@@ -26,8 +26,10 @@ Living task list. Work top-to-bottom; check off with a dated one-line note when 
       mcp/server.py; graceful failure (log + continue) — 2026-06-15: StdioMCPClient
       with select-timeout reads, as_tools(prefix=) wrapping, MCPClientError/
       MCPToolError fail-soft; 6 e2e tests vs the real server (184 passed)
-- [ ] Parse mcpServers manifests ({command,args,env}) from gemini-extension.json
-      / .mcp.json (extend extensions/install discovery beyond names)
+- [x] Parse mcpServers manifests ({command,args,env}) from gemini-extension.json
+      / .mcp.json (extend extensions/install discovery beyond names) — 2026-06-15:
+      mcp/servers.py (MCPServerSpec, parse_mcp_servers, load_server_specs from
+      ~/.sakthai/mcp.json + extension manifests, mcp.json wins). 192 passed.
 - [ ] Wire MCP-client tools into run_agent: load configured servers, convert
       their schemas to Tool objects, merge into the loop, route calls back
 - [ ] Skill injection: render selected SKILL.md bodies into the system prompt
@@ -59,3 +61,4 @@ Living task list. Work top-to-bottom; check off with a dated one-line note when 
 - 2026-06-15 — Phase 0.3 done: store-migration + loop stop/iteration depth tests (172 passed). Phase 0 complete.
 - 2026-06-15 — Phase 1.1 done: dynamic ToolRegistry; loop dispatch routed through it (178 passed).
 - 2026-06-15 — Phase 1.2 done: StdioMCPClient (spawn/handshake/call external MCP servers) (184 passed).
+- 2026-06-15 — Phase 1.3 done: MCP server manifest parsing + config discovery (192 passed).
