@@ -120,3 +120,56 @@ def test_detect_provider_for_gemini_model() -> None:
 
 def test_detect_provider_with_injected_client() -> None:
     assert _detect_provider(object(), "claude-opus-4-8") == "anthropic"
+
+
+# -- stop / iteration logic ----------------------------------------------
+
+
+def test_terminal_stop_max_tokens(store: MemoryStore) -> None:
+    client = FakeClient([_Resp("max_tokens", [_Block(type="text", text="partial")])])
+    result = run_agent("x", client=client, store=store, provider="anthropic")
+    assert result.stop_reason == "max_tokens"
+    assert result.text == "partial"
+    assert result.iterations == 1
+
+
+def test_unexpected_stop_reason_returns_marker(store: MemoryStore) -> None:
+    client = FakeClient([_Resp("weird_reason", [])])
+    result = run_agent("x", client=client, store=store, provider="anthropic")
+    assert result.stop_reason == "weird_reason"
+    assert "unexpected stop_reason" in result.text
+
+
+def test_pause_turn_then_finish(store: MemoryStore) -> None:
+    client = FakeClient(
+        [
+            _Resp("pause_turn", [_Block(type="text", text="thinking")]),
+            _Resp("end_turn", [_Block(type="text", text="done")]),
+        ]
+    )
+    result = run_agent("x", client=client, store=store, provider="anthropic")
+    assert result.stop_reason == "end_turn"
+    assert result.text == "done"
+    assert result.iterations == 2
+
+
+def test_deadline_trips_midloop(store: MemoryStore, monkeypatch: pytest.MonkeyPatch) -> None:
+    import sakthai.agent.loop as loop_mod
+
+    # A tool_use first response forces a second iteration; by then the wall-clock
+    # deadline has passed, so the loop must raise before calling the model again.
+    client = FakeClient(
+        [
+            _Resp("tool_use", [_Block(type="tool_use", id="t1", name="recall", input={})]),
+            _Resp("end_turn", [_Block(type="text", text="too late")]),
+        ]
+    )
+    calls = {"n": 0}
+
+    def fake_monotonic() -> float:
+        calls["n"] += 1
+        return 100.0 if calls["n"] <= 2 else 200.0  # deadline calc + iter1 pass, iter2 trips
+
+    monkeypatch.setattr(loop_mod.time, "monotonic", fake_monotonic)
+    with pytest.raises(AgentError, match="time budget exhausted"):
+        run_agent("x", client=client, store=store, provider="anthropic", max_seconds=1.0)

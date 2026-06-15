@@ -10,8 +10,10 @@ Living task list. Work top-to-bottom; check off with a dated one-line note when 
       a fake store) or document why it stays excluded — 2026-06-15: importorskip-
       guarded smoke test exercises the figure builders via stubbed st (5 tests,
       pass with [dashboard] extra, skip otherwise); documented the coverage omit
-- [ ] Depth pass: targeted correctness tests for memory/store.py migrations and
-      the agent loop's stop/iteration logic
+- [x] Depth pass: targeted correctness tests for memory/store.py migrations and
+      the agent loop's stop/iteration logic — 2026-06-15: test_store_migrations.py
+      (fresh→v3, idempotent reopen, legacy facts-only + confidence backfill) and
+      loop cases (terminal max_tokens, unexpected stop, pause_turn, deadline trip)
 
 ## Phase 1 — Runtime plugin foundation (use ANY MCP / skill, no manual wiring)
 - [ ] Dynamic tool registry: merge builtin + runtime tools; make tool lookup
@@ -49,3 +51,4 @@ Living task list. Work top-to-bottom; check off with a dated one-line note when 
 - 2026-06-15 — todo.md created and committed; roadmap approved.
 - 2026-06-15 — Phase 0.1 done: robust CLI test assertions (159 tests green).
 - 2026-06-15 — Phase 0.2 done: dashboard/app.py smoke test (164 with extra; skips without).
+- 2026-06-15 — Phase 0.3 done: store-migration + loop stop/iteration depth tests (172 passed). Phase 0 complete.
