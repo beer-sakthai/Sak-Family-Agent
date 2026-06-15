@@ -24,7 +24,8 @@ import anthropic
 from ..auth import AuthError, anthropic_credential_source, resolve_anthropic_client
 from ..config import sessions_dir
 from ..memory.store import MemoryStore
-from .tools import BUILTIN_TOOLS, Tool, tool_by_name
+from .registry import ToolRegistry
+from .tools import BUILTIN_TOOLS, Tool
 
 logger = logging.getLogger(__name__)
 
@@ -105,13 +106,14 @@ def _execute_tool(tool: Tool, args: dict[str, Any], store: MemoryStore) -> tuple
 
 def _process_tool_uses(
     tool_uses: list[Any],
+    registry: ToolRegistry,
     store: MemoryStore,
     notify: Callable[[str, dict[str, Any]], None],
     tool_calls: list[dict[str, Any]],
 ) -> list[dict[str, Any]]:
     results: list[dict[str, Any]] = []
     for use in tool_uses:
-        tool = tool_by_name(use.name)
+        tool = registry.get(use.name)
         if tool is None:
             results.append(
                 {
@@ -293,7 +295,8 @@ def run_agent(
     own_store = store is None
     store = store or MemoryStore()
     notify = on_event or (lambda _kind, _payload: None)
-    tool_schemas = [t.schema() for t in tools]
+    registry = ToolRegistry(tools)
+    tool_schemas = registry.schemas()
     tool_calls: list[dict[str, Any]] = []
     messages: list[dict[str, Any]] = [{"role": "user", "content": task}]
     deadline = time.monotonic() + max_seconds if max_seconds is not None else None
@@ -342,7 +345,7 @@ def run_agent(
 
             tool_uses = [b for b in response.content if getattr(b, "type", "") == "tool_use"]
             messages.append({"role": "assistant", "content": response.content})
-            results = _process_tool_uses(tool_uses, store, notify, tool_calls)
+            results = _process_tool_uses(tool_uses, registry, store, notify, tool_calls)
             messages.append({"role": "user", "content": results})
 
         raise AgentError(

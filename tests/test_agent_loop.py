@@ -173,3 +173,29 @@ def test_deadline_trips_midloop(store: MemoryStore, monkeypatch: pytest.MonkeyPa
     monkeypatch.setattr(loop_mod.time, "monotonic", fake_monotonic)
     with pytest.raises(AgentError, match="time budget exhausted"):
         run_agent("x", client=client, store=store, provider="anthropic", max_seconds=1.0)
+
+
+def test_injected_custom_tool_is_dispatched(store: MemoryStore) -> None:
+    # Regression: tools passed via `tools=` must be dispatchable, not just
+    # advertised to the model. Before the registry, dispatch scanned only
+    # BUILTIN_TOOLS, so a custom tool came back as "Unknown tool".
+    from sakthai.agent.tools import Tool
+
+    def _echo(args: dict, _store: MemoryStore) -> str:
+        return f"echoed:{args.get('msg', '')}"
+
+    echo = Tool(
+        name="echo",
+        description="echo back a message",
+        input_schema={"type": "object", "properties": {"msg": {"type": "string"}}},
+        handler=_echo,
+    )
+    client = FakeClient(
+        [
+            _Resp("tool_use", [_Block(type="tool_use", id="t1", name="echo", input={"msg": "hi"})]),
+            _Resp("end_turn", [_Block(type="text", text="ok")]),
+        ]
+    )
+    result = run_agent("x", client=client, store=store, provider="anthropic", tools=(echo,))
+    assert result.stop_reason == "end_turn"
+    assert any(c["name"] == "echo" and not c["is_error"] for c in result.tool_calls)

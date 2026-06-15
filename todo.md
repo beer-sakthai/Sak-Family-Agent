@@ -16,8 +16,11 @@ Living task list. Work top-to-bottom; check off with a dated one-line note when 
       loop cases (terminal max_tokens, unexpected stop, pause_turn, deadline trip)
 
 ## Phase 1 — Runtime plugin foundation (use ANY MCP / skill, no manual wiring)
-- [ ] Dynamic tool registry: merge builtin + runtime tools; make tool lookup
-      registry-driven (agent/tools.py, new agent/registry.py)
+- [x] Dynamic tool registry: merge builtin + runtime tools; make tool lookup
+      registry-driven (agent/tools.py, new agent/registry.py) — 2026-06-15: added
+      ToolRegistry (get/schemas/with_tools, last-wins merge); routed loop dispatch
+      through it, fixing a latent bug where injected tools were advertised but not
+      dispatchable. 178 tests.
 - [ ] MCP client (sakthai/mcp/client.py): spawn an external MCP server over
       stdio, initialize, tools/list, tools/call; reuse the JSON-RPC shapes from
       mcp/server.py; graceful failure (log + continue)
@@ -52,3 +55,4 @@ Living task list. Work top-to-bottom; check off with a dated one-line note when 
 - 2026-06-15 — Phase 0.1 done: robust CLI test assertions (159 tests green).
 - 2026-06-15 — Phase 0.2 done: dashboard/app.py smoke test (164 with extra; skips without).
 - 2026-06-15 — Phase 0.3 done: store-migration + loop stop/iteration depth tests (172 passed). Phase 0 complete.
+- 2026-06-15 — Phase 1.1 done: dynamic ToolRegistry; loop dispatch routed through it (178 passed).
