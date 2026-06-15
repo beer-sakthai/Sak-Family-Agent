@@ -368,3 +368,20 @@ def test_run_agent_loop_tool(store: MemoryStore, monkeypatch: pytest.MonkeyPatch
         store,
     )
     assert res == "inner loop success"
+
+
+def test_run_agent_loop_recursion_guard(
+    store: MemoryStore, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from sakthai.agent.tools import tool_by_name
+
+    run_agent_loop_tool = tool_by_name("run_agent_loop")
+    assert run_agent_loop_tool is not None
+
+    monkeypatch.setenv("SAKTHAI_AGENT_ACTIVE", "1")
+
+    with pytest.raises(ValueError, match="Indirect recursion detected"):
+        run_agent_loop_tool.handler(
+            {"task": "do nested task", "provider": "anthropic"},
+            store,
+        )

@@ -256,6 +256,11 @@ def _send_telegram_message(args: dict[str, Any], store: MemoryStore) -> str:
 
 def _run_agent_loop(args: dict[str, Any], store: MemoryStore) -> str:
     """Run a high-level task through the full SakThai agent loop."""
+    import os
+
+    if os.environ.get("SAKTHAI_AGENT_ACTIVE") == "1":
+        raise ValueError("Indirect recursion detected: cannot run nested SakThai agent loops.")
+
     from .loop import run_agent
 
     task = args.get("task")

@@ -474,13 +474,16 @@ def run_agent(
     if max_seconds is not None and max_seconds <= 0:
         raise AgentError("max_seconds must be positive when set.")
 
+    import os
+
+    old_active = os.environ.get("SAKTHAI_AGENT_ACTIVE")
+    os.environ["SAKTHAI_AGENT_ACTIVE"] = "1"
+
     provider = provider or _detect_provider(client, model)
     if provider == "ollama":
         provider = "openai"
 
     if provider == "openai" and model == DEFAULT_MODEL:
-        import os
-
         if os.environ.get("OLLAMA_HOST"):
             model = "qwen2.5-coder:7b"
         else:
@@ -552,6 +555,13 @@ def run_agent(
             "without producing a final response."
         )
     finally:
+        import os
+
+        if old_active is None:
+            os.environ.pop("SAKTHAI_AGENT_ACTIVE", None)
+        else:
+            os.environ["SAKTHAI_AGENT_ACTIVE"] = old_active
+
         if own_store:
             store.close()
 
