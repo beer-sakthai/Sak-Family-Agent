@@ -61,6 +61,11 @@ Living task list. Work top-to-bottom; check off with a dated one-line note when 
       provider (fake httpx) — keep the no-network rule — 2026-06-15: added provider and tool tests to tests/test_agent_loop.py.
 - [x] Update CLAUDE.md / GEMINI.md / README / docs/architecture.md — 2026-06-15: updated documentation layers, commands, and options.
 
+## Phase 4 — Concurrency & safety hardening (con areas resolved)
+- [x] Concurrency Protection: enable SQLite WAL mode and secure write transactions via BEGIN IMMEDIATE — 2026-06-15: set BEGIN IMMEDIATE locks on all consolidation/import queries; WAL mode verified.
+- [x] Indirect Recursion Safety: environment-based loop guard to prevent nested runs — 2026-06-15: added SAKTHAI_AGENT_ACTIVE environment flag and ValueError loop guard.
+- [x] Context Token Pruning: prune intermediate loop history in run_agent_loop outputs — 2026-06-15: added prune_history parameter to the tool schema/handler.
+
 ---
 
 ## Log
@@ -76,3 +81,4 @@ Living task list. Work top-to-bottom; check off with a dated one-line note when 
 - 2026-06-15 — Phase 1.5 done: skill injection into the system prompt (--with-skills) (203 passed). **Phase 1 (plugin foundation) complete.**
 - 2026-06-15 — Phase 2 done: added OpenAI/Ollama provider, integration guides, run_agent_loop tool (207 passed). **Phase 2 complete.**
 - 2026-06-15 — Phase 3 done: hermetic tests for new provider and tools, strict mypy validation, updated architecture and configuration logs. **Phase 3 complete.**
+- 2026-06-15 — Phase 4 done: SQLite WAL mode/locks, indirect recursion loop guard, run_agent_loop context token pruning (209 passed). **Phase 4 complete.**
