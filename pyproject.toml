@@ -42,6 +42,9 @@ addopts = "-q"
 
 [tool.coverage.run]
 source = ["sakthai"]
+# app.py is Streamlit presentation glue needing a live runtime; its data logic
+# lives in dashboard/data.py (tested). A guarded smoke test covers the figure
+# builders where the `dashboard` extra is installed (tests/test_dashboard_app.py).
 omit = ["sakthai/dashboard/app.py"]
 
 [tool.coverage.report]
