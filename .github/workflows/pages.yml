@@ -1,12 +1,12 @@
 name: Deploy web to Pages
 
 # Publishes the static dashboard in web/ to GitHub Pages.
-# Enable once in the repo: Settings → Pages → Build and deployment →
-# Source: "GitHub Actions". Then this runs on web/ changes or manual dispatch.
+#
+# Manual-only: first enable Pages once in the repo (Settings → Pages → Build and
+# deployment → Source: "GitHub Actions"), then trigger this from the Actions tab
+# or with `gh workflow run "Deploy web to Pages"`. It's not on `push` so it can't
+# fail automatically before Pages is enabled.
 on:
-  push:
-    branches: [main]
-    paths: ["web/**", ".github/workflows/pages.yml"]
   workflow_dispatch:
 
 permissions:
