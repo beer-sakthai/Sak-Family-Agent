@@ -70,9 +70,10 @@ bandit → pytest) → commit → push → **wait for CI green** → next.
 - [x] 5.3 — Session management CLI — 2026-06-15
 - [x] 5.4 — Robust provider construction — 2026-06-15
 - [x] 5.5 — Safe memory backup — 2026-06-15
-- [ ] 5.6 — Preflight `sakthai run --dry-run`: resolve provider + creds + model
-      + tool count with no API call; print and exit 0. No cost.
-      (sakthai/agent/loop.py, sakthai/cli/agent.py, tests/test_cli.py)
+- [x] 5.6 — Preflight `sakthai run --dry-run` — 2026-06-15: loop.preflight()
+      resolves provider/effective-model/credential-source/tool-count with no
+      client build or API call; `--dry-run` prints the report and exits non-zero
+      when no credentials. 9 tests (4 preflight + 2 CLI). **Phase 5 complete.**
 
 ## Phase 6 — Architecture cleanup ← CON #1, #4
 Goal: loop.py drops from ~700 to ~300 lines by extracting providers.

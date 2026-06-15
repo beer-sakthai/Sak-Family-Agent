@@ -655,3 +655,53 @@ def test_provider_construction_no_creds_anthropic(
     monkeypatch.setattr(sakthai.auth, "load_claude_cli_token", lambda: None)
     with pytest.raises(AgentError, match="No Anthropic credentials found"):
         run_agent("hello", store=store, provider="anthropic")
+
+
+# -- 5.6 preflight (sakthai run --dry-run, no API call) -----------------
+
+
+def test_preflight_runnable_with_anthropic_creds(monkeypatch: pytest.MonkeyPatch) -> None:
+    import sakthai.agent.loop as loop_mod
+
+    monkeypatch.setattr(loop_mod, "anthropic_credential_source", lambda: "api_key")
+    report = loop_mod.preflight(provider="anthropic")
+    assert report["provider"] == "anthropic"
+    assert report["model"] == loop_mod.DEFAULT_MODEL
+    assert report["credential_source"] == "api_key"
+    assert report["runnable"] is True
+    assert report["tool_count"] >= 1
+    assert "learn" in report["tools"]
+
+
+def test_preflight_not_runnable_without_creds(monkeypatch: pytest.MonkeyPatch) -> None:
+    import sakthai.agent.loop as loop_mod
+
+    monkeypatch.setattr(loop_mod, "anthropic_credential_source", lambda: None)
+    report = loop_mod.preflight(provider="anthropic")
+    assert report["runnable"] is False
+    assert report["credential_source"] is None
+
+
+def test_preflight_ollama_maps_to_openai(monkeypatch: pytest.MonkeyPatch) -> None:
+    import sakthai.agent.loop as loop_mod
+
+    for var in ("OPENAI_API_KEY", "OPENAI_BASE_URL", "OPENAI_API_BASE"):
+        monkeypatch.delenv(var, raising=False)
+    monkeypatch.setenv("OLLAMA_HOST", "http://localhost:11434")
+    report = loop_mod.preflight(provider="ollama")
+    assert report["provider"] == "openai"
+    assert report["model"] == "qwen2.5-coder:7b"
+    assert report["credential_source"] == "ollama_host"
+    assert report["runnable"] is True
+
+
+def test_preflight_makes_no_api_call(monkeypatch: pytest.MonkeyPatch) -> None:
+    import sakthai.agent.loop as loop_mod
+
+    def boom(*_a: object, **_k: object) -> Any:
+        raise AssertionError("preflight must not build a client")
+
+    monkeypatch.setattr(loop_mod, "_build_client", boom)
+    monkeypatch.setattr(loop_mod, "anthropic_credential_source", lambda: "api_key")
+    report = loop_mod.preflight(provider="anthropic")
+    assert report["runnable"] is True

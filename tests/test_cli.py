@@ -465,3 +465,27 @@ def test_dashboard_rejects_bad_port(runner: CliRunner) -> None:
     result = runner.invoke(main, ["dashboard", "--port", "10"])
     assert result.exit_code != 0
     assert "not a valid port" in result.output
+
+
+def test_run_dry_run_reports_and_exits_zero(
+    runner: CliRunner, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import sakthai.agent.loop as loop_mod
+
+    monkeypatch.setattr(loop_mod, "anthropic_credential_source", lambda: "api_key")
+    result = runner.invoke(main, ["run", "hi", "--dry-run", "--no-mcp", "-p", "anthropic"])
+    assert result.exit_code == 0, result.output
+    assert "[dry-run]" in result.output
+    assert "anthropic" in result.output
+    assert "runnable:    yes" in result.output
+
+
+def test_run_dry_run_not_runnable_exits_nonzero(
+    runner: CliRunner, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import sakthai.agent.loop as loop_mod
+
+    monkeypatch.setattr(loop_mod, "anthropic_credential_source", lambda: None)
+    result = runner.invoke(main, ["run", "hi", "--dry-run", "--no-mcp", "-p", "anthropic"])
+    assert result.exit_code != 0
+    assert "runnable:    no" in result.output

@@ -642,6 +642,54 @@ def run_agent(
             store.close()
 
 
+def preflight(
+    *,
+    model: str = DEFAULT_MODEL,
+    provider: str | None = None,
+    tools: tuple[Tool, ...] = BUILTIN_TOOLS,
+    client: Any | None = None,
+) -> dict[str, Any]:
+    """Report what a run *would* use without building a client or calling the API.
+
+    Resolves the provider, effective model, credential source, and tool count
+    exactly as :func:`run_agent` would, but makes no network call — backing
+    ``sakthai run --dry-run`` so a run can be validated at zero token cost.
+    ``runnable`` is True when a usable credential for the resolved provider exists.
+    """
+    import os
+
+    resolved = provider or _detect_provider(client, model)
+    if resolved == "ollama":
+        resolved = "openai"
+
+    effective_model = model
+    if resolved == "openai" and model == DEFAULT_MODEL:
+        effective_model = "qwen2.5-coder:7b" if os.environ.get("OLLAMA_HOST") else "gpt-4o"
+
+    if resolved == "google":
+        if os.environ.get("GEMINI_API_KEY"):
+            cred_source: str | None = "GEMINI_API_KEY"
+        elif os.environ.get("GOOGLE_API_KEY"):
+            cred_source = "GOOGLE_API_KEY"
+        else:
+            cred_source = None
+    elif resolved == "openai":
+        cred_source = openai_credential_source()
+    else:
+        cred_source = anthropic_credential_source()
+
+    registry = ToolRegistry(tools)
+    return {
+        "provider": resolved,
+        "model": effective_model,
+        "credential_source": cred_source,
+        "credentials_ok": cred_source is not None,
+        "tool_count": len(registry.tools),
+        "tools": [t.name for t in registry.tools],
+        "runnable": cred_source is not None,
+    }
+
+
 def _extract_text(content: Any) -> str:
     parts = [
         getattr(block, "text", "")
