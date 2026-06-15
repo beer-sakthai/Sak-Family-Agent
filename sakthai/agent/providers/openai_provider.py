@@ -90,6 +90,8 @@ def _stream_chat(
             try:
                 chunk = json.loads(data_str)
             except Exception:
+                chunk = None
+            if not isinstance(chunk, dict):
                 continue
             if chunk.get("usage"):
                 usage = chunk["usage"]
