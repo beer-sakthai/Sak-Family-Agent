@@ -25,6 +25,7 @@ This is a clean, from-scratch implementation of the core engine.
 ```bash
 cp .env.example .env          # then fill in ANTHROPIC_API_KEY
 pip install -e ".[dev]"       # editable install (Python >=3.11)
+pip install -e ".[dashboard]" # adds streamlit/plotly/pandas for `sakthai dashboard`
 ```
 
 ## Usage
@@ -39,6 +40,7 @@ sakthai run "summarise my notes"     # standalone Claude/Gemini agent loop
 sakthai mcp                          # serve memory tools over MCP stdio
 sakthai cycle status|next|set|list   # the 6-stage cycle
 sakthai skills list|show|validate    # skill catalog
+sakthai dashboard                    # Streamlit dashboard (--export data.json skips the UI)
 sakthai tools                        # list agent/MCP tools
 ```
 
@@ -53,7 +55,13 @@ mypy sakthai
 bandit -c pyproject.toml -r sakthai
 ```
 
+## The cycle
+
+`SOUL.md` describes the agent's charge model, and `Dream.md` → `Growth.md`
+document the six working stages (Dream → Hope → Care → Joy → Trust → Growth),
+mirrored by the `sakthai-cycle-*` skills and the `sakthai cycle` command.
+
 ## Roadmap
 
-The Streamlit dashboard and the Google ADK / Vertex AI cloud agent are not part
-of this first pass — they're coming next.
+The Google ADK / Vertex AI cloud agent from the original project is not part of
+this repo yet — it needs live GCP and is tracked separately.

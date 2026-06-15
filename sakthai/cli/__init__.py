@@ -7,6 +7,7 @@ import click
 from .. import __version__
 from .agent import mcp, run
 from .cycle import cycle
+from .dashboard import dashboard
 from .extensions import extensions
 from .memory import learn, memory, recall
 from .skills import skills
@@ -34,9 +35,10 @@ main.add_command(tools)
 main.add_command(run)
 main.add_command(mcp)
 
-# Skills, cycle, extensions
+# Skills, cycle, extensions, dashboard
 main.add_command(skills)
 main.add_command(cycle)
 main.add_command(extensions)
+main.add_command(dashboard)
 
 __all__ = ["main"]

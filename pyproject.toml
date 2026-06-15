@@ -27,6 +27,13 @@ dev = [
     "bandit[toml]>=1.7",
 ]
 
+dashboard = [
+    "streamlit>=1.36",
+    "plotly>=5.22",
+    "pandas>=2.2",
+]
+all = ["sakthai-agent[dev,dashboard]"]
+
 [project.scripts]
 sakthai = "sakthai.cli:main"
 
@@ -35,6 +42,7 @@ addopts = "-q"
 
 [tool.coverage.run]
 source = ["sakthai"]
+omit = ["sakthai/dashboard/app.py"]
 
 [tool.coverage.report]
 show_missing = true
@@ -56,6 +64,12 @@ warn_unused_ignores = true
 warn_return_any = true
 check_untyped_defs = true
 files = ["sakthai"]
+
+# The Streamlit app is presentation glue over untyped third-party libs; type
+# it loosely so strict checks don't fight the streamlit/plotly/pandas stubs.
+[[tool.mypy.overrides]]
+module = "sakthai.dashboard.app"
+ignore_errors = true
 
 [tool.bandit]
 exclude_dirs = ["tests"]
