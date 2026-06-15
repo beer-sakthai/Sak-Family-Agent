@@ -1,0 +1,193 @@
+"""Discover and inspect skills (``SKILL.md`` files with YAML frontmatter)."""
+
+from __future__ import annotations
+
+import contextlib
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Any
+
+import yaml
+
+_UNCATEGORIZED = "general"
+
+
+class SkillParseError(ValueError):
+    """Raised when a SKILL.md has missing or invalid frontmatter."""
+
+
+@dataclass
+class SkillInfo:
+    name: str
+    path: Path
+    category: str | None = None
+    description: str | None = None
+    version: str | None = None
+    platforms: list[str] = field(default_factory=list)
+    tags: list[str] = field(default_factory=list)
+    related_skills: list[str] = field(default_factory=list)
+    body: str = ""
+
+
+def _as_str_list(value: Any) -> list[str]:
+    return [str(v) for v in value] if isinstance(value, list) else []
+
+
+def parse_skill(path: Path) -> SkillInfo:
+    """Parse one SKILL.md into a :class:`SkillInfo`. Raises on bad frontmatter."""
+    text = path.read_text(encoding="utf-8")
+    parts = text.split("---", 2)
+    if len(parts) < 3:
+        raise SkillParseError(f"{path}: no YAML frontmatter found")
+    try:
+        front = yaml.safe_load(parts[1])
+    except yaml.YAMLError as exc:
+        raise SkillParseError(f"{path}: invalid YAML — {exc}") from exc
+    if not isinstance(front, dict):
+        raise SkillParseError(f"{path}: empty or non-mapping frontmatter")
+    name = front.get("name")
+    if not name or not isinstance(name, str):
+        raise SkillParseError(f"{path}: missing required field: name")
+
+    sakthai_meta = (front.get("metadata") or {}).get("sakthai") or {}
+    return SkillInfo(
+        name=name,
+        path=path,
+        category=front.get("category"),
+        description=front.get("description"),
+        version=front.get("version"),
+        platforms=_as_str_list(front.get("platforms")),
+        tags=_as_str_list(sakthai_meta.get("tags")),
+        related_skills=_as_str_list(sakthai_meta.get("related_skills")),
+        body=parts[2].strip(),
+    )
+
+
+def list_skills(skills_dir: Path) -> list[SkillInfo]:
+    """Parse skills directly under ``skills_dir`` (flat layout), skipping bad ones."""
+    found: list[SkillInfo] = []
+    for entry in sorted(skills_dir.iterdir()):
+        skill_md = entry / "SKILL.md"
+        if entry.is_dir() and skill_md.exists():
+            with contextlib.suppress(SkillParseError):
+                found.append(parse_skill(skill_md))
+    return sorted(found, key=lambda s: s.name)
+
+
+def validate_skills(skills_dir: Path) -> list[tuple[Path, str]]:
+    """Return (path, reason) for each flat-layout skill that is missing or broken."""
+    errors: list[tuple[Path, str]] = []
+    for entry in sorted(skills_dir.iterdir()):
+        if not entry.is_dir():
+            continue
+        skill_md = entry / "SKILL.md"
+        if not skill_md.exists():
+            errors.append((entry, "missing SKILL.md"))
+            continue
+        try:
+            parse_skill(skill_md)
+        except SkillParseError as exc:
+            errors.append((skill_md, str(exc).split(": ", 1)[-1]))
+    return errors
+
+
+def _category_for(skill: SkillInfo, skill_md: Path, root: Path) -> str:
+    """Resolve a display category: explicit field → nesting dir → name prefix → general."""
+    if skill.category:
+        return skill.category
+    try:
+        rel = skill_md.parent.relative_to(root)
+    except ValueError:
+        rel = Path(skill.name)
+    if len(rel.parts) >= 2:
+        return rel.parts[0]
+    if skill.name.startswith("sakthai-"):
+        suffix = skill.name.removeprefix("sakthai-")
+        if "-" in suffix:
+            return suffix.split("-", 1)[0]
+    return _UNCATEGORIZED
+
+
+def collect_skills(*roots: Path) -> list[SkillInfo]:
+    """Recursively find every SKILL.md under each root, with categories filled in."""
+    found: list[SkillInfo] = []
+    seen: set[Path] = set()
+    for root in roots:
+        if not root.is_dir():
+            continue
+        for skill_md in sorted(root.rglob("SKILL.md")):
+            if skill_md in seen:
+                continue
+            seen.add(skill_md)
+            with contextlib.suppress(SkillParseError):
+                skill = parse_skill(skill_md)
+                skill.category = _category_for(skill, skill_md, root)
+                found.append(skill)
+    return sorted(found, key=lambda s: (s.name.lower(), str(s.path)))
+
+
+def _source_for(skill_md: Path, roots: tuple[Path, ...]) -> str:
+    for root in roots:
+        try:
+            skill_md.relative_to(root)
+        except ValueError:
+            continue
+        return root.name
+    return ""
+
+
+def build_catalog(*roots: Path) -> list[dict[str, Any]]:
+    """Group :func:`collect_skills` by category into a display/export structure."""
+    grouped: dict[str, list[dict[str, Any]]] = {}
+    for skill in collect_skills(*roots):
+        category = skill.category or _UNCATEGORIZED
+        grouped.setdefault(category, []).append(
+            {
+                "name": skill.name,
+                "version": skill.version,
+                "description": skill.description,
+                "tags": skill.tags,
+                "platforms": skill.platforms,
+                "related_skills": skill.related_skills,
+                "source": _source_for(skill.path, roots),
+            }
+        )
+    return [
+        {
+            "category": category,
+            "count": len(skills),
+            "skills": sorted(skills, key=lambda s: str(s["name"]).lower()),
+        }
+        for category, skills in sorted(grouped.items(), key=lambda kv: kv[0].lower())
+    ]
+
+
+def find_skill(name: str, *roots: Path) -> SkillInfo | None:
+    """Find a parsed skill by exact name across the given roots."""
+    for skill in collect_skills(*roots):
+        if skill.name == name:
+            return skill
+    return None
+
+
+def validate_tree(*roots: Path) -> list[tuple[Path, str]]:
+    """Validate every SKILL.md under each root, flagging empty skill folders too."""
+    errors: list[tuple[Path, str]] = []
+    seen: set[Path] = set()
+    for root in roots:
+        if not root.is_dir():
+            continue
+        for child in sorted(p for p in root.iterdir() if p.is_dir()):
+            if child.name.startswith("."):
+                continue
+            if not any(child.rglob("SKILL.md")):
+                errors.append((child, "missing SKILL.md"))
+        for skill_md in sorted(root.rglob("SKILL.md")):
+            if skill_md in seen:
+                continue
+            seen.add(skill_md)
+            try:
+                parse_skill(skill_md)
+            except SkillParseError as exc:
+                errors.append((skill_md, str(exc).split(": ", 1)[-1]))
+    return errors
