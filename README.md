@@ -66,7 +66,6 @@ docs/        architecture and capabilities docs
 scripts/     bootstrap.sh, setup-extensions.sh
 web/         zero-build static dashboard (reads data.json)
 data/        memory snapshot format + a sample export
-scratch/     throwaway prototypes (not packaged, not in CI)
 ```
 
 ## The cycle
