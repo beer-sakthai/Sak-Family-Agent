@@ -713,12 +713,15 @@ def test_preflight_makes_no_api_call(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_run_agent_accepts_on_token(store: MemoryStore) -> None:
+    # With on_token set, the anthropic backend streams via client.messages.stream.
+    final = _Resp("end_turn", [_Block(type="text", text="hi")])
+    client = _StreamClient(["hi"], final)
     tokens: list[str] = []
-    client = FakeClient([_Resp("end_turn", [_Block(type="text", text="hi")])])
     result = run_agent(
         "x", client=client, store=store, provider="anthropic", on_token=tokens.append
     )
     assert result.text == "hi"
+    assert tokens == ["hi"]
 
 
 def test_provider_calls_accept_on_token() -> None:
@@ -728,3 +731,56 @@ def test_provider_calls_accept_on_token() -> None:
 
     for fn in (call_anthropic, call_gemini, call_openai_compat):
         assert "on_token" in inspect.signature(fn).parameters
+
+
+# -- 7.2 Anthropic streaming --------------------------------------------
+
+
+class _FakeStream:
+    def __init__(self, deltas: list[str], final: _Resp) -> None:
+        self.text_stream = iter(deltas)
+        self._final = final
+
+    def __enter__(self) -> _FakeStream:
+        return self
+
+    def __exit__(self, *_a: object) -> bool:
+        return False
+
+    def get_final_message(self) -> _Resp:
+        return self._final
+
+
+class _StreamMessages:
+    def __init__(self, deltas: list[str], final: _Resp) -> None:
+        self._deltas = deltas
+        self._final = final
+        self.stream_calls = 0
+
+    def stream(self, **_kwargs: object) -> _FakeStream:
+        self.stream_calls += 1
+        return _FakeStream(self._deltas, self._final)
+
+
+class _StreamClient:
+    def __init__(self, deltas: list[str], final: _Resp) -> None:
+        self.messages = _StreamMessages(deltas, final)
+
+
+def test_anthropic_streaming_emits_text_deltas(store: MemoryStore) -> None:
+    final = _Resp("end_turn", [_Block(type="text", text="Hello world")])
+    client = _StreamClient(["Hello ", "world"], final)
+    tokens: list[str] = []
+    result = run_agent(
+        "x", client=client, store=store, provider="anthropic", on_token=tokens.append
+    )
+    assert tokens == ["Hello ", "world"]
+    assert result.text == "Hello world"
+    assert client.messages.stream_calls == 1
+
+
+def test_anthropic_no_stream_when_no_on_token(store: MemoryStore) -> None:
+    # Without on_token the non-streaming create() path is used (FakeClient has no .stream).
+    client = FakeClient([_Resp("end_turn", [_Block(type="text", text="plain")])])
+    result = run_agent("x", client=client, store=store, provider="anthropic")
+    assert result.text == "plain"

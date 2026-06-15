@@ -96,9 +96,10 @@ Goal: progressive token display instead of waiting for full response.
       through run_agent → all three provider calls (accepted now; provider impls
       land in 7.2/7.3); `sakthai run --stream` wires it to stdout and falls back
       to printing the final text when nothing streamed. 4 tests.
-- [ ] 7.2 — Anthropic streaming: when on_token provided, use
-      client.messages.stream() and yield deltas.
-      (sakthai/agent/providers/anthropic.py, tests/test_streaming.py)
+- [x] 7.2 — Anthropic streaming — 2026-06-15: call_anthropic streams via
+      client.messages.stream() when on_token is set, forwarding text deltas and
+      returning the assembled final message (same shape as create()); non-stream
+      path unchanged. 2 tests.
 - [ ] 7.3 — OpenAI-compat streaming: set `"stream": True`, parse SSE chunks,
       yield deltas, accumulate tool_calls.
       (sakthai/agent/providers/openai.py, tests/test_streaming.py)
