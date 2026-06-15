@@ -158,6 +158,119 @@ def collect_dashboard_data(db_path: Path | None = None, days: int = 30) -> dict[
     }
 
 
+_SESSIONS_SCAN_LIMIT = 5000
+_RECENT_SESSIONS = 20
+_TASK_PREVIEW_CHARS = 80
+
+
+def _load_session(path: Path) -> dict[str, Any] | None:
+    """Load one session-log JSON, returning None on any read/parse failure."""
+    try:
+        with path.open(encoding="utf-8") as fh:
+            data = json.load(fh)
+    except Exception:
+        data = None
+    return data if isinstance(data, dict) else None
+
+
+def collect_session_data(sessions_path: Path | None = None) -> dict[str, Any]:
+    """Aggregate the agent session logs into a dashboard-ready snapshot.
+
+    Reads the JSON logs ``run_agent`` writes (task/model/usage/timestamp),
+    aggregating sessions and token usage by day and by model, plus a list of the
+    most recent runs. Returns ``source: "empty"`` with zeroed structures when
+    there are no readable logs, so the UI always has something to render.
+    """
+    from sakthai.config import sessions_dir
+
+    base = Path(sessions_path) if sessions_path is not None else sessions_dir()
+    empty: dict[str, Any] = {
+        "source": "empty",
+        "totals": {"sessions": 0, "input_tokens": 0, "output_tokens": 0, "total_tokens": 0},
+        "by_day": {"labels": [], "sessions": [], "tokens": []},
+        "by_model": [],
+        "recent_sessions": [],
+    }
+    if not base.is_dir():
+        return empty
+
+    sessions: list[dict[str, Any]] = []
+    for path in sorted(base.glob("*.json"), reverse=True)[:_SESSIONS_SCAN_LIMIT]:
+        data = _load_session(path)
+        if data is None:
+            continue
+        usage = data.get("usage") or {}
+        result = data.get("result") or {}
+        ts = int(data.get("timestamp") or 0)
+        sessions.append(
+            {
+                "timestamp": ts,
+                "date": _fmt_date(ts) if ts else "",
+                "model": str(data.get("model") or "unknown"),
+                "task": str(data.get("task") or ""),
+                "input_tokens": int(usage.get("input_tokens") or 0),
+                "output_tokens": int(usage.get("output_tokens") or 0),
+                "total_tokens": int(usage.get("total_tokens") or 0),
+                "iterations": int(result.get("iterations") or 0),
+                "stop_reason": str(result.get("stop_reason") or ""),
+            }
+        )
+    if not sessions:
+        return empty
+
+    sessions.sort(key=lambda s: s["timestamp"], reverse=True)
+
+    day_counts: dict[str, int] = {}
+    day_tokens: dict[str, int] = {}
+    model_counts: dict[str, int] = {}
+    model_tokens: dict[str, int] = {}
+    for s in sessions:
+        day = s["date"] or "unknown"
+        day_counts[day] = day_counts.get(day, 0) + 1
+        day_tokens[day] = day_tokens.get(day, 0) + s["total_tokens"]
+        model = s["model"]
+        model_counts[model] = model_counts.get(model, 0) + 1
+        model_tokens[model] = model_tokens.get(model, 0) + s["total_tokens"]
+
+    days_sorted = sorted(day_counts)
+    by_model = [
+        {"model": m, "sessions": model_counts[m], "total_tokens": model_tokens[m]}
+        for m in sorted(model_counts, key=lambda k: -model_tokens[k])
+    ]
+    recent = [
+        {
+            "date": s["date"],
+            "model": s["model"],
+            "task": (
+                s["task"][:_TASK_PREVIEW_CHARS] + "…"
+                if len(s["task"]) > _TASK_PREVIEW_CHARS
+                else s["task"]
+            ),
+            "total_tokens": s["total_tokens"],
+            "iterations": s["iterations"],
+            "stop_reason": s["stop_reason"],
+        }
+        for s in sessions[:_RECENT_SESSIONS]
+    ]
+
+    return {
+        "source": SOURCE_LIVE,
+        "totals": {
+            "sessions": len(sessions),
+            "input_tokens": sum(s["input_tokens"] for s in sessions),
+            "output_tokens": sum(s["output_tokens"] for s in sessions),
+            "total_tokens": sum(s["total_tokens"] for s in sessions),
+        },
+        "by_day": {
+            "labels": days_sorted,
+            "sessions": [day_counts[d] for d in days_sorted],
+            "tokens": [day_tokens[d] for d in days_sorted],
+        },
+        "by_model": by_model,
+        "recent_sessions": recent,
+    }
+
+
 def export_dashboard_json(dest: Path, db_path: Path | None = None, days: int = 30) -> Path:
     """Write a :func:`collect_dashboard_data` snapshot to ``dest`` as JSON."""
     dest = Path(dest)

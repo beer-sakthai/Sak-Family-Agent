@@ -108,8 +108,9 @@ Goal: progressive token display instead of waiting for full response.
 ## Phase 8 — Dashboard & observability ← CON #9
 Goal: session history + token charts in the Streamlit dashboard.
 
-- [ ] 8.1 — Session data layer: `collect_session_data()` reads session JSONs,
-      parses task/model/tokens/timestamp, aggregates by day and model.
+- [x] 8.1 — Session data layer — 2026-06-15: collect_session_data() reads the
+      run_agent session JSON logs and aggregates totals + by-day + by-model +
+      recent runs (empty-safe, skips malformed files). 4 tests.
       (sakthai/dashboard/data.py, tests/test_dashboard_sessions.py)
 - [ ] 8.2 — Dashboard UI: "Agent Activity" tab (session timeline), "Token Usage"
       tab (cumulative chart by model), "Recent Sessions" section.
