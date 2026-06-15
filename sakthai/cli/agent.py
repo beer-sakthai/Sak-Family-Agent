@@ -82,6 +82,12 @@ def _event_emitter(verbose: bool) -> Callable[[str, dict[str, Any]], None]:
     is_flag=True,
     help="Don't load external MCP servers (from ~/.sakthai/mcp.json and extensions).",
 )
+@click.option(
+    "--with-skills",
+    "with_skills",
+    multiple=True,
+    help="Inject the named skill's instructions into the system prompt (repeatable).",
+)
 def run(
     task: str,
     model: str,
@@ -91,6 +97,7 @@ def run(
     provider: str | None,
     verbose: bool,
     no_mcp: bool,
+    with_skills: tuple[str, ...],
 ) -> None:
     """Run TASK through the standalone SakThai agent.
 
@@ -109,6 +116,7 @@ def run(
                 on_event=_event_emitter(verbose),
                 provider=provider,
                 tools=tools,
+                skills=list(with_skills),
             )
     except AgentError as exc:
         raise click.ClickException(str(exc)) from exc

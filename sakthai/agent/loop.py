@@ -15,7 +15,7 @@ import json
 import logging
 import time
 import uuid
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -24,6 +24,7 @@ import anthropic
 from ..auth import AuthError, anthropic_credential_source, resolve_anthropic_client
 from ..config import sessions_dir
 from ..memory.store import MemoryStore
+from ..skills import render_skills_prompt_block
 from .registry import ToolRegistry
 from .tools import BUILTIN_TOOLS, Tool
 
@@ -90,9 +91,14 @@ class _Response:
 # -- prompt + tool execution --------------------------------------------
 
 
-def _build_system(store: MemoryStore) -> str:
-    block = store.render_prompt_block()
-    return f"{SYSTEM_BASE}\n\n{block}" if block else SYSTEM_BASE
+def _build_system(store: MemoryStore, skills_block: str = "") -> str:
+    parts = [SYSTEM_BASE]
+    memory = store.render_prompt_block()
+    if memory:
+        parts.append(memory)
+    if skills_block:
+        parts.append(skills_block)
+    return "\n\n".join(parts)
 
 
 def _execute_tool(tool: Tool, args: dict[str, Any], store: MemoryStore) -> tuple[str, bool]:
@@ -278,11 +284,13 @@ def run_agent(
     client: Any | None = None,
     on_event: Callable[[str, dict[str, Any]], None] | None = None,
     provider: str | None = None,
+    skills: Sequence[str] = (),
 ) -> AgentResult:
     """Run one task to completion against Claude or Gemini.
 
     ``max_seconds`` adds an optional wall-clock budget on top of
-    ``max_iterations``. ``client`` and ``store`` are injectable for testing.
+    ``max_iterations``. ``skills`` names skills whose instructions are injected
+    into the system prompt. ``client`` and ``store`` are injectable for testing.
     """
     if not task.strip():
         raise AgentError("Task must be a non-empty string.")
@@ -299,6 +307,7 @@ def run_agent(
     tool_schemas = registry.schemas()
     tool_calls: list[dict[str, Any]] = []
     messages: list[dict[str, Any]] = [{"role": "user", "content": task}]
+    skills_block = render_skills_prompt_block(skills) if skills else ""
     deadline = time.monotonic() + max_seconds if max_seconds is not None else None
 
     try:
@@ -307,7 +316,7 @@ def run_agent(
                 raise AgentError(f"Agent time budget exhausted (max_seconds={max_seconds}).")
             logger.debug("Agent iteration %d/%d", iteration, max_iterations)
 
-            system = _build_system(store)
+            system = _build_system(store, skills_block)
             if provider == "google":
                 response: Any = _call_gemini(client, model, system, tools, messages, iteration)
             else:

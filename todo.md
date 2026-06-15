@@ -35,9 +35,12 @@ Living task list. Work top-to-bottom; check off with a dated one-line note when 
       2026-06-15: mcp/manager.connect_servers (fail-soft, <server>__ namespacing,
       cleanup); proven e2e — an agent run dispatches sk__learn to an external MCP
       subprocess which writes to its own DB. 196 passed.
-- [ ] Skill injection: render selected SKILL.md bodies into the system prompt
+- [x] Skill injection: render selected SKILL.md bodies into the system prompt
       (loop._build_system + skills.render_skills_prompt_block); collect from
-      ~/.sakthai/extensions too
+      ~/.sakthai/extensions too — 2026-06-15: render_skills_prompt_block +
+      default_skill_roots (bundled+library+extensions); run_agent skills= and
+      `sakthai run --with-skills`; injection verified in the system prompt. 203
+      passed. **Phase 1 complete.**
 - [x] CLI + config: auto-load all configured servers from ~/.sakthai/mcp.json so
       it works with zero flags; `--no-mcp` to opt out — 2026-06-15: `sakthai run`
       wraps run_agent in connect_servers() (no-op when none configured), merges
@@ -70,3 +73,4 @@ Living task list. Work top-to-bottom; check off with a dated one-line note when 
 - 2026-06-15 — Phase 1.3 done: MCP server manifest parsing + config discovery (192 passed).
 - 2026-06-15 — Phase 1.4 done: connect_servers wires external MCP tools into an agent run (196 passed).
 - 2026-06-15 — Phase 1.6 done: `sakthai run` auto-loads MCP servers from config; --no-mcp opt-out (198 passed).
+- 2026-06-15 — Phase 1.5 done: skill injection into the system prompt (--with-skills) (203 passed). **Phase 1 (plugin foundation) complete.**

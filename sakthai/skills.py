@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 import contextlib
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
 import yaml
+
+from .config import LIBRARY_DIR, SKILLS_DIR, sakthai_home
 
 _UNCATEGORIZED = "general"
 
@@ -168,6 +171,37 @@ def find_skill(name: str, *roots: Path) -> SkillInfo | None:
         if skill.name == name:
             return skill
     return None
+
+
+def default_skill_roots() -> tuple[Path, ...]:
+    """Roots searched for injectable skills: bundled + library + installed extensions."""
+    return (SKILLS_DIR, LIBRARY_DIR, sakthai_home() / "extensions")
+
+
+def render_skills_prompt_block(names: Sequence[str], roots: Sequence[Path] | None = None) -> str:
+    """Render the bodies of the named skills as a system-prompt block.
+
+    Skills are matched by exact name across ``roots`` (defaulting to
+    :func:`default_skill_roots`). Unknown names are skipped; returns ``""`` when
+    nothing matches.
+    """
+    if not names:
+        return ""
+    search = tuple(roots) if roots is not None else default_skill_roots()
+    by_name = {skill.name: skill for skill in collect_skills(*search)}
+    sections: list[str] = []
+    for name in names:
+        skill = by_name.get(name)
+        if skill is None:
+            continue
+        heading = f"### {skill.name}"
+        if skill.description:
+            heading += f" — {skill.description}"
+        body = skill.body.strip()
+        sections.append(f"{heading}\n\n{body}" if body else heading)
+    if not sections:
+        return ""
+    return "## Active skills\n\n" + "\n\n".join(sections)
 
 
 def validate_tree(*roots: Path) -> list[tuple[Path, str]]:

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 
 from sakthai.agent.loop import AgentError, _detect_provider, _extract_text, run_agent
@@ -199,3 +201,31 @@ def test_injected_custom_tool_is_dispatched(store: MemoryStore) -> None:
     result = run_agent("x", client=client, store=store, provider="anthropic", tools=(echo,))
     assert result.stop_reason == "end_turn"
     assert any(c["name"] == "echo" and not c["is_error"] for c in result.tool_calls)
+
+
+def test_skills_are_injected_into_system_prompt(
+    store: MemoryStore, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    skill_dir = tmp_path / "demo-skill"
+    skill_dir.mkdir()
+    (skill_dir / "SKILL.md").write_text(
+        "---\nname: demo-skill\ndescription: d\n---\n\nALWAYS DO THE DEMO THING.\n",
+        encoding="utf-8",
+    )
+    import sakthai.skills as skills_mod
+
+    monkeypatch.setattr(skills_mod, "default_skill_roots", lambda: (tmp_path,))
+
+    captured: dict[str, str] = {}
+
+    class _CapMessages:
+        def create(self, **kwargs: object) -> _Resp:
+            captured["system"] = str(kwargs.get("system", ""))
+            return _Resp("end_turn", [_Block(type="text", text="ok")])
+
+    class _CapClient:
+        def __init__(self) -> None:
+            self.messages = _CapMessages()
+
+    run_agent("x", client=_CapClient(), store=store, provider="anthropic", skills=["demo-skill"])
+    assert "ALWAYS DO THE DEMO THING." in captured["system"]
