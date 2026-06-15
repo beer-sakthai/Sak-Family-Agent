@@ -30,8 +30,11 @@ Living task list. Work top-to-bottom; check off with a dated one-line note when 
       / .mcp.json (extend extensions/install discovery beyond names) — 2026-06-15:
       mcp/servers.py (MCPServerSpec, parse_mcp_servers, load_server_specs from
       ~/.sakthai/mcp.json + extension manifests, mcp.json wins). 192 passed.
-- [ ] Wire MCP-client tools into run_agent: load configured servers, convert
-      their schemas to Tool objects, merge into the loop, route calls back
+- [x] Wire MCP-client tools into run_agent: load configured servers, convert
+      their schemas to Tool objects, merge into the loop, route calls back —
+      2026-06-15: mcp/manager.connect_servers (fail-soft, <server>__ namespacing,
+      cleanup); proven e2e — an agent run dispatches sk__learn to an external MCP
+      subprocess which writes to its own DB. 196 passed.
 - [ ] Skill injection: render selected SKILL.md bodies into the system prompt
       (loop._build_system + skills.render_skills_prompt_block); collect from
       ~/.sakthai/extensions too
@@ -62,3 +65,4 @@ Living task list. Work top-to-bottom; check off with a dated one-line note when 
 - 2026-06-15 — Phase 1.1 done: dynamic ToolRegistry; loop dispatch routed through it (178 passed).
 - 2026-06-15 — Phase 1.2 done: StdioMCPClient (spawn/handshake/call external MCP servers) (184 passed).
 - 2026-06-15 — Phase 1.3 done: MCP server manifest parsing + config discovery (192 passed).
+- 2026-06-15 — Phase 1.4 done: connect_servers wires external MCP tools into an agent run (196 passed).
