@@ -254,6 +254,39 @@ def _send_telegram_message(args: dict[str, Any], store: MemoryStore) -> str:
         return f"Unexpected Error sending Telegram message: {exc}"
 
 
+def _run_agent_loop(args: dict[str, Any], store: MemoryStore) -> str:
+    """Run a high-level task through the full SakThai agent loop."""
+    from .loop import run_agent
+
+    task = args.get("task")
+    if not isinstance(task, str) or not task.strip():
+        raise ValueError("`task` is required and must be a non-empty string.")
+    model = args.get("model")
+    provider = args.get("provider")
+    max_iterations = args.get("max_iterations")
+
+    kwargs: dict[str, Any] = {
+        "task": task.strip(),
+        "store": store,
+    }
+    if model:
+        kwargs["model"] = model
+    if provider:
+        kwargs["provider"] = provider
+    if max_iterations is not None:
+        import contextlib
+
+        with contextlib.suppress(TypeError, ValueError):
+            kwargs["max_iterations"] = int(max_iterations)
+
+    # Exclude run_agent_loop from the child loop's tools to prevent self-recursion
+    tools_for_loop = tuple(t for t in BUILTIN_TOOLS if t.name != "run_agent_loop")
+    kwargs["tools"] = tools_for_loop
+
+    result = run_agent(**kwargs)
+    return result.text
+
+
 # -- registry ------------------------------------------------------------
 
 BUILTIN_TOOLS: tuple[Tool, ...] = (
@@ -386,6 +419,36 @@ BUILTIN_TOOLS: tuple[Tool, ...] = (
             "required": ["message"],
         },
         handler=_send_telegram_message,
+    ),
+    Tool(
+        name="run_agent_loop",
+        description=(
+            "Run a high-level task through the full SakThai agent loop (which can execute "
+            "commands, read files, learn preferences, and recall memory to solve the task)."
+        ),
+        input_schema={
+            "type": "object",
+            "properties": {
+                "task": {
+                    "type": "string",
+                    "description": "The high-level prompt/task description to execute.",
+                },
+                "model": {
+                    "type": "string",
+                    "description": "Optional model identifier to override the default.",
+                },
+                "provider": {
+                    "type": "string",
+                    "description": "Optional LLM provider backend (anthropic, google, openai, ollama).",
+                },
+                "max_iterations": {
+                    "type": "integer",
+                    "description": "Optional maximum tool-use cap (default: 12).",
+                },
+            },
+            "required": ["task"],
+        },
+        handler=_run_agent_loop,
     ),
 )
 

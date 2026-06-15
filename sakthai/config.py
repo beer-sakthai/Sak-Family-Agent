@@ -25,6 +25,10 @@ OPTIONAL_ENV_VARS: dict[str, str] = {
     "ANTHROPIC_AUTH_TOKEN": "Bearer token alternative to ANTHROPIC_API_KEY",  # nosec B105 — description text
     "GEMINI_API_KEY": "Gemini API key — alternative provider",
     "GOOGLE_API_KEY": "Google API key — alternative provider",
+    "OPENAI_API_KEY": "OpenAI API key — alternative provider",
+    "OPENAI_API_BASE": "OpenAI API base URL (or use OPENAI_BASE_URL)",
+    "OPENAI_BASE_URL": "OpenAI API base URL",
+    "OLLAMA_HOST": "Ollama host URL (default: http://localhost:11434)",
     "SAKTHAI_HOME": "Override the data directory (default: ~/.sakthai)",
     "SAKTHAI_READ_ALLOW": "Extra paths the read_file tool may read (os.pathsep-separated)",
 }
@@ -44,6 +48,16 @@ def memory_db_path() -> Path:
 def sessions_dir() -> Path:
     """Directory where agent session logs are written."""
     return sakthai_home() / "sessions"
+
+
+def ollama_host() -> str:
+    """Return the Ollama host URL, defaulting to http://localhost:11434."""
+    return os.environ.get("OLLAMA_HOST", "http://localhost:11434").rstrip("/")
+
+
+def openai_api_base() -> str | None:
+    """Return the OpenAI API base URL, honoring OPENAI_BASE_URL or OPENAI_API_BASE."""
+    return os.environ.get("OPENAI_BASE_URL") or os.environ.get("OPENAI_API_BASE")
 
 
 def _paths_report() -> dict[str, Any]:
@@ -113,13 +127,20 @@ def _skills_report() -> dict[str, Any]:
 
 def _auth_report() -> dict[str, Any]:
     # Imported lazily so config.py has no hard dependency on the anthropic SDK.
-    from .auth import anthropic_credential_source, load_gemini_cli_token
+    from .auth import (
+        anthropic_credential_source,
+        load_gemini_cli_token,
+        openai_credential_source,
+    )
 
-    source = anthropic_credential_source()
+    anthropic_source = anthropic_credential_source()
+    openai_source = openai_credential_source()
     return {
-        "anthropic_source": source,
-        "anthropic_ok": source is not None,
+        "anthropic_source": anthropic_source,
+        "anthropic_ok": anthropic_source is not None,
         "gemini_cli_oauth": load_gemini_cli_token() is not None,
+        "openai_source": openai_source,
+        "openai_ok": openai_source is not None,
     }
 
 

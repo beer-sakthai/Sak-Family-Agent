@@ -21,7 +21,12 @@ from typing import Any
 
 import anthropic
 
-from ..auth import AuthError, anthropic_credential_source, resolve_anthropic_client
+from ..auth import (
+    AuthError,
+    anthropic_credential_source,
+    openai_credential_source,
+    resolve_anthropic_client,
+)
 from ..config import sessions_dir
 from ..memory.store import MemoryStore
 from ..skills import render_skills_prompt_block
@@ -152,13 +157,21 @@ def _process_tool_uses(
 def _detect_provider(client: Any | None, model: str) -> str:
     """Choose a provider when the caller didn't.
 
-    A Gemini model name or google-genai client → ``google``; any other injected
-    client → ``anthropic``; otherwise pick whichever credential is present,
-    defaulting to ``anthropic`` (which fails loudly if no key is configured).
+    A Gemini model name or google-genai client → ``google``;
+    an openai client or `openai`/`ollama`/`gpt` in model name → ``openai``;
+    any other injected client → ``anthropic``;
+    otherwise pick whichever credential is present in order: anthropic → google → openai.
     """
-    is_genai_client = client is not None and client.__class__.__module__.startswith("google.genai")
-    if "gemini" in model.lower() or is_genai_client:
+    client_module = client.__class__.__module__ if client is not None else ""
+    if "google.genai" in client_module or "gemini" in model.lower():
         return "google"
+    if "openai" in client_module:
+        return "openai"
+    if any(
+        keyword in model.lower()
+        for keyword in ("openai", "ollama", "gpt-", "qwen", "llama", "deepseek", "mistral")
+    ):
+        return "openai"
     if client is not None:
         return "anthropic"
     if anthropic_credential_source() is not None:
@@ -167,6 +180,8 @@ def _detect_provider(client: Any | None, model: str) -> str:
 
     if os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY"):
         return "google"
+    if openai_credential_source() is not None:
+        return "openai"
     return "anthropic"
 
 
@@ -180,6 +195,20 @@ def _build_client(provider: str, client: Any | None) -> Any:
 
         return genai.Client(
             api_key=os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
+        )
+    if provider == "openai":
+        import httpx
+
+        from ..auth import resolve_openai_credentials
+
+        api_base, api_key = resolve_openai_credentials()
+        return httpx.Client(
+            base_url=api_base,
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json",
+            },
+            timeout=120.0,
         )
     try:
         return resolve_anthropic_client()
@@ -269,6 +298,154 @@ def _call_gemini(
     return _Response(stop_reason=stop_reason, content=blocks)
 
 
+def _to_openai_messages(system: str, messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    openai_msgs: list[dict[str, Any]] = [{"role": "system", "content": system}]
+
+    for msg in messages:
+        role = msg["role"]
+        content = msg["content"]
+
+        if isinstance(content, str):
+            openai_msgs.append({"role": role, "content": content})
+        elif isinstance(content, list):
+            if role == "assistant":
+                text_content = ""
+                tool_calls = []
+                for block in content:
+                    block_type = _block_field(block, "type")
+                    if block_type == "text":
+                        text_content += _block_field(block, "text")
+                    elif block_type == "tool_use":
+                        tool_calls.append(
+                            {
+                                "id": _block_field(block, "id"),
+                                "type": "function",
+                                "function": {
+                                    "name": _block_field(block, "name"),
+                                    "arguments": json.dumps(_block_field(block, "input", {})),
+                                },
+                            }
+                        )
+                item: dict[str, Any] = {"role": "assistant"}
+                if text_content:
+                    item["content"] = text_content
+                else:
+                    item["content"] = None
+                if tool_calls:
+                    item["tool_calls"] = tool_calls
+                openai_msgs.append(item)
+            else:
+                for block in content:
+                    block_type = _block_field(block, "type")
+                    if block_type == "tool_result":
+                        openai_msgs.append(
+                            {
+                                "role": "tool",
+                                "tool_call_id": _block_field(block, "tool_use_id"),
+                                "content": _block_field(block, "content"),
+                            }
+                        )
+                    else:
+                        text = _block_field(block, "text")
+                        if text:
+                            openai_msgs.append({"role": "user", "content": text})
+    return openai_msgs
+
+
+def _call_openai_compat(
+    client: Any,
+    model: str,
+    system: str,
+    tools: tuple[Tool, ...],
+    messages: list[dict[str, Any]],
+    iteration: int,
+) -> _Response:
+    openai_tools = []
+    for t in tools:
+        openai_tools.append(
+            {
+                "type": "function",
+                "function": {
+                    "name": t.name,
+                    "description": t.description,
+                    "parameters": t.input_schema,
+                },
+            }
+        )
+
+    openai_messages = _to_openai_messages(system, messages)
+
+    payload: dict[str, Any] = {
+        "model": model,
+        "messages": openai_messages,
+        "stream": False,
+    }
+    if openai_tools:
+        payload["tools"] = openai_tools
+
+    try:
+        if hasattr(client, "post"):
+            resp = client.post("/chat/completions", json=payload)
+            resp.raise_for_status()
+            data = resp.json()
+        elif hasattr(client, "chat") and hasattr(client.chat, "completions"):
+            raw = client.chat.completions.create(**payload)
+            data = raw.model_dump()
+        else:
+            raise AgentError(f"Unsupported client type: {type(client)}")
+    except Exception as exc:
+        logger.error("OpenAI-compatible API call failed: %s", exc)
+        raise AgentError(f"OpenAI-compatible API call failed: {exc}") from exc
+
+    choices = data.get("choices") or []
+    if not choices:
+        raise AgentError("OpenAI returned no choices.")
+    choice = choices[0]
+    message_data = choice.get("message") or {}
+    content_text = message_data.get("content") or ""
+    tool_calls_data = message_data.get("tool_calls") or []
+    finish_reason = choice.get("finish_reason")
+
+    blocks: list[Any] = []
+    if content_text:
+        blocks.append(_Block("text", text=content_text))
+
+    has_tool_call = False
+    for idx, tc in enumerate(tool_calls_data):
+        fn = tc.get("function") or {}
+        fn_name = fn.get("name")
+        if not isinstance(fn_name, str):
+            fn_name = ""
+        fn_args_raw = fn.get("arguments") or "{}"
+        if isinstance(fn_args_raw, str):
+            try:
+                fn_args = json.loads(fn_args_raw)
+            except Exception:
+                fn_args = {}
+        else:
+            fn_args = fn_args_raw
+
+        has_tool_call = True
+        tool_id = tc.get("id") or f"call_{fn_name}_{iteration}_{idx}"
+        blocks.append(
+            _Block(
+                "tool_use",
+                id=tool_id,
+                name=fn_name,
+                input=dict(fn_args or {}),
+            )
+        )
+
+    if has_tool_call:
+        stop_reason = "tool_use"
+    elif finish_reason == "length":
+        stop_reason = "max_tokens"
+    else:
+        stop_reason = "end_turn"
+
+    return _Response(stop_reason=stop_reason, content=blocks)
+
+
 # -- main loop -----------------------------------------------------------
 
 
@@ -298,6 +475,17 @@ def run_agent(
         raise AgentError("max_seconds must be positive when set.")
 
     provider = provider or _detect_provider(client, model)
+    if provider == "ollama":
+        provider = "openai"
+
+    if provider == "openai" and model == DEFAULT_MODEL:
+        import os
+
+        if os.environ.get("OLLAMA_HOST"):
+            model = "qwen2.5-coder:7b"
+        else:
+            model = "gpt-4o"
+
     client = _build_client(provider, client)
 
     own_store = store is None
@@ -319,6 +507,8 @@ def run_agent(
             system = _build_system(store, skills_block)
             if provider == "google":
                 response: Any = _call_gemini(client, model, system, tools, messages, iteration)
+            elif provider == "openai":
+                response = _call_openai_compat(client, model, system, tools, messages, iteration)
             else:
                 response = _call_anthropic(
                     client, model, max_tokens, system, tool_schemas, messages

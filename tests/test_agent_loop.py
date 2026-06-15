@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -229,3 +230,141 @@ def test_skills_are_injected_into_system_prompt(
 
     run_agent("x", client=_CapClient(), store=store, provider="anthropic", skills=["demo-skill"])
     assert "ALWAYS DO THE DEMO THING." in captured["system"]
+
+
+class FakeHttpxClient:
+    def __init__(self, response_data: dict) -> None:
+        self.response_data = response_data
+        self.payloads: list = []
+
+    def post(self, url: str, json: dict) -> Any:
+        self.payloads.append((url, json))
+
+        class FakeResponse:
+            def __init__(self, data: dict) -> None:
+                self.data = data
+
+            def raise_for_status(self) -> None:
+                pass
+
+            def json(self) -> dict:
+                return self.data
+
+        return FakeResponse(self.response_data)
+
+
+def test_detect_provider_openai(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.delenv("ANTHROPIC_AUTH_TOKEN", raising=False)
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
+
+    import sakthai.auth
+
+    monkeypatch.setattr(sakthai.auth, "load_claude_cli_token", lambda: None)
+    monkeypatch.setattr(sakthai.auth, "load_gemini_cli_token", lambda: None)
+
+    assert _detect_provider(None, "gpt-4o") == "openai"
+    assert _detect_provider(None, "qwen2.5-coder") == "openai"
+    assert _detect_provider(None, "llama-3") == "openai"
+    assert _detect_provider(None, "deepseek-chat") == "openai"
+    assert _detect_provider(None, "mistral-large") == "openai"
+
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+    assert _detect_provider(None, "some-random-model") == "openai"
+
+
+def test_openai_provider_basic(store: MemoryStore) -> None:
+    response_data = {
+        "choices": [
+            {
+                "message": {
+                    "role": "assistant",
+                    "content": "hello world from openai",
+                },
+                "finish_reason": "stop",
+            }
+        ]
+    }
+    client = FakeHttpxClient(response_data)
+    result = run_agent("hi", client=client, store=store, provider="openai")
+    assert result.text == "hello world from openai"
+    assert result.iterations == 1
+    assert result.stop_reason == "end_turn"
+
+
+def test_openai_provider_tool_use(store: MemoryStore) -> None:
+    first_response = {
+        "choices": [
+            {
+                "message": {
+                    "role": "assistant",
+                    "content": "let's learn a fact",
+                    "tool_calls": [
+                        {
+                            "id": "t1",
+                            "type": "function",
+                            "function": {
+                                "name": "learn",
+                                "arguments": '{"value": "loves python", "kind": "pref"}',
+                            },
+                        }
+                    ],
+                },
+                "finish_reason": "tool_calls",
+            }
+        ]
+    }
+    second_response = {
+        "choices": [
+            {
+                "message": {
+                    "role": "assistant",
+                    "content": "fact saved successfully",
+                },
+                "finish_reason": "stop",
+            }
+        ]
+    }
+
+    class MultiResponseFakeHttpxClient:
+        def __init__(self, responses: list) -> None:
+            self.responses = responses
+            self.calls = 0
+
+        def post(self, url: str, json: dict) -> Any:
+            resp_data = self.responses[self.calls]
+            self.calls += 1
+
+            class FakeResponse:
+                def raise_for_status(self) -> None:
+                    pass
+
+                def json(self) -> dict:
+                    return resp_data
+
+            return FakeResponse()
+
+    client = MultiResponseFakeHttpxClient([first_response, second_response])
+    result = run_agent("save fact", client=client, store=store, provider="openai")
+    assert result.text == "fact saved successfully"
+    assert result.iterations == 2
+    assert [c["name"] for c in result.tool_calls] == ["learn"]
+    assert store.list_facts()[0].value == "loves python"
+
+
+def test_run_agent_loop_tool(store: MemoryStore, monkeypatch: pytest.MonkeyPatch) -> None:
+    import sakthai.agent.loop as loop_mod
+    from sakthai.agent.tools import tool_by_name
+
+    run_agent_loop_tool = tool_by_name("run_agent_loop")
+    assert run_agent_loop_tool is not None
+
+    inner_client = FakeClient([_Resp("end_turn", [_Block(type="text", text="inner loop success")])])
+    monkeypatch.setattr(loop_mod, "_build_client", lambda provider, client: inner_client)
+
+    res = run_agent_loop_tool.handler(
+        {"task": "do something complex", "provider": "anthropic"},
+        store,
+    )
+    assert res == "inner loop success"

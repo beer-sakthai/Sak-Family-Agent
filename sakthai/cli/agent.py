@@ -73,7 +73,7 @@ def _event_emitter(verbose: bool) -> Callable[[str, dict[str, Any]], None]:
 @click.option(
     "--provider",
     "-p",
-    type=click.Choice(["anthropic", "google"]),
+    type=click.Choice(["anthropic", "google", "openai", "ollama"]),
     help="LLM provider backend.",
 )
 @click.option("-v", "--verbose", is_flag=True, help="Stream tool calls as they happen.")

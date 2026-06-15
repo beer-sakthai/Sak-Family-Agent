@@ -102,3 +102,42 @@ def anthropic_credential_source() -> str | None:
     if load_claude_cli_token() is not None:
         return "claude_cli"
     return None
+
+
+def resolve_openai_credentials() -> tuple[str, str]:
+    """Resolve the base URL and API key for OpenAI / Ollama compatible calls.
+
+    Returns:
+        (base_url, api_key)
+
+    Resolves base_url to:
+    1. OPENAI_BASE_URL or OPENAI_API_BASE if set.
+    2. OLLAMA_HOST + "/v1" if OLLAMA_HOST is set.
+    3. Otherwise "https://api.openai.com/v1".
+
+    Resolves api_key to:
+    1. OPENAI_API_KEY if set.
+    2. Otherwise "nokey".
+    """
+    from .config import ollama_host, openai_api_base
+
+    api_base = openai_api_base()
+    if not api_base:
+        if os.environ.get("OLLAMA_HOST"):
+            api_base = f"{ollama_host()}/v1"
+        else:
+            api_base = "https://api.openai.com/v1"
+
+    api_key = os.environ.get("OPENAI_API_KEY") or "nokey"
+    return api_base, api_key
+
+
+def openai_credential_source() -> str | None:
+    """Return a short label for the active OpenAI/Ollama credential, or None."""
+    if os.environ.get("OPENAI_API_KEY"):
+        return "openai_api_key"
+    if os.environ.get("OPENAI_BASE_URL") or os.environ.get("OPENAI_API_BASE"):
+        return "openai_api_base"
+    if os.environ.get("OLLAMA_HOST"):
+        return "ollama_host"
+    return None

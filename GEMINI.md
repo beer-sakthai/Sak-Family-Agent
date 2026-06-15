@@ -35,7 +35,7 @@ sakthai doctor                  # report environment + memory health
 
 | Task | Command |
 |------|---------|
-| Run the agent | `sakthai run "your task" --provider google` |
+| Run the agent | `sakthai run "your task" --provider google\|openai\|ollama` |
 | Save a fact | `sakthai learn "fact" (--kind --key --tag)` |
 | Search memory | `sakthai recall "query"` / `sakthai memory search` |
 | Inspect memory | `sakthai memory show` / `sakthai memory stats` |
@@ -77,3 +77,6 @@ detail: [`docs/architecture.md`](docs/architecture.md) and
 - `SAKTHAI_HOME` — override the `~/.sakthai` root (memory db, sessions, extensions).
 - `SAKTHAI_READ_ALLOW` / `SAKTHAI_SHELL_ALLOW` — widen `read_file` paths / enable `run_command`.
 - `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` — for the `send_telegram_message` tool.
+- `OLLAMA_HOST` — local Ollama server address (defaults to `http://localhost:11434`).
+- `OPENAI_API_BASE` / `OPENAI_BASE_URL` — target gateway URL for OpenAI-compatible models.
+- `OPENAI_API_KEY` — key required by the OpenAI-compatible gateway (defaults to `nokey`).

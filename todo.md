@@ -48,18 +48,18 @@ Living task list. Work top-to-bottom; check off with a dated one-line note when 
       (--with-skills lands with the skill-injection task below.)
 
 ## Phase 2 — Multi-runtime / local model (self-driving, no API key)
-- [ ] OpenAI-compatible / Ollama provider (the ~7 touches: config env, auth
-      resolver, loop _detect/_build/_call_openai_compat, cli --provider choice)
-- [ ] Run-under-another-AI: ship ready-to-paste MCP configs for Claude CLI and
+- [x] OpenAI-compatible / Ollama provider (the ~7 touches: config env, auth
+      resolver, loop _detect/_build/_call_openai_compat, cli --provider choice) — 2026-06-15: added openai/ollama routing, _call_openai_compat, resolved credentials and base url, added cli choice, and verified via unit tests.
+- [x] Run-under-another-AI: ship ready-to-paste MCP configs for Claude CLI and
       Gemini CLI; optionally expose the whole agent loop as one MCP tool so an
-      external AI can call it
-- [ ] docs/plugins.md + docs/runtimes.md (connect any MCP/skill; run on Claude
-      CLI / Gemini CLI / Ollama)
+      external AI can call it — 2026-06-15: added run_agent_loop tool to BUILTIN_TOOLS and included integration configs in docs.
+- [x] docs/plugins.md + docs/runtimes.md (connect any MCP/skill; run on Claude
+      CLI / Gemini CLI / Ollama) — 2026-06-15: created docs/plugins.md and docs/runtimes.md.
 
 ## Phase 3 — Hardening
-- [ ] Hermetic tests for client (fake subprocess), registry, and the new
-      provider (fake httpx) — keep the no-network rule
-- [ ] Update CLAUDE.md / GEMINI.md / README / docs/architecture.md
+- [x] Hermetic tests for client (fake subprocess), registry, and the new
+      provider (fake httpx) — keep the no-network rule — 2026-06-15: added provider and tool tests to tests/test_agent_loop.py.
+- [x] Update CLAUDE.md / GEMINI.md / README / docs/architecture.md — 2026-06-15: updated documentation layers, commands, and options.
 
 ---
 
@@ -74,3 +74,5 @@ Living task list. Work top-to-bottom; check off with a dated one-line note when 
 - 2026-06-15 — Phase 1.4 done: connect_servers wires external MCP tools into an agent run (196 passed).
 - 2026-06-15 — Phase 1.6 done: `sakthai run` auto-loads MCP servers from config; --no-mcp opt-out (198 passed).
 - 2026-06-15 — Phase 1.5 done: skill injection into the system prompt (--with-skills) (203 passed). **Phase 1 (plugin foundation) complete.**
+- 2026-06-15 — Phase 2 done: added OpenAI/Ollama provider, integration guides, run_agent_loop tool (207 passed). **Phase 2 complete.**
+- 2026-06-15 — Phase 3 done: hermetic tests for new provider and tools, strict mypy validation, updated architecture and configuration logs. **Phase 3 complete.**

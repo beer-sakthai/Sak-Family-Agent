@@ -34,7 +34,7 @@ hard-codes a path.
 
 **`auth.py`** — credential resolution. Anthropic chain: `ANTHROPIC_API_KEY` →
 `ANTHROPIC_AUTH_TOKEN` → Claude CLI OAuth token. Google: the Gemini CLI OAuth
-token. Use `resolve_anthropic_client()` rather than constructing a client.
+token. OpenAI/Ollama: `resolve_openai_credentials` resolves to `OPENAI_API_BASE` or `OLLAMA_HOST`. Use `resolve_anthropic_client()` rather than constructing a client.
 
 **`memory/`** — `store.MemoryStore` is the only code that touches SQLite. It
 holds *facts* and *observations*, with search, tagging, dedupe, consolidation,
@@ -47,7 +47,7 @@ close. Backs `sakthai learn`.
 **`agent/`** — `tools.py` defines the tool registry (one schema + handler per
 tool) shared by both the agent loop and the MCP server. `loop.run_agent`
 injects `store.render_prompt_block()` into the system prompt and dispatches tool
-calls against Claude or Gemini. The client and store are injectable for testing.
+calls against Claude, Gemini, OpenAI, or Ollama compatible backends. The client and store are injectable for testing.
 
 **`mcp/server.py`** — a dependency-free JSON-RPC 2.0 stdio server.
 `handle_request` is a pure function, so the protocol is unit-testable without a

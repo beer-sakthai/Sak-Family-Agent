@@ -61,7 +61,7 @@ CLI/MCP → agent loop → tool registry → MemoryStore → SQLite. See
 - **`auth.py`** — credential resolution. Always call `resolve_anthropic_client()`
   rather than constructing a client. Anthropic chain: `ANTHROPIC_API_KEY` →
   `ANTHROPIC_AUTH_TOKEN` → Claude CLI OAuth token. Google uses the Gemini CLI
-  OAuth token.
+  OAuth token. OpenAI/Ollama uses `resolve_openai_credentials` to locate the base URL and API key.
 - **`memory/store.py`** — `MemoryStore` is the **only** code that touches SQLite.
   It holds *facts* and *observations* with search, tagging, dedupe,
   consolidation, stats, and snapshot import/export. Schema changes are additive
@@ -109,3 +109,6 @@ CLI/MCP → agent loop → tool registry → MemoryStore → SQLite. See
 | `SAKTHAI_READ_ALLOW` | Extra paths the `read_file` tool may read |
 | `SAKTHAI_SHELL_ALLOW` | Opt-in flag enabling the `run_command` tool |
 | `TELEGRAM_BOT_TOKEN` / `TELEGRAM_CHAT_ID` | Needed for the `send_telegram_message` tool |
+| `OLLAMA_HOST` | Local Ollama server address (defaults to `http://localhost:11434`) |
+| `OPENAI_API_BASE` / `OPENAI_BASE_URL` | Base URL endpoint for OpenAI-compatible services |
+| `OPENAI_API_KEY` | API key required by the OpenAI-compatible gateway (defaults to `nokey`) |
