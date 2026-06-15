@@ -484,7 +484,7 @@ class MemoryStore:
         values = [r["value"] for r in rows]
         summary = f"Consolidated {len(values)} facts: " + "; ".join(values)
         try:
-            self._conn.execute("BEGIN")
+            self._conn.execute("BEGIN IMMEDIATE")
             self._conn.execute(
                 "INSERT INTO observations (summary, evidence_session_id, weight, "
                 "confidence, created_at) VALUES (?, ?, ?, ?, ?)",
@@ -649,7 +649,7 @@ class MemoryStore:
             _validate_row(row, SNAPSHOT_OBS_FIELDS, "observation")
 
         try:
-            self._conn.execute("BEGIN")
+            self._conn.execute("BEGIN IMMEDIATE")
             if mode == "replace":
                 self._conn.execute("DELETE FROM facts")
                 self._conn.execute("DELETE FROM observations")
