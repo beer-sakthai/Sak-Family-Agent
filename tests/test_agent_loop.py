@@ -590,3 +590,38 @@ def test_anthropic_call_retries_then_succeeds(
     result = run_agent("x", client=client, store=store, provider="anthropic")
     assert result.text == "recovered"
     assert client.messages.calls == 2
+
+
+# ---------- provider construction / credentials validation (Phase 5.4) ----------
+
+
+def test_provider_construction_no_creds_google(
+    monkeypatch: pytest.MonkeyPatch, store: MemoryStore
+) -> None:
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
+    with pytest.raises(AgentError, match="Missing credentials for Google Gemini"):
+        run_agent("hello", store=store, provider="google")
+
+
+def test_provider_construction_no_creds_openai(
+    monkeypatch: pytest.MonkeyPatch, store: MemoryStore
+) -> None:
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.delenv("OPENAI_API_BASE", raising=False)
+    monkeypatch.delenv("OPENAI_BASE_URL", raising=False)
+    monkeypatch.delenv("OLLAMA_HOST", raising=False)
+    with pytest.raises(AgentError, match="No OpenAI credentials found"):
+        run_agent("hello", store=store, provider="openai")
+
+
+def test_provider_construction_no_creds_anthropic(
+    monkeypatch: pytest.MonkeyPatch, store: MemoryStore
+) -> None:
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.delenv("ANTHROPIC_AUTH_TOKEN", raising=False)
+    import sakthai.auth
+
+    monkeypatch.setattr(sakthai.auth, "load_claude_cli_token", lambda: None)
+    with pytest.raises(AgentError, match="No Anthropic credentials found"):
+        run_agent("hello", store=store, provider="anthropic")

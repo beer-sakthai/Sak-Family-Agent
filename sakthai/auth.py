@@ -121,6 +121,12 @@ def resolve_openai_credentials() -> tuple[str, str]:
     """
     from .config import ollama_host, openai_api_base
 
+    if openai_credential_source() is None:
+        raise AuthError(
+            "No OpenAI credentials found. Please set OPENAI_API_KEY, "
+            "OPENAI_BASE_URL, or OLLAMA_HOST."
+        )
+
     api_base = openai_api_base()
     if not api_base:
         if os.environ.get("OLLAMA_HOST"):

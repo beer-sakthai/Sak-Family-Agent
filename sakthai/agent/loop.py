@@ -242,15 +242,24 @@ def _build_client(provider: str, client: Any | None) -> Any:
 
         from google import genai
 
-        return genai.Client(
-            api_key=os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
-        )
+        api_key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
+        if not api_key:
+            raise AgentError(
+                "Missing credentials for Google Gemini (GEMINI_API_KEY or GOOGLE_API_KEY must be set)."
+            )
+        try:
+            return genai.Client(api_key=api_key)
+        except Exception as exc:
+            raise AgentError(f"Failed to initialize Google Gemini client: {exc}") from exc
     if provider == "openai":
         import httpx
 
         from ..auth import resolve_openai_credentials
 
-        api_base, api_key = resolve_openai_credentials()
+        try:
+            api_base, api_key = resolve_openai_credentials()
+        except AuthError as exc:
+            raise AgentError(str(exc)) from exc
         return httpx.Client(
             base_url=api_base,
             headers={

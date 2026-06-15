@@ -68,9 +68,7 @@ bandit → pytest) → commit → push → **wait for CI green** → next.
 - [x] 5.1 — API retry with exponential backoff — 2026-06-15
 - [x] 5.2 — Token usage tracking — 2026-06-15
 - [x] 5.3 — Session management CLI — 2026-06-15
-- [ ] 5.4 — Robust provider construction: wrap _build_client so missing creds
-      raise clean AgentError, not raw tracebacks. Test forced-provider-no-creds.
-      (sakthai/agent/loop.py, tests/test_agent_loop.py)
+- [x] 5.4 — Robust provider construction — 2026-06-15
 - [ ] 5.5 — Safe memory backup: backup_memory() raises clear error when no DB
       exists; CLI surfaces as ClickException. Test the no-DB path.
       (sakthai/memory/backup.py, sakthai/cli/memory.py, tests/test_memory_aux.py)
