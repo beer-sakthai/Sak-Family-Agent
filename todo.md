@@ -122,6 +122,14 @@ Goal: session history + token charts in the Streamlit dashboard.
 - [ ] Google ADK / Vertex AI cloud agent port ← CON #5
 - [ ] Multi-user / multi-tenant database isolation ← CON #7
 
+## Phase 10 — Addressing Trade-offs & Run Readiness
+Goal: Make the agent fully runnable and resolve past architecture cons. One task at a time, check off when done.
+
+- [ ] 10.1 — Documentation & Clarification: Update README to clarify v1 deprecation and proprietary license terms.
+- [ ] 10.2 — Fast-Track Mode: Add `--fast` flag to bypass the rigid 6-stage cycle for simple runs.
+- [ ] 10.3 — Remote Memory Sync: Implement `sakthai memory sync` for cloud or git backups to reduce local state dependency.
+- [ ] 10.4 — Basic Cloud Runtime Stubs: Migrate Google ADK / Vertex AI skeleton into v2 for future deployment.
+
 ---
 
 ## Log

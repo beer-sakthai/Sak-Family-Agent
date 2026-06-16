@@ -1,11 +1,13 @@
-# SakThai Agent
+# SakThai Agent (v2)
 
 A personal, learning agent with persistent memory. SakThai gives a Claude (or
 Gemini) agent a durable SQLite memory it can write to and read from across
 sessions, plus a set of tools and an MCP server so the same memory is reachable
 from other agent runtimes.
 
-This is a clean, from-scratch implementation of the core engine.
+> **Note on Versioning & License:** 
+> This repository (`sakthai-agent-v2`) is the active, clean from-scratch rewrite of the core engine. The original `SakThai-Agent` (v1) blueprint is now deprecated and locked. 
+> Please note that this code is provided under a **Proprietary — View Only** license. You may read the source code to learn how it works, but you may not use, copy, modify, or redistribute it.
 
 ## What's here
 
