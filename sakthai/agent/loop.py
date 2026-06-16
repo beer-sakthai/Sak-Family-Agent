@@ -81,8 +81,12 @@ class AgentResult:
 # -- prompt + tool execution --------------------------------------------
 
 
-def _build_system(store: MemoryStore, skills_block: str = "") -> str:
+def _build_system(store: MemoryStore, skills_block: str = "", fast: bool = False) -> str:
     parts = [SYSTEM_BASE]
+    if fast:
+        parts.append(
+            "FAST-TRACK MODE: Execute the user's task directly and quickly without enforcing the 6-stage cycle (Dream/Hope/Care/Joy/Trust/Growth)."
+        )
     memory = store.render_prompt_block()
     if memory:
         parts.append(memory)
@@ -153,6 +157,7 @@ def run_agent(
     on_token: Callable[[str], None] | None = None,
     provider: str | None = None,
     skills: Sequence[str] = (),
+    fast: bool = False,
 ) -> AgentResult:
     """Run one task to completion against Claude, Gemini, or an OpenAI endpoint.
 
@@ -201,7 +206,7 @@ def run_agent(
                 raise AgentError(f"Agent time budget exhausted (max_seconds={max_seconds}).")
             logger.debug("Agent iteration %d/%d", iteration, max_iterations)
 
-            system = _build_system(store, skills_block)
+            system = _build_system(store, skills_block, fast=fast)
             if provider == "google":
                 response: Any = _call_gemini(
                     client, model, system, tools, messages, iteration, on_token=on_token

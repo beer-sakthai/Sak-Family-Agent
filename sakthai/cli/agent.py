@@ -110,6 +110,11 @@ def _event_emitter(verbose: bool) -> Callable[[str, dict[str, Any]], None]:
     is_flag=True,
     help="Stream the assistant's reply to stdout as it is generated.",
 )
+@click.option(
+    "--fast",
+    is_flag=True,
+    help="Fast-track mode: bypass the 6-stage cycle for simple runs.",
+)
 def run(
     task: str,
     model: str,
@@ -122,6 +127,7 @@ def run(
     with_skills: tuple[str, ...],
     dry_run: bool,
     stream: bool,
+    fast: bool,
 ) -> None:
     """Run TASK through the standalone SakThai agent.
 
@@ -160,6 +166,7 @@ def run(
                 provider=provider,
                 tools=tools,
                 skills=list(with_skills),
+                fast=fast,
             )
     except AgentError as exc:
         raise click.ClickException(str(exc)) from exc
