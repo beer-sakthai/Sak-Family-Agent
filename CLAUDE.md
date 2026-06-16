@@ -92,9 +92,7 @@ CLI/MCP → agent loop → tool registry → MemoryStore → SQLite. See
 - **`skills.py` + `skills/` + `library/`** — parse/catalog/validate `SKILL.md`
   files; `library/` is the curated skill set, grouped by category.
 - **`dashboard/`** — `data.py` builds a testable, UI-free snapshot of the store;
-  `app.py` renders it with Streamlit. `web-dashboard/` is a Vite + React static
-  front-end reading the JSON snapshot, published to GitHub Pages via
-  `.github/workflows/pages.yml`.
+  `app.py` renders it with Streamlit.
 
 ## Conventions specific to this repo
 
@@ -106,9 +104,8 @@ CLI/MCP → agent loop → tool registry → MemoryStore → SQLite. See
 - **Sandbox defaults are deliberate.** `read_file` is restricted to cwd +
   `~/.sakthai` + `SAKTHAI_READ_ALLOW`; `run_command` is **opt-in** via
   `SAKTHAI_SHELL_ALLOW`. Don't widen these without reason.
-- **Not linted / not type-checked:** ruff excludes `library/`, `scripts/`, and
-  `web-dashboard/`; mypy only covers `sakthai/`. Don't "fix" lint/types in those
-  trees (`web-dashboard/` has its own TypeScript build).
+- **Not linted / not type-checked:** ruff excludes `library/` and `scripts/`;
+  mypy only covers `sakthai/`. Don't "fix" lint/types in those trees.
 - **mypy is `strict`** over `sakthai/` (the Streamlit `dashboard/app.py` is the
   one loosened module). Keep new code strict-clean.
 
