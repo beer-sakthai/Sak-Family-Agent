@@ -52,9 +52,7 @@ def sync_memory_to_git(remote: str | None = None) -> str:
     if not status.stdout.strip():
         return "No changes to sync."
 
-    subprocess.run(
-        ["git", "commit", "-m", "chore: memory sync"], cwd=home, check=True, capture_output=True
-    )
+    subprocess.run(["git", "-c", "user.name=SakThai Agent", "-c", "user.email=agent@sakthai.local", "commit", "-m", "chore: memory sync"], cwd=home, check=True, capture_output=True)
 
     if remote:
         subprocess.run(
