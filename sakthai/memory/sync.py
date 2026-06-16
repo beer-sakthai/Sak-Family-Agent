@@ -96,8 +96,16 @@ def sync_memory_to_git(remote: str | None = None) -> str:
         capture_output=True,
     )
 
+    # Scope the change check to the synced artifacts: the live ``memory.db``
+    # (and its WAL/SHM siblings) sit untracked in the same directory, so an
+    # unscoped ``git status`` would always look dirty and push us into an empty
+    # commit that aborts with a non-zero exit.
     status = subprocess.run(
-        ["git", "status", "--porcelain"], cwd=home, check=True, capture_output=True, text=True
+        ["git", "status", "--porcelain", "--", "facts.jsonl", "observations.jsonl"],
+        cwd=home,
+        check=True,
+        capture_output=True,
+        text=True,
     )
     if not status.stdout.strip():
         return "No changes to sync."
@@ -174,7 +182,11 @@ def _handle_git_conflict_and_push(home: Path, remote: str) -> str:
     )
 
     status = subprocess.run(
-        ["git", "status", "--porcelain"], cwd=home, check=True, capture_output=True, text=True
+        ["git", "status", "--porcelain", "--", "facts.jsonl", "observations.jsonl"],
+        cwd=home,
+        check=True,
+        capture_output=True,
+        text=True,
     )
     if not status.stdout.strip():
         return f"Merged remote {remote} but no changes to push."
