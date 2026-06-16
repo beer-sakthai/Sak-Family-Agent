@@ -127,12 +127,13 @@ Goal: Make the agent fully runnable and resolve past architecture cons. One task
 
 - [x] 10.1 — Documentation & Clarification: Update README to clarify v1 deprecation and proprietary license terms.
 - [x] 10.2 — Fast-Track Mode: Add `--fast` flag to bypass the rigid 6-stage cycle for simple runs.
-- [ ] 10.3 — Remote Memory Sync: Implement `sakthai memory sync` for cloud or git backups to reduce local state dependency.
+- [x] 10.3 — Remote Memory Sync: Implement `sakthai memory sync` for cloud or git backups to reduce local state dependency.
 - [ ] 10.4 — Basic Cloud Runtime Stubs: Migrate Google ADK / Vertex AI skeleton into v2 for future deployment.
 
 ---
 
 ## Log
+- 2026-06-16 — Phase 10.3 done: implemented `sakthai memory sync` for pushing/pulling memory to local or cloud (gs://, s3://).
 - 2026-06-16 — Phase 10.2 done: implemented --fast mode to bypass cycle overhead.
 - 2026-06-16 — Phase 10.1 done: clarified v1 deprecation and license in README.
 - 2026-06-15 — todo.md created and committed; roadmap approved.
