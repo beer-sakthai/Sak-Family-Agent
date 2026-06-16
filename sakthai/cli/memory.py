@@ -317,13 +317,18 @@ def memory_deduplicate(dry_run: bool, verbose: bool) -> None:
 
 @memory.command("sync")
 @click.option("--remote", default=None, help="Git remote URL to push the snapshot to.")
-def memory_sync(remote: str | None) -> None:
-    """Synchronize memory to a remote Git repository."""
-    from ..memory.sync import sync_memory_to_git
+@click.option("--http-url", default=None, help="HTTP URL to POST the snapshot to (fallback mode).")
+@click.option("--http-key", default=None, help="Bearer token for HTTP authentication.")
+def memory_sync(remote: str | None, http_url: str | None, http_key: str | None) -> None:
+    """Synchronize memory to a remote Git repository or HTTP endpoint."""
+    from ..memory.sync import sync_memory_to_git, sync_memory_via_http
 
     try:
         click.echo("Syncing memory...")
-        result = sync_memory_to_git(remote)
+        if http_url:
+            result = sync_memory_via_http(http_url, api_key=http_key)
+        else:
+            result = sync_memory_to_git(remote)
         click.echo(result)
     except Exception as exc:
         raise click.ClickException(f"Sync failed: {exc}") from exc

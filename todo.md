@@ -135,12 +135,13 @@ Goal: Resolve cons in the Git sync implementation and prepare for standalone age
 
 - [x] 11.1 — Incremental JSON Exports: Split `snapshot.json` into `facts.jsonl` and `observations.jsonl` to reduce Git bloat.
 - [x] 11.2 — Auto-Merge Strategy: Intercept Git conflicts on JSONL files and merge by `id`.
-- [ ] 11.3 — Zero-Dependency HTTP Fallback: Provide a simple HTTP POST export fallback for syncing without local Git.
+- [x] 11.3 — Zero-Dependency HTTP Fallback: Provide a simple HTTP POST export fallback for syncing without local Git.
 - [ ] 11.4 — SQLite Replication Exploration: Evaluate wrapper for Turso/Litestream true DB replication.
 
 ---
 
 ## Log
+- 2026-06-16 — Phase 11.3 done: added `--http-url` zero-dependency fallback to `sakthai memory sync`.
 - 2026-06-16 — Phase 11.2 done: implemented auto-merge strategy utilizing local sqlite DB to resolve git JSONL conflicts seamlessly.
 - 2026-06-16 — Phase 11.1 done: updated memory sync to dump incremental `facts.jsonl` and `observations.jsonl`.
 - 2026-06-16 — Phase 10.3 done: implemented `sakthai memory sync` with Git backup and added `sakthai-memory-admin` skill.
