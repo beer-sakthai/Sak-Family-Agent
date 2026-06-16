@@ -42,6 +42,7 @@ def test_ollama_live_smoke(tmp_path: Path) -> None:
             "Reply with exactly the single word: pong",
             store=store,
             provider="ollama",
+            model="llama3.2",
             max_iterations=2,
         )
     finally:
