@@ -21,7 +21,7 @@ function esc(value) {
 
 async function loadData() {
   try {
-    const res = await fetch("/data.json");
+    const res = await fetch(import.meta.env.BASE_URL + "data.json");
     if (!res.ok) throw new Error("HTTP " + res.status);
     DATA = await res.json();
     console.log("Loaded live snapshot.");
