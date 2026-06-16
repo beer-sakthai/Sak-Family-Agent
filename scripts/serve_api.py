@@ -20,7 +20,7 @@ from typing import Any
 from urllib.parse import urlparse
 
 
-WEB_DIR = (Path(__file__).resolve().parent.parent / "web").resolve()
+WEB_DIR = (Path(__file__).resolve().parent.parent / "dashboard" / "dist").resolve()
 _HOST = "0.0.0.0"
 _PORT = 3002
 

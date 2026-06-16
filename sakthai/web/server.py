@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 _DEFAULT_HOST = "0.0.0.0"  # nosec B104
 _DEFAULT_PORT = 3001
-_STATIC_ROOT = (Path(__file__).resolve().parent.parent / "web").resolve()
+_STATIC_ROOT = (Path(__file__).resolve().parent.parent / "dashboard" / "dist").resolve()
 
 
 def _dashboard_data(days: int = 30) -> dict[str, Any]:
