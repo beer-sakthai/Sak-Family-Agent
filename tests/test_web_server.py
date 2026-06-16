@@ -38,9 +38,7 @@ def api_base() -> str:
     """Start a one-shot HTTPServer on a random port; yield its base URL."""
     srv = HTTPServer(("127.0.0.1", 0), _Handler)
     _, port = srv.server_address
-    thread = threading.Thread(
-        target=srv.serve_forever, kwargs={"poll_interval": 0.01}, daemon=True
-    )
+    thread = threading.Thread(target=srv.serve_forever, kwargs={"poll_interval": 0.01}, daemon=True)
     thread.start()
     yield f"http://127.0.0.1:{port}"
     srv.shutdown()
@@ -80,7 +78,9 @@ class TestDashboardData:
         assert isinstance(data, dict)
 
     def test_demo_stub_has_growth_key(self) -> None:
-        with patch("sakthai.dashboard.data.collect_dashboard_data", side_effect=RuntimeError("no db")):
+        with patch(
+            "sakthai.dashboard.data.collect_dashboard_data", side_effect=RuntimeError("no db")
+        ):
             data = _dashboard_data()
         assert "growth" in data
         assert data.get("source") == "demo"
@@ -103,17 +103,13 @@ class TestEcosystemStatus:
         status = _ecosystem_status()
         assert status["composio_mcp"] == "not_configured"
 
-    def test_huggingface_ready_when_both_vars_set(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_huggingface_ready_when_both_vars_set(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setenv("HUGGINGFACE_USERNAME", "testuser")
         monkeypatch.setenv("HF_TOKEN", "test-token")
         status = _ecosystem_status()
         assert status["huggingface"] == "ready"
 
-    def test_huggingface_not_ready_when_vars_missing(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_huggingface_not_ready_when_vars_missing(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.delenv("HUGGINGFACE_USERNAME", raising=False)
         monkeypatch.delenv("HF_TOKEN", raising=False)
         status = _ecosystem_status()

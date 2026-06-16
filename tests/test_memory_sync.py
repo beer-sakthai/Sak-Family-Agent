@@ -78,11 +78,17 @@ class TestSyncMemoryViaHttp:
         assert isinstance(result, str) and result
 
     def test_server_error_raises(self, sakthai_home: Path) -> None:
-        with patch("urllib.request.urlopen", return_value=_http_response(500, b"error")), pytest.raises(RuntimeError):
+        with (
+            patch("urllib.request.urlopen", return_value=_http_response(500, b"error")),
+            pytest.raises(RuntimeError),
+        ):
             sync_memory_via_http("http://example.com/sync")
 
     def test_bad_request_raises(self, sakthai_home: Path) -> None:
-        with patch("urllib.request.urlopen", return_value=_http_response(400, b"bad request")), pytest.raises(RuntimeError):
+        with (
+            patch("urllib.request.urlopen", return_value=_http_response(400, b"bad request")),
+            pytest.raises(RuntimeError),
+        ):
             sync_memory_via_http("http://example.com/sync")
 
     def test_sends_bearer_api_key(self, sakthai_home: Path) -> None:
@@ -140,7 +146,10 @@ class TestSyncMemoryViaHttp:
         assert captured[0].get_header("Content-type") == "application/json"
 
     def test_network_error_raises_runtime_error(self, sakthai_home: Path) -> None:
-        with patch("urllib.request.urlopen", side_effect=OSError("connection refused")), pytest.raises(RuntimeError, match="Failed to sync"):
+        with (
+            patch("urllib.request.urlopen", side_effect=OSError("connection refused")),
+            pytest.raises(RuntimeError, match="Failed to sync"),
+        ):
             sync_memory_via_http("http://example.com/sync")
 
     def test_https_url_accepted(self, sakthai_home: Path) -> None:

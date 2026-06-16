@@ -54,9 +54,7 @@ class TestDoctorCommand:
         monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
         monkeypatch.delenv("ANTHROPIC_AUTH_TOKEN", raising=False)
         with monkeypatch.context() as mp:
-            mp.setattr(
-                "sakthai.auth.anthropic_credential_source", lambda: None, raising=False
-            )
+            mp.setattr("sakthai.auth.anthropic_credential_source", lambda: None, raising=False)
             result = runner.invoke(main, ["doctor"])
         assert result.exit_code == 0
         assert "none found" in result.output.lower() or "Anthropic" in result.output
@@ -65,9 +63,7 @@ class TestDoctorCommand:
         result = runner.invoke(main, ["doctor"])
         assert "Memory" in result.output or "memory" in result.output.lower()
 
-    def test_shows_fact_count_when_db_exists(
-        self, runner: CliRunner, sakthai_home: Path
-    ) -> None:
+    def test_shows_fact_count_when_db_exists(self, runner: CliRunner, sakthai_home: Path) -> None:
         db = sakthai_home / "memory.db"
         with MemoryStore(db) as store:
             store.add_fact("doctor test fact")
@@ -76,9 +72,7 @@ class TestDoctorCommand:
         assert result.exit_code == 0
         assert "facts" in result.output.lower() or "1" in result.output
 
-    def test_ready_line_shown(
-        self, runner: CliRunner, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_ready_line_shown(self, runner: CliRunner, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-test-key")
         result = runner.invoke(main, ["doctor"])
         assert "ready" in result.output.lower() or "SakThai" in result.output
