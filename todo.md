@@ -125,14 +125,16 @@ Goal: session history + token charts in the Streamlit dashboard.
 ## Phase 10 — Addressing Trade-offs & Run Readiness
 Goal: Make the agent fully runnable and resolve past architecture cons. One task at a time, check off when done.
 
-- [ ] 10.1 — Documentation & Clarification: Update README to clarify v1 deprecation and proprietary license terms.
-- [ ] 10.2 — Fast-Track Mode: Add `--fast` flag to bypass the rigid 6-stage cycle for simple runs.
+- [x] 10.1 — Documentation & Clarification: Update README to clarify v1 deprecation and proprietary license terms.
+- [x] 10.2 — Fast-Track Mode: Add `--fast` flag to bypass the rigid 6-stage cycle for simple runs.
 - [ ] 10.3 — Remote Memory Sync: Implement `sakthai memory sync` for cloud or git backups to reduce local state dependency.
 - [ ] 10.4 — Basic Cloud Runtime Stubs: Migrate Google ADK / Vertex AI skeleton into v2 for future deployment.
 
 ---
 
 ## Log
+- 2026-06-16 — Phase 10.2 done: implemented --fast mode to bypass cycle overhead.
+- 2026-06-16 — Phase 10.1 done: clarified v1 deprecation and license in README.
 - 2026-06-15 — todo.md created and committed; roadmap approved.
 - 2026-06-15 — Phase 0.1 done: robust CLI test assertions (159 tests green).
 - 2026-06-15 — Phase 0.2 done: dashboard/app.py smoke test (164 with extra; skips without).
