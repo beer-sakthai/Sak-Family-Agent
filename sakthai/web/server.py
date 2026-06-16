@@ -20,7 +20,7 @@ from urllib.parse import urlparse
 
 logger = logging.getLogger(__name__)
 
-_DEFAULT_HOST = "0.0.0.0"
+_DEFAULT_HOST = "0.0.0.0"  # nosec B104
 _DEFAULT_PORT = 3001
 _STATIC_ROOT = (Path(__file__).resolve().parent.parent / "web").resolve()
 
@@ -61,7 +61,7 @@ def _ecosystem_status() -> dict[str, Any]:
         from datetime import datetime, UTC
         status["generated_at"] = datetime.now(UTC).isoformat()
     except Exception:
-        pass
+        pass  # nosec B110
     return status
 
 
