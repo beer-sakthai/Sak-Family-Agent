@@ -880,7 +880,9 @@ def _install_fake_genai(monkeypatch: pytest.MonkeyPatch) -> object:
             pass
 
     class _FunctionDeclaration:
-        def __init__(self, name: str = "", description: str = "", parameters: object = None) -> None:
+        def __init__(
+            self, name: str = "", description: str = "", parameters: object = None
+        ) -> None:
             pass
 
     class _GenerateContentConfig:
@@ -1008,7 +1010,14 @@ def test_call_gemini_no_candidates_raises(monkeypatch: pytest.MonkeyPatch) -> No
                 return _FakeResponse()
 
     with pytest.raises(AgentError, match="no candidates"):
-        call_gemini(_FakeClient(), "gemini-2.0-flash", "sys", BUILTIN_TOOLS, [{"role": "user", "content": "x"}], 1)
+        call_gemini(
+            _FakeClient(),
+            "gemini-2.0-flash",
+            "sys",
+            BUILTIN_TOOLS,
+            [{"role": "user", "content": "x"}],
+            1,
+        )
 
 
 def test_gemini_loop_dispatches_via_run_agent(

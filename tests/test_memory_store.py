@@ -264,6 +264,6 @@ def test_encode_tags_invalid_type_raises() -> None:
 def test_decode_tags_tolerates_junk() -> None:
     from sakthai.memory.store import _decode_tags
 
-    assert _decode_tags("{not valid}") == []       # invalid JSON
-    assert _decode_tags('{"k": "v"}') == []        # JSON object, not list
-    assert _decode_tags(None) == []                # None input
+    assert _decode_tags("{not valid}") == []  # invalid JSON
+    assert _decode_tags('{"k": "v"}') == []  # JSON object, not list
+    assert _decode_tags(None) == []  # None input

@@ -52,7 +52,9 @@ def test_export_dashboard_json(tmp_path: Path) -> None:
     assert payload["kpis"]["total_facts"] == 1
 
 
-def test_unreadable_store_falls_back_to_demo(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_unreadable_store_falls_back_to_demo(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     import sakthai.memory.store as store_mod
 
     def _boom(*_a: object, **_kw: object) -> None:
