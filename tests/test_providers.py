@@ -6,18 +6,16 @@ isolation — no real network traffic, no credentials required.
 
 from __future__ import annotations
 
+import importlib
 import json
 import sys
-from contextlib import contextmanager
-from io import StringIO
 from types import SimpleNamespace
 from typing import Any
-from unittest.mock import MagicMock, patch
-
-import httpx
-import pytest
+from unittest.mock import MagicMock
 
 import anthropic
+import httpx
+import pytest
 
 from sakthai.agent.providers.base import (
     RETRYABLE_STATUS,
@@ -29,7 +27,6 @@ from sakthai.agent.providers.base import (
     is_retryable,
     with_retry,
 )
-
 
 # ---------------------------------------------------------------------------
 # base.py — Block / Response
@@ -395,7 +392,6 @@ class TestToGeminiContents:
 
     def _convert(self, messages: list[dict[str, Any]]) -> list[Any]:
         # Re-import after patching to pick up the mocked module
-        import importlib
         import sakthai.agent.providers.gemini_provider as mod
         importlib.reload(mod)
         return mod.to_gemini_contents(messages)
@@ -483,7 +479,6 @@ class TestCallGemini:
         return SimpleNamespace(content=content, finish_reason=finish_reason)
 
     def _call(self, candidates: list[Any]) -> Response:
-        import importlib
         import sakthai.agent.providers.gemini_provider as mod
         importlib.reload(mod)
 
@@ -508,7 +503,6 @@ class TestCallGemini:
         assert resp.content[0].text == "hello"
 
     def test_no_candidates_raises_agent_error(self) -> None:
-        import importlib
         import sakthai.agent.providers.gemini_provider as mod
         importlib.reload(mod)
 
@@ -532,7 +526,6 @@ class TestCallGemini:
         assert resp.stop_reason == "max_tokens"
 
     def test_api_failure_raises_agent_error(self) -> None:
-        import importlib
         import sakthai.agent.providers.gemini_provider as mod
         importlib.reload(mod)
 
@@ -543,7 +536,6 @@ class TestCallGemini:
             mod.call_gemini(client, "gemini-pro", "sys", (), [], iteration=0)
 
     def test_generated_tool_use_id_contains_iteration(self) -> None:
-        import importlib
         import sakthai.agent.providers.gemini_provider as mod
         importlib.reload(mod)
 
