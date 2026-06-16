@@ -46,6 +46,27 @@ mypy sakthai
 bandit -c pyproject.toml -r sakthai
 ```
 
+### Git worktree workflow
+
+For parallel development or when another agent may be committing to the same branch, use git worktrees to isolate checkouts:
+
+```bash
+# Create a new worktree for a feature branch
+git worktree add ../sakthai-agent-v2-feature feature-name
+
+# Switch to the worktree
+cd ../sakthai-agent-v2-feature
+
+# Work normally (isolated checkout, separate git index)
+# Commit and push independently
+
+# Clean up when done
+cd ../sakthai-agent-v2
+git worktree remove ../sakthai-agent-v2-feature
+```
+
+This prevents conflicts when multiple agents or developers commit to the same checkout simultaneously.
+
 ## Repository layout
 
 ```
