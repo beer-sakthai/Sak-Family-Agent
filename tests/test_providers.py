@@ -61,12 +61,13 @@ class TestResponse:
         assert r.content == []
         assert r.usage["input_tokens"] == 0
         assert r.usage["output_tokens"] == 0
-        assert r.usage["total_tokens"] == 0
 
     def test_usage_forwarded(self) -> None:
         r = Response(
             "tool_use", [], usage={"input_tokens": 10, "output_tokens": 5, "total_tokens": 15}
         )
+        assert r.usage["input_tokens"] == 10
+        assert r.usage["output_tokens"] == 5
         assert r.usage["total_tokens"] == 15
 
 
