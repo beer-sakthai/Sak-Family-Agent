@@ -313,3 +313,17 @@ def memory_deduplicate(dry_run: bool, verbose: bool) -> None:
                 click.echo(f"  - id {o.id} ({o.summary[:60]}) [w={o.weight}, c={o.confidence}]")
     else:
         click.echo("No duplicate observations found.")
+
+
+@memory.command("sync")
+@click.option("--remote", default=None, help="Git remote URL to push the snapshot to.")
+def memory_sync(remote: str | None) -> None:
+    """Synchronize memory to a remote Git repository."""
+    from ..memory.sync import sync_memory_to_git
+
+    try:
+        click.echo("Syncing memory...")
+        result = sync_memory_to_git(remote)
+        click.echo(result)
+    except Exception as exc:
+        raise click.ClickException(f"Sync failed: {exc}") from exc
