@@ -138,9 +138,50 @@ Goal: Resolve cons in the Git sync implementation and prepare for standalone age
 - [x] 11.3 — Zero-Dependency HTTP Fallback: Provide a simple HTTP POST export fallback for syncing without local Git.
 - [x] 11.4 — SQLite Replication Exploration: Evaluate wrapper for Turso/Litestream true DB replication.
 
+## Phase 12 — OG → v2 information parity (audit + backfill)
+Goal: nothing of value in the locked OG blueprint is lost in the rewrite.
+Re-derive (never copy) each item, or consciously decline it. Process with
+caution — v2 is intentionally curated, so triage before bulk-adding.
+
+### 12.1 — Identity & governance docs (high value, low risk)
+- [ ] Re-derive SAKTHAI.md (project identity) for v2
+- [ ] Add CONTRIBUTING.md, SECURITY.md, CODE_OF_CONDUCT.md (v2-accurate: uv, no app/ bundle)
+- [ ] Decide on WORKSPACE.md (workspace notes) — re-derive or fold into README/docs
+- [ ] CHANGELOG.md — generate from v2 history via release tooling, do NOT copy OG
+- [ ] DASHBOARD_IMPROVEMENTS.md — fold still-relevant notes into docs/, else drop
+
+### 12.2 — Doc / data info files
+- [ ] Port docs/devtools_ai_capabilities.md if still relevant to v2
+- [ ] Re-derive data/hf_dataset_readme.md (HF dataset card) — only if v2 ships a dataset
+
+### 12.3 — Sakthai-own skills backfill (skills/  — OG 111 vs v2 8)
+- [ ] Triage the ~80 OG sakthai-* skills absent from v2 (agent-*, learning-*,
+      llm-*, memory-*, automation-*, dashboard-*, web-*, soul-engine,
+      core-foundations, …); re-derive the keepers into v2 skills/ or library/
+- [ ] Decide on the ~18 GCP/data skills + media/ (keep in v2 scope or drop)
+
+### 12.4 — Library corpus triage (library/ — OG 357 files / ~26 categories vs v2 ~20)
+- [ ] Per-category keep/drop decision (apple, autonomous-ai-agents, composio,
+      creative, data-science, devops, dogfood, email, github, media, mlops,
+      note-taking, productivity, red-teaming, research, security, smart-home,
+      social-media, software-development, web, yuanbao)
+- [ ] Re-derive kept skills into v2's curated library/ grouping (no verbatim copy)
+- [ ] CAUTION: conflicts with v2 curated design — record rationale for each drop
+
+### 12.5 — Code / feature module gaps (roadmap, evaluate vs decline)
+- [ ] hf.py (Hugging Face hub) — wanted in v2?
+- [ ] sandbox.py (Docker sandbox for `run --sandbox`)
+- [ ] gemini_plugin.py + cli/gemini.py (Gemini CLI plugin)
+- [ ] deployment/terraform/ IaC  •  app/ ADK bundle (overlaps Phase 9)
+- [ ] web/ immersive static gallery  •  eval/ harness + datasets
+- [ ] colab_training/ + scripts/finetune_sakthai.py (LoRA)  •  data/hermes-dataset
+- [ ] Explicitly NOT porting: artifacts/junk (reports, logs, pngs, scratch/, benchmarks)
+
 ---
 
 ## Log
+- 2026-06-16 — Phase 12 added: OG→v2 information-parity audit (identity/governance
+  docs, skills 111→8, library 357→~20, code/feature gaps) recorded for triage.
 - 2026-06-16 — Phase 11.4 done: documented Turso/Litestream architectural evaluation in docs/replication.md.
 - 2026-06-16 — Phase 11.3 done: added `--http-url` zero-dependency fallback to `sakthai memory sync`.
 - 2026-06-16 — Phase 11.2 done: implemented auto-merge strategy utilizing local sqlite DB to resolve git JSONL conflicts seamlessly.
