@@ -8,7 +8,19 @@ on:
   workflow_dispatch:
 
 jobs:
+  secret-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Detect secrets (gitleaks)
+        uses: gitleaks/gitleaks-action@v2
+        with:
+          config-path: .gitleaks.toml
+          fail: true
+        continue-on-error: false
+
   test:
+    needs: secret-scan
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
