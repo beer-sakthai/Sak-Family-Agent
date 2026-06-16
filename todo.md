@@ -133,7 +133,7 @@ Goal: Make the agent fully runnable and resolve past architecture cons. One task
 ## Phase 11 — Robust Memory Sync & Scalability
 Goal: Resolve cons in the Git sync implementation and prepare for standalone agent resilience.
 
-- [ ] 11.1 — Incremental JSON Exports: Split `snapshot.json` into `facts.jsonl` and `observations.jsonl` to reduce Git bloat.
+- [x] 11.1 — Incremental JSON Exports: Split `snapshot.json` into `facts.jsonl` and `observations.jsonl` to reduce Git bloat.
 - [ ] 11.2 — Auto-Merge Strategy: Intercept Git conflicts on JSONL files and merge by `id`.
 - [ ] 11.3 — Zero-Dependency HTTP Fallback: Provide a simple HTTP POST export fallback for syncing without local Git.
 - [ ] 11.4 — SQLite Replication Exploration: Evaluate wrapper for Turso/Litestream true DB replication.
@@ -141,6 +141,7 @@ Goal: Resolve cons in the Git sync implementation and prepare for standalone age
 ---
 
 ## Log
+- 2026-06-16 — Phase 11.1 done: updated memory sync to dump incremental `facts.jsonl` and `observations.jsonl`.
 - 2026-06-16 — Phase 10.3 done: implemented `sakthai memory sync` with Git backup and added `sakthai-memory-admin` skill.
 - 2026-06-16 — Phase 10.2 done: implemented --fast mode to bypass cycle overhead.
 - 2026-06-16 — Phase 10.1 done: clarified v1 deprecation and license in README.
