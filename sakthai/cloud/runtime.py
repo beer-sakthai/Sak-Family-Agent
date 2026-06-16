@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import importlib.util
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, cast
 
 import yaml
 
@@ -125,7 +125,7 @@ def render_manifest(spec: CloudAgentSpec | None = None) -> str:
         "tools": [fn.__name__ for fn in MEMORY_TOOL_FUNCTIONS],
         "extras": ["cloud"],
     }
-    return yaml.safe_dump(manifest, sort_keys=False, default_flow_style=False)
+    return cast(str, yaml.safe_dump(manifest, sort_keys=False, default_flow_style=False))
 
 
 def build_adk_agent(spec: CloudAgentSpec | None = None) -> Any:
@@ -142,7 +142,7 @@ def build_adk_agent(spec: CloudAgentSpec | None = None) -> Any:
         )
     spec = spec or resolve_cloud_spec()
     try:
-        from google.adk.agents import Agent  # type: ignore[import-not-found]
+        from google.adk.agents import Agent
     except ImportError as exc:  # pragma: no cover - exercised only with the extra
         raise CloudRuntimeError(f"Failed to import Google ADK: {exc}") from exc
 
