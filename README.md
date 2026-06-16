@@ -66,7 +66,6 @@ skills/      top-level skills (sakthai-personal, sakthai-cycle-*)
 library/     curated library of SakThai's own skills, grouped by category
 docs/        architecture and capabilities docs
 scripts/     bootstrap.sh, setup-extensions.sh
-web-dashboard/ Vite + React static dashboard (reads data.json); deployed to GitHub Pages
 data/        memory snapshot format + a sample export
 ```
 
