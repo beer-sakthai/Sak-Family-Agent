@@ -58,7 +58,7 @@ skip_covered = false
 [tool.ruff]
 line-length = 100
 target-version = "py311"
-exclude = ["library", "scripts", "web"]
+exclude = ["library", "scripts", "web-dashboard"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "UP", "B", "SIM"]
