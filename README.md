@@ -66,7 +66,6 @@ skills/      top-level skills (sakthai-personal, sakthai-cycle-*)
 library/     curated library of SakThai's own skills, grouped by category
 docs/        architecture and capabilities docs
 scripts/     bootstrap.sh, setup-extensions.sh
-web/         zero-build static dashboard (reads data.json)
 data/        memory snapshot format + a sample export
 ```
 

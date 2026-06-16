@@ -134,7 +134,7 @@ Goal: Make the agent fully runnable and resolve past architecture cons. One task
 
 ## Log
 - 2026-06-16 — Phase 10.4 done: Migrated Google ADK/Vertex AI skeleton into v2 as cloud runtime stubs.
-- 2026-06-16 — Phase 10.3 done: implemented `sakthai memory sync` for pushing/pulling memory to local or cloud (gs://, s3://).
+- 2026-06-16 — Phase 10.3 done: implemented `sakthai memory sync` (Git-backed remote) and added the `sakthai-memory-admin` skill.
 - 2026-06-16 — Phase 10.2 done: implemented --fast mode to bypass cycle overhead.
 - 2026-06-16 — Phase 10.1 done: clarified v1 deprecation and license in README.
 - 2026-06-15 — todo.md created and committed; roadmap approved.

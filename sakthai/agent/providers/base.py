@@ -53,7 +53,7 @@ class Response:
     ) -> None:
         self.stop_reason = stop_reason
         self.content = content
-        self.usage = usage or {"input_tokens": 0, "output_tokens": 0, "total_tokens": 0}
+        self.usage = usage or {"input_tokens": 0, "output_tokens": 0}
 
 
 # -- transient-failure retry policy -------------------------------------

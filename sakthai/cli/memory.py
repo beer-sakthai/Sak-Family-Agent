@@ -270,85 +270,6 @@ def memory_import(path: Path, replace: bool, yes: bool) -> None:
     click.echo(f"imported {n_facts} facts, {n_obs} observations ({mode} mode)")
 
 
-@memory.command("sync")
-@click.argument("remote_path")
-@click.option(
-    "--push",
-    "direction",
-    flag_value="push",
-    default=True,
-    help="Push local memory to remote (default).",
-)
-@click.option(
-    "--pull", "direction", flag_value="pull", help="Pull remote memory and replace local."
-)
-def memory_sync(remote_path: str, direction: str) -> None:
-    """Sync memory snapshot with a remote path (local path, gs://, s3://).
-
-    Examples:
-      sakthai memory sync ~/Dropbox/memory.json
-      sakthai memory sync gs://my-bucket/memory.json --pull
-    """
-    import subprocess
-    import tempfile
-
-    with tempfile.TemporaryDirectory() as tmpdir:
-        tmp_path = Path(tmpdir) / "snapshot.json"
-
-        is_cloud = remote_path.startswith(("gs://", "s3://"))
-
-        if direction == "push":
-            with MemoryStore() as store:
-                snapshot = store.export_to_dict()
-            payload = json.dumps(snapshot, indent=2, ensure_ascii=False)
-            tmp_path.write_text(payload, encoding="utf-8")
-
-            if is_cloud:
-                cmd = ["gsutil", "cp"] if remote_path.startswith("gs://") else ["aws", "s3", "cp"]
-                cmd.extend([str(tmp_path), remote_path])
-                try:
-                    subprocess.run(cmd, check=True, capture_output=True, text=True)
-                except subprocess.CalledProcessError as exc:
-                    raise click.ClickException(f"Sync push failed: {exc.stderr}") from exc
-            else:
-                import shutil
-
-                Path(remote_path).parent.mkdir(parents=True, exist_ok=True)
-                shutil.copy2(tmp_path, remote_path)
-
-            click.echo(f"Successfully pushed memory to {remote_path}")
-
-        else:  # pull
-            if is_cloud:
-                cmd = ["gsutil", "cp"] if remote_path.startswith("gs://") else ["aws", "s3", "cp"]
-                cmd.extend([remote_path, str(tmp_path)])
-                try:
-                    subprocess.run(cmd, check=True, capture_output=True, text=True)
-                except subprocess.CalledProcessError as exc:
-                    raise click.ClickException(f"Sync pull failed: {exc.stderr}") from exc
-            else:
-                import shutil
-
-                if not Path(remote_path).exists():
-                    raise click.ClickException(f"Remote path does not exist: {remote_path}")
-                shutil.copy2(remote_path, tmp_path)
-
-            try:
-                data = json.loads(tmp_path.read_text(encoding="utf-8"))
-            except (OSError, json.JSONDecodeError) as exc:
-                raise click.ClickException(f"Could not read downloaded snapshot: {exc}") from exc
-
-            try:
-                with MemoryStore() as store:
-                    n_facts, n_obs = store.import_from_dict(data, mode="replace")
-            except ValueError as exc:
-                raise click.ClickException(f"Invalid snapshot: {exc}") from exc
-
-            click.echo(
-                f"Successfully pulled and replaced local memory: {n_facts} facts, {n_obs} observations"
-            )
-
-
 @memory.command("consolidate")
 @click.option(
     "--age", default=86400, show_default=True, type=int, help="Fold facts older than AGE seconds."
@@ -392,3 +313,17 @@ def memory_deduplicate(dry_run: bool, verbose: bool) -> None:
                 click.echo(f"  - id {o.id} ({o.summary[:60]}) [w={o.weight}, c={o.confidence}]")
     else:
         click.echo("No duplicate observations found.")
+
+
+@memory.command("sync")
+@click.option("--remote", default=None, help="Git remote URL to push the snapshot to.")
+def memory_sync(remote: str | None) -> None:
+    """Synchronize memory to a remote Git repository."""
+    from ..memory.sync import sync_memory_to_git
+
+    try:
+        click.echo("Syncing memory...")
+        result = sync_memory_to_git(remote)
+        click.echo(result)
+    except Exception as exc:
+        raise click.ClickException(f"Sync failed: {exc}") from exc

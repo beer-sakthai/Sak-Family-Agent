@@ -38,7 +38,12 @@ def _dashboard_data(days: int = 30) -> dict[str, Any]:
         return {
             "generated_at": "demo",
             "source": "demo",
-            "kpis": {"total_facts": 0, "total_facts_delta": 0, "total_observations": 0, "total_observations_delta": 0},
+            "kpis": {
+                "total_facts": 0,
+                "total_facts_delta": 0,
+                "total_observations": 0,
+                "total_observations_delta": 0,
+            },
             "growth": {"labels": [], "facts": [], "observations": []},
             "recent_facts": [],
             "top_observations": [],
@@ -58,7 +63,8 @@ def _ecosystem_status() -> dict[str, Any]:
         "supermemory": "configured",
     }
     try:
-        from datetime import datetime, UTC
+        from datetime import UTC, datetime
+
         status["generated_at"] = datetime.now(UTC).isoformat()
     except Exception:
         pass  # nosec B110
