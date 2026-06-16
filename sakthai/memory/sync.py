@@ -4,10 +4,36 @@ from __future__ import annotations
 
 import json
 import subprocess
+import urllib.request
 from pathlib import Path
 
 from ..config import sakthai_home
 from .store import MemoryStore
+
+
+def sync_memory_via_http(endpoint_url: str, api_key: str | None = None) -> str:
+    """Export memory to JSON and POST it to a remote HTTP endpoint."""
+    with MemoryStore() as store:
+        snapshot = store.export_to_dict()
+
+    if not endpoint_url.startswith(("http://", "https://")):
+        raise ValueError("endpoint_url must start with http:// or https://")
+
+    payload = json.dumps(snapshot, ensure_ascii=False).encode("utf-8")
+    req = urllib.request.Request(endpoint_url, data=payload, method="POST")
+    req.add_header("Content-Type", "application/json")
+    if api_key:
+        req.add_header("Authorization", f"Bearer {api_key}")
+
+    try:
+        with urllib.request.urlopen(req) as response:  # nosec B310
+            if response.status not in (200, 201, 202, 204):
+                raise RuntimeError(
+                    f"HTTP Error {response.status}: {response.read().decode('utf-8', errors='ignore')}"
+                )
+            return f"Synced to HTTP endpoint: {endpoint_url}"
+    except Exception as e:
+        raise RuntimeError(f"Failed to sync to {endpoint_url}: {e}") from e
 
 
 def sync_memory_to_git(remote: str | None = None) -> str:
