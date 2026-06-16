@@ -838,6 +838,271 @@ def test_openai_streaming_emits_text_deltas(store: MemoryStore) -> None:
     assert client.stream_calls == 1
 
 
+# -- Gemini provider helpers ---------------------------------------------
+
+
+def _install_fake_genai(monkeypatch: pytest.MonkeyPatch) -> object:
+    """Inject a minimal google.genai stand-in into sys.modules.
+
+    Returns the fake ``types`` namespace so tests can construct fake response
+    objects without importing the real SDK.
+    """
+    import sys
+    import types as _t
+
+    class _Part:
+        def __init__(
+            self,
+            text: str | None = None,
+            function_call: object | None = None,
+            function_response: object | None = None,
+        ) -> None:
+            self.text = text or ""
+            self.function_calls = [function_call] if function_call is not None else []
+            self.function_response = function_response
+
+    class _FunctionCall:
+        def __init__(self, name: str = "", args: dict | None = None) -> None:
+            self.name = name
+            self.args = args or {}
+
+    class _FunctionResponse:
+        def __init__(self, name: str = "", response: object = None) -> None:
+            pass
+
+    class _Content:
+        def __init__(self, role: str = "", parts: list | None = None) -> None:
+            self.role = role
+            self.parts = parts or []
+
+    class _Tool:
+        def __init__(self, function_declarations: object = None) -> None:
+            pass
+
+    class _FunctionDeclaration:
+        def __init__(self, name: str = "", description: str = "", parameters: object = None) -> None:
+            pass
+
+    class _GenerateContentConfig:
+        def __init__(self, system_instruction: str = "", tools: object = None) -> None:
+            pass
+
+    fake_types = _t.SimpleNamespace(
+        Part=_Part,
+        FunctionCall=_FunctionCall,
+        FunctionResponse=_FunctionResponse,
+        Content=_Content,
+        Tool=_Tool,
+        FunctionDeclaration=_FunctionDeclaration,
+        GenerateContentConfig=_GenerateContentConfig,
+    )
+    fake_genai = _t.SimpleNamespace(types=fake_types)
+
+    if "google" not in sys.modules:
+        monkeypatch.setitem(sys.modules, "google", _t.SimpleNamespace(genai=fake_genai))
+    monkeypatch.setitem(sys.modules, "google.genai", fake_genai)
+    monkeypatch.setitem(sys.modules, "google.genai.types", fake_types)
+    return fake_types
+
+
+# -- call_gemini unit tests ----------------------------------------------
+
+
+def test_call_gemini_text_response(monkeypatch: pytest.MonkeyPatch) -> None:
+    fake_types = _install_fake_genai(monkeypatch)
+
+    from sakthai.agent.providers.gemini_provider import call_gemini
+    from sakthai.agent.tools import BUILTIN_TOOLS
+
+    class _UsageMeta:
+        prompt_token_count = 4
+        candidates_token_count = 8
+
+    class _Candidate:
+        finish_reason = "STOP"
+        content = type("C", (), {"parts": [fake_types.Part(text="gemini reply")]})()  # type: ignore[attr-defined]
+
+    class _FakeResponse:
+        candidates = [_Candidate()]
+        usage_metadata = _UsageMeta()
+
+    class _FakeClient:
+        class models:
+            @staticmethod
+            def generate_content(**_kw: object) -> _FakeResponse:
+                return _FakeResponse()
+
+    resp = call_gemini(
+        _FakeClient(),
+        "gemini-2.0-flash",
+        "system prompt",
+        BUILTIN_TOOLS,
+        [{"role": "user", "content": "hello"}],
+        1,
+    )
+    assert resp.stop_reason == "end_turn"
+    assert any(b.type == "text" and "gemini reply" in b.text for b in resp.content)
+    assert resp.usage["input_tokens"] == 4
+    assert resp.usage["output_tokens"] == 8
+
+
+def test_call_gemini_tool_use_response(monkeypatch: pytest.MonkeyPatch) -> None:
+    fake_types = _install_fake_genai(monkeypatch)
+
+    from sakthai.agent.providers.gemini_provider import call_gemini
+    from sakthai.agent.tools import BUILTIN_TOOLS
+
+    fc = fake_types.FunctionCall(name="learn", args={"value": "from gemini"})  # type: ignore[attr-defined]
+
+    class _UsageMeta:
+        prompt_token_count = 5
+        candidates_token_count = 3
+
+    class _Candidate:
+        finish_reason = "OTHER"
+        content = type("C", (), {"parts": [fake_types.Part(function_call=fc)]})()  # type: ignore[attr-defined]
+
+    class _FakeResponse:
+        candidates = [_Candidate()]
+        usage_metadata = _UsageMeta()
+
+    class _FakeClient:
+        class models:
+            @staticmethod
+            def generate_content(**_kw: object) -> _FakeResponse:
+                return _FakeResponse()
+
+    resp = call_gemini(
+        _FakeClient(),
+        "gemini-2.0-flash",
+        "system",
+        BUILTIN_TOOLS,
+        [{"role": "user", "content": "save it"}],
+        1,
+    )
+    assert resp.stop_reason == "tool_use"
+    assert any(b.type == "tool_use" and b.name == "learn" for b in resp.content)
+    tool_block = next(b for b in resp.content if b.type == "tool_use")
+    assert tool_block.input == {"value": "from gemini"}
+
+
+def test_call_gemini_no_candidates_raises(monkeypatch: pytest.MonkeyPatch) -> None:
+    _install_fake_genai(monkeypatch)
+
+    from sakthai.agent.providers.base import AgentError
+    from sakthai.agent.providers.gemini_provider import call_gemini
+    from sakthai.agent.tools import BUILTIN_TOOLS
+
+    class _UsageMeta:
+        prompt_token_count = 0
+        candidates_token_count = 0
+
+    class _FakeResponse:
+        candidates: list = []
+        usage_metadata = _UsageMeta()
+
+    class _FakeClient:
+        class models:
+            @staticmethod
+            def generate_content(**_kw: object) -> _FakeResponse:
+                return _FakeResponse()
+
+    with pytest.raises(AgentError, match="no candidates"):
+        call_gemini(_FakeClient(), "gemini-2.0-flash", "sys", BUILTIN_TOOLS, [{"role": "user", "content": "x"}], 1)
+
+
+def test_gemini_loop_dispatches_via_run_agent(
+    store: MemoryStore, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import sakthai.agent.loop as loop_mod
+    from sakthai.agent.providers.base import Block, Response
+
+    fake_resp = Response("end_turn", [Block("text", text="gemini answer")])
+    monkeypatch.setattr(loop_mod, "_call_gemini", lambda *_a, **_kw: fake_resp)
+
+    result = run_agent("hi", client=object(), store=store, provider="google")
+    assert result.text == "gemini answer"
+    assert result.stop_reason == "end_turn"
+
+
+# -- to_gemini_contents message adaptation -------------------------------
+
+
+def test_to_gemini_contents_text_message(monkeypatch: pytest.MonkeyPatch) -> None:
+    fake_types = _install_fake_genai(monkeypatch)
+
+    from sakthai.agent.providers.gemini_provider import to_gemini_contents
+
+    messages = [{"role": "user", "content": "hello world"}]
+    contents = to_gemini_contents(messages)
+    assert len(contents) == 1
+    assert contents[0].role == "user"
+    assert len(contents[0].parts) == 1
+    assert contents[0].parts[0].text == "hello world"
+
+
+def test_to_gemini_contents_tool_result_role(monkeypatch: pytest.MonkeyPatch) -> None:
+    fake_types = _install_fake_genai(monkeypatch)
+
+    from sakthai.agent.providers.gemini_provider import to_gemini_contents
+
+    messages = [
+        {
+            "role": "user",
+            "content": [
+                {
+                    "type": "tool_result",
+                    "tool_use_id": "t1",
+                    "content": "stored",
+                    "is_error": False,
+                }
+            ],
+        }
+    ]
+    contents = to_gemini_contents(messages)
+    assert len(contents) == 1
+    assert contents[0].role == "tool"
+
+
+# -- providers/base.py helpers -------------------------------------------
+
+
+def test_block_field_reads_dict_and_object() -> None:
+    from sakthai.agent.providers.base import block_field
+
+    assert block_field({"type": "text", "text": "hi"}, "type") == "text"
+    assert block_field({}, "type", "default") == "default"
+
+    class _Obj:
+        type = "tool_use"
+
+    assert block_field(_Obj(), "type") == "tool_use"
+    assert block_field(_Obj(), "missing_attr", "fallback") == "fallback"
+
+
+def test_find_tool_name_by_id() -> None:
+    from sakthai.agent.providers.base import find_tool_name_by_id
+
+    class _Block:
+        def __init__(self, btype: str, bid: str = "", bname: str = "") -> None:
+            self.type = btype
+            self.id = bid
+            self.name = bname
+
+    messages = [
+        {
+            "role": "assistant",
+            "content": [
+                _Block("tool_use", bid="t1", bname="learn"),
+                _Block("tool_use", bid="t2", bname="recall"),
+            ],
+        }
+    ]
+    assert find_tool_name_by_id(messages, "t1") == "learn"
+    assert find_tool_name_by_id(messages, "t2") == "recall"
+    assert find_tool_name_by_id(messages, "missing") == "unknown"
+
+
 def test_openai_streaming_reassembles_tool_calls(store: MemoryStore) -> None:
     tool_lines = [
         'data: {"choices":[{"delta":{"tool_calls":[{"index":0,"id":"c1",'
