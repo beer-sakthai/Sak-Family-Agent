@@ -130,6 +130,14 @@ Goal: Make the agent fully runnable and resolve past architecture cons. One task
 - [x] 10.3 — Remote Memory Sync: Implement `sakthai memory sync` for cloud or git backups to reduce local state dependency.
 - [ ] 10.4 — Basic Cloud Runtime Stubs: Migrate Google ADK / Vertex AI skeleton into v2 for future deployment.
 
+## Phase 11 — Robust Memory Sync & Scalability
+Goal: Resolve cons in the Git sync implementation and prepare for standalone agent resilience.
+
+- [ ] 11.1 — Incremental JSON Exports: Split `snapshot.json` into `facts.jsonl` and `observations.jsonl` to reduce Git bloat.
+- [ ] 11.2 — Auto-Merge Strategy: Intercept Git conflicts on JSONL files and merge by `id`.
+- [ ] 11.3 — Zero-Dependency HTTP Fallback: Provide a simple HTTP POST export fallback for syncing without local Git.
+- [ ] 11.4 — SQLite Replication Exploration: Evaluate wrapper for Turso/Litestream true DB replication.
+
 ---
 
 ## Log
