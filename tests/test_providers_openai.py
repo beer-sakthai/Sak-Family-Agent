@@ -212,7 +212,9 @@ def test_call_openai_compat_malformed_tool_args_fall_back_empty() -> None:
             {
                 "message": {
                     "content": None,
-                    "tool_calls": [{"id": "c1", "function": {"name": "learn", "arguments": "{{invalid"}}],
+                    "tool_calls": [
+                        {"id": "c1", "function": {"name": "learn", "arguments": "{{invalid"}}
+                    ],
                 },
                 "finish_reason": "tool_calls",
             }
