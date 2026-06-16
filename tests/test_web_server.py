@@ -11,16 +11,15 @@ import json
 import threading
 import urllib.error
 import urllib.request
-from pathlib import Path
 from typing import Any
 from unittest.mock import patch
 
 import pytest
 
 from sakthai.web.server import (
-    _Handler,
     _dashboard_data,
     _ecosystem_status,
+    _Handler,
 )
 
 try:
