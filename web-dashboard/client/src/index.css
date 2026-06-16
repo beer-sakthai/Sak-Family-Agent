@@ -1,0 +1,188 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+:root {
+  /* Cyberpunk Dark Theme */
+  --primary: #00d9ff;
+  --primary-foreground: #0a0e27;
+  --sidebar-primary: #00d9ff;
+  --sidebar-primary-foreground: #0a0e27;
+  --chart-1: #00d9ff;
+  --chart-2: #d946ef;
+  --chart-3: #00d9ff;
+  --chart-4: #d946ef;
+  --chart-5: #00d9ff;
+  --radius: 0.5rem;
+  --background: #0a0e27;
+  --foreground: #e6e9f0;
+  --card: #141d3a;
+  --card-foreground: #e6e9f0;
+  --popover: #141d3a;
+  --popover-foreground: #e6e9f0;
+  --secondary: #1a2847;
+  --secondary-foreground: #b8bcc7;
+  --muted: #8b94a7;
+  --muted-foreground: #8b94a7;
+  --accent: #00d9ff;
+  --accent-foreground: #0a0e27;
+  --destructive: #ff4444;
+  --destructive-foreground: #0a0e27;
+  --border: #232a3a;
+  --input: #1a2847;
+  --ring: #00d9ff;
+  --sidebar: #0f1628;
+  --sidebar-foreground: #e6e9f0;
+  --sidebar-accent: #00d9ff;
+  --sidebar-accent-foreground: #0a0e27;
+  --sidebar-border: #232a3a;
+  --sidebar-ring: #00d9ff;
+}
+
+.dark {
+  /* Dark theme inherits from root (cyberpunk dark is default) */
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  [type="button"]:not(:disabled),
+  [type="submit"]:not(:disabled),
+  [type="reset"]:not(:disabled),
+  a[href],
+  select:not(:disabled),
+  input[type="checkbox"]:not(:disabled),
+  input[type="radio"]:not(:disabled) {
+    @apply cursor-pointer;
+  }
+}
+
+@layer components {
+  /**
+   * Custom container utility that centers content and adds responsive padding.
+   */
+  .container {
+    width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  .flex {
+    min-height: 0;
+    min-width: 0;
+  }
+
+  @media (min-width: 640px) {
+    .container {
+      padding-left: 1.5rem;
+      padding-right: 1.5rem;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .container {
+      padding-left: 2rem;
+      padding-right: 2rem;
+      max-width: 1280px;
+    }
+  }
+
+  /* Cyberpunk Dashboard Components */
+  .glow-card {
+    @apply border border-cyan-500/30 rounded-lg bg-slate-900/50 backdrop-blur-sm transition-all duration-200;
+  }
+
+  .glow-card:hover {
+    @apply border-cyan-500/60 shadow-lg shadow-cyan-500/20;
+  }
+
+  .glow-text {
+    @apply text-cyan-400 font-mono;
+  }
+
+  .glow-accent {
+    @apply text-cyan-400 drop-shadow-lg drop-shadow-cyan-500/50;
+  }
+
+  /* Enhanced glow effects */
+  .glow-card:hover {
+    @apply shadow-xl shadow-cyan-500/25;
+  }
+
+  /* Smooth animations */
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes pulseGlow {
+    0%, 100% {
+      box-shadow: 0 0 0 0 rgba(0, 217, 255, 0.4);
+    }
+    50% {
+      box-shadow: 0 0 0 6px rgba(0, 217, 255, 0);
+    }
+  }
+
+  .animate-fade-in-up {
+    animation: fadeInUp 0.5s ease-out;
+  }
+
+  .animate-pulse-glow {
+    animation: pulseGlow 2s infinite;
+  }
+}

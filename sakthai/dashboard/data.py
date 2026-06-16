@@ -42,6 +42,52 @@ _KIND_COLORS = {
 }
 _FALLBACK_COLORS = ["#a855f7", "#3b82f6", "#22d3ee", "#f472b6", "#34d399", "#f59e0b"]
 
+# Sections the store has no real backing source for yet (evolution telemetry and
+# the chat "thought process" panel). They render from this illustrative content
+# on both the live and demo paths so every page of the rich UI has something to
+# show. Kept as plain dicts so the data layer stays UI-free and unit-testable.
+DEMO_EVOLUTION: dict[str, Any] = {
+    "current_version": "v2.0",
+    "performance_gain": "+21%",
+    "runs": 12,
+    "success_rate": 93.0,
+    "history": [
+        {
+            "version": "v2.0",
+            "date": "Jun 14, 2026",
+            "success": 93.0,
+            "gain": "+21%",
+            "latest": True,
+        },
+        {"version": "v1.9", "date": "Jun 06, 2026", "success": 90.5, "gain": "+17%"},
+        {"version": "v1.8", "date": "May 28, 2026", "success": 88.1, "gain": "+12%"},
+        {"version": "v1.7", "date": "May 19, 2026", "success": 85.4, "gain": "+8%"},
+    ],
+    "before_after": {
+        "accuracy": {"before": 76.0, "after": 93.0},
+        "latency": {"before": 1340, "after": 790},
+    },
+    "neural_focus": [
+        {"name": "Context recall", "pct": 91},
+        {"name": "Response accuracy", "pct": 93},
+        {"name": "Tool selection", "pct": 88},
+    ],
+}
+
+DEMO_CHAT: dict[str, Any] = {
+    "confidence": 96,
+    "thought_process": [
+        {
+            "group": "Memory retrieval",
+            "steps": ["Recall preferences", "Recall recent project context"],
+        },
+        {
+            "group": "Reasoning",
+            "steps": ["Rank relevant facts", "Draft grounded answer"],
+        },
+    ],
+}
+
 DEMO_DATA: dict[str, Any] = {
     "generated_at": "demo",
     "source": SOURCE_DEMO,
@@ -74,6 +120,19 @@ DEMO_DATA: dict[str, Any] = {
         {"name": "Project", "count": 1, "color": _KIND_COLORS["project"]},
         {"name": "Observations", "count": 2, "color": "#f472b6"},
     ],
+    "graph": {
+        "categories": [
+            {"name": "Pref", "count": 2, "color": _KIND_COLORS["pref"]},
+            {"name": "Profile", "count": 1, "color": _KIND_COLORS["profile"]},
+            {"name": "Note", "count": 1, "color": _KIND_COLORS["note"]},
+            {"name": "Project", "count": 1, "color": _KIND_COLORS["project"]},
+            {"name": "Observations", "count": 2, "color": "#f472b6"},
+        ],
+        "total_nodes": 7,
+        "connections": 12,
+    },
+    "evolution": DEMO_EVOLUTION,
+    "chat": DEMO_CHAT,
 }
 
 
@@ -155,6 +214,15 @@ def collect_dashboard_data(db_path: Path | None = None, days: int = 30) -> dict[
             {"summary": o.summary, "weight": round(o.weight, 2)} for o in observations[:6]
         ],
         "categories": categories,
+        "graph": {
+            "categories": categories,
+            "total_nodes": len(facts) + len(observations),
+            "connections": len(facts) * 2 + len(observations),
+        },
+        # No real telemetry source yet — illustrative content keeps these pages
+        # populated even against a live store.
+        "evolution": DEMO_EVOLUTION,
+        "chat": DEMO_CHAT,
     }
 
 

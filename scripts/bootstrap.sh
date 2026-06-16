@@ -27,6 +27,12 @@ if [ ! -f .env ] && [ -f .env.example ]; then
     echo "Created .env from .env.example — fill in ANTHROPIC_API_KEY."
 fi
 
-sakthai doctor
+if command -v uv >/dev/null 2>&1; then
+    uv run sakthai doctor
+elif [ -f .venv/bin/sakthai ]; then
+    .venv/bin/sakthai doctor
+else
+    sakthai doctor
+fi
 echo ""
 echo "Done. Try: sakthai learn \"prefers dark mode\"  &&  sakthai recall dark"

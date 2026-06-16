@@ -161,3 +161,109 @@ def test_dataclasses_positional_construction() -> None:
     assert fact.tags == []
     obs = Observation(1, "s", None, 1.0, 0.5, 0)
     assert obs.weight == 1.0
+
+
+# -- forget_observation --------------------------------------------------
+
+
+def test_forget_observation(store: MemoryStore) -> None:
+    obs_id = store.add_observation("to be forgotten")
+    assert store.forget_observation(obs_id) is True
+    assert store.forget_observation(obs_id) is False  # already gone
+    assert store.top_observations() == []
+
+
+# -- import_from_dict merge mode -----------------------------------------
+
+
+def test_import_merge_mode(tmp_path, store: MemoryStore) -> None:
+    store.add_fact("original")
+    snapshot = store.export_to_dict()
+
+    other = MemoryStore(tmp_path / "other.db")
+    try:
+        other.add_fact("pre-existing")
+        n_facts, n_obs = other.import_from_dict(snapshot, mode="merge")
+        assert n_facts == 1
+        assert n_obs == 0
+        # Both the pre-existing fact and the imported one must survive.
+        values = {f.value for f in other.list_facts()}
+        assert "pre-existing" in values
+        assert "original" in values
+    finally:
+        other.close()
+
+
+# -- deduplicate dry_run / detailed flags --------------------------------
+
+
+def test_deduplicate_facts_dry_run_does_not_delete(store: MemoryStore) -> None:
+    store.add_fact("v1", kind="pref", key="color")
+    store.add_fact("v2", kind="pref", key="color")
+    count = store.deduplicate_facts(dry_run=True)
+    assert count == 1
+    assert len(store.list_facts()) == 2  # nothing actually deleted
+
+
+def test_deduplicate_facts_detailed_returns_list(store: MemoryStore) -> None:
+    fid1 = store.add_fact("old", kind="pref", key="theme")
+    store.add_fact("new", kind="pref", key="theme")  # higher id wins
+    result = store.deduplicate_facts(detailed=True)
+    assert isinstance(result, list)
+    assert len(result) == 1
+    assert result[0].id == fid1  # older row is the one removed
+    remaining = store.list_facts()
+    assert len(remaining) == 1
+    assert remaining[0].value == "new"
+
+
+def test_deduplicate_observations_dry_run_does_not_delete(store: MemoryStore) -> None:
+    store.add_observation("same text", weight=1.0)
+    store.add_observation("same text", weight=2.0)
+    count = store.deduplicate_observations(dry_run=True)
+    assert count == 1
+    assert len(store.top_observations()) == 2  # nothing deleted
+
+
+def test_deduplicate_observations_detailed_returns_list(store: MemoryStore) -> None:
+    store.add_observation("dup", weight=0.5)
+    store.add_observation("dup", weight=1.5)  # higher weight kept
+    result = store.deduplicate_observations(detailed=True)
+    assert isinstance(result, list)
+    assert len(result) == 1
+    remaining = store.top_observations()
+    assert len(remaining) == 1
+    assert remaining[0].weight == 1.5
+
+
+# -- update_fact tag paths -----------------------------------------------
+
+
+def test_update_fact_sets_new_tags(store: MemoryStore) -> None:
+    fid = store.add_fact("hello", tags=["old"])
+    store.update_fact(fid, "hello", tags=["new"])
+    assert store.list_facts()[0].tags == ["new"]
+
+
+def test_update_fact_clears_tags_with_empty_list(store: MemoryStore) -> None:
+    fid = store.add_fact("hello", tags=["a", "b"])
+    store.update_fact(fid, "hello", tags=[])
+    assert store.list_facts()[0].tags == []
+
+
+# -- _encode_tags / _decode_tags edge cases ------------------------------
+
+
+def test_encode_tags_invalid_type_raises() -> None:
+    from sakthai.memory.store import _encode_tags
+
+    with pytest.raises(ValueError, match="list of strings"):
+        _encode_tags({"a": 1})  # type: ignore[arg-type]
+
+
+def test_decode_tags_tolerates_junk() -> None:
+    from sakthai.memory.store import _decode_tags
+
+    assert _decode_tags("{not valid}") == []  # invalid JSON
+    assert _decode_tags('{"k": "v"}') == []  # JSON object, not list
+    assert _decode_tags(None) == []  # None input

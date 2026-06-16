@@ -92,3 +92,13 @@ def test_check_env_structure(sakthai_home: Path) -> None:
     assert "ANTHROPIC_API_KEY" in report["env"]
     # No DB yet → still considered ready (created lazily on first use).
     assert report["ready"] is True
+
+
+# -- cycle fallback on corrupt stored value ------------------------------
+
+
+def test_get_stage_falls_back_on_invalid_stored_value(store: MemoryStore) -> None:
+    # Simulate an invalid stage name written to the DB (e.g. from a future
+    # version that adds a new stage, or plain DB corruption).
+    store.add_fact("NOT_A_VALID_STAGE", kind="cycle", key="current_stage")
+    assert get_current_stage(store) == Stage.DREAM
