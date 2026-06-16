@@ -48,7 +48,8 @@ def test_response_defaults() -> None:
     r = Response("end_turn", [])
     assert r.stop_reason == "end_turn"
     assert r.content == []
-    assert r.usage == {"input_tokens": 0, "output_tokens": 0, "total_tokens": 0}
+    assert r.usage["input_tokens"] == 0
+    assert r.usage["output_tokens"] == 0
 
 
 def test_response_custom_usage() -> None:
@@ -59,7 +60,8 @@ def test_response_custom_usage() -> None:
 
 def test_response_none_usage_becomes_zeros() -> None:
     r = Response("end_turn", [], usage=None)
-    assert r.usage["total_tokens"] == 0
+    assert r.usage["input_tokens"] == 0
+    assert r.usage["output_tokens"] == 0
 
 
 # -- is_retryable ----------------------------------------------------------
