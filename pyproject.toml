@@ -63,6 +63,10 @@ omit = ["sakthai/dashboard/app.py"]
 [tool.coverage.report]
 show_missing = true
 skip_covered = false
+# Floor sits a few points below the current ~89% so it catches real
+# regressions (e.g. a whole module silently dropping to 0%) without being
+# brittle. Raise it as coverage improves.
+fail_under = 85
 
 [tool.ruff]
 line-length = 100
