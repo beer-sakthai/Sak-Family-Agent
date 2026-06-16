@@ -1,5 +1,5 @@
 ---
-name: understand-caveman
+name: sakthai-understand-caveman
 category: sakthai
 description: Understand and work with the Caveman extension — token compression that cuts ~75% output while keeping full technical accuracy. Use when toggling caveman modes, understanding intensity levels, using companion skills, or optimizing token spend.
 version: 1.0.0
@@ -15,10 +15,10 @@ metadata:
       - caveman
       - compression
     related_skills:
-      - understand-claude-code-workflows
+      - sakthai-understand-claude-code-workflows
 ---
 
-# understand-caveman
+# sakthai-understand-caveman
 
 **Caveman** (by Julius Brussee) is a token compression extension installed at
 `~/.gemini/extensions/caveman/`. It makes agent output terse while keeping full
