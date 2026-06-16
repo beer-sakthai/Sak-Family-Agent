@@ -63,7 +63,7 @@ def detect_provider(client: Any | None, model: str) -> str:
         return "openai"
     if any(
         keyword in model.lower()
-        for keyword in ("openai", "ollama", "gpt-", "qwen", "llama", "deepseek", "mistral")
+        for keyword in ("openai", "ollama", "gpt-", "qwen", "llama", "deepseek", "mistral", "gemma")
     ):
         return "openai"
     if client is not None:

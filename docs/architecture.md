@@ -64,6 +64,13 @@ and `library/`.
 **`dashboard/`** — `data.py` builds an honest snapshot of the store (testable,
 no UI deps); `app.py` renders it with Streamlit.
 
+**`cloud/`** — a roadmap stub for Google ADK / Vertex AI deployment. `runtime.py`
+describes a cloud agent (`CloudAgentSpec`), reports readiness (`cloud_status`),
+and renders a deployment manifest, all without importing `google-adk` at module
+load; `build_adk_agent` imports it lazily behind the optional `cloud` extra.
+`tools.py` exposes the memory surface as native ADK function tools, going
+through `MemoryStore` like every other runtime. See [`cloud.md`](cloud.md).
+
 ## Memory schema
 
 ```sql

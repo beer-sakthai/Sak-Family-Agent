@@ -11,9 +11,13 @@ memory is reachable from other runtimes.
 
 This is a **clean, from-scratch rewrite** of the original `SakThai-Agent` (the
 "OG"). The OG is a read-only blueprint: consult it for intent, but never copy its
-code or layout into this repo — re-derive everything. Notably, the OG's Google
-ADK / Vertex AI cloud agent is **not** part of v2 (roadmap only), so there is **no
-`app/` cloud bundle and no `sync-app-package.sh` sync step** here.
+code or layout into this repo — re-derive everything. The OG's full Google
+ADK / Vertex AI cloud agent is **not** shipped in v2: there is **no `app/` cloud
+bundle and no `sync-app-package.sh` sync step** here. v2 carries only a lazy
+**cloud-runtime skeleton** in `sakthai/cloud/` (the `cloud` extra; `sakthai
+cloud` commands) that describes/scaffolds a deployment without importing
+`google-adk` at module load — see [`docs/cloud.md`](docs/cloud.md). Actual
+deployment execution remains on the roadmap.
 
 ## Commands
 
@@ -22,7 +26,8 @@ ADK / Vertex AI cloud agent is **not** part of v2 (roadmap only), so there is **
 cp .env.example .env            # then fill in ANTHROPIC_API_KEY
 pip install -e ".[dev]"         # editable install
 pip install -e ".[dashboard]"   # adds streamlit/plotly/pandas for `sakthai dashboard`
-pip install -e ".[all]"         # dev + dashboard
+pip install -e ".[cloud]"       # adds google-adk/aiplatform/logging for `sakthai cloud`
+pip install -e ".[all]"         # dev + dashboard + cloud
 
 # Test / lint / type-check / security (mirrors .github/workflows/ci.yml)
 python -m pytest tests/ -q                    # full unit suite (no network, no GCP)
