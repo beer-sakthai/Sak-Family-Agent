@@ -99,5 +99,5 @@ this repo yet — it needs live GCP and is tracked separately.
 
 ---
 
-**Note on Versioning & License:** 
-This repository (`sakthai-agent-v2`) is the active, clean from-scratch rewrite of the core engine. The original `SakThai-Agent` (v1) blueprint is now deprecated and locked. This code is provided under a **Proprietary — View Only** license. You may read the source code to learn how it works, but you may not use, copy, modify, or redistribute it.
+**Note on Versioning & License:**
+This repository (`sakthai-agent-v2`) is the active, clean from-scratch rewrite of the core engine. The original `SakThai-Agent` (v1) blueprint is now deprecated and locked. This code is released under the **MIT License** — you are free to use, copy, modify, and redistribute it under the terms in [`LICENSE`](LICENSE).
