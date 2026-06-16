@@ -47,4 +47,4 @@ Each `run_agent` call writes a JSON session log to `~/.sakthai/sessions/`
 
 `sakthai dashboard` serves a Streamlit view of the store; `--export <file>.json`
 writes the same snapshot as JSON without needing Streamlit (handy for a static
-front-end — see [`web/`](../web/)).
+front-end — see [`web-dashboard/`](../web-dashboard/)).

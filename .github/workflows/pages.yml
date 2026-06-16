@@ -1,12 +1,16 @@
 name: Deploy web to Pages
 
-# Publishes the static dashboard in web/ to GitHub Pages.
+# Builds the Vite dashboard in web-dashboard/ and publishes dist/ to GitHub Pages.
 #
-# Manual-only: first enable Pages once in the repo (Settings → Pages → Build and
-# deployment → Source: "GitHub Actions"), then trigger this from the Actions tab
-# or with `gh workflow run "Deploy web to Pages"`. It's not on `push` so it can't
-# fail automatically before Pages is enabled.
+# Pages must be enabled once (Settings → Pages → Build and deployment → Source:
+# "GitHub Actions"). Runs on pushes to main that touch the dashboard, and can be
+# triggered manually from the Actions tab or with `gh workflow run pages.yml`.
 on:
+  push:
+    branches: [main]
+    paths:
+      - "web-dashboard/**"
+      - ".github/workflows/pages.yml"
   workflow_dispatch:
 
 permissions:
@@ -20,16 +24,31 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web-dashboard
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: web-dashboard/package-lock.json
+      - run: npm ci
+      - run: npm run build
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: web-dashboard/dist
+
   deploy:
+    needs: build
     runs-on: ubuntu-latest
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: web
       - id: deployment
         uses: actions/deploy-pages@v4
