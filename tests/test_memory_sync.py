@@ -16,7 +16,6 @@ import pytest
 from sakthai.memory.store import MemoryStore
 from sakthai.memory.sync import sync_memory_to_git, sync_memory_via_http
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -79,14 +78,12 @@ class TestSyncMemoryViaHttp:
         assert isinstance(result, str) and result
 
     def test_server_error_raises(self, sakthai_home: Path) -> None:
-        with patch("urllib.request.urlopen", return_value=_http_response(500, b"error")):
-            with pytest.raises(RuntimeError):
-                sync_memory_via_http("http://example.com/sync")
+        with patch("urllib.request.urlopen", return_value=_http_response(500, b"error")), pytest.raises(RuntimeError):
+            sync_memory_via_http("http://example.com/sync")
 
     def test_bad_request_raises(self, sakthai_home: Path) -> None:
-        with patch("urllib.request.urlopen", return_value=_http_response(400, b"bad request")):
-            with pytest.raises(RuntimeError):
-                sync_memory_via_http("http://example.com/sync")
+        with patch("urllib.request.urlopen", return_value=_http_response(400, b"bad request")), pytest.raises(RuntimeError):
+            sync_memory_via_http("http://example.com/sync")
 
     def test_sends_bearer_api_key(self, sakthai_home: Path) -> None:
         captured: list[MagicMock] = []
@@ -143,9 +140,8 @@ class TestSyncMemoryViaHttp:
         assert captured[0].get_header("Content-type") == "application/json"
 
     def test_network_error_raises_runtime_error(self, sakthai_home: Path) -> None:
-        with patch("urllib.request.urlopen", side_effect=OSError("connection refused")):
-            with pytest.raises(RuntimeError, match="Failed to sync"):
-                sync_memory_via_http("http://example.com/sync")
+        with patch("urllib.request.urlopen", side_effect=OSError("connection refused")), pytest.raises(RuntimeError, match="Failed to sync"):
+            sync_memory_via_http("http://example.com/sync")
 
     def test_https_url_accepted(self, sakthai_home: Path) -> None:
         with patch("urllib.request.urlopen", return_value=_http_response(200)):
