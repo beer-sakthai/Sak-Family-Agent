@@ -11,6 +11,11 @@ dist/
 venv/
 env/
 
+# Node / dashboard build deps (the dashboard has its own .gitignore too)
+node_modules/
+# Stale duplicate of dashboard/ — kept only locally, never committed
+web-dashboard/
+
 # Tooling caches
 .pytest_cache/
 .mypy_cache/
