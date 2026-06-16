@@ -1029,7 +1029,7 @@ def test_gemini_loop_dispatches_via_run_agent(
 
 
 def test_to_gemini_contents_text_message(monkeypatch: pytest.MonkeyPatch) -> None:
-    fake_types = _install_fake_genai(monkeypatch)
+    _install_fake_genai(monkeypatch)
 
     from sakthai.agent.providers.gemini_provider import to_gemini_contents
 
@@ -1042,7 +1042,7 @@ def test_to_gemini_contents_text_message(monkeypatch: pytest.MonkeyPatch) -> Non
 
 
 def test_to_gemini_contents_tool_result_role(monkeypatch: pytest.MonkeyPatch) -> None:
-    fake_types = _install_fake_genai(monkeypatch)
+    _install_fake_genai(monkeypatch)
 
     from sakthai.agent.providers.gemini_provider import to_gemini_contents
 
