@@ -1,0 +1,156 @@
+"""Tests for sakthai.agent.providers detect_provider and build_client."""
+
+from __future__ import annotations
+
+from unittest.mock import MagicMock, patch
+
+import httpx
+import pytest
+
+from sakthai.agent.providers import AgentError, build_client, detect_provider
+
+# -- detect_provider — client-based detection ------------------------------
+
+
+def _client_with_module(module: str) -> object:
+    class _Fake:
+        pass
+
+    _Fake.__module__ = module
+    return _Fake()
+
+
+def test_detect_gemini_via_client_module() -> None:
+    client = _client_with_module("google.genai.client")
+    assert detect_provider(client, "some-model") == "google"
+
+
+def test_detect_openai_via_client_module() -> None:
+    client = _client_with_module("openai._client")
+    assert detect_provider(client, "some-model") == "openai"
+
+
+def test_detect_anthropic_via_injected_client() -> None:
+    client = _client_with_module("anthropic._client")
+    assert detect_provider(client, "claude-3-5-sonnet-20241022") == "anthropic"
+
+
+# -- detect_provider — model-name heuristics -------------------------------
+
+
+@pytest.mark.parametrize("model", ["gemini-2.0-flash", "gemini-1.5-pro", "Gemini-Pro"])
+def test_detect_gemini_model_name(model: str) -> None:
+    assert detect_provider(None, model) == "google"
+
+
+@pytest.mark.parametrize(
+    "model",
+    ["gpt-4o", "gpt-3.5-turbo", "ollama/llama3", "qwen2.5-72b", "llama3.1", "deepseek-v2", "mistral-7b"],
+)
+def test_detect_openai_model_keywords(model: str) -> None:
+    assert detect_provider(None, model) == "openai"
+
+
+# -- detect_provider — env-var fallbacks (no client, no model hint) --------
+
+
+def test_detect_fallback_anthropic_key(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
+    with patch("sakthai.agent.providers.anthropic_credential_source", return_value="env"):
+        assert detect_provider(None, "unknown-model") == "anthropic"
+
+
+def test_detect_fallback_gemini_key(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("GEMINI_API_KEY", "key123")
+    with patch("sakthai.agent.providers.anthropic_credential_source", return_value=None):
+        assert detect_provider(None, "unknown-model") == "google"
+
+
+def test_detect_fallback_google_api_key(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    monkeypatch.setenv("GOOGLE_API_KEY", "gkey")
+    with patch("sakthai.agent.providers.anthropic_credential_source", return_value=None):
+        assert detect_provider(None, "unknown-model") == "google"
+
+
+def test_detect_fallback_openai_credential(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
+    with (
+        patch("sakthai.agent.providers.anthropic_credential_source", return_value=None),
+        patch("sakthai.agent.providers.openai_credential_source", return_value="env"),
+    ):
+        assert detect_provider(None, "unknown-model") == "openai"
+
+
+def test_detect_fallback_default_is_anthropic(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
+    with (
+        patch("sakthai.agent.providers.anthropic_credential_source", return_value=None),
+        patch("sakthai.agent.providers.openai_credential_source", return_value=None),
+    ):
+        assert detect_provider(None, "unknown-model") == "anthropic"
+
+
+# -- build_client ----------------------------------------------------------
+
+
+def test_build_client_returns_injected_client() -> None:
+    sentinel = object()
+    assert build_client("anthropic", sentinel) is sentinel
+
+
+def test_build_client_anthropic_resolves_client() -> None:
+    fake = MagicMock()
+    with patch("sakthai.agent.providers.resolve_anthropic_client", return_value=fake):
+        assert build_client("anthropic", None) is fake
+
+
+def test_build_client_anthropic_auth_error_raises_agent_error() -> None:
+    from sakthai.auth import AuthError
+
+    with patch("sakthai.agent.providers.resolve_anthropic_client", side_effect=AuthError("no creds")), pytest.raises(AgentError, match="no creds"):
+        build_client("anthropic", None)
+
+
+def test_build_client_openai_returns_httpx_client() -> None:
+    with patch("sakthai.auth.resolve_openai_credentials", return_value=("http://localhost:11434", "nokey")):
+        result = build_client("openai", None)
+    assert isinstance(result, httpx.Client)
+
+
+def test_build_client_openai_auth_error_raises_agent_error() -> None:
+    from sakthai.auth import AuthError
+
+    with patch("sakthai.auth.resolve_openai_credentials", side_effect=AuthError("no openai creds")), pytest.raises(AgentError, match="no openai creds"):
+        build_client("openai", None)
+
+
+def test_build_client_google_missing_key_raises_agent_error(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
+    with pytest.raises(AgentError, match="Missing credentials for Google Gemini"):
+        build_client("google", None)
+
+
+def test_build_client_google_with_key(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("GEMINI_API_KEY", "test-key")
+    fake_google_client = MagicMock()
+    fake_genai = MagicMock()
+    fake_genai.Client.return_value = fake_google_client
+    # Patch the local import inside build_client
+    with patch.dict("sys.modules", {"google": MagicMock(genai=fake_genai), "google.genai": fake_genai}):
+        result = build_client("google", None)
+    assert result is fake_google_client
+
+
+def test_build_client_google_client_init_error_raises_agent_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("GEMINI_API_KEY", "test-key")
+    fake_genai = MagicMock()
+    fake_genai.Client.side_effect = RuntimeError("bad api key")
+    with patch.dict("sys.modules", {"google": MagicMock(genai=fake_genai), "google.genai": fake_genai}), pytest.raises(AgentError, match="Failed to initialize Google Gemini client"):
+        build_client("google", None)
