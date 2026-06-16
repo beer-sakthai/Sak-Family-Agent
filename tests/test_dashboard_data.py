@@ -5,6 +5,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
 from sakthai.dashboard.data import (
     SOURCE_DEMO,
     SOURCE_LIVE,
@@ -48,3 +50,17 @@ def test_export_dashboard_json(tmp_path: Path) -> None:
     payload = json.loads(dest.read_text(encoding="utf-8"))
     assert payload["source"] == SOURCE_LIVE
     assert payload["kpis"]["total_facts"] == 1
+
+
+def test_unreadable_store_falls_back_to_demo(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import sakthai.memory.store as store_mod
+
+    def _boom(*_a: object, **_kw: object) -> None:
+        raise RuntimeError("disk full")
+
+    monkeypatch.setattr(store_mod, "MemoryStore", _boom)
+
+    data = collect_dashboard_data(tmp_path / "broken.db")
+    assert data["source"] == SOURCE_DEMO
