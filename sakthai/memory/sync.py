@@ -10,14 +10,26 @@ from .store import MemoryStore
 
 
 def sync_memory_to_git(remote: str | None = None) -> str:
-    """Export memory to snapshot.json and sync to a Git remote."""
+    """Export memory to JSONL and sync to a Git remote."""
     home = sakthai_home()
-    snapshot_path = home / "snapshot.json"
+    facts_path = home / "facts.jsonl"
+    obs_path = home / "observations.jsonl"
 
     with MemoryStore() as store:
         snapshot = store.export_to_dict()
 
-    snapshot_path.write_text(json.dumps(snapshot, indent=2, ensure_ascii=False), encoding="utf-8")
+    # Write facts
+    facts_lines = [json.dumps(f, ensure_ascii=False) for f in snapshot.get("facts", [])]
+    facts_path.write_text("\n".join(facts_lines) + ("\n" if facts_lines else ""), encoding="utf-8")
+
+    # Write observations
+    obs_lines = [json.dumps(o, ensure_ascii=False) for o in snapshot.get("observations", [])]
+    obs_path.write_text("\n".join(obs_lines) + ("\n" if obs_lines else ""), encoding="utf-8")
+
+    # Clean up legacy snapshot
+    legacy_snapshot = home / "snapshot.json"
+    if legacy_snapshot.exists():
+        legacy_snapshot.unlink()
 
     # Git operations
     if not (home / ".git").exists():
@@ -44,7 +56,18 @@ def sync_memory_to_git(remote: str | None = None) -> str:
                 capture_output=True,
             )
 
-    subprocess.run(["git", "add", "snapshot.json"], cwd=home, check=True, capture_output=True)
+    subprocess.run(
+        ["git", "rm", "-q", "--ignore-unmatch", "snapshot.json"],
+        cwd=home,
+        check=False,
+        capture_output=True,
+    )
+    subprocess.run(
+        ["git", "add", "facts.jsonl", "observations.jsonl"],
+        cwd=home,
+        check=True,
+        capture_output=True,
+    )
 
     status = subprocess.run(
         ["git", "status", "--porcelain"], cwd=home, check=True, capture_output=True, text=True
@@ -52,7 +75,21 @@ def sync_memory_to_git(remote: str | None = None) -> str:
     if not status.stdout.strip():
         return "No changes to sync."
 
-    subprocess.run(["git", "-c", "user.name=SakThai Agent", "-c", "user.email=agent@sakthai.local", "commit", "-m", "chore: memory sync"], cwd=home, check=True, capture_output=True)
+    subprocess.run(
+        [
+            "git",
+            "-c",
+            "user.name=SakThai Agent",
+            "-c",
+            "user.email=agent@sakthai.local",
+            "commit",
+            "-m",
+            "chore: memory sync",
+        ],
+        cwd=home,
+        check=True,
+        capture_output=True,
+    )
 
     if remote:
         subprocess.run(
