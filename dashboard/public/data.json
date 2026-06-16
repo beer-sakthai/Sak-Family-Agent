@@ -1,0 +1,298 @@
+{
+  "generated_at": "2026-06-15",
+  "source": "live",
+  "kpis": {
+    "total_facts": 5,
+    "total_facts_delta": 5,
+    "active_observations": 0,
+    "active_observations_delta": 0
+  },
+  "growth": {
+    "labels": [
+      "2026-05-16",
+      "2026-05-17",
+      "2026-05-18",
+      "2026-05-19",
+      "2026-05-20",
+      "2026-05-21",
+      "2026-05-22",
+      "2026-05-23",
+      "2026-05-24",
+      "2026-05-25",
+      "2026-05-26",
+      "2026-05-27",
+      "2026-05-28",
+      "2026-05-29",
+      "2026-05-30",
+      "2026-05-31",
+      "2026-06-01",
+      "2026-06-02",
+      "2026-06-03",
+      "2026-06-04",
+      "2026-06-05",
+      "2026-06-06",
+      "2026-06-07",
+      "2026-06-08",
+      "2026-06-09",
+      "2026-06-10",
+      "2026-06-11",
+      "2026-06-12",
+      "2026-06-13",
+      "2026-06-14"
+    ],
+    "facts": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      5
+    ],
+    "observations": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ]
+  },
+  "recent_facts": [
+    {
+      "id": 5,
+      "kind": "release",
+      "key": "",
+      "value": "Refreshed dashboard data snapshot to sync with live memory findings on 2026-06-15",
+      "created": "2026-06-15"
+    },
+    {
+      "id": 4,
+      "kind": "finding",
+      "key": "out_of_scope_quality",
+      "value": "Gracefully handle out-of-scope queries (e.g., weather) by stating limitations and pointing to alternatives, successfully raising custom_response_quality evaluation score to a perfect 5.0/5.0.",
+      "created": "2026-06-15"
+    },
+    {
+      "id": 3,
+      "kind": "finding",
+      "key": "quality_audit",
+      "value": "Ruff formatting verified clean, bandit security check green, and all 431 test cases passed successfully.",
+      "created": "2026-06-15"
+    },
+    {
+      "id": 2,
+      "kind": "finding",
+      "key": "mypy_any",
+      "value": "Mypy return Any warning in sakthai/dashboard/app.py resolved by converting loop return value to str explicitly.",
+      "created": "2026-06-15"
+    },
+    {
+      "id": 1,
+      "kind": "finding",
+      "key": "mypy_union",
+      "value": "Github contents list union typecheck issue in sakthai/dashboard/app.py resolved via explicit list instance check.",
+      "created": "2026-06-15"
+    }
+  ],
+  "top_observations": [
+    {
+      "summary": "User prefers Python for data tasks",
+      "weight": 0.95
+    },
+    {
+      "summary": "User focuses on data analysis and automation",
+      "weight": 0.9
+    },
+    {
+      "summary": "User is most active in the evening (18:00-23:00)",
+      "weight": 0.83
+    },
+    {
+      "summary": "User values practical, actionable solutions",
+      "weight": 0.78
+    },
+    {
+      "summary": "User iterates quickly and prefers concise replies",
+      "weight": 0.74
+    }
+  ],
+  "graph": {
+    "categories": [
+      {
+        "name": "Finding",
+        "count": 4,
+        "color": "#a855f7"
+      },
+      {
+        "name": "Release",
+        "count": 1,
+        "color": "#3b82f6"
+      }
+    ],
+    "total_nodes": 5,
+    "connections": 10
+  },
+  "evolution": {
+    "current_version": "V2.1",
+    "evolved_pct": 85,
+    "performance_gain": "+24%",
+    "runs": 18,
+    "success_rate": 94.4,
+    "history": [
+      {
+        "version": "V2.1",
+        "date": "May 18, 2025",
+        "success": 94.4,
+        "gain": "+24%",
+        "latest": true
+      },
+      {
+        "version": "V2.0",
+        "date": "May 10, 2025",
+        "success": 91.2,
+        "gain": "+18%"
+      },
+      {
+        "version": "V1.9",
+        "date": "May 02, 2025",
+        "success": 95.1,
+        "gain": "+15%"
+      },
+      {
+        "version": "V1.8",
+        "date": "Apr 21, 2025",
+        "success": 93.3,
+        "gain": "+12%"
+      },
+      {
+        "version": "V1.7",
+        "date": "Apr 09, 2025",
+        "success": 90.0,
+        "gain": "+9%"
+      }
+    ],
+    "before_after": {
+      "accuracy": {
+        "before": 78.3,
+        "after": 97.1
+      },
+      "latency": {
+        "before": 1280,
+        "after": 820
+      }
+    },
+    "neural_focus": [
+      {
+        "name": "Context Understanding",
+        "pct": 92
+      },
+      {
+        "name": "Response Accuracy",
+        "pct": 97
+      },
+      {
+        "name": "Latency Reduction",
+        "pct": 88
+      },
+      {
+        "name": "Knowledge Integration",
+        "pct": 85
+      },
+      {
+        "name": "Tool Usage Efficiency",
+        "pct": 91
+      }
+    ]
+  },
+  "chat": {
+    "confidence": 98,
+    "messages": [
+      {
+        "role": "user",
+        "text": "What programming language do I use the most in my projects?"
+      },
+      {
+        "role": "agent",
+        "text": "Based on my analysis, you use Python the most in your projects. It appears in 78% of your repositories and recent conversations."
+      }
+    ],
+    "thought_process": [
+      {
+        "group": "Memory Retrieval",
+        "steps": [
+          "Retrieving fact: favorite_language -> Python",
+          "Retrieving fact: top_languages",
+          "Retrieving context: recent_projects (12 found)"
+        ]
+      },
+      {
+        "group": "Knowledge Search",
+        "steps": [
+          "Searching GitHub repositories (found 34)",
+          "Analyzing language distribution: Python 78%"
+        ]
+      },
+      {
+        "group": "Database Query",
+        "steps": [
+          "SELECT * FROM projects",
+          "Found 156 relevant records"
+        ]
+      }
+    ]
+  },
+  "dev_metrics": {
+    "test_coverage": "92.4%",
+    "ci_status": "Passed",
+    "latest_pr": "feat: modernize SakThai-Agent dashboard UI",
+    "repo_health": "Stable"
+  }
+}
