@@ -64,7 +64,9 @@ class TestResponse:
         assert r.usage["total_tokens"] == 0
 
     def test_usage_forwarded(self) -> None:
-        r = Response("tool_use", [], usage={"input_tokens": 10, "output_tokens": 5, "total_tokens": 15})
+        r = Response(
+            "tool_use", [], usage={"input_tokens": 10, "output_tokens": 5, "total_tokens": 15}
+        )
         assert r.usage["total_tokens"] == 15
 
 
@@ -259,7 +261,9 @@ class TestCallAnthropic:
 
         raw = self._make_raw_response()
         client = self._fake_client(raw)
-        result = call_anthropic(client, "claude-3", 1024, "sys", [], [{"role": "user", "content": "hi"}])
+        result = call_anthropic(
+            client, "claude-3", 1024, "sys", [], [{"role": "user", "content": "hi"}]
+        )
         assert result is raw
         client.messages.create.assert_called_once()
 
@@ -393,6 +397,7 @@ class TestToGeminiContents:
     def _convert(self, messages: list[dict[str, Any]]) -> list[Any]:
         # Re-import after patching to pick up the mocked module
         import sakthai.agent.providers.gemini_provider as mod
+
         importlib.reload(mod)
         return mod.to_gemini_contents(messages)
 
@@ -404,9 +409,7 @@ class TestToGeminiContents:
         assert result[0].parts[0].text == "hello"
 
     def test_assistant_text_block(self) -> None:
-        messages = [
-            {"role": "assistant", "content": [{"type": "text", "text": "world"}]}
-        ]
+        messages = [{"role": "assistant", "content": [{"type": "text", "text": "world"}]}]
         result = self._convert(messages)
         assert result[0].role == "model"
         assert result[0].parts[0].text == "world"
@@ -415,9 +418,7 @@ class TestToGeminiContents:
         messages = [
             {
                 "role": "assistant",
-                "content": [
-                    {"type": "tool_use", "id": "t1", "name": "recall", "input": {"n": 5}}
-                ],
+                "content": [{"type": "tool_use", "id": "t1", "name": "recall", "input": {"n": 5}}],
             }
         ]
         result = self._convert(messages)
@@ -480,6 +481,7 @@ class TestCallGemini:
 
     def _call(self, candidates: list[Any]) -> Response:
         import sakthai.agent.providers.gemini_provider as mod
+
         importlib.reload(mod)
 
         raw = SimpleNamespace(candidates=candidates, usage_metadata=None)
@@ -504,6 +506,7 @@ class TestCallGemini:
 
     def test_no_candidates_raises_agent_error(self) -> None:
         import sakthai.agent.providers.gemini_provider as mod
+
         importlib.reload(mod)
 
         raw = SimpleNamespace(candidates=[], usage_metadata=None)
@@ -527,6 +530,7 @@ class TestCallGemini:
 
     def test_api_failure_raises_agent_error(self) -> None:
         import sakthai.agent.providers.gemini_provider as mod
+
         importlib.reload(mod)
 
         client = MagicMock()
@@ -537,6 +541,7 @@ class TestCallGemini:
 
     def test_generated_tool_use_id_contains_iteration(self) -> None:
         import sakthai.agent.providers.gemini_provider as mod
+
         importlib.reload(mod)
 
         fc = SimpleNamespace(name="recall", args={"n": 1})
@@ -557,6 +562,7 @@ class TestCallGemini:
 class TestToOpenAIMessages:
     def _convert(self, system: str, messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
         from sakthai.agent.providers.openai_provider import to_openai_messages
+
         return to_openai_messages(system, messages)
 
     def test_system_message_prepended(self) -> None:
@@ -568,9 +574,7 @@ class TestToOpenAIMessages:
         assert result[1] == {"role": "user", "content": "hello"}
 
     def test_assistant_text_block(self) -> None:
-        messages = [
-            {"role": "assistant", "content": [{"type": "text", "text": "reply"}]}
-        ]
+        messages = [{"role": "assistant", "content": [{"type": "text", "text": "reply"}]}]
         result = self._convert("s", messages)
         msg = result[1]
         assert msg["role"] == "assistant"
@@ -581,9 +585,7 @@ class TestToOpenAIMessages:
         messages = [
             {
                 "role": "assistant",
-                "content": [
-                    {"type": "tool_use", "id": "t1", "name": "recall", "input": {"n": 5}}
-                ],
+                "content": [{"type": "tool_use", "id": "t1", "name": "recall", "input": {"n": 5}}],
             }
         ]
         result = self._convert("s", messages)
@@ -615,9 +617,7 @@ class TestToOpenAIMessages:
         messages = [
             {
                 "role": "user",
-                "content": [
-                    {"type": "tool_result", "tool_use_id": "t1", "content": "fact stored"}
-                ],
+                "content": [{"type": "tool_result", "tool_use_id": "t1", "content": "fact stored"}],
             }
         ]
         result = self._convert("s", messages)
@@ -627,15 +627,16 @@ class TestToOpenAIMessages:
         assert msg["content"] == "fact stored"
 
     def test_user_text_block_in_list_content(self) -> None:
-        messages = [
-            {"role": "user", "content": [{"type": "text", "text": "follow up"}]}
-        ]
+        messages = [{"role": "user", "content": [{"type": "text", "text": "follow up"}]}]
         result = self._convert("s", messages)
         assert result[1] == {"role": "user", "content": "follow up"}
 
     def test_assistant_no_content_yields_none(self) -> None:
         messages = [
-            {"role": "assistant", "content": [{"type": "tool_use", "id": "t3", "name": "x", "input": {}}]}
+            {
+                "role": "assistant",
+                "content": [{"type": "tool_use", "id": "t3", "name": "x", "input": {}}],
+            }
         ]
         result = self._convert("s", messages)
         assert result[1]["content"] is None
@@ -691,7 +692,11 @@ class TestStreamChat:
                     {
                         "delta": {
                             "tool_calls": [
-                                {"index": 0, "id": "tc1", "function": {"name": "recall", "arguments": ""}}
+                                {
+                                    "index": 0,
+                                    "id": "tc1",
+                                    "function": {"name": "recall", "arguments": ""},
+                                }
                             ]
                         },
                         "finish_reason": None,
@@ -701,9 +706,7 @@ class TestStreamChat:
             {
                 "choices": [
                     {
-                        "delta": {
-                            "tool_calls": [{"index": 0, "function": {"arguments": '{"n"'}}]
-                        },
+                        "delta": {"tool_calls": [{"index": 0, "function": {"arguments": '{"n"'}}]},
                         "finish_reason": None,
                     }
                 ]
@@ -711,9 +714,7 @@ class TestStreamChat:
             {
                 "choices": [
                     {
-                        "delta": {
-                            "tool_calls": [{"index": 0, "function": {"arguments": ": 5}"}}]
-                        },
+                        "delta": {"tool_calls": [{"index": 0, "function": {"arguments": ": 5}"}}]},
                         "finish_reason": "tool_calls",
                     }
                 ]
@@ -737,10 +738,12 @@ class TestStreamChat:
         from sakthai.agent.providers.openai_provider import _stream_chat
 
         resp = MagicMock()
-        resp.iter_lines.return_value = iter([
-            "data: not-json",
-            "data: [DONE]",
-        ])
+        resp.iter_lines.return_value = iter(
+            [
+                "data: not-json",
+                "data: [DONE]",
+            ]
+        )
         resp.raise_for_status = MagicMock()
         client = MagicMock()
         client.stream.return_value.__enter__ = MagicMock(return_value=resp)
@@ -753,11 +756,13 @@ class TestStreamChat:
         from sakthai.agent.providers.openai_provider import _stream_chat
 
         resp = MagicMock()
-        resp.iter_lines.return_value = iter([
-            "",
-            ": keep-alive",
-            "data: [DONE]",
-        ])
+        resp.iter_lines.return_value = iter(
+            [
+                "",
+                ": keep-alive",
+                "data: [DONE]",
+            ]
+        )
         resp.raise_for_status = MagicMock()
         client = MagicMock()
         client.stream.return_value.__enter__ = MagicMock(return_value=resp)
@@ -780,8 +785,16 @@ class TestStreamChat:
                     {
                         "delta": {
                             "tool_calls": [
-                                {"index": 1, "id": "b", "function": {"name": "b", "arguments": "{}"}},
-                                {"index": 0, "id": "a", "function": {"name": "a", "arguments": "{}"}},
+                                {
+                                    "index": 1,
+                                    "id": "b",
+                                    "function": {"name": "b", "arguments": "{}"},
+                                },
+                                {
+                                    "index": 0,
+                                    "id": "a",
+                                    "function": {"name": "a", "arguments": "{}"},
+                                },
                             ]
                         },
                         "finish_reason": "tool_calls",
