@@ -611,6 +611,69 @@ def test_dashboard_rejects_bad_port(runner: CliRunner) -> None:
     assert "not a valid port" in result.output
 
 
+def test_dashboard_launch_success(runner: CliRunner) -> None:
+    import sys
+    from unittest.mock import MagicMock, patch
+
+    has_original = "streamlit" in sys.modules
+    original_module = sys.modules.get("streamlit")
+    sys.modules["streamlit"] = MagicMock()
+
+    try:
+        with patch("subprocess.call", return_value=0) as mock_call:
+            result = runner.invoke(main, ["dashboard", "--port", "8502", "--no-open"])
+            assert result.exit_code == 0
+            assert mock_call.called
+            cmd_args = mock_call.call_args[0][0]
+            assert "streamlit" in cmd_args
+            assert "run" in cmd_args
+            assert "--server.port" in cmd_args
+            assert "8502" in cmd_args
+            assert "true" in cmd_args  # headless true since --no-open
+    finally:
+        if has_original:
+            sys.modules["streamlit"] = original_module
+        else:
+            sys.modules.pop("streamlit", None)
+
+
+def test_dashboard_launch_keyboard_interrupt(runner: CliRunner) -> None:
+    import sys
+    from unittest.mock import MagicMock, patch
+
+    has_original = "streamlit" in sys.modules
+    original_module = sys.modules.get("streamlit")
+    sys.modules["streamlit"] = MagicMock()
+
+    try:
+        with patch("subprocess.call", side_effect=KeyboardInterrupt) as mock_call:
+            result = runner.invoke(main, ["dashboard", "--port", "8502"])
+            assert result.exit_code == 0
+            assert "stopped." in result.output
+    finally:
+        if has_original:
+            sys.modules["streamlit"] = original_module
+        else:
+            sys.modules.pop("streamlit", None)
+
+
+def test_dashboard_launch_missing_streamlit(runner: CliRunner) -> None:
+    from unittest.mock import patch
+    import builtins
+
+    original_import = builtins.__import__
+
+    def mock_import(name, *args, **kwargs):
+        if name == "streamlit":
+            raise ImportError("mocked streamlit import error")
+        return original_import(name, *args, **kwargs)
+
+    with patch("builtins.__import__", side_effect=mock_import):
+        result = runner.invoke(main, ["dashboard"])
+        assert result.exit_code != 0
+        assert "streamlit is not installed" in result.output
+
+
 def test_run_dry_run_reports_and_exits_zero(
     runner: CliRunner, monkeypatch: pytest.MonkeyPatch
 ) -> None:
