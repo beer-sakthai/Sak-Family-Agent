@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import subprocess
 import urllib.error
 import urllib.request
@@ -10,7 +11,12 @@ from pathlib import Path
 import pytest
 
 import sakthai.agent.tools as _tools_mod
-from sakthai.agent.tools import BUILTIN_TOOLS, tool_by_name
+from sakthai.agent.tools import (
+    BUILTIN_TOOLS,
+    _allowed_read_roots,
+    _path_under_any_root,
+    tool_by_name,
+)
 from sakthai.memory.store import MemoryStore
 
 
@@ -459,3 +465,178 @@ def test_run_agent_loop_non_bool_prune_history_defaults_to_true(
     # A non-bool prune_history is coerced to True, so only the result text returns.
     out = tool_by_name("run_agent_loop").handler({"task": "x", "prune_history": "yes"}, store)
     assert out == "done"
+
+
+# ---------------------------------------------------------------------------
+# _path_under_any_root — unit tests for the private sandbox helper
+# ---------------------------------------------------------------------------
+
+
+class TestPathUnderAnyRoot:
+    def test_exact_root_match(self, tmp_path: Path) -> None:
+        assert _path_under_any_root(tmp_path, [tmp_path])
+
+    def test_subdirectory_allowed(self, tmp_path: Path) -> None:
+        sub = tmp_path / "a" / "b"
+        sub.mkdir(parents=True)
+        assert _path_under_any_root(sub, [tmp_path])
+
+    def test_sibling_directory_rejected(self, tmp_path: Path) -> None:
+        root = tmp_path / "root"
+        sibling = tmp_path / "other"
+        root.mkdir()
+        assert not _path_under_any_root(sibling, [root])
+
+    def test_empty_roots_always_returns_false(self, tmp_path: Path) -> None:
+        assert not _path_under_any_root(tmp_path, [])
+
+    def test_multiple_roots_first_match_wins(self, tmp_path: Path) -> None:
+        root_a = tmp_path / "a"
+        root_b = tmp_path / "b"
+        target = tmp_path / "b" / "file.txt"
+        root_a.mkdir()
+        root_b.mkdir()
+        target.write_text("x", encoding="utf-8")
+        assert _path_under_any_root(target, [root_a, root_b])
+
+
+# ---------------------------------------------------------------------------
+# _allowed_read_roots — SAKTHAI_READ_ALLOW parsing
+# ---------------------------------------------------------------------------
+
+
+class TestAllowedReadRoots:
+    def test_multiple_read_allow_paths_parsed(
+        self, tmp_path: Path, sakthai_home: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        dir_a = tmp_path / "allowed_a"
+        dir_b = tmp_path / "allowed_b"
+        dir_a.mkdir()
+        dir_b.mkdir()
+        monkeypatch.setenv("SAKTHAI_READ_ALLOW", os.pathsep.join([str(dir_a), str(dir_b)]))
+        roots = _allowed_read_roots()
+        assert dir_a.resolve() in roots
+        assert dir_b.resolve() in roots
+
+    def test_empty_tokens_in_read_allow_ignored(
+        self, sakthai_home: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv("SAKTHAI_READ_ALLOW", f"{os.pathsep}{os.pathsep}")
+        roots = _allowed_read_roots()
+        assert isinstance(roots, list)
+
+    def test_read_file_respects_multiple_allow_paths(
+        self, tmp_path: Path, sakthai_home: Path, monkeypatch: pytest.MonkeyPatch, store: MemoryStore
+    ) -> None:
+        dir_a = tmp_path / "allowed_a"
+        dir_b = tmp_path / "allowed_b"
+        dir_a.mkdir()
+        dir_b.mkdir()
+        (dir_a / "file_a.txt").write_text("from a", encoding="utf-8")
+        (dir_b / "file_b.txt").write_text("from b", encoding="utf-8")
+        monkeypatch.setenv("SAKTHAI_READ_ALLOW", os.pathsep.join([str(dir_a), str(dir_b)]))
+        assert tool_by_name("read_file").handler({"path": str(dir_a / "file_a.txt")}, store) == "from a"
+        assert tool_by_name("read_file").handler({"path": str(dir_b / "file_b.txt")}, store) == "from b"
+
+
+# ---------------------------------------------------------------------------
+# read_file — symlink sandbox escape
+# ---------------------------------------------------------------------------
+
+
+class TestReadFileSymlink:
+    def test_symlink_to_outside_root_is_blocked(
+        self, tmp_path: Path, sakthai_home: Path, monkeypatch: pytest.MonkeyPatch, store: MemoryStore
+    ) -> None:
+        secret_dir = tmp_path / "secret"
+        secret_dir.mkdir()
+        secret = secret_dir / "secret.txt"
+        secret.write_text("private", encoding="utf-8")
+        cwd_dir = tmp_path / "working"
+        cwd_dir.mkdir()
+        link = cwd_dir / "link.txt"
+        link.symlink_to(secret)
+        monkeypatch.chdir(cwd_dir)
+        # The symlink is in cwd, but it resolves to outside cwd and sakthai_home.
+        with pytest.raises(PermissionError):
+            tool_by_name("read_file").handler({"path": "link.txt"}, store)
+
+    def test_symlink_within_root_is_allowed(
+        self, tmp_path: Path, sakthai_home: Path, monkeypatch: pytest.MonkeyPatch, store: MemoryStore
+    ) -> None:
+        monkeypatch.chdir(tmp_path)
+        real_file = tmp_path / "real.txt"
+        real_file.write_text("visible", encoding="utf-8")
+        link = tmp_path / "link.txt"
+        link.symlink_to(real_file)
+        out = tool_by_name("read_file").handler({"path": "link.txt"}, store)
+        assert out == "visible"
+
+
+# ---------------------------------------------------------------------------
+# run_command — timeout clamping
+# ---------------------------------------------------------------------------
+
+
+class TestRunCommandTimeoutClamping:
+    def _capture_timeout(self, monkeypatch: pytest.MonkeyPatch) -> dict:
+        captured: dict = {}
+
+        class _FakeProc:
+            returncode = 0
+            stdout = "ok"
+            stderr = ""
+
+        def _fake_run(cmd: object, **kwargs: object) -> _FakeProc:
+            captured["timeout"] = kwargs.get("timeout")
+            return _FakeProc()
+
+        monkeypatch.setattr(subprocess, "run", _fake_run)
+        return captured
+
+    def test_timeout_below_minimum_clamped_to_one(
+        self, monkeypatch: pytest.MonkeyPatch, store: MemoryStore
+    ) -> None:
+        monkeypatch.setenv("SAKTHAI_SHELL_ALLOW", "1")
+        captured = self._capture_timeout(monkeypatch)
+        tool_by_name("run_command").handler({"command": "echo ok", "timeout": 0.1}, store)
+        assert captured["timeout"] == 1.0
+
+    def test_timeout_above_maximum_clamped(
+        self, monkeypatch: pytest.MonkeyPatch, store: MemoryStore
+    ) -> None:
+        monkeypatch.setenv("SAKTHAI_SHELL_ALLOW", "1")
+        captured = self._capture_timeout(monkeypatch)
+        tool_by_name("run_command").handler({"command": "echo ok", "timeout": 99999}, store)
+        assert captured["timeout"] == _tools_mod._CMD_TIMEOUT_MAX
+
+    def test_timeout_within_range_passes_through(
+        self, monkeypatch: pytest.MonkeyPatch, store: MemoryStore
+    ) -> None:
+        monkeypatch.setenv("SAKTHAI_SHELL_ALLOW", "1")
+        captured = self._capture_timeout(monkeypatch)
+        tool_by_name("run_command").handler({"command": "echo ok", "timeout": 45}, store)
+        assert captured["timeout"] == 45.0
+
+
+# ---------------------------------------------------------------------------
+# send_telegram_message — partial environment configuration
+# ---------------------------------------------------------------------------
+
+
+class TestSendTelegramPartialConfig:
+    def test_only_token_set_returns_config_missing(
+        self, monkeypatch: pytest.MonkeyPatch, store: MemoryStore
+    ) -> None:
+        monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "my-token")
+        monkeypatch.delenv("TELEGRAM_CHAT_ID", raising=False)
+        out = tool_by_name("send_telegram_message").handler({"message": "hi"}, store)
+        assert "configuration missing" in out
+
+    def test_only_chat_id_set_returns_config_missing(
+        self, monkeypatch: pytest.MonkeyPatch, store: MemoryStore
+    ) -> None:
+        monkeypatch.delenv("TELEGRAM_BOT_TOKEN", raising=False)
+        monkeypatch.setenv("TELEGRAM_CHAT_ID", "123456")
+        out = tool_by_name("send_telegram_message").handler({"message": "hi"}, store)
+        assert "configuration missing" in out
