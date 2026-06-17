@@ -144,11 +144,11 @@ Re-derive (never copy) each item, or consciously decline it. Process with
 caution — v2 is intentionally curated, so triage before bulk-adding.
 
 ### 12.1 — Identity & governance docs (high value, low risk)
-- [ ] Re-derive SAKTHAI.md (project identity) for v2
-- [ ] Add CONTRIBUTING.md, SECURITY.md, CODE_OF_CONDUCT.md (v2-accurate: uv, no app/ bundle)
-- [ ] Decide on WORKSPACE.md (workspace notes) — re-derive or fold into README/docs
-- [ ] CHANGELOG.md — generate from v2 history via release tooling, do NOT copy OG
-- [ ] DASHBOARD_IMPROVEMENTS.md — fold still-relevant notes into docs/, else drop
+- [x] Re-derive SAKTHAI.md (project identity) for v2 — 2026-06-17
+- [x] Add CODE_OF_CONDUCT.md and confirm CONTRIBUTING.md / SECURITY.md exist — 2026-06-17
+- [x] Decide on WORKSPACE.md (re-derived as docs/workspace.md) — 2026-06-17
+- [x] CHANGELOG.md (generated from v2 history) — 2026-06-17
+- [x] DASHBOARD_IMPROVEMENTS.md (folded into docs/dashboard_improvements.md) — 2026-06-17
 
 ### 12.2 — Doc / data info files
 - [ ] Port docs/devtools_ai_capabilities.md if still relevant to v2
@@ -186,6 +186,7 @@ caution — v2 is intentionally curated, so triage before bulk-adding.
 ---
 
 ## Log
+- 2026-06-17 — Phase 12.1 done: re-derived identity and governance documentation (SAKTHAI.md, CODE_OF_CONDUCT.md, docs/workspace.md, CHANGELOG.md, docs/dashboard_improvements.md).
 - 2026-06-17 — Phase 12.6 done: implemented unified extension paths, namespaced command routing, and native caveman runtime toggle.
 - 2026-06-17 — Phase 12.6 done: completed workflows and caveman integration audit and saved to docs/workflows_caveman_integration_audit.md.
 - 2026-06-16 — Phase 12 added: OG→v2 information-parity audit (identity/governance
