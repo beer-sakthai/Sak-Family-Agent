@@ -143,39 +143,44 @@ Goal: nothing of value in the locked OG blueprint is lost in the rewrite.
 Re-derive (never copy) each item, or consciously decline it. Process with
 caution — v2 is intentionally curated, so triage before bulk-adding.
 
+> Decisions for 12.1–12.5 are recorded in [`docs/og_parity_audit.md`](docs/og_parity_audit.md).
+> 📋 items below = decision made; re-derivation of the keep-lists is scoped follow-on
+> work pending sign-off (no verbatim copying).
+
 ### 12.1 — Identity & governance docs (high value, low risk)
-- [ ] Re-derive SAKTHAI.md (project identity) for v2
-- [ ] Add CONTRIBUTING.md, SECURITY.md, CODE_OF_CONDUCT.md (v2-accurate: uv, no app/ bundle)
-- [ ] Decide on WORKSPACE.md (workspace notes) — re-derive or fold into README/docs
-- [ ] CHANGELOG.md — generate from v2 history via release tooling, do NOT copy OG
-- [ ] DASHBOARD_IMPROVEMENTS.md — fold still-relevant notes into docs/, else drop
+- [x] Re-derive SAKTHAI.md (project identity) for v2 — 2026-06-17: v2-accurate
+      agent identity; tool set updated (adds send_telegram_message, run_agent_loop)
+- [x] Add CONTRIBUTING.md, SECURITY.md, CODE_OF_CONDUCT.md (v2-accurate: uv, no app/ bundle)
+      — 2026-06-17: CONTRIBUTING/SECURITY already present & v2-accurate (verified);
+      re-derived CODE_OF_CONDUCT.md (MIT-aligned; OG's "proprietary/CLA" wording corrected)
+- [x] Decide on WORKSPACE.md — 2026-06-17: DECLINED (OG's is a workspace-root CLAUDE.md
+      for Hermes/colab/root-playwright; none exist in v2; context already in CLAUDE.md + README + ~/CLAUDE.md)
+- [x] CHANGELOG.md — generate from v2 history, do NOT copy OG — 2026-06-17: Keep-a-Changelog
+      built from v2 phase log + git; OG's 993-line v1 changelog not copied
+- [x] DASHBOARD_IMPROVEMENTS.md — 2026-06-17: declined the 426-line v1 proposal (most done
+      in Phase 8 / v3-scoped); 3 still-open ideas folded into og_parity_audit.md#dashboard-backlog
 
 ### 12.2 — Doc / data info files
-- [ ] Port docs/devtools_ai_capabilities.md if still relevant to v2
-- [ ] Re-derive data/hf_dataset_readme.md (HF dataset card) — only if v2 ships a dataset
+- [x] Port docs/devtools_ai_capabilities.md — 2026-06-17: DECLINED (445-byte browser-DevTools note; no such workflow in v2)
+- [x] Re-derive data/hf_dataset_readme.md — 2026-06-17: DECLINED (v2 ships no dataset; data/ holds only the snapshot format)
 
-### 12.3 — Sakthai-own skills backfill (skills/  — OG 111 vs v2 8)
-- [ ] Triage the ~80 OG sakthai-* skills absent from v2 (agent-*, learning-*,
-      llm-*, memory-*, automation-*, dashboard-*, web-*, soul-engine,
-      core-foundations, …); re-derive the keepers into v2 skills/ or library/
-- [ ] Decide on the ~18 GCP/data skills + media/ (keep in v2 scope or drop)
+### 12.3 — Sakthai-own skills backfill (skills/  — OG 111 vs v2 17)
+- [📋] Triage the ~80 OG sakthai-* skills — 2026-06-17: triaged by prefix in the audit;
+      ~6–10 keepers identified (memory/llm/agent/learning), rest declined. Re-derivation pending sign-off.
+- [x] Decide on the ~18 GCP/data skills + media/ — 2026-06-17: OUT OF SCOPE / defer to v3
+      cloud port (no BigQuery/Spanner/Dataflow surface in v2)
 
-### 12.4 — Library corpus triage (library/ — OG 357 files / ~26 categories vs v2 ~20)
-- [ ] Per-category keep/drop decision (apple, autonomous-ai-agents, composio,
-      creative, data-science, devops, dogfood, email, github, media, mlops,
-      note-taking, productivity, red-teaming, research, security, smart-home,
-      social-media, software-development, web, yuanbao)
-- [ ] Re-derive kept skills into v2's curated library/ grouping (no verbatim copy)
-- [ ] CAUTION: conflicts with v2 curated design — record rationale for each drop
+### 12.4 — Library corpus triage (library/ — OG 357 files / 23 categories vs v2 12)
+- [x] Per-category keep/drop decision — 2026-06-17: recorded in the audit (decline
+      creative/mlops/web/media/apple/email/social/etc.; cherry-pick research/security/devops/
+      software-development/github/red-teaming/autonomous-ai-agents/productivity)
+- [📋] Re-derive kept skills into v2's curated library/ grouping — pending sign-off on the cherry-pick list
+- [x] CAUTION recorded — 2026-06-17: category-level rationale in the audit; per-file rationale at re-derive time
 
 ### 12.5 — Code / feature module gaps (roadmap, evaluate vs decline)
-- [ ] hf.py (Hugging Face hub) — wanted in v2?
-- [ ] sandbox.py (Docker sandbox for `run --sandbox`)
-- [ ] gemini_plugin.py + cli/gemini.py (Gemini CLI plugin)
-- [ ] deployment/terraform/ IaC  •  app/ ADK bundle (overlaps Phase 9)
-- [ ] web/ immersive static gallery  •  eval/ harness + datasets
-- [ ] colab_training/ + scripts/finetune_sakthai.py (LoRA)  •  data/hermes-dataset
-- [ ] Explicitly NOT porting: artifacts/junk (reports, logs, pngs, scratch/, benchmarks)
+- [x] Evaluate all module gaps — 2026-06-17: recorded in the audit. sandbox.py + an eval/ harness
+      are the strongest re-derive candidates; hf.py/gemini_plugin.py deferred; terraform/app/ADK → v3;
+      web gallery + LoRA/colab/finetune + artifacts/junk → declined
 
 ### 12.6 — Extension Integration
 - [x] Workflows & Caveman Integration Audit (docs/workflows_caveman_integration_audit.md) — 2026-06-17
@@ -183,6 +188,11 @@ caution — v2 is intentionally curated, so triage before bulk-adding.
 ---
 
 ## Log
+- 2026-06-17 — Phase 12.1–12.5 processed: re-derived SAKTHAI.md, CODE_OF_CONDUCT.md (MIT),
+  CHANGELOG.md; verified CONTRIBUTING/SECURITY already v2-accurate; declined WORKSPACE.md,
+  DASHBOARD_IMPROVEMENTS.md, devtools_ai_capabilities.md, hf_dataset_readme.md. Full skills/
+  library/code-module triage with keep/drop rationale recorded in docs/og_parity_audit.md
+  (re-derivation of keep-lists is scoped follow-on pending sign-off). Done on branch phase12-og-parity.
 - 2026-06-17 — Phase 12.6 done: completed workflows and caveman integration audit and saved to docs/workflows_caveman_integration_audit.md.
 - 2026-06-16 — Phase 12 added: OG→v2 information-parity audit (identity/governance
   docs, skills 111→8, library 357→~20, code/feature gaps) recorded for triage.
