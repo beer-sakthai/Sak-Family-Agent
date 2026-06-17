@@ -200,6 +200,10 @@ caution — v2 is intentionally curated, so triage before bulk-adding.
 ---
 
 ## Log
+- 2026-06-17 — Phase 12 MERGED to main: PR #32 (governance docs + audit + 3 re-derived
+  library skills) merged; its CI flagged pre-existing ruff errors in sakthai/skills.py + tests
+  (not from this work — library/ is ruff-excluded), fixed by follow-up PR #33. main now green
+  on all gates (ruff/format/mypy/bandit, 43 skills validated, 655 passed / 1 skipped).
 - 2026-06-17 — Phase 12.1–12.5 processed: re-derived SAKTHAI.md, CODE_OF_CONDUCT.md (MIT),
   CHANGELOG.md; verified CONTRIBUTING/SECURITY already v2-accurate; declined WORKSPACE.md,
   DASHBOARD_IMPROVEMENTS.md, devtools_ai_capabilities.md, hf_dataset_readme.md. Full skills/
