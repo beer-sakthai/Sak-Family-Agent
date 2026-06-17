@@ -664,3 +664,18 @@ def test_run_without_stream_prints_final_text(
     result = runner.invoke(main, ["run", "hi", "--no-mcp"])
     assert result.exit_code == 0, result.output
     assert "final-answer" in result.output
+
+
+def test_run_passes_caveman_option(runner: CliRunner, monkeypatch: pytest.MonkeyPatch) -> None:
+    from sakthai.agent.loop import AgentResult
+
+    captured: dict[str, Any] = {}
+
+    def fake_run_agent(task: str, **kwargs: Any) -> AgentResult:
+        captured["caveman"] = kwargs.get("caveman")
+        return AgentResult(text="ok", iterations=1, stop_reason="end_turn")
+
+    monkeypatch.setattr(agent_mod, "run_agent", fake_run_agent)
+    result = runner.invoke(main, ["run", "hi", "--caveman", "ultra", "--no-mcp"])
+    assert result.exit_code == 0
+    assert captured["caveman"] == "ultra"

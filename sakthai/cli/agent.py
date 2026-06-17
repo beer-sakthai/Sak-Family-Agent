@@ -115,6 +115,11 @@ def _event_emitter(verbose: bool) -> Callable[[str, dict[str, Any]], None]:
     is_flag=True,
     help="Fast-track mode: bypass the 6-stage cycle for simple runs.",
 )
+@click.option(
+    "--caveman",
+    type=click.Choice(["lite", "full", "ultra", "wenyan-lite", "wenyan-full", "wenyan-ultra"]),
+    help="Enable Caveman token compression at the specified intensity level.",
+)
 def run(
     task: str,
     model: str,
@@ -128,6 +133,7 @@ def run(
     dry_run: bool,
     stream: bool,
     fast: bool,
+    caveman: str | None,
 ) -> None:
     """Run TASK through the standalone SakThai agent.
 
@@ -167,6 +173,7 @@ def run(
                 tools=tools,
                 skills=list(with_skills),
                 fast=fast,
+                caveman=caveman,
             )
     except AgentError as exc:
         raise click.ClickException(str(exc)) from exc
