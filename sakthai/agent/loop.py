@@ -23,7 +23,7 @@ from typing import Any
 from ..auth import anthropic_credential_source, openai_credential_source
 from ..config import sessions_dir
 from ..memory.store import MemoryStore
-from ..skills import render_skills_prompt_block, find_skill, default_skill_roots
+from ..skills import default_skill_roots, find_skill, render_skills_prompt_block
 from . import providers
 from .providers import base as _providers_base
 from .registry import ToolRegistry
@@ -84,17 +84,16 @@ class AgentResult:
 def _parse_slash_command(task: str) -> tuple[str, str] | None:
     """If task starts with /plugin:command, resolve it and return (injected_system_prompt, active_task)."""
     import re
-    from pathlib import Path
-    
+
     task_stripped = task.strip()
     match = re.match(r"^/([a-zA-Z0-9_-]+):([a-zA-Z0-9_-]+)(?:\s+(.*))?$", task_stripped, re.DOTALL)
     if not match:
         return None
-        
+
     plugin_name = match.group(1)
     command_name = match.group(2)
     arguments = match.group(3) or ""
-    
+
     cmd_file = None
     for root in default_skill_roots():
         p = root / plugin_name / "commands" / f"{command_name}.md"
@@ -105,10 +104,10 @@ def _parse_slash_command(task: str) -> tuple[str, str] | None:
         if p.is_file():
             cmd_file = p
             break
-            
+
     if not cmd_file:
         return None
-        
+
     try:
         content = cmd_file.read_text(encoding="utf-8")
         if content.startswith("---"):

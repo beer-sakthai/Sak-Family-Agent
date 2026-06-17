@@ -14,6 +14,7 @@ import sys
 import types
 from collections.abc import Iterator
 from pathlib import Path
+from typing import Any
 
 import pytest
 from click.testing import CliRunner
