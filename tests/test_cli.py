@@ -497,6 +497,55 @@ def test_extensions_install_and_remove(runner: CliRunner, monkeypatch: pytest.Mo
     assert "removed: bar" in rm.output
 
 
+def test_extensions_full_flow(runner: CliRunner, monkeypatch: pytest.MonkeyPatch) -> None:
+    import json
+
+    import sakthai.extensions.install as ext_mod
+
+    def _fake_clone_with_mcp(cmd: list[str], *args: object, **kwargs: object) -> object:
+        dest = Path(cmd[-1])
+        skill = dest / "ext-skill"
+        skill.mkdir(parents=True)
+        (skill / "SKILL.md").write_text("---\nname: ext-skill\n---\n", encoding="utf-8")
+        (dest / "gemini-extension.json").write_text(
+            json.dumps({"mcpServers": {"srv1": {}}}), encoding="utf-8"
+        )
+        return types.SimpleNamespace(returncode=0, stdout="", stderr="")
+
+    monkeypatch.setattr(ext_mod.subprocess, "run", _fake_clone_with_mcp)
+
+    # 1. Install fresh extension
+    inst = runner.invoke(main, ["extensions", "install", "https://github.com/foo/bar"])
+    assert inst.exit_code == 0
+    assert "installed: bar" in inst.output
+    assert "skills: ext-skill" in inst.output
+    assert "mcp   : srv1" in inst.output
+
+    # 2. Install already installed extension (lines 26-27)
+    inst_again = runner.invoke(main, ["extensions", "install", "https://github.com/foo/bar"])
+    assert inst_again.exit_code == 0
+    assert "already installed: bar" in inst_again.output
+
+    # 3. List installed extensions (lines 43-47)
+    lst = runner.invoke(main, ["extensions", "list"])
+    assert lst.exit_code == 0
+    assert "bar" in lst.output
+    assert "skills: ext-skill" in lst.output
+    assert "mcp   : srv1" in lst.output
+
+    # 4. Remove it
+    rm = runner.invoke(main, ["extensions", "remove", "bar"])
+    assert rm.exit_code == 0
+    assert "removed: bar" in rm.output
+
+
+def test_extensions_install_error(runner: CliRunner) -> None:
+    # Trigger ExtensionError click exception mapping (lines 22-23)
+    result = runner.invoke(main, ["extensions", "install", "https://github.com/foo/@bad"])
+    assert result.exit_code != 0
+    assert "invalid extension name" in result.output
+
+
 def test_extensions_remove_unknown(runner: CliRunner) -> None:
     result = runner.invoke(main, ["extensions", "remove", "nope"])
     assert result.exit_code != 0
@@ -609,6 +658,69 @@ def test_dashboard_rejects_bad_port(runner: CliRunner) -> None:
     result = runner.invoke(main, ["dashboard", "--port", "10"])
     assert result.exit_code != 0
     assert "not a valid port" in result.output
+
+
+def test_dashboard_launch_success(runner: CliRunner) -> None:
+    import sys
+    from unittest.mock import MagicMock, patch
+
+    has_original = "streamlit" in sys.modules
+    original_module = sys.modules.get("streamlit")
+    sys.modules["streamlit"] = MagicMock()
+
+    try:
+        with patch("subprocess.call", return_value=0) as mock_call:
+            result = runner.invoke(main, ["dashboard", "--port", "8502", "--no-open"])
+            assert result.exit_code == 0
+            assert mock_call.called
+            cmd_args = mock_call.call_args[0][0]
+            assert "streamlit" in cmd_args
+            assert "run" in cmd_args
+            assert "--server.port" in cmd_args
+            assert "8502" in cmd_args
+            assert "true" in cmd_args  # headless true since --no-open
+    finally:
+        if has_original:
+            sys.modules["streamlit"] = original_module
+        else:
+            sys.modules.pop("streamlit", None)
+
+
+def test_dashboard_launch_keyboard_interrupt(runner: CliRunner) -> None:
+    import sys
+    from unittest.mock import MagicMock, patch
+
+    has_original = "streamlit" in sys.modules
+    original_module = sys.modules.get("streamlit")
+    sys.modules["streamlit"] = MagicMock()
+
+    try:
+        with patch("subprocess.call", side_effect=KeyboardInterrupt):
+            result = runner.invoke(main, ["dashboard", "--port", "8502"])
+            assert result.exit_code == 0
+            assert "stopped." in result.output
+    finally:
+        if has_original:
+            sys.modules["streamlit"] = original_module
+        else:
+            sys.modules.pop("streamlit", None)
+
+
+def test_dashboard_launch_missing_streamlit(runner: CliRunner) -> None:
+    import builtins
+    from unittest.mock import patch
+
+    original_import = builtins.__import__
+
+    def mock_import(name, *args, **kwargs):
+        if name == "streamlit":
+            raise ImportError("mocked streamlit import error")
+        return original_import(name, *args, **kwargs)
+
+    with patch("builtins.__import__", side_effect=mock_import):
+        result = runner.invoke(main, ["dashboard"])
+        assert result.exit_code != 0
+        assert "streamlit is not installed" in result.output
 
 
 def test_run_dry_run_reports_and_exits_zero(
