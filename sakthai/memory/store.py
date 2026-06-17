@@ -318,9 +318,31 @@ class MemoryStore:
         self._conn.commit()
         return cast(int, cur.lastrowid)
 
-    def list_facts(self, limit: int = 100) -> list[Fact]:
+    def list_facts(
+        self,
+        limit: int = 100,
+        *,
+        after_ts: int | None = None,
+        before_ts: int | None = None,
+    ) -> list[Fact]:
+        """Return facts ordered newest-first.
+
+        Optional ``after_ts`` / ``before_ts`` are inclusive Unix timestamps
+        that filter on ``created_at``.
+        """
+        clauses: list[str] = []
+        params: list[int] = []
+        if after_ts is not None:
+            clauses.append("created_at >= ?")
+            params.append(after_ts)
+        if before_ts is not None:
+            clauses.append("created_at <= ?")
+            params.append(before_ts)
+        where = ("WHERE " + " AND ".join(clauses)) if clauses else ""
+        params.append(limit)
         rows = self._conn.execute(
-            "SELECT * FROM facts ORDER BY updated_at DESC LIMIT ?", (limit,)
+            f"SELECT * FROM facts {where} ORDER BY updated_at DESC LIMIT ?",
+            params,
         ).fetchall()
         return [_fact_from_row(r) for r in rows]
 

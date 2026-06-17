@@ -499,6 +499,10 @@ def _render_memory(data: dict[str, Any]) -> None:
     )
     kind_filter = kind_col.multiselect("Filter by kind", all_kinds, default=[], key="mem_kinds")
 
+    date_from_col, date_to_col = st.columns(2)
+    date_from = date_from_col.date_input("From date", value=None, key="mem_date_from")
+    date_to = date_to_col.date_input("To date", value=None, key="mem_date_to")
+
     mem_col, graph_col = st.columns([1.5, 1], gap="large")
 
     with mem_col:
@@ -512,6 +516,18 @@ def _render_memory(data: dict[str, Any]) -> None:
 
         st.subheader("Recent Facts")
         is_live = data["source"] == SOURCE_LIVE
+
+        after_ts: int | None = (
+            int(datetime.datetime.combine(date_from, datetime.time.min).timestamp())
+            if date_from
+            else None
+        )
+        before_ts: int | None = (
+            int(datetime.datetime.combine(date_to, datetime.time.max).timestamp())
+            if date_to
+            else None
+        )
+
         if search_q and live_store is not None:
             raw_facts, _ = live_store.search_memory(search_q, limit=50)
             facts_to_show = [
@@ -520,7 +536,23 @@ def _render_memory(data: dict[str, Any]) -> None:
                     "kind": f.kind,
                     "key": f.key or "",
                     "value": f.value,
-                    "created": str(f.created_at),
+                    "created": f.created_at,
+                }
+                for f in raw_facts
+            ]
+            if after_ts is not None:
+                facts_to_show = [f for f in facts_to_show if int(f["created"]) >= after_ts]
+            if before_ts is not None:
+                facts_to_show = [f for f in facts_to_show if int(f["created"]) <= before_ts]
+        elif (after_ts is not None or before_ts is not None) and live_store is not None:
+            raw_facts = live_store.list_facts(limit=500, after_ts=after_ts, before_ts=before_ts)
+            facts_to_show = [
+                {
+                    "id": f.id,
+                    "kind": f.kind,
+                    "key": f.key or "",
+                    "value": f.value,
+                    "created": f.created_at,
                 }
                 for f in raw_facts
             ]
@@ -535,7 +567,18 @@ def _render_memory(data: dict[str, Any]) -> None:
                 fact_id = fact.get("id")
                 label = f"[{fact['kind']}] {fact.get('key') or ''}: {fact['value'][:70]}"
                 with st.expander(label, expanded=False):
-                    st.caption(f"Created: {fact.get('created', '')}  |  ID: {fact_id}")
+                    raw_created = fact.get("created", "")
+                    try:
+                        created_display = (
+                            datetime.datetime.fromtimestamp(int(raw_created)).strftime(
+                                "%Y-%m-%d %H:%M"
+                            )
+                            if str(raw_created).lstrip("-").isdigit()
+                            else str(raw_created)
+                        )
+                    except (ValueError, OSError):
+                        created_display = str(raw_created)
+                    st.caption(f"Created: {created_display}  |  ID: {fact_id}")
                     if is_live and fact_id is not None and live_store is not None:
                         new_val = st.text_area(
                             "Value", value=fact["value"], key=f"edit_val_{fact_id}"
