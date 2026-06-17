@@ -103,7 +103,7 @@ sakthai dashboard --export /tmp/snap.json               # → snapshot: /tmp/sna
 ## Test
 
 ```bash
-pytest -q -m "not integration"   # ~250 hermetic tests; this is what CI runs
+pytest -q -m "not integration"   # ~546 hermetic tests (1 skipped w/o [dashboard]); this is what CI runs
 ```
 
 Integration tests (`-m integration`) hit real Anthropic/Ollama endpoints and
