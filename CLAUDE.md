@@ -122,6 +122,7 @@ CLI/MCP → agent loop → tool registry → MemoryStore → SQLite. See
 | `SAKTHAI_HOME` | Override the `~/.sakthai` root (memory db, sessions, extensions) |
 | `SAKTHAI_READ_ALLOW` | Extra paths the `read_file` tool may read |
 | `SAKTHAI_SHELL_ALLOW` | Opt-in flag enabling the `run_command` tool |
+| `SAKTHAI_MCP_TIMEOUT` | Seconds to wait for an external MCP server reply (default: 30) |
 | `TELEGRAM_BOT_TOKEN` / `TELEGRAM_CHAT_ID` | Needed for the `send_telegram_message` tool |
 | `OLLAMA_HOST` | Local Ollama server address (defaults to `http://localhost:11434`) |
 | `OPENAI_API_BASE` / `OPENAI_BASE_URL` | Base URL endpoint for OpenAI-compatible services |

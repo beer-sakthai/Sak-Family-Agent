@@ -31,6 +31,7 @@ OPTIONAL_ENV_VARS: dict[str, str] = {
     "OLLAMA_HOST": "Ollama host URL (default: http://localhost:11434)",
     "SAKTHAI_HOME": "Override the data directory (default: ~/.sakthai)",
     "SAKTHAI_READ_ALLOW": "Extra paths the read_file tool may read (os.pathsep-separated)",
+    "SAKTHAI_MCP_TIMEOUT": "Seconds to wait for an external MCP server reply (default: 30)",
     "GOOGLE_CLOUD_PROJECT": "GCP project id for the cloud (ADK/Vertex) runtime stub",
     "GOOGLE_CLOUD_LOCATION": "GCP region for the cloud runtime (default: us-central1)",
     "GOOGLE_GENAI_USE_VERTEXAI": "Set 'True' to route the cloud runtime through Vertex AI",
@@ -39,6 +40,9 @@ OPTIONAL_ENV_VARS: dict[str, str] = {
 
 # Default region for the cloud runtime when GOOGLE_CLOUD_LOCATION is unset.
 DEFAULT_CLOUD_LOCATION = "us-central1"
+
+# Seconds to wait for an external MCP server's reply, before SAKTHAI_MCP_TIMEOUT.
+DEFAULT_MCP_TIMEOUT = 30.0
 
 
 def sakthai_home() -> Path:
@@ -60,6 +64,22 @@ def sessions_dir() -> Path:
 def ollama_host() -> str:
     """Return the Ollama host URL, defaulting to http://localhost:11434."""
     return os.environ.get("OLLAMA_HOST", "http://localhost:11434").rstrip("/")
+
+
+def mcp_timeout() -> float:
+    """Seconds to wait for an external MCP server reply (SAKTHAI_MCP_TIMEOUT).
+
+    Falls back to ``DEFAULT_MCP_TIMEOUT`` when the var is unset, unparseable, or
+    non-positive — a bad value should not silently disable the read deadline.
+    """
+    raw = os.environ.get("SAKTHAI_MCP_TIMEOUT")
+    if not raw:
+        return DEFAULT_MCP_TIMEOUT
+    try:
+        value = float(raw)
+    except ValueError:
+        return DEFAULT_MCP_TIMEOUT
+    return value if value > 0 else DEFAULT_MCP_TIMEOUT
 
 
 def openai_api_base() -> str | None:
