@@ -79,3 +79,83 @@ def test_server_that_exits_immediately_fails_loudly() -> None:
     with pytest.raises(MCPClientError):
         client.start()
     client.close()
+
+
+# -- unit tests for internal helpers (no subprocess) ---------------------
+
+
+def test_extract_text_basic() -> None:
+    from sakthai.mcp.client import _extract_text
+
+    assert _extract_text([{"type": "text", "text": "hello"}]) == "hello"
+
+
+def test_extract_text_joins_multiple_blocks() -> None:
+    from sakthai.mcp.client import _extract_text
+
+    assert _extract_text([{"type": "text", "text": "a"}, {"type": "text", "text": "b"}]) == "a\nb"
+
+
+def test_extract_text_empty_list() -> None:
+    from sakthai.mcp.client import _extract_text
+
+    assert _extract_text([]) == ""
+
+
+def test_extract_text_non_list_returns_empty() -> None:
+    from sakthai.mcp.client import _extract_text
+
+    assert _extract_text("not a list") == ""
+    assert _extract_text(None) == ""
+
+
+def test_extract_text_skips_non_text_blocks() -> None:
+    from sakthai.mcp.client import _extract_text
+
+    content = [{"type": "image", "url": "x"}, {"type": "text", "text": "hi"}]
+    assert _extract_text(content) == "hi"
+
+
+def test_call_tool_raises_on_is_error() -> None:
+    client = StdioMCPClient("dummy", name="test")
+
+    def fake_request(method: str, params: dict | None = None) -> dict:
+        return {"result": {"isError": True, "content": [{"type": "text", "text": "tool bombed"}]}}
+
+    client._request = fake_request  # type: ignore[method-assign]
+    with pytest.raises(MCPToolError, match="tool bombed"):
+        client.call_tool("failing_tool")
+
+
+def test_call_tool_raises_on_rpc_level_error() -> None:
+    client = StdioMCPClient("dummy", name="test")
+
+    def fake_request(method: str, params: dict | None = None) -> dict:
+        return {"error": {"message": "method not found"}}
+
+    client._request = fake_request  # type: ignore[method-assign]
+    with pytest.raises(MCPToolError, match="method not found"):
+        client.call_tool("any_tool")
+
+
+def test_as_tools_skips_descriptor_without_name() -> None:
+    client = StdioMCPClient("dummy", name="test")
+    client._remote_tools = [
+        {"description": "no name key here", "inputSchema": {}},
+        {
+            "name": "valid_tool",
+            "description": "has a name",
+            "inputSchema": {"type": "object", "properties": {}},
+        },
+    ]
+    tools = client.as_tools()
+    assert len(tools) == 1
+    assert tools[0].name == "valid_tool"
+
+
+def test_as_tools_defaults_missing_schema() -> None:
+    client = StdioMCPClient("dummy", name="test")
+    client._remote_tools = [{"name": "no_schema_tool", "description": "no schema"}]
+    tools = client.as_tools()
+    assert len(tools) == 1
+    assert tools[0].input_schema == {"type": "object", "properties": {}}
