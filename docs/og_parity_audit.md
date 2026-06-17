@@ -131,17 +131,19 @@ record a one-line rationale per kept/dropped file at re-derivation time.
 ## Summary
 
 - **Re-derived now (✅):** `SAKTHAI.md`, `CODE_OF_CONDUCT.md`, `CHANGELOG.md`
-  (plus `CONTRIBUTING.md`/`SECURITY.md` confirmed already v2-accurate); three
-  skill keepers — `library/memory/sakthai-memory-store`,
+  (plus `CONTRIBUTING.md`/`SECURITY.md` confirmed already v2-accurate);
+  eight skill keepers — `library/memory/sakthai-memory-store`,
   `library/agent/sakthai-agent-reasoning`,
-  `library/learning/sakthai-learning-curation`.
+  `library/learning/sakthai-learning-curation`,
+  `library/coding/sakthai-coding-codebase-knowledge`,
+  `library/devops/sakthai-devops-github-workflows`,
+  `library/coding/sakthai-coding-debugging`,
+  `library/coding/sakthai-coding-tdd`,
+  `library/security/sakthai-security-red-teaming`.
 - **Declined with reason (⛔):** `WORKSPACE.md`, `docs/devtools_ai_capabilities.md`,
   `data/hf_dataset_readme.md`, the large off-mission skill/library categories,
   the LoRA/training pipeline, and the static web gallery.
-- **Recorded as scoped follow-on (📋):** a ~6–10 skill keep-list, the
-  library cherry-picks per category, and the code-module roadmap
+- **Recorded as scoped follow-on (📋):** the code-module roadmap
   (`sandbox.py` and an `eval/` harness as the strongest candidates).
 
-The 📋 items are decisions, not yet code: re-deriving the kept skills/library
-files and the candidate modules is follow-on work that should proceed only after
-the keep-lists here are confirmed.
+The remaining 📋 items are decisions, not yet code: re-deriving the candidate modules is follow-on work for future phases.
