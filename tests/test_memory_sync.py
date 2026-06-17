@@ -7,6 +7,7 @@ and SAKTHAI_HOME is redirected to a tmp dir via the sakthai_home fixture.
 from __future__ import annotations
 
 import json
+import time
 from pathlib import Path
 from subprocess import CompletedProcess
 from unittest.mock import MagicMock, patch
@@ -14,7 +15,11 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from sakthai.memory.store import MemoryStore
-from sakthai.memory.sync import sync_memory_to_git, sync_memory_via_http
+from sakthai.memory.sync import (
+    _handle_git_conflict_and_push,
+    sync_memory_to_git,
+    sync_memory_via_http,
+)
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -237,3 +242,145 @@ class TestSyncMemoryToGit:
         for ln in lines:
             parsed = json.loads(ln)
             assert "value" in parsed
+
+
+# ---------------------------------------------------------------------------
+# _handle_git_conflict_and_push (direct unit tests)
+# ---------------------------------------------------------------------------
+
+
+def _fact_dict(value: str) -> dict:
+    """Minimal valid fact dict matching the format produced by export_to_dict."""
+    now = int(time.time())
+    return {
+        "id": 1,
+        "kind": "note",
+        "key": None,
+        "value": value,
+        "source_session": None,
+        "created_at": now,
+        "updated_at": now,
+        "tags": [],
+    }
+
+
+class TestHandleGitConflictAndPush:
+    """Direct tests for the conflict-resolution / auto-merge path."""
+
+    def test_returns_auto_merged_message(self, sakthai_home: Path) -> None:
+        (sakthai_home / "facts.jsonl").write_text(
+            json.dumps(_fact_dict("remote fact")) + "\n", encoding="utf-8"
+        )
+        (sakthai_home / "observations.jsonl").write_text("", encoding="utf-8")
+        with patch("subprocess.run", side_effect=_git_mock()):
+            result = _handle_git_conflict_and_push(sakthai_home, "https://example.com/repo.git")
+        assert "Auto-merged" in result
+
+    def test_merges_remote_facts_into_local_store(self, sakthai_home: Path) -> None:
+        db_path = sakthai_home / "memory.db"
+        with MemoryStore(db_path) as store:
+            store.add_fact("local fact")
+        (sakthai_home / "facts.jsonl").write_text(
+            json.dumps(_fact_dict("remote fact")) + "\n", encoding="utf-8"
+        )
+        (sakthai_home / "observations.jsonl").write_text("", encoding="utf-8")
+        with patch("subprocess.run", side_effect=_git_mock()):
+            _handle_git_conflict_and_push(sakthai_home, "https://example.com/repo.git")
+        with MemoryStore(db_path) as store:
+            values = [f.value for f in store.list_facts()]
+        assert "local fact" in values
+        assert "remote fact" in values
+
+    def test_no_changes_after_merge_short_circuits(self, sakthai_home: Path) -> None:
+        (sakthai_home / "facts.jsonl").write_text("", encoding="utf-8")
+        (sakthai_home / "observations.jsonl").write_text("", encoding="utf-8")
+        with patch("subprocess.run", side_effect=_git_mock(status_output="")):
+            result = _handle_git_conflict_and_push(sakthai_home, "https://example.com/repo.git")
+        assert "Merged remote" in result
+        assert "no changes" in result.lower()
+
+    def test_missing_jsonl_files_are_tolerated(self, sakthai_home: Path) -> None:
+        with patch("subprocess.run", side_effect=_git_mock()):
+            result = _handle_git_conflict_and_push(sakthai_home, "https://example.com/repo.git")
+        assert isinstance(result, str) and result
+
+    def test_blank_lines_in_jsonl_are_skipped(self, sakthai_home: Path) -> None:
+        (sakthai_home / "facts.jsonl").write_text(
+            "\n" + json.dumps(_fact_dict("actual fact")) + "\n\n", encoding="utf-8"
+        )
+        (sakthai_home / "observations.jsonl").write_text("\n\n", encoding="utf-8")
+        with patch("subprocess.run", side_effect=_git_mock()):
+            _handle_git_conflict_and_push(sakthai_home, "https://example.com/repo.git")
+        with MemoryStore(sakthai_home / "memory.db") as store:
+            values = [f.value for f in store.list_facts()]
+        assert "actual fact" in values
+
+
+# ---------------------------------------------------------------------------
+# Additional git sync edge cases
+# ---------------------------------------------------------------------------
+
+
+class TestSyncMemoryToGitExtended:
+    """Edge cases not covered by TestSyncMemoryToGit."""
+
+    def test_remote_set_url_when_origin_already_exists(self, sakthai_home: Path) -> None:
+        set_url_called: list[list[str]] = []
+
+        def _run(args: list[str], **kwargs: object) -> CompletedProcess[str]:
+            if len(args) >= 3 and args[1:3] == ["remote", "set-url"]:
+                set_url_called.append(args)
+            if len(args) >= 3 and args[:3] == ["git", "status", "--porcelain"]:
+                return _cp(args, stdout=" M facts.jsonl")
+            if len(args) >= 2 and args[1] == "push":
+                return _cp(args)
+            if len(args) >= 2 and args[1] == "remote" and "set-url" not in args:
+                # Simulate origin already present in the remote list
+                return _cp(args, stdout="origin\n")
+            return _cp(args)
+
+        with patch("subprocess.run", side_effect=_run):
+            sync_memory_to_git(remote="https://example.com/repo.git")
+
+        assert set_url_called, "expected git remote set-url to be called"
+
+    def test_git_init_called_when_dot_git_absent(self, sakthai_home: Path) -> None:
+        init_called: list[bool] = []
+
+        def _run(args: list[str], **kwargs: object) -> CompletedProcess[str]:
+            if len(args) >= 2 and args[:2] == ["git", "init"]:
+                init_called.append(True)
+            if len(args) >= 3 and args[:3] == ["git", "status", "--porcelain"]:
+                return _cp(args, stdout="")
+            if len(args) >= 2 and args[1] == "remote":
+                return _cp(args, stdout="")
+            return _cp(args)
+
+        assert not (sakthai_home / ".git").exists()
+        with patch("subprocess.run", side_effect=_run):
+            sync_memory_to_git()
+
+        assert init_called, "expected git init to be called when .git is absent"
+
+    def test_git_init_skipped_when_dot_git_exists(self, sakthai_home: Path) -> None:
+        (sakthai_home / ".git").mkdir()
+        init_called: list[bool] = []
+
+        def _run(args: list[str], **kwargs: object) -> CompletedProcess[str]:
+            if len(args) >= 2 and args[:2] == ["git", "init"]:
+                init_called.append(True)
+            if len(args) >= 3 and args[:3] == ["git", "status", "--porcelain"]:
+                return _cp(args, stdout="")
+            if len(args) >= 2 and args[1] == "remote":
+                return _cp(args, stdout="")
+            return _cp(args)
+
+        with patch("subprocess.run", side_effect=_run):
+            sync_memory_to_git()
+
+        assert not init_called, "git init should not be called when .git already exists"
+
+    def test_http_202_status_accepted(self, sakthai_home: Path) -> None:
+        with patch("urllib.request.urlopen", return_value=_http_response(202)):
+            result = sync_memory_via_http("https://example.com/sync")
+        assert isinstance(result, str) and result

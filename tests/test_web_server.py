@@ -180,3 +180,70 @@ class TestStaticFilePathTraversal:
     def test_deep_traversal_blocked(self, api_base: str) -> None:
         code, _ = _get(f"{api_base}/../../../../etc/shadow")
         assert code == 403
+
+
+class TestApiEdgeCases:
+    """Boundary values and structural checks not covered by the main endpoint tests."""
+
+    def test_days_zero_accepted(self, api_base: str) -> None:
+        code, body = _get(f"{api_base}/api/stages?days=0")
+        assert code == 200
+        assert "kpis" in body
+
+    def test_unknown_api_path_returns_403(self, api_base: str) -> None:
+        code, _ = _get(f"{api_base}/api/unknown_endpoint")
+        assert code == 403
+
+    def test_content_length_header_present_in_stages(self, api_base: str) -> None:
+        with urllib.request.urlopen(f"{api_base}/api/stages", timeout=5) as resp:
+            content_length = resp.headers.get("Content-Length")
+        assert content_length is not None
+        assert int(content_length) > 0
+
+    def test_content_length_header_present_in_ecosystem(self, api_base: str) -> None:
+        with urllib.request.urlopen(f"{api_base}/api/ecosystem", timeout=5) as resp:
+            content_length = resp.headers.get("Content-Length")
+        assert content_length is not None
+        assert int(content_length) > 0
+
+    def test_extra_query_params_do_not_break_stages(self, api_base: str) -> None:
+        code, body = _get(f"{api_base}/api/stages?days=14&format=json&extra=ignored")
+        assert code == 200
+        assert "kpis" in body
+
+    def test_stages_response_body_is_valid_json(self, api_base: str) -> None:
+        _, body = _get(f"{api_base}/api/stages")
+        assert isinstance(body, dict)
+
+    def test_ecosystem_response_body_is_valid_json(self, api_base: str) -> None:
+        _, body = _get(f"{api_base}/api/ecosystem")
+        assert isinstance(body, dict)
+
+
+class TestEcosystemStatusPartialConfig:
+    """HuggingFace and other partial-config edge cases."""
+
+    def test_huggingface_not_ready_when_only_token_set(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.delenv("HUGGINGFACE_USERNAME", raising=False)
+        monkeypatch.setenv("HF_TOKEN", "some-token")
+        status = _ecosystem_status()
+        assert status["huggingface"] == "not_ready"
+
+    def test_huggingface_not_ready_when_only_username_set(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv("HUGGINGFACE_USERNAME", "myuser")
+        monkeypatch.delenv("HF_TOKEN", raising=False)
+        status = _ecosystem_status()
+        assert status["huggingface"] == "not_ready"
+
+    def test_generated_at_is_iso_format(self) -> None:
+        status = _ecosystem_status()
+        generated_at = status.get("generated_at", "")
+        assert "T" in generated_at or generated_at == "unknown"
+
+    def test_cron_jobs_key_is_list(self) -> None:
+        status = _ecosystem_status()
+        assert isinstance(status.get("cron_jobs"), list)

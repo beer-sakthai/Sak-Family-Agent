@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=77", "wheel"]
+requires = ["setuptools>=82.0.1", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -27,7 +27,7 @@ dev = [
     "pytest-cov>=5.0",
     "ruff>=0.4",
     "mypy>=1.10",
-    "bandit[toml]>=1.7",
+    "bandit[toml]>=1.9.4",
 ]
 
 dashboard = [
@@ -41,7 +41,7 @@ dashboard = [
 # local use or CI; the sakthai.cloud package imports these lazily.
 cloud = [
     "google-adk>=0.1",
-    "google-cloud-aiplatform>=1.60",
+    "google-cloud-aiplatform>=1.158.0",
     "google-cloud-logging>=3.10",
 ]
 all = ["sakthai-agent[dev,dashboard,cloud]"]

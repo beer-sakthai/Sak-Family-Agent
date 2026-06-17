@@ -207,6 +207,149 @@ def test_memory_deduplicate_none(runner: CliRunner) -> None:
     assert "No duplicate facts found." in result.output
 
 
+def test_memory_search_finds_match(runner: CliRunner) -> None:
+    runner.invoke(main, ["learn", "espresso is delicious"])
+    result = runner.invoke(main, ["memory", "search", "espresso"])
+    assert result.exit_code == 0
+    assert "espresso is delicious" in result.output
+
+
+def test_memory_search_no_match(runner: CliRunner) -> None:
+    result = runner.invoke(main, ["memory", "search", "xyzzy-no-match"])
+    assert result.exit_code == 0
+    assert "no matches found" in result.output
+
+
+def test_memory_forget_obs(runner: CliRunner) -> None:
+    from sakthai.memory.store import MemoryStore
+
+    with MemoryStore() as store:
+        obs_id = store.add_observation("temporary observation")
+    result = runner.invoke(main, ["memory", "forget-obs", str(obs_id)])
+    assert result.exit_code == 0
+    assert "forgotten" in result.output
+
+
+def test_memory_forget_obs_missing(runner: CliRunner) -> None:
+    result = runner.invoke(main, ["memory", "forget-obs", "99999"])
+    assert result.exit_code == 0
+    assert "no observation with id 99999" in result.output
+
+
+def test_memory_consolidate_no_old_facts(runner: CliRunner) -> None:
+    runner.invoke(main, ["learn", "fresh fact"])
+    result = runner.invoke(main, ["memory", "consolidate"])
+    assert result.exit_code == 0
+    assert "no older facts found" in result.output
+
+
+def test_memory_consolidate_moves_old_facts(runner: CliRunner, sakthai_home: Path) -> None:
+    from sakthai.memory.store import MemoryStore
+
+    with MemoryStore() as store:
+        store.add_fact("very old fact")
+    result = runner.invoke(main, ["memory", "consolidate", "--age", "-1"])
+    assert result.exit_code == 0
+    assert "consolidated" in result.output
+    assert "1" in result.output
+
+
+def test_memory_export_csv_format(runner: CliRunner, tmp_path: Path) -> None:
+    runner.invoke(main, ["learn", "csv fact"])
+    snap = tmp_path / "export.csv"
+    result = runner.invoke(main, ["memory", "export", str(snap), "--format", "csv"])
+    assert result.exit_code == 0
+    assert snap.is_file()
+    content = snap.read_text(encoding="utf-8")
+    assert "csv fact" in content
+    assert content.startswith("type,")
+
+
+def test_memory_export_jsonl_format(runner: CliRunner, tmp_path: Path) -> None:
+    runner.invoke(main, ["learn", "jsonl fact"])
+    snap = tmp_path / "export.jsonl"
+    result = runner.invoke(main, ["memory", "export", str(snap), "--format", "jsonl"])
+    assert result.exit_code == 0
+    assert snap.is_file()
+    content = snap.read_text(encoding="utf-8")
+    assert "jsonl fact" in content
+    import json as _json
+
+    for line in content.splitlines():
+        if line.strip():
+            _json.loads(line)  # every line must be valid JSON
+
+
+def test_memory_export_force_overwrites(runner: CliRunner, tmp_path: Path) -> None:
+    runner.invoke(main, ["learn", "some fact"])
+    snap = tmp_path / "existing.json"
+    snap.write_text("{}", encoding="utf-8")
+    result = runner.invoke(main, ["memory", "export", str(snap), "--force"])
+    assert result.exit_code == 0
+    assert snap.is_file()
+    import json as _json
+
+    data = _json.loads(snap.read_text(encoding="utf-8"))
+    assert "facts" in data
+
+
+def test_memory_import_replace_mode(runner: CliRunner, tmp_path: Path) -> None:
+    runner.invoke(main, ["learn", "original fact"])
+    snap = tmp_path / "snap.json"
+    runner.invoke(main, ["memory", "export", str(snap)])
+    runner.invoke(main, ["learn", "extra fact that will be wiped"])
+    result = runner.invoke(main, ["memory", "import", str(snap), "--replace", "--yes"])
+    assert result.exit_code == 0
+    assert "replace" in result.output
+
+
+def test_memory_import_invalid_json(runner: CliRunner, tmp_path: Path) -> None:
+    bad = tmp_path / "bad.json"
+    bad.write_text("{not valid json", encoding="utf-8")
+    result = runner.invoke(main, ["memory", "import", str(bad)])
+    assert result.exit_code != 0
+    assert "could not read snapshot" in result.output
+
+
+def test_memory_sync_git(runner: CliRunner, monkeypatch: pytest.MonkeyPatch) -> None:
+    import sakthai.memory.sync as sync_mod
+
+    monkeypatch.setattr(
+        sync_mod, "sync_memory_to_git", lambda remote=None: "Synced locally to Git repository."
+    )
+    result = runner.invoke(main, ["memory", "sync"])
+    assert result.exit_code == 0
+    assert "Synced" in result.output
+
+
+def test_memory_sync_http(runner: CliRunner, monkeypatch: pytest.MonkeyPatch) -> None:
+    import sakthai.memory.sync as sync_mod
+
+    monkeypatch.setattr(
+        sync_mod,
+        "sync_memory_via_http",
+        lambda url, api_key=None: f"Synced to HTTP endpoint: {url}",
+    )
+    result = runner.invoke(main, ["memory", "sync", "--http-url", "http://example.com/sync"])
+    assert result.exit_code == 0
+    assert "example.com" in result.output
+
+
+def test_memory_sync_failure_exits_nonzero(
+    runner: CliRunner, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import sakthai.memory.sync as sync_mod
+
+    monkeypatch.setattr(
+        sync_mod,
+        "sync_memory_to_git",
+        lambda remote=None: (_ for _ in ()).throw(RuntimeError("push failed")),
+    )
+    result = runner.invoke(main, ["memory", "sync"])
+    assert result.exit_code != 0
+    assert "push failed" in result.output
+
+
 # -- system commands -----------------------------------------------------
 
 
