@@ -274,6 +274,7 @@ def test_memory_export_jsonl_format(runner: CliRunner, tmp_path: Path) -> None:
     content = snap.read_text(encoding="utf-8")
     assert "jsonl fact" in content
     import json as _json
+
     for line in content.splitlines():
         if line.strip():
             _json.loads(line)  # every line must be valid JSON
@@ -287,6 +288,7 @@ def test_memory_export_force_overwrites(runner: CliRunner, tmp_path: Path) -> No
     assert result.exit_code == 0
     assert snap.is_file()
     import json as _json
+
     data = _json.loads(snap.read_text(encoding="utf-8"))
     assert "facts" in data
 
@@ -312,7 +314,9 @@ def test_memory_import_invalid_json(runner: CliRunner, tmp_path: Path) -> None:
 def test_memory_sync_git(runner: CliRunner, monkeypatch: pytest.MonkeyPatch) -> None:
     import sakthai.memory.sync as sync_mod
 
-    monkeypatch.setattr(sync_mod, "sync_memory_to_git", lambda remote=None: "Synced locally to Git repository.")
+    monkeypatch.setattr(
+        sync_mod, "sync_memory_to_git", lambda remote=None: "Synced locally to Git repository."
+    )
     result = runner.invoke(main, ["memory", "sync"])
     assert result.exit_code == 0
     assert "Synced" in result.output
@@ -322,17 +326,25 @@ def test_memory_sync_http(runner: CliRunner, monkeypatch: pytest.MonkeyPatch) ->
     import sakthai.memory.sync as sync_mod
 
     monkeypatch.setattr(
-        sync_mod, "sync_memory_via_http", lambda url, api_key=None: f"Synced to HTTP endpoint: {url}"
+        sync_mod,
+        "sync_memory_via_http",
+        lambda url, api_key=None: f"Synced to HTTP endpoint: {url}",
     )
     result = runner.invoke(main, ["memory", "sync", "--http-url", "http://example.com/sync"])
     assert result.exit_code == 0
     assert "example.com" in result.output
 
 
-def test_memory_sync_failure_exits_nonzero(runner: CliRunner, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_memory_sync_failure_exits_nonzero(
+    runner: CliRunner, monkeypatch: pytest.MonkeyPatch
+) -> None:
     import sakthai.memory.sync as sync_mod
 
-    monkeypatch.setattr(sync_mod, "sync_memory_to_git", lambda remote=None: (_ for _ in ()).throw(RuntimeError("push failed")))
+    monkeypatch.setattr(
+        sync_mod,
+        "sync_memory_to_git",
+        lambda remote=None: (_ for _ in ()).throw(RuntimeError("push failed")),
+    )
     result = runner.invoke(main, ["memory", "sync"])
     assert result.exit_code != 0
     assert "push failed" in result.output
