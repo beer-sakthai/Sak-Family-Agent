@@ -165,8 +165,12 @@ caution — v2 is intentionally curated, so triage before bulk-adding.
 - [x] Re-derive data/hf_dataset_readme.md — 2026-06-17: DECLINED (v2 ships no dataset; data/ holds only the snapshot format)
 
 ### 12.3 — Sakthai-own skills backfill (skills/  — OG 111 vs v2 17)
-- [📋] Triage the ~80 OG sakthai-* skills — 2026-06-17: triaged by prefix in the audit;
-      ~6–10 keepers identified (memory/llm/agent/learning), rest declined. Re-derivation pending sign-off.
+- [x] Triage the ~80 OG sakthai-* skills + re-derive keepers — 2026-06-17: triaged by
+      prefix in the audit. Most keepers were ALREADY in v2 library/ (recall/search/
+      consolidate/planning/sessions/tools/prompting/providers/feedback/patterns).
+      Re-derived the 3 genuine gaps fresh: library/memory/sakthai-memory-store,
+      library/agent/sakthai-agent-reasoning, library/learning/sakthai-learning-curation
+      (validated with parse_skill). Remaining OG skills declined as v1-specific/off-mission.
 - [x] Decide on the ~18 GCP/data skills + media/ — 2026-06-17: OUT OF SCOPE / defer to v3
       cloud port (no BigQuery/Spanner/Dataflow surface in v2)
 
@@ -191,8 +195,9 @@ caution — v2 is intentionally curated, so triage before bulk-adding.
 - 2026-06-17 — Phase 12.1–12.5 processed: re-derived SAKTHAI.md, CODE_OF_CONDUCT.md (MIT),
   CHANGELOG.md; verified CONTRIBUTING/SECURITY already v2-accurate; declined WORKSPACE.md,
   DASHBOARD_IMPROVEMENTS.md, devtools_ai_capabilities.md, hf_dataset_readme.md. Full skills/
-  library/code-module triage with keep/drop rationale recorded in docs/og_parity_audit.md
-  (re-derivation of keep-lists is scoped follow-on pending sign-off). Done on branch phase12-og-parity.
+  library/code-module triage with keep/drop rationale in docs/og_parity_audit.md. Backfill:
+  found v2 library/ already held most keepers; re-derived the 3 genuine gaps
+  (memory-store, agent-reasoning, learning-curation). Done on branch phase12-og-parity.
 - 2026-06-17 — Phase 12.6 done: completed workflows and caveman integration audit and saved to docs/workflows_caveman_integration_audit.md.
 - 2026-06-16 — Phase 12 added: OG→v2 information-parity audit (identity/governance
   docs, skills 111→8, library 357→~20, code/feature gaps) recorded for triage.

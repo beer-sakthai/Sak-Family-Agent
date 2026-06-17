@@ -61,9 +61,23 @@ OG-only skills, grouped by prefix:
 | GCP/data skills (~18: `gcp-*`, `bigquery`, `dataform`, `dbt`, `dataflow`, `composer`, `gcloud-auth`, `discovering-gcp-data-assets`, …) + `media/` | ⛔ out of scope | v2 has no BigQuery/Spanner/Dataflow surface and the ADK/Vertex cloud agent is deferred to v3 (Phase 9). Revisit alongside the v3 cloud port, not now. |
 | misc (`notebook-guidance`, `ml-best-practices`, `managing-python-dependencies`, `data-autocleaning`, `building-data-apps`) | ⛔ decline | Generic, not SakThai-specific; `uv` dependency guidance already lives in `sakthai-coding-uv`. |
 
-**Net:** re-derive on the order of ~6–10 keepers (memory/llm/agent/learning),
-decline the rest. The actual re-derivation is follow-on work pending sign-off on
-this keep-list.
+**Correction after inspecting `library/`:** v2 had already re-derived most of the
+high-value keepers into `library/` (memory: recall/search/consolidate; agent:
+planning/sessions/tools; llm: prompting/providers; learning: feedback/patterns),
+so the real gap was small — not ~6–10.
+
+**Backfill done (2026-06-17):** three genuinely-missing keepers re-derived fresh
+(no verbatim copy), matching v2's terse library format and validated with
+`parse_skill`:
+
+| New skill | Fills gap | OG inspiration (intent only) |
+|-----------|-----------|------------------------------|
+| `library/memory/sakthai-memory-store` | how to *write* memory (fact vs observation, kind/key, reuse keys) — recall/search existed but not store | `sakthai-memory-store/management` |
+| `library/agent/sakthai-agent-reasoning` | tool-use/reasoning discipline in the loop | `sakthai-agent-reasoning` |
+| `library/learning/sakthai-learning-curation` | consolidate/dedupe/forget as a habit | `sakthai-learning-curation` |
+
+Remaining OG memory/agent/learning skills (embeddings, graph, index, supermemory,
+finetune, serving, inference, benchmark, …) declined as v1-specific or off-mission.
 
 ---
 
@@ -117,7 +131,10 @@ record a one-line rationale per kept/dropped file at re-derivation time.
 ## Summary
 
 - **Re-derived now (✅):** `SAKTHAI.md`, `CODE_OF_CONDUCT.md`, `CHANGELOG.md`
-  (plus `CONTRIBUTING.md`/`SECURITY.md` confirmed already v2-accurate).
+  (plus `CONTRIBUTING.md`/`SECURITY.md` confirmed already v2-accurate); three
+  skill keepers — `library/memory/sakthai-memory-store`,
+  `library/agent/sakthai-agent-reasoning`,
+  `library/learning/sakthai-learning-curation`.
 - **Declined with reason (⛔):** `WORKSPACE.md`, `docs/devtools_ai_capabilities.md`,
   `data/hf_dataset_readme.md`, the large off-mission skill/library categories,
   the LoRA/training pipeline, and the static web gallery.
