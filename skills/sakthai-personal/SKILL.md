@@ -55,3 +55,10 @@ prompt. If it is empty, proceed normally. If it is not, follow the steps below.
 - `sakthai recall "<topic>"` — search facts + observations.
 - `sakthai memory show` — list recent facts and top observations.
 - `sakthai learn "<fact>"` — capture a new fact (the explicit write path).
+
+## User preference rule
+
+When the user corrects your style, format, tone, workflow, or defaults and
+does not say 'only this time', treat it as a lasting class-level instruction.
+Apply corrections immediately when they affect presentation. Confirm only when
+the change affects outcome, safety, irreversibility, cost, or credentials.
