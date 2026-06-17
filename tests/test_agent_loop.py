@@ -1137,3 +1137,64 @@ def test_openai_streaming_reassembles_tool_calls(store: MemoryStore) -> None:
     # The reassembled tool call (split across chunks) should have dispatched `learn`.
     assert any(c["name"] == "learn" for c in result.tool_calls)
     assert result.text == "done"
+
+
+# -- session log persistence --------------------------------------------
+
+
+def test_session_log_written_after_run(sakthai_home: Path, store: MemoryStore) -> None:
+    import json
+
+    client = FakeClient([_Resp("end_turn", [_Block(type="text", text="result")])])
+    run_agent("my task", client=client, store=store, provider="anthropic")
+    logs = list((sakthai_home / "sessions").glob("*.json"))
+    assert len(logs) == 1
+    payload = json.loads(logs[0].read_text(encoding="utf-8"))
+    assert payload["task"] == "my task"
+    assert isinstance(payload["model"], str) and payload["model"]
+    assert isinstance(payload["timestamp"], int) and payload["timestamp"] > 0
+    assert isinstance(payload["messages"], list)
+
+
+def test_session_log_result_schema(sakthai_home: Path, store: MemoryStore) -> None:
+    import json
+
+    client = FakeClient([_Resp("end_turn", [_Block(type="text", text="hello")])])
+    run_agent("task", client=client, store=store, provider="anthropic")
+    logs = list((sakthai_home / "sessions").glob("*.json"))
+    payload = json.loads(logs[0].read_text(encoding="utf-8"))
+    result = payload["result"]
+    assert result["text"] == "hello"
+    assert result["iterations"] == 1
+    assert result["stop_reason"] == "end_turn"
+    assert isinstance(result["tool_calls"], list)
+
+
+def test_session_log_usage_totals_match(sakthai_home: Path, store: MemoryStore) -> None:
+    import json
+
+    client = FakeClient([_Resp("end_turn", [_Block(type="text", text="ok")])])
+    run_agent("task", client=client, store=store, provider="anthropic")
+    logs = list((sakthai_home / "sessions").glob("*.json"))
+    payload = json.loads(logs[0].read_text(encoding="utf-8"))
+    usage = payload["usage"]
+    assert usage["total_tokens"] == usage["input_tokens"] + usage["output_tokens"]
+
+
+def test_session_log_written_with_tool_calls(sakthai_home: Path, store: MemoryStore) -> None:
+    import json
+
+    client = FakeClient(
+        [
+            _Resp(
+                "tool_use",
+                [_Block(type="tool_use", id="t1", name="learn", input={"value": "x"})],
+            ),
+            _Resp("end_turn", [_Block(type="text", text="done")]),
+        ]
+    )
+    run_agent("learn x", client=client, store=store, provider="anthropic")
+    logs = list((sakthai_home / "sessions").glob("*.json"))
+    payload = json.loads(logs[0].read_text(encoding="utf-8"))
+    tool_calls = payload["result"]["tool_calls"]
+    assert any(c["name"] == "learn" for c in tool_calls)

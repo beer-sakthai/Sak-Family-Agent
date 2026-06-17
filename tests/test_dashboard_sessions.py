@@ -107,3 +107,46 @@ def test_collect_session_data_truncates_long_task(tmp_path: Path) -> None:
     data = collect_session_data(tmp_path)
     assert data["recent_sessions"][0]["task"].endswith("…")
     assert len(data["recent_sessions"][0]["task"]) <= 81
+
+
+def test_collect_session_data_partial_fields_default_to_zero(tmp_path: Path) -> None:
+    # A session with no usage or result sub-keys should not crash and should
+    # default all numeric fields to 0 / empty string.
+    (tmp_path / "1.json").write_text(
+        json.dumps({"timestamp": 1_700_000_000, "model": "m", "task": "bare"}),
+        encoding="utf-8",
+    )
+    data = collect_session_data(tmp_path)
+    assert data["source"] == "live"
+    assert data["totals"]["sessions"] == 1
+    assert data["totals"]["total_tokens"] == 0
+    sess = data["recent_sessions"][0]
+    assert sess["iterations"] == 0
+    assert sess["stop_reason"] == ""
+
+
+def test_collect_session_data_all_malformed_returns_empty(tmp_path: Path) -> None:
+    # Valid JSON but not a dict → treated as malformed; plain garbage too.
+    (tmp_path / "a.json").write_text("[1, 2, 3]", encoding="utf-8")
+    (tmp_path / "b.json").write_text("{bad json", encoding="utf-8")
+    data = collect_session_data(tmp_path)
+    assert data["source"] == "empty"
+    assert data["totals"]["sessions"] == 0
+
+
+def test_collect_session_data_uses_sessions_dir_when_none(
+    sakthai_home: Path,
+) -> None:
+    sessions = sakthai_home / "sessions"
+    sessions.mkdir()
+    _write_session(
+        sessions,
+        "1.json",
+        timestamp=1_700_000_000,
+        model="m",
+        usage={"total_tokens": 5},
+    )
+    data = collect_session_data(None)
+    assert data["source"] == "live"
+    assert data["totals"]["sessions"] == 1
+    assert data["totals"]["total_tokens"] == 5
