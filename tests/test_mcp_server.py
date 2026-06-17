@@ -5,12 +5,9 @@ from __future__ import annotations
 import io
 import json
 
-import pytest
-
 from sakthai.agent.tools import Tool
 from sakthai.mcp.server import PROTOCOL_VERSION, handle_request, serve
 from sakthai.memory.store import MemoryStore
-
 
 # ---------------------------------------------------------------------------
 # Helpers
