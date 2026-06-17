@@ -1208,7 +1208,7 @@ def test_slash_command_parsing(sakthai_home: Path, store: MemoryStore) -> None:
         "---\ndescription: test desc\n---\n\nRule: Do the $ARGUMENTS thing.\n",
         encoding="utf-8",
     )
-    
+
     captured: dict[str, str] = {}
 
     class _CapMessages:
@@ -1227,7 +1227,7 @@ def test_slash_command_parsing(sakthai_home: Path, store: MemoryStore) -> None:
         store=store,
         provider="anthropic",
     )
-    
+
     assert "Rule: Do the write a test thing." in captured["system"]
     assert captured["task"] == "write a test"
 
@@ -1240,7 +1240,7 @@ def test_caveman_flag_injection(sakthai_home: Path, store: MemoryStore) -> None:
         "---\nname: caveman\ndescription: test caveman desc\n---\n\nRespond terse.\n",
         encoding="utf-8",
     )
-    
+
     captured: dict[str, str] = {}
 
     class _CapMessages:
@@ -1259,6 +1259,6 @@ def test_caveman_flag_injection(sakthai_home: Path, store: MemoryStore) -> None:
         provider="anthropic",
         caveman="ultra",
     )
-    
+
     assert "Respond terse." in captured["system"]
     assert "ACTIVE CAVEMAN LEVEL: ultra" in captured["system"]

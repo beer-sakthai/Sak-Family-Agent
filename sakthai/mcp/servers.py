@@ -14,7 +14,7 @@ import logging
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from ..config import sakthai_home, gemini_extensions_dir
+from ..config import gemini_extensions_dir, sakthai_home
 from ..extensions.install import extensions_dir
 
 logger = logging.getLogger(__name__)
@@ -79,21 +79,21 @@ def load_server_specs() -> list[MCPServerSpec]:
     over an extension that declares a server of the same name.
     """
     by_name: dict[str, MCPServerSpec] = {}
-    
+
     # 1. Load from gemini extensions
     gemini_base = gemini_extensions_dir()
     if gemini_base.is_dir():
         for manifest in sorted(gemini_base.glob("*/gemini-extension.json")):
             for spec in _load_manifest(manifest):
                 by_name[spec.name] = spec
-                
+
     # 2. Load from sakthai extensions
     base = extensions_dir()
     if base.is_dir():
         for manifest in sorted(base.glob("*/gemini-extension.json")):
             for spec in _load_manifest(manifest):
                 by_name[spec.name] = spec
-                
+
     config = mcp_config_path()
     if config.is_file():
         for spec in _load_manifest(config):
