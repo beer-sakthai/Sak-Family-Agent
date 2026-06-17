@@ -526,7 +526,11 @@ class TestAllowedReadRoots:
         assert isinstance(roots, list)
 
     def test_read_file_respects_multiple_allow_paths(
-        self, tmp_path: Path, sakthai_home: Path, monkeypatch: pytest.MonkeyPatch, store: MemoryStore
+        self,
+        tmp_path: Path,
+        sakthai_home: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        store: MemoryStore,
     ) -> None:
         dir_a = tmp_path / "allowed_a"
         dir_b = tmp_path / "allowed_b"
@@ -535,8 +539,14 @@ class TestAllowedReadRoots:
         (dir_a / "file_a.txt").write_text("from a", encoding="utf-8")
         (dir_b / "file_b.txt").write_text("from b", encoding="utf-8")
         monkeypatch.setenv("SAKTHAI_READ_ALLOW", os.pathsep.join([str(dir_a), str(dir_b)]))
-        assert tool_by_name("read_file").handler({"path": str(dir_a / "file_a.txt")}, store) == "from a"
-        assert tool_by_name("read_file").handler({"path": str(dir_b / "file_b.txt")}, store) == "from b"
+        assert (
+            tool_by_name("read_file").handler({"path": str(dir_a / "file_a.txt")}, store)
+            == "from a"
+        )
+        assert (
+            tool_by_name("read_file").handler({"path": str(dir_b / "file_b.txt")}, store)
+            == "from b"
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -546,7 +556,11 @@ class TestAllowedReadRoots:
 
 class TestReadFileSymlink:
     def test_symlink_to_outside_root_is_blocked(
-        self, tmp_path: Path, sakthai_home: Path, monkeypatch: pytest.MonkeyPatch, store: MemoryStore
+        self,
+        tmp_path: Path,
+        sakthai_home: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        store: MemoryStore,
     ) -> None:
         secret_dir = tmp_path / "secret"
         secret_dir.mkdir()
@@ -562,7 +576,11 @@ class TestReadFileSymlink:
             tool_by_name("read_file").handler({"path": "link.txt"}, store)
 
     def test_symlink_within_root_is_allowed(
-        self, tmp_path: Path, sakthai_home: Path, monkeypatch: pytest.MonkeyPatch, store: MemoryStore
+        self,
+        tmp_path: Path,
+        sakthai_home: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        store: MemoryStore,
     ) -> None:
         monkeypatch.chdir(tmp_path)
         real_file = tmp_path / "real.txt"
