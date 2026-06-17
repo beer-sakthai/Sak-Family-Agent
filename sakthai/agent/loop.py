@@ -23,7 +23,7 @@ from typing import Any
 from ..auth import anthropic_credential_source, openai_credential_source
 from ..config import sessions_dir
 from ..memory.store import MemoryStore
-from ..skills import render_skills_prompt_block
+from ..skills import render_skills_prompt_block, find_skill, default_skill_roots
 from . import providers
 from .providers import base as _providers_base
 from .registry import ToolRegistry
@@ -79,6 +79,49 @@ class AgentResult:
 
 
 # -- prompt + tool execution --------------------------------------------
+
+
+def _parse_slash_command(task: str) -> tuple[str, str] | None:
+    """If task starts with /plugin:command, resolve it and return (injected_system_prompt, active_task)."""
+    import re
+    from pathlib import Path
+    
+    task_stripped = task.strip()
+    match = re.match(r"^/([a-zA-Z0-9_-]+):([a-zA-Z0-9_-]+)(?:\s+(.*))?$", task_stripped, re.DOTALL)
+    if not match:
+        return None
+        
+    plugin_name = match.group(1)
+    command_name = match.group(2)
+    arguments = match.group(3) or ""
+    
+    cmd_file = None
+    for root in default_skill_roots():
+        p = root / plugin_name / "commands" / f"{command_name}.md"
+        if p.is_file():
+            cmd_file = p
+            break
+        p = root / "commands" / f"{command_name}.md"
+        if p.is_file():
+            cmd_file = p
+            break
+            
+    if not cmd_file:
+        return None
+        
+    try:
+        content = cmd_file.read_text(encoding="utf-8")
+        if content.startswith("---"):
+            parts = content.split("---", 2)
+            if len(parts) >= 3:
+                content = parts[2].strip()
+        content = content.replace("$ARGUMENTS", arguments)
+        content = content.replace("$FEATURE", arguments)
+        system_block = f"COMMAND INSTRUCTIONS ({plugin_name}:{command_name}):\n\n{content}"
+        return system_block, arguments
+    except Exception as exc:
+        logger.warning("failed to load command file %s: %s", cmd_file, exc)
+        return None
 
 
 def _build_system(store: MemoryStore, skills_block: str = "", fast: bool = False) -> str:
@@ -158,6 +201,7 @@ def run_agent(
     provider: str | None = None,
     skills: Sequence[str] = (),
     fast: bool = False,
+    caveman: str | None = None,
 ) -> AgentResult:
     """Run one task to completion against Claude, Gemini, or an OpenAI endpoint.
 
@@ -171,6 +215,11 @@ def run_agent(
         raise AgentError("Task must be a non-empty string.")
     if max_seconds is not None and max_seconds <= 0:
         raise AgentError("max_seconds must be positive when set.")
+
+    parsed = _parse_slash_command(task)
+    command_system = ""
+    if parsed:
+        command_system, task = parsed
 
     import os
 
@@ -197,6 +246,22 @@ def run_agent(
     tool_calls: list[dict[str, Any]] = []
     messages: list[dict[str, Any]] = [{"role": "user", "content": task}]
     skills_block = render_skills_prompt_block(skills) if skills else ""
+    if command_system:
+        if skills_block:
+            skills_block = f"{skills_block}\n\n{command_system}"
+        else:
+            skills_block = command_system
+
+    if caveman:
+        caveman_skill = find_skill("caveman", *default_skill_roots())
+        if caveman_skill:
+            caveman_instructions = f"{caveman_skill.body}\n\nACTIVE CAVEMAN LEVEL: {caveman}\nRespond using the rules of {caveman} level strictly."
+            if skills_block:
+                skills_block = f"{skills_block}\n\n{caveman_instructions}"
+            else:
+                skills_block = caveman_instructions
+        else:
+            logger.warning("Caveman skill not found; compression mode disabled.")
     deadline = time.monotonic() + max_seconds if max_seconds is not None else None
 
     usage_tracker = UsageTracker()

@@ -159,6 +159,11 @@ caution — v2 is intentionally curated, so triage before bulk-adding.
       built from v2 phase log + git; OG's 993-line v1 changelog not copied
 - [x] DASHBOARD_IMPROVEMENTS.md — 2026-06-17: declined the 426-line v1 proposal (most done
       in Phase 8 / v3-scoped); 3 still-open ideas folded into og_parity_audit.md#dashboard-backlog
+- [x] Re-derive SAKTHAI.md (project identity) for v2 — 2026-06-17
+- [x] Add CODE_OF_CONDUCT.md and confirm CONTRIBUTING.md / SECURITY.md exist — 2026-06-17
+- [x] Decide on WORKSPACE.md (re-derived as docs/workspace.md) — 2026-06-17
+- [x] CHANGELOG.md (generated from v2 history) — 2026-06-17
+- [x] DASHBOARD_IMPROVEMENTS.md (folded into docs/dashboard_improvements.md) — 2026-06-17
 
 ### 12.2 — Doc / data info files
 - [x] Port docs/devtools_ai_capabilities.md — 2026-06-17: DECLINED (445-byte browser-DevTools note; no such workflow in v2)
@@ -188,6 +193,9 @@ caution — v2 is intentionally curated, so triage before bulk-adding.
 
 ### 12.6 — Extension Integration
 - [x] Workflows & Caveman Integration Audit (docs/workflows_caveman_integration_audit.md) — 2026-06-17
+- [x] Unified extension paths & discovery (~/.gemini/extensions/) — 2026-06-17
+- [x] Namespaced slash command router (/plugin:command) in loop.py — 2026-06-17
+- [x] Native caveman runtime toggle (--caveman) in sakthai run — 2026-06-17
 
 ---
 
@@ -198,6 +206,8 @@ caution — v2 is intentionally curated, so triage before bulk-adding.
   library/code-module triage with keep/drop rationale in docs/og_parity_audit.md. Backfill:
   found v2 library/ already held most keepers; re-derived the 3 genuine gaps
   (memory-store, agent-reasoning, learning-curation). Done on branch phase12-og-parity.
+- 2026-06-17 — Phase 12.1 done: re-derived identity and governance documentation (SAKTHAI.md, CODE_OF_CONDUCT.md, docs/workspace.md, CHANGELOG.md, docs/dashboard_improvements.md).
+- 2026-06-17 — Phase 12.6 done: implemented unified extension paths, namespaced command routing, and native caveman runtime toggle.
 - 2026-06-17 — Phase 12.6 done: completed workflows and caveman integration audit and saved to docs/workflows_caveman_integration_audit.md.
 - 2026-06-16 — Phase 12 added: OG→v2 information-parity audit (identity/governance
   docs, skills 111→8, library 357→~20, code/feature gaps) recorded for triage.
