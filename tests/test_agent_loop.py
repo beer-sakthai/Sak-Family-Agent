@@ -1198,3 +1198,67 @@ def test_session_log_written_with_tool_calls(sakthai_home: Path, store: MemorySt
     payload = json.loads(logs[0].read_text(encoding="utf-8"))
     tool_calls = payload["result"]["tool_calls"]
     assert any(c["name"] == "learn" for c in tool_calls)
+
+
+def test_slash_command_parsing(sakthai_home: Path, store: MemoryStore) -> None:
+    gemini_ext_dir = sakthai_home.parent / "gemini" / "extensions"
+    cmd_dir = gemini_ext_dir / "my-plugin" / "commands"
+    cmd_dir.mkdir(parents=True, exist_ok=True)
+    (cmd_dir / "my-cmd.md").write_text(
+        "---\ndescription: test desc\n---\n\nRule: Do the $ARGUMENTS thing.\n",
+        encoding="utf-8",
+    )
+    
+    captured: dict[str, str] = {}
+
+    class _CapMessages:
+        def create(self, **kwargs: object) -> _Resp:
+            captured["system"] = str(kwargs.get("system", ""))
+            captured["task"] = str(kwargs.get("messages", [{}])[0].get("content", ""))
+            return _Resp("end_turn", [_Block(type="text", text="ok")])
+
+    class _CapClient:
+        def __init__(self) -> None:
+            self.messages = _CapMessages()
+
+    run_agent(
+        "/my-plugin:my-cmd write a test",
+        client=_CapClient(),
+        store=store,
+        provider="anthropic",
+    )
+    
+    assert "Rule: Do the write a test thing." in captured["system"]
+    assert captured["task"] == "write a test"
+
+
+def test_caveman_flag_injection(sakthai_home: Path, store: MemoryStore) -> None:
+    gemini_ext_dir = sakthai_home.parent / "gemini" / "extensions"
+    skill_dir = gemini_ext_dir / "caveman" / "skills" / "caveman"
+    skill_dir.mkdir(parents=True, exist_ok=True)
+    (skill_dir / "SKILL.md").write_text(
+        "---\nname: caveman\ndescription: test caveman desc\n---\n\nRespond terse.\n",
+        encoding="utf-8",
+    )
+    
+    captured: dict[str, str] = {}
+
+    class _CapMessages:
+        def create(self, **kwargs: object) -> _Resp:
+            captured["system"] = str(kwargs.get("system", ""))
+            return _Resp("end_turn", [_Block(type="text", text="ok")])
+
+    class _CapClient:
+        def __init__(self) -> None:
+            self.messages = _CapMessages()
+
+    run_agent(
+        "x",
+        client=_CapClient(),
+        store=store,
+        provider="anthropic",
+        caveman="ultra",
+    )
+    
+    assert "Respond terse." in captured["system"]
+    assert "ACTIVE CAVEMAN LEVEL: ultra" in captured["system"]

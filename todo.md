@@ -179,10 +179,14 @@ caution — v2 is intentionally curated, so triage before bulk-adding.
 
 ### 12.6 — Extension Integration
 - [x] Workflows & Caveman Integration Audit (docs/workflows_caveman_integration_audit.md) — 2026-06-17
+- [x] Unified extension paths & discovery (~/.gemini/extensions/) — 2026-06-17
+- [x] Namespaced slash command router (/plugin:command) in loop.py — 2026-06-17
+- [x] Native caveman runtime toggle (--caveman) in sakthai run — 2026-06-17
 
 ---
 
 ## Log
+- 2026-06-17 — Phase 12.6 done: implemented unified extension paths, namespaced command routing, and native caveman runtime toggle.
 - 2026-06-17 — Phase 12.6 done: completed workflows and caveman integration audit and saved to docs/workflows_caveman_integration_audit.md.
 - 2026-06-16 — Phase 12 added: OG→v2 information-parity audit (identity/governance
   docs, skills 111→8, library 357→~20, code/feature gaps) recorded for triage.
