@@ -183,7 +183,7 @@ caution — v2 is intentionally curated, so triage before bulk-adding.
 - [x] Per-category keep/drop decision — 2026-06-17: recorded in the audit (decline
       creative/mlops/web/media/apple/email/social/etc.; cherry-pick research/security/devops/
       software-development/github/red-teaming/autonomous-ai-agents/productivity)
-- [📋] Re-derive kept skills into v2's curated library/ grouping — pending sign-off on the cherry-pick list
+- [x] Re-derive kept skills into v2's curated library/ grouping — 2026-06-17: re-derived 5 kept skills (codebase-knowledge, github-workflows, debugging, tdd, and red-teaming). 48 skills validated.
 - [x] CAUTION recorded — 2026-06-17: category-level rationale in the audit; per-file rationale at re-derive time
 
 ### 12.5 — Code / feature module gaps (roadmap, evaluate vs decline)
@@ -200,6 +200,7 @@ caution — v2 is intentionally curated, so triage before bulk-adding.
 ---
 
 ## Log
+- 2026-06-17 — Phase 12.4 done: re-derived 5 kept skills into curated library/ grouping (codebase-knowledge, github-workflows, debugging, tdd, red-teaming). 48 skills validated.
 - 2026-06-17 — Phase 12 MERGED to main: PR #32 (governance docs + audit + 3 re-derived
   library skills) merged; its CI flagged pre-existing ruff errors in sakthai/skills.py + tests
   (not from this work — library/ is ruff-excluded), fixed by follow-up PR #33. main now green
