@@ -10,7 +10,7 @@ from typing import Any
 
 import yaml
 
-from .config import LIBRARY_DIR, SKILLS_DIR, sakthai_home
+from .config import LIBRARY_DIR, SKILLS_DIR, sakthai_home, gemini_extensions_dir
 
 _UNCATEGORIZED = "general"
 
@@ -175,7 +175,11 @@ def find_skill(name: str, *roots: Path) -> SkillInfo | None:
 
 def default_skill_roots() -> tuple[Path, ...]:
     """Roots searched for injectable skills: bundled + library + installed extensions."""
-    return (SKILLS_DIR, LIBRARY_DIR, sakthai_home() / "extensions")
+    gemini_ext = gemini_extensions_dir()
+    roots = [SKILLS_DIR, LIBRARY_DIR, sakthai_home() / "extensions"]
+    if gemini_ext.is_dir():
+        roots.append(gemini_ext)
+    return tuple(roots)
 
 
 def render_skills_prompt_block(names: Sequence[str], roots: Sequence[Path] | None = None) -> str:

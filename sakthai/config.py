@@ -51,6 +51,17 @@ def sakthai_home() -> Path:
     return Path(override) if override else Path.home() / ".sakthai"
 
 
+def gemini_extensions_dir() -> Path:
+    """Return the Gemini CLI extensions directory, honouring SAKTHAI_HOME/GEMINI_HOME."""
+    override = os.environ.get("GEMINI_HOME")
+    if override:
+        return Path(override) / "extensions"
+    sakthai_override = os.environ.get("SAKTHAI_HOME")
+    if sakthai_override:
+        return Path(sakthai_override).parent / "gemini" / "extensions"
+    return Path("~/.gemini/extensions").expanduser()
+
+
 def memory_db_path() -> Path:
     """Path to the shared SQLite memory database."""
     return sakthai_home() / "memory.db"
