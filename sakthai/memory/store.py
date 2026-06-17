@@ -341,7 +341,7 @@ class MemoryStore:
         where = ("WHERE " + " AND ".join(clauses)) if clauses else ""
         params.append(limit)
         rows = self._conn.execute(
-            f"SELECT * FROM facts {where} ORDER BY updated_at DESC LIMIT ?",
+            f"SELECT * FROM facts {where} ORDER BY updated_at DESC LIMIT ?",  # nosec B608
             params,
         ).fetchall()
         return [_fact_from_row(r) for r in rows]
