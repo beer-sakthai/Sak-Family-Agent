@@ -24,7 +24,6 @@ def _server(home: Path) -> StdioMCPClient:
         ["-m", "sakthai.mcp"],
         env={"SAKTHAI_HOME": str(home)},
         name="sakthai",
-        timeout=15.0,
     )
 
 

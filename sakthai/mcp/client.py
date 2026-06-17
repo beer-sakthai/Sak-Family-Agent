@@ -22,6 +22,7 @@ import subprocess
 from collections.abc import Callable, Mapping, Sequence
 from typing import Any
 
+from .. import config
 from ..agent.tools import Tool
 from ..memory.store import MemoryStore
 
@@ -29,7 +30,9 @@ logger = logging.getLogger(__name__)
 
 PROTOCOL_VERSION = "2024-11-05"
 CLIENT_NAME = "sakthai-client"
-DEFAULT_TIMEOUT = 30.0
+# Backwards-compatible alias; the live default is resolved via config so that
+# SAKTHAI_MCP_TIMEOUT is honoured at construction time.
+DEFAULT_TIMEOUT = config.DEFAULT_MCP_TIMEOUT
 
 
 class MCPClientError(RuntimeError):
@@ -59,14 +62,14 @@ class StdioMCPClient:
         env: Mapping[str, str] | None = None,
         cwd: str | None = None,
         name: str = "mcp",
-        timeout: float = DEFAULT_TIMEOUT,
+        timeout: float | None = None,
     ) -> None:
         self.name = name
         self._command = command
         self._args = list(args)
         self._env = dict(env) if env else None
         self._cwd = cwd
-        self._timeout = timeout
+        self._timeout = config.mcp_timeout() if timeout is None else timeout
         self._proc: subprocess.Popen[str] | None = None
         self._id = 0
         self._remote_tools: list[dict[str, Any]] = []

@@ -17,7 +17,7 @@ import logging
 from collections.abc import Iterator, Sequence
 
 from ..agent.tools import Tool
-from .client import DEFAULT_TIMEOUT, MCPClientError, StdioMCPClient
+from .client import MCPClientError, StdioMCPClient
 from .servers import MCPServerSpec, load_server_specs
 
 logger = logging.getLogger(__name__)
@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 def connect_servers(
     specs: Sequence[MCPServerSpec] | None = None,
     *,
-    timeout: float = DEFAULT_TIMEOUT,
+    timeout: float | None = None,
 ) -> Iterator[list[Tool]]:
     """Start the given (or all configured) MCP servers and yield their tools.
 

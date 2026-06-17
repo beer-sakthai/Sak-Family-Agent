@@ -19,6 +19,22 @@ def test_sessions_dir_honours_home(sakthai_home: Path) -> None:
     assert config.sessions_dir() == sakthai_home / "sessions"
 
 
+def test_mcp_timeout_default(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("SAKTHAI_MCP_TIMEOUT", raising=False)
+    assert config.mcp_timeout() == config.DEFAULT_MCP_TIMEOUT
+
+
+def test_mcp_timeout_honours_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("SAKTHAI_MCP_TIMEOUT", "45")
+    assert config.mcp_timeout() == 45.0
+
+
+@pytest.mark.parametrize("bad", ["", "abc", "0", "-5"])
+def test_mcp_timeout_falls_back_on_bad_value(monkeypatch: pytest.MonkeyPatch, bad: str) -> None:
+    monkeypatch.setenv("SAKTHAI_MCP_TIMEOUT", bad)
+    assert config.mcp_timeout() == config.DEFAULT_MCP_TIMEOUT
+
+
 def test_memory_report_counts(sakthai_home: Path) -> None:
     with MemoryStore() as store:
         store.add_fact("one")
