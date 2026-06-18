@@ -11,16 +11,16 @@ import click
 
 from ..learn.capture import learn as learn_fact
 from ..memory.backup import backup_memory
-from ..memory.store import MemoryStore, snapshot_to_csv, snapshot_to_jsonl
+from ..memory.store import Fact, MemoryStore, Observation, snapshot_to_csv, snapshot_to_jsonl
 
 
-def _fact_line(f: Any) -> str:
+def _fact_line(f: Fact) -> str:
     head = f"[{f.kind}] {f.key}: " if f.key else f"[{f.kind}] "
     tags = f"  #{' #'.join(f.tags)}" if getattr(f, "tags", None) else ""
     return f"  {f.id:>4}  {head}{f.value}{tags}"
 
 
-def _obs_line(o: Any) -> str:
+def _obs_line(o: Observation) -> str:
     return f"  {o.id:>4}  ({o.weight:.2f}) {o.summary}"
 
 
@@ -386,9 +386,9 @@ def memory_deduplicate(dry_run: bool, verbose: bool) -> None:
     from ..memory.store import Fact, Observation
 
     with MemoryStore() as store:
-        facts = cast("list[Fact]", store.deduplicate_facts(detailed=True, dry_run=dry_run))
+        facts = cast(list[Fact], store.deduplicate_facts(detailed=True, dry_run=dry_run))
         obs = cast(
-            "list[Observation]", store.deduplicate_observations(detailed=True, dry_run=dry_run)
+            list[Observation], store.deduplicate_observations(detailed=True, dry_run=dry_run)
         )
 
     verb = "Found" if dry_run else "Removed"
