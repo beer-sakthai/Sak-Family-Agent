@@ -35,8 +35,7 @@ Python **>= 3.11** is required (CI runs on 3.11 and 3.12).
 cp .env.example .env          # then fill in ANTHROPIC_API_KEY
 pip install -e ".[dev]"       # editable install with the dev toolchain
 pip install -e ".[dashboard]" # optional: streamlit/plotly/pandas for the dashboard
-pip install -e ".[cloud]"     # optional: google-adk/aiplatform for `sakthai cloud`
-pip install -e ".[all]"       # dev + dashboard + cloud
+pip install -e ".[all]"       # dev + dashboard
 ```
 
 Verify your environment with `sakthai doctor` and `sakthai setup`.

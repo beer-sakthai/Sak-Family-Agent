@@ -93,11 +93,6 @@ mirrored by the `sakthai-cycle-*` skills and the `sakthai cycle` command.
 - **[SOUL.md](./SOUL.md)** — agent charge model
 - **[Dream.md → Growth.md](./)** — the six working stages
 
-## Roadmap
-
-The Google ADK / Vertex AI cloud agent from the original project is not part of
-this repo yet — it needs live GCP and is tracked separately.
-
 ---
 
 **Note on Versioning & License:**

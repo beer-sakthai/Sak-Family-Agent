@@ -119,7 +119,6 @@ Goal: session history + token charts in the Streamlit dashboard.
       (sakthai/dashboard/app.py, tests/test_dashboard_app.py)
 
 ## Phase 9 — Future (deferred to v3)
-- [ ] Google ADK / Vertex AI cloud agent port ← CON #5
 - [ ] Multi-user / multi-tenant database isolation ← CON #7
 
 ## Phase 10 — Addressing Trade-offs & Run Readiness
@@ -128,7 +127,7 @@ Goal: Make the agent fully runnable and resolve past architecture cons. One task
 - [x] 10.1 — Documentation & Clarification: Update README to clarify v1 deprecation and proprietary license terms.
 - [x] 10.2 — Fast-Track Mode: Add `--fast` flag to bypass the rigid 6-stage cycle for simple runs.
 - [x] 10.3 — Remote Memory Sync: Implement `sakthai memory sync` for cloud or git backups to reduce local state dependency.
-- [x] 10.4 — Basic Cloud Runtime Stubs: Migrate Google ADK / Vertex AI skeleton into v2 for future deployment.
+- [x] 10.4 — Basic Cloud Runtime Stubs: ~~Migrate Google ADK / Vertex AI skeleton into v2 for future deployment.~~ Reverted — the cloud runtime skeleton was removed; v2 is local-first.
 
 ## Phase 11 — Robust Memory Sync & Scalability
 Goal: Resolve cons in the Git sync implementation and prepare for standalone agent resilience.

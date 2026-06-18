@@ -18,6 +18,12 @@ carried forward here.
 - Workflows & caveman integration audit (`docs/workflows_caveman_integration_audit.md`).
 - Unified extension discovery across `~/.sakthai/extensions` and `~/.gemini/extensions`.
 
+### Removed
+- **Cloud runtime skeleton** — the lazy `sakthai/cloud/` Google ADK / Vertex AI
+  scaffolding, the `cloud` install extra, the `sakthai cloud` commands, the
+  `GOOGLE_CLOUD_*` / `GOOGLE_GENAI_USE_VERTEXAI` config helpers, and `docs/cloud.md`.
+  v2 is local-first; a cloud port is no longer tracked here.
+
 ## [2.0.0]
 
 First release of the clean-room rewrite. A personal learning agent with a

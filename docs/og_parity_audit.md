@@ -58,7 +58,7 @@ OG-only skills, grouped by prefix:
 | `sakthai-dashboard` (6) | ⛔ mostly decline | v1 Streamlit-specific; superseded by the v2 dashboard. Keep none unless a vendor-neutral idea survives. |
 | `sakthai-automation` (5) | 📋 evaluate | Re-derive if they describe real v2 automation surfaces; otherwise drop. |
 | ops/observability singletons (`telemetry`, `tracing`, `logging`, `observability`, `incident`, `alerts`, `audit`, `accountability`, `guardrails`, `safety`, `security`, `privacy`, `auth`, `ci`, `devops`, `infra`, `containers`, `releases`, `sessions`, `acceptance`, `core`, `soul`, `plugins`, `research`, `members`, `user`×2, `skill`×2) | ⛔ mostly decline | ~30 one-off skills. Most are aspirational ops content for infrastructure v2 doesn't have. Re-derive only `soul`/`core` if they carry identity not already in `SOUL.md`. |
-| GCP/data skills (~18: `gcp-*`, `bigquery`, `dataform`, `dbt`, `dataflow`, `composer`, `gcloud-auth`, `discovering-gcp-data-assets`, …) + `media/` | ⛔ out of scope | v2 has no BigQuery/Spanner/Dataflow surface and the ADK/Vertex cloud agent is deferred to v3 (Phase 9). Revisit alongside the v3 cloud port, not now. |
+| GCP/data skills (~18: `gcp-*`, `bigquery`, `dataform`, `dbt`, `dataflow`, `composer`, `gcloud-auth`, `discovering-gcp-data-assets`, …) + `media/` | ⛔ out of scope | v2 has no BigQuery/Spanner/Dataflow surface and is local-first with no cloud agent. |
 | misc (`notebook-guidance`, `ml-best-practices`, `managing-python-dependencies`, `data-autocleaning`, `building-data-apps`) | ⛔ decline | Generic, not SakThai-specific; `uv` dependency guidance already lives in `sakthai-coding-uv`. |
 
 **Correction after inspecting `library/`:** v2 had already re-derived most of the
@@ -121,7 +121,7 @@ record a one-line rationale per kept/dropped file at re-derivation time.
 | `hf.py` (Hugging Face hub) | 📋 roadmap, low priority | Only valuable if v2 ships a dataset/model (see 12.2). Defer until there's a concrete HF artifact. |
 | `sandbox.py` (Docker sandbox for `run --sandbox`) | 📋 roadmap, candidate | Genuine security value — a real sandbox for `run_command`. Re-derive as a v2 feature when the agent loop's exec story is hardened. Highest-value of the code gaps. |
 | `gemini_plugin.py` + `cli/gemini.py` (Gemini CLI plugin) | 📋 evaluate | v2 already discovers `~/.gemini/extensions`; assess whether a dedicated plugin adds beyond that before re-deriving. |
-| `deployment/terraform/` IaC · `app/` ADK bundle | ⛔ defer to v3 | Overlaps Phase 9 (Google ADK / Vertex AI port). Explicitly out of v2 scope. |
+| `deployment/terraform/` IaC · `app/` ADK bundle | ⛔ decline | Google ADK / Vertex AI cloud deployment is not part of v2 (local-first). Explicitly out of scope. |
 | `web/` immersive static gallery | ⛔ decline | v2 has no static web deploy; the Streamlit dashboard covers visualization. |
 | `eval/` harness + datasets | 📋 roadmap | A hermetic eval harness would be valuable; re-derive fresh rather than porting v1's. |
 | `colab_training/` + `scripts/finetune_sakthai.py` (LoRA) · `data/hermes-dataset` | ⛔ decline | Fine-tuning pipeline is out of v2 scope (v2 is a memory/agent layer, not a training project). |
