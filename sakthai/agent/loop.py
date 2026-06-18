@@ -123,7 +123,9 @@ def _parse_slash_command(task: str) -> tuple[str, str] | None:
         return None
 
 
-def _build_system(store: MemoryStore, skills_block: str = "", fast: bool = False, stateless: bool = False) -> str:
+def _build_system(
+    store: MemoryStore, skills_block: str = "", fast: bool = False, stateless: bool = False
+) -> str:
     parts = [SYSTEM_BASE]
     if fast:
         parts.append(

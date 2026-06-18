@@ -48,7 +48,10 @@ DEMO_CHAT: dict[str, Any] = {
     "confidence": 96,
     "messages": [
         {"role": "user", "text": "What is my favorite programming language?"},
-        {"role": "agent", "text": "Based on our past interactions, your favorite programming language is Python."},
+        {
+            "role": "agent",
+            "text": "Based on our past interactions, your favorite programming language is Python.",
+        },
     ],
     "thought_process": [
         {
@@ -153,6 +156,7 @@ def collect_dashboard_data(db_path: Path | None = None, days: int = 30) -> dict[
 
     from ..config import LIBRARY_DIR, SKILLS_DIR
     from ..skills import build_catalog
+
     skills = build_catalog(SKILLS_DIR, LIBRARY_DIR)
 
     return {
