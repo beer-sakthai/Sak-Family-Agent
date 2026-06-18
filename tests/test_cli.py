@@ -96,6 +96,14 @@ def test_learn_from_file(runner: CliRunner, tmp_path: Path) -> None:
     assert "heading (ignored)" not in " ".join(values)
 
 
+def test_learn_from_file_empty_no_facts(runner: CliRunner, tmp_path: Path) -> None:
+    empty_file = tmp_path / "empty.md"
+    empty_file.write_text("# only a heading\n\n  \n", encoding="utf-8")
+    result = runner.invoke(main, ["learn", "--file", str(empty_file)])
+    assert result.exit_code == 0
+    assert "No valid facts found in file." in result.output
+
+
 def test_recall_finds_match(runner: CliRunner) -> None:
     runner.invoke(main, ["learn", "espresso is strong"])
     result = runner.invoke(main, ["recall", "espresso"])
@@ -107,6 +115,17 @@ def test_recall_no_match(runner: CliRunner) -> None:
     result = runner.invoke(main, ["recall", "nonexistent-token"])
     assert result.exit_code == 0
     assert "no matches found" in result.output
+
+
+def test_recall_shows_observations(runner: CliRunner) -> None:
+    from sakthai.memory.store import MemoryStore
+
+    with MemoryStore() as store:
+        store.add_observation("important pattern observed")
+    result = runner.invoke(main, ["recall", "important"])
+    assert result.exit_code == 0
+    assert "important pattern observed" in result.output
+    assert "Observations" in result.output
 
 
 def test_recall_requires_query_or_tag(runner: CliRunner) -> None:
@@ -138,12 +157,32 @@ def test_memory_show_lists_facts(runner: CliRunner) -> None:
     assert "fact one" in result.output
 
 
+def test_memory_show_with_observations(runner: CliRunner) -> None:
+    from sakthai.memory.store import MemoryStore
+
+    with MemoryStore() as store:
+        store.add_observation("a recurring pattern", weight=1.5)
+    result = runner.invoke(main, ["memory", "show"])
+    assert result.exit_code == 0
+    assert "a recurring pattern" in result.output
+    assert "Observations" in result.output
+
+
 def test_memory_stats_json(runner: CliRunner) -> None:
     runner.invoke(main, ["learn", "a fact"])
     result = runner.invoke(main, ["memory", "stats", "--json"])
     assert result.exit_code == 0
     data = json.loads(result.output)
     assert data["facts"]["total"] == 1
+
+
+def test_memory_stats_human_readable(runner: CliRunner) -> None:
+    runner.invoke(main, ["learn", "stat fact", "--kind", "note", "--tag", "work"])
+    result = runner.invoke(main, ["memory", "stats"])
+    assert result.exit_code == 0
+    assert "Memory stats" in result.output
+    assert "note" in result.output
+    assert "work" in result.output
 
 
 def test_memory_forget(runner: CliRunner) -> None:
@@ -208,11 +247,46 @@ def test_memory_deduplicate_none(runner: CliRunner) -> None:
     assert "No duplicate facts found." in result.output
 
 
+def test_memory_deduplicate_verbose_facts(runner: CliRunner) -> None:
+    from sakthai.memory.store import MemoryStore
+
+    with MemoryStore() as store:
+        store.add_fact("dup value", kind="pref", key="color")
+        store.add_fact("dup value2", kind="pref", key="color")
+    result = runner.invoke(main, ["memory", "deduplicate", "--verbose"])
+    assert result.exit_code == 0
+    assert "duplicate fact" in result.output
+    assert "- id" in result.output
+
+
+def test_memory_deduplicate_verbose_observations(runner: CliRunner) -> None:
+    from sakthai.memory.store import MemoryStore
+
+    with MemoryStore() as store:
+        store.add_observation("dup obs")
+        store.add_observation("dup obs")
+    result = runner.invoke(main, ["memory", "deduplicate", "--verbose"])
+    assert result.exit_code == 0
+    assert "duplicate observation" in result.output
+    assert "- id" in result.output
+
+
 def test_memory_search_finds_match(runner: CliRunner) -> None:
     runner.invoke(main, ["learn", "espresso is delicious"])
     result = runner.invoke(main, ["memory", "search", "espresso"])
     assert result.exit_code == 0
     assert "espresso is delicious" in result.output
+
+
+def test_memory_search_shows_observations(runner: CliRunner) -> None:
+    from sakthai.memory.store import MemoryStore
+
+    with MemoryStore() as store:
+        store.add_observation("searchable observation about espresso")
+    result = runner.invoke(main, ["memory", "search", "espresso"])
+    assert result.exit_code == 0
+    assert "searchable observation about espresso" in result.output
+    assert "Observations" in result.output
 
 
 def test_memory_search_no_match(runner: CliRunner) -> None:
@@ -310,6 +384,26 @@ def test_memory_import_invalid_json(runner: CliRunner, tmp_path: Path) -> None:
     result = runner.invoke(main, ["memory", "import", str(bad)])
     assert result.exit_code != 0
     assert "could not read snapshot" in result.output
+
+
+def test_memory_import_invalid_snapshot_contents(runner: CliRunner, tmp_path: Path) -> None:
+    bad = tmp_path / "invalid.json"
+    bad.write_text(json.dumps({"version": 999, "facts": [], "observations": []}), encoding="utf-8")
+    result = runner.invoke(main, ["memory", "import", str(bad)])
+    assert result.exit_code != 0
+    assert "invalid snapshot" in result.output
+
+
+def test_memory_import_replace_prompts_without_yes(runner: CliRunner, tmp_path: Path) -> None:
+    runner.invoke(main, ["learn", "original"])
+    snap = tmp_path / "snap.json"
+    runner.invoke(main, ["memory", "export", str(snap)])
+    # Invoke --replace without --yes; answer 'y' at the prompt.
+    result = runner.invoke(
+        main, ["memory", "import", str(snap), "--replace"], input="y\n"
+    )
+    assert result.exit_code == 0
+    assert "imported" in result.output
 
 
 def test_memory_sync_git(runner: CliRunner, monkeypatch: pytest.MonkeyPatch) -> None:
