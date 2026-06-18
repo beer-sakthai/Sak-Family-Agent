@@ -78,6 +78,7 @@ DEMO_DATA: dict[str, Any] = {
         "total_observations_delta": 2,
         "sessions": 0,
         "total_tokens": 0,
+        "total_skills": 0,
     },
     "growth": {
         "labels": [f"Day {i}" for i in range(1, 8)],
@@ -161,6 +162,7 @@ def collect_dashboard_data(db_path: Path | None = None, days: int = 30) -> dict[
     from ..skills import build_catalog
 
     skills = build_catalog(SKILLS_DIR, LIBRARY_DIR)
+    total_skills = sum(int(cat.get("count", 0)) for cat in skills) if isinstance(skills, list) else 0
 
     return {
         "generated_at": _fmt_date(now),
@@ -172,6 +174,7 @@ def collect_dashboard_data(db_path: Path | None = None, days: int = 30) -> dict[
             "total_observations_delta": obs_this_week,
             "sessions": session_data.get("totals", {}).get("sessions", 0),
             "total_tokens": session_data.get("totals", {}).get("total_tokens", 0),
+            "total_skills": total_skills,
         },
         "growth": {"labels": labels, "facts": fact_series, "observations": obs_series},
         "recent_facts": [
