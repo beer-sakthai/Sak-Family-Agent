@@ -22,7 +22,7 @@ SakThai Agent v2 employs a modular architecture designed for extensibility and r
 
 The agent operates through a six-stage cycle, representing different states of its operation and learning. This cycle helps in managing the agent's internal state and guiding its behavior over time.
 
-![SakThai Agent 6-Stage Cycle Diagram](./assets/cycle_diagram.png)
+![SakThai Agent 6-Stage Cycle Diagram](./assets/cycle_diagram_v2.png)
 
 ## Quick start
 
