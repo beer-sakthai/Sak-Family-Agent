@@ -251,6 +251,40 @@ def test_update_fact_clears_tags_with_empty_list(store: MemoryStore) -> None:
     assert store.list_facts()[0].tags == []
 
 
+# -- list_facts date range filtering ------------------------------------
+
+
+def test_list_facts_date_range(store: MemoryStore) -> None:
+    import time
+
+    t0 = int(time.time()) - 100
+    fid_old = store.add_fact("old fact")
+    # Manually backdate created_at so we have a fact clearly before `t_mid`.
+    store._conn.execute("UPDATE facts SET created_at = ? WHERE id = ?", (t0, fid_old))
+    store._conn.commit()
+
+    t_mid = int(time.time()) - 50
+    fid_new = store.add_fact("new fact")
+
+    # after_ts: only the new fact falls at or after t_mid
+    recent = store.list_facts(after_ts=t_mid)
+    assert len(recent) == 1
+    assert recent[0].id == fid_new
+
+    # before_ts: only the old fact falls at or before t_mid
+    old_only = store.list_facts(before_ts=t_mid)
+    assert len(old_only) == 1
+    assert old_only[0].id == fid_old
+
+    # both bounds: no fact falls in a 1-second window between the two
+    empty = store.list_facts(after_ts=t_mid - 1, before_ts=t_mid - 1)
+    assert empty == []
+
+    # no bounds: both facts returned
+    all_facts = store.list_facts()
+    assert len(all_facts) == 2
+
+
 # -- _encode_tags / _decode_tags edge cases ------------------------------
 
 
