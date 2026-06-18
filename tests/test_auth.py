@@ -179,3 +179,85 @@ def test_source_claude_cli() -> None:
 
 def test_source_none_when_unset() -> None:
     assert auth.anthropic_credential_source() is None
+
+
+# -- resolve_openai_credentials / openai_credential_source -----------------
+
+
+def test_resolve_openai_with_api_key_defaults_to_openai_url(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-openai-test")
+    monkeypatch.delenv("OPENAI_BASE_URL", raising=False)
+    monkeypatch.delenv("OPENAI_API_BASE", raising=False)
+    monkeypatch.delenv("OLLAMA_HOST", raising=False)
+    base, key = auth.resolve_openai_credentials()
+    assert base == "https://api.openai.com/v1"
+    assert key == "sk-openai-test"
+
+
+def test_resolve_openai_with_ollama_host_builds_v1_url(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.delenv("OPENAI_BASE_URL", raising=False)
+    monkeypatch.delenv("OPENAI_API_BASE", raising=False)
+    monkeypatch.setenv("OLLAMA_HOST", "http://127.0.0.1:11434")
+    base, key = auth.resolve_openai_credentials()
+    assert base == "http://127.0.0.1:11434/v1"
+    assert key == "nokey"
+
+
+def test_resolve_openai_with_base_url(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("OPENAI_BASE_URL", "http://my-proxy/v1")
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.delenv("OPENAI_API_BASE", raising=False)
+    monkeypatch.delenv("OLLAMA_HOST", raising=False)
+    base, key = auth.resolve_openai_credentials()
+    assert base == "http://my-proxy/v1"
+    assert key == "nokey"
+
+
+def test_resolve_openai_raises_without_any_credential(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.delenv("OPENAI_BASE_URL", raising=False)
+    monkeypatch.delenv("OPENAI_API_BASE", raising=False)
+    monkeypatch.delenv("OLLAMA_HOST", raising=False)
+    with pytest.raises(auth.AuthError, match="OPENAI_API_KEY"):
+        auth.resolve_openai_credentials()
+
+
+def test_openai_credential_source_api_key(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
+    assert auth.openai_credential_source() == "openai_api_key"
+
+
+def test_openai_credential_source_base_url(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.setenv("OPENAI_BASE_URL", "http://proxy/v1")
+    assert auth.openai_credential_source() == "openai_api_base"
+
+
+def test_openai_credential_source_api_base(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.delenv("OPENAI_BASE_URL", raising=False)
+    monkeypatch.setenv("OPENAI_API_BASE", "http://proxy/v1")
+    assert auth.openai_credential_source() == "openai_api_base"
+
+
+def test_openai_credential_source_ollama_host(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.delenv("OPENAI_BASE_URL", raising=False)
+    monkeypatch.delenv("OPENAI_API_BASE", raising=False)
+    monkeypatch.setenv("OLLAMA_HOST", "http://127.0.0.1:11434")
+    assert auth.openai_credential_source() == "ollama_host"
+
+
+def test_openai_credential_source_none(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.delenv("OPENAI_BASE_URL", raising=False)
+    monkeypatch.delenv("OPENAI_API_BASE", raising=False)
+    monkeypatch.delenv("OLLAMA_HOST", raising=False)
+    assert auth.openai_credential_source() is None
