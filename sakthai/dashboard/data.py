@@ -162,7 +162,9 @@ def collect_dashboard_data(db_path: Path | None = None, days: int = 30) -> dict[
     from ..skills import build_catalog
 
     skills = build_catalog(SKILLS_DIR, LIBRARY_DIR)
-    total_skills = sum(int(cat.get("count", 0)) for cat in skills) if isinstance(skills, list) else 0
+    total_skills = (
+        sum(int(cat.get("count", 0)) for cat in skills) if isinstance(skills, list) else 0
+    )
 
     return {
         "generated_at": _fmt_date(now),
