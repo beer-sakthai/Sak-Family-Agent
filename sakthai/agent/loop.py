@@ -105,6 +105,26 @@ def _parse_slash_command(task: str) -> tuple[str, str] | None:
             cmd_file = p
             break
 
+        # Check subdirectories of the root (e.g. for extension folders like claude-code-workflows)
+        if root.is_dir():
+            for child in root.iterdir():
+                if not child.is_dir():
+                    continue
+                p = child / "plugins" / plugin_name / "commands" / f"{command_name}.md"
+                if p.is_file():
+                    cmd_file = p
+                    break
+                p = child / plugin_name / "commands" / f"{command_name}.md"
+                if p.is_file():
+                    cmd_file = p
+                    break
+                p = child / "commands" / f"{command_name}.md"
+                if p.is_file():
+                    cmd_file = p
+                    break
+            if cmd_file:
+                break
+
     if not cmd_file:
         return None
 

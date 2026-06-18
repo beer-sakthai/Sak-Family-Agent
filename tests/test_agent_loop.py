@@ -1244,6 +1244,39 @@ def test_slash_command_parsing(sakthai_home: Path, store: MemoryStore) -> None:
     assert captured["task"] == "write a test"
 
 
+def test_slash_command_parsing_nested(sakthai_home: Path, store: MemoryStore) -> None:
+    # Simulates an extension folder under gemini_ext_dir, like gemini_ext_dir/claude-code-workflows/plugins/my-plugin/commands/my-cmd.md
+    gemini_ext_dir = sakthai_home.parent / "gemini" / "extensions"
+    cmd_dir = gemini_ext_dir / "claude-code-workflows" / "plugins" / "my-plugin" / "commands"
+    cmd_dir.mkdir(parents=True, exist_ok=True)
+    (cmd_dir / "my-cmd.md").write_text(
+        "---\ndescription: nested test desc\n---\n\nRule: Do nested $ARGUMENTS thing.\n",
+        encoding="utf-8",
+    )
+
+    captured: dict[str, str] = {}
+
+    class _CapMessages:
+        def create(self, **kwargs: object) -> _Resp:
+            captured["system"] = str(kwargs.get("system", ""))
+            captured["task"] = str(kwargs.get("messages", [{}])[0].get("content", ""))
+            return _Resp("end_turn", [_Block(type="text", text="ok")])
+
+    class _CapClient:
+        def __init__(self) -> None:
+            self.messages = _CapMessages()
+
+    run_agent(
+        "/my-plugin:my-cmd nested test",
+        client=_CapClient(),
+        store=store,
+        provider="anthropic",
+    )
+
+    assert "Rule: Do nested nested test thing." in captured["system"]
+    assert captured["task"] == "nested test"
+
+
 def test_fast_mode_injects_fast_track_instruction(store: MemoryStore) -> None:
     captured: dict[str, str] = {}
 
