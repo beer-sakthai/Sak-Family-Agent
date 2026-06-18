@@ -291,8 +291,18 @@ def run_agent(
             notify("iteration", {"n": iteration, "stop_reason": stop_reason})
 
             if stop_reason in _TERMINAL_STOPS:
+                final_text = _extract_text(response.content)
+                missed_tool = _detect_untriggered_tool_call(final_text, registry)
+                if missed_tool is not None:
+                    logger.warning(
+                        "Model ended the turn (stop_reason=%s) with text that looks "
+                        "like an un-dispatched %r tool call; not executing it.",
+                        stop_reason,
+                        missed_tool,
+                    )
+                    notify("tool_call_in_text", {"name": missed_tool, "stop_reason": stop_reason})
                 result = AgentResult(
-                    text=_extract_text(response.content),
+                    text=final_text,
                     iterations=iteration,
                     stop_reason=stop_reason,
                     tool_calls=tool_calls,
@@ -396,6 +406,55 @@ def _extract_text(content: Any) -> str:
         if getattr(block, "type", "") == "text"
     ]
     return "\n".join(p for p in parts if p).strip()
+
+
+# Keys a model might use to name a tool / wrap its arguments when it emits a
+# tool call as plain text instead of a structured tool_use block.
+_TOOL_NAME_KEYS = ("name", "tool", "tool_name", "function")
+_TOOL_ARG_KEYS = ("arguments", "input", "parameters", "args", "tool_input")
+
+
+def _strip_code_fence(text: str) -> str:
+    """Drop a leading/trailing markdown code fence (```json ... ```)."""
+    stripped = text.strip()
+    if not stripped.startswith("```"):
+        return stripped
+    lines = stripped.splitlines()
+    if len(lines) >= 2 and lines[-1].strip() == "```":
+        return "\n".join(lines[1:-1]).strip()
+    return stripped
+
+
+def _detect_untriggered_tool_call(text: str, registry: ToolRegistry) -> str | None:
+    """Return the tool name if ``text`` is a tool-call-shaped JSON blob.
+
+    Weak local models sometimes end a turn (``stop_reason=end_turn``) with final
+    text that is really a tool call they failed to emit as a structured
+    ``tool_use`` block. We don't dispatch it (that would be guessing), but we
+    surface it so the run isn't silently reported as a clean success. Detection
+    is deliberately conservative: the parsed JSON must name a *registered* tool.
+    """
+    candidate = _strip_code_fence(text)
+    if not candidate or candidate[0] not in "{[":
+        return None
+    try:
+        parsed = json.loads(candidate)
+    except (json.JSONDecodeError, ValueError):
+        return None
+
+    for entry in parsed if isinstance(parsed, list) else [parsed]:
+        if not isinstance(entry, dict):
+            continue
+        for key in _TOOL_NAME_KEYS:
+            value = entry.get(key)
+            # OpenAI-style: {"function": {"name": ...}}
+            if isinstance(value, dict):
+                value = value.get("name")
+            if isinstance(value, str) and value in registry:
+                # Stronger signal when an arguments-ish key is also present, but
+                # a registered tool name alone is enough to warrant a warning.
+                return value
+    return None
 
 
 def _serialize_messages(messages: list[Any]) -> list[dict[str, Any]]:

@@ -7,7 +7,14 @@ from typing import Any
 
 import pytest
 
-from sakthai.agent.loop import AgentError, _detect_provider, _extract_text, run_agent
+from sakthai.agent.loop import (
+    AgentError,
+    _detect_provider,
+    _detect_untriggered_tool_call,
+    _extract_text,
+    run_agent,
+)
+from sakthai.agent.registry import builtin_registry
 from sakthai.memory.store import MemoryStore
 
 
@@ -1346,6 +1353,60 @@ def test_caveman_flag_injection(sakthai_home: Path, store: MemoryStore) -> None:
 
     assert "Respond terse." in captured["system"]
     assert "ACTIVE CAVEMAN LEVEL: ultra" in captured["system"]
+
+
+# --- Phase 13.2: surface text-emitted (un-dispatched) tool calls -------------
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        '{"name": "learn", "input": {"value": "x", "kind": "pref"}}',
+        '{"tool": "learn", "arguments": {}}',
+        '{"function": {"name": "learn"}, "arguments": {}}',
+        '```json\n{"name": "learn", "parameters": {}}\n```',
+        '[{"name": "learn", "input": {}}]',
+    ],
+)
+def test_detect_untriggered_tool_call_positive(text: str) -> None:
+    assert _detect_untriggered_tool_call(text, builtin_registry()) == "learn"
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "",
+        "All done — I have learned that for you.",
+        '{"name": "not_a_real_tool", "input": {}}',  # unknown tool
+        '{"value": "just some json answer"}',  # no tool-name key
+        "{not valid json",
+    ],
+)
+def test_detect_untriggered_tool_call_negative(text: str) -> None:
+    assert _detect_untriggered_tool_call(text, builtin_registry()) is None
+
+
+def test_text_emitted_tool_call_warns_without_failing(store: MemoryStore) -> None:
+    # Weak model ends the turn with a tool-call-shaped JSON blob as plain text.
+    blob = '{"name": "learn", "input": {"value": "uses vim", "kind": "pref"}}'
+    client = FakeClient([_Resp("end_turn", [_Block(type="text", text=blob)])])
+    events: list = []
+    result = run_agent(
+        "remember something",
+        client=client,
+        store=store,
+        provider="anthropic",
+        on_event=lambda k, p: events.append((k, p)),
+    )
+
+    # The run still reports success (it's model quality, not an app error)...
+    assert result.stop_reason == "end_turn"
+    assert result.text == blob
+    # ...but the missed tool call is surfaced rather than silently swallowed.
+    assert ("tool_call_in_text", {"name": "learn", "stop_reason": "end_turn"}) in events
+    # And nothing was actually dispatched / stored.
+    assert result.tool_calls == []
+    assert store.list_facts() == []
 
 
 def test_caveman_flag_not_found_logs_warning(
