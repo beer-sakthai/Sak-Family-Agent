@@ -1,61 +1,40 @@
-"""Smoke tests for the Streamlit dashboard app (sakthai/dashboard/app.py).
-
-The module is pure Streamlit/plotly presentation glue; the data logic it renders
-lives in dashboard/data.py (covered by test_dashboard_data.py) and app.py is
-excluded from coverage/mypy in pyproject.toml. These tests run only where the
-``dashboard`` extra is installed — they skip under CI's dev-only install — and
-verify the module imports cleanly and its figure/helper builders work without a
-live Streamlit runtime (``st`` side effects are stubbed).
-"""
+"""Smoke tests for the React dashboard integration."""
 
 from __future__ import annotations
 
-from typing import Any
+import json
+from pathlib import Path
 
 import pytest
 
-pytest.importorskip("streamlit")
-pytest.importorskip("plotly")
-pytest.importorskip("pandas")
+from sakthai.dashboard.data import SOURCE_LIVE, export_dashboard_json
+from sakthai.memory.store import MemoryStore
 
-from sakthai.dashboard import app  # noqa: E402  (guarded import after importorskip)
-from sakthai.dashboard.data import DEMO_DATA  # noqa: E402
+_DIST_PATH = Path(__file__).parent.parent / "dashboard" / "dist"
 
 
-def test_main_is_callable() -> None:
-    assert callable(app.main)
+@pytest.mark.skipif(
+    not _DIST_PATH.exists(), reason="dashboard/dist not built — run 'npm run build'"
+)
+def test_dashboard_dist_exists() -> None:
+    assert _DIST_PATH.exists()
+    assert (_DIST_PATH / "index.html").exists()
 
 
-def test_token_fingerprint_anonymous_when_empty() -> None:
-    assert app._token_fingerprint("") == "anonymous"
+def test_dashboard_export_integration(tmp_path: Path) -> None:
+    db = tmp_path / "memory.db"
+    with MemoryStore(db) as store:
+        store.add_fact("integration test fact", kind="note")
 
+    dest = tmp_path / "data.json"
+    export_dashboard_json(dest, db)
 
-def test_token_fingerprint_is_stable_and_non_reversible() -> None:
-    fp = app._token_fingerprint("ghp_secret_token")
-    assert fp == app._token_fingerprint("ghp_secret_token")  # deterministic
-    assert "ghp_secret_token" not in fp  # never leaks the secret
-    assert len(fp) == 12
-
-
-def test_knowledge_graph_builds(monkeypatch: pytest.MonkeyPatch) -> None:
-    captured: dict[str, Any] = {}
-    monkeypatch.setattr(app.st, "plotly_chart", lambda fig, **k: captured.setdefault("fig", fig))
-    app._render_knowledge_graph(DEMO_DATA["graph"])
-    # One trace per spoke edge plus one node-marker trace → at least 2 traces.
-    assert len(captured["fig"].data) >= 2
-
-
-def test_knowledge_graph_handles_no_categories(monkeypatch: pytest.MonkeyPatch) -> None:
-    captured: dict[str, Any] = {}
-    monkeypatch.setattr(app.st, "plotly_chart", lambda fig, **k: captured.setdefault("fig", fig))
-    app._render_knowledge_graph({"categories": [], "total_nodes": 0, "connections": 0})
-    assert captured["fig"].data  # the central "Core" node is always present
-
-
-def test_notify_appends_and_caps(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(app.st, "session_state", {}, raising=False)
-    for i in range(25):
-        app._notify(f"event {i}")
-    notes = app.st.session_state["notifications"]
-    assert len(notes) == 20  # capped
-    assert notes[-1]["msg"] == "event 24"
+    assert dest.exists()
+    data = json.loads(dest.read_text(encoding="utf-8"))
+    assert data["source"] == SOURCE_LIVE
+    assert data["kpis"]["total_facts"] == 1
+    assert data["recent_facts"][0]["value"] == "integration test fact"
+    # Ensure new fields are present
+    assert "skills" in data
+    assert "recent_sessions" in data
+    assert "total_tokens" in data["kpis"]
