@@ -5,6 +5,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
 from sakthai.mcp.servers import (
     MCPServerSpec,
     load_server_specs,
@@ -66,6 +68,43 @@ def test_load_specs_includes_extension_manifests(sakthai_home: Path) -> None:
     )
     names = {s.name for s in load_server_specs()}
     assert "fromext" in names
+
+
+def test_parse_skips_non_dict_entry_values() -> None:
+    data = {"mcpServers": {"bad": "not-a-dict", "ok": {"command": "run-ok"}}}
+    names = [s.name for s in parse_mcp_servers(data)]
+    assert names == ["ok"]
+
+
+def test_load_specs_reads_gemini_extensions_dir(
+    sakthai_home: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from sakthai.config import gemini_extensions_dir
+
+    gemini_base = gemini_extensions_dir()
+    ext = gemini_base / "my-gemini-ext"
+    ext.mkdir(parents=True, exist_ok=True)
+    (ext / "gemini-extension.json").write_text(
+        json.dumps({"mcpServers": {"gemini-tool": {"command": "gemini-run"}}}),
+        encoding="utf-8",
+    )
+    names = {s.name for s in load_server_specs()}
+    assert "gemini-tool" in names
+
+
+def test_load_manifest_handles_invalid_json(
+    sakthai_home: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from sakthai.config import gemini_extensions_dir
+
+    gemini_base = gemini_extensions_dir()
+    ext = gemini_base / "bad-ext"
+    ext.mkdir(parents=True, exist_ok=True)
+    # Corrupt JSON — _load_manifest should log a warning and return []
+    (ext / "gemini-extension.json").write_text("{ not valid json }", encoding="utf-8")
+    # Should not raise; corrupt manifest is skipped
+    specs = load_server_specs()
+    assert all(s.name != "bad-ext" for s in specs)
 
 
 def test_mcp_json_overrides_extension_on_name_clash(sakthai_home: Path) -> None:
