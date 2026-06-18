@@ -5,7 +5,10 @@ from __future__ import annotations
 import json
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
+
+if TYPE_CHECKING:
+    from ..memory.store import Fact, Observation
 
 import click
 
@@ -383,7 +386,6 @@ def memory_consolidate_sessions(limit: int, model: str | None) -> None:
 @click.option("--verbose", "-v", is_flag=True, help="Print every pruned row.")
 def memory_deduplicate(dry_run: bool, verbose: bool) -> None:
     """Find and remove duplicate facts and observations."""
-    from ..memory.store import Fact, Observation
 
     with MemoryStore() as store:
         facts = cast("list[Fact]", store.deduplicate_facts(detailed=True, dry_run=dry_run))
