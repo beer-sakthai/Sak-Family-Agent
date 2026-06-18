@@ -39,7 +39,7 @@ bandit -c pyproject.toml -r sakthai           # security scan
 ```
 
 CI runs the lint → format-check → mypy → bandit → pytest sequence on Python
-**3.11 and 3.12**. Run it locally before pushing; green CI is the bar for `main`.
+**3.11, 3.12, and 3.13**. Run it locally before pushing; green CI is the bar for `main`.
 
 ## Runtime entry points
 
