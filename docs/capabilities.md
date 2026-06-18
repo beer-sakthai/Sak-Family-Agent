@@ -26,6 +26,7 @@ These are exposed both to the agent loop (`sakthai run`) and over MCP
 - `backup` — timestamped copy of `memory.db`.
 - `healthcheck` — SQLite `integrity_check`.
 - `consolidate` — fold facts older than N seconds into one observation.
+- `consolidate-sessions` — mine local session logs through an LLM and learn durable facts about the user (idempotent across runs).
 - `deduplicate` — drop duplicate facts/observations (keyed and key-less).
 
 ## Providers

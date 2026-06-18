@@ -117,6 +117,7 @@ record a one-line rationale per kept/dropped file at re-derivation time.
 
 | OG module | Decision | Rationale |
 |-----------|----------|-----------|
+| `cli/memory.py` `consolidate-sessions` (LLM session mining) | ✅ re-derived | The one genuine in-scope CLI gap: OG mines local session logs into durable facts; v2 already wrote `~/.sakthai/sessions/*.json` but never mined them. Re-derived fresh against v2's `run_agent`/`learn`/`config.sessions_dir`, idempotent via a `consolidated_sessions.json` state file. Tests in `tests/test_cli_consolidate_sessions.py`. |
 | `hf.py` (Hugging Face hub) | 📋 roadmap, low priority | Only valuable if v2 ships a dataset/model (see 12.2). Defer until there's a concrete HF artifact. |
 | `sandbox.py` (Docker sandbox for `run --sandbox`) | 📋 roadmap, candidate | Genuine security value — a real sandbox for `run_command`. Re-derive as a v2 feature when the agent loop's exec story is hardened. Highest-value of the code gaps. |
 | `gemini_plugin.py` + `cli/gemini.py` (Gemini CLI plugin) | 📋 evaluate | v2 already discovers `~/.gemini/extensions`; assess whether a dedicated plugin adds beyond that before re-deriving. |
