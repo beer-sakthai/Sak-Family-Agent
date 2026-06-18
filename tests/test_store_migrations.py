@@ -157,12 +157,11 @@ def test_wal_failure_tolerated_store_remains_functional(
     monkeypatch.setattr(_store_mod, "sqlite3", _FakeSqlite3Module())
 
     db = tmp_path / "wal_fallback.db"
-    with caplog.at_level(logging.DEBUG, logger="sakthai.memory.store"):
-        with MemoryStore(db) as s:
-            fid = s.add_fact("WAL fallback works")
-            assert s.list_facts()[0].value == "WAL fallback works"
-            assert s.forget_fact(fid) is True
-            assert s.list_facts() == []
+    with caplog.at_level(logging.DEBUG, logger="sakthai.memory.store"), MemoryStore(db) as s:
+        fid = s.add_fact("WAL fallback works")
+        assert s.list_facts()[0].value == "WAL fallback works"
+        assert s.forget_fact(fid) is True
+        assert s.list_facts() == []
 
     assert any("WAL unavailable" in r.message for r in caplog.records), (
         "expected a debug log saying WAL is unavailable"
