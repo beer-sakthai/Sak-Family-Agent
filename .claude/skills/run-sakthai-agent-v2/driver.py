@@ -49,15 +49,28 @@ def run(args: list[str], env: dict[str, str], stdin: str | None = None) -> tuple
 def drive_mcp(env: dict[str, str]) -> dict[int, dict]:
     """Pipe a JSON-RPC session into `sakthai mcp` and collect responses by id."""
     requests = [
-        {"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {"protocolVersion": "2024-11-05"}},
+        {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "initialize",
+            "params": {"protocolVersion": "2024-11-05"},
+        },
         {"jsonrpc": "2.0", "id": 2, "method": "tools/list"},
         {
             "jsonrpc": "2.0",
             "id": 3,
             "method": "tools/call",
-            "params": {"name": "learn", "arguments": {"value": "drove the MCP server", "kind": "note"}},
+            "params": {
+                "name": "learn",
+                "arguments": {"value": "drove the MCP server", "kind": "note"},
+            },
         },
-        {"jsonrpc": "2.0", "id": 4, "method": "tools/call", "params": {"name": "recall", "arguments": {}}},
+        {
+            "jsonrpc": "2.0",
+            "id": 4,
+            "method": "tools/call",
+            "params": {"name": "recall", "arguments": {}},
+        },
     ]
     payload = "".join(json.dumps(r) + "\n" for r in requests)
     proc = subprocess.run(
@@ -108,8 +121,13 @@ def main() -> int:
 
         print("\nMCP stdio server (live JSON-RPC roundtrip):")
         resp = drive_mcp(env)
-        check("initialize", resp.get(1, {}).get("result", {}).get("serverInfo", {}).get("name") == "sakthai")
-        check("tools/list returns tools", len(resp.get(2, {}).get("result", {}).get("tools", [])) > 0)
+        check(
+            "initialize",
+            resp.get(1, {}).get("result", {}).get("serverInfo", {}).get("name") == "sakthai",
+        )
+        check(
+            "tools/list returns tools", len(resp.get(2, {}).get("result", {}).get("tools", [])) > 0
+        )
         learn_text = resp.get(3, {}).get("result", {}).get("content", [{}])[0].get("text", "")
         check("tools/call learn stores a fact", "Stored fact" in learn_text)
         recall_text = resp.get(4, {}).get("result", {}).get("content", [{}])[0].get("text", "")
