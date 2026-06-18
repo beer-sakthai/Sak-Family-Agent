@@ -1,8 +1,8 @@
 # SakThai Agent (v2)
 
-![SakThai Agent Conceptual Image](./assets/sakthai_concept.png)
+![SakThai Agent Banner](./assets/readme_banner.png)
 
-A personal, learning agent with persistent memory. SakThai gives a Claude (or Gemini) agent a durable SQLite memory it can write to and read from across sessions, plus a set of tools and an MCP server so the same memory is reachable from other agent runtimes.
+An advanced AI agent with **persistent memory**, **context awareness**, and **autonomous capabilities**. SakThai gives a Claude (or Gemini) agent a durable SQLite memory it can write to and read from across sessions, plus a comprehensive set of tools and an MCP server for seamless integration. Built for long-term tasks, continuous learning, and real-world impact.
 
 ## What's here
 
