@@ -549,6 +549,63 @@ def test_skills_validate_flags_errors(runner: CliRunner, skill_roots: tuple[Path
     assert "error:" in result.output
 
 
+def test_skills_list_source_skills(
+    runner: CliRunner, skill_roots: tuple[Path, Path]
+) -> None:
+    _write_skill(skill_roots[0], "s-only")
+    _write_skill(skill_roots[1], "lib-only")
+    result = runner.invoke(main, ["skills", "list", "--source", "skills"])
+    assert result.exit_code == 0
+    assert "s-only" in result.output
+    assert "lib-only" not in result.output
+
+
+def test_skills_list_source_library(
+    runner: CliRunner, skill_roots: tuple[Path, Path]
+) -> None:
+    _write_skill(skill_roots[0], "s-only")
+    _write_skill(skill_roots[1], "lib-only")
+    result = runner.invoke(main, ["skills", "list", "--source", "library"])
+    assert result.exit_code == 0
+    assert "lib-only" in result.output
+    assert "s-only" not in result.output
+
+
+def test_skills_list_empty_with_category_filter(
+    runner: CliRunner, skill_roots: tuple[Path, Path]
+) -> None:
+    _write_skill(skill_roots[0], "alpha")
+    result = runner.invoke(main, ["skills", "list", "--category", "nonexistent"])
+    assert result.exit_code == 0
+    assert "no skills in category" in result.output
+
+
+def test_skills_list_empty_roots(
+    runner: CliRunner, skill_roots: tuple[Path, Path]
+) -> None:
+    # No skills written — both dirs are empty
+    result = runner.invoke(main, ["skills", "list"])
+    assert result.exit_code == 0
+    assert "no skills found" in result.output.lower()
+
+
+def test_skills_list_truncates_long_description(
+    runner: CliRunner, skill_roots: tuple[Path, Path]
+) -> None:
+    skill_dir = skill_roots[0] / "verbose-skill"
+    skill_dir.mkdir(parents=True)
+    long_desc = "A" * 80
+    (skill_dir / "SKILL.md").write_text(
+        f"---\nname: verbose-skill\ndescription: {long_desc}\nversion: 1.0.0\n---\nBody.\n",
+        encoding="utf-8",
+    )
+    result = runner.invoke(main, ["skills", "list"])
+    assert result.exit_code == 0
+    # Output should be truncated — not the full 80-char description
+    assert long_desc not in result.output
+    assert "…" in result.output
+
+
 def test_skills_create(runner: CliRunner, skill_roots: tuple[Path, Path]) -> None:
     result = runner.invoke(main, ["skills", "create", "My Skill"])
     assert result.exit_code == 0
@@ -884,3 +941,66 @@ def test_run_passes_caveman_option(runner: CliRunner, monkeypatch: pytest.Monkey
     result = runner.invoke(main, ["run", "hi", "--caveman", "ultra", "--no-mcp"])
     assert result.exit_code == 0
     assert captured["caveman"] == "ultra"
+
+
+def test_run_keyboard_interrupt_exits_130(
+    runner: CliRunner, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def boom(task: str, **kwargs: Any) -> None:
+        raise KeyboardInterrupt()
+
+    monkeypatch.setattr(agent_mod, "run_agent", boom)
+    result = runner.invoke(main, ["run", "--no-mcp", "some task"])
+    assert result.exit_code == 130
+
+
+# -- _event_emitter unit tests -------------------------------------------
+
+
+def test_event_emitter_tool_call_verbose(capsys: pytest.CaptureFixture[str]) -> None:
+    from sakthai.cli.agent import _event_emitter
+
+    emit = _event_emitter(verbose=True)
+    emit("tool_call", {"name": "learn", "input": {"value": "x"}, "is_error": False})
+    captured = capsys.readouterr()
+    assert "learn" in captured.err
+
+
+def test_event_emitter_tool_call_is_error_verbose(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    from sakthai.cli.agent import _event_emitter
+
+    emit = _event_emitter(verbose=True)
+    emit("tool_call", {"name": "recall", "input": {}, "is_error": True})
+    captured = capsys.readouterr()
+    assert "tool!" in captured.err
+
+
+def test_event_emitter_tool_error_verbose(capsys: pytest.CaptureFixture[str]) -> None:
+    from sakthai.cli.agent import _event_emitter
+
+    emit = _event_emitter(verbose=True)
+    emit("tool_error", {"name": "mystery_tool"})
+    captured = capsys.readouterr()
+    assert "mystery_tool" in captured.err
+
+
+def test_event_emitter_iteration_verbose(capsys: pytest.CaptureFixture[str]) -> None:
+    from sakthai.cli.agent import _event_emitter
+
+    emit = _event_emitter(verbose=True)
+    emit("iteration", {"n": 3, "stop_reason": "tool_use"})
+    captured = capsys.readouterr()
+    assert "iter 3" in captured.err
+
+
+def test_event_emitter_non_verbose_is_noop(capsys: pytest.CaptureFixture[str]) -> None:
+    from sakthai.cli.agent import _event_emitter
+
+    emit = _event_emitter(verbose=False)
+    emit("tool_call", {"name": "learn", "input": {}, "is_error": False})
+    emit("tool_error", {"name": "x"})
+    emit("iteration", {"n": 1, "stop_reason": "end_turn"})
+    captured = capsys.readouterr()
+    assert captured.err == ""

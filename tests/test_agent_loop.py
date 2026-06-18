@@ -7,11 +7,17 @@ from typing import Any
 
 import pytest
 
+from unittest.mock import patch
+
 from sakthai.agent.loop import (
     AgentError,
+    AgentResult,
     _detect_provider,
     _detect_untriggered_tool_call,
     _extract_text,
+    _parse_slash_command,
+    _save_session_log,
+    _strip_code_fence,
     run_agent,
 )
 from sakthai.agent.registry import builtin_registry
@@ -1469,3 +1475,255 @@ def test_caveman_combined_with_existing_skills_block(
     assert "DEMO BLOCK." in captured["system"]
     assert "CAVEMAN RULES." in captured["system"]
     assert "ACTIVE CAVEMAN LEVEL: ultra" in captured["system"]
+
+
+# -- _strip_code_fence ----------------------------------------------------
+
+
+def test_strip_code_fence_no_closing_fence() -> None:
+    text = "```json\n{\"key\": \"value\"}"
+    result = _strip_code_fence(text)
+    # No closing ``` — original (stripped) returned unchanged
+    assert result == text.strip()
+
+
+def test_strip_code_fence_with_closing_fence() -> None:
+    text = "```json\n{\"key\": \"value\"}\n```"
+    result = _strip_code_fence(text)
+    assert result == '{"key": "value"}'
+
+
+def test_strip_code_fence_no_fence_at_all() -> None:
+    text = "plain text"
+    assert _strip_code_fence(text) == "plain text"
+
+
+# -- _detect_untriggered_tool_call: OpenAI-style --------------------------
+
+
+def test_detect_untriggered_tool_call_openai_function_style() -> None:
+    registry = builtin_registry()
+    text = '{"function": {"name": "learn"}, "arguments": {"value": "x"}}'
+    result = _detect_untriggered_tool_call(text, registry)
+    assert result == "learn"
+
+
+def test_detect_untriggered_tool_call_list_with_non_dict_element() -> None:
+    registry = builtin_registry()
+    # List containing a non-dict element followed by a valid tool call — exercises
+    # the `if not isinstance(entry, dict): continue` branch.
+    text = '[42, {"name": "recall"}]'
+    result = _detect_untriggered_tool_call(text, registry)
+    assert result == "recall"
+
+
+# -- _parse_slash_command -------------------------------------------------
+
+
+def test_parse_slash_command_finds_command_file(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import sakthai.agent.loop as loop_mod
+
+    cmd_dir = tmp_path / "my-plugin" / "commands"
+    cmd_dir.mkdir(parents=True)
+    (cmd_dir / "my-cmd.md").write_text(
+        "Do something with $ARGUMENTS", encoding="utf-8"
+    )
+    monkeypatch.setattr(loop_mod, "default_skill_roots", lambda: [tmp_path])
+
+    result = _parse_slash_command("/my-plugin:my-cmd some args")
+    assert result is not None
+    system_prompt, arguments = result
+    assert "COMMAND INSTRUCTIONS" in system_prompt
+    assert "some args" in system_prompt
+    assert arguments == "some args"
+
+
+def test_parse_slash_command_strips_yaml_frontmatter(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import sakthai.agent.loop as loop_mod
+
+    cmd_dir = tmp_path / "my-plugin" / "commands"
+    cmd_dir.mkdir(parents=True)
+    (cmd_dir / "my-cmd.md").write_text(
+        "---\ntitle: cmd\n---\nThe actual body content", encoding="utf-8"
+    )
+    monkeypatch.setattr(loop_mod, "default_skill_roots", lambda: [tmp_path])
+
+    result = _parse_slash_command("/my-plugin:my-cmd")
+    assert result is not None
+    system_prompt, _ = result
+    assert "The actual body content" in system_prompt
+    assert "title: cmd" not in system_prompt
+
+
+def test_parse_slash_command_returns_none_for_missing_file(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import sakthai.agent.loop as loop_mod
+
+    monkeypatch.setattr(loop_mod, "default_skill_roots", lambda: [tmp_path])
+    result = _parse_slash_command("/no-plugin:no-cmd")
+    assert result is None
+
+
+def test_parse_slash_command_finds_commands_dir_variant(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import sakthai.agent.loop as loop_mod
+
+    # Place command at root/commands/cmd.md (second variant, without plugin prefix dir)
+    cmd_dir = tmp_path / "commands"
+    cmd_dir.mkdir(parents=True)
+    (cmd_dir / "my-cmd.md").write_text("Do $ARGUMENTS", encoding="utf-8")
+    monkeypatch.setattr(loop_mod, "default_skill_roots", lambda: [tmp_path])
+
+    result = _parse_slash_command("/any-plugin:my-cmd extra-args")
+    assert result is not None
+    system_prompt, arguments = result
+    assert "COMMAND INSTRUCTIONS" in system_prompt
+    assert arguments == "extra-args"
+
+
+def test_parse_slash_command_returns_none_on_read_error(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import sakthai.agent.loop as loop_mod
+
+    cmd_dir = tmp_path / "myplugin" / "commands"
+    cmd_dir.mkdir(parents=True)
+    cmd_file = cmd_dir / "mycmd.md"
+    cmd_file.write_text("Body", encoding="utf-8")
+    monkeypatch.setattr(loop_mod, "default_skill_roots", lambda: [tmp_path])
+
+    with patch("pathlib.Path.read_text", side_effect=OSError("permission denied")):
+        result = _parse_slash_command("/myplugin:mycmd")
+    assert result is None
+
+
+# -- _save_session_log ----------------------------------------------------
+
+
+def test_save_session_log_handles_write_error(store: MemoryStore) -> None:
+    result = AgentResult(
+        text="done", iterations=1, stop_reason="end_turn", tool_calls=[], usage={}
+    )
+    with patch("pathlib.Path.write_text", side_effect=OSError("disk full")):
+        # Should not raise — failure is best-effort
+        _save_session_log("test task", "claude-sonnet-4-6", [], result)
+
+
+# -- provider/model defaults in run_agent ---------------------------------
+
+
+def test_run_agent_renames_ollama_provider_to_openai(
+    store: MemoryStore, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """provider='ollama' is normalised to 'openai' before the client is built."""
+    from sakthai.agent.providers.base import Response as _ProvResponse
+
+    called: dict[str, bool] = {}
+
+    import sakthai.agent.loop as loop_mod
+
+    def _fake_openai_compat(client: object, model: str, *args: object, **kwargs: object) -> _ProvResponse:
+        called["openai"] = True
+        return _ProvResponse("end_turn", [_Block(type="text", text="ok")])
+
+    monkeypatch.setattr(loop_mod, "_build_client", lambda provider, client: client)
+    monkeypatch.setattr(loop_mod, "_call_openai_compat", _fake_openai_compat)
+    run_agent("hi", client=FakeClient([]), store=store, provider="ollama")
+    assert called.get("openai") is True
+
+
+def test_run_agent_openai_defaults_model_to_gpt4o(
+    store: MemoryStore, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """When provider='openai' and model=DEFAULT_MODEL (Anthropic) without OLLAMA_HOST,
+    the model is reset to 'gpt-4o'."""
+    from sakthai.agent.loop import DEFAULT_MODEL
+    from sakthai.agent.providers.base import Response as _ProvResponse
+
+    captured: dict[str, str] = {}
+
+    import sakthai.agent.loop as loop_mod
+
+    def _fake_openai_compat(client: object, model: str, *args: object, **kwargs: object) -> _ProvResponse:
+        captured["model"] = model
+        return _ProvResponse("end_turn", [_Block(type="text", text="ok")])
+
+    monkeypatch.delenv("OLLAMA_HOST", raising=False)
+    monkeypatch.setattr(loop_mod, "_build_client", lambda provider, client: client)
+    monkeypatch.setattr(loop_mod, "_call_openai_compat", _fake_openai_compat)
+    run_agent("hi", client=FakeClient([]), store=store, provider="openai", model=DEFAULT_MODEL)
+    assert captured["model"] == "gpt-4o"
+
+
+def test_run_agent_openai_defaults_model_to_qwen_when_ollama_host(
+    store: MemoryStore, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """When provider='openai', model=DEFAULT_MODEL, and OLLAMA_HOST is set,
+    the model is reset to 'qwen2.5-coder:7b'."""
+    from sakthai.agent.loop import DEFAULT_MODEL
+    from sakthai.agent.providers.base import Response as _ProvResponse
+
+    captured: dict[str, str] = {}
+
+    import sakthai.agent.loop as loop_mod
+
+    def _fake_openai_compat(client: object, model: str, *args: object, **kwargs: object) -> _ProvResponse:
+        captured["model"] = model
+        return _ProvResponse("end_turn", [_Block(type="text", text="ok")])
+
+    monkeypatch.setenv("OLLAMA_HOST", "http://127.0.0.1:11434")
+    monkeypatch.setattr(loop_mod, "_build_client", lambda provider, client: client)
+    monkeypatch.setattr(loop_mod, "_call_openai_compat", _fake_openai_compat)
+    run_agent("hi", client=FakeClient([]), store=store, provider="openai", model=DEFAULT_MODEL)
+    assert captured["model"] == "qwen2.5-coder:7b"
+
+
+def test_run_agent_skills_and_command_system_are_merged(
+    store: MemoryStore, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """When both a skill and a slash-command are active, they're concatenated into
+    skills_block (line 250 in loop.py)."""
+    import sakthai.agent.loop as loop_mod
+    import sakthai.skills as skills_mod
+
+    # Skill
+    skill_dir = tmp_path / "demo-skill"
+    skill_dir.mkdir()
+    (skill_dir / "SKILL.md").write_text(
+        "---\nname: demo-skill\ndescription: d\n---\n\nSKILL BODY HERE.\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(skills_mod, "default_skill_roots", lambda: (tmp_path,))
+
+    # Slash-command file
+    cmd_dir = tmp_path / "myplugin" / "commands"
+    cmd_dir.mkdir(parents=True)
+    (cmd_dir / "mycmd.md").write_text("COMMAND BODY HERE.", encoding="utf-8")
+    monkeypatch.setattr(loop_mod, "default_skill_roots", lambda: [tmp_path])
+
+    captured: dict[str, str] = {}
+
+    class _CapMessages:
+        def create(self, **kwargs: object) -> _Resp:
+            captured["system"] = str(kwargs.get("system", ""))
+            return _Resp("end_turn", [_Block(type="text", text="ok")])
+
+    class _CapClient:
+        def __init__(self) -> None:
+            self.messages = _CapMessages()
+
+    run_agent(
+        "/myplugin:mycmd",
+        client=_CapClient(),
+        store=store,
+        provider="anthropic",
+        skills=["demo-skill"],
+    )
+    assert "SKILL BODY HERE." in captured["system"]
+    assert "COMMAND BODY HERE." in captured["system"]

@@ -7,7 +7,11 @@ tools run against an isolated store via the ``sakthai_home`` fixture.
 
 from __future__ import annotations
 
+import importlib.util
+import sys
+import types
 from pathlib import Path
+from unittest.mock import MagicMock, patch
 
 import pytest
 import yaml
@@ -17,7 +21,9 @@ from sakthai.cli import main
 from sakthai.cloud import runtime
 from sakthai.cloud.runtime import (
     DEFAULT_CLOUD_MODEL,
+    CloudAgentSpec,
     CloudRuntimeError,
+    adk_installed,
     build_adk_agent,
     cloud_status,
     render_manifest,
@@ -105,6 +111,46 @@ def test_build_adk_agent_raises_without_extra(monkeypatch: pytest.MonkeyPatch) -
     monkeypatch.setattr(runtime, "adk_installed", lambda: False)
     with pytest.raises(CloudRuntimeError, match="cloud"):
         build_adk_agent()
+
+
+def test_adk_installed_returns_false_on_value_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    with patch.object(importlib.util, "find_spec", side_effect=ValueError("bad name")):
+        assert adk_installed() is False
+
+
+def test_adk_installed_returns_false_on_import_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    with patch.object(importlib.util, "find_spec", side_effect=ImportError("missing")):
+        assert adk_installed() is False
+
+
+def test_build_adk_agent_success_with_mocked_adk(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(runtime, "adk_installed", lambda: True)
+
+    mock_agent_instance = MagicMock()
+    MockAgent = MagicMock(return_value=mock_agent_instance)
+
+    mock_agents_mod = types.ModuleType("google.adk.agents")
+    mock_agents_mod.Agent = MockAgent  # type: ignore[attr-defined]
+
+    monkeypatch.setitem(sys.modules, "google.adk.agents", mock_agents_mod)
+
+    spec = CloudAgentSpec(
+        project="test-proj",
+        location="us-central1",
+        model=DEFAULT_CLOUD_MODEL,
+        staging_bucket=None,
+        use_vertex=False,
+    )
+    result = build_adk_agent(spec)
+
+    MockAgent.assert_called_once()
+    assert result is mock_agent_instance
 
 
 # -- memory tools (go through MemoryStore) -------------------------------

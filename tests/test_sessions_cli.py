@@ -278,3 +278,83 @@ def test_sessions_clean(sakthai_home: Path, runner: CliRunner) -> None:
     assert "Successfully deleted 1 session log file(s)." in res_clean.output
     assert not (s_dir / f"{old_id}.json").exists()
     assert (s_dir / f"{new_id}.json").exists()
+
+
+def test_sessions_list_empty_dir_no_json_files(
+    sakthai_home: Path, runner: CliRunner
+) -> None:
+    s_dir = sessions_dir()
+    s_dir.mkdir(parents=True, exist_ok=True)
+    # Dir exists but has no .json files (only a non-json file)
+    (s_dir / "readme.txt").write_text("nothing here", encoding="utf-8")
+    res = runner.invoke(main, ["sessions", "list"])
+    assert res.exit_code == 0
+    assert "No sessions found." in res.output
+
+
+def test_sessions_list_respects_limit(sakthai_home: Path, runner: CliRunner) -> None:
+    s_dir = sessions_dir()
+    s_dir.mkdir(parents=True, exist_ok=True)
+    now = int(time.time())
+    for i in range(5):
+        (s_dir / f"{now - i}_sess-{i}.json").write_text(
+            json.dumps({"timestamp": now - i, "task": f"task-{i}", "model": "m"}),
+            encoding="utf-8",
+        )
+    res = runner.invoke(main, ["sessions", "list", "--limit", "2"])
+    assert res.exit_code == 0
+    # Only 2 sessions in output rows (header + separator don't count as sessions)
+    task_lines = [l for l in res.output.splitlines() if "task-" in l]
+    assert len(task_lines) == 2
+
+
+def test_sessions_show_corrupt_file_reports_error(
+    sakthai_home: Path, runner: CliRunner
+) -> None:
+    s_dir = sessions_dir()
+    s_dir.mkdir(parents=True, exist_ok=True)
+    (s_dir / "corrupt_sess.json").write_text("{ invalid json", encoding="utf-8")
+    res = runner.invoke(main, ["sessions", "show", "corrupt_sess"])
+    assert res.exit_code != 0
+    assert "Failed to read session file" in res.output
+
+
+def test_sessions_clean_bad_duration_reports_error(
+    sakthai_home: Path, runner: CliRunner
+) -> None:
+    res = runner.invoke(main, ["sessions", "clean", "--older-than", "5x"])
+    assert res.exit_code != 0
+    assert "Unknown duration unit" in res.output
+
+
+def test_sessions_clean_no_sessions_dir(
+    sakthai_home: Path, runner: CliRunner
+) -> None:
+    # Don't create the sessions dir — sessions_clean should handle gracefully
+    res = runner.invoke(main, ["sessions", "clean", "--older-than", "1d", "--yes"])
+    assert res.exit_code == 0
+    assert "No sessions directory found." in res.output
+
+
+def test_sessions_clean_unlink_failure(
+    sakthai_home: Path, runner: CliRunner, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    s_dir = sessions_dir()
+    s_dir.mkdir(parents=True, exist_ok=True)
+    old_ts = int(time.time()) - 60 * 86400
+    sess_file = s_dir / f"{old_ts}_old-sess.json"
+    sess_file.write_text(
+        json.dumps({"timestamp": old_ts, "task": "old task"}), encoding="utf-8"
+    )
+
+    original_unlink = sess_file.__class__.unlink
+
+    def failing_unlink(self: Path, missing_ok: bool = False) -> None:
+        if self.name.endswith("old-sess.json"):
+            raise OSError("permission denied")
+        original_unlink(self, missing_ok=missing_ok)
+
+    monkeypatch.setattr(sess_file.__class__, "unlink", failing_unlink)
+    res = runner.invoke(main, ["sessions", "clean", "--older-than", "1d", "--yes"])
+    assert res.exit_code == 0
+    assert "Failed to delete" in res.output
