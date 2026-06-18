@@ -61,7 +61,6 @@ def run_in_sandbox(
     no_mcp: bool = False,
     with_skills: tuple[str, ...] = (),
     fast: bool = False,
-    stateless: bool = False,
     caveman: str | None = None,
     dry_run: bool = False,
     stream: bool = False,
@@ -136,8 +135,6 @@ def run_in_sandbox(
         cmd.extend(["--with-skills", skill])
     if fast:
         cmd.append("--fast")
-    if stateless:
-        cmd.append("--stateless")
     if caveman:
         cmd.extend(["--caveman", caveman])
     if dry_run:

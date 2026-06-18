@@ -2,16 +2,18 @@
 
 from __future__ import annotations
 
-from pathlib import Path
 import json
-import pytest
+from pathlib import Path
+
 from sakthai.dashboard.data import SOURCE_LIVE, export_dashboard_json
 from sakthai.memory.store import MemoryStore
+
 
 def test_dashboard_dist_exists() -> None:
     dist_path = Path(__file__).parent.parent / "dashboard" / "dist"
     assert dist_path.exists(), "Dashboard must be built with 'npm run build'"
     assert (dist_path / "index.html").exists()
+
 
 def test_dashboard_export_integration(tmp_path: Path) -> None:
     db = tmp_path / "memory.db"

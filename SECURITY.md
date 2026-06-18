@@ -115,4 +115,4 @@ All subprocess invocations must use `shell=False` with a list or `shlex.split`-p
 
 ---
 
-*All rights reserved.*
+*This project is distributed under the [MIT License](LICENSE).*

@@ -2,10 +2,8 @@
 
 from __future__ import annotations
 
-import subprocess
-import sys
-import os
 import http.server
+import os
 import socketserver
 import threading
 import webbrowser
