@@ -35,6 +35,21 @@ def test_mcp_timeout_falls_back_on_bad_value(monkeypatch: pytest.MonkeyPatch, ba
     assert config.mcp_timeout() == config.DEFAULT_MCP_TIMEOUT
 
 
+def test_ollama_host_default_is_ipv4(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Must be the 127.0.0.1 literal, not ``localhost``: on hosts where localhost
+    # resolves to IPv6 ``::1`` and Ollama binds IPv4 only, a localhost default
+    # fails with ``[Errno 111] Connection refused`` though the server is up.
+    monkeypatch.delenv("OLLAMA_HOST", raising=False)
+    assert config.ollama_host() == "http://127.0.0.1:11434"
+
+
+def test_ollama_host_honours_env_and_strips_trailing_slash(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("OLLAMA_HOST", "http://my-ollama:1234/")
+    assert config.ollama_host() == "http://my-ollama:1234"
+
+
 def test_memory_report_counts(sakthai_home: Path) -> None:
     with MemoryStore() as store:
         store.add_fact("one")

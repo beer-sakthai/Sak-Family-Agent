@@ -94,6 +94,6 @@ sakthai run "your task" --provider ollama --model qwen2.5-coder:7b
 
 Alternatively, you can configure your environment to use an OpenAI-compatible/Ollama endpoint:
 
-* `OLLAMA_HOST`: Set to your Ollama endpoint (defaults to `http://localhost:11434`).
+* `OLLAMA_HOST`: Set to your Ollama endpoint (defaults to `http://127.0.0.1:11434`). The IPv4 literal avoids a `Connection refused` on hosts where `localhost` resolves to IPv6 `::1` but Ollama binds IPv4 only.
 * `OPENAI_API_BASE` / `OPENAI_BASE_URL`: Point to any other OpenAI-compatible gateway (e.g., LocalAI, vLLM, DeepSeek).
 * `OPENAI_API_KEY`: Provide a key if the endpoint requires one (defaults to `"nokey"`).
