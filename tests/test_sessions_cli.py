@@ -5,7 +5,6 @@ from __future__ import annotations
 import json
 import time
 from pathlib import Path
-from unittest.mock import patch
 
 import pytest
 from click.testing import CliRunner
@@ -125,9 +124,7 @@ def test_sessions_list_corrupt_json_skipped(sakthai_home: Path, runner: CliRunne
     assert "Session ID" in res.output
 
 
-def test_sessions_list_truncates_long_task_and_model(
-    sakthai_home: Path, runner: CliRunner
-) -> None:
+def test_sessions_list_truncates_long_task_and_model(sakthai_home: Path, runner: CliRunner) -> None:
     s_dir = sessions_dir()
     s_dir.mkdir(parents=True, exist_ok=True)
     now = int(time.time())

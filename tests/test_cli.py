@@ -399,9 +399,7 @@ def test_memory_import_replace_prompts_without_yes(runner: CliRunner, tmp_path: 
     snap = tmp_path / "snap.json"
     runner.invoke(main, ["memory", "export", str(snap)])
     # Invoke --replace without --yes; answer 'y' at the prompt.
-    result = runner.invoke(
-        main, ["memory", "import", str(snap), "--replace"], input="y\n"
-    )
+    result = runner.invoke(main, ["memory", "import", str(snap), "--replace"], input="y\n")
     assert result.exit_code == 0
     assert "imported" in result.output
 

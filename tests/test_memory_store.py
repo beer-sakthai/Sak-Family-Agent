@@ -396,6 +396,7 @@ def test_import_rejects_fact_missing_required_field(store: MemoryStore) -> None:
 
 
 def test_update_fact_rolls_back_on_error(tmp_path: pytest.TempPathFactory) -> None:
+    import sqlite3
     from pathlib import Path
 
     db = Path(str(tmp_path)) / "rollback.db"
@@ -404,7 +405,7 @@ def test_update_fact_rolls_back_on_error(tmp_path: pytest.TempPathFactory) -> No
         fid = store.add_fact("original")
         # Corrupt the connection by closing it before the update to force an error.
         store._conn.close()
-        with pytest.raises(Exception):
+        with pytest.raises(sqlite3.ProgrammingError):
             store.update_fact(fid, "new value")
     finally:
         # Re-open to confirm the value was not changed.
@@ -417,6 +418,7 @@ def test_update_fact_rolls_back_on_error(tmp_path: pytest.TempPathFactory) -> No
 
 
 def test_consolidate_facts_rolls_back_on_error(tmp_path: pytest.TempPathFactory) -> None:
+    import sqlite3
     from pathlib import Path
 
     db = Path(str(tmp_path)) / "rollback2.db"
@@ -424,7 +426,7 @@ def test_consolidate_facts_rolls_back_on_error(tmp_path: pytest.TempPathFactory)
     try:
         store.add_fact("old fact")
         store._conn.close()
-        with pytest.raises(Exception):
+        with pytest.raises(sqlite3.ProgrammingError):
             store.consolidate_facts(age_seconds=-1)
     finally:
         store2 = MemoryStore(db)
