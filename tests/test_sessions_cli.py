@@ -280,9 +280,7 @@ def test_sessions_clean(sakthai_home: Path, runner: CliRunner) -> None:
     assert (s_dir / f"{new_id}.json").exists()
 
 
-def test_sessions_list_empty_dir_no_json_files(
-    sakthai_home: Path, runner: CliRunner
-) -> None:
+def test_sessions_list_empty_dir_no_json_files(sakthai_home: Path, runner: CliRunner) -> None:
     s_dir = sessions_dir()
     s_dir.mkdir(parents=True, exist_ok=True)
     # Dir exists but has no .json files (only a non-json file)
@@ -308,9 +306,7 @@ def test_sessions_list_respects_limit(sakthai_home: Path, runner: CliRunner) -> 
     assert len(task_lines) == 2
 
 
-def test_sessions_show_corrupt_file_reports_error(
-    sakthai_home: Path, runner: CliRunner
-) -> None:
+def test_sessions_show_corrupt_file_reports_error(sakthai_home: Path, runner: CliRunner) -> None:
     s_dir = sessions_dir()
     s_dir.mkdir(parents=True, exist_ok=True)
     (s_dir / "corrupt_sess.json").write_text("{ invalid json", encoding="utf-8")
@@ -319,17 +315,13 @@ def test_sessions_show_corrupt_file_reports_error(
     assert "Failed to read session file" in res.output
 
 
-def test_sessions_clean_bad_duration_reports_error(
-    sakthai_home: Path, runner: CliRunner
-) -> None:
+def test_sessions_clean_bad_duration_reports_error(sakthai_home: Path, runner: CliRunner) -> None:
     res = runner.invoke(main, ["sessions", "clean", "--older-than", "5x"])
     assert res.exit_code != 0
     assert "Unknown duration unit" in res.output
 
 
-def test_sessions_clean_no_sessions_dir(
-    sakthai_home: Path, runner: CliRunner
-) -> None:
+def test_sessions_clean_no_sessions_dir(sakthai_home: Path, runner: CliRunner) -> None:
     # Don't create the sessions dir — sessions_clean should handle gracefully
     res = runner.invoke(main, ["sessions", "clean", "--older-than", "1d", "--yes"])
     assert res.exit_code == 0
@@ -343,9 +335,7 @@ def test_sessions_clean_unlink_failure(
     s_dir.mkdir(parents=True, exist_ok=True)
     old_ts = int(time.time()) - 60 * 86400
     sess_file = s_dir / f"{old_ts}_old-sess.json"
-    sess_file.write_text(
-        json.dumps({"timestamp": old_ts, "task": "old task"}), encoding="utf-8"
-    )
+    sess_file.write_text(json.dumps({"timestamp": old_ts, "task": "old task"}), encoding="utf-8")
 
     original_unlink = sess_file.__class__.unlink
 

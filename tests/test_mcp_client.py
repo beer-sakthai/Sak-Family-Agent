@@ -235,8 +235,11 @@ def test_readline_raises_on_select_timeout() -> None:
     mock_proc = MagicMock()
     client._proc = mock_proc
 
-    with patch("select.select", return_value=([], [], [])), pytest.raises(MCPClientError, match="timed out"):
-            client._readline()
+    with (
+        patch("select.select", return_value=([], [], [])),
+        pytest.raises(MCPClientError, match="timed out"),
+    ):
+        client._readline()
 
 
 def test_read_response_skips_empty_lines() -> None:
