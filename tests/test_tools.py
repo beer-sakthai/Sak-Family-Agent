@@ -7,6 +7,7 @@ import subprocess
 import urllib.error
 import urllib.request
 from pathlib import Path
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -688,3 +689,51 @@ def test_run_command_empty_shell_allow_is_disabled(
     monkeypatch.setenv("SAKTHAI_SHELL_ALLOW", "")
     with pytest.raises(PermissionError):
         tool_by_name("run_command").handler({"command": "echo hi"}, store)
+
+
+# ---------------------------------------------------------------------------
+# _allowed_read_roots and _path_under_any_root error paths
+# ---------------------------------------------------------------------------
+
+
+def test_allowed_read_roots_skips_oserror_on_sakthai_home(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """OSError from sakthai_home().resolve() is silently skipped."""
+    bad = MagicMock(spec=Path)
+    bad.resolve.side_effect = OSError("permission denied")
+    monkeypatch.setattr(_tools_mod, "sakthai_home", lambda: bad)
+    roots = _allowed_read_roots()
+    # sakthai_home was skipped; cwd should still appear
+    assert isinstance(roots, list)
+    assert len(roots) >= 1
+
+
+def test_allowed_read_roots_skips_oserror_on_allow_token(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """OSError from Path(token).expanduser().resolve() in SAKTHAI_READ_ALLOW is skipped."""
+    monkeypatch.setenv("SAKTHAI_READ_ALLOW", "/some/bad/path")
+
+    original_resolve = Path.resolve
+
+    def _patched_resolve(self: Path, *a: object, **kw: object) -> Path:
+        if "bad" in str(self):
+            raise OSError("unresolvable path")
+        return original_resolve(self, *a, **kw)  # type: ignore[arg-type]
+
+    monkeypatch.setattr(Path, "resolve", _patched_resolve)
+    roots = _allowed_read_roots()
+    assert isinstance(roots, list)
+    assert all("bad" not in str(r) for r in roots)
+
+
+def test_path_under_any_root_skips_oserror_and_valueerror() -> None:
+    """ValueError and OSError from is_relative_to are silently skipped."""
+    bad_root: MagicMock = MagicMock(spec=Path)
+    bad_root.__eq__ = lambda self, other: False
+    bad_root.is_relative_to.side_effect = ValueError("incompatible")
+    assert _path_under_any_root(Path("/some/path"), [bad_root]) is False
+
+    bad_root.is_relative_to.side_effect = OSError("permission denied")
+    assert _path_under_any_root(Path("/some/path"), [bad_root]) is False
