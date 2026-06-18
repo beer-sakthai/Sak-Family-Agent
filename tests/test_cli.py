@@ -185,6 +185,19 @@ def test_memory_stats_human_readable(runner: CliRunner) -> None:
     assert "work" in result.output
 
 
+def test_memory_stats_shows_observation_averages(runner: CliRunner, sakthai_home: Path) -> None:
+    """memory stats shows avg weight/confidence line when observations exist (cli/memory.py:163)."""
+    from sakthai.config import memory_db_path
+
+    db = memory_db_path()
+    with MemoryStore(db) as store:
+        store.add_observation("user is a developer", weight=0.8, confidence=0.9)
+    result = runner.invoke(main, ["memory", "stats"])
+    assert result.exit_code == 0
+    assert "avg weight" in result.output
+    assert "avg confidence" in result.output
+
+
 def test_memory_forget(runner: CliRunner) -> None:
     runner.invoke(main, ["learn", "deletable"])
     with MemoryStore() as store:

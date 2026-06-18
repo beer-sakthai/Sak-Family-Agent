@@ -20,7 +20,7 @@ from urllib.parse import urlparse
 
 logger = logging.getLogger(__name__)
 
-_DEFAULT_HOST = "0.0.0.0"  # nosec B104
+_DEFAULT_HOST = "127.0.0.1"
 _DEFAULT_PORT = 3001
 _STATIC_ROOT = (Path(__file__).resolve().parent.parent / "dashboard" / "dist").resolve()
 

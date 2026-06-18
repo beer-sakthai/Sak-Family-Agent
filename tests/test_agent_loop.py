@@ -642,6 +642,10 @@ def test_extract_usage_anthropic() -> None:
 def test_provider_construction_no_creds_google(
     monkeypatch: pytest.MonkeyPatch, store: MemoryStore
 ) -> None:
+    try:
+        import google.genai  # noqa: F401
+    except BaseException:
+        pytest.skip("google-genai not importable in this environment (missing native libs)")
     monkeypatch.delenv("GEMINI_API_KEY", raising=False)
     monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
     with pytest.raises(AgentError, match="Missing credentials for Google Gemini"):
@@ -1582,6 +1586,42 @@ def test_parse_slash_command_finds_commands_dir_variant(
     system_prompt, arguments = result
     assert "COMMAND INSTRUCTIONS" in system_prompt
     assert arguments == "extra-args"
+
+
+def test_parse_slash_command_found_in_extension_plugin_subdir(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Command at root/child/plugin_name/commands/cmd.md (lines 117-120 in loop.py)."""
+    import sakthai.agent.loop as loop_mod
+
+    child = tmp_path / "extension-bundle"
+    cmd_dir = child / "my-plugin" / "commands"
+    cmd_dir.mkdir(parents=True)
+    (cmd_dir / "my-cmd.md").write_text("Extension plugin-subdir body", encoding="utf-8")
+    monkeypatch.setattr(loop_mod, "default_skill_roots", lambda: [tmp_path])
+
+    result = _parse_slash_command("/my-plugin:my-cmd")
+    assert result is not None
+    system_prompt, _ = result
+    assert "Extension plugin-subdir body" in system_prompt
+
+
+def test_parse_slash_command_found_in_extension_commands_subdir(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Command at root/child/commands/cmd.md (lines 121-124 in loop.py)."""
+    import sakthai.agent.loop as loop_mod
+
+    child = tmp_path / "extension-bundle"
+    cmd_dir = child / "commands"
+    cmd_dir.mkdir(parents=True)
+    (cmd_dir / "my-cmd.md").write_text("Extension commands-subdir body", encoding="utf-8")
+    monkeypatch.setattr(loop_mod, "default_skill_roots", lambda: [tmp_path])
+
+    result = _parse_slash_command("/any-plugin:my-cmd")
+    assert result is not None
+    system_prompt, _ = result
+    assert "Extension commands-subdir body" in system_prompt
 
 
 def test_parse_slash_command_returns_none_on_read_error(

@@ -66,3 +66,24 @@ def dashboard(port: int, open_browser: bool, export_path: str | None) -> None:
     export_dashboard_json(dist_path / "data.json", memory_db_path())
 
     _serve_dashboard(port, open_browser, dist_path)
+    app_path = Path(__file__).parent.parent / "dashboard" / "app.py"
+    cmd = [
+        sys.executable,
+        "-m",
+        "streamlit",
+        "run",
+        str(app_path),
+        "--server.address",
+        "127.0.0.1",
+        "--server.port",
+        str(port),
+        "--server.headless",
+        "false" if open_browser else "true",
+        "--browser.gatherUsageStats",
+        "false",
+    ]
+    click.echo(f"dashboard: http://localhost:{port}  (Ctrl-C to stop)")
+    try:
+        sys.exit(subprocess.call(cmd))  # nosec B603 — fixed argv, no shell
+    except KeyboardInterrupt:
+        click.echo("\nstopped.")

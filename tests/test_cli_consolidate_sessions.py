@@ -109,3 +109,61 @@ def test_none_extraction_stores_nothing(
     assert res.exit_code == 0
     assert "learned 0 new fact(s)" in res.output
     assert _consolidated_values() == []
+
+
+def test_corrupted_state_file_resets_to_empty_set(
+    sakthai_home: Path, runner: CliRunner, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A malformed consolidated_sessions.json is silently discarded (lines 329-330)."""
+    state_file = sakthai_home_path() / "consolidated_sessions.json"
+    state_file.write_text("{ not valid json !!!}", encoding="utf-8")
+    _write_session("0001_s", "q", "a")
+    _patch_extraction(monkeypatch, "User prefers Linux")
+
+    res = runner.invoke(main, ["memory", "consolidate-sessions"])
+    assert res.exit_code == 0
+    # Session was processed despite the corrupt state file
+    assert "learned 1 new fact(s)" in res.output
+
+
+def test_run_agent_error_is_reported_and_continues(
+    sakthai_home: Path, runner: CliRunner, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """run_agent exceptions in the extraction step are caught and reported (lines 359-361)."""
+    _write_session("0001_good", "q", "a")
+    _write_session("0002_fail", "q2", "a2")
+
+    call_count = 0
+
+    def _patched_run_agent(*args: object, **kwargs: object) -> object:
+        nonlocal call_count
+        call_count += 1
+        if call_count == 1:
+            raise RuntimeError("LLM unavailable")
+        import types
+
+        return types.SimpleNamespace(text="User likes coffee")
+
+    monkeypatch.setattr(loop, "run_agent", _patched_run_agent)
+
+    res = runner.invoke(main, ["memory", "consolidate-sessions"])
+    assert res.exit_code == 0
+    assert "Error extracting from 0001_good.json" in res.output
+    assert "learned 1 new fact(s)" in res.output
+
+
+def test_state_file_write_failure_warns_but_completes(
+    sakthai_home: Path, runner: CliRunner, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """OSError writing the state file produces a warning but doesn't abort (lines 374-375)."""
+    _write_session("0001_s", "q", "a")
+    _patch_extraction(monkeypatch, "User uses macOS")
+
+    # Prevent the state file from being written
+    state_file = sakthai_home_path() / "consolidated_sessions.json"
+    state_file.mkdir()  # directory with same name → write will fail with IsADirectoryError
+
+    res = runner.invoke(main, ["memory", "consolidate-sessions"])
+    assert res.exit_code == 0
+    assert "Warning: could not save consolidation state" in res.output
+    assert "learned 1 new fact(s)" in res.output
