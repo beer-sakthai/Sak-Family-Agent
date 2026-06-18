@@ -1407,6 +1407,8 @@ def test_text_emitted_tool_call_warns_without_failing(store: MemoryStore) -> Non
     # And nothing was actually dispatched / stored.
     assert result.tool_calls == []
     assert store.list_facts() == []
+
+
 def test_caveman_flag_not_found_logs_warning(
     sakthai_home: Path, store: MemoryStore, monkeypatch: pytest.MonkeyPatch
 ) -> None:
