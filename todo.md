@@ -204,14 +204,12 @@ green on Python 3.11/3.12 and 3.14 (ruff, format, mypy, bandit, 668 passed /
 1 skipped). These are reliability + coverage improvements, not bug-fixes for a
 red CI. One task at a time: local gate → commit → push → wait for CI green.
 
-- [ ] 13.1 — Ollama localhost/IPv6 fix: default `config.ollama_host()`
-      (`sakthai/config.py:77`) to `http://127.0.0.1:11434` instead of
-      `http://localhost:11434`. On hosts where `localhost` resolves to IPv6 `::1`
-      and Ollama binds IPv4-only, `sakthai run -p ollama` fails with
-      `[Errno 111] Connection refused` even though the server is up (reproduced
-      2026-06-18). 127.0.0.1 works everywhere localhost does and forces IPv4.
-      Update the docstring + the `OLLAMA_HOST` default note in `config.py:31`;
-      add a regression test asserting the default host is the IPv4 literal.
+- [x] 13.1 — Ollama localhost/IPv6 fix — 2026-06-18: `config.ollama_host()` now
+      defaults to `http://127.0.0.1:11434` (was `localhost`); updated the docstring,
+      the `OLLAMA_HOST` env note (`config.py:31`), and docs/runtimes.md. Fixes
+      `[Errno 111] Connection refused` from `sakthai run -p ollama` on hosts where
+      `localhost`→IPv6 `::1` but Ollama binds IPv4-only. 2 regression tests
+      (default-is-IPv4 + env honoured/slash-stripped) in test_config_reports.py.
 - [ ] 13.2 — Surface text-emitted tool calls: when a weak local model ends a turn
       (`stop_reason=end_turn`) with final text that is actually a tool-call-shaped
       JSON blob it failed to emit as a real `tool_use`, the loop silently returns
