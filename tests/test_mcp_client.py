@@ -8,8 +8,11 @@ Python interpreter running the server.
 
 from __future__ import annotations
 
+import select
+import subprocess
 import sys
 from pathlib import Path
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -159,3 +162,98 @@ def test_as_tools_defaults_missing_schema() -> None:
     tools = client.as_tools()
     assert len(tools) == 1
     assert tools[0].input_schema == {"type": "object", "properties": {}}
+
+
+# -- internal error path coverage ----------------------------------------
+
+
+def test_start_raises_on_initialize_rpc_error() -> None:
+    client = StdioMCPClient("dummy", name="test")
+
+    def fake_request(method: str, params: dict | None = None) -> dict:
+        return {"error": {"message": "server refused init"}}
+
+    client._request = fake_request  # type: ignore[method-assign]
+    with patch("subprocess.Popen") as mock_popen:
+        mock_popen.return_value = MagicMock()
+        with pytest.raises(MCPClientError, match="initialize failed"):
+            client.start()
+
+
+def test_close_kills_process_after_timeout() -> None:
+    client = StdioMCPClient("dummy", name="test")
+    mock_proc = MagicMock()
+    mock_proc.poll.return_value = None
+    mock_proc.wait.side_effect = subprocess.TimeoutExpired("dummy", 5)
+    client._proc = mock_proc
+
+    client.close()
+
+    mock_proc.kill.assert_called_once()
+    assert client._proc is None
+
+
+def test_send_raises_when_proc_not_started() -> None:
+    client = StdioMCPClient("dummy", name="test")
+    # _proc is None (never started)
+    with pytest.raises(MCPClientError, match="server is not running"):
+        client._send({"jsonrpc": "2.0", "id": 1, "method": "test"})
+
+
+def test_send_raises_on_broken_pipe() -> None:
+    client = StdioMCPClient("dummy", name="test")
+    mock_proc = MagicMock()
+    mock_proc.stdin.write.side_effect = BrokenPipeError("pipe closed")
+    client._proc = mock_proc
+
+    with pytest.raises(MCPClientError, match="server pipe closed"):
+        client._send({"jsonrpc": "2.0", "id": 1, "method": "test"})
+
+
+def test_notify_with_params_includes_params_in_message() -> None:
+    client = StdioMCPClient("dummy", name="test")
+    sent: list[dict] = []
+
+    def fake_send(msg: dict) -> None:
+        sent.append(msg)
+
+    client._send = fake_send  # type: ignore[method-assign]
+    client._notify("some/event", {"key": "value"})
+
+    assert len(sent) == 1
+    assert sent[0]["params"] == {"key": "value"}
+    assert sent[0]["method"] == "some/event"
+
+
+def test_readline_raises_when_proc_not_started() -> None:
+    client = StdioMCPClient("dummy", name="test")
+    with pytest.raises(MCPClientError, match="server is not running"):
+        client._readline()
+
+
+def test_readline_raises_on_select_timeout() -> None:
+    client = StdioMCPClient("dummy", name="test", timeout=0.01)
+    mock_proc = MagicMock()
+    client._proc = mock_proc
+
+    with patch("select.select", return_value=([], [], [])):
+        with pytest.raises(MCPClientError, match="timed out"):
+            client._readline()
+
+
+def test_read_response_skips_empty_lines() -> None:
+    client = StdioMCPClient("dummy", name="test")
+    lines = iter(["", "  ", '{"jsonrpc":"2.0","id":1,"result":{}}'])
+
+    client._readline = lambda: next(lines, None)  # type: ignore[method-assign]
+    result = client._read_response(1)
+    assert result["id"] == 1
+
+
+def test_read_response_skips_non_json_noise() -> None:
+    client = StdioMCPClient("dummy", name="test")
+    lines = iter(["not-json-at-all", '{"jsonrpc":"2.0","id":2,"result":{}}'])
+
+    client._readline = lambda: next(lines, None)  # type: ignore[method-assign]
+    result = client._read_response(2)
+    assert result["id"] == 2

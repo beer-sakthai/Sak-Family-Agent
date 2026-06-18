@@ -8,18 +8,25 @@ when no DB exists, so tests don't need a live memory store.
 from __future__ import annotations
 
 import json
+import logging
+import runpy
 import threading
 import urllib.error
 import urllib.request
+from pathlib import Path
 from typing import Any
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
 from sakthai.web.server import (
+    _DEFAULT_HOST,
+    _DEFAULT_PORT,
+    _Handler,
+    _STATIC_ROOT,
     _dashboard_data,
     _ecosystem_status,
-    _Handler,
+    serve,
 )
 
 try:
@@ -218,6 +225,42 @@ class TestApiEdgeCases:
     def test_ecosystem_response_body_is_valid_json(self, api_base: str) -> None:
         _, body = _get(f"{api_base}/api/ecosystem")
         assert isinstance(body, dict)
+
+
+class TestServeFunction:
+    def test_serve_creates_httpserver_with_correct_args(self) -> None:
+        with patch("sakthai.web.server.os.chdir") as mock_chdir, patch(
+            "sakthai.web.server.HTTPServer"
+        ) as mock_http:
+            result = serve()
+            mock_chdir.assert_called_once_with(str(_STATIC_ROOT))
+            mock_http.assert_called_once_with((_DEFAULT_HOST, _DEFAULT_PORT), _Handler)
+            assert result is mock_http.return_value
+
+    def test_serve_custom_host_port(self) -> None:
+        with patch("sakthai.web.server.os.chdir"), patch(
+            "sakthai.web.server.HTTPServer"
+        ) as mock_http:
+            serve(host="127.0.0.1", port=9999)
+            mock_http.assert_called_once_with(("127.0.0.1", 9999), _Handler)
+
+
+class TestMainBlock:
+    def test_main_block_starts_server_and_exits_on_interrupt(self) -> None:
+        import http.server as _http_server
+        import os as _os
+
+        srv = MagicMock()
+        srv.serve_forever.side_effect = KeyboardInterrupt()
+        server_py = Path(__file__).parent.parent / "sakthai" / "web" / "server.py"
+        # runpy executes in a fresh namespace; patch the real stdlib objects so
+        # the re-imported `os.chdir` and `HTTPServer` inside the file use mocks.
+        with patch.object(_os, "chdir"), patch.object(
+            _http_server, "HTTPServer", return_value=srv
+        ):
+            with pytest.raises(SystemExit) as exc_info:
+                runpy.run_path(str(server_py), run_name="__main__")
+            assert exc_info.value.code == 0
 
 
 class TestEcosystemStatusPartialConfig:
