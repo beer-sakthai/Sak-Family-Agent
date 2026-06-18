@@ -549,9 +549,7 @@ def test_skills_validate_flags_errors(runner: CliRunner, skill_roots: tuple[Path
     assert "error:" in result.output
 
 
-def test_skills_list_source_skills(
-    runner: CliRunner, skill_roots: tuple[Path, Path]
-) -> None:
+def test_skills_list_source_skills(runner: CliRunner, skill_roots: tuple[Path, Path]) -> None:
     _write_skill(skill_roots[0], "s-only")
     _write_skill(skill_roots[1], "lib-only")
     result = runner.invoke(main, ["skills", "list", "--source", "skills"])
@@ -560,9 +558,7 @@ def test_skills_list_source_skills(
     assert "lib-only" not in result.output
 
 
-def test_skills_list_source_library(
-    runner: CliRunner, skill_roots: tuple[Path, Path]
-) -> None:
+def test_skills_list_source_library(runner: CliRunner, skill_roots: tuple[Path, Path]) -> None:
     _write_skill(skill_roots[0], "s-only")
     _write_skill(skill_roots[1], "lib-only")
     result = runner.invoke(main, ["skills", "list", "--source", "library"])
@@ -580,9 +576,7 @@ def test_skills_list_empty_with_category_filter(
     assert "no skills in category" in result.output
 
 
-def test_skills_list_empty_roots(
-    runner: CliRunner, skill_roots: tuple[Path, Path]
-) -> None:
+def test_skills_list_empty_roots(runner: CliRunner, skill_roots: tuple[Path, Path]) -> None:
     # No skills written — both dirs are empty
     result = runner.invoke(main, ["skills", "list"])
     assert result.exit_code == 0
