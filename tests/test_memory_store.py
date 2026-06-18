@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import sqlite3
+
 import pytest
 
 from sakthai.memory.store import (
@@ -418,7 +420,6 @@ def test_update_fact_rolls_back_on_error(tmp_path: pytest.TempPathFactory) -> No
 
 
 def test_consolidate_facts_rolls_back_on_error(tmp_path: pytest.TempPathFactory) -> None:
-    import sqlite3
     from pathlib import Path
 
     db = Path(str(tmp_path)) / "rollback2.db"
@@ -434,3 +435,145 @@ def test_consolidate_facts_rolls_back_on_error(tmp_path: pytest.TempPathFactory)
             assert len(store2.list_facts()) == 1  # fact still present
         finally:
             store2.close()
+
+
+# ---------------------------------------------------------------------------
+# Exception / rollback branches (uncovered by normal happy-path tests)
+# ---------------------------------------------------------------------------
+
+
+class _RaisingOnCommit:
+    """Thin proxy for sqlite3.Connection that raises OperationalError on commit().
+
+    sqlite3.Connection is a C extension whose methods are read-only, so
+    patch.object cannot replace them directly. This proxy is swapped in for
+    store._conn in tests that need to exercise exception-handling branches.
+    """
+
+    def __init__(self, real: sqlite3.Connection) -> None:
+        object.__setattr__(self, "_real", real)
+
+    def __getattr__(self, name: str) -> object:
+        return getattr(object.__getattribute__(self, "_real"), name)
+
+    def commit(self) -> None:
+        raise sqlite3.OperationalError("simulated disk full")
+
+
+class _RaisingOnExecute:
+    """Proxy that replaces execute() return value with a configurable fetchall."""
+
+    def __init__(self, real: sqlite3.Connection, fetchall_result: list) -> None:
+        object.__setattr__(self, "_real", real)
+        object.__setattr__(self, "_fetchall_result", fetchall_result)
+
+    def __getattr__(self, name: str) -> object:
+        return getattr(object.__getattribute__(self, "_real"), name)
+
+    def execute(self, *args: object, **kwargs: object) -> object:
+        result = object.__getattribute__(self, "_fetchall_result")
+
+        class _FakeResult:
+            def fetchall(self) -> list:
+                return result
+
+        return _FakeResult()
+
+
+def test_render_prompt_block_includes_keyed_facts(store: MemoryStore) -> None:
+    store.add_fact("dark", kind="pref", key="theme")
+    block = store.render_prompt_block()
+    assert "theme: dark" in block
+
+
+def test_healthcheck_unknown_on_empty_result(store: MemoryStore) -> None:
+    real_conn = store._conn
+    store._conn = _RaisingOnExecute(real_conn, [])  # type: ignore[assignment]
+    try:
+        assert store.healthcheck() == "unknown"
+    finally:
+        store._conn = real_conn
+
+
+def test_healthcheck_reports_integrity_errors(store: MemoryStore) -> None:
+    real_conn = store._conn
+    store._conn = _RaisingOnExecute(real_conn, [("corruption on page 3",)])  # type: ignore[assignment]
+    try:
+        result = store.healthcheck()
+        assert "corruption on page 3" in result
+    finally:
+        store._conn = real_conn
+
+
+def test_migrate_schema_rollback_on_exception(store: MemoryStore) -> None:
+    real_conn = store._conn
+    store._conn = _RaisingOnCommit(real_conn)  # type: ignore[assignment]
+    try:
+        with pytest.raises(sqlite3.OperationalError, match="simulated disk full"):
+            store._migrate_schema()
+    finally:
+        store._conn = real_conn
+
+
+def test_update_fact_rollback_on_exception(store: MemoryStore) -> None:
+    fid = store.add_fact("original")
+    real_conn = store._conn
+    store._conn = _RaisingOnCommit(real_conn)  # type: ignore[assignment]
+    try:
+        with pytest.raises(sqlite3.OperationalError):
+            store.update_fact(fid, "new value")
+    finally:
+        store._conn = real_conn
+
+
+def test_consolidate_facts_rollback_on_exception(store: MemoryStore) -> None:
+    store.add_fact("old fact")
+    # age_seconds < 0 sets threshold in the future, so the just-added fact qualifies
+    real_conn = store._conn
+    store._conn = _RaisingOnCommit(real_conn)  # type: ignore[assignment]
+    try:
+        with pytest.raises(sqlite3.OperationalError):
+            store.consolidate_facts(age_seconds=-86400)
+    finally:
+        store._conn = real_conn
+
+
+def test_deduplicate_facts_rollback_on_exception(store: MemoryStore) -> None:
+    store.add_fact("val1", kind="pref", key="color")
+    store.add_fact("val2", kind="pref", key="color")
+    real_conn = store._conn
+    store._conn = _RaisingOnCommit(real_conn)  # type: ignore[assignment]
+    try:
+        with pytest.raises(sqlite3.OperationalError):
+            store.deduplicate_facts()
+    finally:
+        store._conn = real_conn
+
+
+def test_deduplicate_observations_rollback_on_exception(store: MemoryStore) -> None:
+    store.add_observation("same summary")
+    store.add_observation("same summary")
+    real_conn = store._conn
+    store._conn = _RaisingOnCommit(real_conn)  # type: ignore[assignment]
+    try:
+        with pytest.raises(sqlite3.OperationalError):
+            store.deduplicate_observations()
+    finally:
+        store._conn = real_conn
+
+
+def test_import_snapshot_requires_dict(store: MemoryStore) -> None:
+    with pytest.raises(ValueError, match="snapshot must be a dict"):
+        store.import_from_dict("not a dict")  # type: ignore[arg-type]
+
+
+def test_import_snapshot_rollback_on_exception(store: MemoryStore) -> None:
+    store.add_fact("a fact")
+    snapshot = store.export_to_dict()
+    real_conn = store._conn
+    store._conn = _RaisingOnCommit(real_conn)  # type: ignore[assignment]
+    try:
+        with pytest.raises(sqlite3.OperationalError):
+            store.import_from_dict(snapshot, mode="merge")
+    finally:
+        store._conn = real_conn
