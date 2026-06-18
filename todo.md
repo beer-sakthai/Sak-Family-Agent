@@ -197,9 +197,43 @@ caution — v2 is intentionally curated, so triage before bulk-adding.
 - [x] Namespaced slash command router (/plugin:command) in loop.py — 2026-06-17
 - [x] Native caveman runtime toggle (--caveman) in sakthai run — 2026-06-17
 
+## Phase 13 — Local-run reliability & CI breadth (from 2026-06-18 run session)
+Goal: close the gaps surfaced while driving a live `sakthai run` against local
+Ollama. No test/lint/type/security section currently fails — the full gate is
+green on Python 3.11/3.12 and 3.14 (ruff, format, mypy, bandit, 668 passed /
+1 skipped). These are reliability + coverage improvements, not bug-fixes for a
+red CI. One task at a time: local gate → commit → push → wait for CI green.
+
+- [ ] 13.1 — Ollama localhost/IPv6 fix: default `config.ollama_host()`
+      (`sakthai/config.py:77`) to `http://127.0.0.1:11434` instead of
+      `http://localhost:11434`. On hosts where `localhost` resolves to IPv6 `::1`
+      and Ollama binds IPv4-only, `sakthai run -p ollama` fails with
+      `[Errno 111] Connection refused` even though the server is up (reproduced
+      2026-06-18). 127.0.0.1 works everywhere localhost does and forces IPv4.
+      Update the docstring + the `OLLAMA_HOST` default note in `config.py:31`;
+      add a regression test asserting the default host is the IPv4 literal.
+- [ ] 13.2 — Surface text-emitted tool calls: when a weak local model ends a turn
+      (`stop_reason=end_turn`) with final text that is actually a tool-call-shaped
+      JSON blob it failed to emit as a real `tool_use`, the loop silently returns
+      success and stores nothing (observed with llama3.2, 2026-06-18). In the
+      terminal-stop branch of `run_agent` (`sakthai/agent/loop.py` ~line 293),
+      detect un-dispatched tool-call JSON in the final text and emit a warning via
+      `notify(...)` (don't hard-fail — it's model-quality, not an app error).
+      Add a unit test with a stubbed client returning such a response.
+- [ ] 13.3 — Widen CI Python matrix: add `"3.13"` to
+      `.github/workflows/ci.yml:33` (`["3.11", "3.12"]`). The full gate already
+      passes clean on 3.14 locally, so 3.13 is low-risk and catches newer-Python
+      regressions earlier. Refresh `uv.lock` / `requires-python` classifiers if CI
+      flags drift.
+
 ---
 
 ## Log
+- 2026-06-18 — Full CI gate run, all green on Python 3.14 (ruff ✓, format ✓,
+  mypy strict ✓, bandit ✓, pytest 668 passed / 1 skipped [streamlit] / 2 deselected
+  [integration]). No section fails. Added Phase 13 (local-run reliability + CI breadth)
+  from a live `sakthai run` session against Ollama: localhost→IPv6 connect-refused fix,
+  text-emitted tool-call warning, and widening the CI Python matrix.
 - 2026-06-17 — Phase 12.4 done: re-derived 5 kept skills into curated library/ grouping (codebase-knowledge, github-workflows, debugging, tdd, red-teaming). 48 skills validated.
 - 2026-06-17 — Phase 12 MERGED to main: PR #32 (governance docs + audit + 3 re-derived
   library skills) merged; its CI flagged pre-existing ruff errors in sakthai/skills.py + tests
