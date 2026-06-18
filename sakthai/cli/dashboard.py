@@ -12,7 +12,7 @@ from pathlib import Path
 import click
 
 
-def _serve_dashboard(port: int, open_browser: bool, dist_path: Path):
+def _serve_dashboard(port: int, open_browser: bool, dist_path: Path) -> None:
     """Simple HTTP server to serve the static dashboard files."""
     os.chdir(dist_path)
     Handler = http.server.SimpleHTTPRequestHandler
