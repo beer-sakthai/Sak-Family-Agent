@@ -10,12 +10,46 @@ import pytest
 from click.testing import CliRunner
 
 from sakthai.cli import main
+from sakthai.cli.sessions import parse_duration
 from sakthai.config import sessions_dir
 
 
 @pytest.fixture
 def runner() -> CliRunner:
     return CliRunner()
+
+
+# -- parse_duration unit tests -------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("val", "expected"),
+    [
+        ("1d", 86400.0),
+        ("2d", 172800.0),
+        ("12h", 43200.0),
+        ("30m", 1800.0),
+        ("90s", 90.0),
+        ("0.5d", 43200.0),
+    ],
+)
+def test_parse_duration_valid(val: str, expected: float) -> None:
+    assert parse_duration(val) == expected
+
+
+def test_parse_duration_empty_raises() -> None:
+    with pytest.raises(ValueError, match="Empty duration"):
+        parse_duration("")
+
+
+def test_parse_duration_bad_number_raises() -> None:
+    with pytest.raises(ValueError, match="Invalid duration format"):
+        parse_duration("abcd")
+
+
+def test_parse_duration_unknown_unit_raises() -> None:
+    with pytest.raises(ValueError, match="Unknown duration unit"):
+        parse_duration("10w")
 
 
 def test_sessions_empty(sakthai_home: Path, runner: CliRunner) -> None:
@@ -78,6 +112,139 @@ def test_sessions_show_not_found(sakthai_home: Path, runner: CliRunner) -> None:
     res = runner.invoke(main, ["sessions", "show", "nonexistent"])
     assert res.exit_code != 0
     assert "Session 'nonexistent' not found." in res.output
+
+
+def test_sessions_list_corrupt_json_skipped(sakthai_home: Path, runner: CliRunner) -> None:
+    s_dir = sessions_dir()
+    s_dir.mkdir(parents=True, exist_ok=True)
+    (s_dir / "bad.json").write_text("{not valid json", encoding="utf-8")
+    res = runner.invoke(main, ["sessions", "list"])
+    assert res.exit_code == 0
+    # Corrupt file is silently skipped; no crash and the header line is printed.
+    assert "Session ID" in res.output
+
+
+def test_sessions_list_truncates_long_task_and_model(sakthai_home: Path, runner: CliRunner) -> None:
+    s_dir = sessions_dir()
+    s_dir.mkdir(parents=True, exist_ok=True)
+    now = int(time.time())
+    sess_id = f"{now}_trunc-test"
+    payload = {
+        "timestamp": now,
+        "task": "x" * 60,
+        "model": "y" * 25,
+        "usage": {"total_tokens": 1},
+        "result": {},
+        "messages": [],
+    }
+    (s_dir / f"{sess_id}.json").write_text(json.dumps(payload), encoding="utf-8")
+    res = runner.invoke(main, ["sessions", "list"])
+    assert res.exit_code == 0
+    # Truncation markers appear in the output.
+    assert "..." in res.output
+
+
+def test_sessions_show_tool_blocks(sakthai_home: Path, runner: CliRunner) -> None:
+    s_dir = sessions_dir()
+    s_dir.mkdir(parents=True, exist_ok=True)
+    now = int(time.time())
+    sess_id = f"{now}_tool-sess"
+    payload = {
+        "timestamp": now,
+        "task": "do something",
+        "model": "claude-sonnet-4-6",
+        "usage": {"total_tokens": 10},
+        "result": {"text": "done", "iterations": 2, "stop_reason": "end_turn", "tool_calls": []},
+        "messages": [
+            {"role": "user", "content": "do something"},
+            {
+                "role": "assistant",
+                "content": [
+                    {"type": "tool_use", "id": "t1", "name": "learn", "input": {"value": "x"}},
+                ],
+            },
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "tool_result",
+                        "tool_use_id": "t1",
+                        "content": "learned (id=1)",
+                        "is_error": False,
+                    }
+                ],
+            },
+            {
+                "role": "assistant",
+                "content": [{"type": "text", "text": "done"}],
+            },
+        ],
+    }
+    (s_dir / f"{sess_id}.json").write_text(json.dumps(payload), encoding="utf-8")
+    res = runner.invoke(main, ["sessions", "show", sess_id])
+    assert res.exit_code == 0
+    assert "Tool Use: learn" in res.output
+    assert "Tool Result" in res.output
+    assert "learned (id=1)" in res.output
+
+
+def test_sessions_show_tool_result_error_flag(sakthai_home: Path, runner: CliRunner) -> None:
+    s_dir = sessions_dir()
+    s_dir.mkdir(parents=True, exist_ok=True)
+    now = int(time.time())
+    sess_id = f"{now}_err-sess"
+    payload = {
+        "timestamp": now,
+        "task": "bad call",
+        "model": "claude-sonnet-4-6",
+        "usage": {"total_tokens": 5},
+        "result": {},
+        "messages": [
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "tool_result",
+                        "tool_use_id": "t2",
+                        "content": "RuntimeError: boom",
+                        "is_error": True,
+                    }
+                ],
+            }
+        ],
+    }
+    (s_dir / f"{sess_id}.json").write_text(json.dumps(payload), encoding="utf-8")
+    res = runner.invoke(main, ["sessions", "show", sess_id])
+    assert res.exit_code == 0
+    assert "RuntimeError: boom" in res.output
+
+
+def test_sessions_clean_no_match(sakthai_home: Path, runner: CliRunner) -> None:
+    s_dir = sessions_dir()
+    s_dir.mkdir(parents=True, exist_ok=True)
+    now = int(time.time())
+    (s_dir / f"{now}_fresh.json").write_text(
+        json.dumps({"timestamp": now, "task": "new"}), encoding="utf-8"
+    )
+    res = runner.invoke(main, ["sessions", "clean", "--older-than", "1d", "--yes"])
+    assert res.exit_code == 0
+    assert "No sessions matched" in res.output
+
+
+def test_sessions_clean_stat_fallback(sakthai_home: Path, runner: CliRunner) -> None:
+    """Files whose timestamp can't be extracted fall back to file mtime."""
+    s_dir = sessions_dir()
+    s_dir.mkdir(parents=True, exist_ok=True)
+    # A file with no numeric prefix AND no valid JSON timestamp
+    p = s_dir / "noprefix.json"
+    p.write_text("{}", encoding="utf-8")
+    import os
+
+    old_mtime = time.time() - 40 * 86400  # 40 days old
+    os.utime(p, (old_mtime, old_mtime))
+    res = runner.invoke(main, ["sessions", "clean", "--older-than", "30d", "--yes"])
+    assert res.exit_code == 0
+    assert "deleted" in res.output
 
 
 def test_sessions_clean(sakthai_home: Path, runner: CliRunner) -> None:

@@ -65,6 +65,45 @@ def _event_emitter(verbose: bool) -> Callable[[str, dict[str, Any]], None]:
     return emit
 
 
+def _run_in_sandbox(
+    task: str,
+    model: str,
+    max_tokens: int,
+    max_iterations: int,
+    max_seconds: float | None,
+    provider: str | None,
+    verbose: bool,
+    no_mcp: bool,
+    with_skills: tuple[str, ...],
+    fast: bool,
+    caveman: str | None,
+    dry_run: bool,
+    stream: bool,
+) -> None:
+    from ..sandbox import SandboxError, run_in_sandbox
+
+    try:
+        click.echo("Building sandbox image (cached after first run)…", err=True)
+        code = run_in_sandbox(
+            task,
+            model=model,
+            max_tokens=max_tokens,
+            max_iterations=max_iterations,
+            max_seconds=max_seconds,
+            provider=provider,
+            verbose=verbose,
+            no_mcp=no_mcp,
+            with_skills=with_skills,
+            fast=fast,
+            caveman=caveman,
+            dry_run=dry_run,
+            stream=stream,
+        )
+    except SandboxError as e:
+        raise click.ClickException(str(e)) from e
+    sys.exit(code)
+
+
 @click.command()
 @click.argument("task")
 @click.option("--model", default=DEFAULT_MODEL, show_default=True, help="Model identifier.")
@@ -120,6 +159,11 @@ def _event_emitter(verbose: bool) -> Callable[[str, dict[str, Any]], None]:
     type=click.Choice(["lite", "full", "ultra", "wenyan-lite", "wenyan-full", "wenyan-ultra"]),
     help="Enable Caveman token compression at the specified intensity level.",
 )
+@click.option(
+    "--sandbox",
+    is_flag=True,
+    help="Run inside an isolated Docker container. Enables run_command safely — only memory.db is shared with the host.",
+)
 def run(
     task: str,
     model: str,
@@ -134,6 +178,7 @@ def run(
     stream: bool,
     fast: bool,
     caveman: str | None,
+    sandbox: bool,
 ) -> None:
     """Run TASK through the standalone SakThai agent.
 
@@ -143,6 +188,23 @@ def run(
     configured correctly (provider, credentials, model, tools) without spending
     any tokens.
     """
+    if sandbox:
+        _run_in_sandbox(
+            task=task,
+            model=model,
+            max_tokens=max_tokens,
+            max_iterations=max_iterations,
+            max_seconds=max_seconds,
+            provider=provider,
+            verbose=verbose,
+            no_mcp=no_mcp,
+            with_skills=with_skills,
+            fast=fast,
+            caveman=caveman,
+            dry_run=dry_run,
+            stream=stream,
+        )
+
     if dry_run:
         with _tool_context(no_mcp=no_mcp, verbose=verbose) as tools:
             report = preflight(model=model, provider=provider, tools=tools)

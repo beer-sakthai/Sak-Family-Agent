@@ -222,10 +222,23 @@ red CI. One task at a time: local gate → commit → push → wait for CI green
       passes clean on 3.14 locally, so 3.13 is low-risk and catches newer-Python
       regressions earlier. Refresh `uv.lock` / `requires-python` classifiers if CI
       flags drift.
+- [ ] 13.2 — Surface text-emitted tool calls: when a weak local model ends a turn
+      (`stop_reason=end_turn`) with final text that is actually a tool-call-shaped
+      JSON blob it failed to emit as a real `tool_use`, the loop silently returns
+      success and stores nothing (observed with llama3.2, 2026-06-18). In the
+      terminal-stop branch of `run_agent` (`sakthai/agent/loop.py` ~line 293),
+      detect un-dispatched tool-call JSON in the final text and emit a warning via
+      `notify(...)` (don't hard-fail — it's model-quality, not an app error).
+      Add a unit test with a stubbed client returning such a response.
+- [x] 13.3 — Widen CI Python matrix — 2026-06-18: added `"3.13"` to the
+      `.github/workflows/ci.yml` test matrix (now `["3.11", "3.12", "3.13"]`) and
+      updated the CLAUDE.md prose. `requires-python = ">=3.11"` is open-ended with
+      no per-version classifiers, so no pyproject/uv.lock changes needed.
 
 ---
 
 ## Log
+- 2026-06-18 — Re-derived Hugging Face operations (hf.py) and Docker sandboxing (sandbox.py, Dockerfile.sandbox) from v1 blueprint; registered CLI commands and `--sandbox` run flag; created comprehensive test suites; formatting, lint, strict mypy, bandit, and pytest all green.
 - 2026-06-18 — Full CI gate run, all green on Python 3.14 (ruff ✓, format ✓,
   mypy strict ✓, bandit ✓, pytest 668 passed / 1 skipped [streamlit] / 2 deselected
   [integration]). No section fails. Added Phase 13 (local-run reliability + CI breadth)

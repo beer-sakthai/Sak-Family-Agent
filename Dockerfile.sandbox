@@ -1,0 +1,28 @@
+# Isolated execution environment for `sakthai run --sandbox`.
+# run_command executes here — no host filesystem is mounted except memory.db.
+FROM python:3.11-slim
+
+# Common CLI tools that run_command is likely to need
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    git curl wget jq unzip bash make \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Install sakthai (core only — no dashboard/e2e extras)
+COPY pyproject.toml README.md ./
+COPY sakthai/ ./sakthai/
+COPY skills/ ./skills/
+COPY library/ ./library/
+
+RUN pip install --no-cache-dir -e "."
+
+# Memory store mount point; host binds memory.db here at runtime
+RUN mkdir -p /root/.sakthai
+
+# Shell execution is safe inside the container — that is the whole point
+ENV SAKTHAI_SHELL_ALLOW=1 \
+    PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1
+
+ENTRYPOINT ["sakthai"]
