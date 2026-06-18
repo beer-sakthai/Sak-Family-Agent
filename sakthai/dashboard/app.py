@@ -16,6 +16,7 @@ coverage omits it; a guarded smoke test exercises the figure builders.
 
 from __future__ import annotations
 
+import html
 import datetime
 import hashlib
 import itertools
@@ -271,7 +272,7 @@ def _render_overview(data: dict[str, Any], token: str) -> None:
     st.header("Project Overview")
     st.markdown(
         f'<p class="subtitle">Platform metrics and live integration status — '
-        f"<b>{data['source']}</b> snapshot at {data['generated_at']}.</p>",
+        f"<b>{html.escape(str(data['source']))}</b> snapshot at {html.escape(str(data['generated_at']))}.</p>",
         unsafe_allow_html=True,
     )
 
@@ -367,7 +368,7 @@ def _run_chat_turn(prompt: str, tool_slot: Any) -> str:
 
     if result.tool_calls:
         badges = "".join(
-            f'<span class="tool-badge">{call.get("name", "tool")}</span>'
+            f'<span class="tool-badge">{html.escape(str(call.get("name", "tool")))}</span>'
             for call in result.tool_calls
         )
         tool_slot.markdown(
@@ -408,10 +409,10 @@ def _render_chat(data: dict[str, Any]) -> None:
         st.subheader("Thought Process")
         steps_html: list[str] = []
         for group in data["chat"]["thought_process"]:
-            details = "".join(f"<div style='color:#94a3b8;'>• {s}</div>" for s in group["steps"])
+            details = "".join(f"<div style='color:#94a3b8;'>• {html.escape(str(s))}</div>" for s in group["steps"])
             steps_html.append(
                 f"<div style='margin-bottom:14px;'>"
-                f"<b style='color:#e2e8f0;'>{group['group']}</b>{details}</div>"
+                f"<b style='color:#e2e8f0;'>{html.escape(str(group['group']))}</b>{details}</div>"
             )
         confidence = data["chat"]["confidence"]
         st.markdown(
@@ -487,7 +488,7 @@ def _render_memory(data: dict[str, Any]) -> None:
     st.header("Memory Explorer")
     st.markdown(
         f'<p class="subtitle">Facts and observations from the memory store '
-        f"({data['source']} data).</p>",
+        f"({html.escape(str(data['source']))} data).</p>",
         unsafe_allow_html=True,
     )
 
@@ -887,18 +888,18 @@ def _render_skills(catalog: list[dict[str, Any]]) -> None:
                 desc = (skill["description"] or "").replace("\n", " ").strip()
                 if len(desc) > 140:
                     desc = desc[:139] + "…"
-                desc_html = desc or '<em style="color:#64748b">No description.</em>'
+                desc_html = html.escape(desc) if desc else '<em style="color:#64748b">No description.</em>'
                 source_color = "#10b981" if skill.get("source") == "skills" else "#a855f7"
                 tags_html = "".join(
                     f'<span style="font-size:0.7em; background:rgba(59,130,246,0.12); '
                     "color:#93c5fd; border:1px solid rgba(59,130,246,0.25); border-radius:10px; "
-                    f'padding:2px 7px; margin:2px 2px 0 0; display:inline-block;">{t}</span>'
+                    f'padding:2px 7px; margin:2px 2px 0 0; display:inline-block;">{html.escape(str(t))}</span>'
                     for t in skill["tags"][:5]
                 )
                 ver_badge = (
                     '<span style="font-size:0.68em; background:rgba(168,85,247,0.15); '
                     "color:#d8b4fe; border:1px solid rgba(168,85,247,0.3); border-radius:6px; "
-                    f'padding:2px 7px; margin-left:6px;">v{skill["version"]}</span>'
+                    f'padding:2px 7px; margin-left:6px;">v{html.escape(str(skill["version"]))}</span>'
                     if skill["version"]
                     else ""
                 )
@@ -908,7 +909,7 @@ def _render_skills(catalog: list[dict[str, Any]]) -> None:
                     f"border-top:2px solid {source_color};border-radius:16px;"
                     "padding:18px 16px 14px;margin-bottom:12px;'>"
                     f"<div style='font-weight:700;font-size:0.95rem;color:#e2e8f0;'>"
-                    f"{skill['name']}{ver_badge}</div>"
+                    f"{html.escape(str(skill['name']))}{ver_badge}</div>"
                     f"<div style='font-size:0.82rem;color:#94a3b8;margin-top:6px;"
                     f"line-height:1.45;'>{desc_html}</div>"
                     f"<div style='margin-top:10px;'>{tags_html}</div></div>",
@@ -976,7 +977,7 @@ def _render_sidebar(data: dict[str, Any]) -> tuple[str, str]:
             f'<span class="status-dot"></span>'
             f'<span style="font-weight:600; color:#22c55e;">System Online</span>'
             f'<div style="color:#64748b; font-size:0.75rem; margin-top:6px;">'
-            f"{data['source']} · {data['generated_at']}</div></div>",
+            f"{html.escape(str(data['source']))} · {html.escape(str(data['generated_at']))}</div></div>",
             unsafe_allow_html=True,
         )
 
