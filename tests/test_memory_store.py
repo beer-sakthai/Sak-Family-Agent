@@ -301,3 +301,31 @@ def test_decode_tags_tolerates_junk() -> None:
     assert _decode_tags("{not valid}") == []  # invalid JSON
     assert _decode_tags('{"k": "v"}') == []  # JSON object, not list
     assert _decode_tags(None) == []  # None input
+
+
+# -- forget_fact ---------------------------------------------------------
+
+
+def test_forget_fact_returns_true_and_removes_row(store: MemoryStore) -> None:
+    fid = store.add_fact("to be deleted")
+    assert store.forget_fact(fid) is True
+    assert store.list_facts() == []
+
+
+def test_forget_fact_missing_id_returns_false(store: MemoryStore) -> None:
+    assert store.forget_fact(999) is False
+
+
+def test_forget_fact_does_not_affect_siblings(store: MemoryStore) -> None:
+    fid_keep = store.add_fact("survivor")
+    fid_del = store.add_fact("doomed")
+    store.forget_fact(fid_del)
+    remaining = store.list_facts()
+    assert len(remaining) == 1
+    assert remaining[0].id == fid_keep
+
+
+def test_forget_fact_is_idempotent(store: MemoryStore) -> None:
+    fid = store.add_fact("ephemeral")
+    assert store.forget_fact(fid) is True
+    assert store.forget_fact(fid) is False  # already gone

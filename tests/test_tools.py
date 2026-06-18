@@ -658,3 +658,33 @@ class TestSendTelegramPartialConfig:
         monkeypatch.setenv("TELEGRAM_CHAT_ID", "123456")
         out = tool_by_name("send_telegram_message").handler({"message": "hi"}, store)
         assert "configuration missing" in out
+
+
+# ---------------------------------------------------------------------------
+# run_command — output edge cases
+# ---------------------------------------------------------------------------
+
+
+def test_run_command_no_output_returns_exit_tag_only(
+    monkeypatch: pytest.MonkeyPatch, store: MemoryStore
+) -> None:
+    """A command that produces no stdout and no stderr returns just '[exit 0]'."""
+    monkeypatch.setenv("SAKTHAI_SHELL_ALLOW", "1")
+
+    class _Silent:
+        returncode = 0
+        stdout = ""
+        stderr = ""
+
+    monkeypatch.setattr(subprocess, "run", lambda *a, **kw: _Silent())
+    out = tool_by_name("run_command").handler({"command": "silent_cmd"}, store)
+    assert out == "[exit 0]"
+
+
+def test_run_command_empty_shell_allow_is_disabled(
+    monkeypatch: pytest.MonkeyPatch, store: MemoryStore
+) -> None:
+    """SAKTHAI_SHELL_ALLOW='' (empty string) is falsy and must keep the tool disabled."""
+    monkeypatch.setenv("SAKTHAI_SHELL_ALLOW", "")
+    with pytest.raises(PermissionError):
+        tool_by_name("run_command").handler({"command": "echo hi"}, store)
