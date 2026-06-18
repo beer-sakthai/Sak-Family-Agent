@@ -52,6 +52,8 @@ def dashboard(port: int, open_browser: bool, export_path: str | None) -> None:
         "streamlit",
         "run",
         str(app_path),
+        "--server.address",
+        "127.0.0.1",
         "--server.port",
         str(port),
         "--server.headless",
