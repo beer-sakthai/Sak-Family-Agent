@@ -76,6 +76,7 @@ def _run_in_sandbox(
     no_mcp: bool,
     with_skills: tuple[str, ...],
     fast: bool,
+    stateless: bool,
     caveman: str | None,
     dry_run: bool,
     stream: bool,
@@ -95,6 +96,7 @@ def _run_in_sandbox(
             no_mcp=no_mcp,
             with_skills=with_skills,
             fast=fast,
+            stateless=stateless,
             caveman=caveman,
             dry_run=dry_run,
             stream=stream,
@@ -155,6 +157,11 @@ def _run_in_sandbox(
     help="Fast-track mode: bypass the 6-stage cycle for simple runs.",
 )
 @click.option(
+    "--stateless",
+    is_flag=True,
+    help="Stateless mode: do not load or append persistent memory to the system prompt, saving tokens.",
+)
+@click.option(
     "--caveman",
     type=click.Choice(["lite", "full", "ultra", "wenyan-lite", "wenyan-full", "wenyan-ultra"]),
     help="Enable Caveman token compression at the specified intensity level.",
@@ -177,6 +184,7 @@ def run(
     dry_run: bool,
     stream: bool,
     fast: bool,
+    stateless: bool,
     caveman: str | None,
     sandbox: bool,
 ) -> None:
@@ -200,6 +208,7 @@ def run(
             no_mcp=no_mcp,
             with_skills=with_skills,
             fast=fast,
+            stateless=stateless,
             caveman=caveman,
             dry_run=dry_run,
             stream=stream,
@@ -235,6 +244,7 @@ def run(
                 tools=tools,
                 skills=list(with_skills),
                 fast=fast,
+                stateless=stateless,
                 caveman=caveman,
             )
     except AgentError as exc:

@@ -123,15 +123,16 @@ def _parse_slash_command(task: str) -> tuple[str, str] | None:
         return None
 
 
-def _build_system(store: MemoryStore, skills_block: str = "", fast: bool = False) -> str:
+def _build_system(store: MemoryStore, skills_block: str = "", fast: bool = False, stateless: bool = False) -> str:
     parts = [SYSTEM_BASE]
     if fast:
         parts.append(
             "FAST-TRACK MODE: Execute the user's task directly and quickly without enforcing the 6-stage cycle (Dream/Hope/Care/Joy/Trust/Growth)."
         )
-    memory = store.render_prompt_block()
-    if memory:
-        parts.append(memory)
+    if not stateless:
+        memory = store.render_prompt_block()
+        if memory:
+            parts.append(memory)
     if skills_block:
         parts.append(skills_block)
     return "\n\n".join(parts)
@@ -200,6 +201,7 @@ def run_agent(
     provider: str | None = None,
     skills: Sequence[str] = (),
     fast: bool = False,
+    stateless: bool = False,
     caveman: str | None = None,
 ) -> AgentResult:
     """Run one task to completion against Claude, Gemini, or an OpenAI endpoint.
@@ -270,7 +272,7 @@ def run_agent(
                 raise AgentError(f"Agent time budget exhausted (max_seconds={max_seconds}).")
             logger.debug("Agent iteration %d/%d", iteration, max_iterations)
 
-            system = _build_system(store, skills_block, fast=fast)
+            system = _build_system(store, skills_block, fast=fast, stateless=stateless)
             if provider == "google":
                 response: Any = _call_gemini(
                     client, model, system, tools, messages, iteration, on_token=on_token
