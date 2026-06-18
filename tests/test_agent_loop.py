@@ -1232,6 +1232,90 @@ def test_slash_command_parsing(sakthai_home: Path, store: MemoryStore) -> None:
     assert captured["task"] == "write a test"
 
 
+def test_fast_mode_injects_fast_track_instruction(store: MemoryStore) -> None:
+    captured: dict[str, str] = {}
+
+    class _CapMessages:
+        def create(self, **kwargs: object) -> _Resp:
+            captured["system"] = str(kwargs.get("system", ""))
+            return _Resp("end_turn", [_Block(type="text", text="ok")])
+
+    class _CapClient:
+        def __init__(self) -> None:
+            self.messages = _CapMessages()
+
+    run_agent("x", client=_CapClient(), store=store, provider="anthropic", fast=True)
+    assert "FAST-TRACK MODE" in captured["system"]
+
+
+def test_tool_handler_exception_returned_as_error(store: MemoryStore) -> None:
+    from sakthai.agent.tools import Tool
+
+    def _boom(args: dict, _store: MemoryStore) -> str:
+        raise RuntimeError("handler exploded")
+
+    bad_tool = Tool(
+        name="bad_tool",
+        description="always fails",
+        input_schema={"type": "object", "properties": {}},
+        handler=_boom,
+    )
+    client = FakeClient(
+        [
+            _Resp("tool_use", [_Block(type="tool_use", id="t1", name="bad_tool", input={})]),
+            _Resp("end_turn", [_Block(type="text", text="recovered")]),
+        ]
+    )
+    result = run_agent(
+        "x",
+        client=client,
+        store=store,
+        provider="anthropic",
+        tools=(bad_tool,),
+    )
+    # The error is surfaced back to the model (is_error flag set), not raised.
+    assert result.text == "recovered"
+    assert any(c["is_error"] for c in result.tool_calls)
+
+
+def test_run_agent_creates_own_store_and_closes_it(sakthai_home: Path) -> None:
+    client = FakeClient([_Resp("end_turn", [_Block(type="text", text="ok")])])
+    # No store= passed → run_agent creates and owns its MemoryStore.
+    result = run_agent("hi", client=client, provider="anthropic")
+    assert result.text == "ok"
+
+
+def test_preflight_google_gemini_api_key(monkeypatch: pytest.MonkeyPatch) -> None:
+    import sakthai.agent.loop as loop_mod
+
+    monkeypatch.setenv("GEMINI_API_KEY", "fake-gemini-key")
+    monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
+    report = loop_mod.preflight(provider="google")
+    assert report["provider"] == "google"
+    assert report["credential_source"] == "GEMINI_API_KEY"
+    assert report["runnable"] is True
+
+
+def test_preflight_google_google_api_key_fallback(monkeypatch: pytest.MonkeyPatch) -> None:
+    import sakthai.agent.loop as loop_mod
+
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    monkeypatch.setenv("GOOGLE_API_KEY", "fake-google-key")
+    report = loop_mod.preflight(provider="google")
+    assert report["credential_source"] == "GOOGLE_API_KEY"
+    assert report["runnable"] is True
+
+
+def test_preflight_google_no_creds(monkeypatch: pytest.MonkeyPatch) -> None:
+    import sakthai.agent.loop as loop_mod
+
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
+    report = loop_mod.preflight(provider="google")
+    assert report["credential_source"] is None
+    assert report["runnable"] is False
+
+
 def test_caveman_flag_injection(sakthai_home: Path, store: MemoryStore) -> None:
     gemini_ext_dir = sakthai_home.parent / "gemini" / "extensions"
     skill_dir = gemini_ext_dir / "caveman" / "skills" / "caveman"
@@ -1261,4 +1345,66 @@ def test_caveman_flag_injection(sakthai_home: Path, store: MemoryStore) -> None:
     )
 
     assert "Respond terse." in captured["system"]
+    assert "ACTIVE CAVEMAN LEVEL: ultra" in captured["system"]
+
+
+def test_caveman_flag_not_found_logs_warning(
+    sakthai_home: Path, store: MemoryStore, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import sakthai.agent.loop as loop_mod
+
+    monkeypatch.setattr(loop_mod, "find_skill", lambda *_a: None)
+
+    captured: dict[str, str] = {}
+
+    class _CapMessages:
+        def create(self, **kwargs: object) -> _Resp:
+            captured["system"] = str(kwargs.get("system", ""))
+            return _Resp("end_turn", [_Block(type="text", text="ok")])
+
+    class _CapClient:
+        def __init__(self) -> None:
+            self.messages = _CapMessages()
+
+    run_agent("x", client=_CapClient(), store=store, provider="anthropic", caveman="ultra")
+    # Caveman skill missing → warning logged, system prompt unchanged (no crash).
+    assert "ACTIVE CAVEMAN LEVEL" not in captured.get("system", "")
+
+
+def test_caveman_combined_with_existing_skills_block(
+    sakthai_home: Path, store: MemoryStore
+) -> None:
+    # Place demo-skill and caveman skill under sakthai_home/extensions/ so
+    # default_skill_roots() finds them without any monkeypatching.
+    ext_dir = sakthai_home / "extensions"
+    for name, body in [("demo-skill", "DEMO BLOCK."), ("caveman", "CAVEMAN RULES.")]:
+        skill_dir = ext_dir / name
+        skill_dir.mkdir(parents=True, exist_ok=True)
+        (skill_dir / "SKILL.md").write_text(
+            f"---\nname: {name}\ndescription: {name} desc\n---\n\n{body}\n",
+            encoding="utf-8",
+        )
+
+    captured: dict[str, str] = {}
+
+    class _CapMessages:
+        def create(self, **kwargs: object) -> _Resp:
+            captured["system"] = str(kwargs.get("system", ""))
+            return _Resp("end_turn", [_Block(type="text", text="ok")])
+
+    class _CapClient:
+        def __init__(self) -> None:
+            self.messages = _CapMessages()
+
+    run_agent(
+        "x",
+        client=_CapClient(),
+        store=store,
+        provider="anthropic",
+        skills=["demo-skill"],
+        caveman="ultra",
+    )
+    # Both the skill block and caveman instructions must appear together.
+    assert "DEMO BLOCK." in captured["system"]
+    assert "CAVEMAN RULES." in captured["system"]
     assert "ACTIVE CAVEMAN LEVEL: ultra" in captured["system"]
