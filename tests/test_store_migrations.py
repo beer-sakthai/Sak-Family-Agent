@@ -7,8 +7,11 @@ rows. No network, no GCP.
 
 from __future__ import annotations
 
+import logging
 import sqlite3
 from pathlib import Path
+
+import pytest
 
 from sakthai.memory.store import MemoryStore
 
@@ -103,3 +106,63 @@ def test_legacy_observations_without_confidence_gets_backfilled(tmp_path: Path) 
         assert match and match[0].confidence == 0.5
 
     assert "confidence" in _columns(db, "observations")
+
+
+def test_wal_failure_tolerated_store_remains_functional(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    """MemoryStore opens and is fully functional when WAL mode is rejected.
+
+    On read-only filesystems or network mounts ``PRAGMA journal_mode=WAL``
+    raises OperationalError. The store absorbs it, logs a debug message, and
+    falls back to the default journal — this test pins that contract.
+    """
+    import sakthai.memory.store as _store_mod
+
+    real_sqlite3_module = _store_mod.sqlite3
+
+    class _WalBlockedConnection:
+        """Proxy that forwards everything except the WAL pragma."""
+
+        def __init__(self, conn: sqlite3.Connection) -> None:
+            self._real = conn
+
+        def __getattr__(self, name: str):
+            return getattr(self._real, name)
+
+        @property
+        def row_factory(self):
+            return self._real.row_factory
+
+        @row_factory.setter
+        def row_factory(self, value) -> None:
+            self._real.row_factory = value
+
+        def execute(self, sql: str, *args):
+            if "journal_mode" in sql.lower():
+                raise sqlite3.OperationalError("test: read-only filesystem")
+            return self._real.execute(sql, *args)
+
+    class _FakeSqlite3Module:
+        OperationalError = sqlite3.OperationalError
+        Row = sqlite3.Row
+
+        @staticmethod
+        def connect(database, **kw):
+            return _WalBlockedConnection(real_sqlite3_module.connect(database, **kw))
+
+        def __getattr__(self, name: str):
+            return getattr(real_sqlite3_module, name)
+
+    monkeypatch.setattr(_store_mod, "sqlite3", _FakeSqlite3Module())
+
+    db = tmp_path / "wal_fallback.db"
+    with caplog.at_level(logging.DEBUG, logger="sakthai.memory.store"), MemoryStore(db) as s:
+        fid = s.add_fact("WAL fallback works")
+        assert s.list_facts()[0].value == "WAL fallback works"
+        assert s.forget_fact(fid) is True
+        assert s.list_facts() == []
+
+    assert any("WAL unavailable" in r.message for r in caplog.records), (
+        "expected a debug log saying WAL is unavailable"
+    )
