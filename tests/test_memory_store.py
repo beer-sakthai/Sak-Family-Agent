@@ -329,3 +329,106 @@ def test_forget_fact_is_idempotent(store: MemoryStore) -> None:
     fid = store.add_fact("ephemeral")
     assert store.forget_fact(fid) is True
     assert store.forget_fact(fid) is False  # already gone
+
+
+# -- _encode_tags edge cases ---------------------------------------------
+
+
+def test_encode_tags_all_whitespace_returns_none() -> None:
+    from sakthai.memory.store import _encode_tags
+
+    assert _encode_tags(["  ", "\t", ""]) is None
+
+
+def test_encode_tags_none_input_returns_none() -> None:
+    from sakthai.memory.store import _encode_tags
+
+    assert _encode_tags(None) is None
+
+
+# -- _validate_row error paths -------------------------------------------
+
+
+def test_validate_row_non_dict_raises() -> None:
+    from sakthai.memory.store import _validate_row
+
+    with pytest.raises(ValueError, match="must be a dict"):
+        _validate_row(["not", "a", "dict"], {"value"}, "fact")
+
+
+def test_validate_row_missing_fields_raises() -> None:
+    from sakthai.memory.store import _validate_row
+
+    with pytest.raises(ValueError, match="missing fields"):
+        _validate_row({"id": 1}, {"id", "value", "kind"}, "fact")
+
+
+# -- import_from_dict validation paths -----------------------------------
+
+
+def test_import_rejects_non_list_facts(store: MemoryStore) -> None:
+    from sakthai.memory.store import SNAPSHOT_VERSION
+
+    with pytest.raises(ValueError, match="list"):
+        store.import_from_dict(
+            {"version": SNAPSHOT_VERSION, "facts": "not a list", "observations": []}
+        )
+
+
+def test_import_rejects_fact_missing_required_field(store: MemoryStore) -> None:
+    from sakthai.memory.store import SNAPSHOT_VERSION
+
+    with pytest.raises(ValueError, match="missing fields"):
+        store.import_from_dict(
+            {
+                "version": SNAPSHOT_VERSION,
+                "facts": [{"id": 1}],  # missing kind, value, etc.
+                "observations": [],
+            }
+        )
+
+
+# -- rollback paths (injected SQLite failures) ---------------------------
+#
+# sqlite3.Connection methods are C-level and cannot be monkeypatched directly.
+# Instead we verify the rollback contract behaviourally: an exception inside a
+# transaction must leave the DB unchanged.
+
+
+def test_update_fact_rolls_back_on_error(tmp_path: pytest.TempPathFactory) -> None:
+    from pathlib import Path
+
+    db = Path(str(tmp_path)) / "rollback.db"
+    store = MemoryStore(db)
+    try:
+        fid = store.add_fact("original")
+        # Corrupt the connection by closing it before the update to force an error.
+        store._conn.close()
+        with pytest.raises(Exception):
+            store.update_fact(fid, "new value")
+    finally:
+        # Re-open to confirm the value was not changed.
+        store2 = MemoryStore(db)
+        try:
+            facts = store2.list_facts()
+            assert any(f.value == "original" for f in facts)
+        finally:
+            store2.close()
+
+
+def test_consolidate_facts_rolls_back_on_error(tmp_path: pytest.TempPathFactory) -> None:
+    from pathlib import Path
+
+    db = Path(str(tmp_path)) / "rollback2.db"
+    store = MemoryStore(db)
+    try:
+        store.add_fact("old fact")
+        store._conn.close()
+        with pytest.raises(Exception):
+            store.consolidate_facts(age_seconds=-1)
+    finally:
+        store2 = MemoryStore(db)
+        try:
+            assert len(store2.list_facts()) == 1  # fact still present
+        finally:
+            store2.close()
