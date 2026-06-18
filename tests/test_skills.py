@@ -1,19 +1,21 @@
 from __future__ import annotations
 
 from pathlib import Path
+
 import pytest
+
 from sakthai.skills import (
-    SkillInfo,
     SkillParseError,
-    parse_skill,
-    list_skills,
-    validate_skills,
-    collect_skills,
+    _category_for,
     build_catalog,
+    collect_skills,
     find_skill,
+    list_skills,
+    parse_skill,
+    validate_skills,
     validate_tree,
-    _category_for
 )
+
 
 def write_skill(root: Path, folder: str, name: str, frontmatter: str = "", body: str = "body") -> Path:
     d = root / folder
