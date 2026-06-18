@@ -44,6 +44,8 @@ mypy sakthai                                    # strict type-check
 bandit -c pyproject.toml -r sakthai             # security scan
 ```
 
+CI runs the lint → format-check → mypy → bandit → pytest sequence on Python
+**3.11, 3.12, and 3.13**. Run it locally before pushing; green CI is the bar for `main`.
 CI runs secret-scan → lint → format-check → mypy → bandit → pytest on Python
 **3.11 and 3.12** via uv. Run it locally before pushing; green CI is the bar for
 `main`. Coverage floor is **85%** (`fail_under = 85`); `dashboard/app.py` is
