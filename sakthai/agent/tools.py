@@ -12,6 +12,7 @@ import json
 import os
 import shlex
 import subprocess
+import sys
 import urllib.request
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -199,7 +200,7 @@ def _run_command(args: dict[str, Any], store: MemoryStore) -> str:
     timeout = max(1.0, min(timeout, _CMD_TIMEOUT_MAX))
     try:
         proc = subprocess.run(  # nosec B603 — shell=False, opt-in gated above
-            shlex.split(command),
+            shlex.split(command, posix=sys.platform != "win32"),
             shell=False,
             capture_output=True,
             text=True,
