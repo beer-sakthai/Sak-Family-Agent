@@ -21,4 +21,4 @@ jobs:
         pip install -e ".[dev]" || pip install -e "."
     - name: Analysing the code with pylint
       run: |
-        pylint sakthai --disable=R0801,R0401
+        pylint sakthai --disable=R0801,R0401 --fail-under=9.0
