@@ -37,14 +37,7 @@ dashboard = [
     "PyGithub>=2.3",
 ]
 
-# Optional Google Cloud (ADK / Vertex AI) deployment stack. Not required for
-# local use or CI; the sakthai.cloud package imports these lazily.
-cloud = [
-    "google-adk>=0.1",
-    "google-cloud-aiplatform>=1.158.0",
-    "google-cloud-logging>=3.10",
-]
-all = ["sakthai-agent[dev,dashboard,cloud]"]
+all = ["sakthai-agent[dev,dashboard]"]
 
 [project.scripts]
 sakthai = "sakthai.cli:main"

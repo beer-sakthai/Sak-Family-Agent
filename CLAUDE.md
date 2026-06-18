@@ -11,13 +11,10 @@ memory is reachable from other runtimes.
 
 This is a **clean, from-scratch rewrite** of the original `SakThai-Agent` (the
 "OG"). The OG is a read-only blueprint: consult it for intent, but never copy its
-code or layout into this repo — re-derive everything. The OG's full Google
-ADK / Vertex AI cloud agent is **not** shipped in v2: there is **no `app/` cloud
-bundle and no `sync-app-package.sh` sync step** here. v2 carries only a lazy
-**cloud-runtime skeleton** in `sakthai/cloud/` (the `cloud` extra; `sakthai
-cloud` commands) that describes/scaffolds a deployment without importing
-`google-adk` at module load — see [`docs/cloud.md`](docs/cloud.md). Actual
-deployment execution remains on the roadmap.
+code or layout into this repo — re-derive everything. The OG's Google
+ADK / Vertex AI cloud agent is **not** part of v2: there is **no `app/` cloud
+bundle, no `sync-app-package.sh` sync step, and no `sakthai/cloud/` module** here.
+v2 is local-first — the CLI, the agent loop, and the MCP stdio server.
 
 ---
 
@@ -28,8 +25,7 @@ deployment execution remains on the roadmap.
 cp .env.example .env            # then fill in ANTHROPIC_API_KEY
 pip install -e ".[dev]"         # editable install + test/lint/type-check tools
 pip install -e ".[dashboard]"   # adds streamlit/plotly/pandas/PyGithub for `sakthai dashboard`
-pip install -e ".[cloud]"       # adds google-adk/aiplatform/logging for `sakthai cloud`
-pip install -e ".[all]"         # dev + dashboard + cloud
+pip install -e ".[all]"         # dev + dashboard
 
 # Preferred: use uv (CI uses uv with uv.lock for reproducible installs)
 uv sync --all-extras
@@ -68,7 +64,6 @@ root with `SAKTHAI_HOME`):
    - Sessions: `sessions list|show|export`
    - System: `doctor`, `setup`, `status`, `tools`
    - Dashboard: `dashboard` (Streamlit UI)
-   - Cloud: `cloud status|deploy|validate`
 
 2. **Agent loop** — `sakthai run` drives a provider-agnostic tool-using loop
    (Claude, Gemini, or any OpenAI-compatible/Ollama endpoint).
@@ -166,7 +161,6 @@ Click commands split by area; all sub-files imported by `cli/__init__.py`:
 - `extensions.py` — `extensions` group
 - `dashboard.py` — `dashboard` (launches Streamlit)
 - `sessions.py` — `sessions` group
-- `cloud.py` — `cloud` group (lazy import of `sakthai.cloud`)
 
 ### Other subsystems
 
@@ -184,9 +178,6 @@ Click commands split by area; all sub-files imported by `cli/__init__.py`:
   Settings). `app.py` has loose mypy (`ignore_errors = true`).
 - **`extensions/install.py`** — clones skill/MCP bundles from git into
   `~/.sakthai/extensions`; `list`/`remove` manage installed bundles.
-- **`cloud/`** — lazy-import stub. `runtime.py` describes a cloud agent without
-  importing `google-adk` at module load; `tools.py` adapts the memory surface as
-  ADK function tools. Import gated behind the `cloud` extra.
 - **`web/server.py`** — minimal HTTP server stub for a future web runtime.
 - **`learn/capture.py`** — `learn()` one-shot fact capture used by `sakthai learn`.
 
@@ -221,7 +212,6 @@ sakthai-agent-v2/
 │   ├── learn/                # capture.py one-shot fact entry
 │   ├── extensions/           # install.py (git-based bundle installer)
 │   ├── dashboard/            # data.py (snapshot) + app.py (Streamlit)
-│   ├── cloud/                # Lazy ADK/Vertex stub (cloud extra)
 │   └── web/                  # HTTP server stub
 ├── tests/                    # 33 test files, hermetic, no network
 ├── skills/                   # 18 user/extension SKILL.md folders
@@ -252,7 +242,7 @@ Key test areas:
 - `test_cli*.py`, `test_sessions_cli.py` — CLI commands
 - `test_dashboard_data.py`, `test_dashboard_app.py`, `test_dashboard_sessions.py`
 - `test_auth.py`, `test_config_reports.py`, `test_extensions.py`,
-  `test_skill_injection.py`, `test_cycle_skills_config.py`, `test_cloud.py`,
+  `test_skill_injection.py`, `test_cycle_skills_config.py`,
   `test_integration.py`, `test_web_server.py`
 - `conftest.py` — shared fixtures: in-memory `MemoryStore`, temp dirs,
   mock Anthropic clients
@@ -292,8 +282,6 @@ reach out to a real endpoint. Use `tmp_path` fixtures for file I/O.
   name.
 - **Ollama uses 127.0.0.1, not localhost.** IPv6 resolution for `localhost` breaks
   some environments; the OpenAI provider explicitly connects to `127.0.0.1`.
-- **Cloud module imports are lazy.** `sakthai/cloud/` never imports `google-adk`
-  at module load — only inside functions, guarded by try/except ImportError.
 
 ---
 
@@ -356,9 +344,8 @@ Skills are discovered from `skills/` (user/extension skills) and `library/`
 |------|---------|
 | `docs/architecture.md` | Full layer diagram and SQLite schema |
 | `docs/capabilities.md` | Feature list |
-| `docs/cloud.md` | Google ADK / Vertex AI deployment stub |
 | `docs/plugins.md` | Skills and MCP extensibility |
 | `docs/replication.md` | Multi-agent memory sync |
-| `docs/runtimes.md` | CLI / agent loop / MCP server / cloud |
+| `docs/runtimes.md` | CLI / agent loop / MCP server |
 | `docs/workspace.md` | Dev environment setup |
 | `docs/og_parity_audit.md` | Comparison with original SakThai |

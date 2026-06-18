@@ -8,8 +8,8 @@ Guidance for the Gemini CLI and Gemini-backed agents working in this repository.
 memory, a shared tool registry, a Claude/Gemini agent loop, and an MCP stdio
 server. It is a **clean-room rewrite** of the original `SakThai-Agent` ("OG").
 Treat the OG as a **read-only blueprint** — study it for intent, never copy its
-code or layout. The OG's Google ADK / Vertex AI cloud agent is **roadmap-only**
-in v2: there is no `app/` bundle and no cloud-sync step here.
+code or layout. The OG's Google ADK / Vertex AI cloud agent is **not** part of
+v2: there is no `app/` bundle, no cloud-sync step, and no cloud runtime here.
 
 ## Gemini runtime
 

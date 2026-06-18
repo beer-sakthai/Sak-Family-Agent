@@ -32,14 +32,7 @@ OPTIONAL_ENV_VARS: dict[str, str] = {
     "SAKTHAI_HOME": "Override the data directory (default: ~/.sakthai)",
     "SAKTHAI_READ_ALLOW": "Extra paths the read_file tool may read (os.pathsep-separated)",
     "SAKTHAI_MCP_TIMEOUT": "Seconds to wait for an external MCP server reply (default: 30)",
-    "GOOGLE_CLOUD_PROJECT": "GCP project id for the cloud (ADK/Vertex) runtime stub",
-    "GOOGLE_CLOUD_LOCATION": "GCP region for the cloud runtime (default: us-central1)",
-    "GOOGLE_GENAI_USE_VERTEXAI": "Set 'True' to route the cloud runtime through Vertex AI",
-    "GOOGLE_CLOUD_STAGING_BUCKET": "GCS bucket (gs://...) for staging cloud deployments",
 }
-
-# Default region for the cloud runtime when GOOGLE_CLOUD_LOCATION is unset.
-DEFAULT_CLOUD_LOCATION = "us-central1"
 
 # Seconds to wait for an external MCP server's reply, before SAKTHAI_MCP_TIMEOUT.
 DEFAULT_MCP_TIMEOUT = 30.0
@@ -102,31 +95,6 @@ def mcp_timeout() -> float:
 def openai_api_base() -> str | None:
     """Return the OpenAI API base URL, honoring OPENAI_BASE_URL or OPENAI_API_BASE."""
     return os.environ.get("OPENAI_BASE_URL") or os.environ.get("OPENAI_API_BASE")
-
-
-def google_cloud_project() -> str | None:
-    """Return the GCP project id for the cloud runtime, or None if unset."""
-    return os.environ.get("GOOGLE_CLOUD_PROJECT") or None
-
-
-def google_cloud_location() -> str:
-    """Return the GCP region for the cloud runtime (default: us-central1)."""
-    return os.environ.get("GOOGLE_CLOUD_LOCATION") or DEFAULT_CLOUD_LOCATION
-
-
-def google_cloud_staging_bucket() -> str | None:
-    """Return the GCS staging bucket for cloud deployments, or None if unset."""
-    return os.environ.get("GOOGLE_CLOUD_STAGING_BUCKET") or None
-
-
-def use_vertexai() -> bool:
-    """True when GOOGLE_GENAI_USE_VERTEXAI is set to a truthy value."""
-    return os.environ.get("GOOGLE_GENAI_USE_VERTEXAI", "").strip().lower() in {
-        "1",
-        "true",
-        "yes",
-        "on",
-    }
 
 
 def _paths_report() -> dict[str, Any]:
