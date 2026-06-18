@@ -59,7 +59,7 @@ One package, three ways in — all sharing `~/.sakthai/memory.db` (override the
 root with `SAKTHAI_HOME`):
 
 1. **CLI** — `sakthai <cmd>` (entry point `sakthai.cli:main`). Commands:
-   - Memory: `learn`, `recall`, `memory show|stats|search|export|import|backup|consolidate|deduplicate`
+   - Memory: `learn`, `recall`, `memory show|stats|search|export|import|backup|consolidate|consolidate-sessions|deduplicate`
    - Agent: `run "<task>"` (with `--model`, `--max-tokens`, `--max-iterations`, `--verbose`, `--no-mcp`)
    - Server: `mcp` (start MCP stdio server)
    - Cycle: `cycle status|next|set|list`

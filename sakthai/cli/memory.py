@@ -285,6 +285,99 @@ def memory_consolidate(age: int) -> None:
     )
 
 
+_CONSOLIDATE_PROMPT = (
+    "You are a memory-extraction tool. Below is a trace of one session between a user and "
+    "their personal agent. Pull out any new, concrete, durable facts about the *user* worth "
+    "remembering long-term (preferences, habits, environment, identity, recurring goals).\n\n"
+    "Rules:\n"
+    "- Only facts about the human user, not the agent or the task mechanics.\n"
+    "- One fact per line, concise and declarative (e.g. 'User prefers dark mode', "
+    "'User timezone is GMT+7').\n"
+    "- No preamble, bullets, numbering, or commentary.\n"
+    "- If there is nothing worth keeping, output exactly: None\n\n"
+    "Session trace:\n{trace}"
+)
+
+
+@memory.command("consolidate-sessions")
+@click.option("--limit", default=10, show_default=True, type=int, help="Max sessions to process.")
+@click.option("--model", default=None, help="Model override for the extraction LLM.")
+def memory_consolidate_sessions(limit: int, model: str | None) -> None:
+    """Mine local session logs for durable facts and learn them.
+
+    Reads agent session logs from ``sessions_dir()``, asks an LLM to extract
+    long-term facts about the user, and stores each as a ``consolidated`` fact.
+    Already-processed logs are tracked so re-runs are idempotent.
+    """
+    from ..agent.loop import DEFAULT_MODEL, run_agent
+    from ..config import sakthai_home, sessions_dir
+
+    s_dir = sessions_dir()
+    logs = sorted(s_dir.glob("*.json")) if s_dir.is_dir() else []
+    if not logs:
+        click.echo("No local session logs found.")
+        return
+
+    state_file = sakthai_home() / "consolidated_sessions.json"
+    processed: set[str] = set()
+    if state_file.exists():
+        try:
+            processed = set(json.loads(state_file.read_text(encoding="utf-8")))
+        except (OSError, ValueError):
+            processed = set()
+
+    pending = [f for f in logs if f.name not in processed][:limit]
+    if not pending:
+        click.echo("All local sessions have already been consolidated.")
+        return
+
+    click.echo(f"Consolidating {len(pending)} session(s)...")
+    extraction_model = model or DEFAULT_MODEL
+    learned = 0
+
+    for f in pending:
+        try:
+            data = json.loads(f.read_text(encoding="utf-8"))
+        except (OSError, ValueError) as exc:
+            click.echo(f"Skipping unreadable session log {f.name}: {exc}")
+            continue
+
+        task = data.get("task", "")
+        result_text = (data.get("result") or {}).get("text", "")
+        trace = f"User: {task}\nAgent: {result_text}"
+
+        try:
+            res = run_agent(
+                _CONSOLIDATE_PROMPT.format(trace=trace),
+                model=extraction_model,
+                max_iterations=1,
+                tools=(),
+            )
+        except Exception as exc:  # noqa: BLE001 - report and continue, never abort the batch
+            click.echo(f"Error extracting from {f.name}: {exc}")
+            continue
+
+        for raw in res.text.strip().splitlines():
+            line = raw.strip().lstrip("-*+ ").strip()
+            if not line or line.lower() == "none" or line.startswith("#"):
+                continue
+            learn_fact(line, kind="consolidated", tags=["consolidated"])
+            learned += 1
+
+        processed.add(f.name)
+
+    try:
+        state_file.write_text(json.dumps(sorted(processed), indent=2), encoding="utf-8")
+    except OSError as exc:
+        click.echo(f"Warning: could not save consolidation state: {exc}")
+
+    click.secho(
+        f"consolidated {len(pending)} session(s), learned {learned} new fact(s)",
+        fg="green",
+        bold=True,
+    )
+
+
 @memory.command("deduplicate")
 @click.option("--dry-run", "-n", is_flag=True, help="Report duplicates without deleting.")
 @click.option("--verbose", "-v", is_flag=True, help="Print every pruned row.")
