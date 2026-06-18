@@ -2,6 +2,11 @@
 
 ![SakThai Agent Banner](./assets/readme_banner.png)
 
+[![CI](https://github.com/beer-sakthai/sakthai-agent-v2/actions/workflows/ci.yml/badge.svg)](https://github.com/beer-sakthai/sakthai-agent-v2/actions/workflows/ci.yml)
+[![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13-blue)](https://www.python.org/)
+[![Coverage](https://img.shields.io/badge/coverage-85%25%2B-brightgreen)](https://github.com/beer-sakthai/sakthai-agent-v2/actions/workflows/ci.yml)
+[![License](https://img.shields.io/badge/license-All%20Rights%20Reserved-red)](./LICENSE)
+
 An advanced AI agent with **persistent memory**, **context awareness**, and **autonomous capabilities**. SakThai gives a Claude (or Gemini) agent a durable SQLite memory it can write to and read from across sessions, plus a comprehensive set of tools and an MCP server for seamless integration. Built for long-term tasks, continuous learning, and real-world impact.
 
 ## What's here
