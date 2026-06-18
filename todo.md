@@ -218,11 +218,10 @@ red CI. One task at a time: local gate → commit → push → wait for CI green
       detect un-dispatched tool-call JSON in the final text and emit a warning via
       `notify(...)` (don't hard-fail — it's model-quality, not an app error).
       Add a unit test with a stubbed client returning such a response.
-- [ ] 13.3 — Widen CI Python matrix: add `"3.13"` to
-      `.github/workflows/ci.yml:33` (`["3.11", "3.12"]`). The full gate already
-      passes clean on 3.14 locally, so 3.13 is low-risk and catches newer-Python
-      regressions earlier. Refresh `uv.lock` / `requires-python` classifiers if CI
-      flags drift.
+- [x] 13.3 — Widen CI Python matrix — 2026-06-18: added `"3.13"` to the
+      `.github/workflows/ci.yml` test matrix (now `["3.11", "3.12", "3.13"]`) and
+      updated the CLAUDE.md prose. `requires-python = ">=3.11"` is open-ended with
+      no per-version classifiers, so no pyproject/uv.lock changes needed.
 
 ---
 
