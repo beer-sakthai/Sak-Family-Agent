@@ -37,10 +37,7 @@ def test_concurrent_writers_all_succeed(tmp_path: Path) -> None:
                 s.add_fact(f"fact-{{i}}")
     """)
 
-    procs = [
-        subprocess.Popen([sys.executable, "-c", writer_code])
-        for _ in range(n_writers)
-    ]
+    procs = [subprocess.Popen([sys.executable, "-c", writer_code]) for _ in range(n_writers)]
 
     failed = []
     for p in procs:
@@ -48,9 +45,7 @@ def test_concurrent_writers_all_succeed(tmp_path: Path) -> None:
         if ret != 0:
             failed.append(ret)
 
-    assert not failed, (
-        f"{len(failed)}/{n_writers} writer(s) exited non-zero: {failed}"
-    )
+    assert not failed, f"{len(failed)}/{n_writers} writer(s) exited non-zero: {failed}"
 
     with MemoryStore(db) as s:
         total = len(s.list_facts(limit=n_writers * facts_per_writer + 1))
