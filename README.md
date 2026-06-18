@@ -16,7 +16,7 @@ An advanced AI agent with **persistent memory**, **context awareness**, and **au
 
 SakThai Agent v2 employs a modular architecture designed for extensibility and robust agentic behavior. The core components include a CLI for user interaction, an Agent Loop that orchestrates tasks, a SQLite-based Persistent Memory for long-term knowledge, and a Skills Library for tool-using capabilities. An MCP Server facilitates integration with external agents and editors, while a Dashboard provides a visual interface for memory inspection.
 
-![SakThai Agent Architecture Diagram](./assets/architecture_diagram.png)
+![SakThai Agent Architecture Diagram](./assets/architecture_diagram_v2.png)
 
 ## The 6-Stage Cycle
 
