@@ -19,6 +19,17 @@ def test_mcp_config_path_honours_home(sakthai_home: Path) -> None:
     assert mcp_config_path() == sakthai_home / "mcp.json"
 
 
+def test_mcp_config_path_defaults_to_user_home(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("SAKTHAI_HOME", raising=False)
+    # sakthai_home() defaults to ~/.sakthai when SAKTHAI_HOME is unset
+    assert mcp_config_path() == Path.home() / ".sakthai" / "mcp.json"
+
+
+def test_mcp_config_path_empty_env_uses_default(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("SAKTHAI_HOME", "")
+    assert mcp_config_path() == Path.home() / ".sakthai" / "mcp.json"
+
+
 def test_parse_valid_manifest() -> None:
     data = {
         "mcpServers": {

@@ -52,13 +52,8 @@ Behaviours that are not acceptable:
 
 ## A note on participation
 
-`sakthai-agent` (v2) is released under the [MIT License](LICENSE): you are free
-to read, use, copy, modify, and redistribute the code. It is maintained as a
-personal project, so external pull requests are not actively solicited (see
-[CONTRIBUTING.md](CONTRIBUTING.md)). Engagement through issues, discussions, and
-bug reports is valued all the same — and every person who engages thoughtfully
-deserves the same standards, whether their contribution is a bug report or a
-patch.
+`sakthai-agent` (v2) does not contain a license. Standard copyright applies, and all rights are reserved by the author (beer-sakthai). The codebase is maintained as a personal project, so external pull requests are not actively solicited (see [CONTRIBUTING.md](CONTRIBUTING.md)). Engagement through issues, discussions, and bug reports is valued all the same — and every person who engages thoughtfully deserves the same standards.
+
 ### Behaviours that strengthen the community
 
 - Using language that is welcoming and inclusive — words shape the space.

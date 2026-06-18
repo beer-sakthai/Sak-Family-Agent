@@ -103,8 +103,9 @@ data/        memory snapshot format + a sample export
 
 ---
 
-**Note on Versioning & License:**
-This repository (`sakthai-agent-v2`) is the active, clean from-scratch rewrite of the core engine. The original `SakThai-Agent` (v1) blueprint is now deprecated and locked. This code is released under the **MIT License** — you are free to use, copy, modify, and redistribute it under the terms in [`LICENSE`](LICENSE).
+**Note on License:**
+This repository does not contain a license. Under standard copyright law, in the absence of an explicit license, the author (beer-sakthai) retains all ownership and exclusive copyright over the codebase. You may not copy, distribute, modify, create derivative works from, or use this code for any purpose without explicit written permission from the owner. Viewers may only read and fork the code under GitHub's Terms of Service.
+
 
 ## References
 
