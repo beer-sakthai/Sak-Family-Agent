@@ -226,6 +226,7 @@ red CI. One task at a time: local gate → commit → push → wait for CI green
 ---
 
 ## Log
+- 2026-06-18 — Re-derived Hugging Face operations (hf.py) and Docker sandboxing (sandbox.py, Dockerfile.sandbox) from v1 blueprint; registered CLI commands and `--sandbox` run flag; created comprehensive test suites; formatting, lint, strict mypy, bandit, and pytest all green.
 - 2026-06-18 — Full CI gate run, all green on Python 3.14 (ruff ✓, format ✓,
   mypy strict ✓, bandit ✓, pytest 668 passed / 1 skipped [streamlit] / 2 deselected
   [integration]). No section fails. Added Phase 13 (local-run reliability + CI breadth)
