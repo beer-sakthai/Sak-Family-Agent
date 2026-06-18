@@ -82,4 +82,9 @@ jobs:
       # throwaway home. No API key or network needed; exits non-zero if any
       # surface is broken.
       - name: Smoke test (live CLI + MCP)
+        # The dry-run agent preflight only resolves provider/credentials/model/
+        # tools — it makes no API call — so a dummy key is enough to satisfy
+        # credential resolution on a runner that has none.
+        env:
+          ANTHROPIC_API_KEY: dummy-key-no-network-call
         run: uv run python .claude/skills/run-sakthai-agent-v2/driver.py
