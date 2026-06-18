@@ -8,7 +8,6 @@ Python interpreter running the server.
 
 from __future__ import annotations
 
-import select
 import subprocess
 import sys
 from pathlib import Path
@@ -236,9 +235,11 @@ def test_readline_raises_on_select_timeout() -> None:
     mock_proc = MagicMock()
     client._proc = mock_proc
 
-    with patch("select.select", return_value=([], [], [])):
-        with pytest.raises(MCPClientError, match="timed out"):
-            client._readline()
+    with (
+        patch("select.select", return_value=([], [], [])),
+        pytest.raises(MCPClientError, match="timed out"),
+    ):
+        client._readline()
 
 
 def test_read_response_skips_empty_lines() -> None:

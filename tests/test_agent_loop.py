@@ -4,10 +4,9 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Any
+from unittest.mock import patch
 
 import pytest
-
-from unittest.mock import patch
 
 from sakthai.agent.loop import (
     AgentError,
@@ -1481,14 +1480,14 @@ def test_caveman_combined_with_existing_skills_block(
 
 
 def test_strip_code_fence_no_closing_fence() -> None:
-    text = "```json\n{\"key\": \"value\"}"
+    text = '```json\n{"key": "value"}'
     result = _strip_code_fence(text)
     # No closing ``` — original (stripped) returned unchanged
     assert result == text.strip()
 
 
 def test_strip_code_fence_with_closing_fence() -> None:
-    text = "```json\n{\"key\": \"value\"}\n```"
+    text = '```json\n{"key": "value"}\n```'
     result = _strip_code_fence(text)
     assert result == '{"key": "value"}'
 
@@ -1527,9 +1526,7 @@ def test_parse_slash_command_finds_command_file(
 
     cmd_dir = tmp_path / "my-plugin" / "commands"
     cmd_dir.mkdir(parents=True)
-    (cmd_dir / "my-cmd.md").write_text(
-        "Do something with $ARGUMENTS", encoding="utf-8"
-    )
+    (cmd_dir / "my-cmd.md").write_text("Do something with $ARGUMENTS", encoding="utf-8")
     monkeypatch.setattr(loop_mod, "default_skill_roots", lambda: [tmp_path])
 
     result = _parse_slash_command("/my-plugin:my-cmd some args")
@@ -1607,9 +1604,7 @@ def test_parse_slash_command_returns_none_on_read_error(
 
 
 def test_save_session_log_handles_write_error(store: MemoryStore) -> None:
-    result = AgentResult(
-        text="done", iterations=1, stop_reason="end_turn", tool_calls=[], usage={}
-    )
+    result = AgentResult(text="done", iterations=1, stop_reason="end_turn", tool_calls=[], usage={})
     with patch("pathlib.Path.write_text", side_effect=OSError("disk full")):
         # Should not raise — failure is best-effort
         _save_session_log("test task", "claude-sonnet-4-6", [], result)
@@ -1628,7 +1623,9 @@ def test_run_agent_renames_ollama_provider_to_openai(
 
     import sakthai.agent.loop as loop_mod
 
-    def _fake_openai_compat(client: object, model: str, *args: object, **kwargs: object) -> _ProvResponse:
+    def _fake_openai_compat(
+        client: object, model: str, *args: object, **kwargs: object
+    ) -> _ProvResponse:
         called["openai"] = True
         return _ProvResponse("end_turn", [_Block(type="text", text="ok")])
 
@@ -1650,7 +1647,9 @@ def test_run_agent_openai_defaults_model_to_gpt4o(
 
     import sakthai.agent.loop as loop_mod
 
-    def _fake_openai_compat(client: object, model: str, *args: object, **kwargs: object) -> _ProvResponse:
+    def _fake_openai_compat(
+        client: object, model: str, *args: object, **kwargs: object
+    ) -> _ProvResponse:
         captured["model"] = model
         return _ProvResponse("end_turn", [_Block(type="text", text="ok")])
 
@@ -1673,7 +1672,9 @@ def test_run_agent_openai_defaults_model_to_qwen_when_ollama_host(
 
     import sakthai.agent.loop as loop_mod
 
-    def _fake_openai_compat(client: object, model: str, *args: object, **kwargs: object) -> _ProvResponse:
+    def _fake_openai_compat(
+        client: object, model: str, *args: object, **kwargs: object
+    ) -> _ProvResponse:
         captured["model"] = model
         return _ProvResponse("end_turn", [_Block(type="text", text="ok")])
 
