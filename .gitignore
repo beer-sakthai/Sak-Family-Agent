@@ -21,6 +21,7 @@ web-dashboard/
 .mypy_cache/
 .ruff_cache/
 .coverage
+coverage.json
 htmlcov/
 
 # Local config / secrets
