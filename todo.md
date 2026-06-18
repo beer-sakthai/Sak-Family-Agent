@@ -210,14 +210,13 @@ red CI. One task at a time: local gate → commit → push → wait for CI green
       `[Errno 111] Connection refused` from `sakthai run -p ollama` on hosts where
       `localhost`→IPv6 `::1` but Ollama binds IPv4-only. 2 regression tests
       (default-is-IPv4 + env honoured/slash-stripped) in test_config_reports.py.
-- [ ] 13.2 — Surface text-emitted tool calls: when a weak local model ends a turn
-      (`stop_reason=end_turn`) with final text that is actually a tool-call-shaped
-      JSON blob it failed to emit as a real `tool_use`, the loop silently returns
-      success and stores nothing (observed with llama3.2, 2026-06-18). In the
-      terminal-stop branch of `run_agent` (`sakthai/agent/loop.py` ~line 293),
-      detect un-dispatched tool-call JSON in the final text and emit a warning via
-      `notify(...)` (don't hard-fail — it's model-quality, not an app error).
-      Add a unit test with a stubbed client returning such a response.
+- [x] 13.2 — Surface text-emitted tool calls — 2026-06-18: added
+      `_detect_untriggered_tool_call()` (conservative — parses JSON, optionally
+      strips a markdown fence, matches OpenAI/`name`/`tool`/`function` shapes, and
+      only fires when the named tool is *registered*). The terminal-stop branch of
+      `run_agent` now logs a warning + emits a `tool_call_in_text` event without
+      hard-failing (model quality, not an app error); nothing is dispatched. 11
+      tests (positive/negative parametrized + an end-to-end run).
 - [ ] 13.3 — Widen CI Python matrix: add `"3.13"` to
       `.github/workflows/ci.yml:33` (`["3.11", "3.12"]`). The full gate already
       passes clean on 3.14 locally, so 3.13 is low-risk and catches newer-Python
