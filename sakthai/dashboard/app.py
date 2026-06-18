@@ -16,9 +16,9 @@ coverage omits it; a guarded smoke test exercises the figure builders.
 
 from __future__ import annotations
 
-import html
 import datetime
 import hashlib
+import html
 import itertools
 import math
 import os
@@ -409,7 +409,9 @@ def _render_chat(data: dict[str, Any]) -> None:
         st.subheader("Thought Process")
         steps_html: list[str] = []
         for group in data["chat"]["thought_process"]:
-            details = "".join(f"<div style='color:#94a3b8;'>• {html.escape(str(s))}</div>" for s in group["steps"])
+            details = "".join(
+                f"<div style='color:#94a3b8;'>• {html.escape(str(s))}</div>" for s in group["steps"]
+            )
             steps_html.append(
                 f"<div style='margin-bottom:14px;'>"
                 f"<b style='color:#e2e8f0;'>{html.escape(str(group['group']))}</b>{details}</div>"
@@ -888,7 +890,9 @@ def _render_skills(catalog: list[dict[str, Any]]) -> None:
                 desc = (skill["description"] or "").replace("\n", " ").strip()
                 if len(desc) > 140:
                     desc = desc[:139] + "…"
-                desc_html = html.escape(desc) if desc else '<em style="color:#64748b">No description.</em>'
+                desc_html = (
+                    html.escape(desc) if desc else '<em style="color:#64748b">No description.</em>'
+                )
                 source_color = "#10b981" if skill.get("source") == "skills" else "#a855f7"
                 tags_html = "".join(
                     f'<span style="font-size:0.7em; background:rgba(59,130,246,0.12); '
