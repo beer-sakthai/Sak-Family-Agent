@@ -59,7 +59,7 @@ root with `SAKTHAI_HOME`):
    - Agent: `run "<task>"` (with `--model`, `--max-tokens`, `--max-iterations`, `--verbose`, `--no-mcp`)
    - Server: `mcp` (start MCP stdio server)
    - Cycle: `cycle status|next|set|list`
-   - Skills: `skills list|show|validate`
+   - Skills: `skills list|show|validate|create|sync-hermes`
    - Extensions: `extensions add|list|remove`
    - Sessions: `sessions list|show|export`
    - System: `doctor`, `setup`, `status`, `tools`
