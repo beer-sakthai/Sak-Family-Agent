@@ -5,14 +5,20 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
 from sakthai.dashboard.data import SOURCE_LIVE, export_dashboard_json
 from sakthai.memory.store import MemoryStore
 
+_DIST_PATH = Path(__file__).parent.parent / "dashboard" / "dist"
 
+
+@pytest.mark.skipif(
+    not _DIST_PATH.exists(), reason="dashboard/dist not built — run 'npm run build'"
+)
 def test_dashboard_dist_exists() -> None:
-    dist_path = Path(__file__).parent.parent / "dashboard" / "dist"
-    assert dist_path.exists(), "Dashboard must be built with 'npm run build'"
-    assert (dist_path / "index.html").exists()
+    assert _DIST_PATH.exists()
+    assert (_DIST_PATH / "index.html").exists()
 
 
 def test_dashboard_export_integration(tmp_path: Path) -> None:

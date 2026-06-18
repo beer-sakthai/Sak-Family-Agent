@@ -15,6 +15,9 @@ logger = logging.getLogger(__name__)
 
 SOURCE_LIVE = "live"
 SOURCE_DEMO = "demo"
+SOURCE_EMPTY = "empty"
+
+_TASK_MAX_LEN = 80
 
 _DAY = 86400
 _WEEK = 7 * _DAY
@@ -202,12 +205,24 @@ def _load_session(path: Path) -> dict[str, Any] | None:
 
 
 def collect_session_data(sessions_path: Path | None = None) -> dict[str, Any]:
+    _empty: dict[str, Any] = {
+        "source": SOURCE_EMPTY,
+        "totals": {"sessions": 0, "total_tokens": 0, "input_tokens": 0, "output_tokens": 0},
+        "by_model": [],
+        "by_day": {"labels": [], "tokens": []},
+        "recent_sessions": [],
+    }
     base = Path(sessions_path) if sessions_path is not None else sessions_dir()
     if not base.is_dir():
-        return {"totals": {"sessions": 0, "total_tokens": 0}, "recent_sessions": []}
+        return _empty
 
     sessions: list[dict[str, Any]] = []
     total_tokens = 0
+    total_input = 0
+    total_output = 0
+    model_stats: dict[str, dict[str, Any]] = {}
+    day_stats: dict[str, int] = {}
+
     for path in sorted(base.glob("*.json"), reverse=True)[:100]:
         data = _load_session(path)
         if data is None:
@@ -216,20 +231,47 @@ def collect_session_data(sessions_path: Path | None = None) -> dict[str, Any]:
         result = data.get("result") or {}
         ts = int(data.get("timestamp") or 0)
         tokens = int(usage.get("total_tokens") or 0)
+        input_tokens = int(usage.get("input_tokens") or 0)
+        output_tokens = int(usage.get("output_tokens") or 0)
         total_tokens += tokens
+        total_input += input_tokens
+        total_output += output_tokens
+        model = str(data.get("model") or "unknown")
+        if model not in model_stats:
+            model_stats[model] = {"model": model, "sessions": 0, "total_tokens": 0}
+        model_stats[model]["sessions"] += 1
+        model_stats[model]["total_tokens"] += tokens
+        if ts:
+            day = _fmt_date(ts)
+            day_stats[day] = day_stats.get(day, 0) + tokens
+        task = str(data.get("task") or "")
+        if len(task) > _TASK_MAX_LEN:
+            task = task[:_TASK_MAX_LEN] + "…"
         sessions.append(
             {
                 "date": _fmt_date(ts) if ts else "",
-                "model": str(data.get("model") or "unknown"),
-                "task": str(data.get("task") or ""),
+                "model": model,
+                "task": task,
                 "total_tokens": tokens,
                 "iterations": int(result.get("iterations") or 0),
                 "stop_reason": str(result.get("stop_reason") or ""),
             }
         )
 
+    if not sessions:
+        return _empty
+
+    sorted_days = sorted(day_stats.keys())
     return {
-        "totals": {"sessions": len(sessions), "total_tokens": total_tokens},
+        "source": SOURCE_LIVE,
+        "totals": {
+            "sessions": len(sessions),
+            "total_tokens": total_tokens,
+            "input_tokens": total_input,
+            "output_tokens": total_output,
+        },
+        "by_model": sorted(model_stats.values(), key=lambda m: -int(m["total_tokens"])),
+        "by_day": {"labels": sorted_days, "tokens": [day_stats[d] for d in sorted_days]},
         "recent_sessions": sessions[:20],
     }
 

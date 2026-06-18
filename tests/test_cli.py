@@ -816,67 +816,48 @@ def test_dashboard_rejects_bad_port(runner: CliRunner) -> None:
     assert "not a valid port" in result.output
 
 
-def test_dashboard_launch_success(runner: CliRunner) -> None:
-    import sys
-    from unittest.mock import MagicMock, patch
-
-    has_original = "streamlit" in sys.modules
-    original_module = sys.modules.get("streamlit")
-    sys.modules["streamlit"] = MagicMock()
-
-    try:
-        with patch("subprocess.call", return_value=0) as mock_call:
-            result = runner.invoke(main, ["dashboard", "--port", "8502", "--no-open"])
-            assert result.exit_code == 0
-            assert mock_call.called
-            cmd_args = mock_call.call_args[0][0]
-            assert "streamlit" in cmd_args
-            assert "run" in cmd_args
-            assert "--server.port" in cmd_args
-            assert "8502" in cmd_args
-            assert "true" in cmd_args  # headless true since --no-open
-    finally:
-        if has_original:
-            sys.modules["streamlit"] = original_module
-        else:
-            sys.modules.pop("streamlit", None)
-
-
-def test_dashboard_launch_keyboard_interrupt(runner: CliRunner) -> None:
-    import sys
-    from unittest.mock import MagicMock, patch
-
-    has_original = "streamlit" in sys.modules
-    original_module = sys.modules.get("streamlit")
-    sys.modules["streamlit"] = MagicMock()
-
-    try:
-        with patch("subprocess.call", side_effect=KeyboardInterrupt):
-            result = runner.invoke(main, ["dashboard", "--port", "8502"])
-            assert result.exit_code == 0
-            assert "stopped." in result.output
-    finally:
-        if has_original:
-            sys.modules["streamlit"] = original_module
-        else:
-            sys.modules.pop("streamlit", None)
-
-
-def test_dashboard_launch_missing_streamlit(runner: CliRunner) -> None:
-    import builtins
+def test_dashboard_launch_success(runner: CliRunner, tmp_path: Path) -> None:
     from unittest.mock import patch
 
-    original_import = builtins.__import__
+    dist = tmp_path / "dist"
+    dist.mkdir()
 
-    def mock_import(name, *args, **kwargs):
-        if name == "streamlit":
-            raise ImportError("mocked streamlit import error")
-        return original_import(name, *args, **kwargs)
+    with (
+        patch("sakthai.cli.dashboard._get_dist_path", return_value=dist),
+        patch("sakthai.cli.dashboard._serve_dashboard") as mock_serve,
+        patch("sakthai.dashboard.data.export_dashboard_json"),
+    ):
+        result = runner.invoke(main, ["dashboard", "--port", "8502", "--no-open"])
+        assert result.exit_code == 0
+        assert mock_serve.called
+        assert mock_serve.call_args[0][0] == 8502
+        assert mock_serve.call_args[0][1] is False  # open_browser=False
 
-    with patch("builtins.__import__", side_effect=mock_import):
+
+def test_dashboard_launch_keyboard_interrupt(runner: CliRunner, tmp_path: Path) -> None:
+    from unittest.mock import patch
+
+    dist = tmp_path / "dist"
+    dist.mkdir()
+
+    with (
+        patch("sakthai.cli.dashboard._get_dist_path", return_value=dist),
+        patch("sakthai.cli.dashboard._serve_dashboard", side_effect=KeyboardInterrupt),
+        patch("sakthai.dashboard.data.export_dashboard_json"),
+    ):
+        result = runner.invoke(main, ["dashboard", "--port", "8502"])
+        assert result.exit_code == 0
+        assert "stopped." in result.output
+
+
+def test_dashboard_launch_missing_dist(runner: CliRunner, tmp_path: Path) -> None:
+    from unittest.mock import patch
+
+    missing = tmp_path / "no-dist"
+    with patch("sakthai.cli.dashboard._get_dist_path", return_value=missing):
         result = runner.invoke(main, ["dashboard"])
         assert result.exit_code != 0
-        assert "streamlit is not installed" in result.output
+        assert "build artifacts not found" in result.output
 
 
 def test_run_dry_run_reports_and_exits_zero(

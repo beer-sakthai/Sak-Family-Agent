@@ -12,6 +12,16 @@ from pathlib import Path
 import click
 
 
+def _get_dist_path() -> Path:
+    return Path(__file__).parent.parent.parent / "dashboard" / "dist"
+
+
+def _validate_port(ctx: click.Context, param: click.Parameter, value: int) -> int:
+    if not (1024 <= value <= 65535):
+        raise click.BadParameter("not a valid port (must be 1024-65535)")
+    return value
+
+
 def _serve_dashboard(port: int, open_browser: bool, dist_path: Path) -> None:
     """Simple HTTP server to serve the static dashboard files."""
     os.chdir(dist_path)
@@ -33,7 +43,14 @@ def _serve_dashboard(port: int, open_browser: bool, dist_path: Path) -> None:
 
 
 @click.command()
-@click.option("--port", "-p", default=3000, type=int, help="Port to serve on (default: 3000).")
+@click.option(
+    "--port",
+    "-p",
+    default=3000,
+    type=int,
+    callback=_validate_port,
+    help="Port to serve on (default: 3000).",
+)
 @click.option(
     "--open/--no-open",
     "open_browser",
@@ -56,7 +73,7 @@ def dashboard(port: int, open_browser: bool, export_path: str | None) -> None:
         click.echo(f"snapshot: {written}")
         return
 
-    dist_path = Path(__file__).parent.parent.parent / "dashboard" / "dist"
+    dist_path = _get_dist_path()
     if not dist_path.exists():
         raise click.ClickException(
             "Dashboard build artifacts not found. Please run 'npm run build' in the dashboard directory."
@@ -65,25 +82,7 @@ def dashboard(port: int, open_browser: bool, export_path: str | None) -> None:
     # Export live data to the dist folder so the dashboard can fetch it
     export_dashboard_json(dist_path / "data.json", memory_db_path())
 
-    _serve_dashboard(port, open_browser, dist_path)
-    app_path = Path(__file__).parent.parent / "dashboard" / "app.py"
-    cmd = [
-        sys.executable,
-        "-m",
-        "streamlit",
-        "run",
-        str(app_path),
-        "--server.address",
-        "127.0.0.1",
-        "--server.port",
-        str(port),
-        "--server.headless",
-        "false" if open_browser else "true",
-        "--browser.gatherUsageStats",
-        "false",
-    ]
-    click.echo(f"dashboard: http://localhost:{port}  (Ctrl-C to stop)")
     try:
-        sys.exit(subprocess.call(cmd))  # nosec B603 — fixed argv, no shell
+        _serve_dashboard(port, open_browser, dist_path)
     except KeyboardInterrupt:
         click.echo("\nstopped.")
