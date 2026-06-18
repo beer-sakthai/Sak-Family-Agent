@@ -78,3 +78,44 @@ def test_cli_hf_missing_dependency_message(monkeypatch: pytest.MonkeyPatch) -> N
     r = CliRunner().invoke(main, ["hf", "info", "org/model"])
     assert r.exit_code != 0
     assert "huggingface_hub is not installed" in r.output
+
+
+def test_hf_info_raises_exception_on_error() -> None:
+    """Verify that hf_info propagates exceptions from the hub."""
+
+    def mock_model_info(repo_id: str) -> Any:
+        raise RuntimeError("API Error")
+
+    fake = SimpleNamespace(model_info=mock_model_info)
+
+    with (
+        patch("sakthai.hf._hub", return_value=fake),
+        pytest.raises(RuntimeError, match="API Error"),
+    ):
+        hf_info("org/model")
+
+
+def test_hf_download_raises_exception_on_error() -> None:
+    """Verify that hf_download propagates exceptions from the hub."""
+
+    def mock_snapshot_download(repo_id: str, local_dir: str) -> Any:
+        raise RuntimeError("Download failed")
+
+    fake = SimpleNamespace(snapshot_download=mock_snapshot_download)
+
+    with (
+        patch("sakthai.hf._hub", return_value=fake),
+        pytest.raises(RuntimeError, match="Download failed"),
+    ):
+        hf_download("org/model")
+
+
+def test_hf_info_handles_missing_tags() -> None:
+    """Verify that hf_info handles None tags gracefully."""
+    fake = SimpleNamespace(
+        model_info=lambda repo_id: SimpleNamespace(id=repo_id, downloads=0, likes=0, tags=None)
+    )
+    with patch("sakthai.hf._hub", return_value=fake):
+        out = hf_info("org/model")
+    assert "tags:      " in out
+    assert "tags:      ," not in out
