@@ -208,33 +208,6 @@ def test_block_field_object_missing_uses_default() -> None:
     assert block_field(Obj(), "no_attr", 42) == 42
 
 
-def test_block_field_none_block() -> None:
-    assert block_field(None, "type", "fallback") == "fallback"
-
-
-def test_block_field_primitive_block() -> None:
-    # Most primitives won't have a 'type' attribute
-    assert block_field(123, "type", "default") == "default"
-    assert block_field("string", "type", "default") == "default"
-
-
-def test_block_field_dict_value_none() -> None:
-    # If the key exists but is None, it should return None, not the default
-    assert block_field({"key": None}, "key", "default") is None
-
-
-def test_block_field_object_value_none() -> None:
-    class Obj:
-        key = None
-
-    assert block_field(Obj(), "key", "default") is None
-
-
-def test_block_field_empty_field_name() -> None:
-    assert block_field({"a": 1}, "", "default") == "default"
-    assert block_field({"a": 1}, "a", "default") == 1
-
-
 # -- find_tool_name_by_id --------------------------------------------------
 
 

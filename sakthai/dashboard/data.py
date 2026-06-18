@@ -1,11 +1,4 @@
-"""Data layer for the dashboard.
-
-:func:`collect_dashboard_data` reads the SQLite memory store and assembles an
-honest snapshot of what's actually there — KPIs, a cumulative growth series,
-recent facts, top observations, and a per-kind category breakdown. On an empty
-or unreadable store it returns a small ``demo`` sample so the UI still renders,
-with ``source`` flagging which case occurred.
-"""
+"""Dashboard data collection and snapshot export."""
 
 from __future__ import annotations
 
@@ -16,66 +9,53 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from ..config import sessions_dir
+
 logger = logging.getLogger(__name__)
 
 SOURCE_LIVE = "live"
 SOURCE_DEMO = "demo"
+SOURCE_EMPTY = "empty"
 
-# Generous read caps: enough to cover a real store without unbounded loads.
-_FACTS_LIMIT = 1000
-_OBS_LIMIT = 200
+_TASK_MAX_LEN = 80
 
-_DAY = 86_400
+_DAY = 86400
 _WEEK = 7 * _DAY
+_FACTS_LIMIT = 2000
+_OBS_LIMIT = 500
 
-# Per-kind colours for the category breakdown; unknown kinds cycle the fallback.
 _KIND_COLORS = {
-    "pref": "#a855f7",
-    "preference": "#a855f7",
-    "note": "#3b82f6",
-    "fact": "#22d3ee",
-    "project": "#34d399",
-    "profile": "#34d399",
-    "skill": "#f59e0b",
-    "decision": "#f472b6",
-    "lesson": "#f59e0b",
+    "pref": "#d9b54a",
+    "note": "#c9813f",
+    "project": "#3b82f6",
+    "profile": "#10b981",
+    "skill": "#a855f7",
 }
-_FALLBACK_COLORS = ["#a855f7", "#3b82f6", "#22d3ee", "#f472b6", "#34d399", "#f59e0b"]
+_FALLBACK_COLORS = ["#94a3b8", "#64748b", "#475569", "#334155", "#1e293b"]
 
-# Sections the store has no real backing source for yet (evolution telemetry and
-# the chat "thought process" panel). They render from this illustrative content
-# on both the live and demo paths so every page of the rich UI has something to
-# show. Kept as plain dicts so the data layer stays UI-free and unit-testable.
 DEMO_EVOLUTION: dict[str, Any] = {
     "current_version": "v2.0",
     "performance_gain": "+21%",
     "runs": 12,
     "success_rate": 93.0,
-    "history": [
-        {
-            "version": "v2.0",
-            "date": "Jun 14, 2026",
-            "success": 93.0,
-            "gain": "+21%",
-            "latest": True,
-        },
-        {"version": "v1.9", "date": "Jun 06, 2026", "success": 90.5, "gain": "+17%"},
-        {"version": "v1.8", "date": "May 28, 2026", "success": 88.1, "gain": "+12%"},
-        {"version": "v1.7", "date": "May 19, 2026", "success": 85.4, "gain": "+8%"},
-    ],
-    "before_after": {
-        "accuracy": {"before": 76.0, "after": 93.0},
-        "latency": {"before": 1340, "after": 790},
-    },
     "neural_focus": [
         {"name": "Context recall", "pct": 91},
         {"name": "Response accuracy", "pct": 93},
         {"name": "Tool selection", "pct": 88},
+        {"name": "Knowledge integration", "pct": 85},
+        {"name": "Latency reduction", "pct": 82},
     ],
 }
 
 DEMO_CHAT: dict[str, Any] = {
     "confidence": 96,
+    "messages": [
+        {"role": "user", "text": "What is my favorite programming language?"},
+        {
+            "role": "agent",
+            "text": "Based on our past interactions, your favorite programming language is Python.",
+        },
+    ],
     "thought_process": [
         {
             "group": "Memory retrieval",
@@ -96,6 +76,8 @@ DEMO_DATA: dict[str, Any] = {
         "total_facts_delta": 5,
         "total_observations": 2,
         "total_observations_delta": 2,
+        "sessions": 0,
+        "total_tokens": 0,
     },
     "growth": {
         "labels": [f"Day {i}" for i in range(1, 8)],
@@ -113,26 +95,11 @@ DEMO_DATA: dict[str, Any] = {
         {"summary": "Prefers Python for data tasks", "weight": 0.95},
         {"summary": "Most active in the evening", "weight": 0.80},
     ],
-    "categories": [
-        {"name": "Pref", "count": 2, "color": _KIND_COLORS["pref"]},
-        {"name": "Profile", "count": 1, "color": _KIND_COLORS["profile"]},
-        {"name": "Note", "count": 1, "color": _KIND_COLORS["note"]},
-        {"name": "Project", "count": 1, "color": _KIND_COLORS["project"]},
-        {"name": "Observations", "count": 2, "color": "#f472b6"},
-    ],
-    "graph": {
-        "categories": [
-            {"name": "Pref", "count": 2, "color": _KIND_COLORS["pref"]},
-            {"name": "Profile", "count": 1, "color": _KIND_COLORS["profile"]},
-            {"name": "Note", "count": 1, "color": _KIND_COLORS["note"]},
-            {"name": "Project", "count": 1, "color": _KIND_COLORS["project"]},
-            {"name": "Observations", "count": 2, "color": "#f472b6"},
-        ],
-        "total_nodes": 7,
-        "connections": 12,
-    },
+    "categories": [],
     "evolution": DEMO_EVOLUTION,
     "chat": DEMO_CHAT,
+    "skills": [],
+    "recent_sessions": [],
 }
 
 
@@ -152,7 +119,7 @@ def collect_dashboard_data(db_path: Path | None = None, days: int = 30) -> dict[
         with MemoryStore(db_path) as store:
             facts = store.list_facts(limit=_FACTS_LIMIT)
             observations = store.top_observations(limit=_OBS_LIMIT)
-    except Exception as exc:  # noqa: BLE001 — unreadable store → demo data
+    except Exception as exc:  # noqa: BLE001
         logger.warning("Could not read MemoryStore (%s); using demo data", exc)
         return dict(DEMO_DATA)
 
@@ -171,8 +138,6 @@ def collect_dashboard_data(db_path: Path | None = None, days: int = 30) -> dict[
     for d in range(days):
         day_end = start + (d + 1) * _DAY
         labels.append(_fmt_date(day_end - _DAY))
-        # Inclusive: the final bucket ends at `now`, so facts created this very
-        # second still count toward the latest cumulative total.
         fact_series.append(sum(1 for f in facts if f.created_at <= day_end))
         obs_series.append(sum(1 for o in observations if o.created_at <= day_end))
 
@@ -190,6 +155,13 @@ def collect_dashboard_data(db_path: Path | None = None, days: int = 30) -> dict[
     if observations:
         categories.append({"name": "Observations", "count": len(observations), "color": "#f472b6"})
 
+    session_data = collect_session_data()
+
+    from ..config import LIBRARY_DIR, SKILLS_DIR
+    from ..skills import build_catalog
+
+    skills = build_catalog(SKILLS_DIR, LIBRARY_DIR)
+
     return {
         "generated_at": _fmt_date(now),
         "source": SOURCE_LIVE,
@@ -198,6 +170,8 @@ def collect_dashboard_data(db_path: Path | None = None, days: int = 30) -> dict[
             "total_facts_delta": facts_this_week,
             "total_observations": len(observations),
             "total_observations_delta": obs_this_week,
+            "sessions": session_data.get("totals", {}).get("sessions", 0),
+            "total_tokens": session_data.get("totals", {}).get("total_tokens", 0),
         },
         "growth": {"labels": labels, "facts": fact_series, "observations": obs_series},
         "recent_facts": [
@@ -208,31 +182,20 @@ def collect_dashboard_data(db_path: Path | None = None, days: int = 30) -> dict[
                 "value": f.value,
                 "created": _fmt_date(f.created_at),
             }
-            for f in facts[:8]
+            for f in facts[:10]
         ],
         "top_observations": [
             {"summary": o.summary, "weight": round(o.weight, 2)} for o in observations[:6]
         ],
         "categories": categories,
-        "graph": {
-            "categories": categories,
-            "total_nodes": len(facts) + len(observations),
-            "connections": len(facts) * 2 + len(observations),
-        },
-        # No real telemetry source yet — illustrative content keeps these pages
-        # populated even against a live store.
         "evolution": DEMO_EVOLUTION,
         "chat": DEMO_CHAT,
+        "skills": skills,
+        "recent_sessions": session_data.get("recent_sessions", []),
     }
 
 
-_SESSIONS_SCAN_LIMIT = 5000
-_RECENT_SESSIONS = 20
-_TASK_PREVIEW_CHARS = 80
-
-
 def _load_session(path: Path) -> dict[str, Any] | None:
-    """Load one session-log JSON, returning None on any read/parse failure."""
     try:
         with path.open(encoding="utf-8") as fh:
             data = json.load(fh)
@@ -242,105 +205,78 @@ def _load_session(path: Path) -> dict[str, Any] | None:
 
 
 def collect_session_data(sessions_path: Path | None = None) -> dict[str, Any]:
-    """Aggregate the agent session logs into a dashboard-ready snapshot.
-
-    Reads the JSON logs ``run_agent`` writes (task/model/usage/timestamp),
-    aggregating sessions and token usage by day and by model, plus a list of the
-    most recent runs. Returns ``source: "empty"`` with zeroed structures when
-    there are no readable logs, so the UI always has something to render.
-    """
-    from sakthai.config import sessions_dir
-
-    base = Path(sessions_path) if sessions_path is not None else sessions_dir()
-    empty: dict[str, Any] = {
-        "source": "empty",
-        "totals": {"sessions": 0, "input_tokens": 0, "output_tokens": 0, "total_tokens": 0},
-        "by_day": {"labels": [], "sessions": [], "tokens": []},
+    _empty: dict[str, Any] = {
+        "source": SOURCE_EMPTY,
+        "totals": {"sessions": 0, "total_tokens": 0, "input_tokens": 0, "output_tokens": 0},
         "by_model": [],
+        "by_day": {"labels": [], "tokens": []},
         "recent_sessions": [],
     }
+    base = Path(sessions_path) if sessions_path is not None else sessions_dir()
     if not base.is_dir():
-        return empty
+        return _empty
 
     sessions: list[dict[str, Any]] = []
-    for path in sorted(base.glob("*.json"), reverse=True)[:_SESSIONS_SCAN_LIMIT]:
+    total_tokens = 0
+    total_input = 0
+    total_output = 0
+    model_stats: dict[str, dict[str, Any]] = {}
+    day_stats: dict[str, int] = {}
+
+    for path in sorted(base.glob("*.json"), reverse=True)[:100]:
         data = _load_session(path)
         if data is None:
             continue
         usage = data.get("usage") or {}
         result = data.get("result") or {}
         ts = int(data.get("timestamp") or 0)
+        tokens = int(usage.get("total_tokens") or 0)
+        input_tokens = int(usage.get("input_tokens") or 0)
+        output_tokens = int(usage.get("output_tokens") or 0)
+        total_tokens += tokens
+        total_input += input_tokens
+        total_output += output_tokens
+        model = str(data.get("model") or "unknown")
+        if model not in model_stats:
+            model_stats[model] = {"model": model, "sessions": 0, "total_tokens": 0}
+        model_stats[model]["sessions"] += 1
+        model_stats[model]["total_tokens"] += tokens
+        if ts:
+            day = _fmt_date(ts)
+            day_stats[day] = day_stats.get(day, 0) + tokens
+        task = str(data.get("task") or "")
+        if len(task) > _TASK_MAX_LEN:
+            task = task[:_TASK_MAX_LEN] + "…"
         sessions.append(
             {
-                "timestamp": ts,
                 "date": _fmt_date(ts) if ts else "",
-                "model": str(data.get("model") or "unknown"),
-                "task": str(data.get("task") or ""),
-                "input_tokens": int(usage.get("input_tokens") or 0),
-                "output_tokens": int(usage.get("output_tokens") or 0),
-                "total_tokens": int(usage.get("total_tokens") or 0),
+                "model": model,
+                "task": task,
+                "total_tokens": tokens,
                 "iterations": int(result.get("iterations") or 0),
                 "stop_reason": str(result.get("stop_reason") or ""),
             }
         )
+
     if not sessions:
-        return empty
+        return _empty
 
-    sessions.sort(key=lambda s: s["timestamp"], reverse=True)
-
-    day_counts: dict[str, int] = {}
-    day_tokens: dict[str, int] = {}
-    model_counts: dict[str, int] = {}
-    model_tokens: dict[str, int] = {}
-    for s in sessions:
-        day = s["date"] or "unknown"
-        day_counts[day] = day_counts.get(day, 0) + 1
-        day_tokens[day] = day_tokens.get(day, 0) + s["total_tokens"]
-        model = s["model"]
-        model_counts[model] = model_counts.get(model, 0) + 1
-        model_tokens[model] = model_tokens.get(model, 0) + s["total_tokens"]
-
-    days_sorted = sorted(day_counts)
-    by_model = [
-        {"model": m, "sessions": model_counts[m], "total_tokens": model_tokens[m]}
-        for m in sorted(model_counts, key=lambda k: -model_tokens[k])
-    ]
-    recent = [
-        {
-            "date": s["date"],
-            "model": s["model"],
-            "task": (
-                s["task"][:_TASK_PREVIEW_CHARS] + "…"
-                if len(s["task"]) > _TASK_PREVIEW_CHARS
-                else s["task"]
-            ),
-            "total_tokens": s["total_tokens"],
-            "iterations": s["iterations"],
-            "stop_reason": s["stop_reason"],
-        }
-        for s in sessions[:_RECENT_SESSIONS]
-    ]
-
+    sorted_days = sorted(day_stats.keys())
     return {
         "source": SOURCE_LIVE,
         "totals": {
             "sessions": len(sessions),
-            "input_tokens": sum(s["input_tokens"] for s in sessions),
-            "output_tokens": sum(s["output_tokens"] for s in sessions),
-            "total_tokens": sum(s["total_tokens"] for s in sessions),
+            "total_tokens": total_tokens,
+            "input_tokens": total_input,
+            "output_tokens": total_output,
         },
-        "by_day": {
-            "labels": days_sorted,
-            "sessions": [day_counts[d] for d in days_sorted],
-            "tokens": [day_tokens[d] for d in days_sorted],
-        },
-        "by_model": by_model,
-        "recent_sessions": recent,
+        "by_model": sorted(model_stats.values(), key=lambda m: -int(m["total_tokens"])),
+        "by_day": {"labels": sorted_days, "tokens": [day_stats[d] for d in sorted_days]},
+        "recent_sessions": sessions[:20],
     }
 
 
 def export_dashboard_json(dest: Path, db_path: Path | None = None, days: int = 30) -> Path:
-    """Write a :func:`collect_dashboard_data` snapshot to ``dest`` as JSON."""
     dest = Path(dest)
     dest.parent.mkdir(parents=True, exist_ok=True)
     data = collect_dashboard_data(db_path, days=days)
