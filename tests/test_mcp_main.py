@@ -10,8 +10,8 @@ Two complementary tests:
 
 from __future__ import annotations
 
-import importlib
 import json
+import runpy
 import subprocess
 import sys
 from unittest.mock import patch
@@ -20,10 +20,7 @@ from unittest.mock import patch
 def test_mcp_main_guard_calls_serve() -> None:
     """Running the module as __main__ invokes serve() exactly once."""
     with patch("sakthai.mcp.server.serve") as mock_serve:
-        import sakthai.mcp.__main__ as main_mod  # noqa: F401 — side-effectful import
-
-        # The module already ran at import; re-run it via runpy to trigger the guard.
-        import runpy
+        import sakthai.mcp.__main__  # noqa: F401 — side-effectful import
 
         with patch("sakthai.mcp.__main__.serve", mock_serve):
             runpy.run_module("sakthai.mcp.__main__", run_name="__main__", alter_sys=False)
