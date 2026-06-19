@@ -860,6 +860,48 @@ def test_dashboard_launch_missing_dist(runner: CliRunner, tmp_path: Path) -> Non
         assert "build artifacts not found" in result.output
 
 
+def test_dashboard_live_endpoint(runner: CliRunner, tmp_path: Path) -> None:
+    """The /data.json endpoint regenerates a live snapshot on each request, and
+    static assets are served from the dist directory."""
+    import threading
+    import urllib.request
+
+    from sakthai.cli.dashboard import _make_server
+
+    dist = tmp_path / "dist"
+    dist.mkdir()
+    (dist / "index.html").write_text("<!doctype html><title>dash</title>", encoding="utf-8")
+
+    runner.invoke(main, ["learn", "favorite language is Python"])
+
+    httpd = _make_server(0, dist)
+    port = httpd.server_address[1]
+    thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+    thread.start()
+    try:
+        base = f"http://127.0.0.1:{port}"
+        with urllib.request.urlopen(f"{base}/data.json", timeout=5) as resp:  # noqa: S310
+            assert resp.headers["Content-Type"].startswith("application/json")
+            first = json.loads(resp.read())
+        assert first["source"] == "live"
+        assert first["kpis"]["total_facts"] == 1
+
+        # A second fact is reflected without restarting the server (real-time link).
+        runner.invoke(main, ["learn", "prefers concise replies"])
+        with urllib.request.urlopen(f"{base}/data.json", timeout=5) as resp:  # noqa: S310
+            second = json.loads(resp.read())
+        assert second["kpis"]["total_facts"] == 2
+
+        # Static assets still served from dist.
+        with urllib.request.urlopen(f"{base}/index.html", timeout=5) as resp:  # noqa: S310
+            assert resp.status == 200
+            assert b"dash" in resp.read()
+    finally:
+        httpd.shutdown()
+        httpd.server_close()
+        thread.join(timeout=5)
+
+
 def test_run_dry_run_reports_and_exits_zero(
     runner: CliRunner, monkeypatch: pytest.MonkeyPatch
 ) -> None:
