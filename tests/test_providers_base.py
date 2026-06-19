@@ -112,6 +112,34 @@ def test_not_retryable_no_status_attribute() -> None:
     assert not is_retryable(RuntimeError("generic"))
 
 
+def test_is_retryable_anthropic_connection_error() -> None:
+    import anthropic
+
+    # anthropic.APIConnectionError expects a message and a request
+    exc = anthropic.APIConnectionError(message="fail", request=None)
+    assert is_retryable(exc)
+
+
+def test_is_retryable_non_int_status() -> None:
+    exc = RuntimeError()
+    exc.status_code = "500"  # type: ignore[attr-defined]
+    assert not is_retryable(exc)
+
+
+def test_is_retryable_string_status_matching_retryable_set() -> None:
+    # This specifically tests that "500" (string) is NOT retryable
+    # even if 500 (int) is in the set.
+    exc = RuntimeError()
+    exc.status_code = "500"  # type: ignore[attr-defined]
+    assert not is_retryable(exc)
+
+
+def test_is_retryable_response_without_status_code() -> None:
+    exc = RuntimeError()
+    exc.response = object()  # type: ignore[attr-defined]
+    assert not is_retryable(exc)
+
+
 # -- with_retry ------------------------------------------------------------
 
 
