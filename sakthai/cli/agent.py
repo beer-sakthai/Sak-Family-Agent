@@ -106,74 +106,6 @@ def _run_in_sandbox(
     sys.exit(code)
 
 
-def _perform_dry_run(
-    model: str,
-    provider: str | None,
-    no_mcp: bool,
-    verbose: bool,
-) -> None:
-    """Execute preflight checks and print a report."""
-    with _tool_context(no_mcp=no_mcp, verbose=verbose) as tools:
-        report = preflight(model=model, provider=provider, tools=tools)
-    _print_preflight(report)
-    if not report["runnable"]:
-        raise click.ClickException(
-            f"Not runnable: no credentials found for provider {report['provider']!r}."
-        )
-
-
-def _execute_agent(
-    task: str,
-    model: str,
-    max_tokens: int,
-    max_iterations: int,
-    max_seconds: float | None,
-    provider: str | None,
-    verbose: bool,
-    no_mcp: bool,
-    with_skills: tuple[str, ...],
-    stream: bool,
-    fast: bool,
-    stateless: bool,
-    caveman: str | None,
-) -> None:
-    """Run the main agent loop and handle output."""
-    streamed = False
-
-    def _on_token(text: str) -> None:
-        nonlocal streamed
-        streamed = True
-        click.echo(text, nl=False)
-
-    try:
-        with _tool_context(no_mcp=no_mcp, verbose=verbose) as tools:
-            result = run_agent(
-                task,
-                model=model,
-                max_tokens=max_tokens,
-                max_iterations=max_iterations,
-                max_seconds=max_seconds,
-                on_event=_event_emitter(verbose),
-                on_token=_on_token if stream else None,
-                provider=provider,
-                tools=tools,
-                skills=list(with_skills),
-                fast=fast,
-                stateless=stateless,
-                caveman=caveman,
-            )
-    except AgentError as exc:
-        raise click.ClickException(str(exc)) from exc
-    except KeyboardInterrupt:
-        click.echo("\nInterrupted.", err=True)
-        sys.exit(130)
-
-    if streamed:
-        click.echo("")  # terminate the streamed line
-    else:
-        click.echo(result.text)
-
-
 @click.command()
 @click.argument("task")
 @click.option("--model", default=DEFAULT_MODEL, show_default=True, help="Model identifier.")
@@ -283,29 +215,47 @@ def run(
         )
 
     if dry_run:
-        _perform_dry_run(
-            model=model,
-            provider=provider,
-            no_mcp=no_mcp,
-            verbose=verbose,
-        )
+        with _tool_context(no_mcp=no_mcp, verbose=verbose) as tools:
+            report = preflight(model=model, provider=provider, tools=tools)
+        _print_preflight(report)
+        if not report["runnable"]:
+            raise click.ClickException(
+                f"Not runnable: no credentials found for provider {report['provider']!r}."
+            )
         return
+    streamed = False
 
-    _execute_agent(
-        task=task,
-        model=model,
-        max_tokens=max_tokens,
-        max_iterations=max_iterations,
-        max_seconds=max_seconds,
-        provider=provider,
-        verbose=verbose,
-        no_mcp=no_mcp,
-        with_skills=with_skills,
-        stream=stream,
-        fast=fast,
-        stateless=stateless,
-        caveman=caveman,
-    )
+    def _on_token(text: str) -> None:
+        nonlocal streamed
+        streamed = True
+        click.echo(text, nl=False)
+
+    try:
+        with _tool_context(no_mcp=no_mcp, verbose=verbose) as tools:
+            result = run_agent(
+                task,
+                model=model,
+                max_tokens=max_tokens,
+                max_iterations=max_iterations,
+                max_seconds=max_seconds,
+                on_event=_event_emitter(verbose),
+                on_token=_on_token if stream else None,
+                provider=provider,
+                tools=tools,
+                skills=list(with_skills),
+                fast=fast,
+                stateless=stateless,
+                caveman=caveman,
+            )
+    except AgentError as exc:
+        raise click.ClickException(str(exc)) from exc
+    except KeyboardInterrupt:
+        click.echo("\nInterrupted.", err=True)
+        sys.exit(130)
+    if streamed:
+        click.echo("")  # terminate the streamed line
+    else:
+        click.echo(result.text)
 
 
 @click.command()
