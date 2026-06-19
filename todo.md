@@ -216,19 +216,6 @@ red CI. One task at a time: local gate → commit → push → wait for CI green
       `run_agent` now logs a warning + emits a `tool_call_in_text` event without
       hard-failing (model quality, not an app error); nothing is dispatched. 11
       tests (positive/negative parametrized + an end-to-end run).
-- [ ] 13.3 — Widen CI Python matrix: add `"3.13"` to
-      `.github/workflows/ci.yml:33` (`["3.11", "3.12"]`). The full gate already
-      passes clean on 3.14 locally, so 3.13 is low-risk and catches newer-Python
-      regressions earlier. Refresh `uv.lock` / `requires-python` classifiers if CI
-      flags drift.
-- [ ] 13.2 — Surface text-emitted tool calls: when a weak local model ends a turn
-      (`stop_reason=end_turn`) with final text that is actually a tool-call-shaped
-      JSON blob it failed to emit as a real `tool_use`, the loop silently returns
-      success and stores nothing (observed with llama3.2, 2026-06-18). In the
-      terminal-stop branch of `run_agent` (`sakthai/agent/loop.py` ~line 293),
-      detect un-dispatched tool-call JSON in the final text and emit a warning via
-      `notify(...)` (don't hard-fail — it's model-quality, not an app error).
-      Add a unit test with a stubbed client returning such a response.
 - [x] 13.3 — Widen CI Python matrix — 2026-06-18: added `"3.13"` to the
       `.github/workflows/ci.yml` test matrix (now `["3.11", "3.12", "3.13"]`) and
       updated the CLAUDE.md prose. `requires-python = ">=3.11"` is open-ended with
@@ -236,7 +223,29 @@ red CI. One task at a time: local gate → commit → push → wait for CI green
 
 ---
 
+## Phase 14 — Distribution & integration (from 2026-06-19)
+Goal: package the model lifecycle, settle licensing, and document the agent's
+real surface area (MCP both ways, skills, the Hermes link).
+
+- [x] 14.1 — HF Jobs fine-tune pipeline — 2026-06-19: `training/hf-jobs/`
+      (persona + tool-calling QLoRA, dataset builders). Merged via PR #71.
+- [x] 14.2 — Serving paths — 2026-06-19: `training/serving/` (eval, Ollama export,
+      HF Inference Endpoint) so the agent can run on the fine-tuned model. PR #72.
+- [x] 14.3 — Licensing — 2026-06-19: removed the MIT `LICENSE`; switched to
+      all-rights-reserved across README/pyproject/SECURITY/CODE_OF_CONDUCT. PR #73.
+- [x] 14.4 — Docs refresh + Hermes MCP integration — 2026-06-19: full `README.md`
+      rewrite (providers/no-cost run, MCP in/out, skills, built-in tools, worktree
+      workflow); new `docs/integrations.md` (Hermes + Composio recipes); fixed
+      tool/skill/provider drift in `capabilities.md`/`plugins.md`/`runtimes.md`;
+      reconciled this Phase 13 block (removed duplicate pending 13.2/13.3). Verified
+      `hermes__*` MCP discovery locally (zero-cost stdio).
+
+---
+
 ## Log
+- 2026-06-19 — Phase 14.4: README + docs/ refresh and SakThai↔Hermes MCP
+  integration documented; counts re-derived on `main` (8 tools, 31 library + 65
+  user skills, 38 test files); todo Phase 13 duplicates reconciled.
 - 2026-06-18 — Re-derived Hugging Face operations (hf.py) and Docker sandboxing (sandbox.py, Dockerfile.sandbox) from v1 blueprint; registered CLI commands and `--sandbox` run flag; created comprehensive test suites; formatting, lint, strict mypy, bandit, and pytest all green.
 - 2026-06-18 — Full CI gate run, all green on Python 3.14 (ruff ✓, format ✓,
   mypy strict ✓, bandit ✓, pytest 668 passed / 1 skipped [streamlit] / 2 deselected
