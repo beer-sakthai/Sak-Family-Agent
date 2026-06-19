@@ -737,3 +737,19 @@ def test_path_under_any_root_skips_oserror_and_valueerror() -> None:
 
     bad_root.is_relative_to.side_effect = OSError("permission denied")
     assert _path_under_any_root(Path("/some/path"), [bad_root]) is False
+
+
+def test_path_under_any_root_oserror_on_real_path(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Monkeypatch Path.is_relative_to to raise OSError on the *caller* side.
+
+    The existing test above sets side_effect on the mock *root*, but
+    _path_under_any_root calls path.is_relative_to(root) — the real Path
+    method on the subject path, not on root.  This test exercises the
+    except branch correctly.
+    """
+
+    def _raise_oserror(self: Path, *args: object, **kwargs: object) -> bool:
+        raise OSError("simulated filesystem error in is_relative_to")
+
+    monkeypatch.setattr(Path, "is_relative_to", _raise_oserror)
+    assert _path_under_any_root(Path("/some/path"), [Path("/root")]) is False
