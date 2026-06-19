@@ -55,6 +55,12 @@ python fetch_public_toolcalling.py       # -> glaive_converted.jsonl
 - Model: `Nanthasit/sakthai-toolcalling-1.5b-lora` (QLoRA adapter, Qwen2.5-1.5B base — tool-calling; produced by `train_toolcalling_lora.py`)
 - Dataset: `Nanthasit/sakthai-toolcalling-v1` (167 examples: 151 train / 16 test, `messages`+`tools`)
 
+## Using the trained model
+
+Once the adapter exists on the Hub, see [`../serving/`](../serving/README.md) to
+run the **SakThai agent** on it — locally via Ollama, on a cloud TGI endpoint,
+or just to smoke-test the adapter.
+
 ## Notes
 
 - `Nanthasit/sakthai-context-0.5b` is a stale LoRA adapter whose base path points at
