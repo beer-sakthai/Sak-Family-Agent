@@ -6,11 +6,11 @@ flat `chat` string into a single-turn {tools, messages} example with one
 assistant tool call. Drops rows we can't parse cleanly.
 """
 import json
+import os
 import re
 import time
-import urllib.request
 import urllib.error
-import os
+import urllib.request
 from pathlib import Path
 
 TOK = Path(os.path.expanduser("~/.cache/huggingface/token")).read_text().strip()
