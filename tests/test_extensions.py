@@ -100,6 +100,11 @@ def test_discover_mcp_servers_missing_manifest(tmp_path: Path) -> None:
     assert ext._discover_mcp_servers(tmp_path) == []
 
 
+def test_discover_mcp_servers_corrupt_manifest_returns_empty(tmp_path: Path) -> None:
+    (tmp_path / "gemini-extension.json").write_text("{corrupt json{{", encoding="utf-8")
+    assert ext._discover_mcp_servers(tmp_path) == []
+
+
 # -- install -------------------------------------------------------------
 
 

@@ -9,6 +9,12 @@ from click.testing import CliRunner
 
 from sakthai.cli import main
 from sakthai.hermes_skills import (
+    _MAX_DESC,
+    _category_for,
+    _collect_paragraph,
+    _derive_description,
+    _derive_title,
+    _first_sentence,
     bundled_slugs,
     discover_learned_skills,
     sync_hermes_skills,
@@ -184,3 +190,110 @@ def test_cli_sync_hermes_missing_dir_errors(tmp_path: Path) -> None:
     )
     assert result.exit_code != 0
     assert "not found" in result.output
+
+
+# ---------------------------------------------------------------------------
+# Unit tests for private text-parsing helpers
+# ---------------------------------------------------------------------------
+
+
+def test_first_sentence_truncates_at_max_desc() -> None:
+    long_text = "A" * (_MAX_DESC + 10) + ". More text after."
+    result = _first_sentence(long_text)
+    assert len(result) <= _MAX_DESC
+    assert result.endswith("…")
+
+
+def test_first_sentence_no_truncation_for_short_text() -> None:
+    result = _first_sentence("Short sentence.")
+    assert result == "Short sentence"
+    assert "…" not in result
+
+
+def test_derive_title_extracts_h1() -> None:
+    assert _derive_title("# My Skill Title\n\nBody text here.") == "My Skill Title"
+
+
+def test_derive_title_returns_none_when_no_h1() -> None:
+    assert _derive_title("## Only h2 heading\n\nBody.") is None
+    assert _derive_title("No heading at all.") is None
+
+
+def test_derive_description_fallback_stops_at_empty_line() -> None:
+    # First non-heading paragraph ends at an empty line; only that paragraph is used.
+    body = "## No Purpose\n\nFirst para text.\n\nSecond para ignored."
+    result = _derive_description(body)
+    assert result == "First para text"
+
+
+def test_derive_description_fallback_stops_at_next_heading() -> None:
+    body = "## No Purpose\n\nFirst para.\n## Next heading\nIgnored."
+    result = _derive_description(body)
+    assert result == "First para"
+
+
+def test_derive_description_returns_none_for_headings_only() -> None:
+    body = "# Title\n## Sub\n### Sub-sub"
+    assert _derive_description(body) is None
+
+
+def test_collect_paragraph_stops_at_empty_line_after_content() -> None:
+    lines = ["First line.", "", "Second paragraph ignored."]
+    result = _collect_paragraph(lines)
+    assert result == "First line."
+
+
+def test_collect_paragraph_stops_at_heading_after_content() -> None:
+    lines = ["Content line.", "# Heading stops collection"]
+    result = _collect_paragraph(lines)
+    assert result == "Content line."
+
+
+def test_collect_paragraph_skips_leading_heading_when_no_content() -> None:
+    lines = ["# Heading with no prior content", "Actual content follows."]
+    result = _collect_paragraph(lines)
+    assert result == "Actual content follows."
+
+
+# ---------------------------------------------------------------------------
+# _category_for edge case: path not relative to skills_root
+# ---------------------------------------------------------------------------
+
+
+def test_category_for_returns_hermes_when_path_not_under_root(tmp_path: Path) -> None:
+    skill_md = tmp_path / "some" / "other" / "SKILL.md"
+    skill_md.parent.mkdir(parents=True, exist_ok=True)
+    skill_md.touch()
+    unrelated_root = tmp_path / "completely_different_root"
+    unrelated_root.mkdir()
+    # skill_md is not relative to unrelated_root → ValueError → returns "hermes"
+    result = _category_for(skill_md, unrelated_root)
+    assert result == "hermes"
+
+
+# ---------------------------------------------------------------------------
+# discover_learned_skills edge cases
+# ---------------------------------------------------------------------------
+
+
+def test_discover_skips_hidden_directories(tmp_path: Path) -> None:
+    root = tmp_path / "hermes" / "skills"
+    # A skill nested inside a hidden directory must be ignored.
+    hidden = root / ".hidden-dir" / "my-skill"
+    hidden.mkdir(parents=True)
+    (hidden / "SKILL.md").write_text("# Hidden\n\nShould be skipped.\n", encoding="utf-8")
+    skills = discover_learned_skills(root)
+    assert all(".hidden" not in s.source_slug for s in skills)
+
+
+def test_discover_deduplicates_same_target_slug(tmp_path: Path) -> None:
+    root = tmp_path / "hermes" / "skills"
+    # "foo" maps to "sakthai-foo"; "sakthai-foo" also maps to "sakthai-foo".
+    # Only the first (alphabetically) should appear.
+    for slug in ("foo", "sakthai-foo"):
+        skill_dir = root / slug
+        skill_dir.mkdir(parents=True)
+        (skill_dir / "SKILL.md").write_text(f"# {slug}\n\nBody.\n", encoding="utf-8")
+    skills = discover_learned_skills(root)
+    target_slugs = [s.target_slug for s in skills]
+    assert target_slugs.count("sakthai-foo") == 1
