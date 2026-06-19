@@ -30,6 +30,19 @@ def _err() -> str:
 
 def _info() -> str:
     return str(click.style(_INFO, fg="cyan"))
+    return click.style(_OK, fg="green", bold=True)
+
+
+def _warn() -> str:
+    return click.style(_WARN, fg="yellow", bold=True)
+
+
+def _err() -> str:
+    return click.style(_ERR, fg="red", bold=True)
+
+
+def _info() -> str:
+    return click.style(_INFO, fg="cyan")
 
 
 def _flag(ok: bool, *, optional: bool = False) -> str:

@@ -121,22 +121,9 @@ def _stream_chat(
     return {"choices": [{"message": message, "finish_reason": finish_reason}], "usage": usage}
 
 
-def call_openai_compat(
-    client: Any,
-    model: str,
-    system: str,
-    tools: tuple[Tool, ...],
-    messages: list[dict[str, Any]],
-    iteration: int,
-    on_token: Callable[[str], None] | None = None,
-) -> Response:
-    """Make one OpenAI-compatible chat completion, normalised to :class:`Response`.
-
-    When ``on_token`` is set and the client supports streaming (``client.stream``),
-    the reply is consumed as Server-Sent Events and text deltas are forwarded to
-    the callback; otherwise a single non-streaming request is made.
-    """
-    openai_tools = [
+def _format_openai_tools(tools: tuple[Tool, ...]) -> list[dict[str, Any]]:
+    """Convert internal Tool objects to OpenAI function schema."""
+    return [
         {
             "type": "function",
             "function": {
@@ -148,44 +135,42 @@ def call_openai_compat(
         for t in tools
     ]
 
-    payload: dict[str, Any] = {
-        "model": model,
-        "messages": to_openai_messages(system, messages),
-        "stream": False,
-    }
-    if openai_tools:
-        payload["tools"] = openai_tools
 
+def _get_request_executor(
+    client: Any,
+    payload: dict[str, Any],
+    on_token: Callable[[str], None] | None = None,
+) -> Callable[[], dict[str, Any]]:
+    """Determine and return the appropriate request execution function."""
     if on_token is not None and hasattr(client, "stream"):
+        return lambda: _stream_chat(client, payload, on_token)
 
-        def _do_request() -> dict[str, Any]:
-            return _stream_chat(client, payload, on_token)
+    if hasattr(client, "post"):
 
-    elif hasattr(client, "post"):
-
-        def _do_request() -> dict[str, Any]:
+        def _do_post() -> dict[str, Any]:
             resp = client.post("/chat/completions", json=payload)
             resp.raise_for_status()
             return resp.json()  # type: ignore[no-any-return]
 
-    elif hasattr(client, "chat") and hasattr(client.chat, "completions"):
+        return _do_post
 
-        def _do_request() -> dict[str, Any]:
+    if hasattr(client, "chat") and hasattr(client.chat, "completions"):
+
+        def _do_openai() -> dict[str, Any]:
             raw = client.chat.completions.create(**payload)
             return raw.model_dump()  # type: ignore[no-any-return]
 
-    else:
-        raise AgentError(f"Unsupported client type: {type(client)}")
+        return _do_openai
 
-    try:
-        data = with_retry(_do_request)
-    except Exception as exc:
-        logger.error("OpenAI-compatible API call failed: %s", exc)
-        raise AgentError(f"OpenAI-compatible API call failed: {exc}") from exc
+    raise AgentError(f"Unsupported client type: {type(client)}")
 
+
+def _parse_openai_response(data: dict[str, Any], iteration: int) -> Response:
+    """Convert raw OpenAI response dictionary to a Response object."""
     choices = data.get("choices") or []
     if not choices:
         raise AgentError("OpenAI returned no choices.")
+
     choice = choices[0]
     message_data = choice.get("message") or {}
     content_text = message_data.get("content") or ""
@@ -202,6 +187,7 @@ def call_openai_compat(
         fn_name = fn.get("name")
         if not isinstance(fn_name, str):
             fn_name = ""
+
         fn_args_raw = fn.get("arguments") or "{}"
         if isinstance(fn_args_raw, str):
             try:
@@ -223,3 +209,39 @@ def call_openai_compat(
         stop_reason = "end_turn"
 
     return Response(stop_reason=stop_reason, content=blocks, usage=extract_usage(data))
+
+
+def call_openai_compat(
+    client: Any,
+    model: str,
+    system: str,
+    tools: tuple[Tool, ...],
+    messages: list[dict[str, Any]],
+    iteration: int,
+    on_token: Callable[[str], None] | None = None,
+) -> Response:
+    """Make one OpenAI-compatible chat completion, normalised to :class:`Response`.
+
+    When ``on_token`` is set and the client supports streaming (``client.stream``),
+    the reply is consumed as Server-Sent Events and text deltas are forwarded to
+    the callback; otherwise a single non-streaming request is made.
+    """
+    openai_tools = _format_openai_tools(tools)
+
+    payload: dict[str, Any] = {
+        "model": model,
+        "messages": to_openai_messages(system, messages),
+        "stream": False,
+    }
+    if openai_tools:
+        payload["tools"] = openai_tools
+
+    _do_request = _get_request_executor(client, payload, on_token)
+
+    try:
+        data = with_retry(_do_request)
+    except Exception as exc:
+        logger.error("OpenAI-compatible API call failed: %s", exc)
+        raise AgentError(f"OpenAI-compatible API call failed: {exc}") from exc
+
+    return _parse_openai_response(data, iteration)

@@ -22,16 +22,30 @@ def _validate_port(ctx: click.Context, param: click.Parameter, value: int) -> in
     return value
 
 
-def _serve_dashboard(port: int, open_browser: bool, dist_path: Path) -> None:
+class _SecurityHandler(http.server.SimpleHTTPRequestHandler):
+    """Enforce defensive security headers for the dashboard."""
+
+    def end_headers(self) -> None:
+        self.send_header("X-Frame-Options", "DENY")
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("Referrer-Policy", "strict-origin-when-cross-origin")
+        self.send_header(
+            "Content-Security-Policy",
+            "default-src 'self'; img-src 'self' data:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';",
+        )
+        super().end_headers()
+
+
+def _serve_dashboard(host: str, port: int, open_browser: bool, dist_path: Path) -> None:
     """Simple HTTP server to serve the static dashboard files."""
     os.chdir(dist_path)
-    Handler = http.server.SimpleHTTPRequestHandler
+    Handler = _SecurityHandler
 
     # Allow port reuse
     socketserver.TCPServer.allow_reuse_address = True
 
-    with socketserver.TCPServer(("", port), Handler) as httpd:
-        url = f"http://localhost:{port}"
+    with socketserver.TCPServer((host, port), Handler) as httpd:  # nosec B104 — default is local
+        url = f"http://{host if host != '0.0.0.0' else 'localhost'}:{port}"  # nosec B104
         click.echo(f"dashboard: {url} (Ctrl-C to stop)")
         if open_browser:
             threading.Timer(1.0, lambda: webbrowser.open(url)).start()
@@ -43,6 +57,12 @@ def _serve_dashboard(port: int, open_browser: bool, dist_path: Path) -> None:
 
 
 @click.command()
+@click.option(
+    "--host",
+    "-H",
+    default="127.0.0.1",
+    help="Host to bind the dashboard to (default: 127.0.0.1).",
+)
 @click.option(
     "--port",
     "-p",
@@ -63,7 +83,7 @@ def _serve_dashboard(port: int, open_browser: bool, dist_path: Path) -> None:
     default=None,
     help="Write a JSON snapshot of dashboard data to PATH and exit.",
 )
-def dashboard(port: int, open_browser: bool, export_path: str | None) -> None:
+def dashboard(host: str, port: int, open_browser: bool, export_path: str | None) -> None:
     """Serve the modern SakThai dashboard, or export its data as JSON."""
     from ..config import memory_db_path
     from ..dashboard.data import export_dashboard_json
@@ -83,6 +103,6 @@ def dashboard(port: int, open_browser: bool, export_path: str | None) -> None:
     export_dashboard_json(dist_path / "data.json", memory_db_path())
 
     try:
-        _serve_dashboard(port, open_browser, dist_path)
+        _serve_dashboard(host, port, open_browser, dist_path)
     except KeyboardInterrupt:
         click.echo("\nstopped.")

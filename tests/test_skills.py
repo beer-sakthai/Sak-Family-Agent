@@ -13,6 +13,7 @@ from sakthai.skills import (
     find_skill,
     list_skills,
     parse_skill,
+    render_skills_prompt_block,
     validate_skills,
 )
 
@@ -177,3 +178,43 @@ def test_find_skill(tmp_path: Path) -> None:
 
     assert find_skill("found-me", tmp_path) is not None
     assert find_skill("missing", tmp_path) is None
+
+
+def test_render_skills_prompt_block_empty() -> None:
+
+    assert render_skills_prompt_block([]) == ""
+
+
+def test_render_skills_prompt_block_missing(tmp_path: Path) -> None:
+
+    assert render_skills_prompt_block(["missing"], roots=[tmp_path]) == ""
+
+
+def test_render_skills_prompt_block_success(tmp_path: Path) -> None:
+
+    (tmp_path / "skill1").mkdir()
+    (tmp_path / "skill1" / "SKILL.md").write_text(
+        "---\nname: skill1\ndescription: Desc 1\n---\nBody 1", encoding="utf-8"
+    )
+    (tmp_path / "skill2").mkdir()
+    (tmp_path / "skill2" / "SKILL.md").write_text(
+        "---\nname: skill2\n---\nBody 2", encoding="utf-8"
+    )
+    (tmp_path / "skill3").mkdir()
+    (tmp_path / "skill3" / "SKILL.md").write_text(
+        "---\nname: skill3\ndescription: Desc 3\n---\n", encoding="utf-8"
+    )
+
+    rendered = render_skills_prompt_block(
+        ["skill1", "skill2", "skill3", "missing"], roots=[tmp_path]
+    )
+
+    expected = (
+        "## Active skills\n\n"
+        "### skill1 — Desc 1\n\n"
+        "Body 1\n\n"
+        "### skill2\n\n"
+        "Body 2\n\n"
+        "### skill3 — Desc 3"
+    )
+    assert rendered == expected
