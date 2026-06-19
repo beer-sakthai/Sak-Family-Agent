@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import argparse
 import sys
+from collections import defaultdict
 from difflib import SequenceMatcher
 from pathlib import Path
 
@@ -33,10 +34,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from sakthai.memory.store import Fact, MemoryStore, Observation  # noqa: E402
 
-
 # ---------------------------------------------------------------------------
 # Similarity helpers
 # ---------------------------------------------------------------------------
+
 
 def _similarity(a: str, b: str) -> float:
     """Return SequenceMatcher similarity ratio in [0, 1] (case-insensitive)."""
@@ -57,12 +58,12 @@ def _obs_text(o: Observation) -> str:
 # Union-Find grouping
 # ---------------------------------------------------------------------------
 
+
 def _find_groups(items, text_fn, threshold: float) -> list[list[int]]:
     """Return index-groups of near-duplicates using Union-Find.
 
-    Each group contains at least two indices into *items*.  Items below the
-    threshold with every other item appear in their own singleton group and
-    are excluded from the returned list.
+    Uses an inverted index of shingles and a length-based fast-path to avoid
+    O(N^2) expensive similarity checks.
     """
     n = len(items)
     parent = list(range(n))
@@ -74,13 +75,54 @@ def _find_groups(items, text_fn, threshold: float) -> list[list[int]]:
         return x
 
     def union(x: int, y: int) -> None:
-        parent[find(x)] = find(y)
+        px, py = find(x), find(y)
+        if px != py:
+            parent[px] = py
 
-    texts = [text_fn(item) for item in items]
-    for i in range(n):
-        for j in range(i + 1, n):
-            if _similarity(texts[i], texts[j]) >= threshold:
+    # Pre-process texts for similarity comparison and shingling.
+    raw_texts = [text_fn(item) for item in items]
+    clean_texts = [t.lower().strip() for t in raw_texts]
+
+    # Inverted index of shingles to find candidates.
+    # At threshold=0.85, near-duplicates almost certainly share a 2-gram.
+    shingle_size = 2
+    index = defaultdict(list)
+    for i, text in enumerate(clean_texts):
+        if len(text) < shingle_size:
+            index[text].append(i)
+        else:
+            shingles = {text[j : j + shingle_size] for j in range(len(text) - shingle_size + 1)}
+            for s in shingles:
+                index[s].append(i)
+
+    # Identify candidate pairs from shared shingles.
+    candidates: set[tuple[int, int]] = set()
+    for members in index.values():
+        if len(members) < 2:
+            continue
+        for idx, i in enumerate(members):
+            for j in members[idx + 1 :]:
+                if i < j:
+                    candidates.add((i, j))
+                else:
+                    candidates.add((j, i))
+
+    # Perform expensive similarity check only on candidates.
+    for i, j in candidates:
+        t1, t2 = clean_texts[i], clean_texts[j]
+        l1, l2 = len(t1), len(t2)
+
+        # Fast path: length-based pruning.
+        if l1 == 0 or l2 == 0:
+            if l1 == l2:
                 union(i, j)
+            continue
+
+        if 2.0 * min(l1, l2) / (l1 + l2) < threshold:
+            continue
+
+        if SequenceMatcher(None, t1, t2).ratio() >= threshold:
+            union(i, j)
 
     groups: dict[int, list[int]] = {}
     for i in range(n):
@@ -93,6 +135,7 @@ def _find_groups(items, text_fn, threshold: float) -> list[list[int]]:
 # ---------------------------------------------------------------------------
 # Canonical selection
 # ---------------------------------------------------------------------------
+
 
 def _canonical_fact(group: list[Fact]) -> Fact:
     """Most recently updated fact wins; tie-break by highest id."""
@@ -107,6 +150,7 @@ def _canonical_obs(group: list[Observation]) -> Observation:
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
+
 
 def main() -> None:
     parser = argparse.ArgumentParser(
@@ -180,16 +224,10 @@ def main() -> None:
             obs_ids_to_delete.extend(o.id for o in dupes)
 
             if not args.quiet:
-                print(
-                    f"  [OBS]  canonical id={canon.id}  "
-                    f"w={canon.weight}  {canon.summary[:70]!r}"
-                )
+                print(f"  [OBS]  canonical id={canon.id}  w={canon.weight}  {canon.summary[:70]!r}")
                 for o in dupes:
                     verb = "would remove" if dry_run else "removing"
-                    print(
-                        f"         {verb}  id={o.id}  "
-                        f"w={o.weight}  {o.summary[:70]!r}"
-                    )
+                    print(f"         {verb}  id={o.id}  w={o.weight}  {o.summary[:70]!r}")
                 print()
 
         if not obs_groups:
