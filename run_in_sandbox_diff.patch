@@ -1,0 +1,60 @@
+<<<<<<< SEARCH
+def _run_in_sandbox(
+    task: str,
+    model: str,
+    max_tokens: int,
+    max_iterations: int,
+    max_seconds: float | None,
+    provider: str | None,
+    verbose: bool,
+    no_mcp: bool,
+    with_skills: tuple[str, ...],
+    fast: bool,
+    stateless: bool,
+    caveman: str | None,
+    dry_run: bool,
+    stream: bool,
+) -> None:
+    from ..sandbox import SandboxError, run_in_sandbox
+
+    try:
+        click.echo("Building sandbox image (cached after first run)…", err=True)
+        code = run_in_sandbox(
+            task,
+            model=model,
+            max_tokens=max_tokens,
+            max_iterations=max_iterations,
+            max_seconds=max_seconds,
+            provider=provider,
+            verbose=verbose,
+            no_mcp=no_mcp,
+            with_skills=with_skills,
+            fast=fast,
+            stateless=stateless,
+            caveman=caveman,
+            dry_run=dry_run,
+            stream=stream,
+        )
+=======
+def _run_in_sandbox(cfg: RunConfig) -> None:
+    from ..sandbox import SandboxError, run_in_sandbox
+
+    try:
+        click.echo("Building sandbox image (cached after first run)…", err=True)
+        code = run_in_sandbox(
+            cfg.task,
+            model=cfg.model,
+            max_tokens=cfg.max_tokens,
+            max_iterations=cfg.max_iterations,
+            max_seconds=cfg.max_seconds,
+            provider=cfg.provider,
+            verbose=cfg.verbose,
+            no_mcp=cfg.no_mcp,
+            with_skills=cfg.with_skills,
+            fast=cfg.fast,
+            stateless=cfg.stateless,
+            caveman=cfg.caveman,
+            dry_run=cfg.dry_run,
+            stream=cfg.stream,
+        )
+>>>>>>> REPLACE
