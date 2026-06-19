@@ -672,7 +672,7 @@ class MemoryStore:
                 "INSERT INTO facts (id, kind, key, value, source_session, "
                 "created_at, updated_at, tags) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
             )
-            params = [
+            params_id = [
                 (
                     f["id"],
                     f["kind"],
@@ -685,12 +685,13 @@ class MemoryStore:
                 )
                 for f in rows
             ]
+            self._conn.executemany(sql, params_id)
         else:
             sql = (
                 "INSERT INTO facts (kind, key, value, source_session, "
                 "created_at, updated_at, tags) VALUES (?, ?, ?, ?, ?, ?, ?)"
             )
-            params = [
+            params_no_id = [
                 (
                     f["kind"],
                     f["key"],
@@ -702,7 +703,7 @@ class MemoryStore:
                 )
                 for f in rows
             ]
-        self._conn.executemany(sql, params)
+            self._conn.executemany(sql, params_no_id)
 
     def _insert_observations(self, rows: list[dict[str, Any]], *, include_id: bool) -> None:
         if include_id:
@@ -710,7 +711,7 @@ class MemoryStore:
                 "INSERT INTO observations (id, summary, evidence_session_id, "
                 "weight, confidence, created_at) VALUES (?, ?, ?, ?, ?, ?)"
             )
-            params = [
+            params_id = [
                 (
                     o["id"],
                     o["summary"],
@@ -721,12 +722,13 @@ class MemoryStore:
                 )
                 for o in rows
             ]
+            self._conn.executemany(sql, params_id)
         else:
             sql = (
                 "INSERT INTO observations (summary, evidence_session_id, "
                 "weight, confidence, created_at) VALUES (?, ?, ?, ?, ?)"
             )
-            params = [
+            params_no_id = [
                 (
                     o["summary"],
                     o["evidence_session_id"],
@@ -736,7 +738,7 @@ class MemoryStore:
                 )
                 for o in rows
             ]
-        self._conn.executemany(sql, params)
+            self._conn.executemany(sql, params_no_id)
 
     def import_from_dict(self, data: dict[str, Any], *, mode: str = "merge") -> tuple[int, int]:
         """Load a snapshot. Returns (n_facts, n_observations) imported.
