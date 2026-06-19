@@ -10,9 +10,15 @@ carried forward here.
 
 ## [Unreleased]
 
+### Changed
+- License posture is now **all rights reserved** (© 2026 beer-sakthai). The
+  `LICENSE` file (MIT) was removed and README, `pyproject.toml`, `SECURITY.md`,
+  and `CODE_OF_CONDUCT.md` were updated to match the source-available,
+  no-redistribution terms.
+
 ### Added
-- Identity & governance docs re-derived for v2: `SAKTHAI.md`, `CODE_OF_CONDUCT.md`
-  (MIT-aligned), and this `CHANGELOG.md`.
+- Identity & governance docs re-derived for v2: `SAKTHAI.md`, `CODE_OF_CONDUCT.md`,
+  and this `CHANGELOG.md`.
 - OG→v2 information-parity audit (`docs/og_parity_audit.md`) recording keep/drop
   decisions for the v1 skills, library corpus, and code modules.
 - Workflows & caveman integration audit (`docs/workflows_caveman_integration_audit.md`).
