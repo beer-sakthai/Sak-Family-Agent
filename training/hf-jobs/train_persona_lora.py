@@ -24,14 +24,15 @@ NOT teach tool-calling — there is no tool-calling data yet.
 Run with:
     hf jobs uv run --flavor t4-small --secrets HF_TOKEN --timeout 30m train_persona_lora.py
 """
+
 import torch
 from datasets import load_dataset
+from peft import LoraConfig
 from transformers import (
     AutoModelForCausalLM,
     AutoTokenizer,
     BitsAndBytesConfig,
 )
-from peft import LoraConfig
 from trl import SFTConfig, SFTTrainer
 
 BASE_MODEL = "Qwen/Qwen2.5-0.5B-Instruct"
