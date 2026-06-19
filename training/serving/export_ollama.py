@@ -31,14 +31,15 @@ Knobs via env:
     BASE_MODEL    default Qwen/Qwen2.5-1.5B-Instruct
     ADAPTER_REPO  default Nanthasit/sakthai-toolcalling-1.5b-lora
 """
+
 import argparse
 import os
 import sys
 from pathlib import Path
 
 import torch
-from transformers import AutoModelForCausalLM, AutoTokenizer
 from peft import PeftModel
+from transformers import AutoModelForCausalLM, AutoTokenizer
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "hf-jobs"))
 from build_toolcalling_dataset import SYSTEM_PROMPT  # noqa: E402
