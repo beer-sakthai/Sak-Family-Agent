@@ -1,4 +1,4 @@
-"""The dashboard data layer (and Streamlit app, imported lazily)."""
+"""The dashboard data layer (snapshot builder for the React dashboard UI)."""
 
 from __future__ import annotations
 
