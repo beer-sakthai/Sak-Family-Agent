@@ -145,16 +145,22 @@ def test_collect_skills_recursive(tmp_path: Path) -> None:
     root.mkdir()
     (root / "cat1").mkdir()
     (root / "cat1" / "skill-a").mkdir()
-    (root / "cat1" / "skill-a" / "SKILL.md").write_text("---\nname: skill-a\n---\nbody", encoding="utf-8")
+    (root / "cat1" / "skill-a" / "SKILL.md").write_text(
+        "---\nname: skill-a\n---\nbody", encoding="utf-8"
+    )
 
     (root / "cat2").mkdir()
     (root / "cat2" / "sub").mkdir()
     (root / "cat2" / "sub" / "skill-b").mkdir()
-    (root / "cat2" / "sub" / "skill-b" / "SKILL.md").write_text("---\nname: skill-b\n---\nbody", encoding="utf-8")
+    (root / "cat2" / "sub" / "skill-b" / "SKILL.md").write_text(
+        "---\nname: skill-b\n---\nbody", encoding="utf-8"
+    )
 
     # Prefix-based category
     (root / "sakthai-coding-test").mkdir()
-    (root / "sakthai-coding-test" / "SKILL.md").write_text("---\nname: sakthai-coding-test\n---\nbody", encoding="utf-8")
+    (root / "sakthai-coding-test" / "SKILL.md").write_text(
+        "---\nname: sakthai-coding-test\n---\nbody", encoding="utf-8"
+    )
 
     skills = collect_skills(root)
     assert len(skills) == 3
