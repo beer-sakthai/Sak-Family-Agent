@@ -1,0 +1,7 @@
+<<<<<<< SEARCH
+    with socketserver.TCPServer((host, port), Handler) as httpd:
+        url = f"http://{host if host != '0.0.0.0' else 'localhost'}:{port}"
+=======
+    with socketserver.TCPServer((host, port), Handler) as httpd:  # nosec B104 — default is local
+        url = f"http://{host if host != '0.0.0.0' else 'localhost'}:{port}"  # nosec B104
+>>>>>>> REPLACE
