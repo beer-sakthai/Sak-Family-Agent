@@ -644,8 +644,15 @@ class MemoryStore:
             "observations": [asdict(Observation(**dict(r))) for r in obs_rows],
         }
 
-    def _validate_snapshot(self, data: Any) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
-        """Validate snapshot structure and version. Returns (facts, observations)."""
+    def import_from_dict(self, data: dict[str, Any], *, mode: str = "merge") -> tuple[int, int]:
+        """Load a snapshot. Returns (n_facts, n_observations) imported.
+
+        ``mode="merge"`` appends rows with fresh IDs; ``mode="replace"`` wipes
+        both tables and reinserts preserving original IDs. The whole import runs
+        in one transaction, so a malformed snapshot leaves the DB untouched.
+        """
+        if mode not in ("merge", "replace"):
+            raise ValueError(f"mode must be 'merge' or 'replace', got {mode!r}")
         if not isinstance(data, dict):
             raise ValueError("snapshot must be a dict")
         if data.get("version") != SNAPSHOT_VERSION:
@@ -657,100 +664,11 @@ class MemoryStore:
         obs = data.get("observations")
         if not isinstance(facts, list) or not isinstance(obs, list):
             raise ValueError("snapshot must contain list 'facts' and 'observations'")
-
         # Validate everything before touching the DB.
         for row in facts:
             _validate_row(row, SNAPSHOT_FACT_FIELDS, "fact")
         for row in obs:
             _validate_row(row, SNAPSHOT_OBS_FIELDS, "observation")
-
-        return facts, obs
-
-    def _insert_facts(self, rows: list[dict[str, Any]], *, include_id: bool) -> None:
-        if include_id:
-            sql = (
-                "INSERT INTO facts (id, kind, key, value, source_session, "
-                "created_at, updated_at, tags) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
-            )
-            params_id = [
-                (
-                    f["id"],
-                    f["kind"],
-                    f["key"],
-                    f["value"],
-                    f["source_session"],
-                    f["created_at"],
-                    f["updated_at"],
-                    _encode_tags(f.get("tags")),
-                )
-                for f in rows
-            ]
-            self._conn.executemany(sql, params_id)
-        else:
-            sql = (
-                "INSERT INTO facts (kind, key, value, source_session, "
-                "created_at, updated_at, tags) VALUES (?, ?, ?, ?, ?, ?, ?)"
-            )
-            params_no_id = [
-                (
-                    f["kind"],
-                    f["key"],
-                    f["value"],
-                    f["source_session"],
-                    f["created_at"],
-                    f["updated_at"],
-                    _encode_tags(f.get("tags")),
-                )
-                for f in rows
-            ]
-            self._conn.executemany(sql, params_no_id)
-
-    def _insert_observations(self, rows: list[dict[str, Any]], *, include_id: bool) -> None:
-        if include_id:
-            sql = (
-                "INSERT INTO observations (id, summary, evidence_session_id, "
-                "weight, confidence, created_at) VALUES (?, ?, ?, ?, ?, ?)"
-            )
-            params_id = [
-                (
-                    o["id"],
-                    o["summary"],
-                    o["evidence_session_id"],
-                    o["weight"],
-                    o["confidence"],
-                    o["created_at"],
-                )
-                for o in rows
-            ]
-            self._conn.executemany(sql, params_id)
-        else:
-            sql = (
-                "INSERT INTO observations (summary, evidence_session_id, "
-                "weight, confidence, created_at) VALUES (?, ?, ?, ?, ?)"
-            )
-            params_no_id = [
-                (
-                    o["summary"],
-                    o["evidence_session_id"],
-                    o["weight"],
-                    o["confidence"],
-                    o["created_at"],
-                )
-                for o in rows
-            ]
-            self._conn.executemany(sql, params_no_id)
-
-    def import_from_dict(self, data: dict[str, Any], *, mode: str = "merge") -> tuple[int, int]:
-        """Load a snapshot. Returns (n_facts, n_observations) imported.
-
-        ``mode="merge"`` appends rows with fresh IDs; ``mode="replace"`` wipes
-        both tables and reinserts preserving original IDs. The whole import runs
-        in one transaction, so a malformed snapshot leaves the DB untouched.
-        """
-        if mode not in ("merge", "replace"):
-            raise ValueError(f"mode must be 'merge' or 'replace', got {mode!r}")
-
-        facts, obs = self._validate_snapshot(data)
 
         try:
             self._conn.execute("BEGIN IMMEDIATE")
@@ -763,11 +681,69 @@ class MemoryStore:
                     self._conn.execute(
                         "DELETE FROM sqlite_sequence WHERE name IN ('facts', 'observations')"
                     )
-
-            include_id = mode == "replace"
-            self._insert_facts(facts, include_id=include_id)
-            self._insert_observations(obs, include_id=include_id)
-
+                self._conn.executemany(
+                    "INSERT INTO facts (id, kind, key, value, source_session, "
+                    "created_at, updated_at, tags) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                    [
+                        (
+                            f["id"],
+                            f["kind"],
+                            f["key"],
+                            f["value"],
+                            f["source_session"],
+                            f["created_at"],
+                            f["updated_at"],
+                            _encode_tags(f.get("tags")),
+                        )
+                        for f in facts
+                    ],
+                )
+                self._conn.executemany(
+                    "INSERT INTO observations (id, summary, evidence_session_id, "
+                    "weight, confidence, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+                    [
+                        (
+                            o["id"],
+                            o["summary"],
+                            o["evidence_session_id"],
+                            o["weight"],
+                            o["confidence"],
+                            o["created_at"],
+                        )
+                        for o in obs
+                    ],
+                )
+            else:  # merge — SQLite assigns IDs
+                self._conn.executemany(
+                    "INSERT INTO facts (kind, key, value, source_session, "
+                    "created_at, updated_at, tags) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                    [
+                        (
+                            f["kind"],
+                            f["key"],
+                            f["value"],
+                            f["source_session"],
+                            f["created_at"],
+                            f["updated_at"],
+                            _encode_tags(f.get("tags")),
+                        )
+                        for f in facts
+                    ],
+                )
+                self._conn.executemany(
+                    "INSERT INTO observations (summary, evidence_session_id, "
+                    "weight, confidence, created_at) VALUES (?, ?, ?, ?, ?)",
+                    [
+                        (
+                            o["summary"],
+                            o["evidence_session_id"],
+                            o["weight"],
+                            o["confidence"],
+                            o["created_at"],
+                        )
+                        for o in obs
+                    ],
+                )
             self._conn.commit()
         except Exception:
             self._conn.rollback()
