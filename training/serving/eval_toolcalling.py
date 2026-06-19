@@ -29,7 +29,6 @@ Knobs via env:
     BASE_MODEL    default Qwen/Qwen2.5-1.5B-Instruct
     ADAPTER_REPO  default Nanthasit/sakthai-toolcalling-1.5b-lora
 """
-
 import os
 import sys
 from pathlib import Path
@@ -86,7 +85,7 @@ def main() -> None:
                 do_sample=False,
                 pad_token_id=tokenizer.pad_token_id or tokenizer.eos_token_id,
             )
-        completion = tokenizer.decode(out[0][inputs.shape[-1] :], skip_special_tokens=False)
+        completion = tokenizer.decode(out[0][inputs.shape[-1]:], skip_special_tokens=False)
         print("\n" + "=" * 72)
         print(f"USER: {prompt}   (expected {hint})")
         print(f"MODEL: {completion.strip()}")

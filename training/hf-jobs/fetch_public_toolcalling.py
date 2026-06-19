@@ -5,7 +5,6 @@ Uses the HF datasets-server /rows API (no datasets lib). Parses each row's
 flat `chat` string into a single-turn {tools, messages} example with one
 assistant tool call. Drops rows we can't parse cleanly.
 """
-
 import json
 import os
 import re
@@ -16,19 +15,15 @@ from pathlib import Path
 
 TOK = Path(os.path.expanduser("~/.cache/huggingface/token")).read_text().strip()
 DATASET = "glaiveai/glaive-function-calling-v2"
-WANT = 300  # target converted rows
+WANT = 300          # target converted rows
 PAGE = 100
-NEUTRAL_SYS = (
-    "You are a helpful assistant with access to tools. Call a tool when the "
-    "request requires it; otherwise answer directly."
-)
+NEUTRAL_SYS = ("You are a helpful assistant with access to tools. Call a tool when the "
+               "request requires it; otherwise answer directly.")
 
 
 def fetch_page(offset):
-    url = (
-        f"https://datasets-server.huggingface.co/rows?dataset={DATASET}"
-        f"&config=default&split=train&offset={offset}&length={PAGE}"
-    )
+    url = (f"https://datasets-server.huggingface.co/rows?dataset={DATASET}"
+           f"&config=default&split=train&offset={offset}&length={PAGE}")
     req = urllib.request.Request(url, headers={"Authorization": "Bearer " + TOK})
     delay = 3
     for attempt in range(6):
@@ -56,7 +51,7 @@ def extract_json_objects(text):
         elif ch == "}":
             depth -= 1
             if depth == 0 and start is not None:
-                yield text[start : i + 1]
+                yield text[start:i + 1]
                 start = None
 
 
@@ -68,16 +63,10 @@ def parse_tools(system_text):
         except json.JSONDecodeError:
             continue
         if "name" in fn and "parameters" in fn:
-            tools.append(
-                {
-                    "type": "function",
-                    "function": {
-                        "name": fn["name"],
-                        "description": fn.get("description", ""),
-                        "parameters": fn["parameters"],
-                    },
-                }
-            )
+            tools.append({"type": "function", "function": {
+                "name": fn["name"],
+                "description": fn.get("description", ""),
+                "parameters": fn["parameters"]}})
     return tools
 
 
@@ -126,22 +115,16 @@ def main():
             user, name, args = parsed
             if name not in {t["function"]["name"] for t in tools}:
                 continue
-            out_rows.append(
-                {
-                    "tools": tools,
-                    "messages": [
-                        {"role": "system", "content": NEUTRAL_SYS},
-                        {"role": "user", "content": user},
-                        {
-                            "role": "assistant",
-                            "content": "",
-                            "tool_calls": [
-                                {"type": "function", "function": {"name": name, "arguments": args}}
-                            ],
-                        },
-                    ],
-                }
-            )
+            out_rows.append({
+                "tools": tools,
+                "messages": [
+                    {"role": "system", "content": NEUTRAL_SYS},
+                    {"role": "user", "content": user},
+                    {"role": "assistant", "content": "",
+                     "tool_calls": [{"type": "function",
+                                     "function": {"name": name, "arguments": args}}]},
+                ],
+            })
             if len(out_rows) >= WANT:
                 break
         offset += PAGE
