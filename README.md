@@ -1,8 +1,13 @@
 # SakThai Agent (v2)
 
-![SakThai Agent Conceptual Image](./assets/sakthai_concept.png)
+![SakThai Agent Banner](./assets/readme_banner.png)
 
-A personal, learning agent with persistent memory. SakThai gives a Claude (or Gemini) agent a durable SQLite memory it can write to and read from across sessions, plus a set of tools and an MCP server so the same memory is reachable from other agent runtimes.
+[![CI](https://github.com/beer-sakthai/sakthai-agent-v2/actions/workflows/ci.yml/badge.svg)](https://github.com/beer-sakthai/sakthai-agent-v2/actions/workflows/ci.yml)
+[![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13-blue)](https://www.python.org/)
+[![Coverage](https://img.shields.io/badge/coverage-85%25%2B-brightgreen)](https://github.com/beer-sakthai/sakthai-agent-v2/actions/workflows/ci.yml)
+[![License](https://img.shields.io/badge/license-All%20Rights%20Reserved-red)](./LICENSE)
+
+An advanced AI agent with **persistent memory**, **context awareness**, and **autonomous capabilities**. SakThai gives a Claude (or Gemini) agent a durable SQLite memory it can write to and read from across sessions, plus a comprehensive set of tools and an MCP server for seamless integration. Built for long-term tasks, continuous learning, and real-world impact.
 
 ## What's here
 
@@ -16,13 +21,13 @@ A personal, learning agent with persistent memory. SakThai gives a Claude (or Ge
 
 SakThai Agent v2 employs a modular architecture designed for extensibility and robust agentic behavior. The core components include a CLI for user interaction, an Agent Loop that orchestrates tasks, a SQLite-based Persistent Memory for long-term knowledge, and a Skills Library for tool-using capabilities. An MCP Server facilitates integration with external agents and editors, while a Dashboard provides a visual interface for memory inspection.
 
-![SakThai Agent Architecture Diagram](./assets/architecture_diagram.png)
+![SakThai Agent Architecture Diagram](./assets/architecture_diagram_v2.png)
 
 ## The 6-Stage Cycle
 
 The agent operates through a six-stage cycle, representing different states of its operation and learning. This cycle helps in managing the agent's internal state and guiding its behavior over time.
 
-![SakThai Agent 6-Stage Cycle Diagram](./assets/cycle_diagram.png)
+![SakThai Agent 6-Stage Cycle Diagram](./assets/cycle_diagram_v2.png)
 
 ## Quick start
 
@@ -45,7 +50,7 @@ sakthai run "summarise my notes"     # standalone agent loop
 sakthai mcp                          # serve memory tools over MCP stdio
 sakthai cycle status|next|set|list   # the 6-stage cycle
 sakthai skills list|show|validate    # skill catalog
-sakthai dashboard                    # Streamlit dashboard
+sakthai dashboard                    # Modern React dashboard
 sakthai tools                        # list agent/MCP tools
 ```
 
@@ -103,9 +108,8 @@ data/        memory snapshot format + a sample export
 
 ---
 
-**Note on License:**
-This repository does not contain a license. Under standard copyright law, in the absence of an explicit license, the author (beer-sakthai) retains all ownership and exclusive copyright over the codebase. You may not copy, distribute, modify, create derivative works from, or use this code for any purpose without explicit written permission from the owner. Viewers may only read and fork the code under GitHub's Terms of Service.
-
+**Note on Versioning & License:**
+This repository (`sakthai-agent-v2`) is the active, clean from-scratch rewrite of the core engine. The original `SakThai-Agent` (v1) blueprint is now deprecated and locked. This code is released under the **MIT License** — you are free to use, copy, modify, and redistribute it under the terms in [`LICENSE`](LICENSE).
 
 ## References
 

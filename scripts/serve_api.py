@@ -19,9 +19,8 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
 
-
 WEB_DIR = (Path(__file__).resolve().parent.parent / "dashboard" / "dist").resolve()
-_HOST = "0.0.0.0"
+_HOST = "127.0.0.1"
 _PORT = 3002
 
 

@@ -12,6 +12,7 @@ from pathlib import Path
 import pytest
 from click.testing import CliRunner
 
+import sakthai.cli.system as system_mod
 from sakthai.cli import main
 from sakthai.memory.store import MemoryStore
 
@@ -258,3 +259,125 @@ class TestToolsCommand:
         assert result.exit_code == 0
         for tool in BUILTIN_TOOLS:
             assert tool.name in result.output, f"Tool '{tool.name}' not in output"
+
+
+# ---------------------------------------------------------------------------
+# Uncovered branches: doctor / setup / status error paths
+# ---------------------------------------------------------------------------
+
+
+def _fake_env(
+    *,
+    db_exists: bool = False,
+    db_writable: bool = True,
+    db_error: str | None = None,
+    ready: bool = True,
+    skills_dir_exists: bool = True,
+    anthropic_ok: bool = True,
+) -> dict:
+    """Build a minimal check_env() return value for monkeypatching."""
+    return {
+        "paths": {
+            "sakthai_home": "/fake/sakthai",
+            "sakthai_home_exists": True,
+            "memory_db": "/fake/sakthai/memory.db",
+            "memory_db_exists": db_exists,
+            "skills_dir": "/fake/skills",
+            "skills_dir_exists": skills_dir_exists,
+        },
+        "env": {},
+        "memory": {
+            "db_exists": db_exists,
+            "db_writable": db_writable,
+            "fact_count": 0 if db_writable else None,
+            "observation_count": 0 if db_writable else None,
+            "error": db_error,
+        },
+        "skills": {"dir_exists": skills_dir_exists, "skill_count": 0},
+        "auth": {
+            "anthropic_ok": anthropic_ok,
+            "anthropic_source": "api_key" if anthropic_ok else None,
+            "gemini_cli_oauth": False,
+            "openai_ok": False,
+            "openai_source": None,
+        },
+        "ready": ready,
+    }
+
+
+def test_doctor_shows_memory_error_when_db_corrupt(
+    runner: CliRunner, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """doctor shows the DB error line (cli/system.py:65) when memory has an error."""
+    monkeypatch.setattr(
+        system_mod,
+        "check_env",
+        lambda: _fake_env(db_exists=True, db_writable=False, db_error="file is not a database"),
+    )
+    result = runner.invoke(main, ["doctor"])
+    assert result.exit_code == 0
+    assert "file is not a database" in result.output
+
+
+def test_doctor_shows_not_ready_when_db_not_writable(
+    runner: CliRunner, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """doctor shows the ✗ not-ready line (cli/system.py:89) when ready=False."""
+    monkeypatch.setattr(
+        system_mod,
+        "check_env",
+        lambda: _fake_env(db_exists=True, db_writable=False, ready=False),
+    )
+    result = runner.invoke(main, ["doctor"])
+    assert result.exit_code == 0
+    assert "missing" in result.output.lower() or "[x]" in result.output
+
+
+def test_setup_shows_db_not_writable(runner: CliRunner, monkeypatch: pytest.MonkeyPatch) -> None:
+    """setup shows the not-writable message (cli/system.py:134-135) when db_writable=False."""
+    monkeypatch.setattr(
+        system_mod,
+        "check_env",
+        lambda: _fake_env(db_exists=True, db_writable=False, ready=False),
+    )
+    result = runner.invoke(main, ["setup"])
+    assert result.exit_code == 0
+    assert "not writable" in result.output.lower() or "writable" in result.output.lower()
+
+
+def test_status_shows_db_not_writable(runner: CliRunner, monkeypatch: pytest.MonkeyPatch) -> None:
+    """status shows the NOT writable line (cli/system.py:171) when db exists but not writable."""
+    monkeypatch.setattr(
+        system_mod,
+        "check_env",
+        lambda: _fake_env(db_exists=True, db_writable=False, ready=False),
+    )
+    result = runner.invoke(main, ["status"])
+    assert result.exit_code == 0
+    assert "NOT writable" in result.output or "not writable" in result.output.lower()
+
+
+def test_status_shows_skills_dir_missing(
+    runner: CliRunner, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """status shows the skills-dir-missing line (cli/system.py:186) when dir absent."""
+    monkeypatch.setattr(
+        system_mod,
+        "check_env",
+        lambda: _fake_env(db_exists=False, skills_dir_exists=False),
+    )
+    result = runner.invoke(main, ["status"])
+    assert result.exit_code == 0
+    assert "none" in result.output.lower() or "Skills" in result.output
+
+
+def test_status_not_ready_line(runner: CliRunner, monkeypatch: pytest.MonkeyPatch) -> None:
+    """status shows the ✗ not-ready line (cli/system.py:196) when ready=False."""
+    monkeypatch.setattr(
+        system_mod,
+        "check_env",
+        lambda: _fake_env(db_exists=True, db_writable=False, ready=False),
+    )
+    result = runner.invoke(main, ["status"])
+    assert result.exit_code == 0
+    assert "Not ready" in result.output or "check" in result.output.lower()

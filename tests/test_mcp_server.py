@@ -4,6 +4,9 @@ from __future__ import annotations
 
 import io
 import json
+from pathlib import Path
+
+import pytest
 
 from sakthai.agent.tools import Tool
 from sakthai.mcp.server import PROTOCOL_VERSION, handle_request, serve
@@ -221,3 +224,40 @@ def test_tools_call_notification_with_handler_exception_returns_none(store: Memo
         tools=(tool,),
     )
     assert result is None
+
+
+def test_notification_for_unknown_method_returns_none(store: MemoryStore) -> None:
+    # A notification (no "id") with an unknown method (not ping, not tools/*,
+    # not notifications/*) must return None — not an error frame.
+    result = handle_request({"jsonrpc": "2.0", "method": "completely_unknown_method"}, store)
+    assert result is None
+
+
+def test_serve_skips_blank_lines(store: MemoryStore) -> None:
+    """serve() must silently skip blank / whitespace-only input lines."""
+    import io
+
+    stdin = io.StringIO('\n   \n{"jsonrpc":"2.0","id":1,"method":"tools/list"}\n\n')
+    stdout = io.StringIO()
+    serve(store=store, stdin=stdin, stdout=stdout)
+    lines = [line for line in stdout.getvalue().splitlines() if line.strip()]
+    assert len(lines) == 1
+    import json
+
+    assert json.loads(lines[0])["id"] == 1
+
+
+def test_serve_creates_and_closes_own_store(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """When no store is passed, serve() creates its own and closes it on exit."""
+    import io
+
+    from sakthai.config import memory_db_path
+
+    monkeypatch.setenv("SAKTHAI_HOME", str(tmp_path))
+    stdin = io.StringIO('{"jsonrpc":"2.0","id":1,"method":"ping"}\n')
+    stdout = io.StringIO()
+    serve(stdin=stdin, stdout=stdout)  # no store= argument → own_store=True
+    # The DB should now exist (was opened and closed by serve)
+    assert memory_db_path().exists()

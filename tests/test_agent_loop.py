@@ -642,6 +642,10 @@ def test_extract_usage_anthropic() -> None:
 def test_provider_construction_no_creds_google(
     monkeypatch: pytest.MonkeyPatch, store: MemoryStore
 ) -> None:
+    try:
+        import google.genai  # noqa: F401
+    except BaseException:
+        pytest.skip("google-genai not importable in this environment (missing native libs)")
     monkeypatch.delenv("GEMINI_API_KEY", raising=False)
     monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
     with pytest.raises(AgentError, match="Missing credentials for Google Gemini"):
@@ -1244,39 +1248,6 @@ def test_slash_command_parsing(sakthai_home: Path, store: MemoryStore) -> None:
     assert captured["task"] == "write a test"
 
 
-def test_slash_command_parsing_nested(sakthai_home: Path, store: MemoryStore) -> None:
-    # Simulates an extension folder under gemini_ext_dir, like gemini_ext_dir/claude-code-workflows/plugins/my-plugin/commands/my-cmd.md
-    gemini_ext_dir = sakthai_home.parent / "gemini" / "extensions"
-    cmd_dir = gemini_ext_dir / "claude-code-workflows" / "plugins" / "my-plugin" / "commands"
-    cmd_dir.mkdir(parents=True, exist_ok=True)
-    (cmd_dir / "my-cmd.md").write_text(
-        "---\ndescription: nested test desc\n---\n\nRule: Do nested $ARGUMENTS thing.\n",
-        encoding="utf-8",
-    )
-
-    captured: dict[str, str] = {}
-
-    class _CapMessages:
-        def create(self, **kwargs: object) -> _Resp:
-            captured["system"] = str(kwargs.get("system", ""))
-            captured["task"] = str(kwargs.get("messages", [{}])[0].get("content", ""))
-            return _Resp("end_turn", [_Block(type="text", text="ok")])
-
-    class _CapClient:
-        def __init__(self) -> None:
-            self.messages = _CapMessages()
-
-    run_agent(
-        "/my-plugin:my-cmd nested test",
-        client=_CapClient(),
-        store=store,
-        provider="anthropic",
-    )
-
-    assert "Rule: Do nested nested test thing." in captured["system"]
-    assert captured["task"] == "nested test"
-
-
 def test_fast_mode_injects_fast_track_instruction(store: MemoryStore) -> None:
     captured: dict[str, str] = {}
 
@@ -1615,6 +1586,42 @@ def test_parse_slash_command_finds_commands_dir_variant(
     system_prompt, arguments = result
     assert "COMMAND INSTRUCTIONS" in system_prompt
     assert arguments == "extra-args"
+
+
+def test_parse_slash_command_found_in_extension_plugin_subdir(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Command at root/child/plugin_name/commands/cmd.md (lines 117-120 in loop.py)."""
+    import sakthai.agent.loop as loop_mod
+
+    child = tmp_path / "extension-bundle"
+    cmd_dir = child / "my-plugin" / "commands"
+    cmd_dir.mkdir(parents=True)
+    (cmd_dir / "my-cmd.md").write_text("Extension plugin-subdir body", encoding="utf-8")
+    monkeypatch.setattr(loop_mod, "default_skill_roots", lambda: [tmp_path])
+
+    result = _parse_slash_command("/my-plugin:my-cmd")
+    assert result is not None
+    system_prompt, _ = result
+    assert "Extension plugin-subdir body" in system_prompt
+
+
+def test_parse_slash_command_found_in_extension_commands_subdir(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Command at root/child/commands/cmd.md (lines 121-124 in loop.py)."""
+    import sakthai.agent.loop as loop_mod
+
+    child = tmp_path / "extension-bundle"
+    cmd_dir = child / "commands"
+    cmd_dir.mkdir(parents=True)
+    (cmd_dir / "my-cmd.md").write_text("Extension commands-subdir body", encoding="utf-8")
+    monkeypatch.setattr(loop_mod, "default_skill_roots", lambda: [tmp_path])
+
+    result = _parse_slash_command("/any-plugin:my-cmd")
+    assert result is not None
+    system_prompt, _ = result
+    assert "Extension commands-subdir body" in system_prompt
 
 
 def test_parse_slash_command_returns_none_on_read_error(
