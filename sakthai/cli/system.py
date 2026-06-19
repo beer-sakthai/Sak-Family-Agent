@@ -3,32 +3,33 @@
 from __future__ import annotations
 
 import os
+import re
 from pathlib import Path
 
 import click
 
 from ..config import check_env
 
-_OK = "[+]"
-_WARN = "[!]"
-_ERR = "[x]"
-_INFO = "[i]"
+_OK_M = "[+]"
+_WARN_M = "[!]"
+_ERR_M = "[x]"
+_INFO_M = "[i]"
 
 
 def _ok() -> str:
-    return click.style(_OK, fg="green", bold=True)
+    return str(click.style(_OK_M, fg="green", bold=True))
 
 
 def _warn() -> str:
-    return click.style(_WARN, fg="yellow", bold=True)
+    return str(click.style(_WARN_M, fg="yellow", bold=True))
 
 
 def _err() -> str:
-    return click.style(_ERR, fg="red", bold=True)
+    return str(click.style(_ERR_M, fg="red", bold=True))
 
 
 def _info() -> str:
-    return click.style(_INFO, fg="cyan")
+    return str(click.style(_INFO_M, fg="cyan"))
 
 
 def _flag(ok: bool, *, optional: bool = False) -> str:
@@ -91,7 +92,8 @@ def doctor() -> None:
 
 
 @click.command()
-def setup() -> None:
+@click.option("--interactive/--no-interactive", default=False, help="Prompt to fix issues.")
+def setup(interactive: bool) -> None:
     """Check the .env file, env vars, memory DB, and virtualenv."""
     env = check_env()
     click.echo(click.style("\n── SakThai Setup Check ──", bold=True))
@@ -103,10 +105,21 @@ def setup() -> None:
         click.echo(f"  {_ok()} found at {env_file.resolve()}")
     else:
         click.echo(f"  {_err()} not found")
-        click.echo(
-            click.style("      → cp .env.example .env  # then fill in your keys", fg="yellow")
-        )
-        issues.append(".env file missing")
+        example = Path(".env.example")
+        if interactive and example.exists():
+            if click.confirm(
+                click.style("      → .env.example exists. Create .env now?", fg="yellow"),
+                default=True,
+            ):
+                env_file.write_text(example.read_text(encoding="utf-8"), encoding="utf-8")
+                click.echo(f"  {_ok()} created .env from .env.example")
+            else:
+                issues.append(".env file missing")
+        else:
+            click.echo(
+                click.style("      → cp .env.example .env  # then fill in your keys", fg="yellow")
+            )
+            issues.append(".env file missing")
 
     click.echo(click.style("\n  2. Required environment variables", bold=True))
     anthropic_ok = env["auth"]["anthropic_ok"]
@@ -117,10 +130,36 @@ def setup() -> None:
             click.echo(f"  {_ok()} {var}")
         else:
             click.echo(f"  {_err()} {var} is NOT set")
-            click.echo(
-                click.style(f"      → export {var}=<value>  # {info['description']}", fg="yellow")
-            )
-            issues.append(f"{var} not set")
+            if interactive and var == "ANTHROPIC_API_KEY" and env_file.exists():
+                entered_val = str(
+                    click.prompt(
+                        click.style(f"      → Enter your {var}", fg="yellow"),
+                        hide_input=True,
+                        default="",
+                        show_default=False,
+                    )
+                )
+                if entered_val:
+                    content = env_file.read_text(encoding="utf-8")
+                    pattern = rf"^{var}=.*$"
+                    replacement = f"{var}={entered_val}"
+                    if re.search(pattern, content, re.MULTILINE):
+                        new_content = re.sub(pattern, replacement, content, flags=re.MULTILINE)
+                    else:
+                        new_content = content.rstrip() + f"\n{replacement}\n"
+                    env_file.write_text(new_content, encoding="utf-8")
+                    click.echo(f"  {_ok()} saved {var} to .env")
+                    # Update local env for subsequent checks in this run
+                    os.environ[var] = entered_val
+                else:
+                    issues.append(f"{var} not set")
+            else:
+                click.echo(
+                    click.style(
+                        f"      → export {var}=<value>  # {info['description']}", fg="yellow"
+                    )
+                )
+                issues.append(f"{var} not set")
 
     click.echo(click.style("\n  3. Memory database", bold=True))
     mem = env["memory"]
