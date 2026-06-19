@@ -57,6 +57,16 @@ class _Handler(SimpleHTTPRequestHandler):
     def log_message(self, format: str, *args: Any) -> None:  # noqa: A003
         logging.getLogger(__name__).debug(format, *args)
 
+    def end_headers(self) -> None:
+        self.send_header("X-Frame-Options", "DENY")
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("Referrer-Policy", "strict-origin-when-cross-origin")
+        self.send_header(
+            "Content-Security-Policy",
+            "default-src 'self'; img-src 'self' data:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';",
+        )
+        super().end_headers()
+
     def _json(self, code: int, payload: dict[str, Any]) -> None:
         body = json.dumps(payload, indent=2, ensure_ascii=False).encode("utf-8")
         self.send_response(code)
