@@ -18,19 +18,19 @@ _INFO = "[i]"
 
 
 def _ok() -> str:
-    return cast(str, click.style(_OK, fg="green", bold=True))
+    return click.style(_OK, fg="green", bold=True)
 
 
 def _warn() -> str:
-    return cast(str, click.style(_WARN, fg="yellow", bold=True))
+    return click.style(_WARN, fg="yellow", bold=True)
 
 
 def _err() -> str:
-    return cast(str, click.style(_ERR, fg="red", bold=True))
+    return click.style(_ERR, fg="red", bold=True)
 
 
 def _info() -> str:
-    return cast(str, click.style(_INFO, fg="cyan"))
+    return click.style(_INFO, fg="cyan")
 
 
 def _flag(ok: bool, *, optional: bool = False) -> str:
