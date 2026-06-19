@@ -383,3 +383,94 @@ def test_status_not_ready_line(runner: CliRunner, monkeypatch: pytest.MonkeyPatc
     result = runner.invoke(main, ["status"])
     assert result.exit_code == 0
     assert "Not ready" in result.output or "check" in result.output.lower()
+
+
+# ---------------------------------------------------------------------------
+# setup --interactive
+# ---------------------------------------------------------------------------
+
+
+def test_setup_interactive_create_env(
+    runner: CliRunner, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Setup: No .env, but .env.example exists
+    example = tmp_path / ".env.example"
+    example.write_text("ANTHROPIC_API_KEY=\n", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+
+    # Run setup with interactive=True and say 'y' to creating .env
+    # We also need to handle the API key prompt that follows
+    result = runner.invoke(main, ["setup", "--interactive"], input="y\n\n")
+
+    assert result.exit_code == 0
+    assert "created .env from .env.example" in result.output
+    assert (tmp_path / ".env").exists()
+
+
+def test_setup_interactive_set_api_key(
+    runner: CliRunner, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Setup: .env exists but no API key
+    env_file = tmp_path / ".env"
+    env_file.write_text("ANTHROPIC_API_KEY=\n", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+
+    result = runner.invoke(main, ["setup", "--interactive"], input="sk-test-key-123\n")
+
+    assert result.exit_code == 0
+    assert "saved ANTHROPIC_API_KEY to .env" in result.output
+    content = env_file.read_text(encoding="utf-8")
+    assert "ANTHROPIC_API_KEY=sk-test-key-123" in content
+
+
+def test_setup_no_interactive_skips_prompts(
+    runner: CliRunner, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Setup: No .env, but .env.example exists
+    example = tmp_path / ".env.example"
+    example.write_text("ANTHROPIC_API_KEY=\n", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+
+    # Run setup with --no-interactive
+    result = runner.invoke(main, ["setup", "--no-interactive"])
+
+    assert result.exit_code == 0
+    assert "not found" in result.output
+    assert not (tmp_path / ".env").exists()
+    assert ".env file missing" in result.output
+
+
+def test_setup_interactive_refuse_create_env(
+    runner: CliRunner, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Setup: No .env, but .env.example exists
+    example = tmp_path / ".env.example"
+    example.write_text("ANTHROPIC_API_KEY=\n", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+
+    # Run setup with interactive=True and say 'n' to creating .env
+    result = runner.invoke(main, ["setup", "--interactive"], input="n\n")
+
+    assert result.exit_code == 0
+    assert "not found" in result.output
+    assert not (tmp_path / ".env").exists()
+    assert ".env file missing" in result.output
+
+
+def test_setup_interactive_append_api_key(
+    runner: CliRunner, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Setup: .env exists but doesn't have ANTHROPIC_API_KEY at all
+    env_file = tmp_path / ".env"
+    env_file.write_text("OTHER_VAR=123\n", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+
+    result = runner.invoke(main, ["setup", "--interactive"], input="sk-test-key-456\n")
+
+    assert result.exit_code == 0
+    assert "saved ANTHROPIC_API_KEY to .env" in result.output
+    content = env_file.read_text(encoding="utf-8")
+    assert "ANTHROPIC_API_KEY=sk-test-key-456" in content
+    assert "OTHER_VAR=123" in content

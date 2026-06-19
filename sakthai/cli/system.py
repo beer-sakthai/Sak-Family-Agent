@@ -5,7 +5,6 @@ from __future__ import annotations
 import os
 import re
 from pathlib import Path
-from typing import cast
 
 import click
 
@@ -18,19 +17,19 @@ _INFO = "[i]"
 
 
 def _ok() -> str:
-    return click.style(_OK, fg="green", bold=True)
+    return str(click.style(_OK, fg="green", bold=True))
 
 
 def _warn() -> str:
-    return click.style(_WARN, fg="yellow", bold=True)
+    return str(click.style(_WARN, fg="yellow", bold=True))
 
 
 def _err() -> str:
-    return click.style(_ERR, fg="red", bold=True)
+    return str(click.style(_ERR, fg="red", bold=True))
 
 
 def _info() -> str:
-    return click.style(_INFO, fg="cyan")
+    return str(click.style(_INFO, fg="cyan"))
 
 
 def _flag(ok: bool, *, optional: bool = False) -> str:
@@ -132,14 +131,13 @@ def setup(interactive: bool) -> None:
         else:
             click.echo(f"  {_err()} {var} is NOT set")
             if interactive and var == "ANTHROPIC_API_KEY" and env_file.exists():
-                val = cast(
-                    str,
+                val = str(
                     click.prompt(
                         click.style(f"      → Enter your {var}", fg="yellow"),
                         hide_input=True,
                         default="",
                         show_default=False,
-                    ),
+                    )
                 )
                 if val:
                     content = env_file.read_text(encoding="utf-8")
