@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import anthropic
 import httpx
 import pytest
 
@@ -85,6 +86,14 @@ def test_is_retryable_httpx_transport_error() -> None:
     assert is_retryable(httpx.ConnectError("refused"))
 
 
+def test_is_retryable_anthropic_connection_error() -> None:
+    exc = anthropic.APIConnectionError(
+        message="connection error",
+        request=httpx.Request("GET", "http://localhost"),
+    )
+    assert is_retryable(exc)
+
+
 def test_is_retryable_oserror() -> None:
     assert is_retryable(OSError("broken pipe"))
 
@@ -110,6 +119,18 @@ def test_not_retryable_plain_exception() -> None:
 
 def test_not_retryable_no_status_attribute() -> None:
     assert not is_retryable(RuntimeError("generic"))
+
+
+def test_not_retryable_non_int_status() -> None:
+    exc = RuntimeError()
+    exc.status_code = "503"  # type: ignore[attr-defined]
+    assert not is_retryable(exc)
+
+
+def test_not_retryable_response_missing_status_code() -> None:
+    exc = RuntimeError()
+    exc.response = object()  # type: ignore[attr-defined]
+    assert not is_retryable(exc)
 
 
 # -- with_retry ------------------------------------------------------------
