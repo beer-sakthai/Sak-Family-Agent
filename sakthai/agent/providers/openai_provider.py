@@ -13,8 +13,6 @@ from .base import AgentError, Block, Response, block_field, logger, with_retry
 
 def _convert_assistant_message(content: list[dict[str, Any]]) -> dict[str, Any]:
     """Convert an assistant message with block content to OpenAI format."""
-def _to_openai_assistant_msg(content: list[dict[str, Any]]) -> dict[str, Any]:
-    """Format assistant message blocks into OpenAI assistant message."""
     text_content = ""
     tool_calls = []
     for block in content:
@@ -33,8 +31,6 @@ def _to_openai_assistant_msg(content: list[dict[str, Any]]) -> dict[str, Any]:
                 }
             )
     item: dict[str, Any] = {"role": "assistant", "content": text_content or None}
-    item: dict[str, Any] = {"role": "assistant"}
-    item["content"] = text_content or None
     if tool_calls:
         item["tool_calls"] = tool_calls
     return item
@@ -44,8 +40,6 @@ def _convert_non_assistant_message(
     role: str, content: list[dict[str, Any]]
 ) -> list[dict[str, Any]]:
     """Convert a non-assistant message with block content to OpenAI format."""
-def _to_openai_other_msgs(role: str, content: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Format user or tool blocks into OpenAI message list."""
     msgs = []
     for block in content:
         block_type = block_field(block, "type")
@@ -117,46 +111,6 @@ def _process_stream_chunk(
             finish_reason = choice["finish_reason"]
 
     return finish_reason, usage
-                openai_msgs.append(_to_openai_assistant_msg(content))
-            else:
-                openai_msgs.extend(_to_openai_other_msgs(role, content))
-    return openai_msgs
-
-
-def _update_tool_calls_from_delta(
-    tool_calls: dict[int, dict[str, Any]], delta_tool_calls: list[dict[str, Any]]
-) -> None:
-    """Update accumulated tool calls with fragments from a stream delta."""
-    for tc in delta_tool_calls:
-        idx = tc.get("index", 0)
-        slot = tool_calls.setdefault(idx, {"id": "", "function": {"name": "", "arguments": ""}})
-        if tc.get("id"):
-            slot["id"] = tc["id"]
-        fn = tc.get("function") or {}
-        if fn.get("name"):
-            slot["function"]["name"] = fn["name"]
-        if fn.get("arguments"):
-            slot["function"]["arguments"] += fn["arguments"]
-
-
-def _process_stream_choice(
-    choice: dict[str, Any],
-    content_parts: list[str],
-    tool_calls: dict[int, dict[str, Any]],
-    on_token: Callable[[str], None],
-) -> str | None:
-    """Process a single choice from a stream chunk, updating state."""
-    delta = choice.get("delta") or {}
-    text = delta.get("content")
-    if text:
-        content_parts.append(text)
-        on_token(text)
-
-    delta_tool_calls = delta.get("tool_calls")
-    if delta_tool_calls:
-        _update_tool_calls_from_delta(tool_calls, delta_tool_calls)
-
-    return choice.get("finish_reason")
 
 
 def _stream_chat(
@@ -192,12 +146,6 @@ def _stream_chat(
                 finish_reason = f_reason
             if chunk_usage:
                 usage = chunk_usage
-            if chunk.get("usage"):
-                usage = chunk["usage"]
-            for choice in chunk.get("choices") or []:
-                fr = _process_stream_choice(choice, content_parts, tool_calls, on_token)
-                if fr:
-                    finish_reason = fr
 
     message: dict[str, Any] = {"content": "".join(content_parts) or None}
     if tool_calls:
@@ -251,8 +199,6 @@ def _get_request_executor(
 
 def _parse_tool_call(tc: dict[str, Any], iteration: int, idx: int) -> Block:
     """Parse a single OpenAI tool call into a Block."""
-def _parse_openai_tool_call(tc: dict[str, Any], iteration: int, idx: int) -> Block:
-    """Parse a single OpenAI tool call into a tool_use Block."""
     fn = tc.get("function") or {}
     fn_name = fn.get("name")
     if not isinstance(fn_name, str):
@@ -269,15 +215,6 @@ def _parse_openai_tool_call(tc: dict[str, Any], iteration: int, idx: int) -> Blo
 
     tool_id = tc.get("id") or f"call_{fn_name}_{iteration}_{idx}"
     return Block("tool_use", id=tool_id, name=fn_name, input=dict(fn_args or {}))
-
-
-def _map_openai_stop_reason(finish_reason: str | None, has_tool_call: bool) -> str:
-    """Map OpenAI finish reason to provider-agnostic stop reason."""
-    if has_tool_call:
-        return "tool_use"
-    if finish_reason == "length":
-        return "max_tokens"
-    return "end_turn"
 
 
 def _parse_openai_response(data: dict[str, Any], iteration: int) -> Response:
@@ -305,9 +242,6 @@ def _parse_openai_response(data: dict[str, Any], iteration: int) -> Response:
         stop_reason = "max_tokens"
     else:
         stop_reason = "end_turn"
-        blocks.append(_parse_openai_tool_call(tc, iteration, idx))
-
-    stop_reason = _map_openai_stop_reason(finish_reason, bool(tool_calls_data))
 
     return Response(stop_reason=stop_reason, content=blocks, usage=extract_usage(data))
 
