@@ -14,6 +14,7 @@ These are exposed both to the agent loop (`sakthai run`) and over MCP
 | `read_file` | Read a local text file | Sandboxed to cwd + `~/.sakthai` + `SAKTHAI_READ_ALLOW`; 20k-char cap |
 | `run_command` | Run a CLI command (no shell) | **Opt-in** via `SAKTHAI_SHELL_ALLOW`; 20k-char cap, 120s max |
 | `send_telegram_message` | Send a Telegram message | Needs `TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID` |
+| `run_agent_loop` | Delegate a whole task to SakThai's agent loop | MCP-only (filtered out of the in-loop tool set to avoid recursion) |
 
 ## Memory operations
 
@@ -31,13 +32,17 @@ These are exposed both to the agent loop (`sakthai run`) and over MCP
 
 ## Providers
 
-`run_agent` supports two providers, auto-detected from the model name and
+`run_agent` supports four providers, auto-detected from the model name and
 available credentials (override with `--provider`):
 
 - **anthropic** — Claude via the `anthropic` SDK (default model `claude-opus-4-8`).
 - **google** — Gemini via `google-genai`.
+- **openai** — any OpenAI-compatible gateway via `httpx` (`OPENAI_API_BASE` /
+  `OPENAI_BASE_URL` + `OPENAI_API_KEY`).
+- **ollama** — local models via Ollama (`OLLAMA_HOST`, default
+  `http://127.0.0.1:11434`); no API key, **no cost**.
 
-Both are normalised to one response shape, so the loop logic is provider-agnostic.
+All are normalised to one response shape, so the loop logic is provider-agnostic.
 
 ## Sessions
 

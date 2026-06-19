@@ -6,7 +6,7 @@ SakThai v2 features a pluggable tool and skill runtime that lets you hook up ext
 
 ## 🧩 Model Context Protocol (MCP) Servers
 
-SakThai can automatically spawn, connect to, and route tool calls through external MCP servers communicating over standard input/output (stdio).
+SakThai can automatically spawn, connect to, and route tool calls through external MCP servers communicating over standard input/output (stdio). For concrete recipes (Hermes, Composio, GitHub, …) see [integrations.md](./integrations.md).
 
 ### Configuration (`mcp.json`)
 
@@ -47,8 +47,8 @@ A *skill* in SakThai is a markdown file (`SKILL.md`) that defines system prompt 
 ### Locations
 
 SakThai scans the following directories for skills:
-1. `sakthai/skills/` (bundled default skills)
-2. `library/` (supplementary local skills)
+1. `skills/` (user/extension skills — the `sakthai-*` set, 65 skills)
+2. `library/` (curated catalog — 31 skills across 11 categories)
 3. `~/.sakthai/extensions/` (installed third-party extensions/skills)
 
 ### Structure of a Skill
