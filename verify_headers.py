@@ -1,9 +1,8 @@
 import http.client
-import os
-import signal
 import subprocess
 import time
-
+import os
+import signal
 
 def test_server(cmd, port):
     print(f"Testing server: {cmd}")
@@ -20,7 +19,7 @@ def test_server(cmd, port):
             "x-frame-options",
             "x-content-type-options",
             "referrer-policy",
-            "content-security-policy",
+            "content-security-policy"
         ]
 
         for h in expected:
@@ -30,7 +29,6 @@ def test_server(cmd, port):
                 print(f"MISSING {h}")
     finally:
         os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
-
 
 # Ensure dist exists for CLI test
 os.makedirs("dashboard/dist", exist_ok=True)

@@ -5,7 +5,6 @@ from __future__ import annotations
 import contextlib
 import sys
 from collections.abc import Callable, Iterator
-from dataclasses import dataclass
 from typing import Any
 
 import click
@@ -19,24 +18,6 @@ from ..agent.loop import (
     run_agent,
 )
 from ..agent.tools import BUILTIN_TOOLS, Tool
-
-
-@dataclass(frozen=True)
-class RunConfig:
-    task: str
-    model: str
-    max_tokens: int
-    max_iterations: int
-    max_seconds: float | None
-    provider: str | None
-    verbose: bool
-    no_mcp: bool
-    with_skills: tuple[str, ...]
-    fast: bool
-    stateless: bool
-    caveman: str | None
-    dry_run: bool
-    stream: bool
 
 
 @contextlib.contextmanager
@@ -84,77 +65,45 @@ def _event_emitter(verbose: bool) -> Callable[[str, dict[str, Any]], None]:
     return emit
 
 
-def _run_in_sandbox(cfg: RunConfig) -> None:
+def _run_in_sandbox(
+    task: str,
+    model: str,
+    max_tokens: int,
+    max_iterations: int,
+    max_seconds: float | None,
+    provider: str | None,
+    verbose: bool,
+    no_mcp: bool,
+    with_skills: tuple[str, ...],
+    fast: bool,
+    stateless: bool,
+    caveman: str | None,
+    dry_run: bool,
+    stream: bool,
+) -> None:
     from ..sandbox import SandboxError, run_in_sandbox
 
     try:
         click.echo("Building sandbox image (cached after first run)…", err=True)
         code = run_in_sandbox(
-            cfg.task,
-            model=cfg.model,
-            max_tokens=cfg.max_tokens,
-            max_iterations=cfg.max_iterations,
-            max_seconds=cfg.max_seconds,
-            provider=cfg.provider,
-            verbose=cfg.verbose,
-            no_mcp=cfg.no_mcp,
-            with_skills=cfg.with_skills,
-            fast=cfg.fast,
-            stateless=cfg.stateless,
-            caveman=cfg.caveman,
-            dry_run=cfg.dry_run,
-            stream=cfg.stream,
+            task,
+            model=model,
+            max_tokens=max_tokens,
+            max_iterations=max_iterations,
+            max_seconds=max_seconds,
+            provider=provider,
+            verbose=verbose,
+            no_mcp=no_mcp,
+            with_skills=with_skills,
+            fast=fast,
+            stateless=stateless,
+            caveman=caveman,
+            dry_run=dry_run,
+            stream=stream,
         )
     except SandboxError as e:
         raise click.ClickException(str(e)) from e
     sys.exit(code)
-
-
-def _perform_dry_run(cfg: RunConfig) -> None:
-    with _tool_context(no_mcp=cfg.no_mcp, verbose=cfg.verbose) as tools:
-        report = preflight(model=cfg.model, provider=cfg.provider, tools=tools)
-    _print_preflight(report)
-    if not report["runnable"]:
-        raise click.ClickException(
-            f"Not runnable: no credentials found for provider {report['provider']!r}."
-        )
-
-
-def _perform_agent_run(cfg: RunConfig) -> None:
-    streamed = False
-
-    def _on_token(text: str) -> None:
-        nonlocal streamed
-        streamed = True
-        click.echo(text, nl=False)
-
-    try:
-        with _tool_context(no_mcp=cfg.no_mcp, verbose=cfg.verbose) as tools:
-            result = run_agent(
-                cfg.task,
-                model=cfg.model,
-                max_tokens=cfg.max_tokens,
-                max_iterations=cfg.max_iterations,
-                max_seconds=cfg.max_seconds,
-                on_event=_event_emitter(cfg.verbose),
-                on_token=_on_token if cfg.stream else None,
-                provider=cfg.provider,
-                tools=tools,
-                skills=list(cfg.with_skills),
-                fast=cfg.fast,
-                stateless=cfg.stateless,
-                caveman=cfg.caveman,
-            )
-    except AgentError as exc:
-        raise click.ClickException(str(exc)) from exc
-    except KeyboardInterrupt:
-        click.echo("\nInterrupted.", err=True)
-        sys.exit(130)
-
-    if streamed:
-        click.echo("")  # terminate the streamed line
-    else:
-        click.echo(result.text)
 
 
 @click.command()
@@ -247,31 +196,66 @@ def run(
     configured correctly (provider, credentials, model, tools) without spending
     any tokens.
     """
-    cfg = RunConfig(
-        task=task,
-        model=model,
-        max_tokens=max_tokens,
-        max_iterations=max_iterations,
-        max_seconds=max_seconds,
-        provider=provider,
-        verbose=verbose,
-        no_mcp=no_mcp,
-        with_skills=with_skills,
-        fast=fast,
-        stateless=stateless,
-        caveman=caveman,
-        dry_run=dry_run,
-        stream=stream,
-    )
-
     if sandbox:
-        _run_in_sandbox(cfg)
+        _run_in_sandbox(
+            task=task,
+            model=model,
+            max_tokens=max_tokens,
+            max_iterations=max_iterations,
+            max_seconds=max_seconds,
+            provider=provider,
+            verbose=verbose,
+            no_mcp=no_mcp,
+            with_skills=with_skills,
+            fast=fast,
+            stateless=stateless,
+            caveman=caveman,
+            dry_run=dry_run,
+            stream=stream,
+        )
 
     if dry_run:
-        _perform_dry_run(cfg)
+        with _tool_context(no_mcp=no_mcp, verbose=verbose) as tools:
+            report = preflight(model=model, provider=provider, tools=tools)
+        _print_preflight(report)
+        if not report["runnable"]:
+            raise click.ClickException(
+                f"Not runnable: no credentials found for provider {report['provider']!r}."
+            )
         return
+    streamed = False
 
-    _perform_agent_run(cfg)
+    def _on_token(text: str) -> None:
+        nonlocal streamed
+        streamed = True
+        click.echo(text, nl=False)
+
+    try:
+        with _tool_context(no_mcp=no_mcp, verbose=verbose) as tools:
+            result = run_agent(
+                task,
+                model=model,
+                max_tokens=max_tokens,
+                max_iterations=max_iterations,
+                max_seconds=max_seconds,
+                on_event=_event_emitter(verbose),
+                on_token=_on_token if stream else None,
+                provider=provider,
+                tools=tools,
+                skills=list(with_skills),
+                fast=fast,
+                stateless=stateless,
+                caveman=caveman,
+            )
+    except AgentError as exc:
+        raise click.ClickException(str(exc)) from exc
+    except KeyboardInterrupt:
+        click.echo("\nInterrupted.", err=True)
+        sys.exit(130)
+    if streamed:
+        click.echo("")  # terminate the streamed line
+    else:
+        click.echo(result.text)
 
 
 @click.command()
