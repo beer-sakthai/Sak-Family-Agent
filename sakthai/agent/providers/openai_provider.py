@@ -133,7 +133,7 @@ def _stream_chat(
                 break
             try:
                 chunk = json.loads(data_str)
-            except Exception:
+            except Exception:  # nosec B112
                 continue
 
             if not isinstance(chunk, dict):
