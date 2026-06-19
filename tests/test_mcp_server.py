@@ -261,3 +261,27 @@ def test_serve_creates_and_closes_own_store(
     serve(stdin=stdin, stdout=stdout)  # no store= argument → own_store=True
     # The DB should now exist (was opened and closed by serve)
     assert memory_db_path().exists()
+
+
+def test_mcp_tools_list_matches_builtin_tools(store: MemoryStore) -> None:
+    """tools/list must expose exactly the same names as BUILTIN_TOOLS.
+
+    This is a regression canary: if a tool is added to agent/tools.py but the
+    MCP wiring breaks, this test fails immediately.
+    """
+    from sakthai.agent.tools import BUILTIN_TOOLS
+
+    resp = handle_request({"jsonrpc": "2.0", "id": 99, "method": "tools/list"}, store)
+    listed_names = {t["name"] for t in resp["result"]["tools"]}
+    builtin_names = {t.name for t in BUILTIN_TOOLS}
+    assert listed_names == builtin_names
+
+
+def test_mcp_tools_list_schemas_have_required_fields(store: MemoryStore) -> None:
+    """Every tool in tools/list must carry name, description, and inputSchema."""
+    resp = handle_request({"jsonrpc": "2.0", "id": 100, "method": "tools/list"}, store)
+    for tool in resp["result"]["tools"]:
+        assert "name" in tool, f"tool missing 'name': {tool}"
+        assert "description" in tool, f"tool {tool['name']!r} missing 'description'"
+        assert "inputSchema" in tool, f"tool {tool['name']!r} missing 'inputSchema'"
+        assert tool["inputSchema"]["type"] == "object"

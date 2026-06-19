@@ -253,3 +253,34 @@ def test_call_openai_compat_usage_extracted() -> None:
     resp = call_openai_compat(client, "gpt-4", "sys", (), [], 0)
     assert resp.usage["input_tokens"] == 10
     assert resp.usage["output_tokens"] == 5
+
+
+def test_call_openai_compat_tool_args_as_dict() -> None:
+    """Some OpenAI-compatible backends return tool arguments pre-parsed as a dict.
+
+    The provider must accept dict args without trying to JSON-decode them.
+    """
+    data = {
+        "choices": [
+            {
+                "message": {
+                    "content": None,
+                    "tool_calls": [
+                        {
+                            "id": "c1",
+                            "function": {
+                                "name": "learn",
+                                "arguments": {"value": "already a dict"},  # dict, not str
+                            },
+                        }
+                    ],
+                },
+                "finish_reason": "tool_calls",
+            }
+        ],
+        "usage": {},
+    }
+    client = _post_client(data)
+    resp = call_openai_compat(client, "gpt-4", "sys", (), [], 0)
+    assert resp.stop_reason == "tool_use"
+    assert resp.content[0].input == {"value": "already a dict"}
