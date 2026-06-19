@@ -5,7 +5,7 @@
 [![CI](https://github.com/beer-sakthai/sakthai-agent-v2/actions/workflows/ci.yml/badge.svg)](https://github.com/beer-sakthai/sakthai-agent-v2/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13-blue)](https://www.python.org/)
 [![Coverage](https://img.shields.io/badge/coverage-85%25%2B-brightgreen)](https://github.com/beer-sakthai/sakthai-agent-v2/actions/workflows/ci.yml)
-[![License](https://img.shields.io/badge/license-All%20Rights%20Reserved-red)](./LICENSE)
+![License](https://img.shields.io/badge/license-All%20Rights%20Reserved-red)
 
 An advanced AI agent with **persistent memory**, **context awareness**, and **autonomous capabilities**. SakThai gives a Claude (or Gemini) agent a durable SQLite memory it can write to and read from across sessions, plus a comprehensive set of tools and an MCP server for seamless integration. Built for long-term tasks, continuous learning, and real-world impact.
 
@@ -109,7 +109,7 @@ data/        memory snapshot format + a sample export
 ---
 
 **Note on Versioning & License:**
-This repository (`sakthai-agent-v2`) is the active, clean from-scratch rewrite of the core engine. The original `SakThai-Agent` (v1) blueprint is now deprecated and locked. This code is released under the **MIT License** — you are free to use, copy, modify, and redistribute it under the terms in [`LICENSE`](LICENSE).
+This repository (`sakthai-agent-v2`) is the active, clean from-scratch rewrite of the core engine. The original `SakThai-Agent` (v1) blueprint is now deprecated and locked. **© 2026 beer-sakthai — All rights reserved.** This is a personal, source-available project: no license is granted to use, copy, modify, or redistribute the code without prior written permission from the maintainer.
 
 ## References
 
