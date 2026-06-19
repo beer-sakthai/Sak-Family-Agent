@@ -28,7 +28,6 @@ Then run the agent against it:
     export OPENAI_API_KEY="$HF_TOKEN"
     sakthai run --provider openai --model tgi "Remember I prefer dark mode"
 """
-
 import argparse
 import os
 
