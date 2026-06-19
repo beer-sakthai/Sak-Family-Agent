@@ -37,8 +37,8 @@ import sys
 from pathlib import Path
 
 import torch
-from transformers import AutoModelForCausalLM, AutoTokenizer
 from peft import PeftModel
+from transformers import AutoModelForCausalLM, AutoTokenizer
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "hf-jobs"))
 from build_toolcalling_dataset import SYSTEM_PROMPT  # noqa: E402
