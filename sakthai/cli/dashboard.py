@@ -44,8 +44,8 @@ def _serve_dashboard(host: str, port: int, open_browser: bool, dist_path: Path) 
     # Allow port reuse
     socketserver.TCPServer.allow_reuse_address = True
 
-    with socketserver.TCPServer((host, port), Handler) as httpd:
-        url = f"http://{host if host != '0.0.0.0' else 'localhost'}:{port}"
+    with socketserver.TCPServer((host, port), Handler) as httpd:  # nosec B104 — default is local
+        url = f"http://{host if host != '0.0.0.0' else 'localhost'}:{port}"  # nosec B104
         click.echo(f"dashboard: {url} (Ctrl-C to stop)")
         if open_browser:
             threading.Timer(1.0, lambda: webbrowser.open(url)).start()
