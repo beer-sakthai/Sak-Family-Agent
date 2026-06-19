@@ -1,0 +1,4 @@
+# Build outputs — merged weights / GGUF live on the Hub or on disk, not in git.
+sakthai-merged/
+*.gguf
+*.safetensors
