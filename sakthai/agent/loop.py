@@ -20,7 +20,11 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from typing import Any
 
-from ..auth import anthropic_credential_source, openai_credential_source
+from ..auth import (
+    anthropic_credential_source,
+    gateway_credential_source,
+    openai_credential_source,
+)
 from ..config import sessions_dir
 from ..memory.store import MemoryStore
 from ..skills import default_skill_roots, find_skill, render_skills_prompt_block
@@ -295,7 +299,7 @@ def run_agent(
                     client, model, system, tools, messages, iteration, on_token=on_token
                 )
                 usage_tracker.record(**response.usage)
-            elif provider == "openai":
+            elif provider in ("openai", "gateway"):
                 response = _call_openai_compat(
                     client, model, system, tools, messages, iteration, on_token=on_token
                 )
@@ -400,6 +404,8 @@ def preflight(
             cred_source = None
     elif resolved == "openai":
         cred_source = openai_credential_source()
+    elif resolved == "gateway":
+        cred_source = gateway_credential_source()
     else:
         cred_source = anthropic_credential_source()
 

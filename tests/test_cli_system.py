@@ -300,6 +300,8 @@ def _fake_env(
             "gemini_cli_oauth": False,
             "openai_ok": False,
             "openai_source": None,
+            "gateway_ok": False,
+            "gateway_source": None,
         },
         "ready": ready,
     }

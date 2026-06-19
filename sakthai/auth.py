@@ -147,3 +147,38 @@ def openai_credential_source() -> str | None:
     if os.environ.get("OLLAMA_HOST"):
         return "ollama_host"
     return None
+
+
+def resolve_gateway_credentials() -> tuple[str, str]:
+    """Resolve the base URL and API key for an OpenAI-compatible AI gateway.
+
+    Returns:
+        (base_url, api_key)
+
+    A "gateway" is any OpenAI-compatible HTTP endpoint that fronts one or more
+    upstream models — OpenRouter, LiteLLM, the Vercel AI Gateway, Cloudflare AI
+    Gateway, and so on. It is configured independently of the ``OPENAI_*`` and
+    ``OLLAMA_*`` variables so a gateway and a direct OpenAI key can coexist
+    without one shadowing the other.
+
+    Resolves base_url from ``SAKTHAI_GATEWAY_URL`` (required) and api_key from
+    ``SAKTHAI_GATEWAY_API_KEY``, falling back to ``"nokey"`` for keyless
+    gateways. Raises :class:`AuthError` when no gateway URL is configured.
+    """
+    from .config import gateway_base_url
+
+    base_url = gateway_base_url()
+    if not base_url:
+        raise AuthError(
+            "No AI gateway configured. Set SAKTHAI_GATEWAY_URL to an "
+            "OpenAI-compatible gateway endpoint (e.g. https://openrouter.ai/api/v1)."
+        )
+    api_key = os.environ.get("SAKTHAI_GATEWAY_API_KEY") or "nokey"
+    return base_url.rstrip("/"), api_key
+
+
+def gateway_credential_source() -> str | None:
+    """Return a short label for the active AI gateway config, or None."""
+    if os.environ.get("SAKTHAI_GATEWAY_URL"):
+        return "gateway_url"
+    return None

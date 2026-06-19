@@ -59,6 +59,11 @@ def test_detect_openai_model_keywords(model: str) -> None:
     assert detect_provider(None, model) == "openai"
 
 
+@pytest.mark.parametrize("model", ["gateway/openai/gpt-4o", "gateway:claude", "Gateway-route"])
+def test_detect_gateway_model_prefix(model: str) -> None:
+    assert detect_provider(None, model) == "gateway"
+
+
 # -- detect_provider — env-var fallbacks (no client, no model hint) --------
 
 
@@ -92,12 +97,24 @@ def test_detect_fallback_openai_credential(monkeypatch: pytest.MonkeyPatch) -> N
         assert detect_provider(None, "unknown-model") == "openai"
 
 
+def test_detect_fallback_gateway_credential(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
+    with (
+        patch("sakthai.agent.providers.anthropic_credential_source", return_value=None),
+        patch("sakthai.agent.providers.openai_credential_source", return_value=None),
+        patch("sakthai.agent.providers.gateway_credential_source", return_value="gateway_url"),
+    ):
+        assert detect_provider(None, "unknown-model") == "gateway"
+
+
 def test_detect_fallback_default_is_anthropic(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("GEMINI_API_KEY", raising=False)
     monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
     with (
         patch("sakthai.agent.providers.anthropic_credential_source", return_value=None),
         patch("sakthai.agent.providers.openai_credential_source", return_value=None),
+        patch("sakthai.agent.providers.gateway_credential_source", return_value=None),
     ):
         assert detect_provider(None, "unknown-model") == "anthropic"
 
@@ -144,6 +161,29 @@ def test_build_client_openai_auth_error_raises_agent_error() -> None:
         pytest.raises(AgentError, match="no openai creds"),
     ):
         build_client("openai", None)
+
+
+def test_build_client_gateway_returns_httpx_client() -> None:
+    with patch(
+        "sakthai.auth.resolve_gateway_credentials",
+        return_value=("https://openrouter.ai/api/v1", "sk-test"),
+    ):
+        result = build_client("gateway", None)
+    assert isinstance(result, httpx.Client)
+    assert result.headers["Authorization"] == "Bearer sk-test"
+
+
+def test_build_client_gateway_auth_error_raises_agent_error() -> None:
+    from sakthai.auth import AuthError
+
+    with (
+        patch(
+            "sakthai.auth.resolve_gateway_credentials",
+            side_effect=AuthError("no gateway configured"),
+        ),
+        pytest.raises(AgentError, match="no gateway configured"),
+    ):
+        build_client("gateway", None)
 
 
 def test_build_client_google_missing_key_raises_agent_error(

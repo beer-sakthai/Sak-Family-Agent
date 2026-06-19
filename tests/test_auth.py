@@ -261,3 +261,38 @@ def test_openai_credential_source_none(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("OPENAI_API_BASE", raising=False)
     monkeypatch.delenv("OLLAMA_HOST", raising=False)
     assert auth.openai_credential_source() is None
+
+
+# -- resolve_gateway_credentials / gateway_credential_source ---------------
+
+
+def test_resolve_gateway_with_url_and_key(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("SAKTHAI_GATEWAY_URL", "https://openrouter.ai/api/v1/")
+    monkeypatch.setenv("SAKTHAI_GATEWAY_API_KEY", "sk-gw")
+    base, key = auth.resolve_gateway_credentials()
+    assert base == "https://openrouter.ai/api/v1"  # trailing slash stripped
+    assert key == "sk-gw"
+
+
+def test_resolve_gateway_defaults_key_to_nokey(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("SAKTHAI_GATEWAY_URL", "http://localhost:4000/v1")
+    monkeypatch.delenv("SAKTHAI_GATEWAY_API_KEY", raising=False)
+    base, key = auth.resolve_gateway_credentials()
+    assert base == "http://localhost:4000/v1"
+    assert key == "nokey"
+
+
+def test_resolve_gateway_raises_without_url(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("SAKTHAI_GATEWAY_URL", raising=False)
+    with pytest.raises(auth.AuthError, match="SAKTHAI_GATEWAY_URL"):
+        auth.resolve_gateway_credentials()
+
+
+def test_gateway_credential_source_url(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("SAKTHAI_GATEWAY_URL", "http://localhost:4000/v1")
+    assert auth.gateway_credential_source() == "gateway_url"
+
+
+def test_gateway_credential_source_none(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("SAKTHAI_GATEWAY_URL", raising=False)
+    assert auth.gateway_credential_source() is None

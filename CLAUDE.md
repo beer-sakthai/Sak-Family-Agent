@@ -127,7 +127,8 @@ CLI/MCP → agent loop → tool registry → MemoryStore → SQLite. See
   - `base.py` — shared types (`Block`, `Response`), retry logic via `tenacity`
   - `anthropic_provider.py` — Claude via `anthropic` SDK
   - `gemini_provider.py` — Gemini via `google-genai`
-  - `openai_provider.py` — OpenAI-compatible APIs and Ollama via `httpx`
+  - `openai_provider.py` — OpenAI-compatible APIs, Ollama, and the `gateway`
+    provider (OpenRouter/LiteLLM/Vercel/Cloudflare AI gateways) via `httpx`
   - `__init__.py` — provider detection and client factory
 
 ### MCP subsystem (`mcp/`)
@@ -297,6 +298,8 @@ reach out to a real endpoint. Use `tmp_path` fixtures for file I/O.
 | `OPENAI_API_KEY` | Key for OpenAI-compatible gateway (defaults to `nokey`) |
 | `OPENAI_API_BASE` / `OPENAI_BASE_URL` | Base URL for OpenAI-compatible endpoint |
 | `OLLAMA_HOST` | Ollama server address (default: `http://127.0.0.1:11434`) |
+| `SAKTHAI_GATEWAY_URL` | Base URL of an OpenAI-compatible AI gateway (OpenRouter/LiteLLM/Vercel/Cloudflare) — enables the `gateway` provider |
+| `SAKTHAI_GATEWAY_API_KEY` | Bearer token for the AI gateway (defaults to `nokey`) |
 | `SAKTHAI_HOME` | Override the `~/.sakthai` root (memory db, sessions, extensions) |
 | `SAKTHAI_READ_ALLOW` | Colon-separated extra paths the `read_file` tool may read |
 | `SAKTHAI_SHELL_ALLOW` | Any non-empty value enables the `run_command` tool |

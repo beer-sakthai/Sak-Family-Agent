@@ -14,6 +14,7 @@ from typing import Any
 from ...auth import (
     AuthError,
     anthropic_credential_source,
+    gateway_credential_source,
     openai_credential_source,
     resolve_anthropic_client,
 )
@@ -51,12 +52,16 @@ __all__ = [
 def detect_provider(client: Any | None, model: str) -> str:
     """Choose a provider when the caller didn't.
 
-    A Gemini model name or google-genai client → ``google``;
+    A ``gateway`` model name → ``gateway``;
+    a Gemini model name or google-genai client → ``google``;
     an openai client or `openai`/`ollama`/`gpt` in model name → ``openai``;
     any other injected client → ``anthropic``;
-    otherwise pick whichever credential is present: anthropic → google → openai.
+    otherwise pick whichever credential is present:
+    anthropic → google → openai → gateway.
     """
     client_module = client.__class__.__module__ if client is not None else ""
+    if model.lower().startswith("gateway"):
+        return "gateway"
     if "google.genai" in client_module or "gemini" in model.lower():
         return "google"
     if "openai" in client_module:
@@ -74,7 +79,23 @@ def detect_provider(client: Any | None, model: str) -> str:
         return "google"
     if openai_credential_source() is not None:
         return "openai"
+    if gateway_credential_source() is not None:
+        return "gateway"
     return "anthropic"
+
+
+def _openai_compat_client(api_base: str, api_key: str) -> Any:
+    """Build an httpx client for an OpenAI-compatible endpoint (OpenAI/Ollama/gateway)."""
+    import httpx
+
+    return httpx.Client(
+        base_url=api_base,
+        headers={
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+        },
+        timeout=120.0,
+    )
 
 
 def build_client(provider: str, client: Any | None) -> Any:
@@ -99,22 +120,21 @@ def build_client(provider: str, client: Any | None) -> Any:
         except Exception as exc:
             raise AgentError(f"Failed to initialize Google Gemini client: {exc}") from exc
     if provider == "openai":
-        import httpx
-
         from ...auth import resolve_openai_credentials
 
         try:
             api_base, api_key = resolve_openai_credentials()
         except AuthError as exc:
             raise AgentError(str(exc)) from exc
-        return httpx.Client(
-            base_url=api_base,
-            headers={
-                "Authorization": f"Bearer {api_key}",
-                "Content-Type": "application/json",
-            },
-            timeout=120.0,
-        )
+        return _openai_compat_client(api_base, api_key)
+    if provider == "gateway":
+        from ...auth import resolve_gateway_credentials
+
+        try:
+            api_base, api_key = resolve_gateway_credentials()
+        except AuthError as exc:
+            raise AgentError(str(exc)) from exc
+        return _openai_compat_client(api_base, api_key)
     try:
         return resolve_anthropic_client()
     except AuthError as exc:

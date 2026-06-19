@@ -67,7 +67,7 @@ When an external AI (like Claude or Gemini) calls this tool, it invokes SakThai'
 * **Parameters**:
   * `task` (string, required): The task prompt to run to completion.
   * `model` (string, optional): Model override.
-  * `provider` (string, optional): Provider override (`anthropic`, `google`, `openai`, `ollama`).
+  * `provider` (string, optional): Provider override (`anthropic`, `google`, `openai`, `ollama`, `gateway`).
   * `max_iterations` (int, optional): Tool-use loop iteration limit.
 
 ---
@@ -97,3 +97,39 @@ Alternatively, you can configure your environment to use an OpenAI-compatible/Ol
 * `OLLAMA_HOST`: Set to your Ollama endpoint (defaults to `http://127.0.0.1:11434`). The IPv4 literal avoids a `Connection refused` on hosts where `localhost` resolves to IPv6 `::1` but Ollama binds IPv4 only.
 * `OPENAI_API_BASE` / `OPENAI_BASE_URL`: Point to any other OpenAI-compatible gateway (e.g., LocalAI, vLLM, DeepSeek).
 * `OPENAI_API_KEY`: Provide a key if the endpoint requires one (defaults to `"nokey"`).
+
+---
+
+## 🌐 AI Gateways (OpenRouter, LiteLLM, Vercel, Cloudflare)
+
+The `gateway` provider is a first-class route to any OpenAI-compatible **AI
+gateway** — a proxy that fronts many upstream models behind one endpoint
+(OpenRouter, LiteLLM, the Vercel AI Gateway, the Cloudflare AI Gateway, …). It
+is configured independently of the `OPENAI_*` and `OLLAMA_*` variables, so a
+gateway and a direct OpenAI key can coexist without one shadowing the other.
+
+### Environment Variables
+
+* `SAKTHAI_GATEWAY_URL`: Base URL of the gateway (required), e.g.
+  `https://openrouter.ai/api/v1`.
+* `SAKTHAI_GATEWAY_API_KEY`: Bearer token for the gateway (defaults to `"nokey"`
+  for keyless gateways).
+
+### Running
+
+Select the gateway explicitly, or via a `gateway`-prefixed model name:
+
+```bash
+export SAKTHAI_GATEWAY_URL="https://openrouter.ai/api/v1"
+export SAKTHAI_GATEWAY_API_KEY="sk-or-..."
+
+# explicit provider flag
+sakthai run "your task" --provider gateway --model anthropic/claude-3.5-sonnet
+
+# or auto-detected from a gateway/* model name
+sakthai run "your task" --model gateway/anthropic/claude-3.5-sonnet
+```
+
+When no other provider is selected, SakThai also falls back to the gateway if
+`SAKTHAI_GATEWAY_URL` is set and no Anthropic/Google/OpenAI credentials are
+present.

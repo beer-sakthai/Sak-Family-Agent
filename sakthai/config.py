@@ -29,6 +29,8 @@ OPTIONAL_ENV_VARS: dict[str, str] = {
     "OPENAI_API_BASE": "OpenAI API base URL (or use OPENAI_BASE_URL)",
     "OPENAI_BASE_URL": "OpenAI API base URL",
     "OLLAMA_HOST": "Ollama host URL (default: http://127.0.0.1:11434)",
+    "SAKTHAI_GATEWAY_URL": "Base URL of an OpenAI-compatible AI gateway (OpenRouter, LiteLLM, Vercel, Cloudflare)",
+    "SAKTHAI_GATEWAY_API_KEY": "API key/token for the AI gateway (default: nokey)",  # nosec B105 — description text
     "SAKTHAI_HOME": "Override the data directory (default: ~/.sakthai)",
     "SAKTHAI_READ_ALLOW": "Extra paths the read_file tool may read (os.pathsep-separated)",
     "SAKTHAI_MCP_TIMEOUT": "Seconds to wait for an external MCP server reply (default: 30)",
@@ -95,6 +97,11 @@ def mcp_timeout() -> float:
 def openai_api_base() -> str | None:
     """Return the OpenAI API base URL, honoring OPENAI_BASE_URL or OPENAI_API_BASE."""
     return os.environ.get("OPENAI_BASE_URL") or os.environ.get("OPENAI_API_BASE")
+
+
+def gateway_base_url() -> str | None:
+    """Return the AI-gateway base URL, honoring SAKTHAI_GATEWAY_URL."""
+    return os.environ.get("SAKTHAI_GATEWAY_URL")
 
 
 def _paths_report() -> dict[str, Any]:
@@ -166,18 +173,22 @@ def _auth_report() -> dict[str, Any]:
     # Imported lazily so config.py has no hard dependency on the anthropic SDK.
     from .auth import (
         anthropic_credential_source,
+        gateway_credential_source,
         load_gemini_cli_token,
         openai_credential_source,
     )
 
     anthropic_source = anthropic_credential_source()
     openai_source = openai_credential_source()
+    gateway_source = gateway_credential_source()
     return {
         "anthropic_source": anthropic_source,
         "anthropic_ok": anthropic_source is not None,
         "gemini_cli_oauth": load_gemini_cli_token() is not None,
         "openai_source": openai_source,
         "openai_ok": openai_source is not None,
+        "gateway_source": gateway_source,
+        "gateway_ok": gateway_source is not None,
     }
 
 
