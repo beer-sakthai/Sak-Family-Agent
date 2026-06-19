@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import contextlib
 from collections.abc import Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
@@ -19,7 +20,7 @@ class SkillParseError(ValueError):
     """Raised when a SKILL.md has missing or invalid frontmatter."""
 
 
-@dataclass
+@dataclass(frozen=True)
 class SkillInfo:
     name: str
     path: Path
@@ -36,8 +37,9 @@ def _as_str_list(value: Any) -> list[str]:
     return [str(v) for v in value] if isinstance(value, list) else []
 
 
-def parse_skill(path: Path) -> SkillInfo:
-    """Parse one SKILL.md into a :class:`SkillInfo`. Raises on bad frontmatter."""
+@lru_cache(maxsize=1024)
+def _load_skill_file(path: Path) -> tuple[dict[str, Any], str]:
+    """Read and parse a SKILL.md file, caching the results."""
     text = path.read_text(encoding="utf-8")
     parts = text.split("---", 2)
     if len(parts) < 3:
@@ -48,6 +50,12 @@ def parse_skill(path: Path) -> SkillInfo:
         raise SkillParseError(f"{path}: invalid YAML — {exc}") from exc
     if not isinstance(front, dict):
         raise SkillParseError(f"{path}: empty or non-mapping frontmatter")
+    return front, parts[2].strip()
+
+
+def parse_skill(path: Path) -> SkillInfo:
+    """Parse one SKILL.md into a :class:`SkillInfo`. Raises on bad frontmatter."""
+    front, body = _load_skill_file(path)
     name = front.get("name")
     if not name or not isinstance(name, str):
         raise SkillParseError(f"{path}: missing required field: name")
@@ -62,19 +70,19 @@ def parse_skill(path: Path) -> SkillInfo:
         platforms=_as_str_list(front.get("platforms")),
         tags=_as_str_list(sakthai_meta.get("tags")),
         related_skills=_as_str_list(sakthai_meta.get("related_skills")),
-        body=parts[2].strip(),
+        body=body,
     )
 
 
 def list_skills(skills_dir: Path) -> list[SkillInfo]:
     """Parse skills directly under ``skills_dir`` (flat layout), skipping bad ones."""
-    found: list[SkillInfo] = []
+    found_list: list[SkillInfo] = []
     for entry in sorted(skills_dir.iterdir()):
         skill_md = entry / "SKILL.md"
         if entry.is_dir() and skill_md.exists():
             with contextlib.suppress(SkillParseError):
-                found.append(parse_skill(skill_md))
-    return sorted(found, key=lambda s: s.name)
+                found_list.append(parse_skill(skill_md))
+    return sorted(found_list, key=lambda s: s.name)
 
 
 def validate_skills(skills_dir: Path) -> list[tuple[Path, str]]:
@@ -111,9 +119,10 @@ def _category_for(skill: SkillInfo, skill_md: Path, root: Path) -> str:
     return _UNCATEGORIZED
 
 
+@lru_cache(maxsize=32)
 def collect_skills(*roots: Path) -> list[SkillInfo]:
     """Recursively find every SKILL.md under each root, with categories filled in."""
-    found: list[SkillInfo] = []
+    found_list: list[SkillInfo] = []
     seen: set[Path] = set()
     for root in roots:
         if not root.is_dir():
@@ -124,9 +133,9 @@ def collect_skills(*roots: Path) -> list[SkillInfo]:
             seen.add(skill_md)
             with contextlib.suppress(SkillParseError):
                 skill = parse_skill(skill_md)
-                skill.category = _category_for(skill, skill_md, root)
-                found.append(skill)
-    return sorted(found, key=lambda s: (s.name.lower(), str(s.path)))
+                category = _category_for(skill, skill_md, root)
+                found_list.append(replace(skill, category=category))
+    return sorted(found_list, key=lambda s: (s.name.lower(), str(s.path)))
 
 
 def _source_for(skill_md: Path, roots: tuple[Path, ...]) -> str:
