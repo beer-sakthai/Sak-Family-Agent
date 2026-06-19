@@ -383,7 +383,6 @@ def memory_consolidate_sessions(limit: int, model: str | None) -> None:
 @click.option("--verbose", "-v", is_flag=True, help="Print every pruned row.")
 def memory_deduplicate(dry_run: bool, verbose: bool) -> None:
     """Find and remove duplicate facts and observations."""
-    from ..memory.store import Fact, Observation
 
     with MemoryStore() as store:
         facts = cast(list[Fact], store.deduplicate_facts(detailed=True, dry_run=dry_run))
