@@ -7,111 +7,308 @@
 [![Coverage](https://img.shields.io/badge/coverage-85%25%2B-brightgreen)](https://github.com/beer-sakthai/sakthai-agent-v2/actions/workflows/ci.yml)
 ![License](https://img.shields.io/badge/license-All%20Rights%20Reserved-red)
 
-An advanced AI agent with **persistent memory**, **context awareness**, and **autonomous capabilities**. SakThai gives a Claude (or Gemini) agent a durable SQLite memory it can write to and read from across sessions, plus a comprehensive set of tools and an MCP server for seamless integration. Built for long-term tasks, continuous learning, and real-world impact.
+SakThai is a **personal learning agent with persistent memory**. It gives a
+Claude, Gemini, or local (Ollama / OpenAI-compatible) model a durable SQLite
+memory it reads and writes across sessions, a shared tool registry, a curated
+skills catalog, and a two-way **MCP** bridge so the same memory and tools are
+reachable from other agents and editors. It is **local-first** — one package,
+three ways in: a CLI, a tool-using agent loop, and an MCP stdio server.
 
-## What's here
+---
 
-- **Persistent memory** — a SQLite store of *facts* (things you tell it) and *observations* (things it concludes), with search, tagging, WAL-concurrency, auto-merge dedupe/consolidation, and multi-modal import/export/sync (Git JSONL merge + HTTP backup). The memory schema includes `facts` (id, kind, key, value, source_session, created_at, updated_at, tags) and `observations` (id, summary, evidence_session_id, weight, confidence, created_at) [1].
-- **Extensive skills library** — a curated catalog of **48 skills** across categories (coding, devops, security, memory, agent, llm, safety, observability, research, learning).
-- **Agent loop** — `sakthai run "<task>"` runs a tool-using Claude/Gemini/OpenAI/Ollama loop that injects memory and active skills into the system prompt. Supports `--fast` mode to bypass stage checks. The agent loop supports multiple providers including Anthropic (Claude) and Google (Gemini) [2].
-- **MCP server** — `sakthai mcp` exposes the memory tools over MCP stdio (JSON-RPC) so editors and other agents can share the same memory.
-- **6-stage cycle** — a lightweight Dream → Hope → Care → Joy → Trust → Growth state machine persisted in memory. This cycle is mirrored by the `sakthai-cycle-*` skills and the `sakthai cycle` command.
+## Highlights
 
-## Architecture Overview
+- **Persistent memory** — a SQLite store of *facts* (things you tell it) and
+  *observations* (things it concludes), with substring search, tagging, WAL
+  concurrency, additive migrations, dedupe/consolidation, and multi-agent sync
+  (Git JSONL merge + HTTP backup). See [`docs/architecture.md`](./docs/architecture.md).
+- **Provider-agnostic agent loop** — `sakthai run "<task>"` drives a tool-using
+  loop over **Anthropic (Claude)**, **Google (Gemini)**, or any
+  **OpenAI-compatible / Ollama** endpoint — including a fully **no-cost local run**.
+- **8 built-in tools** — one registry powers both the agent loop and the MCP
+  server (see [Built-in tools](#built-in-tools)).
+- **Skills catalog** — **31 curated library skills** across 11 categories plus
+  **65 user/extension skills**, injected into the system prompt on demand.
+- **MCP, both directions** — *serve* SakThai's tools to other agents
+  (`sakthai mcp`), and *consume* external MCP servers (namespaced `<server>__tool`).
+- **Hermes integration (local, no cost)** — connect SakThai and the
+  [Hermes](https://github.com/) agent over local MCP stdio, and mirror
+  Hermes-learned skills with `sakthai skills sync-hermes`. See [Hermes integration](#hermes-integration-local-no-cost).
+- **6-stage cycle** — a lightweight Dream → Hope → Care → Joy → Trust → Growth
+  state machine persisted in memory and mirrored by the `sakthai-cycle-*` skills.
+- **Dashboard** — `sakthai dashboard` serves a Streamlit view of the store (KPIs,
+  memory explorer, sessions, cycle).
 
-SakThai Agent v2 employs a modular architecture designed for extensibility and robust agentic behavior. The core components include a CLI for user interaction, an Agent Loop that orchestrates tasks, a SQLite-based Persistent Memory for long-term knowledge, and a Skills Library for tool-using capabilities. An MCP Server facilitates integration with external agents and editors, while a Dashboard provides a visual interface for memory inspection.
+![Architecture diagram](./assets/architecture_diagram_v2.png)
 
-![SakThai Agent Architecture Diagram](./assets/architecture_diagram_v2.png)
-
-## The 6-Stage Cycle
-
-The agent operates through a six-stage cycle, representing different states of its operation and learning. This cycle helps in managing the agent's internal state and guiding its behavior over time.
-
-![SakThai Agent 6-Stage Cycle Diagram](./assets/cycle_diagram_v2.png)
+---
 
 ## Quick start
 
 ```bash
-cp .env.example .env          # fill in ANTHROPIC_API_KEY
-pip install -e ".[dev]"       # editable install (Python >=3.11)
-sakthai doctor                # check environment + memory health
-sakthai run "your task here"  # start using it
+# Python >=3.11. Preferred: uv (CI uses uv + uv.lock for reproducible installs).
+uv sync --all-extras
+# or: pip install -e ".[all]"     # dev + dashboard extras
+
+cp .env.example .env              # fill in ANTHROPIC_API_KEY (or use a local model — see below)
+sakthai doctor                    # check environment + memory health
+sakthai learn "prefers dark mode" --kind pref --key ui
+sakthai recall "dark"             # search facts + observations
+sakthai run "summarise my notes"  # standalone tool-using agent loop
 ```
+
+All runtimes share `~/.sakthai/memory.db` (override the root with `SAKTHAI_HOME`).
+
+---
+
+## Providers & no-cost local run
+
+The agent loop is provider-agnostic. The provider is auto-detected from the model
+name and available credentials; override with `--provider`.
+
+| Provider | Models | Auth |
+|----------|--------|------|
+| `anthropic` | Claude (default `claude-opus-4-8`) | `ANTHROPIC_API_KEY`, `ANTHROPIC_AUTH_TOKEN`, or Claude CLI OAuth |
+| `google` | Gemini | `GEMINI_API_KEY` / `GOOGLE_API_KEY`, or Gemini CLI OAuth |
+| `openai` | any OpenAI-compatible gateway (vLLM, LocalAI, …) | `OPENAI_API_BASE` / `OPENAI_BASE_URL` + `OPENAI_API_KEY` (defaults `nokey`) |
+| `ollama` | local models via Ollama | none — `OLLAMA_HOST` (default `http://127.0.0.1:11434`) |
+
+**No-cost local run** (no API key, nothing leaves the machine):
+
+```bash
+ollama run qwen2.5-coder:7b          # start a local model (one-time)
+sakthai run "refactor this script" --provider ollama --model qwen2.5-coder:7b
+```
+
+> Ollama is reached at the IPv4 literal `127.0.0.1` on purpose — on hosts where
+> `localhost` resolves to IPv6 `::1` but Ollama binds IPv4 only, `localhost`
+> would give `Connection refused`.
+
+---
+
+## Runtimes
+
+One package, three entry points (full detail in [`docs/runtimes.md`](./docs/runtimes.md)):
+
+1. **CLI** — `sakthai <cmd>` (see [Commands](#commands)).
+2. **Agent loop** — `sakthai run "<task>"` drives the provider-agnostic tool-using
+   loop, injecting memory and any active skills into the system prompt. Useful
+   flags: `--provider`, `--model`, `--with-skills <name>` (repeatable), `--no-mcp`,
+   `--fast` (skip cycle overhead), `--verbose`, and `--dry-run` (preflight, **no
+   API call**).
+3. **MCP server** — `sakthai mcp` serves the same tools over JSON-RPC stdio
+   (protocol `2024-11-05`), so editors and other agents share one memory.
+
+---
+
+## MCP
+
+SakThai speaks the Model Context Protocol **in both directions**. Deep dive:
+[`docs/plugins.md`](./docs/plugins.md) and [`docs/integrations.md`](./docs/integrations.md).
+
+### Inbound — serve SakThai to other agents
+
+`sakthai mcp` exposes the built-in tools over JSON-RPC stdio. The MCP server
+reuses the exact same `BUILTIN_TOOLS` registry as the agent loop, so behaviour is
+identical on both surfaces. Register it with any MCP client, e.g. Claude CLI
+(`~/.claude/config.json`) or Gemini CLI:
+
+```json
+{
+  "mcpServers": {
+    "sakthai": { "command": "sakthai", "args": ["mcp"] }
+  }
+}
+```
+
+### Outbound — consume external MCP servers
+
+During `sakthai run`, SakThai auto-loads external MCP servers from
+`~/.sakthai/mcp.json` (standard `mcpServers` shape, Claude-Desktop-compatible),
+merges their tools into the registry namespaced as `<server>__<tool>`, and fails
+soft if a server won't start. Pass `--no-mcp` to disable.
+
+```json
+{
+  "mcpServers": {
+    "github": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "env": { "GITHUB_PERSONAL_ACCESS_TOKEN": "your-token-here" }
+    }
+  }
+}
+```
+
+### Hermes integration (local, no cost)
+
+SakThai and the [Hermes](https://github.com/) agent (installed at `~/.hermes`)
+interoperate over **local MCP stdio** — a subprocess JSON-RPC channel with **no
+network and zero API/cloud cost**.
+
+- **Hermes → SakThai** (already wired by Hermes): Hermes registers
+  `sakthai mcp` in its `~/.hermes/config.yaml` and calls SakThai's memory tools.
+- **SakThai → Hermes**: add Hermes to `~/.sakthai/mcp.json` and its conversation
+  / messaging tools appear in the agent loop as `hermes__*`:
+
+  ```json
+  {
+    "mcpServers": {
+      "hermes": { "command": "hermes", "args": ["mcp", "serve"] }
+    }
+  }
+  ```
+
+- **Mirror Hermes-learned skills** into this repo as first-class `sakthai-` skills:
+
+  ```bash
+  sakthai skills sync-hermes            # import learned skills into skills/
+  sakthai skills sync-hermes --dry-run  # preview changes (idempotent)
+  ```
+
+> The MCP link itself is free; SakThai's own *reasoning* still uses whatever
+> provider you pick — pair the Hermes link with a local Ollama model (above) for
+> an end-to-end no-cost setup.
+
+---
+
+## Skills
+
+A *skill* is a directory with a `SKILL.md` (YAML frontmatter + markdown body) that
+gets injected into the agent's system prompt when active. SakThai ships:
+
+- **`library/`** — **31 curated skills** across 11 categories: `agent`,
+  `automation`, `coding`, `devops`, `learning`, `llm`, `memory`, `observability`,
+  `research`, `safety`, `security`.
+- **`skills/`** — **65 user/extension skills** (the `sakthai-*` set, including the
+  `sakthai-cycle-*` stages and skills mirrored from Hermes).
+
+```yaml
+---
+name: my-skill
+category: coding
+description: One-line summary of what this skill does
+version: "1.0"
+platforms: [claude, gemini]
+metadata:
+  sakthai:
+    tags: [python, testing]
+    related_skills: [other-skill]
+---
+
+Skill body goes here — injected into the system prompt when the skill is active.
+```
+
+Manage skills with `sakthai skills list|show|validate|create|sync-hermes`, and
+activate them for a run with `sakthai run "<task>" --with-skills my-skill`.
+
+---
+
+## Built-in tools
+
+The same 8-tool registry (`sakthai/agent/tools.py`) powers both `sakthai run` and
+`sakthai mcp`. Add a tool once and it appears on both surfaces.
+
+| Tool | What it does | Notes |
+|------|--------------|-------|
+| `learn` | Save a fact (value, kind, key) | The agent's write path into memory |
+| `recall` | List recent facts + top observations | Read what's already known |
+| `search` | Substring search over facts + observations | Targeted lookup |
+| `forget` | Delete a fact by id | — |
+| `read_file` | Read a local text file | Sandboxed to cwd + `~/.sakthai` + `SAKTHAI_READ_ALLOW`; 20k-char cap |
+| `run_command` | Run a CLI command (no shell) | **Opt-in** via `SAKTHAI_SHELL_ALLOW`; 20k-char cap |
+| `send_telegram_message` | Send a Telegram message | Needs `TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID` |
+| `run_agent_loop` | Delegate a whole task to SakThai's agent loop | MCP-only (filtered out of the in-loop set to avoid recursion) |
+
+---
 
 ## Commands
 
 ```bash
 sakthai doctor                       # report environment + memory health
 sakthai setup                        # validate .env and required env vars
+sakthai status | tools               # quick status; list agent/MCP tools
 sakthai learn "prefers dark mode"    # save a fact
 sakthai recall "dark"                # search facts + observations
-sakthai memory show|stats|search     # inspect the store
-sakthai run "summarise my notes"     # standalone agent loop
+sakthai memory show|stats|search|export|import|backup|consolidate|deduplicate
+sakthai run "summarise my notes"     # provider-agnostic agent loop
 sakthai mcp                          # serve memory tools over MCP stdio
 sakthai cycle status|next|set|list   # the 6-stage cycle
-sakthai skills list|show|validate    # skill catalog
-sakthai dashboard                    # Modern React dashboard
-sakthai tools                        # list agent/MCP tools
+sakthai skills list|show|validate|create|sync-hermes
+sakthai sessions list|show|export    # inspect session logs
+sakthai dashboard                    # Streamlit view of the store
 ```
 
-All runtimes share `~/.sakthai/memory.db` (override with `SAKTHAI_HOME`).
+---
 
 ## Develop
 
+Mirrors `.github/workflows/ci.yml` (run before pushing; green CI is the bar for
+`main`). Coverage floor is **85%**.
+
 ```bash
-python -m pytest --cov=sakthai tests/   # run test suite with coverage report (92%+)
-ruff check sakthai tests                # lint check
-ruff format --check sakthai tests       # formatting verification
-mypy sakthai                            # strict type checking
-bandit -c pyproject.toml -r sakthai     # security scan
+ruff check sakthai tests                 # lint
+ruff format --check sakthai tests        # format check (drop --check to apply)
+mypy sakthai                             # strict type-check
+bandit -c pyproject.toml -r sakthai      # security scan
+python -m pytest -m "not integration" -q # the 38-file hermetic suite (no network)
+```
+
+A live end-to-end smoke test (CLI + MCP roundtrip, **no API cost**):
+
+```bash
+python .claude/skills/run-sakthai-agent-v2/driver.py
 ```
 
 ### Git worktree workflow
 
-For parallel development or when another agent may be committing to the same branch, use git worktrees to isolate checkouts:
+This checkout may be shared by multiple agents/developers. Use git worktrees to
+isolate work so concurrent commits never collide:
 
 ```bash
-# Create a new worktree for a feature branch
-git worktree add ../sakthai-agent-v2-feature feature-name
-
-# Switch to the worktree
-cd ../sakthai-agent-v2-feature
-
-# Work normally (isolated checkout, separate git index)
-# Commit and push independently
-
-# Clean up when done
-cd ../sakthai-agent-v2
-git worktree remove ../sakthai-agent-v2-feature
+git worktree add -b my-feature ../wt-my-feature origin/main  # isolated checkout off main
+cd ../wt-my-feature                                          # work, commit, push independently
+# ... when done:
+cd -
+git worktree remove ../wt-my-feature
 ```
 
-This prevents conflicts when multiple agents or developers commit to the same checkout simultaneously.
+---
 
 ## Repository layout
 
 ```
-sakthai/     the package (memory, agent, mcp, cycle, skills, dashboard, cli)
-tests/       unit tests
-skills/      top-level skills (sakthai-personal, sakthai-cycle-*)
-library/     curated library of SakThai's own skills, grouped by category
-docs/        architecture and capabilities docs
-scripts/     bootstrap.sh, setup-extensions.sh
+sakthai/     the package (config, auth, memory, agent, mcp, cycle, skills, dashboard, cli, ...)
+tests/       38 hermetic unit-test files (no network, no GCP)
+skills/      65 user/extension SKILL.md folders (the sakthai-* set)
+library/     31 curated skills across 11 categories
+docs/        architecture, capabilities, plugins, runtimes, integrations, replication, ...
+assets/      banner + architecture / cycle diagrams
+scripts/     dev utilities (not linted / type-checked)
 data/        memory snapshot format + a sample export
+training/    HF Jobs fine-tune + serving scripts (optional, off the core path)
 ```
+
+---
 
 ## Documentation
 
-- **[CLAUDE.md](./CLAUDE.md)** — development guide and architecture
-- **[docs/](./docs/)** — full architecture, capabilities, and roadmap
-- **[SOUL.md](./SOUL.md)** — agent charge model
-- **[Dream.md → Growth.md](./)** — the six working stages
+| Doc | Contents |
+|-----|----------|
+| [CLAUDE.md](./CLAUDE.md) | Development guide + architecture for contributors |
+| [docs/architecture.md](./docs/architecture.md) | Layer diagram and SQLite schema |
+| [docs/capabilities.md](./docs/capabilities.md) | Tools, memory ops, providers, dashboard |
+| [docs/plugins.md](./docs/plugins.md) | MCP servers + skills extensibility |
+| [docs/integrations.md](./docs/integrations.md) | Connecting Hermes, Composio, and other agents |
+| [docs/runtimes.md](./docs/runtimes.md) | CLI / agent loop / MCP server + local models |
+| [docs/replication.md](./docs/replication.md) | Multi-agent memory sync |
+| [docs/workspace.md](./docs/workspace.md) | Dev environment setup |
 
 ---
 
 **Note on Versioning & License:**
-This repository (`sakthai-agent-v2`) is the active, clean from-scratch rewrite of the core engine. The original `SakThai-Agent` (v1) blueprint is now deprecated and locked. **© 2026 beer-sakthai — All rights reserved.** This is a personal, source-available project: no license is granted to use, copy, modify, or redistribute the code without prior written permission from the maintainer.
-
-## References
-
-[1] [Memory schema in architecture.md](./docs/architecture.md)
-[2] [Providers in capabilities.md](./docs/capabilities.md)
+This repository (`sakthai-agent-v2`) is the active, clean from-scratch rewrite of
+the core engine. The original `SakThai-Agent` (v1) blueprint is now deprecated and
+locked. **© 2026 beer-sakthai — All rights reserved.** This is a personal,
+source-available project: no license is granted to use, copy, modify, or
+redistribute the code without prior written permission from the maintainer.
