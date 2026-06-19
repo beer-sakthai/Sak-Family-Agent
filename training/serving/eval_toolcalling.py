@@ -34,12 +34,12 @@ import sys
 from pathlib import Path
 
 import torch
-from transformers import AutoModelForCausalLM, AutoTokenizer
 from peft import PeftModel
+from transformers import AutoModelForCausalLM, AutoTokenizer
 
 # Reuse the exact TOOLS / SYSTEM_PROMPT the model was trained on.
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "hf-jobs"))
-from build_toolcalling_dataset import TOOLS, SYSTEM_PROMPT  # noqa: E402
+from build_toolcalling_dataset import SYSTEM_PROMPT, TOOLS  # noqa: E402
 
 BASE_MODEL = os.environ.get("BASE_MODEL", "Qwen/Qwen2.5-1.5B-Instruct")
 ADAPTER_REPO = os.environ.get("ADAPTER_REPO", "Nanthasit/sakthai-toolcalling-1.5b-lora")
