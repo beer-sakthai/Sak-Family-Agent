@@ -35,17 +35,18 @@ Knobs via env (all optional):
     DATASET_ID   default Nanthasit/sakthai-toolcalling-v1
     EPOCHS       default 4
 """
+
 import json
 import os
 
 import torch
 from datasets import load_dataset
+from peft import LoraConfig
 from transformers import (
     AutoModelForCausalLM,
     AutoTokenizer,
     BitsAndBytesConfig,
 )
-from peft import LoraConfig
 from trl import SFTConfig, SFTTrainer
 
 BASE_MODEL = os.environ.get("BASE_MODEL", "Qwen/Qwen2.5-1.5B-Instruct")
@@ -117,9 +118,7 @@ def main() -> None:
 
     train_ds = ds["train"].map(to_text, remove_columns=ds["train"].column_names)
     eval_ds = (
-        ds["test"].map(to_text, remove_columns=ds["test"].column_names)
-        if "test" in ds
-        else None
+        ds["test"].map(to_text, remove_columns=ds["test"].column_names) if "test" in ds else None
     )
     print(f"   train rows={len(train_ds)}", f"eval rows={len(eval_ds)}" if eval_ds else "")
     print("== Sample rendered example:\n", train_ds[0]["text"][:900], "\n...")
@@ -133,8 +132,13 @@ def main() -> None:
         bias="none",
         task_type="CAUSAL_LM",
         target_modules=[
-            "q_proj", "k_proj", "v_proj", "o_proj",
-            "gate_proj", "up_proj", "down_proj",
+            "q_proj",
+            "k_proj",
+            "v_proj",
+            "o_proj",
+            "gate_proj",
+            "up_proj",
+            "down_proj",
         ],
     )
 
