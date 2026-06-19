@@ -123,3 +123,22 @@ def test_call_anthropic_oserror_wraps_as_agent_error(monkeypatch: pytest.MonkeyP
     client.messages.create.side_effect = OSError("broken pipe")
     with pytest.raises(AgentError):
         call_anthropic(client, "m", 100, "sys", [], [])
+
+
+# -- _get_request_executor -------------------------------------------------
+
+
+def test_get_request_executor_returns_stream_when_on_token_provided() -> None:
+    from sakthai.agent.providers.anthropic_provider import _get_request_executor
+
+    client = MagicMock()
+    executor = _get_request_executor(client, "m", 100, "sys", [], [], on_token=lambda _: None)
+    assert executor.__name__ == "_stream"
+
+
+def test_get_request_executor_returns_create_when_on_token_absent() -> None:
+    from sakthai.agent.providers.anthropic_provider import _get_request_executor
+
+    client = MagicMock()
+    executor = _get_request_executor(client, "m", 100, "sys", [], [], on_token=None)
+    assert executor.__name__ == "_create"
