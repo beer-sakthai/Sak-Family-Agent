@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   LayoutDashboard,
   Brain,
@@ -22,106 +22,12 @@ import {
   FlaskConical,
   Cpu,
   RefreshCw,
-  Pause,
-  Play,
 } from 'lucide-react';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   RadarChart, Radar, PolarGrid, PolarAngleAxis, BarChart, Bar, Cell
 } from 'recharts';
 import { DEMO_DATA } from './data/demo-data';
-
-// How often the dashboard re-queries the live snapshot endpoint.
-const POLL_MS = 4000;
-
-function formatAgo(ms) {
-  if (ms == null) return '';
-  const s = Math.max(0, Math.round((Date.now() - ms) / 1000));
-  if (s < 2) return 'just now';
-  if (s < 60) return `${s}s ago`;
-  const m = Math.floor(s / 60);
-  if (m < 60) return `${m}m ago`;
-  return `${Math.floor(m / 60)}h ago`;
-}
-
-// Re-render once per second so relative timestamps stay fresh.
-function useNow(active = true) {
-  const [, setTick] = useState(0);
-  useEffect(() => {
-    if (!active) return undefined;
-    const id = setInterval(() => setTick((t) => t + 1), 1000);
-    return () => clearInterval(id);
-  }, [active]);
-}
-
-// Smoothly animate a number toward `value` (no-op for non-numbers).
-function useCountUp(value, duration = 600) {
-  const [display, setDisplay] = useState(value);
-  const fromRef = useRef(value);
-  const rafRef = useRef(0);
-  useEffect(() => {
-    if (typeof value !== 'number') {
-      setDisplay(value);
-      return undefined;
-    }
-    const from = typeof fromRef.current === 'number' ? fromRef.current : value;
-    fromRef.current = value;
-    if (from === value) {
-      setDisplay(value);
-      return undefined;
-    }
-    const start = performance.now();
-    const tick = (t) => {
-      const p = Math.min(1, (t - start) / duration);
-      const eased = 1 - Math.pow(1 - p, 3);
-      setDisplay(Math.round(from + (value - from) * eased));
-      if (p < 1) rafRef.current = requestAnimationFrame(tick);
-    };
-    rafRef.current = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(rafRef.current);
-  }, [value, duration]);
-  return display;
-}
-
-// Poll the live snapshot endpoint, falling back to bundled demo data.
-function usePolledData(intervalMs) {
-  const [data, setData] = useState(DEMO_DATA);
-  const [status, setStatus] = useState('loading'); // loading | live | demo | reconnecting
-  const [lastUpdated, setLastUpdated] = useState(null);
-  const [refreshing, setRefreshing] = useState(false);
-  const [autoRefresh, setAutoRefresh] = useState(true);
-  const hasData = useRef(false);
-
-  const refresh = useCallback(async () => {
-    setRefreshing(true);
-    try {
-      const res = await fetch('./data.json', { cache: 'no-store' });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const json = await res.json();
-      setData(json);
-      hasData.current = true;
-      setStatus(json.source === 'live' ? 'live' : 'demo');
-      setLastUpdated(Date.now());
-    } catch (e) {
-      // Keep showing the last good snapshot; surface that the link dropped.
-      setStatus(hasData.current ? 'reconnecting' : 'demo');
-    } finally {
-      setRefreshing(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    refresh();
-  }, [refresh]);
-
-  useEffect(() => {
-    if (!autoRefresh) return undefined;
-    const id = setInterval(refresh, intervalMs);
-    return () => clearInterval(id);
-  }, [autoRefresh, intervalMs, refresh]);
-
-  return { data, status, lastUpdated, refreshing, autoRefresh, setAutoRefresh, refresh };
-}
 
 const SidebarItem = ({ icon: Icon, label, active, onClick }) => (
   <button
@@ -144,16 +50,13 @@ const Card = ({ title, children, className = "" }) => (
   </div>
 );
 
-const KpiCard = ({ icon: Icon, label, value, delta, color = "gold" }) => {
-  const animated = useCountUp(typeof value === 'number' ? value : null);
-  const display = typeof value === 'number' ? animated.toLocaleString() : value;
-  return (
+const KpiCard = ({ icon: Icon, label, value, delta, color = "gold" }) => (
   <div className="glass-card p-5 relative overflow-hidden group">
     <div className={`absolute top-0 right-0 w-24 h-24 -mr-8 -mt-8 opacity-5 rounded-full bg-thai-${color} transition-all group-hover:scale-110`} />
     <div className="flex justify-between items-start">
       <div>
         <p className="text-slate-400 text-sm font-medium mb-1">{label}</p>
-        <h4 className="text-2xl font-bold text-white tabular-nums">{display}</h4>
+        <h4 className="text-2xl font-bold text-white">{value}</h4>
         {delta != null && delta !== undefined && (
           <p className="text-emerald-400 text-xs mt-1 flex items-center">
             <TrendingUp size={12} className="mr-1" />
@@ -166,27 +69,19 @@ const KpiCard = ({ icon: Icon, label, value, delta, color = "gold" }) => {
       </div>
     </div>
   </div>
-  );
-};
+);
 
-const STATUS_STYLES = {
-  live:         { dot: 'bg-emerald-400', ring: 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400', label: 'Live',         pulse: true },
-  reconnecting: { dot: 'bg-amber-400',   ring: 'bg-amber-500/10 border-amber-500/20 text-amber-400',       label: 'Reconnecting', pulse: true },
-  demo:         { dot: 'bg-amber-400',   ring: 'bg-amber-500/10 border-amber-500/20 text-amber-400',       label: 'Demo',         pulse: false },
-  loading:      { dot: 'bg-slate-400',   ring: 'bg-white/5 border-white/10 text-slate-400',                label: 'Connecting',   pulse: true },
-};
-
-const LiveStatus = ({ status, lastUpdated, generatedAt }) => {
-  useNow(status === 'live' || status === 'reconnecting');
-  const s = STATUS_STYLES[status] || STATUS_STYLES.loading;
+const SourceBadge = ({ source, generatedAt }) => {
+  const isLive = source === 'live';
   return (
-    <div className={`hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold border ${s.ring}`}>
-      <div className={`w-1.5 h-1.5 rounded-full ${s.dot} ${s.pulse ? 'animate-pulse' : ''}`} />
-      {s.label}
-      {status === 'live' && lastUpdated && (
-        <span className="text-slate-500 font-normal">· {formatAgo(lastUpdated)}</span>
-      )}
-      {status === 'demo' && generatedAt && generatedAt !== 'demo' && (
+    <div className={`hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold border ${
+      isLive
+        ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
+        : 'bg-amber-500/10 border-amber-500/20 text-amber-400'
+    }`}>
+      <div className={`w-1.5 h-1.5 rounded-full ${isLive ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
+      {isLive ? 'Live' : 'Demo'}
+      {generatedAt && generatedAt !== 'demo' && (
         <span className="text-slate-500 font-normal">· {generatedAt}</span>
       )}
     </div>
@@ -195,16 +90,26 @@ const LiveStatus = ({ status, lastUpdated, generatedAt }) => {
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('Overview');
+  const [data, setData] = useState(DEMO_DATA);
+  const [loading, setLoading] = useState(true);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [query, setQuery] = useState('');
-  const { data, status, lastUpdated, refreshing, autoRefresh, setAutoRefresh, refresh } =
-    usePolledData(POLL_MS);
-  const loading = status === 'loading';
 
-  const onSearch = (value) => {
-    setQuery(value);
-    if (value.trim() && activeTab !== 'Memory') setActiveTab('Memory');
-  };
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const response = await fetch('./data.json');
+        if (response.ok) {
+          const liveData = await response.json();
+          setData(liveData);
+        }
+      } catch (e) {
+        console.warn("Live data not found, using demo data");
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadData();
+  }, []);
 
   const growthData = data.growth.labels.map((label, i) => ({
     name: label,
@@ -240,7 +145,7 @@ export default function App() {
         <KpiCard icon={Database}  label="Total Facts"     value={data.kpis.total_facts}                         delta={data.kpis.total_facts_delta}        color="gold"   />
         <KpiCard icon={Brain}     label="Observations"    value={data.kpis.total_observations}                  delta={data.kpis.total_observations_delta} color="bronze" />
         <KpiCard icon={Activity}  label="Total Sessions"  value={data.kpis.sessions || 0}                       color="gold"   />
-        <KpiCard icon={Zap}       label="Tokens Used"     value={data.kpis.total_tokens || 0}                    color="bronze" />
+        <KpiCard icon={Zap}       label="Tokens Used"     value={(data.kpis.total_tokens || 0).toLocaleString()} color="bronze" />
         <KpiCard icon={BookOpen}  label="Skills Library"  value={totalSkills}                                    color="gold"   />
       </div>
 
@@ -314,16 +219,7 @@ export default function App() {
     </div>
   );
 
-  const renderMemory = () => {
-    const q = query.trim().toLowerCase();
-    const facts = q
-      ? data.recent_facts.filter((f) =>
-          [f.kind, f.key, f.value]
-            .filter(Boolean)
-            .some((s) => String(s).toLowerCase().includes(q)))
-      : data.recent_facts;
-
-    return (
+  const renderMemory = () => (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       {data.categories && data.categories.length > 0 && (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
@@ -337,15 +233,6 @@ export default function App() {
       )}
 
       <Card title="Recent Facts">
-        {q && (
-          <div className="flex items-center gap-2 mb-4 -mt-2 text-xs text-slate-400">
-            <span>{facts.length} match{facts.length === 1 ? '' : 'es'} for</span>
-            <span className="px-2 py-0.5 rounded-md bg-thai-gold/10 text-thai-gold font-mono">{query.trim()}</span>
-            <button onClick={() => setQuery('')} className="text-slate-500 hover:text-slate-300 transition-colors flex items-center gap-1">
-              <X size={12} /> clear
-            </button>
-          </div>
-        )}
         <div className="overflow-x-auto">
           <table className="w-full text-left">
             <thead>
@@ -357,7 +244,7 @@ export default function App() {
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
-              {facts.map((fact) => (
+              {data.recent_facts.map((fact) => (
                 <tr key={fact.id} className="group hover:bg-white/5 transition-colors">
                   <td className="py-4">
                     <span className="px-2 py-1 rounded-md bg-thai-gold/10 text-thai-gold text-xs font-bold uppercase">
@@ -371,16 +258,10 @@ export default function App() {
               ))}
             </tbody>
           </table>
-          {facts.length === 0 && (
-            <p className="text-sm text-slate-500 text-center py-8">
-              {q ? 'No facts match your search.' : 'No facts recorded yet.'}
-            </p>
-          )}
         </div>
       </Card>
     </div>
-    );
-  };
+  );
 
   const renderChatReasoning = () => (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -805,7 +686,7 @@ export default function App() {
               { cmd: 'sakthai memory stats',                 note: 'Memory health overview' },
               { cmd: 'sakthai mcp',                          note: 'Start MCP stdio server' },
               { cmd: 'sakthai skills list',                  note: 'Browse skills catalog' },
-              { cmd: 'sakthai dashboard',                    note: 'Open this live dashboard' },
+              { cmd: 'sakthai dashboard',                    note: 'Open Streamlit UI' },
             ].map((item, i) => (
               <div key={i} className="flex items-start gap-3 p-3 rounded-xl bg-white/5 border border-white/5 hover:border-thai-gold/20 transition-all group">
                 <Cpu size={14} className="text-thai-bronze mt-0.5 flex-shrink-0" />
@@ -866,16 +747,12 @@ export default function App() {
         <div className="absolute bottom-0 left-0 right-0 p-6 space-y-3">
           <div className="p-4 rounded-xl bg-white/5 border border-white/10">
             <div className="flex items-center gap-3 mb-2">
-              <div className={`w-2 h-2 rounded-full ${(STATUS_STYLES[status] || STATUS_STYLES.loading).dot} ${(STATUS_STYLES[status] || STATUS_STYLES.loading).pulse ? 'animate-pulse' : ''}`} />
-              <span className="text-xs font-bold text-slate-300">
-                {status === 'live' ? 'Live Data' : status === 'reconnecting' ? 'Reconnecting…' : status === 'loading' ? 'Connecting…' : 'Demo Mode'}
-              </span>
+              <div className={`w-2 h-2 rounded-full ${data.source === 'live' ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
+              <span className="text-xs font-bold text-slate-300">{data.source === 'live' ? 'Live Data' : 'Demo Mode'}</span>
             </div>
             <p className="text-[10px] text-slate-500 leading-relaxed">
-              {status === 'live'
-                ? `Auto-refresh every ${POLL_MS / 1000}s · updated ${formatAgo(lastUpdated)}`
-                : status === 'reconnecting'
-                ? 'Lost link to the agent — retrying. Showing last snapshot.'
+              {data.source === 'live'
+                ? `Snapshot from ${data.generated_at}`
                 : 'Run sakthai dashboard to connect live data'}
             </p>
           </div>
@@ -903,43 +780,15 @@ export default function App() {
           </div>
 
           <div className="flex items-center gap-3">
-            <LiveStatus status={status} lastUpdated={lastUpdated} generatedAt={data.generated_at} />
+            <SourceBadge source={data.source} generatedAt={data.generated_at} />
             <div className="relative hidden md:block">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={16} />
               <input
                 type="text"
-                value={query}
-                onChange={(e) => onSearch(e.target.value)}
                 placeholder="Search memory..."
-                className="bg-white/5 border border-white/10 rounded-full py-1.5 pl-10 pr-9 text-sm text-slate-300 focus:outline-none focus:border-thai-gold/50 w-56 transition-all"
+                className="bg-white/5 border border-white/10 rounded-full py-1.5 pl-10 pr-4 text-sm text-slate-300 focus:outline-none focus:border-thai-gold/50 w-56 transition-all"
               />
-              {query && (
-                <button
-                  onClick={() => setQuery('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors"
-                >
-                  <X size={14} />
-                </button>
-              )}
             </div>
-            <button
-              onClick={() => setAutoRefresh((a) => !a)}
-              title={autoRefresh ? 'Pause auto-refresh' : 'Resume auto-refresh'}
-              className={`p-2 rounded-full border transition-colors ${
-                autoRefresh
-                  ? 'bg-thai-gold/10 border-thai-gold/30 text-thai-gold'
-                  : 'bg-white/5 border-white/10 text-slate-400 hover:text-white'
-              }`}
-            >
-              {autoRefresh ? <Pause size={18} /> : <Play size={18} />}
-            </button>
-            <button
-              onClick={refresh}
-              title="Refresh now"
-              className="p-2 rounded-full bg-white/5 text-slate-400 hover:text-white transition-colors border border-white/10"
-            >
-              <RefreshCw size={18} className={refreshing ? 'animate-spin' : ''} />
-            </button>
             <button className="p-2 rounded-full bg-white/5 text-slate-400 hover:text-white transition-colors border border-white/10">
               <Shield size={20} />
             </button>

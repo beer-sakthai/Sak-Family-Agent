@@ -24,11 +24,8 @@ v2 is local-first — the CLI, the agent loop, and the MCP stdio server.
 # Setup (Python >=3.11)
 cp .env.example .env            # then fill in ANTHROPIC_API_KEY
 pip install -e ".[dev]"         # editable install + test/lint/type-check tools
-pip install -e ".[dashboard]"   # legacy extra (streamlit/plotly/pandas) — the React dashboard does NOT need it
+pip install -e ".[dashboard]"   # adds streamlit/plotly/pandas/PyGithub for `sakthai dashboard`
 pip install -e ".[all]"         # dev + dashboard
-
-# The dashboard UI is a React/Vite app (top-level dashboard/), not Python:
-cd dashboard && npm ci && npm run build   # build once, then: `sakthai dashboard`
 
 # Preferred: use uv (CI uses uv with uv.lock for reproducible installs)
 uv sync --all-extras
@@ -49,9 +46,8 @@ across Python **3.11, 3.12, and 3.13**, then a separate **smoke-test** job that
 drives the live CLI + MCP server via
 `.claude/skills/run-sakthai-agent-v2/driver.py`. Run the lint→pytest sequence
 locally before pushing; green CI is the bar for `main`. Coverage floor is **85%**
-(`fail_under = 85`). The dashboard's only Python module, `sakthai/dashboard/data.py`,
-is the testable snapshot builder; the UI itself is React (`dashboard/`, built with
-Node, not measured by Python coverage).
+(`fail_under = 85`); `dashboard/app.py` is excluded from coverage (it's
+presentation glue).
 
 ---
 
@@ -69,7 +65,7 @@ root with `SAKTHAI_HOME`):
    - Extensions: `extensions add|list|remove`
    - Sessions: `sessions list|show|export`
    - System: `doctor`, `setup`, `status`, `tools`
-   - Dashboard: `dashboard` (serves the React UI build with a live `/data.json` endpoint)
+   - Dashboard: `dashboard` (Streamlit UI)
 
 2. **Agent loop** — `sakthai run` drives a provider-agnostic tool-using loop
    (Claude, Gemini, or any OpenAI-compatible/Ollama endpoint).
@@ -167,7 +163,7 @@ Click commands split by area; all sub-files imported by `cli/__init__.py`:
 - `skills.py` — `skills` group
 - `cycle.py` — `cycle` group
 - `extensions.py` — `extensions` group
-- `dashboard.py` — `dashboard` (serves the React build + live `/data.json`; `--export` writes a JSON snapshot)
+- `dashboard.py` — `dashboard` (launches Streamlit)
 - `sessions.py` — `sessions` group
 
 ### Other subsystems
@@ -180,14 +176,10 @@ Click commands split by area; all sub-files imported by `cli/__init__.py`:
   related_skills). `library/` has 31 curated skills across 11 categories;
   `skills/` has 17 user/extension skills. Skills are injected into the agent
   system prompt via `render_skills_prompt_block()`.
-- **`dashboard/` (Python: `sakthai/dashboard/`)** — `data.py` builds a UI-free,
-  testable snapshot of the store (KPIs, growth series, per-kind breakdown,
-  sessions, skills catalog) via `collect_dashboard_data()`. The UI is a
-  React/Vite single-page app in the **top-level `dashboard/`** directory (built
-  to `dashboard/dist`). `sakthai dashboard` serves that build over a stdlib
-  HTTP server and exposes a live `/data.json` endpoint that re-runs
-  `collect_dashboard_data()` on every poll, so the UI reflects the store in real
-  time. (`--export <file>` writes the same snapshot once, for static hosting.)
+- **`dashboard/`** — `data.py` builds a UI-free, testable snapshot of the store
+  (KPIs, growth series, per-kind breakdown, date-range filtering). `app.py`
+  renders it in Streamlit (tabs: Overview, Memory Explorer, Sessions, Cycle,
+  Settings). `app.py` has loose mypy (`ignore_errors = true`).
 - **`extensions/install.py`** — clones skill/MCP bundles from git into
   `~/.sakthai/extensions`; `list`/`remove` manage installed bundles.
 - **`web/server.py`** — minimal HTTP server stub for a future web runtime.
@@ -223,7 +215,7 @@ sakthai-agent-v2/
 │   ├── cycle/                # Dream→Hope→Care→Joy→Trust→Growth state machine
 │   ├── learn/                # capture.py one-shot fact entry
 │   ├── extensions/           # install.py (git-based bundle installer)
-│   ├── dashboard/            # data.py — UI-free snapshot builder (React UI in top-level dashboard/)
+│   ├── dashboard/            # data.py (snapshot) + app.py (Streamlit)
 │   └── web/                  # HTTP server stub
 ├── tests/                    # 37 test files, hermetic, no network
 ├── skills/                   # 17 user/extension SKILL.md folders
@@ -282,7 +274,8 @@ reach out to a real endpoint. Use `tmp_path` fixtures for file I/O.
   `SAKTHAI_SHELL_ALLOW`. Don't widen these without reason.
 - **Not linted / not type-checked:** ruff excludes `library/` and `scripts/`;
   mypy only covers `sakthai/`. Don't "fix" lint/types in those trees.
-- **mypy is `strict`** over all of `sakthai/`. Keep all new code strict-clean.
+- **mypy is `strict`** over `sakthai/` (`dashboard/app.py` is the one exception:
+  `ignore_errors = true`). Keep all new code strict-clean.
 - **Schema migrations are additive.** Use `ALTER TABLE` only, under
   `BEGIN IMMEDIATE`. Never drop columns or tables in a migration.
 - **Tool registry is the MCP server.** `BUILTIN_TOOLS` in `agent/tools.py` is

@@ -31,7 +31,6 @@ Knobs via env:
     BASE_MODEL    default Qwen/Qwen2.5-1.5B-Instruct
     ADAPTER_REPO  default Nanthasit/sakthai-toolcalling-1.5b-lora
 """
-
 import argparse
 import os
 import sys
