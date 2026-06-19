@@ -14,7 +14,14 @@ import {
   Menu,
   X,
   BookOpen,
-  Layers
+  Layers,
+  ExternalLink,
+  Terminal,
+  Server,
+  GitBranch,
+  FlaskConical,
+  Cpu,
+  RefreshCw,
 } from 'lucide-react';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -116,6 +123,24 @@ export default function App() {
 
   const renderOverview = () => (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      {/* About strip */}
+      <div className="glass-card px-6 py-4 flex flex-wrap items-center justify-between gap-3 border-thai-gold/20">
+        <div className="flex items-center gap-3">
+          <span className="text-sm font-bold text-white">SakThai-Agent</span>
+          <span className="px-2 py-0.5 rounded-full bg-thai-gold/15 text-thai-gold text-[10px] font-bold border border-thai-gold/30">v2.0.0</span>
+          <span className="text-xs text-slate-400 hidden sm:block">Personal learning agent with persistent SQLite memory &amp; MCP server</span>
+        </div>
+        <a
+          href="https://github.com/beer-sakthai/sakthai-agent-v2"
+          target="_blank"
+          rel="noreferrer"
+          className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-thai-gold transition-colors"
+        >
+          <ExternalLink size={13} />
+          beer-sakthai/sakthai-agent-v2
+        </a>
+      </div>
+
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         <KpiCard icon={Database}  label="Total Facts"     value={data.kpis.total_facts}                         delta={data.kpis.total_facts_delta}        color="gold"   />
         <KpiCard icon={Brain}     label="Observations"    value={data.kpis.total_observations}                  delta={data.kpis.total_observations_delta} color="bronze" />
@@ -304,12 +329,13 @@ export default function App() {
         </div>
       </Card>
 
-      <Card title="Evolution History">
+      <Card title="Version History">
         <div className="space-y-4">
           {[
-            { version: 'v2.0', date: 'Jun 2025', gain: '+21%', status: 'active', note: 'Local-first rewrite with SQLite' },
-            { version: 'v1.x', date: 'Jan 2025', gain: '+14%', status: 'legacy', note: 'Google ADK / Vertex AI cloud agent' },
-            { version: 'v0.x', date: 'Sep 2024', gain: '+0%',  status: 'legacy', note: 'Original SakThai OG baseline' },
+            { version: 'v2.2.0', date: 'Jun 2026', gain: 'dev',  status: 'active', note: 'Unified extension paths, namespaced commands, caveman mode toggle' },
+            { version: 'v2.1.0', date: 'Jun 2026', gain: '+5%',  status: 'legacy', note: 'Fast-track mode, remote memory sync, incremental JSONL exports' },
+            { version: 'v2.0.0', date: 'Jun 15 2026', gain: '+21%', status: 'legacy', note: 'Clean rewrite — local-first SQLite, MCP server, 10 built-in tools' },
+            { version: 'pre-v2', date: '2024–2025', gain: 'base', status: 'legacy', note: 'Google ADK / Vertex AI cloud agent (original SakThai OG)' },
           ].map((v, i) => (
             <div key={i} className="flex items-start justify-between p-4 rounded-xl bg-white/5 border border-white/5">
               <div className="flex items-start gap-3">
@@ -320,7 +346,7 @@ export default function App() {
                   <p className="text-xs text-slate-400 mt-1">{v.note}</p>
                 </div>
               </div>
-              <span className="text-sm font-mono text-thai-gold flex-shrink-0">{v.gain}</span>
+              <span className={`text-sm font-mono flex-shrink-0 ${v.gain === 'dev' ? 'text-amber-400' : 'text-thai-gold'}`}>{v.gain}</span>
             </div>
           ))}
         </div>
@@ -459,6 +485,224 @@ export default function App() {
     );
   };
 
+  const renderProject = () => {
+    const ARCH_LAYERS = [
+      { icon: Terminal,    label: 'CLI / MCP',     desc: 'Click commands + JSON-RPC stdio server',       color: '#d9b54a' },
+      { icon: RefreshCw,  label: 'Agent Loop',     desc: 'run_agent() — provider-agnostic orchestration', color: '#c9813f' },
+      { icon: Layers,     label: 'Tool Registry',  desc: 'BUILTIN_TOOLS shared by loop and MCP',          color: '#3b82f6' },
+      { icon: Database,   label: 'MemoryStore',    desc: 'Only code that touches SQLite',                 color: '#10b981' },
+      { icon: Server,     label: 'SQLite',         desc: '~/.sakthai/memory.db — WAL mode',               color: '#a855f7' },
+    ];
+
+    const TOOLS = [
+      { name: 'learn',                  desc: 'Store a new fact' },
+      { name: 'recall',                 desc: 'Retrieve facts by kind/key' },
+      { name: 'search',                 desc: 'Semantic keyword search' },
+      { name: 'forget',                 desc: 'Delete a fact by id' },
+      { name: 'list_facts',             desc: 'Paginated fact listing' },
+      { name: 'read_file',              desc: 'Sandboxed file reader' },
+      { name: 'run_command',            desc: 'Shell (opt-in via env var)' },
+      { name: 'send_telegram_message',  desc: 'Telegram notifications' },
+      { name: 'healthcheck',            desc: 'Store integrity check' },
+      { name: 'render_memory',          desc: 'Inject memory into prompt' },
+    ];
+
+    const PROVIDERS = [
+      { name: 'Claude',           vendor: 'Anthropic',  env: 'ANTHROPIC_API_KEY',  note: 'Reasoning & tool use', color: '#d9b54a' },
+      { name: 'Gemini',           vendor: 'Google',     env: 'GEMINI_API_KEY',     note: 'Long context windows', color: '#4285f4' },
+      { name: 'OpenAI-compatible',vendor: 'Any gateway',env: 'OPENAI_API_BASE',    note: 'Any OpenAI-compat API', color: '#10b981' },
+      { name: 'Ollama',           vendor: 'Local',      env: 'OLLAMA_HOST',        note: 'On-device models',      color: '#a855f7' },
+    ];
+
+    const CYCLE = [
+      { name: 'Dream',  thai: 'ฝัน',    note: 'Define vision, recall context' },
+      { name: 'Hope',   thai: 'หวัง',   note: 'Plan and sequence work' },
+      { name: 'Care',   thai: 'แคร์',   note: 'Build and test' },
+      { name: 'Joy',    thai: 'ยินดี',  note: 'Execute with momentum' },
+      { name: 'Trust',  thai: 'วิศวาส', note: 'Verify end-to-end' },
+      { name: 'Growth', thai: 'เติบโต', note: 'Reflect and consolidate' },
+    ];
+
+    const CI_STATS = [
+      { label: 'Test files',      value: '33' },
+      { label: 'Coverage floor',  value: '85%' },
+      { label: 'Python versions', value: '3' },
+      { label: 'Type-check',      value: 'strict' },
+      { label: 'Lint',            value: 'ruff' },
+      { label: 'Security scan',   value: 'bandit' },
+    ];
+
+    return (
+      <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+
+        {/* Hero */}
+        <Card>
+          <div className="flex flex-wrap items-start justify-between gap-6">
+            <div className="space-y-3">
+              <div className="flex items-center gap-3">
+                <h2 className="text-2xl font-bold text-white">SakThai-Agent</h2>
+                <span className="px-2.5 py-1 rounded-full bg-thai-gold/15 text-thai-gold text-xs font-bold border border-thai-gold/30">v2.0.0</span>
+                <span className="px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-400 text-xs font-bold border border-amber-500/20">v2.2.0-dev</span>
+              </div>
+              <p className="text-slate-300 max-w-xl text-sm leading-relaxed">
+                Personal learning agent with persistent SQLite memory, a provider-agnostic tool-using agent loop (Claude · Gemini · OpenAI · Ollama), and an MCP stdio server — all sharing the same tool registry.
+              </p>
+              <div className="flex flex-wrap items-center gap-2 pt-1">
+                {['Python 3.11', '3.12', '3.13'].map(v => (
+                  <span key={v} className="text-[10px] font-bold px-2 py-0.5 rounded border border-white/10 text-slate-400">{v}</span>
+                ))}
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded border border-white/10 text-slate-400">SQLite WAL</span>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded border border-white/10 text-slate-400">MCP 2024-11-05</span>
+              </div>
+            </div>
+            <a
+              href="https://github.com/beer-sakthai/sakthai-agent-v2"
+              target="_blank"
+              rel="noreferrer"
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-slate-300 hover:border-thai-gold/40 hover:text-thai-gold transition-all text-sm font-medium"
+            >
+              <GitBranch size={16} />
+              View on GitHub
+              <ExternalLink size={12} className="opacity-60" />
+            </a>
+          </div>
+        </Card>
+
+        {/* Architecture */}
+        <div>
+          <div className="flex items-center gap-3 mb-4">
+            <h3 className="text-sm font-bold text-thai-gold uppercase tracking-widest">Architecture</h3>
+            <div className="flex-1 h-px bg-white/10" />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+            {ARCH_LAYERS.map((layer, i) => {
+              const Icon = layer.icon;
+              return (
+                <div key={i} className="glass-card p-5 border border-white/5 hover:border-thai-gold/20 transition-all text-center group">
+                  <div className="flex items-center justify-center mb-3">
+                    <div className="p-3 rounded-xl" style={{ backgroundColor: `${layer.color}15` }}>
+                      <Icon size={20} style={{ color: layer.color }} />
+                    </div>
+                  </div>
+                  <p className="text-xs font-bold text-white mb-1">{layer.label}</p>
+                  <p className="text-[10px] text-slate-500 leading-relaxed">{layer.desc}</p>
+                  {i < ARCH_LAYERS.length - 1 && (
+                    <div className="hidden lg:block absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 z-10">
+                      <ChevronRight size={14} className="text-slate-600" />
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Built-in Tools */}
+        <div>
+          <div className="flex items-center gap-3 mb-4">
+            <h3 className="text-sm font-bold text-thai-gold uppercase tracking-widest">10 Built-in Tools</h3>
+            <div className="flex-1 h-px bg-white/10" />
+            <span className="text-xs text-slate-500">Shared by agent loop &amp; MCP server</span>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+            {TOOLS.map((tool, i) => (
+              <div key={i} className="glass-card p-4 border border-white/5 hover:border-thai-gold/20 transition-all">
+                <p className="text-xs font-bold font-mono text-thai-gold mb-1">{tool.name}</p>
+                <p className="text-[10px] text-slate-500 leading-relaxed">{tool.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Providers + CI Stats side by side */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <Card title="AI Providers">
+            <div className="space-y-3">
+              {PROVIDERS.map((p, i) => (
+                <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/5 hover:border-white/10 transition-all">
+                  <div className="flex items-center gap-3">
+                    <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: p.color }} />
+                    <div>
+                      <p className="text-sm font-bold text-white">{p.name}</p>
+                      <p className="text-[10px] text-slate-500">{p.vendor} · {p.note}</p>
+                    </div>
+                  </div>
+                  <code className="text-[10px] text-slate-500 border border-white/10 px-2 py-0.5 rounded hidden sm:block">{p.env}</code>
+                </div>
+              ))}
+            </div>
+          </Card>
+
+          <Card title="CI / Quality">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {CI_STATS.map((s, i) => (
+                <div key={i} className="p-4 rounded-xl bg-white/5 border border-white/5 text-center">
+                  <p className="text-xl font-bold text-thai-gold">{s.value}</p>
+                  <p className="text-[10px] text-slate-500 uppercase tracking-wider mt-1">{s.label}</p>
+                </div>
+              ))}
+            </div>
+            <div className="mt-4 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center gap-3">
+              <FlaskConical size={16} className="text-emerald-400 flex-shrink-0" />
+              <p className="text-xs text-emerald-300">All tests are hermetic — no network, no GCP credentials required</p>
+            </div>
+          </Card>
+        </div>
+
+        {/* 6-Stage Cycle */}
+        <div>
+          <div className="flex items-center gap-3 mb-4">
+            <h3 className="text-sm font-bold text-thai-gold uppercase tracking-widest">6-Stage Cycle</h3>
+            <div className="flex-1 h-px bg-white/10" />
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+            {CYCLE.map((stage, i) => {
+              const hue = Math.round(40 + i * 4);
+              const color = i === 0 ? '#d9b54a' : i === 1 ? '#c9813f' : i === 2 ? '#3b82f6' : i === 3 ? '#10b981' : i === 4 ? '#a855f7' : '#ec4899';
+              return (
+                <div key={i} className="glass-card p-4 border border-white/5 hover:border-thai-gold/20 transition-all">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold" style={{ backgroundColor: `${color}25`, color }}>
+                      {i + 1}
+                    </div>
+                    <p className="text-sm font-bold text-white">{stage.name}</p>
+                  </div>
+                  <p className="text-[11px] font-medium mb-2" style={{ color }}>{stage.thai}</p>
+                  <p className="text-[10px] text-slate-500 leading-relaxed">{stage.note}</p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Quick Start */}
+        <Card title="Quick Start">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {[
+              { cmd: 'pip install -e ".[dev]"',             note: 'Install with dev extras' },
+              { cmd: 'sakthai run "What do I know?"',       note: 'Run the agent loop' },
+              { cmd: 'sakthai learn "prefer Python"',        note: 'Capture a fact' },
+              { cmd: 'sakthai recall pref',                  note: 'Retrieve facts by kind' },
+              { cmd: 'sakthai memory stats',                 note: 'Memory health overview' },
+              { cmd: 'sakthai mcp',                          note: 'Start MCP stdio server' },
+              { cmd: 'sakthai skills list',                  note: 'Browse skills catalog' },
+              { cmd: 'sakthai dashboard',                    note: 'Open Streamlit UI' },
+            ].map((item, i) => (
+              <div key={i} className="flex items-start gap-3 p-3 rounded-xl bg-white/5 border border-white/5 hover:border-thai-gold/20 transition-all group">
+                <Cpu size={14} className="text-thai-bronze mt-0.5 flex-shrink-0" />
+                <div>
+                  <code className="text-xs text-thai-gold font-mono group-hover:text-white transition-colors">{item.cmd}</code>
+                  <p className="text-[10px] text-slate-500 mt-0.5">{item.note}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+
+      </div>
+    );
+  };
+
   const renderContent = () => {
     switch (activeTab) {
       case 'Overview':        return renderOverview();
@@ -467,6 +711,7 @@ export default function App() {
       case 'Evolution':       return renderEvolution();
       case 'Skills':          return renderSkills();
       case 'Agent Activity':  return renderActivity();
+      case 'Project':         return renderProject();
       default:                return renderOverview();
     }
   };
@@ -493,10 +738,13 @@ export default function App() {
             <SidebarItem icon={TrendingUp}      label="Evolution"        active={activeTab === 'Evolution'}        onClick={() => setActiveTab('Evolution')} />
             <SidebarItem icon={Code}            label="Skills"           active={activeTab === 'Skills'}           onClick={() => setActiveTab('Skills')} />
             <SidebarItem icon={Activity}        label="Agent Activity"   active={activeTab === 'Agent Activity'}   onClick={() => setActiveTab('Agent Activity')} />
+            <div className="pt-2 border-t border-white/5 mt-2">
+              <SidebarItem icon={BookOpen}      label="Project"          active={activeTab === 'Project'}          onClick={() => setActiveTab('Project')} />
+            </div>
           </nav>
         </div>
 
-        <div className="absolute bottom-0 left-0 right-0 p-6">
+        <div className="absolute bottom-0 left-0 right-0 p-6 space-y-3">
           <div className="p-4 rounded-xl bg-white/5 border border-white/10">
             <div className="flex items-center gap-3 mb-2">
               <div className={`w-2 h-2 rounded-full ${data.source === 'live' ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
@@ -508,6 +756,16 @@ export default function App() {
                 : 'Run sakthai dashboard to connect live data'}
             </p>
           </div>
+          <a
+            href="https://github.com/beer-sakthai/sakthai-agent-v2"
+            target="_blank"
+            rel="noreferrer"
+            className="flex items-center justify-center gap-2 w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-slate-400 hover:border-thai-gold/30 hover:text-thai-gold transition-all text-xs font-medium"
+          >
+            <GitBranch size={13} />
+            beer-sakthai/sakthai-agent-v2
+            <ExternalLink size={11} className="opacity-50" />
+          </a>
         </div>
       </aside>
 
