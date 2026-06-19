@@ -15,9 +15,9 @@ Status legend: ✅ done · 📋 decision recorded (re-derivation is follow-on wo
 | Item | Decision | Notes |
 |------|----------|-------|
 | `SAKTHAI.md` | ✅ re-derived | v2-accurate agent identity; tool set updated (adds `send_telegram_message`, `run_agent_loop`); describes all three runtimes sharing `~/.sakthai/memory.db`. |
-| `CONTRIBUTING.md` | ✅ already present, v2-accurate | Documents `uv`, the lint→format→mypy→bandit→pytest bar, and the personal-project/MIT posture. No change needed. |
+| `CONTRIBUTING.md` | ✅ already present, v2-accurate | Documents `uv`, the lint→format→mypy→bandit→pytest bar, and the personal-project, all-rights-reserved posture. No change needed. |
 | `SECURITY.md` | ✅ already present, v2-accurate | Tool sandbox, credential chain, SQL safety, MCP stdio, CI security gates. No change needed. |
-| `CODE_OF_CONDUCT.md` | ✅ re-derived | Contributor Covenant 2.1 adaptation. **Corrected from OG**: OG claimed a "proprietary view-only license" and a CLA; v2 is MIT, so participation wording was rewritten to match `LICENSE`. |
+| `CODE_OF_CONDUCT.md` | ✅ re-derived | Contributor Covenant 2.1 adaptation. v2 is **all rights reserved** (source-available, no redistribution); participation wording matches that posture. |
 | `CHANGELOG.md` | ✅ generated from v2 history | Keep-a-Changelog format built from v2's own phase log and git history. OG's 993-line v1 changelog was **not** copied. |
 | `WORKSPACE.md` | ⛔ declined | OG's `WORKSPACE.md` is a *workspace-root* `CLAUDE.md` describing Hermes integration, a root Playwright suite, and `colab_training/` LoRA scripts — none of which exist in v2. v2's workspace context already lives in the repo `CLAUDE.md` + `README.md`, and the multi-repo home layout is covered by `~/CLAUDE.md`. A standalone `WORKSPACE.md` would duplicate or contradict those. |
 | `DASHBOARD_IMPROVEMENTS.md` | 📋 folded (see below) | 426-line v1 Streamlit proposal by a third-party agent. Most "weaknesses" it lists are already addressed in v2 (Phase 8: session analytics, token-by-model, export/import) or deferred to v3. Declined as a standalone doc; the few still-open ideas are captured under [Dashboard backlog](#dashboard-backlog). |
