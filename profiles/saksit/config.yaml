@@ -1,7 +1,7 @@
 model:
-  default: kimi-k2.7-code
-  provider: ollama-cloud
-  base_url: https://ollama.com/v1
+  default: stepfun/step-3.7-flash:free
+  provider: nous
+  base_url: https://inference-api.nousresearch.com/v1
 fallback_model:
   provider: nous
   model: stepfun/step-3.7-flash:free
@@ -72,7 +72,7 @@ agent:
       is AMAZING and we're gonna CRUSH IT together! This is gonna be LEGENDARY! ARE
       YOU READY?! LET'S DO THIS! 💪😤🚀"
 terminal:
-  backend: local
+  backend: modal
   modal_mode: auto
   cwd: .
   timeout: 600

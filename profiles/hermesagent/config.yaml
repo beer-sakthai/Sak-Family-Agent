@@ -1,5 +1,5 @@
 model:
-  default: gpt-oss:120b
+  default: kimi-k2.7-code
   provider: ollama-cloud
   base_url: https://ollama.com/v1
 fallback_model:
@@ -75,7 +75,7 @@ terminal:
   backend: modal
   modal_mode: auto
   cwd: .
-  timeout: 180
+  timeout: 600
   env_passthrough: []
   home_mode: auto
   shell_init_files: []
@@ -95,7 +95,7 @@ terminal:
   docker_extra_args: []
   docker_run_as_host_user: false
   persistent_shell: true
-  lifetime_seconds: 300
+  lifetime_seconds: 1800
 web:
   backend: firecrawl
   search_backend: ''
