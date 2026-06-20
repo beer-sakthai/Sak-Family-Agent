@@ -10,26 +10,13 @@ import click
 
 from ..config import check_env
 
-_OK_M = "[+]"
-_WARN_M = "[!]"
-_ERR_M = "[x]"
-_INFO_M = "[i]"
+_OK = "[+]"
+_WARN = "[!]"
+_ERR = "[x]"
+_INFO = "[i]"
 
 
 def _ok() -> str:
-    return str(click.style(_OK_M, fg="green", bold=True))
-
-
-def _warn() -> str:
-    return str(click.style(_WARN_M, fg="yellow", bold=True))
-
-
-def _err() -> str:
-    return str(click.style(_ERR_M, fg="red", bold=True))
-
-
-def _info() -> str:
-    return str(click.style(_INFO_M, fg="cyan"))
     return str(click.style(_OK, fg="green", bold=True))
 
 
@@ -144,7 +131,6 @@ def setup(interactive: bool) -> None:
         else:
             click.echo(f"  {_err()} {var} is NOT set")
             if interactive and var == "ANTHROPIC_API_KEY" and env_file.exists():
-                entered_val = str(
                 val = str(
                     click.prompt(
                         click.style(f"      → Enter your {var}", fg="yellow"),
@@ -153,12 +139,6 @@ def setup(interactive: bool) -> None:
                         show_default=False,
                     )
                 )
-                if entered_val:
-                    content = env_file.read_text(encoding="utf-8")
-                    pattern = rf"^{var}=.*$"
-                    replacement = f"{var}={entered_val}"
-                    if re.search(pattern, content, re.MULTILINE):
-                        new_content = re.sub(pattern, lambda m: replacement, content, flags=re.MULTILINE)
                 if val:
                     content = env_file.read_text(encoding="utf-8")
                     pattern = rf"^{var}=.*$"
@@ -170,7 +150,6 @@ def setup(interactive: bool) -> None:
                     env_file.write_text(new_content, encoding="utf-8")
                     click.echo(f"  {_ok()} saved {var} to .env")
                     # Update local env for subsequent checks in this run
-                    os.environ[var] = entered_val
                     os.environ[var] = val
                 else:
                     issues.append(f"{var} not set")
