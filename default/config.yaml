@@ -1,10 +1,7 @@
 model:
-  default: gemini-flash-lite-latest
-  provider: gemini
-  base_url: https://generativelanguage.googleapis.com/v1beta
-  auth_mode: api_key
-  context_length: 400000
-  api_key: ''  # set via env, never commit
+  default: stepfun/step-3.7-flash:free
+  provider: nous
+  base_url: https://inference-api.nousresearch.com/v1
 providers: {}
 fallback_providers: []
 credential_pool_strategies: {}
@@ -676,7 +673,7 @@ known_plugin_toolsets:
 custom_providers:
 - name: mistral-code208
   base_url: https://api.mistral.ai/v1
-  api_key: ''  # set via env, never commit
+  api_key: ''
   model: codestral-2508
   models:
     codestral-2508:
