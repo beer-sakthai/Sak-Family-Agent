@@ -1,6 +1,4 @@
-# Playwright Visual Testing
-
-Cover image-snapshot regression and responsive viewport checks together; avoids splitting the same visual workflow across skills.
+---\nname: playwright-visual-testing\ncategory: testing\ndescription: Cover image-snapshot regression and responsive viewport checks together; avoids splitting the same visual workflow across skills.\nversion: 1.0.0\n---\n\n# Playwright Visual Testing\n\nCover image-snapshot regression and responsive viewport checks together; avoids splitting the same visual workflow across skills.
 
 ## When to use
 
