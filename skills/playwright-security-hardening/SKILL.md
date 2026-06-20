@@ -1,6 +1,4 @@
-# Playwright Security Hardening
-
-Centralize security and isolation test patterns for Playwright: CSP/cookies/cross-origin behavior and other browser-layer boundaries.
+---\nname: playwright-security-hardening\ncategory: testing\ndescription: Centralize security and isolation test patterns for Playwright: CSP/cookies/cross-origin behavior and other browser-layer boundaries.\nversion: 1.0.0\n---\n\n# Playwright Security Hardening\n\nCentralize security and isolation test patterns for Playwright: CSP/cookies/cross-origin behavior and other browser-layer boundaries.
 
 ## When to use
 
