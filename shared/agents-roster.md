@@ -22,7 +22,7 @@ others exist. You are one of these four — your own name is defined in your SOU
 
 ## SakThai — `@sakthai_v1_bot`
 - Runtime: Hermes gateway, **hermesagent profile** (`HERMES_HOME=/home/sakthai/.hermes/profiles/hermesagent`).
-- Model: **Ollama Cloud** — `kimi-k2.7-code`, with **Nous free fallback** on rate-limit.
+- Model: **Ollama Cloud** — `gpt-oss:120b`, with **Nous free fallback** on rate-limit.
 - systemd service: `hermes-gateway-hermesagent.service`.
 
 ## SakSit — `@saksit_agent_bot`
