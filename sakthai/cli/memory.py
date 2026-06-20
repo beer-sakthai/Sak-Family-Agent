@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, cast
+from typing import cast
 
 import click
 
@@ -89,7 +89,7 @@ def recall(query: str | None, tag: str | None, limit: int) -> None:
     with MemoryStore() as store:
         if tag:
             facts = store.search_by_tag(tag, limit=limit)
-            obs: list[Any] = []
+            obs: list[Observation] = []
         else:
             facts, obs = store.search_memory(cast(str, query), limit=limit)
     if not facts and not obs:

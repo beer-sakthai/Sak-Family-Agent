@@ -1,0 +1,111 @@
+<<<<<<< SEARCH
+def _serve_dashboard(host: str, port: int, open_browser: bool, dist_path: Path) -> None:
+    """Simple HTTP server to serve the static dashboard files."""
+    os.chdir(dist_path)
+    Handler = http.server.SimpleHTTPRequestHandler
+
+    # Allow port reuse
+    socketserver.TCPServer.allow_reuse_address = True
+
+    with socketserver.TCPServer((host, port), Handler) as httpd:
+        url = f"http://{host if host != '''0.0.0.0''' else '''localhost'''}:{port}"
+        click.echo(f"dashboard: {url} (Ctrl-C to stop)")
+        if open_browser:
+            threading.Timer(1.0, lambda: webbrowser.open(url)).start()
+        try:
+            httpd.serve_forever()
+        except KeyboardInterrupt:
+            click.echo("\nstopped.")
+            httpd.shutdown()
+
+
+@click.command()
+@click.option(
+    "--host",
+    "-H",
+    default="127.0.0.1",
+    help="Host to bind the dashboard to (default: 127.0.0.1).",
+)
+@click.option(
+    "--port",
+    "-p",
+    default=3000,
+    type=int,
+    callback=_validate_port,
+    help="Port to serve on (default: 3000).",
+)
+@click.option(
+    "--host",
+    "-H",
+    default="127.0.0.1",
+    help="Host to bind the dashboard to (default: 127.0.0.1).",
+)
+@click.option(
+    "--open/--no-open",
+    "open_browser",
+    default=True,
+    help="Open the dashboard in a browser (default: yes).",
+)
+@click.option(
+    "--host",
+    "-H",
+    default="127.0.0.1",
+    help="Host to bind the dashboard to (default: 127.0.0.1).",
+)
+@click.option(
+    "--export",
+    "export_path",
+    default=None,
+    help="Write a JSON snapshot of dashboard data to PATH and exit.",
+)
+def dashboard(host: str, port: int, open_browser: bool, export_path: str | None) -> None:
+=======
+def _serve_dashboard(host: str, port: int, open_browser: bool, dist_path: Path) -> None:
+    """Simple HTTP server to serve the static dashboard files."""
+    os.chdir(dist_path)
+    Handler = http.server.SimpleHTTPRequestHandler
+
+    # Allow port reuse
+    socketserver.TCPServer.allow_reuse_address = True
+
+    with socketserver.TCPServer((host, port), Handler) as httpd:
+        url = f"http://{host if host != '0.0.0.0' else 'localhost'}:{port}"
+        click.echo(f"dashboard: {url} (Ctrl-C to stop)")
+        if open_browser:
+            threading.Timer(1.0, lambda: webbrowser.open(url)).start()
+        try:
+            httpd.serve_forever()
+        except KeyboardInterrupt:
+            click.echo("\nstopped.")
+            httpd.shutdown()
+
+
+@click.command()
+@click.option(
+    "--host",
+    "-H",
+    default="127.0.0.1",
+    help="Host to bind the dashboard to (default: 127.0.0.1).",
+)
+@click.option(
+    "--port",
+    "-p",
+    default=3000,
+    type=int,
+    callback=_validate_port,
+    help="Port to serve on (default: 3000).",
+)
+@click.option(
+    "--open/--no-open",
+    "open_browser",
+    default=True,
+    help="Open the dashboard in a browser (default: yes).",
+)
+@click.option(
+    "--export",
+    "export_path",
+    default=None,
+    help="Write a JSON snapshot of dashboard data to PATH and exit.",
+)
+def dashboard(host: str, port: int, open_browser: bool, export_path: str | None) -> None:
+>>>>>>> REPLACE

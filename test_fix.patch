@@ -1,0 +1,10 @@
+<<<<<<< SEARCH
+        assert mock_serve.called
+        assert mock_serve.call_args[0][0] == 8502
+        assert mock_serve.call_args[0][1] is False  # open_browser=False
+=======
+        assert mock_serve.called
+        assert mock_serve.call_args[0][0] == "127.0.0.1"
+        assert mock_serve.call_args[0][1] == 8502
+        assert mock_serve.call_args[0][2] is False  # open_browser=False
+>>>>>>> REPLACE

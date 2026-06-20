@@ -8,6 +8,7 @@ exercising the memory counts, env-var flags, and readiness logic that back
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -141,3 +142,104 @@ def test_memory_report_corrupt_db_returns_error(
     assert mem["fact_count"] is None
     assert mem["observation_count"] is None
     assert mem["error"] is not None  # exception message forwarded
+
+
+# ---------------------------------------------------------------------------
+# Comprehensive check_env / diagnostics
+# ---------------------------------------------------------------------------
+
+
+def test_check_env_structure(sakthai_home: Path) -> None:
+    report = config.check_env()
+    assert set(report.keys()) == {"paths", "env", "memory", "skills", "auth", "ready"}
+    assert isinstance(report["paths"], dict)
+    assert isinstance(report["env"], dict)
+    assert isinstance(report["memory"], dict)
+    assert isinstance(report["skills"], dict)
+    assert isinstance(report["auth"], dict)
+    assert isinstance(report["ready"], bool)
+
+
+def test_auth_report_sources(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    # 1. Anthropic API Key
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-test")
+    monkeypatch.delenv("ANTHROPIC_AUTH_TOKEN", raising=False)
+    monkeypatch.setenv("CLAUDE_CONFIG_DIR", str(tmp_path / "claude"))
+
+    # 2. OpenAI API Key
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-openai")
+
+    # 3. Gateway
+    monkeypatch.setenv("SAKTHAI_GATEWAY_URL", "http://gw")
+
+    # 4. Gemini CLI (mocking the file)
+    gemini_home = tmp_path / "gemini"
+    gemini_home.mkdir()
+    monkeypatch.setenv("GEMINI_HOME", str(gemini_home))
+    creds = gemini_home / "oauth_creds.json"
+    import json
+    import time
+
+    creds.write_text(
+        json.dumps({"access_token": "abc", "expiry_date": int((time.time() + 3600) * 1000)})
+    )
+
+    report = config.check_env()["auth"]
+    assert report["anthropic_source"] == "api_key"
+    assert report["anthropic_ok"] is True
+    assert report["openai_source"] == "openai_api_key"
+    assert report["openai_ok"] is True
+    assert report["gateway_source"] == "gateway_url"
+    assert report["gateway_ok"] is True
+    assert report["gemini_cli_oauth"] is True
+
+
+def test_ready_false_if_db_not_writable(
+    sakthai_home: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    db = config.memory_db_path()
+    db.touch()
+
+    # Mock os.access to simulate non-writable DB because chmod might not
+    # work reliably across all filesystems/environments in CI.
+    import os
+
+    original_access = os.access
+
+    def mocked_access(path: Any, mode: int) -> bool:
+        if str(path) == str(db) and mode == os.W_OK:
+            return False
+        return original_access(path, mode)
+
+    monkeypatch.setattr(os, "access", mocked_access)
+
+    report = config.check_env()
+    assert report["memory"]["db_exists"] is True
+    assert report["memory"]["db_writable"] is False
+    assert report["ready"] is False
+
+
+def test_paths_report_values(sakthai_home: Path) -> None:
+    report = config.check_env()["paths"]
+    assert report["sakthai_home"] == str(sakthai_home)
+    assert report["sakthai_home_exists"] is True
+    assert report["memory_db"] == str(sakthai_home / "memory.db")
+    assert "skills_dir" in report
+
+
+def test_skills_report_counts(
+    sakthai_home: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    # Use a custom skills dir
+    custom_skills = tmp_path / "custom_skills"
+    custom_skills.mkdir()
+    (custom_skills / "skill1").mkdir()
+    (custom_skills / "skill2").mkdir()
+    (custom_skills / "not-a-skill.txt").touch()
+
+    # We need to patch SKILLS_DIR in sakthai.config
+    monkeypatch.setattr(config, "SKILLS_DIR", custom_skills)
+
+    report = config.check_env()["skills"]
+    assert report["dir_exists"] is True
+    assert report["skill_count"] == 2  # skill1 and skill2 are dirs

@@ -26,7 +26,7 @@ def fetch_page(offset):
            f"&config=default&split=train&offset={offset}&length={PAGE}")
     req = urllib.request.Request(url, headers={"Authorization": "Bearer " + TOK})
     delay = 3
-    for attempt in range(6):
+    for _attempt in range(6):
         try:
             return json.load(urllib.request.urlopen(req))["rows"]
         except urllib.error.HTTPError as e:

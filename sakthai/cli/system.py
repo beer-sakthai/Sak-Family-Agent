@@ -30,6 +30,19 @@ def _err() -> str:
 
 def _info() -> str:
     return str(click.style(_INFO_M, fg="cyan"))
+    return str(click.style(_OK, fg="green", bold=True))
+
+
+def _warn() -> str:
+    return str(click.style(_WARN, fg="yellow", bold=True))
+
+
+def _err() -> str:
+    return str(click.style(_ERR, fg="red", bold=True))
+
+
+def _info() -> str:
+    return str(click.style(_INFO, fg="cyan"))
 
 
 def _flag(ok: bool, *, optional: bool = False) -> str:
@@ -132,6 +145,7 @@ def setup(interactive: bool) -> None:
             click.echo(f"  {_err()} {var} is NOT set")
             if interactive and var == "ANTHROPIC_API_KEY" and env_file.exists():
                 entered_val = str(
+                val = str(
                     click.prompt(
                         click.style(f"      → Enter your {var}", fg="yellow"),
                         hide_input=True,
@@ -145,12 +159,19 @@ def setup(interactive: bool) -> None:
                     replacement = f"{var}={entered_val}"
                     if re.search(pattern, content, re.MULTILINE):
                         new_content = re.sub(pattern, lambda m: replacement, content, flags=re.MULTILINE)
+                if val:
+                    content = env_file.read_text(encoding="utf-8")
+                    pattern = rf"^{var}=.*$"
+                    replacement = f"{var}={val}"
+                    if re.search(pattern, content, re.MULTILINE):
+                        new_content = re.sub(pattern, replacement, content, flags=re.MULTILINE)
                     else:
                         new_content = content.rstrip() + f"\n{replacement}\n"
                     env_file.write_text(new_content, encoding="utf-8")
                     click.echo(f"  {_ok()} saved {var} to .env")
                     # Update local env for subsequent checks in this run
                     os.environ[var] = entered_val
+                    os.environ[var] = val
                 else:
                     issues.append(f"{var} not set")
             else:
