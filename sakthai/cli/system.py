@@ -144,7 +144,7 @@ def setup(interactive: bool) -> None:
                     pattern = rf"^{var}=.*$"
                     replacement = f"{var}={entered_val}"
                     if re.search(pattern, content, re.MULTILINE):
-                        new_content = re.sub(pattern, replacement, content, flags=re.MULTILINE)
+                        new_content = re.sub(pattern, lambda m: replacement, content, flags=re.MULTILINE)
                     else:
                         new_content = content.rstrip() + f"\n{replacement}\n"
                     env_file.write_text(new_content, encoding="utf-8")
