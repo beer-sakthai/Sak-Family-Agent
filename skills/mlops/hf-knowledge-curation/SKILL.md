@@ -35,6 +35,7 @@ Use this skill when asked to run a learning loop: periodically pick a fresh, spe
    - New skill path: `~/.hermes/profiles/<profile>/skills/<category>/hf-<slug>/SKILL.md`.
    - After non-trivial research or a non-obvious workaround, save the technique as a skill rather than just a memory entry.
    - **Cross-profile writes**: The active cron profile may differ from the target profile (e.g., `sakthai` writing to `hermesagent`). The filesystem soft-guard will block writes unless `cross_profile=True` is passed to `write_file`/`patch`. In review phases where `write_file` is denied even after creation, record the intended support file path in Supermemory for the next session to create.
+   - **Skill-manage writes target the current profile**: `skill_manage(action='write_file', name='...')` writes to the active profile's skill directory, NOT the profile where the named skill lives. Do not use `skill_manage` write_file for cross-profile support files; use the top-level `write_file` tool with `cross_profile=true` and an absolute path instead.
    - **Sibling skill mapping**: If the new skill overlaps with an existing sibling skill (e.g., `hf-inference-client` vs `hf-inference-providers`), add a `references/related-skills.md` file noting the boundary and differentiation matrix.
 
 5. **Delivery format** (required when a new skill is created)

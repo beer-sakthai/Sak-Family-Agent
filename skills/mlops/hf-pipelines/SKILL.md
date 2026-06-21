@@ -33,10 +33,36 @@ Pipelines abstract away:
 
 Common task strings include:
 
-- **Text**: `sentiment-analysis`, `text-classification`, `token-classification`, `ner`, `question-answering`, `summarization`, `translation_en_to_fr`, `text-generation`, `text2text-generation`, `fill-mask`, `zero-shot-classification`
-- **Vision**: `image-classification`, `object-detection`, `image-segmentation`, `depth-estimation`, `zero-shot-image-classification`
-- **Audio**: `automatic-speech-recognition`, `audio-classification`, `text-to-speech`
-- **Multimodal**: `visual-question-answering`, `document-question-answering`, `image-to-text`
+- `text-generation`
+- `text2text-generation`
+- `question-answering`
+- `summarization`
+- `translation`
+- `feature-extraction`
+- `zero-shot-classification`
+
+### Audio
+- `audio-classification`
+- `automatic-speech-recognition` — supports CTC and Whisper timestamp modes (`"char"`, `"word"`, `True`)
+- `text-to-audio` (alias: `text-to-speech`)
+- `zero-shot-audio-classification`
+
+### Computer Vision
+- `image-classification`
+- `image-segmentation` — supports `semantic`, `instance`, `panoptic` subtasks
+- `object-detection`
+- `depth-estimation`
+- `mask-generation` — v5-era addition
+- `keypoint-matching` — v5-era addition
+- `zero-shot-image-classification`
+- `zero-shot-object-detection`
+- `image-feature-extraction`
+
+### Multimodal
+- `image-text-to-text` — v5-era addition
+- `document-question-answering`
+- `table-question-answering`
+- `video-classification`
 
 Discover available tasks programmatically:
 
@@ -178,17 +204,46 @@ pipe = pipeline(
 - **Memory leaks**: For long-running services, reuse a single pipeline instance instead of recreating it per request.
 - **CPU slowness**: Tokenization and CPU inference are single-threaded by default in some cases; set `TOKENIZERS_PARALLELISM=true` or use `num_workers` when applicable.
 - **Mixed precision**: Pipelines do not automatically enable `fp16` on GPU for all tasks. Use `torch_dtype=torch.float16` explicitly if needed.
+- **`device` vs `device_map` conflict**: Do not mix `device=` and `device_map=` in the same call; `device_map` takes precedence.
+- **`trust_remote_code` security**: This executes arbitrary Python from the Hub. Only enable it for repositories you have audited.
+- **Audio requires `ffmpeg`**: Needed for file URLs and non-WAV formats in audio pipelines.
+- **Missing fast tokenizer**: Some older repos ship only slow Python-backed tokenizers; use `use_fast=False` as a workaround.
+- **Variable-length OOM**: In batched inference, one long sample can force padding for the entire batch. Profile sequence lengths and OOM-guard batch scaling.
+- **Image timeout**: Remote images default to no timeout; set `timeout=...` for production scrapers to avoid hangs.
+- **`dtype="auto"`**: v5.x selects `bfloat16` on Ampere+ GPUs, `float16` on older CUDA, and `float32` on CPU automatically.
 
 ## Performance Tips
 
 1. **Reuse instances** — keep `pipe` alive across requests.
-2. **Batch when possible** — `pipe(inputs, batch_size=N)`.
+2. **Batch when possible** — `pipe(inputs, batch_size=N)`. Start at 1; raise to 8 → 64 → 256 if sequence lengths are regular. Expect 10× speedup OR slowdown depending on padding regularity.
 3. **Use `.to()` or `device_map`** — move model to GPU once.
 4. **Enable FlashAttention** — pick models that support it (`model="meta-llama/Meta-Llama-3-8B-Instruct"` + `torch_dtype=torch.bfloat16`).
 5. **Quantize** — for large models, use `load_in_4bit=True` or `load_in_8bit=True` with `bitsandbytes`.
+6. **OOM guards**: Wrap GPU inference in `try/except torch.cuda.OutOfMemoryError` and fall back to smaller `batch_size`.
+
+## Custom Pipelines
+
+If the built-in tasks don't fit, subclass a task-specific pipeline for lighter customization:
+
+```python
+from transformers import TextClassificationPipeline
+
+class MyPipe(TextClassificationPipeline):
+    def postprocess(self, model_outputs, **kwargs):
+        scores = super().postprocess(model_outputs, **kwargs)
+        return [{"percent": round(s["score"] * 100, 1), "label": s["label"]} for s in scores]
+
+pipe = pipeline(model="x", pipeline_class=MyPipe)
+```
+
+For full control, subclass `Pipeline` and implement `preprocess`, `_forward`, and `postprocess`, then `register_for_task("custom-task")`.
 
 ## References
 
 - **Docs**: https://huggingface.co/docs/transformers/main/en/pipeline_tutorial
 - **API reference**: https://huggingface.co/docs/transformers/main/en/main_classes/pipelines
 - **Task guide**: https://huggingface.co/docs/transformers/main/en/tasks
+
+## Support Files
+
+- `references/v512-task-catalog.md` — Full v5.12.0 task catalog (NLP, Audio, Vision, Multimodal), alias mappings, `ChunkPipeline` internals, batch-performance rules, and custom pipeline examples extracted from official docs.
