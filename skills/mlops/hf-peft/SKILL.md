@@ -221,3 +221,11 @@ LoraConfig(
 - **Transformers + PEFT**: https://huggingface.co/docs/transformers/en/peft
 - **Diffusers + PEFT**: https://huggingface.co/docs/diffusers/main/en/api/loaders/peft
 - **Beyond LoRA blog**: https://huggingface.co/blog/peft-beyond-lora
+
+---
+
+## Cross-References
+
+- **`hf-bitsandbytes`** — 4-bit/8-bit quantization backend required for QLoRA. Covers `BitsAndBytesConfig`, installation per hardware, compute-dtype selection (bfloat16 vs float16), NF4/FP4 data types, 8-bit optimizers, and custom quantized linear layers.
+- **`hf-accelerate`** — Device mapping, distributed launchers, and `BnbQuantizationConfig` for non-Transformers PyTorch models.
+- **`hf-trl`** (if installed) — `SFTTrainer`, `PPOTrainer`, and `DPOTrainer` wrap PEFT configs directly.

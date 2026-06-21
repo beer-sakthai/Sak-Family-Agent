@@ -72,6 +72,9 @@ The `hf` command is the modern command-line interface for interacting with the H
 
 ## Advanced Usage & Tips
 
+### Transfer Protocol (XET)
+Recent versions of `huggingface_hub` (>= 1.2.2) use the **XET** protocol for large-file uploads and downloads. XET provides chunk-based deduplication, concurrent transfer, and Git-LFS backward compatibility. For details, see the `hf-xet` skill.
+
 ### Global Flags
 *   `--format json`: Produces machine-readable output for automation.
 *   `-q` / `--quiet`: Limits output to IDs only.
