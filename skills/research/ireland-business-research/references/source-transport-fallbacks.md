@@ -8,9 +8,9 @@ Validated: 2026-06-21 maintenance run.
 |--------|-----------|-------------|
 | cro.ie | works | fails — 402 BILLING_ERROR |
 | businesses.ie | works but often returns homepage / tracking links | fails — 402 BILLING_ERROR |
-| cso.ie | works | works |
-| idaireland.com | works | works |
-| enterpriseireland.com | works | works |
+| cso.ie | works | fails — 402 BILLING_ERROR |
+| idaireland.com | works | fails — 402 BILLING_ERROR |
+| enterpriseireland.com | works | fails — 402 BILLING_ERROR |
 | company IR / SEC filings | works | works |
 
 ## Fallback hierarchy when CRO data is unavailable
