@@ -30,5 +30,6 @@ Use this skill anytime the task involves Ireland-focused business research: vali
 7. Save durable findings with `memory(target='user', action='add', content=...)` for multi-job retention.
 8. Tool transport check and graceful degradation:
    - Before heavy web validation, probe `web_search` with a lightweight Ireland query (for example, `site:.ie Ireland business`). If it returns a `BILLING_ERROR` or transport failure, stop, report that live source validation was skipped due to tool unavailability, and do not guess company facts from stale training data.
+   - If `web_extract` returns a `BILLING_ERROR` with HTTP 402 / `Insufficient available balance`, treat it as an unresolvable transport failure: do not retry in the same workflow, note the limitation clearly, and rely only on `web_search` results and cached/archived snapshots.
    - If `web_extract` is unavailable (e.g., billing error, charge authorization failure, or no content returned), fall back to `web_search` results and cached/archived snapshots. Do not fabricate filing numbers, incorporation dates, or director names when direct extraction failed.
    - Always note the limitation clearly and exclude failed sources from final facts, but still report validated findings from working sources.

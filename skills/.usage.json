@@ -25,17 +25,30 @@
     "use_count": 1,
     "view_count": 1
   },
+  "ccc-operational-levers": {
+    "archived_at": null,
+    "created_at": "2026-06-21T18:21:28.823770+00:00",
+    "created_by": null,
+    "last_patched_at": null,
+    "last_used_at": "2026-06-21T18:21:28.906189+00:00",
+    "last_viewed_at": "2026-06-21T18:21:28.824262+00:00",
+    "patch_count": 0,
+    "pinned": false,
+    "state": "active",
+    "use_count": 1,
+    "view_count": 1
+  },
   "cron-watchdog-self-heal": {
     "archived_at": null,
     "created_at": "2026-06-21T10:30:48.036725+00:00",
     "created_by": null,
     "last_patched_at": null,
-    "last_used_at": "2026-06-21T18:13:10.010927+00:00",
+    "last_used_at": "2026-06-21T18:32:15.840605+00:00",
     "last_viewed_at": "2026-06-21T11:06:38.730923+00:00",
     "patch_count": 0,
     "pinned": false,
     "state": "active",
-    "use_count": 67,
+    "use_count": 70,
     "view_count": 2
   },
   "ecommerce-unit-economics": {
@@ -94,14 +107,14 @@
     "archived_at": null,
     "created_at": "2026-06-20T15:56:14.551248+00:00",
     "created_by": null,
-    "last_patched_at": "2026-06-21T15:13:32.965851+00:00",
-    "last_used_at": "2026-06-21T18:13:49.852531+00:00",
-    "last_viewed_at": "2026-06-21T18:13:49.816811+00:00",
-    "patch_count": 3,
+    "last_patched_at": "2026-06-21T18:26:01.405732+00:00",
+    "last_used_at": "2026-06-21T18:32:52.996390+00:00",
+    "last_viewed_at": "2026-06-21T18:32:52.943018+00:00",
+    "patch_count": 4,
     "pinned": false,
     "state": "active",
-    "use_count": 59,
-    "view_count": 59
+    "use_count": 61,
+    "view_count": 61
   },
   "kanban-orchestrator": {
     "archived_at": null,
@@ -155,31 +168,44 @@
     "use_count": 1,
     "view_count": 1
   },
+  "saas-deferred-revenue-and-billing-mix-optimization": {
+    "archived_at": null,
+    "created_at": "2026-06-21T18:25:07.011688+00:00",
+    "created_by": null,
+    "last_patched_at": "2026-06-21T18:25:07.011925+00:00",
+    "last_used_at": null,
+    "last_viewed_at": null,
+    "patch_count": 1,
+    "pinned": false,
+    "state": "active",
+    "use_count": 0,
+    "view_count": 0
+  },
   "saas-pricing-architecture": {
     "archived_at": null,
     "created_at": "2026-06-21T16:54:05.986634+00:00",
     "created_by": null,
     "last_patched_at": null,
-    "last_used_at": "2026-06-21T16:54:05.996002+00:00",
-    "last_viewed_at": "2026-06-21T16:54:05.986658+00:00",
+    "last_used_at": "2026-06-21T18:20:31.231958+00:00",
+    "last_viewed_at": "2026-06-21T18:20:31.214187+00:00",
     "patch_count": 0,
     "pinned": false,
     "state": "active",
-    "use_count": 1,
-    "view_count": 1
+    "use_count": 2,
+    "view_count": 2
   },
   "saas-retention-metrics": {
     "archived_at": null,
     "created_at": "2026-06-21T17:26:25.576328+00:00",
     "created_by": null,
     "last_patched_at": null,
-    "last_used_at": "2026-06-21T17:59:14.193703+00:00",
-    "last_viewed_at": "2026-06-21T17:59:14.171212+00:00",
+    "last_used_at": "2026-06-21T18:21:57.588899+00:00",
+    "last_viewed_at": "2026-06-21T18:21:57.489907+00:00",
     "patch_count": 0,
     "pinned": false,
     "state": "active",
-    "use_count": 3,
-    "view_count": 3
+    "use_count": 4,
+    "view_count": 4
   },
   "serving-llms-vllm": {
     "archived_at": null,
