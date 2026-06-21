@@ -11,7 +11,9 @@ Validated: 2026-06-21 maintenance run.
 | cso.ie | works | fails — 402 BILLING_ERROR |
 | idaireland.com | works | fails — 402 BILLING_ERROR |
 | enterpriseireland.com | works | fails — 402 BILLING_ERROR |
-| company IR / SEC filings | works | works |
+| company IR / SEC filings | works | fails — 402 BILLING_ERROR |
+
+> **Note (2026-06-21):** `web_extract` is currently experiencing a global transport/charge-authorization failure (HTTP 402 Insufficient available balance). It returns billing errors on every tested domain — including SEC filings and company IR pages — not just Irish public sources. Live structured extraction is therefore unavailable until the transport balance is restored. Do not retry `web_extract` expecting different results during this window.
 
 ## Fallback hierarchy when CRO data is unavailable
 
