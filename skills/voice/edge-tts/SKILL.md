@@ -48,3 +48,9 @@ No API key or paid provider is needed.
 - Built-in OpenAI TTS is blocked here by a provider billing 402. Use Edge only.
 - If `edge-tts` is missing, fall back to text-only and disable voice delivery for the rest of the session.
 - For long outputs, split into 2–3 short clips instead of one long MP3.
+
+## Pitfall: double `.mp3` extension
+`edge-tts synthesize --output note.mp3` creates `note.mp3.mp3`. Either pass a path
+without extension, pass `.ogg` directly, or rename afterward. The MP3 in
+`/home/sakthai/.hermes/profiles/saksee/audio_cache/` should then be converted to
+OGG Opus for Telegram voice delivery.

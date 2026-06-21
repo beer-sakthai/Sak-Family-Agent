@@ -130,6 +130,11 @@ cp ~/.hermes/profiles/sakthai/skills/software-development/playwright/templates/p
 # Run suite with list + html reporters
 npx playwright test --reporter=list,html
 ```
+
+```bash
+# For CI-style artifacts (JUnit + JSON) explicitly:
+npx playwright test --reporter=list,html,junit,json --junit=test-results/junit.xml --json=test-results/results.json
+```
 HTML report: `playwright-report/index.html`
 
 ## Test project structure
