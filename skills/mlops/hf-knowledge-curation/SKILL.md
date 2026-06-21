@@ -58,8 +58,18 @@ Use this skill when asked to run a learning loop: periodically pick a fresh, spe
 - **Workaround used**: `curl` against `raw.githubusercontent.com` to fetch README and TypeScript source; GitHub API `/git/trees` to enumerate the package tree; then targeted extraction of `tool-ids.ts`, `jobs-tool.ts`, `sandbox-tool.ts`, `dynamic-space-tool.ts`, `hub-inspect.ts`, and search tool definitions.
 - **Outcome**: Successfully authored a class-level skill covering 17+ built-in tools, 3 transports, proxy-tool CSV loading, bouquet selection, SEP-2640 skills distribution, and client setup for Claude Desktop/Cursor/VSCode/Gemini.
 
+## Case study: Hugging Face Trusted Publishers (2026-06-21)
+
+- **Topic**: `Hugging Face Trusted Publishers` (`hf-trusted-publishers`)
+- **Skill path**: `~/.hermes/profiles/hermesagent/skills/mlops/hf-trusted-publishers/SKILL.md`
+- **Research challenge**: `web_extract` failed with HTTP 402 billing errors on `huggingface.co/docs/hub/en/repositories-github-actions` and `spaces-github-actions`.
+- **Workaround used**: `mcp_huggingface_hf_doc_fetch` returned the full markdown payload for both pages in a single call, providing the complete GitHub Actions and Trusted Publishers documentation without retrying the blocked scraper.
+- **Outcome**: Authored a class-level skill covering OIDC-based CI authentication, RFC 8693 token exchange, repo vs user publisher flavors, hub-sync GitHub Action, and provider-specific guidance for GitHub Actions, GitLab, CircleCI, and Bitbucket.
+
 ## Pitfalls
 
 - **Flat skills are discouraged.** A skill that only makes sense for a single session, PR, or date is a memory entry, not a skill.
 - **Do not hardcode broken tools as permanent constraints.** If a tool fails, capture the retry/switching pattern, not the failure itself.
 - **Loop-detection is real.** When the tool runtime warns about repeated identical failures, switch approach immediately.
+- **MCP doc fetch as fallback for billing-blocked web extraction:** When `web_extract` returns HTTP 402 / `BILLING_ERROR` on `huggingface.co` docs, immediately try `mcp_huggingface_hf_doc_fetch(doc_url=..., offset=0)`. It retrieves the same official markdown without hitting the billing scraper. Useful for secondary metadata pages (GitHub Actions, Trusted Publishers, Spaces docs).
+- **Cross-profile skill authorship:** The active cron profile may differ from the target profile. Use `cross_profile=true` with `write_file`/`patch` and absolute paths when explicitly directed. In review phases where `write_file` is blocked, record intended paths in Supermemory for the next session.
