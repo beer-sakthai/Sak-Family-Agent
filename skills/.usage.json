@@ -94,14 +94,14 @@
     "archived_at": null,
     "created_at": "2026-06-21T17:56:11.217352+00:00",
     "created_by": null,
-    "last_patched_at": "2026-06-21T18:01:20.974745+00:00",
-    "last_used_at": "2026-06-21T18:00:38.314119+00:00",
-    "last_viewed_at": "2026-06-21T18:00:38.252730+00:00",
-    "patch_count": 5,
+    "last_patched_at": "2026-06-21T18:02:47.642350+00:00",
+    "last_used_at": "2026-06-21T18:03:14.540008+00:00",
+    "last_viewed_at": "2026-06-21T18:03:14.480098+00:00",
+    "patch_count": 6,
     "pinned": false,
     "state": "active",
-    "use_count": 2,
-    "view_count": 2
+    "use_count": 3,
+    "view_count": 3
   },
   "hf-inference-endpoints": {
     "archived_at": null,
@@ -258,6 +258,19 @@
     "state": "active",
     "use_count": 2,
     "view_count": 2
+  },
+  "mlops-hf-train-manual-upload": {
+    "archived_at": null,
+    "created_at": "2026-06-21T18:03:10.973351+00:00",
+    "created_by": "agent",
+    "last_patched_at": "2026-06-21T18:03:34.233134+00:00",
+    "last_used_at": null,
+    "last_viewed_at": null,
+    "patch_count": 2,
+    "pinned": false,
+    "state": "active",
+    "use_count": 0,
+    "view_count": 0
   },
   "playwright": {
     "archived_at": null,
