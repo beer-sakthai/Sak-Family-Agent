@@ -9,8 +9,8 @@ Use this skill anytime the task involves Ireland-focused business research: vali
 
 ## Workflow
 1. Parse the exact Irish business entity or topic from the request.
-2. Use `web_search` with Ireland-specific queries: add `site:.ie`, `Ireland`, `companies registration office Ireland`, `IDA`, `Forfás`, `Enterprise Ireland`, `CSO Ireland`, and `Central Bank Ireland` as relevant.
-3. Use `web_extract` on authoritative sources: CRO (`cro.ie`), CSO (`cso.ie`), IDA Ireland, Forfás, Financial Regulators, enterprise bodies, company websites, and filings.
+2. Use `web_search` with Ireland-specific queries: add `site:.ie`, `Ireland`, `companies registration office Ireland`, `IDA`, `Enterprise Ireland`, `CSO Ireland`, and `Central Bank Ireland` as relevant. `Forfás` is defunct and no longer an active agency.
+3. Use `web_extract` on authoritative sources: CRO (`cro.ie`), CSO (`cso.ie`), IDA Ireland (`idaireland.com`), Financial Regulators, enterprise bodies, company websites, and filings.
 4. Capture structured facts:
    - Company name + registration number
    - Registered address + legal form
