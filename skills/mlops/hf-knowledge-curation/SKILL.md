@@ -37,7 +37,9 @@ Use this skill when asked to run a learning loop: periodically pick a fresh, spe
    - New skill path: `~/.hermes/profiles/<profile>/skills/<category>/hf-<slug>/SKILL.md`.
    - After non-trivial research or a non-obvious workaround, save the technique as a skill rather than just a memory entry.
    - **Cross-profile writes**: The active cron profile may differ from the target profile (e.g., `sakthai` writing to `hermesagent`). The filesystem soft-guard will block writes unless `cross_profile=True` is passed to `write_file`/`patch`. In review phases where `write_file` is denied even after creation, record the intended support file path in Supermemory for the next session to create.
-   - **Skill-manage writes target the current profile**: `skill_manage(action='write_file', name='...')` writes to the active profile's skill directory, NOT the profile where the named skill lives. Do not use `skill_manage` write_file for cross-profile support files; use the top-level `write_file` tool with `cross_profile=true` and an absolute path instead.
+   - **Heredoc security blocks in cron**: When writing to another profile's skill directory from a terminal command, avoid shell heredocs (`cat > ... << 'EOF'`) — the runtime security scanner flags dotfile overwrites and may block the command before it runs. Prefer `write_file` with `cross_profile=True` and an absolute path for cross-profile skill creation in cron.
+   - **execute_code limitations**: `execute_code` is blocked in cron mode for local Python scripts that could bypass shell-string approval checks. Use `write_file` (success path) or `terminal` with single-file write commands instead.
+   - **Durable memory fallback**: `mcp_supermemory_memory` and the top-level `memory` tool may be unavailable or disabled in cron. If they fail, document key facts directly in the newly authored skill's SKILL.md or a `references/` note so the learning is preserved in the skill itself rather than lost.
    - **Sibling skill mapping**: If the new skill overlaps with an existing sibling skill (e.g., `hf-inference-client` vs `hf-inference-providers`), add a `references/related-skills.md` file noting the boundary and differentiation matrix. This skill ships with `references/curator-notes.md` for pending cross-profile patches and overlap tracking.
 
    5. **Delivery format** (required when a new skill is created)
@@ -51,6 +53,13 @@ Use this skill when asked to run a learning loop: periodically pick a fresh, spe
    - If research is genuinely blocked and you would have to fabricate, record the no-op instead and stay silent.
 
    **GitHub API for repo structure**: When directory listings are unavailable, use `/repos/{owner}/{repo}/git/trees/main?recursive=1` to enumerate source files, then filter by extension or path to locate modules for direct extraction.
+
+## Case study: Hugging Face Dataset Viewer API (2026-06-22)
+
+- **Topic**: `Hugging Face Dataset Viewer API` (`hf-dataset-viewer`)
+- **Skill path**: `~/.hermes/profiles/hermesagent/skills/mlops/hf-dataset-viewer/SKILL.md`
+- **Research challenge**: `web_extract` failed with HTTP 402 billing errors on `huggingface.co/docs/dataset-viewer/...`. `mcp_huggingface_hf_doc_fetch` succeeded and returned full markdown for quick_start, filter, statistics, info, and croissant pages.
+- **Outcome**: Authored a class-level skill covering 11 endpoints on `datasets-server.huggingface.co`: `is-valid`, `splits`, `first-rows`, `rows`, `search`, `filter`, `parquet`, `size`, `statistics`, `croissant`, and `info`. Includes DuckDB-BM25 search, SQL-like filter predicates, 5 GB partial-compute caveat, 10 column-statistic types, and Croissant JSON-LD metadata retrieval.
 
 ## Case study: HF Official MCP Server (2026-06-21)
 
