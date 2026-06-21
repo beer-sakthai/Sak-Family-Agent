@@ -26,7 +26,9 @@ Use this skill when asked to run a learning loop: periodically pick a fresh, spe
    - Use `web_extract` for clean markdown content.
    - **Billing-error fallback**: If `web_extract` returns HTTP 402 / `BILLING_ERROR` / `Charge authorization failed`, do not retry. Switch immediately to `web_search` for alternate hosts or `curl` against `raw.githubusercontent.com` / `raw.gitmirror.com`.
    - If `web_extract` fails twice on similar domains (billing errors, loop-warning, or repeated timeouts), pivot:
-     - Try `browser_navigate` + `browser_snapshot` on the same URL or a GitHub raw path.
+     - Try `mcp_huggingface_hf_doc_fetch(doc_url=...)` first for official `huggingface.co` docs — it retrieves the same markdown without hitting the billing scraper.
+     - If `mcp_huggingface_hf_doc_fetch` times out (120s), fall back to `mcp_huggingface_hf_doc_search(query=...)` to discover alternate doc paths, then re-fetch.
+     - As a last resort, try `browser_navigate` + `browser_snapshot` on the same URL or a GitHub raw path.
      - Use `web_search` to find an alternate host (e.g., DeepWiki, `raw.githubusercontent.com`, Blogs).
    - Do not continue the same failing path after a loop-warning.
 
@@ -36,9 +38,9 @@ Use this skill when asked to run a learning loop: periodically pick a fresh, spe
    - After non-trivial research or a non-obvious workaround, save the technique as a skill rather than just a memory entry.
    - **Cross-profile writes**: The active cron profile may differ from the target profile (e.g., `sakthai` writing to `hermesagent`). The filesystem soft-guard will block writes unless `cross_profile=True` is passed to `write_file`/`patch`. In review phases where `write_file` is denied even after creation, record the intended support file path in Supermemory for the next session to create.
    - **Skill-manage writes target the current profile**: `skill_manage(action='write_file', name='...')` writes to the active profile's skill directory, NOT the profile where the named skill lives. Do not use `skill_manage` write_file for cross-profile support files; use the top-level `write_file` tool with `cross_profile=true` and an absolute path instead.
-   - **Sibling skill mapping**: If the new skill overlaps with an existing sibling skill (e.g., `hf-inference-client` vs `hf-inference-providers`), add a `references/related-skills.md` file noting the boundary and differentiation matrix.
+   - **Sibling skill mapping**: If the new skill overlaps with an existing sibling skill (e.g., `hf-inference-client` vs `hf-inference-providers`), add a `references/related-skills.md` file noting the boundary and differentiation matrix. This skill ships with `references/curator-notes.md` for pending cross-profile patches and overlap tracking.
 
-5. **Delivery format** (required when a new skill is created)
+   5. **Delivery format** (required when a new skill is created)
    - Output format for the cron user:
      - "Learned `<TOPIC>`. New skill saved to `<PATH>`."
      - Bullet list of 3–5 key facts learned.
@@ -66,10 +68,19 @@ Use this skill when asked to run a learning loop: periodically pick a fresh, spe
 - **Workaround used**: `mcp_huggingface_hf_doc_fetch` returned the full markdown payload for both pages in a single call, providing the complete GitHub Actions and Trusted Publishers documentation without retrying the blocked scraper.
 - **Outcome**: Authored a class-level skill covering OIDC-based CI authentication, RFC 8693 token exchange, repo vs user publisher flavors, hub-sync GitHub Action, and provider-specific guidance for GitHub Actions, GitLab, CircleCI, and Bitbucket.
 
+## Case study: Hugging Face Gated Repositories (2026-06-21)
+
+- **Topic**: `Hugging Face Gated Repositories & Access Requests` (`hf-gated-repos`)
+- **Skill path**: `~/.hermes/profiles/hermesagent/skills/mlops/hf-gated-repos/SKILL.md`
+- **Research challenge**: `web_extract` returned HTTP 402 billing errors on `huggingface.co/docs/hub/en/models-gated`. `mcp_huggingface_hf_doc_search` timed out at 120s.
+- **Workaround used**: `mcp_huggingface_hf_doc_fetch(doc_url="https://huggingface.co/docs/hub/en/models-gated")` returned the full markdown payload in one call, including the programmatic access request API tables and custom form YAML examples.
+- **Outcome**: Authored a class-level skill covering `HfApi.update_repo_settings(gated="auto"/"manual"/False)`, the full access-request lifecycle (`list_pending`, `accept`, `reject`, `cancel`, `grant`), `AccessRequest.fields` for custom form review, `extra_gated_eu_disallowed` geographic restriction, access reports via REST, and the confirmation that no bulk-accept method exists.
+- **Overlap note**: This skill has a light overlap with `hf-fine-grained-tokens` (both touch access control). They map cleanly: `hf-fine-grained-tokens` = token creation / org policies / RBAC; `hf-gated-repos` = repo-side gating and access-request lifecycle. If consolidating, merge gating config + access request methods under an umbrella, keep token mechanics separate.
+
 ## Pitfalls
 
 - **Flat skills are discouraged.** A skill that only makes sense for a single session, PR, or date is a memory entry, not a skill.
 - **Do not hardcode broken tools as permanent constraints.** If a tool fails, capture the retry/switching pattern, not the failure itself.
 - **Loop-detection is real.** When the tool runtime warns about repeated identical failures, switch approach immediately.
 - **MCP doc fetch as fallback for billing-blocked web extraction:** When `web_extract` returns HTTP 402 / `BILLING_ERROR` on `huggingface.co` docs, immediately try `mcp_huggingface_hf_doc_fetch(doc_url=..., offset=0)`. It retrieves the same official markdown without hitting the billing scraper. Useful for secondary metadata pages (GitHub Actions, Trusted Publishers, Spaces docs).
-- **Cross-profile skill authorship:** The active cron profile may differ from the target profile. Use `cross_profile=true` with `write_file`/`patch` and absolute paths when explicitly directed. In review phases where `write_file` is blocked, record intended paths in Supermemory for the next session.
+- **Cross-profile skill authorship:** The active cron profile may differ from the target profile. Use `cross_profile=true` with `write_file`/`patch` and absolute paths when explicitly directed. Before writing, verify the target directory exists with `find` or `terminal("ls -d ...")`. In review phases where `write_file` is blocked, record intended paths in Supermemory for the next session.
