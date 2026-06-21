@@ -155,13 +155,56 @@ asyncio.run(main())
 ## Profiles boundary
 When scripts write a new skill, the runtime defaults to `cross_profile: false` for paths under `/home/sakthai/.hermes/`. For the cross-profile playwright-minute learner, set `cross_profile: true` explicitly.
 
-## Pitfalls & Fixes
-- **Connection refused** – do not run tests against a local server that is not already started.
-  Pair the server with `beforeAll` and retry the server health check first, or start the app before the test run.
-- **Playwright binary not found** – install it as shown above.
-- **Browsers missing** – run `npx playwright install` after the npm install.
-- **Permission errors** – ensure you have write permission in the working directory.
-- **System Chrome on restricted hosts** – on hosts where Playwright’s default Chromium is unsupported, install Google Chrome and target it explicitly: `npx playwright install chrome --with-deps`, then set `channel: 'chrome'` in the project. Run in headless mode on GUI-less environments.
+## Zero-cost QA deliverables
+To produce full Playwright test suites, CI-ready configs, and deliverable
+reports at **no monetary cost**:
+1. Use the project-local `npx playwright test` runner (open-source).
+2. Store results as HTML report (`playwright-report/`), JUnit XML
+   (`test-results/junit.xml`), and JSON (`test-results/results.json`).
+3. CI: GitHub Actions free runners with `actions/upload-artifact@v4` to
+   preserve reports for 14 days.
+4. Target the user's local app when available (e.g. `http://127.0.0.1:<port>`);
+   fall back to public sites only when no local server exists.
+5. Verify each run before claiming "green"; do not substitute fabricated or
+   placeholder test output.
+
+## Targeting local apps
+When a local server is available:
+- Set `baseURL` in `playwright.config.ts` to the local origin.
+- Ensure the server is running and healthy before kicking off the suite
+  (curl `/health`, `/api/...`, or `page.goto('/')` smoke probe).
+- Prefer API-level requests (`request.get('/api/...')`) for fast stable
+  assertions; avoid brittle DOM structure checks on SPAs until hydration
+  is confirmed.
+
+## Visual regression
+- Snapshots live under `tests/<file>-spec.ts-snapshots/`.
+- First run: `UPDATE_SNAPSHOTS=1 npx playwright test <suite>` to capture
+  baselines.
+- Use `maxDiffPixels` tolerance on hosted apps whose rendering varies.
+- Handle SPAs: wait for `#root` / app container with `state: 'attached'`
+  before screenshot. `page.waitForSelector('#root', { state: 'attached' })`.
+
+## Accessibility & matcher caveats
+- `toHaveCountGreaterThan(n)` is **not** a built-in Playwright matcher.
+  Use: `await expect(await locator.count()).toBeGreaterThan(n)`.
+- Headless environments may skip geolocation tests: guard with
+  `if (coords.unsupported || coords.error) test.skip();`.
+
+## Network timing on local apps
+- `waitUntil: 'networkidle'` often times out on local apps with external
+  resources (fonts, analytics). Use `domcontentloaded` or rely on
+  `page.waitForSelector(...)` for readiness.
+- Increase timeouts generously for local apps: `navigationTimeout: 60000`,
+  `actionTimeout: 30000`.
+
+## Report generation
+- `html` reporter alone does not guarantee `junit.xml` / `results.json`.
+- Explicitly pass reporters: `--reporter=html,junit,json` **and** set
+  `outputDir: 'test-results/'` in config, **or** pass `--junit=... --json=...`
+  on the CLI.
+- In CI, always `if: always()` the artifact upload steps so reports appear
+  even when the suite fails.
 
 ## Test recording baseline
 Use the companion template `templates/demo.spec.ts` as a starting point for:
