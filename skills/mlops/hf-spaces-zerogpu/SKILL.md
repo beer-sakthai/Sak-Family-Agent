@@ -1,4 +1,5 @@
 ---
+name: Hugging Face Spaces ZeroGPU
 title: Hugging Face Spaces ZeroGPU
 description: >
   Use ZeroGPU — Hugging Face’s dynamic shared GPU allocation — to build, host,
@@ -161,6 +162,10 @@ Shorter durations improve **queue priority** for visitors.
 - Official docs: https://huggingface.co/docs/hub/en/spaces-zerogpu
 - Feedback/discussions: https://huggingface.co/spaces/zero-gpu-explorers/README/discussions
 - AOT compilation guide: linked from the official docs (requires `torch 2.8+`)
+
+## Related Spaces skills
+
+For general Spaces configuration beyond ZeroGPU, see **hf-spaces-storage-secrets** — covers secrets, environment variables, persistent storage volumes, hardware lifecycle (request/pause/sleep), and log debugging.
 
 ## Session references
 
