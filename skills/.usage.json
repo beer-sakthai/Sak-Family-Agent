@@ -4,13 +4,13 @@
     "created_at": "2026-06-21T04:36:42.811500+00:00",
     "created_by": "agent",
     "last_patched_at": "2026-06-21T14:18:42.746696+00:00",
-    "last_used_at": "2026-06-21T18:26:22.554781+00:00",
-    "last_viewed_at": "2026-06-21T18:26:22.547506+00:00",
+    "last_used_at": "2026-06-21T18:44:21.123522+00:00",
+    "last_viewed_at": "2026-06-21T18:44:21.028857+00:00",
     "patch_count": 6,
     "pinned": false,
     "state": "active",
-    "use_count": 57,
-    "view_count": 57
+    "use_count": 59,
+    "view_count": 59
   },
   "hermes-agent": {
     "archived_at": null,
@@ -50,19 +50,6 @@
     "state": "active",
     "use_count": 11,
     "view_count": 11
-  },
-  "playwright-basics": {
-    "archived_at": null,
-    "created_at": "2026-06-20T12:08:46.346247+00:00",
-    "created_by": null,
-    "last_patched_at": "2026-06-20T13:17:37.135361+00:00",
-    "last_used_at": "2026-06-20T13:17:02.540775+00:00",
-    "last_viewed_at": "2026-06-20T13:17:02.527368+00:00",
-    "patch_count": 1,
-    "pinned": false,
-    "state": "active",
-    "use_count": 3,
-    "view_count": 3
   },
   "sakthai": {
     "archived_at": null,

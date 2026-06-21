@@ -99,6 +99,13 @@ npm install -D playwright
 npx playwright install --with-deps chromium
 ```
 
+## Prerequisites (Linux/WSL)
+The browsers need a set of system libraries. On Debian‑based systems install them with:
+```
+apt-get install -y libnspr4 libnss3 libatk-bridge2.0-0 libatk1.0-0 libxshmfence1 libdrm2 libgbm1 libxss1 libxrender1
+```
+These packages were required for the Chrome headless shell.
+
 ## Running a script
 1. Save your script to a file, e.g. `script.js`.
 2. Execute it with:
