@@ -43,12 +43,12 @@
     "created_at": "2026-06-21T10:30:48.036725+00:00",
     "created_by": null,
     "last_patched_at": null,
-    "last_used_at": "2026-06-21T18:49:49.689345+00:00",
+    "last_used_at": "2026-06-21T19:03:49.686783+00:00",
     "last_viewed_at": "2026-06-21T11:06:38.730923+00:00",
     "patch_count": 0,
     "pinned": false,
     "state": "active",
-    "use_count": 73,
+    "use_count": 75,
     "view_count": 2
   },
   "ecommerce-unit-economics": {
@@ -134,13 +134,13 @@
     "created_at": "2026-06-20T15:56:14.551248+00:00",
     "created_by": null,
     "last_patched_at": "2026-06-21T18:26:01.405732+00:00",
-    "last_used_at": "2026-06-21T18:40:48.059877+00:00",
-    "last_viewed_at": "2026-06-21T18:40:48.052505+00:00",
+    "last_used_at": "2026-06-21T19:03:11.899965+00:00",
+    "last_viewed_at": "2026-06-21T19:03:11.881502+00:00",
     "patch_count": 4,
     "pinned": false,
     "state": "active",
-    "use_count": 62,
-    "view_count": 62
+    "use_count": 64,
+    "view_count": 64
   },
   "kanban-orchestrator": {
     "archived_at": null,
