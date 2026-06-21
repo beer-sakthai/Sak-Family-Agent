@@ -20,14 +20,25 @@ from rich.panel import Panel
 from rich.table import Table
 
 # Cap max_tokens on every dspy.LM (DSPy defaults to a huge value that overruns
-# credit-limited / free OpenRouter models). Override via EVO_MAX_TOKENS.
+# credit-limited / free OpenRouter models and small local context windows).
+# Override via EVO_MAX_TOKENS. For local Ollama models also pin the api_base and
+# keep the weights resident between the many calls a run makes (keep_alive) so a
+# RAM-starved, CPU-only box doesn't reload ~1GB of weights on every request.
 _orig_lm_init = dspy.LM.__init__
 def _capped_lm_init(self, model, *a, **kw):
-    kw.setdefault("max_tokens", int(os.getenv("EVO_MAX_TOKENS", "8192")))
+    kw.setdefault("max_tokens", int(os.getenv("EVO_MAX_TOKENS", "2048")))
+    if isinstance(model, str) and model.startswith(("ollama/", "ollama_chat/")):
+        kw.setdefault("api_base", os.getenv("OLLAMA_API_BASE", "http://localhost:11434"))
+        kw.setdefault("keep_alive", os.getenv("OLLAMA_KEEP_ALIVE", "30m"))
+        kw.setdefault("num_ctx", int(os.getenv("EVO_NUM_CTX", "4096")))
     return _orig_lm_init(self, model, *a, **kw)
 dspy.LM.__init__ = _capped_lm_init
 
-from evolution.core.config import EvolutionConfig, resolve_hermes_agent_path
+from evolution.core.config import (
+    EvolutionConfig,
+    resolve_hermes_agent_path,
+    _DEFAULT_LOCAL_MODEL,
+)
 from evolution.core.dataset_builder import SyntheticDatasetBuilder, EvalDataset, GoldenDatasetLoader
 from evolution.core.external_importers import build_dataset_from_external
 from evolution.core.fitness import skill_fitness_metric, LLMJudge, FitnessScore
@@ -47,8 +58,8 @@ def evolve(
     iterations: int = 10,
     eval_source: str = "synthetic",
     dataset_path: Optional[str] = None,
-    optimizer_model: str = "openai/gpt-4.1",
-    eval_model: str = "openai/gpt-4.1-mini",
+    optimizer_model: str = _DEFAULT_LOCAL_MODEL,
+    eval_model: str = _DEFAULT_LOCAL_MODEL,
     hermes_repo: Optional[str] = None,
     run_tests: bool = False,
     dry_run: bool = False,
@@ -161,20 +172,40 @@ def evolve(
 
     start_time = time.time()
 
-    try:
-        optimizer = dspy.GEPA(
-            metric=skill_fitness_metric,
-            max_steps=iterations,
-        )
+    # GEPA (DSPy 3.2.x) calls the metric with extra positional args
+    # (pred_name, pred_trace) and uses textual feedback to drive its reflective
+    # mutation. Wrap the scalar fitness so it tolerates those args and returns
+    # feedback the reflection model can act on.
+    def gepa_metric(gold, pred, trace=None, pred_name=None, pred_trace=None):
+        score = skill_fitness_metric(gold, pred, trace)
+        if score >= 0.6:
+            fb = f"Score {score:.2f}: output covered the expected behavior."
+        else:
+            fb = (
+                f"Score {score:.2f}: output missed key expected points. Make the "
+                "skill's procedure clearer, more actionable, and better aligned "
+                "with what the task asks for."
+            )
+        return dspy.Prediction(score=score, feedback=fb)
 
+    try:
+        # reflection_lm is required by GEPA; budget the run with max_metric_calls
+        # (DSPy 3.2.x has no `max_steps`). Keep it small — this box is CPU-only.
+        reflection_lm = dspy.LM(optimizer_model)
+        optimizer = dspy.GEPA(
+            metric=gepa_metric,
+            reflection_lm=reflection_lm,
+            max_metric_calls=max(4, iterations * 2),
+            reflection_minibatch_size=2,
+        )
         optimized_module = optimizer.compile(
             baseline_module,
             trainset=trainset,
             valset=valset,
         )
     except Exception as e:
-        # Fall back to MIPROv2 if GEPA isn't available in this DSPy version
-        console.print(f"[yellow]GEPA not available ({e}), falling back to MIPROv2[/yellow]")
+        # Fall back to MIPROv2 if GEPA isn't available/usable in this DSPy version
+        console.print(f"[yellow]GEPA unavailable ({e}); falling back to MIPROv2[/yellow]")
         optimizer = dspy.MIPROv2(
             metric=skill_fitness_metric,
             auto="light",
@@ -310,8 +341,10 @@ def evolve(
 @click.option("--eval-source", default="synthetic", type=click.Choice(["synthetic", "golden", "sessiondb"]),
               help="Source for evaluation dataset")
 @click.option("--dataset-path", default=None, help="Path to existing eval dataset (JSONL)")
-@click.option("--optimizer-model", default="openai/gpt-4.1", help="Model for GEPA reflections")
-@click.option("--eval-model", default="openai/gpt-4.1-mini", help="Model for evaluations")
+@click.option("--optimizer-model", default=lambda: os.getenv("EVO_OPTIMIZER_MODEL", _DEFAULT_LOCAL_MODEL),
+              help="LiteLLM model for GEPA reflections (default: local Ollama)")
+@click.option("--eval-model", default=lambda: os.getenv("EVO_EVAL_MODEL", _DEFAULT_LOCAL_MODEL),
+              help="LiteLLM model for evaluations (default: local Ollama)")
 @click.option("--hermes-repo", default=None, help="Path to hermes-agent repo")
 @click.option("--run-tests", is_flag=True, help="Run full pytest suite as constraint gate")
 @click.option("--dry-run", is_flag=True, help="Validate setup without running optimization")

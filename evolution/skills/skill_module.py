@@ -84,33 +84,38 @@ def find_skill(skill_name: str, hermes_agent_path: Path) -> Optional[Path]:
 class SkillModule(dspy.Module):
     """A DSPy module that wraps a skill file for optimization.
 
-    The skill text (body) is the parameter that GEPA optimizes.
-    On each forward pass, the module:
-    1. Uses the skill text as instructions
-    2. Processes the task input
-    3. Returns the agent's response
+    The skill body is carried as the predictor's *signature instructions* — the
+    thing GEPA/MIPROv2 actually mutate. (The previous design passed the skill as
+    a fixed InputField, which the optimizers never touch, so every "evolved"
+    skill came out byte-identical to the baseline.) Exposing it via the
+    ``skill_text`` property means reading ``optimized_module.skill_text`` after
+    compilation returns the *evolved* skill body.
+
+    On each forward pass the module runs the task input through the predictor
+    whose instructions are the (possibly evolved) skill.
     """
 
     class TaskWithSkill(dspy.Signature):
-        """Complete a task following the provided skill instructions.
-
-        You are an AI agent following specific skill instructions to complete a task.
-        Read the skill instructions carefully and follow the procedure described.
-        """
-        skill_instructions: str = dspy.InputField(desc="The skill instructions to follow")
+        """Complete the task by following the skill instructions in this prompt."""
         task_input: str = dspy.InputField(desc="The task to complete")
         output: str = dspy.OutputField(desc="Your response following the skill instructions")
 
     def __init__(self, skill_text: str):
         super().__init__()
-        self.skill_text = skill_text
         self.predictor = dspy.ChainOfThought(self.TaskWithSkill)
+        # Seed the optimizable instructions with the baseline skill body. The
+        # underlying Predict (not the ChainOfThought wrapper) holds the
+        # signature GEPA/MIPROv2 mutate, so reach it via predictors().
+        p = self.predictor.predictors()[0]
+        p.signature = p.signature.with_instructions(skill_text)
+
+    @property
+    def skill_text(self) -> str:
+        """The current (baseline or evolved) skill body = predictor instructions."""
+        return self.predictor.predictors()[0].signature.instructions
 
     def forward(self, task_input: str) -> dspy.Prediction:
-        result = self.predictor(
-            skill_instructions=self.skill_text,
-            task_input=task_input,
-        )
+        result = self.predictor(task_input=task_input)
         return dspy.Prediction(output=result.output)
 
 

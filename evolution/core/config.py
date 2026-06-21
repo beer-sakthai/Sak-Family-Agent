@@ -5,6 +5,10 @@ from pathlib import Path
 from dataclasses import dataclass, field
 from typing import Optional
 
+# Default model used for every role when no per-role override is set. Local
+# Ollama by default so a run is free and needs no cloud key on this laptop.
+_DEFAULT_LOCAL_MODEL = os.getenv("EVO_MODEL", "ollama_chat/qwen2.5-coder:1.5b")
+
 
 @dataclass
 class EvolutionConfig:
@@ -20,10 +24,19 @@ class EvolutionConfig:
     iterations: int = 10
     population_size: int = 5
 
-    # LLM configuration
-    optimizer_model: str = "openai/gpt-4.1"  # Model for GEPA reflections
-    eval_model: str = "openai/gpt-4.1-mini"  # Model for LLM-as-judge scoring
-    judge_model: str = "openai/gpt-4.1"  # Model for dataset generation
+    # LLM configuration. Defaults run fully local against Ollama so a run needs
+    # no cloud API key; override per-role with EVO_OPTIMIZER_MODEL / EVO_EVAL_MODEL
+    # / EVO_JUDGE_MODEL, or all three at once with EVO_MODEL. Use a LiteLLM model
+    # string (e.g. "openai/gpt-4.1") to go back to a cloud provider.
+    optimizer_model: str = field(
+        default_factory=lambda: os.getenv("EVO_OPTIMIZER_MODEL", _DEFAULT_LOCAL_MODEL)
+    )  # Model for GEPA reflections
+    eval_model: str = field(
+        default_factory=lambda: os.getenv("EVO_EVAL_MODEL", _DEFAULT_LOCAL_MODEL)
+    )  # Model for LLM-as-judge scoring
+    judge_model: str = field(
+        default_factory=lambda: os.getenv("EVO_JUDGE_MODEL", _DEFAULT_LOCAL_MODEL)
+    )  # Model for dataset generation
 
     # Constraints
     max_skill_size: int = 15_000  # 15KB default
@@ -32,7 +45,9 @@ class EvolutionConfig:
     max_prompt_growth: float = 0.2  # 20% max growth over baseline
 
     # Eval dataset
-    eval_dataset_size: int = 20  # Total examples to generate
+    eval_dataset_size: int = field(
+        default_factory=lambda: int(os.getenv("EVO_DATASET_SIZE", "20"))
+    )  # Total examples to generate
     train_ratio: float = 0.5
     val_ratio: float = 0.25
     holdout_ratio: float = 0.25
