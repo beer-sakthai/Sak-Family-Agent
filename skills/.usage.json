@@ -38,17 +38,30 @@
     "use_count": 1,
     "view_count": 1
   },
+  "cohort-analysis-operational-framework": {
+    "archived_at": null,
+    "created_at": "2026-06-21T20:10:19.473411+00:00",
+    "created_by": null,
+    "last_patched_at": null,
+    "last_used_at": "2026-06-21T20:10:19.547117+00:00",
+    "last_viewed_at": "2026-06-21T20:10:19.473488+00:00",
+    "patch_count": 0,
+    "pinned": false,
+    "state": "active",
+    "use_count": 1,
+    "view_count": 1
+  },
   "cron-watchdog-self-heal": {
     "archived_at": null,
     "created_at": "2026-06-21T10:30:48.036725+00:00",
     "created_by": null,
     "last_patched_at": null,
-    "last_used_at": "2026-06-21T20:07:01.515233+00:00",
+    "last_used_at": "2026-06-21T20:19:06.663428+00:00",
     "last_viewed_at": "2026-06-21T11:06:38.730923+00:00",
     "patch_count": 0,
     "pinned": false,
     "state": "active",
-    "use_count": 85,
+    "use_count": 87,
     "view_count": 2
   },
   "dogfood": {
@@ -95,13 +108,13 @@
     "created_at": "2026-06-21T18:40:33.836428+00:00",
     "created_by": null,
     "last_patched_at": null,
-    "last_used_at": "2026-06-21T19:52:37.904923+00:00",
-    "last_viewed_at": "2026-06-21T19:52:37.876601+00:00",
+    "last_used_at": "2026-06-21T20:10:19.501576+00:00",
+    "last_viewed_at": "2026-06-21T20:10:19.444025+00:00",
     "patch_count": 0,
     "pinned": false,
     "state": "active",
-    "use_count": 3,
-    "view_count": 3
+    "use_count": 4,
+    "view_count": 4
   },
   "heartmula": {
     "archived_at": null,
@@ -147,13 +160,13 @@
     "created_at": "2026-06-20T15:56:14.551248+00:00",
     "created_by": null,
     "last_patched_at": "2026-06-21T18:26:01.405732+00:00",
-    "last_used_at": "2026-06-21T20:05:21.925040+00:00",
-    "last_viewed_at": "2026-06-21T20:05:21.505744+00:00",
+    "last_used_at": "2026-06-21T20:18:15.271370+00:00",
+    "last_viewed_at": "2026-06-21T20:18:15.253877+00:00",
     "patch_count": 4,
     "pinned": false,
     "state": "active",
-    "use_count": 71,
-    "view_count": 71
+    "use_count": 73,
+    "view_count": 73
   },
   "kanban-orchestrator": {
     "archived_at": null,
@@ -199,13 +212,13 @@
     "created_at": "2026-06-20T07:15:11.307653+00:00",
     "created_by": "agent",
     "last_patched_at": "2026-06-20T08:44:58.194359+00:00",
-    "last_used_at": "2026-06-20T08:44:45.869639+00:00",
-    "last_viewed_at": "2026-06-20T08:44:45.847214+00:00",
+    "last_used_at": "2026-06-21T20:21:53.157361+00:00",
+    "last_viewed_at": "2026-06-21T20:21:53.140953+00:00",
     "patch_count": 1,
     "pinned": false,
     "state": "active",
-    "use_count": 1,
-    "view_count": 1
+    "use_count": 3,
+    "view_count": 3
   },
   "saas-deferred-revenue-and-billing-mix-optimization": {
     "archived_at": null,
@@ -225,26 +238,26 @@
     "created_at": "2026-06-21T16:54:05.986634+00:00",
     "created_by": null,
     "last_patched_at": null,
-    "last_used_at": "2026-06-21T19:53:08.973159+00:00",
-    "last_viewed_at": "2026-06-21T19:53:08.920602+00:00",
+    "last_used_at": "2026-06-21T20:10:19.405340+00:00",
+    "last_viewed_at": "2026-06-21T20:10:19.342354+00:00",
     "patch_count": 0,
     "pinned": false,
     "state": "active",
-    "use_count": 3,
-    "view_count": 3
+    "use_count": 4,
+    "view_count": 4
   },
   "saas-retention-metrics": {
     "archived_at": null,
     "created_at": "2026-06-21T17:26:25.576328+00:00",
     "created_by": null,
     "last_patched_at": null,
-    "last_used_at": "2026-06-21T19:44:25.130711+00:00",
-    "last_viewed_at": "2026-06-21T19:44:25.058051+00:00",
+    "last_used_at": "2026-06-21T20:18:22.213241+00:00",
+    "last_viewed_at": "2026-06-21T20:18:22.200918+00:00",
     "patch_count": 0,
     "pinned": false,
     "state": "active",
-    "use_count": 7,
-    "view_count": 7
+    "use_count": 8,
+    "view_count": 8
   },
   "serving-llms-vllm": {
     "archived_at": null,
