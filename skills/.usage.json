@@ -199,13 +199,13 @@
     "created_at": "2026-06-20T06:34:16.651852+00:00",
     "created_by": null,
     "last_patched_at": "2026-06-21T12:40:01.510866+00:00",
-    "last_used_at": "2026-06-21T12:39:50.900403+00:00",
-    "last_viewed_at": "2026-06-21T12:39:50.886631+00:00",
+    "last_used_at": "2026-06-21T15:14:23.954882+00:00",
+    "last_viewed_at": "2026-06-21T15:14:23.938365+00:00",
     "patch_count": 1,
     "pinned": false,
     "state": "active",
-    "use_count": 12,
-    "view_count": 12
+    "use_count": 13,
+    "view_count": 13
   },
   "llama-cpp": {
     "archived_at": null,
