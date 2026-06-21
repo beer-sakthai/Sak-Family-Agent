@@ -47,6 +47,16 @@ Use this skill when asked to run a learning loop: periodically pick a fresh, spe
    - Save a durable entry summarizing the new skill topic, file path, and key facts.
    - If research is genuinely blocked and you would have to fabricate, record the no-op instead and stay silent.
 
+   **GitHub API for repo structure**: When directory listings are unavailable, use `/repos/{owner}/{repo}/git/trees/main?recursive=1` to enumerate source files, then filter by extension or path to locate modules for direct extraction.
+
+## Case study: HF Official MCP Server (2026-06-21)
+
+- **Topic**: `Hugging Face Official MCP Server` (`hf-mcp-server`)
+- **Skill path**: `~/.hermes/profiles/hermesagent/skills/mlops/hf-mcp-server/SKILL.md`
+- **Research challenge**: `web_extract` failed repeatedly with HTTP 402 billing errors against `huggingface.co` and GitHub.
+- **Workaround used**: `curl` against `raw.githubusercontent.com` to fetch README and TypeScript source; GitHub API `/git/trees` to enumerate the package tree; then targeted extraction of `tool-ids.ts`, `jobs-tool.ts`, `sandbox-tool.ts`, `dynamic-space-tool.ts`, `hub-inspect.ts`, and search tool definitions.
+- **Outcome**: Successfully authored a class-level skill covering 17+ built-in tools, 3 transports, proxy-tool CSV loading, bouquet selection, SEP-2640 skills distribution, and client setup for Claude Desktop/Cursor/VSCode/Gemini.
+
 ## Pitfalls
 
 - **Flat skills are discouraged.** A skill that only makes sense for a single session, PR, or date is a memory entry, not a skill.
