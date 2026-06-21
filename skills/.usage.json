@@ -1,4 +1,17 @@
 {
+  "ai-native-unit-economics": {
+    "archived_at": null,
+    "created_at": "2026-06-21T23:29:21.725434+00:00",
+    "created_by": null,
+    "last_patched_at": null,
+    "last_used_at": "2026-06-21T23:29:22.143853+00:00",
+    "last_viewed_at": "2026-06-21T23:29:21.725458+00:00",
+    "patch_count": 0,
+    "pinned": false,
+    "state": "active",
+    "use_count": 1,
+    "view_count": 1
+  },
   "audiocraft-audio-generation": {
     "archived_at": null,
     "created_at": "2026-06-20T09:49:06.097673+00:00",
@@ -82,12 +95,12 @@
     "created_at": "2026-06-21T10:30:48.036725+00:00",
     "created_by": null,
     "last_patched_at": null,
-    "last_used_at": "2026-06-21T23:25:16.300466+00:00",
+    "last_used_at": "2026-06-21T23:43:18.232312+00:00",
     "last_viewed_at": "2026-06-21T11:06:38.730923+00:00",
     "patch_count": 0,
     "pinned": false,
     "state": "active",
-    "use_count": 115,
+    "use_count": 118,
     "view_count": 2
   },
   "css-content-visibility": {
@@ -129,6 +142,19 @@
     "use_count": 4,
     "view_count": 4
   },
+  "economic-moat-diagnosis-and-strengthening": {
+    "archived_at": null,
+    "created_at": "2026-06-21T23:43:53.064251+00:00",
+    "created_by": null,
+    "last_patched_at": null,
+    "last_used_at": "2026-06-21T23:43:53.075066+00:00",
+    "last_viewed_at": "2026-06-21T23:43:53.064346+00:00",
+    "patch_count": 0,
+    "pinned": false,
+    "state": "active",
+    "use_count": 1,
+    "view_count": 1
+  },
   "gif-search": {
     "archived_at": null,
     "created_at": "2026-06-20T09:49:06.319186+00:00",
@@ -147,13 +173,13 @@
     "created_at": "2026-06-21T18:40:33.836428+00:00",
     "created_by": null,
     "last_patched_at": null,
-    "last_used_at": "2026-06-21T20:25:50.412900+00:00",
-    "last_viewed_at": "2026-06-21T20:25:50.367112+00:00",
+    "last_used_at": "2026-06-21T23:42:56.053261+00:00",
+    "last_viewed_at": "2026-06-21T23:42:56.044986+00:00",
     "patch_count": 0,
     "pinned": false,
     "state": "active",
-    "use_count": 5,
-    "view_count": 5
+    "use_count": 7,
+    "view_count": 7
   },
   "heartmula": {
     "archived_at": null,
@@ -199,13 +225,13 @@
     "created_at": "2026-06-20T15:56:14.551248+00:00",
     "created_by": null,
     "last_patched_at": "2026-06-21T21:58:41.163383+00:00",
-    "last_used_at": "2026-06-21T23:25:34.328951+00:00",
-    "last_viewed_at": "2026-06-21T23:25:34.320555+00:00",
+    "last_used_at": "2026-06-21T23:37:28.273751+00:00",
+    "last_viewed_at": "2026-06-21T23:37:28.265654+00:00",
     "patch_count": 8,
     "pinned": false,
     "state": "active",
-    "use_count": 111,
-    "view_count": 111
+    "use_count": 116,
+    "view_count": 116
   },
   "kanban-orchestrator": {
     "archived_at": null,
@@ -264,13 +290,13 @@
     "created_at": "2026-06-20T07:15:11.307653+00:00",
     "created_by": "agent",
     "last_patched_at": "2026-06-21T23:11:18.334999+00:00",
-    "last_used_at": "2026-06-21T23:10:34.364053+00:00",
-    "last_viewed_at": "2026-06-21T23:10:34.263751+00:00",
+    "last_used_at": "2026-06-21T23:29:47.121207+00:00",
+    "last_viewed_at": "2026-06-21T23:29:47.111009+00:00",
     "patch_count": 2,
     "pinned": false,
     "state": "active",
-    "use_count": 26,
-    "view_count": 26
+    "use_count": 27,
+    "view_count": 27
   },
   "playwright-html-reports": {
     "archived_at": null,
@@ -303,26 +329,26 @@
     "created_at": "2026-06-21T22:45:35.106142+00:00",
     "created_by": null,
     "last_patched_at": null,
-    "last_used_at": "2026-06-21T23:25:01.582161+00:00",
-    "last_viewed_at": "2026-06-21T23:25:01.570479+00:00",
+    "last_used_at": "2026-06-21T23:39:53.864384+00:00",
+    "last_viewed_at": "2026-06-21T23:39:53.855812+00:00",
     "patch_count": 0,
     "pinned": false,
     "state": "active",
-    "use_count": 4,
-    "view_count": 4
+    "use_count": 5,
+    "view_count": 5
   },
   "plg-funnel-economics": {
     "archived_at": null,
     "created_at": "2026-06-21T20:27:11.650469+00:00",
     "created_by": null,
     "last_patched_at": null,
-    "last_used_at": "2026-06-21T20:27:11.697691+00:00",
-    "last_viewed_at": "2026-06-21T20:27:11.650714+00:00",
+    "last_used_at": "2026-06-21T23:43:11.128836+00:00",
+    "last_viewed_at": "2026-06-21T23:43:11.114408+00:00",
     "patch_count": 0,
     "pinned": false,
     "state": "active",
-    "use_count": 1,
-    "view_count": 1
+    "use_count": 2,
+    "view_count": 2
   },
   "saas-arr-waterfall-analysis": {
     "archived_at": null,
@@ -342,13 +368,13 @@
     "created_at": "2026-06-21T21:59:43.483175+00:00",
     "created_by": null,
     "last_patched_at": null,
-    "last_used_at": "2026-06-21T21:59:44.553689+00:00",
-    "last_viewed_at": "2026-06-21T21:59:43.629905+00:00",
+    "last_used_at": "2026-06-21T23:36:39.471333+00:00",
+    "last_viewed_at": "2026-06-21T23:36:39.460966+00:00",
     "patch_count": 0,
     "pinned": false,
     "state": "active",
-    "use_count": 1,
-    "view_count": 1
+    "use_count": 2,
+    "view_count": 2
   },
   "saas-deal-desk-discount-governance": {
     "archived_at": null,
@@ -433,13 +459,13 @@
     "created_at": "2026-06-21T17:26:25.576328+00:00",
     "created_by": null,
     "last_patched_at": null,
-    "last_used_at": "2026-06-21T20:18:22.213241+00:00",
-    "last_viewed_at": "2026-06-21T20:18:22.200918+00:00",
+    "last_used_at": "2026-06-21T23:29:07.969720+00:00",
+    "last_viewed_at": "2026-06-21T23:29:07.960772+00:00",
     "patch_count": 0,
     "pinned": false,
     "state": "active",
-    "use_count": 8,
-    "view_count": 8
+    "use_count": 9,
+    "view_count": 9
   },
   "server-timing-header": {
     "archived_at": null,

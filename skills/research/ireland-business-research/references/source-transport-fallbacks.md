@@ -1,6 +1,6 @@
 # Ireland Business Research — Source Transport & Fallbacks
 
-Validated: 2026-06-21 maintenance run.
+Validated: 2026-06-22 cron maintenance run.
 
 ## Current transport status for core sources
 
