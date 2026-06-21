@@ -56,12 +56,12 @@
     "created_at": "2026-06-21T10:30:48.036725+00:00",
     "created_by": null,
     "last_patched_at": null,
-    "last_used_at": "2026-06-21T20:48:56.867519+00:00",
+    "last_used_at": "2026-06-21T21:03:16.206277+00:00",
     "last_viewed_at": "2026-06-21T11:06:38.730923+00:00",
     "patch_count": 0,
     "pinned": false,
     "state": "active",
-    "use_count": 92,
+    "use_count": 93,
     "view_count": 2
   },
   "dogfood": {
@@ -134,13 +134,13 @@
     "created_at": "2026-06-21T18:39:35.554024+00:00",
     "created_by": null,
     "last_patched_at": null,
-    "last_used_at": "2026-06-21T18:39:35.562116+00:00",
-    "last_viewed_at": "2026-06-21T18:39:35.554095+00:00",
+    "last_used_at": "2026-06-21T20:59:48.292933+00:00",
+    "last_viewed_at": "2026-06-21T20:59:48.273786+00:00",
     "patch_count": 0,
     "pinned": false,
     "state": "active",
-    "use_count": 1,
-    "view_count": 1
+    "use_count": 2,
+    "view_count": 2
   },
   "huggingface-hub": {
     "archived_at": null,
@@ -160,13 +160,13 @@
     "created_at": "2026-06-20T15:56:14.551248+00:00",
     "created_by": null,
     "last_patched_at": "2026-06-21T18:26:01.405732+00:00",
-    "last_used_at": "2026-06-21T20:52:23.706215+00:00",
-    "last_viewed_at": "2026-06-21T20:52:23.642611+00:00",
+    "last_used_at": "2026-06-21T21:00:31.818159+00:00",
+    "last_viewed_at": "2026-06-21T21:00:31.746760+00:00",
     "patch_count": 4,
     "pinned": false,
     "state": "active",
-    "use_count": 78,
-    "view_count": 78
+    "use_count": 79,
+    "view_count": 79
   },
   "kanban-orchestrator": {
     "archived_at": null,
@@ -212,13 +212,13 @@
     "created_at": "2026-06-20T07:15:11.307653+00:00",
     "created_by": "agent",
     "last_patched_at": "2026-06-20T08:44:58.194359+00:00",
-    "last_used_at": "2026-06-21T20:49:33.464108+00:00",
-    "last_viewed_at": "2026-06-21T20:49:32.625312+00:00",
+    "last_used_at": "2026-06-21T21:04:26.101872+00:00",
+    "last_viewed_at": "2026-06-21T21:04:26.023249+00:00",
     "patch_count": 1,
     "pinned": false,
     "state": "active",
-    "use_count": 5,
-    "view_count": 5
+    "use_count": 6,
+    "view_count": 6
   },
   "plg-funnel-economics": {
     "archived_at": null,
@@ -227,6 +227,19 @@
     "last_patched_at": null,
     "last_used_at": "2026-06-21T20:27:11.697691+00:00",
     "last_viewed_at": "2026-06-21T20:27:11.650714+00:00",
+    "patch_count": 0,
+    "pinned": false,
+    "state": "active",
+    "use_count": 1,
+    "view_count": 1
+  },
+  "saas-arr-waterfall-analysis": {
+    "archived_at": null,
+    "created_at": "2026-06-21T20:55:14.619508+00:00",
+    "created_by": null,
+    "last_patched_at": null,
+    "last_used_at": "2026-06-21T20:55:14.679984+00:00",
+    "last_viewed_at": "2026-06-21T20:55:14.620493+00:00",
     "patch_count": 0,
     "pinned": false,
     "state": "active",
@@ -264,26 +277,26 @@
     "created_at": "2026-06-21T20:25:34.704359+00:00",
     "created_by": null,
     "last_patched_at": null,
-    "last_used_at": "2026-06-21T20:25:34.757056+00:00",
-    "last_viewed_at": "2026-06-21T20:25:34.704862+00:00",
+    "last_used_at": "2026-06-21T21:04:38.682300+00:00",
+    "last_viewed_at": "2026-06-21T21:04:38.594584+00:00",
     "patch_count": 0,
     "pinned": false,
     "state": "active",
-    "use_count": 1,
-    "view_count": 1
+    "use_count": 2,
+    "view_count": 2
   },
   "saas-pricing-architecture": {
     "archived_at": null,
     "created_at": "2026-06-21T16:54:05.986634+00:00",
     "created_by": null,
     "last_patched_at": null,
-    "last_used_at": "2026-06-21T20:26:03.658342+00:00",
-    "last_viewed_at": "2026-06-21T20:26:03.573970+00:00",
+    "last_used_at": "2026-06-21T21:02:30.892388+00:00",
+    "last_viewed_at": "2026-06-21T21:02:30.632840+00:00",
     "patch_count": 0,
     "pinned": false,
     "state": "active",
-    "use_count": 5,
-    "view_count": 5
+    "use_count": 6,
+    "view_count": 6
   },
   "saas-retention-metrics": {
     "archived_at": null,

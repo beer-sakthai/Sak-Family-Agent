@@ -58,6 +58,22 @@ const { chromium } = require('playwright');
 ```
 Run with `node hello.js` and you should see: `Title: Example Domain`
 
+## Web-First Assertions
+Playwright Test uses **web-first assertions** (e.g., `expect(page).toHaveTitle()`, `expect(locator).toBeVisible()`) that auto-wait for the condition to match before failing. Unlike bare `assert` or manual `setTimeout` checks, they retry for the full timeout and produce actionable failure messages with a trace of what was actually seen.
+
+Example:
+```ts
+import { test, expect } from '@playwright/test';
+
+test('web-first assertion', async ({ page }) => {
+  await page.goto('https://example.com');
+  await expect(page).toHaveTitle('Example Domain'); // auto-waits and retries
+  await expect(page.locator('h1')).toBeVisible();
+});
+```
+
+When to use: whenever asserting DOM state, URL, network responses, or accessibility tree conditions. Avoid `waitForTimeout` and custom sleep-based assertions.
+
 ## Tips
 - Use `await page.screenshot({ path: 'screenshot.png' })` to capture visuals
 - Parallel browsers: `await Promise.all([chromium.launch(), firefox.launch(), webkit.launch()])`
