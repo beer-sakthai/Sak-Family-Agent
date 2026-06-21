@@ -1,0 +1,22 @@
+{
+  "servers": [
+    {
+      "name": "hermes",
+      "command": "hermes",
+      "args": ["mcp", "serve"],
+      "env": {}
+    },
+    {
+      "name": "ollama",
+      "command": "ollama",
+      "args": ["mcp", "serve"],
+      "env": {}
+    },
+    {
+      "name": "github",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "env": { "GITHUB_PERSONAL_ACCESS_TOKEN": "your-token-here" }
+    }
+  ]
+}
