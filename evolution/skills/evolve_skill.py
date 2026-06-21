@@ -12,11 +12,20 @@ from pathlib import Path
 from datetime import datetime
 from typing import Optional
 
+import os
 import click
 import dspy
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
+
+# Cap max_tokens on every dspy.LM (DSPy defaults to a huge value that overruns
+# credit-limited / free OpenRouter models). Override via EVO_MAX_TOKENS.
+_orig_lm_init = dspy.LM.__init__
+def _capped_lm_init(self, model, *a, **kw):
+    kw.setdefault("max_tokens", int(os.getenv("EVO_MAX_TOKENS", "8192")))
+    return _orig_lm_init(self, model, *a, **kw)
+dspy.LM.__init__ = _capped_lm_init
 
 from evolution.core.config import EvolutionConfig, resolve_hermes_agent_path
 from evolution.core.dataset_builder import SyntheticDatasetBuilder, EvalDataset, GoldenDatasetLoader
@@ -185,7 +194,10 @@ def evolve(
 
     # ── 7. Validate evolved skill ───────────────────────────────────────
     console.print(f"\n[bold]Validating evolved skill[/bold]")
-    evolved_constraints = validator.validate_all(evolved_body, "skill", baseline_text=skill["body"])
+    # Validate the reassembled skill (with frontmatter) against the full baseline:
+    # the skill_structure check requires frontmatter, so validating the body alone
+    # would always fail.
+    evolved_constraints = validator.validate_all(evolved_full, "skill", baseline_text=skill["raw"])
     all_pass = True
     for c in evolved_constraints:
         icon = "✓" if c.passed else "✗"
