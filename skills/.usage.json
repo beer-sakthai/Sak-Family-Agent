@@ -56,12 +56,12 @@
     "created_at": "2026-06-21T10:30:48.036725+00:00",
     "created_by": null,
     "last_patched_at": null,
-    "last_used_at": "2026-06-21T22:06:02.896755+00:00",
+    "last_used_at": "2026-06-21T22:24:02.072258+00:00",
     "last_viewed_at": "2026-06-21T11:06:38.730923+00:00",
     "patch_count": 0,
     "pinned": false,
     "state": "active",
-    "use_count": 102,
+    "use_count": 105,
     "view_count": 2
   },
   "css-content-visibility": {
@@ -173,13 +173,13 @@
     "created_at": "2026-06-20T15:56:14.551248+00:00",
     "created_by": null,
     "last_patched_at": "2026-06-21T21:58:41.163383+00:00",
-    "last_used_at": "2026-06-21T22:06:22.826706+00:00",
-    "last_viewed_at": "2026-06-21T22:06:22.807449+00:00",
+    "last_used_at": "2026-06-21T22:20:14.047991+00:00",
+    "last_viewed_at": "2026-06-21T22:20:14.035686+00:00",
     "patch_count": 8,
     "pinned": false,
     "state": "active",
-    "use_count": 90,
-    "view_count": 90
+    "use_count": 94,
+    "view_count": 94
   },
   "kanban-orchestrator": {
     "archived_at": null,
@@ -238,13 +238,13 @@
     "created_at": "2026-06-20T07:15:11.307653+00:00",
     "created_by": "agent",
     "last_patched_at": "2026-06-20T08:44:58.194359+00:00",
-    "last_used_at": "2026-06-21T22:03:29.063162+00:00",
-    "last_viewed_at": "2026-06-21T22:03:29.053651+00:00",
+    "last_used_at": "2026-06-21T22:25:31.472416+00:00",
+    "last_viewed_at": "2026-06-21T22:25:31.459913+00:00",
     "patch_count": 1,
     "pinned": false,
     "state": "active",
-    "use_count": 15,
-    "view_count": 15
+    "use_count": 19,
+    "view_count": 19
   },
   "plg-funnel-economics": {
     "archived_at": null,
@@ -329,13 +329,13 @@
     "created_at": "2026-06-21T16:54:05.986634+00:00",
     "created_by": null,
     "last_patched_at": null,
-    "last_used_at": "2026-06-21T21:12:50.051604+00:00",
-    "last_viewed_at": "2026-06-21T21:12:50.028565+00:00",
+    "last_used_at": "2026-06-21T22:21:53.499872+00:00",
+    "last_viewed_at": "2026-06-21T22:21:53.489599+00:00",
     "patch_count": 0,
     "pinned": false,
     "state": "active",
-    "use_count": 7,
-    "view_count": 7
+    "use_count": 8,
+    "view_count": 8
   },
   "saas-pricing-experiment-design": {
     "archived_at": null,
