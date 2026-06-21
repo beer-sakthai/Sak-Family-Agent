@@ -1,0 +1,54 @@
+{
+  "hermes-agent": {
+    "archived_at": null,
+    "created_at": "2026-06-20T11:46:52.163078+00:00",
+    "created_by": null,
+    "last_patched_at": null,
+    "last_used_at": "2026-06-20T11:46:52.170039+00:00",
+    "last_viewed_at": "2026-06-20T11:46:52.163277+00:00",
+    "patch_count": 0,
+    "pinned": false,
+    "state": "active",
+    "use_count": 1,
+    "view_count": 1
+  },
+  "huggingface-hub": {
+    "archived_at": null,
+    "created_at": "2026-06-20T06:34:16.651852+00:00",
+    "created_by": null,
+    "last_patched_at": null,
+    "last_used_at": "2026-06-20T06:34:16.664124+00:00",
+    "last_viewed_at": "2026-06-20T06:34:16.651975+00:00",
+    "patch_count": 0,
+    "pinned": false,
+    "state": "active",
+    "use_count": 1,
+    "view_count": 1
+  },
+  "playwright": {
+    "archived_at": null,
+    "created_at": "2026-06-20T07:15:11.307653+00:00",
+    "created_by": "agent",
+    "last_patched_at": "2026-06-20T12:34:37.941970+00:00",
+    "last_used_at": "2026-06-20T12:33:39.345443+00:00",
+    "last_viewed_at": "2026-06-20T12:33:39.325641+00:00",
+    "patch_count": 8,
+    "pinned": false,
+    "state": "active",
+    "use_count": 9,
+    "view_count": 9
+  },
+  "playwright-basics": {
+    "archived_at": null,
+    "created_at": "2026-06-20T12:08:46.346247+00:00",
+    "created_by": null,
+    "last_patched_at": "2026-06-20T13:17:37.135361+00:00",
+    "last_used_at": "2026-06-20T13:17:02.540775+00:00",
+    "last_viewed_at": "2026-06-20T13:17:02.527368+00:00",
+    "patch_count": 1,
+    "pinned": false,
+    "state": "active",
+    "use_count": 3,
+    "view_count": 3
+  }
+}
