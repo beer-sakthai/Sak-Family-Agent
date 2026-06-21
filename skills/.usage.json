@@ -56,12 +56,12 @@
     "created_at": "2026-06-21T10:30:48.036725+00:00",
     "created_by": null,
     "last_patched_at": null,
-    "last_used_at": "2026-06-21T20:19:06.663428+00:00",
+    "last_used_at": "2026-06-21T20:31:03.882516+00:00",
     "last_viewed_at": "2026-06-21T11:06:38.730923+00:00",
     "patch_count": 0,
     "pinned": false,
     "state": "active",
-    "use_count": 87,
+    "use_count": 89,
     "view_count": 2
   },
   "dogfood": {
@@ -108,13 +108,13 @@
     "created_at": "2026-06-21T18:40:33.836428+00:00",
     "created_by": null,
     "last_patched_at": null,
-    "last_used_at": "2026-06-21T20:10:19.501576+00:00",
-    "last_viewed_at": "2026-06-21T20:10:19.444025+00:00",
+    "last_used_at": "2026-06-21T20:25:50.412900+00:00",
+    "last_viewed_at": "2026-06-21T20:25:50.367112+00:00",
     "patch_count": 0,
     "pinned": false,
     "state": "active",
-    "use_count": 4,
-    "view_count": 4
+    "use_count": 5,
+    "view_count": 5
   },
   "heartmula": {
     "archived_at": null,
@@ -160,13 +160,13 @@
     "created_at": "2026-06-20T15:56:14.551248+00:00",
     "created_by": null,
     "last_patched_at": "2026-06-21T18:26:01.405732+00:00",
-    "last_used_at": "2026-06-21T20:18:15.271370+00:00",
-    "last_viewed_at": "2026-06-21T20:18:15.253877+00:00",
+    "last_used_at": "2026-06-21T20:32:27.566243+00:00",
+    "last_viewed_at": "2026-06-21T20:32:27.502043+00:00",
     "patch_count": 4,
     "pinned": false,
     "state": "active",
-    "use_count": 73,
-    "view_count": 73
+    "use_count": 75,
+    "view_count": 75
   },
   "kanban-orchestrator": {
     "archived_at": null,
@@ -220,6 +220,19 @@
     "use_count": 3,
     "view_count": 3
   },
+  "plg-funnel-economics": {
+    "archived_at": null,
+    "created_at": "2026-06-21T20:27:11.650469+00:00",
+    "created_by": null,
+    "last_patched_at": null,
+    "last_used_at": "2026-06-21T20:27:11.697691+00:00",
+    "last_viewed_at": "2026-06-21T20:27:11.650714+00:00",
+    "patch_count": 0,
+    "pinned": false,
+    "state": "active",
+    "use_count": 1,
+    "view_count": 1
+  },
   "saas-deferred-revenue-and-billing-mix-optimization": {
     "archived_at": null,
     "created_at": "2026-06-21T18:25:07.011688+00:00",
@@ -233,18 +246,31 @@
     "use_count": 0,
     "view_count": 0
   },
+  "saas-growth-efficiency": {
+    "archived_at": null,
+    "created_at": "2026-06-21T20:25:34.704359+00:00",
+    "created_by": null,
+    "last_patched_at": null,
+    "last_used_at": "2026-06-21T20:25:34.757056+00:00",
+    "last_viewed_at": "2026-06-21T20:25:34.704862+00:00",
+    "patch_count": 0,
+    "pinned": false,
+    "state": "active",
+    "use_count": 1,
+    "view_count": 1
+  },
   "saas-pricing-architecture": {
     "archived_at": null,
     "created_at": "2026-06-21T16:54:05.986634+00:00",
     "created_by": null,
     "last_patched_at": null,
-    "last_used_at": "2026-06-21T20:10:19.405340+00:00",
-    "last_viewed_at": "2026-06-21T20:10:19.342354+00:00",
+    "last_used_at": "2026-06-21T20:26:03.658342+00:00",
+    "last_viewed_at": "2026-06-21T20:26:03.573970+00:00",
     "patch_count": 0,
     "pinned": false,
     "state": "active",
-    "use_count": 4,
-    "view_count": 4
+    "use_count": 5,
+    "view_count": 5
   },
   "saas-retention-metrics": {
     "archived_at": null,
