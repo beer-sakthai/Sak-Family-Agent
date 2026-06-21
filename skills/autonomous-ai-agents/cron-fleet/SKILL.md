@@ -95,7 +95,7 @@ You are a cron fleet watchdog. Every tick:
    - If you need richer metadata (last_delivery_error, exact timestamps), fall
      back to the Python API: `python3 -c "from cron.jobs import list_jobs; print(list_jobs(include_disabled=True))"`.
 2. For any job that is `enabled: false` AND has `last_status: 'ok'`
-   (i.e., it was working before being paused), re-enable it:
+   (i.e., it was working before being disabled), re-enable it:
    `hermes cron resume <job_id>`.
 3. For jobs with `last_status: 'error'` or a non-null delivery error,
    **do NOT** auto-re-enable. Instead, emit a concise report listing
@@ -107,8 +107,12 @@ Key constraints:
 - Schedule: `every 5m`, repeat: forever.
 - The watchdog must stay quiet when there is nothing to report.
 - Do not recursively schedule more cron jobs from inside the watchdog.
-- There is no standalone `cronjob` binary; use the `hermes cron` CLI or the
-  `cronjob` Python tool call in live sessions.
+- There is no standalone `cronjob` binary; all cron operations go through the
+  `hermes cron` CLI.
+- `hermes cron list` (no `--all`) filters to `[active]` jobs only. Use `--all`
+  to include disabled and completed jobs.
+- The CLI display omits `last_delivery_error`; to inspect it, read
+  `$HERMES_HOME/cron/jobs.json` directly or use the Python API above.
 
 ## Repo / Source
 

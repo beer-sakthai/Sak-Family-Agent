@@ -27,16 +27,29 @@ appear in `sakthai`. Fleet audits need to check every profile explicitly.
 
 ```bash
 for p in default sakthai hermesagent saksit; do
-  export HERMES_HOME="$HOME/.hermes"
-  [[ $p != default ]] && HERMES_HOME="$HOME/.hermes/profiles/$p"
+  if [[ $p == default ]]; then
+    export HERMES_HOME="$HOME/.hermes"
+  else
+    export HERMES_HOME="$HOME/.hermes/profiles/$p"
+  fi
   echo "=== $p ==="
   hermes cron list --all
 done
 ```
 
-## When to re-enable
+## When delivery errors need inspection
 
-Safe resume mask:
+The CLI output from `hermes cron list --all` does **not** expose
+`last_delivery_error` or `last_error`. To audit the full health status,
+read the JSON directly:
+
+```bash
+cat "$HERMES_HOME/cron/jobs.json" | python3 -m json.tool
+```
+
+or use the scheduler Python API if `cron` is importable in the local env.
+
+## Safe resume mask
 
 ```bash
 hermes cron resume <id>
@@ -44,7 +57,7 @@ hermes cron resume <id>
 
 Only when **both** hold:
 - `enabled: false` (job is currently off)
-- `last_status = "ok"` (last run was healthy)
+- `last_status: "ok"` (last run was healthy)
 
 Chronic error jobs (`last_status: "error"` or non-null `last_delivery_error`)
 must be reported and left disabled for human triage.
