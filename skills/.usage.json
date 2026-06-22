@@ -95,13 +95,13 @@
     "created_at": "2026-06-21T10:30:48.036725+00:00",
     "created_by": null,
     "last_patched_at": null,
-    "last_used_at": "2026-06-21T23:55:18.677605+00:00",
-    "last_viewed_at": "2026-06-21T11:06:38.730923+00:00",
+    "last_used_at": "2026-06-22T00:01:05.337915+00:00",
+    "last_viewed_at": "2026-06-22T00:01:05.216880+00:00",
     "patch_count": 0,
     "pinned": false,
     "state": "active",
-    "use_count": 120,
-    "view_count": 2
+    "use_count": 121,
+    "view_count": 3
   },
   "css-content-visibility": {
     "archived_at": null,
@@ -303,13 +303,13 @@
     "created_at": "2026-06-21T23:24:41.838654+00:00",
     "created_by": null,
     "last_patched_at": null,
-    "last_used_at": "2026-06-21T23:50:03.376750+00:00",
-    "last_viewed_at": "2026-06-21T23:50:03.357755+00:00",
+    "last_used_at": "2026-06-22T00:01:05.424399+00:00",
+    "last_viewed_at": "2026-06-22T00:01:05.307910+00:00",
     "patch_count": 0,
     "pinned": false,
     "state": "active",
-    "use_count": 3,
-    "view_count": 3
+    "use_count": 4,
+    "view_count": 4
   },
   "playwright-trace-viewer-debugging": {
     "archived_at": null,
@@ -459,13 +459,13 @@
     "created_at": "2026-06-21T17:26:25.576328+00:00",
     "created_by": null,
     "last_patched_at": null,
-    "last_used_at": "2026-06-21T23:29:07.969720+00:00",
-    "last_viewed_at": "2026-06-21T23:29:07.960772+00:00",
+    "last_used_at": "2026-06-22T00:01:05.145507+00:00",
+    "last_viewed_at": "2026-06-22T00:01:05.019051+00:00",
     "patch_count": 0,
     "pinned": false,
     "state": "active",
-    "use_count": 9,
-    "view_count": 9
+    "use_count": 10,
+    "view_count": 10
   },
   "server-timing-header": {
     "archived_at": null,
