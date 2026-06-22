@@ -95,12 +95,12 @@
     "created_at": "2026-06-21T10:30:48.036725+00:00",
     "created_by": null,
     "last_patched_at": null,
-    "last_used_at": "2026-06-21T23:43:18.232312+00:00",
+    "last_used_at": "2026-06-21T23:55:18.677605+00:00",
     "last_viewed_at": "2026-06-21T11:06:38.730923+00:00",
     "patch_count": 0,
     "pinned": false,
     "state": "active",
-    "use_count": 118,
+    "use_count": 120,
     "view_count": 2
   },
   "css-content-visibility": {
@@ -225,13 +225,13 @@
     "created_at": "2026-06-20T15:56:14.551248+00:00",
     "created_by": null,
     "last_patched_at": "2026-06-21T21:58:41.163383+00:00",
-    "last_used_at": "2026-06-21T23:37:28.273751+00:00",
-    "last_viewed_at": "2026-06-21T23:37:28.265654+00:00",
+    "last_used_at": "2026-06-21T23:57:31.564262+00:00",
+    "last_viewed_at": "2026-06-21T23:57:31.555441+00:00",
     "patch_count": 8,
     "pinned": false,
     "state": "active",
-    "use_count": 116,
-    "view_count": 116
+    "use_count": 122,
+    "view_count": 122
   },
   "kanban-orchestrator": {
     "archived_at": null,
@@ -290,52 +290,52 @@
     "created_at": "2026-06-20T07:15:11.307653+00:00",
     "created_by": "agent",
     "last_patched_at": "2026-06-21T23:11:18.334999+00:00",
-    "last_used_at": "2026-06-21T23:29:47.121207+00:00",
-    "last_viewed_at": "2026-06-21T23:29:47.111009+00:00",
+    "last_used_at": "2026-06-21T23:54:58.511595+00:00",
+    "last_viewed_at": "2026-06-21T23:54:58.486241+00:00",
     "patch_count": 2,
     "pinned": false,
     "state": "active",
-    "use_count": 27,
-    "view_count": 27
+    "use_count": 29,
+    "view_count": 29
   },
   "playwright-html-reports": {
     "archived_at": null,
     "created_at": "2026-06-21T23:24:41.838654+00:00",
     "created_by": null,
     "last_patched_at": null,
-    "last_used_at": "2026-06-21T23:24:41.849495+00:00",
-    "last_viewed_at": "2026-06-21T23:24:41.838968+00:00",
+    "last_used_at": "2026-06-21T23:50:03.376750+00:00",
+    "last_viewed_at": "2026-06-21T23:50:03.357755+00:00",
     "patch_count": 0,
     "pinned": false,
     "state": "active",
-    "use_count": 1,
-    "view_count": 1
+    "use_count": 3,
+    "view_count": 3
   },
   "playwright-trace-viewer-debugging": {
     "archived_at": null,
     "created_at": "2026-06-21T22:30:28.350339+00:00",
     "created_by": null,
     "last_patched_at": null,
-    "last_used_at": "2026-06-21T22:45:35.170778+00:00",
-    "last_viewed_at": "2026-06-21T22:45:34.911985+00:00",
+    "last_used_at": "2026-06-21T23:54:58.529289+00:00",
+    "last_viewed_at": "2026-06-21T23:54:58.503628+00:00",
     "patch_count": 0,
     "pinned": false,
     "state": "active",
-    "use_count": 2,
-    "view_count": 2
+    "use_count": 3,
+    "view_count": 3
   },
   "playwright-ui-mode": {
     "archived_at": null,
     "created_at": "2026-06-21T22:45:35.106142+00:00",
     "created_by": null,
     "last_patched_at": null,
-    "last_used_at": "2026-06-21T23:39:53.864384+00:00",
-    "last_viewed_at": "2026-06-21T23:39:53.855812+00:00",
+    "last_used_at": "2026-06-21T23:54:58.520029+00:00",
+    "last_viewed_at": "2026-06-21T23:54:58.495172+00:00",
     "patch_count": 0,
     "pinned": false,
     "state": "active",
-    "use_count": 5,
-    "view_count": 5
+    "use_count": 6,
+    "view_count": 6
   },
   "plg-funnel-economics": {
     "archived_at": null,
