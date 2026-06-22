@@ -261,6 +261,70 @@ with gr.Blocks() as demo:
 - `cache_examples="lazy"` is invalid; split into `cache_examples=True` + `cache_mode="lazy"`.
 - `gr.HTML` padding default is now `False`; explicitly set it if layout breaks.
 
+## Calling any Gradio Space as an API
+
+Every public Gradio Space on Hugging Face is an auto-generated REST API. You do not need to own the Space to invoke it.
+
+**Python (`gradio_client`)**
+
+```python
+from gradio_client import Client, handle_file
+
+client = Client("username/space-name", token="hf_...")
+result = client.predict("input text", api_name="/predict")
+
+# Files from URL or local path
+result = client.predict(audio=handle_file("https://example.com/audio.wav"), api_name="/predict")
+
+# Streaming / generator endpoints
+for output in client.submit("prompt", api_name="/generate"):
+    print(output)
+```
+
+**JavaScript (`@gradio/client`)**
+
+```javascript
+import { Client } from "@gradio/client";
+const app = await Client.connect("username/space", { token: "hf_..." });
+const result = await app.predict("/predict", ["Hello"]);
+```
+
+**REST / curl (queue-based two-step)**
+
+```bash
+# 1. Submit request
+curl -X POST "https://space.hf.space/gradio_api/call/predict" \
+  -H "Content-Type: application/json" \
+  -d '{"data": ["Hello"]}'
+# {"event_id": "abc123"}
+
+# 2. Poll for result (SSE)
+curl -N "https://space.hf.space/gradio_api/call/predict/abc123"
+```
+
+**OpenAPI schema**  
+Every Space exposes: `https://<space-subdomain>.hf.space/gradio_api/openapi.json`
+
+**Calling a Space from another Space**  
+Forward `x-ip-token` to preserve auth and quota ownership:
+
+```python
+def process(prompt, request: gr.Request):
+    x_ip_token = request.headers.get("x-ip-token", "")
+    client = Client("owner/zerogpu-space", headers={"x-ip-token": x_ip_token})
+    return client.predict(prompt, api_name="/predict")
+```
+
+**ZeroGPU quotas**
+
+| Account type | Daily GPU quota | Overage |
+|--------------|-----------------|---------|
+| Unauthenticated | 2 min | shared pool |
+| Free | 5 min | $1 / 10 min |
+| PRO | 40 min | $1 / 10 min |
+
+Authenticated calls consume the **owner's** quota.
+
 ## References
 
 - Docs: https://www.gradio.app/docs
@@ -271,3 +335,4 @@ with gr.Blocks() as demo:
 - SSR & env vars: [references/ssr-and-env-vars.md](references/ssr-and-env-vars.md)
 - Minimal starter template: [templates/space-app.py](templates/space-app.py)
 - Requirements template: [templates/space-requirements.txt](templates/space-requirements.txt)
+- Space API invocation patterns: [references/space-api-invocation.md](references/space-api-invocation.md)
