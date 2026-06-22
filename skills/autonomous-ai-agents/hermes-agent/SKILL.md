@@ -339,7 +339,7 @@ The registry of record is `hermes_cli/commands.py` — every consumer
 
 ---
 
-## Key Paths & Config
+### Key Paths & Config
 
 ```
 ~/.hermes/config.yaml       Main configuration
@@ -353,6 +353,16 @@ $HERMES_HOME/skills/        Installed skills
 ```
 
 Profiles use `~/.hermes/profiles/<name>/` with the same layout.
+
+### Repository Discipline
+
+**All skills must be versioned exclusively in `https://github.com/beer-sakthai/sakthai-skills`.** No local copies, no forks, no exceptions. Any skill not pushed to this repo is invalid. This is not a preference — it is the operating rule of this agent.
+
+- ✅ Every `skill_manage(action='create')` or `skill_manage(action='patch')` must trigger an automatic push to this repo.
+- ✅ The agent must **never** declare a skill "saved" unless it confirms the push succeeded.
+- ✅ If the repo does not exist, the agent must **fail loudly** and instruct the user to create it manually.
+
+❌ **Never assume a skill is saved** — verify it was pushed to GitHub before declaring success. A skill written to disk but not pushed is a ghost — it will vanish on WSL reset.
 
 ### Config Sections
 
