@@ -1,17 +1,17 @@
-"""Import skills that Hermes has *learned* into this repo's ``skills/`` tree.
+"""Import skills that SakKing has *learned* into this repo's ``skills/`` tree.
 
-Hermes (the agent runtime at ``~/.hermes``) ships a set of *bundled* skills and
+SakKing (the agent runtime at ``~/.sakking``) ships a set of *bundled* skills and
 also accumulates *learned* (agent-created) ones over time. This module mirrors
 the learned skills into the SakThai repo as first-class ``sakthai-`` skills:
 
-* "learned" = a ``SKILL.md`` whose slug is **not** in Hermes'
-  ``skills/.bundled_manifest`` (and is not a Hermes-internal ``hermes-*`` skill).
+* "learned" = a ``SKILL.md`` whose slug is **not** in SakKing'
+  ``skills/.bundled_manifest`` (and is not a SakKing-internal ``sakking-*`` skill).
 * Each learned skill is rewritten with the repo's canonical YAML frontmatter and
   a ``sakthai-`` name prefix, so it round-trips through :mod:`sakthai.skills`.
 * The sync is **idempotent**: re-running rewrites only the skills whose rendered
   content changed, and reports created / updated / unchanged.
 
-Hermes' learned skills are not guaranteed to carry frontmatter, so parsing here
+SakKing's learned skills are not guaranteed to carry frontmatter, so parsing here
 is deliberately tolerant: a missing or invalid frontmatter block falls back to
 deriving a title and description from the Markdown body.
 """
@@ -26,11 +26,11 @@ from typing import Any
 
 import yaml
 
-from .config import SKILLS_DIR, hermes_skills_dir
+from .config import SKILLS_DIR, sakking_skills_dir
 
-#: Slugs starting with these prefixes are Hermes-internal plumbing, not portable
+#: Slugs starting with these prefixes are SakKing-internal plumbing, not portable
 #: capabilities — excluded from the sync by default.
-DEFAULT_EXCLUDE_PREFIXES: tuple[str, ...] = ("hermes-",)
+DEFAULT_EXCLUDE_PREFIXES: tuple[str, ...] = ("sakking-",)
 
 _BUNDLED_MANIFEST = ".bundled_manifest"
 _PREFIX = "sakthai-"
@@ -59,7 +59,7 @@ def bundled_slugs(skills_root: Path) -> set[str]:
 def _lenient_front(raw: str) -> dict[str, Any]:
     """Recover top-level scalars from frontmatter that is not strict YAML.
 
-    Hermes skills sometimes ship unquoted ``description:`` values that contain a
+    SakKing skills sometimes ship unquoted ``description:`` values that contain a
     colon-space (``coverage: login``), which ``yaml.safe_load`` rejects. This
     line scan salvages the keys we care about so a malformed block still yields a
     usable name/description/version.
@@ -172,7 +172,7 @@ def _dedupe(values: Sequence[str]) -> list[str]:
 
 @dataclass
 class LearnedSkill:
-    """A Hermes-learned skill resolved into repo (``sakthai-``) form."""
+    """A SakKing-learned skill resolved into repo (``sakthai-``) form."""
 
     source_slug: str
     source_path: Path
@@ -197,7 +197,7 @@ class LearnedSkill:
                 "sakthai": {
                     "tags": list(self.tags),
                     "related_skills": list(self.related_skills),
-                    "source": f"hermes:{self.source_slug}",
+                    "source": f"sakking:{self.source_slug}",
                 }
             },
         }
@@ -213,8 +213,8 @@ def _category_for(skill_md: Path, skills_root: Path) -> str:
     try:
         rel = skill_md.parent.relative_to(skills_root)
     except ValueError:
-        return "hermes"
-    return rel.parts[0] if len(rel.parts) >= 2 else "hermes"
+        return "sakking"
+    return rel.parts[0] if len(rel.parts) >= 2 else "sakking"
 
 
 def _resolve_skill(skill_md: Path, skills_root: Path) -> LearnedSkill | None:
@@ -236,7 +236,7 @@ def _resolve_skill(skill_md: Path, skills_root: Path) -> LearnedSkill | None:
     sakthai_meta = (front.get("metadata") or {}).get("sakthai") or {}
     tags = _as_str_list(sakthai_meta.get("tags")) or _as_str_list(front.get("tags"))
     category = _category_for(skill_md, skills_root)
-    tags = _dedupe([*tags, "hermes", category])
+    tags = _dedupe([*tags, "sakking", category])
     related = _as_str_list(sakthai_meta.get("related_skills")) or _as_str_list(
         front.get("related_skills")
     )
@@ -260,8 +260,8 @@ def discover_learned_skills(
     *,
     exclude_prefixes: Sequence[str] = DEFAULT_EXCLUDE_PREFIXES,
 ) -> list[LearnedSkill]:
-    """Find Hermes-learned skills (non-bundled, non-internal) under ``skills_root``."""
-    root = skills_root if skills_root is not None else hermes_skills_dir()
+    """Find SakKing-learned skills (non-bundled, non-internal) under ``skills_root``."""
+    root = skills_root if skills_root is not None else sakking_skills_dir()
     if not root.is_dir():
         return []
     bundled = bundled_slugs(root)
@@ -296,14 +296,14 @@ class SyncOutcome:
         return len(self.created) + len(self.updated) + len(self.unchanged)
 
 
-def sync_hermes_skills(
+def sync_sakking_skills(
     skills_root: Path | None = None,
     dest_dir: Path | None = None,
     *,
     dry_run: bool = False,
     exclude_prefixes: Sequence[str] = DEFAULT_EXCLUDE_PREFIXES,
 ) -> SyncOutcome:
-    """Mirror Hermes-learned skills into ``dest_dir`` (the repo ``skills/`` tree).
+    """Mirror SakKing-learned skills into ``dest_dir`` (the repo ``skills/`` tree).
 
     Idempotent: a skill whose rendered content already matches the file on disk
     is reported as ``unchanged`` and not rewritten. With ``dry_run`` no files are

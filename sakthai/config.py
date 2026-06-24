@@ -34,7 +34,7 @@ OPTIONAL_ENV_VARS: dict[str, str] = {
     "SAKTHAI_HOME": "Override the data directory (default: ~/.sakthai)",
     "SAKTHAI_READ_ALLOW": "Extra paths the read_file tool may read (os.pathsep-separated)",
     "SAKTHAI_MCP_TIMEOUT": "Seconds to wait for an external MCP server reply (default: 30)",
-    "HERMES_HOME": "Override the Hermes data directory (default: ~/.hermes) for skill sync",
+    "SAKKING_HOME": "Override the SakKing data directory (default: ~/.sakking) for skill sync",
 }
 
 # Seconds to wait for an external MCP server's reply, before SAKTHAI_MCP_TIMEOUT.
@@ -58,15 +58,15 @@ def gemini_extensions_dir() -> Path:
     return Path("~/.gemini/extensions").expanduser()
 
 
-def hermes_home() -> Path:
-    """Return the Hermes data directory, honouring the HERMES_HOME override."""
-    override = os.environ.get("HERMES_HOME")
-    return Path(override) if override else Path.home() / ".hermes"
+def sakking_home() -> Path:
+    """Return the SakKing data directory, honouring the SAKKING_HOME override."""
+    override = os.environ.get("SAKKING_HOME")
+    return Path(override) if override else Path.home() / ".sakking"
 
 
-def hermes_skills_dir() -> Path:
-    """Directory where Hermes stores its (bundled and learned) skills."""
-    return hermes_home() / "skills"
+def sakking_skills_dir() -> Path:
+    """Directory where SakKing stores its (bundled and learned) skills."""
+    return sakking_home() / "skills"
 
 
 def memory_db_path() -> Path:

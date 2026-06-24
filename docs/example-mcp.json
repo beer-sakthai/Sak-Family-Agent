@@ -1,8 +1,8 @@
 {
   "servers": [
     {
-      "name": "hermes",
-      "command": "hermes",
+      "name": "sakking",
+      "command": "sakking",
       "args": ["mcp", "serve"],
       "env": {}
     },
