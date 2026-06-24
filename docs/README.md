@@ -7,7 +7,7 @@ Project documentation for SakThai.
 - [capabilities.md](./capabilities.md) — what the agent can do, tool by tool, plus
   memory operations, providers, and the dashboard.
 - [plugins.md](./plugins.md) — the MCP server + skills extensibility model.
-- [integrations.md](./integrations.md) — connecting Hermes, Composio, and other
+- [integrations.md](./integrations.md) — connecting SakKing, Composio, and other
   agents/services over MCP (with no-cost local recipes).
 - [runtimes.md](./runtimes.md) — CLI / agent loop / MCP server, third-party CLI
   integration, and local models (Ollama / OpenAI-compatible).

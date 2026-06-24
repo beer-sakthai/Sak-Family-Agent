@@ -110,18 +110,18 @@ def test_gemini_extensions_dir_honours_sakthai_home(
 
 
 # ---------------------------------------------------------------------------
-# hermes_home() env-var override
+# sakking_home() env-var override
 # ---------------------------------------------------------------------------
 
 
-def test_hermes_home_honours_hermes_home_env(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("HERMES_HOME", "/tmp/my-hermes")
-    assert config.hermes_home() == Path("/tmp/my-hermes")
+def test_sakking_home_honours_sakking_home_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("SAKKING_HOME", "/tmp/my-sakking")
+    assert config.sakking_home() == Path("/tmp/my-sakking")
 
 
-def test_hermes_skills_dir_uses_hermes_home(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("HERMES_HOME", "/tmp/custom-hermes")
-    assert config.hermes_skills_dir() == Path("/tmp/custom-hermes") / "skills"
+def test_sakking_skills_dir_uses_sakking_home(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("SAKKING_HOME", "/tmp/custom-sakking")
+    assert config.sakking_skills_dir() == Path("/tmp/custom-sakking") / "skills"
 
 
 # ---------------------------------------------------------------------------
