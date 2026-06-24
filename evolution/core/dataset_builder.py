@@ -112,6 +112,39 @@ class SyntheticDatasetBuilder:
         self.config = config
         self.generator = dspy.ChainOfThought(self.GenerateTestCases)
 
+    @staticmethod
+    def _parse_cases(text: str) -> list:
+        """Parse a JSON array of test cases from raw LLM output.
+
+        Tolerates surrounding prose and arrays truncated mid-element by the
+        token cap (salvages the last complete object and closes the array).
+        """
+        import re
+
+        try:
+            return json.loads(text)
+        except json.JSONDecodeError:
+            pass
+
+        match = re.search(r'\[.*\]', text, re.DOTALL)
+        if match:
+            try:
+                return json.loads(match.group())
+            except json.JSONDecodeError:
+                pass
+
+        # Salvage a truncated array: keep from the first '[' to the last
+        # complete object '}' and re-close the bracket.
+        start = text.find('[')
+        last_obj = text.rfind('}')
+        if start != -1 and last_obj > start:
+            try:
+                return json.loads(text[start:last_obj + 1] + ']')
+            except json.JSONDecodeError:
+                pass
+
+        raise ValueError(f"Could not parse test cases from LLM output: {text[:200]}")
+
     def generate(
         self,
         artifact_text: str,
@@ -122,8 +155,10 @@ class SyntheticDatasetBuilder:
 
         n = num_cases or self.config.eval_dataset_size
 
-        # Configure DSPy to use the judge model for generation
-        lm = dspy.LM(self.config.judge_model)
+        # Configure DSPy to use the judge model for generation. Give it ample
+        # output room: a 20-case JSON array easily overruns the default token
+        # budget and gets truncated mid-array (unparseable).
+        lm = dspy.LM(self.config.judge_model, max_tokens=8000)
 
         with dspy.context(lm=lm):
             result = self.generator(
@@ -132,17 +167,9 @@ class SyntheticDatasetBuilder:
                 num_cases=n,
             )
 
-        # Parse the generated test cases
-        try:
-            cases_raw = json.loads(result.test_cases)
-        except json.JSONDecodeError:
-            # Try to extract JSON from the response
-            import re
-            match = re.search(r'\[.*\]', result.test_cases, re.DOTALL)
-            if match:
-                cases_raw = json.loads(match.group())
-            else:
-                raise ValueError(f"Could not parse test cases from LLM output: {result.test_cases[:200]}")
+        # Parse the generated test cases, tolerating extra prose around the
+        # array and arrays that were truncated by the token cap.
+        cases_raw = self._parse_cases(result.test_cases)
 
         examples = [
             EvalExample(
