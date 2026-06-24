@@ -31,9 +31,9 @@ three ways in: a CLI, a tool-using agent loop, and an MCP stdio server.
   **65 user/extension skills**, injected into the system prompt on demand.
 - **MCP, both directions** — *serve* SakThai's tools to other agents
   (`sakthai mcp`), and *consume* external MCP servers (namespaced `<server>__tool`).
-- **Hermes integration (local, no cost)** — connect SakThai and the
-  [Hermes](https://github.com/) agent over local MCP stdio, and mirror
-  Hermes-learned skills with `sakthai skills sync-hermes`. See [Hermes integration](#hermes-integration-local-no-cost).
+- **SakKing integration (local, no cost)** — connect SakThai and the
+  [SakKing](https://github.com/) agent over local MCP stdio, and mirror
+  SakKing-learned skills with `sakthai skills sync-sakking`. See [SakKing integration](#sakking-integration-local-no-cost).
 - **6-stage cycle** — a lightweight Dream → Hope → Care → Joy → Trust → Growth
   state machine persisted in memory and mirrored by the `sakthai-cycle-*` skills.
 - **Dashboard** — `sakthai dashboard` serves a Streamlit view of the store (KPIs,
@@ -140,34 +140,34 @@ soft if a server won't start. Pass `--no-mcp` to disable.
 }
 ```
 
-### Hermes integration (local, no cost)
+### SakKing integration (local, no cost)
 
-SakThai and the [Hermes](https://github.com/) agent (installed at `~/.hermes`)
+SakThai and the [SakKing](https://github.com/) agent (installed at `~/.sakking`)
 interoperate over **local MCP stdio** — a subprocess JSON-RPC channel with **no
 network and zero API/cloud cost**.
 
-- **Hermes → SakThai** (already wired by Hermes): Hermes registers
-  `sakthai mcp` in its `~/.hermes/config.yaml` and calls SakThai's memory tools.
-- **SakThai → Hermes**: add Hermes to `~/.sakthai/mcp.json` and its conversation
-  / messaging tools appear in the agent loop as `hermes__*`:
+- **SakKing → SakThai** (already wired by SakKing): SakKing registers
+  `sakthai mcp` in its `~/.sakking/config.yaml` and calls SakThai's memory tools.
+- **SakThai → SakKing**: add SakKing to `~/.sakthai/mcp.json` and its conversation
+  / messaging tools appear in the agent loop as `sakking__*`:
 
   ```json
   {
     "mcpServers": {
-      "hermes": { "command": "hermes", "args": ["mcp", "serve"] }
+      "sakking": { "command": "sakking", "args": ["mcp", "serve"] }
     }
   }
   ```
 
-- **Mirror Hermes-learned skills** into this repo as first-class `sakthai-` skills:
+- **Mirror SakKing-learned skills** into this repo as first-class `sakthai-` skills:
 
   ```bash
-  sakthai skills sync-hermes            # import learned skills into skills/
-  sakthai skills sync-hermes --dry-run  # preview changes (idempotent)
+  sakthai skills sync-sakking            # import learned skills into skills/
+  sakthai skills sync-sakking --dry-run  # preview changes (idempotent)
   ```
 
 > The MCP link itself is free; SakThai's own *reasoning* still uses whatever
-> provider you pick — pair the Hermes link with a local Ollama model (above) for
+> provider you pick — pair the SakKing link with a local Ollama model (above) for
 > an end-to-end no-cost setup.
 
 ---
@@ -181,7 +181,7 @@ gets injected into the agent's system prompt when active. SakThai ships:
   `automation`, `coding`, `devops`, `learning`, `llm`, `memory`, `observability`,
   `research`, `safety`, `security`.
 - **`skills/`** — **65 user/extension skills** (the `sakthai-*` set, including the
-  `sakthai-cycle-*` stages and skills mirrored from Hermes).
+  `sakthai-cycle-*` stages and skills mirrored from SakKing).
 
 ```yaml
 ---
@@ -199,7 +199,7 @@ metadata:
 Skill body goes here — injected into the system prompt when the skill is active.
 ```
 
-Manage skills with `sakthai skills list|show|validate|create|sync-hermes`, and
+Manage skills with `sakthai skills list|show|validate|create|sync-sakking`, and
 activate them for a run with `sakthai run "<task>" --with-skills my-skill`.
 
 ---
@@ -234,7 +234,7 @@ sakthai memory show|stats|search|export|import|backup|consolidate|deduplicate
 sakthai run "summarise my notes"     # provider-agnostic agent loop
 sakthai mcp                          # serve memory tools over MCP stdio
 sakthai cycle status|next|set|list   # the 6-stage cycle
-sakthai skills list|show|validate|create|sync-hermes
+sakthai skills list|show|validate|create|sync-sakking
 sakthai sessions list|show|export    # inspect session logs
 sakthai dashboard                    # Streamlit view of the store
 ```

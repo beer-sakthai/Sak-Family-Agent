@@ -12,18 +12,18 @@ all of them.
 
 ---
 
-## Hermes (local, no cost)
+## SakKing (local, no cost)
 
-[Hermes](https://github.com/) is a separate agent runtime installed at `~/.hermes`.
-SakThai and Hermes interoperate over **local MCP stdio** — a subprocess JSON-RPC
+[SakKing](https://github.com/) is a separate agent runtime installed at `~/.sakking`.
+SakThai and SakKing interoperate over **local MCP stdio** — a subprocess JSON-RPC
 channel, so there is **no network traffic and zero API/cloud cost** for the link
 itself. (Reasoning still uses whichever LLM provider each agent is configured with;
 pair this with a local Ollama model — see [`runtimes.md`](./runtimes.md) — for an
 end-to-end no-cost setup.)
 
-### Hermes → SakThai (already wired by Hermes)
+### SakKing → SakThai (already wired by SakKing)
 
-Hermes registers SakThai's MCP server in its own `~/.hermes/config.yaml`, e.g.:
+SakKing registers SakThai's MCP server in its own `~/.sakking/config.yaml`, e.g.:
 
 ```yaml
 mcp_servers:
@@ -33,44 +33,44 @@ mcp_servers:
     enabled: true
 ```
 
-This lets Hermes read and write the shared `~/.sakthai/memory.db` through SakThai's
+This lets SakKing read and write the shared `~/.sakthai/memory.db` through SakThai's
 `learn` / `recall` / `search` / `forget` tools.
 
-### SakThai → Hermes
+### SakThai → SakKing
 
-Add Hermes to `~/.sakthai/mcp.json`. Its conversation/messaging tools then appear
-in the SakThai agent loop namespaced `hermes__*`:
+Add SakKing to `~/.sakthai/mcp.json`. Its conversation/messaging tools then appear
+in the SakThai agent loop namespaced `sakking__*`:
 
 ```json
 {
   "mcpServers": {
-    "hermes": { "command": "hermes", "args": ["mcp", "serve"] }
+    "sakking": { "command": "sakking", "args": ["mcp", "serve"] }
   }
 }
 ```
 
-If `hermes` is not on `PATH`, use the absolute path (e.g. `~/.local/bin/hermes`).
+If `sakking` is not on `PATH`, use the absolute path (e.g. `~/.local/bin/sakking`).
 Verify discovery without spending anything:
 
 ```bash
 sakthai run "list your tools" --dry-run     # preflight: prints tool_count, no API call
 ```
 
-### Mirror Hermes-learned skills
+### Mirror SakKing-learned skills
 
-Hermes accumulates *learned* (agent-created) skills over time. Import them into
+SakKing accumulates *learned* (agent-created) skills over time. Import them into
 this repo as first-class `sakthai-` skills:
 
 ```bash
-sakthai skills sync-hermes            # import learned skills into skills/
-sakthai skills sync-hermes --dry-run  # preview (idempotent: created / updated / unchanged)
-sakthai skills sync-hermes --hermes-home /custom/.hermes/skills
+sakthai skills sync-sakking            # import learned skills into skills/
+sakthai skills sync-sakking --dry-run  # preview (idempotent: created / updated / unchanged)
+sakthai skills sync-sakking --sakking-home /custom/.sakking/skills
 ```
 
-The importer reads `$HERMES_HOME/skills` (default `~/.hermes/skills`), skips
-bundled and `hermes-*` internal skills, rewrites each with this repo's canonical
-frontmatter (recording `metadata.sakthai.source: hermes:<slug>`), and prefixes the
-name with `sakthai-`. See [`plugins.md`](./plugins.md#-syncing-skills-hermes-has-learned).
+The importer reads `$SAKKING_HOME/skills` (default `~/.sakking/skills`), skips
+bundled and `sakking-*` internal skills, rewrites each with this repo's canonical
+frontmatter (recording `metadata.sakthai.source: sakking:<slug>`), and prefixes the
+name with `sakthai-`. See [`plugins.md`](./plugins.md#-syncing-skills-sakking-has-learned).
 
 ---
 

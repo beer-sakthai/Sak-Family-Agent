@@ -8,8 +8,8 @@ from typing import Any
 
 import click
 
-from ..config import LIBRARY_DIR, SKILLS_DIR, hermes_skills_dir
-from ..hermes_skills import sync_hermes_skills
+from ..config import LIBRARY_DIR, SKILLS_DIR, sakking_skills_dir
+from ..sakking_skills import sync_sakking_skills
 from ..skills import build_catalog, collect_skills, find_skill, validate_tree
 
 
@@ -139,21 +139,21 @@ Describe how this skill works and its instructions here.
     click.secho(f"created skill template → {skill_dir / 'SKILL.md'}", fg="green")
 
 
-@skills.command("sync-hermes")
+@skills.command("sync-sakking")
 @click.option(
-    "--hermes-home",
-    "hermes_root",
+    "--sakking-home",
+    "sakking_root",
     type=click.Path(file_okay=False, path_type=Path),
     default=None,
-    help="Hermes skills dir (default: $HERMES_HOME/skills or ~/.hermes/skills).",
+    help="SakKing skills dir (default: $SAKKING_HOME/skills or ~/.sakking/skills).",
 )
 @click.option("--dry-run", is_flag=True, help="Report what would change without writing.")
-def skills_sync_hermes(hermes_root: Path | None, dry_run: bool) -> None:
-    """Import skills Hermes has learned into skills/ as sakthai- skills."""
-    source = hermes_root if hermes_root is not None else hermes_skills_dir()
+def skills_sync_sakking(sakking_root: Path | None, dry_run: bool) -> None:
+    """Import skills SakKing has learned into skills/ as sakthai- skills."""
+    source = sakking_root if sakking_root is not None else sakking_skills_dir()
     if not source.is_dir():
-        raise click.ClickException(f"Hermes skills dir not found: {source}")
-    outcome = sync_hermes_skills(source, SKILLS_DIR, dry_run=dry_run)
+        raise click.ClickException(f"SakKing skills dir not found: {source}")
+    outcome = sync_sakking_skills(source, SKILLS_DIR, dry_run=dry_run)
     verb = "would sync" if dry_run else "synced"
     click.secho(
         f"{verb} {outcome.total} learned skill(s) from {source}",
