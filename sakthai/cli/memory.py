@@ -412,11 +412,24 @@ def memory_deduplicate(dry_run: bool, verbose: bool) -> None:
 @click.option("--remote", default=None, help="Git remote URL to push the snapshot to.")
 @click.option("--http-url", default=None, help="HTTP URL to POST the snapshot to (fallback mode).")
 @click.option("--http-key", default=None, help="Bearer token for HTTP authentication.")
-def memory_sync(remote: str | None, http_url: str | None, http_key: str | None) -> None:
+@click.option("--supermemory", is_flag=True, help="Regenerate supermemory canonicals (near-dedup) before syncing.")
+def memory_sync(
+    remote: str | None, http_url: str | None, http_key: str | None, supermemory: bool
+) -> None:
     """Synchronize memory to a remote Git repository or HTTP endpoint."""
     from ..memory.sync import sync_memory_to_git, sync_memory_via_http
 
     try:
+        if supermemory:
+            click.echo("Running supermemory canonical regeneration...")
+            import subprocess
+            import sys
+
+            from ..config import REPO_ROOT
+            script = REPO_ROOT / "scripts" / "regenerate-supermemory-canonicals.py"
+            subprocess.run([sys.executable, str(script), "--apply", "--quiet"], check=True)
+            click.echo("Supermemory deduplication complete.")
+
         click.echo("Syncing memory...")
         if http_url:
             result = sync_memory_via_http(http_url, api_key=http_key)
