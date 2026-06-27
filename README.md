@@ -309,6 +309,6 @@ training/    HF Jobs fine-tune + serving scripts (optional, off the core path)
 **Note on Versioning & License:**
 This repository (`sakthai-agent-v2`) is the active, clean from-scratch rewrite of
 the core engine. The original `SakThai-Agent` (v1) blueprint is now deprecated and
-locked. **© 2026 beer-sakthai — All rights reserved.** This is a personal,
-source-available project: no license is granted to use, copy, modify, or
-redistribute the code without prior written permission from the maintainer.
+locked.
+
+**License:** MIT License. See the [LICENSE](LICENSE) file for details.
