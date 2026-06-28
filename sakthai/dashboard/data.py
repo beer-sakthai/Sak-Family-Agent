@@ -120,8 +120,8 @@ def collect_dashboard_data(db_path: Path | None = None, days: int = 30) -> dict[
         with MemoryStore(db_path) as store:
             facts = store.list_facts(limit=_FACTS_LIMIT)
             observations = store.top_observations(limit=_OBS_LIMIT)
-    except Exception as exc:  # noqa: BLE001
-        logger.warning("Could not read MemoryStore (%s); using demo data", exc)
+    except Exception:
+        logger.warning("Could not read MemoryStore; using demo data", exc_info=True)
         return dict(DEMO_DATA)
 
     if not facts and not observations:
@@ -232,7 +232,7 @@ def _load_session(path: Path) -> dict[str, Any] | None:
     try:
         with path.open(encoding="utf-8") as fh:
             data = json.load(fh)
-    except Exception:
+    except (json.JSONDecodeError, OSError):
         data = None
     return data if isinstance(data, dict) else None
 
