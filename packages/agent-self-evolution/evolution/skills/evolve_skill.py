@@ -6,17 +6,15 @@ Usage:
 """
 
 import json
+import os
 import sys
 import time
-from pathlib import Path
 from datetime import datetime
-from typing import Optional
+from pathlib import Path
 
-import os
 import click
 import dspy
 from rich.console import Console
-from rich.panel import Panel
 from rich.table import Table
 
 # Cap max_tokens on every dspy.LM (DSPy defaults to a huge value that overruns
@@ -35,18 +33,18 @@ def _capped_lm_init(self, model, *a, **kw):
 dspy.LM.__init__ = _capped_lm_init
 
 from evolution.core.config import (
+    _DEFAULT_LOCAL_MODEL,
     EvolutionConfig,
     resolve_hermes_agent_path,
-    _DEFAULT_LOCAL_MODEL,
 )
-from evolution.core.dataset_builder import SyntheticDatasetBuilder, EvalDataset, GoldenDatasetLoader
-from evolution.core.external_importers import build_dataset_from_external
-from evolution.core.fitness import skill_fitness_metric, LLMJudge, FitnessScore
 from evolution.core.constraints import ConstraintValidator
+from evolution.core.dataset_builder import EvalDataset, GoldenDatasetLoader, SyntheticDatasetBuilder
+from evolution.core.external_importers import build_dataset_from_external
+from evolution.core.fitness import skill_fitness_metric
 from evolution.skills.skill_module import (
     SkillModule,
-    load_skill,
     find_skill,
+    load_skill,
     reassemble_skill,
 )
 
@@ -57,10 +55,10 @@ def evolve(
     skill_name: str,
     iterations: int = 10,
     eval_source: str = "synthetic",
-    dataset_path: Optional[str] = None,
+    dataset_path: str | None = None,
     optimizer_model: str = _DEFAULT_LOCAL_MODEL,
     eval_model: str = _DEFAULT_LOCAL_MODEL,
-    hermes_repo: Optional[str] = None,
+    hermes_repo: str | None = None,
     run_tests: bool = False,
     dry_run: bool = False,
 ):
@@ -90,10 +88,10 @@ def evolve(
     console.print(f"  Description: {skill['description'][:80]}...")
 
     if dry_run:
-        console.print(f"\n[bold green]DRY RUN — setup validated successfully.[/bold green]")
+        console.print("\n[bold green]DRY RUN — setup validated successfully.[/bold green]")
         console.print(f"  Would generate eval dataset (source: {eval_source})")
         console.print(f"  Would run GEPA optimization ({iterations} iterations)")
-        console.print(f"  Would validate constraints and create PR")
+        console.print("  Would validate constraints and create PR")
         return
 
     # ── 2. Build or load evaluation dataset ─────────────────────────────
@@ -136,7 +134,7 @@ def evolve(
     console.print(f"  Split: {len(dataset.train)} train / {len(dataset.val)} val / {len(dataset.holdout)} holdout")
 
     # ── 3. Validate constraints on baseline ─────────────────────────────
-    console.print(f"\n[bold]Validating baseline constraints[/bold]")
+    console.print("\n[bold]Validating baseline constraints[/bold]")
     validator = ConstraintValidator(config)
     baseline_constraints = validator.validate_all(skill["body"], "skill")
     all_pass = True
@@ -151,7 +149,7 @@ def evolve(
         console.print("[yellow]⚠ Baseline skill has constraint violations — proceeding anyway[/yellow]")
 
     # ── 4. Set up DSPy + GEPA optimizer ─────────────────────────────────
-    console.print(f"\n[bold]Configuring optimizer[/bold]")
+    console.print("\n[bold]Configuring optimizer[/bold]")
     console.print(f"  Optimizer: GEPA ({iterations} iterations)")
     console.print(f"  Optimizer model: {optimizer_model}")
     console.print(f"  Eval model: {eval_model}")
@@ -224,7 +222,7 @@ def evolve(
     evolved_full = reassemble_skill(skill["frontmatter"], evolved_body)
 
     # ── 7. Validate evolved skill ───────────────────────────────────────
-    console.print(f"\n[bold]Validating evolved skill[/bold]")
+    console.print("\n[bold]Validating evolved skill[/bold]")
     # Validate the reassembled skill (with frontmatter) against the full baseline:
     # the skill_structure check requires frontmatter, so validating the body alone
     # would always fail.
