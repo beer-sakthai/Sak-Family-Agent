@@ -1,0 +1,130 @@
+{
+  "jobs": [
+    {
+      "base_url": null,
+      "context_from": null,
+      "created_at": "2026-06-20T13:01:18.324709+01:00",
+      "deliver": "origin",
+      "enabled": true,
+      "enabled_toolsets": [
+        "skills",
+        "terminal",
+        "web",
+        "file",
+        "supermemory",
+        "memory"
+      ],
+      "id": "a643129946eb",
+      "model": "gpt-oss:120b",
+      "name": "playwright-minute-learner",
+      "no_agent": false,
+      "prompt": "Load the prompt file ~/.hermes/profiles/sakthai/cron/prompts/playwright-minute-learner.md and follow it exactly.",
+      "provider": "ollama-cloud",
+      "repeat": {
+        "completed": 2,
+        "times": null
+      },
+      "schedule": {
+        "display": "once in 1m",
+        "kind": "once",
+        "run_at": "2026-06-20T16:29:02.453159+01:00"
+      },
+      "schedule_display": "once in 1m",
+      "script": null,
+      "skill": null,
+      "skills": [],
+      "workdir": null
+    },
+    {
+      "base_url": null,
+      "context_from": null,
+      "created_at": "2026-06-20T15:43:00.920293+01:00",
+      "deliver": "origin",
+      "enabled": true,
+      "enabled_toolsets": [
+        "skills",
+        "terminal",
+        "web",
+        "file",
+        "supermemory",
+        "memory"
+      ],
+      "id": "738ca8c995c2",
+      "model": "gpt-oss:120b",
+      "name": "playwright-5min-learner",
+      "no_agent": false,
+      "prompt": "You are a Playwright skill factory. Run now. Your mission: browse the web, learn one specific Playwright technique/topic, and turn it into a reusable Hermes skill. Avoid repeating anything you've done before.\n\n## Constraints\n- ALWAYS check used_topics FIRST by loading /home/sakthai/playwright-minute-learner-state.json (used_topics array).\n- If used_topics is empty, bootstrap with 5 foundational topics: selectors, waits, fixtures, tracing, page-object-model.\n- Otherwise pick from the remaining topic pool in priority order below.\n- NEVER repeat a topic already in used_topics.\n- ALWAYS save the finished skill to /home/sakthai/playwright-skills/playwright-minute/<normalized-topic>/SKILL.md\n- ALWAYS append the chosen topic to used_topics in the state file after success.\n- ALWAYS record what you learned in supermemory using supermemory_store with content like: \"Playwright skill <topic> created at <path>. Key lesson: <one sentence>.\" and metadata {source: \"playwright-minute-learner\", topic: \"<topic>\"}\n- If the skill already exists at the target path, treat it as a repeat \u2014 pick another topic.\n- The skill must be a valid SKILL.md with frontmatter + markdown body.\n\n## Topic priority order (expand with synonyms)\n1. playwright installation & setup (channel, executable_path)\n2. selectors (css, xpath, text, chaining, locators)\n3. waits & timeouts (wait_for_selector, wait_for_load_state, auto-waiting)\n4. network interception (route, abort, mock, HAR)\n5. browser contexts & isolation (incognito, permissions, geolocation)\n6. fixtures & test hooks (beforeEach, afterEach, worker fixtures)\n7. tracing & debugging (trace viewer, videos, screenshots, console logs)\n8. visual regression (pixelmatch, screenshots compare, expect(page).toHaveScreenshot)\n9. accessibility (axe-core, accessibility tree, ARIA)\n10. emulation (device descriptors, geolocation, timezone, locale)\n11. performance (web vitals, navigation timing, resource timing)\n12. PDF generation (page.pdf, print media)\n13. file upload/download (input[type=file], download handler)\n14. iframes & frames (frame locator, content frame)\n15. popups & dialogs (dialog event, accept/dismiss)\n16. test runner config (reporter, retries, workers, shard)\n17. docker & CI (image, xvfb, dependencies)\n18. python api tips (sync vs async, expect assertions)\n19. typescript & typed locators\n20. custom commands (page.route, page.expect_request)\n21. debugging (playwright inspect, --debug, trace start)\n22. secrets & env (dotenv, process.env)\n23. mobile & touch (touchscreen, gestures)\n24. authentication flows (storage state, cookies, tokens)\n25. cross-browser (chromium, firefox, webkit parity)\n\n## Skill template\nWrite minimal but complete SKILL.md:\n- name: playwright-<normalized-topic>\n- description: one sentence\n- body: when to use it, exact commands/code, pitfalls, verification steps.\n\n## Output format\nReturn exactly:\n1. Topic chosen\n2. Why it was chosen (from priority list)\n3. Path created\n4. One-line summary of the skill\n5. supermemory save confirmation\n\nBe concise.",
+      "provider": "ollama-cloud",
+      "repeat": {
+        "completed": 2,
+        "times": null
+      },
+      "schedule": {
+        "display": "once in 5m",
+        "kind": "once",
+        "run_at": "2026-06-20T16:33:14.414803+01:00"
+      },
+      "schedule_display": "once in 5m",
+      "script": null,
+      "skill": null,
+      "skills": [],
+      "workdir": null
+    },
+    {
+      "base_url": null,
+      "context_from": null,
+      "created_at": "2026-06-21T04:40:27.635904+01:00",
+      "deliver": "origin",
+      "enabled": true,
+      "enabled_toolsets": null,
+      "id": "2ce7d9669d4c",
+      "model": null,
+      "name": "cron-fleet-selfheal",
+      "no_agent": false,
+      "prompt": "You are a cron fleet watchdog. Every tick:\n\n1. Run `cronjob` with `action='list'` and inspect all jobs.\n2. For any job that is `enabled: false` AND has `last_status: 'ok'` (i.e., it was working before being disabled), re-enable it with `cronjob` `action='resume'` `job_id=<id>`.\n3. For any job whose `last_status` is `error` or has a non-null `last_delivery_error`, add one concise line to the report describing the issue. Do NOT re-enable chronic-error jobs automatically \u2014 just report them.\n4. If the fleet is fully healthy and no actions were taken, output exactly `[SILENT]` (nothing else) to suppress delivery.\n\nWhen reporting, use short markdown bullets:\n- `job_id` | `name` | action or issue\n\nKeep it terse.",
+      "provider": null,
+      "repeat": {
+        "completed": 57,
+        "times": null
+      },
+      "schedule": {
+        "display": "every 5m",
+        "kind": "interval",
+        "minutes": 5
+      },
+      "schedule_display": "every 5m",
+      "script": null,
+      "skill": null,
+      "skills": [],
+      "workdir": null
+    },
+    {
+      "base_url": null,
+      "context_from": null,
+      "created_at": "2026-06-21T13:27:51.483468+01:00",
+      "deliver": "local",
+      "enabled": true,
+      "enabled_toolsets": null,
+      "id": "f86fce73ca88",
+      "model": null,
+      "name": "supermemory-sync",
+      "no_agent": false,
+      "prompt": "Review our recent conversation/session memory and persist anything important and durable to long-term Supermemory using the supermemory memory tool. Reply in one line: what you saved, or \"nothing new\".",
+      "provider": null,
+      "repeat": {
+        "completed": 0,
+        "times": null
+      },
+      "schedule": {
+        "display": "0 */6 * * *",
+        "expr": "0 */6 * * *",
+        "kind": "cron"
+      },
+      "schedule_display": "0 */6 * * *",
+      "script": null,
+      "skill": null,
+      "skills": [],
+      "workdir": null
+    }
+  ]
+}

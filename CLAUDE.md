@@ -16,6 +16,32 @@ ADK / Vertex AI cloud agent is **not** part of v2: there is **no `app/` cloud
 bundle, no `sync-app-package.sh` sync step, and no `sakthai/cloud/` module** here.
 v2 is local-first — the CLI, the agent loop, and the MCP stdio server.
 
+## Monorepo layout
+
+This repo is a **monorepo**. The SakThai agent package lives at the root
+(`sakthai/`, `library/`, `skills/`) and everything below this section's
+file-structure still describes it. Consolidated alongside it (history-preserved
+via `git subtree`):
+
+- `packages/agent-self-evolution/` — DSPy/GEPA self-evolution tool. Standalone
+  Python package, **not** a uv workspace member (disjoint/heavy deps; its
+  `darwinian` extra is unpublished). Build it on its own; the root `uv.lock`
+  stays SakThai-only.
+- `personas/` — the four former `*-skills` repos. The ~446 skill files identical
+  across all personas live once in `personas/shared/skills/`; each
+  `personas/<name>/` keeps only its `SOUL.md`, `config/`, and a skill *overlay*
+  (unique/differing files). `scripts/compose_persona.py` rebuilds a persona's
+  full tree as `shared + overlay` (overlay wins), byte-for-byte. See
+  `personas/README.md`.
+- `infra/hermes-agents/` — Hermes Telegram-bot config backup (config only).
+- `infra/pw-poc/` — Playwright accessibility probe (standalone npm project).
+
+CI (`ci.yml`, `pylint.yml`) scopes ruff/mypy/bandit/pytest/pylint to the
+`sakthai` core only; the co-located trees are not held to this repo's bars.
+gitleaks still scans the whole tree (`.gitleaks.toml` allowlists persona docs).
+
+Everything below this point describes the SakThai agent package itself.
+
 ---
 
 ## Commands

@@ -1,0 +1,99 @@
+{
+  "jobs": [
+    {
+      "base_url": null,
+      "context_from": null,
+      "created_at": "2026-06-20T15:42:52.418938+01:00",
+      "deliver": "origin",
+      "enabled": true,
+      "enabled_toolsets": [
+        "web",
+        "terminal",
+        "file",
+        "skills",
+        "supermemory",
+        "memory"
+      ],
+      "id": "fe4f69832737",
+      "model": "stepfun/step-3.7-flash:free",
+      "name": "ireland-business-skill-loop",
+      "no_agent": false,
+      "prompt": "You are running on a prompt file. Load and follow the instructions exactly from the file at ~/.hermes/cron/prompts/ireland-business-skill-creator.md",
+      "provider": "nous",
+      "repeat": {
+        "completed": 123,
+        "times": null
+      },
+      "schedule": {
+        "display": "every 5m",
+        "kind": "interval",
+        "minutes": 5
+      },
+      "schedule_display": "every 5m",
+      "script": null,
+      "skill": null,
+      "skills": [],
+      "workdir": "/home/sakthai"
+    },
+    {
+      "base_url": null,
+      "context_from": null,
+      "created_at": "2026-06-21T11:30:35.802468+01:00",
+      "deliver": "origin",
+      "enabled": true,
+      "enabled_toolsets": [
+        "cronjob"
+      ],
+      "id": "e38baaa2582a",
+      "model": "stepfun/step-3.7-flash:free",
+      "name": "cron-fleet-selfheal",
+      "no_agent": false,
+      "prompt": "Watchdog: list all cron jobs. Re-enable any that were previously enabled and healthy but are now disabled. Check status flags and history to determine prior health. Run silently when nothing needs repair. Never re-enable jobs that were intentionally disabled.",
+      "provider": "nous",
+      "repeat": {
+        "completed": 23,
+        "times": null
+      },
+      "schedule": {
+        "display": "every 5m",
+        "kind": "interval",
+        "minutes": 5
+      },
+      "schedule_display": "every 5m",
+      "script": null,
+      "skill": "cron-watchdog-self-heal",
+      "skills": [
+        "cron-watchdog-self-heal"
+      ],
+      "workdir": null
+    },
+    {
+      "base_url": null,
+      "context_from": null,
+      "created_at": "2026-06-21T13:28:01.815054+01:00",
+      "deliver": "local",
+      "enabled": true,
+      "enabled_toolsets": null,
+      "id": "dc635b8f5081",
+      "model": null,
+      "name": "supermemory-sync",
+      "no_agent": false,
+      "prompt": "Review our recent conversation/session memory and persist anything important and durable to long-term Supermemory using the supermemory memory tool. Reply in one line: what you saved, or \"nothing new\".",
+      "provider": null,
+      "repeat": {
+        "completed": 0,
+        "times": null
+      },
+      "schedule": {
+        "display": "0 */6 * * *",
+        "expr": "0 */6 * * *",
+        "kind": "cron"
+      },
+      "schedule_display": "0 */6 * * *",
+      "script": null,
+      "skill": null,
+      "skills": [],
+      "workdir": null
+    }
+  ]
+}

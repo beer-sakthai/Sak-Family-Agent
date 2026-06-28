@@ -470,9 +470,7 @@ def test_memory_sync_supermemory_flag(
     import sakthai.config as config_mod
 
     monkeypatch.setattr(config_mod, "REPO_ROOT", tmp_path)
-    monkeypatch.setattr(
-        sync_mod, "sync_memory_to_git", lambda remote=None: "Synced locally."
-    )
+    monkeypatch.setattr(sync_mod, "sync_memory_to_git", lambda remote=None: "Synced locally.")
 
     run_calls: list[list[str]] = []
 

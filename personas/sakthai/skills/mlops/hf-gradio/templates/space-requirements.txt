@@ -1,0 +1,2 @@
+gradio>=6.0,<7.0
+# torch>=2.0  # uncomment if your app needs PyTorch
