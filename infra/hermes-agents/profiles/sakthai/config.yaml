@@ -1,7 +1,7 @@
 model:
-  default: gpt-oss:120b
-  provider: ollama-cloud
-  base_url: https://ollama.com/v1
+  default: Qwen/Qwen2.5-7B-Instruct
+  provider: huggingface
+  base_url: https://router.huggingface.co/v1
 fallback_model:
   provider: nous
   model: stepfun/step-3.7-flash:free
@@ -643,3 +643,50 @@ mcp_servers:
     enabled: true
     timeout: 120
     connect_timeout: 30
+  zapier:
+    url: ${ZAPIER_MCP_URL}
+    enabled: true
+    timeout: 120
+    connect_timeout: 30
+  github:
+    url: https://api.githubcopilot.com/mcp/
+    headers:
+      Authorization: Bearer ${GITHUB_TOKEN}
+    enabled: true
+    timeout: 120
+    connect_timeout: 30
+  huggingface:
+    url: https://huggingface.co/mcp
+    headers:
+      Authorization: Bearer ${HF_TOKEN}
+      Accept: "application/json, text/event-stream"
+    enabled: true
+    timeout: 120
+    connect_timeout: 30
+    tools:
+      include:
+        - hf_whoami
+        - hub_repo_search
+        - hub_repo_details
+        - paper_search
+        - space_search
+        - use_space
+        - hf_doc_search
+        - hf_doc_fetch
+        - hf_hub_query
+        - hf_jobs
+        - dynamic_space
+  composio:
+    url: https://connect.composio.dev/mcp
+    headers:
+      x-consumer-api-key: ${COMPOSIO_MCP_KEY}
+    enabled: true
+    timeout: 120
+    connect_timeout: 30
+  cloud-run:
+    command: npx
+    args:
+      - "-y"
+      - "@google-cloud/cloud-run-mcp"
+    enabled: false
+    timeout: 120
