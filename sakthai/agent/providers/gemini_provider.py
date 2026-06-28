@@ -19,6 +19,9 @@ def to_gemini_contents(messages: list[dict[str, Any]]) -> list[Any]:
         role = msg["role"]
         content = msg["content"]
         parts = []
+        # Content that is neither a str nor a list yields an empty ``parts``
+        # list; unknown block types within a list are skipped. Both are
+        # deliberate, forward-compatible no-ops rather than hard errors.
         if isinstance(content, str):
             parts.append(types.Part(text=content))
         elif isinstance(content, list):
