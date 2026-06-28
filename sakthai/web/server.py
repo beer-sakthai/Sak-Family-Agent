@@ -66,8 +66,8 @@ def _ecosystem_status() -> dict[str, Any]:
         from datetime import UTC, datetime
 
         status["generated_at"] = datetime.now(UTC).isoformat()
-    except Exception:
-        pass  # nosec B110
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Failed to generate ecosystem timestamp: %s", exc)
     return status
 
 
