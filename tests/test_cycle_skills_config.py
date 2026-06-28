@@ -97,11 +97,14 @@ def test_check_env_structure(sakthai_home: Path) -> None:
 # -- cycle fallback on corrupt stored value ------------------------------
 
 
-def test_get_stage_falls_back_on_invalid_stored_value(store: MemoryStore) -> None:
+def test_get_stage_falls_back_on_invalid_stored_value(
+    store: MemoryStore, caplog: pytest.LogCaptureFixture
+) -> None:
     # Simulate an invalid stage name written to the DB (e.g. from a future
     # version that adds a new stage, or plain DB corruption).
     store.add_fact("NOT_A_VALID_STAGE", kind="cycle", key="current_stage")
     assert get_current_stage(store) == Stage.DREAM
+    assert "Invalid stage value in memory: NOT_A_VALID_STAGE" in caplog.text
 
 
 def test_parse_skill_invalid_yaml(tmp_path: Path) -> None:

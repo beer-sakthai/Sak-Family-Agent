@@ -23,6 +23,8 @@ from rich.table import Table
 # keep the weights resident between the many calls a run makes (keep_alive) so a
 # RAM-starved, CPU-only box doesn't reload ~1GB of weights on every request.
 _orig_lm_init = dspy.LM.__init__
+
+
 def _capped_lm_init(self, model, *a, **kw):
     kw.setdefault("max_tokens", int(os.getenv("EVO_MAX_TOKENS", "2048")))
     if isinstance(model, str) and model.startswith(("ollama/", "ollama_chat/")):
@@ -30,6 +32,8 @@ def _capped_lm_init(self, model, *a, **kw):
         kw.setdefault("keep_alive", os.getenv("OLLAMA_KEEP_ALIVE", "30m"))
         kw.setdefault("num_ctx", int(os.getenv("EVO_NUM_CTX", "4096")))
     return _orig_lm_init(self, model, *a, **kw)
+
+
 dspy.LM.__init__ = _capped_lm_init
 
 from evolution.core.config import (
@@ -74,11 +78,15 @@ def evolve(
     )
 
     # ── 1. Find and load the skill ──────────────────────────────────────
-    console.print(f"\n[bold cyan]🧬 Hermes Agent Self-Evolution[/bold cyan] — Evolving skill: [bold]{skill_name}[/bold]\n")
+    console.print(
+        f"\n[bold cyan]🧬 Hermes Agent Self-Evolution[/bold cyan] — Evolving skill: [bold]{skill_name}[/bold]\n"
+    )
 
     skill_path = find_skill(skill_name, config.hermes_agent_path)
     if not skill_path:
-        console.print(f"[red]✗ Skill '{skill_name}' not found in {config.hermes_agent_path / 'skills'}[/red]")
+        console.print(
+            f"[red]✗ Skill '{skill_name}' not found in {config.hermes_agent_path / 'skills'}[/red]"
+        )
         sys.exit(1)
 
     skill = load_skill(skill_path)
@@ -131,7 +139,9 @@ def evolve(
         console.print("[red]✗ Specify --dataset-path or use --eval-source synthetic[/red]")
         sys.exit(1)
 
-    console.print(f"  Split: {len(dataset.train)} train / {len(dataset.val)} val / {len(dataset.holdout)} holdout")
+    console.print(
+        f"  Split: {len(dataset.train)} train / {len(dataset.val)} val / {len(dataset.holdout)} holdout"
+    )
 
     # ── 3. Validate constraints on baseline ─────────────────────────────
     console.print("\n[bold]Validating baseline constraints[/bold]")
@@ -146,7 +156,9 @@ def evolve(
             all_pass = False
 
     if not all_pass:
-        console.print("[yellow]⚠ Baseline skill has constraint violations — proceeding anyway[/yellow]")
+        console.print(
+            "[yellow]⚠ Baseline skill has constraint violations — proceeding anyway[/yellow]"
+        )
 
     # ── 4. Set up DSPy + GEPA optimizer ─────────────────────────────────
     console.print("\n[bold]Configuring optimizer[/bold]")
@@ -166,7 +178,9 @@ def evolve(
     valset = dataset.to_dspy_examples("val")
 
     # ── 5. Run GEPA optimization ────────────────────────────────────────
-    console.print(f"\n[bold cyan]Running GEPA optimization ({iterations} iterations)...[/bold cyan]\n")
+    console.print(
+        f"\n[bold cyan]Running GEPA optimization ({iterations} iterations)...[/bold cyan]\n"
+    )
 
     start_time = time.time()
 
@@ -326,27 +340,53 @@ def evolve(
     console.print(f"\n  Output saved to {output_dir}/")
 
     if improvement > 0:
-        console.print(f"\n[bold green]✓ Evolution improved skill by {improvement:+.3f} ({improvement/max(0.001, avg_baseline)*100:+.1f}%)[/bold green]")
-        console.print(f"  Review the diff: diff {output_dir}/baseline_skill.md {output_dir}/evolved_skill.md")
+        console.print(
+            f"\n[bold green]✓ Evolution improved skill by {improvement:+.3f} ({improvement / max(0.001, avg_baseline) * 100:+.1f}%)[/bold green]"
+        )
+        console.print(
+            f"  Review the diff: diff {output_dir}/baseline_skill.md {output_dir}/evolved_skill.md"
+        )
     else:
-        console.print(f"\n[yellow]⚠ Evolution did not improve skill (change: {improvement:+.3f})[/yellow]")
+        console.print(
+            f"\n[yellow]⚠ Evolution did not improve skill (change: {improvement:+.3f})[/yellow]"
+        )
         console.print("  Try: more iterations, better eval dataset, or different optimizer model")
 
 
 @click.command()
 @click.option("--skill", required=True, help="Name of the skill to evolve")
 @click.option("--iterations", default=10, help="Number of GEPA iterations")
-@click.option("--eval-source", default="synthetic", type=click.Choice(["synthetic", "golden", "sessiondb"]),
-              help="Source for evaluation dataset")
+@click.option(
+    "--eval-source",
+    default="synthetic",
+    type=click.Choice(["synthetic", "golden", "sessiondb"]),
+    help="Source for evaluation dataset",
+)
 @click.option("--dataset-path", default=None, help="Path to existing eval dataset (JSONL)")
-@click.option("--optimizer-model", default=lambda: os.getenv("EVO_OPTIMIZER_MODEL", _DEFAULT_LOCAL_MODEL),
-              help="LiteLLM model for GEPA reflections (default: local Ollama)")
-@click.option("--eval-model", default=lambda: os.getenv("EVO_EVAL_MODEL", _DEFAULT_LOCAL_MODEL),
-              help="LiteLLM model for evaluations (default: local Ollama)")
+@click.option(
+    "--optimizer-model",
+    default=lambda: os.getenv("EVO_OPTIMIZER_MODEL", _DEFAULT_LOCAL_MODEL),
+    help="LiteLLM model for GEPA reflections (default: local Ollama)",
+)
+@click.option(
+    "--eval-model",
+    default=lambda: os.getenv("EVO_EVAL_MODEL", _DEFAULT_LOCAL_MODEL),
+    help="LiteLLM model for evaluations (default: local Ollama)",
+)
 @click.option("--hermes-repo", default=None, help="Path to hermes-agent repo")
 @click.option("--run-tests", is_flag=True, help="Run full pytest suite as constraint gate")
 @click.option("--dry-run", is_flag=True, help="Validate setup without running optimization")
-def main(skill, iterations, eval_source, dataset_path, optimizer_model, eval_model, hermes_repo, run_tests, dry_run):
+def main(
+    skill,
+    iterations,
+    eval_source,
+    dataset_path,
+    optimizer_model,
+    eval_model,
+    hermes_repo,
+    run_tests,
+    dry_run,
+):
     """Evolve a Hermes Agent skill using DSPy + GEPA optimization."""
     evolve(
         skill_name=skill,

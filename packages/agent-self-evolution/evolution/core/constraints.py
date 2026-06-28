@@ -15,6 +15,7 @@ from evolution.core.config import EvolutionConfig
 @dataclass
 class ConstraintResult:
     """Result of constraint validation."""
+
     passed: bool
     constraint_name: str
     message: str

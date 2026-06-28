@@ -1,4 +1,5 @@
 """Minimal Gradio 6 template for Hugging Face Spaces."""
+
 import gradio as gr
 
 

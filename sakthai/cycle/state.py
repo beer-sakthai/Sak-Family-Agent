@@ -2,8 +2,12 @@
 
 from __future__ import annotations
 
+import logging
+
 from ..memory.store import MemoryStore
 from .stages import Stage, next_stage
+
+logger = logging.getLogger(__name__)
 
 _CYCLE_KIND = "cycle"
 _CYCLE_KEY = "current_stage"
@@ -16,7 +20,7 @@ def get_current_stage(store: MemoryStore) -> Stage:
         try:
             return Stage(fact.value)
         except ValueError:
-            pass
+            logger.warning("Invalid stage value in memory: %s. Falling back to DREAM.", fact.value)
     return Stage.DREAM
 
 

@@ -97,6 +97,7 @@ class SkillModule(dspy.Module):
 
     class TaskWithSkill(dspy.Signature):
         """Complete the task by following the skill instructions in this prompt."""
+
         task_input: str = dspy.InputField(desc="The task to complete")
         output: str = dspy.OutputField(desc="Your response following the skill instructions")
 
