@@ -556,8 +556,29 @@ class TestAllowedReadRoots:
 
 
 # ---------------------------------------------------------------------------
-# read_file — symlink sandbox escape
+# read_file — error paths
 # ---------------------------------------------------------------------------
+
+
+class TestReadFileErrors:
+    def test_read_file_non_existent_path(self, sakthai_home: Path, store: MemoryStore) -> None:
+        with pytest.raises(FileNotFoundError, match="is not a regular file"):
+            tool_by_name("read_file").handler({"path": "/non/existent/path/at/all"}, store)
+
+    def test_read_file_oserror_on_resolve(
+        self, sakthai_home: Path, monkeypatch: pytest.MonkeyPatch, store: MemoryStore
+    ) -> None:
+        original_resolve = Path.resolve
+
+        def _patched_resolve(self, *args, **kwargs):
+            if "/simulated/os/error" in str(self):
+                raise OSError("simulated os error")
+            return original_resolve(self, *args, **kwargs)
+
+        monkeypatch.setattr(Path, "resolve", _patched_resolve)
+
+        with pytest.raises(FileNotFoundError, match="could not be opened: simulated os error"):
+            tool_by_name("read_file").handler({"path": "/simulated/os/error"}, store)
 
 
 class TestReadFileSymlink:
