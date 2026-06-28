@@ -149,6 +149,48 @@ def test_to_openai_messages_preserves_order() -> None:
     assert result[3]["role"] == "user"
 
 
+# -- to_openai_messages: fall-through / malformed input --------------------
+# These pin the translator's deliberate forward-compatible behaviour: unknown
+# block types and non-(str|list) content are silently skipped, never crash.
+
+
+def test_to_openai_messages_unknown_assistant_block_is_skipped() -> None:
+    """An unknown block in assistant content is dropped; text is still kept."""
+    msgs = [
+        {
+            "role": "assistant",
+            "content": [
+                {"type": "thinking", "thinking": "hmm"},
+                {"type": "text", "text": "answer"},
+            ],
+        }
+    ]
+    result = to_openai_messages("sys", msgs)
+    assert result[1] == {"role": "assistant", "content": "answer"}
+
+
+def test_to_openai_messages_assistant_only_unknown_blocks_yields_null_content() -> None:
+    """Assistant content with only unknown blocks emits a message with null content."""
+    msgs = [{"role": "assistant", "content": [{"type": "image", "source": "..."}]}]
+    result = to_openai_messages("sys", msgs)
+    assert result[1] == {"role": "assistant", "content": None}
+
+
+def test_to_openai_messages_unknown_user_block_is_skipped() -> None:
+    """A non-tool_result, non-text block in user content emits nothing."""
+    msgs = [{"role": "user", "content": [{"type": "image", "source": "..."}]}]
+    result = to_openai_messages("sys", msgs)
+    assert len(result) == 1  # only the system message
+
+
+@pytest.mark.parametrize("content", [None, 42, {"type": "text", "text": "x"}])
+def test_to_openai_messages_non_str_or_list_content_is_dropped(content: object) -> None:
+    """Content that is neither str nor list (incl. a bare dict) emits no message."""
+    msgs = [{"role": "user", "content": content}]
+    result = to_openai_messages("sys", msgs)
+    assert len(result) == 1  # only the system message
+
+
 # -- call_openai_compat ----------------------------------------------------
 
 
