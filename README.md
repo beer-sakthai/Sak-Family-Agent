@@ -16,6 +16,39 @@ three ways in: a CLI, a tool-using agent loop, and an MCP stdio server.
 
 ---
 
+## Monorepo layout
+
+This repository is a **monorepo**: the SakThai agent at the root, plus the
+former `*-skills`, `agent-self-evolution`, `sakthai-hermes-agents`, and `pw-poc`
+repositories consolidated in with their git history preserved (via `git
+subtree`).
+
+```
+.
+├── sakthai/  library/  skills/   # the SakThai agent package (root, this README)
+├── packages/
+│   └── agent-self-evolution/     # DSPy/GEPA self-evolution tool (standalone Python pkg)
+├── personas/
+│   ├── shared/skills/            # skill library shared by all four personas (deduped, once)
+│   └── {sakthai,sakking,saksee,saksit}/   # per-persona SOUL.md + config + skill overlay
+├── infra/
+│   ├── hermes-agents/            # Hermes Telegram-bot config backup (no secrets)
+│   └── pw-poc/                   # Playwright tab-order/accessibility probe (npm)
+└── scripts/compose_persona.py    # rebuild a persona's full skill tree (shared + overlay)
+```
+
+- **Personas** were ~90 % identical; the shared 446 skill files now live once
+  under `personas/shared/skills/`, with each persona keeping only its unique
+  files. See [`personas/README.md`](./personas/README.md).
+- **`packages/agent-self-evolution`** targets a different runtime (Nous
+  Research's Hermes) with a heavy, disjoint dependency set, so it is **not** a uv
+  workspace member — build it on its own per its README. The root `uv.lock`
+  stays scoped to the SakThai agent.
+- CI (`ci.yml`, `pylint.yml`) lints/types/tests only the `sakthai` core; the
+  co-located trees carry their own quality bars.
+
+---
+
 ## Highlights
 
 - **Persistent memory** — a SQLite store of *facts* (things you tell it) and

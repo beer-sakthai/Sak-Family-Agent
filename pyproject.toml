@@ -93,6 +93,16 @@ skips = ["B101", "B404", "B603", "B606", "B607"]
 include = ["sakthai*"]
 exclude = ["tests*"]
 
+# --- Monorepo note --------------------------------------------------------
+# This repo is a monorepo (see top-level README). The core package is
+# sakthai-agent (this file). The other co-located Python package,
+# packages/agent-self-evolution, is intentionally NOT a uv workspace member:
+# its dependency set (dspy/optuna/…) is disjoint and heavy, and its `darwinian`
+# extra references an unpublished package, so folding it into this lock would
+# bloat and break the core resolution. It is built/installed on its own (see
+# packages/agent-self-evolution/README.md). infra/pw-poc is an npm project and
+# infra/hermes-agents is config-only — neither is a Python build target.
+
 [dependency-groups]
 dev = [
     "pytest>=9.1.1",

@@ -2,9 +2,16 @@
 useDefault = true
 
 [allowlist]
-description = "Test fixtures and example configs"
+description = "Test fixtures, example configs, and instructional skill docs"
 paths = [
   '''tests''',
   '''\.env\.example$''',
   '''README\.md$''',
+  # Persona/library skill files are instructional Markdown that contain
+  # illustrative (placeholder) credentials by design — not real secrets.
+  '''^personas/.*\.md$''',
+]
+regexes = [
+  # Documentation placeholders like `sk-xxxxxxxxxxxxxxxx`.
+  '''sk-x{8,}''',
 ]
