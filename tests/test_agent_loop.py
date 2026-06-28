@@ -725,6 +725,17 @@ def test_preflight_makes_no_api_call(monkeypatch: pytest.MonkeyPatch) -> None:
     assert report["runnable"] is True
 
 
+def test_preflight_gateway_provider(monkeypatch: pytest.MonkeyPatch) -> None:
+    import sakthai.agent.loop as loop_mod
+
+    monkeypatch.setattr(loop_mod, "gateway_credential_source", lambda: "gateway_url")
+    monkeypatch.setattr(loop_mod, "_build_client", lambda *a, **kw: None)
+    report = loop_mod.preflight(provider="gateway")
+    assert report["provider"] == "gateway"
+    assert report["credential_source"] == "gateway_url"
+    assert report["runnable"] is True
+
+
 # -- 7.1 streaming callback interface -----------------------------------
 
 

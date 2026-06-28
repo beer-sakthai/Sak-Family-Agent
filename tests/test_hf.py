@@ -25,6 +25,16 @@ def test_hub_missing_dependency_raises_click_exception(monkeypatch: pytest.Monke
         _hub()
 
 
+def test_hub_returns_module_when_available(monkeypatch: pytest.MonkeyPatch) -> None:
+    """_hub() must return the huggingface_hub module when the import succeeds."""
+    import types as _t
+
+    fake_module = _t.ModuleType("huggingface_hub")
+    monkeypatch.setitem(sys.modules, "huggingface_hub", fake_module)
+    result = _hub()
+    assert result is fake_module
+
+
 def test_hf_info_formats_model_fields() -> None:
     fake = SimpleNamespace(
         model_info=lambda repo_id: SimpleNamespace(

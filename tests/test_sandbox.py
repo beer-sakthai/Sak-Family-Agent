@@ -181,6 +181,19 @@ def test_run_in_sandbox_returns_container_exit_code(tmp_path: Path) -> None:
     assert code == 42
 
 
+def test_run_in_sandbox_passes_provider(tmp_path: Path) -> None:
+    mock = _run_sandbox(tmp_path, {"provider": "gemini"})
+    docker_cmd = mock.call_args_list[1][0][0]
+    assert "--provider" in docker_cmd
+    assert "gemini" in docker_cmd
+
+
+def test_run_in_sandbox_passes_stateless(tmp_path: Path) -> None:
+    mock = _run_sandbox(tmp_path, {"stateless": True})
+    docker_cmd = mock.call_args_list[1][0][0]
+    assert "--stateless" in docker_cmd
+
+
 def test_cli_sandbox_flag_triggers_sandbox(tmp_path: Path) -> None:
     with (
         patch("sakthai.sandbox.shutil.which", return_value="/usr/bin/docker"),

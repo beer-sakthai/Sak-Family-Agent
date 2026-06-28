@@ -284,3 +284,71 @@ def test_call_openai_compat_tool_args_as_dict() -> None:
     resp = call_openai_compat(client, "gpt-4", "sys", (), [], 0)
     assert resp.stop_reason == "tool_use"
     assert resp.content[0].input == {"value": "already a dict"}
+
+
+# -- streaming edge cases --------------------------------------------------
+
+
+class _FakeStreamResponse:
+    """Minimal httpx-like streaming response for SSE line injection."""
+
+    def __init__(self, lines: list[str]) -> None:
+        self._lines = lines
+        self.status_code = 200
+
+    def raise_for_status(self) -> None:
+        pass
+
+    def iter_lines(self) -> list[str]:
+        return self._lines
+
+    def __enter__(self) -> _FakeStreamResponse:
+        return self
+
+    def __exit__(self, *_: object) -> None:
+        pass
+
+
+def _stream_client(lines: list[str]) -> Any:
+    client = MagicMock(spec=["stream"])
+    client.stream.return_value = _FakeStreamResponse(lines)
+    return client
+
+
+def test_openai_streaming_skips_non_dict_chunk() -> None:
+    """A parsed SSE chunk that is not a dict (e.g. a JSON null) must be skipped."""
+    from sakthai.agent.providers.openai_provider import _stream_chat
+
+    lines = [
+        "data: null",  # non-dict → must be silently skipped (line 140)
+        'data: {"choices":[{"delta":{"content":"ok"},"finish_reason":"stop"}],"usage":{}}',
+        "data: [DONE]",
+    ]
+    client = _stream_client(lines)
+    tokens: list[str] = []
+    _stream_chat(client, {}, tokens.append)
+    assert tokens == ["ok"]
+
+
+def test_openai_streaming_handles_done_terminator() -> None:
+    """[DONE] must terminate iteration without error."""
+    from sakthai.agent.providers.openai_provider import _stream_chat
+
+    lines = [
+        'data: {"choices":[{"delta":{"content":"hello"},"finish_reason":"stop"}],"usage":{}}',
+        "data: [DONE]",
+        'data: {"choices":[{"delta":{"content":"after-done"}}]}',  # must be ignored
+    ]
+    client = _stream_client(lines)
+    tokens: list[str] = []
+    _stream_chat(client, {}, tokens.append)
+    assert "after-done" not in "".join(tokens)
+
+
+def test_parse_tool_call_missing_function_name_falls_back_to_empty() -> None:
+    """A tool-call object with a non-string function.name must not raise."""
+    from sakthai.agent.providers.openai_provider import _parse_tool_call
+
+    tc = {"id": "c1", "function": {"name": None, "arguments": "{}"}}
+    block = _parse_tool_call(tc, iteration=0, idx=0)
+    assert block.name == ""  # fallback (line 205)

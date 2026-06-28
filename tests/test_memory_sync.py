@@ -291,6 +291,36 @@ class TestHandleGitConflictAndPush:
         assert "local fact" in values
         assert "remote fact" in values
 
+    def test_merges_remote_observations_into_local_store(self, sakthai_home: Path) -> None:
+        """Observations in observations.jsonl are parsed (line 160) and merged."""
+        import time
+
+        db_path = sakthai_home / "memory.db"
+        with MemoryStore(db_path):
+            pass  # initialise schema
+
+        now = int(time.time())
+        obs_dict = {
+            "id": 1,
+            "summary": "remote observation summary",
+            "evidence_session_id": None,
+            "weight": 1.0,
+            "confidence": 0.9,
+            "created_at": now,
+        }
+        (sakthai_home / "facts.jsonl").write_text("", encoding="utf-8")
+        (sakthai_home / "observations.jsonl").write_text(
+            json.dumps(obs_dict) + "\n", encoding="utf-8"
+        )
+        with patch("subprocess.run", side_effect=_git_mock()):
+            result = _handle_git_conflict_and_push(sakthai_home, "https://example.com/repo.git")
+
+        assert isinstance(result, str)
+        with MemoryStore(db_path) as store:
+            observations = store.top_observations(limit=10)
+        summaries = [o.summary for o in observations]
+        assert "remote observation summary" in summaries
+
     def test_no_changes_after_merge_short_circuits(self, sakthai_home: Path) -> None:
         (sakthai_home / "facts.jsonl").write_text("", encoding="utf-8")
         (sakthai_home / "observations.jsonl").write_text("", encoding="utf-8")
