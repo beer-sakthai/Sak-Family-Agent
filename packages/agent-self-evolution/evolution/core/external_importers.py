@@ -178,7 +178,7 @@ class ClaudeCodeImporter:
             return []
 
         messages = []
-        with open(ClaudeCodeImporter.HISTORY_PATH) as f:
+        with open(ClaudeCodeImporter.HISTORY_PATH, encoding="utf-8") as f:
             for line in f:
                 if not line.strip():
                     continue

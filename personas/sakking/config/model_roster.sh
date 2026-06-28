@@ -83,7 +83,7 @@ problems = []
 rows = []
 for name, cfgp, envp in AGENTS:
     try:
-        cfg = yaml.safe_load(open(cfgp))
+        cfg = yaml.safe_load(open(cfgp, encoding="utf-8"))
     except Exception as e:
         problems.append(f"{name}: cannot parse {cfgp}: {e}")
         continue

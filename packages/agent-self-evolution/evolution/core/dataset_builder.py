@@ -55,7 +55,7 @@ class EvalDataset:
         """Save dataset splits to JSONL files."""
         path.mkdir(parents=True, exist_ok=True)
         for split_name, split_data in [("train", self.train), ("val", self.val), ("holdout", self.holdout)]:
-            with open(path / f"{split_name}.jsonl", "w") as f:
+            with open(path / f"{split_name}.jsonl", "w", encoding="utf-8") as f:
                 for ex in split_data:
                     f.write(json.dumps(ex.to_dict()) + "\n")
 

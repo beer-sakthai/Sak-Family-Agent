@@ -21,6 +21,7 @@ dependencies = [
     "click>=8.0",
     "rich>=13.0",
     "optuna>=3.0",
+    "reportlab",
 ]
 
 [project.optional-dependencies]
