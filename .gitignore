@@ -33,3 +33,9 @@ htmlcov/
 .vscode/
 *.swp
 .hermes/
+
+# Persona skill runtime caches/state (regenerated; not authored content)
+personas/*/skills/.hub/
+personas/*/skills/.curator_state
+personas/*/skills/.usage.json
+personas/*/skills/.bundled_manifest
