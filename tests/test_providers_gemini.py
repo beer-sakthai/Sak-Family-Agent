@@ -92,14 +92,16 @@ def test_to_gemini_contents_multiple_messages() -> None:
 # block types and non-(str|list) content are silently skipped, never crash.
 
 
-def test_to_gemini_contents_unknown_block_type_is_skipped() -> None:
-    """An unrecognised block type produces a Content with no parts, not an error."""
+def test_to_gemini_contents_unknown_block_type_falls_back_to_empty_part() -> None:
+    """An unrecognised block type is skipped; a fallback empty text part keeps
+    the Content schema-compliant (Gemini rejects an empty parts list)."""
     contents = to_gemini_contents(
         [{"role": "user", "content": [{"type": "image", "source": "..."}]}]
     )
     assert len(contents) == 1
     assert contents[0].role == "user"
-    assert list(contents[0].parts) == []
+    assert len(contents[0].parts) == 1
+    assert contents[0].parts[0].text == ""
 
 
 def test_to_gemini_contents_mixed_known_and_unknown_blocks_keeps_known() -> None:
@@ -120,17 +122,22 @@ def test_to_gemini_contents_mixed_known_and_unknown_blocks_keeps_known() -> None
 
 
 @pytest.mark.parametrize("content", [None, 42, {"type": "text", "text": "x"}])
-def test_to_gemini_contents_non_str_or_list_content_yields_empty_parts(content: object) -> None:
-    """Content that is neither str nor list (incl. a bare dict) yields no parts."""
+def test_to_gemini_contents_non_str_or_list_content_falls_back_to_empty_part(
+    content: object,
+) -> None:
+    """Content that is neither str nor list (incl. a bare dict) yields a single
+    fallback empty text part rather than an invalid empty Content."""
     contents = to_gemini_contents([{"role": "user", "content": content}])
     assert len(contents) == 1
-    assert list(contents[0].parts) == []
+    assert len(contents[0].parts) == 1
+    assert contents[0].parts[0].text == ""
 
 
-def test_to_gemini_contents_empty_block_list_yields_empty_parts() -> None:
+def test_to_gemini_contents_empty_block_list_falls_back_to_empty_part() -> None:
     contents = to_gemini_contents([{"role": "user", "content": []}])
     assert len(contents) == 1
-    assert list(contents[0].parts) == []
+    assert len(contents[0].parts) == 1
+    assert contents[0].parts[0].text == ""
 
 
 # -- call_gemini -----------------------------------------------------------
