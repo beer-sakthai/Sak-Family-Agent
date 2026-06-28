@@ -1,0 +1,15 @@
+{
+  "global_default": "pro",
+  "per_role": {},
+  "model_mapping": {
+    "low": "gemini-3.1-flash-lite-preview",
+    "pro": "gemini-3.1-pro-preview"
+  },
+  "resolved": {
+    "planner":  "pro → gemini-3.1-pro-preview",
+    "executor": "pro → gemini-3.1-pro-preview",
+    "verifier": "pro → gemini-3.1-pro-preview"
+  },
+  "temperature": 0.2,
+  "updated_at": "2026-06-29T00:10:05+01:00"
+}
