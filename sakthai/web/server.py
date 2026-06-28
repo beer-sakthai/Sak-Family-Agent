@@ -33,22 +33,25 @@ def _dashboard_data(days: int = 30) -> dict[str, Any]:
         from sakthai.dashboard.data import collect_dashboard_data
 
         return collect_dashboard_data(days=days)
-    except Exception as exc:  # noqa: BLE001
-        logger.warning("Dashboard data unavailable (%s); returning demo stub.", exc)
-        return {
-            "generated_at": "demo",
-            "source": "demo",
-            "kpis": {
-                "total_facts": 0,
-                "total_facts_delta": 0,
-                "total_observations": 0,
-                "total_observations_delta": 0,
-            },
-            "growth": {"labels": [], "facts": [], "observations": []},
-            "recent_facts": [],
-            "top_observations": [],
-            "categories": [],
-        }
+    except ImportError:
+        logger.warning("Dashboard data module unavailable; returning demo stub.")
+    except Exception:
+        logger.warning("Dashboard data collection failed; returning demo stub.", exc_info=True)
+
+    return {
+        "generated_at": "demo",
+        "source": "demo",
+        "kpis": {
+            "total_facts": 0,
+            "total_facts_delta": 0,
+            "total_observations": 0,
+            "total_observations_delta": 0,
+        },
+        "growth": {"labels": [], "facts": [], "observations": []},
+        "recent_facts": [],
+        "top_observations": [],
+        "categories": [],
+    }
 
 
 def _ecosystem_status() -> dict[str, Any]:
@@ -66,8 +69,8 @@ def _ecosystem_status() -> dict[str, Any]:
         from datetime import UTC, datetime
 
         status["generated_at"] = datetime.now(UTC).isoformat()
-    except Exception:
-        pass  # nosec B110
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Failed to generate ecosystem timestamp: %s", exc)
     return status
 
 
@@ -101,7 +104,7 @@ class _Handler(SimpleHTTPRequestHandler):
             try:
                 qs = dict(item.split("=") for item in parsed.query.split("&") if "=" in item)
                 days = int(qs.get("days", "30"))
-            except Exception:
+            except (ValueError, KeyError, AttributeError):
                 days = 30
             self._send_json(200, _dashboard_data(days=days))
             return

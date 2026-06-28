@@ -120,8 +120,8 @@ def collect_dashboard_data(db_path: Path | None = None, days: int = 30) -> dict[
         with MemoryStore(db_path) as store:
             facts = store.list_facts(limit=_FACTS_LIMIT)
             observations = store.top_observations(limit=_OBS_LIMIT)
-    except Exception as exc:  # noqa: BLE001
-        logger.warning("Could not read MemoryStore (%s); using demo data", exc)
+    except Exception:
+        logger.warning("Could not read MemoryStore; using demo data", exc_info=True)
         return dict(DEMO_DATA)
 
     if not facts and not observations:
@@ -129,22 +129,50 @@ def collect_dashboard_data(db_path: Path | None = None, days: int = 30) -> dict[
 
     now = int(time.time())
     week_ago = now - _WEEK
-    facts_this_week = sum(1 for f in facts if f.created_at >= week_ago)
-    obs_this_week = sum(1 for o in observations if o.created_at >= week_ago)
-
     start = now - days * _DAY
+
+    fact_bins = [0] * days
+    fact_before_start = 0
+    facts_this_week = 0
+    counts: dict[str, int] = {}
+
+    for f in facts:
+        counts[f.kind] = counts.get(f.kind, 0) + 1
+        if f.created_at >= week_ago:
+            facts_this_week += 1
+        if f.created_at <= start:
+            fact_before_start += 1
+        else:
+            idx = (f.created_at - start - 1) // _DAY
+            if 0 <= idx < days:
+                fact_bins[idx] += 1
+
+    obs_bins = [0] * days
+    obs_before_start = 0
+    obs_this_week = 0
+    for o in observations:
+        if o.created_at >= week_ago:
+            obs_this_week += 1
+        if o.created_at <= start:
+            obs_before_start += 1
+        else:
+            idx = (o.created_at - start - 1) // _DAY
+            if 0 <= idx < days:
+                obs_bins[idx] += 1
+
     labels: list[str] = []
     fact_series: list[int] = []
     obs_series: list[int] = []
+    curr_facts = fact_before_start
+    curr_obs = obs_before_start
     for d in range(days):
         day_end = start + (d + 1) * _DAY
         labels.append(_fmt_date(day_end - _DAY))
-        fact_series.append(sum(1 for f in facts if f.created_at <= day_end))
-        obs_series.append(sum(1 for o in observations if o.created_at <= day_end))
+        curr_facts += fact_bins[d]
+        curr_obs += obs_bins[d]
+        fact_series.append(curr_facts)
+        obs_series.append(curr_obs)
 
-    counts: dict[str, int] = {}
-    for f in facts:
-        counts[f.kind] = counts.get(f.kind, 0) + 1
     categories: list[dict[str, Any]] = [
         {
             "name": kind.replace("_", " ").title(),
@@ -204,7 +232,7 @@ def _load_session(path: Path) -> dict[str, Any] | None:
     try:
         with path.open(encoding="utf-8") as fh:
             data = json.load(fh)
-    except Exception:
+    except (json.JSONDecodeError, OSError):
         data = None
     return data if isinstance(data, dict) else None
 

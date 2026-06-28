@@ -187,11 +187,7 @@ def sessions_clean(older_than: str, yes: bool) -> None:
             ts_part = p.stem.split("_")[0]
             ts = float(ts_part)
         except Exception:
-            try:
-                data = json.loads(p.read_text(encoding="utf-8"))
-                ts = float(data["timestamp"])
-            except Exception:
-                ts = p.stat().st_mtime
+            ts = p.stat().st_mtime
 
         if ts < cutoff_ts:
             files_to_delete.append(p)

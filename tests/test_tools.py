@@ -56,7 +56,7 @@ def test_learn_requires_value(store: MemoryStore) -> None:
 
 
 def test_forget_rejects_non_int(store: MemoryStore) -> None:
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="`fact_id` is required and must be an integer."):
         tool_by_name("forget").handler({"fact_id": True}, store)
 
 
@@ -291,13 +291,18 @@ def test_search_requires_query(store: MemoryStore) -> None:
 
 
 def test_forget_requires_fact_id(store: MemoryStore) -> None:
-    with pytest.raises(ValueError, match="`fact_id` is required"):
+    with pytest.raises(ValueError, match="`fact_id` is required and must be an integer."):
         tool_by_name("forget").handler({}, store)
 
 
 def test_forget_rejects_non_numeric_string(store: MemoryStore) -> None:
-    with pytest.raises(ValueError, match="`fact_id` is required"):
+    with pytest.raises(ValueError, match="`fact_id` is required and must be an integer."):
         tool_by_name("forget").handler({"fact_id": "abc"}, store)
+
+
+def test_forget_rejects_invalid_type(store: MemoryStore) -> None:
+    with pytest.raises(ValueError, match="`fact_id` is required and must be an integer."):
+        tool_by_name("forget").handler({"fact_id": [1, 2]}, store)
 
 
 def test_forget_unknown_id_reports_missing(store: MemoryStore) -> None:

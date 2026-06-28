@@ -349,7 +349,7 @@ dashboard:
 privacy:
   redact_pii: false
 tts:
-  provider: openai
+  provider: edge
   edge:
     voice: en-US-AriaNeural
   elevenlabs:
@@ -648,6 +648,13 @@ mcp_servers:
     enabled: true
     timeout: 120
     connect_timeout: 30
+  cloud-run:
+    command: npx
+    args:
+      - "-y"
+      - "@google-cloud/cloud-run-mcp"
+    enabled: false
+    timeout: 120
   github:
     url: https://api.githubcopilot.com/mcp/
     headers:
@@ -683,10 +690,3 @@ mcp_servers:
     enabled: true
     timeout: 120
     connect_timeout: 30
-  cloud-run:
-    command: npx
-    args:
-      - "-y"
-      - "@google-cloud/cloud-run-mcp"
-    enabled: false
-    timeout: 120
