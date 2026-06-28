@@ -287,9 +287,7 @@ class TestStaticFileServe:
             t.start()
             try:
                 # Use urlopen directly — the response is HTML, not JSON
-                with urllib.request.urlopen(
-                    f"http://127.0.0.1:{port}/ok.html", timeout=5
-                ) as resp:
+                with urllib.request.urlopen(f"http://127.0.0.1:{port}/ok.html", timeout=5) as resp:
                     status = resp.status
                     body = resp.read().decode("utf-8")
                 assert status == 200
