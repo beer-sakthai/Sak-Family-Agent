@@ -37,11 +37,15 @@ def build_image(*, force: bool = False) -> None:
     cmd = [docker, "build", "-f", _DOCKERFILE, "-t", SANDBOX_IMAGE, "."]
     if force:
         cmd.insert(2, "--no-cache")
-    result = subprocess.run(  # noqa: S603
+
+    # Explicit shell=False to prevent shell injection. Arguments are passed as a list.
+    # We use an absolute path for the docker executable (from _docker()).
+    result = subprocess.run(  # nosec B603
         cmd,
         cwd=REPO_ROOT,
         capture_output=True,
         text=True,
+        shell=False,
     )
     if result.returncode != 0:
         raise SandboxError(
@@ -145,5 +149,7 @@ def run_in_sandbox(
     if stream:
         cmd.append("--stream")
 
-    proc = subprocess.run(cmd)  # noqa: S603
+    # Explicit shell=False. The task string is passed as a positional argument to
+    # the 'run' command inside the container, not interpreted by a host shell.
+    proc = subprocess.run(cmd, shell=False)  # nosec B603
     return proc.returncode
