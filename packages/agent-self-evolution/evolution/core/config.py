@@ -1,9 +1,8 @@
 """Configuration and hermes-agent repo discovery."""
 
 import os
-from pathlib import Path
 from dataclasses import dataclass, field
-from typing import Optional
+from pathlib import Path
 
 # Default model used for every role when no per-role override is set. Local
 # Ollama by default so a run is free and needs no cloud key on this laptop.
@@ -18,7 +17,7 @@ class EvolutionConfig:
     # can be constructed even when no repo is present (e.g. unit tests, or
     # callers that pass an explicit path). Use resolve_hermes_agent_path() when
     # an explicit override should win, or get_hermes_agent_path() to require one.
-    hermes_agent_path: Optional[Path] = field(default_factory=lambda: _discover_hermes_agent_path())
+    hermes_agent_path: Path | None = field(default_factory=lambda: _discover_hermes_agent_path())
 
     # Optimization parameters
     iterations: int = 10
@@ -62,7 +61,7 @@ class EvolutionConfig:
     create_pr: bool = True
 
 
-def _discover_hermes_agent_path() -> Optional[Path]:
+def _discover_hermes_agent_path() -> Path | None:
     """Best-effort hermes-agent repo discovery that never raises.
 
     Returns the discovered path, or None when no repo can be found. Used as
@@ -103,7 +102,7 @@ def get_hermes_agent_path() -> Path:
     )
 
 
-def resolve_hermes_agent_path(hermes_repo: Optional[str] = None) -> Path:
+def resolve_hermes_agent_path(hermes_repo: str | None = None) -> Path:
     """Return the hermes-agent repo path, honoring an explicit override.
 
     An explicit path (for example from ``--hermes-repo``) is expanded and used

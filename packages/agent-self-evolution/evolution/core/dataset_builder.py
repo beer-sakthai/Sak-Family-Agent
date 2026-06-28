@@ -8,9 +8,8 @@ C) Golden sets — hand-curated JSONL files
 
 import json
 import random
-from pathlib import Path
 from dataclasses import dataclass, field
-from typing import Optional
+from pathlib import Path
 
 import dspy
 
@@ -149,7 +148,7 @@ class SyntheticDatasetBuilder:
         self,
         artifact_text: str,
         artifact_type: str = "skill",
-        num_cases: Optional[int] = None,
+        num_cases: int | None = None,
     ) -> EvalDataset:
         """Generate a full eval dataset with train/val/holdout splits."""
 
