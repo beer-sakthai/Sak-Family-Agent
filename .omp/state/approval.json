@@ -1,0 +1,8 @@
+{
+  "posture": "standard",
+  "interactive": true,
+  "rules": {
+    "require_command_approval": true,
+    "require_write_approval": false
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "guardrails": [
+    "Always maintain clean workspace git state",
+    "Request user approval for non-sandboxed commands",
+    "Keep files organized under workspace directory"
+  ]
+}
