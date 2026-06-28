@@ -556,9 +556,7 @@ class TestAllowedReadRoots:
 
 
 class TestReadFileErrors:
-    def test_read_file_non_existent_path(
-        self, sakthai_home: Path, store: MemoryStore
-    ) -> None:
+    def test_read_file_non_existent_path(self, sakthai_home: Path, store: MemoryStore) -> None:
         with pytest.raises(FileNotFoundError, match="is not a regular file"):
             tool_by_name("read_file").handler({"path": "/non/existent/path/at/all"}, store)
 
@@ -574,9 +572,7 @@ class TestReadFileErrors:
 
         monkeypatch.setattr(Path, "resolve", _patched_resolve)
 
-        with pytest.raises(
-            FileNotFoundError, match="could not be opened: simulated os error"
-        ):
+        with pytest.raises(FileNotFoundError, match="could not be opened: simulated os error"):
             tool_by_name("read_file").handler({"path": "/simulated/os/error"}, store)
 
 
