@@ -39,3 +39,8 @@ personas/*/skills/.hub/
 personas/*/skills/.curator_state
 personas/*/skills/.usage.json
 personas/*/skills/.bundled_manifest
+
+# Local scratch / build artifacts (never commit these)
+/gitleaks
+*.patch
+changes.txt

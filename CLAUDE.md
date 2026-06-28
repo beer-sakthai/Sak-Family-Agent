@@ -35,6 +35,21 @@ via `git subtree`):
   `personas/README.md`.
 - `infra/hermes-agents/` — Hermes Telegram-bot config backup (config only).
 - `infra/pw-poc/` — Playwright accessibility probe (standalone npm project).
+- `services/` — service pitches/specs not yet part of the package (e.g.
+  `hugging-face-dataset-publishing/`).
+- `training/` — Hugging Face Jobs fine-tune + model-serving scripts.
+- `.jules/` — config for the Jules automation/CI helper.
+
+### Sak Family Agents
+
+The repo also carries the **Sak Family Agents** — four personas with **SakKing**
+as the **main** (Lead & Orchestrator) and **SakThai**, **SakSee**, **SakSit** as
+the family it coordinates. "Hermes" is only the framework they run on, never an
+agent's name. The authoritative per-agent identities are the repo-root
+`SOUL.md` + `SAKKING_SOUL.md` / `SAKTHAI_SOUL.md` / `SAKSEE_SOUL.md` /
+`SAKSIT_SOUL.md`; `personas/<name>/SOUL.md` and `infra/hermes-agents/` carry
+their own (sometimes role-specialized) copies. Keep the SakKing-as-lead framing
+consistent if you touch any of them.
 
 CI (`ci.yml`, `pylint.yml`) scopes ruff/mypy/bandit/pytest/pylint to the
 `sakthai` core only; the co-located trees are not held to this repo's bars.
@@ -221,6 +236,8 @@ sakthai-agent-v2/
 │   ├── config.py             # Paths & env-var names (single source of truth)
 │   ├── auth.py               # Credential resolution
 │   ├── skills.py             # Skill discovery, parsing, injection
+│   ├── hf.py                 # Hugging Face Hub operations
+│   ├── sakking_skills.py     # Mirror SakKing-learned skills into skills/
 │   ├── agent/
 │   │   ├── loop.py           # run_agent() orchestration
 │   │   ├── tools.py          # BUILTIN_TOOLS registry
