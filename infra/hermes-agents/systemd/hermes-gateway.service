@@ -1,0 +1,25 @@
+[Unit]
+Description=Hermes Agent Gateway - Messaging Platform Integration
+After=network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+ExecStart=/home/sakthai/.hermes/hermes-agent/venv/bin/python -m hermes_cli.main gateway run
+WorkingDirectory=/home/sakthai/.hermes
+Environment="PATH=/home/sakthai/.hermes/hermes-agent/venv/bin:/home/sakthai/.hermes/hermes-agent/node_modules/.bin:/usr/bin:/home/sakthai/.local/bin:/home/sakthai/.npm-global/bin:/mnt/c/Program Files/WindowsApps/MicrosoftCorporationII.WindowsSubsystemForLinux_2.7.8.0_x64__8wekyb3d8bbwe:/mnt/c/WINDOWS/system32:/mnt/c/WINDOWS:/mnt/c/WINDOWS/System32/Wbem:/mnt/c/WINDOWS/System32/WindowsPowerShell/v1.0/:/mnt/c/WINDOWS/System32/OpenSSH/:/mnt/c/Program Files/dotnet/:/mnt/c/Program Files/Git/cmd:/mnt/c/Program Files/nodejs/:/mnt/c/Users/beern/AppData/Local/hermes/bin:/mnt/c/Users/beern/.local/bin:/mnt/c/Users/beern/AppData/Local/Microsoft/WindowsApps:/mnt/c/Users/beern/.dotnet/tools:/mnt/c/Users/beern/AppData/Local/Python/bin:/mnt/c/Users/beern/AppData/Local/Programs/Antigravity IDE/bin:/mnt/c/Users/beern/AppData/Local/Microsoft/WinGet/Packages/BurntSushi.ripgrep.MSVC_Microsoft.Winget.Source_8wekyb3d8bbwe/ripgrep-15.1.0-x86_64-pc-windows-msvc:/mnt/c/Users/beern/AppData/Local/Microsoft/WinGet/Packages/Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe/ffmpeg-8.1.1-full_build/bin:/mnt/c/ProgramData/beern/GitHubDesktop/bin:/mnt/c/Users/beern/AppData/Roaming/npm:/mnt/c/Users/beern/AppData/Local/Microsoft/WinGet/Packages/Google.AntigravityCLI_Microsoft.Winget.Source_8wekyb3d8bbwe:/mnt/c/WINDOWS/System32/WindowsPowerShell/v1.0:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+Environment="VIRTUAL_ENV=/home/sakthai/.hermes/hermes-agent/venv"
+Environment="HERMES_HOME=/home/sakthai/.hermes"
+Restart=always
+RestartSec=5
+RestartForceExitStatus=75
+KillMode=mixed
+KillSignal=SIGTERM
+ExecReload=/bin/kill -USR1 $MAINPID
+TimeoutStopSec=210
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=default.target
