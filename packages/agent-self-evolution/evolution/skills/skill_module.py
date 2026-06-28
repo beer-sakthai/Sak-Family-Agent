@@ -5,9 +5,7 @@ where the skill text is the optimizable parameter. GEPA can then
 mutate the skill text and evaluate the results.
 """
 
-import re
 from pathlib import Path
-from typing import Optional
 
 import dspy
 
@@ -55,7 +53,7 @@ def load_skill(skill_path: Path) -> dict:
     }
 
 
-def find_skill(skill_name: str, hermes_agent_path: Optional[Path]) -> Optional[Path]:
+def find_skill(skill_name: str, hermes_agent_path: Path | None) -> Path | None:
     """Find a skill by name in the hermes-agent skills directory.
 
     Searches recursively for a SKILL.md in a directory matching the skill name.

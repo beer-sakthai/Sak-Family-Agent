@@ -6,9 +6,8 @@ considered valid. Failed constraints = immediate rejection.
 
 import subprocess
 import sys
-from pathlib import Path
 from dataclasses import dataclass
-from typing import Optional
+from pathlib import Path
 
 from evolution.core.config import EvolutionConfig
 
@@ -19,7 +18,7 @@ class ConstraintResult:
     passed: bool
     constraint_name: str
     message: str
-    details: Optional[str] = None
+    details: str | None = None
 
 
 class ConstraintValidator:
@@ -32,7 +31,7 @@ class ConstraintValidator:
         self,
         artifact_text: str,
         artifact_type: str,
-        baseline_text: Optional[str] = None,
+        baseline_text: str | None = None,
     ) -> list[ConstraintResult]:
         """Run all applicable constraints. Returns list of results."""
         results = []
