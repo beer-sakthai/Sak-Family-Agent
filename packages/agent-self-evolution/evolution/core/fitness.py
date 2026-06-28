@@ -4,9 +4,9 @@ Uses LLM-as-judge with rubrics to score agent outputs.
 Supports length penalties and multi-dimensional scoring.
 """
 
-import dspy
 from dataclasses import dataclass
-from typing import Optional
+
+import dspy
 
 from evolution.core.config import EvolutionConfig
 
@@ -14,6 +14,7 @@ from evolution.core.config import EvolutionConfig
 @dataclass
 class FitnessScore:
     """Multi-dimensional fitness score."""
+
     correctness: float = 0.0  # Did the agent produce correct output? (0-1)
     procedure_following: float = 0.0  # Did it follow the skill's procedure? (0-1)
     conciseness: float = 0.0  # Was it appropriately concise? (0-1)
@@ -23,11 +24,7 @@ class FitnessScore:
     @property
     def composite(self) -> float:
         """Weighted composite score."""
-        raw = (
-            0.5 * self.correctness
-            + 0.3 * self.procedure_following
-            + 0.2 * self.conciseness
-        )
+        raw = 0.5 * self.correctness + 0.3 * self.procedure_following + 0.2 * self.conciseness
         return max(0.0, raw - self.length_penalty)
 
 
@@ -48,14 +45,23 @@ class LLMJudge:
 
         Also provide specific, actionable feedback on what could be improved.
         """
+
         task_input: str = dspy.InputField(desc="The task the agent was given")
-        expected_behavior: str = dspy.InputField(desc="Rubric describing what a good response looks like")
+        expected_behavior: str = dspy.InputField(
+            desc="Rubric describing what a good response looks like"
+        )
         agent_output: str = dspy.InputField(desc="The agent's actual response")
         skill_text: str = dspy.InputField(desc="The skill/instructions the agent was following")
-        correctness: float = dspy.OutputField(desc="Score 0.0-1.0: Did the response correctly address the task?")
-        procedure_following: float = dspy.OutputField(desc="Score 0.0-1.0: Did it follow the expected procedure?")
+        correctness: float = dspy.OutputField(
+            desc="Score 0.0-1.0: Did the response correctly address the task?"
+        )
+        procedure_following: float = dspy.OutputField(
+            desc="Score 0.0-1.0: Did it follow the expected procedure?"
+        )
         conciseness: float = dspy.OutputField(desc="Score 0.0-1.0: Appropriately concise?")
-        feedback: str = dspy.OutputField(desc="Specific, actionable feedback on what could be improved")
+        feedback: str = dspy.OutputField(
+            desc="Specific, actionable feedback on what could be improved"
+        )
 
     def __init__(self, config: EvolutionConfig):
         self.config = config
@@ -67,8 +73,8 @@ class LLMJudge:
         expected_behavior: str,
         agent_output: str,
         skill_text: str,
-        artifact_size: Optional[int] = None,
-        max_size: Optional[int] = None,
+        artifact_size: int | None = None,
+        max_size: int | None = None,
     ) -> FitnessScore:
         """Score an agent output using LLM-as-judge."""
 

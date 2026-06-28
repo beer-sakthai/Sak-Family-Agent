@@ -15,32 +15,29 @@ Tests cover:
 """
 
 import json
-from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 from click.testing import CliRunner
-
+from evolution.core.dataset_builder import EvalExample
 from evolution.core.external_importers import (
-    _contains_secret,
-    _is_relevant_to_skill,
-    _parse_scoring_json,
-    _parse_copilot_events,
-    _read_copilot_workspace,
-    _load_skill_text,
-    _validate_eval_example,
-    build_dataset_from_external,
-    main,
+    MIN_DATASET_SIZE,
+    VALID_DIFFICULTIES,
     ClaudeCodeImporter,
     CopilotImporter,
     HermesSessionImporter,
     RelevanceFilter,
-    VALID_DIFFICULTIES,
-    MIN_DATASET_SIZE,
+    _contains_secret,
+    _is_relevant_to_skill,
+    _load_skill_text,
+    _parse_copilot_events,
+    _parse_scoring_json,
+    _read_copilot_workspace,
+    _validate_eval_example,
+    build_dataset_from_external,
+    main,
 )
-from evolution.core.dataset_builder import EvalExample
-
 
 # ── Secret Detection ────────────────────────────────────────────────────────
 
@@ -166,9 +163,7 @@ class TestRelevanceHeuristics:
     )
 
     def test_matches_skill_name_keyword(self):
-        assert _is_relevant_to_skill(
-            "categorize these messages", "tim-categorize", self.SKILL_TEXT
-        )
+        assert _is_relevant_to_skill("categorize these messages", "tim-categorize", self.SKILL_TEXT)
 
     def test_matches_skill_content_keywords(self):
         assert _is_relevant_to_skill(
@@ -216,7 +211,9 @@ class TestScoringJsonParser:
         assert result["relevant"] is False
 
     def test_json_with_surrounding_text(self):
-        text = 'I think this is relevant. {"relevant": true, "category": "sorting"} That is my answer.'
+        text = (
+            'I think this is relevant. {"relevant": true, "category": "sorting"} That is my answer.'
+        )
         result = _parse_scoring_json(text)
         assert result["category"] == "sorting"
 
@@ -236,7 +233,7 @@ class TestScoringJsonParser:
 
     def test_non_dict_json_returns_none(self):
         """A JSON array or string should return None (we need a dict)."""
-        assert _parse_scoring_json('[1, 2, 3]') is None
+        assert _parse_scoring_json("[1, 2, 3]") is None
         assert _parse_scoring_json('"just a string"') is None
 
     def test_nested_braces_in_values(self):
@@ -258,9 +255,33 @@ class TestClaudeCodeImporter:
     def test_parses_history_jsonl(self, tmp_path):
         history = tmp_path / "history.jsonl"
         history.write_text(
-            json.dumps({"display": "sort my slack messages by topic", "timestamp": 1700000000000, "project": "/test", "sessionId": "abc"}) + "\n"
-            + json.dumps({"display": "yes go", "timestamp": 1700000001000, "project": "/test", "sessionId": "abc"}) + "\n"
-            + json.dumps({"display": "here is sk-ant-api03-SECRETKEY123456789012345678 the key", "timestamp": 1700000002000, "project": "/test", "sessionId": "abc"}) + "\n"
+            json.dumps(
+                {
+                    "display": "sort my slack messages by topic",
+                    "timestamp": 1700000000000,
+                    "project": "/test",
+                    "sessionId": "abc",
+                }
+            )
+            + "\n"
+            + json.dumps(
+                {
+                    "display": "yes go",
+                    "timestamp": 1700000001000,
+                    "project": "/test",
+                    "sessionId": "abc",
+                }
+            )
+            + "\n"
+            + json.dumps(
+                {
+                    "display": "here is sk-ant-api03-SECRETKEY123456789012345678 the key",
+                    "timestamp": 1700000002000,
+                    "project": "/test",
+                    "sessionId": "abc",
+                }
+            )
+            + "\n"
         )
 
         with patch.object(ClaudeCodeImporter, "HISTORY_PATH", history):
@@ -280,7 +301,14 @@ class TestClaudeCodeImporter:
     def test_respects_limit(self, tmp_path):
         history = tmp_path / "history.jsonl"
         lines = [
-            json.dumps({"display": f"message number {i} with enough length to pass", "timestamp": i, "project": "/test", "sessionId": "s"})
+            json.dumps(
+                {
+                    "display": f"message number {i} with enough length to pass",
+                    "timestamp": i,
+                    "project": "/test",
+                    "sessionId": "s",
+                }
+            )
             for i in range(100)
         ]
         history.write_text("\n".join(lines) + "\n")
@@ -294,7 +322,15 @@ class TestClaudeCodeImporter:
         history = tmp_path / "history.jsonl"
         history.write_text(
             "this is not json\n"
-            + json.dumps({"display": "valid message with sufficient length", "timestamp": 1, "project": "/test", "sessionId": "s"}) + "\n"
+            + json.dumps(
+                {
+                    "display": "valid message with sufficient length",
+                    "timestamp": 1,
+                    "project": "/test",
+                    "sessionId": "s",
+                }
+            )
+            + "\n"
             + "{broken\n"
         )
 
@@ -307,7 +343,15 @@ class TestClaudeCodeImporter:
         history = tmp_path / "history.jsonl"
         history.write_text(
             "\n\n"
-            + json.dumps({"display": "valid message with enough length", "timestamp": 1, "project": "/test", "sessionId": "s"}) + "\n"
+            + json.dumps(
+                {
+                    "display": "valid message with enough length",
+                    "timestamp": 1,
+                    "project": "/test",
+                    "sessionId": "s",
+                }
+            )
+            + "\n"
             + "\n"
         )
 
@@ -324,25 +368,37 @@ class TestCopilotImporter:
     def test_parses_events_jsonl(self, tmp_path):
         session_dir = tmp_path / "session-state" / "test-session-1"
         session_dir.mkdir(parents=True)
-        (session_dir / "workspace.yaml").write_text("id: test-session-1\ncwd: /Users/test/project\n")
+        (session_dir / "workspace.yaml").write_text(
+            "id: test-session-1\ncwd: /Users/test/project\n"
+        )
 
         events = [
             {"type": "session.start", "data": {"sessionId": "test-session-1"}},
-            {"type": "user.message", "data": {"content": "sort these emails into categories for the team"}},
-            {"type": "assistant.message", "data": {"content": "I'll categorize your emails into the following topics..."}},
+            {
+                "type": "user.message",
+                "data": {"content": "sort these emails into categories for the team"},
+            },
+            {
+                "type": "assistant.message",
+                "data": {"content": "I'll categorize your emails into the following topics..."},
+            },
             {"type": "user.message", "data": {"content": "now do the second batch"}},
-            {"type": "assistant.message", "data": {"content": "Here are the categories for batch 2..."}},
+            {
+                "type": "assistant.message",
+                "data": {"content": "Here are the categories for batch 2..."},
+            },
         ]
-        (session_dir / "events.jsonl").write_text(
-            "\n".join(json.dumps(e) for e in events) + "\n"
-        )
+        (session_dir / "events.jsonl").write_text("\n".join(json.dumps(e) for e in events) + "\n")
 
         with patch.object(CopilotImporter, "SESSION_DIR", tmp_path / "session-state"):
             messages = CopilotImporter.extract_messages()
 
         assert len(messages) == 2
         assert messages[0]["task_input"] == "sort these emails into categories for the team"
-        assert messages[0]["assistant_response"] == "I'll categorize your emails into the following topics..."
+        assert (
+            messages[0]["assistant_response"]
+            == "I'll categorize your emails into the following topics..."
+        )
         assert messages[0]["source"] == "copilot"
         assert messages[0]["project"] == "/Users/test/project"
 
@@ -352,12 +408,13 @@ class TestCopilotImporter:
         (session_dir / "workspace.yaml").write_text("id: test-2\ncwd: /test\n")
 
         events = [
-            {"type": "user.message", "data": {"content": "here is my key sk-ant-api03-SECRET123456789012345678901234"}},
+            {
+                "type": "user.message",
+                "data": {"content": "here is my key sk-ant-api03-SECRET123456789012345678901234"},
+            },
             {"type": "assistant.message", "data": {"content": "I see your API key"}},
         ]
-        (session_dir / "events.jsonl").write_text(
-            "\n".join(json.dumps(e) for e in events) + "\n"
-        )
+        (session_dir / "events.jsonl").write_text("\n".join(json.dumps(e) for e in events) + "\n")
 
         with patch.object(CopilotImporter, "SESSION_DIR", tmp_path / "session-state"):
             messages = CopilotImporter.extract_messages()
@@ -379,9 +436,7 @@ class TestCopilotImporter:
             {"type": "user.message", "data": {"content": "hello this is a long enough message"}},
             # No assistant response follows
         ]
-        (session_dir / "events.jsonl").write_text(
-            "\n".join(json.dumps(e) for e in events) + "\n"
-        )
+        (session_dir / "events.jsonl").write_text("\n".join(json.dumps(e) for e in events) + "\n")
 
         with patch.object(CopilotImporter, "SESSION_DIR", tmp_path / "session-state"):
             messages = CopilotImporter.extract_messages()
@@ -396,12 +451,16 @@ class TestCopilotImporter:
 
         events = [
             {"type": "user.message", "data": {"content": "explain this code in detail please"}},
-            {"type": "assistant.message", "data": {"content": "First, the function validates input."}},
-            {"type": "assistant.message", "data": {"content": "Then it processes the data in chunks."}},
+            {
+                "type": "assistant.message",
+                "data": {"content": "First, the function validates input."},
+            },
+            {
+                "type": "assistant.message",
+                "data": {"content": "Then it processes the data in chunks."},
+            },
         ]
-        (session_dir / "events.jsonl").write_text(
-            "\n".join(json.dumps(e) for e in events) + "\n"
-        )
+        (session_dir / "events.jsonl").write_text("\n".join(json.dumps(e) for e in events) + "\n")
 
         with patch.object(CopilotImporter, "SESSION_DIR", tmp_path / "session-state"):
             messages = CopilotImporter.extract_messages()
@@ -441,8 +500,10 @@ class TestCopilotHelpers:
         events_path = tmp_path / "events.jsonl"
         events_path.write_text(
             "not json\n"
-            + json.dumps({"type": "user.message", "data": {"content": "hello this is a message"}}) + "\n"
-            + json.dumps({"type": "assistant.message", "data": {"content": "hi there"}}) + "\n"
+            + json.dumps({"type": "user.message", "data": {"content": "hello this is a message"}})
+            + "\n"
+            + json.dumps({"type": "assistant.message", "data": {"content": "hi there"}})
+            + "\n"
         )
         pairs = _parse_copilot_events(events_path, "s1", "/test")
         assert len(pairs) == 1
@@ -546,7 +607,8 @@ class TestHermesSessionImporter:
     def test_respects_limit(self, tmp_path):
         session = {
             "messages": [
-                {"role": "user", "content": f"Message number {i} with enough text"} for i in range(10)
+                {"role": "user", "content": f"Message number {i} with enough text"}
+                for i in range(10)
             ],
         }
         (tmp_path / "s.json").write_text(json.dumps(session))
@@ -611,10 +673,16 @@ class TestRelevanceFilter:
 
         messages = [
             {"task_input": "sort these messages by topic", "source": "claude-code"},
-            {"task_input": "categorize my emails please", "source": "copilot", "assistant_response": "Sure!"},
+            {
+                "task_input": "categorize my emails please",
+                "source": "copilot",
+                "assistant_response": "Sure!",
+            },
         ]
 
-        examples = rf.filter_and_score(messages, "categorize", "Sort text into topics. Categorize content.", max_examples=10)
+        examples = rf.filter_and_score(
+            messages, "categorize", "Sort text into topics. Categorize content.", max_examples=10
+        )
 
         assert len(examples) == 2
         inputs = {ex.task_input for ex in examples}
@@ -630,15 +698,15 @@ class TestRelevanceFilter:
         rf.model = "test-model"
 
         rf.scorer = MagicMock()
-        rf.scorer.return_value = SimpleNamespace(
-            scoring='{"relevant": false}'
-        )
+        rf.scorer.return_value = SimpleNamespace(scoring='{"relevant": false}')
 
         messages = [
             {"task_input": "deploy the app to production", "source": "claude-code"},
         ]
 
-        examples = rf.filter_and_score(messages, "categorize", "Sort text into topics.", max_examples=10)
+        examples = rf.filter_and_score(
+            messages, "categorize", "Sort text into topics.", max_examples=10
+        )
         assert len(examples) == 0
 
     def test_malformed_llm_output_counted_as_error(self, mock_dspy):
@@ -652,7 +720,9 @@ class TestRelevanceFilter:
             {"task_input": "sort these messages by topic please", "source": "claude-code"},
         ]
 
-        examples = rf.filter_and_score(messages, "categorize", "Sort text into topics.", max_examples=10)
+        examples = rf.filter_and_score(
+            messages, "categorize", "Sort text into topics.", max_examples=10
+        )
         assert len(examples) == 0
 
     def test_max_examples_cap_respected(self, mock_dspy):
@@ -669,7 +739,9 @@ class TestRelevanceFilter:
             for i in range(20)
         ]
 
-        examples = rf.filter_and_score(messages, "categorize", "Sort text into topics. Categorize content.", max_examples=3)
+        examples = rf.filter_and_score(
+            messages, "categorize", "Sort text into topics. Categorize content.", max_examples=3
+        )
         assert len(examples) == 3
 
     def test_scorer_exception_counted_as_error(self, mock_dspy):
@@ -683,7 +755,9 @@ class TestRelevanceFilter:
         ]
 
         # Should not raise — errors are caught and counted
-        examples = rf.filter_and_score(messages, "categorize", "Sort text into topics.", max_examples=10)
+        examples = rf.filter_and_score(
+            messages, "categorize", "Sort text into topics.", max_examples=10
+        )
         assert len(examples) == 0
 
 
@@ -713,8 +787,10 @@ class TestBuildDataset:
 
         output = tmp_path / "output"
 
-        with patch.object(ClaudeCodeImporter, "extract_messages", return_value=mock_messages), \
-             patch.object(RelevanceFilter, "filter_and_score", return_value=mock_examples):
+        with (
+            patch.object(ClaudeCodeImporter, "extract_messages", return_value=mock_messages),
+            patch.object(RelevanceFilter, "filter_and_score", return_value=mock_examples),
+        ):
             dataset = build_dataset_from_external(
                 skill_name="categorize",
                 skill_text="Sort text into topics.",
@@ -750,8 +826,10 @@ class TestBuildDataset:
     def test_no_relevant_examples_returns_empty_dataset(self, tmp_path):
         mock_messages = [{"task_input": "deploy the app", "source": "claude-code"}]
 
-        with patch.object(ClaudeCodeImporter, "extract_messages", return_value=mock_messages), \
-             patch.object(RelevanceFilter, "filter_and_score", return_value=[]):
+        with (
+            patch.object(ClaudeCodeImporter, "extract_messages", return_value=mock_messages),
+            patch.object(RelevanceFilter, "filter_and_score", return_value=[]),
+        ):
             dataset = build_dataset_from_external(
                 skill_name="categorize",
                 skill_text="Sort text into topics.",
@@ -764,16 +842,30 @@ class TestBuildDataset:
 
     def test_multiple_sources(self, tmp_path):
         cc_msgs = [{"task_input": "sort from claude code session", "source": "claude-code"}]
-        cp_msgs = [{"task_input": "sort from copilot session", "source": "copilot", "assistant_response": "ok"}]
-
-        all_examples = [
-            EvalExample(task_input="sort from claude code session", expected_behavior="test", source="claude-code"),
-            EvalExample(task_input="sort from copilot session", expected_behavior="test", source="copilot"),
+        cp_msgs = [
+            {
+                "task_input": "sort from copilot session",
+                "source": "copilot",
+                "assistant_response": "ok",
+            }
         ]
 
-        with patch.object(ClaudeCodeImporter, "extract_messages", return_value=cc_msgs), \
-             patch.object(CopilotImporter, "extract_messages", return_value=cp_msgs), \
-             patch.object(RelevanceFilter, "filter_and_score", return_value=all_examples):
+        all_examples = [
+            EvalExample(
+                task_input="sort from claude code session",
+                expected_behavior="test",
+                source="claude-code",
+            ),
+            EvalExample(
+                task_input="sort from copilot session", expected_behavior="test", source="copilot"
+            ),
+        ]
+
+        with (
+            patch.object(ClaudeCodeImporter, "extract_messages", return_value=cc_msgs),
+            patch.object(CopilotImporter, "extract_messages", return_value=cp_msgs),
+            patch.object(RelevanceFilter, "filter_and_score", return_value=all_examples),
+        ):
             dataset = build_dataset_from_external(
                 skill_name="categorize",
                 skill_text="Sort text.",
@@ -818,7 +910,14 @@ class TestEndToEndRoundtrip:
         # Create fake Claude Code history
         history = tmp_path / "history.jsonl"
         lines = [
-            json.dumps({"display": f"categorize these {i} messages into topics", "timestamp": i, "project": "/test", "sessionId": "s1"})
+            json.dumps(
+                {
+                    "display": f"categorize these {i} messages into topics",
+                    "timestamp": i,
+                    "project": "/test",
+                    "sessionId": "s1",
+                }
+            )
             for i in range(20)
         ]
         history.write_text("\n".join(lines) + "\n")
@@ -837,8 +936,10 @@ class TestEndToEndRoundtrip:
 
         output = tmp_path / "dataset"
 
-        with patch.object(ClaudeCodeImporter, "HISTORY_PATH", history), \
-             patch.object(RelevanceFilter, "filter_and_score", return_value=mock_examples):
+        with (
+            patch.object(ClaudeCodeImporter, "HISTORY_PATH", history),
+            patch.object(RelevanceFilter, "filter_and_score", return_value=mock_examples),
+        ):
             dataset = build_dataset_from_external(
                 skill_name="categorize",
                 skill_text="Sort text into topics.",
@@ -871,12 +972,13 @@ class TestEndToEndRoundtrip:
         (session_dir / "workspace.yaml").write_text("cwd: /Users/test/project\n")
 
         events = [
-            {"type": "user.message", "data": {"content": "sort these messages into categories for me"}},
+            {
+                "type": "user.message",
+                "data": {"content": "sort these messages into categories for me"},
+            },
             {"type": "assistant.message", "data": {"content": "I grouped them into 3 categories"}},
         ]
-        (session_dir / "events.jsonl").write_text(
-            "\n".join(json.dumps(e) for e in events) + "\n"
-        )
+        (session_dir / "events.jsonl").write_text("\n".join(json.dumps(e) for e in events) + "\n")
 
         mock_examples = [
             EvalExample(
@@ -890,8 +992,10 @@ class TestEndToEndRoundtrip:
 
         output = tmp_path / "dataset"
 
-        with patch.object(CopilotImporter, "SESSION_DIR", tmp_path / "session-state"), \
-             patch.object(RelevanceFilter, "filter_and_score", return_value=mock_examples):
+        with (
+            patch.object(CopilotImporter, "SESSION_DIR", tmp_path / "session-state"),
+            patch.object(RelevanceFilter, "filter_and_score", return_value=mock_examples),
+        ):
             dataset = build_dataset_from_external(
                 skill_name="categorize",
                 skill_text="Sort text.",
@@ -1056,7 +1160,9 @@ class TestValidationIntegration:
             {"task_input": "sort these messages by topic", "source": "claude-code"},
         ]
 
-        examples = rf.filter_and_score(messages, "categorize", "Sort text into topics. Categorize content.", max_examples=10)
+        examples = rf.filter_and_score(
+            messages, "categorize", "Sort text into topics. Categorize content.", max_examples=10
+        )
         assert len(examples) == 0
 
     def test_invalid_difficulty_normalized(self, mock_dspy):
@@ -1073,7 +1179,9 @@ class TestValidationIntegration:
             {"task_input": "sort these messages by topic", "source": "claude-code"},
         ]
 
-        examples = rf.filter_and_score(messages, "categorize", "Sort text into topics. Categorize content.", max_examples=10)
+        examples = rf.filter_and_score(
+            messages, "categorize", "Sort text into topics. Categorize content.", max_examples=10
+        )
         assert len(examples) == 1
         assert examples[0].difficulty == "medium"
 
@@ -1092,7 +1200,9 @@ class TestValidationIntegration:
             {"task_input": "categorize emails", "source": "claude-code"},
         ]
 
-        examples = rf.filter_and_score(messages, "categorize", "Sort text into topics. Categorize content.", max_examples=10)
+        examples = rf.filter_and_score(
+            messages, "categorize", "Sort text into topics. Categorize content.", max_examples=10
+        )
         assert len(examples) == 1
         assert examples[0].source == "claude-code"
 
@@ -1107,7 +1217,9 @@ class TestValidationIntegration:
             {"source": "claude-code"},  # missing task_input
         ]
 
-        examples = rf.filter_and_score(messages, "categorize", "Sort text into topics.", max_examples=10)
+        examples = rf.filter_and_score(
+            messages, "categorize", "Sort text into topics.", max_examples=10
+        )
         assert len(examples) == 0
         # scorer should never be called for invalid messages
         rf.scorer.assert_not_called()
@@ -1131,8 +1243,10 @@ class TestMinDatasetSizeWarning:
 
         output = tmp_path / "output"
 
-        with patch.object(ClaudeCodeImporter, "extract_messages", return_value=mock_messages), \
-             patch.object(RelevanceFilter, "filter_and_score", return_value=mock_examples):
+        with (
+            patch.object(ClaudeCodeImporter, "extract_messages", return_value=mock_messages),
+            patch.object(RelevanceFilter, "filter_and_score", return_value=mock_examples),
+        ):
             dataset = build_dataset_from_external(
                 skill_name="categorize",
                 skill_text="Sort text.",
@@ -1157,34 +1271,63 @@ class TestCLI:
         skill_dir.mkdir(parents=True)
         (skill_dir / "SKILL.md").write_text("---\nname: test-skill\n---\nTest skill.")
 
-        with patch.object(ClaudeCodeImporter, "extract_messages", return_value=[
-            {"task_input": "hello with enough length", "source": "claude-code"},
-        ]):
+        with patch.object(
+            ClaudeCodeImporter,
+            "extract_messages",
+            return_value=[
+                {"task_input": "hello with enough length", "source": "claude-code"},
+            ],
+        ):
             runner = CliRunner()
-            result = runner.invoke(main, [
-                "--skill", "test-skill",
-                "--source", "claude-code",
-                "--dry-run",
-            ], catch_exceptions=False, env={"HOME": str(tmp_path.parent)})
+            result = runner.invoke(
+                main,
+                [
+                    "--skill",
+                    "test-skill",
+                    "--source",
+                    "claude-code",
+                    "--dry-run",
+                ],
+                catch_exceptions=False,
+                env={"HOME": str(tmp_path.parent)},
+            )
 
             # _load_skill_text uses ~/.hermes/skills by default, so we patch it
         # Instead, use the skills_dir parameter approach
-        with patch("evolution.core.external_importers._load_skill_text", return_value=("test-skill", "Test skill.")), \
-             patch.object(ClaudeCodeImporter, "extract_messages", return_value=[
-                 {"task_input": "hello with enough length", "source": "claude-code"},
-             ]):
+        with (
+            patch(
+                "evolution.core.external_importers._load_skill_text",
+                return_value=("test-skill", "Test skill."),
+            ),
+            patch.object(
+                ClaudeCodeImporter,
+                "extract_messages",
+                return_value=[
+                    {"task_input": "hello with enough length", "source": "claude-code"},
+                ],
+            ),
+        ):
             runner = CliRunner()
-            result = runner.invoke(main, [
-                "--skill", "test-skill",
-                "--source", "claude-code",
-                "--dry-run",
-            ], catch_exceptions=False)
+            result = runner.invoke(
+                main,
+                [
+                    "--skill",
+                    "test-skill",
+                    "--source",
+                    "claude-code",
+                    "--dry-run",
+                ],
+                catch_exceptions=False,
+            )
 
         assert result.exit_code == 0
         assert "DRY RUN" in result.output
 
     def test_missing_skill_exits_with_error(self):
-        with patch("evolution.core.external_importers._load_skill_text", side_effect=FileNotFoundError("not found")):
+        with patch(
+            "evolution.core.external_importers._load_skill_text",
+            side_effect=FileNotFoundError("not found"),
+        ):
             runner = CliRunner()
             result = runner.invoke(main, ["--skill", "nonexistent"])
 
@@ -1230,4 +1373,10 @@ class TestEvalExampleFormat:
         with open(jsonl_path) as f:
             data = json.loads(f.readline())
 
-        assert set(data.keys()) == {"task_input", "expected_behavior", "difficulty", "category", "source"}
+        assert set(data.keys()) == {
+            "task_input",
+            "expected_behavior",
+            "difficulty",
+            "category",
+            "source",
+        }
