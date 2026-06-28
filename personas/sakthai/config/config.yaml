@@ -670,7 +670,7 @@ mcp_servers:
   composio:
     url: https://connect.composio.dev/mcp
     headers:
-      x-consumer-api-key: ck_-tCxV37L3yJJjLd4qdYt
+      x-consumer-api-key: ''  # scrubbed: set via env at deploy time
     enabled: true
     timeout: 120
     connect_timeout: 30

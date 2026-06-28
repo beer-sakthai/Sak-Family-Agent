@@ -14,4 +14,14 @@ paths = [
 regexes = [
   # Documentation placeholders like `sk-xxxxxxxxxxxxxxxx`.
   '''sk-x{8,}''',
+  # Pre-existing values inherited from the merged repos' git history (the repos
+  # were consolidated here with history preserved via git subtree). These are
+  # matched by value so they're ignored wherever they appear in history, since
+  # historical paths predate the monorepo layout. The live `ck_…` consumer key
+  # has been scrubbed from the working tree; it and the already-scrubbed hermes
+  # `api_key` remain only in history. `2a2ad52a…` is a skill-bundle integrity
+  # hash (`github-auth:<md5>` in `.bundled_manifest`), not a credential.
+  '''ck_-tCxV37L3yJJjLd4qdYt''',
+  '''H9hhwS50qwxJIORLdXbIgFHMUeMKyn4h''',
+  '''2a2ad52aedb7cb9019df9cab263845f0''',
 ]
