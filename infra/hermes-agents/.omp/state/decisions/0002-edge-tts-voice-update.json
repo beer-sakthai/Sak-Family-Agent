@@ -1,0 +1,9 @@
+{
+  "decision_id": "0002",
+  "title": "Configure Edge-TTS Male Voice",
+  "status": "accepted",
+  "date": "2026-06-28T23:46:00+01:00",
+  "context": "The user reported that the default agent was still speaking with a female voice. Upon review, the edge-tts provider was configured to use the female voice 'en-US-AriaNeural'.",
+  "decision": "Configure 'en-US-BrianNeural' as the default Edge-TTS voice across all configurations (default/config.yaml and profile config.yaml files) to ensure a male voice is used.",
+  "consequences": "The default bot and any fallback edge-tts configurations will now output voice using the male Brian voice."
+}

@@ -1,0 +1,9 @@
+{
+  "decision_id": "0003",
+  "title": "Configure Distinct Voices Across Agent Profiles",
+  "status": "accepted",
+  "date": "2026-06-28T23:48:00+01:00",
+  "context": "The user requested different male voices for SakKing, SakThai, and SakSit, and a female voice for SakSee.",
+  "decision": "Configure SakKing to use 'en-US-BrianNeural' (male), SakThai to use 'en-US-AndrewNeural' (male), SakSit to use 'en-US-ChristopherNeural' (male), and SakSee to use 'en-US-AriaNeural' (female), all utilizing the 'edge' TTS provider.",
+  "consequences": "All 4 bots now have unique voices appropriate to their characters, and are configured to use Edge-TTS."
+}

@@ -58,20 +58,21 @@ def learn(
         return
 
     learned: list[int] = []
-    for raw in file.read_text(encoding="utf-8").splitlines():
-        line = raw.strip()
-        if not line or line.startswith("#"):
-            continue
-        if line.startswith(("- ", "* ", "+ ")):
-            line = line[2:].strip()
-        elif (
-            "." in line
-            and line.split(".", 1)[0].isdigit()
-            and line.split(".", 1)[1].startswith(" ")
-        ):
-            line = line.split(".", 1)[1].strip()
-        if line:
-            learned.append(learn_fact(line, kind=kind, key=key, tags=tag_list))
+    with MemoryStore() as store:
+        for raw in file.read_text(encoding="utf-8").splitlines():
+            line = raw.strip()
+            if not line or line.startswith("#"):
+                continue
+            if line.startswith(("- ", "* ", "+ ")):
+                line = line[2:].strip()
+            elif (
+                "." in line
+                and line.split(".", 1)[0].isdigit()
+                and line.split(".", 1)[1].startswith(" ")
+            ):
+                line = line.split(".", 1)[1].strip()
+            if line:
+                learned.append(store.add_fact(line, kind=kind, key=key, tags=tag_list))
     if not learned:
         click.echo("No valid facts found in file.")
         return
