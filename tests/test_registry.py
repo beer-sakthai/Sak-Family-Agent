@@ -78,12 +78,12 @@ def test_names_returns_ordered_list() -> None:
 
 def test_handler_dispatch_executes_and_returns_result() -> None:
     """get() followed by handler() must dispatch and return the tool's output."""
-    store = MemoryStore(":memory:")
-    reg = ToolRegistry([_tool("ping")])
-    tool = reg.get("ping")
-    assert tool is not None
-    result = tool.handler({}, store)
-    assert result == "ping"
+    with MemoryStore(":memory:") as store:
+        reg = ToolRegistry([_tool("ping")])
+        tool = reg.get("ping")
+        assert tool is not None
+        result = tool.handler({}, store)
+        assert result == "ping"
 
 
 def test_with_tools_does_not_mutate_base() -> None:

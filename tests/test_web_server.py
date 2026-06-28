@@ -30,11 +30,6 @@ from sakthai.web.server import (
 )
 
 try:
-    from http.server import HTTPServer as _HTTPServer
-except ImportError:
-    _HTTPServer = None  # type: ignore[misc,assignment]
-
-try:
     from http.server import HTTPServer
 except ImportError:
     HTTPServer = None  # type: ignore[misc,assignment]
@@ -284,7 +279,7 @@ class TestStaticFileServe:
         original_dir = os.getcwd()
         os.chdir(static_root)
         try:
-            srv = _HTTPServer(("127.0.0.1", 0), _Handler)
+            srv = HTTPServer(("127.0.0.1", 0), _Handler)
             _, port = srv.server_address
             t = threading.Thread(
                 target=srv.serve_forever, kwargs={"poll_interval": 0.01}, daemon=True

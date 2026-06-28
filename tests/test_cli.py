@@ -460,6 +460,7 @@ def test_memory_sync_supermemory_flag(
     runner: CliRunner, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     import subprocess
+
     import sakthai.memory.sync as sync_mod
 
     # Create a fake script so the subprocess.run call has a real target
@@ -978,8 +979,6 @@ def test_serve_dashboard_starts_and_stops_on_interrupt(tmp_path: Path) -> None:
 
 def test_dashboard_security_handler_sets_headers(tmp_path: Path) -> None:
     """_SecurityHandler.end_headers() must add the four defensive HTTP headers."""
-    import http.server
-    import io
     import socketserver
     import threading
     import urllib.request

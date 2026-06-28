@@ -302,7 +302,7 @@ class _FakeStreamResponse:
     def iter_lines(self) -> list[str]:
         return self._lines
 
-    def __enter__(self) -> "_FakeStreamResponse":
+    def __enter__(self) -> _FakeStreamResponse:
         return self
 
     def __exit__(self, *_: object) -> None:
@@ -326,7 +326,7 @@ def test_openai_streaming_skips_non_dict_chunk() -> None:
     ]
     client = _stream_client(lines)
     tokens: list[str] = []
-    result = _stream_chat(client, {}, tokens.append)
+    _stream_chat(client, {}, tokens.append)
     assert tokens == ["ok"]
 
 
