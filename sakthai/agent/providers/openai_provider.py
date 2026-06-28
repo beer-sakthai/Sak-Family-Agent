@@ -15,6 +15,7 @@ def _convert_assistant_message(content: list[dict[str, Any]]) -> dict[str, Any]:
     """Convert an assistant message with block content to OpenAI format."""
     text_content = ""
     tool_calls = []
+    # Unknown block types are deliberately skipped (forward-compatible no-op).
     for block in content:
         block_type = block_field(block, "type")
         if block_type == "text":
@@ -66,6 +67,8 @@ def to_openai_messages(system: str, messages: list[dict[str, Any]]) -> list[dict
         role = msg["role"]
         content = msg["content"]
 
+        # Content that is neither a str nor a list is dropped (no message
+        # emitted) — a deliberate, forward-compatible no-op.
         if isinstance(content, str):
             openai_msgs.append({"role": role, "content": content})
         elif isinstance(content, list):

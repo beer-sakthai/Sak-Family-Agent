@@ -87,6 +87,52 @@ def test_to_gemini_contents_multiple_messages() -> None:
     assert contents[2].role == "user"
 
 
+# -- to_gemini_contents: fall-through / malformed input --------------------
+# These pin the translator's deliberate forward-compatible behaviour: unknown
+# block types and non-(str|list) content are silently skipped, never crash.
+
+
+def test_to_gemini_contents_unknown_block_type_is_skipped() -> None:
+    """An unrecognised block type produces a Content with no parts, not an error."""
+    contents = to_gemini_contents(
+        [{"role": "user", "content": [{"type": "image", "source": "..."}]}]
+    )
+    assert len(contents) == 1
+    assert contents[0].role == "user"
+    assert list(contents[0].parts) == []
+
+
+def test_to_gemini_contents_mixed_known_and_unknown_blocks_keeps_known() -> None:
+    """A known block survives alongside an unknown one in the same message."""
+    contents = to_gemini_contents(
+        [
+            {
+                "role": "assistant",
+                "content": [
+                    {"type": "thinking", "thinking": "hmm"},
+                    {"type": "text", "text": "answer"},
+                ],
+            }
+        ]
+    )
+    assert len(contents[0].parts) == 1
+    assert contents[0].parts[0].text == "answer"
+
+
+@pytest.mark.parametrize("content", [None, 42, {"type": "text", "text": "x"}])
+def test_to_gemini_contents_non_str_or_list_content_yields_empty_parts(content: object) -> None:
+    """Content that is neither str nor list (incl. a bare dict) yields no parts."""
+    contents = to_gemini_contents([{"role": "user", "content": content}])
+    assert len(contents) == 1
+    assert list(contents[0].parts) == []
+
+
+def test_to_gemini_contents_empty_block_list_yields_empty_parts() -> None:
+    contents = to_gemini_contents([{"role": "user", "content": []}])
+    assert len(contents) == 1
+    assert list(contents[0].parts) == []
+
+
 # -- call_gemini -----------------------------------------------------------
 
 
