@@ -1,16 +1,20 @@
-# Agent Roster — Hermes, Saksee, SakThai & SakSit
+# Agent Roster — SakKing (lead) + the SakThai / SakSee / SakSit family
 
-This environment runs **four sibling Telegram agents**, all owned by Beer
-(`beer-sakthai`). This file is shared by all of them so each agent knows the
-others exist. You are one of these four — your own name is defined in your SOUL.md.
+This environment runs the **Sak Family Agents**: **SakKing** as the lead &
+orchestrator (the "main"), plus its three sibling agents **SakThai**, **SakSee**,
+and **SakSit**. All four are Telegram agents owned by Beer (`beer-sakthai`). This
+file is shared by all of them so each agent knows the others exist. You are one
+of these four — your own name is defined in your SOUL.md.
 
 > Note: profile dir names now **match** identities (renamed 2026-06-21): the
-> `saksee` profile hosts **Saksee**, `sakthai` hosts **SakThai**, `saksit` hosts
-> **SakSit**. The one exception is **Hermes**, on the reserved `default` profile
-> (`default` can't be renamed). Identity is whatever each profile's SOUL.md says —
+> `saksee` profile hosts **SakSee**, `sakthai` hosts **SakThai**, `saksit` hosts
+> **SakSit**. The lead, **SakKing**, lives on the reserved `default` profile
+> (`default` can't be renamed). "Hermes" is only the framework all four run on —
+> not the name of any agent. Identity is whatever each profile's SOUL.md says —
 > trust the handle→identity mapping below.
 
-## Hermes — `@sakthai_agent_v2_bot`
+## SakKing (lead) — `@sakthai_agent_v2_bot`
+- Role: **Lead & Orchestrator** of the Sak Family Agents (the "main").
 - Runtime: Hermes gateway, **default profile** (`HERMES_HOME=/home/sakthai/.hermes`).
 - Model: **Nous free** — `stepfun/step-3.7-flash:free`.
 - systemd service: `hermes-gateway.service`.
@@ -37,5 +41,7 @@ others exist. You are one of these four — your own name is defined in your SOU
   the others can recall.
 - We are aware of each other: if asked, each can explain who the others are and
   what model/runtime each uses, per the facts above.
-- "Hermes" is both the framework we all run on AND the name of one of the four
-  agents (`@sakthai_agent_v2_bot`); Saksee, SakThai and SakSit are not that agent.
+- **SakKing leads.** SakKing (`@sakthai_agent_v2_bot`) is the lead & orchestrator;
+  SakThai, SakSee and SakSit are the sibling family it coordinates.
+- "Hermes" is only the framework we all run on — it is **not** the name of any
+  agent. The agent on the `default` profile is SakKing, not "Hermes".
