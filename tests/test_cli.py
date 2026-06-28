@@ -456,6 +456,36 @@ def test_memory_sync_failure_exits_nonzero(
     assert "push failed" in result.output
 
 
+def test_memory_sync_supermemory_flag(
+    runner: CliRunner, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    import subprocess
+    import sakthai.memory.sync as sync_mod
+
+    # Create a fake script so the subprocess.run call has a real target
+    fake_script = tmp_path / "regenerate-supermemory-canonicals.py"
+    fake_script.write_text("", encoding="utf-8")
+
+    import sakthai.config as config_mod
+
+    monkeypatch.setattr(config_mod, "REPO_ROOT", tmp_path)
+    monkeypatch.setattr(
+        sync_mod, "sync_memory_to_git", lambda remote=None: "Synced locally."
+    )
+
+    run_calls: list[list[str]] = []
+
+    def fake_subprocess_run(cmd: list[str], **kwargs: object) -> object:
+        run_calls.append(cmd)
+        return subprocess.CompletedProcess(cmd, returncode=0)
+
+    monkeypatch.setattr(subprocess, "run", fake_subprocess_run)
+    result = runner.invoke(main, ["memory", "sync", "--supermemory"])
+    assert result.exit_code == 0
+    assert "supermemory" in result.output.lower()
+    assert any("regenerate-supermemory-canonicals.py" in str(c) for c in run_calls)
+
+
 # -- system commands -----------------------------------------------------
 
 
@@ -623,6 +653,33 @@ def test_skills_create(runner: CliRunner, skill_roots: tuple[Path, Path]) -> Non
     assert "already exists" in again.output
 
 
+def test_skills_sync_sakking_updated_and_unchanged_output(
+    runner: CliRunner,
+    skill_roots: tuple[Path, Path],
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """The sync-sakking command must print '~ slug' for updated and '(N unchanged)'."""
+    import sakthai.cli.skills as skills_cli_mod
+    from sakthai.sakking_skills import SyncOutcome
+
+    fake_outcome = SyncOutcome(created=[], updated=["sakthai-updated"], unchanged=["sakthai-same"])
+
+    monkeypatch.setattr(
+        skills_cli_mod,
+        "sync_sakking_skills",
+        lambda source, dest, dry_run=False: fake_outcome,
+    )
+    # Use a real directory so the source-exists check passes
+    sakking_dir = tmp_path / "sakking-skills"
+    sakking_dir.mkdir()
+
+    result = runner.invoke(main, ["skills", "sync-sakking", "--sakking-home", str(sakking_dir)])
+    assert result.exit_code == 0
+    assert "~ sakthai-updated" in result.output
+    assert "1 unchanged" in result.output
+
+
 # -- extensions (git monkeypatched) --------------------------------------
 
 
@@ -782,6 +839,32 @@ def test_run_autoloads_configured_mcp_tools(
     assert "learn" in names  # built-ins still present
 
 
+def test_run_verbose_logs_loaded_mcp_tools(
+    runner: CliRunner, monkeypatch: pytest.MonkeyPatch, sakthai_home: Path, tmp_path: Path
+) -> None:
+    """When MCP tools are loaded and --verbose is set, the tool count is logged."""
+    server_home = tmp_path / "srv"
+    (sakthai_home / "mcp.json").write_text(
+        json.dumps(
+            {
+                "mcpServers": {
+                    "sk": {
+                        "command": sys.executable,
+                        "args": ["-m", "sakthai.mcp"],
+                        "env": {"SAKTHAI_HOME": str(server_home)},
+                    }
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    _capture_tools(monkeypatch)
+    result = runner.invoke(main, ["run", "--verbose", "hi"])
+    assert result.exit_code == 0
+    # The verbose MCP-load message goes to stderr, which CliRunner mixes into output
+    assert "loaded" in result.output or "mcp" in result.output.lower()
+
+
 def test_run_no_mcp_skips_external_servers(
     runner: CliRunner, monkeypatch: pytest.MonkeyPatch, sakthai_home: Path
 ) -> None:
@@ -859,6 +942,81 @@ def test_dashboard_launch_missing_dist(runner: CliRunner, tmp_path: Path) -> Non
         result = runner.invoke(main, ["dashboard"])
         assert result.exit_code != 0
         assert "build artifacts not found" in result.output
+
+
+def test_get_dist_path_returns_dist_directory() -> None:
+    from sakthai.cli.dashboard import _get_dist_path
+
+    result = _get_dist_path()
+    assert result.name == "dist"
+
+
+def test_serve_dashboard_starts_and_stops_on_interrupt(tmp_path: Path) -> None:
+    """_serve_dashboard() must start the server, print the URL, and handle KeyboardInterrupt."""
+    from unittest.mock import MagicMock, patch
+
+    import sakthai.cli.dashboard as dash_mod
+
+    mock_httpd = MagicMock()
+    mock_httpd.server_address = ("127.0.0.1", 3000)
+    mock_httpd.serve_forever.side_effect = KeyboardInterrupt()
+
+    with (
+        patch.object(dash_mod.os, "chdir"),
+        patch.object(dash_mod.socketserver, "TCPServer") as mock_cls,
+    ):
+        mock_cls.return_value.__enter__.return_value = mock_httpd
+        mock_cls.return_value.__exit__.return_value = False
+        from click.testing import CliRunner as _CliRunner
+
+        runner = _CliRunner()
+        with runner.isolated_filesystem():
+            dash_mod._serve_dashboard("127.0.0.1", 3000, False, tmp_path)
+
+    mock_httpd.shutdown.assert_called_once()
+
+
+def test_dashboard_security_handler_sets_headers(tmp_path: Path) -> None:
+    """_SecurityHandler.end_headers() must add the four defensive HTTP headers."""
+    import http.server
+    import io
+    import socketserver
+    import threading
+    import urllib.request
+
+    from sakthai.cli.dashboard import _SecurityHandler
+
+    # Serve from a real temp directory so SimpleHTTPRequestHandler has something to read
+    dist = tmp_path / "dist"
+    dist.mkdir()
+    (dist / "index.html").write_text("<html></html>", encoding="utf-8")
+
+    import os
+
+    original_dir = os.getcwd()
+    os.chdir(dist)
+    try:
+        socketserver.TCPServer.allow_reuse_address = True
+        with socketserver.TCPServer(("127.0.0.1", 0), _SecurityHandler) as httpd:
+            _, port = httpd.server_address
+            thread = threading.Thread(
+                target=httpd.serve_forever, kwargs={"poll_interval": 0.01}, daemon=True
+            )
+            thread.start()
+            try:
+                with urllib.request.urlopen(
+                    f"http://127.0.0.1:{port}/index.html", timeout=5
+                ) as resp:
+                    headers = {k.lower(): v for k, v in resp.headers.items()}
+            finally:
+                httpd.shutdown()
+    finally:
+        os.chdir(original_dir)
+
+    assert headers.get("x-frame-options") == "DENY"
+    assert headers.get("x-content-type-options") == "nosniff"
+    assert "strict-origin" in headers.get("referrer-policy", "")
+    assert "default-src" in headers.get("content-security-policy", "")
 
 
 def test_run_dry_run_reports_and_exits_zero(

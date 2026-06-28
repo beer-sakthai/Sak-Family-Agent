@@ -8,6 +8,7 @@ when no DB exists, so tests don't need a live memory store.
 from __future__ import annotations
 
 import json
+import os
 import runpy
 import threading
 import urllib.error
@@ -27,6 +28,11 @@ from sakthai.web.server import (
     _Handler,
     serve,
 )
+
+try:
+    from http.server import HTTPServer as _HTTPServer
+except ImportError:
+    _HTTPServer = None  # type: ignore[misc,assignment]
 
 try:
     from http.server import HTTPServer
@@ -260,6 +266,44 @@ class TestMainBlock:
             with pytest.raises(SystemExit) as exc_info:
                 runpy.run_path(str(server_py), run_name="__main__")
             assert exc_info.value.code == 0
+
+
+class TestStaticFileServe:
+    """Tests for the static-file fallback in _Handler.do_GET (line 120)."""
+
+    def test_serves_file_within_static_root(self, tmp_path: Path) -> None:
+        """A request whose resolved path IS within _STATIC_ROOT reaches super().do_GET()."""
+        import sakthai.web.server as srv_mod
+
+        static_root = tmp_path / "web"
+        static_root.mkdir()
+        (static_root / "ok.html").write_text("<html>ok</html>", encoding="utf-8")
+
+        original_root = srv_mod._STATIC_ROOT
+        srv_mod._STATIC_ROOT = static_root
+        original_dir = os.getcwd()
+        os.chdir(static_root)
+        try:
+            srv = _HTTPServer(("127.0.0.1", 0), _Handler)
+            _, port = srv.server_address
+            t = threading.Thread(
+                target=srv.serve_forever, kwargs={"poll_interval": 0.01}, daemon=True
+            )
+            t.start()
+            try:
+                # Use urlopen directly — the response is HTML, not JSON
+                with urllib.request.urlopen(
+                    f"http://127.0.0.1:{port}/ok.html", timeout=5
+                ) as resp:
+                    status = resp.status
+                    body = resp.read().decode("utf-8")
+                assert status == 200
+                assert "ok" in body
+            finally:
+                srv.shutdown()
+        finally:
+            os.chdir(original_dir)
+            srv_mod._STATIC_ROOT = original_root
 
 
 class TestEcosystemStatusPartialConfig:

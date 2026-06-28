@@ -50,3 +50,44 @@ def test_duplicate_names_collapse_keeping_last() -> None:
     reg = ToolRegistry([_tool("x", "first"), _tool("x", "second")])
     assert len(reg) == 1
     assert reg.get("x").description == "second"
+
+
+def test_empty_registry_len_is_zero() -> None:
+    reg = ToolRegistry()
+    assert len(reg) == 0
+    assert reg.tools == ()
+    assert reg.names() == []
+    assert reg.schemas() == []
+
+
+def test_len_reflects_tool_count() -> None:
+    reg = ToolRegistry([_tool("a"), _tool("b"), _tool("c")])
+    assert len(reg) == 3
+
+
+def test_contains_existing_and_missing() -> None:
+    reg = ToolRegistry([_tool("present")])
+    assert "present" in reg
+    assert "absent" not in reg
+
+
+def test_names_returns_ordered_list() -> None:
+    reg = ToolRegistry([_tool("alpha"), _tool("beta"), _tool("gamma")])
+    assert reg.names() == ["alpha", "beta", "gamma"]
+
+
+def test_handler_dispatch_executes_and_returns_result() -> None:
+    """get() followed by handler() must dispatch and return the tool's output."""
+    store = MemoryStore(":memory:")
+    reg = ToolRegistry([_tool("ping")])
+    tool = reg.get("ping")
+    assert tool is not None
+    result = tool.handler({}, store)
+    assert result == "ping"
+
+
+def test_with_tools_does_not_mutate_base() -> None:
+    base = ToolRegistry([_tool("a")])
+    _ = base.with_tools([_tool("b")])
+    assert "b" not in base
+    assert len(base) == 1
