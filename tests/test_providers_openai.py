@@ -169,11 +169,12 @@ def test_to_openai_messages_unknown_assistant_block_is_skipped() -> None:
     assert result[1] == {"role": "assistant", "content": "answer"}
 
 
-def test_to_openai_messages_assistant_only_unknown_blocks_yields_null_content() -> None:
-    """Assistant content with only unknown blocks emits a message with null content."""
+def test_to_openai_messages_assistant_only_unknown_blocks_falls_back_to_empty_content() -> None:
+    """Assistant content with only unknown blocks must not emit null content with
+    no tool_calls (OpenAI rejects that with a 400); it falls back to ""."""
     msgs = [{"role": "assistant", "content": [{"type": "image", "source": "..."}]}]
     result = to_openai_messages("sys", msgs)
-    assert result[1] == {"role": "assistant", "content": None}
+    assert result[1] == {"role": "assistant", "content": ""}
 
 
 def test_to_openai_messages_unknown_user_block_is_skipped() -> None:

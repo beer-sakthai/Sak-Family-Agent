@@ -34,6 +34,11 @@ def _convert_assistant_message(content: list[dict[str, Any]]) -> dict[str, Any]:
     item: dict[str, Any] = {"role": "assistant", "content": text_content or None}
     if tool_calls:
         item["tool_calls"] = tool_calls
+    elif item["content"] is None:
+        # OpenAI rejects an assistant message with null content and no
+        # tool_calls (400). When a message carried only unknown blocks, fall
+        # back to an empty string so the payload stays schema-compliant.
+        item["content"] = ""
     return item
 
 

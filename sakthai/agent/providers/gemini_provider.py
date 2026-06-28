@@ -19,9 +19,10 @@ def to_gemini_contents(messages: list[dict[str, Any]]) -> list[Any]:
         role = msg["role"]
         content = msg["content"]
         parts = []
-        # Content that is neither a str nor a list yields an empty ``parts``
-        # list; unknown block types within a list are skipped. Both are
-        # deliberate, forward-compatible no-ops rather than hard errors.
+        # Content that is neither a str nor a list contributes no parts; unknown
+        # block types within a list are skipped. Both are deliberate,
+        # forward-compatible no-ops rather than hard errors. A fallback empty
+        # text part is added below so the Content stays schema-compliant.
         if isinstance(content, str):
             parts.append(types.Part(text=content))
         elif isinstance(content, list):
@@ -48,6 +49,10 @@ def to_gemini_contents(messages: list[dict[str, Any]]) -> list[Any]:
                             )
                         )
                     )
+        if not parts:
+            # Gemini rejects a Content with an empty parts list (400); keep one
+            # empty text part so the payload stays valid.
+            parts.append(types.Part(text=""))
         if any(getattr(p, "function_response", None) is not None for p in parts):
             gemini_role = "tool"
         elif role == "assistant":
