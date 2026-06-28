@@ -37,9 +37,13 @@ subtree`).
 └── scripts/compose_persona.py    # rebuild a persona's full skill tree (shared + overlay)
 ```
 
-- **Personas** were ~90 % identical; the shared 446 skill files now live once
+- **Personas** are the **Sak Family Agents**: **SakKing** is the main (Lead &
+  Orchestrator) and **SakThai**, **SakSee**, **SakSit** are the family it
+  coordinates ("Hermes" is only the framework they run on, never an agent's
+  name). They were ~90 % identical; the shared 446 skill files now live once
   under `personas/shared/skills/`, with each persona keeping only its unique
-  files. See [`personas/README.md`](./personas/README.md).
+  files. See [`personas/README.md`](./personas/README.md) and the root
+  `SOUL.md`.
 - **`packages/agent-self-evolution`** targets a different runtime (Nous
   Research's Hermes) with a heavy, disjoint dependency set, so it is **not** a uv
   workspace member — build it on its own per its README. The root `uv.lock`
