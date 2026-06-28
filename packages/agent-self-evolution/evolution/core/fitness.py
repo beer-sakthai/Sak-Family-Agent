@@ -4,9 +4,9 @@ Uses LLM-as-judge with rubrics to score agent outputs.
 Supports length penalties and multi-dimensional scoring.
 """
 
-import dspy
 from dataclasses import dataclass
-from typing import Optional
+
+import dspy
 
 from evolution.core.config import EvolutionConfig
 
@@ -67,8 +67,8 @@ class LLMJudge:
         expected_behavior: str,
         agent_output: str,
         skill_text: str,
-        artifact_size: Optional[int] = None,
-        max_size: Optional[int] = None,
+        artifact_size: int | None = None,
+        max_size: int | None = None,
     ) -> FitnessScore:
         """Score an agent output using LLM-as-judge."""
 

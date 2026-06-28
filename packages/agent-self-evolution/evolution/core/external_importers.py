@@ -23,17 +23,16 @@ Usage from evolve_skill.py:
 """
 
 import json
-import re
 import random
+import re
 from pathlib import Path
-from typing import Optional
 
 import click
 import dspy
 from rich.console import Console
 from rich.progress import Progress
 
-from evolution.core.dataset_builder import EvalExample, EvalDataset
+from evolution.core.dataset_builder import EvalDataset, EvalExample
 
 console = Console()
 
@@ -85,7 +84,7 @@ def _validate_eval_example(
     expected_behavior: str,
     difficulty: str,
     category: str,
-) -> Optional[dict]:
+) -> dict | None:
     """Validate and normalize fields before creating an EvalExample.
 
     Returns:
@@ -543,7 +542,7 @@ class RelevanceFilter:
         return examples
 
 
-def _parse_scoring_json(text: str) -> Optional[dict]:
+def _parse_scoring_json(text: str) -> dict | None:
     """Extract a JSON object from LLM scoring output.
 
     Strategy:
@@ -693,7 +692,7 @@ def build_dataset_from_external(
     return dataset
 
 
-def _load_skill_text(skill_name: str, skills_dir: Optional[Path] = None) -> tuple[str, str]:
+def _load_skill_text(skill_name: str, skills_dir: Path | None = None) -> tuple[str, str]:
     """Load skill text from the installed Hermes skills directory.
 
     This is used by the standalone CLI only. When called via evolve_skill.py,
