@@ -170,7 +170,8 @@ def diagnose_improve() -> None:
         except Exception:
             info("self-evolution (DSPy/GEPA)", "package present, deps not installed (pip install -e packages/agent-self-evolution)")
     finally:
-        subprocess.run(["rm", "-rf", str(home)])
+        import shutil
+        shutil.rmtree(home, ignore_errors=True)
 
 
 def main() -> int:
