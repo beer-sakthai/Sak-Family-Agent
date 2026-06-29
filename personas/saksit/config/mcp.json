@@ -1,0 +1,14 @@
+{
+  "_comment": "SakSit — Master of Social Media. Image/video generation via Hugging Face Spaces (mcp-hfspace). Swap the Space ids for your preferred models. HF_TOKEN is inherited from the process env.",
+  "mcpServers": {
+    "hf-media": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@llmindset/mcp-hfspace",
+        "black-forest-labs/FLUX.1-schnell",
+        "Lightricks/LTX-Video"
+      ]
+    }
+  }
+}

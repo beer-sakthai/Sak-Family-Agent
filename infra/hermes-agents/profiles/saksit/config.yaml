@@ -1,11 +1,11 @@
 model:
-  default: stepfun/step-3.7-flash:free
-  provider: nous
-  base_url: https://inference-api.nousresearch.com/v1
+  default: gemini-2.5-flash-lite
+  provider: google
+  base_url: https://generativelanguage.googleapis.com/v1beta/openai/
 fallback_model:
-  provider: nous
-  model: stepfun/step-3.7-flash:free
-  base_url: https://inference-api.nousresearch.com/v1
+  provider: ollama-cloud
+  model: gpt-oss:120b
+  base_url: https://ollama.com/v1
 providers: {}
 fallback_providers: []
 credential_pool_strategies: {}
@@ -301,6 +301,7 @@ display:
   persist_prompts: true
   inline_diffs: true
   file_mutation_verifier: true
+  reply_model_footer: true
   credits_notices: true
   turn_completion_explainer: true
   show_cost: false

@@ -1,11 +1,11 @@
 model:
-  default: stepfun/step-3.7-flash:free
-  provider: nous
-  base_url: https://inference-api.nousresearch.com/v1
+  default: qwen3-coder:480b
+  provider: ollama-cloud
+  base_url: https://ollama.com/v1
 fallback_model:
-  provider: huggingface
-  model: Qwen/Qwen3-Next-80B-A3B-Instruct
-  base_url: https://router.huggingface.co/v1
+  provider: ollama-cloud
+  model: gpt-oss:120b
+  base_url: https://ollama.com/v1
 providers: {}
 fallback_providers: []
 credential_pool_strategies: {}

@@ -1,7 +1,11 @@
 model:
-  default: stepfun/step-3.7-flash:free
-  provider: nous
-  base_url: https://inference-api.nousresearch.com/v1
+  default: qwen3-coder:480b
+  provider: ollama-cloud
+  base_url: https://ollama.com/v1
+fallback_model:
+  provider: ollama-cloud
+  model: gpt-oss:120b
+  base_url: https://ollama.com/v1
 fallback_providers: []
 toolsets:
   - hermes-cli
@@ -301,6 +305,7 @@ display:
   persist_prompts: true
   inline_diffs: true
   file_mutation_verifier: true
+  reply_model_footer: true
   credits_notices: true
   turn_completion_explainer: true
   show_cost: false

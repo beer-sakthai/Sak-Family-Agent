@@ -2,12 +2,13 @@
 
 SakKing (the agent runtime at ``~/.sakking``) ships a set of *bundled* skills and
 also accumulates *learned* (agent-created) ones over time. This module mirrors
-the learned skills into the SakThai repo as first-class ``sakthai-`` skills:
+the learned skills into the SakThai repo as first-class ``SakKing-`` skills:
 
 * "learned" = a ``SKILL.md`` whose slug is **not** in SakKing'
   ``skills/.bundled_manifest`` (and is not a SakKing-internal ``sakking-*`` skill).
 * Each learned skill is rewritten with the repo's canonical YAML frontmatter and
-  a ``sakthai-`` name prefix, so it round-trips through :mod:`sakthai.skills`.
+  the ``SakKing-`` persona name prefix (the naming convention for agent-authored
+  skills), so it round-trips through :mod:`sakthai.skills`.
 * The sync is **idempotent**: re-running rewrites only the skills whose rendered
   content changed, and reports created / updated / unchanged.
 
@@ -27,13 +28,16 @@ from typing import Any
 import yaml
 
 from .config import SKILLS_DIR, sakking_skills_dir
+from .skills import PERSONA_SKILL_PREFIXES, target_skill_name
 
 #: Slugs starting with these prefixes are SakKing-internal plumbing, not portable
 #: capabilities — excluded from the sync by default.
 DEFAULT_EXCLUDE_PREFIXES: tuple[str, ...] = ("sakking-",)
 
 _BUNDLED_MANIFEST = ".bundled_manifest"
-_PREFIX = "sakthai-"
+#: Learned skills are *authored by SakKing*, so they carry the SakKing persona
+#: prefix per the naming convention (see :mod:`sakthai.skills`).
+_PREFIX = PERSONA_SKILL_PREFIXES["sakking"]
 _DEFAULT_VERSION = "1.0.0"
 _DEFAULT_PLATFORMS: tuple[str, ...] = ("linux", "macos")
 _MAX_DESC = 200
@@ -206,7 +210,7 @@ class LearnedSkill:
 
 
 def _target_slug(source_slug: str) -> str:
-    return source_slug if source_slug.startswith(_PREFIX) else f"{_PREFIX}{source_slug}"
+    return target_skill_name(source_slug, _PREFIX)
 
 
 def _category_for(skill_md: Path, skills_root: Path) -> str:

@@ -14,24 +14,27 @@ of these four — your own name is defined in your SOUL.md.
 > trust the handle→identity mapping below.
 
 ## SakKing (lead) — `@sakthai_agent_v2_bot`
-- Role: **Lead & Orchestrator** of the Sak Family Agents (the "main").
+- Role: **Lead & Orchestrator** + **Master of Code & Self-Healing** (the "main"; owns all skills).
 - Runtime: Hermes gateway, **default profile** (`HERMES_HOME=/home/sakthai/.hermes`).
-- Model: **Nous free** — `stepfun/step-3.7-flash:free`.
+- Model: live Telegram on **Ollama Cloud** — `qwen3-coder:480b` (Ollama `gpt-oss:120b` fallback); **Claude** (Anthropic) for heavy coding via the SakThai CLI.
 - systemd service: `hermes-gateway.service`.
 
 ## Saksee — `@saksee_bot`
+- Role: **Master of Web** — Playwright + Chrome DevTools.
 - Runtime: Hermes gateway, **saksee profile** (`HERMES_HOME=/home/sakthai/.hermes/profiles/saksee`).
-- Model: **Ollama Cloud** — `kimi-k2.7-code`, with **Nous free fallback** on rate-limit.
+- Model: **Ollama Cloud** — `minimax-m3`, with **Ollama `gpt-oss:120b` fallback**.
 - systemd service: `hermes-gateway-saksee.service`.
 
 ## SakThai — `@sakthai_v1_bot`
+- Role: **Master of Hugging Face** — Hub, Inference, HF MCP (+ GitHub, Composio).
 - Runtime: Hermes gateway, **sakthai profile** (`HERMES_HOME=/home/sakthai/.hermes/profiles/sakthai`).
-- Model: **Ollama Cloud** — `gpt-oss:120b`, with **Nous free fallback** on rate-limit.
+- Model: **Ollama Cloud** — `deepseek-v3.1:671b`, with **Ollama `gpt-oss:120b` fallback** (HF chat inference is credit-capped; HF mastery stays via Hub/MCP tools).
 - systemd service: `hermes-gateway-sakthai.service`.
 
 ## SakSit — `@saksit_agent_bot`
+- Role: **Master of Social Media** — IG image/video creation via Hugging Face Spaces.
 - Runtime: Hermes gateway, **saksit profile** (`HERMES_HOME=/home/sakthai/.hermes/profiles/saksit`).
-- Model: **Nous free** — `stepfun/step-3.7-flash:free`. Terminal in a Modal sandbox.
+- Model: **Google Gemini** — `gemini-2.5-flash-lite` (chat) + HF Spaces for media, with **Ollama `gpt-oss:120b` fallback**. Terminal in a Modal sandbox.
 - systemd service: `hermes-gateway-saksit.service`.
 
 ## How we relate

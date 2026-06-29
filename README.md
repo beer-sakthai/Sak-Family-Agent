@@ -38,12 +38,15 @@ subtree`).
 ```
 
 - **Personas** are the **Sak Family Agents**: **SakKing** is the main (Lead &
-  Orchestrator) and **SakThai**, **SakSee**, **SakSit** are the family it
-  coordinates ("Hermes" is only the framework they run on, never an agent's
-  name). They were ~90 % identical; the shared 446 skill files now live once
-  under `personas/shared/skills/`, with each persona keeping only its unique
-  files. See [`personas/README.md`](./personas/README.md) and the root
-  `SOUL.md`.
+  Orchestrator, Master of Code & Self-Healing, on `claude-opus-4-8`), and
+  **SakThai** (Master of Hugging Face, on `deepseek-v3.1:671b`), **SakSee**
+  (Master of Web, on `minimax-m3`), **SakSit** (Master of Social Media / IG, on
+  `gemini-2.5-flash-lite`) are the family it coordinates ("Hermes" is only the
+  framework they run on, never an agent's name). They were ~90 % identical; the
+  shared 446 skill files now live once under `personas/shared/skills/`, with each
+  persona keeping only its unique files. See [`personas/README.md`](./personas/README.md)
+  and the root `SOUL.md`. See [`infra/hermes-agents/README.md`](./infra/hermes-agents/README.md)
+  for the full Telegram bot deployment details.
 - **`packages/agent-self-evolution`** targets a different runtime (Nous
   Research's Hermes) with a heavy, disjoint dependency set, so it is **not** a uv
   workspace member — build it on its own per its README. The root `uv.lock`

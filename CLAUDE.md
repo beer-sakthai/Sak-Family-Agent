@@ -230,7 +230,7 @@ Click commands split by area; all sub-files imported by `cli/__init__.py`:
 ## File structure
 
 ```
-sakthai-agent-v2/
+Sak-Family-Agent/
 ├── sakthai/                  # Main package
 │   ├── config.py             # Paths & env-var names (single source of truth)
 │   ├── auth.py               # Credential resolution

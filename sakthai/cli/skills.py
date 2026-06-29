@@ -8,9 +8,17 @@ from typing import Any
 
 import click
 
-from ..config import LIBRARY_DIR, SKILLS_DIR, sakking_skills_dir
+from ..config import LIBRARY_DIR, PERSONAS_DIR, SKILLS_DIR, sakking_skills_dir
 from ..sakking_skills import sync_sakking_skills
-from ..skills import build_catalog, collect_skills, find_skill, validate_tree
+from ..skills import (
+    PERSONA_SKILL_PREFIXES,
+    SHARED_SKILL_PREFIX,
+    build_catalog,
+    collect_skills,
+    find_skill,
+    naming_violations,
+    validate_tree,
+)
 
 
 @click.group()
@@ -92,8 +100,27 @@ def skills_show(name: str) -> None:
 
 @skills.command("validate")
 @_SOURCE_OPTION
-def skills_validate(source: str) -> None:
-    """Validate skill frontmatter; exit 1 if any errors are found."""
+@click.option(
+    "--naming",
+    is_flag=True,
+    help="Check persona skill names against the convention (shared=Sak-, persona=Sak<Name>-).",
+)
+def skills_validate(source: str, naming: bool) -> None:
+    """Validate skill frontmatter; exit 1 if any errors are found.
+
+    With ``--naming`` it instead audits the persona trees under ``personas/``
+    against the naming convention (folder==name, layer prefix, length cap).
+    """
+    if naming:
+        violations = _naming_violations()
+        if not violations:
+            click.echo("ok  persona skill names follow the convention")
+            return
+        for path, message in violations:
+            click.echo(f"naming: {path}: {message}")
+        click.echo(f"\n{len(violations)} naming issue(s) found")
+        sys.exit(1)
+
     roots = _roots(source)
     errors = validate_tree(*roots)
     if not errors:
@@ -105,13 +132,38 @@ def skills_validate(source: str) -> None:
     sys.exit(1)
 
 
+def _naming_violations() -> list[tuple[Path, str]]:
+    """Naming-convention violations across the shared library and every persona overlay."""
+    found: list[tuple[Path, str]] = []
+    found.extend(naming_violations(PERSONAS_DIR / "shared" / "skills", prefix=SHARED_SKILL_PREFIX))
+    for persona, prefix in PERSONA_SKILL_PREFIXES.items():
+        found.extend(naming_violations(PERSONAS_DIR / persona / "skills", prefix=prefix))
+    return found
+
+
 @skills.command("create")
 @click.argument("name")
 @click.option("--category", default="general", help="Skill category.")
 @click.option("--description", default="A new SakThai skill.", help="Skill description.")
-def skills_create(name: str, category: str, description: str) -> None:
-    """Scaffold a new skill directory with a template SKILL.md under skills/."""
+@click.option(
+    "--persona",
+    type=click.Choice(["shared", *PERSONA_SKILL_PREFIXES]),
+    default=None,
+    help="Apply the naming-convention prefix for this owner (shared=Sak-, persona=Sak<Name>-).",
+)
+def skills_create(name: str, category: str, description: str, persona: str | None) -> None:
+    """Scaffold a new skill directory with a template SKILL.md under skills/.
+
+    With ``--persona`` the slug is prefixed per the naming convention so the new
+    skill passes ``skills validate --naming``.
+    """
     slug = name.lower().replace("_", "-").replace(" ", "-")
+    if persona is not None:
+        prefix = SHARED_SKILL_PREFIX if persona == "shared" else PERSONA_SKILL_PREFIXES[persona]
+        prefix_lower = prefix.lower()
+        if slug.startswith(prefix_lower):
+            slug = slug[len(prefix_lower) :]
+        slug = f"{prefix}{slug}"
     skill_dir = SKILLS_DIR / slug
     if skill_dir.exists():
         raise click.ClickException(f"skill directory '{skill_dir}' already exists")

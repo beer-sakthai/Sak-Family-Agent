@@ -1,11 +1,11 @@
 model:
-  default: stepfun/step-3.7-flash:free
-  provider: nous
-  base_url: https://inference-api.nousresearch.com/v1
+  default: minimax-m3
+  provider: ollama-cloud
+  base_url: https://ollama.com/v1
 fallback_model:
-  provider: nous
-  model: stepfun/step-3.7-flash:free
-  base_url: https://inference-api.nousresearch.com/v1
+  provider: ollama-cloud
+  model: gpt-oss:120b
+  base_url: https://ollama.com/v1
 providers: {}
 fallback_providers: []
 credential_pool_strategies: {}
@@ -301,6 +301,7 @@ display:
   persist_prompts: true
   inline_diffs: true
   file_mutation_verifier: true
+  reply_model_footer: true
   credits_notices: true
   turn_completion_explainer: true
   show_cost: false
@@ -687,6 +688,14 @@ mcp_servers:
     url: https://connect.composio.dev/mcp
     headers:
       x-consumer-api-key: ${COMPOSIO_MCP_KEY}
+    enabled: true
+    timeout: 120
+    connect_timeout: 30
+  chrome-devtools:
+    command: npx
+    args:
+      - "-y"
+      - "chrome-devtools-mcp"
     enabled: true
     timeout: 120
     connect_timeout: 30

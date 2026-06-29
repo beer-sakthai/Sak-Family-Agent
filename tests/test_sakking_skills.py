@@ -49,7 +49,7 @@ def _sakking_root(tmp_path: Path) -> Path:
     )
     # SakKing-internal — excluded by default prefix.
     _write(root / "sakking-operations" / "SKILL.md", "# SakKing Ops\n\nInternal stuff.\n")
-    # Already sakthai-prefixed learned skill — keep its name as-is.
+    # Legacy sakthai-prefixed learned skill — retargeted to the SakKing- prefix.
     _write(root / "sakthai-special" / "SKILL.md", "# Special\n\nDo special things.\n")
     return root
 
@@ -66,32 +66,32 @@ def test_bundled_slugs_missing_manifest_is_empty(tmp_path: Path) -> None:
 def test_discover_selects_only_learned(tmp_path: Path) -> None:
     root = _sakking_root(tmp_path)
     slugs = {s.target_slug for s in discover_learned_skills(root)}
-    assert slugs == {"sakthai-cron-watchdog", "sakthai-deploy-helper", "sakthai-special"}
+    assert slugs == {"SakKing-cron-watchdog", "SakKing-deploy-helper", "SakKing-special"}
 
 
 def test_discover_can_include_internal_via_empty_excludes(tmp_path: Path) -> None:
     root = _sakking_root(tmp_path)
     slugs = {s.target_slug for s in discover_learned_skills(root, exclude_prefixes=())}
-    assert "sakthai-sakking-operations" in slugs
+    assert "SakKing-sakking-operations" in slugs
 
 
 def test_category_from_nesting_and_defaults(tmp_path: Path) -> None:
     root = _sakking_root(tmp_path)
     by_slug = {s.target_slug: s for s in discover_learned_skills(root)}
-    assert by_slug["sakthai-deploy-helper"].category == "devops"
-    assert by_slug["sakthai-cron-watchdog"].category == "sakking"
+    assert by_slug["SakKing-deploy-helper"].category == "devops"
+    assert by_slug["SakKing-cron-watchdog"].category == "sakking"
 
 
 def test_description_derived_from_purpose(tmp_path: Path) -> None:
     root = _sakking_root(tmp_path)
     by_slug = {s.target_slug: s for s in discover_learned_skills(root)}
-    assert by_slug["sakthai-cron-watchdog"].description == "Heal the cron fleet automatically"
+    assert by_slug["SakKing-cron-watchdog"].description == "Heal the cron fleet automatically"
 
 
 def test_frontmatter_description_and_version_preserved(tmp_path: Path) -> None:
     root = _sakking_root(tmp_path)
     by_slug = {s.target_slug: s for s in discover_learned_skills(root)}
-    deploy = by_slug["sakthai-deploy-helper"]
+    deploy = by_slug["SakKing-deploy-helper"]
     assert deploy.description == "Ship it safely"
     assert deploy.version == "2.1"
     assert "ci" in deploy.tags and "sakking" in deploy.tags
@@ -102,14 +102,14 @@ def test_sync_creates_valid_roundtrippable_skills(tmp_path: Path) -> None:
     dest = tmp_path / "skills"
     outcome = sync_sakking_skills(root, dest)
     assert set(outcome.created) == {
-        "sakthai-cron-watchdog",
-        "sakthai-deploy-helper",
-        "sakthai-special",
+        "SakKing-cron-watchdog",
+        "SakKing-deploy-helper",
+        "SakKing-special",
     }
     assert not outcome.updated and not outcome.unchanged
     # Every written skill parses cleanly and validates.
-    skill = parse_skill(dest / "sakthai-deploy-helper" / "SKILL.md")
-    assert skill.name == "sakthai-deploy-helper"
+    skill = parse_skill(dest / "SakKing-deploy-helper" / "SKILL.md")
+    assert skill.name == "SakKing-deploy-helper"
     assert validate_tree(dest) == []
 
 
@@ -128,8 +128,8 @@ def test_sync_updates_on_source_change(tmp_path: Path) -> None:
     sync_sakking_skills(root, dest)
     _write(root / "cron-watchdog" / "SKILL.md", "# Cron Watchdog\n\n## Purpose\n\nNew text now.\n")
     outcome = sync_sakking_skills(root, dest)
-    assert outcome.updated == ["sakthai-cron-watchdog"]
-    assert "New text now." in (dest / "sakthai-cron-watchdog" / "SKILL.md").read_text()
+    assert outcome.updated == ["SakKing-cron-watchdog"]
+    assert "New text now." in (dest / "SakKing-cron-watchdog" / "SKILL.md").read_text()
 
 
 def test_dry_run_writes_nothing(tmp_path: Path) -> None:
@@ -155,7 +155,7 @@ def test_malformed_yaml_frontmatter_is_recovered(tmp_path: Path) -> None:
     )
     dest = tmp_path / "skills"
     sync_sakking_skills(root, dest)
-    skill = parse_skill(dest / "sakthai-broken-fm" / "SKILL.md")
+    skill = parse_skill(dest / "SakKing-broken-fm" / "SKILL.md")
     assert skill.description == "Coverage: login and logout flows"
     assert "---" not in skill.body  # fence stripped, no leak
     assert validate_tree(dest) == []
@@ -168,8 +168,8 @@ def test_cli_sync_sakking_writes_skills(tmp_path: Path, monkeypatch: pytest.Monk
     result = CliRunner().invoke(main, ["skills", "sync-sakking", "--sakking-home", str(root)])
     assert result.exit_code == 0, result.output
     assert "synced 3 learned skill(s)" in result.output
-    assert "+ sakthai-deploy-helper" in result.output
-    assert (dest / "sakthai-deploy-helper" / "SKILL.md").is_file()
+    assert "+ SakKing-deploy-helper" in result.output
+    assert (dest / "SakKing-deploy-helper" / "SKILL.md").is_file()
 
 
 def test_cli_sync_sakking_dry_run(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -288,7 +288,7 @@ def test_discover_skips_hidden_directories(tmp_path: Path) -> None:
 
 def test_discover_deduplicates_same_target_slug(tmp_path: Path) -> None:
     root = tmp_path / "sakking" / "skills"
-    # "foo" maps to "sakthai-foo"; "sakthai-foo" also maps to "sakthai-foo".
+    # "foo" maps to "SakKing-foo"; "sakthai-foo" also maps to "SakKing-foo".
     # Only the first (alphabetically) should appear.
     for slug in ("foo", "sakthai-foo"):
         skill_dir = root / slug
@@ -296,4 +296,4 @@ def test_discover_deduplicates_same_target_slug(tmp_path: Path) -> None:
         (skill_dir / "SKILL.md").write_text(f"# {slug}\n\nBody.\n", encoding="utf-8")
     skills = discover_learned_skills(root)
     target_slugs = [s.target_slug for s in skills]
-    assert target_slugs.count("sakthai-foo") == 1
+    assert target_slugs.count("SakKing-foo") == 1

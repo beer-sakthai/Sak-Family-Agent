@@ -15,6 +15,7 @@ from typing import Any
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SKILLS_DIR = REPO_ROOT / "skills"
 LIBRARY_DIR = REPO_ROOT / "library"
+PERSONAS_DIR = REPO_ROOT / "personas"
 
 # Environment variables, grouped by how the readiness check treats them.
 REQUIRED_ENV_VARS: dict[str, str] = {
@@ -33,6 +34,7 @@ OPTIONAL_ENV_VARS: dict[str, str] = {
     "SAKTHAI_GATEWAY_API_KEY": "API key/token for the AI gateway (default: nokey)",  # nosec B105 — description text
     "SAKTHAI_HOME": "Override the data directory (default: ~/.sakthai)",
     "SAKTHAI_READ_ALLOW": "Extra paths the read_file tool may read (os.pathsep-separated)",
+    "SAKTHAI_MCP_CONFIG": "Path to a per-persona mcp.json whose servers override the defaults",
     "SAKTHAI_MCP_TIMEOUT": "Seconds to wait for an external MCP server reply (default: 30)",
     "SAKKING_HOME": "Override the SakKing data directory (default: ~/.sakking) for skill sync",
 }
@@ -62,6 +64,17 @@ def sakking_home() -> Path:
     """Return the SakKing data directory, honouring the SAKKING_HOME override."""
     override = os.environ.get("SAKKING_HOME")
     return Path(override) if override else Path.home() / ".sakking"
+
+
+def mcp_config_override() -> Path | None:
+    """Per-persona MCP manifest path from SAKTHAI_MCP_CONFIG, if set.
+
+    Lets each persona (or a single ``sakthai run``) load an extra ``mcp.json``
+    whose servers take precedence over the shared defaults — e.g.
+    ``personas/saksee/config/mcp.json`` for Playwright + Chrome DevTools.
+    """
+    override = os.environ.get("SAKTHAI_MCP_CONFIG")
+    return Path(override) if override else None
 
 
 def sakking_skills_dir() -> Path:
