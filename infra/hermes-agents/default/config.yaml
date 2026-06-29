@@ -305,6 +305,7 @@ display:
   persist_prompts: true
   inline_diffs: true
   file_mutation_verifier: true
+  reply_model_footer: true
   credits_notices: true
   turn_completion_explainer: true
   show_cost: false

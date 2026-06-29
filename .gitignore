@@ -44,3 +44,6 @@ personas/*/skills/.bundled_manifest
 /gitleaks
 *.patch
 changes.txt
+
+# Local-only Antigravity IDE scratch (untracked; never commit)
+oh-my-antigravity/

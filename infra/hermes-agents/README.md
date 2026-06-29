@@ -92,6 +92,24 @@ env-templates/.env.example                 → fill values → ~/.hermes[/profil
    regenerates runtime state and re-binds delivery `origin` on first fire. Verify
    with `hermes --profile <name> cron list`.
 
+## Framework patches (`patches/`)
+
+Local modifications to the installed Hermes framework (`~/.hermes/hermes-agent/`,
+its own git repo — **not** version-controlled here). These are **overwritten on a
+framework upgrade**, so re-apply after every `hermes` update:
+
+```bash
+cd ~/.hermes/hermes-agent
+git apply ~/Sak-Family-Agent/infra/hermes-agents/patches/reply-model-footer.patch
+systemctl --user restart 'hermes-gateway*.service'
+```
+
+- **`reply-model-footer.patch`** — appends a `🤖 <model> · <N> tok` footer to
+  every text reply, on each turn. Adds `AIAgent._reply_model_footer_enabled()`
+  (gate) in `run_agent.py` and the append in `agent/turn_finalizer.py`. Gated by
+  `display.reply_model_footer: true` (set per-profile in the configs here; default
+  off). Env override: `HERMES_REPLY_MODEL_FOOTER=0` to force off.
+
 ## Hardening notes (already baked into the configs here)
 
 - Terminal/code execution is sandboxed via **Modal** (`terminal.backend: modal`)
