@@ -1,0 +1,34 @@
+#!/bin/bash
+# Mock oh-my-product CLI wrapper for local development
+# This allows 'omp team run' and similar commands to work without the global binary
+
+COMMAND=$1
+shift
+
+if [ "$COMMAND" = "team" ]; then
+    SUBCOMMAND=$1
+    shift
+    if [ "$SUBCOMMAND" = "run" ]; then
+        echo "=> [omp] Dispatching team run with arguments: $@"
+        # We can route specific tasks here. For now, if it's 'smoke', we run doctor.
+        if [[ "$*" == *"--task smoke"* ]]; then
+            echo "=> [omp] Intercepted smoke task. Running local monorepo smoke pass..."
+            cd "$(dirname "$0")/../infra/hermes-agents" || exit 1
+            python3 doctor.py
+        else
+            echo "=> [omp] Emulating orchestrator run for tasks: $@"
+            echo "=> [omp] (Mock execution complete)"
+        fi
+    else
+        echo "=> [omp] Unknown team subcommand: $SUBCOMMAND"
+    fi
+elif [ "$COMMAND" = "doctor" ]; then
+    echo "=> [omp] Running workspace diagnostics..."
+    cd "$(dirname "$0")/../infra/hermes-agents" || exit 1
+    python3 doctor.py
+else
+    echo "Oh My Product (omp) - Local Monorepo Mock"
+    echo "Usage:"
+    echo "  omp team run --task <task>"
+    echo "  omp doctor"
+fi

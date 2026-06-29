@@ -11,7 +11,7 @@ help:
 	@echo "  make lint            - Run code linters (ruff, pylint)"
 
 # Mitigate complexity by providing a shortcut from the root to the deployment scripts
-deploy-hermes:
+deploy-hermes: compose-personas
 	@echo "Deploying Hermes agent configs..."
 	@cd infra/hermes-agents && ./deploy.py
 
