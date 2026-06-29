@@ -15,6 +15,23 @@ from .config import LIBRARY_DIR, SKILLS_DIR, gemini_extensions_dir, sakthai_home
 
 _UNCATEGORIZED = "general"
 
+#: Longest a skill ``name`` may be (matches the authoring guide's MAX_NAME_LENGTH).
+SKILL_NAME_MAX = 64
+
+#: Prefix every skill in the *shared* library carries: ``Sak-<slug>``.
+SHARED_SKILL_PREFIX = "Sak-"
+
+#: Prefix a skill authored by a specific persona carries: ``Sak<Name>-<slug>``.
+PERSONA_SKILL_PREFIXES: dict[str, str] = {
+    "sakking": "SakKing-",
+    "sakthai": "SakThai-",
+    "saksee": "SakSee-",
+    "saksit": "SakSit-",
+}
+
+#: Legacy prefix that predates the convention; stripped when retargeting a name.
+_LEGACY_SKILL_PREFIX = "sakthai-"
+
 
 class SkillParseError(ValueError):
     """Raised when a SKILL.md has missing or invalid frontmatter."""
@@ -238,3 +255,50 @@ def validate_tree(*roots: Path) -> list[tuple[Path, str]]:
             except SkillParseError as exc:
                 errors.append((skill_md, str(exc).split(": ", 1)[-1]))
     return errors
+
+
+def _all_known_prefixes() -> tuple[str, ...]:
+    """Every convention prefix (shared + per-persona) plus the legacy one."""
+    return (SHARED_SKILL_PREFIX, *PERSONA_SKILL_PREFIXES.values(), _LEGACY_SKILL_PREFIX)
+
+
+def strip_known_prefix(slug: str) -> str:
+    """Drop a single leading convention/legacy prefix from ``slug`` if present."""
+    for prefix in _all_known_prefixes():
+        if slug.startswith(prefix):
+            return slug[len(prefix) :]
+    return slug
+
+
+def target_skill_name(current: str, prefix: str) -> str:
+    """The convention-correct name for ``current`` under ``prefix`` (idempotent)."""
+    return f"{prefix}{strip_known_prefix(current)}"
+
+
+def naming_violations(root: Path, *, prefix: str) -> list[tuple[Path, str]]:
+    """Report skills under ``root`` that break the naming convention.
+
+    Each parseable ``SKILL.md`` is checked for: a ``name`` ≤ ``SKILL_NAME_MAX``
+    chars, a ``name`` that matches its leaf folder, and the required ``prefix``
+    for this layer (``Sak-`` shared, ``Sak<Name>-`` for a persona). Parse errors
+    are left to :func:`validate_tree`; this only judges *naming*.
+    """
+    violations: list[tuple[Path, str]] = []
+    if not root.is_dir():
+        return violations
+    for skill_md in sorted(root.rglob("SKILL.md")):
+        try:
+            skill = parse_skill(skill_md)
+        except SkillParseError:
+            continue
+        folder = skill_md.parent.name
+        issues: list[str] = []
+        if len(skill.name) > SKILL_NAME_MAX:
+            issues.append(f"name exceeds {SKILL_NAME_MAX} chars")
+        if not skill.name.startswith(prefix):
+            issues.append(f"missing required prefix '{prefix}'")
+        if skill.name != folder:
+            issues.append(f"name '{skill.name}' != folder '{folder}'")
+        if issues:
+            violations.append((skill_md, "; ".join(issues)))
+    return violations

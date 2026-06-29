@@ -15,6 +15,7 @@ from typing import Any
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SKILLS_DIR = REPO_ROOT / "skills"
 LIBRARY_DIR = REPO_ROOT / "library"
+PERSONAS_DIR = REPO_ROOT / "personas"
 
 # Environment variables, grouped by how the readiness check treats them.
 REQUIRED_ENV_VARS: dict[str, str] = {

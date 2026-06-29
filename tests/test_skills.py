@@ -218,3 +218,59 @@ def test_render_skills_prompt_block_success(tmp_path: Path) -> None:
         "### skill3 — Desc 3"
     )
     assert rendered == expected
+
+
+# ---------------------------------------------------------------------------
+# Naming convention: strip_known_prefix / target_skill_name / naming_violations
+# ---------------------------------------------------------------------------
+
+
+def _write_skill(folder: Path, name: str) -> Path:
+    folder.mkdir(parents=True, exist_ok=True)
+    md = folder / "SKILL.md"
+    md.write_text(f"---\nname: {name}\n---\nBody\n", encoding="utf-8")
+    return md
+
+
+def test_strip_known_prefix() -> None:
+    from sakthai.skills import strip_known_prefix
+
+    assert strip_known_prefix("Sak-foo") == "foo"
+    assert strip_known_prefix("SakThai-foo") == "foo"
+    assert strip_known_prefix("sakthai-foo") == "foo"  # legacy
+    assert strip_known_prefix("foo") == "foo"  # no prefix
+    # Only one leading prefix is stripped.
+    assert strip_known_prefix("Sak-SakThai-foo") == "SakThai-foo"
+
+
+def test_target_skill_name_is_idempotent() -> None:
+    from sakthai.skills import target_skill_name
+
+    assert target_skill_name("foo", "SakThai-") == "SakThai-foo"
+    assert target_skill_name("sakthai-foo", "SakThai-") == "SakThai-foo"  # legacy retargeted
+    assert target_skill_name("SakThai-foo", "SakThai-") == "SakThai-foo"  # already correct
+    assert target_skill_name("Sak-foo", "SakKing-") == "SakKing-foo"  # cross-layer retarget
+
+
+def test_naming_violations_flags_prefix_folder_and_length(tmp_path: Path) -> None:
+    from sakthai.skills import naming_violations
+
+    _write_skill(tmp_path / "Sak-good", "Sak-good")  # clean
+    _write_skill(tmp_path / "bad-prefix", "bad-prefix")  # missing prefix
+    _write_skill(tmp_path / "Sak-mismatch", "Sak-other")  # name != folder
+    long_name = "Sak-" + "x" * 70
+    _write_skill(tmp_path / long_name, long_name)  # too long
+
+    violations = dict(
+        (p.parent.name, reason) for p, reason in naming_violations(tmp_path, prefix="Sak-")
+    )
+    assert "Sak-good" not in violations
+    assert "missing required prefix 'Sak-'" in violations["bad-prefix"]
+    assert "!= folder" in violations["Sak-mismatch"]
+    assert "exceeds 64 chars" in violations[long_name]
+
+
+def test_naming_violations_missing_root_is_empty(tmp_path: Path) -> None:
+    from sakthai.skills import naming_violations
+
+    assert naming_violations(tmp_path / "nope", prefix="Sak-") == []
