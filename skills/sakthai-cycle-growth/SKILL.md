@@ -18,7 +18,7 @@ metadata:
 
 # sakthai-cycle-growth
 
-Stage 6 of 6 in the SakThai cycle — **Growth**. See [Growth.md](../../Growth.md)
+Stage 6 of 6 in the SakThai cycle — **Growth**. See [Growth.md](../../docs/cycle/Growth.md)
 for the full guidance and [SOUL.md](../../SOUL.md) for the charge model.
 
 ## What to do

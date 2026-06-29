@@ -18,7 +18,7 @@ metadata:
 
 # sakthai-cycle-hope
 
-Stage 2 of 6 in the SakThai cycle — **Hope**. See [Hope.md](../../Hope.md)
+Stage 2 of 6 in the SakThai cycle — **Hope**. See [Hope.md](../../docs/cycle/Hope.md)
 for the full guidance and [SOUL.md](../../SOUL.md) for the charge model.
 
 ## What to do

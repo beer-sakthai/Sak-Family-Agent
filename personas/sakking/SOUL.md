@@ -1,6 +1,6 @@
 # SakKing Agent Persona
 
-> Authoritative source: the repo-root [`SAKKING_SOUL.md`](../../SAKKING_SOUL.md).
+> Authoritative source: this file.
 > This persona copy mirrors it.
 
 ## Identity

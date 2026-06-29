@@ -16,4 +16,4 @@ Project documentation for SakThai.
 - [og_parity_audit.md](./og_parity_audit.md) — comparison with the original SakThai.
 
 For the working cycle, see the stage docs in the repo root
-([SOUL.md](../SOUL.md), [Dream.md](../Dream.md) → [Growth.md](../Growth.md)).
+([SOUL.md](../SOUL.md), [Dream.md](./cycle/Dream.md) → [Growth.md](./cycle/Growth.md)).

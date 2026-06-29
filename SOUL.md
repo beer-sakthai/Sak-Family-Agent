@@ -18,12 +18,12 @@ framework all four run on, never the name of an agent.
 | **SakSit** | `@saksit_agent_bot` | General Assistant | `stepfun/step-3.7-flash:free` (Modal sandbox) |
 
 Each agent has its own authoritative SOUL file:
-[SAKKING_SOUL.md](./SAKKING_SOUL.md) ·
-[SAKTHAI_SOUL.md](./SAKTHAI_SOUL.md) ·
-[SAKSEE_SOUL.md](./SAKSEE_SOUL.md) ·
-[SAKSIT_SOUL.md](./SAKSIT_SOUL.md)
+[SAKKING_SOUL.md](./personas/sakking/SOUL.md) ·
+[SAKTHAI_SOUL.md](./personas/sakthai/SOUL.md) ·
+[SAKSEE_SOUL.md](./personas/saksee/SOUL.md) ·
+[SAKSIT_SOUL.md](./personas/saksit/SOUL.md)
 
-The stage docs ([Dream](./Dream.md) → [Growth](./Growth.md)) each draw on and
+The stage docs ([Dream](./docs/cycle/Dream.md) → [Growth](./docs/cycle/Growth.md)) each draw on and
 spend the charge described in those files.
 
 ---

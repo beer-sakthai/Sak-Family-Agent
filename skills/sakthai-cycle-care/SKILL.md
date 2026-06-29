@@ -18,7 +18,7 @@ metadata:
 
 # sakthai-cycle-care
 
-Stage 3 of 6 in the SakThai cycle — **Care**. See [Care.md](../../Care.md)
+Stage 3 of 6 in the SakThai cycle — **Care**. See [Care.md](../../docs/cycle/Care.md)
 for the full guidance and [SOUL.md](../../SOUL.md) for the charge model.
 
 ## What to do
