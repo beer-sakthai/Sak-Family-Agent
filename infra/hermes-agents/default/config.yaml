@@ -1,7 +1,7 @@
 model:
-  default: Qwen/Qwen2.5-7B-Instruct
-  provider: huggingface
-  base_url: https://router.huggingface.co/v1
+  default: stepfun/step-3.7-flash:free
+  provider: nous
+  base_url: https://inference-api.nousresearch.com/v1
 fallback_providers: []
 toolsets:
   - hermes-cli
