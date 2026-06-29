@@ -18,7 +18,7 @@ metadata:
 
 # sakthai-cycle-joy
 
-Stage 4 of 6 in the SakThai cycle — **Joy**. See [Joy.md](../../../../docs/cycle/Joy.md)
+Stage 4 of 6 in the Sak Family cycle — **Joy**. See [Joy.md](../../../../docs/cycle/Joy.md)
 for the full guidance and [SOUL.md](../../../../SOUL.md) for the charge model.
 
 ## What to do

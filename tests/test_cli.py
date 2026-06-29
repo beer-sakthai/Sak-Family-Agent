@@ -519,12 +519,38 @@ def test_cycle_next_advances(runner: CliRunner) -> None:
     assert "HOPE" in result.output
 
 
-def test_cycle_set_valid(runner: CliRunner) -> None:
+def test_cycle_set_forward_skip_requires_force(runner: CliRunner) -> None:
+    # From the default DREAM, jumping to TRUST skips stages and is refused.
     result = runner.invoke(main, ["cycle", "set", "trust"])
+    assert result.exit_code != 0
+    assert "Refusing to skip" in result.output
+    status = runner.invoke(main, ["cycle", "status"])
+    assert "DREAM" in status.output
+
+
+def test_cycle_set_forward_skip_with_force(runner: CliRunner) -> None:
+    result = runner.invoke(main, ["cycle", "set", "trust", "--force"])
     assert result.exit_code == 0
     # State persists across invocations: a fresh status reports the new stage.
     status = runner.invoke(main, ["cycle", "status"])
     assert "TRUST" in status.output
+
+
+def test_cycle_set_one_step_forward_allowed(runner: CliRunner) -> None:
+    # DREAM -> HOPE is a single step; no --force needed.
+    result = runner.invoke(main, ["cycle", "set", "hope"])
+    assert result.exit_code == 0
+    status = runner.invoke(main, ["cycle", "status"])
+    assert "HOPE" in status.output
+
+
+def test_cycle_set_backward_allowed(runner: CliRunner) -> None:
+    runner.invoke(main, ["cycle", "set", "growth", "--force"])
+    # Going back to an earlier stage is always allowed.
+    result = runner.invoke(main, ["cycle", "set", "dream"])
+    assert result.exit_code == 0
+    status = runner.invoke(main, ["cycle", "status"])
+    assert "DREAM" in status.output
 
 
 def test_cycle_set_invalid(runner: CliRunner) -> None:
@@ -534,7 +560,7 @@ def test_cycle_set_invalid(runner: CliRunner) -> None:
 
 
 def test_cycle_list_marks_current(runner: CliRunner) -> None:
-    runner.invoke(main, ["cycle", "set", "care"])
+    runner.invoke(main, ["cycle", "set", "care", "--force"])
     result = runner.invoke(main, ["cycle", "list"])
     assert result.exit_code == 0
     assert "▶" in result.output

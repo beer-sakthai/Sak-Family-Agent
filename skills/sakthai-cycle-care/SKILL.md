@@ -18,12 +18,12 @@ metadata:
 
 # sakthai-cycle-care
 
-Stage 3 of 6 in the SakThai cycle — **Care**. See [Care.md](../../docs/cycle/Care.md)
+Stage 3 of 6 in the Sak Family cycle — **Care**. See [Care.md](../../docs/cycle/Care.md)
 for the full guidance and [SOUL.md](../../SOUL.md) for the charge model.
 
 ## What to do
 
-Quality gate: review code, run `pytest`, `ruff`, `mypy`, and `bandit`. Fix root causes, not symptoms. Record lessons with `sakthai learn --kind lesson` so future Hope stages don't repeat them.
+Quality gate: review code, run `pytest`, `ruff`, `mypy`, and `bandit`. Fix root causes, not symptoms. Record lessons with `sakthai learn --kind note --tag lesson` so future Hope stages don't repeat them.
 
 ## Then
 

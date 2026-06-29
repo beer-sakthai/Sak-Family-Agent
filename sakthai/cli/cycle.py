@@ -35,14 +35,28 @@ def cycle_next() -> None:
 
 @cycle.command("set")
 @click.argument("stage_name", metavar="STAGE")
-def cycle_set(stage_name: str) -> None:
-    """Jump to a specific STAGE (dream, hope, care, joy, trust, growth)."""
+@click.option("-f", "--force", is_flag=True, help="Allow skipping forward over stages.")
+def cycle_set(stage_name: str, force: bool) -> None:
+    """Jump to a specific STAGE (dream, hope, care, joy, trust, growth).
+
+    Going back to an earlier stage or advancing by exactly one is always
+    allowed; skipping *forward* over stages requires --force. Use
+    `sakthai cycle next` for the normal sequential flow.
+    """
     try:
         stage = Stage(stage_name.lower())
     except ValueError:
         valid = ", ".join(s.value for s in Stage)
         raise click.ClickException(f"Unknown stage '{stage_name}'. Valid: {valid}") from None
     with MemoryStore() as store:
+        current = get_current_stage(store)
+        skipped = stage_info(stage).number - stage_info(current).number - 1
+        if skipped > 0 and not force:
+            raise click.ClickException(
+                f"Refusing to skip from {current.value.upper()} to {stage.value.upper()} "
+                f"({skipped} stage(s) skipped). Use `sakthai cycle next` to advance one "
+                "stage, or pass --force to jump."
+            )
         set_stage(store, stage)
     info = stage_info(stage)
     click.echo(f"Set to Stage {info.number}/6  [{stage.value.upper()}]  {info.goal}")

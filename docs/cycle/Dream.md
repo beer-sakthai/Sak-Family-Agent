@@ -1,5 +1,5 @@
 # Dream — Vision & Expectations
-> Stage 1 of 6 · SakThai cycle · ฝัน (Fǎn)
+> Stage 1 of 6 · Sak Family cycle · ฝัน (Fǎn)
 
 > **Mantra** — *Before you build, see clearly.*
 

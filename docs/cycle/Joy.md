@@ -1,5 +1,5 @@
 # Joy — Exports & Shipping
-> Stage 4 of 6 · SakThai cycle · ปีติ (Bpìi-dtì)
+> Stage 4 of 6 · Sak Family cycle · ปีติ (Bpìi-dtì)
 
 > **Mantra** — *Cross the finish line cleanly, then teach the agent what crossing it cost.*
 

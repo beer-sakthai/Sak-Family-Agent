@@ -1,5 +1,5 @@
 # Care — Quality Refinement
-> Stage 3 of 6 · SakThai cycle · ใส่ใจ (Sài-jai)
+> Stage 3 of 6 · Sak Family cycle · ใส่ใจ (Sài-jai)
 
 > **Mantra** — *Slow down where future-you would have wanted you to slow down.*
 
@@ -32,4 +32,4 @@ Hope stages don't repeat the same mistakes.
 ## Exit criteria
 
 All signals above are green and the work reads clearly. Record any lessons:
-`sakthai learn "<lesson>" --kind lesson`. Advance: `sakthai cycle next` → **Joy**.
+`sakthai learn "<lesson>" --kind note --tag lesson`. Advance: `sakthai cycle next` → **Joy**.

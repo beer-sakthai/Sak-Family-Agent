@@ -1,5 +1,5 @@
 # Hope — Solution Engineering
-> Stage 2 of 6 · SakThai cycle · หวัง (Wǎng)
+> Stage 2 of 6 · Sak Family cycle · หวัง (Wǎng)
 
 > **Mantra** — *Turn the vision into a plan worth defending.*
 
@@ -28,7 +28,7 @@ defend it against alternatives, and begin building. A good Hope plan is
 
 ## Do
 
-- Capture each meaningful decision as a fact: `sakthai learn "<decision>" --kind decision`.
+- Capture each meaningful decision as a fact: `sakthai learn "<decision>" --kind note --tag decision`.
 - Sketch the smallest version that proves the approach.
 
 ## Exit criteria

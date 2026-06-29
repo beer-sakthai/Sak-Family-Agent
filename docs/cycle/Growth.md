@@ -1,5 +1,5 @@
 # Growth — Evolution
-> Stage 6 of 6 · SakThai cycle · เติบโต (Dtə̀əp-dtoo)
+> Stage 6 of 6 · Sak Family cycle · เติบโต (Dtə̀əp-dtoo)
 
 > **Mantra** — *The cycle ends by teaching the agent to start the next one smarter.*
 
@@ -30,7 +30,7 @@ consolidated memory and codify reusable instructions as skills.
 
 ## Do
 
-- `sakthai learn "<lesson>" --kind lesson --tag growth` — record what you learned.
+- `sakthai learn "<lesson>" --kind note --tag lesson --tag growth` — record what you learned.
 - `sakthai memory consolidate` — fold older facts into observations.
 - `sakthai skills create <name>` — codify a reusable instruction, if one emerged.
 

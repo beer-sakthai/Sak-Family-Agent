@@ -1,5 +1,5 @@
 # Trust — Safety Foundation
-> Stage 5 of 6 · SakThai cycle · เชื่อใจ (Chêua-jai)
+> Stage 5 of 6 · Sak Family cycle · เชื่อใจ (Chêua-jai)
 
 > **Mantra** — *Measure twice, cut once. Nothing that mutates user state ships without Trust.*
 
