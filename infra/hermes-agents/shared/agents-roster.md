@@ -22,7 +22,7 @@ of these four — your own name is defined in your SOUL.md.
 ## Saksee — `@saksee_bot`
 - Role: **Master of Web** — Playwright + Chrome DevTools.
 - Runtime: Hermes gateway, **saksee profile** (`HERMES_HOME=/home/sakthai/.hermes/profiles/saksee`).
-- Model: **Google Gemini Flash** — `gemini-2.5-flash`, with **Nous free fallback** on rate-limit.
+- Model: **Ollama Cloud** — `minimax-m3`, with **Nous free fallback**.
 - systemd service: `hermes-gateway-saksee.service`.
 
 ## SakThai — `@sakthai_v1_bot`
@@ -34,7 +34,7 @@ of these four — your own name is defined in your SOUL.md.
 ## SakSit — `@saksit_agent_bot`
 - Role: **Master of Social Media** — IG image/video creation via Hugging Face Spaces.
 - Runtime: Hermes gateway, **saksit profile** (`HERMES_HOME=/home/sakthai/.hermes/profiles/saksit`).
-- Model: **Google Gemini** — `gemini-2.5-flash` (chat) + HF Spaces for media, with **Nous free fallback**. Terminal in a Modal sandbox.
+- Model: **Google Gemini** — `gemini-2.5-flash-lite` (chat) + HF Spaces for media, with **Ollama `gpt-oss:120b` fallback**. Terminal in a Modal sandbox.
 - systemd service: `hermes-gateway-saksit.service`.
 
 ## How we relate
