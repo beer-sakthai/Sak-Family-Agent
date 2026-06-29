@@ -109,3 +109,7 @@ dev = [
     "pytest-asyncio>=1.4.0",
     "pytest-cov>=7.1.0",
 ]
+
+[tool.ruff.lint.extend-per-file-ignores]
+"packages/agent-self-evolution/*" = ["E402", "F401", "B904", "SIM102", "F841"]
+"personas/*" = ["F841"]

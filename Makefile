@@ -11,7 +11,7 @@ help:
 	@echo "  make lint            - Run code linters (ruff, pylint)"
 
 # Mitigate complexity by providing a shortcut from the root to the deployment scripts
-deploy-hermes: compose-personas
+deploy-hermes:
 	@echo "Deploying Hermes agent configs..."
 	@cd infra/hermes-agents && ./deploy.py
 
@@ -22,12 +22,16 @@ doctor-hermes:
 # Prevent blast radius by composing and testing all personas
 compose-personas:
 	@echo "Composing persona skill trees..."
-	@python3 scripts/compose_persona.py --all
+	@mkdir -p build/personas
+	@python3 scripts/compose_persona.py sakthai --out build/personas/sakthai
+	@python3 scripts/compose_persona.py sakking --out build/personas/sakking
+	@python3 scripts/compose_persona.py saksee --out build/personas/saksee
+	@python3 scripts/compose_persona.py saksit --out build/personas/saksit
 
 test:
 	@echo "Running tests..."
-	@pytest tests/
+	@if command -v uv >/dev/null 2>&1; then uv run pytest tests/; else pytest tests/; fi
 
 lint:
 	@echo "Running linters..."
-	@ruff check .
+	@if command -v uv >/dev/null 2>&1; then uv run ruff check .; else ruff check .; fi
