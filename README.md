@@ -274,6 +274,12 @@ sakthai cycle status|next|set|list   # the 6-stage cycle
 sakthai skills list|show|validate|create|sync-sakking
 sakthai sessions list|show|export    # inspect session logs
 sakthai dashboard                    # Streamlit view of the store
+
+# Monorepo Development Shortcuts
+make test                            # run pytest suite (via uv)
+make lint                            # run ruff linters (via uv)
+make deploy-hermes                   # deploy hermes configs and restart local services
+make compose-personas                # rebuild persona skill trees into build/
 ```
 
 ---
@@ -284,12 +290,17 @@ Mirrors `.github/workflows/ci.yml` (run before pushing; green CI is the bar for
 `main`). Coverage floor is **85%**.
 
 ```bash
-ruff check sakthai tests                 # lint
-ruff format --check sakthai tests        # format check (drop --check to apply)
-mypy sakthai                             # strict type-check
-bandit -c pyproject.toml -r sakthai      # security scan
-python -m pytest -m "not integration" -q # the 38-file hermetic suite (no network)
+make lint                                # run ruff check
+make test                                # run the 38-file hermetic suite
 ```
+
+### Pre-commit Hooks & Monorepo Workflow
+
+The repository is protected by a strict `.git/hooks/pre-commit` hook that automatically:
+1. Validates all Hermes YAML configurations via `doctor.py`.
+2. Runs `make lint` and `make test` to ensure code health before allowing any commits.
+
+A local mock of the `omp` orchestrator is available at `bin/omp` to test orchestrator commands natively within the repository without requiring global installations (e.g. `./bin/omp team run --task smoke`).
 
 A live end-to-end smoke test (CLI + MCP roundtrip, **no API cost**):
 
