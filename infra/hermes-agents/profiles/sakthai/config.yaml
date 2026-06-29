@@ -1,5 +1,5 @@
 model:
-  default: deepseek-v3.1:671b
+  default: kimi-k2.7-code
   provider: ollama-cloud
   base_url: https://ollama.com/v1
 fallback_model:

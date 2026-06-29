@@ -1,7 +1,7 @@
 model:
-  default: gemini-2.5-flash-lite
-  provider: google
-  base_url: https://generativelanguage.googleapis.com/v1beta/openai/
+  default: nemotron-3-super
+  provider: ollama-cloud
+  base_url: https://ollama.com/v1
 fallback_model:
   provider: ollama-cloud
   model: gpt-oss:120b

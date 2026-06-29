@@ -16,7 +16,7 @@ of these four — your own name is defined in your SOUL.md.
 ## SakKing (lead) — `@sakthai_agent_v2_bot`
 - Role: **Lead & Orchestrator** + **Master of Code & Self-Healing** (the "main"; owns all skills).
 - Runtime: Hermes gateway, **default profile** (`HERMES_HOME=/home/sakthai/.hermes`).
-- Model: live Telegram on **Ollama Cloud** — `qwen3-coder:480b` (Ollama `gpt-oss:120b` fallback); **Claude** (Anthropic) for heavy coding via the SakThai CLI.
+- Model: live Telegram on **OpenRouter** — `anthropic/claude-opus-4.8` (Ollama `gpt-oss:120b` fallback); **Claude** (Anthropic) for heavy coding via the SakThai CLI.
 - systemd service: `hermes-gateway.service`.
 
 ## Saksee — `@saksee_bot`
@@ -28,13 +28,13 @@ of these four — your own name is defined in your SOUL.md.
 ## SakThai — `@sakthai_v1_bot`
 - Role: **Master of Hugging Face** — Hub, Inference, HF MCP (+ GitHub, Composio).
 - Runtime: Hermes gateway, **sakthai profile** (`HERMES_HOME=/home/sakthai/.hermes/profiles/sakthai`).
-- Model: **Ollama Cloud** — `deepseek-v3.1:671b`, with **Ollama `gpt-oss:120b` fallback** (HF chat inference is credit-capped; HF mastery stays via Hub/MCP tools).
+- Model: **Ollama Cloud** — `kimi-k2.7-code`, with **Ollama `gpt-oss:120b` fallback** (HF chat inference is credit-capped; HF mastery stays via Hub/MCP tools).
 - systemd service: `hermes-gateway-sakthai.service`.
 
 ## SakSit — `@saksit_agent_bot`
 - Role: **Master of Social Media** — IG image/video creation via Hugging Face Spaces.
 - Runtime: Hermes gateway, **saksit profile** (`HERMES_HOME=/home/sakthai/.hermes/profiles/saksit`).
-- Model: **Google Gemini** — `gemini-2.5-flash-lite` (chat) + HF Spaces for media, with **Ollama `gpt-oss:120b` fallback**. Terminal in a Modal sandbox.
+- Model: **Ollama Cloud** — `nemotron-3-super` (chat) + HF Spaces for media, with **Ollama `gpt-oss:120b` fallback**. Terminal in a Modal sandbox.
 - systemd service: `hermes-gateway-saksit.service`.
 
 ## How we relate
