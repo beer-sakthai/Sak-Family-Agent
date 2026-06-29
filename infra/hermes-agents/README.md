@@ -119,8 +119,11 @@ systemctl --user restart 'hermes-gateway*.service'
 
 ## Host constraints
 
-The host is small (WSL2, ~3.6 GB RAM, no GPU) — **local LLMs are not viable**
-(Hermes' prompt needs ~33k tokens of context; even a tiny model's KV cache for
+The system runs on two primary hosts:
+1. **WSL2** (local testing) — ~3.6 GB RAM, no GPU.
+2. **sak-medium-vm** (production) — Google Cloud Engine e2-medium (Ubuntu 22.04 LTS), 4 GB RAM, no GPU.
+
+**Local LLMs are not viable** on either host (Hermes' prompt needs ~33k tokens of context; even a tiny model's KV cache for
 that exceeds available RAM). Hence cloud models (Anthropic, Google Gemini,
 Ollama Cloud). Ollama Cloud's free tier has a **weekly token cap**, which is why
 the Ollama-backed bots carry a `fallback_model`.
