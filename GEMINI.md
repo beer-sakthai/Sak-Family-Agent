@@ -4,23 +4,15 @@ Guidance for the Gemini CLI and Gemini-backed agents working in this repository.
 
 ## What this is
 
-`sakthai-agent` **v2.0**: a personal learning agent with persistent SQLite
-memory, a shared tool registry, a Claude/Gemini agent loop, and an MCP stdio
-server. It is a **clean-room rewrite** of the original `SakThai-Agent` ("OG").
-Treat the OG as a **read-only blueprint** — study it for intent, never copy its
-code or layout. The OG's Google ADK / Vertex AI cloud agent is **not** part of
-v2: there is no `app/` bundle, no cloud-sync step, and no cloud runtime here.
+`sakthai-agent` **v2.0**: A personal learning agent (persistent SQLite, shared tool registry, Claude/Gemini agent loop, MCP stdio server). 
+**Clean-room rewrite** of "OG" SakThai-Agent. OG is a **read-only blueprint** (study intent, do not copy code/layout). 
+No Google ADK/Vertex AI cloud agent, no `app/` bundle, no cloud-sync, no cloud runtime.
 
 ## Gemini runtime
 
-Gemini is a first-class provider, not a bolt-on:
-
-- `run_agent` auto-detects the provider from the model name and available
-  credentials; force it with `--provider google`.
-- Google auth uses the **Gemini CLI OAuth token** (resolved in `auth.py`); set
-  `GOOGLE_*` env vars only if you route through your own project.
-- `sakthai mcp` exposes the memory tools over MCP stdio, so the Gemini CLI can
-  share the same `~/.sakthai/memory.db` as every other runtime.
+- Auto-detects provider; force via `--provider google`.
+- Google auth uses **Gemini CLI OAuth token**.
+- `sakthai mcp` exposes memory over stdio, sharing `~/.sakthai/memory.db`.
 
 ## Getting started
 
@@ -48,13 +40,9 @@ sakthai doctor                  # report environment + memory health
 
 ## How it fits together
 
-One layered package; data flows CLI/MCP → agent loop → shared tool registry
-(`agent/tools.py`) → `MemoryStore` (the only SQLite-touching code) → SQLite at
-`~/.sakthai/memory.db`. The MCP server and the agent loop share that one tool
-registry, so a tool added once is available to both. `config.py` owns every
-path; the six-stage Dream → Growth cycle is persisted as a single fact. Full
-detail: [`docs/architecture.md`](docs/architecture.md) and
-[`docs/capabilities.md`](docs/capabilities.md).
+Data flow: CLI/MCP → agent loop → shared tool registry (`agent/tools.py`) → `MemoryStore` → SQLite (`~/.sakthai/memory.db`). 
+One shared tool registry. `config.py` owns paths. 6-stage Dream→Growth cycle is persisted as a single fact. 
+Details: [`docs/architecture.md`](docs/architecture.md), [`docs/capabilities.md`](docs/capabilities.md).
 
 ## Conventions
 
