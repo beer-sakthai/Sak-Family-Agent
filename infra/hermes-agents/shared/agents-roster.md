@@ -16,7 +16,7 @@ of these four — your own name is defined in your SOUL.md.
 ## SakKing (lead) — `@sakthai_agent_v2_bot`
 - Role: **Lead & Orchestrator** + **Master of Code & Self-Healing** (the "main"; owns all skills).
 - Runtime: Hermes gateway, **default profile** (`HERMES_HOME=/home/sakthai/.hermes`).
-- Model: **Claude** (Anthropic), with **Nous free fallback**.
+- Model: live Telegram on **Nous free** — `stepfun/step-3.7-flash:free` (HF `Qwen3-Next-80B` fallback); **Claude** (Anthropic) for heavy coding via the SakThai CLI.
 - systemd service: `hermes-gateway.service`.
 
 ## Saksee — `@saksee_bot`

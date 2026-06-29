@@ -1,7 +1,7 @@
 model:
-  default: stepfun/step-3.7-flash:free
-  provider: nous
-  base_url: https://inference-api.nousresearch.com/v1
+  default: gemini-2.5-flash
+  provider: google
+  base_url: https://generativelanguage.googleapis.com/v1beta/openai/
 fallback_model:
   provider: nous
   model: stepfun/step-3.7-flash:free
