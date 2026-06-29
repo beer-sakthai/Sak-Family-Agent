@@ -14,8 +14,8 @@ framework all four run on, never the name of an agent.
 |---|---|---|---|
 | **SakKing Agent** | `@sakthai_agent_v2_bot` | Lead & Orchestrator · Master of Code & Self-Healing (owns all skills) | live: Ollama Cloud `qwen3-coder:480b` → Nous fallback; CLI coding: Claude |
 | **SakThai** | `@sakthai_v1_bot` | Master of Hugging Face | `Qwen/Qwen3-Next-80B-A3B-Instruct` (HF) → Nous fallback |
-| **SakSee** | `@saksee_bot` | Master of Web (Playwright + Chrome DevTools) | `gemini-2.5-flash` → Nous fallback |
-| **SakSit** | `@saksit_agent_bot` | Master of Social Media (IG image/video) | `gemini-2.5-flash` + HF Spaces → Nous fallback (Modal sandbox) |
+| **SakSee** | `@saksee_bot` | Master of Web (Playwright + Chrome DevTools) | Ollama `minimax-m3` → Nous fallback |
+| **SakSit** | `@saksit_agent_bot` | Master of Social Media (IG image/video) | `gemini-2.5-flash-lite` + HF Spaces → Ollama `gpt-oss:120b` fallback (Modal sandbox) |
 
 Each agent has its own authoritative SOUL file:
 [SAKKING_SOUL.md](./personas/sakking/SOUL.md) ·
