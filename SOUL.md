@@ -12,7 +12,7 @@ framework all four run on, never the name of an agent.
 
 | Agent | Handle | Role | Model |
 |---|---|---|---|
-| **SakKing Agent** | `@sakthai_agent_v2_bot` | Lead & Orchestrator · Master of Code & Self-Healing (owns all skills) | Claude → Nous fallback |
+| **SakKing Agent** | `@sakthai_agent_v2_bot` | Lead & Orchestrator · Master of Code & Self-Healing (owns all skills) | live: `stepfun/step-3.7-flash:free` → HF fallback; CLI coding: Claude |
 | **SakThai** | `@sakthai_v1_bot` | Master of Hugging Face | `Qwen/Qwen3-Next-80B-A3B-Instruct` (HF) → Nous fallback |
 | **SakSee** | `@saksee_bot` | Master of Web (Playwright + Chrome DevTools) | `gemini-2.5-flash` → Nous fallback |
 | **SakSit** | `@saksit_agent_bot` | Master of Social Media (IG image/video) | `gemini-2.5-flash` + HF Spaces → Nous fallback (Modal sandbox) |
