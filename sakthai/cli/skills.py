@@ -162,7 +162,7 @@ def skills_create(name: str, category: str, description: str, persona: str | Non
         prefix = SHARED_SKILL_PREFIX if persona == "shared" else PERSONA_SKILL_PREFIXES[persona]
         prefix_lower = prefix.lower()
         if slug.startswith(prefix_lower):
-            slug = slug[len(prefix_lower):]
+            slug = slug[len(prefix_lower) :]
         slug = f"{prefix}{slug}"
     skill_dir = SKILLS_DIR / slug
     if skill_dir.exists():
