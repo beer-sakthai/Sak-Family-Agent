@@ -5,7 +5,7 @@
       "context_from": null,
       "created_at": "2026-06-20T15:42:52.418938+01:00",
       "deliver": "origin",
-      "enabled": true,
+      "enabled": false,
       "enabled_toolsets": [
         "web",
         "terminal",
@@ -40,7 +40,7 @@
       "context_from": null,
       "created_at": "2026-06-21T11:30:35.802468+01:00",
       "deliver": "origin",
-      "enabled": true,
+      "enabled": false,
       "enabled_toolsets": [
         "cronjob"
       ],
@@ -72,7 +72,7 @@
       "context_from": null,
       "created_at": "2026-06-21T13:28:01.815054+01:00",
       "deliver": "local",
-      "enabled": true,
+      "enabled": false,
       "enabled_toolsets": null,
       "id": "dc635b8f5081",
       "model": null,
