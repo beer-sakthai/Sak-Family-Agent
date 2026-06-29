@@ -3,9 +3,9 @@ model:
   provider: ollama-cloud
   base_url: https://ollama.com/v1
 fallback_model:
-  provider: nous
-  model: stepfun/step-3.7-flash:free
-  base_url: https://inference-api.nousresearch.com/v1
+  provider: ollama-cloud
+  model: gpt-oss:120b
+  base_url: https://ollama.com/v1
 fallback_providers: []
 toolsets:
   - hermes-cli
