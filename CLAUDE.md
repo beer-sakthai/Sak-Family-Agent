@@ -46,8 +46,7 @@ The repo also carries the **Sak Family Agents** — four personas with **SakKing
 as the **main** (Lead & Orchestrator) and **SakThai**, **SakSee**, **SakSit** as
 the family it coordinates. "Hermes" is only the framework they run on, never an
 agent's name. The authoritative per-agent identities are the repo-root
-`SOUL.md` + `SAKKING_SOUL.md` / `SAKTHAI_SOUL.md` / `SAKSEE_SOUL.md` /
-`SAKSIT_SOUL.md`; `personas/<name>/SOUL.md` and `infra/hermes-agents/` carry
+`SOUL.md` + `personas/<name>/SOUL.md`; `infra/hermes-agents/` carry
 their own (sometimes role-specialized) copies. Keep the SakKing-as-lead framing
 consistent if you touch any of them.
 
