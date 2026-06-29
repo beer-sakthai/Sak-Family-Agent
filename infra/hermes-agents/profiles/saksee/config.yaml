@@ -3,9 +3,9 @@ model:
   provider: google
   base_url: https://generativelanguage.googleapis.com/v1beta/openai/
 fallback_model:
-  provider: nous
-  model: stepfun/step-3.7-flash:free
-  base_url: https://inference-api.nousresearch.com/v1
+  provider: ollama-cloud
+  model: gpt-oss:120b
+  base_url: https://ollama.com/v1
 providers: {}
 fallback_providers: []
 credential_pool_strategies: {}
