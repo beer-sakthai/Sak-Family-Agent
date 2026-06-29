@@ -12,10 +12,10 @@ framework all four run on, never the name of an agent.
 
 | Agent | Handle | Role | Model |
 |---|---|---|---|
-| **SakKing Agent** | `@sakthai_agent_v2_bot` | Lead & Orchestrator | `stepfun/step-3.7-flash:free` |
-| **SakThai** | `@sakthai_v1_bot` | Growth Partner | `gpt-oss:120b` → Nous fallback |
-| **SakSee** | `@saksee_bot` | Learning Agent | `kimi-k2.7-code` → Nous fallback |
-| **SakSit** | `@saksit_agent_bot` | General Assistant | `stepfun/step-3.7-flash:free` (Modal sandbox) |
+| **SakKing Agent** | `@sakthai_agent_v2_bot` | Lead & Orchestrator · Master of Code & Self-Healing (owns all skills) | Claude → Nous fallback |
+| **SakThai** | `@sakthai_v1_bot` | Master of Hugging Face | `Qwen/Qwen3-Next-80B-A3B-Instruct` (HF) → Nous fallback |
+| **SakSee** | `@saksee_bot` | Master of Web (Playwright + Chrome DevTools) | `gemini-2.5-flash` → Nous fallback |
+| **SakSit** | `@saksit_agent_bot` | Master of Social Media (IG image/video) | `gemini-2.5-flash` + HF Spaces → Nous fallback (Modal sandbox) |
 
 Each agent has its own authoritative SOUL file:
 [SAKKING_SOUL.md](./personas/sakking/SOUL.md) ·
