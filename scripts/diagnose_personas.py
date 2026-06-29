@@ -142,7 +142,8 @@ def diagnose_persona(persona: str) -> None:
         else:
             check("naming convention", True)
     finally:
-        subprocess.run(["rm", "-rf", str(home)])
+        import shutil
+        shutil.rmtree(home, ignore_errors=True)
 
 
 def diagnose_improve() -> None:
