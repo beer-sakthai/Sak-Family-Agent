@@ -29,8 +29,10 @@ celebration** — until CI is green and Trust has signed off, Joy is provisional
 
 ## Do
 
-- Commit on a branch, push, and open a PR.
-- Watch CI: `gh run watch <run-id>`. Do not move on until it is green.
+- Commit on a branch, push, and open a PR (with `gh pr create`, or via the
+  PR-create URL that `git push` prints when the GitHub CLI isn't installed).
+- Watch CI until it is green — `gh run watch <run-id>` if `gh` is available,
+  otherwise open the PR's **Checks** tab. Do not move on until it is green.
 
 ## Exit criteria
 

@@ -23,7 +23,7 @@ for the full guidance and [SOUL.md](../../SOUL.md) for the charge model.
 
 ## What to do
 
-Commit on a branch, push, open a PR, and watch CI go green with `gh run watch`. Don't celebrate before CI passes and Trust signs off.
+Commit on a branch, push, and open a PR — `gh pr create` if the GitHub CLI is installed, otherwise via the PR-create URL that `git push` prints. Watch CI go green with `gh run watch` (or the PR's Checks tab if `gh` is absent). Don't celebrate before CI passes and Trust signs off.
 
 ## Then
 
