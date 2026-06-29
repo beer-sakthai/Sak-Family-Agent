@@ -690,3 +690,11 @@ mcp_servers:
     enabled: true
     timeout: 120
     connect_timeout: 30
+  chrome-devtools:
+    command: npx
+    args:
+      - "-y"
+      - "chrome-devtools-mcp"
+    enabled: true
+    timeout: 120
+    connect_timeout: 30
