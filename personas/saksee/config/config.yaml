@@ -608,9 +608,9 @@ paste_collapse_threshold_fallback: 5
 paste_collapse_char_threshold: 2000
 _config_version: 30
 fallback_model:
-  provider: nous
-  model: stepfun/step-3.7-flash:free
-  base_url: https://inference-api.nousresearch.com/v1
+  provider: ollama-cloud
+  model: gpt-oss:120b
+  base_url: https://ollama.com/v1
 session_reset:
   mode: none
   idle_minutes: 1440

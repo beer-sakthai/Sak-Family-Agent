@@ -16,19 +16,19 @@ of these four — your own name is defined in your SOUL.md.
 ## SakKing (lead) — `@sakthai_agent_v2_bot`
 - Role: **Lead & Orchestrator** + **Master of Code & Self-Healing** (the "main"; owns all skills).
 - Runtime: Hermes gateway, **default profile** (`HERMES_HOME=/home/sakthai/.hermes`).
-- Model: live Telegram on **Ollama Cloud** — `qwen3-coder:480b` (Nous free fallback); **Claude** (Anthropic) for heavy coding via the SakThai CLI.
+- Model: live Telegram on **Ollama Cloud** — `qwen3-coder:480b` (Ollama `gpt-oss:120b` fallback); **Claude** (Anthropic) for heavy coding via the SakThai CLI.
 - systemd service: `hermes-gateway.service`.
 
 ## Saksee — `@saksee_bot`
 - Role: **Master of Web** — Playwright + Chrome DevTools.
 - Runtime: Hermes gateway, **saksee profile** (`HERMES_HOME=/home/sakthai/.hermes/profiles/saksee`).
-- Model: **Ollama Cloud** — `minimax-m3`, with **Nous free fallback**.
+- Model: **Ollama Cloud** — `minimax-m3`, with **Ollama `gpt-oss:120b` fallback**.
 - systemd service: `hermes-gateway-saksee.service`.
 
 ## SakThai — `@sakthai_v1_bot`
 - Role: **Master of Hugging Face** — Hub, Inference, HF MCP (+ GitHub, Composio).
 - Runtime: Hermes gateway, **sakthai profile** (`HERMES_HOME=/home/sakthai/.hermes/profiles/sakthai`).
-- Model: **Hugging Face** — `Qwen/Qwen3-Next-80B-A3B-Instruct` (HF router), with **Nous free fallback** on rate-limit.
+- Model: **Google Gemini** — `gemini-2.5-flash`, with **Ollama `gpt-oss:120b` fallback** (HF chat inference is credit-capped; HF mastery stays via Hub/MCP tools).
 - systemd service: `hermes-gateway-sakthai.service`.
 
 ## SakSit — `@saksit_agent_bot`
