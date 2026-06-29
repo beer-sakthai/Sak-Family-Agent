@@ -335,36 +335,37 @@ def memory_consolidate_sessions(limit: int, model: str | None) -> None:
     extraction_model = model or DEFAULT_MODEL
     learned = 0
 
-    for f in pending:
-        try:
-            data = json.loads(f.read_text(encoding="utf-8"))
-        except (OSError, ValueError) as exc:
-            click.echo(f"Skipping unreadable session log {f.name}: {exc}")
-            continue
-
-        task = data.get("task", "")
-        result_text = (data.get("result") or {}).get("text", "")
-        trace = f"User: {task}\nAgent: {result_text}"
-
-        try:
-            res = run_agent(
-                _CONSOLIDATE_PROMPT.format(trace=trace),
-                model=extraction_model,
-                max_iterations=1,
-                tools=(),
-            )
-        except Exception as exc:  # noqa: BLE001 - report and continue, never abort the batch
-            click.echo(f"Error extracting from {f.name}: {exc}")
-            continue
-
-        for raw in res.text.strip().splitlines():
-            line = raw.strip().lstrip("-*+ ").strip()
-            if not line or line.lower() == "none" or line.startswith("#"):
+    with MemoryStore() as store:
+        for f in pending:
+            try:
+                data = json.loads(f.read_text(encoding="utf-8"))
+            except (OSError, ValueError) as exc:
+                click.echo(f"Skipping unreadable session log {f.name}: {exc}")
                 continue
-            learn_fact(line, kind="consolidated", tags=["consolidated"])
-            learned += 1
 
-        processed.add(f.name)
+            task = data.get("task", "")
+            result_text = (data.get("result") or {}).get("text", "")
+            trace = f"User: {task}\nAgent: {result_text}"
+
+            try:
+                res = run_agent(
+                    _CONSOLIDATE_PROMPT.format(trace=trace),
+                    model=extraction_model,
+                    max_iterations=1,
+                    tools=(),
+                )
+            except Exception as exc:  # noqa: BLE001 - report and continue, never abort the batch
+                click.echo(f"Error extracting from {f.name}: {exc}")
+                continue
+
+            for raw in res.text.strip().splitlines():
+                line = raw.strip().lstrip("-*+ ").strip()
+                if not line or line.lower() == "none" or line.startswith("#"):
+                    continue
+                store.add_fact(line, kind="consolidated", tags=["consolidated"])
+                learned += 1
+
+            processed.add(f.name)
 
     try:
         state_file.write_text(json.dumps(sorted(processed), indent=2), encoding="utf-8")
