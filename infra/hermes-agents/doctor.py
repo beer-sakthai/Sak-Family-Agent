@@ -116,7 +116,10 @@ def check_systemd_files(repo_path):
         return {"status": "PASS", "details": "All required systemd service definitions exist in the repository."}
 
 def main():
-    repo_path = "/home/beerthai/sakthai-hermes-agents"
+    # Validate the config tree this script lives in (infra/hermes-agents/),
+    # not a hardcoded external clone path. The former standalone
+    # ~/sakthai-hermes-agents repo was consolidated here and deleted.
+    repo_path = os.path.dirname(os.path.abspath(__file__))
 
     results = {}
     results["git_health"] = check_git_status(repo_path)
