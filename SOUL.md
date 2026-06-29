@@ -13,7 +13,7 @@ framework all four run on, never the name of an agent.
 | Agent | Handle | Role | Model |
 |---|---|---|---|
 | **SakKing Agent** | `@sakthai_agent_v2_bot` | Lead & Orchestrator · Master of Code & Self-Healing (owns all skills) | live: Ollama Cloud `qwen3-coder:480b` → `gpt-oss:120b` fallback; CLI coding: Claude |
-| **SakThai** | `@sakthai_v1_bot` | Master of Hugging Face (mastery via Hub/MCP tools) | `gemini-2.5-flash` → Ollama `gpt-oss:120b` fallback |
+| **SakThai** | `@sakthai_v1_bot` | Master of Hugging Face (mastery via Hub/MCP tools) | Ollama `deepseek-v3.1:671b` → `gpt-oss:120b` fallback |
 | **SakSee** | `@saksee_bot` | Master of Web (Playwright + Chrome DevTools) | Ollama `minimax-m3` → `gpt-oss:120b` fallback |
 | **SakSit** | `@saksit_agent_bot` | Master of Social Media (IG image/video) | `gemini-2.5-flash-lite` + HF Spaces → Ollama `gpt-oss:120b` fallback (Modal sandbox) |
 

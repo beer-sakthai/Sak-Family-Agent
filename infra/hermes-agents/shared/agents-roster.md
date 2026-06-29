@@ -28,7 +28,7 @@ of these four — your own name is defined in your SOUL.md.
 ## SakThai — `@sakthai_v1_bot`
 - Role: **Master of Hugging Face** — Hub, Inference, HF MCP (+ GitHub, Composio).
 - Runtime: Hermes gateway, **sakthai profile** (`HERMES_HOME=/home/sakthai/.hermes/profiles/sakthai`).
-- Model: **Google Gemini** — `gemini-2.5-flash`, with **Ollama `gpt-oss:120b` fallback** (HF chat inference is credit-capped; HF mastery stays via Hub/MCP tools).
+- Model: **Ollama Cloud** — `deepseek-v3.1:671b`, with **Ollama `gpt-oss:120b` fallback** (HF chat inference is credit-capped; HF mastery stays via Hub/MCP tools).
 - systemd service: `hermes-gateway-sakthai.service`.
 
 ## SakSit — `@saksit_agent_bot`
