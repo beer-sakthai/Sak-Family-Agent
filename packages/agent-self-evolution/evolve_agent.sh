@@ -9,8 +9,8 @@
 #   agent     profile dir (HERMES_AGENT_REPO)          github repo
 #   ------    --------------------------------------   -------------------------
 #   hermes    ~/.hermes                                beer-sakthai/hermes-skills
-#   sakthai   ~/.hermes/profiles/hermesagent           beer-sakthai/sakthai-skills
-#   saksee    ~/.hermes/profiles/sakthai               beer-sakthai/saksee-skills
+#   sakthai   ~/.hermes/profiles/sakthai               beer-sakthai/sakthai-skills
+#   saksee    ~/.hermes/profiles/saksee                beer-sakthai/saksee-skills
 #   saksit    ~/.hermes/profiles/saksit                beer-sakthai/saksit-skills
 #
 # Usage:
@@ -46,8 +46,8 @@ die() { echo "error: $*" >&2; exit 1; }
 AGENT="${1:-}"; shift || true
 case "$AGENT" in
   hermes)  PROFILE_REPO="$HOME/.hermes";                      REPO="hermes-skills";;
-  sakthai) PROFILE_REPO="$HOME/.hermes/profiles/hermesagent"; REPO="sakthai-skills";;
-  saksee)  PROFILE_REPO="$HOME/.hermes/profiles/sakthai";     REPO="saksee-skills";;
+  sakthai) PROFILE_REPO="$HOME/.hermes/profiles/sakthai";     REPO="sakthai-skills";;
+  saksee)  PROFILE_REPO="$HOME/.hermes/profiles/saksee";      REPO="saksee-skills";;
   saksit)  PROFILE_REPO="$HOME/.hermes/profiles/saksit";      REPO="saksit-skills";;
   *) echo "usage: $0 <hermes|sakthai|saksee|saksit> --skill <name> [opts]"; exit 2;;
 esac

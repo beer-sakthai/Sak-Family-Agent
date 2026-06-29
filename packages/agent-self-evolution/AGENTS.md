@@ -7,12 +7,14 @@ result to its **own** private GitHub repo (one repo per agent).
 | agent     | profile dir (`HERMES_AGENT_REPO`)        | GitHub repo                   |
 |-----------|------------------------------------------|-------------------------------|
 | `hermes`  | `~/.hermes`                              | `beer-sakthai/hermes-skills`  |
-| `sakthai` | `~/.hermes/profiles/hermesagent`        | `beer-sakthai/sakthai-skills` |
-| `saksee`  | `~/.hermes/profiles/sakthai`            | `beer-sakthai/saksee-skills`  |
+| `sakthai` | `~/.hermes/profiles/sakthai`            | `beer-sakthai/sakthai-skills` |
+| `saksee`  | `~/.hermes/profiles/saksee`             | `beer-sakthai/saksee-skills`  |
 | `saksit`  | `~/.hermes/profiles/saksit`             | `beer-sakthai/saksit-skills`  |
 
-> Profile *names* don't match identities (history) — the table above is the
-> source of truth. See `~/.hermes/shared/agents-roster.md`.
+> Profile dirs were renamed on 2026-06-21 and now **match** identities
+> (`sakthai`→SakThai, `saksee`→SakSee, `saksit`→SakSit). The lead, **SakKing**,
+> lives on the reserved `default` profile (`~/.hermes`). "Hermes" is only the
+> framework. Source of truth: `~/.hermes/shared/agents-roster.md`.
 
 ## Usage
 
