@@ -160,8 +160,10 @@ def skills_create(name: str, category: str, description: str, persona: str | Non
     slug = name.lower().replace("_", "-").replace(" ", "-")
     if persona is not None:
         prefix = SHARED_SKILL_PREFIX if persona == "shared" else PERSONA_SKILL_PREFIXES[persona]
-        if not slug.startswith(prefix):
-            slug = f"{prefix}{slug}"
+        prefix_lower = prefix.lower()
+        if slug.startswith(prefix_lower):
+            slug = slug[len(prefix_lower):]
+        slug = f"{prefix}{slug}"
     skill_dir = SKILLS_DIR / slug
     if skill_dir.exists():
         raise click.ClickException(f"skill directory '{skill_dir}' already exists")
