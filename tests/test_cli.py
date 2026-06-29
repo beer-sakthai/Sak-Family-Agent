@@ -678,6 +678,61 @@ def test_skills_create(runner: CliRunner, skill_roots: tuple[Path, Path]) -> Non
     assert "already exists" in again.output
 
 
+def test_skills_create_persona_prefixes_slug(
+    runner: CliRunner, skill_roots: tuple[Path, Path]
+) -> None:
+    """``--persona`` applies the layer prefix so the slug passes ``validate --naming``."""
+    result = runner.invoke(main, ["skills", "create", "auth helper", "--persona", "sakking"])
+    assert result.exit_code == 0
+    created = skill_roots[0] / "SakKing-auth-helper" / "SKILL.md"
+    assert created.is_file()
+    assert "name: SakKing-auth-helper" in created.read_text(encoding="utf-8")
+
+
+def test_skills_create_persona_does_not_double_prefix(
+    runner: CliRunner, skill_roots: tuple[Path, Path]
+) -> None:
+    """An already-prefixed name is stripped before re-applying, not doubled up."""
+    result = runner.invoke(main, ["skills", "create", "Sak-cleanup", "--persona", "shared"])
+    assert result.exit_code == 0
+    assert (skill_roots[0] / "Sak-cleanup" / "SKILL.md").is_file()
+    assert not (skill_roots[0] / "Sak-sak-cleanup").exists()
+
+
+@pytest.fixture
+def personas_root(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """Redirect the persona tree the ``validate --naming`` audit walks to a tmp dir."""
+    root = tmp_path / "personas"
+    root.mkdir()
+    monkeypatch.setattr(skills_mod, "PERSONAS_DIR", root)
+    return root
+
+
+def test_skills_validate_naming_ok(
+    runner: CliRunner, skill_roots: tuple[Path, Path], personas_root: Path
+) -> None:
+    """An empty persona tree has no violations and exits 0."""
+    result = runner.invoke(main, ["skills", "validate", "--naming"])
+    assert result.exit_code == 0
+    assert "follow the convention" in result.output
+
+
+def test_skills_validate_naming_flags_violations(
+    runner: CliRunner, skill_roots: tuple[Path, Path], personas_root: Path
+) -> None:
+    """A shared skill missing the ``Sak-`` prefix is reported and exits 1."""
+    bad = personas_root / "shared" / "skills" / "badskill"
+    bad.mkdir(parents=True)
+    (bad / "SKILL.md").write_text(
+        "---\nname: badskill\ndescription: no prefix\nversion: 1.0.0\n---\n\nBody.\n",
+        encoding="utf-8",
+    )
+    result = runner.invoke(main, ["skills", "validate", "--naming"])
+    assert result.exit_code == 1
+    assert "naming:" in result.output
+    assert "issue(s) found" in result.output
+
+
 def test_skills_sync_sakking_updated_and_unchanged_output(
     runner: CliRunner,
     skill_roots: tuple[Path, Path],

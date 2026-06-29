@@ -48,6 +48,10 @@ markers = [
 
 [tool.coverage.run]
 source = ["sakthai"]
+# Measure branch coverage too: line coverage alone hides untested conditional
+# paths (one side of an if/else). CI passes --cov-branch so the fail_under floor
+# below gates branches as well as lines.
+branch = true
 # app.py is Streamlit presentation glue needing a live runtime; its data logic
 # lives in dashboard/data.py (tested). A guarded smoke test covers the figure
 # builders where the `dashboard` extra is installed (tests/test_dashboard_app.py).

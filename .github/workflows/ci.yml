@@ -59,4 +59,4 @@ jobs:
         run: uv run bandit -c pyproject.toml -r sakthai
 
       - name: Tests (pytest)
-        run: uv run pytest tests/ -q -m "not integration" --cov=sakthai --cov-report=term-missing
+        run: uv run pytest tests/ -q -m "not integration" --cov=sakthai --cov-branch --cov-report=term-missing
