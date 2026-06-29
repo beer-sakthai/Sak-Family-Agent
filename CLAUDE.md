@@ -360,7 +360,7 @@ name: my-skill
 category: coding
 description: One-line summary of what this skill does
 version: "1.0"
-platforms: [claude, gemini]
+platforms: [linux, macos, windows]   # host OSes the skill supports
 tags: [python, testing]
 related_skills: [other-skill]
 ---
