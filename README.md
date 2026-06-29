@@ -5,7 +5,7 @@
 [![CI](https://github.com/beer-sakthai/sakthai-agent-v2/actions/workflows/ci.yml/badge.svg)](https://github.com/beer-sakthai/sakthai-agent-v2/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13-blue)](https://www.python.org/)
 [![Coverage](https://img.shields.io/badge/coverage-85%25%2B-brightgreen)](https://github.com/beer-sakthai/sakthai-agent-v2/actions/workflows/ci.yml)
-![License](https://img.shields.io/badge/license-All%20Rights%20Reserved-red)
+[![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
 SakThai is a **personal learning agent with persistent memory**. It gives a
 Claude, Gemini, or local (Ollama / OpenAI-compatible) model a durable SQLite
@@ -65,7 +65,7 @@ subtree`).
 - **8 built-in tools** — one registry powers both the agent loop and the MCP
   server (see [Built-in tools](#built-in-tools)).
 - **Skills catalog** — **31 curated library skills** across 11 categories plus
-  **65 user/extension skills**, injected into the system prompt on demand.
+  **69 user/extension skills**, injected into the system prompt on demand.
 - **MCP, both directions** — *serve* SakThai's tools to other agents
   (`sakthai mcp`), and *consume* external MCP servers (namespaced `<server>__tool`).
 - **SakKing integration (local, no cost)** — connect SakThai and the
@@ -217,7 +217,7 @@ gets injected into the agent's system prompt when active. SakThai ships:
 - **`library/`** — **31 curated skills** across 11 categories: `agent`,
   `automation`, `coding`, `devops`, `learning`, `llm`, `memory`, `observability`,
   `research`, `safety`, `security`.
-- **`skills/`** — **65 user/extension skills** (the `sakthai-*` set, including the
+- **`skills/`** — **69 user/extension skills** (the `sakthai-*` set, including the
   `sakthai-cycle-*` stages and skills mirrored from SakKing).
 
 ```yaml
@@ -279,6 +279,7 @@ sakthai dashboard                    # Streamlit view of the store
 make test                            # run pytest suite (via uv)
 make lint                            # run ruff linters (via uv)
 make deploy-hermes                   # deploy hermes configs and restart local services
+make doctor-hermes                   # validate hermes YAML configs
 make compose-personas                # rebuild persona skill trees into build/
 ```
 
@@ -291,7 +292,7 @@ Mirrors `.github/workflows/ci.yml` (run before pushing; green CI is the bar for
 
 ```bash
 make lint                                # run ruff check
-make test                                # run the 38-file hermetic suite
+make test                                # run the 41-file hermetic suite
 ```
 
 ### Pre-commit Hooks & Monorepo Workflow
@@ -327,8 +328,8 @@ git worktree remove ../wt-my-feature
 
 ```
 sakthai/     the package (config, auth, memory, agent, mcp, cycle, skills, dashboard, cli, ...)
-tests/       38 hermetic unit-test files (no network, no GCP)
-skills/      65 user/extension SKILL.md folders (the sakthai-* set)
+tests/       41 hermetic unit-test files (no network, no GCP)
+skills/      69 user/extension SKILL.md folders (the sakthai-* set)
 library/     31 curated skills across 11 categories
 docs/        architecture, capabilities, plugins, runtimes, integrations, replication, ...
 assets/      banner + architecture / cycle diagrams
