@@ -48,6 +48,9 @@ markers = [
 
 [tool.coverage.run]
 source = ["sakthai"]
+# Count branch coverage, not just line coverage: an untaken `else` or a
+# short-circuited boolean is a real gap even when every line executed once.
+branch = true
 # app.py is Streamlit presentation glue needing a live runtime; its data logic
 # lives in dashboard/data.py (tested). A guarded smoke test covers the figure
 # builders where the `dashboard` extra is installed (tests/test_dashboard_app.py).
@@ -56,10 +59,10 @@ omit = ["sakthai/dashboard/app.py"]
 [tool.coverage.report]
 show_missing = true
 skip_covered = false
-# Floor sits a few points below the current ~89% so it catches real
-# regressions (e.g. a whole module silently dropping to 0%) without being
-# brittle. Raise it as coverage improves.
-fail_under = 85
+# Floor sits a few points below current branch+line coverage (~98%) so it
+# catches real regressions (e.g. a whole module silently dropping to 0%, or a
+# new untested branch) without being brittle. Raise it as coverage improves.
+fail_under = 95
 
 [tool.ruff]
 line-length = 100

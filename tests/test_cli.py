@@ -705,6 +705,69 @@ def test_skills_sync_sakking_updated_and_unchanged_output(
     assert "1 unchanged" in result.output
 
 
+@pytest.fixture
+def personas_root(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[Path]:
+    """Redirect the persona tree that ``skills validate --naming`` scans."""
+    root = tmp_path / "personas"
+    (root / "shared" / "skills").mkdir(parents=True)
+    monkeypatch.setattr(skills_mod, "PERSONAS_DIR", root)
+    yield root
+
+
+def test_skills_validate_naming_ok(runner: CliRunner, personas_root: Path) -> None:
+    # A shared skill that follows the convention: folder == name == Sak-<slug>.
+    _write_skill(personas_root / "shared" / "skills", "Sak-good")
+    result = runner.invoke(main, ["skills", "validate", "--naming"])
+    assert result.exit_code == 0
+    assert "follow the convention" in result.output
+
+
+def test_skills_validate_naming_flags_violations(runner: CliRunner, personas_root: Path) -> None:
+    # Missing the required ``Sak-`` shared prefix.
+    _write_skill(personas_root / "shared" / "skills", "bad")
+    result = runner.invoke(main, ["skills", "validate", "--naming"])
+    assert result.exit_code == 1
+    assert "naming:" in result.output
+    assert "missing required prefix 'Sak-'" in result.output
+    assert "1 naming issue(s) found" in result.output
+
+
+def test_skills_validate_naming_scans_persona_overlay(
+    runner: CliRunner, personas_root: Path
+) -> None:
+    # A persona overlay must carry its own ``Sak<Name>-`` prefix.
+    _write_skill(personas_root / "sakthai" / "skills", "nope")
+    result = runner.invoke(main, ["skills", "validate", "--naming"])
+    assert result.exit_code == 1
+    assert "missing required prefix 'SakThai-'" in result.output
+
+
+def test_skills_create_persona_shared_prefix(
+    runner: CliRunner, skill_roots: tuple[Path, Path]
+) -> None:
+    result = runner.invoke(main, ["skills", "create", "My Skill", "--persona", "shared"])
+    assert result.exit_code == 0
+    assert (skill_roots[0] / "Sak-my-skill" / "SKILL.md").is_file()
+
+
+def test_skills_create_persona_named_prefix(
+    runner: CliRunner, skill_roots: tuple[Path, Path]
+) -> None:
+    result = runner.invoke(main, ["skills", "create", "My Skill", "--persona", "sakthai"])
+    assert result.exit_code == 0
+    assert (skill_roots[0] / "SakThai-my-skill" / "SKILL.md").is_file()
+
+
+def test_skills_create_persona_prefix_is_idempotent(
+    runner: CliRunner, skill_roots: tuple[Path, Path]
+) -> None:
+    # An already-prefixed name must not be double-prefixed.
+    result = runner.invoke(main, ["skills", "create", "SakThai-thing", "--persona", "sakthai"])
+    assert result.exit_code == 0
+    assert (skill_roots[0] / "SakThai-thing" / "SKILL.md").is_file()
+    assert not (skill_roots[0] / "SakThai-sakthai-thing").exists()
+
+
 # -- extensions (git monkeypatched) --------------------------------------
 
 
