@@ -118,3 +118,38 @@ def test_mcp_json_overrides_extension_on_name_clash(sakthai_home: Path) -> None:
     )
     specs = {s.name: s for s in load_server_specs()}
     assert specs["dup"].command == "config-cmd"  # mcp.json wins
+
+
+def test_persona_override_adds_servers(
+    sakthai_home: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    persona_cfg = tmp_path / "persona-mcp.json"
+    persona_cfg.write_text(
+        json.dumps({"mcpServers": {"playwright": {"command": "npx"}}}), encoding="utf-8"
+    )
+    monkeypatch.setenv("SAKTHAI_MCP_CONFIG", str(persona_cfg))
+    names = {s.name for s in load_server_specs()}
+    assert "playwright" in names
+
+
+def test_persona_override_wins_on_name_clash(
+    sakthai_home: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    (sakthai_home / "mcp.json").write_text(
+        json.dumps({"mcpServers": {"dup": {"command": "shared-cmd"}}}), encoding="utf-8"
+    )
+    persona_cfg = tmp_path / "persona-mcp.json"
+    persona_cfg.write_text(
+        json.dumps({"mcpServers": {"dup": {"command": "persona-cmd"}}}), encoding="utf-8"
+    )
+    monkeypatch.setenv("SAKTHAI_MCP_CONFIG", str(persona_cfg))
+    specs = {s.name: s for s in load_server_specs()}
+    assert specs["dup"].command == "persona-cmd"  # persona override wins over shared
+
+
+def test_persona_override_missing_file_is_ignored(
+    sakthai_home: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("SAKTHAI_MCP_CONFIG", str(tmp_path / "nope.json"))
+    # Should not raise; a missing override file is simply skipped.
+    assert load_server_specs() == []

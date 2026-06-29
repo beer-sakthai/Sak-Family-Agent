@@ -1,0 +1,26 @@
+{
+  "_comment": "SakKing — Lead & Orchestrator; owns all skills/tools. Superset of every sibling's MCP servers. Load with SAKTHAI_MCP_CONFIG=personas/sakking/config/mcp.json.",
+  "mcpServers": {
+    "playwright": {
+      "command": "npx",
+      "args": ["-y", "@playwright/mcp@latest"]
+    },
+    "chrome-devtools": {
+      "command": "npx",
+      "args": ["-y", "chrome-devtools-mcp@latest"]
+    },
+    "huggingface": {
+      "command": "npx",
+      "args": ["-y", "@huggingface/mcp-server"]
+    },
+    "hf-media": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@llmindset/mcp-hfspace",
+        "black-forest-labs/FLUX.1-schnell",
+        "Lightricks/LTX-Video"
+      ]
+    }
+  }
+}

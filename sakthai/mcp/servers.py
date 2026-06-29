@@ -14,7 +14,7 @@ import logging
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from ..config import gemini_extensions_dir, sakthai_home
+from ..config import gemini_extensions_dir, mcp_config_override, sakthai_home
 from ..extensions.install import extensions_dir
 
 logger = logging.getLogger(__name__)
@@ -73,10 +73,12 @@ def _load_manifest(path: Path) -> list[MCPServerSpec]:
 
 
 def load_server_specs() -> list[MCPServerSpec]:
-    """All configured MCP servers: installed extensions first, then mcp.json.
+    """All configured MCP servers, lowest precedence first.
 
-    Later sources override earlier ones by name, so ``~/.sakthai/mcp.json`` wins
-    over an extension that declares a server of the same name.
+    Sources, each overriding the previous by server name: gemini extensions →
+    sakthai extensions → ``~/.sakthai/mcp.json`` → the per-persona override from
+    ``SAKTHAI_MCP_CONFIG`` (highest). So a persona's ``mcp.json`` wins over the
+    shared config, which wins over an extension of the same name.
     """
     by_name: dict[str, MCPServerSpec] = {}
 
@@ -94,8 +96,16 @@ def load_server_specs() -> list[MCPServerSpec]:
             for spec in _load_manifest(manifest):
                 by_name[spec.name] = spec
 
+    # 3. Shared primary config
     config = mcp_config_path()
     if config.is_file():
         for spec in _load_manifest(config):
             by_name[spec.name] = spec
+
+    # 4. Per-persona override (SAKTHAI_MCP_CONFIG) — highest precedence
+    persona_config = mcp_config_override()
+    if persona_config is not None and persona_config.is_file():
+        for spec in _load_manifest(persona_config):
+            by_name[spec.name] = spec
+
     return list(by_name.values())

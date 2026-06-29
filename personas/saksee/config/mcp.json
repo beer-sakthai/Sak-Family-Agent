@@ -1,0 +1,13 @@
+{
+  "_comment": "SakSee — Master of Web. Load with SAKTHAI_MCP_CONFIG=personas/saksee/config/mcp.json. Tools surface namespaced as <server>__<tool>.",
+  "mcpServers": {
+    "playwright": {
+      "command": "npx",
+      "args": ["-y", "@playwright/mcp@latest"]
+    },
+    "chrome-devtools": {
+      "command": "npx",
+      "args": ["-y", "chrome-devtools-mcp@latest"]
+    }
+  }
+}
