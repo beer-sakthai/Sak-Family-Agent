@@ -1,6 +1,10 @@
 model:
-  default: stepfun/step-3.7-flash:free
+  default: gpt-oss:120b
+  provider: ollama-cloud
+  base_url: https://ollama.com/v1
+fallback_model:
   provider: nous
+  model: stepfun/step-3.7-flash:free
   base_url: https://inference-api.nousresearch.com/v1
 fallback_providers: []
 toolsets:
