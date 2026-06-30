@@ -21,10 +21,10 @@ sessions. Owner Telegram user id: `8618306046`.
 
 | Telegram handle | Bot id | Profile (dir) | Identity | Role | Model | Service |
 |---|---|---|---|---|---|---|
-| `@sakthai_agent_v2_bot` | 8602426821 | `default` | **SakKing** | Lead & Orchestrator, Master of Code & Self-Healing | `claude-opus-4-8` (Anthropic) | `hermes-gateway.service` |
-| `@sakthai_v1_bot` | 8773953106 | `profiles/sakthai` | **SakThai** | Master of Hugging Face | `kimi-k2.7-code` (Ollama Cloud) + `gpt-oss:120b` fallback | `hermes-gateway-sakthai.service` |
-| `@saksee_bot` | 8315145484 | `profiles/saksee` | **SakSee** | Master of Web | `gpt-oss:120b` (Ollama Cloud) + `deepseek-v3.1:671b` fallback | `hermes-gateway-saksee.service` |
-| `@saksit_agent_bot` | — | `profiles/saksit` | **SakSit** | Master of Social Media (IG) | `nemotron-3-super` (Ollama Cloud) + `gpt-oss:120b` fallback | `hermes-gateway-saksit.service` |
+| `@sakthai_agent_v2_bot` | 8602426821 | `default` | **SakKing** | Lead & Orchestrator, Master of Code & Self-Healing | `gpt-5.5` (OpenAI Codex OAuth) + `minimax-m3` fallback | `hermes-gateway.service` |
+| `@sakthai_v1_bot` | 8773953106 | `profiles/sakthai` | **SakThai** | Master of Hugging Face | `qwen3-coder:480b` (Ollama Cloud) + `minimax-m3` fallback | `hermes-gateway-sakthai.service` |
+| `@saksee_bot` | 8315145484 | `profiles/saksee` | **SakSee** | Master of Web | `claude-opus-4-8` (Anthropic auth) + `minimax-m3` fallback | `hermes-gateway-saksee.service` |
+| `@saksit_agent_bot` | — | `profiles/saksit` | **SakSit** | Master of Social Media (IG) | `kimi-k2.7-code` (Ollama Cloud) + `minimax-m3` fallback | `hermes-gateway-saksit.service` |
 
 > **Note:** "Hermes" is only the framework they run on — never an agent's name.
 > Each agent identifies by the name in its `SOUL.md`.
