@@ -156,6 +156,7 @@ def _redact_sensitive_data(value):
     if isinstance(value, dict):
         redacted = {}
         for k, v in value.items():
+            if isinstance(k, str) and k.lower() in SENSITIVE_OUTPUT_KEYS:
             normalized_key = k.strip().lower() if isinstance(k, str) else None
             if normalized_key in SENSITIVE_OUTPUT_KEYS:
                 redacted[k] = "[REDACTED]"
