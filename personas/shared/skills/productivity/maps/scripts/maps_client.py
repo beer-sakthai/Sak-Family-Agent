@@ -148,7 +148,25 @@ OSRM_PROFILES = {
 
 def print_json(data):
     """Print data as pretty-printed JSON to stdout."""
-    print(json.dumps(data, indent=2, ensure_ascii=False))
+    sensitive_keys = {
+        "postcode", "postal_code", "zip", "zip_code",
+        "house_number", "email", "phone", "password", "token",
+    }
+
+    def _redact(value):
+        if isinstance(value, dict):
+            redacted = {}
+            for k, v in value.items():
+                if isinstance(k, str) and k.lower() in sensitive_keys:
+                    redacted[k] = "[REDACTED]"
+                else:
+                    redacted[k] = _redact(v)
+            return redacted
+        if isinstance(value, list):
+            return [_redact(item) for item in value]
+        return value
+
+    print(json.dumps(_redact(data), indent=2, ensure_ascii=False))
 
 
 def error_exit(message, code=1):
