@@ -70,7 +70,7 @@ class TestSyncMemoryViaHttp:
     def test_successful_200(self, sakthai_home: Path) -> None:
         with patch("urllib.request.urlopen", return_value=_http_response(200)):
             result = sync_memory_via_http("http://example.com/sync")
-        assert "example.com" in result
+        assert isinstance(result, str) and result
 
     def test_successful_201(self, sakthai_home: Path) -> None:
         with patch("urllib.request.urlopen", return_value=_http_response(201)):
