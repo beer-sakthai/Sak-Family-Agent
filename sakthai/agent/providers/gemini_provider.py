@@ -93,7 +93,7 @@ def call_gemini(
                 types.FunctionDeclaration(
                     name=t.name,
                     description=t.description,
-                    parameters=_clean_schema(t.input_schema),  # type: ignore[arg-type]
+                    parameters=_clean_schema(t.input_schema),
                 )
             ]
         )

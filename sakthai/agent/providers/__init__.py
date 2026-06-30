@@ -117,9 +117,11 @@ def build_client(provider: str, client: Any | None) -> Any:
                 raise AgentError(f"Failed to initialize Google Gemini client: {exc}") from exc
 
         # Fallback to Gemini CLI OAuth token if no API key is set
-        from ...auth import load_gemini_cli_token
-        from google.oauth2.credentials import Credentials
         import subprocess
+
+        from google.oauth2.credentials import Credentials
+
+        from ...auth import load_gemini_cli_token
 
         token = load_gemini_cli_token()
         if not token:
@@ -135,7 +137,7 @@ def build_client(provider: str, client: Any | None) -> Any:
                 project = subprocess.check_output(
                     ["gcloud", "config", "get-value", "project"],
                     stderr=subprocess.DEVNULL,
-                    text=True
+                    text=True,
                 ).strip()
             except Exception:
                 project = None
@@ -147,15 +149,14 @@ def build_client(provider: str, client: Any | None) -> Any:
             )
 
         try:
-            credentials = Credentials(token=token)
+            credentials = Credentials(token=token)  # type: ignore[no-untyped-call]
             return genai.Client(
-                vertexai=True,
-                project=project,
-                location="us-central1",
-                credentials=credentials
+                vertexai=True, project=project, location="us-central1", credentials=credentials
             )
         except Exception as exc:
-            raise AgentError(f"Failed to initialize Google Gemini client with OAuth: {exc}") from exc
+            raise AgentError(
+                f"Failed to initialize Google Gemini client with OAuth: {exc}"
+            ) from exc
     if provider == "openai":
         from ...auth import resolve_openai_credentials
 
