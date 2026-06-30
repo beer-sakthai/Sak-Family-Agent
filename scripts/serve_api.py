@@ -96,6 +96,9 @@ class _Handler(SimpleHTTPRequestHandler):
         req_path = unquote(parsed.path)
         normalized = os.path.normpath(req_path).lstrip("/\\")
         rel = Path(normalized)
+        if rel.is_absolute() or rel.drive or ".." in rel.parts:
+            self.send_error(403, "Forbidden")
+            return
         safe = (WEB_DIR / rel).resolve()
         try:
             safe.relative_to(WEB_DIR)
