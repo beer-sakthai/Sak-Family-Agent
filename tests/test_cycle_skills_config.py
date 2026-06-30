@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -215,3 +217,24 @@ def test_validate_tree_corrupt_and_ignored(tmp_path: Path) -> None:
     assert len(errors) == 1
     assert errors[0][0] == bad_md
     assert "no YAML frontmatter found" in errors[0][1]
+
+
+def test_saktan_scaffold_is_composable(tmp_path: Path) -> None:
+    assert skills.PERSONA_SKILL_PREFIXES["saktan"] == "SakTan-"
+
+    out = tmp_path / "saktan-skills"
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(Path(__file__).resolve().parents[1] / "scripts" / "compose_persona.py"),
+            "saktan",
+            "--out",
+            str(out),
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert proc.returncode == 0
+    assert out.exists()
+    assert any(out.rglob("SKILL.md"))

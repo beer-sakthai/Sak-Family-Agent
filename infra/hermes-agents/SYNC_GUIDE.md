@@ -30,5 +30,6 @@ following are present here now:
 | SakSee | en-US-AriaNeural | Female |
 | SakThai | en-US-AndrewNeural | Male |
 | SakSit | en-US-ChristopherNeural | Male |
+| SakTan | en-US-GuyNeural | Male |
 
 All agents: `tts.provider: edge`
