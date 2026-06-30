@@ -51,6 +51,44 @@ def test_ollama_host_honours_env_and_strips_trailing_slash(
     assert config.ollama_host() == "http://my-ollama:1234"
 
 
+def test_mcp_config_override_default(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("SAKTHAI_MCP_CONFIG", raising=False)
+    assert config.mcp_config_override() is None
+
+
+def test_mcp_config_override_honours_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("SAKTHAI_MCP_CONFIG", "/tmp/mcp.json")
+    assert config.mcp_config_override() == Path("/tmp/mcp.json")
+
+
+def test_openai_api_base_honours_base_url_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("OPENAI_BASE_URL", "http://base-url")
+    monkeypatch.setenv("OPENAI_API_BASE", "http://api-base")
+    assert config.openai_api_base() == "http://base-url"
+
+
+def test_openai_api_base_honours_api_base_env_fallback(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("OPENAI_BASE_URL", raising=False)
+    monkeypatch.setenv("OPENAI_API_BASE", "http://api-base")
+    assert config.openai_api_base() == "http://api-base"
+
+
+def test_openai_api_base_default(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("OPENAI_BASE_URL", raising=False)
+    monkeypatch.delenv("OPENAI_API_BASE", raising=False)
+    assert config.openai_api_base() is None
+
+
+def test_gateway_base_url_honours_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("SAKTHAI_GATEWAY_URL", "http://gateway")
+    assert config.gateway_base_url() == "http://gateway"
+
+
+def test_gateway_base_url_default(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("SAKTHAI_GATEWAY_URL", raising=False)
+    assert config.gateway_base_url() is None
+
+
 def test_memory_report_counts(sakthai_home: Path) -> None:
     with MemoryStore() as store:
         store.add_fact("one")
