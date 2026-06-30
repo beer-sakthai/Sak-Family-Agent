@@ -60,7 +60,8 @@ def server_status(host: str, headers: dict) -> dict:
         if r.status == 200:
             try:
                 stats = r.json() or {}
-            except Exception:
+            except Exception as e:
+                log(f"WARN: failed to parse /system_stats JSON: {e}")
                 stats = {}
             return {"reachable": True, "url": url, "stats": stats}
         return {"reachable": False, "url": url, "http_status": r.status, "body": r.text()[:200]}
@@ -78,7 +79,8 @@ def checkpoint_status(host: str, headers: dict) -> dict:
         return {"queryable": False, "http_status": r.status, "url": url, "body": r.text()[:200]}
     try:
         models = parse_model_list(r.json())
-    except Exception:
+    except Exception as e:
+        log(f"WARN: failed to parse /models/checkpoints response: {e}")
         models = set()
     return {"queryable": True, "count": len(models), "first_few": sorted(models)[:5]}
 
@@ -146,7 +148,7 @@ def smoke_test(host: str, headers: dict, ckpt_name: str | None) -> dict:
     try:
         cancelled = runner.cancel(pid)
     except Exception as e:
-        log(f"WARN: failed to cancel smoke-test job {pid}: {e}")
+        log(f"WARN: failed to cancel smoke test job {pid}: {e}")
 
     return {
         "ran": True,
