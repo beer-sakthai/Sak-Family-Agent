@@ -449,19 +449,17 @@ class MemoryStore:
 
     def search_memory(self, query: str, limit: int = 50) -> tuple[list[Fact], list[Observation]]:
         """Substring-search both tables; returns (matching facts, observations)."""
-        # Escape LIKE wildcards with '=' so a literal % or _ in the query does
-        # not act as a wildcard.
-        escaped = query.replace("=", "==").replace("%", "=%").replace("_", "=_")
-        pattern = f"%{escaped}%"
+        # Use instr() for safe substring search without wildcards.
+        lowered_query = query.lower()
         fact_rows = self._conn.execute(
-            "SELECT * FROM facts WHERE value LIKE ? ESCAPE '=' OR key LIKE ? ESCAPE '=' "
-            "OR kind LIKE ? ESCAPE '=' ORDER BY updated_at DESC LIMIT ?",
-            (pattern, pattern, pattern, limit),
+            "SELECT * FROM facts WHERE instr(lower(value), ?) > 0 OR instr(lower(key), ?) > 0 "
+            "OR instr(lower(kind), ?) > 0 ORDER BY updated_at DESC LIMIT ?",
+            (lowered_query, lowered_query, lowered_query, limit),
         ).fetchall()
         obs_rows = self._conn.execute(
-            "SELECT * FROM observations WHERE summary LIKE ? ESCAPE '=' "
+            "SELECT * FROM observations WHERE instr(lower(summary), ?) > 0 "
             "ORDER BY weight DESC, created_at DESC LIMIT ?",
-            (pattern, limit),
+            (lowered_query, limit),
         ).fetchall()
         return (
             [_fact_from_row(r) for r in fact_rows],
