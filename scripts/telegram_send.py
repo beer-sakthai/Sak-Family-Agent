@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -49,6 +50,9 @@ def load_env_file(path: Path) -> None:
 
 def discover_chat_id(token: str) -> str | None:
     """Return the most recent private chat id that has messaged the bot."""
+    if not re.match(r"^[0-9]+:[a-zA-Z0-9_-]+$", token):
+        print(f"  invalid TELEGRAM_BOT_TOKEN format: {token}", file=sys.stderr)
+        return None
     url = f"https://api.telegram.org/bot{token}/getUpdates"
     try:
         with urllib.request.urlopen(url, timeout=10) as resp:  # nosec B310
@@ -104,6 +108,9 @@ def main(argv: list[str]) -> int:
     token = os.environ.get("TELEGRAM_BOT_TOKEN")
     if not token:
         print("TELEGRAM_BOT_TOKEN is not set (checked env and .env).", file=sys.stderr)
+        return 2
+    if not re.match(r"^[0-9]+:[a-zA-Z0-9_-]+$", token):
+        print(f"TELEGRAM_BOT_TOKEN has an invalid format: {token}", file=sys.stderr)
         return 2
 
     if not os.environ.get("TELEGRAM_CHAT_ID"):

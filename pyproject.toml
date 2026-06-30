@@ -112,6 +112,48 @@ source_paths = [
     "sakthai/agent/tools.py",
     "sakthai/agent/registry.py",
 ]
+# mutmut runs the suite from an isolated ``mutants/`` copy and drops the original
+# source from sys.path, so anything the mutated modules import at runtime must be
+# copied in too. ``source_paths`` only copies the four files above, which left
+# ``mutants/sakthai`` a partial namespace package (``from . import providers``
+# failed with "unknown location") — mutation testing could not run at all. Copy
+# the whole package so imports resolve; ``create_mutants`` still mutates only the
+# four ``source_paths`` files (it runs after the copy), so scope is unchanged.
+also_copy = [
+    "sakthai",
+]
+# mutmut's stats phase runs the whole suite once with a trampoline that resolves
+# the (relative) ``source_paths`` against the *current* working directory on every
+# call into a mutated module. Tests that ``chdir`` into a tmp dir therefore crash
+# that phase ("No such file or directory: 'sakthai'"), aborting the whole run.
+# Deselect exactly those cwd-changing tests from the mutmut run (they exercise CLI
+# setup / web-server / read_file path handling, not the mutated core logic, so the
+# survivor list is unaffected in practice). A renamed/removed node id here degrades
+# to a harmless pytest warning rather than an error.
+pytest_add_cli_args_test_selection = [
+    "--deselect=tests/test_cli.py::test_serve_dashboard_starts_and_stops_on_interrupt",
+    "--deselect=tests/test_cli.py::test_dashboard_security_handler_sets_headers",
+    "--deselect=tests/test_cli_system.py::TestSetupCommand::test_env_file_found_when_present",
+    "--deselect=tests/test_cli_system.py::TestSetupCommand::test_env_file_missing_shows_error",
+    "--deselect=tests/test_cli_system.py::TestSetupCommand::test_all_checks_passed_shows_success",
+    "--deselect=tests/test_cli_system.py::test_setup_interactive_create_env",
+    "--deselect=tests/test_cli_system.py::test_setup_interactive_set_api_key",
+    "--deselect=tests/test_cli_system.py::test_setup_interactive_empty_key_records_issue",
+    "--deselect=tests/test_cli_system.py::test_setup_no_interactive_skips_prompts",
+    "--deselect=tests/test_cli_system.py::test_setup_interactive_refuse_create_env",
+    "--deselect=tests/test_cli_system.py::test_setup_interactive_append_api_key",
+    "--deselect=tests/test_tools.py::test_read_file_within_cwd",
+    "--deselect=tests/test_tools.py::test_read_file_truncates_large_file",
+    "--deselect=tests/test_tools.py::test_read_file_missing_file_raises",
+    "--deselect=tests/test_tools.py::test_read_file_directory_is_not_a_regular_file",
+    "--deselect=tests/test_tools.py::test_read_file_oserror_on_resolve",
+    "--deselect=tests/test_tools.py::TestReadFileSymlink::test_symlink_to_outside_root_is_blocked",
+    "--deselect=tests/test_tools.py::TestReadFileSymlink::test_symlink_within_root_is_allowed",
+    "--deselect=tests/test_web_server.py::TestServeFunction::test_serve_creates_httpserver_with_correct_args",
+    "--deselect=tests/test_web_server.py::TestServeFunction::test_serve_custom_host_port",
+    "--deselect=tests/test_web_server.py::TestMainBlock::test_main_block_starts_server_and_exits_on_interrupt",
+    "--deselect=tests/test_web_server.py::TestStaticFileServe::test_serves_file_within_static_root",
+]
 
 [tool.setuptools.packages.find]
 include = ["sakthai*"]

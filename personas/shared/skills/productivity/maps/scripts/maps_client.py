@@ -146,9 +146,51 @@ OSRM_PROFILES = {
 # Output helpers
 # ---------------------------------------------------------------------------
 
+SENSITIVE_OUTPUT_KEYS = {
+    "postcode",
+}
+
+
+def _redact_sensitive_data(value):
+    """Return a copy of value with sensitive fields redacted."""
+    if isinstance(value, dict):
+        redacted = {}
+        for k, v in value.items():
+            if isinstance(k, str) and k.lower() in SENSITIVE_OUTPUT_KEYS:
+            normalized_key = k.strip().lower() if isinstance(k, str) else None
+            if normalized_key in SENSITIVE_OUTPUT_KEYS:
+                redacted[k] = "[REDACTED]"
+            else:
+                redacted[k] = _redact_sensitive_data(v)
+        return redacted
+    if isinstance(value, list):
+        return [_redact_sensitive_data(item) for item in value]
+    return value
+
+
 def print_json(data):
     """Print data as pretty-printed JSON to stdout."""
-    print(json.dumps(data, indent=2, ensure_ascii=False))
+    sensitive_keys = {
+        "postcode", "postal_code", "zip", "zip_code",
+        "house_number", "email", "phone", "password", "token",
+    }
+
+    def _redact(value):
+        if isinstance(value, dict):
+            redacted = {}
+            for k, v in value.items():
+                if isinstance(k, str) and k.lower() in sensitive_keys:
+                    redacted[k] = "[REDACTED]"
+                else:
+                    redacted[k] = _redact(v)
+            return redacted
+        if isinstance(value, list):
+            return [_redact(item) for item in value]
+        return value
+
+    print(json.dumps(_redact(data), indent=2, ensure_ascii=False))
+    sanitized = _redact_sensitive_data(data)
+    print(json.dumps(sanitized, indent=2, ensure_ascii=False))
 
 
 def error_exit(message, code=1):
@@ -179,7 +221,7 @@ def http_get(url, params=None, retries=MAX_RETRIES, silent=False):
                 raw = resp.read().decode("utf-8")
                 return json.loads(raw)
         except urllib.error.HTTPError as exc:
-            last_error = f"HTTP {exc.code}: {exc.reason} for {url}"
+            last_error = f"HTTP {exc.code}: {exc.reason} for {url.split('?', 1)[0]}"
             if exc.code in {429, 503, 502, 504}:
                 time.sleep(RETRY_DELAY * attempt)
             else:
@@ -215,7 +257,7 @@ def http_get_text(url, params=None, retries=MAX_RETRIES, silent=False):
             with urllib.request.urlopen(req, timeout=15) as resp:
                 return resp.read().decode("utf-8")
         except urllib.error.HTTPError as exc:
-            last_error = f"HTTP {exc.code}: {exc.reason} for {url}"
+            last_error = f"HTTP {exc.code}: {exc.reason} for {url.split('?', 1)[0]}"
             if exc.code in {429, 503, 502, 504}:
                 time.sleep(RETRY_DELAY * attempt)
             else:
@@ -579,7 +621,6 @@ def cmd_reverse(args):
                               or address.get("village", "")),
             "county":        address.get("county", ""),
             "state":         address.get("state", ""),
-            "postcode":      address.get("postcode", ""),
             "country":       address.get("country", ""),
             "country_code":  address.get("country_code", ""),
         },

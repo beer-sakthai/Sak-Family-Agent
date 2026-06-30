@@ -110,15 +110,52 @@ def build_client(provider: str, client: Any | None) -> Any:
         from google import genai
 
         api_key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
-        if not api_key:
+        if api_key:
+            try:
+                return genai.Client(api_key=api_key)
+            except Exception as exc:
+                raise AgentError(f"Failed to initialize Google Gemini client: {exc}") from exc
+
+        # Fallback to Gemini CLI OAuth token if no API key is set
+        from ...auth import load_gemini_cli_token
+        from google.oauth2.credentials import Credentials
+        import subprocess
+
+        token = load_gemini_cli_token()
+        if not token:
             raise AgentError(
                 "Missing credentials for Google Gemini "
-                "(GEMINI_API_KEY or GOOGLE_API_KEY must be set)."
+                "(GEMINI_API_KEY or GOOGLE_API_KEY must be set, or run `gemini auth login` to authenticate)."
             )
+
+        # Retrieve active gcloud project ID
+        project = os.environ.get("GOOGLE_CLOUD_PROJECT")
+        if not project:
+            try:
+                project = subprocess.check_output(
+                    ["gcloud", "config", "get-value", "project"],
+                    stderr=subprocess.DEVNULL,
+                    text=True
+                ).strip()
+            except Exception:
+                project = None
+
+        if not project:
+            raise AgentError(
+                "Missing GCP Project ID. Please configure GOOGLE_CLOUD_PROJECT "
+                "or set your active gcloud project with `gcloud config set project <id>`."
+            )
+
         try:
-            return genai.Client(api_key=api_key)
+            credentials = Credentials(token=token)
+            return genai.Client(
+                vertexai=True,
+                project=project,
+                location="us-central1",
+                credentials=credentials
+            )
         except Exception as exc:
-            raise AgentError(f"Failed to initialize Google Gemini client: {exc}") from exc
+            raise AgentError(f"Failed to initialize Google Gemini client with OAuth: {exc}") from exc
     if provider == "openai":
         from ...auth import resolve_openai_credentials
 

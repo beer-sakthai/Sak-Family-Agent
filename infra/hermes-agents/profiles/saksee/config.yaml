@@ -1,10 +1,10 @@
 model:
-  default: gpt-oss:120b
-  provider: ollama-cloud
-  base_url: https://ollama.com/v1
+  default: gpt-5.4-mini
+  provider: openai-codex
+  base_url: https://chatgpt.com/backend-api/codex
 fallback_model:
   provider: ollama-cloud
-  model: deepseek-v3.1:671b
+  model: gpt-oss:120b
   base_url: https://ollama.com/v1
 providers: {}
 fallback_providers: []

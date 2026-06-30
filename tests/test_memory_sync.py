@@ -10,6 +10,7 @@ import json
 import time
 from pathlib import Path
 from subprocess import CompletedProcess
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -39,7 +40,7 @@ def _cp(args: list[str], *, stdout: str = "", returncode: int = 0) -> CompletedP
     return CompletedProcess(args=args, returncode=returncode, stdout=stdout, stderr="")
 
 
-def _git_mock(*, status_output: str = " M facts.jsonl", push_returncode: int = 0):
+def _git_mock(*, status_output: str = " M facts.jsonl", push_returncode: int = 0) -> Any:
     """Return a subprocess.run side_effect that fakes all git operations."""
     push_calls: list[int] = []
 
@@ -160,7 +161,7 @@ class TestSyncMemoryViaHttp:
     def test_https_url_accepted(self, sakthai_home: Path) -> None:
         with patch("urllib.request.urlopen", return_value=_http_response(200)):
             result = sync_memory_via_http("https://secure.example.com/sync")
-        assert "secure.example.com" in result
+        assert result == "Synced to HTTP endpoint: https://secure.example.com/sync"
 
 
 # ---------------------------------------------------------------------------
@@ -249,7 +250,7 @@ class TestSyncMemoryToGit:
 # ---------------------------------------------------------------------------
 
 
-def _fact_dict(value: str) -> dict:
+def _fact_dict(value: str) -> dict[str, Any]:
     """Minimal valid fact dict matching the format produced by export_to_dict."""
     now = int(time.time())
     return {
@@ -296,9 +297,6 @@ class TestHandleGitConflictAndPush:
         import time
 
         db_path = sakthai_home / "memory.db"
-        with MemoryStore(db_path):
-            pass  # initialise schema
-
         now = int(time.time())
         obs_dict = {
             "id": 1,

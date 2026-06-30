@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shlex
 import subprocess
 import sys
@@ -232,6 +233,8 @@ def _send_telegram_message(args: dict[str, Any], store: MemoryStore) -> str:
             "Error: Telegram configuration missing. Set TELEGRAM_BOT_TOKEN and "
             "TELEGRAM_CHAT_ID in the environment."
         )
+    if not re.match(r"^[0-9]+:[a-zA-Z0-9_-]+$", token):
+        return f"Error: Invalid TELEGRAM_BOT_TOKEN format: {token}"
     url = f"https://api.telegram.org/bot{token}/sendMessage"
     payload = json.dumps({"chat_id": chat_id, "text": message}).encode("utf-8")
     request = urllib.request.Request(

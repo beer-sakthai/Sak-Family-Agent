@@ -1,12 +1,16 @@
 model:
-  default: claude-opus-4-8
-  provider: anthropic
-fallback_model:
-  provider: ollama-cloud
-  model: gpt-oss:120b
-  base_url: https://ollama.com/v1
+  default: gemini-2.5-flash-lite
+  provider: gemini
 providers: {}
-fallback_providers: []
+fallback_providers:
+  - provider: gemini
+    model: gemini-3-flash-preview
+  - provider: gemini
+    model: gemini-3.1-flash-lite
+  - provider: gemini
+    model: gemini-3.5-flash
+  - provider: gemini
+    model: gemini-2.5-flash-preview-native-audio-dialog
 credential_pool_strategies: {}
 toolsets:
   - hermes-cli
@@ -351,7 +355,7 @@ privacy:
 tts:
   provider: edge
   edge:
-    voice: en-US-AndrewNeural
+    voice: en-US-ChristopherNeural
   elevenlabs:
     voice_id: pNInz6obpgDQGcFmaJgB
     model_id: eleven_multilingual_v2
@@ -398,7 +402,7 @@ stt:
 voice:
   record_key: ctrl+b
   max_recording_seconds: 120
-  auto_tts: true
+  auto_tts: false
   beep_enabled: true
   silence_threshold: 200
   silence_duration: 3.0
@@ -430,7 +434,7 @@ delegation:
   max_concurrent_children: 3
   max_async_children: 3
   max_spawn_depth: 1
-  orchestrator_enabled: true
+  orchestrator_enabled: false
   subagent_auto_approve: false
 prefill_messages_file: ''
 goals:
@@ -645,7 +649,7 @@ mcp_servers:
     connect_timeout: 30
   zapier:
     url: ${ZAPIER_MCP_URL}
-    enabled: true
+    enabled: false
     timeout: 120
     connect_timeout: 30
   cloud-run:
@@ -659,7 +663,7 @@ mcp_servers:
     url: https://api.githubcopilot.com/mcp/
     headers:
       Authorization: Bearer ${GITHUB_TOKEN}
-    enabled: true
+    enabled: false
     timeout: 120
     connect_timeout: 30
   huggingface:
@@ -687,6 +691,6 @@ mcp_servers:
     url: https://connect.composio.dev/mcp
     headers:
       x-consumer-api-key: ${COMPOSIO_MCP_KEY}
-    enabled: true
+    enabled: false
     timeout: 120
     connect_timeout: 30

@@ -399,6 +399,45 @@ def test_run_agent_loop_recursion_guard(
         )
 
 
+def test_run_agent_failed_setup_does_not_leak_active_flag(
+    store: MemoryStore, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A run_agent call that fails during setup must not leave SAKTHAI_AGENT_ACTIVE
+    set in the process environment.
+
+    Regression: the flag used to be set before the try/finally that restores it,
+    so any exception in provider detection / client build leaked "1" globally and
+    permanently tripped the run_agent_loop recursion guard for the rest of the
+    process. Here _build_client raises before the loop body; the flag must be
+    absent afterwards and the recursion guard must not fire on a later call.
+    """
+    import os
+
+    import sakthai.agent.loop as loop_mod
+    from sakthai.agent.providers import AgentError
+    from sakthai.agent.tools import tool_by_name
+
+    monkeypatch.delenv("SAKTHAI_AGENT_ACTIVE", raising=False)
+
+    def _boom(provider: str, client: object) -> object:
+        raise AgentError("no credentials")
+
+    monkeypatch.setattr(loop_mod, "_build_client", _boom)
+
+    with pytest.raises(AgentError):
+        run_agent("do something", store=store, provider="anthropic")
+
+    assert "SAKTHAI_AGENT_ACTIVE" not in os.environ
+
+    # The leaked flag would have made this raise "Indirect recursion detected".
+    inner_client = FakeClient([_Resp("end_turn", [_Block(type="text", text="ok")])])
+    monkeypatch.setattr(loop_mod, "_build_client", lambda provider, client: inner_client)
+    run_agent_loop_tool = tool_by_name("run_agent_loop")
+    assert run_agent_loop_tool is not None
+    result = run_agent_loop_tool.handler({"task": "later task", "provider": "anthropic"}, store)
+    assert result == "ok"
+
+
 def test_run_agent_loop_pruning(store: MemoryStore, monkeypatch: pytest.MonkeyPatch) -> None:
     import sakthai.agent.loop as loop_mod
     from sakthai.agent.tools import tool_by_name
