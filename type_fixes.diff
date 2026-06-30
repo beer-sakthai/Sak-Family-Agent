@@ -1,0 +1,12 @@
+<<<<<<< SEARCH
+def _git_mock(*, status_output: str = " M facts.jsonl", push_returncode: int = 0):
+=======
+def _git_mock(
+    *, status_output: str = " M facts.jsonl", push_returncode: int = 0
+) -> Any:
+>>>>>>> REPLACE
+<<<<<<< SEARCH
+def _fact_dict(value: str) -> dict:
+=======
+def _fact_dict(value: str) -> dict[str, Any]:
+>>>>>>> REPLACE

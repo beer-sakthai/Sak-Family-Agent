@@ -1,0 +1,6 @@
+<<<<<<< SEARCH
+        assert result == "Synced to HTTP endpoint: https://secure.example.com/sync"
+        parsed = urlparse(result)
+=======
+        assert result == "Synced to HTTP endpoint: https://secure.example.com/sync"
+>>>>>>> REPLACE

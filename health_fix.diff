@@ -1,0 +1,10 @@
+<<<<<<< SEARCH
+        db_path = sakthai_home / "memory.db"
+        with MemoryStore(db_path):
+            pass  # initialise schema
+
+        now = int(time.time())
+=======
+        db_path = sakthai_home / "memory.db"
+        now = int(time.time())
+>>>>>>> REPLACE
