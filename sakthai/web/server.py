@@ -16,7 +16,7 @@ import os
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 from pathlib import Path
 from typing import Any
-from urllib.parse import urlparse
+from urllib.parse import unquote, urlparse
 
 logger = logging.getLogger(__name__)
 
@@ -113,11 +113,14 @@ class _Handler(SimpleHTTPRequestHandler):
             self._send_json(200, _ecosystem_status())
             return
 
-        # Fallback: static files from `web/`
-        relative = (Path(self.path.lstrip("/"))).resolve()
-        try:
-            relative.relative_to(_STATIC_ROOT)
-        except ValueError:
+        # Fallback: static files from the dashboard dist root. The stdlib
+        # handler serves relative to the current working directory (which
+        # `serve()` points at `_STATIC_ROOT`), so canonicalise the request the
+        # same way and confirm it stays within the static root before
+        # delegating.
+        root = os.path.realpath(str(_STATIC_ROOT))
+        candidate = os.path.realpath(unquote(parsed.path).lstrip("/"))
+        if candidate != root and not candidate.startswith(root + os.sep):
             self.send_error(403, "Forbidden")
             return
         return super().do_GET()
