@@ -11,7 +11,6 @@ import time
 from pathlib import Path
 from subprocess import CompletedProcess
 from unittest.mock import MagicMock, patch
-from urllib.parse import urlparse
 
 import pytest
 
