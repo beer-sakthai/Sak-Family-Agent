@@ -243,3 +243,13 @@ def test_skills_report_counts(
     report = config.check_env()["skills"]
     assert report["dir_exists"] is True
     assert report["skill_count"] == 2  # skill1 and skill2 are dirs
+
+
+def test_gateway_base_url_honors_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    # 1. Set
+    monkeypatch.setenv("SAKTHAI_GATEWAY_URL", "http://my-gateway")
+    assert config.gateway_base_url() == "http://my-gateway"
+
+    # 2. Unset
+    monkeypatch.delenv("SAKTHAI_GATEWAY_URL", raising=False)
+    assert config.gateway_base_url() is None
