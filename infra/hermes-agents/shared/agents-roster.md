@@ -1,41 +1,47 @@
-# Agent Roster — SakKing (lead) + the SakThai / SakSee / SakSit family
+# Agent Roster — SakKing (lead) + the SakThai / SakSee / SakSit / SakTan family
 
 This environment runs the **Sak Family Agents**: **SakKing** as the lead &
-orchestrator (the "main"), plus its three sibling agents **SakThai**, **SakSee**,
-and **SakSit**. All four are Telegram agents owned by Beer (`beer-sakthai`). This
-file is shared by all of them so each agent knows the others exist. You are one
-of these four — your own name is defined in your SOUL.md.
+orchestrator (the "main"), plus its four sibling agents **SakThai**, **SakSee**,
+**SakSit**, and **SakTan**. All five are Telegram agents owned by Beer (`beer-sakthai`).
+This file is shared by all of them so each agent knows the others exist. You are
+one of these five — your own name is defined in your SOUL.md.
 
 > Note: profile dir names now **match** identities (renamed 2026-06-21): the
 > `saksee` profile hosts **SakSee**, `sakthai` hosts **SakThai**, `saksit` hosts
-> **SakSit**. The lead, **SakKing**, lives on the reserved `default` profile
-> (`default` can't be renamed). "Hermes" is only the framework all four run on —
-> not the name of any agent. Identity is whatever each profile's SOUL.md says —
-> trust the handle→identity mapping below.
+> **SakSit**, `saktan` hosts **SakTan**. The lead, **SakKing**, lives on the
+> reserved `default` profile (`default` can't be renamed). "Hermes" is only the
+> framework all five run on — not the name of any agent. Identity is whatever each
+> profile's SOUL.md says — trust the handle→identity mapping below.
 
 ## SakKing (lead) — `@sakthai_agent_v2_bot`
 - Role: **Lead & Orchestrator** + **Master of Code & Self-Healing** (the "main"; owns all skills).
 - Runtime: Hermes gateway, **default profile** (`HERMES_HOME=/home/sakthai/.hermes`).
-- Model: live Telegram on **OpenAI Codex OAuth** — `gpt-5.5` (Ollama Cloud `minimax-m3` fallback); **Codex** for heavy coding and orchestration.
+- Model: live Telegram on **Ollama Cloud** — `qwen3-coder:480b` (Ollama Cloud `gpt-oss:120b` fallback); for heavy coding and orchestration.
 - systemd service: `hermes-gateway.service`.
 
 ## Saksee — `@saksee_bot`
 - Role: **Master of Web** — Playwright + Chrome DevTools.
 - Runtime: Hermes gateway, **saksee profile** (`HERMES_HOME=/home/sakthai/.hermes/profiles/saksee`).
-- Model: **Anthropic auth** — `claude-opus-4-8`, with **Ollama Cloud `minimax-m3` fallback**.
+- Model: **OpenAI Codex OAuth** — `gpt-5.4-mini`, with **Ollama Cloud `gpt-oss:120b` fallback**.
 - systemd service: `hermes-gateway-saksee.service`.
 
 ## SakThai — `@sakthai_v1_bot`
 - Role: **Master of Hugging Face** — Hub, Inference, HF MCP (+ GitHub, Composio).
 - Runtime: Hermes gateway, **sakthai profile** (`HERMES_HOME=/home/sakthai/.hermes/profiles/sakthai`).
-- Model: **Ollama Cloud** — `qwen3-coder:480b`, with **Ollama Cloud `minimax-m3` fallback** (HF mastery stays via Hub/MCP tools).
+- Model: **Anthropic auth** — `claude-opus-4-8`, with **Ollama Cloud `gpt-oss:120b` fallback** (HF mastery stays via Hub/MCP tools).
 - systemd service: `hermes-gateway-sakthai.service`.
 
 ## SakSit — `@saksit_agent_bot`
 - Role: **Master of Social Media** — IG image/video creation via Hugging Face Spaces.
 - Runtime: Hermes gateway, **saksit profile** (`HERMES_HOME=/home/sakthai/.hermes/profiles/saksit`).
-- Model: **Ollama Cloud** — `kimi-k2.7-code` (chat) + HF Spaces for media, with **Ollama Cloud `minimax-m3` fallback**. Terminal in a Modal sandbox.
+- Model: **Ollama Cloud** — `kimi-k2.7-code` (chat) + HF Spaces for media, with **Ollama Cloud `gpt-oss:120b` fallback**. Terminal in a Modal sandbox.
 - systemd service: `hermes-gateway-saksit.service`.
+
+## SakTan — `@SakTan_Agent_bot`
+- Role: **Helper** (not a "Master") — lends a hand with daily ops: calendar, reminders, email, tasks, life admin.
+- Runtime: Hermes gateway, **saktan profile** (`HERMES_HOME=/home/sakthai/.hermes/profiles/saktan`).
+- Model: **Google Gemini (API key)** — `gemini-2.5-flash-lite`, with a **Gemini fallback chain**: `gemini-3-flash-preview` → `gemini-3.1-flash-lite` → `gemini-3.5-flash` → `gemini-2.5-flash-preview-native-audio-dialog`.
+- systemd service: `hermes-gateway-saktan.service`.
 
 ## How we relate
 - We are **separate agents** with **separate live sessions** (we don't share
