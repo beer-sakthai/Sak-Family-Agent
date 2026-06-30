@@ -438,7 +438,7 @@ def test_memory_sync_http(runner: CliRunner, monkeypatch: pytest.MonkeyPatch) ->
     )
     result = runner.invoke(main, ["memory", "sync", "--http-url", "http://example.com/sync"])
     assert result.exit_code == 0
-    assert "example.com" in result.output
+    assert result.output.splitlines()[-1] == "Synced to HTTP endpoint: http://example.com/sync"
 
 
 def test_memory_sync_failure_exits_nonzero(
