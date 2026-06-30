@@ -32,6 +32,8 @@ _KIND_COLORS = {
     "skill": "#a855f7",
 }
 _FALLBACK_COLORS = ["#94a3b8", "#64748b", "#475569", "#334155", "#1e293b"]
+_MAX_DASHBOARD_DAYS = 365
+
 
 DEMO_EVOLUTION: dict[str, Any] = {
     "current_version": "v2.0",
@@ -113,6 +115,9 @@ def _color_for(kind: str, index: int) -> str:
 
 
 def collect_dashboard_data(db_path: Path | None = None, days: int = 30) -> dict[str, Any]:
+    # Clamp window to prevent memory exhaustion from extreme `days` values (DoS).
+    days = max(1, min(days, _MAX_DASHBOARD_DAYS))
+
     """Assemble a dashboard snapshot from the memory store, or demo data if empty."""
     try:
         from sakthai.memory.store import MemoryStore

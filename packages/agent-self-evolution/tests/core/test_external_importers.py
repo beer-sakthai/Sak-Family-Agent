@@ -1225,6 +1225,188 @@ class TestValidationIntegration:
         rf.scorer.assert_not_called()
 
 
+class TestFilterAndScore:
+    """Comprehensive tests for RelevanceFilter.filter_and_score."""
+
+    @pytest.fixture
+    def mock_dspy(self):
+        with patch("evolution.core.external_importers.dspy") as mock:
+            # Mock dspy.context for 'with dspy.context(lm=lm):'
+            mock.context.return_value.__enter__ = MagicMock(return_value=None)
+            mock.context.return_value.__exit__ = MagicMock(return_value=False)
+            yield mock
+
+    def test_empty_messages_returns_empty_list(self, mock_dspy):
+        rf = RelevanceFilter(model="test-model")
+        examples = rf.filter_and_score([], "skill", "description")
+        assert examples == []
+
+    def test_stage_0_drops_invalid_messages(self, mock_dspy):
+        rf = RelevanceFilter(model="test-model")
+        messages = [
+            {"task_input": "valid", "source": "src"},
+            {"source": "only-source"},
+            {"task_input": "only-input"},
+            {},
+        ]
+        # We need to mock _is_relevant_to_skill to return False for everything to see Stage 0 in isolation if possible,
+        # but Stage 1 follows immediately.
+        with patch("evolution.core.external_importers._is_relevant_to_skill", return_value=False):
+            # With 0 candidates from Stage 1, it will try to sample from the 1 valid message from Stage 0.
+            # We mock scorer to return relevant=False so we don't get examples but we can check calls.
+            rf.scorer = MagicMock(return_value=SimpleNamespace(scoring='{"relevant": false}'))
+            rf.filter_and_score(messages, "skill", "description")
+
+            # Scorer should only be called for the message that passed Stage 0
+            assert rf.scorer.call_count <= 1
+
+    def test_stage_1_heuristics(self, mock_dspy):
+        rf = RelevanceFilter(model="test-model")
+        messages = [
+            {"task_input": "relevant match", "source": "src"},
+            {"task_input": "irrelevant", "source": "src"},
+        ]
+
+        def mock_heuristic(text, name, desc):
+            return "relevant" in text
+
+        rf.scorer = MagicMock(return_value=SimpleNamespace(scoring='{"relevant": false}'))
+
+        with patch(
+            "evolution.core.external_importers._is_relevant_to_skill", side_effect=mock_heuristic
+        ):
+            rf.filter_and_score(messages, "skill", "description", max_examples=1)
+
+            # Should call scorer for "relevant match"
+            # It might also sample "irrelevant" if candidates < max_examples.
+            # Since max_examples=1 and we have 1 candidate, it should NOT sample.
+            assert rf.scorer.call_count == 2  # 1 heuristic + 1 sampled
+            args, kwargs = rf.scorer.call_args
+            assert rf.scorer.call_args_list[0].kwargs["user_message"] == "relevant match"
+
+    def test_sampling_logic(self, mock_dspy):
+        """If heuristics find too few, it should sample from remaining messages."""
+        rf = RelevanceFilter(model="test-model")
+        messages = [
+            {"task_input": "heuristic", "source": "src"},
+            {"task_input": "other 1", "source": "src"},
+            {"task_input": "other 2", "source": "src"},
+        ]
+
+        # Heuristic only finds "heuristic"
+        with patch(
+            "evolution.core.external_importers._is_relevant_to_skill",
+            side_effect=lambda t, n, d: t == "heuristic",
+        ):
+            rf.scorer = MagicMock(return_value=SimpleNamespace(scoring='{"relevant": false}'))
+            # max_examples = 2, heuristic found 1. Should sample 1 more.
+            rf.filter_and_score(messages, "skill", "description", max_examples=2)
+
+            assert (
+                rf.scorer.call_count == 3
+            )  # heuristic + sampled (max_examples * 2 = 4 potential sampled, capped later)
+            # Wait, the code says:
+            # candidates.extend(remaining[: max_examples * 2])
+            # if max_examples=2, it extends by 4. Total candidates = 1 + 2 (remaining) = 3.
+            # Then candidates = candidates[: max_examples * 3] = [:6]. Still 3.
+            assert rf.scorer.call_count == 3
+
+    def test_capping_logic(self, mock_dspy):
+        """Candidates are capped at max_examples * 3."""
+        rf = RelevanceFilter(model="test-model")
+        messages = [{"task_input": f"msg {i}", "source": "src"} for i in range(100)]
+
+        rf.scorer = MagicMock(return_value=SimpleNamespace(scoring='{"relevant": false}'))
+
+        # 0 heuristic matches, should sample 2 * 10 = 20 messages.
+        # Total candidates 20. Cap is 3 * 10 = 30.
+        rf.filter_and_score(messages, "skill", "description", max_examples=10)
+        assert rf.scorer.call_count == 20
+
+        # If 50 heuristic matches, max_examples=10.
+        # Candidates = 50. Cap is 30.
+        with patch("evolution.core.external_importers._is_relevant_to_skill", return_value=True):
+            rf.scorer.reset_mock()
+            rf.filter_and_score(messages, "skill", "description", max_examples=10)
+            assert rf.scorer.call_count == 30
+
+    def test_stage_2_success_and_relevance(self, mock_dspy):
+        rf = RelevanceFilter(model="test-model")
+        messages = [{"task_input": "task", "source": "src"}]
+
+        rf.scorer = MagicMock(
+            return_value=SimpleNamespace(
+                scoring='{"relevant": true, "expected_behavior": "behavior", "difficulty": "easy", "category": "cat"}'
+            )
+        )
+
+        examples = rf.filter_and_score(messages, "skill", "desc")
+        assert len(examples) == 1
+        assert examples[0].task_input == "task"
+        assert examples[0].expected_behavior == "behavior"
+
+    def test_stage_2_irrelevant_ignored(self, mock_dspy):
+        rf = RelevanceFilter(model="test-model")
+        messages = [{"task_input": "task", "source": "src"}]
+
+        rf.scorer = MagicMock(
+            return_value=SimpleNamespace(
+                scoring='{"relevant": false, "expected_behavior": "behavior"}'
+            )
+        )
+
+        examples = rf.filter_and_score(messages, "skill", "desc")
+        assert len(examples) == 0
+
+    def test_stage_2_invalid_json_handled(self, mock_dspy):
+        rf = RelevanceFilter(model="test-model")
+        messages = [{"task_input": "task", "source": "src"}]
+
+        # Scorer returns garbage
+        rf.scorer = MagicMock(return_value=SimpleNamespace(scoring="not json"))
+
+        # Should not raise, should just skip
+        examples = rf.filter_and_score(messages, "skill", "desc")
+        assert len(examples) == 0
+
+    def test_stage_2_exception_handled(self, mock_dspy):
+        rf = RelevanceFilter(model="test-model")
+        messages = [{"task_input": "task", "source": "src"}]
+
+        rf.scorer = MagicMock(side_effect=Exception("API Error"))
+
+        # Should not raise, should just skip
+        examples = rf.filter_and_score(messages, "skill", "desc")
+        assert len(examples) == 0
+
+    def test_max_examples_limit_respected(self, mock_dspy):
+        rf = RelevanceFilter(model="test-model")
+        messages = [{"task_input": f"task {i}", "source": "src"} for i in range(10)]
+
+        rf.scorer = MagicMock(
+            return_value=SimpleNamespace(
+                scoring='{"relevant": true, "expected_behavior": "behavior"}'
+            )
+        )
+
+        # Limit to 3 examples
+        examples = rf.filter_and_score(messages, "skill", "desc", max_examples=3)
+        assert len(examples) == 3
+
+    def test_input_truncation(self, mock_dspy):
+        rf = RelevanceFilter(model="test-model")
+        long_input = "a" * 2000
+        messages = [{"task_input": long_input, "source": "src", "assistant_response": long_input}]
+
+        rf.scorer = MagicMock(return_value=SimpleNamespace(scoring='{"relevant": false}'))
+
+        rf.filter_and_score(messages, "skill", "desc")
+
+        args, kwargs = rf.scorer.call_args
+        assert len(kwargs["user_message"]) == 1000
+        assert len(kwargs["assistant_response"]) == 1000
+
+
 class TestMinDatasetSizeWarning:
     """Verify MIN_DATASET_SIZE warning in build_dataset_from_external."""
 
