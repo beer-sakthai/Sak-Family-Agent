@@ -135,6 +135,7 @@ def test_unreadable_store_falls_back_to_demo(
     data = collect_dashboard_data(tmp_path / "broken.db")
     assert data["source"] == SOURCE_DEMO
 
+
 def test_collect_data_clamped_days(tmp_path: Path) -> None:
     """Ensure that extremely large 'days' values are clamped to prevent DoS."""
     db = tmp_path / "memory.db"
