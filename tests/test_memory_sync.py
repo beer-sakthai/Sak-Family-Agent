@@ -11,7 +11,6 @@ import time
 from pathlib import Path
 from subprocess import CompletedProcess
 from unittest.mock import MagicMock, patch
-from urllib.parse import urlparse
 
 import pytest
 
@@ -162,8 +161,6 @@ class TestSyncMemoryViaHttp:
         with patch("urllib.request.urlopen", return_value=_http_response(200)):
             result = sync_memory_via_http("https://secure.example.com/sync")
         assert result == "Synced to HTTP endpoint: https://secure.example.com/sync"
-        parsed = urlparse(result)
-        assert parsed.hostname == "secure.example.com"
 
 
 # ---------------------------------------------------------------------------
