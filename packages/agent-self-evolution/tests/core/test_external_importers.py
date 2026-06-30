@@ -20,6 +20,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from click.testing import CliRunner
+from typing import Any, Generator
 from evolution.core.dataset_builder import EvalExample
 from evolution.core.external_importers import (
     MIN_DATASET_SIZE,
@@ -653,7 +654,7 @@ class TestRelevanceFilter:
     """Test RelevanceFilter with mocked LLM calls."""
 
     @pytest.fixture
-    def mock_dspy(self):
+    def mock_dspy(self) -> Generator[MagicMock, None, None]:
         """Mock dspy.LM and dspy.context to avoid real LLM calls."""
         with patch("evolution.core.external_importers.dspy") as mock:
             # Make dspy.context a no-op context manager
@@ -1140,7 +1141,7 @@ class TestValidationIntegration:
     """Verify validation is wired correctly into RelevanceFilter."""
 
     @pytest.fixture
-    def mock_dspy(self):
+    def mock_dspy(self) -> Generator[MagicMock, None, None]:
         with patch("evolution.core.external_importers.dspy") as mock:
             mock.context.return_value.__enter__ = MagicMock(return_value=None)
             mock.context.return_value.__exit__ = MagicMock(return_value=False)
