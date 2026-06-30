@@ -1,0 +1,3 @@
+## 2025-05-14 - [Accessibility & Environment Constraints]
+**Learning:** Even when the frontend build environment is broken (e.g., PostCSS/Tailwind version mismatch), critical accessibility improvements like ARIA labels and focus indicators should still be implemented in the source JSX. These "invisible" UX improvements are vital for screen reader users and keyboard navigation, even if visual verification is partially blocked by tooling issues.
+**Action:** Always prioritize semantic HTML and ARIA attributes in JSX, and verify them through static code analysis or structural inspection when live previews are unavailable.

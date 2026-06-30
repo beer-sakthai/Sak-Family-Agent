@@ -42,8 +42,8 @@ def _columns(path: Path, table: str) -> set[str]:
 
 def test_fresh_db_migrates_to_latest(tmp_path: Path) -> None:
     db = tmp_path / "memory.db"
-    with MemoryStore(db):
-        pass
+    with MemoryStore(db) as s:
+        assert s.healthcheck() == "ok"
     assert _schema_version(db) == 3
     assert "tags" in _columns(db, "facts")
     assert "confidence" in _columns(db, "observations")
