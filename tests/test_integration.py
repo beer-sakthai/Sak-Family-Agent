@@ -34,6 +34,85 @@ def test_anthropic_live_smoke(tmp_path: Path) -> None:
     assert result.text.strip()
 
 
+@pytest.mark.skipif(
+    not (os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")),
+    reason="GEMINI_API_KEY / GOOGLE_API_KEY not set",
+)
+def test_gemini_live_smoke(tmp_path: Path) -> None:
+    try:
+        from google import genai  # noqa: F401
+    except Exception as exc:  # pragma: no cover - depends on native libs
+        pytest.skip(f"google-genai not importable: {exc}")
+
+    model = os.environ.get("SAKTHAI_GEMINI_MODEL", "gemini-2.0-flash")
+    store = MemoryStore(tmp_path / "memory.db")
+    try:
+        try:
+            result = run_agent(
+                "Reply with exactly the single word: pong",
+                store=store,
+                provider="google",
+                model=model,
+                max_iterations=2,
+            )
+        except Exception as exc:
+            pytest.skip(f"Gemini execution failed (e.g. model unavailable or quota): {exc}")
+    finally:
+        store.close()
+    assert result.text.strip()
+
+
+@pytest.mark.skipif(
+    not os.environ.get("SAKTHAI_GATEWAY_URL"),
+    reason="SAKTHAI_GATEWAY_URL not set",
+)
+def test_gateway_live_smoke(tmp_path: Path) -> None:
+    # The gateway provider is OpenAI-compatible; the model name is whatever the
+    # configured gateway routes (e.g. an OpenRouter/LiteLLM slug). Callers point
+    # SAKTHAI_GATEWAY_MODEL at a model their gateway actually serves.
+    model = os.environ.get("SAKTHAI_GATEWAY_MODEL", "gateway")
+    store = MemoryStore(tmp_path / "memory.db")
+    try:
+        try:
+            result = run_agent(
+                "Reply with exactly the single word: pong",
+                store=store,
+                provider="gateway",
+                model=model,
+                max_iterations=2,
+            )
+        except Exception as exc:
+            pytest.skip(f"Gateway execution failed (e.g. bad route or auth): {exc}")
+    finally:
+        store.close()
+    assert result.text.strip()
+
+
+@pytest.mark.skipif(
+    not (os.environ.get("OPENAI_API_BASE") or os.environ.get("OPENAI_BASE_URL")),
+    reason="OPENAI_API_BASE / OPENAI_BASE_URL not set",
+)
+def test_openai_compat_live_smoke(tmp_path: Path) -> None:
+    # Exercises the OpenAI-compatible HTTP path against any self-hosted or
+    # third-party endpoint the operator points OPENAI_API_BASE at.
+    model = os.environ.get("SAKTHAI_OPENAI_MODEL", "gpt-4o-mini")
+    store = MemoryStore(tmp_path / "memory.db")
+    try:
+        try:
+            result = run_agent(
+                "Reply with exactly the single word: pong",
+                store=store,
+                provider="openai",
+                model=model,
+                max_iterations=2,
+            )
+        except Exception as exc:
+            pytest.skip(f"OpenAI-compatible execution failed: {exc}")
+    finally:
+        store.close()
+    assert result.text.strip()
+
+
 @pytest.mark.skipif(not os.environ.get("OLLAMA_HOST"), reason="OLLAMA_HOST not set")
 def test_ollama_live_smoke(tmp_path: Path) -> None:
     import httpx

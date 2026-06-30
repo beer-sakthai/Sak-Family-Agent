@@ -13,6 +13,7 @@ this targets Linux, like the rest of the project.)
 
 from __future__ import annotations
 
+import codecs
 import contextlib
 import json
 import logging
@@ -73,6 +74,14 @@ class StdioMCPClient:
         self._proc: subprocess.Popen[str] | None = None
         self._id = 0
         self._remote_tools: list[dict[str, Any]] = []
+        # Line buffer for _readline. select() only reports bytes still in the OS
+        # pipe, so we must never let a buffered reader pull *ahead* of select or
+        # lines already drained from the pipe get stranded (the client would then
+        # block on select until timeout). We do our own raw reads + line split and
+        # keep the remainder here. An incremental decoder handles multi-byte UTF-8
+        # sequences split across raw reads.
+        self._read_buf = ""
+        self._decoder = codecs.getincrementaldecoder("utf-8")("replace")
 
     # -- lifecycle --------------------------------------------------------
 
@@ -235,8 +244,23 @@ class StdioMCPClient:
         proc = self._proc
         if proc is None or proc.stdout is None:
             raise MCPClientError(f"{self.name}: server is not running")
-        ready, _, _ = select.select([proc.stdout], [], [], self._timeout)
-        if not ready:
-            raise MCPClientError(f"{self.name}: timed out after {self._timeout}s waiting for reply")
-        line = proc.stdout.readline()
-        return None if line == "" else line
+        # Serve a complete line straight from our buffer first: a previous raw
+        # read may have pulled several lines (e.g. a burst of notifications)
+        # off the pipe at once, and select() would not see them.
+        while "\n" not in self._read_buf:
+            ready, _, _ = select.select([proc.stdout], [], [], self._timeout)
+            if not ready:
+                raise MCPClientError(
+                    f"{self.name}: timed out after {self._timeout}s waiting for reply"
+                )
+            chunk = os.read(proc.stdout.fileno(), 65536)
+            if chunk == b"":
+                # EOF: flush any decoder state and return a trailing partial line.
+                self._read_buf += self._decoder.decode(b"", final=True)
+                if self._read_buf:
+                    line, self._read_buf = self._read_buf, ""
+                    return line
+                return None
+            self._read_buf += self._decoder.decode(chunk)
+        line, _, self._read_buf = self._read_buf.partition("\n")
+        return line + "\n"

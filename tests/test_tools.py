@@ -15,6 +15,7 @@ import sakthai.agent.tools as _tools_mod
 from sakthai.agent.tools import (
     BUILTIN_TOOLS,
     _allowed_read_roots,
+    _coerce_limit,
     _path_under_any_root,
     tool_by_name,
 )
@@ -779,3 +780,75 @@ def test_path_under_any_root_oserror_on_real_path(monkeypatch: pytest.MonkeyPatc
 
     monkeypatch.setattr(Path, "is_relative_to", _raise_oserror)
     assert _path_under_any_root(Path("/some/path"), [Path("/root")]) is False
+
+
+# -- behaviour assertions that close mutation-testing gaps ----------------
+# The following pin exact behaviour that mutation testing (mutmut) found
+# unasserted: surviving mutants in _coerce_limit, _read_file, and _run_command
+# that line coverage alone did not catch. Each test would fail if its named
+# behaviour were silently changed.
+
+
+def test_coerce_limit_clamps_to_floor_of_one() -> None:
+    # A negative request must clamp to 1, not pass through and not floor at 2.
+    assert _coerce_limit("-5", 20) == 1
+    assert _coerce_limit(-1, 20) == 1
+    # Falsy input falls back to the default (0 is falsy → default, not int(0)).
+    assert _coerce_limit(0, 20) == 20
+    assert _coerce_limit(None, 50) == 50
+    # Over-cap requests clamp to the max.
+    assert _coerce_limit(10_000, 20) == 200
+
+
+def test_read_file_outside_roots_message_names_allow_var(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # A blocked read must explain *why* and name the escape hatch, not raise a
+    # bare PermissionError. (No chdir, so this test participates in mutmut.)
+    monkeypatch.delenv("SAKTHAI_READ_ALLOW", raising=False)
+    secret = tmp_path / "outside.txt"
+    secret.write_text("top secret", encoding="utf-8")
+    with pytest.raises(PermissionError, match="outside the allowed roots"):
+        tool_by_name("read_file").handler({"path": str(secret)}, MemoryStore(":memory:"))
+    with pytest.raises(PermissionError, match="SAKTHAI_READ_ALLOW"):
+        tool_by_name("read_file").handler({"path": str(secret)}, MemoryStore(":memory:"))
+
+
+def test_read_file_decodes_invalid_utf8_with_replacement(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # errors="replace" must let undecodable bytes through as U+FFFD rather than
+    # raising UnicodeDecodeError (errors=None/"strict" would blow up).
+    monkeypatch.setenv("SAKTHAI_READ_ALLOW", str(tmp_path))
+    f = tmp_path / "bad.bin"
+    f.write_bytes(b"good\xff\xfetail")
+    out = tool_by_name("read_file").handler({"path": str(f)}, MemoryStore(":memory:"))
+    assert "good" in out and "tail" in out
+    assert "�" in out  # replacement character, not an exception
+
+
+def test_run_command_disabled_message_is_explicit(
+    monkeypatch: pytest.MonkeyPatch, store: MemoryStore
+) -> None:
+    monkeypatch.delenv("SAKTHAI_SHELL_ALLOW", raising=False)
+    with pytest.raises(PermissionError, match="Shell execution is disabled"):
+        tool_by_name("run_command").handler({"command": "echo hi"}, store)
+
+
+def test_run_command_stderr_separator_when_stdout_present(
+    monkeypatch: pytest.MonkeyPatch, store: MemoryStore
+) -> None:
+    # When stdout is non-empty, stderr must be joined with a leading newline and
+    # the lowercase "[stderr]" marker (the empty-stdout branch is covered
+    # elsewhere; this pins the with-stdout branch).
+    monkeypatch.setenv("SAKTHAI_SHELL_ALLOW", "1")
+
+    class _FakeProc:
+        returncode = 2
+        stdout = "out-line"
+        stderr = "err-line"
+
+    monkeypatch.setattr(subprocess, "run", lambda *a, **kw: _FakeProc())
+    out = tool_by_name("run_command").handler({"command": "whatever"}, store)
+    assert "out-line\n[stderr]\nerr-line" in out
+    assert "[exit 2]" in out

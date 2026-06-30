@@ -245,9 +245,6 @@ def run_agent(
 
     import os
 
-    old_active = os.environ.get("SAKTHAI_AGENT_ACTIVE")
-    os.environ["SAKTHAI_AGENT_ACTIVE"] = "1"
-
     provider = provider or _detect_provider(client, model)
     if provider == "ollama":
         provider = "openai"
@@ -287,6 +284,13 @@ def run_agent(
     deadline = time.monotonic() + max_seconds if max_seconds is not None else None
 
     usage_tracker = UsageTracker()
+    # Mark the loop active only once setup has succeeded, and inside the try whose
+    # finally restores it. Setting it earlier leaked "1" into the process
+    # environment whenever setup raised (bad provider, missing credentials,
+    # client build failure), permanently tripping the run_agent_loop recursion
+    # guard for the rest of the process.
+    old_active = os.environ.get("SAKTHAI_AGENT_ACTIVE")
+    os.environ["SAKTHAI_AGENT_ACTIVE"] = "1"
     try:
         for iteration in range(1, max_iterations + 1):
             if deadline is not None and time.monotonic() >= deadline:
