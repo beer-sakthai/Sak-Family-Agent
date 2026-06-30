@@ -12,7 +12,6 @@ from pathlib import Path
 from subprocess import CompletedProcess
 from typing import Any
 from unittest.mock import MagicMock, patch
-from urllib.parse import urlparse
 
 import pytest
 
@@ -140,7 +139,7 @@ class TestSyncMemoryViaHttp:
         assert "facts" in payload
         assert any("test sync fact" in f.get("value", "") for f in payload["facts"])
 
-    def test_content_type_is_json(self, sakthai_home: Path) -> None:
+    def test_content_type_header_is_json(self, sakthai_home: Path) -> None:
         captured: list[MagicMock] = []
 
         def _fake_open(req: MagicMock) -> MagicMock:
@@ -163,11 +162,6 @@ class TestSyncMemoryViaHttp:
         with patch("urllib.request.urlopen", return_value=_http_response(200)):
             result = sync_memory_via_http("https://secure.example.com/sync")
         assert result == "Synced to HTTP endpoint: https://secure.example.com/sync"
-        # Parse the URL part of the message
-        url = result.split(": ", 1)[1]
-        parsed = urlparse(url)
-        parsed = urlparse(result.split(": ")[1])
-        assert parsed.hostname == "secure.example.com"
 
 
 # ---------------------------------------------------------------------------
@@ -303,9 +297,6 @@ class TestHandleGitConflictAndPush:
         import time
 
         db_path = sakthai_home / "memory.db"
-        with MemoryStore(db_path):
-            pass  # initialise schema
-
         now = int(time.time())
         obs_dict = {
             "id": 1,

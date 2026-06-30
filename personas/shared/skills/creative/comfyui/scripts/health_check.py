@@ -26,15 +26,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _common import (  # noqa: E402
-    DEFAULT_LOCAL_HOST,
-    ENV_API_KEY,
-    emit_json,
-    http_get,
-    log,
-    parse_model_list,
-    resolve_api_key,
-    resolve_url,
-    unwrap_workflow,
+    DEFAULT_LOCAL_HOST, ENV_API_KEY, emit_json, http_get, parse_model_list,
+    resolve_api_key, resolve_url, unwrap_workflow,
 )
 
 
@@ -42,11 +35,8 @@ def comfy_cli_status() -> dict:
     if shutil.which("comfy"):
         return {"available": True, "method": "comfy", "path": shutil.which("comfy")}
     if shutil.which("uvx"):
-        return {
-            "available": True,
-            "method": "uvx",
-            "hint": "Invoke as `uvx --from comfy-cli comfy ...`",
-        }
+        return {"available": True, "method": "uvx",
+                "hint": "Invoke as `uvx --from comfy-cli comfy ...`"}
     return {
         "available": False,
         "hint": "Install with: pipx install comfy-cli (or `pip install comfy-cli`)",
@@ -60,8 +50,7 @@ def server_status(host: str, headers: dict) -> dict:
         if r.status == 200:
             try:
                 stats = r.json() or {}
-            except Exception as e:
-                log(f"WARN: failed to parse /system_stats JSON: {e}")
+            except Exception:
                 stats = {}
             return {"reachable": True, "url": url, "stats": stats}
         return {"reachable": False, "url": url, "http_status": r.status, "body": r.text()[:200]}
@@ -79,10 +68,10 @@ def checkpoint_status(host: str, headers: dict) -> dict:
         return {"queryable": False, "http_status": r.status, "url": url, "body": r.text()[:200]}
     try:
         models = parse_model_list(r.json())
-    except Exception as e:
-        log(f"WARN: failed to parse /models/checkpoints response: {e}")
+    except Exception:
         models = set()
-    return {"queryable": True, "count": len(models), "first_few": sorted(models)[:5]}
+    return {"queryable": True, "count": len(models),
+            "first_few": sorted(models)[:5]}
 
 
 SMOKE_WORKFLOW = {
@@ -92,26 +81,22 @@ SMOKE_WORKFLOW = {
     "3": {
         "class_type": "KSampler",
         "inputs": {
-            "seed": 1,
-            "steps": 1,
-            "cfg": 7.0,
-            "sampler_name": "euler",
-            "scheduler": "normal",
-            "denoise": 1.0,
-            "model": ["4", 0],
-            "positive": ["6", 0],
-            "negative": ["7", 0],
+            "seed": 1, "steps": 1, "cfg": 7.0,
+            "sampler_name": "euler", "scheduler": "normal", "denoise": 1.0,
+            "model": ["4", 0], "positive": ["6", 0], "negative": ["7", 0],
             "latent_image": ["5", 0],
         },
     },
-    "4": {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": "REPLACE_ME"}},
-    "5": {
-        "class_type": "EmptyLatentImage",
-        "inputs": {"width": 256, "height": 256, "batch_size": 1},
-    },
-    "6": {"class_type": "CLIPTextEncode", "inputs": {"text": "test", "clip": ["4", 1]}},
-    "7": {"class_type": "CLIPTextEncode", "inputs": {"text": "", "clip": ["4", 1]}},
-    "9": {"class_type": "SaveImage", "inputs": {"filename_prefix": "smoke", "images": ["3", 0]}},
+    "4": {"class_type": "CheckpointLoaderSimple",
+          "inputs": {"ckpt_name": "REPLACE_ME"}},
+    "5": {"class_type": "EmptyLatentImage",
+          "inputs": {"width": 256, "height": 256, "batch_size": 1}},
+    "6": {"class_type": "CLIPTextEncode",
+          "inputs": {"text": "test", "clip": ["4", 1]}},
+    "7": {"class_type": "CLIPTextEncode",
+          "inputs": {"text": "", "clip": ["4", 1]}},
+    "9": {"class_type": "SaveImage",
+          "inputs": {"filename_prefix": "smoke", "images": ["3", 0]}},
 }
 
 
@@ -128,17 +113,12 @@ def smoke_test(host: str, headers: dict, ckpt_name: str | None) -> dict:
 
     # Lazy import to avoid circular issues
     from run_workflow import ComfyRunner
-
     api_key = headers.get("X-API-Key")
     runner = ComfyRunner(host=host, api_key=api_key)
     sub = runner.submit(wf)
     if "_http_error" in sub:
-        return {
-            "ran": True,
-            "submitted": False,
-            "http_status": sub["_http_error"],
-            "body": sub.get("body"),
-        }
+        return {"ran": True, "submitted": False,
+                "http_status": sub["_http_error"], "body": sub.get("body")}
     pid = sub.get("prompt_id")
     if not pid:
         return {"ran": True, "submitted": False, "response": sub}
@@ -147,13 +127,11 @@ def smoke_test(host: str, headers: dict, ckpt_name: str | None) -> dict:
     cancelled = False
     try:
         cancelled = runner.cancel(pid)
-    except Exception as e:
-        log(f"WARN: failed to cancel smoke test job {pid}: {e}")
+    except Exception:
+        pass
 
     return {
-        "ran": True,
-        "submitted": True,
-        "prompt_id": pid,
+        "ran": True, "submitted": True, "prompt_id": pid,
         "cancelled_after_submit": cancelled,
         "note": "Submission accepted; cancelled to avoid running the full pipeline.",
     }
@@ -164,16 +142,10 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--host", default=DEFAULT_LOCAL_HOST)
     p.add_argument("--api-key", help=f"or set ${ENV_API_KEY}")
     p.add_argument("--workflow", help="Optional: also run check_deps on this workflow")
-    p.add_argument(
-        "--smoke-test",
-        action="store_true",
-        help="Submit a tiny test workflow and verify round-trip",
-    )
-    p.add_argument(
-        "--strict",
-        action="store_true",
-        help="Exit non-zero on any non-pass condition (including warnings)",
-    )
+    p.add_argument("--smoke-test", action="store_true",
+                   help="Submit a tiny test workflow and verify round-trip")
+    p.add_argument("--strict", action="store_true",
+                   help="Exit non-zero on any non-pass condition (including warnings)")
     args = p.parse_args(argv)
 
     api_key = resolve_api_key(args.api_key)
@@ -194,7 +166,6 @@ def main(argv: list[str] | None = None) -> int:
                 with wf_path.open() as f:
                     workflow = unwrap_workflow(json.load(f))
                 from check_deps import check_deps
-
                 workflow_check = check_deps(workflow, host=args.host, api_key=api_key)
             except (ValueError, json.JSONDecodeError) as e:
                 workflow_check = {"error": str(e)}

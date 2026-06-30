@@ -1,19 +1,13 @@
 import http.client
-import os
-import shlex
-import signal
 import subprocess
 import time
-
+import os
+import signal
 
 def test_server(cmd, port):
     print(f"Testing server: {cmd}")
-    # Fix security vulnerability: Command Injection via shell=True
-    # We split the command string into a list and run it with shell=False (default)
-    args = shlex.split(cmd)
-    proc = subprocess.Popen(args, preexec_fn=os.setsid)
-    # Increased sleep time to ensure server is ready in all environments
-    time.sleep(10)
+    proc = subprocess.Popen(cmd, shell=True, preexec_fn=os.setsid)
+    time.sleep(2)
     try:
         conn = http.client.HTTPConnection("127.0.0.1", port)
         conn.request("GET", "/")
@@ -25,7 +19,7 @@ def test_server(cmd, port):
             "x-frame-options",
             "x-content-type-options",
             "referrer-policy",
-            "content-security-policy",
+            "content-security-policy"
         ]
 
         for h in expected:
@@ -35,7 +29,6 @@ def test_server(cmd, port):
                 print(f"MISSING {h}")
     finally:
         os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
-
 
 # Ensure dist exists for CLI test
 os.makedirs("dashboard/dist", exist_ok=True)
