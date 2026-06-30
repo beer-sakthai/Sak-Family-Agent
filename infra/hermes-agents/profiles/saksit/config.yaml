@@ -1,10 +1,10 @@
 model:
-  default: nemotron-3-super
+  default: kimi-k2.7-code
   provider: ollama-cloud
   base_url: https://ollama.com/v1
 fallback_model:
   provider: ollama-cloud
-  model: gpt-oss:120b
+  model: minimax-m3
   base_url: https://ollama.com/v1
 providers: {}
 fallback_providers: []
