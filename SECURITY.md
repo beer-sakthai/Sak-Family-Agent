@@ -54,7 +54,7 @@ Credentials are sourced from environment variables or local credential files —
 
 - All queries use `?` parameterized placeholders
 - Dynamic `IN (...)` clauses are built as `",".join("?" for _ in ids)` — no string interpolation
-- `LIKE` patterns use `ESCAPE '='` to prevent wildcard injection
+- Substring searches use `instr()` for safe matching without wildcards
 - Schema migrations are additive (ALTER TABLE only) under `BEGIN IMMEDIATE`
 
 ### MCP stdio server
