@@ -17,7 +17,7 @@ import os
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 from pathlib import Path
 from typing import Any
-from urllib.parse import urlparse
+from urllib.parse import unquote, urlparse
 
 WEB_DIR = (Path(__file__).resolve().parent.parent / "dashboard" / "dist").resolve()
 _HOST = "127.0.0.1"
@@ -93,7 +93,9 @@ class _Handler(SimpleHTTPRequestHandler):
             return
 
         # Serve static files from web/
-        rel = Path(self.path.lstrip("/"))
+        req_path = unquote(parsed.path)
+        normalized = os.path.normpath(req_path).lstrip("/\\")
+        rel = Path(normalized)
         safe = (WEB_DIR / rel).resolve()
         try:
             safe.relative_to(WEB_DIR)
