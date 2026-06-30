@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 import time
 from pathlib import Path
+from typing import Any
 from subprocess import CompletedProcess
 from unittest.mock import MagicMock, patch
 from urllib.parse import urlparse
@@ -40,7 +41,7 @@ def _cp(args: list[str], *, stdout: str = "", returncode: int = 0) -> CompletedP
     return CompletedProcess(args=args, returncode=returncode, stdout=stdout, stderr="")
 
 
-def _git_mock(*, status_output: str = " M facts.jsonl", push_returncode: int = 0):
+def _git_mock(*, status_output: str = " M facts.jsonl", push_returncode: int = 0) -> Any:
     """Return a subprocess.run side_effect that fakes all git operations."""
     push_calls: list[int] = []
 
@@ -162,7 +163,9 @@ class TestSyncMemoryViaHttp:
         with patch("urllib.request.urlopen", return_value=_http_response(200)):
             result = sync_memory_via_http("https://secure.example.com/sync")
         assert result == "Synced to HTTP endpoint: https://secure.example.com/sync"
-        parsed = urlparse(result)
+        # Parse the URL part of the message
+        url = result.split(": ", 1)[1]
+        parsed = urlparse(url)
         assert parsed.hostname == "secure.example.com"
 
 
@@ -252,7 +255,7 @@ class TestSyncMemoryToGit:
 # ---------------------------------------------------------------------------
 
 
-def _fact_dict(value: str) -> dict:
+def _fact_dict(value: str) -> dict[str, Any]:
     """Minimal valid fact dict matching the format produced by export_to_dict."""
     now = int(time.time())
     return {
