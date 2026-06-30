@@ -92,24 +92,22 @@ class _Handler(SimpleHTTPRequestHandler):
             self._json(200, _ecosystem_status())
             return
 
-        # Serve static files from web/
-        req_path = unquote(parsed.path)
-        normalized = os.path.normpath(req_path).lstrip("/\\")
-        rel = Path(normalized)
-        if rel.is_absolute() or rel.drive or ".." in rel.parts:
-            self.send_error(403, "Forbidden")
-            return
-        safe = (WEB_DIR / rel).resolve()
-        try:
-            safe.relative_to(WEB_DIR)
-        except ValueError:
+        # Serve static files from web/ (path-traversal safe).
+        # Canonicalise the request against the static root and verify the
+        # resolved path is contained within it before any filesystem access.
+        root = os.path.realpath(str(WEB_DIR))
+        target = os.path.realpath(os.path.join(root, unquote(parsed.path).lstrip("/\\")))
+        if target != root and not target.startswith(root + os.sep):
             self.send_error(403, "Forbidden")
             return
 
-        if safe.is_dir():
-            safe = safe / "index.html"
+        if os.path.isdir(target):
+            target = os.path.realpath(os.path.join(target, "index.html"))
+            if not target.startswith(root + os.sep):
+                self.send_error(403, "Forbidden")
+                return
 
-        if not safe.exists():
+        if not os.path.exists(target):
             self.send_error(404, "Not found")
             return
 
@@ -121,11 +119,12 @@ class _Handler(SimpleHTTPRequestHandler):
             ".json": "application/json",
             ".png": "image/png",
             ".svg": "image/svg+xml",
-        }.get(safe.suffix.lower(), "application/octet-stream")
+        }.get(os.path.splitext(target)[1].lower(), "application/octet-stream")
         self.send_header("Content-Type", ctype + "; charset=utf-8")
-        self.send_header("Content-Length", str(safe.stat().st_size))
+        self.send_header("Content-Length", str(os.path.getsize(target)))
         self.end_headers()
-        self.wfile.write(safe.read_bytes())
+        with open(target, "rb") as fh:
+            self.wfile.write(fh.read())
 
 
 def serve(host: str = _HOST, port: int = _PORT) -> HTTPServer:

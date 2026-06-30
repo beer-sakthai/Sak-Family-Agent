@@ -130,7 +130,10 @@ def main(argv: list[str] | None = None) -> int:
     is_cloud = is_cloud_host(args.host)
 
     if args.tail_queue:
-        emit_json(fetch_queue(args.host, headers))
+        queue = fetch_queue(args.host, headers)
+        # Emit only the server's queue payload — request auth headers (which
+        # carry the API key) are never part of the output.
+        emit_json({"http_status": queue.get("http_status"), "data": queue.get("data")})
         return 0
 
     if not args.prompt_id:
