@@ -597,7 +597,6 @@ def cmd_reverse(args):
                               or address.get("village", "")),
             "county":        address.get("county", ""),
             "state":         address.get("state", ""),
-            "postcode":      address.get("postcode", ""),
             "country":       address.get("country", ""),
             "country_code":  address.get("country_code", ""),
         },
