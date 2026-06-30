@@ -164,6 +164,7 @@ class TestSyncMemoryViaHttp:
         assert result == "Synced to HTTP endpoint: https://secure.example.com/sync"
         url_part = result.split(": ")[-1]
         parsed = urlparse(url_part)
+        parsed = urlparse(result)
         assert parsed.hostname == "secure.example.com"
 
 
