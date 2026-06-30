@@ -4,7 +4,7 @@ model:
   base_url: https://ollama.com/v1
 fallback_model:
   provider: ollama-cloud
-  model: minimax-m3
+  model: gpt-oss:120b
   base_url: https://ollama.com/v1
 providers: {}
 fallback_providers: []

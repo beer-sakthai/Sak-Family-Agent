@@ -254,6 +254,8 @@ def run_agent(
             model = "qwen2.5-coder:7b"
         else:
             model = "gpt-4o"
+    elif provider == "google" and model == DEFAULT_MODEL:
+        model = "gemini-2.5-flash"
 
     client = _build_client(provider, client)
 
@@ -398,6 +400,8 @@ def preflight(
     effective_model = model
     if resolved == "openai" and model == DEFAULT_MODEL:
         effective_model = "qwen2.5-coder:7b" if os.environ.get("OLLAMA_HOST") else "gpt-4o"
+    elif resolved == "google" and model == DEFAULT_MODEL:
+        effective_model = "gemini-2.5-flash"
 
     if resolved == "google":
         if os.environ.get("GEMINI_API_KEY"):
@@ -405,7 +409,11 @@ def preflight(
         elif os.environ.get("GOOGLE_API_KEY"):
             cred_source = "GOOGLE_API_KEY"
         else:
-            cred_source = None
+            from ..auth import load_gemini_cli_token
+            if load_gemini_cli_token() is not None:
+                cred_source = "gemini_cli_oauth"
+            else:
+                cred_source = None
     elif resolved == "openai":
         cred_source = openai_credential_source()
     elif resolved == "gateway":

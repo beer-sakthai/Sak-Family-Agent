@@ -79,13 +79,21 @@ def call_gemini(
     """
     from google.genai import types
 
+    def _clean_schema(schema: Any) -> Any:
+        if isinstance(schema, dict):
+            cleaned = schema.copy()
+            cleaned.pop("$schema", None)
+            cleaned.pop("$id", None)
+            return cleaned
+        return schema
+
     declarations: list[Any] = [
         types.Tool(
             function_declarations=[
                 types.FunctionDeclaration(
                     name=t.name,
                     description=t.description,
-                    parameters=t.input_schema,  # type: ignore[arg-type]
+                    parameters=_clean_schema(t.input_schema),  # type: ignore[arg-type]
                 )
             ]
         )
