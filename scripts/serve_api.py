@@ -24,17 +24,6 @@ _HOST = "127.0.0.1"
 _PORT = 3002
 
 
-def _safe_web_path(request_path: str) -> Path | None:
-    raw = unquote(request_path or "/")
-    rel = raw.lstrip("/\\")
-    candidate = (WEB_DIR / rel).resolve()
-    try:
-        candidate.relative_to(WEB_DIR)
-    except ValueError:
-        return None
-    return candidate
-
-
 def _dashboard_data(days: int = 30) -> dict[str, Any]:
     try:
         import sys
@@ -103,32 +92,17 @@ class _Handler(SimpleHTTPRequestHandler):
             self._json(200, _ecosystem_status())
             return
 
-        # Serve static files from web/
-        safe = _safe_web_path(parsed.path)
-        if safe is None:
+        # Serve static files from web/ (path-traversal safe). `serve()` chdir's
+        # to WEB_DIR, so the stdlib handler resolves requests relative to it;
+        # mirror that here, reject anything that canonicalises outside the root,
+        # then delegate the actual read to SimpleHTTPRequestHandler (whose
+        # translate_path performs its own safe path handling).
+        root = os.path.realpath(str(WEB_DIR))
+        candidate = os.path.realpath(unquote(parsed.path).lstrip("/\\"))
+        if candidate != root and not candidate.startswith(root + os.sep):
             self.send_error(403, "Forbidden")
             return
-
-        if safe.is_dir():
-            safe = safe / "index.html"
-
-        if not safe.exists():
-            self.send_error(404, "Not found")
-            return
-
-        self.send_response(200)
-        ctype = {
-            ".html": "text/html",
-            ".js": "application/javascript",
-            ".css": "text/css",
-            ".json": "application/json",
-            ".png": "image/png",
-            ".svg": "image/svg+xml",
-        }.get(safe.suffix.lower(), "application/octet-stream")
-        self.send_header("Content-Type", ctype + "; charset=utf-8")
-        self.send_header("Content-Length", str(safe.stat().st_size))
-        self.end_headers()
-        self.wfile.write(safe.read_bytes())
+        return super().do_GET()
 
 
 def serve(host: str = _HOST, port: int = _PORT) -> HTTPServer:
