@@ -175,7 +175,7 @@ def test_run_command_invalid_timeout_falls_back_to_default(
 
 
 def test_send_telegram_http_error(monkeypatch: pytest.MonkeyPatch, store) -> None:
-    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "fake-token")
+    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "12345:fake-token")
     monkeypatch.setenv("TELEGRAM_CHAT_ID", "123")
 
     exc = urllib.error.HTTPError("https://api.telegram.org", 401, "Unauthorized", None, None)
@@ -191,7 +191,7 @@ def test_send_telegram_http_error(monkeypatch: pytest.MonkeyPatch, store) -> Non
 
 
 def test_send_telegram_url_error(monkeypatch: pytest.MonkeyPatch, store) -> None:
-    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "fake-token")
+    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "12345:fake-token")
     monkeypatch.setenv("TELEGRAM_CHAT_ID", "123")
 
     def _raise(_req, timeout=None):
@@ -347,7 +347,7 @@ class _FakeResponse:
 
 
 def test_send_telegram_success(monkeypatch: pytest.MonkeyPatch, store) -> None:
-    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "fake-token")
+    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "12345:fake-token")
     monkeypatch.setenv("TELEGRAM_CHAT_ID", "123")
     monkeypatch.setattr(
         urllib.request,
@@ -359,7 +359,7 @@ def test_send_telegram_success(monkeypatch: pytest.MonkeyPatch, store) -> None:
 
 
 def test_send_telegram_api_reports_not_ok(monkeypatch: pytest.MonkeyPatch, store) -> None:
-    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "fake-token")
+    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "12345:fake-token")
     monkeypatch.setenv("TELEGRAM_CHAT_ID", "123")
     monkeypatch.setattr(
         urllib.request,
@@ -372,7 +372,7 @@ def test_send_telegram_api_reports_not_ok(monkeypatch: pytest.MonkeyPatch, store
 
 
 def test_send_telegram_http_error_unparseable_body(monkeypatch: pytest.MonkeyPatch, store) -> None:
-    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "fake-token")
+    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "12345:fake-token")
     monkeypatch.setenv("TELEGRAM_CHAT_ID", "123")
 
     exc = urllib.error.HTTPError("https://api.telegram.org", 500, "Server Error", None, None)
@@ -387,7 +387,7 @@ def test_send_telegram_http_error_unparseable_body(monkeypatch: pytest.MonkeyPat
 
 
 def test_send_telegram_unexpected_error(monkeypatch: pytest.MonkeyPatch, store) -> None:
-    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "fake-token")
+    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "12345:fake-token")
     monkeypatch.setenv("TELEGRAM_CHAT_ID", "123")
 
     def _boom(_req, timeout=None):
@@ -674,7 +674,7 @@ class TestSendTelegramPartialConfig:
     def test_only_token_set_returns_config_missing(
         self, monkeypatch: pytest.MonkeyPatch, store: MemoryStore
     ) -> None:
-        monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "my-token")
+        monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "12345:my-token")
         monkeypatch.delenv("TELEGRAM_CHAT_ID", raising=False)
         out = tool_by_name("send_telegram_message").handler({"message": "hi"}, store)
         assert "configuration missing" in out
@@ -852,3 +852,12 @@ def test_run_command_stderr_separator_when_stdout_present(
     out = tool_by_name("run_command").handler({"command": "whatever"}, store)
     assert "out-line\n[stderr]\nerr-line" in out
     assert "[exit 2]" in out
+
+
+def test_send_telegram_invalid_token_format(
+    monkeypatch: pytest.MonkeyPatch, store: MemoryStore
+) -> None:
+    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "not-a-token")
+    monkeypatch.setenv("TELEGRAM_CHAT_ID", "123")
+    out = tool_by_name("send_telegram_message").handler({"message": "hi"}, store)
+    assert "Invalid TELEGRAM_BOT_TOKEN format" in out
