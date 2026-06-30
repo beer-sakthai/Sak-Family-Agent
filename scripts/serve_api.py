@@ -92,40 +92,17 @@ class _Handler(SimpleHTTPRequestHandler):
             self._json(200, _ecosystem_status())
             return
 
-        # Serve static files from web/
-        req_path = unquote(parsed.path)
-        normalized = os.path.normpath(req_path).lstrip("/\\")
-        rel = Path(normalized)
-        if rel.is_absolute() or rel.drive or ".." in rel.parts:
+        # Serve static files from web/ (path-traversal safe). `serve()` chdir's
+        # to WEB_DIR, so the stdlib handler resolves requests relative to it;
+        # mirror that here, reject anything that canonicalises outside the root,
+        # then delegate the actual read to SimpleHTTPRequestHandler (whose
+        # translate_path performs its own safe path handling).
+        root = os.path.realpath(str(WEB_DIR))
+        candidate = os.path.realpath(unquote(parsed.path).lstrip("/\\"))
+        if candidate != root and not candidate.startswith(root + os.sep):
             self.send_error(403, "Forbidden")
             return
-        safe = (WEB_DIR / rel).resolve()
-        try:
-            safe.relative_to(WEB_DIR)
-        except ValueError:
-            self.send_error(403, "Forbidden")
-            return
-
-        if safe.is_dir():
-            safe = safe / "index.html"
-
-        if not safe.exists():
-            self.send_error(404, "Not found")
-            return
-
-        self.send_response(200)
-        ctype = {
-            ".html": "text/html",
-            ".js": "application/javascript",
-            ".css": "text/css",
-            ".json": "application/json",
-            ".png": "image/png",
-            ".svg": "image/svg+xml",
-        }.get(safe.suffix.lower(), "application/octet-stream")
-        self.send_header("Content-Type", ctype + "; charset=utf-8")
-        self.send_header("Content-Length", str(safe.stat().st_size))
-        self.end_headers()
-        self.wfile.write(safe.read_bytes())
+        return super().do_GET()
 
 
 def serve(host: str = _HOST, port: int = _PORT) -> HTTPServer:
