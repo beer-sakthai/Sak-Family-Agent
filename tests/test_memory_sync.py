@@ -140,7 +140,7 @@ class TestSyncMemoryViaHttp:
         assert "facts" in payload
         assert any("test sync fact" in f.get("value", "") for f in payload["facts"])
 
-    def test_content_type_header_is_json(self, sakthai_home: Path) -> None:
+    def test_content_type_is_json(self, sakthai_home: Path) -> None:
         captured: list[MagicMock] = []
 
         def _fake_open(req: MagicMock) -> MagicMock:
