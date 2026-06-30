@@ -825,9 +825,41 @@ def fmt_kv(d: dict) -> str:
     return " ".join(f"{k}={v!r}" for k, v in d.items())
 
 
+_REDACTED = "***REDACTED***"
+_SENSITIVE_KEY_MARKERS = {
+    "api_key", "apikey", "password", "passwd", "token", "secret",
+    "authorization", "auth", "bearer", "access_key", "private_key",
+}
+
+
+def _is_sensitive_key(key: Any) -> bool:
+    if not isinstance(key, str):
+        return False
+    k = key.strip().lower()
+    if not k:
+        return False
+    return any(marker in k for marker in _SENSITIVE_KEY_MARKERS)
+
+
+def _redact_sensitive(obj: Any) -> Any:
+    if isinstance(obj, dict):
+        out: dict[Any, Any] = {}
+        for k, v in obj.items():
+            if _is_sensitive_key(k):
+                out[k] = _REDACTED
+            else:
+                out[k] = _redact_sensitive(v)
+        return out
+    if isinstance(obj, list):
+        return [_redact_sensitive(v) for v in obj]
+    if isinstance(obj, tuple):
+        return tuple(_redact_sensitive(v) for v in obj)
+    return obj
+
+
 def emit_json(obj: Any, *, indent: int = 2) -> None:
     """Print JSON to stdout. Centralised so behavior can be tweaked (e.g., --raw)."""
-    print(json.dumps(obj, indent=indent, default=str))
+    print(json.dumps(_redact_sensitive(obj), indent=indent, default=str))
 
 
 def log(msg: str) -> None:
