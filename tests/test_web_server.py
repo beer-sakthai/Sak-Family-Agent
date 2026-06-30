@@ -92,6 +92,19 @@ class TestDashboardData:
         assert "growth" in data
         assert data.get("source") == "demo"
 
+    def test_falls_back_to_demo_on_import_error(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """An ImportError importing the data module yields the demo stub (server.py:36-37)."""
+        import sys
+        import types as _types
+
+        # A stand-in module lacking ``collect_dashboard_data`` makes the
+        # ``from ... import collect_dashboard_data`` raise ImportError.
+        broken = _types.ModuleType("sakthai.dashboard.data")
+        monkeypatch.setitem(sys.modules, "sakthai.dashboard.data", broken)
+        data = _dashboard_data()
+        assert data.get("source") == "demo"
+        assert data["kpis"]["total_facts"] == 0
+
 
 class TestEcosystemStatus:
     def test_returns_dict(self) -> None:
@@ -121,6 +134,13 @@ class TestEcosystemStatus:
         monkeypatch.delenv("HF_TOKEN", raising=False)
         status = _ecosystem_status()
         assert status["huggingface"] == "not_ready"
+
+    def test_generated_at_falls_back_when_clock_fails(self) -> None:
+        """If timestamp generation raises, generated_at stays 'unknown' (server.py:72-73)."""
+        with patch("datetime.datetime") as dt:
+            dt.now.side_effect = RuntimeError("clock broke")
+            status = _ecosystem_status()
+        assert status["generated_at"] == "unknown"
 
     def test_generated_at_is_present(self) -> None:
         status = _ecosystem_status()

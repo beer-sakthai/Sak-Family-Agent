@@ -427,6 +427,25 @@ def test_setup_interactive_set_api_key(
     assert "ANTHROPIC_API_KEY=sk-test-key-123" in content
 
 
+def test_setup_interactive_empty_key_records_issue(
+    runner: CliRunner, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Submitting an empty key at the prompt leaves it unset (cli/system.py:155)."""
+    env_file = tmp_path / ".env"
+    env_file.write_text("ANTHROPIC_API_KEY=\n", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("CLAUDE_CONFIG_DIR", str(tmp_path / "claude"))
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+
+    # Empty line at the hidden API-key prompt -> the "not set" issue path.
+    result = runner.invoke(main, ["setup", "--interactive"], input="\n")
+
+    assert result.exit_code == 0
+    assert "saved ANTHROPIC_API_KEY to .env" not in result.output
+    # The key was never written.
+    assert "ANTHROPIC_API_KEY=\n" in env_file.read_text(encoding="utf-8")
+
+
 def test_setup_no_interactive_skips_prompts(
     runner: CliRunner, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

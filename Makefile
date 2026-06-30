@@ -1,4 +1,4 @@
-.PHONY: help deploy-hermes doctor-hermes compose-personas test lint
+.PHONY: help deploy-hermes doctor-hermes compose-personas test lint mutation
 
 help:
 	@echo "SakThai Agent v2 - Monorepo Operations"
@@ -9,6 +9,7 @@ help:
 	@echo "  make compose-personas- Rebuild full skill trees for all personas (shared + overlays)"
 	@echo "  make test            - Run all pytest test suites"
 	@echo "  make lint            - Run code linters (ruff, pylint)"
+	@echo "  make mutation        - Run mutmut on the core seam modules (slow, local-only)"
 
 # Mitigate complexity by providing a shortcut from the root to the deployment scripts
 deploy-hermes:
@@ -35,3 +36,12 @@ test:
 lint:
 	@echo "Running linters..."
 	@if command -v uv >/dev/null 2>&1; then uv run ruff check .; else ruff check .; fi
+
+# Mutation testing on the core seam modules (see [tool.mutmut] in pyproject.toml).
+# A full run is slow and is intentionally NOT part of CI; use it locally to find
+# covered-but-unasserted code, then strengthen the responsible test.
+#   make mutation        # run, then `uv run mutmut results` to list survivors
+mutation:
+	@echo "Running mutation testing (mutmut) on core seam modules..."
+	@uv run --extra dev --extra mutation mutmut run || true
+	@uv run --extra mutation mutmut results
