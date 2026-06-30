@@ -21,7 +21,7 @@ These are exposed both to the agent loop (`sakthai run`) and over MCP
 `sakthai memory …` and the store API behind them:
 
 - `show` / `stats` — list entries; aggregate counts, kinds, tags, time ranges.
-- `search` — substring search (wildcards are treated literally).
+- `search` — substring search (LIKE wildcards are escaped).
 - `forget` / `forget-obs` — delete by id.
 - `export` / `import` — portable JSON snapshot (also CSV / JSONL export).
 - `backup` — timestamped copy of `memory.db`.
