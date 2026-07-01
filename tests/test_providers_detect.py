@@ -75,9 +75,11 @@ def test_detect_gateway_model_prefix(model: str) -> None:
 
 
 def test_detect_fallback_anthropic_key(monkeypatch: pytest.MonkeyPatch) -> None:
-    with patch("sakthai.agent.providers.anthropic_credential_source", return_value="env"), patch(
-        "sakthai.agent.providers.gateway_credential_source", return_value=None
-    ), patch("sakthai.agent.providers.openai_credential_source", return_value=None):
+    with (
+        patch("sakthai.agent.providers.anthropic_credential_source", return_value="env"),
+        patch("sakthai.agent.providers.gateway_credential_source", return_value=None),
+        patch("sakthai.agent.providers.openai_credential_source", return_value=None),
+    ):
         monkeypatch.delenv("GEMINI_API_KEY", raising=False)
         monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
         monkeypatch.delenv("OLLAMA_HOST", raising=False)
@@ -172,9 +174,11 @@ def test_detect_from_credentials_priority(monkeypatch: pytest.MonkeyPatch) -> No
     # Set all credentials; Ollama should win due to order.
     monkeypatch.setenv("OLLAMA_HOST", "http://localhost:11434")
     monkeypatch.setenv("GEMINI_API_KEY", "key123")
-    with patch("sakthai.agent.providers.openai_credential_source", return_value="env"), patch(
-        "sakthai.agent.providers.gateway_credential_source", return_value="gw"
-    ), patch("sakthai.agent.providers.anthropic_credential_source", return_value="env"):
+    with (
+        patch("sakthai.agent.providers.openai_credential_source", return_value="env"),
+        patch("sakthai.agent.providers.gateway_credential_source", return_value="gw"),
+        patch("sakthai.agent.providers.anthropic_credential_source", return_value="env"),
+    ):
         assert _detect_from_credentials() == "ollama"
 
     # Unset Ollama; Gemini should win.

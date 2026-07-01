@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import uuid
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -63,8 +62,6 @@ def memory_store(tmp_path):
 
 def test_run_agent_simple_text_response(memory_store, mock_tool, caplog):
     """Test that the agent loop correctly handles a simple text response."""
-    mock_provider = MockProvider(responses=[Response("end_turn", [Block("text", text="Final answer.")])])
-
     result = run_agent(
         task="Test task",
         client=MagicMock(),
@@ -106,9 +103,7 @@ def test_run_agent_single_tool_call(mock_call_anthropic, memory_store, mock_tool
 
     # Check that the tool result was passed back to the model
     last_request_messages = mock_call_anthropic.call_args.kwargs["messages"]
-    tool_result_message = next(
-        (m for m in last_request_messages if m.get("role") == "tool"), None
-    )
+    tool_result_message = next((m for m in last_request_messages if m.get("role") == "tool"), None)
     assert tool_result_message is not None
     assert tool_result_message["content"][0]["tool_use_id"] == "call1"
     assert tool_result_message["content"][0]["content"] == "tool output"
@@ -158,9 +153,12 @@ def test_run_agent_logs_session(mock_uuid, memory_store, mock_tool, tmp_path):
     sessions_dir_path = tmp_path / "sessions"
     sessions_dir_path.mkdir()
 
-    with patch("sakthai.config.sessions_dir", return_value=sessions_dir_path), patch(
-        "sakthai.agent.loop._call_anthropic",
-        return_value=Response("end_turn", [Block("text", text="Done.")]),
+    with (
+        patch("sakthai.config.sessions_dir", return_value=sessions_dir_path),
+        patch(
+            "sakthai.agent.loop._call_anthropic",
+            return_value=Response("end_turn", [Block("text", text="Done.")]),
+        ),
     ):
         run_agent(
             task="Test task",
@@ -170,7 +168,10 @@ def test_run_agent_logs_session(mock_uuid, memory_store, mock_tool, tmp_path):
             provider="anthropic",
         )
 
-    session_file = sessions_dir_path / f"{int(list(mock_uuid.return_value.fields)[0])}_{mock_uuid.return_value.hex}.json"
+    session_file = (
+        sessions_dir_path
+        / f"{int(list(mock_uuid.return_value.fields)[0])}_{mock_uuid.return_value.hex}.json"
+    )
     assert session_file.exists()
     assert '"task": "Test task"' in session_file.read_text()
     assert '"output": "Done."' in session_file.read_text()

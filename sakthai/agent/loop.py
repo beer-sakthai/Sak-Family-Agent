@@ -16,6 +16,7 @@ from click import globals
 import json
 from __future__ import annotations
 import logging
+import os
 import time
 import uuid
 from pathlib import Path
@@ -161,9 +162,7 @@ def _parse_slash_command(task: str) -> tuple[str, str] | None:
         return None
 
 
-def _build_skills_block(
-    skills: Sequence[str], command_system: str, caveman: str | None
-) -> str:
+def _build_skills_block(skills: Sequence[str], command_system: str, caveman: str | None) -> str:
     """Construct the full skills block for the system prompt."""
     parts = []
     if skills:
@@ -199,9 +198,8 @@ def _build_system(
         parts.append(
             "FAST-TRACK MODE: Execute the user's task directly and quickly without enforcing the 6-stage cycle (Dream/Hope/Care/Joy/Trust/Growth)."
         )
-    if not stateless:
-        if memory_block := store.render_prompt_block():
-            parts.append(memory_block)
+    if not stateless and (memory_block := store.render_prompt_block()):
+        parts.append(memory_block)
     skills_block = _build_skills_block(skills, command_system, caveman)
     if skills_block:
         parts.append(skills_block)
@@ -394,6 +392,38 @@ def run_agent(
     deltas as they stream from providers that support it. ``client`` and
     ``store`` are injectable for testing.
     """
+    if not task.strip():
+        raise AgentError("Task must be a non-empty string.")
+    if max_seconds is not None and max_seconds <= 0:
+        raise AgentError("max_seconds must be positive when set.")
+
+    parsed = _parse_slash_command(task)
+    command_system = ""
+    if parsed:
+        command_system, task = parsed
+
+    provider = provider or _detect_provider(client, model)
+    if provider == "ollama":
+        provider = "openai"
+
+    if provider == "openai" and model == DEFAULT_MODEL:
+        if os.environ.get("OLLAMA_HOST"):
+            model = "qwen2.5-coder:7b"
+        else:
+            model = "gpt-4o"
+    elif provider == "google" and model == DEFAULT_MODEL:
+        model = "gemini-2.5-flash"
+
+    client = _build_client(provider, client)
+
+    own_store = store is None
+    store = store or MemoryStore()
+    notify = on_event or (lambda _kind, _payload: None)
+    registry = ToolRegistry(tools)
+    tool_schemas = registry.schemas()
+    tool_calls: list[dict[str, Any]] = []
+    messages: list[dict[str, Any]] = [{"role": "user", "content": task}]
+    deadline = time.monotonic() + max_seconds if max_seconds is not None else None
     state = _setup_agent_run(task, model, max_seconds, tools, store, client, on_event, provider, dry_run=False)
 
     usage_tracker = UsageTracker()
@@ -414,6 +444,17 @@ def run_agent(
                 state.store, skills, state.command_system, fast=fast, stateless=stateless, caveman=caveman
             )
             response = _agent_turn(
+                provider,
+                client,
+                model,
+                system,
+                tools,
+                messages,
+                iteration,
+                on_token,
+                max_tokens,
+                tool_schemas,
+                usage_tracker,
                 state.provider, state.client, state.model, system, tools, state.messages, iteration, on_token, max_tokens, state.tool_schemas, usage_tracker
             )
 
@@ -456,6 +497,8 @@ def run_agent(
                 )
                 _save_session_log(state.task, state.model, state.messages, result)
                 return result
+
+            _dispatch_tool_calls(response, messages, registry, store, notify, tool_calls)
             
             _dispatch_tool_calls(response, state.messages, state.registry, state.store, state.notify, state.tool_calls)
 
@@ -464,8 +507,6 @@ def run_agent(
             "without producing a final response."
         )
     finally:
-        import os
-
         if old_active is None:
             os.environ.pop("SAKTHAI_AGENT_ACTIVE", None)
         else:
@@ -489,6 +530,8 @@ def preflight(
     ``sakthai run --dry-run`` so a run can be validated at zero token cost.
     ``runnable`` is True when a usable credential for the resolved provider exists.
     """
+    resolved = provider or _detect_provider(client, model)
+    effective_model = _resolve_model_name(model, resolved)
     import os
     from ..auth import local_credential_source
 
