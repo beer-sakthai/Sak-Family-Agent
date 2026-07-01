@@ -566,9 +566,6 @@ class TestRedactSensitive:
         captured = capsys.readouterr()
         assert "sk_live_secret" not in captured.err
         assert "***REDACTED***" in captured.err
-# Secret redaction (emit_json / log)
-# =============================================================================
-
 
 class TestRedactSensitiveText:
     @pytest.mark.parametrize(
