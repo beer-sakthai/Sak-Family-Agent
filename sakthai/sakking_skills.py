@@ -315,7 +315,9 @@ def sync_sakking_skills(
     """
     dest = dest_dir if dest_dir is not None else SKILLS_DIR
     outcome = SyncOutcome()
-    for skill in discover_learned_skills(skills_root, exclude_prefixes=exclude_prefixes):
+    for skill in discover_learned_skills(
+        skills_root, exclude_prefixes=exclude_prefixes
+    ):
         target = dest / skill.target_slug / "SKILL.md"
         content = skill.render()
         existing = target.read_text(encoding="utf-8") if target.is_file() else None
@@ -325,5 +327,7 @@ def sync_sakking_skills(
         if not dry_run:
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_text(content, encoding="utf-8")
-        (outcome.updated if existing is not None else outcome.created).append(skill.target_slug)
+        (outcome.updated if existing is not None else outcome.created).append(
+            skill.target_slug
+        )
     return outcome

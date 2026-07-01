@@ -86,11 +86,41 @@ DEMO_DATA: dict[str, Any] = {
         "observations": [0, 0, 1, 1, 1, 2, 2],
     },
     "recent_facts": [
-        {"id": 5, "kind": "pref", "key": "language", "value": "Python", "created": "demo"},
-        {"id": 4, "kind": "pref", "key": "editor", "value": "VS Code", "created": "demo"},
-        {"id": 3, "kind": "profile", "key": "timezone", "value": "Asia/Bangkok", "created": "demo"},
-        {"id": 2, "kind": "note", "key": "", "value": "Prefers concise replies", "created": "demo"},
-        {"id": 1, "kind": "project", "key": "", "value": "Building SakThai", "created": "demo"},
+        {
+            "id": 5,
+            "kind": "pref",
+            "key": "language",
+            "value": "Python",
+            "created": "demo",
+        },
+        {
+            "id": 4,
+            "kind": "pref",
+            "key": "editor",
+            "value": "VS Code",
+            "created": "demo",
+        },
+        {
+            "id": 3,
+            "kind": "profile",
+            "key": "timezone",
+            "value": "Asia/Bangkok",
+            "created": "demo",
+        },
+        {
+            "id": 2,
+            "kind": "note",
+            "key": "",
+            "value": "Prefers concise replies",
+            "created": "demo",
+        },
+        {
+            "id": 1,
+            "kind": "project",
+            "key": "",
+            "value": "Building SakThai",
+            "created": "demo",
+        },
     ],
     "top_observations": [
         {"summary": "Prefers Python for data tasks", "weight": 0.95},
@@ -112,7 +142,9 @@ def _color_for(kind: str, index: int) -> str:
     return _KIND_COLORS.get(kind, _FALLBACK_COLORS[index % len(_FALLBACK_COLORS)])
 
 
-def collect_dashboard_data(db_path: Path | None = None, days: int = 30) -> dict[str, Any]:
+def collect_dashboard_data(
+    db_path: Path | None = None, days: int = 30
+) -> dict[str, Any]:
     """Assemble a dashboard snapshot from the memory store, or demo data if empty."""
     try:
         from sakthai.memory.store import MemoryStore
@@ -182,7 +214,9 @@ def collect_dashboard_data(db_path: Path | None = None, days: int = 30) -> dict[
         for i, (kind, count) in enumerate(sorted(counts.items(), key=lambda kv: -kv[1]))
     ]
     if observations:
-        categories.append({"name": "Observations", "count": len(observations), "color": "#f472b6"})
+        categories.append(
+            {"name": "Observations", "count": len(observations), "color": "#f472b6"}
+        )
 
     session_data = collect_session_data()
 
@@ -191,7 +225,9 @@ def collect_dashboard_data(db_path: Path | None = None, days: int = 30) -> dict[
 
     skills = build_catalog(SKILLS_DIR, LIBRARY_DIR)
     total_skills = (
-        sum(int(cat.get("count", 0)) for cat in skills) if isinstance(skills, list) else 0
+        sum(int(cat.get("count", 0)) for cat in skills)
+        if isinstance(skills, list)
+        else 0
     )
 
     return {
@@ -218,7 +254,8 @@ def collect_dashboard_data(db_path: Path | None = None, days: int = 30) -> dict[
             for f in facts[:10]
         ],
         "top_observations": [
-            {"summary": o.summary, "weight": round(o.weight, 2)} for o in observations[:6]
+            {"summary": o.summary, "weight": round(o.weight, 2)}
+            for o in observations[:6]
         ],
         "categories": categories,
         "evolution": DEMO_EVOLUTION,
@@ -240,7 +277,12 @@ def _load_session(path: Path) -> dict[str, Any] | None:
 def collect_session_data(sessions_path: Path | None = None) -> dict[str, Any]:
     _empty: dict[str, Any] = {
         "source": SOURCE_EMPTY,
-        "totals": {"sessions": 0, "total_tokens": 0, "input_tokens": 0, "output_tokens": 0},
+        "totals": {
+            "sessions": 0,
+            "total_tokens": 0,
+            "input_tokens": 0,
+            "output_tokens": 0,
+        },
         "by_model": [],
         "by_day": {"labels": [], "tokens": []},
         "recent_sessions": [],
@@ -304,12 +346,17 @@ def collect_session_data(sessions_path: Path | None = None) -> dict[str, Any]:
             "output_tokens": total_output,
         },
         "by_model": sorted(model_stats.values(), key=lambda m: -int(m["total_tokens"])),
-        "by_day": {"labels": sorted_days, "tokens": [day_stats[d] for d in sorted_days]},
+        "by_day": {
+            "labels": sorted_days,
+            "tokens": [day_stats[d] for d in sorted_days],
+        },
         "recent_sessions": sessions[:20],
     }
 
 
-def export_dashboard_json(dest: Path, db_path: Path | None = None, days: int = 30) -> Path:
+def export_dashboard_json(
+    dest: Path, db_path: Path | None = None, days: int = 30
+) -> Path:
     dest = Path(dest)
     dest.parent.mkdir(parents=True, exist_ok=True)
     data = collect_dashboard_data(db_path, days=days)

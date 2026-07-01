@@ -126,7 +126,9 @@ def install_extension(url: str) -> InstallResult:
             text=True,
         )
     except subprocess.CalledProcessError as exc:
-        raise ExtensionError(f"git clone failed: {(exc.stderr or '').strip() or exc}") from exc
+        raise ExtensionError(
+            f"git clone failed: {(exc.stderr or '').strip() or exc}"
+        ) from exc
     except FileNotFoundError as exc:
         raise ExtensionError("git is not available on PATH") from exc
 
@@ -150,7 +152,9 @@ def install_extension(url: str) -> InstallResult:
 
 def list_extensions() -> list[ExtensionInfo]:
     registry = _load_registry()
-    return [_info_from_registry(name, data) for name, data in registry["extensions"].items()]
+    return [
+        _info_from_registry(name, data) for name, data in registry["extensions"].items()
+    ]
 
 
 def remove(name: str) -> bool:

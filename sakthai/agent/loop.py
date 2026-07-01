@@ -20,14 +20,12 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from typing import Any
 
-from ..auth import (
-    anthropic_credential_source,
-    gateway_credential_source,
-    openai_credential_source,
-)
+from ..auth import (anthropic_credential_source, gateway_credential_source,
+                    openai_credential_source)
 from ..config import sessions_dir
 from ..memory.store import MemoryStore
-from ..skills import default_skill_roots, find_skill, render_skills_prompt_block
+from ..skills import (default_skill_roots, find_skill,
+                      render_skills_prompt_block)
 from . import providers
 from .providers import base as _providers_base
 from .registry import ToolRegistry
@@ -78,7 +76,11 @@ class AgentResult:
     stop_reason: str
     tool_calls: list[dict[str, Any]] = field(default_factory=list)
     usage: dict[str, int] = field(
-        default_factory=lambda: {"input_tokens": 0, "output_tokens": 0, "total_tokens": 0}
+        default_factory=lambda: {
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "total_tokens": 0,
+        }
     )
 
 
@@ -90,7 +92,9 @@ def _parse_slash_command(task: str) -> tuple[str, str] | None:
     import re
 
     task_stripped = task.strip()
-    match = re.match(r"^/([a-zA-Z0-9_-]+):([a-zA-Z0-9_-]+)(?:\s+(.*))?$", task_stripped, re.DOTALL)
+    match = re.match(
+        r"^/([a-zA-Z0-9_-]+):([a-zA-Z0-9_-]+)(?:\s+(.*))?$", task_stripped, re.DOTALL
+    )
     if not match:
         return None
 
@@ -135,7 +139,9 @@ def _parse_slash_command(task: str) -> tuple[str, str] | None:
                 content = parts[2].strip()
         content = content.replace("$ARGUMENTS", arguments)
         content = content.replace("$FEATURE", arguments)
-        system_block = f"COMMAND INSTRUCTIONS ({plugin_name}:{command_name}):\n\n{content}"
+        system_block = (
+            f"COMMAND INSTRUCTIONS ({plugin_name}:{command_name}):\n\n{content}"
+        )
         return system_block, arguments
     except Exception as exc:
         logger.warning("failed to load command file %s: %s", cmd_file, exc)
@@ -143,7 +149,10 @@ def _parse_slash_command(task: str) -> tuple[str, str] | None:
 
 
 def _build_system(
-    store: MemoryStore, skills_block: str = "", fast: bool = False, stateless: bool = False
+    store: MemoryStore,
+    skills_block: str = "",
+    fast: bool = False,
+    stateless: bool = False,
 ) -> str:
     parts = [SYSTEM_BASE]
     if fast:
@@ -159,7 +168,9 @@ def _build_system(
     return "\n\n".join(parts)
 
 
-def _execute_tool(tool: Tool, args: dict[str, Any], store: MemoryStore) -> tuple[str, bool]:
+def _execute_tool(
+    tool: Tool, args: dict[str, Any], store: MemoryStore
+) -> tuple[str, bool]:
     """Run a tool, returning (output, is_error). Errors are reported, not raised."""
     try:
         return tool.handler(args, store), False
@@ -296,7 +307,9 @@ def run_agent(
     try:
         for iteration in range(1, max_iterations + 1):
             if deadline is not None and time.monotonic() >= deadline:
-                raise AgentError(f"Agent time budget exhausted (max_seconds={max_seconds}).")
+                raise AgentError(
+                    f"Agent time budget exhausted (max_seconds={max_seconds})."
+                )
             logger.debug("Agent iteration %d/%d", iteration, max_iterations)
 
             system = _build_system(store, skills_block, fast=fast, stateless=stateless)
@@ -312,7 +325,13 @@ def run_agent(
                 usage_tracker.record(**response.usage)
             else:
                 response = _call_anthropic(
-                    client, model, max_tokens, system, tool_schemas, messages, on_token=on_token
+                    client,
+                    model,
+                    max_tokens,
+                    system,
+                    tool_schemas,
+                    messages,
+                    on_token=on_token,
                 )
                 usage_tracker.record(**extract_usage(response))
 
@@ -329,7 +348,10 @@ def run_agent(
                         stop_reason,
                         missed_tool,
                     )
-                    notify("tool_call_in_text", {"name": missed_tool, "stop_reason": stop_reason})
+                    notify(
+                        "tool_call_in_text",
+                        {"name": missed_tool, "stop_reason": stop_reason},
+                    )
                 result = AgentResult(
                     text=final_text,
                     iterations=iteration,
@@ -356,7 +378,9 @@ def run_agent(
                 _save_session_log(task, model, messages, result)
                 return result
 
-            tool_uses = [b for b in response.content if getattr(b, "type", "") == "tool_use"]
+            tool_uses = [
+                b for b in response.content if getattr(b, "type", "") == "tool_use"
+            ]
             messages.append({"role": "assistant", "content": response.content})
             results = _process_tool_uses(tool_uses, registry, store, notify, tool_calls)
             messages.append({"role": "user", "content": results})
@@ -399,7 +423,9 @@ def preflight(
 
     effective_model = model
     if resolved == "openai" and model == DEFAULT_MODEL:
-        effective_model = "qwen2.5-coder:7b" if os.environ.get("OLLAMA_HOST") else "gpt-4o"
+        effective_model = (
+            "qwen2.5-coder:7b" if os.environ.get("OLLAMA_HOST") else "gpt-4o"
+        )
     elif resolved == "google" and model == DEFAULT_MODEL:
         effective_model = "gemini-2.5-flash"
 
@@ -518,7 +544,9 @@ def _serialize_messages(messages: list[Any]) -> list[dict[str, Any]]:
     return serialized
 
 
-def _save_session_log(task: str, model: str, messages: list[Any], result: AgentResult) -> None:
+def _save_session_log(
+    task: str, model: str, messages: list[Any], result: AgentResult
+) -> None:
     try:
         base = sessions_dir().resolve()
         base.mkdir(parents=True, exist_ok=True)
@@ -537,6 +565,8 @@ def _save_session_log(task: str, model: str, messages: list[Any], result: AgentR
                 "tool_calls": result.tool_calls,
             },
         }
-        target.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
+        target.write_text(
+            json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8"
+        )
     except Exception as exc:  # noqa: BLE001 — logging is best-effort
         logger.warning("Failed to save session log: %s", exc)

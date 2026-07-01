@@ -34,7 +34,9 @@ def _fake_sdk_response(stop_reason: str = "end_turn", text: str = "hello") -> Ma
 def test_call_anthropic_returns_raw_sdk_response() -> None:
     client = MagicMock()
     client.messages.create.return_value = _fake_sdk_response()
-    result = call_anthropic(client, "claude-3-5-sonnet-20241022", 1024, "system", [], [])
+    result = call_anthropic(
+        client, "claude-3-5-sonnet-20241022", 1024, "system", [], []
+    )
     assert result.stop_reason == "end_turn"
     client.messages.create.assert_called_once()
 
@@ -109,7 +111,9 @@ def test_call_anthropic_non_streaming_uses_create_not_stream() -> None:
 # -- error handling --------------------------------------------------------
 
 
-def test_call_anthropic_api_error_raises_agent_error(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_call_anthropic_api_error_raises_agent_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     _zero_wait(monkeypatch)
     client = MagicMock()
     client.messages.create.side_effect = OSError("network failure")
@@ -117,7 +121,9 @@ def test_call_anthropic_api_error_raises_agent_error(monkeypatch: pytest.MonkeyP
         call_anthropic(client, "m", 100, "sys", [], [])
 
 
-def test_call_anthropic_oserror_wraps_as_agent_error(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_call_anthropic_oserror_wraps_as_agent_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     _zero_wait(monkeypatch)
     client = MagicMock()
     client.messages.create.side_effect = OSError("broken pipe")
