@@ -635,7 +635,7 @@ class MemoryStore:
         }
         # SQL-based tag counting is ~2.6x faster than Python loop (Bolt optimization)
         tag_counts = {
-            r["tag"]: r["n"]
+            r["tag"]: int(r["n"])
             for r in c.execute(
                 "SELECT j.value AS tag, COUNT(*) AS n "
                 "FROM facts, json_each(facts.tags) AS j "
@@ -663,7 +663,7 @@ class MemoryStore:
                 "avg_weight": round(avg_w, 3) if avg_w is not None else None,
                 "avg_confidence": round(avg_c, 3) if avg_c is not None else None,
             },
-            "tags": dict(sorted(tag_counts.items(), key=lambda kv: (-kv[1], kv[0]))),
+            "tags": dict(sorted(tag_counts.items(), key=lambda kv: (-int(kv[1]), kv[0]))),
         }
 
     # -- import / export --------------------------------------------------
@@ -717,75 +717,50 @@ class MemoryStore:
             if mode == "replace":
                 self._conn.execute("DELETE FROM facts")
                 self._conn.execute("DELETE FROM observations")
-                # Reset autoincrement so reinserted IDs are honoured rather than
-                # being shadowed by sqlite_sequence. The table may not exist yet.
                 with contextlib.suppress(sqlite3.OperationalError):
                     self._conn.execute(
                         "DELETE FROM sqlite_sequence WHERE name IN ('facts', 'observations')"
                     )
-                self._conn.executemany(
-                    "INSERT INTO facts (id, kind, key, value, source_session, "
-                    "created_at, updated_at, tags) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                    [
-                        (
-                            f["id"],
-                            f["kind"],
-                            f["key"],
-                            f["value"],
-                            f["source_session"],
-                            f["created_at"],
-                            f["updated_at"],
-                            _encode_tags(f.get("tags")),
-                        )
-                        for f in facts
-                    ],
-                )
-                self._conn.executemany(
-                    "INSERT INTO observations (id, summary, evidence_session_id, "
-                    "weight, confidence, created_at) VALUES (?, ?, ?, ?, ?, ?)",
-                    [
-                        (
-                            o["id"],
-                            o["summary"],
-                            o["evidence_session_id"],
-                            o["weight"],
-                            o["confidence"],
-                            o["created_at"],
-                        )
-                        for o in obs
-                    ],
-                )
-            else:  # merge — SQLite assigns IDs
-                self._conn.executemany(
-                    "INSERT INTO facts (kind, key, value, source_session, "
-                    "created_at, updated_at, tags) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                    [
-                        (
-                            f["kind"],
-                            f["key"],
-                            f["value"],
-                            f["source_session"],
-                            f["created_at"],
-                            f["updated_at"],
-                            _encode_tags(f.get("tags")),
-                        )
-                        for f in facts
-                    ],
-                )
-                self._conn.executemany(
-                    "INSERT INTO observations (summary, evidence_session_id, "
-                    "weight, confidence, created_at) VALUES (?, ?, ?, ?, ?)",
-                    [
-                        (
-                            o["summary"],
-                            o["evidence_session_id"],
-                            o["weight"],
-                            o["confidence"],
-                            o["created_at"],
-                        )
-                        for o in obs
-                    ],
-                )
+
+            f_cols = ["kind", "key", "value", "source_session", "created_at", "updated_at", "tags"]
+            if mode == "replace":
+                f_cols.insert(0, "id")
+            f_qs = ", ".join(["?"] * len(f_cols))
+            f_stmt = "INSERT INTO facts (" + ", ".join(f_cols) + ") VALUES (" + f_qs + ")"
+            f_rows = []
+            for f in facts:
+                r = [
+                    f["kind"],
+                    f["key"],
+                    f["value"],
+                    f["source_session"],
+                    f.get("created_at", 0),
+                    f.get("updated_at", 0),
+                    _encode_tags(f.get("tags")),
+                ]
+                if mode == "replace":
+                    r.insert(0, f["id"])
+                f_rows.append(tuple(r))
+            self._conn.executemany(f_stmt, f_rows)
+
+            o_cols = ["summary", "evidence_session_id", "weight", "confidence", "created_at"]
+            if mode == "replace":
+                o_cols.insert(0, "id")
+            o_qs = ", ".join(["?"] * len(o_cols))
+            o_stmt = "INSERT INTO observations (" + ", ".join(o_cols) + ") VALUES (" + o_qs + ")"
+            o_rows = []
+            for o in obs:
+                r = [
+                    o["summary"],
+                    o["evidence_session_id"],
+                    o["weight"],
+                    o["confidence"],
+                    o["created_at"],
+                ]
+                if mode == "replace":
+                    r.insert(0, o["id"])
+                o_rows.append(tuple(r))
+            self._conn.executemany(o_stmt, o_rows)
             self._conn.commit()
         except Exception:
             self._conn.rollback()
