@@ -8,15 +8,15 @@
 One package, three ways in — a CLI, a tool-using agent loop, and an MCP stdio server.
 
 <!-- 📡 Live status bar -->
-[![CI](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/ci.yml)
-[![Pylint](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/pylint.yml/badge.svg?branch=main)](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/pylint.yml)
-[![Dashboard Pages](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/pages.yml/badge.svg?branch=main)](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/pages.yml)
+[![CI](https://github.com/beer-sakthai/sakthai-agent-v2/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/beer-sakthai/sakthai-agent-v2/actions/workflows/ci.yml)
+[![Pylint](https://github.com/beer-sakthai/sakthai-agent-v2/actions/workflows/pylint.yml/badge.svg?branch=main)](https://github.com/beer-sakthai/sakthai-agent-v2/actions/workflows/pylint.yml)
+[![Dashboard Pages](https://github.com/beer-sakthai/sakthai-agent-v2/actions/workflows/pages.yml/badge.svg?branch=main)](https://github.com/beer-sakthai/sakthai-agent-v2/actions/workflows/pages.yml)
 
 [![Python](https://img.shields.io/badge/python-3.11_|_3.12_|_3.13-3776AB?logo=python&logoColor=white)](https://www.python.org/)
-[![Coverage](https://img.shields.io/badge/coverage-85%25%2B-brightgreen)](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/ci.yml)
+[![Coverage](https://img.shields.io/badge/coverage-85%25%2B-brightgreen)](https://github.com/beer-sakthai/sakthai-agent-v2/actions/workflows/ci.yml)
 [![MCP](https://img.shields.io/badge/MCP-2024--11--05-8A2BE2)](https://modelcontextprotocol.io)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
-[![Last commit](https://img.shields.io/github/last-commit/beer-sakthai/Sak-Family-Agent/main?logo=git&logoColor=white)](https://github.com/beer-sakthai/Sak-Family-Agent/commits/main)
+[![Last commit](https://img.shields.io/github/last-commit/beer-sakthai/sakthai-agent-v2/main?logo=git&logoColor=white)](https://github.com/beer-sakthai/sakthai-agent-v2/commits/main)
 
 </div>
 
@@ -36,7 +36,7 @@ One package, three ways in — a CLI, a tool-using agent loop, and an MCP stdio 
 - [⚙️ Runtimes](#️-runtimes)
 - [🔗 MCP (both directions)](#-mcp-both-directions)
 - [📚 Skills](#-skills)
-- [🛠️ Built-in tools](#️-built-in-tools)
+- [🛠️ Built-in tools](#-built-in-tools)
 - [💻 Commands](#-commands)
 - [👩‍💻 Develop](#-develop)
 - [🤝 Family agents](#-family-agents)
@@ -52,9 +52,15 @@ One package, three ways in — a CLI, a tool-using agent loop, and an MCP stdio 
   (things it concludes): substring search, tagging, WAL concurrency, additive migrations,
   dedupe/consolidation, and multi-agent sync (Git JSONL merge + HTTP backup).
   See [`docs/architecture.md`](./docs/architecture.md).
+
+  ![AI Brain Memory](./assets/ai_brain_memory.png)
+
 - 🤖 **Provider-agnostic agent loop** — `sakthai run "<task>"` drives a tool-using loop over
   **Anthropic (Claude)**, **Google (Gemini)**, or any **OpenAI-compatible / Ollama** endpoint —
   including a fully **no-cost local run**.
+
+  ![Agent Workflow](./assets/agent_workflow.png)
+
 - 🛠️ **8 built-in tools** — one registry powers both the agent loop and the MCP server.
 - 📚 **Skills catalog** — **31 curated library skills** across 11 categories plus
   **69 user/extension skills**, injected into the system prompt on demand.
@@ -158,6 +164,8 @@ available credentials; override with `--provider`.
 ollama run qwen2.5-coder:7b          # start a local model (one-time)
 sakthai run "refactor this script" --provider ollama --model qwen2.5-coder:7b
 ```
+
+![Local-First Security](./assets/local_first_security.png)
 
 > ℹ️ Ollama is reached at the IPv4 literal `127.0.0.1` on purpose — on hosts where `localhost`
 > resolves to IPv6 `::1` but Ollama binds IPv4 only, `localhost` would give `Connection refused`.
@@ -330,79 +338,39 @@ make lint                                # run ruff check
 make test                                # run the hermetic test suite
 ```
 
-### 🪝 Pre-commit hooks & monorepo workflow
-
-The repository is protected by a strict `.git/hooks/pre-commit` hook that automatically:
-
-1. Validates all Hermes YAML configurations via `doctor.py`.
-2. Runs `make lint` and `make test` to ensure code health before allowing any commits.
-
-A local mock of the `omp` orchestrator is available at `bin/omp` to test orchestrator commands
-natively within the repository without global installs (e.g. `./bin/omp team run --task smoke`).
-
-A live end-to-end smoke test (CLI + MCP roundtrip, **no API cost**):
-
-```bash
-python .claude/skills/run-sakthai-agent-v2/driver.py
-```
-
-### 🌲 Git worktree workflow
-
-This checkout may be shared by multiple agents/developers. Use git worktrees to isolate work so
-concurrent commits never collide:
-
-```bash
-git worktree add -b my-feature ../wt-my-feature origin/main  # isolated checkout off main
-cd ../wt-my-feature                                          # work, commit, push independently
-# ... when done:
-cd -
-git worktree remove ../wt-my-feature
-```
+### 🪝 Pre-commit hooks
 
 ---
 
 ## 📁 Repository layout
 
 ```
-sakthai/     the package (config, auth, memory, agent, mcp, cycle, skills, dashboard, cli, ...)
-tests/       41 hermetic unit-test files (no network, no GCP)
-skills/      69 user/extension SKILL.md folders (the sakthai-* set)
-library/     31 curated skills across 11 categories
-docs/        architecture, capabilities, plugins, runtimes, integrations, replication, ...
-assets/      banner + architecture / cycle diagrams
-scripts/     dev utilities (not linted / type-checked)
-data/        memory snapshot format + a sample export
-training/    HF Jobs fine-tune + serving scripts (optional, off the core path)
+.
+├── assets/                         # Images for README and documentation
+├── bin/                            # Executable scripts
+├── dashboard/                      # Streamlit dashboard source code
+├── data/                           # Data files and configurations
+├── docs/                           # Project documentation
+├── infra/                          # Infrastructure related files
+├── library/                        # Core library skills
+├── packages/                       # Standalone Python packages
+├── personas/                       # Persona definitions and skill overlays
+├── sakthai/                        # Main SakThai agent source code
+├── scripts/                        # Utility scripts
+├── services/                       # External service integrations
+├── skills/                         # User and extension skills
+├── tests/                          # Test suite
+└── training/                       # Training related files
 ```
 
 ---
 
 ## 📖 Documentation
 
-| Doc | Contents |
-|-----|----------|
-| [CLAUDE.md](./CLAUDE.md) | Development guide + architecture for contributors |
-| [docs/architecture.md](./docs/architecture.md) | Layer diagram and SQLite schema |
-| [docs/capabilities.md](./docs/capabilities.md) | Tools, memory ops, providers, dashboard |
-| [docs/plugins.md](./docs/plugins.md) | MCP servers + skills extensibility |
-| [docs/integrations.md](./docs/integrations.md) | Connecting Hermes, Composio, and other agents |
-| [docs/runtimes.md](./docs/runtimes.md) | CLI / agent loop / MCP server + local models |
-| [docs/replication.md](./docs/replication.md) | Multi-agent memory sync |
-| [docs/workspace.md](./docs/workspace.md) | Dev environment setup |
+Comprehensive documentation is available in the `docs/` directory, covering architecture, runtimes, plugins, and integrations.
 
 ---
 
 ## 📝 License
 
-**MIT License** — see the [LICENSE](LICENSE) file for details.
-
-> 🔖 **Versioning:** `Sak-Family-Agent` is the active, clean from-scratch rewrite of the core
-> engine. The original `SakThai-Agent` (v1) blueprint is deprecated and locked.
-
-<div align="center">
-
----
-
-Made with 🧠 + ☕ by [**@beer-sakthai**](https://github.com/beer-sakthai) · powered by Claude, Gemini & local models
-
-</div>
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
