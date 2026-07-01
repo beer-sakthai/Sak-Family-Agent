@@ -36,14 +36,7 @@ mutation = [
     "mutmut>=3.2",
 ]
 
-dashboard = [
-    "streamlit>=1.36",
-    "plotly>=5.22",
-    "pandas>=2.2",
-    "PyGithub>=2.3",
-]
-
-all = ["sakthai-agent[dev,dashboard]"]
+all = ["sakthai-agent[dev]"]
 
 [project.scripts]
 sakthai = "sakthai.cli:main"

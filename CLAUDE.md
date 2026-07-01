@@ -64,8 +64,7 @@ Everything below this point describes the SakThai agent package itself.
 # Setup (Python >=3.11)
 cp .env.example .env            # then fill in ANTHROPIC_API_KEY
 pip install -e ".[dev]"         # editable install + test/lint/type-check tools
-pip install -e ".[dashboard]"   # adds streamlit/plotly/pandas/PyGithub for `sakthai dashboard`
-pip install -e ".[all]"         # dev + dashboard
+pip install -e ".[all]"         # same as [dev] (dashboard is a pre-built React bundle; no extra Python deps needed)
 
 # Preferred: use uv (CI uses uv with uv.lock for reproducible installs)
 uv sync --all-extras
