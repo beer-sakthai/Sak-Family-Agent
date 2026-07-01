@@ -1,16 +1,1 @@
-# Hermes runtime configuration for the SakJules agent.
-# This file tells Hermes which model to use and how to connect to platforms.
-
-provider: google
-model: gemini-1.5-pro-latest
-
-# Optional: Configure the Telegram bot token if you want to interact via Telegram.
-# telegram:
-#   bot_token: "YOUR_SAKJULES_BOT_TOKEN"
-
-# Optional: Configure MCP servers for extended tools like GitHub access.
-# See infra/hermes-agents/README.md for more examples.
-# mcp_servers:
-#   github:
-#     command: "npx"
-#     args: ["-y", "@modelcontextprotocol/server-github"]
+  name: Auto Dependency Update

@@ -63,6 +63,15 @@ def to_gemini_contents(messages: list[dict[str, Any]]) -> list[Any]:
     return contents
 
 
+def _stop_reason(has_tool_call: bool, finish_reason: Any) -> str:
+    """Map Gemini's tool-call/finish signals to a normalised stop reason."""
+    if has_tool_call:
+        return "tool_use"
+    if finish_reason == "MAX_TOKENS":
+        return "max_tokens"
+    return "end_turn"
+
+
 def call_gemini(
     client: Any,
     model: str,
@@ -72,10 +81,12 @@ def call_gemini(
     iteration: int,
     on_token: Callable[[str], None] | None = None,
 ) -> Response:
-    """Make one Gemini generate_content call, normalised to :class:`Response`.
+    """Make one Gemini call, normalised to :class:`Response`.
 
-    ``on_token`` is accepted for interface parity; Gemini streaming is not yet
-    implemented.
+    When ``on_token`` is provided, the response is streamed via
+    ``client.models.generate_content_stream`` and each text delta is forwarded to
+    the callback; the assembled result is identical in shape to the non-streaming
+    ``generate_content`` response (a single text block plus any tool_use blocks).
     """
     from google.genai import types
 
@@ -99,41 +110,83 @@ def call_gemini(
         )
         for t in tools
     ]
-    try:
-        raw = with_retry(
-            client.models.generate_content,
-            model=model,
-            contents=to_gemini_contents(messages),
-            config=types.GenerateContentConfig(system_instruction=system, tools=declarations),
+    contents = to_gemini_contents(messages)
+    config = types.GenerateContentConfig(system_instruction=system, tools=declarations)
+
+    def _generate() -> Response:
+        raw = client.models.generate_content(model=model, contents=contents, config=config)
+        if not raw.candidates:
+            raise AgentError("Gemini returned no candidates.")
+        candidate = raw.candidates[0]
+        blocks: list[Any] = []
+        has_tool_call = False
+        parts = (candidate.content.parts if candidate.content else None) or []
+        for idx, part in enumerate(parts):
+            if part.text:
+                blocks.append(Block("text", text=part.text))
+            elif part.function_calls:
+                has_tool_call = True
+                for fc in part.function_calls:
+                    blocks.append(
+                        Block(
+                            "tool_use",
+                            id=f"call_{fc.name}_{iteration}_{idx}",
+                            name=fc.name,
+                            input=dict(fc.args or {}),
+                        )
+                    )
+        return Response(
+            stop_reason=_stop_reason(has_tool_call, candidate.finish_reason),
+            content=blocks,
+            usage=extract_usage(raw),
         )
+
+    def _stream() -> Response:
+        text_parts: list[str] = []
+        tool_blocks: list[Any] = []
+        finish_reason: Any = None
+        last_chunk: Any = None
+        fc_index = 0
+        for chunk in client.models.generate_content_stream(
+            model=model, contents=contents, config=config
+        ):
+            last_chunk = chunk
+            for candidate in chunk.candidates or []:
+                if candidate.finish_reason is not None:
+                    finish_reason = candidate.finish_reason
+                parts = (candidate.content.parts if candidate.content else None) or []
+                for part in parts:
+                    if part.text:
+                        text_parts.append(part.text)
+                        if on_token is not None:
+                            on_token(part.text)
+                    elif part.function_calls:
+                        for fc in part.function_calls:
+                            tool_blocks.append(
+                                Block(
+                                    "tool_use",
+                                    id=f"call_{fc.name}_{iteration}_{fc_index}",
+                                    name=fc.name,
+                                    input=dict(fc.args or {}),
+                                )
+                            )
+                            fc_index += 1
+        blocks: list[Any] = []
+        if text_parts:
+            # Deltas are concatenated into one block so downstream text extraction
+            # doesn't see spurious newlines between streamed chunks.
+            blocks.append(Block("text", text="".join(text_parts)))
+        blocks.extend(tool_blocks)
+        return Response(
+            stop_reason=_stop_reason(bool(tool_blocks), finish_reason),
+            content=blocks,
+            usage=extract_usage(last_chunk),
+        )
+
+    try:
+        return with_retry(_stream if on_token is not None else _generate)  # type: ignore[no-any-return]
+    except AgentError:
+        raise
     except Exception as exc:  # noqa: BLE001
         logger.error("Gemini API call failed: %s", exc)
         raise AgentError(f"Gemini API call failed: {exc}") from exc
-
-    if not raw.candidates:
-        raise AgentError("Gemini returned no candidates.")
-    candidate = raw.candidates[0]
-    blocks: list[Any] = []
-    has_tool_call = False
-    parts = (candidate.content.parts if candidate.content else None) or []
-    for idx, part in enumerate(parts):
-        if part.text:
-            blocks.append(Block("text", text=part.text))
-        elif part.function_calls:
-            has_tool_call = True
-            for fc in part.function_calls:
-                blocks.append(
-                    Block(
-                        "tool_use",
-                        id=f"call_{fc.name}_{iteration}_{idx}",
-                        name=fc.name,
-                        input=dict(fc.args or {}),
-                    )
-                )
-    if has_tool_call:
-        stop_reason = "tool_use"
-    elif candidate.finish_reason == "MAX_TOKENS":
-        stop_reason = "max_tokens"
-    else:
-        stop_reason = "end_turn"
-    return Response(stop_reason=stop_reason, content=blocks, usage=extract_usage(raw))
