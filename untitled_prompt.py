@@ -46,4 +46,5 @@ def generate():
         print(chunk.text, end="")
 
 
-generate()
+if __name__ == "__main__":
+    generate()
