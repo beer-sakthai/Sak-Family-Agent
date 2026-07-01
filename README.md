@@ -90,8 +90,8 @@ with their git history preserved (via `git subtree`). Those standalone repos hav
 ├── packages/
 │   └── agent-self-evolution/     # DSPy/GEPA self-evolution tool (standalone Python pkg)
 ├── personas/
-│   ├── shared/skills/            # skill library shared by all six personas (deduped, once)
-│   └── {sakking,sakthai,saksee,saksit,saktan,sakjules}/   # per-persona SOUL.md + config + skill overlay
+│   ├── shared/skills/            # skill library shared by all four personas (deduped, once)
+│   └── {sakking,sakthai,saksee,saksit,saktan}/   # per-persona SOUL.md + config + skill overlay
 ├── infra/
 │   ├── hermes-agents/            # Hermes Telegram-bot config backup (no secrets)
 │   └── pw-poc/                   # Playwright tab-order/accessibility probe (npm)
@@ -99,8 +99,7 @@ with their git history preserved (via `git subtree`). Those standalone repos hav
 ```
 
 - 👑 **Personas** are the **Sak Family Agents**: **SakKing** is the main (Lead & Orchestrator,
-  Master of Code & Self-Healing), and **SakThai**, **SakSee**, **SakSit**, **SakTan**, and
-  **SakJules** are the
+  Master of Code & Self-Healing), and **SakThai**, **SakSee**, **SakSit**, and **SakTan** are the
   family it coordinates. *"Hermes" is only the framework they run on, never an agent's name.*
   The shared skill library now lives once under `personas/shared/skills/`, with each persona
   keeping only its unique files. See [`personas/README.md`](./personas/README.md) and the root
@@ -134,7 +133,7 @@ All runtimes share `~/.sakthai/memory.db` (override the root with `SAKTHAI_HOME`
 
 ## 🤝 Family agents
 
-The repo tracks six personas end to end, each with a distinct role and personality:
+The repo tracks five personas end to end, each with a distinct role and personality:
 
 | Agent | Role | Portrait |
 |---|---|---|
@@ -143,7 +142,6 @@ The repo tracks six personas end to end, each with a distinct role and personali
 | **SakSee** | Master of Web | ![SakSee](./assets/saksee.png) |
 | **SakSit** | Master of Social Media | ![SakSit](./assets/saksit.png) |
 | **SakTan** | Daily Ops Helper | ![SakTan](./assets/saktan.png) |
-| **SakJules** | GitHub Repository Steward | |
 
 ![House of Sak](./assets/house_of_sak.png)
 

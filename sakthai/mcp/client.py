@@ -172,9 +172,6 @@ class StdioMCPClient:
                     input_schema=schema
                     if isinstance(schema, dict)
                     else {"type": "object", "properties": {}},
-                    input_schema=(
-                        schema if isinstance(schema, dict) else {"type": "object", "properties": {}}
-                    ),
                     handler=self._make_handler(remote_name),
                 )
             )

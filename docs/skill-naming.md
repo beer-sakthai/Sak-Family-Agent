@@ -13,8 +13,6 @@ shared across the whole Sak Family or authored by one persona.
 | **SakThai** (Hugging Face) | `personas/sakthai/skills/` | `SakThai-` | `SakThai-hf-diffusers` |
 | **SakSee** (Web) | `personas/saksee/skills/` | `SakSee-` | `SakSee-chrome-devtools` |
 | **SakSit** (Social Media) | `personas/saksit/skills/` | `SakSit-` | `SakSit-ig-carousel-design` |
-| **SakTan** (daily ops) | `personas/saktan/skills/` | `SakTan-` | `SakTan-daily-ops-helper` |
-| **SakJules** (GitHub / repository) | `personas/sakjules/skills/` | `SakJules-` | `SakJules-github-repository-guardian` |
 
 Plus two structural rules, enforced by the validator:
 
@@ -34,7 +32,6 @@ sakthai skills validate --naming
 # Scaffold a new skill already carrying the right prefix
 sakthai skills create my-skill --persona saksit   # -> SakSit-my-skill
 sakthai skills create my-skill --persona shared   # -> Sak-my-skill
-sakthai skills create my-skill --persona sakjules  # -> SakJules-my-skill
 
 # Preview / apply the bulk rename for a layer (dry-run by default)
 python scripts/rename_skills.py shared            # preview
