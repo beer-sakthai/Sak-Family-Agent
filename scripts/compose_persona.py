@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Compose a persona's full skill tree from the shared library + its overlay.
 
-After the monorepo consolidation, the five persona skill libraries
-(``personas/{sakthai,sakking,saksee,saksit,saktan}``) no longer each carry a full copy
+After the monorepo consolidation, the six persona skill libraries
+(``personas/{sakthai,sakking,saksee,saksit,saktan,sakjules}``) no longer each carry a full copy
 of the ~446 skill files they share. Instead the identical files live once under
 ``personas/shared/skills/`` and each persona keeps only the files that are unique
 to it or that differ from the shared version (its *overlay*).
@@ -32,7 +32,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 PERSONAS_DIR = REPO_ROOT / "personas"
-PERSONAS = ("sakthai", "sakking", "saksee", "saksit", "saktan")
+PERSONAS = ("sakthai", "sakking", "saksee", "saksit", "saktan", "sakjules")
 
 
 def _copy_tree(src: Path, dst: Path) -> None:

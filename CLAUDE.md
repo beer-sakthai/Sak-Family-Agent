@@ -18,10 +18,11 @@ v2 is local-first — the CLI, the agent loop, and the MCP stdio server.
 
 ## Monorepo layout
 
-This repo is a **monorepo**. The SakThai agent package lives at the root
-(`sakthai/`, `library/`, `skills/`) and everything below this section's
-file-structure still describes it. Consolidated alongside it (history-preserved
-via `git subtree`):
+This repo is the shared source workspace for the Sak family. The SakThai agent
+package lives at the root (`sakthai/`, `library/`, `skills/`) and everything
+below this section's file-structure still describes it. It also carries the
+persona overlays and can export standalone repo snapshots with
+`scripts/export_agent_repo.py` or `make export-agent-repos`.
 
 - `packages/agent-self-evolution/` — DSPy/GEPA self-evolution tool. Standalone
   Python package, **not** a uv workspace member (disjoint/heavy deps; its

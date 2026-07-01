@@ -54,8 +54,14 @@ persona's `skills/` are regenerated caches/state, not authored content. They are
 git-ignored going forward (see root `.gitignore`); existing snapshots are kept
 so each persona still round-trips exactly.
 
-## Follow-up (not yet wired)
+## Standalone exports
 
-Rewiring the agent's skill loader / `sync-sakking` to read the
-`shared + overlay` layout directly (rather than via `compose_persona.py`) is a
-deliberate follow-up — see the monorepo README.
+When you need a separate repo for one persona, use the export helper from the
+source workspace:
+
+```bash
+python scripts/export_agent_repo.py sakjules --out build/agent-repos/sakjules
+```
+
+That export keeps the shared core plus the selected persona overlay and profile,
+so the standalone repo can own its own skills, tools, and runtime settings.

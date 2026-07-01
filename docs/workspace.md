@@ -17,6 +17,10 @@ The active rewrite repository contains the following:
 | `docs/` | Architecture, plugins, replication, and workspace documentation |
 | `dashboard/` | Source code for the Streamlit memory/activity dashboard |
 
+The same source workspace can also export standalone repo snapshots for each
+persona with `make export-agent-repos` or
+`python scripts/export_agent_repo.py <persona> --out <dir>`.
+
 ---
 
 ## ⚡ Development & Testing Commands

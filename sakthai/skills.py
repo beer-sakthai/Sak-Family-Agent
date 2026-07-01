@@ -28,6 +28,7 @@ PERSONA_SKILL_PREFIXES: dict[str, str] = {
     "saksee": "SakSee-",
     "saksit": "SakSit-",
     "saktan": "SakTan-",
+    "sakjules": "SakJules-",
 }
 
 #: Legacy prefix that predates the convention; stripped when retargeting a name.

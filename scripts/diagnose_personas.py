@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Per-agent diagnostics for the five Sak Family Agents.
+"""Per-agent diagnostics for the six Sak Family Agents.
 
 Where `.claude/skills/run-sakthai-agent-v2/driver.py` smoke-tests the *core*
-once, this checks each persona (SakKing, SakThai, SakSee, SakSit, SakTan) end to
+once, this checks each persona (SakKing, SakThai, SakSee, SakSit, SakTan, SakJules) end to
 end and confirms the family can *improve*:
 
 For every persona it verifies, offline and with zero token spend:
@@ -44,7 +44,7 @@ from sakthai.skills import (  # noqa: E402  (path bootstrap above)
     naming_violations,
 )
 
-PERSONAS = ("sakking", "sakthai", "saksee", "saksit", "saktan")
+PERSONAS = ("sakking", "sakthai", "saksee", "saksit", "saktan", "sakjules")
 PERSONAS_DIR = REPO_ROOT / "personas"
 HERMES_PROFILES_DIR = REPO_ROOT / "infra" / "hermes-agents" / "profiles"
 BIN = os.environ.get("SAKTHAI_BIN", "sakthai")

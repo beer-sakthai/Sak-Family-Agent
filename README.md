@@ -79,10 +79,10 @@ One package, three ways in — a CLI, a tool-using agent loop, and an MCP stdio 
 
 ## 🗂️ Monorepo layout
 
-This repository is a **monorepo**: the SakThai agent at the root, plus the former `*-skills`,
-`agent-self-evolution`, `sakthai-hermes-agents`, and `pw-poc` repositories consolidated in
-with their git history preserved (via `git subtree`). Those standalone repos have since been
-**retired — this is the single source of truth.**
+This repository is the **source workspace** for the Sak family. It contains the
+shared core plus the six persona overlays, and it can **export standalone repo
+snapshots** for each persona into `build/agent-repos/<persona>/` with
+`make export-agent-repos`.
 
 ```
 .
@@ -92,6 +92,7 @@ with their git history preserved (via `git subtree`). Those standalone repos hav
 ├── personas/
 │   ├── shared/skills/            # skill library shared by all six personas (deduped, once)
 │   └── {sakking,sakthai,saksee,saksit,saktan,sakjules}/   # per-persona SOUL.md + config + skill overlay
+├── build/agent-repos/<persona>/   # export target for standalone agent repos
 ├── infra/
 │   ├── hermes-agents/            # Hermes Telegram-bot config backup (no secrets)
 │   └── pw-poc/                   # Playwright tab-order/accessibility probe (npm)
@@ -100,10 +101,11 @@ with their git history preserved (via `git subtree`). Those standalone repos hav
 
 - 👑 **Personas** are the **Sak Family Agents**: **SakKing** is the main (Lead & Orchestrator,
   Master of Code & Self-Healing), and **SakThai**, **SakSee**, **SakSit**, **SakTan**, and
-  **SakJules** are the
-  family it coordinates. *"Hermes" is only the framework they run on, never an agent's name.*
-  The shared skill library now lives once under `personas/shared/skills/`, with each persona
-  keeping only its unique files. See [`personas/README.md`](./personas/README.md) and the root
+  **SakJules** are the family it coordinates. *"Hermes" is only the framework they run on,
+  never an agent's name.* The shared skill library now lives once under
+  `personas/shared/skills/`, with each persona keeping only its unique files. Use
+  `scripts/export_agent_repo.py <persona> --out ...` or `make export-agent-repos` when you want
+  a standalone repo snapshot. See [`personas/README.md`](./personas/README.md) and the root
   [`SOUL.md`](./SOUL.md); see [`infra/hermes-agents/README.md`](./infra/hermes-agents/README.md)
   for full Telegram-bot deployment.
 - 📦 **`packages/agent-self-evolution`** targets a different runtime (Nous Research's Hermes) with

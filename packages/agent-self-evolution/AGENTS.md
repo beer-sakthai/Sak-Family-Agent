@@ -1,20 +1,33 @@
-# Self-evolution for the four sibling Hermes agents
+# Self-evolution for the six Sak Family agents
 
-`evolve_agent.sh` wires this framework to the four Telegram agents that run on
-the local Hermes gateway, so each can evolve its own skills and commit/push the
-result to its **own** private GitHub repo (one repo per agent).
+`evolve_agent.sh` wires this framework to the six Sak Family agents that run on
+the local Hermes gateway, so each can evolve its own skills and keep the result
+inside its standalone repo export before it is published.
 
-| agent     | profile dir (`HERMES_AGENT_REPO`)        | GitHub repo                   |
-|-----------|------------------------------------------|-------------------------------|
-| `hermes`  | `~/.hermes`                              | `beer-sakthai/hermes-skills`  |
-| `sakthai` | `~/.hermes/profiles/sakthai`            | `beer-sakthai/sakthai-skills` |
-| `saksee`  | `~/.hermes/profiles/saksee`             | `beer-sakthai/saksee-skills`  |
-| `saksit`  | `~/.hermes/profiles/saksit`             | `beer-sakthai/saksit-skills`  |
+| agent      | profile dir (`HERMES_AGENT_REPO`)        | standalone repo export                    |
+|------------|------------------------------------------|-------------------------------------------|
+| `sakking`  | `~/.hermes`                              | `build/agent-repos/sakking`               |
+| `sakthai`  | `~/.hermes/profiles/sakthai`             | `build/agent-repos/sakthai`               |
+| `saksee`   | `~/.hermes/profiles/saksee`              | `build/agent-repos/saksee`                |
+| `saksit`   | `~/.hermes/profiles/saksit`              | `build/agent-repos/saksit`                |
+| `saktan`   | `~/.hermes/profiles/saktan`              | `build/agent-repos/saktan`                |
+| `sakjules` | `~/.hermes/profiles/sakjules`            | `build/agent-repos/sakjules`              |
 
-> Profile dirs were renamed on 2026-06-21 and now **match** identities
-> (`sakthai`→SakThai, `saksee`→SakSee, `saksit`→SakSit). The lead, **SakKing**,
-> lives on the reserved `default` profile (`~/.hermes`). "Hermes" is only the
-> framework. Source of truth: `~/.hermes/shared/agents-roster.md`.
+> The lead, **SakKing**, lives on the reserved default profile (`~/.hermes`).
+> "Hermes" is only the framework. Source of truth for repo export is the
+> `Sak-Family-Agent` workspace and its `personas/` plus `infra/hermes-agents/`
+> profile trees.
+
+## Six-stage workflow
+
+Each agent uses self-evolution inside the family cycle:
+
+1. **Dream** — choose the skill, prompt, or tool behavior to improve.
+2. **Hope** — define the eval source, iterations, and expected improvement.
+3. **Care** — run evolution with guardrails and preserve semantic intent.
+4. **Joy** — package the winning variant as a repo change or PR.
+5. **Trust** — run tests and review before changing live behavior.
+6. **Growth** — merge the learning back into the agent's own repo and profile.
 
 ## Usage
 

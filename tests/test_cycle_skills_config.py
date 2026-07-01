@@ -229,7 +229,9 @@ def test_real_skill_catalog_validates_cleanly() -> None:
     assert errors == []
 
 
-@pytest.mark.parametrize("persona", ["sakthai", "sakking", "saksee", "saksit", "saktan"])
+@pytest.mark.parametrize(
+    "persona", ["sakthai", "sakking", "saksee", "saksit", "saktan", "sakjules"]
+)
 def test_persona_scaffold_is_composable(tmp_path: Path, persona: str) -> None:
     out = tmp_path / f"{persona}-skills"
     proc = subprocess.run(
