@@ -146,7 +146,8 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     if args.raw:
-        emit_json(res)
+        # --raw means "show the true, unmodified server payload" — skip redaction.
+        emit_json(res, redact=False)
         return 0
 
     diag = extract_diagnostics(res["entry"])
