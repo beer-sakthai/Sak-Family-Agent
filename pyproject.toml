@@ -94,14 +94,18 @@ source_paths = [
     "sakthai/agent/loop.py",
     "sakthai/agent/tools.py",
     "sakthai/agent/registry.py",
+    "sakthai/mcp/server.py",
+    "sakthai/mcp/client.py",
+    "sakthai/auth.py",
+    "sakthai/sandbox.py",
 ]
 # mutmut runs the suite from an isolated ``mutants/`` copy and drops the original
 # source from sys.path, so anything the mutated modules import at runtime must be
-# copied in too. ``source_paths`` only copies the four files above, which left
+# copied in too. ``source_paths`` only copies the files listed above, which left
 # ``mutants/sakthai`` a partial namespace package (``from . import providers``
 # failed with "unknown location") — mutation testing could not run at all. Copy
 # the whole package so imports resolve; ``create_mutants`` still mutates only the
-# four ``source_paths`` files (it runs after the copy), so scope is unchanged.
+# ``source_paths`` files (it runs after the copy), so scope is unchanged.
 also_copy = [
     "sakthai",
 ]
