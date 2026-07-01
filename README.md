@@ -1,8 +1,8 @@
 <div align="center">
 
-# 🧠 SakThai Agent `v2`
+# 🧠 House of Sak 
 
-![SakThai Agent Banner](./assets/readme_banner.png)
+![Uploading house_of_sak.png…]()
 
 **A local-first personal learning agent with persistent memory.**
 One package, three ways in — a CLI, a tool-using agent loop, and an MCP stdio server.
