@@ -1,5 +1,5 @@
 model:
-  default: gemini-3.1-pro
+  default: gemini-3.1-pro-high
   provider: gemini
 providers: {}
 fallback_providers:
