@@ -139,6 +139,12 @@ def test_export_creates_persona_specific_repo(
     assert "Self-Evolution" in (out / "README.md").read_text(encoding="utf-8")
     assert "SakJules" in (out / "CLAUDE.md").read_text(encoding="utf-8")
     assert "Supermemory" in (out / "CLAUDE.md").read_text(encoding="utf-8")
+    assert "Dream -> Hope -> Care -> Joy -> Trust -> Growth" in (
+        out / "CLAUDE.md"
+    ).read_text(encoding="utf-8")
+    assert "avoid repeating the same failure" in (out / "CLAUDE.md").read_text(
+        encoding="utf-8"
+    )
     assert "SakJules" in (out / "GEMINI.md").read_text(encoding="utf-8")
     assert "Composio" in (out / "GEMINI.md").read_text(encoding="utf-8")
     assert not (out / "SAKTHAI.md").exists()
