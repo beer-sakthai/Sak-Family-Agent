@@ -14,6 +14,8 @@ Project documentation for SakThai.
 - [replication.md](./replication.md) — multi-agent memory sync options.
 - [workspace.md](./workspace.md) — dev environment setup.
 - [og_parity_audit.md](./og_parity_audit.md) — comparison with the original SakThai.
+- [sakthai-live-connect-plan.md](./sakthai-live-connect-plan.md) — Phase 5–8 Live Connect & Robust Agent Runtime execution plan.
+
 
 For the working cycle, see the stage docs in the repo root
 ([SOUL.md](../SOUL.md), [Dream.md](./cycle/Dream.md) → [Growth.md](./cycle/Growth.md)).

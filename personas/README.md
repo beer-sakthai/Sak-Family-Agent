@@ -1,9 +1,9 @@
 # Personas
 
 Six agent personas — **sakthai**, **sakking**, **saksee**, **saksit**, **saktan**, and **sakjules** — each
-formerly its own `*-skills` repository. They were ~90 % identical: the same
-skill library copied five times. In the monorepo that shared content lives
-**once**.
+formerly had its own `*-skills` repository. They were ~90% identical, with the
+same skill library copied across each. In this monorepo, that shared content
+lives **once**.
 
 ## Layout
 

@@ -1,6 +1,6 @@
 # SakThai-Agent v2 — Plan: Live Connect + Robust Agent Runtime
 Owner: Beer (via Hermes-SakThai)  
-Status: Draft  
+Status: Completed  
 Scope: Phases 5–8, aligned with existing todo.md
 
 ## Current state (from v2 repo)

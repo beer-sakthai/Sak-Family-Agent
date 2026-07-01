@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 from typing import Any
 
 import pytest
@@ -11,11 +10,10 @@ from hypothesis import strategies as st
 
 from sakthai.memory.store import (
     MemoryStore,
-    snapshot_to_csv,
-    snapshot_to_jsonl,
 )
 
 # -- strategies --------------------------------------------------------------
+
 
 @st.composite
 def facts_strategy(draw: st.DrawFn):
@@ -24,6 +22,7 @@ def facts_strategy(draw: st.DrawFn):
     value = draw(st.text(min_size=1, max_size=100).filter(lambda x: x.strip() != ""))
     return {"kind": kind, "key": key, "value": value}
 
+
 @st.composite
 def observations_strategy(draw: st.DrawFn):
     summary = draw(st.text(min_size=1, max_size=100).filter(lambda x: x.strip() != ""))
@@ -31,14 +30,18 @@ def observations_strategy(draw: st.DrawFn):
     confidence = draw(st.floats(min_value=0.0, max_value=1.0))
     return {"summary": summary, "weight": weight, "confidence": confidence}
 
+
 # -- tests -------------------------------------------------------------------
+
 
 @settings(suppress_health_check=[HealthCheck.function_scoped_fixture, HealthCheck.too_slow])
 @given(
     facts=st.lists(facts_strategy(), min_size=0, max_size=10),
     obs=st.lists(observations_strategy(), min_size=0, max_size=10),
 )
-def test_export_import_roundtrip(facts: list[dict[str, Any]], obs: list[dict[str, Any]], tmp_path_factory: pytest.TempPathFactory) -> None:
+def test_export_import_roundtrip(
+    facts: list[dict[str, Any]], obs: list[dict[str, Any]], tmp_path_factory: pytest.TempPathFactory
+) -> None:
     db = tmp_path_factory.mktemp("data") / "memory.db"
     with MemoryStore(db) as store:
         for f in facts:

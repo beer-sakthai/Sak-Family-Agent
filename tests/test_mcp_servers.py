@@ -8,7 +8,6 @@ from pathlib import Path
 import pytest
 
 from sakthai.mcp.servers import (
-    MCPServerSpec,
     load_server_specs,
     mcp_config_path,
     parse_mcp_servers,
@@ -37,9 +36,7 @@ def test_load_specs_merges_config(tmp_path: Path, monkeypatch: pytest.MonkeyPatc
     monkeypatch.setenv("SAKTHAI_HOME", str(tmp_path))
     conf = tmp_path / "mcp.json"
     conf.write_text(
-        json.dumps(
-            {"mcpServers": {"extra": {"command": "python", "args": ["m.py"]}}}, indent=2
-        ),
+        json.dumps({"mcpServers": {"extra": {"command": "python", "args": ["m.py"]}}}, indent=2),
         encoding="utf-8",
     )
     specs = load_server_specs()

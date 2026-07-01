@@ -69,11 +69,11 @@ uv sync --all-extras      # install all project and optional dependencies
 # Test / lint / type-check / security (mirrors .github/workflows/ci.yml)
 uv run pytest tests/ -q                      # full unit suite (no network, no GCP)
 uv run pytest tests/test_memory_store.py -q  # a single test file
-uv run pytest -m "not integration" -q        # exclude network tests (default in CI)
-uv run ruff check sakthai tests              # lint
-uv run ruff format --check sakthai tests     # format check (drop --check to apply)
-uv run mypy sakthai                          # strict type-check
-uv run bandit -c pyproject.toml -r sakthai   # security scan
+uv run pytest -m "not integration" -q        # Exclude network tests (default in CI)
+uv run ruff check sakthai tests              # Lint
+uv run ruff format --check sakthai tests     # Format check (drop --check to apply)
+uv run mypy sakthai                          # Strict type-check
+uv run bandit -c pyproject.toml -r sakthai   # Security scan
 ```
 
 CI (`.github/workflows/ci.yml`, all via `uv sync --extra dev --locked`) runs:

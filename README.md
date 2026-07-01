@@ -90,14 +90,12 @@ snapshots** for each persona into `build/agent-repos/<persona>/` with
 ├── packages/
 │   └── agent-self-evolution/     # DSPy/GEPA self-evolution tool (standalone Python pkg)
 ├── personas/
-│   ├── shared/skills/            # skill library shared by all four personas (deduped, once)
-│   └── {sakking,sakthai,saksee,saksit,saktan}/   # per-persona SOUL.md + config + skill overlay
 │   ├── shared/skills/            # skill library shared by all six personas (deduped, once)
-│   └── {sakking,sakthai,saksee,saksit,saktan,sakjules}/   # per-persona SOUL.md + config + skill overlay
+│   └── {sakking,sakthai,saksee,saksit,saktan,sakjules}/ # per-persona SOUL.md + config + skill overlay
+├── build/agent-repos/<persona>/   # export target for standalone agent repos
 ├── infra/
 │   ├── hermes-agents/            # Hermes Telegram-bot config backup (no secrets)
 │   └── pw-poc/                   # Playwright tab-order/accessibility probe (npm)
-├── build/agent-repos/<persona>/   # export target for standalone agent repos
 └── scripts/compose_persona.py    # rebuild a persona's full skill tree (shared + overlay)
 ```
 
@@ -382,7 +380,13 @@ make test                                # run the hermetic test suite
 
 ## 📖 Documentation
 
-Comprehensive documentation is available in the `docs/` directory, covering architecture, runtimes, plugins, and integrations.
+Comprehensive documentation is available in the `docs/` directory:
+- 🏗️ [Architecture & Layering](./docs/architecture.md) — layers, memory database, SQLite schema
+- 🤖 [Capabilities & Tools](./docs/capabilities.md) — tools, memory operations, providers
+- 🔌 [MCP & Skills Extensibility](./docs/plugins.md) — MCP serving, skill directory injection
+- ⚙️ [Runtimes & Local Execution](./docs/runtimes.md) — CLI, agent loop, MCP servers, local Ollama
+- 🔗 [Integrations](./docs/integrations.md) — Composio, Hermes, and cross-agent communication recipes
+- 📅 [Live Connect Plan (Phases 5–8)](./docs/sakthai-live-connect-plan.md) — Phase 5–8 execution plan and status (Completed)
 
 ---
 
