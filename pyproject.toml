@@ -36,14 +36,7 @@ mutation = [
     "mutmut>=3.2",
 ]
 
-dashboard = [
-    "streamlit>=1.36",
-    "plotly>=5.22",
-    "pandas>=2.2",
-    "PyGithub>=2.3",
-]
-
-all = ["sakthai-agent[dev,dashboard]"]
+all = ["sakthai-agent[dev]"]
 
 [project.scripts]
 sakthai = "sakthai.cli:main"
@@ -60,10 +53,6 @@ source = ["sakthai"]
 # paths (one side of an if/else). CI passes --cov-branch so the fail_under floor
 # below gates branches as well as lines.
 branch = true
-# app.py is Streamlit presentation glue needing a live runtime; its data logic
-# lives in dashboard/data.py (tested). A guarded smoke test covers the figure
-# builders where the `dashboard` extra is installed (tests/test_dashboard_app.py).
-omit = ["sakthai/dashboard/app.py"]
 
 [tool.coverage.report]
 show_missing = true
@@ -90,12 +79,6 @@ warn_unused_ignores = true
 warn_return_any = true
 check_untyped_defs = true
 files = ["sakthai"]
-
-# The Streamlit app is presentation glue over untyped third-party libs; type
-# it loosely so strict checks don't fight the streamlit/plotly/pandas stubs.
-[[tool.mypy.overrides]]
-module = "sakthai.dashboard.app"
-ignore_errors = true
 
 [tool.bandit]
 exclude_dirs = ["tests"]
