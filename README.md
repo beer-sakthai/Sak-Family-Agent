@@ -39,6 +39,7 @@ One package, three ways in — a CLI, a tool-using agent loop, and an MCP stdio 
 - [🛠️ Built-in tools](#️-built-in-tools)
 - [💻 Commands](#-commands)
 - [👩‍💻 Develop](#-develop)
+- [🤝 Family agents](#-family-agents)
 - [📁 Repository layout](#-repository-layout)
 - [📖 Documentation](#-documentation)
 - [📝 License](#-license)
@@ -84,7 +85,7 @@ with their git history preserved (via `git subtree`). Those standalone repos hav
 │   └── agent-self-evolution/     # DSPy/GEPA self-evolution tool (standalone Python pkg)
 ├── personas/
 │   ├── shared/skills/            # skill library shared by all four personas (deduped, once)
-│   └── {sakthai,sakking,saksee,saksit}/   # per-persona SOUL.md + config + skill overlay
+│   └── {sakking,sakthai,saksee,saksit,saktan}/   # per-persona SOUL.md + config + skill overlay
 ├── infra/
 │   ├── hermes-agents/            # Hermes Telegram-bot config backup (no secrets)
 │   └── pw-poc/                   # Playwright tab-order/accessibility probe (npm)
@@ -92,13 +93,12 @@ with their git history preserved (via `git subtree`). Those standalone repos hav
 ```
 
 - 👑 **Personas** are the **Sak Family Agents**: **SakKing** is the main (Lead & Orchestrator,
-  Master of Code & Self-Healing, on `claude-opus-4-8`), and **SakThai** (Master of Hugging Face,
-  `deepseek-v3.1:671b`), **SakSee** (Master of Web, `minimax-m3`), **SakSit** (Master of Social
-  Media / IG, `gemini-2.5-flash-lite`) are the family it coordinates — *"Hermes" is only the
-  framework they run on, never an agent's name.* They were ~90 % identical; the shared 446 skill
-  files now live once under `personas/shared/skills/`, each persona keeping only its unique files.
-  See [`personas/README.md`](./personas/README.md) and the root `SOUL.md`; see
-  [`infra/hermes-agents/README.md`](./infra/hermes-agents/README.md) for full Telegram-bot deployment.
+  Master of Code & Self-Healing), and **SakThai**, **SakSee**, **SakSit**, and **SakTan** are the
+  family it coordinates. *"Hermes" is only the framework they run on, never an agent's name.*
+  The shared skill library now lives once under `personas/shared/skills/`, with each persona
+  keeping only its unique files. See [`personas/README.md`](./personas/README.md) and the root
+  [`SOUL.md`](./SOUL.md); see [`infra/hermes-agents/README.md`](./infra/hermes-agents/README.md)
+  for full Telegram-bot deployment.
 - 📦 **`packages/agent-self-evolution`** targets a different runtime (Nous Research's Hermes) with
   a heavy, disjoint dependency set, so it is **not** a uv workspace member — build it on its own
   per its README. The root `uv.lock` stays scoped to the SakThai agent.
@@ -122,6 +122,21 @@ sakthai run "summarise my notes"  # standalone tool-using agent loop
 ```
 
 All runtimes share `~/.sakthai/memory.db` (override the root with `SAKTHAI_HOME`).
+
+---
+
+## 🤝 Family agents
+
+The repo tracks five personas end to end:
+
+- `SakKing` - lead and orchestrator
+- `SakThai` - personal learning and knowledge workflows
+- `SakSee` - web-focused assistant
+- `SakSit` - social-media-focused assistant
+- `SakTan` - daily ops helper
+
+The canonical profile source for the family lives under `infra/hermes-agents/profiles/`, and
+`personas/` contains the consolidated skill trees and overlays used by the repo.
 
 ---
 
@@ -235,9 +250,9 @@ stdio** — a subprocess JSON-RPC channel with **no network and zero API/cloud c
 A *skill* is a directory with a `SKILL.md` (YAML frontmatter + markdown body) that gets injected
 into the agent's system prompt when active. SakThai ships:
 
-- 📗 **`library/`** — **31 curated skills** across 11 categories: `agent`, `automation`, `coding`,
+- 📗 **`library/`** — curated skills across 11 categories: `agent`, `automation`, `coding`,
   `devops`, `learning`, `llm`, `memory`, `observability`, `research`, `safety`, `security`.
-- 📘 **`skills/`** — **69 user/extension skills** (the `sakthai-*` set, including the
+- 📘 **`skills/`** — user/extension skills (the `sakthai-*` set, including the
   `sakthai-cycle-*` stages and skills mirrored from SakKing).
 
 ```yaml
