@@ -1,82 +1,123 @@
 ---
-name: sakjules-auto-dependency-update
-category: automation
-description: A weekly workflow to automatically upgrade Python dependencies, run tests, and open a pull request.
+name: subprocess
+description: "A guide to using Python's built-in subprocess module to spawn new processes, connect to their I/O pipes, and obtain their return codes."
 version: 1.0.0
-platforms:
-  - linux
-metadata:
-  sakthai:
-    tags:
-      - automation
-      - ci
-      - dependencies
-      - python
-      - uv
-    related_skills:
-      - sakthai-coding-uv
+author: Gemini
+license: MIT
+tags: [subprocess, shell, command, process, python, built-in]
+category: system
 ---
 
-# Automatic Dependency Update Workflow
+# Running External Commands with `subprocess`
 
-## Purpose
+## Overview
 
-As SakJules, Master of Automation, I use this skill to keep the project's Python dependencies up-to-date. This workflow runs on a schedule (e.g., weekly), attempts to upgrade all packages, validates the changes with the test suite, and opens a pull request for human review if successful. This automates maintenance and prevents dependency rot.
+Guidelines for using Python's built-in `subprocess` module to run external commands. The modern and recommended approach is to use the `subprocess.run()` function.
 
-## Workflow
+## Sandbox runtime — read first
 
-This is a precise, multi-step process. I will execute it in order and stop if any step fails.
+Your shell runs in a **Modal sandbox** (`nikolaik/python-nodejs:python3.11-nodejs20`). This environment has Python 3.11.
 
-### 1. Set Up the Environment
+- **Security**: Running external commands can be dangerous. Always treat input from external sources with caution. The agent's built-in `run_command` tool is disabled by default and must be enabled with `SAKTHAI_SHELL_ALLOW=1` for this reason. When using `subprocess` directly, you are responsible for security.
+- **Ephemeral Filesystem**: Any scripts or data you create should be saved under `/tmp`.
 
-First, I ensure I am on the `main` branch and have the latest changes.
+## Installation
 
-```bash
-git checkout main
-git pull origin main
+The `subprocess` module is part of Python's standard library. **No installation is needed.**
+
+## Basic Usage
+
+The `subprocess.run()` function is the recommended way to run external commands for most use cases.
+
+### 1. Running a Simple Command
+
+By default, `subprocess.run()` waits for the command to complete and returns a `CompletedProcess` object. For security and correctness, it is critical to pass command arguments as a list (when `shell=False`).
+
+```python
+import subprocess
+
+# Arguments are passed as a list of strings
+result = subprocess.run(['ls', '-l', '/tmp'])
+
+print(f"Return Code: {result.returncode}")
 ```
 
-Then, I create a new branch for the dependency updates. The branch name should be descriptive, like `chore/deps-YYYY-MM-DD`.
+### 2. Capturing Output
 
-```bash
-# Example:
-git checkout -b chore/deps-2026-06-24
+To capture the command's output (stdout and stderr), use `capture_output=True`. To get the output as a string instead of bytes, use `text=True`.
+
+```python
+import subprocess
+
+result = subprocess.run(
+    ['echo', 'hello from subprocess'],
+    capture_output=True,
+    text=True
+)
+
+print(f"STDOUT: {result.stdout.strip()}")
 ```
 
-### 2. Upgrade Dependencies
+### 3. Error Handling
 
-I use `uv` to upgrade all dependencies to their latest allowed versions, which regenerates `uv.lock`.
+If the command returns a non-zero exit code (indicating an error), `subprocess.run()` will not raise an exception by default. To make it raise a `CalledProcessError`, use `check=True`.
 
-```bash
-uv lock --upgrade
+```python
+import subprocess
+
+try:
+    # This command will fail
+    subprocess.run(['ls', '/nonexistent-directory'], check=True, capture_output=True)
+except subprocess.CalledProcessError as e:
+    print(f"Command failed with return code {e.returncode}")
+    print(f"STDERR: {e.stderr}")
 ```
 
-After running this, I check if `uv.lock` has actually changed. If not, all dependencies are already up-to-date, and I can stop the workflow.
+## Hello-World Example
 
-```bash
-git status --porcelain
+Create `hello_subprocess.py` to list files in `/tmp`.
+
+```python
+# /tmp/hello_subprocess.py
+import subprocess
+
+try:
+    # 1. Define the command and arguments as a list
+    command = ['ls', '-la', '/tmp']
+    print(f"Running command: {' '.join(command)}")
+
+    # 2. Run the command, capturing output and checking for errors
+    result = subprocess.run(
+        command,
+        capture_output=True,
+        text=True,
+        check=True,
+        timeout=30  # Add a timeout for safety
+    )
+
+    # 3. Print the standard output
+    print("\n--- STDOUT ---")
+    print(result.stdout)
+
+except FileNotFoundError:
+    print("Error: The 'ls' command was not found in the system's PATH.")
+except subprocess.CalledProcessError as e:
+    print(f"\nCommand failed with exit code {e.returncode}:")
+    print(e.stderr)
+except subprocess.TimeoutExpired:
+    print("\nError: The command timed out.")
+except Exception as e:
+    print(f"\nAn unexpected error occurred: {e}")
 ```
 
-### 3. Validate the Changes
+Run with `python /tmp/hello_subprocess.py`.
 
-If `uv.lock` was modified, I must validate that the new dependencies have not broken anything. I install the newly locked versions and run the full, hermetic test suite.
+## Pitfalls & Fixes
 
-```bash
-uv sync --extra dev
-uv run pytest tests/ -q -m "not integration"
-```
-
-If the tests fail, I will abandon the branch and report the failure, including the test output. I will not proceed.
-
-### 4. Create a Pull Request
-
-If the tests pass, the changes are safe. I will commit the updated `uv.lock` and `pyproject.toml` files and open a pull request on GitHub.
-
-```bash
-git add uv.lock pyproject.toml
-git commit -m "build: Upgrade dependencies" -m "Automated dependency upgrade by SakJules."
-git push origin HEAD
-gh pr create --title "build: Automated Dependency Upgrade" --body "This PR was automatically generated by the SakJules agent. It contains the latest dependency versions that pass all local tests."
-```
-
-This completes the automated workflow. The pull request is now ready for review by Beer.
+| Symptom | Cause | Fix |
+|---------|-------|-----|
+| `FileNotFoundError: [Errno 2] No such file or directory` | The command you are trying to run does not exist or is not in the system's `PATH`. | Verify the command is installed and spelled correctly. Use the full path to the executable if it's not in the `PATH`. |
+| `subprocess.CalledProcessError` | The command returned a non-zero exit code, and you used `check=True`. | This is expected behavior for error handling. Inspect the `.returncode`, `.stdout`, and `.stderr` attributes of the exception object to debug why the command failed. |
+| Command injection vulnerabilities | Using `shell=True` with untrusted input. This is a major security risk. | **Avoid `shell=True`**. Pass arguments as a list of strings. If you absolutely must use shell features, use `shlex.quote()` to escape arguments. |
+| Process hangs indefinitely | The subprocess is waiting for input or is taking a very long time to complete. | Always use the `timeout` parameter in `subprocess.run()` to prevent your script from hanging. |
+| `TypeError: a bytes-like object is required, not 'str'` | You are trying to provide string input to a process's stdin without `text=True`, or you are reading stdout/stderr as strings without `text=True`. | Always use `text=True` (or `encoding='utf-8'`) when you want to work with standard I/O as strings. |

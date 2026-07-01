@@ -10,13 +10,16 @@ live in :mod:`sakthai.agent.providers`; this module is the orchestration.
 the network or a real database.
 """
 
-from __future__ import annotations
+from email import iterators
+from click import globals
 
 import json
+from __future__ import annotations
 import logging
 import os
 import time
 import uuid
+from pathlib import Path
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from typing import Any
@@ -86,6 +89,55 @@ class AgentResult:
 # -- prompt + tool execution --------------------------------------------
 
 
+def _find_command_file(plugin_name: str, command_name: str) -> Path | None:
+    """Search for a command file across all skill roots."""
+    for root in default_skill_roots():
+        # Check for <root>/<plugin>/commands/<command>.md
+        p = root / plugin_name / "commands" / f"{command_name}.md"
+        if p.is_file():
+            return p
+
+        # Check for <root>/commands/<command>.md (for flat structures)
+        p = root / "commands" / f"{command_name}.md"
+        if p.is_file():
+            return p
+
+        # Check one level deeper for extension bundles: <root>/<bundle>/...
+        if root.is_dir():
+            for child in root.iterdir():
+                if not child.is_dir():
+                    continue
+                # Check for <root>/<bundle>/<plugin>/commands/<command>.md
+                p = child / plugin_name / "commands" / f"{command_name}.md"
+                if p.is_file():
+                    return p
+                # Check for <root>/<bundle>/commands/<command>.md
+                p = child / "commands" / f"{command_name}.md"
+                if p.is_file():
+                    return p
+    return None
+
+
+def _load_and_format_command(
+    cmd_file: Path, plugin_name: str, command_name: str, arguments: str
+) -> tuple[str, str]:
+    """Load a command file, format it, and return the system prompt and task."""
+    content = cmd_file.read_text(encoding="utf-8")
+
+    # Strip YAML frontmatter if present
+    if content.startswith("---"):
+        parts = content.split("---", 2)
+        if len(parts) >= 3:
+            content = parts[2].strip()
+
+    # Inject arguments
+    content = content.replace("$ARGUMENTS", arguments)
+    content = content.replace("$FEATURE", arguments)
+
+    system_block = f"COMMAND INSTRUCTIONS ({plugin_name}:{command_name}):\n\n{content}"
+    return system_block, arguments
+
+
 def _parse_slash_command(task: str) -> tuple[str, str] | None:
     """If task starts with /plugin:command, resolve it and return (injected_system_prompt, active_task)."""
     import re
@@ -99,45 +151,12 @@ def _parse_slash_command(task: str) -> tuple[str, str] | None:
     command_name = match.group(2)
     arguments = match.group(3) or ""
 
-    cmd_file = None
-    for root in default_skill_roots():
-        p = root / plugin_name / "commands" / f"{command_name}.md"
-        if p.is_file():
-            cmd_file = p
-            break
-        p = root / "commands" / f"{command_name}.md"
-        if p.is_file():
-            cmd_file = p
-            break
-        # Also search one level deeper to cover extension bundle subdirectories.
-        if root.is_dir():
-            for child in root.iterdir():
-                if not child.is_dir():
-                    continue
-                p = child / plugin_name / "commands" / f"{command_name}.md"
-                if p.is_file():
-                    cmd_file = p
-                    break
-                p = child / "commands" / f"{command_name}.md"
-                if p.is_file():
-                    cmd_file = p
-                    break
-        if cmd_file:
-            break
-
+    cmd_file = _find_command_file(plugin_name, command_name)
     if not cmd_file:
         return None
 
     try:
-        content = cmd_file.read_text(encoding="utf-8")
-        if content.startswith("---"):
-            parts = content.split("---", 2)
-            if len(parts) >= 3:
-                content = parts[2].strip()
-        content = content.replace("$ARGUMENTS", arguments)
-        content = content.replace("$FEATURE", arguments)
-        system_block = f"COMMAND INSTRUCTIONS ({plugin_name}:{command_name}):\n\n{content}"
-        return system_block, arguments
+        return _load_and_format_command(cmd_file, plugin_name, command_name, arguments)
     except Exception as exc:
         logger.warning("failed to load command file %s: %s", cmd_file, exc)
         return None
@@ -298,6 +317,52 @@ def _agent_turn(
     return response
 
 
+@dataclass
+class _AgentRunState:
+    """Holds all the state for a single agent run."""
+
+    task: str
+    model: str
+    provider: str
+    client: Any
+    store: MemoryStore
+    own_store: bool
+    command_system: str
+    notify: Callable[[str, dict[str, Any]], None]
+    registry: ToolRegistry
+    tool_schemas: list[dict[str, Any]]
+    tool_calls: list[dict[str, Any]]
+    messages: list[dict[str, Any]]
+    deadline: float | None
+
+
+def _setup_agent_run(
+    task: str, model: str, max_seconds: float | None, tools: tuple[Tool, ...], store: MemoryStore | None, client: Any | None, on_event: Callable[[str, dict[str, Any]], None] | None, provider: str | None, *, dry_run: bool = False
+) -> _AgentRunState:
+    """Prepare all state needed for an agent run."""
+    if not task.strip():
+        raise AgentError("Task must be a non-empty string.")
+    if max_seconds is not None and max_seconds <= 0:
+        raise AgentError("max_seconds must be positive when set.")
+
+    command_system = ""
+    if parsed := _parse_slash_command(task):
+        command_system, task = parsed
+
+    resolved_provider = provider or _detect_provider(client, model)
+    resolved_model = _resolve_model_name(model, resolved_provider)
+    resolved_client = None if dry_run else _build_client(resolved_provider, client)
+
+    own_store = store is None
+    store = store or MemoryStore()
+    notify = on_event or (lambda _kind, _payload: None)
+    registry = ToolRegistry(tools)
+    tool_schemas = registry.schemas()
+    tool_calls: list[dict[str, Any]] = []
+    messages: list[dict[str, Any]] = [{"role": "user", "content": task}]
+    deadline = time.monotonic() + max_seconds if max_seconds is not None else None
+    return _AgentRunState(task, resolved_model, resolved_provider, resolved_client, store, own_store, command_system, notify, registry, tool_schemas, tool_calls, messages, deadline)
+
 # -- main loop -----------------------------------------------------------
 
 
@@ -359,6 +424,7 @@ def run_agent(
     tool_calls: list[dict[str, Any]] = []
     messages: list[dict[str, Any]] = [{"role": "user", "content": task}]
     deadline = time.monotonic() + max_seconds if max_seconds is not None else None
+    state = _setup_agent_run(task, model, max_seconds, tools, store, client, on_event, provider, dry_run=False)
 
     usage_tracker = UsageTracker()
     # Mark the loop active only once setup has succeeded, and inside the try whose
@@ -370,12 +436,12 @@ def run_agent(
     os.environ["SAKTHAI_AGENT_ACTIVE"] = "1"
     try:
         for iteration in range(1, max_iterations + 1):
-            if deadline is not None and time.monotonic() >= deadline:
+            if state.deadline is not None and time.monotonic() >= state.deadline:
                 raise AgentError(f"Agent time budget exhausted (max_seconds={max_seconds}).")
             logger.debug("Agent iteration %d/%d", iteration, max_iterations)
 
             system = _build_system(
-                store, skills, command_system, fast=fast, stateless=stateless, caveman=caveman
+                state.store, skills, state.command_system, fast=fast, stateless=stateless, caveman=caveman
             )
             response = _agent_turn(
                 provider,
@@ -389,14 +455,15 @@ def run_agent(
                 max_tokens,
                 tool_schemas,
                 usage_tracker,
+                state.provider, state.client, state.model, system, tools, state.messages, iteration, on_token, max_tokens, state.tool_schemas, usage_tracker
             )
 
             stop_reason = getattr(response, "stop_reason", "") or ""
-            notify("iteration", {"n": iteration, "stop_reason": stop_reason})
+            state.notify("iteration", {"n": iteration, "stop_reason": stop_reason})
 
             if stop_reason in _TERMINAL_STOPS:
                 final_text = _extract_text(response.content)
-                missed_tool = _detect_untriggered_tool_call(final_text, registry)
+                missed_tool = _detect_untriggered_tool_call(final_text, state.registry)
                 if missed_tool is not None:
                     logger.warning(
                         "Model ended the turn (stop_reason=%s) with text that looks "
@@ -404,19 +471,19 @@ def run_agent(
                         stop_reason,
                         missed_tool,
                     )
-                    notify("tool_call_in_text", {"name": missed_tool, "stop_reason": stop_reason})
+                    state.notify("tool_call_in_text", {"name": missed_tool, "stop_reason": stop_reason})
                 result = AgentResult(
                     text=final_text,
                     iterations=iteration,
                     stop_reason=stop_reason,
-                    tool_calls=tool_calls,
+                    tool_calls=state.tool_calls,
                     usage=usage_tracker.to_dict(),
                 )
-                _save_session_log(task, model, messages, result)
+                _save_session_log(state.task, state.model, state.messages, result)
                 return result
 
             if stop_reason == "pause_turn":
-                messages.append({"role": "assistant", "content": response.content})
+                state.messages.append({"role": "assistant", "content": response.content})
                 continue
 
             if stop_reason != "tool_use":
@@ -425,13 +492,15 @@ def run_agent(
                     or f"(unexpected stop_reason={stop_reason!r})",
                     iterations=iteration,
                     stop_reason=stop_reason,
-                    tool_calls=tool_calls,
+                    tool_calls=state.tool_calls,
                     usage=usage_tracker.to_dict(),
                 )
-                _save_session_log(task, model, messages, result)
+                _save_session_log(state.task, state.model, state.messages, result)
                 return result
 
             _dispatch_tool_calls(response, messages, registry, store, notify, tool_calls)
+            
+            _dispatch_tool_calls(response, state.messages, state.registry, state.store, state.notify, state.tool_calls)
 
         raise AgentError(
             f"Agent hit the iteration cap (max_iterations={max_iterations}) "
@@ -443,8 +512,8 @@ def run_agent(
         else:
             os.environ["SAKTHAI_AGENT_ACTIVE"] = old_active
 
-        if own_store:
-            store.close()
+        if state.own_store:
+            state.store.close()
 
 
 def preflight(
@@ -463,34 +532,36 @@ def preflight(
     """
     resolved = provider or _detect_provider(client, model)
     effective_model = _resolve_model_name(model, resolved)
+    import os
+    from ..auth import local_credential_source
 
-    if resolved == "google":
+    # We need a dummy task for setup, but it won't be used.
+    state = _setup_agent_run("preflight", model, None, tools, None, client, None, provider, dry_run=True)
+
+    if state.provider == "google":
         if os.environ.get("GEMINI_API_KEY"):
             cred_source: str | None = "GEMINI_API_KEY"
         elif os.environ.get("GOOGLE_API_KEY"):
             cred_source = "GOOGLE_API_KEY"
         else:
             from ..auth import load_gemini_cli_token
-
-            if load_gemini_cli_token() is not None:
-                cred_source = "gemini_cli_oauth"
-            else:
-                cred_source = None
-    elif resolved == "openai":
+            cred_source = "gemini_cli_oauth" if load_gemini_cli_token() else None
+    elif state.provider == "openai":
         cred_source = openai_credential_source()
-    elif resolved == "gateway":
+    elif state.provider == "gateway":
         cred_source = gateway_credential_source()
+    elif state.provider == "local":
+        cred_source = local_credential_source()
     else:
         cred_source = anthropic_credential_source()
 
-    registry = ToolRegistry(tools)
     return {
-        "provider": resolved,
-        "model": effective_model,
+        "provider": state.provider,
+        "model": state.model,
         "credential_source": cred_source,
         "credentials_ok": cred_source is not None,
-        "tool_count": len(registry.tools),
-        "tools": [t.name for t in registry.tools],
+        "tool_count": len(state.registry.tools),
+        "tools": [t.name for t in state.registry.tools],
         "runnable": cred_source is not None,
     }
 
@@ -579,25 +650,42 @@ def _serialize_messages(messages: list[Any]) -> list[dict[str, Any]]:
     return serialized
 
 
-def _save_session_log(task: str, model: str, messages: list[Any], result: AgentResult) -> None:
+def _prepare_session_payload(
+    session_id: str, timestamp: int, task: str, model: str, messages: list[Any], result: AgentResult
+) -> dict[str, Any]:
+    """Construct the data payload for a session log."""
+    return {
+        "session_id": session_id,
+        "timestamp": timestamp,
+        "task": task,
+        "model": model,
+        "messages": _serialize_messages(messages),
+        "usage": result.usage,
+        "result": {
+            "text": result.text,
+            "iterations": result.iterations,
+            "stop_reason": result.stop_reason,
+            "tool_calls": result.tool_calls,
+        },
+    }
+
+
+def _save_session_log(
+    task: str, model: str, messages: list[Any], result: AgentResult
+) -> None:
+    """Write a JSON log of the completed agent session to disk."""
     try:
+        now = int(time.time())
+        session_id = uuid.uuid4().hex
+
         base = sessions_dir().resolve()
         base.mkdir(parents=True, exist_ok=True)
-        target = (base / f"{int(time.time())}_{uuid.uuid4().hex}.json").resolve()
+
+        # The filename format is designed to be unique and sortable by time.
+        target = (base / f"{now}_{session_id}.json").resolve()
         target.relative_to(base)  # guard against traversal
-        payload = {
-            "timestamp": int(time.time()),
-            "task": task,
-            "model": model,
-            "messages": _serialize_messages(messages),
-            "usage": result.usage,
-            "result": {
-                "text": result.text,
-                "iterations": result.iterations,
-                "stop_reason": result.stop_reason,
-                "tool_calls": result.tool_calls,
-            },
-        }
+
+        payload = _prepare_session_payload(session_id, now, task, model, messages, result)
         target.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
     except Exception as exc:  # noqa: BLE001 — logging is best-effort
         logger.warning("Failed to save session log: %s", exc)
