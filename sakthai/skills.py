@@ -11,8 +11,7 @@ from typing import Any
 
 import yaml
 
-from .config import (LIBRARY_DIR, SKILLS_DIR, gemini_extensions_dir,
-                     sakthai_home)
+from .config import LIBRARY_DIR, SKILLS_DIR, gemini_extensions_dir, sakthai_home
 
 _UNCATEGORIZED = "general"
 
@@ -210,9 +209,7 @@ def default_skill_roots() -> tuple[Path, ...]:
     return tuple(roots)
 
 
-def render_skills_prompt_block(
-    names: Sequence[str], roots: Sequence[Path] | None = None
-) -> str:
+def render_skills_prompt_block(names: Sequence[str], roots: Sequence[Path] | None = None) -> str:
     """Render the bodies of the named skills as a system-prompt block.
 
     Skills are matched by exact name across ``roots`` (defaulting to

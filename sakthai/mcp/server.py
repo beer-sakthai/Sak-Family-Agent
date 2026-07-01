@@ -46,11 +46,7 @@ def _error(req_id: Any, code: int, message: str) -> dict[str, Any]:
 def _tool_list(tools: tuple[Tool, ...]) -> dict[str, Any]:
     return {
         "tools": [
-            {
-                "name": t.name,
-                "description": t.description,
-                "inputSchema": t.input_schema,
-            }
+            {"name": t.name, "description": t.description, "inputSchema": t.input_schema}
             for t in tools
         ]
     }
@@ -119,11 +115,7 @@ def handle_request(
         return None if is_notification else _result(req_id, _tool_list(tools))
 
     if method == "tools/call":
-        return (
-            None
-            if is_notification
-            else _result(req_id, _tool_call(params, store, tools))
-        )
+        return None if is_notification else _result(req_id, _tool_call(params, store, tools))
 
     if is_notification:
         return None

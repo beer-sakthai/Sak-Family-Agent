@@ -6,9 +6,14 @@ import httpx
 import pytest
 
 import sakthai.agent.providers.base as base_mod
-from sakthai.agent.providers.base import (Block, Response, block_field,
-                                          find_tool_name_by_id, is_retryable,
-                                          with_retry)
+from sakthai.agent.providers.base import (
+    Block,
+    Response,
+    block_field,
+    find_tool_name_by_id,
+    is_retryable,
+    with_retry,
+)
 
 # -- Block -----------------------------------------------------------------
 
@@ -48,11 +53,7 @@ def test_response_defaults() -> None:
 
 
 def test_response_custom_usage() -> None:
-    r = Response(
-        "tool_use",
-        [],
-        usage={"input_tokens": 10, "output_tokens": 5, "total_tokens": 15},
-    )
+    r = Response("tool_use", [], usage={"input_tokens": 10, "output_tokens": 5, "total_tokens": 15})
     assert r.usage["input_tokens"] == 10
     assert r.usage["output_tokens"] == 5
 
@@ -160,9 +161,7 @@ def test_with_retry_succeeds_first_try(monkeypatch: pytest.MonkeyPatch) -> None:
     assert len(calls) == 1
 
 
-def test_with_retry_retries_transient_then_succeeds(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+def test_with_retry_retries_transient_then_succeeds(monkeypatch: pytest.MonkeyPatch) -> None:
     _zero_wait(monkeypatch)
     monkeypatch.setattr(base_mod, "RETRY_ATTEMPTS", 3)
     calls: list[int] = []
@@ -177,9 +176,7 @@ def test_with_retry_retries_transient_then_succeeds(
     assert len(calls) == 2
 
 
-def test_with_retry_exhausts_attempts_and_reraises(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+def test_with_retry_exhausts_attempts_and_reraises(monkeypatch: pytest.MonkeyPatch) -> None:
     _zero_wait(monkeypatch)
     monkeypatch.setattr(base_mod, "RETRY_ATTEMPTS", 3)
 
@@ -190,9 +187,7 @@ def test_with_retry_exhausts_attempts_and_reraises(
         with_retry(fn)
 
 
-def test_with_retry_non_retryable_raises_immediately(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+def test_with_retry_non_retryable_raises_immediately(monkeypatch: pytest.MonkeyPatch) -> None:
     _zero_wait(monkeypatch)
     calls: list[int] = []
 
@@ -206,9 +201,7 @@ def test_with_retry_non_retryable_raises_immediately(
     assert len(calls) == 1
 
 
-def test_with_retry_passes_positional_and_keyword_args(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+def test_with_retry_passes_positional_and_keyword_args(monkeypatch: pytest.MonkeyPatch) -> None:
     _zero_wait(monkeypatch)
 
     def fn(x: int, y: int = 0) -> int:
@@ -284,9 +277,7 @@ def test_find_tool_name_by_id_multiple_messages() -> None:
         },
         {
             "role": "assistant",
-            "content": [
-                {"type": "tool_use", "id": "t2", "name": "recall", "input": {}}
-            ],
+            "content": [{"type": "tool_use", "id": "t2", "name": "recall", "input": {}}],
         },
     ]
     assert find_tool_name_by_id(messages, "t2") == "recall"

@@ -19,9 +19,15 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from sakthai.web.server import (_DEFAULT_HOST, _DEFAULT_PORT, _STATIC_ROOT,
-                                _dashboard_data, _ecosystem_status, _Handler,
-                                serve)
+from sakthai.web.server import (
+    _DEFAULT_HOST,
+    _DEFAULT_PORT,
+    _STATIC_ROOT,
+    _dashboard_data,
+    _ecosystem_status,
+    _Handler,
+    serve,
+)
 
 try:
     from http.server import HTTPServer
@@ -39,9 +45,7 @@ def api_base() -> str:
     """Start a one-shot HTTPServer on a random port; yield its base URL."""
     srv = HTTPServer(("127.0.0.1", 0), _Handler)
     _, port = srv.server_address
-    thread = threading.Thread(
-        target=srv.serve_forever, kwargs={"poll_interval": 0.01}, daemon=True
-    )
+    thread = threading.Thread(target=srv.serve_forever, kwargs={"poll_interval": 0.01}, daemon=True)
     thread.start()
     yield f"http://127.0.0.1:{port}"
     srv.shutdown()
@@ -82,16 +86,13 @@ class TestDashboardData:
 
     def test_demo_stub_has_growth_key(self) -> None:
         with patch(
-            "sakthai.dashboard.data.collect_dashboard_data",
-            side_effect=RuntimeError("no db"),
+            "sakthai.dashboard.data.collect_dashboard_data", side_effect=RuntimeError("no db")
         ):
             data = _dashboard_data()
         assert "growth" in data
         assert data.get("source") == "demo"
 
-    def test_falls_back_to_demo_on_import_error(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_falls_back_to_demo_on_import_error(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """An ImportError importing the data module yields the demo stub (server.py:36-37)."""
         import sys
         import types as _types
@@ -110,9 +111,7 @@ class TestEcosystemStatus:
         status = _ecosystem_status()
         assert isinstance(status, dict)
 
-    def test_composio_configured_when_key_set(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_composio_configured_when_key_set(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setenv("COMPOSIO_API_KEY", "fake-key")
         status = _ecosystem_status()
         assert status["composio_mcp"] == "configured"
@@ -124,17 +123,13 @@ class TestEcosystemStatus:
         status = _ecosystem_status()
         assert status["composio_mcp"] == "not_configured"
 
-    def test_huggingface_ready_when_both_vars_set(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_huggingface_ready_when_both_vars_set(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setenv("HUGGINGFACE_USERNAME", "testuser")
         monkeypatch.setenv("HF_TOKEN", "test-token")
         status = _ecosystem_status()
         assert status["huggingface"] == "ready"
 
-    def test_huggingface_not_ready_when_vars_missing(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_huggingface_not_ready_when_vars_missing(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.delenv("HUGGINGFACE_USERNAME", raising=False)
         monkeypatch.delenv("HF_TOKEN", raising=False)
         status = _ecosystem_status()
@@ -282,10 +277,7 @@ class TestMainBlock:
         server_py = Path(__file__).parent.parent / "sakthai" / "web" / "server.py"
         # runpy executes in a fresh namespace; patch the real stdlib objects so
         # the re-imported `os.chdir` and `HTTPServer` inside the file use mocks.
-        with (
-            patch.object(_os, "chdir"),
-            patch.object(_http_server, "HTTPServer", return_value=srv),
-        ):
+        with patch.object(_os, "chdir"), patch.object(_http_server, "HTTPServer", return_value=srv):
             with pytest.raises(SystemExit) as exc_info:
                 runpy.run_path(str(server_py), run_name="__main__")
             assert exc_info.value.code == 0
@@ -315,9 +307,7 @@ class TestStaticFileServe:
             t.start()
             try:
                 # Use urlopen directly — the response is HTML, not JSON
-                with urllib.request.urlopen(
-                    f"http://127.0.0.1:{port}/ok.html", timeout=5
-                ) as resp:
+                with urllib.request.urlopen(f"http://127.0.0.1:{port}/ok.html", timeout=5) as resp:
                     status = resp.status
                     body = resp.read().decode("utf-8")
                 assert status == 200

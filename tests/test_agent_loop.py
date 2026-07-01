@@ -8,10 +8,17 @@ from unittest.mock import patch
 
 import pytest
 
-from sakthai.agent.loop import (AgentError, AgentResult, _detect_provider,
-                                _detect_untriggered_tool_call, _extract_text,
-                                _parse_slash_command, _save_session_log,
-                                _strip_code_fence, run_agent)
+from sakthai.agent.loop import (
+    AgentError,
+    AgentResult,
+    _detect_provider,
+    _detect_untriggered_tool_call,
+    _extract_text,
+    _parse_slash_command,
+    _save_session_log,
+    _strip_code_fence,
+    run_agent,
+)
 from sakthai.agent.registry import builtin_registry
 from sakthai.memory.store import MemoryStore
 
@@ -84,9 +91,7 @@ def test_tool_use_then_finish(store: MemoryStore) -> None:
 def test_unknown_tool_is_reported(store: MemoryStore) -> None:
     client = FakeClient(
         [
-            _Resp(
-                "tool_use", [_Block(type="tool_use", id="t1", name="ghost", input={})]
-            ),
+            _Resp("tool_use", [_Block(type="tool_use", id="t1", name="ghost", input={})]),
             _Resp("end_turn", [_Block(type="text", text="ok")]),
         ]
     )
@@ -108,28 +113,19 @@ def test_empty_task_raises(store: MemoryStore) -> None:
 
 
 def test_iteration_cap(store: MemoryStore) -> None:
-    looping = _Resp(
-        "tool_use", [_Block(type="tool_use", id="t", name="recall", input={})]
-    )
+    looping = _Resp("tool_use", [_Block(type="tool_use", id="t", name="recall", input={})])
     client = FakeClient([looping, looping, looping])
     with pytest.raises(AgentError, match="iteration cap"):
-        run_agent(
-            "x", client=client, store=store, provider="anthropic", max_iterations=2
-        )
+        run_agent("x", client=client, store=store, provider="anthropic", max_iterations=2)
 
 
 def test_bad_max_seconds(store: MemoryStore) -> None:
     with pytest.raises(AgentError):
-        run_agent(
-            "x", client=FakeClient([]), store=store, provider="anthropic", max_seconds=0
-        )
+        run_agent("x", client=FakeClient([]), store=store, provider="anthropic", max_seconds=0)
 
 
 def test_extract_text_joins_blocks() -> None:
-    assert (
-        _extract_text([_Block(type="text", text="a"), _Block(type="text", text="b")])
-        == "a\nb"
-    )
+    assert _extract_text([_Block(type="text", text="a"), _Block(type="text", text="b")]) == "a\nb"
     assert _extract_text([]) == ""
 
 
@@ -172,18 +168,14 @@ def test_pause_turn_then_finish(store: MemoryStore) -> None:
     assert result.iterations == 2
 
 
-def test_deadline_trips_midloop(
-    store: MemoryStore, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_deadline_trips_midloop(store: MemoryStore, monkeypatch: pytest.MonkeyPatch) -> None:
     import sakthai.agent.loop as loop_mod
 
     # A tool_use first response forces a second iteration; by then the wall-clock
     # deadline has passed, so the loop must raise before calling the model again.
     client = FakeClient(
         [
-            _Resp(
-                "tool_use", [_Block(type="tool_use", id="t1", name="recall", input={})]
-            ),
+            _Resp("tool_use", [_Block(type="tool_use", id="t1", name="recall", input={})]),
             _Resp("end_turn", [_Block(type="text", text="too late")]),
         ]
     )
@@ -191,15 +183,11 @@ def test_deadline_trips_midloop(
 
     def fake_monotonic() -> float:
         calls["n"] += 1
-        return (
-            100.0 if calls["n"] <= 2 else 200.0
-        )  # deadline calc + iter1 pass, iter2 trips
+        return 100.0 if calls["n"] <= 2 else 200.0  # deadline calc + iter1 pass, iter2 trips
 
     monkeypatch.setattr(loop_mod.time, "monotonic", fake_monotonic)
     with pytest.raises(AgentError, match="time budget exhausted"):
-        run_agent(
-            "x", client=client, store=store, provider="anthropic", max_seconds=1.0
-        )
+        run_agent("x", client=client, store=store, provider="anthropic", max_seconds=1.0)
 
 
 def test_injected_custom_tool_is_dispatched(store: MemoryStore) -> None:
@@ -219,16 +207,11 @@ def test_injected_custom_tool_is_dispatched(store: MemoryStore) -> None:
     )
     client = FakeClient(
         [
-            _Resp(
-                "tool_use",
-                [_Block(type="tool_use", id="t1", name="echo", input={"msg": "hi"})],
-            ),
+            _Resp("tool_use", [_Block(type="tool_use", id="t1", name="echo", input={"msg": "hi"})]),
             _Resp("end_turn", [_Block(type="text", text="ok")]),
         ]
     )
-    result = run_agent(
-        "x", client=client, store=store, provider="anthropic", tools=(echo,)
-    )
+    result = run_agent("x", client=client, store=store, provider="anthropic", tools=(echo,))
     assert result.stop_reason == "end_turn"
     assert any(c["name"] == "echo" and not c["is_error"] for c in result.tool_calls)
 
@@ -257,13 +240,7 @@ def test_skills_are_injected_into_system_prompt(
         def __init__(self) -> None:
             self.messages = _CapMessages()
 
-    run_agent(
-        "x",
-        client=_CapClient(),
-        store=store,
-        provider="anthropic",
-        skills=["demo-skill"],
-    )
+    run_agent("x", client=_CapClient(), store=store, provider="anthropic", skills=["demo-skill"])
     assert "ALWAYS DO THE DEMO THING." in captured["system"]
 
 
@@ -388,21 +365,15 @@ def test_openai_provider_tool_use(store: MemoryStore) -> None:
     assert store.list_facts()[0].value == "loves python"
 
 
-def test_run_agent_loop_tool(
-    store: MemoryStore, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_run_agent_loop_tool(store: MemoryStore, monkeypatch: pytest.MonkeyPatch) -> None:
     import sakthai.agent.loop as loop_mod
     from sakthai.agent.tools import tool_by_name
 
     run_agent_loop_tool = tool_by_name("run_agent_loop")
     assert run_agent_loop_tool is not None
 
-    inner_client = FakeClient(
-        [_Resp("end_turn", [_Block(type="text", text="inner loop success")])]
-    )
-    monkeypatch.setattr(
-        loop_mod, "_build_client", lambda provider, client: inner_client
-    )
+    inner_client = FakeClient([_Resp("end_turn", [_Block(type="text", text="inner loop success")])])
+    monkeypatch.setattr(loop_mod, "_build_client", lambda provider, client: inner_client)
 
     res = run_agent_loop_tool.handler(
         {"task": "do something complex", "provider": "anthropic"},
@@ -460,20 +431,14 @@ def test_run_agent_failed_setup_does_not_leak_active_flag(
 
     # The leaked flag would have made this raise "Indirect recursion detected".
     inner_client = FakeClient([_Resp("end_turn", [_Block(type="text", text="ok")])])
-    monkeypatch.setattr(
-        loop_mod, "_build_client", lambda provider, client: inner_client
-    )
+    monkeypatch.setattr(loop_mod, "_build_client", lambda provider, client: inner_client)
     run_agent_loop_tool = tool_by_name("run_agent_loop")
     assert run_agent_loop_tool is not None
-    result = run_agent_loop_tool.handler(
-        {"task": "later task", "provider": "anthropic"}, store
-    )
+    result = run_agent_loop_tool.handler({"task": "later task", "provider": "anthropic"}, store)
     assert result == "ok"
 
 
-def test_run_agent_loop_pruning(
-    store: MemoryStore, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_run_agent_loop_pruning(store: MemoryStore, monkeypatch: pytest.MonkeyPatch) -> None:
     import sakthai.agent.loop as loop_mod
     from sakthai.agent.tools import tool_by_name
 
@@ -484,21 +449,12 @@ def test_run_agent_loop_pruning(
         [
             _Resp(
                 "tool_use",
-                [
-                    _Block(
-                        type="tool_use",
-                        id="t1",
-                        name="learn",
-                        input={"value": "fact-xyz"},
-                    )
-                ],
+                [_Block(type="tool_use", id="t1", name="learn", input={"value": "fact-xyz"})],
             ),
             _Resp("end_turn", [_Block(type="text", text="inner success")]),
         ]
     )
-    monkeypatch.setattr(
-        loop_mod, "_build_client", lambda provider, client: inner_client
-    )
+    monkeypatch.setattr(loop_mod, "_build_client", lambda provider, client: inner_client)
 
     res_pruned = run_agent_loop_tool.handler(
         {"task": "do pruning task", "provider": "anthropic", "prune_history": True},
@@ -510,21 +466,12 @@ def test_run_agent_loop_pruning(
         [
             _Resp(
                 "tool_use",
-                [
-                    _Block(
-                        type="tool_use",
-                        id="t2",
-                        name="learn",
-                        input={"value": "fact-abc"},
-                    )
-                ],
+                [_Block(type="tool_use", id="t2", name="learn", input={"value": "fact-abc"})],
             ),
             _Resp("end_turn", [_Block(type="text", text="inner success 2")]),
         ]
     )
-    monkeypatch.setattr(
-        loop_mod, "_build_client", lambda provider, client: inner_client2
-    )
+    monkeypatch.setattr(loop_mod, "_build_client", lambda provider, client: inner_client2)
 
     res_unpruned = run_agent_loop_tool.handler(
         {"task": "do unpruned task", "provider": "anthropic", "prune_history": False},
@@ -573,9 +520,7 @@ def test_anthropic_retry_on_rate_limit(store: MemoryStore) -> None:
     client = _FailThenSucceedClient(
         exc, _Resp("end_turn", [_Block(type="text", text="retry worked")])
     )
-    result = run_agent(
-        "hi", client=client, store=store, provider="anthropic", max_iterations=1
-    )
+    result = run_agent("hi", client=client, store=store, provider="anthropic", max_iterations=1)
     assert result.text == "retry worked"
     assert client.messages.calls == 2  # 1 fail + 1 success
 
@@ -596,9 +541,7 @@ def test_anthropic_no_retry_on_bad_request(store: MemoryStore) -> None:
         exc, _Resp("end_turn", [_Block(type="text", text="should not reach")])
     )
     with pytest.raises(AgentError, match="Anthropic API call failed"):
-        run_agent(
-            "hi", client=client, store=store, provider="anthropic", max_iterations=1
-        )
+        run_agent("hi", client=client, store=store, provider="anthropic", max_iterations=1)
     assert client.messages.calls == 1  # no retry
 
 
@@ -608,9 +551,7 @@ def test_anthropic_retry_on_connection_error(store: MemoryStore) -> None:
         OSError("Connection reset"),
         _Resp("end_turn", [_Block(type="text", text="reconnected")]),
     )
-    result = run_agent(
-        "hi", client=client, store=store, provider="anthropic", max_iterations=1
-    )
+    result = run_agent("hi", client=client, store=store, provider="anthropic", max_iterations=1)
     assert result.text == "reconnected"
     assert client.messages.calls == 2
 
@@ -658,9 +599,7 @@ def test_with_retry_recovers_after_transient(monkeypatch: pytest.MonkeyPatch) ->
     assert calls["n"] == 2
 
 
-def test_with_retry_does_not_retry_non_retryable(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+def test_with_retry_does_not_retry_non_retryable(monkeypatch: pytest.MonkeyPatch) -> None:
     import sakthai.agent.loop as loop_mod
     import sakthai.agent.providers.base as base
 
@@ -732,9 +671,7 @@ def test_usage_tracker_accumulates() -> None:
 def test_extract_usage_anthropic() -> None:
     from sakthai.agent.usage import extract_usage
 
-    resp = _RespWithUsage(
-        usage=type("U", (), {"input_tokens": 7, "output_tokens": 13})()
-    )
+    resp = _RespWithUsage(usage=type("U", (), {"input_tokens": 7, "output_tokens": 13})())
     assert extract_usage(resp) == {"input_tokens": 7, "output_tokens": 13}
 
 
@@ -747,9 +684,7 @@ def test_provider_construction_no_creds_google(
     try:
         import google.genai  # noqa: F401
     except BaseException:
-        pytest.skip(
-            "google-genai not importable in this environment (missing native libs)"
-        )
+        pytest.skip("google-genai not importable in this environment (missing native libs)")
     monkeypatch.delenv("GEMINI_API_KEY", raising=False)
     monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
     with pytest.raises(AgentError, match="Missing credentials for Google Gemini"):
@@ -782,9 +717,7 @@ def test_provider_construction_no_creds_anthropic(
 # -- 5.6 preflight (sakthai run --dry-run, no API call) -----------------
 
 
-def test_preflight_runnable_with_anthropic_creds(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+def test_preflight_runnable_with_anthropic_creds(monkeypatch: pytest.MonkeyPatch) -> None:
     import sakthai.agent.loop as loop_mod
 
     monkeypatch.setattr(loop_mod, "anthropic_credential_source", lambda: "api_key")
@@ -860,8 +793,7 @@ def test_run_agent_accepts_on_token(store: MemoryStore) -> None:
 def test_provider_calls_accept_on_token() -> None:
     import inspect
 
-    from sakthai.agent.providers import (call_anthropic, call_gemini,
-                                         call_openai_compat)
+    from sakthai.agent.providers import call_anthropic, call_gemini, call_openai_compat
 
     for fn in (call_anthropic, call_gemini, call_openai_compat):
         assert "on_token" in inspect.signature(fn).parameters
@@ -963,9 +895,7 @@ def test_openai_streaming_emits_text_deltas(store: MemoryStore) -> None:
     ]
     client = _FakeStreamHTTPX([lines])
     tokens: list[str] = []
-    result = run_agent(
-        "x", client=client, store=store, provider="openai", on_token=tokens.append
-    )
+    result = run_agent("x", client=client, store=store, provider="openai", on_token=tokens.append)
     assert tokens == ["Hello ", "world"]
     assert result.text == "Hello world"
     assert result.stop_reason == "end_turn"
@@ -1317,9 +1247,7 @@ def test_session_log_usage_totals_match(sakthai_home: Path, store: MemoryStore) 
     assert usage["total_tokens"] == usage["input_tokens"] + usage["output_tokens"]
 
 
-def test_session_log_written_with_tool_calls(
-    sakthai_home: Path, store: MemoryStore
-) -> None:
+def test_session_log_written_with_tool_calls(sakthai_home: Path, store: MemoryStore) -> None:
     import json
 
     client = FakeClient(
@@ -1400,10 +1328,7 @@ def test_tool_handler_exception_returned_as_error(store: MemoryStore) -> None:
     )
     client = FakeClient(
         [
-            _Resp(
-                "tool_use",
-                [_Block(type="tool_use", id="t1", name="bad_tool", input={})],
-            ),
+            _Resp("tool_use", [_Block(type="tool_use", id="t1", name="bad_tool", input={})]),
             _Resp("end_turn", [_Block(type="text", text="recovered")]),
         ]
     )
@@ -1437,9 +1362,7 @@ def test_preflight_google_gemini_api_key(monkeypatch: pytest.MonkeyPatch) -> Non
     assert report["runnable"] is True
 
 
-def test_preflight_google_google_api_key_fallback(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+def test_preflight_google_google_api_key_fallback(monkeypatch: pytest.MonkeyPatch) -> None:
     import sakthai.agent.loop as loop_mod
 
     monkeypatch.delenv("GEMINI_API_KEY", raising=False)
@@ -1563,9 +1486,7 @@ def test_caveman_flag_not_found_logs_warning(
         def __init__(self) -> None:
             self.messages = _CapMessages()
 
-    run_agent(
-        "x", client=_CapClient(), store=store, provider="anthropic", caveman="ultra"
-    )
+    run_agent("x", client=_CapClient(), store=store, provider="anthropic", caveman="ultra")
     # Caveman skill missing → warning logged, system prompt unchanged (no crash).
     assert "ACTIVE CAVEMAN LEVEL" not in captured.get("system", "")
 
@@ -1744,9 +1665,7 @@ def test_parse_slash_command_found_in_extension_commands_subdir(
     child = tmp_path / "extension-bundle"
     cmd_dir = child / "commands"
     cmd_dir.mkdir(parents=True)
-    (cmd_dir / "my-cmd.md").write_text(
-        "Extension commands-subdir body", encoding="utf-8"
-    )
+    (cmd_dir / "my-cmd.md").write_text("Extension commands-subdir body", encoding="utf-8")
     monkeypatch.setattr(loop_mod, "default_skill_roots", lambda: [tmp_path])
 
     result = _parse_slash_command("/any-plugin:my-cmd")
@@ -1775,9 +1694,7 @@ def test_parse_slash_command_returns_none_on_read_error(
 
 
 def test_save_session_log_handles_write_error(store: MemoryStore) -> None:
-    result = AgentResult(
-        text="done", iterations=1, stop_reason="end_turn", tool_calls=[], usage={}
-    )
+    result = AgentResult(text="done", iterations=1, stop_reason="end_turn", tool_calls=[], usage={})
     with patch("pathlib.Path.write_text", side_effect=OSError("disk full")):
         # Should not raise — failure is best-effort
         _save_session_log("test task", "claude-sonnet-4-6", [], result)
@@ -1829,9 +1746,7 @@ def test_run_agent_openai_defaults_model_to_gpt4o(
     monkeypatch.delenv("OLLAMA_HOST", raising=False)
     monkeypatch.setattr(loop_mod, "_build_client", lambda provider, client: client)
     monkeypatch.setattr(loop_mod, "_call_openai_compat", _fake_openai_compat)
-    run_agent(
-        "hi", client=FakeClient([]), store=store, provider="openai", model=DEFAULT_MODEL
-    )
+    run_agent("hi", client=FakeClient([]), store=store, provider="openai", model=DEFAULT_MODEL)
     assert captured["model"] == "gpt-4o"
 
 
@@ -1856,9 +1771,7 @@ def test_run_agent_openai_defaults_model_to_qwen_when_ollama_host(
     monkeypatch.setenv("OLLAMA_HOST", "http://127.0.0.1:11434")
     monkeypatch.setattr(loop_mod, "_build_client", lambda provider, client: client)
     monkeypatch.setattr(loop_mod, "_call_openai_compat", _fake_openai_compat)
-    run_agent(
-        "hi", client=FakeClient([]), store=store, provider="openai", model=DEFAULT_MODEL
-    )
+    run_agent("hi", client=FakeClient([]), store=store, provider="openai", model=DEFAULT_MODEL)
     assert captured["model"] == "qwen2.5-coder:7b"
 
 

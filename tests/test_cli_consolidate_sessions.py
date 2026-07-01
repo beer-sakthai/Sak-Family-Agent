@@ -11,9 +11,8 @@ from click.testing import CliRunner
 
 import sakthai.agent.loop as loop
 from sakthai.cli import main
-from sakthai.config import memory_db_path
+from sakthai.config import memory_db_path, sessions_dir
 from sakthai.config import sakthai_home as sakthai_home_path
-from sakthai.config import sessions_dir
 from sakthai.memory.store import MemoryStore
 
 
@@ -33,9 +32,7 @@ def _write_session(name: str, task: str, text: str) -> None:
 
 def _patch_extraction(monkeypatch: pytest.MonkeyPatch, text: str) -> None:
     """Make run_agent return a fixed extraction without any network call."""
-    monkeypatch.setattr(
-        loop, "run_agent", lambda *a, **k: types.SimpleNamespace(text=text)
-    )
+    monkeypatch.setattr(loop, "run_agent", lambda *a, **k: types.SimpleNamespace(text=text))
 
 
 def _consolidated_values() -> list[str]:

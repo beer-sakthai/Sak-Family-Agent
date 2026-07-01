@@ -10,9 +10,15 @@ import click
 
 from ..config import LIBRARY_DIR, PERSONAS_DIR, SKILLS_DIR, sakking_skills_dir
 from ..sakking_skills import sync_sakking_skills
-from ..skills import (PERSONA_SKILL_PREFIXES, SHARED_SKILL_PREFIX,
-                      build_catalog, collect_skills, find_skill,
-                      naming_violations, validate_tree)
+from ..skills import (
+    PERSONA_SKILL_PREFIXES,
+    SHARED_SKILL_PREFIX,
+    build_catalog,
+    collect_skills,
+    find_skill,
+    naming_violations,
+    validate_tree,
+)
 
 
 @click.group()
@@ -47,9 +53,7 @@ def skills_list(category: str | None, source: str) -> None:
     if category:
         catalog = [g for g in catalog if g["category"] == category]
     if not catalog:
-        click.echo(
-            f"no skills in category '{category}'" if category else "(no skills found)"
-        )
+        click.echo(f"no skills in category '{category}'" if category else "(no skills found)")
         return
 
     total = sum(g["count"] for g in catalog)
@@ -65,9 +69,7 @@ def skills_list(category: str | None, source: str) -> None:
             desc = str(s["description"] or "")
             if len(desc) > 60:
                 desc = desc[:59] + "…"
-            click.echo(
-                f"  {str(s['name']):<{name_w}}  {str(s['version'] or ''):<8}  {desc}"
-            )
+            click.echo(f"  {str(s['name']):<{name_w}}  {str(s['version'] or ''):<8}  {desc}")
         click.echo()
 
 
@@ -133,33 +135,23 @@ def skills_validate(source: str, naming: bool) -> None:
 def _naming_violations() -> list[tuple[Path, str]]:
     """Naming-convention violations across the shared library and every persona overlay."""
     found: list[tuple[Path, str]] = []
-    found.extend(
-        naming_violations(
-            PERSONAS_DIR / "shared" / "skills", prefix=SHARED_SKILL_PREFIX
-        )
-    )
+    found.extend(naming_violations(PERSONAS_DIR / "shared" / "skills", prefix=SHARED_SKILL_PREFIX))
     for persona, prefix in PERSONA_SKILL_PREFIXES.items():
-        found.extend(
-            naming_violations(PERSONAS_DIR / persona / "skills", prefix=prefix)
-        )
+        found.extend(naming_violations(PERSONAS_DIR / persona / "skills", prefix=prefix))
     return found
 
 
 @skills.command("create")
 @click.argument("name")
 @click.option("--category", default="general", help="Skill category.")
-@click.option(
-    "--description", default="A new SakThai skill.", help="Skill description."
-)
+@click.option("--description", default="A new SakThai skill.", help="Skill description.")
 @click.option(
     "--persona",
     type=click.Choice(["shared", *PERSONA_SKILL_PREFIXES]),
     default=None,
     help="Apply the naming-convention prefix for this owner (shared=Sak-, persona=Sak<Name>-).",
 )
-def skills_create(
-    name: str, category: str, description: str, persona: str | None
-) -> None:
+def skills_create(name: str, category: str, description: str, persona: str | None) -> None:
     """Scaffold a new skill directory with a template SKILL.md under skills/.
 
     With ``--persona`` the slug is prefixed per the naming convention so the new
@@ -167,11 +159,7 @@ def skills_create(
     """
     slug = name.lower().replace("_", "-").replace(" ", "-")
     if persona is not None:
-        prefix = (
-            SHARED_SKILL_PREFIX
-            if persona == "shared"
-            else PERSONA_SKILL_PREFIXES[persona]
-        )
+        prefix = SHARED_SKILL_PREFIX if persona == "shared" else PERSONA_SKILL_PREFIXES[persona]
         prefix_lower = prefix.lower()
         if slug.startswith(prefix_lower):
             slug = slug[len(prefix_lower) :]
@@ -211,9 +199,7 @@ Describe how this skill works and its instructions here.
     default=None,
     help="SakKing skills dir (default: $SAKKING_HOME/skills or ~/.sakking/skills).",
 )
-@click.option(
-    "--dry-run", is_flag=True, help="Report what would change without writing."
-)
+@click.option("--dry-run", is_flag=True, help="Report what would change without writing.")
 def skills_sync_sakking(sakking_root: Path | None, dry_run: bool) -> None:
     """Import skills SakKing has learned into skills/ as sakthai- skills."""
     source = sakking_root if sakking_root is not None else sakking_skills_dir()

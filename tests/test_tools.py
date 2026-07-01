@@ -12,9 +12,13 @@ from unittest.mock import MagicMock
 import pytest
 
 import sakthai.agent.tools as _tools_mod
-from sakthai.agent.tools import (BUILTIN_TOOLS, _allowed_read_roots,
-                                 _coerce_limit, _path_under_any_root,
-                                 tool_by_name)
+from sakthai.agent.tools import (
+    BUILTIN_TOOLS,
+    _allowed_read_roots,
+    _coerce_limit,
+    _path_under_any_root,
+    tool_by_name,
+)
 from sakthai.memory.store import MemoryStore
 
 
@@ -53,15 +57,11 @@ def test_learn_requires_value(store: MemoryStore) -> None:
 
 
 def test_forget_rejects_non_int(store: MemoryStore) -> None:
-    with pytest.raises(
-        ValueError, match="`fact_id` is required and must be an integer."
-    ):
+    with pytest.raises(ValueError, match="`fact_id` is required and must be an integer."):
         tool_by_name("forget").handler({"fact_id": True}, store)
 
 
-def test_read_file_within_cwd(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, store
-) -> None:
+def test_read_file_within_cwd(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, store) -> None:
     monkeypatch.chdir(tmp_path)
     target = tmp_path / "note.txt"
     target.write_text("hello", encoding="utf-8")
@@ -76,9 +76,7 @@ def test_read_file_blocks_outside_roots(tmp_path: Path, store) -> None:
         tool_by_name("read_file").handler({"path": str(secret)}, store)
 
 
-def test_run_command_disabled_by_default(
-    monkeypatch: pytest.MonkeyPatch, store
-) -> None:
+def test_run_command_disabled_by_default(monkeypatch: pytest.MonkeyPatch, store) -> None:
     monkeypatch.delenv("SAKTHAI_SHELL_ALLOW", raising=False)
     with pytest.raises(PermissionError):
         tool_by_name("run_command").handler({"command": "echo hi"}, store)
@@ -113,9 +111,7 @@ def test_run_command_timeout(monkeypatch: pytest.MonkeyPatch, store) -> None:
     assert "sleep 999" in out
 
 
-def test_run_command_oserror_raises_runtime(
-    monkeypatch: pytest.MonkeyPatch, store
-) -> None:
+def test_run_command_oserror_raises_runtime(monkeypatch: pytest.MonkeyPatch, store) -> None:
     monkeypatch.setenv("SAKTHAI_SHELL_ALLOW", "1")
 
     def _fake_run(cmd, **kwargs):
@@ -126,9 +122,7 @@ def test_run_command_oserror_raises_runtime(
         tool_by_name("run_command").handler({"command": "no_such_binary"}, store)
 
 
-def test_run_command_truncates_large_output(
-    monkeypatch: pytest.MonkeyPatch, store
-) -> None:
+def test_run_command_truncates_large_output(monkeypatch: pytest.MonkeyPatch, store) -> None:
     monkeypatch.setenv("SAKTHAI_SHELL_ALLOW", "1")
     big = "x" * (_tools_mod.MAX_CMD_OUTPUT_CHARS + 200)
 
@@ -173,9 +167,7 @@ def test_run_command_invalid_timeout_falls_back_to_default(
         return _FakeProc()
 
     monkeypatch.setattr(subprocess, "run", _fake_run)
-    tool_by_name("run_command").handler(
-        {"command": "echo ok", "timeout": "not-a-number"}, store
-    )
+    tool_by_name("run_command").handler({"command": "echo ok", "timeout": "not-a-number"}, store)
     assert captured["timeout"] == _tools_mod._CMD_TIMEOUT_DEFAULT
 
 
@@ -186,9 +178,7 @@ def test_send_telegram_http_error(monkeypatch: pytest.MonkeyPatch, store) -> Non
     monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "12345:fake-token")
     monkeypatch.setenv("TELEGRAM_CHAT_ID", "123")
 
-    exc = urllib.error.HTTPError(
-        "https://api.telegram.org", 401, "Unauthorized", None, None
-    )
+    exc = urllib.error.HTTPError("https://api.telegram.org", 401, "Unauthorized", None, None)
     exc.read = lambda: b'{"description": "Unauthorized"}'  # type: ignore[method-assign]
 
     def _raise(_req, timeout=None):
@@ -278,9 +268,7 @@ def test_read_file_oserror_on_resolve(
     # subclass (NotADirectoryError), which must be surfaced as FileNotFoundError.
     monkeypatch.chdir(tmp_path)
     (tmp_path / "file.txt").write_text("x", encoding="utf-8")
-    with pytest.raises(
-        FileNotFoundError, match="could not be opened|is not a regular file"
-    ):
+    with pytest.raises(FileNotFoundError, match="could not be opened|is not a regular file"):
         tool_by_name("read_file").handler({"path": "file.txt/inner"}, store)
 
 
@@ -304,23 +292,17 @@ def test_search_requires_query(store: MemoryStore) -> None:
 
 
 def test_forget_requires_fact_id(store: MemoryStore) -> None:
-    with pytest.raises(
-        ValueError, match="`fact_id` is required and must be an integer."
-    ):
+    with pytest.raises(ValueError, match="`fact_id` is required and must be an integer."):
         tool_by_name("forget").handler({}, store)
 
 
 def test_forget_rejects_non_numeric_string(store: MemoryStore) -> None:
-    with pytest.raises(
-        ValueError, match="`fact_id` is required and must be an integer."
-    ):
+    with pytest.raises(ValueError, match="`fact_id` is required and must be an integer."):
         tool_by_name("forget").handler({"fact_id": "abc"}, store)
 
 
 def test_forget_rejects_invalid_type(store: MemoryStore) -> None:
-    with pytest.raises(
-        ValueError, match="`fact_id` is required and must be an integer."
-    ):
+    with pytest.raises(ValueError, match="`fact_id` is required and must be an integer."):
         tool_by_name("forget").handler({"fact_id": [1, 2]}, store)
 
 
@@ -376,32 +358,24 @@ def test_send_telegram_success(monkeypatch: pytest.MonkeyPatch, store) -> None:
     assert "sent successfully" in out
 
 
-def test_send_telegram_api_reports_not_ok(
-    monkeypatch: pytest.MonkeyPatch, store
-) -> None:
+def test_send_telegram_api_reports_not_ok(monkeypatch: pytest.MonkeyPatch, store) -> None:
     monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "12345:fake-token")
     monkeypatch.setenv("TELEGRAM_CHAT_ID", "123")
     monkeypatch.setattr(
         urllib.request,
         "urlopen",
-        lambda _req, timeout=None: _FakeResponse(
-            b'{"ok": false, "description": "blocked"}'
-        ),
+        lambda _req, timeout=None: _FakeResponse(b'{"ok": false, "description": "blocked"}'),
     )
     out = tool_by_name("send_telegram_message").handler({"message": "hi"}, store)
     assert "Telegram send failed" in out
     assert "blocked" in out
 
 
-def test_send_telegram_http_error_unparseable_body(
-    monkeypatch: pytest.MonkeyPatch, store
-) -> None:
+def test_send_telegram_http_error_unparseable_body(monkeypatch: pytest.MonkeyPatch, store) -> None:
     monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "12345:fake-token")
     monkeypatch.setenv("TELEGRAM_CHAT_ID", "123")
 
-    exc = urllib.error.HTTPError(
-        "https://api.telegram.org", 500, "Server Error", None, None
-    )
+    exc = urllib.error.HTTPError("https://api.telegram.org", 500, "Server Error", None, None)
     exc.read = lambda: b"not json"  # type: ignore[method-assign]
     monkeypatch.setattr(
         urllib.request,
@@ -428,9 +402,7 @@ def test_send_telegram_unexpected_error(monkeypatch: pytest.MonkeyPatch, store) 
 # -- _run_agent_loop ------------------------------------------------------
 
 
-def test_run_agent_loop_rejects_recursion(
-    monkeypatch: pytest.MonkeyPatch, store
-) -> None:
+def test_run_agent_loop_rejects_recursion(monkeypatch: pytest.MonkeyPatch, store) -> None:
     monkeypatch.setenv("SAKTHAI_AGENT_ACTIVE", "1")
     with pytest.raises(ValueError, match="Indirect recursion"):
         tool_by_name("run_agent_loop").handler({"task": "do it"}, store)
@@ -442,9 +414,7 @@ def test_run_agent_loop_requires_task(monkeypatch: pytest.MonkeyPatch, store) ->
         tool_by_name("run_agent_loop").handler({"task": "  "}, store)
 
 
-def test_run_agent_loop_prunes_history_by_default(
-    monkeypatch: pytest.MonkeyPatch, store
-) -> None:
+def test_run_agent_loop_prunes_history_by_default(monkeypatch: pytest.MonkeyPatch, store) -> None:
     monkeypatch.delenv("SAKTHAI_AGENT_ACTIVE", raising=False)
     captured: dict = {}
 
@@ -460,12 +430,7 @@ def test_run_agent_loop_prunes_history_by_default(
 
     monkeypatch.setattr(loop_mod, "run_agent", _fake_run_agent)
     out = tool_by_name("run_agent_loop").handler(
-        {
-            "task": "summarize",
-            "model": "claude-x",
-            "provider": "anthropic",
-            "max_iterations": "3",
-        },
+        {"task": "summarize", "model": "claude-x", "provider": "anthropic", "max_iterations": "3"},
         store,
     )
     assert out == "final answer"
@@ -477,9 +442,7 @@ def test_run_agent_loop_prunes_history_by_default(
     assert all(t.name != "run_agent_loop" for t in captured["tools"])
 
 
-def test_run_agent_loop_can_return_tool_call_trace(
-    monkeypatch: pytest.MonkeyPatch, store
-) -> None:
+def test_run_agent_loop_can_return_tool_call_trace(monkeypatch: pytest.MonkeyPatch, store) -> None:
     monkeypatch.delenv("SAKTHAI_AGENT_ACTIVE", raising=False)
 
     class _Result:
@@ -489,9 +452,7 @@ def test_run_agent_loop_can_return_tool_call_trace(
     import sakthai.agent.loop as loop_mod
 
     monkeypatch.setattr(loop_mod, "run_agent", lambda **kw: _Result())
-    out = tool_by_name("run_agent_loop").handler(
-        {"task": "x", "prune_history": False}, store
-    )
+    out = tool_by_name("run_agent_loop").handler({"task": "x", "prune_history": False}, store)
     assert "Tool calls made in this loop:" in out
     assert "recall" in out
 
@@ -509,9 +470,7 @@ def test_run_agent_loop_non_bool_prune_history_defaults_to_true(
 
     monkeypatch.setattr(loop_mod, "run_agent", lambda **kw: _Result())
     # A non-bool prune_history is coerced to True, so only the result text returns.
-    out = tool_by_name("run_agent_loop").handler(
-        {"task": "x", "prune_history": "yes"}, store
-    )
+    out = tool_by_name("run_agent_loop").handler({"task": "x", "prune_history": "yes"}, store)
     assert out == "done"
 
 
@@ -561,9 +520,7 @@ class TestAllowedReadRoots:
         dir_b = tmp_path / "allowed_b"
         dir_a.mkdir()
         dir_b.mkdir()
-        monkeypatch.setenv(
-            "SAKTHAI_READ_ALLOW", os.pathsep.join([str(dir_a), str(dir_b)])
-        )
+        monkeypatch.setenv("SAKTHAI_READ_ALLOW", os.pathsep.join([str(dir_a), str(dir_b)]))
         roots = _allowed_read_roots()
         assert dir_a.resolve() in roots
         assert dir_b.resolve() in roots
@@ -588,19 +545,13 @@ class TestAllowedReadRoots:
         dir_b.mkdir()
         (dir_a / "file_a.txt").write_text("from a", encoding="utf-8")
         (dir_b / "file_b.txt").write_text("from b", encoding="utf-8")
-        monkeypatch.setenv(
-            "SAKTHAI_READ_ALLOW", os.pathsep.join([str(dir_a), str(dir_b)])
-        )
+        monkeypatch.setenv("SAKTHAI_READ_ALLOW", os.pathsep.join([str(dir_a), str(dir_b)]))
         assert (
-            tool_by_name("read_file").handler(
-                {"path": str(dir_a / "file_a.txt")}, store
-            )
+            tool_by_name("read_file").handler({"path": str(dir_a / "file_a.txt")}, store)
             == "from a"
         )
         assert (
-            tool_by_name("read_file").handler(
-                {"path": str(dir_b / "file_b.txt")}, store
-            )
+            tool_by_name("read_file").handler({"path": str(dir_b / "file_b.txt")}, store)
             == "from b"
         )
 
@@ -611,13 +562,9 @@ class TestAllowedReadRoots:
 
 
 class TestReadFileErrors:
-    def test_read_file_non_existent_path(
-        self, sakthai_home: Path, store: MemoryStore
-    ) -> None:
+    def test_read_file_non_existent_path(self, sakthai_home: Path, store: MemoryStore) -> None:
         with pytest.raises(FileNotFoundError, match="is not a regular file"):
-            tool_by_name("read_file").handler(
-                {"path": "/non/existent/path/at/all"}, store
-            )
+            tool_by_name("read_file").handler({"path": "/non/existent/path/at/all"}, store)
 
     def test_read_file_oserror_on_resolve(
         self, sakthai_home: Path, monkeypatch: pytest.MonkeyPatch, store: MemoryStore
@@ -631,9 +578,7 @@ class TestReadFileErrors:
 
         monkeypatch.setattr(Path, "resolve", _patched_resolve)
 
-        with pytest.raises(
-            FileNotFoundError, match="could not be opened: simulated os error"
-        ):
+        with pytest.raises(FileNotFoundError, match="could not be opened: simulated os error"):
             tool_by_name("read_file").handler({"path": "/simulated/os/error"}, store)
 
 
@@ -700,9 +645,7 @@ class TestRunCommandTimeoutClamping:
     ) -> None:
         monkeypatch.setenv("SAKTHAI_SHELL_ALLOW", "1")
         captured = self._capture_timeout(monkeypatch)
-        tool_by_name("run_command").handler(
-            {"command": "echo ok", "timeout": 0.1}, store
-        )
+        tool_by_name("run_command").handler({"command": "echo ok", "timeout": 0.1}, store)
         assert captured["timeout"] == 1.0
 
     def test_timeout_above_maximum_clamped(
@@ -710,9 +653,7 @@ class TestRunCommandTimeoutClamping:
     ) -> None:
         monkeypatch.setenv("SAKTHAI_SHELL_ALLOW", "1")
         captured = self._capture_timeout(monkeypatch)
-        tool_by_name("run_command").handler(
-            {"command": "echo ok", "timeout": 99999}, store
-        )
+        tool_by_name("run_command").handler({"command": "echo ok", "timeout": 99999}, store)
         assert captured["timeout"] == _tools_mod._CMD_TIMEOUT_MAX
 
     def test_timeout_within_range_passes_through(
@@ -720,9 +661,7 @@ class TestRunCommandTimeoutClamping:
     ) -> None:
         monkeypatch.setenv("SAKTHAI_SHELL_ALLOW", "1")
         captured = self._capture_timeout(monkeypatch)
-        tool_by_name("run_command").handler(
-            {"command": "echo ok", "timeout": 45}, store
-        )
+        tool_by_name("run_command").handler({"command": "echo ok", "timeout": 45}, store)
         assert captured["timeout"] == 45.0
 
 
@@ -827,9 +766,7 @@ def test_path_under_any_root_skips_oserror_and_valueerror() -> None:
     assert _path_under_any_root(Path("/some/path"), [bad_root]) is False
 
 
-def test_path_under_any_root_oserror_on_real_path(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+def test_path_under_any_root_oserror_on_real_path(monkeypatch: pytest.MonkeyPatch) -> None:
     """Monkeypatch Path.is_relative_to to raise OSError on the *caller* side.
 
     The existing test above sets side_effect on the mock *root*, but
@@ -872,13 +809,9 @@ def test_read_file_outside_roots_message_names_allow_var(
     secret = tmp_path / "outside.txt"
     secret.write_text("top secret", encoding="utf-8")
     with pytest.raises(PermissionError, match="outside the allowed roots"):
-        tool_by_name("read_file").handler(
-            {"path": str(secret)}, MemoryStore(":memory:")
-        )
+        tool_by_name("read_file").handler({"path": str(secret)}, MemoryStore(":memory:"))
     with pytest.raises(PermissionError, match="SAKTHAI_READ_ALLOW"):
-        tool_by_name("read_file").handler(
-            {"path": str(secret)}, MemoryStore(":memory:")
-        )
+        tool_by_name("read_file").handler({"path": str(secret)}, MemoryStore(":memory:"))
 
 
 def test_read_file_decodes_invalid_utf8_with_replacement(

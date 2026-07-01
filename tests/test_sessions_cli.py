@@ -114,9 +114,7 @@ def test_sessions_show_not_found(sakthai_home: Path, runner: CliRunner) -> None:
     assert "Session 'nonexistent' not found." in res.output
 
 
-def test_sessions_list_corrupt_json_skipped(
-    sakthai_home: Path, runner: CliRunner
-) -> None:
+def test_sessions_list_corrupt_json_skipped(sakthai_home: Path, runner: CliRunner) -> None:
     s_dir = sessions_dir()
     s_dir.mkdir(parents=True, exist_ok=True)
     (s_dir / "bad.json").write_text("{not valid json", encoding="utf-8")
@@ -126,9 +124,7 @@ def test_sessions_list_corrupt_json_skipped(
     assert "Session ID" in res.output
 
 
-def test_sessions_list_truncates_long_task_and_model(
-    sakthai_home: Path, runner: CliRunner
-) -> None:
+def test_sessions_list_truncates_long_task_and_model(sakthai_home: Path, runner: CliRunner) -> None:
     s_dir = sessions_dir()
     s_dir.mkdir(parents=True, exist_ok=True)
     now = int(time.time())
@@ -158,23 +154,13 @@ def test_sessions_show_tool_blocks(sakthai_home: Path, runner: CliRunner) -> Non
         "task": "do something",
         "model": "claude-sonnet-4-6",
         "usage": {"total_tokens": 10},
-        "result": {
-            "text": "done",
-            "iterations": 2,
-            "stop_reason": "end_turn",
-            "tool_calls": [],
-        },
+        "result": {"text": "done", "iterations": 2, "stop_reason": "end_turn", "tool_calls": []},
         "messages": [
             {"role": "user", "content": "do something"},
             {
                 "role": "assistant",
                 "content": [
-                    {
-                        "type": "tool_use",
-                        "id": "t1",
-                        "name": "learn",
-                        "input": {"value": "x"},
-                    },
+                    {"type": "tool_use", "id": "t1", "name": "learn", "input": {"value": "x"}},
                 ],
             },
             {
@@ -202,9 +188,7 @@ def test_sessions_show_tool_blocks(sakthai_home: Path, runner: CliRunner) -> Non
     assert "learned (id=1)" in res.output
 
 
-def test_sessions_show_tool_result_error_flag(
-    sakthai_home: Path, runner: CliRunner
-) -> None:
+def test_sessions_show_tool_result_error_flag(sakthai_home: Path, runner: CliRunner) -> None:
     s_dir = sessions_dir()
     s_dir.mkdir(parents=True, exist_ok=True)
     now = int(time.time())
@@ -282,27 +266,21 @@ def test_sessions_clean(sakthai_home: Path, runner: CliRunner) -> None:
 
     # Test clean older than 2d (should match 1 old session)
     # Aborted path
-    res_clean_abort = runner.invoke(
-        main, ["sessions", "clean", "--older-than", "2d"], input="n\n"
-    )
+    res_clean_abort = runner.invoke(main, ["sessions", "clean", "--older-than", "2d"], input="n\n")
     assert res_clean_abort.exit_code == 0
     assert "Found 1 session(s) older than 2d." in res_clean_abort.output
     assert "Aborted." in res_clean_abort.output
     assert (s_dir / f"{old_id}.json").exists()
 
     # Confirmed path
-    res_clean = runner.invoke(
-        main, ["sessions", "clean", "--older-than", "2d", "--yes"]
-    )
+    res_clean = runner.invoke(main, ["sessions", "clean", "--older-than", "2d", "--yes"])
     assert res_clean.exit_code == 0
     assert "Successfully deleted 1 session log file(s)." in res_clean.output
     assert not (s_dir / f"{old_id}.json").exists()
     assert (s_dir / f"{new_id}.json").exists()
 
 
-def test_sessions_list_empty_dir_no_json_files(
-    sakthai_home: Path, runner: CliRunner
-) -> None:
+def test_sessions_list_empty_dir_no_json_files(sakthai_home: Path, runner: CliRunner) -> None:
     s_dir = sessions_dir()
     s_dir.mkdir(parents=True, exist_ok=True)
     # Dir exists but has no .json files (only a non-json file)
@@ -328,9 +306,7 @@ def test_sessions_list_respects_limit(sakthai_home: Path, runner: CliRunner) -> 
     assert len(task_lines) == 2
 
 
-def test_sessions_show_corrupt_file_reports_error(
-    sakthai_home: Path, runner: CliRunner
-) -> None:
+def test_sessions_show_corrupt_file_reports_error(sakthai_home: Path, runner: CliRunner) -> None:
     s_dir = sessions_dir()
     s_dir.mkdir(parents=True, exist_ok=True)
     (s_dir / "corrupt_sess.json").write_text("{ invalid json", encoding="utf-8")
@@ -339,9 +315,7 @@ def test_sessions_show_corrupt_file_reports_error(
     assert "Failed to read session file" in res.output
 
 
-def test_sessions_clean_bad_duration_reports_error(
-    sakthai_home: Path, runner: CliRunner
-) -> None:
+def test_sessions_clean_bad_duration_reports_error(sakthai_home: Path, runner: CliRunner) -> None:
     res = runner.invoke(main, ["sessions", "clean", "--older-than", "5x"])
     assert res.exit_code != 0
     assert "Unknown duration unit" in res.output
@@ -361,9 +335,7 @@ def test_sessions_clean_unlink_failure(
     s_dir.mkdir(parents=True, exist_ok=True)
     old_ts = int(time.time()) - 60 * 86400
     sess_file = s_dir / f"{old_ts}_old-sess.json"
-    sess_file.write_text(
-        json.dumps({"timestamp": old_ts, "task": "old task"}), encoding="utf-8"
-    )
+    sess_file.write_text(json.dumps({"timestamp": old_ts, "task": "old task"}), encoding="utf-8")
 
     original_unlink = sess_file.__class__.unlink
 

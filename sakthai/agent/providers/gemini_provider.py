@@ -7,8 +7,7 @@ from typing import Any
 
 from ..tools import Tool
 from ..usage import extract_usage
-from .base import (AgentError, Block, Response, block_field,
-                   find_tool_name_by_id, logger, with_retry)
+from .base import AgentError, Block, Response, block_field, find_tool_name_by_id, logger, with_retry
 
 
 def to_gemini_contents(messages: list[dict[str, Any]]) -> list[Any]:
@@ -105,9 +104,7 @@ def call_gemini(
             client.models.generate_content,
             model=model,
             contents=to_gemini_contents(messages),
-            config=types.GenerateContentConfig(
-                system_instruction=system, tools=declarations
-            ),
+            config=types.GenerateContentConfig(system_instruction=system, tools=declarations),
         )
     except Exception as exc:  # noqa: BLE001
         logger.error("Gemini API call failed: %s", exc)

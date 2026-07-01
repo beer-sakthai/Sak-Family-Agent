@@ -5,14 +5,13 @@ from __future__ import annotations
 import json
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, cast
+from typing import cast
 
 import click
 
 from ..learn.capture import learn as learn_fact
 from ..memory.backup import backup_memory
-from ..memory.store import (Fact, MemoryStore, Observation, snapshot_to_csv,
-                            snapshot_to_jsonl)
+from ..memory.store import Fact, MemoryStore, Observation, snapshot_to_csv, snapshot_to_jsonl
 
 
 def _fact_line(f: Fact) -> str:
@@ -58,24 +57,22 @@ def learn(
         click.echo(f"learned (id={fact_id})")
         return
 
-    pending: list[dict[str, Any]] = []
-    for raw in file.read_text(encoding="utf-8").splitlines():
-        line = raw.strip()
-        if not line or line.startswith("#"):
-            continue
-        if line.startswith(("- ", "* ", "+ ")):
-            line = line[2:].strip()
-        elif (
-            "." in line
-            and line.split(".", 1)[0].isdigit()
-            and line.split(".", 1)[1].startswith(" ")
-        ):
-            line = line.split(".", 1)[1].strip()
-        if line:
-            pending.append({"value": line, "kind": kind, "key": key, "tags": tag_list})
-
+    learned: list[int] = []
     with MemoryStore() as store:
-        learned = store.add_facts(pending)
+        for raw in file.read_text(encoding="utf-8").splitlines():
+            line = raw.strip()
+            if not line or line.startswith("#"):
+                continue
+            if line.startswith(("- ", "* ", "+ ")):
+                line = line[2:].strip()
+            elif (
+                "." in line
+                and line.split(".", 1)[0].isdigit()
+                and line.split(".", 1)[1].startswith(" ")
+            ):
+                line = line.split(".", 1)[1].strip()
+            if line:
+                learned.append(store.add_fact(line, kind=kind, key=key, tags=tag_list))
     if not learned:
         click.echo("No valid facts found in file.")
         return
@@ -84,9 +81,7 @@ def learn(
 
 @click.command()
 @click.argument("query", required=False)
-@click.option(
-    "--tag", "tag", default=None, help="Recall facts carrying this exact tag."
-)
+@click.option("--tag", "tag", default=None, help="Recall facts carrying this exact tag.")
 @click.option("--limit", default=20, show_default=True, help="Max results to display.")
 def recall(query: str | None, tag: str | None, limit: int) -> None:
     """Recall facts (and observations) matching QUERY, or filter by --tag."""
@@ -147,16 +142,12 @@ def memory_stats(as_json: bool) -> None:
         return
 
     def _ts(value: int | None) -> str:
-        return (
-            datetime.fromtimestamp(value, tz=UTC).strftime("%Y-%m-%d") if value else "—"
-        )
+        return datetime.fromtimestamp(value, tz=UTC).strftime("%Y-%m-%d") if value else "—"
 
     facts, obs = data["facts"], data["observations"]
     click.echo("# Memory stats")
     click.echo(f"  db: {data['db_path']}")
-    click.echo(
-        f"  facts: {facts['total']}  ({_ts(facts['oldest'])} → {_ts(facts['newest'])})"
-    )
+    click.echo(f"  facts: {facts['total']}  ({_ts(facts['oldest'])} → {_ts(facts['newest'])})")
     if facts["by_kind"]:
         click.echo("  by kind:")
         for kind, n in facts["by_kind"].items():
@@ -165,13 +156,9 @@ def memory_stats(as_json: bool) -> None:
         click.echo("  tags:")
         for tag, n in data["tags"].items():
             click.echo(f"    {n:>4}  #{tag}")
-    click.echo(
-        f"  observations: {obs['total']}  ({_ts(obs['oldest'])} → {_ts(obs['newest'])})"
-    )
+    click.echo(f"  observations: {obs['total']}  ({_ts(obs['oldest'])} → {_ts(obs['newest'])})")
     if obs["total"]:
-        click.echo(
-            f"    avg weight: {obs['avg_weight']}  avg confidence: {obs['avg_confidence']}"
-        )
+        click.echo(f"    avg weight: {obs['avg_weight']}  avg confidence: {obs['avg_confidence']}")
 
 
 @memory.command("search")
@@ -262,9 +249,7 @@ def memory_export(path: Path, force: bool, fmt: str) -> None:
 
 @memory.command("import")
 @click.argument("path", type=click.Path(exists=True, dir_okay=False, path_type=Path))
-@click.option(
-    "--replace", is_flag=True, help="Wipe memory first (preserves snapshot IDs)."
-)
+@click.option("--replace", is_flag=True, help="Wipe memory first (preserves snapshot IDs).")
 @click.option("--yes", is_flag=True, help="Skip the --replace confirmation prompt.")
 def memory_import(path: Path, replace: bool, yes: bool) -> None:
     """Restore facts + observations from a JSON snapshot at PATH."""
@@ -288,11 +273,7 @@ def memory_import(path: Path, replace: bool, yes: bool) -> None:
 
 @memory.command("consolidate")
 @click.option(
-    "--age",
-    default=86400,
-    show_default=True,
-    type=int,
-    help="Fold facts older than AGE seconds.",
+    "--age", default=86400, show_default=True, type=int, help="Fold facts older than AGE seconds."
 )
 def memory_consolidate(age: int) -> None:
     """Fold older facts into a single observation."""
@@ -320,9 +301,7 @@ _CONSOLIDATE_PROMPT = (
 
 
 @memory.command("consolidate-sessions")
-@click.option(
-    "--limit", default=10, show_default=True, type=int, help="Max sessions to process."
-)
+@click.option("--limit", default=10, show_default=True, type=int, help="Max sessions to process.")
 @click.option("--model", default=None, help="Model override for the extraction LLM.")
 def memory_consolidate_sessions(limit: int, model: str | None) -> None:
     """Mine local session logs for durable facts and learn them.
@@ -355,46 +334,39 @@ def memory_consolidate_sessions(limit: int, model: str | None) -> None:
 
     click.echo(f"Consolidating {len(pending)} session(s)...")
     extraction_model = model or DEFAULT_MODEL
-
-    to_learn: list[dict[str, Any]] = []
-    for f in pending:
-        try:
-            data = json.loads(f.read_text(encoding="utf-8"))
-        except (OSError, ValueError) as exc:
-            click.echo(f"Skipping unreadable session log {f.name}: {exc}")
-            continue
-
-        task = data.get("task", "")
-        result_text = (data.get("result") or {}).get("text", "")
-        trace = f"User: {task}\nAgent: {result_text}"
-
-        try:
-            res = run_agent(
-                _CONSOLIDATE_PROMPT.format(trace=trace),
-                model=extraction_model,
-                max_iterations=1,
-                tools=(),
-            )
-        except (
-            Exception
-        ) as exc:  # noqa: BLE001 - report and continue, never abort the batch
-            click.echo(f"Error extracting from {f.name}: {exc}")
-            continue
-
-        for raw in res.text.strip().splitlines():
-            line = raw.strip().lstrip("-*+ ").strip()
-            if not line or line.lower() == "none" or line.startswith("#"):
-                continue
-            to_learn.append(
-                {"value": line, "kind": "consolidated", "tags": ["consolidated"]}
-            )
-
-        processed.add(f.name)
-
     learned = 0
-    if to_learn:
-        with MemoryStore() as store:
-            learned = len(store.add_facts(to_learn))
+
+    with MemoryStore() as store:
+        for f in pending:
+            try:
+                data = json.loads(f.read_text(encoding="utf-8"))
+            except (OSError, ValueError) as exc:
+                click.echo(f"Skipping unreadable session log {f.name}: {exc}")
+                continue
+
+            task = data.get("task", "")
+            result_text = (data.get("result") or {}).get("text", "")
+            trace = f"User: {task}\nAgent: {result_text}"
+
+            try:
+                res = run_agent(
+                    _CONSOLIDATE_PROMPT.format(trace=trace),
+                    model=extraction_model,
+                    max_iterations=1,
+                    tools=(),
+                )
+            except Exception as exc:  # noqa: BLE001 - report and continue, never abort the batch
+                click.echo(f"Error extracting from {f.name}: {exc}")
+                continue
+
+            for raw in res.text.strip().splitlines():
+                line = raw.strip().lstrip("-*+ ").strip()
+                if not line or line.lower() == "none" or line.startswith("#"):
+                    continue
+                store.add_fact(line, kind="consolidated", tags=["consolidated"])
+                learned += 1
+
+            processed.add(f.name)
 
     try:
         state_file.write_text(json.dumps(sorted(processed), indent=2), encoding="utf-8")
@@ -409,21 +381,16 @@ def memory_consolidate_sessions(limit: int, model: str | None) -> None:
 
 
 @memory.command("deduplicate")
-@click.option(
-    "--dry-run", "-n", is_flag=True, help="Report duplicates without deleting."
-)
+@click.option("--dry-run", "-n", is_flag=True, help="Report duplicates without deleting.")
 @click.option("--verbose", "-v", is_flag=True, help="Print every pruned row.")
 def memory_deduplicate(dry_run: bool, verbose: bool) -> None:
     """Find and remove duplicate facts and observations."""
     from ..memory.store import Fact, Observation
 
     with MemoryStore() as store:
-        facts = cast(
-            list[Fact], store.deduplicate_facts(detailed=True, dry_run=dry_run)
-        )
+        facts = cast(list[Fact], store.deduplicate_facts(detailed=True, dry_run=dry_run))
         obs = cast(
-            list[Observation],
-            store.deduplicate_observations(detailed=True, dry_run=dry_run),
+            list[Observation], store.deduplicate_observations(detailed=True, dry_run=dry_run)
         )
 
     verb = "Found" if dry_run else "Removed"
@@ -438,18 +405,14 @@ def memory_deduplicate(dry_run: bool, verbose: bool) -> None:
         click.echo(f"{verb} {len(obs)} duplicate observation(s)")
         if verbose:
             for o in sorted(obs, key=lambda x: (x.summary, x.id)):
-                click.echo(
-                    f"  - id {o.id} ({o.summary[:60]}) [w={o.weight}, c={o.confidence}]"
-                )
+                click.echo(f"  - id {o.id} ({o.summary[:60]}) [w={o.weight}, c={o.confidence}]")
     else:
         click.echo("No duplicate observations found.")
 
 
 @memory.command("sync")
 @click.option("--remote", default=None, help="Git remote URL to push the snapshot to.")
-@click.option(
-    "--http-url", default=None, help="HTTP URL to POST the snapshot to (fallback mode)."
-)
+@click.option("--http-url", default=None, help="HTTP URL to POST the snapshot to (fallback mode).")
 @click.option("--http-key", default=None, help="Bearer token for HTTP authentication.")
 @click.option(
     "--supermemory",
@@ -471,9 +434,7 @@ def memory_sync(
             from ..config import REPO_ROOT
 
             script = REPO_ROOT / "scripts" / "regenerate-supermemory-canonicals.py"
-            subprocess.run(
-                [sys.executable, str(script), "--apply", "--quiet"], check=True
-            )
+            subprocess.run([sys.executable, str(script), "--apply", "--quiet"], check=True)
             click.echo("Supermemory deduplication complete.")
 
         click.echo("Syncing memory...")

@@ -33,12 +33,7 @@ def _raising_tool(name: str, exc: Exception) -> Tool:
 
 def test_initialize_echoes_protocol(store: MemoryStore) -> None:
     resp = handle_request(
-        {
-            "jsonrpc": "2.0",
-            "id": 1,
-            "method": "initialize",
-            "params": {"protocolVersion": "x"},
-        },
+        {"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {"protocolVersion": "x"}},
         store,
     )
     assert resp["result"]["protocolVersion"] == "x"
@@ -90,9 +85,7 @@ def test_unknown_method(store: MemoryStore) -> None:
 
 
 def test_notification_returns_none(store: MemoryStore) -> None:
-    assert (
-        handle_request({"jsonrpc": "2.0", "method": "notifications/x"}, store) is None
-    )
+    assert handle_request({"jsonrpc": "2.0", "method": "notifications/x"}, store) is None
     assert handle_request({"jsonrpc": "2.0", "method": "ping"}, store) is None
 
 
@@ -165,9 +158,7 @@ def test_tools_call_runtime_error_returns_is_error(store: MemoryStore) -> None:
     assert "RuntimeError" in resp["result"]["content"][0]["text"]
 
 
-def test_tools_call_handler_exception_response_is_valid_jsonrpc(
-    store: MemoryStore,
-) -> None:
+def test_tools_call_handler_exception_response_is_valid_jsonrpc(store: MemoryStore) -> None:
     tool = _raising_tool("flakey", OSError("disk full"))
     resp = handle_request(
         {
@@ -220,9 +211,7 @@ def test_tools_call_learn_invalid_value_returns_is_error(store: MemoryStore) -> 
     assert "ValueError" in resp["result"]["content"][0]["text"]
 
 
-def test_tools_call_notification_with_handler_exception_returns_none(
-    store: MemoryStore,
-) -> None:
+def test_tools_call_notification_with_handler_exception_returns_none(store: MemoryStore) -> None:
     # Notifications (no "id") must return None even when the handler would fail.
     tool = _raising_tool("noisy_notif", RuntimeError("boom"))
     result = handle_request(
@@ -240,9 +229,7 @@ def test_tools_call_notification_with_handler_exception_returns_none(
 def test_notification_for_unknown_method_returns_none(store: MemoryStore) -> None:
     # A notification (no "id") with an unknown method (not ping, not tools/*,
     # not notifications/*) must return None — not an error frame.
-    result = handle_request(
-        {"jsonrpc": "2.0", "method": "completely_unknown_method"}, store
-    )
+    result = handle_request({"jsonrpc": "2.0", "method": "completely_unknown_method"}, store)
     assert result is None
 
 

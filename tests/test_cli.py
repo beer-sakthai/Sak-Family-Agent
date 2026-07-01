@@ -185,9 +185,7 @@ def test_memory_stats_human_readable(runner: CliRunner) -> None:
     assert "work" in result.output
 
 
-def test_memory_stats_shows_observation_averages(
-    runner: CliRunner, sakthai_home: Path
-) -> None:
+def test_memory_stats_shows_observation_averages(runner: CliRunner, sakthai_home: Path) -> None:
     """memory stats shows avg weight/confidence line when observations exist (cli/memory.py:163)."""
     from sakthai.config import memory_db_path
 
@@ -333,9 +331,7 @@ def test_memory_consolidate_no_old_facts(runner: CliRunner) -> None:
     assert "no older facts found" in result.output
 
 
-def test_memory_consolidate_moves_old_facts(
-    runner: CliRunner, sakthai_home: Path
-) -> None:
+def test_memory_consolidate_moves_old_facts(runner: CliRunner, sakthai_home: Path) -> None:
     from sakthai.memory.store import MemoryStore
 
     with MemoryStore() as store:
@@ -403,28 +399,20 @@ def test_memory_import_invalid_json(runner: CliRunner, tmp_path: Path) -> None:
     assert "could not read snapshot" in result.output
 
 
-def test_memory_import_invalid_snapshot_contents(
-    runner: CliRunner, tmp_path: Path
-) -> None:
+def test_memory_import_invalid_snapshot_contents(runner: CliRunner, tmp_path: Path) -> None:
     bad = tmp_path / "invalid.json"
-    bad.write_text(
-        json.dumps({"version": 999, "facts": [], "observations": []}), encoding="utf-8"
-    )
+    bad.write_text(json.dumps({"version": 999, "facts": [], "observations": []}), encoding="utf-8")
     result = runner.invoke(main, ["memory", "import", str(bad)])
     assert result.exit_code != 0
     assert "invalid snapshot" in result.output
 
 
-def test_memory_import_replace_prompts_without_yes(
-    runner: CliRunner, tmp_path: Path
-) -> None:
+def test_memory_import_replace_prompts_without_yes(runner: CliRunner, tmp_path: Path) -> None:
     runner.invoke(main, ["learn", "original"])
     snap = tmp_path / "snap.json"
     runner.invoke(main, ["memory", "export", str(snap)])
     # Invoke --replace without --yes; answer 'y' at the prompt.
-    result = runner.invoke(
-        main, ["memory", "import", str(snap), "--replace"], input="y\n"
-    )
+    result = runner.invoke(main, ["memory", "import", str(snap), "--replace"], input="y\n")
     assert result.exit_code == 0
     assert "imported" in result.output
 
@@ -433,9 +421,7 @@ def test_memory_sync_git(runner: CliRunner, monkeypatch: pytest.MonkeyPatch) -> 
     import sakthai.memory.sync as sync_mod
 
     monkeypatch.setattr(
-        sync_mod,
-        "sync_memory_to_git",
-        lambda remote=None: "Synced locally to Git repository.",
+        sync_mod, "sync_memory_to_git", lambda remote=None: "Synced locally to Git repository."
     )
     result = runner.invoke(main, ["memory", "sync"])
     assert result.exit_code == 0
@@ -450,14 +436,9 @@ def test_memory_sync_http(runner: CliRunner, monkeypatch: pytest.MonkeyPatch) ->
         "sync_memory_via_http",
         lambda url, api_key=None: f"Synced to HTTP endpoint: {url}",
     )
-    result = runner.invoke(
-        main, ["memory", "sync", "--http-url", "http://example.com/sync"]
-    )
+    result = runner.invoke(main, ["memory", "sync", "--http-url", "http://example.com/sync"])
     assert result.exit_code == 0
-    assert (
-        result.output.splitlines()[-1]
-        == "Synced to HTTP endpoint: http://example.com/sync"
-    )
+    assert result.output.splitlines()[-1] == "Synced to HTTP endpoint: http://example.com/sync"
 
 
 def test_memory_sync_failure_exits_nonzero(
@@ -489,9 +470,7 @@ def test_memory_sync_supermemory_flag(
     import sakthai.config as config_mod
 
     monkeypatch.setattr(config_mod, "REPO_ROOT", tmp_path)
-    monkeypatch.setattr(
-        sync_mod, "sync_memory_to_git", lambda remote=None: "Synced locally."
-    )
+    monkeypatch.setattr(sync_mod, "sync_memory_to_git", lambda remote=None: "Synced locally.")
 
     run_calls: list[list[str]] = []
 
@@ -592,9 +571,7 @@ def test_cycle_list_marks_current(runner: CliRunner) -> None:
 
 
 @pytest.fixture
-def skill_roots(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> Iterator[tuple[Path, Path]]:
+def skill_roots(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[tuple[Path, Path]]:
     skills_root = tmp_path / "skills"
     library_root = tmp_path / "library"
     skills_root.mkdir()
@@ -633,18 +610,14 @@ def test_skills_validate_ok(runner: CliRunner, skill_roots: tuple[Path, Path]) -
     assert "validated" in result.output
 
 
-def test_skills_validate_flags_errors(
-    runner: CliRunner, skill_roots: tuple[Path, Path]
-) -> None:
+def test_skills_validate_flags_errors(runner: CliRunner, skill_roots: tuple[Path, Path]) -> None:
     (skill_roots[0] / "broken").mkdir()  # dir with no SKILL.md
     result = runner.invoke(main, ["skills", "validate"])
     assert result.exit_code == 1
     assert "error:" in result.output
 
 
-def test_skills_list_source_skills(
-    runner: CliRunner, skill_roots: tuple[Path, Path]
-) -> None:
+def test_skills_list_source_skills(runner: CliRunner, skill_roots: tuple[Path, Path]) -> None:
     _write_skill(skill_roots[0], "s-only")
     _write_skill(skill_roots[1], "lib-only")
     result = runner.invoke(main, ["skills", "list", "--source", "skills"])
@@ -653,9 +626,7 @@ def test_skills_list_source_skills(
     assert "lib-only" not in result.output
 
 
-def test_skills_list_source_library(
-    runner: CliRunner, skill_roots: tuple[Path, Path]
-) -> None:
+def test_skills_list_source_library(runner: CliRunner, skill_roots: tuple[Path, Path]) -> None:
     _write_skill(skill_roots[0], "s-only")
     _write_skill(skill_roots[1], "lib-only")
     result = runner.invoke(main, ["skills", "list", "--source", "library"])
@@ -673,9 +644,7 @@ def test_skills_list_empty_with_category_filter(
     assert "no skills in category" in result.output
 
 
-def test_skills_list_empty_roots(
-    runner: CliRunner, skill_roots: tuple[Path, Path]
-) -> None:
+def test_skills_list_empty_roots(runner: CliRunner, skill_roots: tuple[Path, Path]) -> None:
     # No skills written — both dirs are empty
     result = runner.invoke(main, ["skills", "list"])
     assert result.exit_code == 0
@@ -713,9 +682,7 @@ def test_skills_create_persona_prefixes_slug(
     runner: CliRunner, skill_roots: tuple[Path, Path]
 ) -> None:
     """``--persona`` applies the layer prefix so the slug passes ``validate --naming``."""
-    result = runner.invoke(
-        main, ["skills", "create", "auth helper", "--persona", "sakking"]
-    )
+    result = runner.invoke(main, ["skills", "create", "auth helper", "--persona", "sakking"])
     assert result.exit_code == 0
     created = skill_roots[0] / "SakKing-auth-helper" / "SKILL.md"
     assert created.is_file()
@@ -726,9 +693,7 @@ def test_skills_create_persona_does_not_double_prefix(
     runner: CliRunner, skill_roots: tuple[Path, Path]
 ) -> None:
     """An already-prefixed name is stripped before re-applying, not doubled up."""
-    result = runner.invoke(
-        main, ["skills", "create", "Sak-cleanup", "--persona", "shared"]
-    )
+    result = runner.invoke(main, ["skills", "create", "Sak-cleanup", "--persona", "shared"])
     assert result.exit_code == 0
     assert (skill_roots[0] / "Sak-cleanup" / "SKILL.md").is_file()
     assert not (skill_roots[0] / "Sak-sak-cleanup").exists()
@@ -778,9 +743,7 @@ def test_skills_sync_sakking_updated_and_unchanged_output(
     import sakthai.cli.skills as skills_cli_mod
     from sakthai.sakking_skills import SyncOutcome
 
-    fake_outcome = SyncOutcome(
-        created=[], updated=["sakthai-updated"], unchanged=["sakthai-same"]
-    )
+    fake_outcome = SyncOutcome(created=[], updated=["sakthai-updated"], unchanged=["sakthai-same"])
 
     monkeypatch.setattr(
         skills_cli_mod,
@@ -791,9 +754,7 @@ def test_skills_sync_sakking_updated_and_unchanged_output(
     sakking_dir = tmp_path / "sakking-skills"
     sakking_dir.mkdir()
 
-    result = runner.invoke(
-        main, ["skills", "sync-sakking", "--sakking-home", str(sakking_dir)]
-    )
+    result = runner.invoke(main, ["skills", "sync-sakking", "--sakking-home", str(sakking_dir)])
     assert result.exit_code == 0
     assert "~ sakthai-updated" in result.output
     assert "1 unchanged" in result.output
@@ -816,9 +777,7 @@ def test_extensions_list_empty(runner: CliRunner) -> None:
     assert "no extensions installed" in result.output
 
 
-def test_extensions_install_and_remove(
-    runner: CliRunner, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_extensions_install_and_remove(runner: CliRunner, monkeypatch: pytest.MonkeyPatch) -> None:
     import sakthai.extensions.install as ext_mod
 
     monkeypatch.setattr(ext_mod.subprocess, "run", _fake_clone)
@@ -831,9 +790,7 @@ def test_extensions_install_and_remove(
     assert "removed: bar" in rm.output
 
 
-def test_extensions_full_flow(
-    runner: CliRunner, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_extensions_full_flow(runner: CliRunner, monkeypatch: pytest.MonkeyPatch) -> None:
     import json
 
     import sakthai.extensions.install as ext_mod
@@ -858,9 +815,7 @@ def test_extensions_full_flow(
     assert "mcp   : srv1" in inst.output
 
     # 2. Install already installed extension (lines 26-27)
-    inst_again = runner.invoke(
-        main, ["extensions", "install", "https://github.com/foo/bar"]
-    )
+    inst_again = runner.invoke(main, ["extensions", "install", "https://github.com/foo/bar"])
     assert inst_again.exit_code == 0
     assert "already installed: bar" in inst_again.output
 
@@ -879,9 +834,7 @@ def test_extensions_full_flow(
 
 def test_extensions_install_error(runner: CliRunner) -> None:
     # Trigger ExtensionError click exception mapping (lines 22-23)
-    result = runner.invoke(
-        main, ["extensions", "install", "https://github.com/foo/@bad"]
-    )
+    result = runner.invoke(main, ["extensions", "install", "https://github.com/foo/@bad"])
     assert result.exit_code != 0
     assert "invalid extension name" in result.output
 
@@ -895,9 +848,7 @@ def test_extensions_remove_unknown(runner: CliRunner) -> None:
 # -- agent run / mcp (loop monkeypatched) --------------------------------
 
 
-def test_run_echoes_agent_text(
-    runner: CliRunner, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_run_echoes_agent_text(runner: CliRunner, monkeypatch: pytest.MonkeyPatch) -> None:
     def fake_run_agent(task: str, **kwargs: object) -> object:
         return types.SimpleNamespace(text=f"answered: {task}")
 
@@ -907,9 +858,7 @@ def test_run_echoes_agent_text(
     assert "answered: hello there" in result.output
 
 
-def test_run_reports_agent_error(
-    runner: CliRunner, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_run_reports_agent_error(runner: CliRunner, monkeypatch: pytest.MonkeyPatch) -> None:
     def boom(task: str, **kwargs: object) -> object:
         raise agent_mod.AgentError("no credentials")
 
@@ -945,10 +894,7 @@ def _capture_tools(monkeypatch: pytest.MonkeyPatch) -> dict[str, object]:
 
 
 def test_run_autoloads_configured_mcp_tools(
-    runner: CliRunner,
-    monkeypatch: pytest.MonkeyPatch,
-    sakthai_home: Path,
-    tmp_path: Path,
+    runner: CliRunner, monkeypatch: pytest.MonkeyPatch, sakthai_home: Path, tmp_path: Path
 ) -> None:
     server_home = tmp_path / "srv"
     (sakthai_home / "mcp.json").write_text(
@@ -974,10 +920,7 @@ def test_run_autoloads_configured_mcp_tools(
 
 
 def test_run_verbose_logs_loaded_mcp_tools(
-    runner: CliRunner,
-    monkeypatch: pytest.MonkeyPatch,
-    sakthai_home: Path,
-    tmp_path: Path,
+    runner: CliRunner, monkeypatch: pytest.MonkeyPatch, sakthai_home: Path, tmp_path: Path
 ) -> None:
     """When MCP tools are loaded and --verbose is set, the tool count is logged."""
     server_home = tmp_path / "srv"
@@ -1007,8 +950,7 @@ def test_run_no_mcp_skips_external_servers(
 ) -> None:
     # A configured (here, deliberately broken) server must be ignored with --no-mcp.
     (sakthai_home / "mcp.json").write_text(
-        json.dumps({"mcpServers": {"sk": {"command": "sakthai-no-such-binary"}}}),
-        encoding="utf-8",
+        json.dumps({"mcpServers": {"sk": {"command": "sakthai-no-such-binary"}}}), encoding="utf-8"
     )
     captured = _capture_tools(monkeypatch)
     result = runner.invoke(main, ["run", "hi", "--no-mcp"])
@@ -1186,9 +1128,7 @@ def test_run_dry_run_reports_and_exits_zero(
     import sakthai.agent.loop as loop_mod
 
     monkeypatch.setattr(loop_mod, "anthropic_credential_source", lambda: "api_key")
-    result = runner.invoke(
-        main, ["run", "hi", "--dry-run", "--no-mcp", "-p", "anthropic"]
-    )
+    result = runner.invoke(main, ["run", "hi", "--dry-run", "--no-mcp", "-p", "anthropic"])
     assert result.exit_code == 0, result.output
     assert "[dry-run]" in result.output
     assert "anthropic" in result.output
@@ -1201,9 +1141,7 @@ def test_run_dry_run_not_runnable_exits_nonzero(
     import sakthai.agent.loop as loop_mod
 
     monkeypatch.setattr(loop_mod, "anthropic_credential_source", lambda: None)
-    result = runner.invoke(
-        main, ["run", "hi", "--dry-run", "--no-mcp", "-p", "anthropic"]
-    )
+    result = runner.invoke(main, ["run", "hi", "--dry-run", "--no-mcp", "-p", "anthropic"])
     assert result.exit_code != 0
     assert "runnable:    no" in result.output
 
@@ -1240,9 +1178,7 @@ def test_run_without_stream_prints_final_text(
     assert "final-answer" in result.output
 
 
-def test_run_passes_caveman_option(
-    runner: CliRunner, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_run_passes_caveman_option(runner: CliRunner, monkeypatch: pytest.MonkeyPatch) -> None:
     from sakthai.agent.loop import AgentResult
 
     captured: dict[str, Any] = {}

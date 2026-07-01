@@ -33,9 +33,7 @@ class SakThaiMemoryProvider:
     def initialize(self, session_id: str = "", **kwargs: Any) -> None:
         try:
             self._store = MemoryStore()
-        except (
-            Exception
-        ) as exc:  # noqa: BLE001 — degrade gracefully if the DB is unusable
+        except Exception as exc:  # noqa: BLE001 — degrade gracefully if the DB is unusable
             logger.warning("SakThai memory could not initialize: %s", exc)
 
     def system_prompt_block(self) -> str:

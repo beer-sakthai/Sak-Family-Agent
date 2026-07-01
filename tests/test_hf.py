@@ -18,9 +18,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
-def test_hub_missing_dependency_raises_click_exception(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+def test_hub_missing_dependency_raises_click_exception(monkeypatch: pytest.MonkeyPatch) -> None:
     # A None entry in sys.modules makes `import huggingface_hub` raise ImportError.
     monkeypatch.setitem(sys.modules, "huggingface_hub", None)
     with pytest.raises(click.ClickException, match="huggingface_hub is not installed"):
@@ -51,9 +49,7 @@ def test_hf_info_formats_model_fields() -> None:
     assert "tags:      pytorch, llm" in out
 
 
-def test_hf_download_targets_sakthai_cache(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_hf_download_targets_sakthai_cache(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("SAKTHAI_HOME", str(tmp_path))
     captured: dict[str, Any] = {}
 
@@ -80,9 +76,7 @@ def test_cli_hf_info_command() -> None:
 
 
 def test_cli_hf_download_command() -> None:
-    with patch(
-        "sakthai.cli.hf.hf_download", return_value="/tmp/cache/org/model"
-    ) as mock_dl:
+    with patch("sakthai.cli.hf.hf_download", return_value="/tmp/cache/org/model") as mock_dl:
         r = CliRunner().invoke(main, ["hf", "download", "org/model"])
     assert r.exit_code == 0
     assert "/tmp/cache/org/model" in r.output
@@ -129,9 +123,7 @@ def test_hf_download_raises_exception_on_error() -> None:
 def test_hf_info_handles_missing_tags() -> None:
     """Verify that hf_info handles None tags gracefully."""
     fake = SimpleNamespace(
-        model_info=lambda repo_id: SimpleNamespace(
-            id=repo_id, downloads=0, likes=0, tags=None
-        )
+        model_info=lambda repo_id: SimpleNamespace(id=repo_id, downloads=0, likes=0, tags=None)
     )
     with patch("sakthai.hf._hub", return_value=fake):
         out = hf_info("org/model")
