@@ -93,12 +93,28 @@ def main() -> int:
     home = Path(tempfile.mkdtemp(prefix="sakthai-smoke."))
     env = {**os.environ, "SAKTHAI_HOME": str(home)}
     claude_dir = Path(env.get("CLAUDE_CONFIG_DIR", str(Path.home() / ".claude")))
+    claude_oauth_ok = False
+    creds_path = claude_dir / ".credentials.json"
+    if creds_path.is_file():
+        try:
+            import time
+
+            data = json.loads(creds_path.read_text(encoding="utf-8"))
+            oauth = (data.get("claudeAiOauth") if isinstance(data, dict) else None) or {}
+            token = oauth.get("accessToken")
+            try:
+                expires_ms = int(oauth.get("expiresAt", 0))
+            except (TypeError, ValueError):
+                expires_ms = 0
+            claude_oauth_ok = bool(token) and (expires_ms <= 0 or time.time() * 1000 < expires_ms)
+        except Exception:
+            claude_oauth_ok = False
     if (
         not env.get("ANTHROPIC_API_KEY")
         and not env.get("ANTHROPIC_AUTH_TOKEN")
-        and not (claude_dir / ".credentials.json").is_file()
+        and not claude_oauth_ok
     ):
-        env["ANTHROPIC_API_KEY"] = "sk-ant-smoke-dry-run-placeholder"
+        env["ANTHROPIC_API_KEY"] = "smoke-dry-run-placeholder"
     print(f"sakthai-agent-v2 smoke · SAKTHAI_HOME={home}\n")
 
     try:
