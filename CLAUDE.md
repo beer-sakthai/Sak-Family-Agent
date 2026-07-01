@@ -221,8 +221,9 @@ Click commands split by area; all sub-files imported by `cli/__init__.py`:
 - **`dashboard/`** — `data.py` builds a UI-free, testable snapshot of the store
   (KPIs, growth series, per-kind breakdown, date-range filtering) and serializes
   it to JSON. The UI itself is a separate React/Vite app at the repo root
-  (`dashboard/`); `sakthai dashboard` builds/serves that bundle and drops a
-  `data.json` snapshot beside it.
+  (`dashboard/`); `sakthai dashboard` serves the pre-built `dashboard/dist/`
+  bundle (erroring if it hasn't been built) and drops a `data.json` snapshot
+  beside it.
 - **`extensions/install.py`** — clones skill/MCP bundles from git into
   `~/.sakthai/extensions`; `list`/`remove` manage installed bundles.
 - **`web/server.py`** — minimal HTTP server stub for a future web runtime.
