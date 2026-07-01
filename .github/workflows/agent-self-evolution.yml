@@ -1,0 +1,40 @@
+name: agent-self-evolution
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "packages/agent-self-evolution/**"
+      - ".github/workflows/agent-self-evolution.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "packages/agent-self-evolution/**"
+      - ".github/workflows/agent-self-evolution.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Standalone package (not a uv workspace member — see packages/agent-self-evolution
+# in CLAUDE.md), so it gets its own install + pytest run rather than joining ci.yml,
+# which is scoped to the sakthai core only.
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/agent-self-evolution
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Install
+        run: pip install -e ".[dev]"
+
+      - name: Tests (pytest)
+        run: pytest tests/ -q

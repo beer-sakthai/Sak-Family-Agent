@@ -10,11 +10,11 @@ readme = "README.md"
 requires-python = ">=3.11"
 authors = [{ name = "beer-sakthai" }]
 dependencies = [
-    "click>=8.1,<9.0",
+    "click>=8.4.2,<9.0",
     "pyyaml>=6.0,<7.0",
-    "anthropic>=0.111.0,<1.0",
+    "anthropic>=0.115.0,<1.0",
     "httpx>=0.20.0",
-    "google-genai>=2.9.0",
+    "google-genai>=2.10.0",
     "tenacity>=8.0,<10.0",
 ]
 
@@ -24,7 +24,7 @@ dev = [
     "pytest-asyncio>=0.23",
     "pytest-cov>=5.0",
     "hypothesis>=6.100",
-    "ruff>=0.15.18",
+    "ruff>=0.15.20",
     "mypy>=1.10",
     "bandit[toml]>=1.9.4",
 ]
@@ -36,14 +36,7 @@ mutation = [
     "mutmut>=3.2",
 ]
 
-dashboard = [
-    "streamlit>=1.36",
-    "plotly>=5.22",
-    "pandas>=2.2",
-    "PyGithub>=2.3",
-]
-
-all = ["sakthai-agent[dev,dashboard]"]
+all = ["sakthai-agent[dev]"]
 
 [project.scripts]
 sakthai = "sakthai.cli:main"
@@ -60,10 +53,6 @@ source = ["sakthai"]
 # paths (one side of an if/else). CI passes --cov-branch so the fail_under floor
 # below gates branches as well as lines.
 branch = true
-# app.py is Streamlit presentation glue needing a live runtime; its data logic
-# lives in dashboard/data.py (tested). A guarded smoke test covers the figure
-# builders where the `dashboard` extra is installed (tests/test_dashboard_app.py).
-omit = ["sakthai/dashboard/app.py"]
 
 [tool.coverage.report]
 show_missing = true
@@ -91,12 +80,6 @@ warn_return_any = true
 check_untyped_defs = true
 files = ["sakthai"]
 
-# The Streamlit app is presentation glue over untyped third-party libs; type
-# it loosely so strict checks don't fight the streamlit/plotly/pandas stubs.
-[[tool.mypy.overrides]]
-module = "sakthai.dashboard.app"
-ignore_errors = true
-
 [tool.bandit]
 exclude_dirs = ["tests"]
 skips = ["B101", "B404", "B603", "B606", "B607"]
@@ -111,14 +94,18 @@ source_paths = [
     "sakthai/agent/loop.py",
     "sakthai/agent/tools.py",
     "sakthai/agent/registry.py",
+    "sakthai/mcp/server.py",
+    "sakthai/mcp/client.py",
+    "sakthai/auth.py",
+    "sakthai/sandbox.py",
 ]
 # mutmut runs the suite from an isolated ``mutants/`` copy and drops the original
 # source from sys.path, so anything the mutated modules import at runtime must be
-# copied in too. ``source_paths`` only copies the four files above, which left
+# copied in too. ``source_paths`` only copies the files listed above, which left
 # ``mutants/sakthai`` a partial namespace package (``from . import providers``
 # failed with "unknown location") — mutation testing could not run at all. Copy
 # the whole package so imports resolve; ``create_mutants`` still mutates only the
-# four ``source_paths`` files (it runs after the copy), so scope is unchanged.
+# ``source_paths`` files (it runs after the copy), so scope is unchanged.
 also_copy = [
     "sakthai",
 ]

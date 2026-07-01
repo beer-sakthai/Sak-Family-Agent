@@ -857,6 +857,8 @@ def _redact_sensitive_text(text: str) -> str:
         rf"\1: \2{_REDACTED}",
         redacted,
     )
+    # Redact standalone Comfy Cloud API key tokens that may appear in free-form text.
+    redacted = re.sub(r"(?i)\bcomfyui-[A-Za-z0-9._-]+\b", _REDACTED, redacted)
     return redacted
 
 

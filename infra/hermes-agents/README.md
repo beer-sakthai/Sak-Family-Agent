@@ -1,6 +1,6 @@
 # sakthai-hermes-agents
 
-Configuration backup for **four** Telegram bots running on the
+Configuration backup for **five** Telegram bots running on the
 [Hermes agent framework](https://github.com/NousResearch) (`hermes_cli`),
 installed at `~/.hermes/` on the host. **Config only — no secrets.** All API
 keys / bot tokens / OAuth credentials live in `.env` and `auth.json` files that
@@ -25,7 +25,9 @@ sessions. Owner Telegram user id: `8618306046`.
 | `@sakthai_v1_bot` | 8773953106 | `profiles/sakthai` | **SakThai** | Master of Hugging Face | `qwen3-coder:480b` (Ollama Cloud) + `minimax-m3` fallback | `hermes-gateway-sakthai.service` |
 | `@saksee_bot` | 8315145484 | `profiles/saksee` | **SakSee** | Master of Web | `claude-opus-4-8` (Anthropic auth) + `minimax-m3` fallback | `hermes-gateway-saksee.service` |
 | `@saksit_agent_bot` | — | `profiles/saksit` | **SakSit** | Master of Social Media (IG) | `kimi-k2.7-code` (Ollama Cloud) + `minimax-m3` fallback | `hermes-gateway-saksit.service` |
-| `@SakTan_Agent_bot` | — | `profiles/saktan` | **SakTan** | Helper (daily ops: calendar, reminders, email, tasks) | `gemini-2.5-flash-lite` (Google Gemini API) + Gemini fallback chain: `gemini-3-flash-preview` → `gemini-3.1-flash-lite` → `gemini-3.5-flash` → `gemini-2.5-flash-preview-native-audio-dialog` | `hermes-gateway-saktan.service` |
+| `@SakTan_Agent_bot` | — | `profiles/saktan` | **SakTan** | Young Helper (daily ops: calendar, reminders, email, tasks) | `gemini-2.5-flash-lite` (Google Gemini API) + Gemini fallback chain: `gemini-3-flash-preview` → `gemini-3.1-flash-lite` → `gemini-3.5-flash` → `gemini-2.5-flash-preview-native-audio-dialog` | `hermes-gateway-saktan.service` |
+
+> SakKing, SakThai, SakSee, and SakSit are professional; SakTan is young.
 
 > **Note:** "Hermes" is only the framework they run on — never an agent's name.
 > Each agent identifies by the name in its `SOUL.md`.
@@ -38,6 +40,7 @@ sessions. Owner Telegram user id: `8618306046`.
 | **SakThai** | 20 | `audio-generation`, `tts-voice-generation` |
 | **SakSee** | 23 | 6× `chrome-devtools-*` skills |
 | **SakSit** | 19 | `ig_linkedin_growth_assistant` |
+| **SakTan** | 1 | `daily-ops-helper` |
 
 All agents share a common base of skills: `apple`, `autonomous-ai-agents`,
 `computer-use`, `creative`, `data-science`, `dogfood`, `email`, `github`,
@@ -46,7 +49,7 @@ All agents share a common base of skills: `apple`, `autonomous-ai-agents`,
 
 ## MCP servers (per profile)
 
-All four profiles connect to:
+All five profiles connect to:
 
 | MCP Server | URL / Transport | Status |
 |------------|-----------------|--------|

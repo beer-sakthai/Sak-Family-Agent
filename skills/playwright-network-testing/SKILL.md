@@ -1,4 +1,13 @@
----\nname: playwright-network-testing\ncategory: testing\ndescription: Centralize Playwright network and request-level assertions into one skill for reliable DOM and API behavior testing.\nversion: 1.0.0\n---\n\n# Playwright Network Testing\n\nCentralize Playwright network and request-level assertions into one skill for reliable DOM and API behavior testing.
+---
+name: playwright-network-testing
+category: testing
+description: Centralize Playwright network and request-level assertions into one skill for reliable DOM and API behavior testing.
+version: 1.0.0
+---
+
+# Playwright Network Testing
+
+Centralize Playwright network and request-level assertions into one skill for reliable DOM and API behavior testing.
 
 ## When to use
 

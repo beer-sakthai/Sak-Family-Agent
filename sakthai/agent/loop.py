@@ -410,6 +410,7 @@ def preflight(
             cred_source = "GOOGLE_API_KEY"
         else:
             from ..auth import load_gemini_cli_token
+
             if load_gemini_cli_token() is not None:
                 cred_source = "gemini_cli_oauth"
             else:

@@ -355,7 +355,7 @@ privacy:
 tts:
   provider: edge
   edge:
-    voice: en-US-ChristopherNeural
+    voice: en-US-GuyNeural
   elevenlabs:
     voice_id: pNInz6obpgDQGcFmaJgB
     model_id: eleven_multilingual_v2

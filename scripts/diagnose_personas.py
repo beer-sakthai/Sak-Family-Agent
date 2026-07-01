@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Per-agent diagnostics for the four Sak Family Agents.
+"""Per-agent diagnostics for the five Sak Family Agents.
 
 Where `.claude/skills/run-sakthai-agent-v2/driver.py` smoke-tests the *core*
-once, this checks each persona (SakKing, SakThai, SakSee, SakSit) end to end and
-confirms the family can *improve*:
+once, this checks each persona (SakKing, SakThai, SakSee, SakSit, SakTan) end to
+end and confirms the family can *improve*:
 
 For every persona it verifies, offline and with zero token spend:
   1. its skill tree composes (shared + overlay) via scripts/compose_persona.py;
@@ -44,8 +44,9 @@ from sakthai.skills import (  # noqa: E402  (path bootstrap above)
     naming_violations,
 )
 
-PERSONAS = ("sakking", "sakthai", "saksee", "saksit")
+PERSONAS = ("sakking", "sakthai", "saksee", "saksit", "saktan")
 PERSONAS_DIR = REPO_ROOT / "personas"
+HERMES_PROFILES_DIR = REPO_ROOT / "infra" / "hermes-agents" / "profiles"
 BIN = os.environ.get("SAKTHAI_BIN", "sakthai")
 
 failures: list[str] = []
@@ -67,6 +68,20 @@ def info(label: str, detail: str = "") -> None:
     print(f"  [INFO] {label}" + (f" — {detail}" if detail else ""))
 
 
+def persona_model_config_path(persona: str) -> Path:
+    """Return the model config file for one persona."""
+    if persona == "saktan":
+        return HERMES_PROFILES_DIR / persona / "config.yaml"
+    return PERSONAS_DIR / persona / "config" / "config.yaml"
+
+
+def persona_mcp_config_path(persona: str) -> Path:
+    """Return the MCP manifest path for one persona."""
+    if persona == "saktan":
+        return HERMES_PROFILES_DIR / persona / "config" / "mcp.json"
+    return PERSONAS_DIR / persona / "config" / "mcp.json"
+
+
 def run(args: list[str], env: dict[str, str], stdin: str | None = None) -> tuple[int, str]:
     proc = subprocess.run(
         [BIN, *args], env=env, input=stdin, capture_output=True, text=True, timeout=120
@@ -75,9 +90,7 @@ def run(args: list[str], env: dict[str, str], stdin: str | None = None) -> tuple
 
 
 def model_summary(persona: str) -> str:
-    cfg = PERSONAS_DIR / persona / "config" / "config.yaml"
-    if not cfg.is_file():
-        return "(no config.yaml)"
+    cfg = persona_model_config_path(persona)
     data = yaml.safe_load(cfg.read_text(encoding="utf-8")) or {}
     m = data.get("model", {}) or {}
     fb = data.get("fallback_model", {}) or {}
@@ -87,7 +100,7 @@ def model_summary(persona: str) -> str:
 
 
 def mcp_server_names(persona: str, env: dict[str, str]) -> list[str]:
-    cfg = PERSONAS_DIR / persona / "config" / "mcp.json"
+    cfg = persona_mcp_config_path(persona)
     if not cfg.is_file():
         return []
     code = "from sakthai.mcp.servers import load_server_specs; print(' '.join(s.name for s in load_server_specs()))"
@@ -117,8 +130,13 @@ def diagnose_persona(persona: str) -> None:
         check("skills compose", proc.returncode == 0 and n_files > 0, f"{n_files} skills")
 
         # 2. model configured
-        info("model", model_summary(persona))
-        check("model configured", "None" not in model_summary(persona).split("(")[0])
+        cfg = persona_model_config_path(persona)
+        if cfg.is_file():
+            info("model", model_summary(persona))
+            check("model configured", True)
+        else:
+            info("model", "(no config.yaml)")
+            check("model configured", False, "missing config.yaml")
 
         # 3. MCP servers load
         names = mcp_server_names(persona, env)
@@ -135,12 +153,18 @@ def diagnose_persona(persona: str) -> None:
 
         # naming drift (warning only — bulk rename deferred)
         overlay = PERSONAS_DIR / persona / "skills"
-        prefix = PERSONA_SKILL_PREFIXES[persona]
-        drift = naming_violations(overlay, prefix=prefix)
-        if drift:
-            warn("naming convention", f"{len(drift)} overlay skill(s) need '{prefix}' (run scripts/rename_skills.py)")
+        prefix = PERSONA_SKILL_PREFIXES.get(persona)
+        if prefix is None:
+            warn("naming convention", f"no persona prefix mapping for {persona}; skipped")
         else:
-            check("naming convention", True)
+            drift = naming_violations(overlay, prefix=prefix)
+            if drift:
+                warn(
+                    "naming convention",
+                    f"{len(drift)} overlay skill(s) need '{prefix}' (run scripts/rename_skills.py)",
+                )
+            else:
+                check("naming convention", True)
     finally:
         import shutil
         shutil.rmtree(home, ignore_errors=True)
