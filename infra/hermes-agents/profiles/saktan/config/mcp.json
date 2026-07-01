@@ -1,0 +1,9 @@
+{
+  "_comment": "SakTan — Daily Ops Helper. Minimal stdio MCP manifest for the Hermes profile source of truth.",
+  "mcpServers": {
+    "huggingface": {
+      "command": "npx",
+      "args": ["-y", "@huggingface/mcp-server"]
+    }
+  }
+}

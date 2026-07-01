@@ -221,3 +221,104 @@ def test_build_client_google_client_init_error_raises_agent_error(
         pytest.raises(AgentError, match="Failed to initialize Google Gemini client"),
     ):
         build_client("google", None)
+
+
+# -- build_client — Gemini CLI OAuth / Vertex fallback ---------------------
+
+
+def _gemini_oauth_modules(fake_genai: MagicMock) -> dict[str, MagicMock]:
+    """sys.modules patch so the OAuth branch's `google.*` imports resolve."""
+    return {
+        "google": MagicMock(genai=fake_genai),
+        "google.genai": fake_genai,
+        "google.oauth2": MagicMock(),
+        "google.oauth2.credentials": MagicMock(),
+    }
+
+
+def test_build_client_google_oauth_no_token_raises_agent_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
+    with (
+        patch("sakthai.auth.load_gemini_cli_token", return_value=None),
+        pytest.raises(AgentError, match="Missing credentials for Google Gemini"),
+    ):
+        build_client("google", None)
+
+
+def test_build_client_google_oauth_uses_env_project(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
+    monkeypatch.setenv("GOOGLE_CLOUD_PROJECT", "my-proj")
+    fake_client = MagicMock()
+    fake_genai = MagicMock()
+    fake_genai.Client.return_value = fake_client
+    with (
+        patch("sakthai.auth.load_gemini_cli_token", return_value="oauth-token"),
+        patch("subprocess.check_output") as check_output,
+        patch.dict("sys.modules", _gemini_oauth_modules(fake_genai)),
+    ):
+        result = build_client("google", None)
+    assert result is fake_client
+    # With GOOGLE_CLOUD_PROJECT set, gcloud is never shelled out to.
+    check_output.assert_not_called()
+    _, kwargs = fake_genai.Client.call_args
+    assert kwargs["vertexai"] is True
+    assert kwargs["project"] == "my-proj"
+
+
+def test_build_client_google_oauth_resolves_project_via_gcloud(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
+    monkeypatch.delenv("GOOGLE_CLOUD_PROJECT", raising=False)
+    fake_client = MagicMock()
+    fake_genai = MagicMock()
+    fake_genai.Client.return_value = fake_client
+    with (
+        patch("sakthai.auth.load_gemini_cli_token", return_value="oauth-token"),
+        patch("subprocess.check_output", return_value="gcloud-proj\n") as check_output,
+        patch.dict("sys.modules", _gemini_oauth_modules(fake_genai)),
+    ):
+        result = build_client("google", None)
+    assert result is fake_client
+    check_output.assert_called_once()
+    _, kwargs = fake_genai.Client.call_args
+    assert kwargs["project"] == "gcloud-proj"
+
+
+def test_build_client_google_oauth_no_project_raises_agent_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
+    monkeypatch.delenv("GOOGLE_CLOUD_PROJECT", raising=False)
+    fake_genai = MagicMock()
+    with (
+        patch("sakthai.auth.load_gemini_cli_token", return_value="oauth-token"),
+        patch("subprocess.check_output", side_effect=FileNotFoundError("gcloud")),
+        patch.dict("sys.modules", _gemini_oauth_modules(fake_genai)),
+        pytest.raises(AgentError, match="Missing GCP Project ID"),
+    ):
+        build_client("google", None)
+
+
+def test_build_client_google_oauth_client_init_error_raises_agent_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
+    monkeypatch.setenv("GOOGLE_CLOUD_PROJECT", "my-proj")
+    fake_genai = MagicMock()
+    fake_genai.Client.side_effect = RuntimeError("vertex down")
+    with (
+        patch("sakthai.auth.load_gemini_cli_token", return_value="oauth-token"),
+        patch.dict("sys.modules", _gemini_oauth_modules(fake_genai)),
+        pytest.raises(AgentError, match="Failed to initialize Google Gemini client with OAuth"),
+    ):
+        build_client("google", None)

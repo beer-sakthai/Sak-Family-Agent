@@ -1056,6 +1056,31 @@ def test_serve_dashboard_starts_and_stops_on_interrupt(tmp_path: Path) -> None:
     mock_httpd.shutdown.assert_called_once()
 
 
+def test_serve_dashboard_schedules_browser_open(tmp_path: Path) -> None:
+    """With open_browser=True, _serve_dashboard() must schedule a browser open."""
+    from unittest.mock import MagicMock, patch
+
+    import sakthai.cli.dashboard as dash_mod
+
+    mock_httpd = MagicMock()
+    mock_httpd.server_address = ("127.0.0.1", 3000)
+    mock_httpd.serve_forever.side_effect = KeyboardInterrupt()
+
+    with (
+        patch.object(dash_mod.os, "chdir"),
+        patch.object(dash_mod.socketserver, "TCPServer") as mock_cls,
+        patch.object(dash_mod.threading, "Timer") as mock_timer,
+    ):
+        mock_cls.return_value.__enter__.return_value = mock_httpd
+        mock_cls.return_value.__exit__.return_value = False
+        dash_mod._serve_dashboard("127.0.0.1", 3000, True, tmp_path)
+
+    # A one-shot timer is armed to open the browser after the server is up; it
+    # must be scheduled and started (never invoked inline, so no browser opens).
+    mock_timer.assert_called_once()
+    mock_timer.return_value.start.assert_called_once()
+
+
 def test_dashboard_security_handler_sets_headers(tmp_path: Path) -> None:
     """_SecurityHandler.end_headers() must add the four defensive HTTP headers."""
     import socketserver

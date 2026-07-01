@@ -14,6 +14,7 @@ description: >
 | SakSee  | `saksee`  | `@saksee_bot`           | Female | `en-US-AriaNeural`      |
 | SakThai | `sakthai` | `@sakthai_v1_bot`       | Male   | `en-US-AndrewNeural`    |
 | SakSit  | `saksit`  | `@saksit_agent_bot`     | Male   | `en-US-ChristopherNeural` |
+| SakTan  | `saktan`  | `@SakTan_Agent_bot`     | Male   | `en-US-GuyNeural`       |
 
 ## Config fields (repository)
 
@@ -28,10 +29,10 @@ tts:
 
 ## Invariants
 
-1. ALL four profiles MUST have `tts.provider: edge`. Previously three profiles had
+1. ALL five profiles MUST have `tts.provider: edge`. Previously three profiles had
    `provider: openai`, which caused TTS to bypass Edge-TTS entirely.
 2. Voices are intentionally **distinct** — never set two agents to the same voice.
-3. SakSee is intentionally **female** (`AriaNeural`). The other three are male.
+3. SakSee is intentionally **female** (`AriaNeural`). The other four are male.
 
 ## Config file paths (repo)
 
@@ -41,6 +42,7 @@ tts:
 | SakSee  | `profiles/saksee/config.yaml` |
 | SakThai | `profiles/sakthai/config.yaml` |
 | SakSit  | `profiles/saksit/config.yaml` |
+| SakTan  | `profiles/saktan/config.yaml` |
 
 ## Workflow when modifying a voice
 
@@ -52,6 +54,7 @@ tts:
    systemctl --user restart hermes-gateway-saksee.service   # SakSee
    systemctl --user restart hermes-gateway-sakthai.service  # SakThai
    systemctl --user restart hermes-gateway-saksit.service   # SakSit
+   systemctl --user restart hermes-gateway-saktan.service   # SakTan
    ```
 
 ## Smoke-test verification
@@ -65,6 +68,7 @@ live = {
     "saksee":  "/home/beerthai/.hermes/profiles/saksee/config.yaml",
     "sakthai": "/home/beerthai/.hermes/profiles/sakthai/config.yaml",
     "saksit":  "/home/beerthai/.hermes/profiles/saksit/config.yaml",
+    "saktan":  "/home/beerthai/.hermes/profiles/saktan/config.yaml",
 }
 for name, path in live.items():
     cfg = yaml.safe_load(open(path))

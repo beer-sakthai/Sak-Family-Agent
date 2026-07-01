@@ -881,6 +881,23 @@ def _redact_sensitive_text(text: str) -> str:
     redacted = _AUTH_RE.sub(rf"\1\2\3\4\5{_REDACTED}\4", text)
     redacted = _BEARER_RE.sub(rf"\1 \2{_REDACTED}\2", redacted)
     redacted = _KV_RE.sub(rf"\1\2\3\4{_REDACTED}\4", redacted)
+    redacted = text
+    # Redact explicit env var assignment forms (e.g., COMFY_CLOUD_API_KEY=xxxx)
+    redacted = re.sub(r"(?i)\b(COMFY_CLOUD_API_KEY)\s*=\s*([^\s,;]+)", rf"\1={_REDACTED}", redacted)
+    # Redact common key/value secret forms in free text.
+    redacted = re.sub(
+        r"(?i)\b(api[_-]?key|apikey|password|passwd|token|secret|access[_-]?key|private[_-]?key)\b\s*[:=]\s*([^\s,;]+)",
+        rf"\1={_REDACTED}",
+        redacted,
+    )
+    # Redact Authorization headers / bearer tokens in text blobs.
+    redacted = re.sub(
+        r"(?i)\b(authorization)\b\s*[:=]\s*(bearer\s+)?([^\s,;]+)",
+        rf"\1: \2{_REDACTED}",
+        redacted,
+    )
+    # Redact standalone Comfy Cloud API key tokens that may appear in free-form text.
+    redacted = re.sub(r"(?i)\bcomfyui-[A-Za-z0-9._-]+\b", _REDACTED, redacted)
     return redacted
 
 
