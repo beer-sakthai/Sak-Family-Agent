@@ -94,6 +94,10 @@ source_paths = [
     "sakthai/agent/loop.py",
     "sakthai/agent/tools.py",
     "sakthai/agent/registry.py",
+    "sakthai/mcp/server.py",
+    "sakthai/mcp/client.py",
+    "sakthai/auth.py",
+    "sakthai/sandbox.py",
 ]
 # mutmut runs the suite from an isolated ``mutants/`` copy and drops the original
 # source from sys.path, so anything the mutated modules import at runtime must be

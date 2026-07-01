@@ -116,4 +116,57 @@ describe('App', () => {
     await screen.findByText('Live Data')
     expect(screen.getByText('3')).toBeInTheDocument()
   })
+
+  it('renders thought process groups, messages, and confidence in Chat & Reasoning', async () => {
+    mockFetchOnce(LIVE_DATA)
+    const user = userEvent.setup()
+    render(<App />)
+
+    await screen.findByText('Live Data')
+    const nav = screen.getByRole('navigation')
+    await user.click(within(nav).getByText('Chat & Reasoning'))
+
+    for (const group of LIVE_DATA.chat.thought_process) {
+      expect(screen.getByText(group.group)).toBeInTheDocument()
+      for (const step of group.steps) {
+        expect(screen.getByText(step)).toBeInTheDocument()
+      }
+    }
+    for (const msg of LIVE_DATA.chat.messages) {
+      expect(screen.getByText(msg.text)).toBeInTheDocument()
+    }
+    expect(screen.getByText(`${LIVE_DATA.chat.confidence}%`)).toBeInTheDocument()
+  })
+
+  it('renders performance stats and version history in Evolution', async () => {
+    mockFetchOnce(LIVE_DATA)
+    const user = userEvent.setup()
+    render(<App />)
+
+    await screen.findByText('Live Data')
+    const nav = screen.getByRole('navigation')
+    await user.click(within(nav).getByText('Evolution'))
+
+    expect(screen.getAllByText(LIVE_DATA.evolution.performance_gain).length).toBeGreaterThan(0)
+    expect(screen.getByText(`${LIVE_DATA.evolution.success_rate}%`)).toBeInTheDocument()
+    expect(screen.getByText('v2.2.0')).toBeInTheDocument()
+    expect(screen.getByText('v2.0.0')).toBeInTheDocument()
+  })
+
+  it('renders the architecture layers and tool registry in Project', async () => {
+    mockFetchOnce(LIVE_DATA)
+    const user = userEvent.setup()
+    render(<App />)
+
+    await screen.findByText('Live Data')
+    const nav = screen.getByRole('navigation')
+    await user.click(within(nav).getByText('Project'))
+
+    expect(screen.getByRole('heading', { name: 'SakThai-Agent' })).toBeInTheDocument()
+    expect(screen.getByText('CLI / MCP')).toBeInTheDocument()
+    expect(screen.getByText('MemoryStore')).toBeInTheDocument()
+    expect(screen.getByText('learn')).toBeInTheDocument()
+    expect(screen.getByText('Claude')).toBeInTheDocument()
+    expect(screen.getByText('Dream')).toBeInTheDocument()
+  })
 })
