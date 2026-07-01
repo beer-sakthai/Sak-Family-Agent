@@ -133,13 +133,15 @@ All runtimes share `~/.sakthai/memory.db` (override the root with `SAKTHAI_HOME`
 
 ## 🤝 Family agents
 
-The repo tracks five personas end to end:
+The repo tracks five personas end to end, each with a distinct role and personality:
 
-- `SakKing` - lead and orchestrator
-- `SakThai` - personal learning and knowledge workflows
-- `SakSee` - web-focused assistant
-- `SakSit` - social-media-focused assistant
-- `SakTan` - daily ops helper
+| Agent | Role | Portrait |
+|---|---|---|
+| **SakKing** | Lead & Orchestrator · Master of Code | ![SakKing](./assets/sakking.png) |
+| **SakThai** | Master of Hugging Face | ![SakThai](./assets/sakthai.png) |
+| **SakSee** | Master of Web | ![SakSee](./assets/saksee.png) |
+| **SakSit** | Master of Social Media | ![SakSit](./assets/saksit.png) |
+| **SakTan** | Daily Ops Helper | ![SakTan](./assets/saktan.png) |
 
 ![House of Sak](./assets/house_of_sak.png)
 
