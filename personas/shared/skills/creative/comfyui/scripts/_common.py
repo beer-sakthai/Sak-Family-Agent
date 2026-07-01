@@ -831,7 +831,7 @@ _REDACTED = "***REDACTED***"
 # must appear *adjacent and in order* in a key for it to count as sensitive.
 # Token-based matching (rather than substring containment) avoids false
 # positives like "author"/"tokenizer_name"/"max_tokens" matching "auth"/"token".
-_SENSITIVE_KEY_MARKERS: tuple[tuple[str, ...], ...] = (
+_SENSITIVE_KEY_TOKEN_MARKERS: tuple[tuple[str, ...], ...] = (
     ("api", "key"), ("apikey",), ("password",), ("passwd",), ("token",),
     ("secret",), ("authorization",), ("auth",), ("bearer",),
     ("access", "key"), ("private", "key"),
@@ -840,7 +840,7 @@ _SENSITIVE_KEY_MARKERS: tuple[tuple[str, ...], ...] = (
 # Same marker vocabulary, flattened for the free-text regex below.
 _TEXT_SECRET_NAME_RE = "|".join(
     r"[_-]?".join(re.escape(token) for token in marker)
-    for marker in sorted(_SENSITIVE_KEY_MARKERS, key=len, reverse=True)
+    for marker in sorted(_SENSITIVE_KEY_TOKEN_MARKERS, key=len, reverse=True)
 )
 
 # One pass, single regex: `name[:=]value`, with an optional `bearer` prefix
