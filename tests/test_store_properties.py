@@ -22,8 +22,7 @@ from typing import Any
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
-from sakthai.memory.store import (MemoryStore, snapshot_to_csv,
-                                  snapshot_to_jsonl)
+from sakthai.memory.store import MemoryStore, snapshot_to_csv, snapshot_to_jsonl
 
 # -- strategies --------------------------------------------------------------
 
@@ -57,15 +56,11 @@ def _obs_inputs(draw: st.DrawFn) -> dict[str, Any]:
     }
 
 
-def _populate(
-    store: MemoryStore, facts: list[dict[str, Any]], obs: list[dict[str, Any]]
-) -> None:
+def _populate(store: MemoryStore, facts: list[dict[str, Any]], obs: list[dict[str, Any]]) -> None:
     for f in facts:
         store.add_fact(f["value"], kind=f["kind"], key=f["key"])
     for o in obs:
-        store.add_observation(
-            o["summary"], weight=o["weight"], confidence=o["confidence"]
-        )
+        store.add_observation(o["summary"], weight=o["weight"], confidence=o["confidence"])
 
 
 _NO_FIXTURE_CHECK = settings(

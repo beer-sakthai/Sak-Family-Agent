@@ -6,9 +6,16 @@ from pathlib import Path
 
 import pytest
 
-from sakthai.skills import (SkillParseError, _as_str_list, collect_skills,
-                            find_skill, list_skills, parse_skill,
-                            render_skills_prompt_block, validate_skills)
+from sakthai.skills import (
+    SkillParseError,
+    _as_str_list,
+    collect_skills,
+    find_skill,
+    list_skills,
+    parse_skill,
+    render_skills_prompt_block,
+    validate_skills,
+)
 
 
 def test_as_str_list() -> None:
@@ -107,13 +114,9 @@ def test_parse_skill_empty_name(tmp_path: Path) -> None:
 
 def test_list_skills(tmp_path: Path) -> None:
     (tmp_path / "skill1").mkdir()
-    (tmp_path / "skill1" / "SKILL.md").write_text(
-        "---\nname: s1\n---\nb1", encoding="utf-8"
-    )
+    (tmp_path / "skill1" / "SKILL.md").write_text("---\nname: s1\n---\nb1", encoding="utf-8")
     (tmp_path / "skill2").mkdir()
-    (tmp_path / "skill2" / "SKILL.md").write_text(
-        "---\nname: s2\n---\nb2", encoding="utf-8"
-    )
+    (tmp_path / "skill2" / "SKILL.md").write_text("---\nname: s2\n---\nb2", encoding="utf-8")
     (tmp_path / "bad").mkdir()
     (tmp_path / "bad" / "SKILL.md").write_text("no frontmatter", encoding="utf-8")
     (tmp_path / "not-a-dir").write_text("just a file", encoding="utf-8")
@@ -125,14 +128,10 @@ def test_list_skills(tmp_path: Path) -> None:
 
 def test_validate_skills(tmp_path: Path) -> None:
     (tmp_path / "good").mkdir()
-    (tmp_path / "good" / "SKILL.md").write_text(
-        "---\nname: good\n---\nbody", encoding="utf-8"
-    )
+    (tmp_path / "good" / "SKILL.md").write_text("---\nname: good\n---\nbody", encoding="utf-8")
     (tmp_path / "missing").mkdir()
     (tmp_path / "broken").mkdir()
-    (tmp_path / "broken" / "SKILL.md").write_text(
-        "---\nname: ''\n---\nbody", encoding="utf-8"
-    )
+    (tmp_path / "broken" / "SKILL.md").write_text("---\nname: ''\n---\nbody", encoding="utf-8")
 
     errors = validate_skills(tmp_path)
     assert len(errors) == 2
@@ -175,9 +174,7 @@ def test_collect_skills_recursive(tmp_path: Path) -> None:
 
 def test_find_skill(tmp_path: Path) -> None:
     (tmp_path / "s1").mkdir()
-    (tmp_path / "s1" / "SKILL.md").write_text(
-        "---\nname: found-me\n---\nbody", encoding="utf-8"
-    )
+    (tmp_path / "s1" / "SKILL.md").write_text("---\nname: found-me\n---\nbody", encoding="utf-8")
 
     assert find_skill("found-me", tmp_path) is not None
     assert find_skill("missing", tmp_path) is None
@@ -250,15 +247,9 @@ def test_target_skill_name_is_idempotent() -> None:
     from sakthai.skills import target_skill_name
 
     assert target_skill_name("foo", "SakThai-") == "SakThai-foo"
-    assert (
-        target_skill_name("sakthai-foo", "SakThai-") == "SakThai-foo"
-    )  # legacy retargeted
-    assert (
-        target_skill_name("SakThai-foo", "SakThai-") == "SakThai-foo"
-    )  # already correct
-    assert (
-        target_skill_name("Sak-foo", "SakKing-") == "SakKing-foo"
-    )  # cross-layer retarget
+    assert target_skill_name("sakthai-foo", "SakThai-") == "SakThai-foo"  # legacy retargeted
+    assert target_skill_name("SakThai-foo", "SakThai-") == "SakThai-foo"  # already correct
+    assert target_skill_name("Sak-foo", "SakKing-") == "SakKing-foo"  # cross-layer retarget
 
 
 def test_naming_violations_flags_prefix_folder_and_length(tmp_path: Path) -> None:
@@ -271,8 +262,7 @@ def test_naming_violations_flags_prefix_folder_and_length(tmp_path: Path) -> Non
     _write_skill(tmp_path / long_name, long_name)  # too long
 
     violations = dict(
-        (p.parent.name, reason)
-        for p, reason in naming_violations(tmp_path, prefix="Sak-")
+        (p.parent.name, reason) for p, reason in naming_violations(tmp_path, prefix="Sak-")
     )
     assert "Sak-good" not in violations
     assert "missing required prefix 'Sak-'" in violations["bad-prefix"]
@@ -293,14 +283,11 @@ def test_naming_violations_skips_unparseable_skill(tmp_path: Path) -> None:
     # naming_violations must skip it (validate_tree owns parse errors), while
     # still reporting the genuine naming violation alongside it.
     (tmp_path / "broken").mkdir()
-    (tmp_path / "broken" / "SKILL.md").write_text(
-        "no frontmatter here\n", encoding="utf-8"
-    )
+    (tmp_path / "broken" / "SKILL.md").write_text("no frontmatter here\n", encoding="utf-8")
     _write_skill(tmp_path / "bad-prefix", "bad-prefix")
 
     violations = dict(
-        (p.parent.name, reason)
-        for p, reason in naming_violations(tmp_path, prefix="Sak-")
+        (p.parent.name, reason) for p, reason in naming_violations(tmp_path, prefix="Sak-")
     )
     assert "broken" not in violations
     assert "bad-prefix" in violations

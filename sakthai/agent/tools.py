@@ -263,9 +263,7 @@ def _run_agent_loop(args: dict[str, Any], store: MemoryStore) -> str:
     import os
 
     if os.environ.get("SAKTHAI_AGENT_ACTIVE") == "1":
-        raise ValueError(
-            "Indirect recursion detected: cannot run nested SakThai agent loops."
-        )
+        raise ValueError("Indirect recursion detected: cannot run nested SakThai agent loops.")
 
     from .loop import run_agent
 

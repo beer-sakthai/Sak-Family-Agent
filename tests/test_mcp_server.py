@@ -90,9 +90,7 @@ def test_unknown_method(store: MemoryStore) -> None:
 
 
 def test_notification_returns_none(store: MemoryStore) -> None:
-    assert (
-        handle_request({"jsonrpc": "2.0", "method": "notifications/x"}, store) is None
-    )
+    assert handle_request({"jsonrpc": "2.0", "method": "notifications/x"}, store) is None
     assert handle_request({"jsonrpc": "2.0", "method": "ping"}, store) is None
 
 
@@ -240,9 +238,7 @@ def test_tools_call_notification_with_handler_exception_returns_none(
 def test_notification_for_unknown_method_returns_none(store: MemoryStore) -> None:
     # A notification (no "id") with an unknown method (not ping, not tools/*,
     # not notifications/*) must return None — not an error frame.
-    result = handle_request(
-        {"jsonrpc": "2.0", "method": "completely_unknown_method"}, store
-    )
+    result = handle_request({"jsonrpc": "2.0", "method": "completely_unknown_method"}, store)
     assert result is None
 
 

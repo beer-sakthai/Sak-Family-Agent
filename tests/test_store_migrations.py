@@ -166,6 +166,6 @@ def test_wal_failure_tolerated_store_remains_functional(
         assert s.forget_fact(fid) is True
         assert s.list_facts() == []
 
-    assert any(
-        "WAL unavailable" in r.message for r in caplog.records
-    ), "expected a debug log saying WAL is unavailable"
+    assert any("WAL unavailable" in r.message for r in caplog.records), (
+        "expected a debug log saying WAL is unavailable"
+    )

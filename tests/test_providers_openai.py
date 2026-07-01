@@ -9,8 +9,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from sakthai.agent.providers.base import AgentError, Response
-from sakthai.agent.providers.openai_provider import (call_openai_compat,
-                                                     to_openai_messages)
+from sakthai.agent.providers.openai_provider import call_openai_compat, to_openai_messages
 from sakthai.agent.tools import Tool
 
 
@@ -35,16 +34,12 @@ def _post_client(response: dict[str, Any]) -> Any:
 
 def _text_resp(text: str = "hello", finish: str = "stop") -> dict[str, Any]:
     return {
-        "choices": [
-            {"message": {"content": text, "tool_calls": []}, "finish_reason": finish}
-        ],
+        "choices": [{"message": {"content": text, "tool_calls": []}, "finish_reason": finish}],
         "usage": {"prompt_tokens": 10, "completion_tokens": 5},
     }
 
 
-def _tool_resp(
-    name: str = "learn", args: dict[str, Any] | None = None
-) -> dict[str, Any]:
+def _tool_resp(name: str = "learn", args: dict[str, Any] | None = None) -> dict[str, Any]:
     return {
         "choices": [
             {
@@ -129,9 +124,7 @@ def test_to_openai_messages_tool_result() -> None:
     msgs = [
         {
             "role": "user",
-            "content": [
-                {"type": "tool_result", "tool_use_id": "t1", "content": "learned!"}
-            ],
+            "content": [{"type": "tool_result", "tool_use_id": "t1", "content": "learned!"}],
         }
     ]
     result = to_openai_messages("sys", msgs)
@@ -186,9 +179,7 @@ def test_to_openai_messages_unknown_assistant_block_is_skipped() -> None:
     assert result[1] == {"role": "assistant", "content": "answer"}
 
 
-def test_to_openai_messages_assistant_only_unknown_blocks_falls_back_to_empty_content() -> (
-    None
-):
+def test_to_openai_messages_assistant_only_unknown_blocks_falls_back_to_empty_content() -> None:
     """Assistant content with only unknown blocks must not emit null content with
     no tool_calls (OpenAI rejects that with a 400); it falls back to ""."""
     msgs = [{"role": "assistant", "content": [{"type": "image", "source": "..."}]}]
@@ -335,9 +326,7 @@ def test_call_openai_compat_tool_args_as_dict() -> None:
                             "id": "c1",
                             "function": {
                                 "name": "learn",
-                                "arguments": {
-                                    "value": "already a dict"
-                                },  # dict, not str
+                                "arguments": {"value": "already a dict"},  # dict, not str
                             },
                         }
                     ],

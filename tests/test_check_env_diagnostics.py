@@ -12,9 +12,7 @@ import pytest
 from sakthai import config
 
 
-def test_check_env_all_defined_vars(
-    monkeypatch: pytest.MonkeyPatch, sakthai_home: Path
-) -> None:
+def test_check_env_all_defined_vars(monkeypatch: pytest.MonkeyPatch, sakthai_home: Path) -> None:
     """Ensure every env var in config.py is reported."""
     all_vars = {**config.REQUIRED_ENV_VARS, **config.OPTIONAL_ENV_VARS}
 
@@ -73,9 +71,7 @@ def test_auth_report_priority(
     assert report["anthropic_source"] == "api_key"
 
 
-def test_auth_report_openai_priority(
-    monkeypatch: pytest.MonkeyPatch, sakthai_home: Path
-) -> None:
+def test_auth_report_openai_priority(monkeypatch: pytest.MonkeyPatch, sakthai_home: Path) -> None:
     """Test priority for OpenAI credential source."""
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
     monkeypatch.delenv("OPENAI_BASE_URL", raising=False)
@@ -99,9 +95,7 @@ def test_auth_report_openai_priority(
     assert report["openai_source"] == "openai_api_key"
 
 
-def test_ready_flag_combinations(
-    monkeypatch: pytest.MonkeyPatch, sakthai_home: Path
-) -> None:
+def test_ready_flag_combinations(monkeypatch: pytest.MonkeyPatch, sakthai_home: Path) -> None:
     """Test the ready flag across multiple failure/success states."""
     # Ready if DB doesn't exist
     db_path = config.memory_db_path()
@@ -127,9 +121,7 @@ def test_ready_flag_combinations(
     assert config.check_env()["ready"] is False
 
 
-def test_paths_report_with_override(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-) -> None:
+def test_paths_report_with_override(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     """Ensure path reporting respects SAKTHAI_HOME override."""
     custom_home = tmp_path / "custom_sakthai"
     monkeypatch.setenv("SAKTHAI_HOME", str(custom_home))

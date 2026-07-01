@@ -6,9 +6,14 @@ import httpx
 import pytest
 
 import sakthai.agent.providers.base as base_mod
-from sakthai.agent.providers.base import (Block, Response, block_field,
-                                          find_tool_name_by_id, is_retryable,
-                                          with_retry)
+from sakthai.agent.providers.base import (
+    Block,
+    Response,
+    block_field,
+    find_tool_name_by_id,
+    is_retryable,
+    with_retry,
+)
 
 # -- Block -----------------------------------------------------------------
 
@@ -284,9 +289,7 @@ def test_find_tool_name_by_id_multiple_messages() -> None:
         },
         {
             "role": "assistant",
-            "content": [
-                {"type": "tool_use", "id": "t2", "name": "recall", "input": {}}
-            ],
+            "content": [{"type": "tool_use", "id": "t2", "name": "recall", "input": {}}],
         },
     ]
     assert find_tool_name_by_id(messages, "t2") == "recall"

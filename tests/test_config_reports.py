@@ -31,9 +31,7 @@ def test_mcp_timeout_honours_env(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 @pytest.mark.parametrize("bad", ["", "abc", "0", "-5"])
-def test_mcp_timeout_falls_back_on_bad_value(
-    monkeypatch: pytest.MonkeyPatch, bad: str
-) -> None:
+def test_mcp_timeout_falls_back_on_bad_value(monkeypatch: pytest.MonkeyPatch, bad: str) -> None:
     monkeypatch.setenv("SAKTHAI_MCP_TIMEOUT", bad)
     assert config.mcp_timeout() == config.DEFAULT_MCP_TIMEOUT
 
@@ -187,9 +185,7 @@ def test_auth_report_sources(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) ->
     import time
 
     creds.write_text(
-        json.dumps(
-            {"access_token": "abc", "expiry_date": int((time.time() + 3600) * 1000)}
-        )
+        json.dumps({"access_token": "abc", "expiry_date": int((time.time() + 3600) * 1000)})
     )
 
     report = config.check_env()["auth"]

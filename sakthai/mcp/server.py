@@ -119,11 +119,7 @@ def handle_request(
         return None if is_notification else _result(req_id, _tool_list(tools))
 
     if method == "tools/call":
-        return (
-            None
-            if is_notification
-            else _result(req_id, _tool_call(params, store, tools))
-        )
+        return None if is_notification else _result(req_id, _tool_call(params, store, tools))
 
     if is_notification:
         return None

@@ -245,9 +245,7 @@ class MemoryStore:
         try:
             # BEGIN IMMEDIATE serialises migration across parallel openers.
             self._conn.execute("BEGIN IMMEDIATE")
-            row = self._conn.execute(
-                "SELECT MAX(version) AS v FROM schema_version"
-            ).fetchone()
+            row = self._conn.execute("SELECT MAX(version) AS v FROM schema_version").fetchone()
             current = int(row["v"]) if row and row["v"] is not None else 0
 
             # A DB created before schema_version existed already has the v1
@@ -298,9 +296,7 @@ class MemoryStore:
             "evidence_session_id TEXT, weight REAL NOT NULL DEFAULT 1.0, "
             "confidence REAL NOT NULL DEFAULT 0.5, created_at INTEGER NOT NULL)"
         )
-        cols = {
-            r["name"] for r in self._conn.execute("PRAGMA table_info(observations)")
-        }
+        cols = {r["name"] for r in self._conn.execute("PRAGMA table_info(observations)")}
         if "confidence" not in cols:
             self._conn.execute(
                 "ALTER TABLE observations ADD COLUMN confidence REAL NOT NULL DEFAULT 0.5"
@@ -398,9 +394,7 @@ class MemoryStore:
         return _fact_from_row(row) if row else None
 
     def delete_facts_by_key(self, kind: str, key: str) -> int:
-        cur = self._conn.execute(
-            "DELETE FROM facts WHERE kind = ? AND key = ?", (kind, key)
-        )
+        cur = self._conn.execute("DELETE FROM facts WHERE kind = ? AND key = ?", (kind, key))
         self._conn.commit()
         return cur.rowcount
 
@@ -493,9 +487,7 @@ class MemoryStore:
 
     # -- search & rendering ----------------------------------------------
 
-    def search_memory(
-        self, query: str, limit: int = 50
-    ) -> tuple[list[Fact], list[Observation]]:
+    def search_memory(self, query: str, limit: int = 50) -> tuple[list[Fact], list[Observation]]:
         """Substring-search both tables; returns (matching facts, observations)."""
         # Escape LIKE wildcards with '=' so a literal % or _ in the query does
         # not act as a wildcard.
@@ -655,9 +647,7 @@ class MemoryStore:
                 "GROUP BY tag"
             ).fetchall()
         }
-        f_min, f_max = c.execute(
-            "SELECT MIN(created_at), MAX(created_at) FROM facts"
-        ).fetchone()
+        f_min, f_max = c.execute("SELECT MIN(created_at), MAX(created_at) FROM facts").fetchone()
         o_min, o_max, avg_w, avg_c = c.execute(
             "SELECT MIN(created_at), MAX(created_at), AVG(weight), AVG(confidence) "
             "FROM observations"
@@ -677,9 +667,7 @@ class MemoryStore:
                 "avg_weight": round(avg_w, 3) if avg_w is not None else None,
                 "avg_confidence": round(avg_c, 3) if avg_c is not None else None,
             },
-            "tags": dict(
-                sorted(tag_counts.items(), key=lambda kv: (-int(kv[1]), kv[0]))
-            ),
+            "tags": dict(sorted(tag_counts.items(), key=lambda kv: (-int(kv[1]), kv[0]))),
         }
 
     # -- import / export --------------------------------------------------
@@ -702,9 +690,7 @@ class MemoryStore:
             "observations": [asdict(Observation(**dict(r))) for r in obs_rows],
         }
 
-    def import_from_dict(
-        self, data: dict[str, Any], *, mode: str = "merge"
-    ) -> tuple[int, int]:
+    def import_from_dict(self, data: dict[str, Any], *, mode: str = "merge") -> tuple[int, int]:
         """Load a snapshot. Returns (n_facts, n_observations) imported.
 
         ``mode="merge"`` appends rows with fresh IDs; ``mode="replace"`` wipes
@@ -752,9 +738,7 @@ class MemoryStore:
             if mode == "replace":
                 f_cols.insert(0, "id")
             f_qs = ", ".join(["?"] * len(f_cols))
-            f_stmt = (
-                "INSERT INTO facts (" + ", ".join(f_cols) + ") VALUES (" + f_qs + ")"
-            )  # nosec B608
+            f_stmt = "INSERT INTO facts (" + ", ".join(f_cols) + ") VALUES (" + f_qs + ")"  # nosec B608
             f_rows: list[tuple[Any, ...]] = []
             for f in facts:
                 r = [
@@ -781,13 +765,7 @@ class MemoryStore:
             if mode == "replace":
                 o_cols.insert(0, "id")
             o_qs = ", ".join(["?"] * len(o_cols))
-            o_stmt = (
-                "INSERT INTO observations ("
-                + ", ".join(o_cols)
-                + ") VALUES ("
-                + o_qs
-                + ")"
-            )  # nosec B608
+            o_stmt = "INSERT INTO observations (" + ", ".join(o_cols) + ") VALUES (" + o_qs + ")"  # nosec B608
             o_rows: list[tuple[Any, ...]] = []
             for o in obs:
                 r = [

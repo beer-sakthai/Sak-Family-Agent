@@ -59,9 +59,7 @@ def test_detect_openai_model_keywords(model: str) -> None:
     assert detect_provider(None, model) == "openai"
 
 
-@pytest.mark.parametrize(
-    "model", ["gateway/openai/gpt-4o", "gateway:claude", "Gateway-route"]
-)
+@pytest.mark.parametrize("model", ["gateway/openai/gpt-4o", "gateway:claude", "Gateway-route"])
 def test_detect_gateway_model_prefix(model: str) -> None:
     assert detect_provider(None, model) == "gateway"
 
@@ -72,26 +70,20 @@ def test_detect_gateway_model_prefix(model: str) -> None:
 def test_detect_fallback_anthropic_key(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("GEMINI_API_KEY", raising=False)
     monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
-    with patch(
-        "sakthai.agent.providers.anthropic_credential_source", return_value="env"
-    ):
+    with patch("sakthai.agent.providers.anthropic_credential_source", return_value="env"):
         assert detect_provider(None, "unknown-model") == "anthropic"
 
 
 def test_detect_fallback_gemini_key(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("GEMINI_API_KEY", "key123")
-    with patch(
-        "sakthai.agent.providers.anthropic_credential_source", return_value=None
-    ):
+    with patch("sakthai.agent.providers.anthropic_credential_source", return_value=None):
         assert detect_provider(None, "unknown-model") == "google"
 
 
 def test_detect_fallback_google_api_key(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("GEMINI_API_KEY", raising=False)
     monkeypatch.setenv("GOOGLE_API_KEY", "gkey")
-    with patch(
-        "sakthai.agent.providers.anthropic_credential_source", return_value=None
-    ):
+    with patch("sakthai.agent.providers.anthropic_credential_source", return_value=None):
         assert detect_provider(None, "unknown-model") == "google"
 
 
@@ -337,8 +329,6 @@ def test_build_client_google_oauth_client_init_error_raises_agent_error(
     with (
         patch("sakthai.auth.load_gemini_cli_token", return_value="oauth-token"),
         patch.dict("sys.modules", _gemini_oauth_modules(fake_genai)),
-        pytest.raises(
-            AgentError, match="Failed to initialize Google Gemini client with OAuth"
-        ),
+        pytest.raises(AgentError, match="Failed to initialize Google Gemini client with OAuth"),
     ):
         build_client("google", None)

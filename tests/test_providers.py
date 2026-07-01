@@ -17,10 +17,16 @@ import anthropic
 import httpx
 import pytest
 
-from sakthai.agent.providers.base import (RETRYABLE_STATUS, AgentError, Block,
-                                          Response, block_field,
-                                          find_tool_name_by_id, is_retryable,
-                                          with_retry)
+from sakthai.agent.providers.base import (
+    RETRYABLE_STATUS,
+    AgentError,
+    Block,
+    Response,
+    block_field,
+    find_tool_name_by_id,
+    is_retryable,
+    with_retry,
+)
 
 # ---------------------------------------------------------------------------
 # base.py — Block / Response
@@ -254,9 +260,7 @@ class TestCallAnthropic:
         client.messages = messages
         return client
 
-    def _make_raw_response(
-        self, stop_reason: str = "end_turn", text: str = "hello"
-    ) -> Any:
+    def _make_raw_response(self, stop_reason: str = "end_turn", text: str = "hello") -> Any:
         block = SimpleNamespace(type="text", text=text)
         return SimpleNamespace(stop_reason=stop_reason, content=[block])
 
@@ -413,9 +417,7 @@ class TestToGeminiContents:
         assert result[0].parts[0].text == "hello"
 
     def test_assistant_text_block(self) -> None:
-        messages = [
-            {"role": "assistant", "content": [{"type": "text", "text": "world"}]}
-        ]
+        messages = [{"role": "assistant", "content": [{"type": "text", "text": "world"}]}]
         result = self._convert(messages)
         assert result[0].role == "model"
         assert result[0].parts[0].text == "world"
@@ -444,16 +446,12 @@ class TestToGeminiContents:
         prior = [
             {
                 "role": "assistant",
-                "content": [
-                    {"type": "tool_use", "id": "t1", "name": "recall", "input": {}}
-                ],
+                "content": [{"type": "tool_use", "id": "t1", "name": "recall", "input": {}}],
             }
         ]
         tool_result_msg = {
             "role": "user",
-            "content": [
-                {"type": "tool_result", "tool_use_id": "t1", "content": "result text"}
-            ],
+            "content": [{"type": "tool_result", "tool_use_id": "t1", "content": "result text"}],
         }
         messages = prior + [tool_result_msg]
         result = self._convert(messages)
@@ -542,9 +540,7 @@ class TestCallGemini:
         assert resp.content[0].input == {"n": 3}
 
     def test_max_tokens_finish_reason(self) -> None:
-        resp = self._call(
-            [self._make_candidate(text="cut", finish_reason="MAX_TOKENS")]
-        )
+        resp = self._call([self._make_candidate(text="cut", finish_reason="MAX_TOKENS")])
         assert resp.stop_reason == "max_tokens"
 
     def test_api_failure_raises_agent_error(self) -> None:
@@ -579,9 +575,7 @@ class TestCallGemini:
 
 
 class TestToOpenAIMessages:
-    def _convert(
-        self, system: str, messages: list[dict[str, Any]]
-    ) -> list[dict[str, Any]]:
+    def _convert(self, system: str, messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
         from sakthai.agent.providers.openai_provider import to_openai_messages
 
         return to_openai_messages(system, messages)
@@ -595,9 +589,7 @@ class TestToOpenAIMessages:
         assert result[1] == {"role": "user", "content": "hello"}
 
     def test_assistant_text_block(self) -> None:
-        messages = [
-            {"role": "assistant", "content": [{"type": "text", "text": "reply"}]}
-        ]
+        messages = [{"role": "assistant", "content": [{"type": "text", "text": "reply"}]}]
         result = self._convert("s", messages)
         msg = result[1]
         assert msg["role"] == "assistant"
@@ -663,9 +655,7 @@ class TestToOpenAIMessages:
         assert msg["content"] == "fact stored"
 
     def test_user_text_block_in_list_content(self) -> None:
-        messages = [
-            {"role": "user", "content": [{"type": "text", "text": "follow up"}]}
-        ]
+        messages = [{"role": "user", "content": [{"type": "text", "text": "follow up"}]}]
         result = self._convert("s", messages)
         assert result[1] == {"role": "user", "content": "follow up"}
 
@@ -703,9 +693,7 @@ def _make_sse_stream(chunks: list[dict[str, Any]]) -> MagicMock:
 
 
 class TestStreamChat:
-    def _call(
-        self, chunks: list[dict[str, Any]], on_token: Any = None
-    ) -> dict[str, Any]:
+    def _call(self, chunks: list[dict[str, Any]], on_token: Any = None) -> dict[str, Any]:
         from sakthai.agent.providers.openai_provider import _stream_chat
 
         if on_token is None:
@@ -752,11 +740,7 @@ class TestStreamChat:
             {
                 "choices": [
                     {
-                        "delta": {
-                            "tool_calls": [
-                                {"index": 0, "function": {"arguments": '{"n"'}}
-                            ]
-                        },
+                        "delta": {"tool_calls": [{"index": 0, "function": {"arguments": '{"n"'}}]},
                         "finish_reason": None,
                     }
                 ]
@@ -764,11 +748,7 @@ class TestStreamChat:
             {
                 "choices": [
                     {
-                        "delta": {
-                            "tool_calls": [
-                                {"index": 0, "function": {"arguments": ": 5}"}}
-                            ]
-                        },
+                        "delta": {"tool_calls": [{"index": 0, "function": {"arguments": ": 5}"}}]},
                         "finish_reason": "tool_calls",
                     }
                 ]
@@ -906,9 +886,7 @@ class TestCallOpenAICompat:
         from sakthai.agent.providers.openai_provider import call_openai_compat
 
         client = self._post_client(self._make_response_data("hello", "stop"))
-        result = call_openai_compat(
-            client, "gpt-4", "sys", (self._make_tool(),), [], iteration=0
-        )
+        result = call_openai_compat(client, "gpt-4", "sys", (self._make_tool(),), [], iteration=0)
         assert result.stop_reason == "end_turn"
         assert result.content[0].text == "hello"
 

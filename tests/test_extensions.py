@@ -20,9 +20,7 @@ import sakthai.extensions.install as ext
 # -- helpers -------------------------------------------------------------
 
 
-def _fake_clone(
-    *, with_skill: bool = True, with_mcp: bool = True
-) -> Callable[..., object]:
+def _fake_clone(*, with_skill: bool = True, with_mcp: bool = True) -> Callable[..., object]:
     """Return a subprocess.run stand-in that materialises a cloned repo."""
 
     def _run(cmd: list[str], *args: object, **kwargs: object) -> object:
@@ -31,9 +29,7 @@ def _fake_clone(
         if with_skill:
             skill = dest / "myskill"
             skill.mkdir()
-            (skill / "SKILL.md").write_text(
-                "---\nname: myskill\n---\nbody\n", encoding="utf-8"
-            )
+            (skill / "SKILL.md").write_text("---\nname: myskill\n---\nbody\n", encoding="utf-8")
         if with_mcp:
             (dest / "gemini-extension.json").write_text(
                 json.dumps({"mcpServers": {"srv": {}}}), encoding="utf-8"
@@ -117,9 +113,7 @@ def test_install_rejects_invalid_name(sakthai_home: Path) -> None:
         ext.install_extension("https://example.com/foo/@bad")
 
 
-def test_install_happy_path(
-    sakthai_home: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_install_happy_path(sakthai_home: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(ext.subprocess, "run", _fake_clone())
     result = ext.install_extension("https://github.com/foo/bar")
     assert result.already_installed is False
@@ -156,9 +150,7 @@ def test_install_already_installed_skips_git(
     assert result.skills_found == ["s1"]
 
 
-def test_install_git_missing(
-    sakthai_home: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_install_git_missing(sakthai_home: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     def _raise(*args: object, **kwargs: object) -> object:
         raise FileNotFoundError
 
@@ -167,9 +159,7 @@ def test_install_git_missing(
         ext.install_extension("https://github.com/foo/bar")
 
 
-def test_install_clone_failure(
-    sakthai_home: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_install_clone_failure(sakthai_home: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     def _raise(cmd: list[str], *args: object, **kwargs: object) -> object:
         raise subprocess.CalledProcessError(1, cmd, stderr="fatal: boom")
 
