@@ -5,6 +5,8 @@ from __future__ import annotations
 import pytest
 from _common import (
     EMBEDDING_REGEX,
+    _redact_sensitive,
+    _redact_sensitive_text,
     cloud_endpoint,
     coerce_seed,
     folder_aliases_for,
@@ -478,3 +480,84 @@ class TestVideoWorkflow:
 
     def test_wan_workflow(self, video_workflow):
         assert looks_like_video_workflow(video_workflow) is True
+
+
+# =============================================================================
+# Secret redaction (emit_json / log)
+# =============================================================================
+
+
+class TestRedactSensitiveText:
+    @pytest.mark.parametrize(
+        "text",
+        [
+            "MY_API_KEY=abc123",
+            "APP_SECRET=shhh",
+            "https://x.example.com/cb?access_token=abcDEF123",
+            "COMFY_CLOUD_API_KEY=xxxx",
+            "api_key=plainmatch",
+            "password: hunter2",
+        ],
+    )
+    def test_redacts_underscore_joined_secrets(self, text):
+        # Regression: `\b` doesn't break on `_`, so compound identifiers like
+        # MY_API_KEY= or access_token= previously slipped past the marker regex.
+        result = _redact_sensitive_text(text)
+        assert "REDACTED" in result
+        for secret in ("abc123", "shhh", "abcDEF123", "xxxx", "plainmatch", "hunter2"):
+            assert secret not in result
+
+    def test_redacts_quoted_json_key(self):
+        # Regression: a quote between the marker and the separator (as in raw
+        # JSON text) previously defeated the match entirely.
+        result = _redact_sensitive_text('{"api_key": "sk-123456"}')
+        assert "sk-123456" not in result
+        assert "REDACTED" in result
+
+    def test_redacts_authorization_bearer_in_repr(self):
+        # Regression: a repr'd headers dict (quotes around the header name)
+        # previously wasn't matched, and the bearer token leaked outside the
+        # (unreferenced) capture group in an earlier version of the fix.
+        result = _redact_sensitive_text(
+            "headers={'Authorization': 'Bearer sk-abcdef123456'}"
+        )
+        assert "sk-abcdef123456" not in result
+        assert "REDACTED" in result
+
+    def test_redacts_bare_bearer_token(self):
+        # Regression: "Bearer <token>" with no preceding "Authorization:" label.
+        result = _redact_sensitive_text("Bearer sk-abcdef123456 was used")
+        assert "sk-abcdef123456" not in result
+
+    @pytest.mark.parametrize(
+        "text",
+        [
+            "tokenizer_name=clip_l.safetensors",
+            "prompt_id=abc123 seed=42",
+            "normal text with no secrets at all",
+        ],
+    )
+    def test_leaves_non_secret_text_untouched(self, text):
+        assert _redact_sensitive_text(text) == text
+
+
+class TestRedactSensitiveObj:
+    def test_redacts_sensitive_dict_keys(self):
+        obj = {"api_key": "abc123", "prompt_id": "keep-me"}
+        result = _redact_sensitive(obj)
+        assert result["api_key"] == "***REDACTED***"
+        assert result["prompt_id"] == "keep-me"
+
+    def test_redacts_nested_structures(self):
+        obj = {"outer": [{"password": "hunter2"}, ("token=abc123",)]}
+        result = _redact_sensitive(obj)
+        assert result["outer"][0]["password"] == "***REDACTED***"
+        assert "abc123" not in result["outer"][1][0]
+
+    def test_redacts_exception_message(self):
+        # Regression: exception objects passed straight through (not str(e))
+        # bypassed redaction entirely, since json.dumps(default=str) only
+        # stringifies *after* _redact_sensitive has already run.
+        exc = ValueError("request failed: X-API-Key=SECRETVALUE123")
+        result = _redact_sensitive(exc)
+        assert "SECRETVALUE123" not in result
