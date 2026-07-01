@@ -117,10 +117,7 @@ def setup(interactive: bool) -> None:
                 issues.append(".env file missing")
         else:
             click.echo(
-                click.style(
-                    "      → cp .env.example .env  # then fill in your keys",
-                    fg="yellow",
-                )
+                click.style("      → cp .env.example .env  # then fill in your keys", fg="yellow")
             )
             issues.append(".env file missing")
 
@@ -159,8 +156,7 @@ def setup(interactive: bool) -> None:
             else:
                 click.echo(
                     click.style(
-                        f"      → export {var}=<value>  # {info['description']}",
-                        fg="yellow",
+                        f"      → export {var}=<value>  # {info['description']}", fg="yellow"
                     )
                 )
                 issues.append(f"{var} not set")
@@ -188,11 +184,7 @@ def setup(interactive: bool) -> None:
     click.echo()
     if not issues:
         click.echo(
-            click.style(
-                '  ✓ All checks passed. Try `sakthai run "hello"`.',
-                fg="green",
-                bold=True,
-            )
+            click.style('  ✓ All checks passed. Try `sakthai run "hello"`.', fg="green", bold=True)
         )
     else:
         click.echo(click.style(f"  ✗ {len(issues)} issue(s):", fg="red", bold=True))
@@ -236,17 +228,13 @@ def status() -> None:
     if env["ready"]:
         click.echo(
             click.style(
-                '  ✓ Ready — try: sakthai run "what do you know about me?"',
-                fg="green",
-                bold=True,
+                '  ✓ Ready — try: sakthai run "what do you know about me?"', fg="green", bold=True
             )
         )
     else:
         click.echo(
             click.style(
-                "  ✗ Not ready — run `sakthai setup` for a guided fix.",
-                fg="red",
-                bold=True,
+                "  ✗ Not ready — run `sakthai setup` for a guided fix.", fg="red", bold=True
             )
         )
     click.echo()
@@ -258,10 +246,7 @@ def tools() -> None:
     from ..agent.tools import BUILTIN_TOOLS
 
     click.echo(
-        click.style(
-            "\n── Built-in SakThai tools (via `sakthai run` and `sakthai mcp`)",
-            bold=True,
-        )
+        click.style("\n── Built-in SakThai tools (via `sakthai run` and `sakthai mcp`)", bold=True)
     )
     for tool in BUILTIN_TOOLS:
         click.echo(f"  {_ok()} {tool.name:<22} {tool.description[:66]}")

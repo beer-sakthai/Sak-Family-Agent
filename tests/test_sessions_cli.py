@@ -154,23 +154,13 @@ def test_sessions_show_tool_blocks(sakthai_home: Path, runner: CliRunner) -> Non
         "task": "do something",
         "model": "claude-sonnet-4-6",
         "usage": {"total_tokens": 10},
-        "result": {
-            "text": "done",
-            "iterations": 2,
-            "stop_reason": "end_turn",
-            "tool_calls": [],
-        },
+        "result": {"text": "done", "iterations": 2, "stop_reason": "end_turn", "tool_calls": []},
         "messages": [
             {"role": "user", "content": "do something"},
             {
                 "role": "assistant",
                 "content": [
-                    {
-                        "type": "tool_use",
-                        "id": "t1",
-                        "name": "learn",
-                        "input": {"value": "x"},
-                    },
+                    {"type": "tool_use", "id": "t1", "name": "learn", "input": {"value": "x"}},
                 ],
             },
             {

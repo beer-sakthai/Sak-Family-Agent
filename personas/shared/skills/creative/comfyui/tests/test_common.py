@@ -607,9 +607,7 @@ class TestRedactSensitiveText:
         # Regression: a repr'd headers dict (quotes around the header name)
         # previously wasn't matched, and the bearer token leaked outside the
         # (unreferenced) capture group in an earlier version of the fix.
-        result = _redact_sensitive_text(
-            "headers={'Authorization': 'Bearer sk-abcdef123456'}"
-        )
+        result = _redact_sensitive_text("headers={'Authorization': 'Bearer sk-abcdef123456'}")
         assert "sk-abcdef123456" not in result
         assert "REDACTED" in result
         # Quotes must stay balanced (the value's opening quote is reinserted

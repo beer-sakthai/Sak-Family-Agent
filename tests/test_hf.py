@@ -18,9 +18,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
-def test_hub_missing_dependency_raises_click_exception(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+def test_hub_missing_dependency_raises_click_exception(monkeypatch: pytest.MonkeyPatch) -> None:
     # A None entry in sys.modules makes `import huggingface_hub` raise ImportError.
     monkeypatch.setitem(sys.modules, "huggingface_hub", None)
     with pytest.raises(click.ClickException, match="huggingface_hub is not installed"):

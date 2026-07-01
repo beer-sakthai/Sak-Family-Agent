@@ -122,12 +122,7 @@ def test_call_tool_raises_on_is_error() -> None:
     client = StdioMCPClient("dummy", name="test")
 
     def fake_request(method: str, params: dict | None = None) -> dict:
-        return {
-            "result": {
-                "isError": True,
-                "content": [{"type": "text", "text": "tool bombed"}],
-            }
-        }
+        return {"result": {"isError": True, "content": [{"type": "text", "text": "tool bombed"}]}}
 
     client._request = fake_request  # type: ignore[method-assign]
     with pytest.raises(MCPToolError, match="tool bombed"):

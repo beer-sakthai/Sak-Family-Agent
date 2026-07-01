@@ -64,9 +64,7 @@ class TestResponse:
 
     def test_usage_forwarded(self) -> None:
         r = Response(
-            "tool_use",
-            [],
-            usage={"input_tokens": 10, "output_tokens": 5, "total_tokens": 15},
+            "tool_use", [], usage={"input_tokens": 10, "output_tokens": 5, "total_tokens": 15}
         )
         assert r.usage["input_tokens"] == 10
         assert r.usage["output_tokens"] == 5
@@ -138,12 +136,7 @@ class TestFindToolNameById:
         assert find_tool_name_by_id(msgs, "t3") == "search"
 
     def test_block_with_empty_name_returns_unknown(self) -> None:
-        msgs = [
-            {
-                "role": "assistant",
-                "content": [{"type": "tool_use", "id": "t4", "name": ""}],
-            }
-        ]
+        msgs = [{"role": "assistant", "content": [{"type": "tool_use", "id": "t4", "name": ""}]}]
         assert find_tool_name_by_id(msgs, "t4") == "unknown"
 
 
@@ -426,14 +419,7 @@ class TestToGeminiContents:
         messages = [
             {
                 "role": "assistant",
-                "content": [
-                    {
-                        "type": "tool_use",
-                        "id": "t1",
-                        "name": "recall",
-                        "input": {"n": 5},
-                    }
-                ],
+                "content": [{"type": "tool_use", "id": "t1", "name": "recall", "input": {"n": 5}}],
             }
         ]
         result = self._convert(messages)
@@ -600,14 +586,7 @@ class TestToOpenAIMessages:
         messages = [
             {
                 "role": "assistant",
-                "content": [
-                    {
-                        "type": "tool_use",
-                        "id": "t1",
-                        "name": "recall",
-                        "input": {"n": 5},
-                    }
-                ],
+                "content": [{"type": "tool_use", "id": "t1", "name": "recall", "input": {"n": 5}}],
             }
         ]
         result = self._convert("s", messages)
@@ -639,13 +618,7 @@ class TestToOpenAIMessages:
         messages = [
             {
                 "role": "user",
-                "content": [
-                    {
-                        "type": "tool_result",
-                        "tool_use_id": "t1",
-                        "content": "fact stored",
-                    }
-                ],
+                "content": [{"type": "tool_result", "tool_use_id": "t1", "content": "fact stored"}],
             }
         ]
         result = self._convert("s", messages)
@@ -704,14 +677,8 @@ class TestStreamChat:
 
     def test_text_content_reassembled(self) -> None:
         chunks = [
-            {
-                "choices": [{"delta": {"content": "hel"}, "finish_reason": None}],
-                "usage": None,
-            },
-            {
-                "choices": [{"delta": {"content": "lo"}, "finish_reason": "stop"}],
-                "usage": None,
-            },
+            {"choices": [{"delta": {"content": "hel"}, "finish_reason": None}], "usage": None},
+            {"choices": [{"delta": {"content": "lo"}, "finish_reason": "stop"}], "usage": None},
             {"usage": {"prompt_tokens": 5, "completion_tokens": 2}},
         ]
         tokens: list[str] = []
@@ -877,10 +844,7 @@ class TestCallOpenAICompat:
         tool_calls: list[dict[str, Any]] | None = None,
     ) -> dict[str, Any]:
         message: dict[str, Any] = {"content": text, "tool_calls": tool_calls or []}
-        return {
-            "choices": [{"message": message, "finish_reason": finish_reason}],
-            "usage": {},
-        }
+        return {"choices": [{"message": message, "finish_reason": finish_reason}], "usage": {}}
 
     def test_text_response_end_turn(self) -> None:
         from sakthai.agent.providers.openai_provider import call_openai_compat

@@ -20,7 +20,11 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from typing import Any
 
-from ..auth import anthropic_credential_source, gateway_credential_source, openai_credential_source
+from ..auth import (
+    anthropic_credential_source,
+    gateway_credential_source,
+    openai_credential_source,
+)
 from ..config import sessions_dir
 from ..memory.store import MemoryStore
 from ..skills import default_skill_roots, find_skill, render_skills_prompt_block
@@ -74,11 +78,7 @@ class AgentResult:
     stop_reason: str
     tool_calls: list[dict[str, Any]] = field(default_factory=list)
     usage: dict[str, int] = field(
-        default_factory=lambda: {
-            "input_tokens": 0,
-            "output_tokens": 0,
-            "total_tokens": 0,
-        }
+        default_factory=lambda: {"input_tokens": 0, "output_tokens": 0, "total_tokens": 0}
     )
 
 
@@ -143,10 +143,7 @@ def _parse_slash_command(task: str) -> tuple[str, str] | None:
 
 
 def _build_system(
-    store: MemoryStore,
-    skills_block: str = "",
-    fast: bool = False,
-    stateless: bool = False,
+    store: MemoryStore, skills_block: str = "", fast: bool = False, stateless: bool = False
 ) -> str:
     parts = [SYSTEM_BASE]
     if fast:
@@ -315,13 +312,7 @@ def run_agent(
                 usage_tracker.record(**response.usage)
             else:
                 response = _call_anthropic(
-                    client,
-                    model,
-                    max_tokens,
-                    system,
-                    tool_schemas,
-                    messages,
-                    on_token=on_token,
+                    client, model, max_tokens, system, tool_schemas, messages, on_token=on_token
                 )
                 usage_tracker.record(**extract_usage(response))
 
@@ -338,10 +329,7 @@ def run_agent(
                         stop_reason,
                         missed_tool,
                     )
-                    notify(
-                        "tool_call_in_text",
-                        {"name": missed_tool, "stop_reason": stop_reason},
-                    )
+                    notify("tool_call_in_text", {"name": missed_tool, "stop_reason": stop_reason})
                 result = AgentResult(
                     text=final_text,
                     iterations=iteration,

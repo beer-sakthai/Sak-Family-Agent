@@ -1,6 +1,6 @@
 # sakthai-hermes-agents
 
-Configuration backup for **six** Telegram bots running on the
+Configuration backup for **five** Telegram bots running on the
 [Hermes agent framework](https://github.com/NousResearch) (`hermes_cli`),
 installed at `~/.hermes/` on the host. **Config only — no secrets.** All API
 keys / bot tokens / OAuth credentials live in `.env` and `auth.json` files that
@@ -26,9 +26,8 @@ sessions. Owner Telegram user id: `8618306046`.
 | `@saksee_bot` | 8315145484 | `profiles/saksee` | **SakSee** | Master of Web | `claude-opus-4-8` (Anthropic auth) + `minimax-m3` fallback | `hermes-gateway-saksee.service` |
 | `@saksit_agent_bot` | — | `profiles/saksit` | **SakSit** | Master of Social Media (IG) | `kimi-k2.7-code` (Ollama Cloud) + `minimax-m3` fallback | `hermes-gateway-saksit.service` |
 | `@SakTan_Agent_bot` | — | `profiles/saktan` | **SakTan** | Young Helper (daily ops: calendar, reminders, email, tasks) | `gemini-2.5-flash-lite` (Google Gemini API) + Gemini fallback chain: `gemini-3-flash-preview` → `gemini-3.1-flash-lite` → `gemini-3.5-flash` → `gemini-2.5-flash-preview-native-audio-dialog` | `hermes-gateway-saktan.service` |
-| `@SakJules_Agent_bot` | — | `profiles/sakjules` | **SakJules** | GitHub Repository Steward (code, issues, PRs, Actions, Projects, Security, Insights, Settings) | `gemini-3.1-pro` (Google Gemini API) + Gemini fallback chain: `gemini-3-flash-preview` → `gemini-3.1-flash-lite` → `gemini-3.5-flash` → `gemini-2.5-flash-preview-native-audio-dialog` | `hermes-gateway-sakjules.service` |
 
-> SakKing, SakThai, SakSee, SakSit, and SakJules are professional; SakTan is young.
+> SakKing, SakThai, SakSee, and SakSit are professional; SakTan is young.
 
 > **Note:** "Hermes" is only the framework they run on — never an agent's name.
 > Each agent identifies by the name in its `SOUL.md`.
@@ -50,22 +49,17 @@ All agents share a common base of skills: `apple`, `autonomous-ai-agents`,
 
 ## MCP servers (per profile)
 
-All six profiles connect to:
+All five profiles connect to:
 
 | MCP Server | URL / Transport | Status |
 |------------|-----------------|--------|
 | **supermemory** | `https://mcp.supermemory.ai/mcp` | ✅ Active |
 | **zapier** | `${ZAPIER_MCP_URL}` (embedded token) | ✅ Active |
-| **github** | `https://api.githubcopilot.com/mcp/` | ⚠️ Check `python doctor.py` |
+| **github** | `https://api.githubcopilot.com/mcp/` | ⚠️ PAT needs refresh |
 | **huggingface** | `https://huggingface.co/mcp` | ✅ Active |
 | **composio** | `https://connect.composio.dev/mcp` | ✅ Active |
 
 SakSee additionally connects to a `chrome-devtools` MCP server (npx-based).
-SakJules additionally connects to GitHub and Composio MCP servers.
-
-The GitHub row is validated by `python doctor.py`, which checks the default profile's
-`GITHUB_TOKEN` from the shell or local `infra/hermes-agents/.env` file and can run a live
-`hermes mcp test github` probe when Hermes is installed.
 
 ## Plugins
 

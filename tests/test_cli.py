@@ -421,9 +421,7 @@ def test_memory_sync_git(runner: CliRunner, monkeypatch: pytest.MonkeyPatch) -> 
     import sakthai.memory.sync as sync_mod
 
     monkeypatch.setattr(
-        sync_mod,
-        "sync_memory_to_git",
-        lambda remote=None: "Synced locally to Git repository.",
+        sync_mod, "sync_memory_to_git", lambda remote=None: "Synced locally to Git repository."
     )
     result = runner.invoke(main, ["memory", "sync"])
     assert result.exit_code == 0
@@ -896,10 +894,7 @@ def _capture_tools(monkeypatch: pytest.MonkeyPatch) -> dict[str, object]:
 
 
 def test_run_autoloads_configured_mcp_tools(
-    runner: CliRunner,
-    monkeypatch: pytest.MonkeyPatch,
-    sakthai_home: Path,
-    tmp_path: Path,
+    runner: CliRunner, monkeypatch: pytest.MonkeyPatch, sakthai_home: Path, tmp_path: Path
 ) -> None:
     server_home = tmp_path / "srv"
     (sakthai_home / "mcp.json").write_text(
@@ -925,10 +920,7 @@ def test_run_autoloads_configured_mcp_tools(
 
 
 def test_run_verbose_logs_loaded_mcp_tools(
-    runner: CliRunner,
-    monkeypatch: pytest.MonkeyPatch,
-    sakthai_home: Path,
-    tmp_path: Path,
+    runner: CliRunner, monkeypatch: pytest.MonkeyPatch, sakthai_home: Path, tmp_path: Path
 ) -> None:
     """When MCP tools are loaded and --verbose is set, the tool count is logged."""
     server_home = tmp_path / "srv"
@@ -958,8 +950,7 @@ def test_run_no_mcp_skips_external_servers(
 ) -> None:
     # A configured (here, deliberately broken) server must be ignored with --no-mcp.
     (sakthai_home / "mcp.json").write_text(
-        json.dumps({"mcpServers": {"sk": {"command": "sakthai-no-such-binary"}}}),
-        encoding="utf-8",
+        json.dumps({"mcpServers": {"sk": {"command": "sakthai-no-such-binary"}}}), encoding="utf-8"
     )
     captured = _capture_tools(monkeypatch)
     result = runner.invoke(main, ["run", "hi", "--no-mcp"])

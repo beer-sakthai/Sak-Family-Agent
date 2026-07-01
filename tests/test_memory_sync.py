@@ -92,10 +92,7 @@ class TestSyncMemoryViaHttp:
 
     def test_bad_request_raises(self, sakthai_home: Path) -> None:
         with (
-            patch(
-                "urllib.request.urlopen",
-                return_value=_http_response(400, b"bad request"),
-            ),
+            patch("urllib.request.urlopen", return_value=_http_response(400, b"bad request")),
             pytest.raises(RuntimeError),
         ):
             sync_memory_via_http("http://example.com/sync")

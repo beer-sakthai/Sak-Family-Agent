@@ -88,17 +88,13 @@ def test_env_report_flags(sakthai_home: Path, monkeypatch: pytest.MonkeyPatch) -
 # ---------------------------------------------------------------------------
 
 
-def test_gemini_extensions_dir_honours_gemini_home(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+def test_gemini_extensions_dir_honours_gemini_home(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("GEMINI_HOME", "/tmp/my-gemini")
     monkeypatch.delenv("SAKTHAI_HOME", raising=False)
     assert config.gemini_extensions_dir() == Path("/tmp/my-gemini") / "extensions"
 
 
-def test_gemini_extensions_dir_default_when_no_env(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+def test_gemini_extensions_dir_default_when_no_env(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("GEMINI_HOME", raising=False)
     monkeypatch.delenv("SAKTHAI_HOME", raising=False)
     assert config.gemini_extensions_dir() == Path("~/.gemini/extensions").expanduser()

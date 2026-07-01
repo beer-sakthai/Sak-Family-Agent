@@ -419,9 +419,7 @@ def test_update_fact_rolls_back_on_error(tmp_path: pytest.TempPathFactory) -> No
             store2.close()
 
 
-def test_consolidate_facts_rolls_back_on_error(
-    tmp_path: pytest.TempPathFactory,
-) -> None:
+def test_consolidate_facts_rolls_back_on_error(tmp_path: pytest.TempPathFactory) -> None:
     from pathlib import Path
 
     db = Path(str(tmp_path)) / "rollback2.db"

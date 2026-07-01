@@ -1,7 +1,9 @@
 import os
 from unittest.mock import patch
+
 import pytest
 from generate_report import build_report
+
 
 def test_build_report_creates_file_on_disk(tmp_path):
     """Verify that build_report actually creates a PDF file."""
@@ -13,6 +15,7 @@ def test_build_report_creates_file_on_disk(tmp_path):
     assert result == str(report_path)
     assert os.path.exists(result)
     assert os.path.getsize(result) > 0
+
 
 def test_build_report_mocked(tmp_path):
     """Verify the internal calls of build_report using mocks."""
@@ -34,6 +37,7 @@ def test_build_report_mocked(tmp_path):
         # Verify story is not empty
         story = mock_instance.build.call_args[0][0]
         assert len(story) > 0
+
 
 def test_build_report_directory_creation(tmp_path):
     """Verify that the parent directory is created if it doesn't exist."""
