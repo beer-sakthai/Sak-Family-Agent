@@ -234,7 +234,7 @@ def _send_telegram_message(args: dict[str, Any], store: MemoryStore) -> str:
             "TELEGRAM_CHAT_ID in the environment."
         )
     if not re.match(r"^[0-9]+:[a-zA-Z0-9_-]+$", token):
-        return f"Error: Invalid TELEGRAM_BOT_TOKEN format: {token}"
+        return "Error: Invalid TELEGRAM_BOT_TOKEN format."
     url = f"https://api.telegram.org/bot{token}/sendMessage"
     payload = json.dumps({"chat_id": chat_id, "text": message}).encode("utf-8")
     request = urllib.request.Request(
