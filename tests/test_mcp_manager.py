@@ -118,9 +118,7 @@ def test_agent_run_dispatches_to_external_mcp_tool(tmp_path: Path) -> None:
             tools=(*BUILTIN_TOOLS, *mcp_tools),
         )
     assert result.stop_reason == "end_turn"
-    assert any(
-        c["name"] == "sk__learn" and not c["is_error"] for c in result.tool_calls
-    )
+    assert any(c["name"] == "sk__learn" and not c["is_error"] for c in result.tool_calls)
     # The fact was written to the EXTERNAL server's DB, not the agent's store.
     with MemoryStore(server_home / "memory.db") as srv:
         assert any("via plugin" in f.value for f in srv.list_facts())
@@ -138,9 +136,7 @@ class TestConnectServersMocked:
 
     def test_specs_none_calls_load_server_specs(self) -> None:
         with (
-            patch(
-                "sakthai.mcp.manager.load_server_specs", return_value=[]
-            ) as mock_load,
+            patch("sakthai.mcp.manager.load_server_specs", return_value=[]) as mock_load,
             connect_servers() as tools,
         ):
             pass
@@ -175,9 +171,7 @@ class TestConnectServersMocked:
         mock_client = MagicMock()
         mock_client.as_tools.return_value = []
         with (
-            patch(
-                "sakthai.mcp.manager.StdioMCPClient", return_value=mock_client
-            ) as MockClient,
+            patch("sakthai.mcp.manager.StdioMCPClient", return_value=mock_client) as MockClient,
             connect_servers([spec], timeout=42.5),
         ):
             pass

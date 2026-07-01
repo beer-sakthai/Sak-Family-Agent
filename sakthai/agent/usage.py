@@ -43,9 +43,7 @@ def extract_usage(response: Any) -> dict[str, int]:
     usage_meta = getattr(response, "usage_metadata", None)
     if usage_meta is not None:
         usage["input_tokens"] = int(getattr(usage_meta, "prompt_token_count", 0) or 0)
-        usage["output_tokens"] = int(
-            getattr(usage_meta, "candidates_token_count", 0) or 0
-        )
+        usage["output_tokens"] = int(getattr(usage_meta, "candidates_token_count", 0) or 0)
         return usage
 
     # OpenAI-compatible dict or SDK object

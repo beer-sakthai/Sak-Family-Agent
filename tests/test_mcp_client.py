@@ -95,10 +95,7 @@ def test_extract_text_basic() -> None:
 def test_extract_text_joins_multiple_blocks() -> None:
     from sakthai.mcp.client import _extract_text
 
-    assert (
-        _extract_text([{"type": "text", "text": "a"}, {"type": "text", "text": "b"}])
-        == "a\nb"
-    )
+    assert _extract_text([{"type": "text", "text": "a"}, {"type": "text", "text": "b"}]) == "a\nb"
 
 
 def test_extract_text_empty_list() -> None:

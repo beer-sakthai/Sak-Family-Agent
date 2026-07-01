@@ -36,19 +36,13 @@ def _future_ms() -> int:
     return int((time.time() + 3600) * 1000)
 
 
-def _write_claude_token(
-    token: str = "claude-tok", *, expires_at: int | None = None
-) -> None:
+def _write_claude_token(token: str = "claude-tok", *, expires_at: int | None = None) -> None:
     creds = Path(auth._claude_dir()) / ".credentials.json"
-    payload = {
-        "claudeAiOauth": {"accessToken": token, "expiresAt": expires_at or _future_ms()}
-    }
+    payload = {"claudeAiOauth": {"accessToken": token, "expiresAt": expires_at or _future_ms()}}
     creds.write_text(json.dumps(payload), encoding="utf-8")
 
 
-def _write_gemini_token(
-    token: str = "gemini-tok", *, expiry_date: int | None = None
-) -> None:
+def _write_gemini_token(token: str = "gemini-tok", *, expiry_date: int | None = None) -> None:
     creds = Path(auth._gemini_dir()) / "oauth_creds.json"
     payload = {"access_token": token, "expiry_date": expiry_date or _future_ms()}
     creds.write_text(json.dumps(payload), encoding="utf-8")

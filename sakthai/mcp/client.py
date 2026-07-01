@@ -48,11 +48,7 @@ def _extract_text(content: Any) -> str:
     """Join the text blocks of an MCP ``tools/call`` content array."""
     if not isinstance(content, list):
         return ""
-    parts = [
-        b.get("text", "")
-        for b in content
-        if isinstance(b, dict) and b.get("type") == "text"
-    ]
+    parts = [b.get("text", "") for b in content if isinstance(b, dict) and b.get("type") == "text"]
     return "\n".join(p for p in parts if p)
 
 
@@ -105,9 +101,7 @@ class StdioMCPClient:
                 bufsize=1,  # line-buffered
             )
         except (OSError, ValueError) as exc:
-            raise MCPClientError(
-                f"could not start MCP server {self.name!r}: {exc}"
-            ) from exc
+            raise MCPClientError(f"could not start MCP server {self.name!r}: {exc}") from exc
 
         init = self._request(
             "initialize",
@@ -128,9 +122,7 @@ class StdioMCPClient:
         self._remote_tools = (
             [t for t in tools if isinstance(t, dict)] if isinstance(tools, list) else []
         )
-        logger.info(
-            "MCP server %r ready with %d tool(s)", self.name, len(self._remote_tools)
-        )
+        logger.info("MCP server %r ready with %d tool(s)", self.name, len(self._remote_tools))
         return self
 
     def close(self) -> None:
@@ -178,27 +170,21 @@ class StdioMCPClient:
                     name=f"{prefix}{remote_name}",
                     description=str(desc.get("description") or ""),
                     input_schema=(
-                        schema
-                        if isinstance(schema, dict)
-                        else {"type": "object", "properties": {}}
+                        schema if isinstance(schema, dict) else {"type": "object", "properties": {}}
                     ),
                     handler=self._make_handler(remote_name),
                 )
             )
         return wrapped
 
-    def _make_handler(
-        self, remote_name: str
-    ) -> Callable[[dict[str, Any], MemoryStore], str]:
+    def _make_handler(self, remote_name: str) -> Callable[[dict[str, Any], MemoryStore], str]:
         def handler(args: dict[str, Any], _store: MemoryStore) -> str:
             return self.call_tool(remote_name, args)
 
         return handler
 
     def call_tool(self, name: str, arguments: Mapping[str, Any] | None = None) -> str:
-        response = self._request(
-            "tools/call", {"name": name, "arguments": dict(arguments or {})}
-        )
+        response = self._request("tools/call", {"name": name, "arguments": dict(arguments or {})})
         if "error" in response:
             message = response["error"].get("message", "error")
             raise MCPToolError(f"{self.name}/{name}: {message}")
@@ -230,9 +216,7 @@ class StdioMCPClient:
             message["params"] = params
         self._send(message)
 
-    def _request(
-        self, method: str, params: dict[str, Any] | None = None
-    ) -> dict[str, Any]:
+    def _request(self, method: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
         req_id = self._next_id()
         message: dict[str, Any] = {"jsonrpc": "2.0", "id": req_id, "method": method}
         if params is not None:

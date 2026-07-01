@@ -142,9 +142,7 @@ def _color_for(kind: str, index: int) -> str:
     return _KIND_COLORS.get(kind, _FALLBACK_COLORS[index % len(_FALLBACK_COLORS)])
 
 
-def collect_dashboard_data(
-    db_path: Path | None = None, days: int = 30
-) -> dict[str, Any]:
+def collect_dashboard_data(db_path: Path | None = None, days: int = 30) -> dict[str, Any]:
     """Assemble a dashboard snapshot from the memory store, or demo data if empty."""
     try:
         from sakthai.memory.store import MemoryStore
@@ -214,9 +212,7 @@ def collect_dashboard_data(
         for i, (kind, count) in enumerate(sorted(counts.items(), key=lambda kv: -kv[1]))
     ]
     if observations:
-        categories.append(
-            {"name": "Observations", "count": len(observations), "color": "#f472b6"}
-        )
+        categories.append({"name": "Observations", "count": len(observations), "color": "#f472b6"})
 
     session_data = collect_session_data()
 
@@ -225,9 +221,7 @@ def collect_dashboard_data(
 
     skills = build_catalog(SKILLS_DIR, LIBRARY_DIR)
     total_skills = (
-        sum(int(cat.get("count", 0)) for cat in skills)
-        if isinstance(skills, list)
-        else 0
+        sum(int(cat.get("count", 0)) for cat in skills) if isinstance(skills, list) else 0
     )
 
     return {
@@ -254,8 +248,7 @@ def collect_dashboard_data(
             for f in facts[:10]
         ],
         "top_observations": [
-            {"summary": o.summary, "weight": round(o.weight, 2)}
-            for o in observations[:6]
+            {"summary": o.summary, "weight": round(o.weight, 2)} for o in observations[:6]
         ],
         "categories": categories,
         "evolution": DEMO_EVOLUTION,
@@ -354,9 +347,7 @@ def collect_session_data(sessions_path: Path | None = None) -> dict[str, Any]:
     }
 
 
-def export_dashboard_json(
-    dest: Path, db_path: Path | None = None, days: int = 30
-) -> Path:
+def export_dashboard_json(dest: Path, db_path: Path | None = None, days: int = 30) -> Path:
     dest = Path(dest)
     dest.parent.mkdir(parents=True, exist_ok=True)
     data = collect_dashboard_data(db_path, days=days)

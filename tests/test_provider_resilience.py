@@ -62,9 +62,7 @@ def test_openai_retries_transient_connection_error_then_succeeds() -> None:
         _good_post_response(),
     ]
 
-    result = call_openai_compat(
-        client, "gpt-4o", "sys", (), [{"role": "user", "content": "hi"}], 1
-    )
+    result = call_openai_compat(client, "gpt-4o", "sys", (), [{"role": "user", "content": "hi"}], 1)
 
     assert result.content[0].text == "recovered"
     assert client.post.call_count == 2  # retried once, then succeeded
@@ -78,9 +76,7 @@ def test_openai_retries_retryable_http_status_then_succeeds() -> None:
     client = MagicMock(spec=["post"])
     client.post.side_effect = [bad, _good_post_response()]
 
-    result = call_openai_compat(
-        client, "gpt-4o", "sys", (), [{"role": "user", "content": "hi"}], 1
-    )
+    result = call_openai_compat(client, "gpt-4o", "sys", (), [{"role": "user", "content": "hi"}], 1)
 
     assert result.content[0].text == "recovered"
     assert client.post.call_count == 2
@@ -95,9 +91,7 @@ def test_openai_does_not_retry_non_retryable_http_status() -> None:
     client.post.side_effect = [bad, _good_post_response()]
 
     with pytest.raises(AgentError, match="OpenAI-compatible API call failed"):
-        call_openai_compat(
-            client, "gpt-4o", "sys", (), [{"role": "user", "content": "hi"}], 1
-        )
+        call_openai_compat(client, "gpt-4o", "sys", (), [{"role": "user", "content": "hi"}], 1)
 
     assert client.post.call_count == 1  # 4xx is fatal: no retry
 

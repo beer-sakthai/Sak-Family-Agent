@@ -104,9 +104,7 @@ def call_gemini(
             client.models.generate_content,
             model=model,
             contents=to_gemini_contents(messages),
-            config=types.GenerateContentConfig(
-                system_instruction=system, tools=declarations
-            ),
+            config=types.GenerateContentConfig(system_instruction=system, tools=declarations),
         )
     except Exception as exc:  # noqa: BLE001
         logger.error("Gemini API call failed: %s", exc)

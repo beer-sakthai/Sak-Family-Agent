@@ -47,17 +47,11 @@ def sync_memory_to_git(remote: str | None = None) -> str:
 
     # Write facts
     facts_lines = [json.dumps(f, ensure_ascii=False) for f in snapshot.get("facts", [])]
-    facts_path.write_text(
-        "\n".join(facts_lines) + ("\n" if facts_lines else ""), encoding="utf-8"
-    )
+    facts_path.write_text("\n".join(facts_lines) + ("\n" if facts_lines else ""), encoding="utf-8")
 
     # Write observations
-    obs_lines = [
-        json.dumps(o, ensure_ascii=False) for o in snapshot.get("observations", [])
-    ]
-    obs_path.write_text(
-        "\n".join(obs_lines) + ("\n" if obs_lines else ""), encoding="utf-8"
-    )
+    obs_lines = [json.dumps(o, ensure_ascii=False) for o in snapshot.get("observations", [])]
+    obs_path.write_text("\n".join(obs_lines) + ("\n" if obs_lines else ""), encoding="utf-8")
 
     # Clean up legacy snapshot
     legacy_snapshot = home / "snapshot.json"
@@ -67,9 +61,7 @@ def sync_memory_to_git(remote: str | None = None) -> str:
     # Git operations
     if not (home / ".git").exists():
         subprocess.run(["git", "init"], cwd=home, check=True, capture_output=True)
-        subprocess.run(
-            ["git", "branch", "-M", "main"], cwd=home, check=True, capture_output=True
-        )
+        subprocess.run(["git", "branch", "-M", "main"], cwd=home, check=True, capture_output=True)
 
     if remote:
         # Check if remote origin exists
@@ -147,9 +139,7 @@ def sync_memory_to_git(remote: str | None = None) -> str:
 
 def _handle_git_conflict_and_push(home: Path, remote: str) -> str:
     """Resolve a rejected push by treating the database as the merge engine."""
-    subprocess.run(
-        ["git", "fetch", "origin", "main"], cwd=home, check=True, capture_output=True
-    )
+    subprocess.run(["git", "fetch", "origin", "main"], cwd=home, check=True, capture_output=True)
     subprocess.run(
         ["git", "reset", "--hard", "origin/main"],
         cwd=home,
@@ -181,20 +171,11 @@ def _handle_git_conflict_and_push(home: Path, remote: str) -> str:
         store.import_from_dict(snapshot, mode="merge")
         merged_snapshot = store.export_to_dict()
 
-    facts_lines = [
-        json.dumps(f, ensure_ascii=False) for f in merged_snapshot.get("facts", [])
-    ]
-    facts_path.write_text(
-        "\n".join(facts_lines) + ("\n" if facts_lines else ""), encoding="utf-8"
-    )
+    facts_lines = [json.dumps(f, ensure_ascii=False) for f in merged_snapshot.get("facts", [])]
+    facts_path.write_text("\n".join(facts_lines) + ("\n" if facts_lines else ""), encoding="utf-8")
 
-    obs_lines = [
-        json.dumps(o, ensure_ascii=False)
-        for o in merged_snapshot.get("observations", [])
-    ]
-    obs_path.write_text(
-        "\n".join(obs_lines) + ("\n" if obs_lines else ""), encoding="utf-8"
-    )
+    obs_lines = [json.dumps(o, ensure_ascii=False) for o in merged_snapshot.get("observations", [])]
+    obs_path.write_text("\n".join(obs_lines) + ("\n" if obs_lines else ""), encoding="utf-8")
 
     subprocess.run(
         ["git", "add", "facts.jsonl", "observations.jsonl"],

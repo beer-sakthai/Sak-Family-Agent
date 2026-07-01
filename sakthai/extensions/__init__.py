@@ -3,13 +3,13 @@
 from __future__ import annotations
 
 from .install import (
-                      ExtensionError,
-                      ExtensionInfo,
-                      InstallResult,
-                      extensions_dir,
-                      install_extension,
-                      list_extensions,
-                      remove,
+    ExtensionError,
+    ExtensionInfo,
+    InstallResult,
+    extensions_dir,
+    install_extension,
+    list_extensions,
+    remove,
 )
 
 __all__ = [

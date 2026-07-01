@@ -289,9 +289,7 @@ def test_find_tool_name_by_id_multiple_messages() -> None:
         },
         {
             "role": "assistant",
-            "content": [
-                {"type": "tool_use", "id": "t2", "name": "recall", "input": {}}
-            ],
+            "content": [{"type": "tool_use", "id": "t2", "name": "recall", "input": {}}],
         },
     ]
     assert find_tool_name_by_id(messages, "t2") == "recall"

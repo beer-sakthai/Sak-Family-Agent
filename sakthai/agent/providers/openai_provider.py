@@ -64,9 +64,7 @@ def _convert_non_assistant_message(
     return msgs
 
 
-def to_openai_messages(
-    system: str, messages: list[dict[str, Any]]
-) -> list[dict[str, Any]]:
+def to_openai_messages(system: str, messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Adapt the provider-agnostic message list to the OpenAI chat schema."""
     openai_msgs: list[dict[str, Any]] = [{"role": "system", "content": system}]
 

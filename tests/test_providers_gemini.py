@@ -68,9 +68,7 @@ def test_to_gemini_contents_tool_result_is_tool_role() -> None:
         },
         {
             "role": "user",
-            "content": [
-                {"type": "tool_result", "tool_use_id": "t1", "content": "done"}
-            ],
+            "content": [{"type": "tool_result", "tool_use_id": "t1", "content": "done"}],
         },
     ]
     contents = to_gemini_contents(msgs)
@@ -150,9 +148,7 @@ def test_to_gemini_contents_empty_block_list_falls_back_to_empty_part() -> None:
 # -- call_gemini -----------------------------------------------------------
 
 
-def _candidate(
-    text: str = "", fn_calls: list | None = None, finish: str = "STOP"
-) -> MagicMock:
+def _candidate(text: str = "", fn_calls: list | None = None, finish: str = "STOP") -> MagicMock:
     part = MagicMock()
     part.text = text
     part.function_calls = fn_calls or []
@@ -173,12 +169,8 @@ def _gemini_resp(candidates: list | None = None) -> MagicMock:
 
 def test_call_gemini_text_response() -> None:
     client = MagicMock()
-    client.models.generate_content.return_value = _gemini_resp(
-        [_candidate(text="hello")]
-    )
-    with patch(
-        "sakthai.agent.providers.gemini_provider.to_gemini_contents", return_value=[]
-    ):
+    client.models.generate_content.return_value = _gemini_resp([_candidate(text="hello")])
+    with patch("sakthai.agent.providers.gemini_provider.to_gemini_contents", return_value=[]):
         resp = call_gemini(client, "gemini-2.0-flash", "sys", (), [], 0)
     assert resp.stop_reason == "end_turn"
     assert any(b.type == "text" and b.text == "hello" for b in resp.content)
@@ -189,12 +181,8 @@ def test_call_gemini_tool_use() -> None:
     fc.name = "recall"
     fc.args = {"query": "hobbies"}
     client = MagicMock()
-    client.models.generate_content.return_value = _gemini_resp(
-        [_candidate(fn_calls=[fc])]
-    )
-    with patch(
-        "sakthai.agent.providers.gemini_provider.to_gemini_contents", return_value=[]
-    ):
+    client.models.generate_content.return_value = _gemini_resp([_candidate(fn_calls=[fc])])
+    with patch("sakthai.agent.providers.gemini_provider.to_gemini_contents", return_value=[]):
         resp = call_gemini(client, "gemini-2.0-flash", "sys", (_tool("recall"),), [], 1)
     assert resp.stop_reason == "tool_use"
     b = resp.content[0]
@@ -214,9 +202,7 @@ def test_call_gemini_non_dict_schema_passed_through() -> None:
     )
     client = MagicMock()
     client.models.generate_content.return_value = _gemini_resp([_candidate(text="ok")])
-    with patch(
-        "sakthai.agent.providers.gemini_provider.to_gemini_contents", return_value=[]
-    ):
+    with patch("sakthai.agent.providers.gemini_provider.to_gemini_contents", return_value=[]):
         resp = call_gemini(client, "gemini-2.0-flash", "sys", (no_schema_tool,), [], 0)
 
     assert resp.stop_reason == "end_turn"
@@ -230,9 +216,7 @@ def test_call_gemini_max_tokens_finish_reason() -> None:
     client.models.generate_content.return_value = _gemini_resp(
         [_candidate(text="cut", finish="MAX_TOKENS")]
     )
-    with patch(
-        "sakthai.agent.providers.gemini_provider.to_gemini_contents", return_value=[]
-    ):
+    with patch("sakthai.agent.providers.gemini_provider.to_gemini_contents", return_value=[]):
         resp = call_gemini(client, "gemini-2.0-flash", "sys", (), [], 0)
     assert resp.stop_reason == "max_tokens"
 
@@ -267,9 +251,7 @@ def test_call_gemini_passes_system_instruction() -> None:
 
     client = MagicMock()
     client.models.generate_content.return_value = _gemini_resp([_candidate(text="ok")])
-    with patch(
-        "sakthai.agent.providers.gemini_provider.to_gemini_contents", return_value=[]
-    ):
+    with patch("sakthai.agent.providers.gemini_provider.to_gemini_contents", return_value=[]):
         call_gemini(client, "gemini-2.0-flash", "my system", (), [], 0)
     call_kw = client.models.generate_content.call_args
     config = call_kw.kwargs.get("config") or call_kw.args[2] if call_kw.args else None
@@ -296,9 +278,7 @@ def test_call_gemini_multiple_tool_calls_in_one_part() -> None:
 
     client = MagicMock()
     client.models.generate_content.return_value = _gemini_resp([candidate])
-    with patch(
-        "sakthai.agent.providers.gemini_provider.to_gemini_contents", return_value=[]
-    ):
+    with patch("sakthai.agent.providers.gemini_provider.to_gemini_contents", return_value=[]):
         resp = call_gemini(client, "gemini-2.0-flash", "sys", (), [], 0)
 
     assert resp.stop_reason == "tool_use"

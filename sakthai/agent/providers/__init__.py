@@ -123,9 +123,7 @@ def build_client(provider: str, client: Any | None) -> Any:
             try:
                 return genai.Client(api_key=api_key)
             except Exception as exc:
-                raise AgentError(
-                    f"Failed to initialize Google Gemini client: {exc}"
-                ) from exc
+                raise AgentError(f"Failed to initialize Google Gemini client: {exc}") from exc
 
         # Fallback to Gemini CLI OAuth token if no API key is set
         import subprocess

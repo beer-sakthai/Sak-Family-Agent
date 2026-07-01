@@ -34,9 +34,7 @@ def _fake_sdk_response(stop_reason: str = "end_turn", text: str = "hello") -> Ma
 def test_call_anthropic_returns_raw_sdk_response() -> None:
     client = MagicMock()
     client.messages.create.return_value = _fake_sdk_response()
-    result = call_anthropic(
-        client, "claude-3-5-sonnet-20241022", 1024, "system", [], []
-    )
+    result = call_anthropic(client, "claude-3-5-sonnet-20241022", 1024, "system", [], [])
     assert result.stop_reason == "end_turn"
     client.messages.create.assert_called_once()
 

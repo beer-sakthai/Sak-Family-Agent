@@ -165,15 +165,11 @@ def test_category_for_edge_cases(tmp_path: Path) -> None:
     assert cat == "memory"
 
     # Prefix not matching pattern
-    skill_misc = skills.SkillInfo(
-        name="nonstandard", path=tmp_path / "nonstandard" / "SKILL.md"
-    )
+    skill_misc = skills.SkillInfo(name="nonstandard", path=tmp_path / "nonstandard" / "SKILL.md")
     assert skills._category_for(skill_misc, skill_misc.path, tmp_path) == "general"
 
     # Trigger ValueError in relative_to and check fallback category (lines 103-104)
-    skill_outside = skills.SkillInfo(
-        name="sakthai-outside-test", path=Path("/other/path/SKILL.md")
-    )
+    skill_outside = skills.SkillInfo(name="sakthai-outside-test", path=Path("/other/path/SKILL.md"))
     cat_outside = skills._category_for(skill_outside, skill_outside.path, tmp_path)
     assert cat_outside == "outside"
 
@@ -233,9 +229,7 @@ def test_real_skill_catalog_validates_cleanly() -> None:
     assert errors == []
 
 
-@pytest.mark.parametrize(
-    "persona", ["sakthai", "sakking", "saksee", "saksit", "saktan"]
-)
+@pytest.mark.parametrize("persona", ["sakthai", "sakking", "saksee", "saksit", "saktan"])
 def test_persona_scaffold_is_composable(tmp_path: Path, persona: str) -> None:
     out = tmp_path / f"{persona}-skills"
     proc = subprocess.run(
@@ -273,26 +267,16 @@ def test_compose_persona_overlay_wins_over_shared(tmp_path: Path) -> None:
     overlay_skills = personas_dir / "sakthai" / "skills"
 
     (shared_skills / "demo-skill").mkdir(parents=True)
-    (shared_skills / "demo-skill" / "SKILL.md").write_text(
-        "shared version", encoding="utf-8"
-    )
+    (shared_skills / "demo-skill" / "SKILL.md").write_text("shared version", encoding="utf-8")
     (shared_skills / "shared-only-skill").mkdir(parents=True)
-    (shared_skills / "shared-only-skill" / "SKILL.md").write_text(
-        "shared only", encoding="utf-8"
-    )
+    (shared_skills / "shared-only-skill" / "SKILL.md").write_text("shared only", encoding="utf-8")
 
     (overlay_skills / "demo-skill").mkdir(parents=True)
-    (overlay_skills / "demo-skill" / "SKILL.md").write_text(
-        "overlay version", encoding="utf-8"
-    )
+    (overlay_skills / "demo-skill" / "SKILL.md").write_text("overlay version", encoding="utf-8")
 
     ns["compose"].__globals__["PERSONAS_DIR"] = personas_dir
     out = tmp_path / "composed"
     ns["compose"]("sakthai", out)
 
-    assert (out / "demo-skill" / "SKILL.md").read_text(
-        encoding="utf-8"
-    ) == "overlay version"
-    assert (out / "shared-only-skill" / "SKILL.md").read_text(
-        encoding="utf-8"
-    ) == "shared only"
+    assert (out / "demo-skill" / "SKILL.md").read_text(encoding="utf-8") == "overlay version"
+    assert (out / "shared-only-skill" / "SKILL.md").read_text(encoding="utf-8") == "shared only"
