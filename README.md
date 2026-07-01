@@ -2,7 +2,7 @@
 
 # 🧠 House of Sak 
 
-![Uploading house_of_sak.png…]()
+![House of Sak](./assets/house_of_sak.png)
 
 **A local-first personal learning agent with persistent memory.**
 One package, three ways in — a CLI, a tool-using agent loop, and an MCP stdio server.
