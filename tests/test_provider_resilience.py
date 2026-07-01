@@ -36,10 +36,7 @@ def _fast_retries(monkeypatch: pytest.MonkeyPatch) -> None:
 def _ok_resp() -> dict[str, Any]:
     return {
         "choices": [
-            {
-                "message": {"content": "recovered", "tool_calls": []},
-                "finish_reason": "stop",
-            }
+            {"message": {"content": "recovered", "tool_calls": []}, "finish_reason": "stop"}
         ],
         "usage": {"prompt_tokens": 1, "completion_tokens": 1},
     }
@@ -57,10 +54,7 @@ def _good_post_response() -> MagicMock:
 
 def test_openai_retries_transient_connection_error_then_succeeds() -> None:
     client = MagicMock(spec=["post"])
-    client.post.side_effect = [
-        httpx.ConnectError("connection refused"),
-        _good_post_response(),
-    ]
+    client.post.side_effect = [httpx.ConnectError("connection refused"), _good_post_response()]
 
     result = call_openai_compat(client, "gpt-4o", "sys", (), [{"role": "user", "content": "hi"}], 1)
 

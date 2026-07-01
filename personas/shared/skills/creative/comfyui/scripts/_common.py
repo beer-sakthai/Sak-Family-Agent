@@ -21,7 +21,7 @@ import re
 import sys
 import time
 import uuid
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass, is_dataclass
 from pathlib import Path
 from typing import Any, Iterator
 from urllib.parse import urlparse
@@ -592,7 +592,7 @@ def _http_once(
                 # Build a new request with cleaned headers
                 clean_headers = {
                     k: v for k, v in req2.header_items()
-                    if k.lower() not in {"x-api-key", "authorization", "cookie"}
+                    if k.lower() not in _SENSITIVE_HEADERS
                 }
                 new_req = urllib.request.Request(newurl, headers=clean_headers, method="GET")
                 return new_req
@@ -827,6 +827,40 @@ def fmt_kv(d: dict) -> str:
 
 _REDACTED = "***REDACTED***"
 
+# Each marker is a sequence of tokens (split on non-alphanumeric chars) that
+# must appear *adjacent and in order* in a key for it to count as sensitive.
+# Token-based matching (rather than substring containment) avoids false
+# positives like "author"/"tokenizer_name"/"max_tokens" matching "auth"/"token".
+_SENSITIVE_KEY_TOKEN_MARKERS: tuple[tuple[str, ...], ...] = (
+    ("api", "key"), ("apikey",), ("password",), ("passwd",), ("token",),
+    ("secret",), ("authorization",), ("auth",), ("bearer",),
+    ("access", "key"), ("private", "key"),
+)
+
+# Same marker vocabulary, flattened for the free-text regex below.
+_TEXT_SECRET_NAME_RE = "|".join(
+    r"[_-]?".join(re.escape(token) for token in marker)
+    for marker in sorted(_SENSITIVE_KEY_TOKEN_MARKERS, key=len, reverse=True)
+)
+
+# One pass, single regex: `name[:=]value`, with an optional `bearer` prefix
+# and optional surrounding quote preserved around the redacted value. A
+# single re.sub() call (rather than several sequential ones) guarantees each
+# character span is only ever rewritten once, so matches can't overlap and
+# corrupt each other (e.g. a Bearer token immediately followed by a
+# generic-marker header on the same line).
+_SECRET_KV_RE = re.compile(
+    rf"(?i)\b(comfy_cloud_api_key|{_TEXT_SECRET_NAME_RE})\b"
+    r"\s*[:=]\s*(bearer\s+)?(['\"]?)([^\s,;'\"()\[\]{}]+)(['\"]?)"
+)
+
+# Standalone Comfy Cloud API key tokens that may appear with no adjacent
+# key= marker at all (e.g. pasted directly into an error message).
+_COMFY_TOKEN_RE = re.compile(r"(?i)\bcomfyui-[A-Za-z0-9._-]+\b")
+
+
+def _key_tokens(key: str) -> list[str]:
+    return [t for t in re.split(r"[^a-z0-9]+", key.lower()) if t]
 # Single source of truth for "this looks like a secret" — both the dict-key
 # check and the free-text regex below are built from this one set, so adding
 # a marker here covers both redaction paths instead of silently only one.
@@ -869,13 +903,25 @@ _BEARER_RE = re.compile(
 def _is_sensitive_key(key: Any) -> bool:
     if not isinstance(key, str):
         return False
-    k = key.strip().lower()
-    if not k:
+    tokens = _key_tokens(key)
+    if not tokens:
         return False
-    return any(marker in k for marker in _SENSITIVE_KEY_MARKERS)
+    for marker in _SENSITIVE_KEY_TOKEN_MARKERS:
+        n = len(marker)
+        if any(tuple(tokens[i:i + n]) == marker for i in range(len(tokens) - n + 1)):
+            return True
+    return False
+
+
+def _redact_secret_kv(m: "re.Match[str]") -> str:
+    name, bearer, open_q, _value, close_q = m.groups()
+    sep = ": " if name.lower() == "authorization" else "="
+    return f"{name}{sep}{bearer or ''}{open_q}{_REDACTED}{close_q}"
 
 
 def _redact_sensitive_text(text: str) -> str:
+    redacted = _SECRET_KV_RE.sub(_redact_secret_kv, text)
+    redacted = _COMFY_TOKEN_RE.sub(_REDACTED, redacted)
     # Authorization/bearer first (more specific — captures the bearer prefix
     # correctly), then the generic key=value scan.
     redacted = _AUTH_RE.sub(rf"\1\2\3\4\5{_REDACTED}\4", text)
@@ -901,6 +947,10 @@ def _redact_sensitive_text(text: str) -> str:
 
 
 def _redact_sensitive(obj: Any) -> Any:
+    if is_dataclass(obj) and not isinstance(obj, type):
+        # Recurse into dataclass fields (e.g. HTTPResponse.headers) instead
+        # of letting json.dumps's `default=str` stringify them unredacted.
+        return _redact_sensitive(asdict(obj))
     if isinstance(obj, dict):
         out: dict[Any, Any] = {}
         for k, v in obj.items():
@@ -920,9 +970,15 @@ def _redact_sensitive(obj: Any) -> Any:
     return obj
 
 
-def emit_json(obj: Any, *, indent: int = 2) -> None:
-    """Print JSON to stdout. Centralised so behavior can be tweaked (e.g., --raw)."""
-    print(json.dumps(_redact_sensitive(obj), indent=indent, default=str))
+def emit_json(obj: Any, *, indent: int = 2, redact: bool = True) -> None:
+    """Print JSON to stdout.
+
+    By default secrets are redacted at output time to reduce the risk of
+    clear-text leakage in logs/terminal output. Pass redact=False to emit the
+    raw/unmodified payload (e.g. for --raw tooling).
+    """
+    payload = _redact_sensitive(obj) if redact else obj
+    print(json.dumps(payload, indent=indent, default=str))
 
 
 def log(msg: str) -> None:

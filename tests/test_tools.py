@@ -430,12 +430,7 @@ def test_run_agent_loop_prunes_history_by_default(monkeypatch: pytest.MonkeyPatc
 
     monkeypatch.setattr(loop_mod, "run_agent", _fake_run_agent)
     out = tool_by_name("run_agent_loop").handler(
-        {
-            "task": "summarize",
-            "model": "claude-x",
-            "provider": "anthropic",
-            "max_iterations": "3",
-        },
+        {"task": "summarize", "model": "claude-x", "provider": "anthropic", "max_iterations": "3"},
         store,
     )
     assert out == "final answer"
@@ -771,9 +766,7 @@ def test_path_under_any_root_skips_oserror_and_valueerror() -> None:
     assert _path_under_any_root(Path("/some/path"), [bad_root]) is False
 
 
-def test_path_under_any_root_oserror_on_real_path(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+def test_path_under_any_root_oserror_on_real_path(monkeypatch: pytest.MonkeyPatch) -> None:
     """Monkeypatch Path.is_relative_to to raise OSError on the *caller* side.
 
     The existing test above sets side_effect on the mock *root*, but

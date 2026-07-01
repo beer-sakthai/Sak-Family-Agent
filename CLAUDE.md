@@ -28,8 +28,8 @@ persona overlays and can export standalone repo snapshots with
   Python package, **not** a uv workspace member (disjoint/heavy deps; its
   `darwinian` extra is unpublished). Build it on its own; the root `uv.lock`
   stays SakThai-only.
-- `personas/` — the former `*-skills` repos plus the SakJules scaffold. The ~446
-  skill files identical across all personas live once in `personas/shared/skills/`; each
+- `personas/` — the four former `*-skills` repos. The ~446 skill files identical
+  across all personas live once in `personas/shared/skills/`; each
   `personas/<name>/` keeps only its `SOUL.md`, `config/`, and a skill *overlay*
   (unique/differing files). `scripts/compose_persona.py` rebuilds a persona's
   full tree as `shared + overlay` (overlay wins), byte-for-byte. See
@@ -43,10 +43,10 @@ persona overlays and can export standalone repo snapshots with
 
 ### Sak Family Agents
 
-The repo also carries the **Sak Family Agents** — six personas with **SakKing**
-as the **main** (Lead & Orchestrator) and **SakThai**, **SakSee**, **SakSit**,
-**SakTan**, and **SakJules** as the family it coordinates. "Hermes" is only the
-framework they run on, never an agent's name. The authoritative per-agent identities are the repo-root
+The repo also carries the **Sak Family Agents** — four personas with **SakKing**
+as the **main** (Lead & Orchestrator) and **SakThai**, **SakSee**, **SakSit** as
+the family it coordinates. "Hermes" is only the framework they run on, never an
+agent's name. The authoritative per-agent identities are the repo-root
 `SOUL.md` + `personas/<name>/SOUL.md`; `infra/hermes-agents/` carry
 their own (sometimes role-specialized) copies. Keep the SakKing-as-lead framing
 consistent if you touch any of them.

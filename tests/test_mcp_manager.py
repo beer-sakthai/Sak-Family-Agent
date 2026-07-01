@@ -94,14 +94,7 @@ def test_agent_run_dispatches_to_external_mcp_tool(tmp_path: Path) -> None:
         [
             _Resp(
                 "tool_use",
-                [
-                    _Block(
-                        type="tool_use",
-                        id="t1",
-                        name="sk__learn",
-                        input={"value": "via plugin"},
-                    )
-                ],
+                [_Block(type="tool_use", id="t1", name="sk__learn", input={"value": "via plugin"})],
             ),
             _Resp("end_turn", [_Block(type="text", text="done")]),
         ]

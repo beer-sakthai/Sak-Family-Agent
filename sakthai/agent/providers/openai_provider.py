@@ -125,11 +125,7 @@ def _stream_chat(
     client: Any, payload: dict[str, Any], on_token: Callable[[str], None]
 ) -> dict[str, Any]:
     """Consume an OpenAI-compatible SSE stream into a non-streaming response dict."""
-    stream_payload = {
-        **payload,
-        "stream": True,
-        "stream_options": {"include_usage": True},
-    }
+    stream_payload = {**payload, "stream": True, "stream_options": {"include_usage": True}}
     content_parts: list[str] = []
     tool_calls: dict[int, dict[str, Any]] = {}
     finish_reason: str | None = None
@@ -162,10 +158,7 @@ def _stream_chat(
     message: dict[str, Any] = {"content": "".join(content_parts) or None}
     if tool_calls:
         message["tool_calls"] = [tool_calls[i] for i in sorted(tool_calls)]
-    return {
-        "choices": [{"message": message, "finish_reason": finish_reason}],
-        "usage": usage,
-    }
+    return {"choices": [{"message": message, "finish_reason": finish_reason}], "usage": usage}
 
 
 def _format_openai_tools(tools: tuple[Tool, ...]) -> list[dict[str, Any]]:
@@ -190,6 +183,7 @@ def _get_request_executor(
 ) -> Callable[[], dict[str, Any]]:
     """Determine and return the appropriate request execution function."""
     if on_token is not None and hasattr(client, "stream"):
+        # Narrow the type of on_token for the lambda.
         callback = on_token
         return lambda: _stream_chat(client, payload, callback)
 

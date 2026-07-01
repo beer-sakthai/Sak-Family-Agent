@@ -169,9 +169,9 @@ class StdioMCPClient:
                 Tool(
                     name=f"{prefix}{remote_name}",
                     description=str(desc.get("description") or ""),
-                    input_schema=(
-                        schema if isinstance(schema, dict) else {"type": "object", "properties": {}}
-                    ),
+                    input_schema=schema
+                    if isinstance(schema, dict)
+                    else {"type": "object", "properties": {}},
                     handler=self._make_handler(remote_name),
                 )
             )

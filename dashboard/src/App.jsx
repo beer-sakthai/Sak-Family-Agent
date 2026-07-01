@@ -32,8 +32,7 @@ import { DEMO_DATA } from './data/demo-data';
 const SidebarItem = ({ icon: Icon, label, active, onClick }) => (
   <button
     onClick={onClick}
-    aria-current={active ? 'page' : undefined}
-    className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all focus-visible:ring-2 focus-visible:ring-thai-gold/50 focus-visible:outline-none ${
+    className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${
       active
         ? 'bg-thai-gold/10 text-thai-gold border border-thai-gold/20'
         : 'text-slate-400 hover:bg-white/5 hover:text-slate-200'
@@ -135,8 +134,7 @@ export default function App() {
           href="https://github.com/beer-sakthai/sakthai-agent-v2"
           target="_blank"
           rel="noreferrer"
-          aria-label="View source on GitHub (opens in a new tab)"
-          className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-thai-gold transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-thai-gold/50 rounded"
+          className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-thai-gold transition-colors"
         >
           <ExternalLink size={13} />
           beer-sakthai/sakthai-agent-v2
@@ -561,8 +559,7 @@ export default function App() {
               href="https://github.com/beer-sakthai/sakthai-agent-v2"
               target="_blank"
               rel="noreferrer"
-              aria-label="View on GitHub (opens in a new tab)"
-              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-slate-300 hover:border-thai-gold/40 hover:text-thai-gold transition-all text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-thai-gold/50"
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-slate-300 hover:border-thai-gold/40 hover:text-thai-gold transition-all text-sm font-medium"
             >
               <GitBranch size={16} />
               View on GitHub
@@ -763,8 +760,7 @@ export default function App() {
             href="https://github.com/beer-sakthai/sakthai-agent-v2"
             target="_blank"
             rel="noreferrer"
-            aria-label="View source on GitHub (opens in a new tab)"
-            className="flex items-center justify-center gap-2 w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-slate-400 hover:border-thai-gold/30 hover:text-thai-gold transition-all text-xs font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-thai-gold/50"
+            className="flex items-center justify-center gap-2 w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-slate-400 hover:border-thai-gold/30 hover:text-thai-gold transition-all text-xs font-medium"
           >
             <GitBranch size={13} />
             beer-sakthai/sakthai-agent-v2
@@ -777,12 +773,7 @@ export default function App() {
       <main className="flex-1 overflow-y-auto bg-premium-gradient">
         <header className="sticky top-0 z-40 flex items-center justify-between px-8 py-4 bg-thai-dark/50 backdrop-blur-xl border-b border-white/5">
           <div className="flex items-center gap-4">
-            <button
-              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-              className="lg:hidden text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-thai-gold/50 rounded"
-              aria-label={isSidebarOpen ? "Close sidebar" : "Open sidebar"}
-              aria-expanded={isSidebarOpen}
-            >
+            <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="lg:hidden text-slate-400">
               {isSidebarOpen ? <X size={24} /> : <Menu size={24} />}
             </button>
             <h2 className="text-lg font-semibold text-white">{activeTab}</h2>
@@ -791,18 +782,14 @@ export default function App() {
           <div className="flex items-center gap-3">
             <SourceBadge source={data.source} generatedAt={data.generated_at} />
             <div className="relative hidden md:block">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={16} aria-hidden="true" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={16} />
               <input
                 type="text"
                 placeholder="Search memory..."
-                aria-label="Search memory"
-                className="bg-white/5 border border-white/10 rounded-full py-1.5 pl-10 pr-4 text-sm text-slate-300 focus:outline-none focus:border-thai-gold/50 w-56 transition-all focus-visible:ring-2 focus-visible:ring-thai-gold/50"
+                className="bg-white/5 border border-white/10 rounded-full py-1.5 pl-10 pr-4 text-sm text-slate-300 focus:outline-none focus:border-thai-gold/50 w-56 transition-all"
               />
             </div>
-            <button
-              className="p-2 rounded-full bg-white/5 text-slate-400 hover:text-white transition-colors border border-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-thai-gold/50"
-              aria-label="Security settings"
-            >
+            <button className="p-2 rounded-full bg-white/5 text-slate-400 hover:text-white transition-colors border border-white/10">
               <Shield size={20} />
             </button>
           </div>

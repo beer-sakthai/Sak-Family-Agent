@@ -83,8 +83,8 @@ For products mixing AI and non-AI features:
 
 ```
 AI-COGS = Σ [Query_Count_i × Token_Input_i × $/Input_Token_i
-             + Query_Count_i × Token_Output_i × $/Output_Token_i
-             + Embedding_Count × $/Embedding_Token]
+              + Query_Count_i × Token_Output_i × $/Output_Token_i
+              + Embedding_Count × $/Embedding_Token]
 ```
 
 Track by **feature** (summarization, generation, classification) because

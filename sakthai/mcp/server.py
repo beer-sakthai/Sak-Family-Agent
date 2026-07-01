@@ -46,11 +46,7 @@ def _error(req_id: Any, code: int, message: str) -> dict[str, Any]:
 def _tool_list(tools: tuple[Tool, ...]) -> dict[str, Any]:
     return {
         "tools": [
-            {
-                "name": t.name,
-                "description": t.description,
-                "inputSchema": t.input_schema,
-            }
+            {"name": t.name, "description": t.description, "inputSchema": t.input_schema}
             for t in tools
         ]
     }

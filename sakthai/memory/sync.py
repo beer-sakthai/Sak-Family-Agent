@@ -141,10 +141,7 @@ def _handle_git_conflict_and_push(home: Path, remote: str) -> str:
     """Resolve a rejected push by treating the database as the merge engine."""
     subprocess.run(["git", "fetch", "origin", "main"], cwd=home, check=True, capture_output=True)
     subprocess.run(
-        ["git", "reset", "--hard", "origin/main"],
-        cwd=home,
-        check=True,
-        capture_output=True,
+        ["git", "reset", "--hard", "origin/main"], cwd=home, check=True, capture_output=True
     )
 
     facts_path = home / "facts.jsonl"
@@ -210,10 +207,7 @@ def _handle_git_conflict_and_push(home: Path, remote: str) -> str:
         capture_output=True,
     )
     subprocess.run(
-        ["git", "push", "-u", "origin", "main"],
-        cwd=home,
-        check=True,
-        capture_output=True,
+        ["git", "push", "-u", "origin", "main"], cwd=home, check=True, capture_output=True
     )
 
     return f"Auto-merged remote changes and synced to remote: {remote}"

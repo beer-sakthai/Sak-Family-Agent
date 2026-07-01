@@ -5,10 +5,13 @@ from __future__ import annotations
 import pytest
 from _common import (
     EMBEDDING_REGEX,
+    HTTPResponse,
+    _is_sensitive_key,
     _redact_sensitive,
     _redact_sensitive_text,
     cloud_endpoint,
     coerce_seed,
+    emit_json,
     folder_aliases_for,
     is_api_format,
     is_cloud_host,
@@ -16,6 +19,7 @@ from _common import (
     iter_embedding_refs,
     iter_model_deps,
     iter_nodes,
+    log,
     looks_like_video_workflow,
     media_type_from_filename,
     parse_model_list,
@@ -483,9 +487,85 @@ class TestVideoWorkflow:
 
 
 # =============================================================================
-# Secret redaction (emit_json / log)
+# Sensitive-data redaction (emit_json / log)
 # =============================================================================
 
+
+class TestSensitiveKeyDetection:
+    @pytest.mark.parametrize(
+        "key",
+        ["authorization", "api_key", "my_api_key", "X-Api-Key", "password",
+         "access_key", "private_key", "COMFY_CLOUD_API_KEY", "bearer_token"],
+    )
+    def test_flags_real_secrets(self, key):
+        assert _is_sensitive_key(key) is True
+
+    @pytest.mark.parametrize(
+        "key",
+        ["author", "authored_by", "tokenizer_name", "max_tokens", "width",
+         "prompt", "sampler_name"],
+    )
+    def test_does_not_flag_lookalikes(self, key):
+        assert _is_sensitive_key(key) is False
+
+
+class TestRedactSensitiveTextEmitJsonAndLog:
+    def test_redacts_env_var_assignment(self):
+        out = _redact_sensitive_text("COMFY_CLOUD_API_KEY=supersecretvalue")
+        assert "supersecretvalue" not in out
+        assert "***REDACTED***" in out
+
+    def test_redacts_authorization_bearer(self):
+        out = _redact_sensitive_text('Authorization: Bearer sk_live_abc')
+        assert "sk_live_abc" not in out
+        assert "***REDACTED***" in out
+
+    def test_redacts_standalone_comfy_token(self):
+        out = _redact_sensitive_text("pasted key comfyui-abcDEF123_.-xyz here")
+        assert "abcDEF123" not in out
+
+    def test_does_not_corrupt_quoted_multi_secret_text(self):
+        # Regression: sequential regex passes used to swallow closing quotes
+        # when a generic marker and an Authorization/Bearer value shared a line.
+        text = 'curl -H "Authorization: Bearer sk_live_abc" -H "X-Auth-Token: sk_live_abc"'
+        out = _redact_sensitive_text(text)
+        assert out.count('"') == text.count('"')
+        assert "sk_live_abc" not in out
+
+    def test_preserves_quotes_around_redacted_value(self):
+        out = _redact_sensitive_text('token: "abc123"')
+        assert out == 'token="***REDACTED***"'
+
+    def test_leaves_unrelated_text_alone(self):
+        text = "A poster that reads: welcome home"
+        assert _redact_sensitive_text(text) == text
+
+
+class TestRedactSensitive:
+    def test_redacts_dataclass_fields(self):
+        resp = HTTPResponse(
+            status=200, headers={"Authorization": "Bearer sk_live_secret"},
+            body=b"ok", url="http://x",
+        )
+        out = _redact_sensitive({"response": resp})
+        assert out["response"]["headers"]["Authorization"] == "***REDACTED***"
+
+    def test_emit_json_redacts_by_default(self, capsys):
+        emit_json({"token": "abc123"})
+        captured = capsys.readouterr()
+        assert "abc123" not in captured.out
+        assert "***REDACTED***" in captured.out
+
+    def test_emit_json_redact_false_opts_out(self, capsys):
+        emit_json({"token": "abc123"}, redact=False)
+        captured = capsys.readouterr()
+        assert "abc123" in captured.out
+
+    def test_log_redacts_secrets(self, capsys):
+        log("cancel failed: X-Api-Key=sk_live_secret in headers")
+        captured = capsys.readouterr()
+        assert "sk_live_secret" not in captured.err
+        assert "***REDACTED***" in captured.err
 
 class TestRedactSensitiveText:
     @pytest.mark.parametrize(
@@ -527,9 +607,7 @@ class TestRedactSensitiveText:
         # Regression: a repr'd headers dict (quotes around the header name)
         # previously wasn't matched, and the bearer token leaked outside the
         # (unreferenced) capture group in an earlier version of the fix.
-        result = _redact_sensitive_text(
-            "headers={'Authorization': 'Bearer sk-abcdef123456'}"
-        )
+        result = _redact_sensitive_text("headers={'Authorization': 'Bearer sk-abcdef123456'}")
         assert "sk-abcdef123456" not in result
         assert "REDACTED" in result
         # Quotes must stay balanced (the value's opening quote is reinserted

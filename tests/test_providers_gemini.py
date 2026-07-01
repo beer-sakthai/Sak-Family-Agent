@@ -44,12 +44,7 @@ def test_to_gemini_contents_tool_use_creates_function_call() -> None:
             {
                 "role": "assistant",
                 "content": [
-                    {
-                        "type": "tool_use",
-                        "id": "t1",
-                        "name": "learn",
-                        "input": {"value": "x"},
-                    }
+                    {"type": "tool_use", "id": "t1", "name": "learn", "input": {"value": "x"}}
                 ],
             }
         ]
@@ -225,10 +220,7 @@ def test_call_gemini_no_candidates_raises() -> None:
     client = MagicMock()
     client.models.generate_content.return_value = _gemini_resp([])
     with (
-        patch(
-            "sakthai.agent.providers.gemini_provider.to_gemini_contents",
-            return_value=[],
-        ),
+        patch("sakthai.agent.providers.gemini_provider.to_gemini_contents", return_value=[]),
         pytest.raises(AgentError, match="no candidates"),
     ):
         call_gemini(client, "gemini-2.0-flash", "sys", (), [], 0)
@@ -238,10 +230,7 @@ def test_call_gemini_api_error_raises_agent_error() -> None:
     client = MagicMock()
     client.models.generate_content.side_effect = RuntimeError("quota exceeded")
     with (
-        patch(
-            "sakthai.agent.providers.gemini_provider.to_gemini_contents",
-            return_value=[],
-        ),
+        patch("sakthai.agent.providers.gemini_provider.to_gemini_contents", return_value=[]),
         pytest.raises(AgentError, match="Gemini API call failed"),
     ):
         call_gemini(client, "gemini-2.0-flash", "sys", (), [], 0)
