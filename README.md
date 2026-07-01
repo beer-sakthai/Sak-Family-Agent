@@ -141,6 +141,8 @@ The repo tracks five personas end to end:
 - `SakSit` - social-media-focused assistant
 - `SakTan` - daily ops helper
 
+![House of Sak](./assets/house_of_sak.png)
+
 The canonical profile source for the family lives under `infra/hermes-agents/profiles/`, and
 `personas/` contains the consolidated skill trees and overlays used by the repo.
 
