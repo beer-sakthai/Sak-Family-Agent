@@ -20,12 +20,10 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from typing import Any
 
-from ..auth import (anthropic_credential_source, gateway_credential_source,
-                    openai_credential_source)
+from ..auth import anthropic_credential_source, gateway_credential_source, openai_credential_source
 from ..config import sessions_dir
 from ..memory.store import MemoryStore
-from ..skills import (default_skill_roots, find_skill,
-                      render_skills_prompt_block)
+from ..skills import default_skill_roots, find_skill, render_skills_prompt_block
 from . import providers
 from .providers import base as _providers_base
 from .registry import ToolRegistry

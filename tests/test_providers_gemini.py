@@ -7,8 +7,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from sakthai.agent.providers.base import AgentError
-from sakthai.agent.providers.gemini_provider import (call_gemini,
-                                                     to_gemini_contents)
+from sakthai.agent.providers.gemini_provider import call_gemini, to_gemini_contents
 from sakthai.agent.tools import Tool
 
 

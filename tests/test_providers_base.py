@@ -6,9 +6,14 @@ import httpx
 import pytest
 
 import sakthai.agent.providers.base as base_mod
-from sakthai.agent.providers.base import (Block, Response, block_field,
-                                          find_tool_name_by_id, is_retryable,
-                                          with_retry)
+from sakthai.agent.providers.base import (
+    Block,
+    Response,
+    block_field,
+    find_tool_name_by_id,
+    is_retryable,
+    with_retry,
+)
 
 # -- Block -----------------------------------------------------------------
 

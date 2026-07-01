@@ -11,8 +11,7 @@ from typing import Any
 
 import yaml
 
-from .config import (LIBRARY_DIR, SKILLS_DIR, gemini_extensions_dir,
-                     sakthai_home)
+from .config import LIBRARY_DIR, SKILLS_DIR, gemini_extensions_dir, sakthai_home
 
 _UNCATEGORIZED = "general"
 

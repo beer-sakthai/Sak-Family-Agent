@@ -19,9 +19,15 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from sakthai.web.server import (_DEFAULT_HOST, _DEFAULT_PORT, _STATIC_ROOT,
-                                _dashboard_data, _ecosystem_status, _Handler,
-                                serve)
+from sakthai.web.server import (
+    _DEFAULT_HOST,
+    _DEFAULT_PORT,
+    _STATIC_ROOT,
+    _dashboard_data,
+    _ecosystem_status,
+    _Handler,
+    serve,
+)
 
 try:
     from http.server import HTTPServer

@@ -12,9 +12,13 @@ from unittest.mock import MagicMock
 import pytest
 
 import sakthai.agent.tools as _tools_mod
-from sakthai.agent.tools import (BUILTIN_TOOLS, _allowed_read_roots,
-                                 _coerce_limit, _path_under_any_root,
-                                 tool_by_name)
+from sakthai.agent.tools import (
+    BUILTIN_TOOLS,
+    _allowed_read_roots,
+    _coerce_limit,
+    _path_under_any_root,
+    tool_by_name,
+)
 from sakthai.memory.store import MemoryStore
 
 

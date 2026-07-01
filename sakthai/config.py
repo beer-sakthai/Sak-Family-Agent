@@ -196,8 +196,12 @@ def _skills_report() -> dict[str, Any]:
 
 def _auth_report() -> dict[str, Any]:
     # Imported lazily so config.py has no hard dependency on the anthropic SDK.
-    from .auth import (anthropic_credential_source, gateway_credential_source,
-                       load_gemini_cli_token, openai_credential_source)
+    from .auth import (
+        anthropic_credential_source,
+        gateway_credential_source,
+        load_gemini_cli_token,
+        openai_credential_source,
+    )
 
     anthropic_source = anthropic_credential_source()
     openai_source = openai_credential_source()

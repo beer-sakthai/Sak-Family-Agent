@@ -8,11 +8,17 @@ import pytest
 from click.testing import CliRunner
 
 from sakthai.cli import main
-from sakthai.sakking_skills import (_MAX_DESC, _category_for,
-                                    _collect_paragraph, _derive_description,
-                                    _derive_title, _first_sentence,
-                                    bundled_slugs, discover_learned_skills,
-                                    sync_sakking_skills)
+from sakthai.sakking_skills import (
+    _MAX_DESC,
+    _category_for,
+    _collect_paragraph,
+    _derive_description,
+    _derive_title,
+    _first_sentence,
+    bundled_slugs,
+    discover_learned_skills,
+    sync_sakking_skills,
+)
 from sakthai.skills import parse_skill, validate_tree
 
 

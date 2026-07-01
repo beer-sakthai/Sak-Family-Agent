@@ -6,9 +6,16 @@ from pathlib import Path
 
 import pytest
 
-from sakthai.skills import (SkillParseError, _as_str_list, collect_skills,
-                            find_skill, list_skills, parse_skill,
-                            render_skills_prompt_block, validate_skills)
+from sakthai.skills import (
+    SkillParseError,
+    _as_str_list,
+    collect_skills,
+    find_skill,
+    list_skills,
+    parse_skill,
+    render_skills_prompt_block,
+    validate_skills,
+)
 
 
 def test_as_str_list() -> None:

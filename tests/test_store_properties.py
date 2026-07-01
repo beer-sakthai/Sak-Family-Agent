@@ -22,8 +22,7 @@ from typing import Any
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
-from sakthai.memory.store import (MemoryStore, snapshot_to_csv,
-                                  snapshot_to_jsonl)
+from sakthai.memory.store import MemoryStore, snapshot_to_csv, snapshot_to_jsonl
 
 # -- strategies --------------------------------------------------------------
 

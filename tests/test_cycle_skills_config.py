@@ -9,8 +9,7 @@ from pathlib import Path
 import pytest
 
 from sakthai import config, skills
-from sakthai.cycle import (Stage, advance_stage, get_current_stage, next_stage,
-                           set_stage)
+from sakthai.cycle import Stage, advance_stage, get_current_stage, next_stage, set_stage
 from sakthai.memory.store import MemoryStore
 
 # -- cycle ---------------------------------------------------------------

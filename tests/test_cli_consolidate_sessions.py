@@ -11,9 +11,8 @@ from click.testing import CliRunner
 
 import sakthai.agent.loop as loop
 from sakthai.cli import main
-from sakthai.config import memory_db_path
+from sakthai.config import memory_db_path, sessions_dir
 from sakthai.config import sakthai_home as sakthai_home_path
-from sakthai.config import sessions_dir
 from sakthai.memory.store import MemoryStore
 
 

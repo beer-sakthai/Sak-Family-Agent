@@ -7,8 +7,7 @@ from typing import Any
 
 from ..tools import Tool
 from ..usage import extract_usage
-from .base import (AgentError, Block, Response, block_field,
-                   find_tool_name_by_id, logger, with_retry)
+from .base import AgentError, Block, Response, block_field, find_tool_name_by_id, logger, with_retry
 
 
 def to_gemini_contents(messages: list[dict[str, Any]]) -> list[Any]:

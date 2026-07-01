@@ -6,9 +6,14 @@ import sqlite3
 
 import pytest
 
-from sakthai.memory.store import (SNAPSHOT_VERSION, Fact, MemoryStore,
-                                  Observation, snapshot_to_csv,
-                                  snapshot_to_jsonl)
+from sakthai.memory.store import (
+    SNAPSHOT_VERSION,
+    Fact,
+    MemoryStore,
+    Observation,
+    snapshot_to_csv,
+    snapshot_to_jsonl,
+)
 
 
 def test_add_and_list_facts(store: MemoryStore) -> None:

@@ -16,8 +16,11 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from sakthai.memory.store import MemoryStore
-from sakthai.memory.sync import (_handle_git_conflict_and_push,
-                                 sync_memory_to_git, sync_memory_via_http)
+from sakthai.memory.sync import (
+    _handle_git_conflict_and_push,
+    sync_memory_to_git,
+    sync_memory_via_http,
+)
 
 # ---------------------------------------------------------------------------
 # Helpers

@@ -9,8 +9,7 @@ import pytest
 from click.testing import CliRunner
 
 from sakthai.cli import main
-from sakthai.sandbox import (SANDBOX_IMAGE, SandboxError, build_image,
-                             run_in_sandbox)
+from sakthai.sandbox import SANDBOX_IMAGE, SandboxError, build_image, run_in_sandbox
 
 
 def test_build_image_raises_when_docker_missing() -> None:

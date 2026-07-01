@@ -8,10 +8,17 @@ from unittest.mock import patch
 
 import pytest
 
-from sakthai.agent.loop import (AgentError, AgentResult, _detect_provider,
-                                _detect_untriggered_tool_call, _extract_text,
-                                _parse_slash_command, _save_session_log,
-                                _strip_code_fence, run_agent)
+from sakthai.agent.loop import (
+    AgentError,
+    AgentResult,
+    _detect_provider,
+    _detect_untriggered_tool_call,
+    _extract_text,
+    _parse_slash_command,
+    _save_session_log,
+    _strip_code_fence,
+    run_agent,
+)
 from sakthai.agent.registry import builtin_registry
 from sakthai.memory.store import MemoryStore
 
@@ -860,8 +867,7 @@ def test_run_agent_accepts_on_token(store: MemoryStore) -> None:
 def test_provider_calls_accept_on_token() -> None:
     import inspect
 
-    from sakthai.agent.providers import (call_anthropic, call_gemini,
-                                         call_openai_compat)
+    from sakthai.agent.providers import call_anthropic, call_gemini, call_openai_compat
 
     for fn in (call_anthropic, call_gemini, call_openai_compat):
         assert "on_token" in inspect.signature(fn).parameters

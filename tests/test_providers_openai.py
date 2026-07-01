@@ -9,8 +9,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from sakthai.agent.providers.base import AgentError, Response
-from sakthai.agent.providers.openai_provider import (call_openai_compat,
-                                                     to_openai_messages)
+from sakthai.agent.providers.openai_provider import call_openai_compat, to_openai_messages
 from sakthai.agent.tools import Tool
 
 

@@ -10,9 +10,15 @@ import click
 
 from ..config import LIBRARY_DIR, PERSONAS_DIR, SKILLS_DIR, sakking_skills_dir
 from ..sakking_skills import sync_sakking_skills
-from ..skills import (PERSONA_SKILL_PREFIXES, SHARED_SKILL_PREFIX,
-                      build_catalog, collect_skills, find_skill,
-                      naming_violations, validate_tree)
+from ..skills import (
+    PERSONA_SKILL_PREFIXES,
+    SHARED_SKILL_PREFIX,
+    build_catalog,
+    collect_skills,
+    find_skill,
+    naming_violations,
+    validate_tree,
+)
 
 
 @click.group()
