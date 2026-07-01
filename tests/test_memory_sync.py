@@ -16,11 +16,8 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from sakthai.memory.store import MemoryStore
-from sakthai.memory.sync import (
-    _handle_git_conflict_and_push,
-    sync_memory_to_git,
-    sync_memory_via_http,
-)
+from sakthai.memory.sync import (_handle_git_conflict_and_push,
+                                 sync_memory_to_git, sync_memory_via_http)
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -36,11 +33,15 @@ def _http_response(status: int, body: bytes = b"ok") -> MagicMock:
     return resp
 
 
-def _cp(args: list[str], *, stdout: str = "", returncode: int = 0) -> CompletedProcess[str]:
+def _cp(
+    args: list[str], *, stdout: str = "", returncode: int = 0
+) -> CompletedProcess[str]:
     return CompletedProcess(args=args, returncode=returncode, stdout=stdout, stderr="")
 
 
-def _git_mock(*, status_output: str = " M facts.jsonl", push_returncode: int = 0) -> Any:
+def _git_mock(
+    *, status_output: str = " M facts.jsonl", push_returncode: int = 0
+) -> Any:
     """Return a subprocess.run side_effect that fakes all git operations."""
     push_calls: list[int] = []
 
@@ -92,7 +93,10 @@ class TestSyncMemoryViaHttp:
 
     def test_bad_request_raises(self, sakthai_home: Path) -> None:
         with (
-            patch("urllib.request.urlopen", return_value=_http_response(400, b"bad request")),
+            patch(
+                "urllib.request.urlopen",
+                return_value=_http_response(400, b"bad request"),
+            ),
             pytest.raises(RuntimeError),
         ):
             sync_memory_via_http("http://example.com/sync")
@@ -196,7 +200,11 @@ class TestSyncMemoryToGit:
 
         facts_path = sakthai_home / "facts.jsonl"
         assert facts_path.exists()
-        lines = [ln for ln in facts_path.read_text(encoding="utf-8").splitlines() if ln.strip()]
+        lines = [
+            ln
+            for ln in facts_path.read_text(encoding="utf-8").splitlines()
+            if ln.strip()
+        ]
         assert any("hello world git sync" in ln for ln in lines)
 
     def test_writes_observations_jsonl(self, sakthai_home: Path) -> None:
@@ -215,7 +223,9 @@ class TestSyncMemoryToGit:
 
         assert not legacy.exists()
 
-    def test_push_failure_triggers_conflict_resolution(self, sakthai_home: Path) -> None:
+    def test_push_failure_triggers_conflict_resolution(
+        self, sakthai_home: Path
+    ) -> None:
         with patch("subprocess.run", side_effect=_git_mock(push_returncode=1)):
             result = sync_memory_to_git(remote="https://github.com/user/repo.git")
         assert isinstance(result, str) and result
@@ -238,7 +248,11 @@ class TestSyncMemoryToGit:
             sync_memory_to_git()
 
         facts_path = sakthai_home / "facts.jsonl"
-        lines = [ln for ln in facts_path.read_text(encoding="utf-8").splitlines() if ln.strip()]
+        lines = [
+            ln
+            for ln in facts_path.read_text(encoding="utf-8").splitlines()
+            if ln.strip()
+        ]
         assert len(lines) == 2
         for ln in lines:
             parsed = json.loads(ln)
@@ -274,7 +288,9 @@ class TestHandleGitConflictAndPush:
         )
         (sakthai_home / "observations.jsonl").write_text("", encoding="utf-8")
         with patch("subprocess.run", side_effect=_git_mock()):
-            result = _handle_git_conflict_and_push(sakthai_home, "https://example.com/repo.git")
+            result = _handle_git_conflict_and_push(
+                sakthai_home, "https://example.com/repo.git"
+            )
         assert "Auto-merged" in result
 
     def test_merges_remote_facts_into_local_store(self, sakthai_home: Path) -> None:
@@ -292,7 +308,9 @@ class TestHandleGitConflictAndPush:
         assert "local fact" in values
         assert "remote fact" in values
 
-    def test_merges_remote_observations_into_local_store(self, sakthai_home: Path) -> None:
+    def test_merges_remote_observations_into_local_store(
+        self, sakthai_home: Path
+    ) -> None:
         """Observations in observations.jsonl are parsed (line 160) and merged."""
         import time
 
@@ -311,7 +329,9 @@ class TestHandleGitConflictAndPush:
             json.dumps(obs_dict) + "\n", encoding="utf-8"
         )
         with patch("subprocess.run", side_effect=_git_mock()):
-            result = _handle_git_conflict_and_push(sakthai_home, "https://example.com/repo.git")
+            result = _handle_git_conflict_and_push(
+                sakthai_home, "https://example.com/repo.git"
+            )
 
         assert isinstance(result, str)
         with MemoryStore(db_path) as store:
@@ -323,13 +343,17 @@ class TestHandleGitConflictAndPush:
         (sakthai_home / "facts.jsonl").write_text("", encoding="utf-8")
         (sakthai_home / "observations.jsonl").write_text("", encoding="utf-8")
         with patch("subprocess.run", side_effect=_git_mock(status_output="")):
-            result = _handle_git_conflict_and_push(sakthai_home, "https://example.com/repo.git")
+            result = _handle_git_conflict_and_push(
+                sakthai_home, "https://example.com/repo.git"
+            )
         assert "Merged remote" in result
         assert "no changes" in result.lower()
 
     def test_missing_jsonl_files_are_tolerated(self, sakthai_home: Path) -> None:
         with patch("subprocess.run", side_effect=_git_mock()):
-            result = _handle_git_conflict_and_push(sakthai_home, "https://example.com/repo.git")
+            result = _handle_git_conflict_and_push(
+                sakthai_home, "https://example.com/repo.git"
+            )
         assert isinstance(result, str) and result
 
     def test_blank_lines_in_jsonl_are_skipped(self, sakthai_home: Path) -> None:
@@ -352,7 +376,9 @@ class TestHandleGitConflictAndPush:
 class TestSyncMemoryToGitExtended:
     """Edge cases not covered by TestSyncMemoryToGit."""
 
-    def test_remote_set_url_when_origin_already_exists(self, sakthai_home: Path) -> None:
+    def test_remote_set_url_when_origin_already_exists(
+        self, sakthai_home: Path
+    ) -> None:
         set_url_called: list[list[str]] = []
 
         def _run(args: list[str], **kwargs: object) -> CompletedProcess[str]:

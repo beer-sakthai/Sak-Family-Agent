@@ -66,7 +66,9 @@ def test_concurrent_writers_all_succeed(tmp_path: Path) -> None:
                 s.add_fact(f"fact-{{i}}")
     """)
 
-    procs = [subprocess.Popen([sys.executable, "-c", writer_code]) for _ in range(n_writers)]
+    procs = [
+        subprocess.Popen([sys.executable, "-c", writer_code]) for _ in range(n_writers)
+    ]
 
     failed = []
     for p in procs:
@@ -123,7 +125,9 @@ def test_concurrent_readers_do_not_block_writers(tmp_path: Path) -> None:
     with MemoryStore(db) as s:
         facts = s.list_facts(limit=200)
     written_values = {f.value for f in facts if f.value.startswith("write-")}
-    assert len(written_values) == 10, f"expected 10 written facts, got {len(written_values)}"
+    assert (
+        len(written_values) == 10
+    ), f"expected 10 written facts, got {len(written_values)}"
 
 
 def test_migration_race_multiple_openers(tmp_path: Path) -> None:
@@ -143,7 +147,9 @@ def test_migration_race_multiple_openers(tmp_path: Path) -> None:
     """)
 
     n_openers = 6
-    procs = [subprocess.Popen([sys.executable, "-c", opener_code]) for _ in range(n_openers)]
+    procs = [
+        subprocess.Popen([sys.executable, "-c", opener_code]) for _ in range(n_openers)
+    ]
 
     failed = []
     for p in procs:
@@ -151,7 +157,9 @@ def test_migration_race_multiple_openers(tmp_path: Path) -> None:
         if ret != 0:
             failed.append(ret)
 
-    assert not failed, f"{len(failed)}/{n_openers} opener(s) failed during migration race"
+    assert (
+        not failed
+    ), f"{len(failed)}/{n_openers} opener(s) failed during migration race"
 
     with MemoryStore(db) as s:
         total = len(s.list_facts(limit=n_openers + 1))

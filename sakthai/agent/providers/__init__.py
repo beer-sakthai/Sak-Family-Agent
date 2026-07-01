@@ -11,23 +11,12 @@ from __future__ import annotations
 import os
 from typing import Any
 
-from ...auth import (
-    AuthError,
-    anthropic_credential_source,
-    gateway_credential_source,
-    openai_credential_source,
-    resolve_anthropic_client,
-)
+from ...auth import (AuthError, anthropic_credential_source,
+                     gateway_credential_source, openai_credential_source,
+                     resolve_anthropic_client)
 from .anthropic_provider import call_anthropic
-from .base import (
-    AgentError,
-    Block,
-    Response,
-    block_field,
-    find_tool_name_by_id,
-    is_retryable,
-    with_retry,
-)
+from .base import (AgentError, Block, Response, block_field,
+                   find_tool_name_by_id, is_retryable, with_retry)
 from .gemini_provider import call_gemini, to_gemini_contents
 from .openai_provider import call_openai_compat, to_openai_messages
 
@@ -68,7 +57,16 @@ def detect_provider(client: Any | None, model: str) -> str:
         return "openai"
     if any(
         keyword in model.lower()
-        for keyword in ("openai", "ollama", "gpt-", "qwen", "llama", "deepseek", "mistral", "gemma")
+        for keyword in (
+            "openai",
+            "ollama",
+            "gpt-",
+            "qwen",
+            "llama",
+            "deepseek",
+            "mistral",
+            "gemma",
+        )
     ):
         return "openai"
     if client is not None:
@@ -114,7 +112,9 @@ def build_client(provider: str, client: Any | None) -> Any:
             try:
                 return genai.Client(api_key=api_key)
             except Exception as exc:
-                raise AgentError(f"Failed to initialize Google Gemini client: {exc}") from exc
+                raise AgentError(
+                    f"Failed to initialize Google Gemini client: {exc}"
+                ) from exc
 
         # Fallback to Gemini CLI OAuth token if no API key is set
         import subprocess
@@ -151,7 +151,10 @@ def build_client(provider: str, client: Any | None) -> Any:
         try:
             credentials = Credentials(token=token)  # type: ignore[no-untyped-call]
             return genai.Client(
-                vertexai=True, project=project, location="us-central1", credentials=credentials
+                vertexai=True,
+                project=project,
+                location="us-central1",
+                credentials=credentials,
             )
         except Exception as exc:
             raise AgentError(

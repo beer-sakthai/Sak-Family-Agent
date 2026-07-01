@@ -9,14 +9,8 @@ from typing import Any
 
 import click
 
-from ..agent.loop import (
-    DEFAULT_MAX_ITERATIONS,
-    DEFAULT_MAX_TOKENS,
-    DEFAULT_MODEL,
-    AgentError,
-    preflight,
-    run_agent,
-)
+from ..agent.loop import (DEFAULT_MAX_ITERATIONS, DEFAULT_MAX_TOKENS,
+                          DEFAULT_MODEL, AgentError, preflight, run_agent)
 from ..agent.tools import BUILTIN_TOOLS, Tool
 
 
@@ -108,7 +102,9 @@ def _run_in_sandbox(
 
 @click.command()
 @click.argument("task")
-@click.option("--model", default=DEFAULT_MODEL, show_default=True, help="Model identifier.")
+@click.option(
+    "--model", default=DEFAULT_MODEL, show_default=True, help="Model identifier."
+)
 @click.option("--max-tokens", default=DEFAULT_MAX_TOKENS, show_default=True, type=int)
 @click.option(
     "--max-iterations",
@@ -163,7 +159,9 @@ def _run_in_sandbox(
 )
 @click.option(
     "--caveman",
-    type=click.Choice(["lite", "full", "ultra", "wenyan-lite", "wenyan-full", "wenyan-ultra"]),
+    type=click.Choice(
+        ["lite", "full", "ultra", "wenyan-lite", "wenyan-full", "wenyan-ultra"]
+    ),
     help="Enable Caveman token compression at the specified intensity level.",
 )
 @click.option(

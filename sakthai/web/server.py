@@ -36,7 +36,9 @@ def _dashboard_data(days: int = 30) -> dict[str, Any]:
     except ImportError:
         logger.warning("Dashboard data module unavailable; returning demo stub.")
     except Exception:
-        logger.warning("Dashboard data collection failed; returning demo stub.", exc_info=True)
+        logger.warning(
+            "Dashboard data collection failed; returning demo stub.", exc_info=True
+        )
 
     return {
         "generated_at": "demo",
@@ -102,7 +104,9 @@ class _Handler(SimpleHTTPRequestHandler):
 
         if path == "/api/stages":
             try:
-                qs = dict(item.split("=") for item in parsed.query.split("&") if "=" in item)
+                qs = dict(
+                    item.split("=") for item in parsed.query.split("&") if "=" in item
+                )
                 days = int(qs.get("days", "30"))
             except (ValueError, KeyError, AttributeError):
                 days = 30
@@ -129,7 +133,9 @@ class _Handler(SimpleHTTPRequestHandler):
 def serve(host: str = _DEFAULT_HOST, port: int = _DEFAULT_PORT) -> HTTPServer:
     os.chdir(str(_STATIC_ROOT))
     server = HTTPServer((host, port), _Handler)
-    logger.info("SakThai API listening on http://%s:%d (static=%s)", host, port, _STATIC_ROOT)
+    logger.info(
+        "SakThai API listening on http://%s:%d (static=%s)", host, port, _STATIC_ROOT
+    )
     return server
 
 

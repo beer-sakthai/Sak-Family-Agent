@@ -8,12 +8,9 @@ from pathlib import Path
 
 import pytest
 
-from sakthai.dashboard.data import (
-    SOURCE_DEMO,
-    SOURCE_LIVE,
-    collect_dashboard_data,
-    export_dashboard_json,
-)
+from sakthai.dashboard.data import (SOURCE_DEMO, SOURCE_LIVE,
+                                    collect_dashboard_data,
+                                    export_dashboard_json)
 from sakthai.memory.store import SNAPSHOT_VERSION, MemoryStore
 
 _DAY = 86_400

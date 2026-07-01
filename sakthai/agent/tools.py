@@ -263,7 +263,9 @@ def _run_agent_loop(args: dict[str, Any], store: MemoryStore) -> str:
     import os
 
     if os.environ.get("SAKTHAI_AGENT_ACTIVE") == "1":
-        raise ValueError("Indirect recursion detected: cannot run nested SakThai agent loops.")
+        raise ValueError(
+            "Indirect recursion detected: cannot run nested SakThai agent loops."
+        )
 
     from .loop import run_agent
 
@@ -326,7 +328,10 @@ BUILTIN_TOOLS: tuple[Tool, ...] = (
                     "description": "Category (e.g. 'note', 'pref', 'project').",
                     "default": "note",
                 },
-                "key": {"type": "string", "description": "Optional key/name for the fact."},
+                "key": {
+                    "type": "string",
+                    "description": "Optional key/name for the fact.",
+                },
             },
             "required": ["value"],
         },
@@ -360,7 +365,10 @@ BUILTIN_TOOLS: tuple[Tool, ...] = (
         input_schema={
             "type": "object",
             "properties": {
-                "query": {"type": "string", "description": "The substring search term."},
+                "query": {
+                    "type": "string",
+                    "description": "The substring search term.",
+                },
                 "limit": {
                     "type": "integer",
                     "description": "Maximum entries per section.",
@@ -434,7 +442,10 @@ BUILTIN_TOOLS: tuple[Tool, ...] = (
         input_schema={
             "type": "object",
             "properties": {
-                "message": {"type": "string", "description": "The message body to send."},
+                "message": {
+                    "type": "string",
+                    "description": "The message body to send.",
+                },
             },
             "required": ["message"],
         },

@@ -46,7 +46,9 @@ def doctor() -> None:
 
     paths = env["paths"]
     click.echo(click.style("\n  Paths", bold=True))
-    click.echo(f"  {_flag(paths['sakthai_home_exists'])} sakthai home : {paths['sakthai_home']}")
+    click.echo(
+        f"  {_flag(paths['sakthai_home_exists'])} sakthai home : {paths['sakthai_home']}"
+    )
     click.echo(
         f"  {_flag(paths['memory_db_exists'], optional=True)} memory db    : {paths['memory_db']}"
     )
@@ -56,8 +58,12 @@ def doctor() -> None:
 
     mem = env["memory"]
     click.echo(click.style("\n  Memory database", bold=True))
-    click.echo(f"  {_flag(mem['db_exists'], optional=True)} exists  : {mem['db_exists']}")
-    click.echo(f"  {_flag(mem['db_writable'], optional=True)} writable: {mem['db_writable']}")
+    click.echo(
+        f"  {_flag(mem['db_exists'], optional=True)} exists  : {mem['db_exists']}"
+    )
+    click.echo(
+        f"  {_flag(mem['db_writable'], optional=True)} writable: {mem['db_writable']}"
+    )
     if mem["db_exists"] and mem["error"] is None:
         click.echo(
             f"  {_ok()} facts: {mem['fact_count']}  observations: {mem['observation_count']}"
@@ -76,7 +82,11 @@ def doctor() -> None:
         click.echo(f"  {_ok()} Anthropic    : {label}")
     else:
         click.echo(f"  {_err()} Anthropic    : none found")
-        click.echo(click.style("      → set ANTHROPIC_API_KEY or run `claude login`", fg="yellow"))
+        click.echo(
+            click.style(
+                "      → set ANTHROPIC_API_KEY or run `claude login`", fg="yellow"
+            )
+        )
     gemini = auth.get("gemini_cli_oauth", False)
     click.echo(
         f"  {_flag(gemini, optional=True)} Gemini CLI   : "
@@ -87,12 +97,16 @@ def doctor() -> None:
     if env["ready"]:
         click.echo(click.style("  ✓ SakThai is ready.", fg="green", bold=True))
     else:
-        click.echo(click.style("  ✗ Core components missing — see above.", fg="red", bold=True))
+        click.echo(
+            click.style("  ✗ Core components missing — see above.", fg="red", bold=True)
+        )
     click.echo()
 
 
 @click.command()
-@click.option("--interactive/--no-interactive", default=False, help="Prompt to fix issues.")
+@click.option(
+    "--interactive/--no-interactive", default=False, help="Prompt to fix issues."
+)
 def setup(interactive: bool) -> None:
     """Check the .env file, env vars, memory DB, and virtualenv."""
     env = check_env()
@@ -108,16 +122,23 @@ def setup(interactive: bool) -> None:
         example = Path(".env.example")
         if interactive and example.exists():
             if click.confirm(
-                click.style("      → .env.example exists. Create .env now?", fg="yellow"),
+                click.style(
+                    "      → .env.example exists. Create .env now?", fg="yellow"
+                ),
                 default=True,
             ):
-                env_file.write_text(example.read_text(encoding="utf-8"), encoding="utf-8")
+                env_file.write_text(
+                    example.read_text(encoding="utf-8"), encoding="utf-8"
+                )
                 click.echo(f"  {_ok()} created .env from .env.example")
             else:
                 issues.append(".env file missing")
         else:
             click.echo(
-                click.style("      → cp .env.example .env  # then fill in your keys", fg="yellow")
+                click.style(
+                    "      → cp .env.example .env  # then fill in your keys",
+                    fg="yellow",
+                )
             )
             issues.append(".env file missing")
 
@@ -144,7 +165,9 @@ def setup(interactive: bool) -> None:
                     pattern = rf"^{var}=.*$"
                     replacement = f"{var}={val}"
                     if re.search(pattern, content, re.MULTILINE):
-                        new_content = re.sub(pattern, replacement, content, flags=re.MULTILINE)
+                        new_content = re.sub(
+                            pattern, replacement, content, flags=re.MULTILINE
+                        )
                     else:
                         new_content = content.rstrip() + f"\n{replacement}\n"
                     env_file.write_text(new_content, encoding="utf-8")
@@ -156,7 +179,8 @@ def setup(interactive: bool) -> None:
             else:
                 click.echo(
                     click.style(
-                        f"      → export {var}=<value>  # {info['description']}", fg="yellow"
+                        f"      → export {var}=<value>  # {info['description']}",
+                        fg="yellow",
                     )
                 )
                 issues.append(f"{var} not set")
@@ -184,7 +208,11 @@ def setup(interactive: bool) -> None:
     click.echo()
     if not issues:
         click.echo(
-            click.style('  ✓ All checks passed. Try `sakthai run "hello"`.', fg="green", bold=True)
+            click.style(
+                '  ✓ All checks passed. Try `sakthai run "hello"`.',
+                fg="green",
+                bold=True,
+            )
         )
     else:
         click.echo(click.style(f"  ✗ {len(issues)} issue(s):", fg="red", bold=True))
@@ -209,7 +237,9 @@ def status() -> None:
     else:
         click.echo(f"  {_err()} Memory DB        : exists but NOT writable")
 
-    missing = [v for v, info in env["env"].items() if info["required"] and not info["set"]]
+    missing = [
+        v for v, info in env["env"].items() if info["required"] and not info["set"]
+    ]
     if missing and not env["auth"]["anthropic_ok"]:
         for var in missing:
             click.echo(f"  {_err()} {var:<16}: NOT SET")
@@ -222,19 +252,25 @@ def status() -> None:
             f"  {_ok()} Skills dir       : {env['paths']['skills_dir']} ({skills['skill_count']})"
         )
     else:
-        click.echo(f"  {_info()} Skills dir       : none ({env['paths']['skills_dir']})")
+        click.echo(
+            f"  {_info()} Skills dir       : none ({env['paths']['skills_dir']})"
+        )
 
     click.echo()
     if env["ready"]:
         click.echo(
             click.style(
-                '  ✓ Ready — try: sakthai run "what do you know about me?"', fg="green", bold=True
+                '  ✓ Ready — try: sakthai run "what do you know about me?"',
+                fg="green",
+                bold=True,
             )
         )
     else:
         click.echo(
             click.style(
-                "  ✗ Not ready — run `sakthai setup` for a guided fix.", fg="red", bold=True
+                "  ✗ Not ready — run `sakthai setup` for a guided fix.",
+                fg="red",
+                bold=True,
             )
         )
     click.echo()
@@ -246,7 +282,10 @@ def tools() -> None:
     from ..agent.tools import BUILTIN_TOOLS
 
     click.echo(
-        click.style("\n── Built-in SakThai tools (via `sakthai run` and `sakthai mcp`)", bold=True)
+        click.style(
+            "\n── Built-in SakThai tools (via `sakthai run` and `sakthai mcp`)",
+            bold=True,
+        )
     )
     for tool in BUILTIN_TOOLS:
         click.echo(f"  {_ok()} {tool.name:<22} {tool.description[:66]}")
