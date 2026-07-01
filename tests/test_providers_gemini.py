@@ -205,6 +205,7 @@ def test_call_gemini_non_dict_schema_passed_through() -> None:
     decl = kwargs["config"].tools[0].function_declarations[0]
     assert decl.parameters is None
 
+
 def test_call_gemini_max_tokens_finish_reason() -> None:
     client = MagicMock()
     client.models.generate_content.return_value = _gemini_resp(
