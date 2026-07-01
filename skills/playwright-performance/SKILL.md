@@ -1,4 +1,13 @@
----\nname: playwright-performance\ncategory: testing\ndescription: Automate budget validation and core web vitals measurement in Playwright; combines before/after budget checks with reproducible vitals collection.\nversion: 1.0.0\n---\n\n# Playwright Performance\n\nAutomate budget validation and core web vitals measurement in Playwright; combines before/after budget checks with reproducible vitals collection.
+---
+name: playwright-performance
+category: testing
+description: Automate budget validation and core web vitals measurement in Playwright; combines before/after budget checks with reproducible vitals collection.
+version: 1.0.0
+---
+
+# Playwright Performance
+
+Automate budget validation and core web vitals measurement in Playwright; combines before/after budget checks with reproducible vitals collection.
 
 ## When to use
 
