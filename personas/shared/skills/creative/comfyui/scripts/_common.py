@@ -911,13 +911,13 @@ def _redact_sensitive(obj: Any) -> Any:
 
 
 def emit_json(obj: Any, *, indent: int = 2, redact: bool = True) -> None:
-    """Print JSON to stdout. Centralised so behavior can be tweaked (e.g., --raw).
+    """Print JSON to stdout safely.
 
-    `redact=False` opts out of secret redaction for callers (like
-    `fetch_logs.py --raw`) whose entire purpose is showing the true,
-    unmodified server payload.
+    Secrets are always redacted at output time to prevent accidental
+    clear-text leakage in logs/terminal output.
     """
-    payload = _redact_sensitive(obj) if redact else obj
+    _ = redact  # kept for backward-compatible signature
+    payload = _redact_sensitive(obj)
     print(json.dumps(payload, indent=indent, default=str))
 
 
