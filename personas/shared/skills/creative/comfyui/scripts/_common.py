@@ -906,7 +906,7 @@ def _is_sensitive_key(key: Any) -> bool:
     tokens = _key_tokens(key)
     if not tokens:
         return False
-    for marker in _SENSITIVE_KEY_MARKERS:
+    for marker in _SENSITIVE_KEY_TOKEN_MARKERS:
         n = len(marker)
         if any(tuple(tokens[i:i + n]) == marker for i in range(len(tokens) - n + 1)):
             return True
