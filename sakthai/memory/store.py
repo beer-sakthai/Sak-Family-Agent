@@ -726,7 +726,7 @@ class MemoryStore:
             if mode == "replace":
                 f_cols.insert(0, "id")
             f_qs = ", ".join(["?"] * len(f_cols))
-            f_stmt = "INSERT INTO facts (" + ", ".join(f_cols) + ") VALUES (" + f_qs + ")"
+            f_stmt = "INSERT INTO facts (" + ", ".join(f_cols) + ") VALUES (" + f_qs + ")"  # nosec B608
             f_rows = []
             for f in facts:
                 r = [
@@ -747,7 +747,7 @@ class MemoryStore:
             if mode == "replace":
                 o_cols.insert(0, "id")
             o_qs = ", ".join(["?"] * len(o_cols))
-            o_stmt = "INSERT INTO observations (" + ", ".join(o_cols) + ") VALUES (" + o_qs + ")"
+            o_stmt = "INSERT INTO observations (" + ", ".join(o_cols) + ") VALUES (" + o_qs + ")"  # nosec B608
             o_rows = []
             for o in obs:
                 r = [
