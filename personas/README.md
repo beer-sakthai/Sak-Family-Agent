@@ -1,6 +1,6 @@
 # Personas
 
-Five agent personas — **sakthai**, **sakking**, **saksee**, **saksit**, **saktan** — each
+Six agent personas — **sakthai**, **sakking**, **saksee**, **saksit**, **saktan**, **sakjules** — each
 formerly its own `*-skills` repository. They were ~90 % identical: the same
 skill library copied five times. In the monorepo that shared content lives
 **once**.
@@ -9,7 +9,7 @@ skill library copied five times. In the monorepo that shared content lives
 
 ```
 personas/
-├── shared/skills/      # the 446 skill files identical across all five personas
+├── shared/skills/      # the 446 skill files identical across all six personas
 ├── sakthai/
 │   ├── SOUL.md         # the persona's identity (unique per persona)
 │   ├── config/         # persona config (config.yaml, gateway_voice_mode.json, …)
@@ -17,7 +17,8 @@ personas/
 ├── sakking/  …
 ├── saksee/   …
 ├── saksit/   …
-└── saktan/   …        # scaffolded from infra/hermes-agents/profiles/saktan/
+├── saktan/   …        # scaffolded from infra/hermes-agents/profiles/saktan/
+└── sakjules/ …        # scaffolded from infra/hermes-agents/profiles/sakjules/
 ```
 
 `shared/skills/` + a persona's `skills/` overlay together reconstitute that

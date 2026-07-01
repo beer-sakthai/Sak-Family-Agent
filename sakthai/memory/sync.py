@@ -142,6 +142,10 @@ def _handle_git_conflict_and_push(home: Path, remote: str) -> str:
     subprocess.run(["git", "fetch", "origin", "main"], cwd=home, check=True, capture_output=True)
     subprocess.run(
         ["git", "reset", "--hard", "origin/main"], cwd=home, check=True, capture_output=True
+        ["git", "reset", "--hard", "origin/main"],
+        cwd=home,
+        check=True,
+        capture_output=True,
     )
 
     facts_path = home / "facts.jsonl"

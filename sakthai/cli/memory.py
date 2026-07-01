@@ -358,6 +358,22 @@ def memory_consolidate_sessions(limit: int, model: str | None) -> None:
             except Exception as exc:  # noqa: BLE001 - report and continue, never abort the batch
                 click.echo(f"Error extracting from {f.name}: {exc}")
                 continue
+        try:
+            res = run_agent(
+                _CONSOLIDATE_PROMPT.format(trace=trace),
+                model=extraction_model,
+                max_iterations=1,
+                tools=(),
+            )
+        except Exception as exc:  # noqa: BLE001 - report and continue, never abort the batch
+            click.echo(f"Error extracting from {f.name}: {exc}")
+            continue
+
+        for raw in res.text.strip().splitlines():
+            line = raw.strip().lstrip("-*+ ").strip()
+            if not line or line.lower() == "none" or line.startswith("#"):
+                continue
+            to_learn.append({"value": line, "kind": "consolidated", "tags": ["consolidated"]})
 
             for raw in res.text.strip().splitlines():
                 line = raw.strip().lstrip("-*+ ").strip()

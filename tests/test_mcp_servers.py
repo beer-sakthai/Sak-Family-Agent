@@ -13,6 +13,7 @@ from sakthai.mcp.servers import (
     mcp_config_path,
     parse_mcp_servers,
 )
+from sakthai.mcp.servers import MCPServerSpec, load_server_specs, mcp_config_path, parse_mcp_servers
 
 
 def test_mcp_config_path_honours_home(sakthai_home: Path) -> None:
