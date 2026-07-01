@@ -720,21 +720,22 @@ class MemoryStore:
                     ],
                 )
             else:  # merge — SQLite assigns IDs
+                fact_data = [
+                    (
+                        f["kind"],
+                        f["key"],
+                        f["value"],
+                        f["source_session"],
+                        f["created_at"],
+                        f["updated_at"],
+                        _encode_tags(f.get("tags")),
+                    )
+                    for f in facts
+                ]
                 self._conn.executemany(
                     "INSERT INTO facts (kind, key, value, source_session, "
                     "created_at, updated_at, tags) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                    [
-                        (
-                            f["kind"],
-                            f["key"],
-                            f["value"],
-                            f["source_session"],
-                            f["created_at"],
-                            f["updated_at"],
-                            _encode_tags(f.get("tags")),
-                        )
-                        for f in facts
-                    ],
+                    fact_data,
                 )
                 self._conn.executemany(
                     "INSERT INTO observations (summary, evidence_session_id, "
