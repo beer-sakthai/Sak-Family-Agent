@@ -881,7 +881,6 @@ def _redact_sensitive_text(text: str) -> str:
     redacted = _AUTH_RE.sub(rf"\1\2\3\4\5{_REDACTED}\4", text)
     redacted = _BEARER_RE.sub(rf"\1 \2{_REDACTED}\2", redacted)
     redacted = _KV_RE.sub(rf"\1\2\3\4{_REDACTED}\4", redacted)
-    redacted = text
     # Redact explicit env var assignment forms (e.g., COMFY_CLOUD_API_KEY=xxxx)
     redacted = re.sub(r"(?i)\b(COMFY_CLOUD_API_KEY)\s*=\s*([^\s,;]+)", rf"\1={_REDACTED}", redacted)
     # Redact common key/value secret forms in free text.
