@@ -4,14 +4,8 @@ from __future__ import annotations
 
 import click
 
-from ..cycle import (
-    STAGES,
-    Stage,
-    advance_stage,
-    get_current_stage,
-    set_stage,
-    stage_info,
-)
+from ..cycle import (STAGES, Stage, advance_stage, get_current_stage,
+                     set_stage, stage_info)
 from ..memory.store import MemoryStore
 
 

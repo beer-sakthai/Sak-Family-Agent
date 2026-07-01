@@ -11,13 +11,8 @@ import click
 
 from ..learn.capture import learn as learn_fact
 from ..memory.backup import backup_memory
-from ..memory.store import (
-    Fact,
-    MemoryStore,
-    Observation,
-    snapshot_to_csv,
-    snapshot_to_jsonl,
-)
+from ..memory.store import (Fact, MemoryStore, Observation, snapshot_to_csv,
+                            snapshot_to_jsonl)
 
 
 def _fact_line(f: Fact) -> str:

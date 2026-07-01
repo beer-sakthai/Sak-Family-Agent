@@ -10,8 +10,9 @@ from .cycle import cycle as cycle_cmd
 from .dashboard import dashboard as dashboard_cmd
 from .extensions import extensions as extensions_cmd
 from .hf import hf_cmd
-from .memory import learn, recall
+from .memory import learn
 from .memory import memory as memory_cmd
+from .memory import recall
 from .sessions import sessions as sessions_cmd
 from .skills import skills as skills_cmd
 from .system import doctor, setup, status, tools

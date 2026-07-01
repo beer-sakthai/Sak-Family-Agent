@@ -55,7 +55,9 @@ class TestDoctorCommand:
         monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
         monkeypatch.delenv("ANTHROPIC_AUTH_TOKEN", raising=False)
         with monkeypatch.context() as mp:
-            mp.setattr("sakthai.auth.anthropic_credential_source", lambda: None, raising=False)
+            mp.setattr(
+                "sakthai.auth.anthropic_credential_source", lambda: None, raising=False
+            )
             result = runner.invoke(main, ["doctor"])
         assert result.exit_code == 0
         assert "none found" in result.output.lower() or "Anthropic" in result.output
@@ -64,7 +66,9 @@ class TestDoctorCommand:
         result = runner.invoke(main, ["doctor"])
         assert "Memory" in result.output or "memory" in result.output.lower()
 
-    def test_shows_fact_count_when_db_exists(self, runner: CliRunner, sakthai_home: Path) -> None:
+    def test_shows_fact_count_when_db_exists(
+        self, runner: CliRunner, sakthai_home: Path
+    ) -> None:
         db = sakthai_home / "memory.db"
         with MemoryStore(db) as store:
             store.add_fact("doctor test fact")
@@ -73,7 +77,9 @@ class TestDoctorCommand:
         assert result.exit_code == 0
         assert "facts" in result.output.lower() or "1" in result.output
 
-    def test_ready_line_shown(self, runner: CliRunner, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_ready_line_shown(
+        self, runner: CliRunner, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-test-key")
         result = runner.invoke(main, ["doctor"])
         assert "ready" in result.output.lower() or "SakThai" in result.output
@@ -129,7 +135,9 @@ class TestSetupCommand:
         monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
         monkeypatch.delenv("ANTHROPIC_AUTH_TOKEN", raising=False)
         with monkeypatch.context() as mp:
-            mp.setattr("sakthai.auth.anthropic_credential_source", lambda: None, raising=False)
+            mp.setattr(
+                "sakthai.auth.anthropic_credential_source", lambda: None, raising=False
+            )
             result = runner.invoke(main, ["setup"])
         assert result.exit_code == 0
         assert "NOT set" in result.output or "ANTHROPIC_API_KEY" in result.output
@@ -314,7 +322,9 @@ def test_doctor_shows_memory_error_when_db_corrupt(
     monkeypatch.setattr(
         system_mod,
         "check_env",
-        lambda: _fake_env(db_exists=True, db_writable=False, db_error="file is not a database"),
+        lambda: _fake_env(
+            db_exists=True, db_writable=False, db_error="file is not a database"
+        ),
     )
     result = runner.invoke(main, ["doctor"])
     assert result.exit_code == 0
@@ -335,7 +345,9 @@ def test_doctor_shows_not_ready_when_db_not_writable(
     assert "missing" in result.output.lower() or "[x]" in result.output
 
 
-def test_setup_shows_db_not_writable(runner: CliRunner, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_setup_shows_db_not_writable(
+    runner: CliRunner, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """setup shows the not-writable message (cli/system.py:134-135) when db_writable=False."""
     monkeypatch.setattr(
         system_mod,
@@ -344,10 +356,14 @@ def test_setup_shows_db_not_writable(runner: CliRunner, monkeypatch: pytest.Monk
     )
     result = runner.invoke(main, ["setup"])
     assert result.exit_code == 0
-    assert "not writable" in result.output.lower() or "writable" in result.output.lower()
+    assert (
+        "not writable" in result.output.lower() or "writable" in result.output.lower()
+    )
 
 
-def test_status_shows_db_not_writable(runner: CliRunner, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_status_shows_db_not_writable(
+    runner: CliRunner, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """status shows the NOT writable line (cli/system.py:171) when db exists but not writable."""
     monkeypatch.setattr(
         system_mod,
@@ -373,7 +389,9 @@ def test_status_shows_skills_dir_missing(
     assert "none" in result.output.lower() or "Skills" in result.output
 
 
-def test_status_not_ready_line(runner: CliRunner, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_status_not_ready_line(
+    runner: CliRunner, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """status shows the ✗ not-ready line (cli/system.py:196) when ready=False."""
     monkeypatch.setattr(
         system_mod,
@@ -402,7 +420,9 @@ def test_setup_interactive_create_env(
 
     # Run setup with interactive=True and say 'y' to creating .env
     # We also need to handle the API key prompt that follows
-    result = runner.invoke(main, ["setup", "--interactive"], input="y\nsk-test-key-123\n")
+    result = runner.invoke(
+        main, ["setup", "--interactive"], input="y\nsk-test-key-123\n"
+    )
 
     assert result.exit_code == 0
     assert "created .env from .env.example" in result.output

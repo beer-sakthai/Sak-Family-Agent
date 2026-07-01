@@ -43,12 +43,16 @@ def _tool(name: str = "learn") -> Tool:
 
 
 def _client(handler: Any) -> httpx.Client:
-    return httpx.Client(transport=httpx.MockTransport(handler), base_url="http://test.local")
+    return httpx.Client(
+        transport=httpx.MockTransport(handler), base_url="http://test.local"
+    )
 
 
 def _ok_body(text: str = "hi") -> dict[str, Any]:
     return {
-        "choices": [{"message": {"content": text, "tool_calls": []}, "finish_reason": "stop"}],
+        "choices": [
+            {"message": {"content": text, "tool_calls": []}, "finish_reason": "stop"}
+        ],
         "usage": {"prompt_tokens": 3, "completion_tokens": 2},
     }
 

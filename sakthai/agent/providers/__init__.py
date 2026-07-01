@@ -11,23 +11,12 @@ from __future__ import annotations
 import os
 from typing import Any
 
-from ...auth import (
-    AuthError,
-    anthropic_credential_source,
-    gateway_credential_source,
-    openai_credential_source,
-    resolve_anthropic_client,
-)
+from ...auth import (AuthError, anthropic_credential_source,
+                     gateway_credential_source, openai_credential_source,
+                     resolve_anthropic_client)
 from .anthropic_provider import call_anthropic
-from .base import (
-    AgentError,
-    Block,
-    Response,
-    block_field,
-    find_tool_name_by_id,
-    is_retryable,
-    with_retry,
-)
+from .base import (AgentError, Block, Response, block_field,
+                   find_tool_name_by_id, is_retryable, with_retry)
 from .gemini_provider import call_gemini, to_gemini_contents
 from .openai_provider import call_openai_compat, to_openai_messages
 

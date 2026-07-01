@@ -9,14 +9,8 @@ from typing import Any
 
 import click
 
-from ..agent.loop import (
-    DEFAULT_MAX_ITERATIONS,
-    DEFAULT_MAX_TOKENS,
-    DEFAULT_MODEL,
-    AgentError,
-    preflight,
-    run_agent,
-)
+from ..agent.loop import (DEFAULT_MAX_ITERATIONS, DEFAULT_MAX_TOKENS,
+                          DEFAULT_MODEL, AgentError, preflight, run_agent)
 from ..agent.tools import BUILTIN_TOOLS, Tool
 
 

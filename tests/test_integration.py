@@ -19,7 +19,9 @@ from sakthai.memory.store import MemoryStore
 pytestmark = pytest.mark.integration
 
 
-@pytest.mark.skipif(not os.environ.get("ANTHROPIC_API_KEY"), reason="ANTHROPIC_API_KEY not set")
+@pytest.mark.skipif(
+    not os.environ.get("ANTHROPIC_API_KEY"), reason="ANTHROPIC_API_KEY not set"
+)
 def test_anthropic_live_smoke(tmp_path: Path) -> None:
     store = MemoryStore(tmp_path / "memory.db")
     try:
@@ -56,7 +58,9 @@ def test_gemini_live_smoke(tmp_path: Path) -> None:
                 max_iterations=2,
             )
         except Exception as exc:
-            pytest.skip(f"Gemini execution failed (e.g. model unavailable or quota): {exc}")
+            pytest.skip(
+                f"Gemini execution failed (e.g. model unavailable or quota): {exc}"
+            )
     finally:
         store.close()
     assert result.text.strip()
@@ -128,7 +132,9 @@ def test_ollama_live_smoke(tmp_path: Path) -> None:
     if not models:
         pytest.skip("No models installed in Ollama")
 
-    model = "llama3.2" if "llama3.2" in models or "llama3.2:latest" in models else models[0]
+    model = (
+        "llama3.2" if "llama3.2" in models or "llama3.2:latest" in models else models[0]
+    )
 
     store = MemoryStore(tmp_path / "memory.db")
     try:

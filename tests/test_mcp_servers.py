@@ -7,12 +7,8 @@ from pathlib import Path
 
 import pytest
 
-from sakthai.mcp.servers import (
-    MCPServerSpec,
-    load_server_specs,
-    mcp_config_path,
-    parse_mcp_servers,
-)
+from sakthai.mcp.servers import (MCPServerSpec, load_server_specs,
+                                 mcp_config_path, parse_mcp_servers)
 
 
 def test_mcp_config_path_honours_home(sakthai_home: Path) -> None:
@@ -64,7 +60,8 @@ def test_load_specs_includes_extension_manifests(sakthai_home: Path) -> None:
     ext = sakthai_home / "extensions" / "my-ext"
     ext.mkdir(parents=True)
     (ext / "gemini-extension.json").write_text(
-        json.dumps({"mcpServers": {"fromext": {"command": "ext-run"}}}), encoding="utf-8"
+        json.dumps({"mcpServers": {"fromext": {"command": "ext-run"}}}),
+        encoding="utf-8",
     )
     names = {s.name for s in load_server_specs()}
     assert "fromext" in names
@@ -140,7 +137,8 @@ def test_persona_override_wins_on_name_clash(
     )
     persona_cfg = tmp_path / "persona-mcp.json"
     persona_cfg.write_text(
-        json.dumps({"mcpServers": {"dup": {"command": "persona-cmd"}}}), encoding="utf-8"
+        json.dumps({"mcpServers": {"dup": {"command": "persona-cmd"}}}),
+        encoding="utf-8",
     )
     monkeypatch.setenv("SAKTHAI_MCP_CONFIG", str(persona_cfg))
     specs = {s.name: s for s in load_server_specs()}

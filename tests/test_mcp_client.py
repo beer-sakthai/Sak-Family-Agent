@@ -95,7 +95,10 @@ def test_extract_text_basic() -> None:
 def test_extract_text_joins_multiple_blocks() -> None:
     from sakthai.mcp.client import _extract_text
 
-    assert _extract_text([{"type": "text", "text": "a"}, {"type": "text", "text": "b"}]) == "a\nb"
+    assert (
+        _extract_text([{"type": "text", "text": "a"}, {"type": "text", "text": "b"}])
+        == "a\nb"
+    )
 
 
 def test_extract_text_empty_list() -> None:
@@ -122,7 +125,12 @@ def test_call_tool_raises_on_is_error() -> None:
     client = StdioMCPClient("dummy", name="test")
 
     def fake_request(method: str, params: dict | None = None) -> dict:
-        return {"result": {"isError": True, "content": [{"type": "text", "text": "tool bombed"}]}}
+        return {
+            "result": {
+                "isError": True,
+                "content": [{"type": "text", "text": "tool bombed"}],
+            }
+        }
 
     client._request = fake_request  # type: ignore[method-assign]
     with pytest.raises(MCPToolError, match="tool bombed"):

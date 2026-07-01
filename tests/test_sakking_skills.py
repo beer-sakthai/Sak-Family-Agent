@@ -8,17 +8,11 @@ import pytest
 from click.testing import CliRunner
 
 from sakthai.cli import main
-from sakthai.sakking_skills import (
-    _MAX_DESC,
-    _category_for,
-    _collect_paragraph,
-    _derive_description,
-    _derive_title,
-    _first_sentence,
-    bundled_slugs,
-    discover_learned_skills,
-    sync_sakking_skills,
-)
+from sakthai.sakking_skills import (_MAX_DESC, _category_for,
+                                    _collect_paragraph, _derive_description,
+                                    _derive_title, _first_sentence,
+                                    bundled_slugs, discover_learned_skills,
+                                    sync_sakking_skills)
 from sakthai.skills import parse_skill, validate_tree
 
 
@@ -33,8 +27,12 @@ def _sakking_root(tmp_path: Path) -> Path:
     _write(root / ".bundled_manifest", "github:aaa\nairtable:bbb\napple-notes:ccc\n")
 
     # Bundled (in manifest) — must be ignored.
-    _write(root / "github" / "SKILL.md", "---\nname: github\ndescription: bundled\n---\nx")
-    _write(root / "apple" / "apple-notes" / "SKILL.md", "---\nname: apple-notes\n---\nx")
+    _write(
+        root / "github" / "SKILL.md", "---\nname: github\ndescription: bundled\n---\nx"
+    )
+    _write(
+        root / "apple" / "apple-notes" / "SKILL.md", "---\nname: apple-notes\n---\nx"
+    )
 
     # Learned, no frontmatter, with a ## Purpose section.
     _write(
@@ -48,7 +46,9 @@ def _sakking_root(tmp_path: Path) -> Path:
         "platforms:\n  - linux\nmetadata:\n  sakthai:\n    tags:\n      - ci\n---\n\nBody here.\n",
     )
     # SakKing-internal — excluded by default prefix.
-    _write(root / "sakking-operations" / "SKILL.md", "# SakKing Ops\n\nInternal stuff.\n")
+    _write(
+        root / "sakking-operations" / "SKILL.md", "# SakKing Ops\n\nInternal stuff.\n"
+    )
     # Legacy sakthai-prefixed learned skill — retargeted to the SakKing- prefix.
     _write(root / "sakthai-special" / "SKILL.md", "# Special\n\nDo special things.\n")
     return root
@@ -66,7 +66,11 @@ def test_bundled_slugs_missing_manifest_is_empty(tmp_path: Path) -> None:
 def test_discover_selects_only_learned(tmp_path: Path) -> None:
     root = _sakking_root(tmp_path)
     slugs = {s.target_slug for s in discover_learned_skills(root)}
-    assert slugs == {"SakKing-cron-watchdog", "SakKing-deploy-helper", "SakKing-special"}
+    assert slugs == {
+        "SakKing-cron-watchdog",
+        "SakKing-deploy-helper",
+        "SakKing-special",
+    }
 
 
 def test_discover_can_include_internal_via_empty_excludes(tmp_path: Path) -> None:
@@ -85,7 +89,10 @@ def test_category_from_nesting_and_defaults(tmp_path: Path) -> None:
 def test_description_derived_from_purpose(tmp_path: Path) -> None:
     root = _sakking_root(tmp_path)
     by_slug = {s.target_slug: s for s in discover_learned_skills(root)}
-    assert by_slug["SakKing-cron-watchdog"].description == "Heal the cron fleet automatically"
+    assert (
+        by_slug["SakKing-cron-watchdog"].description
+        == "Heal the cron fleet automatically"
+    )
 
 
 def test_frontmatter_description_and_version_preserved(tmp_path: Path) -> None:
@@ -126,7 +133,10 @@ def test_sync_updates_on_source_change(tmp_path: Path) -> None:
     root = _sakking_root(tmp_path)
     dest = tmp_path / "skills"
     sync_sakking_skills(root, dest)
-    _write(root / "cron-watchdog" / "SKILL.md", "# Cron Watchdog\n\n## Purpose\n\nNew text now.\n")
+    _write(
+        root / "cron-watchdog" / "SKILL.md",
+        "# Cron Watchdog\n\n## Purpose\n\nNew text now.\n",
+    )
     outcome = sync_sakking_skills(root, dest)
     assert outcome.updated == ["SakKing-cron-watchdog"]
     assert "New text now." in (dest / "SakKing-cron-watchdog" / "SKILL.md").read_text()
@@ -161,18 +171,24 @@ def test_malformed_yaml_frontmatter_is_recovered(tmp_path: Path) -> None:
     assert validate_tree(dest) == []
 
 
-def test_cli_sync_sakking_writes_skills(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_cli_sync_sakking_writes_skills(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     root = _sakking_root(tmp_path)
     dest = tmp_path / "repo_skills"
     monkeypatch.setattr("sakthai.cli.skills.SKILLS_DIR", dest)
-    result = CliRunner().invoke(main, ["skills", "sync-sakking", "--sakking-home", str(root)])
+    result = CliRunner().invoke(
+        main, ["skills", "sync-sakking", "--sakking-home", str(root)]
+    )
     assert result.exit_code == 0, result.output
     assert "synced 3 learned skill(s)" in result.output
     assert "+ SakKing-deploy-helper" in result.output
     assert (dest / "SakKing-deploy-helper" / "SKILL.md").is_file()
 
 
-def test_cli_sync_sakking_dry_run(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_cli_sync_sakking_dry_run(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     root = _sakking_root(tmp_path)
     dest = tmp_path / "repo_skills"
     monkeypatch.setattr("sakthai.cli.skills.SKILLS_DIR", dest)
@@ -281,7 +297,9 @@ def test_discover_skips_hidden_directories(tmp_path: Path) -> None:
     # A skill nested inside a hidden directory must be ignored.
     hidden = root / ".hidden-dir" / "my-skill"
     hidden.mkdir(parents=True)
-    (hidden / "SKILL.md").write_text("# Hidden\n\nShould be skipped.\n", encoding="utf-8")
+    (hidden / "SKILL.md").write_text(
+        "# Hidden\n\nShould be skipped.\n", encoding="utf-8"
+    )
     skills = discover_learned_skills(root)
     assert all(".hidden" not in s.source_slug for s in skills)
 
