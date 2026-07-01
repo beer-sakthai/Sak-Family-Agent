@@ -219,15 +219,24 @@ def test_validate_tree_corrupt_and_ignored(tmp_path: Path) -> None:
     assert "no YAML frontmatter found" in errors[0][1]
 
 
-def test_saktan_scaffold_is_composable(tmp_path: Path) -> None:
-    assert skills.PERSONA_SKILL_PREFIXES["saktan"] == "SakTan-"
+def test_real_skill_catalog_validates_cleanly() -> None:
+    """Guard the actual skills/ and library/ trees, not just synthetic fixtures.
 
-    out = tmp_path / "saktan-skills"
+    validate_tree() recurses (rglob) so it correctly handles library/'s nested
+    category/skill-name/SKILL.md layout as well as skills/'s flat layout.
+    """
+    errors = skills.validate_tree(config.SKILLS_DIR, config.LIBRARY_DIR)
+    assert errors == []
+
+
+@pytest.mark.parametrize("persona", ["sakthai", "sakking", "saksee", "saksit", "saktan"])
+def test_persona_scaffold_is_composable(tmp_path: Path, persona: str) -> None:
+    out = tmp_path / f"{persona}-skills"
     proc = subprocess.run(
         [
             sys.executable,
             str(Path(__file__).resolve().parents[1] / "scripts" / "compose_persona.py"),
-            "saktan",
+            persona,
             "--out",
             str(out),
         ],
@@ -235,6 +244,39 @@ def test_saktan_scaffold_is_composable(tmp_path: Path) -> None:
         text=True,
         check=False,
     )
-    assert proc.returncode == 0
+    assert proc.returncode == 0, proc.stderr
     assert out.exists()
     assert any(out.rglob("SKILL.md"))
+
+
+def test_saktan_persona_skill_prefix() -> None:
+    assert skills.PERSONA_SKILL_PREFIXES["saktan"] == "SakTan-"
+
+
+def test_compose_persona_overlay_wins_over_shared(tmp_path: Path) -> None:
+    """Overlay files must win over shared files on path collision (documented
+    invariant in scripts/compose_persona.py: "overlay wins" on any collision).
+    """
+    import runpy
+
+    script = Path(__file__).resolve().parents[1] / "scripts" / "compose_persona.py"
+    ns = runpy.run_path(str(script))
+
+    personas_dir = tmp_path / "personas"
+    shared_skills = personas_dir / "shared" / "skills"
+    overlay_skills = personas_dir / "sakthai" / "skills"
+
+    (shared_skills / "demo-skill").mkdir(parents=True)
+    (shared_skills / "demo-skill" / "SKILL.md").write_text("shared version", encoding="utf-8")
+    (shared_skills / "shared-only-skill").mkdir(parents=True)
+    (shared_skills / "shared-only-skill" / "SKILL.md").write_text("shared only", encoding="utf-8")
+
+    (overlay_skills / "demo-skill").mkdir(parents=True)
+    (overlay_skills / "demo-skill" / "SKILL.md").write_text("overlay version", encoding="utf-8")
+
+    ns["compose"].__globals__["PERSONAS_DIR"] = personas_dir
+    out = tmp_path / "composed"
+    ns["compose"]("sakthai", out)
+
+    assert (out / "demo-skill" / "SKILL.md").read_text(encoding="utf-8") == "overlay version"
+    assert (out / "shared-only-skill" / "SKILL.md").read_text(encoding="utf-8") == "shared only"
