@@ -25,6 +25,7 @@ def test_telegram_token_leak_in_error() -> None:
     assert "SECRET" not in result
     assert "12345" not in result
 
+
 if __name__ == "__main__":
     test_telegram_token_leak_in_error()
     print("Security test passed.")

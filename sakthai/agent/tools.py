@@ -467,7 +467,10 @@ BUILTIN_TOOLS: tuple[Tool, ...] = (
                 },
                 "prune_history": {
                     "type": "boolean",
-                    "description": "If true, returns only the final text answer of the loop. If false, appends a tool call summary.",
+                    "description": (
+                        "If true, returns only the final text answer of the loop. "
+                        "If false, appends a tool call summary."
+                    ),
                     "default": True,
                 },
             },

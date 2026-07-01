@@ -627,7 +627,7 @@ class MemoryStore:
                 "avg_weight": round(avg_w, 3) if avg_w is not None else None,
                 "avg_confidence": round(avg_c, 3) if avg_c is not None else None,
             },
-            "tags": dict(sorted(tag_counts.items(), key=lambda kv: (-kv[1], kv[0]))),
+            "tags": dict(sorted(tag_counts.items(), key=lambda kv: (-int(kv[1]), str(kv[0])))),
         }
 
     # -- import / export --------------------------------------------------

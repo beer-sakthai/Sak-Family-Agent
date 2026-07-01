@@ -183,7 +183,9 @@ def _get_request_executor(
 ) -> Callable[[], dict[str, Any]]:
     """Determine and return the appropriate request execution function."""
     if on_token is not None and hasattr(client, "stream"):
-        return lambda: _stream_chat(client, payload, on_token)
+        # Narrow the type of on_token for the lambda.
+        callback = on_token
+        return lambda: _stream_chat(client, payload, callback)
 
     if hasattr(client, "post"):
 

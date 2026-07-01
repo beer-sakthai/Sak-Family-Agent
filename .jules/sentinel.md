@@ -1,3 +1,5 @@
+# Sentinel Journal
+
 ## 2026-06-19 - [Insecure Dashboard Defaults]
 **Vulnerability:** The dashboard server was binding to 0.0.0.0 by default and lacked basic security headers (CSP, X-Frame-Options).
 **Learning:** Defaulting to all interfaces exposes internal data (like memory snapshots in data.json) to the local network.
