@@ -74,9 +74,10 @@ jobs:
       - uses: actions/checkout@v7
 
       - name: Install Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
-          node-version: "22"
+          # Matches pages.yml, which builds this same dashboard package.
+          node-version: 20
           cache: npm
           cache-dependency-path: dashboard/package-lock.json
 
