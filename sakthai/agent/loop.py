@@ -339,7 +339,6 @@ class _AgentRunState:
 
 
 def _setup_agent_run(
-    task: str, model: str, max_seconds: float | None, tools: tuple[Tool, ...], store: MemoryStore | None, client: Any | None, on_event: Callable[[str, dict[str, Any]], None] | None, provider: str | None
     task: str, model: str, max_seconds: float | None, tools: tuple[Tool, ...], store: MemoryStore | None, client: Any | None, on_event: Callable[[str, dict[str, Any]], None] | None, provider: str | None, *, dry_run: bool = False
 ) -> _AgentRunState:
     """Prepare all state needed for an agent run."""
@@ -354,7 +353,6 @@ def _setup_agent_run(
 
     resolved_provider = provider or _detect_provider(client, model)
     resolved_model = _resolve_model_name(model, resolved_provider)
-    resolved_client = _build_client(resolved_provider, client)
     resolved_client = None if dry_run else _build_client(resolved_provider, client)
 
     own_store = store is None
@@ -396,7 +394,6 @@ def run_agent(
     deltas as they stream from providers that support it. ``client`` and
     ``store`` are injectable for testing.
     """
-    state = _setup_agent_run(task, model, max_seconds, tools, store, client, on_event, provider)
     state = _setup_agent_run(task, model, max_seconds, tools, store, client, on_event, provider, dry_run=False)
 
     usage_tracker = UsageTracker()
@@ -495,12 +492,9 @@ def preflight(
     import os
     from ..auth import local_credential_source
 
-    resolved = provider or _detect_provider(client, model)
-    effective_model = _resolve_model_name(model, resolved)
     # We need a dummy task for setup, but it won't be used.
     state = _setup_agent_run("preflight", model, None, tools, None, client, None, provider, dry_run=True)
 
-    if resolved == "google":
     if state.provider == "google":
         if os.environ.get("GEMINI_API_KEY"):
             cred_source: str | None = "GEMINI_API_KEY"
@@ -508,16 +502,9 @@ def preflight(
             cred_source = "GOOGLE_API_KEY"
         else:
             from ..auth import load_gemini_cli_token
-
-            if load_gemini_cli_token() is not None:
-                cred_source = "gemini_cli_oauth"
-            else:
-                cred_source = None
-    elif resolved == "openai":
             cred_source = "gemini_cli_oauth" if load_gemini_cli_token() else None
     elif state.provider == "openai":
         cred_source = openai_credential_source()
-    elif resolved == "gateway":
     elif state.provider == "gateway":
         cred_source = gateway_credential_source()
     elif state.provider == "local":
@@ -525,16 +512,11 @@ def preflight(
     else:
         cred_source = anthropic_credential_source()
 
-    registry = ToolRegistry(tools)
     return {
-        "provider": resolved,
-        "model": effective_model,
         "provider": state.provider,
         "model": state.model,
         "credential_source": cred_source,
         "credentials_ok": cred_source is not None,
-        "tool_count": len(registry.tools),
-        "tools": [t.name for t in registry.tools],
         "tool_count": len(state.registry.tools),
         "tools": [t.name for t in state.registry.tools],
         "runnable": cred_source is not None,
@@ -625,25 +607,42 @@ def _serialize_messages(messages: list[Any]) -> list[dict[str, Any]]:
     return serialized
 
 
-def _save_session_log(task: str, model: str, messages: list[Any], result: AgentResult) -> None:
+def _prepare_session_payload(
+    session_id: str, timestamp: int, task: str, model: str, messages: list[Any], result: AgentResult
+) -> dict[str, Any]:
+    """Construct the data payload for a session log."""
+    return {
+        "session_id": session_id,
+        "timestamp": timestamp,
+        "task": task,
+        "model": model,
+        "messages": _serialize_messages(messages),
+        "usage": result.usage,
+        "result": {
+            "text": result.text,
+            "iterations": result.iterations,
+            "stop_reason": result.stop_reason,
+            "tool_calls": result.tool_calls,
+        },
+    }
+
+
+def _save_session_log(
+    task: str, model: str, messages: list[Any], result: AgentResult
+) -> None:
+    """Write a JSON log of the completed agent session to disk."""
     try:
+        now = int(time.time())
+        session_id = uuid.uuid4().hex
+
         base = sessions_dir().resolve()
         base.mkdir(parents=True, exist_ok=True)
-        target = (base / f"{int(time.time())}_{uuid.uuid4().hex}.json").resolve()
+
+        # The filename format is designed to be unique and sortable by time.
+        target = (base / f"{now}_{session_id}.json").resolve()
         target.relative_to(base)  # guard against traversal
-        payload = {
-            "timestamp": int(time.time()),
-            "task": task,
-            "model": model,
-            "messages": _serialize_messages(messages),
-            "usage": result.usage,
-            "result": {
-                "text": result.text,
-                "iterations": result.iterations,
-                "stop_reason": result.stop_reason,
-                "tool_calls": result.tool_calls,
-            },
-        }
+
+        payload = _prepare_session_payload(session_id, now, task, model, messages, result)
         target.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
     except Exception as exc:  # noqa: BLE001 — logging is best-effort
         logger.warning("Failed to save session log: %s", exc)
