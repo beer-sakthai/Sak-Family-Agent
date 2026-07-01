@@ -73,6 +73,12 @@ for raw in sys.stdin:
             time.sleep(60)
         elif mode == "die_mid_call":
             sys.exit(0)
+        elif mode == "partial_then_die":
+            # A complete JSON-RPC response but with NO trailing newline, then EOF.
+            sys.stdout.write(json.dumps({"jsonrpc": "2.0", "id": mid,
+                  "result": {"content": [{"type": "text", "text": "unterminated"}]}}))
+            sys.stdout.flush()
+            sys.exit(0)
         else:
             send({"jsonrpc": "2.0", "id": mid,
                   "result": {"content": [{"type": "text", "text": "ok"}]}})
@@ -132,6 +138,14 @@ def test_server_death_mid_call_fails_loudly(tmp_path: Path) -> None:
         pytest.raises(MCPClientError, match="closed before responding"),
     ):
         client.call_tool("echo", {})
+
+
+def test_unterminated_final_line_is_recovered_at_eof(tmp_path: Path) -> None:
+    # A server that writes a complete response with no trailing newline and then
+    # closes stdout must have that trailing partial line flushed and parsed at
+    # EOF, not silently dropped as "closed before responding".
+    with _client(tmp_path, "partial_then_die") as client:
+        assert client.call_tool("echo", {}) == "unterminated"
 
 
 def test_server_death_mid_handshake_fails_to_start(tmp_path: Path) -> None:

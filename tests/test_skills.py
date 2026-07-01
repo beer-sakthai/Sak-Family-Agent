@@ -274,3 +274,20 @@ def test_naming_violations_missing_root_is_empty(tmp_path: Path) -> None:
     from sakthai.skills import naming_violations
 
     assert naming_violations(tmp_path / "nope", prefix="Sak-") == []
+
+
+def test_naming_violations_skips_unparseable_skill(tmp_path: Path) -> None:
+    from sakthai.skills import naming_violations
+
+    # A SKILL.md with no YAML frontmatter is a parse error, not a naming issue:
+    # naming_violations must skip it (validate_tree owns parse errors), while
+    # still reporting the genuine naming violation alongside it.
+    (tmp_path / "broken").mkdir()
+    (tmp_path / "broken" / "SKILL.md").write_text("no frontmatter here\n", encoding="utf-8")
+    _write_skill(tmp_path / "bad-prefix", "bad-prefix")
+
+    violations = dict(
+        (p.parent.name, reason) for p, reason in naming_violations(tmp_path, prefix="Sak-")
+    )
+    assert "broken" not in violations
+    assert "bad-prefix" in violations
