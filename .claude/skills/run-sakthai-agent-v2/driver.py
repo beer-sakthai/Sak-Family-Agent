@@ -7,7 +7,10 @@ dashboard JSON export, and a live JSON-RPC roundtrip against `sakthai mcp` —
 in a throwaway SAKTHAI_HOME, and exits non-zero if anything misbehaves.
 
 No API key or network is required: the agent loop is exercised only via
-`run --dry-run` (preflight), never a real model call.
+`run --dry-run` (preflight), never a real model call. If no Anthropic
+credential is present in the environment, a placeholder `ANTHROPIC_API_KEY`
+is injected so the "runnable" preflight check has something to resolve —
+`--dry-run` never uses it to make a request.
 
 Usage:
     python .claude/skills/run-sakthai-agent-v2/driver.py
@@ -89,6 +92,8 @@ def drive_mcp(env: dict[str, str]) -> dict[int, dict]:
 def main() -> int:
     home = Path(tempfile.mkdtemp(prefix="sakthai-smoke."))
     env = {**os.environ, "SAKTHAI_HOME": str(home)}
+    if not env.get("ANTHROPIC_API_KEY") and not env.get("ANTHROPIC_AUTH_TOKEN"):
+        env["ANTHROPIC_API_KEY"] = "sk-ant-smoke-dry-run-placeholder"
     print(f"sakthai-agent-v2 smoke · SAKTHAI_HOME={home}\n")
 
     try:
