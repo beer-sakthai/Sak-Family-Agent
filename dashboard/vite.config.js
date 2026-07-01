@@ -7,5 +7,10 @@ export default defineConfig({
   base: '/sakthai-agent-v2/',
   server: {
     port: 3000,
-  }
+  },
+  test: {
+    environment: 'jsdom',
+    setupFiles: ['./src/test/setup.js'],
+    globals: true,
+  },
 })
