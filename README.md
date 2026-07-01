@@ -25,7 +25,8 @@ One package, three ways in — a CLI, a tool-using agent loop, and an MCP stdio 
 > a curated **skills catalog**, and a two-way **MCP** bridge — so the same memory and tools
 > are reachable from other agents and editors. **Local-first**, with a fully **no-cost** local run.
 
----
+---<img width="1280" height="549" alt="image" src="https://github.com/user-attachments/assets/6a58ff16-74cd-47d5-881a-84736e7c994b" />
+
 
 ## 📑 Table of contents
 
