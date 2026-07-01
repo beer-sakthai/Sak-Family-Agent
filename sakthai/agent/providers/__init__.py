@@ -5,8 +5,8 @@ Each provider lives in its own module and owns its API call, message adaptation,
 
 from __future__ import annotations
 
-from typing import Callable
 import os
+from collections.abc import Callable
 from typing import Any
 
 from ...auth import (
@@ -16,6 +16,8 @@ from ...auth import (
     local_credential_source,
     openai_credential_source,
     resolve_anthropic_client,
+    resolve_local_credentials,
+    resolve_ollama_credentials,
 )
 from .anthropic_provider import call_anthropic
 from .base import (
@@ -117,7 +119,7 @@ def detect_provider(client: Any | None, model: str) -> str:
     # The order of these checks defines the detection priority.
     checks: list[Callable[[], str | None]] = [
         lambda: _detect_from_model_name(model),
-        lambda: _detect_from_client_type(client),  # type: ignore[no-any-return]
+        lambda: _detect_from_client_type(client),
         _detect_from_credentials,
     ]
 
@@ -156,7 +158,9 @@ def _build_google_client() -> Any:
 
     # Fallback to Gemini CLI OAuth token
     import subprocess
+
     from google.oauth2.credentials import Credentials
+
     from ...auth import load_gemini_cli_token
 
     token = load_gemini_cli_token()
@@ -216,8 +220,6 @@ def _build_anthropic_client() -> Any:
 
 def _build_ollama_client() -> Any:
     """Build a client for a local Ollama instance."""
-    from ...auth import resolve_ollama_credentials
-
     try:
         api_base, api_key = resolve_ollama_credentials()
     except AuthError as exc:
@@ -228,8 +230,6 @@ def _build_ollama_client() -> Any:
 
 def _build_local_client() -> Any:
     """Build a client for a custom local OpenAI-compatible model."""
-    from ...auth import resolve_local_credentials
-
     try:
         api_base, api_key = resolve_local_credentials()
     except AuthError as exc:

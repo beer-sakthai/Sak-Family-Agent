@@ -22,10 +22,18 @@ from sakthai.auth import AuthError
     [
         (None, "gateway-claude-3", {}, {}, "gateway"),
         (None, "gemini-1.5-pro", {}, {}, "google"),
-        (MagicMock(__class__=MagicMock(__module__="google.genai.client")), "m", {}, {}, "google"), (None, "local/my-model", {}, {}, "local"),
+        (MagicMock(__class__=MagicMock(__module__="google.genai.client")), "m", {}, {}, "google"),
+        (None, "local/my-model", {}, {}, "local"),
         (MagicMock(__class__=MagicMock(__module__="openai.lib.client")), "m", {}, {}, "openai"),
-        (None, "gpt-4o", {}, {}, "openai"), (None, "ollama/llama3", {}, {}, "ollama"),
-        (MagicMock(__class__=MagicMock(__module__="anthropic.lib.client")), "m", {}, {}, "anthropic"),
+        (None, "gpt-4o", {}, {}, "openai"),
+        (None, "ollama/llama3", {}, {}, "ollama"),
+        (
+            MagicMock(__class__=MagicMock(__module__="anthropic.lib.client")),
+            "m",
+            {},
+            {},
+            "anthropic",
+        ),
         (None, "claude-3", {"GEMINI_API_KEY": "test"}, {}, "google"),
         (None, "claude-3", {}, {"openai": True}, "openai"),
         (None, "claude-3", {}, {"gateway": True}, "gateway"),
@@ -37,15 +45,19 @@ def test_detect_provider(client, model, env, creds, expected, monkeypatch):
     for k, v in env.items():
         monkeypatch.setenv(k, v)
 
-    with patch(
-        "sakthai.agent.providers.openai_credential_source",
-        return_value="dummy" if creds.get("openai") else None,
-    ), patch(
-        "sakthai.agent.providers.gateway_credential_source",
-        return_value="dummy" if creds.get("gateway") else None,
-    ), patch(
-        "sakthai.agent.providers.local_credential_source",
-        return_value="dummy" if creds.get("local") else None,
+    with (
+        patch(
+            "sakthai.agent.providers.openai_credential_source",
+            return_value="dummy" if creds.get("openai") else None,
+        ),
+        patch(
+            "sakthai.agent.providers.gateway_credential_source",
+            return_value="dummy" if creds.get("gateway") else None,
+        ),
+        patch(
+            "sakthai.agent.providers.local_credential_source",
+            return_value="dummy" if creds.get("local") else None,
+        ),
     ):
         assert detect_provider(client, model) == expected
 
@@ -192,7 +204,9 @@ def test_build_google_client_no_project(mock_check_output, mock_load_token, monk
 @patch("google.genai.Client", side_effect=Exception("oauth failed"))
 @patch("google.oauth2.credentials.Credentials")
 @patch("sakthai.auth.load_gemini_cli_token", return_value="oauth-token")
-def test_build_google_client_oauth_fails(mock_load_token, mock_creds, mock_genai_client, monkeypatch):
+def test_build_google_client_oauth_fails(
+    mock_load_token, mock_creds, mock_genai_client, monkeypatch
+):
     """Test _build_google_client raises AgentError on OAuth client init failure."""
     monkeypatch.setenv("GOOGLE_CLOUD_PROJECT", "gcp-project-id")
     with pytest.raises(AgentError, match="Failed to initialize Google Gemini client with OAuth"):

@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import time
 import uuid
 from collections.abc import Callable, Sequence
@@ -142,9 +143,7 @@ def _parse_slash_command(task: str) -> tuple[str, str] | None:
         return None
 
 
-def _build_skills_block(
-    skills: Sequence[str], command_system: str, caveman: str | None
-) -> str:
+def _build_skills_block(skills: Sequence[str], command_system: str, caveman: str | None) -> str:
     """Construct the full skills block for the system prompt."""
     parts = []
     if skills:
@@ -180,9 +179,8 @@ def _build_system(
         parts.append(
             "FAST-TRACK MODE: Execute the user's task directly and quickly without enforcing the 6-stage cycle (Dream/Hope/Care/Joy/Trust/Growth)."
         )
-    if not stateless:
-        if memory_block := store.render_prompt_block():
-            parts.append(memory_block)
+    if not stateless and (memory_block := store.render_prompt_block()):
+        parts.append(memory_block)
     skills_block = _build_skills_block(skills, command_system, caveman)
     if skills_block:
         parts.append(skills_block)
@@ -339,8 +337,6 @@ def run_agent(
     if parsed:
         command_system, task = parsed
 
-    import os
-
     provider = provider or _detect_provider(client, model)
     if provider == "ollama":
         provider = "openai"
@@ -382,7 +378,17 @@ def run_agent(
                 store, skills, command_system, fast=fast, stateless=stateless, caveman=caveman
             )
             response = _agent_turn(
-                provider, client, model, system, tools, messages, iteration, on_token, max_tokens, tool_schemas, usage_tracker
+                provider,
+                client,
+                model,
+                system,
+                tools,
+                messages,
+                iteration,
+                on_token,
+                max_tokens,
+                tool_schemas,
+                usage_tracker,
             )
 
             stop_reason = getattr(response, "stop_reason", "") or ""
@@ -424,7 +430,7 @@ def run_agent(
                 )
                 _save_session_log(task, model, messages, result)
                 return result
-            
+
             _dispatch_tool_calls(response, messages, registry, store, notify, tool_calls)
 
         raise AgentError(
@@ -432,8 +438,6 @@ def run_agent(
             "without producing a final response."
         )
     finally:
-        import os
-
         if old_active is None:
             os.environ.pop("SAKTHAI_AGENT_ACTIVE", None)
         else:
@@ -457,8 +461,6 @@ def preflight(
     ``sakthai run --dry-run`` so a run can be validated at zero token cost.
     ``runnable`` is True when a usable credential for the resolved provider exists.
     """
-    import os
-
     resolved = provider or _detect_provider(client, model)
     effective_model = _resolve_model_name(model, resolved)
 

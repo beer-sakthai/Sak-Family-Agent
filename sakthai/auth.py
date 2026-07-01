@@ -149,6 +149,49 @@ def openai_credential_source() -> str | None:
     return None
 
 
+def resolve_ollama_credentials() -> tuple[str, str]:
+    """Resolve the base URL and API key for a local Ollama instance.
+
+    Returns ``(base_url, api_key)`` where ``base_url`` is ``ollama_host()`` with a
+    ``/v1`` suffix (default ``http://127.0.0.1:11434/v1``) and ``api_key`` is
+    ``OPENAI_API_KEY`` or ``"nokey"`` — Ollama ignores the key but the
+    OpenAI-compatible client still requires a non-empty value.
+    """
+    from .config import ollama_host
+
+    api_key = os.environ.get("OPENAI_API_KEY") or "nokey"
+    return f"{ollama_host()}/v1", api_key
+
+
+def resolve_local_credentials() -> tuple[str, str]:
+    """Resolve the base URL and API key for a custom local OpenAI-compatible model.
+
+    A "local" endpoint is any self-hosted OpenAI-compatible server addressed via
+    ``OPENAI_BASE_URL`` / ``OPENAI_API_BASE``. This reuses the OpenAI resolver but
+    requires an explicit base URL, so it never silently targets the public OpenAI
+    API. Raises :class:`AuthError` when no base URL is configured.
+    """
+    from .config import openai_api_base
+
+    if not openai_api_base():
+        raise AuthError(
+            "No local model endpoint configured. Set OPENAI_BASE_URL "
+            "(or OPENAI_API_BASE) to your local OpenAI-compatible server."
+        )
+    return resolve_openai_credentials()
+
+
+def local_credential_source() -> str | None:
+    """Return a label for a distinct local-model credential, or None.
+
+    Reserved for a future dedicated local-model config surface. It returns None
+    today so the ``local`` provider is reachable only when selected explicitly
+    (``provider="local"`` or a ``local/…`` model name) and never shadows the
+    ``openai`` credential auto-detection.
+    """
+    return None
+
+
 def resolve_gateway_credentials() -> tuple[str, str]:
     """Resolve the base URL and API key for an OpenAI-compatible AI gateway.
 
