@@ -1,8 +1,11 @@
 from __future__ import annotations
+
 import os
 from unittest.mock import MagicMock
+
 from sakthai.agent.tools import _send_telegram_message
 from sakthai.memory.store import MemoryStore
+
 
 def test_telegram_token_leak_in_error() -> None:
     """Verify that an invalid TELEGRAM_BOT_TOKEN is not leaked in the error message."""
