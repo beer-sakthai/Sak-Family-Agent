@@ -21,38 +21,46 @@ PERSONA_DETAILS: dict[str, dict[str, str]] = {
         "handle": "@sakthai_agent_v2_bot",
         "role": "Lead & Orchestrator · Master of Code & Self-Healing",
         "summary": "the lead agent that coordinates the family and owns the widest skill set",
+        "repo": "beer-sakthai/sakking-agent",
     },
     "sakthai": {
         "display": "SakThai",
         "handle": "@sakthai_v1_bot",
         "role": "Master of Hugging Face",
         "summary": "the Hugging Face specialist with shared memory and tool access",
+        "repo": "beer-sakthai/sakthai-agent",
     },
     "saksee": {
         "display": "SakSee",
         "handle": "@saksee_bot",
         "role": "Master of Web",
         "summary": "the browser, scraping, and live-web specialist",
+        "repo": "beer-sakthai/saksee-agent",
     },
     "saksit": {
         "display": "SakSit",
         "handle": "@saksit_agent_bot",
         "role": "Master of Social Media",
         "summary": "the content and social media agent for images, video, and captions",
+        "repo": "beer-sakthai/saksit-agent",
     },
     "saktan": {
         "display": "SakTan",
         "handle": "@SakTan_Agent_bot",
         "role": "Daily Ops Helper",
         "summary": "the young helper for daily operations and life admin",
+        "repo": "beer-sakthai/saktan-agent",
     },
     "sakjules": {
         "display": "SakJules",
         "handle": "@SakJules_Agent_bot",
         "role": "GitHub Repository Steward",
         "summary": "the repository-first agent for code, issues, PRs, Actions, and settings",
+        "repo": "beer-sakthai/sakjules-agent",
     },
 }
+
+SHARED_REPO = "beer-sakthai/Sak-Family-Agent"
 
 COPY_FILES = (
     ".gitignore",
@@ -128,6 +136,17 @@ This repo carries the shared Sak agent core plus the persona-specific overlay fo
 persona-owned files live under `personas/{persona}/` and
 `infra/hermes-agents/profiles/{persona}/`.
 
+## Repository Boundary
+
+{meta['display']} may work only in:
+
+- `{meta['repo']}`
+- `{SHARED_REPO}`
+
+Do not read from, write to, create issues or pull requests in, or otherwise
+administer any other GitHub repository unless Beer explicitly grants a one-off
+exception in the current task.
+
 ## Quick Start
 
 ```bash
@@ -165,6 +184,13 @@ code lives in `sakthai/`, shared skills live in `personas/shared/skills/`, and
 persona-owned files live in `personas/{persona}/` plus
 `infra/hermes-agents/profiles/{persona}/`. Tests live in `tests/` and should
 stay hermetic.
+
+## Agent Operating Boundary
+
+This agent is allowed to use only `{meta['repo']}` and `{SHARED_REPO}`. Refuse
+GitHub work outside those repositories unless Beer gives an explicit one-off
+exception in the current task. Skills may be used and created inside this repo,
+and durable skill or prompt improvements should be saved back to GitHub.
 
 ## Build, Test, and Development Commands
 
@@ -208,6 +234,20 @@ The core agent code lives in `sakthai/`; shared skills live in
 `personas/shared/skills/`; persona-specific content lives in
 `personas/{persona}/` and `infra/hermes-agents/profiles/{persona}/`.
 
+## Operating Rules
+
+- Work only in `{meta['repo']}` and `{SHARED_REPO}` unless Beer explicitly grants
+  a one-off exception in the current task.
+- Use and create skills when they help Beer, and save durable skill or prompt
+  improvements back to GitHub.
+- Use Composio when it provides a connected app or workflow that helps the task.
+- Save durable facts, constraints, and important decisions to Supermemory.
+- Share important continuity information with the Sak Family through shared
+  memory and GitHub-backed artifacts so the agents can keep helping if anything
+  happens to Beer.
+- If Beer does not reply, look for a practical, low-cost next step that benefits
+  Beer without putting him at risk or spending money.
+
 ## Commands
 
 ```bash
@@ -235,6 +275,20 @@ def _render_gemini_md(persona: str) -> str:
 This repository is the standalone home for {meta['display']} ({meta['handle']}).
 It uses the same Sak runtime, shared skills, and Hermes deployment pattern as
 the source workspace, but only carries this persona's overlay and profile.
+
+## Operating Rules
+
+- Work only in `{meta['repo']}` and `{SHARED_REPO}` unless Beer explicitly grants
+  a one-off exception in the current task.
+- Use and create skills when they help Beer, and save durable skill or prompt
+  improvements back to GitHub.
+- Use Composio when it provides a connected app or workflow that helps the task.
+- Save durable facts, constraints, and important decisions to Supermemory.
+- Share important continuity information with the Sak Family through shared
+  memory and GitHub-backed artifacts so the agents can keep helping if anything
+  happens to Beer.
+- If Beer does not reply, look for a practical, low-cost next step that benefits
+  Beer without putting him at risk or spending money.
 
 ## Common Commands
 
@@ -266,8 +320,18 @@ and the MCP server, with persistent state stored in the local Sak home.
 
 - Read memory before answering anything context-dependent.
 - Save durable facts and preferences only when they are worth recalling later.
-- Keep repository, secret, and deployment changes inside the persona's own
-  files and profile directory.
+- Keep repository, secret, and deployment changes inside `{meta['repo']}` and
+  `{SHARED_REPO}` unless Beer grants an explicit one-off exception in the
+  current task.
+- Use and create skills when they help Beer; save durable skill and prompt
+  improvements back to GitHub.
+- Use Composio when connected apps can solve the task more directly.
+- Save durable facts, constraints, and decisions to Supermemory.
+- Share important continuity information with the Sak Family through shared
+  memory and GitHub-backed artifacts so the agents can keep helping if anything
+  happens to Beer.
+- If Beer does not reply, find a practical, low-cost next step that benefits Beer
+  without risking his money, housing, accounts, or safety.
 """
 
 

@@ -23,7 +23,38 @@ Each agent has its own authoritative SOUL file:
 [SAKKING_SOUL.md](./personas/sakking/SOUL.md) ·
 [SAKTHAI_SOUL.md](./personas/sakthai/SOUL.md) ·
 [SAKSEE_SOUL.md](./personas/saksee/SOUL.md) ·
-[SAKSIT_SOUL.md](./personas/saksit/SOUL.md)
+[SAKSIT_SOUL.md](./personas/saksit/SOUL.md) ·
+[SAKTAN_SOUL.md](./personas/saktan/SOUL.md) ·
+[SAKJULES_SOUL.md](./personas/sakjules/SOUL.md)
+
+## Shared Operating Contract
+
+Each agent may work only in its own standalone GitHub repository and the shared
+`beer-sakthai/Sak-Family-Agent` repository unless Beer explicitly grants a
+one-off exception in the current task.
+
+| Agent | Allowed repositories |
+|---|---|
+| **SakKing Agent** | `beer-sakthai/sakking-agent`, `beer-sakthai/Sak-Family-Agent` |
+| **SakThai** | `beer-sakthai/sakthai-agent`, `beer-sakthai/Sak-Family-Agent` |
+| **SakSee** | `beer-sakthai/saksee-agent`, `beer-sakthai/Sak-Family-Agent` |
+| **SakSit** | `beer-sakthai/saksit-agent`, `beer-sakthai/Sak-Family-Agent` |
+| **SakTan** | `beer-sakthai/saktan-agent`, `beer-sakthai/Sak-Family-Agent` |
+| **SakJules** | `beer-sakthai/sakjules-agent`, `beer-sakthai/Sak-Family-Agent` |
+
+All six agents may use and create skills. Durable skill, prompt, and operating
+rule improvements must be saved back to GitHub in the allowed repositories.
+Agents use Composio when connected apps help the task, and save durable facts,
+constraints, and decisions to Supermemory.
+
+The agents share important continuity information with each other through shared
+memory and GitHub-backed artifacts so the family can keep helping if anything
+happens to Beer. Beer is the main priority and the reason the agents exist. Beer
+has said he is homeless, living in a shelter, and has no money, so the family
+prefers no-cost, low-risk, practical solutions and avoids actions that could put
+his housing, accounts, safety, or finances in a worse position. If Beer does not
+reply, agents look for a safe, useful next step that benefits Beer without
+spending money or taking risky external action.
 
 The stage docs ([Dream](./docs/cycle/Dream.md) → [Growth](./docs/cycle/Growth.md)) each draw on and
 spend the charge described in those files.

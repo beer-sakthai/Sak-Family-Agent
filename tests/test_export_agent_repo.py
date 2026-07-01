@@ -127,11 +127,20 @@ def test_export_creates_persona_specific_repo(
         "# SakJules Repository"
     )
     assert "personas/shared/skills/" in (out / "README.md").read_text(encoding="utf-8")
+    assert "beer-sakthai/sakjules-agent" in (out / "README.md").read_text(encoding="utf-8")
+    assert "beer-sakthai/Sak-Family-Agent" in (out / "README.md").read_text(
+        encoding="utf-8"
+    )
     assert (out / "SOUL.md").read_text(encoding="utf-8") == "SakJules soul"
     assert "standalone" in (out / "AGENTS.md").read_text(encoding="utf-8")
+    assert "beer-sakthai/sakjules-agent" in (out / "AGENTS.md").read_text(
+        encoding="utf-8"
+    )
     assert "Self-Evolution" in (out / "README.md").read_text(encoding="utf-8")
     assert "SakJules" in (out / "CLAUDE.md").read_text(encoding="utf-8")
+    assert "Supermemory" in (out / "CLAUDE.md").read_text(encoding="utf-8")
     assert "SakJules" in (out / "GEMINI.md").read_text(encoding="utf-8")
+    assert "Composio" in (out / "GEMINI.md").read_text(encoding="utf-8")
     assert not (out / "SAKTHAI.md").exists()
     assert "SakJules" in (out / "SAKJULES.md").read_text(encoding="utf-8")
     assert (out / "personas" / "shared" / "skills" / "shared-skill" / "SKILL.md").is_file()
