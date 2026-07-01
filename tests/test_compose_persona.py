@@ -63,14 +63,20 @@ def test_compose_includes_shared_only_files(personas_dir: Path, tmp_path: Path) 
     assert (out / "shared-only.md").read_text(encoding="utf-8") == "shared content"
 
 
-def test_compose_includes_overlay_only_files(personas_dir: Path, tmp_path: Path) -> None:
+def test_compose_includes_overlay_only_files(
+    personas_dir: Path, tmp_path: Path
+) -> None:
     out = compose_persona.compose("sakthai", tmp_path / "out")
     assert (out / "overlay-only.md").read_text(encoding="utf-8") == "overlay content"
 
 
-def test_compose_preserves_nested_shared_layout(personas_dir: Path, tmp_path: Path) -> None:
+def test_compose_preserves_nested_shared_layout(
+    personas_dir: Path, tmp_path: Path
+) -> None:
     out = compose_persona.compose("sakthai", tmp_path / "out")
-    assert (out / "category" / "nested.md").read_text(encoding="utf-8") == "nested shared"
+    assert (out / "category" / "nested.md").read_text(
+        encoding="utf-8"
+    ) == "nested shared"
 
 
 def test_compose_unknown_persona_raises(personas_dir: Path, tmp_path: Path) -> None:
@@ -78,7 +84,9 @@ def test_compose_unknown_persona_raises(personas_dir: Path, tmp_path: Path) -> N
         compose_persona.compose("not-a-real-persona", tmp_path / "out")
 
 
-def test_compose_wipes_stale_output_directory(personas_dir: Path, tmp_path: Path) -> None:
+def test_compose_wipes_stale_output_directory(
+    personas_dir: Path, tmp_path: Path
+) -> None:
     out_dir = tmp_path / "out"
     out_dir.mkdir()
     (out_dir / "stale.md").write_text("leftover from a previous run", encoding="utf-8")
@@ -116,14 +124,18 @@ def test_compose_tolerates_missing_shared_dir(
     assert (out / "only.md").read_text(encoding="utf-8") == "overlay content"
 
 
-def test_diff_reports_no_mismatches_for_identical_trees(personas_dir: Path, tmp_path: Path) -> None:
+def test_diff_reports_no_mismatches_for_identical_trees(
+    personas_dir: Path, tmp_path: Path
+) -> None:
     expected = compose_persona.compose("sakthai", tmp_path / "expected")
     composed = compose_persona.compose("sakthai", tmp_path / "composed")
 
     assert compose_persona._diff(expected, composed) == []
 
 
-def test_diff_reports_content_and_presence_mismatches(personas_dir: Path, tmp_path: Path) -> None:
+def test_diff_reports_content_and_presence_mismatches(
+    personas_dir: Path, tmp_path: Path
+) -> None:
     expected = compose_persona.compose("sakthai", tmp_path / "expected")
     composed_dir = tmp_path / "composed"
     composed_dir.mkdir()
@@ -143,7 +155,9 @@ def test_main_check_succeeds_on_matching_tree(
     expected = compose_persona.compose("sakthai", tmp_path / "expected")
     out_dir = tmp_path / "out"
 
-    exit_code = compose_persona.main(["sakthai", "--out", str(out_dir), "--check", str(expected)])
+    exit_code = compose_persona.main(
+        ["sakthai", "--out", str(out_dir), "--check", str(expected)]
+    )
 
     assert exit_code == 0
     assert "OK: composed sakthai matches" in capsys.readouterr().out

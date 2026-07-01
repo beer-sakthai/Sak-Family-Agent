@@ -39,7 +39,9 @@ def sessions() -> None:
 
 
 @sessions.command("list")
-@click.option("--limit", default=20, show_default=True, help="Limit number of sessions shown.")
+@click.option(
+    "--limit", default=20, show_default=True, help="Limit number of sessions shown."
+)
 def sessions_list(limit: int) -> None:
     """List past agent sessions."""
     dir_path = sessions_dir()
@@ -84,7 +86,9 @@ def sessions_list(limit: int) -> None:
         total_tokens = usage.get("total_tokens", 0)
         token_str = str(total_tokens) if total_tokens else "0"
 
-        click.echo(f"{session_id:<45} {dt_str:<19} {model:<18} {token_str:<10} {task:<50}")
+        click.echo(
+            f"{session_id:<45} {dt_str:<19} {model:<18} {token_str:<10} {task:<50}"
+        )
         count += 1
 
 
@@ -146,7 +150,9 @@ def sessions_show(session_id: str) -> None:
                     name = block.get("name", "")
                     args = block.get("input", {})
                     tool_id = block.get("id", "")
-                    click.secho(f"  Tool Use: {name}({args}) [id: {tool_id}]", fg="yellow")
+                    click.secho(
+                        f"  Tool Use: {name}({args}) [id: {tool_id}]", fg="yellow"
+                    )
                 elif b_type == "tool_result":
                     tool_id = block.get("tool_use_id", "")
                     result_text = block.get("content", "")

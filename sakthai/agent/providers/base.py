@@ -88,7 +88,9 @@ def with_retry(fn: Callable[..., Any], *args: Any, **kwargs: Any) -> Any:
     retryer = tenacity.Retrying(
         retry=tenacity.retry_if_exception(is_retryable),
         stop=tenacity.stop_after_attempt(RETRY_ATTEMPTS),
-        wait=tenacity.wait_exponential(multiplier=RETRY_WAIT_MULTIPLIER, max=RETRY_WAIT_MAX),
+        wait=tenacity.wait_exponential(
+            multiplier=RETRY_WAIT_MULTIPLIER, max=RETRY_WAIT_MAX
+        ),
         reraise=True,
     )
     return retryer(fn, *args, **kwargs)

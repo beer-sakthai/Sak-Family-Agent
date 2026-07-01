@@ -237,11 +237,17 @@ class MemoryStore:
             )
             self._conn.commit()
 
-        migrations = {1: self._migration_v1, 2: self._migration_v2, 3: self._migration_v3}
+        migrations = {
+            1: self._migration_v1,
+            2: self._migration_v2,
+            3: self._migration_v3,
+        }
         try:
             # BEGIN IMMEDIATE serialises migration across parallel openers.
             self._conn.execute("BEGIN IMMEDIATE")
-            row = self._conn.execute("SELECT MAX(version) AS v FROM schema_version").fetchone()
+            row = self._conn.execute(
+                "SELECT MAX(version) AS v FROM schema_version"
+            ).fetchone()
             current = int(row["v"]) if row and row["v"] is not None else 0
 
             # A DB created before schema_version existed already has the v1
@@ -292,7 +298,9 @@ class MemoryStore:
             "evidence_session_id TEXT, weight REAL NOT NULL DEFAULT 1.0, "
             "confidence REAL NOT NULL DEFAULT 0.5, created_at INTEGER NOT NULL)"
         )
-        cols = {r["name"] for r in self._conn.execute("PRAGMA table_info(observations)")}
+        cols = {
+            r["name"] for r in self._conn.execute("PRAGMA table_info(observations)")
+        }
         if "confidence" not in cols:
             self._conn.execute(
                 "ALTER TABLE observations ADD COLUMN confidence REAL NOT NULL DEFAULT 0.5"
@@ -317,6 +325,42 @@ class MemoryStore:
         )
         self._conn.commit()
         return cast(int, cur.lastrowid)
+
+    def add_facts(self, facts: Iterable[dict[str, Any]]) -> list[int]:
+        """Store multiple facts in a single transaction.
+
+        Each dict in ``facts`` can contain: "value" (required), "kind", "key",
+        "source_session", "tags". Returns the list of new IDs.
+        """
+        now = _now()
+        ids: list[int] = []
+        try:
+            # BEGIN IMMEDIATE ensures we have the write lock and prevents
+            # deadlocks if another connection is already reading.
+            self._conn.execute("BEGIN IMMEDIATE")
+            for f in facts:
+                value = f.get("value")
+                if not value or not value.strip():
+                    continue
+                cur = self._conn.execute(
+                    "INSERT INTO facts (kind, key, value, source_session, created_at, "
+                    "updated_at, tags) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                    (
+                        f.get("kind", "note"),
+                        f.get("key"),
+                        value.strip(),
+                        f.get("source_session"),
+                        now,
+                        now,
+                        _encode_tags(f.get("tags")),
+                    ),
+                )
+                ids.append(cast(int, cur.lastrowid))
+            self._conn.commit()
+            return ids
+        except Exception:
+            self._conn.rollback()
+            raise
 
     def list_facts(
         self,
@@ -354,7 +398,9 @@ class MemoryStore:
         return _fact_from_row(row) if row else None
 
     def delete_facts_by_key(self, kind: str, key: str) -> int:
-        cur = self._conn.execute("DELETE FROM facts WHERE kind = ? AND key = ?", (kind, key))
+        cur = self._conn.execute(
+            "DELETE FROM facts WHERE kind = ? AND key = ?", (kind, key)
+        )
         self._conn.commit()
         return cur.rowcount
 
@@ -447,7 +493,9 @@ class MemoryStore:
 
     # -- search & rendering ----------------------------------------------
 
-    def search_memory(self, query: str, limit: int = 50) -> tuple[list[Fact], list[Observation]]:
+    def search_memory(
+        self, query: str, limit: int = 50
+    ) -> tuple[list[Fact], list[Observation]]:
         """Substring-search both tables; returns (matching facts, observations)."""
         # Escape LIKE wildcards with '=' so a literal % or _ in the query does
         # not act as a wildcard.
@@ -599,7 +647,7 @@ class MemoryStore:
         }
         # SQL-based tag counting is ~2.6x faster than Python loop (Bolt optimization)
         tag_counts = {
-            r["tag"]: r["n"]
+            r["tag"]: int(r["n"])
             for r in c.execute(
                 "SELECT j.value AS tag, COUNT(*) AS n "
                 "FROM facts, json_each(facts.tags) AS j "
@@ -607,7 +655,9 @@ class MemoryStore:
                 "GROUP BY tag"
             ).fetchall()
         }
-        f_min, f_max = c.execute("SELECT MIN(created_at), MAX(created_at) FROM facts").fetchone()
+        f_min, f_max = c.execute(
+            "SELECT MIN(created_at), MAX(created_at) FROM facts"
+        ).fetchone()
         o_min, o_max, avg_w, avg_c = c.execute(
             "SELECT MIN(created_at), MAX(created_at), AVG(weight), AVG(confidence) "
             "FROM observations"
@@ -627,7 +677,9 @@ class MemoryStore:
                 "avg_weight": round(avg_w, 3) if avg_w is not None else None,
                 "avg_confidence": round(avg_c, 3) if avg_c is not None else None,
             },
-            "tags": dict(sorted(tag_counts.items(), key=lambda kv: (-kv[1], kv[0]))),
+            "tags": dict(
+                sorted(tag_counts.items(), key=lambda kv: (-int(kv[1]), kv[0]))
+            ),
         }
 
     # -- import / export --------------------------------------------------
@@ -650,7 +702,9 @@ class MemoryStore:
             "observations": [asdict(Observation(**dict(r))) for r in obs_rows],
         }
 
-    def import_from_dict(self, data: dict[str, Any], *, mode: str = "merge") -> tuple[int, int]:
+    def import_from_dict(
+        self, data: dict[str, Any], *, mode: str = "merge"
+    ) -> tuple[int, int]:
         """Load a snapshot. Returns (n_facts, n_observations) imported.
 
         ``mode="merge"`` appends rows with fresh IDs; ``mode="replace"`` wipes
@@ -681,75 +735,72 @@ class MemoryStore:
             if mode == "replace":
                 self._conn.execute("DELETE FROM facts")
                 self._conn.execute("DELETE FROM observations")
-                # Reset autoincrement so reinserted IDs are honoured rather than
-                # being shadowed by sqlite_sequence. The table may not exist yet.
                 with contextlib.suppress(sqlite3.OperationalError):
                     self._conn.execute(
                         "DELETE FROM sqlite_sequence WHERE name IN ('facts', 'observations')"
                     )
-                self._conn.executemany(
-                    "INSERT INTO facts (id, kind, key, value, source_session, "
-                    "created_at, updated_at, tags) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                    [
-                        (
-                            f["id"],
-                            f["kind"],
-                            f["key"],
-                            f["value"],
-                            f["source_session"],
-                            f["created_at"],
-                            f["updated_at"],
-                            _encode_tags(f.get("tags")),
-                        )
-                        for f in facts
-                    ],
-                )
-                self._conn.executemany(
-                    "INSERT INTO observations (id, summary, evidence_session_id, "
-                    "weight, confidence, created_at) VALUES (?, ?, ?, ?, ?, ?)",
-                    [
-                        (
-                            o["id"],
-                            o["summary"],
-                            o["evidence_session_id"],
-                            o["weight"],
-                            o["confidence"],
-                            o["created_at"],
-                        )
-                        for o in obs
-                    ],
-                )
-            else:  # merge — SQLite assigns IDs
-                self._conn.executemany(
-                    "INSERT INTO facts (kind, key, value, source_session, "
-                    "created_at, updated_at, tags) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                    [
-                        (
-                            f["kind"],
-                            f["key"],
-                            f["value"],
-                            f["source_session"],
-                            f["created_at"],
-                            f["updated_at"],
-                            _encode_tags(f.get("tags")),
-                        )
-                        for f in facts
-                    ],
-                )
-                self._conn.executemany(
-                    "INSERT INTO observations (summary, evidence_session_id, "
-                    "weight, confidence, created_at) VALUES (?, ?, ?, ?, ?)",
-                    [
-                        (
-                            o["summary"],
-                            o["evidence_session_id"],
-                            o["weight"],
-                            o["confidence"],
-                            o["created_at"],
-                        )
-                        for o in obs
-                    ],
-                )
+
+            f_cols = [
+                "kind",
+                "key",
+                "value",
+                "source_session",
+                "created_at",
+                "updated_at",
+                "tags",
+            ]
+            if mode == "replace":
+                f_cols.insert(0, "id")
+            f_qs = ", ".join(["?"] * len(f_cols))
+            f_stmt = (
+                "INSERT INTO facts (" + ", ".join(f_cols) + ") VALUES (" + f_qs + ")"
+            )  # nosec B608
+            f_rows: list[tuple[Any, ...]] = []
+            for f in facts:
+                r = [
+                    f["kind"],
+                    f["key"],
+                    f["value"],
+                    f["source_session"],
+                    f.get("created_at", 0),
+                    f.get("updated_at", 0),
+                    _encode_tags(f.get("tags")),
+                ]
+                if mode == "replace":
+                    r.insert(0, f["id"])
+                f_rows.append(tuple(r))
+            self._conn.executemany(f_stmt, f_rows)
+
+            o_cols = [
+                "summary",
+                "evidence_session_id",
+                "weight",
+                "confidence",
+                "created_at",
+            ]
+            if mode == "replace":
+                o_cols.insert(0, "id")
+            o_qs = ", ".join(["?"] * len(o_cols))
+            o_stmt = (
+                "INSERT INTO observations ("
+                + ", ".join(o_cols)
+                + ") VALUES ("
+                + o_qs
+                + ")"
+            )  # nosec B608
+            o_rows: list[tuple[Any, ...]] = []
+            for o in obs:
+                r = [
+                    o["summary"],
+                    o["evidence_session_id"],
+                    o["weight"],
+                    o["confidence"],
+                    o["created_at"],
+                ]
+                if mode == "replace":
+                    r.insert(0, o["id"])
+                o_rows.append(tuple(r))
+            self._conn.executemany(o_stmt, o_rows)
             self._conn.commit()
         except Exception:
             self._conn.rollback()

@@ -31,7 +31,9 @@ def test_mcp_timeout_honours_env(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 @pytest.mark.parametrize("bad", ["", "abc", "0", "-5"])
-def test_mcp_timeout_falls_back_on_bad_value(monkeypatch: pytest.MonkeyPatch, bad: str) -> None:
+def test_mcp_timeout_falls_back_on_bad_value(
+    monkeypatch: pytest.MonkeyPatch, bad: str
+) -> None:
     monkeypatch.setenv("SAKTHAI_MCP_TIMEOUT", bad)
     assert config.mcp_timeout() == config.DEFAULT_MCP_TIMEOUT
 
@@ -88,13 +90,17 @@ def test_env_report_flags(sakthai_home: Path, monkeypatch: pytest.MonkeyPatch) -
 # ---------------------------------------------------------------------------
 
 
-def test_gemini_extensions_dir_honours_gemini_home(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_gemini_extensions_dir_honours_gemini_home(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     monkeypatch.setenv("GEMINI_HOME", "/tmp/my-gemini")
     monkeypatch.delenv("SAKTHAI_HOME", raising=False)
     assert config.gemini_extensions_dir() == Path("/tmp/my-gemini") / "extensions"
 
 
-def test_gemini_extensions_dir_default_when_no_env(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_gemini_extensions_dir_default_when_no_env(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     monkeypatch.delenv("GEMINI_HOME", raising=False)
     monkeypatch.delenv("SAKTHAI_HOME", raising=False)
     assert config.gemini_extensions_dir() == Path("~/.gemini/extensions").expanduser()
@@ -181,7 +187,9 @@ def test_auth_report_sources(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) ->
     import time
 
     creds.write_text(
-        json.dumps({"access_token": "abc", "expiry_date": int((time.time() + 3600) * 1000)})
+        json.dumps(
+            {"access_token": "abc", "expiry_date": int((time.time() + 3600) * 1000)}
+        )
     )
 
     report = config.check_env()["auth"]

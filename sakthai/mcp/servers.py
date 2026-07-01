@@ -56,10 +56,16 @@ def parse_mcp_servers(data: object) -> list[MCPServerSpec]:
         raw_args = entry.get("args")
         args = [str(a) for a in raw_args] if isinstance(raw_args, list) else []
         raw_env = entry.get("env")
-        env = {str(k): str(v) for k, v in raw_env.items()} if isinstance(raw_env, dict) else {}
+        env = (
+            {str(k): str(v) for k, v in raw_env.items()}
+            if isinstance(raw_env, dict)
+            else {}
+        )
         raw_cwd = entry.get("cwd")
         cwd = raw_cwd if isinstance(raw_cwd, str) else None
-        specs.append(MCPServerSpec(name=name, command=command, args=args, env=env, cwd=cwd))
+        specs.append(
+            MCPServerSpec(name=name, command=command, args=args, env=env, cwd=cwd)
+        )
     return specs
 
 

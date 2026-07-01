@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import click
 
-from ..cycle import STAGES, Stage, advance_stage, get_current_stage, set_stage, stage_info
+from ..cycle import (STAGES, Stage, advance_stage, get_current_stage,
+                     set_stage, stage_info)
 from ..memory.store import MemoryStore
 
 
@@ -47,7 +48,9 @@ def cycle_set(stage_name: str, force: bool) -> None:
         stage = Stage(stage_name.lower())
     except ValueError:
         valid = ", ".join(s.value for s in Stage)
-        raise click.ClickException(f"Unknown stage '{stage_name}'. Valid: {valid}") from None
+        raise click.ClickException(
+            f"Unknown stage '{stage_name}'. Valid: {valid}"
+        ) from None
     with MemoryStore() as store:
         current = get_current_stage(store)
         skipped = stage_info(stage).number - stage_info(current).number - 1
@@ -69,4 +72,6 @@ def cycle_list() -> None:
         current = get_current_stage(store)
     for info in STAGES:
         marker = "▶" if info.stage == current else " "
-        click.echo(f"  {marker} {info.number}. {info.stage.value.upper():<8}  {info.goal}")
+        click.echo(
+            f"  {marker} {info.number}. {info.stage.value.upper():<8}  {info.goal}"
+        )

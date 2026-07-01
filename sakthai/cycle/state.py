@@ -20,7 +20,9 @@ def get_current_stage(store: MemoryStore) -> Stage:
         try:
             return Stage(fact.value)
         except ValueError:
-            logger.warning("Invalid stage value in memory: %s. Falling back to DREAM.", fact.value)
+            logger.warning(
+                "Invalid stage value in memory: %s. Falling back to DREAM.", fact.value
+            )
     return Stage.DREAM
 
 
