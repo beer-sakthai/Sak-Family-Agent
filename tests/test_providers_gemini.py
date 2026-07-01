@@ -274,3 +274,83 @@ def test_call_gemini_multiple_tool_calls_in_one_part() -> None:
     assert len(resp.content) == 2
     assert resp.content[0].name == "learn"
     assert resp.content[1].name == "recall"
+
+
+# -- call_gemini streaming (on_token) --------------------------------------
+
+
+def _stream_chunk(
+    text: str = "", fn_calls: list | None = None, finish: str | None = None
+) -> MagicMock:
+    part = MagicMock()
+    part.text = text
+    part.function_calls = fn_calls or []
+    content = MagicMock()
+    content.parts = [part]
+    candidate = MagicMock()
+    candidate.content = content
+    candidate.finish_reason = finish
+    chunk = MagicMock()
+    chunk.candidates = [candidate]
+    chunk.usage_metadata = None
+    return chunk
+
+
+def test_call_gemini_streams_text_deltas() -> None:
+    tokens: list[str] = []
+    client = MagicMock()
+    client.models.generate_content_stream.return_value = iter(
+        [_stream_chunk(text="Hel"), _stream_chunk(text="lo"), _stream_chunk(finish="STOP")]
+    )
+    with patch("sakthai.agent.providers.gemini_provider.to_gemini_contents", return_value=[]):
+        resp = call_gemini(client, "gemini-2.0-flash", "sys", (), [], 0, on_token=tokens.append)
+
+    # The callback saw each delta as it arrived.
+    assert tokens == ["Hel", "lo"]
+    # Deltas are assembled into a single, newline-free text block.
+    assert resp.stop_reason == "end_turn"
+    assert len([b for b in resp.content if b.type == "text"]) == 1
+    assert resp.content[0].type == "text"
+    assert resp.content[0].text == "Hello"
+    # Streaming was used, not the non-streaming endpoint.
+    client.models.generate_content.assert_not_called()
+    client.models.generate_content_stream.assert_called_once()
+
+
+def test_call_gemini_stream_tool_use() -> None:
+    fc = MagicMock()
+    fc.name = "recall"
+    fc.args = {"query": "hobbies"}
+    client = MagicMock()
+    client.models.generate_content_stream.return_value = iter(
+        [_stream_chunk(fn_calls=[fc], finish="STOP")]
+    )
+    with patch("sakthai.agent.providers.gemini_provider.to_gemini_contents", return_value=[]):
+        resp = call_gemini(
+            client, "gemini-2.0-flash", "sys", (_tool("recall"),), [], 1, on_token=lambda _t: None
+        )
+
+    assert resp.stop_reason == "tool_use"
+    assert resp.content[0].type == "tool_use"
+    assert resp.content[0].name == "recall"
+    assert resp.content[0].input == {"query": "hobbies"}
+
+
+def test_call_gemini_stream_max_tokens_finish_reason() -> None:
+    client = MagicMock()
+    client.models.generate_content_stream.return_value = iter(
+        [_stream_chunk(text="cut"), _stream_chunk(finish="MAX_TOKENS")]
+    )
+    with patch("sakthai.agent.providers.gemini_provider.to_gemini_contents", return_value=[]):
+        resp = call_gemini(client, "gemini-2.0-flash", "sys", (), [], 0, on_token=lambda _t: None)
+    assert resp.stop_reason == "max_tokens"
+
+
+def test_call_gemini_stream_error_wrapped() -> None:
+    client = MagicMock()
+    client.models.generate_content_stream.side_effect = RuntimeError("stream broke")
+    with (
+        patch("sakthai.agent.providers.gemini_provider.to_gemini_contents", return_value=[]),
+        pytest.raises(AgentError, match="Gemini API call failed"),
+    ):
+        call_gemini(client, "gemini-2.0-flash", "sys", (), [], 0, on_token=lambda _t: None)
