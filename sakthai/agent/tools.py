@@ -22,6 +22,7 @@ from typing import Any
 from urllib.error import HTTPError, URLError
 
 from ..config import sakthai_home
+from ..learn.ingest import ingest_document as ingest_document_facts
 from ..memory.store import MemoryStore
 
 MAX_FILE_READ_CHARS = 20_000  # read_file output cap
@@ -78,6 +79,16 @@ def _learn(args: dict[str, Any], store: MemoryStore) -> str:
     key = args.get("key")
     fact_id = store.add_fact(raw.strip(), kind=kind, key=key)
     return f"Stored fact id={fact_id} (kind={kind}, key={key or '-'})."
+
+
+def _ingest_document(args: dict[str, Any], store: MemoryStore) -> str:
+    path = args.get("path")
+    if not isinstance(path, str) or not path.strip():
+        raise ValueError("`path` is required and must be a non-empty string.")
+    ids = ingest_document_facts(path.strip(), store=store)
+    if not ids:
+        return "No facts found in document."
+    return f"learned {len(ids)} facts (ids: {ids})"
 
 
 def _recall(args: dict[str, Any], store: MemoryStore) -> str:
@@ -331,6 +342,25 @@ BUILTIN_TOOLS: tuple[Tool, ...] = (
             "required": ["value"],
         },
         handler=_learn,
+    ),
+    Tool(
+        name="ingest_document",
+        description=(
+            "Parse a markdown, CSV, or plain-text document into explicit memory facts. "
+            "Use for price books, FAQs, and other source documents that should become "
+            "recallable structured facts."
+        ),
+        input_schema={
+            "type": "object",
+            "properties": {
+                "path": {
+                    "type": "string",
+                    "description": "Path to a markdown, CSV, or plain-text document.",
+                },
+            },
+            "required": ["path"],
+        },
+        handler=_ingest_document,
     ),
     Tool(
         name="recall",

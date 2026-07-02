@@ -51,6 +51,43 @@ def test_learn_recall_search_forget(store: MemoryStore) -> None:
     assert "Memory is empty" in recall({}, store)
 
 
+def test_ingest_document_parses_common_formats(tmp_path: Path, store: MemoryStore) -> None:
+    ingest = tool_by_name("ingest_document")
+    assert ingest is not None
+
+    markdown = tmp_path / "price-book.md"
+    markdown.write_text(
+        "# Price book\n\n- Website audit: $250\n- Support plan: $99/month\n",
+        encoding="utf-8",
+    )
+    csv_file = tmp_path / "faq.csv"
+    csv_file.write_text(
+        "question,answer\nHow long does setup take?,2 business days\nDo you offer support?,Yes\n",
+        encoding="utf-8",
+    )
+    plain_text = tmp_path / "notes.txt"
+    plain_text.write_text("Custom project quotes are scoped after discovery.", encoding="utf-8")
+
+    out_md = ingest.handler({"path": str(markdown)}, store)
+    out_csv = ingest.handler({"path": str(csv_file)}, store)
+    out_txt = ingest.handler({"path": str(plain_text)}, store)
+
+    assert "learned" in out_md
+    assert "learned" in out_csv
+    assert "learned" in out_txt
+
+    facts = store.list_facts()
+    assert len(facts) == 5
+    assert {f.kind for f in facts} == {"fact"}
+    assert {f.value for f in facts} == {
+        "Website audit: $250",
+        "Support plan: $99/month",
+        "How long does setup take? -> 2 business days",
+        "Do you offer support? -> Yes",
+        "Custom project quotes are scoped after discovery.",
+    }
+
+
 def test_learn_requires_value(store: MemoryStore) -> None:
     with pytest.raises(ValueError):
         tool_by_name("learn").handler({"value": "  "}, store)
