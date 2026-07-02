@@ -6,7 +6,7 @@ author: Hermes Agent (inspired by powerpoint and sketch)
 license: MIT
 platforms: [linux, macos, windows]
 metadata:
-  hermes:
+  sakthai:
     tags: [pitch-deck, presentation, powerpoint, startup, business, ideation]
     related_skills: [powerpoint, sketch, economic-moat-diagnosis-and-strengthening]
 ---
