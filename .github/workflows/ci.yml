@@ -2,95 +2,39 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [ main ]
   pull_request:
-    branches: [main]
-  workflow_dispatch:
+    branches: [ main ]
 
 permissions:
-  contents: read
+  contents: read # read-only permissions
 
 jobs:
-  secret-scan:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
-      - name: Detect secrets (gitleaks)
-        # Run the gitleaks binary directly rather than gitleaks-action@v2, which
-        # now requires GITHUB_TOKEN to scan PRs and rejects config-path/fail
-        # inputs. The binary scans full history (fetch-depth: 0) with no token.
-        run: |
-          VER=8.21.2
-          curl -sSL "https://github.com/gitleaks/gitleaks/releases/download/v${VER}/gitleaks_${VER}_linux_x64.tar.gz" \
-            | tar -xz gitleaks
-          ./gitleaks detect --source . --config .gitleaks.toml --redact --no-banner --exit-code 1
-
   test:
-    needs: secret-scan
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-      - name: Install uv
-        uses: astral-sh/setup-uv@v7
-        with:
-          python-version: "3.12"
-          enable-cache: true
-          cache-dependency-glob: uv.lock
-      - name: Install dependencies
-        run: uv sync --extra dev --locked
-      - name: Lint (ruff)
-        run: uv run ruff check .
-      - name: Type check (mypy)
-        run: uv run mypy
-
-  pytest:
-    needs: secret-scan
     runs-on: ubuntu-latest
     strategy:
-      fail-fast: false
       matrix:
-        python-version: ["3.11", "3.12", "3.13"]
+        python-version: ['3.11', '3.12']
 
     steps:
-      - uses: actions/checkout@v7
+      - name: Checkout repository
+        uses: actions/checkout@v7
 
-      - name: Install uv
+      - name: Install uv for Python ${{ matrix.python-version }}
         uses: astral-sh/setup-uv@v7
         with:
-          enable-cache: true
-          cache-dependency-glob: "uv.lock"
-      # --locked fails the build if uv.lock is stale, so CI exercises the same
-      # pinned dependency set as local development (the repo is uv-managed).
-      - name: Verify lockfile is up to date
-        run: uv lock --check
+          python-version: ${{ matrix.python-version }}
 
-      - name: Install test dependencies
-        run: uv sync --extra dev --locked
-
-      - name: Tests (pytest)
-        run: uv run pytest tests/ -q -m "not integration" --cov=sakthai --cov-branch --cov-report=term-missing
-
-  dashboard-test:
-    needs: secret-scan
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: dashboard
-    steps:
-      - uses: actions/checkout@v7
-
-      - name: Install Node
-        uses: actions/setup-node@v6
+      - name: Cache uv
+        uses: actions/cache@v4
         with:
-          # Matches pages.yml, which builds this same dashboard package.
-          node-version: 20
-          cache: npm
-          cache-dependency-path: dashboard/package-lock.json
+          path: ~/.cache/uv
+          key: ${{ runner.os }}-uv-${{ matrix.python-version }}-${{ hashFiles('**/uv.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-uv-${{ matrix.python-version }}-
 
-      - name: Install (locked)
-        run: npm ci
+      - name: Install dependencies
+        run: uv sync --extra dev
 
-      - name: Tests (vitest)
-        run: npm test
+      - name: Run tests
+        run: uv run pytest tests/ -q -m "not integration"

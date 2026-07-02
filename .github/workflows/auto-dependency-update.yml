@@ -22,6 +22,14 @@ jobs:
         with:
           python-version: '3.12'
 
+      - name: Cache uv
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/uv
+          key: ${{ runner.os }}-uv-${{ hashFiles('**/uv.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-uv-
+
       - name: Configure Git
         run: |
           git config user.name "SakJules [bot]"
@@ -37,7 +45,7 @@ jobs:
       - name: Upgrade dependencies
         id: upgrade
         run: |
-          uv lock --upgrade
+          uv pip compile pyproject.toml -o uv.lock --upgrade
           # Check if the lockfile changed. If not, we can exit early.
           if git diff --quiet uv.lock; then
             echo "changed=false" >> $GITHUB_OUTPUT
