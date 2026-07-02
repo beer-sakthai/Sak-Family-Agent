@@ -65,7 +65,7 @@ def search_sessions(
 ```
 
 - `sessions_dir` is injectable (defaults to `config.sessions_dir()`), matching
-  this repo's dependency-injection convention for testability.
+  this repository's dependency-injection convention for testability.
 - Walks `*.json` in the sessions directory, parses each, skips
   unreadable/corrupt files (`except (JSONDecodeError, OSError): continue`,
   same as `sessions_list`'s existing pattern).
@@ -114,13 +114,13 @@ matched-snippet column replacing model/tokens.
 ### Agent tool surface
 
 New entry in `BUILTIN_TOOLS` (`agent/tools.py`): `search_sessions(query,
-limit)`, calling the same `search_sessions()` function. Per this repo's
+limit)`, calling the same `search_sessions()` function. Per this repository's
 existing tool convention, adding it once here makes it available in both the
 agent loop and `sakthai mcp` automatically — no separate wiring.
 
 ### Out of scope (deliberately deferred)
 
-- Regex search
+- Regular expression search
 - Fuzzy/typo-tolerant matching
 - Pagination beyond `--limit`
 - A persistent search index (SQLite FTS5 or otherwise)
@@ -132,7 +132,7 @@ minimal (YAGNI) given current session volume.
 ## Testing Plan
 
 - **`tests/test_session_search.py`** (new): inject a `tmp_path` sessions
-  directory (existing fixture pattern in this repo), write a handful of fake
+  directory (existing fixture pattern in this repository), write a handful of fake
   session JSON files, assert: multi-term AND matching, no-match case,
   corrupt-file-is-skipped, `limit` is respected, ordering is
   timestamp-descending.
@@ -155,7 +155,7 @@ minimal (YAGNI) given current session volume.
 
 ## Six-Stage Cycle Alignment
 
-This repo runs work through its own Dream → Hope → Care → Joy → Trust →
+This repository runs work through its own Dream → Hope → Care → Joy → Trust →
 Growth cycle (`sakthai/cycle/`, `docs/cycle/*.md`), persisted as a single
 fact in `MemoryStore` and advanced with `sakthai cycle set|next`. Brainstorming
 this spec was Dream/Hope/Care-shaped work but never touched the cycle
@@ -178,7 +178,7 @@ checkboxes.
 
 ## Plan-First Workflow Linkage
 
-Per this repo's `CLAUDE.md` ("Always read and update `PLAN.md`... mark tasks
+Per this repository's `CLAUDE.md` ("Always read and update `PLAN.md`... mark tasks
 `[ ]` → `[x] YYYY-MM-DD` once verified"), the implementation plan derived from
 this spec adds a **Phase 4** section to `product/todo.md` (alongside the
 existing Phase 1–3 sections) with these checklist items, each checked off

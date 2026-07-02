@@ -15,14 +15,14 @@
 - Ruff: line-length 100, rule set `["E", "F", "W", "I", "UP", "B", "SIM"]` (E501 and SIM108 ignored). No unused-argument rule is enabled, so an intentionally-unused `store: MemoryStore` tool-handler parameter is fine as-is (matches existing handlers' signature requirement).
 - Coverage floor 85% (`fail_under = 85`) over `sakthai/` — new code needs tests, not just happy-path.
 - Tests are hermetic: no network, no real `~/.sakthai`. Use the existing `sakthai_home` fixture (`tests/conftest.py`) to sandbox `SAKTHAI_HOME`, and `tmp_path` directly when a function accepts an injectable directory.
-- Commit message style: short imperative subject line, no strict Conventional Commits prefix enforced but this repo's recent history uses `feat:`/`fix:`/`docs:`/`test:` prefixes — follow that.
-- Per this repo's workflow: local `uv run pytest`, `ruff check`, `ruff format --check`, `mypy`, `bandit` must all be green before pushing; push, wait for green CI, then merge (not just a local commit).
+- Commit message style: short imperative subject line, no strict Conventional Commits prefix enforced but this repository's recent history uses `feat:`/`fix:`/`docs:`/`test:` prefixes — follow that.
+- Per this repository's workflow: local `uv run pytest`, `ruff check`, `ruff format --check`, `mypy`, `bandit` must all be green before pushing; push, wait for green CI, then merge (not just a local commit).
 
 ---
 
 ### Task 1: Cycle checkpoint — Dream → Hope
 
-**Files:** none (this task only runs `sakthai` CLI commands against the local memory store; no repo files change).
+**Files:** none (this task only runs `sakthai` CLI commands against the local memory store; no repository files change).
 
 **Interfaces:**
 - Consumes: nothing.
@@ -488,7 +488,7 @@ git commit -m "feat: add sakthai sessions search CLI command"
 
 **Interfaces:**
 - Consumes: `search_sessions(query, limit, sessions_dir=None) -> list[SessionMatch]` from Task 2 (`sakthai.memory.session_search`); `_coerce_limit(raw: Any, default: int) -> int` (existing, in this same file).
-- Produces: a new `Tool` named `"search_sessions"` in `BUILTIN_TOOLS`, automatically available to both `sakthai run` (agent loop) and `sakthai mcp` (MCP server) — no other wiring needed, per this repo's existing tool-registry pattern.
+- Produces: a new `Tool` named `"search_sessions"` in `BUILTIN_TOOLS`, automatically available to both `sakthai run` (agent loop) and `sakthai mcp` (MCP server) — no other wiring needed, per this repository's existing tool-registry pattern.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -745,11 +745,11 @@ Expected: push succeeds.
 - [ ] **Step 2: Open a PR and wait for CI**
 
 Run: `gh pr create --title "Phase 4: memory architecture and session search" --body "Implements docs/superpowers/specs/2026-07-02-phase4-memory-session-search-design.md — adds search_sessions() (memory/session_search.py), the sakthai sessions search CLI command, and the search_sessions agent/MCP tool. No MemoryStore schema changes."`
-Then watch CI (`gh pr checks --watch` or the repo's GitHub Actions UI) until every required check (secret-scan, lint, format-check, mypy, bandit, pytest across Python 3.11/3.12/3.13, smoke-test) is green.
+Then watch CI (`gh pr checks --watch` or the repository's GitHub Actions UI) until every required check (secret-scan, lint, format-check, mypy, bandit, pytest across Python 3.11/3.12/3.13, smoke-test) is green.
 
 - [ ] **Step 3: Merge**
 
-Run: `gh pr merge --squash` (or the repo's usual merge method) once all checks are green.
+Run: `gh pr merge --squash` (or the repository's usual merge method) once all checks are green.
 Expected: PR merges into `main`.
 
 - [ ] **Step 4: Cycle Growth checkpoint**
@@ -760,7 +760,7 @@ uv run sakthai cycle next
 uv run sakthai memory consolidate
 uv run sakthai cycle next
 ```
-Expected: first `cycle next` prints `Stage 6/6  [GROWTH]  Learn and grow`; `memory consolidate` runs without error; second `cycle next` wraps back around to `Stage 1/6  [DREAM]  Define the vision or task`, closing the loop per this repo's `CLAUDE.md` Principle 3 ("a cycle isn't done until Trust has signed off and Growth has fed the lesson back into memory").
+Expected: first `cycle next` prints `Stage 6/6  [GROWTH]  Learn and grow`; `memory consolidate` runs without error; second `cycle next` wraps back around to `Stage 1/6  [DREAM]  Define the vision or task`, closing the loop per this repository's `CLAUDE.md` Principle 3 ("a cycle isn't done until Trust has signed off and Growth has fed the lesson back into memory").
 
 - [ ] **Step 5: Check off GitHub delivery and commit**
 
