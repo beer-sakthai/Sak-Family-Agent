@@ -192,6 +192,21 @@ def test_close_kills_process_after_timeout() -> None:
     assert client._proc is None
 
 
+def test_close_is_idempotent_and_clears_reader_thread() -> None:
+    client = StdioMCPClient("dummy", name="test")
+    mock_proc = MagicMock()
+    mock_proc.poll.return_value = 0
+    client._proc = mock_proc
+    client._reader_thread = MagicMock()
+    client._reader_thread.is_alive.return_value = False
+
+    client.close()
+    client.close()
+
+    assert client._proc is None
+    assert client._reader_thread is None
+
+
 def test_send_raises_when_proc_not_started() -> None:
     client = StdioMCPClient("dummy", name="test")
     # _proc is None (never started)

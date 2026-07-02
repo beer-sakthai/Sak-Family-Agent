@@ -6,20 +6,21 @@ newline-delimited JSON-RPC 2.0 over its stdio, and wraps each remote tool as a
 local :class:`~sakthai.agent.tools.Tool` so the agent loop can call it.
 
 Dependency-free and synchronous: a request writes one line and reads until the
-matching response id, with a ``select``-based read timeout so a hung or dead
-server fails loudly instead of blocking forever. (``select`` on pipes is POSIX;
-this targets Linux, like the rest of the project.)
+matching response id, with a queue-based read timeout so a hung or dead server
+fails loudly instead of blocking forever. A background thread drains stdout
+into a :class:`queue.Queue`; the main thread does a timed ``queue.get()``.
+This is cross-platform — unlike ``select`` on pipes, which is POSIX-only.
 """
 
 from __future__ import annotations
 
-import codecs
 import contextlib
 import json
 import logging
 import os
-import select
+import queue
 import subprocess
+import threading
 from collections.abc import Callable, Mapping, Sequence
 from typing import Any
 
@@ -34,6 +35,9 @@ CLIENT_NAME = "sakthai-client"
 # Backwards-compatible alias; the live default is resolved via config so that
 # SAKTHAI_MCP_TIMEOUT is honoured at construction time.
 DEFAULT_TIMEOUT = config.DEFAULT_MCP_TIMEOUT
+
+# Sentinel placed in the line queue by the reader thread to signal EOF.
+_EOF: object = object()
 
 
 class MCPClientError(RuntimeError):
@@ -74,14 +78,9 @@ class StdioMCPClient:
         self._proc: subprocess.Popen[str] | None = None
         self._id = 0
         self._remote_tools: list[dict[str, Any]] = []
-        # Line buffer for _readline. select() only reports bytes still in the OS
-        # pipe, so we must never let a buffered reader pull *ahead* of select or
-        # lines already drained from the pipe get stranded (the client would then
-        # block on select until timeout). We do our own raw reads + line split and
-        # keep the remainder here. An incremental decoder handles multi-byte UTF-8
-        # sequences split across raw reads.
-        self._read_buf = ""
-        self._decoder = codecs.getincrementaldecoder("utf-8")("replace")
+        # Queue filled by the background reader thread. Holds str lines or _EOF.
+        self._line_queue: queue.Queue[Any] = queue.Queue()
+        self._reader_thread: threading.Thread | None = None
 
     # -- lifecycle --------------------------------------------------------
 
@@ -102,6 +101,8 @@ class StdioMCPClient:
             )
         except (OSError, ValueError) as exc:
             raise MCPClientError(f"could not start MCP server {self.name!r}: {exc}") from exc
+
+        self._start_reader_thread()
 
         init = self._request(
             "initialize",
@@ -125,6 +126,29 @@ class StdioMCPClient:
         logger.info("MCP server %r ready with %d tool(s)", self.name, len(self._remote_tools))
         return self
 
+    def _start_reader_thread(self) -> None:
+        """Spawn a daemon thread that drains stdout into ``self._line_queue``."""
+        proc = self._proc
+        assert proc is not None and proc.stdout is not None  # guaranteed by start()
+
+        stdout = proc.stdout
+
+        def _reader() -> None:
+            try:
+                for line in stdout:
+                    self._line_queue.put(line)
+            except Exception:
+                pass
+            finally:
+                self._line_queue.put(_EOF)
+
+        self._reader_thread = threading.Thread(
+            target=_reader,
+            daemon=True,
+            name=f"mcp-reader-{self.name}",
+        )
+        self._reader_thread.start()
+
     def close(self) -> None:
         proc = self._proc
         if proc is None:
@@ -140,6 +164,10 @@ class StdioMCPClient:
                 proc.wait(timeout=5)
             except subprocess.TimeoutExpired:
                 proc.kill()
+        # Join the reader thread so it can observe the closed stdout and exit.
+        if self._reader_thread is not None and self._reader_thread.is_alive():
+            self._reader_thread.join(timeout=2)
+        self._reader_thread = None
 
     def __enter__(self) -> StdioMCPClient:
         return self.start()
@@ -241,26 +269,20 @@ class StdioMCPClient:
             # else: a notification or an unrelated id — keep reading
 
     def _readline(self) -> str | None:
-        proc = self._proc
-        if proc is None or proc.stdout is None:
-            raise MCPClientError(f"{self.name}: server is not running")
-        # Serve a complete line straight from our buffer first: a previous raw
-        # read may have pulled several lines (e.g. a burst of notifications)
-        # off the pipe at once, and select() would not see them.
-        while "\n" not in self._read_buf:
-            ready, _, _ = select.select([proc.stdout], [], [], self._timeout)
-            if not ready:
-                raise MCPClientError(
-                    f"{self.name}: timed out after {self._timeout}s waiting for reply"
-                )
-            chunk = os.read(proc.stdout.fileno(), 65536)
-            if chunk == b"":
-                # EOF: flush any decoder state and return a trailing partial line.
-                self._read_buf += self._decoder.decode(b"", final=True)
-                if self._read_buf:
-                    line, self._read_buf = self._read_buf, ""
-                    return line
-                return None
-            self._read_buf += self._decoder.decode(chunk)
-        line, _, self._read_buf = self._read_buf.partition("\n")
-        return line + "\n"
+        """Return the next line from the server, or ``None`` on EOF.
+
+        Blocks up to ``self._timeout`` seconds. Raises :exc:`MCPClientError` if
+        the server does not respond in time. Works on all platforms (unlike
+        ``select`` on pipes, which is POSIX-only).
+        """
+        try:
+            item = self._line_queue.get(timeout=self._timeout)
+        except queue.Empty:
+            raise MCPClientError(
+                f"{self.name}: timed out after {self._timeout}s waiting for reply"
+            ) from None
+        if item is _EOF:
+            # Put the sentinel back so subsequent calls also see EOF immediately.
+            self._line_queue.put(_EOF)
+            return None
+        return item

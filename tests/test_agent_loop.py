@@ -687,6 +687,8 @@ def test_provider_construction_no_creds_google(
         pytest.skip("google-genai not importable in this environment (missing native libs)")
     monkeypatch.delenv("GEMINI_API_KEY", raising=False)
     monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
+    # Ensure Gemini CLI OAuth token (if present on this machine) is not found.
+    monkeypatch.setattr("sakthai.auth.load_gemini_cli_token", lambda: None)
     with pytest.raises(AgentError, match="Missing credentials for Google Gemini"):
         run_agent("hello", store=store, provider="google")
 
@@ -1377,6 +1379,8 @@ def test_preflight_google_no_creds(monkeypatch: pytest.MonkeyPatch) -> None:
 
     monkeypatch.delenv("GEMINI_API_KEY", raising=False)
     monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
+    # Ensure Gemini CLI OAuth token (if present on this machine) is not found.
+    monkeypatch.setattr("sakthai.auth.load_gemini_cli_token", lambda: None)
     report = loop_mod.preflight(provider="google")
     assert report["credential_source"] is None
     assert report["runnable"] is False
