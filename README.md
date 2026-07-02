@@ -110,8 +110,10 @@ snapshots** for each persona into `build/agent-repos/<persona>/` with
   `personas/shared/skills/`, with each persona keeping only its unique files. Use
   `scripts/export_agent_repo.py <persona> --out ...` or `make export-agent-repos` when you want
   a standalone repo snapshot. See [`personas/README.md`](./personas/README.md) and the root
-  [`SOUL.md`](./docs/SOUL.md). Read [`USER.md`](./docs/USER.md) for Beer's identity, support context, and
-  the values behind the agents: Dream, Hope, Care, Joy, Trust, and Growth. See
+  [`SOUL.md`](./docs/SOUL.md). Read [`USER.md`](./docs/USER.md) for Beer's identity: Beer is
+  Nanthasit Burankum, and SakThai plus the Sak Family are meant to act as
+  supportive companions grounded in Beer's values of Dream, Hope, Care, Joy,
+  Trust, and Growth. See
   [`infra/hermes-agents/README.md`](./infra/hermes-agents/README.md) for full Telegram-bot
   deployment.
 - 📦 **`packages/agent-self-evolution`** targets a different runtime (Nous Research's Hermes) with
