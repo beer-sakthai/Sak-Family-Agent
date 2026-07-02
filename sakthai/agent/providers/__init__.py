@@ -9,14 +9,18 @@ all provider-specific concerns out of the orchestration loop.
 from __future__ import annotations
 
 import os
+from collections.abc import Callable
 from typing import Any
 
 from ...auth import (
     AuthError,
     anthropic_credential_source,
     gateway_credential_source,
+    local_credential_source,
     openai_credential_source,
     resolve_anthropic_client,
+    resolve_local_credentials,
+    resolve_ollama_credentials,
 )
 from .anthropic_provider import call_anthropic
 from .base import (
@@ -48,33 +52,42 @@ __all__ = [
     "with_retry",
 ]
 
+OPENAI_COMPAT_KEYWORDS = {
+    "openai",
+    "gpt-",
+    "qwen",
+    "llama",
+    "deepseek",
+    "mistral",
+    "gemma",
+}
 
-def detect_provider(client: Any | None, model: str) -> str:
-    """Choose a provider when the caller didn't.
 
-    A ``gateway`` model name → ``gateway``;
-    a Gemini model name or google-genai client → ``google``;
-    an openai client or `openai`/`ollama`/`gpt` in model name → ``openai``;
-    any other injected client → ``anthropic``;
-    otherwise pick whichever credential is present:
-    anthropic → google → openai → gateway.
-    """
-    client_module = client.__class__.__module__ if client is not None else ""
-    if model.lower().startswith("gateway"):
+def _detect_from_model_name(model: str) -> str | None:
+    """Detect provider from model name hints."""
+    model_lower = model.lower()
+    if model_lower.startswith("gateway"):
         return "gateway"
-    if "google.genai" in client_module or "gemini" in model.lower():
+    if model_lower.startswith("local/"):
+        return "local"
+    if "ollama" in model_lower:
+        return "ollama"
+    if "gemini" in model_lower:
         return "google"
-    if "openai" in client_module:
+    if any(keyword in model_lower for keyword in OPENAI_COMPAT_KEYWORDS):
         return "openai"
-    if any(
-        keyword in model.lower()
-        for keyword in ("openai", "ollama", "gpt-", "qwen", "llama", "deepseek", "mistral", "gemma")
-    ):
+    return None
+
+
+def _detect_from_client_type(client: Any) -> str | None:
+    """Detect provider from the type of an injected client."""
+    if client is None:
+        return None
+    module = client.__class__.__module__
+    if "google.genai" in module:
+        return "google"
+    if "openai" in module:
         return "openai"
-    if client is not None:
-        return "anthropic"
-    if anthropic_credential_source() is not None:
-        return "anthropic"
     # Any other client is assumed to be Anthropic-compatible.
     return "anthropic"
 
@@ -91,8 +104,6 @@ def _detect_from_credentials() -> str | None:
         return "google"
     if openai_credential_source() is not None:
         return "openai"
-    if gateway_credential_source() is not None:
-        return "gateway"
     if anthropic_credential_source() is not None:
         return "anthropic"
     return None
@@ -101,12 +112,10 @@ def _detect_from_credentials() -> str | None:
 def detect_provider(client: Any | None, model: str) -> str:
     """Choose a provider when the caller didn't.
 
-    A ``gateway`` model name → ``gateway``;
-    a Gemini model name or google-genai client → ``google``;
-    an openai client or `openai`/`ollama`/`gpt` in model name → ``openai``;
-    any other injected client → ``anthropic``;
-    otherwise pick whichever credential is present:
-    google → gateway → local → openai → anthropic → ollama.
+    Detection runs in priority order: an explicit model-name hint
+    (``gateway``/``local/``/``ollama``/``gemini``/OpenAI-compat keywords) wins
+    first, then the type of an injected client, then whichever credential is
+    configured. Falls back to ``anthropic`` when nothing else matches.
     """
     # The order of these checks defines the detection priority.
     checks: list[Callable[[], str | None]] = [
@@ -227,6 +236,18 @@ def _build_local_client() -> Any:
     return _openai_compat_client(api_base, api_key)
 
 
+def _build_gateway_client() -> Any:
+    """Build a client for an OpenAI-compatible AI gateway."""
+    from ...auth import resolve_gateway_credentials
+
+    try:
+        api_base, api_key = resolve_gateway_credentials()
+    except AuthError as exc:
+        raise AgentError(str(exc)) from exc
+
+    return _openai_compat_client(api_base, api_key)
+
+
 def build_client(provider: str, client: Any | None) -> Any:
     """Construct the SDK client for ``provider``, or return an injected one.
 
@@ -235,77 +256,8 @@ def build_client(provider: str, client: Any | None) -> Any:
     """
     if client is not None:
         return client
+
     if provider == "google":
-        from google import genai
-
-        api_key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
-        if api_key:
-            try:
-                return genai.Client(api_key=api_key)
-            except Exception as exc:
-                raise AgentError(f"Failed to initialize Google Gemini client: {exc}") from exc
-
-        # Fallback to Gemini CLI OAuth token if no API key is set
-        import subprocess
-
-        from google.oauth2.credentials import Credentials
-
-        from ...auth import load_gemini_cli_token
-
-        token = load_gemini_cli_token()
-        if not token:
-            raise AgentError(
-                "Missing credentials for Google Gemini. Either set GEMINI_API_KEY / "
-                "GOOGLE_API_KEY, or run `gemini auth login` to authenticate via the CLI."
-            )
-
-        # Retrieve active gcloud project ID
-        project = os.environ.get("GOOGLE_CLOUD_PROJECT")
-        if not project:
-            try:
-                project = subprocess.check_output(
-                    ["gcloud", "config", "get-value", "project"],
-                    stderr=subprocess.DEVNULL,
-                    text=True,
-                ).strip()
-            except Exception:
-                project = None
-
-        if not project:
-            raise AgentError(
-                "Missing GCP Project ID. Please configure GOOGLE_CLOUD_PROJECT "
-                "or set your active gcloud project with `gcloud config set project <id>`."
-            )
-
-        try:
-            credentials = Credentials(token=token)  # type: ignore[no-untyped-call]
-            return genai.Client(
-                vertexai=True, project=project, location="us-central1", credentials=credentials
-            )
-        except Exception as exc:
-            raise AgentError(
-                f"Failed to initialize Google Gemini client with OAuth: {exc}"
-            ) from exc
-    if provider == "openai":
-        from ...auth import resolve_openai_credentials
-
-        try:
-            api_base, api_key = resolve_openai_credentials()
-        except AuthError as exc:
-            raise AgentError(str(exc)) from exc
-        return _openai_compat_client(api_base, api_key)
-    if provider == "gateway":
-        from ...auth import resolve_gateway_credentials
-
-        try:
-            api_base, api_key = resolve_gateway_credentials()
-        except AuthError as exc:
-            raise AgentError(str(exc)) from exc
-        return _openai_compat_client(api_base, api_key)
-    try:
-        return resolve_anthropic_client()
-    except AuthError as exc:
-        raise AgentError(str(exc)) from exc
         return _build_google_client()
     if provider == "openai":
         return _build_openai_compat_client(provider)
@@ -318,13 +270,3 @@ def build_client(provider: str, client: Any | None) -> Any:
 
     # Default to Anthropic
     return _build_anthropic_client()
-
-
-def _build_gateway_client() -> Any:
-    """Build a client for an OpenAI-compatible AI gateway."""
-    try:
-        api_base, api_key = resolve_gateway_credentials()
-    except AuthError as exc:
-        raise AgentError(str(exc)) from exc
-
-    return _openai_compat_client(api_base, api_key)

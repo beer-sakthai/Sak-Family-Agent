@@ -19,6 +19,7 @@ def _client_with_module(module: str) -> object:
     _Fake.__module__ = module
     return _Fake()
 
+
 @pytest.mark.parametrize(
     ("client", "model", "env", "creds", "expected"),
     [
@@ -39,7 +40,7 @@ def _client_with_module(module: str) -> object:
         (None, "claude-3", {"GEMINI_API_KEY": "test"}, {}, "google"),
         (None, "claude-3", {}, {"openai": True}, "openai"),
         (None, "claude-3", {}, {"gateway": True}, "gateway"),
-        (None, "claude-3", {}, {}, "anthropic"), # Default fallback
+        (None, "claude-3", {}, {}, "anthropic"),  # Default fallback
     ],
 )
 def test_detect_provider_scenarios(client, model, env, creds, expected, monkeypatch):
@@ -48,12 +49,25 @@ def test_detect_provider_scenarios(client, model, env, creds, expected, monkeypa
         monkeypatch.setenv(k, v)
 
     with (
-        patch("sakthai.agent.providers.openai_credential_source", return_value="dummy" if creds.get("openai") else None),
-        patch("sakthai.agent.providers.gateway_credential_source", return_value="dummy" if creds.get("gateway") else None),
-        patch("sakthai.agent.providers.local_credential_source", return_value="dummy" if creds.get("local") else None),
-        patch("sakthai.agent.providers.anthropic_credential_source", return_value="dummy" if creds.get("anthropic") else None),
+        patch(
+            "sakthai.agent.providers.openai_credential_source",
+            return_value="dummy" if creds.get("openai") else None,
+        ),
+        patch(
+            "sakthai.agent.providers.gateway_credential_source",
+            return_value="dummy" if creds.get("gateway") else None,
+        ),
+        patch(
+            "sakthai.agent.providers.local_credential_source",
+            return_value="dummy" if creds.get("local") else None,
+        ),
+        patch(
+            "sakthai.agent.providers.anthropic_credential_source",
+            return_value="dummy" if creds.get("anthropic") else None,
+        ),
     ):
         assert detect_provider(client, model) == expected
+
 
 def test_detect_gemini_via_client_module() -> None:
     client = _client_with_module("google.genai.client")
@@ -83,7 +97,6 @@ def test_detect_gemini_model_name(model: str) -> None:
     [
         "gpt-4o",
         "gpt-3.5-turbo",
-        "ollama/llama3",
         "qwen2.5-72b",
         "llama3.1",
         "deepseek-v2",
