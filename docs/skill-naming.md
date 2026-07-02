@@ -13,6 +13,8 @@ shared across the whole Sak Family or authored by one persona.
 | **SakThai** (Hugging Face) | `personas/sakthai/skills/` | `SakThai-` | `SakThai-hf-diffusers` |
 | **SakSee** (Web) | `personas/saksee/skills/` | `SakSee-` | `SakSee-chrome-devtools` |
 | **SakSit** (Social Media) | `personas/saksit/skills/` | `SakSit-` | `SakSit-ig-carousel-design` |
+| **SakTan** (Daily Ops) | `personas/saktan/skills/` | `SakTan-` | `SakTan-daily-ops-helper` |
+| **SakJules** (Automation & CI/CD) | `personas/sakjules/skills/` | `SakJules-` | `SakJules-github-actions-fix` |
 
 Plus two structural rules, enforced by the validator:
 

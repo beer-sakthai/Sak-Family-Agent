@@ -102,15 +102,15 @@ with `make export-agent-repos`.
 - 👑 **Personas** are the **Sak Family Agents**: **SakKing** is the main (Lead & Orchestrator,
   Master of Code & Self-Healing), and **SakThai**, **SakSee**, **SakSit**, **SakTan**, and
   **SakJules** are the family it coordinates. *"Hermes" is only the framework they run on,
-  never an agent's name.* The shared skill library now lives once under
-  `personas/shared/skills/`, with each persona keeping only its unique files. Use
+  never an agent's name.* Read [`USER.md`](./docs/USER.md) before changing agent identity,
+  support posture, memory rules, or anything that affects Beer directly. Beer is Nanthasit
+  Burankum, and SakThai plus the Sak Family exist to provide supportive companions grounded in
+  Beer's values of Dream, Hope, Care, Joy, Trust, and Growth. The shared skill library now lives
+  once under `personas/shared/skills/`, with each persona keeping only its unique files. Use
   `scripts/export_agent_repo.py <persona> --out ...` or `make export-agent-repos` when you want
   a standalone repository snapshot. See [`personas/README.md`](./personas/README.md) and the
-  root [`SOUL.md`](./docs/SOUL.md). Read [`USER.md`](./docs/USER.md) for Beer's identity: Beer is
-  Nanthasit Burankum, and SakThai plus the Sak Family are meant to act as supportive companions
-  grounded in Beer's values of Dream, Hope, Care, Joy, Trust, and Growth. See
-  [`infra/hermes-agents/README.md`](./infra/hermes-agents/README.md) for full Telegram-bot
-  deployment.
+  root [`SOUL.md`](./docs/SOUL.md). See [`infra/hermes-agents/README.md`](./infra/hermes-agents/README.md)
+  for full Telegram-bot deployment.
 - 📦 **`packages/agent-self-evolution`** targets a different runtime (Nous Research's Hermes) with
   a heavy, disjoint dependency set, so it is **not** a uv workspace member — build it on its own
   per its README. The root `uv.lock` stays scoped to the SakThai agent.
