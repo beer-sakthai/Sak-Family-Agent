@@ -1,11 +1,8 @@
-import os
+"""Telegram configuration re-exported from the central SakThai config module."""
 
-# Telegram Bot API Token
-TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
-if not TELEGRAM_BOT_TOKEN:
-    raise ValueError("TELEGRAM_BOT_TOKEN environment variable not set!")
+from __future__ import annotations
 
-# List of allowed user IDs for security
-ALLOWED_USER_IDS = [
-    # 123456789, # Example user ID
-]
+from ..config import telegram_allowed_user_ids, telegram_bot_token
+
+TELEGRAM_BOT_TOKEN = telegram_bot_token()
+ALLOWED_USER_IDS = telegram_allowed_user_ids()

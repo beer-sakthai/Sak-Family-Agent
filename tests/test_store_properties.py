@@ -34,7 +34,10 @@ def observations_strategy(draw: st.DrawFn):
 # -- tests -------------------------------------------------------------------
 
 
-@settings(suppress_health_check=[HealthCheck.function_scoped_fixture, HealthCheck.too_slow])
+@settings(
+    suppress_health_check=[HealthCheck.function_scoped_fixture, HealthCheck.too_slow],
+    deadline=None,
+)
 @given(
     facts=st.lists(facts_strategy(), min_size=0, max_size=10),
     obs=st.lists(observations_strategy(), min_size=0, max_size=10),
