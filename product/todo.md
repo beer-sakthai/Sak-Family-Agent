@@ -1,6 +1,16 @@
 # TODO — ServiceQuoteBot MVP
 
-This file tracks the tasks required to build the "ServiceQuoteBot" MVP, as defined in `product/PLAN.md`. The goal is a Telegram-based agent that provides quotes from a business's price book and captures leads.
+This file tracks the tasks required to build the "ServiceQuoteBot" MVP, as defined in `product/PLAN.md`.
+
+## Product Direction
+
+The project is a **business-first AI team platform** with customer-specific packaging.
+Business is the primary target, and personal/family modes remain supported as secondary
+variants when a customer needs them. See [`product/decision.md`](decision.md) for the
+short decision note.
+
+The initial MVP remains a Telegram-based agent that provides quotes from a business's
+price book and captures leads.
 
 ## Phase 1: Core Agent & Knowledge Base
 
