@@ -43,17 +43,17 @@ persona overlays and can export standalone repo snapshots with
 
 ### Sak Family Agents
 
-The repo also carries the **Sak Family Agents** — six personas with **SakKing**
+**The repo also carries the **Sak Family Agents** — six personas with **SakKing**
 as the **main** (Lead & Orchestrator) and **SakThai**, **SakSee**, **SakSit**,
 **SakTan**, and **SakJules** as the family it coordinates. "Hermes" is only the
 framework they run on, never an agent's name. The authoritative per-agent
-identities are the repo-root `SOUL.md` + `personas/<name>/SOUL.md`;
+identities are `docs/SOUL.md` + `personas/<name>/SOUL.md`;
 `infra/hermes-agents/` carry their own (sometimes role-specialized) copies.
 Keep the SakKing-as-lead framing consistent if you touch any of them.
 
 CI (`ci.yml`, `pylint.yml`) scopes ruff/mypy/bandit/pytest/pylint to the
 `sakthai` core only; the co-located trees are not held to this repo's bars.
-gitleaks still scans the whole tree (`.gitleaks.toml` allowlists persona docs).
+**gitleaks still scans the whole tree (`.gitleaks.toml` allowlists persona docs).
 
 Everything below this point describes the SakThai agent package itself.
 

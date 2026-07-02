@@ -1,0 +1,4 @@
+# file: C:\Users\beern\OneDrive\Documents\GitHub\Sak-Family-Agent\sakthai\sandbox.py
+# hypothesis_version: 6.155.7
+
+['--caveman', '--cpus', '--dry-run', '--fast', '--max-iterations', '--max-seconds', '--max-tokens', '--memory', '--model', '--no-cache', '--no-mcp', '--provider', '--rm', '--security-opt', '--stateless', '--stream', '--with-skills', '-e', '-f', '-t', '-v', '.', '1', '512m', 'ANTHROPIC_API_KEY', 'Dockerfile.sandbox', 'GEMINI_API_KEY', 'GOOGLE_API_KEY', 'OLLAMA_HOST', 'OPENAI_API_BASE', 'OPENAI_API_KEY', 'OPENAI_BASE_URL', 'build', 'docker', 'no-new-privileges', 'run']

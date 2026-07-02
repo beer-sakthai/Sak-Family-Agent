@@ -19,19 +19,19 @@ and monetizing a product based on the Sak Family Agent technology.
 
 | Persona | SOUL.md | Status |
 |---|---|---|
-| SakKing | [personas/sakking/SOUL.md](./personas/sakking/SOUL.md) | ✅ Done |
-| SakSee | [personas/saksee/SOUL.md](./personas/saksee/SOUL.md) | ✅ Done |
-| SakThai | [personas/sakthai/SOUL.md](./personas/sakthai/SOUL.md) | ✅ Done |
-| SakSit | [personas/saksit/SOUL.md](./personas/saksit/SOUL.md) | ✅ Done |
-| SakTan | [personas/saktan/SOUL.md](./personas/saktan/SOUL.md) | ✅ Done |
-| SakJules | [personas/sakjules/SOUL.md](./personas/sakjules/SOUL.md) | ✅ Done |
+| SakKing | [personas/sakking/SOUL.md](../personas/sakking/SOUL.md) | ✅ Done |
+| SakSee | [personas/saksee/SOUL.md](../personas/saksee/SOUL.md) | ✅ Done |
+| SakThai | [personas/sakthai/SOUL.md](../personas/sakthai/SOUL.md) | ✅ Done |
+| SakSit | [personas/saksit/SOUL.md](../personas/saksit/SOUL.md) | ✅ Done |
+| SakTan | [personas/saktan/SOUL.md](../personas/saktan/SOUL.md) | ✅ Done |
+| SakJules | [personas/sakjules/SOUL.md](../personas/sakjules/SOUL.md) | ✅ Done |
 
 ### Shared files
 
 | File | Status |
 |---|---|
-| [SOUL.md](./SOUL.md) | ✅ Root — team roster synced, Charge, Principles, Operating Contract |
-| [OPERATING_CONTRACT.md](./OPERATING_CONTRACT.md) | ✅ Shared operating rules (one place) |
+| [SOUL.md](../docs/SOUL.md) | ✅ Root — team roster synced, Charge, Principles, Operating Contract |
+| [OPERATING_CONTRACT.md](../docs/OPERATING_CONTRACT.md) | ✅ Shared operating rules (one place) |
 
 ---
 
