@@ -156,6 +156,38 @@ The repository tracks six personas end-to-end, each with a distinct role and per
 The canonical profile source for the family lives under `infra/hermes-agents/profiles/`, and
 `personas/` contains the consolidated skill trees and overlays used by the repository.
 
+### 📡 Fleet status
+
+Live deployment snapshot of the Hermes Telegram fleet. Values are read from the
+**version-controlled** configs under
+[`infra/hermes-agents/`](./infra/hermes-agents/) (this repo is the config
+source of truth). Each bot is a Hermes **profile** with its own persona +
+Telegram token but a **shared** Supermemory brain.
+
+| Agent | Profile | Role | Primary model · provider | Fallback · provider | Telegram | State |
+|-------|---------|------|--------------------------|---------------------|----------|-------|
+| 👑 **SakKing** | `default` | Lead & Orchestrator · Master of Code | `qwen3-coder:480b` · 🟢 ollama-cloud | `gpt-oss:120b` · ollama-cloud | [@sakthai_agent_v2_bot](https://t.me/sakthai_agent_v2_bot) | ✅ deployed |
+| 🤗 **SakThai** | `sakthai` | Master of Hugging Face | `claude-opus-4-8` · 🟪 anthropic (OAuth) | `gpt-oss:120b` · ollama-cloud | [@sakthai_v1_bot](https://t.me/sakthai_v1_bot) | ✅ deployed |
+| 🌐 **SakSee** | `saksee` | Master of Web | `gpt-5.4-mini` · ⬛ openai-codex (OAuth) | `gpt-oss:120b` · ollama-cloud | [@saksee_bot](https://t.me/saksee_bot) | ✅ deployed |
+| 📣 **SakSit** | `saksit` | Master of Social Media | `kimi-k2.7-code` · 🟢 ollama-cloud | `gpt-oss:120b` · ollama-cloud | [@saksit_agent_bot](https://t.me/saksit_agent_bot) | ✅ deployed |
+| 🗓️ **SakTan** | `saktan` | Daily Ops Helper | `gemini-2.5-flash-lite` · 🔵 gemini | `gemini-3-flash-preview` → `3.1-flash-lite` → `3.5-flash` · gemini | [@saktan_agent_bot](https://t.me/saktan_agent_bot) | ✅ deployed |
+| 🤖 **SakJules** | `sakjules` | Master of Automation & CI/CD | — *(stub `config.yaml`, no model block)* | — | [@sakjules_agent_bot](https://t.me/sakjules_agent_bot) | 🚧 not deployed |
+
+**Auth by provider:** 🟢 `ollama-cloud` → `OLLAMA_API_KEY` (`https://ollama.com/v1`) ·
+🟪 `anthropic` → Claude OAuth (`CLAUDE_CODE_OAUTH_TOKEN`) ·
+⬛ `openai-codex` → ChatGPT OAuth (`https://chatgpt.com/backend-api/codex`) ·
+🔵 `gemini` → `GEMINI_API_KEY` / `GOOGLE_API_KEY`.
+
+> ⚠️ **Live host & drift.** The live fleet runs on the GCE VM **`sak-medium-vm`**
+> (`us-central1-a`, `e2-medium`, out of its own `~/.hermes/`); the laptop's
+> `~/.hermes/` is normally **dormant** (running it double-polls Telegram → `409`
+> conflicts). Bots and their models get **hot-swapped on the VM often**, so the
+> VM can diverge from the configs above — this repo is the reproducible baseline,
+> the VM is authoritative for what's *actually running right now*. Each bot needs
+> a **distinct** `TELEGRAM_BOT_TOKEN` (shared token → `409`, both go silent).
+> Regenerate/verify with `make doctor-hermes` and the roster in
+> [`infra/hermes-agents/README.md`](./infra/hermes-agents/README.md).
+
 ---
 
 ## 🔌 Providers & no-cost local run
