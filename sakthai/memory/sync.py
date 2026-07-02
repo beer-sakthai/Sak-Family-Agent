@@ -106,12 +106,8 @@ def sync_memory_to_git(remote: str | None = None) -> str:
 
     commit_body = ""
     try:
-        diff_proc = _run_git(
-            ["diff", "--", "facts.jsonl", "observations.jsonl"], cwd=home
-        )
-        added_lines = [
-            line[1:] for line in diff_proc.stdout.splitlines() if line.startswith("+")
-        ]
+        diff_proc = _run_git(["diff", "--", "facts.jsonl", "observations.jsonl"], cwd=home)
+        added_lines = [line[1:] for line in diff_proc.stdout.splitlines() if line.startswith("+")]
         num_facts_added = sum(1 for line in added_lines if '"kind":' in line)
         num_obs_added = sum(1 for line in added_lines if '"summary":' in line)
 

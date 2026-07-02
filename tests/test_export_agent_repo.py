@@ -195,9 +195,7 @@ def test_export_creates_saktan_specific_repo(
     assert (out / "SOUL.md").read_text(encoding="utf-8") == "SakTan soul"
     assert (out / "personas" / "saktan" / "skills" / "overlay-skill" / "SKILL.md").is_file()
     assert (out / "infra" / "hermes-agents" / "profiles" / "saktan" / "SOUL.md").is_file()
-    assert (
-        out / "infra" / "hermes-agents" / "profiles" / "saktan" / "config.yaml"
-    ).is_file()
+    assert (out / "infra" / "hermes-agents" / "profiles" / "saktan" / "config.yaml").is_file()
     assert "exported saktan ->" in capsys.readouterr().out
 
 

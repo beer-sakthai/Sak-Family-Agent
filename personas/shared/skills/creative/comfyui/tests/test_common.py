@@ -494,16 +494,32 @@ class TestVideoWorkflow:
 class TestSensitiveKeyDetection:
     @pytest.mark.parametrize(
         "key",
-        ["authorization", "api_key", "my_api_key", "X-Api-Key", "password",
-         "access_key", "private_key", "COMFY_CLOUD_API_KEY", "bearer_token"],
+        [
+            "authorization",
+            "api_key",
+            "my_api_key",
+            "X-Api-Key",
+            "password",
+            "access_key",
+            "private_key",
+            "COMFY_CLOUD_API_KEY",
+            "bearer_token",
+        ],
     )
     def test_flags_real_secrets(self, key):
         assert _is_sensitive_key(key) is True
 
     @pytest.mark.parametrize(
         "key",
-        ["author", "authored_by", "tokenizer_name", "max_tokens", "width",
-         "prompt", "sampler_name"],
+        [
+            "author",
+            "authored_by",
+            "tokenizer_name",
+            "max_tokens",
+            "width",
+            "prompt",
+            "sampler_name",
+        ],
     )
     def test_does_not_flag_lookalikes(self, key):
         assert _is_sensitive_key(key) is False
@@ -516,7 +532,7 @@ class TestRedactSensitiveTextEmitJsonAndLog:
         assert "***REDACTED***" in out
 
     def test_redacts_authorization_bearer(self):
-        out = _redact_sensitive_text('Authorization: Bearer sk_live_abc')
+        out = _redact_sensitive_text("Authorization: Bearer sk_live_abc")
         assert "sk_live_abc" not in out
         assert "***REDACTED***" in out
 
@@ -544,8 +560,10 @@ class TestRedactSensitiveTextEmitJsonAndLog:
 class TestRedactSensitive:
     def test_redacts_dataclass_fields(self):
         resp = HTTPResponse(
-            status=200, headers={"Authorization": "Bearer sk_live_secret"},
-            body=b"ok", url="http://x",
+            status=200,
+            headers={"Authorization": "Bearer sk_live_secret"},
+            body=b"ok",
+            url="http://x",
         )
         out = _redact_sensitive({"response": resp})
         assert out["response"]["headers"]["Authorization"] == "***REDACTED***"
@@ -566,6 +584,7 @@ class TestRedactSensitive:
         captured = capsys.readouterr()
         assert "sk_live_secret" not in captured.err
         assert "***REDACTED***" in captured.err
+
 
 class TestRedactSensitiveText:
     @pytest.mark.parametrize(

@@ -19,6 +19,7 @@ def _client_with_module(module: str) -> object:
     _Fake.__module__ = module
     return _Fake()
 
+
 @pytest.mark.parametrize(
     ("client", "model", "env", "creds", "expected"),
     [

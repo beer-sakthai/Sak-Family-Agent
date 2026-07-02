@@ -275,6 +275,8 @@ class StdioMCPClient:
         the server does not respond in time. Works on all platforms (unlike
         ``select`` on pipes, which is POSIX-only).
         """
+        if self._proc is None:
+            raise MCPClientError(f"{self.name}: server is not running")
         try:
             item = self._line_queue.get(timeout=self._timeout)
         except queue.Empty:

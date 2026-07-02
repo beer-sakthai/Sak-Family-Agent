@@ -11,8 +11,9 @@ so the model learns when NOT to call a tool.
 
 import json
 import random
+from collections.abc import Callable, Iterable
 from pathlib import Path
-from typing import Any, Callable, Dict, Iterable, List, Tuple
+from typing import Any
 
 random.seed(7)
 
@@ -211,11 +212,11 @@ BIG_TASKS = [
 
 def generate_tool_rows(
     tool_name: str,
-    templates: List[str],
+    templates: list[str],
     items: Iterable[Any],
-    arg_builder: Callable[[Any], Dict[str, Any]],
+    arg_builder: Callable[[Any], dict[str, Any]],
     sample_size: int = 1,
-) -> Iterable[Tuple[str, str, Dict[str, Any]]]:
+) -> Iterable[tuple[str, str, dict[str, Any]]]:
     """Generic row generator for a tool."""
     for item in items:
         for template in random.sample(templates, min(sample_size, len(templates))):
@@ -224,7 +225,7 @@ def generate_tool_rows(
             yield user_text, tool_name, args
 
 
-def learn_rows() -> Iterable[Tuple[str, str, Dict[str, Any]]]:
+def learn_rows() -> Iterable[tuple[str, str, dict[str, Any]]]:
     templates = [
         "Remember that {f}.",
         "Note for later: {f}.",
@@ -234,14 +235,18 @@ def learn_rows() -> Iterable[Tuple[str, str, Dict[str, Any]]]:
     ]
     for fact_value, fact_kind, fact_key in FACTS:
         for template in random.sample(templates, 3):
-            yield template.format(f=fact_value.lower()), "learn", {
-                "value": fact_value,
-                "kind": fact_kind,
-                "key": fact_key,
-            }
+            yield (
+                template.format(f=fact_value.lower()),
+                "learn",
+                {
+                    "value": fact_value,
+                    "kind": fact_kind,
+                    "key": fact_key,
+                },
+            )
 
 
-def recall_rows() -> Iterable[Tuple[str, str, Dict[str, Any]]]:
+def recall_rows() -> Iterable[tuple[str, str, dict[str, Any]]]:
     user_prompts = [
         "What do you know about me?",
         "List everything in your memory.",
@@ -255,7 +260,7 @@ def recall_rows() -> Iterable[Tuple[str, str, Dict[str, Any]]]:
         yield user_prompt, "recall", args
 
 
-def search_rows() -> Iterable[Tuple[str, str, Dict[str, Any]]]:
+def search_rows() -> Iterable[tuple[str, str, dict[str, Any]]]:
     templates = [
         "Do you have anything saved about {q}?",
         "Search your memory for {q}.",
@@ -267,7 +272,7 @@ def search_rows() -> Iterable[Tuple[str, str, Dict[str, Any]]]:
             yield template.format(q=topic), "search", {"query": topic}
 
 
-def forget_rows() -> Iterable[Tuple[str, str, Dict[str, Any]]]:
+def forget_rows() -> Iterable[tuple[str, str, dict[str, Any]]]:
     prompts = [
         ("Delete fact 5.", 5),
         ("Forget memory id 12.", 12),
@@ -279,7 +284,7 @@ def forget_rows() -> Iterable[Tuple[str, str, Dict[str, Any]]]:
         yield user_prompt, "forget", {"fact_id": fact_id}
 
 
-def read_file_rows() -> Iterable[Tuple[str, str, Dict[str, Any]]]:
+def read_file_rows() -> Iterable[tuple[str, str, dict[str, Any]]]:
     templates = [
         "Read {p} for me.",
         "What's in {p}?",
@@ -290,7 +295,7 @@ def read_file_rows() -> Iterable[Tuple[str, str, Dict[str, Any]]]:
         yield random.choice(templates).format(p=file_path), "read_file", {"path": file_path}
 
 
-def run_command_rows() -> Iterable[Tuple[str, str, Dict[str, Any]]]:
+def run_command_rows() -> Iterable[tuple[str, str, dict[str, Any]]]:
     templates = ["Run `{c}`.", "Execute {c}.", "Can you run {c} for me?", "Shell: {c}"]
     for command in COMMANDS:
         args = {"command": command}
@@ -299,7 +304,7 @@ def run_command_rows() -> Iterable[Tuple[str, str, Dict[str, Any]]]:
         yield random.choice(templates).format(c=command), "run_command", args
 
 
-def telegram_rows() -> Iterable[Tuple[str, str, Dict[str, Any]]]:
+def telegram_rows() -> Iterable[tuple[str, str, dict[str, Any]]]:
     templates = [
         "Text me: {m}",
         "Send a Telegram saying '{m}'.",
@@ -310,7 +315,7 @@ def telegram_rows() -> Iterable[Tuple[str, str, Dict[str, Any]]]:
         yield random.choice(templates).format(m=msg), "send_telegram_message", {"message": msg}
 
 
-def agent_loop_rows() -> Iterable[Tuple[str, str, Dict[str, Any]]]:
+def agent_loop_rows() -> Iterable[tuple[str, str, dict[str, Any]]]:
     templates = [
         "Go ahead and {t}.",
         "Handle this end to end: {t}.",
@@ -368,7 +373,10 @@ def build():
                             "role": "assistant",
                             "content": "",
                             "tool_calls": [
-                                {"type": "function", "function": {"name": tool_name, "arguments": tool_args}}
+                                {
+                                    "type": "function",
+                                    "function": {"name": tool_name, "arguments": tool_args},
+                                }
                             ],
                         },
                     ],
@@ -381,7 +389,11 @@ def build():
                 "messages": [
                     {"role": "system", "content": SYSTEM_PROMPT},
                     {"role": "user", "content": user_text},
-                    {"role": "assistant", "content": answer, "tool_calls": []}, # Explicitly show no tool call
+                    {
+                        "role": "assistant",
+                        "content": answer,
+                        "tool_calls": [],
+                    },  # Explicitly show no tool call
                 ],
             }
         )
