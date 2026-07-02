@@ -2,6 +2,16 @@
 
 Living task list. Work top-to-bottom; check off with a dated one-line note when done.
 
+## Migration Guideline
+
+For Hermes-free migration work, keep the order fixed:
+1. inventory the Hermes dependency surface,
+2. define the smallest safe replacement path,
+3. implement one runtime seam at a time,
+4. add tests before expanding the surface,
+5. verify with a local smoke run,
+6. commit, open a PR, wait for CI, and merge only after green checks.
+
 ## Phase 0 — Quality cleanup (from review cons)
 - [x] Make brittle CLI test assertions robust (assert on stable tokens / exit
       codes, not fragile full-string output) — 2026-06-15: shifted mutating-command
@@ -239,6 +249,34 @@ real surface area (MCP both ways, skills, the Hermes link).
       tool/skill/provider drift in `capabilities.md`/`plugins.md`/`runtimes.md`;
       reconciled this Phase 13 block (removed duplicate pending 13.2/13.3). Verified
       `hermes__*` MCP discovery locally (zero-cost stdio).
+
+## Phase 15 — Hermes-free migration (CLI first, then bot wrapper)
+Goal: make the family runnable without Hermes in a staged way. Keep the existing
+Hermes path intact until the replacement passes tests. One task at a time:
+discovery → design → implementation → tests → commit → PR → merge.
+
+- [ ] 15.1 — Hermes dependency inventory: map every runtime touchpoint that
+      currently depends on `~/.hermes`, `HERMES_HOME`, profile dirs, cron, or
+      systemd service wiring. Classify each one as CLI-only, MCP-only, bot-only,
+      or shared.
+- [ ] 15.2 — Non-Hermes config contract: define the minimal repo-local config
+      files and env vars needed to start a persona without Hermes, including
+      persona identity, shared memory location, tool/MCP server config, and
+      fallback model settings.
+- [ ] 15.3 — CLI/MCP launcher seam: add the smallest possible startup path that
+      can run `sakthai run` and `sakthai mcp` without reading `~/.hermes`, while
+      preserving the existing Hermes-backed path for Telegram bots.
+- [ ] 15.4 — Profile-free tests: add focused tests for config loading, persona
+      selection, tool discovery, and a no-Hermes startup smoke test that proves
+      the CLI path works with local models or OpenAI-compatible backends.
+- [ ] 15.5 — Migration docs: document the supported no-Hermes path, the current
+      Hermes-dependent path, and exactly which agents still require Hermes for
+      Telegram operation.
+- [ ] 15.6 — Verification: run the targeted tests, then run one manual
+      no-Hermes smoke test with a local model or OpenAI-compatible endpoint and
+      record the result in this roadmap.
+- [ ] 15.7 — GitHub flow: commit the migration branch, open a PR, wait for CI to
+      go green, and merge only after the no-Hermes tests pass.
 
 ---
 
