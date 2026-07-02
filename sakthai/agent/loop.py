@@ -19,7 +19,6 @@ import time
 import uuid
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
-from pathlib import Path
 from typing import Any
 
 from ..auth import (
@@ -434,8 +433,6 @@ def run_agent(
 
             _dispatch_tool_calls(response, messages, registry, store, notify, tool_calls)
 
-            _dispatch_tool_calls(response, state.messages, state.registry, state.store, state.notify, state.tool_calls)
-
         raise AgentError(
             f"Agent hit the iteration cap (max_iterations={max_iterations}) "
             "without producing a final response."
@@ -468,9 +465,6 @@ def preflight(
     if resolved == "ollama":
         resolved = "openai"
     effective_model = _resolve_model_name(model, resolved)
-    import os
-
-    from ..auth import local_credential_source
 
     if resolved == "google":
         if os.environ.get("GEMINI_API_KEY"):
