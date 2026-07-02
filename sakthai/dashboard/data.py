@@ -114,62 +114,40 @@ def _color_for(kind: str, index: int) -> str:
 
 def collect_dashboard_data(db_path: Path | None = None, days: int = 30) -> dict[str, Any]:
     """Assemble a dashboard snapshot from the memory store, or demo data if empty."""
-    try:
-        from sakthai.memory.store import MemoryStore
-
-        with MemoryStore(db_path) as store:
-            facts = store.list_facts(limit=_FACTS_LIMIT)
-            observations = store.top_observations(limit=_OBS_LIMIT)
-    except Exception:
-        logger.warning("Could not read MemoryStore; using demo data", exc_info=True)
-        return dict(DEMO_DATA)
-
-    if not facts and not observations:
-        return dict(DEMO_DATA)
-
     now = int(time.time())
     week_ago = now - _WEEK
     start = now - days * _DAY
 
-    fact_bins = [0] * days
-    fact_before_start = 0
-    facts_this_week = 0
-    counts: dict[str, int] = {}
+    try:
+        from sakthai.memory.store import MemoryStore
 
-    for f in facts:
-        counts[f.kind] = counts.get(f.kind, 0) + 1
-        if f.created_at >= week_ago:
-            facts_this_week += 1
-        if f.created_at <= start:
-            fact_before_start += 1
-        else:
-            idx = (f.created_at - start - 1) // _DAY
-            if 0 <= idx < days:
-                fact_bins[idx] += 1
+        with MemoryStore(db_path) as store:
+            # SQL-optimized aggregation (Bolt optimization)
+            f_agg = store.get_dashboard_aggregates("facts", _FACTS_LIMIT, start, week_ago)
+            o_agg = store.get_dashboard_aggregates("observations", _OBS_LIMIT, start, week_ago)
+            counts = store.get_fact_kind_counts(_FACTS_LIMIT)
 
-    obs_bins = [0] * days
-    obs_before_start = 0
-    obs_this_week = 0
-    for o in observations:
-        if o.created_at >= week_ago:
-            obs_this_week += 1
-        if o.created_at <= start:
-            obs_before_start += 1
-        else:
-            idx = (o.created_at - start - 1) // _DAY
-            if 0 <= idx < days:
-                obs_bins[idx] += 1
+            if f_agg["total"] == 0 and o_agg["total"] == 0:
+                return dict(DEMO_DATA)
+
+            # Fetch only the minimum required for the "recent" lists
+            facts = store.list_facts(limit=10)
+            observations = store.top_observations(limit=6)
+    except Exception:
+        logger.warning("Could not read MemoryStore; using demo data", exc_info=True)
+        return dict(DEMO_DATA)
 
     labels: list[str] = []
     fact_series: list[int] = []
     obs_series: list[int] = []
-    curr_facts = fact_before_start
-    curr_obs = obs_before_start
+
+    curr_facts = f_agg["before_start"]
+    curr_obs = o_agg["before_start"]
     for d in range(days):
         day_end = start + (d + 1) * _DAY
         labels.append(_fmt_date(day_end - _DAY))
-        curr_facts += fact_bins[d]
-        curr_obs += obs_bins[d]
+        curr_facts += f_agg["bins"][d]
+        curr_obs += o_agg["bins"][d]
         fact_series.append(curr_facts)
         obs_series.append(curr_obs)
 
@@ -181,8 +159,8 @@ def collect_dashboard_data(db_path: Path | None = None, days: int = 30) -> dict[
         }
         for i, (kind, count) in enumerate(sorted(counts.items(), key=lambda kv: -kv[1]))
     ]
-    if observations:
-        categories.append({"name": "Observations", "count": len(observations), "color": "#f472b6"})
+    if o_agg["total"] > 0:
+        categories.append({"name": "Observations", "count": o_agg["total"], "color": "#f472b6"})
 
     session_data = collect_session_data()
 
@@ -198,10 +176,10 @@ def collect_dashboard_data(db_path: Path | None = None, days: int = 30) -> dict[
         "generated_at": _fmt_date(now),
         "source": SOURCE_LIVE,
         "kpis": {
-            "total_facts": len(facts),
-            "total_facts_delta": facts_this_week,
-            "total_observations": len(observations),
-            "total_observations_delta": obs_this_week,
+            "total_facts": f_agg["total"],
+            "total_facts_delta": f_agg["this_week"],
+            "total_observations": o_agg["total"],
+            "total_observations_delta": o_agg["this_week"],
             "sessions": session_data.get("totals", {}).get("sessions", 0),
             "total_tokens": session_data.get("totals", {}).get("total_tokens", 0),
             "total_skills": total_skills,
