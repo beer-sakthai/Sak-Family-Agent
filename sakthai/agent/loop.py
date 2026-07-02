@@ -26,7 +26,7 @@ from ..auth import (
     gateway_credential_source,
     openai_credential_source,
 )
-from ..config import sessions_dir
+from ..config import redact_secrets, sessions_dir
 from ..memory.store import MemoryStore
 from ..skills import default_skill_roots, find_skill, render_skills_prompt_block
 from . import providers
@@ -205,7 +205,8 @@ def _execute_tool(tool: Tool, args: dict[str, Any], store: MemoryStore) -> tuple
         return tool.handler(args, store), False
     except Exception as exc:  # noqa: BLE001 — surfaced back to the model
         logger.debug("Tool %r raised %s: %s", tool.name, type(exc).__name__, exc)
-        return f"{type(exc).__name__}: {exc}", True
+        # Use redact_secrets as a global fail-safe for unhandled tool exceptions
+        return redact_secrets(f"{type(exc).__name__}: {exc}"), True
 
 
 def _process_tool_uses(
