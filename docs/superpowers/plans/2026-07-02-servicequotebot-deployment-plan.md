@@ -1,8 +1,12 @@
 # ServiceQuoteBot Deployment Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use
+> `superpowers:subagent-driven-development` (recommended) or
+> `superpowers:executing-plans` to implement this plan task-by-task.
+> Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Add a customer deployment package for ServiceQuoteBot with repeatable setup, a systemd service template, and a repo-local deployment guide.
+**Goal:** Add a customer deployment package for ServiceQuoteBot with repeatable
+setup, a systemd service template, and a repository-local deployment guide.
 
 **Architecture:** Keep the runtime simple and Linux-first. The bot already runs in-process via `sakthai.telegram.bot`, so deployment should wrap that entry point with a small systemd unit, a setup script that assembles a customer-specific `.env` and memory directory, and a short guide that explains how to ingest the customer price book before starting the service. Keep the deployment assets separate from the core runtime so they can be reused for future customer installs.
 
@@ -10,7 +14,7 @@
 
 ---
 
-### Task 1: Define the deployment contract
+## Task 1: Define the deployment contract
 
 **Files:**
 - Create: `docs/servicequotebot/deployment.md`
@@ -19,7 +23,7 @@
 - [ ] **Step 1: Write the deployment guide**
 
 Document the deployment flow end to end:
-- where the repo should live on the customer host
+- where the repository should live on the customer host
 - which environment variables the bot needs (`ANTHROPIC_API_KEY`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_ALLOWED_USER_IDS`, `SAKTHAI_HOME`)
 - how the price book gets ingested into the persistent memory DB before first launch
 - how to start and verify the service with `systemctl --user`
@@ -48,7 +52,7 @@ git add docs/servicequotebot/deployment.md product/todo.md
 git commit -m "docs: add servicequotebot deployment guide"
 ```
 
-### Task 2: Add a systemd service template
+## Task 2: Add a systemd service template
 
 **Files:**
 - Create: `infra/servicequotebot/systemd/servicequotebot.service`
@@ -93,7 +97,7 @@ git add infra/servicequotebot/systemd/servicequotebot.service
 git commit -m "infra: add servicequotebot systemd unit"
 ```
 
-### Task 3: Add the customer bootstrap script
+## Task 3: Add the customer bootstrap script
 
 **Files:**
 - Create: `scripts/setup_servicequotebot.py`
@@ -164,7 +168,7 @@ git add scripts/setup_servicequotebot.py tests/test_setup_servicequotebot.py
 git commit -m "feat: add servicequotebot setup script"
 ```
 
-### Task 4: Validate the full deployment story
+## Task 4: Validate the full deployment story
 
 **Files:**
 - Modify: `product/todo.md`
@@ -191,7 +195,7 @@ git add product/todo.md docs/servicequotebot/deployment.md infra/servicequotebot
 git commit -m "docs: finish servicequotebot deployment plan"
 ```
 
-### Coverage Check
+## Coverage Check
 
 - `docs/servicequotebot/deployment.md` covers the customer deployment flow requested in the tracker.
 - `infra/servicequotebot/systemd/servicequotebot.service` satisfies the “systemd service file or Dockerfile” requirement.

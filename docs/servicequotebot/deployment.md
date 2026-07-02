@@ -8,9 +8,10 @@ python -m sakthai.telegram.bot
 
 The deployment shape is intentionally simple:
 
-- the repo lives on the customer host
+- the repository lives on the customer host
 - a user-level `systemd` service keeps the bot running
-- a small setup script writes the customer env file, copies the systemd unit, and ingests the first price book into persistent memory
+- a small setup script writes the customer env file, copies the systemd unit,
+  and ingests the first price book into persistent memory
 
 ## Prerequisites
 
@@ -27,7 +28,7 @@ The deployment shape is intentionally simple:
 
 ## Setup flow
 
-1. Create a bundle for the customer:
+- Create a bundle for the customer:
 
 ```bash
 python scripts/setup_servicequotebot.py \
@@ -39,18 +40,20 @@ python scripts/setup_servicequotebot.py \
   --telegram-allowed-user-ids 123456789,987654321
 ```
 
-2. Install the generated env file and service unit:
+- Install the generated env file and service unit:
 
 ```bash
-install -Dm600 /etc/servicequotebot/acme-plumbing/config/servicequotebot.env \
+install -Dm600 \
+  /etc/servicequotebot/acme-plumbing/config/servicequotebot.env \
   ~/.config/servicequotebot/servicequotebot.env
-install -Dm644 /etc/servicequotebot/acme-plumbing/systemd/servicequotebot.service \
+install -Dm644 \
+  /etc/servicequotebot/acme-plumbing/systemd/servicequotebot.service \
   ~/.config/systemd/user/servicequotebot.service
 systemctl --user daemon-reload
 systemctl --user enable --now servicequotebot.service
 ```
 
-3. Verify the service:
+- Verify the service:
 
 ```bash
 systemctl --user status servicequotebot.service
@@ -59,14 +62,18 @@ journalctl --user -u servicequotebot.service -f
 
 ## What the setup script prepares
 
-- a customer-specific `servicequotebot.env` file with the Telegram and Anthropic credentials
+- a customer-specific `servicequotebot.env` file with the Telegram and
+  Anthropic credentials
 - a persistent `SAKTHAI_HOME` directory for that customer
 - a copied price book stored in the customer bundle
 - a pre-seeded memory database created by ingesting the supplied price book
-- a customer-specific systemd unit that points at the repo root and launches the Telegram bot entry point
+- a customer-specific systemd unit that points at the repository root and
+  launches the Telegram bot entry point
 
 ## Rollout notes
 
 - Keep one bundle per customer.
-- Update the price book by rerunning the setup script with the new source file, then restart the user service.
-- If the repo moves, regenerate the service unit so `WorkingDirectory` and `ExecStart` point at the new path.
+- Update the price book by rerunning the setup script with the new source
+  file, then restart the user service.
+- If the repository moves, regenerate the service unit so `WorkingDirectory`
+  and `ExecStart` point at the new path.
