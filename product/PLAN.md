@@ -102,7 +102,7 @@ and monetizing a product based on the Sak Family Agent technology.
 
 ## 🚀 Phases — Product & Monetization (Continued)
 
-### Phase 6 — Detailed Product & Market Analysis (Pivoted 2026-07-02)
+### Phase 6 — Detailed Product & Market Analysis ✅ 2026-07-02
 
 *Goal: To ensure the agent is ready for any business type, including digital marketing, we will perform a more detailed analysis before building.*
 
@@ -119,7 +119,7 @@ and monetizing a product based on the Sak Family Agent technology.
 #### Part B: Agent Capability & Gap Analysis
 
 - [x] Audit the Sak-Family-Agent's current tools (`learn`, `recall`, `search`, etc.) and skills. — 2026-07-02
-- [ ] Create a map: which existing tools/skills can solve which problems from Part A? *(In Progress)*
+- [x] Create a map: which existing tools/skills can solve which problems from Part A?
   - **1. Digital Marketing Agency**
     - **Problem:** Repetitive Content Creation & Trend-Chasing.
       - **Capability:** SakSit (content) + SakSee (research).
@@ -134,13 +134,52 @@ and monetizing a product based on the Sak Family Agent technology.
     - **Problem:** Repetitive Market & Influencer Research.
       - **Capability:** SakSee (web browsing).
       - **Gap:** Needs a more structured way to filter and score potential influencers beyond manual browsing.
-- [ ] Identify capability gaps: what new skills or tools would be needed to be effective for these businesses?
+  - **2. Local Service Business**
+    - **Problem:** Repetitive Scheduling & Availability Inquiries.
+      - **Capability:** SakTan (ops) + `send_telegram_message`.
+      - **Gap:** Needs calendar integration (Google Calendar/Calendly) to check and book real-time availability.
+    - **Problem:** Repetitive Pricing & Service Quotes.
+      - **Capability:** SakThai (logic) + `recall` (pricing rules).
+      - **Gap:** Needs a structured quoting engine or connection to an invoicing system (Stripe, QuickBooks).
+    - **Problem:** Repetitive Follow-up & Review Requests.
+      - **Capability:** SakTan.
+      - **Gap:** Needs a trigger/webhook system when a job is marked 'done' to automatically send the request.
+  - **3. Student / Researcher**
+    - **Problem:** Repetitive Source Gathering & Citation Formatting.
+      - **Capability:** SakSee (research) + SakSit (writing).
+      - **Gap:** Direct integration with academic databases (PubMed, JSTOR) and reference managers (Zotero).
+    - **Problem:** Repetitive Summarization of Long PDFs.
+      - **Capability:** `read_file` or a custom PDF extraction tool.
+      - **Gap:** Needs an efficient way to handle large token contexts or chunked RAG specifically optimized for academic papers.
+  - **4. E-commerce Store**
+    - **Problem:** Repetitive "Where is my order?" (WISMO) Inquiries.
+      - **Capability:** SakTan (ops).
+      - **Gap:** Direct API access to Shopify/WooCommerce and shipping providers (FedEx, UPS, USPS).
+    - **Problem:** Repetitive Product Recommendation & Sizing.
+      - **Capability:** `recall`, `learn` for product catalog.
+      - **Gap:** Real-time inventory check and a dynamic recommendation engine based on visual fit or past purchases.
+    - **Problem:** Repetitive Return Processing.
+      - **Capability:** SakTan.
+      - **Gap:** Ability to generate return labels programmatically and update order status in the e-commerce backend.
+  - **5. Content Creator / Solopreneur**
+    - **Problem:** Repetitive Content Repurposing (YouTube to Blog to Twitter).
+      - **Capability:** SakSit (content) + SakJules (automation).
+      - **Gap:** Ability to process long-form audio/video directly (whisper integration) to extract text, and integration with posting scheduling tools (Buffer, HootSuite).
+    - **Problem:** Repetitive Email Triage & Fan Engagement.
+      - **Capability:** SakTan.
+      - **Gap:** Direct integration with Gmail/Outlook with read/write access and draft generation capabilities.
+
+- [x] Identify capability gaps: what new skills or tools would be needed to be effective for these businesses?
+  - **Summary of Gaps:** Across all archetypes, the core missing link is **third-party integration tools**. The Sak Family Agent handles text/logic beautifully via its personas, but needs standard APIs (Calendly, Shopify, Gmail, social media platforms) to execute actions. Additionally, handling rich media (audio/video transcription, large PDFs) is a recurring bottleneck.
 
 #### Part C: MVP Definition & Strategy
 
-- [ ] Based on the analysis, select the single most promising combination of (Business Archetype + Solvable Problem).
-- [ ] Define a highly specific Minimum Viable Product (MVP) for this combination.
-- [ ] Outline a low-risk monetization strategy for this MVP.
+- [x] Based on the analysis, select the single most promising combination of (Business Archetype + Solvable Problem).
+  - **Selection:** Local Service Business (e.g., Plumbers, Cleaners) + Repetitive Pricing & Service Quotes. This provides immediate value and requires minimal custom integrations (mostly Q&A from a price book).
+- [x] Define a highly specific Minimum Viable Product (MVP) for this combination.
+  - **MVP Definition: "ServiceQuoteBot"** A Telegram-based agent (leveraging SakTan and SakThai) that ingests a local service business's price book and FAQs. It provides instant, accurate quotes or service info to customers 24/7, capturing leads in the process.
+- [x] Outline a low-risk monetization strategy for this MVP.
+  - **Monetization:** A "Done-for-you" one-time setup fee ($200 - $500) plus a flat monthly hosting/maintenance fee ($50 - $100/month). Low risk as it relies on existing platforms (Telegram) and requires no custom app development.
 
 ---
 

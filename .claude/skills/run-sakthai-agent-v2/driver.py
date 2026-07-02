@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -42,6 +43,7 @@ def run(args: list[str], env: dict[str, str], stdin: str | None = None) -> tuple
         capture_output=True,
         text=True,
         timeout=120,
+        shell=False,
     )
     return proc.returncode, proc.stdout + proc.stderr
 
@@ -74,7 +76,7 @@ def drive_mcp(env: dict[str, str]) -> dict[int, dict]:
     ]
     payload = "".join(json.dumps(r) + "\n" for r in requests)
     proc = subprocess.run(
-        [BIN, "mcp"], env=env, input=payload, capture_output=True, text=True, timeout=60
+        [BIN, "mcp"], env=env, input=payload, capture_output=True, text=True, timeout=60, shell=False
     )
     out: dict[int, dict] = {}
     for line in proc.stdout.splitlines():
@@ -133,7 +135,7 @@ def main() -> int:
         recall_text = resp.get(4, {}).get("result", {}).get("content", [{}])[0].get("text", "")
         check("tools/call recall reads it back", "drove the MCP server" in recall_text)
     finally:
-        subprocess.run(["rm", "-rf", str(home)])
+        shutil.rmtree(home, ignore_errors=True)
 
     print()
     if failures:

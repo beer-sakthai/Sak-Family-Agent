@@ -42,6 +42,7 @@ If `git diff --cached` is empty but `git diff` shows changes, tell the user to
 `git add <files>` first. If still empty, run `git status` — nothing to verify.
 
 If the diff exceeds 15,000 characters, split by file:
+
 ```bash
 git diff --name-only
 git diff HEAD -- specific_file.py
@@ -50,22 +51,17 @@ git diff HEAD -- specific_file.py
 ## Step 2 — Static security scan
 
 Scan added lines only. Any match is a security concern fed into Step 5.
+The `grep` command uses multiple `-e` flags to check for several patterns at once:
+hardcoded secrets, shell injection, dangerous `eval`/`exec`, unsafe
+deserialization, and potential SQL injection.
 
 ```bash
-# Hardcoded secrets
-git diff --cached | grep "^+" | grep -iE "(api_key|secret|password|token|passwd)\s*=\s*['\"][^'\"]{6,}['\"]"
-
-# Shell injection
-git diff --cached | grep "^+" | grep -E "os\.system\(|subprocess.*shell=True"
-
-# Dangerous eval/exec
-git diff --cached | grep "^+" | grep -E "\beval\(|\bexec\("
-
-# Unsafe deserialization
-git diff --cached | grep "^+" | grep -E "pickle\.loads?\("
-
-# SQL injection (string formatting in queries)
-git diff --cached | grep "^+" | grep -E "execute\(f\"|\.format\(.*SELECT|\.format\(.*INSERT"
+git diff --cached | grep "^+" | grep -iE \
+  -e "(api_key|secret|password|token|passwd)\s*=\s*['\"][^'\"]{6,}['\"]" \
+  -e "os\.system\(|subprocess.*shell=True" \
+  -e "\beval\(|\bexec\(" \
+  -e "pickle\.loads?\(" \
+  -e "execute\(f\"|\.format\(.*SELECT|\.format\(.*INSERT"
 ```
 
 ## Step 3 — Baseline tests and linting
@@ -75,6 +71,7 @@ count BEFORE your changes as **baseline_failures** (stash changes, run, pop).
 Only NEW failures introduced by your changes block the commit.
 
 **Test frameworks** (auto-detect by project files):
+
 ```bash
 # Python (pytest)
 python -m pytest --tb=no -q 2>&1 | tail -5
@@ -90,6 +87,7 @@ go test ./... 2>&1 | tail -5
 ```
 
 **Linting and type checking** (run only if installed):
+
 ```bash
 # Python
 which ruff && ruff check . 2>&1 | tail -10
@@ -220,6 +218,7 @@ Fix each issue precisely. Describe what you changed and why.""",
 ```
 
 After the fix agent completes, re-run Steps 1-6 (full verification cycle).
+
 - Passed: proceed to Step 8
 - Failed and attempts < 2: repeat Step 7
 - Failed after 2 attempts: escalate to user with the remaining issues and
@@ -238,6 +237,7 @@ The `[verified]` prefix indicates an independent reviewer approved this change.
 ## Reference: Common Patterns to Flag
 
 ### Python
+
 ```python
 # Bad: SQL injection
 cursor.execute(f"SELECT * FROM users WHERE id = {user_id}")
@@ -251,6 +251,7 @@ subprocess.run(["ls", user_input], check=True)
 ```
 
 ### JavaScript
+
 ```javascript
 // Bad: XSS
 element.innerHTML = userInput;
