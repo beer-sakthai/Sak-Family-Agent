@@ -31,6 +31,17 @@ def _load_module() -> ModuleType:
 compose_persona = _load_module()
 
 
+def test_persona_registry_covers_all_six_agents() -> None:
+    assert compose_persona.PERSONAS == (
+        "sakthai",
+        "sakking",
+        "saksee",
+        "saksit",
+        "saktan",
+        "sakjules",
+    )
+
+
 @pytest.fixture
 def personas_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     """A synthetic ``personas/`` tree with a shared library and a sakthai overlay."""
