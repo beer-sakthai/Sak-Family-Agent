@@ -91,6 +91,8 @@ def _detect_from_client_type(client: Any) -> str | None:
 
 def _detect_from_credentials() -> str | None:
     """Detect provider by checking for available credentials."""
+    if gateway_credential_source() is not None:
+        return "gateway"
     if local_credential_source() is not None:
         return "local"
     if os.environ.get("OLLAMA_HOST"):
@@ -99,8 +101,6 @@ def _detect_from_credentials() -> str | None:
         return "google"
     if openai_credential_source() is not None:
         return "openai"
-    if gateway_credential_source() is not None:
-        return "gateway"
     if anthropic_credential_source() is not None:
         return "anthropic"
     return None
@@ -114,7 +114,7 @@ def detect_provider(client: Any | None, model: str) -> str:
     an openai client or `openai`/`ollama`/`gpt` in model name → ``openai``;
     any other injected client → ``anthropic``;
     otherwise pick whichever credential is present:
-    anthropic → google → openai → gateway.
+    google → gateway → local → openai → anthropic → ollama.
     """
     # The order of these checks defines the detection priority.
     checks: list[Callable[[], str | None]] = [
@@ -198,13 +198,10 @@ def _build_google_client() -> Any:
 
 def _build_openai_compat_client(provider: str) -> Any:
     """Build a client for OpenAI-compatible providers (OpenAI, Gateway)."""
-    if provider == "openai":
-        from ...auth import resolve_openai_credentials as resolve
-    else:  # provider == "gateway"
-        from ...auth import resolve_gateway_credentials as resolve
+    from ...auth import resolve_openai_credentials
 
     try:
-        api_base, api_key = resolve()
+        api_base, api_key = resolve_openai_credentials()
     except AuthError as exc:
         raise AgentError(str(exc)) from exc
     return _openai_compat_client(api_base, api_key)
@@ -249,8 +246,10 @@ def build_client(provider: str, client: Any | None) -> Any:
 
     if provider == "google":
         return _build_google_client()
-    if provider in ("openai", "gateway"):
+    if provider == "openai":
         return _build_openai_compat_client(provider)
+    if provider == "gateway":
+        return _build_gateway_client()
     if provider == "ollama":
         return _build_ollama_client()
     if provider == "local":
@@ -258,3 +257,13 @@ def build_client(provider: str, client: Any | None) -> Any:
 
     # Default to Anthropic
     return _build_anthropic_client()
+
+
+def _build_gateway_client() -> Any:
+    """Build a client for an OpenAI-compatible AI gateway."""
+    try:
+        api_base, api_key = resolve_gateway_credentials()
+    except AuthError as exc:
+        raise AgentError(str(exc)) from exc
+
+    return _openai_compat_client(api_base, api_key)

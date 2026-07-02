@@ -75,6 +75,15 @@ def load_gemini_cli_token() -> str | None:
     return str(token)
 
 
+def gemini_credential_source() -> str | None:
+    """Return a short label for the active Gemini credential, or None."""
+    if os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY"):
+        return "api_key"
+    if load_gemini_cli_token() is not None:
+        return "gemini_cli"
+    return None
+
+
 def resolve_anthropic_client(**kwargs: Any) -> anthropic.Anthropic:
     """Build an Anthropic client from the best available credential.
 
@@ -107,13 +116,15 @@ def anthropic_credential_source() -> str | None:
 def resolve_openai_credentials() -> tuple[str, str]:
     """Resolve the base URL and API key for OpenAI / Ollama compatible calls.
 
+    Raises :class:`AuthError` when no usable credential is found.
+
     Returns:
         (base_url, api_key)
 
     Resolves base_url to:
     1. OPENAI_BASE_URL or OPENAI_API_BASE if set.
     2. OLLAMA_HOST + "/v1" if OLLAMA_HOST is set.
-    3. Otherwise "https://api.openai.com/v1".
+    3. Otherwise "https://api.openai.com/v1" (only if OPENAI_API_KEY is set).
 
     Resolves api_key to:
     1. OPENAI_API_KEY if set.
@@ -121,7 +132,7 @@ def resolve_openai_credentials() -> tuple[str, str]:
     """
     from .config import ollama_host, openai_api_base
 
-    if openai_credential_source() is None:
+    if not openai_credential_source():
         raise AuthError(
             "No OpenAI credentials found. Please set OPENAI_API_KEY, "
             "OPENAI_BASE_URL, or OLLAMA_HOST."
@@ -179,6 +190,34 @@ def resolve_local_credentials() -> tuple[str, str]:
             "(or OPENAI_API_BASE) to your local OpenAI-compatible server."
         )
     return resolve_openai_credentials()
+
+
+def resolve_gateway_credentials() -> tuple[str, str]:
+    """Resolve the base URL and API key for an OpenAI-compatible AI gateway.
+
+    Returns:
+        (base_url, api_key)
+
+    A "gateway" is any OpenAI-compatible HTTP endpoint that fronts one or more
+    upstream models — OpenRouter, LiteLLM, the Vercel AI Gateway, Cloudflare AI
+    Gateway, and so on. It is configured independently of the ``OPENAI_*`` and
+    ``OLLAMA_*`` variables so a gateway and a direct OpenAI key can coexist
+    without one shadowing the other.
+
+    Resolves base_url from ``SAKTHAI_GATEWAY_URL`` (required) and api_key from
+    ``SAKTHAI_GATEWAY_API_KEY``, falling back to ``"nokey"`` for keyless
+    gateways. Raises :class:`AuthError` when no gateway URL is configured.
+    """
+    from .config import gateway_base_url
+
+    base_url = gateway_base_url()
+    if not base_url:
+        raise AuthError(
+            "No AI gateway configured. Set SAKTHAI_GATEWAY_URL to an "
+            "OpenAI-compatible gateway endpoint (e.g. https://openrouter.ai/api/v1)."
+        )
+    api_key = os.environ.get("SAKTHAI_GATEWAY_API_KEY") or "nokey"
+    return base_url.rstrip("/"), api_key
 
 
 def local_credential_source() -> str | None:
