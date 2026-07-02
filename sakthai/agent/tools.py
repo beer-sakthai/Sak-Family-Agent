@@ -22,6 +22,7 @@ from typing import Any
 from urllib.error import HTTPError, URLError
 
 from ..config import sakthai_home
+from ..lead.capture import capture_lead as capture_lead_fact
 from ..learn.ingest import ingest_document as ingest_document_facts
 from ..memory.store import MemoryStore
 
@@ -89,6 +90,15 @@ def _ingest_document(args: dict[str, Any], store: MemoryStore) -> str:
     if not ids:
         return "No facts found in document."
     return f"learned {len(ids)} facts (ids: {ids})"
+
+
+def _capture_lead(args: dict[str, Any], store: MemoryStore) -> str:
+    name = args.get("name")
+    phone = args.get("phone")
+    email = args.get("email")
+    query = args.get("query")
+    lead_id = capture_lead_fact(name=name, phone=phone, email=email, query=query, store=store)
+    return f"captured lead id={lead_id}"
 
 
 def _recall(args: dict[str, Any], store: MemoryStore) -> str:
@@ -361,6 +371,28 @@ BUILTIN_TOOLS: tuple[Tool, ...] = (
             "required": ["path"],
         },
         handler=_ingest_document,
+    ),
+    Tool(
+        name="capture_lead",
+        description=(
+            "Capture a customer lead with contact details and their query. Use when "
+            "the conversation should be handed off for follow-up instead of answered "
+            "immediately."
+        ),
+        input_schema={
+            "type": "object",
+            "properties": {
+                "name": {"type": "string", "description": "Customer name."},
+                "phone": {"type": "string", "description": "Customer phone number."},
+                "email": {"type": "string", "description": "Customer email address."},
+                "query": {
+                    "type": "string",
+                    "description": "The customer's request or question.",
+                },
+            },
+            "required": ["query"],
+        },
+        handler=_capture_lead,
     ),
     Tool(
         name="recall",

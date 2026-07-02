@@ -36,9 +36,9 @@ For Hermes-free migration work, keep the order fixed:
   - The tool stores each extracted line as a structured `fact` entry in the active `memory.db`.
   - It uses the existing `learn` path internally so document facts flow through the same memory layer as manual facts.
 
-- [ ] **Quoting & Lead Capture:**
-  - Create a new skill `service-quoting` that guides the agent on how to construct a quote by recalling pricing facts.
-  - Create a new tool `capture_lead` that saves customer contact details (name, phone/email) and their query into a `lead` kind in the memory store.
+- [x] **Quoting & Lead Capture:**
+  - Added the `service-quoting` skill to guide quote construction from stored pricing facts.
+  - Added the `capture_lead` tool to store customer contact details and their query as a `lead` fact.
 
 ## Phase 2: Telegram Integration & Deployment
 

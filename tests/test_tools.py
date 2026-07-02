@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 import subprocess
 import urllib.error
@@ -85,6 +86,34 @@ def test_ingest_document_parses_common_formats(tmp_path: Path, store: MemoryStor
         "How long does setup take? -> 2 business days",
         "Do you offer support? -> Yes",
         "Custom project quotes are scoped after discovery.",
+    }
+
+
+def test_capture_lead_stores_structured_contact_details(store: MemoryStore) -> None:
+    capture_lead = tool_by_name("capture_lead")
+    assert capture_lead is not None
+
+    out = capture_lead.handler(
+        {
+            "name": "Ada",
+            "phone": "+1-555-0100",
+            "email": "ada@example.com",
+            "query": "Need a quote for a website refresh",
+        },
+        store,
+    )
+
+    assert "captured" in out
+    facts = store.list_facts()
+    assert len(facts) == 1
+    lead = facts[0]
+    assert lead.kind == "lead"
+    assert lead.key == "Ada"
+    assert json.loads(lead.value) == {
+        "name": "Ada",
+        "phone": "+1-555-0100",
+        "email": "ada@example.com",
+        "query": "Need a quote for a website refresh",
     }
 
 
