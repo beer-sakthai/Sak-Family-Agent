@@ -86,8 +86,7 @@ class TestDashboardData:
 
     def test_demo_stub_has_growth_key(self) -> None:
         with patch(
-            "sakthai.dashboard.data.collect_dashboard_data",
-            side_effect=RuntimeError("no db"),
+            "sakthai.dashboard.data.collect_dashboard_data", side_effect=RuntimeError("no db")
         ):
             data = _dashboard_data()
         assert "growth" in data
@@ -278,10 +277,7 @@ class TestMainBlock:
         server_py = Path(__file__).parent.parent / "sakthai" / "web" / "server.py"
         # runpy executes in a fresh namespace; patch the real stdlib objects so
         # the re-imported `os.chdir` and `HTTPServer` inside the file use mocks.
-        with (
-            patch.object(_os, "chdir"),
-            patch.object(_http_server, "HTTPServer", return_value=srv),
-        ):
+        with patch.object(_os, "chdir"), patch.object(_http_server, "HTTPServer", return_value=srv):
             with pytest.raises(SystemExit) as exc_info:
                 runpy.run_path(str(server_py), run_name="__main__")
             assert exc_info.value.code == 0

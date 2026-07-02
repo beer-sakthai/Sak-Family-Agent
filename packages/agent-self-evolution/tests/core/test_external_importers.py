@@ -149,6 +149,15 @@ class TestSecretDetection:
     def test_detects_database_url_env_var(self):
         assert _contains_secret("DATABASE_URL=postgres://user:pass@host/db")
 
+    def test_detects_secret_in_json_string(self):
+        assert _contains_secret('{"api_key": "sk-abc123def456"}')
+
+    def test_detects_bearer_token_in_repr(self):
+        assert _contains_secret("headers={'Authorization': 'Bearer sk-abcdef123456'}")
+
+    def test_detects_bare_bearer_token(self):
+        assert _contains_secret("Bearer sk-abcdef123456 was used")
+
 
 # ── Relevance Heuristics ────────────────────────────────────────────────────
 

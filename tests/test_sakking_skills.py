@@ -66,11 +66,7 @@ def test_bundled_slugs_missing_manifest_is_empty(tmp_path: Path) -> None:
 def test_discover_selects_only_learned(tmp_path: Path) -> None:
     root = _sakking_root(tmp_path)
     slugs = {s.target_slug for s in discover_learned_skills(root)}
-    assert slugs == {
-        "SakKing-cron-watchdog",
-        "SakKing-deploy-helper",
-        "SakKing-special",
-    }
+    assert slugs == {"SakKing-cron-watchdog", "SakKing-deploy-helper", "SakKing-special"}
 
 
 def test_discover_can_include_internal_via_empty_excludes(tmp_path: Path) -> None:
@@ -130,10 +126,7 @@ def test_sync_updates_on_source_change(tmp_path: Path) -> None:
     root = _sakking_root(tmp_path)
     dest = tmp_path / "skills"
     sync_sakking_skills(root, dest)
-    _write(
-        root / "cron-watchdog" / "SKILL.md",
-        "# Cron Watchdog\n\n## Purpose\n\nNew text now.\n",
-    )
+    _write(root / "cron-watchdog" / "SKILL.md", "# Cron Watchdog\n\n## Purpose\n\nNew text now.\n")
     outcome = sync_sakking_skills(root, dest)
     assert outcome.updated == ["SakKing-cron-watchdog"]
     assert "New text now." in (dest / "SakKing-cron-watchdog" / "SKILL.md").read_text()

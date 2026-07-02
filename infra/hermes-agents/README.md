@@ -1,141 +1,137 @@
-# sakthai-hermes-agents
+# Hermes Agent Runtime for the Sak Family
 
-Configuration backup for **six** Telegram bots running on the
-[Hermes agent framework](https://github.com/NousResearch) (`hermes_cli`),
-installed at `~/.hermes/` on the host. **Config only — no secrets.** All API
-keys / bot tokens / OAuth credentials live in `.env` and `auth.json` files that
-are deliberately **excluded** (see `.gitignore`); use `env-templates/.env.example`
-as the key list and fill real values locally.
+This directory contains the configuration for running the Sak Family agents on the **Hermes Agent framework**.
 
-## The Sak Family Agents
+## How It Works
 
-Each agent is a Hermes **profile** (its own `HERMES_HOME`), run as a systemd
-**user** service. They share **one long-term memory brain** (Supermemory,
-container `hermes`) but have distinct `SOUL.md` personas and separate live
-sessions. Owner Telegram user id: `8618306046`.
+The Sak Family project follows a "brain in a jar" model:
 
-> Profile dir names now **match** each agent's identity (renamed 2026-06-21),
-> except **SakKing**, which stays on the reserved `default` profile (`default`
-> cannot be renamed). Identity is whatever each profile's `SOUL.md` says.
-> Current mapping:
+- **`sakthai-agent` (This Monorepo):** Contains the core logic, shared memory, and the `SOUL.md` persona definitions for all six agents. It is the "brain."
+- **Hermes Agent Framework:** An external runtime that loads a persona and connects it to chat platforms like Telegram. It is the "body."
 
-| Telegram handle | Bot id | Profile (dir) | Identity | Role | Model | Service |
-|---|---|---|---|---|---|---|
-| `@sakthai_agent_v2_bot` | 8602426821 | `default` | **SakKing** | Lead & Orchestrator, Master of Code & Self-Healing | `gpt-5.5` (OpenAI Codex OAuth) + `minimax-m3` fallback | `hermes-gateway.service` |
-| `@sakthai_v1_bot` | 8773953106 | `profiles/sakthai` | **SakThai** | Master of Hugging Face | `qwen3-coder:480b` (Ollama Cloud) + `minimax-m3` fallback | `hermes-gateway-sakthai.service` |
-| `@saksee_bot` | 8315145484 | `profiles/saksee` | **SakSee** | Master of Web | `claude-opus-4-8` (Anthropic auth) + `minimax-m3` fallback | `hermes-gateway-saksee.service` |
-| `@saksit_agent_bot` | — | `profiles/saksit` | **SakSit** | Master of Social Media (IG) | `kimi-k2.7-code` (Ollama Cloud) + `minimax-m3` fallback | `hermes-gateway-saksit.service` |
-| `@SakTan_Agent_bot` | — | `profiles/saktan` | **SakTan** | Young Helper (daily ops: calendar, reminders, email, tasks) | `gemini-2.5-flash-lite` (Google Gemini API) + Gemini fallback chain: `gemini-3-flash-preview` → `gemini-3.1-flash-lite` → `gemini-3.5-flash` → `gemini-2.5-flash-preview-native-audio-dialog` | `hermes-gateway-saktan.service` |
-| `@SakJules_Agent_bot` | — | `profiles/sakjules` | **SakJules** | GitHub Repository Steward (code, issues, PRs, Actions, Projects, Security, Insights, Settings) | `gemini-3.1-pro` (Google Gemini API) + Gemini fallback chain: `gemini-3-flash-preview` → `gemini-3.1-flash-lite` → `gemini-3.5-flash` → `gemini-2.5-flash-preview-native-audio-dialog` | `hermes-gateway-sakjules.service` |
+The configurations in this directory tell the Hermes framework how to load and run each Sak Family agent.
 
-> SakKing, SakThai, SakSee, SakSit, and SakJules are professional; SakTan is young.
+## Directory Structure
 
-> **Note:** "Hermes" is only the framework they run on — never an agent's name.
-> Each agent identifies by the name in its `SOUL.md`.
+- `profiles/{agent_name}/SOUL.md`: The specific persona definition loaded by Hermes. These are often copies or specializations of the main `SOUL.md` files in the root `personas/` directory.
+- `profiles/{agent_name}/config.yaml`: The runtime configuration for the Hermes agent, specifying the model, enabled tools, and platform integrations (e.g., Telegram token).
+- `systemd/`: Example `systemd` service files for running the agents as persistent services on a Linux machine.
 
-## Skills per agent
+## Native MCP Client for Hermes
 
-| Agent | Skill Count | Unique / Notable Skills |
-|-------|-------------|------------------------|
-| **SakKing** | 18 | `devops`, `software-development` |
-| **SakThai** | 20 | `audio-generation`, `tts-voice-generation` |
-| **SakSee** | 23 | 6× `chrome-devtools-*` skills |
-| **SakSit** | 19 | `ig_linkedin_growth_assistant` |
-| **SakTan** | 1 | `daily-ops-helper` |
+The Hermes Agent has a built-in MCP (Model Context Protocol) client that connects to MCP servers at startup, discovers their tools, and makes them available to the running agent. This is the primary way to extend the capabilities of a deployed agent.
 
-All agents share a common base of skills: `apple`, `autonomous-ai-agents`,
-`computer-use`, `creative`, `data-science`, `dogfood`, `email`, `github`,
-`media`, `mlops`, `note-taking`, `productivity`, `research`, `smart-home`,
-`social-media`, `software-development`, `yuanbao`.
+### When to Use
 
-## MCP servers (per profile)
+Use this whenever you want to:
 
-All six profiles connect to:
+- Connect to MCP servers and use their tools from within a deployed Hermes Agent.
+- Add external capabilities (filesystem access, GitHub, databases, APIs) via MCP.
+- Run local stdio-based MCP servers (`npx`, `uvx`, or any command).
 
-| MCP Server | URL / Transport | Status |
-|------------|-----------------|--------|
-| **supermemory** | `https://mcp.supermemory.ai/mcp` | ✅ Active |
-| **zapier** | `${ZAPIER_MCP_URL}` (embedded token) | ✅ Active |
-| **github** | `https://api.githubcopilot.com/mcp/` | ⚠️ Check `python doctor.py` |
-| **huggingface** | `https://huggingface.co/mcp` | ✅ Active |
-| **composio** | `https://connect.composio.dev/mcp` | ✅ Active |
+### Quick Start
 
-SakSee additionally connects to a `chrome-devtools` MCP server (npx-based).
-SakJules additionally connects to GitHub and Composio MCP servers.
+Add MCP servers to the Hermes Agent's configuration file at `~/.hermes/config.yaml` under the `mcp_servers` key:
 
-The GitHub row is validated by `python doctor.py`, which checks the default profile's
-`GITHUB_TOKEN` from the shell or local `infra/hermes-agents/.env` file and can run a live
-`hermes mcp test github` probe when Hermes is installed.
-
-## Plugins
-
-| Agent | Plugin | Status |
-|-------|--------|--------|
-| **SakSit** | `nanobanana` | ✅ Installed & enabled |
-
-## Layout in this repo
-
-```
-default/{SOUL.md,config.yaml}              → ~/.hermes/{SOUL.md,config.yaml}
-profiles/<name>/{SOUL.md,config.yaml}      → ~/.hermes/profiles/<name>/...
-profiles/<name>/cron/jobs.json             → ~/.hermes/profiles/<name>/cron/jobs.json
-                                             (scheduled-job DEFINITIONS only; runtime
-                                              state + delivery origin stripped)
-shared/agents-roster.md                    → ~/.hermes/shared/agents-roster.md
-                                             (symlinked as AGENTS.md into each profile)
-systemd/*.service                          → ~/.config/systemd/user/*.service
-env-templates/.env.example                 → fill values → ~/.hermes[/profiles/<name>]/.env
+```yaml
+mcp_servers:
+  time:
+    command: "uvx"
+    args: ["mcp-server-time"]
 ```
 
-## Restore / apply on a host
+When the Hermes Agent starts, it will automatically connect to the server, discover its tools (e.g., `get_current_time`), and register them with the prefix `mcp_time_*`.
 
-1. Copy files to the paths above (and `systemctl --user daemon-reload`).
-2. Create each `.env` from `env-templates/.env.example` with real values
-   (distinct `TELEGRAM_BOT_TOKEN` per bot — two bots **cannot** share one token,
-   or Telegram returns 409 and neither replies).
-3. Authenticate providers: `hermes auth ...` / `modal setup` (writes `~/.modal.toml`).
-4. In each profile, symlink the roster as context:
-   `ln -s ../../shared/agents-roster.md ~/.hermes/profiles/<name>/AGENTS.md`
-5. `systemctl --user enable --now hermes-gateway*.service`.
-6. (Optional) Restore scheduled jobs: copy `profiles/<name>/cron/jobs.json` into
-   `~/.hermes/profiles/<name>/cron/`. These are definitions only — Hermes
-   regenerates runtime state and re-binds delivery `origin` on first fire. Verify
-   with `hermes --profile <name> cron list`.
+### Configuration Reference
 
-## Framework patches (`patches/`)
+Each entry under `mcp_servers` is a server name mapped to its config.
 
-Local modifications to the installed Hermes framework (`~/.hermes/hermes-agent/`,
-its own git repo — **not** version-controlled here). These are **overwritten on a
-framework upgrade**, so re-apply after every `hermes` update:
+#### Stdio Transport (command + args)
 
-```bash
-cd ~/.hermes/hermes-agent
-git apply ~/Sak-Family-Agent/infra/hermes-agents/patches/reply-model-footer.patch
-systemctl --user restart 'hermes-gateway*.service'
+```yaml
+mcp_servers:
+  server_name:
+    command: "npx"             # (required) executable to run
+    args: ["-y", "pkg-name"]   # (optional) command arguments, default: []
+    env:                       # (optional) environment variables for the subprocess
+      SOME_API_KEY: "value"
+    timeout: 120               # (optional) per-tool-call timeout in seconds, default: 120
+    connect_timeout: 60        # (optional) initial connection timeout in seconds, default: 60
 ```
 
-- **`reply-model-footer.patch`** — appends a `🤖 <model> · <N> tok` footer to
-  every text reply, on each turn. Adds `AIAgent._reply_model_footer_enabled()`
-  (gate) in `run_agent.py` and the append in `agent/turn_finalizer.py`. Gated by
-  `display.reply_model_footer: true` (set per-profile in the configs here; default
-  off). Env override: `HERMES_REPLY_MODEL_FOOTER=0` to force off.
+#### HTTP Transport (url)
 
-## Hardening notes (already baked into the configs here)
+```yaml
+mcp_servers:
+  server_name:
+    url: "https://my-server.example.com/mcp"   # (required) server URL
+    headers:                                     # (optional) HTTP headers
+      Authorization: "Bearer sk-..."
+    timeout: 180               # (optional) per-tool-call timeout in seconds, default: 120
+    connect_timeout: 60        # (optional) initial connection timeout in seconds, default: 60
+```
 
-- Terminal/code execution is sandboxed via **Modal** (`terminal.backend: modal`)
-  — needs `MODAL_TOKEN_ID`/`MODAL_TOKEN_SECRET`.
-- Manual approvals + destructive-slash confirmation on.
-- Bots locked to the single owner Telegram id.
+### Tool Naming Convention
 
-## Host constraints
+MCP tools are registered with the naming pattern `mcp_{server_name}_{tool_name}`. Hyphens and dots in names are replaced with underscores.
 
-The system runs on two primary hosts:
-1. **WSL2** (local testing) — ~3.6 GB RAM, no GPU.
-2. **sak-medium-vm** (production) — Google Cloud Engine e2-medium (Ubuntu 22.04 LTS), 4 GB RAM, no GPU.
+### Security
 
-**Local LLMs are not viable** on either host (Hermes' prompt needs ~33k tokens of context; even a tiny model's KV cache for
-that exceeds available RAM). Hence cloud models (Anthropic, Google Gemini,
-Ollama Cloud). Ollama Cloud's free tier has a **weekly token cap**, which is why
-the Ollama-backed bots carry a `fallback_model`. **SakTan** (Gemini-backed)
-instead carries a multi-entry `fallback_providers` chain across Gemini models so
-a single model's rate-limit or overload rolls over to the next.
+For stdio servers, Hermes does **not** pass your full shell environment to MCP subprocesses. Only safe baseline variables are inherited (`PATH`, `HOME`, `USER`, etc.).
+
+To pass secrets like API keys, you **must** add them explicitly via the `env` config key. This prevents accidental credential leakage.
+
+```yaml
+mcp_servers:
+  github:
+    command: "npx"
+    args: ["-y", "@modelcontextprotocol/server-github"]
+    env:
+      # Only this token is passed to the subprocess
+      GITHUB_PERSONAL_ACCESS_TOKEN: "ghp_..."
+```
+
+### Troubleshooting
+
+**"MCP SDK not available"**: The `mcp` Python package is not installed in the Hermes Agent's environment. Install it with `pip install mcp`.
+
+**"No MCP servers configured"**: The `mcp_servers` key is missing or empty in `~/.hermes/config.yaml`.
+
+**"Failed to connect to MCP server 'X'"**:
+
+- **Command not found**: The `command` (e.g., `npx`, `uvx`) isn't on the `PATH` for the user running the Hermes service.
+- **Timeout**: The server took too long to start. Increase `connect_timeout`.
+
+**Tools not appearing**:
+
+- Check that the server is listed under the `mcp_servers` key in the correct `config.yaml`.
+- Ensure the YAML indentation is correct.
+- Look at the Hermes Agent's startup logs for connection messages.
+
+### Examples
+
+#### Filesystem Server (npx)
+
+```yaml
+mcp_servers:
+  filesystem:
+    command: "npx"
+    args: ["-y", "@modelcontextprotocol/server-filesystem", "/home/user/documents"]
+    timeout: 30
+```
+
+#### SakThai Memory Server
+
+This is how you would give a deployed Hermes agent access to the shared Sak-Family memory store.
+
+```yaml
+mcp_servers:
+  sakthai:
+    command: "/path/to/your/Sak-Family-Agent/.venv/bin/sakthai"
+    args: ["mcp"]
+    env:
+      # Ensure the MCP server can find the memory database
+      SAKTHAI_HOME: "/home/beer/.sakthai"
+```
+
+This would expose tools like `mcp_sakthai_learn`, `mcp_sakthai_recall`, and `mcp_sakthai_search` to the running Hermes agent, allowing it to access the family's shared brain.

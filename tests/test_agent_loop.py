@@ -207,10 +207,7 @@ def test_injected_custom_tool_is_dispatched(store: MemoryStore) -> None:
     )
     client = FakeClient(
         [
-            _Resp(
-                "tool_use",
-                [_Block(type="tool_use", id="t1", name="echo", input={"msg": "hi"})],
-            ),
+            _Resp("tool_use", [_Block(type="tool_use", id="t1", name="echo", input={"msg": "hi"})]),
             _Resp("end_turn", [_Block(type="text", text="ok")]),
         ]
     )
@@ -243,13 +240,7 @@ def test_skills_are_injected_into_system_prompt(
         def __init__(self) -> None:
             self.messages = _CapMessages()
 
-    run_agent(
-        "x",
-        client=_CapClient(),
-        store=store,
-        provider="anthropic",
-        skills=["demo-skill"],
-    )
+    run_agent("x", client=_CapClient(), store=store, provider="anthropic", skills=["demo-skill"])
     assert "ALWAYS DO THE DEMO THING." in captured["system"]
 
 
@@ -458,14 +449,7 @@ def test_run_agent_loop_pruning(store: MemoryStore, monkeypatch: pytest.MonkeyPa
         [
             _Resp(
                 "tool_use",
-                [
-                    _Block(
-                        type="tool_use",
-                        id="t1",
-                        name="learn",
-                        input={"value": "fact-xyz"},
-                    )
-                ],
+                [_Block(type="tool_use", id="t1", name="learn", input={"value": "fact-xyz"})],
             ),
             _Resp("end_turn", [_Block(type="text", text="inner success")]),
         ]
@@ -482,14 +466,7 @@ def test_run_agent_loop_pruning(store: MemoryStore, monkeypatch: pytest.MonkeyPa
         [
             _Resp(
                 "tool_use",
-                [
-                    _Block(
-                        type="tool_use",
-                        id="t2",
-                        name="learn",
-                        input={"value": "fact-abc"},
-                    )
-                ],
+                [_Block(type="tool_use", id="t2", name="learn", input={"value": "fact-abc"})],
             ),
             _Resp("end_turn", [_Block(type="text", text="inner success 2")]),
         ]
@@ -622,9 +599,7 @@ def test_with_retry_recovers_after_transient(monkeypatch: pytest.MonkeyPatch) ->
     assert calls["n"] == 2
 
 
-def test_with_retry_does_not_retry_non_retryable(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+def test_with_retry_does_not_retry_non_retryable(monkeypatch: pytest.MonkeyPatch) -> None:
     import sakthai.agent.loop as loop_mod
     import sakthai.agent.providers.base as base
 
@@ -712,6 +687,8 @@ def test_provider_construction_no_creds_google(
         pytest.skip("google-genai not importable in this environment (missing native libs)")
     monkeypatch.delenv("GEMINI_API_KEY", raising=False)
     monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
+    # Ensure Gemini CLI OAuth token (if present on this machine) is not found.
+    monkeypatch.setattr("sakthai.auth.load_gemini_cli_token", lambda: None)
     with pytest.raises(AgentError, match="Missing credentials for Google Gemini"):
         run_agent("hello", store=store, provider="google")
 
@@ -742,9 +719,7 @@ def test_provider_construction_no_creds_anthropic(
 # -- 5.6 preflight (sakthai run --dry-run, no API call) -----------------
 
 
-def test_preflight_runnable_with_anthropic_creds(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+def test_preflight_runnable_with_anthropic_creds(monkeypatch: pytest.MonkeyPatch) -> None:
     import sakthai.agent.loop as loop_mod
 
     monkeypatch.setattr(loop_mod, "anthropic_credential_source", lambda: "api_key")
@@ -1355,10 +1330,7 @@ def test_tool_handler_exception_returned_as_error(store: MemoryStore) -> None:
     )
     client = FakeClient(
         [
-            _Resp(
-                "tool_use",
-                [_Block(type="tool_use", id="t1", name="bad_tool", input={})],
-            ),
+            _Resp("tool_use", [_Block(type="tool_use", id="t1", name="bad_tool", input={})]),
             _Resp("end_turn", [_Block(type="text", text="recovered")]),
         ]
     )
@@ -1392,9 +1364,7 @@ def test_preflight_google_gemini_api_key(monkeypatch: pytest.MonkeyPatch) -> Non
     assert report["runnable"] is True
 
 
-def test_preflight_google_google_api_key_fallback(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+def test_preflight_google_google_api_key_fallback(monkeypatch: pytest.MonkeyPatch) -> None:
     import sakthai.agent.loop as loop_mod
 
     monkeypatch.delenv("GEMINI_API_KEY", raising=False)
@@ -1409,6 +1379,8 @@ def test_preflight_google_no_creds(monkeypatch: pytest.MonkeyPatch) -> None:
 
     monkeypatch.delenv("GEMINI_API_KEY", raising=False)
     monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
+    # Ensure Gemini CLI OAuth token (if present on this machine) is not found.
+    monkeypatch.setattr("sakthai.auth.load_gemini_cli_token", lambda: None)
     report = loop_mod.preflight(provider="google")
     assert report["credential_source"] is None
     assert report["runnable"] is False

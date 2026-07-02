@@ -169,7 +169,7 @@ def _fact_from_row(row: sqlite3.Row) -> Fact:
 
 def _render_facts(facts: Iterable[Fact]) -> list[str]:
     lines: list[str] = []
-    for f in facts:
+    for f in facts or []:
         prefix = f"[{f.kind}]"
         if f.key:
             lines.append(f"- {prefix} {f.key}: {f.value}")
@@ -237,11 +237,7 @@ class MemoryStore:
             )
             self._conn.commit()
 
-        migrations = {
-            1: self._migration_v1,
-            2: self._migration_v2,
-            3: self._migration_v3,
-        }
+        migrations = {1: self._migration_v1, 2: self._migration_v2, 3: self._migration_v3}
         try:
             # BEGIN IMMEDIATE serialises migration across parallel openers.
             self._conn.execute("BEGIN IMMEDIATE")
@@ -321,42 +317,6 @@ class MemoryStore:
         )
         self._conn.commit()
         return cast(int, cur.lastrowid)
-
-    def add_facts(self, facts: Iterable[dict[str, Any]]) -> list[int]:
-        """Store multiple facts in a single transaction.
-
-        Each dict in ``facts`` can contain: "value" (required), "kind", "key",
-        "source_session", "tags". Returns the list of new IDs.
-        """
-        now = _now()
-        ids: list[int] = []
-        try:
-            # BEGIN IMMEDIATE ensures we have the write lock and prevents
-            # deadlocks if another connection is already reading.
-            self._conn.execute("BEGIN IMMEDIATE")
-            for f in facts:
-                value = f.get("value")
-                if not value or not value.strip():
-                    continue
-                cur = self._conn.execute(
-                    "INSERT INTO facts (kind, key, value, source_session, created_at, "
-                    "updated_at, tags) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                    (
-                        f.get("kind", "note"),
-                        f.get("key"),
-                        value.strip(),
-                        f.get("source_session"),
-                        now,
-                        now,
-                        _encode_tags(f.get("tags")),
-                    ),
-                )
-                ids.append(cast(int, cur.lastrowid))
-            self._conn.commit()
-            return ids
-        except Exception:
-            self._conn.rollback()
-            raise
 
     def list_facts(
         self,
@@ -639,7 +599,7 @@ class MemoryStore:
         }
         # SQL-based tag counting is ~2.6x faster than Python loop (Bolt optimization)
         tag_counts = {
-            r["tag"]: int(r["n"])
+            r["tag"]: r["n"]
             for r in c.execute(
                 "SELECT j.value AS tag, COUNT(*) AS n "
                 "FROM facts, json_each(facts.tags) AS j "
@@ -667,7 +627,7 @@ class MemoryStore:
                 "avg_weight": round(avg_w, 3) if avg_w is not None else None,
                 "avg_confidence": round(avg_c, 3) if avg_c is not None else None,
             },
-            "tags": dict(sorted(tag_counts.items(), key=lambda kv: (-int(kv[1]), kv[0]))),
+            "tags": dict(sorted(tag_counts.items(), key=lambda kv: (-int(kv[1]), str(kv[0])))),
         }
 
     # -- import / export --------------------------------------------------
@@ -693,7 +653,7 @@ class MemoryStore:
     def import_from_dict(self, data: dict[str, Any], *, mode: str = "merge") -> tuple[int, int]:
         """Load a snapshot. Returns (n_facts, n_observations) imported.
 
-        ``mode="merge"`` appends rows with fresh IDs; ``mode="replace"`` wipes
+        mode="merge" appends rows with fresh IDs; mode="replace" wipes
         both tables and reinserts preserving original IDs. The whole import runs
         in one transaction, so a malformed snapshot leaves the DB untouched.
         """
@@ -710,11 +670,24 @@ class MemoryStore:
         obs = data.get("observations")
         if not isinstance(facts, list) or not isinstance(obs, list):
             raise ValueError("snapshot must contain list 'facts' and 'observations'")
+
         # Validate everything before touching the DB.
         for row in facts:
             _validate_row(row, SNAPSHOT_FACT_FIELDS, "fact")
         for row in obs:
             _validate_row(row, SNAPSHOT_OBS_FIELDS, "observation")
+
+        def fact_to_tuple(f: dict[str, Any], include_id: bool) -> tuple[Any, ...]:
+            t = (
+                f["kind"],
+                f["key"],
+                f["value"],
+                f["source_session"],
+                f["created_at"],
+                f["updated_at"],
+                _encode_tags(f.get("tags")),
+            )
+            return (f["id"],) + t if include_id else t
 
         try:
             self._conn.execute("BEGIN IMMEDIATE")
@@ -726,59 +699,46 @@ class MemoryStore:
                         "DELETE FROM sqlite_sequence WHERE name IN ('facts', 'observations')"
                     )
 
-            f_cols = [
-                "kind",
-                "key",
-                "value",
-                "source_session",
-                "created_at",
-                "updated_at",
-                "tags",
-            ]
-            if mode == "replace":
-                f_cols.insert(0, "id")
-            f_qs = ", ".join(["?"] * len(f_cols))
-            f_stmt = "INSERT INTO facts (" + ", ".join(f_cols) + ") VALUES (" + f_qs + ")"  # nosec B608
-            f_rows: list[tuple[Any, ...]] = []
-            for f in facts:
-                r = [
-                    f["kind"],
-                    f["key"],
-                    f["value"],
-                    f["source_session"],
-                    f.get("created_at", 0),
-                    f.get("updated_at", 0),
-                    _encode_tags(f.get("tags")),
-                ]
-                if mode == "replace":
-                    r.insert(0, f["id"])
-                f_rows.append(tuple(r))
-            self._conn.executemany(f_stmt, f_rows)
-
-            o_cols = [
-                "summary",
-                "evidence_session_id",
-                "weight",
-                "confidence",
-                "created_at",
-            ]
-            if mode == "replace":
-                o_cols.insert(0, "id")
-            o_qs = ", ".join(["?"] * len(o_cols))
-            o_stmt = "INSERT INTO observations (" + ", ".join(o_cols) + ") VALUES (" + o_qs + ")"  # nosec B608
-            o_rows: list[tuple[Any, ...]] = []
-            for o in obs:
-                r = [
-                    o["summary"],
-                    o["evidence_session_id"],
-                    o["weight"],
-                    o["confidence"],
-                    o["created_at"],
-                ]
-                if mode == "replace":
-                    r.insert(0, o["id"])
-                o_rows.append(tuple(r))
-            self._conn.executemany(o_stmt, o_rows)
+                self._conn.executemany(
+                    "INSERT INTO facts (id, kind, key, value, source_session, "
+                    "created_at, updated_at, tags) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                    [fact_to_tuple(f, True) for f in facts],
+                )
+                self._conn.executemany(
+                    "INSERT INTO observations (id, summary, evidence_session_id, "
+                    "weight, confidence, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+                    [
+                        (
+                            o["id"],
+                            o["summary"],
+                            o["evidence_session_id"],
+                            o["weight"],
+                            o["confidence"],
+                            o["created_at"],
+                        )
+                        for o in obs
+                    ],
+                )
+            else:  # merge
+                self._conn.executemany(
+                    "INSERT INTO facts (kind, key, value, source_session, "
+                    "created_at, updated_at, tags) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                    [fact_to_tuple(f, False) for f in facts],
+                )
+                self._conn.executemany(
+                    "INSERT INTO observations (summary, evidence_session_id, "
+                    "weight, confidence, created_at) VALUES (?, ?, ?, ?, ?)",
+                    [
+                        (
+                            o["summary"],
+                            o["evidence_session_id"],
+                            o["weight"],
+                            o["confidence"],
+                            o["created_at"],
+                        )
+                        for o in obs
+                    ],
+                )
             self._conn.commit()
         except Exception:
             self._conn.rollback()

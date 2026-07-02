@@ -122,12 +122,7 @@ def test_call_tool_raises_on_is_error() -> None:
     client = StdioMCPClient("dummy", name="test")
 
     def fake_request(method: str, params: dict | None = None) -> dict:
-        return {
-            "result": {
-                "isError": True,
-                "content": [{"type": "text", "text": "tool bombed"}],
-            }
-        }
+        return {"result": {"isError": True, "content": [{"type": "text", "text": "tool bombed"}]}}
 
     client._request = fake_request  # type: ignore[method-assign]
     with pytest.raises(MCPToolError, match="tool bombed"):
@@ -195,6 +190,21 @@ def test_close_kills_process_after_timeout() -> None:
 
     mock_proc.kill.assert_called_once()
     assert client._proc is None
+
+
+def test_close_is_idempotent_and_clears_reader_thread() -> None:
+    client = StdioMCPClient("dummy", name="test")
+    mock_proc = MagicMock()
+    mock_proc.poll.return_value = 0
+    client._proc = mock_proc
+    client._reader_thread = MagicMock()
+    client._reader_thread.is_alive.return_value = False
+
+    client.close()
+    client.close()
+
+    assert client._proc is None
+    assert client._reader_thread is None
 
 
 def test_send_raises_when_proc_not_started() -> None:

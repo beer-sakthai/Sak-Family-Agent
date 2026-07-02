@@ -75,6 +75,15 @@ def load_gemini_cli_token() -> str | None:
     return str(token)
 
 
+def gemini_credential_source() -> str | None:
+    """Return a short label for the active Gemini credential, or None."""
+    if os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY"):
+        return "api_key"
+    if load_gemini_cli_token() is not None:
+        return "gemini_cli"
+    return None
+
+
 def resolve_anthropic_client(**kwargs: Any) -> anthropic.Anthropic:
     """Build an Anthropic client from the best available credential.
 
@@ -107,13 +116,15 @@ def anthropic_credential_source() -> str | None:
 def resolve_openai_credentials() -> tuple[str, str]:
     """Resolve the base URL and API key for OpenAI / Ollama compatible calls.
 
+    Raises :class:`AuthError` when no usable credential is found.
+
     Returns:
         (base_url, api_key)
 
     Resolves base_url to:
     1. OPENAI_BASE_URL or OPENAI_API_BASE if set.
     2. OLLAMA_HOST + "/v1" if OLLAMA_HOST is set.
-    3. Otherwise "https://api.openai.com/v1".
+    3. Otherwise "https://api.openai.com/v1" (only if OPENAI_API_KEY is set).
 
     Resolves api_key to:
     1. OPENAI_API_KEY if set.
@@ -121,7 +132,7 @@ def resolve_openai_credentials() -> tuple[str, str]:
     """
     from .config import ollama_host, openai_api_base
 
-    if openai_credential_source() is None:
+    if not openai_credential_source():
         raise AuthError(
             "No OpenAI credentials found. Please set OPENAI_API_KEY, "
             "OPENAI_BASE_URL, or OLLAMA_HOST."
@@ -147,6 +158,38 @@ def openai_credential_source() -> str | None:
     if os.environ.get("OLLAMA_HOST"):
         return "ollama_host"
     return None
+
+
+def resolve_ollama_credentials() -> tuple[str, str]:
+    """Resolve the base URL and API key for a local Ollama instance.
+
+    Returns ``(base_url, api_key)`` where ``base_url`` is ``ollama_host()`` with a
+    ``/v1`` suffix (default ``http://127.0.0.1:11434/v1``) and ``api_key`` is
+    ``OPENAI_API_KEY`` or ``"nokey"`` — Ollama ignores the key but the
+    OpenAI-compatible client still requires a non-empty value.
+    """
+    from .config import ollama_host
+
+    api_key = os.environ.get("OPENAI_API_KEY") or "nokey"
+    return f"{ollama_host()}/v1", api_key
+
+
+def resolve_local_credentials() -> tuple[str, str]:
+    """Resolve the base URL and API key for a custom local OpenAI-compatible model.
+
+    A "local" endpoint is any self-hosted OpenAI-compatible server addressed via
+    ``OPENAI_BASE_URL`` / ``OPENAI_API_BASE``. This reuses the OpenAI resolver but
+    requires an explicit base URL, so it never silently targets the public OpenAI
+    API. Raises :class:`AuthError` when no base URL is configured.
+    """
+    from .config import openai_api_base
+
+    if not openai_api_base():
+        raise AuthError(
+            "No local model endpoint configured. Set OPENAI_BASE_URL "
+            "(or OPENAI_API_BASE) to your local OpenAI-compatible server."
+        )
+    return resolve_openai_credentials()
 
 
 def resolve_gateway_credentials() -> tuple[str, str]:
@@ -175,6 +218,17 @@ def resolve_gateway_credentials() -> tuple[str, str]:
         )
     api_key = os.environ.get("SAKTHAI_GATEWAY_API_KEY") or "nokey"
     return base_url.rstrip("/"), api_key
+
+
+def local_credential_source() -> str | None:
+    """Return a label for a distinct local-model credential, or None.
+
+    Reserved for a future dedicated local-model config surface. It returns None
+    today so the ``local`` provider is reachable only when selected explicitly
+    (``provider="local"`` or a ``local/…`` model name) and never shadows the
+    ``openai`` credential auto-detection.
+    """
+    return None
 
 
 def gateway_credential_source() -> str | None:

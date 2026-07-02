@@ -86,41 +86,11 @@ DEMO_DATA: dict[str, Any] = {
         "observations": [0, 0, 1, 1, 1, 2, 2],
     },
     "recent_facts": [
-        {
-            "id": 5,
-            "kind": "pref",
-            "key": "language",
-            "value": "Python",
-            "created": "demo",
-        },
-        {
-            "id": 4,
-            "kind": "pref",
-            "key": "editor",
-            "value": "VS Code",
-            "created": "demo",
-        },
-        {
-            "id": 3,
-            "kind": "profile",
-            "key": "timezone",
-            "value": "Asia/Bangkok",
-            "created": "demo",
-        },
-        {
-            "id": 2,
-            "kind": "note",
-            "key": "",
-            "value": "Prefers concise replies",
-            "created": "demo",
-        },
-        {
-            "id": 1,
-            "kind": "project",
-            "key": "",
-            "value": "Building SakThai",
-            "created": "demo",
-        },
+        {"id": 5, "kind": "pref", "key": "language", "value": "Python", "created": "demo"},
+        {"id": 4, "kind": "pref", "key": "editor", "value": "VS Code", "created": "demo"},
+        {"id": 3, "kind": "profile", "key": "timezone", "value": "Asia/Bangkok", "created": "demo"},
+        {"id": 2, "kind": "note", "key": "", "value": "Prefers concise replies", "created": "demo"},
+        {"id": 1, "kind": "project", "key": "", "value": "Building SakThai", "created": "demo"},
     ],
     "top_observations": [
         {"summary": "Prefers Python for data tasks", "weight": 0.95},
@@ -270,12 +240,7 @@ def _load_session(path: Path) -> dict[str, Any] | None:
 def collect_session_data(sessions_path: Path | None = None) -> dict[str, Any]:
     _empty: dict[str, Any] = {
         "source": SOURCE_EMPTY,
-        "totals": {
-            "sessions": 0,
-            "total_tokens": 0,
-            "input_tokens": 0,
-            "output_tokens": 0,
-        },
+        "totals": {"sessions": 0, "total_tokens": 0, "input_tokens": 0, "output_tokens": 0},
         "by_model": [],
         "by_day": {"labels": [], "tokens": []},
         "recent_sessions": [],
@@ -339,10 +304,7 @@ def collect_session_data(sessions_path: Path | None = None) -> dict[str, Any]:
             "output_tokens": total_output,
         },
         "by_model": sorted(model_stats.values(), key=lambda m: -int(m["total_tokens"])),
-        "by_day": {
-            "labels": sorted_days,
-            "tokens": [day_stats[d] for d in sorted_days],
-        },
+        "by_day": {"labels": sorted_days, "tokens": [day_stats[d] for d in sorted_days]},
         "recent_sessions": sessions[:20],
     }
 

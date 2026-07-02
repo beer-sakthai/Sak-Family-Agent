@@ -19,7 +19,7 @@ metadata:
 # sakthai-cycle-care
 
 Stage 3 of 6 in the Sak Family cycle — **Care**. See [Care.md](../../../../docs/cycle/Care.md)
-for the full guidance and [SOUL.md](../../../../SOUL.md) for the charge model.
+for the full guidance and [SOUL.md](../../../../docs/SOUL.md) for the charge model.
 
 ## What to do
 

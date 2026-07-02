@@ -109,9 +109,7 @@ def test_call_anthropic_non_streaming_uses_create_not_stream() -> None:
 # -- error handling --------------------------------------------------------
 
 
-def test_call_anthropic_api_error_raises_agent_error(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+def test_call_anthropic_api_error_raises_agent_error(monkeypatch: pytest.MonkeyPatch) -> None:
     _zero_wait(monkeypatch)
     client = MagicMock()
     client.messages.create.side_effect = OSError("network failure")
@@ -119,9 +117,7 @@ def test_call_anthropic_api_error_raises_agent_error(
         call_anthropic(client, "m", 100, "sys", [], [])
 
 
-def test_call_anthropic_oserror_wraps_as_agent_error(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+def test_call_anthropic_oserror_wraps_as_agent_error(monkeypatch: pytest.MonkeyPatch) -> None:
     _zero_wait(monkeypatch)
     client = MagicMock()
     client.messages.create.side_effect = OSError("broken pipe")

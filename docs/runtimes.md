@@ -6,7 +6,7 @@ SakThai can be run directly from the command line, integrated into third-party A
 
 ## 💻 Integration with Claude CLI
 
-You can expose the SakThai tools directly to Claude CLI (built into `claude-code`). 
+You can expose the SakThai tools directly to Claude CLI (built into `claude-code`).
 
 Add the following configuration to `~/.claude/config.json`:
 
@@ -81,7 +81,7 @@ directions, Composio, skill sync) are in [integrations.md](./integrations.md).
 
 ## 🧠 Exposing the Agent Loop as an MCP Tool
 
-SakThai also exposes a special `run_agent_loop` tool through its MCP server. 
+SakThai also exposes a special `run_agent_loop` tool through its MCP server.
 
 When an external AI (like Claude or Gemini) calls this tool, it invokes SakThai's own multi-step agent loop. This allows the host AI to delegate complex, multi-iteration tasks (like running commands, reading directories, and self-correcting) to SakThai as a single tool call:
 
@@ -101,6 +101,7 @@ You can run SakThai offline without external API keys by pointing it to Ollama o
 ### Prerequisites
 
 Ensure you have Ollama running locally. For example, to use Qwen 2.5 Coder:
+
 ```bash
 ollama run qwen2.5-coder:7b
 ```
@@ -108,6 +109,7 @@ ollama run qwen2.5-coder:7b
 ### Running with CLI Choice
 
 To force local execution via the CLI:
+
 ```bash
 sakthai run "your task" --provider ollama --model qwen2.5-coder:7b
 ```

@@ -1,8 +1,8 @@
 <div align="center">
 
-# 🧠 House of Sak 
+# 🧠 House of Sak
 
-![House of Sak](./assets/house_of_sak.png)
+![House of Sak](./assets/house_of_sak_v2.png)
 
 **A local-first personal learning agent with persistent memory.**
 One package, three ways in — a CLI, a tool-using agent loop, and an MCP stdio server.
@@ -25,7 +25,7 @@ One package, three ways in — a CLI, a tool-using agent loop, and an MCP stdio 
 > a curated **skills catalog**, and a two-way **MCP** bridge — so the same memory and tools
 > are reachable from other agents and editors. **Local-first**, with a fully **no-cost** local run.
 
----
+---<img width="1280" height="549" alt="image" src="https://github.com/user-attachments/assets/6a58ff16-74cd-47d5-881a-84736e7c994b" />
 
 ## 📑 Table of contents
 
@@ -91,7 +91,7 @@ snapshots** for each persona into `build/agent-repos/<persona>/` with
 │   └── agent-self-evolution/     # DSPy/GEPA self-evolution tool (standalone Python pkg)
 ├── personas/
 │   ├── shared/skills/            # skill library shared by all six personas (deduped, once)
-│   └── {sakking,sakthai,saksee,saksit,saktan,sakjules}/   # per-persona SOUL.md + config + skill overlay
+│   └── {sakking,sakthai,saksee,saksit,saktan,sakjules}/ # per-persona SOUL.md + config + skill overlay
 ├── build/agent-repos/<persona>/   # export target for standalone agent repos
 ├── infra/
 │   ├── hermes-agents/            # Hermes Telegram-bot config backup (no secrets)
@@ -100,13 +100,17 @@ snapshots** for each persona into `build/agent-repos/<persona>/` with
 ```
 
 - 👑 **Personas** are the **Sak Family Agents**: **SakKing** is the main (Lead & Orchestrator,
+  Master of Code & Self-Healing), and **SakThai**, **SakSee**, **SakSit**, and **SakTan** are the
+  family it coordinates. *"Hermes" is only the framework they run on, never an agent's name.*
+  The shared skill library now lives once under `personas/shared/skills/`, with each persona
+  keeping only its unique files. See [`personas/README.md`](./personas/README.md) and the root
   Master of Code & Self-Healing), and **SakThai**, **SakSee**, **SakSit**, **SakTan**, and
   **SakJules** are the family it coordinates. *"Hermes" is only the framework they run on,
   never an agent's name.* The shared skill library now lives once under
   `personas/shared/skills/`, with each persona keeping only its unique files. Use
   `scripts/export_agent_repo.py <persona> --out ...` or `make export-agent-repos` when you want
   a standalone repo snapshot. See [`personas/README.md`](./personas/README.md) and the root
-  [`SOUL.md`](./SOUL.md). Read [`USER.md`](./USER.md) for Beer's identity, support context, and
+  [`SOUL.md`](./docs/SOUL.md). Read [`USER.md`](./docs/USER.md) for Beer's identity, support context, and
   the values behind the agents: Dream, Hope, Care, Joy, Trust, and Growth. See
   [`infra/hermes-agents/README.md`](./infra/hermes-agents/README.md) for full Telegram-bot
   deployment.
@@ -136,9 +140,9 @@ All runtimes share `~/.sakthai/memory.db` (override the root with `SAKTHAI_HOME`
 
 ---
 
-## 🤝 Family agents
+## 🤝 Family Agents
 
-The repo tracks six personas end to end, each with a distinct role and personality:
+The repo tracks six personas end to end, each with a distinct role and personality. See `SOUL.md` for the full roster.
 
 | Agent | Role | Portrait |
 |---|---|---|
@@ -147,9 +151,9 @@ The repo tracks six personas end to end, each with a distinct role and personali
 | **SakSee** | Master of Web | ![SakSee](./assets/saksee.png) |
 | **SakSit** | Master of Social Media | ![SakSit](./assets/saksit.png) |
 | **SakTan** | Daily Ops Helper | ![SakTan](./assets/saktan.png) |
-| **SakJules** | GitHub Repository Steward | |
+| **SakJules** | Master of Automation & CI/CD | ![SakJules](./assets/sakjules.png) |
 
-![House of Sak](./assets/house_of_sak.png)
+![House of Sak](./assets/house_of_sak_v2.png)
 
 The canonical profile source for the family lives under `infra/hermes-agents/profiles/`, and
 `personas/` contains the consolidated skill trees and overlays used by the repo.
@@ -377,10 +381,16 @@ make test                                # run the hermetic test suite
 
 ## 📖 Documentation
 
-Comprehensive documentation is available in the `docs/` directory, covering architecture, runtimes, plugins, and integrations.
+Comprehensive documentation is available in the `docs/` directory:
+- 🏗️ [Architecture & Layering](./docs/architecture.md) — layers, memory database, SQLite schema
+- 🤖 [Capabilities & Tools](./docs/capabilities.md) — tools, memory operations, providers
+- 🔌 [MCP & Skills Extensibility](./docs/plugins.md) — MCP serving, skill directory injection
+- ⚙️ [Runtimes & Local Execution](./docs/runtimes.md) — CLI, agent loop, MCP servers, local Ollama
+- 🔗 [Integrations](./docs/integrations.md) — Composio, Hermes, and cross-agent communication recipes
+- 📅 [Live Connect Plan (Phases 5–8)](./docs/sakthai-live-connect-plan.md) — Phase 5–8 execution plan and status (Completed)
 
 ---
 
 ## 📝 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is **all rights reserved** (© 2026 beer-sakthai). The source is available for reading and learning, but no license to use, copy, modify, or redistribute it is granted. See `CODE_OF_CONDUCT.md` for details.

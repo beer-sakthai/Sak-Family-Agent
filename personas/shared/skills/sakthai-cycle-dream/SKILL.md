@@ -19,7 +19,7 @@ metadata:
 # sakthai-cycle-dream
 
 Stage 1 of 6 in the Sak Family cycle — **Dream**. See [Dream.md](../../../../docs/cycle/Dream.md)
-for the full guidance and [SOUL.md](../../../../SOUL.md) for the charge model.
+for the full guidance and [SOUL.md](../../../../docs/SOUL.md) for the charge model.
 
 ## What to do
 

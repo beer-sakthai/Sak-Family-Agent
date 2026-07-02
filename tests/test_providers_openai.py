@@ -48,10 +48,7 @@ def _tool_resp(name: str = "learn", args: dict[str, Any] | None = None) -> dict[
                     "tool_calls": [
                         {
                             "id": "c1",
-                            "function": {
-                                "name": name,
-                                "arguments": json.dumps(args or {}),
-                            },
+                            "function": {"name": name, "arguments": json.dumps(args or {})},
                         }
                     ],
                 },
@@ -85,14 +82,7 @@ def test_to_openai_messages_assistant_tool_use() -> None:
     msgs = [
         {
             "role": "assistant",
-            "content": [
-                {
-                    "type": "tool_use",
-                    "id": "t1",
-                    "name": "learn",
-                    "input": {"value": "x"},
-                }
-            ],
+            "content": [{"type": "tool_use", "id": "t1", "name": "learn", "input": {"value": "x"}}],
         }
     ]
     result = to_openai_messages("sys", msgs)
@@ -266,10 +256,7 @@ def test_call_openai_compat_malformed_tool_args_fall_back_empty() -> None:
                 "message": {
                     "content": None,
                     "tool_calls": [
-                        {
-                            "id": "c1",
-                            "function": {"name": "learn", "arguments": "{{invalid"},
-                        }
+                        {"id": "c1", "function": {"name": "learn", "arguments": "{{invalid"}}
                     ],
                 },
                 "finish_reason": "tool_calls",

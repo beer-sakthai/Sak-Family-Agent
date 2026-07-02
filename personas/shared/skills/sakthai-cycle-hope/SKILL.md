@@ -19,7 +19,7 @@ metadata:
 # sakthai-cycle-hope
 
 Stage 2 of 6 in the Sak Family cycle — **Hope**. See [Hope.md](../../../../docs/cycle/Hope.md)
-for the full guidance and [SOUL.md](../../../../SOUL.md) for the charge model.
+for the full guidance and [SOUL.md](../../../../docs/SOUL.md) for the charge model.
 
 ## What to do
 

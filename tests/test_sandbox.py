@@ -26,12 +26,7 @@ def test_run_in_sandbox_raises_when_docker_missing() -> None:
         pytest.raises(SandboxError, match="Docker is not installed"),
     ):
         run_in_sandbox(
-            "hi",
-            model="m",
-            max_tokens=100,
-            max_iterations=3,
-            max_seconds=None,
-            verbose=False,
+            "hi", model="m", max_tokens=100, max_iterations=3, max_seconds=None, verbose=False
         )
 
 
@@ -181,12 +176,7 @@ def test_run_in_sandbox_returns_container_exit_code(tmp_path: Path) -> None:
         patch("subprocess.run", side_effect=[build_result, run_result]),
     ):
         code = run_in_sandbox(
-            "fail",
-            model="m",
-            max_tokens=100,
-            max_iterations=3,
-            max_seconds=None,
-            verbose=False,
+            "fail", model="m", max_tokens=100, max_iterations=3, max_seconds=None, verbose=False
         )
     assert code == 42
 

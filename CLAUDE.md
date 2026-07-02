@@ -28,8 +28,8 @@ persona overlays and can export standalone repo snapshots with
   Python package, **not** a uv workspace member (disjoint/heavy deps; its
   `darwinian` extra is unpublished). Build it on its own; the root `uv.lock`
   stays SakThai-only.
-- `personas/` — the former `*-skills` repos plus the SakJules scaffold. The ~446
-  skill files identical across all personas live once in `personas/shared/skills/`; each
+- `personas/` — the four former `*-skills` repos. The ~446 skill files identical
+  across all personas live once in `personas/shared/skills/`; each
   `personas/<name>/` keeps only its `SOUL.md`, `config/`, and a skill *overlay*
   (unique/differing files). `scripts/compose_persona.py` rebuilds a persona's
   full tree as `shared + overlay` (overlay wins), byte-for-byte. See
@@ -43,17 +43,17 @@ persona overlays and can export standalone repo snapshots with
 
 ### Sak Family Agents
 
-The repo also carries the **Sak Family Agents** — six personas with **SakKing**
+**The repo also carries the **Sak Family Agents** — six personas with **SakKing**
 as the **main** (Lead & Orchestrator) and **SakThai**, **SakSee**, **SakSit**,
 **SakTan**, and **SakJules** as the family it coordinates. "Hermes" is only the
-framework they run on, never an agent's name. The authoritative per-agent identities are the repo-root
-`SOUL.md` + `personas/<name>/SOUL.md`; `infra/hermes-agents/` carry
-their own (sometimes role-specialized) copies. Keep the SakKing-as-lead framing
-consistent if you touch any of them.
+framework they run on, never an agent's name. The authoritative per-agent
+identities are `docs/SOUL.md` + `personas/<name>/SOUL.md`;
+`infra/hermes-agents/` carry their own (sometimes role-specialized) copies.
+Keep the SakKing-as-lead framing consistent if you touch any of them.
 
 CI (`ci.yml`, `pylint.yml`) scopes ruff/mypy/bandit/pytest/pylint to the
 `sakthai` core only; the co-located trees are not held to this repo's bars.
-gitleaks still scans the whole tree (`.gitleaks.toml` allowlists persona docs).
+**gitleaks still scans the whole tree (`.gitleaks.toml` allowlists persona docs).
 
 Everything below this point describes the SakThai agent package itself.
 
@@ -63,21 +63,18 @@ Everything below this point describes the SakThai agent package itself.
 
 ```bash
 # Setup (Python >=3.11)
-cp .env.example .env            # then fill in ANTHROPIC_API_KEY
-pip install -e ".[dev]"         # editable install + test/lint/type-check tools
-pip install -e ".[all]"         # same as [dev] (dashboard is a pre-built React bundle; no extra Python deps needed)
-
-# Preferred: use uv (CI uses uv with uv.lock for reproducible installs)
-uv sync --all-extras
+cp .env.example .env      # then fill in ANTHROPIC_API_KEY
+uv sync --all-extras      # install all project and optional dependencies
 
 # Test / lint / type-check / security (mirrors .github/workflows/ci.yml)
-python -m pytest tests/ -q                      # full unit suite (no network, no GCP)
-python -m pytest tests/test_memory_store.py -q  # a single test file
-python -m pytest -m "not integration" -q        # exclude network tests (default in CI)
-ruff check sakthai tests                        # lint
-ruff format --check sakthai tests               # format check (drop --check to apply)
-mypy sakthai                                    # strict type-check
-bandit -c pyproject.toml -r sakthai             # security scan
+uv run pytest tests/ -q                      # full unit suite (no network, no GCP)
+uv run pytest tests/test_memory_store.py -q  # a single test file
+uv run pytest -m "not integration" -q        # Exclude network tests (default in CI)
+uv run ruff check sakthai tests              # Lint
+uv run ruff format --check sakthai tests     # Format check (drop --check to apply)
+uv run mypy sakthai                          # Strict type-check
+uv run bandit -c pyproject.toml -r sakthai   # Security scan
+make mutation                                # mutmut on core seam modules (slow, local-only, not in CI)
 ```
 
 CI (`.github/workflows/ci.yml`, all via `uv sync --extra dev --locked`) runs:
@@ -99,7 +96,12 @@ root with `SAKTHAI_HOME`):
 
 1. **CLI** — `sakthai <cmd>` (entry point `sakthai.cli:main`). Commands:
    - Memory: `learn`, `recall`, `memory show|stats|search|export|import|backup|consolidate|consolidate-sessions|deduplicate`
-   - Agent: `run "<task>"` (with `--model`, `--max-tokens`, `--max-iterations`, `--verbose`, `--no-mcp`)
+   - Agent: `run "<task>"` — key flags: `--provider`/`-p` (anthropic/google/openai/ollama/gateway),
+     `--model`, `--max-tokens`, `--max-iterations`, `--max-seconds`, `--with-skills <name>`
+     (repeatable), `--no-mcp`, `--dry-run` (validate config, no API call), `--stream`, `--fast`
+     (skip the 6-stage cycle), `--stateless` (don't load/append memory), `--caveman
+     lite|full|ultra|wenyan-*` (token-compression skill), `--sandbox` (run inside the
+     `Dockerfile.sandbox` container; only `memory.db` is bind-mounted), `-v/--verbose`
    - Server: `mcp` (start MCP stdio server)
    - Cycle: `cycle status|next|set|list`
    - Skills: `skills list|show|validate|create|sync-sakking`
@@ -107,6 +109,7 @@ root with `SAKTHAI_HOME`):
    - Sessions: `sessions list|show|export`
    - System: `doctor`, `setup`, `status`, `tools`
    - Dashboard: `dashboard` (serves the React UI; `--export` writes a JSON snapshot)
+   - Hugging Face: `hf info|download <repo_id>`
 
 2. **Agent loop** — `sakthai run` drives a provider-agnostic tool-using loop
    (Claude, Gemini, or any OpenAI-compatible/Ollama endpoint).
@@ -134,6 +137,10 @@ CLI/MCP → agent loop → tool registry → MemoryStore → SQLite. See
   `ANTHROPIC_AUTH_TOKEN` → Claude CLI OAuth token. Google uses the Gemini CLI
   OAuth token. OpenAI/Ollama uses `resolve_openai_credentials` to locate the base
   URL and API key. Raises `AuthError` when no credentials are found.
+- **`sandbox.py`** — backs `sakthai run --sandbox`. Builds/reuses a Docker image
+  from `Dockerfile.sandbox` (layer-cached) and re-executes the task inside it;
+  only `memory.db` is bind-mounted from the host. Raises `SandboxError` if Docker
+  isn't on `PATH`.
 
 ### Memory subsystem (`memory/`)
 
@@ -187,6 +194,7 @@ CLI/MCP → agent loop → tool registry → MemoryStore → SQLite. See
   discovers external server specs from `~/.sakthai/mcp.json` and extensions.
 
 External MCP server config format (`~/.sakthai/mcp.json`):
+
 ```json
 {
   "servers": [
@@ -198,6 +206,7 @@ External MCP server config format (`~/.sakthai/mcp.json`):
 ### CLI subsystem (`cli/`)
 
 Click commands split by area; all sub-files imported by `cli/__init__.py`:
+
 - `agent.py` — `run`, `mcp`
 - `memory.py` — `learn`, `recall`, `memory` group
 - `system.py` — `doctor`, `setup`, `status`, `tools`
@@ -207,6 +216,7 @@ Click commands split by area; all sub-files imported by `cli/__init__.py`:
 - `dashboard.py` — `dashboard` (serves the React `dashboard/dist/` bundle over a
   hardened `http.server`, or exports a JSON snapshot with `--export`)
 - `sessions.py` — `sessions` group
+- `hf.py` — `hf info|download` (Hugging Face Hub operations)
 
 ### Other subsystems
 
@@ -216,7 +226,7 @@ Click commands split by area; all sub-files imported by `cli/__init__.py`:
 - **`skills.py` + `skills/` + `library/`** — parse/catalog/validate `SKILL.md`
   files (YAML frontmatter: name, category, description, version, platforms, tags,
   related_skills). `library/` has 31 curated skills across 11 categories;
-  `skills/` has 17 user/extension skills. Skills are injected into the agent
+  `skills/` has 69 user/extension skills. Skills are injected into the agent
   system prompt via `render_skills_prompt_block()`.
 - **`dashboard/`** — `data.py` builds a UI-free, testable snapshot of the store
   (KPIs, growth series, per-kind breakdown, date-range filtering) and serializes
@@ -228,6 +238,15 @@ Click commands split by area; all sub-files imported by `cli/__init__.py`:
   `~/.sakthai/extensions`; `list`/`remove` manage installed bundles.
 - **`web/server.py`** — minimal HTTP server stub for a future web runtime.
 - **`learn/capture.py`** — `learn()` one-shot fact capture used by `sakthai learn`.
+- **`telegram/`** — a standalone `python-telegram-bot` polling bot (`bot.py`,
+  `config.py`, `workflow_executor.py`) that shells out to
+  `python -m sakthai run ... --with-skills <name> --fast --stateless` per
+  `/workflow <name>` command. Early-stage and **not yet aligned with this
+  repo's conventions**: its own `ALLOWED_USER_IDS`/`TELEGRAM_BOT_TOKEN`
+  handling in `telegram/config.py` duplicates the existing
+  `send_telegram_message` tool's env vars instead of going through
+  `config.py`, and `SKILLS_DIR` is a hardcoded relative path. Treat as
+  prototype code, not a pattern to extend.
 
 ---
 
@@ -264,7 +283,7 @@ Sak-Family-Agent/
 │   ├── dashboard/            # data.py (JSON snapshot; React UI lives at repo root)
 │   └── web/                  # HTTP server stub
 ├── tests/                    # hermetic test suite, no network
-├── skills/                   # 17 user/extension SKILL.md folders
+├── skills/                   # 69 user/extension SKILL.md folders
 ├── library/                  # 31 curated skills in 11 categories
 ├── docs/                     # Architecture & design docs
 ├── scripts/                  # Dev utilities (not linted/type-checked)
@@ -277,12 +296,13 @@ Sak-Family-Agent/
 
 ## Tests
 
-Tests live in `tests/` (37 files, ~9300 lines). All tests are hermetic — no
+Tests live in `tests/` (49 files, ~13000 lines). All tests are hermetic — no
 network, no GCP credentials. Integration tests that may hit real endpoints
 (Ollama, Anthropic) are marked `@pytest.mark.integration` and self-skip when
 credentials/endpoints are absent; CI excludes them with `-m "not integration"`.
 
 Key test areas:
+
 - `test_memory_store.py`, `test_memory_sync.py`, `test_memory_aux.py`,
   `test_memory_concurrent.py`, `test_store_migrations.py` — memory subsystem
 - `test_agent_loop.py`, `test_tools.py`, `test_registry.py`, `test_usage.py`,
@@ -335,6 +355,22 @@ reach out to a real endpoint. Use `tmp_path` fixtures for file I/O.
 
 ---
 
+## Workflow: Plan First
+
+- **Always read and update `PLAN.md` before starting any work** in this repo.
+  - Mark tasks `[ ]` → `[/]` (in progress) at the start of a phase.
+  - Mark `[/]` → `[x] YYYY-MM-DD` (done with date) once the work is verified.
+- **Never start coding a phase until it is checked off in PLAN.md** as in-progress.
+- Terse one-word or short user approvals like `process`, `go`, `do it`, `run` after a plan summary = explicit approval to execute all queued plan steps.
+
+### PLAN.md Safety
+
+- **Never overwrite `PLAN.md` entirely.** Use `multi_replace_file_content` with targeted chunk replacements only.
+- When marking tasks complete, find and replace only the specific `- [ ]` or `- [/]` line(s) — not whole sections.
+- After any edit to `PLAN.md`, immediately re-read it to verify the surrounding content is intact before continuing.
+
+---
+
 ## Key environment variables
 
 | Variable | Purpose |
@@ -365,13 +401,19 @@ category: coding
 description: One-line summary of what this skill does
 version: "1.0"
 platforms: [linux, macos, windows]   # host OSes the skill supports
-tags: [python, testing]
-related_skills: [other-skill]
+metadata:
+  sakthai:
+    tags: [python, testing]
+    related_skills: [other-skill]
 ---
 
 Skill body goes here. This is injected into the agent system prompt when the
 skill is active.
 ```
+
+Note: `tags`/`related_skills` must be nested under `metadata.sakthai` — a flat
+top-level `tags:`/`related_skills:` is silently ignored by the parser in
+`skills.py`.
 
 Skills are discovered from `skills/` (user/extension skills) and `library/`
 (curated catalog). Run `sakthai skills list` to see all discovered skills.
@@ -401,3 +443,4 @@ Skills are discovered from `skills/` (user/extension skills) and `library/`
 | `docs/runtimes.md` | CLI / agent loop / MCP server |
 | `docs/workspace.md` | Dev environment setup |
 | `docs/og_parity_audit.md` | Comparison with original SakThai |
+| `docs/integrations.md` | Composio, Hermes, and cross-agent communication recipes |

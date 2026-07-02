@@ -4,8 +4,8 @@ Guidance for the Gemini CLI and Gemini-backed agents working in this repository.
 
 ## What this is
 
-`sakthai-agent` **v2.0**: A personal learning agent (persistent SQLite, shared tool registry, Claude/Gemini agent loop, MCP stdio server). 
-**Clean-room rewrite** of "OG" SakThai-Agent. OG is a **read-only blueprint** (study intent, do not copy code/layout). 
+`sakthai-agent` **v2.0**: A personal learning agent (persistent SQLite, shared tool registry, Claude/Gemini agent loop, MCP stdio server).
+**Clean-room rewrite** of "OG" SakThai-Agent. OG is a **read-only blueprint** (study intent, do not copy code/layout).
 No Google ADK/Vertex AI cloud agent, no `app/` bundle, no cloud-sync, no cloud runtime.
 
 ## Gemini runtime
@@ -17,10 +17,10 @@ No Google ADK/Vertex AI cloud agent, no `app/` bundle, no cloud-sync, no cloud r
 ## Getting started
 
 ```bash
-cp .env.example .env            # ANTHROPIC_API_KEY for Claude; Gemini uses CLI OAuth
-pip install -e ".[all]"         # dev + dashboard extras (Python >=3.11)
-sakthai setup                   # validate .env and required env vars
-sakthai doctor                  # report environment + memory health
+cp .env.example .env      # ANTHROPIC_API_KEY for Claude; Gemini uses CLI OAuth
+uv sync --all-extras      # install all dependencies (Python >=3.11)
+uv run sakthai setup      # validate .env and required env vars
+uv run sakthai doctor     # report environment + memory health
 ```
 
 ## Common commands
@@ -35,13 +35,13 @@ sakthai doctor                  # report environment + memory health
 | The 6-stage cycle | `sakthai cycle status\|next\|set\|list` |
 | Skills | `sakthai skills list\|show\|validate` |
 | Dashboard | `sakthai dashboard` (`--export data.json` skips the UI) |
-| Test | `python -m pytest tests/ -q` |
+| Test | `uv run pytest tests/ -q` |
 | Lint / format / types | `ruff check sakthai tests` · `ruff format --check sakthai tests` · `mypy sakthai` |
 
 ## How it fits together
 
-Data flow: CLI/MCP → agent loop → shared tool registry (`agent/tools.py`) → `MemoryStore` → SQLite (`~/.sakthai/memory.db`). 
-One shared tool registry. `config.py` owns paths. 6-stage Dream→Growth cycle is persisted as a single fact. 
+Data flow: CLI/MCP → agent loop → shared tool registry (`agent/tools.py`) → `MemoryStore` → SQLite (`~/.sakthai/memory.db`).
+One shared tool registry. `config.py` owns paths. 6-stage Dream→Growth cycle is persisted as a single fact.
 Details: [`docs/architecture.md`](docs/architecture.md), [`docs/capabilities.md`](docs/capabilities.md).
 
 ## Conventions

@@ -1,0 +1,4 @@
+# file: C:\Users\beern\OneDrive\Documents\GitHub\Sak-Family-Agent\sakthai\cli\agent.py
+# hypothesis_version: 6.155.7
+
+[130, '\nInterrupted.', ', ', ', …', '--caveman', '--dry-run', '--fast', '--max-iterations', '--max-seconds', '--max-tokens', '--model', '--no-mcp', '--provider', '--sandbox', '--stateless', '--stream', '--verbose', '--with-skills', '-p', '-v', 'Model identifier.', 'Tool-use loop cap.', 'anthropic', 'full', 'gateway', 'google', 'is_error', 'iteration', 'lite', 'ollama', 'openai', 'runnable', 'task', 'tool', 'tool!', 'tool_call', 'tool_error', 'tools', 'ultra', 'wenyan-full', 'wenyan-lite', 'wenyan-ultra', 'with_skills']

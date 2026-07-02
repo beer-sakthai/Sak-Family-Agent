@@ -1,5 +1,6 @@
 import pytest
-from evolution.core.dataset_builder import EvalExample, EvalDataset
+from evolution.core.dataset_builder import EvalDataset, EvalExample
+
 
 class TestEvalExample:
     def test_eval_example_to_dict(self):
@@ -8,14 +9,14 @@ class TestEvalExample:
             expected_behavior="behavior",
             difficulty="hard",
             category="test",
-            source="golden"
+            source="golden",
         )
         expected = {
             "task_input": "input",
             "expected_behavior": "behavior",
             "difficulty": "hard",
             "category": "test",
-            "source": "golden"
+            "source": "golden",
         }
         assert example.to_dict() == expected
 
@@ -26,7 +27,7 @@ class TestEvalExample:
             "difficulty": "easy",
             "category": "logic",
             "source": "synthetic",
-            "extra_field": "ignored"
+            "extra_field": "ignored",
         }
         example = EvalExample.from_dict(data)
         assert example.task_input == "input"
@@ -34,6 +35,7 @@ class TestEvalExample:
         assert example.difficulty == "easy"
         assert example.category == "logic"
         assert example.source == "synthetic"
+
 
 class TestEvalDataset:
     def test_all_examples_empty(self):

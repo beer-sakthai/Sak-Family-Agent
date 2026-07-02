@@ -54,8 +54,8 @@ PERSONA_DETAILS: dict[str, dict[str, str]] = {
     "sakjules": {
         "display": "SakJules",
         "handle": "@SakJules_Agent_bot",
-        "role": "GitHub Repository Steward",
-        "summary": "the repository-first agent for code, issues, PRs, Actions, and settings",
+        "role": "Master of Automation & CI/CD",
+        "summary": "the repository automation and CI/CD specialist",
         "repo": "beer-sakthai/sakjules-agent",
     },
 }

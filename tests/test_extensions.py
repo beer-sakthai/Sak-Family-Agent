@@ -61,6 +61,31 @@ def test_extension_name_regex_accepts_and_rejects() -> None:
     assert not ext.EXTENSION_NAME_RE.match("")
 
 
+def test_install_rejects_traversal_name_derived_from_url(
+    sakthai_home: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Name filter blocks path traversal: a ``../``-laden name never installs.
+
+    The name regex is the first line of defense here; assert the public API
+    surfaces an ExtensionError rather than cloning outside the extensions dir.
+    """
+    with pytest.raises(ext.ExtensionError, match="invalid extension name"):
+        ext.install_extension("https://github.com/foo/..%2f..%2fevil.git")
+
+
+def test_install_path_guard_blocks_escape_if_name_filter_regresses(
+    sakthai_home: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Defense-in-depth: the resolved-path check catches a traversal name that
+    slips past the regex, so a future loosening of the filter still can't write
+    outside the extensions dir.
+    """
+    monkeypatch.setattr(ext, "EXTENSION_NAME_RE", ext.re.compile(r".*"))
+    monkeypatch.setattr(ext, "_name_from_url", lambda url: "../escape")
+    with pytest.raises(ext.ExtensionError, match="invalid extension path"):
+        ext.install_extension("https://github.com/foo/whatever.git")
+
+
 # -- registry round-trip -------------------------------------------------
 
 

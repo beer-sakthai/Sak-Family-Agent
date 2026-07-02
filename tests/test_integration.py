@@ -136,13 +136,38 @@ def test_ollama_live_smoke(tmp_path: Path) -> None:
             result = run_agent(
                 "Reply with exactly the single word: pong",
                 store=store,
-                provider="ollama",
+                provider="openai",
                 model=model,
                 max_iterations=2,
             )
         except Exception as exc:
             pytest.skip(
                 f"Ollama execution failed (e.g. server error or model loading error): {exc}"
+            )
+    finally:
+        store.close()
+    assert result.text.strip()
+
+
+@pytest.mark.skipif(not os.environ.get("LOCAL_API_BASE"), reason="LOCAL_API_BASE not set")
+def test_local_live_smoke(tmp_path: Path) -> None:
+    """Exercises the `local` provider against a custom OpenAI-compatible endpoint."""
+    # The model name must start with "local/" to be auto-detected, or the
+    # provider must be set explicitly. The part after the slash is the model
+    # identifier the local server expects.
+    model = os.environ.get("SAKTHAI_LOCAL_MODEL", "local/local-model")
+    store = MemoryStore(tmp_path / "memory.db")
+    try:
+        try:
+            result = run_agent(
+                "Reply with exactly the single word: pong",
+                store=store,
+                model=model,
+                max_iterations=2,
+            )
+        except Exception as exc:
+            pytest.skip(
+                f"Local provider execution failed (e.g. server not running or bad auth): {exc}"
             )
     finally:
         store.close()

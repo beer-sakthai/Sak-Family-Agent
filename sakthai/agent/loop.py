@@ -14,13 +14,18 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import time
 import uuid
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from typing import Any
 
-from ..auth import anthropic_credential_source, gateway_credential_source, openai_credential_source
+from ..auth import (
+    anthropic_credential_source,
+    gateway_credential_source,
+    openai_credential_source,
+)
 from ..config import sessions_dir
 from ..memory.store import MemoryStore
 from ..skills import default_skill_roots, find_skill, render_skills_prompt_block
@@ -74,11 +79,7 @@ class AgentResult:
     stop_reason: str
     tool_calls: list[dict[str, Any]] = field(default_factory=list)
     usage: dict[str, int] = field(
-        default_factory=lambda: {
-            "input_tokens": 0,
-            "output_tokens": 0,
-            "total_tokens": 0,
-        }
+        default_factory=lambda: {"input_tokens": 0, "output_tokens": 0, "total_tokens": 0}
     )
 
 
@@ -142,24 +143,60 @@ def _parse_slash_command(task: str) -> tuple[str, str] | None:
         return None
 
 
+def _build_skills_block(skills: Sequence[str], command_system: str, caveman: str | None) -> str:
+    """Construct the full skills block for the system prompt."""
+    parts = []
+    if skills:
+        parts.append(render_skills_prompt_block(skills))
+    if command_system:
+        parts.append(command_system)
+
+    if caveman:
+        caveman_skill = find_skill("caveman", *default_skill_roots())
+        if caveman_skill:
+            caveman_instructions = (
+                f"{caveman_skill.body}\n\nACTIVE CAVEMAN LEVEL: {caveman}\n"
+                f"Respond using the rules of {caveman} level strictly."
+            )
+            parts.append(caveman_instructions)
+        else:
+            logger.warning("Caveman skill not found; compression mode disabled.")
+
+    return "\n\n".join(p for p in parts if p)
+
+
 def _build_system(
     store: MemoryStore,
-    skills_block: str = "",
-    fast: bool = False,
-    stateless: bool = False,
+    skills: Sequence[str],
+    command_system: str,
+    fast: bool,
+    stateless: bool,
+    caveman: str | None,
 ) -> str:
+    """Assemble the complete system prompt from all its parts."""
     parts = [SYSTEM_BASE]
     if fast:
         parts.append(
             "FAST-TRACK MODE: Execute the user's task directly and quickly without enforcing the 6-stage cycle (Dream/Hope/Care/Joy/Trust/Growth)."
         )
-    if not stateless:
-        memory = store.render_prompt_block()
-        if memory:
-            parts.append(memory)
+    if not stateless and (memory_block := store.render_prompt_block()):
+        parts.append(memory_block)
+    skills_block = _build_skills_block(skills, command_system, caveman)
     if skills_block:
         parts.append(skills_block)
-    return "\n\n".join(parts)
+    return "\n\n".join(p for p in parts if p)
+
+
+def _resolve_model_name(model: str, provider: str) -> str:
+    """Resolve the final model name, applying provider-specific defaults."""
+    if model != DEFAULT_MODEL:
+        return model
+
+    if provider == "openai":
+        return "qwen2.5-coder:7b" if os.environ.get("OLLAMA_HOST") else "gpt-4o"
+    if provider == "google":
+        return "gemini-2.5-flash"
+    return model
 
 
 def _execute_tool(tool: Tool, args: dict[str, Any], store: MemoryStore) -> tuple[str, bool]:
@@ -207,6 +244,60 @@ def _process_tool_uses(
     return results
 
 
+def _dispatch_tool_calls(
+    response: Any,
+    messages: list[dict[str, Any]],
+    registry: ToolRegistry,
+    store: MemoryStore,
+    notify: Callable[[str, dict[str, Any]], None],
+    tool_calls: list[dict[str, Any]],
+) -> None:
+    """Process tool_use blocks, execute tools, and append results to messages."""
+    tool_uses = [b for b in response.content if getattr(b, "type", "") == "tool_use"]
+    if not tool_uses:
+        # This can happen if the model returns stop_reason="tool_use" but with
+        # no actual tool_use blocks in the content. Treat as a pause.
+        logger.warning("Model indicated tool_use but sent no tool_use blocks.")
+        messages.append({"role": "assistant", "content": response.content})
+        return
+
+    messages.append({"role": "assistant", "content": response.content})
+    results = _process_tool_uses(tool_uses, registry, store, notify, tool_calls)
+    messages.append({"role": "user", "content": results})
+
+
+def _agent_turn(
+    provider: str,
+    client: Any,
+    model: str,
+    system: str,
+    tools: tuple[Tool, ...],
+    messages: list[dict[str, Any]],
+    iteration: int,
+    on_token: Callable[[str], None] | None,
+    max_tokens: int,
+    tool_schemas: list[dict[str, Any]],
+    usage_tracker: UsageTracker,
+) -> Any:
+    """Execute a single turn of the agent loop, calling the provider."""
+    if provider == "google":
+        response: Any = _call_gemini(
+            client, model, system, tools, messages, iteration, on_token=on_token
+        )
+        usage_tracker.record(**response.usage)
+    elif provider in ("openai", "gateway"):
+        response = _call_openai_compat(
+            client, model, system, tools, messages, iteration, on_token=on_token
+        )
+        usage_tracker.record(**response.usage)
+    else:
+        response = _call_anthropic(
+            client, model, max_tokens, system, tool_schemas, messages, on_token=on_token
+        )
+        usage_tracker.record(**extract_usage(response))
+    return response
+
+
 # -- main loop -----------------------------------------------------------
 
 
@@ -246,8 +337,6 @@ def run_agent(
     if parsed:
         command_system, task = parsed
 
-    import os
-
     provider = provider or _detect_provider(client, model)
     if provider == "ollama":
         provider = "openai"
@@ -269,23 +358,6 @@ def run_agent(
     tool_schemas = registry.schemas()
     tool_calls: list[dict[str, Any]] = []
     messages: list[dict[str, Any]] = [{"role": "user", "content": task}]
-    skills_block = render_skills_prompt_block(skills) if skills else ""
-    if command_system:
-        if skills_block:
-            skills_block = f"{skills_block}\n\n{command_system}"
-        else:
-            skills_block = command_system
-
-    if caveman:
-        caveman_skill = find_skill("caveman", *default_skill_roots())
-        if caveman_skill:
-            caveman_instructions = f"{caveman_skill.body}\n\nACTIVE CAVEMAN LEVEL: {caveman}\nRespond using the rules of {caveman} level strictly."
-            if skills_block:
-                skills_block = f"{skills_block}\n\n{caveman_instructions}"
-            else:
-                skills_block = caveman_instructions
-        else:
-            logger.warning("Caveman skill not found; compression mode disabled.")
     deadline = time.monotonic() + max_seconds if max_seconds is not None else None
 
     usage_tracker = UsageTracker()
@@ -302,28 +374,22 @@ def run_agent(
                 raise AgentError(f"Agent time budget exhausted (max_seconds={max_seconds}).")
             logger.debug("Agent iteration %d/%d", iteration, max_iterations)
 
-            system = _build_system(store, skills_block, fast=fast, stateless=stateless)
-            if provider == "google":
-                response: Any = _call_gemini(
-                    client, model, system, tools, messages, iteration, on_token=on_token
-                )
-                usage_tracker.record(**response.usage)
-            elif provider in ("openai", "gateway"):
-                response = _call_openai_compat(
-                    client, model, system, tools, messages, iteration, on_token=on_token
-                )
-                usage_tracker.record(**response.usage)
-            else:
-                response = _call_anthropic(
-                    client,
-                    model,
-                    max_tokens,
-                    system,
-                    tool_schemas,
-                    messages,
-                    on_token=on_token,
-                )
-                usage_tracker.record(**extract_usage(response))
+            system = _build_system(
+                store, skills, command_system, fast=fast, stateless=stateless, caveman=caveman
+            )
+            response = _agent_turn(
+                provider,
+                client,
+                model,
+                system,
+                tools,
+                messages,
+                iteration,
+                on_token,
+                max_tokens,
+                tool_schemas,
+                usage_tracker,
+            )
 
             stop_reason = getattr(response, "stop_reason", "") or ""
             notify("iteration", {"n": iteration, "stop_reason": stop_reason})
@@ -338,10 +404,7 @@ def run_agent(
                         stop_reason,
                         missed_tool,
                     )
-                    notify(
-                        "tool_call_in_text",
-                        {"name": missed_tool, "stop_reason": stop_reason},
-                    )
+                    notify("tool_call_in_text", {"name": missed_tool, "stop_reason": stop_reason})
                 result = AgentResult(
                     text=final_text,
                     iterations=iteration,
@@ -368,18 +431,13 @@ def run_agent(
                 _save_session_log(task, model, messages, result)
                 return result
 
-            tool_uses = [b for b in response.content if getattr(b, "type", "") == "tool_use"]
-            messages.append({"role": "assistant", "content": response.content})
-            results = _process_tool_uses(tool_uses, registry, store, notify, tool_calls)
-            messages.append({"role": "user", "content": results})
+            _dispatch_tool_calls(response, messages, registry, store, notify, tool_calls)
 
         raise AgentError(
             f"Agent hit the iteration cap (max_iterations={max_iterations}) "
             "without producing a final response."
         )
     finally:
-        import os
-
         if old_active is None:
             os.environ.pop("SAKTHAI_AGENT_ACTIVE", None)
         else:
@@ -403,17 +461,10 @@ def preflight(
     ``sakthai run --dry-run`` so a run can be validated at zero token cost.
     ``runnable`` is True when a usable credential for the resolved provider exists.
     """
-    import os
-
     resolved = provider or _detect_provider(client, model)
     if resolved == "ollama":
         resolved = "openai"
-
-    effective_model = model
-    if resolved == "openai" and model == DEFAULT_MODEL:
-        effective_model = "qwen2.5-coder:7b" if os.environ.get("OLLAMA_HOST") else "gpt-4o"
-    elif resolved == "google" and model == DEFAULT_MODEL:
-        effective_model = "gemini-2.5-flash"
+    effective_model = _resolve_model_name(model, resolved)
 
     if resolved == "google":
         if os.environ.get("GEMINI_API_KEY"):

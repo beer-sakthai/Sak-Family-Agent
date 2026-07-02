@@ -234,7 +234,7 @@ def _send_telegram_message(args: dict[str, Any], store: MemoryStore) -> str:
             "TELEGRAM_CHAT_ID in the environment."
         )
     if not re.match(r"^[0-9]+:[a-zA-Z0-9_-]+$", token):
-        return f"Error: Invalid TELEGRAM_BOT_TOKEN format: {token}"
+        return "Error: Invalid TELEGRAM_BOT_TOKEN format."
     url = f"https://api.telegram.org/bot{token}/sendMessage"
     payload = json.dumps({"chat_id": chat_id, "text": message}).encode("utf-8")
     request = urllib.request.Request(
@@ -326,10 +326,7 @@ BUILTIN_TOOLS: tuple[Tool, ...] = (
                     "description": "Category (e.g. 'note', 'pref', 'project').",
                     "default": "note",
                 },
-                "key": {
-                    "type": "string",
-                    "description": "Optional key/name for the fact.",
-                },
+                "key": {"type": "string", "description": "Optional key/name for the fact."},
             },
             "required": ["value"],
         },
@@ -363,10 +360,7 @@ BUILTIN_TOOLS: tuple[Tool, ...] = (
         input_schema={
             "type": "object",
             "properties": {
-                "query": {
-                    "type": "string",
-                    "description": "The substring search term.",
-                },
+                "query": {"type": "string", "description": "The substring search term."},
                 "limit": {
                     "type": "integer",
                     "description": "Maximum entries per section.",
@@ -440,10 +434,7 @@ BUILTIN_TOOLS: tuple[Tool, ...] = (
         input_schema={
             "type": "object",
             "properties": {
-                "message": {
-                    "type": "string",
-                    "description": "The message body to send.",
-                },
+                "message": {"type": "string", "description": "The message body to send."},
             },
             "required": ["message"],
         },
@@ -476,7 +467,7 @@ BUILTIN_TOOLS: tuple[Tool, ...] = (
                 },
                 "prune_history": {
                     "type": "boolean",
-                    "description": "If true, returns only the final text answer of the loop. If false, appends a tool call summary.",
+                    "description": "If true, return answer only; else include tool summary.",
                     "default": True,
                 },
             },
