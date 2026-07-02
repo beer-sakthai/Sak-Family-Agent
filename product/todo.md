@@ -64,13 +64,13 @@ For Hermes-free migration work, keep the order fixed:
   - Uses `sakthai run --no-mcp --fast --stateless` as the local smoke route.
   - Avoids `~/.hermes/` for bootstrap and relies on `~/.sakthai/mcp.json` for external tools.
 
-- [ ] **Runtime seams:**
-  - Replace one Hermes integration surface at a time.
-  - Keep each seam small enough that it can be exercised by a focused test before the next seam is changed.
+- [x] **Runtime seams:**
+  - The Telegram workflow executor now uses the package-configured skills directory and the active Python interpreter, instead of assuming the cwd or hardcoding `python`.
+  - This keeps the workflow-launch seam portable across local shells, services, and standalone repos.
 
-- [ ] **Test coverage:**
-  - Add or update tests before broadening the replacement surface.
-  - Cover config loading, startup behavior, and the core agent loop with at least one smoke path that runs without Hermes.
+- [x] **Test coverage:**
+  - Added focused tests for the workflow-executor seam.
+  - Covers skills-directory discovery, command construction, and subprocess invocation using the current interpreter.
 
 - [ ] **Local verification:**
   - Run the smallest reliable local smoke test first.

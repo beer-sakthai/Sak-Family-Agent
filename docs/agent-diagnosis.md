@@ -35,9 +35,9 @@ The repo core is already Hermes-free in the sense that the `sakthai/` package
 implements the provider-agnostic CLI, memory, and MCP surfaces. The Hermes
 surface lives around deployment, export, and documentation.
 
-There is no `telegram/` package in this checkout, so the Telegram integration
-item in `product/todo.md` will need a new seam or a reintroduced package rather
-than an in-place refactor.
+There is no top-level `telegram/` package in this checkout, so the Telegram
+integration item in `product/todo.md` maps to the `sakthai/telegram/` package
+rather than a repo-root module.
 
 ### Runtime-critical Hermes surfaces
 
@@ -84,6 +84,16 @@ no profile loader dependency.
    `~/.hermes/` for the bootstrap path.
 5. Use this path as the baseline smoke route before introducing any Telegram or
    runtime-wrapper seam.
+
+### Runtime seam completed
+
+The first executable seam is the Telegram workflow executor:
+
+- it now reads available workflows from the package-configured `skills/` tree,
+  not the current working directory;
+- it launches the agent with `sys.executable`, not a hardcoded `python`;
+- its command construction is covered by focused tests so the seam stays
+  portable across local shells and service launches.
 
 ## Standalone Requirements
 
