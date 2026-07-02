@@ -26,9 +26,10 @@ For Hermes-free migration work, keep the order fixed:
 
 ## Phase 1: Core Agent & Knowledge Base
 
-- [ ] **Define Persona:**
-  - Create a new, dedicated persona `ServiceQuoteBot` by running `make new-persona`.
-  - Write its `SOUL.md` to be focused on customer service, quoting, and lead capture. It will leverage the skills of `SakTan` (ops) and `SakThai` (logic).
+- [x] **Define Persona:**
+  - Created `personas/servicequotebot/SOUL.md` as the dedicated `ServiceQuoteBot` persona.
+  - The persona is focused on customer service, quoting, and lead capture.
+  - It explicitly leans on `SakTan` for ops and `SakThai` for logic.
 
 - [ ] **Knowledge Ingestion:**
   - Develop a new tool `ingest_document` for the agent.
