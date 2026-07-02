@@ -160,7 +160,7 @@ The canonical profile source for the family lives under `infra/hermes-agents/pro
 
 Live deployment snapshot of the Hermes Telegram fleet. Values are read from the
 **version-controlled** configs under
-[`infra/hermes-agents/`](./infra/hermes-agents/) (this repo is the config
+[`infra/hermes-agents/`](./infra/hermes-agents/) (this repository is the config
 source of truth). Each bot is a Hermes **profile** with its own persona +
 Telegram token but a **shared** Supermemory brain.
 
@@ -182,7 +182,7 @@ Telegram token but a **shared** Supermemory brain.
 > (`us-central1-a`, `e2-medium`, out of its own `~/.hermes/`); the laptop's
 > `~/.hermes/` is normally **dormant** (running it double-polls Telegram → `409`
 > conflicts). Bots and their models get **hot-swapped on the VM often**, so the
-> VM can diverge from the configs above — this repo is the reproducible baseline,
+> VM can diverge from the configs above — this repository is the reproducible baseline,
 > the VM is authoritative for what's *actually running right now*. Each bot needs
 > a **distinct** `TELEGRAM_BOT_TOKEN` (shared token → `409`, both go silent).
 > Regenerate/verify with `make doctor-hermes` and the roster in
