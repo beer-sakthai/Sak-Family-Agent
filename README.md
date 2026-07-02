@@ -84,7 +84,7 @@ shared core plus the six persona overlays, and it can **export standalone
 repository snapshots** for each persona into `build/agent-repos/<persona>/`
 with `make export-agent-repos`.
 
-```
+```text
 .
 ├── sakthai/  library/  skills/   # the SakThai agent package (root, this README)
 ├── packages/
@@ -296,6 +296,7 @@ for a run with `sakthai run "<task>" --with-skills my-skill`.
 
 ---
 
+<a id="built-in-tools"></a>
 ## 🛠️ Built-in tools
 
 The same **8-tool** registry (`sakthai/agent/tools.py`) powers both `sakthai run` and
@@ -329,17 +330,21 @@ sakthai cycle status|next|set|list   # the 6-stage cycle
 sakthai skills list|show|validate|create|sync-sakking
 sakthai sessions list|show|export    # inspect session logs
 sakthai dashboard                    # Streamlit view of the store
+```
 
-# 🧰 Monorepo development shortcuts
+## 🧰 Monorepo development shortcuts
+
+```bash
 make test                            # run pytest suite (via uv)
 make lint                            # run ruff linters (via uv)
 make deploy-hermes                   # deploy hermes configs and restart local services
 make doctor-hermes                   # validate hermes YAML configs
 make compose-personas                # rebuild persona skill trees into build/
-```text
+```
 
 ---
 
+<a id="develop"></a>
 ## 👩‍💻 Develop
 
 Mirrors `.github/workflows/ci.yml` (run before pushing; **green CI is the bar for `main`**).
