@@ -2,7 +2,7 @@
 
 # 🧠 House of Sak
 
-![House of Sak](./assets/house_of_sak.png)
+![House of Sak](./assets/house_of_sak_v2.png)
 
 **A local-first personal learning agent with persistent memory.**
 One package, three ways in — a CLI, a tool-using agent loop, and an MCP stdio server.
@@ -151,8 +151,9 @@ The repo tracks six personas end to end, each with a distinct role and personali
 | **SakSee** | Master of Web | ![SakSee](./assets/saksee.png) |
 | **SakSit** | Master of Social Media | ![SakSit](./assets/saksit.png) |
 | **SakTan** | Daily Ops Helper | ![SakTan](./assets/saktan.png) |
+| **SakJules** | Master of Automation & CI/CD | ![SakJules](./assets/sakjules.png) |
 
-![House of Sak](./assets/house_of_sak.png)
+![House of Sak](./assets/house_of_sak_v2.png)
 
 The canonical profile source for the family lives under `infra/hermes-agents/profiles/`, and
 `personas/` contains the consolidated skill trees and overlays used by the repo.

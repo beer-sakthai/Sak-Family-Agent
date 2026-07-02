@@ -1,6 +1,9 @@
 """Provider backends for the agent loop.
 
 Each provider lives in its own module and owns its API call, message adaptation,
+and retry handling. This package also resolves *which* provider to use
+(:func:`detect_provider`) and builds its client (:func:`build_client`), keeping
+all provider-specific concerns out of the orchestration loop.
 """
 
 from __future__ import annotations
@@ -109,12 +112,10 @@ def _detect_from_credentials() -> str | None:
 def detect_provider(client: Any | None, model: str) -> str:
     """Choose a provider when the caller didn't.
 
-    A ``gateway`` model name → ``gateway``;
-    a Gemini model name or google-genai client → ``google``;
-    an openai client or `openai`/`ollama`/`gpt` in model name → ``openai``;
-    any other injected client → ``anthropic``;
-    otherwise pick whichever credential is present:
-    google → gateway → local → openai → anthropic → ollama.
+    Detection runs in priority order: an explicit model-name hint
+    (``gateway``/``local/``/``ollama``/``gemini``/OpenAI-compat keywords) wins
+    first, then the type of an injected client, then whichever credential is
+    configured. Falls back to ``anthropic`` when nothing else matches.
     """
     # The order of these checks defines the detection priority.
     checks: list[Callable[[], str | None]] = [
@@ -235,6 +236,18 @@ def _build_local_client() -> Any:
     return _openai_compat_client(api_base, api_key)
 
 
+def _build_gateway_client() -> Any:
+    """Build a client for an OpenAI-compatible AI gateway."""
+    from ...auth import resolve_gateway_credentials
+
+    try:
+        api_base, api_key = resolve_gateway_credentials()
+    except AuthError as exc:
+        raise AgentError(str(exc)) from exc
+
+    return _openai_compat_client(api_base, api_key)
+
+
 def build_client(provider: str, client: Any | None) -> Any:
     """Construct the SDK client for ``provider``, or return an injected one.
 
@@ -257,13 +270,3 @@ def build_client(provider: str, client: Any | None) -> Any:
 
     # Default to Anthropic
     return _build_anthropic_client()
-
-
-def _build_gateway_client() -> Any:
-    """Build a client for an OpenAI-compatible AI gateway."""
-    try:
-        api_base, api_key = resolve_gateway_credentials()
-    except AuthError as exc:
-        raise AgentError(str(exc)) from exc
-
-    return _openai_compat_client(api_base, api_key)
