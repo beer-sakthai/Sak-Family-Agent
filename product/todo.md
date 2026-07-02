@@ -2,6 +2,8 @@
 
 This file tracks the tasks required to build the "ServiceQuoteBot" MVP, as defined in `product/PLAN.md`.
 
+The Hermes runtime roadmap now lives in the root [`PLAN.md`](../PLAN.md). Keep this file focused on product delivery and the Hermes-free migration path.
+
 ## Product Direction
 
 The project is a **business-first AI team platform** with customer-specific packaging.

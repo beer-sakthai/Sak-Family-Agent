@@ -39,6 +39,30 @@ never duplicate content across files.
 | Monetization strategy | ✅ Done (2026-07-02) — Setup + Subscription |
 | MVP execution — ServiceQuoteBot build | ⏳ Pending next steps |
 
+## 🔧 Hermes Runtime Roadmap
+
+The Hermes migration work is tracked in [`product/todo.md`](./product/todo.md).
+This is the runtime-facing companion to the business plan above.
+
+### Phases
+
+1. Baseline decisions for runtime, control plane, routing, and memory.
+2. Host and runtime hardening.
+3. Core Hermes configuration and persona loading.
+4. Memory architecture and session search.
+5. Skills system and curator policy.
+6. Context compression and prefix-cache stability.
+7. Tooling, safety, and MCP integration.
+8. Telegram gateway wiring.
+9. DSPy trace capture and self-improvement loop.
+10. Verification and cost control.
+
+### Source files
+
+- `docs/agent-diagnosis.md` for the standalone run checklist and runtime notes.
+- `infra/hermes-agents/` for Hermes profiles, systemd services, and deployment config.
+- `product/todo.md` for the executable checklist.
+
 ---
 
 ## 🔑 Working Rules
