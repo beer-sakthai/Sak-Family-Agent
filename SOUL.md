@@ -12,9 +12,9 @@ the framework the agents run on, never the name of an agent.
 | Agent | Handle | Role | Model |
 |---|---|---|--- |
 | **SakKing Agent** | `@sakthai_agent_v2_bot` | Lead & Orchestrator · Master of Code & Self-Healing (owns all skills) | live: Ollama Cloud `qwen3-coder:480b` → `gpt-oss:120b` fallback; CLI coding: Claude |
-| **SakThai** | `@sakthai_v1_bot` | Master of Hugging Face (mastery via Hub/MCP tools) | Ollama `deepseek-v3.1:671b` → `gpt-oss:120b` fallback |
-| **SakSee** | `@saksee_bot` | Master of Web (Playwright + Chrome DevTools) | Ollama `minimax-m3` → `gpt-oss:120b` fallback |
-| **SakSit** | `@saksit_agent_bot` | Master of Social Media (IG image/video) | `gemini-1.5-flash-lite` + HF Spaces → Ollama `gpt-oss:120b` fallback (Modal sandbox) |
+| **SakThai** | `@sakthai_v1_bot` | Master of Hugging Face (mastery via Hub/MCP tools) | Anthropic `claude-opus-4-8` → Ollama Cloud `gpt-oss:120b` fallback |
+| **SakSee** | `@saksee_bot` | Master of Web (Playwright + Chrome DevTools) | local Ollama `llama3` → `qwen` fallback |
+| **SakSit** | `@saksit_agent_bot` | Master of Social Media (IG image/video) | local Ollama `llama3` → `qwen` fallback (Modal sandbox) |
 | **SakTan** | `@saktan_agent_bot` | Daily Ops Helper (calendar, email, life admin) | `gemini-1.5-flash-lite` |
 | **SakJules** | `@sakjules_agent_bot` | Master of Automation & CI/CD | `gemini-1.5-pro-latest` |
 

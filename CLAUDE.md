@@ -103,6 +103,7 @@ root with `SAKTHAI_HOME`):
    - Sessions: `sessions list|show|export`
    - System: `doctor`, `setup`, `status`, `tools`
    - Dashboard: `dashboard` (serves the React UI; `--export` writes a JSON snapshot)
+   - Hugging Face: `hf info|download <repo_id>`
 
 2. **Agent loop** — `sakthai run` drives a provider-agnostic tool-using loop
    (Claude, Gemini, or any OpenAI-compatible/Ollama endpoint).
@@ -205,6 +206,7 @@ Click commands split by area; all sub-files imported by `cli/__init__.py`:
 - `dashboard.py` — `dashboard` (serves the React `dashboard/dist/` bundle over a
   hardened `http.server`, or exports a JSON snapshot with `--export`)
 - `sessions.py` — `sessions` group
+- `hf.py` — `hf info|download` (Hugging Face Hub operations)
 
 ### Other subsystems
 
@@ -214,7 +216,7 @@ Click commands split by area; all sub-files imported by `cli/__init__.py`:
 - **`skills.py` + `skills/` + `library/`** — parse/catalog/validate `SKILL.md`
   files (YAML frontmatter: name, category, description, version, platforms, tags,
   related_skills). `library/` has 31 curated skills across 11 categories;
-  `skills/` has 17 user/extension skills. Skills are injected into the agent
+  `skills/` has 69 user/extension skills. Skills are injected into the agent
   system prompt via `render_skills_prompt_block()`.
 - **`dashboard/`** — `data.py` builds a UI-free, testable snapshot of the store
   (KPIs, growth series, per-kind breakdown, date-range filtering) and serializes
@@ -226,6 +228,15 @@ Click commands split by area; all sub-files imported by `cli/__init__.py`:
   `~/.sakthai/extensions`; `list`/`remove` manage installed bundles.
 - **`web/server.py`** — minimal HTTP server stub for a future web runtime.
 - **`learn/capture.py`** — `learn()` one-shot fact capture used by `sakthai learn`.
+- **`telegram/`** — a standalone `python-telegram-bot` polling bot (`bot.py`,
+  `config.py`, `workflow_executor.py`) that shells out to
+  `python -m sakthai run ... --with-skills <name> --fast --stateless` per
+  `/workflow <name>` command. Early-stage and **not yet aligned with this
+  repo's conventions**: its own `ALLOWED_USER_IDS`/`TELEGRAM_BOT_TOKEN`
+  handling in `telegram/config.py` duplicates the existing
+  `send_telegram_message` tool's env vars instead of going through
+  `config.py`, and `SKILLS_DIR` is a hardcoded relative path. Treat as
+  prototype code, not a pattern to extend.
 
 ---
 
@@ -262,7 +273,7 @@ Sak-Family-Agent/
 │   ├── dashboard/            # data.py (JSON snapshot; React UI lives at repo root)
 │   └── web/                  # HTTP server stub
 ├── tests/                    # hermetic test suite, no network
-├── skills/                   # 17 user/extension SKILL.md folders
+├── skills/                   # 69 user/extension SKILL.md folders
 ├── library/                  # 31 curated skills in 11 categories
 ├── docs/                     # Architecture & design docs
 ├── scripts/                  # Dev utilities (not linted/type-checked)
@@ -275,7 +286,7 @@ Sak-Family-Agent/
 
 ## Tests
 
-Tests live in `tests/` (37 files, ~9300 lines). All tests are hermetic — no
+Tests live in `tests/` (49 files, ~13000 lines). All tests are hermetic — no
 network, no GCP credentials. Integration tests that may hit real endpoints
 (Ollama, Anthropic) are marked `@pytest.mark.integration` and self-skip when
 credentials/endpoints are absent; CI excludes them with `-m "not integration"`.

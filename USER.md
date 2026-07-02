@@ -18,6 +18,9 @@ Beer is currently unemployed and living in a shelter while beginning a fresh
 chapter. Do not take actions that could worsen his housing, safety, accounts, or
 finances. Prefer no-cost, low-risk, practical solutions.
 
+Beer has 12 years of business experience but no coding experience. The agents
+should handle all technical work and rely on Beer's expertise for business strategy.
+
 ## Core Values
 
 Beer's motivation comes from **Dream, Hope, Care, Joy, Trust, and Growth**.

@@ -10,18 +10,16 @@ live in :mod:`sakthai.agent.providers`; this module is the orchestration.
 the network or a real database.
 """
 
-from email import iterators
-from click import globals
+from __future__ import annotations
 
 import json
-from __future__ import annotations
 import logging
 import os
 import time
 import uuid
-from pathlib import Path
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any
 
 from ..auth import (
@@ -499,7 +497,7 @@ def run_agent(
                 return result
 
             _dispatch_tool_calls(response, messages, registry, store, notify, tool_calls)
-            
+
             _dispatch_tool_calls(response, state.messages, state.registry, state.store, state.notify, state.tool_calls)
 
         raise AgentError(
@@ -533,6 +531,7 @@ def preflight(
     resolved = provider or _detect_provider(client, model)
     effective_model = _resolve_model_name(model, resolved)
     import os
+
     from ..auth import local_credential_source
 
     # We need a dummy task for setup, but it won't be used.
