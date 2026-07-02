@@ -33,11 +33,11 @@ never duplicate content across files.
 
 | Area | Status |
 |---|---|
-| Repo hygiene — persona SOULs | ✅ All 6 personas done (2026-07-02) |
+| Repository hygiene — persona SOULs | ✅ All 6 personas done (2026-07-02) |
 | Business strategy — market analysis | ✅ Done (2026-07-02) |
 | MVP definition | ✅ Done (2026-07-02) — ServiceQuoteBot |
 | Monetization strategy | ✅ Done (2026-07-02) — Setup + Subscription |
-| MVP execution — ServiceQuoteBot build | ⏳ Pending next steps |
+| MVP execution — ServiceQuoteBot build | ✅ Done (2026-07-02) |
 
 ## 🔧 Hermes Runtime Roadmap
 

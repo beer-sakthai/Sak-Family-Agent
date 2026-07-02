@@ -20,7 +20,7 @@ setup, a systemd service template, and a repository-local deployment guide.
 - Create: `docs/servicequotebot/deployment.md`
 - Modify: `product/todo.md`
 
-- [ ] **Step 1: Write the deployment guide**
+- [x] **Step 1: Write the deployment guide**
 
 Document the deployment flow end to end:
 - where the repository should live on the customer host
@@ -28,11 +28,11 @@ Document the deployment flow end to end:
 - how the price book gets ingested into the persistent memory DB before first launch
 - how to start and verify the service with `systemctl --user`
 
-- [ ] **Step 2: Update the tracker**
+- [x] **Step 2: Update the tracker**
 
 Mark the `Deployment Plan` checklist item complete only after the deployment guide exists and matches the implementation.
 
-- [ ] **Step 3: Verify the doc is specific**
+- [x] **Step 3: Verify the doc is specific**
 
 Run:
 
@@ -45,7 +45,7 @@ Expected:
 - the guide names the service file path and the setup script path
 - the guide shows one concrete example command for price-book ingestion
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add docs/servicequotebot/deployment.md product/todo.md
@@ -57,7 +57,7 @@ git commit -m "docs: add servicequotebot deployment guide"
 **Files:**
 - Create: `infra/servicequotebot/systemd/servicequotebot.service`
 
-- [ ] **Step 1: Write the service file**
+- [x] **Step 1: Write the service file**
 
 Use a user-service template that:
 - runs `python -m sakthai.telegram.bot`
@@ -86,11 +86,11 @@ RestartSec=5
 WantedBy=default.target
 ```
 
-- [ ] **Step 2: Verify the unit is portable**
+- [x] **Step 2: Verify the unit is portable**
 
 Confirm the unit only uses customer-local paths and does not reference the Hermes deployment tree.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add infra/servicequotebot/systemd/servicequotebot.service
@@ -103,7 +103,7 @@ git commit -m "infra: add servicequotebot systemd unit"
 - Create: `scripts/setup_servicequotebot.py`
 - Create: `tests/test_setup_servicequotebot.py`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Test these behaviors:
 - the script writes a customer env file with the requested Telegram and Anthropic credentials
@@ -130,7 +130,7 @@ def test_setup_writes_env_and_service(tmp_path, monkeypatch):
     assert result.service_file.read_text().startswith("[Unit]")
 ```
 
-- [ ] **Step 2: Run the tests and confirm they fail**
+- [x] **Step 2: Run the tests and confirm they fail**
 
 Run:
 
@@ -141,7 +141,7 @@ uv run pytest tests/test_setup_servicequotebot.py -q
 Expected:
 - import or function errors until the script exists
 
-- [ ] **Step 3: Implement the script**
+- [x] **Step 3: Implement the script**
 
 Implement a small standard-library CLI that:
 - accepts `--repo-root`, `--target-dir`, `--price-book`, `--anthropic-api-key`, `--telegram-bot-token`, and `--telegram-allowed-user-ids`
@@ -150,7 +150,7 @@ Implement a small standard-library CLI that:
 - copies the systemd template into the customer bundle
 - optionally runs `sakthai ingest_document` against the supplied price book after the environment is prepared
 
-- [ ] **Step 4: Run the tests and confirm they pass**
+- [x] **Step 4: Run the tests and confirm they pass**
 
 Run:
 
@@ -161,7 +161,7 @@ uv run pytest tests/test_setup_servicequotebot.py -q
 Expected:
 - tests pass and the generated env/service content matches the deployment contract
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add scripts/setup_servicequotebot.py tests/test_setup_servicequotebot.py
@@ -174,7 +174,7 @@ git commit -m "feat: add servicequotebot setup script"
 - Modify: `product/todo.md`
 - Possibly modify: `docs/servicequotebot/deployment.md`, `infra/servicequotebot/systemd/servicequotebot.service`, `scripts/setup_servicequotebot.py`
 
-- [ ] **Step 1: Run the repository checks**
+- [x] **Step 1: Run the repository checks**
 
 Run:
 
@@ -184,16 +184,28 @@ uv run ruff format --check .
 uv run pytest tests/ -q -m "not integration"
 ```
 
-- [ ] **Step 2: Update the tracker**
+- [x] **Step 2: Update the tracker**
 
 Mark `Deployment Plan` complete in `product/todo.md`.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add product/todo.md docs/servicequotebot/deployment.md infra/servicequotebot/systemd/servicequotebot.service scripts/setup_servicequotebot.py tests/test_setup_servicequotebot.py
 git commit -m "docs: finish servicequotebot deployment plan"
 ```
+
+## Completion Notes
+
+This plan is complete. The deployment bundle is now live in the repository
+and the active trackers point to the completed ServiceQuoteBot MVP:
+
+- `PLAN.md` marks "MVP execution — ServiceQuoteBot build" complete.
+- `product/todo.md` marks the deployment plan complete.
+- `docs/servicequotebot/deployment.md` documents the customer setup flow.
+- `infra/servicequotebot/systemd/servicequotebot.service` provides the
+  portable user-service unit.
+- `scripts/setup_servicequotebot.py` and its tests cover the bootstrap path.
 
 ## Coverage Check
 
