@@ -31,10 +31,10 @@ For Hermes-free migration work, keep the order fixed:
   - The persona is focused on customer service, quoting, and lead capture.
   - It explicitly leans on `SakTan` for ops and `SakThai` for logic.
 
-- [ ] **Knowledge Ingestion:**
-  - Develop a new tool `ingest_document` for the agent.
-  - This tool should parse common document formats (e.g., Markdown, CSV, plain text) containing a price list or FAQs.
-  - It will use the `learn` tool internally to save the parsed information as structured `fact` entries in the `memory.db`.
+- [x] **Knowledge Ingestion:**
+  - Added the `ingest_document` tool to parse Markdown, CSV, and plain-text source files.
+  - The tool stores each extracted line as a structured `fact` entry in the active `memory.db`.
+  - It uses the existing `learn` path internally so document facts flow through the same memory layer as manual facts.
 
 - [ ] **Quoting & Lead Capture:**
   - Create a new skill `service-quoting` that guides the agent on how to construct a quote by recalling pricing facts.
