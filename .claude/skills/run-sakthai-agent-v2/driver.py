@@ -76,7 +76,13 @@ def drive_mcp(env: dict[str, str]) -> dict[int, dict]:
     ]
     payload = "".join(json.dumps(r) + "\n" for r in requests)
     proc = subprocess.run(
-        [BIN, "mcp"], env=env, input=payload, capture_output=True, text=True, timeout=60, shell=False
+        [BIN, "mcp"],
+        env=env,
+        input=payload,
+        capture_output=True,
+        text=True,
+        timeout=60,
+        shell=False,
     )
     out: dict[int, dict] = {}
     for line in proc.stdout.splitlines():

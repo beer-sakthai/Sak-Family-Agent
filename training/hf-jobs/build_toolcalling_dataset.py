@@ -235,11 +235,15 @@ def learn_rows() -> Iterable[tuple[str, str, dict[str, Any]]]:
     ]
     for fact_value, fact_kind, fact_key in FACTS:
         for template in random.sample(templates, 3):
-            yield template.format(f=fact_value.lower()), "learn", {
-                "value": fact_value,
-                "kind": fact_kind,
-                "key": fact_key,
-            }
+            yield (
+                template.format(f=fact_value.lower()),
+                "learn",
+                {
+                    "value": fact_value,
+                    "kind": fact_kind,
+                    "key": fact_key,
+                },
+            )
 
 
 def recall_rows() -> Iterable[tuple[str, str, dict[str, Any]]]:
@@ -369,7 +373,10 @@ def build():
                             "role": "assistant",
                             "content": "",
                             "tool_calls": [
-                                {"type": "function", "function": {"name": tool_name, "arguments": tool_args}}
+                                {
+                                    "type": "function",
+                                    "function": {"name": tool_name, "arguments": tool_args},
+                                }
                             ],
                         },
                     ],
@@ -382,7 +389,11 @@ def build():
                 "messages": [
                     {"role": "system", "content": SYSTEM_PROMPT},
                     {"role": "user", "content": user_text},
-                    {"role": "assistant", "content": answer, "tool_calls": []}, # Explicitly show no tool call
+                    {
+                        "role": "assistant",
+                        "content": answer,
+                        "tool_calls": [],
+                    },  # Explicitly show no tool call
                 ],
             }
         )
