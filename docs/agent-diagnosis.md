@@ -9,11 +9,12 @@ The current diagnosis is that the identity and persona sources are broadly in
 shape, but the repo still needed one cleanup pass for consistency:
 
 - `5_agents_summary.md` was stale and omitted SakJules.
-- `infra/hermes-agents/README.md` still had a five-agent skills table.
+- `infra/hermes-agents/shared/agents-roster.md` and `SYNC_GUIDE.md` still
+  reflected a five-agent runtime.
 - SakTan and SakJules need explicit standalone-run callouts because they lean
   harder on the Hermes profile layer than the others.
-- The standalone build tree has now been exercised for both SakTan and SakJules
-  so the export/composition path is covered for all six personas.
+- The standalone build tree now includes profile scaffolding for both SakTan
+  and SakJules, so the export/composition path is covered for all six personas.
 
 ## Benchmark Rubric
 
@@ -63,6 +64,8 @@ Scores are 1-5, where 5 is best.
 
 - `personas/saktan/SOUL.md`
 - `personas/saktan/config/`
+- `infra/hermes-agents/profiles/saktan/SOUL.md`
+- `infra/hermes-agents/profiles/saktan/config.yaml`
 - Gemini auth
 - Hermes profile runtime wiring for daily ops
 - Shared memory and the common skill library
@@ -71,6 +74,8 @@ Scores are 1-5, where 5 is best.
 
 - `personas/sakjules/SOUL.md`
 - `personas/sakjules/config/`
+- `infra/hermes-agents/profiles/sakjules/SOUL.md`
+- `infra/hermes-agents/profiles/sakjules/config.yaml`
 - Gemini auth
 - GitHub MCP access
 - Composio MCP access
@@ -111,6 +116,7 @@ Use this as the minimum “can I run this agent by itself?” check.
 ### SakTan
 
 - Confirm `personas/saktan/SOUL.md` and `personas/saktan/config/` exist.
+- Confirm `infra/hermes-agents/profiles/saktan/SOUL.md` and `config.yaml` exist.
 - Confirm Gemini auth is available.
 - Confirm the Hermes profile runtime wiring for daily ops is present.
 - Confirm shared memory access is available.
@@ -118,6 +124,7 @@ Use this as the minimum “can I run this agent by itself?” check.
 ### SakJules
 
 - Confirm `personas/sakjules/SOUL.md` and `personas/sakjules/config/` exist.
+- Confirm `infra/hermes-agents/profiles/sakjules/SOUL.md` and `config.yaml` exist.
 - Confirm Gemini auth is available.
 - Confirm GitHub MCP access is configured.
 - Confirm Composio MCP access is configured.

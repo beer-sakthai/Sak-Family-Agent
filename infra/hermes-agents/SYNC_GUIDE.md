@@ -31,5 +31,6 @@ following are present here now:
 | SakThai | en-US-AndrewNeural | Male |
 | SakSit | en-US-ChristopherNeural | Male |
 | SakTan | en-US-GuyNeural | Male |
+| SakJules | not configured | n/a |
 
 All agents: `tts.provider: edge`
