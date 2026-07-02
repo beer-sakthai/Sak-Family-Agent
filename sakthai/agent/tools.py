@@ -97,7 +97,9 @@ def _capture_lead(args: dict[str, Any], store: MemoryStore) -> str:
     phone = args.get("phone")
     email = args.get("email")
     query = args.get("query")
-    lead_id = capture_lead_fact(name=name, phone=phone, email=email, query=str(query or ""), store=store)
+    lead_id = capture_lead_fact(
+        name=name, phone=phone, email=email, query=str(query or ""), store=store
+    )
     return f"captured lead id={lead_id}"
 
 
