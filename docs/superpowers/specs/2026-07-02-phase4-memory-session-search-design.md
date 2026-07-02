@@ -69,11 +69,25 @@ def search_sessions(
 - Walks `*.json` in the sessions directory, parses each, skips
   unreadable/corrupt files (`except (JSONDecodeError, OSError): continue`,
   same as `sessions_list`'s existing pattern).
+- **Searchable text** (verified against the actual payload written by
+  `_save_session_log` in `agent/loop.py`, not just the general shape):
+  `task`, `result.text` (the final answer), and `result.tool_calls[].name` /
+  `result.tool_calls[].input` for every entry in `result.tool_calls`. Note
+  `result.tool_calls` is already a **flat** `list[dict]` (`{name, input,
+  is_error}`) — there is no need to walk the nested `messages[].content[]`
+  blocks to find tool calls; `messages` is not parsed by this feature at all.
 - **Query semantics:** split `query` on whitespace into terms; a session
   matches if **every** term appears (case-insensitive) somewhere in the
-  session's searchable text (task, tool-call names/inputs, result/text
-  blocks). AND-of-terms, not exact-substring — this is what "search" means
-  colloquially and costs only a few extra lines over substring matching.
+  searchable text above. AND-of-terms, not exact-substring — this is what
+  "search" means colloquially and costs only a few extra lines over substring
+  matching. An empty/whitespace-only query raises `ValueError` (mirrors
+  `parse_duration`'s existing empty-input guard in `cli/sessions.py`).
+- **Missing sessions directory:** if `sessions_dir()` doesn't exist,
+  `search_sessions()` returns `[]` (mirrors `sessions_list`'s existing
+  `if not dir_path.exists(): ...; return` guard — no error).
+- **No matches:** the CLI prints `"No matching sessions found."` (same
+  empty-state style as `sessions_list`'s `"No sessions found."`); the agent
+  tool returns an empty list, same as any other zero-result tool call.
 - **Result ordering:** sorted by session timestamp descending (most recent
   first), matching `sessions_list`'s existing sort order. No relevance
   ranking — an on-demand substring scan doesn't warrant one.
@@ -138,3 +152,24 @@ minimal (YAGNI) given current session volume.
 | `tests/test_session_search.py` | New |
 | `tests/test_tools.py` | Extend |
 | CLI sessions test file | Extend |
+
+## Plan-First Workflow Linkage
+
+Per this repo's `CLAUDE.md` ("Always read and update `PLAN.md`... mark tasks
+`[ ]` → `[x] YYYY-MM-DD` once verified"), the implementation plan derived from
+this spec adds a **Phase 4** section to `product/todo.md` (alongside the
+existing Phase 1–3 sections) with these checklist items, each checked off
+with a date once its verification step passes:
+
+- [ ] **Architecture audit:** Part A of this spec folded into `product/todo.md`
+  or linked from it.
+- [ ] **`search_sessions()`:** implemented in `sakthai/memory/session_search.py`
+  with the query/ordering/missing-dir semantics above.
+- [ ] **CLI command:** `sakthai sessions search <query> [--limit N]`.
+- [ ] **Agent tool:** `search_sessions` in `BUILTIN_TOOLS`, verified reachable
+  from both `sakthai run` and `sakthai mcp`.
+- [ ] **Test coverage:** all cases in the Testing Plan above passing.
+- [ ] **Local verification:** `uv run pytest tests/test_session_search.py
+  tests/test_tools.py -q` and a manual `sakthai sessions search` smoke run.
+- [ ] **GitHub delivery:** committed, pushed, PR opened, merged after green CI
+  (per `CLAUDE.md`'s commit → green CI → merge workflow).
