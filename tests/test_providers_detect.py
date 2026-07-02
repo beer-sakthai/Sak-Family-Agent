@@ -19,6 +19,41 @@ def _client_with_module(module: str) -> object:
     _Fake.__module__ = module
     return _Fake()
 
+@pytest.mark.parametrize(
+    ("client", "model", "env", "creds", "expected"),
+    [
+        (None, "gateway/claude-3", {}, {}, "gateway"),
+        (None, "gemini-1.5-pro", {}, {}, "google"),
+        (_client_with_module("google.genai.client"), "m", {}, {}, "google"),
+        (None, "local/my-model", {}, {}, "local"),
+        (_client_with_module("openai._client"), "m", {}, {}, "openai"),
+        (None, "gpt-4o", {}, {}, "openai"),
+        (None, "ollama/llama3", {}, {}, "ollama"),
+        (
+            _client_with_module("anthropic._client"),
+            "m",
+            {},
+            {},
+            "anthropic",
+        ),
+        (None, "claude-3", {"GEMINI_API_KEY": "test"}, {}, "google"),
+        (None, "claude-3", {}, {"openai": True}, "openai"),
+        (None, "claude-3", {}, {"gateway": True}, "gateway"),
+        (None, "claude-3", {}, {}, "anthropic"), # Default fallback
+    ],
+)
+def test_detect_provider_scenarios(client, model, env, creds, expected, monkeypatch):
+    """Test provider detection logic across various signals."""
+    for k, v in env.items():
+        monkeypatch.setenv(k, v)
+
+    with (
+        patch("sakthai.agent.providers.openai_credential_source", return_value="dummy" if creds.get("openai") else None),
+        patch("sakthai.agent.providers.gateway_credential_source", return_value="dummy" if creds.get("gateway") else None),
+        patch("sakthai.agent.providers.local_credential_source", return_value="dummy" if creds.get("local") else None),
+        patch("sakthai.agent.providers.anthropic_credential_source", return_value="dummy" if creds.get("anthropic") else None),
+    ):
+        assert detect_provider(client, model) == expected
 
 def test_detect_gemini_via_client_module() -> None:
     client = _client_with_module("google.genai.client")

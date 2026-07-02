@@ -199,12 +199,14 @@ def _auth_report() -> dict[str, Any]:
     from .auth import (
         anthropic_credential_source,
         gateway_credential_source,
+        gemini_credential_source,
         load_gemini_cli_token,
         openai_credential_source,
     )
 
     anthropic_source = anthropic_credential_source()
     openai_source = openai_credential_source()
+    gemini_source = gemini_credential_source()
     gateway_source = gateway_credential_source()
     return {
         "anthropic_source": anthropic_source,
@@ -214,6 +216,8 @@ def _auth_report() -> dict[str, Any]:
         "openai_ok": openai_source is not None,
         "gateway_source": gateway_source,
         "gateway_ok": gateway_source is not None,
+        "gemini_source": gemini_source,
+        "gemini_ok": gemini_source is not None,
     }
 
 
