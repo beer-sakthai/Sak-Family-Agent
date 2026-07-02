@@ -153,6 +153,29 @@ minimal (YAGNI) given current session volume.
 | `tests/test_tools.py` | Extend |
 | CLI sessions test file | Extend |
 
+## Six-Stage Cycle Alignment
+
+This repo runs work through its own Dream → Hope → Care → Joy → Trust →
+Growth cycle (`sakthai/cycle/`, `docs/cycle/*.md`), persisted as a single
+fact in `MemoryStore` and advanced with `sakthai cycle set|next`. Brainstorming
+this spec was Dream/Hope/Care-shaped work but never touched the cycle
+tooling; persisted stage is still `DREAM (1/6)` as of this writing. The
+implementation plan for this phase drives the cycle explicitly instead of
+skipping it:
+
+| Stage | Command to run | What satisfies it here |
+|---|---|---|
+| Dream | `sakthai memory show` | Recall prior Phase 1-3 facts/decisions before coding starts |
+| Hope | `sakthai learn` | Record the key decisions from this spec (AND-of-terms query, no schema change, flat `result.tool_calls`) as facts |
+| Care | `sakthai learn` | Record findings from the correctness/schema review (already done in conversation; log it) |
+| Joy | `sakthai memory stats` | After implementation + tests pass + CI green |
+| Trust | `sakthai doctor` | Before merge — also confirms `search_sessions()` is read-only/idempotent by construction (no writes) |
+| Growth | `sakthai memory consolidate` | After merge, closing the loop before Phase 5 |
+
+The implementation plan should call `sakthai cycle next` at each transition
+so the persisted stage reflects real progress, not just `product/todo.md`
+checkboxes.
+
 ## Plan-First Workflow Linkage
 
 Per this repo's `CLAUDE.md` ("Always read and update `PLAN.md`... mark tasks
