@@ -1,6 +1,6 @@
-<div align="center">
-
 # 🧠 House of Sak
+
+<div align="center">
 
 ![House of Sak](./assets/house_of_sak_v2.png)
 
@@ -36,7 +36,7 @@ One package, three ways in — a CLI, a tool-using agent loop, and an MCP stdio 
 - [⚙️ Runtimes](#️-runtimes)
 - [🔗 MCP (both directions)](#-mcp-both-directions)
 - [📚 Skills](#-skills)
-- [🛠️ Built-in tools](#-built-in-tools)
+- [🛠️ Built-in tools](#built-in-tools)
 - [💻 Commands](#-commands)
 - [👩‍💻 Develop](#-develop)
 - [🤝 Family agents](#-family-agents)
@@ -80,11 +80,11 @@ One package, three ways in — a CLI, a tool-using agent loop, and an MCP stdio 
 ## 🗂️ Monorepo layout
 
 This repository is the **source workspace** for the Sak family. It contains the
-shared core plus the six persona overlays, and it can **export standalone repo
-snapshots** for each persona into `build/agent-repos/<persona>/` with
-`make export-agent-repos`.
+shared core plus the six persona overlays, and it can **export standalone
+repository snapshots** for each persona into `build/agent-repos/<persona>/`
+with `make export-agent-repos`.
 
-```
+```text
 .
 ├── sakthai/  library/  skills/   # the SakThai agent package (root, this README)
 ├── packages/
@@ -100,24 +100,21 @@ snapshots** for each persona into `build/agent-repos/<persona>/` with
 ```
 
 - 👑 **Personas** are the **Sak Family Agents**: **SakKing** is the main (Lead & Orchestrator,
-  Master of Code & Self-Healing), and **SakThai**, **SakSee**, **SakSit**, and **SakTan** are the
-  family it coordinates. *"Hermes" is only the framework they run on, never an agent's name.*
-  The shared skill library now lives once under `personas/shared/skills/`, with each persona
-  keeping only its unique files. See [`personas/README.md`](./personas/README.md) and the root
   Master of Code & Self-Healing), and **SakThai**, **SakSee**, **SakSit**, **SakTan**, and
   **SakJules** are the family it coordinates. *"Hermes" is only the framework they run on,
   never an agent's name.* The shared skill library now lives once under
   `personas/shared/skills/`, with each persona keeping only its unique files. Use
   `scripts/export_agent_repo.py <persona> --out ...` or `make export-agent-repos` when you want
-  a standalone repo snapshot. See [`personas/README.md`](./personas/README.md) and the root
-  [`SOUL.md`](./docs/SOUL.md). Read [`USER.md`](./docs/USER.md) for Beer's identity, support context, and
-  the values behind the agents: Dream, Hope, Care, Joy, Trust, and Growth. See
+  a standalone repository snapshot. See [`personas/README.md`](./personas/README.md) and the
+  root [`SOUL.md`](./docs/SOUL.md). Read [`USER.md`](./docs/USER.md) for Beer's identity: Beer is
+  Nanthasit Burankum, and SakThai plus the Sak Family are meant to act as supportive companions
+  grounded in Beer's values of Dream, Hope, Care, Joy, Trust, and Growth. See
   [`infra/hermes-agents/README.md`](./infra/hermes-agents/README.md) for full Telegram-bot
   deployment.
 - 📦 **`packages/agent-self-evolution`** targets a different runtime (Nous Research's Hermes) with
   a heavy, disjoint dependency set, so it is **not** a uv workspace member — build it on its own
   per its README. The root `uv.lock` stays scoped to the SakThai agent.
-- ✅ CI (`ci.yml`, `pylint.yml`) lints/types/tests only the `sakthai` core; the co-located trees
+- ✅ CI (`ci.yml`, `pylint.yml`) lints/types/tests only the `sakthai` core; the colocated trees
   carry their own quality bars.
 
 ---
@@ -142,7 +139,8 @@ All runtimes share `~/.sakthai/memory.db` (override the root with `SAKTHAI_HOME`
 
 ## 🤝 Family Agents
 
-The repo tracks six personas end to end, each with a distinct role and personality. See `SOUL.md` for the full roster.
+The repository tracks six personas end-to-end, each with a distinct role and personality. See
+`SOUL.md` for the full roster.
 
 | Agent | Role | Portrait |
 |---|---|---|
@@ -156,7 +154,7 @@ The repo tracks six personas end to end, each with a distinct role and personali
 ![House of Sak](./assets/house_of_sak_v2.png)
 
 The canonical profile source for the family lives under `infra/hermes-agents/profiles/`, and
-`personas/` contains the consolidated skill trees and overlays used by the repo.
+`personas/` contains the consolidated skill trees and overlays used by the repository.
 
 ---
 
@@ -255,7 +253,7 @@ stdio** — a subprocess JSON-RPC channel with **no network and zero API/cloud c
   }
   ```
 
-- **Mirror SakKing-learned skills** into this repo as first-class `sakthai-` skills:
+- **Mirror SakKing-learned skills** into this repository as first-class `sakthai-` skills:
 
   ```bash
   sakthai skills sync-sakking            # import learned skills into skills/
@@ -269,7 +267,7 @@ stdio** — a subprocess JSON-RPC channel with **no network and zero API/cloud c
 
 ## 📚 Skills
 
-A *skill* is a directory with a `SKILL.md` (YAML frontmatter + markdown body) that gets injected
+A *skill* is a directory with a `SKILL.md` (YAML frontmatter + Markdown body) that gets injected
 into the agent's system prompt when active. SakThai ships:
 
 - 📗 **`library/`** — curated skills across 11 categories: `agent`, `automation`, `coding`,
@@ -298,6 +296,7 @@ for a run with `sakthai run "<task>" --with-skills my-skill`.
 
 ---
 
+<a id="built-in-tools"></a>
 ## 🛠️ Built-in tools
 
 The same **8-tool** registry (`sakthai/agent/tools.py`) powers both `sakthai run` and
@@ -308,7 +307,7 @@ The same **8-tool** registry (`sakthai/agent/tools.py`) powers both `sakthai run
 | 🧠 `learn` | Save a fact (value, kind, key) | The agent's write path into memory |
 | 🔎 `recall` | List recent facts + top observations | Read what's already known |
 | 🔍 `search` | Substring search over facts + observations | Targeted lookup |
-| 🗑️ `forget` | Delete a fact by id | — |
+| 🗑️ `forget` | Delete a fact by ID | — |
 | 📄 `read_file` | Read a local text file | Sandboxed to cwd + `~/.sakthai` + `SAKTHAI_READ_ALLOW`; 20k-char cap |
 | 💲 `run_command` | Run a CLI command (no shell) | **Opt-in** via `SAKTHAI_SHELL_ALLOW`; 20k-char cap |
 | 📨 `send_telegram_message` | Send a Telegram message | Needs `TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID` |
@@ -331,8 +330,11 @@ sakthai cycle status|next|set|list   # the 6-stage cycle
 sakthai skills list|show|validate|create|sync-sakking
 sakthai sessions list|show|export    # inspect session logs
 sakthai dashboard                    # Streamlit view of the store
+```
 
-# 🧰 Monorepo development shortcuts
+## 🧰 Monorepo development shortcuts
+
+```bash
 make test                            # run pytest suite (via uv)
 make lint                            # run ruff linters (via uv)
 make deploy-hermes                   # deploy hermes configs and restart local services
@@ -342,6 +344,7 @@ make compose-personas                # rebuild persona skill trees into build/
 
 ---
 
+<a id="develop"></a>
 ## 👩‍💻 Develop
 
 Mirrors `.github/workflows/ci.yml` (run before pushing; **green CI is the bar for `main`**).
@@ -358,7 +361,7 @@ make test                                # run the hermetic test suite
 
 ## 📁 Repository layout
 
-```
+```text
 .
 ├── assets/                         # Images for README and documentation
 ├── bin/                            # Executable scripts
