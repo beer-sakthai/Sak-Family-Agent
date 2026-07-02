@@ -47,7 +47,7 @@ For Hermes-free migration work, keep the order fixed:
   - Align its configuration (`telegram/config.py`) to use the central `sakthai/config.py` and `sakthai/auth.py` modules.
   - Modify the bot to run the main `sakthai run` agent loop with a persistent session, rather than as a stateless subprocess.
 
-- [ ] **Deployment Plan:**
+- [x] **Deployment Plan:**
   - Document the steps to deploy the ServiceQuoteBot for a customer.
   - This should include creating a systemd service file or a Dockerfile for easy, repeatable deployment.
   - Write a script to automate the setup for a new client (e.g., setting API keys, ingesting their price book).
