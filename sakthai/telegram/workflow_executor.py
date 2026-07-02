@@ -1,14 +1,15 @@
-import os
 import asyncio
-import subprocess
+import os
 
 SKILLS_DIR = "skills"
+
 
 def get_available_workflows():
     """
     Returns a list of available workflows (skills).
     """
     return [d for d in os.listdir(SKILLS_DIR) if os.path.isdir(os.path.join(SKILLS_DIR, d))]
+
 
 async def run_workflow(workflow_name: str) -> str:
     """
@@ -30,12 +31,10 @@ async def run_workflow(workflow_name: str) -> str:
             "--with-skills",
             workflow_name,
             "--fast",
-            "--stateless"
+            "--stateless",
         ]
         process = await asyncio.create_subprocess_exec(
-            *command,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE
+            *command, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
         )
         stdout, stderr = await process.communicate()
 

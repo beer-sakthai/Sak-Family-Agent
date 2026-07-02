@@ -7,14 +7,7 @@ from unittest.mock import MagicMock, patch
 import httpx
 import pytest
 
-from sakthai.agent.providers import (
-    AgentError,
-    _detect_from_client_type,
-    _detect_from_credentials,
-    _detect_from_model_name,
-    build_client,
-    detect_provider,
-)
+from sakthai.agent.providers import AgentError, build_client, detect_provider
 
 # -- detect_provider — client-based detection ------------------------------
 
@@ -25,6 +18,7 @@ def _client_with_module(module: str) -> object:
 
     _Fake.__module__ = module
     return _Fake()
+
 
 @pytest.mark.parametrize(
     ("client", "model", "env", "creds", "expected"),
@@ -46,7 +40,7 @@ def _client_with_module(module: str) -> object:
         (None, "claude-3", {"GEMINI_API_KEY": "test"}, {}, "google"),
         (None, "claude-3", {}, {"openai": True}, "openai"),
         (None, "claude-3", {}, {"gateway": True}, "gateway"),
-        (None, "claude-3", {}, {}, "anthropic"), # Default fallback
+        (None, "claude-3", {}, {}, "anthropic"),  # Default fallback
     ],
 )
 def test_detect_provider_scenarios(client, model, env, creds, expected, monkeypatch):
@@ -55,12 +49,25 @@ def test_detect_provider_scenarios(client, model, env, creds, expected, monkeypa
         monkeypatch.setenv(k, v)
 
     with (
-        patch("sakthai.agent.providers.openai_credential_source", return_value="dummy" if creds.get("openai") else None),
-        patch("sakthai.agent.providers.gateway_credential_source", return_value="dummy" if creds.get("gateway") else None),
-        patch("sakthai.agent.providers.local_credential_source", return_value="dummy" if creds.get("local") else None),
-        patch("sakthai.agent.providers.anthropic_credential_source", return_value="dummy" if creds.get("anthropic") else None),
+        patch(
+            "sakthai.agent.providers.openai_credential_source",
+            return_value="dummy" if creds.get("openai") else None,
+        ),
+        patch(
+            "sakthai.agent.providers.gateway_credential_source",
+            return_value="dummy" if creds.get("gateway") else None,
+        ),
+        patch(
+            "sakthai.agent.providers.local_credential_source",
+            return_value="dummy" if creds.get("local") else None,
+        ),
+        patch(
+            "sakthai.agent.providers.anthropic_credential_source",
+            return_value="dummy" if creds.get("anthropic") else None,
+        ),
     ):
         assert detect_provider(client, model) == expected
+
 
 def test_detect_gemini_via_client_module() -> None:
     client = _client_with_module("google.genai.client")
@@ -90,7 +97,6 @@ def test_detect_gemini_model_name(model: str) -> None:
     [
         "gpt-4o",
         "gpt-3.5-turbo",
-        "ollama/llama3",
         "qwen2.5-72b",
         "llama3.1",
         "deepseek-v2",
@@ -110,32 +116,28 @@ def test_detect_gateway_model_prefix(model: str) -> None:
 
 
 def test_detect_fallback_anthropic_key(monkeypatch: pytest.MonkeyPatch) -> None:
-    with (
-        patch("sakthai.agent.providers.anthropic_credential_source", return_value="env"),
-        patch("sakthai.agent.providers.gateway_credential_source", return_value=None),
-        patch("sakthai.agent.providers.openai_credential_source", return_value=None),
-    ):
-        monkeypatch.delenv("GEMINI_API_KEY", raising=False)
-        monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
-        monkeypatch.delenv("OLLAMA_HOST", raising=False)
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
+    with patch("sakthai.agent.providers.anthropic_credential_source", return_value="env"):
         assert detect_provider(None, "unknown-model") == "anthropic"
 
 
 def test_detect_fallback_gemini_key(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("GEMINI_API_KEY", "key123")
-    assert detect_provider(None, "unknown-model") == "google"
+    with patch("sakthai.agent.providers.anthropic_credential_source", return_value=None):
+        assert detect_provider(None, "unknown-model") == "google"
 
 
 def test_detect_fallback_google_api_key(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("GEMINI_API_KEY", raising=False)
     monkeypatch.setenv("GOOGLE_API_KEY", "gkey")
-    assert detect_provider(None, "unknown-model") == "google"
+    with patch("sakthai.agent.providers.anthropic_credential_source", return_value=None):
+        assert detect_provider(None, "unknown-model") == "google"
 
 
 def test_detect_fallback_openai_credential(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("GEMINI_API_KEY", raising=False)
     monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
-    monkeypatch.delenv("OLLAMA_HOST", raising=False)
     with (
         patch("sakthai.agent.providers.anthropic_credential_source", return_value=None),
         patch("sakthai.agent.providers.openai_credential_source", return_value="env"),
@@ -146,7 +148,6 @@ def test_detect_fallback_openai_credential(monkeypatch: pytest.MonkeyPatch) -> N
 def test_detect_fallback_gateway_credential(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("GEMINI_API_KEY", raising=False)
     monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
-    monkeypatch.delenv("OLLAMA_HOST", raising=False)
     with (
         patch("sakthai.agent.providers.anthropic_credential_source", return_value=None),
         patch("sakthai.agent.providers.openai_credential_source", return_value=None),
@@ -158,75 +159,12 @@ def test_detect_fallback_gateway_credential(monkeypatch: pytest.MonkeyPatch) -> 
 def test_detect_fallback_default_is_anthropic(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("GEMINI_API_KEY", raising=False)
     monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
-    monkeypatch.delenv("OLLAMA_HOST", raising=False)
     with (
         patch("sakthai.agent.providers.anthropic_credential_source", return_value=None),
         patch("sakthai.agent.providers.openai_credential_source", return_value=None),
         patch("sakthai.agent.providers.gateway_credential_source", return_value=None),
     ):
         assert detect_provider(None, "unknown-model") == "anthropic"
-
-
-def test_detect_ollama_via_env(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("OLLAMA_HOST", "http://localhost:11434")
-    assert detect_provider(None, "some-model") == "ollama"
-
-
-# -- unit tests for new private helpers ------------------------------------
-
-
-@pytest.mark.parametrize(
-    ("model", "expected"),
-    [
-        ("gateway-model", "gateway"),
-        ("ollama/llama3", "ollama"),
-        ("gemini-1.5-pro", "google"),
-        ("gpt-4o", "openai"),
-        ("claude-3-opus", None),
-    ],
-)
-def test_detect_from_model_name(model: str, expected: str | None) -> None:
-    """Test `_detect_from_model_name` with various model name hints."""
-    assert _detect_from_model_name(model) == expected
-
-
-@pytest.mark.parametrize(
-    ("module", "expected"),
-    [
-        ("google.genai.client", "google"),
-        ("openai._client", "openai"),
-        ("anthropic._client", "anthropic"),
-        ("some.other.lib", "anthropic"),
-    ],
-)
-def test_detect_from_client_type(module: str, expected: str) -> None:
-    """Test `_detect_from_client_type` with various client module paths."""
-    assert _detect_from_client_type(_client_with_module(module)) == expected
-    assert _detect_from_client_type(None) is None
-
-
-def test_detect_from_credentials_priority(monkeypatch: pytest.MonkeyPatch) -> None:
-    # Set all credentials; Ollama should win due to order.
-    monkeypatch.setenv("OLLAMA_HOST", "http://localhost:11434")
-    monkeypatch.setenv("GEMINI_API_KEY", "key123")
-    with (
-        patch("sakthai.agent.providers.openai_credential_source", return_value="env"),
-        patch("sakthai.agent.providers.gateway_credential_source", return_value="gw"),
-        patch("sakthai.agent.providers.anthropic_credential_source", return_value="env"),
-    ):
-        assert _detect_from_credentials() == "ollama"
-
-    # Unset Ollama; Gemini should win.
-    monkeypatch.delenv("OLLAMA_HOST")
-    assert _detect_from_credentials() == "google"
-
-    # Unset Gemini; OpenAI should win.
-    monkeypatch.delenv("GEMINI_API_KEY")
-    assert _detect_from_credentials() == "openai"
-
-    # Unset OpenAI; Gateway should win.
-    with patch("sakthai.agent.providers.openai_credential_source", return_value=None):
-        assert _detect_from_credentials() == "gateway"
 
 
 # -- build_client ----------------------------------------------------------
