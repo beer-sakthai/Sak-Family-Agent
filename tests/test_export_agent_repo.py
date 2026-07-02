@@ -23,6 +23,17 @@ def _load_module() -> ModuleType:
 export_agent_repo = _load_module()
 
 
+def test_persona_registry_covers_all_six_agents() -> None:
+    assert set(export_agent_repo.PERSONA_DETAILS) == {
+        "sakking",
+        "sakthai",
+        "saksee",
+        "saksit",
+        "saktan",
+        "sakjules",
+    }
+
+
 @pytest.fixture
 def source_tree(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     root = tmp_path / "source"
@@ -48,10 +59,22 @@ def source_tree(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     (root / "personas" / "sakjules" / "skills" / "overlay-skill" / "SKILL.md").write_text(
         "---\nname: SakJules-overlay-skill\n---\noverlay\n", encoding="utf-8"
     )
+    (root / "personas" / "saktan" / "skills" / "overlay-skill").mkdir(parents=True)
+    (root / "personas" / "saktan" / "skills" / "overlay-skill" / "SKILL.md").write_text(
+        "---\nname: SakTan-overlay-skill\n---\noverlay\n", encoding="utf-8"
+    )
     (root / "personas" / "sakjules" / "SOUL.md").write_text("SakJules soul", encoding="utf-8")
+    (root / "personas" / "saktan" / "SOUL.md").write_text("SakTan soul", encoding="utf-8")
     (root / "infra" / "hermes-agents" / "profiles" / "sakjules").mkdir(parents=True)
     (root / "infra" / "hermes-agents" / "profiles" / "sakjules" / "SOUL.md").write_text(
         "SakJules profile soul", encoding="utf-8"
+    )
+    (root / "infra" / "hermes-agents" / "profiles" / "saktan").mkdir(parents=True)
+    (root / "infra" / "hermes-agents" / "profiles" / "saktan" / "SOUL.md").write_text(
+        "SakTan profile soul", encoding="utf-8"
+    )
+    (root / "infra" / "hermes-agents" / "profiles" / "saktan" / "config.yaml").write_text(
+        "model:\n  default: gemini-2.5-flash-lite\n", encoding="utf-8"
     )
     (root / "infra" / "hermes-agents" / "profiles" / "sakjules" / "config.yaml").write_text(
         "model:\n  default: gemini-3-pro\n", encoding="utf-8"
@@ -158,6 +181,24 @@ def test_export_creates_persona_specific_repo(
         out / "infra" / "hermes-agents" / "systemd" / "hermes-gateway-sakthai.service"
     ).exists()
     assert "exported sakjules ->" in capsys.readouterr().out
+
+
+def test_export_creates_saktan_specific_repo(
+    source_tree: Path, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    exit_code = export_agent_repo.main(["saktan", "--out", str(tmp_path / "out")])
+    assert exit_code == 0
+    out = tmp_path / "out"
+
+    assert (out / "README.md").read_text(encoding="utf-8").startswith("# SakTan Repository")
+    assert "beer-sakthai/saktan-agent" in (out / "README.md").read_text(encoding="utf-8")
+    assert (out / "SOUL.md").read_text(encoding="utf-8") == "SakTan soul"
+    assert (out / "personas" / "saktan" / "skills" / "overlay-skill" / "SKILL.md").is_file()
+    assert (out / "infra" / "hermes-agents" / "profiles" / "saktan" / "SOUL.md").is_file()
+    assert (
+        out / "infra" / "hermes-agents" / "profiles" / "saktan" / "config.yaml"
+    ).is_file()
+    assert "exported saktan ->" in capsys.readouterr().out
 
 
 def test_export_wipes_stale_output(source_tree: Path, tmp_path: Path) -> None:
