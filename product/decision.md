@@ -16,7 +16,7 @@ lighter-weight customer modes, but they do not drive the core roadmap.
 ## Why This Direction
 
 - Business customers can justify paying for time saved, leads captured, and support reduced.
-- The current repo already fits a reusable agent-platform model, not a single consumer app.
+- The current repository already fits a reusable agent-platform model, not a single consumer app.
 - One shared core with persona-specific deployment keeps the project flexible without fragmenting it.
 
 ## Product Shape
@@ -29,4 +29,4 @@ lighter-weight customer modes, but they do not drive the core roadmap.
 
 - Do not optimize the roadmap for a general consumer app first.
 - Do not add framework dependencies unless they directly support the chosen business use case.
-- Do not split the repo into separate stacks for business, personal, and family.
+- Do not split the repository into separate stacks for business, personal, and family.
