@@ -2,6 +2,16 @@
 
 This file tracks the tasks required to build the "ServiceQuoteBot" MVP, as defined in `product/PLAN.md`. The goal is a Telegram-based agent that provides quotes from a business's price book and captures leads.
 
+## Migration Guideline
+
+For Hermes-free migration work, keep the order fixed:
+1. inventory the Hermes dependency surface,
+2. define the smallest safe replacement path,
+3. implement one runtime seam at a time,
+4. add tests before expanding the surface,
+5. verify with a local smoke run,
+6. commit, open a PR, wait for CI, and merge only after green checks.
+
 ## Phase 1: Core Agent & Knowledge Base
 
 - [ ] **Define Persona:**
@@ -28,3 +38,29 @@ This file tracks the tasks required to build the "ServiceQuoteBot" MVP, as defin
   - Document the steps to deploy the ServiceQuoteBot for a customer.
   - This should include creating a systemd service file or a Dockerfile for easy, repeatable deployment.
   - Write a script to automate the setup for a new client (e.g., setting API keys, ingesting their price book).
+
+## Phase 3: Hermes-free runtime migration
+
+- [ ] **Dependency inventory:**
+  - List every place the current repo depends on Hermes-specific profiles, launchers, services, and environment conventions.
+  - Mark which pieces are runtime-critical, which are documentation-only, and which can be removed outright.
+
+- [ ] **Replacement path:**
+  - Define the smallest non-Hermes execution path that can run locally by itself.
+  - Prefer direct CLI entry points, explicit config files, and a single agent bootstrap flow over profile-specific wrappers.
+
+- [ ] **Runtime seams:**
+  - Replace one Hermes integration surface at a time.
+  - Keep each seam small enough that it can be exercised by a focused test before the next seam is changed.
+
+- [ ] **Test coverage:**
+  - Add or update tests before broadening the replacement surface.
+  - Cover config loading, startup behavior, and the core agent loop with at least one smoke path that runs without Hermes.
+
+- [ ] **Local verification:**
+  - Run the smallest reliable local smoke test first.
+  - Then run the repo test command(s) that prove the Hermes-free path still works end to end.
+
+- [ ] **GitHub delivery:**
+  - Commit the change set in focused steps.
+  - Push a branch, open a PR, wait for CI to pass, then merge.
