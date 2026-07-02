@@ -586,6 +586,75 @@ class MemoryStore:
 
     # -- reporting --------------------------------------------------------
 
+    def get_dashboard_aggregates(
+        self,
+        table: str,
+        limit: int,
+        start_ts: int,
+        week_ago_ts: int,
+    ) -> dict[str, Any]:
+        """Return KPI counts and binned growth data for the dashboard in one pass.
+
+        Aggregation happens in SQL to avoid fetching and parsing thousands of
+        rows in Python. Capped by ``limit`` to match legacy behavior.
+        """
+        if table not in ("facts", "observations"):
+            raise ValueError(f"Invalid table: {table}")
+
+        # We use a CTE to apply the limit once, then aggregate over that subset.
+        query = f"""
+            WITH subset AS (
+                SELECT created_at FROM {table} LIMIT ?
+            )
+            SELECT
+                COUNT(*) as total,
+                SUM(CASE WHEN created_at >= ? THEN 1 ELSE 0 END) as this_week,
+                SUM(CASE WHEN created_at <= ? THEN 1 ELSE 0 END) as before_start
+            FROM subset
+        """
+        row = self._conn.execute(query, (limit, week_ago_ts, start_ts)).fetchone()
+        res: dict[str, Any] = {
+            "total": row["total"] or 0,
+            "this_week": row["this_week"] or 0,
+            "before_start": row["before_start"] or 0,
+            "bins": [],
+        }
+
+        # Growth bins: one per day for 30 days.
+        days = 30
+        bins = [0] * days
+        bin_query = f"""
+            WITH subset AS (
+                SELECT created_at FROM {table} LIMIT ?
+            )
+            SELECT
+                CAST((created_at - ? - 1) / 86400 AS INTEGER) as bin,
+                COUNT(*) as n
+            FROM subset
+            WHERE created_at > ? AND created_at <= ?
+            GROUP BY bin
+        """
+        rows = self._conn.execute(
+            bin_query, (limit, start_ts, start_ts, start_ts + days * 86400)
+        ).fetchall()
+        for r in rows:
+            idx = r["bin"]
+            if 0 <= idx < days:
+                bins[idx] = r["n"]
+        res["bins"] = bins
+        return res
+
+    def get_fact_kind_counts(self, limit: int) -> dict[str, int]:
+        """Return counts of facts grouped by kind, capped by ``limit``."""
+        query = """
+            WITH subset AS (
+                SELECT kind FROM facts LIMIT ?
+            )
+            SELECT kind, COUNT(*) as n FROM subset GROUP BY kind ORDER BY n DESC, kind
+        """
+        rows = self._conn.execute(query, (limit,)).fetchall()
+        return {r["kind"]: r["n"] for r in rows}
+
     def stats(self) -> dict[str, Any]:
         """Aggregate counts and distributions. Safe on an empty DB."""
         c = self._conn
