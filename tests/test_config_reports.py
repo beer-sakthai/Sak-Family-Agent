@@ -20,6 +20,15 @@ def test_sessions_dir_honours_home(sakthai_home: Path) -> None:
     assert config.sessions_dir() == sakthai_home / "sessions"
 
 
+def test_telegram_session_db_path_honours_home(sakthai_home: Path) -> None:
+    assert config.telegram_session_db_path(123) == sakthai_home / "telegram" / "123" / "memory.db"
+
+
+def test_telegram_allowed_user_ids_parses_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("TELEGRAM_ALLOWED_USER_IDS", "123, 456 789")
+    assert config.telegram_allowed_user_ids() == [123, 456, 789]
+
+
 def test_mcp_timeout_default(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("SAKTHAI_MCP_TIMEOUT", raising=False)
     assert config.mcp_timeout() == config.DEFAULT_MCP_TIMEOUT

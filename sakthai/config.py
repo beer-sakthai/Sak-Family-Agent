@@ -36,6 +36,8 @@ OPTIONAL_ENV_VARS: dict[str, str] = {
     "SAKTHAI_READ_ALLOW": "Extra paths the read_file tool may read (os.pathsep-separated)",
     "SAKTHAI_MCP_CONFIG": "Path to a per-persona mcp.json whose servers override the defaults",
     "SAKTHAI_MCP_TIMEOUT": "Seconds to wait for an external MCP server reply (default: 30)",
+    "TELEGRAM_ALLOWED_USER_IDS": "Comma- or space-separated Telegram user IDs allowed to use the bot",
+    "TELEGRAM_BOT_TOKEN": "Telegram bot token used by the Telegram gateway",
     "SAKKING_HOME": "Override the SakKing data directory (default: ~/.sakking) for skill sync",
 }
 
@@ -127,6 +129,35 @@ def openai_api_base() -> str | None:
 def gateway_base_url() -> str | None:
     """Return the AI-gateway base URL, honoring SAKTHAI_GATEWAY_URL."""
     return os.environ.get("SAKTHAI_GATEWAY_URL")
+
+
+def telegram_bot_token() -> str | None:
+    """Return the Telegram bot token, or None when not configured."""
+    token = os.environ.get("TELEGRAM_BOT_TOKEN")
+    return token.strip() if token and token.strip() else None
+
+
+def telegram_allowed_user_ids() -> list[int]:
+    """Return the Telegram user IDs allowed to use the bot.
+
+    The env var accepts comma, space, or newline separated integers. Invalid
+    tokens are ignored rather than crashing startup.
+    """
+    raw = os.environ.get("TELEGRAM_ALLOWED_USER_IDS", "")
+    if not raw.strip():
+        return []
+    values: list[int] = []
+    for chunk in raw.replace(",", " ").split():
+        try:
+            values.append(int(chunk))
+        except ValueError:
+            continue
+    return values
+
+
+def telegram_session_db_path(chat_id: int | str) -> Path:
+    """Return the persistent memory DB path for one Telegram chat session."""
+    return sakthai_home() / "telegram" / str(chat_id) / "memory.db"
 
 
 def _paths_report() -> dict[str, Any]:

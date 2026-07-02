@@ -42,7 +42,7 @@ For Hermes-free migration work, keep the order fixed:
 
 ## Phase 2: Telegram Integration & Deployment
 
-- [ ] **Refactor Telegram Bot:**
+- [x] **Refactor Telegram Bot:**
   - Mature the existing prototype `telegram/` bot into a production-ready component.
   - Align its configuration (`telegram/config.py`) to use the central `sakthai/config.py` and `sakthai/auth.py` modules.
   - Modify the bot to run the main `sakthai run` agent loop with a persistent session, rather than as a stateless subprocess.
