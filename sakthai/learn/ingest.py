@@ -46,7 +46,11 @@ def ingest_document(path: str | Path, *, store: MemoryStore | None = None) -> li
     """Parse a document and store each extracted fact in memory."""
     document = Path(path)
     text = document.read_text(encoding="utf-8", errors="replace")
-    facts = _facts_from_csv(text) if document.suffix.lower() == ".csv" else _facts_from_markdown_or_text(text)
+    facts = (
+        _facts_from_csv(text)
+        if document.suffix.lower() == ".csv"
+        else _facts_from_markdown_or_text(text)
+    )
     stored: list[int] = []
     for fact in facts:
         stored.append(learn_fact(fact, kind="fact", store=store))

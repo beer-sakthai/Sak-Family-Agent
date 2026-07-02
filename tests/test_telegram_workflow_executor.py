@@ -9,9 +9,7 @@ from pathlib import Path
 from sakthai.telegram import workflow_executor
 
 
-def test_get_available_workflows_uses_configured_skills_dir(
-    tmp_path: Path, monkeypatch
-) -> None:
+def test_get_available_workflows_uses_configured_skills_dir(tmp_path: Path, monkeypatch) -> None:
     skills_dir = tmp_path / "skills"
     skills_dir.mkdir()
     (skills_dir / "beta").mkdir()
@@ -23,9 +21,7 @@ def test_get_available_workflows_uses_configured_skills_dir(
     assert workflow_executor.get_available_workflows() == ["alpha", "beta"]
 
 
-def test_get_available_workflows_missing_dir_returns_empty(
-    tmp_path: Path, monkeypatch
-) -> None:
+def test_get_available_workflows_missing_dir_returns_empty(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setattr(workflow_executor, "SKILLS_DIR", tmp_path / "missing-skills")
 
     assert workflow_executor.get_available_workflows() == []
@@ -38,9 +34,7 @@ def test_workflow_command_uses_current_interpreter() -> None:
     assert command[-2:] == ["--fast", "--stateless"]
 
 
-def test_run_workflow_executes_skill_with_current_interpreter(
-    tmp_path: Path, monkeypatch
-) -> None:
+def test_run_workflow_executes_skill_with_current_interpreter(tmp_path: Path, monkeypatch) -> None:
     skills_dir = tmp_path / "skills"
     skills_dir.mkdir()
     (skills_dir / "alpha").mkdir()

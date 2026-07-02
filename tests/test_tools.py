@@ -62,9 +62,7 @@ def test_ingest_document_parses_common_formats(tmp_path: Path, store: MemoryStor
     )
     csv_file = tmp_path / "faq.csv"
     csv_file.write_text(
-        "question,answer\n"
-        "How long does setup take?,2 business days\n"
-        "Do you offer support?,Yes\n",
+        "question,answer\nHow long does setup take?,2 business days\nDo you offer support?,Yes\n",
         encoding="utf-8",
     )
     plain_text = tmp_path / "notes.txt"
