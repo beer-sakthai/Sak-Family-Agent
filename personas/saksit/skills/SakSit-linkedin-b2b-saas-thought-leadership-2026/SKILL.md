@@ -26,7 +26,7 @@ Treat your LinkedIn profile as a high-converting landing page — NOT a resume.
    - *Good*: "I help B2B SaaS founders scale from $1M → $10M ARR in 12 months | DM me 'SCALE'"
 2. **About section**: Lead with a hook, state your expertise, include a clear CTA.
 3. **Featured section**: Pin your best-performing carousel/post + a case study or lead magnet.
-4. **CTA button**: Use "Visit website" or "Contact us" — link to a squeeze page, not your homepage.
+4. **CTA button**: Use "Visit site" or "Contact us" — link to a squeeze page, not your homepage.
 
 ---
 

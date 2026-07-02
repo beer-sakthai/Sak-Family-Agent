@@ -126,7 +126,7 @@ hermes skills update        Update outdated skills
 hermes skills uninstall N   Remove a hub skill
 hermes skills publish PATH  Publish to registry
 hermes skills browse        Browse all available skills
-hermes skills tap add REPO  Add a GitHub repo as skill source
+hermes skills tap add REPO  Add a GitHub repository as skill source
 ```
 
 ### MCP Servers
@@ -741,7 +741,7 @@ mintty / git-bash behaves the same (fullscreen on Alt+Enter) unless you
 disable Alt+Fn shortcuts in Options → Keys. Easier to just use Ctrl+Enter.
 
 **Diagnosing keybindings.** Run `python scripts/keystroke_diagnostic.py`
-(repo root) to see exactly how prompt_toolkit identifies each keystroke
+(repository root) to see exactly how prompt_toolkit identifies each keystroke
 in the current terminal. Answers questions like "does Shift+Enter come
 through as a distinct key?" (almost never — most terminals collapse it
 to plain Enter) or "what byte sequence is my terminal sending for
@@ -971,7 +971,7 @@ python -m pytest tests/tools/ -q            # Specific area
 - Run full suite before pushing any change
 - Use `-o 'addopts='` to clear any baked-in pytest flags
 
-**Windows contributors:** `scripts/run_tests.sh` currently looks for POSIX venvs (`.venv/bin/activate` / `venv/bin/activate`) and will error out on Windows where the layout is `venv/Scripts/activate` + `python.exe`. The Hermes-installed venv at `venv/Scripts/` also has no `pip` or `pytest` — it's stripped for end-user install size. Workaround: install pytest + pytest-xdist + pyyaml into a system Python 3.11 user site (`/c/Program Files/Python311/python -m pip install --user pytest pytest-xdist pyyaml`), then run tests directly:
+**Windows contributors:** `scripts/run_tests.sh` currently looks for POSIX venvs (`.venv/bin/activate` / `venv/bin/activate`) and will error out on Windows where the layout is `venv/Scripts/activate` + `python.exe`. The Hermes-installed venv at `venv/Scripts/` also has no `pip` or `pytest` — it's stripped for end user install size. Workaround: install pytest + pytest-xdist + pyyaml into a system Python 3.11 user site (`/c/Program Files/Python311/python -m pip install --user pytest pytest-xdist pyyaml`), then run tests directly:
 
 ```bash
 export PYTHONPATH="$(pwd)"

@@ -20,7 +20,7 @@ Node 20, **headless only — no display**). Two consequences:
 - **No persistent workspace, no pre-existing project.** The container is
   ephemeral and separate from the host — do **not** hunt for a project dir like
   `/home/...`, `/home/pn`, or `/home/saas`; they don't exist here. To work on an
-  existing repo, **`git clone` it into `/tmp` first**. To start fresh, create the
+  existing repository, **`git clone` it into `/tmp` first**. To start fresh, create the
   project under `/tmp` (below). Browsers install to `/root/.cache/ms-playwright`
   and persist only within the session.
 - Always launch `headless: true`.
@@ -89,5 +89,5 @@ When to use: whenever asserting DOM state, URL, network responses, or accessibil
 | Browser crashes on start | Missing graphics libs (libgbm1, libdrm2) | Install list in *Prerequisites* |
 | Playwright binary not found | Browsers not downloaded | `npx playwright install --with-deps chromium` |
 | Permission errors | Write perms in working dir | Work under `/tmp` |
-| "Can't find project / no such dir" | Looking for a persistent workspace that doesn't exist in the sandbox | Create under `/tmp`, or `git clone` the repo first |
+| "Can't find project / no such dir" | Looking for a persistent workspace that doesn't exist in the sandbox | Create under `/tmp`, or `git clone` the repository first |
 | Overwriting existing tests on re-init | Running `npm init playwright@latest` twice blindly | Safe to re-run; it skips existing files |

@@ -63,7 +63,7 @@ mcp_servers:
     connect_timeout: 60        # (optional) initial connection timeout in seconds, default: 60
 ```
 
-### HTTP Transport (url)
+### HTTP Transport (URL)
 
 ```yaml
 mcp_servers:
