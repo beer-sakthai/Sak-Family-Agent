@@ -61,7 +61,7 @@ git commit -m "docs: add servicequotebot deployment guide"
 
 Use a user-service template that:
 - runs `python -m sakthai.telegram.bot`
-- points `WorkingDirectory` at the deployed repo root
+- points `WorkingDirectory` at the deployed repository root
 - exports `SAKTHAI_HOME`, `ANTHROPIC_API_KEY`, `TELEGRAM_BOT_TOKEN`, and `TELEGRAM_ALLOWED_USER_IDS`
 - restarts automatically on failure
 
@@ -174,7 +174,7 @@ git commit -m "feat: add servicequotebot setup script"
 - Modify: `product/todo.md`
 - Possibly modify: `docs/servicequotebot/deployment.md`, `infra/servicequotebot/systemd/servicequotebot.service`, `scripts/setup_servicequotebot.py`
 
-- [ ] **Step 1: Run the repo checks**
+- [ ] **Step 1: Run the repository checks**
 
 Run:
 
