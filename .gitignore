@@ -55,3 +55,5 @@ oh-my-antigravity/
 
 # Hypothesis test database (local cache, must not be committed)
 .hypothesis/
+
+.worktrees/

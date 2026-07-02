@@ -94,15 +94,14 @@ with `make export-agent-repos`.
 │   └── {sakking,sakthai,saksee,saksit,saktan,sakjules}/ # per-persona SOUL.md + config + skill overlay
 ├── build/agent-repos/<persona>/   # export target for standalone agent repos
 ├── infra/
-│   ├── hermes-agents/            # Hermes Telegram-bot config backup (no secrets)
+│   ├── hermes-agents/            # Live Telegram agent runtime config (no secrets)
 │   └── pw-poc/                   # Playwright tab-order/accessibility probe (npm)
 └── scripts/compose_persona.py    # rebuild a persona's full skill tree (shared + overlay)
 ```
 
 - 👑 **Personas** are the **Sak Family Agents**: **SakKing** is the main (Lead & Orchestrator,
   Master of Code & Self-Healing), and **SakThai**, **SakSee**, **SakSit**, **SakTan**, and
-  **SakJules** are the family it coordinates. *"Hermes" is only the framework they run on,
-  never an agent's name.* Read [`USER.md`](./docs/USER.md) before changing agent identity,
+  **SakJules** are the family it coordinates. Read [`USER.md`](./docs/USER.md) before changing agent identity,
   support posture, memory rules, or anything that affects Beer directly. Beer is Nanthasit
   Burankum, and SakThai plus the Sak Family exist to provide supportive companions grounded in
   Beer's values of Dream, Hope, Care, Joy, Trust, and Growth. The shared skill library now lives
@@ -111,7 +110,7 @@ with `make export-agent-repos`.
   a standalone repository snapshot. See [`personas/README.md`](./personas/README.md) and the
   root [`SOUL.md`](./docs/SOUL.md). See [`infra/hermes-agents/README.md`](./infra/hermes-agents/README.md)
   for full Telegram-bot deployment.
-- 📦 **`packages/agent-self-evolution`** targets a different runtime (Nous Research's Hermes) with
+- 📦 **`packages/agent-self-evolution`** targets a separate optimization runtime with
   a heavy, disjoint dependency set, so it is **not** a uv workspace member — build it on its own
   per its README. The root `uv.lock` stays scoped to the SakThai agent.
 - ✅ CI (`ci.yml`, `pylint.yml`) lints/types/tests only the `sakthai` core; the colocated trees
@@ -158,10 +157,10 @@ The canonical profile source for the family lives under `infra/hermes-agents/pro
 
 ### 📡 Fleet status
 
-Live deployment snapshot of the Hermes Telegram fleet. Values are read from the
+Live deployment snapshot of the Telegram agent fleet. Values are read from the
 **version-controlled** configs under
 [`infra/hermes-agents/`](./infra/hermes-agents/) (this repository is the config
-source of truth). Each bot is a Hermes **profile** with its own persona +
+source of truth). Each bot is a runtime profile with its own persona +
 Telegram token but a **shared** Supermemory brain.
 
 | Agent | Profile | Role | Primary model · provider | Fallback · provider | Telegram | State |
@@ -179,14 +178,12 @@ Telegram token but a **shared** Supermemory brain.
 🔵 `gemini` → `GEMINI_API_KEY` / `GOOGLE_API_KEY`.
 
 > ⚠️ **Live host & drift.** The live fleet runs on the GCE VM **`sak-medium-vm`**
-> (`us-central1-a`, `e2-medium`, out of its own `~/.hermes/`); the laptop's
-> `~/.hermes/` is normally **dormant** (running it double-polls Telegram → `409`
-> conflicts). Bots and their models get **hot-swapped on the VM often**, so the
-> VM can diverge from the configs above — this repository is the reproducible baseline,
-> the VM is authoritative for what's *actually running right now*. Each bot needs
-> a **distinct** `TELEGRAM_BOT_TOKEN` (shared token → `409`, both go silent).
-> Regenerate/verify with `make doctor-hermes` and the roster in
-> [`infra/hermes-agents/README.md`](./infra/hermes-agents/README.md).
+> (`us-central1-a`, `e2-medium`). Bots and their models get **hot-swapped on the
+> VM often**, so the VM can diverge from the configs above — this repository is
+> the reproducible baseline, the VM is authoritative for what's *actually running
+> right now*. Each bot needs a **distinct** `TELEGRAM_BOT_TOKEN` (shared token →
+> `409`, both go silent). Regenerate/verify with `make doctor-runtime` and the
+> roster in [`infra/hermes-agents/README.md`](./infra/hermes-agents/README.md).
 
 ---
 
@@ -369,8 +366,8 @@ sakthai dashboard                    # Streamlit view of the store
 ```bash
 make test                            # run pytest suite (via uv)
 make lint                            # run ruff linters (via uv)
-make deploy-hermes                   # deploy hermes configs and restart local services
-make doctor-hermes                   # validate hermes YAML configs
+make deploy-runtime                  # deploy live agent configs and restart local services
+make doctor-runtime                  # validate runtime configs
 make compose-personas                # rebuild persona skill trees into build/
 ```
 
@@ -421,7 +418,7 @@ Comprehensive documentation is available in the `docs/` directory:
 - 🤖 [Capabilities & Tools](./docs/capabilities.md) — tools, memory operations, providers
 - 🔌 [MCP & Skills Extensibility](./docs/plugins.md) — MCP serving, skill directory injection
 - ⚙️ [Runtimes & Local Execution](./docs/runtimes.md) — CLI, agent loop, MCP servers, local Ollama
-- 🔗 [Integrations](./docs/integrations.md) — Composio, Hermes, and cross-agent communication recipes
+- 🔗 [Integrations](./docs/integrations.md) — Composio and cross-agent communication recipes
 - 📅 [Live Connect Plan (Phases 5–8)](./docs/sakthai-live-connect-plan.md) — Phase 5–8 execution plan and status (Completed)
 
 ---

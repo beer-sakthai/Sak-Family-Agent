@@ -2,7 +2,7 @@
 
 This file tracks the tasks required to build the "ServiceQuoteBot" MVP, as defined in `product/PLAN.md`.
 
-The Hermes runtime roadmap now lives in the root [`PLAN.md`](../PLAN.md). Keep this file focused on product delivery and the Hermes-free migration path.
+Keep this file focused on product delivery and the runtime implementation work needed for the bot.
 
 ## Product Direction
 
@@ -13,16 +13,6 @@ short decision note.
 
 The initial MVP remains a Telegram-based agent that provides quotes from a business's
 price book and captures leads.
-
-## Migration Guideline
-
-For Hermes-free migration work, keep the order fixed:
-1. inventory the Hermes dependency surface,
-2. define the smallest safe replacement path,
-3. implement one runtime seam at a time,
-4. add tests before expanding the surface,
-5. verify with a local smoke run,
-6. commit, open a PR, wait for CI, and merge only after green checks.
 
 ## Phase 1: Core Agent & Knowledge Base
 
@@ -51,31 +41,3 @@ For Hermes-free migration work, keep the order fixed:
   - Document the steps to deploy the ServiceQuoteBot for a customer.
   - This should include creating a systemd service file or a Dockerfile for easy, repeatable deployment.
   - Write a script to automate the setup for a new client (e.g., setting API keys, ingesting their price book).
-
-## Phase 3: Hermes-free runtime migration
-
-- [x] **Dependency inventory:**
-  - Inventory captured in `docs/agent-diagnosis.md`.
-  - Lists Hermes-specific profiles, launchers, services, and environment conventions.
-  - Marks which pieces are runtime-critical, which are documentation-only, and which are removal candidates after the non-Hermes path is proven.
-
-- [x] **Replacement path:**
-  - Defined in `docs/agent-diagnosis.md` as the smallest non-Hermes bootstrap.
-  - Uses the existing `sakthai run` CLI with `--dry-run --no-mcp` for validation.
-  - Uses `sakthai run --no-mcp --fast --stateless` as the local smoke route.
-  - Avoids `~/.hermes/` for bootstrap and relies on `~/.sakthai/mcp.json` for external tools.
-
-- [x] **Runtime seams:**
-  - The Telegram workflow executor now uses the package-configured skills directory and the active Python interpreter, instead of assuming the cwd or hardcoding `python`.
-  - This keeps the workflow-launch seam portable across local shells, services, and standalone repos.
-
-- [x] **Test coverage:**
-  - Added focused tests for the workflow-executor seam.
-  - Covers skills-directory discovery, command construction, and subprocess invocation using the current interpreter.
-
-- [x] **Local verification:**
-  - Smoke run passed with `uv run sakthai run "smoke check" --dry-run --no-mcp`.
-  - Targeted tests passed with `uv run pytest tests/test_telegram_workflow_executor.py tests/test_cli.py -q`.
-
-- [x] **GitHub delivery:**
-  - This checklist update was committed and merged to GitHub after verification.
