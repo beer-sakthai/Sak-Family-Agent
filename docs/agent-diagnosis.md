@@ -29,6 +29,62 @@ Scores are 1-5, where 5 is best.
 | SakTan | 5 | 3 | 4 | 3 | 3 | The helper role is clear, and the export/composition path now verifies its standalone tree. |
 | SakJules | 5 | 3 | 4 | 4 | 3 | Identity is now correct, and the export/composition path now verifies its standalone tree. |
 
+## Hermes Dependency Inventory
+
+The repo core is already Hermes-free in the sense that the `sakthai/` package
+implements the provider-agnostic CLI, memory, and MCP surfaces. The Hermes
+surface lives around deployment, export, and documentation.
+
+There is no `telegram/` package in this checkout, so the Telegram integration
+item in `product/todo.md` will need a new seam or a reintroduced package rather
+than an in-place refactor.
+
+### Runtime-critical Hermes surfaces
+
+| Area | Files | Why it matters |
+|---|---|---|
+| Live Hermes deployment | `infra/hermes-agents/` | This is the live Telegram gateway/runtime backup tree, including profile configs, deploy tooling, and user services. |
+| Profile launchers | `infra/hermes-agents/systemd/hermes-gateway*.service` | These are the actual service definitions that start each Hermes-backed bot. |
+| Default/profile config | `infra/hermes-agents/default/`, `infra/hermes-agents/profiles/{saksee,sakthai,saksit,saktan,sakjules}/` | These hold the per-agent Hermes config/state that the deployment scripts load. |
+| Deployment helpers | `Makefile` (`deploy-hermes`, `doctor-hermes`) | These commands are explicit Hermes entry points for deployment and diagnostics. |
+| Export helpers | `scripts/export_agent_repo.py`, `scripts/diagnose_personas.py` | These scripts still know about Hermes profile paths and service conventions. |
+
+### Documentation-only Hermes references
+
+| Area | Files | Why it matters |
+|---|---|---|
+| Root orientation docs | `README.md`, `CLAUDE.md` | These explain the family layout, standalone export behavior, and Hermes relationship to the repo. |
+| Shared identity docs | `docs/SOUL.md`, `docs/agent-diagnosis.md` | These describe the six-agent roster and the standalone run checklist. |
+| Hermes runtime docs | `infra/hermes-agents/README.md`, `infra/hermes-agents/SYNC_GUIDE.md` | These are deployment notes for the Hermes-backed path and can be rewritten once the non-Hermes path is complete. |
+| Runtime guidance docs | `docs/plugins.md`, `docs/integrations.md`, `docs/sakthai-live-connect-plan.md` | These still document Hermes-backed and mixed runtime recipes. |
+
+### Removal candidates after migration
+
+- `Makefile` Hermes targets can be removed once the replacement launch path is
+  stable and tested.
+- `infra/hermes-agents/README.md` and `infra/hermes-agents/SYNC_GUIDE.md` can
+  be folded into the new standalone runtime docs after the transition.
+- `scripts/export_agent_repo.py` can be simplified once the standalone export
+  path no longer needs Hermes profile copies.
+
+### Immediate next step
+
+The next migration step is the smallest safe replacement path: define a local
+non-Hermes bootstrap that can run the core agent loop with explicit config and
+no profile loader dependency.
+
+### Smallest non-Hermes bootstrap
+
+1. Install the local workspace dependencies with `uv sync --all-extras`.
+2. Validate the agent without spending tokens:
+   `sakthai run "<task>" --dry-run --no-mcp`.
+3. Run the core loop without Hermes profile loading:
+   `sakthai run "<task>" --no-mcp --fast --stateless`.
+4. Add external tools only through `~/.sakthai/mcp.json`; do not require
+   `~/.hermes/` for the bootstrap path.
+5. Use this path as the baseline smoke route before introducing any Telegram or
+   runtime-wrapper seam.
+
 ## Standalone Requirements
 
 ### SakKing

@@ -53,13 +53,16 @@ For Hermes-free migration work, keep the order fixed:
 
 ## Phase 3: Hermes-free runtime migration
 
-- [ ] **Dependency inventory:**
-  - List every place the current repo depends on Hermes-specific profiles, launchers, services, and environment conventions.
-  - Mark which pieces are runtime-critical, which are documentation-only, and which can be removed outright.
+- [x] **Dependency inventory:**
+  - Inventory captured in `docs/agent-diagnosis.md`.
+  - Lists Hermes-specific profiles, launchers, services, and environment conventions.
+  - Marks which pieces are runtime-critical, which are documentation-only, and which are removal candidates after the non-Hermes path is proven.
 
-- [ ] **Replacement path:**
-  - Define the smallest non-Hermes execution path that can run locally by itself.
-  - Prefer direct CLI entry points, explicit config files, and a single agent bootstrap flow over profile-specific wrappers.
+- [x] **Replacement path:**
+  - Defined in `docs/agent-diagnosis.md` as the smallest non-Hermes bootstrap.
+  - Uses the existing `sakthai run` CLI with `--dry-run --no-mcp` for validation.
+  - Uses `sakthai run --no-mcp --fast --stateless` as the local smoke route.
+  - Avoids `~/.hermes/` for bootstrap and relies on `~/.sakthai/mcp.json` for external tools.
 
 - [ ] **Runtime seams:**
   - Replace one Hermes integration surface at a time.
