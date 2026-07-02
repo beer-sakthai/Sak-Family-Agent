@@ -2,7 +2,18 @@
 
 from __future__ import annotations
 
+import sys
+
 import click
+
+# On Windows the default console encoding is often cp1252, which cannot
+# represent the box-drawing and check-mark characters used by this CLI.
+# Reconfigure stdout/stderr to UTF-8 with replacement so they never raise
+# UnicodeEncodeError regardless of the user's terminal code-page setting.
+if sys.platform == "win32":
+    for _stream in (sys.stdout, sys.stderr):
+        if hasattr(_stream, "reconfigure"):
+            _stream.reconfigure(encoding="utf-8", errors="replace")  # type: ignore[union-attr]
 
 from .. import __version__
 from .agent import mcp, run

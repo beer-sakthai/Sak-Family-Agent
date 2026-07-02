@@ -74,6 +74,7 @@ uv run ruff check sakthai tests              # Lint
 uv run ruff format --check sakthai tests     # Format check (drop --check to apply)
 uv run mypy sakthai                          # Strict type-check
 uv run bandit -c pyproject.toml -r sakthai   # Security scan
+make mutation                                # mutmut on core seam modules (slow, local-only, not in CI)
 ```
 
 CI (`.github/workflows/ci.yml`, all via `uv sync --extra dev --locked`) runs:
@@ -95,7 +96,12 @@ root with `SAKTHAI_HOME`):
 
 1. **CLI** — `sakthai <cmd>` (entry point `sakthai.cli:main`). Commands:
    - Memory: `learn`, `recall`, `memory show|stats|search|export|import|backup|consolidate|consolidate-sessions|deduplicate`
-   - Agent: `run "<task>"` (with `--model`, `--max-tokens`, `--max-iterations`, `--verbose`, `--no-mcp`)
+   - Agent: `run "<task>"` — key flags: `--provider`/`-p` (anthropic/google/openai/ollama/gateway),
+     `--model`, `--max-tokens`, `--max-iterations`, `--max-seconds`, `--with-skills <name>`
+     (repeatable), `--no-mcp`, `--dry-run` (validate config, no API call), `--stream`, `--fast`
+     (skip the 6-stage cycle), `--stateless` (don't load/append memory), `--caveman
+     lite|full|ultra|wenyan-*` (token-compression skill), `--sandbox` (run inside the
+     `Dockerfile.sandbox` container; only `memory.db` is bind-mounted), `-v/--verbose`
    - Server: `mcp` (start MCP stdio server)
    - Cycle: `cycle status|next|set|list`
    - Skills: `skills list|show|validate|create|sync-sakking`
@@ -131,6 +137,10 @@ CLI/MCP → agent loop → tool registry → MemoryStore → SQLite. See
   `ANTHROPIC_AUTH_TOKEN` → Claude CLI OAuth token. Google uses the Gemini CLI
   OAuth token. OpenAI/Ollama uses `resolve_openai_credentials` to locate the base
   URL and API key. Raises `AuthError` when no credentials are found.
+- **`sandbox.py`** — backs `sakthai run --sandbox`. Builds/reuses a Docker image
+  from `Dockerfile.sandbox` (layer-cached) and re-executes the task inside it;
+  only `memory.db` is bind-mounted from the host. Raises `SandboxError` if Docker
+  isn't on `PATH`.
 
 ### Memory subsystem (`memory/`)
 
@@ -391,13 +401,19 @@ category: coding
 description: One-line summary of what this skill does
 version: "1.0"
 platforms: [linux, macos, windows]   # host OSes the skill supports
-tags: [python, testing]
-related_skills: [other-skill]
+metadata:
+  sakthai:
+    tags: [python, testing]
+    related_skills: [other-skill]
 ---
 
 Skill body goes here. This is injected into the agent system prompt when the
 skill is active.
 ```
+
+Note: `tags`/`related_skills` must be nested under `metadata.sakthai` — a flat
+top-level `tags:`/`related_skills:` is silently ignored by the parser in
+`skills.py`.
 
 Skills are discovered from `skills/` (user/extension skills) and `library/`
 (curated catalog). Run `sakthai skills list` to see all discovered skills.
@@ -427,3 +443,4 @@ Skills are discovered from `skills/` (user/extension skills) and `library/`
 | `docs/runtimes.md` | CLI / agent loop / MCP server |
 | `docs/workspace.md` | Dev environment setup |
 | `docs/og_parity_audit.md` | Comparison with original SakThai |
+| `docs/integrations.md` | Composio, Hermes, and cross-agent communication recipes |
