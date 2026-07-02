@@ -1,14 +1,31 @@
 import asyncio
-import os
+import sys
 
-SKILLS_DIR = "skills"
+from ..config import SKILLS_DIR
+
+
+def _workflow_command(workflow_name: str) -> list[str]:
+    """Build the command used to execute one workflow skill."""
+    return [
+        sys.executable,
+        "-m",
+        "sakthai",
+        "run",
+        f"execute the {workflow_name} skill",
+        "--with-skills",
+        workflow_name,
+        "--fast",
+        "--stateless",
+    ]
 
 
 def get_available_workflows():
     """
     Returns a list of available workflows (skills).
     """
-    return [d for d in os.listdir(SKILLS_DIR) if os.path.isdir(os.path.join(SKILLS_DIR, d))]
+    if not SKILLS_DIR.is_dir():
+        return []
+    return sorted(d.name for d in SKILLS_DIR.iterdir() if d.is_dir())
 
 
 async def run_workflow(workflow_name: str) -> str:
@@ -22,17 +39,7 @@ async def run_workflow(workflow_name: str) -> str:
 
     if workflow_name in available_skills:
         print(f"Executing skill: {workflow_name}")
-        command = [
-            "python",
-            "-m",
-            "sakthai",
-            "run",
-            f"execute the {workflow_name} skill",
-            "--with-skills",
-            workflow_name,
-            "--fast",
-            "--stateless",
-        ]
+        command = _workflow_command(workflow_name)
         process = await asyncio.create_subprocess_exec(
             *command, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
         )
