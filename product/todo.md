@@ -72,10 +72,9 @@ For Hermes-free migration work, keep the order fixed:
   - Added focused tests for the workflow-executor seam.
   - Covers skills-directory discovery, command construction, and subprocess invocation using the current interpreter.
 
-- [ ] **Local verification:**
-  - Run the smallest reliable local smoke test first.
-  - Then run the repo test command(s) that prove the Hermes-free path still works end to end.
+- [x] **Local verification:**
+  - Smoke run passed with `uv run sakthai run "smoke check" --dry-run --no-mcp`.
+  - Targeted tests passed with `uv run pytest tests/test_telegram_workflow_executor.py tests/test_cli.py -q`.
 
-- [ ] **GitHub delivery:**
-  - Commit the change set in focused steps.
-  - Push a branch, open a PR, wait for CI to pass, then merge.
+- [x] **GitHub delivery:**
+  - This checklist update was committed and merged to GitHub after verification.
