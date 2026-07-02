@@ -68,7 +68,7 @@ Intent data must be operationalized, not just monitored. Connect it to downstrea
 2. **Score** — Apply Recency Multiplier: a visit 1 hour ago = 1.0, 1 day ago = 0.7, 1 week ago = 0.3
 3. **Alert** — Trigger real-time Slack/email notifications when a Tier 1 account shows pricing intent
 4. **Route** — Auto-assign to the right SDR/AE based on account tier
-5. **Personalize** — Dynamically populate website content, ad copy, and email sequences based on the specific intent topic detected
+5. **Personalize** — Dynamically populate site content, ad copy, and email sequences based on the specific intent topic detected
 
 **Tools:** 6sense, Demandbase, Bombora, Abmatic
 

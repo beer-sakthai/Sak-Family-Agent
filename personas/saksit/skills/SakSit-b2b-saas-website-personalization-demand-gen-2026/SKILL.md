@@ -7,11 +7,11 @@ description: |
 category: B2B SaaS Marketing
 ---
 
-# B2B SaaS Website Personalization for Demand Generation 2026
+# B2B SaaS site Personalization for Demand Generation 2026
 
 ## When to use this skill
 Use this skill when you need to:
-- Turn your B2B SaaS website into a dynamic revenue engine that adapts to each visitor in real-time
+- Turn your B2B SaaS site into a dynamic revenue engine that adapts to each visitor in real-time
 - Implement AI-driven personalization without requiring heavy engineering resources
 - Build an Account-Based Experience (ABX) strategy that coordinates marketing, sales, and product across the web surface
 - Choose the right personalization platform for your stage (seed through scale-up)
@@ -19,9 +19,9 @@ Use this skill when you need to:
 
 ## Prerequisites
 - **Data foundation**: Reverse-IP resolution tool or CDP (e.g., 6sense, Demandbase, Clearbit) for visitor deanonymization
-- **CMS/platform**: Website must support dynamic content swapping (Webflow, HubSpot CMS, Next.js with a headless CMS, or a personalization tool overlay)
+- **CMS/platform**: site must support dynamic content swapping (Webflow, HubSpot CMS, Next.js with a headless CMS, or a personalization tool overlay)
 - **CRM integration**: Salesforce or HubSpot to map web behavior to pipeline stages
-- **Minimum traffic**: At least 5,000 monthly website visitors for statistical significance in A/B testing
+- **Minimum traffic**: At least 5,000 monthly site visitors for statistical significance in A/B testing
 
 ## Quick-start: The 4-surface minimum viable personalization
 
@@ -66,7 +66,7 @@ Create a **content matrix** with three axes:
 
 | Axis | Values |
 |------|--------|
-| **Persona** | Decision-maker, Influencer, Champion, End-user |
+| **Persona** | Decision-maker, Influencer, Champion, end user |
 | **Stage** | Awareness, Consideration, Decision, Retention |
 | **Objection** | Price, Integration, Security, Scale, Time-to-value |
 

@@ -177,7 +177,7 @@ leads and account insights.
 
 | Metric | Target | Measurement |
 |--------|--------|-------------|
-| Website personalization lift | +10-30% conversion | A/B test variants vs control for 2+ weeks |
+| Site personalization lift | +10-30% conversion | A/B test variants vs control for 2+ weeks |
 | Email reply rate (cold) | 6.5-12% | Track by personalization depth level |
 | Activation rate (30-day) | 38-61% | Compare AI-personalized vs generic flows |
 | Pipeline from personalized channels | 15-25% of total | UTM + CRM source attribution |

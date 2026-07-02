@@ -52,7 +52,7 @@ LearnUpon's customer academy blueprint treats education as an always-on motion
 rather than a one-time onboarding event.
 
 ### Phase 1 — Attract (Awareness)
-- Publish free course previews and certification teasers to your website
+- Publish free course previews and certification teasers to your site
 - Use educational content as top-of-funnel demand generation
 - Gate only the exam and credential, not the learning content
 - **Target:** 15-25% of signups from education-attributed channels

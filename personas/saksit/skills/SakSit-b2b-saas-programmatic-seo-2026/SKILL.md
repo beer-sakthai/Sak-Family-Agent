@@ -72,7 +72,7 @@ A defensible programmatic template has three layers:
 
 ### Layer 1: Fixed Skeleton (same on every page)
 - Layout, navigation, footer
-- Global structured data (Organization, WebSite)
+- Global structured data (Organization, site)
 - Primary CTA placement, trust signals
 - Responsive design, Core Web Vitals optimised
 

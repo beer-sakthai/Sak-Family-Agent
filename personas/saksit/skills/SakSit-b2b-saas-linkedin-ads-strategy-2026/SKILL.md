@@ -43,14 +43,14 @@ awareness and conversion audiences.
 - **Goal:** Feed retargeting pools, build top-of-mind
 
 ### Tier 2 — Consideration (Middle of Funnel)
-- **Objective:** Website Conversions or Lead Generation
-- **Audience:** Website visitors, video viewers (25%+), engaged users
+- **Objective:** site Conversions or Lead Generation
+- **Audience:** site visitors, video viewers (25%+), engaged users
 - **Formats:** Document Ads (PDF carousels), Case Study Single Images, Video
 - **Budget:** 35% of total
 - **Goal:** Nurture with proof points and frameworks
 
 ### Tier 3 — Conversion (Bottom of Funnel)
-- **Objective:** Website Conversions or Lead Generation
+- **Objective:** site Conversions or Lead Generation
 - **Audience:** Page-depth visitors (pricing, features, demo), Lead Gen openers,
   high-intent retargeting pools
 - **Formats:** Lead Gen Forms, demo-CTAs, limited-time offer Single Images
@@ -58,7 +58,7 @@ awareness and conversion audiences.
 - **Goal:** Generate pipeline and demo requests
 
 ### Tier 4 — ABM (Account-Based)
-- **Objective:** Website Conversions
+- **Objective:** site Conversions
 - **Audience:** Uploaded company CSV with persona-layer filters
 - **Formats:** Personalised Single Images, Thought Leader Ads, Message Ads
 - **Budget:** 10% of total (higher per-account spend)
@@ -94,7 +94,7 @@ Precision targeting separates profitable campaigns from budget drains.
 ### Predictive Audiences
 Use LinkedIn's AI-powered audience to find lookalike segments from your
 best-converting audiences. Most effective when seeded with >1,000 conversions
-or >5,000 website visitors.
+or >5,000 site visitors.
 
 **Anti-pattern:** Disable Audience Expansion for performance campaigns until
 you've validated your base audience. Test it only after 30+ days of stable data.
@@ -207,7 +207,7 @@ of total budget to retargeting.
 ### Retargeting time windows
 | Segment | Window | Bid multiplier |
 |---------|--------|---------------|
-| All website visitors | 30 days | 1.0× |
+| All site visitors | 30 days | 1.0× |
 | Pricing page | 14 days | 1.5× |
 | Lead form openers (not submitted) | 7 days | 2.0× |
 

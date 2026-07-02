@@ -75,7 +75,7 @@ Reddit is the highest-intent underexploited channel for B2B SaaS in 2026. With 7
 20. **Run a quarterly Reddit audit.** Review:
     - Top 10 posts by upvotes
     - Comment-to-karma ratio
-    - Inbound click-through rate from Reddit to website
+    - Inbound click-through rate from Reddit to site
     - Pipeline value attributed to Reddit
 
 ## Key Benchmarks (2026)

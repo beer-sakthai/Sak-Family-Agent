@@ -53,13 +53,13 @@ Score every account. Only proceed with accounts scoring 60+ for Tier 1, 40–59 
 |--------|----------|---------------|-------------------|---------------|
 | **Tier 1** | 1:1 — fully bespoke | 5–50 accounts | Executive sponsors, custom ABM campaigns, 1:1 content, executive events | Personalized video, direct mail, custom research, 1:1 ads |
 | **Tier 2** | 1:Few — cluster-based | 25–200 accounts | Semi-personalized by cluster (industry, tech stack, challenge), micro-events, targeted ads | Agile ABM platform, LinkedIn Matched Audiences, intent-triggered email |
-| **Tier 3** | 1:Many — programmatic | 500–1,000+ accounts | Automated rules-based personalization, intent-triggered outreach, retargeting | DSP ads, IP-based website personalization, automated email sequences |
+| **Tier 3** | 1:Many — programmatic | 500–1,000+ accounts | Automated rules-based personalization, intent-triggered outreach, retargeting | DSP ads, IP-based site personalization, automated email sequences |
 
 **Dynamic tiering:** Accounts are NOT frozen. Promote accounts into Tier 1 when intent spikes, hiring signals emerge, or a champion joins. Move back to Tier 2/3 if an account goes quiet for 60+ days.
 
 ## Step 3: Set up signal-based account lists
 
-1. **Source signals from 3+ channels:** Website visits (IP identification + UTM), competitor intent (Bombora/6sense), job change alerts (LinkedIn Sales Navigator), product usage spikes (PQL activity), G2/Capterra comparison page visits.
+1. **Source signals from 3+ channels:** site visits (IP identification + UTM), competitor intent (Bombora/6sense), job change alerts (LinkedIn Sales Navigator), product usage spikes (PQL activity), G2/Capterra comparison page visits.
 2. **Build lists of ≤100 Tier-1 accounts** — smaller lists drive focus. Refresh quarterly.
 3. **Exclude stale accounts:** Remove any account with no signal activity for 90+ days. Replace with fresh targets from the scoring pipeline.
 4. **Use AI-generated ad copy** for Tier-1 accounts. Signal-based ABM programs targeting ≤100 accounts with AI-personalized copy achieve 15–30% reply rates vs. 1–3% for generic bought lists.

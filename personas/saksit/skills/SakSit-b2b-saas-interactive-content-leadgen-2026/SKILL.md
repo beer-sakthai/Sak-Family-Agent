@@ -139,7 +139,7 @@ Push the following **custom properties** to CRM (HubSpot/Salesforce) on every su
 
 ### 4.1 Channel Priority
 
-1. **Product website** — embed on homepage, pricing page, and feature pages (highest intent)
+1. **Product site** — embed on homepage, pricing page, and feature pages (highest intent)
 2. **Blog posts** — contextual CTAs within relevant articles (e.g., "Calculate your cloud savings" in a cloud-cost article)
 3. **Paid ads** — dedicated landing pages for calculator/assessment ads (40-60% lower CPL than generic ads)
 4. **Email campaigns** — nurture sequence trigger: "See how much you could save"

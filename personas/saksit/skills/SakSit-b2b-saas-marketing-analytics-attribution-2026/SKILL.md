@@ -46,7 +46,7 @@ Integrate these sources:
 1. CRM data (Salesforce/Hubspot): opportunity value, campaign tag, stage status
 2. Analytics (Command/Amplitude/Mixpanel): user behavior, user activity, activation events
 3. Billing (Stripe/Chargebeo): subscription events, MRV MRR, revenue
-4. Website analytics (GA4): sessions, page views, events from marketing channels
+4. Site analytics (GA4): sessions, page views, events from marketing channels
 
 ### Step 3: Build a marketing dashboard
 

@@ -135,7 +135,7 @@ Move from ad-hoc stories to a repeatable system:
 ### Distribution
 - **Internal:** Load to sales enablement platform (Highspot, Seismic) organized
   by funnel stage and industry tag.
-- **External:** Website / resources section, LinkedIn (native document upload),
+- **External:** site / resources section, LinkedIn (native document upload),
   email nurture sequences, G2/Capterra profiles.
 
 ### Repurposing Matrix

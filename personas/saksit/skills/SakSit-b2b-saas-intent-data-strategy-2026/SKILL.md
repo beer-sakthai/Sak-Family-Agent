@@ -25,7 +25,7 @@ author: SakSit Agent
 
 - CRM (HubSpot / Salesforce) with API access
 - At least one third-party intent source (G2 Buyer Intent, Bombora, or 6sense)
-- Website analytics (GA4 / Plausible / Heap) for first-party signals
+- Site analytics (GA4 / Plausible / Heap) for first-party signals
 - Marketing automation platform (HubSpot / Marketo / Pardot)
 - SDR team (1-5 reps) ready to act on routed signals
 
@@ -35,10 +35,10 @@ Map every available signal into four weighted layers:
 
 | Layer | Weight | Signals | Source |
 |-------|--------|---------|--------|
-| 1st-party high-intent | 40% | Pricing page visits, demo abandonments, "request quote" submissions | Your website + GA4 |
-| 3rd-party high-intent | 35% | G2 profile views, competitor comparison checks, review page visits | G2 Buyer Intent |
+| 1st-party high-intent | 40% | Pricing page visits, demo abandonments, "request quote" submissions | Your site + GA4 |
+| Third-party high-intent | 35% | G2 profile views, competitor comparison checks, review page visits | G2 Buyer Intent |
 | 1st-party mid-intent | 15% | Blog article reads, email opens/clicks, ad clicks | CRM + MAP |
-| 3rd-party broad | 10% | Topic surges, category research, tech stack changes | Bombora / 6sense |
+| Third-party broad | 10% | Topic surges, category research, tech stack changes | Bombora / 6sense |
 
 Document your taxonomy in a spreadsheet. Every signal must have:
 - A **source** (which platform detects it)
@@ -153,7 +153,7 @@ Before declaring the intent program live, verify:
 - [ ] Signal taxonomy documented with weights, decay rates, and sources
 - [ ] At least one third-party intent source configured and sending data
 - [ ] Composite intent score formula implemented (manual or automated)
-- [ ] Routing rules built in CRM/MAP covering Hot/Warm/Cold tiers
+- [ ] Routing rules built-in CRM/MAP covering Hot/Warm/Cold tiers
 - [ ] Outreach sequences drafted for all three tiers
 - [ ] SDR team trained on how to reference intent signals naturally
 - [ ] Dashboard created tracking intent-sourced pipeline and conversion

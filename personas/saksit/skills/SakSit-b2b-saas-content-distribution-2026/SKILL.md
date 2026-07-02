@@ -112,7 +112,7 @@ Content that ranks in AI search summaries gets 340% more visibility:
 
 | Day | Channel | Action |
 |---|---|---|
-| Day 0 | All | Publish pillar asset on blog/website |
+| Day 0 | All | Publish pillar asset on blog/site |
 | Day 0 | Email | Send to primary subscriber list (~25% open rates expected) |
 | Day 1 | LinkedIn | Post carousel version + founder/employee shares |
 | Day 2 | Reddit | Post discussion thread in relevant communities |
@@ -171,7 +171,7 @@ Stop tracking vanity metrics. Measure what matters:
 - [ ] Attribution tracking set up (W-shaped MTA, UTM parameters, self-reported forms)
 - [ ] Monthly AI citation share baseline established
 - [ ] 70-20-10 budget allocation documented
-- [ ] Dark social capture (self-reported attribution form) implemented on website
+- [ ] Dark social capture (self-reported attribution form) implemented on site
 - [ ] Quarterly content audit and distribution performance review scheduled
 
 ## References

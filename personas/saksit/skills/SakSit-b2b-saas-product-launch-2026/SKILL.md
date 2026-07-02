@@ -38,7 +38,7 @@ outcome-focused metrics, and a "rolling thunder" momentum strategy.
 |------|-------|-------------|------------------|
 | **Tier 1 — Major** | New products, market entry, platform shifts | 6–12 weeks | Full GTM: updated positioning, PR, sales enablement, cross-channel campaigns |
 | **Tier 2 — Medium** | Meaningful feature additions, workflow improvements | 2–6 weeks | Targeted communications, updated sales materials, focused campaigns |
-| **Tier 3 — Minor** | Bug fixes, quality-of-life updates | 1–2 weeks | Changelog entry, in-app notification |
+| **Tier 3 — Minor** | Bugfixes, quality-of-life updates | 1–2 weeks | Changelog entry, in-app notification |
 
 **Rule:** Define the tier before planning anything else. Prevents launch
 fatigue and ensures resource allocation matches expected revenue or

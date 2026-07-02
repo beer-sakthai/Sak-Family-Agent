@@ -67,7 +67,7 @@ Pick **3 pillars** where company expertise meets employee professional interest:
 ### Step 6: Launch original posting cadence
 - Target: **3-5 posts/week per participant** (post + 4-5 comments/reposts).
 - Each employee must personalise the draft — change wording, add personal anecdotes.
-- Encourage **video-first** content (authentic smartphone clips); algorithm favours it.
+- Encourage **video-first** content (authentic mobile phone clips); algorithm favours it.
 
 ### Step 7: Content formats that work
 | Format | Example | Best For |

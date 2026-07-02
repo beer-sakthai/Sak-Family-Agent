@@ -89,7 +89,7 @@ All four agents expose the same built-in tool registry:
 | `learn` | Save a fact to persistent memory (`kind`: note/pref/project, optional `key`) |
 | `recall` | List facts and observations currently in memory |
 | `search` | Substring search across stored facts and observations |
-| `forget` | Delete a fact by its integer id |
+| `forget` | Delete a fact by its integer ID |
 | `read_file` | Read a local text file within the allowed roots (output capped at 20,000 chars) |
 | `run_command` | Run a CLI command — **disabled unless `SAKTHAI_SHELL_ALLOW=1`** |
 | `send_telegram_message` | Send a Telegram message (needs `TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID`) |

@@ -84,7 +84,7 @@ Stop publishing raw audio. Every episode is a content engine. Convert one 30–4
 ### Distribution cadence
 
 Stagger assets over 5–7 days to avoid feed saturation:
-- **Day 1**: Full episode + transcript on website (SEO anchor)
+- **Day 1**: Full episode + transcript on site (SEO anchor)
 - **Day 2**: 2 short video clips on LinkedIn + Instagram Reels
 - **Day 3**: Blog post version + email newsletter
 - **Day 4**: LinkedIn carousel with key insights
@@ -149,7 +149,7 @@ vs. $4,000/month production × 12 months = $48,000 investment
 
 ### Multi-channel distribution (per episode)
 
-1. **Owned anchor**: Episode page on website with full transcript, show notes, timestamps
+1. **Owned anchor**: Episode page on site with full transcript, show notes, timestamps
 2. **YouTube**: Full episode upload with SEO-optimized title and description
 3. **LinkedIn**: Short clips (native video), carousel, quote graphics
 4. **Instagram/TikTok**: Vertical clips with captions

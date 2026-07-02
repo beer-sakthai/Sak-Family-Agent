@@ -50,7 +50,7 @@ platform. Switch to Ghost only if you need absolute data ownership at scale
    (contacts, customers, LinkedIn connections) with a personal invitation.
 2. **LinkedIn profile hook:** Add "I write a newsletter about [niche]" to your
    headline — expect 5-15 sign-ups per week passively.
-3. **Website embed:** Add a sign-up form to your blog's hero section, not the
+3. **Site embed:** Add a sign-up form to your blog's hero section, not the
    footer — footer forms convert at 0.5-2%, hero forms at 3-8%.
 4. **Welcome gate:** Gate your 3 best blog posts behind an email capture.
 

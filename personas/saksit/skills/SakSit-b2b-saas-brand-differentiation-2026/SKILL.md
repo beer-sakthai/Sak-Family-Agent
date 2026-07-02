@@ -83,7 +83,7 @@ Identify the "villain" in your narrative -- this is NOT a competitor but an enem
 2. Define the market shift that makes the status quo obsolete
 3. Write the category manifesto (300 words max)
 4. Mobilize: 5 analyst briefings, 10 customer references using the new language
-5. Align GTM: update sales decks, website, PRD, pricing page to reflect the new category
+5. Align GTM: update sales decks, site, PRD, pricing page to reflect the new category
 6. Measure: track category keyword search volume, analyst inquiry volume, competitive mimicry
 
 **Pitfall:** Category creation is expensive -- budget $50k-$200k for the first year of market education. Only pursue if you can sustain 18+ months of investment.
@@ -188,7 +188,7 @@ Every 90 days:
 ## Verification checklist
 
 - [ ] Five-part positioning model completed with clear answers
-- [ ] Competitive heatmap shows your differentiator white space
+- [ ] Competitive heatmap shows your differentiator whitespace
 - [ ] Strategic path selected and documented with rationale
 - [ ] Brand narrative written with villain story
 - [ ] AI positioning stance defined

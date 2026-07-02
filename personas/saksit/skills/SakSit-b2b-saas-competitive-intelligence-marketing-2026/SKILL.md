@@ -47,7 +47,7 @@ Monitor each competitor across these five surfaces using CI tools or manual RSS/
 |---------|---------------|---------------|
 | **SEO / AI-search visibility** | Keyword rankings, featured snippets, AI Overview citations, G2 reviews | Semrush, Ahrefs, G2 Track |
 | **Paid ad activity** | Ad copy, landing pages, new campaigns | SpyFu, BuiltWith, ad library scraping |
-| **Hiring patterns** | New roles, job descriptions (signal product direction) | Linkedin Talent, Otta |
+| **Hiring patterns** | New roles, job descriptions (signal product direction) | LinkedIn Talent, Otta |
 | **Product-launch signals** | Changelog, blog posts, ProductHunt launches, Twitter/X feeds | RSS feeds, Feedly, G2 |
 | **Review-site sentiment** | G2, Capterra, TrustRadius scores & emerging themes | G2 Track, review monitoring |
 

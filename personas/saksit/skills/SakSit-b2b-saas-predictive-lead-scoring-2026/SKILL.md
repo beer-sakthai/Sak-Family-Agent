@@ -143,7 +143,7 @@ CatBoost → transformer-based). Validate against 2+ years of holdout data.
 
 ## Anti-Patterns
 
-- ❌ Scoring every website visitor — lead scoring is for identified prospects
+- ❌ Scoring every site visitor — lead scoring is for identified prospects
    (email/company known). Use a separate engagement score for anonymous traffic.
 - ❌ Setting it and forgetting it — models decay. Without quarterly recalibration,
    accuracy drops 15-25% within 6 months.
