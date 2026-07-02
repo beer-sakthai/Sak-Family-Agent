@@ -276,3 +276,29 @@ def check_env() -> dict[str, Any]:
     }
     report["ready"] = _is_ready(report)
     return report
+
+
+def redact_secrets(text: str) -> str:
+    """Redact sensitive environment variable values from the given text."""
+    if not isinstance(text, str) or not text:
+        return text
+
+    # Values of these variables are considered sensitive and will be masked.
+    secret_keys = [
+        "ANTHROPIC_API_KEY",
+        "ANTHROPIC_AUTH_TOKEN",
+        "GEMINI_API_KEY",
+        "GOOGLE_API_KEY",
+        "OPENAI_API_KEY",
+        "SAKTHAI_GATEWAY_API_KEY",
+        "TELEGRAM_BOT_TOKEN",
+        "HF_TOKEN",
+        "COMPOSIO_API_KEY",
+    ]
+
+    for key in secret_keys:
+        val = os.environ.get(key)
+        if val and len(val) > 5:
+            text = text.replace(val, "[REDACTED]")
+
+    return text
