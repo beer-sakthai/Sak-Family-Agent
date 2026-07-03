@@ -69,9 +69,9 @@ def test_main_one_url_fails(
     parsed_urls = []
     for token in sent_message.split():
         parsed = urlparse(token.strip(".,;:()[]{}<>\"'"))
-        if parsed.scheme in {"http", "https"} and parsed.netloc:
-            parsed_urls.append(f"{parsed.scheme}://{parsed.netloc}{parsed.path or ''}")
-    assert "http://fail.com" in parsed_urls
+        if parsed.scheme in {"http", "https"} and parsed.hostname:
+            parsed_urls.append(parsed)
+    assert any(p.scheme == "http" and p.hostname == "fail.com" for p in parsed_urls)
     mock_sys_exit.assert_called_once_with(1)
 
 
