@@ -17,6 +17,7 @@ import csv
 import io
 import json
 import logging
+import os
 import sqlite3
 import time
 from collections.abc import Iterable
@@ -191,7 +192,23 @@ class MemoryStore:
 
     def __init__(self, db_path: Path | None = None) -> None:
         self.db_path = Path(db_path) if db_path else memory_db_path()
+        # Restrict permissions on the data directory: rwx------ (0700)
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
+        with contextlib.suppress(OSError):
+            os.chmod(str(self.db_path.parent), 0o700)
+
+        # Ensure the DB file itself is restricted: rw------- (0600)
+        # If it doesn't exist, we create it with correct permissions.
+        # ":memory:" is a special SQLite string, not a real path.
+        is_mem = str(self.db_path) == ":memory:"
+        if not is_mem and not self.db_path.exists():
+            with contextlib.suppress(OSError):
+                fd = os.open(str(self.db_path), os.O_WRONLY | os.O_CREAT, 0o600)
+                os.close(fd)
+        elif not is_mem:
+            with contextlib.suppress(OSError):
+                os.chmod(str(self.db_path), 0o600)
+
         self._conn = sqlite3.connect(self.db_path, timeout=DB_CONNECT_TIMEOUT)
         self._conn.row_factory = sqlite3.Row
         self._conn.execute(f"PRAGMA busy_timeout={DB_BUSY_TIMEOUT_MS}")

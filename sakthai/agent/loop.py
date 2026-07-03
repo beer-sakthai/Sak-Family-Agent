@@ -200,12 +200,15 @@ def _resolve_model_name(model: str, provider: str) -> str:
 
 
 def _execute_tool(tool: Tool, args: dict[str, Any], store: MemoryStore) -> tuple[str, bool]:
-    """Run a tool, returning (output, is_error). Errors are reported, not raised."""
+    """Run a tool, returning (output, is_error). Errors are reported, not raised.
+
+    All tool output is passed through ``redact_secrets`` as a global fail-safe.
+    """
     try:
-        return tool.handler(args, store), False
+        output = tool.handler(args, store)
+        return redact_secrets(output), False
     except Exception as exc:  # noqa: BLE001 — surfaced back to the model
         logger.debug("Tool %r raised %s: %s", tool.name, type(exc).__name__, exc)
-        # Use redact_secrets as a global fail-safe for unhandled tool exceptions
         return redact_secrets(f"{type(exc).__name__}: {exc}"), True
 
 
@@ -585,7 +588,10 @@ def _serialize_messages(messages: list[Any]) -> list[dict[str, Any]]:
 def _save_session_log(task: str, model: str, messages: list[Any], result: AgentResult) -> None:
     try:
         base = sessions_dir().resolve()
+        # Restrict permissions on the sessions directory: rwx------ (0700)
         base.mkdir(parents=True, exist_ok=True)
+        os.chmod(str(base), 0o700)
+
         target = (base / f"{int(time.time())}_{uuid.uuid4().hex}.json").resolve()
         target.relative_to(base)  # guard against traversal
         payload = {
@@ -601,6 +607,14 @@ def _save_session_log(task: str, model: str, messages: list[Any], result: AgentR
                 "tool_calls": result.tool_calls,
             },
         }
-        target.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
+        # Redact any accidental secrets in the full log payload.
+        log_json = json.dumps(payload, indent=2, ensure_ascii=False)
+        redacted_log = redact_secrets(log_json)
+
+        # Create log file with restricted permissions: rw------- (0600)
+        # Use os.open with flags to ensure correct mode on creation.
+        fd = os.open(str(target), os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            f.write(redacted_log)
     except Exception as exc:  # noqa: BLE001 — logging is best-effort
         logger.warning("Failed to save session log: %s", exc)
