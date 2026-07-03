@@ -20,7 +20,7 @@ jobs:
       actions: read
     name: Codacy Security Scan
     runs-on: ubuntu-latest
-    if: >
+    if: >-
       github.event_name == 'push' ||
       github.event_name == 'schedule' ||
       github.event.pull_request.head.repo.full_name == github.repository
@@ -41,17 +41,8 @@ jobs:
           gh-code-scanning-compat: true
           max-allowed-issues: 2147483647
 
-      - name: Check SARIF file existence
-        id: check_sarif
-        run: |
-          if [ -s "results.sarif" ]; then
-            echo "exists=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "exists=false" >> "$GITHUB_OUTPUT"
-          fi
-
       - name: Upload SARIF results file
-        if: steps.check_sarif.outputs.exists == 'true'
+        if: hashFiles('results.sarif') != ''
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: results.sarif

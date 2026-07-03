@@ -14,7 +14,7 @@ permissions:
 jobs:
   Analysis:
     runs-on: ubuntu-latest
-    if: >
+    if: >-
       github.event_name == 'push' ||
       github.event.pull_request.head.repo.full_name == github.repository
     env:
@@ -27,7 +27,7 @@ jobs:
 
       - name: Analyze with SonarCloud
         if: env.SONAR_TOKEN != ''
-        uses: SonarSource/sonarcloud-github-action@4006f663ecaf1f8093e8e4abb9227f6041f52216
+        uses: SonarSource/sonarcloud-github-action@v3.1.0
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         with:
