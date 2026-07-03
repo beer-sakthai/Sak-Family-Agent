@@ -18,6 +18,7 @@ import pytest
 from sakthai.memory.store import MemoryStore
 from sakthai.memory.sync import (
     _handle_git_conflict_and_push,
+    _run_git,
     sync_memory_to_git,
     sync_memory_via_http,
 )
@@ -412,3 +413,78 @@ class TestSyncMemoryToGitExtended:
         with patch("urllib.request.urlopen", return_value=_http_response(202)):
             result = sync_memory_via_http("https://example.com/sync")
         assert isinstance(result, str) and result
+
+    def test_commit_body_summarises_added_facts_and_observations(self, sakthai_home: Path) -> None:
+        """A non-empty ``git diff`` yields a 'Learned N fact(s), M observation(s)'
+        commit body appended as a second ``-m`` argument."""
+        commit_args: list[list[str]] = []
+        diff_out = '+{"kind": "note"}\n+{"kind": "note"}\n+{"summary": "obs"}\n-{"kind": "old"}'
+
+        def _run(args: list[str], **kwargs: object) -> CompletedProcess[str]:
+            if len(args) >= 2 and args[1] == "diff":
+                return _cp(args, stdout=diff_out)
+            if len(args) >= 3 and args[:3] == ["git", "status", "--porcelain"]:
+                return _cp(args, stdout=" M facts.jsonl")
+            if "commit" in args:
+                commit_args.append(args)
+            if len(args) >= 2 and args[1] == "remote":
+                return _cp(args, stdout="")
+            return _cp(args)
+
+        with patch("subprocess.run", side_effect=_run):
+            sync_memory_to_git()
+
+        assert commit_args, "expected a git commit call"
+        body = commit_args[0]
+        assert "Learned 2 fact(s), 1 observation(s)." in body
+
+    def test_commit_body_omitted_when_diff_empty(self, sakthai_home: Path) -> None:
+        """An empty diff leaves a single generic ``-m`` message (no summary body)."""
+        commit_args: list[list[str]] = []
+
+        def _run(args: list[str], **kwargs: object) -> CompletedProcess[str]:
+            if len(args) >= 2 and args[1] == "diff":
+                return _cp(args, stdout="")
+            if len(args) >= 3 and args[:3] == ["git", "status", "--porcelain"]:
+                return _cp(args, stdout=" M facts.jsonl")
+            if "commit" in args:
+                commit_args.append(args)
+            if len(args) >= 2 and args[1] == "remote":
+                return _cp(args, stdout="")
+            return _cp(args)
+
+        with patch("subprocess.run", side_effect=_run):
+            sync_memory_to_git()
+
+        assert commit_args and commit_args[0].count("-m") == 1
+
+
+# ---------------------------------------------------------------------------
+# _run_git error reporting
+# ---------------------------------------------------------------------------
+
+
+class TestRunGit:
+    def test_reraises_and_reports_context_on_failure(
+        self, sakthai_home: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """A failing git command re-raises CalledProcessError after printing the
+        command, exit code, and captured stdout/stderr to stderr."""
+        import subprocess
+
+        err = subprocess.CalledProcessError(
+            returncode=128,
+            cmd=["git", "push", "origin", "main"],
+            output="some stdout",
+            stderr="fatal: remote error",
+        )
+        with (
+            patch("subprocess.run", side_effect=err),
+            pytest.raises(subprocess.CalledProcessError),
+        ):
+            _run_git(["push", "origin", "main"], cwd=sakthai_home)
+
+        captured = capsys.readouterr()
+        assert "Git command failed" in captured.err
+        assert "128" in captured.err
+        assert "fatal: remote error" in captured.err
