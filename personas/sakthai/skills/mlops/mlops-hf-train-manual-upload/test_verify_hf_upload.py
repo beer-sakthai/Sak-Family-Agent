@@ -1,8 +1,10 @@
 import subprocess
+import sys
 from unittest.mock import MagicMock, patch
 
 import pytest
 
+# The user wants me to assume the script is in the python path.
 from sakthai.scripts import verify_hf_upload
 
 
@@ -47,6 +49,71 @@ def test_verify_url_failure_on_404_status(mock_subprocess_run: MagicMock):
     # Assert
     assert result is False
     mock_subprocess_run.assert_called_once()
+
+
+@patch("sakthai.scripts.verify_hf_upload.verify_url")
+@patch("sys.exit")
+def test_main_success_with_multiple_urls(mock_sys_exit: MagicMock, mock_verify_url: MagicMock):
+    """
+    Given multiple valid URLs via command-line arguments,
+    When the main function is run and all URLs verify successfully,
+    Then it should call verify_url for each URL and exit gracefully.
+    """
+    # Arrange
+    mock_verify_url.return_value = True
+    test_urls = ["http://url1.com", "http://url2.com"]
+    with patch.object(sys, "argv", ["verify_hf_upload.py"] + test_urls):
+        # Act
+        verify_hf_upload.main()
+
+    # Assert
+    assert mock_verify_url.call_count == 2
+    mock_verify_url.assert_any_call(test_urls[0], "Resource #1")
+    mock_verify_url.assert_any_call(test_urls[1], "Resource #2")
+    mock_sys_exit.assert_not_called()
+
+
+@patch("sakthai.scripts.verify_hf_upload.verify_url")
+@patch("sys.exit")
+def test_main_failure_with_one_bad_url(mock_sys_exit: MagicMock, mock_verify_url: MagicMock):
+    """
+    Given multiple URLs where one fails verification,
+    When the main function is run,
+    Then it should call sys.exit(1).
+    """
+    # Arrange
+    # Simulate the second URL failing
+    mock_verify_url.side_effect = [True, False]
+    test_urls = ["http://success.com", "http://fail.com"]
+    with patch.object(sys, "argv", ["verify_hf_upload.py"] + test_urls):
+        # Act
+        verify_hf_upload.main()
+
+    # Assert
+    assert mock_verify_url.call_count == 2
+    mock_sys_exit.assert_called_once_with(1)
+
+
+@patch("sakthai.scripts.verify_hf_upload.verify_url")
+@patch("sys.exit")
+def test_main_exits_with_no_urls(mock_sys_exit: MagicMock, mock_verify_url: MagicMock, capsys):
+    """
+    Given no command-line arguments,
+    When the main function is run,
+    Then it should print a usage message and call sys.exit(1).
+    """
+    # Arrange
+    with patch.object(sys, "argv", ["verify_hf_upload.py"]):
+        # Act
+        verify_hf_upload.main()
+
+    # Assert
+    mock_verify_url.assert_not_called()
+    mock_sys_exit.assert_called_once_with(1)
+
+    # Check that the usage message was printed to stdout
+    captured = capsys.readouterr()
+    assert "Usage: python3 verify_hf_upload.py <url1>" in captured.out
 
 
 @patch("subprocess.run")
