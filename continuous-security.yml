@@ -1,0 +1,49 @@
+# This workflow runs the devsecops skill on a schedule to proactively
+# find, triage, and automatically patch vulnerabilities.
+name: Continuous Security Scan
+
+on:
+  workflow_dispatch: # Allows manual triggering from the Actions tab
+  schedule:
+    # Runs nightly at 2 AM UTC
+    - cron: '0 2 * * *'
+
+permissions:
+  contents: write # To create branches and commits for patches
+  pull-requests: write # To create pull requests with fixes
+
+jobs:
+  devsecops-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install uv
+        run: pipx install uv
+
+      - name: Install dependencies
+        run: uv sync --all-extras
+
+      - name: Configure Git User
+        run: |
+          git config --global user.name "SakKing Agent [bot]"
+          git config --global user.email "sakking-agent[bot]@users.noreply.github.com"
+
+      - name: Run DevSecOps Skill
+        # This command invokes the agent and tells it to use the devsecops skill.
+        # The skill will scan for issues and trigger the automated patching pipeline,
+        # which may create a pull request with a proposed fix.
+        run: uv run sakthai run "Use the devsecops skill to perform a full security audit of the codebase." --with-skills devsecops --provider anthropic
+        env:
+          # API keys are needed for the LLM to generate patches.
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          # The GITHUB_TOKEN is automatically available to the workflow and is needed to create pull requests.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # SAKTHAI_SHELL_ALLOW is needed for the agent to run ruff/bandit.
+          SAKTHAI_SHELL_ALLOW: "1"

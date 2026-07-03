@@ -1,0 +1,3 @@
+# Author Bio
+
+**Nanthasit Burankum** is an independent researcher and the creator of the Sak-Family-Agent project. His work focuses on developing novel, value-driven architectures for AI agents, exploring how to engineer systems that are fundamentally empathetic and aligned with human well-being. The Sak-Family-Agent project was born from his personal journey through a period of profound difficulty, leading him to design an AI companion system grounded in the core values of Dream, Hope, Care, Joy, Trust, and Growth. Through his work, Nanthasit aims to pioneer a new paradigm in AI development where human values are not an afterthought but the foundational building blocks of more humane and life-saving technology.

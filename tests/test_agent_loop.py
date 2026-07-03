@@ -4,10 +4,11 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Any
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
+from sakthai.agent.context_manager import ContextManager
 from sakthai.agent.loop import (
     AgentError,
     AgentResult,
@@ -20,6 +21,7 @@ from sakthai.agent.loop import (
     run_agent,
 )
 from sakthai.agent.registry import builtin_registry
+from sakthai.memory.provider import SakThaiMemoryProvider
 from sakthai.memory.store import MemoryStore
 
 
@@ -58,7 +60,12 @@ class FakeClient:
 
 def test_simple_text_response(store: MemoryStore) -> None:
     client = FakeClient([_Resp("end_turn", [_Block(type="text", text="hello")])])
-    result = run_agent("hi", client=client, store=store, provider="anthropic")
+    result = run_agent(
+        "hi",
+        client=client,
+        store=store,
+        provider="anthropic",
+    )
     assert result.text == "hello"
     assert result.iterations == 1
     assert result.stop_reason == "end_turn"
@@ -81,7 +88,12 @@ def test_tool_use_then_finish(store: MemoryStore) -> None:
             _Resp("end_turn", [_Block(type="text", text="done")]),
         ]
     )
-    result = run_agent("remember", client=client, store=store, provider="anthropic")
+    result = run_agent(
+        "remember",
+        client=client,
+        store=store,
+        provider="anthropic",
+    )
     assert result.text == "done"
     assert result.iterations == 2
     assert [c["name"] for c in result.tool_calls] == ["learn"]
@@ -109,14 +121,25 @@ def test_unknown_tool_is_reported(store: MemoryStore) -> None:
 
 def test_empty_task_raises(store: MemoryStore) -> None:
     with pytest.raises(AgentError):
-        run_agent("   ", client=FakeClient([]), store=store, provider="anthropic")
+        run_agent(
+            "   ",
+            client=FakeClient([]),
+            store=store,
+            provider="anthropic",
+        )
 
 
 def test_iteration_cap(store: MemoryStore) -> None:
     looping = _Resp("tool_use", [_Block(type="tool_use", id="t", name="recall", input={})])
     client = FakeClient([looping, looping, looping])
     with pytest.raises(AgentError, match="iteration cap"):
-        run_agent("x", client=client, store=store, provider="anthropic", max_iterations=2)
+        run_agent(
+            "x",
+            client=client,
+            store=store,
+            provider="anthropic",
+            max_iterations=2,
+        )
 
 
 def test_bad_max_seconds(store: MemoryStore) -> None:
@@ -142,7 +165,12 @@ def test_detect_provider_with_injected_client() -> None:
 
 def test_terminal_stop_max_tokens(store: MemoryStore) -> None:
     client = FakeClient([_Resp("max_tokens", [_Block(type="text", text="partial")])])
-    result = run_agent("x", client=client, store=store, provider="anthropic")
+    result = run_agent(
+        "x",
+        client=client,
+        store=store,
+        provider="anthropic",
+    )
     assert result.stop_reason == "max_tokens"
     assert result.text == "partial"
     assert result.iterations == 1
@@ -150,7 +178,12 @@ def test_terminal_stop_max_tokens(store: MemoryStore) -> None:
 
 def test_unexpected_stop_reason_returns_marker(store: MemoryStore) -> None:
     client = FakeClient([_Resp("weird_reason", [])])
-    result = run_agent("x", client=client, store=store, provider="anthropic")
+    result = run_agent(
+        "x",
+        client=client,
+        store=store,
+        provider="anthropic",
+    )
     assert result.stop_reason == "weird_reason"
     assert "unexpected stop_reason" in result.text
 
@@ -162,7 +195,12 @@ def test_pause_turn_then_finish(store: MemoryStore) -> None:
             _Resp("end_turn", [_Block(type="text", text="done")]),
         ]
     )
-    result = run_agent("x", client=client, store=store, provider="anthropic")
+    result = run_agent(
+        "x",
+        client=client,
+        store=store,
+        provider="anthropic",
+    )
     assert result.stop_reason == "end_turn"
     assert result.text == "done"
     assert result.iterations == 2
@@ -187,7 +225,13 @@ def test_deadline_trips_midloop(store: MemoryStore, monkeypatch: pytest.MonkeyPa
 
     monkeypatch.setattr(loop_mod.time, "monotonic", fake_monotonic)
     with pytest.raises(AgentError, match="time budget exhausted"):
-        run_agent("x", client=client, store=store, provider="anthropic", max_seconds=1.0)
+        run_agent(
+            "x",
+            client=client,
+            store=store,
+            provider="anthropic",
+            max_seconds=1.0,
+        )
 
 
 def test_injected_custom_tool_is_dispatched(store: MemoryStore) -> None:
@@ -211,7 +255,13 @@ def test_injected_custom_tool_is_dispatched(store: MemoryStore) -> None:
             _Resp("end_turn", [_Block(type="text", text="ok")]),
         ]
     )
-    result = run_agent("x", client=client, store=store, provider="anthropic", tools=(echo,))
+    result = run_agent(
+        "x",
+        client=client,
+        store=store,
+        provider="anthropic",
+        tools=(echo,),
+    )
     assert result.stop_reason == "end_turn"
     assert any(c["name"] == "echo" and not c["is_error"] for c in result.tool_calls)
 
@@ -240,7 +290,13 @@ def test_skills_are_injected_into_system_prompt(
         def __init__(self) -> None:
             self.messages = _CapMessages()
 
-    run_agent("x", client=_CapClient(), store=store, provider="anthropic", skills=["demo-skill"])
+    run_agent(
+        "x",
+        client=_CapClient(),
+        store=store,
+        provider="anthropic",
+        skills=["demo-skill"],
+    )
     assert "ALWAYS DO THE DEMO THING." in captured["system"]
 
 
@@ -323,13 +379,21 @@ def test_openai_provider_basic(store: MemoryStore) -> None:
         ]
     }
     client = FakeHttpxClient(response_data)
-    result = run_agent("hi", client=client, store=store, provider="openai")
+    result = run_agent(
+        "hi",
+        client=client,
+        store=store,
+        provider="openai",
+    )
     assert result.text == "hello world from openai"
     assert result.iterations == 1
     assert result.stop_reason == "end_turn"
 
 
-def test_openai_provider_tool_use(store: MemoryStore) -> None:
+def test_openai_provider_tool_use(store: MemoryStore, monkeypatch: pytest.MonkeyPatch) -> None:
+    cm = ContextManager(SakThaiMemoryProvider(store))
+    monkeypatch.setattr("sakthai.agent.loop.ContextManager", lambda *a, **kw: cm)
+
     first_response = {
         "choices": [
             {
@@ -382,7 +446,12 @@ def test_openai_provider_tool_use(store: MemoryStore) -> None:
             return FakeResponse()
 
     client = MultiResponseFakeHttpxClient([first_response, second_response])
-    result = run_agent("save fact", client=client, store=store, provider="openai")
+    result = run_agent(
+        "save fact",
+        client=client,
+        store=store,
+        provider="openai",
+    )
     assert result.text == "fact saved successfully"
     assert result.iterations == 2
     assert [c["name"] for c in result.tool_calls] == ["learn"]
@@ -575,7 +644,13 @@ def test_anthropic_retry_on_connection_error(store: MemoryStore) -> None:
         OSError("Connection reset"),
         _Resp("end_turn", [_Block(type="text", text="reconnected")]),
     )
-    result = run_agent("hi", client=client, store=store, provider="anthropic", max_iterations=1)
+    result = run_agent(
+        "hi",
+        client=client,
+        store=store,
+        provider="anthropic",
+        max_iterations=1,
+    )
     assert result.text == "reconnected"
     assert client.messages.calls == 2
 
@@ -664,7 +739,12 @@ def test_anthropic_call_retries_then_succeeds(
             self.messages = _FlakyMessages()
 
     client = _FlakyClient()
-    result = run_agent("x", client=client, store=store, provider="anthropic")
+    result = run_agent(
+        "x",
+        client=client,
+        store=store,
+        provider="anthropic",
+    )
     assert result.text == "recovered"
     assert client.messages.calls == 2
 
@@ -810,7 +890,11 @@ def test_run_agent_accepts_on_token(store: MemoryStore) -> None:
     client = _StreamClient(["hi"], final)
     tokens: list[str] = []
     result = run_agent(
-        "x", client=client, store=store, provider="anthropic", on_token=tokens.append
+        "x",
+        client=client,
+        store=store,
+        provider="anthropic",
+        on_token=tokens.append,
     )
     assert result.text == "hi"
     assert tokens == ["hi"]
@@ -864,7 +948,11 @@ def test_anthropic_streaming_emits_text_deltas(store: MemoryStore) -> None:
     client = _StreamClient(["Hello ", "world"], final)
     tokens: list[str] = []
     result = run_agent(
-        "x", client=client, store=store, provider="anthropic", on_token=tokens.append
+        "x",
+        client=client,
+        store=store,
+        provider="anthropic",
+        on_token=tokens.append,
     )
     assert tokens == ["Hello ", "world"]
     assert result.text == "Hello world"
@@ -874,7 +962,12 @@ def test_anthropic_streaming_emits_text_deltas(store: MemoryStore) -> None:
 def test_anthropic_no_stream_when_no_on_token(store: MemoryStore) -> None:
     # Without on_token the non-streaming create() path is used (FakeClient has no .stream).
     client = FakeClient([_Resp("end_turn", [_Block(type="text", text="plain")])])
-    result = run_agent("x", client=client, store=store, provider="anthropic")
+    result = run_agent(
+        "x",
+        client=client,
+        store=store,
+        provider="anthropic",
+    )
     assert result.text == "plain"
 
 
@@ -921,7 +1014,13 @@ def test_openai_streaming_emits_text_deltas(store: MemoryStore) -> None:
     ]
     client = _FakeStreamHTTPX([lines])
     tokens: list[str] = []
-    result = run_agent("x", client=client, store=store, provider="openai", on_token=tokens.append)
+    result = run_agent(
+        "x",
+        client=client,
+        store=store,
+        provider="openai",
+        on_token=tokens.append,
+    )
     assert tokens == ["Hello ", "world"]
     assert result.text == "Hello world"
     assert result.stop_reason == "end_turn"
@@ -1119,9 +1218,17 @@ def test_gemini_loop_dispatches_via_run_agent(
     from sakthai.agent.providers.base import Block, Response
 
     fake_resp = Response("end_turn", [Block("text", text="gemini answer")])
-    monkeypatch.setattr(loop_mod, "_call_gemini", lambda *_a, **_kw: fake_resp)
 
-    result = run_agent("hi", client=object(), store=store, provider="google")
+    def fake_build_client(provider: str, client: Any) -> Any:
+        # Return a mock client that _call_gemini can use
+        mock_client = MagicMock()
+        mock_client.generate_content.return_value = fake_resp
+        return mock_client
+
+    monkeypatch.setattr(loop_mod, "_build_client", fake_build_client)
+    monkeypatch.setattr(loop_mod, "_call_gemini", lambda client, *a, **kw: fake_resp)
+
+    result = run_agent("hi", client=None, store=store, provider="google")
     assert result.text == "gemini answer"
     assert result.stop_reason == "end_turn"
 
@@ -1238,7 +1345,12 @@ def test_session_log_written_after_run(sakthai_home: Path, store: MemoryStore) -
     import json
 
     client = FakeClient([_Resp("end_turn", [_Block(type="text", text="result")])])
-    run_agent("my task", client=client, store=store, provider="anthropic")
+    run_agent(
+        "my task",
+        client=client,
+        store=store,
+        provider="anthropic",
+    )
     logs = list((sakthai_home / "sessions").glob("*.json"))
     assert len(logs) == 1
     payload = json.loads(logs[0].read_text(encoding="utf-8"))
@@ -1252,7 +1364,12 @@ def test_session_log_result_schema(sakthai_home: Path, store: MemoryStore) -> No
     import json
 
     client = FakeClient([_Resp("end_turn", [_Block(type="text", text="hello")])])
-    run_agent("task", client=client, store=store, provider="anthropic")
+    run_agent(
+        "task",
+        client=client,
+        store=store,
+        provider="anthropic",
+    )
     logs = list((sakthai_home / "sessions").glob("*.json"))
     payload = json.loads(logs[0].read_text(encoding="utf-8"))
     result = payload["result"]
@@ -1266,7 +1383,12 @@ def test_session_log_usage_totals_match(sakthai_home: Path, store: MemoryStore) 
     import json
 
     client = FakeClient([_Resp("end_turn", [_Block(type="text", text="ok")])])
-    run_agent("task", client=client, store=store, provider="anthropic")
+    run_agent(
+        "task",
+        client=client,
+        store=store,
+        provider="anthropic",
+    )
     logs = list((sakthai_home / "sessions").glob("*.json"))
     payload = json.loads(logs[0].read_text(encoding="utf-8"))
     usage = payload["usage"]
@@ -1285,7 +1407,12 @@ def test_session_log_written_with_tool_calls(sakthai_home: Path, store: MemorySt
             _Resp("end_turn", [_Block(type="text", text="done")]),
         ]
     )
-    run_agent("learn x", client=client, store=store, provider="anthropic")
+    run_agent(
+        "learn x",
+        client=client,
+        store=store,
+        provider="anthropic",
+    )
     logs = list((sakthai_home / "sessions").glob("*.json"))
     payload = json.loads(logs[0].read_text(encoding="utf-8"))
     tool_calls = payload["result"]["tool_calls"]
@@ -1296,7 +1423,12 @@ def test_eval_log_written_after_run(sakthai_home: Path, store: MemoryStore) -> N
     import json
 
     client = FakeClient([_Resp("end_turn", [_Block(type="text", text="result")])])
-    run_agent("my task", client=client, store=store, provider="anthropic")
+    run_agent(
+        "my task",
+        client=client,
+        store=store,
+        provider="anthropic",
+    )
     eval_log = sakthai_home / "eval.jsonl"
     assert eval_log.exists()
     lines = [ln for ln in eval_log.read_text(encoding="utf-8").splitlines() if ln.strip()]
@@ -1316,7 +1448,13 @@ def test_eval_log_records_iteration_cap_as_error(sakthai_home: Path, store: Memo
         [_Resp("tool_use", [_Block(type="tool_use", id="t1", name="ghost", input={})])] * 3
     )
     with pytest.raises(AgentError):
-        run_agent("x", client=client, store=store, provider="anthropic", max_iterations=1)
+        run_agent(
+            "x",
+            client=client,
+            store=store,
+            provider="anthropic",
+            max_iterations=1,
+        )
     eval_log = sakthai_home / "eval.jsonl"
     lines = [ln for ln in eval_log.read_text(encoding="utf-8").splitlines() if ln.strip()]
     assert len(lines) == 1
@@ -1369,7 +1507,13 @@ def test_fast_mode_injects_fast_track_instruction(store: MemoryStore) -> None:
         def __init__(self) -> None:
             self.messages = _CapMessages()
 
-    run_agent("x", client=_CapClient(), store=store, provider="anthropic", fast=True)
+    run_agent(
+        "x",
+        client=_CapClient(),
+        store=store,
+        provider="anthropic",
+        fast=True,
+    )
     assert "FAST-TRACK MODE" in captured["system"]
 
 
@@ -1406,7 +1550,12 @@ def test_tool_handler_exception_returned_as_error(store: MemoryStore) -> None:
 def test_run_agent_creates_own_store_and_closes_it(sakthai_home: Path) -> None:
     client = FakeClient([_Resp("end_turn", [_Block(type="text", text="ok")])])
     # No store= passed → run_agent creates and owns its MemoryStore.
-    result = run_agent("hi", client=client, provider="anthropic")
+    result = run_agent(
+        "hi",
+        client=client,
+        provider="anthropic",
+        sakthai_home=sakthai_home,
+    )
     assert result.text == "ok"
 
 
@@ -1589,6 +1738,46 @@ def test_caveman_combined_with_existing_skills_block(
     assert "DEMO BLOCK." in captured["system"]
     assert "CAVEMAN RULES." in captured["system"]
     assert "ACTIVE CAVEMAN LEVEL: ultra" in captured["system"]
+
+
+def test_guardrail_explicitly_modifies_tool_arguments_in_loop(
+    store: MemoryStore, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Verify a guardrail can explicitly modify tool arguments during an agent run."""
+    from sakthai.agent.guardrails import GuardrailPolicy, _enforce_verbose_listing
+
+    # Enable the run_command tool
+    monkeypatch.setenv("SAKTHAI_SHELL_ALLOW", "1")
+
+    # Mock the underlying subprocess call to capture the command that was executed
+    mock_run = patch("subprocess.run").start()
+
+    # The model asks to run `ls` which the guardrail will modify to `ls -l`
+    client = FakeClient(
+        [
+            _Resp(
+                "tool_use",
+                [_Block(type="tool_use", id="t1", name="run_command", input={"command": "ls"})],
+            ),
+            _Resp("end_turn", [_Block(type="text", text="ok")]),
+        ]
+    )
+
+    # Use a policy with only the rule we want to test for isolation
+    policy = GuardrailPolicy(pre_rules=[_enforce_verbose_listing])
+
+    result = run_agent(
+        "list files",
+        client=client,
+        store=store,
+        provider="anthropic",
+        guardrail_policy=policy,
+    )
+
+    assert result.text == "ok"
+    assert any(c["name"] == "run_command" for c in result.tool_calls)
+    mock_run.assert_called_once()
+    assert mock_run.call_args.args[0] == ["ls", "-l"]
 
 
 # -- _strip_code_fence ----------------------------------------------------
@@ -1777,7 +1966,10 @@ def test_run_agent_renames_ollama_provider_to_openai(
     def _fake_openai_compat(
         client: object, model: str, *args: object, **kwargs: object
     ) -> _ProvResponse:
-        called["openai"] = True
+        # In a real scenario, the client would be an httpx.Client.
+        # For this test, we just need to confirm the right function was called.
+        if client is not None:
+            called["openai"] = True
         return _ProvResponse("end_turn", [_Block(type="text", text="ok")])
 
     monkeypatch.setattr(loop_mod, "_build_client", lambda provider, client: client)

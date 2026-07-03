@@ -31,6 +31,7 @@ from ..memory.store import MemoryStore
 from ..skills import default_skill_roots, find_skill, render_skills_prompt_block
 from . import providers
 from .eval import EvalRecord, record_eval, task_preview
+from .guardrails import DEFAULT_POLICY, GuardrailAction, GuardrailPolicy
 from .providers import base as _providers_base
 from .registry import ToolRegistry
 from .tools import BUILTIN_TOOLS, Tool
@@ -217,12 +218,45 @@ def _execute_tool(tool: Tool, args: dict[str, Any], store: MemoryStore) -> tuple
         return redact_secrets(f"{type(exc).__name__}: {exc}"), True
 
 
+def _execute_tool_with_guardrails(
+    tool: Tool, args: dict[str, Any], store: MemoryStore, policy: GuardrailPolicy
+) -> tuple[str, bool]:
+    """Check guardrails, then run a tool.
+
+    If the pre-execution guardrail check fails, the tool is not run, and the
+    denial reason is returned as an error output.
+    """
+    pre_check_result = policy.check_pre_execution(tool, args, store)
+    if pre_check_result.action == GuardrailAction.DENY:
+        return (
+            pre_check_result.reason
+            or f"Tool '{tool.name}' was denied by a pre-execution guardrail.",
+            True,
+        )
+
+    # Use the arguments as potentially modified by the guardrail policy.
+    final_args = pre_check_result.modified_args or args
+
+    output, is_error = _execute_tool(tool, final_args, store)
+
+    post_check_result = policy.check_post_execution(tool, final_args, output, is_error, store)
+    if post_check_result.action == GuardrailAction.DENY:
+        return (
+            post_check_result.reason
+            or f"Output from tool '{tool.name}' was denied by a post-execution guardrail.",
+            True,
+        )
+
+    return output, is_error
+
+
 def _process_tool_uses(
     tool_uses: list[Any],
     registry: ToolRegistry,
     store: MemoryStore,
     notify: Callable[[str, dict[str, Any]], None],
     tool_calls: list[dict[str, Any]],
+    policy: GuardrailPolicy,
 ) -> list[dict[str, Any]]:
     results: list[dict[str, Any]] = []
     for use in tool_uses:
@@ -239,7 +273,7 @@ def _process_tool_uses(
             notify("tool_error", {"name": use.name, "reason": "unknown"})
             continue
         args = dict(use.input or {})
-        output, is_error = _execute_tool(tool, args, store)
+        output, is_error = _execute_tool_with_guardrails(tool, args, store, policy)
         tool_calls.append({"name": use.name, "input": args, "is_error": is_error})
         notify("tool_call", {"name": use.name, "input": args, "is_error": is_error})
         results.append(
@@ -260,6 +294,7 @@ def _dispatch_tool_calls(
     store: MemoryStore,
     notify: Callable[[str, dict[str, Any]], None],
     tool_calls: list[dict[str, Any]],
+    policy: GuardrailPolicy,
 ) -> None:
     """Process tool_use blocks, execute tools, and append results to messages."""
     tool_uses = [b for b in response.content if getattr(b, "type", "") == "tool_use"]
@@ -271,7 +306,7 @@ def _dispatch_tool_calls(
         return
 
     messages.append({"role": "assistant", "content": response.content})
-    results = _process_tool_uses(tool_uses, registry, store, notify, tool_calls)
+    results = _process_tool_uses(tool_uses, registry, store, notify, tool_calls, policy)
     messages.append({"role": "user", "content": results})
 
 
@@ -328,6 +363,7 @@ def run_agent(
     stateless: bool = False,
     caveman: str | None = None,
     system_prompt_prefix: str = "",
+    guardrail_policy: GuardrailPolicy | None = None,
 ) -> AgentResult:
     """Run one task to completion against Claude, Gemini, or an OpenAI endpoint.
 
@@ -367,6 +403,7 @@ def run_agent(
     registry = ToolRegistry(tools)
     tool_schemas = registry.schemas()
     tool_calls: list[dict[str, Any]] = []
+    policy = guardrail_policy or DEFAULT_POLICY
     messages: list[dict[str, Any]] = [{"role": "user", "content": task}]
     deadline = time.monotonic() + max_seconds if max_seconds is not None else None
 
@@ -469,7 +506,7 @@ def run_agent(
                 _record_run_eval(iteration, stop_reason, had_error=False)
                 return result
 
-            _dispatch_tool_calls(response, messages, registry, store, notify, tool_calls)
+            _dispatch_tool_calls(response, messages, registry, store, notify, tool_calls, policy)
 
         _record_run_eval(max_iterations, "max_iterations", had_error=True)
         raise AgentError(

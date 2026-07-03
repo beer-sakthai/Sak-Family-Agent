@@ -89,6 +89,7 @@ The Sak-Family-Agent provides a rich set of capabilities through its CLI, agent 
 - **Hugging Face Integration**: Tools for interacting with the Hugging Face Hub, including `hf info` and `hf download` [2].
 - **Asset Monitoring**: A built-in skill (`asset-monitor`) to monitor a list of public URLs and send a Telegram alert if any of them become unavailable [4].
 - **Self-Evolution (Experimental)**: An experimental `agent-self-evolution` package explores DSPy/GEPA for agent self-improvement [2].
+- **Continuous Security & Self-Healing**: A nightly GitHub Actions workflow runs the `devsecops` skill to proactively scan the codebase with `ruff` and `bandit`. When vulnerabilities are found, it triggers an automated patching pipeline to generate, test, and open pull requests with proposed fixes, creating an "intelligent digital immune system" [5].
 
 ## 🛠️ Tech Stack
 
@@ -201,3 +202,4 @@ Built with ❤️ for Beer by the Sak Family.
 [2] `CLAUDE.md` from `beer-sakthai/Sak-Family-Agent`
 [3] `pyproject.toml` from `beer-sakthai/Sak-Family-Agent`
 [4] `.github/workflows/SKILL.md` from `beer-sakthai/Sak-Family-Agent`
+[5] `.github/workflows/continuous-security.yml` from `beer-sakthai/Sak-Family-Agent`
