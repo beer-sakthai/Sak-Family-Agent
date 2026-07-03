@@ -1,10 +1,10 @@
-task: yaml_validity
-dataset_path: yaml_validity_dataset.jsonl
+task: yaml_key_check
+dataset_path: yaml_key_check_dataset.jsonl
 output_type: generate_until
 
 doc_to_text: |
   You are an AI assistant that only responds in valid YAML format.
-  Based on the following input, generate a YAML document.
+  Based on the following input, generate a YAML document that includes the key '{{key_to_check}}'.
 
   Input: {{input}}
   YAML Output:
@@ -17,10 +17,10 @@ generation_kwargs:
   temperature: 0.1
 
 metric_list:
-  - metric: !function evaluation_tasks.utils.check_yaml_validity
+  - metric: !function evaluation_tasks.utils.check_yaml_key
     aggregation: mean
     higher_is_better: true
 
 metadata:
   version: 1.0
-  description: "Tests if a model's output is a valid YAML document."
+  description: "Tests if a model's YAML output contains a specific required key."

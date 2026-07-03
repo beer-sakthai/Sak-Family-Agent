@@ -23,6 +23,7 @@ jobs:
           - 'json_key_check'
           - 'json_key_value_pattern_check'
           - 'json_numerical_range_check'
+          - 'yaml_validity'
       fail-fast: false # Allow all jobs to run even if some fail
     runs-on: ubuntu-latest
     outputs:
