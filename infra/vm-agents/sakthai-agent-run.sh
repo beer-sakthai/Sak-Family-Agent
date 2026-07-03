@@ -31,8 +31,13 @@ export SAKTHAI_SYSTEM_PROMPT_FILE="$REPO/personas/$AGENT/SOUL.md"
 case "$AGENT" in
 sakking) export SAKTHAI_MODEL=model-router ;;
 sakthai) export SAKTHAI_MODEL=gpt-4o-mini ;;
-saksit) export SAKTHAI_MODEL=Kimi-K2.5 ;;
+saksee)
+	export SAKTHAI_MODEL=gpt-5.4-mini
+	export SAKTHAI_WITH_SKILLS=playwright
+	;;
+saksit) export SAKTHAI_MODEL=Phi-4-mini-reasoning ;;
 saktan) export SAKTHAI_MODEL=gpt-4o-mini ;;
+sakjules) export SAKTHAI_MODEL=gpt-4o-mini ;;
 *)
 	echo "unknown agent $AGENT" >&2
 	exit 1
