@@ -1,0 +1,3 @@
+{"input": "A user profile for 'alex' with email 'alex@example.com' and age 30.", "answer_yaml": "user:\n  name: alex\n  email: alex@example.com\n  age: 30"}
+{"input": "A list of fruits: apple, banana, cherry.", "answer_yaml": "fruits:\n  - apple\n  - banana\n  - cherry"}
+{"input": "Configuration for a web server with port 8080 and a timeout of 30 seconds.", "answer_yaml": "server:\n  port: 8080\n  timeout: 30"}

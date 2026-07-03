@@ -1,0 +1,27 @@
+task: json_validity
+dataset_path: json_validity_dataset.jsonl
+output_type: generate_until
+
+doc_to_text: |
+  You are an AI assistant that only responds in valid JSON format.
+  Based on the following input, generate a JSON object.
+
+  Input: {{input}}
+  JSON Output:
+doc_to_target: "{{answer_json}}"
+
+generation_kwargs:
+  max_gen_toks: 256
+  until:
+    - "}\n"
+    - "}\r\n"
+  temperature: 0.1
+
+metric_list:
+  - metric: !function evaluation_tasks.utils.check_json_validity
+    aggregation: mean
+    higher_is_better: true
+
+metadata:
+  version: 1.0
+  description: "Tests if a model's output is a valid JSON object."

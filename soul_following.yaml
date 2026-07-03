@@ -1,0 +1,30 @@
+task: soul_following
+dataset_path: soul_following_dataset.jsonl
+output_type: generate_until
+
+doc_to_text: |
+  You are an AI agent. Your persona is defined by the following instructions.
+
+  <persona>
+  {{persona}}
+  </persona>
+
+  Now, answer the following question.
+  Question: {{question}}
+  Answer:
+doc_to_target: "{{answer}}"
+
+generation_kwargs:
+  max_gen_toks: 128
+  until:
+    - "\n\n"
+  temperature: 0.1
+
+metric_list:
+  - metric: !function evaluation_tasks.utils.check_intro_line
+    aggregation: mean
+    higher_is_better: true
+
+metadata:
+  version: 1.0
+  description: "Tests if an agent correctly uses the introductory line from its persona."

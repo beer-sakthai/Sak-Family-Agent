@@ -1,0 +1,185 @@
+# .github/workflows/run-evals.yml
+name: Run Evals
+
+on:
+  workflow_dispatch: # Allows manual triggering
+  schedule:
+    - cron: '0 0 * * 0' # Runs every Sunday at midnight UTC
+
+permissions:
+  contents: read
+
+jobs:
+  run-evaluations:
+    strategy:
+      matrix:
+        model:
+          - 'Nanthasit/sakthai-context-0.5b-tools'
+          - 'google/gemma-2b'
+          - 'mistralai/Mistral-7B-v0.1'
+        task:
+          - 'soul_following'
+          - 'json_validity'
+          - 'json_key_check'
+          - 'json_key_value_pattern_check'
+          - 'json_numerical_range_check'
+      fail-fast: false # Allow all jobs to run even if some fail
+    runs-on: ubuntu-latest
+    outputs:
+      model_name: ${{ matrix.model }}
+      task_name: ${{ matrix.task }}
+      sanitized_model_name: ${{ steps.run_eval.outputs.sanitized_model_name }}
+      sanitized_task_name: ${{ steps.run_eval.outputs.sanitized_task_name }}
+      score: ${{ steps.run_eval.outputs.score }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install uv
+        run: pipx install uv
+
+      - name: Install dependencies
+        run: uv sync --all-extras
+
+      - name: Run lm-evaluation-harness
+        id: run_eval
+        run: |
+          export HF_TOKEN=${{ secrets.HF_TOKEN }}
+          export RESULTS_DIR="eval-results"
+          # Sanitize model name for use in filenames and IDs
+          SANITIZED_MODEL_NAME=$(echo "${{ matrix.model }}" | tr '/' '_-')
+          SANITIZED_TASK_NAME=$(echo "${{ matrix.task }}" | tr '/' '_-')
+          export RESULTS_FILE="$RESULTS_DIR/results-$SANITIZED_MODEL_NAME-$SANITIZED_TASK_NAME.json"
+          mkdir -p $RESULTS_DIR
+
+          uv run lm_eval \
+            --model hf \
+            --model_args pretrained=${{ matrix.model }},trust_remote_code=True \
+            --tasks ${{ matrix.task }} \
+            --task_path evaluation_tasks \
+            --output_path $RESULTS_FILE \
+            --batch_size auto \
+            --log_samples
+
+          # Extract score and set as output
+          # Note: This jq query dynamically gets the metric name from the first result.
+          METRIC_KEY=$(jq -r '.results["${{ matrix.task }}"] | keys[0]' $RESULTS_FILE)
+          SCORE=$(jq '.results["${{ matrix.task }}"][$METRIC_KEY]' $RESULTS_FILE)
+          echo "score=$SCORE" >> $GITHUB_OUTPUT
+          echo "sanitized_model_name=$SANITIZED_MODEL_NAME" >> $GITHUB_OUTPUT
+          echo "sanitized_task_name=$SANITIZED_TASK_NAME" >> $GITHUB_OUTPUT
+
+      - name: Upload evaluation results
+        uses: actions/upload-artifact@v4
+        with:
+          name: evaluation-results-${{ steps.run_eval.outputs.sanitized_model_name }}-${{ steps.run_eval.outputs.sanitized_task_name }}
+          path: eval-results/
+
+  post-summary:
+    runs-on: ubuntu-latest
+    needs: [run-evaluations]
+    if: always() # Run even if some evals fail
+    steps:
+      - name: Build consolidated results and Slack Payload
+        id: build_payload
+        # This step now also creates a single results.json for the baseline
+        run: |
+          # The 'needs' context contains outputs from all matrix jobs
+          JSON_RESULTS='${{ toJSON(needs.run-evaluations.outputs) }}'
+          
+          # Use jq to format the results into a markdown table for Slack
+          MARKDOWN_TABLE=$(echo "$JSON_RESULTS" | jq -r 'map(select(.score != null)) | "| Model | Task | Score |\n|---|---|---|\n" + (map("| `\(.model_name)` | `\(.task_name)` | `\(.score)` |") | join("\n"))')
+
+          # Create a consolidated results.json file for the baseline artifact
+          echo "$JSON_RESULTS" | jq 'map(select(.score != null)) | map({model: .model_name, task: .task_name, score: .score})' > results.json
+
+          # Escape characters for JSON and create the payload
+          ESCAPED_TABLE=$(echo "$MARKDOWN_TABLE" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g' -e 's/`/\\`/g' | tr -d '\n')
+          PAYLOAD="{\"text\": \"✅ Weekly `lm-evaluation-harness` run completed.\", \"blocks\": [{\"type\": \"header\", \"text\": {\"type\": \"plain_text\", \"text\": \"✅ Model Evaluation Comparison\"}}, {\"type\": \"section\", \"text\": {\"type\": \"mrkdwn\", \"text\": \"$ESCAPED_TABLE\"}}]}"
+          echo "payload=$PAYLOAD" >> $GITHUB_OUTPUT
+
+      - name: Post comparison to Slack
+        if: success() # Only post if the summary build succeeds
+        uses: slackapi/slack-github-action@v1.26.0
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        with:
+          payload: ${{ steps.build_payload.outputs.payload }}
+
+      - name: Upload baseline results artifact (on main branch)
+        if: github.ref == 'refs/heads/main' && success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: baseline-results-main
+          path: results.json
+          retention-days: 90
+
+  check-regressions:
+    runs-on: ubuntu-latest
+    needs: [run-evaluations]
+    if: always() # Run even if some evals fail
+    permissions:
+      issues: write # Permission to create issues
+      actions: read # Permission to download artifacts from other runs
+    strategy:
+      matrix: ${{ needs.run-evaluations.outputs }}
+    steps:
+      - name: Download baseline results artifact
+        uses: dawidd6/action-download-artifact@v6
+        with:
+          # Download from the last successful workflow run on the main branch
+          workflow: ${{ github.workflow_id }}
+          branch: main
+          name: baseline-results-main
+          path: baseline
+        # Continue even if the artifact is not found (e.g., first run)
+        continue-on-error: true
+
+      - name: Check for score regression and create issue
+        id: check
+        run: |
+          BASELINE_FILE="baseline/results.json"
+          if [ ! -f "$BASELINE_FILE" ]; then
+            echo "No baseline results found. Skipping regression check."
+            exit 0
+          fi
+
+          # Find the baseline score for the current model and task
+          BASELINE_SCORE=$(jq -r --arg MODEL "${{ matrix.model_name }}" --arg TASK "${{ matrix.task_name }}" '.[] | select(.model == $MODEL and .task == $TASK) | .score' $BASELINE_FILE)
+          CURRENT_SCORE=${{ matrix.score }}
+
+          if [ -z "$BASELINE_SCORE" ]; then
+            echo "No baseline score found for this model/task. Skipping."
+            exit 0
+          fi
+
+          # Use awk for floating point comparison
+          IS_REGRESSION=$(awk -v current="$CURRENT_SCORE" -v baseline="$BASELINE_SCORE" 'BEGIN { print (current < baseline) }')
+
+          if [ "$IS_REGRESSION" -eq 1 ]; then
+            echo "Regression detected: $CURRENT_SCORE < $BASELINE_SCORE"
+            echo "BASELINE_SCORE=$BASELINE_SCORE" >> $GITHUB_OUTPUT
+          fi
+
+        uses: actions/create-issue@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          title: "📉 Performance Regression Detected: ${{ matrix.model_name }}"
+          body: |
+            ### 📉 Model Performance Alert
+
+            The model **${{ matrix.model_name }}** has scored below the threshold on an evaluation task.
+
+            - **Task:** `${{ matrix.task_name }}`
+            - **Current Score:** `${{ matrix.score }}`
+            - **Baseline Score:** `${{ steps.check.outputs.BASELINE_SCORE }}`
+
+            Please investigate this performance regression.
+          labels: |
+            bug
+            performance-regression
