@@ -20,12 +20,12 @@ AGENTS = {
         "skills": "",
     },
     "saksee": {
-        "model": "gpt-5.4-mini",
+        "model": "gpt-4o-mini",
         "persona": "personas/saksee/SOUL.md",
         "skills": "playwright",
     },
     "saksit": {
-        "model": "kimi-k2.7-code",
+        "model": "gpt-4o-mini",
         "persona": "personas/saksit/SOUL.md",
         "skills": "",
     },
@@ -76,7 +76,8 @@ def _render_agent_env(
     spec = AGENTS[agent]
     lines = [
         f"TELEGRAM_BOT_TOKEN={telegram_bot_token}",
-        "TELEGRAM_ALLOWED_USER_IDS=" + ",".join(str(user_id) for user_id in telegram_allowed_user_ids),
+        "TELEGRAM_ALLOWED_USER_IDS="
+        + ",".join(str(user_id) for user_id in telegram_allowed_user_ids),
         f"SAKTHAI_MODEL={spec['model']}",
         f"SAKTHAI_SYSTEM_PROMPT_FILE={repo_root / spec['persona']}",
         f"SAKTHAI_WITH_SKILLS={spec['skills']}",
@@ -105,7 +106,9 @@ def build_vm_bundle(
 
     common_env_file = config_dir / "common.env"
     common_env_file.write_text(
-        _render_common_env(openai_base_url=openai_base_url, openai_api_key=openai_api_key),
+        _render_common_env(
+            openai_base_url=openai_base_url, openai_api_key=openai_api_key
+        ),
         encoding="utf-8",
     )
 
@@ -124,7 +127,9 @@ def build_vm_bundle(
         )
         env_files[agent] = env_file
 
-    service_src = repo_root / "infra" / "vm-agents" / "systemd" / "sakthai-telegram@.service"
+    service_src = (
+        repo_root / "infra" / "vm-agents" / "systemd" / "sakthai-telegram@.service"
+    )
     service_file = systemd_dir / "sakthai-telegram@.service"
     shutil.copy2(service_src, service_file)
 
@@ -154,9 +159,7 @@ def _build_parser() -> argparse.ArgumentParser:
 
 def main() -> int:
     args = _build_parser().parse_args()
-    tokens = {
-        agent: getattr(args, f"{agent}_telegram_bot_token") for agent in AGENTS
-    }
+    tokens = {agent: getattr(args, f"{agent}_telegram_bot_token") for agent in AGENTS}
     bundle = build_vm_bundle(
         repo_root=args.repo_root,
         target_dir=args.target_dir,

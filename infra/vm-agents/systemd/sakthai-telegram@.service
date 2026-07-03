@@ -1,20 +1,38 @@
 [Unit]
 Description=Sak Family Telegram Agent (%i)
-After=network-online.target
-Wants=network-online.target
-StartLimitIntervalSec=0
+
+# This service depends on the Docker daemon and network connectivity.
+After=docker.service network-online.target
+Wants=docker.service network-online.target
 
 [Service]
 Type=simple
-WorkingDirectory=%h/Sak-Family-Agent
-ExecStart=%h/bin/sakthai-agent-run.sh %i
+
+# Define the container and image names.
+# Assumes the image is hosted on GitHub Container Registry.
+Environment="CONTAINER_NAME=sakthai-telegram-%i"
+Environment="IMAGE_NAME=ghcr.io/beer-sakthai/sak-family-agent:latest"
+
+# Before starting, pull the latest image and clean up any old container.
+# The `|| true` ensures that the commands don't fail if the container doesn't exist.
+ExecStartPre=-/usr/bin/docker pull ${IMAGE_NAME}
+ExecStartPre=-/usr/bin/docker stop ${CONTAINER_NAME}
+ExecStartPre=-/usr/bin/docker rm ${CONTAINER_NAME}
+
+# Run the agent inside a Docker container.
+ExecStart=/usr/bin/docker run --rm --name ${CONTAINER_NAME} \
+  --env-file %h/.config/sak-family-agents/common.env \
+  --env-file %h/.config/sak-family-agents/%i.env \
+  -v %h/Sak-Family-Agent:%h/Sak-Family-Agent:ro \
+  -v %h/.sakthai:%h/.sakthai \
+  ${IMAGE_NAME}
+
+# When stopping the service, also stop the container.
+ExecStop=/usr/bin/docker stop ${CONTAINER_NAME}
+
+# Let systemd handle restarts if the container exits unexpectedly.
 Restart=always
-RestartSec=5
-KillMode=mixed
-KillSignal=SIGTERM
-TimeoutStopSec=210
-StandardOutput=journal
-StandardError=journal
+RestartSec=10
 
 [Install]
 WantedBy=default.target
