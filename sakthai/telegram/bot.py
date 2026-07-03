@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -11,7 +12,16 @@ from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, MessageHandler, filters
 
 from ..agent.loop import run_agent
-from ..config import telegram_allowed_user_ids, telegram_bot_token, telegram_session_db_path
+from ..config import (
+    sakthai_default_model,
+    sakthai_default_provider,
+    sakthai_fast_mode,
+    sakthai_system_prompt_prefix,
+    sakthai_with_skills,
+    telegram_allowed_user_ids,
+    telegram_bot_token,
+    telegram_session_db_path,
+)
 from ..memory.store import MemoryStore
 from . import workflow_executor
 
@@ -29,6 +39,18 @@ class TelegramSession:
 
     db_path: Path
     store: MemoryStore
+
+
+def _env_bool(name: str, default: bool = False) -> bool:
+    value = os.environ.get(name)
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _ensure_main_thread_event_loop() -> None:
+    """Register a current event loop for python-telegram-bot startup."""
+    asyncio.set_event_loop(asyncio.new_event_loop())
 
 
 def _is_authorized(user_id: int | None) -> bool:
@@ -72,12 +94,19 @@ async def _reply_with_agent_result(
         return
 
     session = _get_chat_session(context, session_id)
-    result = await asyncio.to_thread(
-        run_agent,
+    provider = sakthai_default_provider()
+    model = sakthai_default_model() or "gpt-4o"
+    system_prompt_prefix = sakthai_system_prompt_prefix() or ""
+    combined_skills = tuple(skills) + tuple(sakthai_with_skills())
+    result = run_agent(
         task,
         store=session.store,
-        skills=list(skills),
-        stateless=False,
+        skills=list(combined_skills),
+        provider=provider,
+        model=model,
+        fast=sakthai_fast_mode(),
+        stateless=_env_bool("SAKTHAI_STATELESS", False),
+        system_prompt_prefix=system_prompt_prefix,
     )
     await update.message.reply_text(result.text)
 
@@ -165,6 +194,9 @@ def main() -> None:
     if not token:
         raise ValueError("TELEGRAM_BOT_TOKEN environment variable not set!")
 
+    # Python 3.14 no longer guarantees a current loop in the main thread.
+    # python-telegram-bot still expects one when run_polling() starts.
+    _ensure_main_thread_event_loop()
     application = ApplicationBuilder().token(token).build()
 
     application.add_handler(CommandHandler("start", start))

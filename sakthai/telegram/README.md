@@ -1,48 +1,40 @@
 # SakThai Telegram Bot
 
-This directory contains a Telegram bot that allows you to interact with the SakThai agent.
+This bot runs the agent loop in-process and is the runtime entry point used by
+the VM services.
 
-## Setup
+## Required environment
 
-1.  **Install dependencies:**
-    ```bash
-    pip install -r requirements.txt
-    ```
+- `TELEGRAM_BOT_TOKEN`
+- `TELEGRAM_ALLOWED_USER_IDS`
+- `SAKTHAI_PROVIDER`
+- `SAKTHAI_MODEL`
+- `SAKTHAI_SYSTEM_PROMPT_FILE` or `SAKTHAI_SYSTEM_PROMPT`
 
-2.  **Configure the bot:**
-    *   Set the `TELEGRAM_BOT_TOKEN` environment variable to your Telegram bot token.
-    *   Open the `config.py` file.
-    *   Add your Telegram user ID to the `ALLOWED_USER_IDS` list.
+Optional launch controls:
 
-    To get your Telegram Bot Token:
-    1.  Open the Telegram app and search for the "BotFather" bot.
-    2.  Start a chat with BotFather and send the `/newbot` command.
-    3.  Follow the instructions to create a new bot. BotFather will give you a token for your new bot.
+- `SAKTHAI_FAST=1`
+- `SAKTHAI_STATELESS=1`
+- `SAKTHAI_WITH_SKILLS=skill-a,skill-b`
 
-    To get your Telegram User ID:
-    1.  Search for the "userinfobot" in the Telegram app.
-    2.  Start a chat with this bot and it will return your user ID.
+## Run
 
-## Running the bot
-
-To run the bot, execute the following command from the root of the project:
+From the repo root:
 
 ```bash
-python -m sakthai.telegram
+python -m sakthai.telegram.bot
 ```
 
-## Usage
+## Telegram commands
 
-Once the bot is running, you can interact with it from your Telegram account.
+- `/start` opens the bot.
+- `/workflows` lists workflow skills.
+- `/workflow <name>` runs one workflow skill through the agent loop.
+- Plain text messages go straight to the agent.
 
-*   `/start`: Sends a welcome message.
-*   `/workflows`: Lists the available workflows.
-*   `/workflow <workflow_name>`: Executes a workflow. The available workflows are the skills in the `skills` directory.
+## Persona setup
 
-For example, to run the `sakthai-coding-testing` skill, you would send the following message:
-
-```
-/workflow sakthai-coding-testing
-```
-
-The bot will then execute the skill and return the output to you.
+For Hermes-free deployments, point `SAKTHAI_SYSTEM_PROMPT_FILE` at the agent's
+`SOUL.md` file. The bot prepends that persona block before the shared runtime
+prompt, so one code path can serve SakKing, SakThai, SakSee, SakSit, SakTan,
+and SakJules.
