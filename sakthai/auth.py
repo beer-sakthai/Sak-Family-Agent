@@ -242,3 +242,16 @@ def gateway_credential_source() -> str | None:
     if os.environ.get("SAKTHAI_GATEWAY_URL"):
         return "gateway_url"
     return None
+
+
+def get_credential_source(provider: str) -> str | None:
+    """Return a short label for the active credential for the given provider."""
+    if provider == "google":
+        return gemini_credential_source()
+    if provider == "openai":
+        return openai_credential_source()
+    if provider == "gateway":
+        return gateway_credential_source()
+    if provider == "anthropic":
+        return anthropic_credential_source()
+    return None

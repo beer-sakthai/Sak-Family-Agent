@@ -21,11 +21,7 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from typing import Any
 
-from ..auth import (
-    anthropic_credential_source,
-    gateway_credential_source,
-    openai_credential_source,
-)
+from ..auth import get_credential_source
 from ..config import redact_secrets, sessions_dir
 from ..memory.store import MemoryStore
 from ..skills import default_skill_roots, find_skill, render_skills_prompt_block
@@ -541,25 +537,7 @@ def preflight(
     if resolved == "ollama":
         resolved = "openai"
     effective_model = _resolve_model_name(model, resolved)
-
-    if resolved == "google":
-        if os.environ.get("GEMINI_API_KEY"):
-            cred_source: str | None = "GEMINI_API_KEY"
-        elif os.environ.get("GOOGLE_API_KEY"):
-            cred_source = "GOOGLE_API_KEY"
-        else:
-            from ..auth import load_gemini_cli_token
-
-            if load_gemini_cli_token() is not None:
-                cred_source = "gemini_cli_oauth"
-            else:
-                cred_source = None
-    elif resolved == "openai":
-        cred_source = openai_credential_source()
-    elif resolved == "gateway":
-        cred_source = gateway_credential_source()
-    else:
-        cred_source = anthropic_credential_source()
+    cred_source = get_credential_source(resolved)
 
     registry = ToolRegistry(tools)
     return {
