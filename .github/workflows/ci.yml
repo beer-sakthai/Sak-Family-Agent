@@ -1,46 +1,49 @@
+# This workflow runs the full quality suite on every push and pull request
+# to the main branch. It is the source of truth for the project's quality bar.
 name: CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [ "main" ]
   pull_request:
-    branches: [ main ]
+    branches: [ "main" ]
 
 permissions:
-  contents: read # read-only permissions
+  contents: read
 
 jobs:
   test:
     runs-on: ubuntu-latest
     strategy:
+      # Run the test suite against all supported Python versions.
       matrix:
-        python-version: ['3.11', '3.12']
+        python-version: ["3.11", "3.12"]
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install uv for Python ${{ matrix.python-version }}
-        uses: astral-sh/setup-uv@v1
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Cache uv
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/uv
-          key: ${{ runner.os }}-uv-${{ matrix.python-version }}-${{ hashFiles('**/uv.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-uv-${{ matrix.python-version }}-
+      - name: Install uv
+        run: pipx install uv
 
       - name: Install dependencies
-        run: uv sync --extra dev
+        # Install all optional dependencies to ensure linting/testing tools are present.
+        run: uv sync --all-extras
 
-      - name: Lint with ruff
-        run: uv run ruff check .
+      - name: Run linters
+        run: |
+          uv run ruff check sakthai tests
+          uv run ruff format --check sakthai tests
 
-      - name: Check formatting with ruff
-        run: uv run ruff format --check .
+      - name: Run static analysis
+        run: |
+          uv run mypy sakthai
+          uv run bandit -c pyproject.toml -r sakthai
 
       - name: Run tests
-        run: uv run pytest tests/ -q -m "not integration"
+        run: uv run pytest tests/ -q
