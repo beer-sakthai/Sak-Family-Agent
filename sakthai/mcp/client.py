@@ -287,4 +287,5 @@ class StdioMCPClient:
             # Put the sentinel back so subsequent calls also see EOF immediately.
             self._line_queue.put(_EOF)
             return None
+        assert isinstance(item, str)
         return item

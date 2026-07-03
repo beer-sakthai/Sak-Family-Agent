@@ -122,7 +122,7 @@ def main() -> int:
         ok = rc == 0 and snap.is_file()
         if ok:
             try:
-                json.loads(snap.read_text())
+                json.loads(snap.read_text(encoding="utf-8"))
             except Exception:
                 ok = False
         check("dashboard --export writes valid JSON", ok)
