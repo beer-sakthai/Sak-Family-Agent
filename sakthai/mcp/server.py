@@ -94,7 +94,8 @@ def _tool_call(
     post_check = policy.check_post_execution(tool, final_args, output, is_error, store)
     if post_check.action == GuardrailAction.DENY:
         return _text_content(
-            post_check.reason or f"Output from tool '{name}' was denied by a post-execution guardrail.",
+            post_check.reason
+            or f"Output from tool '{name}' was denied by a post-execution guardrail.",
             is_error=True,
         )
 
@@ -143,7 +144,9 @@ def handle_request(
         return None if is_notification else _result(req_id, _tool_list(tools))
 
     if method == "tools/call":
-        return None if is_notification else _result(req_id, _tool_call(params, store, tools, policy))
+        return (
+            None if is_notification else _result(req_id, _tool_call(params, store, tools, policy))
+        )
 
     if is_notification:
         return None

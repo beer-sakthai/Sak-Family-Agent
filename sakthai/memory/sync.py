@@ -149,7 +149,9 @@ def _read_jsonl(path: Path) -> list[dict[str, Any]]:
     """Read a facts/observations JSONL export, tolerating a missing file."""
     if not path.exists():
         return []
-    return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+    return [
+        json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()
+    ]
 
 
 def _write_jsonl(path: Path, rows: list[dict[str, Any]]) -> None:
