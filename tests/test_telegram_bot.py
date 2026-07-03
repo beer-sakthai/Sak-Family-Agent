@@ -105,6 +105,173 @@ def test_workflow_command_routes_through_run_agent(
     assert any("workflow" in reply for reply in update.message.replies)
 
 
+def test_env_bool_parses_truthy_and_falsy_values(monkeypatch: pytest.MonkeyPatch) -> None:
+    assert bot._env_bool("SAKTHAI_SAMPLE_FLAG", default=True) is True  # unset -> default
+    for truthy in ("1", "true", "YES", " On "):
+        monkeypatch.setenv("SAKTHAI_SAMPLE_FLAG", truthy)
+        assert bot._env_bool("SAKTHAI_SAMPLE_FLAG") is True
+    for falsy in ("0", "false", "no", ""):
+        monkeypatch.setenv("SAKTHAI_SAMPLE_FLAG", falsy)
+        assert bot._env_bool("SAKTHAI_SAMPLE_FLAG") is False
+
+
+def test_unauthorized_user_is_rejected_before_run_agent(
+    sakthai_home: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("TELEGRAM_ALLOWED_USER_IDS", "123")
+
+    def _explode(*_a: object, **_k: object) -> object:
+        raise AssertionError("run_agent must not be called for an unauthorized user")
+
+    monkeypatch.setattr(bot, "run_agent", _explode)
+    update = _Update(999)  # not in the allow list
+    context = _Context()
+
+    import asyncio
+
+    asyncio.run(bot.handle_text(update, context))
+
+    assert update.message.replies == ["Sorry, you are not authorized to use this bot."]
+
+
+def test_start_greets_authorized_and_rejects_unauthorized(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("TELEGRAM_ALLOWED_USER_IDS", "123")
+
+    import asyncio
+
+    allowed = _Update(123)
+    asyncio.run(bot.start(allowed, _Context()))
+    assert "Welcome" in allowed.message.replies[-1]
+
+    denied = _Update(999)
+    asyncio.run(bot.start(denied, _Context()))
+    assert denied.message.replies == ["Sorry, you are not authorized to use this bot."]
+
+
+def test_handle_text_ignores_empty_messages(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("TELEGRAM_ALLOWED_USER_IDS", "123")
+
+    def _explode(*_a: object, **_k: object) -> object:
+        raise AssertionError("empty text must short-circuit before run_agent")
+
+    monkeypatch.setattr(bot, "run_agent", _explode)
+    update = _Update(123, text="")
+
+    import asyncio
+
+    asyncio.run(bot.handle_text(update, _Context()))
+
+    assert update.message.replies == []
+
+
+def test_workflow_requires_a_name_argument(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("TELEGRAM_ALLOWED_USER_IDS", "123")
+    update = _Update(123)
+
+    import asyncio
+
+    asyncio.run(bot.workflow(update, _Context(args=[])))
+
+    assert "Usage: /workflow" in update.message.replies[-1]
+
+
+def test_workflow_rejects_unknown_workflow(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("TELEGRAM_ALLOWED_USER_IDS", "123")
+    monkeypatch.setattr(bot.workflow_executor, "get_available_workflows", lambda: ["alpha"])
+
+    def _explode(*_a: object, **_k: object) -> object:
+        raise AssertionError("unknown workflow must not reach run_agent")
+
+    monkeypatch.setattr(bot, "run_agent", _explode)
+    update = _Update(123)
+
+    import asyncio
+
+    asyncio.run(bot.workflow(update, _Context(args=["missing"])))
+
+    reply = update.message.replies[-1]
+    assert "Workflow not found" in reply
+    assert "alpha" in reply
+
+
+def test_workflow_rejects_unauthorized(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("TELEGRAM_ALLOWED_USER_IDS", "123")
+    update = _Update(999)
+
+    import asyncio
+
+    asyncio.run(bot.workflow(update, _Context(args=["alpha"])))
+
+    assert update.message.replies == ["Sorry, you are not authorized to use this bot."]
+
+
+def test_reply_reports_missing_chat_session(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("TELEGRAM_ALLOWED_USER_IDS", "123")
+
+    def _explode(*_a: object, **_k: object) -> object:
+        raise AssertionError("run_agent must not run without a chat session")
+
+    monkeypatch.setattr(bot, "run_agent", _explode)
+    update = _Update(123)
+    update.effective_chat = None  # cannot resolve a session key
+
+    import asyncio
+
+    asyncio.run(bot.handle_text(update, _Context()))
+
+    assert update.message.replies == ["Sorry, I could not determine the chat session."]
+
+
+def test_workflows_command_lists_and_reports_empty(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("TELEGRAM_ALLOWED_USER_IDS", "123")
+
+    import asyncio
+
+    monkeypatch.setattr(bot.workflow_executor, "get_available_workflows", lambda: ["alpha", "beta"])
+    listed = _Update(123)
+    asyncio.run(bot.workflows(listed, _Context()))
+    assert "alpha" in listed.message.replies[-1]
+    assert "beta" in listed.message.replies[-1]
+
+    monkeypatch.setattr(bot.workflow_executor, "get_available_workflows", lambda: [])
+    empty = _Update(123)
+    asyncio.run(bot.workflows(empty, _Context()))
+    assert empty.message.replies[-1] == "No workflows found."
+
+
+def test_workflows_command_rejects_unauthorized(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("TELEGRAM_ALLOWED_USER_IDS", "123")
+    update = _Update(999)
+
+    import asyncio
+
+    asyncio.run(bot.workflows(update, _Context()))
+
+    assert update.message.replies == ["Sorry, you are not authorized to use this bot."]
+
+
+def test_help_command_lists_available_commands() -> None:
+    update = _Update(123)
+
+    import asyncio
+
+    asyncio.run(bot.help_command(update, _Context()))
+
+    reply = update.message.replies[-1]
+    assert "/start" in reply
+    assert "/workflows" in reply
+    assert "/help" in reply
+
+
+def test_main_raises_when_token_missing(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("TELEGRAM_BOT_TOKEN", raising=False)
+
+    with pytest.raises(ValueError, match="TELEGRAM_BOT_TOKEN"):
+        bot.main()
+
+
 def test_main_registers_an_event_loop(monkeypatch: pytest.MonkeyPatch) -> None:
     seen: dict[str, bool] = {}
 
