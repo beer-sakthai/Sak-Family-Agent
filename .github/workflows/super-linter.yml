@@ -27,8 +27,15 @@ jobs:
           # of changed files.
           fetch-depth: 0
 
+      - name: Check uv.lock synchronization
+        run: |
+          pipx install uv
+          chmod +x .githooks/pre-commit
+          ./.githooks/pre-commit
+        shell: bash
+
       - name: Lint Code Base
-        uses: github/super-linter@v4
+        uses: github/super-linter@v6
         env:
           VALIDATE_ALL_CODEBASE: false
           DEFAULT_BRANCH: "main"

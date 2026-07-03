@@ -1,4 +1,4 @@
-# 🧠 House of Sak
+# Sak-Family-Agent: Your Personal AI Agent Ecosystem
 
 <div align="center">
 
@@ -7,13 +7,12 @@
 **A local-first personal learning agent with persistent memory.**
 One package, three ways in — a CLI, a tool-using agent loop, and an MCP stdio server.
 
-<!-- 📡 Live status bar -->
-[![CI](https://github.com/beer-sakthai/sakthai-agent-v2/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/beer-sakthai/sakthai-agent-v2/actions/workflows/ci.yml)
-[![Pylint](https://github.com/beer-sakthai/sakthai-agent-v2/actions/workflows/pylint.yml/badge.svg?branch=main)](https://github.com/beer-sakthai/sakthai-agent-v2/actions/workflows/pylint.yml)
-[![Dashboard Pages](https://github.com/beer-sakthai/sakthai-agent-v2/actions/workflows/pages.yml/badge.svg?branch=main)](https://github.com/beer-sakthai/sakthai-agent-v2/actions/workflows/pages.yml)
+<!-- 📡 Live status bar. Note: The repo name in badge URLs is hardcoded to the main repo, not the fork name. -->
+[![CI](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/ci.yml)
+[![Lint Code Base](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/super-linter.yml/badge.svg?branch=main)](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/super-linter.yml)
+[![Codecov](https://codecov.io/gh/beer-sakthai/Sak-Family-Agent/branch/main/graph/badge.svg)](https://codecov.io/gh/beer-sakthai/Sak-Family-Agent)
 
 [![Python](https://img.shields.io/badge/python-3.11_|_3.12_|_3.13-3776AB?logo=python&logoColor=white)](https://www.python.org/)
-[![Coverage](https://img.shields.io/badge/coverage-85%25%2B-brightgreen)](https://github.com/beer-sakthai/sakthai-agent-v2/actions/workflows/ci.yml)
 [![MCP](https://img.shields.io/badge/MCP-2024--11--05-8A2BE2)](https://modelcontextprotocol.io)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![Last commit](https://img.shields.io/github/last-commit/beer-sakthai/sakthai-agent-v2/main?logo=git&logoColor=white)](https://github.com/beer-sakthai/sakthai-agent-v2/commits/main)
@@ -25,404 +24,176 @@ One package, three ways in — a CLI, a tool-using agent loop, and an MCP stdio 
 > a curated **skills catalog**, and a two-way **MCP** bridge — so the same memory and tools
 > are reachable from other agents and editors. **Local-first**, with a fully **no-cost** local run.
 
----<img width="1280" height="549" alt="image" src="https://github.com/user-attachments/assets/6a58ff16-74cd-47d5-881a-84736e7c994b" />
+---
 
-## 📑 Table of contents
+## 📑 Table of Contents
 
-- [✨ Highlights](#-highlights)
-- [🗂️ Monorepo layout](#️-monorepo-layout)
-- [🚀 Quick start](#-quick-start)
-- [🔌 Providers & no-cost local run](#-providers--no-cost-local-run)
-- [⚙️ Runtimes](#️-runtimes)
-- [🔗 MCP (both directions)](#-mcp-both-directions)
-- [📚 Skills](#-skills)
-- [🛠️ Built-in tools](#built-in-tools)
-- [💻 Commands](#-commands)
-- [👩‍💻 Develop](#-develop)
-- [🤝 Family agents](#-family-agents)
-- [📁 Repository layout](#-repository-layout)
-- [📖 Documentation](#-documentation)
-- [📝 License](#-license)
+- [🚀 What is Sak-Family-Agent?](#-what-is-sak-family-agent)
+- [🎯 Who is it for?](#-who-is-it-for)
+- [👨‍👩‍👧‍👦 The Sak Family Members](#-the-sak-family-members)
+- [✨ What Can It Do?](#-what-can-it-do)
+- [🛠️ Tech Stack](#️-tech-stack)
+- [📂 Project Structure](#-project-structure)
+- [🚀 How to Use / Get Started](#-how-to-use--get-started)
+- [🗺️ Roadmap & Status](#️-roadmap--status)
+- [🤝 Contributing](#-contributing)
+- [📄 License](#-license)
+- [✍️ Author](#️-author)
+- [References](#references)
 
 ---
 
-## ✨ Highlights
+## 🚀 What is Sak-Family-Agent?
 
-- 🧩 **Persistent memory** — a SQLite store of *facts* (things you tell it) and *observations*
-  (things it concludes): substring search, tagging, WAL concurrency, additive migrations,
-  dedupe/consolidation, and multi-agent sync (Git JSONL merge + HTTP backup).
-  See [`docs/architecture.md`](./docs/architecture.md).
+**Sak-Family-Agent** is a personal AI agent ecosystem designed for real-life growth and learning. It provides a robust framework for AI assistants (like Claude, Gemini, and others) to operate with persistent memory, a shared tool registry, and an MCP (Model Context Protocol) stdio server. This setup allows for seamless interaction and knowledge sharing across multiple AI agents, all working towards enhancing personal productivity and learning for Beer [1].
 
-  ![AI Brain Memory](./assets/ai_brain_memory.png)
+This repository serves as the shared workspace for the entire Sak family of agents, enabling them to coordinate, learn, and evolve together. It emphasizes a local-first approach, focusing on CLI operations, agent loops, and MCP server functionalities [2].
 
-- 🤖 **Provider-agnostic agent loop** — `sakthai run "<task>"` drives a tool-using loop over
-  **Anthropic (Claude)**, **Google (Gemini)**, or any **OpenAI-compatible / Ollama** endpoint —
-  including a fully **no-cost local run**.
+## 🎯 Who is it for?
 
-  ![Agent Workflow](./assets/agent_workflow.png)
+This project is primarily built for **Beer** (`beer-sakthai`) as a personal sandbox for real-life growth and continuous learning. It is also a valuable resource for:
 
-- 🛠️ **8 built-in tools** — one registry powers both the agent loop and the MCP server.
-- 📚 **Skills catalog** — **31 curated library skills** across 11 categories plus
-  **69 user/extension skills**, injected into the system prompt on demand.
-- 🔗 **MCP, both directions** — *serve* SakThai's tools to other agents (`sakthai mcp`),
-  and *consume* external MCP servers (namespaced `<server>__<tool>`).
-- 👑 **Sak Family Agents** — **SakKing** leads & orchestrates **SakThai**, **SakSee**, **SakSit**
-  (consolidated here, history-preserved). See [SakKing integration](#-sakking-integration-local-no-cost).
-- 🔄 **6-stage cycle** — a lightweight Dream → Hope → Care → Joy → Trust → Growth state machine
-  persisted in memory and mirrored by the `sakthai-cycle-*` skills.
-- 📊 **Dashboard** — `sakthai dashboard` serves a Streamlit view of the store (KPIs, memory
-  explorer, sessions, cycle).
+- **AI Enthusiasts**: Individuals interested in building and experimenting with multi-agent AI systems.
+- **Developers**: Those looking for a practical example of integrating various AI models and tools into a cohesive agent framework.
+- **Learners**: Anyone keen on understanding how persistent memory, tool registries, and inter-agent communication can be implemented in AI applications.
 
-![Architecture diagram](./assets/architecture_diagram_v2.png)
+## 👨‍👩‍👧‍👦 The Sak Family Members
 
----
+The Sak-Family-Agent ecosystem comprises six distinct AI personas, with **SakKing** acting as the lead and orchestrator. Each agent has a specialized role and leverages different AI models to perform its tasks [1].
 
-## 🗂️ Monorepo layout
+| Agent           | Handle                 | Role                                                               | Primary Model · Provider                                                                                             | Fallback Model · Provider                                                                                             | Telegram                                                               | State       |
+| :-------------- | :--------------------- | :----------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------- | :-------------------------------------------------------------------------------------------------------------------- | :--------------------------------------------------------------------- | :---------- |
+| 👑 **SakKing**  | `@sakthai_agent_v2_bot` | Lead & Orchestrator · Master of Code & Self-Healing (owns all skills) | `qwen3-coder:480b` · 🟢 ollama-cloud                                                                                   | `gpt-oss:120b` · ollama-cloud                                                                                         | [@sakthai_agent_v2_bot](https://t.me/sakthai_agent_v2_bot)             | ✅ deployed |
+| 🤗 **SakThai**  | `@sakthai_v1_bot`      | Master of Hugging Face (mastery via Hub/MCP tools)                 | `claude-opus-4-8` · 🟪 anthropic (OAuth)                                                                               | `gpt-oss:120b` · ollama-cloud                                                                                         | [@sakthai_v1_bot](https://t.me/sakthai_v1_bot)                         | ✅ deployed |
+| 🌐 **SakSee**   | `@saksee_bot`          | Master of Web (Playwright + Chrome DevTools)                       | `gpt-5.4-mini` · ⬛ openai-codex (OAuth)                                                                               | `gpt-oss:120b` · ollama-cloud                                                                                         | [@saksee_bot](https://t.me/saksee_bot)                                 | ✅ deployed |
+| 📣 **SakSit**   | `@saksit_agent_bot`    | Master of Social Media (IG image/video)                            | `kimi-k2.7-code` · 🟢 ollama-cloud                                                                                     | `gpt-oss:120b` · ollama-cloud                                                                                         | [@saksit_agent_bot](https://t.me/saksit_agent_bot)                     | ✅ deployed |
+| 🗓️ **SakTan**   | `@saktan_agent_bot`    | Daily Ops Helper (calendar, email, life admin)                     | `gemini-2.5-flash-lite` · 🔵 gemini                                                                                    | `gemini-3-flash-preview` → `3.1-flash-lite` → `3.5-flash` · gemini                                                    | [@saktan_agent_bot](https://t.me/saktan_agent_bot)                     | ✅ deployed |
+| 🤖 **SakJules** | `@sakjules_agent_bot`  | Master of Automation & CI/CD                                       | — *(stub `config.yaml`, no model block)*                                                                             | —                                                                                                     | [@sakjules_agent_bot](https://t.me/sakjules_agent_bot)                 | 🚧 not deployed |
 
-This repository is the **source workspace** for the Sak family. It contains the
-shared core plus the six persona overlays, and it can **export standalone
-repository snapshots** for each persona into `build/agent-repos/<persona>/`
-with `make export-agent-repos`.
+**Auth by provider:** 🟢 `ollama-cloud` → `OLLAMA_API_KEY` (`https://ollama.com/v1`) · 🟪 `anthropic` → Claude OAuth (`CLAUDE_CODE_OAUTH_TOKEN`) · ⬛ `openai-codex` → ChatGPT OAuth (`https://chatgpt.com/backend-api/codex`) · 🔵 `gemini` → `GEMINI_API_KEY` / `GOOGLE_API_KEY`.
 
-```text
-.
-├── sakthai/  library/  skills/   # the SakThai agent package (root, this README)
-├── packages/
-│   └── agent-self-evolution/     # DSPy/GEPA self-evolution tool (standalone Python pkg)
-├── personas/
-│   ├── shared/skills/            # skill library shared by all six personas (deduped, once)
-│   └── {sakking,sakthai,saksee,saksit,saktan,sakjules}/ # per-persona SOUL.md + config + skill overlay
-├── build/agent-repos/<persona>/   # export target for standalone agent repos
-├── infra/
-│   ├── hermes-agents/            # Live Telegram agent runtime config (no secrets)
-│   └── pw-poc/                   # Playwright tab-order/accessibility probe (npm)
-└── scripts/compose_persona.py    # rebuild a persona's full skill tree (shared + overlay)
+## ✨ What Can It Do?
+
+The Sak-Family-Agent provides a rich set of capabilities through its CLI, agent loop, and MCP server, all sharing a persistent SQLite memory (`~/.sakthai/memory.db`). Key functionalities include:
+
+- **Persistent Memory**: Agents can `learn`, `recall`, `search`, and `forget` facts, observations, and preferences across sessions, ensuring continuous learning and context retention [1, 3].
+- **Tool Usage**: A shared tool registry allows agents to perform actions like reading files (`read_file`), running commands (`run_command`), sending Telegram messages (`send_telegram_message`), and even running nested agent loops (`run_agent_loop`) [1, 3].
+- **Multi-Agent Coordination**: SakKing orchestrates the other agents, leveraging their specialized skills for complex tasks. Agents communicate and share information through shared memory and GitHub-backed artifacts [1].
+- **Extensible Skills**: The system supports a wide range of skills, which are parsed, cataloged, and validated from `SKILL.md` files. These skills are injected into the agent's system prompt, enhancing their capabilities [2].
+- **Flexible AI Model Integration**: The agent loop is provider-agnostic, supporting Claude, Gemini, OpenAI-compatible APIs, and Ollama endpoints [2].
+- **Dashboard & Sessions Management**: CLI commands allow for managing memory, viewing agent sessions, and interacting with a React-based dashboard for insights [2].
+- **Hugging Face Integration**: Tools for interacting with the Hugging Face Hub, including `hf info` and `hf download` [2].
+- **Asset Monitoring**: A built-in skill (`asset-monitor`) to monitor a list of public URLs and send a Telegram alert if any of them become unavailable [4].
+- **Self-Evolution (Experimental)**: An experimental `agent-self-evolution` package explores DSPy/GEPA for agent self-improvement [2].
+
+## 🛠️ Tech Stack
+
+The project is built primarily with Python and leverages several key libraries and AI models:
+
+- **Python**: Version 3.11 and above [3].
+- **AI Models**: Anthropic Claude, Google Gemini, OpenAI-compatible models, Ollama [1, 3].
+- **Memory**: SQLite for persistent memory storage [2].
+- **CLI**: `click` for command-line interface development [3].
+- **Dependencies**: `pyyaml`, `anthropic`, `httpx`, `google-genai`, `tenacity`, `python-telegram-bot` [3].
+- **Development Tools**: `pytest`, `ruff`, `mypy`, `bandit`, `mutmut` for testing, linting, type-checking, security, and mutation testing [3].
+- **Frontend (Dashboard)**: React/Vite (located in the `dashboard/` directory, served by the `sakthai dashboard` command) [2].
+
+## 📂 Project Structure
+
+This repository is structured as a monorepo, with `sakthai-agent` as the core package at the root. Other components are organized into logical directories [2].
+
+```
+Sak-Family-Agent/
+├── .github/                # GitHub Actions workflows (CI/CD)
+├── docs/                   # Documentation (architecture, cycle stages, SOUL files)
+├── infra/                  # Infrastructure configurations (Hermes, Playwright PoC)
+├── library/                # Curated skills library
+├── packages/               # Other standalone Python packages (e.g., agent-self-evolution)
+├── personas/               # Agent persona definitions (SOUL.md, config, skill overlays)
+├── scripts/                # Utility scripts (e.g., export_agent_repo.py, compose_persona.py)
+├── services/               # Service pitches/specs
+├── sakthai/                # Main Python package for SakThai agent
+│   ├── agent/              # Agent loop, tools, registry, providers
+│   ├── cli/                # CLI commands
+│   ├── config.py           # Centralized configuration
+│   ├── cycle/              # Six-stage state machine
+│   ├── dashboard/          # Dashboard data generation
+│   ├── extensions/         # Git-based skill/MCP bundle installer
+│   ├── hf.py               # Hugging Face operations
+│   ├── learn/              # One-shot fact capture
+│   ├── mcp/                # Model Context Protocol (server, client, manager)
+│   ├── memory/             # Memory store, provider, backup, sync
+│   ├── sakking_skills.py   # SakKing-specific skill mirroring
+│   ├── sandbox.py          # Docker sandbox integration
+│   ├── skills.py           # Skill discovery and management
+│   ├── telegram/           # Telegram bot prototype
+│   └── web/                # Web server stub
+├── skills/                 # User/extension skills
+├── tests/                  # Unit and integration tests
+├── training/               # Hugging Face Jobs fine-tune + model-serving scripts
+├── .env.example            # Example environment variables
+├── pyproject.toml          # Project metadata and dependencies
+├── README.md               # This file
+├── CLAUDE.md               # Guidance for Claude Code
+└── uv.lock                 # uv dependency lock file
 ```
 
-- 👑 **Personas** are the **Sak Family Agents**: **SakKing** is the main (Lead & Orchestrator,
-  Master of Code & Self-Healing), and **SakThai**, **SakSee**, **SakSit**, **SakTan**, and
-  **SakJules** are the family it coordinates. Read [`USER.md`](./docs/USER.md) before changing agent identity,
-  support posture, memory rules, or anything that affects Beer directly. Beer is Nanthasit
-  Burankum, and SakThai plus the Sak Family exist to provide supportive companions grounded in
-  Beer's values of Dream, Hope, Care, Joy, Trust, and Growth. The shared skill library now lives
-  once under `personas/shared/skills/`, with each persona keeping only its unique files. Use
-  `scripts/export_agent_repo.py <persona> --out ...` or `make export-agent-repos` when you want
-  a standalone repository snapshot. See [`personas/README.md`](./personas/README.md) and the
-  root [`SOUL.md`](./docs/SOUL.md). See [`infra/hermes-agents/README.md`](./infra/hermes-agents/README.md)
-  for full Telegram-bot deployment.
-- 📦 **`packages/agent-self-evolution`** targets a separate optimization runtime with
-  a heavy, disjoint dependency set, so it is **not** a uv workspace member — build it on its own
-  per its README. The root `uv.lock` stays scoped to the SakThai agent.
-- ✅ CI (`ci.yml`, `pylint.yml`) lints/types/tests only the `sakthai` core; the colocated trees
-  carry their own quality bars.
+## 🚀 How to Use / Get Started
+
+To get started with the Sak-Family-Agent, follow these steps:
+
+1. **Clone the repository**:
+
+    ```bash
+    git clone https://github.com/beer-sakthai/Sak-Family-Agent.git
+    cd Sak-Family-Agent
+    ```
+
+2. **Setup Environment Variables**:
+    Copy the example environment file and fill in your API keys (e.g., `ANTHROPIC_API_KEY`):
+
+    ```bash
+    cp .env.example .env
+    # Open .env and add your API keys
+    ```
+
+3. **Install Dependencies**:
+    The project uses `uv` for dependency management. Ensure you have Python 3.11+ installed.
+
+    ```bash
+    uv sync --all-extras
+    ```
+
+4. **Run Commands**:
+    You can now use the `sakthai` CLI. For example:
+    - Run an agent: `sakthai run "your task here" --provider anthropic --model claude-3-opus-20240229`
+    - Learn a fact: `sakthai learn "My favorite color is blue" --kind pref --key color`
+    - Show memory: `sakthai memory show`
+    - Start the dashboard: `sakthai dashboard`
+
+    Refer to the `CLAUDE.md` file for a comprehensive list of commands and usage examples [2].
+
+## 🗺️ Roadmap & Status
+
+The Sak-Family-Agent is a continuously evolving project. It operates on a six-stage cycle: Dream → Hope → Care → Joy → Trust → Growth, ensuring iterative development and improvement. The project prioritizes no-cost, low-risk, and practical solutions, always focusing on benefiting Beer [1].
+
+## 🤝 Contributing
+
+While this is primarily a personal project, contributions are welcome. Please refer to the `CLAUDE.md` for development guidelines and the `CODE_OF_CONDUCT.md` for community standards.
+
+## 📄 License
+
+This project is **All Rights Reserved (© 2026 beer-sakthai)**. The source code is available for reading and learning, but no license to use, copy, modify, or redistribute it is granted. See `CODE_OF_CONDUCT.md` for details.
+
+## ✍️ Author
+
+Built with ❤️ for Beer by the Sak Family.
 
 ---
 
-## 🚀 Quick start
-
-```bash
-# Python >=3.11. Preferred: uv (CI uses uv + uv.lock for reproducible installs).
-uv sync --all-extras
-# or: pip install -e ".[all]"     # dev + dashboard extras
-
-cp .env.example .env              # fill in ANTHROPIC_API_KEY (or use a local model — see below)
-sakthai doctor                    # check environment + memory health
-sakthai learn "prefers dark mode" --kind pref --key ui
-sakthai recall "dark"             # search facts + observations
-sakthai run "summarise my notes"  # standalone tool-using agent loop
-```
-
-All runtimes share `~/.sakthai/memory.db` (override the root with `SAKTHAI_HOME`).
-
----
-
-## 🤝 Family Agents
-
-The repository tracks six personas end-to-end, each with a distinct role and personality. See
-`SOUL.md` for the full roster.
-
-| Agent | Role | Portrait |
-|---|---|---|
-| **SakKing** | Lead & Orchestrator · Master of Code | ![SakKing](./assets/sakking.png) |
-| **SakThai** | Master of Hugging Face | ![SakThai](./assets/sakthai.png) |
-| **SakSee** | Master of Web | ![SakSee](./assets/saksee.png) |
-| **SakSit** | Master of Social Media | ![SakSit](./assets/saksit.png) |
-| **SakTan** | Daily Ops Helper | ![SakTan](./assets/saktan.png) |
-| **SakJules** | Master of Automation & CI/CD | ![SakJules](./assets/sakjules.png) |
-
-![House of Sak](./assets/house_of_sak_v2.png)
-
-The canonical profile source for the family lives under `infra/hermes-agents/profiles/`, and
-`personas/` contains the consolidated skill trees and overlays used by the repository.
-
-### 📡 Fleet status
-
-Live deployment snapshot of the Telegram agent fleet. Values are read from the
-**version-controlled** configs under
-[`infra/hermes-agents/`](./infra/hermes-agents/) (this repository is the config
-source of truth). Each bot is a runtime profile with its own persona +
-Telegram token but a **shared** Supermemory brain.
-
-| Agent | Profile | Role | Primary model · provider | Fallback · provider | Telegram | State |
-|-------|---------|------|--------------------------|---------------------|----------|-------|
-| 👑 **SakKing** | `default` | Lead & Orchestrator · Master of Code | `qwen3-coder:480b` · 🟢 ollama-cloud | `gpt-oss:120b` · ollama-cloud | [@sakthai_agent_v2_bot](https://t.me/sakthai_agent_v2_bot) | ✅ deployed |
-| 🤗 **SakThai** | `sakthai` | Master of Hugging Face | `claude-opus-4-8` · 🟪 anthropic (OAuth) | `gpt-oss:120b` · ollama-cloud | [@sakthai_v1_bot](https://t.me/sakthai_v1_bot) | ✅ deployed |
-| 🌐 **SakSee** | `saksee` | Master of Web | `gpt-5.4-mini` · ⬛ openai-codex (OAuth) | `gpt-oss:120b` · ollama-cloud | [@saksee_bot](https://t.me/saksee_bot) | ✅ deployed |
-| 📣 **SakSit** | `saksit` | Master of Social Media | `kimi-k2.7-code` · 🟢 ollama-cloud | `gpt-oss:120b` · ollama-cloud | [@saksit_agent_bot](https://t.me/saksit_agent_bot) | ✅ deployed |
-| 🗓️ **SakTan** | `saktan` | Daily Ops Helper | `gemini-2.5-flash-lite` · 🔵 gemini | `gemini-3-flash-preview` → `3.1-flash-lite` → `3.5-flash` · gemini | [@saktan_agent_bot](https://t.me/saktan_agent_bot) | ✅ deployed |
-| 🤖 **SakJules** | `sakjules` | Master of Automation & CI/CD | — *(stub `config.yaml`, no model block)* | — | [@sakjules_agent_bot](https://t.me/sakjules_agent_bot) | 🚧 not deployed |
-
-**Auth by provider:** 🟢 `ollama-cloud` → `OLLAMA_API_KEY` (`https://ollama.com/v1`) ·
-🟪 `anthropic` → Claude OAuth (`CLAUDE_CODE_OAUTH_TOKEN`) ·
-⬛ `openai-codex` → ChatGPT OAuth (`https://chatgpt.com/backend-api/codex`) ·
-🔵 `gemini` → `GEMINI_API_KEY` / `GOOGLE_API_KEY`.
-
-> ⚠️ **Live host & drift.** The live fleet runs on the GCE VM **`sak-medium-vm`**
-> (`us-central1-a`, `e2-medium`). Bots and their models get **hot-swapped on the
-> VM often**, so the VM can diverge from the configs above — this repository is
-> the reproducible baseline, the VM is authoritative for what's *actually running
-> right now*. Each bot needs a **distinct** `TELEGRAM_BOT_TOKEN` (shared token →
-> `409`, both go silent). Regenerate/verify with `make doctor-runtime` and the
-> roster in [`infra/hermes-agents/README.md`](./infra/hermes-agents/README.md).
-
----
-
-## 🔌 Providers & no-cost local run
-
-The agent loop is provider-agnostic. The provider is auto-detected from the model name and
-available credentials; override with `--provider`.
-
-| Provider | Models | Auth |
-|----------|--------|------|
-| 🟪 `anthropic` | Claude (default `claude-opus-4-8`) | `ANTHROPIC_API_KEY`, `ANTHROPIC_AUTH_TOKEN`, or Claude CLI OAuth |
-| 🔵 `google` | Gemini | `GEMINI_API_KEY` / `GOOGLE_API_KEY`, or Gemini CLI OAuth |
-| ⚪ `openai` | any OpenAI-compatible gateway (vLLM, LocalAI, …) | `OPENAI_API_BASE` / `OPENAI_BASE_URL` + `OPENAI_API_KEY` (defaults `nokey`) |
-| 🟢 `ollama` | local models via Ollama | none — `OLLAMA_HOST` (default `http://127.0.0.1:11434`) |
-
-**💸 No-cost local run** (no API key, nothing leaves the machine):
-
-```bash
-ollama run qwen2.5-coder:7b          # start a local model (one-time)
-sakthai run "refactor this script" --provider ollama --model qwen2.5-coder:7b
-```
-
-![Local-First Security](./assets/local_first_security.png)
-
-> ℹ️ Ollama is reached at the IPv4 literal `127.0.0.1` on purpose — on hosts where `localhost`
-> resolves to IPv6 `::1` but Ollama binds IPv4 only, `localhost` would give `Connection refused`.
-
----
-
-## ⚙️ Runtimes
-
-One package, three entry points (full detail in [`docs/runtimes.md`](./docs/runtimes.md)):
-
-1. 💻 **CLI** — `sakthai <cmd>` (see [Commands](#-commands)).
-2. 🤖 **Agent loop** — `sakthai run "<task>"` drives the provider-agnostic tool-using loop,
-   injecting memory and any active skills into the system prompt. Useful flags: `--provider`,
-   `--model`, `--with-skills <name>` (repeatable), `--no-mcp`, `--fast` (skip cycle overhead),
-   `--verbose`, and `--dry-run` (preflight, **no API call**).
-3. 🔗 **MCP server** — `sakthai mcp` serves the same tools over JSON-RPC stdio (protocol
-   `2024-11-05`), so editors and other agents share one memory.
-
----
-
-## 🔗 MCP (both directions)
-
-SakThai speaks the Model Context Protocol **in both directions**. Deep dive:
-[`docs/plugins.md`](./docs/plugins.md) and [`docs/integrations.md`](./docs/integrations.md).
-
-### 📥 Inbound — serve SakThai to other agents
-
-`sakthai mcp` exposes the built-in tools over JSON-RPC stdio, reusing the exact same
-`BUILTIN_TOOLS` registry as the agent loop (identical behaviour on both surfaces). Register it
-with any MCP client, e.g. Claude CLI (`~/.claude/config.json`) or Gemini CLI:
-
-```json
-{
-  "mcpServers": {
-    "sakthai": { "command": "sakthai", "args": ["mcp"] }
-  }
-}
-```
-
-### 📤 Outbound — consume external MCP servers
-
-During `sakthai run`, SakThai auto-loads external MCP servers from `~/.sakthai/mcp.json`
-(standard `mcpServers` shape, Claude-Desktop-compatible), merges their tools into the registry
-namespaced as `<server>__<tool>`, and fails soft if a server won't start. Pass `--no-mcp` to disable.
-
-```json
-{
-  "mcpServers": {
-    "github": {
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-github"],
-      "env": { "GITHUB_PERSONAL_ACCESS_TOKEN": "your-token-here" }
-    }
-  }
-}
-```
-
-### 👑 SakKing integration (local, no cost)
-
-SakThai and the **SakKing** agent (installed at `~/.sakking`) interoperate over **local MCP
-stdio** — a subprocess JSON-RPC channel with **no network and zero API/cloud cost**.
-
-- **SakKing → SakThai** (already wired by SakKing): SakKing registers `sakthai mcp` in its
-  `~/.sakking/config.yaml` and calls SakThai's memory tools.
-- **SakThai → SakKing**: add SakKing to `~/.sakthai/mcp.json` and its conversation / messaging
-  tools appear in the agent loop as `sakking__*`:
-
-  ```json
-  {
-    "mcpServers": {
-      "sakking": { "command": "sakking", "args": ["mcp", "serve"] }
-    }
-  }
-  ```
-
-- **Mirror SakKing-learned skills** into this repository as first-class `sakthai-` skills:
-
-  ```bash
-  sakthai skills sync-sakking            # import learned skills into skills/
-  sakthai skills sync-sakking --dry-run  # preview changes (idempotent)
-  ```
-
-> 💡 The MCP link itself is free; SakThai's own *reasoning* still uses whatever provider you pick —
-> pair the SakKing link with a local Ollama model (above) for an end-to-end no-cost setup.
-
----
-
-## 📚 Skills
-
-A *skill* is a directory with a `SKILL.md` (YAML frontmatter + Markdown body) that gets injected
-into the agent's system prompt when active. SakThai ships:
-
-- 📗 **`library/`** — curated skills across 11 categories: `agent`, `automation`, `coding`,
-  `devops`, `learning`, `llm`, `memory`, `observability`, `research`, `safety`, `security`.
-- 📘 **`skills/`** — user/extension skills (the `sakthai-*` set, including the
-  `sakthai-cycle-*` stages and skills mirrored from SakKing).
-
-```yaml
----
-name: my-skill
-category: coding
-description: One-line summary of what this skill does
-version: "1.0"
-platforms: [linux, macos, windows]   # host OSes the skill supports
-metadata:
-  sakthai:
-    tags: [python, testing]
-    related_skills: [other-skill]
----
-
-Skill body goes here — injected into the system prompt when the skill is active.
-```
-
-Manage skills with `sakthai skills list|show|validate|create|sync-sakking`, and activate them
-for a run with `sakthai run "<task>" --with-skills my-skill`.
-
----
-
-<a id="built-in-tools"></a>
-## 🛠️ Built-in tools
-
-The same **8-tool** registry (`sakthai/agent/tools.py`) powers both `sakthai run` and
-`sakthai mcp`. Add a tool once and it appears on both surfaces.
-
-| Tool | What it does | Notes |
-|------|--------------|-------|
-| 🧠 `learn` | Save a fact (value, kind, key) | The agent's write path into memory |
-| 🔎 `recall` | List recent facts + top observations | Read what's already known |
-| 🔍 `search` | Substring search over facts + observations | Targeted lookup |
-| 🗑️ `forget` | Delete a fact by ID | — |
-| 📄 `read_file` | Read a local text file | Sandboxed to cwd + `~/.sakthai` + `SAKTHAI_READ_ALLOW`; 20k-char cap |
-| 💲 `run_command` | Run a CLI command (no shell) | **Opt-in** via `SAKTHAI_SHELL_ALLOW`; 20k-char cap |
-| 📨 `send_telegram_message` | Send a Telegram message | Needs `TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID` |
-| 🔁 `run_agent_loop` | Delegate a whole task to SakThai's agent loop | MCP-only (filtered out of the in-loop set to avoid recursion) |
-
----
-
-## 💻 Commands
-
-```bash
-sakthai doctor                       # report environment + memory health
-sakthai setup                        # validate .env and required env vars
-sakthai status | tools               # quick status; list agent/MCP tools
-sakthai learn "prefers dark mode"    # save a fact
-sakthai recall "dark"                # search facts + observations
-sakthai memory show|stats|search|export|import|backup|consolidate|deduplicate
-sakthai run "summarise my notes"     # provider-agnostic agent loop
-sakthai mcp                          # serve memory tools over MCP stdio
-sakthai cycle status|next|set|list   # the 6-stage cycle
-sakthai skills list|show|validate|create|sync-sakking
-sakthai sessions list|show|export    # inspect session logs
-sakthai dashboard                    # Streamlit view of the store
-```
-
-## 🧰 Monorepo development shortcuts
-
-```bash
-make test                            # run pytest suite (via uv)
-make lint                            # run ruff linters (via uv)
-make deploy-runtime                  # deploy live agent configs and restart local services
-make doctor-runtime                  # validate runtime configs
-make compose-personas                # rebuild persona skill trees into build/
-```
-
----
-
-<a id="develop"></a>
-## 👩‍💻 Develop
-
-Mirrors `.github/workflows/ci.yml` (run before pushing; **green CI is the bar for `main`**).
-Coverage floor is **85 %**. The hermetic suite is **41 test files** (no network, no GCP).
-
-```bash
-make lint                                # run ruff check
-make test                                # run the hermetic test suite
-```
-
-### 🪝 Pre-commit hooks
-
----
-
-## 📁 Repository layout
-
-```text
-.
-├── assets/                         # Images for README and documentation
-├── bin/                            # Executable scripts
-├── dashboard/                      # Streamlit dashboard source code
-├── data/                           # Data files and configurations
-├── docs/                           # Project documentation
-├── infra/                          # Infrastructure related files
-├── library/                        # Core library skills
-├── packages/                       # Standalone Python packages
-├── personas/                       # Persona definitions and skill overlays
-├── sakthai/                        # Main SakThai agent source code
-├── scripts/                        # Utility scripts
-├── services/                       # External service integrations
-├── skills/                         # User and extension skills
-├── tests/                          # Test suite
-└── training/                       # Training related files
-```
-
----
-
-## 📖 Documentation
-
-Comprehensive documentation is available in the `docs/` directory:
-- 🏗️ [Architecture & Layering](./docs/architecture.md) — layers, memory database, SQLite schema
-- 🤖 [Capabilities & Tools](./docs/capabilities.md) — tools, memory operations, providers
-- 🔌 [MCP & Skills Extensibility](./docs/plugins.md) — MCP serving, skill directory injection
-- ⚙️ [Runtimes & Local Execution](./docs/runtimes.md) — CLI, agent loop, MCP servers, local Ollama
-- 🔗 [Integrations](./docs/integrations.md) — Composio and cross-agent communication recipes
-- 📅 [Live Connect Plan (Phases 5–8)](./docs/sakthai-live-connect-plan.md) — Phase 5–8 execution plan and status (Completed)
-
----
-
-## 📝 License
-
-This project is **all rights reserved** (© 2026 beer-sakthai). The source is available for reading and learning, but no license to use, copy, modify, or redistribute it is granted. See `CODE_OF_CONDUCT.md` for details.
+## References
+
+[1] `docs/SOUL.md` from `beer-sakthai/Sak-Family-Agent`
+[2] `CLAUDE.md` from `beer-sakthai/Sak-Family-Agent`
+[3] `pyproject.toml` from `beer-sakthai/Sak-Family-Agent`
+[4] `.github/workflows/SKILL.md` from `beer-sakthai/Sak-Family-Agent`

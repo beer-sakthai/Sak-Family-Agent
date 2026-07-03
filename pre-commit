@@ -1,0 +1,22 @@
+#!/bin/sh
+#
+# pre-commit hook to ensure uv.lock is up-to-date.
+#
+# To use this hook, run the following command from the repository root:
+#   git config core.hooksPath .githooks
+
+echo "Checking if uv.lock is synchronized..."
+
+# Regenerate the lock file to see if there are any changes.
+uv lock
+
+# Check if git detects any unstaged changes in uv.lock.
+# If it does, the file was out of sync.
+if ! git diff --quiet uv.lock; then
+  echo "❌ Error: uv.lock is out of sync with pyproject.toml." >&2
+  echo "Please run 'uv lock', stage the changes to uv.lock, and re-commit." >&2
+  exit 1
+fi
+
+echo "✅ uv.lock is up to date."
+exit 0

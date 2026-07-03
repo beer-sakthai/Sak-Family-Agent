@@ -39,124 +39,17 @@ from evolution.core.external_importers import (
     main,
 )
 
+from tests.shared.secrets import run_secret_detection_tests
+
 # ── Secret Detection ────────────────────────────────────────────────────────
 
 
 class TestSecretDetection:
     """Verify that known secret formats are caught and normal text is not."""
 
-    def test_detects_anthropic_key(self):
-        assert _contains_secret("here is sk-ant-api03-abc123def456 my key")
-
-    def test_detects_openrouter_key(self):
-        assert _contains_secret("sk-or-v1-abcdef1234567890abcdef")
-
-    def test_detects_github_pat(self):
-        assert _contains_secret("use ghp_abcdefghijklmnopqrstuvwxyz12")
-
-    def test_detects_github_user_token(self):
-        assert _contains_secret("ghu_abcdef123456")
-
-    def test_detects_slack_bot_token(self):
-        assert _contains_secret("SLACK_TOKEN is xoxb-123-456-abcdef")
-
-    def test_detects_slack_app_token(self):
-        assert _contains_secret("xapp-1-ABC-123456-xyz")
-
-    def test_detects_notion_token(self):
-        assert _contains_secret("ntn_37257299567bdiGRuYDIjhNH8uFribb461")
-
-    def test_detects_bearer_token(self):
-        assert _contains_secret("Authorization: Bearer dsm_bYxe4QUvPsDjRThUu2Qb3z")
-
-    def test_detects_env_var_anthropic(self):
-        assert _contains_secret("export ANTHROPIC_API_KEY=something")
-
-    def test_detects_env_var_openai(self):
-        assert _contains_secret("OPENAI_API_KEY=sk-blah")
-
-    def test_detects_long_sk_prefix(self):
-        assert _contains_secret("sk-proj-1234567890abcdefghij")
-
-    def test_ignores_normal_text(self):
-        assert not _contains_secret("sort these messages by topic")
-
-    def test_ignores_short_sk_prefix(self):
-        # "sk" alone or "sk-foo" (short) should not trigger
-        assert not _contains_secret("I asked about sk")
-
-    def test_ignores_prose_with_key_word(self):
-        assert not _contains_secret("the key insight is that we need to refactor")
-
-    def test_ignores_word_bearer_in_prose(self):
-        # "Bearer" followed by short token shouldn't match (< 20 chars)
-        assert not _contains_secret("the bearer of bad news")
-
-    def test_ignores_code_token_discussion(self):
-        # Discussing tokens in general shouldn't trigger
-        assert not _contains_secret("parse the JWT token from the header")
-
-    def test_ignores_ask_substring(self):
-        # "ask" contains "sk" — should not trigger
-        assert not _contains_secret("ask the user for their preferences")
-
-    # -- Targeted assignment patterns (password=, secret=, token=) --
-
-    def test_detects_password_assignment(self):
-        assert _contains_secret("password=my_super_secret_123")
-        assert _contains_secret("password: hunter2abc")
-
-    def test_detects_secret_assignment(self):
-        assert _contains_secret("secret=abc123def456")
-        assert _contains_secret("secret: my_api_secret_key")
-
-    def test_detects_token_assignment_long_value(self):
-        assert _contains_secret("token=abcdef1234567890")
-        assert _contains_secret("token: eyJhbGciOiJIUzI1NiJ9")
-
-    def test_ignores_token_assignment_short_value(self):
-        # "token=abc" has < 10 chars after = so should NOT trigger
-        assert not _contains_secret("token=abc")
-
-    def test_ignores_password_in_prose(self):
-        # "password" without assignment operator shouldn't trigger
-        assert not _contains_secret("the password field should be validated")
-        assert not _contains_secret("reset your password using the link")
-
-    def test_ignores_secret_in_prose(self):
-        assert not _contains_secret("the secret to success is consistency")
-        assert not _contains_secret("it's no secret that we need to refactor")
-
-    def test_detects_openrouter_env_var(self):
-        assert _contains_secret("export OPENROUTER_API_KEY=sk-or-xyz")
-
-    def test_detects_slack_bot_token_env_var(self):
-        assert _contains_secret("SLACK_BOT_TOKEN=xoxb-abc")
-
-    def test_detects_github_token_env_var(self):
-        assert _contains_secret("GITHUB_TOKEN=ghp_abc123")
-
-    def test_detects_aws_access_key(self):
-        assert _contains_secret("AKIAIOSFODNN7EXAMPLE")
-
-    def test_detects_pem_private_key(self):
-        assert _contains_secret("-----BEGIN RSA PRIVATE KEY-----\nMIIEow...")
-        assert _contains_secret("-----BEGIN PRIVATE KEY-----\nMIIEvQ...")
-
-    def test_detects_aws_secret_env_var(self):
-        assert _contains_secret("export AWS_SECRET_ACCESS_KEY=wJalrXUtnFEMI/K7MDENG")
-
-    def test_detects_database_url_env_var(self):
-        assert _contains_secret("DATABASE_URL=postgres://user:pass@host/db")
-
-    def test_detects_secret_in_json_string(self):
-        assert _contains_secret('{"api_key": "sk-abc123def456"}')
-
-    def test_detects_bearer_token_in_repr(self):
-        assert _contains_secret("headers={'Authorization': 'Bearer sk-abcdef123456'}")
-
-    def test_detects_bare_bearer_token(self):
-        assert _contains_secret("Bearer sk-abcdef123456 was used")
+    def test_secret_detection(self):
+        """Run the shared battery of secret detection tests."""
+        run_secret_detection_tests(_contains_secret)
 
 
 # ── Relevance Heuristics ────────────────────────────────────────────────────
