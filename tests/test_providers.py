@@ -945,3 +945,54 @@ class TestCallOpenAICompat:
         call_openai_compat(client, "gpt-4", "sys", (), [], iteration=0)
         payload = client.post.call_args.kwargs["json"]
         assert "tools" not in payload
+
+
+class TestBuildClient:
+    """Cover build_client's provider dispatch for ollama / local endpoints.
+
+    These construct only an httpx.Client (no network) so they run hermetically.
+    The AuthError -> AgentError wrapping on the ``local`` branch is exercised by
+    omitting the base URL.
+    """
+
+    def test_injected_client_is_returned_untouched(self) -> None:
+        from sakthai.agent.providers import build_client
+
+        sentinel = object()
+        assert build_client("ollama", sentinel) is sentinel
+
+    def test_build_ollama_client_constructs_httpx_client(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        import httpx
+
+        from sakthai.agent.providers import build_client
+
+        monkeypatch.delenv("OLLAMA_HOST", raising=False)
+        monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+        client = build_client("ollama", None)
+        assert isinstance(client, httpx.Client)
+        assert "11434" in str(client.base_url)
+
+    def test_build_local_client_constructs_httpx_client(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        import httpx
+
+        from sakthai.agent.providers import build_client
+
+        monkeypatch.setenv("OPENAI_BASE_URL", "http://localhost:8080/v1")
+        monkeypatch.setenv("OPENAI_API_KEY", "local-key")
+        client = build_client("local", None)
+        assert isinstance(client, httpx.Client)
+
+    def test_build_local_client_missing_base_url_raises_agent_error(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from sakthai.agent.providers import build_client
+        from sakthai.agent.providers.base import AgentError
+
+        monkeypatch.delenv("OPENAI_BASE_URL", raising=False)
+        monkeypatch.delenv("OPENAI_API_BASE", raising=False)
+        with pytest.raises(AgentError, match="local model endpoint"):
+            build_client("local", None)

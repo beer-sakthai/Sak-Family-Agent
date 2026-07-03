@@ -296,3 +296,40 @@ def test_gateway_credential_source_url(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_gateway_credential_source_none(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("SAKTHAI_GATEWAY_URL", raising=False)
     assert auth.gateway_credential_source() is None
+
+
+# -- resolve_ollama_credentials ------------------------------------------
+
+
+def test_resolve_ollama_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("OLLAMA_HOST", raising=False)
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    base, key = auth.resolve_ollama_credentials()
+    assert base == "http://127.0.0.1:11434/v1"
+    assert key == "nokey"
+
+
+def test_resolve_ollama_uses_custom_host_and_key(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("OLLAMA_HOST", "http://gpu-box:9999")
+    monkeypatch.setenv("OPENAI_API_KEY", "supplied-key")
+    base, key = auth.resolve_ollama_credentials()
+    assert base == "http://gpu-box:9999/v1"
+    assert key == "supplied-key"
+
+
+# -- resolve_local_credentials -------------------------------------------
+
+
+def test_resolve_local_raises_without_base_url(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("OPENAI_BASE_URL", raising=False)
+    monkeypatch.delenv("OPENAI_API_BASE", raising=False)
+    with pytest.raises(auth.AuthError, match="OPENAI_BASE_URL"):
+        auth.resolve_local_credentials()
+
+
+def test_resolve_local_returns_openai_creds_with_base_url(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("OPENAI_BASE_URL", "http://localhost:8080/v1")
+    monkeypatch.setenv("OPENAI_API_KEY", "local-key")
+    base, key = auth.resolve_local_credentials()
+    assert base == "http://localhost:8080/v1"
+    assert key == "local-key"

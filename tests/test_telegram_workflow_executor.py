@@ -60,3 +60,55 @@ def test_run_workflow_executes_skill_with_current_interpreter(tmp_path: Path, mo
     assert "executed successfully" in result
     assert captured["args"][0] == sys.executable
     assert "--stateless" in captured["args"]
+
+
+def test_run_workflow_reports_error_on_nonzero_exit(tmp_path: Path, monkeypatch) -> None:
+    skills_dir = tmp_path / "skills"
+    skills_dir.mkdir()
+    (skills_dir / "alpha").mkdir()
+    monkeypatch.setattr(workflow_executor, "SKILLS_DIR", skills_dir)
+
+    class _Process:
+        returncode = 1
+
+        async def communicate(self) -> tuple[bytes, bytes]:
+            return b"", b"boom: skill crashed"
+
+    async def _fake_subprocess_exec(*args: str, **kwargs: object) -> _Process:
+        return _Process()
+
+    monkeypatch.setattr(workflow_executor.asyncio, "create_subprocess_exec", _fake_subprocess_exec)
+
+    result = asyncio.run(workflow_executor.run_workflow("alpha"))
+
+    assert "Error executing skill 'alpha'" in result
+    assert "boom: skill crashed" in result
+
+
+def test_run_workflow_unknown_skill_lists_available(tmp_path: Path, monkeypatch) -> None:
+    skills_dir = tmp_path / "skills"
+    skills_dir.mkdir()
+    (skills_dir / "alpha").mkdir()
+    monkeypatch.setattr(workflow_executor, "SKILLS_DIR", skills_dir)
+
+    result = asyncio.run(workflow_executor.run_workflow("does-not-exist"))
+
+    assert "not found" in result
+    assert "alpha" in result
+
+
+def test_config_reexports_central_values(monkeypatch) -> None:
+    """telegram/config.py re-exports the central config accessors at import time."""
+    import importlib
+
+    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "tok-123")
+    monkeypatch.setenv("TELEGRAM_ALLOWED_USER_IDS", "1,2,3")
+
+    from sakthai.telegram import config as tg_config
+
+    importlib.reload(tg_config)
+    try:
+        assert tg_config.TELEGRAM_BOT_TOKEN == "tok-123"
+        assert tg_config.ALLOWED_USER_IDS == [1, 2, 3]
+    finally:
+        importlib.reload(tg_config)
