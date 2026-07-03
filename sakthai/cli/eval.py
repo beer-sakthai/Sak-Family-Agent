@@ -25,7 +25,7 @@ def eval_summary(limit: int, as_json: bool) -> None:
         return
 
     if data["count"] == 0:
-        click.echo("(no eval records yet — run `sakthai run \"...\"` first)")
+        click.echo('(no eval records yet — run `sakthai run "..."` first)')
         return
 
     click.echo("# Eval summary")
