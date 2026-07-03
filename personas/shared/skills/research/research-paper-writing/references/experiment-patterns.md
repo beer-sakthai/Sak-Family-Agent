@@ -645,6 +645,157 @@ COLOR_CYCLE = ['#0072B2', '#D55E00', '#009E73', '#E69F00', '#CC79A7', '#56B4E9']
 
 Also differentiate lines by **marker and linestyle**, not just color:
 
+<<<<<<< HEAD
+=======
+```python
+STYLES = [
+    {'color': '#0072B2', 'marker': 'o', 'linestyle': '-'},
+    {'color': '#D55E00', 'marker': 's', 'linestyle': '--'},
+    {'color': '#009E73', 'marker': '^', 'linestyle': '-.'},
+    {'color': '#E69F00', 'marker': 'D', 'linestyle': ':'},
+]
+```
+
+### Complete Example: Method Comparison Bar Chart
+
+```python
+import matplotlib.pyplot as plt
+import numpy as np
+
+try:
+    import scienceplots
+    style = ['science', 'no-latex']
+except ImportError:
+    style = 'default'
+
+with plt.style.context(style):
+    methods = ['Single Pass', 'Critique+Revise', 'Best-of-N', 'Ours']
+    scores = [73.2, 74.1, 68.5, 77.0]
+    errors = [2.1, 1.8, 3.2, 1.5]
+    colors = ['#56B4E9', '#E69F00', '#CC79A7', '#0072B2']
+    
+    fig, ax = plt.subplots(figsize=(3.5, 2.5))
+    bars = ax.bar(methods, scores, yerr=errors, capsize=3,
+                  color=colors, edgecolor='black', linewidth=0.5)
+    
+    # Highlight "Ours"
+    bars[-1].set_edgecolor('#0072B2')
+    bars[-1].set_linewidth(1.5)
+    
+    ax.set_ylabel('Pass Rate (%)')
+    ax.set_ylim(60, 85)
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    
+    fig.savefig('paper/fig_comparison.pdf', bbox_inches='tight')
+```
+
+### Output Rules
+
+- **Always save as PDF**: `fig.savefig('fig.pdf')` — vector graphics, sharp at any zoom
+- **Never save as PNG** for paper figures — raster PNGs look blurry when printed/zoomed
+- **Exception**: Screenshots, photographs, or pixel-art visualizations → PNG at 600 DPI
+- **Verify grayscale**: Print to grayscale PDF and check all information is still visible
+
+### Chart Types for Common Comparisons
+
+| Comparison Type | Chart | Notes |
+|----------------|-------|-------|
+| Method vs method | Grouped bar chart | Include error bars |
+| Across model sizes | Line chart with CI bands | Log scale for model size axis |
+| Ablation study | Stacked/grouped bar | Highlight removed component |
+| Trajectory/convergence | Line chart over iterations | Show winner per iteration |
+| Per-task breakdown | Heatmap or grouped bar | Show variance across tasks |
+
+---
+
+## Visualization Best Practices
+
+### Setup: SciencePlots + matplotlib
+
+Install SciencePlots for publication-ready defaults:
+
+```bash
+pip install SciencePlots matplotlib numpy
+```
+
+**Option A: SciencePlots styles** (recommended — handles most defaults automatically):
+
+```python
+import matplotlib.pyplot as plt
+import scienceplots  # registers the styles
+
+# Pick a style:
+# 'science'        — clean, serif fonts, suitable for most venues
+# 'science+ieee'   — IEEE-style (good for two-column papers)
+# 'science+nature' — Nature-style
+# Add 'no-latex' if LaTeX is not installed on the machine generating plots
+
+with plt.style.context(['science', 'no-latex']):
+    fig, ax = plt.subplots(figsize=(3.5, 2.5))  # single-column width
+    # ... plot ...
+    fig.savefig('paper/fig_results.pdf', bbox_inches='tight')
+```
+
+**Option B: Manual rcParams** (when you need full control):
+
+```python
+import matplotlib.pyplot as plt
+
+plt.rcParams.update({
+    'font.size': 10,
+    'font.family': 'serif',
+    'axes.labelsize': 11,
+    'axes.titlesize': 11,
+    'xtick.labelsize': 9,
+    'ytick.labelsize': 9,
+    'legend.fontsize': 9,
+    'figure.figsize': (3.5, 2.5),    # single-column default
+    'figure.dpi': 300,
+    'savefig.dpi': 300,
+    'savefig.bbox': 'tight',
+    'savefig.pad_inches': 0.05,
+    'axes.linewidth': 0.8,
+    'lines.linewidth': 1.5,
+    'lines.markersize': 5,
+    'axes.grid': True,
+    'grid.alpha': 0.3,
+    'grid.linewidth': 0.5,
+})
+```
+
+### Standard Figure Sizes (Two-Column Format)
+
+| Use Case | figsize | Notes |
+|----------|---------|-------|
+| Single column | `(3.5, 2.5)` | Fits in one column of two-column layout |
+| Double column | `(7.0, 3.0)` | Spans full page width |
+| Square (heatmap, confusion matrix) | `(3.5, 3.5)` | Single column |
+| Tall single (many rows) | `(3.5, 5.0)` | Use sparingly |
+
+### Colorblind-Safe Palette (Okabe-Ito)
+
+Use this palette for all paper figures. It is distinguishable by people with all common forms of color vision deficiency:
+
+```python
+COLORS = {
+    'blue':    '#0072B2',
+    'orange':  '#E69F00',
+    'green':   '#009E73',
+    'red':     '#D55E00',
+    'purple':  '#CC79A7',
+    'cyan':    '#56B4E9',
+    'yellow':  '#F0E442',
+    'black':   '#000000',
+}
+
+# As a list for cycling:
+COLOR_CYCLE = ['#0072B2', '#D55E00', '#009E73', '#E69F00', '#CC79A7', '#56B4E9']
+```
+
+Also differentiate lines by **marker and linestyle**, not just color:
+
+>>>>>>> 858045420f64b1617246e98fd657d158bc7109cd
 ```python
 STYLES = [
     {'color': '#0072B2', 'marker': 'o', 'linestyle': '-'},
