@@ -13,7 +13,7 @@ from ..config import sakthai_home
 from .store import MemoryStore
 
 
-def _run_git(args: list[str], cwd: Path, check: bool = True) -> subprocess.CompletedProcess:
+def _run_git(args: list[str], cwd: Path, check: bool = True) -> subprocess.CompletedProcess[str]:
     """Run a Git command and raise a detailed error on failure."""
     try:
         return subprocess.run(

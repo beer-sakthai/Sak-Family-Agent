@@ -159,11 +159,12 @@ CLI/MCP → agent loop → tool registry → MemoryStore → SQLite. See
 
 ### Agent subsystem (`agent/`)
 
-- **`agent/tools.py`** — defines `BUILTIN_TOOLS` (8 tools, one schema + handler
-  each): `learn`, `recall`, `search`, `forget`, `read_file`, `run_command`,
-  `send_telegram_message`, `run_agent_loop`. Add a tool here and it appears in
-  both the agent loop and the MCP server automatically. Note: `run_agent_loop`
-  is filtered out of the in-loop tool set (it's MCP-only) to avoid recursion.
+- **`agent/tools.py`** — defines `BUILTIN_TOOLS` (10 tools, one schema + handler
+  each): `learn`, `ingest_document`, `capture_lead`, `recall`, `search`, `forget`,
+  `read_file`, `run_command`, `send_telegram_message`, `run_agent_loop`. Add a
+  tool here and it appears in both the agent loop and the MCP server
+  automatically. Note: `run_agent_loop` is filtered out of the in-loop tool set
+  (it's MCP-only) to avoid recursion.
 - **`agent/registry.py`** — `ToolRegistry` keys tools by name; `with_tools()`
   merges sets (later tool wins on name clash, so plugins can shadow built-ins).
 - **`agent/loop.py`** — `run_agent()` is the main orchestration loop. Injects
@@ -226,7 +227,7 @@ Click commands split by area; all sub-files imported by `cli/__init__.py`:
 - **`skills.py` + `skills/` + `library/`** — parse/catalog/validate `SKILL.md`
   files (YAML frontmatter: name, category, description, version, platforms, tags,
   related_skills). `library/` has 31 curated skills across 11 categories;
-  `skills/` has 69 user/extension skills. Skills are injected into the agent
+  `skills/` has 70 user/extension skills. Skills are injected into the agent
   system prompt via `render_skills_prompt_block()`.
 - **`dashboard/`** — `data.py` builds a UI-free, testable snapshot of the store
   (KPIs, growth series, per-kind breakdown, date-range filtering) and serializes
@@ -283,7 +284,7 @@ Sak-Family-Agent/
 │   ├── dashboard/            # data.py (JSON snapshot; React UI lives at repo root)
 │   └── web/                  # HTTP server stub
 ├── tests/                    # hermetic test suite, no network
-├── skills/                   # 69 user/extension SKILL.md folders
+├── skills/                   # 70 user/extension SKILL.md folders
 ├── library/                  # 31 curated skills in 11 categories
 ├── docs/                     # Architecture & design docs
 ├── scripts/                  # Dev utilities (not linted/type-checked)
@@ -296,7 +297,7 @@ Sak-Family-Agent/
 
 ## Tests
 
-Tests live in `tests/` (49 files, ~13000 lines). All tests are hermetic — no
+Tests live in `tests/` (51 files, ~14700 lines). All tests are hermetic — no
 network, no GCP credentials. Integration tests that may hit real endpoints
 (Ollama, Anthropic) are marked `@pytest.mark.integration` and self-skip when
 credentials/endpoints are absent; CI excludes them with `-m "not integration"`.

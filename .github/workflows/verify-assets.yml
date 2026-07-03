@@ -1,0 +1,41 @@
+# .github/workflows/verify-assets.yml
+name: Verify Public Hugging Face Assets
+
+permissions:
+  contents: read
+
+on:
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+  # Runs the check automatically every day at midnight UTC
+  schedule:
+    - cron: '0 0 * * *'
+
+  # You could also trigger this on a push to main, for example:
+  # push:
+  #   branches: [ main ]
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Run verification script
+        run: |
+          python3 personas/sakthai/skills/mlops/mlops-hf-train-manual-upload/scripts/verify_hf_upload.py \
+            https://huggingface.co/datasets/Nanthasit/hf-training-composio-tools-50 \
+            https://huggingface.co/models/Nanthasit/sakthai-context-0.5b-tools
+        # The script will exit with a non-zero status code if any URL fails,
+        # which will automatically fail this step and the entire workflow.
+
+      - name: All assets verified
+        if: success()
+        run: echo "✅ All public assets are available and accessible."

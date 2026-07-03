@@ -93,6 +93,22 @@ def _format_missing_scopes(missing_scopes: list[str]) -> str:
     )
 
 
+def _load_client_config() -> dict:
+    """Load and validate the client secret file."""
+    if not CLIENT_SECRET_PATH.exists():
+        print("ERROR: No client secret stored. Run --client-secret first.", file=sys.stderr)
+        sys.exit(1)
+    try:
+        data = json.loads(CLIENT_SECRET_PATH.read_text())
+        if "installed" not in data and "web" not in data:
+            print("ERROR: Not a Google OAuth client secret file (missing 'installed' or 'web' key).", file=sys.stderr)
+            print("Download the correct file from: https://console.cloud.google.com/apis/credentials", file=sys.stderr)
+            sys.exit(1)
+        return data
+    except (json.JSONDecodeError, IOError) as e:
+        print(f"ERROR: Could not read client secret file at {CLIENT_SECRET_PATH}: {e}", file=sys.stderr)
+        sys.exit(1)
+
 def install_deps():
     """Install Google API packages if missing. Returns True on success."""
     try:
@@ -105,7 +121,20 @@ def install_deps():
 
     print("Installing Google API dependencies...")
 
-    # First choice: pip in the current interpreter. Works for most installs.
+    # Prefer `uv` if available, as it can install into a pip-less venv.
+    uv = shutil.which("uv")
+    if uv:
+        try:
+            subprocess.check_call(
+                [uv, "pip", "install", "--python", sys.executable, "--quiet"] + REQUIRED_PACKAGES,
+                stdout=subprocess.DEVNULL,
+            )
+            print("Dependencies installed.")
+            return True
+        except subprocess.CalledProcessError as e:
+            print(f"WARNING: 'uv' failed to install dependencies, falling back to pip: {e}", file=sys.stderr)
+
+    # Fallback to pip.
     try:
         subprocess.check_call(
             [sys.executable, "-m", "pip", "install", "--quiet"] + REQUIRED_PACKAGES,
@@ -113,37 +142,11 @@ def install_deps():
         )
         print("Dependencies installed.")
         return True
-    except subprocess.CalledProcessError as e:
-        pip_error = e
-
-    # Fallback: the interpreter has no pip (the Hermes Docker image's venv is
-    # built with `uv sync`, which does not bootstrap pip). `uv pip install
-    # --python <interpreter>` installs into that exact interpreter without
-    # needing pip present. Targeting sys.executable keeps us on the venv the
-    # script is actually running under, rather than guessing.
-    uv = shutil.which("uv")
-    if uv:
-        try:
-            subprocess.check_call(
-                [uv, "pip", "install", "--python", sys.executable, "--quiet"]
-                + REQUIRED_PACKAGES,
-                stdout=subprocess.DEVNULL,
-            )
-            print("Dependencies installed.")
-            return True
-        except subprocess.CalledProcessError as e:
-            print(f"ERROR: Failed to install dependencies via uv: {e}")
-            print(f"Manually: {uv} pip install --python {sys.executable} {' '.join(REQUIRED_PACKAGES)}")
-            return False
-
-    print(f"ERROR: Failed to install dependencies: {pip_error}")
-    print(
-        "On environments without pip (e.g. Nix, or the Hermes Docker image's "
-        "uv-managed venv), install the optional extra instead:"
-    )
-    print("  pip install 'hermes-agent[google]'")
-    print(f"Or manually: {sys.executable} -m pip install {' '.join(REQUIRED_PACKAGES)}")
-    return False
+    except (subprocess.CalledProcessError, FileNotFoundError) as e:
+        print(f"ERROR: Failed to install dependencies: {e}", file=sys.stderr)
+        print("Please install the required packages manually:", file=sys.stderr)
+        print(f"  {sys.executable} -m pip install {' '.join(REQUIRED_PACKAGES)}", file=sys.stderr)
+        return False
 
 
 def _ensure_deps():
@@ -265,13 +268,7 @@ def store_client_secret(path: str):
         print("ERROR: File is not valid JSON.")
         sys.exit(1)
 
-    if "installed" not in data and "web" not in data:
-        print("ERROR: Not a Google OAuth client secret file (missing 'installed' key).")
-        print("Download the correct file from: https://console.cloud.google.com/apis/credentials")
-        sys.exit(1)
-
-    CLIENT_SECRET_PATH.write_text(json.dumps(data, indent=2))
-    print(f"OK: Client secret saved to {CLIENT_SECRET_PATH}")
+    _load_client_config()  # Validate the structure before saving
 
 
 def _save_pending_auth(*, state: str, code_verifier: str):
@@ -328,15 +325,12 @@ def _extract_code_and_state(code_or_url: str) -> tuple[str, str | None]:
 
 def get_auth_url():
     """Print the OAuth authorization URL. User visits this in a browser."""
-    if not CLIENT_SECRET_PATH.exists():
-        print("ERROR: No client secret stored. Run --client-secret first.")
-        sys.exit(1)
-
+    client_config = _load_client_config()
     _ensure_deps()
     from google_auth_oauthlib.flow import Flow
 
-    flow = Flow.from_client_secrets_file(
-        str(CLIENT_SECRET_PATH),
+    flow = Flow.from_client_config(
+        client_config,
         scopes=SCOPES,
         redirect_uri=REDIRECT_URI,
         autogenerate_code_verifier=True,
@@ -352,10 +346,7 @@ def get_auth_url():
 
 def exchange_auth_code(code: str):
     """Exchange the authorization code for a token and save it."""
-    if not CLIENT_SECRET_PATH.exists():
-        print("ERROR: No client secret stored. Run --client-secret first.")
-        sys.exit(1)
-
+    client_config = _load_client_config()
     pending_auth = _load_pending_auth()
     raw_callback = code
     code, returned_state = _extract_code_and_state(code)
@@ -375,8 +366,8 @@ def exchange_auth_code(code: str):
         if scope_val:
             granted_scopes = scope_val.split()
 
-    flow = Flow.from_client_secrets_file(
-        str(CLIENT_SECRET_PATH),
+    flow = Flow.from_client_config(
+        client_config,
         scopes=granted_scopes,
         redirect_uri=pending_auth.get("redirect_uri", REDIRECT_URI),
         state=pending_auth["state"],
@@ -422,12 +413,13 @@ def revoke():
         print("No token to revoke.")
         return
 
+    client_config = _load_client_config()
     _ensure_deps()
     from google.oauth2.credentials import Credentials
     from google.auth.transport.requests import Request
 
     try:
-        creds = Credentials.from_authorized_user_file(str(TOKEN_PATH), SCOPES)
+        creds = Credentials.from_authorized_user_file(str(TOKEN_PATH), scopes=SCOPES)
         if creds.expired and creds.refresh_token:
             creds.refresh(Request())
 
@@ -440,7 +432,7 @@ def revoke():
             ),
             timeout=15,
         )
-        print("Token revoked with Google.")
+        print("OK: Token revoked with Google.")
     except Exception as e:
         print(f"Remote revocation failed (token may already be invalid): {e}")
 

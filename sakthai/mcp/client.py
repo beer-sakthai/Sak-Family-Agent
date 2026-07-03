@@ -22,7 +22,7 @@ import queue
 import subprocess
 import threading
 from collections.abc import Callable, Mapping, Sequence
-from typing import Any
+from typing import Any, cast
 
 from .. import config
 from ..agent.tools import Tool
@@ -287,4 +287,5 @@ class StdioMCPClient:
             # Put the sentinel back so subsequent calls also see EOF immediately.
             self._line_queue.put(_EOF)
             return None
+        assert isinstance(item, str)
         return item
