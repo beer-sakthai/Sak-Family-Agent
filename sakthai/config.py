@@ -46,6 +46,7 @@ OPTIONAL_ENV_VARS: dict[str, str] = {
     "TELEGRAM_ALLOWED_USER_IDS": "Comma- or space-separated Telegram user IDs allowed to use the bot",
     "TELEGRAM_BOT_TOKEN": "Telegram bot token used by the Telegram gateway",
     "SAKKING_HOME": "Override the SakKing data directory (default: ~/.sakking) for skill sync",
+    "SAKTHAI_EVAL_LOG": "Override the local model eval/MLOps log path (default: SAKTHAI_HOME/eval.jsonl)",
 }
 
 # Seconds to wait for an external MCP server's reply, before SAKTHAI_MCP_TIMEOUT.
@@ -99,6 +100,12 @@ def memory_db_path() -> Path:
 def sessions_dir() -> Path:
     """Directory where agent session logs are written."""
     return sakthai_home() / "sessions"
+
+
+def eval_log_path() -> Path:
+    """Path to the local model eval/MLOps JSONL log, honouring SAKTHAI_EVAL_LOG."""
+    override = os.environ.get("SAKTHAI_EVAL_LOG")
+    return Path(override) if override else sakthai_home() / "eval.jsonl"
 
 
 def ollama_host() -> str:

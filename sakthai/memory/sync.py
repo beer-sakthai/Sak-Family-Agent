@@ -9,9 +9,10 @@ import sys
 import urllib.error
 import urllib.request
 from pathlib import Path
+from typing import Any
 
 from ..config import sakthai_home
-from .store import MemoryStore
+from .store import SNAPSHOT_VERSION, MemoryStore
 
 
 def _run_git(args: list[str], cwd: Path, check: bool = True) -> subprocess.CompletedProcess[str]:
@@ -144,40 +145,83 @@ def sync_memory_to_git(remote: str | None = None) -> str:
     return "Synced locally to Git repository."
 
 
+def _read_jsonl(path: Path) -> list[dict[str, Any]]:
+    """Read a facts/observations JSONL export, tolerating a missing file."""
+    if not path.exists():
+        return []
+    return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+
+
+def _write_jsonl(path: Path, rows: list[dict[str, Any]]) -> None:
+    lines = [json.dumps(row, ensure_ascii=False) for row in rows]
+    path.write_text("\n".join(lines) + ("\n" if lines else ""), encoding="utf-8")
+
+
+def _merge_remote_into_store(home: Path) -> tuple[int, int]:
+    """Merge facts.jsonl/observations.jsonl (as currently checked out) into the
+    local store, then re-export the merged result back over those two files.
+
+    Returns the (facts, observations) counts read from the checked-out
+    snapshot and merged in (merge has no content-level dedup — that's what
+    `sakthai memory deduplicate` is for).
+    """
+    facts_path = home / "facts.jsonl"
+    obs_path = home / "observations.jsonl"
+
+    snapshot = {
+        "version": SNAPSHOT_VERSION,
+        "facts": _read_jsonl(facts_path),
+        "observations": _read_jsonl(obs_path),
+    }
+
+    with MemoryStore() as store:
+        merged_facts, merged_obs = store.import_from_dict(snapshot, mode="merge")
+        merged_snapshot = store.export_to_dict()
+
+    _write_jsonl(facts_path, merged_snapshot.get("facts", []))
+    _write_jsonl(obs_path, merged_snapshot.get("observations", []))
+    return merged_facts, merged_obs
+
+
+def pull_memory_from_git(remote: str | None = None) -> str:
+    """Fetch a Git remote and merge its facts/observations into the local store.
+
+    ``facts.jsonl``/``observations.jsonl`` are pure exports of the DB, always
+    regenerated fresh before every sync — so fast-forwarding the local
+    checkout to match the remote (``reset --hard origin/main``) loses nothing
+    that isn't already durably stored in ``memory.db``. Doing that reset here
+    (rather than only reactively on a push conflict) means a later `sync`
+    starts from an up-to-date HEAD and won't re-merge the same remote rows.
+    """
+    home = sakthai_home()
+    if not (home / ".git").exists():
+        raise RuntimeError(
+            "no local Git repository found; run `sakthai memory sync` once to initialize it"
+        )
+
+    if remote:
+        remotes_proc = _run_git(["remote"], cwd=home)
+        remotes = remotes_proc.stdout.splitlines()
+        if "origin" not in remotes:
+            _run_git(["remote", "add", "origin", remote], cwd=home)
+        else:
+            _run_git(["remote", "set-url", "origin", remote], cwd=home)
+
+    _run_git(["fetch", "origin", "main"], cwd=home)
+    _run_git(["reset", "--hard", "origin/main"], cwd=home)
+
+    merged_facts, merged_obs = _merge_remote_into_store(home)
+    if merged_facts == 0 and merged_obs == 0:
+        return f"Pulled from {remote or 'origin'}: already up to date."
+    return f"Pulled from {remote or 'origin'}: merged {merged_facts} fact(s), {merged_obs} observation(s)."
+
+
 def _handle_git_conflict_and_push(home: Path, remote: str) -> str:
     """Resolve a rejected push by treating the database as the merge engine."""
     _run_git(["fetch", "origin", "main"], cwd=home)
     _run_git(["reset", "--hard", "origin/main"], cwd=home)
 
-    facts_path = home / "facts.jsonl"
-    obs_path = home / "observations.jsonl"
-
-    remote_facts = []
-    if facts_path.exists():
-        for line in facts_path.read_text(encoding="utf-8").splitlines():
-            if line.strip():
-                remote_facts.append(json.loads(line))
-
-    remote_obs = []
-    if obs_path.exists():
-        for line in obs_path.read_text(encoding="utf-8").splitlines():
-            if line.strip():
-                remote_obs.append(json.loads(line))
-
-    # SNAPSHOT_VERSION is 1 (hardcoded to avoid import loops if not easily accessible)
-    snapshot = {"version": 1, "facts": remote_facts, "observations": remote_obs}
-
-    from .store import MemoryStore
-
-    with MemoryStore() as store:
-        store.import_from_dict(snapshot, mode="merge")
-        merged_snapshot = store.export_to_dict()
-
-    facts_lines = [json.dumps(f, ensure_ascii=False) for f in merged_snapshot.get("facts", [])]
-    facts_path.write_text("\n".join(facts_lines) + ("\n" if facts_lines else ""), encoding="utf-8")
-
-    obs_lines = [json.dumps(o, ensure_ascii=False) for o in merged_snapshot.get("observations", [])]
-    obs_path.write_text("\n".join(obs_lines) + ("\n" if obs_lines else ""), encoding="utf-8")
+    _merge_remote_into_store(home)
 
     _run_git(["add", "facts.jsonl", "observations.jsonl"], cwd=home)
 

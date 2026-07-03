@@ -19,6 +19,7 @@ from .. import __version__
 from .agent import mcp, run
 from .cycle import cycle as cycle_cmd
 from .dashboard import dashboard as dashboard_cmd
+from .eval import eval_cmd
 from .extensions import extensions as extensions_cmd
 from .hf import hf_cmd
 from .memory import learn, recall
@@ -61,5 +62,6 @@ main.add_command(extensions_cmd)
 main.add_command(dashboard_cmd)
 main.add_command(sessions_cmd)
 main.add_command(hf_cmd)
+main.add_command(eval_cmd, name="eval")
 
 __all__ = ["main"]

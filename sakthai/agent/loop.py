@@ -30,6 +30,7 @@ from ..config import redact_secrets, sessions_dir
 from ..memory.store import MemoryStore
 from ..skills import default_skill_roots, find_skill, render_skills_prompt_block
 from . import providers
+from .eval import EvalRecord, record_eval, task_preview
 from .providers import base as _providers_base
 from .registry import ToolRegistry
 from .tools import BUILTIN_TOOLS, Tool
@@ -370,6 +371,26 @@ def run_agent(
     deadline = time.monotonic() + max_seconds if max_seconds is not None else None
 
     usage_tracker = UsageTracker()
+    start_time = time.monotonic()
+
+    def _record_run_eval(iteration: int, stop_reason: str, had_error: bool) -> None:
+        usage = usage_tracker.to_dict()
+        record_eval(
+            EvalRecord(
+                timestamp=int(time.time()),
+                task_preview=task_preview(task),
+                model=model,
+                provider=provider,
+                iterations=iteration,
+                stop_reason=stop_reason,
+                latency_s=time.monotonic() - start_time,
+                input_tokens=usage["input_tokens"],
+                output_tokens=usage["output_tokens"],
+                tool_call_count=len(tool_calls),
+                had_error=had_error,
+            )
+        )
+
     # Mark the loop active only once setup has succeeded, and inside the try whose
     # finally restores it. Setting it earlier leaked "1" into the process
     # environment whenever setup raised (bad provider, missing credentials,
@@ -428,6 +449,7 @@ def run_agent(
                     usage=usage_tracker.to_dict(),
                 )
                 _save_session_log(task, model, messages, result)
+                _record_run_eval(iteration, stop_reason, had_error=False)
                 return result
 
             if stop_reason == "pause_turn":
@@ -444,10 +466,12 @@ def run_agent(
                     usage=usage_tracker.to_dict(),
                 )
                 _save_session_log(task, model, messages, result)
+                _record_run_eval(iteration, stop_reason, had_error=False)
                 return result
 
             _dispatch_tool_calls(response, messages, registry, store, notify, tool_calls)
 
+        _record_run_eval(max_iterations, "max_iterations", had_error=True)
         raise AgentError(
             f"Agent hit the iteration cap (max_iterations={max_iterations}) "
             "without producing a final response."

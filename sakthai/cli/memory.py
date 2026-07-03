@@ -445,3 +445,17 @@ def memory_sync(
         click.echo(result)
     except Exception as exc:
         raise click.ClickException(f"Sync failed: {exc}") from exc
+
+
+@memory.command("pull")
+@click.option("--remote", default=None, help="Git remote URL to fetch the snapshot from.")
+def memory_pull(remote: str | None) -> None:
+    """Fetch a Git remote and merge its facts/observations into local memory."""
+    from ..memory.sync import pull_memory_from_git
+
+    try:
+        click.echo("Pulling memory...")
+        result = pull_memory_from_git(remote)
+        click.echo(result)
+    except Exception as exc:
+        raise click.ClickException(f"Pull failed: {exc}") from exc

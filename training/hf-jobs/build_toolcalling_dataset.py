@@ -18,10 +18,9 @@ from typing import Any
 random.seed(7)
 
 SYSTEM_PROMPT = (
-    "You are SakThai-Agent, Beer's Growth Partner. You are sharp, calm, and direct. "
-    "You operate within the 6-stage cycle: Dream, Hope, Care, Joy, Trust, and Growth. "
-    "Always be helpful, honest, and protective. Skip filler and be concise. "
-    "When a task needs an action, call the appropriate tool. Otherwise answer directly."
+    "You are SakThai-Agent, Beer's Growth Partner. You are a sharp, calm, and direct assistant. "
+    "Be helpful, honest, and concise. "
+    "When a task requires an action, call the appropriate tool. Otherwise, answer directly."
 )
 
 # OpenAI-style function definitions (what Qwen's chat template consumes via `tools=`).
@@ -184,14 +183,19 @@ FILES = [
     "SOUL.md",
 ]
 COMMANDS = [
-    "ls -la",
+    "ls -l",
     "git status",
     "uv run pytest",
     "df -h",
     "uname -a",
     "git log --oneline -5",
     "cat pyproject.toml",
-    "whoami",
+    "pwd",
+    "ls -F src/",
+    "git diff --stat",
+    'grep -r "TODO" .',
+    'find . -name "*.py" | wc -l',
+    "pytest -k test_memory_store -v",
 ]
 TG_MSGS = [
     "Standup in 10 minutes",
@@ -296,7 +300,14 @@ def read_file_rows() -> Iterable[tuple[str, str, dict[str, Any]]]:
 
 
 def run_command_rows() -> Iterable[tuple[str, str, dict[str, Any]]]:
-    templates = ["Run `{c}`.", "Execute {c}.", "Can you run {c} for me?", "Shell: {c}"]
+    templates = [
+        "Run `{c}`.",
+        "Execute {c}.",
+        "Can you run {c} for me?",
+        "Shell: {c}",
+        "What's the output of `{c}`?",
+        "In the terminal, run: {c}",
+    ]
     for command in COMMANDS:
         args = {"command": command}
         if random.random() < 0.3:
@@ -346,6 +357,24 @@ NEGATIVES = [
         "I'm SakThai-Agent — Beer's Growth Partner, here to move you through Dream, Hope, Care, Joy, Trust, and Growth.",
     ),
     ("What's 12 times 11?", "132."),
+    ("What is the capital of France?", "Paris."),
+    ("Can you help me with something?", "Of course. What's the task?"),
+    (
+        "What can you do?",
+        "I can help you with tasks by using tools like reading files, running commands, and managing a persistent memory of facts. I can also answer questions directly.",
+    ),
+    ("Okay, sounds good.", "Great. What's our next step?"),
+    (
+        "Explain the concept of recursion in programming.",
+        "Recursion is a method where a function calls itself to solve a problem. It breaks down a problem into smaller, identical sub-problems until it reaches a base case that can be solved directly.",
+    ),
+    ("Who wrote Hamlet?", "William Shakespeare."),
+    ("What's the weather like?", "I can't check real-time information like the weather."),
+    (
+        "How do I declare a variable in Python?",
+        "You can declare a variable in Python by assigning a value to a name, like `my_variable = 10`.",
+    ),
+    ("Good morning!", "Good morning. I'm ready to get started."),
 ]
 
 

@@ -1292,6 +1292,39 @@ def test_session_log_written_with_tool_calls(sakthai_home: Path, store: MemorySt
     assert any(c["name"] == "learn" for c in tool_calls)
 
 
+def test_eval_log_written_after_run(sakthai_home: Path, store: MemoryStore) -> None:
+    import json
+
+    client = FakeClient([_Resp("end_turn", [_Block(type="text", text="result")])])
+    run_agent("my task", client=client, store=store, provider="anthropic")
+    eval_log = sakthai_home / "eval.jsonl"
+    assert eval_log.exists()
+    lines = [ln for ln in eval_log.read_text(encoding="utf-8").splitlines() if ln.strip()]
+    assert len(lines) == 1
+    record = json.loads(lines[0])
+    assert record["provider"] == "anthropic"
+    assert record["iterations"] == 1
+    assert record["stop_reason"] == "end_turn"
+    assert record["had_error"] is False
+    assert record["task_preview"] == "my task"
+
+
+def test_eval_log_records_iteration_cap_as_error(sakthai_home: Path, store: MemoryStore) -> None:
+    import json
+
+    client = FakeClient(
+        [_Resp("tool_use", [_Block(type="tool_use", id="t1", name="ghost", input={})])] * 3
+    )
+    with pytest.raises(AgentError):
+        run_agent("x", client=client, store=store, provider="anthropic", max_iterations=1)
+    eval_log = sakthai_home / "eval.jsonl"
+    lines = [ln for ln in eval_log.read_text(encoding="utf-8").splitlines() if ln.strip()]
+    assert len(lines) == 1
+    record = json.loads(lines[0])
+    assert record["had_error"] is True
+    assert record["stop_reason"] == "max_iterations"
+
+
 def test_slash_command_parsing(sakthai_home: Path, store: MemoryStore) -> None:
     gemini_ext_dir = sakthai_home.parent / "gemini" / "extensions"
     cmd_dir = gemini_ext_dir / "my-plugin" / "commands"
