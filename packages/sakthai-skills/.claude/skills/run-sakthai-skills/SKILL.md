@@ -1,9 +1,11 @@
 ---
 name: run-sakthai-skills
-description: Build, run, smoke-test, and drive sakthai-skills — the root ~/ Node/TS package (Gemini agent loop + skills registry behind an HTTP server). Use when asked to run sakthai-skills, start its server, test the agent loop or a skill, or verify the root TS code works.
+description: Build, run, smoke-test, and drive sakthai-skills — the Node/TS package at packages/sakthai-skills (Gemini agent loop + skills registry behind an HTTP server). Use when asked to run sakthai-skills, start its server, test the agent loop or a skill, or verify its TS code works.
 ---
 
-`sakthai-skills` is the Node/TS package at the workspace root (`~/`): an HTTP
+# run-sakthai-skills
+
+`sakthai-skills` is the Node/TS package at `packages/sakthai-skills/`: an HTTP
 server (`src/index.ts`, endpoints `/health` and `POST /chat`) that runs a
 Gemini tool-calling agent loop (`src/agent.ts`) over a pluggable skills
 registry (`src/skills/registry.ts`; `calculate` is the one built-in skill).
