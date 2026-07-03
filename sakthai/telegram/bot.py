@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import os
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -16,6 +15,7 @@ from ..config import (
     sakthai_default_model,
     sakthai_default_provider,
     sakthai_fast_mode,
+    sakthai_stateless,
     sakthai_system_prompt_prefix,
     sakthai_with_skills,
     telegram_allowed_user_ids,
@@ -39,13 +39,6 @@ class TelegramSession:
 
     db_path: Path
     store: MemoryStore
-
-
-def _env_bool(name: str, default: bool = False) -> bool:
-    value = os.environ.get(name)
-    if value is None:
-        return default
-    return value.strip().lower() in {"1", "true", "yes", "on"}
 
 
 def _ensure_main_thread_event_loop() -> None:
@@ -105,7 +98,7 @@ async def _reply_with_agent_result(
         provider=provider,
         model=model,
         fast=sakthai_fast_mode(),
-        stateless=_env_bool("SAKTHAI_STATELESS", False),
+        stateless=sakthai_stateless(),
         system_prompt_prefix=system_prompt_prefix,
     )
     await update.message.reply_text(result.text)

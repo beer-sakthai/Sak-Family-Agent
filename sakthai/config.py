@@ -33,6 +33,7 @@ OPTIONAL_ENV_VARS: dict[str, str] = {
     "SAKTHAI_MODEL": "Default model for Telegram/systemd launches",
     "SAKTHAI_NO_MCP": "Skip external MCP servers for Telegram/systemd launches",
     "SAKTHAI_PROVIDER": "Default provider for Telegram/systemd launches",
+    "SAKTHAI_STATELESS": "Skip loading/appending memory for Telegram/systemd launches",
     "SAKTHAI_SYSTEM_PROMPT": "Inline system prompt prefix for a persona",
     "SAKTHAI_SYSTEM_PROMPT_FILE": "Path to a persona file prepended to the system prompt",
     "SAKTHAI_WITH_SKILLS": "Comma-separated skill names injected into the system prompt",
@@ -158,6 +159,11 @@ def sakthai_fast_mode() -> bool:
 def sakthai_skip_mcp() -> bool:
     """Return whether Telegram/systemd launches should skip external MCP servers."""
     return os.environ.get("SAKTHAI_NO_MCP", "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def sakthai_stateless() -> bool:
+    """Return whether Telegram/systemd launches should skip loading/appending memory."""
+    return os.environ.get("SAKTHAI_STATELESS", "").strip().lower() in {"1", "true", "yes", "on"}
 
 
 def sakthai_system_prompt_prefix() -> str | None:

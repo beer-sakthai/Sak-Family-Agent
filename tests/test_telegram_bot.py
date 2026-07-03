@@ -67,6 +67,7 @@ def test_text_message_routes_through_run_agent(
     monkeypatch.setenv("SAKTHAI_MODEL", "gpt-4o-mini")
     monkeypatch.setenv("SAKTHAI_SYSTEM_PROMPT", "PERSONA")
     monkeypatch.setenv("SAKTHAI_WITH_SKILLS", "skill-a, skill-b")
+    monkeypatch.setenv("SAKTHAI_STATELESS", "1")
     calls: list[dict[str, object]] = []
 
     def _fake_run_agent(*_a: object, **kwargs: object) -> object:
@@ -86,6 +87,7 @@ def test_text_message_routes_through_run_agent(
     assert calls[-1]["model"] == "gpt-4o-mini"
     assert calls[-1]["system_prompt_prefix"] == "PERSONA"
     assert calls[-1]["skills"] == ["skill-a", "skill-b"]
+    assert calls[-1]["stateless"] is True
 
 
 def test_workflow_command_routes_through_run_agent(
@@ -105,14 +107,19 @@ def test_workflow_command_routes_through_run_agent(
     assert any("workflow" in reply for reply in update.message.replies)
 
 
-def test_env_bool_parses_truthy_and_falsy_values(monkeypatch: pytest.MonkeyPatch) -> None:
-    assert bot._env_bool("SAKTHAI_SAMPLE_FLAG", default=True) is True  # unset -> default
+def test_sakthai_stateless_parses_truthy_and_falsy_values(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from sakthai import config
+
+    monkeypatch.delenv("SAKTHAI_STATELESS", raising=False)
+    assert config.sakthai_stateless() is False  # unset -> False
     for truthy in ("1", "true", "YES", " On "):
-        monkeypatch.setenv("SAKTHAI_SAMPLE_FLAG", truthy)
-        assert bot._env_bool("SAKTHAI_SAMPLE_FLAG") is True
+        monkeypatch.setenv("SAKTHAI_STATELESS", truthy)
+        assert config.sakthai_stateless() is True
     for falsy in ("0", "false", "no", ""):
-        monkeypatch.setenv("SAKTHAI_SAMPLE_FLAG", falsy)
-        assert bot._env_bool("SAKTHAI_SAMPLE_FLAG") is False
+        monkeypatch.setenv("SAKTHAI_STATELESS", falsy)
+        assert config.sakthai_stateless() is False
 
 
 def test_unauthorized_user_is_rejected_before_run_agent(
