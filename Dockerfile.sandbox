@@ -1,5 +1,8 @@
 # Isolated execution environment for `sakthai run --sandbox`.
 # run_command executes here — no host filesystem is mounted except memory.db.
+#
+# checkov:skip=CKV_DOCKER_2: Ephemeral task container, not a service — HEALTHCHECK is meaningless here
+# checkov:skip=CKV_DOCKER_3: Runs as root so the bind-mounted memory.db keeps host-writable ownership
 FROM python:3.11-slim
 
 # Common CLI tools that run_command is likely to need

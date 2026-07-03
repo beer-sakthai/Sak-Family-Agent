@@ -9,6 +9,9 @@
 # container alive with `sleep infinity` and run training via attached Jobs,
 # SSH Dev Mode, or an entry script controlled by environment variables.
 
+#
+# checkov:skip=CKV_DOCKER_2: Training Space kept alive via sleep infinity; no service endpoint to health-check
+# checkov:skip=CKV_DOCKER_3: HF Spaces/Jobs manage the runtime user; training needs root for CUDA tooling
 FROM nvidia/cuda:12.4.1-cudnn-devel-ubuntu22.04
 
 # Build-time args / env
