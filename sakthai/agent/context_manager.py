@@ -54,7 +54,7 @@ class ContextManager:
         Returns:
             A tuple of (system_prompt, messages).
         """
-        memory_block = self.memory_provider.render_prompt_block()
+        memory_block = self.memory_provider.system_prompt_block()
         skills_block = render_skills_prompt_block(skills or [], caveman)
         system_prompt = build_system_prompt(memory_block, skills_block, system_prompt_prefix, fast)
 
