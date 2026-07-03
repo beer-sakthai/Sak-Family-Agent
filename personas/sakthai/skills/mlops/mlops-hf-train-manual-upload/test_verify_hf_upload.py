@@ -2,8 +2,6 @@ import subprocess
 import sys
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 # The user wants me to assume the script is in the python path.
 from sakthai.scripts import verify_hf_upload
 
@@ -26,8 +24,11 @@ def test_verify_url_success_on_200_status(mock_subprocess_run: MagicMock):
     # Assert
     assert result is True
     mock_subprocess_run.assert_called_once_with(
-        ['curl', '-s', '-o', '/dev/null', '-w', '%{http_code}', "https://example.com/success"],
-        capture_output=True, text=True, check=True, timeout=30
+        ["curl", "-s", "-o", "/dev/null", "-w", "%{http_code}", "https://example.com/success"],
+        capture_output=True,
+        text=True,
+        check=True,
+        timeout=30,
     )
 
 

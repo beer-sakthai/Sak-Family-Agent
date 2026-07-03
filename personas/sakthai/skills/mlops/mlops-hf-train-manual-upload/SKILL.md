@@ -109,7 +109,7 @@ Go to: <https://hf.co/datasets/new>
 - **Owner**: `Nanthasit`
 - **Privacy**: ✅ Private
 - **Upload file**: `/home/sakthai/data/hf_training_data_composio_tools_50.jsonl`
-- **File name**: `data.jsonl`
+- **Filename**: `data.jsonl`
 - **Click "Upload"**
 
 ✅ Done. No token. No script. No exposure.

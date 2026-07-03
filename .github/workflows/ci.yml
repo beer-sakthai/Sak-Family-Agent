@@ -45,5 +45,11 @@ jobs:
           uv run mypy sakthai
           uv run bandit -c pyproject.toml -r sakthai
 
-      - name: Run tests
-        run: uv run pytest tests/ -q
+      - name: Run tests with coverage
+        run: uv run pytest --cov=sakthai --cov-report=xml tests/
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: true

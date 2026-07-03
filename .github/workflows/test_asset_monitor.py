@@ -1,15 +1,18 @@
 import os
+import sys
+from pathlib import Path
 from unittest.mock import MagicMock, mock_open, patch
 
-import pytest
+# The script is a sibling file in this directory, not part of a package.
+sys.path.insert(0, str(Path(__file__).parent))
+import run_asset_monitor  # noqa: E402
 
-# The script is in a non-standard path, so we import it carefully
-from personas.sakthai.skills.monitoring.asset_monitor.scripts import run_asset_monitor
 
-
-@patch("personas.sakthai.skills.monitoring.asset_monitor.scripts.run_asset_monitor.verify_url")
-@patch("personas.sakthai.skills.monitoring.asset_monitor.scripts.run_asset_monitor.send_telegram_message")
-@patch("builtins.open", new_callable=mock_open, read_data="http://success.com\nhttp://alsosuccess.com")
+@patch("run_asset_monitor.verify_url")
+@patch("run_asset_monitor.send_telegram_message")
+@patch(
+    "builtins.open", new_callable=mock_open, read_data="http://success.com\nhttp://alsosuccess.com"
+)
 @patch.dict(os.environ, {"TELEGRAM_CHAT_ID": "test_chat_id"})
 @patch("sys.exit")
 def test_main_all_urls_succeed(
@@ -35,8 +38,8 @@ def test_main_all_urls_succeed(
     mock_sys_exit.assert_not_called()
 
 
-@patch("personas.sakthai.skills.monitoring.asset_monitor.scripts.run_asset_monitor.verify_url")
-@patch("personas.sakthai.skills.monitoring.asset_monitor.scripts.run_asset_monitor.send_telegram_message")
+@patch("run_asset_monitor.verify_url")
+@patch("run_asset_monitor.send_telegram_message")
 @patch("builtins.open", new_callable=mock_open, read_data="http://success.com\nhttp://fail.com")
 @patch.dict(os.environ, {"TELEGRAM_CHAT_ID": "test_chat_id"})
 @patch("sys.exit")
@@ -104,19 +107,3 @@ def test_main_config_file_not_found(mock_sys_exit: MagicMock, mock_open_file: Ma
     mock_sys_exit.assert_called_once_with(1)
     captured = capsys.readouterr()
     assert "Configuration file not found" in captured.err
-
-```
-
-### How These Tests Work
-
-1.  **Comprehensive Mocking**: The tests use `@patch` to replace external dependencies (`open`, `os.environ`, `sys.exit`, and the imported `verify_url` and `send_telegram_message` functions) with mock objects. This ensures the test focuses only on the logic inside the `main` function.
-2.  **Success Path (`test_main_all_urls_succeed`)**: This test simulates the ideal scenario where the config file is read and all URLs are verified successfully. It asserts that no alert is sent and the script does not exit with an error.
-3.  **Failure Path (`test_main_one_url_fails`)**: This test simulates a failure. It configures the mock `verify_url` to return `False` for one of the URLs and asserts that `send_telegram_message` is called with the correct information and that the script exits with an error code.
-4.  **Configuration Errors**: The tests for `test_main_no_telegram_chat_id` and `test_main_config_file_not_found` validate the script's startup checks, ensuring it fails gracefully and provides clear error messages when its environment is not set up correctly.
-
-This test suite provides strong coverage for your asset monitor, making it a more reliable component of your agent's operational toolkit.
-
-<!--
-[PROMPT_SUGGESTION]How could I add logging to the `run_asset_monitor.py` script and test it?[/PROMPT_SUGGESTION]
-[PROMPT_SUGGESTION]Refactor the `send_telegram_message` function to be a class that can be more easily mocked.[/PROMPT_SUGGESTION]
--->

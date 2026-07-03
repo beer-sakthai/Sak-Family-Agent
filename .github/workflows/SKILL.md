@@ -26,7 +26,7 @@ First, create a configuration file that lists the URLs you want to monitor.
 
 **Format**: One URL per line.
 
-```
+```text
 https://huggingface.co/datasets/Nanthasit/hf-training-composio-tools-50
 https://huggingface.co/models/Nanthasit/sakthai-context-0.5b-tools
 https://google.com/this-will-fail-404

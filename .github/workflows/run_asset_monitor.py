@@ -1,13 +1,23 @@
 import os
+import subprocess
 import sys
 
-# Add the skills directory to the Python path to allow direct imports
-sys.path.append('/home/sakthai')
 
-# Import the verification function directly from the other skill's script
-from personas.sakthai.skills.mlops.mlops-hf-train-manual-upload.scripts.verify_hf_upload import (
-    verify_url,
-)
+def verify_url(url: str, label: str) -> bool:
+    """Return True if `url` responds with HTTP 200, False otherwise."""
+    try:
+        result = subprocess.run(
+            ["curl", "-s", "-o", "/dev/null", "-w", "%{http_code}", url],
+            capture_output=True,
+            text=True,
+            check=True,
+            timeout=30,
+        )
+        return result.stdout == "200"
+    except (subprocess.SubprocessError, OSError):
+        print(f"Error verifying {label} ({url})", file=sys.stderr)
+        return False
+
 
 # We will simulate the telegram tool here for local execution and clarity.
 # We will simulate it here for local execution and clarity.
@@ -17,10 +27,10 @@ def send_telegram_message(chat_id: str, message: str):
     In a real Hermes agent environment, this would be a call to the
     `telegram` tool via `execute_code` or a similar mechanism.
     """
-    print(f"--- SIMULATING TELEGRAM ALERT ---")
+    print("--- SIMULATING TELEGRAM ALERT ---")
     print(f"TO: {chat_id}")
     print(f"MESSAGE: {message}")
-    print(f"-------------------------------")
+    print("-------------------------------")
     # In a real environment, you might use:
     # subprocess.run(['telegram', 'send', '--chat_id', chat_id, '--text', message], check=True)
 
@@ -38,7 +48,7 @@ def main():
         sys.exit(1)
 
     try:
-        with open(urls_file, "r") as f:
+        with open(urls_file) as f:
             urls = [line.strip() for line in f if line.strip()]
     except FileNotFoundError:
         print(f"❌ ERROR: Configuration file not found at {urls_file}", file=sys.stderr)
@@ -51,13 +61,15 @@ def main():
     print(f"Monitoring {len(urls)} assets...")
     failed_urls = []
     for i, url in enumerate(urls):
-        if not verify_url(url, f"Resource #{i+1}"):
+        if not verify_url(url, f"Resource #{i + 1}"):
             failed_urls.append(url)
 
     if not failed_urls:
         print("✅ All assets are available and accessible.")
     else:
-        message = "🚨 Asset Monitor Failure!\nThe following assets may be down:\n" + "\n".join(f"- {url}" for url in failed_urls)
+        message = "🚨 Asset Monitor Failure!\nThe following assets may be down:\n" + "\n".join(
+            f"- {url}" for url in failed_urls
+        )
         send_telegram_message(chat_id, message)
         print(f"🔥 Alert sent for {len(failed_urls)} failed asset(s).", file=sys.stderr)
         sys.exit(1)
