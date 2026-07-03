@@ -1,3 +1,4 @@
+---
 # This workflow uses actions that are not certified by GitHub.
 # They are provided by a third-party and are governed by
 # separate terms of service, privacy policy, and support
@@ -15,6 +16,9 @@ name: Codacy Security Scan
 
 on:
   push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
     branches: [ "main" ]
   pull_request:
     # The branches below must be a subset of the branches above
@@ -28,6 +32,25 @@ permissions:
 jobs:
   codacy-security-scan:
     permissions:
+      contents: read
+      security-events: write
+      actions: read
+    name: Codacy Security Scan
+    runs-on: ubuntu-latest
+    if: >-
+      github.event_name == 'push' ||
+      github.event_name == 'schedule' ||
+      github.event.pull_request.head.repo.full_name == github.repository
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run Codacy Analysis CLI
+        uses: codacy/codacy-analysis-cli-action@master
+        continue-on-error: true
+        with:
       contents: read # for actions/checkout to fetch code
       security-events: write # for github/codeql-action/upload-sarif to upload SARIF results
       actions: read # only required for a private repository by github/codeql-action/upload-sarif to get the Action run status
@@ -48,6 +71,11 @@ jobs:
           verbose: true
           output: results.sarif
           format: sarif
+          gh-code-scanning-compat: true
+          max-allowed-issues: 2147483647
+
+      - name: Upload SARIF results file
+        if: hashFiles('results.sarif') != ''
           # Adjust severity of non-security issues
           gh-code-scanning-compat: true
           # Force 0 exit code to allow SARIF file generation
