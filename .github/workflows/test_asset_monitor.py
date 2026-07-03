@@ -1,6 +1,7 @@
 import os
 import sys
 from pathlib import Path
+from urllib.parse import urlparse
 from unittest.mock import MagicMock, mock_open, patch
 
 # The script is a sibling file in this directory, not part of a package.
@@ -63,9 +64,14 @@ def test_main_one_url_fails(
     # Assert
     assert mock_verify_url.call_count == 2
     mock_send_telegram.assert_called_once()
-    # Check that the message contains the failed URL
+    # Check that the message includes the failed URL as a parsed URL token
     sent_message = mock_send_telegram.call_args[0][1]
-    assert "http://fail.com" in sent_message
+    parsed_urls = []
+    for token in sent_message.split():
+        parsed = urlparse(token.strip(".,;:()[]{}<>\"'"))
+        if parsed.scheme in {"http", "https"} and parsed.netloc:
+            parsed_urls.append(f"{parsed.scheme}://{parsed.netloc}{parsed.path or ''}")
+    assert "http://fail.com" in parsed_urls
     mock_sys_exit.assert_called_once_with(1)
 
 
