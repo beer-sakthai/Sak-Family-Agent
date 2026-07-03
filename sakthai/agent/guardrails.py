@@ -79,10 +79,11 @@ def _block_dangerous_shell_commands(
 
         # Example blocklist: prevent recursive deletion or other high-risk commands.
         # This is not exhaustive but serves as a starting point.
-        if parts[0] == "rm" and "-rf" in parts and ("/" in parts or "~" in parts):
-            return GuardrailResult(
-                GuardrailAction.DENY, reason="Potentially destructive 'rm -rf' command blocked."
-            )
+        if "rm" in parts and "-rf" in parts:
+            if any(p.startswith("/") or p.startswith("~") for p in parts):
+                return GuardrailResult(
+                    GuardrailAction.DENY, reason="Potentially destructive 'rm -rf' command blocked."
+                )
 
     return GuardrailResult(GuardrailAction.ALLOW)
 

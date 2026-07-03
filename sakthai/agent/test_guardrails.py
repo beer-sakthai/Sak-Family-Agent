@@ -16,6 +16,15 @@ from sakthai.memory.store import MemoryStore
 
 
 @pytest.fixture
+def store(tmp_path):
+    s = MemoryStore(tmp_path / "memory.db")
+    try:
+        yield s
+    finally:
+        s.close()
+
+
+@pytest.fixture
 def run_command_tool() -> Tool:
     return Tool("run_command", "desc", {}, lambda _a, _s: "")
 

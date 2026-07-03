@@ -23,3 +23,11 @@
 **Learning:** Security must extend beyond the active tool loop to the persistent data layer. Centralizing redaction at the tool execution boundary and the log writing boundary, combined with strict POSIX file permissions (0600/0700), ensures that sensitive data remains protected both in transit (to the LLM) and at rest (on disk).
 
 **Prevention:** Use `os.open` with explicit modes for file creation and `os.chmod` for existing sensitive directories/files. Always apply central redaction logic to any data being persisted to logs or returned from external tool executions.
+
+## 2026-07-04 - [Hardening Command Guardrails and MCP Security]
+
+**Vulnerability:** Command guardrails in `guardrails.py` were easily bypassed using prefixes like `sudo` or by targeting non-exact root paths (e.g., `rm -rf /etc`). Furthermore, the MCP server bypassed all tool guardrails and secret redaction entirely.
+
+**Learning:** Security checks that rely on exact string matches at specific positions (like `parts[0] == "rm"`) are brittle. In an agentic system with multiple entry points (CLI, MCP), security logic must be centralized and applied consistently across all invocation paths.
+
+**Prevention:** Use membership checks (`"rm" in parts`) and prefix matching (`p.startswith("/")`) for shell guardrails. Ensure the MCP tool execution layer integrates the same `GuardrailPolicy` and `redact_secrets` filters as the primary agent loop.
