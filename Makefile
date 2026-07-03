@@ -1,26 +1,15 @@
-.PHONY: help deploy-runtime doctor-runtime compose-personas export-agent-repos export-agent-repo test lint mutation
+.PHONY: help compose-personas export-agent-repos export-agent-repo test lint mutation
 
 help:
 	@echo "SakThai Agent v2 - Workspace Operations"
 	@echo "======================================"
 	@echo "Available commands:"
-	@echo "  make deploy-runtime  - Deploy live agent configs"
-	@echo "  make doctor-runtime  - Run diagnostics on the agent configurations"
 	@echo "  make compose-personas - Rebuild full skill trees for all personas (shared + overlays)"
 	@echo "  make export-agent-repos - Materialize standalone repo snapshots for all six personas"
 	@echo "  make export-agent-repo PERSONA=sakjules - Export one standalone persona repo"
 	@echo "  make test            - Run all pytest test suites"
 	@echo "  make lint            - Run code linters (ruff, pylint)"
 	@echo "  make mutation        - Run mutmut on the core seam modules (slow, local-only)"
-
-# Mitigate complexity by providing a shortcut from the root to the deployment scripts.
-deploy-runtime:
-	@echo "Deploying live agent configs..."
-	@cd infra/hermes-agents && ./deploy.py
-
-doctor-runtime:
-	@echo "Running agent configuration doctor..."
-	@cd infra/hermes-agents && python3 doctor.py
 
 # Prevent blast radius by composing and testing all personas
 compose-personas:

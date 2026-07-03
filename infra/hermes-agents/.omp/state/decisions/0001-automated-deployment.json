@@ -1,9 +1,0 @@
-{
-  "decision_id": "0001",
-  "title": "Automated Profile Deployment and Path Translation",
-  "status": "accepted",
-  "date": "2026-06-28T23:42:00+01:00",
-  "context": "The repository contains configuration references to '/home/sakthai', while the active live environment is located at '/home/beerthai'. Manual copying and editing is error-prone.",
-  "decision": "Implement a Python deployment script `deploy.py` that copies configurations, profiles, and systemd services to their live target locations while dynamically translating '/home/sakthai' path references to the user's active '$HOME'.",
-  "consequences": "Eliminates manual path-correction errors, creates backup copies of overwritten live configurations, establishes necessary AGENTS.md symlinks, and guides user on restarting services."
-}

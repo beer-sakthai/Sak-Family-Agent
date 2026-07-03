@@ -32,7 +32,6 @@ htmlcov/
 .idea/
 .vscode/
 *.swp
-.hermes/
 
 # Persona skill runtime caches/state (regenerated; not authored content)
 personas/*/skills/.hub/

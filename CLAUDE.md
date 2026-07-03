@@ -11,17 +11,17 @@ memory is reachable from other runtimes.
 
 This is a **clean, from-scratch rewrite** of the original `SakThai-Agent` (the
 "OG"). The OG is a read-only blueprint: consult it for intent, but never copy its
-code or layout into this repo — re-derive everything. The OG's Google
+code or layout into this repository — re-derive everything. The OG's Google
 ADK / Vertex AI cloud agent is **not** part of v2: there is **no `app/` cloud
 bundle, no `sync-app-package.sh` sync step, and no `sakthai/cloud/` module** here.
 v2 is local-first — the CLI, the agent loop, and the MCP stdio server.
 
 ## Monorepo layout
 
-This repo is the shared source workspace for the Sak family. The SakThai agent
+This repository is the shared source workspace for the Sak family. The SakThai agent
 package lives at the root (`sakthai/`, `library/`, `skills/`) and everything
 below this section's file-structure still describes it. It also carries the
-persona overlays and can export standalone repo snapshots with
+persona overlays and can export standalone repository snapshots with
 `scripts/export_agent_repo.py` or `make export-agent-repos`.
 
 - `packages/agent-self-evolution/` — DSPy/GEPA self-evolution tool. Standalone
@@ -34,7 +34,8 @@ persona overlays and can export standalone repo snapshots with
   (unique/differing files). `scripts/compose_persona.py` rebuilds a persona's
   full tree as `shared + overlay` (overlay wins), byte-for-byte. See
   `personas/README.md`.
-- `infra/hermes-agents/` — Hermes Telegram-bot config backup (config only).
+- `infra/vm-agents/` — VM deployment assets for the Telegram bots (env
+  templates, systemd units; config only).
 - `infra/pw-poc/` — Playwright accessibility probe (standalone npm project).
 - `services/` — service pitches/specs not yet part of the package (e.g.
   `hugging-face-dataset-publishing/`).
@@ -43,16 +44,14 @@ persona overlays and can export standalone repo snapshots with
 
 ### Sak Family Agents
 
-**The repo also carries the **Sak Family Agents** — six personas with **SakKing**
+**The repository also carries the **Sak Family Agents** — six personas with **SakKing**
 as the **main** (Lead & Orchestrator) and **SakThai**, **SakSee**, **SakSit**,
-**SakTan**, and **SakJules** as the family it coordinates. "Hermes" is only the
-framework they run on, never an agent's name. The authoritative per-agent
-identities are `docs/SOUL.md` + `personas/<name>/SOUL.md`;
-`infra/hermes-agents/` carry their own (sometimes role-specialized) copies.
+**SakTan**, and **SakJules** as the family it coordinates. The authoritative
+per-agent identities are `docs/SOUL.md` + `personas/<name>/SOUL.md`.
 Keep the SakKing-as-lead framing consistent if you touch any of them.
 
 CI (`ci.yml`, `pylint.yml`) scopes ruff/mypy/bandit/pytest/pylint to the
-`sakthai` core only; the co-located trees are not held to this repo's bars.
+`sakthai` core only; the colocated trees are not held to this repository's bars.
 **gitleaks still scans the whole tree (`.gitleaks.toml` allowlists persona docs).
 
 Everything below this point describes the SakThai agent package itself.
@@ -145,8 +144,8 @@ CLI/MCP → agent loop → tool registry → MemoryStore → SQLite. See
 ### Memory subsystem (`memory/`)
 
 - **`memory/store.py`** — `MemoryStore` is the **only** code that touches SQLite.
-  It holds *facts* (`Fact` dataclass: id, kind, key, value, source_session,
-  created_at, updated_at, tags) and *observations* (`Observation` dataclass: id,
+  It holds *facts* (`Fact` dataclass: `id`, kind, key, value, source_session,
+  created_at, updated_at, tags) and *observations* (`Observation` dataclass: `id`,
   summary, evidence_session_id, weight, confidence, created_at). Features:
   WAL concurrency, additive migrations in `_migrate_schema()` (ALTER TABLE only,
   under `BEGIN IMMEDIATE`), snapshot export/import (JSONL/CSV), deduplicate, and
@@ -231,7 +230,7 @@ Click commands split by area; all sub-files imported by `cli/__init__.py`:
   system prompt via `render_skills_prompt_block()`.
 - **`dashboard/`** — `data.py` builds a UI-free, testable snapshot of the store
   (KPIs, growth series, per-kind breakdown, date-range filtering) and serializes
-  it to JSON. The UI itself is a separate React/Vite app at the repo root
+  it to JSON. The UI itself is a separate React/Vite app at the repository root
   (`dashboard/`); `sakthai dashboard` serves the pre-built `dashboard/dist/`
   bundle (erroring if it hasn't been built) and drops a `data.json` snapshot
   beside it.
@@ -253,7 +252,7 @@ Click commands split by area; all sub-files imported by `cli/__init__.py`:
 
 ## File structure
 
-```
+```text
 Sak-Family-Agent/
 ├── sakthai/                  # Main package
 │   ├── config.py             # Paths & env-var names (single source of truth)
@@ -324,7 +323,7 @@ reach out to a real endpoint. Use `tmp_path` fixtures for file I/O.
 
 ---
 
-## Conventions specific to this repo
+## Conventions specific to this repository
 
 - **The memory store is the seam.** Anything touching SQLite goes through
   `MemoryStore`; anything an agent or MCP client can do goes through the
@@ -358,7 +357,7 @@ reach out to a real endpoint. Use `tmp_path` fixtures for file I/O.
 
 ## Workflow: Plan First
 
-- **Always read and update `PLAN.md` before starting any work** in this repo.
+- **Always read and update `PLAN.md` before starting any work** in this repository.
   - Mark tasks `[ ]` → `[/]` (in progress) at the start of a phase.
   - Mark `[/]` → `[x] YYYY-MM-DD` (done with date) once the work is verified.
 - **Never start coding a phase until it is checked off in PLAN.md** as in-progress.
@@ -444,4 +443,4 @@ Skills are discovered from `skills/` (user/extension skills) and `library/`
 | `docs/runtimes.md` | CLI / agent loop / MCP server |
 | `docs/workspace.md` | Dev environment setup |
 | `docs/og_parity_audit.md` | Comparison with original SakThai |
-| `docs/integrations.md` | Composio, Hermes, and cross-agent communication recipes |
+| `docs/integrations.md` | Composio and cross-agent communication recipes |

@@ -244,6 +244,30 @@ def test_skills_are_injected_into_system_prompt(
     assert "ALWAYS DO THE DEMO THING." in captured["system"]
 
 
+def test_system_prompt_prefix_is_preprended(
+    store: MemoryStore, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    captured: dict[str, str] = {}
+
+    class _CapMessages:
+        def create(self, **kwargs: object) -> _Resp:
+            captured["system"] = str(kwargs.get("system", ""))
+            return _Resp("end_turn", [_Block(type="text", text="ok")])
+
+    class _CapClient:
+        def __init__(self) -> None:
+            self.messages = _CapMessages()
+
+    run_agent(
+        "x",
+        client=_CapClient(),
+        store=store,
+        provider="anthropic",
+        system_prompt_prefix="PERSONA BLOCK",
+    )
+    assert captured["system"].startswith("PERSONA BLOCK\n\nYou are SakThai")
+
+
 class FakeHttpxClient:
     def __init__(self, response_data: dict) -> None:
         self.response_data = response_data

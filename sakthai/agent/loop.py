@@ -172,9 +172,13 @@ def _build_system(
     fast: bool,
     stateless: bool,
     caveman: str | None,
+    system_prompt_prefix: str = "",
 ) -> str:
     """Assemble the complete system prompt from all its parts."""
-    parts = [SYSTEM_BASE]
+    parts = []
+    if system_prompt_prefix.strip():
+        parts.append(system_prompt_prefix.strip())
+    parts.append(SYSTEM_BASE)
     if fast:
         parts.append(
             "FAST-TRACK MODE: Execute the user's task directly and quickly without enforcing the 6-stage cycle (Dream/Hope/Care/Joy/Trust/Growth)."
@@ -322,6 +326,7 @@ def run_agent(
     fast: bool = False,
     stateless: bool = False,
     caveman: str | None = None,
+    system_prompt_prefix: str = "",
 ) -> AgentResult:
     """Run one task to completion against Claude, Gemini, or an OpenAI endpoint.
 
@@ -379,7 +384,13 @@ def run_agent(
             logger.debug("Agent iteration %d/%d", iteration, max_iterations)
 
             system = _build_system(
-                store, skills, command_system, fast=fast, stateless=stateless, caveman=caveman
+                store,
+                skills,
+                command_system,
+                fast=fast,
+                stateless=stateless,
+                caveman=caveman,
+                system_prompt_prefix=system_prompt_prefix,
             )
             response = _agent_turn(
                 provider,

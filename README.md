@@ -45,7 +45,11 @@ One package, three ways in — a CLI, a tool-using agent loop, and an MCP stdio 
 
 ## 🚀 What is Sak-Family-Agent?
 
-**Sak-Family-Agent** is a personal AI agent ecosystem designed for real-life growth and learning. It provides a robust framework for AI assistants (like Claude, Gemini, and others) to operate with persistent memory, a shared tool registry, and an MCP (Model Context Protocol) stdio server. This setup allows for seamless interaction and knowledge sharing across multiple AI agents, all working towards enhancing personal productivity and learning for Beer [1].
+**Sak-Family-Agent** is a personal AI agent ecosystem designed for real-life growth and learning.
+It provides a robust framework for AI assistants (like Claude, Gemini, and others) to operate with
+persistent memory, a shared tool registry, and an MCP (Model Context Protocol) stdio server. This
+setup allows for seamless interaction and knowledge sharing across multiple AI agents, all working
+towards enhancing personal productivity and learning for Beer [1].
 
 This repository serves as the shared workspace for the entire Sak family of agents, enabling them to coordinate, learn, and evolve together. It emphasizes a local-first approach, focusing on CLI operations, agent loops, and MCP server functionalities [2].
 
@@ -61,8 +65,8 @@ This project is primarily built for **Beer** (`beer-sakthai`) as a personal sand
 
 The Sak-Family-Agent ecosystem comprises six distinct AI personas, with **SakKing** acting as the lead and orchestrator. Each agent has a specialized role and leverages different AI models to perform its tasks [1].
 
-| Agent           | Handle                 | Role                                                               | Primary Model · Provider                                                                                             | Fallback Model · Provider                                                                                             | Telegram                                                               | State       |
-| :-------------- | :--------------------- | :----------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------- | :-------------------------------------------------------------------------------------------------------------------- | :--------------------------------------------------------------------- | :---------- |
+| Agent | Handle | Role | Primary Model · Provider | Fallback Model · Provider | Telegram | State |
+| :---- | :----- | :--- | :----------------------- | :------------------------ | :------- | :---- |
 | 👑 **SakKing**  | `@sakthai_agent_v2_bot` | Lead & Orchestrator · Master of Code & Self-Healing (owns all skills) | `qwen3-coder:480b` · 🟢 ollama-cloud                                                                                   | `gpt-oss:120b` · ollama-cloud                                                                                         | [@sakthai_agent_v2_bot](https://t.me/sakthai_agent_v2_bot)             | ✅ deployed |
 | 🤗 **SakThai**  | `@sakthai_v1_bot`      | Master of Hugging Face (mastery via Hub/MCP tools)                 | `claude-opus-4-8` · 🟪 anthropic (OAuth)                                                                               | `gpt-oss:120b` · ollama-cloud                                                                                         | [@sakthai_v1_bot](https://t.me/sakthai_v1_bot)                         | ✅ deployed |
 | 🌐 **SakSee**   | `@saksee_bot`          | Master of Web (Playwright + Chrome DevTools)                       | `gpt-5.4-mini` · ⬛ openai-codex (OAuth)                                                                               | `gpt-oss:120b` · ollama-cloud                                                                                         | [@saksee_bot](https://t.me/saksee_bot)                                 | ✅ deployed |
@@ -102,11 +106,11 @@ The project is built primarily with Python and leverages several key libraries a
 
 This repository is structured as a monorepo, with `sakthai-agent` as the core package at the root. Other components are organized into logical directories [2].
 
-```
+```text
 Sak-Family-Agent/
 ├── .github/                # GitHub Actions workflows (CI/CD)
 ├── docs/                   # Documentation (architecture, cycle stages, SOUL files)
-├── infra/                  # Infrastructure configurations (Hermes, Playwright PoC)
+├── infra/                  # Infrastructure configurations (VM agents, Playwright PoC)
 ├── library/                # Curated skills library
 ├── packages/               # Other standalone Python packages (e.g., agent-self-evolution)
 ├── personas/               # Agent persona definitions (SOUL.md, config, skill overlays)

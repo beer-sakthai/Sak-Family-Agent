@@ -29,6 +29,13 @@ OPTIONAL_ENV_VARS: dict[str, str] = {
     "OPENAI_API_KEY": "OpenAI API key — alternative provider",
     "OPENAI_API_BASE": "OpenAI API base URL (or use OPENAI_BASE_URL)",
     "OPENAI_BASE_URL": "OpenAI API base URL",
+    "SAKTHAI_FAST": "Enable fast-track mode for Telegram/systemd launches",
+    "SAKTHAI_MODEL": "Default model for Telegram/systemd launches",
+    "SAKTHAI_NO_MCP": "Skip external MCP servers for Telegram/systemd launches",
+    "SAKTHAI_PROVIDER": "Default provider for Telegram/systemd launches",
+    "SAKTHAI_SYSTEM_PROMPT": "Inline system prompt prefix for a persona",
+    "SAKTHAI_SYSTEM_PROMPT_FILE": "Path to a persona file prepended to the system prompt",
+    "SAKTHAI_WITH_SKILLS": "Comma-separated skill names injected into the system prompt",
     "OLLAMA_HOST": "Ollama host URL (default: http://127.0.0.1:11434)",
     "SAKTHAI_GATEWAY_URL": "Base URL of an OpenAI-compatible AI gateway (OpenRouter, LiteLLM, Vercel, Cloudflare)",
     "SAKTHAI_GATEWAY_API_KEY": "API key/token for the AI gateway (default: nokey)",  # nosec B105 — description text
@@ -129,6 +136,48 @@ def openai_api_base() -> str | None:
 def gateway_base_url() -> str | None:
     """Return the AI-gateway base URL, honoring SAKTHAI_GATEWAY_URL."""
     return os.environ.get("SAKTHAI_GATEWAY_URL")
+
+
+def sakthai_default_provider() -> str | None:
+    """Return the default provider override for Telegram/systemd launches."""
+    value = os.environ.get("SAKTHAI_PROVIDER", "").strip()
+    return value or None
+
+
+def sakthai_default_model() -> str | None:
+    """Return the default model override for Telegram/systemd launches."""
+    value = os.environ.get("SAKTHAI_MODEL", "").strip()
+    return value or None
+
+
+def sakthai_fast_mode() -> bool:
+    """Return whether Telegram/systemd launches should use fast-track mode."""
+    return os.environ.get("SAKTHAI_FAST", "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def sakthai_skip_mcp() -> bool:
+    """Return whether Telegram/systemd launches should skip external MCP servers."""
+    return os.environ.get("SAKTHAI_NO_MCP", "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def sakthai_system_prompt_prefix() -> str | None:
+    """Return an inline or file-backed system prompt prefix for agent launches."""
+    inline = os.environ.get("SAKTHAI_SYSTEM_PROMPT", "")
+    if inline.strip():
+        return inline
+    prompt_file = os.environ.get("SAKTHAI_SYSTEM_PROMPT_FILE", "").strip()
+    if not prompt_file:
+        return None
+    try:
+        return Path(prompt_file).read_text(encoding="utf-8").strip()
+    except Exception:
+        return None
+
+
+def sakthai_with_skills() -> list[str]:
+    """Return comma-separated skills injected into Telegram/systemd launches."""
+    raw = os.environ.get("SAKTHAI_WITH_SKILLS", "")
+    return [item.strip() for item in raw.replace(",", " ").split() if item.strip()]
 
 
 def telegram_bot_token() -> str | None:
