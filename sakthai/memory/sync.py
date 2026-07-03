@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import json
 import subprocess
 import sys
@@ -105,7 +106,8 @@ def sync_memory_to_git(remote: str | None = None) -> str:
         return "No changes to sync."
 
     commit_body = ""
-    try:
+    # If summary generation fails, proceed with a generic message.
+    with contextlib.suppress(Exception):
         diff_proc = _run_git(["diff", "--", "facts.jsonl", "observations.jsonl"], cwd=home)
         added_lines = [line[1:] for line in diff_proc.stdout.splitlines() if line.startswith("+")]
         num_facts_added = sum(1 for line in added_lines if '"kind":' in line)
@@ -119,9 +121,6 @@ def sync_memory_to_git(remote: str | None = None) -> str:
 
         if summary_parts:
             commit_body = f"Learned {', '.join(summary_parts)}."
-    except Exception:
-        # If summary generation fails, proceed with a generic message.
-        pass
 
     commit_args = [
         "-c",

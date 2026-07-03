@@ -602,6 +602,7 @@ class MemoryStore:
             raise ValueError(f"Invalid table: {table}")
 
         # We use a CTE to apply the limit once, then aggregate over that subset.
+        # ``table`` is allowlist-validated above, so the interpolation is safe.
         query = f"""
             WITH subset AS (
                 SELECT created_at FROM {table} LIMIT ?
@@ -611,7 +612,7 @@ class MemoryStore:
                 SUM(CASE WHEN created_at >= ? THEN 1 ELSE 0 END) as this_week,
                 SUM(CASE WHEN created_at <= ? THEN 1 ELSE 0 END) as before_start
             FROM subset
-        """
+        """  # nosec B608
         row = self._conn.execute(query, (limit, week_ago_ts, start_ts)).fetchone()
         res: dict[str, Any] = {
             "total": row["total"] or 0,
@@ -633,7 +634,7 @@ class MemoryStore:
             FROM subset
             WHERE created_at > ? AND created_at <= ?
             GROUP BY bin
-        """
+        """  # nosec B608
         rows = self._conn.execute(
             bin_query, (limit, start_ts, start_ts, start_ts + days * 86400)
         ).fetchall()
