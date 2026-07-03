@@ -63,18 +63,18 @@ This project is primarily built for **Beer** (`beer-sakthai`) as a personal sand
 
 ## 👨‍👩‍👧‍👦 The Sak Family Members
 
-The Sak-Family-Agent ecosystem comprises six distinct AI personas, with **SakKing** acting as the lead and orchestrator. Each agent has a specialized role and leverages different AI models to perform its tasks [1].
+The Sak-Family-Agent ecosystem comprises six distinct AI personas, with **SakKing** acting as the lead and orchestrator. All are deployed as always-on Telegram bots on a single Azure VM, sharing one Azure AI Foundry backend (`sakthai-resource`) via the OpenAI-compatible `/openai/v1` API — each persona just points at a different deployed model [1].
 
-| Agent | Handle | Role | Primary Model · Provider | Fallback Model · Provider | Telegram | State |
-| :---- | :----- | :--- | :----------------------- | :------------------------ | :------- | :---- |
-| 👑 **SakKing**  | `@sakthai_agent_v2_bot` | Lead & Orchestrator · Master of Code & Self-Healing (owns all skills) | `qwen3-coder:480b` · 🟢 ollama-cloud                                                                                   | `gpt-oss:120b` · ollama-cloud                                                                                         | [@sakthai_agent_v2_bot](https://t.me/sakthai_agent_v2_bot)             | ✅ deployed |
-| 🤗 **SakThai**  | `@sakthai_v1_bot`      | Master of Hugging Face (mastery via Hub/MCP tools)                 | `claude-opus-4-8` · 🟪 anthropic (OAuth)                                                                               | `gpt-oss:120b` · ollama-cloud                                                                                         | [@sakthai_v1_bot](https://t.me/sakthai_v1_bot)                         | ✅ deployed |
-| 🌐 **SakSee**   | `@saksee_bot`          | Master of Web (Playwright + Chrome DevTools)                       | `gpt-5.4-mini` · ⬛ openai-codex (OAuth)                                                                               | `gpt-oss:120b` · ollama-cloud                                                                                         | [@saksee_bot](https://t.me/saksee_bot)                                 | ✅ deployed |
-| 📣 **SakSit**   | `@saksit_agent_bot`    | Master of Social Media (IG image/video)                            | `kimi-k2.7-code` · 🟢 ollama-cloud                                                                                     | `gpt-oss:120b` · ollama-cloud                                                                                         | [@saksit_agent_bot](https://t.me/saksit_agent_bot)                     | ✅ deployed |
-| 🗓️ **SakTan**   | `@saktan_agent_bot`    | Daily Ops Helper (calendar, email, life admin)                     | `gemini-2.5-flash-lite` · 🔵 gemini                                                                                    | `gemini-3-flash-preview` → `3.1-flash-lite` → `3.5-flash` · gemini                                                    | [@saktan_agent_bot](https://t.me/saktan_agent_bot)                     | ✅ deployed |
-| 🤖 **SakJules** | `@sakjules_agent_bot`  | Master of Automation & CI/CD                                       | — *(stub `config.yaml`, no model block)*                                                                             | —                                                                                                     | [@sakjules_agent_bot](https://t.me/sakjules_agent_bot)                 | 🚧 not deployed |
+| Agent | Handle | Role | Model (on `sakthai-resource`) | State |
+| :---- | :----- | :--- | :----------------------------- | :---- |
+| 👑 **SakKing**  | `@SakKing_Agent_bot`  | Lead & Orchestrator · Master of Code & Self-Healing (owns all skills) | `model-router` (auto-routes across deployed models) | ✅ deployed |
+| 🤗 **SakThai**  | `@SakThai_Agent_bot`  | Master of Hugging Face (mastery via Hub/MCP tools)                    | `gpt-4o-mini` | ✅ deployed |
+| 🌐 **SakSee**   | `@SakSee_Agent_bot`   | Master of Web (Playwright + Chrome DevTools)                          | `gpt-5.4-mini` | 🚧 pending |
+| 📣 **SakSit**   | `@SakSit_Agent_bot`   | Master of Social Media (IG image/video)                               | `Phi-4-mini-reasoning` | ✅ deployed |
+| 🗓️ **SakTan**   | `@SakTan_Agent_bot`   | Daily Ops Helper (calendar, email, life admin)                        | `gpt-4o-mini` | ✅ deployed |
+| 🤖 **SakJules** | `@SakJules_Agent_bot` | Master of Automation & CI/CD                                          | `gpt-4o-mini` | 🚧 pending |
 
-**Auth by provider:** 🟢 `ollama-cloud` → `OLLAMA_API_KEY` (`https://ollama.com/v1`) · 🟪 `anthropic` → Claude OAuth (`CLAUDE_CODE_OAUTH_TOKEN`) · ⬛ `openai-codex` → ChatGPT OAuth (`https://chatgpt.com/backend-api/codex`) · 🔵 `gemini` → `GEMINI_API_KEY` / `GOOGLE_API_KEY`.
+**Secrets:** each bot's Telegram token and the shared Azure OpenAI key live in Azure Key Vault, fetched at process start via the VM's managed identity (see `infra/vm-agents/sakthai-agent-run.sh`) — no static secret files on the host.
 
 ## ✨ What Can It Do?
 
