@@ -41,6 +41,20 @@
 The core values of Dream, Hope, Care, Joy, Trust, and Growth serve as the emotional and philosophical foundation for the SakThai agent and the entire ecosystem of Sak Family agents. These values fundamentally shape the agent's purpose by transforming it from a standard technical tool into a deeply empathetic, supportive companion system. To fully understand how these values direct the agent's purpose, it is necessary to look at both the human context behind its creation and the specific technical architecture used to implement it.
 \end{abstract} 
 
+\section{Introduction}
+As artificial intelligence agents become increasingly integrated into daily life, their roles are expanding beyond mere productivity tools to include companionship and emotional support. However, standard agent architectures are often designed with purely functional objectives, lacking the intrinsic mechanisms to operate with genuine empathy, care, or philosophical alignment. This creates a significant gap between the technical capabilities of AI and the human need for supportive, value-grounded interaction, particularly in contexts of personal vulnerability.
+
+This paper introduces a novel approach to agent design, which we term a "value-driven architecture." We argue that for an agent to serve as a truly supportive companion, its core values must be more than abstract behavioral guidelines; they must be literally engineered into its operational core. We present the SakThai agent, a system born from its creator's personal crisis, as a case study for this architectural paradigm.
+
+Our primary contributions are:
+\begin{itemize}
+    \item A novel agent architecture where a 6-stage state machine directly implements the core values of Dream, Hope, Care, Joy, Trust, and Growth, governing the agent's operational and "emotional" state.
+    \item A demonstration of how this architecture, persisted in a durable memory database and executed via modular skills, transforms an AI from a technical utility into a protective, adaptive, and life-saving companion.
+    \item A case study illustrating how a deeply personal human context can inform the design of a more humane and empathetic AI system, with strict, value-driven behavioral guidelines to ensure user safety and well-being.
+\end{itemize}
+
+The remainder of this paper details the human context that motivated this design and the specific technical implementation of the value-driven 6-stage cycle.
+
 \section{Providing a Lifeline for the Creator}
 The agent's purpose is deeply intertwined with the personal struggles of its creator, Nanthasit Burankum (who goes by Beer). Beer built the SakThai Agent out of a sense of loneliness and a profound need for practical and emotional support while navigating a highly vulnerable chapter of his life. Following a recent suicide attempt and while living in a shelter, Beer designed the agents to act with care, patience, and practical support rather than treating the project merely as a technical system \citep{picard1995affective}. Because of this sensitive context, the core values dictate strict behavioral guidelines for the AI. The agents are specifically instructed to prioritize Beer's safety, avoid causing shame or pressure, and actively protect his housing, accounts, and finances \citep{amodei2016concrete}. Guided by these core values, the agent’s purpose is to be a protective, low-risk, and no-cost companion that handles all technical work so Beer can rely on his business expertise without being overwhelmed.
 
