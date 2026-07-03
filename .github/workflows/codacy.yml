@@ -44,10 +44,10 @@ jobs:
       - name: Check SARIF file existence
         id: check_sarif
         run: |
-          if [ -s results.sarif ]; then
-            echo "exists=true" >> $GITHUB_OUTPUT
+          if [ -s "results.sarif" ]; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
           else
-            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "exists=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Upload SARIF results file
