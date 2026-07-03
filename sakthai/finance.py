@@ -1,11 +1,19 @@
-import yfinance as yf
+import os
 import sys
 import time
-import os
+from typing import TypedDict
 
-_RISK_FREE_RATE_CACHE = {
+import yfinance as yf
+
+
+class _RateCache(TypedDict):
+    value: float | None
+    timestamp: float
+
+
+_RISK_FREE_RATE_CACHE: _RateCache = {
     "value": None,
-    "timestamp": 0,
+    "timestamp": 0.0,
 }
 
 # Read cache TTL from environment variable, with a default of 1 hour.
@@ -15,6 +23,7 @@ try:
 except (ValueError, TypeError):
     CACHE_TTL_SECONDS = 3600
 
+
 def get_risk_free_rate() -> float:
     """
     Fetches the current 13-week US Treasury Bill yield as the risk-free rate.
@@ -23,20 +32,24 @@ def get_risk_free_rate() -> float:
     The cache duration is configurable via SAKTHAI_FINANCE_CACHE_TTL (in seconds).
     """
     now = time.time()
-    if _RISK_FREE_RATE_CACHE["value"] is not None and (now - _RISK_FREE_RATE_CACHE["timestamp"]) < CACHE_TTL_SECONDS:
+    cached_value = _RISK_FREE_RATE_CACHE["value"]
+    if cached_value is not None and (now - _RISK_FREE_RATE_CACHE["timestamp"]) < CACHE_TTL_SECONDS:
         # Return cached value
-        return _RISK_FREE_RATE_CACHE["value"]
+        return cached_value
 
     try:
         irx = yf.Ticker("^IRX")
         # Fetch last 5 days to get the most recent available closing value
         hist = irx.history(period="5d")
-        if hist.empty or 'Close' not in hist or hist['Close'].isnull().all():
-            print("Warning: Could not fetch risk-free rate (^IRX). Defaulting to a fixed rate of 0.02.", file=sys.stderr)
+        if hist.empty or "Close" not in hist or hist["Close"].isnull().all():
+            print(
+                "Warning: Could not fetch risk-free rate (^IRX). Defaulting to a fixed rate of 0.02.",
+                file=sys.stderr,
+            )
             return 0.02
         # Get the last valid closing price and convert from percentage to decimal
-        last_yield = hist['Close'].dropna().iloc[-1]
-        risk_free_rate = last_yield / 100
+        last_yield = hist["Close"].dropna().iloc[-1]
+        risk_free_rate = float(last_yield) / 100
         print(f"Automatically determined risk-free rate: {risk_free_rate:.4f} (from ^IRX)")
 
         # Update cache
@@ -45,5 +58,8 @@ def get_risk_free_rate() -> float:
 
         return risk_free_rate
     except Exception as e:
-        print(f"Warning: Failed to fetch risk-free rate (^IRX) due to an error: {e}. Defaulting to 0.02.", file=sys.stderr)
+        print(
+            f"Warning: Failed to fetch risk-free rate (^IRX) due to an error: {e}. Defaulting to 0.02.",
+            file=sys.stderr,
+        )
         return 0.02
