@@ -63,7 +63,7 @@ Purpose
 - Use git worktrees for isolated development if multiple agents/devs share the checkout (see CONTRIBUTING.md).
 
 6) AI assistant configs
-- This repo contains CLAUDE.md and GEMINI.md. Copilot sessions should read them before making repo-wide recommendations.
+- This repository contains CLAUDE.md and GEMINI.md. Copilot sessions should read them before making repository-wide recommendations.
 
 7) When editing code
 - Make surgical edits only. Validate with ruff, mypy, bandit, pytest locally before suggesting a PR. Update docs (README, docs/, CLAUDE.md) if behavior or conventions change.
@@ -80,6 +80,7 @@ Add a JSON file at ~/.sakthai/mcp.json (or under SAKTHAI_HOME) to declare extern
 
 Example (Ollama):
 
+```json
 {
   "servers": [
     {
@@ -90,11 +91,13 @@ Example (Ollama):
     }
   ]
 }
+```
 
 Notes & tips:
-- Ollama: when used as a provider prefer OLLAMA_HOST=http://127.0.0.1:11434 (IPv4 literal avoids localhost/IPv6 issues).
+- Ollama: when used as a provider prefer `OLLAMA_HOST=http://127.0.0.1:11434` (IPv4 literal avoids localhost/IPv6 issues).
 - GitHub-style npx MCP server example:
 
+```json
 {
   "servers": [
     {
@@ -105,10 +108,11 @@ Notes & tips:
     }
   ]
 }
+```
 
 How SakThai uses these specs:
 - On `sakthai run`, SakThai auto-loads ~/.sakthai/mcp.json and attempts to start each server, merging their tools into the registry as `<server>__<tool>`.
 - Use `sakthai status` or `sakthai status | sakthai tools` to list discovered tools.
 - Pass `--no-mcp` to `sakthai run` to disable MCP discovery.
 
-Would you like me to also add a docs/example file in the repo (docs/example-mcp.json) with these entries?"}
+Would you like me to also add a docs/example file in the repository (docs/example-mcp.json) with these entries?"}
