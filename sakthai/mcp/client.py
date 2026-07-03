@@ -134,13 +134,11 @@ class StdioMCPClient:
         stdout = proc.stdout
 
         def _reader() -> None:
-            try:
+            # The pipe closing mid-read is expected on shutdown; always emit EOF.
+            with contextlib.suppress(Exception):
                 for line in stdout:
                     self._line_queue.put(line)
-            except Exception:
-                pass
-            finally:
-                self._line_queue.put(_EOF)
+            self._line_queue.put(_EOF)
 
         self._reader_thread = threading.Thread(
             target=_reader,
