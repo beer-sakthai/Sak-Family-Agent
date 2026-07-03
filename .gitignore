@@ -22,6 +22,7 @@ web-dashboard/
 .ruff_cache/
 .coverage
 coverage.json
+coverage.xml
 htmlcov/
 
 # Local config / secrets
