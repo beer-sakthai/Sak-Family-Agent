@@ -34,7 +34,8 @@ persona overlays and can export standalone repo snapshots with
   (unique/differing files). `scripts/compose_persona.py` rebuilds a persona's
   full tree as `shared + overlay` (overlay wins), byte-for-byte. See
   `personas/README.md`.
-- `infra/hermes-agents/` — Hermes Telegram-bot config backup (config only).
+- `infra/vm-agents/` — VM deployment assets for the Telegram bots (env
+  templates, systemd units; config only).
 - `infra/pw-poc/` — Playwright accessibility probe (standalone npm project).
 - `services/` — service pitches/specs not yet part of the package (e.g.
   `hugging-face-dataset-publishing/`).
@@ -45,10 +46,8 @@ persona overlays and can export standalone repo snapshots with
 
 **The repo also carries the **Sak Family Agents** — six personas with **SakKing**
 as the **main** (Lead & Orchestrator) and **SakThai**, **SakSee**, **SakSit**,
-**SakTan**, and **SakJules** as the family it coordinates. "Hermes" is only the
-framework they run on, never an agent's name. The authoritative per-agent
-identities are `docs/SOUL.md` + `personas/<name>/SOUL.md`;
-`infra/hermes-agents/` carry their own (sometimes role-specialized) copies.
+**SakTan**, and **SakJules** as the family it coordinates. The authoritative
+per-agent identities are `docs/SOUL.md` + `personas/<name>/SOUL.md`.
 Keep the SakKing-as-lead framing consistent if you touch any of them.
 
 CI (`ci.yml`, `pylint.yml`) scopes ruff/mypy/bandit/pytest/pylint to the
@@ -444,4 +443,4 @@ Skills are discovered from `skills/` (user/extension skills) and `library/`
 | `docs/runtimes.md` | CLI / agent loop / MCP server |
 | `docs/workspace.md` | Dev environment setup |
 | `docs/og_parity_audit.md` | Comparison with original SakThai |
-| `docs/integrations.md` | Composio, Hermes, and cross-agent communication recipes |
+| `docs/integrations.md` | Composio and cross-agent communication recipes |

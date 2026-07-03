@@ -162,7 +162,7 @@ exclude = ["tests*"]
 # extra references an unpublished package, so folding it into this lock would
 # bloat and break the core resolution. It is built/installed on its own (see
 # packages/agent-self-evolution/README.md). infra/pw-poc is an npm project and
-# infra/hermes-agents is config-only — neither is a Python build target.
+# infra/vm-agents is config-only — neither is a Python build target.
 
 [dependency-groups]
 dev = [

@@ -106,7 +106,7 @@ This repository is structured as a monorepo, with `sakthai-agent` as the core pa
 Sak-Family-Agent/
 ├── .github/                # GitHub Actions workflows (CI/CD)
 ├── docs/                   # Documentation (architecture, cycle stages, SOUL files)
-├── infra/                  # Infrastructure configurations (Hermes, Playwright PoC)
+├── infra/                  # Infrastructure configurations (VM agents, Playwright PoC)
 ├── library/                # Curated skills library
 ├── packages/               # Other standalone Python packages (e.g., agent-self-evolution)
 ├── personas/               # Agent persona definitions (SOUL.md, config, skill overlays)

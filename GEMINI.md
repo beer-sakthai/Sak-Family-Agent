@@ -39,7 +39,7 @@ Sak-Family-Agent/
 ├── docs/                    # Architecture, capabilities, integrations, runtimes
 ├── dashboard/               # Vite + Tailwind standalone web dashboard
 ├── product/                 # Business strategy, monetization, MVP plans
-├── infra/                   # hermes-agents deployment, pw-poc, training space
+├── infra/                   # vm-agents deployment, pw-poc, training space
 ├── packages/                # agent-self-evolution (separate dependency set)
 ├── services/                # HuggingFace dataset publishing
 ├── training/                # HF jobs, model serving configs
@@ -90,7 +90,6 @@ uv run sakthai doctor     # report environment + memory health
 | Mutation testing | `make mutation` (local-only, slow) |
 | Compose personas | `make compose-personas` |
 | Export agent repos | `make export-agent-repos` |
-| Deploy runtime | `make deploy-runtime` |
 
 ## How it fits together
 

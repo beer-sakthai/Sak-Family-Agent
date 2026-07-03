@@ -78,16 +78,10 @@ MCP servers — example config
 
 Add a JSON file at ~/.sakthai/mcp.json (or under SAKTHAI_HOME) to declare external MCP servers. Example entries below can be dropped into that file or used as a starting point for local development.
 
-Example (Hermes + Ollama):
+Example (Ollama):
 
 {
   "servers": [
-    {
-      "name": "hermes",
-      "command": "hermes",
-      "args": ["mcp", "serve"],
-      "env": {}
-    },
     {
       "name": "ollama",
       "command": "ollama",
@@ -98,7 +92,6 @@ Example (Hermes + Ollama):
 }
 
 Notes & tips:
-- Hermes: installs/tools vary by Hermes distribution; the example exposes Hermes tools under the `hermes__*` namespace in SakThai.
 - Ollama: when used as a provider prefer OLLAMA_HOST=http://127.0.0.1:11434 (IPv4 literal avoids localhost/IPv6 issues).
 - GitHub-style npx MCP server example:
 
