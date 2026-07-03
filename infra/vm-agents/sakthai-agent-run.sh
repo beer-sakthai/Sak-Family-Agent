@@ -16,8 +16,10 @@ get_secret() {
 	curl -s -H "Authorization: Bearer $kv_token" "https://$VAULT.vault.azure.net/secrets/$secret_name?api-version=7.4" | python3 -c "import json,sys; print(json.load(sys.stdin)['value'])"
 }
 
-export OPENAI_API_KEY="$(get_secret sakthai-openai-key)"
-export TELEGRAM_BOT_TOKEN="$(get_secret telegram-$AGENT)"
+OPENAI_API_KEY="$(get_secret sakthai-openai-key)"
+export OPENAI_API_KEY
+TELEGRAM_BOT_TOKEN="$(get_secret "telegram-$AGENT")"
+export TELEGRAM_BOT_TOKEN
 export OPENAI_BASE_URL=https://sakthai-resource.openai.azure.com/openai/v1
 export SAKTHAI_PROVIDER=openai
 export TELEGRAM_ALLOWED_USER_IDS=8618306046
