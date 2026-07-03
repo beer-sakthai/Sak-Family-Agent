@@ -235,6 +235,30 @@ class ApiService:
 # Gmail
 # =========================================================================
 
+def _fetch_message_details(msg_meta: dict, gmail_service: ApiService) -> dict:
+    """Worker function to fetch details for a single message."""
+    get_params = {
+        "userId": "me",
+        "id": msg_meta["id"],
+        "format": "metadata",
+        "metadataHeaders": ["From", "To", "Subject", "Date"],
+    }
+    msg = gmail_service.execute(
+        gws_parts=["users", "messages", "get"],
+        gws_params=get_params,
+        py_func=lambda: gmail_service.service.users().messages().get(**get_params),
+    )
+    headers = _headers_dict(msg)
+    return {
+        "id": msg["id"],
+        "threadId": msg["threadId"],
+        "from": headers.get("from", ""),
+        "to": headers.get("to", ""),
+        "subject": headers.get("subject", ""),
+        "date": headers.get("date", ""),
+        "snippet": msg.get("snippet", ""),
+        "labels": msg.get("labelIds", []),
+    }
 
 def gmail_search(args):
     gmail_service = ApiService("gmail", "v1")
@@ -251,31 +275,15 @@ def gmail_search(args):
         print("No messages found.")
         return
 
-    output = []
-    # This loop can be parallelized for performance, but for now we'll keep it sequential.
-    for msg_meta in messages:
-        get_params = {
-            "userId": "me",
-            "id": msg_meta["id"],
-            "format": "metadata",
-            "metadataHeaders": ["From", "To", "Subject", "Date"],
-        }
-        msg = gmail_service.execute(
-            gws_parts=["users", "messages", "get"],
-            gws_params=get_params,
-            py_func=lambda: gmail_service.service.users().messages().get(**get_params),
-        )
-        headers = _headers_dict(msg)
-        output.append({
-            "id": msg["id"],
-            "threadId": msg["threadId"],
-            "from": headers.get("from", ""),
-            "to": headers.get("to", ""),
-            "subject": headers.get("subject", ""),
-            "date": headers.get("date", ""),
-            "snippet": msg.get("snippet", ""),
-            "labels": msg.get("labelIds", []),
-        })
+    from concurrent.futures import ThreadPoolExecutor
+    from functools import partial
+
+    # Use a ThreadPoolExecutor to fetch message details in parallel.
+    # max_workers=10 is a reasonable default to avoid overwhelming the API.
+    with ThreadPoolExecutor(max_workers=10) as executor:
+        worker_func = partial(_fetch_message_details, gmail_service=gmail_service)
+        output = list(executor.map(worker_func, messages))
+
     print(json.dumps(output, indent=2, ensure_ascii=False))
 
 def gmail_get(args):
@@ -1077,29 +1085,6 @@ if __name__ == "__main__":
 
 
 def gmail_send(args):
-    if _gws_binary():
-        message = MIMEText(args.body, "html" if args.html else "plain")
-        message["To"] = args.to
-        message["Subject"] = args.subject
-        if args.cc:
-            message["Cc"] = args.cc
-        if args.from_header:
-            message["From"] = args.from_header
-
-        raw = base64.urlsafe_b64encode(message.as_bytes()).decode()
-        body = {"raw": raw}
-        if args.thread_id:
-            body["threadId"] = args.thread_id
-
-        result = _run_gws(
-            ["gmail", "users", "messages", "send"],
-            params={"userId": "me"},
-            body=body,
-        )
-        print(json.dumps({"status": "sent", "id": result["id"], "threadId": result.get("threadId", "")}, indent=2))
-        return
-
-    service = build_service("gmail", "v1")
     message = MIMEText(args.body, "html" if args.html else "plain")
     message["To"] = args.to
     message["Subject"] = args.subject
@@ -1110,50 +1095,23 @@ def gmail_send(args):
 
     raw = base64.urlsafe_b64encode(message.as_bytes()).decode()
     body = {"raw": raw}
-
     if args.thread_id:
         body["threadId"] = args.thread_id
 
-    result = service.users().messages().send(userId="me", body=body).execute()
+    gmail_service = ApiService("gmail", "v1")
+    result = gmail_service.execute(
+        gws_parts=["users", "messages", "send"],
+        gws_params={"userId": "me"},
+        gws_body=body,
+        py_func=lambda: gmail_service.service.users().messages().send(userId="me", body=body),
+    )
     print(json.dumps({"status": "sent", "id": result["id"], "threadId": result.get("threadId", "")}, indent=2))
 
 
 
 def gmail_reply(args):
-    if _gws_binary():
-        original = _run_gws(
-            ["gmail", "users", "messages", "get"],
-            params={
-                "userId": "me",
-                "id": args.message_id,
-                "format": "metadata",
-                "metadataHeaders": ["From", "Subject", "Message-ID"],
-            },
-        )
-        headers = _headers_dict(original)
-
-        subject = headers.get("subject", "")
-        if not subject.startswith("Re:"):
-            subject = f"Re: {subject}"
-
-        message = MIMEText(args.body)
-        message["To"] = headers.get("from", "")
-        message["Subject"] = subject
-        if args.from_header:
-            message["From"] = args.from_header
-        if headers.get("message-id"):
-            message["In-Reply-To"] = headers["message-id"]
-            message["References"] = headers["message-id"]
-
-        raw = base64.urlsafe_b64encode(message.as_bytes()).decode()
-        result = _run_gws(
-            ["gmail", "users", "messages", "send"],
-            params={"userId": "me"},
-            body={"raw": raw, "threadId": original["threadId"]},
-        )
-        print(json.dumps({"status": "sent", "id": result["id"], "threadId": result.get("threadId", "")}, indent=2))
-        return
-
+    # The gws and python-native logic are slightly different here, so a full
+    # abstraction is more complex. We can still simplify.
     service = build_service("gmail", "v1")
     original = service.users().messages().get(
         userId="me", id=args.message_id, format="metadata",
@@ -1177,20 +1135,24 @@ def gmail_reply(args):
     raw = base64.urlsafe_b64encode(message.as_bytes()).decode()
     body = {"raw": raw, "threadId": original["threadId"]}
 
-    result = service.users().messages().send(userId="me", body=body).execute()
+    gmail_service = ApiService("gmail", "v1")
+    result = gmail_service.execute(
+        gws_parts=["users", "messages", "send"],
+        gws_params={"userId": "me"},
+        gws_body=body,
+        py_func=lambda: gmail_service.service.users().messages().send(userId="me", body=body),
+    )
     print(json.dumps({"status": "sent", "id": result["id"], "threadId": result.get("threadId", "")}, indent=2))
 
 
 
 def gmail_labels(args):
-    if _gws_binary():
-        results = _run_gws(["gmail", "users", "labels", "list"], params={"userId": "me"})
-        labels = [{"id": l["id"], "name": l["name"], "type": l.get("type", "")} for l in results.get("labels", [])]
-        print(json.dumps(labels, indent=2))
-        return
-
-    service = build_service("gmail", "v1")
-    results = service.users().labels().list(userId="me").execute()
+    gmail_service = ApiService("gmail", "v1")
+    results = gmail_service.execute(
+        gws_parts=["users", "labels", "list"],
+        gws_params={"userId": "me"},
+        py_func=lambda: gmail_service.service.users().labels().list(userId="me"),
+    )
     labels = [{"id": l["id"], "name": l["name"], "type": l.get("type", "")} for l in results.get("labels", [])]
     print(json.dumps(labels, indent=2))
 
@@ -1203,17 +1165,13 @@ def gmail_modify(args):
     if args.remove_labels:
         body["removeLabelIds"] = args.remove_labels.split(",")
 
-    if _gws_binary():
-        result = _run_gws(
-            ["gmail", "users", "messages", "modify"],
-            params={"userId": "me", "id": args.message_id},
-            body=body,
-        )
-        print(json.dumps({"id": result["id"], "labels": result.get("labelIds", [])}, indent=2))
-        return
-
-    service = build_service("gmail", "v1")
-    result = service.users().messages().modify(userId="me", id=args.message_id, body=body).execute()
+    gmail_service = ApiService("gmail", "v1")
+    result = gmail_service.execute(
+        gws_parts=["users", "messages", "modify"],
+        gws_params={"userId": "me", "id": args.message_id},
+        gws_body=body,
+        py_func=lambda: gmail_service.service.users().messages().modify(userId="me", id=args.message_id, body=body),
+    )
     print(json.dumps({"id": result["id"], "labels": result.get("labelIds", [])}, indent=2))
 
 
@@ -1227,38 +1185,21 @@ def calendar_list(args):
     time_min = _datetime_with_timezone(args.start or now.isoformat())
     time_max = _datetime_with_timezone(args.end or (now + timedelta(days=7)).isoformat())
 
-    if _gws_binary():
-        results = _run_gws(
-            ["calendar", "events", "list"],
-            params={
-                "calendarId": args.calendar,
-                "timeMin": time_min,
-                "timeMax": time_max,
-                "maxResults": args.max,
-                "singleEvents": True,
-                "orderBy": "startTime",
-            },
-        )
-        events = []
-        for e in results.get("items", []):
-            events.append({
-                "id": e["id"],
-                "summary": e.get("summary", "(no title)"),
-                "start": e.get("start", {}).get("dateTime", e.get("start", {}).get("date", "")),
-                "end": e.get("end", {}).get("dateTime", e.get("end", {}).get("date", "")),
-                "location": e.get("location", ""),
-                "description": e.get("description", ""),
-                "status": e.get("status", ""),
-                "htmlLink": e.get("htmlLink", ""),
-            })
-        print(json.dumps(events, indent=2, ensure_ascii=False))
-        return
+    params = {
+        "calendarId": args.calendar,
+        "timeMin": time_min,
+        "timeMax": time_max,
+        "maxResults": args.max,
+        "singleEvents": True,
+        "orderBy": "startTime",
+    }
 
-    service = build_service("calendar", "v3")
-    results = service.events().list(
-        calendarId=args.calendar, timeMin=time_min, timeMax=time_max,
-        maxResults=args.max, singleEvents=True, orderBy="startTime",
-    ).execute()
+    cal_service = ApiService("calendar", "v3")
+    results = cal_service.execute(
+        gws_parts=["events", "list"],
+        gws_params=params,
+        py_func=lambda: cal_service.service.events().list(**params),
+    )
 
     events = []
     for e in results.get("items", []):
@@ -1289,22 +1230,13 @@ def calendar_create(args):
     if args.attendees:
         event["attendees"] = [{"email": e.strip()} for e in args.attendees.split(",") if e.strip()]
 
-    if _gws_binary():
-        result = _run_gws(
-            ["calendar", "events", "insert"],
-            params={"calendarId": args.calendar},
-            body=event,
-        )
-        print(json.dumps({
-            "status": "created",
-            "id": result["id"],
-            "summary": result.get("summary", ""),
-            "htmlLink": result.get("htmlLink", ""),
-        }, indent=2))
-        return
-
-    service = build_service("calendar", "v3")
-    result = service.events().insert(calendarId=args.calendar, body=event).execute()
+    cal_service = ApiService("calendar", "v3")
+    result = cal_service.execute(
+        gws_parts=["events", "insert"],
+        gws_params={"calendarId": args.calendar},
+        gws_body=event,
+        py_func=lambda: cal_service.service.events().insert(calendarId=args.calendar, body=event),
+    )
     print(json.dumps({
         "status": "created",
         "id": result["id"],
@@ -1315,13 +1247,12 @@ def calendar_create(args):
 
 
 def calendar_delete(args):
-    if _gws_binary():
-        _run_gws(["calendar", "events", "delete"], params={"calendarId": args.calendar, "eventId": args.event_id})
-        print(json.dumps({"status": "deleted", "eventId": args.event_id}))
-        return
-
-    service = build_service("calendar", "v3")
-    service.events().delete(calendarId=args.calendar, eventId=args.event_id).execute()
+    cal_service = ApiService("calendar", "v3")
+    cal_service.execute(
+        gws_parts=["events", "delete"],
+        gws_params={"calendarId": args.calendar, "eventId": args.event_id},
+        py_func=lambda: cal_service.service.events().delete(calendarId=args.calendar, eventId=args.event_id),
+    )
     print(json.dumps({"status": "deleted", "eventId": args.event_id}))
 
 
@@ -1332,39 +1263,30 @@ def calendar_delete(args):
 
 def drive_search(args):
     query = args.query if args.raw_query else f"fullText contains '{args.query}'"
-    if _gws_binary():
-        results = _run_gws(
-            ["drive", "files", "list"],
-            params={
-                "q": query,
-                "pageSize": args.max,
-                "fields": "files(id, name, mimeType, modifiedTime, webViewLink)",
-            },
-        )
-        print(json.dumps(results.get("files", []), indent=2, ensure_ascii=False))
-        return
+    params = {
+        "q": query,
+        "pageSize": args.max,
+        "fields": "files(id, name, mimeType, modifiedTime, webViewLink)",
+    }
 
-    service = build_service("drive", "v3")
-    results = service.files().list(
-        q=query, pageSize=args.max, fields="files(id, name, mimeType, modifiedTime, webViewLink)",
-    ).execute()
-    files = results.get("files", [])
-    print(json.dumps(files, indent=2, ensure_ascii=False))
+    drive_service = ApiService("drive", "v3")
+    results = drive_service.execute(
+        gws_parts=["files", "list"],
+        gws_params=params,
+        py_func=lambda: drive_service.service.files().list(**params),
+    )
+    print(json.dumps(results.get("files", []), indent=2, ensure_ascii=False))
 
 
 def drive_get(args):
     """Get metadata for a single Drive file by ID."""
     fields = "id, name, mimeType, modifiedTime, size, webViewLink, parents, owners(emailAddress)"
-    if _gws_binary():
-        result = _run_gws(
-            ["drive", "files", "get"],
-            params={"fileId": args.file_id, "fields": fields},
-        )
-        print(json.dumps(result, indent=2, ensure_ascii=False))
-        return
-
-    service = build_service("drive", "v3")
-    result = service.files().get(fileId=args.file_id, fields=fields).execute()
+    drive_service = ApiService("drive", "v3")
+    result = drive_service.execute(
+        gws_parts=["files", "get"],
+        gws_params={"fileId": args.file_id, "fields": fields},
+        py_func=lambda: drive_service.service.files().get(fileId=args.file_id, fields=fields),
+    )
     print(json.dumps(result, indent=2, ensure_ascii=False))
 
 
@@ -1457,22 +1379,13 @@ def drive_create_folder(args):
     if args.parent:
         body["parents"] = [args.parent]
 
-    if _gws_binary():
-        result = _run_gws(
-            ["drive", "files", "create"],
-            params={"fields": "id, name, webViewLink"},
-            body=body,
-        )
-        print(json.dumps({
-            "status": "created",
-            "id": result["id"],
-            "name": result.get("name", ""),
-            "webViewLink": result.get("webViewLink", ""),
-        }, indent=2, ensure_ascii=False))
-        return
-
-    service = build_service("drive", "v3")
-    result = service.files().create(body=body, fields="id, name, webViewLink").execute()
+    drive_service = ApiService("drive", "v3")
+    result = drive_service.execute(
+        gws_parts=["files", "create"],
+        gws_params={"fields": "id, name, webViewLink"},
+        gws_body=body,
+        py_func=lambda: drive_service.service.files().create(body=body, fields="id, name, webViewLink"),
+    )
     print(json.dumps({
         "status": "created",
         "id": result["id"],
@@ -1497,31 +1410,18 @@ def drive_share(args):
             sys.exit(1)
         permission["domain"] = args.domain
 
-    if _gws_binary():
-        result = _run_gws(
-            ["drive", "permissions", "create"],
-            params={
-                "fileId": args.file_id,
-                "sendNotificationEmail": args.notify,
-            },
+    drive_service = ApiService("drive", "v3")
+    result = drive_service.execute(
+        gws_parts=["permissions", "create"],
+        gws_params={"fileId": args.file_id, "sendNotificationEmail": args.notify},
+        gws_body=permission,
+        py_func=lambda: drive_service.service.permissions().create(
+            fileId=args.file_id,
             body=permission,
-        )
-        print(json.dumps({
-            "status": "shared",
-            "permissionId": result.get("id", ""),
-            "fileId": args.file_id,
-            "role": permission["role"],
-            "type": permission["type"],
-        }, indent=2, ensure_ascii=False))
-        return
-
-    service = build_service("drive", "v3")
-    result = service.permissions().create(
-        fileId=args.file_id,
-        body=permission,
-        sendNotificationEmail=args.notify,
-        fields="id",
-    ).execute()
+            sendNotificationEmail=args.notify,
+            fields="id",
+        ),
+    )
     print(json.dumps({
         "status": "shared",
         "permissionId": result.get("id", ""),
@@ -1533,29 +1433,24 @@ def drive_share(args):
 
 def drive_delete(args):
     """Trash or permanently delete a Drive file. Defaults to trash (reversible)."""
+    drive_service = ApiService("drive", "v3")
     if args.permanent:
-        if _gws_binary():
-            _run_gws(["drive", "files", "delete"], params={"fileId": args.file_id})
-            print(json.dumps({"status": "deleted", "fileId": args.file_id, "permanent": True}))
-            return
-        service = build_service("drive", "v3")
-        service.files().delete(fileId=args.file_id).execute()
+        drive_service.execute(
+            gws_parts=["files", "delete"],
+            gws_params={"fileId": args.file_id},
+            py_func=lambda: drive_service.service.files().delete(fileId=args.file_id),
+        )
         print(json.dumps({"status": "deleted", "fileId": args.file_id, "permanent": True}))
         return
 
     # Trash (reversible). Use files.update with trashed=True.
     body = {"trashed": True}
-    if _gws_binary():
-        _run_gws(
-            ["drive", "files", "update"],
-            params={"fileId": args.file_id},
-            body=body,
-        )
-        print(json.dumps({"status": "trashed", "fileId": args.file_id, "permanent": False}))
-        return
-
-    service = build_service("drive", "v3")
-    service.files().update(fileId=args.file_id, body=body).execute()
+    drive_service.execute(
+        gws_parts=["files", "update"],
+        gws_params={"fileId": args.file_id},
+        gws_body=body,
+        py_func=lambda: drive_service.service.files().update(fileId=args.file_id, body=body),
+    )
     print(json.dumps({"status": "trashed", "fileId": args.file_id, "permanent": False}))
 
 
@@ -1565,34 +1460,17 @@ def drive_delete(args):
 
 
 def contacts_list(args):
-    if _gws_binary():
-        results = _run_gws(
-            ["people", "people", "connections", "list"],
-            params={
-                "resourceName": "people/me",
-                "pageSize": args.max,
-                "personFields": "names,emailAddresses,phoneNumbers",
-            },
-        )
-        contacts = []
-        for person in results.get("connections", []):
-            names = person.get("names", [{}])
-            emails = person.get("emailAddresses", [])
-            phones = person.get("phoneNumbers", [])
-            contacts.append({
-                "name": names[0].get("displayName", "") if names else "",
-                "emails": [e.get("value", "") for e in emails],
-                "phones": [p.get("value", "") for p in phones],
-            })
-        print(json.dumps(contacts, indent=2, ensure_ascii=False))
-        return
-
-    service = build_service("people", "v1")
-    results = service.people().connections().list(
-        resourceName="people/me",
-        pageSize=args.max,
-        personFields="names,emailAddresses,phoneNumbers",
-    ).execute()
+    params = {
+        "resourceName": "people/me",
+        "pageSize": args.max,
+        "personFields": "names,emailAddresses,phoneNumbers",
+    }
+    people_service = ApiService("people", "v1")
+    results = people_service.execute(
+        gws_parts=["people", "connections", "list"],
+        gws_params=params,
+        py_func=lambda: people_service.service.people().connections().list(**params),
+    )
     contacts = []
     for person in results.get("connections", []):
         names = person.get("names", [{}])
@@ -1612,18 +1490,14 @@ def contacts_list(args):
 
 
 def sheets_get(args):
-    if _gws_binary():
-        result = _run_gws(
-            ["sheets", "spreadsheets", "values", "get"],
-            params={"spreadsheetId": args.sheet_id, "range": args.range},
-        )
-        print(json.dumps(result.get("values", []), indent=2, ensure_ascii=False))
-        return
-
-    service = build_service("sheets", "v4")
-    result = service.spreadsheets().values().get(
-        spreadsheetId=args.sheet_id, range=args.range,
-    ).execute()
+    sheets_service = ApiService("sheets", "v4")
+    result = sheets_service.execute(
+        gws_parts=["spreadsheets", "values", "get"],
+        gws_params={"spreadsheetId": args.sheet_id, "range": args.range},
+        py_func=lambda: sheets_service.service.spreadsheets().values().get(
+            spreadsheetId=args.sheet_id, range=args.range
+        ),
+    )
     print(json.dumps(result.get("values", []), indent=2, ensure_ascii=False))
 
 
@@ -1631,25 +1505,19 @@ def sheets_get(args):
 def sheets_update(args):
     values = json.loads(args.values)
     body = {"values": values}
+    params = {
+        "spreadsheetId": args.sheet_id,
+        "range": args.range,
+        "valueInputOption": "USER_ENTERED",
+    }
 
-    if _gws_binary():
-        result = _run_gws(
-            ["sheets", "spreadsheets", "values", "update"],
-            params={
-                "spreadsheetId": args.sheet_id,
-                "range": args.range,
-                "valueInputOption": "USER_ENTERED",
-            },
-            body=body,
-        )
-        print(json.dumps({"updatedCells": result.get("updatedCells", 0), "updatedRange": result.get("updatedRange", "")}, indent=2))
-        return
-
-    service = build_service("sheets", "v4")
-    result = service.spreadsheets().values().update(
-        spreadsheetId=args.sheet_id, range=args.range,
-        valueInputOption="USER_ENTERED", body=body,
-    ).execute()
+    sheets_service = ApiService("sheets", "v4")
+    result = sheets_service.execute(
+        gws_parts=["spreadsheets", "values", "update"],
+        gws_params=params,
+        gws_body=body,
+        py_func=lambda: sheets_service.service.spreadsheets().values().update(**params, body=body),
+    )
     print(json.dumps({"updatedCells": result.get("updatedCells", 0), "updatedRange": result.get("updatedRange", "")}, indent=2))
 
 
@@ -1657,26 +1525,20 @@ def sheets_update(args):
 def sheets_append(args):
     values = json.loads(args.values)
     body = {"values": values}
+    params = {
+        "spreadsheetId": args.sheet_id,
+        "range": args.range,
+        "valueInputOption": "USER_ENTERED",
+        "insertDataOption": "INSERT_ROWS",
+    }
 
-    if _gws_binary():
-        result = _run_gws(
-            ["sheets", "spreadsheets", "values", "append"],
-            params={
-                "spreadsheetId": args.sheet_id,
-                "range": args.range,
-                "valueInputOption": "USER_ENTERED",
-                "insertDataOption": "INSERT_ROWS",
-            },
-            body=body,
-        )
-        print(json.dumps({"updatedCells": result.get("updates", {}).get("updatedCells", 0)}, indent=2))
-        return
-
-    service = build_service("sheets", "v4")
-    result = service.spreadsheets().values().append(
-        spreadsheetId=args.sheet_id, range=args.range,
-        valueInputOption="USER_ENTERED", insertDataOption="INSERT_ROWS", body=body,
-    ).execute()
+    sheets_service = ApiService("sheets", "v4")
+    result = sheets_service.execute(
+        gws_parts=["spreadsheets", "values", "append"],
+        gws_params=params,
+        gws_body=body,
+        py_func=lambda: sheets_service.service.spreadsheets().values().append(**params, body=body),
+    )
     print(json.dumps({"updatedCells": result.get("updates", {}).get("updatedCells", 0)}, indent=2))
 
 
@@ -1686,20 +1548,14 @@ def sheets_create(args):
     if args.sheet_name:
         body["sheets"] = [{"properties": {"title": args.sheet_name}}]
 
-    if _gws_binary():
-        result = _run_gws(["sheets", "spreadsheets", "create"], body=body)
-        print(json.dumps({
-            "status": "created",
-            "spreadsheetId": result.get("spreadsheetId", ""),
-            "title": result.get("properties", {}).get("title", ""),
-            "spreadsheetUrl": result.get("spreadsheetUrl", ""),
-        }, indent=2, ensure_ascii=False))
-        return
-
-    service = build_service("sheets", "v4")
-    result = service.spreadsheets().create(
-        body=body, fields="spreadsheetId,properties,spreadsheetUrl",
-    ).execute()
+    sheets_service = ApiService("sheets", "v4")
+    result = sheets_service.execute(
+        gws_parts=["spreadsheets", "create"],
+        gws_body=body,
+        py_func=lambda: sheets_service.service.spreadsheets().create(
+            body=body, fields="spreadsheetId,properties,spreadsheetUrl"
+        ),
+    )
     print(json.dumps({
         "status": "created",
         "spreadsheetId": result.get("spreadsheetId", ""),
@@ -1714,18 +1570,12 @@ def sheets_create(args):
 
 
 def docs_get(args):
-    if _gws_binary():
-        doc = _run_gws(["docs", "documents", "get"], params={"documentId": args.doc_id})
-        result = {
-            "title": doc.get("title", ""),
-            "documentId": doc.get("documentId", ""),
-            "body": _extract_doc_text(doc),
-        }
-        print(json.dumps(result, indent=2, ensure_ascii=False))
-        return
-
-    service = build_service("docs", "v1")
-    doc = service.documents().get(documentId=args.doc_id).execute()
+    docs_service = ApiService("docs", "v1")
+    doc = docs_service.execute(
+        gws_parts=["documents", "get"],
+        gws_params={"documentId": args.doc_id},
+        py_func=lambda: docs_service.service.documents().get(documentId=args.doc_id),
+    )
     result = {
         "title": doc.get("title", ""),
         "documentId": doc.get("documentId", ""),
@@ -1738,12 +1588,13 @@ def docs_create(args):
     """Create a new Doc. Optionally seed it with initial body text."""
     body = {"title": args.title}
 
-    if _gws_binary():
-        doc = _run_gws(["docs", "documents", "create"], body=body)
-    else:
-        service = build_service("docs", "v1")
-        doc = service.documents().create(body=body).execute()
-
+    docs_service = ApiService("docs", "v1")
+    doc = docs_service.execute(
+        gws_parts=["documents", "create"],
+        gws_body=body,
+        py_func=lambda: docs_service.service.documents().create(body=body),
+    )
+    
     doc_id = doc.get("documentId", "")
 
     if args.body and doc_id:
@@ -1759,12 +1610,13 @@ def docs_create(args):
 
 def docs_append(args):
     """Append text to the end of an existing Doc."""
-    if _gws_binary():
-        doc = _run_gws(["docs", "documents", "get"], params={"documentId": args.doc_id})
-    else:
-        service = build_service("docs", "v1")
-        doc = service.documents().get(documentId=args.doc_id).execute()
-
+    docs_service = ApiService("docs", "v1")
+    doc = docs_service.execute(
+        gws_parts=["documents", "get"],
+        gws_params={"documentId": args.doc_id},
+        py_func=lambda: docs_service.service.documents().get(documentId=args.doc_id),
+    )
+    
     # The end-of-body index is one less than the segment endIndex of the body
     # (trailing newline is always at length-1). Docs indexes are 1-based; use
     # endIndex - 1 to insert before the final newline.
@@ -1795,17 +1647,13 @@ def _docs_insert_text(doc_id: str, text: str, index: int) -> None:
             "text": text,
         }
     }]
-    if _gws_binary():
-        _run_gws(
-            ["docs", "documents", "batchUpdate"],
-            params={"documentId": doc_id},
-            body={"requests": requests},
-        )
-        return
-
-    service = build_service("docs", "v1")
-    service.documents().batchUpdate(documentId=doc_id, body={"requests": requests}).execute()
-
+    docs_service = ApiService("docs", "v1")
+    docs_service.execute(
+        gws_parts=["documents", "batchUpdate"],
+        gws_params={"documentId": doc_id},
+        gws_body={"requests": requests},
+        py_func=lambda: docs_service.service.documents().batchUpdate(documentId=doc_id, body={"requests": requests}),
+    )
 
 # =========================================================================
 # CLI parser
