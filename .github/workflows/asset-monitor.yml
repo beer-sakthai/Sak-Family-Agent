@@ -2,6 +2,9 @@
 # public-facing assets are available.
 name: Asset Monitor
 
+permissions:
+  contents: read
+
 on:
   workflow_dispatch: # Allows manual triggering from the Actions tab
   schedule:
