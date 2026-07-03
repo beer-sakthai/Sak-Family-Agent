@@ -42,7 +42,12 @@ from evolution.core.config import (
     resolve_hermes_agent_path,
 )
 from evolution.core.constraints import ConstraintValidator
-from evolution.core.dataset_builder import EvalDataset, GoldenDatasetLoader, SyntheticDatasetBuilder
+from evolution.core.dataset_builder import (
+    EvalDataset,
+    GoldenDatasetLoader,
+    LayoutDatasetBuilder,
+    SyntheticDatasetBuilder,
+)
 from evolution.core.external_importers import build_dataset_from_external
 from evolution.core.fitness import skill_fitness_metric
 from evolution.skills.skill_module import (
@@ -64,6 +69,7 @@ def evolve(
     eval_model: str = _DEFAULT_LOCAL_MODEL,
     hermes_repo: str | None = None,
     run_tests: bool = False,
+    test_layout: bool = False,
     dry_run: bool = False,
 ):
     """Main evolution function — orchestrates the full optimization loop."""
@@ -98,12 +104,37 @@ def evolve(
     if dry_run:
         console.print("\n[bold green]DRY RUN — setup validated successfully.[/bold green]")
         console.print(f"  Would generate eval dataset (source: {eval_source})")
+        if test_layout:
+            console.print("  Would use LayoutDatasetBuilder for layout-specific tests.")
         console.print(f"  Would run GEPA optimization ({iterations} iterations)")
         console.print("  Would validate constraints and create PR")
         return
 
     # ── 2. Build or load evaluation dataset ─────────────────────────────
     console.print(f"\n[bold]Building evaluation dataset[/bold] (source: {eval_source})")
+
+    if test_layout:
+        console.print("  [cyan]Layout testing enabled.[/cyan]")
+        # Find reference guides for the skill
+        reference_dir = skill_path.parent / "references"
+        reference_guides = []
+        if reference_dir.exists():
+            for ref_file in reference_dir.glob("*.md"):
+                reference_guides.append(ref_file.read_text())
+        if not reference_guides:
+            console.print("[yellow]⚠ No reference guides found for layout testing.[/yellow]")
+
+        builder = LayoutDatasetBuilder(config)
+        dataset = builder.generate(
+            artifact_text=skill["raw"],
+            reference_guides=reference_guides,
+        )
+        # Save for reuse
+        save_path = Path("datasets") / "skills" / f"{skill_name}_layout"
+        dataset.save(save_path)
+        console.print(f"  Generated {len(dataset.all_examples)} layout-specific examples")
+        console.print(f"  Saved to {save_path}/")
+        eval_source = "layout_synthetic"  # Override source for clarity
 
     if eval_source == "golden" and dataset_path:
         dataset = GoldenDatasetLoader.load(Path(dataset_path))
@@ -119,6 +150,39 @@ def evolve(
         )
         if not dataset.all_examples:
             console.print("[red]✗ No relevant examples found from session history[/red]")
+    else:
+        if eval_source == "golden" and dataset_path:
+            dataset = GoldenDatasetLoader.load(Path(dataset_path))
+            console.print(f"  Loaded golden dataset: {len(dataset.all_examples)} examples")
+        elif eval_source == "sessiondb":
+            save_path = Path(dataset_path) if dataset_path else Path("datasets") / "skills" / skill_name
+            dataset = build_dataset_from_external(
+                skill_name=skill_name,
+                skill_text=skill["raw"],
+                sources=["claude-code", "copilot", "hermes"],
+                output_path=save_path,
+                model=eval_model,
+            )
+            if not dataset.all_examples:
+                console.print("[red]✗ No relevant examples found from session history[/red]")
+                sys.exit(1)
+            console.print(f"  Mined {len(dataset.all_examples)} examples from session history")
+        elif eval_source == "synthetic":
+            builder = SyntheticDatasetBuilder(config)
+            dataset = builder.generate(
+                artifact_text=skill["raw"],
+                artifact_type="skill",
+            )
+            # Save for reuse
+            save_path = Path("datasets") / "skills" / skill_name
+            dataset.save(save_path)
+            console.print(f"  Generated {len(dataset.all_examples)} synthetic examples")
+            console.print(f"  Saved to {save_path}/")
+        elif dataset_path:
+            dataset = EvalDataset.load(Path(dataset_path))
+            console.print(f"  Loaded dataset: {len(dataset.all_examples)} examples")
+        else:
+            console.print("[red]✗ Specify --dataset-path or use --eval-source synthetic[/red]")
             sys.exit(1)
         console.print(f"  Mined {len(dataset.all_examples)} examples from session history")
     elif eval_source == "synthetic":
@@ -375,6 +439,7 @@ def evolve(
 )
 @click.option("--hermes-repo", default=None, help="Path to hermes-agent repo")
 @click.option("--run-tests", is_flag=True, help="Run full pytest suite as constraint gate")
+@click.option("--test-layout", is_flag=True, help="Generate layout-specific test cases")
 @click.option("--dry-run", is_flag=True, help="Validate setup without running optimization")
 def main(
     skill,
@@ -385,6 +450,7 @@ def main(
     eval_model,
     hermes_repo,
     run_tests,
+    test_layout,
     dry_run,
 ):
     """Evolve a Hermes Agent skill using DSPy + GEPA optimization."""
@@ -397,6 +463,7 @@ def main(
         eval_model=eval_model,
         hermes_repo=hermes_repo,
         run_tests=run_tests,
+        test_layout=test_layout,
         dry_run=dry_run,
     )
 

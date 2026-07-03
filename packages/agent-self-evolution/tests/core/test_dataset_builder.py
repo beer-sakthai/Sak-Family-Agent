@@ -1,5 +1,10 @@
+import json
+from unittest.mock import MagicMock, patch
+
 import pytest
-from evolution.core.dataset_builder import EvalDataset, EvalExample
+
+from evolution.core.config import EvolutionConfig
+from evolution.core.dataset_builder import EvalDataset, EvalExample, LayoutDatasetBuilder
 
 
 class TestEvalExample:
@@ -59,3 +64,48 @@ class TestEvalDataset:
 
         dataset = EvalDataset(train=[ex_t], val=[ex_v], holdout=[ex_h])
         assert dataset.all_examples == [ex_t, ex_v, ex_h]
+
+
+@patch("dspy.LM")
+@patch("dspy.ChainOfThought")
+def test_layout_dataset_builder(mock_cot, mock_lm):
+    # Arrange
+    mock_config = MagicMock(spec=EvolutionConfig)
+    mock_config.eval_dataset_size = 1
+    mock_config.train_ratio = 1.0
+    mock_config.val_ratio = 0.0
+    mock_config.judge_model = "mock_model"
+
+    builder = LayoutDatasetBuilder(mock_config)
+
+    # Mock the dspy generator call
+    mock_generator_instance = mock_cot.return_value
+    mock_result = MagicMock()
+    mock_result.test_cases = json.dumps(
+        [
+            {
+                "task_input": "Generate a bar chart.",
+                "expected_behavior": "- Use colorblind-safe palette\n- Save as PDF",
+                "difficulty": "easy",
+                "category": "visualization",
+            }
+        ]
+    )
+    mock_generator_instance.return_value = mock_result
+
+    # Act
+    dataset = builder.generate(
+        artifact_text="A skill about charts.", reference_guides=["A guide about charts."]
+    )
+
+    # Assert
+    assert len(dataset.all_examples) == 1
+    example = dataset.train[0]
+    assert example.task_input == "Generate a bar chart."
+    assert "Use colorblind-safe palette" in example.expected_behavior
+    assert "Save as PDF" in example.expected_behavior
+    assert example.difficulty == "easy"
+    assert example.category == "layout"  # The builder should override this
+    assert example.source == "synthetic_layout"
+
+    mock_generator_instance.assert_called_once()
