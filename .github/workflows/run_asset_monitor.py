@@ -1,8 +1,15 @@
 import os
-import subprocess
 import sys
 
-# This script assumes a 'telegram' tool is available in the agent's environment.
+# Add the skills directory to the Python path to allow direct imports
+sys.path.append('/home/sakthai')
+
+# Import the verification function directly from the other skill's script
+from personas.sakthai.skills.mlops.mlops-hf-train-manual-upload.scripts.verify_hf_upload import (
+    verify_url,
+)
+
+# We will simulate the telegram tool here for local execution and clarity.
 # We will simulate it here for local execution and clarity.
 def send_telegram_message(chat_id: str, message: str):
     """
@@ -24,7 +31,6 @@ def main():
     and sends a Telegram alert on failure.
     """
     urls_file = "/home/sakthai/config/asset_monitor_urls.txt"
-    verification_script = "/home/sakthai/personas/sakthai/skills/mlops/mlops-hf-train-manual-upload/scripts/verify_hf_upload.py"
     chat_id = os.environ.get("TELEGRAM_CHAT_ID")
 
     if not chat_id:
@@ -43,20 +49,19 @@ def main():
         sys.exit(0)
 
     print(f"Monitoring {len(urls)} assets...")
-    result = subprocess.run(
-        ['python3', verification_script] + urls,
-        capture_output=True,
-        text=True
-    )
+    failed_urls = []
+    for i, url in enumerate(urls):
+        if not verify_url(url, f"Resource #{i+1}"):
+            failed_urls.append(url)
 
-    if result.returncode == 0:
+    if not failed_urls:
         print("✅ All assets are available and accessible.")
     else:
-        failed_urls = [url for url in urls if url in result.stdout or url in result.stderr]
         message = "🚨 Asset Monitor Failure!\nThe following assets may be down:\n" + "\n".join(f"- {url}" for url in failed_urls)
         send_telegram_message(chat_id, message)
         print(f"🔥 Alert sent for {len(failed_urls)} failed asset(s).", file=sys.stderr)
         sys.exit(1)
+
 
 if __name__ == "__main__":
     main()
