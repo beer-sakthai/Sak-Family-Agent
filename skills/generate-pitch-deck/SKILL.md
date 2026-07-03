@@ -1,5 +1,6 @@
 ---
 name: generate-pitch-deck
+category: business
 description: "Generate a 5-slide pitch deck from a one-sentence idea."
 version: 1.1.0
 author: Hermes Agent (inspired by powerpoint and sketch)
