@@ -1,0 +1,2 @@
+[console_scripts]
+sakthai = sakthai.cli:main
