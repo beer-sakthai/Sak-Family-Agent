@@ -9,6 +9,9 @@
 # container alive with `sleep infinity` and run training via attached Jobs,
 # SSH Dev Mode, or an entry script controlled by environment variables.
 
+#
+# checkov:skip=CKV_DOCKER_2: Training Space kept alive via sleep infinity; no service endpoint to health-check
+# checkov:skip=CKV_DOCKER_3: HF Spaces/Jobs manage the runtime user; training needs root for CUDA tooling
 FROM nvidia/cuda:12.4.1-cudnn-devel-ubuntu22.04
 
 # Build-time args / env
@@ -23,6 +26,7 @@ ENV HUGGINGFACE_HUB_CACHE=/tmp/.huggingface/hub
 # -----------------------------------------------------------------------------
 # 1. System dependencies + Python 3.11
 # -----------------------------------------------------------------------------
+# hadolint ignore=DL3008,DL3013
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     ca-certificates \
@@ -47,6 +51,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # -----------------------------------------------------------------------------
 # 2. Core ML stack (pinned for CUDA 12.4)
 # -----------------------------------------------------------------------------
+# hadolint ignore=DL3013
 RUN pip install \
     torch==2.5.1 torchvision==0.20.1 torchaudio==2.5.1 --index-url https://download.pytorch.org/whl/cu124 \
     transformers==4.47.1 \
@@ -65,6 +70,8 @@ RUN pip install \
 # 3. DeepSpeed + TRL (install together to avoid ABI/version drift)
 # -----------------------------------------------------------------------------
 # trl[deepspeed] pulls the deepspeed extra; we also pin deepspeed explicitly.
+# Kept as a separate layer from the core stack so ML-stack rebuilds cache.
+# hadolint ignore=DL3013,DL3059
 RUN pip install \
     deepspeed==0.15.4 \
     "trl[deepspeed]>=0.15.0,<0.16.0" \
@@ -101,9 +108,9 @@ ENV PYTHONPATH=/workspace
 
 # Health-ish keepalive: if no train script is set, hold the Space open.
 CMD ["/bin/bash", "-c", \
-    "if [ -n "$SAKTHAI_TRAIN_SCRIPT" ]; then \
-        echo 'Starting SakThai training: ' $SAKTHAI_TRAIN_SCRIPT $SAKTHAI_TRAIN_ARGS; \
-        python $SAKTHAI_TRAIN_SCRIPT $SAKTHAI_TRAIN_ARGS; \
+    "if [ -n \"$SAKTHAI_TRAIN_SCRIPT\" ]; then \
+        echo \"Starting SakThai training: $SAKTHAI_TRAIN_SCRIPT $SAKTHAI_TRAIN_ARGS\"; \
+        python \"$SAKTHAI_TRAIN_SCRIPT\" $SAKTHAI_TRAIN_ARGS; \
      else \
         echo 'sakthai-training-space ready. Set SAKTHAI_TRAIN_SCRIPT to auto-train, or attach via Dev Mode/SSH/Jobs.'; \
         sleep infinity; \

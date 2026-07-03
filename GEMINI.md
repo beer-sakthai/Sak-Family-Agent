@@ -15,6 +15,7 @@ No Google ADK/Vertex AI cloud agent, no `app/` bundle, no cloud-sync, no cloud r
 ## Repository layout
 
 ```
+```text
 Sak-Family-Agent/
 ├── sakthai/                 # Core Python package
 │   ├── agent/               #   Agent loop + providers (anthropic, gemini, openai)
@@ -105,6 +106,7 @@ The **Sak Family** (6 personas + ServiceQuoteBot) share the core package but
 each has a persona overlay in `personas/` with its own `SOUL.md`, skills, and
 `CLAUDE.md`. `make compose-personas` merges shared + overlay skills;
 `make export-agent-repos` materializes standalone repo snapshots.
+`make export-agent-repos` materializes standalone repository snapshots.
 
 Details: [`docs/architecture.md`](docs/architecture.md),
 [`docs/capabilities.md`](docs/capabilities.md),

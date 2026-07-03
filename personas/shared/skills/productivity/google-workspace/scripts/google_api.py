@@ -942,10 +942,37 @@ def main():
     p.add_argument("--calendar", default="primary")
     p.set_defaults(func=calendar_create)
 
+
+    # --- Calendar ---
+    cal = sub.add_parser("calendar")
+    cal_sub = cal.add_subparsers(dest="action", required=True)
+
+    p = cal_sub.add_parser("list")
+    p.add_argument("--start", default="", help="Start time (ISO 8601)")
+    p.add_argument("--end", default="", help="End time (ISO 8601)")
+    p.add_argument("--max", type=int, default=25)
+    p.add_argument("--calendar", default="primary")
+    p.set_defaults(func=calendar_list)
+
+    p = cal_sub.add_parser("create")
+    p.add_argument("--summary", required=True)
+    p.add_argument("--start", required=True, help="Start (ISO 8601 with timezone)")
+    p.add_argument("--end", required=True, help="End (ISO 8601 with timezone)")
+    p.add_argument("--location", default="")
+    p.add_argument("--description", default="")
+    p.add_argument("--attendees", default="", help="Comma-separated email addresses")
+    p.add_argument("--calendar", default="primary")
+    p.set_defaults(func=calendar_create)
+
     p = cal_sub.add_parser("delete")
     p.add_argument("event_id")
     p.add_argument("--calendar", default="primary")
     p.set_defaults(func=calendar_delete)
+
+    # --- Drive ---
+    drv = sub.add_parser("drive")
+    drv_sub = drv.add_subparsers(dest="action", required=True)
+
 
     # --- Drive ---
     drv = sub.add_parser("drive")
@@ -1595,6 +1622,7 @@ def docs_create(args):
         py_func=lambda: docs_service.service.documents().create(body=body),
     )
 
+    
     doc_id = doc.get("documentId", "")
 
     if args.body and doc_id:
@@ -1617,6 +1645,7 @@ def docs_append(args):
         py_func=lambda: docs_service.service.documents().get(documentId=args.doc_id),
     )
 
+    
     # The end-of-body index is one less than the segment endIndex of the body
     # (trailing newline is always at length-1). Docs indexes are 1-based; use
     # endIndex - 1 to insert before the final newline.
