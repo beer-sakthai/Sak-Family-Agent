@@ -20,6 +20,8 @@ from typing import Any
 
 import anthropic
 
+from .config import register_secret
+
 
 class AuthError(RuntimeError):
     """Raised when no usable credential can be found."""
@@ -61,7 +63,9 @@ def load_claude_cli_token() -> str | None:
     token = oauth.get("accessToken")
     if not token or _expired(oauth.get("expiresAt", 0)):
         return None
-    return str(token)
+    res = str(token)
+    register_secret(res)
+    return res
 
 
 def load_gemini_cli_token() -> str | None:
@@ -72,7 +76,9 @@ def load_gemini_cli_token() -> str | None:
     token = data.get("access_token")
     if not token or _expired(data.get("expiry_date", 0)):
         return None
-    return str(token)
+    res = str(token)
+    register_secret(res)
+    return res
 
 
 def gemini_credential_source() -> str | None:
