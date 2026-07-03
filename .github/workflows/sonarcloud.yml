@@ -15,8 +15,8 @@ jobs:
   Analysis:
     runs-on: ubuntu-latest
     if: >
-      github.event.pull_request.head.repo.full_name == github.repository ||
-      github.event_name == 'push'
+      github.event_name == 'push' ||
+      github.event.pull_request.head.repo.full_name == github.repository
     env:
       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
     steps:
