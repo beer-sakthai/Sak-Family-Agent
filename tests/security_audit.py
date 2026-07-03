@@ -1,19 +1,19 @@
 from __future__ import annotations
 
-import json
 import os
 import shutil
 import tempfile
 from pathlib import Path
 from unittest.mock import MagicMock
 
-from sakthai.agent.loop import _execute_tool, _save_session_log, AgentResult
+from sakthai.agent.loop import AgentResult, _execute_tool, _save_session_log
 from sakthai.memory.store import MemoryStore
+
 
 def test_tool_output_redaction():
     print("Testing tool output redaction...")
     # Mock a tool that returns a secret
-    secret = "sk-ant-api01-1234567890abcdef1234567890abcdef"
+    secret = "DUMMY_ANTHROPIC_KEY_FOR_TESTING"
     os.environ["ANTHROPIC_API_KEY"] = secret
 
     mock_tool = MagicMock()
@@ -35,16 +35,23 @@ def test_tool_output_redaction():
     assert is_error is True
     print("  [OK] Error output redacted.")
 
+
 def test_session_log_security():
     print("Testing session log security...")
     tmpdir = Path(tempfile.mkdtemp())
     try:
         os.environ["SAKTHAI_HOME"] = str(tmpdir)
-        secret = "sk-1234567890abcdef1234567890abcdef"
+        secret = "DUMMY_OPENAI_KEY_FOR_TESTING"
         os.environ["OPENAI_API_KEY"] = secret
 
         task = f"User said {secret}"
-        result = AgentResult(text=f"Response with {secret}", iterations=1, stop_reason="end_turn", tool_calls=[], usage={})
+        result = AgentResult(
+            text=f"Response with {secret}",
+            iterations=1,
+            stop_reason="end_turn",
+            tool_calls=[],
+            usage={},
+        )
 
         _save_session_log(task, "gpt-4", [], result)
 
@@ -70,13 +77,14 @@ def test_session_log_security():
     finally:
         shutil.rmtree(tmpdir)
 
+
 def test_memory_db_security():
     print("Testing memory database security...")
     tmpdir = Path(tempfile.mkdtemp())
     try:
         db_path = tmpdir / "memory.db"
         # Initializing MemoryStore should create DB and restrict permissions
-        with MemoryStore(db_path=db_path) as store:
+        with MemoryStore(db_path=db_path):
             pass
 
         # Parent dir check (0700)
@@ -90,6 +98,7 @@ def test_memory_db_security():
     finally:
         shutil.rmtree(tmpdir)
 
+
 if __name__ == "__main__":
     try:
         test_tool_output_redaction()
@@ -102,5 +111,6 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"\nUNEXPECTED ERROR: {e}")
         import traceback
+
         traceback.print_exc()
         exit(1)

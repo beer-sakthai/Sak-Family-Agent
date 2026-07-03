@@ -199,11 +199,13 @@ class MemoryStore:
 
         # Ensure the DB file itself is restricted: rw------- (0600)
         # If it doesn't exist, we create it with correct permissions.
-        if not self.db_path.exists():
+        # ":memory:" is a special SQLite string, not a real path.
+        is_mem = str(self.db_path) == ":memory:"
+        if not is_mem and not self.db_path.exists():
             with contextlib.suppress(OSError):
                 fd = os.open(str(self.db_path), os.O_WRONLY | os.O_CREAT, 0o600)
                 os.close(fd)
-        else:
+        elif not is_mem:
             with contextlib.suppress(OSError):
                 os.chmod(str(self.db_path), 0o600)
 
