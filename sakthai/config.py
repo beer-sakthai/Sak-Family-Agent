@@ -334,8 +334,22 @@ def check_env() -> dict[str, Any]:
     return report
 
 
+# Extra values to be redacted (e.g. tokens loaded from disk), populated via register_secret.
+_EXTRA_SECRETS: set[str] = set()
+
+
+def register_secret(secret: str) -> None:
+    """Register a value to be masked by redact_secrets.
+
+    Used by the auth layer to register tokens loaded from disk so they are
+    redacted even if they aren't in the environment.
+    """
+    if isinstance(secret, str) and len(secret) > 5:
+        _EXTRA_SECRETS.add(secret)
+
+
 def redact_secrets(text: str) -> str:
-    """Redact sensitive environment variable values from the given text."""
+    """Redact sensitive environment variable values and registered secrets from text."""
     if not isinstance(text, str) or not text:
         return text
 
@@ -352,9 +366,18 @@ def redact_secrets(text: str) -> str:
         "COMPOSIO_API_KEY",
     ]
 
+    secrets: set[str] = set(_EXTRA_SECRETS)
     for key in secret_keys:
-        val = os.environ.get(key)
-        if val and len(val) > 5:
+        if val := os.environ.get(key):
+            secrets.add(val)
+
+    if not secrets:
+        return text
+
+    # Sort by length descending to ensure longer secrets (e.g. session tokens)
+    # are redacted before their potential substrings (e.g. parts of keys).
+    for val in sorted(secrets, key=len, reverse=True):
+        if len(val) > 5:
             text = text.replace(val, "[REDACTED]")
 
     return text

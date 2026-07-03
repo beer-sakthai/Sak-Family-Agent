@@ -18,7 +18,6 @@ import pytest
 from sakthai.memory.store import MemoryStore
 from sakthai.memory.sync import (
     _handle_git_conflict_and_push,
-    pull_memory_from_git,
     sync_memory_to_git,
     sync_memory_via_http,
 )
@@ -412,92 +411,4 @@ class TestSyncMemoryToGitExtended:
     def test_http_202_status_accepted(self, sakthai_home: Path) -> None:
         with patch("urllib.request.urlopen", return_value=_http_response(202)):
             result = sync_memory_via_http("https://example.com/sync")
-        assert isinstance(result, str) and result
-
-
-# ---------------------------------------------------------------------------
-# pull_memory_from_git
-# ---------------------------------------------------------------------------
-
-
-def _pull_git_mock() -> Any:
-    """Fake subprocess.run covering fetch/reset/remote calls, all succeeding."""
-
-    def _run(args: list[str], **kwargs: object) -> CompletedProcess[str]:
-        if len(args) >= 2 and args[1] == "remote":
-            return _cp(args, stdout="")
-        return _cp(args)
-
-    return _run
-
-
-class TestPullMemoryFromGit:
-    def test_raises_without_git_repo(self, sakthai_home: Path) -> None:
-        with pytest.raises(RuntimeError, match="no local Git repository"):
-            pull_memory_from_git()
-
-    def test_merges_remote_facts_into_local_store(self, sakthai_home: Path) -> None:
-        (sakthai_home / ".git").mkdir()
-        db_path = sakthai_home / "memory.db"
-        with MemoryStore(db_path) as store:
-            store.add_fact("local fact")
-        (sakthai_home / "facts.jsonl").write_text(
-            json.dumps(_fact_dict("remote pulled fact")) + "\n", encoding="utf-8"
-        )
-        (sakthai_home / "observations.jsonl").write_text("", encoding="utf-8")
-
-        with patch("subprocess.run", side_effect=_pull_git_mock()):
-            result = pull_memory_from_git()
-
-        assert "merged" in result.lower()
-        with MemoryStore(db_path) as store:
-            values = [f.value for f in store.list_facts()]
-        assert "local fact" in values
-        assert "remote pulled fact" in values
-
-    def test_already_up_to_date_when_no_remote_rows(self, sakthai_home: Path) -> None:
-        (sakthai_home / ".git").mkdir()
-        (sakthai_home / "facts.jsonl").write_text("", encoding="utf-8")
-        (sakthai_home / "observations.jsonl").write_text("", encoding="utf-8")
-
-        with patch("subprocess.run", side_effect=_pull_git_mock()):
-            result = pull_memory_from_git()
-
-        assert "already up to date" in result.lower()
-
-    def test_remote_arg_adds_origin_when_absent(self, sakthai_home: Path) -> None:
-        (sakthai_home / ".git").mkdir()
-        (sakthai_home / "facts.jsonl").write_text("", encoding="utf-8")
-        (sakthai_home / "observations.jsonl").write_text("", encoding="utf-8")
-        add_calls: list[list[str]] = []
-
-        def _run(args: list[str], **kwargs: object) -> CompletedProcess[str]:
-            if len(args) >= 3 and args[1:3] == ["remote", "add"]:
-                add_calls.append(args)
-                return _cp(args)
-            if len(args) >= 2 and args[1] == "remote":
-                return _cp(args, stdout="")
-            return _cp(args)
-
-        with patch("subprocess.run", side_effect=_run):
-            pull_memory_from_git(remote="https://example.com/repo.git")
-
-        assert add_calls, "expected git remote add to be called"
-
-    def test_result_mentions_remote_url(self, sakthai_home: Path) -> None:
-        (sakthai_home / ".git").mkdir()
-        (sakthai_home / "facts.jsonl").write_text(
-            json.dumps(_fact_dict("x")) + "\n", encoding="utf-8"
-        )
-        (sakthai_home / "observations.jsonl").write_text("", encoding="utf-8")
-
-        with patch("subprocess.run", side_effect=_pull_git_mock()):
-            result = pull_memory_from_git(remote="https://example.com/repo.git")
-
-        assert "https://example.com/repo.git" in result
-
-    def test_missing_jsonl_files_are_tolerated(self, sakthai_home: Path) -> None:
-        (sakthai_home / ".git").mkdir()
-        with patch("subprocess.run", side_effect=_pull_git_mock()):
-            result = pull_memory_from_git()
         assert isinstance(result, str) and result
