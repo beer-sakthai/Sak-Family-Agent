@@ -19,7 +19,7 @@ Optional launch controls:
 
 ## Run
 
-From the repo root:
+From the repository root:
 
 ```bash
 python -m sakthai.telegram.bot

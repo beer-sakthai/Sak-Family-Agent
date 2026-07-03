@@ -8,7 +8,7 @@ Deploy all six Sak Family agents on the VM with Telegram chat and persistent mem
 - Keep one runtime instance per agent: SakKing, SakThai, SakSee, SakSit, SakTan, and SakJules.
 - Preserve Telegram delivery by wiring each bot directly to the agent loop and its own token.
 - Keep shared memory and MCP/tool access available so the agents still behave statefully.
-- Use the existing `Sak-Family-Agent` repo as the source of truth for persona files, runtime docs, and deployment scripts.
+- Use the existing `Sak-Family-Agent` repository as the source of truth for persona files, runtime docs, and deployment scripts.
 
 ## Implementation Changes
 - Define a repeatable VM bootstrap flow: install dependencies, export secrets, start services, and verify Telegram replies.
