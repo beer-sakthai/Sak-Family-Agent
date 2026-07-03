@@ -1,6 +1,6 @@
 ---
 name: sakthai-segment-anything
-category: mlops
+category: ml
 description: 'SAM: zero-shot image segmentation via points, boxes, masks.'
 version: 1.0.0
 platforms:

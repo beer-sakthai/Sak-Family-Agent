@@ -24,8 +24,16 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install uv
-        run: pipx install uv
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v1
+
+      - name: Cache uv dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/uv
+          key: ${{ runner.os }}-uv-${{ hashFiles('**/uv.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-uv-
 
       - name: Install dependencies
         run: uv sync --all-extras
@@ -43,7 +51,9 @@ jobs:
         env:
           # API keys are needed for the LLM to generate patches.
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          # The GITHUB_TOKEN is automatically available to the workflow and is needed to create pull requests.
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # A PAT is used instead of the default GITHUB_TOKEN to ensure that any
+          # pull requests created by the agent will trigger the full CI suite.
+          # This is a critical security and validation measure.
+          GITHUB_TOKEN: ${{ secrets.GH_PAT_FOR_ACTIONS }}
           # SAKTHAI_SHELL_ALLOW is needed for the agent to run ruff/bandit.
           SAKTHAI_SHELL_ALLOW: "1"

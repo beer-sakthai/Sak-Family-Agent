@@ -15,6 +15,7 @@ The workflow consists of three main stages:
 1. **Proactive Scanning**:
     - The `devsecops` skill runs a suite of static analysis tools, including `ruff` for code quality and `bandit` for security vulnerabilities, across the entire codebase.
     - This process identifies potential bugs, security hotspots, and style issues.
+    - A dedicated `gitleaks` workflow (`.github/workflows/secret-scan.yml`) runs on every push and pull request to detect and prevent hardcoded secrets from being committed to the repository.
 
 2. **Automated Triage and Patching**:
     - For each actionable vulnerability found, the agent triggers the `automated-vulnerability-patching` skill.

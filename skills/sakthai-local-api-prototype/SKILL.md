@@ -1,6 +1,6 @@
 ---
 name: sakthai-local-api-prototype
-category: hermes
+category: web
 description: Class-level skill for spinning up a minimal, secure, stdlib HTTP API
   server on WSL/Ubuntu — no extra dependencies, suitable for dashboard/JSON endpoints.
 version: 1.0.0

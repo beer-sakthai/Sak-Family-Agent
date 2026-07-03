@@ -1,6 +1,6 @@
 ---
 name: sakthai-instagram-qa
-category: hermes
+category: social
 description: Provide a verified, repeatable workflow for checking Instagram content
   quality before publishing
 version: 1.0.0
