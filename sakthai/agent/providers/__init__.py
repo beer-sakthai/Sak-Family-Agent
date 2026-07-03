@@ -191,7 +191,9 @@ def _build_google_client() -> Any:
     try:
         credentials = Credentials(token=token)  # type: ignore[no-untyped-call]
         return genai.Client(
-            vertexai=True, project=project, location="us-central1", credentials=credentials
+            vertexai=True, project=project,
+            location=os.environ.get("GOOGLE_CLOUD_LOCATION", "us-central1"),
+            credentials=credentials
         )
     except Exception as exc:
         raise AgentError(f"Failed to initialize Google Gemini client with OAuth: {exc}") from exc
