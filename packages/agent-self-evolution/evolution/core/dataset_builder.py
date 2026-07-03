@@ -91,6 +91,20 @@ class EvalDataset:
         ]
 
 
+def _shuffle_split(examples: list[EvalExample], config: EvolutionConfig) -> EvalDataset:
+    """Shuffle examples and split them into train/val/holdout per the config ratios."""
+    random.shuffle(examples)
+    n_total = len(examples)
+    n_train = max(1, int(n_total * config.train_ratio))
+    n_val = max(1, int(n_total * config.val_ratio))
+
+    return EvalDataset(
+        train=examples[:n_train],
+        val=examples[n_train : n_train + n_val],
+        holdout=examples[n_train + n_val :],
+    )
+
+
 class SyntheticDatasetBuilder:
     """Generate evaluation datasets using a strong LLM.
 
@@ -195,17 +209,7 @@ class SyntheticDatasetBuilder:
             if c.get("task_input") and c.get("expected_behavior")
         ]
 
-        # Shuffle and split
-        random.shuffle(examples)
-        n_total = len(examples)
-        n_train = max(1, int(n_total * self.config.train_ratio))
-        n_val = max(1, int(n_total * self.config.val_ratio))
-
-        return EvalDataset(
-            train=examples[:n_train],
-            val=examples[n_train : n_train + n_val],
-            holdout=examples[n_train + n_val :],
-        )
+        return _shuffle_split(examples, self.config)
 
 
 class GoldenDatasetLoader:
@@ -238,3 +242,81 @@ class GoldenDatasetLoader:
             val=examples[n_train : n_train + n_val],
             holdout=examples[n_train + n_val :],
         )
+
+
+class LayoutDatasetBuilder:
+    """
+    Generates synthetic evaluation datasets specifically to test layout quality.
+
+    The "expected_behavior" for these examples is a rubric of layout rules,
+    not a specific output. This is ideal for evolving skills that produce
+    structured documents, reports, or visualizations.
+    """
+
+    class GenerateLayoutTestCases(dspy.Signature):
+        """
+        Generate test cases that evaluate the layout and structure of an output.
+
+        Given a skill that produces a structured artifact (like a report, a chart,
+        or a formatted document), create test cases where the expected behavior is
+        a checklist of layout and formatting rules.
+
+        For example, for a chart-generating skill, the task might be "plot these results",
+        and the expected_behavior rubric would be:
+        - "Uses a colorblind-safe palette"
+        - "Saves as PDF, not PNG"
+        - "Figure size is appropriate for a single column"
+        - "Axes are clearly labeled"
+        - "Includes error bars"
+        """
+
+        artifact_text: str = dspy.InputField(
+            desc="The full text of the skill that produces the structured output."
+        )
+        reference_guides: str = dspy.InputField(
+            desc="Relevant reference documents that define layout best practices (e.g., visualization guides, style guides)."
+        )
+        num_cases: int = dspy.InputField(desc="Number of test cases to generate.")
+        test_cases: str = dspy.OutputField(
+            desc="JSON array of test cases. Each case must have 'task_input' and a 'expected_behavior' which is a string containing a markdown checklist of layout rules."
+        )
+
+    def __init__(self, config: EvolutionConfig):
+        self.config = config
+        self.generator = dspy.ChainOfThought(self.GenerateLayoutTestCases)
+
+    def generate(
+        self,
+        artifact_text: str,
+        reference_guides: list[str],
+        num_cases: int | None = None,
+    ) -> EvalDataset:
+        """Generates a full eval dataset focused on layout quality."""
+        n = num_cases or self.config.eval_dataset_size
+        lm = dspy.LM(self.config.judge_model, max_tokens=8000)
+
+        with dspy.context(lm=lm):
+            result = self.generator(
+                artifact_text=artifact_text,
+                reference_guides="\n---\n".join(reference_guides),
+                num_cases=n,
+            )
+
+        # Use the same robust parser from the main builder
+        cases_raw = SyntheticDatasetBuilder._parse_cases(result.test_cases)
+
+        examples = [
+            EvalExample(
+                task_input=c.get("task_input", ""),
+                expected_behavior=c.get("expected_behavior", ""),
+                difficulty=c.get("difficulty", "medium"),
+                # Layout datasets are always categorized as layout, regardless
+                # of what the generator model labels each case.
+                category="layout",
+                source="synthetic_layout",
+            )
+            for c in cases_raw
+            if c.get("task_input") and c.get("expected_behavior")
+        ]
+
+        return _shuffle_split(examples, self.config)

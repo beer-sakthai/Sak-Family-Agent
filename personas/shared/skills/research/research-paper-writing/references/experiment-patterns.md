@@ -169,6 +169,7 @@ def compute_borda(rankings, n_methods=3):
 ```
 
 Key design decisions:
+
 - **Randomize both labels AND order** per judge to prevent position bias
 - **Use odd number of judges** (3, 5, 7) to break ties
 - **Conservative tiebreak**: Incumbent/baseline wins ties (prevents false positives)
@@ -259,6 +260,7 @@ Human Evaluation Protocol:
 | Overall preference | Which output is better? | A/B/Tie (pairwise) |
 
 **Pairwise comparison** (preferred over absolute scoring — more reliable):
+
 - Present two outputs side-by-side (randomize left/right position)
 - Ask: "Which is better? A / B / Tie"
 - More discriminative and less susceptible to annotator calibration drift
@@ -311,6 +313,7 @@ print(f"Cohen's kappa: {kappa:.3f}")
 | **Expert annotators** | Domain-specific (medical, legal) | Highest | Highest — but slow |
 
 **Ethics requirements**:
+
 - Report compensation rate (must be at minimum local minimum wage)
 - Describe annotator demographics if relevant
 - Obtain IRB/ethics approval if required by your institution
@@ -406,6 +409,7 @@ def cohens_h(p1, p2):
 ### Reporting Standards
 
 Always include in the paper:
+
 - **Sample sizes**: n=X problems/tasks
 - **Number of runs**: K independent runs if applicable
 - **Error bars**: Specify standard deviation or standard error
@@ -640,6 +644,7 @@ COLOR_CYCLE = ['#0072B2', '#D55E00', '#009E73', '#E69F00', '#CC79A7', '#56B4E9']
 ```
 
 Also differentiate lines by **marker and linestyle**, not just color:
+
 ```python
 STYLES = [
     {'color': '#0072B2', 'marker': 'o', 'linestyle': '-'},
@@ -681,33 +686,6 @@ with plt.style.context(style):
     ax.spines['right'].set_visible(False)
     
     fig.savefig('paper/fig_comparison.pdf', bbox_inches='tight')
-```
-
-### Complete Example: Convergence/Trajectory Line Chart
-
-```python
-with plt.style.context(style):
-    fig, ax = plt.subplots(figsize=(3.5, 2.5))
-    
-    passes = np.arange(1, 16)
-    ours = [65, 72, 78, 82, 85, 87, 88, 89, 89.5, 90, 90, 90, 90, 90, 90]
-    baseline = [65, 68, 70, 71, 69, 67, 66, 65, 64, 63, 62, 61, 60, 59, 58]
-    
-    ax.plot(passes, ours, **STYLES[0], label='Ours', markersize=4)
-    ax.plot(passes, baseline, **STYLES[1], label='Critique+Revise', markersize=4)
-    
-    # Mark convergence point
-    ax.axvline(x=10, color='gray', linestyle=':', alpha=0.5, linewidth=0.8)
-    ax.annotate('Converged', xy=(10, 90), fontsize=8, ha='center',
-                xytext=(10, 93), arrowprops=dict(arrowstyle='->', color='gray'))
-    
-    ax.set_xlabel('Iteration')
-    ax.set_ylabel('Quality Score')
-    ax.legend(loc='lower right')
-    ax.spines['top'].set_visible(False)
-    ax.spines['right'].set_visible(False)
-    
-    fig.savefig('paper/fig_trajectory.pdf', bbox_inches='tight')
 ```
 
 ### Output Rules

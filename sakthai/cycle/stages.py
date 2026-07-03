@@ -1,12 +1,19 @@
-"""The six stages of the Dream → Growth working cycle."""
+"""Defines the stages of the SakThai agent's value-driven cycle.
+
+This module contains only pure functions and data structures, making the core
+state transition logic easy to test and reason about independently of its
+persistence.
+"""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
-from enum import StrEnum
+from enum import Enum
 
 
-class Stage(StrEnum):
+class Stage(str, Enum):
+    """The 6 core value stages of the agent's operational cycle."""
+
     DREAM = "dream"
     HOPE = "hope"
     CARE = "care"
@@ -17,66 +24,33 @@ class Stage(StrEnum):
 
 @dataclass(frozen=True)
 class StageInfo:
+    """Metadata associated with a stage."""
+
     stage: Stage
     number: int
-    goal: str
-    commands: tuple[str, ...]
-    guidance: str
+    description: str
 
 
-STAGES: tuple[StageInfo, ...] = (
-    StageInfo(
-        stage=Stage.DREAM,
-        number=1,
-        goal="Define the vision or task",
-        commands=("memory show",),
-        guidance="Explore options and recall past context; don't implement yet.",
-    ),
-    StageInfo(
-        stage=Stage.HOPE,
-        number=2,
-        goal="Engineer a solution",
-        commands=("learn",),
-        guidance="Propose concrete approaches and capture key decisions with `sakthai learn`.",
-    ),
-    StageInfo(
-        stage=Stage.CARE,
-        number=3,
-        goal="Refine quality — concurrency and performance",
-        commands=("learn",),
-        guidance="Audit correctness, race conditions, and performance; record findings.",
-    ),
-    StageInfo(
-        stage=Stage.JOY,
-        number=4,
-        goal="Package and ship",
-        commands=("memory stats",),
-        guidance="Focus on packaging and CI; celebrate what shipped.",
-    ),
-    StageInfo(
-        stage=Stage.TRUST,
-        number=5,
-        goal="Secure the foundation",
-        commands=("doctor",),
-        guidance="Run `sakthai doctor`, check boundaries, and verify idempotency.",
-    ),
-    StageInfo(
-        stage=Stage.GROWTH,
-        number=6,
-        goal="Learn and grow",
-        commands=("memory consolidate",),
-        guidance="Capture learnings into memory, then loop back to Dream.",
-    ),
-)
+STAGES = [
+    StageInfo(Stage.DREAM, 1, "Define the ideal future and set ambitious goals."),
+    StageInfo(Stage.HOPE, 2, "Identify pathways to the dream and build optimism."),
+    StageInfo(Stage.CARE, 3, "Act with empathy, ensuring safety and well-being."),
+    StageInfo(Stage.JOY, 4, "Find and create moments of happiness and satisfaction."),
+    StageInfo(Stage.TRUST, 5, "Build reliability and confidence through consistent action."),
+    StageInfo(Stage.GROWTH, 6, "Learn from experience and expand capabilities."),
+]
 
-_ORDER: tuple[Stage, ...] = tuple(s.stage for s in STAGES)
-_BY_STAGE: dict[Stage, StageInfo] = {s.stage: s for s in STAGES}
+_STAGE_MAP = {s.stage: s for s in STAGES}
+_STAGE_ORDER = [s.stage for s in STAGES]
+
+
+def next_stage(current: Stage) -> Stage:
+    """Calculates the next stage in the cycle."""
+    current_index = _STAGE_ORDER.index(current)
+    next_index = (current_index + 1) % len(_STAGE_ORDER)
+    return _STAGE_ORDER[next_index]
 
 
 def stage_info(stage: Stage) -> StageInfo:
-    return _BY_STAGE[stage]
-
-
-def next_stage(stage: Stage) -> Stage:
-    index = _ORDER.index(stage)
-    return _ORDER[(index + 1) % len(_ORDER)]
+    """Returns the metadata for a given stage."""
+    return _STAGE_MAP[stage]

@@ -38,6 +38,7 @@ never duplicate content across files.
 | MVP definition | ✅ Done (2026-07-02) — ServiceQuoteBot |
 | Monetization strategy | ✅ Done (2026-07-02) — Setup + Subscription |
 | MVP execution — ServiceQuoteBot build | ✅ Done (2026-07-02) |
+| Code-review fixes — commit 8580454 (LayoutDatasetBuilder + agent loop) | [/] In progress (2026-07-03) |
 
 ## 🔧 Runtime Notes
 
