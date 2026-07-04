@@ -31,3 +31,7 @@
 **Learning:** When multiple tools share similar side-effect patterns (e.g., reading from the filesystem), security controls must be centralized. Implementing validation individually in each tool is error-prone and leads to security gaps as new tools are added or existing ones are refactored.
 
 **Prevention:** Centralize sensitive validation logic (like path resolution and containment checks) into shared internal helpers (e.g., `_resolve_and_validate_path`). Mandate that any tool accessing the filesystem must use these helpers to ensure a consistent security posture across the entire toolset.
+## 2026-07-04 - Restricting File System Access in Document Ingestion
+**Vulnerability:** The `ingest_document` tool lacked path validation, allowing it to read and ingest any file on the host that the process had permissions for (e.g., `/etc/hostname`), bypassing the intended directory restrictions enforced by `_allowed_read_roots`.
+**Learning:** Security controls must be applied consistently across all tools that perform similar operations (like file I/O). Hardening one tool (`read_file`) but leaving another (`ingest_document`) open creates a gap that can be exploited for path traversal or unauthorized data exposure.
+**Prevention:** Centralize security validation logic into reusable helper functions and ensure all relevant entry points use them. In this case, extracting the path resolution and root-containment check into `_resolve_and_validate_path` ensures consistent enforcement.
