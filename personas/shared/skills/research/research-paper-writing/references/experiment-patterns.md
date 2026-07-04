@@ -841,25 +841,25 @@ with plt.style.context(style):
 ```python
 with plt.style.context(style):
     fig, ax = plt.subplots(figsize=(3.5, 2.5))
-    
+
     passes = np.arange(1, 16)
     ours = [65, 72, 78, 82, 85, 87, 88, 89, 89.5, 90, 90, 90, 90, 90, 90]
     baseline = [65, 68, 70, 71, 69, 67, 66, 65, 64, 63, 62, 61, 60, 59, 58]
-    
+
     ax.plot(passes, ours, **STYLES[0], label='Ours', markersize=4)
     ax.plot(passes, baseline, **STYLES[1], label='Critique+Revise', markersize=4)
-    
+
     # Mark convergence point
     ax.axvline(x=10, color='gray', linestyle=':', alpha=0.5, linewidth=0.8)
     ax.annotate('Converged', xy=(10, 90), fontsize=8, ha='center',
                 xytext=(10, 93), arrowprops=dict(arrowstyle='->', color='gray'))
-    
+
     ax.set_xlabel('Iteration')
     ax.set_ylabel('Quality Score')
     ax.legend(loc='lower right')
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
-    
+
     fig.savefig('paper/fig_trajectory.pdf', bbox_inches='tight')
 ```
 

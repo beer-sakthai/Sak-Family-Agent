@@ -306,7 +306,7 @@ class LayoutDatasetBuilder:
                 task_input=c.get("task_input", ""),
                 expected_behavior=c.get("expected_behavior", ""),
                 difficulty=c.get("difficulty", "medium"),
-                category=c.get("category", "layout"),
+                category="layout",
                 source="synthetic_layout",
             )
             for c in cases_raw

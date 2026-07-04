@@ -48,7 +48,11 @@ def _error(req_id: Any, code: int, message: str) -> dict[str, Any]:
 def _tool_list(tools: tuple[Tool, ...]) -> dict[str, Any]:
     return {
         "tools": [
-            {"name": t.name, "description": t.description, "inputSchema": t.input_schema}
+            {
+                "name": t.name,
+                "description": t.description,
+                "inputSchema": t.input_schema,
+            }
             for t in tools
         ]
     }
@@ -62,7 +66,7 @@ def _tool_call(
     params: dict[str, Any],
     store: MemoryStore,
     tools: tuple[Tool, ...],
-    policy: GuardrailPolicy = DEFAULT_POLICY,
+    policy: GuardrailPolicy,
 ) -> dict[str, Any]:
     name = params.get("name")
     arguments = params.get("arguments")
@@ -72,34 +76,33 @@ def _tool_call(
     if tool is None:
         return _text_content(f"Unknown tool: {name}", is_error=True)
 
-    # Pre-execution guardrail check
-    pre_check = policy.check_pre_execution(tool, arguments, store)
+    # 1. Pre-execution guardrails
+    pre_check = policy.check_pre_execution(tool, dict(arguments), store)
     if pre_check.action == GuardrailAction.DENY:
-        return _text_content(
-            pre_check.reason or f"Tool '{name}' was denied by a pre-execution guardrail.",
-            is_error=True,
-        )
+        reason = pre_check.reason or f"Tool '{name}' was denied by a pre-execution guardrail."
+        return _text_content(reason, is_error=True)
 
-    final_args = pre_check.modified_args or arguments
+    final_args = pre_check.modified_args if pre_check.modified_args is not None else dict(arguments)
 
+    # 2. Tool execution with global redaction fail-safe
     try:
-        output = tool.handler(dict(final_args), store)
+        output = tool.handler(final_args, store)
         is_error = False
     except Exception as exc:  # noqa: BLE001 — reported to the client as isError
         logger.debug("MCP tool %r raised %s: %s", name, type(exc).__name__, exc)
         output = f"{type(exc).__name__}: {exc}"
         is_error = True
 
-    # Post-execution guardrail check
-    post_check = policy.check_post_execution(tool, final_args, output, is_error, store)
-    if post_check.action == GuardrailAction.DENY:
-        return _text_content(
-            post_check.reason
-            or f"Output from tool '{name}' was denied by a post-execution guardrail.",
-            is_error=True,
-        )
+    # Apply redaction to raw output or exception message
+    redacted_output = redact_secrets(output)
 
-    return _text_content(redact_secrets(output), is_error=is_error)
+    # 3. Post-execution guardrails
+    post_check = policy.check_post_execution(tool, final_args, redacted_output, is_error, store)
+    if post_check.action == GuardrailAction.DENY:
+        reason = post_check.reason or f"Output from tool '{name}' was denied by a guardrail."
+        return _text_content(reason, is_error=True)
+
+    return _text_content(redacted_output, is_error=is_error)
 
 
 def handle_request(
@@ -145,7 +148,12 @@ def handle_request(
 
     if method == "tools/call":
         return (
-            None if is_notification else _result(req_id, _tool_call(params, store, tools, policy))
+            None
+            if is_notification
+            else _result(
+                req_id,
+                _tool_call(params, store, tools, policy),
+            )
         )
 
     if is_notification:

@@ -9,9 +9,9 @@ name: Lint Code Base
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
 
 permissions:
   contents: read
@@ -21,7 +21,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           # Full git history is needed so super-linter can compute the list
           # of changed files.
@@ -35,7 +35,7 @@ jobs:
         shell: bash
 
       - name: Lint Code Base
-        uses: github/super-linter@v6
+        uses: github/super-linter@v7
         env:
           VALIDATE_ALL_CODEBASE: false
           DEFAULT_BRANCH: "main"
@@ -53,6 +53,7 @@ jobs:
           VALIDATE_PYTHON_FLAKE8: false
           VALIDATE_PYTHON_MYPY: false
           VALIDATE_PYTHON_PYLINT: false
+          VALIDATE_PYTHON_PYINK: false
           VALIDATE_JSCPD: false
           # standard.js style (no semicolons) conflicts with this repo's
           # JS/TS style, and ts-standard cannot parse the TS sources under

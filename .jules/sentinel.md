@@ -24,10 +24,34 @@
 
 **Prevention:** Use `os.open` with explicit modes for file creation and `os.chmod` for existing sensitive directories/files. Always apply central redaction logic to any data being persisted to logs or returned from external tool executions.
 
-## 2026-07-04 - [Hardening Command Guardrails and MCP Security]
+## 2026-07-04 - [Centralized Path Validation for Tools]
 
-**Vulnerability:** Command guardrails in `guardrails.py` were easily bypassed using prefixes like `sudo` or by targeting non-exact root paths (e.g., `rm -rf /etc`). Furthermore, the MCP server bypassed all tool guardrails and secret redaction entirely.
+**Vulnerability:** The `ingest_document` tool lacked the directory restriction checks (SAKTHAI_READ_ALLOW) present in `read_file`, allowing the agent to potentially read and learn facts from any file accessible by the process, including sensitive configuration or system files outside the intended sandbox.
 
-**Learning:** Security checks that rely on exact string matches at specific positions (like `parts[0] == "rm"`) are brittle. In an agentic system with multiple entry points (CLI, MCP), security logic must be centralized and applied consistently across all invocation paths.
+**Learning:** When multiple tools share similar side-effect patterns (e.g., reading from the filesystem), security controls must be centralized. Implementing validation individually in each tool is error-prone and leads to security gaps as new tools are added or existing ones are refactored.
 
-**Prevention:** Use membership checks (`"rm" in parts`) and prefix matching (`p.startswith("/")`) for shell guardrails. Ensure the MCP tool execution layer integrates the same `GuardrailPolicy` and `redact_secrets` filters as the primary agent loop.
+**Prevention:** Centralize sensitive validation logic (like path resolution and containment checks) into shared internal helpers (e.g., `_resolve_and_validate_path`). Mandate that any tool accessing the filesystem must use these helpers to ensure a consistent security posture across the entire toolset.
+
+## 2026-07-04 - [Hardening Shell Command Guardrails]
+
+**Vulnerability:** Shell command guardrails for `rm -rf` were too specific, only blocking the exact string `-rf` and standalone `/` or `~` arguments. This allowed bypasses using different flag combinations (e.g., `-r -f`, `-fr`, `--recursive`) or targeting absolute subdirectories (e.g., `/etc`).
+
+**Learning:** String-matching based security checks on CLI commands are fragile. Effective guardrails must parse the command (e.g., using `shlex`) and evaluate the semantic intent (recursive deletion) and the reach of the target (absolute or home-relative paths) across all possible flag variations.
+
+**Prevention:** Use robust flag detection that handles combined, individual, and long-form flags. Validate all positional arguments for sensitive path prefixes rather than matching exact strings.
+
+## 2026-07-06 - [Robust Command Binary Detection in Guardrails]
+
+**Vulnerability:** Destructive command guardrails (like the `rm` check) could be bypassed by using absolute paths to the binary (e.g., `/bin/rm` or `sudo /bin/rm`) because the detection logic only looked for exact string matches on the command name.
+
+**Learning:** When building security guardrails that inspect shell commands, simply checking for a command name is insufficient. Command aliases, absolute paths, and wrappers (like `sudo`) must be considered to prevent trivial bypasses.
+
+**Prevention:** Use matching logic that identifies a binary both by its base name and its path-prefixed forms (e.g., `part == "binary" or part.endswith("/binary")`). Ensure this check is applied even when commands are prefixed by administrative wrappers.
+
+## 2026-07-05 - [Unified Security Enforcement for MCP Tools]
+
+**Vulnerability:** Tool calls in the MCP server bypassed the `GuardrailPolicy` and `redact_secrets` mechanisms used by the main agent loop, leading to inconsistent security enforcement and potential secret leakage during remote tool execution.
+
+**Learning:** Security controls must be enforced at every layer that executes tools. Implementing guardrails only in the primary agent loop leaves other interfaces (like MCP or API endpoints) vulnerable if they share the same tool registry but bypass the orchestration's security logic.
+
+**Prevention:** Ensure all tool execution entry points consistently apply the full security pipeline: pre-execution policy checks, argument validation, exception redaction, and post-execution output filtering. Pass the active `GuardrailPolicy` through all transport layers to maintain a unified security posture.

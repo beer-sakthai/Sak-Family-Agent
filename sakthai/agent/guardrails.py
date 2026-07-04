@@ -74,16 +74,34 @@ def _block_dangerous_shell_commands(
         if not parts:
             return GuardrailResult(GuardrailAction.ALLOW)
 
-        # Example blocklist: prevent recursive deletion or other high-risk commands.
-        # This is not exhaustive but serves as a starting point.
-        if (
-            "rm" in parts
-            and "-rf" in parts
-            and any(p.startswith("/") or p.startswith("~") for p in parts)
-        ):
-            return GuardrailResult(
-                GuardrailAction.DENY, reason="Potentially destructive 'rm -rf' command blocked."
+        # prevent recursive deletion of absolute or home-relative paths.
+        rm_idx = -1
+        for i, part in enumerate(parts):
+            if part == "rm" or part.endswith("/rm"):
+                rm_idx = i
+                break
+
+        if rm_idx != -1:
+            after_rm = parts[rm_idx + 1 :]
+
+            # Look for recursive and force flags among the arguments
+            has_recursive = any(
+                (p.startswith("-") and not p.startswith("--") and ("r" in p or "R" in p))
+                or p == "--recursive"
+                for p in after_rm
             )
+            has_force = any(
+                (p.startswith("-") and not p.startswith("--") and "f" in p) or p == "--force"
+                for p in after_rm
+            )
+
+            if has_recursive and has_force:
+                for part in after_rm:
+                    if part.startswith(("/", "~")):
+                        return GuardrailResult(
+                            GuardrailAction.DENY,
+                            reason=f"Potentially destructive 'rm' command on {part!r} blocked.",
+                        )
 
     return GuardrailResult(GuardrailAction.ALLOW)
 
@@ -102,7 +120,11 @@ def _enforce_verbose_listing(
 
 
 def _block_output_with_secrets(
-    _tool: Tool, _args: dict[str, Any], output: str, _is_error: bool, _store: MemoryStore
+    _tool: Tool,
+    _args: dict[str, Any],
+    output: str,
+    _is_error: bool,
+    _store: MemoryStore,
 ) -> GuardrailResult:
     """Deny any tool output that appears to contain a secret."""
     # A simple regex for common API key prefixes (sk-, rk-, pk-)
@@ -145,7 +167,9 @@ class GuardrailPolicy:
             result = rule(tool, current_args, store)
             if result.action == GuardrailAction.DENY:
                 logger.warning(
-                    "Guardrail denied pre-execution of tool %r: %s", tool.name, result.reason
+                    "Guardrail denied pre-execution of tool %r: %s",
+                    tool.name,
+                    result.reason,
                 )
                 return result
             if result.modified_args is not None:
@@ -158,14 +182,21 @@ class GuardrailPolicy:
         return GuardrailResult(GuardrailAction.ALLOW)
 
     def check_post_execution(
-        self, tool: Tool, args: dict[str, Any], output: str, is_error: bool, store: MemoryStore
+        self,
+        tool: Tool,
+        args: dict[str, Any],
+        output: str,
+        is_error: bool,
+        store: MemoryStore,
     ) -> GuardrailResult:
         """Check if a tool's output is allowed after execution."""
         for rule in self.post_rules:
             result = rule(tool, args, output, is_error, store)
             if result.action == GuardrailAction.DENY:
                 logger.warning(
-                    "Guardrail denied post-execution of tool %r: %s", tool.name, result.reason
+                    "Guardrail denied post-execution of tool %r: %s",
+                    tool.name,
+                    result.reason,
                 )
                 return result
         return GuardrailResult(GuardrailAction.ALLOW)
