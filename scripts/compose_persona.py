@@ -3,7 +3,7 @@
 
 After the monorepo consolidation, the six persona skill libraries
 (``personas/{sakthai,sakking,saksee,saksit,saktan,sakjules}``) no longer each carry a full copy
-of the 461 skill files they share. Instead the identical files live once under
+of the ~446 skill files they share. Instead the identical files live once under
 ``personas/shared/skills/`` and each persona keeps only the files that are unique
 to it or that differ from the shared version (its *overlay*).
 

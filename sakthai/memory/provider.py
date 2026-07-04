@@ -17,8 +17,8 @@ logger = logging.getLogger(__name__)
 class SakThaiMemoryProvider:
     """Lazily open a :class:`MemoryStore` and expose it as a prompt block."""
 
-    def __init__(self) -> None:
-        self._store: MemoryStore | None = None
+    def __init__(self, store: MemoryStore | None = None) -> None:
+        self._store = store
 
     @property
     def name(self) -> str:
@@ -31,6 +31,8 @@ class SakThaiMemoryProvider:
         return []
 
     def initialize(self, session_id: str = "", **kwargs: Any) -> None:
+        if self._store is not None:
+            return
         try:
             self._store = MemoryStore()
         except Exception as exc:  # noqa: BLE001 — degrade gracefully if the DB is unusable

@@ -77,7 +77,7 @@ describe('Agent Skill Integration', () => {
     // Verify 2nd call parameters contain tool response
     const secondCallArgs = mockAi.models.generateContent.mock.calls[1][0];
     expect(secondCallArgs.contents).toHaveLength(3); // User prompt, Model prediction, Tool response
-    expect(secondCallArgs.contents[2].role).toBe('user');
+    expect(secondCallArgs.contents[2].role).toBe('tool');
     expect(secondCallArgs.contents[2].parts[0].functionResponse).toEqual({
       name: 'calculate',
       response: { output: { result: 8 } }
@@ -127,7 +127,7 @@ describe('Agent Skill Integration', () => {
 
     // Verify 2nd call parameters contain error response
     const secondCallArgs = mockAi.models.generateContent.mock.calls[1][0];
-    expect(secondCallArgs.contents[2].role).toBe('user');
+    expect(secondCallArgs.contents[2].role).toBe('tool');
     expect(secondCallArgs.contents[2].parts[0].functionResponse).toEqual({
       name: 'calculate',
       response: { error: 'Cannot divide by zero' }

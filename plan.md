@@ -50,18 +50,7 @@ workspace runtime config under `infra/`.
 - `infra/hermes-agents/` for the live agent profiles, systemd services, and deployment config.
 - `product/todo.md` for the product delivery checklist.
 
-
-
-## 🚀 Active Phase — Restore and Align Codebase
-
-- [/] **Phase 7 — Restore and Align Codebase**
-  - [/] Restore `sakthai/memory/store.py`, `sakthai/cycle/stages.py`, `sakthai/cycle/state.py`, `sakthai/dashboard/data.py`, and `sakthai/mcp/server.py` to `origin/main` (`8580454`).
-  - [ ] Run `pytest` to ensure 100% of unit tests pass.
-  - [ ] Run the driver script (`python .claude/skills/run-sakthai-agent-v2/driver.py`) to verify all 11 smoke tests pass.
-  - [ ] Update `CLAUDE.md` and `GEMINI.md` to reflect the fully working codebase status, fulfilling the initial `/init` request.
-
 ---
-
 
 ## 🔑 Working Rules
 

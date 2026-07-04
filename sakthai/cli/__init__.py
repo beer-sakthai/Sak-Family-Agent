@@ -13,7 +13,7 @@ import click
 if sys.platform == "win32":
     for _stream in (sys.stdout, sys.stderr):
         if hasattr(_stream, "reconfigure"):
-            _stream.reconfigure(encoding="utf-8", errors="replace")
+            _stream.reconfigure(encoding="utf-8", errors="replace")  # type: ignore[union-attr]
 
 from .. import __version__
 from .agent import mcp, run

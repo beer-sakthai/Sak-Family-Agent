@@ -44,11 +44,8 @@ sakthai = "sakthai.cli:main"
 
 [tool.pytest.ini_options]
 addopts = "-q"
-# Put the repo root on sys.path so tests can import the `scripts` package.
-pythonpath = ["."]
 markers = [
     "integration: tests that may hit real external endpoints (Ollama/Anthropic); excluded from CI via -m 'not integration', and self-skip when the endpoint/credential is absent",
-    "tdd: tests written ahead of the implementation they specify",
 ]
 
 [tool.coverage.run]
