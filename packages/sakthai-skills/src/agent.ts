@@ -22,12 +22,17 @@ export async function runAgentLoop(ai: GoogleGenAI, model: string, prompt: strin
     }
   ];
 
+<<<<<<< HEAD
+  const systemInstruction =
+    "You are a helpful and intelligent agent. Your goal is to assist the user with their request.\n\nBefore calling a tool, you MUST first explain your reasoning and plan in a 'thought' block. First, think about the user's request and your plan to address it. Then, output your thought process. Finally, call the necessary tool(s).\n\nExample:\nThought: The user wants to know the sum of two numbers. I should use the 'calculate' tool with the 'add' operation to find the result.\nTool Call: calculate(operation: 'add', a: 5, b: 3)";
+=======
   const systemInstruction = {
     role: 'system',
     parts: [{
       text: "You are a helpful and intelligent agent. Your goal is to assist the user with their request.\n\nBefore calling a tool, you MUST first explain your reasoning and plan in a 'thought' block. First, think about the user's request and your plan to address it. Then, output your thought process. Finally, call the necessary tool(s).\n\nExample:\nThought: The user wants to know the sum of two numbers. I should use the 'calculate' tool with the 'add' operation to find the result.\nTool Call: calculate(operation: 'add', a: 5, b: 3)"
     }]
   };
+>>>>>>> 858045420f64b1617246e98fd657d158bc7109cd
 
   console.log(`[Agent] Starting loop for prompt: "${prompt}"`);
 
@@ -38,6 +43,7 @@ export async function runAgentLoop(ai: GoogleGenAI, model: string, prompt: strin
       contents: [...contents],
       systemInstruction,
       config: {
+        systemInstruction,
         tools,
         automaticFunctionCalling: { disable: true }
       }
@@ -99,8 +105,9 @@ export async function runAgentLoop(ai: GoogleGenAI, model: string, prompt: strin
       })
     );
 
+    // Gemini expects function responses under the 'user' role
     contents.push({
-      role: 'tool',
+      role: 'user',
       parts: toolResponses
     });
   }

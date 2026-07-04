@@ -91,6 +91,20 @@ class EvalDataset:
         ]
 
 
+def _shuffle_split(examples: list[EvalExample], config: EvolutionConfig) -> EvalDataset:
+    """Shuffle examples and split them into train/val/holdout per the config ratios."""
+    random.shuffle(examples)
+    n_total = len(examples)
+    n_train = max(1, int(n_total * config.train_ratio))
+    n_val = max(1, int(n_total * config.val_ratio))
+
+    return EvalDataset(
+        train=examples[:n_train],
+        val=examples[n_train : n_train + n_val],
+        holdout=examples[n_train + n_val :],
+    )
+
+
 class SyntheticDatasetBuilder:
     """Generate evaluation datasets using a strong LLM.
 
@@ -195,17 +209,7 @@ class SyntheticDatasetBuilder:
             if c.get("task_input") and c.get("expected_behavior")
         ]
 
-        # Shuffle and split
-        random.shuffle(examples)
-        n_total = len(examples)
-        n_train = max(1, int(n_total * self.config.train_ratio))
-        n_val = max(1, int(n_total * self.config.val_ratio))
-
-        return EvalDataset(
-            train=examples[:n_train],
-            val=examples[n_train : n_train + n_val],
-            holdout=examples[n_train + n_val :],
-        )
+        return _shuffle_split(examples, self.config)
 
 
 class GoldenDatasetLoader:
@@ -306,13 +310,22 @@ class LayoutDatasetBuilder:
                 task_input=c.get("task_input", ""),
                 expected_behavior=c.get("expected_behavior", ""),
                 difficulty=c.get("difficulty", "medium"),
+<<<<<<< HEAD
+                # Layout datasets are always categorized as layout, regardless
+                # of what the generator model labels each case.
+                category="layout",
+=======
                 category=c.get("category", "layout"),
+>>>>>>> 858045420f64b1617246e98fd657d158bc7109cd
                 source="synthetic_layout",
             )
             for c in cases_raw
             if c.get("task_input") and c.get("expected_behavior")
         ]
 
+<<<<<<< HEAD
+        return _shuffle_split(examples, self.config)
+=======
         random.shuffle(examples)
         n_total = len(examples)
         n_train = max(1, int(n_total * self.config.train_ratio))
@@ -323,3 +336,4 @@ class LayoutDatasetBuilder:
             val=examples[n_train : n_train + n_val],
             holdout=examples[n_train + n_val :],
         )
+>>>>>>> 858045420f64b1617246e98fd657d158bc7109cd

@@ -1,54 +1,104 @@
+"""Tests for the ServiceQuoteBot customer bootstrap script."""
+
 from __future__ import annotations
 
-import importlib.util
 import sys
 from pathlib import Path
+from unittest.mock import patch
 
-from sakthai.memory.store import MemoryStore
+import pytest
 
-SCRIPT_PATH = Path(__file__).resolve().parents[1] / "scripts" / "setup_servicequotebot.py"
-SCRIPT_SPEC = importlib.util.spec_from_file_location("setup_servicequotebot", SCRIPT_PATH)
-assert SCRIPT_SPEC is not None and SCRIPT_SPEC.loader is not None
-SCRIPT_MODULE = importlib.util.module_from_spec(SCRIPT_SPEC)
-sys.modules[SCRIPT_SPEC.name] = SCRIPT_MODULE
-SCRIPT_SPEC.loader.exec_module(SCRIPT_MODULE)
-
-build_customer_bundle = SCRIPT_MODULE.build_customer_bundle
-parse_user_ids = SCRIPT_MODULE.parse_user_ids
+# Mark all tests in this file as TDD
+pytestmark = pytest.mark.tdd
 
 
-def test_parse_user_ids_accepts_commas_and_spaces() -> None:
-    assert parse_user_ids("123, 456 789") == [123, 456, 789]
+def test_setup_script_exists_and_is_importable() -> None:
+    """Verify that the setup script exists and can be imported without errors."""
+    try:
+        import scripts.setup_servicequotebot  # noqa: F401
+    except ImportError as e:
+        pytest.fail(f"Could not import scripts.setup_servicequotebot: {e}")
 
 
-def test_build_customer_bundle_writes_env_service_and_ingests_price_book(tmp_path: Path) -> None:
-    repo_root = Path(__file__).resolve().parents[1]
-    price_book = tmp_path / "price-book.md"
-    price_book.write_text(
-        "# Price Book\n\n- Window cleaning -> $100\n- Gutter cleaning -> $150\n",
-        encoding="utf-8",
+def test_build_customer_bundle_writes_env_and_service_files(tmp_path: Path) -> None:
+    """Test that build_customer_bundle creates the correct .env and service files."""
+    from scripts.setup_servicequotebot import build_customer_bundle
+
+    repo_root = tmp_path / "Sak-Family-Agent"
+    target_dir = tmp_path / "customer_bundle"
+    price_book_path = repo_root / "data" / "price-book.md"
+
+    # Create dummy infra file for the script to copy
+    infra_dir = repo_root / "infra" / "servicequotebot" / "systemd"
+    infra_dir.mkdir(parents=True, exist_ok=True)
+    service_template_path = infra_dir / "servicequotebot.service"
+    service_template_path.write_text(
+        "[Unit]\nDescription=ServiceQuoteBot\n\n[Service]\nExecStart=\n"
     )
 
-    bundle = build_customer_bundle(
+    result = build_customer_bundle(
+        target_dir=target_dir,
         repo_root=repo_root,
-        target_dir=tmp_path / "bundle",
-        price_book=price_book,
-        anthropic_api_key="sk-test",
-        telegram_bot_token="123:abc",
-        telegram_allowed_user_ids=[123, 456],
+        anthropic_api_key="sk-test-anthropic",
+        telegram_bot_token="12345:telegram-token",
+        telegram_allowed_user_ids=[98765],
+        price_book=price_book_path,
     )
 
-    assert bundle.env_file.read_text(encoding="utf-8") == (
-        f"ANTHROPIC_API_KEY=sk-test\n"
-        f"TELEGRAM_BOT_TOKEN=123:abc\n"
-        "TELEGRAM_ALLOWED_USER_IDS=123,456\n"
-        f"SAKTHAI_HOME={bundle.state_dir}\n"
+    assert result.env_file.exists()
+    assert result.service_file.exists()
+    assert result.ingest_command
+
+    env_content = result.env_file.read_text()
+    assert 'ANTHROPIC_API_KEY="sk-test-anthropic"' in env_content
+    assert 'TELEGRAM_BOT_TOKEN="12345:telegram-token"' in env_content
+    assert 'TELEGRAM_ALLOWED_USER_IDS="98765"' in env_content
+    assert f'SAKTHAI_HOME="{target_dir / ".sakthai-servicequotebot"}"' in env_content
+
+    service_content = result.service_file.read_text()
+    assert service_content.startswith("[Unit]")
+
+    assert result.service_file.parent == target_dir / "systemd"
+
+
+@patch("scripts.setup_servicequotebot.build_customer_bundle")
+@patch("scripts.setup_servicequotebot.run_ingest")
+def test_main_cli_flow(mock_run_ingest, mock_build_bundle, tmp_path: Path, capsys) -> None:
+    """Test the main function CLI argument parsing and flow."""
+    from scripts.setup_servicequotebot import BundleResult, main
+
+    target_dir = tmp_path / "customer_bundle"
+    repo_root = tmp_path / "repo"
+    price_book = repo_root / "price.md"
+
+    mock_build_bundle.return_value = BundleResult(
+        env_file=target_dir / "servicequotebot.env",
+        service_file=target_dir / "systemd" / "servicequotebot.service",
+        ingest_command=["ingest", "command"],
     )
-    assert repo_root.as_posix() in bundle.service_file.read_text(encoding="utf-8")
-    assert str(bundle.env_file) in bundle.service_file.read_text(encoding="utf-8")
-    assert bundle.price_book_copy.exists()
 
-    with MemoryStore(bundle.memory_db) as store:
-        snapshot = store.export_to_dict()
+    sys.argv = [
+        "setup_servicequotebot.py",
+        "--repo-root",
+        str(repo_root),
+        "--target-dir",
+        str(target_dir),
+        "--price-book",
+        str(price_book),
+        "--anthropic-api-key",
+        "key1",
+        "--telegram-bot-token",
+        "token1",
+        "--telegram-allowed-user-ids",
+        "123,456",
+        "--run-ingest",
+    ]
 
-    assert len(snapshot["facts"]) == 2
+    main()
+
+    mock_build_bundle.assert_called_once()
+    mock_run_ingest.assert_called_once_with(["ingest", "command"])
+
+    captured = capsys.readouterr()
+    assert "ServiceQuoteBot bundle created at" in captured.out
+    assert "Ingesting price book..." in captured.out

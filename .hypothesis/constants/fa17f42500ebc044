@@ -1,4 +1,0 @@
-# file: C:\Users\beern\OneDrive\Documents\GitHub\Sak-Family-Agent\sakthai\web\server.py
-# hypothesis_version: 6.155.7
-
-[200, 403, 3001, '&', '/', '/api/ecosystem', '/api/stages', '127.0.0.1', '30', '=', 'COMPOSIO_API_KEY', 'Content-Length', 'Content-Type', 'DENY', 'Forbidden', 'HF_TOKEN', 'HUGGINGFACE_USERNAME', 'Referrer-Policy', 'X-Frame-Options', '__main__', 'categories', 'composio_mcp', 'configured', 'cron_jobs', 'dashboard', 'days', 'demo', 'dist', 'facts', 'generated_at', 'growth', 'huggingface', 'kpis', 'labels', 'nosniff', 'not_configured', 'not_ready', 'observations', 'ready', 'recent_facts', 'source', 'supermemory', 'top_observations', 'total_facts', 'total_facts_delta', 'total_observations', 'unknown', 'utf-8']
