@@ -36,9 +36,7 @@ def test_run_command_denied_by_default(
 ) -> None:
     """run_command is denied if SAKTHAI_SHELL_ALLOW is not set."""
     monkeypatch.delenv("SAKTHAI_SHELL_ALLOW", raising=False)
-    result = DEFAULT_POLICY.check_pre_execution(
-        run_command_tool, {"command": "ls"}, store
-    )
+    result = DEFAULT_POLICY.check_pre_execution(run_command_tool, {"command": "ls"}, store)
     assert result.action == GuardrailAction.DENY
     assert result.reason and "disabled" in result.reason
 
@@ -48,9 +46,7 @@ def test_run_command_allowed_when_env_var_is_set(
 ) -> None:
     """run_command is allowed if SAKTHAI_SHELL_ALLOW is set."""
     monkeypatch.setenv("SAKTHAI_SHELL_ALLOW", "1")
-    result = DEFAULT_POLICY.check_pre_execution(
-        run_command_tool, {"command": "ls -l"}, store
-    )
+    result = DEFAULT_POLICY.check_pre_execution(run_command_tool, {"command": "ls -l"}, store)
     assert result.action == GuardrailAction.ALLOW
 
 
@@ -119,9 +115,7 @@ def test_malformed_shell_command_is_denied(
     """A command that shlex cannot parse should be denied."""
     monkeypatch.setenv("SAKTHAI_SHELL_ALLOW", "1")
     policy = GuardrailPolicy()
-    result = policy.check_pre_execution(
-        run_command_tool, {"command": "echo 'mismatched"}, store
-    )
+    result = policy.check_pre_execution(run_command_tool, {"command": "echo 'mismatched"}, store)
     assert result.action == GuardrailAction.DENY
     assert result.reason and "Malformed" in result.reason
 
@@ -131,9 +125,7 @@ def test_custom_rules_can_be_added(learn_tool: Tool, store: MemoryStore) -> None
 
     from sakthai.agent.guardrails import GuardrailResult
 
-    def _deny_all_rule(
-        tool: Tool, args: dict[str, Any], store: MemoryStore
-    ) -> GuardrailResult:
+    def _deny_all_rule(tool: Tool, args: dict[str, Any], store: MemoryStore) -> GuardrailResult:
         return GuardrailResult(action=GuardrailAction.DENY, reason="custom rule")
 
     policy = GuardrailPolicy(pre_rules=[_deny_all_rule])

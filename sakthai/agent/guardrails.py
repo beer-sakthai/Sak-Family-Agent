@@ -42,9 +42,7 @@ class GuardrailResult:
 
 
 PreGuardrailRule = Callable[[Tool, dict[str, Any], MemoryStore], GuardrailResult]
-PostGuardrailRule = Callable[
-    [Tool, dict[str, Any], str, bool, MemoryStore], GuardrailResult
-]
+PostGuardrailRule = Callable[[Tool, dict[str, Any], str, bool, MemoryStore], GuardrailResult]
 
 
 def _block_run_command_if_not_allowed(
@@ -71,9 +69,7 @@ def _block_dangerous_shell_commands(
         try:
             parts = shlex.split(command)
         except ValueError:
-            return GuardrailResult(
-                GuardrailAction.DENY, reason="Malformed shell command."
-            )
+            return GuardrailResult(GuardrailAction.DENY, reason="Malformed shell command.")
 
         if not parts:
             return GuardrailResult(GuardrailAction.ALLOW)
@@ -85,17 +81,12 @@ def _block_dangerous_shell_commands(
 
             # Look for recursive and force flags among the arguments
             has_recursive = any(
-                (
-                    p.startswith("-")
-                    and not p.startswith("--")
-                    and ("r" in p or "R" in p)
-                )
+                (p.startswith("-") and not p.startswith("--") and ("r" in p or "R" in p))
                 or p == "--recursive"
                 for p in after_rm
             )
             has_force = any(
-                (p.startswith("-") and not p.startswith("--") and "f" in p)
-                or p == "--force"
+                (p.startswith("-") and not p.startswith("--") and "f" in p) or p == "--force"
                 for p in after_rm
             )
 
@@ -116,9 +107,7 @@ def _enforce_verbose_listing(
     """If `run_command` is used for `ls`, enforce the `-l` flag."""
     if tool.name == "run_command" and isinstance(args.get("command"), str):
         command = args["command"]
-        if command.strip() == "ls" or (
-            command.startswith("ls ") and "-l" not in command
-        ):
+        if command.strip() == "ls" or (command.startswith("ls ") and "-l" not in command):
             modified_args = args.copy()
             modified_args["command"] = command.replace("ls", "ls -l", 1)
             return GuardrailResult(GuardrailAction.ALLOW, modified_args=modified_args)
@@ -161,12 +150,8 @@ DEFAULT_POST_RULES: list[PostGuardrailRule] = [
 class GuardrailPolicy:
     """A policy that enforces guardrails on tool execution."""
 
-    pre_rules: Sequence[PreGuardrailRule] = field(
-        default_factory=lambda: DEFAULT_PRE_RULES
-    )
-    post_rules: Sequence[PostGuardrailRule] = field(
-        default_factory=lambda: DEFAULT_POST_RULES
-    )
+    pre_rules: Sequence[PreGuardrailRule] = field(default_factory=lambda: DEFAULT_PRE_RULES)
+    post_rules: Sequence[PostGuardrailRule] = field(default_factory=lambda: DEFAULT_POST_RULES)
 
     def check_pre_execution(
         self, tool: Tool, args: dict[str, Any], store: MemoryStore
