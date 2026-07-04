@@ -23,3 +23,8 @@
 **Learning:** Security must extend beyond the active tool loop to the persistent data layer. Centralizing redaction at the tool execution boundary and the log writing boundary, combined with strict POSIX file permissions (0600/0700), ensures that sensitive data remains protected both in transit (to the LLM) and at rest (on disk).
 
 **Prevention:** Use `os.open` with explicit modes for file creation and `os.chmod` for existing sensitive directories/files. Always apply central redaction logic to any data being persisted to logs or returned from external tool executions.
+
+## 2026-07-04 - Restricting File System Access in Document Ingestion
+**Vulnerability:** The `ingest_document` tool lacked path validation, allowing it to read and ingest any file on the host that the process had permissions for (e.g., `/etc/hostname`), bypassing the intended directory restrictions enforced by `_allowed_read_roots`.
+**Learning:** Security controls must be applied consistently across all tools that perform similar operations (like file I/O). Hardening one tool (`read_file`) but leaving another (`ingest_document`) open creates a gap that can be exploited for path traversal or unauthorized data exposure.
+**Prevention:** Centralize security validation logic into reusable helper functions and ensure all relevant entry points use them. In this case, extracting the path resolution and root-containment check into `_resolve_and_validate_path` ensures consistent enforcement.
