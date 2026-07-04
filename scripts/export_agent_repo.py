@@ -18,28 +18,28 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 PERSONA_DETAILS: dict[str, dict[str, str]] = {
     "sakking": {
         "display": "SakKing Agent",
-        "handle": "@SakKing_Agent_bot",
+        "handle": "@sakthai_agent_v2_bot",
         "role": "Lead & Orchestrator · Master of Code & Self-Healing",
         "summary": "the lead agent that coordinates the family and owns the widest skill set",
         "repo": "beer-sakthai/sakking-agent",
     },
     "sakthai": {
         "display": "SakThai",
-        "handle": "@SakThai_Agent_bot",
+        "handle": "@sakthai_v1_bot",
         "role": "Master of Hugging Face",
         "summary": "the Hugging Face specialist with shared memory and tool access",
         "repo": "beer-sakthai/sakthai-agent",
     },
     "saksee": {
         "display": "SakSee",
-        "handle": "@SakSee_Agent_bot",
+        "handle": "@saksee_bot",
         "role": "Master of Web",
         "summary": "the browser, scraping, and live-web specialist",
         "repo": "beer-sakthai/saksee-agent",
     },
     "saksit": {
         "display": "SakSit",
-        "handle": "@SakSit_Agent_bot",
+        "handle": "@saksit_agent_bot",
         "role": "Master of Social Media",
         "summary": "the content and social media agent for images, video, and captions",
         "repo": "beer-sakthai/saksit-agent",
