@@ -5,7 +5,6 @@ from __future__ import annotations
 import json
 import os
 import subprocess
-import sys
 import urllib.error
 import urllib.request
 from pathlib import Path
@@ -161,16 +160,9 @@ def test_run_command_disabled_by_default(monkeypatch: pytest.MonkeyPatch, store)
 
 def test_run_command_when_enabled(monkeypatch: pytest.MonkeyPatch, store) -> None:
     monkeypatch.setenv("SAKTHAI_SHELL_ALLOW", "1")
-    from unittest.mock import MagicMock
-
-    mock_run = MagicMock()
-    mock_run.return_value.returncode = 0
-    mock_run.return_value.stdout = "hello output"
-    mock_run.return_value.stderr = ""
-    monkeypatch.setattr("subprocess.run", mock_run)
-    out = tool_by_name("run_command").handler({"command": "some command"}, store)
+    out = tool_by_name("run_command").handler({"command": "echo hello"}, store)
     assert "[exit 0]" in out
-    assert "hello output" in out
+    assert "hello" in out
 
 
 def test_telegram_missing_config(monkeypatch: pytest.MonkeyPatch, store) -> None:
@@ -656,19 +648,16 @@ class TestReadFileErrors:
         original_resolve = Path.resolve
 
         def _patched_resolve(self, *args, **kwargs):
-            if "simulated_os_error.txt" in str(self):
+            if "/simulated/os/error" in str(self):
                 raise OSError("simulated os error")
             return original_resolve(self, *args, **kwargs)
 
         monkeypatch.setattr(Path, "resolve", _patched_resolve)
 
         with pytest.raises(FileNotFoundError, match="could not be opened: simulated os error"):
-            tool_by_name("read_file").handler({"path": "simulated_os_error.txt"}, store)
+            tool_by_name("read_file").handler({"path": "/simulated/os/error"}, store)
 
 
-@pytest.mark.skipif(
-    sys.platform == "win32", reason="Windows requires admin privileges for symlinks"
-)
 class TestReadFileSymlink:
     def test_symlink_to_outside_root_is_blocked(
         self,

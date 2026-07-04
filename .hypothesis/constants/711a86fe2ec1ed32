@@ -1,0 +1,4 @@
+# file: C:\Users\beern\OneDrive\Documents\GitHub\Sak-Family-Agent\sakthai\cli\cycle.py
+# hypothesis_version: 6.155.7
+
+[', ', '--force', '-f', 'STAGE', 'list', 'next', 'set', 'stage_name', 'status', '▶']

@@ -1,0 +1,4 @@
+# file: C:\Users\beern\OneDrive\Documents\GitHub\Sak-Family-Agent\sakthai\agent\providers\base.py
+# hypothesis_version: 6.155.7
+
+[0.5, 8.0, 408, 409, 429, 500, 502, 503, 504, 'code', 'content', 'id', 'input_tokens', 'name', 'output_tokens', 'response', 'status_code', 'tool_use', 'type', 'unknown']

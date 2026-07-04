@@ -79,10 +79,6 @@ def _block_dangerous_shell_commands(
         is_rm_rf = "rm" in parts and "-rf" in parts
         # More specific check: only block if / or ~ is a separate argument following rm -rf
         if is_rm_rf and ("/" in parts or "~" in parts):
-        while parts and parts[0] == "sudo":
-            parts = parts[1:]
-        if parts and parts[0] == "rm" and "-rf" in parts and ("/" in parts or "~" in parts):
-        if "rm" in parts and "-rf" in parts and ("/" in parts or "~" in parts):
             return GuardrailResult(
                 GuardrailAction.DENY, reason="Potentially destructive 'rm -rf' command blocked."
             )

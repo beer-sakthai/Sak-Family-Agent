@@ -389,16 +389,6 @@ def test_openai_provider_basic(store: MemoryStore) -> None:
 
 
 def test_openai_provider_tool_use(store: MemoryStore, monkeypatch: pytest.MonkeyPatch) -> None:
-    # We no longer use ContextManager in loop.py, so we mock _build_system instead
-    # to return the prompt we want.
-    import sakthai.agent.loop as loop_mod
-
-    def _fake_build_system(
-        store, skills, command_system, fast, stateless, caveman, system_prompt_prefix=""
-    ):
-        return "system prompt"
-
-    monkeypatch.setattr(loop_mod, "_build_system", _fake_build_system)
 
     first_response = {
         "choices": [
@@ -833,7 +823,6 @@ def test_preflight_runnable_with_anthropic_creds(monkeypatch: pytest.MonkeyPatch
     import sakthai.agent.loop as loop_mod
 
     monkeypatch.setattr("sakthai.agent.loop.get_credential_source", lambda _p: "api_key")
-    monkeypatch.setattr("sakthai.auth.anthropic_credential_source", lambda: "api_key")
     report = loop_mod.preflight(provider="anthropic")
     assert report["provider"] == "anthropic"
     assert report["model"] == loop_mod.DEFAULT_MODEL
@@ -847,7 +836,6 @@ def test_preflight_not_runnable_without_creds(monkeypatch: pytest.MonkeyPatch) -
     import sakthai.agent.loop as loop_mod
 
     monkeypatch.setattr("sakthai.agent.loop.get_credential_source", lambda _p: None)
-    monkeypatch.setattr("sakthai.auth.anthropic_credential_source", lambda: None)
     report = loop_mod.preflight(provider="anthropic")
     assert report["runnable"] is False
     assert report["credential_source"] is None
@@ -874,7 +862,6 @@ def test_preflight_makes_no_api_call(monkeypatch: pytest.MonkeyPatch) -> None:
 
     monkeypatch.setattr(loop_mod, "_build_client", boom)
     monkeypatch.setattr("sakthai.agent.loop.get_credential_source", lambda _p: "api_key")
-    monkeypatch.setattr("sakthai.auth.anthropic_credential_source", lambda: "api_key")
     report = loop_mod.preflight(provider="anthropic")
     assert report["runnable"] is True
 
@@ -883,7 +870,6 @@ def test_preflight_gateway_provider(monkeypatch: pytest.MonkeyPatch) -> None:
     import sakthai.agent.loop as loop_mod
 
     monkeypatch.setattr("sakthai.agent.loop.get_credential_source", lambda _p: "gateway_url")
-    monkeypatch.setattr("sakthai.auth.gateway_credential_source", lambda: "gateway_url")
     monkeypatch.setattr(loop_mod, "_build_client", lambda *a, **kw: None)
     report = loop_mod.preflight(provider="gateway")
     assert report["provider"] == "gateway"
@@ -1759,11 +1745,7 @@ def test_guardrail_explicitly_modifies_tool_arguments_in_loop(
     monkeypatch.setenv("SAKTHAI_SHELL_ALLOW", "1")
 
     # Mock the underlying subprocess call to capture the command that was executed
-    mock_run = MagicMock()
-    mock_run.return_value.returncode = 0
-    mock_run.return_value.stdout = "output"
-    mock_run.return_value.stderr = ""
-    monkeypatch.setattr("subprocess.run", mock_run)
+    mock_run = patch("subprocess.run").start()
 
     # The model asks to run `ls` which the guardrail will modify to `ls -l`
     client = FakeClient(

@@ -134,13 +134,9 @@ def evolve(
         dataset.save(save_path)
         console.print(f"  Generated {len(dataset.all_examples)} layout-specific examples")
         console.print(f"  Saved to {save_path}/")
-<<<<<<< HEAD
-    elif eval_source == "golden" and dataset_path:
-=======
         eval_source = "layout_synthetic"  # Override source for clarity
 
     if eval_source == "golden" and dataset_path:
->>>>>>> 858045420f64b1617246e98fd657d158bc7109cd
         dataset = GoldenDatasetLoader.load(Path(dataset_path))
         console.print(f"  Loaded golden dataset: {len(dataset.all_examples)} examples")
     elif eval_source == "sessiondb":
