@@ -36,11 +36,10 @@ on:
     branches: ["main"]
   workflow_dispatch:
 
-permissions:
-  pull-requests: read # allows SonarCloud to decorate PRs with analysis results
-
 jobs:
   Analysis:
+    permissions:
+      pull-requests: read # allows SonarCloud to decorate PRs with analysis results
     runs-on: ubuntu-latest
     if: >-
       github.event_name == 'push' ||
@@ -50,13 +49,13 @@ jobs:
       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v4.1.7
         with:
           fetch-depth: 0
 
       - name: Analyze with SonarCloud
         if: env.SONAR_TOKEN != ''
-        uses: SonarSource/sonarcloud-github-action@v3.1.0
+        uses: SonarSource/sonarcloud-github-action@v3.1.0 # Note: v3.1.0 is the latest as of review. Consider updating if a newer release is available.
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         with:

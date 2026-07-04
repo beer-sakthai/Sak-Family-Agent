@@ -63,7 +63,7 @@ This project is primarily built for **Beer** (`beer-sakthai`) as a personal sand
 
 ## 👨‍👩‍👧‍👦 The Sak Family Members
 
-The Sak-Family-Agent ecosystem comprises six distinct AI personas, with **SakKing** acting as the lead and orchestrator. All are deployed as always-on Telegram bots on a single Azure VM, sharing one Azure AI Foundry backend (`sakthai-resource`) via the OpenAI-compatible `/openai/v1` API — each persona just points at a different deployed model [1].
+The Sak-Family-Agent ecosystem comprises six distinct AI personas, with **SakKing** acting as the lead and orchestrator. All are deployed as always-on Telegram bots on a single Azure VM, sharing one Azure AI Foundry backend (`sakthai-resource`) via the OpenAI-compatible `/openai/v1` API — each persona just points at a different deployed model [1]. The repository also carries **ServiceQuoteBot** (`personas/servicequotebot/`), a business persona scaffold for quoting and lead capture that is not part of the six-agent family.
 
 | Agent | Handle | Role | Model (on `sakthai-resource`) | State |
 | :---- | :----- | :--- | :----------------------------- | :---- |

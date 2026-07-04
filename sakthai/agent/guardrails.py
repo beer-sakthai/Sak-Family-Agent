@@ -76,6 +76,9 @@ def _block_dangerous_shell_commands(
 
         # Example blocklist: prevent recursive deletion or other high-risk commands.
         # This is not exhaustive but serves as a starting point.
+        while parts and parts[0] == "sudo":
+            parts = parts[1:]
+        if parts and parts[0] == "rm" and "-rf" in parts and ("/" in parts or "~" in parts):
         if "rm" in parts and "-rf" in parts and ("/" in parts or "~" in parts):
             return GuardrailResult(
                 GuardrailAction.DENY, reason="Potentially destructive 'rm -rf' command blocked."
