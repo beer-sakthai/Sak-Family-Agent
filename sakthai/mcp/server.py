@@ -78,9 +78,7 @@ def _tool_call(
         reason = pre_check.reason or f"Tool '{name}' was denied by a pre-execution guardrail."
         return _text_content(reason, is_error=True)
 
-    final_args = (
-        pre_check.modified_args if pre_check.modified_args is not None else dict(arguments)
-    )
+    final_args = pre_check.modified_args if pre_check.modified_args is not None else dict(arguments)
 
     # 2. Tool execution with global redaction fail-safe
     try:
@@ -146,9 +144,7 @@ def handle_request(
 
     if method == "tools/call":
         return (
-            None
-            if is_notification
-            else _result(req_id, _tool_call(params, store, tools, policy))
+            None if is_notification else _result(req_id, _tool_call(params, store, tools, policy))
         )
 
     if is_notification:
