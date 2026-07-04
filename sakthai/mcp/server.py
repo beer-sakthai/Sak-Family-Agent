@@ -19,7 +19,9 @@ import sys
 from typing import Any, TextIO
 
 from .. import __version__
+from ..agent.guardrails import DEFAULT_POLICY, GuardrailAction, GuardrailPolicy
 from ..agent.tools import BUILTIN_TOOLS, Tool
+from ..config import redact_secrets
 from ..memory.store import MemoryStore
 
 logger = logging.getLogger(__name__)
@@ -46,7 +48,11 @@ def _error(req_id: Any, code: int, message: str) -> dict[str, Any]:
 def _tool_list(tools: tuple[Tool, ...]) -> dict[str, Any]:
     return {
         "tools": [
-            {"name": t.name, "description": t.description, "inputSchema": t.input_schema}
+            {
+                "name": t.name,
+                "description": t.description,
+                "inputSchema": t.input_schema,
+            }
             for t in tools
         ]
     }
@@ -57,7 +63,10 @@ def _text_content(text: str, *, is_error: bool) -> dict[str, Any]:
 
 
 def _tool_call(
-    params: dict[str, Any], store: MemoryStore, tools: tuple[Tool, ...]
+    params: dict[str, Any],
+    store: MemoryStore,
+    tools: tuple[Tool, ...],
+    policy: GuardrailPolicy,
 ) -> dict[str, Any]:
     name = params.get("name")
     arguments = params.get("arguments")
@@ -66,12 +75,34 @@ def _tool_call(
     tool = next((t for t in tools if t.name == name), None)
     if tool is None:
         return _text_content(f"Unknown tool: {name}", is_error=True)
+
+    # 1. Pre-execution guardrails
+    pre_check = policy.check_pre_execution(tool, dict(arguments), store)
+    if pre_check.action == GuardrailAction.DENY:
+        reason = pre_check.reason or f"Tool '{name}' was denied by a pre-execution guardrail."
+        return _text_content(reason, is_error=True)
+
+    final_args = pre_check.modified_args if pre_check.modified_args is not None else dict(arguments)
+
+    # 2. Tool execution with global redaction fail-safe
     try:
-        output = tool.handler(dict(arguments), store)
+        output = tool.handler(final_args, store)
+        is_error = False
     except Exception as exc:  # noqa: BLE001 — reported to the client as isError
         logger.debug("MCP tool %r raised %s: %s", name, type(exc).__name__, exc)
-        return _text_content(f"{type(exc).__name__}: {exc}", is_error=True)
-    return _text_content(output, is_error=False)
+        output = f"{type(exc).__name__}: {exc}"
+        is_error = True
+
+    # Apply redaction to raw output or exception message
+    redacted_output = redact_secrets(output)
+
+    # 3. Post-execution guardrails
+    post_check = policy.check_post_execution(tool, final_args, redacted_output, is_error, store)
+    if post_check.action == GuardrailAction.DENY:
+        reason = post_check.reason or f"Output from tool '{name}' was denied by a guardrail."
+        return _text_content(reason, is_error=True)
+
+    return _text_content(redacted_output, is_error=is_error)
 
 
 def handle_request(
@@ -79,6 +110,7 @@ def handle_request(
     store: MemoryStore,
     *,
     tools: tuple[Tool, ...] = BUILTIN_TOOLS,
+    policy: GuardrailPolicy = DEFAULT_POLICY,
 ) -> dict[str, Any] | None:
     """Handle one JSON-RPC request.
 
@@ -115,7 +147,14 @@ def handle_request(
         return None if is_notification else _result(req_id, _tool_list(tools))
 
     if method == "tools/call":
-        return None if is_notification else _result(req_id, _tool_call(params, store, tools))
+        return (
+            None
+            if is_notification
+            else _result(
+                req_id,
+                _tool_call(params, store, tools, policy),
+            )
+        )
 
     if is_notification:
         return None
@@ -133,6 +172,7 @@ def serve(
     stdin: TextIO | None = None,
     stdout: TextIO | None = None,
     tools: tuple[Tool, ...] = BUILTIN_TOOLS,
+    policy: GuardrailPolicy = DEFAULT_POLICY,
 ) -> None:
     """Run the stdio loop until EOF. Streams and store are injectable for tests."""
     in_stream = stdin if stdin is not None else sys.stdin
@@ -150,7 +190,7 @@ def serve(
             except json.JSONDecodeError:
                 _write(out_stream, _error(None, PARSE_ERROR, "Parse error."))
                 continue
-            response = handle_request(request, store, tools=tools)
+            response = handle_request(request, store, tools=tools, policy=policy)
             if response is not None:
                 _write(out_stream, response)
     finally:
