@@ -8,7 +8,6 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from sakthai.agent.context_manager import ContextManager
 from sakthai.agent.loop import (
     AgentError,
     AgentResult,
@@ -21,7 +20,6 @@ from sakthai.agent.loop import (
     run_agent,
 )
 from sakthai.agent.registry import builtin_registry
-from sakthai.memory.provider import SakThaiMemoryProvider
 from sakthai.memory.store import MemoryStore
 
 
@@ -391,8 +389,16 @@ def test_openai_provider_basic(store: MemoryStore) -> None:
 
 
 def test_openai_provider_tool_use(store: MemoryStore, monkeypatch: pytest.MonkeyPatch) -> None:
-    cm = ContextManager(SakThaiMemoryProvider(store))
-    monkeypatch.setattr("sakthai.agent.loop.ContextManager", lambda *a, **kw: cm)
+    # We no longer use ContextManager in loop.py, so we mock _build_system instead
+    # to return the prompt we want.
+    import sakthai.agent.loop as loop_mod
+
+    def _fake_build_system(
+        store, skills, command_system, fast, stateless, caveman, system_prompt_prefix=""
+    ):
+        return "system prompt"
+
+    monkeypatch.setattr(loop_mod, "_build_system", _fake_build_system)
 
     first_response = {
         "choices": [
@@ -825,8 +831,9 @@ def test_provider_construction_no_creds_anthropic(
 
 def test_preflight_runnable_with_anthropic_creds(monkeypatch: pytest.MonkeyPatch) -> None:
     import sakthai.agent.loop as loop_mod
+    import sakthai.auth as auth_mod
 
-    monkeypatch.setattr(loop_mod, "anthropic_credential_source", lambda: "api_key")
+    monkeypatch.setattr(auth_mod, "anthropic_credential_source", lambda: "api_key")
     report = loop_mod.preflight(provider="anthropic")
     assert report["provider"] == "anthropic"
     assert report["model"] == loop_mod.DEFAULT_MODEL
@@ -838,8 +845,9 @@ def test_preflight_runnable_with_anthropic_creds(monkeypatch: pytest.MonkeyPatch
 
 def test_preflight_not_runnable_without_creds(monkeypatch: pytest.MonkeyPatch) -> None:
     import sakthai.agent.loop as loop_mod
+    import sakthai.auth as auth_mod
 
-    monkeypatch.setattr(loop_mod, "anthropic_credential_source", lambda: None)
+    monkeypatch.setattr(auth_mod, "anthropic_credential_source", lambda: None)
     report = loop_mod.preflight(provider="anthropic")
     assert report["runnable"] is False
     assert report["credential_source"] is None
@@ -860,20 +868,22 @@ def test_preflight_ollama_maps_to_openai(monkeypatch: pytest.MonkeyPatch) -> Non
 
 def test_preflight_makes_no_api_call(monkeypatch: pytest.MonkeyPatch) -> None:
     import sakthai.agent.loop as loop_mod
+    import sakthai.auth as auth_mod
 
     def boom(*_a: object, **_k: object) -> Any:
         raise AssertionError("preflight must not build a client")
 
     monkeypatch.setattr(loop_mod, "_build_client", boom)
-    monkeypatch.setattr(loop_mod, "anthropic_credential_source", lambda: "api_key")
+    monkeypatch.setattr(auth_mod, "anthropic_credential_source", lambda: "api_key")
     report = loop_mod.preflight(provider="anthropic")
     assert report["runnable"] is True
 
 
 def test_preflight_gateway_provider(monkeypatch: pytest.MonkeyPatch) -> None:
     import sakthai.agent.loop as loop_mod
+    import sakthai.auth as auth_mod
 
-    monkeypatch.setattr(loop_mod, "gateway_credential_source", lambda: "gateway_url")
+    monkeypatch.setattr(auth_mod, "gateway_credential_source", lambda: "gateway_url")
     monkeypatch.setattr(loop_mod, "_build_client", lambda *a, **kw: None)
     report = loop_mod.preflight(provider="gateway")
     assert report["provider"] == "gateway"
@@ -1554,7 +1564,6 @@ def test_run_agent_creates_own_store_and_closes_it(sakthai_home: Path) -> None:
         "hi",
         client=client,
         provider="anthropic",
-        sakthai_home=sakthai_home,
     )
     assert result.text == "ok"
 
@@ -1566,7 +1575,7 @@ def test_preflight_google_gemini_api_key(monkeypatch: pytest.MonkeyPatch) -> Non
     monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
     report = loop_mod.preflight(provider="google")
     assert report["provider"] == "google"
-    assert report["credential_source"] == "GEMINI_API_KEY"
+    assert report["credential_source"] == "api_key"
     assert report["runnable"] is True
 
 
@@ -1576,7 +1585,7 @@ def test_preflight_google_google_api_key_fallback(monkeypatch: pytest.MonkeyPatc
     monkeypatch.delenv("GEMINI_API_KEY", raising=False)
     monkeypatch.setenv("GOOGLE_API_KEY", "fake-google-key")
     report = loop_mod.preflight(provider="google")
-    assert report["credential_source"] == "GOOGLE_API_KEY"
+    assert report["credential_source"] == "api_key"
     assert report["runnable"] is True
 
 
@@ -1750,34 +1759,35 @@ def test_guardrail_explicitly_modifies_tool_arguments_in_loop(
     monkeypatch.setenv("SAKTHAI_SHELL_ALLOW", "1")
 
     # Mock the underlying subprocess call to capture the command that was executed
-    mock_run = patch("subprocess.run").start()
+    with patch("subprocess.run") as mock_run:
+        mock_run.return_value = MagicMock(returncode=0, stdout="ok", stderr="")
 
-    # The model asks to run `ls` which the guardrail will modify to `ls -l`
-    client = FakeClient(
-        [
-            _Resp(
-                "tool_use",
-                [_Block(type="tool_use", id="t1", name="run_command", input={"command": "ls"})],
-            ),
-            _Resp("end_turn", [_Block(type="text", text="ok")]),
-        ]
-    )
+        # The model asks to run `ls` which the guardrail will modify to `ls -l`
+        client = FakeClient(
+            [
+                _Resp(
+                    "tool_use",
+                    [_Block(type="tool_use", id="t1", name="run_command", input={"command": "ls"})],
+                ),
+                _Resp("end_turn", [_Block(type="text", text="ok")]),
+            ]
+        )
 
-    # Use a policy with only the rule we want to test for isolation
-    policy = GuardrailPolicy(pre_rules=[_enforce_verbose_listing])
+        # Use a policy with only the rule we want to test for isolation
+        policy = GuardrailPolicy(pre_rules=[_enforce_verbose_listing])
 
-    result = run_agent(
-        "list files",
-        client=client,
-        store=store,
-        provider="anthropic",
-        guardrail_policy=policy,
-    )
+        result = run_agent(
+            "list files",
+            client=client,
+            store=store,
+            provider="anthropic",
+            guardrail_policy=policy,
+        )
 
-    assert result.text == "ok"
-    assert any(c["name"] == "run_command" for c in result.tool_calls)
-    mock_run.assert_called_once()
-    assert mock_run.call_args.args[0] == ["ls", "-l"]
+        assert result.text == "ok"
+        assert any(c["name"] == "run_command" for c in result.tool_calls)
+        mock_run.assert_called_once()
+        assert mock_run.call_args.args[0] == ["ls", "-l"]
 
 
 # -- _strip_code_fence ----------------------------------------------------
