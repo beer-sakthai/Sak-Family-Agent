@@ -82,11 +82,33 @@ def _learn(args: dict[str, Any], store: MemoryStore) -> str:
     return f"Stored fact id={fact_id} (kind={kind}, key={key or '-'})."
 
 
+def _resolve_and_validate_path(path_str: str) -> Path:
+    """Resolve a path and ensure it is a file within the allowed roots."""
+    candidate = Path(path_str).expanduser()
+    try:
+        resolved = candidate.resolve(strict=True)
+    except FileNotFoundError as exc:
+        raise FileNotFoundError(f"{candidate} is not a regular file.") from exc
+    except OSError as exc:
+        raise FileNotFoundError(f"{candidate} could not be opened: {exc}") from exc
+
+    if not resolved.is_file():
+        raise FileNotFoundError(f"{resolved} is not a regular file.")
+
+    if not _path_under_any_root(resolved, _allowed_read_roots()):
+        raise PermissionError(
+            f"{resolved} is outside the allowed roots. Add it to SAKTHAI_READ_ALLOW "
+            "(os.pathsep-separated) to permit reading."
+        )
+    return resolved
+
+
 def _ingest_document(args: dict[str, Any], store: MemoryStore) -> str:
     path = args.get("path")
     if not isinstance(path, str) or not path.strip():
         raise ValueError("`path` is required and must be a non-empty string.")
-    ids = ingest_document_facts(path.strip(), store=store)
+    resolved = _resolve_and_validate_path(path.strip())
+    ids = ingest_document_facts(resolved, store=store)
     if not ids:
         return "No facts found in document."
     return f"learned {len(ids)} facts (ids: {ids})"
@@ -183,20 +205,7 @@ def _read_file(args: dict[str, Any], store: MemoryStore) -> str:
     raw = args.get("path")
     if not isinstance(raw, str) or not raw:
         raise ValueError("`path` is required and must be a non-empty string.")
-    candidate = Path(raw).expanduser()
-    try:
-        resolved = candidate.resolve(strict=True)
-    except FileNotFoundError as exc:
-        raise FileNotFoundError(f"{candidate} is not a regular file.") from exc
-    except OSError as exc:
-        raise FileNotFoundError(f"{candidate} could not be opened: {exc}") from exc
-    if not resolved.is_file():
-        raise FileNotFoundError(f"{resolved} is not a regular file.")
-    if not _path_under_any_root(resolved, _allowed_read_roots()):
-        raise PermissionError(
-            f"{resolved} is outside the allowed roots. Add it to SAKTHAI_READ_ALLOW "
-            "(os.pathsep-separated) to permit reading."
-        )
+    resolved = _resolve_and_validate_path(raw)
     with resolved.open(encoding="utf-8", errors="replace") as fh:
         text = fh.read(MAX_FILE_READ_CHARS + 1)
     if len(text) > MAX_FILE_READ_CHARS:

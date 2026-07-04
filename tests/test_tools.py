@@ -52,7 +52,10 @@ def test_learn_recall_search_forget(store: MemoryStore) -> None:
     assert "Memory is empty" in recall({}, store)
 
 
-def test_ingest_document_parses_common_formats(tmp_path: Path, store: MemoryStore) -> None:
+def test_ingest_document_parses_common_formats(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, store: MemoryStore
+) -> None:
+    monkeypatch.chdir(tmp_path)
     ingest = tool_by_name("ingest_document")
     assert ingest is not None
 
@@ -140,6 +143,13 @@ def test_read_file_blocks_outside_roots(tmp_path: Path, store) -> None:
     secret.write_text("x", encoding="utf-8")
     with pytest.raises(PermissionError):
         tool_by_name("read_file").handler({"path": str(secret)}, store)
+
+
+def test_ingest_document_blocks_outside_roots(tmp_path: Path, store) -> None:
+    secret = tmp_path / "secret.md"
+    secret.write_text("- top secret", encoding="utf-8")
+    with pytest.raises(PermissionError):
+        tool_by_name("ingest_document").handler({"path": str(secret)}, store)
 
 
 def test_run_command_disabled_by_default(monkeypatch: pytest.MonkeyPatch, store) -> None:
