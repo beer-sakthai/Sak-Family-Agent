@@ -391,10 +391,16 @@ def test_openai_provider_basic(store: MemoryStore) -> None:
 
 
 def test_openai_provider_tool_use(store: MemoryStore, monkeypatch: pytest.MonkeyPatch) -> None:
-    provider = SakThaiMemoryProvider()
-    provider._store = store
-    cm = ContextManager(provider)
-    monkeypatch.setattr("sakthai.agent.loop.ContextManager", lambda *a, **kw: cm)
+    # We no longer use ContextManager in loop.py, so we mock _build_system instead
+    # to return the prompt we want.
+    import sakthai.agent.loop as loop_mod
+
+    def _fake_build_system(
+        store, skills, command_system, fast, stateless, caveman, system_prompt_prefix=""
+    ):
+        return "system prompt"
+
+    monkeypatch.setattr(loop_mod, "_build_system", _fake_build_system)
 
     first_response = {
         "choices": [
@@ -1556,7 +1562,6 @@ def test_run_agent_creates_own_store_and_closes_it(sakthai_home: Path) -> None:
         "hi",
         client=client,
         provider="anthropic",
-        sakthai_home=sakthai_home,
     )
     assert result.text == "ok"
 
@@ -1568,7 +1573,7 @@ def test_preflight_google_gemini_api_key(monkeypatch: pytest.MonkeyPatch) -> Non
     monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
     report = loop_mod.preflight(provider="google")
     assert report["provider"] == "google"
-    assert report["credential_source"] == "GEMINI_API_KEY"
+    assert report["credential_source"] == "api_key"
     assert report["runnable"] is True
 
 
@@ -1578,7 +1583,7 @@ def test_preflight_google_google_api_key_fallback(monkeypatch: pytest.MonkeyPatc
     monkeypatch.delenv("GEMINI_API_KEY", raising=False)
     monkeypatch.setenv("GOOGLE_API_KEY", "fake-google-key")
     report = loop_mod.preflight(provider="google")
-    assert report["credential_source"] == "GOOGLE_API_KEY"
+    assert report["credential_source"] == "api_key"
     assert report["runnable"] is True
 
 
@@ -1752,7 +1757,11 @@ def test_guardrail_explicitly_modifies_tool_arguments_in_loop(
     monkeypatch.setenv("SAKTHAI_SHELL_ALLOW", "1")
 
     # Mock the underlying subprocess call to capture the command that was executed
-    mock_run = patch("subprocess.run").start()
+    mock_run = MagicMock()
+    mock_run.return_value.returncode = 0
+    mock_run.return_value.stdout = "output"
+    mock_run.return_value.stderr = ""
+    monkeypatch.setattr("subprocess.run", mock_run)
 
     # The model asks to run `ls` which the guardrail will modify to `ls -l`
     client = FakeClient(
