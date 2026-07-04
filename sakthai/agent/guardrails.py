@@ -75,8 +75,13 @@ def _block_dangerous_shell_commands(
             return GuardrailResult(GuardrailAction.ALLOW)
 
         # prevent recursive deletion of absolute or home-relative paths.
-        if "rm" in parts:
-            rm_idx = parts.index("rm")
+        rm_idx = -1
+        for i, part in enumerate(parts):
+            if part == "rm" or part.endswith("/rm"):
+                rm_idx = i
+                break
+
+        if rm_idx != -1:
             after_rm = parts[rm_idx + 1 :]
 
             # Look for recursive and force flags among the arguments

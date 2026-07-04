@@ -71,6 +71,9 @@ def test_other_tools_unaffected_by_shell_env_var(
         "sudo rm -rf /",
         "sudo rm -rf /etc",
         "rm -Rf /lib",
+        "/bin/rm -rf /",
+        "sudo /bin/rm -rf /",
+        "/usr/bin/rm -rf ~",
     ],
 )
 def test_dangerous_shell_commands_are_denied(
