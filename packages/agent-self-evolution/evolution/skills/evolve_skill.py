@@ -134,13 +134,9 @@ def evolve(
         dataset.save(save_path)
         console.print(f"  Generated {len(dataset.all_examples)} layout-specific examples")
         console.print(f"  Saved to {save_path}/")
-<<<<<<< HEAD
-    elif eval_source == "golden" and dataset_path:
-=======
         eval_source = "layout_synthetic"  # Override source for clarity
 
     if eval_source == "golden" and dataset_path:
->>>>>>> 858045420f64b1617246e98fd657d158bc7109cd
         dataset = GoldenDatasetLoader.load(Path(dataset_path))
         console.print(f"  Loaded golden dataset: {len(dataset.all_examples)} examples")
     elif eval_source == "sessiondb":
@@ -154,41 +150,6 @@ def evolve(
         )
         if not dataset.all_examples:
             console.print("[red]✗ No relevant examples found from session history[/red]")
-    else:
-        if eval_source == "golden" and dataset_path:
-            dataset = GoldenDatasetLoader.load(Path(dataset_path))
-            console.print(f"  Loaded golden dataset: {len(dataset.all_examples)} examples")
-        elif eval_source == "sessiondb":
-            save_path = Path(dataset_path) if dataset_path else Path("datasets") / "skills" / skill_name
-            dataset = build_dataset_from_external(
-                skill_name=skill_name,
-                skill_text=skill["raw"],
-                sources=["claude-code", "copilot", "hermes"],
-                output_path=save_path,
-                model=eval_model,
-            )
-            if not dataset.all_examples:
-                console.print("[red]✗ No relevant examples found from session history[/red]")
-                sys.exit(1)
-            console.print(f"  Mined {len(dataset.all_examples)} examples from session history")
-        elif eval_source == "synthetic":
-            builder = SyntheticDatasetBuilder(config)
-            dataset = builder.generate(
-                artifact_text=skill["raw"],
-                artifact_type="skill",
-            )
-            # Save for reuse
-            save_path = Path("datasets") / "skills" / skill_name
-            dataset.save(save_path)
-            console.print(f"  Generated {len(dataset.all_examples)} synthetic examples")
-            console.print(f"  Saved to {save_path}/")
-        elif dataset_path:
-            dataset = EvalDataset.load(Path(dataset_path))
-            console.print(f"  Loaded dataset: {len(dataset.all_examples)} examples")
-        else:
-            console.print("[red]✗ Specify --dataset-path or use --eval-source synthetic[/red]")
-            sys.exit(1)
-        console.print(f"  Mined {len(dataset.all_examples)} examples from session history")
     elif eval_source == "synthetic":
         builder = SyntheticDatasetBuilder(config)
         dataset = builder.generate(

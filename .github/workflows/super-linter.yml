@@ -13,14 +13,15 @@ on:
   pull_request:
     branches: [ "main" ]
 
+permissions:
+  contents: read
+
 jobs:
   run-lint:
-    permissions:
-      contents: read # for actions/checkout to fetch code
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4.1.7
+        uses: actions/checkout@v4
         with:
           # Full git history is needed so super-linter can compute the list
           # of changed files.
@@ -34,7 +35,7 @@ jobs:
         shell: bash
 
       - name: Lint Code Base
-        uses: github/super-linter@v6.6.0
+        uses: github/super-linter@v6
         env:
           VALIDATE_ALL_CODEBASE: false
           DEFAULT_BRANCH: "main"

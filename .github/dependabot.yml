@@ -7,11 +7,7 @@ updates:
   - package-ecosystem: "uv"
     directory: "/"
     schedule:
-      interval: "weekly" # Can be "daily", "weekly", or "monthly"
-      # Check for updates on Mondays at 9am Bangkok time
-      day: "monday"
-      time: "09:00"
-      timezone: "Asia/Bangkok"
+      interval: "weekly"
     open-pull-requests-limit: 5
     groups:
       python-minor-patch:
@@ -23,19 +19,7 @@ updates:
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 5
-    # Ignore specific dependencies
-    ignore:
-      # Ignore all updates for the 'express' package
-      - dependency-name: "express"
-      # Ignore only major version updates for the 'react' package
-      - dependency-name: "react"
-        update-types: ["version-update:semver-major"]
     groups:
-      # Group all eslint-related packages together
-      eslint-packages:
-        patterns:
-          - "eslint"
-          - "eslint-*"
       npm-minor-patch:
         update-types: ["minor", "patch"]
 
@@ -44,8 +28,6 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
-    # Create pull requests against the 'develop' branch instead of the default branch
-    target-branch: "develop"
     open-pull-requests-limit: 5
     groups:
       actions:
