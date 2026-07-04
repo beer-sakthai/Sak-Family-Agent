@@ -1,0 +1,4 @@
+# file: C:\Users\beern\Sak-Family-Agent\scripts\setup_servicequotebot.py
+# hypothesis_version: 6.155.7
+
+[',', '--anthropic-api-key', '--price-book', '--repo-root', '--target-dir', '--telegram-bot-token', '__ENV_FILE__', '__REPO_ROOT__', '__SAKTHAI_HOME__', '__main__', 'config', 'inputs', 'memory.db', 'sakthai', 'servicequotebot.env', 'state', 'systemd', 'utf-8']

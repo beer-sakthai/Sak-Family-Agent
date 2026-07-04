@@ -1,0 +1,4 @@
+# file: C:\Users\beern\Sak-Family-Agent\sakthai\cli\eval.py
+# hypothesis_version: 6.155.7
+
+['# Eval summary', '# Per-model', '--json', '--limit', 'as_json', 'count', 'per_model', 'summary']

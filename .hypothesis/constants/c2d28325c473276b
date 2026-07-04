@@ -1,0 +1,4 @@
+# file: C:\Users\beern\Sak-Family-Agent\scripts\setup_vm_telegram_agents.py
+# hypothesis_version: 6.155.7
+
+[',', '--openai-api-key', '--openai-base-url', '--repo-root', '--target-dir', 'SAKTHAI_FAST=1', '__main__', 'common.env', 'config', 'gpt-4o-mini', 'infra', 'model', 'persona', 'playwright', 'sakjules', 'sakking', 'saksee', 'saksit', 'saktan', 'sakthai', 'skills', 'systemd', 'utf-8', 'vm-agents']

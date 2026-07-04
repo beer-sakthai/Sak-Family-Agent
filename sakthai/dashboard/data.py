@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import UTC, datetime, timedelta
+import time
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -111,117 +112,98 @@ def _color_for(kind: str, index: int) -> str:
     return _KIND_COLORS.get(kind, _FALLBACK_COLORS[index % len(_FALLBACK_COLORS)])
 
 
-class DashboardDataCollector:
-    """Collects and structures data for the dashboard."""
+def collect_dashboard_data(db_path: Path | None = None, days: int = 30) -> dict[str, Any]:
+    """Assemble a dashboard snapshot from the memory store, or demo data if empty."""
+    now = int(time.time())
+    week_ago = now - _WEEK
+    start = now - days * _DAY
 
-    def __init__(self, store: Any):
-        self._store = store
+    try:
+        from sakthai.memory.store import MemoryStore
 
-    def collect(self, days: int = 30) -> dict[str, Any]:
-        """Assemble a dashboard snapshot from the memory store, or demo data if empty."""
-        now = datetime.now(UTC)
-        now_ts = int(now.timestamp())
-        week_ago = now_ts - _WEEK
-        start = now_ts - days * _DAY
-
-        try:
+        with MemoryStore(db_path) as store:
             # SQL-optimized aggregation (Bolt optimization)
-            f_agg = self._store.get_dashboard_aggregates("facts", _FACTS_LIMIT, start, week_ago)
-            o_agg = self._store.get_dashboard_aggregates(
-                "observations", _OBS_LIMIT, start, week_ago
-            )
-            counts = self._store.get_fact_kind_counts(_FACTS_LIMIT)
+            f_agg = store.get_dashboard_aggregates("facts", _FACTS_LIMIT, start, week_ago)
+            o_agg = store.get_dashboard_aggregates("observations", _OBS_LIMIT, start, week_ago)
+            counts = store.get_fact_kind_counts(_FACTS_LIMIT)
 
             if f_agg["total"] == 0 and o_agg["total"] == 0:
                 return dict(DEMO_DATA)
 
             # Fetch only the minimum required for the "recent" lists
-            facts = self._store.list_facts(limit=10)
-            observations = self._store.top_observations(limit=6)
-        except Exception:
-            logger.warning("Could not read MemoryStore; using demo data", exc_info=True)
-            return dict(DEMO_DATA)
-
-        labels: list[str] = []
-        fact_series: list[int] = []
-        obs_series: list[int] = []
-
-        curr_facts = f_agg["before_start"]
-        curr_obs = o_agg["before_start"]
-        for d in range(days):
-            day_end = start + (d + 1) * _DAY
-            labels.append(_fmt_date(day_end - _DAY))
-            curr_facts += f_agg["bins"][d]
-            curr_obs += o_agg["bins"][d]
-            fact_series.append(curr_facts)
-            obs_series.append(curr_obs)
-
-        categories: list[dict[str, Any]] = [
-            {
-                "name": kind.replace("_", " ").title(),
-                "count": count,
-                "color": _color_for(kind, i),
-            }
-            for i, (kind, count) in enumerate(sorted(counts.items(), key=lambda kv: -kv[1]))
-        ]
-        if o_agg["total"] > 0:
-            categories.append({"name": "Observations", "count": o_agg["total"], "color": "#f472b6"})
-
-        session_data = collect_session_data()
-
-        from ..config import LIBRARY_DIR, SKILLS_DIR
-        from ..skills import build_catalog
-
-        skills = build_catalog(SKILLS_DIR, LIBRARY_DIR)
-        total_skills = (
-            sum(int(cat.get("count", 0)) for cat in skills) if isinstance(skills, list) else 0
-        )
-
-        return {
-            "generated_at": _fmt_date(now_ts),
-            "source": SOURCE_LIVE,
-            "kpis": {
-                "total_facts": f_agg["total"],
-                "total_facts_delta": f_agg["this_week"],
-                "total_observations": o_agg["total"],
-                "total_observations_delta": o_agg["this_week"],
-                "sessions": session_data.get("totals", {}).get("sessions", 0),
-                "total_tokens": session_data.get("totals", {}).get("total_tokens", 0),
-                "total_skills": total_skills,
-            },
-            "growth": {"labels": labels, "facts": fact_series, "observations": obs_series},
-            "recent_facts": [
-                {
-                    "id": f.id,
-                    "kind": f.kind,
-                    "key": f.key or "",
-                    "value": f.value,
-                    "created": _fmt_date(f.created_at),
-                }
-                for f in facts[:10]
-            ],
-            "top_observations": [
-                {"summary": o.summary, "weight": round(o.weight, 2)} for o in observations[:6]
-            ],
-            "categories": categories,
-            "evolution": DEMO_EVOLUTION,
-            "chat": DEMO_CHAT,
-            "skills": skills,
-            "recent_sessions": session_data.get("recent_sessions", []),
-        }
-
-
-def collect_dashboard_data(db_path: Path | None = None, days: int = 30) -> dict[str, Any]:
-    """Assemble a dashboard snapshot from the memory store, or demo data if empty."""
-    try:
-        from sakthai.memory.store import MemoryStore
-
-        with MemoryStore(db_path) as store:
-            collector = DashboardDataCollector(store)
-            return collector.collect(days=days)
+            facts = store.list_facts(limit=10)
+            observations = store.top_observations(limit=6)
     except Exception:
         logger.warning("Could not read MemoryStore; using demo data", exc_info=True)
         return dict(DEMO_DATA)
+
+    labels: list[str] = []
+    fact_series: list[int] = []
+    obs_series: list[int] = []
+
+    curr_facts = f_agg["before_start"]
+    curr_obs = o_agg["before_start"]
+    for d in range(days):
+        day_end = start + (d + 1) * _DAY
+        labels.append(_fmt_date(day_end - _DAY))
+        curr_facts += f_agg["bins"][d]
+        curr_obs += o_agg["bins"][d]
+        fact_series.append(curr_facts)
+        obs_series.append(curr_obs)
+
+    categories: list[dict[str, Any]] = [
+        {
+            "name": kind.replace("_", " ").title(),
+            "count": count,
+            "color": _color_for(kind, i),
+        }
+        for i, (kind, count) in enumerate(sorted(counts.items(), key=lambda kv: -kv[1]))
+    ]
+    if o_agg["total"] > 0:
+        categories.append({"name": "Observations", "count": o_agg["total"], "color": "#f472b6"})
+
+    session_data = collect_session_data()
+
+    from ..config import LIBRARY_DIR, SKILLS_DIR
+    from ..skills import build_catalog
+
+    skills = build_catalog(SKILLS_DIR, LIBRARY_DIR)
+    total_skills = (
+        sum(int(cat.get("count", 0)) for cat in skills) if isinstance(skills, list) else 0
+    )
+
+    return {
+        "generated_at": _fmt_date(now),
+        "source": SOURCE_LIVE,
+        "kpis": {
+            "total_facts": f_agg["total"],
+            "total_facts_delta": f_agg["this_week"],
+            "total_observations": o_agg["total"],
+            "total_observations_delta": o_agg["this_week"],
+            "sessions": session_data.get("totals", {}).get("sessions", 0),
+            "total_tokens": session_data.get("totals", {}).get("total_tokens", 0),
+            "total_skills": total_skills,
+        },
+        "growth": {"labels": labels, "facts": fact_series, "observations": obs_series},
+        "recent_facts": [
+            {
+                "id": f.id,
+                "kind": f.kind,
+                "key": f.key or "",
+                "value": f.value,
+                "created": _fmt_date(f.created_at),
+            }
+            for f in facts[:10]
+        ],
+        "top_observations": [
+            {"summary": o.summary, "weight": round(o.weight, 2)} for o in observations[:6]
+        ],
+        "categories": categories,
+        "evolution": DEMO_EVOLUTION,
+        "chat": DEMO_CHAT,
+        "skills": skills,
+        "recent_sessions": session_data.get("recent_sessions", []),
+    }
 
 
 def _load_session(path: Path) -> dict[str, Any] | None:

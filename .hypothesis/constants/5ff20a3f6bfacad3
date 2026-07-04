@@ -1,0 +1,4 @@
+# file: C:\Users\beern\Sak-Family-Agent\sakthai\mcp\client.py
+# hypothesis_version: 6.155.7
+
+['1', '2.0', '2024-11-05', 'arguments', 'capabilities', 'clientInfo', 'content', 'description', 'error', 'id', 'initialize', 'inputSchema', 'isError', 'jsonrpc', 'mcp', 'message', 'method', 'name', 'object', 'params', 'properties', 'protocolVersion', 'result', 'sakthai-client', 'text', 'tools', 'tools/call', 'tools/list', 'type', 'version']

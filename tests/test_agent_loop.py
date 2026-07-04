@@ -391,7 +391,9 @@ def test_openai_provider_basic(store: MemoryStore) -> None:
 
 
 def test_openai_provider_tool_use(store: MemoryStore, monkeypatch: pytest.MonkeyPatch) -> None:
-    cm = ContextManager(SakThaiMemoryProvider(store))
+    provider = SakThaiMemoryProvider()
+    provider._store = store
+    cm = ContextManager(provider)
     monkeypatch.setattr("sakthai.agent.loop.ContextManager", lambda *a, **kw: cm)
 
     first_response = {
@@ -826,7 +828,7 @@ def test_provider_construction_no_creds_anthropic(
 def test_preflight_runnable_with_anthropic_creds(monkeypatch: pytest.MonkeyPatch) -> None:
     import sakthai.agent.loop as loop_mod
 
-    monkeypatch.setattr(loop_mod, "anthropic_credential_source", lambda: "api_key")
+    monkeypatch.setattr("sakthai.auth.anthropic_credential_source", lambda: "api_key")
     report = loop_mod.preflight(provider="anthropic")
     assert report["provider"] == "anthropic"
     assert report["model"] == loop_mod.DEFAULT_MODEL
@@ -839,7 +841,7 @@ def test_preflight_runnable_with_anthropic_creds(monkeypatch: pytest.MonkeyPatch
 def test_preflight_not_runnable_without_creds(monkeypatch: pytest.MonkeyPatch) -> None:
     import sakthai.agent.loop as loop_mod
 
-    monkeypatch.setattr(loop_mod, "anthropic_credential_source", lambda: None)
+    monkeypatch.setattr("sakthai.auth.anthropic_credential_source", lambda: None)
     report = loop_mod.preflight(provider="anthropic")
     assert report["runnable"] is False
     assert report["credential_source"] is None
@@ -865,7 +867,7 @@ def test_preflight_makes_no_api_call(monkeypatch: pytest.MonkeyPatch) -> None:
         raise AssertionError("preflight must not build a client")
 
     monkeypatch.setattr(loop_mod, "_build_client", boom)
-    monkeypatch.setattr(loop_mod, "anthropic_credential_source", lambda: "api_key")
+    monkeypatch.setattr("sakthai.auth.anthropic_credential_source", lambda: "api_key")
     report = loop_mod.preflight(provider="anthropic")
     assert report["runnable"] is True
 
@@ -873,7 +875,7 @@ def test_preflight_makes_no_api_call(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_preflight_gateway_provider(monkeypatch: pytest.MonkeyPatch) -> None:
     import sakthai.agent.loop as loop_mod
 
-    monkeypatch.setattr(loop_mod, "gateway_credential_source", lambda: "gateway_url")
+    monkeypatch.setattr("sakthai.auth.gateway_credential_source", lambda: "gateway_url")
     monkeypatch.setattr(loop_mod, "_build_client", lambda *a, **kw: None)
     report = loop_mod.preflight(provider="gateway")
     assert report["provider"] == "gateway"

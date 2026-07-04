@@ -1,0 +1,4 @@
+# file: C:\Users\beern\Sak-Family-Agent\sakthai\memory\store.py
+# hypothesis_version: 6.155.7
+
+[0.5, 1.0, 5.0, 100, 384, 448, 5000, 86400, ' AND ', '### Observations', '%', ',', ':memory:', ';', '; ', '=', '=%', '==', '=_', '?', 'BEGIN IMMEDIATE', 'DELETE FROM facts', 'WHERE ', '_', 'avg_confidence', 'avg_weight', 'before_start', 'bin', 'bins', 'by_kind', 'confidence', 'created_at', 'created_at <= ?', 'created_at >= ?', 'db_path', 'evidence_session_id', 'exported_at', 'fact', 'facts', 'id', 'ignore', 'key', 'kind', 'merge', 'n', 'name', 'newest', 'note', 'observation', 'observations', 'ok', 'oldest', 'replace', 'source_session', 'summary', 'tag', 'tags', 'this_week', 'total', 'type', 'unknown', 'updated_at', 'v', 'value', 'version', 'weight']

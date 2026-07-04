@@ -1,0 +1,4 @@
+# file: C:\Users\beern\Sak-Family-Agent\sakthai\agent\loop.py
+# hypothesis_version: 6.155.7
+
+[384, 448, 16000, '$ARGUMENTS', '$FEATURE', '---', '1', 'OLLAMA_HOST', 'SAKTHAI_AGENT_ACTIVE', '```', 'args', 'arguments', 'assistant', 'caveman', 'claude-opus-4-8', 'commands', 'content', 'credential_source', 'credentials_ok', 'end_turn', 'function', 'gateway', 'gemini-2.5-flash', 'google', 'gpt-4o', 'id', 'input', 'input_tokens', 'is_error', 'iteration', 'iterations', 'max_iterations', 'max_tokens', 'messages', 'model', 'n', 'name', 'ollama', 'openai', 'output_tokens', 'parameters', 'pause_turn', 'provider', 'qwen2.5-coder:7b', 'reason', 'refusal', 'result', 'role', 'runnable', 'stop_reason', 'stop_sequence', 'task', 'text', 'timestamp', 'tool', 'tool_call', 'tool_call_in_text', 'tool_calls', 'tool_count', 'tool_error', 'tool_input', 'tool_name', 'tool_result', 'tool_use', 'tool_use_id', 'tools', 'total_tokens', 'type', 'unknown', 'usage', 'user', 'utf-8', 'w', '{[']
