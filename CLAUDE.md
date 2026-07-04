@@ -28,8 +28,7 @@ persona overlays and can export standalone repository snapshots with
   Python package, **not** a uv workspace member (disjoint/heavy deps; its
   `darwinian` extra is unpublished). Build it on its own; the root `uv.lock`
   stays SakThai-only.
-- `personas/` — the six Sak Family persona trees plus the ServiceQuoteBot
-  business scaffold. The 461 skill files identical
+- `personas/` — the four former `*-skills` repos. The ~446 skill files identical
   across all personas live once in `personas/shared/skills/`; each
   `personas/<name>/` keeps only its `SOUL.md`, `config/`, and a skill *overlay*
   (unique/differing files). `scripts/compose_persona.py` rebuilds a persona's
@@ -38,8 +37,6 @@ persona overlays and can export standalone repository snapshots with
 - `infra/vm-agents/` — VM deployment assets for the Telegram bots (env
   templates, systemd units; config only).
 - `infra/pw-poc/` — Playwright accessibility probe (standalone npm project).
-- `infra/servicequotebot/` — deployment assets for the ServiceQuoteBot scaffold.
-- `infra/sakthai-training-space/` — training-space assets (Hugging Face).
 - `services/` — service pitches/specs not yet part of the package (e.g.
   `hugging-face-dataset-publishing/`).
 - `training/` — Hugging Face Jobs fine-tune + model-serving scripts.
@@ -47,12 +44,10 @@ persona overlays and can export standalone repository snapshots with
 
 ### Sak Family Agents
 
-The repository also carries the **Sak Family Agents** — six family personas with
-**SakKing** as the **main** (Lead & Orchestrator) and **SakThai**, **SakSee**,
-**SakSit**, **SakTan**, and **SakJules** as the family it coordinates — plus
-**ServiceQuoteBot**, a separate business-persona scaffold under `personas/`
-that is not a family member. The authoritative per-agent identities are
-`docs/SOUL.md` + `personas/<name>/SOUL.md`.
+**The repository also carries the **Sak Family Agents** — six personas with **SakKing**
+as the **main** (Lead & Orchestrator) and **SakThai**, **SakSee**, **SakSit**,
+**SakTan**, and **SakJules** as the family it coordinates. The authoritative
+per-agent identities are `docs/SOUL.md` + `personas/<name>/SOUL.md`.
 Keep the SakKing-as-lead framing consistent if you touch any of them.
 
 CI (`ci.yml`, `pylint.yml`) scopes ruff/mypy/bandit/pytest/pylint to the
@@ -176,17 +171,6 @@ CLI/MCP → agent loop → tool registry → MemoryStore → SQLite. See
   writes session logs to `~/.sakthai/sessions/`. Returns `AgentResult` (iterations,
   stop_reason, tool_calls, usage). Client and store are injectable for testing.
 - **`agent/usage.py`** — `UsageTracker` / `extract_usage()` for token counting.
-- **`agent/prompt_builder.py`** — assembles the system prompt (memory block +
-  skills block) used by `run_agent()`.
-- **`agent/context_manager.py`** / **`agent/context_filter.py`** — context-window
-  management: `ContextManager` assembles prompt + history; the filter module
-  provides summarization/pruning strategies to keep token counts bounded.
-- **`agent/guardrails.py`** — `GuardrailPolicy` checks tool calls before/after
-  execution (e.g. blocking dangerous shell commands) for centralized policy
-  enforcement.
-- **`agent/eval.py`** — local eval/MLOps logging: every `run_agent` call appends
-  an `EvalRecord` (model, latency, usage, outcome) to `~/.sakthai/eval.jsonl`;
-  `summarize_evals` backs `sakthai eval summary`.
 - **`agent/providers/`** — provider abstraction:
   - `base.py` — shared types (`Block`, `Response`), retry logic via `tenacity`
   - `anthropic_provider.py` — Claude via `anthropic` SDK
@@ -233,7 +217,6 @@ Click commands split by area; all sub-files imported by `cli/__init__.py`:
   hardened `http.server`, or exports a JSON snapshot with `--export`)
 - `sessions.py` — `sessions` group
 - `hf.py` — `hf info|download` (Hugging Face Hub operations)
-- `eval.py` — `eval` group (summarize the local model eval/MLOps log)
 
 ### Other subsystems
 
@@ -243,7 +226,7 @@ Click commands split by area; all sub-files imported by `cli/__init__.py`:
 - **`skills.py` + `skills/` + `library/`** — parse/catalog/validate `SKILL.md`
   files (YAML frontmatter: name, category, description, version, platforms, tags,
   related_skills). `library/` has 31 curated skills across 11 categories;
-  `skills/` has 71 user/extension skills. Skills are injected into the agent
+  `skills/` has 70 user/extension skills. Skills are injected into the agent
   system prompt via `render_skills_prompt_block()`.
 - **`dashboard/`** — `data.py` builds a UI-free, testable snapshot of the store
   (KPIs, growth series, per-kind breakdown, date-range filtering) and serializes
@@ -255,8 +238,6 @@ Click commands split by area; all sub-files imported by `cli/__init__.py`:
   `~/.sakthai/extensions`; `list`/`remove` manage installed bundles.
 - **`web/server.py`** — minimal HTTP server stub for a future web runtime.
 - **`learn/capture.py`** — `learn()` one-shot fact capture used by `sakthai learn`.
-- **`lead/capture.py`** — `capture_lead()` stores customer leads in the memory
-  database; backs the `capture_lead` built-in tool.
 - **`telegram/`** — a standalone `python-telegram-bot` polling bot (`bot.py`,
   `config.py`, `workflow_executor.py`) that shells out to
   `python -m sakthai run ... --with-skills <name> --fast --stateless` per
@@ -284,11 +265,6 @@ Sak-Family-Agent/
 │   │   ├── tools.py          # BUILTIN_TOOLS registry
 │   │   ├── registry.py       # ToolRegistry class
 │   │   ├── usage.py          # Token tracking
-│   │   ├── prompt_builder.py # System-prompt assembly
-│   │   ├── context_manager.py# Context-window assembly
-│   │   ├── context_filter.py # History summarization/pruning
-│   │   ├── guardrails.py     # GuardrailPolicy tool-call checks
-│   │   ├── eval.py           # Local eval/MLOps JSONL logging
 │   │   └── providers/        # Claude / Gemini / OpenAI / Ollama backends
 │   ├── memory/
 │   │   ├── store.py          # MemoryStore (only SQLite access)
@@ -300,15 +276,14 @@ Sak-Family-Agent/
 │   │   ├── client.py         # Outbound stdio client
 │   │   ├── manager.py        # connect_servers() context manager
 │   │   └── servers.py        # MCPServerSpec + spec discovery
-│   ├── cli/                  # Click commands (agent, memory, system, eval, ...)
+│   ├── cli/                  # Click commands (agent, memory, system, ...)
 │   ├── cycle/                # Dream→Hope→Care→Joy→Trust→Growth state machine
 │   ├── learn/                # capture.py one-shot fact entry
-│   ├── lead/                 # capture.py customer-lead capture
 │   ├── extensions/           # install.py (git-based bundle installer)
 │   ├── dashboard/            # data.py (JSON snapshot; React UI lives at repo root)
 │   └── web/                  # HTTP server stub
 ├── tests/                    # hermetic test suite, no network
-├── skills/                   # 71 user/extension SKILL.md folders
+├── skills/                   # 70 user/extension SKILL.md folders
 ├── library/                  # 31 curated skills in 11 categories
 ├── docs/                     # Architecture & design docs
 ├── scripts/                  # Dev utilities (not linted/type-checked)
@@ -321,7 +296,7 @@ Sak-Family-Agent/
 
 ## Tests
 
-Tests live in `tests/` (59 files, ~16,000 lines). All tests are hermetic — no
+Tests live in `tests/` (51 files, ~14700 lines). All tests are hermetic — no
 network, no GCP credentials. Integration tests that may hit real endpoints
 (Ollama, Anthropic) are marked `@pytest.mark.integration` and self-skip when
 credentials/endpoints are absent; CI excludes them with `-m "not integration"`.
@@ -459,10 +434,6 @@ Skills are discovered from `skills/` (user/extension skills) and `library/`
 
 ## Docs
 
-A curated subset of `docs/` — the directory also holds team/identity docs
-(`SOUL.md`, `USER.md`, `OPERATING_CONTRACT.md`), audits, and the `cycle/`,
-`diagrams/`, `servicequotebot/`, `superpowers/` subdirectories.
-
 | File | Contents |
 |------|---------|
 | `docs/architecture.md` | Full layer diagram and SQLite schema |
@@ -473,4 +444,3 @@ A curated subset of `docs/` — the directory also holds team/identity docs
 | `docs/workspace.md` | Dev environment setup |
 | `docs/og_parity_audit.md` | Comparison with original SakThai |
 | `docs/integrations.md` | Composio and cross-agent communication recipes |
-| `docs/audit-2026-07-04.md` | Big Audit: docs-vs-reality findings, hygiene, reorg proposal |

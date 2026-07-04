@@ -9,23 +9,14 @@ brain at `~/.sakthai/memory.db`, but keep separate live sessions.
 **SakKing is the main** — the Lead & Orchestrator of the team. "Hermes" is only
 the framework the agents run on, never the name of an agent.
 
-All six run as always-on Telegram bots on a single Azure VM, sharing one Azure
-AI Foundry backend (`sakthai-resource`) — each persona points at a different
-deployed model (see the root `README.md` and `infra/vm-agents/`).
-
-| Agent | Handle | Role | Model (on `sakthai-resource`) |
+| Agent | Handle | Role | Model |
 |---|---|---|--- |
-| **SakKing Agent** | `@SakKing_Agent_bot` | Lead & Orchestrator · Master of Code & Self-Healing (owns all skills) | `model-router` (auto-routes across deployed models) |
-| **SakThai** | `@SakThai_Agent_bot` | Master of Hugging Face (mastery via Hub/MCP tools) | `gpt-4o-mini` |
-| **SakSee** | `@SakSee_Agent_bot` | Master of Web (Playwright + Chrome DevTools) | `gpt-5.4-mini` |
-| **SakSit** | `@SakSit_Agent_bot` | Master of Social Media (IG image/video) | `Phi-4-mini-reasoning` |
-| **SakTan** | `@SakTan_Agent_bot` | Daily Ops Helper (calendar, email, life admin) | `gpt-4o-mini` |
-| **SakJules** | `@SakJules_Agent_bot` | Master of Automation & CI/CD | `gpt-4o-mini` |
-
-The repository also carries **ServiceQuoteBot**
-(`personas/servicequotebot/`) — a business persona scaffold for quoting and
-lead capture. It is not a family member and is not part of the six-agent
-roster above.
+| **SakKing Agent** | `@sakthai_agent_v2_bot` | Lead & Orchestrator · Master of Code & Self-Healing (owns all skills) | live: Ollama Cloud `qwen3-coder:480b` → `gpt-oss:120b` fallback; CLI coding: Claude |
+| **SakThai** | `@sakthai_v1_bot` | Master of Hugging Face (mastery via Hub/MCP tools) | Anthropic `claude-opus-4-8` → Ollama Cloud `gpt-oss:120b` fallback |
+| **SakSee** | `@saksee_bot` | Master of Web (Playwright + Chrome DevTools) | local Ollama `llama3` → `qwen` fallback |
+| **SakSit** | `@saksit_agent_bot` | Master of Social Media (IG image/video) | local Ollama `llama3` → `qwen` fallback (Modal sandbox) |
+| **SakTan** | `@saktan_agent_bot` | Daily Ops Helper (calendar, email, life admin) | `gemini-1.5-flash-lite` |
+| **SakJules** | `@sakjules_agent_bot` | Master of Automation & CI/CD | `gemini-1.5-pro-latest` |
 
 Each agent has its own authoritative SOUL file:
 [SAKKING_SOUL.md](./personas/sakking/SOUL.md) ·
@@ -91,7 +82,7 @@ spend the charge described in those files.
 
 ## Shared Tools
 
-All six agents expose the same built-in tool registry:
+All four agents expose the same built-in tool registry:
 
 | Tool | What it does |
 |---|---|

@@ -213,173 +213,131 @@ BIG_TASKS = [
     "audit my project for leftover debug prints",
 ]
 
-CHAINED_TASKS = [
-    (
-        "Find the main readme file and show me what's inside.",
-        "find . -name README.md",
-        "[exit 0]\n./README.md",
-        "./README.md",
-    ),
-    (
-        "List the markdown files and then read the first one you find.",
-        "ls *.md",
-        "[exit 0]\nCONTRIBUTING.md\nREADME.md",
-        "CONTRIBUTING.md",
-    ),
-]
 
-CHAINED_FAILURE_TASKS = [
-    (
-        "Find the 'config.yaml' file and read it for me.",
-        "find . -name config.yaml",
-        "[exit 1]",  # find returns 1 if no files are found
-        "I couldn't find a file named 'config.yaml' in the current directory.",
-    ),
-    (
-        "What's in the 'nonexistent_folder/' directory?",
-        "ls nonexistent_folder/",
-        "[exit 2]\n[stderr]\nls: cannot access 'nonexistent_folder/': No such file or directory",
-        "I couldn't list the contents of 'nonexistent_folder/' because the directory does not exist.",
-    ),
-]
+def generate_tool_rows(
+    tool_name: str,
+    templates: list[str],
+    items: Iterable[Any],
+    arg_builder: Callable[[Any], dict[str, Any]],
+    sample_size: int = 1,
+) -> Iterable[tuple[str, str, dict[str, Any]]]:
+    """Generic row generator for a tool."""
+    for item in items:
+        for template in random.sample(templates, min(sample_size, len(templates))):
+            user_text = template.format(item=item)
+            args = arg_builder(item)
+            yield user_text, tool_name, args
 
 
-# ---- Example Generators (Class-based approach) ----
+def learn_rows() -> Iterable[tuple[str, str, dict[str, Any]]]:
+    templates = [
+        "Remember that {f}.",
+        "Note for later: {f}.",
+        "Save this: {f}.",
+        "Keep in mind {f}.",
+        "FYI, {f} — hold onto that.",
+    ]
+    for fact_value, fact_kind, fact_key in FACTS:
+        for template in random.sample(templates, 3):
+            yield (
+                template.format(f=fact_value.lower()),
+                "learn",
+                {
+                    "value": fact_value,
+                    "kind": fact_kind,
+                    "key": fact_key,
+                },
+            )
 
 
-class ExampleGenerator:
-    """Base class for generating training examples."""
-
-    def generate(self) -> Iterable[dict[str, Any]]:
-        raise NotImplementedError
-
-
-@dataclass
-class SingleToolCallGenerator(ExampleGenerator):
-    """Generates examples for a single tool call."""
-
-    tool_name: str
-    templates: list[str]
-    items: Iterable[Any]
-    arg_builder: Callable[[Any], dict[str, Any]]
-    sample_size: int = 1
-
-    def generate(self) -> Iterable[dict[str, Any]]:
-        for item in self.items:
-            for template in random.sample(
-                self.templates, min(self.sample_size, len(self.templates))
-            ):
-                user_text = template.format(item=item) if "{item}" in template else template
-                args = self.arg_builder(item)
-                yield {
-                    "tools": TOOLS,
-                    "messages": [
-                        {"role": "system", "content": SYSTEM_PROMPT},
-                        {"role": "user", "content": user_text},
-                        {
-                            "role": "assistant",
-                            "content": "",
-                            "tool_calls": [
-                                {
-                                    "type": "function",
-                                    "function": {"name": self.tool_name, "arguments": args},
-                                }
-                            ],
-                        },
-                    ],
-                }
+def recall_rows() -> Iterable[tuple[str, str, dict[str, Any]]]:
+    user_prompts = [
+        "What do you know about me?",
+        "List everything in your memory.",
+        "Show me my stored facts.",
+        "Remind me what we've saved so far.",
+        "Dump your memory.",
+        "What's in long-term memory right now?",
+    ]
+    for user_prompt in user_prompts:
+        args = {} if random.random() < 0.5 else {"limit": random.choice([10, 20, 50])}
+        yield user_prompt, "recall", args
 
 
-@dataclass
-class ChainedSuccessGenerator(ExampleGenerator):
-    """Generates successful multi-turn tool-chaining examples."""
-
-    tasks: list[tuple[str, str, str, str]]
-    templates: list[str]
-
-    def generate(self) -> Iterable[dict[str, Any]]:
-        for task, cmd, cmd_output, file_to_read in self.tasks:
-            user_text = random.choice(self.templates).format(t=task.lower())
-            yield {
-                "tools": TOOLS,
-                "messages": [
-                    {"role": "system", "content": SYSTEM_PROMPT},
-                    {"role": "user", "content": user_text},
-                    {
-                        "role": "assistant",
-                        "content": "",
-                        "tool_calls": [
-                            {
-                                "type": "function",
-                                "function": {"name": "run_command", "arguments": {"command": cmd}},
-                            }
-                        ],
-                    },
-                    {"role": "tool", "content": cmd_output, "tool_call_id": None},
-                    {
-                        "role": "assistant",
-                        "content": "",
-                        "tool_calls": [
-                            {
-                                "type": "function",
-                                "function": {
-                                    "name": "read_file",
-                                    "arguments": {"path": file_to_read},
-                                },
-                            }
-                        ],
-                    },
-                ],
-            }
+def search_rows() -> Iterable[tuple[str, str, dict[str, Any]]]:
+    templates = [
+        "Do you have anything saved about {q}?",
+        "Search your memory for {q}.",
+        "Find notes related to {q}.",
+        "What do you remember about {q}?",
+    ]
+    for topic in SEARCH_TOPICS:
+        for template in random.sample(templates, 2):
+            yield template.format(q=topic), "search", {"query": topic}
 
 
-@dataclass
-class ChainedFailureGenerator(ExampleGenerator):
-    """Generates failed multi-turn tool-chaining examples."""
-
-    tasks: list[tuple[str, str, str, str]]
-    templates: list[str]
-
-    def generate(self) -> Iterable[dict[str, Any]]:
-        for task, cmd, cmd_output, assistant_reply in self.tasks:
-            user_text = random.choice(self.templates).format(t=task.lower())
-            yield {
-                "tools": TOOLS,
-                "messages": [
-                    {"role": "system", "content": SYSTEM_PROMPT},
-                    {"role": "user", "content": user_text},
-                    {
-                        "role": "assistant",
-                        "content": "",
-                        "tool_calls": [
-                            {
-                                "type": "function",
-                                "function": {"name": "run_command", "arguments": {"command": cmd}},
-                            }
-                        ],
-                    },
-                    {"role": "tool", "content": cmd_output, "tool_call_id": None},
-                    {"role": "assistant", "content": assistant_reply, "tool_calls": []},
-                ],
-            }
+def forget_rows() -> Iterable[tuple[str, str, dict[str, Any]]]:
+    prompts = [
+        ("Delete fact 5.", 5),
+        ("Forget memory id 12.", 12),
+        ("Remove the fact numbered 3.", 3),
+        ("Drop entry 27 from memory.", 27),
+        ("That fact 9 is wrong, delete it.", 9),
+    ]
+    for user_prompt, fact_id in prompts:
+        yield user_prompt, "forget", {"fact_id": fact_id}
 
 
-@dataclass
-class DirectAnswerGenerator(ExampleGenerator):
-    """Generates examples where the agent answers directly without tools."""
+def read_file_rows() -> Iterable[tuple[str, str, dict[str, Any]]]:
+    templates = [
+        "Read {p} for me.",
+        "What's in {p}?",
+        "Open {p} and show me.",
+        "Pull up the contents of {p}.",
+    ]
+    for file_path in FILES:
+        yield random.choice(templates).format(p=file_path), "read_file", {"path": file_path}
 
-    items: list[tuple[str, str]]
 
-    def generate(self) -> Iterable[dict[str, Any]]:
-        for user_text, answer in self.items:
-            yield {
-                "tools": TOOLS,
-                "messages": [
-                    {"role": "system", "content": SYSTEM_PROMPT},
-                    {"role": "user", "content": user_text},
-                    {"role": "assistant", "content": answer, "tool_calls": []},
-                ],
-            }
+def run_command_rows() -> Iterable[tuple[str, str, dict[str, Any]]]:
+    templates = [
+        "Run `{c}`.",
+        "Execute {c}.",
+        "Can you run {c} for me?",
+        "Shell: {c}",
+        "What's the output of `{c}`?",
+        "In the terminal, run: {c}",
+    ]
+    for command in COMMANDS:
+        args = {"command": command}
+        if random.random() < 0.3:
+            args["timeout"] = random.choice([10, 60, 120])
+        yield random.choice(templates).format(c=command), "run_command", args
+
+
+def telegram_rows() -> Iterable[tuple[str, str, dict[str, Any]]]:
+    templates = [
+        "Text me: {m}",
+        "Send a Telegram saying '{m}'.",
+        "Ping me on Telegram: {m}",
+        "Message me '{m}' on Telegram.",
+    ]
+    for msg in TG_MSGS:
+        yield random.choice(templates).format(m=msg), "send_telegram_message", {"message": msg}
+
+
+def agent_loop_rows() -> Iterable[tuple[str, str, dict[str, Any]]]:
+    templates = [
+        "Go ahead and {t}.",
+        "Handle this end to end: {t}.",
+        "Take care of this task: {t}.",
+        "I need you to {t} — run with it.",
+    ]
+    for task in BIG_TASKS:
+        args = {"task": task}
+        if random.random() < 0.3:
+            args["max_iterations"] = random.choice([6, 12, 20])
+        yield random.choice(templates).format(t=task), "run_agent_loop", args
 
 
 # ---- negatives: answer directly, no tool call ----
@@ -422,120 +380,64 @@ NEGATIVES = [
 
 def build():
     """Generates the full dataset."""
-    all_rows: list[dict[str, Any]] = []
-    generators: list[ExampleGenerator] = [
-        SingleToolCallGenerator(
-            tool_name="learn",
-            templates=[
-                "Remember that {item[0]}.",
-                "Note for later: {item[0]}.",
-                "Save this: {item[0]}.",
-            ],
-            items=FACTS,
-            arg_builder=lambda item: {"value": item[0], "kind": item[1], "key": item[2]},
-            sample_size=3,
-        ),
-        SingleToolCallGenerator(
-            tool_name="recall",
-            templates=[
-                "What do you know about me?",
-                "List everything in your memory.",
-                "Show me my stored facts.",
-            ],
-            items=[None] * 6,  # Run 6 times with different random args
-            arg_builder=lambda _: (
-                {} if random.random() < 0.5 else {"limit": random.choice([10, 20, 50])}
-            ),
-        ),
-        SingleToolCallGenerator(
-            tool_name="search",
-            templates=[
-                "Do you have anything saved about {item}?",
-                "Search your memory for {item}.",
-            ],
-            items=SEARCH_TOPICS,
-            arg_builder=lambda item: {"query": item},
-            sample_size=2,
-        ),
-        SingleToolCallGenerator(
-            tool_name="forget",
-            templates=["{item[0]}"],
-            items=[
-                ("Delete fact 5.", 5),
-                ("Forget memory id 12.", 12),
-                ("Remove the fact numbered 3.", 3),
-            ],
-            arg_builder=lambda item: {"fact_id": item[1]},
-        ),
-        SingleToolCallGenerator(
-            tool_name="read_file",
-            templates=["Read {item} for me.", "What's in {item}?"],
-            items=FILES,
-            arg_builder=lambda item: {"path": item},
-        ),
-        SingleToolCallGenerator(
-            tool_name="run_command",
-            templates=["Run `{item}`.", "Execute {item}."],
-            items=COMMANDS,
-            arg_builder=lambda item: (
-                {"command": item, "timeout": random.choice([10, 60, 120])}
-                if random.random() < 0.3
-                else {"command": item}
-            ),
-        ),
-        SingleToolCallGenerator(
-            tool_name="send_telegram_message",
-            templates=["Text me: {item}", "Send a Telegram saying '{item}'."],
-            items=TG_MSGS,
-            arg_builder=lambda item: {"message": item},
-        ),
-        SingleToolCallGenerator(
-            tool_name="run_agent_loop",
-            templates=["Go ahead and {item}.", "Handle this end to end: {item}."],
-            items=BIG_TASKS,
-            arg_builder=lambda item: (
-                {"task": item, "max_iterations": random.choice([6, 12, 20])}
-                if random.random() < 0.3
-                else {"task": item}
-            ),
-        ),
-        ChainedSuccessGenerator(
-            tasks=CHAINED_TASKS,
-            templates=["Can you {t}", "I need you to {t}", "Please {t}"],
-        ),
-        ChainedFailureGenerator(
-            tasks=CHAINED_FAILURE_TASKS,
-            templates=["Could you {t}", "Please try to {t}", "I need you to {t}"],
-        ),
-        DirectAnswerGenerator(items=NEGATIVES),
-    ]
-
-    for gen in generators:
-        all_rows.extend(gen.generate())
-
+    all_rows = []
+    for gen in (
+        learn_rows,
+        recall_rows,
+        search_rows,
+        forget_rows,
+        read_file_rows,
+        run_command_rows,
+        telegram_rows,
+        agent_loop_rows,
+    ):
+        for user_text, tool_name, tool_args in gen():
+            all_rows.append(
+                {
+                    "tools": TOOLS,
+                    "messages": [
+                        {"role": "system", "content": SYSTEM_PROMPT},
+                        {"role": "user", "content": user_text},
+                        {
+                            "role": "assistant",
+                            "content": "",
+                            "tool_calls": [
+                                {
+                                    "type": "function",
+                                    "function": {"name": tool_name, "arguments": tool_args},
+                                }
+                            ],
+                        },
+                    ],
+                }
+            )
+    for user_text, answer in NEGATIVES:
+        all_rows.append(
+            {
+                "tools": TOOLS,
+                "messages": [
+                    {"role": "system", "content": SYSTEM_PROMPT},
+                    {"role": "user", "content": user_text},
+                    {
+                        "role": "assistant",
+                        "content": answer,
+                        "tool_calls": [],
+                    },  # Explicitly show no tool call
+                ],
+            }
+        )
     random.shuffle(all_rows)
     return all_rows
 
 
 if __name__ == "__main__":
     rows = build()
-    out = Path(__file__).parent / "sakthai_toolcalling_synthetic.jsonl"
+    out = Path("sakthai_toolcalling_synthetic.jsonl")
     with out.open("w") as f:
         for r in rows:
             f.write(json.dumps(r, ensure_ascii=False) + "\n")
     # quick stats
-    single_tool_calls = sum(
-        1 for r in rows if len(r["messages"]) == 3 and r["messages"][-1].get("tool_calls")
-    )
-    chained_success_calls = sum(
-        1 for r in rows if len(r["messages"]) == 5 and r["messages"][-1].get("tool_calls")
-    )
-    chained_failure_calls = sum(
-        1 for r in rows if len(r["messages"]) == 5 and not r["messages"][-1].get("tool_calls")
-    )
-    no_tool_calls = len(rows) - single_tool_calls - chained_success_calls - chained_failure_calls
+    tool_calls = sum(1 for r in rows if r["messages"][-1].get("tool_calls"))
     print(
-        f"Wrote {len(rows)} rows to {out} ({single_tool_calls} single-tool, "
-        f"{chained_success_calls} chained-success, {chained_failure_calls} chained-failure, "
-        f"{no_tool_calls} no-tool)"
+        f"Wrote {len(rows)} rows to {out} ({tool_calls} tool-call, {len(rows) - tool_calls} no-tool)"
     )

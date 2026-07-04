@@ -45,7 +45,7 @@ SECRET_PATTERNS = re.compile(
     r"("
     r"sk-ant-api\S+"  # Anthropic API keys
     r"|sk-or-v1-\S+"  # OpenRouter API keys
-    r"|sk-\S{20,}"  # Generic OpenAI-style keys (20+ chars after sk-)
+    r"|sk-\S{10,}"  # Generic OpenAI-style keys (20+ chars after sk-)
     r"|ghp_\S+"  # GitHub personal access tokens
     r"|ghu_\S+"  # GitHub user tokens
     r"|xoxb-\S+"  # Slack bot tokens
