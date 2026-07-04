@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 import pytest
 
 from sakthai.agent.guardrails import (
@@ -36,7 +38,7 @@ def test_run_command_denied_by_default(
     monkeypatch.delenv("SAKTHAI_SHELL_ALLOW", raising=False)
     result = DEFAULT_POLICY.check_pre_execution(run_command_tool, {"command": "ls"}, store)
     assert result.action == GuardrailAction.DENY
-    assert "disabled" in result.reason
+    assert result.reason and "disabled" in result.reason
 
 
 def test_run_command_allowed_when_env_var_is_set(
@@ -62,7 +64,13 @@ def test_other_tools_unaffected_by_shell_env_var(
     [
         "rm -rf /",
         "rm -rf ~",
-        "sudo rm -rf /",  # Although sudo is not special, '/' is present
+        "rm -rf /etc",
+        "rm -r -f /usr",
+        "rm --recursive --force /var",
+        "rm -fr /tmp",
+        "sudo rm -rf /",
+        "sudo rm -rf /etc",
+        "rm -Rf /lib",
     ],
 )
 def test_dangerous_shell_commands_are_denied(
@@ -73,7 +81,7 @@ def test_dangerous_shell_commands_are_denied(
     policy = GuardrailPolicy()  # Use default rules
     result = policy.check_pre_execution(run_command_tool, {"command": command}, store)
     assert result.action == GuardrailAction.DENY
-    assert "destructive" in result.reason
+    assert result.reason and "destructive" in result.reason
 
 
 @pytest.mark.parametrize(
@@ -103,14 +111,16 @@ def test_malformed_shell_command_is_denied(
     policy = GuardrailPolicy()
     result = policy.check_pre_execution(run_command_tool, {"command": "echo 'mismatched"}, store)
     assert result.action == GuardrailAction.DENY
-    assert "Malformed" in result.reason
+    assert result.reason and "Malformed" in result.reason
 
 
 def test_custom_rules_can_be_added(learn_tool: Tool, store: MemoryStore) -> None:
     """Verify that a custom rule can be used to deny a tool."""
 
-    def _deny_all_rule(*_args: object) -> object:
-        return type("R", (), {"action": GuardrailAction.DENY, "reason": "custom rule"})()
+    from sakthai.agent.guardrails import GuardrailResult
+
+    def _deny_all_rule(tool: Tool, args: dict[str, Any], store: MemoryStore) -> GuardrailResult:
+        return GuardrailResult(action=GuardrailAction.DENY, reason="custom rule")
 
     policy = GuardrailPolicy(pre_rules=[_deny_all_rule])
     result = policy.check_pre_execution(learn_tool, {}, store)
