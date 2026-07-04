@@ -42,21 +42,18 @@ class GuardrailResult:
 
 
 PreGuardrailRule = Callable[[Tool, dict[str, Any], MemoryStore], GuardrailResult]
-PostGuardrailRule = Callable[
-    [Tool, dict[str, Any], str, bool, MemoryStore], GuardrailResult
-]
+PostGuardrailRule = Callable[[Tool, dict[str, Any], str, bool, MemoryStore], GuardrailResult]
 
 
 def _block_run_command_if_not_allowed(
     tool: Tool, _args: dict[str, Any], _store: MemoryStore
 ) -> GuardrailResult:
     """Deny the `run_command` tool if SAKTHAI_SHELL_ALLOW is not set."""
-    if tool.name == "run_command":
-        if not os.environ.get("SAKTHAI_SHELL_ALLOW"):
-            return GuardrailResult(
-                GuardrailAction.DENY,
-                reason="Tool 'run_command' is disabled. Set SAKTHAI_SHELL_ALLOW to enable it.",
-            )
+    if tool.name == "run_command" and not os.environ.get("SAKTHAI_SHELL_ALLOW"):
+        return GuardrailResult(
+            GuardrailAction.DENY,
+            reason="Tool 'run_command' is disabled. Set SAKTHAI_SHELL_ALLOW to enable it.",
+        )
     return GuardrailResult(GuardrailAction.ALLOW)
 
 
@@ -79,7 +76,9 @@ def _block_dangerous_shell_commands(
 
         # Example blocklist: prevent recursive deletion or other high-risk commands.
         # This is not exhaustive but serves as a starting point.
-        if parts[0] == "rm" and "-rf" in parts and ("/" in parts or "~" in parts):
+        while parts and parts[0] == "sudo":
+            parts = parts[1:]
+        if parts and parts[0] == "rm" and "-rf" in parts and ("/" in parts or "~" in parts):
             return GuardrailResult(
                 GuardrailAction.DENY, reason="Potentially destructive 'rm -rf' command blocked."
             )
@@ -87,7 +86,9 @@ def _block_dangerous_shell_commands(
     return GuardrailResult(GuardrailAction.ALLOW)
 
 
-def _enforce_verbose_listing(tool: Tool, args: dict[str, Any], _store: MemoryStore) -> GuardrailResult:
+def _enforce_verbose_listing(
+    tool: Tool, args: dict[str, Any], _store: MemoryStore
+) -> GuardrailResult:
     """If `run_command` is used for `ls`, enforce the `-l` flag."""
     if tool.name == "run_command" and isinstance(args.get("command"), str):
         command = args["command"]
@@ -141,7 +142,9 @@ class GuardrailPolicy:
         for rule in self.pre_rules:
             result = rule(tool, current_args, store)
             if result.action == GuardrailAction.DENY:
-                logger.warning("Guardrail denied pre-execution of tool %r: %s", tool.name, result.reason)
+                logger.warning(
+                    "Guardrail denied pre-execution of tool %r: %s", tool.name, result.reason
+                )
                 return result
             if result.modified_args is not None:
                 current_args = result.modified_args

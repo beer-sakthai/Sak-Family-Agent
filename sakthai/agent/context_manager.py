@@ -13,9 +13,8 @@ from typing import Any
 
 from ..memory.provider import SakThaiMemoryProvider
 from ..skills import SkillInfo
-from .context_filter import ContextFilter, DEFAULT_CONTEXT_FILTER
+from .context_filter import DEFAULT_CONTEXT_FILTER, ContextFilter
 from .prompt_builder import (
-    build_skills_prompt_block,
     build_system_prompt,
     render_skills_prompt_block,
 )
@@ -55,11 +54,9 @@ class ContextManager:
         Returns:
             A tuple of (system_prompt, messages).
         """
-        memory_block = self.memory_provider.render_prompt_block()
+        memory_block = self.memory_provider.system_prompt_block()
         skills_block = render_skills_prompt_block(skills or [], caveman)
-        system_prompt = build_system_prompt(
-            memory_block, skills_block, system_prompt_prefix, fast
-        )
+        system_prompt = build_system_prompt(memory_block, skills_block, system_prompt_prefix, fast)
 
         messages = self.context_filter.filter(history)
         messages.append({"role": "user", "content": task})

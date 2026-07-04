@@ -12,7 +12,7 @@ The repo also includes a dedicated business persona scaffold,
 
 ```
 personas/
-├── shared/skills/      # the 446 skill files identical across all five personas
+├── shared/skills/      # the 461 skill files identical across all six personas
 ├── sakthai/
 │   ├── SOUL.md         # the persona's identity (unique per persona)
 │   ├── config/         # persona config (config.yaml, gateway_voice_mode.json, …)
@@ -20,8 +20,9 @@ personas/
 ├── sakking/  …
 ├── saksee/   …
 ├── saksit/   …
-├── saktan/   …        # scaffolded from infra/hermes-agents/profiles/saktan/
-└── servicequotebot/    # business quoting persona scaffold
+├── saktan/   …
+├── sakjules/ …         # SOUL.md only so far (no config/ or skills overlay yet)
+└── servicequotebot/    # business quoting persona scaffold (config/skills empty)
 ```
 
 `shared/skills/` + a persona's `skills/` overlay together reconstitute that

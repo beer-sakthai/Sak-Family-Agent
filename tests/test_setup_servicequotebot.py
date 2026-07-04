@@ -63,9 +63,7 @@ def test_build_customer_bundle_writes_env_and_service_files(tmp_path: Path) -> N
 
 @patch("scripts.setup_servicequotebot.build_customer_bundle")
 @patch("scripts.setup_servicequotebot.run_ingest")
-def test_main_cli_flow(
-    mock_run_ingest, mock_build_bundle, tmp_path: Path, capsys
-) -> None:
+def test_main_cli_flow(mock_run_ingest, mock_build_bundle, tmp_path: Path, capsys) -> None:
     """Test the main function CLI argument parsing and flow."""
     from scripts.setup_servicequotebot import BundleResult, main
 

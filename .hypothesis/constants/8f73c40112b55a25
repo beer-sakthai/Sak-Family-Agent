@@ -1,4 +1,0 @@
-# file: C:\Users\beern\Sak-Family-Agent\sakthai\agent\tools.py
-# hypothesis_version: 6.155.7
-
-[1.0, 10.0, 30.0, 120.0, 200, 20000, '\n... [truncated]', '\n[stderr]\n', '1', 'Customer name.', 'Facts:', 'Memory is empty.', 'Observations:', 'SAKTHAI_AGENT_ACTIVE', 'SAKTHAI_READ_ALLOW', 'SAKTHAI_SHELL_ALLOW', 'TELEGRAM_BOT_TOKEN', 'TELEGRAM_CHAT_ID', 'The fact id.', 'The fact text.', '[stderr]\n', 'boolean', 'capture_lead', 'chat_id', 'command', 'default', 'description', 'email', 'error', 'fact_id', 'forget', 'ingest_document', 'input_schema', 'integer', 'is_error', 'key', 'kind', 'learn', 'limit', 'max_iterations', 'message', 'model', 'name', 'note', 'number', 'object', 'ok', 'path', 'phone', 'properties', 'provider', 'prune_history', 'query', 'read_file', 'recall', 'replace', 'required', 'run_agent_loop', 'run_command', 'search', 'store', 'string', 'success', 'task', 'text', 'timeout', 'tools', 'type', 'utf-8', 'value']

@@ -1,4 +1,0 @@
-# file: C:\Users\beern\Sak-Family-Agent\packages\agent-self-evolution\evolution\core\config.py
-# hypothesis_version: 6.155.7
-
-[0.02, 0.2, 0.25, 0.5, 200, 500, 15000, './output', '.hermes', '20', 'EVO_DATASET_SIZE', 'EVO_EVAL_MODEL', 'EVO_JUDGE_MODEL', 'EVO_MODEL', 'EVO_OPTIMIZER_MODEL', 'HERMES_AGENT_REPO', 'hermes-agent']

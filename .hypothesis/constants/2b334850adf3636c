@@ -1,4 +1,0 @@
-# file: C:\Users\beern\Sak-Family-Agent\sakthai\agent\providers\__init__.py
-# hypothesis_version: 6.155.7
-
-[120.0, 'AgentError', 'Authorization', 'Block', 'Content-Type', 'GEMINI_API_KEY', 'GOOGLE_API_KEY', 'GOOGLE_CLOUD_PROJECT', 'OLLAMA_HOST', 'Response', 'anthropic', 'application/json', 'block_field', 'build_client', 'call_anthropic', 'call_gemini', 'call_openai_compat', 'config', 'deepseek', 'detect_provider', 'find_tool_name_by_id', 'gateway', 'gcloud', 'gemini', 'gemma', 'get-value', 'google', 'google.genai', 'gpt-', 'is_retryable', 'llama', 'local', 'local/', 'mistral', 'ollama', 'openai', 'project', 'qwen', 'to_gemini_contents', 'to_openai_messages', 'us-central1', 'with_retry']

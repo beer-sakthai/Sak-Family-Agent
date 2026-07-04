@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import subprocess
+import sys
 import urllib.error
 import urllib.request
 from pathlib import Path
@@ -151,6 +152,7 @@ def test_run_command_disabled_by_default(monkeypatch: pytest.MonkeyPatch, store)
 def test_run_command_when_enabled(monkeypatch: pytest.MonkeyPatch, store) -> None:
     monkeypatch.setenv("SAKTHAI_SHELL_ALLOW", "1")
     from unittest.mock import MagicMock
+
     mock_run = MagicMock()
     mock_run.return_value.returncode = 0
     mock_run.return_value.stdout = "hello output"
@@ -654,9 +656,9 @@ class TestReadFileErrors:
             tool_by_name("read_file").handler({"path": "simulated_os_error.txt"}, store)
 
 
-import sys
-
-@pytest.mark.skipif(sys.platform == "win32", reason="Windows requires admin privileges for symlinks")
+@pytest.mark.skipif(
+    sys.platform == "win32", reason="Windows requires admin privileges for symlinks"
+)
 class TestReadFileSymlink:
     def test_symlink_to_outside_root_is_blocked(
         self,

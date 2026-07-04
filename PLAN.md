@@ -20,7 +20,7 @@ never duplicate content across files.
 | **Architecture & capabilities** | [`docs/architecture.md`](./docs/architecture.md) · [`docs/capabilities.md`](./docs/capabilities.md) |
 | **Python source** | [`sakthai/`](./sakthai/) |
 | **Agent personas** | [`personas/`](./personas/) |
-| **Skills (69 total)** | [`skills/`](./skills/) — see `skills/README.md` for categories |
+| **Skills (71 total)** | [`skills/`](./skills/) — see `skills/README.md` for categories |
 | **Helper scripts** | [`scripts/`](./scripts/) |
 | **Tests** | [`tests/`](./tests/) |
 | **Web dashboard** | [`dashboard/`](./dashboard/) |
@@ -38,6 +38,7 @@ never duplicate content across files.
 | MVP definition | ✅ Done (2026-07-02) — ServiceQuoteBot |
 | Monetization strategy | ✅ Done (2026-07-02) — Setup + Subscription |
 | MVP execution — ServiceQuoteBot build | ✅ Done (2026-07-02) |
+| Big Audit — docs vs reality, roster, hygiene | ✅ Done (2026-07-04) — see `docs/audit-2026-07-04.md` (open questions in §F) |
 
 ## 🔧 Runtime Notes
 
@@ -47,7 +48,7 @@ workspace runtime config under `infra/`.
 ### Source files
 
 - `docs/agent-diagnosis.md` for the standalone run checklist and runtime notes.
-- `infra/hermes-agents/` for the live agent profiles, systemd services, and deployment config.
+- `infra/vm-agents/` for the live agent env templates, systemd services, and deployment config.
 - `product/todo.md` for the product delivery checklist.
 
 ---

@@ -1,4 +1,0 @@
-# file: C:\Users\beern\Sak-Family-Agent\sakthai\agent\guardrails.py
-# hypothesis_version: 6.155.7
-
-['-l', '-rf', '/', 'SAKTHAI_SHELL_ALLOW', 'allow', 'command', 'deny', 'ls', 'ls ', 'ls -l', 'rm', 'run_command', '~']
