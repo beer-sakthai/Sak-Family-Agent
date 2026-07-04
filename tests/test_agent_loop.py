@@ -1744,9 +1744,6 @@ def test_guardrail_explicitly_modifies_tool_arguments_in_loop(
     # Enable the run_command tool
     monkeypatch.setenv("SAKTHAI_SHELL_ALLOW", "1")
 
-    # Mock the underlying subprocess call to capture the command that was executed
-    mock_run = patch("subprocess.run").start()
-
     # The model asks to run `ls` which the guardrail will modify to `ls -l`
     client = FakeClient(
         [
@@ -1761,18 +1758,22 @@ def test_guardrail_explicitly_modifies_tool_arguments_in_loop(
     # Use a policy with only the rule we want to test for isolation
     policy = GuardrailPolicy(pre_rules=[_enforce_verbose_listing])
 
-    result = run_agent(
-        "list files",
-        client=client,
-        store=store,
-        provider="anthropic",
-        guardrail_policy=policy,
-    )
+    # Mock the underlying subprocess call to capture the command that was executed
+    with patch("subprocess.run") as mock_run:
+        mock_run.return_value = MagicMock(returncode=0, stdout="ok", stderr="")
 
-    assert result.text == "ok"
-    assert any(c["name"] == "run_command" for c in result.tool_calls)
-    mock_run.assert_called_once()
-    assert mock_run.call_args.args[0] == ["ls", "-l"]
+        result = run_agent(
+            "list files",
+            client=client,
+            store=store,
+            provider="anthropic",
+            guardrail_policy=policy,
+        )
+
+        assert result.text == "ok"
+        assert any(c["name"] == "run_command" for c in result.tool_calls)
+        mock_run.assert_called_once()
+        assert mock_run.call_args.args[0] == ["ls", "-l"]
 
 
 # -- _strip_code_fence ----------------------------------------------------
