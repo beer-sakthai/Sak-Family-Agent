@@ -8,7 +8,6 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from sakthai.agent.context_manager import ContextManager
 from sakthai.agent.loop import (
     AgentError,
     AgentResult,
@@ -21,7 +20,6 @@ from sakthai.agent.loop import (
     run_agent,
 )
 from sakthai.agent.registry import builtin_registry
-from sakthai.memory.provider import SakThaiMemoryProvider
 from sakthai.memory.store import MemoryStore
 
 
@@ -391,8 +389,6 @@ def test_openai_provider_basic(store: MemoryStore) -> None:
 
 
 def test_openai_provider_tool_use(store: MemoryStore, monkeypatch: pytest.MonkeyPatch) -> None:
-    cm = ContextManager(SakThaiMemoryProvider(store))
-    # monkeypatch.setattr("sakthai.agent.loop.ContextManager", lambda *a, **kw: cm)
 
     first_response = {
         "choices": [
