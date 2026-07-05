@@ -1,3 +1,3 @@
 ---
-description: GitHub workflow skills for managing repositories, pull requests, code reviews, issues, and CI/CD pipelines using the gh CLI and git via terminal.
+description: Skills for GitHub integration - repos, issues, pull requests, GitHub Actions, webhooks, and collaboration features.
 ---
