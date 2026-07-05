@@ -1,3 +1,2 @@
-# Apple Skills
-
-Skills for working with Apple devices and services.
+# Apple / macOS skills — tools that interact with the Mac desktop (Finder,
+native apps) or system features (accessibility, screenshots).
