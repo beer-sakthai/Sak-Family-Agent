@@ -23,12 +23,6 @@ keyboard focus, or switch virtual desktops / Spaces. The user can keep
 typing in their editor while you click around in a browser in another
 window. This is the opposite of pyautogui-style automation.
 
-Everything here works with any tool-capable model — Claude, GPT, Gemini,
-or an open model on a local OpenAI-compatible endpoint. There is no
-Anthropic-native schema to learn.
+Everything here works with any tool-capable model — there are no model-specific-skills-required; just load the tool and your model will pilot it. The tool itself handles platform-specific details (mouse, trackpad, VD). This is similar to OpenAI Tools — a model-neutral tool you plug in.
 
-Hermes drives [cua-driver](https://github.com/trycua/cua) under the hood
-for the platform plumbing. The Hermes-side `computer_use` tool exposed
-in this skill is a higher-level Hermes vocabulary; the raw cua-driver
-MCP tools (which a different agent harness would see) are NOT what you
-call — call the `computer_use` actions...
+## Transparency and Priving
