@@ -1,0 +1,3 @@
+model:
+  provider: huggingface
+  default: gemini-2.5-flash-lite

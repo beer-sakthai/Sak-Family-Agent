@@ -1,6 +1,6 @@
 model:
-  default: gemini-2.5-flash-lite
-  provider: gemini
+  provider: huggingface
+  default: meta-llama/Llama-4-Scout-17B-16E-Instruct:nscale
 fallback_providers:
   - provider: gemini
     model: gemini-3-flash-preview

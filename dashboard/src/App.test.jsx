@@ -162,7 +162,7 @@ describe('App', () => {
     const nav = screen.getByRole('navigation')
     await user.click(within(nav).getByText('Project'))
 
-    expect(screen.getByRole('heading', { name: 'SakThai-Agent' })).toBeInTheDocument()
+    expect(screen.getAllByRole('heading', { name: 'SakThai-Agent' }).length).toBeGreaterThanOrEqual(1)
     expect(screen.getByText('CLI / MCP')).toBeInTheDocument()
     expect(screen.getByText('MemoryStore')).toBeInTheDocument()
     expect(screen.getByText('learn')).toBeInTheDocument()

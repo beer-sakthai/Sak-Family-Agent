@@ -1,7 +1,6 @@
 model:
-  default: qwen3-coder:480b
-  provider: ollama-cloud
-  base_url: https://ollama.com/v1
+  provider: huggingface
+  default: Qwen/Qwen3-Coder-30B-A3B-Instruct
 fallback_model:
   provider: ollama-cloud
   model: gpt-oss:120b

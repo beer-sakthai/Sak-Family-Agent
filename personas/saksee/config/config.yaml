@@ -1,7 +1,6 @@
 model:
-  default: minimax-m3
-  provider: ollama-cloud
-  base_url: https://ollama.com/v1
+  provider: huggingface
+  default: gemini-3.1-flash-lite
 providers: {}
 fallback_providers: []
 credential_pool_strategies: {}
