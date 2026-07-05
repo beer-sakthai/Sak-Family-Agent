@@ -127,9 +127,10 @@ def _block_output_with_secrets(
     _store: MemoryStore,
 ) -> GuardrailResult:
     """Deny any tool output that appears to contain a secret."""
-    # A simple regex for common API key prefixes (sk-, rk-, pk-)
-    # This is an example and not exhaustive.
-    if re.search(r"\b(sk|rk|pk)_[a-zA-Z0-9]{20,}\b", output):
+    # A regex for common API key prefixes (sk-, rk-, pk-, ghp-) and Google keys (AIza).
+    # Handles both underscore (sk_) and hyphen (sk-) used by Anthropic and OpenAI.
+    secret_pattern = r"\b(?:(?:sk|rk|pk|ghp)[-_][a-zA-Z0-9\-_]{20,}|AIza[0-9A-Za-z\-_]{34,})\b"
+    if re.search(secret_pattern, output):
         return GuardrailResult(
             GuardrailAction.DENY,
             reason="Tool output blocked because it appears to contain a secret.",
