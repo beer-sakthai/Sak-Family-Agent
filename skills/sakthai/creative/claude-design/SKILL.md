@@ -10,6 +10,8 @@ metadata:
 
 # Claude Design
 
+---
+
 ## Description
 
 Design one-off HTML artifacts (landing, deck, prototype). Use the following workflow: user Requiest -> Page Structure -> Design Decisions -> HTML Code.

@@ -11,3 +11,6 @@ metadata:
 # Xurl
 
 This skill enables X/Twitter operations through the xurl CLI. It supports posting, searching, DMs, media, and v2 API integration.
+---
+
+This skill enables X/Twitter operations through the xurl CLI. It supports posting, searching, DMs, media, and v2 API integration.

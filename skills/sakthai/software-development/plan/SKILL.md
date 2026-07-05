@@ -13,3 +13,6 @@ metadata:
 ## Description
 
 Write an actionable Markdown plan to `.hermes/p/.`. Use this skill for planning and strategizing before executing complex tasks.
+
+## Description
+Write an actionable markdown plan to `.hermes/p/.`. Use this skill for planning and strategizing before executing complex tasks.
