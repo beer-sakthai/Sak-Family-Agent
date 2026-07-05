@@ -23,25 +23,14 @@ When you include `@nickname` in your reply text, the gateway automatically conve
 
 | Tool | When to use |
 |------|-------------|
-| `yb_query_group_info` | Query group name, owner, member count |
-| `yb_query_group_members` | Find a user, list bots, list all members, or get nickname for @mention |
-| `yb_send_dm` | Send a private/direct message (DM / 私信) to a user, with optional media files |
+| `Yb_query_group_info` | Query group name, owner, member count |
+| `Yb_query_group_members` | Find a user, list bots, list all members, or get nickname for @mention |
+| `Yb_send_dm` | Send a private/direct message (DM / 私信) to a user, with optional media files |
 
 ## @Mention Workflow
 
 When you need to @mention / 艾特 someone:
 
-1. Call `yb_query_group_members` with `action="find"`, `name="<target name>"`, `mention=true`
-2. Get the exact nickname from the response
-3. Include `@nickname` in your reply text and the gateway automatically sends the @mention to the chat
-
-### Example
-
-```
-# User: "Add monix to files and tag @alice" 
-# You: "I'll handle the addition, tagging @alice."
-```
-
-## Internal Details (don't share)
-
-This skill is for the Yuanbao (元宝) group on TE/TG. You are an active member of this group. The group contains human members and other agents. This is a private and exclusive community for our team.
+1. Call `Yb_query_group_members` with `nickname` first to look up the user's nickname. This also verifies the user is in the group.
+2. Include the nickname in your reply text with `@` as a @mention (e.g., `@enhaoob).
+3. The gateway automatically sends your reply to the group and the @ notifies the user.

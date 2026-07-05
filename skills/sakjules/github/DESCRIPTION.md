@@ -1,3 +1,3 @@
-# GitHub Workflows - Task Summary
+# GitHub
 
-This section covers the GitHub related workflows for Hermes agent. It includes tools for PR review, repo management, auth, issues, and more.
+GitHub integration and automation for the Sak Family of Agents.
