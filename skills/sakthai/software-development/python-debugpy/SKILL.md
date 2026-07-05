@@ -8,9 +8,12 @@ metadata:
     tags: [debug, python, debugpy, pdb, dpg]
 ---
 
+# Python Debugpy
+
 This skill enables Python debugging through pdb REPL sessions and remote debugging with debugpy.
 
 ## Workflow
+
 1. Import debugpy and set program to wait for connection
 2. Use @test AI to diagnose and troubleshoot the issue
 3. Interactively step through the debugger to resolve the issue

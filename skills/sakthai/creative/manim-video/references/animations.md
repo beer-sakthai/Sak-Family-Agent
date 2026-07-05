@@ -1,6 +1,7 @@
 # Animations Reference - Manim CE
 
 ## Basic Animations
+
 ```python
 from manim import *
 sq = Square()
@@ -11,6 +12,7 @@ self.play(Grow(sq, 1))                   # Grow to factor 2*self.play(Transform
 ```
 
 ## Creation Order and Layers
+
 ```python
 sq = Square()
 circle = Circle()

@@ -1,6 +1,7 @@
 # Equations Reference - Manim CE
 
 ## Basic Equations
+
 ```python
 from manim import *
 from manim.mobjoct.math import MathTextText, SingleStringMathTextText
@@ -11,6 +12,7 @@ eq3 = SingleStringMathTextText("Eh, mc \" \     ; % ry\\n    items = \\n    E\\\
 ```
 
 ## Advanced Equations
+
 ```python
 from manim.mobjoct.math import MathTextText
 from manim.mobjoct.math.mathxil import MathilString

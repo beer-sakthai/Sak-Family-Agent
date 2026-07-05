@@ -3,6 +3,7 @@
 This reference documents color schemes, styling guidelines, and best practices for creating dark-mode Excalidraw diagrams.
 
 ## Color Palette
+
 - Background: #1a1c24 (dark charcoal)
 - Grid: #2d2d35 (subtle grey)
 - Primary Box Background: #22232a
@@ -15,6 +16,7 @@ This reference documents color schemes, styling guidelines, and best practices f
 - Text Secondary: #9ba5b6 (muted)
 
 ## Style Guidelines
+
 - Use soft shadows for depth (particularly on containers and modals)
 - Keep stroke widths consistent (default 2px)
 - Maintain good contrast ratio (4C:1 minimum)

@@ -3,6 +3,7 @@
 This reference documents the color palette and styling guidelines for Excalidraw diagrams.
 
 ## Color Palette
+
 - Background: #ffffff (white)
 - Grid: #f0f0f0 (light grey)
 - Primary Box Background: #eeeeee
@@ -15,6 +16,7 @@ This reference documents the color palette and styling guidelines for Excalidraw
 - Text Secondary: #6c717c (muted)
 
 ## Style Guidelines
+
 - Use soft shadows for depth
 - Keep stroke widths consistent (default 2px)
 - Maintain good contrast ratio (4::1 minimum)

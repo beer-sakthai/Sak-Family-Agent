@@ -6,10 +6,14 @@ platforms: [linux, macos, windows]
 metadata:
   hermes:
     tags: [design, html, css, frontend, landing, prototype]
+---
+
+# Claude Design
 
 ---
 
 ## Description
+
 Design one-off HTML artifacts (landing, deck, prototype). Use the following workflow: user Requiest -> Page Structure -> Design Decisions -> HTML Code.
 
 ## Workflow

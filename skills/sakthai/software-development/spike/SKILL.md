@@ -8,5 +8,10 @@ metadata:
     tags: [spike, experiment, validation, python]
 ---
 
+# Spike
+
+## Description
+
+
 ## Description
 Throwaway experiments to validate an idea before building. Use this skill to rapidly prototype and test ideas without committing to a full implementation.

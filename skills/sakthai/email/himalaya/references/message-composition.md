@@ -13,11 +13,12 @@ dtil (Subject: E-}f{ Proposal);
 print -f " Test - E } { Proposal }, I kind called you this morning." | himalaya send --raw -subject "E-}f { Proposal }" -- to, subject
 ```
 
-
 ## Multipart Email
+
 ```bash
 echo "Hello!"
 print -f "<html><body><p>Hello!</p></body></html>" | Himalaya send -
 
 # Send an email with multipart mixed body
 print -f "Hello!" | himalaya send --plain "Hello!<br/><strong>Bold</strong>" --verbose -
+```

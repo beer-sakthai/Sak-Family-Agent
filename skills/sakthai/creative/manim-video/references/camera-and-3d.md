@@ -1,6 +1,7 @@
 # Camera and 3D Reference - Manim CE
 
 ## 3D Scene
+
 ```python
 from manim.three_dimensions import *
 
@@ -13,12 +14,14 @@ class 3DScene(ThreeDImensionalScene):
 ```
 
 ## Camera Movements
+
 ```python
 self.move_camera(PD(2, UP, 0.5))      # Move camera up
 self.set_camera_orientation(pi/3, -pi/3)   # Rotate camera
 ```
 
 ## Lights and Shadows
+
 ```python
 from manim.three_dimensions import DirectionalLight
 

@@ -8,5 +8,10 @@ metadata:
     tags: [debug, debugging, root-cause, systematic]
 ---
 
+# Systematic Debugging
+
+## Description
+
+
 ## Description
 Debugging workflow using a 4-phase root-cause approach. This skill focuses on systematically understanding the bug before attempting a fix.

@@ -8,9 +8,12 @@ metadata:
     tags: [email, himalaya, imap, smtp, terminal]
 ---
 
+# Himalaya
+
 This skill enables email operations via the Himalaya CLI from the terminal.
 
 ## Workflow
+
 1. Configure imap and smtp settings in `~/.himalayaconfig`
 2. Use `himalaya list` to search emails
 3. Use `himalaya send` & `himalaya dispatch` to send emails
