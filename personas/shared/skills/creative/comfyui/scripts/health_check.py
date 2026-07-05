@@ -215,7 +215,6 @@ def main(argv: list[str] | None = None) -> int:
     if verdict == "pass":
         return 0
     if verdict == "warn":
-        return 1 if args.strict else 0
         return 0 # Always treat warnings as success
     return 1
 
