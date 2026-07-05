@@ -56,3 +56,19 @@ oh-my-antigravity/
 .hypothesis/
 
 .worktrees/
+
+# Temp scripts for consolidation
+copy_skills.sh
+fix_missing.sh
+gen_batch.sh
+gen_tool_call.sh
+process_batch.sh
+
+# Temp scripts
+copy_skills.sh
+fix_missing.sh
+gen_batch.sh
+gen_tool_call.sh
+process_batch.sh
+gen_batch_json.py
+gen_tool.py
