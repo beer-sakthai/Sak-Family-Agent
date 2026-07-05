@@ -6,6 +6,10 @@ platforms: [linux, macos, windows]
 metadata:
   hermes:
     tags: [playwright, browser, automation, testing, scraping]
+---
+
+# Playwright
 
 ## Description
+
 Playwright-based browser automation for testing and web scraping. Can both perform actions in the browser and scrape content.

@@ -1,6 +1,7 @@
 # Graphs and Data Reference - Manim CE
 
 ## Bar graph
+
 ```python
 from manim import *
 from manim.graphing import BarChart, BarLabel
@@ -16,6 +17,7 @@ self.add(bars)
 ```
 
 ## Line graph
+
 ```python
 from manim.graphing import LineGraph
 
@@ -29,6 +31,7 @@ self.add(axes)
 ```
 
 ## Pie Chart
+
 ```python
 from manim.graphing import PieChart
 

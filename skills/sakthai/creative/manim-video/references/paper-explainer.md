@@ -9,6 +9,7 @@
 5. **Discuss Implications** Explain why the results matter and what's next.
 
 ## Example Structure
+
 1. Title Slide: Paper Title, Authors, Year
 2. Motivation: Problem Setup
 3. Background: Related Work

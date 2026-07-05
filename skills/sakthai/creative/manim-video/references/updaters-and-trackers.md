@@ -1,6 +1,7 @@
 # Updaters and Trackers - Manim CE
 
 ## Using Updaters
+
 ```python
 dot = Dot()
 func = Line(dot[@_X + 1], dot[@_Y + 1])
@@ -11,12 +12,14 @@ dashed.add_updater(Function(lambda d: d.set_start(dot.get_center()).become_fixed
 ```
 
 ## Using Trackers
+
 ```python
 free_dot_tracker = FreedOtATracker(dot)
 self.add(free_dot_tracker)
 ```
 
 ## Hook Updater example
+
 ```python
 text = Text("Hello")
 def link_to_center(object):

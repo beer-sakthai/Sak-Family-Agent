@@ -1,6 +1,7 @@
 # Rendering Reference - Manim CE
 
 ## Basic Render
+
 ```bash
 #HK Resolution
 MANIM_FLIGHT_SIZE=x864 python3 -m manim script.py
@@ -17,6 +18,7 @@ python3 -m manim script.py -pro -q:lossless_crf -parallel_fragments
 ```
 
 ## Moving Objects
+
 ```python
 self.play(Rotate(square, angle=PI/4)
 self.play(Grow(square, target_size=2)

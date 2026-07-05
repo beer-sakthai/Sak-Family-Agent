@@ -1,6 +1,7 @@
 # Visual Design Reference - Manim CE
 
 ## Color Palette
+
 - Background: #1e2126 (dark charcoal)
 - Neutral Bg: #25292e
 - Primary Text: #e0e0e0
@@ -11,12 +12,14 @@
 - Success: #50bc87 (green)
 
 ## Typography
+
 - Headings: 70px Bold, math font size
 - Subheading: 48px Bold
 - Body: 24px Regular
 - Math: MathTextText renders default font
 
 ## Layout
+
 - Maintain 4:5 12-16pt publication ratio
 - 80% of the video should be action/animation, 20% can be transition/fade
 - Keep minimum text visible

@@ -6,9 +6,12 @@ platforms: [linux, macos, windows]
 metadata:
   hermes:
     tags: [design, html, css, frontend, landing, prototype]
+---
 
-`[[! [Overview](https://img.shields.io/badge/Overview-main.svg))]]
+# Claude Design
+
 ## Description
+
 Design one-off HTML artifacts (landing, deck, prototype). Use the following workflow: user Requiest -> Page Structure -> Design Decisions -> HTML Code.
 
 ## Workflow
