@@ -1,1 +1,1 @@
-Software Development — testing, debugging, deployment, benchmarking, and coding workflows.
+Common development tools not covered by category-specific skills.
