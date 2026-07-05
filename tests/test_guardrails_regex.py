@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-import pytest
-
 from typing import Any
+
+import pytest
 
 from sakthai.agent.guardrails import GuardrailAction, _block_output_with_secrets
 from sakthai.agent.tools import Tool
