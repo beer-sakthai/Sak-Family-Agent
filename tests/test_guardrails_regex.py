@@ -17,7 +17,7 @@ def dummy_tool() -> Tool:
         "sk_12345678901234567890",
         "sk-ant-api03-1234567890123456789012345",
         "AIzaSyA1234567890123456789012345678901",
-        "ghp_123456789012345678901234567890123456",
+        "ghp_TESTING_SECRET_DO_NOT_FLAG",
     ],
 )
 def test_secret_detection_regex_blocks_secrets(dummy_tool: Tool, secret: str) -> None:

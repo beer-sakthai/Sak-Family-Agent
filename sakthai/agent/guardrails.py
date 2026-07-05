@@ -129,7 +129,7 @@ def _block_output_with_secrets(
     """Deny any tool output that appears to contain a secret."""
     # A regex for common API key prefixes (sk-, rk-, pk-, ghp-) and Google keys (AIza).
     # Handles both underscore (sk_) and hyphen (sk-) used by Anthropic and OpenAI.
-    secret_pattern = r"\b(?:(?:sk|rk|pk|ghp)[-_][a-zA-Z0-9\-_]{20,}|AIza[0-9A-Za-z\-_]{34,})\b"
+    secret_pattern = r"\b(?:(?:sk|rk|pk|ghp)[-_][a-zA-Z0-9\-_]{20,}|AIza[0-9A-Za-z\-_]{34,})\b"  # nosec B105
     if re.search(secret_pattern, output):
         return GuardrailResult(
             GuardrailAction.DENY,
