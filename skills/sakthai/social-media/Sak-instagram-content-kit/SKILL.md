@@ -1,10 +1,11 @@
 ---
 name: Sak-instagram-content-kit
-description: "End-to-end Instagram content production for SakSit: Reels..."
+description: "Instagram Content Kit: post, search, media, v2 API."
 version: 1.0.0
 platforms: [linux, macos, windows]
 metadata:
   hermes:
-    tags: [instagram, social-media, content, saksit, production]
+    tags: [instagram, social-media, content-kit, cli]
+---
 
-This skill enables end-to-end Instagram content production for SakSit. It includes Reels, Stories, carousels, and feeds with posting, remixed update content, story replies, and scheduling.
+Provides Instagram Content Kit operations.

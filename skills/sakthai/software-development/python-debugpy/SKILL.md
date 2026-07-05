@@ -6,6 +6,7 @@ platforms: [linux, macos, windows]
 metadata:
   hermes:
     tags: [debug, python, debugpy, pdb, dpg]
+---
 
 This skill enables Python debugging through pdb REPL sessions and remote debugging with debugpy.
 

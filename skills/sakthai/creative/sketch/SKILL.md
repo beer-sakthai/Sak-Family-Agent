@@ -7,7 +7,7 @@ metadata:
   hermes:
     tags: [design, html, css, frontend, mockup, prototype]
 
-`[[! [Overview](https://img.shields.io/badge/Overview-main.svg)]]
+---
 
 ## Description
 Throwaway HTML mockups: 2-3 design variants to compare. Use this skill to quickly prototype and visualize design ideas. Each variant should be a complete single-file HTML page that can be opened in a browser.

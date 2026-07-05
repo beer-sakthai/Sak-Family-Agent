@@ -6,6 +6,7 @@ platforms: [linux, macos, windows]
 metadata:
   hermes:
     tags: [sakthai, cycle, audit, quality, safety]
+---
 
 ## Description
 Audit correctness, safety, and performance before shipping to production. This is the "care" phase of the Sakthai Agent development cycle.

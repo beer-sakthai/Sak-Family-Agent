@@ -6,6 +6,7 @@ platforms: [linux, macos, windows]
 metadata:
   hermes:
     tags: [excalidraw, diagram, architecture, flow, sequence, design]
+---
 
 ## Description
 Creates Excalidraw diagrams for architecture, sequence, and flow diagrams. This skill contains scripts that generate Excalidraw-format JSON and upload it to S3 for sharing.

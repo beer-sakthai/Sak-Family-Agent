@@ -6,6 +6,7 @@ platforms: [linux, macos, windows]
 metadata:
   hermes:
     tags: [manim, animation, video, math, science, 3blue1bown]
+---
 
 ## Description
 Creates Manim CE animations for math/science/algo videos. USe the following workflow: user request -> script planning -> animation > rendering -> output.

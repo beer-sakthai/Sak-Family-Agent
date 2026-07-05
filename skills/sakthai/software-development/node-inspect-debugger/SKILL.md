@@ -6,6 +6,7 @@ platforms: [linux, macos, windows]
 metadata:
   hermes:
     tags: [debug, node, javascript, chrome-devtools, inspect]
+---
 
 ## Description
 Debug Node.js applications using the --inspect flag and Chrome DevTools Protocol CLI tools.

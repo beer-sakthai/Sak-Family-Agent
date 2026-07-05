@@ -6,6 +6,7 @@ platforms: [linux, macos, windows]
 metadata:
   hermes:
     tags: [refactor, cleanup, code-quality, automated]
+---
 
 ## Description
 Parallel 3-Agent cleanup of recent code changes. This skill runs three agents in parallel to simplify, improve, and clean up recent code changes.
