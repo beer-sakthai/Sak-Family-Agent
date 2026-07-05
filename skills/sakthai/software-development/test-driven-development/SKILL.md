@@ -6,6 +6,7 @@ platforms: [linux, macos, windows]
 metadata:
   hermes:
     tags: [tdd, testing, pythest, python, software-development]
+---
 
 ## Description
 Test-Driven Development (TDD) workflow. Enforces the red-green-refactor cycle: write a failing test first, make it pass, then refactor.

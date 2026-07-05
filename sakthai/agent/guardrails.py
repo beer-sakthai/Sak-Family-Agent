@@ -84,20 +84,18 @@ def _block_dangerous_shell_commands(
         if rm_idx != -1:
             after_rm = parts[rm_idx + 1 :]
 
-            # Look for recursive and force flags among the arguments
+            # Look for recursive flag among the arguments.
+            # Even without --force, 'rm -r' on a root-level or traversal path is dangerous.
             has_recursive = any(
                 (p.startswith("-") and not p.startswith("--") and ("r" in p or "R" in p))
                 or p == "--recursive"
                 for p in after_rm
             )
-            has_force = any(
-                (p.startswith("-") and not p.startswith("--") and "f" in p) or p == "--force"
-                for p in after_rm
-            )
 
-            if has_recursive and has_force:
+            if has_recursive:
                 for part in after_rm:
-                    if part.startswith(("/", "~")):
+                    # Prevent destructive rm on absolute, home, or traversal paths.
+                    if part.startswith(("/", "~")) or ".." in part:
                         return GuardrailResult(
                             GuardrailAction.DENY,
                             reason=f"Potentially destructive 'rm' command on {part!r} blocked.",

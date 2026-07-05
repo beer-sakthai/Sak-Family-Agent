@@ -6,6 +6,7 @@ platforms: [linux, macos, windows]
 metadata:
   hermes:
     tags: [code-review, security, quality, python]
+---
 
 ## Description
 Pre-commit code review workflow. Security scanning, quality checks, and automatic fixes before committing to the branch.
