@@ -43,6 +43,7 @@ never duplicate content across files.
 | Repository hygiene — SakFin persona SOUL + per-agent skill name prefixes | [x] 2026-07-06 |
 | Restructure — copy sakthai package + agent-self-evolution into each persona; remove root `packages/` and `sakthai/` | [x] 2026-07-06 |
 | Build/CI repointing — canonical package at `personas/sakthai/sakthai`; pyproject, workflows, Dockerfile, path fixes | [x] 2026-07-06 |
+| Restructure — move servicequotebot scaffold from `personas/` to `services/` | [x] 2026-07-06 |
 
 ## 🔧 Runtime Notes
 
