@@ -20,15 +20,15 @@ The ecosystem follows a strict **Dream → Hope → Care → Joy → Trust → G
 ## 👨‍👩‍👧‍👦 The Sak Family Agents
 Each agent is a specialized persona orchestrated by **SakKing**. They share a common memory brain but operate in distinct domains.
 
-| Agent | Role | Specialized Skill | Backend |
-| :--- | :--- | :--- | :--- |
-| 👑 **SakKing** | Lead & Orchestrator | Code & Self-Healing | Claude / Qwen-480B |
-| 🤗 **SakThai** | HF Expert | Model Discovery | Claude-Opus |
-| 🌐 **SakSee** | Web Specialist | Playwright & Browsing | Local Llama3 |
-| 📣 **SakSit** | Social Master | Content Strategy | Local Llama3 |
-| 🗓️ **SakTan** | Daily Ops | Life Admin & Scheduling | Gemini-Flash |
-| 🤖 **SakJules** | Automation/CI | Infrastructure & Testing | Gemini-Pro |
-| 📈 **SakFin** | Financial Analyst | Market Analysis | Python/Pandas |
+| Agent | Role | Specialized Skill |
+| :--- | :--- | :--- |
+| 👑 **SakKing** | Lead & Orchestrator | Code & Self-Healing |
+| 🤗 **SakThai** | HF Expert | Model Discovery |
+| 🌐 **SakSee** | Web Specialist | Playwright & Browsing |
+| 📣 **SakSit** | Social Master | Content Strategy |
+| 🗓️ **SakTan** | Daily Ops | Life Admin & Scheduling |
+| 🤖 **SakJules** | Automation/CI | Infrastructure & Testing |
+| 📈 **SakFin** | Financial Analyst | Market Analysis |
 
 ---
 
