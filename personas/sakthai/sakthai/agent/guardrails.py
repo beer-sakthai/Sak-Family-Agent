@@ -81,7 +81,7 @@ def _is_sensitive_path(path: str) -> bool:
         "/home",
         "/sys",
         "/proc",
-        "/tmp",
+        "/tmp",  # nosec B108 — this is a protection list, not a target
         "/lib",
         "/lib64",
     }
