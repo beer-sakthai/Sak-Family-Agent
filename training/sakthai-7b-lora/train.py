@@ -74,12 +74,6 @@ tok.pad_token = tok.eos_token
 tok.padding_side = "right"
 print(f"Loaded. Params: {model.num_parameters():,}", flush=True)
 
-# ── Check TRL version for tokenizer arg ──────────────────────────
-import importlib.metadata as _ilm
-trl_ver_str = _ilm.version("trl")
-trl_ver = tuple(int(x) for x in trl_ver_str.split("."))
-print(f"TRL version: {trl_ver_str}", flush=True)
-
 # ── LoRA ──────────────────────────────────────────────────────────
 from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
 model = prepare_model_for_kbit_training(model)
@@ -101,9 +95,15 @@ args = SFTConfig(
     dataset_text_field="text", packing=False, report_to="none", remove_unused_columns=False,
 )
 
-trainer = SFTTrainer(model=model, args=args, max_seq_length=MAX_SEQ_LEN,
+# TRL dynamic loader: detect correct arg name at runtime
+import inspect
+sig_trainer = inspect.signature(SFTTrainer.__init__)
+arg_name = "processing_class" if "processing_class" in sig_trainer.parameters else "tokenizer"
+print(f"TRL detected, using argument: {arg_name}", flush=True)
+
+trainer = SFTTrainer(model=model, args=args,
                      train_dataset=split["train"], eval_dataset=split["test"],
-                     **({"tokenizer": tok} if trl_ver < (0, 15) else {"processing_class": tok}))
+                     **{arg_name: tok})
 
 print("Training...", flush=True)
 trainer.train()
