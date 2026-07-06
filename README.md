@@ -72,6 +72,7 @@ The Sak-Family-Agent provides a rich set of capabilities through its CLI, agent 
 - 🚨 **Asset Monitoring**: A built-in skill (`asset-monitor`) to monitor a list of public URLs and send a Telegram alert if any of them become unavailable [4].
 - 🌱 **Self-Evolution (Experimental)**: An experimental `agent-self-evolution` package explores DSPy/GEPA for agent self-improvement [2].
 - 🔒 **Continuous Security & Self-Healing**: A nightly GitHub Actions workflow runs the `devsecops` skill to proactively scan the codebase with `ruff` and `bandit`. When vulnerabilities are found, it triggers an automated patching pipeline to generate, test, and open pull requests with proposed fixes, creating an "intelligent digital immune system" [5].
+- 🧪 **Model Evaluation**: Custom tasks for `lm-evaluation-harness` defined in `evaluation_tasks/` validate the agent's structured outputs (JSON, YAML) and reasoning constraints.
 
 ## 🛠️ Tech Stack
 
