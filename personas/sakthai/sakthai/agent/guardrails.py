@@ -64,6 +64,36 @@ def _is_binary(part: str, names: str | tuple[str, ...]) -> bool:
     return any(part == name or part.endswith(f"/{name}") for name in names)
 
 
+def _is_sensitive_path(path: str) -> bool:
+    """Return True if the path targets a sensitive system directory or uses traversal."""
+    if ".." in path:
+        return True
+    if path.startswith("~"):
+        return True
+    if path.startswith("/"):
+        if path == "/":
+            return True
+        # List of critical roots that should never be targeted by destructive commands.
+        critical_roots = {
+            "/etc",
+            "/bin",
+            "/sbin",
+            "/usr",
+            "/var",
+            "/root",
+            "/boot",
+            "/dev",
+            "/home",
+            "/sys",
+            "/proc",
+            "/tmp",
+            "/lib",
+            "/lib64",
+        }
+        return any(path == c or path.startswith(c + "/") for c in critical_roots)
+    return False
+
+
 def _check_destructive_tokens(parts: list[str]) -> GuardrailResult:
     """Recursively check tokens for destructive commands."""
     if not parts:
@@ -86,7 +116,7 @@ def _check_destructive_tokens(parts: list[str]) -> GuardrailResult:
             except ValueError:
                 pass
 
-    # 2. Prevent recursive deletion of absolute or home-relative paths.
+    # 2. Prevent deletion of sensitive paths (files or directories).
     rm_idx = -1
     for i, part in enumerate(parts):
         if _is_binary(part, "rm"):
@@ -94,21 +124,14 @@ def _check_destructive_tokens(parts: list[str]) -> GuardrailResult:
             break
     if rm_idx != -1:
         after_rm = parts[rm_idx + 1 :]
-        # Look for recursive flag among the arguments.
-        has_recursive = any(
-            (p.startswith("-") and not p.startswith("--") and ("r" in p or "R" in p))
-            or p == "--recursive"
-            for p in after_rm
-        )
-        if has_recursive:
-            for part in after_rm:
-                if part.startswith(("/", "~")) or ".." in part:
-                    return GuardrailResult(
-                        GuardrailAction.DENY,
-                        reason=f"Potentially destructive 'rm' command on {part!r} blocked.",
-                    )
+        for part in after_rm:
+            if _is_sensitive_path(part):
+                return GuardrailResult(
+                    GuardrailAction.DENY,
+                    reason=f"Potentially destructive 'rm' command on {part!r} blocked.",
+                )
 
-    # 3. Prevent recursive chmod on sensitive paths.
+    # 3. Prevent chmod on sensitive paths.
     chmod_idx = -1
     for i, part in enumerate(parts):
         if _is_binary(part, "chmod"):
@@ -116,19 +139,14 @@ def _check_destructive_tokens(parts: list[str]) -> GuardrailResult:
             break
     if chmod_idx != -1:
         after_chmod = parts[chmod_idx + 1 :]
-        has_recursive = any(
-            (p.startswith("-") and not p.startswith("--") and "R" in p) or p == "--recursive"
-            for p in after_chmod
-        )
-        if has_recursive:
-            for part in after_chmod:
-                if part.startswith(("/", "~")) or ".." in part:
-                    return GuardrailResult(
-                        GuardrailAction.DENY,
-                        reason=f"Potentially destructive 'chmod' command on {part!r} blocked.",
-                    )
+        for part in after_chmod:
+            if _is_sensitive_path(part):
+                return GuardrailResult(
+                    GuardrailAction.DENY,
+                    reason=f"Potentially destructive 'chmod' command on {part!r} blocked.",
+                )
 
-    # 4. Prevent moving critical system directories.
+    # 4. Prevent moving critical system directories or sensitive targets.
     mv_idx = -1
     for i, part in enumerate(parts):
         if _is_binary(part, "mv"):
@@ -136,19 +154,32 @@ def _check_destructive_tokens(parts: list[str]) -> GuardrailResult:
             break
     if mv_idx != -1:
         after_mv = parts[mv_idx + 1 :]
-        critical_roots = {"/etc", "/bin", "/sbin", "/usr", "/var", "/root", "/boot", "/dev"}
         for part in after_mv:
-            if (
-                part == "/"
-                or part == "~"
-                or any(part == c or part.startswith(c + "/") for c in critical_roots)
-            ):
+            if _is_sensitive_path(part):
                 return GuardrailResult(
                     GuardrailAction.DENY,
                     reason=f"Potentially destructive 'mv' command on {part!r} blocked.",
                 )
 
-    # 5. Handle wrappers that don't use -c (sudo, doas, find -exec)
+    # 5. Prevent 'find -delete' on sensitive paths.
+    find_idx = -1
+    for i, part in enumerate(parts):
+        if _is_binary(part, "find"):
+            find_idx = i
+            break
+    if find_idx != -1:
+        after_find = parts[find_idx + 1 :]
+        if "-delete" in after_find:
+            for part in after_find:
+                if part.startswith("-"):
+                    break
+                if _is_sensitive_path(part):
+                    return GuardrailResult(
+                        GuardrailAction.DENY,
+                        reason=f"destructive 'find -delete' on {part!r} blocked.",
+                    )
+
+    # 6. Handle wrappers that don't use -c (sudo, doas, find -exec)
     for i, part in enumerate(parts):
         # sudo command ... or doas command ...
         if _is_binary(part, ("sudo", "doas")):
@@ -157,42 +188,23 @@ def _check_destructive_tokens(parts: list[str]) -> GuardrailResult:
                 return res
         # find ... -exec command ...
         if part == "-exec" and any(_is_binary(p, "find") for p in parts[:i]):
-            # For find -exec, we also want to block if the find command itself
-            # targets a sensitive path and the exec command is destructive.
-            # But the current logic is to check if the exec command is destructive.
-            # find / -exec rm -rf {} +
-            # filtered_parts = ['rm', '-rf']
-
             # Filter out find-specific tokens like {} and + or \;
             filtered_parts = [p for p in parts[i + 1 :] if p not in ("{}", "+", "\\;", ";")]
 
-            # If we see 'rm', 'chmod', 'mv' in filtered_parts,
-            # and 'find' was targeting a sensitive root, we should block.
-
-            # Heuristic: if find's target (usually parts[1]) is sensitive,
-            # and filtered_parts has a recursive/destructive command.
+            # Heuristic: if find's target is sensitive, and we are doing rm/chmod/mv.
             targets_sensitive = False
             for p in parts[:i]:
-                if p.startswith(("/", "~")) or ".." in p:
+                if _is_sensitive_path(p):
                     targets_sensitive = True
                     break
 
-            # If find targets sensitive path, and we are doing rm/chmod/mv,
-            # even without a path in the exec part, it might be dangerous because of {}.
             if targets_sensitive:
-                # Check for recursive rm/chmod or any mv
-                if any(_is_binary(p, "rm") for p in filtered_parts) and any(
-                    (p.startswith("-") and "r" in p.replace("-", "")) or p == "--recursive"
-                    for p in filtered_parts
-                ):
+                if any(_is_binary(p, "rm") for p in filtered_parts):
                     return GuardrailResult(
                         GuardrailAction.DENY,
                         reason="destructive 'find -exec rm' on sensitive path blocked.",
                     )
-                if any(_is_binary(p, "chmod") for p in filtered_parts) and any(
-                    (p.startswith("-") and "R" in p.replace("-", "")) or p == "--recursive"
-                    for p in filtered_parts
-                ):
+                if any(_is_binary(p, "chmod") for p in filtered_parts):
                     return GuardrailResult(
                         GuardrailAction.DENY,
                         reason="destructive 'find -exec chmod' on sensitive path blocked.",
