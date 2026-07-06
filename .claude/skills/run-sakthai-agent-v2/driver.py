@@ -3,8 +3,9 @@
 
 This is the agent-facing harness for the skill. It exercises every surface a
 PR is likely to touch — the memory CLI, the zero-cost agent preflight, the
-dashboard JSON export, and a live JSON-RPC roundtrip against `sakthai mcp` —
-in a throwaway SAKTHAI_HOME, and exits non-zero if anything misbehaves.
+web API server (`python -m sakthai.web.server`), and a live JSON-RPC roundtrip
+against `sakthai mcp` — in a throwaway SAKTHAI_HOME, and exits non-zero if
+anything misbehaves.
 
 No API key or network is required: the agent loop is exercised only via
 `run --dry-run` (preflight), never a real model call.
@@ -22,6 +23,8 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
+import urllib.request
 from pathlib import Path
 
 BIN = os.environ.get("SAKTHAI_BIN", "sakthai")
@@ -116,16 +119,31 @@ def main() -> int:
         rc, out = run(["run", "say hi", "--dry-run", "--no-mcp"], env)
         check("run --dry-run", rc == 0 and "runnable:" in out)
 
-        print("\nDashboard export (headless):")
-        snap = home / "data.json"
-        rc, out = run(["dashboard", "--export", str(snap)], env)
-        ok = rc == 0 and snap.is_file()
-        if ok:
-            try:
-                json.loads(snap.read_text(encoding="utf-8"))
-            except Exception:
-                ok = False
-        check("dashboard --export writes valid JSON", ok)
+        print("\nWeb API server (headless):")
+        # The `dashboard` CLI command was removed (5de2c25); the JSON surface
+        # now lives in `python -m sakthai.web.server` on 127.0.0.1:3001.
+        srv = subprocess.Popen(
+            [sys.executable, "-m", "sakthai.web.server"],
+            env=env,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        try:
+            stages: dict = {}
+            deadline = time.monotonic() + 10
+            while time.monotonic() < deadline:
+                try:
+                    with urllib.request.urlopen(
+                        "http://127.0.0.1:3001/api/stages", timeout=2
+                    ) as r:
+                        stages = json.loads(r.read())
+                    break
+                except OSError:
+                    time.sleep(0.3)
+            check("web server serves /api/stages JSON", "kpis" in stages)
+        finally:
+            srv.terminate()
+            srv.wait(timeout=10)
 
         print("\nMCP stdio server (live JSON-RPC roundtrip):")
         resp = drive_mcp(env)

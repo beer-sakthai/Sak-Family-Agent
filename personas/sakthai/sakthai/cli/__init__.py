@@ -18,7 +18,6 @@ if sys.platform == "win32":
 from .. import __version__
 from .agent import mcp, run
 from .cycle import cycle as cycle_cmd
-from .dashboard import dashboard as dashboard_cmd
 from .eval import eval_cmd
 from .extensions import extensions as extensions_cmd
 from .hf import hf_cmd
@@ -55,11 +54,10 @@ main.add_command(tools)
 main.add_command(run)
 main.add_command(mcp)
 
-# Skills, cycle, extensions, dashboard, sessions, hf
+# Skills, cycle, extensions, sessions, hf
 main.add_command(skills_cmd)
 main.add_command(cycle_cmd)
 main.add_command(extensions_cmd)
-main.add_command(dashboard_cmd)
 main.add_command(sessions_cmd)
 main.add_command(hf_cmd)
 main.add_command(eval_cmd, name="eval")

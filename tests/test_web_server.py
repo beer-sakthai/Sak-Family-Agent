@@ -85,10 +85,9 @@ class TestDashboardData:
         assert isinstance(data, dict)
 
     def test_demo_stub_has_growth_key(self) -> None:
-        with patch(
-            "sakthai.dashboard.data.collect_dashboard_data", side_effect=RuntimeError("no db")
-        ):
-            data = _dashboard_data()
+        # sakthai.dashboard was removed (5de2c25): the import inside
+        # _dashboard_data always fails, so the demo stub is the only path.
+        data = _dashboard_data()
         assert "growth" in data
         assert data.get("source") == "demo"
 
@@ -254,7 +253,12 @@ class TestServeFunction:
             patch("sakthai.web.server.HTTPServer") as mock_http,
         ):
             result = serve()
-            mock_chdir.assert_called_once_with(str(_STATIC_ROOT))
+            # dashboard/dist is gone (5de2c25): serve() must skip the chdir
+            # and still bring the API up.
+            if _STATIC_ROOT.is_dir():
+                mock_chdir.assert_called_once_with(str(_STATIC_ROOT))
+            else:
+                mock_chdir.assert_not_called()
             mock_http.assert_called_once_with((_DEFAULT_HOST, _DEFAULT_PORT), _Handler)
             assert result is mock_http.return_value
 

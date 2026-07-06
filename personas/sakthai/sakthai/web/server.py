@@ -32,7 +32,8 @@ def _dashboard_data(days: int = 30) -> dict[str, Any]:
         sys.path.insert(0, str((Path(__file__).resolve().parent.parent).resolve()))
         from sakthai.dashboard.data import collect_dashboard_data
 
-        return collect_dashboard_data(days=days)
+        data: dict[str, Any] = collect_dashboard_data(days=days)
+        return data
     except ImportError:
         logger.warning("Dashboard data module unavailable; returning demo stub.")
     except Exception:
@@ -127,7 +128,10 @@ class _Handler(SimpleHTTPRequestHandler):
 
 
 def serve(host: str = _DEFAULT_HOST, port: int = _DEFAULT_PORT) -> HTTPServer:
-    os.chdir(str(_STATIC_ROOT))
+    # The built dashboard (dashboard/dist) is optional: without it the API
+    # endpoints still serve, and static requests fall through to 403/404.
+    if _STATIC_ROOT.is_dir():
+        os.chdir(str(_STATIC_ROOT))
     server = HTTPServer((host, port), _Handler)
     logger.info("SakThai API listening on http://%s:%d (static=%s)", host, port, _STATIC_ROOT)
     return server
