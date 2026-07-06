@@ -88,10 +88,18 @@
 
 **Prevention:** Use recursive token inspection for shell wrappers (`bash -c`, `sudo`, etc.). Explicitly detect and block recursive operations (`rm -r`, `chmod -R`) and sensitive target moves (`mv`) on system-critical paths across all nested levels. For specialized tools like `find`, implement heuristics that account for target paths and placeholder replacement.
 
-## 2026-07-09 - [Unified Sensitive Path Validation and find -delete Protection]
+## 2026-07-09 - [Hardening Shell Guardrails against Non-recursive and Specialized Deletions]
 
-**Vulnerability:** The `find` command's `-delete` flag allowed for recursive deletion of files without using `-exec`, bypassing the existing `find -exec` guardrails. Furthermore, sensitive path detection was fragmented across different command checks, leading to inconsistent protection (e.g., `/home` or `/tmp` being blocked for `mv` but not for `rm`).
+**Vulnerability:** Shell command guardrails only blocked recursive `rm -rf` on sensitive paths, allowing bypasses via non-recursive `rm`, `chmod`, `mv`, or specialized flags like `find ... -delete`.
 
-**Learning:** Security guardrails for multi-functional tools like `find` must account for all destructive flags, not just those that spawn sub-processes. Fragmentation of security policy (like lists of sensitive paths) leads to "security debt" where new paths are added to some checks but forgotten in others.
+**Learning:** Security guardrails for CLI commands must not rely solely on "recursive" flags when the target is a system-critical path. Even a single-file deletion or permission change on a sensitive target can compromise the system. Furthermore, multi-purpose utilities like `find` have built-in destructive capabilities that bypass simple command-name matching.
 
-**Prevention:** Centralize sensitive path validation into a single, well-defined helper. Ensure all destructive shell command guardrails (including `find` variants like `-delete` and `-exec`) use this central helper to maintain a consistent and comprehensive security posture.
+**Prevention:** Centralize sensitive path detection (e.g., `_is_sensitive_path`) and apply it consistently across all potentially destructive command types. Ensure that any operation targeting a sensitive root is blocked, regardless of flags. Explicitly audit flags of common utilities (like `find -delete`) for destructive side-effects.
+
+## 2026-07-10 - [Path Normalization in Guardrails]
+
+**Vulnerability:** Path-based guardrails (like `_is_sensitive_path`) could be bypassed using redundant slashes (e.g., `//etc/passwd`) or relative segments (e.g., `/./etc/passwd`) because the detection logic relied on simple string prefix matching.
+
+**Learning:** String-based path checks are vulnerable to normalization bypasses. POSIX path resolution collapses redundant slashes and dots, but naive string comparisons do not. Furthermore, `os.path.normpath` has an edge case where it preserves a leading `//` for certain network filesystem implementations, which can still bypass a check for `/etc`.
+
+**Prevention:** Always normalize paths using `os.path.normpath` before performing security checks. For POSIX-style root checks, explicitly handle and collapse the leading `//` edge case to ensure that targets in sensitive system roots are correctly identified regardless of their string representation.
