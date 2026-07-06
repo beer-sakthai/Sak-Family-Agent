@@ -978,7 +978,8 @@ def emit_json(obj: Any, *, indent: int = 2, redact: bool = True) -> None:
     """
     _ = redact  # Backward-compatible signature; redaction is enforced for safety.
     payload = _redact_sensitive(obj)
-    print(json.dumps(payload, indent=indent, default=str))
+    serialized = json.dumps(payload, indent=indent, default=str)
+    print(_redact_sensitive_text(serialized))
 
 
 def log(msg: str) -> None:
