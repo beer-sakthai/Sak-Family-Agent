@@ -928,17 +928,21 @@ def _redact_sensitive_text(text: str) -> str:
     redacted = _BEARER_RE.sub(rf"\1 \2{_REDACTED}\2", redacted)
     redacted = _KV_RE.sub(rf"\1\2\3\4{_REDACTED}\4", redacted)
     # Redact explicit env var assignment forms (e.g., COMFY_CLOUD_API_KEY=xxxx)
-    redacted = re.sub(r"(?i)\b(COMFY_CLOUD_API_KEY)\s*=\s*([^\s,;]+)", rf"\1={_REDACTED}", redacted)
+    redacted = re.sub(
+        r"(?i)\b(COMFY_CLOUD_API_KEY)\s*=\s*(['\"]?)(?![^\s,;'\"]*\*\*\*REDACTED\*\*\*)([^\s,;'\"]+)\2",
+        rf"\1=\2{_REDACTED}\2",
+        redacted,
+    )
     # Redact common key/value secret forms in free text.
     redacted = re.sub(
-        r"(?i)\b(api[_-]?key|apikey|password|passwd|token|secret|access[_-]?key|private[_-]?key)\b\s*[:=]\s*([^\s,;]+)",
-        rf"\1={_REDACTED}",
+        r"(?i)\b(api[_-]?key|apikey|password|passwd|token|secret|access[_-]?key|private[_-]?key)\b\s*[:=]\s*(['\"]?)(?![^\s,;'\"]*\*\*\*REDACTED\*\*\*)([^\s,;'\"]+)\2",
+        rf"\1=\2{_REDACTED}\2",
         redacted,
     )
     # Redact Authorization headers / bearer tokens in text blobs.
     redacted = re.sub(
-        r"(?i)\b(authorization)\b\s*[:=]\s*(bearer\s+)?([^\s,;]+)",
-        rf"\1: \2{_REDACTED}",
+        r"(?i)\b(authorization)\b\s*[:=]\s*(bearer\s+)?(['\"]?)(?![^\s,;'\"]*\*\*\*REDACTED\*\*\*)([^\s,;'\"]+)\3",
+        rf"\1: \2\3{_REDACTED}\3",
         redacted,
     )
     # Redact standalone Comfy Cloud API key tokens that may appear in free-form text.
@@ -971,20 +975,14 @@ def _redact_sensitive(obj: Any) -> Any:
 
 
 def emit_json(obj: Any, *, indent: int = 2, redact: bool = True) -> None:
-    """Print JSON to stdout with sensitive data redacted.
+    """Print JSON to stdout with sensitive content redacted.
 
-    Redaction is always applied at this sink to prevent accidental clear-text
-    leakage in logs/terminal output. The `redact` argument is retained for
-    backward compatibility but is intentionally ignored.
+    Security hardening: output is always redacted to avoid clear-text leakage
+    in logs/terminal output. The `redact` parameter is retained for backward
+    compatibility but does not disable redaction.
     """
+    _ = redact
     payload = _redact_sensitive(obj)
-    serialized = json.dumps(payload, indent=indent, default=str)
-    serialized = re.sub(
-        r'(?i)("COMFY_CLOUD_API_KEY"\s*:\s*)"[^"]*"',
-        rf'\1"{_REDACTED}"',
-        serialized,
-    )
-    print(serialized)
     print(json.dumps(payload, indent=indent, default=str))
 
 

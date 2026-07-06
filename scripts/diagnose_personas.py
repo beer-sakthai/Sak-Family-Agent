@@ -185,12 +185,12 @@ def diagnose_improve() -> None:
         try:
             subprocess.run(
                 [sys.executable, "-c", "import evolution"],
-                cwd=str(REPO_ROOT / "packages" / "agent-self-evolution"),
+                cwd=str(REPO_ROOT / "personas" / "sakthai" / "agent-self-evolution"),
                 capture_output=True, text=True, timeout=60, check=True,
             )
             info("self-evolution (DSPy/GEPA)", "importable")
         except Exception:
-            info("self-evolution (DSPy/GEPA)", "package present, deps not installed (pip install -e packages/agent-self-evolution)")
+            info("self-evolution (DSPy/GEPA)", "package present, deps not installed (pip install -e personas/sakthai/agent-self-evolution)")
     finally:
         import shutil
         shutil.rmtree(home, ignore_errors=True)
