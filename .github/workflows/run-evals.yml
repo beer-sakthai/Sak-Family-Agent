@@ -165,8 +165,11 @@ jobs:
           if [ "$IS_REGRESSION" -eq 1 ]; then
             echo "Regression detected: $CURRENT_SCORE < $BASELINE_SCORE"
             echo "BASELINE_SCORE=$BASELINE_SCORE" >> $GITHUB_OUTPUT
+            echo "regression=true" >> $GITHUB_OUTPUT
           fi
 
+      - name: Create issue on regression
+        if: steps.check.outputs.regression == 'true'
         uses: actions/create-issue@v2
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
