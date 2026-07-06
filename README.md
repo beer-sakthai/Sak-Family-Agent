@@ -15,7 +15,7 @@ Welcome to the Sak-Family-Agent repository, a sophisticated multi-agent workspac
 ---
 
 ## 📑 Table of Contents
-- [🖥️ System Status](#️-system-status)
+- [🖥️ System Status](#system-status)
 - [📊 Roadmap & System Status](#-roadmap--system-status)
 - [👨‍👩‍👧‍👦 The Sak Family Agents](#-the-sak-family-agents)
 - [🤝 Family Workflows](#-family-workflows)
