@@ -95,10 +95,3 @@
 **Learning:** Security guardrails for multi-functional tools like `find` must account for all destructive flags, not just those that spawn sub-processes. Fragmentation of security policy (like lists of sensitive paths) leads to "security debt" where new paths are added to some checks but forgotten in others.
 
 **Prevention:** Centralize sensitive path validation into a single, well-defined helper. Ensure all destructive shell command guardrails (including `find` variants like `-delete` and `-exec`) use this central helper to maintain a consistent and comprehensive security posture.
-## 2026-07-09 - [Hardening Shell Guardrails against Non-recursive and Specialized Deletions]
-
-**Vulnerability:** Shell command guardrails only blocked recursive `rm -rf` on sensitive paths, allowing bypasses via non-recursive `rm`, `chmod`, `mv`, or specialized flags like `find ... -delete`.
-
-**Learning:** Security guardrails for CLI commands must not rely solely on "recursive" flags when the target is a system-critical path. Even a single-file deletion or permission change on a sensitive target can compromise the system. Furthermore, multi-purpose utilities like `find` have built-in destructive capabilities that bypass simple command-name matching.
-
-**Prevention:** Centralize sensitive path detection (e.g., `_is_sensitive_path`) and apply it consistently across all potentially destructive command types. Ensure that any operation targeting a sensitive root is blocked, regardless of flags. Explicitly audit flags of common utilities (like `find -delete`) for destructive side-effects.
