@@ -129,3 +129,16 @@ def test_hf_info_handles_missing_tags() -> None:
         out = hf_info("org/model")
     assert "tags:      " in out
     assert "tags:      ," not in out
+
+
+def test_hf_download_blocks_path_traversal(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Verify that hf_download raises ValueError when repo_id contains path traversal."""
+    monkeypatch.setenv("SAKTHAI_HOME", str(tmp_path))
+
+    # A repo_id that tries to escape ~/.sakthai/hf
+    with pytest.raises(ValueError, match="path traversal detected"):
+        hf_download("../../etc/passwd")
+
+    # Another one trying to target the root
+    with pytest.raises(ValueError, match="path traversal detected"):
+        hf_download("/etc/passwd")
