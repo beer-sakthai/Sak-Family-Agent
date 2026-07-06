@@ -1,0 +1,18 @@
+[Unit]
+Description=Sak Family Telegram Agent (%i) - Native
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=hermes
+WorkingDirectory=/opt/data/Sak-Family-Agent
+# Run natively via local uv
+ExecStart=/usr/local/bin/uv run -m sakthai.telegram.bot --agent %i
+Restart=always
+RestartSec=10
+# Persona configuration path
+Environment=SAKTHAI_CONFIG_PATH=/opt/data/Sak-Family-Agent/personas/%i/config/config.yaml
+
+[Install]
+WantedBy=default.target
