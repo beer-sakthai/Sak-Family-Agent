@@ -5,8 +5,8 @@ Six core agent personas — **sakthai**, **sakking**, **saksee**, **saksit**,
 repository. They were ~90% identical, with the same skill library copied across
 each. In this monorepo, that shared content lives **once**.
 
-The repo also includes a dedicated business persona scaffold,
-**servicequotebot**, for quote generation and lead capture workflows.
+The dedicated business scaffold for quote generation and lead capture
+workflows, **servicequotebot**, lives under `services/servicequotebot/`.
 
 ## Layout
 
@@ -20,8 +20,7 @@ personas/
 ├── sakking/  …
 ├── saksee/   …
 ├── saksit/   …
-├── saktan/   …        # scaffolded from infra/hermes-agents/profiles/saktan/
-└── servicequotebot/    # business quoting persona scaffold
+└── saktan/   …        # scaffolded from infra/hermes-agents/profiles/saktan/
 ```
 
 `shared/skills/` + a persona's `skills/` overlay together reconstitute that
