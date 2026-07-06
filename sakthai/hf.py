@@ -35,5 +35,11 @@ def hf_info(repo_id: str) -> str:
 
 
 def hf_download(repo_id: str) -> str:
-    target = sakthai_home() / "hf" / repo_id
+    """Download a model snapshot into the SakThai cache, protected against traversal."""
+    root = (sakthai_home() / "hf").resolve()
+    target = (root / repo_id).resolve()
+
+    if not target.is_relative_to(root):
+        raise ValueError(f"Invalid repo_id {repo_id!r}: path traversal detected.")
+
     return str(_hub().snapshot_download(repo_id, local_dir=str(target)))
