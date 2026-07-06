@@ -74,6 +74,16 @@ def test_other_tools_unaffected_by_shell_env_var(
         "/bin/rm -rf /",
         "sudo /bin/rm -rf /",
         "/usr/bin/rm -rf ~",
+        "bash -c 'rm -rf /'",
+        "sh -c 'rm -rf /etc'",
+        "sudo rm -rf /var",
+        "doas rm -rf /root",
+        "find / -exec rm -rf {} +",
+        r"find /etc -exec rm -rf {} \;",
+        "chmod -R 777 /",
+        "sudo chmod -R 000 ~",
+        "mv /etc /tmp/etc_bak",
+        "sudo mv /bin /tmp/bin_bak",
     ],
 )
 def test_dangerous_shell_commands_are_denied(
