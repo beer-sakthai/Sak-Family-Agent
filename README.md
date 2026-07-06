@@ -6,6 +6,20 @@
 
 Welcome to the Sak-Family-Agent repository, a sophisticated multi-agent workspace designed for high-performance productivity and personal growth. This project implements a local-first, privacy-conscious AI environment using a layered Python architecture and a shared persistent memory system.
 
+---
+
+## 📑 Table of Contents
+- [📊 Roadmap & System Status](#-roadmap--system-status)
+- [👨‍👩‍👧‍👦 The Sak Family Agents](#-the-sak-family-agents)
+- [🤝 Family Workflows](#-family-workflows)
+- [🔍 Deep Dive: Technical Architecture](#-deep-dive-technical-architecture)
+- [🛠️ CLI Command Cheat Sheet](#-cli-command-cheat-sheet)
+- [🚀 Getting Started](#-getting-started)
+- [📖 Glossary of Terms](#-glossary-of-terms)
+- [📂 Project Structure](#-project-structure)
+
+---
+
 ## 📊 Roadmap & System Status
 The ecosystem follows a strict **Dream → Hope → Care → Joy → Trust → Growth** lifecycle. We are currently scaling from an MVP to a full production-ready suite.
 
@@ -16,6 +30,8 @@ The ecosystem follows a strict **Dream → Hope → Care → Joy → Trust → G
 | **Family Workflows** | 🟩🟩🟩🟩🟩🟩⬜⬜⬜⬜ 60% | Active |
 | **ServiceQuoteBot** | 🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩 100% | Deployed |
 | **Model Evaluation** | 🟩🟩🟩🟩🟩🟩🟩⬜⬜⬜ 70% | In Progress |
+
+---
 
 ## 👨‍👩‍👧‍👦 The Sak Family Agents
 Each agent is a specialized persona orchestrated by **SakKing**. They share a common memory brain but operate in distinct domains.
@@ -32,69 +48,72 @@ Each agent is a specialized persona orchestrated by **SakKing**. They share a co
 
 ---
 
+## 🤝 Family Workflows
+The power of the Sak Family lies in multi-agent coordination. Here are common collaborative patterns:
+
+*   **The Researcher's Loop**: Ask **SakKing** to investigate a topic. He delegates web scraping to **SakSee**, technical model lookup to **SakThai**, and final content drafting to **SakSit**.
+*   **The Ops Pipeline**: **SakTan** identifies an upcoming meeting. He triggers **SakJules** to ensure all CI/CD reports are ready for presentation and notifies the team via Telegram.
+*   **The Financial Insight**: **SakFin** analyzes market trends and stores key facts via `learn`. **SakKing** then uses these facts to suggest architectural adjustments for the product.
+
+---
+
 ## 🔍 Deep Dive: Technical Architecture
 
-The Sak-Family-Agent is built as a layered Python package where each component has a strictly defined responsibility. This modularity ensures that the system is both testable and extensible.
-
 ### 🏗️ System Layers
-The architecture is divided into several key modules that interact through well-defined interfaces:
-- **`sakthai/cli/`**: A Click-based interface providing the primary entry point for users. It handles commands like `learn`, `recall`, `run`, and `mcp`.
-- **`sakthai/agent/`**: The execution core. It manages the agent loop, injecting memory context into system prompts and dispatching tool calls to various LLM providers.
-- **`sakthai/memory/`**: The exclusive layer for database interactions. It uses a SQLite backend to store durable facts and observations.
-- **`sakthai/mcp/`**: A dependency-free JSON-RPC 2.0 stdio server that shares the core tool registry, allowing external tools to interact with the agent's capabilities.
+- **`sakthai/cli/`**: Click-based entry point for all commands (`learn`, `recall`, `run`, `mcp`).
+- **`sakthai/agent/`**: The execution core managing the agent loop and LLM provider dispatching.
+- **`sakthai/memory/`**: Exclusive SQLite layer for storing durable facts and observations.
+- **`sakthai/mcp/`**: JSON-RPC 2.0 stdio server sharing the core tool registry.
 
 ### 🧠 Persistent Memory Schema
-Memory is the cornerstone of the ecosystem. It is stored in `~/.sakthai/memory.db` with the following core schema:
+Stored in `~/.sakthai/memory.db`:
+- **`facts`**: Discrete information (notes, preferences, project data).
+- **`observations`**: Agent-curated weighted insights and summaries.
 
-| Table | Columns | Purpose |
-| :--- | :--- | :--- |
-| **`facts`** | `id, kind, key, value, tags, created_at` | Stores discrete, durable information (notes, preferences, project data). |
-| **`observations`** | `id, summary, weight, confidence, created_at` | Stores agent-curated summaries and weighted insights derived from sessions. |
+---
 
-The system includes automated **consolidation** and **deduplication** routines to keep the memory brain efficient and relevant over time.
+## 🛠️ CLI Command Cheat Sheet
 
-### 🛠️ Shared Tool Registry
-Agents interact with the world through a unified registry. These tools are available via the CLI, the agent loop, and the MCP server:
-- **`learn` / `recall` / `search`**: Core memory operations.
-- **`read_file`**: Sandboxed file access (capped at 20k characters).
-- **`run_command`**: Opt-in CLI execution for system tasks (requires `SAKTHAI_SHELL_ALLOW=1`).
-- **`send_telegram_message`**: Real-time communication via the Telegram Bot API.
-- **`run_agent_loop`**: Delegation of complex tasks to nested agent instances.
+| Action | Command |
+| :--- | :--- |
+| **Run Agent Task** | `uv run sakthai run "your task here" --provider <name>` |
+| **Store Fact** | `uv run sakthai learn "I prefer dark mode" --kind pref` |
+| **Recall Memory** | `uv run sakthai recall` |
+| **Search Memory** | `uv run sakthai search "keyword"` |
+| **Open Dashboard** | `uv run sakthai dashboard` |
+| **Check Health** | `uv run sakthai memory healthcheck` |
 
 ---
 
 ## 🚀 Getting Started
 
-### Prerequisites
-- **Python 3.11+**
-- **uv** (Recommended for dependency management)
-
-### Installation
-1.  **Clone the Repository**:
+1.  **Clone & Enter**:
     ```bash
     git clone https://github.com/beer-sakthai/Sak-Family-Agent.git
     cd Sak-Family-Agent
     ```
-2.  **Environment Configuration**:
-    Copy `.env.example` to `.env` and provide your API keys for Anthropic, Google, or OpenAI.
+2.  **Setup Environment**:
+    `cp .env.example .env` and add your API keys.
 3.  **Sync Dependencies**:
-    ```bash
-    uv sync --all-extras
-    ```
+    `uv sync --all-extras`
+4.  **Engage**:
+    `uv run sakthai run "Analyze the environment" --provider anthropic`
 
-### First Run
-Engage the lead agent to analyze the environment:
-```bash
-uv run sakthai run "Analyze the current memory state and report back" --provider anthropic
-```
+---
+
+## 📖 Glossary of Terms
+*   **SOUL**: The authoritative identity, intent, and emotional readiness definition for an agent.
+*   **Charge**: A measure of an agent's focus and energy (Optimal, Active, Low, Critical).
+*   **6-Stage Cycle**: The operational lifecycle: **Dream → Hope → Care → Joy → Trust → Growth**.
+*   **Persistent Memory**: A shared SQLite backend that allows agents to remember context across different sessions.
 
 ---
 
 ## 📂 Project Structure
 - `sakthai/`: Core package (Agent, Memory, MCP, CLI).
-- `personas/`: Identity and SOUL definitions for each family member.
-- `skills/`: A library of 69+ specialized capabilities.
-- `docs/`: Detailed technical documentation and architectural diagrams.
-- `tests/`: Comprehensive unit and integration test suite.
+- `personas/`: Identity and SOUL definitions.
+- `skills/`: Library of 69+ specialized capabilities.
+- `docs/`: Technical documentation and diagrams.
+- `tests/`: Unit and integration test suite.
 
 *Built with ❤️ for **Beer** by the Sak Family. All Rights Reserved (© 2026 beer-sakthai).*
