@@ -274,7 +274,11 @@ class TestMainBlock:
 
         srv = MagicMock()
         srv.serve_forever.side_effect = KeyboardInterrupt()
-        server_py = Path(__file__).parent.parent / "sakthai" / "web" / "server.py"
+        # Resolve via the installed package rather than a repo-layout path (the
+        # canonical package copy lives under personas/sakthai/).
+        import sakthai.web.server as _server_mod
+
+        server_py = Path(str(_server_mod.__file__))
         # runpy executes in a fresh namespace; patch the real stdlib objects so
         # the re-imported `os.chdir` and `HTTPServer` inside the file use mocks.
         with patch.object(_os, "chdir"), patch.object(_http_server, "HTTPServer", return_value=srv):

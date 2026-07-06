@@ -4,27 +4,28 @@ on:
   push:
     branches: [main]
     paths:
-      - "packages/agent-self-evolution/**"
+      - "personas/sakthai/agent-self-evolution/**"
       - ".github/workflows/agent-self-evolution.yml"
   pull_request:
     branches: [main]
     paths:
-      - "packages/agent-self-evolution/**"
+      - "personas/sakthai/agent-self-evolution/**"
       - ".github/workflows/agent-self-evolution.yml"
   workflow_dispatch:
 
 permissions:
   contents: read
 
-# Standalone package (not a uv workspace member — see packages/agent-self-evolution
-# in CLAUDE.md), so it gets its own install + pytest run rather than joining ci.yml,
-# which is scoped to the sakthai core only.
+# Standalone package (not a uv workspace member — see CLAUDE.md), so it gets its
+# own install + pytest run rather than joining ci.yml, which is scoped to the
+# sakthai core only. Each persona carries a copy; personas/sakthai's is the
+# canonical one CI tests.
 jobs:
   test:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: packages/agent-self-evolution
+        working-directory: personas/sakthai/agent-self-evolution
     steps:
       - uses: actions/checkout@v4
 

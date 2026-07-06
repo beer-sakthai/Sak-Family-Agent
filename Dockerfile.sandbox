@@ -12,10 +12,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
-# Install sakthai (core only — no dashboard/e2e extras)
+# Install sakthai (core only — no dashboard/e2e extras). The package sources
+# live under personas/sakthai/sakthai (see [tool.setuptools.packages.find] in
+# pyproject.toml), so mirror that layout inside the image.
 COPY pyproject.toml README.md ./
-COPY sakthai/ ./sakthai/
-COPY skills/ ./skills/
+COPY personas/sakthai/sakthai/ ./personas/sakthai/sakthai/
 COPY library/ ./library/
 
 RUN pip install --no-cache-dir -e "."

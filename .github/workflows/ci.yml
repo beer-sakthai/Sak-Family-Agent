@@ -37,13 +37,13 @@ jobs:
 
       - name: Run linters
         run: |
-          uv run ruff check sakthai tests
-          uv run ruff format --check sakthai tests
+          uv run ruff check personas/sakthai/sakthai tests
+          uv run ruff format --check personas/sakthai/sakthai tests
 
       - name: Run static analysis
         run: |
-          uv run mypy sakthai
-          uv run bandit -c pyproject.toml -r sakthai
+          uv run mypy personas/sakthai/sakthai
+          uv run bandit -c pyproject.toml -r personas/sakthai/sakthai
 
       - name: Run tests with coverage
         run: uv run pytest --cov=sakthai --cov-report=xml tests/
