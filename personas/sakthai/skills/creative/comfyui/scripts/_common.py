@@ -977,6 +977,7 @@ def emit_json(obj: Any, *, indent: int = 2, redact: bool = True) -> None:
     in logs/terminal output. The `redact` parameter is retained for backward
     compatibility but does not disable redaction.
     """
+    _ = redact
     payload = _redact_sensitive(obj)
     print(json.dumps(payload, indent=indent, default=str))
 
