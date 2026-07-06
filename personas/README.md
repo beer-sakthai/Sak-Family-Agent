@@ -2,34 +2,31 @@
 
 Six core agent personas — **sakthai**, **sakking**, **saksee**, **saksit**,
 **saktan**, and **sakjules** — each formerly had its own `*-skills`
-repository. They were ~90% identical, with the same skill library copied across
-each. In this monorepo, that shared content lives **once**.
+repository. 
+
+Today, they collectively host **671 specialized skills** directly within their individual persona folders. This allows each agent to maintain a perfectly tailored skill tree while securely sharing the same monorepo base.
 
 The dedicated business scaffold for quote generation and lead capture
 workflows, **servicequotebot**, lives under `services/servicequotebot/`.
 
 ## Layout
 
-```
+```text
 personas/
-├── shared/skills/      # the 446 skill files identical across all five personas
 ├── sakthai/
 │   ├── SOUL.md         # the persona's identity (unique per persona)
 │   ├── config/         # persona config (config.yaml, gateway_voice_mode.json, …)
-│   └── skills/         # OVERLAY: only skills unique to or differing in this persona
-├── sakking/  …
-├── saksee/   …
-├── saksit/   …
-└── saktan/   …        # scaffolded from infra/hermes-agents/profiles/saktan/
+│   └── skills/         # Contains the 181 skills mapped to SakThai
+├── saksit/             # Contains the 172 skills mapped to SakSit
+├── sakking/            # Contains the 119 skills mapped to SakKing
+├── saktan/             # Contains the 85 skills mapped to SakTan
+├── sakjules/           # Contains the 59 skills mapped to SakJules
+└── saksee/             # Contains the 55 skills mapped to SakSee
 ```
-
-`shared/skills/` + a persona's `skills/` overlay together reconstitute that
-persona's complete, original skill tree.
 
 ## Composition rule
 
-A persona's full skill set = **shared library first, then its own overlay on
-top**. On any path collision the **overlay wins** — the same "later wins"
+A persona's full skill tree is built directly from its `skills/` directory alongside the core framework. On any path collision, the specific **overlay wins** — the same "later wins"
 precedence the agent's tool registry uses (`ToolRegistry.with_tools()`).
 
 To materialise a persona's full tree (e.g. for a runtime that expects one
@@ -45,9 +42,7 @@ verifies a composed tree against a snapshot.
 
 ## How to add or change a skill
 
-- **Affects every persona** → edit it under `shared/skills/`.
-- **Specific to one persona** (or that persona needs a different version) →
-  place/edit it under `personas/<name>/skills/`; it shadows the shared copy.
+Place or edit the skill directly under the respective `personas/<name>/skills/` folder so it is picked up by that specific agent at runtime.
 
 ## Runtime artifacts
 
