@@ -72,6 +72,19 @@ def _check_destructive_tokens(parts: list[str]) -> GuardrailResult:
     # 1. Handle nested commands in wrappers (recursion)
     for i, part in enumerate(parts):
         # bash -c "..." or sh -c "..."
+        if (
+            part == "-c"
+            and i > 0
+            and i + 1 < len(parts)
+            and _is_binary(parts[i - 1], ("bash", "sh", "zsh", "dash"))
+        ):
+            try:
+                nested = shlex.split(parts[i + 1])
+                res = _check_destructive_tokens(nested)
+                if res.action == GuardrailAction.DENY:
+                    return res
+            except ValueError:
+                pass
         if part == "-c" and i > 0 and _is_binary(parts[i - 1], ("bash", "sh", "zsh", "dash")):
             if i + 1 < len(parts):
                 try:
@@ -134,6 +147,11 @@ def _check_destructive_tokens(parts: list[str]) -> GuardrailResult:
         after_mv = parts[mv_idx + 1 :]
         critical_roots = {"/etc", "/bin", "/sbin", "/usr", "/var", "/root", "/boot", "/dev"}
         for part in after_mv:
+            if (
+                part == "/"
+                or part == "~"
+                or any(part == c or part.startswith(c + "/") for c in critical_roots)
+            ):
             if part == "/" or part == "~" or any(part == c or part.startswith(c + "/") for c in critical_roots):
                 return GuardrailResult(
                     GuardrailAction.DENY,
@@ -173,6 +191,27 @@ def _check_destructive_tokens(parts: list[str]) -> GuardrailResult:
             # even without a path in the exec part, it might be dangerous because of {}.
             if targets_sensitive:
                 # Check for recursive rm/chmod or any mv
+                if any(_is_binary(p, "rm") for p in filtered_parts) and any(
+                    (p.startswith("-") and "r" in p.replace("-", "")) or p == "--recursive"
+                    for p in filtered_parts
+                ):
+                    return GuardrailResult(
+                        GuardrailAction.DENY,
+                        reason="destructive 'find -exec rm' on sensitive path blocked.",
+                    )
+                if any(_is_binary(p, "chmod") for p in filtered_parts) and any(
+                    (p.startswith("-") and "R" in p.replace("-", "")) or p == "--recursive"
+                    for p in filtered_parts
+                ):
+                    return GuardrailResult(
+                        GuardrailAction.DENY,
+                        reason="destructive 'find -exec chmod' on sensitive path blocked.",
+                    )
+                if any(_is_binary(p, "mv") for p in filtered_parts):
+                    return GuardrailResult(
+                        GuardrailAction.DENY,
+                        reason="destructive 'find -exec mv' on sensitive path blocked.",
+                    )
                 if any(_is_binary(p, "rm") for p in filtered_parts):
                      if any((p.startswith("-") and "r" in p.replace("-","")) or p == "--recursive" for p in filtered_parts):
                          return GuardrailResult(GuardrailAction.DENY, reason="destructive 'find -exec rm' on sensitive path blocked.")
