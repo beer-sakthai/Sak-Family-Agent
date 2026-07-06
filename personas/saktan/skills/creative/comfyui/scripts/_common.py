@@ -924,7 +924,7 @@ def _redact_sensitive_text(text: str) -> str:
     redacted = _COMFY_TOKEN_RE.sub(_REDACTED, redacted)
     # Authorization/bearer first (more specific — captures the bearer prefix
     # correctly), then the generic key=value scan.
-    redacted = _AUTH_RE.sub(rf"\1\2\3\4\5{_REDACTED}\4", text)
+    redacted = _AUTH_RE.sub(rf"\1\2\3\4\5{_REDACTED}\4", redacted)
     redacted = _BEARER_RE.sub(rf"\1 \2{_REDACTED}\2", redacted)
     redacted = _KV_RE.sub(rf"\1\2\3\4{_REDACTED}\4", redacted)
     # Redact explicit env var assignment forms (e.g., COMFY_CLOUD_API_KEY=xxxx)
@@ -978,6 +978,13 @@ def emit_json(obj: Any, *, indent: int = 2, redact: bool = True) -> None:
     backward compatibility but is intentionally ignored.
     """
     payload = _redact_sensitive(obj)
+    serialized = json.dumps(payload, indent=indent, default=str)
+    serialized = re.sub(
+        r'(?i)("COMFY_CLOUD_API_KEY"\s*:\s*)"[^"]*"',
+        rf'\1"{_REDACTED}"',
+        serialized,
+    )
+    print(serialized)
     print(json.dumps(payload, indent=indent, default=str))
 
 
