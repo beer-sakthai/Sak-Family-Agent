@@ -37,6 +37,7 @@ from pathlib import Path
 import yaml
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(REPO_ROOT / "personas" / "sakthai"))
 sys.path.insert(0, str(REPO_ROOT))
 
 from sakthai.skills import (  # noqa: E402  (path bootstrap above)
@@ -70,15 +71,11 @@ def info(label: str, detail: str = "") -> None:
 
 def persona_model_config_path(persona: str) -> Path:
     """Return the model config file for one persona."""
-    if persona == "saktan":
-        return HERMES_PROFILES_DIR / persona / "config.yaml"
     return PERSONAS_DIR / persona / "config" / "config.yaml"
 
 
 def persona_mcp_config_path(persona: str) -> Path:
     """Return the MCP manifest path for one persona."""
-    if persona == "saktan":
-        return HERMES_PROFILES_DIR / persona / "config" / "mcp.json"
     return PERSONAS_DIR / persona / "config" / "mcp.json"
 
 

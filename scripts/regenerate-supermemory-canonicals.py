@@ -30,7 +30,9 @@ from difflib import SequenceMatcher
 from pathlib import Path
 
 # Allow running from the repo root without pip-installing the package.
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+REPO_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(REPO_ROOT / "personas" / "sakthai"))
+sys.path.insert(0, str(REPO_ROOT))
 
 from sakthai.memory.store import Fact, MemoryStore, Observation  # noqa: E402
 
