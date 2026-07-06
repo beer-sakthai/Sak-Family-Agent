@@ -1,5 +1,11 @@
 # Sak-Family-Agent 🤖👨‍👩‍👧‍👦
 
+[![CI](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/ci.yml/badge.svg)](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/ci.yml)
+![Version](https://img.shields.io/badge/version-2.0.0-blue)
+![Python](https://img.shields.io/badge/python-3.11%2B-blue)
+![Coverage](https://img.shields.io/badge/coverage-85%25%2B-brightgreen)
+![License](https://img.shields.io/badge/license-All%20Rights%20Reserved-lightgrey)
+
 > **Your Personal AI Ecosystem for Real-Life Growth and Productivity**
 
 **SakJules · Master of Automation & CI/CD.**
@@ -9,6 +15,7 @@ Welcome to the Sak-Family-Agent repository, a sophisticated multi-agent workspac
 ---
 
 ## 📑 Table of Contents
+- [🖥️ System Status](#system-status)
 - [📊 Roadmap & System Status](#-roadmap--system-status)
 - [👨‍👩‍👧‍👦 The Sak Family Agents](#-the-sak-family-agents)
 - [🤝 Family Workflows](#-family-workflows)
@@ -17,6 +24,20 @@ Welcome to the Sak-Family-Agent repository, a sophisticated multi-agent workspac
 - [🚀 Getting Started](#-getting-started)
 - [📖 Glossary of Terms](#-glossary-of-terms)
 - [📂 Project Structure](#-project-structure)
+
+---
+
+## 🖥️ System Status
+The system inside, subsystem by subsystem — all sharing one `~/.sakthai/memory.db` brain across three runtime entry points (CLI, agent loop, MCP server).
+
+| Subsystem | Status | Description |
+| :--- | :--- | :--- |
+| ⌨️ **CLI** (`sakthai/cli/`) | 🟢 Operational | `sakthai` entry point — `learn`/`recall`/`run`/`mcp`/`dashboard`/... |
+| 🤖 **Agent Loop** (`sakthai/agent/`) | 🟢 Operational | Claude / Gemini / OpenAI-compatible tool-using orchestration |
+| 🧠 **Memory Store** (`sakthai/memory/`) | 🟢 Operational | SQLite WAL store for durable facts + observations |
+| 🔌 **MCP Server** (`sakthai/mcp/`) | 🟢 Operational | JSON-RPC 2.0 stdio server, shares the CLI's tool registry |
+| 🔁 **6-Stage Cycle** (`sakthai/cycle/`) | 🟢 Operational | Dream → Hope → Care → Joy → Trust → Growth state machine |
+| 📊 **Dashboard** (`dashboard/`) | 🟡 Partial | React/Vite UI served via `sakthai dashboard`; requires a build step |
 
 ---
 
@@ -30,6 +51,7 @@ The ecosystem follows a strict **Dream → Hope → Care → Joy → Trust → G
 | **Family Workflows** | 🟩🟩🟩🟩🟩🟩⬜⬜⬜⬜ 60% | Active |
 | **ServiceQuoteBot** | 🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩 100% | Deployed |
 | **Model Evaluation** | 🟩🟩🟩🟩🟩🟩🟩⬜⬜⬜ 70% | In Progress |
+| **Dashboard UI** | 🟩🟩🟩🟩🟩🟩🟩⬜⬜⬜ 70% | In Progress |
 
 ---
 
