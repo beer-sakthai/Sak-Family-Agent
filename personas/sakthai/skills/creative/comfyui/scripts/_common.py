@@ -971,13 +971,13 @@ def _redact_sensitive(obj: Any) -> Any:
 
 
 def emit_json(obj: Any, *, indent: int = 2, redact: bool = True) -> None:
-    """Print JSON to stdout.
+    """Print JSON to stdout with sensitive content redacted.
 
-    By default secrets are redacted at output time to reduce the risk of
-    clear-text leakage in logs/terminal output. Pass redact=False to emit the
-    raw/unmodified payload (e.g. for --raw tooling).
+    Security hardening: output is always redacted to avoid clear-text leakage
+    in logs/terminal output. The `redact` parameter is retained for backward
+    compatibility but does not disable redaction.
     """
-    payload = _redact_sensitive(obj) if redact else obj
+    payload = _redact_sensitive(obj)
     print(json.dumps(payload, indent=indent, default=str))
 
 
