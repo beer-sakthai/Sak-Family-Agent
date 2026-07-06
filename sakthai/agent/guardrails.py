@@ -152,7 +152,6 @@ def _check_destructive_tokens(parts: list[str]) -> GuardrailResult:
                 or part == "~"
                 or any(part == c or part.startswith(c + "/") for c in critical_roots)
             ):
-            if part == "/" or part == "~" or any(part == c or part.startswith(c + "/") for c in critical_roots):
                 return GuardrailResult(
                     GuardrailAction.DENY,
                     reason=f"Potentially destructive 'mv' command on {part!r} blocked.",
