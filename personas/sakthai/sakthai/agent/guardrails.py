@@ -70,8 +70,16 @@ def _is_sensitive_path(path: str) -> bool:
         return True
     if path.startswith("~"):
         return True
-    if path.startswith("/"):
-        if path == "/":
+
+    # Normalize the path to collapse redundant slashes and dots.
+    # Note: os.path.normpath preserves a leading '//' on some systems, so we
+    # explicitly collapse it for comparison.
+    normalized = os.path.normpath(path)
+    if normalized.startswith("//") and not normalized.startswith("///"):
+        normalized = normalized[1:]
+
+    if normalized.startswith("/"):
+        if normalized == "/":
             return True
         # List of critical roots that should never be targeted by destructive commands.
         critical_roots = {
@@ -90,7 +98,7 @@ def _is_sensitive_path(path: str) -> bool:
             "/lib",
             "/lib64",
         }
-        return any(path == c or path.startswith(c + "/") for c in critical_roots)
+        return any(normalized == c or normalized.startswith(c + "/") for c in critical_roots)
     return False
 
 
