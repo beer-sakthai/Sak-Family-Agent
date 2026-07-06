@@ -979,6 +979,11 @@ def emit_json(obj: Any, *, indent: int = 2, redact: bool = True) -> None:
     _ = redact  # Backward-compatible signature; redaction is enforced for safety.
     payload = _redact_sensitive(obj)
     serialized = json.dumps(payload, indent=indent, default=str)
+    serialized = re.sub(
+        r'(?i)("COMFY_CLOUD_API_KEY"\s*:\s*)"[^"]*"',
+        rf'\1"{_REDACTED}"',
+        serialized,
+    )
     print(serialized)
 
 
