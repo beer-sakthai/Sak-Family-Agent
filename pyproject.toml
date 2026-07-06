@@ -72,6 +72,11 @@ exclude = ["library", "scripts"]
 select = ["E", "F", "W", "I", "UP", "B", "SIM"]
 ignore = ["E501", "SIM108"]
 
+[tool.ruff.lint.isort]
+# The package no longer lives at the repo root, so isort can't infer it from
+# the default src root; keep `import sakthai` classified as first-party.
+known-first-party = ["sakthai"]
+
 [tool.mypy]
 python_version = "3.11"
 strict = true
@@ -79,7 +84,8 @@ ignore_missing_imports = true
 warn_unused_ignores = true
 warn_return_any = true
 check_untyped_defs = true
-files = ["sakthai"]
+files = ["personas/sakthai/sakthai"]
+mypy_path = "personas/sakthai"
 
 # The Telegram bot is an early-stage, standalone prototype (see CLAUDE.md); it is
 # not held to the package's strict-typing bar. Exclude it from mypy rather than
@@ -98,14 +104,14 @@ skips = ["B101", "B404", "B603", "B606", "B607"]
 # Keys follow mutmut >= 3.x (`source_paths`, not the deprecated `paths_to_mutate`).
 [tool.mutmut]
 source_paths = [
-    "sakthai/memory/store.py",
-    "sakthai/agent/loop.py",
-    "sakthai/agent/tools.py",
-    "sakthai/agent/registry.py",
-    "sakthai/mcp/server.py",
-    "sakthai/mcp/client.py",
-    "sakthai/auth.py",
-    "sakthai/sandbox.py",
+    "personas/sakthai/sakthai/memory/store.py",
+    "personas/sakthai/sakthai/agent/loop.py",
+    "personas/sakthai/sakthai/agent/tools.py",
+    "personas/sakthai/sakthai/agent/registry.py",
+    "personas/sakthai/sakthai/mcp/server.py",
+    "personas/sakthai/sakthai/mcp/client.py",
+    "personas/sakthai/sakthai/auth.py",
+    "personas/sakthai/sakthai/sandbox.py",
 ]
 # mutmut runs the suite from an isolated ``mutants/`` copy and drops the original
 # source from sys.path, so anything the mutated modules import at runtime must be
@@ -115,7 +121,7 @@ source_paths = [
 # the whole package so imports resolve; ``create_mutants`` still mutates only the
 # ``source_paths`` files (it runs after the copy), so scope is unchanged.
 also_copy = [
-    "sakthai",
+    "personas/sakthai/sakthai",
 ]
 # mutmut's stats phase runs the whole suite once with a trampoline that resolves
 # the (relative) ``source_paths`` against the *current* working directory on every
@@ -150,19 +156,24 @@ pytest_add_cli_args_test_selection = [
     "--deselect=tests/test_web_server.py::TestStaticFileServe::test_serves_file_within_static_root",
 ]
 
+# The canonical importable copy of the core package lives inside the SakThai
+# persona (personas/sakthai/sakthai); the copies under the other five personas
+# are data, not build targets.
 [tool.setuptools.packages.find]
+where = ["personas/sakthai"]
 include = ["sakthai*"]
 exclude = ["tests*"]
 
 # --- Monorepo note --------------------------------------------------------
 # This repo is a monorepo (see top-level README). The core package is
-# sakthai-agent (this file). The other co-located Python package,
-# packages/agent-self-evolution, is intentionally NOT a uv workspace member:
-# its dependency set (dspy/optuna/…) is disjoint and heavy, and its `darwinian`
-# extra references an unpublished package, so folding it into this lock would
-# bloat and break the core resolution. It is built/installed on its own (see
-# packages/agent-self-evolution/README.md). infra/pw-poc is an npm project and
-# infra/vm-agents is config-only — neither is a Python build target.
+# sakthai-agent (this file), sourced from personas/sakthai/sakthai. The other
+# co-located Python package, agent-self-evolution (one copy per persona;
+# personas/sakthai/agent-self-evolution is canonical for CI), is intentionally
+# NOT a uv workspace member: its dependency set (dspy/optuna/…) is disjoint and
+# heavy, and its `darwinian` extra references an unpublished package, so folding
+# it into this lock would bloat and break the core resolution. It is
+# built/installed on its own (see its README.md). infra/pw-poc is an npm project
+# and infra/vm-agents is config-only — neither is a Python build target.
 
 [dependency-groups]
 dev = [
@@ -172,5 +183,5 @@ dev = [
 ]
 
 [tool.ruff.lint.extend-per-file-ignores]
-"packages/agent-self-evolution/*" = ["E402", "F401", "B904", "SIM102", "F841"]
+"personas/*/agent-self-evolution/*" = ["E402", "F401", "B904", "SIM102", "F841"]
 "personas/*" = ["F841"]

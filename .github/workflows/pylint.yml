@@ -24,8 +24,9 @@ jobs:
         pip install -e ".[dev]" || pip install -e "."
     - name: Analysing the code with pylint
       run: |
-        # Monorepo: lint only the core sakthai-agent package + its tests.
-        # Co-located packages (packages/*, infra/*, personas/*) carry their own
-        # quality bars and are not held to this repo's pylint thresholds.
-        pylint --fail-under=7.0 $(git ls-files | grep -E '^(sakthai|tests|scripts)/.*\.py$')
-        pylint sakthai --disable=R0801,R0401 --fail-under=9.0
+        # Monorepo: lint only the core sakthai-agent package (canonical copy at
+        # personas/sakthai/sakthai) + its tests. Other co-located trees (infra/*,
+        # the other personas' package copies) carry their own quality bars and
+        # are not held to this repo's pylint thresholds.
+        pylint --fail-under=7.0 $(git ls-files | grep -E '^(personas/sakthai/sakthai|tests|scripts)/.*\.py$')
+        pylint personas/sakthai/sakthai --disable=R0801,R0401 --fail-under=9.0
