@@ -79,3 +79,11 @@
 **Learning:** Any tool that uses user-provided strings to construct filesystem paths must explicitly validate that the resulting path remains within the intended directory. Simply appending strings is never safe, even if the base path is trusted.
 
 **Prevention:** Always resolve the final target path using `Path.resolve()` and verify that it is still a child of the intended root directory using `path.is_relative_to(root)`.
+
+## 2026-07-08 - [Recursion and Wrapper-aware Shell Guardrails]
+
+**Vulnerability:** Shell command guardrails could be bypassed by nesting destructive commands inside wrappers like `bash -c`, `sudo`, or `find -exec`. Additionally, destructive `chmod` and `mv` operations on system-critical paths were unmonitored.
+
+**Learning:** Simple top-level token matching is insufficient for shell security. Commands can be deeply nested or executed via specialized flags in common utilities. Effective guardrails must recursively inspect arguments and understand the context of specialized wrappers.
+
+**Prevention:** Use recursive token inspection for shell wrappers (`bash -c`, `sudo`, etc.). Explicitly detect and block recursive operations (`rm -r`, `chmod -R`) and sensitive target moves (`mv`) on system-critical paths across all nested levels. For specialized tools like `find`, implement heuristics that account for target paths and placeholder replacement.

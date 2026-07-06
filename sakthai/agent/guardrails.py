@@ -57,51 +57,176 @@ def _block_run_command_if_not_allowed(
     return GuardrailResult(GuardrailAction.ALLOW)
 
 
+def _is_binary(part: str, names: str | tuple[str, ...]) -> bool:
+    """Return True if part matches any of the given binary names (exactly or as path suffix)."""
+    if isinstance(names, str):
+        names = (names,)
+    return any(part == name or part.endswith(f"/{name}") for name in names)
+
+
+def _check_destructive_tokens(parts: list[str]) -> GuardrailResult:
+    """Recursively check tokens for destructive commands."""
+    if not parts:
+        return GuardrailResult(GuardrailAction.ALLOW)
+
+    # 1. Handle nested commands in wrappers (recursion)
+    for i, part in enumerate(parts):
+        # bash -c "..." or sh -c "..."
+        if (
+            part == "-c"
+            and i > 0
+            and i + 1 < len(parts)
+            and _is_binary(parts[i - 1], ("bash", "sh", "zsh", "dash"))
+        ):
+            try:
+                nested = shlex.split(parts[i + 1])
+                res = _check_destructive_tokens(nested)
+                if res.action == GuardrailAction.DENY:
+                    return res
+            except ValueError:
+                pass
+
+    # 2. Prevent recursive deletion of absolute or home-relative paths.
+    rm_idx = -1
+    for i, part in enumerate(parts):
+        if _is_binary(part, "rm"):
+            rm_idx = i
+            break
+    if rm_idx != -1:
+        after_rm = parts[rm_idx + 1 :]
+        # Look for recursive flag among the arguments.
+        has_recursive = any(
+            (p.startswith("-") and not p.startswith("--") and ("r" in p or "R" in p))
+            or p == "--recursive"
+            for p in after_rm
+        )
+        if has_recursive:
+            for part in after_rm:
+                if part.startswith(("/", "~")) or ".." in part:
+                    return GuardrailResult(
+                        GuardrailAction.DENY,
+                        reason=f"Potentially destructive 'rm' command on {part!r} blocked.",
+                    )
+
+    # 3. Prevent recursive chmod on sensitive paths.
+    chmod_idx = -1
+    for i, part in enumerate(parts):
+        if _is_binary(part, "chmod"):
+            chmod_idx = i
+            break
+    if chmod_idx != -1:
+        after_chmod = parts[chmod_idx + 1 :]
+        has_recursive = any(
+            (p.startswith("-") and not p.startswith("--") and "R" in p) or p == "--recursive"
+            for p in after_chmod
+        )
+        if has_recursive:
+            for part in after_chmod:
+                if part.startswith(("/", "~")) or ".." in part:
+                    return GuardrailResult(
+                        GuardrailAction.DENY,
+                        reason=f"Potentially destructive 'chmod' command on {part!r} blocked.",
+                    )
+
+    # 4. Prevent moving critical system directories.
+    mv_idx = -1
+    for i, part in enumerate(parts):
+        if _is_binary(part, "mv"):
+            mv_idx = i
+            break
+    if mv_idx != -1:
+        after_mv = parts[mv_idx + 1 :]
+        critical_roots = {"/etc", "/bin", "/sbin", "/usr", "/var", "/root", "/boot", "/dev"}
+        for part in after_mv:
+            if (
+                part == "/"
+                or part == "~"
+                or any(part == c or part.startswith(c + "/") for c in critical_roots)
+            ):
+                return GuardrailResult(
+                    GuardrailAction.DENY,
+                    reason=f"Potentially destructive 'mv' command on {part!r} blocked.",
+                )
+
+    # 5. Handle wrappers that don't use -c (sudo, doas, find -exec)
+    for i, part in enumerate(parts):
+        # sudo command ... or doas command ...
+        if _is_binary(part, ("sudo", "doas")):
+            res = _check_destructive_tokens(parts[i + 1 :])
+            if res.action == GuardrailAction.DENY:
+                return res
+        # find ... -exec command ...
+        if part == "-exec" and any(_is_binary(p, "find") for p in parts[:i]):
+            # For find -exec, we also want to block if the find command itself
+            # targets a sensitive path and the exec command is destructive.
+            # But the current logic is to check if the exec command is destructive.
+            # find / -exec rm -rf {} +
+            # filtered_parts = ['rm', '-rf']
+
+            # Filter out find-specific tokens like {} and + or \;
+            filtered_parts = [p for p in parts[i + 1 :] if p not in ("{}", "+", "\\;", ";")]
+
+            # If we see 'rm', 'chmod', 'mv' in filtered_parts,
+            # and 'find' was targeting a sensitive root, we should block.
+
+            # Heuristic: if find's target (usually parts[1]) is sensitive,
+            # and filtered_parts has a recursive/destructive command.
+            targets_sensitive = False
+            for p in parts[:i]:
+                if p.startswith(("/", "~")) or ".." in p:
+                    targets_sensitive = True
+                    break
+
+            # If find targets sensitive path, and we are doing rm/chmod/mv,
+            # even without a path in the exec part, it might be dangerous because of {}.
+            if targets_sensitive:
+                # Check for recursive rm/chmod or any mv
+                if any(_is_binary(p, "rm") for p in filtered_parts) and any(
+                    (p.startswith("-") and "r" in p.replace("-", "")) or p == "--recursive"
+                    for p in filtered_parts
+                ):
+                    return GuardrailResult(
+                        GuardrailAction.DENY,
+                        reason="destructive 'find -exec rm' on sensitive path blocked.",
+                    )
+                if any(_is_binary(p, "chmod") for p in filtered_parts) and any(
+                    (p.startswith("-") and "R" in p.replace("-", "")) or p == "--recursive"
+                    for p in filtered_parts
+                ):
+                    return GuardrailResult(
+                        GuardrailAction.DENY,
+                        reason="destructive 'find -exec chmod' on sensitive path blocked.",
+                    )
+                if any(_is_binary(p, "mv") for p in filtered_parts):
+                    return GuardrailResult(
+                        GuardrailAction.DENY,
+                        reason="destructive 'find -exec mv' on sensitive path blocked.",
+                    )
+
+            res = _check_destructive_tokens(filtered_parts)
+            if res.action == GuardrailAction.DENY:
+                return res
+
+    return GuardrailResult(GuardrailAction.ALLOW)
+
+
 def _block_dangerous_shell_commands(
     tool: Tool, args: dict[str, Any], _store: MemoryStore
 ) -> GuardrailResult:
     """Deny `run_command` if it contains a potentially destructive command."""
-    if tool.name == "run_command":
-        command = args.get("command", "")
-        if not isinstance(command, str):
-            return GuardrailResult(GuardrailAction.ALLOW)
+    if tool.name != "run_command":
+        return GuardrailResult(GuardrailAction.ALLOW)
 
-        try:
-            parts = shlex.split(command)
-        except ValueError:
-            return GuardrailResult(GuardrailAction.DENY, reason="Malformed shell command.")
+    command = args.get("command", "")
+    if not isinstance(command, str):
+        return GuardrailResult(GuardrailAction.ALLOW)
 
-        if not parts:
-            return GuardrailResult(GuardrailAction.ALLOW)
+    try:
+        parts = shlex.split(command)
+    except ValueError:
+        return GuardrailResult(GuardrailAction.DENY, reason="Malformed shell command.")
 
-        # prevent recursive deletion of absolute or home-relative paths.
-        rm_idx = -1
-        for i, part in enumerate(parts):
-            if part == "rm" or part.endswith("/rm"):
-                rm_idx = i
-                break
-
-        if rm_idx != -1:
-            after_rm = parts[rm_idx + 1 :]
-
-            # Look for recursive flag among the arguments.
-            # Even without --force, 'rm -r' on a root-level or traversal path is dangerous.
-            has_recursive = any(
-                (p.startswith("-") and not p.startswith("--") and ("r" in p or "R" in p))
-                or p == "--recursive"
-                for p in after_rm
-            )
-
-            if has_recursive:
-                for part in after_rm:
-                    # Prevent destructive rm on absolute, home, or traversal paths.
-                    if part.startswith(("/", "~")) or ".." in part:
-                        return GuardrailResult(
-                            GuardrailAction.DENY,
-                            reason=f"Potentially destructive 'rm' command on {part!r} blocked.",
-                        )
-
-    return GuardrailResult(GuardrailAction.ALLOW)
+    return _check_destructive_tokens(parts)
 
 
 def _enforce_verbose_listing(
