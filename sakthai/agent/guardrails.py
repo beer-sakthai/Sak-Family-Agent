@@ -85,15 +85,6 @@ def _check_destructive_tokens(parts: list[str]) -> GuardrailResult:
                     return res
             except ValueError:
                 pass
-        if part == "-c" and i > 0 and _is_binary(parts[i - 1], ("bash", "sh", "zsh", "dash")):
-            if i + 1 < len(parts):
-                try:
-                    nested = shlex.split(parts[i + 1])
-                    res = _check_destructive_tokens(nested)
-                    if res.action == GuardrailAction.DENY:
-                        return res
-                except ValueError:
-                    pass
 
     # 2. Prevent recursive deletion of absolute or home-relative paths.
     rm_idx = -1
@@ -152,7 +143,6 @@ def _check_destructive_tokens(parts: list[str]) -> GuardrailResult:
                 or part == "~"
                 or any(part == c or part.startswith(c + "/") for c in critical_roots)
             ):
-            if part == "/" or part == "~" or any(part == c or part.startswith(c + "/") for c in critical_roots):
                 return GuardrailResult(
                     GuardrailAction.DENY,
                     reason=f"Potentially destructive 'mv' command on {part!r} blocked.",
@@ -212,14 +202,6 @@ def _check_destructive_tokens(parts: list[str]) -> GuardrailResult:
                         GuardrailAction.DENY,
                         reason="destructive 'find -exec mv' on sensitive path blocked.",
                     )
-                if any(_is_binary(p, "rm") for p in filtered_parts):
-                     if any((p.startswith("-") and "r" in p.replace("-","")) or p == "--recursive" for p in filtered_parts):
-                         return GuardrailResult(GuardrailAction.DENY, reason="destructive 'find -exec rm' on sensitive path blocked.")
-                if any(_is_binary(p, "chmod") for p in filtered_parts):
-                     if any((p.startswith("-") and "R" in p.replace("-","")) or p == "--recursive" for p in filtered_parts):
-                         return GuardrailResult(GuardrailAction.DENY, reason="destructive 'find -exec chmod' on sensitive path blocked.")
-                if any(_is_binary(p, "mv") for p in filtered_parts):
-                     return GuardrailResult(GuardrailAction.DENY, reason="destructive 'find -exec mv' on sensitive path blocked.")
 
             res = _check_destructive_tokens(filtered_parts)
             if res.action == GuardrailAction.DENY:
