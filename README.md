@@ -1,85 +1,100 @@
-![Sak Family Agent Banner](assets/sak_family_banner.png)
-
 # Sak-Family-Agent 🤖👨‍👩‍👧‍👦
 
 > **Your Personal AI Ecosystem for Real-Life Growth and Productivity**
 
-![Status](https://img.shields.io/badge/status-active-brightgreen)
-![License](https://img.shields.io/badge/license-All%20Rights%20Reserved-red)
-![Last Commit](https://img.shields.io/github/last-commit/beer-sakthai/Sak-Family-Agent)
-![Python](https://img.shields.io/badge/python-3.11%2B-blue)
-![Coverage](https://img.shields.io/badge/coverage-%E2%89%A585%25-success)
-
----
-
 **SakJules · Master of Automation & CI/CD.**
 
-Welcome to the heart of the Sak Family's digital operations. This repository houses a sophisticated multi-agent ecosystem designed to automate, analyze, and accelerate every aspect of our daily lives.
-
-## 🌟 Vision
-The **Sak-Family-Agent** is a local-first, privacy-conscious AI workspace. It leverages persistent memory and specialized personas to provide a seamless bridge between digital intelligence and real-world productivity.
+Welcome to the Sak-Family-Agent repository, a sophisticated multi-agent workspace designed for high-performance productivity and personal growth. This project implements a local-first, privacy-conscious AI environment using a layered Python architecture and a shared persistent memory system.
 
 ## 📊 Roadmap & System Status
-We are currently in the **Trust → Growth** transition phase.
+The ecosystem follows a strict **Dream → Hope → Care → Joy → Trust → Growth** lifecycle. We are currently scaling from an MVP to a full production-ready suite.
 
 | Area | Progress | Status |
 | :--- | :--- | :--- |
-| **Core Agent Framework** | 🟩🟩🟩🟩🟩🟩🟩🟩🟨⬜ 85% | Stable |
+| **Core Framework** | 🟩🟩🟩🟩🟩🟩🟩🟩🟨⬜ 85% | Stable |
 | **Persona SOULs** | 🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩 100% | Completed |
-| **Family Workflows** | 🟩🟩🟩🟩🟩🟩⬜⬜⬜⬜ 60% | Active Development |
-| **ServiceQuoteBot (MVP)** | 🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩 100% | Deployed |
+| **Family Workflows** | 🟩🟩🟩🟩🟩🟩⬜⬜⬜⬜ 60% | Active |
+| **ServiceQuoteBot** | 🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩 100% | Deployed |
 | **Model Evaluation** | 🟩🟩🟩🟩🟩🟩🟩⬜⬜⬜ 70% | In Progress |
 
 ## 👨‍👩‍👧‍👦 The Sak Family Agents
-Our ecosystem is powered by specialized personas, each a master of their domain, orchestrated by **SakKing**.
+Each agent is a specialized persona orchestrated by **SakKing**. They share a common memory brain but operate in distinct domains.
 
-| Agent | Role | Specialized Skill |
+| Agent | Role | Specialized Skill | Backend |
+| :--- | :--- | :--- | :--- |
+| 👑 **SakKing** | Lead & Orchestrator | Code & Self-Healing | Claude / Qwen-480B |
+| 🤗 **SakThai** | HF Expert | Model Discovery | Claude-Opus |
+| 🌐 **SakSee** | Web Specialist | Playwright & Browsing | Local Llama3 |
+| 📣 **SakSit** | Social Master | Content Strategy | Local Llama3 |
+| 🗓️ **SakTan** | Daily Ops | Life Admin & Scheduling | Gemini-Flash |
+| 🤖 **SakJules** | Automation/CI | Infrastructure & Testing | Gemini-Pro |
+| 📈 **SakFin** | Financial Analyst | Market Analysis | Python/Pandas |
+
+---
+
+## 🔍 Deep Dive: Technical Architecture
+
+The Sak-Family-Agent is built as a layered Python package where each component has a strictly defined responsibility. This modularity ensures that the system is both testable and extensible.
+
+### 🏗️ System Layers
+The architecture is divided into several key modules that interact through well-defined interfaces:
+- **`sakthai/cli/`**: A Click-based interface providing the primary entry point for users. It handles commands like `learn`, `recall`, `run`, and `mcp`.
+- **`sakthai/agent/`**: The execution core. It manages the agent loop, injecting memory context into system prompts and dispatching tool calls to various LLM providers.
+- **`sakthai/memory/`**: The exclusive layer for database interactions. It uses a SQLite backend to store durable facts and observations.
+- **`sakthai/mcp/`**: A dependency-free JSON-RPC 2.0 stdio server that shares the core tool registry, allowing external tools to interact with the agent's capabilities.
+
+### 🧠 Persistent Memory Schema
+Memory is the cornerstone of the ecosystem. It is stored in `~/.sakthai/memory.db` with the following core schema:
+
+| Table | Columns | Purpose |
 | :--- | :--- | :--- |
-| 👑 **SakKing** | Lead & Orchestrator | Master of Code & Architecture |
-| 🤗 **SakThai** | Hugging Face Expert | Model Discovery & Integration |
-| 🌐 **SakSee** | Web Specialist | Playwright, Scraping & Browsing |
-| 📣 **SakSit** | Social Media Master | Content Strategy & Engagement |
-| 🗓️ **SakTan** | Daily Ops Helper | Calendar, Email & Scheduling |
-| 🤖 **SakJules** | Automation & CI/CD | Infrastructure, Testing & Deployment |
-| 📈 **SakFin** | Financial Analyst | Market Trends & Quantitative Analysis |
+| **`facts`** | `id, kind, key, value, tags, created_at` | Stores discrete, durable information (notes, preferences, project data). |
+| **`observations`** | `id, summary, weight, confidence, created_at` | Stores agent-curated summaries and weighted insights derived from sessions. |
 
-## 🚀 Key Features
-*   🧠 **Persistent Memory**: Shared SQLite backend (`~/.sakthai/memory.db`) allowing agents to learn and recall context across sessions.
-*   🛠️ **Unified Tool Registry**: A robust set of tools for file I/O, terminal execution, and Telegram communication.
-*   🤝 **Multi-Agent Swarms**: Agents can delegate tasks, share artifacts, and collaborate on complex objectives.
-*   🧪 **Automated Evaluation**: Integrated `lm-evaluation-harness` to ensure high-quality, structured AI outputs.
-*   🔒 **Self-Healing Infrastructure**: Nightly security scans and automated patching via the `devsecops` skill.
+The system includes automated **consolidation** and **deduplication** routines to keep the memory brain efficient and relevant over time.
 
-## 💻 Quick Start
-This project requires **Python 3.11+** and uses **uv** for lightning-fast dependency management.
+### 🛠️ Shared Tool Registry
+Agents interact with the world through a unified registry. These tools are available via the CLI, the agent loop, and the MCP server:
+- **`learn` / `recall` / `search`**: Core memory operations.
+- **`read_file`**: Sandboxed file access (capped at 20k characters).
+- **`run_command`**: Opt-in CLI execution for system tasks (requires `SAKTHAI_SHELL_ALLOW=1`).
+- **`send_telegram_message`**: Real-time communication via the Telegram Bot API.
+- **`run_agent_loop`**: Delegation of complex tasks to nested agent instances.
 
-1.  **Clone & Enter**:
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+- **Python 3.11+**
+- **uv** (Recommended for dependency management)
+
+### Installation
+1.  **Clone the Repository**:
     ```bash
     git clone https://github.com/beer-sakthai/Sak-Family-Agent.git
     cd Sak-Family-Agent
     ```
-2.  **Environment Setup**:
-    ```bash
-    cp .env.example .env
-    # Add your API keys (Anthropic, OpenAI, Gemini, etc.)
-    ```
-3.  **Install Everything**:
+2.  **Environment Configuration**:
+    Copy `.env.example` to `.env` and provide your API keys for Anthropic, Google, or OpenAI.
+3.  **Sync Dependencies**:
     ```bash
     uv sync --all-extras
     ```
-4.  **Engage the Agent**:
-    ```bash
-    # Ask SakKing to perform a task
-    uv run sakthai run "Analyze the current repository structure" --provider anthropic
-    ```
 
-## 📂 Repository Structure
-*   `sakthai/`: Core Python package (agent, memory, mcp, cli).
-*   `personas/`: Identity definitions and SOUL files for each agent.
-*   `skills/`: A library of 69+ specialized agent capabilities.
-*   `scripts/`: Automation and utility scripts for maintenance.
-*   `tests/`: Comprehensive test suite (Unit & Integration).
+### First Run
+Engage the lead agent to analyze the environment:
+```bash
+uv run sakthai run "Analyze the current memory state and report back" --provider anthropic
+```
 
 ---
+
+## 📂 Project Structure
+- `sakthai/`: Core package (Agent, Memory, MCP, CLI).
+- `personas/`: Identity and SOUL definitions for each family member.
+- `skills/`: A library of 69+ specialized capabilities.
+- `docs/`: Detailed technical documentation and architectural diagrams.
+- `tests/`: Comprehensive unit and integration test suite.
 
 *Built with ❤️ for **Beer** by the Sak Family. All Rights Reserved (© 2026 beer-sakthai).*
