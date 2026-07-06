@@ -87,3 +87,11 @@
 **Learning:** Simple top-level token matching is insufficient for shell security. Commands can be deeply nested or executed via specialized flags in common utilities. Effective guardrails must recursively inspect arguments and understand the context of specialized wrappers.
 
 **Prevention:** Use recursive token inspection for shell wrappers (`bash -c`, `sudo`, etc.). Explicitly detect and block recursive operations (`rm -r`, `chmod -R`) and sensitive target moves (`mv`) on system-critical paths across all nested levels. For specialized tools like `find`, implement heuristics that account for target paths and placeholder replacement.
+
+## 2026-07-09 - [Unified Sensitive Path Validation and find -delete Protection]
+
+**Vulnerability:** The `find` command's `-delete` flag allowed for recursive deletion of files without using `-exec`, bypassing the existing `find -exec` guardrails. Furthermore, sensitive path detection was fragmented across different command checks, leading to inconsistent protection (e.g., `/home` or `/tmp` being blocked for `mv` but not for `rm`).
+
+**Learning:** Security guardrails for multi-functional tools like `find` must account for all destructive flags, not just those that spawn sub-processes. Fragmentation of security policy (like lists of sensitive paths) leads to "security debt" where new paths are added to some checks but forgotten in others.
+
+**Prevention:** Centralize sensitive path validation into a single, well-defined helper. Ensure all destructive shell command guardrails (including `find` variants like `-delete` and `-exec`) use this central helper to maintain a consistent and comprehensive security posture.

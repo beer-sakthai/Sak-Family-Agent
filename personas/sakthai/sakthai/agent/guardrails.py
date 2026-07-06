@@ -64,6 +64,32 @@ def _is_binary(part: str, names: str | tuple[str, ...]) -> bool:
     return any(part == name or part.endswith(f"/{name}") for name in names)
 
 
+def _is_sensitive_path(path: str) -> bool:
+    """Return True if the path is a system-critical or sensitive location."""
+    if path.startswith("~") or ".." in path:
+        return True
+
+    critical_roots = {
+        "/etc",
+        "/bin",
+        "/sbin",
+        "/usr",
+        "/var",
+        "/root",
+        "/boot",
+        "/dev",
+        "/home",
+        "/sys",
+        "/proc",
+        "/tmp",
+        "/lib",
+        "/lib64",
+    }
+    if path == "/":
+        return True
+    return any(path == root or path.startswith(root + "/") for root in critical_roots)
+
+
 def _check_destructive_tokens(parts: list[str]) -> GuardrailResult:
     """Recursively check tokens for destructive commands."""
     if not parts:
@@ -102,7 +128,7 @@ def _check_destructive_tokens(parts: list[str]) -> GuardrailResult:
         )
         if has_recursive:
             for part in after_rm:
-                if part.startswith(("/", "~")) or ".." in part:
+                if _is_sensitive_path(part):
                     return GuardrailResult(
                         GuardrailAction.DENY,
                         reason=f"Potentially destructive 'rm' command on {part!r} blocked.",
@@ -122,7 +148,7 @@ def _check_destructive_tokens(parts: list[str]) -> GuardrailResult:
         )
         if has_recursive:
             for part in after_chmod:
-                if part.startswith(("/", "~")) or ".." in part:
+                if _is_sensitive_path(part):
                     return GuardrailResult(
                         GuardrailAction.DENY,
                         reason=f"Potentially destructive 'chmod' command on {part!r} blocked.",
@@ -136,13 +162,8 @@ def _check_destructive_tokens(parts: list[str]) -> GuardrailResult:
             break
     if mv_idx != -1:
         after_mv = parts[mv_idx + 1 :]
-        critical_roots = {"/etc", "/bin", "/sbin", "/usr", "/var", "/root", "/boot", "/dev"}
         for part in after_mv:
-            if (
-                part == "/"
-                or part == "~"
-                or any(part == c or part.startswith(c + "/") for c in critical_roots)
-            ):
+            if _is_sensitive_path(part):
                 return GuardrailResult(
                     GuardrailAction.DENY,
                     reason=f"Potentially destructive 'mv' command on {part!r} blocked.",
@@ -155,57 +176,54 @@ def _check_destructive_tokens(parts: list[str]) -> GuardrailResult:
             res = _check_destructive_tokens(parts[i + 1 :])
             if res.action == GuardrailAction.DENY:
                 return res
-        # find ... -exec command ...
-        if part == "-exec" and any(_is_binary(p, "find") for p in parts[:i]):
-            # For find -exec, we also want to block if the find command itself
-            # targets a sensitive path and the exec command is destructive.
-            # But the current logic is to check if the exec command is destructive.
-            # find / -exec rm -rf {} +
-            # filtered_parts = ['rm', '-rf']
-
-            # Filter out find-specific tokens like {} and + or \;
-            filtered_parts = [p for p in parts[i + 1 :] if p not in ("{}", "+", "\\;", ";")]
-
-            # If we see 'rm', 'chmod', 'mv' in filtered_parts,
-            # and 'find' was targeting a sensitive root, we should block.
-
-            # Heuristic: if find's target (usually parts[1]) is sensitive,
-            # and filtered_parts has a recursive/destructive command.
+        # find ... -delete or -exec command ...
+        if (part == "-delete" or part == "-exec") and any(_is_binary(p, "find") for p in parts[:i]):
+            # Check if find's target is sensitive.
             targets_sensitive = False
             for p in parts[:i]:
-                if p.startswith(("/", "~")) or ".." in p:
+                # find targets are usually paths before the first flag.
+                if not p.startswith("-") and not _is_binary(p, "find") and _is_sensitive_path(p):
                     targets_sensitive = True
                     break
 
-            # If find targets sensitive path, and we are doing rm/chmod/mv,
-            # even without a path in the exec part, it might be dangerous because of {}.
-            if targets_sensitive:
-                # Check for recursive rm/chmod or any mv
-                if any(_is_binary(p, "rm") for p in filtered_parts) and any(
-                    (p.startswith("-") and "r" in p.replace("-", "")) or p == "--recursive"
-                    for p in filtered_parts
-                ):
-                    return GuardrailResult(
-                        GuardrailAction.DENY,
-                        reason="destructive 'find -exec rm' on sensitive path blocked.",
-                    )
-                if any(_is_binary(p, "chmod") for p in filtered_parts) and any(
-                    (p.startswith("-") and "R" in p.replace("-", "")) or p == "--recursive"
-                    for p in filtered_parts
-                ):
-                    return GuardrailResult(
-                        GuardrailAction.DENY,
-                        reason="destructive 'find -exec chmod' on sensitive path blocked.",
-                    )
-                if any(_is_binary(p, "mv") for p in filtered_parts):
-                    return GuardrailResult(
-                        GuardrailAction.DENY,
-                        reason="destructive 'find -exec mv' on sensitive path blocked.",
-                    )
+            if part == "-delete" and targets_sensitive:
+                return GuardrailResult(
+                    GuardrailAction.DENY,
+                    reason="destructive 'find -delete' on sensitive path blocked.",
+                )
 
-            res = _check_destructive_tokens(filtered_parts)
-            if res.action == GuardrailAction.DENY:
-                return res
+            if part == "-exec":
+                # Filter out find-specific tokens like {} and + or \;
+                filtered_parts = [p for p in parts[i + 1 :] if p not in ("{}", "+", "\\;", ";")]
+
+                # If find targets sensitive path, and we are doing recursive rm/chmod or any mv,
+                # block it even if the exec part doesn't explicitly name the path (uses {}).
+                if targets_sensitive:
+                    if any(_is_binary(p, "rm") for p in filtered_parts) and any(
+                        (p.startswith("-") and "r" in p.replace("-", "")) or p == "--recursive"
+                        for p in filtered_parts
+                    ):
+                        return GuardrailResult(
+                            GuardrailAction.DENY,
+                            reason="destructive 'find -exec rm' on sensitive path blocked.",
+                        )
+                    if any(_is_binary(p, "chmod") for p in filtered_parts) and any(
+                        (p.startswith("-") and "R" in p.replace("-", "")) or p == "--recursive"
+                        for p in filtered_parts
+                    ):
+                        return GuardrailResult(
+                            GuardrailAction.DENY,
+                            reason="destructive 'find -exec chmod' on sensitive path blocked.",
+                        )
+                    if any(_is_binary(p, "mv") for p in filtered_parts):
+                        return GuardrailResult(
+                            GuardrailAction.DENY,
+                            reason="destructive 'find -exec mv' on sensitive path blocked.",
+                        )
+
+                res = _check_destructive_tokens(filtered_parts)
+                if res.action == GuardrailAction.DENY:
+                    return res
 
     return GuardrailResult(GuardrailAction.ALLOW)
 
