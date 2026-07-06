@@ -973,14 +973,11 @@ def _redact_sensitive(obj: Any) -> Any:
 def emit_json(obj: Any, *, indent: int = 2, redact: bool = True) -> None:
     """Print JSON to stdout.
 
-    Secrets are always redacted at output time to reduce the risk of
-    clear-text leakage in logs/terminal output.
-
-    The `redact` parameter is retained for backward compatibility with existing
-    callers, but output remains redacted regardless.
+    By default secrets are redacted at output time to reduce the risk of
+    clear-text leakage in logs/terminal output. Pass redact=False to emit the
+    raw/unmodified payload (e.g. for --raw tooling).
     """
-    _ = redact  # Backward-compatible no-op; emission is intentionally fail-closed.
-    payload = _redact_sensitive(obj)
+    payload = _redact_sensitive(obj) if redact else obj
     print(json.dumps(payload, indent=indent, default=str))
 
 
