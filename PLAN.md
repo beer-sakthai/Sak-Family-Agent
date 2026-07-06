@@ -40,6 +40,7 @@ never duplicate content across files.
 | MVP execution — ServiceQuoteBot build | ✅ Done (2026-07-02) |
 | Model Evaluation — Task validation via lm-evaluation-harness | [x] 2026-07-06 |
 | Documentation — Revamp README with banner and detailed status | [x] 2026-07-06 |
+| Repository hygiene — SakFin persona SOUL + per-agent skill name prefixes | [x] 2026-07-06 |
 
 ## 🔧 Runtime Notes
 
