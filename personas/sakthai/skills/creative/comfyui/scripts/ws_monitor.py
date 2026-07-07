@@ -85,7 +85,7 @@ def parse_binary_frame(data: bytes) -> dict | None:
             return None
         try:
             meta = json.loads(data[8:meta_end].decode("utf-8"))
-        except Exception:
+        except json.JSONDecodeError:
             meta = {"raw": data[8:meta_end][:200].decode("utf-8", "replace")}
         return {
             "kind": "preview_with_metadata",
@@ -184,7 +184,7 @@ def main(argv: list[str] | None = None) -> int:
 
             try:
                 payload = json.loads(msg)
-            except Exception:
+            except json.JSONDecodeError:
                 continue
             mtype = payload.get("type", "")
             mdata = payload.get("data", {}) or {}
@@ -261,7 +261,7 @@ def main(argv: list[str] | None = None) -> int:
     finally:
         try:
             ws.close()
-        except Exception:
+        except json.JSONDecodeError:
             pass
 
 

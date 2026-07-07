@@ -130,13 +130,13 @@ def fetch_object_info(url: str, headers: dict) -> tuple[set[str] | None, dict | 
             data = r.json()
             if isinstance(data, dict):
                 return set(data.keys()), None
-        except Exception:
+        except json.JSONDecodeError:
             pass
         return None, {"http_status": 200, "reason": "non-dict response"}
     if r.status == 403:
         try:
             body = r.json()
-        except Exception:
+        except json.JSONDecodeError:
             body = {"raw": r.text()[:200]}
         return None, {"http_status": 403, "reason": "forbidden", "body": body}
     if r.status == 404:
@@ -153,13 +153,13 @@ def _fetch_one_folder(
     if r.status == 200:
         try:
             return parse_model_list(r.json()), None
-        except Exception:
+        except json.JSONDecodeError:
             return set(), {"http_status": 200, "reason": "non-list response"}
     if r.status == 404:
         body_text = r.text()
         try:
             body = r.json()
-        except Exception:
+        except json.JSONDecodeError:
             body = {"raw": body_text[:200]}
         code = body.get("code") if isinstance(body, dict) else None
         if code == "folder_not_found":
@@ -170,7 +170,7 @@ def _fetch_one_folder(
     if r.status == 403:
         try:
             body = r.json()
-        except Exception:
+        except json.JSONDecodeError:
             body = {}
         return None, {"http_status": 403, "reason": "forbidden", "body": body}
     return None, {"http_status": r.status, "reason": "unexpected"}
@@ -223,7 +223,7 @@ def fetch_embeddings(base: str, headers: dict, *, is_cloud: bool) -> tuple[set[s
                         # Also store stem for fuzzy matching
                         names.add(Path(n).stem)
                 return names, None
-        except Exception:
+        except json.JSONDecodeError:
             pass
     return None, {"http_status": r.status, "reason": "unexpected"}
 
