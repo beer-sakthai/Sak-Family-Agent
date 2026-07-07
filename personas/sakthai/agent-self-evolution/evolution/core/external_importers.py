@@ -266,7 +266,7 @@ def _read_copilot_workspace(workspace_path: Path) -> str:
         for line in workspace_path.read_text().split("\n"):
             if line.startswith("cwd:"):
                 return line.split(":", 1)[1].strip()
-    except Exception:
+    except (OSError, UnicodeDecodeError):
         pass
     return ""
 
@@ -545,8 +545,10 @@ class RelevanceFilter:
                                 )
                             )
 
-                except Exception:
+                except Exception as e:
                     errors += 1
+                    if not isinstance(e, (json.JSONDecodeError, KeyError)):
+                        console.print(f"  [red]Unexpected error scoring example: {e}[/red]")
 
                 progress.update(task, advance=1)
 
