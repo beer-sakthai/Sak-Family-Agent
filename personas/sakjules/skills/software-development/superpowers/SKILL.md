@@ -41,5 +41,5 @@ Never rely on self-certification. You must prove code correctness:
 ## 3. Progress Logging
 Always record technical takeaways in the appropriate Jules journal:
 - **SQL / DB optimizations**: Record in `.jules/bolt.md`.
-- **UI / UX improvements**: Record in `.Jules/palette.md`.
+- **UI / UX improvements**: Record in `.jules/palette.md`.
 - **Security / Secrets / Safety**: Record in `.jules/sentinel.md`.
