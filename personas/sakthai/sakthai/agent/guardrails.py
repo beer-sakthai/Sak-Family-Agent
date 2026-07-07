@@ -189,15 +189,17 @@ def _check_destructive_tokens(parts: list[str]) -> GuardrailResult:
                         reason=f"destructive 'find -delete' on {part!r} blocked.",
                     )
 
-    # 6. Handle wrappers that don't use -c (sudo, doas, find -exec)
+    # 6. Handle wrappers that don't use -c (sudo, doas, xargs, find -exec)
     for i, part in enumerate(parts):
-        # sudo command ... or doas command ...
-        if _is_binary(part, ("sudo", "doas")):
+        # sudo command ... or doas command ... or xargs command ...
+        if _is_binary(part, ("sudo", "doas", "xargs")):
             res = _check_destructive_tokens(parts[i + 1 :])
             if res.action == GuardrailAction.DENY:
                 return res
-        # find ... -exec command ...
-        if part == "-exec" and any(_is_binary(p, "find") for p in parts[:i]):
+        # find ... -exec/ok command ...
+        if part in ("-exec", "-execdir", "-ok", "-okdir") and any(
+            _is_binary(p, "find") for p in parts[:i]
+        ):
             # Filter out find-specific tokens like {} and + or \;
             filtered_parts = [p for p in parts[i + 1 :] if p not in ("{}", "+", "\\;", ";")]
 

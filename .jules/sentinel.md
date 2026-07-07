@@ -119,3 +119,10 @@
 **Learning:** Shell utilities often support global options that precede positional arguments. When building security guardrails that inspect command-line arguments, "stopping at the first flag" is an unsafe heuristic if sensitive targets can appear later in the command string.
 
 **Prevention:** When inspecting command arguments for sensitive paths, skip flags (tokens starting with `-`) using `continue` instead of `break`. This ensures that all positional arguments are evaluated even if they follow or are interspersed with options.
+## 2026-07-06 - [Hardened Shell Guardrails against find -delete Bypass and Wrappers]
+
+**Vulnerability:** Shell guardrails for `find -delete` could be bypassed by inserting global options (e.g., `find -L /etc -delete`) because the argument scanner prematurely stopped at hyphenated tokens. Additionally, destructive commands wrapped in `xargs` or using `find` variants like `-execdir` were unmonitored.
+
+**Learning:** When scanning CLI arguments for sensitive paths, security logic must not assume that options only appear after positional targets. Furthermore, security enforcement must be recursive and account for all variants of execution wrappers to prevent trivial bypasses.
+
+**Prevention:** Ensure that argument scanners for specialized tools (like `find`) continue inspecting all non-option tokens as potential starting points even when global options are present. Consistently apply recursive inspection to all common execution wrappers, including `xargs` and all `-exec`-like variants of `find`.
