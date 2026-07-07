@@ -4,7 +4,12 @@ Six core agent personas — **sakthai**, **sakking**, **saksee**, **saksit**,
 **saktan**, and **sakjules** — each formerly had its own `*-skills`
 repository. 
 
-Today, they collectively host **671 specialized skills** directly within their individual persona folders. This allows each agent to maintain a perfectly tailored skill tree while securely sharing the same monorepo base.
+Today, they collectively host **671 specialized skills**. Most of that content
+lives directly within each persona's own `skills/` folder (its overlay); a
+small number of files that are byte-identical across **all six** personas
+live once under `personas/shared/skills/` instead. This allows each agent to
+maintain a perfectly tailored skill tree while securely sharing the same
+monorepo base.
 
 The dedicated business scaffold for quote generation and lead capture
 workflows, **servicequotebot**, lives under `services/servicequotebot/`.
@@ -26,8 +31,22 @@ personas/
 
 ## Composition rule
 
-A persona's full skill tree is built directly from its `skills/` directory alongside the core framework. On any path collision, the specific **overlay wins** — the same "later wins"
+A persona's full skill tree is `personas/shared/skills/` (laid down first)
+plus that persona's own `skills/` directory (copied on top). On any path
+collision, the persona's own **overlay wins** — the same "later wins"
 precedence the agent's tool registry uses (`ToolRegistry.with_tools()`).
+
+`personas/shared/skills/` only contains files that are byte-identical across
+**all six** personas — currently just 2 skills (`dogfood`, `yuanbao`). This is
+intentionally conservative: `compose()` applies `shared/skills/` to every
+persona unconditionally, so promoting a file there is only safe if every
+persona already has that exact content — otherwise it would add content to
+personas that never had it. Most of the apparent overlap between personas (including everything in
+`sakking`'s `SakXxx-`-prefixed rollup, which deliberately aggregates the
+other five personas' skills — SakKing is the Lead & Orchestrator and "owns
+all skills" per `docs/SOUL.md`) is only a **partial** match (2–5 personas, or
+one persona plus sakking's copy of it), so it stays in each persona's own
+overlay rather than being deduped.
 
 To materialise a persona's full tree (e.g. for a runtime that expects one
 directory):

@@ -109,12 +109,16 @@ def source_tree(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     (root / "scripts" / "compose_persona.py").write_text("print('compose')\n", encoding="utf-8")
     (root / "scripts" / "__pycache__").mkdir()
     (root / "scripts" / "__pycache__" / "compose_persona.cpython-311.pyc").write_bytes(b"cache")
-    (root / "packages" / "agent-self-evolution" / "evolution").mkdir(parents=True)
-    (root / "packages" / "agent-self-evolution" / "README.md").write_text(
+    (root / "personas" / "sakthai" / "agent-self-evolution" / "evolution").mkdir(parents=True)
+    (root / "personas" / "sakthai" / "agent-self-evolution" / "README.md").write_text(
         "Hermes Agent Self-Evolution", encoding="utf-8"
     )
-    (root / "packages" / "agent-self-evolution" / "evolution" / "__init__.py").write_text(
-        "", encoding="utf-8"
+    (
+        root / "personas" / "sakthai" / "agent-self-evolution" / "evolution" / "__init__.py"
+    ).write_text("", encoding="utf-8")
+    (root / "personas" / "sakthai" / "sakthai" / "cli").mkdir(parents=True)
+    (root / "personas" / "sakthai" / "sakthai" / "config.py").write_text(
+        "SAKTHAI_HOME = None\n", encoding="utf-8"
     )
 
     monkeypatch.setattr(export_agent_repo, "REPO_ROOT", root)
@@ -168,6 +172,7 @@ def test_export_creates_persona_specific_repo(
     assert (out / "personas" / "sakjules" / "skills" / "overlay-skill" / "SKILL.md").is_file()
     assert (out / "packages" / "agent-self-evolution" / "README.md").is_file()
     assert (out / "packages" / "agent-self-evolution" / "evolution" / "__init__.py").is_file()
+    assert (out / "sakthai" / "config.py").is_file()
     assert (out / "uv.lock").is_file()
     assert not any(out.rglob("__pycache__"))
     assert not any(out.rglob("*.pyc"))

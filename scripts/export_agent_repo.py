@@ -82,10 +82,17 @@ COPY_DIRS = (
     "docs",
     "infra/hermes-agents",
     "library",
-    "packages/agent-self-evolution",
-    "sakthai",
     "scripts",
     "tests",
+)
+
+# Canonical sources live under personas/sakthai/ (see repo CLAUDE.md), but the
+# exported standalone repo flattens them back to root-level paths -- src and
+# dst relative paths differ here, so these are copied explicitly rather than
+# through the generic COPY_DIRS loop.
+CANONICAL_COPY_DIRS = (
+    ("personas/sakthai/sakthai", "sakthai"),
+    ("personas/sakthai/agent-self-evolution", "packages/agent-self-evolution"),
 )
 
 EXCLUDED_DIR_NAMES = {
@@ -478,6 +485,9 @@ def export_agent_repo(persona: str, out: Path) -> Path:
     for rel in COPY_DIRS:
         src = REPO_ROOT / rel
         _copy_tree(src, out / rel)
+
+    for src_rel, dst_rel in CANONICAL_COPY_DIRS:
+        _copy_tree(REPO_ROOT / src_rel, out / dst_rel)
 
     # Only keep the selected persona's deployment material.
     _prune_hermes_profiles(out, persona)
