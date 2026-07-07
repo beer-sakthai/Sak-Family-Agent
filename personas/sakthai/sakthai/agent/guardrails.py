@@ -77,6 +77,12 @@ def _is_sensitive_path(path: str) -> bool:
         if _is_sensitive_path(val):
             return True
 
+    # Support checking short flags with attached paths like -o/etc/passwd
+    if len(path) > 2 and path.startswith("-") and path[1] != "-" and path[2] == "/":
+        val = path[2:]
+        if _is_sensitive_path(val):
+            return True
+
     # Normalize the path to collapse redundant slashes and dots.
     # Note: os.path.normpath preserves a leading '//' on some systems, so we
     # explicitly collapse it for comparison.
@@ -136,7 +142,19 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
                 pass
 
     # 2. Prevent destructive commands on sensitive paths.
-    destructive_binaries = ("rm", "chmod", "mv", "cp", "ln", "tee", "chown", "chgrp")
+    destructive_binaries = (
+        "rm",
+        "chmod",
+        "mv",
+        "cp",
+        "ln",
+        "tee",
+        "chown",
+        "chgrp",
+        "sed",
+        "curl",
+        "wget",
+    )
     for i, part in enumerate(parts):
         if _is_binary(part, destructive_binaries):
             # Inspect tokens following the binary until a separator is hit.
