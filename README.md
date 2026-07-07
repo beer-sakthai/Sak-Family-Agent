@@ -28,7 +28,7 @@ I built six of them now. I call them the House of Sak. They're not chatbots — 
 
 I'm not looking for sympathy. I'm not selling anything. I just want the person in Cork who's reading this at 3am, in a bad place, to know that I made it through. And if I can build AI agents from a shelter with no money, you can do whatever you need to do next.
 
-If you're struggling in Cork — Pieta House, the Samaritans, the Cork Mental Health services. They helped me. They'll help you.
+If you're struggling in Cork — Pieta House, the Samaritans, or the Cork Mental Health services. They helped me. They'll help you.
 
 And if anyone wants to talk tech, AI, or just grab a coffee — I'm here. Building from the bottom.
 
@@ -65,14 +65,15 @@ The ecosystem operates through specialized agent personas, collectively known as
 
 ### 📚 The Skills Library
 
-The agents are powered by a massive library of **671 specialized skills**, distributed precisely among the different personas to match their respective strengths and use cases. Each persona maintains its own curated skill tree under `personas/<name>/skills/`:
+The agents are powered by a massive library of **665 specialized skills**, distributed precisely among the different personas to match their respective strengths and use cases. Each persona maintains its own curated skill tree under `personas/<name>/skills/`, with the following distribution:
 
-- **SakThai**: 181 skills
-- **SakSit**: 172 skills
-- **SakKing**: 119 skills
-- **SakTan**: 85 skills
-- **SakJules**: 59 skills
-- **SakSee**: 55 skills
+- **SakThai**: 180 skills
+- **SakSit**: 171 skills
+- **SakKing**: 118 skills
+- **SakTan**: 84 skills
+- **SakJules**: 58 skills
+- **SakSee**: 54 skills
+- **SakFin**: 0 skills
 
 When an agent boots or is composed via `scripts/compose_persona.py`, these individual skill trees are seamlessly integrated into their active registry alongside the core intelligence.
 
