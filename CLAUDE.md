@@ -35,12 +35,16 @@ export standalone repository snapshots with `scripts/export_agent_repo.py` or
   deps; its `darwinian` extra is unpublished). Build it on its own; the root
   `uv.lock` stays SakThai-only. Each persona carries its own copy;
   `personas/sakthai/agent-self-evolution` is canonical.
-- `personas/` — the six Sak Family personas. **Known gap:** `scripts/compose_persona.py`
-  is written to rebuild a persona's tree as `personas/shared/skills/` + a
-  per-persona overlay (overlay wins), but `personas/shared/skills/` does not
-  currently exist on disk — each `personas/<name>/skills/` today carries a
-  full independent copy instead of a deduped overlay, so a skill fix made in
-  one persona does not propagate to the other five. See `personas/README.md`.
+- `personas/` — the six Sak Family personas. `scripts/compose_persona.py`
+  rebuilds a persona's tree as `personas/shared/skills/` + a per-persona
+  overlay (overlay wins). `personas/shared/skills/` only holds files that are
+  byte-identical across **all six** personas (currently 2 skills:
+  `dogfood`, `yuanbao`) — `compose()` applies it to every persona
+  unconditionally, so anything less than 6-way-identical stays in each
+  persona's own overlay rather than being deduped (this includes most of
+  `sakking`'s `SakXxx-`-prefixed rollup, which intentionally aggregates the
+  other five personas' skills rather than being a peer overlay). See
+  `personas/README.md`.
 - `infra/vm-agents/` — VM deployment assets for the Telegram bots (env
   templates, systemd units; config only).
 - `infra/pw-poc/` — Playwright accessibility probe (standalone npm project).
@@ -85,7 +89,7 @@ make mutation                                # mutmut on core seam modules (slow
 
 CI (`.github/workflows/ci.yml`, all via `uv sync --extra dev --locked`) runs:
 secret-scan (gitleaks) → lint (ruff) → format-check → mypy → bandit → pytest
-across Python **3.11, 3.12, and 3.13**, then a separate **smoke-test** job that
+across Python **3.11 and 3.12**, then a separate **smoke-test** job that
 drives the live CLI + MCP server via
 `.claude/skills/run-sakthai-agent-v2/driver.py`. Run the lint→pytest sequence
 locally before pushing; green CI is the bar for `main`. Coverage floor is **85%**
@@ -248,12 +252,12 @@ Click commands split by area; all sub-files imported by `cli/__init__.py`:
 - **`telegram/`** — a standalone `python-telegram-bot` polling bot (`bot.py`,
   `config.py`, `workflow_executor.py`) that shells out to
   `python -m sakthai run ... --with-skills <name> --fast --stateless` per
-  `/workflow <name>` command. Early-stage and **not yet aligned with this
-  repo's conventions**: its own `ALLOWED_USER_IDS`/`TELEGRAM_BOT_TOKEN`
-  handling in `telegram/config.py` duplicates the existing
-  `send_telegram_message` tool's env vars instead of going through
-  `config.py`, and `SKILLS_DIR` is a hardcoded relative path. Treat as
-  prototype code, not a pattern to extend.
+  `/workflow <name>` command. `telegram/config.py` re-exports
+  `ALLOWED_USER_IDS`/`TELEGRAM_BOT_TOKEN` from the central `config.py`
+  (`telegram_allowed_user_ids()`/`telegram_bot_token()`), and
+  `workflow_executor.py` uses `config.SKILLS_DIR` rather than a hardcoded
+  path — aligned with this repo's config-centralization convention. Covered
+  by `tests/test_telegram_bot.py` and `tests/test_telegram_workflow_executor.py`.
 
 ---
 

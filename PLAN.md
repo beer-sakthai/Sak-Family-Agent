@@ -40,7 +40,7 @@ never duplicate content across files.
 | MVP execution — ServiceQuoteBot build | ✅ Done (2026-07-02) |
 | Model Evaluation — Task validation via lm-evaluation-harness | ✅ Done (2026-07-06) |
 | Documentation — Revamp README with banner and detailed status | ✅ Done (2026-07-06) |
-| Repository hygiene — SakFin persona SOUL + per-agent skill name prefixes | ✅ Done (2026-07-06) |
+| Repository hygiene — per-agent skill name prefixes; SakFin role folded into SakTan's `SOUL.md` (no standalone SakFin persona) | ✅ Done (2026-07-06) |
 | Restructure — copy sakthai package + agent-self-evolution into each persona; remove root packages/ and sakthai/ | ✅ Done (2026-07-06) |
 | Build/CI repointing — canonical package at personas/sakthai/sakthai; pyproject, workflows, Dockerfile, path fixes | ✅ Done (2026-07-06) |
 | Restructure — move servicequotebot scaffold from personas/ to services/ | ✅ Done (2026-07-06) |

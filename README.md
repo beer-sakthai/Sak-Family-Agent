@@ -48,13 +48,12 @@ The **House of Sak** operates through a family of specialized agent personas, ea
 
 | Agent | Role | Focus Area |
 | :--- | :--- | :--- |
-| 👑 **SakKing** | Gen Assistant / Runner | Emails, messages, Web UI/UX design, and runner tasks. |
-| 🤗 **SakThai** | Main Lead & HF Expert | House orchestration, AI operations, and Hugging Face. |
+| 👑 **SakKing** | Lead & Orchestrator | Master of Code & Self-Healing; owns all skills, coordinates the family. |
+| 🤗 **SakThai** | HF Expert | Master of Hugging Face — mastery via Hub/MCP tools. |
 | 🌐 **SakSee** | Web Specialist | Browser automation (Playwright), deep web research, and UI testing. |
 | 📣 **SakSit** | Social Master | Content strategy, communication, and social synthesis. |
-| 🗓️ **SakTan** | Daily Ops | Life administration, scheduling, and family operations. |
+| 🗓️ **SakTan** | Daily Ops & Financial Analyst | Life administration, scheduling, family operations, plus market analysis, budgeting, and financial observations (the former SakFin role, folded into SakTan's `SOUL.md`). |
 | 🤖 **SakJules** | Automation/CI | CI/CD workflows, testing, infrastructure, and strict orchestration. |
-| 📈 **SakFin** | Financial Analyst | Market analysis, budgeting, and financial observations. |
 
 > *Note: The ecosystem also includes **ServiceQuoteBot**, a dedicated business scaffold for quote generation and lead capture workflows, located under `services/servicequotebot/`.*
 
@@ -68,7 +67,6 @@ The agents are powered by a massive library of **665 specialized skills**, preci
 - **SakTan**: 84 skills
 - **SakJules**: 58 skills
 - **SakSee**: 54 skills
-- **SakFin**: 0 skills
 
 These individual skill trees are seamlessly integrated into an agent's active registry upon boot or composition via `scripts/compose_persona.py`, alongside the core intelligence.
 
