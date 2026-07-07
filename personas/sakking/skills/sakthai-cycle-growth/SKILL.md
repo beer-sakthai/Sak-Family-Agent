@@ -18,8 +18,8 @@ metadata:
 
 # sakthai-cycle-growth
 
-Stage 6 of 6 in the Sak Family cycle — **Growth**. See [Growth.md](../../../../docs/cycle/Growth.md)
-for the full guidance and [SOUL.md](../../../../docs/SOUL.md) for the charge model.
+Stage 6 of 6 in the Sak Family cycle — **Growth**. See [Growth.md](../../docs/cycle/Growth.md)
+for the full guidance and [SOUL.md](../../docs/SOUL.md) for the charge model.
 
 ## What to do
 

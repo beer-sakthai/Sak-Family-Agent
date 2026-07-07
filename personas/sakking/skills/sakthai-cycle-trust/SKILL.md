@@ -18,8 +18,8 @@ metadata:
 
 # sakthai-cycle-trust
 
-Stage 5 of 6 in the Sak Family cycle — **Trust**. See [Trust.md](../../../../docs/cycle/Trust.md)
-for the full guidance and [SOUL.md](../../../../docs/SOUL.md) for the charge model.
+Stage 5 of 6 in the Sak Family cycle — **Trust**. See [Trust.md](../../docs/cycle/Trust.md)
+for the full guidance and [SOUL.md](../../docs/SOUL.md) for the charge model.
 
 ## What to do
 
