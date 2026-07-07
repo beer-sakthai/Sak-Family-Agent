@@ -366,17 +366,19 @@ The agent can self-invoke optimization:
 → Proposes the improved skill for human approval
 ```
 
-### Phase 2: Tool Description Optimization
+### Phase 2: Tool Description Optimization [x] 2026-07-08
 
 **Goal:** Optimize the natural language descriptions in tool schemas so the agent picks the right tools more reliably and uses them correctly.
 
 **Prerequisite:** Phase 1 gate passed — GEPA optimization loop proven to work on skills.
 
-**Week 1 (Build):** Adapt Phase 1's GEPA runner for tool descriptions. Build tool selection evaluator and synthetic dataset generator. The hard part is cross-tool evaluation — ensuring one tool's improvement doesn't steal from another.
-
-**Week 2 (Run):** Generate tool selection dataset (~200-400 triples). Run GEPA on all tool descriptions simultaneously. Mine SessionDB for misselection patterns.
-
-**Week 3 (Validate):** Benchmark gate. Human review of evolved descriptions — do they still accurately describe the tools? PR.
+**Implementation Status:**
+- [x] Task 2.1: Add dynamic tool description overrides from config JSON file in `sakthai/config.py` and `sakthai/agent/tools.py` — 2026-07-08
+- [x] Task 2.2: Implement `ToolSelectionExample` and synthetic dataset parser in `evolution/core/dataset_builder.py` — 2026-07-08
+- [x] Task 2.3: Implement `ToolSelectionModule` (Direct Single-Step Predictor) in `evolution/tools/tool_module.py` — 2026-07-08
+- [x] Task 2.4: Implement tool selection fitness metric (tool match + args match - length penalty) in `evolution/core/fitness.py` — 2026-07-08
+- [x] Task 2.5: Implement `evolve_tools.py` runner in `evolution/tools/evolve_tools.py` for joint GEPA optimization — 2026-07-08
+- [x] Task 2.6: Write unit tests in `tests/tools/` and run verify check — 2026-07-08
 
 **Done when:**
 - Tool selection accuracy improves on holdout set (≥5% improvement)
