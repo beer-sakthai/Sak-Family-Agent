@@ -67,10 +67,15 @@ def _is_binary(part: str, names: str | tuple[str, ...]) -> bool:
 
 def _is_sensitive_path(path: str) -> bool:
     """Return True if the path targets a sensitive system directory or uses traversal."""
-    if ".." in path:
+    # Check for path traversal or home-relative paths.
+    if ".." in path or path.startswith("~"):
         return True
-    if path.startswith("~"):
-        return True
+
+    # Support checking flags with values like --directory=/etc
+    if "=" in path and path.startswith("-"):
+        _, val = path.split("=", 1)
+        if _is_sensitive_path(val):
+            return True
 
     # Normalize the path to collapse redundant slashes and dots.
     # Note: os.path.normpath preserves a leading '//' on some systems, so we
@@ -125,50 +130,54 @@ def _check_destructive_tokens(parts: list[str]) -> GuardrailResult:
             except ValueError:
                 pass
 
-    # 2. Prevent deletion of sensitive paths (files or directories).
-    rm_idx = -1
+    # 2. Prevent destructive commands on sensitive paths.
+    destructive_binaries = ("rm", "chmod", "mv", "cp", "ln", "tee", "chown", "chgrp")
     for i, part in enumerate(parts):
-        if _is_binary(part, "rm"):
-            rm_idx = i
-            break
-    if rm_idx != -1:
-        after_rm = parts[rm_idx + 1 :]
-        for part in after_rm:
-            if _is_sensitive_path(part):
-                return GuardrailResult(
-                    GuardrailAction.DENY,
-                    reason=f"Potentially destructive 'rm' command on {part!r} blocked.",
-                )
+        if _is_binary(part, destructive_binaries):
+            # Inspect tokens following the binary until a separator is hit.
+            for subpart in parts[i + 1 :]:
+                if subpart in (";", "&&", "||", "|"):
+                    break
+                if _is_sensitive_path(subpart):
+                    binary_name = os.path.basename(part)
+                    return GuardrailResult(
+                        GuardrailAction.DENY,
+                        reason=f"Potentially destructive '{binary_name}' command on {subpart!r} blocked.",
+                    )
 
-    # 3. Prevent chmod on sensitive paths.
-    chmod_idx = -1
+    # 3. Specialized protection for dd (output file).
     for i, part in enumerate(parts):
-        if _is_binary(part, "chmod"):
-            chmod_idx = i
-            break
-    if chmod_idx != -1:
-        after_chmod = parts[chmod_idx + 1 :]
-        for part in after_chmod:
-            if _is_sensitive_path(part):
-                return GuardrailResult(
-                    GuardrailAction.DENY,
-                    reason=f"Potentially destructive 'chmod' command on {part!r} blocked.",
-                )
+        if _is_binary(part, "dd"):
+            for subpart in parts[i + 1 :]:
+                if subpart in (";", "&&", "||", "|"):
+                    break
+                if subpart.startswith("of="):
+                    val = subpart[3:]
+                    if _is_sensitive_path(val):
+                        return GuardrailResult(
+                            GuardrailAction.DENY,
+                            reason=f"destructive 'dd' on {val!r} blocked.",
+                        )
 
-    # 4. Prevent moving critical system directories or sensitive targets.
-    mv_idx = -1
+    # 4. Prevent shell redirections targeting sensitive paths.
     for i, part in enumerate(parts):
-        if _is_binary(part, "mv"):
-            mv_idx = i
-            break
-    if mv_idx != -1:
-        after_mv = parts[mv_idx + 1 :]
-        for part in after_mv:
-            if _is_sensitive_path(part):
-                return GuardrailResult(
-                    GuardrailAction.DENY,
-                    reason=f"Potentially destructive 'mv' command on {part!r} blocked.",
-                )
+        # Check tokens like '>', '>>', '2>', '&>'
+        # These might be standalone or prefixed (e.g., '2>/etc/passwd')
+        for op in (">", ">>", "2>", "2>>", "&>", "&>>"):
+            if part == op and i + 1 < len(parts):
+                target = parts[i + 1]
+                if _is_sensitive_path(target):
+                    return GuardrailResult(
+                        GuardrailAction.DENY,
+                        reason=f"destructive redirection to {target!r} blocked.",
+                    )
+            elif part.startswith(op) and len(part) > len(op):
+                target = part[len(op) :]
+                if _is_sensitive_path(target):
+                    return GuardrailResult(
+                        GuardrailAction.DENY,
+                        reason=f"destructive redirection to {target!r} blocked.",
+                    )
 
     # 5. Prevent 'find -delete' on sensitive paths.
     find_idx = -1
