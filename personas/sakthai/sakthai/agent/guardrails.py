@@ -108,9 +108,7 @@ def _is_sensitive_path(path: str) -> bool:
     return False
 
 
-def _check_destructive_tokens(
-    parts: list[str], context_sensitive: bool = False
-) -> GuardrailResult:
+def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False) -> GuardrailResult:
     """Recursively check tokens for destructive commands.
 
     If ``context_sensitive`` is True, discovery placeholders like '{}' and '+'
@@ -145,9 +143,7 @@ def _check_destructive_tokens(
             for subpart in parts[i + 1 :]:
                 if subpart in (";", "&&", "||", "|"):
                     break
-                if _is_sensitive_path(subpart) or (
-                    context_sensitive and subpart in ("{}", "+")
-                ):
+                if _is_sensitive_path(subpart) or (context_sensitive and subpart in ("{}", "+")):
                     binary_name = os.path.basename(part)
                     return GuardrailResult(
                         GuardrailAction.DENY,
