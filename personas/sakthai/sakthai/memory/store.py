@@ -25,7 +25,7 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any, cast
 
-from ..config import memory_db_path
+from ..config import memory_db_path, redact_secrets
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +37,9 @@ DB_BUSY_TIMEOUT_MS = 5000  # milliseconds, PRAGMA busy_timeout
 # Defaults for render_prompt_block().
 DEFAULT_FACT_LIMIT = 25
 DEFAULT_OBS_LIMIT = 10
+
+# Security: cap on the length of any single fact or observation to prevent DoS.
+MAX_MEMORY_CONTENT_CHARS = 32768
 
 # Snapshot format version. Bump whenever the exported columns change so old
 # snapshots are rejected loudly instead of importing into the wrong shape.
@@ -326,11 +329,13 @@ class MemoryStore:
         source_session: str | None = None,
         tags: list[str] | None = None,
     ) -> int:
+        # Security: redact secrets and truncate before storing.
+        clean_value = redact_secrets(value)[:MAX_MEMORY_CONTENT_CHARS]
         now = _now()
         cur = self._conn.execute(
             "INSERT INTO facts (kind, key, value, source_session, created_at, "
             "updated_at, tags) VALUES (?, ?, ?, ?, ?, ?, ?)",
-            (kind, key, value, source_session, now, now, _encode_tags(tags)),
+            (kind, key, clean_value, source_session, now, now, _encode_tags(tags)),
         )
         self._conn.commit()
         return cast(int, cur.lastrowid)
@@ -409,18 +414,21 @@ class MemoryStore:
         """
         if not isinstance(value, str) or not value.strip():
             raise ValueError("value must be a non-empty string")
+
+        # Security: redact secrets and truncate before storing.
+        clean_value = redact_secrets(value)[:MAX_MEMORY_CONTENT_CHARS]
         now = _now()
         try:
             self._conn.execute("BEGIN IMMEDIATE")
             if tags is not None:
                 cur = self._conn.execute(
                     "UPDATE facts SET value = ?, tags = ?, updated_at = ? WHERE id = ?",
-                    (value, _encode_tags(tags), now, fact_id),
+                    (clean_value, _encode_tags(tags), now, fact_id),
                 )
             else:
                 cur = self._conn.execute(
                     "UPDATE facts SET value = ?, updated_at = ? WHERE id = ?",
-                    (value, now, fact_id),
+                    (clean_value, now, fact_id),
                 )
             updated = cur.rowcount > 0
             self._conn.commit()
@@ -442,10 +450,13 @@ class MemoryStore:
     ) -> int:
         if not isinstance(summary, str) or not summary.strip():
             raise ValueError("Observation summary must be a non-empty string.")
+
+        # Security: redact secrets and truncate before storing.
+        clean_summary = redact_secrets(summary)[:MAX_MEMORY_CONTENT_CHARS]
         cur = self._conn.execute(
             "INSERT INTO observations (summary, evidence_session_id, weight, "
             "confidence, created_at) VALUES (?, ?, ?, ?, ?)",
-            (summary, evidence_session_id, weight, confidence, _now()),
+            (clean_summary, evidence_session_id, weight, confidence, _now()),
         )
         self._conn.commit()
         return cast(int, cur.lastrowid)
@@ -520,8 +531,12 @@ class MemoryStore:
         ).fetchall()
         if not rows:
             return 0
-        values = [r["value"] for r in rows]
+        # Security: redact and truncate individual values if they somehow escaped earlier.
+        values = [redact_secrets(r["value"])[:MAX_MEMORY_CONTENT_CHARS] for r in rows]
         summary = f"Consolidated {len(values)} facts: " + "; ".join(values)
+
+        # Final safety check on the combined summary.
+        summary = redact_secrets(summary)[:MAX_MEMORY_CONTENT_CHARS]
         try:
             self._conn.execute("BEGIN IMMEDIATE")
             self._conn.execute(
@@ -765,16 +780,30 @@ class MemoryStore:
             _validate_row(row, SNAPSHOT_OBS_FIELDS, "observation")
 
         def fact_to_tuple(f: dict[str, Any], include_id: bool) -> tuple[Any, ...]:
+            # Security: redact secrets and truncate during import.
+            clean_value = redact_secrets(str(f["value"]))[:MAX_MEMORY_CONTENT_CHARS]
             t = (
                 f["kind"],
                 f["key"],
-                f["value"],
+                clean_value,
                 f["source_session"],
                 f["created_at"],
                 f["updated_at"],
                 _encode_tags(f.get("tags")),
             )
             return (f["id"],) + t if include_id else t
+
+        def obs_to_tuple(o: dict[str, Any], include_id: bool) -> tuple[Any, ...]:
+            # Security: redact secrets and truncate during import.
+            clean_summary = redact_secrets(str(o["summary"]))[:MAX_MEMORY_CONTENT_CHARS]
+            t = (
+                clean_summary,
+                o["evidence_session_id"],
+                o["weight"],
+                o["confidence"],
+                o["created_at"],
+            )
+            return (o["id"],) + t if include_id else t
 
         try:
             self._conn.execute("BEGIN IMMEDIATE")
@@ -794,17 +823,7 @@ class MemoryStore:
                 self._conn.executemany(
                     "INSERT INTO observations (id, summary, evidence_session_id, "
                     "weight, confidence, created_at) VALUES (?, ?, ?, ?, ?, ?)",
-                    [
-                        (
-                            o["id"],
-                            o["summary"],
-                            o["evidence_session_id"],
-                            o["weight"],
-                            o["confidence"],
-                            o["created_at"],
-                        )
-                        for o in obs
-                    ],
+                    [obs_to_tuple(o, True) for o in obs],
                 )
             else:  # merge
                 self._conn.executemany(
@@ -815,16 +834,7 @@ class MemoryStore:
                 self._conn.executemany(
                     "INSERT INTO observations (summary, evidence_session_id, "
                     "weight, confidence, created_at) VALUES (?, ?, ?, ?, ?)",
-                    [
-                        (
-                            o["summary"],
-                            o["evidence_session_id"],
-                            o["weight"],
-                            o["confidence"],
-                            o["created_at"],
-                        )
-                        for o in obs
-                    ],
+                    [obs_to_tuple(o, False) for o in obs],
                 )
             self._conn.commit()
         except Exception:

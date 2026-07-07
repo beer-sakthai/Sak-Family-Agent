@@ -19,6 +19,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
 
+from ..config import SECRET_PATTERN
 from ..memory.store import MemoryStore
 from .tools import Tool
 
@@ -274,11 +275,7 @@ def _block_output_with_secrets(
     _store: MemoryStore,
 ) -> GuardrailResult:
     """Deny any tool output that appears to contain a secret."""
-    # A regex for common API key prefixes (sk-, rk-, pk-, ghp-, hf-), Google keys (AIza),
-    # and Telegram bot tokens (123456789:ABC...).
-    # Handles both underscore (sk_) and hyphen (sk-) used by Anthropic, OpenAI, and HF.
-    secret_pattern = r"\b(?:(?:sk|rk|pk|ghp|hf)[-_][a-zA-Z0-9\-_]{20,}|AIza[0-9A-Za-z\-_]{34,}|[0-9]{8,12}:[a-zA-Z0-9_-]{35})\b"  # nosec B105
-    if re.search(secret_pattern, output):
+    if re.search(SECRET_PATTERN, output):
         return GuardrailResult(
             GuardrailAction.DENY,
             reason="Tool output blocked because it appears to contain a secret.",
