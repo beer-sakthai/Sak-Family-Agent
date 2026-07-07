@@ -1,3 +1,7 @@
 model:
   provider: huggingface
   default: gemini-2.5-flash-lite
+fallback_model:
+  provider: ollama-cloud
+  model: gpt-oss:120b
+  base_url: https://ollama.com/v1

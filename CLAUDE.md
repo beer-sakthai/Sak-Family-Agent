@@ -39,12 +39,30 @@ export standalone repository snapshots with `scripts/export_agent_repo.py` or
   rebuilds a persona's tree as `personas/shared/skills/` + a per-persona
   overlay (overlay wins). `personas/shared/skills/` only holds files that are
   byte-identical across **all six** personas (currently 2 skills:
-  `dogfood`, `yuanbao`) — `compose()` applies it to every persona
+  `Sak-dogfood`, `Sak-yuanbao`) — `compose()` applies it to every persona
   unconditionally, so anything less than 6-way-identical stays in each
   persona's own overlay rather than being deduped (this includes most of
   `sakking`'s `SakXxx-`-prefixed rollup, which intentionally aggregates the
   other five personas' skills rather than being a peer overlay). See
-  `personas/README.md`.
+  `personas/README.md`. Skill naming (shared = `Sak-`, per-persona =
+  `Sak<Name>-`, enforced by `sakthai skills validate --naming`) was brought
+  into line via `scripts/rename_skills.py --apply` on 2026-07-07 across all
+  layers; 31 pre-existing collisions remain unrenamed on purpose (a
+  differently-prefixed skill with different content already occupied the
+  target name in each case — mostly a duplicate unprefixed `comfyui` sitting
+  next to an already-correct `Sak<Name>-comfyui`, plus ~27 in `sakking`'s own
+  rollup). Resolving those needs a human call on which content wins per case,
+  not an automated rename — run `sakthai skills validate --naming` to see the
+  current list.
+- `scripts/export_agent_repo.py` (`make export-agent-repos`) references
+  `infra/hermes-agents/` (profiles + systemd units), but only `infra/vm-agents/`
+  exists in this repo — a differently-shaped tree (env-templates + one
+  templated systemd unit, no per-persona `SOUL.md`/`config.yaml`). That part of
+  standalone persona export currently silently no-ops rather than erroring.
+  Unclear whether `infra/hermes-agents/` is meant to be synced in from an
+  external live host at export time, or is a leftover from an incomplete
+  rename to `infra/vm-agents/` — don't guess at a fix without checking with
+  the user first.
 - `infra/vm-agents/` — VM deployment assets for the Telegram bots (env
   templates, systemd units; config only).
 - `infra/pw-poc/` — Playwright accessibility probe (standalone npm project).
@@ -87,15 +105,16 @@ uv run bandit -c pyproject.toml -r personas/sakthai/sakthai   # Security scan
 make mutation                                # mutmut on core seam modules (slow, local-only, not in CI)
 ```
 
-CI (`.github/workflows/ci.yml`, all via `uv sync --extra dev --locked`) runs:
-secret-scan (gitleaks) → lint (ruff) → format-check → mypy → bandit → pytest
-across Python **3.11 and 3.12**, then a separate **smoke-test** job that
-drives the live CLI + MCP server via
-`.claude/skills/run-sakthai-agent-v2/driver.py`. Run the lint→pytest sequence
-locally before pushing; green CI is the bar for `main`. Coverage floor is **85%**
-(`fail_under = 85`); the whole `sakthai/` package is measured (the dashboard UI
-is a separate React/Vite app under the repo-root `dashboard/`, outside the
-coverage `source`).
+CI (`.github/workflows/ci.yml`, via `uv sync --all-extras`) runs: lint (ruff
+check + format --check) → static analysis (mypy, bandit) → pytest with
+coverage, across Python **3.11 and 3.12**. A separate `pylint.yml` workflow
+runs pylint over the same `personas/sakthai/sakthai` + `tests` scope. **No
+gitleaks/secret-scan step and no smoke-test job are wired into any GitHub
+workflow**, despite `.gitleaks.toml` and
+`.claude/skills/run-sakthai-agent-v2/driver.py` existing in the repo — treat
+those as available tooling, not enforced CI gates. Run the lint→pytest
+sequence locally before pushing; green CI is the bar for `main`. Coverage
+floor is **85%** (`fail_under = 85`) over the whole `sakthai/` package.
 
 ---
 
@@ -118,8 +137,12 @@ root with `SAKTHAI_HOME`):
    - Extensions: `extensions add|list|remove`
    - Sessions: `sessions list|show|export`
    - System: `doctor`, `setup`, `status`, `tools`
-   - Dashboard: `dashboard` (serves the React UI; `--export` writes a JSON snapshot)
+   - Eval: `eval` (inspect local model evaluation / MLOps metrics)
    - Hugging Face: `hf info|download <repo_id>`
+   - Note: there is **no `dashboard` CLI command** — it was fully removed
+     (`sakthai/dashboard/`, its CLI wiring, and its tests all deleted; only
+     stale `__pycache__` remnants remain). See the dashboard note under
+     "Other subsystems" below.
 
 2. **Agent loop** — `sakthai run` drives a provider-agnostic tool-using loop
    (Claude, Gemini, or any OpenAI-compatible/Ollama endpoint).
@@ -224,10 +247,11 @@ Click commands split by area; all sub-files imported by `cli/__init__.py`:
 - `skills.py` — `skills` group
 - `cycle.py` — `cycle` group
 - `extensions.py` — `extensions` group
-- `dashboard.py` — `dashboard` (serves the React `dashboard/dist/` bundle over a
-  hardened `http.server`, or exports a JSON snapshot with `--export`)
+- `eval.py` — `eval` (local model evaluation / MLOps metrics)
 - `sessions.py` — `sessions` group
 - `hf.py` — `hf info|download` (Hugging Face Hub operations)
+
+There is no `dashboard.py` here — see the dashboard note below.
 
 ### Other subsystems
 
@@ -239,15 +263,21 @@ Click commands split by area; all sub-files imported by `cli/__init__.py`:
   related_skills). `library/` has 31 curated skills across 11 categories;
   `skills/` has 70 user/extension skills. Skills are injected into the agent
   system prompt via `render_skills_prompt_block()`.
-- **`dashboard/`** — `data.py` builds a UI-free, testable snapshot of the store
-  (KPIs, growth series, per-kind breakdown, date-range filtering) and serializes
-  it to JSON. The UI itself is a separate React/Vite app at the repository root
-  (`dashboard/`); `sakthai dashboard` serves the pre-built `dashboard/dist/`
-  bundle (erroring if it hasn't been built) and drops a `data.json` snapshot
-  beside it.
+- **Dashboard — removed, docs not yet reconciled.** `personas/sakthai/sakthai/dashboard/`
+  is now an empty package (no `data.py`, only stale `__pycache__`); the CLI's
+  `dashboard` command and all `test_dashboard_*` test files were deleted
+  (`1964dbf`, `5de2c25`). The repo-root `dashboard/` (Vite/npm project) still
+  exists and still builds to `dashboard/dist/` there, but `web/server.py`'s
+  `_STATIC_ROOT` resolves to `personas/sakthai/sakthai/dashboard/dist/` —
+  a **different path** — so a build produced by the root project is not
+  where the web server looks for it. Unclear whether this is leftover
+  mid-refactor breakage or an intentional split; don't guess at a fix without
+  checking with the user first.
 - **`extensions/install.py`** — clones skill/MCP bundles from git into
   `~/.sakthai/extensions`; `list`/`remove` manage installed bundles.
-- **`web/server.py`** — minimal HTTP server stub for a future web runtime.
+- **`web/server.py`** — HTTP API server; optionally serves a pre-built static
+  bundle from `_STATIC_ROOT` (see the dashboard note above) alongside its API
+  endpoints, falling back to 403/404 for static requests if it's missing.
 - **`learn/capture.py`** — `learn()` one-shot fact capture used by `sakthai learn`.
 - **`telegram/`** — a standalone `python-telegram-bot` polling bot (`bot.py`,
   `config.py`, `workflow_executor.py`) that shells out to
@@ -291,7 +321,7 @@ Sak-Family-Agent/
 │   ├── cycle/                # Dream→Hope→Care→Joy→Trust→Growth state machine
 │   ├── learn/                # capture.py one-shot fact entry
 │   ├── extensions/           # install.py (git-based bundle installer)
-│   ├── dashboard/            # data.py (JSON snapshot; React UI lives at repo root)
+│   ├── dashboard/            # empty (removed); see "Other subsystems" dashboard note
 │   └── web/                  # HTTP server stub
 ├── tests/                    # hermetic test suite, no network
 ├── library/                  # 31 curated skills in 11 categories
@@ -306,7 +336,7 @@ Sak-Family-Agent/
 
 ## Tests
 
-Tests live in `tests/` (51 files, ~14700 lines). All tests are hermetic — no
+Tests live in `tests/` (60 files, ~15,780 lines). All tests are hermetic — no
 network, no GCP credentials. Integration tests that may hit real endpoints
 (Ollama, Anthropic) are marked `@pytest.mark.integration` and self-skip when
 credentials/endpoints are absent; CI excludes them with `-m "not integration"`.
@@ -320,7 +350,6 @@ Key test areas:
 - `test_mcp_server.py`, `test_mcp_client.py`, `test_mcp_manager.py`,
   `test_mcp_servers.py` — MCP subsystem
 - `test_cli*.py`, `test_sessions_cli.py` — CLI commands
-- `test_dashboard_data.py`, `test_dashboard_app.py`, `test_dashboard_sessions.py`
 - `test_auth.py`, `test_config_reports.py`, `test_extensions.py`,
   `test_skill_injection.py`, `test_cycle_skills_config.py`,
   `test_integration.py`, `test_web_server.py`
