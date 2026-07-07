@@ -50,7 +50,7 @@ def server_status(host: str, headers: dict) -> dict:
         if r.status == 200:
             try:
                 stats = r.json() or {}
-            except Exception:
+            except json.JSONDecodeError:
                 stats = {}
             return {"reachable": True, "url": url, "stats": stats}
         return {"reachable": False, "url": url, "http_status": r.status, "body": r.text()[:200]}
@@ -68,7 +68,7 @@ def checkpoint_status(host: str, headers: dict) -> dict:
         return {"queryable": False, "http_status": r.status, "url": url, "body": r.text()[:200]}
     try:
         models = parse_model_list(r.json())
-    except Exception:
+    except json.JSONDecodeError:
         models = set()
     return {"queryable": True, "count": len(models),
             "first_few": sorted(models)[:5]}
@@ -127,7 +127,7 @@ def smoke_test(host: str, headers: dict, ckpt_name: str | None) -> dict:
     cancelled = False
     try:
         cancelled = runner.cancel(pid)
-    except Exception:
+    except json.JSONDecodeError:
         pass
 
     return {

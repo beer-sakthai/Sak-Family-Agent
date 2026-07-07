@@ -19,6 +19,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
 
+from ..config import SECRET_PATTERN
 from ..memory.store import MemoryStore
 from .tools import Tool
 
@@ -179,23 +180,27 @@ def _check_destructive_tokens(parts: list[str]) -> GuardrailResult:
         after_find = parts[find_idx + 1 :]
         if "-delete" in after_find:
             for part in after_find:
+                # Flags like -L, -H (global options) or expression flags (like -name)
+                # should be skipped, not cause the whole check to stop.
                 if part.startswith("-"):
-                    break
+                    continue
                 if _is_sensitive_path(part):
                     return GuardrailResult(
                         GuardrailAction.DENY,
                         reason=f"destructive 'find -delete' on {part!r} blocked.",
                     )
 
-    # 6. Handle wrappers that don't use -c (sudo, doas, find -exec)
+    # 6. Handle wrappers that don't use -c (sudo, doas, xargs, find -exec)
     for i, part in enumerate(parts):
-        # sudo command ... or doas command ...
-        if _is_binary(part, ("sudo", "doas")):
+        # sudo command ... or doas command ... or xargs command ...
+        if _is_binary(part, ("sudo", "doas", "xargs")):
             res = _check_destructive_tokens(parts[i + 1 :])
             if res.action == GuardrailAction.DENY:
                 return res
-        # find ... -exec command ...
-        if part == "-exec" and any(_is_binary(p, "find") for p in parts[:i]):
+        # find ... -exec/ok command ...
+        if part in ("-exec", "-execdir", "-ok", "-okdir") and any(
+            _is_binary(p, "find") for p in parts[:i]
+        ):
             # Filter out find-specific tokens like {} and + or \;
             filtered_parts = [p for p in parts[i + 1 :] if p not in ("{}", "+", "\\;", ";")]
 
@@ -270,11 +275,7 @@ def _block_output_with_secrets(
     _store: MemoryStore,
 ) -> GuardrailResult:
     """Deny any tool output that appears to contain a secret."""
-    # A regex for common API key prefixes (sk-, rk-, pk-, ghp-, hf-), Google keys (AIza),
-    # and Telegram bot tokens (123456789:ABC...).
-    # Handles both underscore (sk_) and hyphen (sk-) used by Anthropic, OpenAI, and HF.
-    secret_pattern = r"\b(?:(?:sk|rk|pk|ghp|hf)[-_][a-zA-Z0-9\-_]{20,}|AIza[0-9A-Za-z\-_]{34,}|[0-9]{8,12}:[a-zA-Z0-9_-]{35})\b"  # nosec B105
-    if re.search(secret_pattern, output):
+    if re.search(SECRET_PATTERN, output):
         return GuardrailResult(
             GuardrailAction.DENY,
             reason="Tool output blocked because it appears to contain a secret.",

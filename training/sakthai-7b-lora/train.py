@@ -20,7 +20,7 @@ print("=== Starting 7B training ===", flush=True)
 print(f"BASE_MODEL={BASE_MODEL}, DATASET={DATASET_ID}", flush=True)
 
 # ── Install deps ──────────────────────────────────────────────────
-subprocess.run("pip install -q transformers peft trl accelerate bitsandbytes datasets sentencepiece huggingface_hub torch", shell=True, check=True)
+subprocess.run([sys.executable, "-m", "pip", "install", "-q", "transformers", "peft", "trl", "accelerate", "bitsandbytes", "datasets", "sentencepiece", "huggingface_hub", "torch"], check=True)
 print("Deps installed", flush=True)
 
 # ── Auth (HF_TOKEN env var or file) ────────────────────────────────
