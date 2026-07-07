@@ -943,8 +943,8 @@ def test_load_tool_overrides(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) ->
     # Mock SAKTHAI_HOME to use tmp_path
     monkeypatch.setenv("SAKTHAI_HOME", str(tmp_path))
 
+    from sakthai.agent.tools import _load_tool_overrides, tool_by_name
     from sakthai.config import tool_descriptions_path
-    from sakthai.agent.tools import BUILTIN_TOOLS, tool_by_name, _load_tool_overrides
 
     # Write a test overrides file
     overrides = {
