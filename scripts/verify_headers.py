@@ -1,12 +1,15 @@
 import http.client
+import os
+import shlex
+import signal
 import subprocess
 import time
-import os
-import signal
+
 
 def test_server(cmd, port):
     print(f"Testing server: {cmd}")
-    proc = subprocess.Popen(cmd, shell=True, preexec_fn=os.setsid)
+    args = shlex.split(cmd)
+    proc = subprocess.Popen(args, shell=False, preexec_fn=os.setsid)
     time.sleep(2)
     try:
         conn = http.client.HTTPConnection("127.0.0.1", port)
@@ -19,7 +22,7 @@ def test_server(cmd, port):
             "x-frame-options",
             "x-content-type-options",
             "referrer-policy",
-            "content-security-policy"
+            "content-security-policy",
         ]
 
         for h in expected:
@@ -29,6 +32,7 @@ def test_server(cmd, port):
                 print(f"MISSING {h}")
     finally:
         os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
+
 
 # Ensure dist exists for CLI test
 os.makedirs("dashboard/dist", exist_ok=True)
