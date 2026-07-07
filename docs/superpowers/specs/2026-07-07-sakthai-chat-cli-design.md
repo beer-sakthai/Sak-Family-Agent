@@ -138,6 +138,7 @@ def run_chat(
     model: str,
     provider: str | None,
     caveman: str | None,
+    with_skills: tuple[str, ...],
     console: Console,              # rich.Console, injectable
     read_input: Callable[[], str | None],  # returns None on EOF/exit
 ) -> None:
@@ -153,6 +154,7 @@ def run_chat(
                 history=prior_messages,
                 system_prompt_prefix=soul_text,
                 model=model, provider=provider, tools=tools, caveman=caveman,
+                skills=list(with_skills),
                 on_event=make_tool_renderer(console, persona),
                 on_token=make_token_renderer(console, persona),
             )
