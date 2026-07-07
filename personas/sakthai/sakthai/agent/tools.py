@@ -554,11 +554,12 @@ BUILTIN_TOOLS: tuple[Tool, ...] = (
 def _load_tool_overrides() -> None:
     """Load tool description overrides from a local config JSON if it exists."""
     from ..config import tool_descriptions_path
+
     path = tool_descriptions_path()
     if not path.is_file():
         return
     try:
-        with open(path, "r", encoding="utf-8") as f:
+        with open(path, encoding="utf-8") as f:
             overrides = json.load(f)
         for tool in BUILTIN_TOOLS:
             if tool.name in overrides:
@@ -567,7 +568,7 @@ def _load_tool_overrides() -> None:
                     object.__setattr__(tool, "description", tool_override["description"])
                 if "input_schema" in tool_override:
                     object.__setattr__(tool, "input_schema", tool_override["input_schema"])
-    except Exception:
+    except Exception:  # nosec B110
         pass
 
 

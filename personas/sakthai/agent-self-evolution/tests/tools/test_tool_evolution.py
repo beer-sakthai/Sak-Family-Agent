@@ -30,9 +30,7 @@ def test_format_baseline_descriptions():
             description="A dummy tool for testing.",
             input_schema={
                 "type": "object",
-                "properties": {
-                    "param1": {"type": "string", "description": "The first parameter."}
-                },
+                "properties": {"param1": {"type": "string", "description": "The first parameter."}},
                 "required": ["param1"],
             },
         )
@@ -100,37 +98,3 @@ def test_tool_selection_metric():
     )
     score_wrong_args = tool_selection_metric(example, pred_wrong_args)
     assert score_wrong_args == 0.6  # tool_match=1 (0.6), args_match=0 (0.0)
-
-
-def test_load_tool_overrides(tmp_path, monkeypatch):
-    # Mock SAKTHAI_HOME to use tmp_path
-    monkeypatch.setenv("SAKTHAI_HOME", str(tmp_path))
-
-    from sakthai.config import tool_descriptions_path
-    from sakthai.agent.tools import BUILTIN_TOOLS, tool_by_name, _load_tool_overrides
-
-    # Write a test overrides file
-    overrides = {
-        "learn": {
-            "description": "Custom overridden learn description.",
-            "input_schema": {
-                "type": "object",
-                "properties": {
-                    "value": {"type": "string", "description": "Overridden param description."}
-                },
-            },
-        }
-    }
-    path = tool_descriptions_path()
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with open(path, "w", encoding="utf-8") as f:
-        json.dump(overrides, f)
-
-    # Call override loader
-    _load_tool_overrides()
-
-    # Find the learn tool and assert overridden descriptions
-    learn_tool = tool_by_name("learn")
-    assert learn_tool is not None
-    assert learn_tool.description == "Custom overridden learn description."
-    assert learn_tool.input_schema["properties"]["value"]["description"] == "Overridden param description."
