@@ -7,9 +7,16 @@ module should hard-code a path or read an env var that has a home in this file.
 from __future__ import annotations
 
 import os
+import re
 import sqlite3
 from pathlib import Path
 from typing import Any
+
+# A regex for common API key prefixes (sk-, rk-, pk-, ghp-, hf-), Google keys (AIza),
+# and Telegram bot tokens (123456789:ABC...).
+# Handles both underscore (sk_) and hyphen (sk-) used by Anthropic, OpenAI, and HF.
+SECRET_PATTERN = r"\b(?:(?:sk|rk|pk|ghp|hf)[-_][a-zA-Z0-9\-_]{20,}|AIza[0-9A-Za-z\-_]{34,}|[0-9]{8,12}:[a-zA-Z0-9_-]{35})\b"  # nosec B105
+_SECRET_RE = re.compile(SECRET_PATTERN)
 
 # Repository root and bundled resource directories. The package no longer sits
 # directly under the repo root (its canonical copy lives at
@@ -366,7 +373,7 @@ def redact_secrets(text: str) -> str:
     if not isinstance(text, str) or not text:
         return text
 
-    # Values of these variables are considered sensitive and will be masked.
+    # First, redact based on known exact values (highest precision).
     secret_keys = [
         "ANTHROPIC_API_KEY",
         "ANTHROPIC_AUTH_TOKEN",
@@ -384,13 +391,14 @@ def redact_secrets(text: str) -> str:
         if val := os.environ.get(key):
             secrets.add(val)
 
-    if not secrets:
-        return text
+    if secrets:
+        # Sort by length descending to ensure longer secrets (e.g. session tokens)
+        # are redacted before their potential substrings (e.g. parts of keys).
+        for val in sorted(secrets, key=len, reverse=True):
+            if len(val) > 5:
+                text = text.replace(val, "[REDACTED]")
 
-    # Sort by length descending to ensure longer secrets (e.g. session tokens)
-    # are redacted before their potential substrings (e.g. parts of keys).
-    for val in sorted(secrets, key=len, reverse=True):
-        if len(val) > 5:
-            text = text.replace(val, "[REDACTED]")
+    # Second, redact based on common patterns (defense-in-depth).
+    text = _SECRET_RE.sub("[REDACTED]", text)
 
     return text
