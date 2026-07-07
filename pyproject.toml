@@ -17,6 +17,8 @@ dependencies = [
     "google-genai>=2.10.0",
     "tenacity>=8.0,<10.0",
     "python-telegram-bot==22.8",
+    "rich>=13.7,<15.0",
+    "prompt-toolkit>=3.0.43,<4.0",
 ]
 
 [project.optional-dependencies]
