@@ -122,6 +122,11 @@ def sessions_dir() -> Path:
     return sakthai_home() / "sessions"
 
 
+def tool_descriptions_path() -> Path:
+    """Path to the custom tool descriptions overrides JSON file."""
+    return sakthai_home() / "tool_descriptions.json"
+
+
 def eval_log_path() -> Path:
     """Path to the local model eval/MLOps JSONL log, honouring SAKTHAI_EVAL_LOG."""
     override = os.environ.get("SAKTHAI_EVAL_LOG")

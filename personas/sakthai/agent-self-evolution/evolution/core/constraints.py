@@ -38,10 +38,11 @@ class ConstraintValidator:
         results = []
 
         # 1. Size limits
-        results.append(self._check_size(artifact_text, artifact_type))
+        if artifact_type != "tool_descriptions":
+            results.append(self._check_size(artifact_text, artifact_type))
 
         # 2. Growth limit (if baseline provided)
-        if baseline_text:
+        if baseline_text and artifact_type != "tool_descriptions":
             results.append(self._check_growth(artifact_text, baseline_text, artifact_type))
 
         # 3. Non-empty
@@ -50,6 +51,8 @@ class ConstraintValidator:
         # 4. Structural integrity
         if artifact_type == "skill":
             results.append(self._check_skill_structure(artifact_text))
+        elif artifact_type == "tool_descriptions":
+            results.append(self._check_tool_descriptions_structure(artifact_text))
 
         return results
 
@@ -172,4 +175,44 @@ class ConstraintValidator:
                 passed=False,
                 constraint_name="skill_structure",
                 message=f"Skill missing: {', '.join(missing)}",
+            )
+
+    def _check_tool_descriptions_structure(self, text: str) -> ConstraintResult:
+        """Verify structural parsing and size limits on all tool descriptions."""
+        from evolution.tools.tool_module import parse_evolved_descriptions
+        try:
+            parsed = parse_evolved_descriptions(text)
+            if not parsed:
+                return ConstraintResult(
+                    passed=False,
+                    constraint_name="tool_descriptions_structure",
+                    message="No tools parsed from evolved instructions text. Format should be: [TOOL name]",
+                )
+
+            # Check description and param sizes
+            for tool_name, override in parsed.items():
+                desc = override.get("description", "")
+                if len(desc) > self.config.max_tool_desc_size:
+                    return ConstraintResult(
+                        passed=False,
+                        constraint_name="tool_descriptions_structure",
+                        message=f"Tool '{tool_name}' description exceeds limit: {len(desc)}/{self.config.max_tool_desc_size} chars",
+                    )
+                for param, param_desc in override.get("parameters", {}).items():
+                    if len(param_desc) > self.config.max_param_desc_size:
+                        return ConstraintResult(
+                            passed=False,
+                            constraint_name="tool_descriptions_structure",
+                            message=f"Tool '{tool_name}' param '{param}' description exceeds limit: {len(param_desc)}/{self.config.max_param_desc_size} chars",
+                        )
+            return ConstraintResult(
+                passed=True,
+                constraint_name="tool_descriptions_structure",
+                message=f"Successfully parsed {len(parsed)} tool descriptions. All sizes within limits.",
+            )
+        except Exception as e:
+            return ConstraintResult(
+                passed=False,
+                constraint_name="tool_descriptions_structure",
+                message=f"Error parsing tool descriptions: {e}",
             )
