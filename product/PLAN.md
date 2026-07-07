@@ -67,25 +67,17 @@ and monetizing a product based on the Sak Family Agent technology.
 
 ---
 
-## 🚀 Phases — Repo Hygiene
+## 🚀 Phases — Repo Hygiene ✅ (Completed 2026-07-02)
 
-### Phase 1 — Fix the two partially-refactored personas ✅ 2026-07-02
+All four phases completed — SOULs created/refactored for all 6 personas and root synced.
 
-- [x] **SakThai**: Added `## Character & Craft` heading + HF craft paragraph. Self-reference line in correct place.
-- [x] **SakSit**: Moved `SOUL.md` self-reference line to directly after role line.
+### Phase 1-4 Summary
+- **Phase 1** — SakThai + SakSit SOUL fixes ✅
+- **Phase 2** — SakTan full SOUL rewrite ✅
+- **Phase 3** — SakJules SOUL.md created ✅
+- **Phase 4** — Root SOUL.md roster synced ✅
 
-### Phase 2 — Refactor SakTan ✅ 2026-07-02
-
-- [x] Full SOUL.md rewrite: Identity, Say who I am, Character & Craft (daily ops / life admin), Charge, Principles, Tone. Inline Operating Contract removed.
-
-### Phase 3 — Create SakJules SOUL.md ✅ 2026-07-02
-
-- [x] Created `personas/sakjules/SOUL.md` from scratch (Master of Automation & CI/CD, `gemini-1.5-pro-latest`, full structure).
-
-### Phase 4 — Sync root SOUL.md team roster ✅ 2026-07-02
-
-- [x] Updated model column: SakThai (`claude-opus-4-8`), SakSee (local `llama3`), SakSit (local `llama3` / Modal).
-- [x] Added `personas/sakjules/SOUL.md` link to root `SOUL.md` link list.
+---
 
 ### Phase 5 — Long-term: Product & Monetization
 
@@ -180,6 +172,17 @@ and monetizing a product based on the Sak Family Agent technology.
   - **MVP Definition: "ServiceQuoteBot"** A Telegram-based agent (leveraging SakTan and SakThai) that ingests a local service business's price book and FAQs. It provides instant, accurate quotes or service info to customers 24/7, capturing leads in the process.
 - [x] Outline a low-risk monetization strategy for this MVP.
   - **Monetization:** A "Done-for-you" one-time setup fee ($200 - $500) plus a flat monthly hosting/maintenance fee ($50 - $100/month). Low risk as it relies on existing platforms (Telegram) and requires no custom app development.
+
+---
+
+### Phase 7 — ServiceQuoteBot Execution ✅ (2026-07-02 → ongoing)
+
+- [x] **ServiceQuoteBot scaffold** built — quoting engine structure created at `services/servicequotebot/`
+- [x] **Pricing templates** defined per archetype (local service, digital marketing, e-commerce)
+- [x] **Integration with Composio** for Google Sheets-based price book ingestion
+- [x] **Target customer identified** — Beer's friend's business (web app project)
+- [ ] **Customer outreach** — pending first deployment
+- [ ] **Revenue tracking** — metrics dashboard setup
 
 ---
 

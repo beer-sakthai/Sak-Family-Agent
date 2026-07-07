@@ -38,12 +38,22 @@ never duplicate content across files.
 | MVP definition | ✅ Done (2026-07-02) — ServiceQuoteBot |
 | Monetization strategy | ✅ Done (2026-07-02) — Setup + Subscription |
 | MVP execution — ServiceQuoteBot build | ✅ Done (2026-07-02) |
-| Model Evaluation — Task validation via lm-evaluation-harness | [x] 2026-07-06 |
-| Documentation — Revamp README with banner and detailed status | [x] 2026-07-06 |
-| Repository hygiene — SakFin persona SOUL + per-agent skill name prefixes | [x] 2026-07-06 |
-| Restructure — copy sakthai package + agent-self-evolution into each persona; remove root `packages/` and `sakthai/` | [x] 2026-07-06 |
-| Build/CI repointing — canonical package at `personas/sakthai/sakthai`; pyproject, workflows, Dockerfile, path fixes | [x] 2026-07-06 |
-| Restructure — move servicequotebot scaffold from `personas/` to `services/` | [x] 2026-07-06 |
+| Model Evaluation — Task validation via lm-evaluation-harness | ✅ Done (2026-07-06) |
+| Documentation — Revamp README with banner and detailed status | ✅ Done (2026-07-06) |
+| Repository hygiene — SakFin persona SOUL + per-agent skill name prefixes | ✅ Done (2026-07-06) |
+| Restructure — copy sakthai package + agent-self-evolution into each persona; remove root packages/ and sakthai/ | ✅ Done (2026-07-06) |
+| Build/CI repointing — canonical package at personas/sakthai/sakthai; pyproject, workflows, Dockerfile, path fixes | ✅ Done (2026-07-06) |
+| Restructure — move servicequotebot scaffold from personas/ to services/ | ✅ Done (2026-07-06) |
+| **Plans audit & refresh** — standardized markers, cross-links, archived completed sub-plans | ✅ Done (2026-07-07) |
+
+## 📋 Sub-Plans
+
+| Plan | Location | Status |
+|---|---|---|
+| Product & Monetization | [`product/PLAN.md`](./product/PLAN.md) | 🟡 Active — Phase 6 done, extending |
+| SakJules — skills organisation | [`personas/sakjules/PLAN.md`](./personas/sakjules/PLAN.md) | ✅ Complete — archived |
+| SakTan — daily story & diary | [`personas/saktan/PLAN.md`](./personas/saktan/PLAN.md) | 🟢 Active — daily rhythm |
+| Agent Self-Evolution (×6 agents) | `personas/*/agent-self-evolution/PLAN.md` | 🟡 Active — personalised per agent |
 
 ## 🔧 Runtime Notes
 

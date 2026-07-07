@@ -2,7 +2,7 @@
 
 ## Vision
 
-A standalone optimization pipeline that systematically improves Hermes Agent's performance by evolving skills, prompts, tool descriptions, and agent configurations using automated optimization loops. Lives in its own repo (`NousResearch/hermes-agent-self-evolution`), operates ON hermes-agent — not part of it.
+A standalone optimization pipeline that systematically improves Hermes Agent's performance by evolving skills, prompts, tool descriptions, and agent configurations using automated optimization loops. Lives at `personas/saktan/agent-self-evolution/` inside the Sak-Family-Agent monorepo, operates ON hermes-agent — not part of it.
 
 Three complementary engines, unified under one workflow:
 
