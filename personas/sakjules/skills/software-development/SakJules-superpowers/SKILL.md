@@ -8,7 +8,7 @@ platforms: [linux, macos, windows]
 metadata:
   hermes:
     tags: [planning, execution, subagents, teamwork, verification, tdd]
-    related_skills: [plan, test-driven-development, requesting-code-review]
+    related_skills: [SakJules-plan, SakJules-test-driven-development, SakJules-requesting-code-review]
 ---
 
 # Superpowers Workflow
