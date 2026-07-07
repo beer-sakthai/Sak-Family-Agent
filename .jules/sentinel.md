@@ -119,6 +119,7 @@
 **Learning:** Shell utilities often support global options that precede positional arguments. When building security guardrails that inspect command-line arguments, "stopping at the first flag" is an unsafe heuristic if sensitive targets can appear later in the command string.
 
 **Prevention:** When inspecting command arguments for sensitive paths, skip flags (tokens starting with `-`) using `continue` instead of `break`. This ensures that all positional arguments are evaluated even if they follow or are interspersed with options.
+
 ## 2026-07-06 - [Hardened Shell Guardrails against find -delete Bypass and Wrappers]
 
 **Vulnerability:** Shell guardrails for `find -delete` could be bypassed by inserting global options (e.g., `find -L /etc -delete`) because the argument scanner prematurely stopped at hyphenated tokens. Additionally, destructive commands wrapped in `xargs` or using `find` variants like `-execdir` were unmonitored.
@@ -126,3 +127,11 @@
 **Learning:** When scanning CLI arguments for sensitive paths, security logic must not assume that options only appear after positional targets. Furthermore, security enforcement must be recursive and account for all variants of execution wrappers to prevent trivial bypasses.
 
 **Prevention:** Ensure that argument scanners for specialized tools (like `find`) continue inspecting all non-option tokens as potential starting points even when global options are present. Consistently apply recursive inspection to all common execution wrappers, including `xargs` and all `-exec`-like variants of `find`.
+
+## 2026-07-07 - [Comprehensive Shell Redirection and Flag-based Path Protection]
+
+**Vulnerability:** Shell command guardrails could be bypassed by using redirections (e.g., `echo evil > /etc/passwd`), destructive binaries not previously monitored (e.g., `cp`, `ln`, `tee`), or by passing sensitive paths within flags (e.g., `--directory=/etc`) or specialized arguments (e.g., `dd of=/etc/passwd`).
+
+**Learning:** Hardening shell guardrails requires move beyond simple command name matching. Destructive intent can be expressed through I/O redirections which are handled by the shell before the command is even executed in a full shell environment, or through specialized arguments in common utilities. Furthermore, positional argument scanning must account for flags that use an equals sign to pair with their values.
+
+**Prevention:** Implement a unified scanner that monitors a broad list of destructive binaries (`rm`, `chmod`, `mv`, `cp`, `ln`, `tee`, `chgrp`, `chown`) and explicitly stops scanning at command separators to prevent false positives. Enhance path validation to decompose flag-value pairs. Add dedicated heuristics for specialized commands like `dd` and for shell redirection operators that target sensitive system roots.
