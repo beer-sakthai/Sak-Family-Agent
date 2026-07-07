@@ -111,3 +111,11 @@
 **Learning:** When developing skills or tools to audit, verify, or read environment configuration files, security checks must be built into the parsing loop itself. Simply reading the file is a risk; variables must be evaluated for sensitivity based on key patterns, and their values proactively masked before formatting the response.
 
 **Prevention:** Implement strict key-pattern recognition (matching strings like `SECRET`, `KEY`, `TOKEN`, `PASSWORD`, `CREDENTIAL`) during configuration file parsing. Proactively redact these values with placeholders (e.g., `[REDACTED]`) at the parsing stage, ensuring that secrets are never sent to the LLM or rendered in UI logs.
+
+## 2026-07-06 - [Hardened Shell Guardrails against find -delete Bypass and Wrappers]
+
+**Vulnerability:** Shell guardrails for `find -delete` could be bypassed by inserting global options (e.g., `find -L /etc -delete`) because the argument scanner prematurely stopped at hyphenated tokens. Additionally, destructive commands wrapped in `xargs` or using `find` variants like `-execdir` were unmonitored.
+
+**Learning:** When scanning CLI arguments for sensitive paths, security logic must not assume that options only appear after positional targets. Furthermore, security enforcement must be recursive and account for all variants of execution wrappers to prevent trivial bypasses.
+
+**Prevention:** Ensure that argument scanners for specialized tools (like `find`) continue inspecting all non-option tokens as potential starting points even when global options are present. Consistently apply recursive inspection to all common execution wrappers, including `xargs` and all `-exec`-like variants of `find`.
