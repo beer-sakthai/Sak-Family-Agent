@@ -179,8 +179,10 @@ def _check_destructive_tokens(parts: list[str]) -> GuardrailResult:
         after_find = parts[find_idx + 1 :]
         if "-delete" in after_find:
             for part in after_find:
+                # Flags like -L, -H (global options) or expression flags (like -name)
+                # should be skipped, not cause the whole check to stop.
                 if part.startswith("-"):
-                    break
+                    continue
                 if _is_sensitive_path(part):
                     return GuardrailResult(
                         GuardrailAction.DENY,

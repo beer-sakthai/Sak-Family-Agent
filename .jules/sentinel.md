@@ -111,3 +111,11 @@
 **Learning:** When developing skills or tools to audit, verify, or read environment configuration files, security checks must be built into the parsing loop itself. Simply reading the file is a risk; variables must be evaluated for sensitivity based on key patterns, and their values proactively masked before formatting the response.
 
 **Prevention:** Implement strict key-pattern recognition (matching strings like `SECRET`, `KEY`, `TOKEN`, `PASSWORD`, `CREDENTIAL`) during configuration file parsing. Proactively redact these values with placeholders (e.g., `[REDACTED]`) at the parsing stage, ensuring that secrets are never sent to the LLM or rendered in UI logs.
+
+## 2026-07-12 - [Hardening find -delete Guardrails against Global Options]
+
+**Vulnerability:** The guardrail for `find -delete` could be bypassed by using global options like `-L` or `-H` before the target path (e.g., `find -L /etc -delete`). This happened because the inspection logic used a `break` statement as soon as it encountered any token starting with a hyphen.
+
+**Learning:** Shell utilities often support global options that precede positional arguments. When building security guardrails that inspect command-line arguments, "stopping at the first flag" is an unsafe heuristic if sensitive targets can appear later in the command string.
+
+**Prevention:** When inspecting command arguments for sensitive paths, skip flags (tokens starting with `-`) using `continue` instead of `break`. This ensures that all positional arguments are evaluated even if they follow or are interspersed with options.
