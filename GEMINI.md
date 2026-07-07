@@ -16,13 +16,13 @@ No Google ADK/Vertex AI cloud agent, no `app/` bundle, no cloud-sync, no cloud r
 
 ```text
 Sak-Family-Agent/
-├── sakthai/                 # Core Python package
+├── personas/sakthai/sakthai/ # Core Python package (installable "sakthai")
 │   ├── agent/               #   Agent loop + providers (anthropic, gemini, openai)
 │   ├── cli/                 #   Click CLI (learn, recall, run, mcp, cycle, …)
 │   ├── memory/              #   MemoryStore (SQLite, WAL mode)
 │   ├── mcp/                 #   JSON-RPC 2.0 stdio MCP server + outbound client
 │   ├── cycle/               #   6-stage Dream → Growth state machine
-│   ├── dashboard/           #   Streamlit data layer + app
+│   ├── dashboard/           #   data.py snapshot layer (UI is the repo-root React/Vite dashboard/)
 │   ├── extensions/          #   Clone skill/MCP bundles from git
 │   ├── lead/                #   Customer lead capture (ServiceQuoteBot)
 │   ├── learn/               #   Explicit fact-write path
@@ -34,8 +34,7 @@ Sak-Family-Agent/
 │   ├── sakking_skills.py    #   Import SakKing learned skills into skills/
 │   ├── sandbox.py           #   read_file / run_command sandboxing
 │   └── skills.py            #   SKILL.md parsing, catalog, validation
-├── personas/                # 7 persona overlays (sakthai, sakking, saksee, …)
-├── skills/                  # 70+ bundled and learned skills
+├── personas/                # 6 persona overlays (sakthai, sakking, saksee, …); no root-level skills/
 ├── docs/                    # Architecture, capabilities, integrations, runtimes
 ├── dashboard/               # Vite + Tailwind standalone web dashboard
 ├── product/                 # Business strategy, monetization, MVP plans
@@ -56,6 +55,48 @@ Sak-Family-Agent/
 - Google auth: `GEMINI_API_KEY` / `GOOGLE_API_KEY` env var, **or** the Gemini CLI
   OAuth token (`~/.gemini/oauth_creds.json`).
 - `sakthai mcp` exposes memory over stdio, sharing `~/.sakthai/memory.db`.
+
+## Google Antigravity & Gemini CLI Run Help
+
+Here are 5 key instructions and tips for running the agent using Google Antigravity and the Gemini CLI:
+
+1. **Explicit Google/Gemini Provider Execution**
+   Force execution via the Google provider and configure the model explicitly:
+   ```bash
+   sakthai run "your task" --provider google --model gemini-2.5-flash
+   ```
+
+2. **Connecting to Antigravity CLI (`agy`)**
+   Expose the agent's memory as an MCP server by registering it in the `.mcp.json` configuration file:
+   ```json
+   {
+     "mcpServers": {
+       "sakthai": {
+         "command": "sakthai",
+         "args": ["mcp"]
+       }
+     }
+   }
+   ```
+   This registers the agent so the `agy` CLI can read from and write to the shared `~/.sakthai/memory.db`.
+
+3. **Delegation via the `run_agent_loop` MCP Tool**
+   The agent exposes a `run_agent_loop` tool over MCP. An external orchestrator (like Antigravity) can call this tool to delegate complex multi-step tasks to `sakthai`:
+   - `task` (string, required): Task description
+   - `provider` (string, optional): Provider override
+   - `model` (string, optional): Model override
+   - `max_iterations` (int, optional): Execution limit
+
+4. **Environment Authentication & Custom Paths**
+   - **Auth**: Resolves automatically via `GEMINI_API_KEY`/`GOOGLE_API_KEY`, or the Gemini CLI OAuth token.
+   - **Path Override**: Use `GEMINI_HOME` to redirect the `~/.gemini` search path for credentials.
+   - **Permissions**: Set `SAKTHAI_READ_ALLOW` or `SAKTHAI_SHELL_ALLOW` to widen workspace sandbox read and shell command access.
+
+5. **Cost-Free Run Validation (Dry Run)**
+   Verify all loaded skills, plugins, and MCP tool discovery without executing requests or incurring API costs:
+   ```bash
+   sakthai run "list tools" --dry-run
+   ```
 
 ## Getting started
 
@@ -82,11 +123,11 @@ uv run sakthai doctor     # report environment + memory health
 | Sessions | `sakthai sessions list\|show\|prune` |
 | Extensions | `sakthai extensions install\|list` |
 | HuggingFace Hub | `sakthai hf info\|download <repo_id>` |
-| Dashboard (Streamlit) | `sakthai dashboard` (`--export data.json` skips the UI) |
+| Dashboard (React/Vite) | `sakthai dashboard` (`--export data.json` skips the UI) |
 | System info | `sakthai status` / `sakthai tools` |
 | Test | `uv run pytest tests/ -q` |
-| Lint / format / types | `ruff check sakthai tests` · `ruff format --check sakthai tests` · `mypy sakthai` |
-| Security scan | `uv run bandit -c pyproject.toml -r sakthai` |
+| Lint / format / types | `ruff check personas/sakthai/sakthai tests` · `ruff format --check personas/sakthai/sakthai tests` · `mypy personas/sakthai/sakthai` |
+| Security scan | `uv run bandit -c pyproject.toml -r personas/sakthai/sakthai` |
 | Mutation testing | `make mutation` (local-only, slow) |
 | Compose personas | `make compose-personas` |
 | Export agent repos | `make export-agent-repos` |
@@ -118,7 +159,7 @@ Details: [`docs/architecture.md`](docs/architecture.md),
   style and formatting.
 - **Hermetic tests.** The suite runs with no network and no GCP credentials —
   keep it that way (inject clients/stores).
-- **Validate before proposing changes.** Run `ruff`, `mypy sakthai`, `bandit`,
+- **Validate before proposing changes.** Run `ruff`, `mypy personas/sakthai/sakthai`, `bandit`,
   and `pytest`; CI gates `main` on Python 3.11 and 3.12.
 - **Respect the sandbox.** `read_file` is limited to cwd + `~/.sakthai` +
   `SAKTHAI_READ_ALLOW`; `run_command` is opt-in via `SAKTHAI_SHELL_ALLOW`.

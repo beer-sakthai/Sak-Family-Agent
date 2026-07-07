@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "file_path=$(if command -v jq >/dev/null 2>&1; then jq -r '.tool_input.file_path // empty' 2>/dev/null; else python3 -c \"import json,sys;d=json.load(sys.stdin);print((d.get('tool_input') or {}).get('file_path') or '')\" 2>/dev/null; fi); case \"$file_path\" in personas/sakthai/sakthai/*.py|*/personas/sakthai/sakthai/*.py|tests/*.py|*/tests/*.py) cd \"${CLAUDE_PROJECT_DIR:-$PWD}\" && uv run ruff format \"$file_path\" 2>/dev/null || true ;; esac"
+          }
+        ]
+      }
+    ]
+  }
+}
