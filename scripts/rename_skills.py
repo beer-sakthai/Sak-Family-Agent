@@ -69,8 +69,18 @@ def _planned_renames(root: Path, prefix: str) -> list[tuple[Path, str, str]]:
     return plan
 
 
-def _apply(skill_md: Path, old_name: str, new_name: str) -> None:
-    """Rewrite the ``name:`` field, then rename the leaf folder to ``new_name``."""
+def _apply(skill_md: Path, old_name: str, new_name: str) -> bool:
+    """Rewrite the ``name:`` field, then rename the leaf folder to ``new_name``.
+
+    Returns ``False`` (and touches nothing) if a *different* skill already
+    occupies ``new_name`` -- a genuine content collision that needs a human
+    call on which skill wins, not a silent overwrite or a crash mid-batch.
+    """
+    folder = skill_md.parent
+    target = folder.with_name(new_name)
+    if folder.name != new_name and target.exists():
+        return False
+
     text = skill_md.read_text(encoding="utf-8")
     # Replace only the first `name:` line in the frontmatter.
     lines = text.splitlines(keepends=True)
@@ -80,9 +90,9 @@ def _apply(skill_md: Path, old_name: str, new_name: str) -> None:
             lines[i] = f"{indent}name: {new_name}\n"
             break
     skill_md.write_text("".join(lines), encoding="utf-8")
-    folder = skill_md.parent
     if folder.name != new_name:
-        folder.rename(folder.with_name(new_name))
+        folder.rename(target)
+    return True
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -105,12 +115,21 @@ def main(argv: list[str] | None = None) -> int:
 
     verb = "renaming" if args.apply else "would rename"
     print(f"{verb} {len(plan)} skill(s) in {args.layer} -> prefix '{prefix}':")
+    collisions: list[tuple[str, str]] = []
     for skill_md, old_name, new_name in plan:
         print(f"  {old_name}  ->  {new_name}")
-        if args.apply:
-            _apply(skill_md, old_name, new_name)
+        if args.apply and not _apply(skill_md, old_name, new_name):
+            collisions.append((old_name, new_name))
     if not args.apply:
         print("\n(dry-run — re-run with --apply to perform these renames)")
+    if collisions:
+        print(
+            f"\n{len(collisions)} skipped -- a different skill already occupies the "
+            "target name (needs a human call on which content wins):",
+            file=sys.stderr,
+        )
+        for old_name, new_name in collisions:
+            print(f"  {old_name}  ->  {new_name}  (target already exists)", file=sys.stderr)
     return 0
 
 
