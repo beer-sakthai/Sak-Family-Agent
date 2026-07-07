@@ -15,7 +15,7 @@ from typing import Any
 # A regex for common API key prefixes (sk-, rk-, pk-, ghp-, hf-), Google keys (AIza),
 # and Telegram bot tokens (123456789:ABC...).
 # Handles both underscore (sk_) and hyphen (sk-) used by Anthropic, OpenAI, and HF.
-SECRET_PATTERN = r"\b(?:(?:sk|rk|pk|ghp|hf)[-_][a-zA-Z0-9\-_]{20,}|AIza[0-9A-Za-z\-_]{34,}|[0-9]{8,12}:[a-zA-Z0-9_-]{35})\b"  # nosec B105
+SECRET_PATTERN = r"\b(?:(?:sk|rk|pk|ghp|hf)[-_][a-zA-Z0-9\-_]{20,}|AIza[0-9A-Za-z\-_]{34,}|[0-9]{8,12}:[a-zA-Z0-9_-]{35,})\b"  # nosec B105
 _SECRET_RE = re.compile(SECRET_PATTERN)
 
 # Repository root and bundled resource directories. The package no longer sits
