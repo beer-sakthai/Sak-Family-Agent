@@ -108,8 +108,15 @@ def _is_sensitive_path(path: str) -> bool:
     return False
 
 
-def _check_destructive_tokens(parts: list[str]) -> GuardrailResult:
-    """Recursively check tokens for destructive commands."""
+def _check_destructive_tokens(
+    parts: list[str], context_sensitive: bool = False
+) -> GuardrailResult:
+    """Recursively check tokens for destructive commands.
+
+    If ``context_sensitive`` is True, discovery placeholders like '{}' and '+'
+    are treated as sensitive paths (used by find -exec to target the discovered
+    files).
+    """
     if not parts:
         return GuardrailResult(GuardrailAction.ALLOW)
 
@@ -124,7 +131,7 @@ def _check_destructive_tokens(parts: list[str]) -> GuardrailResult:
         ):
             try:
                 nested = shlex.split(parts[i + 1])
-                res = _check_destructive_tokens(nested)
+                res = _check_destructive_tokens(nested, context_sensitive=context_sensitive)
                 if res.action == GuardrailAction.DENY:
                     return res
             except ValueError:
@@ -138,7 +145,9 @@ def _check_destructive_tokens(parts: list[str]) -> GuardrailResult:
             for subpart in parts[i + 1 :]:
                 if subpart in (";", "&&", "||", "|"):
                     break
-                if _is_sensitive_path(subpart):
+                if _is_sensitive_path(subpart) or (
+                    context_sensitive and subpart in ("{}", "+")
+                ):
                     binary_name = os.path.basename(part)
                     return GuardrailResult(
                         GuardrailAction.DENY,
@@ -153,7 +162,7 @@ def _check_destructive_tokens(parts: list[str]) -> GuardrailResult:
                     break
                 if subpart.startswith("of="):
                     val = subpart[3:]
-                    if _is_sensitive_path(val):
+                    if _is_sensitive_path(val) or (context_sensitive and val in ("{}", "+")):
                         return GuardrailResult(
                             GuardrailAction.DENY,
                             reason=f"destructive 'dd' on {val!r} blocked.",
@@ -166,14 +175,14 @@ def _check_destructive_tokens(parts: list[str]) -> GuardrailResult:
         for op in (">", ">>", "2>", "2>>", "&>", "&>>"):
             if part == op and i + 1 < len(parts):
                 target = parts[i + 1]
-                if _is_sensitive_path(target):
+                if _is_sensitive_path(target) or (context_sensitive and target in ("{}", "+")):
                     return GuardrailResult(
                         GuardrailAction.DENY,
                         reason=f"destructive redirection to {target!r} blocked.",
                     )
             elif part.startswith(op) and len(part) > len(op):
                 target = part[len(op) :]
-                if _is_sensitive_path(target):
+                if _is_sensitive_path(target) or (context_sensitive and target in ("{}", "+")):
                     return GuardrailResult(
                         GuardrailAction.DENY,
                         reason=f"destructive redirection to {target!r} blocked.",
@@ -193,7 +202,7 @@ def _check_destructive_tokens(parts: list[str]) -> GuardrailResult:
                 # should be skipped, not cause the whole check to stop.
                 if part.startswith("-"):
                     continue
-                if _is_sensitive_path(part):
+                if _is_sensitive_path(part) or (context_sensitive and part in ("{}", "+")):
                     return GuardrailResult(
                         GuardrailAction.DENY,
                         reason=f"destructive 'find -delete' on {part!r} blocked.",
@@ -203,42 +212,40 @@ def _check_destructive_tokens(parts: list[str]) -> GuardrailResult:
     for i, part in enumerate(parts):
         # sudo command ... or doas command ... or xargs command ...
         if _is_binary(part, ("sudo", "doas", "xargs")):
-            res = _check_destructive_tokens(parts[i + 1 :])
+            res = _check_destructive_tokens(parts[i + 1 :], context_sensitive=context_sensitive)
             if res.action == GuardrailAction.DENY:
                 return res
         # find ... -exec/ok command ...
         if part in ("-exec", "-execdir", "-ok", "-okdir") and any(
             _is_binary(p, "find") for p in parts[:i]
         ):
-            # Filter out find-specific tokens like {} and + or \;
-            filtered_parts = [p for p in parts[i + 1 :] if p not in ("{}", "+", "\\;", ";")]
+            # We don't filter out {} and + here anymore because we want the
+            # recursive scanner to see them if they are being used destructively.
+            # We still stop at the terminator.
+            exec_args: list[str] = []
+            for subpart in parts[i + 1 :]:
+                if subpart in ("\\;", ";", "+"):
+                    if subpart == "+":
+                        exec_args.append(subpart)
+                    break
+                exec_args.append(subpart)
 
-            # Heuristic: if find's target is sensitive, and we are doing rm/chmod/mv.
+            # Heuristic: if find's target is sensitive, set context_sensitive.
             targets_sensitive = False
             for p in parts[:i]:
                 if _is_sensitive_path(p):
                     targets_sensitive = True
                     break
 
-            if targets_sensitive:
-                if any(_is_binary(p, "rm") for p in filtered_parts):
-                    return GuardrailResult(
-                        GuardrailAction.DENY,
-                        reason="destructive 'find -exec rm' on sensitive path blocked.",
-                    )
-                if any(_is_binary(p, "chmod") for p in filtered_parts):
-                    return GuardrailResult(
-                        GuardrailAction.DENY,
-                        reason="destructive 'find -exec chmod' on sensitive path blocked.",
-                    )
-                if any(_is_binary(p, "mv") for p in filtered_parts):
-                    return GuardrailResult(
-                        GuardrailAction.DENY,
-                        reason="destructive 'find -exec mv' on sensitive path blocked.",
-                    )
-
-            res = _check_destructive_tokens(filtered_parts)
+            res = _check_destructive_tokens(exec_args, context_sensitive=targets_sensitive)
             if res.action == GuardrailAction.DENY:
+                if targets_sensitive:
+                    # Specific reason for find-exec when target is sensitive.
+                    binary_name = os.path.basename(part)
+                    return GuardrailResult(
+                        GuardrailAction.DENY,
+                        reason=f"destructive 'find {binary_name}' on sensitive path blocked.",
+                    )
                 return res
 
     return GuardrailResult(GuardrailAction.ALLOW)
