@@ -26,6 +26,8 @@ def run_command_tool() -> Tool:
         "find /etc -name 'foo' -delete",
         "find /var/log -type f -delete",
         "find /usr/bin -delete",
+        "find -L /etc -delete",
+        "find -H /root -delete",
     ],
 )
 def test_find_delete_on_sensitive_paths_blocked(
