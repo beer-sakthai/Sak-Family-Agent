@@ -58,7 +58,7 @@ Sak-Family-Agent/
 
 ## Google Antigravity & Gemini CLI Run Help
 
-Here are 5 key instructions and tips for running the agent using Google Antigravity and the Gemini CLI:
+Here are 6 key instructions and tips for running the agent using Google Antigravity and the Gemini CLI:
 
 1. **Explicit Google/Gemini Provider Execution**
    Force execution via the Google provider and configure the model explicitly:
@@ -97,6 +97,9 @@ Here are 5 key instructions and tips for running the agent using Google Antigrav
    ```bash
    sakthai run "list tools" --dry-run
    ```
+
+6. **Fullstack Trust & Verification**
+   Google Antigravity elevates your fullstack applications, ensuring unparalleled trust through advanced verification and testing.
 
 ## Getting started
 
