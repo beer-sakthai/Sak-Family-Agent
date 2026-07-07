@@ -53,8 +53,8 @@ The ecosystem operates through specialized agent personas, collectively known as
 
 | Agent | Role | Focus Area |
 | :--- | :--- | :--- |
-| 👑 **SakKing** | Lead & Orchestrator | Core code architecture, self-healing, and technical leadership. |
-| 🤗 **SakThai** | HF / AI Expert | Model discovery, Hugging Face Hub integration, and AI operations. |
+| 👑 **SakKing** | Code Architect | Core code architecture, self-healing, and technical leadership. |
+| 🤗 **SakThai** | Lead & Orchestrator | Core code architecture, self-healing, and technical leadership. |
 | 🌐 **SakSee** | Web Specialist | Browser automation (Playwright), deep web research, and UI testing. |
 | 📣 **SakSit** | Social Master | Content strategy, communication, and social synthesis. |
 | 🗓️ **SakTan** | Daily Ops | Life administration, scheduling, and family operations. |
