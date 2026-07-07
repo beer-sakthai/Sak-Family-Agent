@@ -35,12 +35,12 @@ export standalone repository snapshots with `scripts/export_agent_repo.py` or
   deps; its `darwinian` extra is unpublished). Build it on its own; the root
   `uv.lock` stays SakThai-only. Each persona carries its own copy;
   `personas/sakthai/agent-self-evolution` is canonical.
-- `personas/` — the four former `*-skills` repos. The ~446 skill files identical
-  across all personas live once in `personas/shared/skills/`; each
-  `personas/<name>/` keeps only its `SOUL.md`, `config/`, and a skill *overlay*
-  (unique/differing files). `scripts/compose_persona.py` rebuilds a persona's
-  full tree as `shared + overlay` (overlay wins), byte-for-byte. See
-  `personas/README.md`.
+- `personas/` — the six Sak Family personas. **Known gap:** `scripts/compose_persona.py`
+  is written to rebuild a persona's tree as `personas/shared/skills/` + a
+  per-persona overlay (overlay wins), but `personas/shared/skills/` does not
+  currently exist on disk — each `personas/<name>/skills/` today carries a
+  full independent copy instead of a deduped overlay, so a skill fix made in
+  one persona does not propagate to the other five. See `personas/README.md`.
 - `infra/vm-agents/` — VM deployment assets for the Telegram bots (env
   templates, systemd units; config only).
 - `infra/pw-poc/` — Playwright accessibility probe (standalone npm project).
