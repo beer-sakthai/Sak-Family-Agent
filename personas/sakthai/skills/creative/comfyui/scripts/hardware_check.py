@@ -274,11 +274,11 @@ def check_pytorch_cuda() -> dict | None:
         if info["cuda_available"]:
             info["cuda_device_count"] = torch.cuda.device_count()
             info["cuda_device_0"] = torch.cuda.get_device_name(0)
-    except Exception:
+    except json.JSONDecodeError:
         info["cuda_available"] = False
     try:
         info["mps_available"] = bool(torch.backends.mps.is_available())
-    except Exception:
+    except json.JSONDecodeError:
         info["mps_available"] = False
     return info
 

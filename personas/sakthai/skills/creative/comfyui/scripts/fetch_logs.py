@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import argparse
 import sys
+import json
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -39,6 +40,8 @@ def fetch_history_entry(host: str, headers: dict, prompt_id: str, *, is_cloud: b
         if r.status == 200:
             try:
                 return {"ok": True, "entry": r.json(), "source": "/api/jobs"}
+            except json.JSONDecodeError:
+                pass
             except ValueError as e:
                 log(f"Failed to parse /jobs JSON: {e}")
         # Fallback to history_v2
@@ -46,6 +49,7 @@ def fetch_history_entry(host: str, headers: dict, prompt_id: str, *, is_cloud: b
         r = http_get(url, headers=headers, retries=2, timeout=30)
         try:
             data = r.json()
+        except json.JSONDecodeError:
         except ValueError as e:
             log(f"Failed to parse /history_v2 JSON: {e}")
             data = None
@@ -59,6 +63,7 @@ def fetch_history_entry(host: str, headers: dict, prompt_id: str, *, is_cloud: b
         return {"ok": False, "http_status": r.status, "body": r.text()[:500]}
     try:
         data = r.json()
+    except json.JSONDecodeError:
     except ValueError as e:
         log(f"Failed to parse /history JSON: {e}")
         return {"ok": False, "reason": "non-JSON response"}
@@ -73,6 +78,7 @@ def fetch_queue(host: str, headers: dict) -> dict:
     r = http_get(url, headers=headers, retries=2, timeout=15)
     try:
         data = r.json()
+    except json.JSONDecodeError:
     except ValueError as e:
         log(f"Failed to parse /queue JSON: {e}")
         data = {"raw": r.text()[:500]}
