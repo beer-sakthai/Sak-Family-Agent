@@ -18,16 +18,23 @@ v2 is local-first — the CLI, the agent loop, and the MCP stdio server.
 
 ## Monorepo layout
 
-This repository is the shared source workspace for the Sak family. The SakThai agent
-package lives at the root (`sakthai/`, `library/`, `skills/`) and everything
-below this section's file-structure still describes it. It also carries the
-persona overlays and can export standalone repository snapshots with
-`scripts/export_agent_repo.py` or `make export-agent-repos`.
+This repository is the shared source workspace for the Sak family. The SakThai
+agent's installable core package (`sakthai`) lives at
+`personas/sakthai/sakthai/` — **not** at the repo root (the identically-named
+copies under the other five personas are data snapshots for standalone
+export, not build targets). `library/` still lives at the repo root; there is
+no root-level `skills/` — persona skill trees live under
+`personas/<name>/skills/` (see `personas/README.md`). Everything below this
+section's file-structure diagram gives paths relative to `personas/sakthai/`
+unless noted otherwise. The repo also carries the persona overlays and can
+export standalone repository snapshots with `scripts/export_agent_repo.py` or
+`make export-agent-repos`.
 
-- `packages/agent-self-evolution/` — DSPy/GEPA self-evolution tool. Standalone
-  Python package, **not** a uv workspace member (disjoint/heavy deps; its
-  `darwinian` extra is unpublished). Build it on its own; the root `uv.lock`
-  stays SakThai-only.
+- `personas/sakthai/agent-self-evolution/` — DSPy/GEPA self-evolution tool.
+  Standalone Python package, **not** a uv workspace member (disjoint/heavy
+  deps; its `darwinian` extra is unpublished). Build it on its own; the root
+  `uv.lock` stays SakThai-only. Each persona carries its own copy;
+  `personas/sakthai/agent-self-evolution` is canonical.
 - `personas/` — the four former `*-skills` repos. The ~446 skill files identical
   across all personas live once in `personas/shared/skills/`; each
   `personas/<name>/` keeps only its `SOUL.md`, `config/`, and a skill *overlay*
@@ -69,10 +76,10 @@ uv sync --all-extras      # install all project and optional dependencies
 uv run pytest tests/ -q                      # full unit suite (no network, no GCP)
 uv run pytest tests/test_memory_store.py -q  # a single test file
 uv run pytest -m "not integration" -q        # Exclude network tests (default in CI)
-uv run ruff check sakthai tests              # Lint
-uv run ruff format --check sakthai tests     # Format check (drop --check to apply)
-uv run mypy sakthai                          # Strict type-check
-uv run bandit -c pyproject.toml -r sakthai   # Security scan
+uv run ruff check personas/sakthai/sakthai tests              # Lint
+uv run ruff format --check personas/sakthai/sakthai tests     # Format check (drop --check to apply)
+uv run mypy personas/sakthai/sakthai                          # Strict type-check
+uv run bandit -c pyproject.toml -r personas/sakthai/sakthai   # Security scan
 make mutation                                # mutmut on core seam modules (slow, local-only, not in CI)
 ```
 
@@ -254,7 +261,7 @@ Click commands split by area; all sub-files imported by `cli/__init__.py`:
 
 ```text
 Sak-Family-Agent/
-├── sakthai/                  # Main package
+├── personas/sakthai/sakthai/ # Main package (the installable "sakthai" package)
 │   ├── config.py             # Paths & env-var names (single source of truth)
 │   ├── auth.py               # Credential resolution
 │   ├── skills.py             # Skill discovery, parsing, injection
@@ -283,7 +290,6 @@ Sak-Family-Agent/
 │   ├── dashboard/            # data.py (JSON snapshot; React UI lives at repo root)
 │   └── web/                  # HTTP server stub
 ├── tests/                    # hermetic test suite, no network
-├── skills/                   # 70 user/extension SKILL.md folders
 ├── library/                  # 31 curated skills in 11 categories
 ├── docs/                     # Architecture & design docs
 ├── scripts/                  # Dev utilities (not linted/type-checked)
