@@ -36,7 +36,7 @@ The **House of Sak** is more than just a collection of AI agents; it's a testame
 - **Shared Persistent Memory:** A robust SQLite WAL store (`~/.sakthai/memory.db`) provides durable context, facts, and observations across all agent sessions.
 - **Multi-Persona Ecosystem:** A 
 family of specialized agents (the "Sak Family") operates via overlay `SOUL.md` profiles, sharing a unified core system.
-- **Provider Agnostic (Mixture-of-Agents Enabled):** Supports a powerful MoA pipeline harnessing your premium accounts including Claude Pro, Gemini Pro, Codex, Ollama Pro, OpenCode Go, and Hugging Face. The system leverages these elite models simultaneously for maximal reasoning capacity, with auto-detection, rate-limit failovers, and forced selection via CLI.
+- **Provider Agnostic:** Supports Anthropic (Claude), Google (Gemini), and OpenAI/Ollama APIs, with auto-detection or forced selection via CLI.
 - **MCP Native:** Features an integrated JSON-RPC 2.0 stdio MCP server, exposing the core tool registry for seamless interaction.
 - **6-Stage Cycle:** Driven by a state machine that tracks progress through **Dream → Hope → Care → Joy → Trust → Growth**, guiding agent workflows.
 
