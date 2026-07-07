@@ -1,16 +1,16 @@
 # Repository Guidelines
 
 ## Project Structure & Module Organization
-This is a monorepo with the core Python agent at the root. Primary code lives in `sakthai/`, with subpackages for `agent/`, `cli/`, `memory/`, `mcp/`, `dashboard/`, `cycle/`, `learn/`, `telegram/`, and `web/`. Tests live in `tests/`. Shared documentation is in `docs/`, while assets are in `assets/`. Persona overlays and shared skills are under `personas/` and `skills/`. Supporting scripts live in `scripts/`, and longer-running or experimental projects are under `packages/` and `infra/`.
+This is a monorepo. The installable core package (`sakthai`) lives at `personas/sakthai/sakthai/` — not at the repo root — with subpackages for `agent/`, `cli/`, `memory/`, `mcp/`, `dashboard/`, `cycle/`, `learn/`, `telegram/`, and `web/`. Tests live in `tests/`. Shared documentation is in `docs/`, while assets are in `assets/`. Persona overlays and skills are under `personas/<name>/`; there is no root-level `skills/`. Supporting scripts live in `scripts/`, and longer-running or experimental projects are under `personas/sakthai/agent-self-evolution/` and `infra/`.
 
 ## Build, Test, and Development Commands
 - `uv sync --all-extras`: install the full local Python environment.
 - `make test`: run the pytest suite in `tests/`.
 - `make lint`: run Ruff checks across the repository.
-- `uv run mypy sakthai`: run strict type checking on the core package.
-- `uv run bandit -c pyproject.toml -r sakthai`: run the security scan.
+- `uv run mypy personas/sakthai/sakthai`: run strict type checking on the core package.
+- `uv run bandit -c pyproject.toml -r personas/sakthai/sakthai`: run the security scan.
 - `make mutation`: run local mutation testing for the core seams.
-- **Path Resolution for Scripts**: Any development/maintenance script in the `scripts/` folder that imports `sakthai` must insert the canonical package path into `sys.path` (e.g., `sys.path.insert(0, str(REPO_ROOT / "personas" / "sakthai"))`) before the repo root to prevent importing from the dummy root-level folder.
+- **Path Resolution for Scripts**: There is no root-level `sakthai/` package — `import sakthai` only resolves because the package is editable-installed from `personas/sakthai/`. Any development/maintenance script in the `scripts/` folder that imports `sakthai` without relying on the installed environment must insert the canonical package path into `sys.path` explicitly (e.g., `sys.path.insert(0, str(REPO_ROOT / "personas" / "sakthai"))`).
 
 ## Coding Style & Naming Conventions
 Use Python 3.11+ conventions with 4-space indentation and type annotations on public code paths. Ruff enforces formatting and import order; the project uses a 100-character line length. Prefer `snake_case` for functions, variables, and modules, `PascalCase` for classes, and descriptive test names like `test_memory_store.py` or `test_cli_system.py`. Keep changes localized to the relevant subsystem.
