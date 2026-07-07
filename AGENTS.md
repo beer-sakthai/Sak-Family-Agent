@@ -10,6 +10,7 @@ This is a monorepo with the core Python agent at the root. Primary code lives in
 - `uv run mypy sakthai`: run strict type checking on the core package.
 - `uv run bandit -c pyproject.toml -r sakthai`: run the security scan.
 - `make mutation`: run local mutation testing for the core seams.
+- **Path Resolution for Scripts**: Any development/maintenance script in the `scripts/` folder that imports `sakthai` must insert the canonical package path into `sys.path` (e.g., `sys.path.insert(0, str(REPO_ROOT / "personas" / "sakthai"))`) before the repo root to prevent importing from the dummy root-level folder.
 
 ## Coding Style & Naming Conventions
 Use Python 3.11+ conventions with 4-space indentation and type annotations on public code paths. Ruff enforces formatting and import order; the project uses a 100-character line length. Prefer `snake_case` for functions, variables, and modules, `PascalCase` for classes, and descriptive test names like `test_memory_store.py` or `test_cli_system.py`. Keep changes localized to the relevant subsystem.

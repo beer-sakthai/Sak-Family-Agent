@@ -1,0 +1,9 @@
+{
+  "_comment": "SakJules — Master of Automation & CI/CD. Load with SAKTHAI_MCP_CONFIG=personas/sakjules/config/mcp.json.",
+  "mcpServers": {
+    "huggingface": {
+      "command": "npx",
+      "args": ["-y", "@huggingface/mcp-server"]
+    }
+  }
+}

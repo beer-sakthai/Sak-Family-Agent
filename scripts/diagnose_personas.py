@@ -37,6 +37,7 @@ from pathlib import Path
 import yaml
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(REPO_ROOT / "personas" / "sakthai"))
 sys.path.insert(0, str(REPO_ROOT))
 
 from sakthai.skills import (  # noqa: E402  (path bootstrap above)
@@ -70,15 +71,11 @@ def info(label: str, detail: str = "") -> None:
 
 def persona_model_config_path(persona: str) -> Path:
     """Return the model config file for one persona."""
-    if persona == "saktan":
-        return HERMES_PROFILES_DIR / persona / "config.yaml"
     return PERSONAS_DIR / persona / "config" / "config.yaml"
 
 
 def persona_mcp_config_path(persona: str) -> Path:
     """Return the MCP manifest path for one persona."""
-    if persona == "saktan":
-        return HERMES_PROFILES_DIR / persona / "config" / "mcp.json"
     return PERSONAS_DIR / persona / "config" / "mcp.json"
 
 
@@ -188,12 +185,12 @@ def diagnose_improve() -> None:
         try:
             subprocess.run(
                 [sys.executable, "-c", "import evolution"],
-                cwd=str(REPO_ROOT / "packages" / "agent-self-evolution"),
+                cwd=str(REPO_ROOT / "personas" / "sakthai" / "agent-self-evolution"),
                 capture_output=True, text=True, timeout=60, check=True,
             )
             info("self-evolution (DSPy/GEPA)", "importable")
         except Exception:
-            info("self-evolution (DSPy/GEPA)", "package present, deps not installed (pip install -e packages/agent-self-evolution)")
+            info("self-evolution (DSPy/GEPA)", "package present, deps not installed (pip install -e personas/sakthai/agent-self-evolution)")
     finally:
         import shutil
         shutil.rmtree(home, ignore_errors=True)

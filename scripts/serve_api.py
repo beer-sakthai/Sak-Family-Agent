@@ -27,7 +27,9 @@ _PORT = 3002
 def _dashboard_data(days: int = 30) -> dict[str, Any]:
     try:
         import sys
-        sys.path.insert(0, str((Path(__file__).resolve().parent.parent).resolve()))
+        REPO_ROOT = (Path(__file__).resolve().parent.parent).resolve()
+        sys.path.insert(0, str(REPO_ROOT / "personas" / "sakthai"))
+        sys.path.insert(0, str(REPO_ROOT))
         from sakthai.dashboard.data import collect_dashboard_data
         return collect_dashboard_data(days=days)
     except Exception as exc:  # noqa: BLE001
