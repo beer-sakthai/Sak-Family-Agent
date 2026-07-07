@@ -56,6 +56,48 @@ Sak-Family-Agent/
   OAuth token (`~/.gemini/oauth_creds.json`).
 - `sakthai mcp` exposes memory over stdio, sharing `~/.sakthai/memory.db`.
 
+## Google Antigravity & Gemini CLI Run Help
+
+Here are 5 key instructions and tips for running the agent using Google Antigravity and the Gemini CLI:
+
+1. **Explicit Google/Gemini Provider Execution**
+   Force execution via the Google provider and configure the model explicitly:
+   ```bash
+   sakthai run "your task" --provider google --model gemini-2.5-flash
+   ```
+
+2. **Connecting to Antigravity CLI (`agy`)**
+   Expose the agent's memory as an MCP server by registering it in the `.mcp.json` configuration file:
+   ```json
+   {
+     "mcpServers": {
+       "sakthai": {
+         "command": "sakthai",
+         "args": ["mcp"]
+       }
+     }
+   }
+   ```
+   This registers the agent so the `agy` CLI can read from and write to the shared `~/.sakthai/memory.db`.
+
+3. **Delegation via the `run_agent_loop` MCP Tool**
+   The agent exposes a `run_agent_loop` tool over MCP. An external orchestrator (like Antigravity) can call this tool to delegate complex multi-step tasks to `sakthai`:
+   - `task` (string, required): Task description
+   - `provider` (string, optional): Provider override
+   - `model` (string, optional): Model override
+   - `max_iterations` (int, optional): Execution limit
+
+4. **Environment Authentication & Custom Paths**
+   - **Auth**: Resolves automatically via `GEMINI_API_KEY`/`GOOGLE_API_KEY`, or the Gemini CLI OAuth token.
+   - **Path Override**: Use `GEMINI_HOME` to redirect the `~/.gemini` search path for credentials.
+   - **Permissions**: Set `SAKTHAI_READ_ALLOW` or `SAKTHAI_SHELL_ALLOW` to widen workspace sandbox read and shell command access.
+
+5. **Cost-Free Run Validation (Dry Run)**
+   Verify all loaded skills, plugins, and MCP tool discovery without executing requests or incurring API costs:
+   ```bash
+   sakthai run "list tools" --dry-run
+   ```
+
 ## Getting started
 
 ```bash
