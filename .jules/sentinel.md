@@ -167,3 +167,8 @@
 **Learning:** Security guardrails for shell execution must account for all possible redirection variants supported by modern shells (Bash/Zsh). Furthermore, tools that perform low-level data movement like `dd` must be validated for both reading and writing to prevent both data destruction and unauthorized exfiltration. Path validation for flags must also account for home-relative segments (`~`) which can be used to target sensitive user data outside the sandbox.
 
 **Prevention:** Expand redirection regex to include `&>>` and `>|`. Implement dual-side path validation for `dd` (both `if=` and `of=`). Update flag-based path detection to recognize and resolve the `~` character.
+
+## 2026-07-15 - [Credential Leakage in Memory Metadata]
+**Vulnerability:** Secrets (API keys, tokens) were only redacted from the `value` of facts and `summary` of observations. Metadata fields like `kind`, `key`, `tags`, and session IDs were not redacted, allowing credentials to be stored in plain text in the SQLite database and potentially leaked during memory recall.
+**Learning:** Security redaction must be applied to all user-controllable string fields in a persistent store, not just the primary content fields. Metadata can often be used to store sensitive data accidentally or maliciously.
+**Prevention:** Apply a centralized `redact_secrets` function to every string field at the data entry boundary (both for individual writes and bulk imports).

@@ -331,11 +331,24 @@ class MemoryStore:
     ) -> int:
         # Security: redact secrets and truncate before storing.
         clean_value = redact_secrets(value)[:MAX_MEMORY_CONTENT_CHARS]
+        clean_kind = redact_secrets(kind)
+        clean_key = redact_secrets(key) if key else None
+        clean_tags = [redact_secrets(t) for t in tags] if tags is not None else None
+        clean_source_session = redact_secrets(source_session) if source_session else None
+
         now = _now()
         cur = self._conn.execute(
             "INSERT INTO facts (kind, key, value, source_session, created_at, "
             "updated_at, tags) VALUES (?, ?, ?, ?, ?, ?, ?)",
-            (kind, key, clean_value, source_session, now, now, _encode_tags(tags)),
+            (
+                clean_kind,
+                clean_key,
+                clean_value,
+                clean_source_session,
+                now,
+                now,
+                _encode_tags(clean_tags),
+            ),
         )
         self._conn.commit()
         return cast(int, cur.lastrowid)
@@ -417,13 +430,14 @@ class MemoryStore:
 
         # Security: redact secrets and truncate before storing.
         clean_value = redact_secrets(value)[:MAX_MEMORY_CONTENT_CHARS]
+        clean_tags = [redact_secrets(t) for t in tags] if tags is not None else None
         now = _now()
         try:
             self._conn.execute("BEGIN IMMEDIATE")
             if tags is not None:
                 cur = self._conn.execute(
                     "UPDATE facts SET value = ?, tags = ?, updated_at = ? WHERE id = ?",
-                    (clean_value, _encode_tags(tags), now, fact_id),
+                    (clean_value, _encode_tags(clean_tags), now, fact_id),
                 )
             else:
                 cur = self._conn.execute(
@@ -453,10 +467,11 @@ class MemoryStore:
 
         # Security: redact secrets and truncate before storing.
         clean_summary = redact_secrets(summary)[:MAX_MEMORY_CONTENT_CHARS]
+        clean_sid = redact_secrets(evidence_session_id) if evidence_session_id else None
         cur = self._conn.execute(
             "INSERT INTO observations (summary, evidence_session_id, weight, "
             "confidence, created_at) VALUES (?, ?, ?, ?, ?)",
-            (clean_summary, evidence_session_id, weight, confidence, _now()),
+            (clean_summary, clean_sid, weight, confidence, _now()),
         )
         self._conn.commit()
         return cast(int, cur.lastrowid)
@@ -782,23 +797,33 @@ class MemoryStore:
         def fact_to_tuple(f: dict[str, Any], include_id: bool) -> tuple[Any, ...]:
             # Security: redact secrets and truncate during import.
             clean_value = redact_secrets(str(f["value"]))[:MAX_MEMORY_CONTENT_CHARS]
+            clean_kind = redact_secrets(str(f["kind"]))
+            clean_key = redact_secrets(str(f["key"])) if f.get("key") else None
+            clean_tags = (
+                [redact_secrets(str(t)) for t in f["tags"]] if isinstance(f.get("tags"), list) else None
+            )
+            clean_source_session = (
+                redact_secrets(str(f["source_session"])) if f.get("source_session") else None
+            )
+
             t = (
-                f["kind"],
-                f["key"],
+                clean_kind,
+                clean_key,
                 clean_value,
-                f["source_session"],
+                clean_source_session,
                 f["created_at"],
                 f["updated_at"],
-                _encode_tags(f.get("tags")),
+                _encode_tags(clean_tags),
             )
             return (f["id"],) + t if include_id else t
 
         def obs_to_tuple(o: dict[str, Any], include_id: bool) -> tuple[Any, ...]:
             # Security: redact secrets and truncate during import.
             clean_summary = redact_secrets(str(o["summary"]))[:MAX_MEMORY_CONTENT_CHARS]
+            clean_sid = redact_secrets(str(o["evidence_session_id"])) if o.get("evidence_session_id") else None
             t = (
                 clean_summary,
-                o["evidence_session_id"],
+                clean_sid,
                 o["weight"],
                 o["confidence"],
                 o["created_at"],
