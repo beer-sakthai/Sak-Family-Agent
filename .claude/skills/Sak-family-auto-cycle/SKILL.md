@@ -39,6 +39,15 @@ dispatch mechanics and the SAKTHAI_HOME mapping right (both covered below)
 is worthless if this step gets skipped — a live run spends real API tokens
 across 6 parallel agents and mutates real, hard-to-reverse persona memory.
 
+**Test mode itself needs no permission — only switching to live does.**
+Once you've defaulted to test (which is automatic, not a request), dispatch
+the six parallel calls; don't also stop and ask the user "test or live?"
+before running the safe default. Asking before every dispatch, even the
+throwaway-`SAKTHAI_HOME` one, isn't a stricter version of this rule — it's
+a different failure (stalling on an action that was never risky) than the
+one this rule exists to prevent (a risky action taken without asking). Ask
+before *live*. Don't ask before *test*.
+
 ## The dispatch is one message, six subagents
 
 Your response to this skill is **one message containing six Agent tool
@@ -107,8 +116,14 @@ the same round.
 
 `<task>` for each persona comes from whatever the user specified, or — if
 the user said "just run the family" with no specifics — from that
-persona's own domain backlog (check their `PLAN.md`, recent `docs/`
-changes, or ask the user rather than guessing at something consequential).
+persona's own domain backlog: check their `PLAN.md` and recent `docs/`
+changes *first*. Only ask the user if that search genuinely turns up
+nothing for a given persona — don't hold up the whole six-way dispatch
+waiting on an answer you could look up yourself. This is a test-mode
+dispatch by default (per the rule above), not a live commitment, so an
+imperfect task guess sourced from real backlog docs is low-stakes; asking
+the user to enumerate six tasks before you'll run anything is not required
+just because the request was underspecified.
 
 ## After all 6 return
 
@@ -140,3 +155,10 @@ block reporting the other five.
 - Mixing live and test mode across the six dispatches in the same round
   (e.g. testing SakKing but going live on the other five) instead of
   applying the same default consistently to all six.
+- Stopping to ask the user "test or live?" before running the default
+  test-mode dispatch, or refusing to dispatch at all until the user
+  enumerates all six tasks by hand. Test mode needs no permission and a
+  missing task should send you to `PLAN.md`/`docs/` first, not to a
+  clarifying question — asking before every safe default is a different
+  failure from the one this skill exists to close, not a safer version of
+  it.
