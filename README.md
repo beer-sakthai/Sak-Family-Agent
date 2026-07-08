@@ -51,8 +51,8 @@ The **House of Sak** operates through a family of specialized agent personas, ea
 
 | Agent | Role | Focus Area |
 | :--- | :--- | :--- |
-| 👑 **SakKing** | Lead & Orchestrator | Master of Code & Self-Healing; owns all skills, coordinates the family. |
-| 🤗 **SakThai** | HF Expert | Master of Hugging Face — mastery via Hub/MCP tools. |
+| 🤗 **SakThai** | Lead & Orchestrator | Main Lead of the House & Master of Hugging Face — guides overall direction, mastery via Hub/MCP tools. |
+| 👑 **SakKing** | General Assistant | Runner, Email, Message & General Assistant; Self-Healing & Web UI/UX Specialist; owns all skills (superset of the family's skillset). |
 | 🌐 **SakSee** | Web Specialist | Browser automation (Playwright), deep web research, and UI testing. |
 | 📣 **SakSit** | Social Master | Content strategy, communication, and social synthesis. |
 | 🗓️ **SakTan** | Daily Ops & Financial Analyst | Life administration, scheduling, family operations, plus market analysis, budgeting, and financial observations (the former SakFin role, folded into SakTan's `SOUL.md`). |
