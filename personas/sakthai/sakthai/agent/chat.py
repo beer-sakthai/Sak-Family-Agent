@@ -16,6 +16,8 @@ from rich.console import Console
 
 from .. import config
 from ..memory.store import MemoryStore
+from .loop import AgentError, run_agent
+from .tools import Tool
 
 logger = logging.getLogger(__name__)
 
@@ -105,3 +107,59 @@ def render_cancelled(console: Console) -> None:
 def status_line(store: MemoryStore, model: str, tool_count: int) -> str:
     n_facts = store.stats()["facts"]["total"]
     return f"{model} · {tool_count} tools · memory: {n_facts} facts"
+
+
+def run_chat(
+    *,
+    persona: str,
+    soul_text: str,
+    tools: tuple[Tool, ...],
+    model: str,
+    provider: str | None,
+    caveman: str | None,
+    with_skills: tuple[str, ...],
+    store: MemoryStore,
+    console: Console,
+    read_input: Callable[[], str | None],
+) -> None:
+    """Run an interactive chat session: one ``run_agent`` call per turn.
+
+    ``read_input`` returns ``None`` on EOF (Ctrl+D). Typing ``/exit`` ends the
+    session the same way. History is carried in-process only via
+    ``AgentResult.messages`` — nothing beyond the shared ``MemoryStore`` is
+    persisted, so each new ``sakthai chat`` invocation starts a fresh
+    transcript (see the design spec's "Memory" section).
+    """
+    prior_messages: list[dict[str, Any]] = []
+    tool_renderer = make_tool_renderer(console)
+    while True:
+        user_text = read_input()
+        if user_text is None or user_text.strip() == "/exit":
+            break
+        if not user_text.strip():
+            continue
+        render_user_turn(console, user_text)
+        token_renderer = make_token_renderer(console, persona)
+        try:
+            result = run_agent(
+                user_text,
+                history=prior_messages,
+                system_prompt_prefix=soul_text,
+                model=model,
+                provider=provider,
+                tools=tools,
+                caveman=caveman,
+                skills=list(with_skills),
+                store=store,
+                on_event=tool_renderer,
+                on_token=token_renderer,
+            )
+        except AgentError as exc:
+            render_error(console, exc)
+            continue
+        except KeyboardInterrupt:
+            render_cancelled(console)
+            continue
+        console.print()
+        prior_messages = result.messages
+        console.print(f"[dim]{status_line(store, model, len(tools))}[/dim]\n")

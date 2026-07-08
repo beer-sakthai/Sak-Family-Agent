@@ -4,13 +4,16 @@ from __future__ import annotations
 
 import io
 import logging
+from collections.abc import Callable
 from pathlib import Path
+from typing import Any
 
 import pytest
 from rich.console import Console
 
 from sakthai import config
 from sakthai.agent import chat as chat_agent
+from sakthai.agent.loop import AgentError, AgentResult
 from sakthai.memory.store import MemoryStore
 
 
@@ -111,3 +114,202 @@ def test_status_line_reports_model_tools_and_fact_count(store: MemoryStore) -> N
     assert "claude-opus-4-8" in line
     assert "5 tools" in line
     assert "1 facts" in line
+
+
+def _make_scripted_input(lines: list[str | None]) -> Callable[[], str | None]:
+    it = iter(lines)
+
+    def _read() -> str | None:
+        try:
+            return next(it)
+        except StopIteration:
+            return None
+
+    return _read
+
+
+def test_run_chat_threads_history_across_turns(
+    monkeypatch: pytest.MonkeyPatch, store: MemoryStore
+) -> None:
+    seen_history: list[list[dict[str, Any]]] = []
+
+    def fake_run_agent(
+        task: str, *, history: list[dict[str, Any]] | None = None, **kwargs: Any
+    ) -> AgentResult:
+        seen_history.append(list(history) if history else [])
+        return AgentResult(
+            text=f"reply to {task}",
+            iterations=1,
+            stop_reason="end_turn",
+            messages=[
+                *(history or []),
+                {"role": "user", "content": task},
+                {"role": "assistant", "content": f"reply to {task}"},
+            ],
+        )
+
+    monkeypatch.setattr(chat_agent, "run_agent", fake_run_agent)
+    chat_agent.run_chat(
+        persona="sakthai",
+        soul_text="",
+        tools=(),
+        model="claude-opus-4-8",
+        provider="anthropic",
+        caveman=None,
+        with_skills=(),
+        store=store,
+        console=_console(),
+        read_input=_make_scripted_input(["hi", "again", None]),
+    )
+    assert seen_history[0] == []
+    assert seen_history[1][-2] == {"role": "user", "content": "hi"}
+    assert seen_history[1][-1] == {"role": "assistant", "content": "reply to hi"}
+
+
+def test_run_chat_exits_on_slash_exit(monkeypatch: pytest.MonkeyPatch, store: MemoryStore) -> None:
+    calls: list[str] = []
+
+    def fake_run_agent(task: str, **kwargs: Any) -> AgentResult:
+        calls.append(task)
+        return AgentResult(text="ok", iterations=1, stop_reason="end_turn", messages=[])
+
+    monkeypatch.setattr(chat_agent, "run_agent", fake_run_agent)
+    chat_agent.run_chat(
+        persona="sakthai",
+        soul_text="",
+        tools=(),
+        model="m",
+        provider=None,
+        caveman=None,
+        with_skills=(),
+        store=store,
+        console=_console(),
+        read_input=_make_scripted_input(["hello", "/exit", "should not run"]),
+    )
+    assert calls == ["hello"]
+
+
+def test_run_chat_stops_on_eof(monkeypatch: pytest.MonkeyPatch, store: MemoryStore) -> None:
+    calls: list[str] = []
+
+    def fake_run_agent(task: str, **kwargs: Any) -> AgentResult:
+        calls.append(task)
+        return AgentResult(text="ok", iterations=1, stop_reason="end_turn", messages=[])
+
+    monkeypatch.setattr(chat_agent, "run_agent", fake_run_agent)
+    chat_agent.run_chat(
+        persona="sakthai",
+        soul_text="",
+        tools=(),
+        model="m",
+        provider=None,
+        caveman=None,
+        with_skills=(),
+        store=store,
+        console=_console(),
+        read_input=_make_scripted_input(["hello", None]),
+    )
+    assert calls == ["hello"]
+
+
+def test_run_chat_skips_blank_input(monkeypatch: pytest.MonkeyPatch, store: MemoryStore) -> None:
+    calls: list[str] = []
+
+    def fake_run_agent(task: str, **kwargs: Any) -> AgentResult:
+        calls.append(task)
+        return AgentResult(text="ok", iterations=1, stop_reason="end_turn", messages=[])
+
+    monkeypatch.setattr(chat_agent, "run_agent", fake_run_agent)
+    chat_agent.run_chat(
+        persona="sakthai",
+        soul_text="",
+        tools=(),
+        model="m",
+        provider=None,
+        caveman=None,
+        with_skills=(),
+        store=store,
+        console=_console(),
+        read_input=_make_scripted_input(["   ", "hi", None]),
+    )
+    assert calls == ["hi"]
+
+
+def test_run_chat_survives_agent_error(monkeypatch: pytest.MonkeyPatch, store: MemoryStore) -> None:
+    calls: list[str] = []
+
+    def fake_run_agent(task: str, **kwargs: Any) -> AgentResult:
+        calls.append(task)
+        if task == "bad":
+            raise AgentError("no credentials")
+        return AgentResult(text="ok", iterations=1, stop_reason="end_turn", messages=[])
+
+    monkeypatch.setattr(chat_agent, "run_agent", fake_run_agent)
+    chat_agent.run_chat(
+        persona="sakthai",
+        soul_text="",
+        tools=(),
+        model="m",
+        provider=None,
+        caveman=None,
+        with_skills=(),
+        store=store,
+        console=_console(),
+        read_input=_make_scripted_input(["bad", "good", None]),
+    )
+    assert calls == ["bad", "good"]
+
+
+def test_run_chat_survives_keyboard_interrupt(
+    monkeypatch: pytest.MonkeyPatch, store: MemoryStore
+) -> None:
+    calls: list[str] = []
+
+    def fake_run_agent(task: str, **kwargs: Any) -> AgentResult:
+        calls.append(task)
+        if task == "cancel-me":
+            raise KeyboardInterrupt
+        return AgentResult(text="ok", iterations=1, stop_reason="end_turn", messages=[])
+
+    monkeypatch.setattr(chat_agent, "run_agent", fake_run_agent)
+    chat_agent.run_chat(
+        persona="sakthai",
+        soul_text="",
+        tools=(),
+        model="m",
+        provider=None,
+        caveman=None,
+        with_skills=(),
+        store=store,
+        console=_console(),
+        read_input=_make_scripted_input(["cancel-me", "next", None]),
+    )
+    assert calls == ["cancel-me", "next"]
+
+
+def test_run_chat_forwards_persona_and_skills_to_run_agent(
+    monkeypatch: pytest.MonkeyPatch, store: MemoryStore
+) -> None:
+    received: dict[str, Any] = {}
+
+    def fake_run_agent(task: str, **kwargs: Any) -> AgentResult:
+        received.update(kwargs)
+        return AgentResult(text="ok", iterations=1, stop_reason="end_turn", messages=[])
+
+    monkeypatch.setattr(chat_agent, "run_agent", fake_run_agent)
+    chat_agent.run_chat(
+        persona="sakking",
+        soul_text="SakKing Agent · Runner.",
+        tools=(),
+        model="claude-opus-4-8",
+        provider="anthropic",
+        caveman="lite",
+        with_skills=("some-skill",),
+        store=store,
+        console=_console(),
+        read_input=_make_scripted_input(["hi", None]),
+    )
+    assert received["system_prompt_prefix"] == "SakKing Agent · Runner."
+    assert received["caveman"] == "lite"
+    assert received["skills"] == ["some-skill"]
+    assert received["store"] is store
