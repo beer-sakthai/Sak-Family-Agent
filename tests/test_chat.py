@@ -9,12 +9,25 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+from click.testing import CliRunner
 from rich.console import Console
 
+import sakthai.cli.chat as chat_cli
 from sakthai import config
 from sakthai.agent import chat as chat_agent
 from sakthai.agent.loop import AgentError, AgentResult
+from sakthai.cli import main
 from sakthai.memory.store import MemoryStore
+
+
+@pytest.fixture(autouse=True)
+def _isolated_home(sakthai_home: Path) -> Path:
+    return sakthai_home
+
+
+@pytest.fixture
+def runner() -> CliRunner:
+    return CliRunner()
 
 
 def test_load_persona_soul_reads_file(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
@@ -360,3 +373,89 @@ def test_run_chat_forwards_persona_and_skills_to_run_agent(
     assert received["caveman"] == "lite"
     assert received["skills"] == ["some-skill"]
     assert received["store"] is store
+
+
+def test_chat_loads_persona_soul_and_invokes_run_chat(
+    runner: CliRunner, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    persona_dir = tmp_path / "sakking"
+    persona_dir.mkdir()
+    (persona_dir / "SOUL.md").write_text("SakKing Agent · Runner.", encoding="utf-8")
+    monkeypatch.setattr(config, "PERSONAS_DIR", tmp_path)
+
+    calls: list[dict[str, Any]] = []
+
+    def fake_run_chat(**kwargs: Any) -> None:
+        calls.append(kwargs)
+
+    monkeypatch.setattr(chat_cli, "run_chat", fake_run_chat)
+    monkeypatch.setattr(chat_cli, "_make_read_input", lambda: (lambda: None))
+
+    result = runner.invoke(main, ["chat", "--persona", "sakking", "--no-mcp"])
+
+    assert result.exit_code == 0, result.output
+    assert len(calls) == 1
+    assert calls[0]["persona"] == "sakking"
+    assert calls[0]["soul_text"] == "SakKing Agent · Runner."
+    assert calls[0]["with_skills"] == ()
+
+
+def test_chat_defaults_to_sakthai_persona(
+    runner: CliRunner, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    persona_dir = tmp_path / "sakthai"
+    persona_dir.mkdir()
+    (persona_dir / "SOUL.md").write_text("SakThai identity.", encoding="utf-8")
+    monkeypatch.setattr(config, "PERSONAS_DIR", tmp_path)
+
+    calls: list[dict[str, Any]] = []
+    monkeypatch.setattr(chat_cli, "run_chat", lambda **kwargs: calls.append(kwargs))
+    monkeypatch.setattr(chat_cli, "_make_read_input", lambda: (lambda: None))
+
+    result = runner.invoke(main, ["chat", "--no-mcp"])
+
+    assert result.exit_code == 0, result.output
+    assert calls[0]["persona"] == "sakthai"
+
+
+def test_chat_rejects_invalid_persona(runner: CliRunner) -> None:
+    result = runner.invoke(main, ["chat", "--persona", "notreal", "--no-mcp"])
+    assert result.exit_code != 0
+    assert "notreal" in result.output
+
+
+def test_chat_forwards_model_provider_caveman_and_skills(
+    runner: CliRunner, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    persona_dir = tmp_path / "sakthai"
+    persona_dir.mkdir()
+    (persona_dir / "SOUL.md").write_text("id", encoding="utf-8")
+    monkeypatch.setattr(config, "PERSONAS_DIR", tmp_path)
+
+    calls: list[dict[str, Any]] = []
+    monkeypatch.setattr(chat_cli, "run_chat", lambda **kwargs: calls.append(kwargs))
+    monkeypatch.setattr(chat_cli, "_make_read_input", lambda: (lambda: None))
+
+    result = runner.invoke(
+        main,
+        [
+            "chat",
+            "--no-mcp",
+            "--model",
+            "gpt-4o",
+            "--provider",
+            "openai",
+            "--caveman",
+            "lite",
+            "--with-skills",
+            "skill-a",
+            "--with-skills",
+            "skill-b",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert calls[0]["model"] == "gpt-4o"
+    assert calls[0]["provider"] == "openai"
+    assert calls[0]["caveman"] == "lite"
+    assert calls[0]["with_skills"] == ("skill-a", "skill-b")

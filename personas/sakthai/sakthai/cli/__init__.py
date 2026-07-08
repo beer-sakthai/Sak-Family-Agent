@@ -17,6 +17,7 @@ if sys.platform == "win32":
 
 from .. import __version__
 from .agent import mcp, run
+from .chat import chat as chat_cmd
 from .cycle import cycle as cycle_cmd
 from .eval import eval_cmd
 from .extensions import extensions as extensions_cmd
@@ -31,6 +32,8 @@ from .system import doctor, setup, status, tools
 # group object under its own name here would shadow the same-named submodule as
 # a package attribute (e.g. ``sakthai.cli.skills`` would resolve to the group,
 # not the module), which breaks ``import sakthai.cli.skills`` for tests/tools.
+# The same applies to any single command whose name matches its module (hence
+# ``chat_cmd`` for the ``chat`` command in ``chat.py``).
 
 
 @click.group()
@@ -53,6 +56,7 @@ main.add_command(tools)
 # Agent
 main.add_command(run)
 main.add_command(mcp)
+main.add_command(chat_cmd, name="chat")
 
 # Skills, cycle, extensions, sessions, hf
 main.add_command(skills_cmd)
