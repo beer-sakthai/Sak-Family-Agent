@@ -133,7 +133,7 @@ Following `superpowers:writing-skills` TDD methodology:
   which is not on the `sakthai` runtime's skill-discovery path. A live
   `--with-skills Sak-auto-cycle-loop` dispatch will fail to resolve the
   skill until it's composed/synced into each persona's live skill
-  directory via the repo's existing `scripts/compose_persona.py` /
-  skill-mirroring pattern (`docs/skill-naming.md`). Flagged in
+  directory via make compose-personas (which runs scripts/compose_persona.py /
+  skill-mirroring pattern — see docs/skill-naming.md). Flagged in
   `Sak-family-auto-cycle`'s own text so a live-run attempt isn't
   surprised by it, but the actual sync step is a separate task.
