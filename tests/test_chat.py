@@ -260,6 +260,53 @@ def test_run_chat_survives_agent_error(monkeypatch: pytest.MonkeyPatch, store: M
     assert calls == ["bad", "good"]
 
 
+def test_run_chat_preserves_history_after_a_failed_turn(
+    monkeypatch: pytest.MonkeyPatch, store: MemoryStore
+) -> None:
+    calls: list[str] = []
+    seen_history: list[list[dict[str, Any]] | None] = []
+    results: dict[str, AgentResult] = {}
+
+    def fake_run_agent(
+        task: str, *, history: list[dict[str, Any]] | None = None, **kwargs: Any
+    ) -> AgentResult:
+        calls.append(task)
+        seen_history.append(history)
+        if task == "bad":
+            raise AgentError("boom")
+        result = AgentResult(
+            text=f"reply to {task}",
+            iterations=1,
+            stop_reason="end_turn",
+            messages=[
+                *(history or []),
+                {"role": "user", "content": task},
+                {"role": "assistant", "content": f"reply to {task}"},
+            ],
+        )
+        results[task] = result
+        return result
+
+    monkeypatch.setattr(chat_agent, "run_agent", fake_run_agent)
+    chat_agent.run_chat(
+        persona="sakthai",
+        soul_text="",
+        tools=(),
+        model="m",
+        provider=None,
+        caveman=None,
+        with_skills=(),
+        store=store,
+        console=_console(),
+        read_input=_make_scripted_input(["good1", "bad", "good2", None]),
+    )
+    assert calls == ["good1", "bad", "good2"]
+    # The "bad" turn raised before reassigning prior_messages, so the history
+    # seen by "good2" must still be exactly what "good1" returned — untouched
+    # by the intervening failure.
+    assert seen_history[2] == results["good1"].messages
+
+
 def test_run_chat_survives_keyboard_interrupt(
     monkeypatch: pytest.MonkeyPatch, store: MemoryStore
 ) -> None:
