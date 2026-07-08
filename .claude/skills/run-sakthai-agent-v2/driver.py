@@ -2,10 +2,11 @@
 """Smoke-drive the sakthai-agent-v2 CLI and its MCP stdio server.
 
 This is the agent-facing harness for the skill. It exercises every surface a
-PR is likely to touch — the memory CLI, the zero-cost agent preflight, the
-web API server (`python -m sakthai.web.server`), and a live JSON-RPC roundtrip
-against `sakthai mcp` — in a throwaway SAKTHAI_HOME, and exits non-zero if
-anything misbehaves.
+PR is likely to touch — the memory CLI, doctor/cycle/sessions/skills, a
+memory export→import roundtrip, the zero-cost agent preflight (with and
+without skill injection), the web API server (`python -m sakthai.web.server`),
+and a live JSON-RPC roundtrip against `sakthai mcp` — in a throwaway
+SAKTHAI_HOME, and exits non-zero if anything misbehaves.
 
 No API key or network is required: the agent loop is exercised only via
 `run --dry-run` (preflight), never a real model call.
@@ -115,9 +116,40 @@ def main() -> int:
         rc, out = run(["tools"], env)
         check("tools lists builtins", rc == 0 and "learn" in out)
 
+        print("\nSystem / state-machine surface:")
+        rc, out = run(["doctor"], env)
+        check("doctor", rc == 0)
+        rc, out = run(["cycle", "status"], env)
+        check("cycle status", rc == 0 and "DREAM" in out)
+        rc, out = run(["cycle", "next"], env)
+        check("cycle next advances stage", rc == 0 and "HOPE" in out)
+        rc, out = run(["sessions", "list"], env)
+        check("sessions list", rc == 0)
+        rc, out = run(["skills", "list"], env)
+        check("skills list discovers library", rc == 0 and "skill(s)" in out)
+
+        print("\nMemory snapshot roundtrip (export → import into a fresh home):")
+        snap = home / "snap.jsonl"
+        rc, out = run(["memory", "export", str(snap)], env)
+        check("memory export", rc == 0 and snap.exists())
+        home2 = Path(tempfile.mkdtemp(prefix="sakthai-smoke2."))
+        try:
+            env2 = {**os.environ, "SAKTHAI_HOME": str(home2)}
+            rc, out = run(["memory", "import", str(snap)], env2)
+            check("memory import", rc == 0 and "imported" in out.lower())
+            rc, out = run(["recall", "dark"], env2)
+            check("imported fact recalls in new home", rc == 0 and "dark mode" in out)
+        finally:
+            shutil.rmtree(home2, ignore_errors=True)
+
         print("\nAgent preflight (no API call):")
         rc, out = run(["run", "say hi", "--dry-run", "--no-mcp"], env)
         check("run --dry-run", rc == 0 and "runnable:" in out)
+        rc, out = run(
+            ["run", "say hi", "--dry-run", "--no-mcp", "--with-skills", "sakthai-security-red-teaming"],
+            env,
+        )
+        check("run --dry-run --with-skills", rc == 0 and "runnable:" in out)
 
         print("\nWeb API server (headless):")
         # The `dashboard` CLI command was removed (5de2c25); the JSON surface
@@ -141,6 +173,15 @@ def main() -> int:
                 except OSError:
                     time.sleep(0.3)
             check("web server serves /api/stages JSON", "kpis" in stages)
+            eco: dict = {}
+            try:
+                with urllib.request.urlopen(
+                    "http://127.0.0.1:3001/api/ecosystem", timeout=2
+                ) as r:
+                    eco = json.loads(r.read())
+            except OSError:
+                pass
+            check("web server serves /api/ecosystem JSON", "generated_at" in eco)
         finally:
             srv.terminate()
             srv.wait(timeout=10)

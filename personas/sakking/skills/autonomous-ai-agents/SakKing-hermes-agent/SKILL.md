@@ -9,7 +9,7 @@ metadata:
   hermes:
     tags: [hermes, setup, configuration, multi-agent, spawning, cli, gateway, development]
     homepage: https://github.com/NousResearch/hermes-agent
-    related_skills: [SakJules-claude-code, SakJules-codex, SakJules-opencode]
+    related_skills: [SakKing-claude-code, SakKing-codex, SakKing-opencode]
 ---
 
 # Hermes Agent

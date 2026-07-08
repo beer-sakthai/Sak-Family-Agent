@@ -15,7 +15,7 @@ metadata:
       - caveman
       - compression
     related_skills:
-      - sakthai-understand-claude-code-workflows
+      - SakThai-understand-claude-code-workflows
 ---
 
 # sakthai-understand-caveman

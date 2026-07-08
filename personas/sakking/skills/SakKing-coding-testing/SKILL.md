@@ -16,8 +16,8 @@ metadata:
       - pytest
       - hermetic
     related_skills:
-      - sakthai-coding-uv
-      - sakthai-coding-type-safety
+      - SakKing-coding-uv
+      - SakKing-coding-type-safety
       - sakthai-coding-skill-authoring
 ---
 

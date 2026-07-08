@@ -8,7 +8,7 @@ platforms: [linux, macos]
 metadata:
   hermes:
     tags: [Memory-Agent, SakThai, Persistent-Memory, MCP, CLI, SQLite, Learning-Agent]
-    related_skills: [claude-code, codex, hermes-agent, opencode]
+    related_skills: [SakSit-claude-code, SakSit-codex, hermes-agent, SakSit-opencode]
 ---
 
 # SakThai — Hermes Orchestration Guide

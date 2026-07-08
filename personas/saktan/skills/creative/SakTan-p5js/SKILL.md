@@ -6,7 +6,7 @@ platforms: [linux, macos, windows]
 metadata:
   hermes:
     tags: [creative-coding, generative-art, p5js, canvas, interactive, visualization, webgl, shaders, animation]
-    related_skills: [ascii-video, manim-video, excalidraw]
+    related_skills: [SakTan-ascii-video, SakTan-manim-video, SakTan-excalidraw]
 ---
 
 # p5.js Production Pipeline

@@ -133,6 +133,29 @@ def test_gemini_token_expired_returns_none() -> None:
     assert auth.load_gemini_cli_token() is None
 
 
+def test_gemini_token_falls_back_to_antigravity_cli() -> None:
+    ag_dir = Path(auth._gemini_dir()) / "antigravity-cli"
+    ag_dir.mkdir(parents=True, exist_ok=True)
+    token_file = ag_dir / "antigravity-oauth-token"
+    future_iso = "2099-01-01T00:00:00.000Z"
+    payload = {"token": {"access_token": "ag-tok", "expiry": future_iso}}
+    token_file.write_text(json.dumps(payload), encoding="utf-8")
+
+    assert auth.load_gemini_cli_token() == "ag-tok"
+
+
+def test_gemini_token_antigravity_cli_expired_returns_none() -> None:
+    ag_dir = Path(auth._gemini_dir()) / "antigravity-cli"
+    ag_dir.mkdir(parents=True, exist_ok=True)
+    token_file = ag_dir / "antigravity-oauth-token"
+    past_iso = "2020-01-01T00:00:00.000Z"
+    payload = {"token": {"access_token": "ag-tok", "expiry": past_iso}}
+    token_file.write_text(json.dumps(payload), encoding="utf-8")
+
+    assert auth.load_gemini_cli_token() is None
+
+
+
 # -- resolve_anthropic_client -------------------------------------------
 
 

@@ -13,7 +13,7 @@ metadata:
       - cycle
       - care
     related_skills:
-      - sakthai-cycle-joy
+      - SakTan-cycle-joy
 ---
 
 # sakthai-cycle-care

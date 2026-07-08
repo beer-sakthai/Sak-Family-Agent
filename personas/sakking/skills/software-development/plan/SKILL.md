@@ -8,7 +8,7 @@ platforms: [linux, macos, windows]
 metadata:
   hermes:
     tags: [planning, plan-mode, implementation, workflow, design, documentation]
-    related_skills: [subagent-driven-development, test-driven-development, requesting-code-review]
+    related_skills: [subagent-driven-development, SakKing-test-driven-development, SakKing-requesting-code-review]
 ---
 
 # Plan Mode

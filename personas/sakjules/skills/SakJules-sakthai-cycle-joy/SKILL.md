@@ -13,7 +13,7 @@ metadata:
       - cycle
       - joy
     related_skills:
-      - sakthai-cycle-trust
+      - SakJules-cycle-trust
 ---
 
 # sakthai-cycle-joy

@@ -13,7 +13,7 @@ metadata:
       - cycle
       - growth
     related_skills:
-      - sakthai-cycle-dream
+      - SakKing-cycle-dream
 ---
 
 # sakthai-cycle-growth

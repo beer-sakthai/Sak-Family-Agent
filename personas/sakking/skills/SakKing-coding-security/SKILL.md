@@ -16,9 +16,9 @@ metadata:
       - bandit
       - threat-modeling
     related_skills:
-      - sakthai-coding-mcp-tools
-      - sakthai-coding-error-handling
-      - sakthai-coding-type-safety
+      - SakKing-coding-mcp-tools
+      - SakKing-coding-error-handling
+      - SakKing-coding-type-safety
 ---
 
 # sakthai-coding-security

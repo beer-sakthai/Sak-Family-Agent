@@ -6,7 +6,7 @@ platforms: [linux, macos, windows]
 metadata:
   hermes:
     tags: [github, organization, admin, team, roles, audit, logs, security, policies, secrets, billing]
-    related_skills: [SakJules-github-repo-management, github-repo-roles]
+    related_skills: [SakKing-github-repo-management, github-repo-roles]
 ---
 
 # GitHub Organization Administration

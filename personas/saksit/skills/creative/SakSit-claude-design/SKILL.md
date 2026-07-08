@@ -8,7 +8,7 @@ platforms: [linux, macos, windows]
 metadata:
   hermes:
     tags: [design, html, prototype, ux, ui, creative, artifact, deck, motion, design-system]
-    related_skills: [design-md, popular-web-designs, excalidraw, architecture-diagram]
+    related_skills: [SakSit-design-md, SakSit-popular-web-designs, SakSit-excalidraw, SakSit-architecture-diagram]
 ---
 
 # Claude Design for CLI/API Agents

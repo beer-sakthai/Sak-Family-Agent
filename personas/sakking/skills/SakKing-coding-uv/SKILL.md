@@ -16,8 +16,8 @@ metadata:
       - dependencies
       - tooling
     related_skills:
-      - sakthai-coding-type-safety
-      - sakthai-coding-testing
+      - SakKing-coding-type-safety
+      - SakKing-coding-testing
       - sakthai-coding-skill-authoring
 ---
 

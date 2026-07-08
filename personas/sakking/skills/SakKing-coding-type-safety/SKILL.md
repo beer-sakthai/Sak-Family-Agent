@@ -16,8 +16,8 @@ metadata:
       - mypy
       - type-safety
     related_skills:
-      - sakthai-coding-uv
-      - sakthai-coding-testing
+      - SakKing-coding-uv
+      - SakKing-coding-testing
       - sakthai-coding-skill-authoring
 ---
 

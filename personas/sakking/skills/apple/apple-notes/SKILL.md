@@ -8,7 +8,7 @@ platforms: [macos]
 metadata:
   hermes:
     tags: [Notes, Apple, macOS, note-taking]
-    related_skills: [obsidian]
+    related_skills: [SakKing-obsidian]
 prerequisites:
   commands: [memo]
 ---

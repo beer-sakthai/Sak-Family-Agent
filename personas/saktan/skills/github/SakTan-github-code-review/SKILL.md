@@ -8,7 +8,7 @@ platforms: [linux, macos, windows]
 metadata:
   hermes:
     tags: [GitHub, Code-Review, Pull-Requests, Git, Quality]
-    related_skills: [github-auth, github-pr-workflow]
+    related_skills: [SakTan-github-auth, SakTan-github-pr-workflow]
 ---
 
 # GitHub Code Review
