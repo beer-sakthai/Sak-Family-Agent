@@ -159,3 +159,11 @@
 **Learning:** Shell parsing is highly flexible regarding whitespace around redirection operators. A robust security scanner must use regular expressions to identify redirection operators within any part of a token and correctly resolve the target path, whether it's attached to the operator or appears in the subsequent token.
 
 **Prevention:** Use a unified regular expression to detect all standard redirection operators (including numeric file descriptors like `2>`) within shell command tokens. Ensure the scanner correctly extracts the target path by checking both the remainder of the current token and the entirety of the next token if the operator appears at the end.
+
+## 2026-07-14 - [Hardening Guardrails against Data Exfiltration and Clobbering]
+
+**Vulnerability:** Shell guardrails could be bypassed using advanced redirection operators like `>|` (clobber) or `&>>` (append both streams) to overwrite sensitive files. Additionally, the `dd` command was only monitored for its output file (`of=`), leaving the input file (`if=`) unprotected, which allowed the agent to be tricked into reading and exfiltrating system-critical files (e.g., `/dev/sda` or `/etc/shadow`).
+
+**Learning:** Security guardrails for shell execution must account for all possible redirection variants supported by modern shells (Bash/Zsh). Furthermore, tools that perform low-level data movement like `dd` must be validated for both reading and writing to prevent both data destruction and unauthorized exfiltration. Path validation for flags must also account for home-relative segments (`~`) which can be used to target sensitive user data outside the sandbox.
+
+**Prevention:** Expand redirection regex to include `&>>` and `>|`. Implement dual-side path validation for `dd` (both `if=` and `of=`). Update flag-based path detection to recognize and resolve the `~` character.

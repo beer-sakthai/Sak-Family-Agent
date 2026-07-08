@@ -77,8 +77,8 @@ def _is_sensitive_path(path: str) -> bool:
         if _is_sensitive_path(val):
             return True
 
-    # Support checking short flags with attached paths like -o/etc/passwd
-    if len(path) > 2 and path.startswith("-") and path[1] != "-" and path[2] == "/":
+    # Support checking short flags with attached paths like -o/etc/passwd or -o~/key
+    if len(path) > 2 and path.startswith("-") and path[1] != "-" and (path[2] == "/" or path[2] == "~"):
         val = path[2:]
         if _is_sensitive_path(val):
             return True
@@ -175,26 +175,28 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
                         reason=f"Potentially destructive '{binary_name}' command on {subpart!r} blocked.",
                     )
 
-    # 3. Specialized protection for dd (output file).
+    # 3. Specialized protection for dd (input/output file).
     for i, part in enumerate(parts):
         if _is_binary(part, "dd"):
             for subpart in parts[i + 1 :]:
                 if subpart in (";", "&&", "||", "|"):
                     break
-                if subpart.startswith("of="):
+                if subpart.startswith("of=") or subpart.startswith("if="):
                     val = subpart[3:]
                     if _is_sensitive_path(val) or (context_sensitive and val in ("{}", "+")):
+                        binary_name = os.path.basename(part)
+                        op = "destructive" if subpart.startswith("of=") else "potentially dangerous"
                         return GuardrailResult(
                             GuardrailAction.DENY,
-                            reason=f"destructive 'dd' on {val!r} blocked.",
+                            reason=f"{op} {binary_name!r} on {val!r} blocked.",
                         )
 
     # 4. Prevent shell redirections targeting sensitive paths.
     for i, part in enumerate(parts):
-        # We look for redirection operators (>, >>, 1>, 2>, &>, >&, <, etc.)
-        # Pattern: optional digit or '&', then '>>', '>&', '>', or '<'
-        # Note: >& must come before > to match it correctly.
-        match = re.search(r"(?:[0-9]|&)?(?:>>|>&|>|<)", part)
+        # We look for redirection operators (>, >>, 1>, 2>, &>, >&, >|, <, etc.)
+        # Pattern: optional digit or '&', then '&>>', '>>', '>&', '>|', '>', or '<'
+        # Note: longer operators must come before shorter ones to match correctly.
+        match = re.search(r"(?:[0-9]|&)?(?:&>>|>>|>&|>\||>|<)", part)
         if match:
             # If the operator is at the end of the token or attached to its front,
             # we need to find the target path.
