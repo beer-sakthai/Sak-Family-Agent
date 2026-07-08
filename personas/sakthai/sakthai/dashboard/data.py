@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import logging
 import time
-from datetime import datetime, timedelta, UTC
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -21,10 +21,10 @@ def _parse_team_roster() -> list[dict[str, str]]:
         soul_path = repo_root / "docs" / "SOUL.md"
         if not soul_path.exists():
             return []
-        
+
         content = soul_path.read_text(encoding="utf-8")
         lines = content.splitlines()
-        
+
         roster = []
         in_table = False
         for line in lines:
@@ -47,12 +47,7 @@ def _parse_team_roster() -> list[dict[str, str]]:
                     handle = parts[1].replace("`", "")
                     role = parts[2]
                     model = parts[3].replace("`", "")
-                    roster.append({
-                        "agent": agent,
-                        "handle": handle,
-                        "role": role,
-                        "model": model
-                    })
+                    roster.append({"agent": agent, "handle": handle, "role": role, "model": model})
         return roster
     except Exception as e:
         logger.warning("Failed to parse team roster from SOUL.md: %s", e)
@@ -86,7 +81,11 @@ def collect_dashboard_data(days: int = 30) -> dict[str, Any]:
             ][:10]
 
             top_obs = [
-                {"id": o.id, "label": o.summary, "value": f"Weight: {o.weight:.2f}, Conf: {o.confidence:.2f}"}
+                {
+                    "id": o.id,
+                    "label": o.summary,
+                    "value": f"Weight: {o.weight:.2f}, Conf: {o.confidence:.2f}",
+                }
                 for o in all_obs
             ][:10]
 
@@ -109,22 +108,29 @@ def collect_dashboard_data(days: int = 30) -> dict[str, Any]:
             revenue_list = []
             total_revenue = 0.0
             mrr = 0.0
-            
+
             for rf in revenue_facts:
                 try:
                     payload = json.loads(rf.value)
                 except (TypeError, ValueError):
                     # Fallback if key/value are not JSON
-                    payload = {"client": rf.key or "Unknown", "amount": 0.0, "type": "setup", "date": ""}
-                
+                    payload = {
+                        "client": rf.key or "Unknown",
+                        "amount": 0.0,
+                        "type": "setup",
+                        "date": "",
+                    }
+
                 amount = float(payload.get("amount") or 0.0)
                 payload["id"] = rf.id
-                
+
                 # Use value date, default to created_at
-                date_str = payload.get("date") or datetime.fromtimestamp(rf.created_at, UTC).strftime("%Y-%m-%d")
+                date_str = payload.get("date") or datetime.fromtimestamp(
+                    rf.created_at, UTC
+                ).strftime("%Y-%m-%d")
                 payload["date"] = date_str
                 payload["amount"] = amount
-                
+
                 revenue_list.append(payload)
                 total_revenue += amount
 
@@ -149,7 +155,7 @@ def collect_dashboard_data(days: int = 30) -> dict[str, Any]:
                 lead_name = lead.get("name", "").strip().lower()
                 lead_email = lead.get("email", "").strip().lower()
                 lead_phone = lead.get("phone", "").strip().lower()
-                
+
                 matched = False
                 for rev in revenue_list:
                     rev_client = rev.get("client", "").strip().lower()
@@ -165,13 +171,15 @@ def collect_dashboard_data(days: int = 30) -> dict[str, Any]:
                     if lead_phone and lead_phone in rev_client:
                         matched = True
                         break
-                
+
                 lead["converted"] = matched
                 if matched:
                     converted_leads_count += 1
 
             total_leads = len(leads_list)
-            conversion_rate = (converted_leads_count / total_leads * 100.0) if total_leads > 0 else 0.0
+            conversion_rate = (
+                (converted_leads_count / total_leads * 100.0) if total_leads > 0 else 0.0
+            )
 
             # Revenue Growth Timeline
             # Sort revenue by date
@@ -179,7 +187,7 @@ def collect_dashboard_data(days: int = 30) -> dict[str, Any]:
             timeline_labels = []
             timeline_values = []
             cumulative = 0.0
-            
+
             # Group by date to show a clean cumulative progression
             date_groups: dict[str, float] = {}
             for rev in sorted_rev:
@@ -216,8 +224,8 @@ def collect_dashboard_data(days: int = 30) -> dict[str, Any]:
                     "revenue_growth": {
                         "labels": timeline_labels,
                         "values": timeline_values,
-                    }
-                }
+                    },
+                },
             }
 
     except Exception as e:
@@ -246,6 +254,6 @@ def collect_dashboard_data(days: int = 30) -> dict[str, Any]:
                 "revenue_growth": {
                     "labels": [],
                     "values": [],
-                }
-            }
+                },
+            },
         }
