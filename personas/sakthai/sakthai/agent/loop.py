@@ -79,6 +79,7 @@ class AgentResult:
     usage: dict[str, int] = field(
         default_factory=lambda: {"input_tokens": 0, "output_tokens": 0, "total_tokens": 0}
     )
+    messages: list[dict[str, Any]] = field(default_factory=list)
 
 
 # -- prompt + tool execution --------------------------------------------
@@ -246,6 +247,14 @@ def _execute_tool_with_guardrails(
     return output, is_error
 
 
+def _preview(text: str, limit: int = 80) -> str:
+    """Collapse whitespace and truncate for compact event/log display."""
+    collapsed = " ".join(text.split())
+    if len(collapsed) <= limit:
+        return collapsed
+    return collapsed[: limit - 1] + "…"
+
+
 def _process_tool_uses(
     tool_uses: list[Any],
     registry: ToolRegistry,
@@ -271,7 +280,15 @@ def _process_tool_uses(
         args = dict(use.input or {})
         output, is_error = _execute_tool_with_guardrails(tool, args, store, policy)
         tool_calls.append({"name": use.name, "input": args, "is_error": is_error})
-        notify("tool_call", {"name": use.name, "input": args, "is_error": is_error})
+        notify(
+            "tool_call",
+            {
+                "name": use.name,
+                "input": args,
+                "is_error": is_error,
+                "output_preview": _preview(output),
+            },
+        )
         results.append(
             {
                 "type": "tool_result",
@@ -359,6 +376,7 @@ def run_agent(
     stateless: bool = False,
     caveman: str | None = None,
     system_prompt_prefix: str = "",
+    history: Sequence[dict[str, Any]] | None = None,
     guardrail_policy: GuardrailPolicy | None = None,
 ) -> AgentResult:
     """Run one task to completion against Claude, Gemini, or an OpenAI endpoint.
@@ -366,8 +384,10 @@ def run_agent(
     ``max_seconds`` adds an optional wall-clock budget on top of
     ``max_iterations``. ``skills`` names skills whose instructions are injected
     into the system prompt. ``on_token`` (when set) receives assistant text
-    deltas as they stream from providers that support it. ``client`` and
-    ``store`` are injectable for testing.
+    deltas as they stream from providers that support it.
+    ``client`` and ``store`` are injectable for testing. ``history`` seeds the
+    conversation with a prior turn's messages (e.g. from a previous
+    ``AgentResult.messages``) so multi-turn callers don't lose context.
     """
     if not task.strip():
         raise AgentError("Task must be a non-empty string.")
@@ -400,7 +420,8 @@ def run_agent(
     tool_schemas = registry.schemas()
     tool_calls: list[dict[str, Any]] = []
     policy = guardrail_policy or DEFAULT_POLICY
-    messages: list[dict[str, Any]] = [{"role": "user", "content": task}]
+    messages: list[dict[str, Any]] = list(history) if history else []
+    messages.append({"role": "user", "content": task})
     deadline = time.monotonic() + max_seconds if max_seconds is not None else None
 
     usage_tracker = UsageTracker()
@@ -480,6 +501,7 @@ def run_agent(
                     stop_reason=stop_reason,
                     tool_calls=tool_calls,
                     usage=usage_tracker.to_dict(),
+                    messages=[*messages, {"role": "assistant", "content": response.content}],
                 )
                 _save_session_log(task, model, messages, result)
                 _record_run_eval(iteration, stop_reason, had_error=False)
@@ -497,6 +519,7 @@ def run_agent(
                     stop_reason=stop_reason,
                     tool_calls=tool_calls,
                     usage=usage_tracker.to_dict(),
+                    messages=[*messages, {"role": "assistant", "content": response.content}],
                 )
                 _save_session_log(task, model, messages, result)
                 _record_run_eval(iteration, stop_reason, had_error=False)

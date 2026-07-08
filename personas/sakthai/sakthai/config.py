@@ -37,6 +37,15 @@ SKILLS_DIR = REPO_ROOT / "skills"
 LIBRARY_DIR = REPO_ROOT / "library"
 PERSONAS_DIR = REPO_ROOT / "personas"
 
+# The six Sak Family personas `sakthai chat --persona` can address.
+PERSONA_NAMES: tuple[str, ...] = ("sakking", "sakthai", "saksee", "saksit", "saktan", "sakjules")
+
+
+def persona_soul_path(persona: str) -> Path:
+    """Path to a persona's SOUL.md identity file."""
+    return PERSONAS_DIR / persona / "SOUL.md"
+
+
 # Environment variables, grouped by how the readiness check treats them.
 REQUIRED_ENV_VARS: dict[str, str] = {
     "ANTHROPIC_API_KEY": "Claude API key for `sakthai run` (or sign in with `claude login`)",

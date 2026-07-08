@@ -252,3 +252,18 @@ def test_skills_report_counts(
     report = config.check_env()["skills"]
     assert report["dir_exists"] is True
     assert report["skill_count"] == 2  # skill1 and skill2 are dirs
+
+
+def test_persona_soul_path() -> None:
+    assert config.persona_soul_path("sakking") == config.PERSONAS_DIR / "sakking" / "SOUL.md"
+
+
+def test_persona_names_lists_all_six() -> None:
+    assert config.PERSONA_NAMES == (
+        "sakking",
+        "sakthai",
+        "saksee",
+        "saksit",
+        "saktan",
+        "sakjules",
+    )
