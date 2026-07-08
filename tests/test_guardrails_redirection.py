@@ -43,11 +43,13 @@ def test_cat_redirection_blocked_by_binary_rule_first(run_command_tool, store, m
     [
         "echo hi <>./local_file",
         "cat <& 3",
-        "ls -la <> /dev/null", # /dev is sensitive, but /dev/null is often allowed?
-                               # Actually _is_sensitive_path blocks /dev and anything under it.
+        "ls -la <> /dev/null",  # /dev is sensitive, but /dev/null is often allowed?
+        # Actually _is_sensitive_path blocks /dev and anything under it.
     ],
 )
-def test_new_redirection_operators_allowed_where_appropriate(command, run_command_tool, store, monkeypatch):
+def test_new_redirection_operators_allowed_where_appropriate(
+    command, run_command_tool, store, monkeypatch
+):
     # Note: /dev/null WILL be blocked because /dev is in critical_roots.
     # Let's use a non-sensitive path for allowed test.
     if "/dev/null" in command:
