@@ -135,3 +135,11 @@
 **Learning:** Hardening shell guardrails requires move beyond simple command name matching. Destructive intent can be expressed through I/O redirections which are handled by the shell before the command is even executed in a full shell environment, or through specialized arguments in common utilities. Furthermore, positional argument scanning must account for flags that use an equals sign to pair with their values.
 
 **Prevention:** Implement a unified scanner that monitors a broad list of destructive binaries (`rm`, `chmod`, `mv`, `cp`, `ln`, `tee`, `chgrp`, `chown`) and explicitly stops scanning at command separators to prevent false positives. Enhance path validation to decompose flag-value pairs. Add dedicated heuristics for specialized commands like `dd` and for shell redirection operators that target sensitive system roots.
+
+## 2026-07-07 - [Hardening Guardrails against Binary-specific Flag Bypasses]
+
+**Vulnerability:** Shell command guardrails could be bypassed by using binaries like `curl`, `wget`, or `sed` to overwrite sensitive files (e.g., `curl -o /etc/passwd ...`). Additionally, short flags with attached paths (e.g., `-o/etc/passwd`) were not correctly decomposed by the path validator, allowing them to bypass sensitive path checks.
+
+**Learning:** Destructive intent is not limited to `rm` or `chmod`. Many common utilities have flags that allow writing to arbitrary locations. Furthermore, shell argument parsing allows for various ways to attach values to flags, which security scanners must account for beyond simple space or equals-sign separation.
+
+**Prevention:** Expand monitored destructive binaries to include tools with file-writing capabilities (`curl`, `wget`, `sed`). Harden path validation to detect and decompose short flags that are immediately followed by an absolute path (e.g., `-x/path`).
