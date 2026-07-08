@@ -418,23 +418,30 @@ class TestSyncMemoryToGitExtended:
         import subprocess
 
         from sakthai.memory.sync import _run_git
+
         # Pass check=True (default) to cause CompletedProcess error print
         with pytest.raises(subprocess.CalledProcessError):
             _run_git(["status", "--invalid-flag-nonexistent"], cwd=sakthai_home)
 
     def test_http_url_error(self, sakthai_home: Path) -> None:
         import urllib.error
-        with patch("urllib.request.urlopen", side_effect=urllib.error.URLError("reason")):
-            with pytest.raises(RuntimeError, match="Failed to sync to"):
-                sync_memory_via_http("https://example.com/sync")
+
+        with (
+            patch("urllib.request.urlopen", side_effect=urllib.error.URLError("reason")),
+            pytest.raises(RuntimeError, match="Failed to sync to"),
+        ):
+            sync_memory_via_http("https://example.com/sync")
 
     def test_http_generic_exception(self, sakthai_home: Path) -> None:
-        with patch("urllib.request.urlopen", side_effect=Exception("oops")):
-            with pytest.raises(RuntimeError, match="Failed to sync to"):
-                sync_memory_via_http("https://example.com/sync")
+        with (
+            patch("urllib.request.urlopen", side_effect=Exception("oops")),
+            pytest.raises(RuntimeError, match="Failed to sync to"),
+        ):
+            sync_memory_via_http("https://example.com/sync")
 
     def test_sync_memory_to_git_diff_summary(self, sakthai_home: Path) -> None:
         diff_stdout = '+ {"kind": "note", "value": "fact"}\n+ {"summary": "obs"}\n'
+
         def _run(args: list[str], **kwargs: object) -> CompletedProcess[str]:
             if "diff" in args:
                 return _cp(args, stdout=diff_stdout)
@@ -443,6 +450,7 @@ class TestSyncMemoryToGitExtended:
             return _cp(args)
 
         commit_args_called = []
+
         def _run_with_commit_check(args: list[str], **kwargs: object) -> CompletedProcess[str]:
             if "commit" in args:
                 commit_args_called.append(args)
@@ -462,6 +470,7 @@ class TestSyncMemoryToGitExtended:
 
         # Test pulling with remote when origin is absent and present
         remote_calls = []
+
         def _run(args: list[str], **kwargs: object) -> CompletedProcess[str]:
             if "remote" in args:
                 remote_calls.append(args)
@@ -472,10 +481,13 @@ class TestSyncMemoryToGitExtended:
         # Mock merge to return some counts
         with (
             patch("sakthai.memory.sync._run_git", side_effect=_run),
-            patch("sakthai.memory.sync._merge_remote_into_store", return_value=(2, 3))
+            patch("sakthai.memory.sync._merge_remote_into_store", return_value=(2, 3)),
         ):
             res1 = pull_memory_from_git(remote="https://example.com/repo.git")
-            assert "Pulled from https://example.com/repo.git: merged 2 fact(s), 3 observation(s)" in res1
+            assert (
+                "Pulled from https://example.com/repo.git: merged 2 fact(s), 3 observation(s)"
+                in res1
+            )
 
             res2 = pull_memory_from_git(remote="https://example.com/repo.git")
             assert "Pulled from https://example.com/repo.git" in res2
@@ -484,7 +496,7 @@ class TestSyncMemoryToGitExtended:
         (sakthai_home / ".git").mkdir()
         with (
             patch("sakthai.memory.sync._run_git", return_value=_cp([])),
-            patch("sakthai.memory.sync._merge_remote_into_store", return_value=(0, 0))
+            patch("sakthai.memory.sync._merge_remote_into_store", return_value=(0, 0)),
         ):
             res = pull_memory_from_git()
             assert "already up to date" in res

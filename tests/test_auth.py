@@ -155,7 +155,6 @@ def test_gemini_token_antigravity_cli_expired_returns_none() -> None:
     assert auth.load_gemini_cli_token() is None
 
 
-
 # -- resolve_anthropic_client -------------------------------------------
 
 

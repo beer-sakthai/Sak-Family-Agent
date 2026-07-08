@@ -30,6 +30,7 @@ def test_build_system_prompt_basic() -> None:
     prompt = build_system_prompt()
     # Should include base system instructions
     from sakthai.agent.loop import SYSTEM_BASE
+
     assert SYSTEM_BASE in prompt
 
 
@@ -39,10 +40,7 @@ def test_build_system_prompt_all_options() -> None:
     skills_block = "Active skills: git, grep"
 
     prompt = build_system_prompt(
-        memory_block=memory_block,
-        skills_block=skills_block,
-        prefix=prefix,
-        fast=True
+        memory_block=memory_block, skills_block=skills_block, prefix=prefix, fast=True
     )
 
     # All components should be joined by double newlines

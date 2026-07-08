@@ -16,10 +16,7 @@ def test_context_manager_assemble_prompt() -> None:
     mock_filter = MagicMock()
     mock_filter.filter.side_effect = lambda x: list(x)  # identity filter
 
-    manager = ContextManager(
-        memory_provider=mock_memory_provider,
-        context_filter=mock_filter
-    )
+    manager = ContextManager(memory_provider=mock_memory_provider, context_filter=mock_filter)
 
     task = "Do the task"
     history = [{"role": "user", "content": "hello"}]
@@ -31,7 +28,7 @@ def test_context_manager_assemble_prompt() -> None:
         skills=skills,
         system_prompt_prefix="My prefix",
         caveman="ultra",
-        fast=True
+        fast=True,
     )
 
     # Verify memory provider was called
