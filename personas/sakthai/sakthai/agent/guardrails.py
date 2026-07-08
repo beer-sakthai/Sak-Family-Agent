@@ -141,7 +141,7 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
             except ValueError:
                 pass
 
-    # 2. Prevent destructive commands on sensitive paths.
+    # 2. Prevent destructive or dangerous commands on sensitive paths.
     destructive_binaries = (
         "rm",
         "chmod",
@@ -154,6 +154,13 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
         "sed",
         "curl",
         "wget",
+        "cat",
+        "grep",
+        "head",
+        "tail",
+        "strings",
+        "nc",
+        "netcat",
     )
     for i, part in enumerate(parts):
         if _is_binary(part, destructive_binaries):
@@ -184,9 +191,10 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
 
     # 4. Prevent shell redirections targeting sensitive paths.
     for i, part in enumerate(parts):
-        # We look for redirection operators (>, >>, 1>, 2>, &>, etc.)
-        # Pattern: optional digit or '&', then '>' or '>>'
-        match = re.search(r"(?:[0-9]|&)?>>?", part)
+        # We look for redirection operators (>, >>, 1>, 2>, &>, >&, <, etc.)
+        # Pattern: optional digit or '&', then '>>', '>&', '>', or '<'
+        # Note: >& must come before > to match it correctly.
+        match = re.search(r"(?:[0-9]|&)?(?:>>|>&|>|<)", part)
         if match:
             # If the operator is at the end of the token or attached to its front,
             # we need to find the target path.

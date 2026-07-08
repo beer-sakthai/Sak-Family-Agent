@@ -120,6 +120,14 @@
 
 **Prevention:** When inspecting command arguments for sensitive paths, skip flags (tokens starting with `-`) using `continue` instead of `break`. This ensures that all positional arguments are evaluated even if they follow or are interspersed with options.
 
+## 2026-07-13 - [Hardening Shell Guardrails against Data Exfiltration and Input Redirection]
+
+**Vulnerability:** Shell guardrails for `run_command` only monitored destructive binaries (like `rm`, `mv`) and a subset of output redirections (`>`, `>>`), allowing bypasses via file-reading commands (e.g., `cat /etc/shadow`) or input/descriptor redirections (e.g., `cmd < .env` or `cmd >& /etc/passwd`).
+
+**Learning:** Security guardrails for shell execution must account for data exfiltration and unauthorized reading, not just system destruction. Furthermore, shell redirection is versatile, and many operators besides simple output redirection can be used to target sensitive files.
+
+**Prevention:** Maintain an expansive list of "dangerous" binaries beyond just "destructive" ones, including tools for reading, searching, and networking. Use comprehensive regular expressions for shell redirection operators and ensure correct alternation order (e.g., `>&` before `>`) in regex to prevent partial matches.
+
 ## 2026-07-06 - [Hardened Shell Guardrails against find -delete Bypass and Wrappers]
 
 **Vulnerability:** Shell guardrails for `find -delete` could be bypassed by inserting global options (e.g., `find -L /etc -delete`) because the argument scanner prematurely stopped at hyphenated tokens. Additionally, destructive commands wrapped in `xargs` or using `find` variants like `-execdir` were unmonitored.
