@@ -67,8 +67,9 @@ def collect_dashboard_data(days: int = 30) -> dict[str, Any]:
             all_facts = store.list_facts(limit=1000)
             all_obs = store.top_observations(limit=200)
 
-            total_facts = len(all_facts)
-            total_obs = len(all_obs)
+            db_stats = store.stats()
+            total_facts = db_stats["facts"]["total"]
+            total_obs = db_stats["observations"]["total"]
 
             facts_delta = sum(1 for f in all_facts if f.created_at >= seven_days_ago_ts)
             obs_delta = sum(1 for o in all_obs if o.created_at >= seven_days_ago_ts)
