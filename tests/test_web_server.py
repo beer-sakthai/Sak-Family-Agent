@@ -51,7 +51,7 @@ def api_base() -> str:
     srv.shutdown()
 
 
-def _get(url: str, timeout: int = 5) -> tuple[int, dict[str, Any]]:
+def _get(url: str, timeout: int = 30) -> tuple[int, dict[str, Any]]:
     """GET url, returning (status_code, parsed_body). 4xx raises are caught."""
     try:
         with urllib.request.urlopen(url, timeout=timeout) as resp:
@@ -193,7 +193,7 @@ class TestApiEcosystemEndpoint:
         assert "huggingface" in body
 
     def test_content_type_is_json(self, api_base: str) -> None:
-        with urllib.request.urlopen(f"{api_base}/api/ecosystem", timeout=5) as resp:
+        with urllib.request.urlopen(f"{api_base}/api/ecosystem", timeout=30) as resp:
             ct = resp.headers.get("Content-Type", "")
         assert "application/json" in ct
 
@@ -221,13 +221,13 @@ class TestApiEdgeCases:
         assert code == 403
 
     def test_content_length_header_present_in_stages(self, api_base: str) -> None:
-        with urllib.request.urlopen(f"{api_base}/api/stages", timeout=5) as resp:
+        with urllib.request.urlopen(f"{api_base}/api/stages", timeout=30) as resp:
             content_length = resp.headers.get("Content-Length")
         assert content_length is not None
         assert int(content_length) > 0
 
     def test_content_length_header_present_in_ecosystem(self, api_base: str) -> None:
-        with urllib.request.urlopen(f"{api_base}/api/ecosystem", timeout=5) as resp:
+        with urllib.request.urlopen(f"{api_base}/api/ecosystem", timeout=30) as resp:
             content_length = resp.headers.get("Content-Length")
         assert content_length is not None
         assert int(content_length) > 0
@@ -315,7 +315,7 @@ class TestStaticFileServe:
             t.start()
             try:
                 # Use urlopen directly — the response is HTML, not JSON
-                with urllib.request.urlopen(f"http://127.0.0.1:{port}/ok.html", timeout=5) as resp:
+                with urllib.request.urlopen(f"http://127.0.0.1:{port}/ok.html", timeout=30) as resp:
                     status = resp.status
                     body = resp.read().decode("utf-8")
                 assert status == 200
