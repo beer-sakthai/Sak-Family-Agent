@@ -73,11 +73,11 @@ export standalone repository snapshots with `scripts/export_agent_repo.py` or
 
 ### Sak Family Agents
 
-**The repository also carries the **Sak Family Agents** — six personas with **SakKing**
-as the **main** (Lead & Orchestrator) and **SakThai**, **SakSee**, **SakSit**,
+**The repository also carries the **Sak Family Agents** — six personas with **SakThai**
+as the **main** (Lead & Orchestrator) and **SakKing**, **SakSee**, **SakSit**,
 **SakTan**, and **SakJules** as the family it coordinates. The authoritative
 per-agent identities are `docs/SOUL.md` + `personas/<name>/SOUL.md`.
-Keep the SakKing-as-lead framing consistent if you touch any of them.
+Keep the SakThai-as-lead framing consistent if you touch any of them.
 
 CI (`ci.yml`, `pylint.yml`) scopes ruff/mypy/bandit/pytest/pylint to the
 `sakthai` core only; the colocated trees are not held to this repository's bars.

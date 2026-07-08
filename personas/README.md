@@ -43,9 +43,10 @@ every persona unconditionally, so promoting a file there is only safe if
 every persona already has that exact content — otherwise it would add
 content to personas that never had it. Most of the apparent overlap between
 personas (including everything in `sakking`'s `SakXxx-`-prefixed rollup,
-which deliberately aggregates the other five personas' skills — SakKing is
-the Lead & Orchestrator and "owns all skills" per `docs/SOUL.md`) is only a
-**partial** match (2–5 personas, or one persona plus sakking's copy of it),
+which deliberately aggregates the other five personas' skills — SakKing
+"owns all skills" per `docs/SOUL.md`, while SakThai is the family's Lead &
+Orchestrator) is only a **partial** match (2–5 personas, or one persona plus
+sakking's copy of it),
 so it stays in each persona's own overlay rather than being deduped.
 
 Skill folder/frontmatter names follow the convention enforced by
