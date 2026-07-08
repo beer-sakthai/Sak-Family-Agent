@@ -135,3 +135,19 @@
 **Learning:** Hardening shell guardrails requires move beyond simple command name matching. Destructive intent can be expressed through I/O redirections which are handled by the shell before the command is even executed in a full shell environment, or through specialized arguments in common utilities. Furthermore, positional argument scanning must account for flags that use an equals sign to pair with their values.
 
 **Prevention:** Implement a unified scanner that monitors a broad list of destructive binaries (`rm`, `chmod`, `mv`, `cp`, `ln`, `tee`, `chgrp`, `chown`) and explicitly stops scanning at command separators to prevent false positives. Enhance path validation to decompose flag-value pairs. Add dedicated heuristics for specialized commands like `dd` and for shell redirection operators that target sensitive system roots.
+
+## 2026-07-07 - [Hardening Guardrails against Binary-specific Flag Bypasses]
+
+**Vulnerability:** Shell command guardrails could be bypassed by using binaries like `curl`, `wget`, or `sed` to overwrite sensitive files (e.g., `curl -o /etc/passwd ...`). Additionally, short flags with attached paths (e.g., `-o/etc/passwd`) were not correctly decomposed by the path validator, allowing them to bypass sensitive path checks.
+
+**Learning:** Destructive intent is not limited to `rm` or `chmod`. Many common utilities have flags that allow writing to arbitrary locations. Furthermore, shell argument parsing allows for various ways to attach values to flags, which security scanners must account for beyond simple space or equals-sign separation.
+
+**Prevention:** Expand monitored destructive binaries to include tools with file-writing capabilities (`curl`, `wget`, `sed`). Harden path validation to detect and decompose short flags that are immediately followed by an absolute path (e.g., `-x/path`).
+
+## 2026-07-08 - [Hardening Shell Redirection Guardrails Against Attached Operators]
+
+**Vulnerability:** Shell redirection guardrails could be bypassed by attaching the operator directly to the preceding command or argument (e.g., `echo>file` or `echo> /etc/passwd`). The previous logic only checked for exact matches on standalone operators (e.g., `>`) or tokens that started with the operator (e.g., `>/etc/passwd`).
+
+**Learning:** Shell parsing is highly flexible regarding whitespace around redirection operators. A robust security scanner must use regular expressions to identify redirection operators within any part of a token and correctly resolve the target path, whether it's attached to the operator or appears in the subsequent token.
+
+**Prevention:** Use a unified regular expression to detect all standard redirection operators (including numeric file descriptors like `2>`) within shell command tokens. Ensure the scanner correctly extracts the target path by checking both the remainder of the current token and the entirety of the next token if the operator appears at the end.

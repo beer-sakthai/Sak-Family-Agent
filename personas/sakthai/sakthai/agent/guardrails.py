@@ -77,6 +77,12 @@ def _is_sensitive_path(path: str) -> bool:
         if _is_sensitive_path(val):
             return True
 
+    # Support checking short flags with attached paths like -o/etc/passwd
+    if len(path) > 2 and path.startswith("-") and path[1] != "-" and path[2] == "/":
+        val = path[2:]
+        if _is_sensitive_path(val):
+            return True
+
     # Normalize the path to collapse redundant slashes and dots.
     # Note: os.path.normpath preserves a leading '//' on some systems, so we
     # explicitly collapse it for comparison.
@@ -136,7 +142,19 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
                 pass
 
     # 2. Prevent destructive commands on sensitive paths.
-    destructive_binaries = ("rm", "chmod", "mv", "cp", "ln", "tee", "chown", "chgrp")
+    destructive_binaries = (
+        "rm",
+        "chmod",
+        "mv",
+        "cp",
+        "ln",
+        "tee",
+        "chown",
+        "chgrp",
+        "sed",
+        "curl",
+        "wget",
+    )
     for i, part in enumerate(parts):
         if _is_binary(part, destructive_binaries):
             # Inspect tokens following the binary until a separator is hit.
@@ -166,23 +184,23 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
 
     # 4. Prevent shell redirections targeting sensitive paths.
     for i, part in enumerate(parts):
-        # Check tokens like '>', '>>', '2>', '&>'
-        # These might be standalone or prefixed (e.g., '2>/etc/passwd')
-        for op in (">", ">>", "2>", "2>>", "&>", "&>>"):
-            if part == op and i + 1 < len(parts):
+        # We look for redirection operators (>, >>, 1>, 2>, &>, etc.)
+        # Pattern: optional digit or '&', then '>' or '>>'
+        match = re.search(r"(?:[0-9]|&)?>>?", part)
+        if match:
+            # If the operator is at the end of the token or attached to its front,
+            # we need to find the target path.
+            target = part[match.end() :]
+            if not target and i + 1 < len(parts):
                 target = parts[i + 1]
-                if _is_sensitive_path(target) or (context_sensitive and target in ("{}", "+")):
-                    return GuardrailResult(
-                        GuardrailAction.DENY,
-                        reason=f"destructive redirection to {target!r} blocked.",
-                    )
-            elif part.startswith(op) and len(part) > len(op):
-                target = part[len(op) :]
-                if _is_sensitive_path(target) or (context_sensitive and target in ("{}", "+")):
-                    return GuardrailResult(
-                        GuardrailAction.DENY,
-                        reason=f"destructive redirection to {target!r} blocked.",
-                    )
+
+            if target and (
+                _is_sensitive_path(target) or (context_sensitive and target in ("{}", "+"))
+            ):
+                return GuardrailResult(
+                    GuardrailAction.DENY,
+                    reason=f"destructive redirection to {target!r} blocked.",
+                )
 
     # 5. Prevent 'find -delete' on sensitive paths.
     find_idx = -1
