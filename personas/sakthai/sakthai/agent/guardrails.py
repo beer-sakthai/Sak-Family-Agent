@@ -199,9 +199,9 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
     # 4. Prevent shell redirections targeting sensitive paths.
     for i, part in enumerate(parts):
         # We look for redirection operators (>, >>, 1>, 2>, &>, >&, >|, <, etc.)
-        # Pattern: optional digit or '&', then '&>>', '>>', '>&', '>|', '>', or '<'
+        # Pattern: optional digit or '&', then '&>>', '>>', '>&', '>|', '<>', '<&', '>', or '<'
         # Note: longer operators must come before shorter ones to match correctly.
-        match = re.search(r"(?:[0-9]|&)?(?:&>>|>>|>&|>\||>|<)", part)
+        match = re.search(r"(?:[0-9]|&)?(?:&>>|>>|>&|>\||<>|<&|>|<)", part)
         if match:
             # If the operator is at the end of the token or attached to its front,
             # we need to find the target path.
