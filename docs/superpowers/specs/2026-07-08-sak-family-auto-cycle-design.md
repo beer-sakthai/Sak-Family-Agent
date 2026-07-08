@@ -128,3 +128,12 @@ Following `superpowers:writing-skills` TDD methodology:
   out of scope here — both skills assume a task is already given to
   `sakthai run "<task>"` by the caller (human or orchestrator). A future
   skill could pull from each persona's own backlog/kanban automatically.
+- **Deployment/sync is out of scope, and blocks live use as shipped.**
+  `Sak-auto-cycle-loop` lives at `personas/shared/skills/` in this repo,
+  which is not on the `sakthai` runtime's skill-discovery path. A live
+  `--with-skills Sak-auto-cycle-loop` dispatch will fail to resolve the
+  skill until it's composed/synced into each persona's live skill
+  directory via the repo's existing `scripts/compose_persona.py` /
+  skill-mirroring pattern (`docs/skill-naming.md`). Flagged in
+  `Sak-family-auto-cycle`'s own text so a live-run attempt isn't
+  surprised by it, but the actual sync step is a separate task.

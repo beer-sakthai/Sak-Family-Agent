@@ -6,7 +6,7 @@ description: >-
   session instead of stopping after the first Growth. Use when a persona
   should keep working through follow-on tasks, each getting its own full
   6-stage cycle, capped at an exact, tracked count of 3 rounds.
-version: 1.0.0
+version: "1.0.0"
 platforms:
   - linux
   - macos

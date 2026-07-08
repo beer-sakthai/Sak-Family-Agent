@@ -8,7 +8,22 @@ description: Use when asked to run the Sak Family auto-cycle, get all six Sak Fa
 Fans out one round of work to all 6 Sak Family personas in parallel, each
 sustaining up to 3 Dream-through-Growth cycle rounds via the
 `Sak-auto-cycle-loop` skill. Requires the `Sak-Family-Agent` repo (this
-repo) with `uv sync --all-extras` already run.
+repo) with `uv sync --all-extras` already run. Dispatch each of the six
+Agent tool calls at your maximum available reasoning effort — this fan-out
+is exactly the kind of judgment-heavy, multi-step work that benefits from
+it.
+
+**Known gap — live runs need a sync step first.** `Sak-auto-cycle-loop`
+lives at `personas/shared/skills/` in this repo, which is not on the
+`sakthai` runtime's skill-discovery path (`skills/`, `library/`, or
+`$SAKTHAI_HOME/extensions` — see `personas/sakthai/sakthai/skills.py`). A
+live dispatch's `--with-skills Sak-auto-cycle-loop` will fail to resolve
+until the shared skill is composed/synced into each persona's live skill
+directory (the repo's existing `scripts/compose_persona.py` /
+skill-mirroring pattern — see `docs/skill-naming.md`). Confirm that sync
+has run before relying on a live run; a `--dry-run` may hit the same
+lookup failure since it changes `SAKTHAI_HOME`, not the injectable-skill
+search path.
 
 ## STOP: default to a dry, throwaway run — this is not optional
 
