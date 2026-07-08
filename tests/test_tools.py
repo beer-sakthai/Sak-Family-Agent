@@ -937,3 +937,40 @@ def test_send_telegram_invalid_token_format(
     monkeypatch.setenv("TELEGRAM_CHAT_ID", "123")
     out = tool_by_name("send_telegram_message").handler({"message": "hi"}, store)
     assert "Invalid TELEGRAM_BOT_TOKEN format" in out
+
+
+def test_load_tool_overrides(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    # Mock SAKTHAI_HOME to use tmp_path
+    monkeypatch.setenv("SAKTHAI_HOME", str(tmp_path))
+
+    from sakthai.agent.tools import _load_tool_overrides, tool_by_name
+    from sakthai.config import tool_descriptions_path
+
+    # Write a test overrides file
+    overrides = {
+        "learn": {
+            "description": "Custom overridden learn description.",
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "value": {"type": "string", "description": "Overridden param description."}
+                },
+            },
+        }
+    }
+    path = tool_descriptions_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(overrides, f)
+
+    # Call override loader
+    _load_tool_overrides()
+
+    # Find the learn tool and assert overridden descriptions
+    learn_tool = tool_by_name("learn")
+    assert learn_tool is not None
+    assert learn_tool.description == "Custom overridden learn description."
+    assert (
+        learn_tool.input_schema["properties"]["value"]["description"]
+        == "Overridden param description."
+    )

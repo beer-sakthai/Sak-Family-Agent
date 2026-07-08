@@ -37,7 +37,25 @@ class EvalExample:
 
     @classmethod
     def from_dict(cls, d: dict) -> "EvalExample":
+        if "expected_tool" in d:
+            return ToolSelectionExample(**{k: v for k, v in d.items() if k in ToolSelectionExample.__dataclass_fields__})
         return cls(**{k: v for k, v in d.items() if k in cls.__dataclass_fields__})
+
+
+@dataclass
+class ToolSelectionExample(EvalExample):
+    """An evaluation example specifically for tool selection optimization."""
+
+    expected_tool: str = ""  # Name of the correct tool
+    expected_args: dict = field(default_factory=dict)  # Expected parameters
+
+    def to_dict(self) -> dict:
+        d = super().to_dict()
+        d.update({
+            "expected_tool": self.expected_tool,
+            "expected_args": self.expected_args,
+        })
+        return d
 
 
 @dataclass
@@ -82,13 +100,24 @@ class EvalDataset:
     def to_dspy_examples(self, split: str = "train") -> list[dspy.Example]:
         """Convert a split to DSPy Example objects."""
         data = getattr(self, split)
-        return [
-            dspy.Example(
-                task_input=ex.task_input,
-                expected_behavior=ex.expected_behavior,
-            ).with_inputs("task_input")
-            for ex in data
-        ]
+        examples = []
+        for ex in data:
+            if isinstance(ex, ToolSelectionExample):
+                examples.append(
+                    dspy.Example(
+                        task_input=ex.task_input,
+                        expected_tool=ex.expected_tool,
+                        expected_args=ex.expected_args,
+                    ).with_inputs("task_input")
+                )
+            else:
+                examples.append(
+                    dspy.Example(
+                        task_input=ex.task_input,
+                        expected_behavior=ex.expected_behavior,
+                    ).with_inputs("task_input")
+                )
+        return examples
 
 
 class SyntheticDatasetBuilder:
@@ -311,6 +340,80 @@ class LayoutDatasetBuilder:
             )
             for c in cases_raw
             if c.get("task_input") and c.get("expected_behavior")
+        ]
+
+        random.shuffle(examples)
+        n_total = len(examples)
+        n_train = max(1, int(n_total * self.config.train_ratio))
+        n_val = max(1, int(n_total * self.config.val_ratio))
+
+        return EvalDataset(
+            train=examples[:n_train],
+            val=examples[n_train : n_train + n_val],
+            holdout=examples[n_train + n_val :],
+        )
+
+
+class ToolSelectionDatasetBuilder:
+    """Generate evaluation datasets specifically for tool selection optimization."""
+
+    class GenerateToolSelectionCases(dspy.Signature):
+        """Generate realistic tool selection evaluation test cases.
+
+        Given a JSON block containing the schema (name, description, parameters) of all
+        available tools, generate diverse test cases where a user wants the agent to do
+        something, and the agent must select the single correct tool to execute it.
+
+        For each generated test case, output:
+        - task_input: what the user would actually ask (e.g. "Find all lines matching 'TODO' in app.py")
+        - expected_tool: the name of the correct tool to use (e.g. "search" or "run_command" or "read_file")
+        - expected_args: the dictionary of parameters (arguments) that the tool expects (e.g. {"query": "TODO"} or similar)
+        - difficulty: "easy", "medium", or "hard"
+        - category: "general"
+        """
+
+        tools_schema: str = dspy.InputField(desc="JSON list of all available tool schemas")
+        num_cases: int = dspy.InputField(desc="Number of test cases to generate")
+        test_cases: str = dspy.OutputField(
+            desc="JSON array of test cases, each with: task_input, expected_tool, expected_args, difficulty, category"
+        )
+
+    def __init__(self, config: EvolutionConfig):
+        self.config = config
+        self.generator = dspy.ChainOfThought(self.GenerateToolSelectionCases)
+
+    def generate(
+        self,
+        tools_list: list[dict],
+        num_cases: int | None = None,
+    ) -> EvalDataset:
+        """Generate a tool selection evaluation dataset."""
+        n = num_cases or self.config.eval_dataset_size
+        lm = dspy.LM(self.config.judge_model, max_tokens=8000)
+
+        tools_json = json.dumps(tools_list, indent=2)
+
+        with dspy.context(lm=lm):
+            result = self.generator(
+                tools_schema=tools_json,
+                num_cases=n,
+            )
+
+        # Parse the generated test cases using the robust parser from SyntheticDatasetBuilder
+        cases_raw = SyntheticDatasetBuilder._parse_cases(result.test_cases)
+
+        examples = [
+            ToolSelectionExample(
+                task_input=c.get("task_input", ""),
+                expected_behavior=f"Use tool {c.get('expected_tool')} with args {c.get('expected_args')}",
+                expected_tool=c.get("expected_tool", ""),
+                expected_args=c.get("expected_args", {}),
+                difficulty=c.get("difficulty", "medium"),
+                category=c.get("category", "general"),
+                source="synthetic_tool",
+            )
+            for c in cases_raw
+            if c.get("task_input") and c.get("expected_tool")
         ]
 
         random.shuffle(examples)

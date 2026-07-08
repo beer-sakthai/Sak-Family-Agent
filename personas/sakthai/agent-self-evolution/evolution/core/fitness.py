@@ -150,3 +150,62 @@ def _parse_score(value) -> float:
         return min(1.0, max(0.0, float(str(value).strip())))
     except (ValueError, TypeError):
         return 0.5  # Default to neutral on parse failure
+
+
+def tool_selection_metric(example: dspy.Example, prediction: dspy.Prediction, trace=None) -> float:
+    """DSPy-compatible metric for tool selection optimization.
+
+    Evaluates the correctness of the predicted tool name and its arguments.
+    """
+    # Expected tool and args
+    expected_tool = getattr(example, "expected_tool", "") or ""
+    expected_args = getattr(example, "expected_args", {}) or {}
+
+    # Predicted tool and args
+    predicted_tool = getattr(prediction, "predicted_tool", "") or ""
+    predicted_args_raw = getattr(prediction, "predicted_args", "") or ""
+
+    if not predicted_tool:
+        return 0.0
+
+    # 1. Score tool name match (0.6 weight)
+    expected_clean = expected_tool.strip().lower()
+    predicted_clean = predicted_tool.strip().strip("'\"").strip().lower()
+
+    tool_match_score = 0.0
+    if expected_clean == predicted_clean:
+        tool_match_score = 1.0
+
+    # 2. Score arguments match (0.4 weight)
+    import json
+    parsed_args = {}
+    if isinstance(predicted_args_raw, dict):
+        parsed_args = predicted_args_raw
+    elif isinstance(predicted_args_raw, str) and predicted_args_raw.strip():
+        # Clean JSON markdown blocks if any
+        json_clean = predicted_args_raw.strip()
+        if json_clean.startswith("```"):
+            lines = json_clean.split("\n")
+            if len(lines) > 2:
+                json_clean = "\n".join(lines[1:-1]).strip()
+        try:
+            parsed_args = json.loads(json_clean)
+        except Exception:
+            pass
+
+    args_match_score = 0.0
+    if expected_args:
+        total_keys = len(expected_args)
+        matching_keys = 0
+        for k, expected_val in expected_args.items():
+            if k in parsed_args:
+                pred_val = parsed_args[k]
+                if str(expected_val).strip().lower() == str(pred_val).strip().lower():
+                    matching_keys += 1
+        args_match_score = matching_keys / total_keys if total_keys > 0 else 1.0
+    else:
+        if not parsed_args:
+            args_match_score = 1.0
+
+    score = (tool_match_score * 0.6) + (args_match_score * 0.4)
+    return min(1.0, max(0.0, score))
