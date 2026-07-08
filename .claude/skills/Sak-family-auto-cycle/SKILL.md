@@ -19,8 +19,8 @@ lives at `personas/shared/skills/` in this repo, which is not on the
 `$SAKTHAI_HOME/extensions` — see `personas/sakthai/sakthai/skills.py`). A
 live dispatch's `--with-skills Sak-auto-cycle-loop` will fail to resolve
 until the shared skill is composed/synced into each persona's live skill
-directory (the repo's existing `scripts/compose_persona.py` /
-skill-mirroring pattern — see `docs/skill-naming.md`). Confirm that sync
+directory (via make compose-personas or the underlying scripts/compose_persona.py /
+skill-mirroring pattern — see docs/skill-naming.md). Confirm that sync
 has run before relying on a live run; a `--dry-run` may hit the same
 lookup failure since it changes `SAKTHAI_HOME`, not the injectable-skill
 search path.
