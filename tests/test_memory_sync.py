@@ -424,14 +424,18 @@ class TestSyncMemoryToGitExtended:
 
     def test_http_url_error(self, sakthai_home: Path) -> None:
         import urllib.error
-        with patch("urllib.request.urlopen", side_effect=urllib.error.URLError("reason")):
-            with pytest.raises(RuntimeError, match="Failed to sync to"):
-                sync_memory_via_http("https://example.com/sync")
+        with (
+            patch("urllib.request.urlopen", side_effect=urllib.error.URLError("reason")),
+            pytest.raises(RuntimeError, match="Failed to sync to"),
+        ):
+            sync_memory_via_http("https://example.com/sync")
 
     def test_http_generic_exception(self, sakthai_home: Path) -> None:
-        with patch("urllib.request.urlopen", side_effect=Exception("oops")):
-            with pytest.raises(RuntimeError, match="Failed to sync to"):
-                sync_memory_via_http("https://example.com/sync")
+        with (
+            patch("urllib.request.urlopen", side_effect=Exception("oops")),
+            pytest.raises(RuntimeError, match="Failed to sync to"),
+        ):
+            sync_memory_via_http("https://example.com/sync")
 
     def test_sync_memory_to_git_diff_summary(self, sakthai_home: Path) -> None:
         diff_stdout = '+ {"kind": "note", "value": "fact"}\n+ {"summary": "obs"}\n'
