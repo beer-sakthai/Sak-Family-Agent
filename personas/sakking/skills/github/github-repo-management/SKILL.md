@@ -8,7 +8,7 @@ platforms: [linux, macos, windows]
 metadata:
   hermes:
     tags: [GitHub, Repositories, Git, Releases, Secrets, Configuration]
-    related_skills: [github-auth, github-pr-workflow, github-issues]
+    related_skills: [SakKing-github-auth, SakKing-github-pr-workflow, SakKing-github-issues]
 ---
 
 # GitHub Repository Management

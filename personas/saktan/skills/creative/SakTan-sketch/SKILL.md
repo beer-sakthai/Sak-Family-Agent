@@ -8,7 +8,7 @@ platforms: [linux, macos, windows]
 metadata:
   hermes:
     tags: [sketch, mockup, design, ui, prototype, html, variants, exploration, wireframe, comparison]
-    related_skills: [spike, claude-design, popular-web-designs, excalidraw]
+    related_skills: [SakTan-spike, SakTan-claude-design, SakTan-popular-web-designs, SakTan-excalidraw]
 ---
 
 # Sketch

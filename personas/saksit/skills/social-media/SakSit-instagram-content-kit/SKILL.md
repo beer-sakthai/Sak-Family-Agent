@@ -25,8 +25,8 @@ metadata:
     related_skills:
     - sakthai-instagram-qa
     - huggingface-hub
-    - baoyu-infographic
-    - gif-search
+    - SakSit-baoyu-infographic
+    - SakSit-gif-search
 ---
 
 # SakSit Instagram Content Kit

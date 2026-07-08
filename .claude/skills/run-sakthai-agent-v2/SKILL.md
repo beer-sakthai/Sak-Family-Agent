@@ -46,7 +46,7 @@ Run the driver. It exits non-zero if any surface is broken and prints a
 
 ```bash
 uv run python .claude/skills/run-sakthai-agent-v2/driver.py
-# → 11 [PASS] lines, then "OK: all checks passed"
+# → a [PASS] line per check (21 currently), then "OK: all checks passed"
 ```
 
 What it drives (all in a throwaway `SAKTHAI_HOME`):
@@ -54,8 +54,10 @@ What it drives (all in a throwaway `SAKTHAI_HOME`):
 | surface | how it's checked |
 |---|---|
 | memory CLI | `status`, `learn`, `recall`, `memory stats`, `tools` (exit codes + output) |
-| agent loop | `run "..." --dry-run --no-mcp` — resolves provider/creds/model/tools, **no API call** |
-| web API | spawns `python -m sakthai.web.server`, asserts `GET /api/stages` returns KPI JSON |
+| system & state machine | `doctor`, `cycle status` → `cycle next` (Dream→Hope transition persists), `sessions list`, `skills list` (library discovery) |
+| memory snapshots | `memory export` → `memory import` into a **second** fresh home, then `recall` proves the fact survived the roundtrip |
+| agent loop | `run "..." --dry-run --no-mcp` — resolves provider/creds/model/tools, **no API call**; repeated with `--with-skills` to prove skill injection preflights |
+| web API | spawns `python -m sakthai.web.server`, asserts `GET /api/stages` (KPI JSON) and `GET /api/ecosystem` (integration status JSON) |
 | MCP server | spawns `sakthai mcp`, pipes JSON-RPC `initialize` → `tools/list` → `tools/call learn` → `tools/call recall`, asserts the fact round-trips through the live server |
 
 Override the binary with `SAKTHAI_BIN=/path/to/sakthai`.
@@ -102,7 +104,7 @@ kill %1
 ## Test
 
 ```bash
-uv run pytest tests/ -q -m "not integration"   # 1190 hermetic tests, ~80s
+uv run pytest tests/ -q -m "not integration"   # ~1.2k hermetic tests, ~80s
 ```
 
 Integration tests (`-m integration`) hit real Anthropic/Ollama endpoints and
@@ -123,6 +125,10 @@ self-skip when no credential/endpoint is set.
 - **All runtimes share one SQLite DB** (`$SAKTHAI_HOME/memory.db`, default
   `~/.sakthai`). Always set `SAKTHAI_HOME` to a temp dir when smoke-testing or
   you'll pollute (or lock) your real memory. The driver does this for you.
+- **The cycle stage is itself a fact.** The Dream→Growth state machine
+  persists its current stage as a fact (kind=`cycle`) in the same store, so
+  after a single `learn`, `memory stats`/`export` report **2** facts, not 1.
+  Don't assert exact fact counts without accounting for it.
 - **`sakthai run` without `--dry-run` costs tokens and needs network.** For a
   "does it work" check, `--dry-run` resolves provider + credentials + model +
   tool count with zero API calls.

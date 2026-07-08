@@ -8,7 +8,7 @@ platforms: [linux, macos, windows]
 metadata:
   hermes:
     tags: [devsecops, security, ci, automation, self-healing, ruff, bandit]
-    related_skills: [automated-vulnerability-patching, systematic-debugging, test-driven-development, github-pull-request]
+    related_skills: [automated-vulnerability-patching, systematic-debugging, SakTan-test-driven-development, github-pull-request]
 ---
 
 # DevSecOps: Continuous Security Workflow

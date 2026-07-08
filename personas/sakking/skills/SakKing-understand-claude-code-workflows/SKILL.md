@@ -16,7 +16,7 @@ metadata:
       - workflows
       - claude-code
     related_skills:
-      - sakthai-understand-caveman
+      - SakKing-understand-caveman
 ---
 
 # sakthai-understand-claude-code-workflows

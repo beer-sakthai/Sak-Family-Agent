@@ -8,7 +8,7 @@ platforms: [linux, macos, windows]
 metadata:
   hermes:
     tags: [Coding-Agent, Claude, Anthropic, Code-Review, Refactoring, PTY, Automation]
-    related_skills: [SakJules-codex, SakJules-hermes-agent, SakJules-opencode]
+    related_skills: [SakKing-codex, SakKing-hermes-agent, SakKing-opencode]
 ---
 
 # Claude Code — Hermes Orchestration Guide

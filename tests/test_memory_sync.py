@@ -18,6 +18,7 @@ import pytest
 from sakthai.memory.store import MemoryStore
 from sakthai.memory.sync import (
     _handle_git_conflict_and_push,
+    pull_memory_from_git,
     sync_memory_to_git,
     sync_memory_via_http,
 )
@@ -412,3 +413,78 @@ class TestSyncMemoryToGitExtended:
         with patch("urllib.request.urlopen", return_value=_http_response(202)):
             result = sync_memory_via_http("https://example.com/sync")
         assert isinstance(result, str) and result
+
+    def test_run_git_failure_raises(self, sakthai_home: Path) -> None:
+        import subprocess
+
+        from sakthai.memory.sync import _run_git
+        # Pass check=True (default) to cause CompletedProcess error print
+        with pytest.raises(subprocess.CalledProcessError):
+            _run_git(["status", "--invalid-flag-nonexistent"], cwd=sakthai_home)
+
+    def test_http_url_error(self, sakthai_home: Path) -> None:
+        import urllib.error
+        with patch("urllib.request.urlopen", side_effect=urllib.error.URLError("reason")):
+            with pytest.raises(RuntimeError, match="Failed to sync to"):
+                sync_memory_via_http("https://example.com/sync")
+
+    def test_http_generic_exception(self, sakthai_home: Path) -> None:
+        with patch("urllib.request.urlopen", side_effect=Exception("oops")):
+            with pytest.raises(RuntimeError, match="Failed to sync to"):
+                sync_memory_via_http("https://example.com/sync")
+
+    def test_sync_memory_to_git_diff_summary(self, sakthai_home: Path) -> None:
+        diff_stdout = '+ {"kind": "note", "value": "fact"}\n+ {"summary": "obs"}\n'
+        def _run(args: list[str], **kwargs: object) -> CompletedProcess[str]:
+            if "diff" in args:
+                return _cp(args, stdout=diff_stdout)
+            if "status" in args:
+                return _cp(args, stdout=" M facts.jsonl")
+            return _cp(args)
+
+        commit_args_called = []
+        def _run_with_commit_check(args: list[str], **kwargs: object) -> CompletedProcess[str]:
+            if "commit" in args:
+                commit_args_called.append(args)
+            return _run(args, **kwargs)
+
+        with patch("sakthai.memory.sync._run_git", side_effect=_run_with_commit_check):
+            sync_memory_to_git()
+
+        assert any("Learned 1 fact(s), 1 observation(s)." in cmd for cmd in commit_args_called)
+
+    def test_pull_memory_git_absent_raises(self, sakthai_home: Path) -> None:
+        with pytest.raises(RuntimeError, match="no local Git repository found"):
+            pull_memory_from_git()
+
+    def test_pull_memory_git_remote_operations(self, sakthai_home: Path) -> None:
+        (sakthai_home / ".git").mkdir()
+
+        # Test pulling with remote when origin is absent and present
+        remote_calls = []
+        def _run(args: list[str], **kwargs: object) -> CompletedProcess[str]:
+            if "remote" in args:
+                remote_calls.append(args)
+                if "set-url" not in args and "add" not in args:
+                    return _cp(args, stdout="origin" if len(remote_calls) > 1 else "")
+            return _cp(args)
+
+        # Mock merge to return some counts
+        with (
+            patch("sakthai.memory.sync._run_git", side_effect=_run),
+            patch("sakthai.memory.sync._merge_remote_into_store", return_value=(2, 3))
+        ):
+            res1 = pull_memory_from_git(remote="https://example.com/repo.git")
+            assert "Pulled from https://example.com/repo.git: merged 2 fact(s), 3 observation(s)" in res1
+
+            res2 = pull_memory_from_git(remote="https://example.com/repo.git")
+            assert "Pulled from https://example.com/repo.git" in res2
+
+    def test_pull_memory_git_already_up_to_date(self, sakthai_home: Path) -> None:
+        (sakthai_home / ".git").mkdir()
+        with (
+            patch("sakthai.memory.sync._run_git", return_value=_cp([])),
+            patch("sakthai.memory.sync._merge_remote_into_store", return_value=(0, 0))
+        ):
+            res = pull_memory_from_git()
+            assert "already up to date" in res

@@ -15,8 +15,8 @@ metadata:
       - emotional-intelligence
       - presence
     related_skills:
-      - sakthai-cycle-dream
-      - sakthai-cycle-care
+      - SakTan-cycle-dream
+      - SakTan-cycle-care
 ---
 
 # SakTan Soul Engine 🔥💛

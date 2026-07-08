@@ -8,7 +8,7 @@ platforms: [linux, macos, windows]
 metadata:
   hermes:
     tags: [hermes, cron, jobs, scheduler, fleet, multi-profile, watchdog, automation]
-    related_skills: [hermes-agent, sakthai]
+    related_skills: [hermes-agent, SakKing-sakthai]
 ---
 
 # Cron Fleet — Multi-Profile Scheduled Jobs

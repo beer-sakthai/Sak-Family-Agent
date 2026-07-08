@@ -8,7 +8,7 @@ platforms: [linux, macos, windows]
 metadata:
   hermes:
     tags: [business, quoting, leads, sales, service-bot]
-    related_skills: [ocr-and-documents, sakthai]
+    related_skills: [SakThai-ocr-and-documents, SakThai-sakthai]
 ---
 
 # Service Quoting

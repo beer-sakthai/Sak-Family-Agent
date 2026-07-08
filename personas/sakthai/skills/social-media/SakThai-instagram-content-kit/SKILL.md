@@ -23,10 +23,10 @@ metadata:
     - caption
     - hashtag
     related_skills:
-    - sakthai-instagram-qa
+    - SakThai-instagram-qa
     - huggingface-hub
-    - baoyu-infographic
-    - gif-search
+    - SakThai-baoyu-infographic
+    - SakThai-gif-search
 ---
 
 # SakSit Instagram Content Kit

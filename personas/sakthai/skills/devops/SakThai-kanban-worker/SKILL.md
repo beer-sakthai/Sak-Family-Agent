@@ -7,7 +7,7 @@ environments: [kanban]
 metadata:
   hermes:
     tags: [kanban, multi-agent, collaboration, workflow, pitfalls]
-    related_skills: [kanban-orchestrator]
+    related_skills: [SakThai-kanban-orchestrator]
 ---
 
 # Kanban Worker — Pitfalls and Examples

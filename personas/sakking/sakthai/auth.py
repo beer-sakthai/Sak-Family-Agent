@@ -15,6 +15,7 @@ from __future__ import annotations
 import json
 import os
 import time
+from datetime import UTC
 from pathlib import Path
 from typing import Any
 
@@ -69,16 +70,37 @@ def load_claude_cli_token() -> str | None:
 
 
 def load_gemini_cli_token() -> str | None:
-    """Return the Gemini CLI OAuth access token, or None if missing/expired."""
+    """Return the Gemini/Antigravity CLI OAuth access token, or None if missing/expired."""
     data = _read_json(_gemini_dir() / "oauth_creds.json")
-    if not data:
-        return None
-    token = data.get("access_token")
-    if not token or _expired(data.get("expiry_date", 0)):
-        return None
-    res = str(token)
-    register_secret(res)
-    return res
+    if data:
+        token = data.get("access_token")
+        if token and not _expired(data.get("expiry_date", 0)):
+            res = str(token)
+            register_secret(res)
+            return res
+
+    ag_data = _read_json(_gemini_dir() / "antigravity-cli" / "antigravity-oauth-token")
+    if ag_data:
+        token_info = ag_data.get("token") or {}
+        token = token_info.get("access_token")
+        if token:
+            expiry = token_info.get("expiry")
+            if expiry and isinstance(expiry, str):
+                from datetime import datetime
+                try:
+                    dt = datetime.fromisoformat(expiry)
+                    expired = datetime.now(UTC) >= dt.astimezone(UTC)
+                except Exception:
+                    expired = False
+            else:
+                expired = False
+
+            if not expired:
+                res = str(token)
+                register_secret(res)
+                return res
+
+    return None
 
 
 def gemini_credential_source() -> str | None:

@@ -8,7 +8,7 @@ platforms: [linux, macos, windows]
 metadata:
   hermes:
     tags: [GitHub, Authentication, Git, gh-cli, SSH, Setup]
-    related_skills: [github-pr-workflow, github-code-review, github-issues, github-repo-management]
+    related_skills: [SakTan-github-pr-workflow, SakTan-github-code-review, SakTan-github-issues, SakTan-github-repo-management]
 ---
 
 # GitHub Authentication Setup

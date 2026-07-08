@@ -10,13 +10,13 @@ platforms:
 metadata:
   sakthai:
     related_skills:
-      - saktan-soul-engine
-      - sakthai-cycle-dream
-      - sakthai-cycle-hope
-      - sakthai-cycle-care
-      - sakthai-cycle-joy
-      - sakthai-cycle-trust
-      - sakthai-cycle-growth
+      - SakTan-saktan-soul-engine
+      - SakTan-cycle-dream
+      - SakTan-cycle-hope
+      - SakTan-cycle-care
+      - SakTan-cycle-joy
+      - SakTan-cycle-trust
+      - SakTan-cycle-growth
 ---
 
 # Beer's Cycle Signals
