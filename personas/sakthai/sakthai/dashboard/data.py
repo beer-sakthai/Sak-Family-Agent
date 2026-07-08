@@ -99,6 +99,8 @@ def collect_dashboard_data(days: int = 30) -> dict[str, Any]:
             for lf in lead_facts:
                 try:
                     payload = json.loads(lf.value)
+                    if not isinstance(payload, dict):
+                        payload = {"query": str(payload)}
                 except (TypeError, ValueError):
                     payload = {"query": lf.value}
                 payload["id"] = lf.id
