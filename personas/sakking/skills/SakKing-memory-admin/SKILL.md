@@ -14,7 +14,7 @@ metadata:
       - admin
       - sync
     related_skills:
-      - sakthai-personal
+      - SakKing-personal
 ---
 
 # sakthai-memory-admin

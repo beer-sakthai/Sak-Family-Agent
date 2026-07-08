@@ -16,9 +16,9 @@ metadata:
       - registry
       - json-rpc
     related_skills:
-      - sakthai-coding-llm-prompting
-      - sakthai-coding-type-safety
-      - sakthai-coding-testing
+      - SakKing-coding-llm-prompting
+      - SakKing-coding-type-safety
+      - SakKing-coding-testing
 ---
 
 # sakthai-coding-mcp-tools

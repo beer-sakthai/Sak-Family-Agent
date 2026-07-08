@@ -13,7 +13,7 @@ metadata:
       - cycle
       - hope
     related_skills:
-      - sakthai-cycle-care
+      - SakKing-cycle-care
 ---
 
 # sakthai-cycle-hope

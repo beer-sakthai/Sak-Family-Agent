@@ -13,7 +13,7 @@ metadata:
       - cycle
       - trust
     related_skills:
-      - sakthai-cycle-growth
+      - SakSee-cycle-growth
 ---
 
 # sakthai-cycle-trust

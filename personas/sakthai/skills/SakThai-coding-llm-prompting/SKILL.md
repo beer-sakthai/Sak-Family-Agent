@@ -16,9 +16,9 @@ metadata:
       - agent-loop
       - anthropic
     related_skills:
-      - sakthai-coding-mcp-tools
-      - sakthai-coding-testing
-      - sakthai-personal
+      - SakThai-coding-mcp-tools
+      - SakThai-coding-testing
+      - SakThai-personal
 ---
 
 # sakthai-coding-llm-prompting

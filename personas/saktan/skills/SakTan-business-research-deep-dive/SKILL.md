@@ -8,7 +8,7 @@ platforms: [linux, macos, windows]
 metadata:
   hermes:
     tags: [business, research, scouting, lead-generation, house-of-sak]
-    related_skills: [house-of-sak-qa-shield, service-quoting]
+    related_skills: [SakTan-house-of-sak-qa-shield, SakTan-service-quoting]
 
 ---
 

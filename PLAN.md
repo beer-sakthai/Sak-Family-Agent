@@ -45,6 +45,7 @@ never duplicate content across files.
 | Build/CI repointing — canonical package at personas/sakthai/sakthai; pyproject, workflows, Dockerfile, path fixes | ✅ Done (2026-07-06) |
 | Restructure — move servicequotebot scaffold from personas/ to services/ | ✅ Done (2026-07-06) |
 | **Plans audit & refresh** — standardized markers, cross-links, archived completed sub-plans | ✅ Done (2026-07-07) |
+| **Test Coverage Improvement** — 100% coverage on all previously untested modules, sync and eval Edge Cases | ✅ Done (2026-07-08) |
 
 ## 📋 Sub-Plans
 

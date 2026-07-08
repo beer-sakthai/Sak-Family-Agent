@@ -10,9 +10,9 @@ metadata:
       - multi-agent
       - handoff
     related_skills:
-      - saktan-soul-engine
-      - sakthai-cycle-dream
-      - sakthai-cycle-growth
+      - SakTan-saktan-soul-engine
+      - SakTan-cycle-dream
+      - SakTan-cycle-growth
 ---
 
 # SakTan Daily Ops Helper 🐚

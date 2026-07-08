@@ -13,7 +13,7 @@ metadata:
       - cycle
       - dream
     related_skills:
-      - sakthai-cycle-hope
+      - SakSee-cycle-hope
 ---
 
 # sakthai-cycle-dream

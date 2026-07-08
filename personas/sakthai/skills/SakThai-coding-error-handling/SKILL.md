@@ -16,9 +16,9 @@ metadata:
       - validation
       - agent-loop
     related_skills:
-      - sakthai-coding-mcp-tools
-      - sakthai-coding-security
-      - sakthai-coding-testing
+      - SakThai-coding-mcp-tools
+      - SakThai-coding-security
+      - SakThai-coding-testing
 ---
 
 # sakthai-coding-error-handling

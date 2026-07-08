@@ -6,7 +6,7 @@ platforms: [linux, macos, windows]
 metadata:
   hermes:
     tags: [github, family, stewardship, inventory, repo, archive, rotation, labels, coordination]
-    related_skills: [SakJules-github-repo-management, github-organization-admin, github-repo-roles]
+    related_skills: [SakKing-github-repo-management, github-organization-admin, github-repo-roles]
 ---
 
 # GitHub Family Stewardship

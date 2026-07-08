@@ -8,7 +8,7 @@ platforms: [linux, macos, windows]
 metadata:
   hermes:
     tags: [Coding-Agent, OpenCode, Autonomous, Refactoring, Code-Review]
-    related_skills: [SakJules-claude-code, SakJules-codex, SakJules-hermes-agent]
+    related_skills: [SakKing-claude-code, SakKing-codex, SakKing-hermes-agent]
 ---
 
 # OpenCode CLI

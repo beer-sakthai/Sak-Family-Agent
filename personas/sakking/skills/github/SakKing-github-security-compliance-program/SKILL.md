@@ -6,7 +6,7 @@ platforms: [linux, macos, windows]
 metadata:
   hermes:
     tags: [github, security, compliance, dependabot, code scanning, secret, branch rules, ssl, cert, dbr, force push]
-    related_skills: [SakJules-github-repo-management, github-repo-roles]
+    related_skills: [SakKing-github-repo-management, github-repo-roles]
 ---
 
 # GitHub Security & Compliance Program

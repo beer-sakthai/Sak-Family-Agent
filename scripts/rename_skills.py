@@ -130,7 +130,7 @@ def main(argv: list[str] | None = None) -> int:
         )
         for old_name, new_name in collisions:
             print(f"  {old_name}  ->  {new_name}  (target already exists)", file=sys.stderr)
-    return 0
+    return 1 if collisions else 0
 
 
 if __name__ == "__main__":

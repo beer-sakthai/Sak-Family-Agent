@@ -8,7 +8,7 @@ platforms: [linux, macos, windows]
 metadata:
   hermes:
     tags: [design, design-system, tokens, ui, accessibility, wcag, tailwind, dtcg, google]
-    related_skills: [popular-web-designs, claude-design, excalidraw, architecture-diagram]
+    related_skills: [SakKing-popular-web-designs, SakKing-claude-design, SakKing-excalidraw, SakKing-architecture-diagram]
 ---
 
 # DESIGN.md Skill
