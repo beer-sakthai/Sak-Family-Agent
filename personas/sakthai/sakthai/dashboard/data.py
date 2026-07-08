@@ -31,7 +31,7 @@ def _parse_team_roster() -> list[dict[str, str]]:
             line = line.strip()
             if not line:
                 continue
-            if "| Agent | Handle | Role | Model |" in line:
+            if "|Agent|Handle|Role|Model|" in line.replace(" ", ""):
                 in_table = True
                 continue
             if in_table:
