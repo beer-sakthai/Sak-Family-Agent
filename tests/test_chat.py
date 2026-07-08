@@ -389,7 +389,7 @@ def test_chat_loads_persona_soul_and_invokes_run_chat(
         calls.append(kwargs)
 
     monkeypatch.setattr(chat_cli, "run_chat", fake_run_chat)
-    monkeypatch.setattr(chat_cli, "_make_read_input", lambda: (lambda: None))
+    monkeypatch.setattr(chat_cli, "_make_read_input", lambda: lambda: None)
 
     result = runner.invoke(main, ["chat", "--persona", "sakking", "--no-mcp"])
 
@@ -410,7 +410,7 @@ def test_chat_defaults_to_sakthai_persona(
 
     calls: list[dict[str, Any]] = []
     monkeypatch.setattr(chat_cli, "run_chat", lambda **kwargs: calls.append(kwargs))
-    monkeypatch.setattr(chat_cli, "_make_read_input", lambda: (lambda: None))
+    monkeypatch.setattr(chat_cli, "_make_read_input", lambda: lambda: None)
 
     result = runner.invoke(main, ["chat", "--no-mcp"])
 
@@ -434,7 +434,7 @@ def test_chat_forwards_model_provider_caveman_and_skills(
 
     calls: list[dict[str, Any]] = []
     monkeypatch.setattr(chat_cli, "run_chat", lambda **kwargs: calls.append(kwargs))
-    monkeypatch.setattr(chat_cli, "_make_read_input", lambda: (lambda: None))
+    monkeypatch.setattr(chat_cli, "_make_read_input", lambda: lambda: None)
 
     result = runner.invoke(
         main,
