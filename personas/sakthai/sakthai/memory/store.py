@@ -800,7 +800,9 @@ class MemoryStore:
             clean_kind = redact_secrets(str(f["kind"]))
             clean_key = redact_secrets(str(f["key"])) if f.get("key") else None
             clean_tags = (
-                [redact_secrets(str(t)) for t in f["tags"]] if isinstance(f.get("tags"), list) else None
+                [redact_secrets(str(t)) for t in f["tags"]]
+                if isinstance(f.get("tags"), list)
+                else None
             )
             clean_source_session = (
                 redact_secrets(str(f["source_session"])) if f.get("source_session") else None
@@ -820,7 +822,11 @@ class MemoryStore:
         def obs_to_tuple(o: dict[str, Any], include_id: bool) -> tuple[Any, ...]:
             # Security: redact secrets and truncate during import.
             clean_summary = redact_secrets(str(o["summary"]))[:MAX_MEMORY_CONTENT_CHARS]
-            clean_sid = redact_secrets(str(o["evidence_session_id"])) if o.get("evidence_session_id") else None
+            clean_sid = (
+                redact_secrets(str(o["evidence_session_id"]))
+                if o.get("evidence_session_id")
+                else None
+            )
             t = (
                 clean_summary,
                 clean_sid,
