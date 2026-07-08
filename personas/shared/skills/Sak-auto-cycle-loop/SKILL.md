@@ -18,15 +18,12 @@ metadata:
       - shared
       - auto-cycle
       - multi-round
-    related_skills:
-      - sakthai-cycle-dream
-      - sakthai-cycle-growth
+    related_skills: []
 ---
 
 # Sak-auto-cycle-loop
 
-Extends the six-stage cycle (`sakthai-cycle-dream` through
-`sakthai-cycle-growth`) with one rule: **completing Growth is not the end of
+Extends the six-stage cycle (Dream through Growth) with one rule: **completing Growth is not the end of
 the session by default.** Without this skill, the natural instinct is to
 treat "cycle finished" as "task finished" and stop. That instinct is wrong
 when this skill is loaded — the session keeps going until the round cap or
@@ -83,8 +80,8 @@ You were given exactly one task at invocation. Round 1 works that task.
 Rounds 2 and 3 do **not** require a new task string from outside — Dream's
 job is to find it: `sakthai recall` your own memory and any pending
 items (PLAN.md, kanban, prior `learn --tag decision` notes) and pick the
-single most valuable next thing, same as `sakthai-cycle-dream` already
-instructs. If genuinely nothing useful turns up, that counts as an early
+single most valuable next thing, the same way a persona's own Dream-stage
+skill already instructs. If genuinely nothing useful turns up, that counts as an early
 stop: say so, don't invent busywork, and end the session below 3 rounds —
 state which round you stopped at and why, using the same "Round N of 3"
 phrasing so it's clear the cap wasn't the reason you stopped.
