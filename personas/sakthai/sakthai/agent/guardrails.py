@@ -78,7 +78,12 @@ def _is_sensitive_path(path: str) -> bool:
             return True
 
     # Support checking short flags with attached paths like -o/etc/passwd or -o~/key
-    if len(path) > 2 and path.startswith("-") and path[1] != "-" and (path[2] == "/" or path[2] == "~"):
+    if (
+        len(path) > 2
+        and path.startswith("-")
+        and path[1] != "-"
+        and (path[2] == "/" or path[2] == "~")
+    ):
         val = path[2:]
         if _is_sensitive_path(val):
             return True
