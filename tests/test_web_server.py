@@ -85,11 +85,11 @@ class TestDashboardData:
         assert isinstance(data, dict)
 
     def test_demo_stub_has_growth_key(self) -> None:
-        # sakthai.dashboard was removed (5de2c25): the import inside
-        # _dashboard_data always fails, so the demo stub is the only path.
-        data = _dashboard_data()
-        assert "growth" in data
-        assert data.get("source") == "demo"
+        # Force fallback to the demo stub by mocking the import error
+        with patch.dict("sys.modules", {"sakthai.dashboard.data": None}):
+            data = _dashboard_data()
+            assert "growth" in data
+            assert data.get("source") == "demo"
 
     def test_falls_back_to_demo_on_import_error(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """An ImportError importing the data module yields the demo stub (server.py:36-37)."""

@@ -56,8 +56,11 @@ def _ecosystem_status() -> dict[str, Any]:
 
 
 class _Handler(SimpleHTTPRequestHandler):
+    def address_string(self) -> str:
+        return self.client_address[0]
+
     def log_message(self, format: str, *args: Any) -> None:  # noqa: A003
-        logging.getLogger(__name__).debug(format, *args)
+        logging.getLogger(__name__).info(format, *args)
 
     def end_headers(self) -> None:
         self.send_header("X-Frame-Options", "DENY")
@@ -78,6 +81,7 @@ class _Handler(SimpleHTTPRequestHandler):
         self.wfile.write(body)
 
     def do_GET(self) -> None:  # noqa: N802
+        logging.getLogger(__name__).info("GET request for path: %s", self.path)
         parsed = urlparse(self.path)
         path = parsed.path.rstrip("/") or "/"
 

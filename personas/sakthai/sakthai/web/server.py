@@ -22,14 +22,14 @@ logger = logging.getLogger(__name__)
 
 _DEFAULT_HOST = "127.0.0.1"
 _DEFAULT_PORT = 3001
-_STATIC_ROOT = (Path(__file__).resolve().parent.parent / "dashboard" / "dist").resolve()
+_STATIC_ROOT = (Path(__file__).resolve().parents[4] / "dashboard" / "dist").resolve()
 
 
 def _dashboard_data(days: int = 30) -> dict[str, Any]:
     try:
         import sys
 
-        sys.path.insert(0, str((Path(__file__).resolve().parent.parent).resolve()))
+        sys.path.insert(0, str((Path(__file__).resolve().parents[2]).resolve()))
         from sakthai.dashboard.data import collect_dashboard_data
 
         data: dict[str, Any] = collect_dashboard_data(days=days)
@@ -76,8 +76,11 @@ def _ecosystem_status() -> dict[str, Any]:
 
 
 class _Handler(SimpleHTTPRequestHandler):
+    def address_string(self) -> str:
+        return self.client_address[0]
+
     def log_message(self, format: str, *args: Any) -> None:  # noqa: A003
-        logger.debug(format, *args)
+        logger.info(format, *args)
 
     def end_headers(self) -> None:
         self.send_header("X-Frame-Options", "DENY")
