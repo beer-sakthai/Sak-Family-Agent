@@ -56,6 +56,20 @@ class FakeClient:
         self.messages = _Messages(responses)
 
 
+class _CapturingClient:
+    def __init__(self, responses: list) -> None:
+        self.received_messages: list[list[dict]] = []
+        self._responses = responses
+        self._i = 0
+        self.messages = self
+
+    def create(self, **kwargs: object) -> _Resp:
+        self.received_messages.append(kwargs["messages"])  # type: ignore[arg-type]
+        resp = self._responses[self._i]
+        self._i += 1
+        return resp
+
+
 def test_simple_text_response(store: MemoryStore) -> None:
     client = FakeClient([_Resp("end_turn", [_Block(type="text", text="hello")])])
     result = run_agent(
@@ -2067,3 +2081,59 @@ def test_run_agent_skills_and_command_system_are_merged(
     )
     assert "SKILL BODY HERE." in captured["system"]
     assert "COMMAND BODY HERE." in captured["system"]
+
+
+def test_history_seeds_prior_messages(store: MemoryStore) -> None:
+    client = _CapturingClient([_Resp("end_turn", [_Block(type="text", text="ok")])])
+    prior = [
+        {"role": "user", "content": "earlier question"},
+        {"role": "assistant", "content": [_Block(type="text", text="earlier answer")]},
+    ]
+    run_agent(
+        "follow up",
+        client=client,
+        store=store,
+        provider="anthropic",
+        history=prior,
+    )
+    sent = client.received_messages[0]
+    assert sent[0] == prior[0]
+    assert sent[1] == prior[1]
+    assert sent[2] == {"role": "user", "content": "follow up"}
+
+
+def test_agent_result_messages_include_final_assistant_turn(store: MemoryStore) -> None:
+    block = _Block(type="text", text="hello")
+    client = FakeClient([_Resp("end_turn", [block])])
+    result = run_agent("hi", client=client, store=store, provider="anthropic")
+    assert result.messages[0] == {"role": "user", "content": "hi"}
+    assert result.messages[1]["role"] == "assistant"
+    assert result.messages[1]["content"] == [block]
+
+
+def test_tool_call_event_includes_output_preview(store: MemoryStore) -> None:
+    events: list[dict[str, Any]] = []
+    client = FakeClient(
+        [
+            _Resp(
+                "tool_use",
+                [
+                    _Block(
+                        type="tool_use", id="t1", name="learn", input={"value": "x", "kind": "note"}
+                    )
+                ],
+            ),
+            _Resp("end_turn", [_Block(type="text", text="done")]),
+        ]
+    )
+    run_agent(
+        "remember x",
+        client=client,
+        store=store,
+        provider="anthropic",
+        on_event=lambda kind, payload: events.append({"kind": kind, **payload}),
+    )
+    tool_events = [e for e in events if e["kind"] == "tool_call"]
+    assert len(tool_events) == 1
+    assert tool_events[0]["output_preview"]
+    assert len(tool_events[0]["output_preview"]) <= 80
