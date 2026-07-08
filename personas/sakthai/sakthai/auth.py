@@ -87,6 +87,7 @@ def load_gemini_cli_token() -> str | None:
             expiry = token_info.get("expiry")
             if expiry and isinstance(expiry, str):
                 from datetime import datetime
+
                 try:
                     dt = datetime.fromisoformat(expiry)
                     expired = datetime.now(UTC) >= dt.astimezone(UTC)

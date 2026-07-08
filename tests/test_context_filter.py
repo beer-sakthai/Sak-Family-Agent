@@ -22,7 +22,10 @@ def test_summarization_filter_truncates_old_messages() -> None:
         {"role": "user", "content": "a" * 1000},
         {"role": "assistant", "content": "b" * 200},
         {"role": "user", "content": "c" * 1000},  # Part of last 2 messages (will not be truncated)
-        {"role": "assistant", "content": "d" * 1000},  # Part of last 2 messages (will not be truncated)
+        {
+            "role": "assistant",
+            "content": "d" * 1000,
+        },  # Part of last 2 messages (will not be truncated)
     ]
     filt = TurnSummarizationFilter(max_length=500)
     result = filt.filter(messages)

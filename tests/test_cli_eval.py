@@ -27,7 +27,7 @@ def _record(
     latency: float = 2.0,
     in_tok: int = 10,
     out_tok: int = 5,
-    err: bool = False
+    err: bool = False,
 ) -> EvalRecord:
     return EvalRecord(
         timestamp=1700000000,
@@ -40,7 +40,7 @@ def _record(
         input_tokens=in_tok,
         output_tokens=out_tok,
         tool_call_count=1,
-        had_error=err
+        had_error=err,
     )
 
 
