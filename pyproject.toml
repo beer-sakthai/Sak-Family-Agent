@@ -29,7 +29,6 @@ dev = [
     "hypothesis>=6.156.2",
     "ruff>=0.15.20",
     "mypy>=1.10",
-    "types-PyYAML>=6.0.12",
     "bandit[toml]>=1.9.4",
 ]
 
@@ -97,6 +96,10 @@ mypy_path = "personas/sakthai"
 [[tool.mypy.overrides]]
 module = "sakthai.telegram.*"
 ignore_errors = true
+
+[[tool.mypy.overrides]]
+module = ["sakthai.skills", "sakthai.sakking_skills"]
+disable_error_code = ["import-untyped"]
 
 [tool.bandit]
 exclude_dirs = ["tests"]

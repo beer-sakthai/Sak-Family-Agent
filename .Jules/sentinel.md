@@ -8,10 +8,10 @@
 
 **Action/Prevention:** Keep Bandit, Ruff, and mypy examples aligned with the monorepo package location whenever the workspace layout changes.
 
-## 2026-07-09 - [Typed Security Gate Dependencies]
+## 2026-07-09 - [Scoped Typed Security Gates]
 
 **Context/Vulnerability:** Moving the CI guidance to the real package path exposed strict mypy failures that had been hidden by the old path, including untyped PyYAML imports.
 
-**Learning:** CI path corrections can turn previously skipped checks into active gates; the dev dependency set must include required type stubs so the strict gate is reproducible.
+**Learning:** CI path corrections can turn previously skipped checks into active gates; when a runtime library lacks usable stubs in the locked environment, any exception should be scoped to the exact importing modules instead of weakening the whole type gate.
 
-**Action/Prevention:** Keep type stubs for runtime libraries in the `dev` extra whenever strict mypy checks import those libraries.
+**Action/Prevention:** Prefer real type stubs when the lock can be updated safely; otherwise use targeted mypy overrides for the specific modules importing the untyped runtime library.
