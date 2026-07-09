@@ -201,3 +201,11 @@
 **Learning:** Path sensitivity is context-dependent. While the current directory is not a "system-critical" root, it should still be protected from destructive operations. Security policies must differentiate between destructive intent (e.g., `rm`, `chmod`, `find -delete`) and safe discovery or exfiltration intent (e.g., `ls`, `cat`, `find`, `python` execution) when evaluating local path targets.
 
 **Prevention:** Introduce an `allow_local` flag to `_is_sensitive_path`. Differentiate monitored binaries into `destructive_binaries` (which block `.`) and `exfiltration_binaries` (which allow `.`). Apply stricter `allow_local=False` checks to `destructive_binaries` and the output targets (`of=`) of data-movement tools like `dd`.
+
+## 2026-07-20 - [CI Failures due to Inflated Action Versions]
+
+**Vulnerability:** Multiple GitHub Actions workflows failed with `fatal: repository not found` because they referenced non-existent future versions of actions (e.g., `actions/checkout@v7`).
+
+**Learning:** Using overly high version numbers for community or official actions can lead to infrastructure-level failures as runners fail to resolve the action reference. Always use established, stable major versions (e.g., `@v4` for checkout) unless a specific new feature is required and verified to exist.
+
+**Prevention:** Audit workflow files regularly to ensure action versions match the current stable releases provided by maintainers. Avoid "future-proofing" by inflating version numbers.
