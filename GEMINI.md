@@ -1,6 +1,65 @@
-# Sak-Family-Agent — Project Context
+# Sak-Family-Agent — House Rules (SOP) + Project Context
 
 Guidance for the Gemini CLI and Gemini-backed agents working in this repository.
+
+---
+
+> ## 🏠 This repository is Beer's house. Treat it with care.
+>
+> Beer is **Nanthasit Burankum**. Read `USER.md` before anything that affects him.
+> These rules bind **every** agent working here — Gemini especially. Follow them,
+> and the house stays consistent. Ignore them, and it breaks (again).
+
+## The House Rules (Standard Operating Procedure)
+
+1. **Read before you change — and check other branches.** Read the file, the code
+   around it, and run `git branch -a` / `git log` first. This repo has been broken
+   by rewriting `main` while richer work lived on a feature branch. Diff against the
+   branch actually in use before you touch anything.
+
+2. **Understand before you touch.** If you don't know why something is the way it
+   is, ask Beer. Don't guess, and don't "tidy up" what you don't understand.
+
+3. **Keep the family consistent.** If you change a name, handle, model, or path in
+   one place, update it **everywhere** — half-renames are how this house drifted.
+   Canonical facts:
+   - **Handles:** `@sakthai_agent_bot`, `@sakking_agent_bot`, `@saksit_agent_bot`,
+     `@saktan_agent_bot`, `@saksee_agent_bot`, `@sakjules_agent_bot`.
+   - **Value cycle:** SakThai = Dream → SakKing = Hope → SakSit = Care →
+     SakTan = Joy → SakJules = Trust → SakSee = Growth → back to Dream.
+   - **SakThai is the heart; SakKing is the hands.**
+
+4. **The family stays together.** One home: `beer-sakthai/Sak-Family-Agent`. Do
+   **not** split the family into separate per-agent repos. They share one memory
+   at `~/.sakthai`. Togetherness is the point.
+
+5. **Free and local by default.** Beer is cost-constrained. Default every agent to
+   the free local model (Ollama `sakthai`). **Never** spend on paid cloud
+   (Gemini / Anthropic / HF router / Ollama Cloud) without Beer's explicit, informed
+   OK — and always state the cost first.
+
+6. **Beer comes first.** His safety, dignity, housing, accounts, and money before
+   any task. No pressure, no shame; prefer low-risk, no-cost help. Read `USER.md`.
+
+7. **Verify before you claim done.** "Done" means tool-validated — show the proof
+   (test pass, command output, API response). Never celebrate before it's green.
+
+8. **Secrets never get committed.** No tokens or keys in the repo. `.env`,
+   `*_creds.json`, and `.jules/cache/` stay git-ignored. If you find a leaked
+   secret, tell Beer and help revoke it — don't just delete it.
+
+9. **Get approval for outward actions.** Pushing to GitHub, creating repos/PRs,
+   sending messages, or spending money — confirm with Beer first. Local commits are
+   fine; pushing is never automatic.
+
+10. **Small, reversible steps — and leave it better.** Prefer the smallest safe
+    change. Don't leave the house half-done or inconsistent. If unsure, stop and ask.
+
+### If something looks wrong
+Don't paper over it. Surface it to Beer with what you found and a recommendation.
+It's his house — he decides.
+
+---
 
 ## What this is
 
