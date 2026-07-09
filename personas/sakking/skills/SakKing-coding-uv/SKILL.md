@@ -69,10 +69,10 @@ an out-of-date lock means non-reproducible builds.
 Mirror `.github/workflows/ci.yml` before pushing — green CI is the bar for `main`:
 
 ```bash
-uv run ruff check sakthai tests
-uv run ruff format --check sakthai tests
-uv run mypy sakthai
-uv run bandit -c pyproject.toml -r sakthai
+uv run ruff check personas/sakthai/sakthai tests
+uv run ruff format --check personas/sakthai/sakthai tests
+uv run mypy personas/sakthai/sakthai
+uv run bandit -c pyproject.toml -r personas/sakthai/sakthai
 uv run pytest tests/ -q
 ```
 

@@ -6,10 +6,10 @@ Use before every production cut to `main` or a published HF artifact.
 - [ ] `git status` clean (no untracked `.env` or secrets)
 - [ ] `git pull --rebase` latest `main`
 - [ ] `pytest tests/ -q -m "not integration"` green
-- [ ] `ruff check sakthai tests` green
-- [ ] `ruff format --check sakthai tests` green
-- [ ] `mypy sakthai` green
-- [ ] `bandit -c pyproject.toml -r sakthai` green
+- [ ] `uv run ruff check personas/sakthai/sakthai tests` green
+- [ ] `uv run ruff format --check personas/sakthai/sakthai tests` green
+- [ ] `uv run mypy personas/sakthai/sakthai` green
+- [ ] `uv run bandit -c pyproject.toml -r personas/sakthai/sakthai` green
 
 ## Secret / credential check
 - [ ] `.env` is gitignored

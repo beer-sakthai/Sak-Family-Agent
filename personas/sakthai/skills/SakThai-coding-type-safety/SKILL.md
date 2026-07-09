@@ -41,7 +41,7 @@ strict-clean; treat type errors as build failures, not warnings.
 Run the exact gate locally:
 
 ```bash
-uv run mypy sakthai
+uv run mypy personas/sakthai/sakthai
 ```
 
 Strict mode means, in practice:

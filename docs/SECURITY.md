@@ -74,8 +74,8 @@ Every push to `main` and every pull request runs the following pipeline (`.githu
 1. **Secret scan** (Gitleaks v8.21.2) — scans full git history; must pass before any other job runs
 2. **Lint** (`ruff check`) — catches unsafe patterns flagged by ruff's built-in security rules
 3. **Format check** (`ruff format --check`)
-4. **Type check** (`mypy sakthai` in strict mode)
-5. **Static security analysis** (`bandit -c pyproject.toml -r sakthai`)
+4. **Type check** (`uv run mypy personas/sakthai/sakthai` in strict mode)
+5. **Static security analysis** (`uv run bandit -c pyproject.toml -r personas/sakthai/sakthai`)
 6. **Tests** (`pytest tests/ -q -m "not integration"`) — hermetic unit suite with no network access
 
 Bandit skips: `B101` (assert in non-test code), `B404`/`B603`/`B606`/`B607` (subprocess flags — all subprocess calls use `shell=False` with fixed/parsed argument arrays).

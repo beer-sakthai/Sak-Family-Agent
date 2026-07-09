@@ -38,8 +38,8 @@ uv run pytest -q -m "not integration"
 uv run pytest -q -m "integration"
 
 # Check code style and formatting
-uv run ruff check sakthai/ tests/
-uv run ruff format sakthai/ tests/
+uv run ruff check personas/sakthai/sakthai tests
+uv run ruff format --check personas/sakthai/sakthai tests
 ```
 
 ---

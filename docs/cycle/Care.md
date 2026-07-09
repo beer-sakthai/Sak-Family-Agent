@@ -25,9 +25,9 @@ Hope stages don't repeat the same mistakes.
 
 - Code produced in **Hope**.
 - `pytest tests/ -q` — tests pass.
-- `ruff check sakthai tests` and `ruff format --check sakthai tests` — clean.
-- `mypy sakthai` — types clean.
-- `bandit -c pyproject.toml -r sakthai` — no findings.
+- `uv run ruff check personas/sakthai/sakthai tests` and `uv run ruff format --check personas/sakthai/sakthai tests` — clean.
+- `uv run mypy personas/sakthai/sakthai` — types clean.
+- `uv run bandit -c pyproject.toml -r personas/sakthai/sakthai` — no findings.
 
 ## Exit criteria
 

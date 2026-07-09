@@ -20,10 +20,10 @@ Purpose
   - python -m pytest -m "not integration" -q
 
 - Lint / format / types / security (mirror CI):
-  - ruff check sakthai tests
-  - ruff format --check sakthai tests
-  - mypy sakthai
-  - bandit -c pyproject.toml -r sakthai
+  - uv run ruff check personas/sakthai/sakthai tests
+  - uv run ruff format --check personas/sakthai/sakthai tests
+  - uv run mypy personas/sakthai/sakthai
+  - uv run bandit -c pyproject.toml -r personas/sakthai/sakthai
 
 - Notes:
   - CI runs on Python 3.11–3.13 and requires green lint + tests before merging.
