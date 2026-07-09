@@ -11,9 +11,9 @@ the framework the agents run on, never the name of an agent.
 
 | Agent | Handle | Role | Model |
 |---|---|---|--- |
-| **SakThai** | `@sakthai_v1_bot` | Lead & Orchestrator · Main Lead of the House & Master of Hugging Face (mastery via Hub/MCP tools) | Anthropic `claude-opus-4-8` → Ollama Cloud `gpt-oss:120b` fallback |
-| **SakKing Agent** | `@sakthai_agent_v2_bot` | General Assistant, Runner & Self-Healing (owns all skills) | live: Ollama Cloud `qwen3-coder:480b` → `gpt-oss:120b` fallback; CLI coding: Claude |
-| **SakSee** | `@saksee_bot` | Master of Web (Playwright + Chrome DevTools) | local Ollama `llama3` → `qwen` fallback |
+| **SakThai** | `@sakthai_agent_bot` | Lead & Orchestrator · Main Lead of the House & Master of Hugging Face (mastery via Hub/MCP tools) | Anthropic `claude-opus-4-8` → Ollama Cloud `gpt-oss:120b` fallback |
+| **SakKing Agent** | `@sakking_agent_bot` | General Assistant, Runner & Self-Healing (owns all skills) | live: Ollama Cloud `qwen3-coder:480b` → `gpt-oss:120b` fallback; CLI coding: Claude |
+| **SakSee** | `@saksee_agent_bot` | Master of Web (Playwright + Chrome DevTools) | local Ollama `llama3` → `qwen` fallback |
 | **SakSit** | `@saksit_agent_bot` | Master of Social Media (IG image/video) | local Ollama `llama3` → `qwen` fallback (Modal sandbox) |
 | **SakTan** | `@saktan_agent_bot` | Daily Ops Helper (calendar, email, life admin) | `gemini-1.5-flash-lite` |
 | **SakJules** | `@sakjules_agent_bot` | Master of Automation & CI/CD | `gemini-1.5-pro-latest` |
