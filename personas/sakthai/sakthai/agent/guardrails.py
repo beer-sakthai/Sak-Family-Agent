@@ -112,7 +112,7 @@ def _is_sensitive_path(path: str) -> bool:
     # could target a sensitive directory.
     if any(c in path for c in "*?[]"):
         # Strip trailing wildcards to check the base path.
-        base_path = re.split(r"[*?\[\]]", path, 1)[0]
+        base_path = re.split(r"[*?\[\]]", path, maxsplit=1)[0]
         if base_path:
             # If base_path itself is sensitive, block.
             if _is_sensitive_path(base_path):
