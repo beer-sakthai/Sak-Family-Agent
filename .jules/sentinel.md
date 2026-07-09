@@ -172,3 +172,8 @@
 **Vulnerability:** Secrets (API keys, tokens) were only redacted from the `value` of facts and `summary` of observations. Metadata fields like `kind`, `key`, `tags`, and session IDs were not redacted, allowing credentials to be stored in plain text in the SQLite database and potentially leaked during memory recall.
 **Learning:** Security redaction must be applied to all user-controllable string fields in a persistent store, not just the primary content fields. Metadata can often be used to store sensitive data accidentally or maliciously.
 **Prevention:** Apply a centralized `redact_secrets` function to every string field at the data entry boundary (both for individual writes and bulk imports).
+
+## 2026-07-16 - [Hardening Shell Redirection against Read-Write and Descriptor Duplication]
+**Vulnerability:** Shell redirection guardrails missed the `<>` (read-write) and `<&` (input duplication) operators, allowing potential bypasses when interacting with sensitive system files (e.g., `cat <>/etc/passwd`).
+**Learning:** Shell redirection is extremely versatile. Less common operators like `<>` and `<&` can be just as dangerous as standard output redirections if they target sensitive paths. Security regexes must be exhaustive and prioritized (longer matches first).
+**Prevention:** Use a unified and comprehensive regex for shell redirection operators: `r"(?:[0-9]|&)?(?:&>>|>>|>&|>\||<>|<&|>|<)"`. This ensures all variants are captured before the target path is validated.
