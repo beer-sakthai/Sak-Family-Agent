@@ -147,7 +147,7 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
                 pass
 
     # 2. Prevent destructive or dangerous commands on sensitive paths.
-    destructive_binaries = (
+    dangerous_binaries = (
         "rm",
         "chmod",
         "mv",
@@ -166,9 +166,12 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
         "strings",
         "nc",
         "netcat",
+        "python",
+        "python3",
+        "node",
     )
     for i, part in enumerate(parts):
-        if _is_binary(part, destructive_binaries):
+        if _is_binary(part, dangerous_binaries):
             # Inspect tokens following the binary until a separator is hit.
             for subpart in parts[i + 1 :]:
                 if subpart in (";", "&&", "||", "|"):
@@ -177,7 +180,7 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
                     binary_name = os.path.basename(part)
                     return GuardrailResult(
                         GuardrailAction.DENY,
-                        reason=f"Potentially destructive '{binary_name}' command on {subpart!r} blocked.",
+                        reason=f"Potentially dangerous '{binary_name}' command on {subpart!r} blocked.",
                     )
 
     # 3. Specialized protection for dd (input/output file).

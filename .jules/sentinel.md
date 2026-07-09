@@ -177,3 +177,11 @@
 **Vulnerability:** Shell redirection guardrails missed the `<>` (read-write) and `<&` (input duplication) operators, allowing potential bypasses when interacting with sensitive system files (e.g., `cat <>/etc/passwd`).
 **Learning:** Shell redirection is extremely versatile. Less common operators like `<>` and `<&` can be just as dangerous as standard output redirections if they target sensitive paths. Security regexes must be exhaustive and prioritized (longer matches first).
 **Prevention:** Use a unified and comprehensive regex for shell redirection operators: `r"(?:[0-9]|&)?(?:&>>|>>|>&|>\||<>|<&|>|<)"`. This ensures all variants are captured before the target path is validated.
+
+## 2026-07-17 - [Hardening Guardrails against Interpreter-based Path Bypasses]
+
+**Vulnerability:** Shell guardrails could be bypassed by using language interpreters (e.g., `python3`, `node`) to read or execute system-critical files (e.g., `python3 /etc/passwd`). These binaries were not monitored, allowing them to target sensitive paths via positional arguments.
+
+**Learning:** Security guardrails for shell execution must include common language interpreters in the monitored list. Interpreters are dual-use: they are necessary for the agent's operation but can also be used as powerful file-reading and execution tools that bypass simple utility-based filters.
+
+**Prevention:** Expand `dangerous_binaries` to include `python`, `python3`, and `node`. Update guardrail denial reasons and test assertions to use more inclusive terminology (like "dangerous" instead of just "destructive") to cover both data exfiltration and system destruction.
