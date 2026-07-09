@@ -1,8 +1,12 @@
 import unittest
-from pathlib import Path
-from personas.sakthai.sakthai.agent.guardrails import _block_dangerous_shell_commands, GuardrailAction
+
+from personas.sakthai.sakthai.agent.guardrails import (
+    GuardrailAction,
+    _block_dangerous_shell_commands,
+)
 from personas.sakthai.sakthai.agent.tools import Tool
 from personas.sakthai.sakthai.memory.store import MemoryStore
+
 
 class TestGuardrailsBypass(unittest.TestCase):
     def setUp(self):
