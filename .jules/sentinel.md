@@ -185,3 +185,19 @@
 **Learning:** Security guardrails for shell execution must include common language interpreters in the monitored list. Interpreters are dual-use: they are necessary for the agent's operation but can also be used as powerful file-reading and execution tools that bypass simple utility-based filters.
 
 **Prevention:** Expand `dangerous_binaries` to include `python`, `python3`, and `node`. Update guardrail denial reasons and test assertions to use more inclusive terminology (like "dangerous" instead of just "destructive") to cover both data exfiltration and system destruction.
+
+## 2026-07-18 - [Hardening _is_binary against Versioning Bypasses]
+
+**Vulnerability:** The `_is_binary` helper used simple string matching (exact or suffix), allowing bypasses using versioned binary names (e.g., `python3.12`) or absolute paths to those binaries (e.g., `/usr/bin/python3`).
+
+**Learning:** Command-line tokens can refer to the same logical binary through various string representations, including absolute paths and version-specific suffixes. Security checks must use robust pattern matching on the base name to ensure all variants are captured.
+
+**Prevention:** Refactor `_is_binary` to use a regular expression that matches the binary's base name followed by optional versioning (e.g., `rf"^{re.escape(name)}(?:[0-9]+(?:\.[0-9]+)*)?$"`). Always extract the `basename` before matching to account for absolute paths.
+
+## 2026-07-19 - [Conditional Local Path Blocking in Guardrails]
+
+**Vulnerability:** Destructive commands could target the current directory (e.g., `rm -rf .`), causing local data loss. However, blocking the current directory (`.`) globally in `_is_sensitive_path` caused regressions for common, safe discovery tools like `find .`.
+
+**Learning:** Path sensitivity is context-dependent. While the current directory is not a "system-critical" root, it should still be protected from destructive operations. Security policies must differentiate between destructive intent (e.g., `rm`, `chmod`, `find -delete`) and safe discovery or exfiltration intent (e.g., `ls`, `cat`, `find`, `python` execution) when evaluating local path targets.
+
+**Prevention:** Introduce an `allow_local` flag to `_is_sensitive_path`. Differentiate monitored binaries into `destructive_binaries` (which block `.`) and `exfiltration_binaries` (which allow `.`). Apply stricter `allow_local=False` checks to `destructive_binaries` and the output targets (`of=`) of data-movement tools like `dd`.
