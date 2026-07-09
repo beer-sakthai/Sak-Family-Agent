@@ -2,6 +2,8 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+> **Historical path note:** This implementation plan is archival. Commands and module paths that mention the former root-level `sakthai/` layout reflect the repository layout at the time of writing; current contributor-facing checks use `personas/sakthai/sakthai` for the package path.
+
 **Goal:** Add cross-session content search (CLI + agent tool) to the Sak-Family-Agent, per the approved spec at `docs/superpowers/specs/2026-07-02-phase4-memory-session-search-design.md`, without changing `MemoryStore`'s schema.
 
 **Architecture:** A single new module, `sakthai/memory/session_search.py`, owns the on-demand scan over `~/.sakthai/sessions/*.json` and exposes one function, `search_sessions()`. Both the CLI subcommand (`sakthai sessions search`) and the new agent tool (`search_sessions` in `BUILTIN_TOOLS`) call this one function — no duplicated scan logic. Session files are read, not written; the feature is inherently read-only/idempotent.

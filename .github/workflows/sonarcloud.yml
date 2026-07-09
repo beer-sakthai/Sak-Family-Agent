@@ -37,6 +37,7 @@ on:
   workflow_dispatch:
 
 permissions:
+  contents: read # allows actions/checkout to fetch code
   pull-requests: read # allows SonarCloud to decorate PRs with analysis results
 
 jobs:
@@ -56,7 +57,7 @@ jobs:
 
       - name: Analyze with SonarCloud
         if: env.SONAR_TOKEN != ''
-        uses: SonarSource/sonarcloud-github-action@v5.0.0
+        uses: SonarSource/sonarqube-scan-action@v7.1.0
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         with:

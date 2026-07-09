@@ -47,10 +47,10 @@ CI runs a fixed sequence on every pull request, and **green CI is the bar for
 `main`.** Run the same checks locally before pushing:
 
 ```bash
-ruff check sakthai tests          # lint
-ruff format --check sakthai tests # format check (drop --check to apply)
-mypy sakthai                      # strict type-check
-bandit -c pyproject.toml -r sakthai  # security scan
+uv run ruff check personas/sakthai/sakthai tests          # lint
+uv run ruff format --check personas/sakthai/sakthai tests # format check (drop --check to apply)
+uv run mypy personas/sakthai/sakthai                      # strict type-check
+uv run bandit -c pyproject.toml -r personas/sakthai/sakthai  # security scan
 python -m pytest tests/ -q        # full unit suite
 ```
 

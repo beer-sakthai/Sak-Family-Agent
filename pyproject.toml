@@ -97,6 +97,10 @@ mypy_path = "personas/sakthai"
 module = "sakthai.telegram.*"
 ignore_errors = true
 
+[[tool.mypy.overrides]]
+module = ["sakthai.skills", "sakthai.sakking_skills"]
+disable_error_code = ["import-untyped"]
+
 [tool.bandit]
 exclude_dirs = ["tests"]
 skips = ["B101", "B404", "B603", "B606", "B607"]

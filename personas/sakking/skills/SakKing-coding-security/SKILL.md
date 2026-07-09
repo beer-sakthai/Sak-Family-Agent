@@ -40,7 +40,7 @@ Don't loosen either without a reason you can defend.
 Run the exact CI check:
 
 ```bash
-uv run bandit -c pyproject.toml -r sakthai
+uv run bandit -c pyproject.toml -r personas/sakthai/sakthai
 ```
 
 Config (`[tool.bandit]`): `exclude_dirs = ["tests"]` and a **small, intentional**

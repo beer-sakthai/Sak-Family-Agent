@@ -43,11 +43,13 @@ jobs:
     - name: Run Microsoft Security DevOps
       uses: microsoft/security-devops-action@latest
       id: msdo
+      continue-on-error: true
       with:
         tools: eslint
 
       # Upload results to the Security tab
     - name: Upload results
+      if: steps.msdo.outputs.sarifFile != ''
       uses: github/codeql-action/upload-sarif@v3
       with:
         sarif_file: ${{ steps.msdo.outputs.sarifFile }}

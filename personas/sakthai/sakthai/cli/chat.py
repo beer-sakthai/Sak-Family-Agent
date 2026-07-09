@@ -21,7 +21,8 @@ def _make_read_input() -> Callable[[], str | None]:
 
     def _read() -> str | None:
         try:
-            return session.prompt("> ")
+            line: str = session.prompt("> ")
+            return line
         except EOFError:
             return None
 
