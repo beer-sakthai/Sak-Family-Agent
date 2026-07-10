@@ -73,16 +73,6 @@ def _is_binary(part: str, names: str | tuple[str, ...]) -> bool:
         if re.match(pattern, basename):
             return True
     return False
-    """Return True if part matches any given binary names (exactly, as suffix, or with version)."""
-    if isinstance(names, str):
-        names = (names,)
-    basename = os.path.basename(part)
-    for name in names:
-        # Match name exactly, or name followed by a version number (e.g. python3, python3.11)
-        pattern = re.compile(rf"^{re.escape(name)}(?:[0-9]+(?:\.[0-9]+)*)?$")
-        if pattern.match(basename):
-            return True
-    return False
 
 
 # List of critical roots that should never be targeted by destructive commands.
@@ -194,31 +184,18 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
             part in ("-c", "-e")
             and i > 0
             and i + 1 < len(parts)
-            and _is_binary(parts[i - 1], ("python", "python3", "node", "perl", "ruby", "php"))
+            and _is_binary(parts[i - 1], ("python", "node", "perl", "ruby", "php"))
         ):
             script = parts[i + 1]
-            binary_name = os.path.basename(parts[i - 1])
             # Scan script for absolute or home-relative paths (including traversal)
             path_pattern = r"(?:/|~|(?:\.\./)+)[a-zA-Z0-9\._/-]+"
             for match in re.finditer(path_pattern, script):
                 candidate = match.group(0)
                 if _is_sensitive_path(candidate):
+                    binary_name = os.path.basename(parts[i - 1])
                     return GuardrailResult(
                         GuardrailAction.DENY,
                         reason=f"Potentially dangerous '{binary_name}' script targeting {candidate!r} blocked.",
-                    )
-            # Broader heuristic: sensitive roots or traversal embedded anywhere in
-            # the script string, which the path tokenizer above may have missed.
-            path_patterns = [
-                r"/(?:etc|bin|sbin|usr|var|root|boot|dev|home|sys|proc|tmp|lib|lib64)\b",
-                r"\.\./",
-                r"~/",
-            ]
-            for pattern in path_patterns:
-                if re.search(pattern, script):
-                    return GuardrailResult(
-                        GuardrailAction.DENY,
-                        reason=f"Potentially dangerous {binary_name!r} script blocked.",
                     )
 
     # 2. Prevent destructive or dangerous commands on sensitive paths.
