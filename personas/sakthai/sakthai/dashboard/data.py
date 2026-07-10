@@ -31,7 +31,7 @@ def _parse_team_roster() -> list[dict[str, str]]:
             line = line.strip()
             if not line:
                 continue
-            if "| Agent | Handle | Role | Model |" in line:
+            if "|Agent|Handle|Role|Model|" in line.replace(" ", ""):
                 in_table = True
                 continue
             if in_table:
@@ -67,8 +67,9 @@ def collect_dashboard_data(days: int = 30) -> dict[str, Any]:
             all_facts = store.list_facts(limit=1000)
             all_obs = store.top_observations(limit=200)
 
-            total_facts = len(all_facts)
-            total_obs = len(all_obs)
+            db_stats = store.stats()
+            total_facts = db_stats["facts"]["total"]
+            total_obs = db_stats["observations"]["total"]
 
             facts_delta = sum(1 for f in all_facts if f.created_at >= seven_days_ago_ts)
             obs_delta = sum(1 for o in all_obs if o.created_at >= seven_days_ago_ts)
@@ -98,6 +99,8 @@ def collect_dashboard_data(days: int = 30) -> dict[str, Any]:
             for lf in lead_facts:
                 try:
                     payload = json.loads(lf.value)
+                    if not isinstance(payload, dict):
+                        payload = {"query": str(payload)}
                 except (TypeError, ValueError):
                     payload = {"query": lf.value}
                 payload["id"] = lf.id
