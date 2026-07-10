@@ -155,6 +155,25 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
             except ValueError:
                 pass
 
+        # python -c "..." or node -e "..."
+        if (
+            part in ("-c", "-e")
+            and i > 0
+            and i + 1 < len(parts)
+            and _is_binary(parts[i - 1], ("python", "python3", "node"))
+        ):
+            script = parts[i + 1]
+            # Scan script for absolute or home-relative paths (including traversal)
+            path_pattern = r"(?:/|~|(?:\.\./)+)[a-zA-Z0-9\._/-]+"
+            for match in re.finditer(path_pattern, script):
+                candidate = match.group(0)
+                if _is_sensitive_path(candidate):
+                    binary_name = os.path.basename(parts[i - 1])
+                    return GuardrailResult(
+                        GuardrailAction.DENY,
+                        reason=f"Potentially dangerous '{binary_name}' script targeting {candidate!r} blocked.",
+                    )
+
     # 2. Prevent destructive or dangerous commands on sensitive paths.
     destructive_binaries = (
         "rm",
