@@ -22,7 +22,16 @@ logger = logging.getLogger(__name__)
 
 _DEFAULT_HOST = "127.0.0.1"
 _DEFAULT_PORT = 3001
-_STATIC_ROOT = (Path(__file__).resolve().parent.parent / "dashboard" / "dist").resolve()
+def _find_static_root() -> Path:
+    curr = Path(__file__).resolve().parent
+    for parent in [curr] + list(curr.parents):
+        candidate = parent / "dashboard" / "dist"
+        if candidate.is_dir():
+            return candidate.resolve()
+    return (Path(__file__).resolve().parents[4] / "dashboard" / "dist").resolve()
+
+
+_STATIC_ROOT = _find_static_root()
 
 
 def _dashboard_data(days: int = 30) -> dict[str, Any]:
@@ -113,14 +122,23 @@ class _Handler(SimpleHTTPRequestHandler):
             self._send_json(200, _ecosystem_status())
             return
 
+        if path.startswith("/api/"):
+            self.send_error(403, "Forbidden")
+            return
+
         # Fallback: static files from the dashboard dist root. The stdlib
         # handler serves relative to the current working directory (which
         # `serve()` points at `_STATIC_ROOT`), so canonicalise the request the
         # same way and confirm it stays within the static root before
         # delegating.
-        root = os.path.realpath(str(_STATIC_ROOT))
-        candidate = os.path.realpath(unquote(parsed.path).lstrip("/"))
-        if candidate != root and not candidate.startswith(root + os.sep):
+        try:
+            root = os.path.realpath(str(_STATIC_ROOT))
+            requested = unquote(parsed.path).lstrip("/\\")
+            candidate = os.path.realpath(os.path.join(root, requested))
+            if candidate != root and not candidate.startswith(root + os.sep):
+                self.send_error(403, "Forbidden")
+                return
+        except Exception:
             self.send_error(403, "Forbidden")
             return
         return super().do_GET()

@@ -45,6 +45,10 @@ def _client_with_module(module: str) -> object:
 )
 def test_detect_provider_scenarios(client, model, env, creds, expected, monkeypatch):
     """Test provider detection logic across various signals."""
+    # Start from a clean slate: host-machine env (e.g. OLLAMA_HOST or a real
+    # Gemini key) must not leak into the scenario being asserted.
+    for var in ("OLLAMA_HOST", "SAKTHAI_GATEWAY_URL", "GEMINI_API_KEY", "GOOGLE_API_KEY"):
+        monkeypatch.delenv(var, raising=False)
     for k, v in env.items():
         monkeypatch.setenv(k, v)
 
@@ -127,27 +131,47 @@ def test_detect_gateway_model_prefix(model: str) -> None:
 # -- detect_provider — env-var fallbacks (no client, no model hint) --------
 
 
-def test_detect_fallback_anthropic_key(monkeypatch: pytest.MonkeyPatch) -> None:
+@pytest.fixture(autouse=False)
+def _clear_host_credential_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Clear host-machine credential env that would shadow the fallback chain.
+
+    Detection prefers gateway/Ollama over the providers these tests assert,
+    so a developer machine with OLLAMA_HOST or SAKTHAI_GATEWAY_URL set would
+    otherwise leak into the tests.
+    """
+    monkeypatch.delenv("OLLAMA_HOST", raising=False)
+    monkeypatch.delenv("SAKTHAI_GATEWAY_URL", raising=False)
+
+
+def test_detect_fallback_anthropic_key(
+    monkeypatch: pytest.MonkeyPatch, _clear_host_credential_env: None
+) -> None:
     monkeypatch.delenv("GEMINI_API_KEY", raising=False)
     monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
     with patch("sakthai.agent.providers.anthropic_credential_source", return_value="env"):
         assert detect_provider(None, "unknown-model") == "anthropic"
 
 
-def test_detect_fallback_gemini_key(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_detect_fallback_gemini_key(
+    monkeypatch: pytest.MonkeyPatch, _clear_host_credential_env: None
+) -> None:
     monkeypatch.setenv("GEMINI_API_KEY", "key123")
     with patch("sakthai.agent.providers.anthropic_credential_source", return_value=None):
         assert detect_provider(None, "unknown-model") == "google"
 
 
-def test_detect_fallback_google_api_key(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_detect_fallback_google_api_key(
+    monkeypatch: pytest.MonkeyPatch, _clear_host_credential_env: None
+) -> None:
     monkeypatch.delenv("GEMINI_API_KEY", raising=False)
     monkeypatch.setenv("GOOGLE_API_KEY", "gkey")
     with patch("sakthai.agent.providers.anthropic_credential_source", return_value=None):
         assert detect_provider(None, "unknown-model") == "google"
 
 
-def test_detect_fallback_openai_credential(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_detect_fallback_openai_credential(
+    monkeypatch: pytest.MonkeyPatch, _clear_host_credential_env: None
+) -> None:
     monkeypatch.delenv("GEMINI_API_KEY", raising=False)
     monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
     with (
@@ -157,7 +181,9 @@ def test_detect_fallback_openai_credential(monkeypatch: pytest.MonkeyPatch) -> N
         assert detect_provider(None, "unknown-model") == "openai"
 
 
-def test_detect_fallback_gateway_credential(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_detect_fallback_gateway_credential(
+    monkeypatch: pytest.MonkeyPatch, _clear_host_credential_env: None
+) -> None:
     monkeypatch.delenv("GEMINI_API_KEY", raising=False)
     monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
     with (
@@ -168,7 +194,9 @@ def test_detect_fallback_gateway_credential(monkeypatch: pytest.MonkeyPatch) -> 
         assert detect_provider(None, "unknown-model") == "gateway"
 
 
-def test_detect_fallback_default_is_anthropic(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_detect_fallback_default_is_anthropic(
+    monkeypatch: pytest.MonkeyPatch, _clear_host_credential_env: None
+) -> None:
     monkeypatch.delenv("GEMINI_API_KEY", raising=False)
     monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
     with (

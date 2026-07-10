@@ -9,9 +9,14 @@ from rich.console import Console
 
 from .. import config
 from ..agent.chat import load_persona_soul, run_chat
-from ..agent.loop import DEFAULT_MODEL
 from ..memory.store import MemoryStore
 from .agent import _tool_context
+
+# Default chat to the fine-tuned SakThai model served locally by Ollama (model
+# tag "sakthai"), so `sakthai chat` runs free/offline. Override with
+# --provider/--model for cloud backends.
+DEFAULT_CHAT_PROVIDER = "ollama"
+DEFAULT_CHAT_MODEL = "sakthai"
 
 
 def _make_read_input() -> Callable[[], str | None]:
@@ -36,11 +41,13 @@ def _make_read_input() -> Callable[[], str | None]:
     show_default=True,
     help="Which Sak Family persona to chat with.",
 )
-@click.option("--model", default=DEFAULT_MODEL, show_default=True, help="Model identifier.")
+@click.option("--model", default=DEFAULT_CHAT_MODEL, show_default=True, help="Model identifier.")
 @click.option(
     "--provider",
     "-p",
     type=click.Choice(["anthropic", "google", "openai", "ollama", "gateway"]),
+    default=DEFAULT_CHAT_PROVIDER,
+    show_default=True,
     help="LLM provider backend.",
 )
 @click.option(
