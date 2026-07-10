@@ -217,3 +217,11 @@
 **Learning:** Command-line parsers for shells and interpreters often allow combining multiple short flags into a single token. Security guardrails must account for this by checking if the relevant flag (like `c` for command execution) is present in a combined flag group, typically as the last character if it takes an argument.
 
 **Prevention:** When inspecting tokens for flags that trigger subcommand execution, check if the token starts with a single hyphen and ends with the expected flag character. This ensures that combined flags are correctly identified before recursing into the command string.
+
+## 2026-07-22 - [Hardening Guardrails against Empty-Base Glob Bypasses]
+
+**Vulnerability:** Shell command guardrails could be bypassed by using empty-base wildcards (e.g., `rm *` or `rm ?`) when `allow_local=False`. The logic to extract `base_path` from a glob would result in an empty string, skipping the critical root checks and potentially allowing destructive operations on the current directory.
+
+**Learning:** Path validation for globs must explicitly handle the case where the glob starts with a wildcard character, especially when local path access is prohibited. Relying solely on prefix-based root checks is insufficient for protecting the current directory from broad wildcard deletions.
+
+**Prevention:** Harden `_is_sensitive_path` to return `True` if `allow_local` is `False` and the path contains wildcards but has an empty `base_path`. This ensures that patterns like `*` are correctly identified as targeting the local directory and blocked when destructive tools are used.
