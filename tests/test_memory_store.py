@@ -577,3 +577,66 @@ def test_import_snapshot_rollback_on_exception(store: MemoryStore) -> None:
             store.import_from_dict(snapshot, mode="merge")
     finally:
         store._conn = real_conn
+
+
+# -- dashboard aggregates --------------------------------------------------
+
+
+def test_dashboard_aggregates_rejects_unknown_table(store: MemoryStore) -> None:
+    with pytest.raises(ValueError, match="Invalid table"):
+        store.get_dashboard_aggregates("users; DROP TABLE facts", 100, 0, 0)
+
+
+def test_dashboard_aggregates_empty_table(store: MemoryStore) -> None:
+    res = store.get_dashboard_aggregates("facts", 100, 0, 0)
+    assert res["total"] == 0
+    assert res["this_week"] == 0
+    assert res["before_start"] == 0
+    assert res["bins"] == [0] * 30
+
+
+def test_dashboard_aggregates_counts_facts(store: MemoryStore) -> None:
+    import time as _time
+
+    store.add_fact("one")
+    store.add_fact("two")
+    now = int(_time.time())
+    week_ago = now - 7 * 86400
+    start = now - 86400  # window starting yesterday
+
+    res = store.get_dashboard_aggregates("facts", 100, start, week_ago)
+    assert res["total"] == 2
+    assert res["this_week"] == 2  # both created just now, after week_ago
+    assert res["before_start"] == 0  # nothing predates yesterday
+    # Both rows land in the first daily bin of the 30-day window.
+    assert res["bins"][0] == 2
+    assert sum(res["bins"]) == 2
+
+
+def test_dashboard_aggregates_respects_limit(store: MemoryStore) -> None:
+    for i in range(5):
+        store.add_fact(f"fact {i}")
+    res = store.get_dashboard_aggregates("facts", 3, 0, 0)
+    assert res["total"] == 3
+
+
+def test_dashboard_aggregates_observations_table(store: MemoryStore) -> None:
+    store.add_observation("obs one")
+    res = store.get_dashboard_aggregates("observations", 100, 0, 0)
+    assert res["total"] == 1
+
+
+def test_fact_kind_counts_groups_and_orders(store: MemoryStore) -> None:
+    store.add_fact("a", kind="note")
+    store.add_fact("b", kind="note")
+    store.add_fact("c", kind="lead")
+    counts = store.get_fact_kind_counts(limit=100)
+    assert counts == {"note": 2, "lead": 1}
+    assert list(counts)[0] == "note"  # highest count first
+
+
+def test_fact_kind_counts_respects_limit(store: MemoryStore) -> None:
+    for _ in range(4):
+        store.add_fact("x", kind="note")
+    counts = store.get_fact_kind_counts(limit=2)
+    assert counts == {"note": 2}

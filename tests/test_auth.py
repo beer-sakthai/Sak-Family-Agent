@@ -355,3 +355,67 @@ def test_resolve_local_returns_openai_creds_with_base_url(monkeypatch: pytest.Mo
     base, key = auth.resolve_local_credentials()
     assert base == "http://localhost:8080/v1"
     assert key == "local-key"
+
+
+# -- Antigravity CLI token (expiry parsing) --------------------------------
+
+
+def _write_antigravity_token(token: str, *, expiry: object = None) -> None:
+    ag_dir = Path(auth._gemini_dir()) / "antigravity-cli"
+    ag_dir.mkdir(parents=True, exist_ok=True)
+    token_info: dict[str, object] = {"access_token": token}
+    if expiry is not None:
+        token_info["expiry"] = expiry
+    (ag_dir / "antigravity-oauth-token").write_text(
+        json.dumps({"token": token_info}), encoding="utf-8"
+    )
+
+
+def test_antigravity_token_with_future_expiry_is_returned() -> None:
+    from datetime import UTC, datetime, timedelta
+
+    future = (datetime.now(UTC) + timedelta(hours=1)).isoformat()
+    _write_antigravity_token("ag-tok", expiry=future)
+    assert auth.load_gemini_cli_token() == "ag-tok"
+
+
+def test_antigravity_token_with_past_expiry_is_rejected() -> None:
+    from datetime import UTC, datetime, timedelta
+
+    past = (datetime.now(UTC) - timedelta(hours=1)).isoformat()
+    _write_antigravity_token("ag-tok", expiry=past)
+    assert auth.load_gemini_cli_token() is None
+
+
+def test_antigravity_token_with_unparseable_expiry_is_treated_as_valid() -> None:
+    _write_antigravity_token("ag-tok", expiry="not-a-timestamp")
+    assert auth.load_gemini_cli_token() == "ag-tok"
+
+
+def test_antigravity_token_without_expiry_is_treated_as_valid() -> None:
+    _write_antigravity_token("ag-tok")
+    assert auth.load_gemini_cli_token() == "ag-tok"
+
+
+def test_antigravity_token_with_naive_past_expiry_is_rejected() -> None:
+    # A naive ISO timestamp exercises the astimezone() normalisation branch.
+    _write_antigravity_token("ag-tok", expiry="2020-01-01T00:00:00")
+    assert auth.load_gemini_cli_token() is None
+
+
+# -- get_credential_source dispatcher ---------------------------------------
+
+
+def test_get_credential_source_dispatches_per_provider(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "k")
+    monkeypatch.setenv("GEMINI_API_KEY", "k")
+    monkeypatch.setenv("OPENAI_API_KEY", "k")
+    monkeypatch.setenv("OPENAI_BASE_URL", "http://127.0.0.1:1/v1")
+    monkeypatch.setenv("SAKTHAI_GATEWAY_URL", "http://gw.example/v1")
+    assert auth.get_credential_source("anthropic") == "api_key"
+    assert auth.get_credential_source("google") == "api_key"
+    assert auth.get_credential_source("openai") is not None
+    assert auth.get_credential_source("gateway") is not None
+    assert auth.get_credential_source("unknown-provider") is None

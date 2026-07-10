@@ -2,23 +2,16 @@
 
 from __future__ import annotations
 
-from pathlib import Path
+import runpy
 from unittest.mock import patch
-
-import sakthai.telegram
 
 
 def test_telegram_main_execution() -> None:
-    # Resolve absolute path to __main__.py
-    main_file = Path(sakthai.telegram.__file__).parent / "__main__.py"
-    code = main_file.read_text(encoding="utf-8")
+    """Running the module as __main__ invokes bot.main() exactly once.
 
-    # Run the script content with __name__ set to "__main__"
+    ``runpy`` (rather than ``exec`` on the file text) attributes the executed
+    lines to the real module file, so coverage sees them.
+    """
     with patch("sakthai.telegram.bot.main") as mock_main:
-        globals_dict = {
-            "__name__": "__main__",
-            "__package__": "sakthai.telegram",
-            "__builtins__": __builtins__,
-        }
-        exec(code, globals_dict)
-        mock_main.assert_called_once()
+        runpy.run_module("sakthai.telegram.__main__", run_name="__main__", alter_sys=False)
+    mock_main.assert_called_once()

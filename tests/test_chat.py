@@ -459,3 +459,33 @@ def test_chat_forwards_model_provider_caveman_and_skills(
     assert calls[0]["provider"] == "openai"
     assert calls[0]["caveman"] == "lite"
     assert calls[0]["with_skills"] == ("skill-a", "skill-b")
+
+
+# ---------------------------------------------------------------------------
+# _make_read_input — the prompt_toolkit-backed REPL reader
+# ---------------------------------------------------------------------------
+
+
+def test_make_read_input_returns_prompt_value(monkeypatch: pytest.MonkeyPatch) -> None:
+    import prompt_toolkit
+
+    class _FakeSession:
+        def prompt(self, text: str) -> str:
+            assert text == "> "
+            return "hello"
+
+    monkeypatch.setattr(prompt_toolkit, "PromptSession", _FakeSession)
+    read = chat_cli._make_read_input()
+    assert read() == "hello"
+
+
+def test_make_read_input_eof_returns_none(monkeypatch: pytest.MonkeyPatch) -> None:
+    import prompt_toolkit
+
+    class _EOFSession:
+        def prompt(self, text: str) -> str:
+            raise EOFError
+
+    monkeypatch.setattr(prompt_toolkit, "PromptSession", _EOFSession)
+    read = chat_cli._make_read_input()
+    assert read() is None

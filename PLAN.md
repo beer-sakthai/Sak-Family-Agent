@@ -47,6 +47,7 @@ never duplicate content across files.
 | **Plans audit & refresh** — standardized markers, cross-links, archived completed sub-plans | ✅ Done (2026-07-07) |
 | **Test Coverage Improvement** — 100% coverage on all previously untested modules, sync and eval Edge Cases | ✅ Done (2026-07-08) |
 | **Security hardening + free-local model policy** — memory metadata redaction, static-serving path canonicalisation, all agents default to local `sakthai`, handles standardized (PR #344) | ✅ Done (2026-07-10) |
+| **Test Coverage round 2** — dashboard data tests + injectable store, guardrail deny-path branches, MCP guardrail paths, auth expiry, store aggregates, small CLI/web/config gaps, guardrails added to mutation scope; coverage 95.4% → 98.3%, floor raised to 95 | ✅ Done (2026-07-10) |
 
 ## 📋 Sub-Plans
 
