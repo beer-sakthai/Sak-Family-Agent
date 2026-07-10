@@ -106,11 +106,13 @@ class _Handler(SimpleHTTPRequestHandler):
         # to WEB_DIR, so the stdlib handler resolves requests relative to it;
         # mirror that here, reject anything that canonicalises outside the root,
         # then delegate the actual read to SimpleHTTPRequestHandler (whose
-        # translate_path performs its own safe path handling).
+        # translate_path performs its own safe path handling). The
+        # realpath + startswith form is the sanitizer CodeQL recognizes.
         try:
-            root = WEB_DIR.resolve()
-            candidate = (root / unquote(parsed.path).lstrip("/\\")).resolve()
-            if not candidate.is_relative_to(root):
+            root = os.path.realpath(str(WEB_DIR))
+            requested = unquote(parsed.path).lstrip("/\\")
+            candidate = os.path.realpath(os.path.join(root, requested))
+            if candidate != root and not candidate.startswith(root + os.sep):
                 self.send_error(403, "Forbidden")
                 return
         except Exception:

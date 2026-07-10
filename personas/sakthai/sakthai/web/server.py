@@ -138,9 +138,10 @@ class _Handler(SimpleHTTPRequestHandler):
         # same way and confirm it stays within the static root before
         # delegating.
         try:
-            root = _STATIC_ROOT.resolve()
-            candidate = (root / unquote(parsed.path).lstrip("/\\")).resolve()
-            if not candidate.is_relative_to(root):
+            root = os.path.realpath(str(_STATIC_ROOT))
+            requested = unquote(parsed.path).lstrip("/\\")
+            candidate = os.path.realpath(os.path.join(root, requested))
+            if candidate != root and not candidate.startswith(root + os.sep):
                 self.send_error(403, "Forbidden")
                 return
         except Exception:
