@@ -146,6 +146,23 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
             except ValueError:
                 pass
 
+        # python -c "..." or node -e "..."
+        if (
+            part in ("-c", "-e")
+            and i > 0
+            and i + 1 < len(parts)
+            and _is_binary(parts[i - 1], ("python", "python3", "node"))
+        ):
+            script_content = parts[i + 1]
+            for match in re.finditer(r"(?:/|~|(?:\.\./)+)[a-zA-Z0-9\._/-]+", script_content):
+                path = match.group()
+                if _is_sensitive_path(path):
+                    binary_name = os.path.basename(parts[i - 1])
+                    return GuardrailResult(
+                        GuardrailAction.DENY,
+                        reason=f"Potentially dangerous '{binary_name}' script targeting {path!r} blocked.",
+                    )
+
     # 2. Prevent destructive or dangerous commands on sensitive paths.
     dangerous_binaries = (
         "rm",
@@ -204,11 +221,11 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
         # We look for redirection operators (>, >>, 1>, 2>, &>, >&, >|, <, etc.)
         # Pattern: optional digit or '&', then '&>>', '>>', '>&', '>|', '<>', '<&', '>', or '<'
         # Note: longer operators must come before shorter ones to match correctly.
-        match = re.search(r"(?:[0-9]|&)?(?:&>>|>>|>&|>\||<>|<&|>|<)", part)
-        if match:
+        r_match = re.search(r"(?:[0-9]|&)?(?:&>>|>>|>&|>\||<>|<&|>|<)", part)
+        if r_match:
             # If the operator is at the end of the token or attached to its front,
             # we need to find the target path.
-            target = part[match.end() :]
+            target = part[r_match.end() :]
             if not target and i + 1 < len(parts):
                 target = parts[i + 1]
 
