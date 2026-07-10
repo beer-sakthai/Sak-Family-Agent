@@ -233,8 +233,8 @@ Ensure you have Python 3.11+ and `uv` installed.
 | 🆓 Validate setup for free | `uv run sakthai run "task" --dry-run` (resolves provider/creds/model/tools, no API call) |
 | 📦 Run in a Docker sandbox | `uv run sakthai run "task" --sandbox` |
 | 🧠 Save a fact | `uv run sakthai learn "fact" (--kind --key --tag)` |
-| 🔎 Search memory | `uv run sakthai recall "query"` / `sakthai memory search` |
-| 📋 Inspect memory | `uv run sakthai memory show` / `sakthai memory stats` |
+| 🔎 Search memory | `uv run sakthai recall "query"` / `uv run sakthai memory search` |
+| 📋 Inspect memory | `uv run sakthai memory show` / `uv run sakthai memory stats` |
 | 🧹 Maintain memory | `uv run sakthai memory export\|import\|backup\|consolidate\|deduplicate\|healthcheck` |
 | 🔁 Sync memory (multi-agent) | `uv run sakthai memory sync\|pull` |
 | 🔌 Serve MCP | `uv run sakthai mcp` |
@@ -245,9 +245,9 @@ Ensure you have Python 3.11+ and `uv` installed.
 | 🧩 Extensions (git bundles) | `uv run sakthai extensions add\|list\|remove` |
 | 📈 Eval / MLOps metrics | `uv run sakthai eval` |
 | 🤗 Hugging Face Hub | `uv run sakthai hf info\|download <repo_id>` |
-| 🩺 System health | `uv run sakthai doctor` / `sakthai status` / `sakthai setup` / `sakthai tools` |
+| 🩺 System health | `uv run sakthai doctor` / `uv run sakthai status` / `uv run sakthai setup` / `uv run sakthai tools` |
 | 🧪 Test suite | `uv run pytest tests/ -q` |
-| 🧼 Lint / format / types | `ruff check personas/sakthai/sakthai tests` · `ruff format --check personas/sakthai/sakthai tests` · `mypy personas/sakthai/sakthai` |
+| 🧼 Lint / format / types | `uv run ruff check personas/sakthai/sakthai tests` · `uv run ruff format --check personas/sakthai/sakthai tests` · `uv run mypy personas/sakthai/sakthai` |
 | 🔐 Security scan | `uv run bandit -c pyproject.toml -r personas/sakthai/sakthai` |
 
 ---
