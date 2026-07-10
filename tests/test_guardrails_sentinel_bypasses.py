@@ -45,9 +45,7 @@ class TestGuardrailsBypass(unittest.TestCase):
         # env rm -rf /etc
         args = {"command": "env rm -rf /etc"}
         result = _block_dangerous_shell_commands(self.tool, args, self.store)
-        self.assertEqual(
-            result.action, GuardrailAction.DENY, "env rm -rf /etc should be blocked"
-        )
+        self.assertEqual(result.action, GuardrailAction.DENY, "env rm -rf /etc should be blocked")
 
     def test_env_with_vars_bypass(self):
         # env FOO=BAR rm -rf /etc
@@ -61,9 +59,7 @@ class TestGuardrailsBypass(unittest.TestCase):
         # rsync /etc/shadow ...
         args = {"command": "rsync /etc/shadow /tmp/exfil"}
         result = _block_dangerous_shell_commands(self.tool, args, self.store)
-        self.assertEqual(
-            result.action, GuardrailAction.DENY, "rsync /etc/shadow should be blocked"
-        )
+        self.assertEqual(result.action, GuardrailAction.DENY, "rsync /etc/shadow should be blocked")
 
     def test_tar_bypass(self):
         # tar -cf out.tar /etc/shadow
@@ -85,9 +81,7 @@ class TestGuardrailsBypass(unittest.TestCase):
         # bash /etc/shadow
         args = {"command": "bash /etc/shadow"}
         result = _block_dangerous_shell_commands(self.tool, args, self.store)
-        self.assertEqual(
-            result.action, GuardrailAction.DENY, "bash /etc/shadow should be blocked"
-        )
+        self.assertEqual(result.action, GuardrailAction.DENY, "bash /etc/shadow should be blocked")
 
 
 if __name__ == "__main__":
