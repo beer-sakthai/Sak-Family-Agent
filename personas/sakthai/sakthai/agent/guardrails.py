@@ -59,6 +59,20 @@ def _block_run_command_if_not_allowed(
 
 
 def _is_binary(part: str, names: str | tuple[str, ...]) -> bool:
+    """Return True if part matches any of the given binary names (exactly or as path suffix).
+
+    Handles versioned binaries (e.g. python3, python3.11) using regex matching.
+    """
+    if isinstance(names, str):
+        names = (names,)
+
+    basename = os.path.basename(part)
+    for name in names:
+        # Match exactly 'name' or 'name' followed by a version (e.g. python3, python3.11).
+        pattern = rf"^{re.escape(name)}(?:[0-9]+(?:\.[0-9]+)*)?$"
+        if re.match(pattern, basename):
+            return True
+    return False
     """Return True if part matches any given binary names (exactly, as suffix, or with version)."""
     if isinstance(names, str):
         names = (names,)
@@ -213,6 +227,10 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
                     )
 
     # 2. Prevent destructive or dangerous commands on sensitive paths.
+    dangerous_binaries = (
+        "rm", "chmod", "mv", "cp", "ln", "tee", "chown", "chgrp", "sed", "curl",
+        "wget", "cat", "grep", "head", "tail", "strings", "nc", "netcat", "python",
+        "node", "awk", "perl", "ruby", "php", "base64",
     destructive_binaries = (
         "rm",
         "chmod",
@@ -250,7 +268,13 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
         "sort",
         "diff",
     )
+    # Common interpreters where sensitive paths can be embedded in arguments.
+    interpreters = ("python", "node", "awk", "perl", "ruby", "php", "sed", "grep")
+
     for i, part in enumerate(parts):
+        if _is_binary(part, dangerous_binaries):
+            binary_name = os.path.basename(part)
+            is_interpreter = _is_binary(part, interpreters)
         is_dest = _is_binary(part, destructive_binaries)
         is_exfil = _is_binary(part, exfiltration_binaries)
         if is_dest or is_exfil:
@@ -258,6 +282,8 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
             for subpart in parts[i + 1 :]:
                 if subpart in (";", "&&", "||", "|"):
                     break
+                # Direct path check or embedded path check for interpreters.
+                if _is_sensitive_path(subpart) or (context_sensitive and subpart in ("{}", "+")):
                 # For destructive binaries, we don't allow targeting the current directory.
                 # For exfiltration binaries, we allow targeting the current directory.
                 allow_local = is_exfil
@@ -271,6 +297,14 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
                         reason=f"Potentially dangerous '{binary_name}' command on {subpart!r} blocked."
                         if not is_dest
                         else f"Potentially destructive '{binary_name}' command on {subpart!r} blocked.",
+                    )
+                if is_interpreter and re.search(
+                    r"(?:/etc|/root|/bin|/sbin|/usr|/var|/boot|/dev|/home|/sys|/proc|/tmp|/lib|/lib64)(?:/|$)|~|\.\.",
+                    subpart,
+                ):
+                    return GuardrailResult(
+                        GuardrailAction.DENY,
+                        reason=f"Potentially dangerous '{binary_name}' command with sensitive path in arguments blocked.",
                     )
 
     # 3. Specialized protection for dd (input/output file).
