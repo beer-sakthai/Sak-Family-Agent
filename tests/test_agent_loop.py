@@ -362,6 +362,10 @@ def test_detect_provider_openai(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("ANTHROPIC_AUTH_TOKEN", raising=False)
     monkeypatch.delenv("GEMINI_API_KEY", raising=False)
     monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
+    # Credential detection prefers Ollama/gateway when these are set on the
+    # host, which would shadow the openai fallback this test asserts.
+    monkeypatch.delenv("OLLAMA_HOST", raising=False)
+    monkeypatch.delenv("SAKTHAI_GATEWAY_URL", raising=False)
 
     import sakthai.auth
 

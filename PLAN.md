@@ -46,6 +46,7 @@ never duplicate content across files.
 | Restructure — move servicequotebot scaffold from personas/ to services/ | ✅ Done (2026-07-06) |
 | **Plans audit & refresh** — standardized markers, cross-links, archived completed sub-plans | ✅ Done (2026-07-07) |
 | **Test Coverage Improvement** — 100% coverage on all previously untested modules, sync and eval Edge Cases | ✅ Done (2026-07-08) |
+| **Security hardening + free-local model policy** — memory metadata redaction, static-serving path canonicalisation, all agents default to local `sakthai`, handles standardized (PR #344) | ✅ Done (2026-07-10) |
 
 ## 📋 Sub-Plans
 

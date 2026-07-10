@@ -72,3 +72,11 @@ gen_tool_call.sh
 process_batch.sh
 gen_batch_json.py
 gen_tool.py
+
+# Secrets — never commit OAuth/credential caches (added after security review)
+.jules/cache/
+**/oauth_creds.json
+**/*_creds.json
+
+# Security-audit scratch (Gemini SAST working notes)
+.gemini_security/

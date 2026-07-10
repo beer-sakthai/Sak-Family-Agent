@@ -98,14 +98,24 @@ class _Handler(SimpleHTTPRequestHandler):
             self._json(200, _ecosystem_status())
             return
 
+        if path.startswith("/api/"):
+            self.send_error(403, "Forbidden")
+            return
+
         # Serve static files from web/ (path-traversal safe). `serve()` chdir's
         # to WEB_DIR, so the stdlib handler resolves requests relative to it;
         # mirror that here, reject anything that canonicalises outside the root,
         # then delegate the actual read to SimpleHTTPRequestHandler (whose
-        # translate_path performs its own safe path handling).
-        root = os.path.realpath(str(WEB_DIR))
-        candidate = os.path.realpath(unquote(parsed.path).lstrip("/\\"))
-        if candidate != root and not candidate.startswith(root + os.sep):
+        # translate_path performs its own safe path handling). The
+        # realpath + startswith form is the sanitizer CodeQL recognizes.
+        try:
+            root = os.path.realpath(str(WEB_DIR))
+            requested = unquote(parsed.path).lstrip("/\\")
+            candidate = os.path.realpath(os.path.join(root, requested))
+            if candidate != root and not candidate.startswith(root + os.sep):
+                self.send_error(403, "Forbidden")
+                return
+        except Exception:
             self.send_error(403, "Forbidden")
             return
         return super().do_GET()
