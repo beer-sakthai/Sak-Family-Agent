@@ -71,6 +71,26 @@ def _is_binary(part: str, names: str | tuple[str, ...]) -> bool:
     return False
 
 
+# List of critical roots that should never be targeted by destructive commands.
+_CRITICAL_ROOTS = {
+    "/etc",
+    "/bin",
+    "/sbin",
+    "/usr",
+    "/var",
+    "/root",
+    "/boot",
+    "/dev",
+    "/home",
+    "/sys",
+    "/proc",
+    "/tmp",  # nosec B108 — allowlisting the root path for protection, not for temp file creation
+    "/lib",
+    "/lib64",
+}
+
+
+def _is_sensitive_path(path: str) -> bool:
 def _is_sensitive_path(path: str, allow_local: bool = False) -> bool:
     """Return True if the path targets a sensitive system directory or uses traversal."""
     # Check for path traversal or home-relative paths.
@@ -97,6 +117,23 @@ def _is_sensitive_path(path: str, allow_local: bool = False) -> bool:
         if _is_sensitive_path(val):
             return True
 
+    # Strengthen check against shell wildcards (globbing).
+    # If the path contains wildcards, we check if its prefix (before the first wildcard)
+    # could target a sensitive directory.
+    if any(c in path for c in "*?[]"):
+        # Strip trailing wildcards to check the base path.
+        base_path = re.split(r"[*?\[\]]", path, maxsplit=1)[0]
+        if base_path:
+            # If base_path itself is sensitive, block.
+            if _is_sensitive_path(base_path):
+                return True
+            # If base_path is a prefix of any critical root (e.g. /et matching /etc),
+            # it is also potentially sensitive if it is not just "/".
+            if base_path != "/":
+                for root in _CRITICAL_ROOTS:
+                    if root.startswith(base_path):
+                        return True
+
     # Normalize the path to collapse redundant slashes and dots.
     # Note: os.path.normpath preserves a leading '//' on some systems, so we
     # explicitly collapse it for comparison.
@@ -107,24 +144,7 @@ def _is_sensitive_path(path: str, allow_local: bool = False) -> bool:
     if normalized.startswith("/"):
         if normalized == "/":
             return True
-        # List of critical roots that should never be targeted by destructive commands.
-        critical_roots = {
-            "/etc",
-            "/bin",
-            "/sbin",
-            "/usr",
-            "/var",
-            "/root",
-            "/boot",
-            "/dev",
-            "/home",
-            "/sys",
-            "/proc",
-            "/tmp",  # nosec B108 — allowlisting the root path for protection, not for temp file creation
-            "/lib",
-            "/lib64",
-        }
-        return any(normalized == c or normalized.startswith(c + "/") for c in critical_roots)
+        return any(normalized == c or normalized.startswith(c + "/") for c in _CRITICAL_ROOTS)
     return False
 
 
@@ -155,11 +175,29 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
             except ValueError:
                 pass
 
+        # interpreter -c "script" or interpreter -e "script"
         # python -c "..." or node -e "..."
         if (
             part in ("-c", "-e")
             and i > 0
             and i + 1 < len(parts)
+            and _is_binary(parts[i - 1], ("python", "python3", "node", "perl", "ruby", "php"))
+        ):
+            script = parts[i + 1]
+            # Simple heuristic: look for anything that looks like an absolute path,
+            # home-relative path, or path traversal in the script string.
+            # This is broader than _is_sensitive_path because scripts use these as strings.
+            path_patterns = [
+                r"/(?:etc|bin|sbin|usr|var|root|boot|dev|home|sys|proc|tmp|lib|lib64)\b",
+                r"\.\./",
+                r"~/",
+            ]
+            for pattern in path_patterns:
+                if re.search(pattern, script):
+                    binary_name = os.path.basename(parts[i - 1])
+                    return GuardrailResult(
+                        GuardrailAction.DENY,
+                        reason=f"Potentially dangerous {binary_name!r} script blocked.",
             and _is_binary(parts[i - 1], ("python", "python3", "node"))
         ):
             script = parts[i + 1]
@@ -194,6 +232,8 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
         "head",
         "tail",
         "strings",
+        "base64",
+        "awk",
         "nc",
         "netcat",
         "python",
