@@ -181,10 +181,13 @@ def _collect(store: MemoryStore, days: int) -> dict[str, Any]:
         # Or simply sum all active monthly subscriptions
         rev_type = payload.get("type", "setup").lower()
         if rev_type in ("monthly", "subscription"):
-            # Check if within last 30 days
+            # Check if within last 30 days. Compare date objects against the
+            # UTC calendar day (the module stamps dates in UTC): naive
+            # datetime.now() would skew by the host timezone, and an unbounded
+            # `<= 30 days` would count future-dated entries (negative delta).
             try:
-                f_date = datetime.strptime(date_str, "%Y-%m-%d")
-                if datetime.now() - f_date <= timedelta(days=30):
+                f_date = datetime.strptime(date_str, "%Y-%m-%d").date()
+                if timedelta(0) <= datetime.now(UTC).date() - f_date <= timedelta(days=30):
                     mrr += amount
             except Exception:
                 # Fallback to created_at check

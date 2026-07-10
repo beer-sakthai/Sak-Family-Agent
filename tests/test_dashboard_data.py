@@ -140,6 +140,22 @@ def test_mrr_excludes_monthly_revenue_older_than_30_days(store: MemoryStore) -> 
     assert data["servicequotebot"]["total_revenue"] == 100.0
 
 
+def test_mrr_excludes_future_dated_monthly_revenue(store: MemoryStore) -> None:
+    # A future date must not count toward MRR (a negative delta would slip
+    # through an unbounded `<= 30 days` comparison).
+    _add_revenue(store, client="A", amount=100.0, type="monthly", date=_days_ago(-60))
+    data = collect_dashboard_data(store=store)
+    assert data["servicequotebot"]["mrr"] == 0.0
+    assert data["servicequotebot"]["total_revenue"] == 100.0
+
+
+def test_mrr_includes_monthly_revenue_dated_today_and_30_days_ago(store: MemoryStore) -> None:
+    _add_revenue(store, client="A", amount=100.0, type="monthly", date=_days_ago(0))
+    _add_revenue(store, client="B", amount=25.0, type="monthly", date=_days_ago(30))
+    data = collect_dashboard_data(store=store)
+    assert data["servicequotebot"]["mrr"] == 125.0
+
+
 def test_mrr_excludes_setup_revenue(store: MemoryStore) -> None:
     _add_revenue(store, client="A", amount=100.0, type="setup", date=_days_ago(1))
     data = collect_dashboard_data(store=store)
