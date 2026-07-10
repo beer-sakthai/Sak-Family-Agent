@@ -75,10 +75,32 @@ def _is_binary(part: str, names: str | tuple[str, ...]) -> bool:
     return False
 
 
-def _is_sensitive_path(path: str) -> bool:
+# List of critical roots that should never be targeted by destructive commands.
+_CRITICAL_ROOTS = {
+    "/etc",
+    "/bin",
+    "/sbin",
+    "/usr",
+    "/var",
+    "/root",
+    "/boot",
+    "/dev",
+    "/home",
+    "/sys",
+    "/proc",
+    "/tmp",  # nosec B108 — allowlisting the root path for protection, not for temp file creation
+    "/lib",
+    "/lib64",
+}
+
+
+def _is_sensitive_path(path: str, allow_local: bool = False) -> bool:
     """Return True if the path targets a sensitive system directory or uses traversal."""
     # Check for path traversal or home-relative paths.
     if ".." in path or path.startswith("~"):
+        return True
+
+    if not allow_local and path in (".", "./"):
         return True
 
     # Support checking flags with values like --directory=/etc
@@ -88,15 +110,31 @@ def _is_sensitive_path(path: str) -> bool:
             return True
 
     # Support checking short flags with attached paths like -o/etc/passwd or -o~/key
-    if (
-        len(path) > 2
-        and path.startswith("-")
-        and path[1] != "-"
-        and (path[2] == "/" or path[2] == "~")
-    ):
-        val = path[2:]
-        if _is_sensitive_path(val):
-            return True
+    # This also catches cases like -xf/etc/shadow by searching for the first / or ~
+    if path.startswith("-") and not path.startswith("--"):
+        for i, char in enumerate(path):
+            if char in ("/", "~"):
+                val = path[i:]
+                if _is_sensitive_path(val):
+                    return True
+                break
+
+    # Strengthen check against shell wildcards (globbing).
+    # If the path contains wildcards, we check if its prefix (before the first wildcard)
+    # could target a sensitive directory.
+    if any(c in path for c in "*?[]"):
+        # Strip trailing wildcards to check the base path.
+        base_path = re.split(r"[*?\[\]]", path, maxsplit=1)[0]
+        if base_path:
+            # If base_path itself is sensitive, block.
+            if _is_sensitive_path(base_path):
+                return True
+            # If base_path is a prefix of any critical root (e.g. /et matching /etc),
+            # it is also potentially sensitive if it is not just "/".
+            if base_path != "/":
+                for root in _CRITICAL_ROOTS:
+                    if root.startswith(base_path):
+                        return True
 
     # Normalize the path to collapse redundant slashes and dots.
     # Note: os.path.normpath preserves a leading '//' on some systems, so we
@@ -108,24 +146,7 @@ def _is_sensitive_path(path: str) -> bool:
     if normalized.startswith("/"):
         if normalized == "/":
             return True
-        # List of critical roots that should never be targeted by destructive commands.
-        critical_roots = {
-            "/etc",
-            "/bin",
-            "/sbin",
-            "/usr",
-            "/var",
-            "/root",
-            "/boot",
-            "/dev",
-            "/home",
-            "/sys",
-            "/proc",
-            "/tmp",  # nosec B108 — allowlisting the root path for protection, not for temp file creation
-            "/lib",
-            "/lib64",
-        }
-        return any(normalized == c or normalized.startswith(c + "/") for c in critical_roots)
+        return any(normalized == c or normalized.startswith(c + "/") for c in _CRITICAL_ROOTS)
     return False
 
 
@@ -156,57 +177,13 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
             except ValueError:
                 pass
 
+        # interpreter -c "script" or interpreter -e "script"
         # python -c "..." or node -e "..."
         if (
             part in ("-c", "-e")
             and i > 0
             and i + 1 < len(parts)
-            and _is_binary(parts[i - 1], ("python", "python3", "node"))
-        ):
-            script_content = parts[i + 1]
-            for match in re.finditer(r"(?:/|~|(?:\.\./)+)[a-zA-Z0-9\._/-]+", script_content):
-                path = match.group()
-                if _is_sensitive_path(path):
-                    binary_name = os.path.basename(parts[i - 1])
-                    return GuardrailResult(
-                        GuardrailAction.DENY,
-                        reason=f"Potentially dangerous '{binary_name}' script targeting {path!r} blocked.",
-    # 2. Prevent destructive or dangerous commands on sensitive paths.
-    dangerous_binaries = (
-        "rm", "chmod", "mv", "cp", "ln", "tee", "chown", "chgrp", "sed", "curl",
-        "wget", "cat", "grep", "head", "tail", "strings", "nc", "netcat", "python",
-        "node", "awk", "perl", "ruby", "php", "base64",
-    )
-    # Common interpreters where sensitive paths can be embedded in arguments.
-    interpreters = ("python", "node", "awk", "perl", "ruby", "php", "sed", "grep")
-
-    for i, part in enumerate(parts):
-        if _is_binary(part, dangerous_binaries):
-            binary_name = os.path.basename(part)
-            is_interpreter = _is_binary(part, interpreters)
-            # Inspect tokens following the binary until a separator is hit.
-            for subpart in parts[i + 1 :]:
-                if subpart in (";", "&&", "||", "|"):
-                    break
-                # Direct path check or embedded path check for interpreters.
-                if _is_sensitive_path(subpart) or (context_sensitive and subpart in ("{}", "+")):
-                    return GuardrailResult(
-                        GuardrailAction.DENY,
-                        reason=f"Potentially dangerous '{binary_name}' command on {subpart!r} blocked.",
-                    )
-                if is_interpreter and re.search(
-                    r"(?:/etc|/root|/bin|/sbin|/usr|/var|/boot|/dev|/home|/sys|/proc|/tmp|/lib|/lib64)(?:/|$)|~|\.\.",
-                    subpart,
-                ):
-                    return GuardrailResult(
-                        GuardrailAction.DENY,
-                        reason=f"Potentially dangerous '{binary_name}' command with sensitive path in arguments blocked.",
-        # python -c "..." or node -e "..."
-        if (
-            part in ("-c", "-e")
-            and i > 0
-            and i + 1 < len(parts)
-            and _is_binary(parts[i - 1], ("python", "python3", "node"))
+            and _is_binary(parts[i - 1], ("python", "node", "perl", "ruby", "php"))
         ):
             script = parts[i + 1]
             # Scan script for absolute or home-relative paths (including traversal)
@@ -221,7 +198,7 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
                     )
 
     # 2. Prevent destructive or dangerous commands on sensitive paths.
-    dangerous_binaries = (
+    destructive_binaries = (
         "rm",
         "chmod",
         "mv",
@@ -231,6 +208,8 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
         "chown",
         "chgrp",
         "sed",
+    )
+    exfiltration_binaries = (
         "curl",
         "wget",
         "cat",
@@ -238,23 +217,78 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
         "head",
         "tail",
         "strings",
+        "base64",
+        "awk",
         "nc",
         "netcat",
         "python",
-        "python3",
         "node",
+        "perl",
+        "ruby",
+        "php",
+        "more",
+        "less",
+        "hexdump",
+        "od",
+        "sort",
+        "diff",
+        "tar",
+        "rsync",
+        "zip",
+        "unzip",
+        "7z",
+        "scp",
+        "sftp",
+        "bash",
+        "sh",
+        "zsh",
+        "dash",
     )
+    # Common interpreters where sensitive paths can be embedded in arguments.
+    interpreters = (
+        "python",
+        "node",
+        "awk",
+        "perl",
+        "ruby",
+        "php",
+        "sed",
+        "grep",
+        "bash",
+        "sh",
+        "zsh",
+        "dash",
+    )
+
     for i, part in enumerate(parts):
-        if _is_binary(part, dangerous_binaries):
+        is_dest = _is_binary(part, destructive_binaries)
+        is_exfil = _is_binary(part, exfiltration_binaries)
+        if is_dest or is_exfil:
+            binary_name = os.path.basename(part)
+            is_interpreter = _is_binary(part, interpreters)
             # Inspect tokens following the binary until a separator is hit.
             for subpart in parts[i + 1 :]:
                 if subpart in (";", "&&", "||", "|"):
                     break
-                if _is_sensitive_path(subpart) or (context_sensitive and subpart in ("{}", "+")):
-                    binary_name = os.path.basename(part)
+                # For destructive binaries, we don't allow targeting the current directory.
+                # For exfiltration binaries, we allow targeting the current directory.
+                allow_local = is_exfil
+                if _is_sensitive_path(subpart, allow_local=allow_local) or (
+                    context_sensitive and subpart in ("{}", "+")
+                ):
                     return GuardrailResult(
                         GuardrailAction.DENY,
-                        reason=f"Potentially dangerous '{binary_name}' command on {subpart!r} blocked.",
+                        reason=f"Potentially dangerous '{binary_name}' command on {subpart!r} blocked."
+                        if not is_dest
+                        else f"Potentially destructive '{binary_name}' command on {subpart!r} blocked.",
+                    )
+                if is_interpreter and re.search(
+                    r"(?:/etc|/root|/bin|/sbin|/usr|/var|/boot|/dev|/home|/sys|/proc|/tmp|/lib|/lib64)(?:/|$)|~|\.\.",
+                    subpart,
+                ):
+                    return GuardrailResult(
+                        GuardrailAction.DENY,
+                        reason=f"Potentially dangerous '{binary_name}' command with sensitive path in arguments blocked.",
                     )
 
     # 3. Specialized protection for dd (input/output file).
@@ -265,7 +299,12 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
                     break
                 if subpart.startswith("of=") or subpart.startswith("if="):
                     val = subpart[3:]
-                    if _is_sensitive_path(val) or (context_sensitive and val in ("{}", "+")):
+                    # of= targets are destructive; don't allow local path.
+                    # if= targets are potentially dangerous; allow local path.
+                    allow_local = subpart.startswith("if=")
+                    if _is_sensitive_path(val, allow_local=allow_local) or (
+                        context_sensitive and val in ("{}", "+")
+                    ):
                         binary_name = os.path.basename(part)
                         op = "destructive" if subpart.startswith("of=") else "potentially dangerous"
                         return GuardrailResult(
@@ -283,11 +322,6 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
             # If the operator is at the end of the token or attached to its front,
             # we need to find the target path.
             target = part[r_match.end() :]
-        match = re.search(r"(?:[0-9]|&)?(?:&>>|>>|>&|>\||<>|<&|>|<)", part)
-        if match:
-            # If the operator is at the end of the token or attached to its front,
-            # we need to find the target path.
-            target = part[match.end() :]
             if not target and i + 1 < len(parts):
                 target = parts[i + 1]
 
@@ -313,37 +347,25 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
                 # should be skipped, not cause the whole check to stop.
                 if part.startswith("-"):
                     continue
-                if _is_sensitive_path(part) or (context_sensitive and part in ("{}", "+")):
+                # find -delete is destructive; don't allow local path.
+                if _is_sensitive_path(part, allow_local=False) or (
+                    context_sensitive and part in ("{}", "+")
+                ):
                     return GuardrailResult(
                         GuardrailAction.DENY,
                         reason=f"destructive 'find -delete' on {part!r} blocked.",
                     )
 
-    # 6. Handle wrappers that don't use -c (sudo, doas, xargs, find -exec)
+    # 6. Handle wrappers that don't use -c (sudo, doas, xargs, env, find -exec)
     for i, part in enumerate(parts):
-    for i, part in enumerate(parts):
-        if _is_binary(part, "find"):
-            find_idx = i
-            break
-    if find_idx != -1:
-        after_find = parts[find_idx + 1 :]
-        if "-delete" in after_find:
-            for part in after_find:
-                # Flags like -L, -H (global options) or expression flags (like -name)
-                # should be skipped, not cause the whole check to stop.
-                if part.startswith("-"):
-                    continue
-                if _is_sensitive_path(part) or (context_sensitive and part in ("{}", "+")):
-                    return GuardrailResult(
-                        GuardrailAction.DENY,
-                        reason=f"destructive 'find -delete' on {part!r} blocked.",
-                    )
-
-    # 6. Handle wrappers that don't use -c (sudo, doas, xargs, find -exec)
-    for i, part in enumerate(parts):
-        # sudo command ... or doas command ... or xargs command ...
-        if _is_binary(part, ("sudo", "doas", "xargs")):
-            res = _check_destructive_tokens(parts[i + 1 :], context_sensitive=context_sensitive)
+        # sudo command ... or doas command ... or xargs command ... or env [VAR=VAL] command ...
+        if _is_binary(part, ("sudo", "doas", "xargs", "env")):
+            # env might have arguments like VAR=VAL before the command.
+            start_idx = i + 1
+            if _is_binary(part, "env"):
+                while start_idx < len(parts) and "=" in parts[start_idx]:
+                    start_idx += 1
+            res = _check_destructive_tokens(parts[start_idx:], context_sensitive=context_sensitive)
             if res.action == GuardrailAction.DENY:
                 return res
         # find ... -exec/ok command ...
@@ -363,8 +385,12 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
 
             # Heuristic: if find's target is sensitive, set context_sensitive.
             targets_sensitive = False
-            for p in parts[:i]:
-                if _is_sensitive_path(p):
+            # Search for find targets (tokens starting find's search) between find and -exec.
+            for p in parts[find_idx + 1 : i]:
+                if p.startswith("-"):
+                    continue
+                # For find's targets, we allow local path unless it's destructive.
+                if _is_sensitive_path(p, allow_local=True):
                     targets_sensitive = True
                     break
 

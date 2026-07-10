@@ -110,15 +110,14 @@ def _is_sensitive_path(path: str, allow_local: bool = False) -> bool:
             return True
 
     # Support checking short flags with attached paths like -o/etc/passwd or -o~/key
-    if (
-        len(path) > 2
-        and path.startswith("-")
-        and path[1] != "-"
-        and (path[2] == "/" or path[2] == "~")
-    ):
-        val = path[2:]
-        if _is_sensitive_path(val):
-            return True
+    # This also catches cases like -xf/etc/shadow by searching for the first / or ~
+    if path.startswith("-") and not path.startswith("--"):
+        for i, char in enumerate(path):
+            if char in ("/", "~"):
+                val = path[i:]
+                if _is_sensitive_path(val):
+                    return True
+                break
 
     # Strengthen check against shell wildcards (globbing).
     # If the path contains wildcards, we check if its prefix (before the first wildcard)
@@ -233,9 +232,33 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
         "od",
         "sort",
         "diff",
+        "tar",
+        "rsync",
+        "zip",
+        "unzip",
+        "7z",
+        "scp",
+        "sftp",
+        "bash",
+        "sh",
+        "zsh",
+        "dash",
     )
     # Common interpreters where sensitive paths can be embedded in arguments.
-    interpreters = ("python", "node", "awk", "perl", "ruby", "php", "sed", "grep")
+    interpreters = (
+        "python",
+        "node",
+        "awk",
+        "perl",
+        "ruby",
+        "php",
+        "sed",
+        "grep",
+        "bash",
+        "sh",
+        "zsh",
+        "dash",
+    )
 
     for i, part in enumerate(parts):
         is_dest = _is_binary(part, destructive_binaries)
@@ -333,11 +356,16 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
                         reason=f"destructive 'find -delete' on {part!r} blocked.",
                     )
 
-    # 6. Handle wrappers that don't use -c (sudo, doas, xargs, find -exec)
+    # 6. Handle wrappers that don't use -c (sudo, doas, xargs, env, find -exec)
     for i, part in enumerate(parts):
-        # sudo command ... or doas command ... or xargs command ...
-        if _is_binary(part, ("sudo", "doas", "xargs")):
-            res = _check_destructive_tokens(parts[i + 1 :], context_sensitive=context_sensitive)
+        # sudo command ... or doas command ... or xargs command ... or env [VAR=VAL] command ...
+        if _is_binary(part, ("sudo", "doas", "xargs", "env")):
+            # env might have arguments like VAR=VAL before the command.
+            start_idx = i + 1
+            if _is_binary(part, "env"):
+                while start_idx < len(parts) and "=" in parts[start_idx]:
+                    start_idx += 1
+            res = _check_destructive_tokens(parts[start_idx:], context_sensitive=context_sensitive)
             if res.action == GuardrailAction.DENY:
                 return res
         # find ... -exec/ok command ...
@@ -357,8 +385,11 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
 
             # Heuristic: if find's target is sensitive, set context_sensitive.
             targets_sensitive = False
-            for p in parts[:i]:
-                # For find's targets, we allow local path unless it's destructive (handled below)
+            # Search for find targets (tokens starting find's search) between find and -exec.
+            for p in parts[find_idx + 1 : i]:
+                if p.startswith("-"):
+                    continue
+                # For find's targets, we allow local path unless it's destructive.
                 if _is_sensitive_path(p, allow_local=True):
                     targets_sensitive = True
                     break
