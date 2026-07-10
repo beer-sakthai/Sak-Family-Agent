@@ -88,8 +88,8 @@ class TestGuardrailsBypass(unittest.TestCase):
         bypass_cmds = [
             'bash -xc "rm -rf /etc"',
             'sh -ec "rm -rf /etc"',
-            'python3 -ic "import os; os.remove(\'/etc/passwd\')"',
-            'node -pe "require(\'fs\').readFileSync(\'/etc/shadow\')"',
+            "python3 -ic \"import os; os.remove('/etc/passwd')\"",
+            "node -pe \"require('fs').readFileSync('/etc/shadow')\"",
         ]
         for cmd in bypass_cmds:
             args = {"command": cmd}
