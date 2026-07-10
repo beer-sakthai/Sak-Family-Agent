@@ -209,3 +209,11 @@
 **Learning:** Using overly high version numbers for community or official actions can lead to infrastructure-level failures as runners fail to resolve the action reference. Always use established, stable major versions (e.g., `@v4` for checkout) unless a specific new feature is required and verified to exist.
 
 **Prevention:** Audit workflow files regularly to ensure action versions match the current stable releases provided by maintainers. Avoid "future-proofing" by inflating version numbers.
+
+## 2026-07-21 - [Hardening Guardrails against Combined Flag Bypasses]
+
+**Vulnerability:** Shell and interpreter guardrails could be bypassed by combining the command execution flag with other short flags (e.g., `bash -xc` or `python3 -ic`). The previous logic only checked for exact matches like `-c`.
+
+**Learning:** Command-line parsers for shells and interpreters often allow combining multiple short flags into a single token. Security guardrails must account for this by checking if the relevant flag (like `c` for command execution) is present in a combined flag group, typically as the last character if it takes an argument.
+
+**Prevention:** When inspecting tokens for flags that trigger subcommand execution, check if the token starts with a single hyphen and ends with the expected flag character. This ensures that combined flags are correctly identified before recursing into the command string.
