@@ -139,9 +139,9 @@ root with `SAKTHAI_HOME`):
    - System: `doctor`, `setup`, `status`, `tools`
    - Eval: `eval` (inspect local model evaluation / MLOps metrics)
    - Hugging Face: `hf info|download <repo_id>`
-   - Note: there is **no `dashboard` CLI command** — it was fully removed
-     (`sakthai/dashboard/`, its CLI wiring, and its tests all deleted; only
-     stale `__pycache__` remnants remain). See the dashboard note under
+   - Note: there is **no `dashboard` CLI command** — the CLI wiring was
+     removed, but `sakthai/dashboard/data.py` (the KPI collection module used
+     by `web/server.py`) was later re-added. See the dashboard note under
      "Other subsystems" below.
 
 2. **Agent loop** — `sakthai run` drives a provider-agnostic tool-using loop
@@ -263,16 +263,14 @@ There is no `dashboard.py` here — see the dashboard note below.
   related_skills). `library/` has 31 curated skills across 11 categories;
   `skills/` has 70 user/extension skills. Skills are injected into the agent
   system prompt via `render_skills_prompt_block()`.
-- **Dashboard — removed, docs not yet reconciled.** `personas/sakthai/sakthai/dashboard/`
-  is now an empty package (no `data.py`, only stale `__pycache__`); the CLI's
-  `dashboard` command and all `test_dashboard_*` test files were deleted
-  (`1964dbf`, `5de2c25`). The repo-root `dashboard/` (Vite/npm project) still
-  exists and still builds to `dashboard/dist/` there, but `web/server.py`'s
-  `_STATIC_ROOT` resolves to `personas/sakthai/sakthai/dashboard/dist/` —
-  a **different path** — so a build produced by the root project is not
-  where the web server looks for it. Unclear whether this is leftover
-  mid-refactor breakage or an intentional split; don't guess at a fix without
-  checking with the user first.
+- **Dashboard — backend only.** The CLI's `dashboard` command and the
+  frontend (both the old in-package bundle and the repo-root Vite project)
+  are gone, but `personas/sakthai/sakthai/dashboard/data.py` was re-added:
+  it collects KPI/lead/revenue metrics from the memory store and is served by
+  `web/server.py`'s `/api/stages` endpoint (covered by
+  `tests/test_dashboard_data.py`). `_STATIC_ROOT` resolves to
+  `personas/sakthai/sakthai/dashboard/dist/`, which does not exist, so the
+  web server runs API-only and static requests fall through to 403/404.
 - **`extensions/install.py`** — clones skill/MCP bundles from git into
   `~/.sakthai/extensions`; `list`/`remove` manage installed bundles.
 - **`web/server.py`** — HTTP API server; optionally serves a pre-built static
@@ -321,7 +319,7 @@ Sak-Family-Agent/
 │   ├── cycle/                # Dream→Hope→Care→Joy→Trust→Growth state machine
 │   ├── learn/                # capture.py one-shot fact entry
 │   ├── extensions/           # install.py (git-based bundle installer)
-│   ├── dashboard/            # empty (removed); see "Other subsystems" dashboard note
+│   ├── dashboard/            # data.py KPI collection (no CLI/frontend); see dashboard note
 │   └── web/                  # HTTP server stub
 ├── tests/                    # hermetic test suite, no network
 ├── library/                  # 31 curated skills in 11 categories
@@ -336,7 +334,7 @@ Sak-Family-Agent/
 
 ## Tests
 
-Tests live in `tests/` (60 files, ~15,780 lines). All tests are hermetic — no
+Tests live in `tests/` (70 files, ~17,900 lines). All tests are hermetic — no
 network, no GCP credentials. Integration tests that may hit real endpoints
 (Ollama, Anthropic) are marked `@pytest.mark.integration` and self-skip when
 credentials/endpoints are absent; CI excludes them with `-m "not integration"`.

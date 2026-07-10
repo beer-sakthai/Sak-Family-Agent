@@ -267,3 +267,43 @@ def test_persona_names_lists_all_six() -> None:
         "saktan",
         "sakjules",
     )
+
+
+def test_telegram_allowed_user_ids_skips_invalid_chunks(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("TELEGRAM_ALLOWED_USER_IDS", "123, junk, 456")
+    assert config.telegram_allowed_user_ids() == [123, 456]
+
+
+def test_telegram_allowed_user_ids_empty_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("TELEGRAM_ALLOWED_USER_IDS", "   ")
+    assert config.telegram_allowed_user_ids() == []
+
+
+def test_system_prompt_prefix_prefers_inline(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("SAKTHAI_SYSTEM_PROMPT", "inline prompt")
+    monkeypatch.setenv("SAKTHAI_SYSTEM_PROMPT_FILE", "/does/not/matter")
+    assert config.sakthai_system_prompt_prefix() == "inline prompt"
+
+
+def test_system_prompt_prefix_reads_file(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    prompt = tmp_path / "prompt.txt"
+    prompt.write_text("  from file  \n", encoding="utf-8")
+    monkeypatch.delenv("SAKTHAI_SYSTEM_PROMPT", raising=False)
+    monkeypatch.setenv("SAKTHAI_SYSTEM_PROMPT_FILE", str(prompt))
+    assert config.sakthai_system_prompt_prefix() == "from file"
+
+
+def test_system_prompt_prefix_unreadable_file_returns_none(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delenv("SAKTHAI_SYSTEM_PROMPT", raising=False)
+    monkeypatch.setenv("SAKTHAI_SYSTEM_PROMPT_FILE", str(tmp_path / "missing.txt"))
+    assert config.sakthai_system_prompt_prefix() is None
+
+
+def test_system_prompt_prefix_unset_returns_none(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("SAKTHAI_SYSTEM_PROMPT", raising=False)
+    monkeypatch.delenv("SAKTHAI_SYSTEM_PROMPT_FILE", raising=False)
+    assert config.sakthai_system_prompt_prefix() is None

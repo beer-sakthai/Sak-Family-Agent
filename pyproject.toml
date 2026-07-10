@@ -61,10 +61,10 @@ branch = true
 [tool.coverage.report]
 show_missing = true
 skip_covered = false
-# Floor sits a few points below the current ~89% so it catches real
+# Floor sits a few points below the current ~98% so it catches real
 # regressions (e.g. a whole module silently dropping to 0%) without being
 # brittle. Raise it as coverage improves.
-fail_under = 85
+fail_under = 95
 
 [tool.ruff]
 line-length = 100
@@ -111,6 +111,7 @@ source_paths = [
     "personas/sakthai/sakthai/agent/loop.py",
     "personas/sakthai/sakthai/agent/tools.py",
     "personas/sakthai/sakthai/agent/registry.py",
+    "personas/sakthai/sakthai/agent/guardrails.py",
     "personas/sakthai/sakthai/mcp/server.py",
     "personas/sakthai/sakthai/mcp/client.py",
     "personas/sakthai/sakthai/auth.py",

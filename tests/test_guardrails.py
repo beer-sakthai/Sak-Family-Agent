@@ -145,3 +145,23 @@ def test_custom_rules_can_be_added(learn_tool: Tool, store: MemoryStore) -> None
     result = policy.check_pre_execution(learn_tool, {}, store)
     assert result.action == GuardrailAction.DENY
     assert result.reason == "custom rule"
+
+
+def test_policy_post_execution_deny_and_allow(learn_tool: Tool, store: MemoryStore) -> None:
+    """A denying post-rule blocks output; with no post rules the output passes."""
+
+    def deny_all(
+        _tool: Tool, _args: dict[str, Any], _output: str, _is_error: bool, _store: MemoryStore
+    ) -> Any:
+        from sakthai.agent.guardrails import GuardrailResult
+
+        return GuardrailResult(GuardrailAction.DENY, reason="post rule says no")
+
+    policy = GuardrailPolicy(post_rules=[deny_all])
+    result = policy.check_post_execution(learn_tool, {}, "output", False, store)
+    assert result.action == GuardrailAction.DENY
+    assert result.reason == "post rule says no"
+
+    permissive = GuardrailPolicy(post_rules=[])
+    result = permissive.check_post_execution(learn_tool, {}, "output", False, store)
+    assert result.action == GuardrailAction.ALLOW

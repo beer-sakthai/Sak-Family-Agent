@@ -285,3 +285,74 @@ def test_mcp_tools_list_schemas_have_required_fields(store: MemoryStore) -> None
         assert "description" in tool, f"tool {tool['name']!r} missing 'description'"
         assert "inputSchema" in tool, f"tool {tool['name']!r} missing 'inputSchema'"
         assert tool["inputSchema"]["type"] == "object"
+
+
+# ---------------------------------------------------------------------------
+# Guardrail integration: pre- and post-execution DENY through the MCP surface
+# ---------------------------------------------------------------------------
+
+
+def test_tools_call_pre_execution_guardrail_denies(
+    store: MemoryStore, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """run_command without SAKTHAI_SHELL_ALLOW is denied before execution."""
+    monkeypatch.delenv("SAKTHAI_SHELL_ALLOW", raising=False)
+    resp = handle_request(
+        {
+            "jsonrpc": "2.0",
+            "id": 20,
+            "method": "tools/call",
+            "params": {"name": "run_command", "arguments": {"command": "ls"}},
+        },
+        store,
+    )
+    assert resp["result"]["isError"] is True
+    assert "disabled" in resp["result"]["content"][0]["text"]
+
+
+def test_tools_call_post_execution_guardrail_denies(store: MemoryStore) -> None:
+    """A denying post-rule replaces the tool output with the denial reason."""
+    from sakthai.agent.guardrails import GuardrailAction, GuardrailPolicy, GuardrailResult
+
+    def deny_output(
+        _tool: Tool, _args: dict, _output: str, _is_error: bool, _store: MemoryStore
+    ) -> GuardrailResult:
+        return GuardrailResult(GuardrailAction.DENY, reason="output blocked by policy")
+
+    policy = GuardrailPolicy(post_rules=[deny_output])
+    resp = handle_request(
+        {
+            "jsonrpc": "2.0",
+            "id": 21,
+            "method": "tools/call",
+            "params": {"name": "learn", "arguments": {"value": "hi"}},
+        },
+        store,
+        policy=policy,
+    )
+    assert resp["result"]["isError"] is True
+    assert resp["result"]["content"][0]["text"] == "output blocked by policy"
+
+
+def test_tools_call_post_guardrail_default_reason(store: MemoryStore) -> None:
+    """A reasonless post-rule denial falls back to the generic message."""
+    from sakthai.agent.guardrails import GuardrailAction, GuardrailPolicy, GuardrailResult
+
+    def deny_silently(
+        _tool: Tool, _args: dict, _output: str, _is_error: bool, _store: MemoryStore
+    ) -> GuardrailResult:
+        return GuardrailResult(GuardrailAction.DENY)
+
+    policy = GuardrailPolicy(post_rules=[deny_silently])
+    resp = handle_request(
+        {
+            "jsonrpc": "2.0",
+            "id": 22,
+            "method": "tools/call",
+            "params": {"name": "learn", "arguments": {"value": "hi"}},
+        },
+        store,
+        policy=policy,
+    )
+    assert resp["result"]["isError"] is True
+    assert "denied by a guardrail" in resp["result"]["content"][0]["text"]

@@ -354,3 +354,84 @@ class TestEcosystemStatusPartialConfig:
     def test_cron_jobs_key_is_list(self) -> None:
         status = _ecosystem_status()
         assert isinstance(status.get("cron_jobs"), list)
+
+
+# ---------------------------------------------------------------------------
+# serve(), _find_static_root, and handler edge paths
+# ---------------------------------------------------------------------------
+
+
+class TestServe:
+    def test_serve_binds_and_returns_server(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        import sakthai.web.server as server_mod
+
+        # Point the static root at a non-directory so serve() skips chdir.
+        monkeypatch.setattr(server_mod, "_STATIC_ROOT", Path("/nonexistent/dist"))
+        srv = serve(host="127.0.0.1", port=0)
+        try:
+            assert srv.server_address[1] != 0
+        finally:
+            srv.server_close()
+
+    def test_serve_chdirs_into_existing_static_root(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        import sakthai.web.server as server_mod
+
+        static = tmp_path / "dist"
+        static.mkdir()
+        monkeypatch.chdir(tmp_path)  # teardown restores the original cwd
+        monkeypatch.setattr(server_mod, "_STATIC_ROOT", static)
+        srv = serve(host="127.0.0.1", port=0)
+        try:
+            assert Path(os.getcwd()) == static
+        finally:
+            srv.server_close()
+
+
+class TestFindStaticRoot:
+    def test_returns_first_dist_dir_walking_up(self, tmp_path: Path) -> None:
+        from sakthai.web.server import _find_static_root
+
+        dist = tmp_path / "dashboard" / "dist"
+        dist.mkdir(parents=True)
+        marker = tmp_path / "pkg" / "server.py"
+        marker.parent.mkdir()
+        marker.touch()
+        assert _find_static_root(start=marker) == dist.resolve()
+
+    def test_falls_back_relative_to_module_when_no_dist_found(self, tmp_path: Path) -> None:
+        from sakthai.web.server import _find_static_root
+
+        marker = tmp_path / "server.py"
+        marker.touch()
+        result = _find_static_root(start=marker)
+        assert result.name == "dist"
+
+
+class TestHandlerEdgePaths:
+    def test_address_string_returns_client_ip(self) -> None:
+        fake = MagicMock()
+        fake.client_address = ("203.0.113.9", 4242)
+        assert _Handler.address_string(fake) == "203.0.113.9"
+
+    def test_dashboard_data_generic_exception_yields_demo(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        import sys
+        import types as _types
+
+        broken = _types.ModuleType("sakthai.dashboard.data")
+
+        def _boom(days: int = 30) -> dict:
+            raise RuntimeError("collection failed")
+
+        broken.collect_dashboard_data = _boom  # type: ignore[attr-defined]
+        monkeypatch.setitem(sys.modules, "sakthai.dashboard.data", broken)
+        data = _dashboard_data()
+        assert data.get("source") == "demo"
+
+    def test_static_request_403_when_realpath_raises(self, api_base: str) -> None:
+        with patch("sakthai.web.server.os.path.realpath", side_effect=OSError("boom")):
+            status, _ = _get(f"{api_base}/index.html")
+        assert status == 403
