@@ -83,6 +83,23 @@ class TestGuardrailsBypass(unittest.TestCase):
         result = _block_dangerous_shell_commands(self.tool, args, self.store)
         self.assertEqual(result.action, GuardrailAction.DENY, "bash /etc/shadow should be blocked")
 
+    def test_combined_flags_bypass(self):
+        # Test combined flags for shells and interpreters
+        bypass_cmds = [
+            'bash -xc "rm -rf /etc"',
+            'sh -ec "rm -rf /etc"',
+            "python3 -ic \"import os; os.remove('/etc/passwd')\"",
+            "node -pe \"require('fs').readFileSync('/etc/shadow')\"",
+        ]
+        for cmd in bypass_cmds:
+            args = {"command": cmd}
+            result = _block_dangerous_shell_commands(self.tool, args, self.store)
+            self.assertEqual(
+                result.action,
+                GuardrailAction.DENY,
+                f"Combined flag bypass '{cmd}' should be blocked",
+            )
+
 
 if __name__ == "__main__":
     unittest.main()

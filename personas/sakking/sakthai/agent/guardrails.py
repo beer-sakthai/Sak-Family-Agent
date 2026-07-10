@@ -162,13 +162,17 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
 
     # 1. Handle nested commands in wrappers (recursion)
     for i, part in enumerate(parts):
-        # bash -c "..." or sh -c "..."
+        # bash -c "..." or sh -c "..." (including combined flags like -xc)
         if (
-            part == "-c"
+            part.startswith("-")
+            and not part.startswith("--")
             and i > 0
             and i + 1 < len(parts)
             and _is_binary(parts[i - 1], ("bash", "sh", "zsh", "dash"))
+            and part.endswith("c")
         ):
+            # In shlex.split, -c"script" becomes one token if no space.
+            # But usually it's -c script or -xc script.
             try:
                 nested = shlex.split(parts[i + 1])
                 res = _check_destructive_tokens(nested, context_sensitive=context_sensitive)
@@ -177,13 +181,15 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
             except ValueError:
                 pass
 
-        # interpreter -c "script" or interpreter -e "script"
+        # interpreter -c "script" or interpreter -e "script" (including combined flags like -ic or -pe)
         # python -c "..." or node -e "..."
         if (
-            part in ("-c", "-e")
+            part.startswith("-")
+            and not part.startswith("--")
             and i > 0
             and i + 1 < len(parts)
             and _is_binary(parts[i - 1], ("python", "node", "perl", "ruby", "php"))
+            and part.endswith(("c", "e"))
         ):
             script = parts[i + 1]
             # Scan script for absolute or home-relative paths (including traversal)
