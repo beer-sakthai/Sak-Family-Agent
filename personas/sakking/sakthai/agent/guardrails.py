@@ -135,6 +135,10 @@ def _is_sensitive_path(path: str, allow_local: bool = False) -> bool:
                 for root in _CRITICAL_ROOTS:
                     if root.startswith(base_path):
                         return True
+        elif not allow_local:
+            # If the path starts with a wildcard and local paths are not allowed,
+            # block it as it could target anything in the current directory.
+            return True
 
     # Normalize the path to collapse redundant slashes and dots.
     # Note: os.path.normpath preserves a leading '//' on some systems, so we
