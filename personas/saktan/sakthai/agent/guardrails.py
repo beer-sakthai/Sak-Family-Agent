@@ -403,8 +403,10 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
         # 5c. Block unauthorized discovery of sensitive system roots.
         # find [path...] [expression]
         for part in after_find:
-            if part.startswith("-") or part in (";", "&&", "||", "|"):
+            if part in (";", "&&", "||", "|"):
                 break
+            if part.startswith("-"):
+                continue
             if _is_sensitive_path(part, allow_local=True):
                 return GuardrailResult(
                     GuardrailAction.DENY,
