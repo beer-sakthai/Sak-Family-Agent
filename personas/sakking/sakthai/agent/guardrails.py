@@ -105,11 +105,13 @@ def _is_sensitive_path(path: str, allow_local: bool = False) -> bool:
             if sep == "@" and path.startswith("@"):
                 continue
             val = path.split(sep, 1)[1]
-            if val and val != path:
-                # Only recurse if the value looks like a path or a sensitive filename.
-                if val.startswith(("/", ".", "~")) or val == "memory.db":
-                    if _is_sensitive_path(val, allow_local=allow_local):
-                        return True
+            if (
+                val
+                and val != path
+                and (val.startswith(("/", ".", "~")) or val == "memory.db")
+                and _is_sensitive_path(val, allow_local=allow_local)
+            ):
+                return True
 
     # Strip curl-style file upload prefix if present at start.
     if path.startswith("@") and len(path) > 1:
