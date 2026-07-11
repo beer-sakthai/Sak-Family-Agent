@@ -497,6 +497,23 @@ def _enforce_verbose_listing(
     return GuardrailResult(GuardrailAction.ALLOW)
 
 
+def _block_sensitive_path_args(
+    tool: Tool, args: dict[str, Any], _store: MemoryStore
+) -> GuardrailResult:
+    """Deny any tool call that targets a sensitive path via its arguments."""
+    # run_command has its own specialized (and recursive) guardrails.
+    if tool.name == "run_command":
+        return GuardrailResult(GuardrailAction.ALLOW)
+
+    for key, value in args.items():
+        if isinstance(value, str) and _is_sensitive_path(value, allow_local=True):
+            return GuardrailResult(
+                GuardrailAction.DENY,
+                reason=f"Access to sensitive path {value!r} via argument {key!r} is blocked.",
+            )
+    return GuardrailResult(GuardrailAction.ALLOW)
+
+
 def _block_output_with_secrets(
     _tool: Tool,
     _args: dict[str, Any],
@@ -517,6 +534,7 @@ def _block_output_with_secrets(
 DEFAULT_PRE_RULES: list[PreGuardrailRule] = [
     _block_run_command_if_not_allowed,
     _block_dangerous_shell_commands,
+    _block_sensitive_path_args,
     _enforce_verbose_listing,
 ]
 
