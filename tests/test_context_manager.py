@@ -2,12 +2,21 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from unittest.mock import MagicMock
 
 from sakthai.agent.context_manager import ContextManager
 
 
-def test_context_manager_assemble_prompt() -> None:
+def test_context_manager_assemble_prompt(sakthai_home: Path) -> None:
+    # Plant a caveman skill so the caveman branch injects its body + directive
+    skill_dir = sakthai_home.parent / "gemini" / "extensions" / "caveman" / "skills" / "caveman"
+    skill_dir.mkdir(parents=True, exist_ok=True)
+    (skill_dir / "SKILL.md").write_text(
+        "---\nname: caveman\ndescription: test caveman desc\n---\n\nRespond terse.\n",
+        encoding="utf-8",
+    )
+
     # Set up mock memory provider
     mock_memory_provider = MagicMock()
     mock_memory_provider.system_prompt_block.return_value = "Mocked Memory block"
@@ -40,6 +49,7 @@ def test_context_manager_assemble_prompt() -> None:
     # Verify system prompt components
     assert "My prefix" in system_prompt
     assert "Mocked Memory block" in system_prompt
+    assert "Respond terse." in system_prompt
     assert "ACTIVE CAVEMAN LEVEL: ultra" in system_prompt
     assert "FAST-TRACK MODE" in system_prompt
 
