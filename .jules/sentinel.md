@@ -225,3 +225,11 @@
 **Learning:** Path validation for globs must explicitly handle the case where the glob starts with a wildcard character, especially when local path access is prohibited. Relying solely on prefix-based root checks is insufficient for protecting the current directory from broad wildcard deletions.
 
 **Prevention:** Harden `_is_sensitive_path` to return `True` if `allow_local` is `False` and the path contains wildcards but has an empty `base_path`. This ensures that patterns like `*` are correctly identified as targeting the local directory and blocked when destructive tools are used.
+
+## 2026-07-23 - [Hardening find Guardrails against Destructive fprint and Discovery]
+
+**Vulnerability:** The 'find' command's file-writing flags (-fprint, -fprint0, -fls, -fprintf) allowed overwriting sensitive system files. Additionally, 'find' could be used for unauthorized discovery of sensitive directories without being flagged.
+
+**Learning:** Specialized commands like 'find' have dual-use flags that can be used for both discovery and destruction. Generic exfiltration lists might intercept these commands prematurely, preventing more granular specialized logic from enforcing stricter path rules (like allow_local=False for deletions or writes).
+
+**Prevention:** Implement a dedicated, multi-stage scanner for complex tools like 'find'. First, check for destructive action flags (-delete, -fprint) with strict root protection (allow_local=False). Second, validate discovery paths with standard root protection (allow_local=True). Ensure these specialized tools are excluded from broader "interpreter" or "exfiltration" loops that might shadow the more specific security checks.
