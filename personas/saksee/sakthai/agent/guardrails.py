@@ -343,7 +343,7 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
                     reason=f"destructive redirection to {target!r} blocked.",
                 )
 
-    # 5. Prevent 'find -delete' on sensitive paths.
+    # 5. Specialized protection for find (discovery, -delete, -fprint).
     find_idx = -1
     for i, part in enumerate(parts):
         if _is_binary(part, "find"):
@@ -351,13 +351,24 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
             break
     if find_idx != -1:
         after_find = parts[find_idx + 1 :]
+
+        # 5a. Block destructive file-writing variants (-fprint, etc.)
+        for i, part in enumerate(after_find):
+            if part in ("-fprint", "-fprint0", "-fls", "-fprintf") and i + 1 < len(after_find):
+                target = after_find[i + 1]
+                if _is_sensitive_path(target, allow_local=False) or (
+                    context_sensitive and target in ("{}", "+")
+                ):
+                    return GuardrailResult(
+                        GuardrailAction.DENY,
+                        reason=f"destructive 'find {part}' on {target!r} blocked.",
+                    )
+
+        # 5b. Block destructive deletion (-delete) on sensitive paths.
         if "-delete" in after_find:
             for part in after_find:
-                # Flags like -L, -H (global options) or expression flags (like -name)
-                # should be skipped, not cause the whole check to stop.
                 if part.startswith("-"):
                     continue
-                # find -delete is destructive; don't allow local path.
                 if _is_sensitive_path(part, allow_local=False) or (
                     context_sensitive and part in ("{}", "+")
                 ):
@@ -365,6 +376,17 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
                         GuardrailAction.DENY,
                         reason=f"destructive 'find -delete' on {part!r} blocked.",
                     )
+
+        # 5c. Block unauthorized discovery of sensitive system roots.
+        # find [path...] [expression]
+        for part in after_find:
+            if part.startswith("-") or part in (";", "&&", "||", "|"):
+                break
+            if _is_sensitive_path(part, allow_local=True):
+                return GuardrailResult(
+                    GuardrailAction.DENY,
+                    reason=f"Potentially dangerous 'find' command on {part!r} blocked.",
+                )
 
     # 6. Handle wrappers that don't use -c (sudo, doas, xargs, env, find -exec)
     for i, part in enumerate(parts):
