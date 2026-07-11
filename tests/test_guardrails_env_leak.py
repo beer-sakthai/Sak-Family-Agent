@@ -1,4 +1,3 @@
-
 import unittest
 
 from sakthai.agent.guardrails import (
@@ -44,7 +43,10 @@ class TestGuardrailsEnvLeak(unittest.TestCase):
         # php -r "echo file_get_contents('/etc/shadow');" should be DENY
         args = {"command": "php -r \"echo file_get_contents('/etc/shadow');\""}
         result = _block_dangerous_shell_commands(self.tool, args, self.store)
-        self.assertEqual(result.action, GuardrailAction.DENY, "php -r with sensitive path should be blocked")
+        self.assertEqual(
+            result.action, GuardrailAction.DENY, "php -r with sensitive path should be blocked"
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
