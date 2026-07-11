@@ -49,8 +49,11 @@ jobs:
 
       - name: Run lm-evaluation-harness
         id: run_eval
+        env:
+          # Passed via env rather than interpolated into the script body, so
+          # the secret never appears in the rendered shell source.
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
-          export HF_TOKEN=${{ secrets.HF_TOKEN }}
           export RESULTS_DIR="eval-results"
           # Sanitize model name for use in filenames and IDs
           SANITIZED_MODEL_NAME=$(echo "${{ matrix.model }}" | tr '/' '_-')

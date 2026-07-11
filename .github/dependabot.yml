@@ -1,5 +1,5 @@
 # Dependabot keeps dependencies and pinned action versions current.
-# Three ecosystems live in this repo: Python (uv), the dashboard's npm
+# Three ecosystems live in this repo: Python (uv), the Playwright probe's npm
 # packages, and the GitHub Actions used by the workflows.
 version: 2
 updates:
@@ -13,9 +13,10 @@ updates:
       python-minor-patch:
         update-types: ["minor", "patch"]
 
-  # Dashboard frontend — dashboard/package.json + package-lock.json.
+  # Playwright accessibility probe — the only npm project with real
+  # dependencies (the old /dashboard tree no longer exists).
   - package-ecosystem: "npm"
-    directory: "/dashboard"
+    directory: "/infra/pw-poc"
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 5

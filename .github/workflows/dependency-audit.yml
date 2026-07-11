@@ -1,0 +1,37 @@
+# Audits the locked Python dependency set against known-vulnerability
+# databases (OSV / PyPI advisories). Dependabot proposes version bumps, but
+# nothing else in CI fails when a *current* pin has a published CVE — this
+# workflow closes that gap. Runs weekly, on dependency changes, and on demand.
+name: Dependency Audit
+
+on:
+  pull_request:
+    paths:
+      - "pyproject.toml"
+      - "uv.lock"
+      - ".github/workflows/dependency-audit.yml"
+  schedule:
+    - cron: "30 5 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  pip-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Export locked requirements
+        # --no-emit-project: audit third-party deps only, not the local package.
+        run: uv export --frozen --all-extras --no-emit-project --no-hashes -o requirements.txt
+
+      - name: Run pip-audit
+        # --no-deps is safe: uv export already emits the fully resolved,
+        # pinned dependency closure, so there is nothing left to resolve.
+        run: uvx pip-audit -r requirements.txt --disable-pip --no-deps
