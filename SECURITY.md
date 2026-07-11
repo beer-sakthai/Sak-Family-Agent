@@ -6,7 +6,7 @@ This document outlines the security posture of the Sak-Family-Agent project, inc
 
 These run automatically and are the controls actually enforced on this repository:
 
-| Gate | Workflow | What it covers |
+| Gate | Where it's defined | What it covers |
 |---|---|---|
 | Lint + static analysis | `ci.yml` | `ruff`, strict `mypy`, and `bandit` over the core `sakthai` package on every push/PR to `main` |
 | Secret scanning | `secret-scan.yml` | `gitleaks` over the full git history (config: `.gitleaks.toml`) on pushes to `main` and every pull request |
