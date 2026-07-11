@@ -248,3 +248,11 @@
 **Learning:** Positional arguments in many CLI tools can be preceded or interspersed with options. Heuristics that stop scanning at the first flag are unsafe and easily bypassed.
 
 **Prevention:** When scanning command arguments for sensitive paths, use `continue` to skip flags instead of `break`, ensuring all non-flag tokens are evaluated as potential targets.
+
+## 2026-07-25 - [Repository-wide Tool Argument Path Validation]
+
+**Vulnerability:** Tools like `read_file` or `ingest_document` could bypass security guardrails and access sensitive repository files (e.g., `.env`) because path-based protection was primarily implemented for shell commands.
+
+**Learning:** Security enforcement must happen at the generic tool boundary. Relying on per-tool or per-command-type validation leaves gaps as new tools are added or existing ones are used in unexpected ways.
+
+**Prevention:** Implement a universal pre-execution guardrail (`_block_sensitive_path_args`) that automatically scans all string arguments for all tools against the centralized `_is_sensitive_path` validator, providing defense-in-depth across the entire toolset.

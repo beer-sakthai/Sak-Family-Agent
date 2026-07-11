@@ -1,10 +1,16 @@
+import os
+import sys
 import unittest
 
+# Add the package to sys.path
+sys.path.insert(0, os.path.abspath("personas/sakthai"))
+
 from sakthai.agent.guardrails import (
+    DEFAULT_POLICY,
     GuardrailAction,
     _block_dangerous_shell_commands,
 )
-from sakthai.agent.tools import Tool
+from sakthai.agent.tools import Tool, tool_by_name
 from sakthai.memory.store import MemoryStore
 
 
@@ -46,6 +52,23 @@ class TestGuardrailsEnvLeak(unittest.TestCase):
         self.assertEqual(
             result.action, GuardrailAction.DENY, "php -r with sensitive path should be blocked"
         )
+
+    def test_read_file_env_blocked(self):
+        # read_file .env should now be DENY via _block_sensitive_path_args
+        tool = tool_by_name("read_file")
+        args = {"path": ".env"}
+        result = DEFAULT_POLICY.check_pre_execution(tool, args, self.store)
+        self.assertEqual(result.action, GuardrailAction.DENY)
+        self.assertIn(".env", result.reason)
+        self.assertIn("blocked", result.reason)
+
+    def test_ingest_document_env_blocked(self):
+        # ingest_document .env should now be DENY
+        tool = tool_by_name("ingest_document")
+        args = {"path": ".env"}
+        result = DEFAULT_POLICY.check_pre_execution(tool, args, self.store)
+        self.assertEqual(result.action, GuardrailAction.DENY)
+        self.assertIn(".env", result.reason)
 
 
 if __name__ == "__main__":

@@ -497,6 +497,28 @@ def _enforce_verbose_listing(
     return GuardrailResult(GuardrailAction.ALLOW)
 
 
+def _block_sensitive_path_args(
+    tool: Tool, args: dict[str, Any], _store: MemoryStore
+) -> GuardrailResult:
+    """Block any tool argument that targets a sensitive system path.
+
+    This provides a repository-wide safety net for all tools (like `read_file`
+    or `ingest_document`) that use path arguments but aren't explicitly
+    guarded by the specialized `run_command` rules.
+    """
+    # run_command has its own deep, recursive guardrail logic.
+    if tool.name == "run_command":
+        return GuardrailResult(GuardrailAction.ALLOW)
+
+    for key, value in args.items():
+        if isinstance(value, str) and _is_sensitive_path(value, allow_local=True):
+            return GuardrailResult(
+                GuardrailAction.DENY,
+                reason=f"Access to {value!r} via tool {tool.name!r} (argument {key!r}) is blocked for security.",
+            )
+    return GuardrailResult(GuardrailAction.ALLOW)
+
+
 def _block_output_with_secrets(
     _tool: Tool,
     _args: dict[str, Any],
@@ -518,6 +540,7 @@ DEFAULT_PRE_RULES: list[PreGuardrailRule] = [
     _block_run_command_if_not_allowed,
     _block_dangerous_shell_commands,
     _enforce_verbose_listing,
+    _block_sensitive_path_args,
 ]
 
 # Default set of rules to check *after* a tool is executed.
