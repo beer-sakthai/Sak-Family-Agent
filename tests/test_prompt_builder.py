@@ -23,11 +23,6 @@ def test_render_skills_prompt_block() -> None:
     # but we can verify it contains or processes the input names/block correctly.
     assert isinstance(block, str)
 
-    # Render with caveman
-    block_caveman = render_skills_prompt_block([skill1, skill2], caveman="lite")
-    assert "ACTIVE CAVEMAN LEVEL: lite" in block_caveman
-    assert "Respond using the rules of lite level strictly." in block_caveman
-
 
 def test_render_skills_prompt_block_caveman_skill_body_injected(sakthai_home: Path) -> None:
     skill_dir = sakthai_home.parent / "gemini" / "extensions" / "caveman" / "skills" / "caveman"
@@ -54,7 +49,7 @@ def test_render_skills_prompt_block_caveman_skill_missing_warns(
     with caplog.at_level("WARNING", logger="sakthai.agent.prompt_builder"):
         block = render_skills_prompt_block([], caveman="full")
 
-    assert "ACTIVE CAVEMAN LEVEL: full" in block
+    assert "ACTIVE CAVEMAN LEVEL: full" not in block
     assert any("Caveman skill not found" in rec.message for rec in caplog.records)
 
 

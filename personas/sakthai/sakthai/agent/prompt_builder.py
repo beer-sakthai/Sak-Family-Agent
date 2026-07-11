@@ -32,17 +32,14 @@ def render_skills_prompt_block(skills: Sequence[SkillInfo], caveman: str | None 
     block = _render_skills(names)
 
     if caveman:
-        level_directive = (
-            f"ACTIVE CAVEMAN LEVEL: {caveman}\nRespond using the rules of {caveman} level strictly."
-        )
         caveman_skill = find_skill("caveman", *default_skill_roots())
         if caveman_skill:
-            block += f"\n\n{caveman_skill.body}\n\n{level_directive}"
-        else:
-            logger.warning(
-                "Caveman skill not found; injecting the level directive without skill instructions."
+            block += (
+                f"\n\n{caveman_skill.body}\n\nACTIVE CAVEMAN LEVEL: {caveman}\n"
+                f"Respond using the rules of {caveman} level strictly."
             )
-            block += f"\n\n{level_directive}"
+        else:
+            logger.warning("Caveman skill not found; compression mode disabled.")
 
     return block
 
