@@ -96,18 +96,39 @@ _CRITICAL_ROOTS = {
 
 def _is_sensitive_path(path: str, allow_local: bool = False) -> bool:
     """Return True if the path targets a sensitive system directory or uses traversal."""
+    # Support checking flags or arguments with values like --file=/etc or field=@.env
+    # Note: we only split if the result isn't the same as the original,
+    # and for '@' we only consider it a separator if it's not the first character
+    # (to distinguish it from a curl @path prefix).
+    for sep in ("=", "@"):
+        if sep in path:
+            if sep == "@" and path.startswith("@"):
+                continue
+            val = path.split(sep, 1)[1]
+            if val and val != path:
+                # Only recurse if the value looks like a path or a sensitive filename.
+                if val.startswith(("/", ".", "~")) or val == "memory.db":
+                    if _is_sensitive_path(val, allow_local=allow_local):
+                        return True
+
+    # Strip curl-style file upload prefix if present at start.
+    if path.startswith("@") and len(path) > 1:
+        path = path[1:]
+
     # Check for path traversal or home-relative paths.
     if ".." in path or path.startswith("~"):
         return True
 
-    if not allow_local and path in (".", "./"):
+    # Block access to repository-sensitive files and directories (.env, .git, memory.db).
+    normalized = os.path.normpath(path)
+    basename = os.path.basename(normalized)
+    if basename == ".env" or basename.startswith(".env.") or basename == "memory.db":
+        return True
+    if ".git" in normalized.split(os.sep) or ".jules" in normalized.split(os.sep):
         return True
 
-    # Support checking flags with values like --directory=/etc
-    if "=" in path and path.startswith("-"):
-        _, val = path.split("=", 1)
-        if _is_sensitive_path(val):
-            return True
+    if not allow_local and path in (".", "./"):
+        return True
 
     # Support checking short flags with attached paths like -o/etc/passwd or -o~/key
     # This also catches cases like -xf/etc/shadow by searching for the first / or ~
@@ -193,7 +214,7 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
             and i > 0
             and i + 1 < len(parts)
             and _is_binary(parts[i - 1], ("python", "node", "perl", "ruby", "php"))
-            and part.endswith(("c", "e"))
+            and part.endswith(("c", "e", "r", "p", "E"))
         ):
             script = parts[i + 1]
             # Scan script for absolute or home-relative paths (including traversal)

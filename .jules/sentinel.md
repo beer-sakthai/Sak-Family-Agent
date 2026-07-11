@@ -233,3 +233,11 @@
 **Learning:** Specialized commands like 'find' have dual-use flags that can be used for both discovery and destruction. Generic exfiltration lists might intercept these commands prematurely, preventing more granular specialized logic from enforcing stricter path rules (like allow_local=False for deletions or writes).
 
 **Prevention:** Implement a dedicated, multi-stage scanner for complex tools like 'find'. First, check for destructive action flags (-delete, -fprint) with strict root protection (allow_local=False). Second, validate discovery paths with standard root protection (allow_local=True). Ensure these specialized tools are excluded from broader "interpreter" or "exfiltration" loops that might shadow the more specific security checks.
+
+## 2026-07-24 - [Protecting Repository-Sensitive Files and Hardening Argument Decomposition]
+
+**Vulnerability:** Repository-sensitive files such as `.env`, `.git/config`, `.jules/`, and `memory.db` were vulnerable to exfiltration via direct commands (e.g., `cat .env`) or advanced tool flags (e.g., `curl -F file=@.env`). Additionally, certain interpreter execution flags (like `php -r`) were not monitored, allowing arbitrary code execution bypasses.
+
+**Learning:** Guardrails focusing primarily on system-critical roots (`/etc`, `/root`) miss application-specific sensitive data stored in the repository or home directory. Furthermore, tool-specific argument syntax (like `curl`'s `@` prefix for file uploads) can be used to target sensitive files if the guardrail does not correctly decompose and validate argument values.
+
+**Prevention:** Explicitly block access to repository-sensitive filenames and directories within the path validation logic. Harden `_is_sensitive_path` to recognize and decompose value separators (like `=` and `@`) in command arguments, ensuring that target values are recursively validated as paths. Expand interpreter flag detection to include all common one-liner execution variants (e.g., `-r`, `-p`, `-E`).
