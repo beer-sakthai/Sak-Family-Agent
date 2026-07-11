@@ -100,6 +100,20 @@ class TestGuardrailsBypass(unittest.TestCase):
                 f"Combined flag bypass '{cmd}' should be blocked",
             )
 
+    def test_find_global_options_bypass(self):
+        # find -L /etc should be blocked
+        args = {"command": "find -L /etc"}
+        result = _block_dangerous_shell_commands(self.tool, args, self.store)
+        self.assertEqual(result.action, GuardrailAction.DENY, "find -L /etc should be blocked")
+
+    def test_find_delete_global_options_bypass(self):
+        # find -L /etc -delete should be blocked
+        args = {"command": "find -L /etc -delete"}
+        result = _block_dangerous_shell_commands(self.tool, args, self.store)
+        self.assertEqual(
+            result.action, GuardrailAction.DENY, "find -L /etc -delete should be blocked"
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
