@@ -34,10 +34,10 @@ jobs:
       score: ${{ steps.run_eval.outputs.score }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
@@ -79,7 +79,7 @@ jobs:
           echo "sanitized_task_name=$SANITIZED_TASK_NAME" >> $GITHUB_OUTPUT
 
       - name: Upload evaluation results
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v4
         with:
           name: evaluation-results-${{ steps.run_eval.outputs.sanitized_model_name }}-${{ steps.run_eval.outputs.sanitized_task_name }}
           path: eval-results/
@@ -109,7 +109,7 @@ jobs:
 
       - name: Post comparison to Slack
         if: success() # Only post if the summary build succeeds
-        uses: slackapi/slack-github-action@v3.0.5
+        uses: slackapi/slack-github-action@v3.0.3
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         with:
@@ -117,7 +117,7 @@ jobs:
 
       - name: Upload baseline results artifact (on main branch)
         if: github.ref == 'refs/heads/main' && success()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v4
         with:
           name: baseline-results-main
           path: results.json
