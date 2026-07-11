@@ -8,6 +8,7 @@ import logging
 from collections.abc import Sequence
 from typing import TYPE_CHECKING
 
+from ..skills import default_skill_roots, find_skill
 from ..skills import render_skills_prompt_block as _render_skills
 
 if TYPE_CHECKING:
@@ -31,10 +32,14 @@ def render_skills_prompt_block(skills: Sequence[SkillInfo], caveman: str | None 
     block = _render_skills(names)
 
     if caveman:
-        # In a real implementation, this might load the caveman skill
-        # and append its instructions. For now, we'll just add a placeholder
-        # or simplified version if the caveman skill isn't easily accessible.
-        block += f"\n\nACTIVE CAVEMAN LEVEL: {caveman}\nRespond using the rules of {caveman} level strictly."
+        caveman_skill = find_skill("caveman", *default_skill_roots())
+        if caveman_skill:
+            block += (
+                f"\n\n{caveman_skill.body}\n\nACTIVE CAVEMAN LEVEL: {caveman}\n"
+                f"Respond using the rules of {caveman} level strictly."
+            )
+        else:
+            logger.warning("Caveman skill not found; compression mode disabled.")
 
     return block
 
