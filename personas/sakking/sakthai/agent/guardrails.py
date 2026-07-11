@@ -354,16 +354,15 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
 
         # 5a. Block destructive file-writing variants (-fprint, etc.)
         for i, part in enumerate(after_find):
-            if part in ("-fprint", "-fprint0", "-fls", "-fprintf"):
-                if i + 1 < len(after_find):
-                    target = after_find[i + 1]
-                    if _is_sensitive_path(target, allow_local=False) or (
-                        context_sensitive and target in ("{}", "+")
-                    ):
-                        return GuardrailResult(
-                            GuardrailAction.DENY,
-                            reason=f"destructive 'find {part}' on {target!r} blocked.",
-                        )
+            if part in ("-fprint", "-fprint0", "-fls", "-fprintf") and i + 1 < len(after_find):
+                target = after_find[i + 1]
+                if _is_sensitive_path(target, allow_local=False) or (
+                    context_sensitive and target in ("{}", "+")
+                ):
+                    return GuardrailResult(
+                        GuardrailAction.DENY,
+                        reason=f"destructive 'find {part}' on {target!r} blocked.",
+                    )
 
         # 5b. Block destructive deletion (-delete) on sensitive paths.
         if "-delete" in after_find:
