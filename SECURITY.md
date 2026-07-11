@@ -2,11 +2,25 @@
 
 This document outlines the security posture of the Sak-Family-Agent project, including our automated security measures and how to report vulnerabilities.
 
+## Enforced security gates (GitHub Actions)
+
+These run automatically and are the controls actually enforced on this repository:
+
+| Gate | Where it's defined | What it covers |
+|---|---|---|
+| Lint + static analysis | `ci.yml` | `ruff`, strict `mypy`, and `bandit` over the core `sakthai` package on every push/PR to `main` |
+| Secret scanning | `secret-scan.yml` | `gitleaks` over the full git history (config: `.gitleaks.toml`) on pushes to `main` and every pull request |
+| Dependency vulnerability audit | `dependency-audit.yml` | `pip-audit` over the locked dependency set (`uv.lock`) — weekly, on dependency changes, and on demand |
+| Code scanning (SAST) | CodeQL default setup | GitHub CodeQL analysis, managed in repository settings (no workflow file — do not add a conflicting `codeql.yml`) |
+| Multi-tool SAST | `ossar.yml` | Microsoft Security DevOps (MSDO), results uploaded to the Security tab |
+| Quality/security hotspots | `sonarcloud.yml`, `pylint.yml` | SonarCloud analysis and pylint |
+| Dependency updates | `.github/dependabot.yml` | Weekly update PRs for Python (uv), npm (`infra/pw-poc`), and pinned GitHub Actions versions |
+
 ## Intelligent Digital Immune System
 
-The security of this project is built on the concept of an "intelligent digital immune system." This is a proactive, self-healing approach to vulnerability management, designed to find and fix issues automatically and continuously.
+Beyond the enforced gates above, the project's longer-term security concept is an "intelligent digital immune system" — a proactive, self-healing approach to vulnerability management, designed to find and fix issues automatically and continuously.
 
-This system is orchestrated by a nightly GitHub Actions workflow (`.github/workflows/continuous-security.yml`) that executes the agent's own `devsecops` skill.
+This system is designed to be orchestrated by a nightly workflow that executes the agent's own `devsecops` skill. **Note:** that workflow currently lives at the repository root (`continuous-security.yml`), *outside* `.github/workflows/`, so it is **dormant** — GitHub never schedules it. Activating it is a deliberate decision (it spends LLM API credits nightly and requires the `ANTHROPIC_API_KEY` and `GH_PAT_FOR_ACTIONS` secrets); move it into `.github/workflows/` to turn it on.
 
 ### The Automated Security Workflow
 
@@ -15,7 +29,7 @@ The workflow consists of three main stages:
 1. **Proactive Scanning**:
     - The `devsecops` skill runs a suite of static analysis tools, including `ruff` for code quality and `bandit` for security vulnerabilities, across the entire codebase.
     - This process identifies potential bugs, security hotspots, and style issues.
-    - A dedicated `gitleaks` workflow (`.github/workflows/secret-scan.yml`) runs on every push and pull request to detect and prevent hardcoded secrets from being committed to the repository.
+    - A dedicated `gitleaks` workflow (`.github/workflows/secret-scan.yml`) runs on pushes to `main` and every pull request to detect and prevent hardcoded secrets from being committed to the repository.
 
 2. **Automated Triage and Patching**:
     - For each actionable vulnerability found, the agent triggers the `automated-vulnerability-patching` skill.

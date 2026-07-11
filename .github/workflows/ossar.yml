@@ -41,7 +41,9 @@ jobs:
 
       # Run open source static analysis tools
     - name: Run Microsoft Security DevOps
-      uses: microsoft/security-devops-action@latest
+      # Pinned to a release tag (not @latest) so the workflow can't silently
+      # pick up a compromised or breaking action version; Dependabot bumps it.
+      uses: microsoft/security-devops-action@v1.12.0
       id: msdo
       with:
         tools: eslint

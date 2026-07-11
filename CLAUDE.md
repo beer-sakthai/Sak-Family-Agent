@@ -108,11 +108,14 @@ make mutation                                # mutmut on core seam modules (slow
 CI (`.github/workflows/ci.yml`, via `uv sync --all-extras`) runs: lint (ruff
 check + format --check) → static analysis (mypy, bandit) → pytest with
 coverage, across Python **3.11 and 3.12**. A separate `pylint.yml` workflow
-runs pylint over the same `personas/sakthai/sakthai` + `tests` scope. **No
-gitleaks/secret-scan step and no smoke-test job are wired into any GitHub
-workflow**, despite `.gitleaks.toml` and
-`.claude/skills/run-sakthai-agent-v2/driver.py` existing in the repo — treat
-those as available tooling, not enforced CI gates. Run the lint→pytest
+runs pylint over the same `personas/sakthai/sakthai` + `tests` scope. A
+`secret-scan.yml` workflow runs gitleaks (config: `.gitleaks.toml`) on pushes
+to `main` and all PRs, and `dependency-audit.yml` runs pip-audit over
+`uv.lock` weekly and on dependency changes. CodeQL runs via GitHub's *default
+setup* (repo settings), so there is deliberately no `codeql.yml` — adding one
+would conflict. **No smoke-test job is wired into any GitHub workflow**,
+despite `.claude/skills/run-sakthai-agent-v2/driver.py` existing in the repo
+— treat that as available tooling, not an enforced CI gate. Run the lint→pytest
 sequence locally before pushing; green CI is the bar for `main`. Coverage
 floor is **85%** (`fail_under = 85`) over the whole `sakthai/` package.
 
