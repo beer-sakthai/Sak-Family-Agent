@@ -1,8 +1,14 @@
-import unittest
 import os
-from sakthai.agent.guardrails import GuardrailAction, _block_dangerous_shell_commands, DEFAULT_POLICY
-from sakthai.agent.tools import Tool, tool_by_name
+import unittest
+
+from sakthai.agent.guardrails import (
+    DEFAULT_POLICY,
+    GuardrailAction,
+    _block_dangerous_shell_commands,
+)
+from sakthai.agent.tools import tool_by_name
 from sakthai.memory.store import MemoryStore
+
 
 class TestGuardrailGap(unittest.TestCase):
     def setUp(self):
@@ -28,10 +34,13 @@ class TestGuardrailGap(unittest.TestCase):
         result = DEFAULT_POLICY.check_pre_execution(self.read_file_tool, args, self.store)
 
         try:
-            self.assertEqual(result.action, GuardrailAction.DENY, "read_file('.env.test') should be blocked")
+            self.assertEqual(
+                result.action, GuardrailAction.DENY, "read_file('.env.test') should be blocked"
+            )
         finally:
             if os.path.exists(".env.test"):
                 os.remove(".env.test")
+
 
 if __name__ == "__main__":
     unittest.main()
