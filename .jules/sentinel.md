@@ -248,3 +248,8 @@
 **Learning:** Positional arguments in many CLI tools can be preceded or interspersed with options. Heuristics that stop scanning at the first flag are unsafe and easily bypassed.
 
 **Prevention:** When scanning command arguments for sensitive paths, use `continue` to skip flags instead of `break`, ensuring all non-flag tokens are evaluated as potential targets.
+
+## 2026-07-25 - [Centralized Path Guardrails and Expanded Utility Coverage]
+**Vulnerability:** Guardrails could be bypassed by using less common utilities (e.g., `uniq`, `cut`, `ls`) to target sensitive paths in `run_command`. Additionally, direct tool calls (e.g., `read_file`) relied on their own internal checks which might be less exhaustive than the centralized path validation logic.
+**Learning:** Command-line utilities are numerous; relying on a small blocklist of "destructive" binaries is insufficient. Furthermore, per-tool security logic leads to fragmentation and potential gaps.
+**Prevention:** Implement a generic `_block_sensitive_path_args` guardrail that scans *all* tool arguments for sensitive paths. Expand `exfiltration_binaries` to include all common text-processing and metadata utilities.

@@ -58,6 +58,27 @@ def _block_run_command_if_not_allowed(
     return GuardrailResult(GuardrailAction.ALLOW)
 
 
+def _block_sensitive_path_args(
+    tool: Tool, args: dict[str, Any], _store: MemoryStore
+) -> GuardrailResult:
+    """Block any tool argument that targets a sensitive system path.
+
+    This provides a defense-in-depth layer for all tools (read_file,
+    ingest_document, etc.) by scanning all string arguments.
+    """
+    if tool.name == "run_command":
+        # run_command has its own specialized shell-aware scanner.
+        return GuardrailResult(GuardrailAction.ALLOW)
+
+    for key, value in args.items():
+        if isinstance(value, str) and _is_sensitive_path(value, allow_local=True):
+            return GuardrailResult(
+                GuardrailAction.DENY,
+                reason=f"Argument {key!r} targets a sensitive path and was blocked.",
+            )
+    return GuardrailResult(GuardrailAction.ALLOW)
+
+
 def _is_binary(part: str, names: str | tuple[str, ...]) -> bool:
     """Return True if part matches any of the given binary names (exactly or as path suffix).
 
@@ -241,6 +262,7 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
         "chown",
         "chgrp",
         "sed",
+        "truncate",
     )
     exfiltration_binaries = (
         "curl",
@@ -276,6 +298,16 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
         "sh",
         "zsh",
         "dash",
+        "ls",
+        "uniq",
+        "cut",
+        "file",
+        "stat",
+        "tac",
+        "rev",
+        "nl",
+        "xxd",
+        "column",
     )
     # Common interpreters where sensitive paths can be embedded in arguments.
     interpreters = (
@@ -516,6 +548,7 @@ def _block_output_with_secrets(
 # Default set of rules to check *before* a tool is executed.
 DEFAULT_PRE_RULES: list[PreGuardrailRule] = [
     _block_run_command_if_not_allowed,
+    _block_sensitive_path_args,
     _block_dangerous_shell_commands,
     _enforce_verbose_listing,
 ]
