@@ -20,6 +20,16 @@ def run_command_tool() -> Tool:
         r"find /etc -okdir rm {} \;",
         "xargs rm -rf /etc",
         "sudo xargs rm -rf /bin",
+        'eval "rm -rf /etc"',
+        "exec rm -rf /etc",
+        'sudo eval "rm -rf /etc"',
+        'bash -c "eval \\"rm -rf /etc\\""',
+        'timeout 10 bash -c "rm -rf /etc"',
+        'sudo timeout 10 eval "rm -rf /etc"',
+        "timeout -s KILL 5 rm -rf /etc",
+        "nice -n 10 sudo rm -rf /etc",
+        "stdbuf -oL -eL sudo rm -rf /etc",
+        'exec bash -c "rm -rf /etc"',
     ],
 )
 def test_hardened_bypasses_blocked(command, run_command_tool, store, monkeypatch):

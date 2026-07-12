@@ -272,3 +272,11 @@
 **Learning:** Security scanners that look for absolute paths starting with `/` or `~` can be fooled by tool-specific syntax that wraps or prefixes the path. A robust scanner must decompose arguments using all common separators, including colons, before validating the resulting strings as paths.
 
 **Prevention:** Update `_is_sensitive_path` to include `:` as a value separator. Expand monitored binary lists to include versatile networking and cryptography tools (`socat`, `openssl`) and alternative listing utilities (`dir`, `vdir`).
+
+## 2026-07-27 - [Hardening Guardrails against Shell Wrapper and eval/exec Bypasses]
+
+**Vulnerability:** Shell command guardrails could be bypassed by nesting destructive commands inside `eval` or `exec`, or by using transparent wrappers like `timeout`, `nice`, `nohup`, etc. These wrappers hid the actual command from the simple token-based scanner.
+
+**Learning:** Destructive intent can be hidden behind multiple layers of shell built-ins and system utilities. A robust security scanner must be able to recursively peel back these layers, handling both shell-level evaluation (`eval`) and process-level wrapping (`timeout`). Heuristics for skipping wrapper-specific flags and arguments are necessary to reach the core command.
+
+**Prevention:** Implement recursive inspection for `eval` and `exec` by re-splitting their arguments. Maintain an exhaustive list of transparent system wrappers (`timeout`, `nice`, `nohup`, `setsid`, `chrt`, `taskset`, `stdbuf`) and implement logic to skip their specific flags and arguments before recursing into the wrapped command.
