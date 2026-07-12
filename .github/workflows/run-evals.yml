@@ -134,7 +134,7 @@ jobs:
       matrix: ${{ needs.run-evaluations.outputs }}
     steps:
       - name: Download baseline results artifact
-        uses: dawidd6/action-download-artifact@v3
+        uses: dawidd6/action-download-artifact@v6
         with:
           # Download from the last successful workflow run on the main branch
           workflow: ${{ github.workflow_id }}
