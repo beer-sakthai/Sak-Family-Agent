@@ -6,6 +6,8 @@
 ![Coverage](https://img.shields.io/badge/coverage-98.3%25-brightgreen)
 ![License](https://img.shields.io/badge/license-All%20Rights%20Reserved-lightgrey)
 
+![Sak Family Agent Banner](./assets/sak_family_banner_v3.png)
+
 Welcome to the **House of Sak** — a personal AI agent ecosystem, built with purpose and resilience. This project, formerly known as Sak-Family-Agent (v2.0), is a local-first, privacy-conscious AI environment: a multi-persona family of agents sharing one tool registry and one persistent SQLite memory.
 
 ---
