@@ -10,6 +10,7 @@ The design is based on Phase 3 of the plan in ``PLAN.md``.
 
 from __future__ import annotations
 
+import contextlib
 import logging
 import os
 import re
@@ -189,7 +190,7 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
 
     # 1. Handle nested commands in wrappers (recursion)
     for i, part in enumerate(parts):
-        # bash -c "..." or sh -c "..." (including combined flags like -xc)
+        # 1a. bash -c "..." or sh -c "..." (including combined flags like -xc)
         if (
             part.startswith("-")
             and not part.startswith("--")
@@ -208,7 +209,18 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
             except ValueError:
                 pass
 
-        # interpreter -c "script" or interpreter -e "script" (including combined flags like -ic or -pe)
+        # 1b. eval "..." or exec "..."
+        if _is_binary(part, ("eval", "exec")):
+            rest = parts[i + 1 :]
+            # If the next token looks like a quoted command string, split it.
+            if len(rest) == 1 and " " in rest[0]:
+                with contextlib.suppress(ValueError):
+                    rest = shlex.split(rest[0])
+            res = _check_destructive_tokens(rest, context_sensitive=context_sensitive)
+            if res.action == GuardrailAction.DENY:
+                return res
+
+        # 1c. interpreter -c "script" or interpreter -e "script" (including combined flags like -ic or -pe)
         # python -c "..." or node -e "..."
         if (
             part.startswith("-")
@@ -442,15 +454,74 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
                     reason=f"Potentially dangerous 'find' command on {part!r} blocked.",
                 )
 
-    # 6. Handle wrappers that don't use -c (sudo, doas, xargs, env, find -exec)
+    # 6. Handle wrappers that don't use -c (sudo, doas, xargs, env, find -exec, timeout, etc.)
     for i, part in enumerate(parts):
         # sudo command ... or doas command ... or xargs command ... or env [VAR=VAL] command ...
-        if _is_binary(part, ("sudo", "doas", "xargs", "env")):
-            # env might have arguments like VAR=VAL before the command.
+        transparent_wrappers = (
+            "sudo",
+            "doas",
+            "xargs",
+            "env",
+            "timeout",
+            "nohup",
+            "setsid",
+            "nice",
+            "ionice",
+            "chrt",
+            "taskset",
+            "stdbuf",
+        )
+        if _is_binary(part, transparent_wrappers):
+            # Most of these wrappers have flags. xargs and env are special.
+            # We skip tokens that are likely arguments to the wrapper's flags.
             start_idx = i + 1
+            while start_idx < len(parts) and parts[start_idx].startswith("-"):
+                flag = parts[start_idx]
+                if flag == "--":
+                    start_idx += 1
+                    break
+                start_idx += 1
+                # Skip the next token if this flag takes an argument.
+                # This is a heuristic for common wrappers.
+                if (
+                    _is_binary(part, "timeout")
+                    and flag in ("-s", "--signal", "-k", "--kill-after")
+                    or _is_binary(part, "nice")
+                    and flag in ("-n", "--adjustment")
+                    or _is_binary(part, "ionice")
+                    and flag in ("-c", "-n", "-p")
+                    or _is_binary(part, "chrt")
+                    and flag in ("-p")
+                    or _is_binary(part, "taskset")
+                    and flag in ("-p", "-c")
+                    or _is_binary(part, "stdbuf")
+                    and flag in ("-i", "-o", "-e")
+                    or _is_binary(part, ("sudo", "doas"))
+                    and flag
+                    in (
+                        "-u",
+                        "-g",
+                        "-p",
+                        "-D",
+                        "-R",
+                        "-T",
+                    )
+                ):
+                    start_idx += 1
+
+            # env might have arguments like VAR=VAL before the command.
             if _is_binary(part, "env"):
                 while start_idx < len(parts) and "=" in parts[start_idx]:
                     start_idx += 1
+
+            # timeout has a duration argument that is NOT a flag.
+            if (
+                _is_binary(part, "timeout")
+                and start_idx < len(parts)
+                and not parts[start_idx].startswith("-")
+            ):
+                start_idx += 1
+
             res = _check_destructive_tokens(parts[start_idx:], context_sensitive=context_sensitive)
             if res.action == GuardrailAction.DENY:
                 return res
