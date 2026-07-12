@@ -64,7 +64,7 @@ skip_covered = false
 # Floor sits a few points below the current ~98% so it catches real
 # regressions (e.g. a whole module silently dropping to 0%) without being
 # brittle. Raise it as coverage improves.
-fail_under = 95
+fail_under = 97
 
 [tool.ruff]
 line-length = 100

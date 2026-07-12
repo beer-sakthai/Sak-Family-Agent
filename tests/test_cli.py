@@ -456,6 +456,36 @@ def test_memory_sync_failure_exits_nonzero(
     assert "push failed" in result.output
 
 
+def test_memory_pull_git(runner: CliRunner, monkeypatch: pytest.MonkeyPatch) -> None:
+    import sakthai.memory.sync as sync_mod
+
+    received: list[str | None] = []
+
+    def _fake_pull(remote: str | None = None) -> str:
+        received.append(remote)
+        return "Merged 3 facts from remote."
+
+    monkeypatch.setattr(sync_mod, "pull_memory_from_git", _fake_pull)
+    result = runner.invoke(main, ["memory", "pull", "--remote", "git@example.com:mem.git"])
+    assert result.exit_code == 0
+    assert "Merged 3 facts" in result.output
+    assert received == ["git@example.com:mem.git"]
+
+
+def test_memory_pull_failure_exits_nonzero(
+    runner: CliRunner, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import sakthai.memory.sync as sync_mod
+
+    def _fail(remote: str | None = None) -> str:
+        raise RuntimeError("fetch failed")
+
+    monkeypatch.setattr(sync_mod, "pull_memory_from_git", _fail)
+    result = runner.invoke(main, ["memory", "pull"])
+    assert result.exit_code != 0
+    assert "fetch failed" in result.output
+
+
 def test_memory_sync_supermemory_flag(
     runner: CliRunner, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
@@ -1092,3 +1122,26 @@ def test_event_emitter_non_verbose_is_noop(capsys: pytest.CaptureFixture[str]) -
     emit("iteration", {"n": 1, "stop_reason": "end_turn"})
     captured = capsys.readouterr()
     assert captured.err == ""
+
+
+def test_windows_streams_reconfigured_to_utf8(monkeypatch: pytest.MonkeyPatch) -> None:
+    """On win32 the CLI module reconfigures stdout/stderr to UTF-8 at import."""
+    import importlib
+    from unittest.mock import MagicMock
+
+    import sakthai.cli as cli_mod
+
+    fake_out = MagicMock()
+    fake_err = MagicMock()
+    try:
+        with monkeypatch.context() as m:
+            m.setattr(sys, "platform", "win32")
+            m.setattr(sys, "stdout", fake_out)
+            m.setattr(sys, "stderr", fake_err)
+            importlib.reload(cli_mod)
+        fake_out.reconfigure.assert_called_once_with(encoding="utf-8", errors="replace")
+        fake_err.reconfigure.assert_called_once_with(encoding="utf-8", errors="replace")
+    finally:
+        # Rebuild the module under the real platform so later imports see
+        # the normal state.
+        importlib.reload(cli_mod)

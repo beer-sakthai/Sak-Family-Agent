@@ -51,6 +51,7 @@ never duplicate content across files.
 | **README rewrite** — corrected origin story (fabricated "cleaners found me" detail removed at Beer's request), status bars + emoji, refreshed project facts | ✅ Done (2026-07-10) |
 | **Repo security audit round 2** — gitleaks CI gate added (`secret-scan.yml`), pip-audit dependency audit added, `@latest` action pinned, dead Dependabot npm target fixed, HF_TOKEN moved to env block, SECURITY.md/CLAUDE.md corrected; report at `docs/security_audit_2026-07-11.md` | ✅ Done (2026-07-11) |
 | **Caveman skill injection in prompt_builder** — replaced the placeholder in `render_skills_prompt_block` with real caveman skill loading (mirrors `agent/loop.py`), simplified directive kept as fallback | ✅ Done (2026-07-11) |
+| **Test Coverage round 3** — guardrails wrapper/find bypass branches (88% → 99%, zero missed statements), agent-loop failure seams, `memory pull` CLI, tool overrides, telegram session/main paths, provider detection edges, win32 CLI stream reconfigure; coverage 97.6% → 99.2%, floor raised to 97, CLAUDE.md floor claim corrected | ✅ Done (2026-07-12) |
 
 ## 📋 Sub-Plans
 
