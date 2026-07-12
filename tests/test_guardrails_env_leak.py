@@ -58,6 +58,11 @@ class TestGuardrailsEnvLeak(unittest.TestCase):
             "tac .git/config",
             "nl memory.db",
             "xxd /etc/passwd",
+            "gzip -c /etc/passwd",
+            "zcat /root/secrets.gz",
+            "jq . .env",
+            "paste /etc/shadow",
+            "split .git/config",
         ):
             result = _block_dangerous_shell_commands(self.tool, {"command": command}, self.store)
             self.assertEqual(result.action, GuardrailAction.DENY, f"{command!r} should be blocked")
@@ -68,11 +73,11 @@ class TestGuardrailsEnvLeak(unittest.TestCase):
             result = _block_dangerous_shell_commands(self.tool, {"command": command}, self.store)
             self.assertEqual(result.action, GuardrailAction.ALLOW, f"{command!r} should be allowed")
 
-    def test_truncate_destructive(self):
-        # truncate can zero out files and belongs with the destructive binaries.
-        args = {"command": "truncate -s 0 /etc/passwd"}
-        result = _block_dangerous_shell_commands(self.tool, args, self.store)
-        self.assertEqual(result.action, GuardrailAction.DENY, "truncate should be blocked")
+    def test_truncate_shred_destructive(self):
+        # truncate and shred can destroy files and belong with the destructive binaries.
+        for command in ("truncate -s 0 /etc/passwd", "shred -u /etc/passwd"):
+            result = _block_dangerous_shell_commands(self.tool, {"command": command}, self.store)
+            self.assertEqual(result.action, GuardrailAction.DENY, f"{command!r} should be blocked")
 
 
 class TestSensitivePathArgs(unittest.TestCase):
