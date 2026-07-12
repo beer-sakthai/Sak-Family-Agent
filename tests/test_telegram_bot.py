@@ -301,3 +301,29 @@ def test_main_registers_an_event_loop(monkeypatch: pytest.MonkeyPatch) -> None:
     bot.main()
 
     assert seen["called"] is True
+
+
+def test_reply_with_undeterminable_session_apologizes(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Authorized update with neither chat id nor user id yields the session apology."""
+    import asyncio
+
+    # Force authorization so the defensive session-id check is reachable at all.
+    monkeypatch.setattr(bot, "_is_authorized", lambda _uid: True)
+    update = _Update(123)
+    update.effective_user = None
+    update.effective_chat = type("Chat", (), {"id": None})()
+
+    asyncio.run(bot._reply_with_agent_result(update, _Context(), "task"))
+
+    assert update.message.replies == ["Sorry, I could not determine the chat session."]
+
+
+def test_bot_main_guard_raises_without_token(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Running the module as __main__ invokes main(), which requires a token."""
+    import runpy
+
+    monkeypatch.delenv("TELEGRAM_BOT_TOKEN", raising=False)
+    with pytest.raises(ValueError, match="TELEGRAM_BOT_TOKEN"):
+        runpy.run_module("sakthai.telegram.bot", run_name="__main__", alter_sys=False)

@@ -117,7 +117,7 @@ would conflict. **No smoke-test job is wired into any GitHub workflow**,
 despite `.claude/skills/run-sakthai-agent-v2/driver.py` existing in the repo
 — treat that as available tooling, not an enforced CI gate. Run the lint→pytest
 sequence locally before pushing; green CI is the bar for `main`. Coverage
-floor is **85%** (`fail_under = 85`) over the whole `sakthai/` package.
+floor is **97%** (`fail_under = 97`) over the whole `sakthai/` package.
 
 ---
 
