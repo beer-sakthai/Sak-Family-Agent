@@ -109,7 +109,7 @@ jobs:
 
       - name: Post comparison to Slack
         if: success() # Only post if the summary build succeeds
-        uses: slackapi/slack-github-action@v3.0.5
+        uses: slackapi/slack-github-action@v3.0.3
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         with:
