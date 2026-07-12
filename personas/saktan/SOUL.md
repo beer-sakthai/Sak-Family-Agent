@@ -218,15 +218,12 @@ same response. Only serialize when a later call genuinely depends on an earlier
 result.
 
 ### Memory discipline
-Save durable facts using `memory` tool: user preferences, environment details,
-tool quirks, stable conventions. Do NOT save task progress, completed-work
-logs, or temporary TODO state — use `session_search` for that. Write
-declarative facts, not instructions to yourself. Procedures belong in skills.
-
-### Supermemory
-Active container: `hermes`. Tools: `supermemory-search`, `supermemory-save`,
-`supermemory-forget`, `supermemory-profile`. Write credits are limited — prefer
-Hermes `memory` for durable storage.
+Save durable facts using the `learn` tool: user preferences, environment
+details, tool quirks, stable conventions. Do NOT save task progress,
+completed-work logs, or temporary TODO state — session logs
+(`sakthai sessions`) already hold that. Read with `recall`/`search`, remove
+stale facts with `forget`. Write declarative facts, not instructions to
+yourself. Procedures belong in skills.
 
 ### Decision Framework — When Things Conflict
 

@@ -4,7 +4,9 @@ Six core agent personas — **sakthai**, **sakking**, **saksee**, **saksit**,
 **saktan**, and **sakjules** — each formerly had its own `*-skills`
 repository. 
 
-Today, they collectively host **671 specialized skills**. Most of that content
+Today, they collectively host **877 specialized skills** in their overlays
+(counted as `SKILL.md` files on disk — see the per-persona counts in the
+layout below), plus 3 shared skills. Most of that content
 lives directly within each persona's own `skills/` folder (its overlay); a
 small number of files that are byte-identical across **all six** personas
 live once under `personas/shared/skills/` instead. This allows each agent to
@@ -21,12 +23,12 @@ personas/
 ├── sakthai/
 │   ├── SOUL.md         # the persona's identity (unique per persona)
 │   ├── config/         # persona config (config.yaml, gateway_voice_mode.json, …)
-│   └── skills/         # Contains the 181 skills mapped to SakThai
-├── saksit/             # Contains the 172 skills mapped to SakSit
-├── sakking/            # Contains the 119 skills mapped to SakKing
-├── saktan/             # Contains the 85 skills mapped to SakTan
-├── sakjules/           # Contains the 59 skills mapped to SakJules
-└── saksee/             # Contains the 55 skills mapped to SakSee
+│   └── skills/         # Contains the 175 skills mapped to SakThai
+├── sakking/            # Contains the 355 skills mapped to SakKing (incl. its rollup of the other five)
+├── saksit/             # Contains the 156 skills mapped to SakSit
+├── saktan/             # Contains the 82 skills mapped to SakTan
+├── sakjules/           # Contains the 57 skills mapped to SakJules
+└── saksee/             # Contains the 52 skills mapped to SakSee
 ```
 
 ## Composition rule
@@ -37,7 +39,8 @@ collision, the persona's own **overlay wins** — the same "later wins"
 precedence the agent's tool registry uses (`ToolRegistry.with_tools()`).
 
 `personas/shared/skills/` only contains files that are byte-identical across
-**all six** personas — currently just 2 skills (`Sak-dogfood`, `Sak-yuanbao`).
+**all six** personas — currently 3 skills (`Sak-auto-cycle-loop`,
+`Sak-dogfood`, `Sak-yuanbao`).
 This is intentionally conservative: `compose()` applies `shared/skills/` to
 every persona unconditionally, so promoting a file there is only safe if
 every persona already has that exact content — otherwise it would add

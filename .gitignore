@@ -80,3 +80,7 @@ gen_tool.py
 
 # Security-audit scratch (Gemini SAST working notes)
 .gemini_security/
+
+# Test/build artifacts (kept local only)
+coverage.xml
+sakking-dashboard.tar.gz

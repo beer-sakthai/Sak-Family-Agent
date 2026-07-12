@@ -38,8 +38,8 @@ export standalone repository snapshots with `scripts/export_agent_repo.py` or
 - `personas/` — the six Sak Family personas. `scripts/compose_persona.py`
   rebuilds a persona's tree as `personas/shared/skills/` + a per-persona
   overlay (overlay wins). `personas/shared/skills/` only holds files that are
-  byte-identical across **all six** personas (currently 2 skills:
-  `Sak-dogfood`, `Sak-yuanbao`) — `compose()` applies it to every persona
+  byte-identical across **all six** personas (currently 3 skills:
+  `Sak-auto-cycle-loop`, `Sak-dogfood`, `Sak-yuanbao`) — `compose()` applies it to every persona
   unconditionally, so anything less than 6-way-identical stays in each
   persona's own overlay rather than being deduped (this includes most of
   `sakking`'s `SakXxx-`-prefixed rollup, which intentionally aggregates the
