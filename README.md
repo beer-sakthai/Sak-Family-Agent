@@ -161,23 +161,7 @@ One package, several ways in — all sharing the same memory at `~/.sakthai/memo
 
 ### 🌊 Core Data Flow
 
-```mermaid
-graph TD
-    CLI[CLI Entry] --> AgentLoop[Agent Loop]
-    Chat[sakthai chat REPL] --> AgentLoop
-    MCP[MCP Server] --> AgentLoop
-
-    AgentLoop --> SharedTools[Shared Tool Registry]
-    SharedTools --> MemoryStore[(SQLite Memory)]
-    Web[Web API Server] -. Read Only .-> MemoryStore
-
-    AgentLoop --> Provider[Providers: Claude / Gemini / OpenAI-compatible / Gateway]
-
-    subgraph "Core Data Seam"
-    SharedTools
-    MemoryStore
-    end
-```
+![Core Data Flow Diagram](./assets/core_data_flow_diagram.png)
 
 ### 🧠 Core Philosophy & Design Rules
 
