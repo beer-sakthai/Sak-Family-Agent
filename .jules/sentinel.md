@@ -248,3 +248,11 @@
 **Learning:** Positional arguments in many CLI tools can be preceded or interspersed with options. Heuristics that stop scanning at the first flag are unsafe and easily bypassed.
 
 **Prevention:** When scanning command arguments for sensitive paths, use `continue` to skip flags instead of `break`, ensuring all non-flag tokens are evaluated as potential targets.
+
+## 2026-07-25 - [Global Path Guardrails for All Tools]
+
+**Vulnerability:** Tools with filesystem access (like `read_file` or `ingest_document`) could be used to read sensitive repository files (e.g., `.env`, `.git/config`) if those files were located within a default allowed root like the current working directory.
+
+**Learning:** Hardening `run_command` is insufficient if other tools also accept path arguments. Security policies for sensitive paths must be enforced globally at the tool execution boundary to prevent information disclosure via seemingly "safe" tools.
+
+**Prevention:** Use a centralized pre-execution guardrail that scans all tool arguments and validates them against a sensitive path registry (`_is_sensitive_path`). Ensure this rule is registered in the default policy applied to all tools.
