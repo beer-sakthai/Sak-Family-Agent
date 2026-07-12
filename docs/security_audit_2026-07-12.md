@@ -36,7 +36,7 @@ mapped to exact files and lines.
 |---|---|---|
 | CRITICAL | 0 | — |
 | HIGH | 1 | Prompt-injection trust boundary (memory/read/search → model) |
-| MEDIUM | 4 | Denylist bypassability, cleartext memory sync, silent tool-override rewrite, unbounded `httpx` |
+| MEDIUM | 4 | Denylist bypassability, cleartext memory sync, silent tool-override rewrite, unbounded dependencies |
 | LOW | 5 | Docs/version drift, broad excepts, env-var recursion guard, coverage badge, `.env.example` gaps |
 
 ---
@@ -108,9 +108,10 @@ framing. Low code cost, meaningfully raises the bar.
 - Runtime deps in `pyproject.toml` are pinned with bounds (`anthropic>=…,<1.0`,
   `click`, `rich`, `python-telegram-bot==22.8`), `uv.lock` is committed, and
   `dependency-audit.yml` runs `pip-audit` weekly + on lock changes.
-- **M-4 — one unbounded dep:** `httpx>=0.20.0` (`pyproject.toml:16`) has no upper
-  bound; a future breaking major could land silently. Add `,<1.0` (or the next
-  major) to match the others.
+- **M-4 — unbounded deps:** `httpx>=0.20.0` (`pyproject.toml:16`) and
+  `google-genai>=2.11.0` (`pyproject.toml:17`) have no upper bounds; a future
+  breaking major of either could land silently. Add upper bounds to match the
+  others (`click`, `pyyaml`, `anthropic`, `tenacity`, `rich`, `prompt-toolkit`).
 
 ---
 
@@ -210,8 +211,8 @@ is otherwise accurate against `pyproject.toml` (`uv sync --all-extras`,
       (`memory/sync.py:38`) to `https://` (or gate `http://` behind an explicit flag).
 - [ ] **M-3 — Tool-override rewrite.** Log when `tool_descriptions.json` overrides
       a tool (`tools.py:554`); consider limiting overrides to `description` only.
-- [ ] **M-4 — Unbounded `httpx`.** Add an upper bound to `httpx>=0.20.0`
-      (`pyproject.toml:16`).
+- [ ] **M-4 — Unbounded dependencies.** Add upper bounds to `httpx>=0.20.0`
+      (`pyproject.toml:16`) and `google-genai>=2.11.0` (`pyproject.toml:17`).
 
 ### 🟡 LOW — cleanliness, optimization, docs
 - [ ] **L-1 — Move `continuous-security.yml`** into `.github/workflows/` if the
