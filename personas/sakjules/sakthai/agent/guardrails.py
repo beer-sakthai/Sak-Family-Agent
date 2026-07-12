@@ -97,10 +97,10 @@ _CRITICAL_ROOTS = {
 def _is_sensitive_path(path: str, allow_local: bool = False) -> bool:
     """Return True if the path targets a sensitive system directory or uses traversal."""
     # Support checking flags or arguments with values like --file=/etc or field=@.env
-    # Note: we only split if the result isn't the same as the original,
-    # and for '@' we only consider it a separator if it's not the first character
-    # (to distinguish it from a curl @path prefix).
-    for sep in ("=", "@"):
+    # or socat's FILE:/etc/passwd. Note: we only split if the result isn't the same
+    # as the original, and for '@' we only consider it a separator if it's not
+    # the first character (to distinguish it from a curl @path prefix).
+    for sep in ("=", "@", ":"):
         if sep in path:
             if sep == "@" and path.startswith("@"):
                 continue
@@ -243,10 +243,16 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
         "sed",
         "truncate",
         "shred",
+        "openssl",
+        "socat",
     )
     exfiltration_binaries = (
         "curl",
         "wget",
+        "dir",
+        "vdir",
+        "openssl",
+        "socat",
         "cat",
         "grep",
         "head",

@@ -264,3 +264,11 @@
 **Learning:** Command-line utilities are numerous; a short blocklist invites bypasses, so every file-reading/metadata utility must be paired with the sensitive-path scan. Process-wise: concurrent security tasks scanning the same module converge on the same fix — without checking open PRs first, they generate conflicting duplicates that all go stale once one merges.
 
 **Prevention:** Keep `exfiltration_binaries`/`destructive_binaries` exhaustive and covered by tests that assert both DENY on sensitive paths and ALLOW on local files (no overblocking). Before opening a Sentinel PR, fetch latest `main` and list open Sentinel PRs; if one already covers the same guardrail area, extend it instead of opening a new one (see AGENTS.md rule 5).
+
+## 2026-07-26 - [Hardening Guardrails against Protocol-prefixed Path Bypasses]
+
+**Vulnerability:** Shell command guardrails could be bypassed using tools that prefix paths with protocols or schemes (e.g., `socat FILE:/etc/passwd ...` or `openssl ... -in /etc/shadow`). These prefixes prevented the path validator from recognizing the target as a sensitive absolute path.
+
+**Learning:** Security scanners that look for absolute paths starting with `/` or `~` can be fooled by tool-specific syntax that wraps or prefixes the path. A robust scanner must decompose arguments using all common separators, including colons, before validating the resulting strings as paths.
+
+**Prevention:** Update `_is_sensitive_path` to include `:` as a value separator. Expand monitored binary lists to include versatile networking and cryptography tools (`socat`, `openssl`) and alternative listing utilities (`dir`, `vdir`).
