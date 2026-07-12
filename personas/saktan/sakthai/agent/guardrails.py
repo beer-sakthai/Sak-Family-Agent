@@ -241,6 +241,7 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
         "chown",
         "chgrp",
         "sed",
+        "truncate",
     )
     exfiltration_binaries = (
         "curl",
@@ -276,6 +277,16 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
         "sh",
         "zsh",
         "dash",
+        "ls",
+        "uniq",
+        "cut",
+        "file",
+        "stat",
+        "tac",
+        "rev",
+        "nl",
+        "xxd",
+        "column",
     )
     # Common interpreters where sensitive paths can be embedded in arguments.
     interpreters = (

@@ -256,3 +256,11 @@
 **Learning:** Hardening `run_command` is insufficient if other tools also accept path arguments. Security policies for sensitive paths must be enforced globally at the tool execution boundary to prevent information disclosure via seemingly "safe" tools.
 
 **Prevention:** Use a centralized pre-execution guardrail that scans all tool arguments and validates them against a sensitive path registry (`_is_sensitive_path`). Ensure this rule is registered in the default policy applied to all tools.
+
+## 2026-07-12 - [Expanded Utility Coverage + Duplicate Sentinel PR Consolidation]
+
+**Vulnerability:** `run_command` guardrails could still be bypassed with less common text/metadata utilities (`uniq`, `cut`, `ls`, `file`, `stat`, `tac`, `rev`, `nl`, `xxd`, `column`) targeting sensitive paths, and `truncate` was missing from the destructive-binary list. Separately, three concurrent Sentinel tasks (PRs #361, #363, #364) each re-implemented the same `_block_sensitive_path_args` guardrail, producing duplicate, mutually conflicting PRs.
+
+**Learning:** Command-line utilities are numerous; a short blocklist invites bypasses, so every file-reading/metadata utility must be paired with the sensitive-path scan. Process-wise: concurrent security tasks scanning the same module converge on the same fix — without checking open PRs first, they generate conflicting duplicates that all go stale once one merges.
+
+**Prevention:** Keep `exfiltration_binaries`/`destructive_binaries` exhaustive and covered by tests that assert both DENY on sensitive paths and ALLOW on local files (no overblocking). Before opening a Sentinel PR, fetch latest `main` and list open Sentinel PRs; if one already covers the same guardrail area, extend it instead of opening a new one (see AGENTS.md rule 5).
