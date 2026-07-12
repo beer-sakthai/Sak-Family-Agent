@@ -1,4 +1,3 @@
-
 import pytest
 
 from sakthai.agent.guardrails import DEFAULT_POLICY, GuardrailAction
@@ -8,6 +7,7 @@ from sakthai.agent.tools import Tool
 @pytest.fixture
 def run_command_tool() -> Tool:
     return Tool("run_command", "desc", {}, lambda _a, _s: "")
+
 
 @pytest.mark.parametrize(
     "command",
