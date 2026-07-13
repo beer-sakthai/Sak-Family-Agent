@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Poll endpoint until running."""
-import sys, time
+import sys
+import time
+
 sys.path.insert(0, '/opt/data/.venv/lib/python3.13/site-packages')
 from huggingface_hub import HfApi
 
