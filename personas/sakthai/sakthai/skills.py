@@ -11,7 +11,13 @@ from typing import Any
 
 import yaml
 
-from .config import LIBRARY_DIR, SKILLS_DIR, gemini_extensions_dir, sakthai_home
+from .config import (
+    LIBRARY_DIR,
+    SHARED_SKILLS_DIR,
+    SKILLS_DIR,
+    gemini_extensions_dir,
+    sakthai_home,
+)
 
 _UNCATEGORIZED = "general"
 
@@ -202,12 +208,23 @@ def find_skill(name: str, *roots: Path) -> SkillInfo | None:
 
 
 def default_skill_roots() -> tuple[Path, ...]:
-    """Roots searched for injectable skills: bundled + library + installed extensions."""
+    """Roots searched for injectable skills: bundled + shared + library + installed extensions."""
     gemini_ext = gemini_extensions_dir()
-    roots = [SKILLS_DIR, LIBRARY_DIR, sakthai_home() / "extensions"]
+    roots = [SKILLS_DIR, SHARED_SKILLS_DIR, LIBRARY_DIR, sakthai_home() / "extensions"]
     if gemini_ext.is_dir():
         roots.append(gemini_ext)
     return tuple(roots)
+
+
+def resolve_skill_names(
+    names: Sequence[str], roots: Sequence[Path] | None = None
+) -> tuple[list[str], list[str]]:
+    """Partition skill names into ``(resolved, missing)`` across the given roots."""
+    search = tuple(roots) if roots is not None else default_skill_roots()
+    known = {skill.name for skill in collect_skills(*search)}
+    resolved = [name for name in names if name in known]
+    missing = [name for name in names if name not in known]
+    return resolved, missing
 
 
 def render_skills_prompt_block(names: Sequence[str], roots: Sequence[Path] | None = None) -> str:

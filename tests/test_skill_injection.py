@@ -43,3 +43,26 @@ def test_default_skill_roots_includes_extensions(sakthai_home: Path) -> None:
     roots = default_skill_roots()
     assert skills_mod.SKILLS_DIR in roots
     assert sakthai_home / "extensions" in roots
+
+
+def test_default_skill_roots_includes_shared_persona_skills(sakthai_home: Path) -> None:
+    from sakthai.config import PERSONAS_DIR
+
+    assert PERSONAS_DIR / "shared" / "skills" in default_skill_roots()
+
+
+def test_shared_auto_cycle_loop_skill_resolves(sakthai_home: Path) -> None:
+    # Regression guard: the shared cycle skill must be reachable at runtime
+    # (it lives only in personas/shared/skills/, not skills/ or library/).
+    from sakthai.skills import find_skill
+
+    assert find_skill("Sak-auto-cycle-loop", *default_skill_roots()) is not None
+
+
+def test_resolve_skill_names_partitions_hits_and_misses(tmp_path: Path) -> None:
+    from sakthai.skills import resolve_skill_names
+
+    _write_skill(tmp_path, "alpha", "A")
+    resolved, missing = resolve_skill_names(["alpha", "ghost"], roots=[tmp_path])
+    assert resolved == ["alpha"]
+    assert missing == ["ghost"]

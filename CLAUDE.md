@@ -455,8 +455,11 @@ Note: `tags`/`related_skills` must be nested under `metadata.sakthai` — a flat
 top-level `tags:`/`related_skills:` is silently ignored by the parser in
 `skills.py`.
 
-Skills are discovered from `skills/` (user/extension skills) and `library/`
+Skills are discovered from `skills/` (user/extension skills),
+`personas/shared/skills/` (the shared six-persona skills), and `library/`
 (curated catalog). Run `sakthai skills list` to see all discovered skills.
+`sakthai run --dry-run` validates `--with-skills` names and fails on
+unresolved ones; a live run warns and skips them.
 
 ---
 
