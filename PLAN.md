@@ -53,6 +53,7 @@ never duplicate content across files.
 | **Caveman skill injection in prompt_builder** — replaced the placeholder in `render_skills_prompt_block` with real caveman skill loading (mirrors `agent/loop.py`), simplified directive kept as fallback | ✅ Done (2026-07-11) |
 | **Test Coverage round 3** — guardrails wrapper/find bypass branches (88% → 99%, zero missed statements), agent-loop failure seams, `memory pull` CLI, tool overrides, telegram session/main paths, provider detection edges, win32 CLI stream reconfigure; coverage 97.6% → 99.2%, floor raised to 97, CLAUDE.md floor claim corrected | ✅ Done (2026-07-12) |
 | **SOUL consistency + repo hygiene** — fix six-persona SOUL drift (sibling lists in SakThai/SakKing, SakSee model line → local `sakthai` per PR #344 policy, finance lane → SakTan/SakFin, SakKing phantom tools + web-lane split vs SakSee, SakJules/SakSee craft passes), refresh `personas/README.md` skill counts from disk, add `tests/test_soul_consistency.py` CI guard, untrack `coverage.xml`/`sakking-dashboard.tar.gz`, remove throwaway `LABELER_TEST.md` | ✅ Done (2026-07-13) |
+| **Security audit round 3** — git-URL transport validation (`giturl.py`, applied in memory sync + extensions install), `extensions remove` containment check, HTTP sync timeout, Telegram `/workflow` empty-allowlist bypass, bot handlers moved off the event loop, tool-override load failures logged | ✅ Done (2026-07-13) |
 
 ## 📋 Sub-Plans
 

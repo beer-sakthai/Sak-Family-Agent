@@ -98,7 +98,10 @@ async def _reply_with_agent_result(
     model = sakthai_default_model() or "gpt-4o"
     system_prompt_prefix = sakthai_system_prompt_prefix() or ""
     combined_skills = tuple(skills) + tuple(sakthai_with_skills())
-    result = run_agent(
+    # run_agent is a long, synchronous LLM round-trip; run it in a worker
+    # thread so the polling loop keeps serving other chats meanwhile.
+    result = await asyncio.to_thread(
+        run_agent,
         task,
         store=session.store,
         skills=list(combined_skills),
@@ -138,10 +141,15 @@ async def workflow(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
     workflow_name = context.args[0]
     available_workflows = workflow_executor.get_available_workflows()
-    if available_workflows and workflow_name not in available_workflows:
-        await update.message.reply_text(
-            "Workflow not found. Available workflows are: " + ", ".join(available_workflows)
-        )
+    if workflow_name not in available_workflows:
+        # An empty list must reject too: otherwise any name would pass the
+        # allowlist and flow straight into the agent prompt.
+        if available_workflows:
+            await update.message.reply_text(
+                "Workflow not found. Available workflows are: " + ", ".join(available_workflows)
+            )
+        else:
+            await update.message.reply_text("Workflow not found. No workflows are installed.")
         return
 
     await update.message.reply_text(f"Executing workflow: {workflow_name}")

@@ -327,3 +327,23 @@ def test_bot_main_guard_raises_without_token(monkeypatch: pytest.MonkeyPatch) ->
     monkeypatch.delenv("TELEGRAM_BOT_TOKEN", raising=False)
     with pytest.raises(ValueError, match="TELEGRAM_BOT_TOKEN"):
         runpy.run_module("sakthai.telegram.bot", run_name="__main__", alter_sys=False)
+
+
+def test_workflow_rejects_any_name_when_no_workflows_installed(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """An empty allowlist must reject everything, not wave everything through."""
+    monkeypatch.setenv("TELEGRAM_ALLOWED_USER_IDS", "123")
+    monkeypatch.setattr(bot.workflow_executor, "get_available_workflows", lambda: [])
+
+    def _explode(*_a: object, **_k: object) -> object:
+        raise AssertionError("no workflow may reach run_agent when none are installed")
+
+    monkeypatch.setattr(bot, "run_agent", _explode)
+    update = _Update(123)
+
+    import asyncio
+
+    asyncio.run(bot.workflow(update, _Context(args=["anything"])))
+
+    assert "No workflows are installed" in update.message.replies[-1]
