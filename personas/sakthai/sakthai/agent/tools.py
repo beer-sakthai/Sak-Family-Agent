@@ -9,6 +9,7 @@ in one place.
 from __future__ import annotations
 
 import json
+import logging
 import os
 import re
 import shlex
@@ -25,6 +26,8 @@ from ..config import sakthai_home
 from ..lead.capture import capture_lead as capture_lead_fact
 from ..learn.ingest import ingest_document as ingest_document_facts
 from ..memory.store import MemoryStore
+
+logger = logging.getLogger(__name__)
 
 MAX_FILE_READ_CHARS = 20_000  # read_file output cap
 MAX_CMD_OUTPUT_CHARS = 20_000  # run_command output cap
@@ -568,8 +571,10 @@ def _load_tool_overrides() -> None:
                     object.__setattr__(tool, "description", tool_override["description"])
                 if "input_schema" in tool_override:
                     object.__setattr__(tool, "input_schema", tool_override["input_schema"])
-    except Exception:  # nosec B110
-        pass
+    except Exception as exc:  # noqa: BLE001
+        # A broken overrides file must not stop the agent from starting, but
+        # it must not be indistinguishable from no overrides file either.
+        logger.warning("Failed to load tool overrides from %s: %s", path, exc)
 
 
 _load_tool_overrides()

@@ -212,3 +212,48 @@ def test_remove_installed(sakthai_home: Path, monkeypatch: pytest.MonkeyPatch) -
     assert ext.remove("bar") is True
     assert not clone_path.exists()
     assert ext.list_extensions() == []
+
+
+@pytest.mark.parametrize(
+    "url",
+    ["ext::sh -c 'touch /tmp/pwned'", "-oProxyCommand=evil", "ftp://example.com/repo.git"],
+)
+def test_install_rejects_unsafe_git_url(
+    sakthai_home: Path, monkeypatch: pytest.MonkeyPatch, url: str
+) -> None:
+    """Option smuggling and remote-helper transports never reach git clone."""
+
+    def _explode(*_a: object, **_k: object) -> object:
+        raise AssertionError("git clone must not run for an unsafe URL")
+
+    monkeypatch.setattr(ext.subprocess, "run", _explode)
+    with pytest.raises(ext.ExtensionError):
+        ext.install_extension(url)
+
+
+def test_remove_refuses_path_outside_extensions_dir(sakthai_home: Path, tmp_path: Path) -> None:
+    """A tampered registry entry must not be able to delete an arbitrary tree."""
+    victim = tmp_path / "victim"
+    victim.mkdir()
+    (victim / "keep.txt").write_text("precious", encoding="utf-8")
+    ext._save_registry(
+        {"extensions": {"evil": {"url": "https://example.com/evil.git", "path": str(victim)}}}
+    )
+
+    with pytest.raises(ext.ExtensionError, match="outside"):
+        ext.remove("evil")
+
+    assert (victim / "keep.txt").exists()
+    # The registry entry is left in place for the user to inspect.
+    assert "evil" in ext._load_registry()["extensions"]
+
+
+def test_remove_refuses_extensions_dir_itself(sakthai_home: Path) -> None:
+    base = ext.extensions_dir()
+    base.mkdir(parents=True, exist_ok=True)
+    ext._save_registry(
+        {"extensions": {"evil": {"url": "https://example.com/evil.git", "path": str(base)}}}
+    )
+    with pytest.raises(ext.ExtensionError, match="outside"):
+        ext.remove("evil")
+    assert base.exists()

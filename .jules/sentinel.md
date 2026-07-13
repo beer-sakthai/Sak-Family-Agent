@@ -178,6 +178,14 @@
 **Learning:** Shell redirection is extremely versatile. Less common operators like `<>` and `<&` can be just as dangerous as standard output redirections if they target sensitive paths. Security regexes must be exhaustive and prioritized (longer matches first).
 **Prevention:** Use a unified and comprehensive regex for shell redirection operators: `r"(?:[0-9]|&)?(?:&>>|>>|>&|>\||<>|<&|>|<)"`. This ensures all variants are captured before the target path is validated.
 
+## 2026-07-28 - [Protecting SQLite Sidecar Files and Hardening Destructive Commands]
+
+**Vulnerability:** Guardrails only blocked `memory.db`, leaving SQLite sidecar files (`-wal`, `-shm`, `-journal`) exposed to exfiltration. Additionally, `rmdir` was missing from monitored destructive binaries.
+
+**Learning:** Database security must cover all auxiliary files that may contain data fragments. When blocking a specific file like a database, always consider its sidecar and temporary files. Furthermore, security lists for destructive actions must be exhaustive regarding standard utilities that can modify or remove the filesystem structure.
+
+**Prevention:** Use prefix matching (e.g., `memory.db-`) in path validation to block all associated database files. Periodically audit and expand `destructive_binaries` to include all standard POSIX utilities with deletion capabilities like `rmdir`.
+
 ## 2026-07-17 - [Hardening Guardrails against Interpreter-based Path Bypasses]
 
 **Vulnerability:** Shell guardrails could be bypassed by using language interpreters (e.g., `python3`, `node`) to read or execute system-critical files (e.g., `python3 /etc/passwd`). These binaries were not monitored, allowing them to target sensitive paths via positional arguments.
@@ -280,3 +288,11 @@
 **Learning:** Destructive intent can be hidden behind multiple layers of shell built-ins and system utilities. A robust security scanner must be able to recursively peel back these layers, handling both shell-level evaluation (`eval`) and process-level wrapping (`timeout`). Heuristics for skipping wrapper-specific flags and arguments are necessary to reach the core command.
 
 **Prevention:** Implement recursive inspection for `eval` and `exec` by re-splitting their arguments. Maintain an exhaustive list of transparent system wrappers (`timeout`, `nice`, `nohup`, `setsid`, `chrt`, `taskset`, `stdbuf`) and implement logic to skip their specific flags and arguments before recursing into the wrapped command.
+
+## 2026-07-28 - [Hardening Interpreter Guardrails against Intermediate Flags and Relative Repo Paths]
+
+**Vulnerability:** Interpreter and shell command guardrails could be bypassed by inserting intermediate flags (e.g., `python3 -v -c`) between the binary and the script execution flag. Additionally, repository-sensitive files (like `.env`, `memory.db`) could be targeted within scripts if they were accessed via relative paths without leading `/`, `~`, or `../` segments, which the script scanner previously ignored.
+
+**Learning:** Positional heuristics in CLI guardrails (e.g., assuming `binary_name` is at `i-1` for a flag at `i`) are unsafe due to the flexibility of standard CLI parsers. Furthermore, script-based exfiltration scanners must explicitly include application-specific sensitive files in their search patterns to prevent access to data not covered by generic absolute path checks.
+
+**Prevention:** Implement a robust backward-searching scanner that identifies the command binary associated with an execution flag even when separated by intermediate options. Enhance script argument regexes to explicitly match repository-sensitive file patterns (`.env`, `.git`, `.jules`, `memory.db`) at the start of any path-like string.

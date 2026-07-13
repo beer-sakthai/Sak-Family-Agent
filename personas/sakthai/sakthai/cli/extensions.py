@@ -51,7 +51,11 @@ def extensions_list() -> None:
 @click.argument("name")
 def extensions_remove(name: str) -> None:
     """Remove an installed extension by NAME."""
-    if remove_extension(name):
+    try:
+        removed = remove_extension(name)
+    except ExtensionError as exc:
+        raise click.ClickException(str(exc)) from exc
+    if removed:
         click.echo(f"removed: {name}")
     else:
         raise click.ClickException(f"no extension named '{name}' is installed")
