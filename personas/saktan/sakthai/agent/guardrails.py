@@ -109,7 +109,11 @@ def _is_sensitive_path(path: str, allow_local: bool = False) -> bool:
             if (
                 val
                 and val != path
-                and (val.startswith(("/", ".", "~")) or val == "memory.db")
+                and (
+                    val.startswith(("/", ".", "~"))
+                    or val == "memory.db"
+                    or val.startswith("memory.db-")
+                )
                 and _is_sensitive_path(val, allow_local=allow_local)
             ):
                 return True
@@ -125,7 +129,12 @@ def _is_sensitive_path(path: str, allow_local: bool = False) -> bool:
     # Block access to repository-sensitive files and directories (.env, .git, memory.db).
     normalized = os.path.normpath(path)
     basename = os.path.basename(normalized)
-    if basename == ".env" or basename.startswith(".env.") or basename == "memory.db":
+    if (
+        basename == ".env"
+        or basename.startswith(".env.")
+        or basename == "memory.db"
+        or basename.startswith("memory.db-")
+    ):
         return True
     if ".git" in normalized.split(os.sep) or ".jules" in normalized.split(os.sep):
         return True
@@ -268,6 +277,7 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
     # 2. Prevent destructive or dangerous commands on sensitive paths.
     destructive_binaries = (
         "rm",
+        "rmdir",
         "chmod",
         "mv",
         "cp",
