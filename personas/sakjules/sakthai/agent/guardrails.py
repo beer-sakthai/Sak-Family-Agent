@@ -200,23 +200,31 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
     # 1. Handle nested commands in wrappers (recursion)
     for i, part in enumerate(parts):
         # 1a. bash -c "..." or sh -c "..." (including combined flags like -xc)
+        # Search backwards for the shell binary to handle intermediate flags (e.g. bash -v -c).
         if (
             part.startswith("-")
             and not part.startswith("--")
+            and part.endswith("c")
             and i > 0
             and i + 1 < len(parts)
-            and _is_binary(parts[i - 1], ("bash", "sh", "zsh", "dash"))
-            and part.endswith("c")
         ):
-            # In shlex.split, -c"script" becomes one token if no space.
-            # But usually it's -c script or -xc script.
-            try:
-                nested = shlex.split(parts[i + 1])
-                res = _check_destructive_tokens(nested, context_sensitive=context_sensitive)
-                if res.action == GuardrailAction.DENY:
-                    return res
-            except ValueError:
-                pass
+            shell_idx = -1
+            for j in range(i - 1, -1, -1):
+                if parts[j].startswith("-"):
+                    continue
+                if _is_binary(parts[j], ("bash", "sh", "zsh", "dash")):
+                    shell_idx = j
+                    break
+                break  # Not a flag and not a shell
+
+            if shell_idx != -1:
+                try:
+                    nested = shlex.split(parts[i + 1])
+                    res = _check_destructive_tokens(nested, context_sensitive=context_sensitive)
+                    if res.action == GuardrailAction.DENY:
+                        return res
+                except ValueError:
+                    pass
 
         # 1b. eval "..." or exec "..."
         if _is_binary(part, ("eval", "exec")):
@@ -231,25 +239,40 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
 
         # 1c. interpreter -c "script" or interpreter -e "script" (including combined flags like -ic or -pe)
         # python -c "..." or node -e "..."
+        # Search backwards for the interpreter binary to handle intermediate flags (e.g. python -v -c).
         if (
             part.startswith("-")
             and not part.startswith("--")
+            and part.endswith(("c", "e", "r", "p", "E"))
             and i > 0
             and i + 1 < len(parts)
-            and _is_binary(parts[i - 1], ("python", "node", "perl", "ruby", "php"))
-            and part.endswith(("c", "e", "r", "p", "E"))
         ):
-            script = parts[i + 1]
-            # Scan script for absolute or home-relative paths (including traversal)
-            path_pattern = r"(?:/|~|(?:\.\./)+)[a-zA-Z0-9\._/-]+"
-            for match in re.finditer(path_pattern, script):
-                candidate = match.group(0)
-                if _is_sensitive_path(candidate):
-                    binary_name = os.path.basename(parts[i - 1])
-                    return GuardrailResult(
-                        GuardrailAction.DENY,
-                        reason=f"Potentially dangerous '{binary_name}' script targeting {candidate!r} blocked.",
-                    )
+            interp_idx = -1
+            interpreters_with_c = ("python", "node", "perl", "ruby", "php")
+            for j in range(i - 1, -1, -1):
+                if parts[j].startswith("-"):
+                    continue
+                if _is_binary(parts[j], interpreters_with_c):
+                    interp_idx = j
+                    break
+                break
+
+            if interp_idx != -1:
+                script = parts[i + 1]
+                # Scan script for absolute or home-relative paths (including traversal)
+                # or repository-sensitive files (.env, .git, .jules, memory.db).
+                path_pattern = (
+                    r"(?:/|~|(?:\.\./)+|\.env(?:\.[a-zA-Z0-9_-]+)?|\.git|\.jules|memory\.db)"
+                    r"[a-zA-Z0-9\._/-]*"
+                )
+                for match in re.finditer(path_pattern, script):
+                    candidate = match.group(0)
+                    if _is_sensitive_path(candidate):
+                        binary_name = os.path.basename(parts[interp_idx])
+                        return GuardrailResult(
+                            GuardrailAction.DENY,
+                            reason=f"Potentially dangerous {binary_name!r} script targeting {candidate!r} blocked.",
+                        )
 
     # 2. Prevent destructive or dangerous commands on sensitive paths.
     destructive_binaries = (
@@ -367,7 +390,7 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
                         else f"Potentially destructive '{binary_name}' command on {subpart!r} blocked.",
                     )
                 if is_interpreter and re.search(
-                    r"(?:/etc|/root|/bin|/sbin|/usr|/var|/boot|/dev|/home|/sys|/proc|/tmp|/lib|/lib64)(?:/|$)|~|\.\.",
+                    r"(?:/etc|/root|/bin|/sbin|/usr|/var|/boot|/dev|/home|/sys|/proc|/tmp|/lib|/lib64)(?:/|$)|~|\.\.|\.env|\.git|\.jules|memory\.db",
                     subpart,
                 ):
                     return GuardrailResult(
