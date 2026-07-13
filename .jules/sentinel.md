@@ -296,3 +296,11 @@
 **Learning:** Positional heuristics in CLI guardrails (e.g., assuming `binary_name` is at `i-1` for a flag at `i`) are unsafe due to the flexibility of standard CLI parsers. Furthermore, script-based exfiltration scanners must explicitly include application-specific sensitive files in their search patterns to prevent access to data not covered by generic absolute path checks.
 
 **Prevention:** Implement a robust backward-searching scanner that identifies the command binary associated with an execution flag even when separated by intermediate options. Enhance script argument regexes to explicitly match repository-sensitive file patterns (`.env`, `.git`, `.jules`, `memory.db`) at the start of any path-like string.
+
+## 2026-07-29 - [Hardening Guardrails against Unmonitored Development Binaries]
+
+**Vulnerability:** Shell command guardrails could be bypassed using standard development and maintenance tools (`mkdir`, `touch`, `git`, `npm`, `pip`) to create, modify, or exfiltrate files in sensitive system roots. These binaries were not previously monitored.
+
+**Learning:** Security blocklists for CLI commands must go beyond standard destructive utilities (`rm`, `mv`) and include common development tools that have significant filesystem side-effects. "Dual-use" tools like `git` or package managers can be used to compromise system integrity if their target paths are not validated.
+
+**Prevention:** Expand `destructive_binaries` and `exfiltration_binaries` to include common version control systems, package managers, and file creation utilities. Ensure that any tool capable of modifying the filesystem or reading data is subjected to sensitive path validation.

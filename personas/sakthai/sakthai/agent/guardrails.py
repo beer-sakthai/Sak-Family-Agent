@@ -290,6 +290,14 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
         "shred",
         "openssl",
         "socat",
+        "mkdir",
+        "touch",
+        "git",
+        "npm",
+        "yarn",
+        "pnpm",
+        "pip",
+        "pip3",
     )
     exfiltration_binaries = (
         "curl",
@@ -350,6 +358,12 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
         "paste",
         "join",
         "split",
+        "git",
+        "npm",
+        "yarn",
+        "pnpm",
+        "pip",
+        "pip3",
     )
     # Common interpreters where sensitive paths can be embedded in arguments.
     interpreters = (
