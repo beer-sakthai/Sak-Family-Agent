@@ -12,7 +12,11 @@ from pathlib import Path
 from typing import Any
 
 from ..config import sakthai_home
+from ..giturl import validate_git_url
 from .store import SNAPSHOT_VERSION, MemoryStore
+
+# Ceiling on the HTTP backup POST so a dead endpoint fails instead of hanging.
+_HTTP_SYNC_TIMEOUT = 30.0
 
 
 def _run_git(args: list[str], cwd: Path, check: bool = True) -> subprocess.CompletedProcess[str]:
@@ -45,7 +49,7 @@ def sync_memory_via_http(endpoint_url: str, api_key: str | None = None) -> str:
         req.add_header("Authorization", f"Bearer {api_key}")
 
     try:
-        with urllib.request.urlopen(req) as response:  # nosec B310
+        with urllib.request.urlopen(req, timeout=_HTTP_SYNC_TIMEOUT) as response:  # nosec B310
             if response.status not in (200, 201, 202, 204):
                 raise RuntimeError(
                     f"HTTP Error {response.status}: {response.read().decode('utf-8', errors='ignore')}"
@@ -59,6 +63,8 @@ def sync_memory_via_http(endpoint_url: str, api_key: str | None = None) -> str:
 
 def sync_memory_to_git(remote: str | None = None) -> str:
     """Export memory to JSONL and sync to a Git remote."""
+    if remote is not None:
+        remote = validate_git_url(remote)
     home = sakthai_home()
     facts_path = home / "facts.jsonl"
     obs_path = home / "observations.jsonl"
@@ -195,6 +201,8 @@ def pull_memory_from_git(remote: str | None = None) -> str:
     (rather than only reactively on a push conflict) means a later `sync`
     starts from an up-to-date HEAD and won't re-merge the same remote rows.
     """
+    if remote is not None:
+        remote = validate_git_url(remote)
     home = sakthai_home()
     if not (home / ".git").exists():
         raise RuntimeError(

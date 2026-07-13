@@ -101,7 +101,7 @@ class TestSyncMemoryViaHttp:
     def test_sends_bearer_api_key(self, sakthai_home: Path) -> None:
         captured: list[MagicMock] = []
 
-        def _fake_open(req: MagicMock) -> MagicMock:
+        def _fake_open(req: MagicMock, timeout: float | None = None) -> MagicMock:
             captured.append(req)
             return _http_response(200)
 
@@ -113,7 +113,7 @@ class TestSyncMemoryViaHttp:
     def test_no_api_key_omits_auth_header(self, sakthai_home: Path) -> None:
         captured: list[MagicMock] = []
 
-        def _fake_open(req: MagicMock) -> MagicMock:
+        def _fake_open(req: MagicMock, timeout: float | None = None) -> MagicMock:
             captured.append(req)
             return _http_response(200)
 
@@ -129,7 +129,7 @@ class TestSyncMemoryViaHttp:
 
         captured: list[MagicMock] = []
 
-        def _fake_open(req: MagicMock) -> MagicMock:
+        def _fake_open(req: MagicMock, timeout: float | None = None) -> MagicMock:
             captured.append(req)
             return _http_response(200)
 
@@ -143,7 +143,7 @@ class TestSyncMemoryViaHttp:
     def test_content_type_header_is_json(self, sakthai_home: Path) -> None:
         captured: list[MagicMock] = []
 
-        def _fake_open(req: MagicMock) -> MagicMock:
+        def _fake_open(req: MagicMock, timeout: float | None = None) -> MagicMock:
             captured.append(req)
             return _http_response(200)
 
@@ -500,3 +500,33 @@ class TestSyncMemoryToGitExtended:
         ):
             res = pull_memory_from_git()
             assert "already up to date" in res
+
+
+class TestGitUrlValidation:
+    """Unsafe remotes are rejected before any git subprocess runs."""
+
+    @pytest.mark.parametrize(
+        "remote",
+        ["ext::sh -c 'touch /tmp/pwned'", "-oProxyCommand=evil", "ftp://example.com/repo.git"],
+    )
+    def test_sync_rejects_unsafe_remote(self, sakthai_home: Path, remote: str) -> None:
+        with patch("sakthai.memory.sync._run_git") as run_git, pytest.raises(ValueError):
+            sync_memory_to_git(remote=remote)
+        run_git.assert_not_called()
+
+    @pytest.mark.parametrize(
+        "remote",
+        ["ext::sh -c 'touch /tmp/pwned'", "-oProxyCommand=evil", "ftp://example.com/repo.git"],
+    )
+    def test_pull_rejects_unsafe_remote(self, sakthai_home: Path, remote: str) -> None:
+        (sakthai_home / ".git").mkdir()
+        with patch("sakthai.memory.sync._run_git") as run_git, pytest.raises(ValueError):
+            pull_memory_from_git(remote=remote)
+        run_git.assert_not_called()
+
+
+def test_http_sync_sets_a_timeout(sakthai_home: Path) -> None:
+    """A dead endpoint must fail after the timeout instead of hanging forever."""
+    with patch("urllib.request.urlopen", return_value=_http_response(200)) as urlopen:
+        sync_memory_via_http("https://example.com/sync")
+    assert urlopen.call_args.kwargs.get("timeout") == pytest.approx(30.0)

@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any
 
 from ..config import sakthai_home
+from ..giturl import validate_git_url
 
 # A safe single-path-segment name derived from the repo URL.
 EXTENSION_NAME_RE = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}$")
@@ -95,6 +96,10 @@ def _info_from_registry(name: str, data: dict[str, Any]) -> ExtensionInfo:
 
 def install_extension(url: str) -> InstallResult:
     """Clone ``url`` into the extensions dir and register its skills/MCP servers."""
+    try:
+        url = validate_git_url(url)
+    except ValueError as exc:
+        raise ExtensionError(str(exc)) from exc
     name = _name_from_url(url)
     if not EXTENSION_NAME_RE.match(name):
         raise ExtensionError(
@@ -154,13 +159,26 @@ def list_extensions() -> list[ExtensionInfo]:
 
 
 def remove(name: str) -> bool:
-    """Remove an extension and its clone. Returns False if it wasn't installed."""
+    """Remove an extension and its clone. Returns False if it wasn't installed.
+
+    Raises :class:`ExtensionError` (without touching the registry or the
+    filesystem) when the registered path resolves outside the extensions
+    directory — a tampered or corrupted registry entry must not be able to
+    delete an arbitrary tree.
+    """
     registry = _load_registry()
     if name not in registry["extensions"]:
         return False
     data = registry["extensions"].pop(name)
     path = Path(data["path"])
     if path.exists():
-        shutil.rmtree(path)
+        base = extensions_dir().resolve()
+        resolved = path.resolve()
+        if resolved == base or not resolved.is_relative_to(base):
+            raise ExtensionError(
+                f"refusing to delete {path}: registered path resolves outside "
+                f"the extensions directory {base}"
+            )
+        shutil.rmtree(resolved)
     _save_registry(registry)
     return True
