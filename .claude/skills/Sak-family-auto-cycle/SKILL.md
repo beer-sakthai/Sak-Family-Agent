@@ -13,17 +13,15 @@ Agent tool calls at your maximum available reasoning effort — this fan-out
 is exactly the kind of judgment-heavy, multi-step work that benefits from
 it.
 
-**Known gap — live runs need a sync step first.** `Sak-auto-cycle-loop`
-lives at `personas/shared/skills/` in this repo, which is not on the
-`sakthai` runtime's skill-discovery path (`skills/`, `library/`, or
-`$SAKTHAI_HOME/extensions` — see `personas/sakthai/sakthai/skills.py`). A
-live dispatch's `--with-skills Sak-auto-cycle-loop` will fail to resolve
-until the shared skill is composed/synced into each persona's live skill
-directory (via make compose-personas or the underlying scripts/compose_persona.py /
-skill-mirroring pattern — see docs/skill-naming.md). Confirm that sync
-has run before relying on a live run; a `--dry-run` may hit the same
-lookup failure since it changes `SAKTHAI_HOME`, not the injectable-skill
-search path.
+**Resolved gap (2026-07-13):** `personas/shared/skills/` is now on the
+`sakthai` runtime's skill-discovery path (`default_skill_roots()` in
+`personas/sakthai/sakthai/skills.py`), so `--with-skills
+Sak-auto-cycle-loop` resolves without a compose/sync step. `--dry-run`
+now also validates `--with-skills` names and exits non-zero on
+unresolved ones (a live run warns and skips instead), so a clean dry-run
+is real evidence the skill will inject. If a dry-run reports
+`Unresolved --with-skills name(s)`, stop and fix the skill path before
+dispatching.
 
 ## STOP: default to a dry, throwaway run — this is not optional
 

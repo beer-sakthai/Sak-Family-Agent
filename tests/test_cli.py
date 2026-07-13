@@ -1003,6 +1003,49 @@ def test_run_dry_run_reports_and_exits_zero(
     assert "runnable:    yes" in result.output
 
 
+def test_run_dry_run_fails_on_unresolved_skill(
+    runner: CliRunner, monkeypatch: pytest.MonkeyPatch, sakthai_home: Path
+) -> None:
+    import sakthai.agent.loop as loop_mod
+
+    monkeypatch.setattr(loop_mod, "get_credential_source", lambda _p: "api_key")
+    result = runner.invoke(
+        main,
+        ["run", "hi", "--dry-run", "--no-mcp", "-p", "anthropic", "--with-skills", "no-such-skill"],
+    )
+    assert result.exit_code != 0
+    assert "no-such-skill" in result.output
+
+
+def test_run_dry_run_reports_resolved_skills(
+    runner: CliRunner, monkeypatch: pytest.MonkeyPatch, sakthai_home: Path
+) -> None:
+    import sakthai.agent.loop as loop_mod
+
+    monkeypatch.setattr(loop_mod, "get_credential_source", lambda _p: "api_key")
+    ext = sakthai_home / "extensions" / "alpha"
+    ext.mkdir(parents=True)
+    (ext / "SKILL.md").write_text(
+        "---\nname: alpha\ndescription: d\nversion: 1.0.0\n---\n\nBODY\n", encoding="utf-8"
+    )
+    result = runner.invoke(
+        main, ["run", "hi", "--dry-run", "--no-mcp", "-p", "anthropic", "--with-skills", "alpha"]
+    )
+    assert result.exit_code == 0, result.output
+    assert "alpha" in result.output
+    assert "runnable:    yes" in result.output
+
+
+def test_run_warns_on_unresolved_skill(
+    runner: CliRunner, monkeypatch: pytest.MonkeyPatch, sakthai_home: Path
+) -> None:
+    _capture_tools(monkeypatch)
+    result = runner.invoke(main, ["run", "hi", "--no-mcp", "--with-skills", "no-such-skill"])
+    assert result.exit_code == 0
+    # Warning goes to stderr, which CliRunner mixes into output
+    assert "no-such-skill" in result.output
+
+
 def test_run_dry_run_not_runnable_exits_nonzero(
     runner: CliRunner, monkeypatch: pytest.MonkeyPatch
 ) -> None:

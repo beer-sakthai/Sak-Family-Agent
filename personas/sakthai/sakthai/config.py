@@ -36,6 +36,7 @@ REPO_ROOT = _find_repo_root(Path(__file__).resolve().parent.parent)
 SKILLS_DIR = REPO_ROOT / "skills"
 LIBRARY_DIR = REPO_ROOT / "library"
 PERSONAS_DIR = REPO_ROOT / "personas"
+SHARED_SKILLS_DIR = PERSONAS_DIR / "shared" / "skills"
 
 # The six Sak Family personas `sakthai chat --persona` can address.
 PERSONA_NAMES: tuple[str, ...] = ("sakking", "sakthai", "saksee", "saksit", "saktan", "sakjules")

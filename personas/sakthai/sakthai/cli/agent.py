@@ -18,6 +18,7 @@ from ..agent.loop import (
     run_agent,
 )
 from ..agent.tools import BUILTIN_TOOLS, Tool
+from ..skills import resolve_skill_names
 
 
 @contextlib.contextmanager
@@ -218,11 +219,23 @@ def run(
         with _tool_context(no_mcp=no_mcp, verbose=verbose) as tools:
             report = preflight(model=model, provider=provider, tools=tools)
         _print_preflight(report)
+        resolved, missing = resolve_skill_names(list(with_skills))
+        if resolved:
+            click.echo(f"[dry-run] skills:      {len(resolved)} resolved ({', '.join(resolved)})")
         if not report["runnable"]:
             raise click.ClickException(
                 f"Not runnable: no credentials found for provider {report['provider']!r}."
             )
+        if missing:
+            raise click.ClickException(f"Unresolved --with-skills name(s): {', '.join(missing)}")
         return
+    if with_skills:
+        _, missing = resolve_skill_names(list(with_skills))
+        if missing:
+            click.echo(
+                f"warning: skill(s) not found and will be skipped: {', '.join(missing)}",
+                err=True,
+            )
     streamed = False
 
     def _on_token(text: str) -> None:
