@@ -178,6 +178,14 @@
 **Learning:** Shell redirection is extremely versatile. Less common operators like `<>` and `<&` can be just as dangerous as standard output redirections if they target sensitive paths. Security regexes must be exhaustive and prioritized (longer matches first).
 **Prevention:** Use a unified and comprehensive regex for shell redirection operators: `r"(?:[0-9]|&)?(?:&>>|>>|>&|>\||<>|<&|>|<)"`. This ensures all variants are captured before the target path is validated.
 
+## 2026-07-28 - [Protecting SQLite Sidecar Files and Hardening Destructive Commands]
+
+**Vulnerability:** Guardrails only blocked `memory.db`, leaving SQLite sidecar files (`-wal`, `-shm`, `-journal`) exposed to exfiltration. Additionally, `rmdir` was missing from monitored destructive binaries.
+
+**Learning:** Database security must cover all auxiliary files that may contain data fragments. When blocking a specific file like a database, always consider its sidecar and temporary files. Furthermore, security lists for destructive actions must be exhaustive regarding standard utilities that can modify or remove the filesystem structure.
+
+**Prevention:** Use prefix matching (e.g., `memory.db-`) in path validation to block all associated database files. Periodically audit and expand `destructive_binaries` to include all standard POSIX utilities with deletion capabilities like `rmdir`.
+
 ## 2026-07-17 - [Hardening Guardrails against Interpreter-based Path Bypasses]
 
 **Vulnerability:** Shell guardrails could be bypassed by using language interpreters (e.g., `python3`, `node`) to read or execute system-critical files (e.g., `python3 /etc/passwd`). These binaries were not monitored, allowing them to target sensitive paths via positional arguments.
