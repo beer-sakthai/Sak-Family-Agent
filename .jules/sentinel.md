@@ -280,3 +280,11 @@
 **Learning:** Destructive intent can be hidden behind multiple layers of shell built-ins and system utilities. A robust security scanner must be able to recursively peel back these layers, handling both shell-level evaluation (`eval`) and process-level wrapping (`timeout`). Heuristics for skipping wrapper-specific flags and arguments are necessary to reach the core command.
 
 **Prevention:** Implement recursive inspection for `eval` and `exec` by re-splitting their arguments. Maintain an exhaustive list of transparent system wrappers (`timeout`, `nice`, `nohup`, `setsid`, `chrt`, `taskset`, `stdbuf`) and implement logic to skip their specific flags and arguments before recursing into the wrapped command.
+
+## 2026-07-28 - [Hardening Interpreter Guardrails against Intermediate Flags and Relative Repo Paths]
+
+**Vulnerability:** Interpreter and shell command guardrails could be bypassed by inserting intermediate flags (e.g., `python3 -v -c`) between the binary and the script execution flag. Additionally, repository-sensitive files (like `.env`, `memory.db`) could be targeted within scripts if they were accessed via relative paths without leading `/`, `~`, or `../` segments, which the script scanner previously ignored.
+
+**Learning:** Positional heuristics in CLI guardrails (e.g., assuming `binary_name` is at `i-1` for a flag at `i`) are unsafe due to the flexibility of standard CLI parsers. Furthermore, script-based exfiltration scanners must explicitly include application-specific sensitive files in their search patterns to prevent access to data not covered by generic absolute path checks.
+
+**Prevention:** Implement a robust backward-searching scanner that identifies the command binary associated with an execution flag even when separated by intermediate options. Enhance script argument regexes to explicitly match repository-sensitive file patterns (`.env`, `.git`, `.jules`, `memory.db`) at the start of any path-like string.
