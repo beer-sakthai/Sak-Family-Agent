@@ -8,6 +8,7 @@ from sakthai.agent.tools import Tool
 def run_command_tool() -> Tool:
     return Tool("run_command", "desc", {}, lambda _a, _s: "")
 
+
 @pytest.mark.parametrize(
     "command",
     [
@@ -24,4 +25,6 @@ def test_unmonitored_binaries_bypass(command, run_command_tool, store, monkeypat
     result = DEFAULT_POLICY.check_pre_execution(run_command_tool, {"command": command}, store)
     # If these are currently bypassing, they will return ALLOW.
     # We WANT them to be blocked.
-    assert result.action == GuardrailAction.DENY, f"Command '{command}' should be blocked but was allowed"
+    assert result.action == GuardrailAction.DENY, (
+        f"Command '{command}' should be blocked but was allowed"
+    )
