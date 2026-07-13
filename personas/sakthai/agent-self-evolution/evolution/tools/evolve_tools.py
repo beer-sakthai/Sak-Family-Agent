@@ -144,7 +144,9 @@ def evolve_tools(
             all_pass = False
 
     if not all_pass:
-        console.print("[yellow]⚠ Baseline descriptions have constraint violations — proceeding anyway[/yellow]")
+        console.print(
+            "[yellow]⚠ Baseline descriptions have constraint violations — proceeding anyway[/yellow]"
+        )
 
     # 4. Set up DSPy + GEPA optimizer
     console.print("\n[bold]Configuring optimizer[/bold]")

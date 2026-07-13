@@ -94,6 +94,35 @@ _CRITICAL_ROOTS = {
     "/lib64",
 }
 
+# Known sensitive basenames (files) and directories that should be blocked even if relative.
+_SENSITIVE_BASENAMES = {
+    ".env",
+    "memory.db",
+    ".bash_history",
+    ".zsh_history",
+    ".python_history",
+    ".history",
+    ".netrc",
+    ".npmrc",
+    ".pypirc",
+    "id_rsa",
+    "id_dsa",
+    "id_ecdsa",
+    "id_ed25519",
+    "known_hosts",
+    "authorized_keys",
+}
+
+_SENSITIVE_DIRS = {
+    ".ssh",
+    ".aws",
+    ".git",
+    ".jules",
+    ".docker",
+    ".kube",
+    ".gnupg",
+}
+
 
 def _is_sensitive_path(path: str, allow_local: bool = False) -> bool:
     """Return True if the path targets a sensitive system directory or uses traversal."""
@@ -126,17 +155,17 @@ def _is_sensitive_path(path: str, allow_local: bool = False) -> bool:
     if ".." in path or path.startswith("~"):
         return True
 
-    # Block access to repository-sensitive files and directories (.env, .git, memory.db).
+    # Block access to known sensitive files and directories.
     normalized = os.path.normpath(path)
+    parts = normalized.split(os.sep)
     basename = os.path.basename(normalized)
-    if (
-        basename == ".env"
-        or basename.startswith(".env.")
-        or basename == "memory.db"
-        or basename.startswith("memory.db-")
+
+    if basename in _SENSITIVE_BASENAMES or any(
+        basename.startswith(p) for p in (".env.", "memory.db-")
     ):
         return True
-    if ".git" in normalized.split(os.sep) or ".jules" in normalized.split(os.sep):
+
+    if any(d in parts for d in _SENSITIVE_DIRS):
         return True
 
     if not allow_local and path in (".", "./"):

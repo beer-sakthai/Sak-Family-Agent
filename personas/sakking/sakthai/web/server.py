@@ -22,6 +22,8 @@ logger = logging.getLogger(__name__)
 
 _DEFAULT_HOST = "127.0.0.1"
 _DEFAULT_PORT = 3001
+
+
 def _find_static_root() -> Path:
     curr = Path(__file__).resolve().parent
     for parent in [curr] + list(curr.parents):
