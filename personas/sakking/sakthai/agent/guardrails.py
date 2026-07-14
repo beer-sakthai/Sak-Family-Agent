@@ -94,6 +94,38 @@ _CRITICAL_ROOTS = {
     "/lib64",
 }
 
+# Sensitive directories that should be blocked if present in the path.
+_SENSITIVE_DIRS = {
+    ".ssh",
+    ".aws",
+    ".git",
+    ".jules",
+    ".docker",
+    ".kube",
+    ".gnupg",
+    ".config",
+    ".npm",
+    ".pypirc",
+}
+
+# Sensitive basenames that should be blocked.
+_SENSITIVE_BASENAMES = {
+    ".env",
+    "memory.db",
+    "id_rsa",
+    "id_ecdsa",
+    "id_ed25519",
+    "id_dsa",
+    "authorized_keys",
+    "known_hosts",
+    ".bash_history",
+    ".zsh_history",
+    ".history",
+    ".netrc",
+    ".npmrc",
+    "credentials",
+}
+
 
 def _is_sensitive_path(path: str, allow_local: bool = False) -> bool:
     """Return True if the path targets a sensitive system directory or uses traversal."""
@@ -126,18 +158,32 @@ def _is_sensitive_path(path: str, allow_local: bool = False) -> bool:
     if ".." in path or path.startswith("~"):
         return True
 
-    # Block access to repository-sensitive files and directories (.env, .git, memory.db).
+    # Block access to sensitive files and directories.
     normalized = os.path.normpath(path)
+    parts = normalized.split(os.sep)
     basename = os.path.basename(normalized)
+
+    # 1. Check basenames and variants (e.g. memory.db-wal, .env.local).
     if (
-        basename == ".env"
-        or basename.startswith(".env.")
-        or basename == "memory.db"
-        or basename.startswith("memory.db-")
+        basename in _SENSITIVE_BASENAMES
+        or basename.startswith((".env.", "memory.db-", "id_rsa", "id_ecdsa", "id_ed25519", "id_dsa"))
     ):
         return True
-    if ".git" in normalized.split(os.sep) or ".jules" in normalized.split(os.sep):
+
+    # 2. Check for sensitive directories in the path components.
+    if any(p in _SENSITIVE_DIRS for p in parts):
         return True
+
+    # 3. Check for relative paths targeting system roots (e.g. 'etc/passwd').
+    # If the path is relative and its first component is a critical root (minus leading slash).
+    if not path.startswith("/") and parts:
+        first = "/" + parts[0]
+        if first in _CRITICAL_ROOTS:
+            # Single-component 'tmp' is common and often safe as a local name.
+            if first == "/tmp" and len(parts) == 1:
+                pass
+            else:
+                return True
 
     if not allow_local and path in (".", "./"):
         return True

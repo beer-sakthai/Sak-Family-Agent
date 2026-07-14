@@ -14,7 +14,7 @@ def run_command_tool() -> Tool:
     [
         "echo evil <>/etc/passwd",
         "cat <>/etc/shadow",
-        "echo hi 3<>/tmp/test",  # /tmp is a sensitive root in guardrails.py
+        "echo hi 3<>/var/test",  # /var is a sensitive root
         "tail <&/etc/hostname",
     ],
 )

@@ -304,3 +304,11 @@
 **Learning:** Security blocklists for CLI commands must go beyond standard destructive utilities (`rm`, `mv`) and include common development tools that have significant filesystem side-effects. "Dual-use" tools like `git` or package managers can be used to compromise system integrity if their target paths are not validated.
 
 **Prevention:** Expand `destructive_binaries` and `exfiltration_binaries` to include common version control systems, package managers, and file creation utilities. Ensure that any tool capable of modifying the filesystem or reading data is subjected to sensitive path validation.
+
+## 2026-07-14 - [Hardening _is_sensitive_path against Relative System Paths and Sensitive User Data]
+
+**Vulnerability:** Shell and tool guardrails could be bypassed by using relative paths to system-critical files (e.g., `cat etc/passwd`) or by targeting sensitive user directories and files (e.g., `.ssh/id_rsa`, `.bash_history`) that were only blocked when accessed via absolute paths.
+
+**Learning:** Security guardrails must normalize paths and evaluate their components recursively. Simply checking for leading `/` or `~` is insufficient as relative paths can still target sensitive files depending on the current working directory or application-specific data layouts.
+
+**Prevention:** Implement comprehensive sensitive directory (`_SENSITIVE_DIRS`) and basename (`_SENSITIVE_BASENAMES`) blocklists that apply to all components of a path. Additionally, detect relative paths targeting system roots by checking if the first component (normalized) is a known critical root. Allow exceptions for common safe single-component names (like `tmp`) to avoid overblocking discovery tools.
