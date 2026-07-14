@@ -113,6 +113,7 @@ _SENSITIVE_BASENAMES = {
     "id_ed25519",
     "known_hosts",
     "authorized_keys",
+    "credentials",
 }
 
 _SENSITIVE_DIRS = {
@@ -123,6 +124,8 @@ _SENSITIVE_DIRS = {
     ".docker",
     ".kube",
     ".gnupg",
+    ".config",
+    ".npm",
 }
 
 # Private-key stems whose backup/rename variants (id_rsa.bak, id_ed25519.old,
@@ -199,6 +202,18 @@ def _is_sensitive_path(path: str, allow_local: bool = False) -> bool:
     lowered_parts = {p.casefold() for p in parts}
     if any(d in lowered_parts for d in _SENSITIVE_DIRS):
         return True
+
+    # Block relative paths targeting system roots (e.g. 'etc/passwd'): a
+    # relative reference whose first component names a critical root is
+    # treated like the absolute path it resolves to when cwd is '/'.
+    # Exception: a bare single-component 'tmp' is a common safe local name
+    # (discovery tools, project dirs), so only subpaths are blocked.
+    if not normalized.startswith("/") and parts and parts[0]:
+        first = "/" + parts[0].casefold()
+        if first in _CRITICAL_ROOTS and not (
+            first == "/tmp" and len(parts) == 1  # nosec B108
+        ):
+            return True
 
     if not allow_local and path in (".", "./"):
         return True
