@@ -11,6 +11,7 @@ The design is based on Phase 3 of the plan in ``PLAN.md``.
 from __future__ import annotations
 
 import contextlib
+import fnmatch
 import logging
 import os
 import re
@@ -94,7 +95,26 @@ _CRITICAL_ROOTS = {
     "/lib64",
 }
 
-# Sensitive directories that should be blocked even when targeted via relative paths.
+
+# Known sensitive basenames (files) and directories that should be blocked even if relative.
+_SENSITIVE_BASENAMES = {
+    ".env",
+    "memory.db",
+    ".bash_history",
+    ".zsh_history",
+    ".python_history",
+    ".history",
+    ".netrc",
+    ".npmrc",
+    ".pypirc",
+    "id_rsa",
+    "id_dsa",
+    "id_ecdsa",
+    "id_ed25519",
+    "known_hosts",
+    "authorized_keys",
+}
+
 _SENSITIVE_DIRS = {
     ".ssh",
     ".aws",
@@ -105,19 +125,45 @@ _SENSITIVE_DIRS = {
     ".gnupg",
 }
 
-# Sensitive basenames that should be blocked regardless of their directory.
-_SENSITIVE_BASENAMES = {
-    ".bash_history",
-    ".zsh_history",
-    ".netrc",
+# Private-key stems whose backup/rename variants (id_rsa.bak, id_ed25519.old,
+# id_rsa.pem, …) carry the same key material and must also be blocked.
+_SENSITIVE_KEY_STEMS = {
     "id_rsa",
-    "id_ed25519",
-    "id_ecdsa",
     "id_dsa",
-    "authorized_keys",
-    ".pypirc",
-    ".npmrc",
+    "id_ecdsa",
+    "id_ed25519",
 }
+
+
+# Regex fragment matching the *start* of a path-like token that references a
+# sensitive location, derived from the sets above so the interpreter-script
+# scanner stays in sync with _is_sensitive_path. Longer alternatives first so
+# the alternation is greedy where names overlap.
+_SENSITIVE_NAME_RE = "|".join(
+    re.escape(name)
+    for name in sorted(
+        _SENSITIVE_DIRS | _SENSITIVE_BASENAMES | _SENSITIVE_KEY_STEMS,
+        key=len,
+        reverse=True,
+    )
+)
+_SENSITIVE_MARKER_RE = "|".join([r"/", r"~", r"(?:\.\./)+", _SENSITIVE_NAME_RE])
+_SENSITIVE_SCRIPT_PATH_RE = rf"(?:{_SENSITIVE_MARKER_RE})[a-zA-Z0-9\._/-]*"
+
+
+def _basename_is_sensitive(basename: str) -> bool:
+    """Return True if a path basename names a sensitive file.
+
+    Comparison is case-insensitive so that differently-cased references
+    (``.AWS``, ``id_RSA``) on case-insensitive filesystems are still caught.
+    Private-key stems match their backup/rename suffixes (``id_rsa.bak``).
+    """
+    lowered = basename.casefold()
+    if lowered in _SENSITIVE_BASENAMES or any(
+        lowered.startswith(p) for p in (".env.", "memory.db-")
+    ):
+        return True
+    return any(lowered == stem or lowered.startswith(stem + ".") for stem in _SENSITIVE_KEY_STEMS)
 
 
 def _is_sensitive_path(path: str, allow_local: bool = False) -> bool:
@@ -131,17 +177,7 @@ def _is_sensitive_path(path: str, allow_local: bool = False) -> bool:
             if sep == "@" and path.startswith("@"):
                 continue
             val = path.split(sep, 1)[1]
-            if (
-                val
-                and val != path
-                and (
-                    val.startswith(("/", ".", "~"))
-                    or val == "memory.db"
-                    or val.startswith("memory.db-")
-                    or val in _SENSITIVE_BASENAMES
-                )
-                and _is_sensitive_path(val, allow_local=allow_local)
-            ):
+            if val and val != path and _is_sensitive_path(val, allow_local=allow_local):
                 return True
 
     # Strip curl-style file upload prefix if present at start.
@@ -152,20 +188,16 @@ def _is_sensitive_path(path: str, allow_local: bool = False) -> bool:
     if ".." in path or path.startswith("~"):
         return True
 
-    # Block access to repository-sensitive files and directories.
+    # Block access to known sensitive files and directories.
     normalized = os.path.normpath(path)
     parts = normalized.split(os.sep)
-    if any(part in _SENSITIVE_DIRS for part in parts):
+    basename = os.path.basename(normalized)
+
+    if _basename_is_sensitive(basename):
         return True
 
-    basename = os.path.basename(normalized)
-    if (
-        basename in _SENSITIVE_BASENAMES
-        or basename == ".env"
-        or basename.startswith(".env.")
-        or basename == "memory.db"
-        or basename.startswith("memory.db-")
-    ):
+    lowered_parts = {p.casefold() for p in parts}
+    if any(d in lowered_parts for d in _SENSITIVE_DIRS):
         return True
 
     if not allow_local and path in (".", "./"):
@@ -185,6 +217,18 @@ def _is_sensitive_path(path: str, allow_local: bool = False) -> bool:
     # If the path contains wildcards, we check if its prefix (before the first wildcard)
     # could target a sensitive directory.
     if any(c in path for c in "*?[]"):
+        # Any wildcard component that could expand to a sensitive directory or
+        # file name (e.g. '.a?s/credentials' -> '.aws/...') is treated as
+        # sensitive, since the child shell performs the expansion.
+        for component in os.path.normpath(path).split(os.sep):
+            if not any(c in component for c in "*?[]"):
+                continue
+            folded = component.casefold()
+            if any(fnmatch.fnmatch(name, folded) for name in _SENSITIVE_DIRS) or any(
+                fnmatch.fnmatch(name, folded) for name in _SENSITIVE_BASENAMES
+            ):
+                return True
+
         # Strip trailing wildcards to check the base path.
         base_path = re.split(r"[*?\[\]]", path, maxsplit=1)[0]
         if base_path:
@@ -289,12 +333,9 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
             if interp_idx != -1:
                 script = parts[i + 1]
                 # Scan script for absolute or home-relative paths (including traversal)
-                # or repository-sensitive files (.env, .git, .jules, memory.db).
-                path_pattern = (
-                    r"(?:/|~|(?:\.\./)+|\.env(?:\.[a-zA-Z0-9_-]+)?|\.git|\.jules|memory\.db)"
-                    r"[a-zA-Z0-9\._/-]*"
-                )
-                for match in re.finditer(path_pattern, script):
+                # or any known sensitive file/directory referenced relatively
+                # (.env, .git, .ssh, .aws, id_rsa, memory.db, ...).
+                for match in re.finditer(_SENSITIVE_SCRIPT_PATH_RE, script):
                     candidate = match.group(0)
                     if _is_sensitive_path(candidate):
                         binary_name = os.path.basename(parts[interp_idx])
@@ -433,7 +474,8 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
                         else f"Potentially destructive '{binary_name}' command on {subpart!r} blocked.",
                     )
                 if is_interpreter and re.search(
-                    r"(?:/etc|/root|/bin|/sbin|/usr|/var|/boot|/dev|/home|/sys|/proc|/tmp|/lib|/lib64)(?:/|$)|~|\.\.|\.env|\.git|\.jules|memory\.db",
+                    r"(?:/etc|/root|/bin|/sbin|/usr|/var|/boot|/dev|/home|/sys|/proc|/tmp|/lib|/lib64)(?:/|$)|~|\.\.|"
+                    + _SENSITIVE_NAME_RE,
                     subpart,
                 ):
                     return GuardrailResult(
