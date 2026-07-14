@@ -9,6 +9,7 @@ def test_ssh_keygen_destructive():
     assert result.action == GuardrailAction.DENY
     assert "destructive" in result.reason.lower()
 
+
 def test_ssh_add_exfiltration():
     # ssh-add can be used to read a private key
     cmd = "ssh-add /home/user/.ssh/id_rsa"
@@ -17,6 +18,7 @@ def test_ssh_add_exfiltration():
     assert result.action == GuardrailAction.DENY
     assert "dangerous" in result.reason.lower()
 
+
 def test_ssh_exfiltration():
     # ssh can be used to read a private key via -i
     cmd = "ssh -i /home/user/.ssh/id_rsa user@host"
@@ -24,6 +26,7 @@ def test_ssh_exfiltration():
     result = _check_destructive_tokens(parts)
     assert result.action == GuardrailAction.DENY
     assert "dangerous" in result.reason.lower()
+
 
 def test_ssh_copy_id_destructive():
     # ssh-copy-id can be used to write to authorized_keys
