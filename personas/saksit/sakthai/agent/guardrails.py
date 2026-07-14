@@ -114,6 +114,10 @@ _SENSITIVE_BASENAMES = {
     "known_hosts",
     "authorized_keys",
     "credentials",
+    ".bashrc",
+    ".zshrc",
+    ".profile",
+    ".bash_profile",
 }
 
 _SENSITIVE_DIRS = {
@@ -145,7 +149,10 @@ _SENSITIVE_KEY_STEMS = {
 _SENSITIVE_NAME_RE = "|".join(
     re.escape(name)
     for name in sorted(
-        _SENSITIVE_DIRS | _SENSITIVE_BASENAMES | _SENSITIVE_KEY_STEMS,
+        _SENSITIVE_DIRS
+        | _SENSITIVE_BASENAMES
+        | _SENSITIVE_KEY_STEMS
+        | {r.lstrip("/") for r in _CRITICAL_ROOTS},
         key=len,
         reverse=True,
     )

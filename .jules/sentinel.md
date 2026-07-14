@@ -317,3 +317,11 @@
 **Learning:** A critical-root blocklist keyed on a leading `/` is bypassable by dropping the slash; relative references must be checked against the same roots. User-level config trees (`.config`, `.npm`) commonly hold tokens (gh, npm) and belong in the sensitive-directory set.
 
 **Prevention:** Treat a relative path whose first normalized component names a critical root as sensitive (case-insensitively), with a single-component `tmp` exception to avoid overblocking discovery tools; add `.config`/`.npm` to `_SENSITIVE_DIRS` and `credentials` to `_SENSITIVE_BASENAMES` so the derived interpreter-script regex and wildcard checks pick them up automatically. Synced across all six personas (enforced by `tests/test_persona_guardrails_parity.py`).
+
+## 2026-07-30 - [Hardening Interpreter Guardrails against Relative System Roots and Shell Config Exfiltration]
+
+**Vulnerability:** Interpreter script scanners missed relative references to critical system roots (e.g., `python3 -c "open('etc/passwd')"`). Additionally, common shell configuration files (`.bashrc`, `.zshrc`, `.profile`, `.bash_profile`) were unmonitored.
+
+**Learning:** `_SENSITIVE_NAME_RE` must be kept in sync with all sensitive path patterns, including basenames of critical system roots, to prevent bypasses in script-based exfiltration. Shell configuration files are high-value targets for exfiltration as they often contain aliases, environment variables, or path settings.
+
+**Prevention:** Derive `_SENSITIVE_NAME_RE` from the union of `_SENSITIVE_DIRS`, `_SENSITIVE_BASENAMES`, `_SENSITIVE_KEY_STEMS`, and the basenames of `_CRITICAL_ROOTS`. Explicitly include shell startup files in `_SENSITIVE_BASENAMES`.
