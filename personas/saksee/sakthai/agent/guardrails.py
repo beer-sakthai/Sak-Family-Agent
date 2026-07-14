@@ -94,6 +94,31 @@ _CRITICAL_ROOTS = {
     "/lib64",
 }
 
+# Sensitive directories that should be blocked even when targeted via relative paths.
+_SENSITIVE_DIRS = {
+    ".ssh",
+    ".aws",
+    ".git",
+    ".jules",
+    ".docker",
+    ".kube",
+    ".gnupg",
+}
+
+# Sensitive basenames that should be blocked regardless of their directory.
+_SENSITIVE_BASENAMES = {
+    ".bash_history",
+    ".zsh_history",
+    ".netrc",
+    "id_rsa",
+    "id_ed25519",
+    "id_ecdsa",
+    "id_dsa",
+    "authorized_keys",
+    ".pypirc",
+    ".npmrc",
+}
+
 
 def _is_sensitive_path(path: str, allow_local: bool = False) -> bool:
     """Return True if the path targets a sensitive system directory or uses traversal."""
@@ -113,6 +138,7 @@ def _is_sensitive_path(path: str, allow_local: bool = False) -> bool:
                     val.startswith(("/", ".", "~"))
                     or val == "memory.db"
                     or val.startswith("memory.db-")
+                    or val in _SENSITIVE_BASENAMES
                 )
                 and _is_sensitive_path(val, allow_local=allow_local)
             ):
@@ -126,17 +152,20 @@ def _is_sensitive_path(path: str, allow_local: bool = False) -> bool:
     if ".." in path or path.startswith("~"):
         return True
 
-    # Block access to repository-sensitive files and directories (.env, .git, memory.db).
+    # Block access to repository-sensitive files and directories.
     normalized = os.path.normpath(path)
+    parts = normalized.split(os.sep)
+    if any(part in _SENSITIVE_DIRS for part in parts):
+        return True
+
     basename = os.path.basename(normalized)
     if (
-        basename == ".env"
+        basename in _SENSITIVE_BASENAMES
+        or basename == ".env"
         or basename.startswith(".env.")
         or basename == "memory.db"
         or basename.startswith("memory.db-")
     ):
-        return True
-    if ".git" in normalized.split(os.sep) or ".jules" in normalized.split(os.sep):
         return True
 
     if not allow_local and path in (".", "./"):

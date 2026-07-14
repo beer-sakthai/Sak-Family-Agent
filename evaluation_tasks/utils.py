@@ -1,6 +1,7 @@
-import re
 import json
+import re
 from functools import wraps
+
 
 def get_intro_line(persona_text):
     """
@@ -48,7 +49,7 @@ def make_json_metric(validator_fn):
     def metric_fn(predictions, references, docs):
         prediction_str = predictions[0]
         doc = docs[0]
-        
+
         data = _parse_prediction_as_json(prediction_str)
         if data is None:
             return 0.0 # Fail if the prediction is not valid JSON.
@@ -87,7 +88,7 @@ def check_json_key_value_pattern(data, doc):
     value_pattern = doc.get('value_pattern')
     if not key_to_check or not value_pattern or not isinstance(data, dict) or key_to_check not in data:
         return 0.0
-    
+
     value = data[key_to_check]
     return 1.0 if re.match(value_pattern, str(value)) else 0.0
 

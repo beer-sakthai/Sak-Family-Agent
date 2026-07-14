@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
-"""SakThai 7B LoRA training — simpler version for HF Jobs.""" 
-import os, json, subprocess, sys
+"""SakThai 7B LoRA training — simpler version for HF Jobs."""
+import json
+import os
+import subprocess
+import sys
 
 # ── Config ────────────────────────────────────────────────────────
 BASE_MODEL = "Qwen/Qwen2.5-7B-Instruct"
@@ -25,6 +28,7 @@ print("Deps installed", flush=True)
 
 # ── Auth (HF_TOKEN env var or file) ────────────────────────────────
 from huggingface_hub import HfApi
+
 token = os.environ.get("HF_TOKEN", "")
 if not token:
     token_path = os.path.expanduser("~/.cache/huggingface/token")
@@ -34,6 +38,7 @@ print(f"Auth OK: {api.whoami()['name']}", flush=True)
 
 # ── Load dataset ──────────────────────────────────────────────────
 from datasets import load_dataset
+
 print("Loading dataset...", flush=True)
 dataset = load_dataset(DATASET_ID, split="train")
 print(f"Loaded {len(dataset)} examples", flush=True)
@@ -76,6 +81,7 @@ print(f"Loaded. Params: {model.num_parameters():,}", flush=True)
 
 # ── LoRA ──────────────────────────────────────────────────────────
 from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
+
 model = prepare_model_for_kbit_training(model)
 lora = LoraConfig(r=LORA_R, lora_alpha=LORA_ALPHA, target_modules=["q_proj","k_proj","v_proj","o_proj"],
                   bias="none", task_type="CAUSAL_LM")
@@ -83,7 +89,7 @@ model = get_peft_model(model, lora)
 model.print_trainable_parameters()
 
 # ── Training ──────────────────────────────────────────────────────
-from trl import SFTTrainer, SFTConfig
+from trl import SFTConfig, SFTTrainer
 
 args = SFTConfig(
     output_dir="/data/7b-lora", num_train_epochs=NUM_EPOCHS, max_steps=MAX_STEPS,
@@ -97,6 +103,7 @@ args = SFTConfig(
 
 # TRL dynamic loader: detect correct arg name at runtime
 import inspect
+
 sig_trainer = inspect.signature(SFTTrainer.__init__)
 arg_name = "processing_class" if "processing_class" in sig_trainer.parameters else "tokenizer"
 print(f"TRL detected, using argument: {arg_name}", flush=True)

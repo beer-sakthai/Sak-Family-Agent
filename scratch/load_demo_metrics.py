@@ -1,14 +1,14 @@
 """Script to load mock leads and revenue into SQLite memory.db for dashboard testing."""
 
 import json
-import time
+import sys
 from datetime import datetime, timedelta
 from pathlib import Path
-import sys
 
 # Ensure sakthai package is in path
 sys.path.insert(0, str((Path(__file__).resolve().parent.parent / "personas" / "sakthai").resolve()))
 from sakthai.memory.store import MemoryStore
+
 
 def load_mock_data():
     print("Opening MemoryStore...")
@@ -63,7 +63,7 @@ def load_mock_data():
         for lead in leads:
             created_dt = now - timedelta(days=lead["days_ago"])
             created_ts = int(created_dt.timestamp())
-            
+
             payload = {
                 "name": lead["name"],
                 "email": lead["email"],
@@ -71,7 +71,7 @@ def load_mock_data():
                 "query": lead["query"]
             }
             encoded = json.dumps(payload)
-            
+
             # Insert via cursor to set custom created_at/updated_at timestamps
             store._conn.execute(
                 "INSERT INTO facts (kind, key, value, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
