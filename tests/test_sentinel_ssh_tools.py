@@ -1,6 +1,5 @@
+from sakthai.agent.guardrails import GuardrailAction, _check_destructive_tokens
 
-import pytest
-from sakthai.agent.guardrails import _check_destructive_tokens, GuardrailAction
 
 def test_ssh_keygen_destructive():
     # ssh-keygen can be used to overwrite an existing key
