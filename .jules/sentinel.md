@@ -317,3 +317,11 @@
 **Learning:** A critical-root blocklist keyed on a leading `/` is bypassable by dropping the slash; relative references must be checked against the same roots. User-level config trees (`.config`, `.npm`) commonly hold tokens (gh, npm) and belong in the sensitive-directory set.
 
 **Prevention:** Treat a relative path whose first normalized component names a critical root as sensitive (case-insensitively), with a single-component `tmp` exception to avoid overblocking discovery tools; add `.config`/`.npm` to `_SENSITIVE_DIRS` and `credentials` to `_SENSITIVE_BASENAMES` so the derived interpreter-script regex and wildcard checks pick them up automatically. Synced across all six personas (enforced by `tests/test_persona_guardrails_parity.py`).
+
+## 2026-07-15 - [Hardening Guardrails against SSH Tool Bypasses]
+
+**Vulnerability:** Shell command guardrails did not monitor common SSH-related utilities (`ssh`, `ssh-add`, `ssh-keygen`, `ssh-copy-id`), allowing an agent to exfiltrate private identity files or overwrite sensitive security credentials like `authorized_keys`.
+
+**Learning:** When defining guardrails for a tool-using agent, it's not enough to block direct file access tools (`cat`, `rm`). Multi-purpose networking and security utilities often have built-in flags for reading from or writing to specific sensitive paths that bypass generic path-based argument scanners if the binary itself is not monitored.
+
+**Prevention:** Maintain an exhaustive list of sensitive binaries that includes not just general-purpose file utilities, but also specialized security and networking tools (`ssh*`, `openssl`, `socat`). Ensure these are synchronized across all agent personas to maintain a consistent security posture.
