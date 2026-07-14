@@ -168,14 +168,22 @@ def test_interpreter_one_liner_on_local_file_allowed(
 def test_interpreter_arg_with_embedded_sensitive_path_blocked(
     run_command_tool: Tool, store: MemoryStore, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    # The sed expression embeds /etc mid-token, so only the interpreter
-    # argument regex (not the plain path check) can catch it.
+    # The sed expression embeds /etc mid-token with a non-separator delimiter,
+    # so only the interpreter argument regex (not the plain path check) can
+    # catch it.
     monkeypatch.setenv("SAKTHAI_SHELL_ALLOW", "1")
+    result = DEFAULT_POLICY.check_pre_execution(
+        run_command_tool, {"command": "sed sx/etc/passwdx input.txt"}, store
+    )
+    assert result.action == GuardrailAction.DENY
+    assert result.reason and "sensitive path in arguments" in result.reason
+
+    # With '@' as the delimiter the separator recursion in _is_sensitive_path
+    # catches the embedded path directly; still denied.
     result = DEFAULT_POLICY.check_pre_execution(
         run_command_tool, {"command": "sed s@x@/etc/passwd@ input.txt"}, store
     )
     assert result.action == GuardrailAction.DENY
-    assert result.reason and "sensitive path in arguments" in result.reason
 
 
 # ---------------------------------------------------------------------------
