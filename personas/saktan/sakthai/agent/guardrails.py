@@ -164,9 +164,8 @@ def _is_sensitive_path(path: str, allow_local: bool = False) -> bool:
     basename = os.path.basename(normalized)
 
     # 1. Check basenames and variants (e.g. memory.db-wal, .env.local).
-    if (
-        basename in _SENSITIVE_BASENAMES
-        or basename.startswith((".env.", "memory.db-", "id_rsa", "id_ecdsa", "id_ed25519", "id_dsa"))
+    if basename in _SENSITIVE_BASENAMES or basename.startswith(
+        (".env.", "memory.db-", "id_rsa", "id_ecdsa", "id_ed25519", "id_dsa")
     ):
         return True
 
