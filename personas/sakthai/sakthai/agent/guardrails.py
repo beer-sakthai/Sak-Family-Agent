@@ -179,7 +179,7 @@ def _is_sensitive_path(path: str, allow_local: bool = False) -> bool:
         first = "/" + parts[0]
         if first in _CRITICAL_ROOTS:
             # Single-component 'tmp' is common and often safe as a local name.
-            if first == "/tmp" and len(parts) == 1:
+            if first == "/tmp" and len(parts) == 1:  # nosec B108
                 pass
             else:
                 return True
