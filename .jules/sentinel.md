@@ -325,3 +325,11 @@
 **Learning:** Script scanning regexes must be as exhaustive as the path validation they feed into. If the path validator blocks relative system roots, the script scanner must proactively extract those same patterns from script strings.
 
 **Prevention:** derived the interpreter-script scanner's regex (`_SENSITIVE_NAME_RE`) from a union of sensitive directories, basenames, and *stripped critical roots* (e.g., `etc`, `bin`, `var`). This ensures that relative references to system roots are consistently identified for validation regardless of their location in a script argument.
+
+## 2026-07-15 - [Hardening Guardrails against Container and Virtualization Bypasses]
+
+**Vulnerability:** Shell command guardrails could be bypassed using containerization tools (`docker`, `podman`, `kubectl`) and virtualization wrappers (`chroot`, `nsenter`) to mount or access sensitive host files (e.g., `docker run -v /etc:/mnt ...`).
+
+**Learning:** Generic path-based guardrails often miss host paths embedded within complex argument strings (like volume mount mappings). Furthermore, container tools and system wrappers provide powerful pivots that can bypass standard utility-based filters if they are not explicitly monitored with specialized logic that understands their specific argument syntax.
+
+**Prevention:** Implement specialized guardrail logic for container tools that parses volume mount flags (`-v`, `--volume`, `--mount`) and file transfer commands (`kubectl cp`). Update `_is_sensitive_path` to recursively decompose and validate all components of delimited strings. Treat `chroot` and `nsenter` as transparent wrappers, while specifically validating the `chroot` target directory.

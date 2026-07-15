@@ -182,9 +182,9 @@ def _is_sensitive_path(path: str, allow_local: bool = False) -> bool:
         if sep in path:
             if sep == "@" and path.startswith("@"):
                 continue
-            val = path.split(sep, 1)[1]
-            if val and val != path and _is_sensitive_path(val, allow_local=allow_local):
-                return True
+            for val in path.split(sep):
+                if val and val != path and _is_sensitive_path(val, allow_local=allow_local):
+                    return True
 
     # Strip curl-style file upload prefix if present at start.
     if path.startswith("@") and len(path) > 1:
@@ -590,7 +590,61 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
                     reason=f"Potentially dangerous 'find' command on {part!r} blocked.",
                 )
 
-    # 6. Handle wrappers that don't use -c (sudo, doas, xargs, env, find -exec, timeout, etc.)
+    # 6. Specialized protection for container tools (docker, podman, kubectl).
+    for i, part in enumerate(parts):
+        if _is_binary(part, ("docker", "podman", "kubectl")):
+            binary_name = os.path.basename(part)
+            for j, subpart in enumerate(parts[i + 1 :], i + 1):
+                if subpart in (";", "&&", "||", "|"):
+                    break
+                # Check for volume mounts in docker/podman: -v /etc:/mnt or --mount type=bind,source=/etc,...
+                if subpart == "-v" or subpart == "--volume":
+                    if j + 1 < len(parts):
+                        val = parts[j + 1]
+                        if _is_sensitive_path(val):
+                            return GuardrailResult(
+                                GuardrailAction.DENY,
+                                reason=f"potentially dangerous {binary_name!r} volume mount targeting {val!r} blocked.",
+                            )
+                elif subpart.startswith("-v=") or subpart.startswith("--volume="):
+                    val = subpart.split("=", 1)[1]
+                    if _is_sensitive_path(val):
+                        return GuardrailResult(
+                            GuardrailAction.DENY,
+                            reason=f"potentially dangerous {binary_name!r} volume mount targeting {val!r} blocked.",
+                        )
+                elif subpart.startswith("--mount"):
+                    val = subpart
+                    if "=" not in val and j + 1 < len(parts):
+                        val = parts[j + 1]
+                    # --mount type=bind,source=/etc,target=/mnt
+                    if "source=" in val:
+                        source_val = val.split("source=", 1)[1].split(",", 1)[0]
+                        if _is_sensitive_path(source_val):
+                            return GuardrailResult(
+                                GuardrailAction.DENY,
+                                reason=f"potentially dangerous {binary_name!r} mount source {source_val!r} blocked.",
+                            )
+                    elif "src=" in val:
+                        source_val = val.split("src=", 1)[1].split(",", 1)[0]
+                        if _is_sensitive_path(source_val):
+                            return GuardrailResult(
+                                GuardrailAction.DENY,
+                                reason=f"potentially dangerous {binary_name!r} mount source {source_val!r} blocked.",
+                            )
+
+                # Specialized kubectl cp check.
+                if binary_name == "kubectl" and subpart == "cp":
+                    for k in range(j + 1, len(parts)):
+                        if parts[k] in (";", "&&", "||", "|"):
+                            break
+                        if _is_sensitive_path(parts[k]):
+                            return GuardrailResult(
+                                GuardrailAction.DENY,
+                                reason=f"potentially dangerous 'kubectl cp' on {parts[k]!r} blocked.",
+                            )
+
+    # 7. Handle wrappers that don't use -c (sudo, doas, xargs, env, find -exec, timeout, etc.)
     for i, part in enumerate(parts):
         # sudo command ... or doas command ... or xargs command ... or env [VAR=VAL] command ...
         transparent_wrappers = (
@@ -606,6 +660,8 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
             "chrt",
             "taskset",
             "stdbuf",
+            "chroot",
+            "nsenter",
         )
         if _is_binary(part, transparent_wrappers):
             # Most of these wrappers have flags. xargs and env are special.
@@ -632,6 +688,8 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
                     and flag in ("-p", "-c")
                     or _is_binary(part, "stdbuf")
                     and flag in ("-i", "-o", "-e")
+                    or _is_binary(part, "nsenter")
+                    and flag in ("-t", "--target", "-S", "--setuid", "-G", "--setgid")
                     or _is_binary(part, ("sudo", "doas"))
                     and flag
                     in (
@@ -656,6 +714,20 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
                 and start_idx < len(parts)
                 and not parts[start_idx].startswith("-")
             ):
+                start_idx += 1
+
+            # chroot has the NEWROOT argument that is NOT a flag.
+            if (
+                _is_binary(part, "chroot")
+                and start_idx < len(parts)
+                and not parts[start_idx].startswith("-")
+            ):
+                # The NEWROOT itself might be sensitive (e.g. chroot /etc).
+                if _is_sensitive_path(parts[start_idx], allow_local=True):
+                    return GuardrailResult(
+                        GuardrailAction.DENY,
+                        reason=f"potentially dangerous 'chroot' on {parts[start_idx]!r} blocked.",
+                    )
                 start_idx += 1
 
             res = _check_destructive_tokens(parts[start_idx:], context_sensitive=context_sensitive)
