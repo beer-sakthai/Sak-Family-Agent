@@ -317,3 +317,11 @@
 **Learning:** A critical-root blocklist keyed on a leading `/` is bypassable by dropping the slash; relative references must be checked against the same roots. User-level config trees (`.config`, `.npm`) commonly hold tokens (gh, npm) and belong in the sensitive-directory set.
 
 **Prevention:** Treat a relative path whose first normalized component names a critical root as sensitive (case-insensitively), with a single-component `tmp` exception to avoid overblocking discovery tools; add `.config`/`.npm` to `_SENSITIVE_DIRS` and `credentials` to `_SENSITIVE_BASENAMES` so the derived interpreter-script regex and wildcard checks pick them up automatically. Synced across all six personas (enforced by `tests/test_persona_guardrails_parity.py`).
+
+## 2026-07-15 - [Hardening Script Scanner for Relative System Roots]
+
+**Vulnerability:** Interpreter script scanners (e.g. for `python3 -c`) previously only matched absolute paths (`/etc`), home-relative paths (`~`), or traversals (`../`). They missed relative references to system roots (e.g., `etc/passwd`) if the command was run from `/`, even if `_is_sensitive_path` would have correctly identified them.
+
+**Learning:** Script scanning regexes must be as exhaustive as the path validation they feed into. If the path validator blocks relative system roots, the script scanner must proactively extract those same patterns from script strings.
+
+**Prevention:** derived the interpreter-script scanner's regex (`_SENSITIVE_NAME_RE`) from a union of sensitive directories, basenames, and *stripped critical roots* (e.g., `etc`, `bin`, `var`). This ensures that relative references to system roots are consistently identified for validation regardless of their location in a script argument.
