@@ -601,20 +601,20 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
                 if subpart in (";", "&&", "||", "|"):
                     break
                 # volume/mounts for docker/podman
-                val = None
+                cont_path: str | None = None
                 if subpart in ("-v", "--volume") and j + 1 < len(subparts):
-                    val = subparts[j + 1]
+                    cont_path = subparts[j + 1]
                 elif subpart.startswith(("-v=", "--volume=")):
-                    val = subpart.split("=", 1)[1]
+                    cont_path = subpart.split("=", 1)[1]
                 elif subpart == "--mount" and j + 1 < len(subparts):
-                    val = subparts[j + 1]
+                    cont_path = subparts[j + 1]
                 elif subpart.startswith("--mount="):
-                    val = subpart.split("=", 1)[1]
-                if val:
-                    host_path = val.split(":", 1)[0]
+                    cont_path = subpart.split("=", 1)[1]
+                if cont_path:
+                    host_path = cont_path.split(":", 1)[0]
                     for k in ("source=", "src="):
-                        if k in val:
-                            host_path = val.split(k, 1)[1].split(",", 1)[0]
+                        if k in cont_path:
+                            host_path = cont_path.split(k, 1)[1].split(",", 1)[0]
                     if _is_sensitive_path(host_path, allow_local=True):
                         return GuardrailResult(
                             GuardrailAction.DENY,
