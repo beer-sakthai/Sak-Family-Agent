@@ -179,9 +179,9 @@ def _is_sensitive_path(path: str, allow_local: bool = False) -> bool:
         if sep in path:
             if sep == "@" and path.startswith("@"):
                 continue
-            val = path.split(sep, 1)[1]
-            if val and val != path and _is_sensitive_path(val, allow_local=allow_local):
-                return True
+            for val in path.split(sep):
+                if val and val != path and _is_sensitive_path(val, allow_local=allow_local):
+                    return True
 
     # Strip curl-style file upload prefix if present at start.
     if path.startswith("@") and len(path) > 1:
@@ -383,6 +383,13 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
         "pnpm",
         "pip",
         "pip3",
+        "docker",
+        "podman",
+        "kubectl",
+        "chroot",
+        "nsenter",
+        "ssh-keygen",
+        "ssh-copy-id",
     )
     exfiltration_binaries = (
         "curl",
@@ -449,6 +456,15 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
         "pnpm",
         "pip",
         "pip3",
+        "docker",
+        "podman",
+        "kubectl",
+        "chroot",
+        "nsenter",
+        "ssh",
+        "ssh-add",
+        "ssh-keygen",
+        "ssh-copy-id",
     )
     # Common interpreters where sensitive paths can be embedded in arguments.
     interpreters = (
@@ -603,6 +619,8 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
             "chrt",
             "taskset",
             "stdbuf",
+            "chroot",
+            "nsenter",
         )
         if _is_binary(part, transparent_wrappers):
             # Most of these wrappers have flags. xargs and env are special.
@@ -629,6 +647,8 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
                     and flag in ("-p", "-c")
                     or _is_binary(part, "stdbuf")
                     and flag in ("-i", "-o", "-e")
+                    or _is_binary(part, "nsenter")
+                    and flag in ("-t", "--target", "-m", "-u", "-i", "-n", "-p", "-U", "-S", "-G")
                     or _is_binary(part, ("sudo", "doas"))
                     and flag
                     in (
@@ -650,6 +670,14 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
             # timeout has a duration argument that is NOT a flag.
             if (
                 _is_binary(part, "timeout")
+                and start_idx < len(parts)
+                and not parts[start_idx].startswith("-")
+            ):
+                start_idx += 1
+
+            # nsenter PID target or chroot NEWROOT target are NOT flags.
+            if (
+                _is_binary(part, ("nsenter", "chroot"))
                 and start_idx < len(parts)
                 and not parts[start_idx].startswith("-")
             ):

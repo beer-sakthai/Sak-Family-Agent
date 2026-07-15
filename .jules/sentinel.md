@@ -317,3 +317,11 @@
 **Learning:** A critical-root blocklist keyed on a leading `/` is bypassable by dropping the slash; relative references must be checked against the same roots. User-level config trees (`.config`, `.npm`) commonly hold tokens (gh, npm) and belong in the sensitive-directory set.
 
 **Prevention:** Treat a relative path whose first normalized component names a critical root as sensitive (case-insensitively), with a single-component `tmp` exception to avoid overblocking discovery tools; add `.config`/`.npm` to `_SENSITIVE_DIRS` and `credentials` to `_SENSITIVE_BASENAMES` so the derived interpreter-script regex and wildcard checks pick them up automatically. Synced across all six personas (enforced by `tests/test_persona_guardrails_parity.py`).
+
+## 2026-07-30 - [Hardening Guardrails against Container and Remote Access Bypasses]
+
+**Vulnerability:** `run_command` guardrails could be bypassed using containerization tools (e.g., `docker run -v /etc:/mnt ...`), cluster managers (e.g., `kubectl cp /etc/shadow ...`), or remote access tools (e.g., `ssh -i /etc/shadow ...`) targeting sensitive paths. Additionally, `_is_sensitive_path` only validated the second part of split arguments, missing sensitive paths in multi-part strings (e.g., `host:container`).
+
+**Learning:** High-level orchestration and virtualization tools are powerful "escape hatches" that can be used to bypass filesystem restrictions if they are not explicitly monitored. Furthermore, path validation must be exhaustive across all components of tool-specific argument syntax to prevent bypasses via multi-part strings.
+
+**Prevention:** Expand monitored binary lists to include `docker`, `podman`, `kubectl`, `chroot`, `nsenter`, and `ssh`-related tools. Harden `_is_sensitive_path` to iterate over and validate all components of split arguments. Implement specialized argument skipping for `chroot` and `nsenter` in the recursive wrapper logic.
