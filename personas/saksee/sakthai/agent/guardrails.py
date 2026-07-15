@@ -383,16 +383,6 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
         "pnpm",
         "pip",
         "pip3",
-        "docker",
-        "podman",
-        "kubectl",
-        "chroot",
-        "nsenter",
-        "rsync",
-        "tar",
-        "zip",
-        "unzip",
-        "7z",
     )
     exfiltration_binaries = (
         "curl",
@@ -602,66 +592,43 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
                     reason=f"Potentially dangerous 'find' command on {part!r} blocked.",
                 )
 
-    # 6. Specialized protection for container volumes and kubectl cp.
+    # 6. Specialized protection for container tools (docker, podman, kubectl).
     for i, part in enumerate(parts):
-        # 6a. docker/podman volumes (-v, --volume, --mount).
-        if _is_binary(part, ("docker", "podman")):
+        if _is_binary(part, ("docker", "podman", "kubectl")):
             binary_name = os.path.basename(part)
-            for j, subpart in enumerate(parts[i + 1 :]):
+            subparts = parts[i + 1 :]
+            for j, subpart in enumerate(subparts):
                 if subpart in (";", "&&", "||", "|"):
                     break
-                # -v host-path:container-path or --volume host-path:container-path
-                if (subpart == "-v" or subpart == "--volume") and i + j + 2 < len(parts):
-                    val = parts[i + j + 2]
-                    host_path = val.split(":", 1)[0]
-                    if _is_sensitive_path(host_path):
-                        return GuardrailResult(
-                            GuardrailAction.DENY,
-                            reason=f"Potentially dangerous '{binary_name}' volume mount on {host_path!r} blocked.",
-                        )
-                elif subpart.startswith("-v=") or subpart.startswith("--volume="):
+                # volume/mounts for docker/podman
+                val = None
+                if subpart in ("-v", "--volume") and j + 1 < len(subparts):
+                    val = subparts[j + 1]
+                elif subpart.startswith(("-v=", "--volume=")):
                     val = subpart.split("=", 1)[1]
-                    host_path = val.split(":", 1)[0]
-                    if _is_sensitive_path(host_path):
-                        return GuardrailResult(
-                            GuardrailAction.DENY,
-                            reason=f"Potentially dangerous '{binary_name}' volume mount on {host_path!r} blocked.",
-                        )
-                # --mount type=bind,source=host-path,target=container-path
-                elif (subpart == "--mount") and i + j + 2 < len(parts):
-                    val = parts[i + j + 2]
-                    if "source=" in val:
-                        host_path = val.split("source=", 1)[1].split(",", 1)[0]
-                        if _is_sensitive_path(host_path):
-                            return GuardrailResult(
-                                GuardrailAction.DENY,
-                                reason=f"Potentially dangerous '{binary_name}' bind mount on {host_path!r} blocked.",
-                            )
+                elif subpart == "--mount" and j + 1 < len(subparts):
+                    val = subparts[j + 1]
                 elif subpart.startswith("--mount="):
                     val = subpart.split("=", 1)[1]
-                    if "source=" in val:
-                        host_path = val.split("source=", 1)[1].split(",", 1)[0]
-                        if _is_sensitive_path(host_path):
-                            return GuardrailResult(
-                                GuardrailAction.DENY,
-                                reason=f"Potentially dangerous '{binary_name}' bind mount on {host_path!r} blocked.",
-                            )
+                if val:
+                    host_path = val.split(":", 1)[0]
+                    for k in ("source=", "src="):
+                        if k in val:
+                            host_path = val.split(k, 1)[1].split(",", 1)[0]
+                    if _is_sensitive_path(host_path, allow_local=True):
+                        return GuardrailResult(
+                            GuardrailAction.DENY,
+                            reason=f"Potentially dangerous '{binary_name}' mount on {host_path!r} blocked.",
+                        )
 
-        # 6b. kubectl cp source destination.
-        if _is_binary(part, "kubectl") and i + 1 < len(parts) and parts[i + 1] == "cp":
-            binary_name = os.path.basename(part)
-            # kubectl cp [options] <source> <destination>
-            args_after_cp = []
-            for subpart in parts[i + 2 :]:
-                if subpart in (";", "&&", "||", "|"):
-                    break
-                if not subpart.startswith("-"):
-                    args_after_cp.append(subpart)
-            for arg in args_after_cp:
-                # Local paths are checked; remote paths (containing ':') are skipped
-                # unless they look like local paths with a colon (handled by _is_sensitive_path).
-                if ":" not in arg or arg.startswith("/") or arg.startswith("."):
-                    if _is_sensitive_path(arg):
+            # cp source destination (docker, podman, kubectl)
+            if any(p == "cp" for p in subparts[:5]):
+                # Check all positional arguments after 'cp' for sensitive host paths.
+                for arg in [p for p in subparts if not p.startswith("-") and p != "cp"]:
+                    # remote paths (containing ':') are skipped unless they look local
+                    if (":" not in arg or arg.startswith(("/", "."))) and _is_sensitive_path(
+                        arg, allow_local=True
+                    ):
                         return GuardrailResult(
                             GuardrailAction.DENY,
                             reason=f"Potentially dangerous '{binary_name} cp' on {arg!r} blocked.",
@@ -722,7 +689,7 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
                         "-T",
                     )
                     or _is_binary(part, "nsenter")
-                    and flag in ("-t", "--target", "-m", "-u", "-i", "-n", "-p", "-C", "-U", "-S", "-G", "-r", "-w")
+                    and flag in ("-t", "--target")
                 ):
                     start_idx += 1
 
