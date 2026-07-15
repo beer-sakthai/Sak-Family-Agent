@@ -1,24 +1,29 @@
-import os
+from __future__ import annotations
+
 import sys
 from pathlib import Path
 
-# Add the persona path to sys.path
+# Add the persona path to sys.path before other imports
 repo_root = Path(__file__).resolve().parent.parent
 persona_path = repo_root / "personas" / "sakthai"
 sys.path.append(str(persona_path))
 
-import pytest
-from sakthai.agent.guardrails import DEFAULT_POLICY, GuardrailAction
-from sakthai.agent.tools import Tool
-from sakthai.memory.store import MemoryStore
+import pytest  # noqa: E402
+
+from sakthai.agent.guardrails import DEFAULT_POLICY, GuardrailAction  # noqa: E402
+from sakthai.agent.tools import Tool  # noqa: E402
+from sakthai.memory.store import MemoryStore  # noqa: E402
+
 
 @pytest.fixture
 def store():
     return MemoryStore(":memory:")
 
+
 @pytest.fixture
 def run_command_tool():
     return Tool("run_command", "desc", {}, lambda _a, _s: "")
+
 
 @pytest.mark.parametrize(
     "command",
@@ -42,6 +47,7 @@ def test_container_guardrails(command, run_command_tool, store, monkeypatch):
     result = DEFAULT_POLICY.check_pre_execution(run_command_tool, {"command": command}, store)
     assert result.action == GuardrailAction.DENY
     assert "blocked" in result.reason.lower()
+
 
 def test_safe_container_commands(run_command_tool, store, monkeypatch):
     monkeypatch.setenv("SAKTHAI_SHELL_ALLOW", "1")
