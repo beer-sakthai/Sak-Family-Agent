@@ -66,7 +66,7 @@
 
 ## 2026-07-05 - [Hardening Destructive Command Guardrails Against Bypass]
 
-**Vulnerability:** Shell command guardrails for `rm -rf` were bypassed if the force flag (`-f`) was omitted, or if path traversal (`..`) was used to target files outside the current directory (e.g., `rm -rf ../../../etc/shadow`).
+**Vulnerability:** Shell command guardrails for `rm -rf` were bypassed if the flag was changed, or if path traversal (`..`) was used to target files outside the current directory (e.g., `rm -rf ../../../etc/shadow`).
 
 **Learning:** Destructive command detection must not rely on specific flag combinations (like `-rf`) as recursive deletion alone (`rm -r`) on sensitive targets is equally dangerous. Furthermore, target path validation must account for path traversal sequences (`..`) to prevent escaping the intended sandbox via relative paths.
 
@@ -249,13 +249,6 @@
 **Learning:** Guardrails focusing primarily on system-critical roots (`/etc`, `/root`) miss application-specific sensitive data stored in the repository or home directory. Furthermore, tool-specific argument syntax (like `curl`'s `@` prefix for file uploads) can be used to target sensitive files if the guardrail does not correctly decompose and validate argument values.
 
 **Prevention:** Explicitly block access to repository-sensitive filenames and directories within the path validation logic. Harden `_is_sensitive_path` to recognize and decompose value separators (like `=` and `@`) in command arguments, ensuring that target values are recursively validated as paths. Expand interpreter flag detection to include all common one-liner execution variants (e.g., `-r`, `-p`, `-E`).
-## 2026-07-11 - [Hardening find Guardrails against Global Options Bypass]
-
-**Vulnerability:** The `find` command's path validation could be bypassed by inserting global options (e.g., `find -L /etc`) because the scanner prematurely stopped at the first token starting with a hyphen.
-
-**Learning:** Positional arguments in many CLI tools can be preceded or interspersed with options. Heuristics that stop scanning at the first flag are unsafe and easily bypassed.
-
-**Prevention:** When scanning command arguments for sensitive paths, use `continue` to skip flags instead of `break`, ensuring all non-flag tokens are evaluated as potential targets.
 
 ## 2026-07-25 - [Global Path Guardrails for All Tools]
 
@@ -264,14 +257,6 @@
 **Learning:** Hardening `run_command` is insufficient if other tools also accept path arguments. Security policies for sensitive paths must be enforced globally at the tool execution boundary to prevent information disclosure via seemingly "safe" tools.
 
 **Prevention:** Use a centralized pre-execution guardrail that scans all tool arguments and validates them against a sensitive path registry (`_is_sensitive_path`). Ensure this rule is registered in the default policy applied to all tools.
-
-## 2026-07-12 - [Expanded Utility Coverage + Duplicate Sentinel PR Consolidation]
-
-**Vulnerability:** `run_command` guardrails could still be bypassed with less common text/metadata utilities (`uniq`, `cut`, `ls`, `file`, `stat`, `tac`, `rev`, `nl`, `xxd`, `column`) targeting sensitive paths, and `truncate` was missing from the destructive-binary list. Separately, three concurrent Sentinel tasks (PRs #361, #363, #364) each re-implemented the same `_block_sensitive_path_args` guardrail, producing duplicate, mutually conflicting PRs.
-
-**Learning:** Command-line utilities are numerous; a short blocklist invites bypasses, so every file-reading/metadata utility must be paired with the sensitive-path scan. Process-wise: concurrent security tasks scanning the same module converge on the same fix — without checking open PRs first, they generate conflicting duplicates that all go stale once one merges.
-
-**Prevention:** Keep `exfiltration_binaries`/`destructive_binaries` exhaustive and covered by tests that assert both DENY on sensitive paths and ALLOW on local files (no overblocking). Before opening a Sentinel PR, fetch latest `main` and list open Sentinel PRs; if one already covers the same guardrail area, extend it instead of opening a new one (see AGENTS.md rule 5).
 
 ## 2026-07-26 - [Hardening Guardrails against Protocol-prefixed Path Bypasses]
 
@@ -306,9 +291,20 @@
 **Prevention:** Expand `destructive_binaries` and `exfiltration_binaries` to include common version control systems, package managers, and file creation utilities. Ensure that any tool capable of modifying the filesystem or reading data is subjected to sensitive path validation.
 
 ## 2026-07-29 - [Comprehensive Relative Path Blocking for Sensitive Data]
+
 **Vulnerability:** `_is_sensitive_path` only blocked absolute paths, home-relative paths (`~`), or paths with traversal (`..`) to system-critical roots. Relative paths to sensitive user data (e.g., `.ssh/id_rsa`, `.aws/credentials`, shell histories) located in the current or sub-directories were not blocked. Follow-up variants also bypassed it: sensitive basenames as flag/upload values (`data=@id_rsa`), backup-suffixed private keys (`id_rsa.bak`), case-variant references on case-insensitive filesystems (`.AWS/credentials`), globs expanding to sensitive dirs (`.a?s/credentials`), and relative credential paths embedded in interpreter one-liners.
+
 **Learning:** Security guardrails must protect sensitive user and application data regardless of how they are referenced. Relying on absolute path prefixes is insufficient in a local-first environment where the agent often operates in the user's home directory or repository root, and every separator/case/glob/interpreter surface is a distinct bypass vector.
+
 **Prevention:** Block via `_SENSITIVE_BASENAMES`/`_SENSITIVE_DIRS`/`_SENSITIVE_KEY_STEMS`, validating every normalized path component case-insensitively; recurse into all separator-extracted values; treat wildcard components that can expand to a sensitive dir as sensitive; and derive the interpreter-script scanner's regex from the same sets. `tests/test_persona_guardrails_parity.py` fails CI whenever any persona's `guardrails.py` drifts from the canonical copy, so a hardening fix can no longer land in one persona while leaving the others vulnerable.
+
+## 2026-07-30 - [Recursive Path Validation against Multi-Separator Bypasses]
+
+**Vulnerability:** `_is_sensitive_path` only checked the value following the first occurrence of a separator (like `=` or `:`), and lacked comma (`,`) as a delimiter. This allowed attackers to bypass path-based security checks using multiple separators (e.g., `VAR=/safe:/etc/passwd`) or alternative delimiters (e.g., `etc/passwd,something`).
+
+**Learning:** When command arguments or environment variables contain lists of paths or complex flag values, security guardrails must not assume a single separator or a specific position for the sensitive target. A naive split that only takes the "rest" of the string after the first separator is easily fooled.
+
+**Prevention:** Harden path validation to recursively check all components separated by common delimiters (':', '=', ',', '@'). Iterate over the results of a full split to ensure that no part of the string targets a sensitive location.
 
 ## 2026-07-14 - [Relative System-Root Path Blocking (re-land of PR #380)]
 

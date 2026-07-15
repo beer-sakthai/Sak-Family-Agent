@@ -174,17 +174,18 @@ def _basename_is_sensitive(basename: str) -> bool:
 
 def _is_sensitive_path(path: str, allow_local: bool = False) -> bool:
     """Return True if the path targets a sensitive system directory or uses traversal."""
-    # Support checking flags or arguments with values like --file=/etc or field=@.env
-    # or socat's FILE:/etc/passwd. Note: we only split if the result isn't the same
-    # as the original, and for '@' we only consider it a separator if it's not
-    # the first character (to distinguish it from a curl @path prefix).
-    for sep in ("=", "@", ":"):
+    # Support checking flags or arguments with values like --file=/etc, field=@.env,
+    # socat's FILE:/etc/passwd, or comma-separated paths. We recursively check
+    # all components separated by common delimiters. For '@', we only consider
+    # it a separator if it's not the first character (to distinguish it from
+    # a curl @path prefix).
+    for sep in ("=", "@", ":", ","):
         if sep in path:
             if sep == "@" and path.startswith("@"):
                 continue
-            val = path.split(sep, 1)[1]
-            if val and val != path and _is_sensitive_path(val, allow_local=allow_local):
-                return True
+            for part in path.split(sep):
+                if part and part != path and _is_sensitive_path(part, allow_local=allow_local):
+                    return True
 
     # Strip curl-style file upload prefix if present at start.
     if path.startswith("@") and len(path) > 1:
