@@ -340,3 +340,10 @@
 **Learning:** `_SENSITIVE_NAME_RE` must be kept in sync with all sensitive path patterns, including basenames of critical system roots, to prevent bypasses in script-based exfiltration. Shell configuration files are high-value targets for exfiltration as they often contain aliases, environment variables, or path settings.
 
 **Prevention:** Derive `_SENSITIVE_NAME_RE` from the union of `_SENSITIVE_DIRS`, `_SENSITIVE_BASENAMES`, `_SENSITIVE_KEY_STEMS`, and the basenames of `_CRITICAL_ROOTS`. Explicitly include shell startup files in `_SENSITIVE_BASENAMES`.
+## 2026-07-15 - [Hardening Guardrails against SSH Tool Bypasses]
+
+**Vulnerability:** Shell command guardrails did not monitor common SSH-related utilities (`ssh`, `ssh-add`, `ssh-keygen`, `ssh-copy-id`), allowing an agent to exfiltrate private identity files or overwrite sensitive security credentials like `authorized_keys`.
+
+**Learning:** When defining guardrails for a tool-using agent, it's not enough to block direct file access tools (`cat`, `rm`). Multi-purpose networking and security utilities often have built-in flags for reading from or writing to specific sensitive paths that bypass generic path-based argument scanners if the binary itself is not monitored.
+
+**Prevention:** Maintain an exhaustive list of sensitive binaries that includes not just general-purpose file utilities, but also specialized security and networking tools (`ssh*`, `openssl`, `socat`). Ensure these are synchronized across all agent personas to maintain a consistent security posture.
