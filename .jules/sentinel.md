@@ -347,3 +347,10 @@
 **Learning:** When defining guardrails for a tool-using agent, it's not enough to block direct file access tools (`cat`, `rm`). Multi-purpose networking and security utilities often have built-in flags for reading from or writing to specific sensitive paths that bypass generic path-based argument scanners if the binary itself is not monitored.
 
 **Prevention:** Maintain an exhaustive list of sensitive binaries that includes not just general-purpose file utilities, but also specialized security and networking tools (`ssh*`, `openssl`, `socat`). Ensure these are synchronized across all agent personas to maintain a consistent security posture.
+## 2026-07-29 - [Hardening Guardrails against Container and Virtualization Bypasses]
+
+**Vulnerability:** Shell command guardrails could be bypassed using containerization tools (`docker`, `podman`, `kubectl`) and virtualization wrappers (`chroot`, `nsenter`). These tools allowed accessing sensitive host files via volume mounts, remote-copy commands, or by changing the root directory/namespace, effectively escaping the agent's path-based guardrails.
+
+**Learning:** Advanced system tools provide multiple ways to interact with the host filesystem that go beyond direct file access. autonomous agents with shell access must be restricted from using these tools to bridge into sensitive host areas. specialized logic is required to parse tool-specific flags (like docker's `-v` or `--mount`) and arguments to maintain a consistent security posture.
+
+**Prevention:** Add containerization and virtualization tools to monitored binary lists. Implement specialized inspection for volume mounts and remote-copy commands to block host-sensitive paths. Expand recursive wrapper inspection to include `chroot` and `nsenter`, ensuring wrapped commands are always validated against the security policy.

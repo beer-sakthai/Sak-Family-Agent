@@ -643,15 +643,16 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
                                 reason=f"potentially dangerous {binary_name!r} mount source {source_val!r} blocked.",
                             )
 
-                # Specialized kubectl cp check.
-                if binary_name == "kubectl" and subpart == "cp":
+                # cp copies files between host and container/pod
+                # (docker cp, podman cp, kubectl cp).
+                if subpart == "cp":
                     for k in range(j + 1, len(parts)):
                         if parts[k] in (";", "&&", "||", "|"):
                             break
                         if _is_sensitive_path(parts[k]):
                             return GuardrailResult(
                                 GuardrailAction.DENY,
-                                reason=f"potentially dangerous 'kubectl cp' on {parts[k]!r} blocked.",
+                                reason=f"potentially dangerous '{binary_name} cp' on {parts[k]!r} blocked.",
                             )
 
     # 7. Handle wrappers that don't use -c (sudo, doas, xargs, env, find -exec, timeout, etc.)
