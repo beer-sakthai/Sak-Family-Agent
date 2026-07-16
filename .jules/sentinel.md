@@ -333,3 +333,10 @@
 **Learning:** Generic path-based guardrails often miss host paths embedded within complex argument strings (like volume mount mappings). Furthermore, container tools and system wrappers provide powerful pivots that can bypass standard utility-based filters if they are not explicitly monitored with specialized logic that understands their specific argument syntax.
 
 **Prevention:** Implement specialized guardrail logic for container tools that parses volume mount flags (`-v`, `--volume`, `--mount`) and file transfer commands (`kubectl cp`). Update `_is_sensitive_path` to recursively decompose and validate all components of delimited strings. Treat `chroot` and `nsenter` as transparent wrappers, while specifically validating the `chroot` target directory.
+## 2026-07-30 - [Hardening Interpreter Guardrails against Relative System Roots and Shell Config Exfiltration]
+
+**Vulnerability:** Interpreter script scanners missed relative references to critical system roots (e.g., `python3 -c "open('etc/passwd')"`). Additionally, common shell configuration files (`.bashrc`, `.zshrc`, `.profile`, `.bash_profile`) were unmonitored.
+
+**Learning:** `_SENSITIVE_NAME_RE` must be kept in sync with all sensitive path patterns, including basenames of critical system roots, to prevent bypasses in script-based exfiltration. Shell configuration files are high-value targets for exfiltration as they often contain aliases, environment variables, or path settings.
+
+**Prevention:** Derive `_SENSITIVE_NAME_RE` from the union of `_SENSITIVE_DIRS`, `_SENSITIVE_BASENAMES`, `_SENSITIVE_KEY_STEMS`, and the basenames of `_CRITICAL_ROOTS`. Explicitly include shell startup files in `_SENSITIVE_BASENAMES`.

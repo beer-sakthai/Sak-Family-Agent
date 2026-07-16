@@ -114,6 +114,10 @@ _SENSITIVE_BASENAMES = {
     "known_hosts",
     "authorized_keys",
     "credentials",
+    ".bashrc",
+    ".zshrc",
+    ".profile",
+    ".bash_profile",
 }
 
 _SENSITIVE_DIRS = {
