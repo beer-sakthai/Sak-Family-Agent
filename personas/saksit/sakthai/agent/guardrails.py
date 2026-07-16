@@ -747,15 +747,11 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
                         "-R",
                         "-T",
                     )
-                    or _is_binary(part, "nsenter")
-                    and flag in ("-t", "--target", "-m", "--mount", "-u", "--uts", "-i", "--ipc", "-n", "--net", "-p", "--pid", "-U", "--user", "-G", "--group", "-r", "--root", "-w", "--wd")
+                ) or (
+                    _is_binary(part, "nsenter")
+                    and flag in ("-t", "--target", "-r", "--root", "-w", "--wd")
                 ):
-                    # For nsenter, some flags like -m can optionally take a file but usually don't.
-                    # Our heuristic skips the next token if it's one of these flags.
-                    if _is_binary(part, "nsenter") and flag in ("-t", "--target", "-r", "--root", "-w", "--wd"):
-                        start_idx += 1
-                    elif not _is_binary(part, "nsenter"):
-                        start_idx += 1
+                    start_idx += 1
 
             # env might have arguments like VAR=VAL before the command.
             if _is_binary(part, "env"):
