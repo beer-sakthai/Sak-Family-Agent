@@ -124,3 +124,30 @@ def test_interpreter_bypass_on_sensitive_paths_blocked(
     result = DEFAULT_POLICY.check_pre_execution(run_command_tool, {"command": command}, store)
     assert result.action == GuardrailAction.DENY
     assert result.reason and "potentially dangerous" in result.reason.lower()
+
+
+def test_nested_sensitive_path_arguments_blocked(store) -> None:
+    # Define a dummy tool that is not run_command, so it is checked by _block_sensitive_path_args
+    tool = Tool("dummy_tool", "desc", {}, lambda _a, _s: "")
+
+    # 1. Nested list containing sensitive path
+    args1 = {"nested_list": ["safe_path", "/etc/passwd"]}
+    result1 = DEFAULT_POLICY.check_pre_execution(tool, args1, store)
+    assert result1.action == GuardrailAction.DENY
+    assert (
+        "Access to sensitive path '/etc/passwd' via argument 'nested_list' is blocked."
+        in result1.reason
+    )
+
+    # 2. Nested dict containing sensitive path
+    args2 = {"nested_dict": {"some_key": {"inner_key": ".env"}}}
+    result2 = DEFAULT_POLICY.check_pre_execution(tool, args2, store)
+    assert result2.action == GuardrailAction.DENY
+    assert (
+        "Access to sensitive path '.env' via argument 'nested_dict' is blocked." in result2.reason
+    )
+
+    # 3. Safe nested structures allowed
+    args3 = {"nested_safe": {"safe_list": ["tmp", "safe_file", "/safe_dir/file.txt"]}}
+    result3 = DEFAULT_POLICY.check_pre_execution(tool, args3, store)
+    assert result3.action == GuardrailAction.ALLOW

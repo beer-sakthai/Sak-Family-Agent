@@ -828,6 +828,28 @@ def _enforce_verbose_listing(
     return GuardrailResult(GuardrailAction.ALLOW)
 
 
+def _contains_sensitive_path(val: Any) -> tuple[bool, str | None]:
+    """Recursively search for sensitive paths within nested data structures.
+
+    This ensures that even if a future tool accepts a nested list, dictionary,
+    or set, we still catch any embedded sensitive path strings.
+    """
+    if isinstance(val, str):
+        if _is_sensitive_path(val, allow_local=True):
+            return True, val
+    elif isinstance(val, dict):
+        for v in val.values():
+            found, path = _contains_sensitive_path(v)
+            if found:
+                return True, path
+    elif isinstance(val, (list, tuple, set)):
+        for item in val:
+            found, path = _contains_sensitive_path(item)
+            if found:
+                return True, path
+    return False, None
+
+
 def _block_sensitive_path_args(
     tool: Tool, args: dict[str, Any], _store: MemoryStore
 ) -> GuardrailResult:
@@ -837,10 +859,11 @@ def _block_sensitive_path_args(
         return GuardrailResult(GuardrailAction.ALLOW)
 
     for key, value in args.items():
-        if isinstance(value, str) and _is_sensitive_path(value, allow_local=True):
+        found, sensitive_path = _contains_sensitive_path(value)
+        if found:
             return GuardrailResult(
                 GuardrailAction.DENY,
-                reason=f"Access to sensitive path {value!r} via argument {key!r} is blocked.",
+                reason=f"Access to sensitive path {sensitive_path!r} via argument {key!r} is blocked.",
             )
     return GuardrailResult(GuardrailAction.ALLOW)
 
