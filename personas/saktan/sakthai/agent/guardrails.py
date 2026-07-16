@@ -114,6 +114,11 @@ _SENSITIVE_BASENAMES = {
     "known_hosts",
     "authorized_keys",
     "credentials",
+    "shadow",
+    "passwd",
+    "sudoers",
+    "gshadow",
+    "group",
 }
 
 _SENSITIVE_DIRS = {
@@ -386,6 +391,7 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
         "pnpm",
         "pip",
         "pip3",
+        "sqlite",
     )
     exfiltration_binaries = (
         "curl",
@@ -452,6 +458,7 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
         "pnpm",
         "pip",
         "pip3",
+        "sqlite",
     )
     # Common interpreters where sensitive paths can be embedded in arguments.
     interpreters = (
@@ -467,6 +474,8 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
         "sh",
         "zsh",
         "dash",
+        "sqlite",
+        "git",
     )
 
     for i, part in enumerate(parts):
