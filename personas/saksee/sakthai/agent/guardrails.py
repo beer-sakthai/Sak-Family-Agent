@@ -174,17 +174,18 @@ def _basename_is_sensitive(basename: str) -> bool:
 
 def _is_sensitive_path(path: str, allow_local: bool = False) -> bool:
     """Return True if the path targets a sensitive system directory or uses traversal."""
-    # Support checking flags or arguments with values like --file=/etc or field=@.env
-    # or socat's FILE:/etc/passwd. Note: we only split if the result isn't the same
+    # Support checking flags or arguments with values like --file=/etc, field=@.env,
+    # or socat's FILE:/etc/passwd, as well as multi-component strings like
+    # host_path:container_path. Note: we only split if the result isn't the same
     # as the original, and for '@' we only consider it a separator if it's not
     # the first character (to distinguish it from a curl @path prefix).
-    for sep in ("=", "@", ":"):
+    for sep in ("=", "@", ":", ","):
         if sep in path:
             if sep == "@" and path.startswith("@"):
                 continue
-            val = path.split(sep, 1)[1]
-            if val and val != path and _is_sensitive_path(val, allow_local=allow_local):
-                return True
+            for part in path.split(sep):
+                if part and part != path and _is_sensitive_path(part, allow_local=allow_local):
+                    return True
 
     # Strip curl-style file upload prefix if present at start.
     if path.startswith("@") and len(path) > 1:
@@ -288,7 +289,107 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
     if not parts:
         return GuardrailResult(GuardrailAction.ALLOW)
 
-    # 1. Handle nested commands in wrappers (recursion)
+    # 1. Specialized protection for container tools (docker, podman, kubectl).
+    # These often use subcommands (run, cp, exec) preceded by global flags.
+    # We do this FIRST to provide better error messages and censor internal commands.
+    for i, part in enumerate(parts):
+        if _is_binary(part, ("docker", "podman", "kubectl")):
+            binary_name = os.path.basename(part)
+            # Find the subcommand by skipping global options.
+            sub_idx = -1
+            j = i + 1
+            while j < len(parts):
+                if parts[j].startswith("-"):
+                    # Known global options that take a value.
+                    if parts[j] in ("-c", "--context", "-n", "--namespace", "--kubeconfig", "-H", "--host", "-s", "--server", "--token", "--user"):
+                        j += 2
+                        continue
+                    j += 1
+                    continue
+                sub_idx = j
+                break
+
+            if sub_idx != -1:
+                subcommand = parts[sub_idx]
+                # 1a. Block dangerous volume/bind mounts.
+                if subcommand == "run":
+                    image_idx = -1
+                    # In 'docker run', the image name is the first non-option argument
+                    # after the 'run' subcommand, but we MUST scan all tokens for volume flags.
+                    j = sub_idx + 1
+                    while j < len(parts):
+                        arg = parts[j]
+                        if arg in ("-v", "--volume", "--mount") or arg.startswith(("--volume=", "--mount=")):
+                            val = ""
+                            if arg in ("-v", "--volume", "--mount"):
+                                if j + 1 < len(parts):
+                                    val = parts[j + 1]
+                                    j += 2
+                                else:
+                                    j += 1
+                            else:
+                                val = arg
+                                j += 1
+
+                            if val and _is_sensitive_path(val):
+                                return GuardrailResult(
+                                    GuardrailAction.DENY,
+                                    reason=f"dangerous {binary_name} mount {val!r} blocked.",
+                                )
+                            continue
+                        if not arg.startswith("-") and image_idx == -1:
+                            # This is the image name; subsequent positional tokens are internal command.
+                            image_idx = j
+                        j += 1
+                    # Censor internal command to avoid false positives in host-level loops.
+                    if image_idx != -1:
+                        for j in range(image_idx + 1, len(parts)):
+                            parts[j] = "___"
+
+                # 1b. Block dangerous file copy.
+                elif subcommand == "cp":
+                    for j in range(sub_idx + 1, len(parts)):
+                        arg = parts[j]
+                        if arg.startswith("-"):
+                            continue
+                        if _is_sensitive_path(arg, allow_local=True):
+                            return GuardrailResult(
+                                GuardrailAction.DENY,
+                                reason=f"dangerous {binary_name} cp on {arg!r} blocked.",
+                            )
+
+                # 1c. Recurse into exec.
+                elif subcommand == "exec":
+                    exec_args_start = -1
+                    j = sub_idx + 1
+                    while j < len(parts):
+                        if parts[j] == "--":
+                            exec_args_start = j + 1
+                            break
+                        if not parts[j].startswith("-"):
+                            # The first non-flag after 'exec' is the container ID.
+                            # The SECOND non-flag is the command.
+                            # We skip the container ID.
+                            for k in range(j + 1, len(parts)):
+                                if not parts[k].startswith("-"):
+                                    exec_args_start = k
+                                    break
+                            break
+                        # Skip flag and its potential argument.
+                        if parts[j] in ("-u", "--user", "-w", "--workdir"):
+                            j += 2
+                        else:
+                            j += 1
+
+                    if exec_args_start != -1:
+                        res = _check_destructive_tokens(parts[exec_args_start:], context_sensitive=context_sensitive)
+                        if res.action == GuardrailAction.DENY:
+                            return res
+                        # Censor to prevent re-scanning.
+                        for j in range(exec_args_start, len(parts)):
+                            parts[j] = "___"
+
+    # 2. Handle nested commands in wrappers (recursion)
     for i, part in enumerate(parts):
         # 1a. bash -c "..." or sh -c "..." (including combined flags like -xc)
         # Search backwards for the shell binary to handle intermediate flags (e.g. bash -v -c).
@@ -368,7 +469,7 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
         "rmdir",
         "chmod",
         "mv",
-        "cp",
+        #"cp",  # Handled by container logic or specialized checks if needed
         "ln",
         "tee",
         "chown",
@@ -395,6 +496,7 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
         "openssl",
         "socat",
         "cat",
+        "cp",
         "grep",
         "head",
         "tail",
@@ -472,7 +574,8 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
     for i, part in enumerate(parts):
         is_dest = _is_binary(part, destructive_binaries)
         is_exfil = _is_binary(part, exfiltration_binaries)
-        if is_dest or is_exfil:
+        # Skip container tools so they use specialized logic later.
+        if (is_dest or is_exfil) and not _is_binary(part, ("docker", "podman", "kubectl")):
             binary_name = os.path.basename(part)
             is_interpreter = _is_binary(part, interpreters)
             # Inspect tokens following the binary until a separator is hit.
@@ -606,6 +709,8 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
             "chrt",
             "taskset",
             "stdbuf",
+            "chroot",
+            "nsenter",
         )
         if _is_binary(part, transparent_wrappers):
             # Most of these wrappers have flags. xargs and env are special.
@@ -642,8 +747,15 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
                         "-R",
                         "-T",
                     )
+                    or _is_binary(part, "nsenter")
+                    and flag in ("-t", "--target", "-m", "--mount", "-u", "--uts", "-i", "--ipc", "-n", "--net", "-p", "--pid", "-U", "--user", "-G", "--group", "-r", "--root", "-w", "--wd")
                 ):
-                    start_idx += 1
+                    # For nsenter, some flags like -m can optionally take a file but usually don't.
+                    # Our heuristic skips the next token if it's one of these flags.
+                    if _is_binary(part, "nsenter") and flag in ("-t", "--target", "-r", "--root", "-w", "--wd"):
+                        start_idx += 1
+                    elif not _is_binary(part, "nsenter"):
+                        start_idx += 1
 
             # env might have arguments like VAR=VAL before the command.
             if _is_binary(part, "env"):
@@ -657,6 +769,13 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
                 and not parts[start_idx].startswith("-")
             ):
                 start_idx += 1
+
+            # chroot has a NEWROOT argument.
+            if _is_binary(part, "chroot") and start_idx < len(parts) and not parts[start_idx].startswith("-"):
+                start_idx += 1
+
+            # nsenter might have a PID argument if -t was used (already skipped above)
+            # or it might just be boolean flags.
 
             res = _check_destructive_tokens(parts[start_idx:], context_sensitive=context_sensitive)
             if res.action == GuardrailAction.DENY:

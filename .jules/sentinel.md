@@ -325,3 +325,11 @@
 **Learning:** Script scanning regexes must be as exhaustive as the path validation they feed into. If the path validator blocks relative system roots, the script scanner must proactively extract those same patterns from script strings.
 
 **Prevention:** derived the interpreter-script scanner's regex (`_SENSITIVE_NAME_RE`) from a union of sensitive directories, basenames, and *stripped critical roots* (e.g., `etc`, `bin`, `var`). This ensures that relative references to system roots are consistently identified for validation regardless of their location in a script argument.
+
+## 2026-07-30 - [Hardening Guardrails against Container and Virtualization Bypasses]
+
+**Vulnerability:** Shell command guardrails could be bypassed using containerization tools (`docker`, `podman`, `kubectl`) or virtualization wrappers (`chroot`, `nsenter`) to mount sensitive host paths or exfiltrate data from them.
+
+**Learning:** Containerization and virtualization tools present high-risk filesystem bypass vectors. Volume mounts (`-v`, `--mount`) and file copies (`cp`) in these tools can map sensitive host-level paths into containers, effectively escaping host-level guardrails if the tools themselves are not monitored. Furthermore, transparent wrappers like `chroot` and `nsenter` can hide the actual target command from simple token scanners. Subcommand detection must account for global flags that take values (e.g., `kubectl -n ns exec`), and volume scanning must not break early on non-hyphenated tokens (which are the mount specs themselves).
+
+**Prevention:** Implement specialized guardrail logic for `docker`, `podman`, and `kubectl` that explicitly validates mount and copy targets. Use `_is_sensitive_path` to recursively inspect multi-component strings (separated by `:`, `=`, `,`, or `@`) for sensitive host paths. Add `chroot` and `nsenter` to the list of transparent wrappers and ensure correct argument skipping before recursing into the wrapped command. Subcommand scanners should use look-ahead logic to skip known global flags and their arguments. Volume scanners must iterate through all tokens following the subcommand. Censor internal container commands after validation to prevent false positives in subsequent host-level scans.
