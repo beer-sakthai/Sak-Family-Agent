@@ -354,3 +354,10 @@
 **Learning:** Advanced system tools provide multiple ways to interact with the host filesystem that go beyond direct file access. autonomous agents with shell access must be restricted from using these tools to bridge into sensitive host areas. specialized logic is required to parse tool-specific flags (like docker's `-v` or `--mount`) and arguments to maintain a consistent security posture.
 
 **Prevention:** Add containerization and virtualization tools to monitored binary lists. Implement specialized inspection for volume mounts and remote-copy commands to block host-sensitive paths. Expand recursive wrapper inspection to include `chroot` and `nsenter`, ensuring wrapped commands are always validated against the security policy.
+## 2026-07-30 - [Hardening Guardrails against Container and Remote Access Bypasses]
+
+**Vulnerability:** `run_command` guardrails could be bypassed using containerization tools (e.g., `docker run -v /etc:/mnt ...`), cluster managers (e.g., `kubectl cp /etc/shadow ...`), or remote access tools (e.g., `ssh -i /etc/shadow ...`) targeting sensitive paths. Additionally, `_is_sensitive_path` only validated the second part of split arguments, missing sensitive paths in multi-part strings (e.g., `host:container`).
+
+**Learning:** High-level orchestration and virtualization tools are powerful "escape hatches" that can be used to bypass filesystem restrictions if they are not explicitly monitored. Furthermore, path validation must be exhaustive across all components of tool-specific argument syntax to prevent bypasses via multi-part strings.
+
+**Prevention:** Expand monitored binary lists to include `docker`, `podman`, `kubectl`, `chroot`, `nsenter`, and `ssh`-related tools. Harden `_is_sensitive_path` to iterate over and validate all components of split arguments. Implement specialized argument skipping for `chroot` and `nsenter` in the recursive wrapper logic.

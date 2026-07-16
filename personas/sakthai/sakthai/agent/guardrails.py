@@ -392,6 +392,11 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
         "pnpm",
         "pip",
         "pip3",
+        "docker",
+        "podman",
+        "kubectl",
+        "chroot",
+        "nsenter",
     )
     exfiltration_binaries = (
         "curl",
@@ -462,6 +467,11 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
         "pnpm",
         "pip",
         "pip3",
+        "docker",
+        "podman",
+        "kubectl",
+        "chroot",
+        "nsenter",
     )
     # Common interpreters where sensitive paths can be embedded in arguments.
     interpreters = (
