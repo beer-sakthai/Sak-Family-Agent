@@ -301,7 +301,19 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
             while j < len(parts):
                 if parts[j].startswith("-"):
                     # Known global options that take a value.
-                    if parts[j] in ("-c", "--context", "-n", "--namespace", "--kubeconfig", "-H", "--host", "-s", "--server", "--token", "--user"):
+                    if parts[j] in (
+                        "-c",
+                        "--context",
+                        "-n",
+                        "--namespace",
+                        "--kubeconfig",
+                        "-H",
+                        "--host",
+                        "-s",
+                        "--server",
+                        "--token",
+                        "--user",
+                    ):
                         j += 2
                         continue
                     j += 1
@@ -319,7 +331,9 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
                     j = sub_idx + 1
                     while j < len(parts):
                         arg = parts[j]
-                        if arg in ("-v", "--volume", "--mount") or arg.startswith(("--volume=", "--mount=")):
+                        if arg in ("-v", "--volume", "--mount") or arg.startswith(
+                            ("--volume=", "--mount=")
+                        ):
                             val = ""
                             if arg in ("-v", "--volume", "--mount"):
                                 if j + 1 < len(parts):
@@ -382,7 +396,9 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
                             j += 1
 
                     if exec_args_start != -1:
-                        res = _check_destructive_tokens(parts[exec_args_start:], context_sensitive=context_sensitive)
+                        res = _check_destructive_tokens(
+                            parts[exec_args_start:], context_sensitive=context_sensitive
+                        )
                         if res.action == GuardrailAction.DENY:
                             return res
                         # Censor to prevent re-scanning.
@@ -469,7 +485,7 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
         "rmdir",
         "chmod",
         "mv",
-        #"cp",  # Handled by container logic or specialized checks if needed
+        # "cp",  # Handled by container logic or specialized checks if needed
         "ln",
         "tee",
         "chown",
@@ -767,7 +783,11 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
                 start_idx += 1
 
             # chroot has a NEWROOT argument.
-            if _is_binary(part, "chroot") and start_idx < len(parts) and not parts[start_idx].startswith("-"):
+            if (
+                _is_binary(part, "chroot")
+                and start_idx < len(parts)
+                and not parts[start_idx].startswith("-")
+            ):
                 start_idx += 1
 
             # nsenter might have a PID argument if -t was used (already skipped above)
