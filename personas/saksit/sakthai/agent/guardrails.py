@@ -114,6 +114,10 @@ _SENSITIVE_BASENAMES = {
     "known_hosts",
     "authorized_keys",
     "credentials",
+    ".bashrc",
+    ".zshrc",
+    ".profile",
+    ".bash_profile",
 }
 
 _SENSITIVE_DIRS = {
@@ -174,11 +178,13 @@ def _basename_is_sensitive(basename: str) -> bool:
 
 def _is_sensitive_path(path: str, allow_local: bool = False) -> bool:
     """Return True if the path targets a sensitive system directory or uses traversal."""
-    # Support checking flags or arguments with values like --file=/etc or field=@.env
-    # or socat's FILE:/etc/passwd. Note: we only split if the result isn't the same
-    # as the original, and for '@' we only consider it a separator if it's not
-    # the first character (to distinguish it from a curl @path prefix).
-    for sep in ("=", "@", ":"):
+    # Support checking flags or arguments with values like --file=/etc, field=@.env,
+    # socat's FILE:/etc/passwd, or comma-separated paths (--mount src=/etc,dst=/x).
+    # Every delimited component is checked recursively. Note: we only recurse on
+    # components that differ from the original, and for '@' we only consider it
+    # a separator if it's not the first character (to distinguish it from a curl
+    # @path prefix).
+    for sep in ("=", "@", ":", ","):
         if sep in path:
             if sep == "@" and path.startswith("@"):
                 continue
@@ -378,6 +384,8 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
         "shred",
         "openssl",
         "socat",
+        "ssh-keygen",
+        "ssh-copy-id",
         "mkdir",
         "touch",
         "git",
@@ -386,6 +394,11 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
         "pnpm",
         "pip",
         "pip3",
+        "docker",
+        "podman",
+        "kubectl",
+        "chroot",
+        "nsenter",
     )
     exfiltration_binaries = (
         "curl",
@@ -421,6 +434,10 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
         "7z",
         "scp",
         "sftp",
+        "ssh",
+        "ssh-add",
+        "ssh-keygen",
+        "ssh-copy-id",
         "bash",
         "sh",
         "zsh",
@@ -452,6 +469,11 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
         "pnpm",
         "pip",
         "pip3",
+        "docker",
+        "podman",
+        "kubectl",
+        "chroot",
+        "nsenter",
     )
     # Common interpreters where sensitive paths can be embedded in arguments.
     interpreters = (
@@ -633,15 +655,16 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
                                 reason=f"potentially dangerous {binary_name!r} mount source {source_val!r} blocked.",
                             )
 
-                # Specialized kubectl cp check.
-                if binary_name == "kubectl" and subpart == "cp":
+                # cp copies files between host and container/pod
+                # (docker cp, podman cp, kubectl cp).
+                if subpart == "cp":
                     for k in range(j + 1, len(parts)):
                         if parts[k] in (";", "&&", "||", "|"):
                             break
                         if _is_sensitive_path(parts[k]):
                             return GuardrailResult(
                                 GuardrailAction.DENY,
-                                reason=f"potentially dangerous 'kubectl cp' on {parts[k]!r} blocked.",
+                                reason=f"potentially dangerous '{binary_name} cp' on {parts[k]!r} blocked.",
                             )
 
     # 7. Handle wrappers that don't use -c (sudo, doas, xargs, env, find -exec, timeout, etc.)

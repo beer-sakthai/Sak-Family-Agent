@@ -28,7 +28,7 @@ dev = [
     "pytest-cov>=5.0",
     "hypothesis>=6.156.6",
     "ruff>=0.15.21",
-    "mypy>=2.2.0",
+    "mypy>=2.3.0",
     "bandit[toml]>=1.9.4",
 ]
 
