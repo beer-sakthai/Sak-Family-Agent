@@ -364,3 +364,11 @@
 **Learning:** Containerization and virtualization tools present high-risk filesystem bypass vectors. Volume mounts (`-v`, `--mount`) and file copies (`cp`) in these tools can map sensitive host-level paths into containers, effectively escaping host-level guardrails if the tools themselves are not monitored. Furthermore, transparent wrappers like `chroot` and `nsenter` can hide the actual target command from simple token scanners. Subcommand detection must account for global flags that take values (e.g., `kubectl -n ns exec`), and volume scanning must not break early on non-hyphenated tokens (which are the mount specs themselves).
 
 **Prevention:** Implement specialized guardrail logic for `docker`, `podman`, and `kubectl` that explicitly validates mount and copy targets. Use `_is_sensitive_path` to recursively inspect multi-component strings (separated by `:`, `=`, `,`, or `@`) for sensitive host paths. Add `chroot` and `nsenter` to the list of transparent wrappers and ensure correct argument skipping before recursing into the wrapped command. Subcommand scanners should use look-ahead logic to skip known global flags and their arguments. Volume scanners must iterate through all tokens following the subcommand. Censor internal container commands after validation to prevent false positives in subsequent host-level scans.
+
+## 2026-07-31 - [Recursive Scanning for Nested Tool Arguments]
+
+**Vulnerability:** The pre-execution guardrail `_block_sensitive_path_args` only scanned flat string-type tool arguments, allowing bypasses if a sensitive path was nested inside other structures like lists, dicts, tuples, or sets.
+
+**Learning:** Security validation of tool arguments must not assume a flat or simple type mapping. Autonomous agents can pass complex/nested structures dynamically, and any nested value (or key) could contain sensitive path strings.
+
+**Prevention:** Implement a recursive scanner (`_contains_sensitive_path`) that unpacks all standard collection types (lists, dicts, tuples, sets) and checks every nested string element recursively. Apply this fail-safe global path block across all persona configurations in the monorepo.
