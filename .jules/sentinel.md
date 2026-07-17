@@ -372,3 +372,11 @@
 **Learning:** When validating arguments for security compliance, validating only top-level primitives is insufficient. LLM tool arguments are deserialized from JSON structures and can easily convey complex nested data structures.
 
 **Prevention:** Implement recursive scanners (like `_contains_sensitive_path`) that inspect all iterable containers and dictionaries (both keys and values) to ensure no sensitive path lies embedded in any part of the tool payload.
+
+## 2026-08-02 - [Hardening Guardrails against Sqlite and Git Command Bypasses]
+
+**Vulnerability:** Simple path-based command scanners failed to recognize and block dangerous file-access commands embedded within `sqlite3` and `git` arguments (such as `sqlite3 db ".import /etc/shadow table"` or `git config alias.x '!cat /etc/shadow'`), because neither tool was treated as an interpreter with embedded scripts.
+
+**Learning:** Tools with built-in scripting, configuration aliases, or file-import utilities (like SQLite and Git) must be treated as execution interpreters rather than simple binaries. Treating them solely as standard binaries allows sensitive path references to hide inside complex option arguments.
+
+**Prevention:** Register `sqlite` and `git` in the `interpreters` blocklist so that their complete argument strings are recursively scanned for sensitive paths using `_SENSITIVE_NAME_RE`. Also, ensure both are included in `destructive_binaries` and `exfiltration_binaries` to prevent direct unvalidated invocations.

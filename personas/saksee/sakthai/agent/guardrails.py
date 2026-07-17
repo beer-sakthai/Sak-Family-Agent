@@ -384,6 +384,8 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
         "shred",
         "openssl",
         "socat",
+        "sqlite",
+        "sqlite3",
         "ssh-keygen",
         "ssh-copy-id",
         "mkdir",
@@ -407,6 +409,8 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
         "vdir",
         "openssl",
         "socat",
+        "sqlite",
+        "sqlite3",
         "cat",
         "grep",
         "head",
@@ -489,6 +493,9 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
         "sh",
         "zsh",
         "dash",
+        "sqlite",
+        "sqlite3",
+        "git",
     )
 
     for i, part in enumerate(parts):
