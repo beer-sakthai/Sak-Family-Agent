@@ -110,7 +110,9 @@ class TestSensitivePathArgs(unittest.TestCase):
         assert tool is not None
 
         # Test list of paths
-        result = DEFAULT_POLICY.check_pre_execution(tool, {"paths": ["safe.txt", ".env"]}, self.store)
+        result = DEFAULT_POLICY.check_pre_execution(
+            tool, {"paths": ["safe.txt", ".env"]}, self.store
+        )
         self.assertEqual(result.action, GuardrailAction.DENY)
         self.assertIn(".env", result.reason)
 
@@ -120,12 +122,16 @@ class TestSensitivePathArgs(unittest.TestCase):
         self.assertIn(".env", result.reason)
 
         # Test tuple of paths
-        result = DEFAULT_POLICY.check_pre_execution(tool, {"paths": ("safe.txt", ".env")}, self.store)
+        result = DEFAULT_POLICY.check_pre_execution(
+            tool, {"paths": ("safe.txt", ".env")}, self.store
+        )
         self.assertEqual(result.action, GuardrailAction.DENY)
         self.assertIn(".env", result.reason)
 
         # Test set of paths
-        result = DEFAULT_POLICY.check_pre_execution(tool, {"paths": {"safe.txt", ".env"}}, self.store)
+        result = DEFAULT_POLICY.check_pre_execution(
+            tool, {"paths": {"safe.txt", ".env"}}, self.store
+        )
         self.assertEqual(result.action, GuardrailAction.DENY)
         self.assertIn(".env", result.reason)
 
