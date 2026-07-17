@@ -364,3 +364,11 @@
 **Learning:** Containerization and virtualization tools present high-risk filesystem bypass vectors. Volume mounts (`-v`, `--mount`) and file copies (`cp`) in these tools can map sensitive host-level paths into containers, effectively escaping host-level guardrails if the tools themselves are not monitored. Furthermore, transparent wrappers like `chroot` and `nsenter` can hide the actual target command from simple token scanners. Subcommand detection must account for global flags that take values (e.g., `kubectl -n ns exec`), and volume scanning must not break early on non-hyphenated tokens (which are the mount specs themselves).
 
 **Prevention:** Implement specialized guardrail logic for `docker`, `podman`, and `kubectl` that explicitly validates mount and copy targets. Use `_is_sensitive_path` to recursively inspect multi-component strings (separated by `:`, `=`, `,`, or `@`) for sensitive host paths. Add `chroot` and `nsenter` to the list of transparent wrappers and ensure correct argument skipping before recursing into the wrapped command. Subcommand scanners should use look-ahead logic to skip known global flags and their arguments. Volume scanners must iterate through all tokens following the subcommand. Censor internal container commands after validation to prevent false positives in subsequent host-level scans.
+
+## 2026-08-01 - [Recursive Validation of Nested Tool Arguments]
+
+**Vulnerability:** Simple type-checking guardrails (like `isinstance(value, str)`) could be bypassed by passing sensitive path arguments within nested structures (e.g., lists, sets, tuples, or dictionaries) which bypassed path checks but were still parsed and processed by tools.
+
+**Learning:** When validating arguments for security compliance, validating only top-level primitives is insufficient. LLM tool arguments are deserialized from JSON structures and can easily convey complex nested data structures.
+
+**Prevention:** Implement recursive scanners (like `_contains_sensitive_path`) that inspect all iterable containers and dictionaries (both keys and values) to ensure no sensitive path lies embedded in any part of the tool payload.
