@@ -178,6 +178,7 @@ def _basename_is_sensitive(basename: str) -> bool:
 
 def _is_sensitive_path(path: str, allow_local: bool = False) -> bool:
     """Return True if the path targets a sensitive system directory or uses traversal."""
+    path = path.strip(" \t\n\r\"'")
     # Support checking flags or arguments with values like --file=/etc, field=@.env,
     # socat's FILE:/etc/passwd, or comma-separated paths (--mount src=/etc,dst=/x).
     # Every delimited component is checked recursively. Note: we only recurse on
@@ -834,6 +835,17 @@ def _contains_sensitive_path(val: Any) -> str | None:
     Returns the sensitive path if found, or None.
     """
     if isinstance(val, str):
+        stripped = val.strip()
+        if stripped.startswith(("{", "[")):
+            import contextlib
+            import json
+
+            with contextlib.suppress(Exception):
+                parsed = json.loads(stripped)
+                if isinstance(parsed, (list, tuple, set, dict)):
+                    res_json = _contains_sensitive_path(parsed)
+                    if res_json is not None:
+                        return res_json
         if _is_sensitive_path(val, allow_local=True):
             return val
     elif isinstance(val, (list, tuple, set)):
