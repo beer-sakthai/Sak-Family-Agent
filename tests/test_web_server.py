@@ -178,6 +178,31 @@ class TestApiStagesEndpoint:
         code, _ = _get(f"{api_base}/api/stages/")
         assert code == 200
 
+    def test_secrets_redacted_in_stages_response(self, api_base: str) -> None:
+        """Verify that any secrets in the dashboard data are redacted in the JSON response."""
+        secret_val = "sk-abcdef1234567890abcdef1234567890"
+        mock_data = {
+            "source": "demo",
+            "kpis": {
+                "total_facts": 0,
+                "total_facts_delta": 0,
+                "total_observations": 0,
+                "total_observations_delta": 0,
+            },
+            "growth": {"labels": [], "facts": [], "observations": []},
+            "recent_facts": [
+                {"id": 1, "kind": "note", "value": f"my token is {secret_val}", "key": "test"}
+            ],
+            "top_observations": [],
+            "categories": [],
+        }
+
+        with patch("sakthai.web.server._dashboard_data", return_value=mock_data):
+            code, body = _get(f"{api_base}/api/stages")
+            assert code == 200
+            assert secret_val not in json.dumps(body)
+            assert "[REDACTED]" in json.dumps(body)
+
 
 class TestApiEcosystemEndpoint:
     def test_returns_200(self, api_base: str) -> None:
