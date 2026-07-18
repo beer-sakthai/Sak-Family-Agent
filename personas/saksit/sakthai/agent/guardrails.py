@@ -838,14 +838,12 @@ def _contains_sensitive_path(val: Any) -> str | None:
         if _is_sensitive_path(val, allow_local=True):
             return val
         if val.strip().startswith(("{", "[")):
-            try:
+            with contextlib.suppress(Exception):
                 decoded = json.loads(val)
                 if decoded != val:
                     res = _contains_sensitive_path(decoded)
                     if res is not None:
                         return res
-            except Exception:
-                pass
     elif isinstance(val, (list, tuple, set)):
         for item in val:
             res = _contains_sensitive_path(item)
