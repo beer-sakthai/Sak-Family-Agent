@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import contextlib
 import fnmatch
+import json
 import logging
 import os
 import re
@@ -836,6 +837,15 @@ def _contains_sensitive_path(val: Any) -> str | None:
     if isinstance(val, str):
         if _is_sensitive_path(val, allow_local=True):
             return val
+        if val.strip().startswith(("{", "[")):
+            try:
+                decoded = json.loads(val)
+                if decoded != val:
+                    res = _contains_sensitive_path(decoded)
+                    if res is not None:
+                        return res
+            except Exception:
+                pass
     elif isinstance(val, (list, tuple, set)):
         for item in val:
             res = _contains_sensitive_path(item)
