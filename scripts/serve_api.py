@@ -27,17 +27,24 @@ _PORT = 3002
 def _dashboard_data(days: int = 30) -> dict[str, Any]:
     try:
         import sys
+
         REPO_ROOT = (Path(__file__).resolve().parent.parent).resolve()
         sys.path.insert(0, str(REPO_ROOT / "personas" / "sakthai"))
         sys.path.insert(0, str(REPO_ROOT))
         from sakthai.dashboard.data import collect_dashboard_data
+
         return collect_dashboard_data(days=days)
     except Exception as exc:  # noqa: BLE001
         logging.getLogger(__name__).warning("dashboard data failed: %s", exc)
         return {
             "generated_at": "demo",
             "source": "demo",
-            "kpis": {"total_facts": 0, "total_facts_delta": 0, "total_observations": 0, "total_observations_delta": 0},
+            "kpis": {
+                "total_facts": 0,
+                "total_facts_delta": 0,
+                "total_observations": 0,
+                "total_observations_delta": 0,
+            },
             "growth": {"labels": [], "facts": [], "observations": []},
             "recent_facts": [],
             "top_observations": [],
@@ -75,6 +82,7 @@ class _Handler(SimpleHTTPRequestHandler):
     def _json(self, code: int, payload: dict[str, Any]) -> None:
         try:
             from sakthai.config import redact_secrets
+
             serialized = json.dumps(payload, indent=2, ensure_ascii=False)
             redacted = redact_secrets(serialized)
         except ImportError:

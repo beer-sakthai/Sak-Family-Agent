@@ -178,7 +178,9 @@ class TestApiStagesEndpoint:
         code, _ = _get(f"{api_base}/api/stages/")
         assert code == 200
 
-    def test_secrets_redacted_in_stages_response(self, api_base: str, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_secrets_redacted_in_stages_response(
+        self, api_base: str, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         fake_secret = "sk-ant-api03-abcdefghijklmnopabcdefghijklmnopabcdefghijklmnop"
         mock_data = {
             "source": "demo",
