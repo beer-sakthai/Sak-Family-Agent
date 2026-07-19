@@ -73,7 +73,13 @@ class _Handler(SimpleHTTPRequestHandler):
         super().end_headers()
 
     def _json(self, code: int, payload: dict[str, Any]) -> None:
-        body = json.dumps(payload, indent=2, ensure_ascii=False).encode("utf-8")
+        try:
+            from sakthai.config import redact_secrets
+            serialized = json.dumps(payload, indent=2, ensure_ascii=False)
+            redacted = redact_secrets(serialized)
+        except ImportError:
+            redacted = json.dumps(payload, indent=2, ensure_ascii=False)
+        body = redacted.encode("utf-8")
         self.send_response(code)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))

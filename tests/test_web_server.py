@@ -178,6 +178,26 @@ class TestApiStagesEndpoint:
         code, _ = _get(f"{api_base}/api/stages/")
         assert code == 200
 
+    def test_secrets_redacted_in_stages_response(self, api_base: str, monkeypatch: pytest.MonkeyPatch) -> None:
+        fake_secret = "sk-ant-api03-abcdefghijklmnopabcdefghijklmnopabcdefghijklmnop"
+        mock_data = {
+            "source": "demo",
+            "kpis": {
+                "total_facts": 0,
+                "total_facts_delta": 0,
+                "total_observations": 0,
+                "total_observations_delta": 0,
+            },
+            "recent_facts": [{"value": f"My secret key is {fake_secret}"}],
+            "top_observations": [],
+        }
+        monkeypatch.setattr("sakthai.web.server._dashboard_data", lambda days=30: mock_data)
+        code, body = _get(f"{api_base}/api/stages")
+        assert code == 200
+        body_str = json.dumps(body)
+        assert fake_secret not in body_str
+        assert "[REDACTED]" in body_str
+
 
 class TestApiEcosystemEndpoint:
     def test_returns_200(self, api_base: str) -> None:
