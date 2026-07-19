@@ -435,3 +435,26 @@ class TestHandlerEdgePaths:
         with patch("sakthai.web.server.os.path.realpath", side_effect=OSError("boom")):
             status, _ = _get(f"{api_base}/index.html")
         assert status == 403
+
+
+def test_secrets_redacted_in_stages_response(
+    api_base: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Verify that sensitive values are redacted in JSON API responses."""
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-ant-api03-abcdefg-hijklmnop-1234567")
+    monkeypatch.setenv("HF_TOKEN", "hf-token-value-secret-stuff-99999")
+
+    with patch("sakthai.web.server._dashboard_data") as mock_data:
+        mock_data.return_value = {
+            "source": "demo",
+            "kpis": {
+                "total_facts": 12,
+                "anthropic_key": "sk-ant-api03-abcdefg-hijklmnop-1234567",
+                "hf_token": "hf-token-value-secret-stuff-99999",
+            },
+        }
+
+        status, body = _get(f"{api_base}/api/stages")
+        assert status == 200
+        assert body["kpis"]["anthropic_key"] == "[REDACTED]"
+        assert body["kpis"]["hf_token"] == "[REDACTED]"

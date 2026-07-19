@@ -146,7 +146,14 @@ def main() -> int:
         rc, out = run(["run", "say hi", "--dry-run", "--no-mcp"], env)
         check("run --dry-run", rc == 0 and "runnable:" in out)
         rc, out = run(
-            ["run", "say hi", "--dry-run", "--no-mcp", "--with-skills", "sakthai-security-red-teaming"],
+            [
+                "run",
+                "say hi",
+                "--dry-run",
+                "--no-mcp",
+                "--with-skills",
+                "sakthai-security-red-teaming",
+            ],
             env,
         )
         check("run --dry-run --with-skills", rc == 0 and "runnable:" in out)
@@ -165,9 +172,7 @@ def main() -> int:
             deadline = time.monotonic() + 10
             while time.monotonic() < deadline:
                 try:
-                    with urllib.request.urlopen(
-                        "http://127.0.0.1:3001/api/stages", timeout=2
-                    ) as r:
+                    with urllib.request.urlopen("http://127.0.0.1:3001/api/stages", timeout=2) as r:
                         stages = json.loads(r.read())
                     break
                 except OSError:
@@ -175,9 +180,7 @@ def main() -> int:
             check("web server serves /api/stages JSON", "kpis" in stages)
             eco: dict = {}
             try:
-                with urllib.request.urlopen(
-                    "http://127.0.0.1:3001/api/ecosystem", timeout=2
-                ) as r:
+                with urllib.request.urlopen("http://127.0.0.1:3001/api/ecosystem", timeout=2) as r:
                     eco = json.loads(r.read())
             except OSError:
                 pass

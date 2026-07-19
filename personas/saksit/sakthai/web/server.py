@@ -22,6 +22,8 @@ logger = logging.getLogger(__name__)
 
 _DEFAULT_HOST = "127.0.0.1"
 _DEFAULT_PORT = 3001
+
+
 def _find_static_root() -> Path:
     curr = Path(__file__).resolve().parent
     for parent in [curr] + list(curr.parents):
@@ -98,7 +100,11 @@ class _Handler(SimpleHTTPRequestHandler):
         super().end_headers()
 
     def _send_json(self, code: int, payload: dict[str, Any]) -> None:
-        body = json.dumps(payload, indent=2, ensure_ascii=False).encode("utf-8")
+        from ..config import redact_secrets
+
+        serialized = json.dumps(payload, indent=2, ensure_ascii=False)
+        redacted = redact_secrets(serialized)
+        body = redacted.encode("utf-8")
         self.send_response(code)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
