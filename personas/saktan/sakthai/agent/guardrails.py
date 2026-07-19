@@ -345,7 +345,17 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
             and i + 1 < len(parts)
         ):
             interp_idx = -1
-            interpreters_with_c = ("python", "node", "perl", "ruby", "php")
+            interpreters_with_c = (
+                "python",
+                "node",
+                "perl",
+                "ruby",
+                "php",
+                "tsx",
+                "ts-node",
+                "sqlite",
+                "git",
+            )
             for j in range(i - 1, -1, -1):
                 if parts[j].startswith("-"):
                     continue
@@ -389,6 +399,9 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
         "mkdir",
         "touch",
         "git",
+        "sqlite",
+        "tsx",
+        "ts-node",
         "npm",
         "yarn",
         "pnpm",
@@ -464,6 +477,9 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
         "join",
         "split",
         "git",
+        "sqlite",
+        "tsx",
+        "ts-node",
         "npm",
         "yarn",
         "pnpm",
@@ -489,6 +505,10 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
         "sh",
         "zsh",
         "dash",
+        "tsx",
+        "ts-node",
+        "sqlite",
+        "git",
     )
 
     for i, part in enumerate(parts):

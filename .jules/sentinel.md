@@ -372,3 +372,11 @@
 **Learning:** When validating arguments for security compliance, validating only top-level primitives is insufficient. LLM tool arguments are deserialized from JSON structures and can easily convey complex nested data structures.
 
 **Prevention:** Implement recursive scanners (like `_contains_sensitive_path`) that inspect all iterable containers and dictionaries (both keys and values) to ensure no sensitive path lies embedded in any part of the tool payload.
+
+## 2026-08-02 - [Unmonitored Execution of Modern Development and Database Tools]
+
+**Vulnerability:** Shell guardrails could be bypassed by using unmonitored development runners (`tsx`, `ts-node`), databases (`sqlite`), or version control aliases (`git`) to read, write, or exfiltrate sensitive files, because these binaries were not registered in `destructive_binaries`, `exfiltration_binaries`, or `interpreters`.
+
+**Learning:** Standard security checks focusing on traditional shells (`bash`, `sh`, `python`, `node`) fail to capture modern developer runtimes and databases that have equal potential for destructive operations or raw file exfiltration.
+
+**Prevention:** Maintain exhaustive sets of monitored command-line runners, package managers, and database clients. Ensure they are systematically registered in the command scanner's exfiltration and interpreter blocks to enable recursive script and argument path validation.
