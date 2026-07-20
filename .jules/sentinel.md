@@ -232,7 +232,7 @@
 
 **Vulnerability:** Shell and interpreter guardrails could be bypassed by combining the command execution flag with other short flags (e.g., `bash -xc` or `python3 -ic`). The previous logic only checked for exact matches like `-c`.
 
-**Learning:** Command-line parsers for shells and interpreters often allow combining multiple short flags into a single token. Security guardrails must account for this by checking if the relevant flag (like `c` for command execution) is present in a combined flag group, typically as the last character if it takes an argument.
+**Learning:** Command-line routers for shells and interpreters often allow combining multiple short flags into a single token. Security guardrails must account for this by checking if the relevant flag (like `c` for command execution) is present in a combined flag group, typically as the last character if it takes an argument.
 
 **Prevention:** When inspecting tokens for flags that trigger subcommand execution, check if the token starts with a single hyphen and ends with the expected flag character. This ensures that combined flags are correctly identified before recursing into the command string.
 
@@ -334,7 +334,7 @@
 
 ## 2026-07-15 - [Hardening Guardrails against Container and Virtualization Bypasses]
 
-**Vulnerability:** Shell command guardrails could be bypassed using containerization tools (`docker`, `podman`, `kubectl`) and virtualization wrappers (`chroot`, `nsenter`) to mount or access sensitive host files (e.g., `docker run -v /etc:/mnt ...`).
+**Vulnerability:** Shell command guardrails could be bypassed using containerization tools (`docker`, `podman`, `kubectl`) and virtualization wrappers (`chroot`, `nsenter`) to mount or access sensitive host files (e.g., `docker run -v /etc:/mnt alpine`).
 
 **Learning:** Advanced system tools provide multiple ways to interact with the host filesystem that go beyond direct file access. autonomous agents with shell access must be restricted from using these tools to bridge into sensitive host areas. specialized logic is required to parse tool-specific flags (like docker's `-v` or `--mount`) and arguments to maintain a consistent security posture.
 
@@ -372,6 +372,9 @@
 
 **Prevention:** Implement specialized guardrail logic for `docker`, `podman`, and `kubectl` that explicitly validates mount and copy targets. Use `_is_sensitive_path` to recursively inspect multi-component strings (separated by `:`, `=`, `,`, or `@`) for sensitive host paths. Add `chroot` and `nsenter` to the list of transparent wrappers and ensure correct argument skipping before recursing into the wrapped command. Subcommand scanners should use look-ahead logic to skip known global flags and their arguments. Volume scanners must iterate through all tokens following the subcommand. Censor internal container commands after validation to prevent false positives in subsequent host-level scans.
 
+**Learning:** Generic path-based guardrails often miss host paths embedded within complex argument strings (like volume mount mappings). Furthermore, container tools and system wrappers provide powerful pivots that can bypass standard utility-based filters if they are not explicitly monitored with specialized logic that understands their specific argument syntax.
+
+**Prevention:** Implement specialized guardrail logic for container tools that parses volume mount flags (`-v`, `--volume`, `--mount`) and file transfer commands (`kubectl cp`). Update `_is_sensitive_path` to recursively decompose and validate all components of delimited strings. Treat `chroot` and `nsenter` as transparent wrappers, while specifically validating the `chroot` target directory.
 ## 2026-08-01 - [Recursive Validation of Nested Tool Arguments]
 
 **Vulnerability:** Simple type-checking guardrails (like `isinstance(value, str)`) could be bypassed by passing sensitive path arguments within nested structures (e.g., lists, sets, tuples, or dictionaries) which bypassed path checks but were still parsed and processed by tools.
@@ -379,3 +382,11 @@
 **Learning:** When validating arguments for security compliance, validating only top-level primitives is insufficient. LLM tool arguments are deserialized from JSON structures and can easily convey complex nested data structures.
 
 **Prevention:** Implement recursive scanners (like `_contains_sensitive_path`) that inspect all iterable containers and dictionaries (both keys and values) to ensure no sensitive path lies embedded in any part of the tool payload.
+
+## 2026-08-02 - [Hardening Parameter Guardrails against Quoted and Serialized JSON Bypasses]
+
+**Vulnerability:** Filesystem-access and argument-based guardrails (like `_block_sensitive_path_args`) could be bypassed if a sensitive path was wrapped in quotes (e.g., `"/etc/shadow"`) inside malformed JSON-like strings, or if sensitive paths were nested inside serialized JSON string arguments that the tool-checking system treated as a single flat string.
+
+**Learning:** String-based path checks do not natively handle string escapes, quotes, or JSON encoding. Attackers or models can utilize serialized JSON parameters to obscure sensitive paths from primitive substring checks. Furthermore, quoting a path prevents standard prefix matching (e.g., matching a leading `/`).
+
+**Prevention:** Explicitly strip whitespace and quoting characters (`"`, `'`) inside path-sensitivity validators before normalisation. Additionally, parse strings starting with `{` or `[` as JSON and recursively scan the deserialized structures (lists, dicts, tuples, sets) using a centralized, exception-safe checker.
