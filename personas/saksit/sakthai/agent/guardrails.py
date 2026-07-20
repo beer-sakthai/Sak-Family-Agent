@@ -346,7 +346,7 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
             and i + 1 < len(parts)
         ):
             interp_idx = -1
-            interpreters_with_c = ("python", "node", "perl", "ruby", "php")
+            interpreters_with_c = ("python", "node", "perl", "ruby", "php", "tsx", "ts-node")
             for j in range(i - 1, -1, -1):
                 if parts[j].startswith("-"):
                     continue
@@ -400,6 +400,12 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
         "kubectl",
         "chroot",
         "nsenter",
+        "uv",
+        "pipx",
+        "bun",
+        "bunx",
+        "tsx",
+        "ts-node",
     )
     exfiltration_binaries = (
         "curl",
@@ -475,6 +481,12 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
         "kubectl",
         "chroot",
         "nsenter",
+        "uv",
+        "pipx",
+        "bun",
+        "bunx",
+        "tsx",
+        "ts-node",
     )
     # Common interpreters where sensitive paths can be embedded in arguments.
     interpreters = (
@@ -490,6 +502,8 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
         "sh",
         "zsh",
         "dash",
+        "tsx",
+        "ts-node",
     )
 
     for i, part in enumerate(parts):
@@ -686,11 +700,27 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
             "stdbuf",
             "chroot",
             "nsenter",
+            "uv",
+            "pipx",
+            "bun",
+            "bunx",
         )
         if _is_binary(part, transparent_wrappers):
             # Most of these wrappers have flags. xargs and env are special.
             # We skip tokens that are likely arguments to the wrapper's flags.
             start_idx = i + 1
+
+            # If the wrapper is uv, pipx, or bun, we want to look for the "run" subcommand.
+            if _is_binary(part, ("uv", "pipx", "bun")):
+                run_idx = -1
+                for idx in range(i + 1, len(parts)):
+                    if parts[idx] == "run":
+                        run_idx = idx
+                        break
+                if run_idx == -1:
+                    continue
+                start_idx = run_idx + 1
+
             while start_idx < len(parts) and parts[start_idx].startswith("-"):
                 flag = parts[start_idx]
                 if flag == "--":
@@ -724,6 +754,27 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
                         "-R",
                         "-T",
                     )
+                    or _is_binary(part, "uv")
+                    and flag
+                    in (
+                        "--with",
+                        "-p",
+                        "--package",
+                        "-m",
+                        "--module",
+                        "--python",
+                        "--env-file",
+                        "--directory",
+                        "-C",
+                        "--project",
+                        "--settings",
+                    )
+                    or _is_binary(part, "pipx")
+                    and flag in ("--spec", "--index-url", "--pip-args", "--python")
+                    or _is_binary(part, "bun")
+                    and flag in ("--cwd", "--env-file", "-c", "--config", "-e", "--entry-point")
+                    or _is_binary(part, "bunx")
+                    and flag in ("-p", "--package", "--cwd", "--env-file")
                 ):
                     start_idx += 1
 

@@ -1,5 +1,10 @@
 # Sentinel Security Journal
 
+## 2026-08-02 - [Hardening Guardrails against Modern Development Tools and TS Engines]
+**Vulnerability:** Shell command guardrails could be bypassed by executing destructive or exfiltrative commands using modern package managers and runners (`uv`, `pipx`, `bun`, `bunx`) or TypeScript runners (`tsx`, `ts-node`), which were unmonitored.
+**Learning:** Generic command blocklists easily miss modern development runtimes. Since these tools are commonly used to execute arbitrary commands, scripts, or package tasks, they must be registered as transparent wrappers with custom option-skipping parser logic, and their respective script execution flags must be monitored.
+**Prevention:** Include `uv`, `pipx`, `bun`, `bunx`, `tsx`, `ts-node` in destructive and exfiltration binary blocklists. Register them as transparent wrappers to skip global flags/subcommands and recursively validate the underlying wrapped commands.
+
 ## 2026-07-01 - [Redacting Secrets in Tool Error Handlers]
 
 **Vulnerability:** Raw `TELEGRAM_BOT_TOKEN` was included in the exception string returned to the LLM when an `Unexpected Error` occurred during message sending.
