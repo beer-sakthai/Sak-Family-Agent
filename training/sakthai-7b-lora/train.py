@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """SakThai 7B LoRA training — simpler version for HF Jobs."""
+
 import json
 import os
 import subprocess
@@ -23,7 +24,25 @@ print("=== Starting 7B training ===", flush=True)
 print(f"BASE_MODEL={BASE_MODEL}, DATASET={DATASET_ID}", flush=True)
 
 # ── Install deps ──────────────────────────────────────────────────
-subprocess.run([sys.executable, "-m", "pip", "install", "-q", "transformers", "peft", "trl", "accelerate", "bitsandbytes", "datasets", "sentencepiece", "huggingface_hub", "torch"], check=True)
+subprocess.run(
+    [
+        sys.executable,
+        "-m",
+        "pip",
+        "install",
+        "-q",
+        "transformers",
+        "peft",
+        "trl",
+        "accelerate",
+        "bitsandbytes",
+        "datasets",
+        "sentencepiece",
+        "huggingface_hub",
+        "torch",
+    ],
+    check=True,
+)
 print("Deps installed", flush=True)
 
 # ── Auth (HF_TOKEN env var or file) ────────────────────────────────
@@ -43,6 +62,7 @@ print("Loading dataset...", flush=True)
 dataset = load_dataset(DATASET_ID, split="train")
 print(f"Loaded {len(dataset)} examples", flush=True)
 
+
 def fmt(msgs):
     text = ""
     for m in msgs:
@@ -61,6 +81,7 @@ def fmt(msgs):
     text += "<|im_start|>assistant\n"
     return text
 
+
 dataset = dataset.map(lambda x: {"text": fmt(x["messages"])})
 split = dataset.train_test_split(test_size=50, seed=42)
 print(f"Train: {len(split['train'])}, Eval: {len(split['test'])}", flush=True)
@@ -69,11 +90,20 @@ print(f"Train: {len(split['train'])}, Eval: {len(split['test'])}", flush=True)
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 
-bnb = BitsAndBytesConfig(load_in_4bit=True, bnb_4bit_compute_dtype=torch.bfloat16,
-                         bnb_4bit_use_double_quant=True, bnb_4bit_quant_type="nf4")
+bnb = BitsAndBytesConfig(
+    load_in_4bit=True,
+    bnb_4bit_compute_dtype=torch.bfloat16,
+    bnb_4bit_use_double_quant=True,
+    bnb_4bit_quant_type="nf4",
+)
 print("Loading model...", flush=True)
-model = AutoModelForCausalLM.from_pretrained(BASE_MODEL, quantization_config=bnb,
-    device_map="auto", torch_dtype="auto", trust_remote_code=True)
+model = AutoModelForCausalLM.from_pretrained(
+    BASE_MODEL,
+    quantization_config=bnb,
+    device_map="auto",
+    torch_dtype="auto",
+    trust_remote_code=True,
+)
 tok = AutoTokenizer.from_pretrained(BASE_MODEL, trust_remote_code=True)
 tok.pad_token = tok.eos_token
 tok.padding_side = "right"
@@ -83,8 +113,13 @@ print(f"Loaded. Params: {model.num_parameters():,}", flush=True)
 from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
 
 model = prepare_model_for_kbit_training(model)
-lora = LoraConfig(r=LORA_R, lora_alpha=LORA_ALPHA, target_modules=["q_proj","k_proj","v_proj","o_proj"],
-                  bias="none", task_type="CAUSAL_LM")
+lora = LoraConfig(
+    r=LORA_R,
+    lora_alpha=LORA_ALPHA,
+    target_modules=["q_proj", "k_proj", "v_proj", "o_proj"],
+    bias="none",
+    task_type="CAUSAL_LM",
+)
 model = get_peft_model(model, lora)
 model.print_trainable_parameters()
 
@@ -92,13 +127,26 @@ model.print_trainable_parameters()
 from trl import SFTConfig, SFTTrainer
 
 args = SFTConfig(
-    output_dir="/data/7b-lora", num_train_epochs=NUM_EPOCHS, max_steps=MAX_STEPS,
-    per_device_train_batch_size=BATCH_SIZE, gradient_accumulation_steps=GRAD_ACCUM,
-    gradient_checkpointing=True, optim="paged_adamw_8bit", learning_rate=LR,
-    lr_scheduler_type="linear", warmup_ratio=0.05, bf16=True,
-    logging_steps=10, save_strategy="steps", save_steps=50,
-    eval_strategy="steps", eval_steps=50,
-    dataset_text_field="text", packing=False, report_to="none", remove_unused_columns=False,
+    output_dir="/data/7b-lora",
+    num_train_epochs=NUM_EPOCHS,
+    max_steps=MAX_STEPS,
+    per_device_train_batch_size=BATCH_SIZE,
+    gradient_accumulation_steps=GRAD_ACCUM,
+    gradient_checkpointing=True,
+    optim="paged_adamw_8bit",
+    learning_rate=LR,
+    lr_scheduler_type="linear",
+    warmup_ratio=0.05,
+    bf16=True,
+    logging_steps=10,
+    save_strategy="steps",
+    save_steps=50,
+    eval_strategy="steps",
+    eval_steps=50,
+    dataset_text_field="text",
+    packing=False,
+    report_to="none",
+    remove_unused_columns=False,
 )
 
 # TRL dynamic loader: detect correct arg name at runtime
@@ -108,9 +156,13 @@ sig_trainer = inspect.signature(SFTTrainer.__init__)
 arg_name = "processing_class" if "processing_class" in sig_trainer.parameters else "tokenizer"
 print(f"TRL detected, using argument: {arg_name}", flush=True)
 
-trainer = SFTTrainer(model=model, args=args,
-                     train_dataset=split["train"], eval_dataset=split["test"],
-                     **{arg_name: tok})
+trainer = SFTTrainer(
+    model=model,
+    args=args,
+    train_dataset=split["train"],
+    eval_dataset=split["test"],
+    **{arg_name: tok},
+)
 
 print("Training...", flush=True)
 trainer.train()
@@ -121,16 +173,24 @@ trainer.save_model("/tmp/7b-adapter")
 tok.save_pretrained("/tmp/7b-adapter")
 print(f"Pushing to {ADAPTER_REPO}...", flush=True)
 api.create_repo(ADAPTER_REPO, exist_ok=True)
-api.upload_folder(folder_path="/tmp/7b-adapter", repo_id=ADAPTER_REPO,
-                  repo_type="model", commit_message="SakThai 7B LoRA adapter")
+api.upload_folder(
+    folder_path="/tmp/7b-adapter",
+    repo_id=ADAPTER_REPO,
+    repo_type="model",
+    commit_message="SakThai 7B LoRA adapter",
+)
 print(f"Pushed! https://huggingface.co/{ADAPTER_REPO}", flush=True)
 
 # ── Metrics ───────────────────────────────────────────────────────
 log = trainer.state.log_history
 with open("/tmp/metrics.json", "w") as f:
     json.dump({"base": BASE_MODEL, "dataset": DATASET_ID, "log": log}, f, indent=2)
-api.upload_file(path_or_fileobj="/tmp/metrics.json", path_in_repo="training_metrics.json",
-                repo_id=ADAPTER_REPO, repo_type="model")
+api.upload_file(
+    path_or_fileobj="/tmp/metrics.json",
+    path_in_repo="training_metrics.json",
+    repo_id=ADAPTER_REPO,
+    repo_type="model",
+)
 
 final_loss = None
 for e in log:
