@@ -736,7 +736,11 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
                 if run_idx == -1:
                     continue
                 # If bun eval or deno eval is found, recursively scan the script argument for sensitive paths
-                if parts[run_idx] == "eval" and run_idx + 1 < len(parts) and _is_binary(part, ("bun", "deno")):
+                if (
+                    parts[run_idx] == "eval"
+                    and run_idx + 1 < len(parts)
+                    and _is_binary(part, ("bun", "deno"))
+                ):
                     script = parts[run_idx + 1]
                     for match in re.finditer(_SENSITIVE_SCRIPT_PATH_RE, script):
                         candidate = match.group(0)
@@ -805,7 +809,8 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
                     or _is_binary(part, "npx")
                     and flag in ("-p", "--package")
                     or _is_binary(part, "deno")
-                    and flag in ("-c", "--config", "-p", "--port", "--import-map", "--lock", "--ext")
+                    and flag
+                    in ("-c", "--config", "-p", "--port", "--import-map", "--lock", "--ext")
                 ):
                     start_idx += 1
 
