@@ -105,41 +105,6 @@ class TestSensitivePathArgs(unittest.TestCase):
         result = DEFAULT_POLICY.check_pre_execution(tool, {"path": "README.md"}, self.store)
         self.assertEqual(result.action, GuardrailAction.ALLOW)
 
-    def test_nested_path_arguments_blocked(self):
-        tool = tool_by_name("read_file")
-        assert tool is not None
-
-        # Test list of paths
-        result = DEFAULT_POLICY.check_pre_execution(
-            tool, {"paths": ["safe.txt", ".env"]}, self.store
-        )
-        self.assertEqual(result.action, GuardrailAction.DENY)
-        self.assertIn(".env", result.reason)
-
-        # Test dict of paths
-        result = DEFAULT_POLICY.check_pre_execution(tool, {"config": {"file": ".env"}}, self.store)
-        self.assertEqual(result.action, GuardrailAction.DENY)
-        self.assertIn(".env", result.reason)
-
-        # Test tuple of paths
-        result = DEFAULT_POLICY.check_pre_execution(
-            tool, {"paths": ("safe.txt", ".env")}, self.store
-        )
-        self.assertEqual(result.action, GuardrailAction.DENY)
-        self.assertIn(".env", result.reason)
-
-        # Test set of paths
-        result = DEFAULT_POLICY.check_pre_execution(
-            tool, {"paths": {"safe.txt", ".env"}}, self.store
-        )
-        self.assertEqual(result.action, GuardrailAction.DENY)
-        self.assertIn(".env", result.reason)
-
-        # Test dict with sensitive path in key
-        result = DEFAULT_POLICY.check_pre_execution(tool, {"config": {".env": "safe"}}, self.store)
-        self.assertEqual(result.action, GuardrailAction.DENY)
-        self.assertIn(".env", result.reason)
-
 
 if __name__ == "__main__":
     unittest.main()

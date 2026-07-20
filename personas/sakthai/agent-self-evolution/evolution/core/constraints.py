@@ -180,7 +180,6 @@ class ConstraintValidator:
     def _check_tool_descriptions_structure(self, text: str) -> ConstraintResult:
         """Verify structural parsing and size limits on all tool descriptions."""
         from evolution.tools.tool_module import parse_evolved_descriptions
-
         try:
             parsed = parse_evolved_descriptions(text)
             if not parsed:

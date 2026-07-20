@@ -178,7 +178,6 @@ def tool_selection_metric(example: dspy.Example, prediction: dspy.Prediction, tr
 
     # 2. Score arguments match (0.4 weight)
     import json
-
     parsed_args = {}
     if isinstance(predicted_args_raw, dict):
         parsed_args = predicted_args_raw
