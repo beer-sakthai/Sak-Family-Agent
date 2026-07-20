@@ -412,6 +412,8 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
         "bunx",
         "tsx",
         "ts-node",
+        "deno",
+        "npx",
     )
     exfiltration_binaries = (
         "curl",
@@ -494,6 +496,8 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
         "bunx",
         "tsx",
         "ts-node",
+        "deno",
+        "npx",
     )
     # Common interpreters where sensitive paths can be embedded in arguments.
     interpreters = (
@@ -513,6 +517,7 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
         "git",
         "tsx",
         "ts-node",
+        "deno",
     )
 
     for i, part in enumerate(parts):
@@ -713,21 +718,38 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
             "pipx",
             "bun",
             "bunx",
+            "npx",
+            "deno",
         )
         if _is_binary(part, transparent_wrappers):
             # Most of these wrappers have flags. xargs and env are special.
             # We skip tokens that are likely arguments to the wrapper's flags.
             start_idx = i + 1
 
-            # If the wrapper is uv, pipx, or bun, we want to look for the "run" subcommand.
-            if _is_binary(part, ("uv", "pipx", "bun")):
+            # If the wrapper is uv, pipx, bun, or deno, we want to look for the "run" or "eval" subcommand.
+            if _is_binary(part, ("uv", "pipx", "bun", "deno")):
                 run_idx = -1
                 for idx in range(i + 1, len(parts)):
-                    if parts[idx] == "run":
+                    if parts[idx] in ("run", "eval"):
                         run_idx = idx
                         break
                 if run_idx == -1:
                     continue
+                # If bun eval or deno eval is found, recursively scan the script argument for sensitive paths
+                if (
+                    parts[run_idx] == "eval"
+                    and run_idx + 1 < len(parts)
+                    and _is_binary(part, ("bun", "deno"))
+                ):
+                    script = parts[run_idx + 1]
+                    for match in re.finditer(_SENSITIVE_SCRIPT_PATH_RE, script):
+                        candidate = match.group(0)
+                        if _is_sensitive_path(candidate):
+                            binary_name = os.path.basename(part)
+                            return GuardrailResult(
+                                GuardrailAction.DENY,
+                                reason=f"Potentially dangerous {binary_name!r} eval script targeting {candidate!r} blocked.",
+                            )
                 start_idx = run_idx + 1
 
             while start_idx < len(parts) and parts[start_idx].startswith("-"):
@@ -784,6 +806,11 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
                     and flag in ("--cwd", "--env-file", "-c", "--config", "-e", "--entry-point")
                     or _is_binary(part, "bunx")
                     and flag in ("-p", "--package", "--cwd", "--env-file")
+                    or _is_binary(part, "npx")
+                    and flag in ("-p", "--package")
+                    or _is_binary(part, "deno")
+                    and flag
+                    in ("-c", "--config", "-p", "--port", "--import-map", "--lock", "--ext")
                 ):
                     start_idx += 1
 
