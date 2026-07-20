@@ -83,3 +83,16 @@ def test_deeply_nested_json(test_tool: Tool, store: MemoryStore) -> None:
     result = DEFAULT_POLICY.check_pre_execution(test_tool, args, store)
     assert result.action == GuardrailAction.DENY
     assert "/etc/shadow" in result.reason
+
+
+def test_quoted_sensitive_path(test_tool: Tool, store: MemoryStore) -> None:
+    """Verify that a sensitive path wrapped in quotes is successfully stripped and blocked."""
+    args = {"file_path": '"/etc/shadow"'}
+    result = DEFAULT_POLICY.check_pre_execution(test_tool, args, store)
+    assert result.action == GuardrailAction.DENY
+    assert "/etc/shadow" in result.reason
+
+    args_single = {"file_path": "'/etc/shadow'"}
+    result_single = DEFAULT_POLICY.check_pre_execution(test_tool, args_single, store)
+    assert result_single.action == GuardrailAction.DENY
+    assert "/etc/shadow" in result_single.reason

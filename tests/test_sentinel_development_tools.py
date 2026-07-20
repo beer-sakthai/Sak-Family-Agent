@@ -51,3 +51,22 @@ def test_safe_development_tools_allowed(command, run_command_tool, store, monkey
     assert result.action == GuardrailAction.ALLOW, (
         f"Command '{command}' should be allowed but was blocked: {result.reason}"
     )
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        # Version-control and database tools with embedded file access
+        "git config alias.x '!cat /etc/shadow'",
+        "git -c alias.x='!cat /etc/shadow' x",
+        "sqlite3 memory.db",
+        "sqlite3 .import /etc/shadow table",
+        # TypeScript runners evaluating inline scripts that read sensitive files
+        "tsx -e \"require('fs').readFileSync('.env')\"",
+        "ts-node -e \"require('fs').readFileSync('.env')\"",
+    ],
+)
+def test_database_and_vcs_tools_bypass_blocked(command, run_command_tool, store, monkeypatch):
+    monkeypatch.setenv("SAKTHAI_SHELL_ALLOW", "1")
+    result = DEFAULT_POLICY.check_pre_execution(run_command_tool, {"command": command}, store)
+    assert result.action == GuardrailAction.DENY, f"Command '{command}' should be blocked"

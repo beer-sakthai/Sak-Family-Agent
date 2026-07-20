@@ -133,6 +133,23 @@ class TestGuardrailsBypass(unittest.TestCase):
                 f"Multi-path separator bypass '{cmd}' should be blocked",
             )
 
+    def test_sqlite_and_git_bypass(self):
+        # Test that sqlite and git commands with embedded sensitive paths are blocked.
+        bypass_cmds = [
+            'sqlite3 db ".import /etc/shadow table"',
+            "git config alias.x '!cat /etc/shadow'",
+            'sqlite3 db ".backup /etc/shadow"',
+            'sqlite3 db ".restore /etc/shadow"',
+        ]
+        for cmd in bypass_cmds:
+            args = {"command": cmd}
+            result = _block_dangerous_shell_commands(self.tool, args, self.store)
+            self.assertEqual(
+                result.action,
+                GuardrailAction.DENY,
+                f"Sqlite/Git bypass '{cmd}' should be blocked",
+            )
+
 
 if __name__ == "__main__":
     unittest.main()
