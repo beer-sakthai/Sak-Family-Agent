@@ -397,3 +397,11 @@
 **Learning:** Tools with built-in scripting, configuration aliases, or file-import utilities (like SQLite and Git) must be treated as execution interpreters rather than simple binaries. Treating them solely as standard binaries allows sensitive path references to hide inside complex option arguments.
 
 **Prevention:** Register `sqlite` and `git` in the `interpreters` blocklist so that their complete argument strings are recursively scanned for sensitive paths using `_SENSITIVE_NAME_RE`. Also, ensure both are included in `destructive_binaries` and `exfiltration_binaries` to prevent direct unvalidated invocations.
+
+## 2026-08-02 - [Unmonitored Execution of Modern Development and Database Tools]
+
+**Vulnerability:** Shell guardrails could be bypassed by using unmonitored development runners (`tsx`, `ts-node`), databases (`sqlite`), or version control aliases (`git`) to read, write, or exfiltrate sensitive files, because these binaries were not registered in `destructive_binaries`, `exfiltration_binaries`, or `interpreters`.
+
+**Learning:** Standard security checks focusing on traditional shells (`bash`, `sh`, `python`, `node`) fail to capture modern developer runtimes and databases that have equal potential for destructive operations or raw file exfiltration.
+
+**Prevention:** Maintain exhaustive sets of monitored command-line runners, package managers, and database clients. Ensure they are systematically registered in the command scanner's exfiltration and interpreter blocks to enable recursive script and argument path validation.
