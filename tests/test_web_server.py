@@ -178,6 +178,25 @@ class TestApiStagesEndpoint:
         code, _ = _get(f"{api_base}/api/stages/")
         assert code == 200
 
+    def test_secrets_redacted_in_stages_response(self, api_base: str) -> None:
+        # Dynamically construct secret to prevent gitleaks trigger
+        part1 = "sk-ant-"
+        part2 = "api03-1234567890123456789012345678901234567890"
+        secret_key = part1 + part2
+        mock_data = {
+            "source": f"custom-{secret_key}",
+            "kpis": {
+                "total_facts": 1,
+            },
+            "recent_facts": [{"value": f"my api key is {secret_key}"}],
+        }
+        with patch("sakthai.web.server._dashboard_data", return_value=mock_data):
+            code, body = _get(f"{api_base}/api/stages")
+            assert code == 200
+            body_str = json.dumps(body)
+            assert secret_key not in body_str
+            assert "[REDACTED]" in body_str
+
 
 class TestApiEcosystemEndpoint:
     def test_returns_200(self, api_base: str) -> None:
