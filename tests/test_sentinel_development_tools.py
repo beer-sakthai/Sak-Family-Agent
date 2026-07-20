@@ -19,6 +19,10 @@ def run_command_tool() -> Tool:
         "pipx install --spec some-package /etc",
         "bun run /etc/shadow",
         "bunx --cwd /etc some-command",
+        "npx rimraf /etc",
+        "npx --yes rimraf /etc",
+        "deno run --allow-read /etc/shadow",
+        "deno run /etc/passwd",
         # Wrapped dangerous commands (recursive wrapper check)
         "uv run rm -rf /etc",
         "uv run --with requests python3 -c \"print(open('/etc/shadow').read())\"",
@@ -43,6 +47,8 @@ def test_dangerous_development_tools_blocked(command, run_command_tool, store, m
         "uv run python -c \"print('hello')\"",
         "bun run index.ts",
         "bunx cowsay hello",
+        "npx cowsay hello",
+        "deno run main.ts",
     ],
 )
 def test_safe_development_tools_allowed(command, run_command_tool, store, monkeypatch):
@@ -64,6 +70,8 @@ def test_safe_development_tools_allowed(command, run_command_tool, store, monkey
         # TypeScript runners evaluating inline scripts that read sensitive files
         "tsx -e \"require('fs').readFileSync('.env')\"",
         "ts-node -e \"require('fs').readFileSync('.env')\"",
+        "deno eval \"Deno.readTextFileSync('.env')\"",
+        "bun eval \"require('fs').readFileSync('.env')\"",
     ],
 )
 def test_database_and_vcs_tools_bypass_blocked(command, run_command_tool, store, monkeypatch):

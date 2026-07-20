@@ -1,5 +1,10 @@
 # Sentinel Security Journal
 
+## 2026-08-04 - [Hardening Guardrails against Unmonitored npx and Deno Execution Bypasses]
+**Vulnerability:** Shell command guardrails could be bypassed by utilizing unmonitored modern package runners (`npx`) or JavaScript/TypeScript engines (`deno`) to execute arbitrary destructive commands or run inline script files that targeted host-sensitive paths.
+**Learning:** Standard security scanners focusing solely on shell runtimes like python/node fail to recognize modern alternative engines like Deno and package execution wrappers like npx, leaving robust escape hatches for bypasses.
+**Prevention:** Systematically register `deno` and `npx` in monitored destructive, exfiltration, and interpreter collections. Handle `npx` and `deno` as transparent wrappers, and explicitly scan bun/deno `eval` subcommand arguments for embedded sensitive paths using robust script regex matches.
+
 ## 2026-08-03 - [Harden HTTP API JSON response serialization with centralized secret redaction]
 **Vulnerability:** HTTP API endpoints (like `/api/stages` and `/api/ecosystem`) served by the web dashboard server could leak active secrets (API keys, credentials, tokens) present in facts, observations, or environment configurations via plain-text JSON response serialization.
 **Learning:** Application-level endpoints and dashboard APIs that query persistent stores can easily exfiltrate secrets stored within normal data fields or error stacks. Redaction must be applied globally at the serialization layer of JSON endpoints, rather than only in CLI or agent tools.
