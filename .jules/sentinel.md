@@ -390,3 +390,10 @@
 **Learning:** String-based path checks do not natively handle string escapes, quotes, or JSON encoding. Attackers or models can utilize serialized JSON parameters to obscure sensitive paths from primitive substring checks. Furthermore, quoting a path prevents standard prefix matching (e.g., matching a leading `/`).
 
 **Prevention:** Explicitly strip whitespace and quoting characters (`"`, `'`) inside path-sensitivity validators before normalisation. Additionally, parse strings starting with `{` or `[` as JSON and recursively scan the deserialized structures (lists, dicts, tuples, sets) using a centralized, exception-safe checker.
+## 2026-08-02 - [Hardening Guardrails against Sqlite and Git Command Bypasses]
+
+**Vulnerability:** Simple path-based command scanners failed to recognize and block dangerous file-access commands embedded within `sqlite3` and `git` arguments (such as `sqlite3 db ".import /etc/shadow table"` or `git config alias.x '!cat /etc/shadow'`), because neither tool was treated as an interpreter with embedded scripts.
+
+**Learning:** Tools with built-in scripting, configuration aliases, or file-import utilities (like SQLite and Git) must be treated as execution interpreters rather than simple binaries. Treating them solely as standard binaries allows sensitive path references to hide inside complex option arguments.
+
+**Prevention:** Register `sqlite` and `git` in the `interpreters` blocklist so that their complete argument strings are recursively scanned for sensitive paths using `_SENSITIVE_NAME_RE`. Also, ensure both are included in `destructive_binaries` and `exfiltration_binaries` to prevent direct unvalidated invocations.
