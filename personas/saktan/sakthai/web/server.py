@@ -24,8 +24,8 @@ _DEFAULT_HOST = "127.0.0.1"
 _DEFAULT_PORT = 3001
 
 
-def _find_static_root(start: Path | None = None) -> Path:
-    curr = (start or Path(__file__)).resolve().parent
+def _find_static_root() -> Path:
+    curr = Path(__file__).resolve().parent
     for parent in [curr] + list(curr.parents):
         candidate = parent / "dashboard" / "dist"
         if candidate.is_dir():
@@ -40,11 +40,10 @@ def _dashboard_data(days: int = 30) -> dict[str, Any]:
     try:
         import sys
 
-        sys.path.insert(0, str((Path(__file__).resolve().parents[2]).resolve()))
+        sys.path.insert(0, str((Path(__file__).resolve().parent.parent).resolve()))
         from sakthai.dashboard.data import collect_dashboard_data
 
-        data: dict[str, Any] = collect_dashboard_data(days=days)
-        return data
+        return collect_dashboard_data(days=days)
     except ImportError:
         logger.warning("Dashboard data module unavailable; returning demo stub.")
     except Exception:
@@ -87,11 +86,8 @@ def _ecosystem_status() -> dict[str, Any]:
 
 
 class _Handler(SimpleHTTPRequestHandler):
-    def address_string(self) -> str:
-        return self.client_address[0]
-
     def log_message(self, format: str, *args: Any) -> None:  # noqa: A003
-        logger.info(format, *args)
+        logger.debug(format, *args)
 
     def end_headers(self) -> None:
         self.send_header("X-Frame-Options", "DENY")
@@ -106,9 +102,9 @@ class _Handler(SimpleHTTPRequestHandler):
     def _send_json(self, code: int, payload: dict[str, Any]) -> None:
         from ..config import redact_secrets
 
-        serialized = json.dumps(payload, indent=2, ensure_ascii=False)
-        redacted = redact_secrets(serialized)
-        body = redacted.encode("utf-8")
+        raw_body = json.dumps(payload, indent=2, ensure_ascii=False)
+        redacted_body = redact_secrets(raw_body)
+        body = redacted_body.encode("utf-8")
         self.send_response(code)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
@@ -155,10 +151,7 @@ class _Handler(SimpleHTTPRequestHandler):
 
 
 def serve(host: str = _DEFAULT_HOST, port: int = _DEFAULT_PORT) -> HTTPServer:
-    # The built dashboard (dashboard/dist) is optional: without it the API
-    # endpoints still serve, and static requests fall through to 403/404.
-    if _STATIC_ROOT.is_dir():
-        os.chdir(str(_STATIC_ROOT))
+    os.chdir(str(_STATIC_ROOT))
     server = HTTPServer((host, port), _Handler)
     logger.info("SakThai API listening on http://%s:%d (static=%s)", host, port, _STATIC_ROOT)
     return server
