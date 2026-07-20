@@ -1,5 +1,10 @@
 # Sentinel Security Journal
 
+## 2026-08-03 - [Harden HTTP API JSON response serialization with centralized secret redaction]
+**Vulnerability:** HTTP API endpoints (like `/api/stages` and `/api/ecosystem`) served by the web dashboard server could leak active secrets (API keys, credentials, tokens) present in facts, observations, or environment configurations via plain-text JSON response serialization.
+**Learning:** Application-level endpoints and dashboard APIs that query persistent stores can easily exfiltrate secrets stored within normal data fields or error stacks. Redaction must be applied globally at the serialization layer of JSON endpoints, rather than only in CLI or agent tools.
+**Prevention:** In the web server's JSON serialization helper (`_send_json`), apply `redact_secrets` from the central configuration module on the serialized string before transmitting it to the client. Keep this synchronized across all persona packages.
+
 ## 2026-08-02 - [Hardening Guardrails against Modern Development Tools and TS Engines]
 **Vulnerability:** Shell command guardrails could be bypassed by executing destructive or exfiltrative commands using modern package managers and runners (`uv`, `pipx`, `bun`, `bunx`) or TypeScript runners (`tsx`, `ts-node`), which were unmonitored.
 **Learning:** Generic command blocklists easily miss modern development runtimes. Since these tools are commonly used to execute arbitrary commands, scripts, or package tasks, they must be registered as transparent wrappers with custom option-skipping parser logic, and their respective script execution flags must be monitored.
@@ -330,6 +335,42 @@
 ## 2026-07-15 - [Hardening Guardrails against Container and Virtualization Bypasses]
 
 **Vulnerability:** Shell command guardrails could be bypassed using containerization tools (`docker`, `podman`, `kubectl`) and virtualization wrappers (`chroot`, `nsenter`) to mount or access sensitive host files (e.g., `docker run -v /etc:/mnt alpine`).
+
+**Learning:** Advanced system tools provide multiple ways to interact with the host filesystem that go beyond direct file access. autonomous agents with shell access must be restricted from using these tools to bridge into sensitive host areas. specialized logic is required to parse tool-specific flags (like docker's `-v` or `--mount`) and arguments to maintain a consistent security posture.
+
+**Prevention:** Add containerization and virtualization tools to monitored binary lists. Implement specialized inspection for volume mounts and remote-copy commands to block host-sensitive paths. Expand recursive wrapper inspection to include `chroot` and `nsenter`, ensuring wrapped commands are always validated against the security policy.
+
+## 2026-07-15 - [Hardening Guardrails against SSH Tool Bypasses]
+
+**Vulnerability:** Shell command guardrails did not monitor common SSH-related utilities (`ssh`, `ssh-add`, `ssh-keygen`, `ssh-copy-id`), allowing an agent to exfiltrate private identity files or overwrite sensitive security credentials like `authorized_keys`.
+
+**Learning:** When defining guardrails for a tool-using agent, it's not enough to block direct file access tools (`cat`, `rm`). Multi-purpose networking and security utilities often have built-in flags for reading from or writing to specific sensitive paths that bypass generic path-based argument scanners if the binary itself is not monitored.
+
+**Prevention:** Maintain an exhaustive list of sensitive binaries that includes not just general-purpose file utilities, but also specialized security and networking tools (`ssh*`, `openssl`, `socat`). Ensure these are synchronized across all agent personas to maintain a consistent security posture.
+
+## 2026-07-29 - [Hardening Guardrails against Container and Virtualization Bypasses]
+
+**Vulnerability:** Shell command guardrails could be bypassed using containerization tools (`docker`, `podman`, `kubectl`) or virtualization wrappers (`chroot`, `nsenter`). These tools allowed accessing sensitive host files via volume mounts, remote-copy commands, or by changing the root directory/namespace, effectively escaping the agent's path-based guardrails.
+
+**Learning:** Advanced system tools provide multiple ways to interact with the host filesystem that go beyond direct file access. autonomous agents with shell access must be restricted from using these tools to bridge into sensitive host areas. specialized logic is required to parse tool-specific flags (like docker's `-v` or `--mount`) and arguments to maintain a consistent security posture.
+
+**Prevention:** Add containerization and virtualization tools to monitored binary lists. Implement specialized inspection for volume mounts and remote-copy commands to block host-sensitive paths. Expand recursive wrapper inspection to include `chroot` and `nsenter`, ensuring wrapped commands are always validated against the security policy.
+
+## 2026-07-30 - [Hardening Guardrails against Container and Remote Access Bypasses]
+
+**Vulnerability:** `run_command` guardrails could be bypassed using containerization tools (e.g., `docker run -v /etc:/mnt ...`), cluster managers (e.g., `kubectl cp /etc/shadow ...`), or remote access tools (e.g., `ssh -i /etc/shadow ...`) targeting sensitive paths. Additionally, `_is_sensitive_path` only validated the second part of split arguments, missing sensitive paths in multi-part strings (e.g., `host:container`).
+
+**Learning:** High-level orchestration and virtualization tools are powerful "escape hatches" that can be used to bypass filesystem restrictions if they are not explicitly monitored. Furthermore, path validation must be exhaustive across all components of tool-specific argument syntax to prevent bypasses via multi-part strings.
+
+**Prevention:** Expand monitored binary lists to include `docker`, `podman`, `kubectl`, `chroot`, `nsenter`, and `ssh`-related tools. Harden `_is_sensitive_path` to iterate over and validate all components of split arguments. Implement specialized argument skipping for `chroot` and `nsenter` in the recursive wrapper logic.
+
+## 2026-07-30 - [Hardening Guardrails against Container and Virtualization Bypasses]
+
+**Vulnerability:** Shell command guardrails could be bypassed using containerization tools (`docker`, `podman`, `kubectl`) or virtualization wrappers (`chroot`, `nsenter`) to mount sensitive host paths or exfiltrate data from them.
+
+**Learning:** Containerization and virtualization tools present high-risk filesystem bypass vectors. Volume mounts (`-v`, `--mount`) and file copies (`cp`) in these tools can map sensitive host-level paths into containers, effectively escaping host-level guardrails if the tools themselves are not monitored. Furthermore, transparent wrappers like `chroot` and `nsenter` can hide the actual target command from simple token scanners. Subcommand detection must account for global flags that take values (e.g., `kubectl -n ns exec`), and volume scanning must not break early on non-hyphenated tokens (which are the mount specs themselves).
+
+**Prevention:** Implement specialized guardrail logic for `docker`, `podman`, and `kubectl` that explicitly validates mount and copy targets. Use `_is_sensitive_path` to recursively inspect multi-component strings (separated by `:`, `=`, `,`, or `@`) for sensitive host paths. Add `chroot` and `nsenter` to the list of transparent wrappers and ensure correct argument skipping before recursing into the wrapped command. Subcommand scanners should use look-ahead logic to skip known global flags and their arguments. Volume scanners must iterate through all tokens following the subcommand. Censor internal container commands after validation to prevent false positives in subsequent host-level scans.
 
 **Learning:** Generic path-based guardrails often miss host paths embedded within complex argument strings (like volume mount mappings). Furthermore, container tools and system wrappers provide powerful pivots that can bypass standard utility-based filters if they are not explicitly monitored with specialized logic that understands their specific argument syntax.
 
