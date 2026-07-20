@@ -119,6 +119,10 @@ _SENSITIVE_BASENAMES = {
     "sudoers",
     "gshadow",
     "group",
+    ".bashrc",
+    ".zshrc",
+    ".profile",
+    ".bash_profile",
 }
 
 _SENSITIVE_DIRS = {
@@ -179,11 +183,13 @@ def _basename_is_sensitive(basename: str) -> bool:
 
 def _is_sensitive_path(path: str, allow_local: bool = False) -> bool:
     """Return True if the path targets a sensitive system directory or uses traversal."""
-    # Support checking flags or arguments with values like --file=/etc or field=@.env
-    # or socat's FILE:/etc/passwd. Note: we only split if the result isn't the same
-    # as the original, and for '@' we only consider it a separator if it's not
-    # the first character (to distinguish it from a curl @path prefix).
-    for sep in ("=", "@", ":"):
+    # Support checking flags or arguments with values like --file=/etc, field=@.env,
+    # socat's FILE:/etc/passwd, or comma-separated paths (--mount src=/etc,dst=/x).
+    # Every delimited component is checked recursively. Note: we only recurse on
+    # components that differ from the original, and for '@' we only consider it
+    # a separator if it's not the first character (to distinguish it from a curl
+    # @path prefix).
+    for sep in ("=", "@", ":", ","):
         if sep in path:
             if sep == "@" and path.startswith("@"):
                 continue
@@ -344,7 +350,7 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
             and i + 1 < len(parts)
         ):
             interp_idx = -1
-            interpreters_with_c = ("python", "node", "perl", "ruby", "php")
+            interpreters_with_c = ("python", "node", "perl", "ruby", "php", "tsx", "ts-node")
             for j in range(i - 1, -1, -1):
                 if parts[j].startswith("-"):
                     continue
@@ -383,6 +389,8 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
         "shred",
         "openssl",
         "socat",
+        "ssh-keygen",
+        "ssh-copy-id",
         "mkdir",
         "touch",
         "git",
@@ -392,6 +400,17 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
         "pip",
         "pip3",
         "sqlite",
+        "docker",
+        "podman",
+        "kubectl",
+        "chroot",
+        "nsenter",
+        "uv",
+        "pipx",
+        "bun",
+        "bunx",
+        "tsx",
+        "ts-node",
     )
     exfiltration_binaries = (
         "curl",
@@ -427,6 +446,10 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
         "7z",
         "scp",
         "sftp",
+        "ssh",
+        "ssh-add",
+        "ssh-keygen",
+        "ssh-copy-id",
         "bash",
         "sh",
         "zsh",
@@ -459,6 +482,17 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
         "pip",
         "pip3",
         "sqlite",
+        "docker",
+        "podman",
+        "kubectl",
+        "chroot",
+        "nsenter",
+        "uv",
+        "pipx",
+        "bun",
+        "bunx",
+        "tsx",
+        "ts-node",
     )
     # Common interpreters where sensitive paths can be embedded in arguments.
     interpreters = (
@@ -476,6 +510,8 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
         "dash",
         "sqlite",
         "git",
+        "tsx",
+        "ts-node",
     )
 
     for i, part in enumerate(parts):
@@ -642,15 +678,16 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
                                 reason=f"potentially dangerous {binary_name!r} mount source {source_val!r} blocked.",
                             )
 
-                # Specialized kubectl cp check.
-                if binary_name == "kubectl" and subpart == "cp":
+                # cp copies files between host and container/pod
+                # (docker cp, podman cp, kubectl cp).
+                if subpart == "cp":
                     for k in range(j + 1, len(parts)):
                         if parts[k] in (";", "&&", "||", "|"):
                             break
                         if _is_sensitive_path(parts[k]):
                             return GuardrailResult(
                                 GuardrailAction.DENY,
-                                reason=f"potentially dangerous 'kubectl cp' on {parts[k]!r} blocked.",
+                                reason=f"potentially dangerous '{binary_name} cp' on {parts[k]!r} blocked.",
                             )
 
     # 7. Handle wrappers that don't use -c (sudo, doas, xargs, env, find -exec, timeout, etc.)
@@ -671,11 +708,27 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
             "stdbuf",
             "chroot",
             "nsenter",
+            "uv",
+            "pipx",
+            "bun",
+            "bunx",
         )
         if _is_binary(part, transparent_wrappers):
             # Most of these wrappers have flags. xargs and env are special.
             # We skip tokens that are likely arguments to the wrapper's flags.
             start_idx = i + 1
+
+            # If the wrapper is uv, pipx, or bun, we want to look for the "run" subcommand.
+            if _is_binary(part, ("uv", "pipx", "bun")):
+                run_idx = -1
+                for idx in range(i + 1, len(parts)):
+                    if parts[idx] == "run":
+                        run_idx = idx
+                        break
+                if run_idx == -1:
+                    continue
+                start_idx = run_idx + 1
+
             while start_idx < len(parts) and parts[start_idx].startswith("-"):
                 flag = parts[start_idx]
                 if flag == "--":
@@ -709,6 +762,27 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
                         "-R",
                         "-T",
                     )
+                    or _is_binary(part, "uv")
+                    and flag
+                    in (
+                        "--with",
+                        "-p",
+                        "--package",
+                        "-m",
+                        "--module",
+                        "--python",
+                        "--env-file",
+                        "--directory",
+                        "-C",
+                        "--project",
+                        "--settings",
+                    )
+                    or _is_binary(part, "pipx")
+                    and flag in ("--spec", "--index-url", "--pip-args", "--python")
+                    or _is_binary(part, "bun")
+                    and flag in ("--cwd", "--env-file", "-c", "--config", "-e", "--entry-point")
+                    or _is_binary(part, "bunx")
+                    and flag in ("-p", "--package", "--cwd", "--env-file")
                 ):
                     start_idx += 1
 
@@ -814,6 +888,30 @@ def _enforce_verbose_listing(
     return GuardrailResult(GuardrailAction.ALLOW)
 
 
+def _contains_sensitive_path(val: Any) -> str | None:
+    """Recursively scan nested data structures for sensitive paths.
+
+    Returns the sensitive path if found, or None.
+    """
+    if isinstance(val, str):
+        if _is_sensitive_path(val, allow_local=True):
+            return val
+    elif isinstance(val, (list, tuple, set)):
+        for item in val:
+            res = _contains_sensitive_path(item)
+            if res is not None:
+                return res
+    elif isinstance(val, dict):
+        for k, v in val.items():
+            res_key = _contains_sensitive_path(k)
+            if res_key is not None:
+                return res_key
+            res_val = _contains_sensitive_path(v)
+            if res_val is not None:
+                return res_val
+    return None
+
+
 def _block_sensitive_path_args(
     tool: Tool, args: dict[str, Any], _store: MemoryStore
 ) -> GuardrailResult:
@@ -823,10 +921,11 @@ def _block_sensitive_path_args(
         return GuardrailResult(GuardrailAction.ALLOW)
 
     for key, value in args.items():
-        if isinstance(value, str) and _is_sensitive_path(value, allow_local=True):
+        sensitive_path = _contains_sensitive_path(value)
+        if sensitive_path is not None:
             return GuardrailResult(
                 GuardrailAction.DENY,
-                reason=f"Access to sensitive path {value!r} via argument {key!r} is blocked.",
+                reason=f"Access to sensitive path {sensitive_path!r} via argument {key!r} is blocked.",
             )
     return GuardrailResult(GuardrailAction.ALLOW)
 
