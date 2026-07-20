@@ -140,6 +140,41 @@ class TestSensitivePathArgs(unittest.TestCase):
         self.assertEqual(result.action, GuardrailAction.DENY)
         self.assertIn(".env", result.reason)
 
+    def test_json_serialized_path_arguments_blocked(self):
+        tool = tool_by_name("read_file")
+        assert tool is not None
+
+        # Test JSON string containing a sensitive path
+        result = DEFAULT_POLICY.check_pre_execution(
+            tool, {"config": '{"file": "/etc/passwd"}'}, self.store
+        )
+        self.assertEqual(result.action, GuardrailAction.DENY)
+        self.assertIn("/etc/passwd", result.reason)
+
+        # Test JSON array containing a sensitive path
+        result = DEFAULT_POLICY.check_pre_execution(tool, {"config": '[".env"]'}, self.store)
+        self.assertEqual(result.action, GuardrailAction.DENY)
+        self.assertIn(".env", result.reason)
+
+        # Test deeply nested JSON string
+        result = DEFAULT_POLICY.check_pre_execution(
+            tool, {"config": '{"nested": {"path": "/etc/shadow"}}'}, self.store
+        )
+        self.assertEqual(result.action, GuardrailAction.DENY)
+        self.assertIn("/etc/shadow", result.reason)
+
+        # Test safe JSON string is allowed
+        result = DEFAULT_POLICY.check_pre_execution(
+            tool, {"config": '{"safe": "README.md"}'}, self.store
+        )
+        self.assertEqual(result.action, GuardrailAction.ALLOW)
+
+        # Test invalid JSON string is handled safely and allowed if no sensitive paths
+        result = DEFAULT_POLICY.check_pre_execution(
+            tool, {"config": 'invalid-json{file: "README.md"'}, self.store
+        )
+        self.assertEqual(result.action, GuardrailAction.ALLOW)
+
 
 if __name__ == "__main__":
     unittest.main()
