@@ -104,7 +104,11 @@ class _Handler(SimpleHTTPRequestHandler):
         super().end_headers()
 
     def _send_json(self, code: int, payload: dict[str, Any]) -> None:
-        body = json.dumps(payload, indent=2, ensure_ascii=False).encode("utf-8")
+        from ..config import redact_secrets
+
+        raw_body = json.dumps(payload, indent=2, ensure_ascii=False)
+        redacted_body = redact_secrets(raw_body)
+        body = redacted_body.encode("utf-8")
         self.send_response(code)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
