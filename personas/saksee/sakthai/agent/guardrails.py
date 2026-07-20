@@ -114,6 +114,11 @@ _SENSITIVE_BASENAMES = {
     "known_hosts",
     "authorized_keys",
     "credentials",
+    "shadow",
+    "passwd",
+    "sudoers",
+    "gshadow",
+    "group",
     ".bashrc",
     ".zshrc",
     ".profile",
@@ -178,6 +183,7 @@ def _basename_is_sensitive(basename: str) -> bool:
 
 def _is_sensitive_path(path: str, allow_local: bool = False) -> bool:
     """Return True if the path targets a sensitive system directory or uses traversal."""
+    path = path.strip(" \t\n\r\"'")
     # Support checking flags or arguments with values like --file=/etc, field=@.env,
     # socat's FILE:/etc/passwd, or comma-separated paths (--mount src=/etc,dst=/x).
     # Every delimited component is checked recursively. Note: we only recurse on
@@ -345,7 +351,7 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
             and i + 1 < len(parts)
         ):
             interp_idx = -1
-            interpreters_with_c = ("python", "node", "perl", "ruby", "php")
+            interpreters_with_c = ("python", "node", "perl", "ruby", "php", "tsx", "ts-node")
             for j in range(i - 1, -1, -1):
                 if parts[j].startswith("-"):
                     continue
@@ -394,11 +400,18 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
         "pnpm",
         "pip",
         "pip3",
+        "sqlite",
         "docker",
         "podman",
         "kubectl",
         "chroot",
         "nsenter",
+        "uv",
+        "pipx",
+        "bun",
+        "bunx",
+        "tsx",
+        "ts-node",
     )
     exfiltration_binaries = (
         "curl",
@@ -469,11 +482,18 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
         "pnpm",
         "pip",
         "pip3",
+        "sqlite",
         "docker",
         "podman",
         "kubectl",
         "chroot",
         "nsenter",
+        "uv",
+        "pipx",
+        "bun",
+        "bunx",
+        "tsx",
+        "ts-node",
     )
     # Common interpreters where sensitive paths can be embedded in arguments.
     interpreters = (
@@ -489,6 +509,10 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
         "sh",
         "zsh",
         "dash",
+        "sqlite",
+        "git",
+        "tsx",
+        "ts-node",
     )
 
     for i, part in enumerate(parts):
@@ -685,11 +709,27 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
             "stdbuf",
             "chroot",
             "nsenter",
+            "uv",
+            "pipx",
+            "bun",
+            "bunx",
         )
         if _is_binary(part, transparent_wrappers):
             # Most of these wrappers have flags. xargs and env are special.
             # We skip tokens that are likely arguments to the wrapper's flags.
             start_idx = i + 1
+
+            # If the wrapper is uv, pipx, or bun, we want to look for the "run" subcommand.
+            if _is_binary(part, ("uv", "pipx", "bun")):
+                run_idx = -1
+                for idx in range(i + 1, len(parts)):
+                    if parts[idx] == "run":
+                        run_idx = idx
+                        break
+                if run_idx == -1:
+                    continue
+                start_idx = run_idx + 1
+
             while start_idx < len(parts) and parts[start_idx].startswith("-"):
                 flag = parts[start_idx]
                 if flag == "--":
@@ -723,6 +763,27 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
                         "-R",
                         "-T",
                     )
+                    or _is_binary(part, "uv")
+                    and flag
+                    in (
+                        "--with",
+                        "-p",
+                        "--package",
+                        "-m",
+                        "--module",
+                        "--python",
+                        "--env-file",
+                        "--directory",
+                        "-C",
+                        "--project",
+                        "--settings",
+                    )
+                    or _is_binary(part, "pipx")
+                    and flag in ("--spec", "--index-url", "--pip-args", "--python")
+                    or _is_binary(part, "bun")
+                    and flag in ("--cwd", "--env-file", "-c", "--config", "-e", "--entry-point")
+                    or _is_binary(part, "bunx")
+                    and flag in ("-p", "--package", "--cwd", "--env-file")
                 ):
                     start_idx += 1
 
@@ -848,6 +909,39 @@ def _contains_sensitive_path(val: Any) -> tuple[bool, str | None]:
             if found:
                 return True, path
     return False, None
+def _contains_sensitive_path(val: Any) -> str | None:
+    """Recursively scan nested data structures for sensitive paths.
+
+    Returns the sensitive path if found, or None.
+    """
+    if isinstance(val, str):
+        stripped = val.strip()
+        if stripped.startswith(("{", "[")):
+            import contextlib
+            import json
+
+            with contextlib.suppress(Exception):
+                parsed = json.loads(stripped)
+                if isinstance(parsed, (list, tuple, set, dict)):
+                    res_json = _contains_sensitive_path(parsed)
+                    if res_json is not None:
+                        return res_json
+        if _is_sensitive_path(val, allow_local=True):
+            return val
+    elif isinstance(val, (list, tuple, set)):
+        for item in val:
+            res = _contains_sensitive_path(item)
+            if res is not None:
+                return res
+    elif isinstance(val, dict):
+        for k, v in val.items():
+            res_key = _contains_sensitive_path(k)
+            if res_key is not None:
+                return res_key
+            res_val = _contains_sensitive_path(v)
+            if res_val is not None:
+                return res_val
+    return None
 
 
 def _block_sensitive_path_args(
@@ -861,6 +955,8 @@ def _block_sensitive_path_args(
     for key, value in args.items():
         found, sensitive_path = _contains_sensitive_path(value)
         if found:
+        sensitive_path = _contains_sensitive_path(value)
+        if sensitive_path is not None:
             return GuardrailResult(
                 GuardrailAction.DENY,
                 reason=f"Access to sensitive path {sensitive_path!r} via argument {key!r} is blocked.",
