@@ -738,7 +738,9 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
             start_idx = i + 1
 
             # If the wrapper is uv, pipx, bun, deno, poetry, pipenv, conda, pnpm, or yarn, we want to look for subcommands.
-            if _is_binary(part, ("uv", "pipx", "bun", "deno", "poetry", "pipenv", "conda", "pnpm", "yarn")):
+            if _is_binary(
+                part, ("uv", "pipx", "bun", "deno", "poetry", "pipenv", "conda", "pnpm", "yarn")
+            ):
                 run_idx = -1
                 for idx in range(i + 1, len(parts)):
                     if parts[idx] in ("run", "eval", "exec", "node"):

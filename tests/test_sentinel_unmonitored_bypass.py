@@ -21,11 +21,11 @@ def run_command_tool() -> Tool:
         "poetry run cat /etc/shadow",
         "pipenv run cat /etc/shadow",
         "conda run cat /etc/shadow",
-        "pnpm exec sh -c \"cat /etc/shadow\"",
-        "yarn exec sh -c \"cat /etc/shadow\"",
+        'pnpm exec sh -c "cat /etc/shadow"',
+        'yarn exec sh -c "cat /etc/shadow"',
         "conda run -n myenv -p /some/prefix --cwd /some/dir cat /etc/shadow",
         "poetry run -C /some/dir cat /etc/shadow",
-        "pnpm exec --filter mypkg -c /some/dir sh -c \"cat /etc/shadow\"",
+        'pnpm exec --filter mypkg -c /some/dir sh -c "cat /etc/shadow"',
     ],
 )
 def test_unmonitored_binaries_bypass(command, run_command_tool, store, monkeypatch):
