@@ -1,5 +1,10 @@
 # Sentinel Security Journal
 
+## 2026-08-05 - [Comprehensive Hardening of Sensitive Relative Paths against Configuration and Key Exfiltration]
+**Vulnerability:** Path-based and shell command guardrails failed to protect modern development configuration file variants (like `.env-local`, `.env_production`), global Git config (`.gitconfig`), macOS-specific shell configurations (`.zprofile`), package-specific registry tokens (`.yarnrc`, `.yarnrc.yml`), cloud provider credential directories (`.gcloud`, `.azure`), and SSH security-key backed private keys (`id_ed25519_sk`, `id_ecdsa_sk`) from exfiltration, leaving them exposed to relative path traversal and script-based reading.
+**Learning:** Basic blocklists of default sensitive paths (like `.env` and `.ssh`) can easily overlook alternative configuration naming conventions, user-specific global tools, or key formats introduced by newer security specifications (such as FIDO2/security keys in SSH). Since these files hold high-value credentials, security logic must expand to cover all variations of environments and tools.
+**Prevention:** Continuously audit and update `_SENSITIVE_BASENAMES`, `_SENSITIVE_DIRS`, and `_SENSITIVE_KEY_STEMS` collections to include these files. Harden prefix/suffix-matching functions like `_basename_is_sensitive` to explicitly parse alternative delimiters (e.g., `.env-` and `.env_`) to prevent evasion.
+
 ## 2026-08-04 - [Hardening Guardrails against Unmonitored npx and Deno Execution Bypasses]
 **Vulnerability:** Shell command guardrails could be bypassed by utilizing unmonitored modern package runners (`npx`) or JavaScript/TypeScript engines (`deno`) to execute arbitrary destructive commands or run inline script files that targeted host-sensitive paths.
 **Learning:** Standard security scanners focusing solely on shell runtimes like python/node fail to recognize modern alternative engines like Deno and package execution wrappers like npx, leaving robust escape hatches for bypasses.
