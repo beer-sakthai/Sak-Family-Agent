@@ -1,5 +1,10 @@
 # Sentinel Security Journal
 
+## 2026-08-05 - [Hardening Guardrails against Python and Node Execution Wrappers Bypasses]
+**Vulnerability:** Shell command guardrails could be bypassed by utilizing unmonitored Python and Node execution runners (`poetry`, `pipenv`, `conda`) or package execution commands (`pnpm`, `yarn`) to execute nested destructive or exfiltrative commands targeting host-sensitive paths.
+**Learning:** Even if `pnpm` and `yarn` are monitored, they do not recursively check underlying nested executions unless they are specifically registered as transparent wrappers. Furthermore, unmonitored interpreters/runners like Poetry, Pipenv, and Conda offer direct wrapper execution bypasses unless registered, parsed, and checked.
+**Prevention:** Systematically register `poetry`, `pipenv`, `conda` in monitored destructive and exfiltration collections. Register `poetry`, `pipenv`, `conda`, `pnpm`, and `yarn` as transparent wrappers. Heuristically parse and skip subcommand options and their flags before recursing into the wrapped command.
+
 ## 2026-08-04 - [Hardening Guardrails against Unmonitored npx and Deno Execution Bypasses]
 **Vulnerability:** Shell command guardrails could be bypassed by utilizing unmonitored modern package runners (`npx`) or JavaScript/TypeScript engines (`deno`) to execute arbitrary destructive commands or run inline script files that targeted host-sensitive paths.
 **Learning:** Standard security scanners focusing solely on shell runtimes like python/node fail to recognize modern alternative engines like Deno and package execution wrappers like npx, leaving robust escape hatches for bypasses.
@@ -390,7 +395,7 @@
 
 ## 2026-08-02 - [Hardening Parameter Guardrails against Quoted and Serialized JSON Bypasses]
 
-**Vulnerability:** Filesystem-access and argument-based guardrails (like `_block_sensitive_path_args`) could be bypassed if a sensitive path was wrapped in quotes (e.g., `"/etc/shadow"`) inside malformed JSON-like strings, or if sensitive paths were nested inside serialized JSON string arguments that the tool-checking system treated as a single flat string.
+**Vulnerability:** Filesystem-access and argument-based guardrails (like `_block_sensitive_path_args`) could be bypassed if a sensitive path was wrapped in quotes (e.g., `"/etc/shadow"`) inside malformed JSON-like strings, or if sensitive paths were nested inside serialized JSON string arguments that the tool-checking system treated as a flat single string.
 
 **Learning:** String-based path checks do not natively handle string escapes, quotes, or JSON encoding. Attackers or models can utilize serialized JSON parameters to obscure sensitive paths from primitive substring checks. Furthermore, quoting a path prevents standard prefix matching (e.g., matching a leading `/`).
 
