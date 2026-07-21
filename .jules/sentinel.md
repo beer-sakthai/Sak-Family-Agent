@@ -1,5 +1,10 @@
 # Sentinel Security Journal
 
+## 2026-08-05 - [Hardening Guardrails against Multicall Utility Bypasses via Busybox and Toybox]
+**Vulnerability:** Shell command guardrails could be bypassed by invoking destructive or exfiltrative subcommands via unmonitored multicall binaries like `busybox` or `toybox` (e.g., `busybox cat /etc/shadow` or `toybox rm -rf /etc`), as these wrappers were not recognized by the command scanner.
+**Learning:** Security blocklists must cover multicall utility frameworks and multi-purpose binary entrypoints that dynamically wrap other commands. Treating them solely as standard binaries allows the actual command and its target arguments to bypass positional validations.
+**Prevention:** Register `busybox` and `toybox` in `destructive_binaries`, `exfiltration_binaries`, and as `transparent_wrappers`, so that their wrapped subcommand payloads are systematically extracted and recursively validated.
+
 ## 2026-08-04 - [Hardening Guardrails against Unmonitored npx and Deno Execution Bypasses]
 **Vulnerability:** Shell command guardrails could be bypassed by utilizing unmonitored modern package runners (`npx`) or JavaScript/TypeScript engines (`deno`) to execute arbitrary destructive commands or run inline script files that targeted host-sensitive paths.
 **Learning:** Standard security scanners focusing solely on shell runtimes like python/node fail to recognize modern alternative engines like Deno and package execution wrappers like npx, leaving robust escape hatches for bypasses.

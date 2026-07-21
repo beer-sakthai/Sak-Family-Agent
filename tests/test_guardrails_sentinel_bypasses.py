@@ -150,6 +150,42 @@ class TestGuardrailsBypass(unittest.TestCase):
                 f"Sqlite/Git bypass '{cmd}' should be blocked",
             )
 
+    def test_busybox_and_toybox_bypass(self):
+        # Test that busybox and toybox commands with embedded sensitive paths are blocked.
+        bypass_cmds = [
+            "busybox cat /etc/shadow",
+            "toybox cat /etc/shadow",
+            "busybox rm -rf /etc",
+            "toybox rm -rf /etc",
+            "busybox sh -c 'cat /etc/shadow'",
+            "toybox sh -c 'cat /etc/shadow'",
+        ]
+        for cmd in bypass_cmds:
+            args = {"command": cmd}
+            result = _block_dangerous_shell_commands(self.tool, args, self.store)
+            self.assertEqual(
+                result.action,
+                GuardrailAction.DENY,
+                f"Busybox/Toybox bypass '{cmd}' should be blocked",
+            )
+
+    def test_busybox_and_toybox_safe_commands_allowed(self):
+        # Test that safe busybox/toybox commands are still allowed.
+        safe_cmds = [
+            "busybox ls -l",
+            "toybox ls -l",
+            "busybox echo 'hello'",
+            "toybox echo 'hello'",
+        ]
+        for cmd in safe_cmds:
+            args = {"command": cmd}
+            result = _block_dangerous_shell_commands(self.tool, args, self.store)
+            self.assertEqual(
+                result.action,
+                GuardrailAction.ALLOW,
+                f"Busybox/Toybox safe command '{cmd}' should be allowed",
+            )
+
 
 if __name__ == "__main__":
     unittest.main()
