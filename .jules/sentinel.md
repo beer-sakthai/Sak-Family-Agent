@@ -1,5 +1,10 @@
 # Sentinel Security Journal
 
+## 2026-08-05 - [Harden Centralized Secret Redaction against Private Keys, AWS keys, and Fine-grained GitHub Tokens]
+**Vulnerability:** Although classic API keys starting with `sk_` or `sk-` were redacted, PEM private key blocks, AWS Access Key IDs (`AKIA`/`ASIA`), and fine-grained GitHub Personal Access Tokens (`github_pat`) were not detected by standard patterns. This left high-severity credentials exposed to exfiltration via log files, HTTP serialization payloads, or terminal screen-scraping.
+**Learning:** Secret redaction filters must go beyond simple pattern matches for a single provider. High-impact credentials like private key blocks, cloud provider keys, and modern fine-grained tokens carry distinct structures (such as multiline boundaries or distinct prefixes) and must be explicitly handled by global redaction functions.
+**Prevention:** Extend the central configuration module's `SECRET_PATTERN` with precise regex alternations for AWS key patterns and fine-grained GitHub tokens. Integrate a dedicated, multiline PEM private key block detection and redaction layer in `redact_secrets` before running substring/pattern filters. Synchronize the updated canonical `config.py` across all persona snapshots.
+
 ## 2026-08-04 - [Hardening Guardrails against Unmonitored npx and Deno Execution Bypasses]
 **Vulnerability:** Shell command guardrails could be bypassed by utilizing unmonitored modern package runners (`npx`) or JavaScript/TypeScript engines (`deno`) to execute arbitrary destructive commands or run inline script files that targeted host-sensitive paths.
 **Learning:** Standard security scanners focusing solely on shell runtimes like python/node fail to recognize modern alternative engines like Deno and package execution wrappers like npx, leaving robust escape hatches for bypasses.
