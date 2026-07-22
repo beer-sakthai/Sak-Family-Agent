@@ -1,5 +1,10 @@
 # Sentinel Security Journal
 
+## 2026-08-05 - [Hardening Guardrails against Global Git, Yarn, Cloud Credentials, and Security-Key SSH Private Keys]
+**Vulnerability:** Agent shell command execution and filesystem access could potentially read or exfiltrate high-value developer assets such as global Git configurations (`.gitconfig`), Yarn credentials/npm registry tokens (`.yarnrc`, `.yarnrc.yml`), cloud provider directories (`.gcloud`, `.azure`), alternative environment files (e.g., `.env-production`, `.env_dev`), and hardware security-key backed SSH private keys (`id_ecdsa_sk`, `id_ed25519_sk`).
+**Learning:** Standard sensitive-path registries often focus on standard names (like `.env`, `id_rsa`, `.ssh`) but miss global configuration files, custom developer tools, cloud metadata caches, and hardware-bound private keys, leaving valuable assets exposed.
+**Prevention:** Systematically expand `_SENSITIVE_BASENAMES`, `_SENSITIVE_DIRS`, and `_SENSITIVE_KEY_STEMS` to encompass all modern cloud, SSH, Git, package manager configurations, and alternative env patterns. Keep this synchronized across all persona packages.
+
 ## 2026-08-04 - [Hardening Guardrails against Unmonitored npx and Deno Execution Bypasses]
 **Vulnerability:** Shell command guardrails could be bypassed by utilizing unmonitored modern package runners (`npx`) or JavaScript/TypeScript engines (`deno`) to execute arbitrary destructive commands or run inline script files that targeted host-sensitive paths.
 **Learning:** Standard security scanners focusing solely on shell runtimes like python/node fail to recognize modern alternative engines like Deno and package execution wrappers like npx, leaving robust escape hatches for bypasses.
