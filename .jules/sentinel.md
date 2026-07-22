@@ -1,5 +1,10 @@
 # Sentinel Security Journal
 
+## 2026-08-05 - [Hardening Guardrails against Unmonitored Package Manager and Runner Bypasses]
+**Vulnerability:** Shell command guardrails could be bypassed by utilizing unmonitored Python and Node package managers and execution runners (`poetry`, `pipenv`, `conda`, `pnpm`, `yarn`) to run arbitrary nested commands or scripts targeting sensitive files.
+**Learning:** Standard command scanners focusing on simple wrappers like `sudo` or traditional runners like `node` easily overlook specialized package ecosystem runners. Since these tools have subcommands (like `run`, `exec`) that wrap subsequent arbitrary commands, they can act as perfect execution wrappers and bypass standard blocklists.
+**Prevention:** Systematically register `poetry`, `pipenv`, `conda`, `pnpm`, and `yarn` in destructive, exfiltration, and transparent wrapper lists. Implement custom option-skipping parsers for wrapper-specific subcommands and flags to allow recursive argument path validation of the actual wrapped command.
+
 ## 2026-08-04 - [Hardening Guardrails against Unmonitored npx and Deno Execution Bypasses]
 **Vulnerability:** Shell command guardrails could be bypassed by utilizing unmonitored modern package runners (`npx`) or JavaScript/TypeScript engines (`deno`) to execute arbitrary destructive commands or run inline script files that targeted host-sensitive paths.
 **Learning:** Standard security scanners focusing solely on shell runtimes like python/node fail to recognize modern alternative engines like Deno and package execution wrappers like npx, leaving robust escape hatches for bypasses.

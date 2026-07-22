@@ -18,13 +18,49 @@ def run_command_tool() -> Tool:
         "git init /etc",
         "mkdir /etc/test_dir",
         "pip install --target /root/.ssh some-package",
+        # Modern Python & Node execution runners targeting sensitive files
+        "poetry run rm -rf /etc",
+        "poetry run -C /tmp rm -rf /etc",
+        "pipenv run rm -rf /etc",
+        "conda run rm -rf /etc",
+        "conda run -n myenv rm -rf /etc",
+        "conda run -p /tmp/env cat /etc/shadow",
+        "pnpm exec rm -rf /etc",
+        "pnpm --filter pkg exec rm -rf /etc",
+        "pnpm -c /tmp exec rm -rf /etc",
+        "yarn run rm -rf /etc",
+        "yarn --cwd /tmp run rm -rf /etc",
+        "poetry run cat /etc/shadow",
+        "pipenv run cat /etc/shadow",
+        "conda run cat /etc/shadow",
+        "pnpm exec cat /etc/shadow",
+        "yarn run cat /etc/shadow",
     ],
 )
 def test_unmonitored_binaries_bypass(command, run_command_tool, store, monkeypatch):
     monkeypatch.setenv("SAKTHAI_SHELL_ALLOW", "1")
     result = DEFAULT_POLICY.check_pre_execution(run_command_tool, {"command": command}, store)
-    # If these are currently bypassing, they will return ALLOW.
-    # We WANT them to be blocked.
     assert result.action == GuardrailAction.DENY, (
         f"Command '{command}' should be blocked but was allowed"
+    )
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        "poetry run pytest",
+        "pipenv run python main.py",
+        'conda run python -c "print(1)"',
+        "conda run -n myenv python",
+        "pnpm exec tsc",
+        "pnpm --filter pkg exec lint",
+        "yarn run build",
+        "yarn --cwd docs run build",
+    ],
+)
+def test_safe_unmonitored_binaries_allowed(command, run_command_tool, store, monkeypatch):
+    monkeypatch.setenv("SAKTHAI_SHELL_ALLOW", "1")
+    result = DEFAULT_POLICY.check_pre_execution(run_command_tool, {"command": command}, store)
+    assert result.action == GuardrailAction.ALLOW, (
+        f"Command '{command}' should be allowed but was blocked: {result.reason}"
     )
