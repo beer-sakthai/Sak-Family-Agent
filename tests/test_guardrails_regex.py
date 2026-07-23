@@ -70,7 +70,8 @@ def test_block_output_with_env_and_extra_secrets(
     assert "appears to contain a secret" in result.reason.lower()
 
     # 2. Test registered extra secrets (via register_secret)
-    from sakthai.config import register_secret, _EXTRA_SECRETS
+    from sakthai.config import _EXTRA_SECRETS, register_secret
+
     extra_secret = "extra-" + "secret-token-value"
     register_secret(extra_secret)
     try:

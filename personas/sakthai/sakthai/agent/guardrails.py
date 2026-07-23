@@ -1013,6 +1013,7 @@ def _block_output_with_secrets(
     secrets_to_check = set()
     try:
         from ..config import _EXTRA_SECRETS
+
         for s in _EXTRA_SECRETS:
             if isinstance(s, str) and len(s) > 5:
                 secrets_to_check.add(s)
@@ -1021,6 +1022,7 @@ def _block_output_with_secrets(
 
     try:
         import os
+
         for key in secret_keys:
             val = os.environ.get(key)
             if isinstance(val, str) and len(val) > 5:
