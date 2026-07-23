@@ -56,6 +56,11 @@ def _ecosystem_status() -> dict[str, Any]:
 
 
 class _Handler(SimpleHTTPRequestHandler):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        # Secure fallback: explicitly bind the static files directory to WEB_DIR
+        # to prevent fallback file serving from the process's working directory.
+        super().__init__(*args, directory=str(WEB_DIR), **kwargs)
+
     def address_string(self) -> str:
         return self.client_address[0]
 
@@ -126,6 +131,12 @@ class _Handler(SimpleHTTPRequestHandler):
         except Exception:
             self.send_error(403, "Forbidden")
             return
+
+        # Explicitly verify the static files directory exists before serving.
+        if not WEB_DIR.is_dir():
+            self.send_error(404, "File not found")
+            return
+
         return super().do_GET()
 
 

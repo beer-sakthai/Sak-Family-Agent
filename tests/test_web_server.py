@@ -454,3 +454,62 @@ class TestHandlerEdgePaths:
         with patch("sakthai.web.server.os.path.realpath", side_effect=OSError("boom")):
             status, _ = _get(f"{api_base}/index.html")
         assert status == 403
+
+    def test_standalone_server_bind_directory(self) -> None:
+        import sys
+        from pathlib import Path
+        REPO_ROOT = Path(__file__).resolve().parents[1]
+        if str(REPO_ROOT) not in sys.path:
+            sys.path.insert(0, str(REPO_ROOT))
+
+        from scripts.serve_api import WEB_DIR
+        from scripts.serve_api import _Handler as StandaloneHandler
+
+        mock_request = MagicMock()
+        mock_client_address = ("127.0.0.1", 12345)
+        mock_server = MagicMock()
+
+        with patch("http.server.SimpleHTTPRequestHandler.__init__") as mock_base_init:
+            StandaloneHandler(mock_request, mock_client_address, mock_server)
+            mock_base_init.assert_called_once()
+            assert mock_base_init.call_args[1].get("directory") == str(WEB_DIR)
+
+    def test_standalone_server_missing_web_dir(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        import sys
+        from pathlib import Path
+        REPO_ROOT = Path(__file__).resolve().parents[1]
+        if str(REPO_ROOT) not in sys.path:
+            sys.path.insert(0, str(REPO_ROOT))
+
+        import scripts.serve_api as standalone_mod
+
+        # Point WEB_DIR to a non-existent directory
+        missing_dir = tmp_path / "does-not-exist"
+        monkeypatch.setattr(standalone_mod, "WEB_DIR", missing_dir)
+
+        srv = HTTPServer(("127.0.0.1", 0), standalone_mod._Handler)
+        _, port = srv.server_address
+        t = threading.Thread(
+            target=srv.serve_forever, kwargs={"poll_interval": 0.01}, daemon=True
+        )
+        t.start()
+        try:
+            url = f"http://127.0.0.1:{port}/index.html"
+            try:
+                with urllib.request.urlopen(url, timeout=30) as resp:
+                    status = resp.status
+            except urllib.error.HTTPError as exc:
+                status = exc.code
+            assert status == 404
+
+            # Verify that API endpoints still work properly
+            api_url = f"http://127.0.0.1:{port}/api/ecosystem"
+            with urllib.request.urlopen(api_url, timeout=30) as resp:
+                api_status = resp.status
+                api_body = json.loads(resp.read().decode("utf-8"))
+            assert api_status == 200
+            assert "generated_at" in api_body
+        finally:
+            srv.shutdown()
