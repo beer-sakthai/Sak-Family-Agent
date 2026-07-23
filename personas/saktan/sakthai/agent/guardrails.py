@@ -150,6 +150,8 @@ _SENSITIVE_KEY_STEMS = {
     "id_dsa",
     "id_ecdsa",
     "id_ed25519",
+    "id_ecdsa_sk",
+    "id_ed25519_sk",
     "id_ed25519_sk",
     "id_ecdsa_sk",
 }
@@ -179,7 +181,7 @@ def _basename_is_sensitive(basename: str) -> bool:
 
     Comparison is case-insensitive so that differently-cased references
     (``.AWS``, ``id_RSA``) on case-insensitive filesystems are still caught.
-    Private-key stems match their backup/rename suffixes (``id_rsa.bak``).
+    Private-key stems match their backup/rename suffixes (``.bak``, etc.).
     """
     lowered = basename.casefold()
     if lowered in _SENSITIVE_BASENAMES or any(

@@ -1,5 +1,9 @@
 # Sentinel Security Journal
 
+## 2026-08-05 - [Hardening Guardrails against Global Git, Yarn, Cloud Credentials, and Security-Key SSH Private Keys]
+**Vulnerability:** Agent shell command execution and filesystem access could potentially read or exfiltrate high-value developer assets such as global Git configurations (`.gitconfig`), Yarn credentials/npm registry tokens (`.yarnrc`, `.yarnrc.yml`), cloud provider directories (`.gcloud`, `.azure`), alternative environment files (e.g., `.env-production`, `.env_dev`), and hardware security-key backed SSH private keys (`id_ecdsa_sk`, `id_ed25519_sk`).
+**Learning:** Standard sensitive-path registries often focus on standard names (like `.env`, `id_rsa`, `.ssh`) but miss global configuration files, custom developer tools, cloud metadata caches, and hardware-bound private keys, leaving valuable assets exposed.
+**Prevention:** Systematically expand `_SENSITIVE_BASENAMES`, `_SENSITIVE_DIRS`, and `_SENSITIVE_KEY_STEMS` to encompass all modern cloud, SSH, Git, package manager configurations, and alternative env patterns. Keep this synchronized across all persona packages.
 ## 2026-08-05 - [Hardening Guardrails against Python and Node Execution Wrappers Bypasses]
 **Vulnerability:** Shell command guardrails could be bypassed by utilizing unmonitored Python and Node execution runners (`poetry`, `pipenv`, `conda`) or package execution commands (`pnpm`, `yarn`) to execute nested destructive or exfiltrative commands targeting host-sensitive paths.
 **Learning:** Even if `pnpm` and `yarn` are monitored, they do not recursively check underlying nested executions unless they are specifically registered as transparent wrappers. Furthermore, unmonitored interpreters/runners like Poetry, Pipenv, and Conda offer direct wrapper execution bypasses unless registered, parsed, and checked.

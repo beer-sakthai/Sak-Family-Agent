@@ -79,6 +79,29 @@ class TestGuardrailsEnvLeak(unittest.TestCase):
             result = _block_dangerous_shell_commands(self.tool, {"command": command}, self.store)
             self.assertEqual(result.action, GuardrailAction.DENY, f"{command!r} should be blocked")
 
+    def test_harden_datasets_exfiltration(self):
+        # Test newly blocked files/directories (global git configs, Yarn files, cloud dirs, SSH keys)
+        for path in (
+            ".gitconfig",
+            ".zprofile",
+            ".yarnrc",
+            ".yarnrc.yml",
+            ".gcloud/config",
+            ".azure/credentials",
+            "id_ed25519_sk",
+            "id_ecdsa_sk",
+            "id_ed25519_sk.bak",
+            ".env-production",
+            ".env_dev",
+        ):
+            args = {"command": f"cat {path}"}
+            result = _block_dangerous_shell_commands(self.tool, args, self.store)
+            self.assertEqual(
+                result.action,
+                GuardrailAction.DENY,
+                f"{path} should be blocked",
+            )
+
 
 class TestSensitivePathArgs(unittest.TestCase):
     """Direct tool calls (read_file, ingest_document) go through DEFAULT_POLICY."""
