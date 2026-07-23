@@ -1017,7 +1017,7 @@ def _block_output_with_secrets(
         for s in _EXTRA_SECRETS:
             if isinstance(s, str) and len(s) > 5:
                 secrets_to_check.add(s)
-    except Exception:
+    except Exception:  # nosec B110 — safe swallow of configuration error
         pass
 
     try:
@@ -1027,7 +1027,7 @@ def _block_output_with_secrets(
             val = os.environ.get(key)
             if isinstance(val, str) and len(val) > 5:
                 secrets_to_check.add(val)
-    except Exception:
+    except Exception:  # nosec B110 — safe swallow of environment variable reading error
         pass
 
     if secrets_to_check:
