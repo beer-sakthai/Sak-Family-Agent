@@ -7,15 +7,50 @@ module should hard-code a path or read an env var that has a home in this file.
 from __future__ import annotations
 
 import os
+import re
 import sqlite3
 from pathlib import Path
 from typing import Any
 
-# Repository root and bundled resource directories.
-REPO_ROOT = Path(__file__).resolve().parent.parent
+# A regex for common API key prefixes (sk-, rk-, pk-, ghp-, hf-, github_pat-), Google keys (AIza),
+# Telegram bot tokens (123456789:ABC...), and AWS Access Key IDs (AKIA/ASIA).
+# Handles both underscore (sk_) and hyphen (sk-) used by Anthropic, OpenAI, and HF.
+SECRET_PATTERN = r"\b(?:(?:sk|rk|pk|ghp|hf|github_pat)[-_][a-zA-Z0-9\-_]{20,}|AIza[0-9A-Za-z\-_]{34,}|[0-9]{8,12}:[a-zA-Z0-9_-]{35,}|(?:AKIA|ASIA)[A-Z0-9]{16})\b"  # nosec B105
+_SECRET_RE = re.compile(SECRET_PATTERN)
+
+# Multiline regex pattern to detect PEM private key blocks.
+_PRIVATE_KEY_RE = re.compile(
+    r"-----BEGIN [A-Z ]+ PRIVATE KEY-----[a-zA-Z0-9\s+/=\r\n]+-----END [A-Z ]+ PRIVATE KEY-----"
+)
+
+# Repository root and bundled resource directories. The package no longer sits
+# directly under the repo root (its canonical copy lives at
+# personas/sakthai/sakthai), so walk up from the package to the nearest
+# directory holding pyproject.toml — correct both in this monorepo and in an
+# exported standalone agent repo where the package sits at the root again.
+
+
+def _find_repo_root(start: Path) -> Path:
+    for candidate in (start, *start.parents):
+        if (candidate / "pyproject.toml").is_file():
+            return candidate
+    return start
+
+
+REPO_ROOT = _find_repo_root(Path(__file__).resolve().parent.parent)
 SKILLS_DIR = REPO_ROOT / "skills"
 LIBRARY_DIR = REPO_ROOT / "library"
 PERSONAS_DIR = REPO_ROOT / "personas"
+SHARED_SKILLS_DIR = PERSONAS_DIR / "shared" / "skills"
+
+# The six Sak Family personas `sakthai chat --persona` can address.
+PERSONA_NAMES: tuple[str, ...] = ("sakking", "sakthai", "saksee", "saksit", "saktan", "sakjules")
+
+
+def persona_soul_path(persona: str) -> Path:
+    """Path to a persona's SOUL.md identity file."""
+    return PERSONAS_DIR / persona / "SOUL.md"
+
 
 # Environment variables, grouped by how the readiness check treats them.
 REQUIRED_ENV_VARS: dict[str, str] = {
@@ -100,6 +135,11 @@ def memory_db_path() -> Path:
 def sessions_dir() -> Path:
     """Directory where agent session logs are written."""
     return sakthai_home() / "sessions"
+
+
+def tool_descriptions_path() -> Path:
+    """Path to the custom tool descriptions overrides JSON file."""
+    return sakthai_home() / "tool_descriptions.json"
 
 
 def eval_log_path() -> Path:
@@ -353,7 +393,10 @@ def redact_secrets(text: str) -> str:
     if not isinstance(text, str) or not text:
         return text
 
-    # Values of these variables are considered sensitive and will be masked.
+    # First, redact PEM private key blocks.
+    text = _PRIVATE_KEY_RE.sub("[REDACTED PRIVATE KEY]", text)
+
+    # Second, redact based on known exact values (highest precision).
     secret_keys = [
         "ANTHROPIC_API_KEY",
         "ANTHROPIC_AUTH_TOKEN",
@@ -371,13 +414,14 @@ def redact_secrets(text: str) -> str:
         if val := os.environ.get(key):
             secrets.add(val)
 
-    if not secrets:
-        return text
+    if secrets:
+        # Sort by length descending to ensure longer secrets (e.g. session tokens)
+        # are redacted before their potential substrings (e.g. parts of keys).
+        for val in sorted(secrets, key=len, reverse=True):
+            if len(val) > 5:
+                text = text.replace(val, "[REDACTED]")
 
-    # Sort by length descending to ensure longer secrets (e.g. session tokens)
-    # are redacted before their potential substrings (e.g. parts of keys).
-    for val in sorted(secrets, key=len, reverse=True):
-        if len(val) > 5:
-            text = text.replace(val, "[REDACTED]")
+    # Second, redact based on common patterns (defense-in-depth).
+    text = _SECRET_RE.sub("[REDACTED]", text)
 
     return text

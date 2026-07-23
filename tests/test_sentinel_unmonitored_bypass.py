@@ -35,6 +35,11 @@ def run_command_tool() -> Tool:
         "conda run cat /etc/shadow",
         "pnpm exec cat /etc/shadow",
         "yarn run cat /etc/shadow",
+        'pnpm exec sh -c "cat /etc/shadow"',
+        'yarn exec sh -c "cat /etc/shadow"',
+        "conda run -n myenv -p /some/prefix --cwd /some/dir cat /etc/shadow",
+        "poetry run -C /some/dir cat /etc/shadow",
+        'pnpm exec --filter mypkg -c /some/dir sh -c "cat /etc/shadow"',
     ],
 )
 def test_unmonitored_binaries_bypass(command, run_command_tool, store, monkeypatch):
@@ -56,6 +61,13 @@ def test_unmonitored_binaries_bypass(command, run_command_tool, store, monkeypat
         "pnpm --filter pkg exec lint",
         "yarn run build",
         "yarn --cwd docs run build",
+        "pipenv run python -m unittest",
+        "conda run python -c \"print('hello')\"",
+        "pnpm exec eslint .",
+        "yarn exec prettier --check .",
+        "conda run -n myenv -p /some/prefix --cwd /some/dir python -c \"print('hello')\"",
+        "poetry run -C /some/dir pytest",
+        "pnpm exec --filter mypkg -c /some/dir eslint .",
     ],
 )
 def test_safe_unmonitored_binaries_allowed(command, run_command_tool, store, monkeypatch):
