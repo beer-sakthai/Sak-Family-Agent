@@ -152,8 +152,6 @@ _SENSITIVE_KEY_STEMS = {
     "id_ed25519",
     "id_ecdsa_sk",
     "id_ed25519_sk",
-    "id_ed25519_sk",
-    "id_ecdsa_sk",
 }
 
 
