@@ -45,3 +45,39 @@ def test_secret_detection_regex_allows_innocent_text(
     text = "Total tokens used: 12345. Request ID: req_abc123."
     result = _block_output_with_secrets(dummy_tool, {}, text, False, dummy_store)
     assert result.action == GuardrailAction.ALLOW
+
+
+def test_block_output_with_pem_private_key(dummy_tool: Tool, dummy_store: MemoryStore) -> None:
+    # Construct a PEM Private Key with concatenation to avoid any scanner false positives
+    prefix = "-----BEGIN " + "RSA PRIVATE KEY-----"
+    suffix = "-----END " + "RSA PRIVATE KEY-----"
+    text = f"Some data here\n{prefix}\nMIIEowIBAAKCAQEAr7...\n{suffix}\nmore data"
+    result = _block_output_with_secrets(dummy_tool, {}, text, False, dummy_store)
+    assert result.action == GuardrailAction.DENY
+    assert "private key block" in result.reason.lower()
+
+
+def test_block_output_with_env_and_extra_secrets(
+    dummy_tool: Tool, dummy_store: MemoryStore, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # 1. Test exact active environment variable secret matching (even if it does not match standard patterns)
+    secret_val = "custom-" + "secret-key-xyz-123-abc"
+    monkeypatch.setenv("ANTHROPIC_API_KEY", secret_val)
+
+    text = f"The process failed with value: {secret_val}"
+    result = _block_output_with_secrets(dummy_tool, {}, text, False, dummy_store)
+    assert result.action == GuardrailAction.DENY
+    assert "appears to contain a secret" in result.reason.lower()
+
+    # 2. Test registered extra secrets (via register_secret)
+    from sakthai.config import _EXTRA_SECRETS, register_secret
+
+    extra_secret = "extra-" + "secret-token-value"
+    register_secret(extra_secret)
+    try:
+        text2 = f"This is an extra secret: {extra_secret}"
+        result2 = _block_output_with_secrets(dummy_tool, {}, text2, False, dummy_store)
+        assert result2.action == GuardrailAction.DENY
+        assert "appears to contain a secret" in result2.reason.lower()
+    finally:
+        _EXTRA_SECRETS.discard(extra_secret)

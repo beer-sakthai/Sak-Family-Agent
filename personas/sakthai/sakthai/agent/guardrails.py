@@ -1012,11 +1012,67 @@ def _block_output_with_secrets(
     _store: MemoryStore,
 ) -> GuardrailResult:
     """Deny any tool output that appears to contain a secret."""
+    # 1. Block common secret patterns (API keys, bot tokens, etc.)
     if re.search(SECRET_PATTERN, output):
         return GuardrailResult(
             GuardrailAction.DENY,
             reason="Tool output blocked because it appears to contain a secret.",
         )
+
+    # 2. Block PEM Private Key blocks
+    if re.search(
+        r"-----BEGIN[A-Z0-9\s_]+PRIVATE KEY-----[\s\S]*?-----END[A-Z0-9\s_]+PRIVATE KEY-----",
+        output,
+    ):
+        return GuardrailResult(
+            GuardrailAction.DENY,
+            reason="Tool output blocked because it appears to contain a private key block.",
+        )
+
+    # 3. Block exact active environment credentials or registered extra secrets
+    secret_keys = [
+        "ANTHROPIC_API_KEY",
+        "ANTHROPIC_AUTH_TOKEN",
+        "GEMINI_API_KEY",
+        "GOOGLE_API_KEY",
+        "OPENAI_API_KEY",
+        "SAKTHAI_GATEWAY_API_KEY",
+        "TELEGRAM_BOT_TOKEN",
+        "HF_TOKEN",
+        "COMPOSIO_API_KEY",
+        "AWS_ACCESS_KEY_ID",
+        "AWS_SECRET_ACCESS_KEY",
+        "GITHUB_TOKEN",
+        "GITHUB_PAT",
+    ]
+    secrets_to_check = set()
+    try:
+        from ..config import _EXTRA_SECRETS
+
+        for s in _EXTRA_SECRETS:
+            if isinstance(s, str) and len(s) > 5:
+                secrets_to_check.add(s)
+    except Exception:  # nosec B110 — safe swallow of configuration error
+        pass
+
+    try:
+        import os
+
+        for key in secret_keys:
+            val = os.environ.get(key)
+            if isinstance(val, str) and len(val) > 5:
+                secrets_to_check.add(val)
+    except Exception:  # nosec B110 — safe swallow of environment variable reading error
+        pass
+
+    if secrets_to_check:
+        for val in sorted(secrets_to_check, key=len, reverse=True):
+            if val in output:
+                return GuardrailResult(
+                    GuardrailAction.DENY,
+                    reason="Tool output blocked because it appears to contain a secret.",
+                )
+
     return GuardrailResult(GuardrailAction.ALLOW)
 
 

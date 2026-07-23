@@ -1,5 +1,9 @@
 # Sentinel Security Journal
 
+## 2026-07-23 - [Harden tool output guardrails against PEM Private Keys and Dynamic/Active Environment Secrets]
+**Vulnerability:** Tool execution output guardrails (`_block_output_with_secrets`) could allow the leakage of PEM-encoded private keys or active credentials (such as dynamically loaded/registered keys) because it only searched for matches of standard static prefix patterns (e.g., `sk_`, `ghp_`).
+**Learning:** Hardcoded regular expression pattern lists easily miss dynamically configured, custom-formatted, or alternative credentials (like dynamic bearer tokens) and raw cryptographic private keys. True defense-in-depth output security must dynamically inspect exact active credentials present in the environment/memory as well as robust cryptographic block matches.
+**Prevention:** Extend tool output checks to recursively scan for PEM-encoded block strings (`-----BEGIN...`) and exact values of active environment variables and dynamically registered memory secrets, using robust try-except wrapping for self-contained, crash-safe logic.
 ## 2026-08-05 - [Hardening Global Secret Redaction and Persona Package Parity]
 **Vulnerability:** Core secret masking helper `redact_secrets` lacked regex and environment variable mappings for critical credentials like AWS access key IDs, fine-grained GitHub personal access tokens (PATs), and PEM-encoded private key blocks. Furthermore, older unhardened configurations and memory database schemas remained un-synchronized across secondary persona packages.
 **Learning:** Defense-in-depth requires that secret-redaction engines cover modern fine-grained tokens and standard asymmetric key structures. For monorepos containing multiple semi-isolated persona packages, hardening fixes in canonical packages must be systematically and comprehensively synchronized to prevent outdated packages from retaining security gaps.
