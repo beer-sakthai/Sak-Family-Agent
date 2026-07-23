@@ -1,5 +1,10 @@
 # Sentinel Security Journal
 
+## 2026-07-23 - [Harden tool output guardrails against PEM Private Keys and Dynamic/Active Environment Secrets]
+**Vulnerability:** Tool execution output guardrails (`_block_output_with_secrets`) could allow the leakage of PEM-encoded private keys or active credentials (such as dynamically loaded/registered keys) because it only searched for matches of standard static prefix patterns (e.g., `sk_`, `ghp_`).
+**Learning:** Hardcoded regular expression pattern lists easily miss dynamically configured, custom-formatted, or alternative credentials (like dynamic bearer tokens) and raw cryptographic private keys. True defense-in-depth output security must dynamically inspect exact active credentials present in the environment/memory as well as robust cryptographic block matches.
+**Prevention:** Extend tool output checks to recursively scan for PEM-encoded block strings (`-----BEGIN...`) and exact values of active environment variables and dynamically registered memory secrets, using robust try-except wrapping for self-contained, crash-safe logic.
+
 ## 2026-08-04 - [Hardening Guardrails against Unmonitored npx and Deno Execution Bypasses]
 **Vulnerability:** Shell command guardrails could be bypassed by utilizing unmonitored modern package runners (`npx`) or JavaScript/TypeScript engines (`deno`) to execute arbitrary destructive commands or run inline script files that targeted host-sensitive paths.
 **Learning:** Standard security scanners focusing solely on shell runtimes like python/node fail to recognize modern alternative engines like Deno and package execution wrappers like npx, leaving robust escape hatches for bypasses.
