@@ -4,24 +4,28 @@ useDefault = true
 [allowlist]
 description = "Test fixtures, example configs, and instructional skill docs"
 paths = [
-  '''tests''',
+  # Anchored to a real ``tests/`` path segment so it can't allowlist an
+  # unrelated path that merely contains the substring "tests".
+  '''(^|/)tests/''',
   '''\.env\.example$''',
   '''README\.md$''',
   # Persona/library skill files are instructional Markdown that contain
-  # illustrative (placeholder) credentials by design — not real secrets.
+  # illustrative (placeholder) credentials by design — not real secrets. This
+  # is intentionally broad; do not paste real secrets into persona docs.
   '''^personas/.*\.md$''',
 ]
 regexes = [
   # Documentation placeholders like `sk-xxxxxxxxxxxxxxxx`.
   '''sk-x{8,}''',
-  # Pre-existing values inherited from the merged repos' git history (the repos
-  # were consolidated here with history preserved via git subtree). These are
-  # matched by value so they're ignored wherever they appear in history, since
-  # historical paths predate the monorepo layout. The live `ck_…` consumer key
-  # has been scrubbed from the working tree; it and an already-scrubbed legacy
-  # `api_key` remain only in history. `2a2ad52a…` is a skill-bundle integrity
-  # hash (`github-auth:<md5>` in `.bundled_manifest`), not a credential.
-  '''ck_-tCxV37L3yJJjLd4qdYt''',
-  '''H9hhwS50qwxJIORLdXbIgFHMUeMKyn4h''',
+  # Skill-bundle integrity hash (`github-auth:<md5>` in `.bundled_manifest`) —
+  # a content digest, not a credential, so allowlisting it hides nothing secret.
   '''2a2ad52aedb7cb9019df9cab263845f0''',
+  #
+  # NOTE: the previously allowlisted `ck_…` consumer key and
+  # `H9hhwS50qwxJIORLdXbIgFHMUeMKyn4h` token were removed here on purpose. They
+  # look like real credentials that were scrubbed from the working tree but
+  # remain in git history. Value-allowlisting them only hid them from the
+  # scanner — it did NOT invalidate them. They must be ROTATED/REVOKED at their
+  # providers (see docs/security-hardening.md). Removing the allowlist lets
+  # gitleaks flag them if they are ever reintroduced into a commit.
 ]

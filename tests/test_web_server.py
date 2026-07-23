@@ -289,6 +289,26 @@ class TestServeFunction:
             serve(host="127.0.0.1", port=9999)
             mock_http.assert_called_once_with(("127.0.0.1", 9999), _Handler)
 
+    def test_serve_refuses_non_loopback_without_ack(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.delenv("SAKTHAI_WEB_ALLOW_PUBLIC", raising=False)
+        with (
+            patch("sakthai.web.server.HTTPServer") as mock_http,
+            pytest.raises(PermissionError, match="non-loopback"),
+        ):
+            serve(host="0.0.0.0", port=9999)  # noqa: S104 — testing the guard
+        mock_http.assert_not_called()
+
+    def test_serve_allows_non_loopback_when_acknowledged(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv("SAKTHAI_WEB_ALLOW_PUBLIC", "1")
+        with (
+            patch("sakthai.web.server.os.chdir"),
+            patch("sakthai.web.server.HTTPServer") as mock_http,
+        ):
+            serve(host="0.0.0.0", port=9999)  # noqa: S104 — explicit opt-in
+            mock_http.assert_called_once_with(("0.0.0.0", 9999), _Handler)  # noqa: S104
+
 
 class TestMainBlock:
     def test_main_block_starts_server_and_exits_on_interrupt(self) -> None:

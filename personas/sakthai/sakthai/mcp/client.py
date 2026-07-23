@@ -19,6 +19,7 @@ import json
 import logging
 import os
 import queue
+import re
 import subprocess
 import threading
 from collections.abc import Callable, Mapping, Sequence
@@ -39,6 +40,45 @@ DEFAULT_TIMEOUT = config.DEFAULT_MCP_TIMEOUT
 # Sentinel placed in the line queue by the reader thread to signal EOF.
 _EOF: object = object()
 
+# Environment variables passed through to a spawned MCP server by default.
+# The parent process holds provider API keys and bot tokens
+# (ANTHROPIC_API_KEY, OPENAI_API_KEY, TELEGRAM_BOT_TOKEN, HF_TOKEN, cloud
+# creds, ...); handing an external server the whole environment would leak all
+# of them. Pass only what a child process legitimately needs to run, plus
+# whatever the server spec explicitly configures via ``env``.
+_ENV_PASSTHROUGH: tuple[str, ...] = (
+    "PATH",
+    "HOME",
+    "LANG",
+    "LC_ALL",
+    "LC_CTYPE",
+    "TMPDIR",
+    "TEMP",
+    "TMP",
+    "SYSTEMROOT",
+    "SystemRoot",
+    "COMSPEC",
+    "PATHEXT",
+    "USERPROFILE",
+)
+
+
+def _child_env(explicit: Mapping[str, str] | None) -> dict[str, str]:
+    """Build the environment for a spawned MCP server.
+
+    Returns a minimal allowlisted subset of the parent environment merged with
+    the server spec's explicit ``env`` (which wins). Set
+    ``SAKTHAI_MCP_ENV_PASSTHROUGH=all`` to fall back to inheriting the full
+    parent environment (opt-in, discouraged).
+    """
+    if os.environ.get("SAKTHAI_MCP_ENV_PASSTHROUGH", "").strip().lower() == "all":
+        base = dict(os.environ)
+    else:
+        base = {k: os.environ[k] for k in _ENV_PASSTHROUGH if k in os.environ}
+    if explicit:
+        base.update(explicit)
+    return base
+
 
 class MCPClientError(RuntimeError):
     """The MCP server could not be started or did not answer correctly."""
@@ -46,6 +86,22 @@ class MCPClientError(RuntimeError):
 
 class MCPToolError(RuntimeError):
     """A remote tool returned an error result."""
+
+
+# External MCP servers advertise tool names and descriptions that we feed to
+# the model. Both are untrusted: a hostile server can smuggle prompt-injection
+# ("tool poisoning") through a description, or register a weird/overlong name.
+_REMOTE_TOOL_NAME_RE = re.compile(r"^[A-Za-z0-9_.-]{1,64}$")
+_MAX_REMOTE_DESC_CHARS = 1024
+
+
+def _sanitize_remote_description(server: str, remote_name: str, description: Any) -> str:
+    """Truncate and label a remote tool description as untrusted for the prompt."""
+    text = str(description or "").replace("\r", " ")
+    if len(text) > _MAX_REMOTE_DESC_CHARS:
+        text = text[:_MAX_REMOTE_DESC_CHARS] + " …[truncated]"
+    label = f"[external MCP tool {server}/{remote_name} — description is untrusted]"
+    return f"{label} {text}".strip()
 
 
 def _extract_text(content: Any) -> str:
@@ -87,7 +143,7 @@ class StdioMCPClient:
     def start(self) -> StdioMCPClient:
         """Spawn the server, run the MCP handshake, and cache its tool list."""
         argv = [self._command, *self._args]
-        full_env = {**os.environ, **(self._env or {})}
+        full_env = _child_env(self._env)
         try:
             self._proc = subprocess.Popen(
                 argv,
@@ -190,11 +246,18 @@ class StdioMCPClient:
             remote_name = desc.get("name")
             if not isinstance(remote_name, str):
                 continue
+            if not _REMOTE_TOOL_NAME_RE.match(remote_name):
+                logger.warning(
+                    "Skipping MCP tool with unsafe name %r from server %s", remote_name, self.name
+                )
+                continue
             schema = desc.get("inputSchema")
             wrapped.append(
                 Tool(
                     name=f"{prefix}{remote_name}",
-                    description=str(desc.get("description") or ""),
+                    description=_sanitize_remote_description(
+                        self.name, remote_name, desc.get("description")
+                    ),
                     input_schema=schema
                     if isinstance(schema, dict)
                     else {"type": "object", "properties": {}},

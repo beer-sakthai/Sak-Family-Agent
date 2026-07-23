@@ -884,6 +884,24 @@ def snapshot_to_jsonl(snapshot: dict[str, Any]) -> str:
     return "\n".join(lines) + ("\n" if lines else "")
 
 
+# Leading characters a spreadsheet may interpret as the start of a formula.
+# Prefixing such a cell with a single quote neutralizes CSV/DDE injection when
+# the export is opened in Excel/LibreOffice/Google Sheets.
+_CSV_FORMULA_TRIGGERS = ("=", "+", "-", "@", "\t", "\r")
+
+
+def _csv_safe(value: Any) -> Any:
+    """Neutralize spreadsheet-formula injection in a CSV cell.
+
+    Non-string values are returned unchanged. A string starting with a
+    formula-trigger character is prefixed with a single quote so a spreadsheet
+    treats it as literal text rather than executing it.
+    """
+    if isinstance(value, str) and value.startswith(_CSV_FORMULA_TRIGGERS):
+        return "'" + value
+    return value
+
+
 def snapshot_to_csv(snapshot: dict[str, Any]) -> str:
     """Render an export snapshot as one flat CSV (tags joined by commas)."""
     buf = io.StringIO()
@@ -894,9 +912,9 @@ def snapshot_to_csv(snapshot: dict[str, Any]) -> str:
         row["type"] = "fact"
         if isinstance(row.get("tags"), list):
             row["tags"] = ",".join(row["tags"])
-        writer.writerow(row)
+        writer.writerow({k: _csv_safe(v) for k, v in row.items()})
     for o in snapshot.get("observations", []):
         row = dict(o)
         row["type"] = "observation"
-        writer.writerow(row)
+        writer.writerow({k: _csv_safe(v) for k, v in row.items()})
     return buf.getvalue()

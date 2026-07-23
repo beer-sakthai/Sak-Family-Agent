@@ -487,3 +487,4 @@ unresolved ones; a live run warns and skips them.
 | `docs/workspace.md` | Dev environment setup |
 | `docs/og_parity_audit.md` | Comparison with original SakThai |
 | `docs/integrations.md` | Composio and cross-agent communication recipes |
+| `docs/SECURITY.md` · `docs/security-hardening.md` | Security policy/architecture · audit findings, fixes, and the prevention pattern + regression test for each |

@@ -145,6 +145,34 @@ def test_read_file_blocks_outside_roots(tmp_path: Path, store) -> None:
         tool_by_name("read_file").handler({"path": str(secret)}, store)
 
 
+@pytest.mark.parametrize(
+    "name",
+    [".env", ".env.production", "id_rsa", "server.pem", "credentials.json", ".netrc"],
+)
+def test_read_file_blocks_sensitive_names_even_in_cwd(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, store, name: str
+) -> None:
+    # cwd is an auto-trusted root, but secret-bearing files must still be refused
+    # regardless of location (defense-in-depth against exfiltration).
+    monkeypatch.chdir(tmp_path)
+    secret = tmp_path / name
+    secret.write_text("TOKEN=abc", encoding="utf-8")
+    with pytest.raises(PermissionError):
+        tool_by_name("read_file").handler({"path": name}, store)
+
+
+def test_read_file_blocks_dot_ssh_directory(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, store
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    ssh_dir = tmp_path / ".ssh"
+    ssh_dir.mkdir()
+    key = ssh_dir / "authorized_keys"
+    key.write_text("ssh-rsa ...", encoding="utf-8")
+    with pytest.raises(PermissionError):
+        tool_by_name("read_file").handler({"path": ".ssh/authorized_keys"}, store)
+
+
 def test_ingest_document_blocks_outside_roots(tmp_path: Path, store) -> None:
     secret = tmp_path / "secret.md"
     secret.write_text("- top secret", encoding="utf-8")
@@ -163,6 +191,23 @@ def test_run_command_when_enabled(monkeypatch: pytest.MonkeyPatch, store) -> Non
     out = tool_by_name("run_command").handler({"command": "echo hello"}, store)
     assert "[exit 0]" in out
     assert "hello" in out
+
+
+def test_run_command_allowlist_permits_named_program(
+    monkeypatch: pytest.MonkeyPatch, store
+) -> None:
+    # A program-name allow-list (not a truthy flag) permits exactly its members.
+    monkeypatch.setenv("SAKTHAI_SHELL_ALLOW", "echo")
+    out = tool_by_name("run_command").handler({"command": "echo hello"}, store)
+    assert "[exit 0]" in out and "hello" in out
+
+
+def test_run_command_allowlist_blocks_other_programs(
+    monkeypatch: pytest.MonkeyPatch, store
+) -> None:
+    monkeypatch.setenv("SAKTHAI_SHELL_ALLOW", "echo")
+    with pytest.raises(PermissionError, match="allow-list"):
+        tool_by_name("run_command").handler({"command": "cat /etc/passwd"}, store)
 
 
 def test_telegram_missing_config(monkeypatch: pytest.MonkeyPatch, store) -> None:

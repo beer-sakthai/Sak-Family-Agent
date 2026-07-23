@@ -6,16 +6,19 @@ from ..config import SKILLS_DIR
 
 def _workflow_command(workflow_name: str) -> list[str]:
     """Build the command used to execute one workflow skill."""
+    # The task text is placed last, after a ``--`` separator, so it can never be
+    # parsed as an option by the inner CLI even if it were to start with ``-``.
     return [
         sys.executable,
         "-m",
         "sakthai",
         "run",
-        f"execute the {workflow_name} skill",
         "--with-skills",
         workflow_name,
         "--fast",
         "--stateless",
+        "--",
+        f"execute the {workflow_name} skill",
     ]
 
 
