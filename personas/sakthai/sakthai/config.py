@@ -12,11 +12,16 @@ import sqlite3
 from pathlib import Path
 from typing import Any
 
-# A regex for common API key prefixes (sk-, rk-, pk-, ghp-, hf-), Google keys (AIza),
-# and Telegram bot tokens (123456789:ABC...).
+# A regex for common API key prefixes (sk-, rk-, pk-, ghp-, hf-, github_pat-), Google keys (AIza),
+# Telegram bot tokens (123456789:ABC...), and AWS Access Key IDs (AKIA/ASIA).
 # Handles both underscore (sk_) and hyphen (sk-) used by Anthropic, OpenAI, and HF.
-SECRET_PATTERN = r"\b(?:(?:sk|rk|pk|ghp|hf)[-_][a-zA-Z0-9\-_]{20,}|AIza[0-9A-Za-z\-_]{34,}|[0-9]{8,12}:[a-zA-Z0-9_-]{35,})\b"  # nosec B105
+SECRET_PATTERN = r"\b(?:(?:sk|rk|pk|ghp|hf|github_pat)[-_][a-zA-Z0-9\-_]{20,}|AIza[0-9A-Za-z\-_]{34,}|[0-9]{8,12}:[a-zA-Z0-9_-]{35,}|(?:AKIA|ASIA)[A-Z0-9]{16})\b"  # nosec B105
 _SECRET_RE = re.compile(SECRET_PATTERN)
+
+# Multiline regex pattern to detect PEM private key blocks.
+_PRIVATE_KEY_RE = re.compile(
+    r"-----BEGIN [A-Z ]+ PRIVATE KEY-----[a-zA-Z0-9\s+/=\r\n]+-----END [A-Z ]+ PRIVATE KEY-----"
+)
 
 # Repository root and bundled resource directories. The package no longer sits
 # directly under the repo root (its canonical copy lives at
@@ -388,7 +393,10 @@ def redact_secrets(text: str) -> str:
     if not isinstance(text, str) or not text:
         return text
 
-    # First, redact based on known exact values (highest precision).
+    # First, redact PEM private key blocks.
+    text = _PRIVATE_KEY_RE.sub("[REDACTED PRIVATE KEY]", text)
+
+    # Second, redact based on known exact values (highest precision).
     secret_keys = [
         "ANTHROPIC_API_KEY",
         "ANTHROPIC_AUTH_TOKEN",
@@ -399,6 +407,10 @@ def redact_secrets(text: str) -> str:
         "TELEGRAM_BOT_TOKEN",
         "HF_TOKEN",
         "COMPOSIO_API_KEY",
+        "AWS_ACCESS_KEY_ID",
+        "AWS_SECRET_ACCESS_KEY",
+        "GITHUB_TOKEN",
+        "GITHUB_PAT",
     ]
 
     secrets: set[str] = set(_EXTRA_SECRETS)
