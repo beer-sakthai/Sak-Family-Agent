@@ -61,9 +61,12 @@ jobs:
           export RESULTS_FILE="$RESULTS_DIR/results-$SANITIZED_MODEL_NAME-$SANITIZED_TASK_NAME.json"
           mkdir -p $RESULTS_DIR
 
+          # trust_remote_code is disabled below: it would execute arbitrary
+          # Python shipped by the model repo inside CI (which holds HF_TOKEN).
+          # The evaluated models use standard architectures and do not need it.
           uv run lm_eval \
             --model hf \
-            --model_args pretrained=${{ matrix.model }},trust_remote_code=True \
+            --model_args pretrained=${{ matrix.model }},trust_remote_code=False \
             --tasks ${{ matrix.task }} \
             --task_path evaluation_tasks \
             --output_path $RESULTS_FILE \
@@ -109,7 +112,7 @@ jobs:
 
       - name: Post comparison to Slack
         if: success() # Only post if the summary build succeeds
-        uses: slackapi/slack-github-action@v4.0.0
+        uses: slackapi/slack-github-action@dcb1066f776dd043e64d0e8ba94ca15cc7e1875d # v4.0.0
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         with:
@@ -134,7 +137,7 @@ jobs:
       matrix: ${{ needs.run-evaluations.outputs }}
     steps:
       - name: Download baseline results artifact
-        uses: dawidd6/action-download-artifact@v21
+        uses: dawidd6/action-download-artifact@b6e2e70617bc3265edd6dab6c906732b2f1ae151 # v21
         with:
           # Download from the last successful workflow run on the main branch
           workflow: ${{ github.workflow_id }}

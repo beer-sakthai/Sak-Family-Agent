@@ -25,6 +25,10 @@ Response timeline:
 
 Only the `main` branch of this repository (v2.x) receives security patches.
 
+For the 2026-07 audit — every finding, its fix, the prevention pattern, and the
+regression test that locks it in — see
+[`security-hardening.md`](./security-hardening.md).
+
 ## Security Architecture
 
 ### Tool sandbox
@@ -33,8 +37,8 @@ The agent and MCP server share a single tool registry (`sakthai/agent/tools.py`)
 
 | Tool | Boundary |
 |------|----------|
-| `read_file` | Restricted to `cwd`, `~/.sakthai`, and any paths in `SAKTHAI_READ_ALLOW`. Symlinks resolved with `Path.resolve(strict=True)` before the allowlist check; output capped at 20,000 characters. |
-| `run_command` | **Off by default.** Requires `SAKTHAI_SHELL_ALLOW=1` to activate. Runs with `shell=False` via `shlex.split`; timeout bounded 1–120 s; output capped at 20,000 characters. |
+| `read_file` | Restricted to `cwd`, `~/.sakthai`, and any paths in `SAKTHAI_READ_ALLOW`. Symlinks resolved with `Path.resolve(strict=True)` before the allowlist check. Known secret files (`.env*`, `id_rsa`, `*.pem`/`*.key`, `credentials.json`, `.netrc`, `.ssh/…`, `.git/config`, …) are refused regardless of root. Output capped at 20,000 characters. |
+| `run_command` | **Off by default.** `SAKTHAI_SHELL_ALLOW=1` enables any program; setting it to an `os.pathsep`-separated list of program names restricts execution to exactly those. Runs with `shell=False` via `shlex.split`; timeout bounded 1–120 s; output capped at 20,000 characters. |
 | `send_telegram_message` | Requires `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID`; 10-second network timeout. |
 | `run_agent_loop` | Recursion guard via `SAKTHAI_AGENT_ACTIVE` environment flag; the nested loop excludes `run_agent_loop` from its own tool set. |
 
@@ -65,7 +69,7 @@ Credentials are sourced from environment variables or local credential files —
 
 - `.env` is gitignored; only `.env.example` (empty values) is committed
 - `uv.lock` pins all transitive dependencies
-- Gitleaks scans the full git history on every push and pull request (see `.gitleaks.toml`); the allowlist covers `tests/`, `.env.example`, and `README.md`
+- Gitleaks scans on every push and pull request (see `.gitleaks.toml`); the allowlist covers `tests/` (anchored), `.env.example`, `README.md`, and persona instructional Markdown. Real secret values are **not** allowlisted — a leaked credential must be rotated, not hidden from the scanner.
 
 ## CI Security Checks
 
@@ -84,8 +88,11 @@ Bandit skips: `B101` (assert in non-test code), `B404`/`B603`/`B606`/`B607` (sub
 
 | Variable | Effect | Recommendation |
 |----------|--------|---------------|
-| `SAKTHAI_SHELL_ALLOW` | Enables `run_command`. Unset = disabled. | Do not set unless you explicitly need the agent to run shell commands. |
+| `SAKTHAI_SHELL_ALLOW` | Enables `run_command`. Unset = disabled; `1` = any program; a path-separator list = only those programs. | Prefer a program allow-list over `1`. Do not set unless you need the agent to run shell commands. |
 | `SAKTHAI_READ_ALLOW` | Adds extra filesystem roots the `read_file` tool can access (OS path-separator-delimited). | Specify exact paths, not broad directories like `/` or `$HOME`. |
+| `SAKTHAI_MCP_ENV_PASSTHROUGH` | `all` passes the full environment to spawned external MCP servers. Default passes only a minimal allow-list. | Leave unset; only child-needed vars plus the spec's `env` reach the child. |
+| `SAKTHAI_SANDBOX_NETWORK` | Sets `docker --network` for `--sandbox` (e.g. `none`). Default: unrestricted (needed to reach the model provider). | Set to `none`/an egress-restricted network when running local/offline models. |
+| `SAKTHAI_WEB_ALLOW_PUBLIC` | Required to bind the unauthenticated web API to a non-loopback host. | Keep unset; put real auth in front before ever setting it. |
 | `SAKTHAI_HOME` | Overrides the data directory (default `~/.sakthai`). | Ensure the path is readable only by the owning user. |
 | `ANTHROPIC_API_KEY` | Primary Anthropic credential. | Store in `.env` (gitignored) or a secrets manager. Never export in shared shell profiles. |
 | `TELEGRAM_BOT_TOKEN` | Activates Telegram outbound messaging. | Treat as a secret; rotate if leaked. |

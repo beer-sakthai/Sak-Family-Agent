@@ -3,10 +3,13 @@
 from __future__ import annotations
 
 import contextlib
+import ipaddress
 import json
+import socket
 import subprocess
 import sys
 import urllib.error
+import urllib.parse
 import urllib.request
 from pathlib import Path
 from typing import Any
@@ -17,6 +20,47 @@ from .store import SNAPSHOT_VERSION, MemoryStore
 
 # Ceiling on the HTTP backup POST so a dead endpoint fails instead of hanging.
 _HTTP_SYNC_TIMEOUT = 30.0
+
+
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    """Block HTTP redirects so a 3xx can't bounce a POST to an internal host."""
+
+    def redirect_request(self, *args: Any, **kwargs: Any) -> None:  # noqa: D401
+        raise RuntimeError(
+            "HTTP redirect refused: the sync endpoint must be a direct, "
+            "pre-validated URL (redirects could target an internal host)."
+        )
+
+
+def _assert_safe_sync_endpoint(endpoint_url: str, *, has_secret: bool) -> None:
+    """Validate an HTTP(S) sync endpoint against SSRF and cleartext exposure.
+
+    Rejects non-http(s) schemes, plaintext ``http://`` when a bearer token
+    would be sent, and any host that resolves to a private, loopback,
+    link-local, or otherwise non-global address.
+    """
+    parsed = urllib.parse.urlparse(endpoint_url)
+    if parsed.scheme not in ("http", "https"):
+        raise ValueError("endpoint_url must start with http:// or https://")
+    host = parsed.hostname
+    if not host:
+        raise ValueError("endpoint_url has no host.")
+    if has_secret and parsed.scheme != "https":
+        raise ValueError(
+            "Refusing to send an Authorization token over plaintext http://; "
+            "use https:// for the sync endpoint."
+        )
+    try:
+        addrinfos = socket.getaddrinfo(host, parsed.port, proto=socket.IPPROTO_TCP)
+    except OSError as exc:
+        raise ValueError(f"Could not resolve sync endpoint host {host!r}: {exc}") from exc
+    for _family, _type, _proto, _canon, sockaddr in addrinfos:
+        ip = ipaddress.ip_address(sockaddr[0])
+        if not ip.is_global or ip.is_multicast:
+            raise ValueError(
+                f"Refusing to sync to non-public address {ip} (resolved from "
+                f"{host!r}); private/loopback/link-local endpoints are blocked."
+            )
 
 
 def _run_git(args: list[str], cwd: Path, check: bool = True) -> subprocess.CompletedProcess[str]:
@@ -39,8 +83,7 @@ def sync_memory_via_http(endpoint_url: str, api_key: str | None = None) -> str:
     with MemoryStore() as store:
         snapshot = store.export_to_dict()
 
-    if not endpoint_url.startswith(("http://", "https://")):
-        raise ValueError("endpoint_url must start with http:// or https://")
+    _assert_safe_sync_endpoint(endpoint_url, has_secret=bool(api_key))
 
     payload = json.dumps(snapshot, ensure_ascii=False).encode("utf-8")
     req = urllib.request.Request(endpoint_url, data=payload, method="POST")
@@ -48,8 +91,9 @@ def sync_memory_via_http(endpoint_url: str, api_key: str | None = None) -> str:
     if api_key:
         req.add_header("Authorization", f"Bearer {api_key}")
 
+    opener = urllib.request.build_opener(_NoRedirect)
     try:
-        with urllib.request.urlopen(req, timeout=_HTTP_SYNC_TIMEOUT) as response:  # nosec B310
+        with opener.open(req, timeout=_HTTP_SYNC_TIMEOUT) as response:  # nosec B310
             if response.status not in (200, 201, 202, 204):
                 raise RuntimeError(
                     f"HTTP Error {response.status}: {response.read().decode('utf-8', errors='ignore')}"

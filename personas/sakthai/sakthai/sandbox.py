@@ -7,6 +7,7 @@ memory database is bind-mounted from the host; nothing else is shared.
 
 from __future__ import annotations
 
+import os
 import shutil
 import subprocess
 from pathlib import Path
@@ -84,10 +85,19 @@ def run_in_sandbox(
     if not db.exists():
         db.touch()
 
+    # Network posture. The sandbox needs outbound network to reach the model
+    # provider, so full isolation cannot be the unconditional default. Operators
+    # who run offline/local models can set SAKTHAI_SANDBOX_NETWORK=none (or any
+    # docker --network value) to cut or restrict egress and shrink the
+    # data-exfiltration surface of a prompt-injected task.
+    network = os.environ.get("SAKTHAI_SANDBOX_NETWORK", "").strip()
+
     cmd: list[str] = [
         docker,
         "run",
         "--rm",
+        # Restrict container networking when the operator opted in.
+        *(["--network", network] if network else []),
         # Pass API keys from current env
         "-e",
         "ANTHROPIC_API_KEY",
@@ -118,9 +128,10 @@ def run_in_sandbox(
         "--security-opt",
         "no-new-privileges",
         SANDBOX_IMAGE,
-        # Forward all agent flags
+        # Forward all agent flags. The task positional is appended last, after a
+        # ``--`` separator, so a task string starting with ``-`` cannot be
+        # parsed as an option by the inner CLI.
         "run",
-        task,
         "--model",
         model,
         "--max-tokens",
@@ -148,6 +159,7 @@ def run_in_sandbox(
         cmd.append("--dry-run")
     if stream:
         cmd.append("--stream")
+    cmd.extend(["--", task])
 
     # Explicit shell=False. The task string is passed as a positional argument to
     # the 'run' command inside the container, not interpreted by a host shell.

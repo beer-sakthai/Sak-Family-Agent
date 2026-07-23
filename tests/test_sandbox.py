@@ -96,6 +96,14 @@ def test_run_in_sandbox_passes_task(tmp_path: Path) -> None:
     assert "do something" in docker_cmd
 
 
+def test_run_in_sandbox_task_is_guarded_by_double_dash(tmp_path: Path) -> None:
+    # The task must be the final argv element, immediately after a ``--``
+    # separator, so a task starting with ``-`` can't be parsed as an inner flag.
+    mock = _run_sandbox(tmp_path)
+    docker_cmd = mock.call_args_list[1][0][0]
+    assert docker_cmd[-2:] == ["--", "do something"]
+
+
 def test_run_in_sandbox_passes_api_keys_via_e_flag(tmp_path: Path) -> None:
     mock = _run_sandbox(tmp_path)
     docker_cmd = mock.call_args_list[1][0][0]
@@ -122,6 +130,21 @@ def test_run_in_sandbox_includes_resource_limits(tmp_path: Path) -> None:
     assert "--memory" in docker_cmd
     assert "--cpus" in docker_cmd
     assert "--security-opt" in docker_cmd
+
+
+def test_run_in_sandbox_no_network_flag_by_default(tmp_path: Path) -> None:
+    mock = _run_sandbox(tmp_path)
+    docker_cmd = mock.call_args_list[1][0][0]
+    assert "--network" not in docker_cmd
+
+
+def test_run_in_sandbox_restricts_network_when_opted_in(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("SAKTHAI_SANDBOX_NETWORK", "none")
+    mock = _run_sandbox(tmp_path)
+    docker_cmd = mock.call_args_list[1][0][0]
+    assert docker_cmd[docker_cmd.index("--network") + 1] == "none"
 
 
 def test_run_in_sandbox_passes_max_seconds(tmp_path: Path) -> None:

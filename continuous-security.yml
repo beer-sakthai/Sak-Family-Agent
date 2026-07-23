@@ -1,5 +1,10 @@
 # This workflow runs the devsecops skill on a schedule to proactively
 # find, triage, and automatically patch vulnerabilities.
+#
+# NOTE: this file lives at the repository root, NOT under .github/workflows/,
+# so GitHub Actions does not currently execute it. If it is meant to run, move
+# it into .github/workflows/. It is left in place (dormant) here and only
+# hardened; its trigger/location was not changed. See docs/security-hardening.md.
 name: Continuous Security Scan
 
 on:
@@ -25,7 +30,7 @@ jobs:
           python-version: '3.11'
 
       - name: Set up uv
-        uses: astral-sh/setup-uv@v1
+        uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
 
       - name: Cache uv dependencies
         uses: actions/cache@v4
@@ -55,5 +60,7 @@ jobs:
           # pull requests created by the agent will trigger the full CI suite.
           # This is a critical security and validation measure.
           GITHUB_TOKEN: ${{ secrets.GH_PAT_FOR_ACTIONS }}
-          # SAKTHAI_SHELL_ALLOW is needed for the agent to run ruff/bandit.
-          SAKTHAI_SHELL_ALLOW: "1"
+          # Scope shell execution to only the security tools the skill needs,
+          # rather than "1" (which would allow ANY binary). Colon-separated
+          # program allow-list, honored by sakthai's run_command tool.
+          SAKTHAI_SHELL_ALLOW: "ruff:bandit:mypy:pytest:uv:git:python:python3"
