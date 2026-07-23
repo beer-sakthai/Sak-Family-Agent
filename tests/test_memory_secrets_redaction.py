@@ -99,6 +99,32 @@ def test_import_from_dict_redacts_all_fields(store: MemoryStore, secret: str) ->
     assert "[REDACTED]" in obs.evidence_session_id
 
 
+def test_additional_secrets_redacted() -> None:
+    from sakthai.config import redact_secrets
+
+    # 1. Test AWS key
+    aws_key = "AKIA" + "IOSFODNN7EXAMPLE"
+    assert redact_secrets(aws_key) == "[REDACTED]"
+    assert redact_secrets(f"my key is {aws_key}") == "my key is [REDACTED]"
+
+    # 2. Test fine-grained GitHub PAT
+    gh_pat = "github_pat_" + "123456789012345678901234567890123456789012345678901234567890"
+    assert redact_secrets(gh_pat) == "[REDACTED]"
+    assert redact_secrets(f"my token is {gh_pat}") == "my token is [REDACTED]"
+
+    # 3. Test PEM Private Key block
+    pem_block = (
+        "-----BEGIN " + "RSA PRIVATE KEY-----\n"
+        "MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDOf7Zp5iVzZpWk\n"
+        "-----END " + "RSA PRIVATE KEY-----"
+    )
+    assert redact_secrets(pem_block) == "[REDACTED PRIVATE KEY]"
+    assert (
+        redact_secrets(f"headers\n{pem_block}\nfooters")
+        == "headers\n[REDACTED PRIVATE KEY]\nfooters"
+    )
+
+
 def test_redact_new_secret_patterns(store: MemoryStore) -> None:
     # AWS Access Key ID (constructed dynamically to avoid gitleaks false positives)
     aws_prefix = "AKIA"

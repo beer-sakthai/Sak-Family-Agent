@@ -1,5 +1,9 @@
 # Sentinel Security Journal
 
+## 2026-08-05 - [Hardening Global Secret Redaction and Persona Package Parity]
+**Vulnerability:** Core secret masking helper `redact_secrets` lacked regex and environment variable mappings for critical credentials like AWS access key IDs, fine-grained GitHub personal access tokens (PATs), and PEM-encoded private key blocks. Furthermore, older unhardened configurations and memory database schemas remained un-synchronized across secondary persona packages.
+**Learning:** Defense-in-depth requires that secret-redaction engines cover modern fine-grained tokens and standard asymmetric key structures. For monorepos containing multiple semi-isolated persona packages, hardening fixes in canonical packages must be systematically and comprehensively synchronized to prevent outdated packages from retaining security gaps.
+**Prevention:** Incorporate fine-grained PAT, AWS key, and PEM private key block patterns directly into the central `SECRET_PATTERN` regex and exact environment match lists. Synchronize core package components (`config.py` and `memory/store.py`) cleanly across all six persona folders.
 ## 2026-08-05 - [Hardening Guardrails against Unmonitored Package Manager and Runner Bypasses]
 **Vulnerability:** Shell command guardrails could be bypassed by utilizing unmonitored Python and Node package managers and execution runners (`poetry`, `pipenv`, `conda`, `pnpm`, `yarn`) to run arbitrary nested commands or scripts targeting sensitive files.
 **Learning:** Standard command scanners focusing on simple wrappers like `sudo` or traditional runners like `node` easily overlook specialized package ecosystem runners. Since these tools have subcommands (like `run`, `exec`) that wrap subsequent arbitrary commands, they can act as perfect execution wrappers and bypass standard blocklists.

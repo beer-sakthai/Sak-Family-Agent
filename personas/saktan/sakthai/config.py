@@ -407,6 +407,10 @@ def redact_secrets(text: str) -> str:
         "TELEGRAM_BOT_TOKEN",
         "HF_TOKEN",
         "COMPOSIO_API_KEY",
+        "AWS_ACCESS_KEY_ID",
+        "AWS_SECRET_ACCESS_KEY",
+        "GITHUB_TOKEN",
+        "GITHUB_PAT",
     ]
 
     secrets: set[str] = set(_EXTRA_SECRETS)
