@@ -123,6 +123,10 @@ _SENSITIVE_BASENAMES = {
     ".zshrc",
     ".profile",
     ".bash_profile",
+    ".gitconfig",
+    ".zprofile",
+    ".yarnrc",
+    ".yarnrc.yml",
 }
 
 _SENSITIVE_DIRS = {
@@ -135,6 +139,8 @@ _SENSITIVE_DIRS = {
     ".gnupg",
     ".config",
     ".npm",
+    ".gcloud",
+    ".azure",
 }
 
 # Private-key stems whose backup/rename variants (id_rsa.bak, id_ed25519.old,
@@ -144,6 +150,8 @@ _SENSITIVE_KEY_STEMS = {
     "id_dsa",
     "id_ecdsa",
     "id_ed25519",
+    "id_ed25519_sk",
+    "id_ecdsa_sk",
 }
 
 
@@ -175,7 +183,7 @@ def _basename_is_sensitive(basename: str) -> bool:
     """
     lowered = basename.casefold()
     if lowered in _SENSITIVE_BASENAMES or any(
-        lowered.startswith(p) for p in (".env.", "memory.db-")
+        lowered.startswith(p) for p in (".env.", ".env-", ".env_", "memory.db-")
     ):
         return True
     return any(lowered == stem or lowered.startswith(stem + ".") for stem in _SENSITIVE_KEY_STEMS)
