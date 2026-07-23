@@ -152,6 +152,8 @@ _SENSITIVE_KEY_STEMS = {
     "id_ed25519",
     "id_ecdsa_sk",
     "id_ed25519_sk",
+    "id_ed25519_sk",
+    "id_ecdsa_sk",
 }
 
 
@@ -422,6 +424,11 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
         "ts-node",
         "deno",
         "npx",
+        "poetry",
+        "pipenv",
+        "conda",
+        "busybox",
+        "toybox",
     )
     exfiltration_binaries = (
         "curl",
@@ -506,6 +513,11 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
         "ts-node",
         "deno",
         "npx",
+        "poetry",
+        "pipenv",
+        "conda",
+        "busybox",
+        "toybox",
     )
     # Common interpreters where sensitive paths can be embedded in arguments.
     interpreters = (
@@ -728,17 +740,26 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
             "bunx",
             "npx",
             "deno",
+            "poetry",
+            "pipenv",
+            "conda",
+            "pnpm",
+            "yarn",
+            "busybox",
+            "toybox",
         )
         if _is_binary(part, transparent_wrappers):
             # Most of these wrappers have flags. xargs and env are special.
             # We skip tokens that are likely arguments to the wrapper's flags.
             start_idx = i + 1
 
-            # If the wrapper is uv, pipx, bun, or deno, we want to look for the "run" or "eval" subcommand.
-            if _is_binary(part, ("uv", "pipx", "bun", "deno")):
+            # If the wrapper is uv, pipx, bun, deno, poetry, pipenv, conda, pnpm, or yarn, we want to look for subcommands.
+            if _is_binary(
+                part, ("uv", "pipx", "bun", "deno", "poetry", "pipenv", "conda", "pnpm", "yarn")
+            ):
                 run_idx = -1
                 for idx in range(i + 1, len(parts)):
-                    if parts[idx] in ("run", "eval"):
+                    if parts[idx] in ("run", "eval", "exec", "node"):
                         run_idx = idx
                         break
                 if run_idx == -1:
@@ -819,6 +840,14 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
                     or _is_binary(part, "deno")
                     and flag
                     in ("-c", "--config", "-p", "--port", "--import-map", "--lock", "--ext")
+                    or _is_binary(part, "conda")
+                    and flag in ("-n", "--name", "-p", "--prefix", "--cwd")
+                    or _is_binary(part, "pnpm")
+                    and flag in ("--filter", "-c", "--dir", "--config")
+                    or _is_binary(part, "yarn")
+                    and flag in ("--cwd",)
+                    or _is_binary(part, "poetry")
+                    and flag in ("-C", "--directory")
                 ):
                     start_idx += 1
 
