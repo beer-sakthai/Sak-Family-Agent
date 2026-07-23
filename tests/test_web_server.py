@@ -345,6 +345,41 @@ class TestStaticFileServe:
             os.chdir(original_dir)
             srv_mod._STATIC_ROOT = original_root
 
+    def test_no_file_leakage_when_static_root_missing(self, tmp_path: Path) -> None:
+        """Verify that files from current working directory are not served/leaked when _STATIC_ROOT is missing."""
+        import sakthai.web.server as srv_mod
+
+        # Point _STATIC_ROOT to a nonexistent directory
+        fake_root = tmp_path / "nonexistent_dist"
+        original_root = srv_mod._STATIC_ROOT
+        srv_mod._STATIC_ROOT = fake_root
+
+        # Create a dummy file in the current working directory
+        leak_file = Path("leak_test_file_xyz.txt")
+        leak_file.write_text("top secret data", encoding="utf-8")
+
+        try:
+            srv = HTTPServer(("127.0.0.1", 0), _Handler)
+            _, port = srv.server_address
+            t = threading.Thread(
+                target=srv.serve_forever, kwargs={"poll_interval": 0.01}, daemon=True
+            )
+            t.start()
+            try:
+                url = f"http://127.0.0.1:{port}/leak_test_file_xyz.txt"
+                try:
+                    with urllib.request.urlopen(url, timeout=5) as resp:
+                        status = resp.status
+                except urllib.error.HTTPError as exc:
+                    status = exc.code
+                assert status != 200
+            finally:
+                srv.shutdown()
+        finally:
+            srv_mod._STATIC_ROOT = original_root
+            if leak_file.exists():
+                leak_file.unlink()
+
 
 class TestEcosystemStatusPartialConfig:
     """HuggingFace and other partial-config edge cases."""
