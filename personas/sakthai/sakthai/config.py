@@ -15,7 +15,7 @@ from typing import Any
 # A regex for common API key prefixes (sk-, rk-, pk-, ghp-, hf-), Google keys (AIza),
 # and Telegram bot tokens (123456789:ABC...).
 # Handles both underscore (sk_) and hyphen (sk-) used by Anthropic, OpenAI, and HF.
-SECRET_PATTERN = r"\b(?:(?:sk|rk|pk|ghp|hf)[-_][a-zA-Z0-9\-_]{20,}|AIza[0-9A-Za-z\-_]{34,}|[0-9]{8,12}:[a-zA-Z0-9_-]{35,})\b"  # nosec B105
+SECRET_PATTERN = r"\b(?:(?:sk|rk|pk|ghp|hf)[-_][a-zA-Z0-9\-_]{20,}|github_pat_[a-zA-Z0-9_]{20,}|(?:AKIA|ASIA)[0-9A-Z]{16}|AIza[0-9A-Za-z\-_]{34,}|[0-9]{8,12}:[a-zA-Z0-9_-]{35,})\b"  # nosec B105
 _SECRET_RE = re.compile(SECRET_PATTERN)
 
 # Repository root and bundled resource directories. The package no longer sits
@@ -399,6 +399,10 @@ def redact_secrets(text: str) -> str:
         "TELEGRAM_BOT_TOKEN",
         "HF_TOKEN",
         "COMPOSIO_API_KEY",
+        "AWS_ACCESS_KEY_ID",
+        "AWS_SECRET_ACCESS_KEY",
+        "GITHUB_TOKEN",
+        "GITHUB_PAT",
     ]
 
     secrets: set[str] = set(_EXTRA_SECRETS)
@@ -414,6 +418,12 @@ def redact_secrets(text: str) -> str:
                 text = text.replace(val, "[REDACTED]")
 
     # Second, redact based on common patterns (defense-in-depth).
+    # Redact PEM Private Key blocks
+    text = re.sub(
+        r"-----BEGIN[A-Z0-9\s_]+PRIVATE KEY-----[\s\S]*?-----END[A-Z0-9\s_]+PRIVATE KEY-----",
+        "[REDACTED]",
+        text,
+    )
     text = _SECRET_RE.sub("[REDACTED]", text)
 
     return text

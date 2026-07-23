@@ -1,5 +1,10 @@
 # Sentinel Security Journal
 
+## 2026-08-05 - [Hardening Global Secret Redaction and Persona Package Parity]
+**Vulnerability:** Core secret masking helper `redact_secrets` lacked regex and environment variable mappings for critical credentials like AWS access key IDs, fine-grained GitHub personal access tokens (PATs), and PEM-encoded private key blocks. Furthermore, older unhardened configurations and memory database schemas remained un-synchronized across secondary persona packages.
+**Learning:** Defense-in-depth requires that secret-redaction engines cover modern fine-grained tokens and standard asymmetric key structures. For monorepos containing multiple semi-isolated persona packages, hardening fixes in canonical packages must be systematically and comprehensively synchronized to prevent outdated packages from retaining security gaps.
+**Prevention:** Incorporate fine-grained PAT, AWS key, and PEM private key block patterns directly into the central `SECRET_PATTERN` regex and exact environment match lists. Synchronize core package components (`config.py` and `memory/store.py`) cleanly across all six persona folders.
+
 ## 2026-08-04 - [Hardening Guardrails against Unmonitored npx and Deno Execution Bypasses]
 **Vulnerability:** Shell command guardrails could be bypassed by utilizing unmonitored modern package runners (`npx`) or JavaScript/TypeScript engines (`deno`) to execute arbitrary destructive commands or run inline script files that targeted host-sensitive paths.
 **Learning:** Standard security scanners focusing solely on shell runtimes like python/node fail to recognize modern alternative engines like Deno and package execution wrappers like npx, leaving robust escape hatches for bypasses.
