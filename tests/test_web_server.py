@@ -458,6 +458,7 @@ class TestHandlerEdgePaths:
     def test_standalone_server_bind_directory(self) -> None:
         import sys
         from pathlib import Path
+
         REPO_ROOT = Path(__file__).resolve().parents[1]
         if str(REPO_ROOT) not in sys.path:
             sys.path.insert(0, str(REPO_ROOT))
@@ -479,6 +480,7 @@ class TestHandlerEdgePaths:
     ) -> None:
         import sys
         from pathlib import Path
+
         REPO_ROOT = Path(__file__).resolve().parents[1]
         if str(REPO_ROOT) not in sys.path:
             sys.path.insert(0, str(REPO_ROOT))
@@ -491,9 +493,7 @@ class TestHandlerEdgePaths:
 
         srv = HTTPServer(("127.0.0.1", 0), standalone_mod._Handler)
         _, port = srv.server_address
-        t = threading.Thread(
-            target=srv.serve_forever, kwargs={"poll_interval": 0.01}, daemon=True
-        )
+        t = threading.Thread(target=srv.serve_forever, kwargs={"poll_interval": 0.01}, daemon=True)
         t.start()
         try:
             url = f"http://127.0.0.1:{port}/index.html"
