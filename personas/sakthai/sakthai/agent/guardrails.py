@@ -422,6 +422,8 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
         "ts-node",
         "deno",
         "npx",
+        "busybox",
+        "toybox",
     )
     exfiltration_binaries = (
         "curl",
@@ -506,6 +508,8 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
         "ts-node",
         "deno",
         "npx",
+        "busybox",
+        "toybox",
     )
     # Common interpreters where sensitive paths can be embedded in arguments.
     interpreters = (
@@ -728,6 +732,8 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
             "bunx",
             "npx",
             "deno",
+            "busybox",
+            "toybox",
         )
         if _is_binary(part, transparent_wrappers):
             # Most of these wrappers have flags. xargs and env are special.
