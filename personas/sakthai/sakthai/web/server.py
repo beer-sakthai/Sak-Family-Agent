@@ -87,6 +87,11 @@ def _ecosystem_status() -> dict[str, Any]:
 
 
 class _Handler(SimpleHTTPRequestHandler):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        # Secure fallback: explicitly bind the static files directory to _STATIC_ROOT
+        # to prevent fallback file serving from the process's working directory.
+        super().__init__(*args, directory=str(_STATIC_ROOT), **kwargs)
+
     def address_string(self) -> str:
         return self.client_address[0]
 
@@ -137,10 +142,9 @@ class _Handler(SimpleHTTPRequestHandler):
             return
 
         # Fallback: static files from the dashboard dist root. The stdlib
-        # handler serves relative to the current working directory (which
-        # `serve()` points at `_STATIC_ROOT`), so canonicalise the request the
-        # same way and confirm it stays within the static root before
-        # delegating.
+        # handler serves relative to the configured directory (explicitly set
+        # to _STATIC_ROOT above), so canonicalise the request the same way and
+        # confirm it stays within the static root before delegating.
         try:
             root = os.path.realpath(str(_STATIC_ROOT))
             requested = unquote(parsed.path).lstrip("/\\")
@@ -151,6 +155,12 @@ class _Handler(SimpleHTTPRequestHandler):
         except Exception:
             self.send_error(403, "Forbidden")
             return
+
+        # Explicitly verify the static files directory exists before serving.
+        if not _STATIC_ROOT.is_dir():
+            self.send_error(404, "File not found")
+            return
+
         return super().do_GET()
 
 
