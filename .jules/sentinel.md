@@ -1,5 +1,10 @@
 # Sentinel Security Journal
 
+## 2026-08-06 - [Harden Web Dashboard Server against Arbitrary File Leakage via Static File Fallback]
+**Vulnerability:** When the web dashboard static root (`_STATIC_ROOT`) was not built or missing, the process's working directory remained at the repository root. A request targeting root files (e.g., `/package.json`) passed the standard prefix check (`candidate.startswith(root + os.sep)`) because `root` was resolved to the expected missing directory, but Python's `SimpleHTTPRequestHandler` would fall back to serving files from the actual current working directory, leaking critical system or repository files.
+**Learning:** Overlying standard library file handlers like `SimpleHTTPRequestHandler` can create subtle security gaps if their logical root (`os.getcwd()`) and the security check's expected root (`_STATIC_ROOT`) drift or are misaligned.
+**Prevention:** Explicitly pass the resolved target directory to `SimpleHTTPRequestHandler.__init__` using the `directory` parameter, and strictly verify that the target directory exists as a directory before delegating any fallback file serving requests.
+
 ## 2026-08-05 - [Harden Centralized Secret Redaction against Private Keys, AWS keys, and Fine-grained GitHub Tokens]
 **Vulnerability:** Although classic API keys starting with `sk_` or `sk-` were redacted, PEM private key blocks, AWS Access Key IDs (`AKIA`/`ASIA`), and fine-grained GitHub Personal Access Tokens (`github_pat`) were not detected by standard patterns. This left high-severity credentials exposed to exfiltration via log files, HTTP serialization payloads, or terminal screen-scraping.
 **Learning:** Secret redaction filters must go beyond simple pattern matches for a single provider. High-impact credentials like private key blocks, cloud provider keys, and modern fine-grained tokens carry distinct structures (such as multiline boundaries or distinct prefixes) and must be explicitly handled by global redaction functions.
