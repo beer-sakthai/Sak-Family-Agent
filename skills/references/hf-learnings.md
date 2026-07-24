@@ -13329,3 +13329,301 @@ Deep-dive into Hugging Face Hub's storage limit and quota system — covering st
 
 ### Skill
 mlops/hf-hub-storage-limits — SKILL.md + references/hf-learnings.md
+
+---
+
+## 2026-07-24: hf-data-studio-sql-console-deep-dive — Query HF Datasets with DuckDB SQL In-Browser (Topic #226)
+
+### Summary
+Comprehensive deep-dive into Hugging Face's **Data Studio SQL Console** — the in-browser DuckDB SQL query engine that lets you run analytical SQL queries directly on Hub datasets at zero cost. Covers in-browser DuckDB WASM architecture, `hf://` protocol integration with DuckDB CLI, the Saved Embeds CRUD API, `hf datasets sql` CLI command, natural language querying, leakage detection, histogram analysis, regex matching, Storage Bucket queries, and share/embed/export workflows.
+
+### Source
+- Data Studio SQL Console docs: https://huggingface.co/docs/hub/en/datasets-viewer-sql-console
+- Data Studio docs: https://huggingface.co/docs/hub/en/data-studio
+- DuckDB datasets docs: https://huggingface.co/docs/hub/en/datasets-duckdb
+- DuckDB official docs: https://duckdb.org/docs/
+- Dataset Viewer API docs: https://huggingface.co/docs/dataset-viewer/en/index
+
+### 1. What Is the Data Studio SQL Console?
+
+The **SQL Console** is an in-browser SQL query engine built into the Data Studio (rebranded Dataset Viewer) at `huggingface.co/datasets/{namespace}/{repo}`. It is powered by **DuckDB compiled to WebAssembly (WASM)** and runs entirely in the browser — no server-side compute, no API calls, no cost.
+
+**Architecture:**
+```
+Browser
+├── DuckDB WASM binary (~5 MB)
+├── Auto-converted Parquet files from the Hub
+│   (fetched via HTTP range requests)
+├── SQL execution engine (OLAP, columnar)
+└── Results displayed as table + download
+```
+
+Because DuckDB runs in-process in the browser, queries execute instantly on the client side. The Parquet data is streamed directly from the Hugging Face Hub's CDN.
+
+### 2. Key Capabilities
+
+| Capability | Description |
+|---|---|
+| **Full DuckDB SQL** | All DuckDB SQL syntax — SELECT, FROM, WHERE, GROUP BY, JOIN, window functions, CTEs, set operations |
+| **Histogram** | `FROM histogram(table, column, bin_count)` — instant distribution plots |
+| **Regex Matching** | DuckDB `regexp_matches()`, `regexp_replace()` for text pattern queries |
+| **Share Links** | URL encodes the SQL query — shareable `?sql_console=true&sql=...` |
+| **Download Results** | Export query results as **Parquet** or **CSV** directly from the browser |
+| **Embed Results** | Embed query results in any webpage via iframe |
+| **Natural Language Querying** | Describe what you want in English → auto-generated SQL |
+| **Copy to DuckDB CLI** | Generates the equivalent SQL for DuckDB CLI usage |
+| **Leakage Detection** | Find overlapping rows between splits (e.g. train vs test leakage) |
+
+### 3. Accessing the SQL Console
+
+Navigate to any dataset on the Hub and append `?sql_console=true` to the URL, or click the SQL Console tab in the Data Studio UI.
+
+Example: `https://huggingface.co/datasets/gretelai/synthetic-gsm8k-reflection-405b?sql_console=true`
+
+### 4. Basic SQL Queries
+
+The dataset splits are available as virtual table names (e.g., `train`, `test`, `validation`):
+
+```sql
+-- List all rows from the training split
+SELECT * FROM train LIMIT 10;
+
+-- Filter with WHERE clause
+SELECT * FROM train WHERE LENGTH(reasoning_chains) > 10;
+
+-- Aggregate and group
+SELECT topic, COUNT(*) as count
+FROM train
+GROUP BY topic
+ORDER BY count DESC;
+```
+
+### 5. DuckDB Histogram Function
+
+The built-in `histogram()` function is one of the most powerful features for data exploration:
+
+```sql
+-- Basic histogram of a column
+FROM histogram(train, Rating);
+
+-- With custom bin count
+FROM histogram(train, Rating, bin_count := 20);
+
+-- Using traditional syntax
+SELECT * FROM histogram(train, Rating);
+```
+
+This generates a bar chart visualization directly in the browser showing value distributions.
+
+### 6. Regex Pattern Matching
+
+DuckDB has deep regex support via the `regexp_matches()` function:
+
+```sql
+-- Find rows where model_answer contains markdown code blocks
+SELECT *
+FROM train
+WHERE regexp_matches(model_answer, '```')
+LIMIT 10;
+
+-- Extract matching patterns
+SELECT regexp_extract(text, 'error: (.+)', 1) AS error_message
+FROM train
+WHERE regexp_matches(text, 'error:');
+```
+
+### 7. Leakage Detection Between Splits
+
+Critical for ML data integrity — detect if test data appears in the training set:
+
+```sql
+WITH
+    overlapping_rows AS (
+        SELECT COALESCE(
+            (SELECT COUNT(*) AS overlap_count
+             FROM train
+             INTERSECT
+             SELECT COUNT(*) AS overlap_count
+             FROM test),
+            0
+        ) AS overlap_count
+    ),
+    total_unique_rows AS (
+        SELECT COUNT(*) AS total_count
+        FROM (
+            SELECT * FROM train
+            UNION
+            SELECT * FROM test
+        ) combined
+    )
+SELECT
+    overlap_count,
+    total_count,
+    CASE
+        WHEN total_count > 0 THEN (overlap_count * 100.0 / total_count)
+        ELSE 0
+    END AS overlap_percentage
+FROM overlapping_rows, total_unique_rows;
+```
+
+### 8. Shareable Query Links
+
+Queries in the SQL Console are shareable via URL parameters:
+
+```
+https://huggingface.co/datasets/{namespace}/{repo}?sql_console=true&sql=SELECT+*+FROM+train+LIMIT+10
+```
+
+The `sql` parameter is URL-encoded. When someone opens the link, the SQL Console loads with the query pre-filled and auto-executed.
+
+### 9. Saved Embeds API (CRUD)
+
+Embeds are persisted queries that can be shared, embedded, or used as saved views. The API is part of the Hub's REST API:
+
+**Create an embed:**
+```
+POST /api/datasets/{namespace}/{repo}/sql-console/embed
+Content-Type: application/json
+Authorization: Bearer {token}
+
+{
+  "sql": "SELECT * FROM train LIMIT 10",
+  "title": "Sample rows",
+  "private": false,
+  "views": [{"key": "default/train", "displayName": "Train", "viewName": "train"}]
+}
+```
+
+**Update an embed:**
+```
+PATCH /api/datasets/{namespace}/{repo}/sql-console/embed/{embed_id}
+Content-Type: application/json
+Authorization: Bearer {token}
+
+{
+  "sql": "SELECT * FROM train LIMIT 20",
+  "title": "Updated title",
+  "private": true
+}
+```
+
+**Delete an embed:**
+```
+DELETE /api/datasets/{namespace}/{repo}/sql-console/embed/{embed_id}
+Authorization: Bearer {token}
+```
+
+**Embedding results in an iframe:**
+```html
+<iframe src="https://huggingface.co/datasets/{namespace}/{repo}/embed/sql-console/{embed_id}"></iframe>
+```
+
+### 10. Natural Language to SQL
+
+The SQL Console includes a natural language querying feature — type what you want in English and it auto-generates the DuckDB SQL. This is powered by a Hugging Face model running on the Hub's Inference API (free tier eligible for small queries).
+
+Example:
+- User types: "show me the top 10 rows with the longest reasoning chains"
+- Generates: `SELECT * FROM train ORDER BY LENGTH(reasoning_chains) DESC LIMIT 10`
+
+### 11. DuckDB CLI with `hf://` Protocol
+
+Starting from DuckDB v0.10.3, the DuckDB CLI has **native support for the `hf://` scheme** — query datasets directly from the terminal:
+
+```bash
+# Connect DuckDB CLI, then:
+FROM 'hf://datasets/ibm/duorc/ParaphraseRC/*.parquet' LIMIT 3;
+
+# Traditional SQL syntax:
+SELECT * FROM 'hf://datasets/ibm/duorc/ParaphraseRC/*.parquet' LIMIT 3;
+```
+
+**URL format:**
+```
+hf://datasets/{username}/{dataset}/{path}
+```
+
+Supports **glob patterns** (`*`, `**`) for querying multiple parquet files.
+
+**Using the auto-converted Parquet branch (`@~parquet`):**
+```sql
+FROM 'hf://datasets/ibm/duorc@~parquet/ParaphraseRC/test/0000.parquet' LIMIT 5;
+```
+
+The `@~parquet` revision references the `refs/convert/parquet` branch where auto-converted Parquet files live — this is the same data powering the Data Studio.
+
+### 12. `hf datasets sql` CLI Command
+
+The Hugging Face CLI (`hf`) provides a direct wrapper:
+
+```bash
+# Run SQL query from terminal
+hf datasets sql "FROM 'hf://datasets/ibm/duorc/ParaphraseRC/*.parquet' LIMIT 3"
+
+# JSON format for machine-readable output
+hf datasets sql "FROM 'hf://datasets/ibm/duorc/ParaphraseRC/*.parquet' LIMIT 3" --format json
+```
+
+**Advantages:**
+- Authentication for gated/private datasets is **automatic** (from logged-in HF token)
+- No need to manually manage `hf://` auth headers
+- Output formats: default (table) and JSON
+
+### 13. Storage Buckets Integration
+
+When using the DuckDB Python client, you can query data stored in Storage Buckets:
+
+```python
+import duckdb
+from huggingface_hub import HfFileSystem
+
+duckdb.register_filesystem(HfFileSystem())
+duckdb.sql("SELECT * FROM 'hf://buckets/username/my-bucket/data.parquet' LIMIT 10")
+```
+
+Note: Native `hf://buckets/` support in the DuckDB CLI is expected in a future release. For now, use the Python client with `HfFileSystem`.
+
+### 14. DuckDB Capabilities for Datasets
+
+| Feature | Supported | Example |
+|---|---|---|
+| **Full SQL queries** | ✅ | SELECT, WHERE, JOIN, GROUP BY, ORDER BY |
+| **Window functions** | ✅ | ROW_NUMBER(), RANK(), LAG(), LEAD() |
+| **Vector similarity** | ✅ | `array_cosine_similarity()` for embedding search |
+| **Full-text search** | ✅ | `stem()` + GIN index via FTS extension |
+| **Aggregation** | ✅ | COUNT, SUM, AVG, MIN, MAX, histogram |
+| **Regex** | ✅ | regexp_matches, regexp_extract, regexp_replace |
+| **JSON processing** | ✅ | json_extract, json_serialize_sql |
+| **List/array functions** | ✅ | list_sort, list_distinct, array_cosine_similarity |
+| **Export formats** | ✅ | Parquet, CSV (download from SQL Console) |
+
+### 15. Limitations & Considerations
+
+| Limitation | Impact |
+|---|---|
+| **Browser memory-bound** | Very large datasets (10M+ rows) may slow the browser tab |
+| **First 5GB only** | For >5GB non-Parquet datasets, only first 5GB is auto-converted for querying |
+| **No write-back** | SQL Console is read-only — results cannot be saved back to the Hub |
+| **DuckDB WASM only** | SQL Console uses DuckDB WASM (not native) — some advanced extensions may not be available |
+| **CUDA/GPU not available** | DuckDB in browser cannot use GPU acceleration |
+
+### 16. Best Practices
+
+1. **Use LIMIT liberally** — DuckDB in WASM is fast but browser memory limits apply
+2. **Prefer Parquet datasets** — Native Parquet datasets have full 100% query coverage (not just 5GB)
+3. **Save complex queries as embeds** — Create programmatic embeds via the API for reusable analyses
+4. **Use leakage detection on train/test splits** — Run the leakage detection query before publishing fine-tuned models
+5. **Combine `hf datasets sql` with shell pipelines** — Pipe JSON output to `jq` for further processing
+6. **Reference `@~parquet` for auto-converted datasets** — Ensures you query the same parquet files the Data Studio shows
+7. **Use histogram for quick column profiling** — Faster than writing aggregation queries for distribution analysis
+
+### Resources
+- Data Studio: https://huggingface.co/docs/hub/en/data-studio
+- SQL Console: https://huggingface.co/docs/hub/en/datasets-viewer-sql-console
+- DuckDB datasets: https://huggingface.co/docs/hub/en/datasets-duckdb
+- DuckDB SQL docs: https://duckdb.org/docs/sql/query_syntax/select
+- `hf datasets sql` CLI: https://huggingface.co/docs/huggingface_hub/package_reference/cli#hf-datasets-sql
+- SQL Snippets Space: https://huggingface.co/spaces/cfahlgren1/sql-snippets
+
+### Skill
+mlops/hf-data-studio-sql-console — Create new SKILL.md + references/hf-learnings.md
