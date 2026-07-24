@@ -307,4 +307,237 @@ For backward compatibility with pre-v4.45 models (when `PreTrainedModel` stopped
 - Docs: https://huggingface.co/docs/transformers/en/model_doc/auto
 - Source: https://github.com/huggingface/transformers/tree/main/src/transformers/models/auto
 
+## 2026-07-24: hf-transformers-inkling — Inkling by Thinking Machines Lab: 975B Multimodal MoE with Native Image/Audio/Text (Topic #198)
+
+### Summary
+Inkling (`thinkingmachines/Inkling`) is a **975B-parameter decoder-only multimodal Mixture-of-Experts transformer** released July 14, 2026 — the first large open model to natively accept **image, text, AND audio inputs** jointly. It uses 256 experts with top-6 routing + 2 shared experts (41B active), hybrid attention (5:1 sliding-window:global), relative attention instead of RoPE, short 1D convolution (SConv) for local processing, hierarchical MLP patchifier for vision, and discrete mel-spectrogram encoding for audio. Supports 1M context, Multi-Token Prediction (MTP) drafters for speculative decoding, and ships in BF16 (2TB VRAM) and NVFP4 (600GB VRAM). Day-0 support in transformers 5.14.0 (`AutoModelForMultimodalLM`), vLLM, SGLang, llama.cpp. Available via HF Inference Providers (Together, DeepInfra). Apache 2.0 license.
+
+### Source
+- Blog announcement: https://huggingface.co/blog/thinkingmachines-inkling
+- Model: https://huggingface.co/thinkingmachines/Inkling
+- NVFP4 quant: https://huggingface.co/thinkingmachines/Inkling-NVFP4
+- Model card: https://huggingface.co/thinkingmachines/Inkling/raw/main/README.md
+- Playground: https://tinker.thinkingmachines.ai/playground
+- Cookbook: https://github.com/thinking-machines-lab/tinker-cookbook
+- Transformers v5.14.0 release (same day): `pip install -U transformers`
+
+### 1. Model Overview
+
+| Property | Value |
+|----------|-------|
+| **Total params** | 975B (BF16), ~952B safetensors |
+| **Active params** | 41B |
+| **Architecture** | Decoder-only multimodal MoE transformer |
+| **Layers** | 66 |
+| **Experts** | 256, top-6 routed + 2 shared always active |
+| **Context window** | 1M tokens |
+| **Attention** | Hybrid: 5 sliding-window layers per 1 global attention layer |
+| **Position encoding** | Relative attention (learned position logits, NOT RoPE) |
+| **Vocab** | 200,064 tokens |
+| **Precision** | BF16 (full) + NVFP4 (quantized) |
+| **License** | Apache 2.0 |
+| **Pipeline tag** | `image-text-to-text` (HF), also `audio-text-to-text` |
+| **Libraries** | transformers 5.14.0+, vLLM, SGLang, llama.cpp, Unsloth |
+| **Auto class** | `AutoModelForMultimodalLM` (NEW in transformers 5.14.0) |
+| **Processor** | `AutoProcessor` |
+| **Training data** | 45T tokens (text, images, audio, video) |
+
+### 2. Key Architectural Innovations
+
+#### Relative Attention (No RoPE)
+Unlike most modern LLMs that use Rotary Position Embeddings (RoPE), Inkling uses **relative attention** — each attention layer learns position directly in the attention logits via a fourth projection producing per-token, per-head relative feature `R`. This tensor is modulated by distance between key and query vectors before propagating into the attention module. This avoids the fixed-frequency constraints of RoPE and allows the model to handle variable-length sequences more flexibly.
+
+#### Hybrid Attention: 5:1 Sliding Window:Global
+Decoder layers alternate between:
+- **Sliding window attention** — attends to a fixed local context window (efficient, O(n·w) compute)
+- **Global attention** — attends to the full 1M context (full O(n²) but infrequent)
+- Pattern: 5 sliding-window layers followed by 1 global attention layer
+- Final layer always uses global attention for rich feature representations
+
+#### Short 1D Convolution (SConv)
+A distinctive architectural element: a short 1D convolution (`nn.Conv1d`) over hidden states that reads the current token plus `k` previous tokens (where `k` is the sliding window size). SConv handles local pattern extraction, freeing the attention and MoE modules from learning local representations.
+
+#### Vision: Hierarchical MLP Patchifier
+No separate vision encoder (like CLIP/SigLIP). Instead:
+- Simple hierarchical MLP consisting of several linear layers
+- Each layer progressively merges pixels
+- Final layer produces one embedding per patch
+- Additional temporal dimension for video (video capability not evaluated out-of-box, intended for fine-tuning)
+- The patch grid is folded — small local blocks of neighboring tokens stacked into the channel dimension, processed through hMLP
+
+#### Audio: Discrete Mel-Spectrogram Encoding
+- Audio waveform converted to mel scale
+- Each 100ms chunk classified into discrete mel spectrogram bin
+- Mel bin values embedded and summed to construct final audio input
+- No separate audio encoder — lightweight embedding approach
+
+### 3. Multi-Token Prediction (MTP) Drafters
+
+Inkling includes built-in MTP drafters for speculative decoding. MTP (Multi-Token Prediction) is already covered in the transformers 5 cache system (`MtpCache`), but Inkling's implementation is notable because:
+
+- Drafters predict multiple future tokens in parallel
+- Used as the draught model in speculative decoding
+- The main model (975B) verifies the draft tokens
+- Significant speedup on long generations (2-3x throughput improvement)
+- Enabled via `model.generate(use_mtp=True, num_assistant_tokens=N)`
+
+### 4. transformers 5.14.0 Integration
+
+Inkling's release coincided with transformers v5.14.0 which introduced `AutoModelForMultimodalLM` — a NEW auto class for multimodal models that accept >1 input modality.
+
+```python
+from transformers import pipeline
+
+# High-level: pipeline
+pipe = pipeline("image-text-to-text", model="thinkingmachines/Inkling")
+result = pipe([
+    {"type": "image", "url": "https://.../photo.jpg"},
+    {"type": "text", "text": "Describe this image"}
+])
+
+# Low-level: Auto classes
+from transformers import AutoProcessor, AutoModelForMultimodalLM
+
+processor = AutoProcessor.from_pretrained("thinkingmachines/Inkling")
+model = AutoModelForMultimodalLM.from_pretrained(
+    "thinkingmachines/Inkling",
+    device_map="auto",
+    torch_dtype="auto",
+)
+
+# Multimodal chat template
+messages = [
+    {"role": "user", "content": [
+        {"type": "image", "url": "https://.../photo.jpg"},
+        {"type": "text", "text": "What's in this image?"}
+    ]}
+]
+
+inputs = processor.apply_chat_template(
+    messages,
+    add_generation_prompt=True,
+    return_dict=True,
+    return_tensors="pt",
+).to(model.device)
+
+outputs = model.generate(**inputs, max_new_tokens=200)
+response = processor.decode(outputs[0][inputs["input_ids"].shape[-1]:])
+print(processor.parse_response(response))
+```
+
+#### Reasoning Effort Parameter
+Inkling's chat template includes a unique `reasoning_effort` parameter (float 0.0–0.99) that controls inference-time compute:
+- Passed through `apply_chat_template(reasoning_effort=0.9)`
+- Added as system message: `Thinking effort level: 0.9`
+- Higher values → more thorough reasoning chains (slower but more accurate)
+- Can also use string aliases in generation config
+
+#### Audio Inference
+```python
+messages = [
+    {"role": "user", "content": [
+        {"type": "audio", "url": "https://.../recording.wav"},
+        {"type": "text", "text": "Transcribe this audio"}
+    ]}
+]
+# Same apply_chat_template + generate pattern
+```
+
+### 5. NVFP4 Quantization
+
+The NVFP4 variant (`thinkingmachines/Inkling-NVFP4`) is NVIDIA's 4-bit floating-point format (not integer quantization):
+- Reduces VRAM from ~2TB (BF16) to ~600GB
+- Well-calibrated — minimal accuracy regression vs BF16
+- Requires Blackwell-generation NVIDIA GPUs (B200, B100)
+- Uses the same architecture and can be loaded with the same transformers classes
+- Available via HF Inference Providers on compatible hardware
+
+### 6. Inference Providers & Serving
+
+| Provider | Model ID | Live | Tool Calling | Structured Output | Tokens/s | Cost (per M output tokens) |
+|----------|----------|------|--------------|-------------------|----------|---------------------------|
+| **Together** | `thinkingmachines/Inkling` | ✅ | ✅ | ✅ | ~82.8 | $4.05 |
+| **DeepInfra** | `thinkingmachines/Inkling` | ✅ | ❌ | ❌ | ~118.0 | $4.05 |
+
+Both providers serve the BF16 variant. Together supports tool calling and structured output; DeepInfra offers higher throughput (118 tok/s) but no tool/structured output.
+
+#### Local Deployment
+```bash
+# vLLM
+pip install vllm
+vllm serve "thinkingmachines/Inkling"
+
+# SGLang
+pip install sglang
+python3 -m sglang.launch_server --model-path "thinkingmachines/Inkling" --host 0.0.0.0
+
+# llama.cpp (with GGUF quants)
+# See huggingface.co/thinkingmachines for GGUF variants
+
+# Docker (via ghcr.io)
+docker model run hf.co/thinkingmachines/Inkling
+```
+
+### 7. Agentic & Tool-Use Capabilities
+
+Inkling supports:
+- **Tool calling** via chat template (JSON-based tool declarations)
+- **MCP** (Model Context Protocol) integration — scored 74.1% on MCP Atlas benchmark
+- **Agentic coding** — SWE-bench Verified 77.6%, SWE-bench Pro 54.3%
+- **Pi-powered agentic coding** (blog mentions native integration with Pi coding agent)
+
+The chat template includes special tokens for tool use:
+- `<|content_invoke_tool_json|>` — marks tool invocation beginning
+- `<|content_tool|>` — tool response format
+- Tools declared via system message with `tool_declare<|content_xml|>` tokens
+
+### 8. Benchmark Results (effort=0.99)
+
+| Category | Benchmark | Score | vs Frontier |
+|----------|-----------|-------|-------------|
+| **Reasoning** | AIME 2026 | 97.1% | #1 on leaderboard |
+| **Reasoning** | GPQA Diamond | 87.2% | Competitive with GPT-5.6 Sol (94.1%) |
+| **Reasoning** | HLE (text only) | 29.7% | Below frontier (53.3%) |
+| **Reasoning** | HLE (with tools) | 46.0% | Improved with tool use |
+| **Coding** | SWE-bench Verified | 77.6% | Better than Nemotron 3 Ultra (70.7%) |
+| **Coding** | SWE-bench Pro | 54.3% | Mid-tier |
+| **Agentic** | MCP Atlas | 74.1% | Strong, beats most open models |
+| **Vision** | MMMU Pro | 73.5% | Strong for first multimodal release |
+| **Vision** | Charxiv RQ | 78.1% | Competitive |
+| **Audio** | MMAU | 77.2% | Strong (first model to report audio benchmarks) |
+| **Audio** | VoiceBench | 91.4% | Very strong |
+| **Safety** | StrongREJECT | 98.6% | Excellent refusal rate |
+| **Factuality** | BrowseComp (w/ Ctx) | 77.1% | Competitive |
+
+### 9. Key Takeaways for Practitioners
+
+1. **Inkling is the first truly multimodal open model** — not just vision+text but also audio, all natively in one architecture without separate encoder modules for each modality.
+2. **Requires heavy hardware** — 2TB VRAM for BF16, 600GB for NVFP4 (Blackwell GPUs needed). Realistically, use HF Inference Providers (Together/DeepInfra) or GGUF quants with llama.cpp.
+3. **AutoModelForMultimodalLM** is the new transformers 5.14.0 auto class for any model accepting multiple input modalities. This will become the standard for future multimodal models.
+4. **NVFP4 is the quantization format of choice** for Blackwell GPUs — 4-bit float, not integer, maintains calibration well.
+5. **Relative attention (no RoPE)** is a notable design choice — the model learns position directly in attention logits via a fourth projection, breaking from the RoPE convention used by Llama, Qwen, DeepSeek, etc.
+6. **Reasoning_effort parameter** provides fine-grained control over inference compute — useful for cost/performance trade-offs.
+7. **MTP drafters are built-in** for speculative decoding speedup — no separate draught model needed.
+
+### 10. Comparison with Previous Topics
+
+This builds on prior learnings:
+- **hf-transformers-5-architecture-deep-dive** (#100-101): Transformers v5 architecture registry, `register_for_auto_class`
+- **hf-transformers-moe-deep-dive** (#68): MoE architectures in transformers — Inkling is the most advanced MoE model supported
+- **hf-transformers-speculative-decoding-deep-dive-v3** (#167): MTP and speculative decoding — Inkling implements MTP drafters natively
+- **hf-transformers-kv-cache-architecture** (#65, #126): Cache hierarchy — Inkling uses the 5.x cache system with MtpCache
+- **hf-vllm-transformers-modeling-backend-native** (#179): vLLM native modeling — Inkling supported day-0
+- **hf-inference-providers-multi-provider-routing** (#26): Multi-provider inference — Inkling available on Together + DeepInfra
+
+### Sources
+- HF Blog: https://huggingface.co/blog/thinkingmachines-inkling
+- Model: https://huggingface.co/thinkingmachines/Inkling
+- Model card (raw): https://huggingface.co/thinkingmachines/Inkling/raw/main/README.md
+- NVFP4: https://huggingface.co/thinkingmachines/Inkling-NVFP4
+- Tinker Cookbook: https://github.com/thinking-machines-lab/tinker-cookbook
+- SGLang recipe: https://docs.sglang.io/cookbook/autoregressive/ThinkingMachines/Inkling
+- vLLM recipe: https://recipes.vllm.ai/thinkingmachines/Inkling
+- Unsloth recipe: https://unsloth.ai/docs/models/inkling
+- Transformers 5.14.0 release: `pip install -U transformers`
+|
 |
