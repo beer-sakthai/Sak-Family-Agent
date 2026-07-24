@@ -3290,3 +3290,891 @@ Comprehensive deep-dive into the Hugging Face Hub Collections API — covering a
 - Source: `huggingface_hub/hf_api.py` lines 9908–10400
 - Hub docs: https://huggingface.co/docs/hub/en/collections
 - Collections page: https://huggingface.co/collections
+
+---
+
+## 2026-07-24: hf-hub-python-api-v2 — Complete HfApi v1.x Reference (Topic #6 — Deep Dive v2)
+
+### Summary
+Comprehensive deep-dive into the **`huggingface_hub` Python library (v1.24.0)** — 161 public `HfApi` methods covering the complete Hugging Face Hub API surface. This is a v2 deep dive of Topic #6 (originally covered early in the learning cycle) and focuses on the **v1.x architecture** which introduced major new features: Buckets object storage, Webhooks API, Hub Jobs, Scheduled UV Jobs, Branches/Tags API, Discussion API, Access Request management, LFS management, Safetensors metadata inspection, Daily Papers API, and expanded Space management (25 methods). All methods also available as top-level functions in `huggingface_hub`.
+
+### v1.x vs 0.x — Key Differences
+
+| Area | 0.x (old) | 1.x (current) |
+|------|-----------|---------------|
+| **API class** | `HfApi` (limited methods) | `HfApi` (161 methods) |
+| **Object storage** | Git + LFS only | **Buckets** (`hf://buckets/...`) — Git-free, S3-compatible |
+| **Jobs** | None | `run_job`, `run_uv_job`, `create_scheduled_job`, `create_scheduled_uv_job` |
+| **Webhooks** | None | Full CRUD: `create_webhook`, `get_webhook`, `update_webhook`, `delete_webhook`, etc. |
+| **Collections** | Manual REST only | 8 methods: `list_collections`, `get_collection`, `create_collection`, etc. |
+| **Discussions** | None | 8 methods: `create_discussion`, `comment_discussion`, `get_discussion_details`, etc. |
+| **Branches/Tags** | `main` only | `create_branch`, `delete_branch`, `create_tag`, `delete_tag`, `list_repo_refs` |
+| **Access requests** | None | 7 methods for gated repo access management |
+| **LFS management** | None | `list_lfs_files`, `permanently_delete_lfs_files`, `verify_repo_checksums` |
+| **Space management** | Minimal (`space_info`) | 25 methods — secrets, variables, storage, volumes, dev mode, sleep, etc. |
+| **Safetensors metadata** | None | `get_safetensors_metadata`, `parse_safetensors_file_metadata` |
+| **Large uploads** | `upload_folder` | + `upload_large_folder` (resumable, parallel, with progress reports) |
+| **Repo refactoring** | None | `move_repo`, `duplicate_repo`, `super_squash_history`, `update_repo_settings` |
+| **License** | apache-2.0 | apache-2.0 (unchanged) |
+
+### Core Architecture
+
+The `huggingface_hub` library provides three interfaces to the same REST API:
+
+1. **`HfApi` class** — The full-featured Python API. Instantiate once, reuse.
+2. **Top-level functions** — Convenience wrappers (e.g., `upload_file()` calls `HfApi().upload_file()`).
+3. **`hf` CLI** — Shell-level access for scripting.
+
+All three authenticate via `HF_TOKEN` env var, cached token file, or explicit `token=` parameter.
+
+#### HfApi Initialization
+
+```python
+from huggingface_hub import HfApi
+
+# Default (reads HF_TOKEN env var)
+api = HfApi()
+
+# Custom endpoint and token
+api = HfApi(
+    endpoint="https://huggingface.co",  # or a HF Enterprise endpoint
+    token="hf_...",                      # explicit token
+    library_name="my-app",               # telemetry
+    library_version="1.0",
+    user_agent="MyApp/1.0",
+)
+```
+
+**Token precedence:** `token=` param > `HF_TOKEN` env > cached token in `~/.cache/huggingface/token`.
+
+### 1. Repository CRUD (6 methods)
+
+```python
+# Create
+url = api.create_repo("my-model", repo_type="model", private=True, exist_ok=True)
+
+# Info (returns RepoInfo with all metadata)
+info = api.repo_info("user/my-model", repo_type="model", expand=["trendingScore", "inference"])
+
+# Exists
+exists = api.repo_exists("user/my-model", repo_type="dataset")
+
+# Settings (update description, private status, etc.)
+api.update_repo_settings("user/my-model", description="Updated description",
+                          private=True, gated="auto")
+
+# Move (rename/transfer)
+api.move_repo("old-user/model", "new-user/model")
+
+# Duplicate (clone across namespaces)
+url = api.duplicate_repo("source-user/model", "my-model", repo_type="model",
+                          exist_ok=True)
+
+# Delete (irreversible)
+api.delete_repo("user/my-model", repo_type="model", missing_ok=True)
+
+# Squash history into one commit
+api.super_squash_history("user/my-model", commit_message="Initial release")
+```
+
+**`duplicate_repo`** — incredibly useful for model/dataset/space cloning. Supports passing `hardware`, `storage`, `sleep_time`, `secrets`, `variables` for Space duplication. This is the programmatic equivalent of the Hub UI's "Duplicate Space" button.
+
+**`super_squash_history`** — collapses an entire repo's commit history into a single commit. Useful for repos with bloated Git histories from many small uploads. Works on models, datasets, and Spaces. Branch-optional (defaults to `main`).
+
+### 2. File Operations (22 methods)
+
+#### Commit Operations — The Foundation
+
+All file modifications flow through `create_commit()` with three operation types:
+
+```python
+from huggingface_hub import CommitOperationAdd, CommitOperationDelete, CommitOperationCopy
+
+# Add files
+ops = [
+    CommitOperationAdd(path_in_repo="config.json", path_or_fileobj=b'{"key": "val"}'),
+    CommitOperationAdd(path_in_repo="model.safetensors", path_or_fileobj="./local/model.safetensors"),
+]
+
+# Delete files
+ops.append(CommitOperationDelete(path_in_repo="old_weights.bin"))
+
+# Copy files (server-side — no download/upload needed)
+ops.append(CommitOperationCopy(
+    src_path_in_repo="backup/config.json",
+    path_in_repo="config.json",
+    src_revision="backup-branch"  # optional, same repo by default
+))
+
+# Server-side cross-repo copy
+ops.append(CommitOperationCopy(
+    src_path_in_repo="tokenizer.json",
+    path_in_repo="tokenizer.json",
+    src_repo_id="other-user/source-model",
+    src_repo_type="model",
+    src_revision="main"
+))
+
+# Execute
+commit = api.create_commit(
+    repo_id="user/my-model",
+    operations=ops,
+    commit_message="Update config and clean up",
+    commit_description="Multi-operation commit",
+    repo_type="model",
+    revision="main",
+    create_pr=False,           # Set True to open a PR instead
+    num_threads=5,             # Parallel LFS uploads
+    parent_commit=None,        # Optimistic locking: enforce linear history
+)
+```
+
+**Critical constraints:**
+- Max **25,000 LFS files** per commit
+- Max **1 GB** payload for regular (non-LFS) files
+- The `operations` list **will be mutated** — do not reuse objects
+- Empty `commit_message` raises `ValueError`
+- `parent_commit` provides optimistic locking — set to the current HEAD OID to prevent conflicts
+
+#### High-Level Upload/Download Wrappers
+
+```python
+# Upload single file
+api.upload_file(
+    path_or_fileobj=b"content",
+    path_in_repo="config.json",
+    repo_id="user/my-model",
+    repo_type="model",
+)
+
+# Upload entire folder
+api.upload_folder(
+    folder_path="./model_output/",
+    repo_id="user/my-model",
+    repo_type="model",
+    allow_patterns=["*.safetensors", "*.json"],
+    ignore_patterns=["*.tmp", "__pycache__/*"],
+    commit_message="Upload model outputs",
+    delete_patterns=["old_*.bin"],  # delete matching files first
+)
+
+# Upload large folders (resumable, parallel, progress reporting)
+api.upload_large_folder(
+    repo_id="user/my-model",
+    folder_path="./large-model/",
+    repo_type="model",
+    num_workers=8,            # parallel threads
+    print_report=True,        # progress every 60s
+    print_report_every=30,    # seconds between reports
+    allow_patterns=["*.safetensors"],
+)
+
+# Download single file
+path = api.hf_hub_download(
+    repo_id="user/my-model",
+    filename="config.json",
+    revision="main",
+    local_dir="./models/my-model/",
+    local_dir_use_symlinks=False,  # True = symlink to cache
+    cache_dir="/custom/cache/path",
+    force_download=False,
+    resume_download=True,
+)
+
+# Download snapshot (entire repo)
+local_path = api.snapshot_download(
+    repo_id="user/my-model",
+    revision="main",
+    allow_patterns=["*.safetensors", "*.json"],
+    ignore_patterns=["*.bin", "*.pt"],
+    local_dir="./models/my-model/",
+    cache_dir=None,  # None = download directly to local_dir
+)
+
+# Check file existence
+exists = api.file_exists("user/my-model", "config.json", repo_type="model")
+
+# Get file metadata (size, commit info, LFS status, last modified)
+meta = api.get_hf_file_metadata(
+    url="https://huggingface.co/user/my-model/resolve/main/config.json"
+)
+print(f"Size: {meta.size}, Commit: {meta.commit_hash}, LFS: {meta.lfs}")
+```
+
+**`upload_large_folder` vs `upload_folder`:**
+- `upload_large_folder` is designed for **hundreds/thousands of large files** — uses multiple workers, prints periodic progress, handles retries
+- `upload_folder` is simpler and synchronous — good for smaller uploads (<100 files, <1GB)
+
+#### File Listing & Tree Inspection
+
+```python
+# List files at root
+files = api.list_repo_files("user/my-model", repo_type="model")
+
+# List files with tree structure (recursive, with folder metadata)
+tree = list(api.list_repo_tree(
+    "user/my-model",
+    path_in_repo="checkpoints/",
+    recursive=True,
+    expand=True,  # include file sizes and commit info
+    revision="main",
+    repo_type="model",
+))
+for item in tree:
+    if isinstance(item, RepoFile):
+        print(f"FILE: {item.path} ({item.size} bytes, LFS={item.lfs})")
+    elif isinstance(item, RepoFolder):
+        print(f"DIR:  {item.path}")
+
+# Get paths info for specific files
+paths = api.get_paths_info(
+    "user/my-model",
+    paths=["config.json", "model.safetensors", "nonexistent.txt"],
+    expand=True,
+    repo_type="model",
+)
+```
+
+### 3. Bucket API — Object Storage (11 methods)
+
+Buckets are the **biggest new feature** in v1.x — Git-free, S3-compatible object storage.
+
+```python
+# Create a bucket
+bucket_url = api.create_bucket("my-bucket", private=True, exist_ok=True)
+# Returns: BucketUrl("hf://buckets/user/my-bucket")
+
+# List all buckets
+all_buckets = list(api.list_buckets(search="my-"))
+
+# List files in a bucket (tree)
+files = list(api.list_bucket_tree("user/my-bucket", recursive=True))
+
+# Get bucket info (metadata, policy, storage used)
+info = api.bucket_info("user/my-bucket")
+
+# Get metadata for a specific file
+meta = api.get_bucket_file_metadata("user/my-bucket", "data/file.parquet")
+
+# Move/rename bucket
+api.move_bucket("user/old-name", "user/new-name")
+
+# Delete bucket (irreversible)
+api.delete_bucket("user/my-bucket", missing_ok=True)
+
+# Batch operations (add, copy, delete in one call)
+api.batch_bucket_files(
+    "user/my-bucket",
+    add=[(b"content", "new_file.txt"), ("./local/data.parquet", "data.parquet")],
+    copy=[("user/source-bucket", "file.txt", "user/my-bucket", "backup/file.txt")],
+    delete=["old_file.txt"],
+)
+
+# Sync local ↔ bucket (bidirectional)
+plan = api.sync_bucket(
+    source="./data/",
+    dest="hf://buckets/user/my-bucket",
+    delete=True,        # delete remote files not in source
+    dry_run=True,       # preview before applying
+)
+# Returns SyncPlan — inspect and then call sync_bucket again with --apply
+
+# Download specific files from bucket
+api.download_bucket_files(
+    "user/my-bucket",
+    files=[("remote/data.csv", "./local/data.csv")],
+)
+
+# Get paths info for arbitrary paths
+paths = list(api.get_bucket_paths_info(
+    "user/my-bucket",
+    paths=["file1.txt", "file2.txt", "subdir/"],
+))
+```
+
+**Bucket sync workflow:**
+```python
+# Step 1: Plan
+plan = api.sync_bucket("./data", "hf://buckets/user/my-bucket", dry_run=True)
+print(f"Files to upload: {len(plan.to_add)}, to delete: {len(plan.to_delete)}")
+
+# Step 2: Apply (no dry_run)
+result = api.sync_bucket("./data", "hf://buckets/user/my-bucket", delete=True)
+```
+
+### 4. Space Management (25 methods)
+
+The most method-rich area of the API. All operations for managing Spaces programmatically.
+
+```python
+# Read operations
+info = api.space_info("user/my-space")
+runtime = api.get_space_runtime("user/my-space")
+print(f"Stage: {runtime.stage}, Hardware: {runtime.hardware}, SDG: {runtime.sdk}")
+
+# Secrets management
+api.add_space_secret("user/my-space", "API_KEY", "sk-...")
+api.add_space_variable("user/my-space", "MODEL_NAME", "gpt-4o")
+secrets = api.get_space_secrets("user/my-space")   # returns dict of SpaceSecret
+vars = api.get_space_variables("user/my-space")     # returns dict of SpaceVariable
+api.delete_space_secret("user/my-space", "API_KEY")
+api.delete_space_variable("user/my-space", "MODEL_NAME")
+
+# Hardware & storage
+api.request_space_hardware("user/my-space", SpaceHardware.T4_MEDIUM, sleep_time=300)
+api.request_space_storage("user/my-space", SpaceStorage.SMALL)  # +50GB persistent
+api.delete_space_storage("user/my-space")                        # remove persistent storage
+api.set_space_sleep_time("user/my-space", sleep_time=900)       # 15 min inactivity timeout
+api.set_space_volumes("user/my-space", volumes=[Volume(...)])
+api.delete_space_volumes("user/my-space")
+
+# Lifecycle
+api.pause_space("user/my-space")
+api.restart_space("user/my-space", factory_reboot=True)  # full factory reset
+api.enable_space_dev_mode("user/my-space")
+api.disable_space_dev_mode("user/my-space")
+
+# Logs
+logs = list(api.fetch_space_logs("user/my-space", build=False, follow=False))
+
+# Discovery
+for space in api.list_spaces(author="user", sort="trending", limit=10):
+    print(f"{space.id}: {space.likes} likes")
+
+results = list(api.search_spaces("flux", sdk="gradio"))
+
+templates = list(api.list_space_templates())
+
+# Management & Duplication
+url = api.duplicate_space(
+    "source-user/template-space",
+    "my-new-space",
+    hardware=SpaceHardware.T4_MEDIUM,
+    storage=SpaceStorage.SMALL,
+    sleep_time=300,
+    secrets=[{"key": "API_KEY", "value": "sk-..."}],
+    variables=[{"key": "MODEL", "value": "flux.1-dev"}],
+    exist_ok=True,
+)
+
+# Wait for Space to be running
+runtime = api.wait_for_space("user/my-space", timeout=300, poll_interval=5)
+print(f"Space is {runtime.stage}")
+```
+
+**Hardware tiers** (`SpaceHardware` constants): `CPU`, `CPU_UPGRADE`, `T4_SMALL`, `T4_MEDIUM`, `A10G_SMALL`, `A10G_LARGE`, `A100_LARGE`, `H100`, `ZERO_GPU`.
+
+**Storage tiers** (`SpaceStorage` constants): `SMALL` (50GB), `MEDIUM`, `LARGE`.
+
+### 5. Hub Jobs — Run Compute on HF Infrastructure (20 methods)
+
+HF Hub Jobs let you run containerized and Python script workloads directly on HF infrastructure.
+
+#### Quick Script Jobs (UV Jobs — most practical)
+
+```python
+# Run a Python script with dependencies — zero setup
+job = api.run_uv_job(
+    script="""
+import requests, json
+r = requests.get('https://huggingface.co/api/models?sort=downloads&limit=5')
+results = r.json()
+for m in results:
+    print(f\"{m['id']}: {m['downloads']} downloads\")
+""",
+    dependencies=["requests"],
+    python="3.12",
+    timeout=300,
+    name="top-models-poller",
+)
+job_id = job.job_id
+
+# Wait for completion
+finished = api.wait_for_job(job_id, timeout=600)
+print(f"Status: {finished.status}")
+
+# Fetch logs
+logs = list(api.fetch_job_logs(job_id=job_id))
+for line in logs:
+    print(line)
+```
+
+#### Container-Based Jobs
+
+```python
+# Full container job
+job = api.run_job(
+    image="python:3.12-slim",
+    command=["python", "-c", "print('hello from HF job')"],
+    flavor="cpu",            # or "t4", "a10g", etc.
+    timeout=300,
+    name="my-job",
+    secrets={"MY_SECRET": "..."},
+)
+
+# Scheduled job (cron)
+cron_job = api.create_scheduled_job(
+    image="python:3.12-slim",
+    command=["python", "/app/script.py"],
+    schedule="0 */6 * * *",   # every 6 hours
+    flavor="cpu",
+    timeout=3600,
+    name="daily-pipeline",
+    env={"ENV": "production"},
+    labels={"project": "monitoring"},
+)
+
+# Scheduled UV job (python script with dependencies)
+cron_uv = api.create_scheduled_uv_job(
+    script="print('hello world')",
+    dependencies=["requests", "torch"],
+    schedule="0 0 * * *",     # daily at midnight
+    python="3.12",
+    timeout=600,
+    name="daily-report",
+)
+
+# List & manage jobs
+for job in api.list_jobs(status="completed", namespace="user", timeout=3600):
+    print(f"{job.job_id}: {job.status}")
+
+scheduled = api.list_scheduled_jobs()
+
+# Lifecycle
+api.cancel_job(job_id="...")
+api.suspend_scheduled_job("...")
+api.resume_scheduled_job("...")
+api.trigger_scheduled_job("...")   # manual trigger
+
+# Inspect
+details = api.inspect_job(job_id="...")
+sched_details = api.inspect_scheduled_job("...")
+
+# Metrics & logs
+metrics = list(api.fetch_job_metrics(job_id="..."))
+logs = list(api.fetch_job_logs(job_id="...", tail=100))
+
+# Available hardware
+hardware = api.list_jobs_hardware()
+for hw in hardware:
+    print(f"{hw.flavor}: {hw.cpus} CPUs, {hw.memory}GB RAM")
+```
+
+**UV Jobs** are the most convenient for quick tasks — they auto-install dependencies, no Docker image needed. Perfect for cron-based data collection, model evaluation, API polling.
+
+### 6. Webhook API (7 methods)
+
+Full CRUD for Hub webhooks, which fire on repo events (push, PR, discussion, etc.).
+
+```python
+# Create webhook
+hook = api.create_webhook(
+    url="https://my-service.com/hf-webhook",
+    watched=[
+        {"type": "model", "id": "user/*"},     # all models under user
+        {"type": "dataset", "id": "specific-dataset"},
+    ],
+    domains=["repo", "discussion"],   # event types to listen for
+    secret="whsec_...",               # for payload verification
+)
+webhook_id = hook.id
+
+# Read
+hook_info = api.get_webhook(webhook_id)
+
+# Update
+api.update_webhook(
+    webhook_id,
+    url="https://my-service.com/v2/hf-webhook",
+    watched=[{"type": "model", "id": "user/*"}],
+)
+
+# Toggle
+api.enable_webhook(webhook_id)
+api.disable_webhook(webhook_id)
+
+# List all webhooks
+for hook in api.list_webhooks():
+    print(f"{hook.id}: {hook.url} (enabled={hook.enabled})")
+
+# Delete
+api.delete_webhook(webhook_id)
+```
+
+**Webhook domains:** `"repo"` (pushes, file changes), `"discussion"` (PRs, comments, issues), `"collection"` (collection events).
+
+**Watched items:** Use `"user/*"` to watch everything under a namespace, or specific repo IDs.
+
+### 7. Collections API (8 methods)
+
+```python
+# List collections with filters
+collections = list(api.list_collections(
+    owner="user",
+    item="user/my-model",
+    sort="lastModified",
+    limit=20,
+))
+
+# Get full collection (all items — list_collections truncates to 4)
+collection = api.get_collection("user/collection-slug")
+for item in collection.items:
+    print(f"{item.item_type}: {item.item_id} — {item.note}")
+
+# Create
+new_coll = api.create_collection(
+    title="My Curated Models",
+    namespace="user",            # org or username
+    description="Best models for X",  # max 150 chars
+    private=False,
+    exists_ok=True,
+)
+# NOTE: theme cannot be set on creation — use update_collection_metadata
+
+# Update
+api.update_collection_metadata(
+    "user/slug",
+    description="Updated description",
+    private=True,
+    theme="blue",
+)
+
+# Add items
+api.add_collection_item(
+    "user/slug",
+    item_id="user/model",
+    item_type="model",
+    note="Great for X task",     # max 500 chars
+    exists_ok=True,
+)
+
+# Modify items (uses item_object_id, not item_id)
+api.update_collection_item("user/slug", item_object_id="...", note="Updated note")
+
+# Delete items
+api.delete_collection_item("user/slug", item_object_id="...")
+
+# Delete collection
+api.delete_collection("user/slug", missing_ok=True)
+```
+
+**6 item types:** `"model"`, `"dataset"`, `"space"`, `"paper"`, `"collection"`, `"bucket"`.
+
+**Critical:** `list_collections` truncates items to 4 per collection. Always use `get_collection()` for full item details. Item modification/deletion uses the internal `item_object_id` (DB id), not the Hub repo ID.
+
+### 8. Discussions & Pull Requests (8 methods)
+
+```python
+# List discussions
+discussions = api.get_repo_discussions("user/my-model", repo_type="model")
+
+# Create a discussion (issue or PR)
+disc = api.create_discussion(
+    "user/my-model",
+    title="Add support for batch inference",
+    repo_type="model",
+    discussion_type="issue",     # or "pull_request"
+)
+
+# Comment
+api.comment_discussion("user/my-model", disc.num, comment="Great idea!")
+
+# Edit comment
+api.edit_discussion_comment("user/my-model", disc.num, comment_id="...",
+                              new_comment="Updated suggestion")
+
+# Hide comment (moderator only)
+api.hide_discussion_comment("user/my-model", disc.num, comment_id="...")
+
+# Rename discussion
+api.rename_discussion("user/my-model", disc.num, new_title="Better title")
+
+# Change status
+api.change_discussion_status("user/my-model", disc.num,
+                              new_status="closed", comment="Resolved")
+
+# Get details
+details = api.get_discussion_details("user/my-model", disc.num, repo_type="model")
+for event in details.events:
+    print(f"{event.type}: {event.created_at}")
+
+# Merge pull request (creates a commit)
+api.merge_pull_request("user/my-model", pr_number=42, comment="LGTM!")
+```
+
+### 9. Access Request Management — Gated Repos (7 methods)
+
+For repos with `gated="auto"` or `gated="manual"`:
+
+```python
+# List pending requests
+pending = api.list_pending_access_requests("user/gated-model", repo_type="model")
+
+# Accept
+for req in pending:
+    api.accept_access_request("user/gated-model", req.username, repo_type="model")
+
+# Reject
+api.reject_access_request("user/gated-model", "blocked-user", repo_type="model")
+
+# Cancel (by requestor)
+api.cancel_access_request("user/gated-model", repo_type="model")
+
+# List handled requests
+accepted = api.list_accepted_access_requests("user/gated-model")
+rejected = api.list_rejected_access_requests("user/gated-model")
+
+# Grant access directly (without a request)
+api.grant_access("user/gated-model", "user-to-grant", repo_type="model")
+```
+
+### 10. Branches & Tags (5 methods)
+
+```python
+# Create branch
+api.create_branch("user/my-repo", branch="experiment-fp8",
+                  repo_type="model")
+
+# Delete branch
+api.delete_branch("user/my-repo", branch="old-branch",
+                  repo_type="model")
+
+# Create tag
+api.create_tag("user/my-repo", tag="v1.0",
+               repo_type="model", revision="main")
+
+# Delete tag
+api.delete_tag("user/my-repo", tag="v1.0", repo_type="model")
+
+# List all refs (branches + tags + PRs)
+refs = api.list_repo_refs("user/my-repo", repo_type="model",
+                           include_pull_requests=True)
+for branch in refs.branches:
+    print(f"Branch: {branch.name} ({branch.target_commit[:8]})")
+for tag in refs.converted_tags:
+    print(f"Tag: {tag.name} → {tag.target_commit[:8]}")
+for tag in refs.tags:
+    print(f"Lightweight tag: {tag.name}")
+```
+
+### 11. LFS & Safetensors Management (5 methods)
+
+```python
+# List LFS files in repo
+lfs_files = list(api.list_lfs_files("user/my-model", repo_type="model"))
+for f in lfs_files:
+    print(f"{f.path}: {f.size} bytes, oid={f.oid[:12]}...")
+
+# Permanently delete LFS files (removes from history!)
+api.permanently_delete_lfs_files("user/my-model", repo_type="model",
+                                  paths=["old-large-file.bin"])
+
+# Verify checksums of downloaded files
+result = api.verify_repo_checksums("user/my-model", local_dir="./models/my-model/",
+                                    repo_type="model")
+print(f"Matched: {result.matched}/{result.total}, Failed: {result.failed}")
+
+# Get safetensors metadata (all tensors, dtypes, shapes)
+meta = api.get_safetensors_metadata("user/my-model", repo_type="model")
+for tensor_name, tensor_meta in meta.parameters.items():
+    print(f"{tensor_name}: shape={tensor_meta.shape}, dtype={tensor_meta.dtype}")
+
+# Parse safetensors file metadata without downloading full file
+file_meta = api.parse_safetensors_file_metadata(
+    "user/my-model", "model.safetensors", repo_type="model"
+)
+```
+
+### 12. Model, Dataset & Space Discovery (12 methods)
+
+```python
+# Models
+for model in api.list_models(
+    sort="downloads",
+    direction=-1,
+    limit=10,
+    pipeline_tag="text-generation",
+    expand=["inference", "trendingScore"],
+):
+    print(f"{model.id}: {model.downloads:,} downloads, "
+          f"likes={model.likes}, trending={getattr(model, 'trendingScore', 'N/A')}")
+
+# Tags
+model_tags = api.get_model_tags()   # all model tags with counts
+
+# Datasets
+for ds in api.list_datasets(sort="trending", limit=10):
+    print(f"{ds.id}: {ds.likes} likes, tags={ds.cardData.get('annotations_creators', [])}")
+
+ds_info = api.dataset_info("user/dataset", expand=["parquet"])
+# Check parquet availability
+if ds_info.cardData:
+    print(f"Configs: {ds_info.cardData.get('configs', [])}")
+
+# Daily Papers
+for paper in api.list_daily_papers(limit=10, sort="trending"):
+    print(f"{paper.title} — {paper.upvotes} upvotes")
+    print(f"  Authors: {', '.join(a['name'] for a in paper.authors)}")
+
+# Spaces
+for space in api.list_spaces(sdk="gradio", sort="likes", limit=10):
+    print(f"{space.id}: SDK={space.sdk}, runtime={space.runtime.stage}")
+
+# User info
+user = api.whoami()
+print(f"User: {user['name']}, Token: {user['auth']['type']}")
+
+# Liked / following
+likes = api.list_liked_repos("user")
+for like in likes.models:
+    print(f"Liked model: {like.id}")
+```
+
+### 13. Utility & Housekeeping (10 methods)
+
+```python
+# Get full repo name (resolves relative IDs)
+full = api.get_full_repo_name("my-model", organization="org-name")
+
+# Check revision existence
+exists = api.revision_exists("user/my-model", "main", repo_type="model")
+
+# List repo likers
+for user in api.list_repo_likers("user/my-model", repo_type="model"):
+    print(f"{user['user']}: {user['fullname']}")
+
+# List user repos
+for repo in api.list_user_repos("user", repo_type="model"):
+    print(f"{repo.repo_id}: {repo.type}")
+
+# List user followers/following
+for follower in api.list_user_followers("user"):
+    print(follower['user'])
+
+# Org info
+org = api.get_organization_overview("org-name")
+for member in api.list_organization_members("org-name"):
+    print(f"{member['user']} ({member.get('role', 'member')})")
+
+# Pre-upload LFS files (for memory-constrained environments)
+api.preupload_lfs_files(
+    repo_id="user/my-model",
+    operations=ops,
+    repo_type="model",
+)
+
+# List repo commits
+for commit in api.list_repo_commits("user/my-model", repo_type="model", limit=10):
+    print(f"{commit.oid[:8]}: {commit.title} ({commit.date})")
+
+# Run as future (non-blocking commit)
+future = api.run_as_future(
+    api.create_commit,
+    repo_id="user/my-model",
+    operations=ops,
+    commit_message="Async upload",
+)
+```
+
+### 14. Zero-Cost Patterns — Practical Recipes
+
+#### Recipe 1: Automated Model Card Update (cron-friendly)
+
+```python
+from huggingface_hub import HfApi
+api = HfApi()
+
+# Read existing model card
+info = api.model_info("user/my-model", expand=["cardData"])
+current_card = info.cardData or {}
+
+# Update card data
+current_card.update({
+    "metrics": [{"accuracy": 0.95}],
+    "widget": [{"text": "Sample input"}],
+})
+api.update_repo_settings("user/my-model", card_data=current_card)
+```
+
+#### Recipe 2: Daily Dataset Stats Collection (UV Job)
+
+```python
+# Run this daily via create_scheduled_uv_job
+import json
+from huggingface_hub import HfApi
+api = HfApi()
+
+results = []
+for model in api.list_models(sort="downloads", direction=-1, limit=50):
+    results.append({"id": model.id, "downloads": model.downloads, "likes": model.likes})
+
+# Store in a bucket
+api.create_bucket("daily-stats", exist_ok=True)
+import tempfile
+with tempfile.NamedTemporaryFile(mode='w', suffix='.json') as f:
+    json.dump({"date": "2026-07-24", "models": results}, f)
+    f.flush()
+    api.sync_bucket(f.name, "hf://buckets/user/daily-stats/top-models.json")
+```
+
+#### Recipe 3: Space Duplication with Configuration
+
+```python
+# Duplicate a Gradio Space with all secrets and storage
+url = api.duplicate_space(
+    "user/template-space",
+    "my-new-space",
+    hardware="t4-medium",
+    storage="small",
+    sleep_time=300,
+    secrets=[{"key": "HF_TOKEN", "value": "hf_..."}],
+    variables=[{"key": "MODEL_ID", "value": "user/my-model"}],
+    exist_ok=True,
+)
+api.wait_for_space("user/my-new-space")
+```
+
+#### Recipe 4: Bucket as Job Artifact Store
+
+```python
+# In a scheduled UV job
+from huggingface_hub import HfApi
+import json, tempfile
+
+api = HfApi()
+results = {"status": "ok", "count": 42, "generated_at": "2026-07-24T07:00:00Z"}
+
+with tempfile.NamedTemporaryFile(mode='w', suffix='.json') as f:
+    json.dump(results, f)
+    f.flush()
+    api.batch_bucket_files(
+        "artifact-bucket",
+        add=[(f.name, f"reports/daily-2026-07-24.json")],
+    )
+```
+
+### 15. All 161 HfApi Methods — Full Reference
+
+| Category | Count | Methods |
+|----------|-------|---------|
+| **Repository CRUD** | 6 | `create_repo`, `delete_repo`, `repo_info`, `repo_exists`, `update_repo_settings`, `move_repo`, `duplicate_repo`, `super_squash_history` |
+| **File Operations** | 22 | `create_commit`, `upload_file`, `upload_folder`, `upload_large_folder`, `hf_hub_download`, `snapshot_download`, `file_exists`, `get_hf_file_metadata`, `list_repo_files`, `list_repo_tree`, `list_repo_commits`, `get_paths_info`, `copy_files`, `delete_file`, `delete_files`, `delete_folder`, `preupload_lfs_files`, `parse_safetensors_file_metadata`, `get_safetensors_metadata`, `list_lfs_files`, `permanently_delete_lfs_files`, `verify_repo_checksums` |
+| **Buckets** | 12 | `create_bucket`, `bucket_info`, `delete_bucket`, `list_buckets`, `move_bucket`, `sync_bucket`, `batch_bucket_files`, `list_bucket_tree`, `download_bucket_files`, `get_bucket_file_metadata`, `get_bucket_paths_info`, `list_buckets` |
+| **Spaces** | 25 | `space_info`, `get_space_runtime`, `list_spaces`, `search_spaces`, `list_space_templates`, `add_space_secret`, `get_space_secrets`, `delete_space_secret`, `add_space_variable`, `get_space_variables`, `delete_space_variable`, `request_space_hardware`, `request_space_storage`, `delete_space_storage`, `set_space_volumes`, `delete_space_volumes`, `set_space_sleep_time`, `pause_space`, `restart_space`, `duplicate_space`, `enable_space_dev_mode`, `disable_space_dev_mode`, `fetch_space_logs`, `wait_for_space`, `list_spaces_hardware` |
+| **Jobs** | 20 | `run_job`, `run_uv_job`, `create_scheduled_job`, `create_scheduled_uv_job`, `list_jobs`, `list_scheduled_jobs`, `cancel_job`, `wait_for_job`, `fetch_job_logs`, `fetch_job_metrics`, `inspect_job`, `inspect_scheduled_job`, `suspend_scheduled_job`, `resume_scheduled_job`, `trigger_scheduled_job`, `delete_scheduled_job`, `update_job_labels`, `update_scheduled_job_labels`, `list_jobs_hardware`, `sync_job_volume` |
+| **Webhooks** | 7 | `create_webhook`, `get_webhook`, `update_webhook`, `delete_webhook`, `list_webhooks`, `enable_webhook`, `disable_webhook` |
+| **Collections** | 8 | `list_collections`, `get_collection`, `create_collection`, `update_collection_metadata`, `delete_collection`, `add_collection_item`, `update_collection_item`, `delete_collection_item` |
+| **Discussions** | 8 | `get_repo_discussions`, `create_discussion`, `comment_discussion`, `edit_discussion_comment`, `hide_discussion_comment`, `rename_discussion`, `change_discussion_status`, `merge_pull_request` |
+| **Access Requests** | 7 | `list_pending_access_requests`, `list_accepted_access_requests`, `list_rejected_access_requests`, `accept_access_request`, `reject_access_request`, `cancel_access_request`, `grant_access` |
+| **Branches & Tags** | 5 | `create_branch`, `delete_branch`, `create_tag`, `delete_tag`, `list_repo_refs` |
+| **Discovery** | 12 | `list_models`, `model_info`, `get_model_tags`, `list_datasets`, `dataset_info`, `get_dataset_tags`, `list_dataset_parquet_files`, `list_spaces`, `space_info`, `list_daily_papers`, `search_spaces`, `get_dataset_leaderboard` |
+| **User & Org** | 8 | `whoami`, `get_user_overview`, `list_user_followers`, `list_user_following`, `list_user_repos`, `get_organization_overview`, `list_organization_members`, `list_organization_followers` |
+| **Utilities** | 10 | `get_full_repo_name`, `revision_exists`, `list_repo_likers`, `list_liked_repos`, `run_as_future`, `auth_check`, `like`, `unlike`, `super_squash_history`, `verify_repo_checksums` |
+
+### Resources
+- Official API docs: https://huggingface.co/docs/huggingface_hub/en/index
+- HfApi reference: https://huggingface.co/docs/huggingface_hub/en/package_reference/hf_api
+- Migration guide: https://huggingface.co/docs/huggingface_hub/en/migration
+- CLI reference: https://huggingface.co/docs/huggingface_hub/en/guides/cli
+- Source code: `huggingface_hub/hf_api.py` — 161 public methods in v1.24.0
+- Changelog: https://github.com/huggingface/huggingface_hub/releases

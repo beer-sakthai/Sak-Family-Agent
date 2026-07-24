@@ -292,3 +292,31 @@ hf cp hf://buckets/user/my-bucket/log.txt -  # pipe to stdout
 - Source: `huggingface_hub/cli/_cp.py` — unified `hf cp` command
 - 🔗 Hugging Face Hub docs: https://huggingface.co/docs/hub/storage-buckets
 - 🔗 CLI reference: https://huggingface.co/docs/hub/en/cli/buckets
+
+---
+
+## 2026-07-24: hf-hub-python-api-v2 — Complete HfApi v1.x Reference (Topic #6 — Deep Dive v2)
+
+### Summary
+Comprehensive deep-dive into the **`huggingface_hub` Python library (v1.24.0)** — 161 public `HfApi` methods covering the complete Hugging Face Hub API surface. This is a v2 deep dive of Topic #6 (originally covered early in the learning cycle) and focuses on the **v1.x architecture** which introduced major new features: Buckets object storage, Webhooks API, Hub Jobs, Scheduled UV Jobs, Branches/Tags API, Discussion API, Access Request management, LFS management, Safetensors metadata inspection, Daily Papers API, and expanded Space management (25 methods).
+
+### v1.x vs 0.x — What Changed
+
+| Area | 0.x | 1.x |
+|------|-----|-----|
+| **API methods** | ~60 | **161** |
+| **Object storage** | Git + LFS only | **Buckets** (`hf://buckets/...`) — Git-free, S3-compatible |
+| **Jobs** | None | `run_job`, `run_uv_job`, `create_scheduled_job`, `create_scheduled_uv_job` |
+| **Webhooks** | None | Full CRUD (7 methods) |
+| **Collections** | Manual REST only | 8 methods |
+| **Discussions** | None | 8 methods |
+| **Branches/Tags** | `main` only | `create_branch`, `delete_branch`, `create_tag`, `delete_tag`, `list_repo_refs` |
+| **Access requests** | None | 7 methods for gated repo management |
+| **Space management** | Minimal (`space_info`) | 25 methods |
+| **LFS management** | None | `list_lfs_files`, `permanently_delete_lfs_files`, `verify_repo_checksums` |
+| **Safetensors metadata** | None | `get_safetensors_metadata`, `parse_safetensors_file_metadata` |
+| **Large uploads** | `upload_folder` only | + `upload_large_folder` (parallel, resumable, progress reports) |
+| **Repo refactoring** | None | `move_repo`, `duplicate_repo`, `super_squash_history` |
+
+### Full Reference
+See the main learnings file at `skills/references/hf-learnings.md` (appended under the same date/topic) for the complete comprehensive reference covering all 161 HfApi methods with code examples across all API categories: Repository CRUD, File Operations, Buckets, Spaces, Jobs, Webhooks, Collections, Discussions, Access Requests, Branches/Tags, LFS/Safetensors, Discovery, User/Org, and Zero-Cost recipes.
