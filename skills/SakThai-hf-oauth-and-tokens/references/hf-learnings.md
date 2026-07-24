@@ -1,5 +1,97 @@
 # HF Learnings — Cumulative Reference
 
+---
+
+## Entry 145: Fine-Grained Token Presets — Deep Dive (2026-07-24)
+**Date:** 2026-07-24
+**Topic:** `hf-token-presets-fine-grained-tokens-v3` — Fine-grained token preset system added Jul 14, 2026
+
+### What Changed
+
+On **Jul 14, 2026**, Hugging Face introduced **Token Presets** — a curated UI for creating fine-grained access tokens with pre-configured permission sets. Instead of manually fine-tuning individual permissions, users pick a preset that selects the appropriate scope group automatically.
+
+### The Five Presets
+
+| Preset | Token Role | Intended Use | Typical Permissions |
+|--------|-----------|-------------|-------------------|
+| **Read-Only** | `fine-grained` | Download models, read datasets, inference on public/gated repos | Read access to repos, inference calls |
+| **Inference** | `fine-grained` | Serverless inference calls via Inference Providers | Inference API access, no repo write |
+| **Write** | `fine-grained` | Push models/datasets, update Spaces | Read + write to repos the user/org owns |
+| **CI/CD** | `fine-grained` | Automated pipelines, GitHub Actions, GitLab CI | Write access scoped to specific repos, no user-level grants |
+| **Full Access** | `write` | Personal dev workflows, complete access | Everything the user can do |
+
+**Key design choice:** Only the Full Access preset uses the legacy `write` role. All other presets use the `fine-grained` role, which restricts scope to only what's needed.
+
+### Linkable Preset URLs
+
+Presets have URL query parameters, making them shareable:
+
+```
+# Direct to inference preset
+https://huggingface.co/settings/tokens/new?preset=inference
+
+# Read-only preset with organizations attached
+https://huggingface.co/settings/tokens/new?preset=read-only&orgs=huggingface
+
+# CI/CD preset (bind to specific repos)
+https://huggingface.co/settings/tokens/new?preset=ci-cd
+```
+
+This is useful for:
+- **Docs/onboarding guides** — link new contributors directly to the right token type
+- **Scoped deployment guides** — "Create a token for inference via [this link](...)"
+
+### How Presets Work Under the Hood
+
+When a user selects a preset and clicks Create:
+1. The UI pre-fills the permission scope toggles for that preset's curated set
+2. Users can review the permissions summary before creating
+3. Users can **switch to Custom** at any point to fine-tune further
+4. Organization scoping is a single click (attach orgs)
+5. The token is created with `fine-grained` role and the selected scopes
+
+### Comparison with Pre-Preset Token Creation
+
+| Aspect | Before (Jul 13) | After (Jul 14+) |
+|--------|----------------|-----------------|
+| UI | Manual permission toggles, no guidance | Preset selector with curated scopes |
+| Token role | Choose read/write/fine-grained from dropdown | Preset auto-selects role |
+| Org attachment | Multi-step | One-click on preset screen |
+| Shareability | Not linkable | URL-based linking with `?preset=` |
+| Error risk | Easy to over-scope or under-scope | Curated presets reduce mistakes |
+| Customization | Always manual | Start from preset, then Custom if needed |
+
+### Best Practices with Presets
+
+1. **Inference preset for API keys** — Any token used solely for `huggingface_hub.inference_api` or Inference Providers should use the Inference preset. No repo write access = reduced blast radius.
+2. **Read-Only for CI read access** — If a CI pipeline only needs to download gated models or read private datasets, use Read-Only (not CI/CD, which grants write).
+3. **CI/CD for publishing pipelines** — Use CI/CD preset when your pipeline pushes models, datasets, or Spaces. Pair with Trusted Publishers for keyless OIDC auth.
+4. **Always attach orgs** — Fine-grained tokens scoped to an org provide the smallest blast radius. If the token leaks, only that org's resources are at risk.
+5. **Review before save** — Even with presets, review the permissions summary. The Inference preset grants inference access across all providers the org/user has access to.
+
+### Token Management Policies (Team/Enterprise) — Updated
+
+The Jul 14 release also reinforced these existing policies:
+
+| Policy | Behaviour |
+|--------|-----------|
+| **Admin approval required** | Fine-grained tokens scoped to an org enter `pending` state until an admin approves |
+| **Auto-approval for admins** | Token creators who are org admins skip the pending state |
+| **Denied tokens** | Cannot access org resources (403). Token still works for non-org resources. Can be re-approved later without creating a new token. |
+| **Revoked tokens** | Permanent. Must delete and recreate. 403 with message: "Your token has been revoked by the organization administrator." |
+| **Fine-grained-only policy** | Orgs can require all tokens to be fine-grained; read/write tokens get 403 on org resources. |
+
+### Resources
+
+- Changelog: https://huggingface.co/changelog/token-presets
+- Token settings: https://huggingface.co/settings/tokens
+- Token creation (inference preset): https://huggingface.co/settings/tokens/new?preset=inference
+- Token creation (read-only preset): https://huggingface.co/settings/tokens/new?preset=read-only
+- Hub docs — User Access Tokens: https://huggingface.co/docs/hub/en/security-tokens
+- Trusted Publishers docs: https://huggingface.co/docs/hub/en/security-trusted-publishers
+
+---
+
 ## Entry 1: Transformers Pipeline API — Deep Dive
 **Date:** 2026-07-23
 **Topic:** `hf-transformers-pipeline-api` — Complete reference on the Transformers `pipeline()` API
