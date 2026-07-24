@@ -3183,3 +3183,69 @@ Names optional, stored as `name` label, shown in UI.
 
 ### Skill
 mlops/huggingface-hub -- references/hf-learnings.md
+
+---
+
+## 2026-07-24: hf-hub-organization-management-api — Managing Organizations, Members, Repos, and Teams (Topic #150)
+
+### Summary
+Comprehensive deep-dive into the Hugging Face Hub Organization Management ecosystem — covering the Python SDK (`huggingface_hub` `HfApi`) methods, REST API endpoints, data models (`Organization`, `User`), repo lifecycle under org namespaces, resource groups (Enterprise), and the web UI management interface. Built entirely from source code analysis of `huggingface_hub` v1.24.0.
+
+### Core Architecture
+
+Organizations on the Hugging Face Hub are **namespace containers** that own models, datasets, Spaces, and buckets. They provide:
+- **Shared ownership** — repos belong to the org, not any individual
+- **Role-based access** — members have reader/writer/admin roles
+- **Resource groups** (Enterprise) — granular access control within an org
+- **Team plan** — paid tier with additional features (private repos, higher rate limits)
+- **Verification** — verified badge for official orgs
+
+API endpoint base: `https://huggingface.co/api/organizations/{organization}`
+
+### Python SDK Methods
+
+| Method | Description | REST Endpoint |
+|--------|-------------|---------------|
+| `get_organization_overview(org)` | Org profile (name, members, counts) | `GET /api/organizations/{org}/overview` |
+| `list_organization_members(org)` | Paginated member roster | `GET /api/organizations/{org}/members` |
+| `list_organization_followers(org)` | Paginated follower list | `GET /api/organizations/{org}/followers` |
+| `whoami()` | Auth user info including org roles | `GET /api/whoami-v2` |
+| `create_repo("org/repo")` | Create repo under org | `POST /api/repos/create` |
+| `move_repo(from_id, to_id)` | Transfer across namespaces | `POST /api/repos/move` |
+| `duplicate_repo(from_id, to_id)` | Server-side copy | `POST /api/repos/duplicate` |
+| `delete_repo("org/repo")` | Delete repo (irreversible) | `DELETE /api/repos/delete` |
+| `update_repo_settings()` | Change visibility/gating | `POST /api/repos/{repo}/settings` |
+| `list_user_repos(namespace=org)` | List all org repos with storage info | `GET /api/organizations/{org}/settings/repositories` |
+
+### Key Takeaways
+
+1. **Three org-read methods** exist in the SDK: `get_organization_overview()`, `list_organization_members()`, and `list_organization_followers()` — all pull from the `huggingface_hub` REST API
+2. **No SDK for creating orgs or managing members** — these are web UI only (https://huggingface.co/settings/organizations)
+3. **Repo management under orgs** uses the same SDK methods as user repos, just with `org/repo` notation — `create_repo`, `move_repo`, `duplicate_repo`, `delete_repo`, `update_repo_settings`
+4. **`whoami()` with `cache=True`** is the way to check your role in an org — role info is not exposed via `get_organization_overview()`
+5. **Resource groups** provide Enterprise-only fine-grained access control within orgs
+6. **Org names must be globally unique** — they share the namespace with usernames
+7. **Member roles** (admin/write/read) control what you can do with repo operations under an org namespace
+
+### Data Models
+
+**Organization** fields: avatar_url, name, fullname, details, is_verified, is_following, num_users, num_models, num_spaces, num_datasets, num_followers, num_papers, plan
+
+**User** fields: username, fullname, avatar_url, details, is_following, is_pro, num_models, num_datasets, num_spaces, num_discussions, num_papers, num_upvotes, orgs
+
+### Limitations
+- No SDK for member invite/remove/role-change
+- No API for creating orgs
+- `num_users` can be stale
+- Role info only via `whoami()`, not org overview
+- Resource groups are Enterprise-only
+- Creating repos under org requires write+ role
+
+### Source
+Direct from `huggingface_hub` v1.24.0 source code analysis:
+- `/opt/data/.venv-sakthai/lib/python3.14/site-packages/huggingface_hub/hf_api.py`
+
+### Resources
+- [Hub Organizations Docs](https://huggingface.co/docs/hub/en/organizations)
+- [Hugging Face Account Settings (Orgs)](https://huggingface.co/settings/organizations)
+- [huggingface_hub API Reference: HfApi](https://huggingface.co/docs/huggingface_hub/en/package_reference/hf_api)

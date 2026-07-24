@@ -7922,3 +7922,481 @@ Complete deep-dive into the internal working of `hf_hub_download()` — the prim
 huggingface-hub -- references/hf-learnings.md
 
 ---
+
+## 2026-07-24: hf-hub-organization-management-api — Managing Organizations, Members, Repos, and Teams (Topic #150)
+
+### Summary
+Comprehensive deep-dive into the Hugging Face Hub Organization Management ecosystem — covering the full lifecycle of organizations on the Hub: Python SDK (`huggingface_hub` `HfApi`) methods, REST API endpoints, data models (`Organization`, `User`), repo lifecycle under org namespaces, resource groups (Enterprise), and the web UI management interface. Built entirely from source code analysis of `huggingface_hub` v1.24.0.
+
+### Core Architecture
+
+Organizations on the Hugging Face Hub are **namespace containers** that own models, datasets, Spaces, and buckets. They provide:
+- **Shared ownership** — repos belong to the org, not any individual
+- **Role-based access** — members have reader/writer/admin roles
+- **Resource groups** (Enterprise) — granular access control within an org
+- **Team plan** — paid tier with additional features (private repos, higher rate limits)
+- **Verification** — verified badge for official orgs
+
+API endpoint base: `https://huggingface.co/api/organizations/{organization}`
+
+### Data Models
+
+#### Organization Dataclass
+
+```python
+@dataclass
+class Organization:
+    avatar_url: str
+    name: str                        # Unique org name on Hub
+    fullname: str                    # Display name
+    details: str | None = None       # Description/mission
+    is_verified: bool | None = None  # Official org badge
+    is_following: bool | None = None # Auth user follows this org?
+    num_users: int | None = None     # Member count
+    num_models: int | None = None    # Models owned
+    num_spaces: int | None = None    # Spaces owned
+    num_datasets: int | None = None  # Datasets owned
+    num_followers: int | None = None # Follower count
+    num_papers: int | None = None    # Authored papers
+    plan: str | None = None          # "enterprise", "team", or None
+```
+
+#### User Dataclass (member context)
+
+```python
+@dataclass
+class User:
+    username: str
+    fullname: str
+    avatar_url: str
+    details: str | None = None
+    is_following: bool | None = None
+    is_pro: bool | None = None
+    num_models: int | None = None
+    num_datasets: int | None = None
+    num_spaces: int | None = None
+    num_discussions: int | None = None
+    num_papers: int | None = None
+    num_upvotes: int | None = None
+    num_likes: int | None = None
+    num_following: int | None = None
+    num_followers: int | None = None
+    orgs: list[Organization] | None = None  # Orgs the user belongs to
+```
+
+**Key attributes available from JSON response:**
+| JSON field | Python field | Type | Description |
+|------------|-------------|------|-------------|
+| `avatarUrl` | `avatar_url` | `str` | Avatar URL |
+| `name` | `name` | `str` | Unique org name |
+| `fullname` | `fullname` | `str` | Display name |
+| `details` | `details` | `str\|None` | Description |
+| `isVerified` | `is_verified` | `bool\|None` | Badge status |
+| `isFollowing` | `is_following` | `bool\|None` | Auth user follows? |
+| `numUsers` | `num_users` | `int\|None` | Member count |
+| `numModels` | `num_models` | `int\|None` | Model count |
+| `numSpaces` | `num_spaces` | `int\|None` | Space count |
+| `numDatasets` | `num_datasets` | `int\|None` | Dataset count |
+| `numFollowers` | `num_followers` | `int\|None` | Follower count |
+| `numPapers` | `num_papers` | `int\|None` | Paper count |
+| `plan` | `plan` | `str\|None` | Plan type |
+
+### Python SDK — Reading Org Information
+
+#### get_organization_overview() — Org Profile
+
+```python
+from huggingface_hub import HfApi
+
+api = HfApi()
+org = api.get_organization_overview("huggingface")
+
+print(f"Name: {org.fullname}")          # "Hugging Face"
+print(f"Handle: {org.name}")             # "huggingface"
+print(f"Description: {org.details}")     # "We're on a journey..."
+print(f"Members: {org.num_users}")       # e.g., 150
+print(f"Models: {org.num_models}")       # e.g., 30000+
+print(f"Datasets: {org.num_datasets}")   # e.g., 5000+
+print(f"Spaces: {org.num_spaces}")       # e.g., 2000+
+print(f"Followers: {org.num_followers}") # e.g., 10000+
+print(f"Papers: {org.num_papers}")       # e.g., 50+
+print(f"Verified: {org.is_verified}")    # True
+print(f"Plan: {org.plan}")               # "enterprise"
+```
+
+**REST endpoint:** `GET /api/organizations/{organization}/overview`
+
+**Error handling:**
+```python
+from huggingface_hub import HfApi
+from requests.exceptions import HTTPError
+
+api = HfApi()
+try:
+    org = api.get_organization_overview("non-existent-org")
+except HTTPError as e:
+    if e.response.status_code == 404:
+        print("Organization does not exist on the Hub")
+```
+
+#### list_organization_members() — Member Roster
+
+```python
+from huggingface_hub import HfApi
+
+api = HfApi()
+members = api.list_organization_members("huggingface")
+
+for member in members:
+    print(f"{member.username:20s} | {member.fullname:30s} | pro={member.is_pro}")
+```
+
+Returns an `Iterable[User]` — uses pagination internally via the `paginate()` helper.
+
+**REST endpoint:** `GET /api/organizations/{organization}/members`
+
+#### list_organization_followers() — Follower List
+
+```python
+from huggingface_hub import HfApi
+
+api = HfApi()
+followers = api.list_organization_followers("huggingface")
+
+for follower in followers:
+    print(f"{follower.username} — {follower.fullname}")
+```
+
+Returns an `Iterable[User]` — uses pagination.
+
+**REST endpoint:** `GET /api/organizations/{organization}/followers`
+
+### Python SDK — Creating & Managing Repos Under an Org
+
+#### Creating Repos in an Org Namespace
+
+Use `create_repo()` with an org-prefixed `repo_id`:
+
+```python
+from huggingface_hub import HfApi
+
+api = HfApi()
+url = api.create_repo(
+    repo_id="my-org/my-model",
+    repo_type="model",
+    private=False,           # or True for private
+    exist_ok=False,          # set True to avoid error if exists
+)
+print(url)  # https://huggingface.co/my-org/my-model
+```
+
+**Token requirements:** The authenticated user must be a member of the org with at least **write** permission. Read-only members cannot create repos under the org namespace.
+
+**Supported repo types:**
+| repo_type | Description |
+|-----------|-------------|
+| `None` (default) | Model |
+| `"dataset"` | Dataset |
+| `"space"` | Space |
+
+**Enterprise: Resource Groups:**
+```python
+api.create_repo(
+    repo_id="my-org/restricted-model",
+    repo_type="model",
+    resource_group_id="66670e5163145ca562cb1988",  # Enterprise only
+)
+```
+
+Resource groups allow org admins to define which members can access specific repos. The `resource_group_id` can be found in the URL of the resource's page on the Hub.
+
+#### Moving/Transferring Repos
+
+```python
+from huggingface_hub import HfApi
+
+api = HfApi()
+# Transfer a repo from a user to an org
+api.move_repo(
+    from_id="my-user/my-model",
+    to_id="my-org/my-model",
+    repo_type="model",
+)
+# Transfer between orgs
+api.move_repo(
+    from_id="org-a/my-model",
+    to_id="org-b/my-model",
+)
+```
+
+**Limitations (per HF docs):**
+- Moving repos across namespaces requires appropriate permissions in both source and target
+- Cannot move repos with the same name in target namespace
+- LFS objects are preserved
+- Git history is fully preserved
+
+#### Duplicating Repos
+
+Server-side copy — preserves full git history and LFS without local download:
+
+```python
+from huggingface_hub import HfApi
+
+api = HfApi()
+# Duplicate a model to an org
+api.duplicate_repo(
+    from_id="google/gemma-2-2b",
+    to_id="my-org/gemma-2-2b-fork",
+    repo_type="model",
+)
+```
+
+#### Updating Repo Settings
+
+```python
+from huggingface_hub import HfApi
+
+api = HfApi()
+# Change visibility to private
+api.update_repo_settings(
+    repo_id="my-org/my-model",
+    private=True,
+)
+# Enable gated access (manual approval)
+api.update_repo_settings(
+    repo_id="my-org/my-model",
+    gated="manual",  # "auto" for auto-approve, False to disable
+)
+# Or set visibility directly
+api.update_repo_settings(
+    repo_id="my-org/my-space",
+    visibility="protected",  # "public", "private", or "protected" (Spaces only)
+)
+```
+
+#### Listing All Repos Under an Org
+
+```python
+from huggingface_hub import list_user_repos
+
+# List all repos for an organization
+repos = list(list_user_repos(namespace="my-org"))
+for repo in repos:
+    print(f"{repo.id:40s} | type={repo.type:10s} | size={repo.size}")
+```
+
+**REST endpoint:** `GET /api/organizations/{namespace}/settings/repositories`
+
+#### Deleting Repos
+
+```python
+from huggingface_hub import HfApi
+
+api = HfApi()
+api.delete_repo(
+    repo_id="my-org/old-model",
+    repo_type="model",
+    missing_ok=True,  # Don't error if already gone
+)
+# CAUTION: This is IRREVERSIBLE
+```
+
+### Whoami — Understanding Your Org Affiliations
+
+```python
+from huggingface_hub import whoami
+
+info = whoami()
+print(f"User: {info['name']}")
+for org in info.get('orgs', []):
+    print(f"  Org: {org['name']} — role: {org.get('role', 'N/A')}")
+```
+
+The `whoami` response includes:
+```python
+{
+    "name": "beer-sakthai",
+    "fullname": "Beer Sakthai",
+    "email": "beer@example.com",
+    "canPay": False,
+    "isPro": False,
+    "orgs": [
+        {
+            "name": "my-org",
+            "fullname": "My Organization",
+            "avatarUrl": "https://...",
+            "role": "admin"  # "admin", "write", or "read"
+        }
+    ]
+}
+```
+
+**Cache support:** Pass `cache=True` to `whoami()` to cache the result for the duration of the Python process. Useful when calling `whoami` multiple times, as this endpoint is heavily rate-limited.
+
+### REST API — Organization Endpoints Reference
+
+Base URL: `https://huggingface.co`
+
+| Method | Endpoint | SDK Method | Description |
+|--------|----------|-----------|-------------|
+| `GET` | `/api/organizations/{org}/overview` | `get_organization_overview()` | Org profile |
+| `GET` | `/api/organizations/{org}/members` | `list_organization_members()` | Paginated member list |
+| `GET` | `/api/organizations/{org}/followers` | `list_organization_followers()` | Paginated follower list |
+| `GET` | `/api/organizations/{org}/settings/repositories` | `list_user_repos(namespace=org)` | All repos with storage info |
+| `POST` | `/api/repos/create` | `create_repo()` | Create repo under org* |
+| `POST` | `/api/repos/move` | `move_repo()` | Transfer/move repo* |
+| `POST` | `/api/repos/duplicate` | `duplicate_repo()` | Server-side copy* |
+| `DELETE` | `/api/repos/delete` | `delete_repo()` | Delete repo* |
+| `POST` | `/api/repos/{repo}/settings` | `update_repo_settings()` | Update visibility/gating |
+
+*Requires token with write/admin role in org
+
+### Web UI Management
+
+#### Organization Settings Page
+
+URL: `https://huggingface.co/{org}/settings`
+
+Available settings:
+- **Profile** — name, description, avatar
+- **Members** — invite, remove, change roles (admin/write/read)
+- **Billing** — plan upgrades, payment methods
+- **Resource Groups** (Enterprise) — granular access control
+- **OAuth Apps** — connected applications
+- **Webhooks** — org-level webhooks
+- **Audit Log** — Enterprise, tracks all actions
+
+#### Member Roles
+
+| Role | Description |
+|------|-------------|
+| **Admin** | Full control — manage members, billing, settings, all repos |
+| **Write** | Create and push to repos under org namespace |
+| **Read** | Read-only access to public org repos; cannot create/push |
+
+**Role management is only available via the web UI** — there is no Python SDK method to invite/remove members or change roles programmatically.
+
+#### Creating an Organization
+
+Via web UI only — visit `https://huggingface.co/settings/organizations` → "New Organization":
+- Requires a unique name (username-style, alphanumeric + hyphens)
+- Full name (display name)
+- Description (optional)
+- Auto-creates you as the sole admin member
+
+### CLI Interaction
+
+The `hf` CLI has limited direct org commands, but many commands accept org-prefixed repo IDs:
+
+```bash
+# List repos with `hf` (requires token):
+hf download my-org/my-model --help
+
+# Upload to org namespace:
+hf upload my-org/my-model ./local_dir .
+
+# List files in org repo:
+hf ls hf://my-org/my-model
+```
+
+The `whoami` response from `hf` CLI includes org affiliations:
+```bash
+hf auth login  # login first
+# then check user info
+```
+
+### Organization Discovery
+
+#### Finding Orgs a User Belongs To
+
+```python
+from huggingface_hub import whoami
+
+info = whoami()
+user_orgs = info.get('orgs', [])
+for org in user_orgs:
+    print(f"{org['name']} ({org.get('role', '?')})")
+```
+
+#### Finding Org Repos by Type
+
+```python
+from huggingface_hub import HfApi
+
+api = HfApi()
+
+# List models in an org using Hub search API
+models = api.list_models(author="huggingface")
+for model in models:
+    print(model.modelId)
+
+# List datasets
+datasets = api.list_datasets(author="huggingface")
+for ds in datasets:
+    print(ds.id)
+```
+
+### Enterprise Features: Resource Groups
+
+Resource groups are an Enterprise Hub feature that enable fine-grained access control within an org:
+
+```python
+# Create a repo in a specific resource group
+api.create_repo(
+    repo_id="my-org/enterprise-model",
+    repo_type="model",
+    resource_group_id="66670e5163145ca562cb1988",
+)
+```
+
+**Characteristics:**
+- Only Enterprise orgs can use resource groups
+- Resource group ID is found in the URL of the resource's page
+- Members assigned to a resource group can access repos within that group
+- Non-members cannot see the repo exists (even if they are org members)
+- Repository visibility (public/private) is separate from resource group access
+
+### Best Practices
+
+1. **Use org namespaces for team projects** — repos owned by orgs survive member turnover
+2. **Check whoami before operations** — verify you have the right org role before creating repos
+3. **Cache whoami responses** — use `cache=True` when calling `whoami()` multiple times (rate-limited)
+4. **Use `exist_ok=True` in scripts** — prevents errors from race conditions in automation
+5. **Prefer `missing_ok=True` for deletions** — idempotent cleanup in cron jobs
+6. **Resource groups for sensitive models** — restrict access within an org without making repos private
+7. **Transfer vs. duplicate** — use `move_repo` for ownership change, `duplicate_repo` for forks
+8. **Plan restrictions** — Free orgs have public-only repos; private repos require Team/Enterprise
+
+### Limitations & Gotchas
+
+- **No SDK for member management** — invite/remove/role-change is web UI only
+- **No API for creating orgs** — must use web UI
+- **Creating repos under org requires write+ role** — read-only members cannot create repos
+- **Resource groups are Enterprise-only** — not available on free or Team plans
+- **Org names must be unique across all Hub users** — can't use a name that's already a username
+- **Role info not available via `get_organization_overview()`** — use `whoami()` for the auth user's role
+- **`num_users` field can be stale** — might not update immediately after member changes
+- **Rate limiting on whoami** — cache results if calling frequently
+- **Plan downgrade restrictions** — may lose private repos on downgrade from Team/Enterprise
+
+### Source Code References
+
+- `Organization` dataclass: `huggingface_hub/hf_api.py` (Organization class)
+- `get_organization_overview()`: `huggingface_hub/hf_api.py` — REST: `GET /api/organizations/{org}/overview`
+- `list_organization_members()`: `huggingface_hub/hf_api.py` — REST: `GET /api/organizations/{org}/members`
+- `list_organization_followers()`: `huggingface_hub/hf_api.py` — REST: `GET /api/organizations/{org}/followers`
+- `create_repo()`: `huggingface_hub/hf_api.py` — REST: `POST /api/repos/create`
+- `move_repo()`: `huggingface_hub/hf_api.py` — REST: `POST /api/repos/move`
+- `duplicate_repo()`: `huggingface_hub/hf_api.py` — REST: `POST /api/repos/duplicate`
+- `delete_repo()`: `huggingface_hub/hf_api.py` — REST: `DELETE /api/repos/delete`
+- `update_repo_settings()`: `huggingface_hub/hf_api.py` — REST: `POST /api/repos/{repo}/settings`
+- `list_user_repos()`: `huggingface_hub/hf_api.py` — REST: `GET /api/organizations/{org}/settings/repositories`
+- `User` dataclass: `huggingface_hub/hf_api.py`
+- `whoami()`: `huggingface_hub/hf_api.py`
+- `paginate()` helper: `huggingface_hub/utils/_http.py`
+
+### Resources
+- [Hub Organizations Documentation](https://huggingface.co/docs/hub/en/organizations)
+- [Hugging Face Account Settings (Orgs)](https://huggingface.co/settings/organizations)
+- [Hub Repositories Settings (Moving/Transferring)](https://hf.co/docs/hub/repositories-settings#renaming-or-transferring-a-repo)
+- [huggingface_hub API Reference: HfApi](https://huggingface.co/docs/huggingface_hub/en/package_reference/hf_api)
