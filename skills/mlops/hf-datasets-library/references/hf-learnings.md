@@ -873,3 +873,296 @@ ds_with_ids = concatenate_datasets([original, id_dataset], axis=1)
 - API ref: https://huggingface.co/docs/datasets/v4.8.4/en/package_reference/main_classes#datasets.concatenate_datasets
 - Stream guide: https://huggingface.co/docs/datasets/en/stream
 - Live test: datasets v5.0.0 on MRPC (3,668 rows), verified this session
+---
+
+## 2026-07-24: hf-datasets-from-parquet — Loading Parquet Files with `datasets` Library (Topic #149 Deepened)
+
+### Summary
+Comprehensive deep-dive into loading Parquet data with the `datasets` library (v5.0.0). Covers `Dataset.from_parquet()` (path, columns, filters, num_proc, fragment_scan_options, on_bad_files), `load_dataset()` with auto-detected parquet format, the `ParquetConfig` options (split, streaming), pyarrow filter predicate pushdown for efficient column/row pruning, multi-file loading with sharding, integration with the Datasets Server `/parquet` endpoint for server-side conversions, and practical performance patterns.
+
+### Source
+- huggingface/datasets source: `src/datasets/io/parquet.py` (ParquetDatasetReader)
+- huggingface/datasets source: `src/datasets/packaged_modules/parquet/parquet.py` (Parquet builder)
+- Official docs: https://huggingface.co/docs/datasets/en/parquet_processing
+- API reference: https://huggingface.co/docs/datasets/v5.0.0/en/package_reference/main_classes#datasets.Dataset.from_parquet
+- PyArrow Dataset docs: https://arrow.apache.org/docs/python/generated/pyarrow.dataset.ParquetFragmentScanOptions.html
+
+### 1. `Dataset.from_parquet()` — Core API
+
+```python
+from datasets import Dataset
+
+# Single file
+ds = Dataset.from_parquet("data/train-00000-of-00001.parquet")
+
+# Multiple files (sharded dataset)
+ds = Dataset.from_parquet([
+    "data/train-00000-of-00004.parquet",
+    "data/train-00001-of-00004.parquet",
+    "data/train-00002-of-00004.parquet",
+    "data/train-00003-of-00004.parquet",
+])
+
+# Select columns only (saves I/O)
+ds = Dataset.from_parquet("data.parquet", columns=["text", "label"])
+
+# Filter rows on load — predicate pushdown to Parquet metadata
+ds = Dataset.from_parquet(
+    "data.parquet",
+    filters=[("label", "==", 1)]       # only rows where label == 1
+)
+
+# Compound filter
+ds = Dataset.from_parquet(
+    "data.parquet",
+    filters=[("label", "==", 1), ("split", "in", ["train", "val"])]
+)
+
+# Multi-process parsing (num_proc)
+ds = Dataset.from_parquet(
+    ["shard-1.parquet", "shard-2.parquet", "shard-3.parquet"],
+    num_proc=3                   # one process per file
+)
+```
+
+**Full parameter reference:**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `path_or_paths` | `PathLike \| list[PathLike]` | required | Single Parquet file path or list of paths |
+| `split` | `NamedSplit` | `None` | Split name to assign (e.g., `"train"`, `"test"`) |
+| `features` | `Features` | `None` | Explicit feature schema (auto-detected if None) |
+| `cache_dir` | `str` | `~/.cache/huggingface/datasets` | Cache directory for Arrow data |
+| `keep_in_memory` | `bool` | `False` | Copy all data in-memory instead of memory-mapping |
+| `columns` | `list[str]` | `None` | Subset of columns to load (prunes at read time) |
+| `num_proc` | `int` | `None` | Parallel reading across files (v2.8.0+) |
+| `filters` | `Expression \| list[tuple] \| list[list[tuple]]` | `None` | Predicate pushdown filter — prunes rows at source |
+| `fragment_scan_options` | `ParquetFragmentScanOptions` | `None` | Scan tuning (buffering, caching) (v4.2.0+) |
+| `on_bad_files` | `"error" \| "warn" \| "skip"` | `"error"` | Behavior on unreadable files (v4.2.0+) |
+| `**kwargs` | any | — | Passed to `ParquetConfig` |
+
+### 2. Filter Predicate Pushdown — Deep Dive
+
+Filters are evaluated at the **Parquet metadata level** — row group statistics (`min`, `max`, `null_count`) are checked before any I/O. This means entire row groups can be skipped without decompression.
+
+**Filter format — tuple list:**
+```python
+# Simple: [("column", "op", value)]
+filters = [("age", ">=", 18)]
+
+# AND: multiple tuples in same list
+filters = [("age", ">=", 18), ("country", "==", "US")]
+
+# OR: list of lists (each inner list is AND-ed)
+filters = [("age", ">=", 18), [("country", "==", "US"), ("country", "==", "CA")]]
+# = (age >= 18) AND (country == "US" OR country == "CA")
+```
+
+**Filter format — pyarrow Expression (more expressive):**
+```python
+import pyarrow.dataset as pds
+
+# Equivalent to tuple list
+filt = (pds.field("age") >= 18) & (pds.field("country") == "US")
+
+ds = Dataset.from_parquet("data.parquet", filters=filt)
+```
+
+**Supported operators:** `==`, `!=`, `<`, `<=`, `>`, `>=`, `in`, `not in`
+
+**Performance impact:** For a 10 GB Parquet file partitioned into 64 MB row groups, a selective filter can skip 95%+ of row groups, reducing read to ~500 MB and load time from minutes to seconds.
+
+### 3. `load_dataset()` with Parquet — Auto-Detection
+
+`load_dataset()` automatically detects Parquet files by extension (`.parquet`):
+
+```python
+from datasets import load_dataset
+
+# From local directory of parquet files
+ds = load_dataset("parquet", data_dir="./my-data/")
+# or explicitly:
+ds = load_dataset("parquet", data_files="data/*.parquet")
+
+# From Hugging Face Hub (auto-detects parquet if no loading script)
+ds = load_dataset("username/my-parquet-dataset", split="train")
+
+# Force parquet builder
+ds = load_dataset(
+    "parquet",
+    data_files={
+        "train": "train-*.parquet",
+        "test": "test-*.parquet",
+    }
+)
+
+# With streaming
+ds = load_dataset("parquet", data_files="big.parquet", streaming=True)
+```
+
+**The auto-detection logic** (from `packaged_modules/parquet/parquet.py`):
+1. When `load_dataset()` is called with a dataset path, it first checks for a loading script
+2. If none found, it inspects the repo's file extensions
+3. If `.parquet` files dominate, it uses the `Parquet` packaged builder
+4. The builder reads file metadata (schema, row count) without loading data
+
+### 4. Streaming Parquet Data
+
+```python
+# Streaming reads rows on-demand — no local cache
+ds = load_dataset("parquet", data_files="huge.parquet", streaming=True)
+
+# IterableDataset methods
+for i, example in enumerate(ds):
+    if i > 100:
+        break
+    print(example["text"])
+
+# Take/skip/shuffle
+sample = ds.take(1000)               # first 1000
+ds_filtered = ds.filter(lambda x: x["label"] == 1)
+```
+
+**When to stream:**
+- Dataset too large for available disk
+- Iterating once (training epoch over large corpus)
+- Exploring data before deciding to download
+
+**When NOT to stream:**
+- Multiple random-access passes needed
+- Index-based lookups (`ds[5000]`)
+- Shuffling before training (use `IterableDataset.shuffle()` instead)
+
+### 5. Datasets Server `/parquet` Endpoint Integration
+
+The Datasets Server exposes a `/parquet` endpoint that returns URLs to pre-converted Parquet files for any compatible dataset:
+
+```python
+import requests
+
+# Get parquet URLs for a dataset
+resp = requests.get(
+    "https://datasets-server.huggingface.co/parquet?dataset=imdb"
+)
+parquet_data = resp.json()
+parquet_files = parquet_data["parquet_files"]
+
+# {'dataset': 'imdb', 'config': 'plain_text', 'split': 'train',
+#  'url': 'https://.../imdb/plain_text/train/0000.parquet'}
+
+# Load directly from URLs
+ds = load_dataset(
+    "parquet",
+    data_files={"train": [p["url"] for p in parquet_files]},
+    streaming=True
+)
+```
+
+**Key `/parquet` response fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `dataset` | `str` | Dataset name |
+| `config` | `str` | Configuration/subset name |
+| `split` | `str` | Split name |
+| `url` | `str` | HTTPS URL to the Parquet file |
+| `size` | `int` | File size in bytes |
+| `columns` | `list[str]` | Column names in the file |
+
+**Practical pattern — zero-cost Hub querying without downloading:**
+```python
+from datasets import load_dataset
+
+# Stream a Hub dataset from its Parquet conversion
+ds = load_dataset(
+    "parquet",
+    data_files={
+        "train": [
+            "https://huggingface.co/datasets/username/dataset/resolve/refs%2Fconvert%2Fparquet/train/0000.parquet"
+        ]
+    },
+    streaming=True
+)
+
+# or use the datasets-server API for auto-discovery
+import requests, json
+url = "https://datasets-server.huggingface.co/parquet?dataset=username/dataset"
+files = requests.get(url).json()["parquet_files"]
+ds = load_dataset("parquet", data_files={"train": [f["url"] for f in files]})
+```
+
+### 6. Performance Patterns
+
+**Pattern 1: Column selection first, filter second**
+```python
+# BEST — prune columns AND rows at read time (most efficient)
+ds = Dataset.from_parquet("big.parquet", columns=["id", "text", "label"], filters=[("label", "==", 1)])
+```
+
+**Pattern 2: Parallelize across shards**
+```python
+# Each file processed in parallel
+files = [f"shard-{i:05d}-of-00010.parquet" for i in range(10)]
+ds = Dataset.from_parquet(files, num_proc=4, columns=["text"])
+```
+
+**Pattern 3: Fragment scan options for memory-constrained environments**
+```python
+import pyarrow.dataset as pds
+
+opts = pds.ParquetFragmentScanOptions(
+    use_buffered_stream=True,     # smaller reads
+    buffer_size=8192,             # 8 KB read buffer
+)
+ds = Dataset.from_parquet("big.parquet", fragment_scan_options=opts)
+```
+
+**Pattern 4: Chaining from_parquet with dataset operations**
+```python
+ds = (
+    Dataset
+    .from_parquet("data.parquet", filters=[("lang", "==", "en")])
+    .select_columns(["text", "label"])
+    .shuffle(seed=42)
+    .select(range(10000))
+)
+```
+
+### 7. `ParquetConfig` Tuning
+
+When using `load_dataset("parquet", ...)`, the `ParquetConfig` class controls behavior:
+
+```python
+from datasets import load_dataset
+from datasets.packaged_modules.parquet.parquet import ParquetConfig
+
+ds = load_dataset(
+    "parquet",
+    data_files="data.parquet",
+    split="train",
+    streaming=True,
+    parquet_config=ParquetConfig(
+        features=None,          # auto-detect
+        schema=None,            # optional pyarrow schema
+        batch_size=10000,       # rows per read batch (default: auto)
+    )
+)
+```
+
+### 8. Known Limitations
+
+1. **Appending is not supported** — `from_parquet` creates a new Dataset; use `datasets.concatenate_datasets()` to merge
+2. **Nested schema differences** — if Parquet files in a list have different schemas, loading may fail (use `features` to force schema)
+3. **Predicate pushdown varies** — not all Parquet writers generate equally useful statistics for filter pruning
+4. **Remote URLs** — `from_parquet()` does NOT accept HTTPS URLs directly (use `load_dataset("parquet", data_files="https://...")` with streaming instead)
+5. **`fragment_scan_options` is PyArrow-specific** — only works with the PyArrow-backed reader
+
+### Skill
+mlops/hf-datasets-library — references/hf-learnings.md
+
+### References
+- https://huggingface.co/docs/datasets/en/parquet_processing
+- https://huggingface.co/docs/datasets/v5.0.0/en/package_reference/main_classes#datasets.Dataset.from_parquet
+- https://arrow.apache.org/docs/python/dataset.html#filtering-data
+- https://huggingface.co/docs/datasets/en/stream
+- https://huggingface.co/docs/datasets-server/parquet
