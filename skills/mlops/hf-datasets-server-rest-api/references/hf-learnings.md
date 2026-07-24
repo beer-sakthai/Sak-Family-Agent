@@ -1154,3 +1154,125 @@ def class_balance(dataset_id, config, split):
 - `/size`: https://huggingface.co/docs/dataset-viewer/size
 - OpenAPI spec: https://datasets-server.huggingface.co/openapi.json
 - ReDoc interactive: https://redocly.github.io/redoc/?url=https://datasets-server.huggingface.co/openapi.json
+
+---
+
+## 2026-07-24: hf-datasets-server-data-preview-rows-search-filter-deep-dive
+
+### Summary
+Deep-dive into the Hugging Face Datasets Server's data preview and query endpoints — `/first-rows`, `/rows`, `/search`, `/filter`, `/statistics`, and `/croissant`. All verified live against the production API at `https://datasets-server.huggingface.co`. Covers exact response formats, SQL-like filter syntax, pagination behavior, and practical zero-cost patterns.
+
+### Base URL
+```
+https://datasets-server.huggingface.co
+```
+No auth required for public datasets. Gated/private datasets need `Authorization: Bearer ***` header.
+
+### Endpoint Reference (Verified Live)
+
+#### 1. `/is-valid` — Check Dataset Capabilities
+```bash
+curl "https://datasets-server.huggingface.co/is-valid?dataset=Salesforce/wikitext"
+# -> {"preview":true,"viewer":true,"search":true,"filter":true,"statistics":true}
+```
+Returns which features (preview, viewer, search, filter, statistics) are available.
+
+#### 2. `/splits` — List All Splits and Subsets
+```bash
+curl "https://datasets-server.huggingface.co/splits?dataset=Salesforce/wikitext&config=wikitext-2-raw-v1"
+```
+
+#### 3. `/size` — Dataset Size (Rows + Bytes)
+**Verified response (2026-07-24):**
+```json
+{
+  "size": {
+    "config": { "dataset": "Salesforce/wikitext", "config": "wikitext-2-raw-v1", "num_bytes_original_files": 7747362, "num_bytes_parquet_files": 7747362, "num_bytes_memory": 13055524, "num_rows": 44836, "num_columns": 1 },
+    "splits": [
+      {"split": "test", "num_rows": 4358, "num_bytes_memory": 1391252},
+      {"split": "train", "num_rows": 36718, "num_bytes_memory": 10720370},
+      {"split": "validation", "num_rows": 3760, "num_bytes_memory": 943902}
+    ]
+  },
+  "partial": false
+}
+```
+
+#### 4. `/first-rows` — Preview First Rows (VERIFIED)
+- Returns exactly 100 rows (default page size)
+- Fields: `features`, `rows[]` (each with `row_idx`, `row`, `truncated_cells`)
+- No `num_rows_total` — use `/size` for total count
+- `split` parameter is required
+
+#### 5. `/rows` — Download Arbitrary Slices (VERIFIED)
+- `offset` (default: 0), `length` (default/max: 100)
+- Same format as `/first-rows` but with controllable offset
+
+#### 6. `/search` — Full-Text Search (VERIFIED)
+- Query scanned across ALL text columns
+- Returns absolute `row_idx` (not renumbered)
+- No total match count exposed
+- Pagination via `offset`/`length`
+
+#### 7. `/filter` — SQL-Like WHERE Filtering (VERIFIED)
+**WHERE Syntax Rules (from docs + verified):**
+- Column names MUST be in double quotes: `"text"`
+- String values MUST be in single quotes: `'hello'`
+- Numeric values unquoted: `label=1`
+- Operators: `=`, `<>`, `>`, `>=`, `<`, `<=`, `LIKE`, `NOT LIKE`
+- Combinators: `AND`, `OR`, `NOT`, parentheses
+- `LIKE` wildcards: `%` (any sequence), `_` (single char)
+- **Only endpoint that returns `num_rows_total`** (total matching rows)
+
+#### 8. `/statistics` — Column Statistics (VERIFIED)
+**Verified response for wikitext train split:**
+- `num_examples`: 36718 (total rows in split)
+- String columns: length stats (min/max/mean/median/std + histogram)
+- Numeric columns: value stats
+- `class_label` columns: frequency counts
+- Histogram: 10 bins with `hist` (counts) and `bin_edges` (boundaries)
+
+#### 9. `/parquet` — Get Parquet File URLs (VERIFIED)
+- Returns per-split Parquet URLs under `refs/convert/parquet`
+- Usable with DuckDB, Polars, Pandas, cuDF, PySpark, ClickHouse, PostgreSQL
+
+#### 10. `/info` — Dataset Metadata (VERIFIED)
+- Returns `dataset_info` with description, features, splits, sizes
+
+#### 11. `/croissant` — ML-Commons Croissant Metadata
+- Structured ML dataset metadata for interoperability
+
+### Pagination Behavior Summary
+
+| Endpoint | Max Length | Has `offset` | `num_rows_total` |
+|----------|-----------|-------------|-----------------|
+| `/first-rows` | N/A (always 100) | No | null |
+| `/rows` | 100 | Yes | null |
+| `/search` | 100 | Yes | null |
+| `/filter` | 100 | Yes | **Yes** |
+| `/size` | N/A | N/A | Has split counts |
+| `/statistics` | N/A | N/A | Has `num_examples` |
+
+### Error States (Verified)
+
+| Error | Status | Example |
+|-------|--------|---------|
+| Renamed dataset | 200 body | `{"error":"The dataset has been renamed..."}` |
+| Not found / private | 200 body | `{"error":"The dataset does not exist..."}` |
+| Missing param | 422 | `{"error":"Parameter 'dataset' is required"}` |
+| Length too large | 422 | `{"error":"Parameter 'length' must not be greater than 100"}` |
+| Invalid WHERE | 422 | `{"error":"Parameter 'where' contains errors or invalid symbols"}` |
+
+### Key Takeaways
+1. `/first-rows` gives 100 rows free — quick inspection without download
+2. Use `/size` for total row counts — `/rows` and `/search` don't return totals
+3. `/filter` is the only endpoint returning `num_rows_total`
+4. WHERE syntax is SQL-like: double-quoted columns, single-quoted strings
+5. Search is case-sensitive
+6. Parquet URLs enable zero-cost analytics with DuckDB/Polars
+7. All endpoints are completely free — no API keys for public datasets
+
+### Resources
+- Docs: https://huggingface.co/docs/dataset-viewer/
+- OpenAPI: https://datasets-server.huggingface.co/openapi.json
+- Source: https://github.com/huggingface/dataset-viewer
