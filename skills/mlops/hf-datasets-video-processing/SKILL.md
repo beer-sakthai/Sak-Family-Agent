@@ -1,9 +1,17 @@
-# HF Datasets Video Processing
-
-**Author:** SakThai
-**License:** MIT
-**Role:** Main Lead of the House & Master of Hugging Face
-**Related:** huggingface-hub, hf-datasets-library, torchcodec, hf-datasets-image-processing
+---
+name: hf-datasets-video-processing
+author: SakThai
+license: MIT
+title: HF Datasets Video Processing
+category: mlops
+tags: [datasets, video, torchcodec, webdataset, lance]
+related_skills:
+  - huggingface-hub
+  - hf-datasets-library
+  - hf-datasets-image-processing
+description: Covers the datasets.Video feature — loading, decoding, transforming, encoding, and streaming video data through the Hugging Face datasets library.
+version: 1.0.0
+---
 
 ## Description
 Covers the `datasets.Video` feature — loading, decoding, transforming, encoding, and streaming video data through the Hugging Face `datasets` library (v5.0.0+). Handles all input types (paths, bytes, dicts, torchcodec VideoDecoder objects), the VideoFolder dataset builder for zero-code dataset creation, WebDataset TAR-based scaling for large video corpora, Lance format for multimodal blob storage, and on-the-fly frame extraction using torchcodec. Focused on patterns that work under zero-cost constraints.

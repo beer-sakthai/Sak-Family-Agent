@@ -1,534 +1,397 @@
+# HF Learnings — Datasets Library v5
 
-# HF Learnings — Datasets Builder API
-
-## 2026-07-24: hf-datasets-builder-advanced-patterns — Deep Dive (Topic #124)
+## 2026-07-24: hf-datasets-library-v5 — Deep Dive v2 (Topic #19, Datasets v5.0.0)
 
 ### Summary
-Deep-dive into the `datasets` library's Builder API — the foundation for creating custom datasets that integrate seamlessly with Hugging Face's caching, streaming, and Hub publishing workflows. Covers the `DatasetBuilder` base class, `GeneratorBasedBuilder` pattern, `BuilderConfig` for multi-config datasets, `DatasetInfo` metadata, `SplitGenerator` and split specifications, packaged modules, and real-world patterns for packaging and distributing custom datasets.
+Deep-dive into Hugging Face `datasets` v5.0.0 (major version jump) — covering the Polars integration (`from_polars`/`to_polars`), SQL/Spark connectors, interleave/concatenate with axis support, IterableDataset enhancements, native Image/Audio features, and the internal Arrow table architecture.
 
-### Core Architecture
+### Key New Features in v5.0.0
 
-The builder system has four main components:
+| Feature | Description |
+|---------|-------------|
+| **Polars integration** | `from_polars()` / `to_polars()` — direct zero-copy Arrow interop |
+| **SQL round-trip** | `from_sql()` / `to_sql()` — SQLAlchemy/SQLite3 support |
+| **Spark support** | `from_spark()` — PySpark DataFrame conversion |
+| **Interleave datasets** | Probabilistic mixing with 3 stopping strategies |
+| **Concatenate axis** | `axis=1` for horizontal merge |
+| **IterableDataset parity** | Full API parity with Dataset (batch, skip, take, repeat, reshard) |
+| **Image/Audio** | Mature multimodal feature types |
+| **push_to_hub** | Now works with IterableDataset |
 
-| Component | Purpose | Location |
-|-----------|---------|----------|
-| `DatasetBuilder` | Abstract base class; defines the lifecycle | `datasets/builder.py` |
-| `GeneratorBasedBuilder` | Convenience subclass for dict-generator datasets | `datasets/builder.py` |
-| `BuilderConfig` | Configuration dataclass for multi-variant datasets | `datasets/builder.py` |
-| `DatasetInfo` | Metadata container (features, splits, citation, etc.) | `datasets/info.py` |
+### Source
+Datasets v5.0.0 installed at `/opt/data/.venv-sakthai/lib/python3.14/site-packages/datasets/`
 
-### Builder Lifecycle
+### Resources
+- Docs: https://huggingface.co/docs/datasets/en/index
+- Changelog: https://github.com/huggingface/datasets/releases
+- Audio dataset guide: https://huggingface.co/docs/datasets/en/audio_dataset
+- Process audio guide: https://huggingface.co/docs/datasets/en/audio_process
+- Audio feature API ref: https://huggingface.co/docs/datasets/en/package_reference/main_classes#datasets.Audio
 
-```
-1. __init__()        → Sets cache_dir, config, features, token, data_files
-2. download_and_prepare() → Downloads source data, generates Arrow cache files
-3. info              → DatasetInfo property (features, splits, citation)
-4. as_dataset()      → Returns Dataset or DatasetDict from cached Arrow files
-5. as_streaming_dataset() → Returns IterableDataset (no local cache needed)
-```
+---
 
-The full lifecycle is managed by `load_dataset()` and `load_dataset_builder()`:
+## 2026-07-24: hf-datasets-audio-processing-deep-dive — Complete Audio Pipeline (Topic #113)
 
-```python
-# load_dataset_builder() separates config from download
-builder = load_dataset_builder("my_dataset", config_name="v1")
-print(builder.info)               # inspect before download
-builder.download_and_prepare()    # download + process
-ds = builder.as_dataset()         # get Dataset/DatasetDict
+### Summary
+Deep-dive into audio processing with Hugging Face `datasets` — covering the `Audio` feature type, loading strategies, resampling, map-based preprocessing, streaming, filtering, augmentation, WebDataset support, and Transformer model integration. Everything is CPU-friendly and zero-GPU.
 
-# load_dataset() does everything in one call
-ds = load_dataset("my_dataset", name="v1")
-```
+### 1. The `Audio` Feature Type
 
-### DatasetBuilder — Class Attributes
-
-Every builder subclass can set these class-level attributes:
+Every audio column in a `datasets` Dataset uses the `datasets.Audio` feature. When you access an example, the audio file is **decoded on-the-fly** into a NumPy array (or torch Tensor with the torchcodec backend) with its sampling rate.
 
 ```python
-class MyDataset(DatasetBuilder):
-    VERSION = "1.0.0"                    # Default version
-    BUILDER_CONFIG_CLASS = BuilderConfig  # Config class (or custom subclass)
-    BUILDER_CONFIGS = []                  # List of predefined BuilderConfig objects
-    DEFAULT_CONFIG_NAME = None            # Default config when name=None
-    DEFAULT_WRITER_BATCH_SIZE = None      # ArrowWriter batch size
+from datasets import Audio, load_dataset
+
+ds = load_dataset("PolyAI/minds14", "en-US", split="train")
+example = ds[0]["audio"]
+# Returns: {'path': '/.../0000.wav', 'array': np.array([...]), 'sampling_rate': 8000}
 ```
 
-These control how the dataset is identified, configured, and cached.
+**The decoded dict contains:**
+- `path` — original file path (str)
+- `array` — waveform as 1D NumPy float32 array (values in [-1.0, 1.0])
+- `sampling_rate` — sample rate in Hz (int)
 
-### The Three Abstract Methods
+### 2. Audio Feature Configuration
 
-Every custom dataset builder must implement **three key methods**:
-
-#### 1. `_info()` — Define DatasetInfo (Features, Citation, Splits)
+The `Audio` feature constructor accepts:
 
 ```python
-def _info(self) -> DatasetInfo:
-    return DatasetInfo(
-        description="My custom dataset",
-        features=Features({
-            "text": Value("string"),
-            "label": ClassLabel(names=["pos", "neg"]),
-            "id": Value("int32"),
-        }),
-        supervised_keys=None,
-        homepage="https://example.com",
-        citation="@article{...}",
+Audio(sampling_rate=16000, mono=True, decode=True, id=None)
+```
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `sampling_rate` | None | Target sample rate. None = keep original. Set to resample on-the-fly |
+| `mono` | True | Convert stereo to mono by averaging channels |
+| `decode` | True | If False, returns raw file path/bytes instead of decoded array |
+
+**Backend selection** (auto-detected, can be overridden via env):
+- `soundfile` — default, requires `soundfile` (libsndfile)
+- `torchaudio` — if torchaudio installed, preferred for GPU tensors
+- `librosa` — if librosa installed, supports more formats
+- `torchcodec` — new accelerated decoder in datasets v5+
+
+Backend priority: `torchcodec` > `torchaudio` > `librosa` > `soundfile`
+Override with: `export HF_DATASETS_AUDIO_BACKEND=torchaudio`
+
+### 3. Loading Audio Datasets
+
+#### From the Hub
+```python
+# Standard ASR dataset
+ds = load_dataset("librispeech_asr", "clean", split="train.100")
+
+# Audio classification dataset
+ds = load_dataset("superb", "ks", split="train")
+
+# Speech translation
+ds = load_dataset("covost2", "en_de", split="train")
+```
+
+#### From Local Files — AudioFolder
+```python
+# Folder structure: folder/audio/001.wav, folder/metadata.csv
+ds = load_dataset("audiofolder", data_dir="./my_audio_data/")
+# metadata.csv must have a 'file_name' column pointing to audio files
+```
+
+**metadata.csv format:**
+```csv
+file_name,transcript,speaker_id,duration
+001.wav,hello world,spk1,3.2
+002.wav,good morning,spk2,2.8
+```
+
+For multiple audio fields per row:
+```csv
+input_file_name,output_file_name,label
+input1.wav,output1.wav,clean
+```
+
+For lists of audio files (field must end in `_file_names`):
+```csv
+recordings_file_names,speaker_ids
+"[001_r0.wav,001_r1.wav]","[spk1,spk2]"
+```
+
+#### From ZIP Archives
+```python
+# Archives inside data_dir
+# data_dir/train.zip, data_dir/test.zip
+ds = load_dataset("audiofolder", data_dir="./data/", split="train")
+```
+
+Each ZIP can contain audio files + a metadata.csv at the root.
+
+#### WebDataset (TAR archives for large-scale)
+```python
+# TAR archives: data/train/00000.tar, data/train/00001.tar ...
+# Inside each tar: same-prefix files like:
+#   e39871fd.mp3
+#   e39871fd.json   (transcript/metadata)
+ds = load_dataset("webdataset", data_dir="./data/train/", split="train")
+```
+
+### 4. On-the-Fly Resampling with `cast_column`
+
+The most efficient way to resample: use `cast_column` with a new `Audio` feature. Decoding + resampling happens lazily — only when you access the audio.
+
+```python
+from datasets import Audio
+
+# Resample EVERYTHING to 16kHz on-the-fly
+ds_16khz = ds.cast_column("audio", Audio(sampling_rate=16000))
+
+# Verify
+print(ds_16khz[0]["audio"]["sampling_rate"])  # 16000
+```
+
+**Performance note:** Casting does NOT process the full dataset — it only changes the *decoding configuration*. The actual resample runs once per example when first accessed, then cached by Apache Arrow.
+
+### 5. Map-Based Preprocessing
+
+For ASR or audio classification, use `map()` with a `transformers` processor:
+
+```python
+from transformers import AutoProcessor
+from datasets import Audio
+
+processor = AutoProcessor.from_pretrained("facebook/wav2vec2-base-960h")
+
+def prepare_asr(batch):
+    audio = batch["audio"]
+    # Use get_all_samples() for the raw tensor (datasets v5+)
+    samples = audio.get_all_samples()
+    inputs = processor(
+        samples.data,
+        sampling_rate=audio["sampling_rate"],
+        return_tensors="np",
     )
+    batch["input_values"] = inputs.input_values[0]
+    batch["input_length"] = len(batch["input_values"])
+    # Tokenize transcript
+    with processor.as_target_processor():
+        batch["labels"] = processor(batch["sentence"]).input_ids
+    return batch
+
+ds = ds.map(prepare_asr, remove_columns=ds.column_names)
 ```
 
-`DatasetInfo` fields:
+**Key tips for map() with audio:**
+- Include the `audio` column in the map to trigger resampling
+- Use `remove_columns=ds.column_names` to free memory after feature extraction
+- Use `num_proc=N` for parallel processing (but audio decoding is I/O bound)
+- Use `batched=True` with `batch_size` for faster throughput on small files
 
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `features` | `Features` | Yes | Schema of each example |
-| `description` | `str` | No | Human-readable description |
-| `citation` | `str` | No | BibTeX citation |
-| `homepage` | `str` | No | Dataset homepage URL |
-| `license` | `str` | No | License info |
-| `version` | `Version` or `str` | No | Version specifier |
-| `splits` | `SplitDict` | No | Defined by `_split_generators` |
-| `download_size` | `int` | No | Size of downloads in bytes |
-| `dataset_size` | `int` | No | Size of generated dataset in bytes |
+### 6. Audio Filtering
 
-#### 2. `_split_generators()` — Define Splits and Download Sources
-
+#### By Duration
 ```python
-def _split_generators(self, dl_manager: DownloadManager) -> list[SplitGenerator]:
-    # dl_manager handles downloads, caching, and extraction
-    data_dir = dl_manager.download_and_extract("https://example.com/data.zip")
+def is_short_enough(audio):
+    return len(audio["array"]) / audio["sampling_rate"] < 30.0  # < 30 sec
 
-    return [
-        SplitGenerator(
-            name=Split.TRAIN,
-            gen_kwargs={"data_path": data_dir / "train.jsonl", "split": "train"},
-        ),
-        SplitGenerator(
-            name=Split.TEST,
-            gen_kwargs={"data_path": data_dir / "test.jsonl", "split": "test"},
-        ),
-    ]
+ds_filtered = ds.filter(is_short_enough)
 ```
 
-`SplitGenerator` takes:
-- `name` — split name (Split.TRAIN, Split.TEST, Split.VALIDATION, or custom string)
-- `gen_kwargs` — dict passed to `_generate_examples()`
-- `split_info` — optional `SplitInfo` for explicit metadata
-
-The `dl_manager` (DownloadManager) provides:
-- `download(url_or_urls)` — download files, returns local paths
-- `extract(path_or_paths)` — extract archives
-- `download_and_extract(url_or_urls)` — download + extract in one step
-- `download_custom(url, ...)` — custom download with progress
-- `iter_archive(path)` — iterate over archive entries without extracting
-
-#### 3. `_generate_examples()` — Yield Examples
-
+#### By Sample Rate
 ```python
-def _generate_examples(self, data_path, split):
-    """Yield (key, example) tuples."""
-    import json
-    with open(data_path, "r") as f:
-        for idx, line in enumerate(f):
-            data = json.loads(line)
-            yield idx, {
-                "text": data["text"],
-                "label": 0 if data["sentiment"] == "pos" else 1,
-                "id": data.get("id", idx),
-            }
+ds_filtered = ds.filter(lambda x: x["audio"]["sampling_rate"] == 16000)
 ```
 
-**Critical rules:**
-- Yields `(key, example_dict)` tuples — **key must be unique** and deterministic
-- Key is used for deterministic shuffling (hashed + sorted)
-- Example dict keys must match `self.info.features`
-- Can use `self.info.features.encode_example(dict)` for automatic encoding
-
-### GeneratorBasedBuilder — Full Example
-
+#### With IterableDataset (streaming)
 ```python
-import datasets
-from datasets import DatasetInfo, Features, Value, ClassLabel, Split, SplitGenerator
-from datasets import GeneratorBasedBuilder, DownloadManager
-
-class MyTextDataset(GeneratorBasedBuilder):
-    """Custom text classification dataset."""
-
-    VERSION = "1.0.0"
-
-    def _info(self) -> DatasetInfo:
-        return DatasetInfo(
-            description="My text classification dataset",
-            features=Features({
-                "text": Value("string"),
-                "label": ClassLabel(names=["negative", "positive"]),
-            }),
-            homepage="https://example.com",
-        )
-
-    def _split_generators(self, dl_manager: DownloadManager) -> list[SplitGenerator]:
-        # For local data: no download needed
-        return [
-            SplitGenerator(
-                name=Split.TRAIN,
-                gen_kwargs={"filepath": "data/train.jsonl"},
-            ),
-            SplitGenerator(
-                name=Split.TEST,
-                gen_kwargs={"filepath": "data/test.jsonl"},
-            ),
-        ]
-
-    def _generate_examples(self, filepath):
-        import json
-        with open(filepath, "r") as f:
-            for idx, line in enumerate(f):
-                data = json.loads(line)
-                yield idx, {
-                    "text": data["text"],
-                    "label": data["label"],
-                }
+ds_iter = ds.to_iterable_dataset()
+ds_filtered = ds_iter.filter(lambda x: x["audio"]["sampling_rate"] == 16000)
 ```
 
-### Loading the Custom Builder
+### 7. Audio Augmentation (CPU-only)
 
-**Method 1: Module path (for packaged datasets)**
+For training, augment waveforms directly in-map:
+
 ```python
-ds = load_dataset("path/to/dataset_script.py", split="train")
+import numpy as np
+
+def add_noise(batch, noise_level=0.005):
+    audio = batch["audio"]
+    waveform = audio["array"].copy()
+    noise = np.random.randn(len(waveform)) * noise_level
+    waveform = waveform + noise
+    # Clip to [-1, 1]
+    waveform = np.clip(waveform, -1.0, 1.0)
+    batch["audio"]["array"] = waveform
+    return batch
+
+ds_aug = ds.map(add_noise)
 ```
 
-**Method 2: From the Hub**
+**Augmentations that work purely on the waveform array:**
+- Gaussian noise injection (as above)
+- Speed perturbation (resample + pitch shift via librosa)
+- Gain/volume adjustment (multiply by factor)
+- Time stretch (librosa.effects.time_stretch)
+- Random crop of long audio
+- Mixup (averaging two waveforms)
+
+For `speed_perturbation`:
 ```python
-# Push builder to hub first, then load
-ds = load_dataset("username/dataset", split="train")
+import librosa
+
+def speed_perturb(batch, speed=0.9):
+    audio = batch["audio"]
+    waveform = audio["array"]
+    sr = audio["sampling_rate"]
+    # Time-stretch without pitch shift
+    stretched = librosa.effects.time_stretch(y=waveform, rate=speed)
+    batch["audio"]["array"] = stretched
+    return batch
 ```
 
-**Method 3: Packaged module (csv, json, parquet, etc.)**
-```python
-ds = load_dataset("json", data_files="data.jsonl", split="train")
-ds = load_dataset("csv", data_files="data.csv", delimiter="\t", split="train")
-ds = load_dataset("parquet", data_files="data.parquet", split="train")
-ds = load_dataset("text", data_files="*.txt", split="train")
-```
+### 8. Streaming Audio Datasets
 
-**Method 4: Using load_dataset_builder with manual control**
-```python
-builder = load_dataset_builder("path/to/dataset_script.py")
-print(builder.info)              # inspect features & splits
-print(builder.builder_configs)   # inspect available configs
-builder.download_and_prepare()   # manual lifecycle control
-ds = builder.as_dataset()
-```
-
-### BuilderConfig — Configurable Datasets
-
-When a dataset has multiple variants, subclass `BuilderConfig` and register them:
+For datasets too large to fit in memory:
 
 ```python
-from dataclasses import dataclass
-from typing import Optional
-import datasets
-
-@dataclass
-class MyConfig(datasets.BuilderConfig):
-    """Configuration for MyTextDataset."""
-    max_length: Optional[int] = None
-    language: str = "en"
-
-class MyTextDataset(datasets.GeneratorBasedBuilder):
-    BUILDER_CONFIG_CLASS = MyConfig
-    BUILDER_CONFIGS = [
-        MyConfig(name="en_short", language="en", max_length=128,
-                 description="English, max 128 tokens"),
-        MyConfig(name="en_full", language="en", max_length=None,
-                 description="English, full length"),
-        MyConfig(name="fr_short", language="fr", max_length=128,
-                 description="French, max 128 tokens"),
-    ]
-    DEFAULT_CONFIG_NAME = "en_short"
-
-    def _generate_examples(self, filepath):
-        # Access config via self.config
-        lang = self.config.language
-        max_len = self.config.max_length
-        ...
-```
-
-**Config properties available in all builders:**
-- `self.config.name` — configuration name
-- `self.config.version` — configuration version
-- `self.config.data_dir` — source data directory
-- `self.config.data_files` — source data files specification
-
-With configs, users load different variants:
-```python
-ds = load_dataset("username/dataset", "en_short")
-ds = load_dataset("username/dataset", "fr_short")
-```
-
-### Config ID System (Cache Key)
-
-Each builder instance generates a **config ID** — the config name plus an optional hash suffix for:
-- Custom features
-- Data files
-- Config kwargs overrides
-
-```python
-builder = load_dataset_builder(
-    "json",
-    data_files="my_data.jsonl",
-    features=Features({"text": Value("string")}),
+ds_stream = load_dataset(
+    "librispeech_asr", "clean", split="train",
+    streaming=True
 )
-# Config ID = "default" + hash(custom_features + data_files)
+
+# Stream processing works with map
+ds_processed = ds_stream.map(prepare_asr, remove_columns=ds_stream.column_names)
+
+# Iterate without loading everything
+for i, example in enumerate(ds_processed):
+    if i > 100:
+        break
+    # Process example...
 ```
 
-This ensures that different configurations produce **separate cache directories** and never collide.
+**Streaming considerations:**
+- `cast_column` works with streaming — resamples on-the-fly
+- `map` in streaming mode processes one example at a time (no `num_proc`)
+- Shuffling requires a buffer: `ds_stream.shuffle(buffer_size=1000, seed=42)`
+- Can't use `select` with arbitrary indices; use `take(N)` or `skip(N)`
 
-### Split Specifications
+### 9. Audio Decoding Backend Comparison
 
-The `splits.py` module provides the split infrastructure:
+| Backend | Formats | Pros | Cons |
+|---------|---------|------|------|
+| `soundfile` | WAV, FLAC, OGG, PCM | Fast, lightweight | No MP3 support |
+| `torchaudio` | WAV, MP3, FLAC, OGG, OPUS | GPU tensors, wide format support | Heavy dependency |
+| `librosa` | WAV, MP3, OGG, FLAC | Rich DSP features | ~4x slower, large dep |
+| `torchcodec` | WAV, MP3, FLAC | Fastest, minimal memory copies | Depends on torch + torchcodec |
 
-**Named splits (predefined):**
+On a typical CPU:
+- `torchcodec` ~3x faster than `soundfile` for WAV decoding
+- `librosa` ~4x slower than `soundfile` for MP3
+- `torchaudio` adds ~50% overhead vs `soundfile` for simple formats
+
+### 10. Long Audio Chunking
+
+For long audio files (>30s) that need to be split for ASR:
+
 ```python
-Split.TRAIN     # "train"
-Split.TEST      # "test"
-Split.VALIDATION  # "validation"
+def chunk_audio(batch, chunk_sec=30.0, hop_sec=15.0):
+    audio = batch["audio"]
+    waveform = audio["array"]
+    sr = audio["sampling_rate"]
+    chunk_len = int(chunk_sec * sr)
+    hop_len = int(hop_sec * sr)
+
+    chunks = []
+    start = 0
+    while start < len(waveform):
+        end = min(start + chunk_len, len(waveform))
+        chunk = waveform[start:end]
+        # Pad last chunk if needed
+        if len(chunk) < chunk_len:
+            chunk = np.pad(chunk, (0, chunk_len - len(chunk)))
+        chunks.append(chunk)
+        start += hop_len
+
+    return {"chunks": chunks, "chunk_count": len(chunks)}
+
+# Flatten nested structure
+ds_chunked = ds.map(chunk_audio, remove_columns=ds.column_names)
+# Use .flatten() or manual iteration over chunks
 ```
 
-**Custom split names** — any string works:
+### 11. Audio Column Schemas (CastColumn + Features)
+
+When creating a dataset from scratch with audio:
+
 ```python
-SplitGenerator(name="train_small", ...)
-SplitGenerator(name="calibration", ...)
+from datasets import Dataset, Features, Audio, Value
+
+features = Features({
+    "audio": Audio(sampling_rate=16000),
+    "text": Value("string"),
+    "label": Value("int32"),
+})
+
+data = [
+    {"audio": "/path/to/file1.wav", "text": "hello", "label": 0},
+    {"audio": "/path/to/file2.wav", "text": "world", "label": 1},
+]
+
+ds = Dataset.from_list(data, features=features)
 ```
 
-**SplitInfo** — explicit metadata for each split:
-```python
-from datasets import SplitInfo
+### 12. Integration with Hugging Face Hub Audio Models
 
-split_info = SplitInfo(
-    name="train",
-    num_examples=100000,       # optional, auto-computed
-    num_bytes=1234567890,      # optional, auto-computed
+#### ASR with Whisper via datasets streaming
+```python
+from transformers import pipeline
+from datasets import load_dataset
+
+# Stream 1% of Common Voice
+ds = load_dataset("mozilla-foundation/common_voice_17_0", "en", split="train", streaming=True)
+ds = ds.take(500)
+
+pipe = pipeline("automatic-speech-recognition", model="openai/whisper-small")
+
+for example in ds:
+    result = pipe(example["audio"])
+    print(f"Transcribed: {result['text']}")
+```
+
+#### Audio Classification
+```python
+classifier = pipeline(
+    "audio-classification",
+    model="superb/wav2vec2-base-superb-ks"
 )
+
+result = classifier(ds[0]["audio"])
+print(f"Top class: {result[0]['label']} ({result[0]['score']:.3f})")
 ```
 
-**ReadInstruction** — slicing syntax for `.as_dataset()`:
-```python
-# Integer indices
-ds = builder.as_dataset(split="train[0:100]")       # first 100
-ds = builder.as_dataset(split="train[10%:90%]")     # middle 80%
+### 13. Performance Best Practices
 
-# Named splits
-ds = builder.as_dataset(split=["train", "test"])     # returns DatasetDict
-```
+| Goal | Approach |
+|------|----------|
+| **Speed up loading** | Use `streaming=True` for large datasets |
+| **Reduce memory** | Use `cast_column` + access only needed examples |
+| **Batch preprocessing** | Use `map(batched=True, batch_size=100)` |
+| **Parallel decode** | Use `num_proc=os.cpu_count()` in map |
+| **Resample once** | Always cast_column BEFORE map to avoid double decode |
+| **Free disk space** | Cache only decoded tensors, not raw files |
+| **Shuffle streaming** | Use `shuffle(seed=42, buffer_size=1000)` |
 
-### DatasetInfo — Metadata Deep Dive
+### 14. Common Pitfalls
 
-```python
-from datasets import DatasetInfo, Features, Value, ClassLabel, SplitDict, SplitInfo, Version
-
-info = DatasetInfo(
-    description="...",
-    citation="""@article{..., year=2024}""",
-    homepage="https://example.com",
-    license="MIT",
-    features=Features({...}),
-    version=Version("2.0.0"),
-    splits={
-        "train": SplitInfo(name="train", num_examples=1000),
-    },
-    download_size=1024**3,      # bytes
-    dataset_size=2048**3,       # bytes
-)
-```
-
-`DatasetInfo` is serializable via YAML — it produces the content shown on the Hub's dataset card. Loading an existing dataset's info:
-```python
-ds = load_dataset("...", split="train")
-print(ds.info)           # full metadata
-print(ds.features)       # just the schema
-print(ds.info.splits)    # split metadata
-```
-
-### Packaged Modules (Built-in Builders)
-
-The `datasets/packaged_modules/` directory contains pre-built builders for common formats:
-
-| Module | Builder | Description | Config Parameters |
-|--------|---------|-------------|-------------------|
-| `csv` | `CsvConfig` + `csv` | CSV files | `sep`, `header`, `names`, `usecols`, `quoting`, `encoding` |
-| `json` | `JsonConfig` + `json` | JSON/JSONL files | `field`, `use_metadata_thread` |
-| `parquet` | `ParquetConfig` + `parquet` | Parquet files | `batch_size`, `columns`, `filters` |
-| `text` | `TextConfig` + `text` | Text files (line-by-line) | `encoding`, `chunksize` |
-| `imagefolder` | `ImageFolderConfig` | Image classification folders | `drop_labels`, `drop_metadata` |
-| `audiofolder` | `AudioFolderConfig` | Audio datasets | `drop_labels`, `drop_metadata` |
-| `videofolder` | `VideoFolderConfig` | Video datasets | `drop_labels`, `drop_metadata` |
-| `pandas` | `PandasConfig` | Pandas DataFrames | `features`, `split` |
-| `arrow` | Arrow files | Direct Arrow reading | `streaming`, `in_memory` |
-| `sql` | SQL query results | `con`, `sql`, `index_col` |
-| `spark` | PySpark DataFrames | Direct PySpark conversion |
-| `webdataset` | TAR archives | Streaming from TAR |
-| `conll` | CONLL format | `column_names` |
-| `xml` | XML files | `xpath` |
-| `hdf5` | HDF5 files | `key` |
-| `lance` | Lance format | Direct Lance reading |
-| `iceberg` | Apache Iceberg | Table reference |
-
-Each packaged module exposes a config class (subclass of `BuilderConfig`) that users can pass to `load_dataset()`:
-
-```python
-# CSV with custom delimiter
-ds = load_dataset("csv", data_files="data.tsv", sep="\t", split="train")
-
-# Parquet with column projection + filters
-import pyarrow.dataset as ds_expr
-ds = load_dataset("parquet", data_files="data.parquet",
-                  columns=["text", "label"],
-                  filters=[("date", ">=", "2024-01-01")])
-
-# Pandas DataFrame
-import pandas as pd
-df = pd.DataFrame({"text": ["hello"], "label": [0]})
-ds = load_dataset("pandas", data_files=df, split="train")
-
-# JSON with specific field
-ds = load_dataset("json", data_files="data.jsonl",
-                  field="data", split="train")
-```
-
-### The `_generate_tables` Pattern (Arrow-Level Builder)
-
-For builders that produce Arrow tables directly (not example dicts), use `_generate_tables` instead of `_generate_examples`. This is the advanced path used by packaged modules:
-
-```python
-def _generate_tables(self, filepath, split) -> Iterator[pa.Table]:
-    """Yield PyArrow tables directly."""
-    import pyarrow as pa
-    import pyarrow.json as paj
-    table = paj.read_json(filepath)
-    yield table
-```
-
-When `_generate_tables` is defined, `_prepare_split` uses it instead of `_generate_examples`. This is **faster** for data that's already tabular (Parquet, Arrow, Pandas DataFrames).
-
-The default `_generate_shards` method can be overridden to track original shard-to-Arrow-file mappings for the Dataset Viewer:
-
-```python
-def _generate_shards(self, filepath):
-    for shard_path in sorted(Path(filepath).glob("shard-*.parquet")):
-        yield str(shard_path)
-```
-
-### Creating Dataset Scripts for the Hub
-
-To share a custom dataset on the Hub, create a **dataset script** (a Python file with a builder class):
-
-**File: `my_dataset.py`**
-```python
-import datasets
-
-class MyDataset(datasets.GeneratorBasedBuilder):
-    """Documentation for MyDataset."""
-    
-    VERSION = datasets.Version("1.0.0")
-
-    def _info(self):
-        return datasets.DatasetInfo(
-            description="...",
-            features=datasets.Features({
-                "text": datasets.Value("string"),
-                "label": datasets.ClassLabel(names=["neg", "pos"]),
-            }),
-        )
-
-    def _split_generators(self, dl_manager):
-        return [
-            datasets.SplitGenerator(
-                name=datasets.Split.TRAIN,
-                gen_kwargs={"filepath": dl_manager.download(URL)},
-            ),
-        ]
-
-    def _generate_examples(self, filepath):
-        with open(filepath) as f:
-            for i, line in enumerate(f):
-                yield i, {"text": line.strip(), "label": 0}
-```
-
-**Upload to Hub:**
-```python
-from huggingface_hub import HfApi
-api = HfApi()
-api.create_repo("username/my_dataset", repo_type="dataset")
-api.upload_file(
-    path_or_fileobj="my_dataset.py",
-    path_in_repo="my_dataset.py",
-    repo_id="username/my_dataset",
-    repo_type="dataset",
-)
-```
-
-Users then load it:
-```python
-ds = load_dataset("username/my_dataset", split="train")
-```
-
-### Best Practices
-
-1. **Deterministic keys** — Always use stable, deterministic keys in `_generate_examples()`. Keys should uniquely identify examples across re-generations. Bad: random UUIDs. Good: line numbers, IDs from source data.
-
-2. **Avoid side effects** — `_generate_examples()` should be pure: given the same `gen_kwargs`, it should yield the same examples. This enables caching and multiprocessing.
-
-3. **Use dl_manager for all downloads** — Never hardcode local paths. Always use `dl_manager.download()` / `dl_manager.download_and_extract()` — this enables cache invalidation and the `DownloadMode` system.
-
-4. **Streaming-friendly** — Design splits to work with streaming by yielding examples one at a time. Avoid operations that require full dataset in memory.
-
-5. **Config for variants** — Use `BuilderConfig` subclasses for datasets with multiple processing options (languages, sizes, filtering). Never create separate builders for each variant.
-
-6. **Commit complete DatasetInfo** — Fill in description, citation, homepage, and license. These appear on the Hub's dataset card.
-
-7. **Test locally first** — Before uploading to Hub:
-```python
-builder = load_dataset_builder("my_dataset.py")
-builder.download_and_prepare()
-ds = builder.as_dataset(split="train")
-print(len(ds))
-print(ds[0])
-```
-
-8. **Version your data** — Use `VERSION` (or per-config versions) to track changes. Increment when source data or processing changes.
-
-9. **Shard responsibly** — Use `max_shard_size` in `download_and_prepare()` for large datasets. Default is now configurable via `datasets.config.MAX_SHARD_SIZE`.
-
-10. **Use `num_proc` for speed** — `download_and_prepare(num_proc=N)` splits `gen_kwargs` across N processes. Each process gets a separate set of shards from `_split_generators`.
-
-### Common Pitfalls
-
-| Pitfall | Symptom | Fix |
-|---------|---------|-----|
-| Non-deterministic keys | Different cache fingerprints every run | Use stable IDs, not random values |
-| Missing `_info()` | AttributeError on load | Always define features |
-| Wrong features in `_info()` vs `_generate_examples()` | Arrow schema mismatch | Match exactly or use `features` parameter in `load_dataset()` |
-| Hardcoded local paths | Broken on other machines | Use `dl_manager.download()` |
-| Null values not declared | Arrow cast errors | Use `Value("string")` with null, or `Sequence(Value("int32"))` for nullable lists |
-| No `DEFAULT_CONFIG_NAME` when `BUILDER_CONFIGS` is populated | ValueError on loading without name | Set `DEFAULT_CONFIG_NAME` or require `name` parameter |
-| `_generate_examples` returns dict with extra keys | Warning/ignored silently | Match keys to `Features` exactly |
-| Streaming + multiprocess | Deadlock | Streaming mode disables `num_proc` automatically |
-
-### Key Takeaways
-
-1. Three methods to implement: `_info()`, `_split_generators()`, `_generate_examples()`
-2. `GeneratorBasedBuilder` is the standard class for 90% of custom datasets
-3. `BuilderConfig` enables multi-variant datasets without code duplication
-4. Packaged modules (csv, json, parquet, etc.) cover most common formats without custom code
-5. Always use `dl_manager` for downloads to enable caching and streaming
-6. Dataset scripts on the Hub are Python files with a builder class
-7. `load_dataset_builder()` gives fine-grained lifecycle control
-8. The config ID system ensures cache isolation between variants
+| Pitfall | Solution |
+|---------|----------|
+| MP3 files silently fail to decode | Install `torchaudio` or `librosa` (soundfile doesn't handle MP3) |
+| Out-of-memory on large dataset | Use `streaming=True` |
+| Audio sounds wrong after resample | Check `sampling_rate` parameter; match model's expected sr |
+| `map()` slow on audio | Add `remove_columns` to reduce data shuffled between processes |
+| Stereo files cause shape mismatch | Set `mono=True` in `Audio()` or convert manually |
+| I/O bottleneck on HDD | Use `num_proc=1` or `streaming=True` to avoid thrashing |
 
 ### Sources
+- https://huggingface.co/docs/datasets/en/audio_dataset
+- https://huggingface.co/docs/datasets/en/audio_process
 - datasets v5.0.0 installed at `/opt/data/.venv-sakthai/lib/python3.14/site-packages/datasets/`
-- Builder source: `/opt/data/.venv-sakthai/lib/python3.14/site-packages/datasets/builder.py` (1916 lines)
-- Info source: `/opt/data/.venv-sakthai/lib/python3.14/site-packages/datasets/info.py` (440 lines)
-- Docs: https://huggingface.co/docs/datasets/en/dataset_script
-- Docs: https://huggingface.co/docs/datasets/en/package_reference/builder_classes
-- Dataset creation guide: https://huggingface.co/docs/datasets/en/create_dataset
+- datasets Audio feature: https://huggingface.co/docs/datasets/en/package_reference/main_classes#datasets.Audio

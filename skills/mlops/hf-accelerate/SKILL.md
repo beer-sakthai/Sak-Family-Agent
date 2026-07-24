@@ -1,9 +1,17 @@
-# HF Accelerate
-
-**Author:** SakThai
-**License:** MIT
-**Role:** Main Lead of the House & Master of Hugging Face
-**Related:** huggingface-hub, hf-transformers-5, hf-peft-lora
+---
+name: hf-accelerate
+author: SakThai
+license: MIT
+title: HF Accelerate
+category: mlops
+tags: [accelerate, distributed-training, mixed-precision, fsdp, deepspeed]
+related_skills:
+  - huggingface-hub
+  - hf-transformers-5
+  - hf-peft-lora
+description: Covers Hugging Face Accelerate library — distributed training engine with Accelerator, mixed precision, and composable parallelism.
+version: 1.0.0
+---
 
 ## Description
 Covers Hugging Face Accelerate library (v1.14.0+) — the zero-boilerplate distributed training engine. Includes the Accelerator class, mixed precision (FP16/BF16/FP8), GradScaler, DeepSpeed/FSDP integration, and the new Composable Parallelism system (`ParallelismConfig`) for 2D/3D/4D parallel training with FSDP2 + Tensor/Context/Sequence Parallelism. Focused on patterns that work under zero-cost constraints.
