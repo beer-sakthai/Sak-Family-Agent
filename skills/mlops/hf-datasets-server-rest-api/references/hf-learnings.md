@@ -453,11 +453,417 @@ PostgreSQL can query Parquet files via the `pgai` extension's `pg_read_parquet()
 - **Small datasets are always free** — Any public dataset under 5 GB is automatically available as Parquet at no cost to the user.
 - **Script auto-download with caching** — Use conditional HTTP requests (ETags/If-Modified-Since) to avoid re-downloading unchanged Parquet files.
 
+## 2026-07-25: hf-datasets-server-parquet-conversion-pipeline (Deep Dive) — Parquet Conversion Architecture Internals
+
+### Summary
+Comprehensive deep-dive into the Hugging Face Datasets Server's Parquet conversion pipeline — how datasets of any format (CSV, JSONL, image dirs, etc.) are automatically converted to Apache Parquet for efficient remote querying. Covers the full conversion architecture, sharding strategy, partial export handling, parquet-native datasets, the `refs/convert/parquet` branch internals, the `RowsIndex` class from the source code, and zero-cost analytical querying patterns.
+
+### Source
+- Dataset Viewer Parquet docs: https://huggingface.co/docs/dataset-viewer/en/parquet
+- Parquet Conversion Process: https://huggingface.co/docs/dataset-viewer/en/parquet_process
+- Source: `libcommon/parquet_utils.py` in https://github.com/huggingface/dataset-viewer
+- Published: 2026-07-25, Dataset Viewer latest
+
+### 1. Why Parquet?
+
+Parquet is a **columnar storage format** optimized for analytics — data is divided into **row groups**, and within each row group data is stored by **column** rather than by row. Each column chunk is independently compressed using algorithms like Snappy, Zstd, or LZ4. This design enables:
+
+- **Predicate pushdown** — Only read the columns you need, skip irrelevant row groups
+- **Compression** — Columnar layout compresses better than row-oriented formats (same data types cluster together)
+- **Schema evolution** — Columns can be added without rewriting entire files
+- **Page-level indexing** — Min/max statistics per page enable skipping non-matching pages during scans
+
+The Datasets Server auto-converts every dataset (CSV, JSONL, Parquet-native, directories of images/audio) to Parquet for fast querying regardless of original format.
+
+### 2. The Conversion Pipeline Architecture
+
+```
+┌──────────────────────────────┐
+│  User uploads dataset (any   │
+│  format: CSV, JSONL, images, │
+│  audio, Parquet, etc.)       │
+└──────────────┬───────────────┘
+               ▼
+┌──────────────────────────────┐
+│  Datasets Server detects new │
+│  or updated dataset          │
+└──────────────┬───────────────┘
+               ▼
+┌──────────────────────────────┐
+│  Conversion job spawns:      │
+│  ┌────────────────────────┐  │
+│  │ 1. Read source format  │  │
+│  │ 2. Stream to Arrow     │  │
+│  │ 3. Write Parquet       │  │
+│  │ 4. Upload to Hub       │  │
+│  └────────────────────────┘  │
+└──────────────┬───────────────┘
+               ▼
+┌──────────────────────────────┐
+│  Published to                │
+│  refs/convert/parquet branch │
+│  (parallel to main)          │
+└──────────────┬───────────────┘
+               ▼
+┌──────────────────────────────┐
+│  Available via:              │
+│  - /parquet API endpoint     │
+│  - Hub /api/parquet endpoint │
+│  - Direct file access        │
+└──────────────────────────────┘
+```
+
+### 3. The `refs/convert/parquet` Branch
+
+Parquet files are published to a **separate branch** named `refs/convert/parquet` that parallels the main branch.
+
+**Why a separate branch?**
+- Avoids inflating the main branch with generated files
+- Allows the Datasets Server to manage Parquet files independently of user edits
+- Enables clean separation between source data and derived analytics format
+- The branch uses `%2F` encoding in URLs (`refs%2Fconvert%2Fparquet`) because `/` is not allowed in branch names
+
+**Directory structure on the branch:**
+```
+refs/convert/parquet/
+  ├── config_name/           # e.g., "default", "ParaphraseRC", "en"
+  │   ├── train/             # split name (or "partial-train" if partial)
+  │   │   ├── 0000.parquet   # shard 0
+  │   │   ├── 0001.parquet   # shard 1
+  │   │   └── ...
+  │   ├── validation/
+  │   └── test/
+  └── another_config/
+      └── ...
+```
+
+**Direct file resolution URL pattern:**
+```
+https://huggingface.co/datasets/{dataset}/resolve/refs%2Fconvert%2Fparquet/{config}/{split}/{shard}.parquet
+```
+
+### 4. Sharded Parquet Files (500MB Shards)
+
+Big datasets are **partitioned into shards** of approximately **500MB each** to enable efficient distributed and streaming access.
+
+**Shard filename convention:**
+```
+{dataset-name}-{split}-{shard-index:04d}-of-{total-shards:04d}.parquet
+# Example: fineweb-edu-train-0000-of-0004.parquet
+```
+
+**Key properties:**
+- Each shard targets ~500MB uncompressed
+- Shard indices are zero-indexed and contiguous
+- Splits with only one shard still get the `0000-of-0001` naming
+- Shards are listed in ascending order by the API responses
+- The `/parquet` endpoint returns a flat list of URLs per split, not a range — you iterate over the list
+
+**How sharding is decided:**
+The conversion process calculates the total dataset size and splits into shards of ~500MB. For very large datasets (like FineWeb-Edu with billions of rows), you might get thousands of shards per split.
+
+### 5. Partial Parquet Export
+
+The Parquet version can be **partial** in two specific cases:
+
+**Case A: Non-Parquet source datasets > 5GB**
+When the original dataset is larger than **5GB** and not already Parquet, the Datasets Server generates Parquet files up to **5GB total** and stops. The split directory is prefixed with `"partial-"` (e.g., `partial-train` instead of `train`).
+
+**Case B: Parquet-native datasets with oversized row groups**
+If the dataset is already in Parquet format but contains row groups larger than the recommended size (**100-300MB uncompressed**), the server may re-convert to split large row groups. The recommended row group size is 100-300MB because Parquet is streamed row-group-by-row-group in most data libraries — larger row groups consume more memory during streaming reads.
+
+**How to detect a partial export (from source code):**
+```python
+# libcommon/parquet_utils.py
+PARTIAL_PREFIX = "partial-"
+
+def parquet_export_is_partial(parquet_file_url: str) -> bool:
+    """Check if the Parquet export is the full dataset or partial.
+    Returns True if the split directory starts with 'partial-'."""
+    split_dir = parquet_file_url.rsplit("/", 2)[1]
+    return split_dir.startswith("partial-")
+```
+
+**Implications:**
+- Partial exports only contain the first ~5GB of data
+- The dataset viewer will show reduced rows
+- Full export requires either: smaller source dataset, PRO subscription, or manual conversion via the `datasets` library
+- The `rows` endpoint still works on partial exports — it just returns fewer rows
+
+### 6. Parquet-Native Datasets (Zero-Copy)
+
+When the source dataset is **already in Parquet format**, no conversion is needed:
+
+```
+refs/convert/parquet/{config}/{split}/{shard}.parquet
+  │
+  └── (symbolic link / redirect to the original file)
+```
+
+**Exception:** If the original Parquet files have **oversized row groups** (>300MB), the server still re-converts to split them into smaller row groups for optimal API performance.
+
+**How to check if your dataset is Parquet-native:**
+1. Upload speed — Parquet uploads are immediately available (no conversion delay)
+2. The `/parquet` endpoint responds immediately after upload
+3. Row group sizes can be inspected via the Hub's Parquet metadata sidebar
+
+**Parquet metadata sidebar on the Hub:**
+Files on datasets with `.parquet` extension show a metadata panel revealing:
+- Number of row groups
+- Row group sizes (compressed and uncompressed)
+- Column statistics (null counts, min/max values)
+- Compression codec used
+
+### 7. The `/parquet` API Endpoints (Two Flavors)
+
+#### 7.1 Datasets Server Endpoint: `GET /parquet`
+
+```
+https://datasets-server.huggingface.co/parquet?dataset={dataset_name}
+```
+
+**Optional query params:** `config` (subset name), `split` (train/validation/test)
+
+**Response structure:**
+```json
+{
+  "parquet_files": {
+    "{config}": {
+      "{split}": [
+        "https://huggingface.co/api/datasets/{dataset}/parquet/{config}/{split}/{index}.parquet"
+      ]
+    }
+  },
+  "pending": [...],   // Configs still being converted
+  "failed": [...]     // Configs that failed conversion
+}
+```
+
+**Response example (from FineWeb-Edu):**
+```json
+{
+  "default": {
+    "train": [
+      "https://huggingface.co/api/datasets/HuggingFaceFW/fineweb-edu/parquet/default/train/0.parquet",
+      "https://huggingface.co/api/datasets/HuggingFaceFW/fineweb-edu/parquet/default/train/1.parquet",
+      "..."
+    ]
+  }
+}
+```
+
+#### 7.2 Hub API Endpoint: `GET /api/datasets/{dataset}/parquet`
+
+```
+https://huggingface.co/api/datasets/{dataset}/parquet
+```
+
+**Optional path segments:** `/{config}/{split}` for filtered results
+
+**Response** — Same structure as the datasets-server endpoint, but using Hub authentication.
+
+**Shard-level URL resolution:**
+```
+https://huggingface.co/api/datasets/{dataset}/parquet/{config}/{split}/{shard_index}.parquet
+# This redirects to:
+https://huggingface.co/datasets/{dataset}/resolve/refs%2Fconvert%2Fparquet/{config}/{split}/{shard_index:04d}.parquet
+```
+
+### 8. Source Code Architecture (from `parquet_utils.py`)
+
+The core implementation lives in `libcommon/parquet_utils.py` in the dataset-viewer repo (302 lines). Key components:
+
+#### 8.1 Exception Hierarchy
+```python
+class EmptyParquetMetadataError(Exception):    # No parquet files found
+class ParquetResponseFormatError(Exception):    # Invalid API response
+class FileSystemError(Exception):               # Filesystem access error
+class TooBigRows(Exception):                    # Scan size limit exceeded
+class SchemaMismatchError(Exception):           # Schema changed between shards
+```
+
+#### 8.2 ParquetFileMetadataItem (TypedDict)
+```python
+class ParquetFileMetadataItem(TypedDict):
+    dataset: str
+    config: str
+    split: str
+    url: str
+    filename: str
+    size: int
+    num_rows: int
+    parquet_metadata_subpath: str
+```
+
+Each Parquet file in the index has its URL, size, row count, and metadata path. The `parquet_metadata_subpath` references a cached metadata file on the server's filesystem for fast access without re-reading the Parquet file headers.
+
+#### 8.3 RowsIndex — The Query Engine
+```python
+class RowsIndex:
+    def __init__(self, dataset, config, split, parquet_metadata_directory,
+                 max_scan_size=None, hf_token=None, hf_endpoint=None, data_store=None):
+        self._init_dataset_info()    # Load parquet file list from cached step
+        self._init_viewer_index()    # Create libviewer.Dataset for row-group/page pruning
+```
+
+**`_init_dataset_info()`** flow:
+1. Load cached `config-parquet-metadata` from MongoDB (previous pipeline step)
+2. Filter Parquet files matching the requested config + split
+3. Sort by filename for deterministic ordering
+4. Calculate total rows (`num_rows_total = sum(f["num_rows"] for f in self.parquet_files)`)
+5. Detect partial export via `parquet_export_is_partial()`
+6. Load Arrow schema from features or from the first Parquet metadata file
+
+**`_init_viewer_index()`** flow:
+1. Transform Parquet file metadata into `libviewer.Dataset` format
+2. Extract revision from URL (encoded in the `refs/convert/parquet` branch reference)
+3. Create `lv.Dataset` with metadata store pointing to local parquet metadata cache
+
+#### 8.4 Query Execution with Page Pruning
+```python
+@alru_cache(maxsize=1)  # Cache per RowsIndex instance
+async def query(self, offset: int, length: int) -> tuple[pa.Table, list[str]]:
+    return await self.query_libviewer_index(offset=offset, length=length)
+```
+
+**`query_libviewer_index()`** uses `libviewer.Dataset.scan()` which performs:
+1. **Row-group pruning** — Skip row groups that don't contain the requested row range
+2. **Page-level pruning** — Use min/max statistics from the page index to skip irrelevant pages within a row group
+3. **Column projection** — Only deserialize the requested columns
+
+**Important:** The scan size is bounded by `max_scan_size`. If exceeded, `TooBigRows` is raised with a suggestion to either:
+- Ensure Parquet files contain a page index (for random access without loading entire row groups)
+- Use smaller row-group sizes when serializing Parquet files
+
+#### 8.5 Schema Casting
+```python
+parts = [
+    cast_table_to_schema(pa.Table.from_batches([batch]), self.features.arrow_schema)
+    for batch in batches
+]
+table = pa.concat_tables(parts)
+```
+
+All batches are cast to the canonical schema from Hugging Face datasets `Features`. If casting fails (e.g., type mismatch due to schema evolution between shards), a `SchemaMismatchError` is raised.
+
+#### 8.6 Binary Column Truncation (Disabled)
+```python
+def truncate_binary_columns(table: pa.Table, max_binary_length: int, features: Features):
+    if max_binary_length < 0:
+        return table, []
+    # Truncates binary values to max_binary_length bytes
+```
+
+Binary column truncation is implemented but disabled (line 300: `max_binary_length=-1`). The code note says it's disabled because they can't iterate on small batches in `sync_scan()` and truncate batches per batch yet.
+
+### 9. The Split Suffix Convention for Multi-Part Datasets
+
+For datasets split across multiple "parts" (not to be confused with shards), there's a `-part{N}` suffix convention:
+
+```python
+# For paths like "en/train-part0/0000.parquet", "en/train-part1/0000.parquet"
+PART_SUFFIX = "-part{}"
+```
+
+This is used when datasets themselves have multiple parts that are logically separate partitions of the same split. The `-` character is forbidden in split names, so it doesn't create directory name collisions with actual split directories.
+
+### 10. Practical Usage Patterns
+
+#### 10.1 Loading Parquet with DuckDB (Zero-Cost Analytics)
+```python
+import duckdb
+
+# Query remote Parquet files from the Hub
+con = duckdb.connect()
+result = con.execute("""
+    SELECT COUNT(*) as total_rows,
+           COUNT(DISTINCT column_name) as unique_values
+    FROM read_parquet('https://huggingface.co/api/datasets/{dataset}/parquet/{config}/{train}/*.parquet')
+    WHERE some_column > 100
+""").fetchall()
+```
+
+DuckDB performs **predicate pushdown** — only the relevant row groups and columns are fetched over HTTP.
+
+#### 10.2 Loading with PyArrow
+```python
+import pyarrow.parquet as pq
+import pyarrow.dataset as ds
+
+# Read remote Parquet with filtering
+dataset = ds.dataset(
+    "https://huggingface.co/api/datasets/{dataset}/parquet/{config}/{train}/0.parquet",
+    format="parquet"
+)
+table = dataset.to_table(filter=ds.field("column") > 100)
+```
+
+#### 10.3 Programmatic Discovery
+```python
+import requests
+
+# Step 1: Get list of configs and splits
+splits = requests.get(
+    "https://datasets-server.huggingface.co/splits",
+    params={"dataset": "my-dataset"}
+).json()
+
+# Step 2: Get Parquet URLs for a specific config+split
+parquet = requests.get(
+    "https://datasets-server.huggingface.co/parquet",
+    params={"dataset": "my-dataset"}
+).json()
+
+# Step 3: Inspect first Parquet file's metadata
+first_url = parquet["parquet_files"]["default"]["train"][0]
+meta = pq.read_metadata(first_url.replace(
+    "https://huggingface.co/api/datasets/",
+    "https://huggingface.co/datasets/"
+).replace(
+    "/parquet/", "/resolve/refs%2Fconvert%2Fparquet/"
+))
+print(f"Rows: {meta.num_rows}, Row groups: {meta.num_row_groups}")
+```
+
+#### 10.4 Check if Export is Complete (Partial Detection)
+```python
+def is_partial_export(parquet_url: str) -> bool:
+    """Check if a Parquet export URL points to a partial export."""
+    split_dir = parquet_url.rsplit("/", 2)[1]
+    return split_dir.startswith("partial-")
+```
+
+### 11. Error Handling & Edge Cases
+
+| Error Pattern | Cause | Mitigation |
+|---|---|---|
+| `EmptyParquetMetadataError` | No Parquet files found for the config+split | Verify the dataset has been converted; check `/parquet` endpoint status |
+| `SchemaMismatchError` | Parquet shards have different schemas | Re-dataset with consistent schema across all shards |
+| `TooBigRows` | Query would scan too many bytes for page-pruned access | Check Parquet files have page indexes; use smaller row groups |
+| `FileSystemError` | Cannot read Parquet metadata from local cache | Server-side cache miss; trigger re-conversion |
+| Missing config in response | Dataset has multiple configs but none match | Use `/splits` to discover all configs first |
+| Dataset renamed | Source dataset moved | Use current dataset name (check error message for hint) |
+
+### 12. Zero-Cost Strategies for Parquet on Hugging Face
+
+1. **Free serverless analytics** — Query remote Parquet files via DuckDB or PyArrow without downloading. Only the necessary bytes are transferred.
+2. **Predicate pushdown is free** — Filtering on Parquet before data transfer means you can analyze multi-TB datasets from a laptop.
+3. **5GB free tier** — Any public dataset under 5 GB is automatically fully converted to Parquet at no cost.
+4. **Partial exports still useful** — Even partial 5GB Parquet exports are valuable for prototyping and schema exploration.
+5. **No GPU needed** — Parquet analytics is CPU-only, no inference credits involved.
+6. **Hub API rate limits apply** — Unauthenticated requests are heavily rate-limited. Use an HF token for reasonable quotas. See rate limiting docs.
+7. **Manual conversion for >5GB** — Use `datasets` library with streaming + `to_parquet()` to create your own sharded Parquet files for larger datasets.
+
 ### Resources
-- Parquet API: https://huggingface.co/docs/dataset-viewer/en/parquet
-- Parquet Conversion Overview: https://huggingface.co/docs/dataset-viewer/en/parquet_process
+- Parquet API docs: https://huggingface.co/docs/dataset-viewer/en/parquet
+- Parquet Conversion Process: https://huggingface.co/docs/dataset-viewer/en/parquet_process
+- Dataset Viewer Source: https://github.com/huggingface/dataset-viewer
+  - Core logic: `libs/libcommon/src/libcommon/parquet_utils.py`
+  - API implementation: `libs/libapi/`
+  - Worker jobs: `services/worker/`
 - Server Infrastructure: https://huggingface.co/docs/dataset-viewer/en/server
 - DuckDB + Parquet: https://duckdb.org/docs/data/parquet
-- Dataset Viewer Source: https://github.com/huggingface/dataset-viewer
 - Apache Parquet: https://parquet.apache.org/
-- OpenAPI: https://datasets-server.huggingface.co/openapi.json
+- OpenAPI spec: https://datasets-server.huggingface.co/openapi.json
+- Datasets Server endpoint: https://datasets-server.huggingface.co/parquet
+- Hub API endpoint: https://huggingface.co/api/datasets/{dataset}/parquet

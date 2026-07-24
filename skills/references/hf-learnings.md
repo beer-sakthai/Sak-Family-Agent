@@ -1,5 +1,38 @@
 # HF Learnings Log
 
+## 2026-07-25: hf-datasets-server-parquet-conversion-pipeline (Deep Dive) — Parquet Conversion Architecture Internals (Topic #174 Deepened)
+
+### Summary
+Comprehensive deep-dive into the Hugging Face Datasets Server's Parquet conversion pipeline — how datasets of any format are auto-converted to Apache Parquet for efficient remote querying. Covers the `refs/convert/parquet` branch, 500MB shard strategy, partial exports (>5GB limit), Parquet-native zero-copy, dual `/parquet` API endpoints, internal `RowsIndex` class with page-level pruning, and zero-cost analytical patterns using DuckDB/PyArrow.
+
+**Full deep-dive:** `skills/mlops/hf-datasets-server-rest-api/references/hf-learnings.md`
+
+### Source
+- Dataset Viewer Parquet docs: https://huggingface.co/docs/dataset-viewer/en/parquet
+- Parquet Conversion Process: https://huggingface.co/docs/dataset-viewer/en/parquet_process
+- Source code: `libcommon/parquet_utils.py` in dataset-viewer repo
+
+### Key Discoveries
+1. **`refs/convert/parquet` branch** — Separate git branch parallel to main, uses `%2F` encoding because `/` isn't allowed in branch names
+2. **500MB sharding** — Datasets partitioned into ~500MB shards (`{name}-{split}-0000-of-NNNN.parquet`) for efficient streaming
+3. **Partial prefix detection** — `parquet_export_is_partial()` checks if split directory starts with `"partial-"`; from source code at `libcommon/parquet_utils.py`
+4. **Dual API endpoints** — Datasets Server (`/parquet?dataset=`) returns `pending`/`failed` arrays; Hub API (`/api/datasets/{ds}/parquet`) uses Hub auth
+5. **Page-level pruning** — `libviewer.Dataset.scan()` skips row groups and pages that don't match query range, bounded by `max_scan_size`
+6. **Binary truncation disabled** — `truncate_binary_columns()` exists but disabled (`max_binary_length=-1`) due to batch iteration limitation
+7. **5GB free tier** — Public datasets >5GB get partial export only; full conversion requires PRO or manual conversion
+
+### Zero-Cost Implications
+- Remote Parquet querying via DuckDB is free (predicate pushdown, only relevant bytes transferred)
+- The 5GB partial export limit means most small datasets are fully available as Parquet at no cost
+- No GPU needed — Parquet analytics is CPU-only
+
+### Resources
+- Full deep-dive in `mlops/hf-datasets-server-rest-api/references/hf-learnings.md`
+- https://huggingface.co/docs/dataset-viewer/en/parquet
+- https://github.com/huggingface/dataset-viewer
+
+---
+
 ## 2026-07-24: hf-custom-model-integration-deep-dive — Complete Guide to Integrating Custom PyTorch Models into Transformers (Topic #55 Deepened)
 
 ### Summary
