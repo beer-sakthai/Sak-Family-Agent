@@ -214,3 +214,290 @@ The default template (`datasetcard_template.md`) accepts these Jinja2 variables 
 4. **ignore_metadata_errors** — set to `True` when loading cards with partial/invalid YAML
 5. **RepoCard fallback** — `DatasetCard(text)` still works for cards without structured metadata
 6. **No config needed for simple cards** — if you just want basic metadata, `DatasetCardData(language="en", license="mit")` is sufficient
+
+---
+
+## 2026-07-24: hf-dataset-card-api — Deep Dive on Hub Tag Taxonomy, Validation Endpoint & Discoverability (Topic #191 Deepening)
+
+### Summary
+Deepening the dataset card API coverage with the Hub's built-in tag taxonomy (`get_dataset_tags()` / `get_model_tags()`), the validation endpoint mechanics, and practical tagging patterns for tool-calling datasets. Covers all 10 dataset tag categories, how to pass them via `DatasetCardData(**kwargs)`, the Hub's YAML validation schema, array-vs-string field requirements, and a complete reference for tagging Beer's tool-calling datasets with `format:agent-traces` for maximum discoverability.
+
+### Source
+- `huggingface_hub` v1.24.0 source: `HfApi.get_dataset_tags()`, `HfApi.get_model_tags()`
+- Hub validation: `POST https://huggingface.co/api/validate-yaml`
+- Dataset card spec: https://github.com/huggingface/hub-docs/blob/main/datasetcard.md
+- Dataset tags endpoint: `https://huggingface.co/api/datasets-tags-by-type`
+- Model tags endpoint: `https://huggingface.co/api/models-tags-by-type`
+
+### 1. Hub Tag Taxonomy — Complete Reference
+
+The Hugging Face Hub maintains a hierarchical tag system for datasets and models. Tags are fetched via `HfApi.get_dataset_tags()` / `HfApi.get_model_tags()` and are the authoritative source of valid metadata values.
+
+**Dataset tags — 10 categories:**
+
+| Category | Count | Description | Example |
+|----------|-------|-------------|---------|
+| `library` | 12 | Data processing libraries | `datasets`, `mlcroissant`, `polars` |
+| `license` | 82 | Standard licenses | `apache-2.0`, `mit`, `cc-by-4.0` |
+| `language` | 8244 | ISO 639 codes | `en`, `fra`, `zh` |
+| `other` | 11 | Domain/genre tags | `synthetic`, `agent`, `medical`, `code`, `finance` |
+| `task_ids` | 74 | Specific tasks | `language-modeling`, `tool-use`, `function-calling` |
+| `task_categories` | 52 | Task families | `text-generation`, `text-classification`, `question-answering` |
+| `size_categories` | 11 | Size buckets | `n<1K`, `10K<n<100K`, `1M<n<10M` |
+| `format` | 10 | Data format/structure | `agent-traces`, `json`, `parquet`, `arrow` |
+| `modality` | 9 | Data modality | `text`, `audio`, `image`, `tabular`, `video` |
+| `benchmark` | 1 | Official benchmarks | `benchmark:official` |
+
+**Model tags — 8 categories:**
+
+| Category | Count | Description |
+|----------|-------|-------------|
+| `region` | 2 | Deployment region (`us`, `eu`) |
+| `library` | 53 | ML framework (`pytorch`, `tf`, `jax`, ...) |
+| `other` | 10 | Infrastructure (`text-generation-inference`, ...) |
+| `license` | 82 | Standard licenses |
+| `language` | 4973 | Language support |
+| `deploy` | 3 | Deployment targets (`endpoints_compatible`, `azure`, `sagemaker`) |
+| `dataset` | 2567 | Training datasets (auto-populated) |
+| `pipeline_tag` | 52 | HF pipeline types |
+
+**Key difference:** Dataset tags use `type:value` format (e.g., `format:agent-traces`), while model tags use bare slugs (e.g., `pytorch`). The `DatasetCardData` typed fields (`task_categories`, `task_ids`, `size_categories`, `language`, `license`) auto-map to their tag equivalents. All other categories must be added via the `tags` kwargs list.
+
+### 2. Adding Tags to DatasetCardData
+
+`DatasetCardData` has **no `tags` field** — tags outside the predefined fields must be passed as extra kwargs:
+
+```python
+from huggingface_hub import DatasetCard, DatasetCardData
+
+card_data = DatasetCardData(
+    language=['en'],
+    license=['mit'],
+    annotations_creators=['machine-generated'],
+    language_creators=['machine-generated'],
+    multilinguality=['monolingual'],
+    size_categories=['10K<n<100K'],
+    source_datasets=['original'],
+    task_categories=['text-generation'],
+    task_ids=['tool-use', 'function-calling', 'language-modeling'],
+    pretty_name='My Tool-Calling Dataset',
+    config_names=['default'],
+    # Extra tags beyond the typed fields:
+    tags=['format:agent-traces', 'other:agent', 'synthetic'],
+    format='agent-traces',
+    modality='text',
+)
+
+card = DatasetCard.from_template(card_data, pretty_name=card_data.pretty_name)
+# card.push_to_hub("username/my-dataset")
+```
+
+**How it works:** `CardData.__init__(**kwargs)` stores all extra kwargs in `self.__dict__`. `CardData.to_dict()` exports all non-None values. The YAML block thus automatically includes any tags passed as direct attributes.
+
+### 3. Validation Endpoint (`/api/validate-yaml`)
+
+The `RepoCard.validate()` method sends the card content to `POST https://huggingface.co/api/validate-yaml`:
+
+```python
+body = {"repoType": "dataset", "content": str(card)}
+response = session.post("https://huggingface.co/api/validate-yaml", json=body)
+# 200 → {"errors": [], "warnings": []}
+# 400 → {"errors": [{"message": "...", "path": [...]}], "warnings": [...]}
+```
+
+**Validation rules discovered empirically:**
+
+| Field | Required Format | Notes |
+|-------|----------------|-------|
+| `language` | List `[str]` | ISO codes or special values like `"code"` |
+| `license` | List `[str]` | License identifiers from Hub list |
+| `annotations_creators` | List `[str]` | One of: `found`, `crowdsourced`, `expert-generated`, `machine-generated`, `no-annotation`, `other` |
+| `language_creators` | List `[str]` | Same options minus `no-annotation` |
+| `multilinguality` | List `[str]` | One of: `monolingual`, `multilingual`, `translation`, `other` |
+| `size_categories` | List `[str]` | Exact bucket names from tag taxonomy |
+| `task_categories` | List `[str]` | Valid pipeline tag names |
+| `task_ids` | List `[str]` | Specific task names from tag taxonomy |
+| `source_datasets` | List `[str]` | `original` or `extended` |
+| `config_names` | List `[str]` or `str` | Dataset config/subset names |
+| `tags` | List `[str]` | Arbitrary tags in `type:value` or bare format |
+| `format` | `str` | Single format identifier |
+| `modality` | `str` | Single modality identifier |
+| `pretty_name` | `str` | Any string (no validation) |
+
+**Critical rule:** The Hub validation **requires arrays** for all multi-valued fields. Passing a bare string (e.g., `task_categories="text-generation"`) fails with `"must be an array"`. Always use lists.
+
+### 4. `train_eval_index` — Evaluation Specifications
+
+The `train_eval_index` field (exported as `train-eval-index` in YAML) tells the Hub how to evaluate a dataset. Format:
+
+```python
+train_eval_index = {
+    "config": "default",           # Dataset config to use
+    "task": "text-generation",     # Task type from task taxonomy
+    "task_id": "language-modeling", # Specific task ID
+    "splits": {"train": "train"},  # Split mapping
+    "col_mapping": {               # Column → expected field mapping
+        "input": "text",
+        "target": "label",
+    },
+    "metrics": [
+        {
+            "type": "accuracy",
+            "name": "Accuracy",
+        }
+    ],
+}
+
+card_data = DatasetCardData(
+    language=['en'],
+    license=['mit'],
+    pretty_name='Eval-Supported Dataset',
+    train_eval_index=train_eval_index,
+)
+```
+
+The `train_eval_index` is auto-renamed from `train_eval_index` → `train-eval-index` in `DatasetCardData._to_dict()`.
+
+### 5. Practical Pattern: Tool-Calling Dataset Card for Beer
+
+Beer's 8 tool-calling datasets should use these tags for maximum Hub discoverability:
+
+```python
+from huggingface_hub import DatasetCard, DatasetCardData
+
+card_data = DatasetCardData(
+    language=['en'],
+    license=['mit'],
+    annotations_creators=['machine-generated'],
+    language_creators=['machine-generated'],
+    multilinguality=['monolingual'],
+    size_categories=['1K<n<10K'],  # Adjust per dataset size
+    source_datasets=['original'],
+    task_categories=['text-generation'],
+    task_ids=['tool-use', 'function-calling', 'multi-turn-conversation'],
+    pretty_name='Tool-Calling Assistant Traces',
+    config_names=['default'],
+    tags=[
+        'format:agent-traces',   # ← Key tag: marks as agent trace data
+        'other:agent',           # ← Second key tag: agent domain
+        'synthetic',             # Machine-generated
+    ],
+    format='agent-traces',       # Structured format tag
+    modality='text',             # Text modality
+)
+
+card = DatasetCard.from_template(
+    card_data,
+    pretty_name=card_data.pretty_name,
+    dataset_summary=(
+        "Multi-turn tool-calling conversation traces for function-calling "
+        "assistant training. Contains structured tool_call and tool_response "
+        "messages across diverse scenarios."
+    ),
+    dataset_description=(
+        "This dataset contains N tool-calling conversations with 3-8 turns each. "
+        "Each conversation includes user queries, assistant tool-call requests, "
+        "tool execution results, and final assistant responses."
+    ),
+    curators="Nanthasit (beer-sakthai)",
+)
+
+# Push to Hub
+card.push_to_hub("username/tool-calling-traces")
+```
+
+**Resulting YAML metadata:**
+```yaml
+---
+language:
+- en
+license:
+- mit
+annotations_creators:
+- machine-generated
+language_creators:
+- machine-generated
+multilinguality:
+- monolingual
+size_categories:
+- 1K<n<10K
+source_datasets:
+- original
+task_categories:
+- text-generation
+task_ids:
+- tool-use
+- function-calling
+- multi-turn-conversation
+pretty_name: Tool-Calling Assistant Traces
+config_names:
+- default
+tags:
+- format:agent-traces
+- other:agent
+- synthetic
+format: agent-traces
+modality: text
+---
+```
+
+### 6. Programmatic Tag Discovery
+
+You can fetch the complete, up-to-date tag taxonomy at any time:
+
+```python
+from huggingface_hub import HfApi
+
+api = HfApi()
+
+# Dataset tags
+dataset_tags = api.get_dataset_tags()
+print(dataset_tags.keys())
+# dict_keys(['library', 'license', 'language', 'other', 'task_ids',
+#            'task_categories', 'size_categories', 'format', 'modality', 'benchmark'])
+
+# All valid task IDs for datasets
+task_ids = [t['id'] for t in dataset_tags['task_ids']]
+print(len(task_ids))  # 74
+
+# Model tags
+model_tags = api.get_model_tags()
+print(model_tags.keys())
+# dict_keys(['region', 'library', 'other', 'license', 'language', 'deploy',
+#            'dataset', 'pipeline_tag'])
+```
+
+### 7. Card Data Round-Tripping
+
+The `RepoCard.content` property reconstructs the YAML block preserving original key order:
+
+```python
+# Load existing card
+card = DatasetCard.load("username/my-dataset")
+
+# Read current metadata
+print(card.data.to_yaml())
+
+# Modify
+card.data['tags'] = ['format:agent-traces', 'other:agent']
+card.data.pretty_name = "Updated Name"
+
+# The YAML block is rebuilt with original_order preserved
+# New keys are appended after listed keys
+card.push_to_hub("username/my-dataset", commit_message="Update tags")
+
+# For full control of key order:
+card.data.to_yaml(original_order=["language", "license", "tags", "pretty_name"])
+```
+
+The `_original_order` attribute captures the YAML key ordering from file load. When `content` is read, `to_yaml(original_order=self._original_order)` is called, keeping diffs minimal.
+
+### Skill
+mlops/hf-dataset-card-api — references/hf-learnings.md
+
+### References
+- `huggingface_hub` source: `repocard.py`, `repocard_data.py` (v1.24.0)
+- Hub validation: `POST https://huggingface.co/api/validate-yaml`
+- Tags: `GET https://huggingface.co/api/datasets-tags-by-type`
+- Dataset card spec: https://github.com/huggingface/hub-docs/blob/main/datasetcard.md
+- HF Hub datasets cards guide: https://huggingface.co/docs/hub/datasets-cards
