@@ -1309,3 +1309,436 @@ gr.ChatInterface(
 8. **ChatInterface + Blocks** — Wrap in `gr.Blocks` for layout control and additional components, but lose auto-layout convenience.
 9. **`cache_examples=True`** on HF Spaces — Caches example outputs at app start so first user doesn't pay cold-start penalty.
 10. **API unlisted** — Set `api_visibility="private"` to prevent programmatic access while keeping UI functional.
+
+
+---
+
+# HF Learnings — Gradio 6 Custom Components: Create, Dev, Build, Publish
+
+**Topic:** `hf-gradio-custom-components-deep-dive`
+**Date:** 2026-07-24
+**Skill:** mlops/gradio-spaces
+**Author:** SakThai
+**License:** MIT
+
+## Overview
+
+Deep-dive into Gradio 6's Custom Components system — the full workflow for creating,
+developing, building, and publishing reusable Gradio components. Covers the CLI (`gradio cc`),
+backend implementation (`preprocess`/`postprocess`/`data_model`), frontend Svelte architecture,
+and publishing to PyPI / Hugging Face Spaces.
+
+**Source:** Gradio v6.20.0 official guides at https://github.com/gradio-app/gradio/tree/main/guides/08_custom-components
+(5 guides + 1 FAQ + 3 case studies: PDF component, Multimodal Chatbot parts 1-2, Documentation).
+
+## Prerequisites
+
+- Python 3.10+
+- Node.js 20+ and npm 9+
+- Gradio 5+ (`pip install --upgrade gradio`)
+- pip 21.3+
+
+## The 4-Step Workflow
+
+```
+gradio cc create MyComponent --template SimpleTextbox   # 1. CREATE
+cd mycomponent && gradio cc dev                          # 2. DEVELOP (hot reload)
+gradio cc build                                           # 3. BUILD (.whl + .tar.gz)
+gradio cc publish                                         # 4. PUBLISH (PyPI + Spaces)
+```
+
+### Step 1: Create
+
+`gradio cc create <Name> --template <Template>` bootstraps a component directory:
+
+```
+mycomponent/
+├── backend/              # Python code
+│   └── gradio_mycomponent/
+│       ├── __init__.py
+│       └── mycomponent.py
+├── frontend/             # Svelte/JS code
+│   ├── Index.svelte      # Main component view
+│   ├── Example.svelte    # Example preview view
+│   └── package.json
+├── demo/                 # Sample app for development
+│   └── app.py
+└── pyproject.toml        # Python package config
+```
+
+**Templates available:** `SimpleTextbox`, `SimpleDropdown`, `SimpleImage`, `File`, or
+any built-in Gradio component (e.g. `--template Chatbot`).
+
+List templates: `gradio cc show`
+
+### Step 2: Develop (Hot Reload)
+
+`gradio cc dev` from the component directory launches:
+1. A Vite dev server for the frontend (port 7861 by default) — **hot reloads** on file changes
+2. A Python server running the demo app with the custom component
+
+Changes to both `frontend/*.svelte` and `backend/*.py` reflect live without manual restart.
+
+For troubleshooting:
+- Check `window.__GRADIO_CC__` in browser console — if empty, CLI can't find the component
+- Use `--python-path` and `--gradio-path` to specify exact executables
+- Chrome on Windows blocks local Svelte files — use WSL
+
+### Step 3: Build
+
+`gradio cc build` creates a distributable Python package:
+
+- `dist/gradio_mycomponent-X.Y.Z-py3-none-any.whl`
+- `dist/gradio_mycomponent-X.Y.Z.tar.gz`
+
+Also auto-generates documentation:
+- Interactive Gradio Space (demo + API docs)
+- Static README.md with installation guide, type signatures, event tables
+
+Pass `--no-generate-docs` to skip.
+
+### Step 4: Publish
+
+`gradio cc publish` walks through:
+1. Upload `.whl`/`.tar.gz` to PyPI (requires PyPI account)
+2. Upload demo app to Hugging Face Spaces
+
+Set `pyproject.toml` URLs for auto-linking:
+```toml
+[project.urls]
+repository = "https://github.com/user/repo-name"
+space = "https://huggingface.co/spaces/user/space-name"
+```
+
+## Backend Architecture
+
+### Inheritance Hierarchy
+
+| Base Class     | When to Use                                      |
+|----------------|--------------------------------------------------|
+| `Component`    | Default for most custom components               |
+| `FormComponent`| When component should group in `Form` layout     |
+| `BlockContext` | When other components go "inside" (like `gr.Tab`)|
+| `StreamingOutput`| For streaming output components                |
+
+### Required Methods
+
+```python
+class MyComponent(Component):
+
+    def preprocess(self, x: Any) -> Any:
+        """Convert frontend JSON → Python value for user function."""
+        return x
+
+    def postprocess(self, y: Any) -> Any:
+        """Convert user function return → frontend JSON."""
+        return y
+
+    def example_payload(self) -> Any:
+        """Sample input for View API page (JSON-serializable)."""
+        return "hello"
+
+    def example_value(self) -> Any:
+        """Sample output for default demo (passes through postprocess)."""
+        return "hello"
+
+    def api_info(self) -> dict:
+        """JSON Schema of value. Only needed without data_model."""
+        ...
+
+    def flag(self, x, flag_dir) -> str:
+        """Serialize value to CSV/JSON. Only needed without data_model."""
+        ...
+
+    def read_from_flag(self, x) -> Any:
+        """Deserialize from flag file. Only needed without data_model."""
+        ...
+```
+
+### The `data_model` — Simplifies Everything
+
+Use Pydantic V2 models to auto-implement `api_info`, `flag`, `read_from_flag`:
+
+```python
+from gradio.data_classes import FileData, GradioModel, GradioRootModel
+
+# Standard model — serializes to dict
+class VideoData(GradioModel):
+    video: FileData
+    subtitles: Optional[FileData] = None
+
+# Root model — serializes to raw list (no wrapping dict)
+class ChatHistory(GradioRootModel):
+    root: list[tuple[str | None, str | None]]
+
+class MyVideoComponent(Component):
+    data_model = VideoData
+```
+
+**Types:**
+- `GradioModel` → serializes as `{"video": {...}, "subtitles": {...}}`
+- `GradioRootModel` → serializes as the raw value `[{...}, {...}]`
+
+### Handling Files
+
+**Always use `FileData`** for file upload components:
+
+```python
+from gradio.data_classes import FileData
+
+class MyFileData(GradioModel):
+    file: FileData
+    caption: Optional[str] = None
+```
+
+Using `FileData` enables:
+- Secure file serving (Gradio blocks arbitrary file access)
+- Automatic caching (deduplication)
+- Client library auto-upload/download
+
+### Event Triggers
+
+```python
+from gradio.events import Events, EventListener
+
+class MyComponent(Component):
+    EVENTS = [
+        Events.change,                    # Built-in event
+        Events.upload,
+        EventListener(                    # Custom event with docs
+            "bingbong",
+            doc="Triggered when the user does a bingbong."
+        ),
+    ]
+```
+
+Events auto-generate methods `my_component.change(fn, ...)`, `my_component.bingbong(fn, ...)`.
+
+## Frontend Architecture
+
+### Directory Structure
+
+```
+frontend/
+├── Index.svelte        # Main component (required)
+├── Example.svelte      # Example preview (required)
+├── package.json        # Dependencies & exports
+└── gradio.config.js    # Vite/Svelte customization
+```
+
+### Index.svelte — Required Props
+
+```typescript
+import type { LoadingStatus } from "@gradio/statustracker";
+import type { Gradio } from "@gradio/utils";
+
+export let gradio: Gradio<{ change: never; upload: never }>;
+export let elem_id = "";
+export let elem_classes: string[] = [];
+export let scale: number | null = null;
+export let min_width: number | undefined = undefined;
+export let loading_status: LoadingStatus | undefined = undefined;
+export let mode: "static" | "interactive";
+export let value: any;  // Your component's data
+export let root: string; // Base URL for file uploads/fetching
+```
+
+### Minimal Index.svelte
+
+```svelte
+<script lang="ts">
+    import { Block } from "@gradio/atoms";
+    import { StatusTracker } from "@gradio/statustracker";
+    import type { Gradio } from "@gradio/utils";
+    import type { LoadingStatus } from "@gradio/statustracker";
+
+    export let gradio: Gradio<{ change: never }>;
+    export let value = "";
+    export let elem_id = "";
+    export let elem_classes: string[] = [];
+    export let scale: number | null = null;
+    export let min_width: number | undefined = undefined;
+    export let loading_status: LoadingStatus | undefined = undefined;
+    export let mode: "static" | "interactive";
+</script>
+
+<Block {visible} {elem_id} {elem_classes} {scale} {min_width}>
+    {#if loading_status}
+        <StatusTracker autoscroll={gradio.autoscroll}
+            i18n={gradio.i18n} {...loading_status} />
+    {/if}
+    <p>{value}</p>
+</Block>
+```
+
+### Example.svelte
+
+```typescript
+export let value: string;
+export let type: "gallery" | "table";
+export let selected = false;
+export let index: number;
+```
+
+### Interactive vs Static Mode
+
+Gradio uses `mode` prop:
+- `"interactive"` — User can change the value (e.g. upload, edit)
+- `"static"` — Display only (e.g. output display)
+
+Gradio auto-selects based on whether the component is used as event input.
+
+### File Upload in Frontend
+
+```svelte
+<script lang="ts">
+    import { upload, prepare_files, type FileData } from "@gradio/client";
+    import { Upload, ModifyUpload } from "@gradio/upload";
+    import { Empty, UploadText, BlockLabel } from "@gradio/atoms";
+
+    async function handle_upload(files: FileList) {
+        let file_data = await prepare_files(Array.from(files));
+        file_data = await upload(file_data, root);
+        value = file_data[0];
+        gradio.dispatch("change");  // Notify backend
+    }
+</script>
+
+<!-- Upload state -->
+<Upload filetype="application/pdf" file_count="single" {root}>
+    <UploadText type="file" i18n={gradio.i18n} />
+</Upload>
+
+<!-- Loaded state with clear button -->
+<ModifyUpload i18n={gradio.i18n} on:clear={() => value = null} />
+```
+
+For WASM support, get upload function from Svelte context:
+```typescript
+import { getContext } from "svelte";
+const upload_fn = getContext("upload_files");
+await upload(file_data, root, upload_fn);
+```
+
+### Leveraging Existing Gradio Packages
+
+| npm Package             | Purpose                        |
+|-------------------------|--------------------------------|
+| `@gradio/atoms`         | Block, BlockLabel, Empty, etc. |
+| `@gradio/statustracker` | StatusTracker, LoadingStatus   |
+| `@gradio/utils`         | Gradio, FileData types         |
+| `@gradio/client`        | upload, prepare_files          |
+| `@gradio/upload`        | Upload, ModifyUpload components|
+| `@gradio/icons`         | SVG icon components            |
+| `@gradio/button`        | Button component               |
+
+### Vite Customization (`gradio.config.js`)
+
+```javascript
+// frontend/gradio.config.js
+import tailwindcss from "@tailwindcss/vite";
+
+export default {
+    plugins: [tailwindcss()],
+    // Svelte options:
+    // preprocess: [...],
+    // extensions: ['.svx'],
+    // build: { target: 'es2022' }
+};
+```
+
+## Packaging & Configuration
+
+### pyproject.toml
+
+```toml
+[project]
+name = "gradio_mycomponent"
+version = "0.1.0"
+description = "My custom Gradio component"
+dependencies = ["gradio", "numpy"]
+
+[project.urls]
+repository = "https://github.com/user/repo"
+space = "https://huggingface.co/spaces/user/demo"
+
+[tool.hatch.build]
+artifacts = ["/backend/gradio_mycomponent/templates", "*.pyi"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["/backend/gradio_mycomponent"]
+```
+
+### Custom Package Name
+
+To change from `gradio_mycomponent` to custom name (e.g. `supertextbox`):
+
+1. Update `name` in `pyproject.toml`
+2. Replace all `gradio_mycomponent` references in `pyproject.toml`
+3. Rename `backend/gradio_mycomponent/` → `backend/supertextbox/`
+4. Update import in `demo/app.py`
+
+### Additional Python Exports
+
+```python
+# backend/supertextbox/__init__.py
+from .mytextbox import MyTextbox, AdditionalClass, additional_function
+__all__ = ['MyTextbox', 'AdditionalClass', 'additional_function']
+```
+
+## Case Studies
+
+### 1. PDF Component
+
+- **Template:** None (from scratch with `gradio cc create PDF`)
+- **Frontend:** Uses `pdfjs-dist` library for rendering PDF pages onto canvas
+- **File handling:** Uses `Upload`/`ModifyUpload` from `@gradio/upload`
+- **Backend:** Simple `FileData` data_model, mostly pass-through `preprocess`/`postprocess`
+- **Key insight:** CSS variables from Gradio core (`var(--size-60)`, `var(--body-text-color-subdued)`) ensure theme compatibility
+
+### 2. Multimodal Chatbot (Part 1 — Chatbot)
+
+- **Template:** `--template Chatbot`
+- **Backend:** Custom `data_model` with `MultimodalMessage(text, files[])` — extends chatbot messages with inline media
+- **Frontend:** Modifies `shared/Chatbot.svelte` to loop through message files and render audio/video/image/file links inline
+- **Key insight:** Always display text first, then loop through files array — this pattern extends the existing chatbot rendering pipeline
+
+## Documentation Generation
+
+### What gets generated at build time
+
+- Interactive Gradio Space with live demo
+- Static README.md with:
+  - Description, installation instructions, code snippet
+  - API docs: `__init__` argument table, `preprocess`/`postprocess` type signatures
+  - Event table with descriptions
+  - Links to PyPI, GitHub, HF Space
+
+### To get best docs
+
+1. **Type hints** on `__init__` params, `preprocess` return, `postprocess` input
+2. **Docstrings** following Google-style:
+   ```python
+   def __init__(self, value: str | None = None):
+       """
+       Parameters:
+           value: The initial text value.
+       """
+   ```
+3. **Demo in `demo/app.py`** with `if __name__ == "__main__": demo.launch()`
+4. **Compact demo** — minimize extraneous UI, no external dependencies if possible
+5. **Events doc** — use `EventListener("name", doc="...")` for custom events
+6. **`pyproject.toml` URLs** — `repository` and `space` keys for auto-linking
+
+## Key Insights
+
+1. **`data_model` is the key simplification** — using Pydantic V2 models auto-implements 5+ methods (api_info, flag, read_from_flag, example caching). Always use it unless trivial.
+2. **`FileData` is mandatory for file components** — without it, file serving, caching, and client uploads break silently.
+3. **The `gradio cc dev` hot reload loop is the fastest dev cycle** — frontend Svelte changes reflect in <1s. Backend changes need a restart but the CLI handles it.
+4. **Interactive/Static duality** — every component implicitly has two modes. Handle `mode` prop in frontend for proper behavior.
+5. **CSS variables** — use Gradio core variables (`--size-*`, `--body-text-color-subdued`, `--block-label-text-color`, `--color-accent`) for automatic theme compatibility.
+6. **Svelte + Gradio packages** — `@gradio/upload` and `@gradio/atoms` provide ready-made building blocks for common patterns (upload UI, layout, status tracking).
+7. **npm registry** — all Gradio JS packages published on npm. Find docs at `gradio.app/main/docs/js`.
+8. **Storybook** — https://gradio.app/main/docs/js/storybook for component design system reference.
+9. **Gradio 4 → 5 migration** — must rebuild components. Update `@gradio/preview` via `npm update`, pin `gradio>=4.0,<6.0` in dependencies.
+10. **Zero-cost distribution** — publish to PyPI (free) + HF Spaces demo (free with static CPU Space). No paid accounts required.
