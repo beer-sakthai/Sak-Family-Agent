@@ -1,5 +1,538 @@
 # HF Learnings — Hugging Face Hub
 
+## 2026-07-24: hf-hub-exception-reference — Complete Exception Hierarchy (Topic #130)
+
+### Summary
+Comprehensive reference of all custom exceptions in the `huggingface_hub` library (v1.24.0+). Covers the full exception hierarchy (50+ classes), inheritance relationships, attributes, when each error is raised, and error-handling patterns for production use. Source: `huggingface_hub/errors.py` on GitHub.
+
+### Exception Hierarchy Overview
+
+All custom exceptions in huggingface_hub. Indentation = inheritance:
+
+```
+Exception
+├── CacheNotFound
+├── CorruptedCacheException
+├── CachedRepoTreeNotFoundError
+├── OIDCError
+├── DeviceCodeError
+├── EntryNotFoundError (abstract base)
+│   ├── RemoteEntryNotFoundError (also HfHubHTTPError)
+│   └── LocalEntryNotFoundError (also FileNotFoundError)
+│       └── IncompleteSnapshotError
+├── InferenceEndpointError
+│   └── InferenceEndpointTimeoutError (also TimeoutError)
+├── SafetensorsParsingError
+├── NotASafetensorsRepoError
+├── DDUFError
+│   ├── DDUFCorruptedFileError
+│   └── DDUFExportError
+│       └── DDUFInvalidEntryNameError
+├── StrictDataclassError
+│   ├── StrictDataclassDefinitionError
+│   ├── StrictDataclassFieldValidationError
+│   └── StrictDataclassClassValidationError
+├── XetDownloadError
+├── FileDuplicationError
+├── CLIError
+│   ├── ConfirmationError
+│   └── CLIExtensionInstallError
+├── SandboxError
+│   └── SandboxCommandError
+├── HfHubHTTPError (also httpx.HTTPError, OSError)
+│   ├── RepositoryNotFoundError
+│   │   └── GatedRepoError
+│   ├── DisabledRepoError
+│   ├── RevisionNotFoundError
+│   ├── RemoteEntryNotFoundError (also EntryNotFoundError)
+│   ├── BadRequestError (also ValueError)
+│   ├── BucketNotFoundError
+│   └── JobNotFoundError
+
+HTTPError (httpx)
+├── InferenceTimeoutError (also TimeoutError)
+└── TextGenerationError
+    ├── ValidationError
+    ├── GenerationError
+    ├── OverloadedError
+    ├── IncompleteGenerationError
+    └── UnknownError
+
+OSError
+├── HfHubHTTPError (see above — multiple inheritance)
+├── DryRunError
+├── FileMetadataError
+└── LocalTokenNotFoundError (EnvironmentError)
+
+ConnectionError
+└── OfflineModeIsEnabled
+
+ValueError
+├── HFValidationError
+├── HfUriError
+└── BadRequestError (also HfHubHTTPError)
+
+FileNotFoundError
+└── LocalEntryNotFoundError (also EntryNotFoundError)
+```
+
+### HTTP Errors (Most Commonly Used)
+
+#### HfHubHTTPError — The Base
+All Hub HTTP requests that fail are converted to `HfHubHTTPError` (or a subclass). Uses the `hf_raise_for_status()` utility.
+
+```python
+from huggingface_hub.utils import hf_raise_for_status, HfHubHTTPError
+import httpx
+
+response = httpx.get("https://huggingface.co/api/models/unknown-model")
+try:
+    hf_raise_for_status(response)
+except HfHubHTTPError as e:
+    print(e.request_id)         # "Root=1-xxx" — X-Request-Id header
+    print(e.server_message)     # Server error detail from header/body
+    print(e.response)           # Full httpx.Response object
+    print(e.request)            # Full httpx.Request object
+    e.append_to_message("\nCheck repo_id and try again.")  # Enrich inline
+    raise
+```
+
+**Error selection logic** in `hf_raise_for_status()`:
+- HTTP 400 → `BadRequestError`
+- HTTP 401/404 + "Not Found" in body → `RepositoryNotFoundError`
+- HTTP 403 + "gated" in body or headers → `GatedRepoError`
+- HTTP 403 + "disabled" → `DisabledRepoError`
+- HTTP 404 + "Revision Not Found" → `RevisionNotFoundError`
+- HTTP 404 + "Entry Not Found" → `RemoteEntryNotFoundError`
+- HTTP 404 + "Bucket" in body → `BucketNotFoundError`
+- All other 4xx/5xx → plain `HfHubHTTPError`
+
+#### RepositoryNotFoundError
+```python
+try:
+    model_info("nonexistent/repo")
+except RepositoryNotFoundError as e:
+    print(e.repo_id)      # "nonexistent/repo"
+    print(e.repo_type)    # "model"
+    # Handle: check credentials, check repo_id spelling
+```
+
+#### GatedRepoError (subclass of RepositoryNotFoundError)
+```python
+try:
+    model_info("meta-llama/Llama-2-7b")
+except GatedRepoError:
+    # User is not authorized — needs to request access
+    # Falls through to RepositoryNotFoundError catch too (inheritance)
+```
+
+#### RevisionNotFoundError
+```python
+try:
+    hf_hub_download("bert-base-cased", "config.json", revision="nonexistent-branch")
+except RevisionNotFoundError as e:
+    print(e.repo_id)      # "bert-base-cased"
+    print(e.repo_type)    # "model"
+```
+
+#### RemoteEntryNotFoundError
+```python
+try:
+    hf_hub_download("bert-base-cased", "nonexistent-file.bin")
+except (RemoteEntryNotFoundError, LocalEntryNotFoundError) as e:
+    # Handle missing file
+    pass
+```
+
+#### BadRequestError
+```python
+try:
+    create_repo("invalid///name")
+except BadRequestError as e:
+    # HTTP 400 — invalid request
+    print(str(e))
+```
+
+### Cache & Local File Errors
+
+#### LocalEntryNotFoundError
+Raised in `local_files_only=True` mode when a file isn't cached:
+```python
+try:
+    hf_hub_download("bert-base-cased", "config.json", local_files_only=True)
+except LocalEntryNotFoundError:
+    # File not in local cache, and network disabled
+    pass
+```
+
+#### IncompleteSnapshotError
+Raised by `snapshot_download` when cached snapshot is incomplete and network is unavailable:
+```python
+try:
+    snapshot_download("bert-base-cased", local_files_only=True)
+except IncompleteSnapshotError as e:
+    print(e.snapshot_path)  # Path to partial snapshot
+    # Use whatever files are available
+```
+
+#### CacheNotFound / CorruptedCacheException
+```python
+from huggingface_hub.errors import CacheNotFound
+# Raised when ~/.cache/huggingface/ doesn't exist or is corrupted
+```
+
+#### CachedRepoTreeNotFoundError
+Raised when `get_cached_repo_tree()` is called but no tree listing was cached by `snapshot_download`.
+
+### Inference & TGI Errors
+
+#### InferenceTimeoutError
+```python
+from huggingface_hub import InferenceClient
+
+client = InferenceClient()
+try:
+    client.text_generation("meta-llama/Llama-2-7b", "Hello", max_tokens=500)
+except InferenceTimeoutError:
+    # Model unavailable, loading, or request timed out
+    # Retry with backoff or try a different model
+    pass
+```
+
+#### Text Generation Error Family (TGI)
+```python
+from huggingface_hub import InferenceClient
+from huggingface_hub.errors import (
+    ValidationError, GenerationError, OverloadedError,
+    IncompleteGenerationError, UnknownError
+)
+
+client = InferenceClient()
+try:
+    client.text_generation("meta-llama/Llama-2-7b", "Hello")
+except OverloadedError:
+    # Model is busy — retry with exponential backoff
+    pass
+except ValidationError:
+    # Bad input — fix the prompt
+    pass
+except GenerationError:
+    # Generation failed mid-stream
+    pass
+except IncompleteGenerationError:
+    # Response was truncated — partial output available in response
+    pass
+except UnknownError:
+    # Unclassified TGI error
+    pass
+```
+
+### Auth & Token Errors
+
+#### LocalTokenNotFoundError
+```python
+from huggingface_hub.errors import LocalTokenNotFoundError
+
+try:
+    # Operation requires token but none found
+    whoami()
+except LocalTokenNotFoundError:
+    print("Please run `huggingface-cli login` or set HF_TOKEN")
+```
+
+#### DeviceCodeError
+Raised during OAuth device code flow:
+```python
+from huggingface_hub.errors import DeviceCodeError, OAuthErrorCode
+
+try:
+    login()
+except DeviceCodeError as e:
+    if e.error_code == OAuthErrorCode.ACCESS_DENIED:
+        print("User denied authorization")
+    elif e.error_code == OAuthErrorCode.EXPIRED_TOKEN:
+        print("Device code expired, restart flow")
+```
+
+The `OAuthErrorCode` enum provides known error codes: `AUTHORIZATION_PENDING`, `SLOW_DOWN`, `EXPIRED_TOKEN`, `ACCESS_DENIED`, `INVALID_GRANT`.
+
+#### OIDCError
+Raised when Trusted Publishers / OIDC token exchange fails:
+```python
+from huggingface_hub.errors import OIDCError
+
+try:
+    create_repo("my-private-model", private=True)
+except OIDCError:
+    # Not running in a supported CI provider or HF_OIDC_ID_TOKEN unset
+    pass
+```
+
+### Offline Mode
+
+#### OfflineModeIsEnabled
+```python
+from huggingface_hub.errors import OfflineModeIsEnabled
+import os
+
+os.environ["HF_HUB_OFFLINE"] = "1"
+try:
+    hf_hub_download("bert-base-cased", "config.json")
+except OfflineModeIsEnabled:
+    print("Cannot download: offline mode is active")
+```
+
+### Validation Errors
+
+#### HFValidationError
+Generic validation for repo IDs, token formats, etc.:
+```python
+from huggingface_hub.utils import HFValidationError
+
+try:
+    hf_hub_download("Invalid Repo ID!!!", "file.txt")
+except HFValidationError as e:
+    print(f"Invalid input: {e}")
+```
+
+#### HfUriError
+Raised for malformed `hf://...` URIs:
+```python
+from huggingface_hub.errors import HfUriError
+
+try:
+    hf_hub_download("hf://invalid-uri")
+except HfUriError as e:
+    print(e.uri)   # The malformed URI
+    print(e.msg)   # Human-readable explanation
+```
+
+### Resource-Specific Errors
+
+#### BucketNotFoundError
+```python
+from huggingface_hub import bucket_info
+from huggingface_hub.errors import BucketNotFoundError
+
+try:
+    bucket_info("nonexistent/bucket")
+except BucketNotFoundError as e:
+    print(e.bucket_id)  # "nonexistent/bucket"
+    # Handle: wrong bucket path, or bucket deleted
+```
+
+#### JobNotFoundError
+```python
+from huggingface_hub.errors import JobNotFoundError
+
+try:
+    get_job_status("nonexistent-job-id")
+except JobNotFoundError as e:
+    print(e.job_id)  # "nonexistent-job-id"
+```
+
+### Safetensors Errors
+
+```python
+from huggingface_hub.errors import SafetensorsParsingError, NotASafetensorsRepoError
+
+try:
+    get_safetensors_metadata("user/repo")
+except NotASafetensorsRepoError:
+    print("Repo doesn't use safetensors format")
+except SafetensorsParsingError:
+    print("safetensors file is corrupted or invalid")
+```
+
+### Sandbox Errors
+
+```python
+from huggingface_hub import Sandbox
+from huggingface_hub.errors import SandboxCommandError, SandboxError
+
+sandbox = Sandbox()
+try:
+    result = sandbox.run("python script.py")
+except SandboxCommandError as e:
+    print(e.cmd)               # The command that failed
+    print(e.result.exit_code)  # Exit code
+    print(e.result.stderr)     # Stderr output
+    print(e.result.timed_out)  # Was it a timeout?
+```
+
+### Strict Dataclass Errors (Advanced)
+
+The `StrictDataclass` system validates HuggingFace Hub API response models:
+
+```python
+from huggingface_hub.errors import (
+    StrictDataclassDefinitionError,
+    StrictDataclassFieldValidationError,
+    StrictDataclassClassValidationError,
+)
+```
+
+### Error Handling Best Practices
+
+**1. Broad catch with HfHubHTTPError**
+```python
+from huggingface_hub.utils import HfHubHTTPError
+
+try:
+    result = some_hub_operation()
+except HfHubHTTPError as e:
+    # All Hub API errors inherit from this
+    status = e.response.status_code
+    if status == 429:
+        # Rate limited — exponential backoff
+        time.sleep(2 ** attempt)
+    elif status >= 500:
+        # Server error — retry
+        pass
+    else:
+        # Client error — don't retry
+        raise
+```
+
+**2. Distinguish network vs Hub errors**
+```python
+import httpx
+
+try:
+    result = some_hub_operation()
+except HfHubHTTPError as e:
+    # Server responded with error
+    handle_hub_error(e)
+except httpx.ConnectError:
+    # Network unreachable (no response at all)
+    handle_network_error()
+except httpx.TimeoutException:
+    # Request timed out
+    handle_timeout()
+```
+
+**3. Offline-aware fallback**
+```python
+from huggingface_hub import hf_hub_download
+from huggingface_hub.errors import OfflineModeIsEnabled, LocalEntryNotFoundError
+
+try:
+    path = hf_hub_download(repo_id, filename, local_files_only=True)
+except (OfflineModeIsEnabled, LocalEntryNotFoundError):
+    # No network or not cached
+    path = DEFAULT_FALLBACK_PATH
+```
+
+**4. Gated repo detection**
+```python
+try:
+    info = model_info("meta-llama/Llama-2-7b")
+except GatedRepoError:
+    # Known pattern: repo exists but needs access request
+    print("Request access at https://huggingface.co/meta-llama/Llama-2-7b")
+except RepositoryNotFoundError:
+    # Repo genuinely doesn't exist (or wrong permissions)
+    print("Repository not found")
+```
+
+### The `hf_raise_for_status()` Utility
+
+The main entry point for converting httpx responses to native errors:
+
+```python
+from huggingface_hub.utils import hf_raise_for_status, HfHubHTTPError
+import httpx
+
+response = httpx.get("https://huggingface.co/api/models/bert-base-uncased")
+try:
+    hf_raise_for_status(response)
+except HfHubHTTPError:
+    # Automatically catches all HTTP error subclasses
+    raise
+```
+
+Internal dispatch logic:
+1. Extracts `X-Request-Id`, `X-Amzn-Trace-Id`, or `x-amz-cf-id` → `request_id`
+2. Reads `X-Error-Message` header → `server_message`
+3. Falls back to parsing response body for error context
+4. Selects the most specific exception class based on status code and body content
+5. The exception can be enriched post-creation with `append_to_message()`
+
+### Complete List of All 50+ Exception Classes
+
+| # | Exception | Parent(s) | When Raised |
+|---|-----------|-----------|-------------|
+| 1 | `HfHubHTTPError` | `HTTPError, OSError` | All failed Hub HTTP requests |
+| 2 | `RepositoryNotFoundError` | `HfHubHTTPError` | Repo doesn't exist or no access |
+| 3 | `GatedRepoError` | `RepositoryNotFoundError` | Gated repo, not authorized |
+| 4 | `DisabledRepoError` | `HfHubHTTPError` | Repo disabled by author |
+| 5 | `RevisionNotFoundError` | `HfHubHTTPError` | Invalid revision/branch/tag |
+| 6 | `BadRequestError` | `HfHubHTTPError, ValueError` | HTTP 400 bad request |
+| 7 | `BucketNotFoundError` | `HfHubHTTPError` | Bucket not found |
+| 8 | `JobNotFoundError` | `HfHubHTTPError` | Job not found |
+| 9 | `RemoteEntryNotFoundError` | `HfHubHTTPError, EntryNotFoundError` | File not found on Hub |
+| 10 | `EntryNotFoundError` | `Exception` | Abstract base for entry errors |
+| 11 | `LocalEntryNotFoundError` | `FileNotFoundError, EntryNotFoundError` | File not cached locally |
+| 12 | `IncompleteSnapshotError` | `LocalEntryNotFoundError` | Cached snapshot incomplete |
+| 13 | `CacheNotFound` | `Exception` | Cache directory missing |
+| 14 | `CorruptedCacheException` | `Exception` | Cache has unexpected structure |
+| 15 | `CachedRepoTreeNotFoundError` | `Exception` | No cached tree listing |
+| 16 | `OfflineModeIsEnabled` | `ConnectionError` | `HF_HUB_OFFLINE=1` set |
+| 17 | `InferenceTimeoutError` | `HTTPError, TimeoutError` | Model unavailable/timeout |
+| 18 | `InferenceEndpointError` | `Exception` | Generic IE error |
+| 19 | `InferenceEndpointTimeoutError` | `InferenceEndpointError, TimeoutError` | IE timeout |
+| 20 | `TextGenerationError` | `HTTPError` | Generic TGI error |
+| 21 | `ValidationError` | `TextGenerationError` | TGI bad input |
+| 22 | `GenerationError` | `TextGenerationError` | TGI generation failure |
+| 23 | `OverloadedError` | `TextGenerationError` | TGI overloaded |
+| 24 | `IncompleteGenerationError` | `TextGenerationError` | TGI truncated response |
+| 25 | `UnknownError` | `TextGenerationError` | TGI unclassified |
+| 26 | `LocalTokenNotFoundError` | `EnvironmentError` | No HF token found |
+| 27 | `OIDCError` | `Exception` | OIDC token exchange failed |
+| 28 | `DeviceCodeError` | `Exception` | OAuth device code flow failed |
+| 29 | `HFValidationError` | `ValueError` | Generic validation failure |
+| 30 | `HfUriError` | `ValueError` | Malformed hf:// URI |
+| 31 | `SafetensorsParsingError` | `Exception` | Corrupt safetensors file |
+| 32 | `NotASafetensorsRepoError` | `Exception` | No safetensors in repo |
+| 33 | `DryRunError` | `OSError` | Dry run cannot proceed |
+| 34 | `FileMetadataError` | `OSError` | Missing ETag/commit_hash |
+| 35 | `DDUFError` | `Exception` | Base DDUF error |
+| 36 | `DDUFCorruptedFileError` | `DDUFError` | Corrupt DDUF file |
+| 37 | `DDUFExportError` | `DDUFError` | Base DDUF export error |
+| 38 | `DDUFInvalidEntryNameError` | `DDUFExportError` | Invalid DDUF entry name |
+| 39 | `StrictDataclassError` | `Exception` | Base strict dataclass error |
+| 40 | `StrictDataclassDefinitionError` | `StrictDataclassError` | Incorrect definition |
+| 41 | `StrictDataclassFieldValidationError` | `StrictDataclassError` | Field validation failed |
+| 42 | `StrictDataclassClassValidationError` | `StrictDataclassError` | Class validator failed |
+| 43 | `XetDownloadError` | `Exception` | Xet storage download failed |
+| 44 | `FileDuplicationError` | `Exception` | File duplication failed |
+| 45 | `CLIError` | `Exception` | Base CLI error |
+| 46 | `ConfirmationError` | `CLIError` | Confirmation declined |
+| 47 | `CLIExtensionInstallError` | `CLIError` | CLI extension install failed |
+| 48 | `SandboxError` | `Exception` | Base sandbox error |
+| 49 | `SandboxCommandError` | `SandboxError` | Sandbox command failed |
+| 50 | `OAuthErrorCode` | `Enum` | Known OAuth error codes |
+
+### Key Design Patterns
+
+1. **Multiple inheritance for compatibility**: `HfHubHTTPError` inherits both `httpx.HTTPError` and `OSError` so that `except OSError` and `except httpx.HTTPError` both catch Hub errors.
+
+2. **GatedRepoError is a RepositoryNotFoundError** — backward compatible: code catching `RepositoryNotFoundError` will also catch gate errors, preventing silent breakage when repos switch from open to gated.
+
+3. **EntryNotFoundError is abstract** — never raised directly; always subclassed by `LocalEntryNotFoundError` or `RemoteEntryNotFoundError`.
+
+4. **Error enrichment**: Use `HfHubHTTPError.append_to_message()` to add context without losing the original error data.
+
+5. **Request ID tracing**: Every `HfHubHTTPError` carries a `request_id` from Hub response headers, enabling correlation with server-side logs.
+
+### Resources
+- Source: `huggingface_hub/errors.py` — all 50+ exception classes
+- `huggingface_hub/utils/_errors.py` — `hf_raise_for_status()` dispatch
+- `huggingface_hub/utils/_validators.py` — validation error triggers
+- OAuth error codes: RFC 6749 (Authorization Code), RFC 8628 (Device Code)
+
+---
+
 ## 2026-07-24: hf-hub-buckets-api-deep-dive — Bucket Object Storage (Topic #105)
 
 ### Summary

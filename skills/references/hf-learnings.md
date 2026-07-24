@@ -5930,5 +5930,23 @@ Layer types recognized:
 5931|### Resources
 5932|- Hub docs: https://huggingface.co/docs/hub/en/repositories-pull-requests-discussions
 5933|- Python SDK source (v1.24.0)
-5934|
-5935|---
+5933|
+5934|## 2026-07-24: hf-hub-exception-reference — Complete Exception Hierarchy (Topic #130)
+5935|
+5936|### Summary
+5937|Comprehensive reference of all 50+ custom exceptions in the `huggingface_hub` library — full inheritance hierarchy, attributes, when each error is raised, `hf_raise_for_status()` dispatch logic, and error-handling best practices for production use.
+5938|
+5939|### Key Coverage
+5940|- Full exception hierarchy tree with 50+ classes across 15 categories (HTTP, cache, inference, TGI, auth, validation, safetensors, DDUF, sandbox, CLI, etc.)
+5941|- `HfHubHTTPError` base class with `request_id`, `server_message`, `response`, `request` attributes
+5942|- `hf_raise_for_status()` — status-code → exception dispatch logic (400→BadRequestError, 403 gated→GatedRepoError, etc.)
+5943|- TGI errors: `OverloadedError`, `ValidationError`, `IncompleteGenerationError`, `GenerationError`, `UnknownError`
+5944|- Cache errors: `CacheNotFound`, `CorruptedCacheException`, `IncompleteSnapshotError`
+5945|- OAuth errors: `DeviceCodeError` with `OAuthErrorCode` enum, `OIDCError`
+5946|- Key design patterns: multiple inheritance for backward compat, abstract EntryNotFoundError, error enrichment via `append_to_message()`, request ID tracing
+5947|- 4 practical error handling patterns with code examples
+5948|
+5949|### Skill
+5950|huggingface-hub — references/hf-learnings.md
+5951|
+5952|---
