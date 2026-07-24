@@ -3238,57 +3238,55 @@ Buckets are free to create with a free storage allowance. Per-TB billing above f
 
 ---
 
-## 2026-07-24: hf-text-embeddings-inference-v2 — OpenAI-Compatible API, Router Architecture & Matryoshka (Topic #106)
+## 2026-07-24: hf-hub-collections-api-deep-dive — Full API Reference & Patterns (Topic #107)
 
 ### Summary
-Second deep-dive into TEI covering the OpenAI-compatible `/v1/embeddings` endpoint, the internal router architecture (request pipeline, validation, tokenization, batching, inference), Matryoshka/linear dimension reduction, direct TEI endpoint connection patterns, and Kubernetes deployment patterns.
+Comprehensive deep-dive into the Hugging Face Hub Collections API — covering all 7 collection methods from source (`huggingface_hub` v1.x), the `list_collections` pagination engine with 3 sort modes and 2 filter axes, the `Collection` and `CollectionItem` data classes, 6 item types (model, dataset, space, paper, collection, bucket), and practical patterns for programmatic curation, batch population, and integration with other Hub features.
 
-### OpenAI-Compatible `/v1/embeddings` Endpoint
+### Core Data Types
 
-TEI exposes an OpenAI-compatible embeddings endpoint at `/v1/embeddings` when started:
+**`CollectionItemType_T`** = `Literal["model", "dataset", "space", "paper", "collection", "bucket"]`
 
-```bash
-docker run --gpus all -p 8080:80 ... \
-  --model-id WhereIsAI/UAE-Large-V1 \
-  --served-model-name text-embedding-3-large
-```
+**`CollectionSort_T`** = `Literal["lastModified", "trending", "upvotes"]`
 
-**Python client (OpenAI SDK):**
-```python
-from openai import OpenAI
-client = OpenAI(base_url="http://localhost:8080/v1", api_key="not-needed")
-response = client.embeddings.create(input="Hello world", model="default", dimensions=256)
-```
+**`CollectionItem`** fields: `item_object_id` (DB id), `item_id` (Hub ID), `item_type`, `position`, `note` (max 500 chars)
 
-**InferenceClient direct connection:**
-```python
-from huggingface_hub import InferenceClient
-client = InferenceClient(base_url="http://localhost:8080")
-embedding = client.feature_extraction("Direct TEI endpoint", normalize=True)
-```
+**`Collection`** fields: `slug`, `title`, `owner`, `items`, `last_updated`, `position`, `private`, `theme`, `upvotes`, `description` (max 150 chars), `url` (property)
 
-### Router Pipeline
+### Method Reference
 
-```
-HTTP/gRPC → Router (validate+dispatch) → Tokenizer (tokenize+truncate+prompt) → Batcher (token-aware dynamic batching) → Backend (Candle+FlashAttn+pooling+normalize) → Response Builder (de-batch+format)
-```
+| Method | Endpoint | Purpose |
+|--------|----------|---------|
+| `list_collections()` | GET `/api/collections` | List with filters (owner, item, sort, limit) — items truncated to 4 |
+| `get_collection()` | GET `/api/collections/{slug}` | Full collection with ALL items |
+| `create_collection()` | POST `/api/collections` | Create new (title, namespace, description, private, exists_ok) |
+| `update_collection_metadata()` | PATCH `/api/collections/{slug}` | Update title/desc/position/private/theme |
+| `delete_collection()` | DELETE `/api/collections/{slug}` | Irreversible! Supports `missing_ok` |
+| `add_collection_item()` | POST `/api/collections/{slug}/items` | Add item (item_id, item_type, note, exists_ok) |
+| `update_collection_item()` | PATCH `/api/collections/{slug}/items/{id}` | Edit note/position (uses `item_object_id`) |
+| `delete_collection_item()` | DELETE `/api/collections/{slug}/items/{id}` | Remove item (uses `item_object_id`) |
 
-Token-aware batching groups requests up to `--max-batch-tokens`, dispatching when full or every ~1ms.
+### Key Behaviors & Pitfalls
 
-### Matryoshka Dimension Reduction
+1. **`list_collections` truncates items to 4** — always use `get_collection()` for full item lists
+2. **`item_object_id` vs `item_id`** — modify/delete operations require the internal DB id, NOT the Hub repo ID
+3. **No `theme` on `create_collection`** — must be set via `update_collection_metadata()` after creation
+4. **Slug changes on title update** — prefix changes but trailing hash stays the same; old slug URL breaks
+5. **Description capped at 150 chars** — silently truncated; notes capped at 500 chars
+6. **6 item types**: model, dataset, space, paper, collection, bucket
+7. **`exists_ok` on create_collection catches HTTP 409** — returns existing collection if slug collision
+8. **Hub Web UI features NOT in API**: item images, history, drag-and-drop, gating group collections, resource group assignment
 
-Supported models: `WhereIsAI/UAE-Large-V1` (1024→256), `Alibaba-NLP/gte-Qwen2-1.5B-instruct`. Use `dimensions=N` in API calls. Enables 75% storage reduction in vector DBs with minimal quality loss.
+### 6 Practical Patterns
 
-### Key Tuning Parameters
-
-| Parameter | Recommendation |
-|---|---|
-| `--max-batch-tokens` | Start 16384, increase if GPU mem available |
-| `--auto-truncate` | Always `true` (prevents OOM) |
-| `--pooling` | `auto` (let TEI detect) |
-| `--max-concurrent-requests` | Match expected concurrent load |
+1. **Batch population** — iterate model lists with `exists_ok=True` and try/except for resilience
+2. **Trending discovery** — combine `list_models()` search with `add_collection_item()`
+3. **Cross-user mirror** — `get_collection()` source → `create_collection()` dest with all items copied
+4. **Research project page** — paper + model + dataset in one collection with notes
+5. **Annotated curation** — use `note` fields for ratings/status emoji (⭐ ⚠ 🔄)
+6. **Auto-curation via cron** — daily cron to maintain a "Trending Today" collection
 
 ### Resources
-- GitHub: https://github.com/huggingface/text-embeddings-inference
-- Docs: https://huggingface.co/docs/text-embeddings-inference/en/index
-- Swagger: https://huggingface.github.io/text-embeddings-inference
+- Source: `huggingface_hub/hf_api.py` lines 9908–10400
+- Hub docs: https://huggingface.co/docs/hub/en/collections
+- Collections page: https://huggingface.co/collections
