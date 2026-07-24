@@ -4762,3 +4762,371 @@ except HfHubHTTPError as e:
 - [Inference Providers Hub API](https://huggingface.co/docs/inference-providers/en/hub-api)
 - [Inference guide](https://huggingface.co/docs/huggingface_hub/en/guides/inference)
 - [hf models ls CLI](https://huggingface.co/docs/huggingface_hub/package_reference/cli#hf-models-list)
+
+## 2026-07-25: hf-datasets-server-core-endpoints-deep-dive
+
+### Summary
+Comprehensive deep-dive into the Hugging Face Datasets Server REST API — the zero-download way to inspect, query, and analyze datasets on the Hub. Covers all core endpoints (`/splits`, `/size`, `/statistics`, `/parquet`, `/first-rows`, `/rows`, `/is-valid`, `/configs`), their request/response schemas, and practical integration patterns with Python, DuckDB, and Polars. Based on real API responses from `datasets-server.huggingface.co`.
+
+### Base URL
+```
+https://datasets-server.huggingface.co
+```
+All endpoints are GET requests. The `dataset` parameter is the Hub dataset ID (e.g., `stanfordnlp/imdb`). For datasets with configs (subsets), `config` and `split` parameters are required on most endpoints.
+
+---
+
+### 1. `/is-valid` — Quick Health Check
+**Purpose:** Check whether a dataset is fully processed and available on the Datasets Server.
+
+**Request:**
+```
+GET /is-valid?dataset=stanfordnlp/imdb
+```
+
+**Response:**
+```json
+{"preview": true, "viewer": true, "search": true, "filter": true, "statistics": true}
+```
+
+**Fields:**
+| Field | Meaning |
+|-------|---------|
+| `preview` | First-rows endpoint is available |
+| `viewer` | Full rows endpoint is available |
+| `search` | Search endpoint is available |
+| `filter` | Filter endpoint is available |
+| `statistics` | Statistics endpoint is available |
+
+**Use case:** Before building a dataset explorer tool, call `/is-valid` to check which capabilities are enabled. Some datasets may have `preview: true` but `search: false`.
+
+---
+
+### 2. `/configs` — List Dataset Configs (Subsets)
+**Purpose:** List all available configs (subsets) for a dataset.
+
+**Request:**
+```
+GET /configs?dataset=bigcode/the-stack
+```
+
+**Key detail:** Many popular datasets (GLUE, SUPERGLUE) expose multiple configs for different subtasks. Always call `/configs` first when exploring an unfamiliar dataset.
+
+---
+
+### 3. `/splits` — List Splits Per Config
+**Purpose:** List all splits (train/test/validation) for each config.
+
+**Request:**
+```
+GET /splits?dataset=stanfordnlp/imdb
+```
+
+**Response:**
+```json
+{
+  "splits": [
+    {"dataset": "stanfordnlp/imdb", "config": "plain_text", "split": "train"},
+    {"dataset": "stanfordnlp/imdb", "config": "plain_text", "split": "test"},
+    {"dataset": "stanfordnlp/imdb", "config": "plain_text", "split": "unsupervised"}
+  ],
+  "pending": [],
+  "failed": []
+}
+```
+
+**Error handling:** `pending` and `failed` arrays list configs still processing or errored. Retry failed configs after a few minutes.
+
+---
+
+### 4. `/size` — Dataset Size Overview
+**Purpose:** Get byte sizes, row counts, and column counts at dataset/config/split level.
+
+**Request:**
+```
+GET /size?dataset=stanfordnlp/imdb
+```
+
+**Response (tiered — dataset → configs → splits):**
+```json
+{
+  "size": {
+    "dataset": {
+      "num_bytes_original_files": 83446840,
+      "num_bytes_parquet_files": 83446840,
+      "num_bytes_memory": 128683449,
+      "num_rows": 100000
+    },
+    "configs": [{
+      "config": "plain_text",
+      "num_rows": 100000, "num_columns": 2
+    }],
+    "splits": [
+      {"config": "plain_text", "split": "train",
+        "num_bytes_parquet_files": 20979968, "num_bytes_memory": 33090550,
+        "num_rows": 25000, "num_columns": 2},
+      {"config": "plain_text", "split": "test",
+        "num_bytes_parquet_files": 20470363, "num_rows": 25000},
+      {"config": "plain_text", "split": "unsupervised",
+        "num_bytes_parquet_files": 41996509, "num_rows": 50000}
+    ]
+  }
+}
+```
+
+**Key metrics:**
+| Metric | Meaning |
+|--------|---------|
+| `num_bytes_original_files` | Size of original source files |
+| `num_bytes_parquet_files` | Size after Parquet conversion |
+| `num_bytes_memory` | Projected RAM if loaded into Python (≥ parquet due to object overhead) |
+| `num_rows` | Exact row count |
+| `num_columns` | Number of feature columns |
+
+**Memory-to-parquet ratio:** `num_bytes_memory / num_bytes_parquet_files` varies: text ~1.5×, numerics ~2–4×, binary ~1×. Use this to decide if streaming is needed.
+
+**Use case:** Before downloading, check `num_bytes_memory` — if it exceeds available RAM, use streaming or DuckDB remote Parquet queries.
+
+---
+
+### 5. `/first-rows` — Schema + First 100 Rows
+**Purpose:** Get the feature schema and first 100 rows to understand dataset structure.
+
+**Request:**
+```
+GET /first-rows?dataset=stanfordnlp/imdb&config=plain_text&split=train
+```
+
+**Feature type taxonomy:**
+| `_type` | `dtype`/detail | Meaning |
+|---------|----------------|---------|
+| `Value` | `string` | Text column |
+| `Value` | `int32`/`int64` | Integer column |
+| `Value` | `float32`/`float64` | Float column |
+| `ClassLabel` | `names: [...]` | Categorical with named labels |
+| `Image` | — | Image column |
+| `Audio` | — | Audio column |
+| `Sequence` | `[inner_type]` | List/array of inner values |
+
+**`truncated_cells`:** Cells >~100KB are truncated; indices appear here. Use `/rows` or Parquet for full content.
+
+**Use case:** The canonical "dataset sniffing" tool — verify column names, types, and labels before coding any loading logic.
+
+---
+
+### 6. `/rows` — Paginated Row Access
+**Purpose:** Access any contiguous slice of rows.
+
+**Request:**
+```
+GET /rows?dataset=stanfordnlp/imdb&config=plain_text&split=train&length=3&offset=100
+```
+
+**Limitations:**
+- Max `length`: **500 rows** per request (hard limit)
+- Max `offset`: **5M rows** (beyond that, use Parquet snapshots)
+- Large cells may be truncated
+
+**Use case:** Paginated UIs or pulling small validation samples.
+
+---
+
+### 7. `/parquet` — Parquet Snapshot URLs (Most Powerful)
+**Purpose:** Get direct URLs to Parquet snapshot files for each split. Query with DuckDB/Polars **without any HF datasets library code**.
+
+**Request:**
+```
+GET /parquet?dataset=stanfordnlp/imdb
+```
+
+**Response:**
+```json
+{
+  "parquet_files": [
+    {"config": "plain_text", "split": "train",
+      "url": "https://huggingface.co/datasets/stanfordnlp/imdb/resolve/refs%2Fconvert%2Fparquet/plain_text/train/0000.parquet",
+      "size": 20979968},
+    {"config": "plain_text", "split": "test",
+      "url": "...", "size": 20470363},
+    {"config": "plain_text", "split": "unsupervised",
+      "url": "...", "size": 41996509}
+  ]
+}
+```
+
+**Practical integration — DuckDB (zero-install, HTTP range requests):**
+```python
+import duckdb
+
+url = "https://huggingface.co/datasets/stanfordnlp/imdb/resolve/refs%2Fconvert%2Fparquet/plain_text/train/0000.parquet"
+result = duckdb.sql(f"""
+  SELECT label, COUNT(*) as cnt FROM read_parquet('{url}') GROUP BY label
+""").fetchall()
+print(result)  # [(0, 12500), (1, 12500)]
+```
+
+**Practical integration — Polars:**
+```python
+import polars as pl
+url = "..."  # from /parquet endpoint
+df = pl.read_parquet(url)
+print(df.group_by("label").len())
+```
+
+**Multi-file datasets — query all shards at once:**
+```python
+files = [...]  # from /parquet endpoint
+queries = [
+    f"SELECT '{f['split']}' as split, COUNT(*) as cnt FROM read_parquet('{f['url']}')"
+    for f in files
+]
+result = duckdb.sql(" UNION ALL BY NAME ".join(queries)).fetchdf()
+```
+
+**Performance:** DuckDB's `read_parquet` uses HTTP range requests — it only fetches bytes for queried columns. For wide datasets this is drastically faster than downloading.
+
+**Zero-cost:** Parquet URLs are **free** — no auth needed for public datasets, no rate limits, no credits.
+
+---
+
+### 8. `/statistics` — Column-Level Statistics
+**Purpose:** Per-column stats including histograms, unique counts, min/max, and null proportions.
+
+**Request:**
+```
+GET /statistics?dataset=stanfordnlp/imdb&config=plain_text&split=train
+```
+
+**Response:**
+```json
+{
+  "num_examples": 25000,
+  "statistics": [
+    {
+      "column_name": "label",
+      "column_type": "class_label",
+      "column_statistics": {
+        "nan_count": 0, "nan_proportion": 0.0,
+        "n_unique": 2,
+        "frequencies": {"neg": 12500, "pos": 12500}
+      }
+    },
+    {
+      "column_name": "text",
+      "column_type": "string_text",
+      "column_statistics": {
+        "nan_count": 0, "min": 52, "max": 13704,
+        "mean": 1325.06, "median": 979.0, "std": 1003.13,
+        "histogram": {"hist": [17426, 5384, 1490, 535, 147, 11, 4, 2, 0, 1], "num_bins": 10}
+      }
+    }
+  ]
+}
+```
+
+**Column type-specific stats:**
+| `column_type` | Available |
+|---------------|-----------|
+| `class_label` | `nan_count`, `n_unique`, `frequencies` |
+| `string_text` | `nan_count`, `min`/`max`/`mean`/`median`/`std` of length, `histogram` |
+| `int`/`float` | `nan_count`, `min`, `max`, `mean`, `median`, `std`, `histogram` |
+| `bool` | `n_unique` (2), `frequencies` |
+| `sequence`/`image`/`audio`/`video` | No statistics computed |
+
+**Use case:** Validate class balance, text length distribution (set `max_length`), missing values, feature ranges — all before training.
+
+---
+
+### 9. `/search` — Keyword Search
+**Purpose:** Substring search within dataset split.
+
+**Request:**
+```
+GET /search?dataset=...&config=plain_text&split=train&query=terrible&length=3
+```
+
+**Limitation:** Only available when `/is-valid` returns `"search": true`. Substring match on all string columns — no BM25/semantic ranking.
+
+---
+
+### 10. `/filter` — Column-Based Filtering
+**Request:**
+```
+GET /filter?dataset=...&where=label=0&length=3
+```
+
+Equality-only on specific columns. Equivalent to SQL `WHERE label=0`.
+
+---
+
+### 11. Python Helpers (huggingface_hub)
+```python
+from huggingface_hub.datasets_server import (
+    get_dataset_splits, get_dataset_configs, get_dataset_size,
+    get_dataset_first_rows, get_dataset_parquet_files, get_dataset_statistics,
+)
+
+configs = get_dataset_configs("stanfordnlp/imdb")
+splits = get_dataset_splits("stanfordnlp/imdb")
+size = get_dataset_size("stanfordnlp/imdb")
+rows = get_dataset_first_rows("stanfordnlp/imdb", "plain_text", "train")
+stats = get_dataset_statistics("stanfordnlp/imdb", "plain_text", "train")
+```
+
+---
+
+### 12. Complete Integration Workflow
+```python
+import json, urllib.request, duckdb
+
+DS = "stanfordnlp/imdb"
+BASE = "https://datasets-server.huggingface.co"
+
+def json_get(path):
+    with urllib.request.urlopen(f"{BASE}{path}") as r:
+        return json.loads(r.read())
+
+# 1. Health check
+valid = json_get(f"/is-valid?dataset={DS}")
+print(f"Available: preview={valid['preview']} stats={valid['statistics']}")
+
+# 2. List splits
+splits = json_get(f"/splits?dataset={DS}")["splits"]
+for s in splits:
+    print(f"  {s['config']}/{s['split']}")
+
+# 3. Get size
+ds_size = json_get(f"/size?dataset={DS}")["size"]["dataset"]
+print(f"Rows: {ds_size['num_rows']}, Memory: {ds_size['num_bytes_memory']/1e6:.1f}MB")
+
+# 4. Query via Parquet + DuckDB
+parquet_files = json_get(f"/parquet?dataset={DS}")["parquet_files"]
+queries = [
+    f"SELECT '{pf['split']}' as split, COUNT(*) as cnt FROM read_parquet('{pf['url']}')"
+    for pf in parquet_files
+]
+result = duckdb.sql(" UNION ALL BY NAME ".join(queries)).fetchdf()
+print(result)
+```
+
+---
+
+### 13. Key Design Principles
+1. **Zero-download exploration** — All endpoints return JSON. Inspect any public dataset without downloading.
+2. **Parquet as interchange** — Parquet is columnar, compressed, queryable via HTTP range requests, works with any data tool.
+3. **Config → Split → Row hierarchy** — Always go: `/configs` → `/splits` → `/first-rows` (or `/rows`).
+4. **Cached results** — Datasets Server processes once on upload. No per-query compute cost.
+5. **Large dataset strategy** — For >5M rows, use `/parquet` + DuckDB remote reads (fetch only needed columns).
+
+---
+
+### Resources
+- [Datasets Server docs](https://huggingface.co/docs/dataset-viewer/main/en/valid)
+- [Splits endpoint](https://huggingface.co/docs/dataset-viewer/main/en/splits)
+- [First rows](https://huggingface.co/docs/dataset-viewer/main/en/first_rows)
+- [Size endpoint](https://huggingface.co/docs/dataset-viewer/main/en/size)
+- [Parquet endpoint](https://huggingface.co/docs/dataset-viewer/main/en/parquet)
+- [Statistics endpoint](https://huggingface.co/docs/dataset-viewer/main/en/statistics)
+- [Datasets Server base URL](https://datasets-server.huggingface.co)
+- [huggingface_hub datasets_server module](https://huggingface.co/docs/huggingface_hub/en/package_reference/datasets_server)
+- [DuckDB remote Parquet](https://duckdb.org/docs/data/parquet/overview.html)

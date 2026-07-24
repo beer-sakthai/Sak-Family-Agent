@@ -1,9 +1,13 @@
-# HF Datasets Image Processing
+---
+author: SakThai
+license: MIT
+name: hf-datasets-image-processing
+description: Covers the datasets.Image feature — loading, decoding, transforming, encoding, and streaming image data through the Hugging Face datasets library (v5.0.0+).
+role: Main Lead of the House & Master of Hugging Face
+related: [huggingface-hub, hf-datasets-library, hf-computer-vision-course]
+---
 
-**Author:** SakThai
-**License:** MIT
-**Role:** Main Lead of the House & Master of Hugging Face
-**Related:** huggingface-hub, hf-datasets-library, hf-computer-vision-course
+# HF Datasets Image Processing
 
 ## Description
 Covers the `datasets.Image` feature — loading, decoding, transforming, encoding, and streaming image data through the Hugging Face `datasets` library (v5.0.0+). Handles all input types (paths, bytes, PIL Images, numpy arrays), streaming patterns, image folder datasets, on-the-fly transforms, and memory management.
