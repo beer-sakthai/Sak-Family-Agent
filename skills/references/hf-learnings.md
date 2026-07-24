@@ -4178,3 +4178,198 @@ with tempfile.NamedTemporaryFile(mode='w', suffix='.json') as f:
 - CLI reference: https://huggingface.co/docs/huggingface_hub/en/guides/cli
 - Source code: `huggingface_hub/hf_api.py` — 161 public methods in v1.24.0
 - Changelog: https://github.com/huggingface/huggingface_hub/releases
+
+## 2026-07-24: hf-datasets-video-processing — Deep Dive (Topic #115)
+
+### Summary
+Comprehensive deep-dive into Hugging Face `datasets` library's video support — the `Video` feature class, its `torchcodec` backend (FFmpeg-based), the `VideoFolder` dataset builder for zero-code video dataset creation, WebDataset TAR shards for scaling to millions of videos, and Lance native blob storage. Covers the full data flow: encoding, Arrow storage, decoding, streaming, metadata integration, and memory management.
+
+### Core Architecture — The Video Feature
+
+The `Video` feature (`datasets.features.Video`) follows the same architectural pattern as `Image` and `Audio`:
+
+```
+Input Types → encode_example() → Arrow struct<bytes: binary, path: string> → decode_example() → torchcodec.VideoDecoder
+```
+
+**Arrow storage:** `pa.struct({"bytes": pa.binary(), "path": pa.string()})` — identical to Image/Audio storage.
+
+#### Constructor Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `decode` | bool | `True` | Decode into VideoDecoder objects. `False` yields raw dicts |
+| `stream_index` | int \| None | `None` | Which stream from container (default: "best") |
+| `dimension_order` | Literal["NCHW", "NHWC"] | `"NCHW"` | Frame tensor dimension order |
+| `num_ffmpeg_threads` | int | `1` | FFmpeg decode threads (keep at 1) |
+| `device` | str \| torch.device | `"cpu"` | Decode device (CPU or CUDA) |
+| `seek_mode` | Literal["exact", "approximate"] | `"exact"` | Frame seek accuracy vs. speed |
+| `id` | str \| None | `None` | Feature identifier |
+
+### Input Types — encode_example()
+
+| Input Type | Behaviour |
+|------------|-----------|
+| `str` | Absolute/relative file path → `{"path": str, "bytes": None}` |
+| `pathlib.Path` | Absolute string via `str(value.absolute())` |
+| `bytes` / `bytearray` | In-memory video bytes → `{"path": None, "bytes": bytes}` |
+| `np.ndarray` | Calls `encode_np_array()` — **NotImplementedError** (stub) |
+| `torchcodec.VideoDecoder` | If has `_hf_encoded` (was decoded from datasets), returns stored dict; otherwise **NotImplementedError** |
+| `dict` | Validated and passed through as-is |
+
+### Decoding — decode_example()
+
+```python
+def decode_example(self, value, token_per_repo_id=None) -> VideoDecoder:
+```
+
+1. If `value` is a string, treat as path; otherwise extract `path`/`bytes` from dict
+2. If `bytes` is not None → `VideoDecoder(bytes_, ...)` (in-memory)
+3. If `bytes` is None and path is local → `VideoDecoder(path, ...)`
+4. If `bytes` is None and path is remote (hf://) → `hf_video_reader(path, ...)` — downloads via `xopen()` then decodes
+5. Stores `{"path": ..., "bytes": ...}` as `video._hf_encoded` for re-encoding
+6. Sets `video.metadata.path` to the original path
+
+**Requirement:** `torchcodec` must be installed (`config.TORCHCODEC_AVAILABLE`).
+
+### Storage Casting — cast_storage()
+
+| Source Arrow Type | Conversion |
+|-------------------|------------|
+| `pa.string()` | path → `{"bytes": None, "path": string}` |
+| `pa.binary()` / `pa.large_binary()` | bytes → `{"bytes": binary, "path": None}` |
+| `pa.struct({"bytes": binary, "path": string})` | Any subset; missing fields = null |
+| `pa.list_(*)` | numpy array → `encode_np_array()` — **NotImplementedError** |
+
+### TorchCodec — The Backend
+
+`torchcodec` v0.15.0 wraps FFmpeg (v4–v8) and returns PyTorch tensors directly.
+
+```python
+from torchcodec.decoders import VideoDecoder
+decoder = VideoDecoder("path/to/video.mp4", device="cpu")
+# or from bytes: VideoDecoder(video_bytes, device="cpu")
+
+# Metadata
+decoder.metadata  # num_frames, duration_seconds, codec, fps
+
+# Indexing API
+frame = decoder[0]                     # [C, H, W] uint8
+batch = decoder[0:-1:20]               # [N, C, H, W]
+batch = decoder.get_frames_at(indices=[2, 100])  # with PTS/duration
+batch = decoder.get_frames_played_at(seconds=[0.5, 10.4])
+```
+
+**Encoding (CPU only):**
+```python
+from torchcodec.encoders import Encoder
+encoder = Encoder()
+vs = encoder.add_video(height=H, width=W, frame_rate=30)
+with encoder.open_file("output.mp4"):
+    vs.add_frames(frames_batch)
+```
+
+**Note:** `encode_torchcodec_video()` and `encode_np_array()` in datasets are stubs — no round-trip encoding from numpy or externally-constructed VideoDecoders.
+
+### VideoFolder — Zero-Code Builder
+
+Directory-structured auto-classification datasets:
+
+```
+folder/train/dog/*.mp4, folder/train/cat/*.mp4
+folder/test/dog/*.mp4,  folder/test/cat/*.mp4
+```
+
+```python
+dataset = load_dataset("path/to/folder")  # auto-detect
+# or: load_dataset("videofolder", data_dir="/path/to/folder")
+```
+
+- Labels inferred from subdirectory names
+- Supports train/test/val splits via directory hierarchy
+- `drop_labels=False` if files are flat/mixed
+
+### Metadata Integration (CSV/JSONL/Parquet)
+
+For captions, bboxes, or multi-video rows, add a metadata file alongside videos:
+
+```
+folder/train/metadata.csv
+folder/train/0001.mp4
+folder/train/0002.mp4
+```
+
+**Single video per row:** `file_name,text` columns
+**Multi-video rows:** `input_file_name`/`output_file_name` or `*_file_names` (list)
+**Multiple video lists:** `videos_file_names` field for array columns
+
+The `file_name` value is the relative path from metadata file's directory to the video file.
+
+### WebDataset — TAR-Based Scaling
+
+For 1000s–millions of videos, group in ~1GB TAR archives:
+
+```python
+dataset = load_dataset("webdataset", data_dir="/path/to/folder", split="train")
+# Columns created per file suffix: "mp4", "json", etc.
+```
+
+Each TAR shard contains videos plus metadata files (.json, .txt). Streams without full extraction.
+
+### Lance Format — Native Blob Storage
+
+```python
+schema = pa.schema([
+    pa.field("caption", pa.utf8()),
+    pa.field("video_blob", pa.large_binary(),
+             metadata={"lance-encoding:blob": "true"}),
+])
+```
+
+- Single `videos.lance/` directory: metadata + video blobs
+- Metadata-only scans skip blobs; on-demand fetch
+- `max_bytes_per_file` for shard size control (~5GB default)
+- Upload to Hub via `api.upload_folder()`
+
+### Remote File Handling — hf_video_reader()
+
+Transparently downloads and decodes video from Hub dataset repos:
+
+```python
+def hf_video_reader(path, token_per_repo_id=None, stream="video",
+                    dimension_order="NCHW", num_ffmpeg_threads=1,
+                    device="cpu", seek_mode="exact") -> VideoDecoder:
+```
+
+Resolves HF URL patterns (`hf://`), downloads via `xopen()` with optional auth, passes to VideoDecoder.
+
+### Memory Management Patterns
+
+- **Deferred decode:** `Video(decode=False)` — store paths only
+- **embed_storage():** Inline all video bytes into Arrow (memory-heavy but self-contained)
+- **token_per_repo_id:** `{"user/private-ds": True}` for private repos
+- **Streaming:** `load_dataset(..., streaming=True)` — decode on-demand per row
+
+### Zero-Cost Patterns
+
+1. **Small-scale:** Local VideoFolder + CSV metadata
+2. **Medium-scale:** Stream from Hub — no full download
+3. **Large-scale:** WebDataset TAR shards — stream without extraction
+4. **Self-contained:** Lance format — single directory artifact
+5. **Memory-constrained:** `Video(decode=False)` decode only accessed rows
+6. **No GPU:** CPU decode default; FFmpeg pre-installed on most Linux
+
+### Dependencies
+
+```bash
+pip install datasets torchcodec
+# Optional: pip install lancedb
+# FFmpeg v4–v8 required (pre-installed on most Linux)
+```
+
+### Source Code References
+- `Video` feature: [`src/datasets/features/video.py`](https://github.com/huggingface/datasets/blob/main/src/datasets/features/video.py)
+- Feature registration: [`src/datasets/features/features.py`](https://github.com/huggingface/datasets/blob/main/src/datasets/features/features.py) (Video import at line 50)
+- TorchCodec: [`github.com/pytorch/torchcodec`](https://github.com/pytorch/torchcodec)
+- Docs: https://huggingface.co/docs/datasets/main/en/video_dataset
+
