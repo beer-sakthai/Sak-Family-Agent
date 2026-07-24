@@ -1350,4 +1350,245 @@ else:
 - Xet guide: https://huggingface.co/docs/hub/xet/index
 - `scan_cache_dir` docs: https://huggingface.co/docs/huggingface_hub/main/en/package_reference/cache#huggingface_hub.scan_cache_dir
 - `hf cache` CLI: https://huggingface.co/docs/huggingface_hub/main/en/guides/cli#hf-cache
-| CACHEDIR.TAG standard: https://bford.info/cachedir/
+|| CACHEDIR.TAG standard: https://bford.info/cachedir/
+|
+
+---
+
+## 2026-07-24: hf-hub-fsspec — HfFileSystem Deep Dive (Topic #59 — Deep Dive v2)
+
+**Author:** SakThai
+**License:** MIT
+
+### Summary
+Comprehensive deep-dive into `HfFileSystem` — the `fsspec`-compatible filesystem interface to the Hugging Face Hub. Covers the full architecture (path resolution, instance caching, directory caching), every method with source-verified signatures and behavior, the `hf://` URL scheme for all 4 resource types (models, datasets, Spaces, buckets), integration patterns with Pandas/DuckDB/Zarr/Dask/Polars, performance tradeoffs vs `HfApi`, and practical zero-cost workflows. Source: `huggingface_hub/hf_file_system.py` (main branch v1.24.0-dev), official HF docs.
+
+### Architecture Overview
+
+`HfFileSystem` extends `fsspec.AbstractFileSystem` with a custom metaclass `_Cached` for instance caching. It wraps `HfApi` internally and provides familiar filesystem operations (`ls`, `glob`, `open`, `cp`, `mv`, `rm`, `walk`, `find`, `info`, `exists`, `isdir`, `isfile`, `put`, `get`).
+
+**Key classes:**
+- **`HfFileSystem`** — The main filesystem class. Protocol: `"hf"`. Identified by `endpoint`, `token`, `block_size`, `expand_info`.
+- **`HfFileSystemResolvedRepositoryPath`** — Resolved path: `repo_type`, `repo_id`, `revision`, `path_in_repo`, `_raw_revision`.
+- **`HfFileSystemResolvedBucketPath`** — Resolved bucket path: `bucket_id`, `path`.
+- **`HfFileSystemFile`** / **`HfFileSystemStreamFile`** — File-like objects for read/write.
+
+### URL Scheme — `hf://` Protocol
+
+Four URL patterns, all valid with or without the `hf://` prefix when using `HfFileSystem` directly:
+
+| Resource | Scheme | Example |
+|----------|--------|---------|
+| **Models** | `hf://<repo-id>[@<revision>]/<path>` | `hf://beer-sakthai/my-model/config.json` |
+| **Datasets** | `hf://datasets/<repo-id>[@<revision>]/<path>` | `hf://datasets/squad/data.json` |
+| **Spaces** | `hf://spaces/<repo-id>[@<revision>]/<path>` | `hf://spaces/gradio/hello-world/app.py` |
+| **Buckets** | `hf://buckets/<bucket-id>/<path>` | `hf://buckets/my-org/my-bucket/data.parquet` |
+
+**Key rules:**
+- Models have NO prefix (bare repo_id); datasets and Spaces use explicit prefixes
+- Revision is optional — defaults to `"main"` (or bucket's latest)
+- The `@revision` suffix can be a branch name, tag, or commit hash
+- Buckets do NOT support revision at all
+- Paths are case-sensitive on the Hub
+
+### Instance Caching (`_Cached` Metaclass)
+
+`HfFileSystem` uses a custom metaclass `_Cached` that overrides fsspec's default caching:
+
+- **Tokenization**: `_tokenize()` produces a deterministic MD5 hash from `(cls, thread_id, args, kwargs)`. Unlike standard fsspec, PID is NOT included — instances are shared across threads in the same process.
+- **Main thread reuse**: New instances in child threads copy cache state from the main thread instance if one exists.
+- **Instance sharing**: Two `HfFileSystem()` calls with the same parameters share the same underlying instance (including its internal caches).
+- **Skip cache**: Pass `skip_instance_cache=True` to force a fresh instance.
+- **Clear cache**: `cls.clear_instance_cache()` classmethod to wipe all cached instances.
+
+**Important**: The metaclass keeps a strong reference to each cached instance, preventing garbage collection. Call `clear_instance_cache()` explicitly when done.
+
+### Internal Caches (3 Levels)
+
+1. **`_repo_and_revision_exists_cache`** — Maps `(repo_type, repo_id, revision)` → `(bool, Exception)`. Validates repo and revision existence. Results cached bidirectionally: checking `(type, id, "v1.0")` also populates `(type, id, None)`.
+2. **`_bucket_exists_cache`** — Maps `bucket_id` → `(bool, Exception)`. Simpler than repos — no revision dimension.
+3. **`dircache`** — Maps parent directory paths to lists of file info dicts (`ls` results). Standard fsspec directory listing cache.
+
+**Cache invalidation**: `invalidate_cache(path=None)` clears all caches; `invalidate_cache(path="specific/path")` clears only that path's entries and its ancestors.
+
+### Complete Method Reference (Source-Verified)
+
+All methods from `hf_file_system.py`:
+
+| Method | Signature Highlights | Description | Better Alternative |
+|--------|---------------------|-------------|-------------------|
+| `resolve_path(path, revision=None)` | Returns `HfFileSystemResolvedRepositoryPath` or `HfFileSystemResolvedBucketPath` | Parse an `hf://` path into structured components | — |
+| `ls(path, detail=True, refresh=False, revision=None)` | Returns `list[str]` or `list[dict]` | List directory contents | `HfApi.list_repo_tree()` |
+| `find(path, maxdepth=None, withdirs=False, detail=False, refresh=False, revision=None)` | Returns paths recursively | Like `ls` but recursive — no subdirectory grouping | — |
+| `walk(path)` | Returns `Iterator[(path, dirs, files)]` | os.walk-style tree traversal | — |
+| `glob(path, maxdepth=None)` | Returns `list[str]` | Glob matching (`**/*.csv`) | — |
+| `exists(path, revision=None)` | Returns `bool` | Check if path exists | `HfApi.file_exists()` |
+| `isfile(path, revision=None)` | Returns `bool` | Check if path is a file | — |
+| `isdir(path, revision=None)` | Returns `bool` | Check if path is a directory | — |
+| `info(path, refresh=False, revision=None)` | Returns `dict` (type, size, commit info) | Get file/directory metadata | `HfApi.get_paths_info()` |
+| `modified(path, revision=None)` | Returns `datetime` | Get last modified time | — |
+| `open(path, mode="rb", block_size=None, revision=None, **kwargs)` | Returns `HfFileSystemFile` or `HfFileSystemStreamFile` | Open a file for reading/writing | `HfApi.upload_file()` / `hf_hub_download()` |
+| `read_text(path, revision=None)` | Returns `str` | Read entire file as string | — |
+| `read_bytes(path, revision=None)` | Returns `bytes` | Read entire file as bytes | — |
+| `cp(path1, path2, revision=None)` | None | Copy file within/between repos | `HfApi.upload_file()` |
+| `mv(path1, path2, revision=None)` | None | Move/rename file within/between repos | — |
+| `rm(path, recursive=False, maxdepth=None, revision=None)` | None | Delete file(s) | `HfApi.delete_file()` |
+| `put(lpath, rpath, callback=None, revision=None, **kwargs)` | None | Upload local file(s) to Hub | `HfApi.upload_file()` |
+| `get(rpath, lpath, callback=None, outfile=None, **kwargs)` | None | Download remote file(s) | `HfApi.hf_hub_download()` |
+| `url(path)` | Returns `str` (HTTP URL) | Get direct HTTP URL for a path | — |
+| `invalidate_cache(path=None)` | None | Clear dircache + existence caches | — |
+| `copy(path1, path2, revision=None)` | None | Alias for `cp` | — |
+| `du(path, revision=None)` | Returns `int` | Disk usage (total size) | — |
+| `disk_usage(path, revision=None)` | Returns `int` | Alias for `du` | — |
+
+**Not implemented**: `quota()`, `disk_utilization()`, `setxattrs()` — all raise `NotImplementedError`.
+
+### Path Resolution Internals
+
+`resolve_path()` is the heart of `HfFileSystem`. It:
+
+1. Strips the `hf://` protocol prefix via `_strip_protocol()`
+2. Rejects empty paths (listing all repos not supported)
+3. Rejects single-segment paths (must be `namespace/name` format)
+4. Delegates to `parse_hf_uri()` to parse the HF URI into `(type, id, revision, path_in_repo)`
+5. For **buckets** — validates bucket existence via `_bucket_exists()` → `bucket_info()`
+6. For **repos** — validates repo + revision existence via `_repo_and_revision_exist()` → `repo_info()`
+7. Handles revision conflicts (path vs explicit arg) — raises `ValueError` on mismatch
+8. Special-cases special refs (`refs/pr/123`) — splits on `@` manually to avoid greedy matching by `parse_hf_uri()`
+9. Preserves raw revision string for `unresolve()` fidelity (quoted refs stay quoted)
+
+### Read/Write Operations
+
+#### Reading (`_open` with mode `"rb"` or `"r"`)
+
+Two file-like classes are used depending on block_size:
+- **`HfFileSystemFile`** — For non-streaming reads (block_size ≥ 0). Fetches the full file content lazily on first read, caches it in `_cache`. Supports `seek()`.
+- **`HfFileSystemStreamFile`** — For streaming reads (block_size is None). Downloads chunks on demand. No `seek()` support.
+
+**Behaviour:**
+- Default mode is `"rb"` (binary) — unlike Python's `"rt"` default. Always specify `"r"` for text.
+- `read_text()` / `read_bytes()` are convenience wrappers that open, read, and close.
+
+#### Writing (`_open` with mode `"wb"` or `"w"`)
+
+Uses `HfFileSystemFile` in write mode:
+- Writes are buffered locally, then committed on `close()` as a single `CommitOperationAdd`
+- The temp file is created via `tempfile.mkstemp()` in a thread-safe manner
+- Appending (`"a"`, `"ab"`) raises `NotImplementedError`
+
+### Integration Patterns
+
+#### Pandas
+```python
+import pandas as pd
+
+df = pd.read_csv("hf://datasets/my-username/my-dataset/train.csv")
+df = pd.read_csv("hf://buckets/my-username/my-bucket/train.parquet")
+
+df.to_csv("hf://datasets/my-username/my-dataset/processed.csv")
+```
+
+`HfFileSystem` is auto-registered as the `hf://` filesystem, so Pandas uses it transparently.
+
+#### DuckDB
+```python
+from huggingface_hub import HfFileSystem
+import duckdb
+
+fs = HfFileSystem()
+duckdb.register_filesystem(fs)
+
+result = duckdb.query(
+    "SELECT * FROM 'hf://datasets/my-username/my-dataset/data.parquet' LIMIT 10"
+).df()
+```
+
+#### Zarr (Array Storage)
+```python
+import zarr
+import numpy as np
+
+embeddings = np.random.randn(50000, 1000).astype("float32")
+with zarr.open_group("hf://my-username/my-model/embeddings", mode="w") as root:
+    root.zeros("experiment_0", shape=(50000, 1000), chunks=(10000, 1000), dtype='f4')[:] = embeddings
+
+with zarr.open_group("hf://my-username/my-model/embeddings", mode="r") as root:
+    first_row = root["embeddings/experiment_0"][0]
+```
+
+#### Dask & Polars
+```python
+import dask.dataframe as dd
+df = dd.read_csv("hf://datasets/.../*.csv")
+
+import polars as pl
+df = pl.read_parquet("hf://buckets/my-org/my-bucket/data/*.parquet")
+```
+
+### Performance Considerations
+
+Official HF docs **strongly recommend** using `HfApi` methods over `HfFileSystem` when performance matters:
+
+| Operation | Prefer | Reason |
+|-----------|--------|--------|
+| Upload file | `HfApi.upload_file()` | Direct API call, no fsspec overhead |
+| Download file | `HfApi.hf_hub_download()` | Proper caching, etag-based, resume support |
+| Delete file | `HfApi.delete_file()` | Single API call vs file-level ops |
+| List directory | `HfApi.list_repo_tree()` | Returns structured data, more efficient |
+| File exists | `HfApi.file_exists()` | Direct HEAD request |
+| File info | `HfApi.get_paths_info()` / `HfApi.repo_info()` | More detailed + cached |
+
+**When to use HfFileSystem anyway:**
+- Integrating with libraries that require `fsspec` (Pandas, DuckDB, Zarr, Dask, Polars)
+- Quick ad-hoc browsing of Hub repos from a Python script
+- Globbing and pattern matching across repo directories
+- When the overhead doesn't matter (small files, infrequent ops)
+
+### Error Handling
+
+`HfFileSystem` wraps Hub errors into standard filesystem errors:
+
+| Hub Error | Filesystem Behaviour |
+|-----------|---------------------|
+| `RepositoryNotFoundError` | `FileNotFoundError` with descriptive message |
+| `RevisionNotFoundError` | `FileNotFoundError` ("No such revision") |
+| `EntryNotFoundError` | `FileNotFoundError` ("No such file") |
+| `BucketNotFoundError` | `FileNotFoundError` ("No such bucket") |
+| `HFValidationError` | `FileNotFoundError` ("Invalid repo id") |
+
+### Limitations & Edge Cases
+
+1. **Appending not supported** — `"a"` / `"ab"` modes raise `NotImplementedError`
+2. **Single-segment IDs not supported** — Must use `namespace/repo` format (no bare `gpt2`)
+3. **Listing all repos** — `hffs.ls("")` raises `NotImplementedError`
+4. **Cache invalidation** — `dircache` entries persist across operations unless explicitly invalidated
+5. **Buckets don't support revision** — revision parameter is silently ignored for bucket paths
+6. **Thread safety** — Instance-level caches may race in concurrent access
+7. **Large files** — Streaming reads with default block_size avoid loading entire files into memory, but `read_bytes()` loads it all
+8. **`quota()` / `disk_utilization()`** — Not implemented (raises error)
+9. **`setxattrs()`** — Not implemented
+
+### Global Module-Level Convenience
+
+```python
+from huggingface_hub import hffs
+```
+
+`hffs` is a module-level singleton `HfFileSystem()` at `huggingface_hub/__init__.py`. It uses the default endpoint and cached token. For custom config, instantiate `HfFileSystem()` directly:
+
+```python
+from huggingface_hub import HfFileSystem
+fs = HfFileSystem(endpoint="https://huggingface.co", token="hf_...")
+```
+
+### Resources
+- Guide: https://huggingface.co/docs/huggingface_hub/en/guides/hf_file_system
+- Package reference: https://huggingface.co/docs/huggingface_hub/en/package_reference/hf_file_system
+- Source: `huggingface_hub/hf_file_system.py` (main branch)
+- fsspec docs: https://filesystem-spec.readthedocs.io/en/latest/
+- Pandas remote IO: https://pandas.pydata.org/pandas-docs/stable/user_guide/io.html#reading-writing-remote-files
+- DuckDB fsspec: https://duckdb.org/docs/guides/python/filesystems
+- Zarr fsspec: https://zarr.readthedocs.io/en/stable/tutorial.html#io-with-fsspec
+
+### Skill
+huggingface-hub — references/hf-learnings.md
