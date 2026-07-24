@@ -173,6 +173,7 @@
   "hf-datasets-server-parquet-conversion-pipeline",
   "hf-hub-modelcard-python-api",
   "hf-gradio-lite",
+  "hf-gradio-lite-deep-dive",
   "hf-transformers-qwen3-architecture-deep-dive",
   "hf-peft-lora-deep-dive",
   "hf-vllm-transformers-modeling-backend-native-deep-dive",
@@ -181,5 +182,12 @@
   "hf-hub-models-api-query-language-complete",
   "hf-datasets-tool-calling-format",
   "hf-context-engineering-course",
-  "hf-datasets-concatenate-and-interleave-deep-dive"
+  "hf-datasets-concatenate-and-interleave-deep-dive",
+  "hf-transformers-cache-hierarchy-deep-dive",
+  "hf-hub-hf_transfer-rust-download-accelerator-deep-dive",
+  "hf-inference-client-image-input-pipeline-deep-dive",
+  "hf-transformers-logits-processors-deep-dive",
+  "hf-hub-configuration-and-environment-variables",
+  "hf-dataset-card-api",
+  "hf-repo-creation-publishing-automation"
 ]
