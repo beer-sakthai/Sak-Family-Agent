@@ -180,5 +180,6 @@
   "hf-safetensors-library-architecture",
   "hf-hub-models-api-query-language-complete",
   "hf-datasets-tool-calling-format",
-  "hf-context-engineering-course"
+  "hf-context-engineering-course",
+  "hf-datasets-concatenate-and-interleave-deep-dive"
 ]
