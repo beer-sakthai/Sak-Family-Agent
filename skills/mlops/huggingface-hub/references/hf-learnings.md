@@ -26,7 +26,186 @@ Exception
 ├── NotASafetensorsRepoError
 ├── DDUFError
 │   ├── DDUFCorruptedFileError
-│   └── DDUFExportError
+|       └── DDUFExportError
+
+## 2026-07-24: hf-hub-sandboxes-deep-dive — HF Sandboxes: Ephemeral Cloud Machines via `huggingface_hub` (Topic #148 Deepened)
+
+### Summary
+Deep-dive into **HF Sandboxes** — isolated cloud machines you spin up in seconds, run commands in with live-streamed output, and transfer files in/out of — all from Python (`huggingface_hub` v1.24.0+) or the CLI (`hf sandbox`). Sandboxes are built on top of HF Jobs: a sandbox is a Job running a small static binary (`sbx-server`) that exposes command execution and file transfer over HTTP. Available in two flavors: **dedicated** (one Job = one VM, supports GPU) and **pooled** (one Job hosts many sandboxes via uid + Landlock isolation, CPU only). Covered: architecture, API reference, CLI usage, pooling model, security model, file API, proxy/forwarding, and performance benchmarks.
+
+### Key Concepts
+
+**No dedicated sandbox backend.** A sandbox is just an HF Job (VM) running a single static Rust binary `sbx-server` (~640KB, zero deps) that speaks HTTP. The client talks to it through the Jobs proxy (`*.hf.jobs` URL). Everything — auth, discovery, packing — builds on existing Job primitives (labels, env vars, secrets).
+
+### The Two Kinds of Sandbox
+
+| Aspect | `Sandbox.create()` (dedicated) | `SandboxPool` (shared/pool) |
+|--------|-------------------------------|-----------------------------|
+| Mapping | 1 Job = 1 sandbox (whole VM) | 1 Job = many sandboxes (same VM, packed) |
+| Isolation | Full VM | uid + Landlock (same-user trust) |
+| Cold start | ~6s per sandbox | ~6s first host, then ~1 round-trip each |
+| Cost | 1 VM per sandbox | 1 VM per host, amortized |
+| GPU | ✅ | ❌ (CPU only) |
+| Best for | Single sandbox, GPU workloads, untrusted code | Many cheap CPU sandboxes (RL rollouts, fan-out) |
+
+### Quickstart (Python)
+
+```python
+from huggingface_hub import Sandbox
+
+# Dedicated sandbox
+with Sandbox.create() as sbx:
+    result = sbx.run("python -c 'print(40 + 2)'")
+    print(result.stdout)  # 42
+
+# Custom image and GPU flavor
+sbx = Sandbox.create(image="pytorch/pytorch:2.6.0-cuda12.4-cudnn9-devel", flavor="a10g-small")
+```
+
+### Running Commands: `Sandbox.run()`
+
+- **String** → runs through `/bin/sh -c` (supports pipes, globs, `$VARS`)
+- **List** → exec'd directly as argv (no quoting surprises)
+- `shell=True/False` to force mode explicitly (avoids footgun of `["echo hi"]` being exec'd as a single program named "echo hi")
+- Non-zero exit raises `SandboxCommandError` by default; pass `check=False` to get `SandboxCommandResult` instead
+- `background=True` starts a process detached, returns `SandboxProcess` immediately (for servers/watchers)
+
+```python
+# Live streaming output
+sbx.run("make -j4", cwd="/app", env={"CC": "gcc"}, timeout=600,
+        on_stdout=print, on_stderr=print)
+
+# Background server
+proc = sbx.run("python -m http.server 8000", background=True)
+# Later: sbx.processes() → list, proc.kill() → terminate
+```
+
+### File Transfer
+
+```python
+# Write/read
+sbx.files.write("/app/script.py", "print('hi')")
+text = sbx.files.read_text("/app/script.py")
+
+# Upload/download (local ↔ sandbox)
+sbx.files.upload("local_data.csv", "/data/data.csv")
+sbx.files.download("/data/results.bin", "results.bin")
+
+# List/stat
+entries = sbx.files.list("/data")
+# Also: stat, exists, mkdir, delete
+```
+
+### Proxy: Reaching an Inner Server
+
+Start a server in the sandbox (background), then reach it from outside:
+
+```python
+import httpx
+with Sandbox.create() as sbx:
+    sbx.files.write("app.py", "...")
+    sbx.run("uvicorn app:app --host 127.0.0.1 --port 8000", background=True)
+    
+    # Plain HTTP
+    r = httpx.get(sbx.proxy_url_for(8000, "/hello"), headers=sbx.proxy_headers)
+    
+    # WebSocket
+    ws_url = sbx.proxy_url_for(8000, "/ws", scheme="wss://")
+```
+
+**Pooled sandbox note:** Can't bind TCP (Landlock), so listen on unix socket at `$SBX_PROXY_DIR/<port>.sock`:
+```python
+# Inside sandbox: uvicorn app:app --uds $SBX_PROXY_DIR/8000.sock
+# Client side (proxy_url_for / proxy_headers) is identical
+```
+
+### Lifecycle
+
+- **Persistent:** outlives the creating process — reconnect from anywhere with `Sandbox.connect("687f911eaea852de79c4a50a")`
+- **`idle_timeout`:** default 10 min auto-shutdown when no API calls or running processes; pass `None` to disable
+- **24h hard limit:** maximum job lifetime (not configurable)
+- **`forward_hf_token=True`:** opt-in to inject HF_TOKEN into the sandbox (never sent by default)
+
+### Pooled Sandboxes: `SandboxPool`
+
+For many parallel CPU sandboxes (RL rollouts, batch eval, fan-out):
+
+```python
+from huggingface_hub import SandboxPool
+from concurrent.futures import ThreadPoolExecutor
+
+with SandboxPool(image="python:3.12", flavor="cpu-basic", warm_up=4) as pool:
+    boxes = [pool.create() for _ in tasks]
+    with ThreadPoolExecutor(32) as ex:
+        outputs = list(ex.map(lambda b, t: b.run(t.cmd).stdout, boxes, tasks))
+```
+
+Key pooling parameters:
+- `sandboxes_per_host`: default 50 sandboxes per host VM
+- `warm_up`: pre-provision N hosts (avoids cold start on first calls)
+- `max_hosts`: cap on concurrent host VMs
+- Per-sandbox `env`, `idle_timeout`, `forward_hf_token` — but `image`/`flavor`/`volumes` are pool-level (set once)
+
+Pool reconnection: `SandboxPool.connect("pool-ae9f7efe0bc7")` from any machine.
+
+### Security & Authentication (Stateless HMAC)
+
+Two-layer auth:
+1. **Jobs proxy gate:** requires HF token with read access to the job's namespace
+2. **Application gate (`X-Sandbox-Token`):** per-sandbox token derived as:
+   ```
+   nonce = random 128-bit hex  (stored in job label "hf-sandbox-nonce")
+   token = HMAC-SHA256(key=your_hf_token, msg="hf-sandbox:" + nonce)
+   ```
+
+This means: stateless reconnection from anywhere (read nonce from label, recompute token), HF token never enters the sandbox (unless explicitly forwarded), and each sandbox has a unique token scope.
+
+### Pool Isolation: uid + Landlock
+
+- Each pooled sandbox gets: dedicated uid (≥20000), private `0700` home, `NO_NEW_PRIVS`, per-process rlimits, per-sandbox Landlock ruleset
+- ✅ Cannot read other sandboxes' environ, /proc/*/environ, signal/ptrace, read 0700 homes
+- ✅ /tmp and /dev/shm access denied (each confined to own home, TMPDIR inside $HOME)
+- ✅ Cannot bind TCP ports (no inter-sandbox localhost services)
+- ✅ Abstract unix sockets blocked (via `LANDLOCK_SCOPED_ABSTRACT_UNIX_SOCKET`)
+- ⚠️ No cgroup delegation — CPU/RAM/disk not partitioned (RLIMIT_NPROC/RLIMIT_AS bound per-process)
+- ⚠️ Can see process list metadata via /proc (names, cmdlines) — cannot read or signal
+
+Use `Sandbox.create()` (full VM) for mutually-hostile untrusted code or GPU workloads.
+
+### CLI Reference
+
+```bash
+# Dedicated
+hf sandbox create
+hf sandbox exec <id> -- python -c "print('hi')"
+hf sandbox cp data.csv <id>:/data/data.csv
+hf sandbox kill <id>
+
+# Background processes
+hf sandbox spawn <id> -- python -m http.server 8000
+hf sandbox process ls <id>
+hf sandbox process kill <id> <pid>
+
+# Pool
+hf sandbox pool create python:3.12 --flavor cpu-basic
+hf sandbox create --pool <pool-id> --env LOG_LEVEL=debug
+hf sandbox pool ls
+hf sandbox pool delete <pool-id>
+```
+
+### Performance Benchmarks
+
+**Dedicated:** cold start ~5.8s median, run() round-trip p50 ~110ms (proxy RTT floor ~105ms), file transfer ~340 MiB/s down, ~441 MiB/s up (parallel ranged, >8 MiB).
+
+**Pool (50 sandboxes/host):** 100 sandboxes in ~6.1s total, 1000 sandboxes in ~16s total. Server-side create/exec/delete ~1ms each — budget is entirely network round-trip.
+
+**Cost example:** 1000 sandboxes (20 hosts × 50 each) ≈ $0.0009 total vs ~$0.06 for one Job per sandbox (1000 VMs).
+
+### Source
+- https://huggingface.co/docs/huggingface_hub/en/guides/sandbox
+- https://huggingface.co/docs/huggingface_hub/en/concepts/sandbox
+- https://huggingface.co/docs/huggingface_hub/en/package_reference/sandbox
+- Server binary: https://github.com/huggingface/sandbox-server
 │       └── DDUFInvalidEntryNameError
 ├── StrictDataclassError
 │   ├── StrictDataclassDefinitionError
