@@ -12321,3 +12321,55 @@ Key contract:
 - Source: https://github.com/huggingface/transformers/blob/v5.14.0/src/transformers/generation/logits_process.py
 - Generation strategies: https://huggingface.co/docs/transformers/en/generation_strategies
 - Internal generation utils: https://huggingface.co/docs/transformers/en/internal/generation_utils
+
+---
+
+## 2026-07-24: hf-repo-creation-publishing-automation — Complete Repository Lifecycle & Publishing Automation (Topic #192 Deep-Dive)
+
+### Summary
+Comprehensive deep-dive into programmatic repository lifecycle management on Hugging Face Hub. Covers all HfApi methods for repo CRUD (create_repo, delete_repo, duplicate_repo, move_repo, super_squash_history), metadata/settings management (repo_info, repo_exists, update_repo_settings), file upload strategies (upload_file, upload_folder, create_commit with CommitOperationAdd/Delete/Copy), the hf CLI equivalents (hf repos create/delete/duplicate/move/settings/cp), and CI/CD automation patterns (GitHub Actions, idempotent publishing, atomic multi-file updates, Space duplication with secrets). Based on huggingface_hub v1.24.0+ source code at hf_api.py.
+
+### Source
+- HfApi source: https://github.com/huggingface/huggingface_hub/blob/main/src/huggingface_hub/hf_api.py
+- CLI docs: https://huggingface.co/docs/huggingface_hub/en/guides/cli
+- Hub API docs: https://huggingface.co/docs/huggingface_hub/en/package_reference/hf_api
+- Repo settings: https://hf.co/docs/hub/repositories-settings
+
+### Key API Reference
+
+| Method | Purpose | Returns |
+|--------|---------|---------|
+| `create_repo()` | Create empty repo (model/dataset/Space) | `RepoUrl` |
+| `delete_repo()` | Irreversibly delete a repo | `None` |
+| `duplicate_repo()` | Server-side copy with full history | `RepoUrl` |
+| `move_repo()` | Rename/transfer between namespaces | `None` |
+| `super_squash_history()` | Collapse all commits into one | `None` |
+| `repo_exists()` | Lightweight existence check | `bool` |
+| `repo_info()` | Full metadata including siblings/tags | `ModelInfo | DatasetInfo | SpaceInfo` |
+| `update_repo_settings()` | Change private/gated/visibility | `None` |
+| `upload_file()` | Single file upload | `CommitInfo` |
+| `upload_folder()` | Directory upload with glob filters | `CommitInfo` |
+| `create_commit()` | Multi-operation atomic commit | `CommitInfo` |
+| `list_repo_files()` | List all files in a repo revision | `list[str]` |
+| `list_repo_commits()` | List commit history | `list[CommitInfo]` |
+
+### Key Design Insights
+
+1. **create_repo is polymorphic** — Same method handles models, datasets, and Spaces via `repo_type`. Space-specific args (sdk, hardware, secrets, volumes) are silently ignored for model/dataset repos.
+
+2. **duplicate_repo is server-side** — No local download/upload. Preserves full git history and LFS objects. For Spaces, you can override hardware, secrets, volumes, and sleep time in the copy.
+
+3. **create_commit is the foundation** — All file operations flow through it. Supports up to 25k LFS files and 1GB regular payload per commit. Supports `parent_commit` for optimistic locking and `create_pr` for PR-based workflows.
+
+4. **CommitOperationCopy is zero-bandwidth** — Cross-repo file copies are purely server-side. No download to client, no re-upload. Useful for duplicating configs/tokenizers across repos.
+
+5. **`parent_commit` enables optimistic locking** — Pass the current HEAD hash to prevent race conditions in concurrent CI/CD pipelines. Without it, auto-merge (fast-forward) can cause ordering issues.
+
+6. **`exist_ok=True` is CI/CD safe** — Idempotent creation: first run creates, subsequent runs are no-ops. Prevents race conditions in multi-stage pipelines.
+
+7. **CLI `--json` flag is script-ready** — All `hf repos` commands support `--format json` for structured output consumption without parsing human tables.
+
+8. **`super_squash_history()` is one-way** — Non-revertible. Use before public release to clean up messy dev commits, but never on a branch that needs future merges.
+
+### Skill
+mlops/hf-repo-creation-publishing-automation — references/hf-learnings.md
