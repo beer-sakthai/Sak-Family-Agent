@@ -686,10 +686,156 @@ write_api = HfApi(token="hf_write_...") # write operations
 
 ---
 
+---
+
+## 11. REST API Deep-Dive — Raw Endpoint Contracts
+
+The `HfApi` Python client wraps the Hub's REST API, but the raw HTTP endpoints expose additional parameters and settings not yet surfaced in the Python library. Below is the complete contract for repo management endpoints sourced from the official [OpenAPI spec](https://huggingface.co/.well-known/openapi.json).
+
+### 11.1 POST /api/repos/create — Create a Repository
+
+**Full request body schema:**
+
+```json
+{
+  "name": "my-repo",                          // (required) repo name
+  "organization": "my-org",                   // (optional) org namespace
+  "type": "model",                            // "model" | "dataset" | "space"
+  "private": false,                           // bool | null (default: public)
+  "visibility": "public",                     // "public" | "private" | "protected" (Spaces only)
+  "region": "us",                             // "us" | "eu" (activates regional hosting)
+  "license": "mit",                           // HF license enum (50+ values)
+  "license_name": "my-custom-license",         // custom license slug (if license="other")
+  "license_link": "LICENSE",                  // "LICENSE" | "LICENSE.md" | URL
+  "resourceGroupId": "66670e51631...",        // Enterprise Hub resource group (24-char hex)
+  "files": [                                  // seed with initial files
+    {"content": "# Model Card\n...", "path": "README.md", "encoding": "utf-8"}
+  ]
+}
+```
+
+**Key details:**
+- The `type` field defaults to `"model"` if omitted
+- `private` and `visibility` are mutually exclusive — pass one, not both
+- `region` requires a Team/Enterprise plan (free tier uses the default region)
+- The `files` array lets you seed a repo with initial content in one request, avoiding a follow-up commit
+- `organization` creates the repo under an org — equivalent to passing `repo_id="org/repo"` in the Python API
+
+### 11.2 POST /api/repos/move — Move or Rename a Repository
+
+**Full request body schema:**
+
+```json
+{
+  "fromRepo": "source-user/old-name",          // (required) current repo ID
+  "toRepo": "target-user/new-name",            // (required) new repo ID
+  "type": "model"                              // "model" | "dataset" | "space" | "bucket" | "kernel"
+}
+```
+
+**Move rules based on permissions:**
+
+| Source → Target | Permission Required | Status |
+|-----------------|-------------------|--------|
+| User → same user (rename) | Ownership | ✅ Supported |
+| Org → same org (rename) | write/admin | ✅ Supported |
+| User → Org | Org membership (contributor+) | ✅ Supported |
+| Org → self | Org admin | ✅ Supported |
+| Org1 → Org2 | Admin in source, contributor+ in target | ✅ Supported |
+| User A → User B | — | ❌ Not supported |
+| Org → non-self user | — | ❌ Not supported |
+
+**Behavior:** A redirect is auto-setup from the old URL → new URL. Download counts and likes are preserved. If the old repo was private, the new repo inherits the same visibility.
+
+### 11.3 PUT /api/models/{namespace}/{repo}/settings — Update Repo Settings
+
+**Full request body schema:**
+
+```json
+{
+  "private": false,                               // bool — quick toggling
+  "visibility": "public",                         // "public" | "private" | "protected"
+  "discussionsDisabled": false,                   // bool — disable PRs/discussions
+  "discussionsSorting": "recently-created",       // "recently-created" | "trending" | "reactions"
+  "gated": false,                                 // false | "auto" | "manual"
+  "orgMembersGated": true,                        // bool — org members also need gated access
+  "gatedNotificationsEmail": "admin@org.com",     // email for gated request notifications
+  "gatedNotificationsMode": "bulk"                // "bulk" | "real-time"
+}
+```
+
+**Endpoint variation by repo type:**
+
+| Repo Type | Settings URL |
+|-----------|-------------|
+| Model | `PUT /api/models/{namespace}/{repo}/settings` |
+| Dataset | `PUT /api/datasets/{namespace}/{repo}/settings` |
+| Space | `PUT /api/spaces/{namespace}/{repo}/settings` |
+
+**Python wrapper vs REST API comparison:**
+
+| Setting | `update_repo_settings()` | REST API |
+|---------|------------------------|----------|
+| `private` | ✅ Yes | ✅ Yes |
+| `visibility` | ✅ Yes | ✅ Yes |
+| `gated` | ✅ Yes (auto/manual/False) | ✅ Yes (same values) |
+| `discussionsDisabled` | ❌ No | ✅ Yes |
+| `discussionsSorting` | ❌ No | ✅ Yes |
+| `orgMembersGated` | ❌ No | ✅ Yes |
+| `gatedNotificationsEmail` | ❌ No | ✅ Yes |
+| `gatedNotificationsMode` | ❌ No | ✅ Yes |
+
+**Notes on gated access:**
+- `"auto"` — Hugging Face auto-evaluates access requests and approves/denies based on the requesting user's profile
+- `"manual"` — All requests land in the repo owner's queue for manual review
+- `"orgMembersGated": true` — Even members of the owning org (except admins) must go through the gated flow, useful for sensitive model releases
+- `"gatedNotificationsMode": "real-time"` — sends instant email per request; `"bulk"` (default) batches notifications periodically
+
+### 11.4 REST API → Python Method Mapping
+
+| REST Endpoint | Python HfApi Method | HTTP Method |
+|--------------|-------------------|-------------|
+| `POST /api/repos/create` | `create_repo()` | POST |
+| `POST /api/repos/move` | `move_repo()` | POST |
+| `DELETE /api/repos/{type}/{repo_id}` | `delete_repo()` | DELETE |
+| `POST /api/repos/duplicate` | `duplicate_repo()` | POST |
+| `PUT /api/{type}s/{ns}/{repo}/settings` | `update_repo_settings()` | PUT |
+| `GET /api/{type}s/{repo_id}` | `repo_info()` | GET |
+| `HEAD /api/{type}s/{repo_id}` | `repo_exists()` | HEAD |
+
+### 11.5 Direct HTTP Example — Beyond the Python Wrapper
+
+When you need settings not exposed by `HfApi.update_repo_settings()`, call the REST API directly with the `requests` library:
+
+```python
+import requests
+
+HF_TOKEN = "hf_..."
+headers = {"Authorization": f"Bearer {HF_TOKEN}"}
+
+# Disable discussions and enable real-time gated notifications
+resp = requests.put(
+    "https://huggingface.co/api/models/my-org/my-model/settings",
+    headers=headers,
+    json={
+        "discussionsDisabled": True,
+        "gated": "manual",
+        "orgMembersGated": True,
+        "gatedNotificationsMode": "real-time",
+    },
+)
+resp.raise_for_status()
+```
+
+---
+
 ## References
 
 - HfApi docs: https://huggingface.co/docs/huggingface_hub/en/package_reference/hf_api
 - CLI guide: https://huggingface.co/docs/huggingface_hub/en/guides/cli
 - Hub API overview: https://huggingface.co/docs/hub/en/api
+- Hub OpenAPI spec (always current): https://huggingface.co/.well-known/openapi.json
+- Hub OpenAPI spec (markdown, agent-friendly): https://huggingface.co/.well-known/openapi.md
 - Spaces hardware reference: https://huggingface.co/docs/hub/en/spaces-gpus
 - Moving repos: https://hf.co/docs/hub/repositories-settings#renaming-or-transferring-a-repo
+- Repository settings (UI): https://huggingface.co/docs/hub/en/repositories-settings
