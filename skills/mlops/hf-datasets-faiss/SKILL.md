@@ -1,5 +1,8 @@
 # SKILL.md — hf-datasets-faiss
 
+author: SakThai
+license: MIT
+
 **author:** SakThai  
 **license:** MIT  
 **tags:** [huggingface, datasets, faiss, vector-search, nearest-neighbors, embeddings]  
