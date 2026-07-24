@@ -530,3 +530,151 @@ print(f"Loaded {len(ds)} Python files over 1KB")
 - API ref (v4.8.4): https://huggingface.co/docs/datasets/v4.8.4/en/package_reference/main_classes#datasets.Dataset.from_parquet
 - Datasets source: `/opt/data/.venv-sakthai/lib/python3.14/site-packages/datasets/arrow_dataset.py` (line ~1488)
 - PyArrow dataset docs: https://arrow.apache.org/docs/python/dataset.html
+
+---
+
+## 2026-07-24: hf-datasets-sort-shuffle-split-shard — Dataset Sort, Shuffle, Split & Shard Deep Dive (Topic #162 Deepened)
+
+### Summary
+Comprehensive deep-dive into the 🤗 Datasets library's row-rearrangement methods — `sort()`, `shuffle()`, `select()`, `filter()`, `train_test_split()`, and `shard()` — tested live against Datasets v5.0.0 with the MRPC dataset (3,668 rows).
+
+### Key Discovery: v5.0.0 sort() API Changes
+`sort()` now accepts `column_names` (plural) — a single string or sequence of strings — and supports per-column `reverse` as either a single bool or a per-column sequence. `null_placement` controls where null rows appear:
+
+```python
+# Single-column sort
+sorted_ds = ds.sort("label")                     # ascending (default)
+sorted_rev = ds.sort("label", reverse=True)      # descending
+
+# Multi-column sort (v5.0.0+)
+sorted_multi = ds.sort(["label", "idx"], reverse=[False, True])
+
+# Null placement (v5.0.0+)
+sorted_nulls_first = ds.sort("label", null_placement="at_start")
+```
+
+The sort creates an **indices mapping** — a list of integer indices sorted by column values, used to reorder rows on access. This is memory-efficient (only stores `n` int32 values) but adds indirection on every read.
+
+### Key Discovery: shuffle() — Performance Trap
+`shuffle()` randomly permutes the indices mapping. **After shuffle, all subsequent row access becomes ~10× slower** because data is no longer read contiguously from the Arrow table:
+
+```python
+shuffled = ds.shuffle(seed=42)  # fast (O(n) permutation), but...
+print(shuffled[0])              # slow — random seek in Arrow table
+```
+
+**The fix:** `flatten_indices()` rewrites the entire dataset to disk, materializing the shuffled order into a contiguous Arrow table:
+
+```python
+# Slow access after shuffle
+shuffled = ds.shuffle(seed=42)
+
+# Rewrite to disk — restores contiguous access speed
+flattened = shuffled.flatten_indices()  # ~60ms for 3,668 rows
+print(flattened[0])                     # fast again
+```
+
+`flatten_indices()` copies all data to a new cache file. For large datasets, this is a one-time cost worth paying if you'll do many random accesses.
+
+### Key Discovery: IterableDataset Buffer Shuffle
+For streaming/large datasets, use `IterableDataset.shuffle()` — a buffer-based approximate shuffle that avoids creating indices mappings entirely:
+
+```python
+iterable = dataset.to_iterable_dataset(num_shards=128)
+shuffled = iterable.shuffle(seed=42, buffer_size=10_000)
+```
+
+**How it works:** Fills a buffer from all shards, randomly selects one to yield, replaces it. Buffer size controls shuffle quality — larger = better randomness. Also shuffles shard order. No `flatten_indices()` needed because there's no indices mapping.
+
+**Per-epoch re-shuffle:** Use `set_epoch(epoch)` to change the effective seed per epoch:
+```python
+for epoch in range(5):
+    shuffled.set_epoch(epoch)
+    for example in shuffled:
+        ...
+```
+
+### Key Discovery: select() vs filter()
+Two filtering approaches with different performance characteristics:
+
+| Aspect | `select()` | `filter()` |
+|--------|-----------|------------|
+| **Input** | List of integer indices | Callable predicate |
+| **Memory** | Stores indices list (efficient) | Materializes all data matching predicate |
+| **Speed** | O(n) — just creates index list | O(n × fn_cost) — evaluates function on every row |
+| **Use case** | Known positions | Dynamic conditions |
+| **with_indices** | N/A | ✅ `filter(fn, with_indices=True)` passes `(example, idx)` |
+
+```python
+# select — known positions, instant
+subset = ds.select([0, 10, 20, 30, 40])
+
+# filter — dynamic condition (evaluates all rows)
+result = ds.filter(lambda x: x["label"] == 1)  # ~0.01s for 3,668 rows
+
+# filter with indices
+even = ds.filter(lambda ex, idx: idx % 2 == 0, with_indices=True)
+```
+
+Both create indices mappings, with the same `flatten_indices()` escape hatch for speed recovery.
+
+### Key Discovery: train_test_split() with Stratification
+`train_test_split()` creates train/test splits with optional stratified sampling:
+
+```python
+# Basic split
+split = ds.train_test_split(test_size=0.1, seed=42)
+
+# Stratified split (v5.0.0+) — preserves class proportions
+stratified = ds.train_test_split(test_size=0.2, stratify_by_column="label", seed=42)
+
+# Absolute count
+split = ds.train_test_split(test_size=100, train_size=500)
+```
+
+Returns a `DatasetDict` with `"train"` and `"test"` keys. Default `shuffle=True` — set `shuffle=False` to preserve order (e.g., time-series).
+
+### Key Discovery: shard() — Contiguous vs Round-Robin
+`shard()` splits a dataset into `num_shards` equal chunks:
+
+```python
+# Default: contiguous (splits dataset into sequential blocks)
+shard_0 = ds.shard(num_shards=4, index=0)  # rows 0–916
+shard_1 = ds.shard(num_shards=4, index=1)  # rows 917–1833
+
+# Round-robin: distributes rows 0,4,8... to shard 0 → better for imbalanced sorted data
+shard_2 = ds.shard(num_shards=4, index=2, contiguous=False)
+```
+
+| Parameter | `contiguous=True` (default) | `contiguous=False` |
+|-----------|-----------------------------|-------------------|
+| **Distribution** | Sequential blocks | Round-robin |
+| **Shard locality** | Rows are adjacent | Rows interleaved across shards |
+| **Use case** | Split large file into chunks | Distributed processing / worker assignment |
+| **Random access after** | Fast (contiguous) | Slow (scattered indices) |
+
+### Best Practices
+
+1. **For exploration/analysis:** Use `select()` over `filter()` when indices are known — it avoids evaluating a function on every row
+2. **After shuffle/filter:** Call `flatten_indices()` if you'll do repeated random access — the one-time rewrite cost pays off quickly
+3. **For large datasets (streaming):** Use `IterableDataset.shuffle(buffer_size)` — no indices mapping, no speed penalty
+4. **For model training:** Use `IterableDataset.shuffle()` with `set_epoch()` for per-epoch reshuffling; avoid `Dataset.shuffle()` + `flatten_indices()` at scale
+5. **For train/test split:** Use `stratify_by_column` to maintain class balance — critical for imbalanced classification datasets
+6. **For distributed processing:** Use `shard(contiguous=False)` (round-robin) for balanced worker assignment when data is sorted by a label column
+7. **Per-epoch shuffling order:** `shuffle() → flatten_indices()` once, then save the flattened dataset and reload each epoch — faster than re-shuffling from scratch
+
+### Live Test Results (verified this session)
+Tested on `nyu-mll/glue` MRPC split (3,668 rows) with Datasets v5.0.0:
+- `sort(label)`: 0.001s — instant (creates indices mapping)
+- `shuffle(seed=42)`: 0.003s — fast (permutes indices)
+- `flatten_indices()`: 0.062s — rewrites 3,668 rows to disk
+- `filter(label==1)`: 2,474 matching rows — ~0.01s for 3,668 evaluations
+- `train_test_split(test_size=0.1)`: 3,301 train + 367 test — balanced split
+- `shard(4, 0)`: 917 rows per shard — equal distribution
+
+### Source
+- Official docs (process): https://huggingface.co/docs/datasets/en/process
+- Dataset API ref (v5.0.0): https://huggingface.co/docs/datasets/main/en/package_reference/main_classes#datasets.Dataset
+- IterableDataset API ref: https://huggingface.co/docs/datasets/main/en/package_reference/main_classes#datasets.IterableDataset
+- Datasets source: `/opt/data/.venv-sakthai/lib/python3.14/site-packages/datasets/arrow_dataset.py`
+- Live test: datasets v5.0.0 on MRPC (3,668 rows), verified this session

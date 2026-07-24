@@ -1,5 +1,54 @@
 # HF Learnings Log
 
+## 2026-07-30: hf-hub-models-architecture-and-pipeline-tags — Complete HF Model Tag Taxonomy Deep Dive (Topic #164 Deepened)
+
+### Summary
+Comprehensive deep-dive into the Hugging Face Hub's model tag taxonomy — the
+complete classification system that powers discovery, filtering, and widget
+selection across 1M+ models. Covers all 47 official pipeline tags, the 6 tag
+categories (pipeline, library, language, license, architecture, auto-generated),
+the automatic tag inference pipeline (transformers config → Architecture-to-
+Pipeline mapping gist → tag-based fallback → default), search/filter API
+patterns, and the conversational widget special case. Full document at
+`skills/mlops/hf-hub-models-tags/references/hf-learnings.md`.
+
+### Key Discovery: 47 Official Pipeline Tags
+Confirmed via the `/tasks` page: 47 distinct pipeline tags covering text (13),
+vision (22), audio (5), multimodal (2), tabular (2), RL (1), time-series (1),
+and any-to-any (1). `conversational` is NOT a pipeline tag — it's a companion
+boolean tag that activates the chat widget only when paired with
+`text-generation` or `image-text-to-text`.
+
+### Key Discovery: Tag Inference Priority Chain
+1. Explicit `pipeline_tag:` in model card YAML
+2. Transformers `config.json` → `architectures[]` mapped via a reference gist
+3. Library-specific detection (sentence-transformers modules.json, etc.)
+4. First matching task tag from `tags[]` in model card metadata
+5. Fallback: `feature-extraction`
+
+### Key Discovery: No Public Tag Registry API
+Unlike datasets (`/api/tags`), there is no public auth-free endpoint to
+enumerate model tags. The taxonomy must be reconstructed from the /tasks HTML,
+live API queries, the OpenAPI spec, and the widgets doc's architecture mapping
+gist.
+
+**Full document:** `skills/mlops/hf-hub-models-tags/references/hf-learnings.md`
+
+---
+
+## 2026-07-24: hf-transformers-speculative-decoding-deep-dive — v5.14.0 MTP Support & Static Ensemble Verification (Topic #79 Deepened)
+
+### Summary
+Deep-dive into two major generation features added in Transformers v5.14.0 (2026-07-15): (1) **Multi-Token Prediction (MTP) decoding** — `use_mtp=True` enables proper inference-time MTP, auto-loading MTP head weights from the Hub repo and achieving ~1.4× speedup. (2) **Static ensemble verification** — `assistant_ensemble_weight` blends target/draft distributions during speculative decoding, increasing acceptance rates with zero training. Covers usage, design decisions, benchmark data, cache infrastructure (MtpCache), DeepSeek V4 limitations, and paper references. Full document at `skills/mlops/hf-transformers-5/references/hf-learnings.md`.
+
+### Key Discovery: MTP Is Now One Flag
+`model.generate(use_mtp=True, ...)` is all it takes — no separate assistant model, no custom loading code. The `generate()` method automatically scans the repo for MTP head weights, loads them, and integrates with the assisted decoding pipeline. On GLM-4.5-Air this yields 73.68% token acceptance with a 1.4× decoding speedup.
+
+### Key Discovery: Ensemble Verification Is Free Speed
+Static ensemble verification (`assistant_ensemble_weight=0.7`) is a training-free drop-in parameter that relaxes the strict verification distribution from `p_target` to `w * p_target + (1-w) * q_draft`. This provably achieves a Pareto-optimal tradeoff between acceptance rate and distributional bias. The acceptance probability increases from `1 - TV(q,p)` to `1 - w * TV(q,p)`.
+
+---
+
 ## 2026-07-26: hf-mcp-server-enhancements-hf-fs-consolidation — MCP Server Consolidation & Gallery Install (Topic #44/#90 Deepened)
 
 ### Summary
@@ -9778,3 +9827,190 @@ For Beer's 8 datasets (tool-calling training data), these operations are directl
 - https://huggingface.co/docs/datasets/v4.8.4/process
 - https://huggingface.co/docs/datasets/v4.8.4/en/package_reference/main_classes
 - https://huggingface.co/docs/datasets/v4.8.4/en/loading#slice-splits
+
+---
+
+## 2026-07-24: lm-evaluation-harness-complete-reference — EleutherAI LM Evaluation Harness v0.4.0+ Complete Guide (Topic #170, New)
+
+### Summary
+Complete deep-dive into the LM Evaluation Harness — the industry-standard framework for benchmarking LLMs on 60+ academic benchmarks. Covers the v0.4.0 CLI refactoring (`lm-eval run`/`ls`/`validate` subcommands), lighter install with model backend extras (`hf`, `vllm`, `sglang`, `api`), YAML config file support, Python API (`simple_evaluate`, `EvaluatorConfig`, `evaluate`), thinking/reasoning model evaluation (`enable_thinking`, `think_end_token`), task creation via YAML+Jinja2, filter pipelines (regex, majority vote, self-consistency), multi-GPU parallelism strategies (data parallel, model parallel, tensor parallel), and HF Hub logging integration. Full document at `skills/mlops/evaluation/lm-evaluation-harness/references/hf-learnings.md`.
+
+### Key Discovery: CLI Now Uses Subcommands
+The legacy `lm_eval --model hf --tasks ...` flat syntax still works but the canonical interface is now `lm-eval run` (evaluate), `lm-eval ls` (list tasks/groups/tags), and `lm-eval validate` (validate configs). YAML config files via `--config` enable reusable, shareable evaluation plans.
+
+### Key Discovery: Thinking Model Support
+`enable_thinking=True` and `think_end_token` (string or token ID) strip CoT reasoning traces from models like Qwen3/DeepSeek-R1 before metric computation. Token ID form (`think_end_token=200008`) avoids edge cases. Only compatible with generative (`generate_until`) tasks.
+
+### Key Discovery: Three Python Entry Points
+`simple_evaluate()` for quick scripts, `EvaluatorConfig.from_config()` for config-driven workflows, and `evaluate()` for full control. All return structured dicts with results, configs, versions, and optional per-sample logs.
+
+### Key Discovery: v0.4.0 Decoupled Backends
+Base install no longer bundles `transformers`/`torch`. Users install only the backends they need via extras: `lm_eval[hf]`, `lm_eval[vllm]`, `lm_eval[api]`, etc. This drastically reduces the installation footprint for API-only or vLLM-only users.
+
+**Full document:** `skills/mlops/evaluation/lm-evaluation-harness/references/hf-learnings.md`
+
+---
+
+## 2026-07-24: hf-transformers-gguf-integration-v2 — Small Model Quantization, Hub Ecosystem & Quantization Taxonomy (Topic #94 Deepened)
+
+### Summary
+Deep-dive into the latest Transformers GGUF integration developments (v5.14.1), Hub ecosystem features, and the complete GGUF quantization taxonomy. Three new areas: (1) **June 2026 small model quantization support** (#46449) enables GGUF direct loading for tiny models (0.5B–1.5B) with 15-20% faster dequantization and reduced peak memory. (2) **Full Hub GGUF ecosystem** — built-in tensor viewer for no-download metadata inspection, `@huggingface/gguf` JS parser, `ggml-org/gguf-my-repo` Space for free browser-based conversion. (3) **Complete quantization type taxonomy** — all 25+ types (F32, F16, Qx_K, IQx, MXFP4, TQ) with selection guide by use case including Beer-specific guidance for his 0.5B and 1.5B GGUF files. Full document at `skills/mlops/hf-gguf-llama-cpp/references/hf-learnings.md`.
+
+### Key Discovery: Small Model Quantization Path (June 2026)
+Transformers v5.14.1 introduced an optimised GGUF loading path for models <3B parameters. Files added: `gemma_quant.py` (+249), `quantizer_gemma.py` (+75), `ggml.py` (+18). Auto-selected based on model size — no config changes needed. Impact: 15-20% faster loading with reduced peak memory.
+
+### Key Discovery: Hub GGUF Viewer & JS Parser
+The Hub provides `?show_tensors=<filename>` for per-tensor metadata inspection without downloading. The `@huggingface/gguf` npm package enables programmatic remote GGUF parsing in JS/TS — useful for auto-generating model cards and building GGUF discovery tools.
+
+### Key Discovery: Quantization Type Taxonomy
+25+ types across 4 families: unquantized (F32, F16, BF16), K-quant (Q2_K through Q8_K — recommended), IQ (IQ4_NL through IQ1_M — sub-3-bit), and next-gen (TQ1_0, TQ2_0, MXFP4). Selection guide: Q4_K_M for default balance, Q5_K_M for best quality, IQ3_XXS for memory-constrained, Q2_K for extreme compression.
+
+**Full document:** `skills/mlops/hf-gguf-llama-cpp/references/hf-learnings.md`
+
+---
+
+## 2026-07-24: hf-datasets-sort-shuffle-split-shard — Dataset Sort, Shuffle, Split & Shard Deep Dive (Topic #162 Deepened)
+
+### Summary
+Comprehensive deep-dive into the 🤗 Datasets library's row-rearrangement methods — `sort()`, `shuffle()`, `select()`, `filter()`, `train_test_split()`, and `shard()` — tested live against Datasets v5.0.0 with the MRPC dataset (3,668 rows). Covers the new v5.0.0 API signatures (multi-column sort, `null_placement`, `stratify_by_column`), the critical indices-mapping performance trap, the `flatten_indices()` escape hatch, and the IterableDataset buffer-shuffle alternative. Full document at `skills/mlops/hf-datasets-library/references/hf-learnings.md`.
+
+### Key Discovery: v5.0.0 sort() API Changes
+`sort()` now accepts `column_names` (plural) — a single string or sequence of strings — and supports per-column `reverse` as either a single bool or a per-column sequence. `null_placement` controls where null rows appear:
+
+```python
+# Single-column sort
+sorted_ds = ds.sort("label")           # ascending (default)
+sorted_rev = ds.sort("label", reverse=True)  # descending
+
+# Multi-column sort (v5.0.0+)
+sorted_multi = ds.sort(["label", "idx"], reverse=[False, True])
+
+# Null placement (v5.0.0+)
+sorted_nulls_first = ds.sort("label", null_placement="at_start")
+```
+
+The sort creates an **indices mapping** — a list of integer indices sorted by column values, used to reorder rows on access. This is memory-efficient (only stores `n` int32 values) but adds indirection on every read.
+
+### Key Discovery: shuffle() — Performance Trap
+`shuffle()` randomly permutes the indices mapping. **After shuffle, all subsequent row access becomes ~10× slower** because data is no longer read contiguously from the Arrow table:
+
+```python
+shuffled = ds.shuffle(seed=42)  # fast (O(n) permutation), but...
+print(shuffled[0])  # slow — random seek in Arrow table
+```
+
+**The fix:** `flatten_indices()` rewrites the entire dataset to disk, materializing the shuffled order into a contiguous Arrow table:
+
+```python
+# Slow access after shuffle
+shuffled = ds.shuffle(seed=42)
+
+# Rewrite to disk — restores contiguous access speed
+flattened = shuffled.flatten_indices()  # ~60ms for 3,668 rows
+print(flattened[0])  # fast again
+```
+
+`flatten_indices()` copies all data to a new cache file. For large datasets, this is a one-time cost worth paying if you'll do many random accesses.
+
+### Key Discovery: IterableDataset Buffer Shuffle
+For streaming/large datasets, use `IterableDataset.shuffle()` — a buffer-based approximate shuffle that avoids creating indices mappings entirely:
+
+```python
+iterable = dataset.to_iterable_dataset(num_shards=128)
+shuffled = iterable.shuffle(seed=42, buffer_size=10_000)
+```
+
+**How it works:** Fills a buffer from all shards, randomly selects one to yield, replaces it. Buffer size controls shuffle quality — larger = better randomness. Also shuffles shard order. No `flatten_indices()` needed because there's no indices mapping.
+
+**Per-epoch re-shuffle:** Use `set_epoch(epoch)` to change the effective seed per epoch:
+```python
+for epoch in range(5):
+    shuffled.set_epoch(epoch)
+    for example in shuffled:
+        ...
+```
+
+### Key Discovery: select() vs filter()
+Two filtering approaches with different performance characteristics:
+
+| Aspect | `select()` | `filter()` |
+|--------|-----------|------------|
+| **Input** | List of integer indices | Callable predicate |
+| **Memory** | Stores indices list (efficient) | Materializes all data matching predicate |
+| **Speed** | O(n) — just creates index list | O(n × fn_cost) — evaluates function on every row |
+| **Use case** | Known positions | Dynamic conditions |
+| **with_indices** | N/A | ✅ `filter(fn, with_indices=True)` passes `(example, idx)` |
+
+```python
+# select — known positions, instant
+subset = ds.select([0, 10, 20, 30, 40])
+
+# filter — dynamic condition (evaluates all rows)
+result = ds.filter(lambda x: x["label"] == 1)  # ~0.01s for 3,668 rows
+
+# filter with indices
+even = ds.filter(lambda ex, idx: idx % 2 == 0, with_indices=True)
+```
+
+Both create indices mappings, with the same `flatten_indices()` escape hatch for speed recovery.
+
+### Key Discovery: train_test_split() with Stratification
+`train_test_split()` creates train/test splits with optional stratified sampling:
+
+```python
+# Basic split
+split = ds.train_test_split(test_size=0.1, seed=42)
+
+# Stratified split (v5.0.0+) — preserves class proportions
+stratified = ds.train_test_split(test_size=0.2, stratify_by_column="label", seed=42)
+
+# Absolute count
+split = ds.train_test_split(test_size=100, train_size=500)
+```
+
+Returns a `DatasetDict` with `"train"` and `"test"` keys. Default `shuffle=True` — set `shuffle=False` to preserve order (e.g., time-series).
+
+### Key Discovery: shard() — Contiguous vs Round-Robin
+`shard()` splits a dataset into `num_shards` equal chunks:
+
+```python
+# Default: contiguous (splits dataset into sequential blocks)
+shard_0 = ds.shard(num_shards=4, index=0)  # rows 0–916
+shard_1 = ds.shard(num_shards=4, index=1)  # rows 917–1833
+
+# Round-robin: distributes rows 0,4,8... to shard 0 → better for imbalanced sorted data
+shard_2 = ds.shard(num_shards=4, index=2, contiguous=False)
+```
+
+| Parameter | `contiguous=True` (default) | `contiguous=False` |
+|-----------|-----------------------------|-------------------|
+| **Distribution** | Sequential blocks | Round-robin |
+| **Shard locality** | Rows are adjacent | Rows interleaved across shards |
+| **Use case** | Split large file into chunks | Distributed processing / worker assignment |
+| **Random access after** | Fast (contiguous) | Slow (scattered indices) |
+
+### Best Practices
+
+1. **For exploration/analysis:** Use `select()` over `filter()` when indices are known — it avoids evaluating a function on every row
+2. **After shuffle/filter:** Call `flatten_indices()` if you'll do repeated random access — the one-time rewrite cost pays off quickly
+3. **For large datasets (streaming):** Use `IterableDataset.shuffle(buffer_size)` — no indices mapping, no speed penalty
+4. **For model training:** Use `IterableDataset.shuffle()` with `set_epoch()` for per-epoch reshuffling; avoid `Dataset.shuffle()` + `flatten_indices()` at scale
+5. **For train/test split:** Use `stratify_by_column` to maintain class balance — critical for imbalanced classification datasets
+6. **For distributed processing:** Use `shard(contiguous=False)` (round-robin) for balanced worker assignment when data is sorted by a label column
+7. **Per-epoch shuffling order:** `shuffle() → flatten_indices()` once, then save the flattened dataset and reload each epoch — faster than re-shuffling from scratch
+
+### Live Test Results (verified this session)
+Tested on `nyu-mll/glue` MRPC split (3,668 rows) with Datasets v5.0.0:
+- `sort(label)`: 0.001s — instant (creates indices mapping)
+- `shuffle(seed=42)`: 0.003s — fast (permutes indices)
+- `flatten_indices()`: 0.062s — rewrites 3,668 rows to disk
+- `filter(label==1)`: 2,474 matching rows — ~0.01s for 3,668 evaluations
+- `train_test_split(test_size=0.1)`: 3,301 train + 367 test — balanced split
+- `shard(4, 0)`: 917 rows per shard — equal distribution
+
+### Source
+- Official docs (process): https://huggingface.co/docs/datasets/en/process
+- Dataset API ref (v5.0.0): https://huggingface.co/docs/datasets/main/en/package_reference/main_classes#datasets.Dataset
+- IterableDataset API ref: https://huggingface.co/docs/datasets/main/en/package_reference/main_classes#datasets.IterableDataset
+- Datasets source: `/opt/data/.venv-sakthai/lib/python3.14/site-packages/datasets/arrow_dataset.py`
+- Live test: datasets v5.0.0 on MRPC (3,668 rows), verified this session
