@@ -9827,3 +9827,24 @@ For Beer's 8 datasets (tool-calling training data), these operations are directl
 - https://huggingface.co/docs/datasets/v4.8.4/process
 - https://huggingface.co/docs/datasets/v4.8.4/en/package_reference/main_classes
 - https://huggingface.co/docs/datasets/v4.8.4/en/loading#slice-splits
+
+---
+
+## 2026-07-24: lm-evaluation-harness-complete-reference — EleutherAI LM Evaluation Harness v0.4.0+ Complete Guide (Topic #170, New)
+
+### Summary
+Complete deep-dive into the LM Evaluation Harness — the industry-standard framework for benchmarking LLMs on 60+ academic benchmarks. Covers the v0.4.0 CLI refactoring (`lm-eval run`/`ls`/`validate` subcommands), lighter install with model backend extras (`hf`, `vllm`, `sglang`, `api`), YAML config file support, Python API (`simple_evaluate`, `EvaluatorConfig`, `evaluate`), thinking/reasoning model evaluation (`enable_thinking`, `think_end_token`), task creation via YAML+Jinja2, filter pipelines (regex, majority vote, self-consistency), multi-GPU parallelism strategies (data parallel, model parallel, tensor parallel), and HF Hub logging integration. Full document at `skills/mlops/evaluation/lm-evaluation-harness/references/hf-learnings.md`.
+
+### Key Discovery: CLI Now Uses Subcommands
+The legacy `lm_eval --model hf --tasks ...` flat syntax still works but the canonical interface is now `lm-eval run` (evaluate), `lm-eval ls` (list tasks/groups/tags), and `lm-eval validate` (validate configs). YAML config files via `--config` enable reusable, shareable evaluation plans.
+
+### Key Discovery: Thinking Model Support
+`enable_thinking=True` and `think_end_token` (string or token ID) strip CoT reasoning traces from models like Qwen3/DeepSeek-R1 before metric computation. Token ID form (`think_end_token=200008`) avoids edge cases. Only compatible with generative (`generate_until`) tasks.
+
+### Key Discovery: Three Python Entry Points
+`simple_evaluate()` for quick scripts, `EvaluatorConfig.from_config()` for config-driven workflows, and `evaluate()` for full control. All return structured dicts with results, configs, versions, and optional per-sample logs.
+
+### Key Discovery: v0.4.0 Decoupled Backends
+Base install no longer bundles `transformers`/`torch`. Users install only the backends they need via extras: `lm_eval[hf]`, `lm_eval[vllm]`, `lm_eval[api]`, etc. This drastically reduces the installation footprint for API-only or vLLM-only users.
+
+**Full document:** `skills/mlops/evaluation/lm-evaluation-harness/references/hf-learnings.md`
