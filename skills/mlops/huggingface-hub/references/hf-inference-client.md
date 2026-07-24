@@ -263,7 +263,82 @@ client.chat_completion(
 ---
 
 ## References
-- [HF docs: Run Inference on servers](https://huggingface.co/docs/huggingface_hub/en/guides/inference)
-- [Inference Providers docs](https://huggingface.co/docs/inference-providers/en/index)
-- [InferenceClient API reference](https://huggingface.co/docs/huggingface_hub/en/package_reference/inference_client)
-- [Inference Providers announcement blog](https://huggingface.co/blog/inference-providers)
+|- [HF docs: Run Inference on servers](https://huggingface.co/docs/huggingface_hub/en/guides/inference)
+|- [Inference Providers docs](https://huggingface.co/docs/inference-providers/en/index)
+|- [InferenceClient API reference](https://huggingface.co/docs/huggingface_hub/en/package_reference/inference_client)
+|- [Inference Providers announcement blog](https://huggingface.co/blog/inference-providers)
+|- [Inference Providers Hub API](https://huggingface.co/docs/inference-providers/en/hub-api)
+|- [hf models ls CLI](https://huggingface.co/docs/huggingface_hub/package_reference/cli#hf-models-list)
+
+---
+
+## Deep Dive Addendum — v1.24.0 Advanced Patterns
+
+### OpenAI-Compatible Syntax
+`client.chat.completions.create()` aliases `chat_completion()`. Init accepts `base_url` + `api_key` for drop-in OpenAI replacement:
+```python
+from huggingface_hub import InferenceClient
+client = InferenceClient(
+    base_url="https://router.huggingface.co/v1",
+    api_key=os.environ["HF_TOKEN"],
+)
+output = client.chat.completions.create(
+    model="openai/gpt-oss-120b:fastest",
+    messages=[{"role": "user", "content": "Hello"}],
+)
+```
+
+### Provider Suffix in Model ID
+Append to model id: `:fastest`, `:cheapest`, `:preferred`, or `:provider-name`:
+```python
+client.chat_completion(model="deepseek-ai/DeepSeek-R1:cheapest", ...)
+```
+
+### Router API — Provider Comparison
+```bash
+curl -s https://router.huggingface.co/v1/models  | jq '.data[].providers[] | {provider, throughput, pricing}'
+```
+Returns per-provider: `status`, `context_length`, `pricing` (input/output per M tokens), `supports_tools`, `supports_structured_output`, `first_token_latency_ms`, `throughput`.
+
+### Hub API — Model Discovery
+```bash
+# All served models
+curl -s "https://huggingface.co/api/models?inference_provider=all"
+
+# Check if a model is warm
+curl -s "https://huggingface.co/api/models/google/gemma-3-27b-it?expand[]=inference"
+```
+Same in Python: `model_info("...", expand="inference")` → `info.inference` is `"warm"` or None.
+`model_info("...", expand="inferenceProviderMapping")` → per-provider mapping details.
+
+### CLI Discovery
+```bash
+hf models ls --warn                              # all served models
+hf models ls --warn --search GLM-5.2              # search
+hf models ls --inference-provider fal-ai --pipeline-tag text-to-image
+```
+
+### Direct Provider Billing
+Pass provider's own API key to bill directly (bypass HF billing):
+```python
+client = InferenceClient(provider="together", api_key="<together_key>")
+```
+
+### Provider-Specific Params (extra_body)
+```python
+client.chat_completion(..., extra_body={"safety_model": "Meta-Llama/Llama-Guard-7b"})
+```
+
+### Vision Input
+```python
+output = client.chat.completions.create(
+    model="meta-llama/Llama-3.2-11B-Vision-Instruct",
+    messages=[{"role": "user", "content": [
+        {"type": "image_url", "image_url": {"url": image_url}},
+        {"type": "text", "text": "Describe this image."},
+    ]}],
+)
+```
+
+### Automatic Failover
+`provider="auto"` routes to alternative providers if primary is flagged unavailable.
