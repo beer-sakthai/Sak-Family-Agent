@@ -1715,47 +1715,404 @@ python ${llama_cpp_dir}/convert-hf-to-gguf.py ${hf_model_directory} \
 
 ---
 
-## 2026-07-24: hf-spaces-persistent-storage-zero-cost — Deeper Dive
+## 2026-07-24: hf-spaces-persistent-storage-zero-cost — Full Deep Dive v2 (Topic #95, Updated 2026-07-24)
 
 ### Summary
-Research into persisting data across HF Space restarts without spending money. Covers four strategies for zero-cost persistent storage: (A) Dataset Hub as persistent storage via `huggingface_hub` API, (B) mounting models/datasets as free read-only volumes, (C) using the Space's own git repo (with caveats), and (D) external free services. Comprehensive analysis of which approaches work under Beer's zero-cost constraint.
+Comprehensive deep-dive into persisting data across Hugging Face Space restarts without spending money. Covers all five zero-cost persistence strategies: (A) Storage Buckets (new — free tier, read-write mounts, recommended), (B) Dataset repos via Hub API, (C) read-only volumes for models/datasets, (D) Space's own git repo (with heavy caveats), and (E) external free services. Includes the new `Volume` API in `huggingface_hub`, ZeroGPU integration patterns, Space lifecycle management, and practical code examples for each strategy.
 
-### Key Takeaways
+### MAJOR CORRECTIONS from Previous Coverage
 
-1. **Ephemeral disk is the enemy**: All Space disk (50GB) is lost on restart, stop, or sleep. Nothing written to `/data` or `/tmp` survives.
+| Old (v1) Claim | New (v2) Reality | Source |
+|---|---|---|
+| Storage Buckets cost money, 0 GB free tier | **Buckets are free to create with a free storage allowance** — pricing is per-TB above free tier | HF docs July 2026 |
+| No writable mounts for free | **Buckets support read-write mounts** in Spaces (models/datasets remain read-only) | HF Spaces Storage doc |
+| `update_space_volume()` is the API | **Deprecated/replaced by `set_space_volumes()`** using the `Volume` dataclass | huggingface_hub API |
+| `hf spaces volume add` CLI | **Replaced by `hf spaces volumes set`** (atomic replace) and `hf spaces volumes ls` | CLI reference |
 
-2. **Dataset repos are the free persistent storage backend**: Every HF account gets free Dataset repo storage with Git LFS. Use `HfApi.upload_file()` to persist state from a Space — zero cost.
+### Strategy Comparison Matrix
 
-3. **Mount models/datasets as read-only volumes for free**: Via `update_space_volume()` or `hf spaces volume add`, any public (or accessible private) repo can be mounted as a read-only filesystem inside the Space — free and no startup download time.
+| Strategy | Writable? | Free? | Survives Restart? | Latency | Max Size | Setup Complexity |
+|---|---|---|---|---|---|---|
+| **A. Storage Bucket** (recommended) | ✅ Read-Write | ✅ Free tier | ✅ Yes — mounted as volume | Filesystem-native | Free allowance | Low |
+| **B. Dataset Repo via API** | ✅ Write via API | ✅ Free | ✅ Yes | API latency (~100ms) | LFS storage limit | Medium |
+| **C. Read-only Volume** (model/dataset) | ❌ Read-only | ✅ Free | ✅ Yes (mount persists) | Filesystem-native | Repo limit | Low |
+| **D. Space's own git repo** | ⚠️ Yes (write) | ✅ Free | ✅ Yes (committed) | Seconds (build+restart) | Space disk (50GB) | Low but DANGEROUS |
+| **E. External free service** | ✅ | ✅ Free | ✅ Yes | Network latency | Varies | High |
 
-4. **Storage Buckets cost money**: 0 GB free tier for personal accounts. Not usable under zero-cost constraint. The S3-compatible API is bucket-only.
+### Strategy A: Storage Buckets (Recommended — New Free Tier)
 
-5. **Avoid writing to the Space's own git repo**: This triggers a rebuild + restart (infinite loop potential). Only safe for one-shot initialization or user-triggered saves.
+**Buckets are the recommended way to persist data in your Space** as of July 2026. They support read-write mounts directly into the Space container.
 
-6. **ZeroGPU + storage**: Load models at module level (CUDA emulation in `@spaces.GPU`). Push results to Dataset repos. Mount reference data as volumes.
+#### Creating a Bucket
 
-7. **Practical patterns**: Chat history persistence, periodic snapshots (every 5 min), first-boot detection via `file_exists()`, unique timestamped filenames to avoid concurrent write conflicts.
-
-8. **Limitations**: No real-time sync, no writable mounts for free, ~50MB max per API upload, API rate limits (~100 req/min), 404 handling on first boot required.
-
-### Commands Reference
 ```bash
-# Mount a dataset as read-only volume
-hf spaces volume add my-space \
-  --repo beer-sakthai/my-dataset \
-  --repo-type dataset \
-  --mount-path /data/reference
+# CLI
+hf buckets create my-space-data
 
-# List mounted volumes (from Space settings UI)
-# Visible in Space → actions dropdown → Volumes
+# Python
+from huggingface_hub import create_bucket
+create_bucket("my-space-data")
 ```
 
-### Resources
-- HF Spaces Storage docs: https://huggingface.co/docs/hub/en/spaces-storage
-- Storage Buckets docs: https://huggingface.co/docs/hub/en/storage-buckets
-|- huggingface_hub manage-spaces: https://huggingface.co/docs/huggingface_hub/guides/manage-spaces
-|- ZeroGPU docs: https://huggingface.co/docs/hub/en/spaces-zerogpu
-|- HF Spaces overview: https://huggingface.co/docs/hub/en/spaces-overview
+#### Mounting as a Read-Write Volume (New Volume API)
+
+The old `update_space_volume()` / `hf spaces volume add` APIs are **replaced**. Use the `Volume` dataclass and `set_space_volumes()`:
+
+```python
+from huggingface_hub import HfApi, Volume
+
+api = HfApi()
+
+# Mount a bucket as read-write volume at Space creation
+api.create_repo(
+    repo_id="username/my-space",
+    repo_type="space",
+    space_sdk="gradio",
+    space_volumes=[
+        Volume(
+            type="bucket",
+            source="username/my-bucket",
+            mount_path="/data",       # default: read-write
+        ),
+    ],
+)
+
+# Mount on existing Space (replaces ALL existing volumes)
+api.set_space_volumes(
+    repo_id="username/my-space",
+    volumes=[
+        Volume(type="bucket", source="username/my-bucket", mount_path="/data"),
+        Volume(type="model",  source="username/basemodel", mount_path="/models", read_only=True),
+    ],
+)
+
+# Check current volumes
+runtime = api.get_space_runtime(repo_id="username/my-space")
+for v in runtime.volumes:
+    print(f"{v.type}: {v.source} -> {v.mount_path} ({'ro' if v.read_only else 'rw'})")
+
+# Remove all volumes
+api.delete_space_volumes(repo_id="username/my-space")
+```
+
+#### CLI for Volumes (New Syntax)
+
+```bash
+# List mounted volumes
+hf spaces volumes ls username/my-space
+
+# Set (replace) all volumes — atomically replaces previous mounts
+hf spaces volumes set username/my-space \
+  --volume bucket=username/my-bucket:/data \
+  --volume model=username/basemodel:/models:ro
+
+# Delete all volumes
+hf spaces volumes delete username/my-space
+```
+
+#### Inside the Space — Read/Write to Volume
+
+Once mounted, the bucket appears as a local filesystem path. No API calls needed:
+
+```python
+# Write — persists across restarts
+with open("/data/counter.txt", "w") as f:
+    f.write(str(count))
+
+# Read — survives restarts, sleep, rebuilds
+if os.path.exists("/data/counter.txt"):
+    with open("/data/counter.txt") as f:
+        count = int(f.read().strip())
+
+# List files in the bucket
+import os
+for fname in os.listdir("/data"):
+    print(fname)
+```
+
+**Key advantage:** Filesystem semantics — no API calls, no rate limits, no latency beyond local I/O.
+
+#### Pricing Reality for Free Accounts
+
+- **Free to create** — zero cost to create a bucket
+- **Free storage allowance** — basic personal accounts get free bucket storage
+- **Above free tier** — billed per-TB, see hf.co/storage
+- **Enterprise** — dedup-based billing (shared chunks reduce billed footprint)
+
+For Beer's use case (small configs, chat logs, state files) — stays within free tier indefinitely.
+
+### Strategy B: Dataset Repo via Hub API (Classic Fallback)
+
+Use when you can't use buckets (e.g., need Git versioning, or access from non-Space environments). Every HF account gets free Dataset repo storage with Git LFS.
+
+```python
+from huggingface_hub import HfApi
+import json, os
+
+api = HfApi()
+DATASET_ID = "username/my-space-state"
+HF_TOKEN = os.environ["HF_TOKEN"]  # Set as Space secret
+
+def save_state(state: dict):
+    """Persist state dict to Dataset repo."""
+    api.upload_file(
+        path_or_fileobj=json.dumps(state).encode(),
+        path_in_repo="state.json",
+        repo_id=DATASET_ID,
+        repo_type="dataset",
+        token=HF_TOKEN,
+    )
+
+def load_state() -> dict:
+    """Load state from Dataset repo. Returns {} on first boot."""
+    from huggingface_hub import hf_hub_download
+    try:
+        path = hf_hub_download(
+            repo_id=DATASET_ID,
+            filename="state.json",
+            repo_type="dataset",
+            token=HF_TOKEN,
+        )
+        with open(path) as f:
+            return json.load(f)
+    except Exception:
+        return {}  # First boot — no file yet
+```
+
+**Limitations (unchanged from v1):**
+- ~50MB max per `upload_file` call (use `upload_folder` or `CommitScheduler` for larger)
+- API rate limits: ~100 requests/min for free tier
+- ~100ms+ latency per API call
+- No atomic read-modify-write — handle concurrent write conflicts
+- `upload_file` overwrites atomically but doesn't lock
+
+### Strategy C: Read-Only Volumes (Models/Datasets/Spaces)
+
+Models, datasets, and other Spaces can be mounted as **read-only** volumes for free. Use for reference data, model weights, configuration files.
+
+```python
+from huggingface_hub import HfApi, Volume
+
+api = HfApi()
+
+# Mount at creation
+api.create_repo(
+    repo_id="username/my-space",
+    repo_type="space",
+    space_sdk="gradio",
+    space_volumes=[
+        Volume(type="model",   source="meta-llama/Llama-3.2-3B", mount_path="/models/llama", read_only=True),
+        Volume(type="dataset", source="username/my-ref-data",   mount_path="/data/ref",     read_only=True),
+    ],
+)
+
+# Attach to existing Space
+api.set_space_volumes(
+    repo_id="username/my-space",
+    volumes=[
+        Volume(type="model", source="username/my-model", mount_path="/models", read_only=True),
+    ],
+)
+```
+
+**Inside the Space:**
+```python
+# Files are immediately available — no download code needed
+with open("/models/llama/config.json") as f:
+    config = json.load(f)
+```
+
+**Benefits vs downloading at runtime:**
+- Zero startup delay — files are mounted, not downloaded
+- No ephemeral disk usage for reference data
+- Works seamlessly with all file-access patterns
+
+### Strategy D: Space's Own Git Repo (Use with Extreme Caution)
+
+Writing into the Space's own git repo triggers an automatic rebuild + restart. Pattern: one-shot initialization or explicit user-triggered save.
+
+```python
+from huggingface_hub import HfApi
+import os
+
+api = HfApi()
+SPACE_ID = os.environ["SPACE_ID"]  # Built-in env var
+
+# DANGEROUS — triggers rebuild
+api.upload_file(
+    path_or_fileobj=b"data",
+    path_in_repo="persistent/data.txt",
+    repo_id=SPACE_ID,
+    repo_type="space",
+)
+
+# SAFER — commit via PR (no immediate rebuild, but needs merge)
+from huggingface_hub import create_commit, CommitOperationAdd
+create_commit(
+    repo_id=SPACE_ID,
+    repo_type="space",
+    operations=[CommitOperationAdd(path_in_repo="data.txt", path_or_fileobj=b"data")],
+    commit_message="save state",
+    create_pr=True,  # PRs don't trigger automatic rebuild
+)
+```
+
+**⚠️ Warnings:**
+- Every push to default branch triggers `BUILDING` stage — ~30-120s downtime
+- Writing frequently can create an infinite loop: write → rebuild → boot → write → rebuild...
+- Only safe for: user-triggered "Save" buttons, initial setup, infrequent checkpoint saves
+- PR-based saves avoid auto-rebuild but still consume git history
+
+### Strategy E: External Free Services
+
+When HF-native options are insufficient, free external services can supplement:
+
+| Service | Free Tier | Use Case |
+|---|---|---|
+| **Supabase** | 500 MB DB, 2 GB bandwidth | Structured data, real-time sync |
+| **MongoDB Atlas** | 512 MB shared cluster | Document storage, JSON state |
+| **Cloudflare KV** | 100k reads/day, 1k writes/day | Key-value state, configs |
+| **Vercel Blob** | 250 MB, 5 GB bandwidth | Binary artifacts, images |
+| **GitHub Gist API** | Unlimited gists via API | Config files, small state |
+
+**Trade-off:** Adds network dependency and external credentials. Only use when HF-native options don't fit.
+
+### ZeroGPU + Storage Integration
+
+Beer: Free personal accounts can host **up to 2 ZeroGPU Spaces** if account is in good standing (verified email, older than 30 days). Daily quota: **5 minutes GPU time** for free accounts (40 min for PRO).
+
+```python
+import spaces
+import os
+from huggingface_hub import HfApi
+
+HF_TOKEN = os.environ["HF_TOKEN"]
+api = HfApi()
+
+# Load model at module level (runs once on CPU)
+model = load_my_model()
+
+@spaces.GPU
+def generate(prompt: str) -> str:
+    """GPU is allocated only during this function call."""
+    return model.generate(prompt)
+
+# Persist results to a bucket (always accessible)
+def save_result(prompt: str, output: str):
+    import json
+    with open("/data/results.jsonl", "a") as f:
+        f.write(json.dumps({"prompt": prompt, "output": output}) + "\n")
+```
+
+**ZeroGPU storage best practices:**
+- Load model weights from a mounted model volume (read-only, no startup delay)
+- Write inference results to a mounted bucket volume (persistent)
+- Use `@spaces.GPU(duration=...)` for accurate GPU time estimation
+- Module-level model loading (not inside `@spaces.GPU`) avoids re-loading per call
+- Prep models with ahead-of-time compilation (`torch.export`) for ZeroGPU efficiency
+
+### Practical Patterns
+
+#### Pattern 1: First-Boot Detection
+
+```python
+import os
+
+BOOT_FLAG = "/data/.initialized"
+
+def is_first_boot() -> bool:
+    return not os.path.exists(BOOT_FLAG)
+
+def mark_initialized():
+    with open(BOOT_FLAG, "w") as f:
+        f.write("1")
+```
+
+#### Pattern 2: Periodic State Snapshots
+
+```python
+import threading, json, time
+
+snapshot_interval = 300  # 5 minutes
+
+def snapshot_loop(state_getter):
+    while True:
+        time.sleep(snapshot_interval)
+        state = state_getter()
+        # Write directly to bucket volume
+        with open("/data/snapshot.json", "w") as f:
+            json.dump(state, f)
+
+# Start in background
+threading.Thread(target=snapshot_loop, args=(lambda: current_state,), daemon=True).start()
+```
+
+#### Pattern 3: Concurrent-Write Safe Logging
+
+```python
+import json, time, os
+
+LOG_FILE = "/data/event_log.jsonl"
+
+def log_event(event: dict):
+    event["_ts"] = time.time()
+    # Append-only pattern — safe for concurrent Gradio requests
+    with open(LOG_FILE, "a") as f:
+        f.write(json.dumps(event) + "\n")
+```
+
+#### Pattern 4: Chat History Persistence (Bucket Volume)
+
+```python
+import json, os
+
+HISTORY_FILE = "/data/chat_history.json"
+
+def load_history() -> list:
+    if os.path.exists(HISTORY_FILE):
+        with open(HISTORY_FILE) as f:
+            return json.load(f)
+    return []
+
+def append_message(role: str, content: str):
+    history = load_history()
+    history.append({"role": role, "content": content})
+    with open(HISTORY_FILE, "w") as f:
+        json.dump(history, f)
+    return history
+```
+
+### Migration Guide: v1 (Dataset API) → v2 (Bucket Volume)
+
+If you have existing Spaces using the old Dataset-API pattern, migrate to bucket volumes:
+
+1. **Create a bucket**: `hf buckets create my-space-data`
+2. **Copy existing data**: Download from dataset, upload to bucket
+3. **Mount the bucket**: Use `api.set_space_volumes()` with the Volume dataclass
+4. **Update app code**: Replace `api.upload_file()` / `hf_hub_download()` calls with direct filesystem I/O to `/data/`
+5. **Clean up**: Remove old Dataset API calls and rate-limit handling
+
+### Limitations & Edge Cases
+
+| Issue | Mitigation |
+|---|---|
+| Bucket volume mount replaces ALL existing volumes | Read current volumes first, append new one |
+| Model/dataset volumes are read-only | Use bucket for writes, model mounts for reference data only |
+| Buckets are not versioned | Take periodic snapshots to a dataset repo if history needed |
+| Space goes to sleep after 48h inactivity (free CPU) | Use `HF_API` to wake: `api.restart_space(repo_id)` |
+| ZeroGPU has 5 min daily quota (free) | Optimize GPU calls, cache results, batch requests |
+| Bucket not available from outside Spaces | Use Dataset API for cross-environment access |
+| Volume changes trigger Space rebuild | Batch volume changes together in one `set_space_volumes()` call |
+
+### Updated Resources (July 2026)
+
+- HF Spaces Storage: https://huggingface.co/docs/hub/en/spaces-storage
+- Storage Buckets: https://huggingface.co/docs/hub/en/storage-buckets
+- huggingface_hub Manage Spaces: https://huggingface.co/docs/huggingface_hub/guides/manage-spaces
+- Volume API (new): `from huggingface_hub import Volume`
+- ZeroGPU docs: https://huggingface.co/docs/hub/en/spaces-zerogpu
+- HF Spaces Overview: https://huggingface.co/docs/hub/en/spaces-overview
+- Buckets Pricing: https://huggingface.co/docs/hub/en/storage-buckets#pricing
 
 ---
 
