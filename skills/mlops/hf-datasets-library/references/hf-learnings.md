@@ -1892,3 +1892,85 @@ for batch in dataloader:
 - Source: `src/datasets/distributed.py` — `split_dataset_by_node`
 - https://pytorch.org/docs/stable/data.html — PyTorch DataLoader docs
 - https://github.com/pytorch/data — StatefulDataLoader
+
+## 2026-07-24: hf-datasets-5-by-column-batching — `batch(by_column=...)` for Grouped Batches (Added v4.9.0, Extended in v5.0.0)
+
+### Summary
+The `Dataset.batch()` and `IterableDataset.batch()` methods accept `by_column` (single column name or list of column names) to group successive rows that share identical values in the specified column(s) into the same batch. This is critical for:
+- **Robotics:** group frames by episode
+- **RL/RLHF:** group trajectory steps by rollout ID
+- **Time-series:** group readings by session or user
+- **Multi-turn conversations:** group turns by conversation ID
+
+### API
+
+```python
+from datasets import Dataset
+
+ds = Dataset.from_dict({
+    "episode": [0]*10 + [1]*10,
+    "frame": list(range(10))*2,
+})
+
+# Group by episode — each batch = one full episode
+batched_ds = ds.batch(by_column="episode")
+for b in batched_ds:
+    print(b)
+# {'episode': [0,0,0,0,0,0,0,0,0,0], 'frame': [0,1,2,3,4,5,6,7,8,9]}
+# {'episode': [1,1,1,1,1,1,1,1,1,1], 'frame': [0,1,2,3,4,5,6,7,8,9]}
+
+# Multiple columns
+ds.batch(by_column=["episode", "split"])
+
+# Also works with datasets in streaming mode
+stream_ds = ds.to_iterable_dataset()
+for b in stream_ds.batch(by_column="episode"):
+    print(b)
+```
+
+### How It Works (Internal Architecture)
+
+The `by_column` feature uses `_batch_accumulate_arrow_table_by_columns()` from `datasets.table.py`:
+
+1. **Accumulation phase:** Successive mini-batches (from `map()` with `batched=True`) are compared against the accumulator. If all rows in the new mini-batch share the same column value(s) as the accumulated rows, the mini-batch is appended to the accumulator and an *empty* batched table is returned (so the upstream pipeline sees zero rows, effectively deferring the batch).
+
+2. **Cut phase:** When a row with a different column value is found, all accumulated rows are concatenated into a single Arrow table, then cut at boundaries where the `by_column` value(s) change. `pc.indices_nonzero()` detects the cut points. Each segment becomes one batch entry.
+
+3. **Last batch handling:** For `Dataset.batch()` (non-streaming), if the last batch might be incomplete, it's kept in `tables_accumulator` and returned when `length` is known. The `drop_last_batch` parameter controls whether incomplete final batches are dropped.
+
+### Key Design Details
+
+| Aspect | Detail |
+|--------|--------|
+| **Comparator** | Uses `pyarrow.compute.not_equal()` — zero-copy, vectorized |
+| **Cut detection** | `pc.indices_nonzero()` on the diff array of the key column(s) |
+| **Batch assembly** | `pa.ListArray.from_arrays(offsets, column)` creates nested list arrays |
+| **Feature schema** | Output features auto-convert to `List(feature)` for all columns |
+| **Accumulator** | Python list of `pa.Table` objects, max-1 incomplete batch held |
+| **Streaming** | Same algorithm, but `length=None` means "don't know if batch is complete" so accumulation is greedy |
+| **Multi-column** | Requires ALL specified columns to match; uses `pc.or_()` across diff arrays |
+| **Parallelism** | `num_proc` raises `NotImplementedError` for `by_column` mode — must be single-process |
+
+### Performance Characteristics
+
+- **Memory:** The accumulator holds at most one incomplete batch worth of Arrow data (typically small). The cut operation uses Arrow's zero-copy slicing where possible.
+- **Time:** O(n) where n = number of rows. The `pc.not_equal()` and `pc.indices_nonzero()` operations are vectorized in C++.
+- **Batch size param:** When using `by_column`, `batch_size` controls the mini-batch size fed to the map function (internal detail), NOT the output batch size. Output batch size is determined by the number of rows sharing each column value.
+
+### Comparison: `by_column` vs. `group_by`
+
+| Feature | `batch(by_column=...)` | Manual `group_by` |
+|---------|----------------------|--------------------|
+| Preserves order | ✅ Successive groups in order | ❌ Requires sort/partition |
+| Streaming | ✅ Works with IterableDataset | ❌ Requires full dataset |
+| Returns | Batched Dataset (nested lists) | Depends on implementation |
+| Memory | O(max group size) | O(unique values × groups) |
+| Use case | Sequential grouped data | Arbitrary grouping |
+
+### Source
+- `src/datasets/table.py` → `_batch_accumulate_arrow_table_by_columns()`
+- `src/datasets/arrow_dataset.py` → `Dataset.batch()`
+- `src/datasets/iterable_dataset.py` → `IterableDataset.batch()`
+- Doc: https://huggingface.co/docs/datasets/en/package_reference/main_classes#datasets.Dataset.batch
+- Added in v4.9.0 (2025), extended in v5.0.0 (2026-06-05)
+
