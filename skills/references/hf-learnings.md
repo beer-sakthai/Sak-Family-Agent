@@ -2786,3 +2786,95 @@ Support varies by provider. Verified patterns as of July 2026:
 - OpenAI-compatible structured outputs: https://platform.openai.com/docs/guides/structured-outputs
 - JSON Schema spec: https://json-schema.org/
 - `outlines` library (FSM grammar engine): https://github.com/dottxt-ai/outlines
+## 2026-07-24: hf-hub-storage-buckets — Deep Dive (New Feature, Topic #103)
+
+### Summary
+Comprehensive deep-dive into Hugging Face **Storage Buckets** — a brand-new repo type providing S3-like object storage on the Hub, powered by the Xet storage backend. Unlike Git-based repositories (models, datasets, Spaces), buckets are non-versioned and mutable: designed for training checkpoints, logs, intermediate artifacts, agent scratch storage, and any large collection of files that doesn't need version control. Buckets have a **free storage allowance** and are available to all users.
+
+### Buckets vs Repositories — Key Differences
+
+| Feature            | Repositories (Git-based)        | Storage Buckets                     |
+| ------------------ | ------------------------------- | ----------------------------------- |
+| Versioning         | Full Git history                | None (mutable, overwrite-in-place)  |
+| Types              | Models, Datasets, Spaces        | Standalone bucket                   |
+| Primary use case   | Publishing finished artifacts   | Working storage / intermediate data |
+| Operations         | Hub API, Git push/pull          | S3-like `sync`, `cp`, `rm`          |
+| Deduplication      | Xet chunk-level                 | Xet chunk-level                     |
+| Pull Requests      | Yes                             | No                                  |
+| Model/Dataset Cards| Yes                             | No (but plain README rendered)      |
+
+### Creating a Bucket
+
+**From Hub UI:** Visit huggingface.co/new-bucket, choose owner, name, public/private visibility, optional CDN pre-warming regions.
+
+**From CLI:**
+```bash
+hf buckets create my-bucket
+hf buckets create my-org/shared-bucket --private
+```
+
+**From Python:**
+```python
+from huggingface_hub import create_bucket
+create_bucket("my-bucket")
+create_bucket("my-org/shared-bucket", private=True)
+```
+
+### Managing Files
+
+All bucket file references use hf://buckets/ paths.
+
+**Upload/Download/Sync:**
+```bash
+hf buckets cp ./model.safetensors hf://buckets/username/my-bucket/models/
+hf buckets cp hf://buckets/username/my-bucket/config.json - | jq .
+hf buckets sync ./data hf://buckets/username/my-bucket/data --delete
+```
+
+The sync command supports --include/--exclude filters, --dry-run, and a plan-and-apply workflow (--plan sync-plan.jsonl then --apply).
+
+**Server-Side Copy (brand-new feature):**
+```bash
+hf buckets cp hf://datasets/HuggingFaceFW/fineweb/data hf://buckets/username/fineweb-data
+```
+Only Xet-tracked files (large) copied server-side instantly; small non-Xet files auto-downloaded and re-uploaded. Source and destination must be in the same storage region.
+
+### Access Patterns
+
+| Method | Best for |
+|--------|----------|
+| hf-mount | Mount as local filesystem via NFS/FUSE |
+| Volume mounts | HF Jobs & Spaces |
+| hf:// paths (fsspec) | Python data tools (pandas, DuckDB) |
+| CLI sync | Batch transfers, backups |
+| S3 API | AWS CLI, boto3, s5cmd |
+
+**Python via HfFileSystem:**
+```python
+import pandas as pd
+df = pd.read_parquet("hf://buckets/username/my-bucket/data.parquet")
+
+import duckdb
+from huggingface_hub import HfFileSystem
+duckdb.register_filesystem(HfFileSystem())
+```
+
+### Key Use Cases for Zero-Cost
+
+1. Training checkpoints & logs - overwrite-in-place, no Git history accumulation
+2. Data processing pipelines - staging area for intermediate results
+3. Agentic storage - Hub-native scratch for AI agents (tool outputs, working memory)
+4. Rolling backups - old files truly gone when deleted (unlike Git repos)
+5. Linking models to buckets - two-way link via model card YAML
+
+### Pricing
+
+Buckets are free to create with a free storage allowance. Per-TB billing above free tier. Enterprise plans get dedup-based billing. CDN pre-warming available at hf.co/storage.
+
+### Resources
+- Storage Buckets docs: https://huggingface.co/docs/hub/en/storage-buckets
+- Access Patterns: https://huggingface.co/docs/hub/en/storage-buckets-access
+- S3-Compatible API: https://huggingface.co/docs/hub/en/storage-buckets-s3
+- hf-mount: https://github.com/huggingface/hf-mount
+- HuggingFace Hub Buckets Python guide: https://huggingface.co/docs/huggingface_hub/guides/buckets
+- Xet storage backend: https://huggingface.co/docs/hub/xet/index
