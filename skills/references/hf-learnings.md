@@ -5699,4 +5699,199 @@ Click "Delete ref" to permanently remove `refs/pr/{N}`. This is especially usefu
 - [HfApi Discussion Methods Reference](https://huggingface.co/docs/huggingface_hub/main/en/package_reference/hf_api#huggingface_hub.HfApi.get_repo_discussions)
 - [CLI: hf discussions](https://huggingface.co/docs/huggingface_hub/main/en/guides/cli#hf-discussions)
 - [Repository Settings](https://huggingface.co/docs/hub/en/repositories-settings)
+
+## 2026-07-24: hf-transformers-kv-cache-architecture-deep-dive-v2 — Source Code Analysis from cache_utils.py
+
+### Summary
+Comprehensive source-level deep-dive into the 🤗 Transformers KV Cache architecture (cache_utils.py, ~2056 lines, Transformers v5.14+). Covers the full two-tier class hierarchy: **CacheLayerMixin** (per-layer state) and **Cache** (layer container with dispatch). Explains all dynamic, static, quantized, linear-attention, and hybrid cache variants, plus the config-driven auto-dispatch system, GPU offloading, and torch.compile support.
+
+### Architecture Overview
+
+The KV Cache system has a clean separation of concerns:
+- **CacheLayerMixin** — manages a single layer's key/value tensors (or conv/recurrent states for linear-attention)
+- **Cache** — an ordered container of `CacheLayerMixin` objects, one per model layer
+
+New in v5: The old `tuple[tuple[torch.Tensor]]` format is fully replaced by Cache objects. The legacy `past_key_values` parameter now accepts any Cache subclass, and model configs drive automatic layer-type dispatch.
+
+### Layer-Level Hierarchy
+
+#### Base: `CacheLayerMixin` (ABC)
+```
+CacheLayerMixin
+├── DynamicLayer              — grows via torch.cat (default generative)
+├── DynamicSlidingWindowLayer — grows up to sliding_window, then rotates
+├── DynamicIndexedLayer       — DynamicLayer + indexer key cache (DSA)
+├── StaticLayer               — preallocated tensor, index_copy_, torch.compile
+├── StaticSlidingWindowLayer  — static + sliding window
+├── StaticIndexedLayer        — static + DSA indexer
+├── QuantizedLayer (abstract) — KIVI-style two-tier
+│   ├── QuantoQuantizedLayer  — optimum-quanto backend (qint2/qint4)
+│   └── HQQQuantizedLayer     — HQQ backend (nbits 1–8)
+└── LinearAttentionCacheLayerMixin (ABC)
+    └── LinearAttentionLayer  — conv + recurrent states, no KV dim
+        ├── LinearAttentionAndFullAttentionLayer            — hybrid dynamic
+        ├── LinearAttentionAndSlidingWindowAttentionLayer   — hybrid sliding
+        ├── LinearAttentionAndStaticFullAttentionLayer      — hybrid static
+        └── LinearAttentionAndStaticSlidingWindowAttentionLayer
+```
+
+All layers auto-register via `__init_subclass__` into `DYNAMIC_LAYER_TYPE_MAPPING` or `STATIC_LAYER_TYPE_MAPPING` by setting `_layer_type`.
+
+#### DynamicLayer (the default)
+- Shapes: `[batch_size, num_heads, seq_len, head_dim]`, grows by `torch.cat`
+- Key methods: `lazy_initialization`, `update` (cat), `crop`, `reorder_cache`, `batch_repeat_interleave`, `batch_select_indices`
+- `get_max_length()` returns `-1` (no maximum)
+- `reset()` zeros in-place (preserves tensor objects); `offload()` moves to CPU
+
+#### DynamicSlidingWindowLayer
+- Adds `sliding_window` param; cache limited to last `sliding_window-1` tokens
+- Tracks `cumulative_length` separately (theoretical total, beyond window)
+- `record_past` mode: keeps full KV until `crop()` is called (for speculative decoding rollback)
+- Returns FULL states in `update()` even though only window is stored — critical correctness detail
+
+#### StaticLayer (for torch.compile/export)
+- Preallocates zero tensors of shape `[batch_size, num_heads, max_cache_len, head_dim]`
+- Updates use `index_copy_` in-place (preserves static memory address)
+- `mark_static_address()` tags tensors for cudagraphs compatibility
+- `is_compileable = True`
+- The `cumulative_length` is a **tensor** (not Python int) to avoid graph breaks
+
+#### StaticSlidingWindowLayer
+- Combines preallocation with sliding window rotation
+- When full and one token arrives: uses `tensor.roll(-1, dims=-2)` followed by overwrite at `index=-1` — avoids cat entirely for token-by-token generation
+- For multi-token prefill on full cache: uses `cat` fallback
+- Tracks both `cumulative_length` (tensor) and `cumulative_length_int` (Python int) — the int avoids data-dependent control flow in compiled regions
+
+#### DynamicIndexedLayer / StaticIndexedLayer
+- Extra `indexer_keys` cache of shape `[batch_size, seq_len, index_head_dim]` for Dynamic Sparse Attention (DSA)
+- Used by GLM MoE DSA, DeepSeek V3/V2
+- `update_indexer()` mirrors the same cat (dynamic) or index_copy_ (static) pattern
+- All lifecycle methods (crop, reset, offload, reorder) are extended to cover the indexer
+
+#### QuantizedLayer / QuantoQuantizedLayer / HQQQuantizedLayer
+- KIVI-style two-tier cache: full-precision residual buffer (default 128 tokens) + quantized storage
+- When residual fills up, dequantize + concatenate full precision → re-quantize all → discard full precision
+- Quanto backend: `qint2` (2-bit) or `qint4` (4-bit), per-channel, MaxOptimizer
+- HQQ backend: nbits 1–8, group_size configurable, separate quantize/dequantize steps
+- **Only supported for models with ALL full_attention layers** — raises error for sliding/hybrid
+- Quantized only at the layer level; the Cache container (`QuantizedCache`) dispatches them
+
+#### LinearAttentionLayer
+- No KV dimension; stores `conv_states` (1D conv buffer) and `recurrent_states` (SSM state)
+- Static shapes by design — `is_compileable = True`, `supports_early_init = False`
+- `update_conv_state()` pads/preserves conv kernel window; `update_recurrent_state()` copies in-place
+- Hybrid variants combine LinearAttentionLayer with DynamicLayer or StaticLayer using MRO
+
+### Cache Container Classes
+
+```
+Cache (base)
+├── DynamicCache         — lazy layer creation, config-driven dispatch
+├── StaticCache          — preallocated all layers at init (compile/export)
+├── QuantizedCache       — quantized KV, KIVI-style
+├── EncoderDecoderCache  — self_attention + cross_attention caches
+└── MtpCache             — Multi-Token Prediction offset handling
+```
+
+#### Cache Base Class
+- Constructor: pass pre-built `layers` list OR `layer_class_to_replicate` (lazy append)
+- `update()` dispatches to `layers[layer_idx].update()`, handling lazy append if needed
+- Offloading: uses a dedicated `prefetch_stream` (CUDA stream) to async prefetch next layer from CPU while current layer computes
+- `offload_only_non_sliding=True` by default — sliding layers are small enough to keep resident
+- `is_linear`, `is_sliding`, `is_compileable` properties introspect all layers
+- `early_initialization()` creates fake zero-size tensors for torch.export compatibility
+
+#### DynamicCache
+- Constructor accepts `config` OR `ddp_cache_data` (for distributed) OR neither (lazy DynamicLayer)
+- When `config` provided: calls `get_layer_types_and_kwargs(config)` → dispatches per-layer types from `DYNAMIC_LAYER_TYPE_MAPPING`
+- `__iter__` yields `(keys, values, sliding_window_tensor)` tuples for backward compatibility
+- This is the default cache for all generative models if no explicit cache is passed
+
+#### StaticCache
+- Requires both `config` and `max_cache_len`
+- Dispatches from `STATIC_LAYER_TYPE_MAPPING`
+- Preallocates ALL layers at init time — zero tensors ready for `index_copy_`
+- Used automatically when `model.generate()` detects static cache usage
+- Marked `**kwargs` in constructor for backward compatibility
+
+#### QuantizedCache
+- Accepts `backend` ("quanto" or "hqq") and quantization params
+- Validates all layers are `full_attention` (the only type currently supported)
+- Creates one `QuantoQuantizedLayer` or `HQQQuantizedLayer` per hidden layer
+
+#### EncoderDecoderCache
+- Holds two Cache objects: `self_attention_cache` and `cross_attention_cache`
+- DDP support: can reconstruct from flat tuple `(self_k, self_v, cross_k, cross_v, ...)`
+- `is_updated` tracks which cross-attention layers have been populated
+
+#### MtpCache
+- Extends DynamicCache for Multi-Token Prediction (MTP) heads (DeepSeek V3 R1)
+- `get_query_offset()` adds `layer_idx + 1` offset — MTP depth k runs k+1 tokens ahead
+- `get_mask_sizes()` adjusts kv_offset accordingly
+
+### Config-Driven Layer Type Dispatch
+
+`get_layer_types_and_kwargs(config)` reads:
+1. `config.layer_types` — explicit list (e.g., ["full_attention", "linear_attention", "hybrid", ...])
+2. If absent: infers from `config.sliding_window` → all `sliding_attention`, or `config.attention_chunk_size` → all `chunked_attention`, else all `full_attention`
+3. Shared layers: subtracts `num_kv_shared_layers` from the list
+4. Returns `layer_types` + `layer_kwargs` dict with `sliding_window`, `number_of_states`, etc.
+
+Layer types recognized:
+| Type | Dynamic Mapping | Static Mapping |
+|------|----------------|----------------|
+| full_attention | DynamicLayer | StaticLayer |
+| sliding_attention | DynamicSlidingWindowLayer | StaticSlidingWindowLayer |
+| chunked_attention | DynamicSlidingWindowLayer | StaticSlidingWindowLayer |
+| conv | LinearAttentionLayer | LinearAttentionLayer |
+| moe | LinearAttentionLayer | LinearAttentionLayer |
+| linear_attention | LinearAttentionLayer | LinearAttentionLayer |
+| hybrid | LinearAttentionAndFullAttentionLayer | LinearAttentionAndStaticFullAttentionLayer |
+| hybrid_sliding | LinearAttentionAndSlidingWindowAttentionLayer | LinearAttentionAndStaticSlidingWindowAttentionLayer |
+| deepseek_sparse_attention | DynamicIndexedLayer | StaticIndexedLayer |
+
+### GPU Offloading Architecture
+
+- Enabled via `offloading=True` in Cache constructor
+- Creates a dedicated `torch.Stream()` for async prefetch
+- After each layer's `update()`:
+  1. Wait for prefetch stream to finish
+  2. Kick off prefetch for next non-sliding, non-linear layer
+  3. Offload current layer (if eligible) to CPU
+- `prefetch()` circles back to layer 0 when reaching the end of the list
+- Linear-attention layers never offloaded (no KV to save)
+- Sliding layers skipped when `offload_only_non_sliding=True` (they're small)
+
+### torch.compile / cudagraphs Considerations
+
+- `StaticLayer` (and variants) are `is_compileable = True`
+- `DynamicLayer` is NOT compileable — `torch.cat` changes tensor shapes
+- `mark_static_address()` on preallocated tensors prevents cudagraph recompilation
+- `cumulative_length` is a `torch.Tensor` (not Python int) in static layers to avoid graph breaks
+- `StaticSlidingWindowLayer` uses `tensor.roll(-1)` for single-token updates — avoids dynamic shapes
+- `index_copy_` fallback for MPS etc. when `NotImplementedError` is raised
+
+### Deprecations
+
+- `SlidingWindowCache` → renamed to `StaticCache` in v5
+- `get_max_cache_shape()` → `get_max_length()` (v5.16 removal target)
+- `max_cache_len` property → `get_max_length()` method
+- `max_batch_size` property → `batch_size` property
+
+### Zero-Cost Relevance
+
+- **Free to use**: All cache classes are in-memory only, no API costs
+- **Memory optimization**: Sliding window and quantized caches reduce GPU memory for long generations
+- **Compile speed**: StaticCache + torch.compile provides free inference speedup
+- **No cloud needed**: Offloading trades GPU memory for CPU RAM at zero monetary cost
+
+### Key Source File
+- `transformers/src/transformers/cache_utils.py` (~2056 lines, latest main branch)
+
+### References
+- [Transformers cache_utils.py source](https://github.com/huggingface/transformers/blob/main/src/transformers/cache_utils.py)
+- [KIVI: 2bit KV Cache Quantization Paper](https://huggingface.co/papers/2402.02750)
+- [KV Cache Quantization docs](https://huggingface.co/docs/transformers/en/llm_tutorial_optimization#quantized-cache)
+- [torch.compile guide](https://huggingface.co/docs/transformers/en/torch_compile)
+- [Dynamic Sparse Attention (DSA) in Transformers](https://arxiv.org/abs/2504.11714)
 |
