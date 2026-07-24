@@ -9574,4 +9574,208 @@ Since Beer has no income (zero-cost constraint) and owns 8 models on HF:
 - optimum-quanto: https://github.com/huggingface/optimum-quanto
 - torchao: https://github.com/pytorch/ao
 - AQLM: https://github.com/Vahe1994/AQLM
-- GGUF Hub Docs: https://huggingface.co/docs/hub/en/models-gguf
+|- GGUF Hub Docs: https://huggingface.co/docs/hub/en/models-gguf
+
+---
+
+## 2026-07-27: hf-datasets-sort-shuffle-split-shard — Dataset Process Operations Deep Dive (Topic #18 Deepened)
+
+### Summary
+Deep-dive into the 🤗 Datasets library's core processing pipeline (datasets v4.8.4). Covers every major Dataset method for sorting, shuffling, selecting, filtering, splitting, sharding, renaming, casting, flattening, mapping, batching, concatenating, interleaving, formatting, saving, and exporting — the complete data transformation toolkit.
+
+### 1. Sort, Shuffle, Select, Split & Shard
+
+#### `Dataset.sort()`
+Sorts by a column's values. Returns a new Dataset sorted in ascending or descending order. Efficient because Arrow columnar storage makes column access cheap.
+```python
+dataset = dataset.sort("label")
+dataset = dataset.sort("timestamp", reverse=True)
+```
+
+#### `Dataset.shuffle()`
+Randomly shuffles the dataset. Accepts a `seed` for reproducibility and a `generator` for numpy RNG. Important: shuffling is **lazy** in buffered mode — the dataset is shuffled only when iterated.
+```python
+dataset = dataset.shuffle(seed=42)
+import numpy as np
+rng = np.random.default_rng(42)
+dataset = dataset.shuffle(generator=rng)
+```
+
+#### `Dataset.select()` and `Dataset.filter()`
+- **`select(indices)`**: Index-based selection. Takes an iterable of row indices and returns a new Dataset containing only those rows. Extremely fast — no data copy since Arrow uses zero-copy slicing.
+  ```python
+  dataset = dataset.select([0, 1, 2, 42, 99])
+  dataset = dataset.select(range(1000))
+  ```
+- **`filter(function)`**: Row-wise boolean filtering. Function receives one row (as a dict) and returns `True` to keep it. Supports `num_proc` for multiprocessing and `input_columns` to limit columns passed to the function.
+  ```python
+  dataset = dataset.filter(lambda x: x["label"] == 1, num_proc=4)
+  dataset = dataset.filter(lambda x: len(x["text"]) > 50)
+  ```
+
+#### `Dataset.train_test_split()`
+The canonical method for creating train/test splits. Returns a `DatasetDict`.
+- `test_size` or `train_size`: float (proportion) or int (count). Default test_size=0.1.
+- `seed`: for reproducibility.
+- `stratify_by_column`: for **stratified splitting** — critical for imbalanced classification.
+- `shuffle`: whether to shuffle before splitting (default True).
+
+```python
+splits = dataset.train_test_split(test_size=0.2, seed=42)
+train = splits["train"]
+test = splits["test"]
+# Stratified split — preserves class distribution
+splits = dataset.train_test_split(test_size=0.2, seed=42, stratify_by_column="label")
+```
+
+#### `Dataset.shard()`
+Splits the dataset into `num_shards` approximately equal shards, returns shard `index`. Essential for distributed processing.
+```python
+shard_0 = dataset.shard(num_shards=8, index=0)
+shard_0 = dataset.shard(num_shards=8, index=0, contiguous=False)
+```
+With `contiguous=False`, shards are created in interleaved (round-robin) order.
+
+### 2. Rename, Remove, Cast & Flatten
+
+#### `Dataset.rename_column()`
+```python
+dataset = dataset.rename_column("old_name", "new_name")
+```
+
+#### `Dataset.remove_columns()`
+Faster than using `map()` with `remove_columns` — doesn't copy data of remaining columns.
+```python
+dataset = dataset.remove_columns("unused_column")
+dataset = dataset.remove_columns(["col1", "col2"])
+```
+
+#### `Dataset.cast()` and `Dataset.cast_column()`
+- `cast(new_features)`: Cast all columns to new features.
+- `cast_column(column, feature)`: Cast a single column, efficient.
+
+```python
+from datasets import ClassLabel, Value
+new_features = dataset.features.copy()
+new_features["label"] = ClassLabel(names=["bad", "good"])
+new_features["text"] = Value("large_string")
+dataset = dataset.cast(new_features)
+# Or per-column:
+dataset = dataset.cast_column("label", ClassLabel(names=["bad", "good"]))
+```
+
+#### `Dataset.flatten()`
+Flattens nested struct columns into top-level columns.
+
+### 3. Map — The Swiss Army Knife
+
+`Dataset.map()` is the most powerful transformation. Applies a function to every row (or batch).
+
+Key parameters: `function` (callable), `num_proc` (multiprocessing), `batched` (batch mode), `batch_size` (default 1000), `remove_columns`, `input_columns`, `load_from_cache_file` (cache control), `writer_batch_size` (cache write buffer), `fn_kwargs` (extra kwargs to function).
+
+```python
+def tokenize(batch, tokenizer):
+    return tokenizer(batch["text"], truncation=True, padding="max_length")
+dataset = dataset.map(tokenize, batched=True, batch_size=256,
+                       fn_kwargs={"tokenizer": tokenizer})
+```
+
+**Cache fingerprint**: Every `map()` call has a unique fingerprint (hash of previous fingerprint + transform args). Enables deterministic caching. Disable with `load_from_cache_file=False`.
+
+### 4. Batch Operations
+
+#### `Dataset.with_format()`
+Changes output format lazily (no data copy until iteration).
+```python
+dataset.with_format("torch")
+dataset.with_format("numpy", columns=["input_ids", "attention_mask"])
+dataset.with_format("tensorflow")
+dataset.with_format("pandas")
+dataset.with_format("jax")
+```
+
+#### `Dataset.flatten_indices()`
+After select/filter/shard, the underlying Arrow table may use indirection via index mapping. `flatten_indices()` makes a contiguous copy — needed before `with_format("torch")` after filtering.
+
+### 5. Concatenate & Interleave
+
+#### `concatenate_datasets()`
+```python
+from datasets import concatenate_datasets
+combined = concatenate_datasets([dataset1, dataset2, dataset3])
+```
+
+#### `interleave_datasets()`
+```python
+from datasets import interleave_datasets
+# Weighted — 70% from dataset1, 30% from dataset2
+combined = interleave_datasets(
+    [dataset1, dataset2], probabilities=[0.7, 0.3], seed=42
+)
+# Continue until all datasets exhausted
+combined = interleave_datasets(
+    [dataset1, dataset2], stopping_strategy="all_exhausted"
+)
+```
+
+### 6. Save & Export
+
+- **`save_to_disk()` / `load_from_disk()`**: Arrow format (fast local reload).
+- **`push_to_hub()`**: Upload to Hub with optional `num_proc` parallel upload.
+- **Export**: `to_csv()`, `to_json()`, `to_parquet()` (compressed), `to_sql()`, `to_pandas()`, `to_dict()`, `to_iterable_dataset()`.
+
+All export methods support `hf://` paths for direct Hub upload:
+```python
+dataset.to_csv("hf://datasets/username/repo/path/to/file.csv")
+dataset.to_parquet("hf://buckets/username/bucket/path/to/file.parquet")
+```
+
+### 7. DatasetDict Operations
+
+DatasetDict applies methods to every split:
+```python
+splits = dataset.train_test_split(test_size=0.2, seed=42)
+splits = splits.map(tokenize, batched=True)
+splits = splits.rename_column("old", "new")
+splits = splits.remove_columns(["unused"])
+splits = splits.cast(new_features)
+splits.save_to_disk("/path/to/dataset")
+splits.push_to_hub("username/my_dataset")
+```
+
+### Key Design Insight: Arrow-Based Zero-Copy
+
+The datasets library uses Apache Arrow as its memory format. Operations like `select()`, `shard()`, and `filter()` use **indirection (indices arrays)** rather than data copying:
+- `select()` is O(1) in memory.
+- `shard()` creates new views, not copies.
+- `flatten_indices()` needed only for contiguous copy.
+- `remove_columns()` without `map()` is zero-copy for remaining columns.
+
+### Best Practices
+
+1. **Use `remove_columns` in `map()`** to avoid keeping unnecessary columns.
+2. **Batch maps** with `batched=True` for tokenization — 10-100x faster.
+3. **Set `num_proc`** for CPU-bound operations.
+4. **Disable cache** with `load_from_cache_file=False` when debugging.
+5. **Use stratified splits** (`stratify_by_column`) for classification datasets.
+6. **`flatten_indices()` before `with_format("torch")`** after filtering/sharding.
+7. **`interleave_datasets()` with probabilities** for mixing domain datasets.
+8. **Use `shard()` for distributed training** — each worker loads one shard.
+9. **Save as Parquet** for long-term storage (compressed), Arrow for local caching (fast reload).
+
+### Zero-Cost Relevance
+
+All operations are **100% free** — no API calls, no GPU, no inference credits. They run entirely locally on Apache Arrow.
+
+For Beer's 8 datasets (tool-calling training data), these operations are directly applicable:
+- Split into train/validation for evaluation
+- Shard for parallel processing
+- Map to format data for different model architectures
+- Filter by task type
+- Rename/cast columns for consistency
+
+### References
+- https://huggingface.co/docs/datasets/v4.8.4/process
+- https://huggingface.co/docs/datasets/v4.8.4/en/package_reference/main_classes
+- https://huggingface.co/docs/datasets/v4.8.4/en/loading#slice-splits
+|
