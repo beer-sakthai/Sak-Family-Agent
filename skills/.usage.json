@@ -783,14 +783,14 @@
     "archived_at": null,
     "created_at": "2026-07-09T14:17:07.954996+00:00",
     "created_by": "agent",
-    "last_patched_at": "2026-07-24T02:50:38.737669+00:00",
-    "last_used_at": "2026-07-24T07:06:26.614840+00:00",
-    "last_viewed_at": "2026-07-24T07:06:26.612349+00:00",
-    "patch_count": 96,
+    "last_patched_at": "2026-07-24T07:45:12.491495+00:00",
+    "last_used_at": "2026-07-24T07:44:37.965915+00:00",
+    "last_viewed_at": "2026-07-24T07:44:37.963373+00:00",
+    "patch_count": 98,
     "pinned": false,
     "state": "active",
-    "use_count": 114,
-    "view_count": 114
+    "use_count": 115,
+    "view_count": 115
   },
   "node-inspect-debugger": {
     "archived_at": null,
@@ -1017,14 +1017,14 @@
     "archived_at": null,
     "created_at": "2026-07-09T13:11:56.358035+00:00",
     "created_by": "agent",
-    "last_patched_at": "2026-07-24T06:58:03.354412+00:00",
-    "last_used_at": "2026-07-24T07:06:18.142141+00:00",
-    "last_viewed_at": "2026-07-24T07:06:18.136433+00:00",
-    "patch_count": 35,
+    "last_patched_at": "2026-07-24T07:44:52.627018+00:00",
+    "last_used_at": "2026-07-24T07:44:31.496654+00:00",
+    "last_viewed_at": "2026-07-24T07:44:31.493197+00:00",
+    "patch_count": 36,
     "pinned": false,
     "state": "active",
-    "use_count": 80,
-    "view_count": 67
+    "use_count": 81,
+    "view_count": 68
   },
   "weights-and-biases": {
     "archived_at": null,

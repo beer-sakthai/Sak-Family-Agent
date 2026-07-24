@@ -409,3 +409,4 @@ The Trust pass is not optional. It catches issues that automated validation miss
 - Bundled skill `huggingface-hub` — for `hf` CLI commands (cannot edit — use for discovery tasks)
 - Bundled skill `llama-cpp` — for GGUF discovery and inference (cannot edit — use for finding/downloading existing GGUFs)
 - Bundled skill `evaluating-llms-harness` — for MMLU/GSM8K benchmarks (not BFCL — that's covered here)
+- `references/embedding-model-deployment.md` — Deploy sentence-transformers to HF Hub + set up local RAG server over agent SOULs and docs
