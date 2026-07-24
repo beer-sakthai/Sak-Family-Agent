@@ -9377,8 +9377,178 @@ except HfHubHTTPError as e:
 7. **Provider varies** — Not all inference providers support tool calling; verify via `inferenceProviderMapping`
 
 ### Resources
-- huggingface_hub InferenceClient docs (https://huggingface.co/docs/huggingface_hub/en/guides/inference)
-- huggingface_hub v1.24.0 source: `_client.py` `chat_completion` method
-- huggingface_hub MCP integration (https://huggingface.co/docs/huggingface_hub/v1.24.0/en/package_reference/mcp)
-- huggingface_hub generated types: `_generated/types/chat_completion.py`
-- OpenAI Chat Completions API reference (for compatibility comparison)
+|- huggingface_hub InferenceClient docs (https://huggingface.co/docs/huggingface_hub/en/guides/inference)
+|- huggingface_hub v1.24.0 source: `_client.py` `chat_completion` method
+|- huggingface_hub MCP integration (https://huggingface.co/docs/huggingface_hub/v1.24.0/en/package_reference/mcp)
+|- huggingface_hub generated types: `_generated/types/chat_completion.py`
+|- OpenAI Chat Completions API reference (for compatibility comparison)
+
+---
+
+## 2026-07-24: hf-quantization-methods-comparison — Comprehensive Quantization Method Comparison (Topic #157)
+
+### Summary
+Comprehensive comparison of every quantization method supported in Hugging Face Transformers, based on the official Transformers v5.14.0 quantization overview. Covers 21 methods across dimensions: bit-depth, hardware support, on-the-fly vs. calibration, PEFT compatibility, serialization, performance characteristics, and zero-cost recommendations for Beer's models.
+
+### Source
+Official Transformers Quantization Overview: https://huggingface.co/docs/transformers/en/quantization/overview
+Published: 2026-07-24, Transformers v5.14.0
+
+### Complete Method Comparison Matrix
+
+| Method | Bits | On-the-fly | CPU | CUDA | ROCm | Metal (Apple) | Intel GPU | torch.compile | PEFT FT | Serializable | Notes |
+|--------|------|-----------|-----|------|------|--------------|-----------|--------------|---------|-------------|-------|
+| **AQLM** | 1/2 | ❌ | 🟢 | 🟢 | 🔴 | 🔴 | 🟢 | 🟢 | 🟢 | 🟢 | Extreme compression; groups 8-16 weights together |
+| **AutoRound** | 2/3/4/8 | ❌ | 🟢 | 🟢 | 🔴 | 🔴 | 🟢 | 🔴 | 🔴 | 🟢 | Intel's weight-rounding optimization |
+| **AWQ** | 4 | ❌ | 🟢 | 🟢 | 🟢 | 🔴 | 🟢 | ❓ | 🟢 | 🟢 | Activation-aware; most popular 4-bit |
+| **bitsandbytes** | 4/8 | 🟢 | 🟢 | 🟢 | 🟡 | 🟡 | 🟢 | 🟢 | 🟢 | 🟢 | Most mature; NF4 for QLoRA |
+| **compressed-tensors** | 1/8 | ❌ | 🟢 | 🟢 | 🟢 | 🔴 | 🔴 | 🔴 | 🟢 | 🟢 | Neural Magic's sparsity+quant |
+| **EETQ** | 8 | 🟢 | 🔴 | 🟢 | 🔴 | 🔴 | 🔴 | ❓ | 🟢 | 🟢 | NetEase Easy Efficient Transformer |
+| **Four Over Six** | 4 | 🟢 | 🟢 | 🟢 | 🔴 | 🔴 | 🔴 | 🟢 | 🔴 | 🟢 | MIT; 4-bit via 6-bit intermediate |
+| **FP-Quant** | 4 | 🟢 | 🔴 | 🟢 | 🔴 | 🔴 | 🔴 | 🟢 | 🔴 | 🟢 | IST; FP8-based 4-bit quantization |
+| **GGUF/llama.cpp** | 1–8 | 🟢 | 🟢 | 🟢 | 🔴 | 🟢 | 🟢 | 🔴 | 🔴 | See Notes | Separate format; NOT serializable in Transformers |
+| **GPTQModel** | 2/3/4/8 | ❌ | 🟢 | 🟢 | 🟢 | 🟢 | 🟢 | 🔴 | 🟢 | 🟢 | Replaced AutoGPTQ; requires calibration |
+| **HIGGS** | 2/4 | 🟢 | 🔴 | 🟢 | 🔴 | 🔴 | 🔴 | 🟢 | 🔴 | 🟢 | HanGuo's FLUTE-based quantization |
+| **HQQ** | 1–8 | 🟢 | 🟢 | 🟢 | 🔴 | 🔴 | 🟢 | 🟢 | 🟢 | 🔴 | No calibration needed; half-quadratic |
+| **Metal** | 2/4/8 | 🟢 | 🔴 | 🔴 | 🔴 | 🟢 | 🔴 | 🔴 | 🔴 | 🟢 | Apple Silicon only (Hub Kernels) |
+| **optimum-quanto** | 2/4/8 | 🟢 | 🟢 | 🟢 | 🔴 | 🟢 | 🟢 | 🟢 | 🔴 | 🔴 | HF's own; lightweight, no heavy deps |
+| **SINQ** | 2/3/4/6/8 | 🟢 | 🟢 | 🟢 | 🟡 | 🟡 | 🟡 | 🟡 | 🔴 | 🟢 | Huawei; sparse+integer quantization |
+| **FBGEMM_FP8** | 8 | 🟢 | 🔴 | 🟢 | 🔴 | 🔴 | 🔴 | 🔴 | 🔴 | 🟢 | PyTorch FBGEMM FP8 |
+| **torchao** | 4/8 | 🟢 | 🟢 | 🟢 | 🔴 | 🟡 | 🟢 | — | 🟢 | 🟢 | PyTorch native; Int4/FP8/NF4 |
+| **VPTQ** | 1–8 | ❌ | 🔴 | 🟢 | 🟡 | 🔴 | 🔴 | 🟢 | 🔴 | 🟢 | Microsoft; vectorized PTQ |
+| **FINEGRAINED_FP8** | 8 | 🟢 | 🔴 | 🟢 | 🔴 | 🔴 | 🟢 | 🔴 | 🔴 | 🟢 | Built-in Transformers |
+| **SpQR** | 3 | ❌ | 🔴 | 🟢 | 🔴 | 🔴 | 🔴 | 🟢 | 🔴 | 🟢 | Sparse-plus-quantized |
+| **Quark** | 2/4/6/8/9/16 | ❌ | 🟢 | 🟢 | 🟢 | 🟢 | 🟢 | ❓ | 🔴 | 🔴 | AMD; widest bit range |
+
+Legend: 🟢 = Supported, 🟡 = Partial/Experimental, 🔴 = Not Supported, ❓ = Unknown, — = Native
+
+### Key Decision Dimensions
+
+#### 1. On-the-Fly vs. Calibration Required
+- **On-the-fly** (no calibration data needed): bitsandbytes, HQQ, optimum-quanto, torchao, GGUF (pre-quantized), EETQ, Four Over Six, FP-Quant, HIGGS, Metal, SINQ, FBGEMM_FP8, FINEGRAINED_FP8
+- **Calibration required** (need sample dataset): AWQ, GPTQModel, AQLM, AutoRound, compressed-tensors, VPTQ, SpQR, Quark
+
+#### 2. PEFT (LoRA/QLoRA) Fine-Tuning Compatible
+- **🟢 Supported:** AQLM, AWQ, bitsandbytes, compressed-tensors, EETQ, GPTQModel, HQQ, torchao
+- **🔴 Not Supported:** AutoRound, Four Over Six, FP-Quant, GGUF, HIGGS, Metal, optimum-quanto, SINQ, FBGEMM_FP8, VPTQ, FINEGRAINED_FP8, SpQR, Quark
+
+#### 3. Serializable (can be saved & reloaded in Transformers)
+- **🟢 Yes:** AQLM, AutoRound, AWQ, bitsandbytes, compressed-tensors, EETQ, Four Over Six, FP-Quant, GPTQModel, HIGGS, Metal, SINQ, FBGEMM_FP8, torchao, VPTQ, FINEGRAINED_FP8, SpQR
+- **🔴 No / Partial:** HQQ (not serializable in Transformers), optimum-quanto (not serializable), GGUF (separate format, use `gguf_file` parameter), Quark (not serializable)
+
+#### 4. Hardware Coverage
+- **Most universal** (CPU+CUDA+ROCm): bitsandbytes, torchao, AQLM, compressed-tensors, AutoRound, AWQ, GPTQModel
+- **Apple Silicon (Metal):** AWQ, bitsandbytes (🟡), torchao (🟡), GGUF, Metal (native), optimum-quanto, GPTQModel, SINQ (🟡), Quark — for best Apple support, use GGUF or optimum-quanto
+- **Intel GPU:** bitsandbytes, HQQ, torchao, SINQ (🟡), GPTQModel, AWQ, FINEGRAINED_FP8, AutoRound, Quark, optimum-quanto, GGUF
+
+### Detailed Method Profiles
+
+#### bitsandbytes (Mature, Most Widely Used)
+- **Bits:** 4 (NF4/FP4) and 8 (LLM.int8())
+- **Install:** `pip install bitsandbytes`
+- **Key Feature:** On-the-fly quantization — no calibration data needed. QLoRA enables 4-bit fine-tuning with LoRA adapters.
+- **Usage:** `model = AutoModelForCausalLM.from_pretrained(..., load_in_4bit=True, bnb_4bit_quant_type="nf4")`
+- **Limitations:** ROCm and Metal support are partial (🟡). 4-bit inference slower than AWQ/GPTQ on some benchmarks.
+- **Best for:** Quick memory reduction, QLoRA fine-tuning, prototyping on consumer GPUs.
+
+#### AWQ (Activation-Aware Weight Quantization)
+- **Bits:** 4
+- **Install:** `pip install autoawq` (note: downgrades Transformers to 4.47.1)
+- **Key Feature:** Preserves 1% of weights as FP16 based on activation importance, achieving 4-bit with minimal perplexity loss. Very fast inference.
+- **Usage:** Load pre-quantized models: `AutoModelForCausalLM.from_pretrained("model-awq")`
+- **Limitations:** Requires calibration data to quantize. Cannot quantize on-the-fly — must use pre-quantized models or quantize offline.
+- **Best for:** Production 4-bit inference on CUDA GPUs; best quality-per-bit ratio at 4-bit.
+
+#### GPTQModel (Successor to AutoGPTQ)
+- **Bits:** 2, 3, 4, 8
+- **Install:** `pip install gptqmodel --no-build-isolation`
+- **Key Feature:** Layer-wise quantization minimizing output error via second-order optimization (Hessian-based). Multiple bit-widths.
+- **Usage:** `GPTQConfig(bits=4, dataset="c4", tokenizer=tokenizer)` then `from_pretrained(..., quantization_config=gptq_config)`
+- **Limitations:** Calibration required (need representative dataset). Slower to quantize than on-the-fly methods.
+- **Best for:** When you need flexible bit-widths (2/3/4/8) with good quality; supports Apple Silicon.
+
+#### GGUF / llama.cpp (Ecosystem Standard for Local Inference)
+- **Bits:** Q2_K through Q8_0, plus F32/F16/BF16/F64
+- **Key Feature:** Single-file format with metadata header and all weights bundled. Community standard for local inference (Ollama, LM Studio, LlamaFile).
+- **Usage in Transformers:** `AutoModelForCausalLM.from_pretrained(..., gguf_file="model.q4_K_M.gguf")`
+- **Limitations:** NOT PEFT-compatible. NOT serializable back to Transformers format (separate ecosystem). No torch.compile support.
+- **Hardware:** CPU native, CUDA via llama.cpp backend, Metal native on Apple Silicon.
+- **Best for:** Local/edge deployment, Apple Silicon users, CPU inference, Ollama/LM Studio workflow.
+
+#### HQQ (Half-Quadratic Quantization)
+- **Bits:** 1, 2, 3, 4, 8
+- **Install:** `pip install hqq`
+- **Key Feature:** On-the-fly quantization without calibration data. Supports per-layer configs. 4-bit fused kernels reach 200 tok/s on RTX 4090.
+- **Usage:** `HqqConfig(nbits=4, group_size=64)` then `from_pretrained(..., quantization_config=hqq_config)`
+- **Limitations:** Not serializable in Transformers (🔴). No ROCm support. Relatively newer/lower adoption.
+- **Best for:** Rapid quantization of any model without calibration; extreme 1-2 bit for research.
+
+#### optimum-quanto (HuggingFace's Lightweight Option)
+- **Bits:** 2, 4, 8
+- **Install:** `pip install optimum-quanto`
+- **Key Feature:** Lightweight, no heavy dependencies. Works out of the box with any model. Supports torch.compile.
+- **Usage:** `quantize_model(model, weights=torch.qint4, activations=torch.qfloat8)`
+- **Limitations:** NOT serializable (cannot save/load quantized state). No PEFT support. Limited ecosystem maturity.
+- **Best for:** Quick experiments, torch.compile integration, when you want minimal deps.
+
+#### torchao (PyTorch Native)
+- **Bits:** 4 (int4/NF4), 8 (FP8 dynamic/weight-only)
+- **Install:** `pip install torchao` (comes with PyTorch 2.6+)
+- **Key Feature:** Native PyTorch integration. Supports Int4, FP8, NF4 dtypes. Composable with torch.compile and PEFT.
+- **Usage:** `from torchao.quantization import quantize_` then `quantize_(model, int4_weight_only())`
+- **Limitations:** ROCm support 🟡. Newer, fewer pre-quantized models on the Hub.
+- **Best for:** PyTorch native workflows, production deployment with torch.compile, when you want tight integration.
+
+#### AQLM (Additive Quantization of Language Models)
+- **Bits:** 1–2 (extreme compression)
+- **Install:** `pip install aqlm[gpu,cpu]` (Python 3.10+ only)
+- **Key Feature:** Groups 8-16 weights together and represents them as additive combinations of codewords. Achieves 2-bit with competitive perplexity.
+- **Usage:** `AutoModelForCausalLM.from_pretrained("ISTA-DASLab/Mixtral-8x7b-AQLM-2Bit-1x16-hf")`
+- **Limitations:** Python 3.10+ only. Limited model availability. Primarily for research at extreme compression levels.
+- **Best for:** Extreme memory constraint scenarios (sub-2 GB models), research on ultra-low-bit quantization.
+
+### Practical Decision Flowchart
+
+```
+Q: What hardware do you have?
+├── Apple Silicon (Metal)
+│   └── GGUF (Ollama) → best ecosystem support
+│   └── optimum-quanto → lightweight, on-the-fly
+│   └── AWQ → best 4-bit quality if pre-quantized model exists
+├── CPU-only
+│   └── GGUF (llama.cpp) → best CPU performance
+│   └── bitsandbytes → on-the-fly, mature
+│   └── optimum-quanto → lightweight
+├── NVIDIA GPU (CUDA)
+│   ├── Need PEFT fine-tuning?
+│   │   ├── Yes → bitsandbytes (QLoRA) or HQQ (on-the-fly)
+│   │   └── No → AWQ (best quality) or GPTQ (flexible bits)
+│   ├── Need on-the-fly?
+│   │   ├── Yes → bitsandbytes, HQQ, torchao
+│   │   └── No → AWQ, GPTQModel (better quality)
+│   └── Extreme memory constraint?
+│       └── AQLM (1-2 bit) or HQQ (1 bit)
+└── AMD GPU (ROCm)
+    └── bitsandbytes 🟡 or AWQ or GPTQModel or Quark
+```
+
+### Zero-Cost Recommendations for Beer's 8 Models
+
+Since Beer has no income (zero-cost constraint) and owns 8 models on HF:
+
+1. **For serverless inference on HF:** Use pre-quantized GGUF models (free via HuggingChat or Inference Providers) — no cost, no GPU needed.
+2. **For local testing on CPU:** Download GGUF models (Q4_K_M) — single file, easy to test, works on any hardware.
+3. **For fine-tuning (if GPU access via free tiers):** bitsandbytes + PEFT (QLoRA) — on-the-fly 4-bit, no calibration needed, free Colab/ZeroGPU compatible.
+4. **For deploying on HF Spaces ZeroGPU:** torchao or bitsandbytes — both work in free Spaces with ZeroGPU (NVIDIA A10G).
+5. **For pushing quantized versions of Beer's own models:** Choose AWQ (best quality at 4-bit) or GGUF (widest compatibility) depending on target audience.
+
+### Resources
+- Transformers Quantization Overview: https://huggingface.co/docs/transformers/en/quantization/overview
+- bitsandbytes: https://github.com/bitsandbytes-foundation/bitsandbytes
+- AWQ (AutoAWQ): https://github.com/casper-hansen/AutoAWQ
+- GPTQModel: https://github.com/ModelCloud/GPTQModel
+- HQQ: https://github.com/mobiusml/hqq/
+- optimum-quanto: https://github.com/huggingface/optimum-quanto
+- torchao: https://github.com/pytorch/ao
+- AQLM: https://github.com/Vahe1994/AQLM
+- GGUF Hub Docs: https://huggingface.co/docs/hub/en/models-gguf
