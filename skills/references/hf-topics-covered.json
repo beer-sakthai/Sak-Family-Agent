@@ -92,5 +92,7 @@
   "hf-peft-prefix-tuning-and-p-tuning",
   "hf-datasets-server-advanced-query",
   "hf-transformers-gguf-integration",
-  "hf-spaces-persistent-storage-zero-cost"
+  "hf-spaces-persistent-storage-zero-cost",
+  "hf-hub-lfs-architecture",
+  "hf-transformers-hqq-quantization"
 ]
