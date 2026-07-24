@@ -5467,3 +5467,236 @@ The Diffusers video ecosystem has matured significantly, with the `main` branch 
 - [Genmo Mochi 1](https://github.com/genmoai/models)
 - [Wan-AI GitHub](https://github.com/Wan-AI/Wan)
 |
+## 2026-07-24: hf-hub-pull-requests-and-discussions-api — Full Guide (Topic #123)
+
+### Summary
+Comprehensive deep-dive into the Hugging Face Hub's Pull Requests and Discussions system — the community collaboration layer for models, datasets, Spaces, and storage repos. Covers the no-fork ref-based PR architecture, the web UI lifecycle (draft → open → merged/closed), programmatic API via `huggingface_hub`, and the `hf discussions` CLI. Key insight: HF PRs do NOT use forks — contributors push to custom git refs (e.g. `refs/pr/42`) directly on the source repo.
+
+### Architecture — No Fork, All Ref
+
+HF's PR system is fundamentally different from GitHub:
+
+| Feature | GitHub PR | HF Hub PR |
+|---------|-----------|-----------|
+| Fork required | Yes — fork + branch | No — push to `refs/pr/N` on source repo |
+| Where changes live | Fork's branch | Custom git ref `refs/pr/{N}` on source repo |
+| Clone visibility | Not fetched by default | Not fetched by default (intentional) |
+| Distinction from Issues | Separate systems | PRs and Discussions share the same list |
+| Streamlined for ML | No | Yes — model/dataset/Space-specific defaults |
+
+### PR Lifecycle
+
+```
+Draft (default when created via advanced mode / API)
+  │
+  ▼
+Open (Publish button)
+  │
+  ├── Merged  → optional: delete ref to free storage
+  └── Closed  → optional: delete ref to free storage
+```
+
+**Draft → Open:** Draft is the default when creating a PR via "Advanced mode" or via `create_pull_request()` API. The Publish button converts it to Open. This transition is **one-way** — you cannot go back to draft.
+
+**Closing/Merging:** After close or merge, a banner appears showing storage freed by deleting the PR ref. Clicking "Delete ref" removes `refs/pr/{N}` permanently — this is **irreversible**.
+
+### Web UI Features
+
+| Feature | Who Can Use |
+|---------|-------------|
+| Edit title | Author, repo writer, or org write-access |
+| Pin discussion | Write-access to repo |
+| Lock discussion | Write-access to repo (prevents new comments) |
+| Edit comment | Comment author or write-access |
+| Hide comment | Write-access (irreversible — content hidden forever) |
+| Markdown + LaTeX | Everyone (`$$...$$` for display, `\\\\(...\\\\)` for inline) |
+
+### Git — Working with PRs Locally
+
+```bash
+# Fetch a specific PR (e.g. PR #42)
+git fetch origin refs/pr/42:pr/42
+git checkout pr/42
+
+# Make changes and push back to the PR
+git commit -m "Add your change"
+git push origin pr/42:refs/pr/42
+
+# Fetch ALL PRs (git magician mode)
+git config remote.origin.fetch "+refs/pr/*:refs/remotes/origin/pr/*"
+git fetch origin
+git checkout pr/42
+```
+
+### Programmatic API — huggingface_hub
+
+#### List Discussions/PRs
+
+```python
+from huggingface_hub import get_repo_discussions
+
+# Iterate all discussions/PRs
+for discussion in get_repo_discussions(repo_id="bigscience/bloom"):
+    print(f"{discussion.num} - {discussion.title}, pr: {discussion.is_pull_request}")
+
+# Filter by author, type, status
+for discussion in get_repo_discussions(
+    repo_id="bigscience/bloom",
+    author="ArthurZ",
+    discussion_type="pull_request",  # or "discussion"
+    discussion_status="open",          # or "closed"
+):
+    print(f"{discussion.num} - {discussion.title}")
+
+# Get a flat list
+discussions_list = list(get_repo_discussions(repo_id="bert-base-uncased"))
+```
+
+#### Get Detailed PR Info
+
+```python
+from huggingface_hub import get_discussion_details
+
+details = get_discussion_details(
+    repo_id="bigscience/bloom-1b3",
+    discussion_num=2
+)
+# Returns DiscussionWithDetails with:
+#   .num, .title, .author, .status, .is_pull_request
+#   .events — all comments, commits, status changes, renames
+#   .diff — raw git diff (PR only)
+#   .target_branch — "refs/heads/main"
+#   .merge_commit_oid — None if not merged
+```
+
+#### Create PR from a Commit
+
+The easiest way to propose changes: set `create_pr=True` on any commit operation.
+
+```python
+from huggingface_hub import metadata_update, upload_file, upload_folder, delete_file, delete_folder
+
+# Update model card metadata via PR
+metadata_update(
+    repo_id="username/repo_name",
+    metadata={"tags": ["computer-vision", "awesome-model"]},
+    create_pr=True,
+)
+
+# Upload file via PR
+upload_file(
+    path_or_fileobj="local_file.bin",
+    path_in_repo="remote_file.bin",
+    repo_id="username/repo_name",
+    create_pr=True,
+)
+```
+
+#### Create Discussion/PR from Scratch
+
+```python
+from huggingface_hub import create_discussion, create_pull_request
+
+# Create a discussion
+disc = create_discussion(
+    repo_id="username/repo-name",
+    title="Hi from the huggingface_hub library!",
+)
+
+# Create a pull request (starts in DRAFT mode)
+pr = create_pull_request(
+    repo_id="username/repo-name",
+    title="Fix tokenizer config",
+)
+```
+
+#### Manage PRs
+
+```python
+from huggingface_hub import (
+    comment_discussion,
+    edit_discussion_comment,
+    rename_discussion,
+    change_discussion_status,
+    merge_pull_request,
+)
+
+# Add a comment
+comment_discussion(repo_id="username/repo-name", discussion_num=5, body="LGTM!")
+
+# Rename
+rename_discussion(repo_id="username/repo-name", discussion_num=5, title="Better title")
+
+# Open/Close
+change_discussion_status(repo_id="username/repo-name", discussion_num=5, new_status="closed")
+
+# Merge a PR
+merge_pull_request(repo_id="username/repo-name", discussion_num=5)
+```
+
+### CLI — hf discussions
+
+All operations available from the command line — useful for CI pipelines and scripting.
+
+```bash
+# List all discussions/PRs (supports --type: model/dataset/space)
+hf discussions list username/repo-name
+
+# List discussions on a dataset repo
+hf discussions list username/dataset-repo --type dataset
+
+# Get details + comments
+hf discussions info username/repo-name 5
+
+# Create discussion
+hf discussions create username/repo-name --title "Bug report" --body "Description here"
+
+# Create pull request
+hf discussions create username/repo-name --title "Fix typo" --pull-request
+
+# Comment
+hf discussions comment username/repo-name 5 --body "LGTM!"
+
+# Merge
+hf discussions merge username/repo-name 5 --yes
+
+# Show diff
+hf discussions diff username/repo-name 5
+```
+
+### Storage Management
+
+After closing or merging a PR, a banner shows **estimated storage that could be freed** by deleting the PR's git ref:
+
+```
+Changes in this PR are now part of main.
+Delete ref to free ~X MB of storage.
+```
+
+Click "Delete ref" to permanently remove `refs/pr/{N}`. This is especially useful when:
+- The main branch was squashed-merged (PR branch retains full history)
+- Files were deleted in main but remain in PR branch history
+- Large binary files were added during development
+
+### Key Design Decisions
+
+1. **No forks = lower friction.** Contributors don't need to maintain fork sync. Changes go directly to the source repo under custom refs that don't pollute the default clone.
+2. **PRs == Discussions.** Unified list reduces UX complexity. A Discussion becomes a PR when it has code changes attached.
+3. **Draft → Open is one-way.** Prevents abuse of toggling between states.
+4. **PR ref deletion is irreversible.** Storage savings come with the cost of losing history — design APIs accordingly.
+5. **`create_pr=True` is the recommended pattern.** Simplest way to contribute: just write files as normal, add one parameter.
+
+### Zero-Cost Relevance
+
+- **Free to use**: No cost to create/comment/merge PRs. Storage costs only apply to the PR ref itself.
+- **Free storage cleanup**: Deleting closed/merged PR refs reclaims storage on free tier.
+- **CI/CD scripting**: `hf discussions merge` + `hf discussions diff` can be wired into free GitHub Actions.
+- **No fork needed**: Avoids the storage cost of maintaining a full fork on the Hub.
+
+### References
+- [HF Hub Docs: Pull Requests and Discussions](https://huggingface.co/docs/hub/en/repositories-pull-requests-discussions)
+- [huggingface_hub: Interact with Discussions and PRs](https://huggingface.co/docs/huggingface_hub/main/en/guides/community)
+- [HfApi Discussion Methods Reference](https://huggingface.co/docs/huggingface_hub/main/en/package_reference/hf_api#huggingface_hub.HfApi.get_repo_discussions)
+- [CLI: hf discussions](https://huggingface.co/docs/huggingface_hub/main/en/guides/cli#hf-discussions)
+- [Repository Settings](https://huggingface.co/docs/hub/en/repositories-settings)
+|
