@@ -1,5 +1,259 @@
 # HF Learnings Log
 
+## 2026-07-24: hf-hub-commit-api — Deep Dive (Topic #57)
+
+### Summary
+Comprehensive deep-dive into Hugging Face Hub's Commit API — the low-level foundation for all file operations on the Hub. Covers all three `CommitOperation` types (Add, Delete, Copy), the `create_commit()` entry point, high-level wrappers (`upload_file`, `upload_folder`, `copy_files`), the `CommitScheduler` for periodic pushes, `preupload_lfs_files` for memory-constrained large uploads, and `list_repo_commits` for inspecting history. Focused on practical patterns that work under zero-cost constraints.
+
+### Core Architecture
+
+The Hub Commit API follows a three-operation model:
+
+| Operation | Purpose | Fields |
+|---|---|---|
+| `CommitOperationAdd` | Upload/create a file | `path_in_repo`, `path_or_fileobj` (str Path bytes or BinaryIO) |
+| `CommitOperationDelete` | Remove a file or folder | `path_in_repo` |
+| `CommitOperationCopy` | Copy within/across repos (server-side) | `src_path_in_repo`, `path_in_repo`, optional `src_revision`, `src_repo_id`, `src_repo_type` |
+
+All three inherit from `CommitOperation` and are passed as a list to `create_commit()`.
+
+### create_commit() Parameters
+
+```python
+api.create_commit(
+    repo_id="user/repo",
+    operations=[...],           # List[CommitOperation] — will be mutated!
+    commit_message="msg",       # Required, non-empty
+    commit_description=None,    # Optional longer description
+    token=None,                 # Defaults to cached token
+    repo_type=None,             # None/model, dataset, space
+    revision=None,              # Branch name or commit OID (default: main)
+    create_pr=False,            # Open a PR instead of committing directly
+    num_threads=5,              # Concurrent upload threads for LFS files
+    parent_commit=None,         # OID to enforce linear history (optimistic locking)
+    run_as_future=False,        # Non-blocking background execution
+)
+```
+
+**Critical constraints:**
+- Max **25k LFS files** per commit
+- Max **1GB payload** for regular (non-LFS) files
+- The input `operations` list **will be mutated** — do not reuse objects
+- Repo must already exist; create it first with `create_repo()`
+- Empty `commit_message` raises `ValueError`
+
+### CommitOperationAdd — Three Input Modes
+
+```python
+# 1. From local file path
+CommitOperationAdd(path_in_repo="weights.bin", path_or_fileobj="./local/weights.bin")
+
+# 2. From bytes in memory
+CommitOperationAdd(path_in_repo="config.json", path_or_fileobj=b'{"key": "value"}')
+
+# 3. From binary file object (supports seek/tell)
+with open("data.bin", "rb") as f:
+    CommitOperationAdd(path_in_repo="data.bin", path_or_fileobj=f)
+```
+
+Internally computes `UploadInfo` (SHA256 for LFS, SHA1 for regular files) and compares against the remote OID to skip unchanged files (preventing empty commits).
+
+The `as_file()` context manager yields a `BinaryIO` from any input type, optionally with tqdm progress bar:
+```python
+with operation.as_file(with_tqdm=True) as f:
+    httpx.put(..., data=f)
+```
+
+### CommitOperationCopy — Server-Side Copies
+
+```python
+# Copy within same repo
+CommitOperationCopy(src_path_in_repo="image.png", path_in_repo="backup/image.png")
+
+# Copy from another repo
+CommitOperationCopy(
+    src_path_in_repo="weights.safetensors",
+    path_in_repo="weights.safetensors",
+    src_repo_id="other-user/source-model",
+    src_repo_type="model",
+    src_revision="main",       # Optional: specify source branch
+)
+```
+
+**Key details:**
+- Zero data transfer — server-side operation, no download/upload cost
+- Works across repos but NOT across storage regions
+- Also works with Buckets via `api.copy_files(source, destination)` using `hf://` URIs
+
+### CommitInfo Return Value
+
+```python
+@dataclass
+class CommitInfo(str):
+    commit_url: str        # e.g. "https://huggingface.co/user/repo/commit/abc123"
+    commit_message: str
+    commit_description: str
+    oid: str               # Full SHA commit hash
+    pr_url: str | None     # Set when create_pr=True
+    pr_revision: str | None  # e.g. "refs/pr/1"
+    pr_num: int | None
+    repo_url: RepoUrl      # Parsed repo info
+```
+
+Inherits from `str` for backward compatibility (the string value is the commit URL).
+
+### High-Level Wrappers
+
+#### upload_file() — Single File
+
+```python
+api.upload_file(
+    path_or_fileobj="/path/to/local/README.md",  # or bytes or BinaryIO
+    path_in_repo="README.md",
+    repo_id="user/test-dataset",
+    repo_type="dataset",
+)
+```
+
+#### upload_folder() — Directory Upload (Recommended)
+
+```python
+api.upload_folder(
+    folder_path="./logs",
+    repo_id="user/trained-model",
+    path_in_repo="experiment/logs/",
+    allow_patterns="*.txt",        # Upload only .txt files
+    ignore_patterns="**/temp/*",   # Exclude temp files
+    delete_patterns="*.txt",       # Delete remote .txt files before upload
+)
+```
+
+**Auto-batching:** When `hf_xet` is installed (default since huggingface_hub v0.32.0), `upload_folder()` automatically splits large folders into multiple commits with "(part 2)", "(part 3)" suffixes. It's **resumable** — re-run the same call after interruption and already-committed files are skipped, chunks are deduplicated.
+
+**Performance:** Set `HF_XET_HIGH_PERFORMANCE=1` to saturate bandwidth and CPU cores. The legacy `HF_HUB_ENABLE_HF_TRANSFER=1` is deprecated.
+
+#### copy_files() — Server-Side Cross-Repo Copy
+
+```python
+# Copy single file between repos
+api.copy_files(
+    "hf://username/source-model/weights.safetensors",
+    "hf://username/target-model/weights.safetensors",
+)
+
+# Copy entire folder (rsync-style with trailing /)
+api.copy_files(
+    "hf://datasets/username/source-dataset/data/",
+    "hf://datasets/username/target-dataset/data/",
+)
+
+# Duplicate within same repo
+api.copy_files(
+    "hf://username/my-model/config.json",
+    "hf://username/my-model/backup/config.json",
+)
+```
+
+**Folder semantics:**
+- Trailing `/` on source → copies **contents** (rsync-style, no nesting)
+- No trailing `/` on source → copies **folder itself** (cp -r style, nests inside destination)
+
+### CommitScheduler — Periodic Background Uploads
+
+```python
+from huggingface_hub import CommitScheduler
+
+scheduler = CommitScheduler(
+    repo_id="user/feedback-data",
+    repo_type="dataset",
+    folder_path="/local/data",
+    path_in_repo="data",
+    every=10,                    # minutes between commits
+    allow_patterns="*.jsonl",
+    squash_history=False,        # Set True to keep repo history manageable
+)
+```
+
+**Key design properties:**
+- **Append-only assumption:** Only add new files or append to existing ones. Deleting/overwriting may corrupt the repo.
+- **No empty commits:** Automatically skips if no changes detected.
+- **Thread-safe:** Use `scheduler.lock` context manager for concurrent writes from multiple threads.
+- **Error resilience:** Silent failure on network errors — retries at next interval.
+- **Context manager:** Use `with CommitScheduler(...) as scheduler:` to ensure clean shutdown + final commit.
+
+**Custom push_to_hub():** Override to transform data before upload (e.g., zip PNGs, aggregate logs):
+```python
+class ZipScheduler(CommitScheduler):
+    def push_to_hub(self):
+        png_files = list(self.folder_path.glob("*.png"))
+        if not png_files:
+            return
+        # ... zip and upload via self.api.upload_file(...)
+        for png in png_files:
+            png.unlink()  # clean up local files
+```
+
+### preupload_lfs_files — Memory-Constrained Large Uploads
+
+For cases where you generate large shards in memory and want a single commit:
+
+```python
+from huggingface_hub import CommitOperationAdd, preupload_lfs_files, create_commit
+
+operations = []
+for i in range(5):
+    content = generate_shard()  # generates bytes
+    addition = CommitOperationAdd(path_in_repo=f"shard_{i}.bin", path_or_fileobj=content)
+    preupload_lfs_files(repo_id, additions=[addition])  # upload to S3 now
+    operations.append(addition)
+
+# Single commit referencing all pre-uploaded files
+create_commit(repo_id, operations=operations, commit_message="All shards")
+```
+
+**⚠ Caveat:** Until the commit is made, pre-uploaded files are NOT accessible on the Hub. The `CommitOperationAdd` objects are **mutated** (binary content removed from the object) during preupload.
+
+### list_repo_commits — Inspecting History
+
+```python
+commits = api.list_repo_commits("gpt2")
+# Sorted by date, newest first
+
+initial_commit = commits[-1]  # Last is the initial commit
+# GitCommitInfo(
+#     commit_id='9b865efde13a30...',
+#     authors=['system'],
+#     created_at=datetime(...),
+#     title='initial commit',
+#     message='',
+# )
+```
+
+Useful for finding the initial commit OID to create an empty branch:
+```python
+api.create_branch("gpt2", "new_empty_branch", revision=initial_commit.commit_id)
+```
+
+### Zero-Cost Best Practices
+
+1. **Prefer `upload_folder()` with `hf_xet`** — automatic batching, resumability, and deduplication are free and reduce API calls.
+2. **Use `CommitOperationCopy` for file duplication** — server-side copies cost nothing and move zero bytes.
+3. **Schedule with `CommitScheduler`** — avoid per-event commits; batch every 5-10 minutes to stay under rate limits (~100 req/min).
+4. **Check `_remote_oid` before uploading** — `create_commit` already deduplicates unchanged files, but you can pre-check with `file_exists()` on the Hub API.
+5. **Avoid empty PRs** — opening PRs without real changes wastes rate limit budget.
+6. **Never reuse `CommitOperation` objects** — they get mutated during upload; create fresh operations per commit.
+7. **Use `repo_type="dataset"` for persistent storage** — datasets get generous LFS storage for free and integrate with `CommitScheduler`.
+
+### Resources
+- Upload guide: https://huggingface.co/docs/huggingface_hub/en/guides/upload
+- HfApi reference: https://huggingface.co/docs/huggingface_hub/en/package_reference/hf_api
+- CommitScheduler: https://huggingface.co/docs/huggingface_hub/en/package_reference/hf_api#huggingface_hub.CommitScheduler
+- Repository limitations: https://huggingface.co/docs/hub/en/repositories-limitations
+- HF URIs syntax: https://huggingface.co/docs/huggingface_hub/en/package_reference/utilities#huggingface_hub.HfUri
+- Xet storage overview: https://huggingface.co/docs/hub/en/xet
+
+---
+
 ## 2026-07-23: hf-bitsandbytes-quantization
 
 ### Summary
