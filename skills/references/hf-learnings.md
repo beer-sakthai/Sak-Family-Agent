@@ -11991,4 +11991,113 @@ When hf_transfer was active (pre-deprecation):
 - hf_transfer PyPI: https://pypi.org/pypi/hf_transfer/
 - Hugging Face Xet docs: https://huggingface.co/docs/hub/en/xet
 - Environment vars: https://huggingface.co/docs/huggingface_hub/package_reference/environment_variables
+
+---
+
+## 2026-07-24: hf-gradio-lite-deep-dive — Complete Gradio Lite Architecture Reference (Topic #175 Deep-Dive)
+
+### Summary
+Deep-dive into `@gradio/lite` — Gradio's serverless runtime that runs entire Gradio apps inside the browser using Pyodide (Python for WebAssembly). Covers the architecture, custom element API (`<gradio-lite>`), Wasm worker pipeline, filesystem virtualization, ASGI-over-Wasm protocol, package installation via micropip, the Playground mode, limitations, and the official deprecation/archival status.
+
+### Quick Facts
+
+| Attribute | Value |
+|-----------|-------|
+| Package | `@gradio/lite` (npm), v5.45.0 (final) |
+| License | Apache-2.0 |
+| Runtime | Pyodide v0.27.3 (Python 3.12 Wasm) |
+| CDN | `https://cdn.jsdelivr.net/npm/@gradio/lite/dist/lite.js` |
+| Worker | DedicatedWorker (default) or SharedWorker (`shared-worker` attr) |
+| Status | **Archived** — frozen repo at gradio-app/gradio-lite |
+
+### Architecture
+
+```
+┌─────────────────────────────────────────────┐
+│  Browser DOM                                │
+│  ┌─────────────────────────────────┐        │
+│  │  <gradio-lite> Custom Element   │        │
+│  │  ┌──────────┐ ┌──────────────┐ │        │
+│  │  │ LiteIndex│ │  Playground  │ │        │
+│  │  │ (Svelte) │ │  (Svelte)    │ │        │
+│  │  └────┬─────┘ └──────────────┘ │        │
+│  │       │                        │        │
+│  │  ┌────▼────────┐               │        │
+│  │  │ WorkerProxy │               │        │
+│  │  │ (EventTarget)│              │        │
+│  │  └────┬────────┘              │        │
+│  └───────┼─────────────────────────┘        │
+│          │ postMessage (MessageChannel)      │
+├──────────┼──────────────────────────────────┤
+│  Wasm Worker (WebWorker)                     │
+│  ┌───────▼──────────────────────────┐       │
+│  │  Pyodide v0.27.3                  │       │
+│  │  ┌─────────────────┐  gradio.whl │       │
+│  │  │ Python 3.12     │  gradio_    │       │
+│  │  │ + micropip      │  client.whl │       │
+│  │  │ + gradio        │             │       │
+│  │  └─────────────────┘             │       │
+│  ├──────────────────────────────────┤       │
+│  │  ASGI Gateway: Wasm → HTTP proxy │       │
+│  └──────────────────────────────────┘       │
+└─────────────────────────────────────────────┘
+```
+
+### Layer Details
+
+**1. Custom Element (`<gradio-lite>`):** Registered via `customElements.define()`. Parses HTML attributes (theme, embed, eager, shared-worker, playground, layout, info, container, etc.) and child elements (`<gradio-file>`, `<gradio-requirements>`, `<gradio-code>`). Maps inline Python code or named files into the Wasm virtual filesystem.
+
+**2. WorkerProxy (main thread):** Bridges the DOM and the Web Worker via `MessageChannel` async protocol. Two-phase init: (1) `init-env` loads Pyodide + Gradio wheels, (2) `init-app` writes files + installs requirements. Dispatches events: `initialization-completed`, `initialization-error`, `progress-update`, `stdout`, `stderr`, `python-error`.
+
+**3. Web Worker (Pyodide):** Bootstraps Pyodide v0.27.3, mocks `os.link` (not in Wasm) and `anyio.to_thread.run_sync` (no threading), loads `gradio.whl` + `gradio_client.whl` via micropip, registers the ASGI app wrapper. Installs user packages with up to 3 retries (`installPackages()` with `keep_going=True`).
+
+**4. Network Proxy (`wasm_proxied_fetch`):** Since Wasm has no native HTTP, all requests are proxied: JS serializes Request → Worker converts to ASGI scope → Python ASGI app processes → Response streamed back. SSE is proxied via `wasm_proxied_stream_factory`.
+
+### Usage Patterns
+
+| Pattern | Code |
+|---------|------|
+| Inline | `<gradio-lite>import gradio as gr\ngr.Interface(lambda x:f\"Hi {x}!\",\"text\",\"text\").launch()</gradio-lite>` |
+| Multi-file | `<gradio-file name="app.py" entrypoint>...</gradio-file>` + `<gradio-file name="utils.py">` |
+| Dependencies | `<gradio-requirements>transformers_js_py</gradio-requirements>` |
+| Remote URL | `<gradio-file name="app.py" entrypoint url="https://...">` |
+| Playground | `<gradio-lite playground layout="vertical">` |
+
+### JavaScript API
+
+```javascript
+const ctrl = createGradioApp({ target, code, requirements, files, entrypoint, themeMode })
+ctrl.run_code('print("hello")')
+ctrl.run_file('app.py')
+ctrl.write('file.txt', 'content')
+ctrl.rename('old.py', 'new.py')
+ctrl.unlink('file.txt')
+ctrl.install(['numpy'])
+ctrl.unmount()
+ctrl.addEventListener('stdout', (e) => ...)
+```
+
+### Key Source Insights
+
+1. **Wheel build:** `pnpm pybuild` → `hatch build -t lite` → `pyodide py-compile` for bytecode optimization
+2. **Cross-origin worker:** `CrossOriginWorkerMaker` creates blob: URL wrapper to bypass CDN CORS
+3. **ASGI scope conversion:** JS HTTP → Python ASGI scope with careful byte-encoding of headers/query/raw_path
+4. **Module unloading:** `unload_local_modules()` clears Python modules between Playground re-runs
+5. **Code completion:** Jedi-based `CodeCompleter` in Playground
+6. **Random entropy:** Wasm lacks `os.urandom` → `crypto.getRandomValues` polyfill
+7. **Static Spaces:** Gradio Lite apps work as Hugging Face Static Spaces (zero-cost, no server)
+
+### Limitations
+- 5-15s initial load (Pyodide download + init)
+- Only pure-Python packages (no C extensions unless pre-built for Wasm)
+- No threading, no GPU, no `os.link`
+- Browser memory limits (2-4 GB Wasm heap)
+- **Archived** — frozen at v5.45.0, no longer maintained
+
+### References
+- Archived source: https://github.com/gradio-app/gradio-lite
+- CDN: https://www.jsdelivr.com/package/npm/@gradio/lite
+- NPM: https://www.npmjs.com/package/@gradio/lite
+- Pyodide: https://pyodide.org/
+- Static Spaces: https://huggingface.co/docs/hub/en/spaces-static
 |
