@@ -174,5 +174,11 @@
   "hf-hub-modelcard-python-api",
   "hf-gradio-lite",
   "hf-transformers-qwen3-architecture-deep-dive",
-  "hf-peft-lora-deep-dive"
+  "hf-peft-lora-deep-dive",
+  "hf-vllm-transformers-modeling-backend-native-deep-dive",
+  "hf-timm-deep-dive",
+  "hf-safetensors-library-architecture",
+  "hf-hub-models-api-query-language-complete",
+  "hf-datasets-tool-calling-format",
+  "hf-context-engineering-course"
 ]
