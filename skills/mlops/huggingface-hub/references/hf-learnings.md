@@ -4336,3 +4336,267 @@ api.delete_sandbox("<id>")
 2. Volume mounts (hf:// URIs) avoid data downloads.
 3. Secrets injection only for dedicated mode.
 4. Zero-cost default: cpu-basic + pool mode.
+
+## 2026-07-24: hf-hub-create-commit-atomic-operations-deep-dive — `create_commit` API with CommitOperationAdd/Copy/Delete (Topic #211)
+
+### Summary
+Deep-dive into the `create_commit` API — the core programmatic interface for atomic multi-file operations on the Hugging Face Hub. Covers the three `CommitOperation` types (`Add`, `Copy`, `Delete`), the full commit lifecycle (preupload → LFS batch → commit), no-op detection, cross-repo copies, Xet vs legacy LFS upload, the `preupload_lfs_files` power-user pattern, `CommitInfo` return type, and high-level wrappers (`upload_file`, `upload_folder`, `delete_file`, `delete_folder`). Source: `huggingface_hub/_commit_api.py` and `huggingface_hub/hf_api.py` (v1.24.0).
+
+### Core Architecture
+
+`create_commit` is the foundation that all Hub write operations build on. It accepts a list of `CommitOperation` objects (mutated in-place during processing — do NOT reuse objects across commits) and returns a `CommitInfo`.
+
+#### Type Alias
+
+```python
+CommitOperation = Union[CommitOperationAdd, CommitOperationCopy, CommitOperationDelete]
+```
+
+### Three Operation Types
+
+#### 1. `CommitOperationAdd` — Upload Files
+
+```python
+@dataclass
+class CommitOperationAdd:
+    path_in_repo: str                          # e.g. "checkpoints/weights.bin"
+    path_or_fileobj: str | Path | bytes | BinaryIO  # Local path, bytes, or buffered IO
+    # Internal (set during commit):
+    _upload_mode: UploadMode | None = None     # "lfs" or "regular"
+    _remote_oid: str | None = None             # SHA of existing file on Hub (for no-op detection)
+    _local_oid: str | None = None              # SHA256 (LFS) or SHA1 (regular) of local content
+    _is_uploaded: bool = False                 # True once LFS upload completes
+    _is_committed: bool = False                # True once commit is sent
+```
+
+- `path_or_fileobj` accepts: `str` (file path), `Path`, `bytes` (in-memory content), or `io.BufferedIOBase` (must support `seek()` + `tell()`)
+- `upload_info` (computed in `__post_init__`): stores SHA256, file size, etc. via `UploadInfo.from_path()`, `UploadInfo.from_bytes()`, or `UploadInfo.from_fileobj()`
+- Use `.as_file()` context manager to read content regardless of input type:
+  ```python
+  with operation.as_file(with_tqdm=True) as f:
+      content = f.read()
+  ```
+- `.b64content()` returns base64-encoded bytes for inline content
+
+#### 2. `CommitOperationCopy` — Server-Side File Copy
+
+```python
+@dataclass
+class CommitOperationCopy:
+    src_path_in_repo: str                      # Source file path
+    path_in_repo: str                          # Destination file path
+    src_revision: str | None = None            # Git revision of source (default: current commit)
+    src_repo_id: str | None = None             # Cross-repo source (e.g. "user/source-model")
+    src_repo_type: str | None = None           # Required when src_repo_id set ("model"/"dataset"/"space")
+    # Internal:
+    _src_oid: str | None = None
+    _dest_oid: str | None = None
+    _is_duplicated: bool = False
+```
+
+- LFS files are copied **server-side** (no download/upload needed)
+- Regular (non-LFS) files are downloaded and re-uploaded as part of the commit
+- Cross-repo copies require same storage region (cross-region not supported)
+- Combine with `CommitOperationDelete` to rename an LFS file on the Hub:
+  ```python
+  operations = [
+      CommitOperationCopy(src_path_in_repo="old_name.bin", path_in_repo="new_name.bin"),
+      CommitOperationDelete(path_in_repo="old_name.bin"),
+  ]
+  ```
+
+#### 3. `CommitOperationDelete` — Delete Files or Folders
+
+```python
+@dataclass
+class CommitOperationDelete:
+    path_in_repo: str                          # File path or folder path (ending in "/")
+    is_folder: bool | Literal["auto"] = "auto" # Auto-detects by trailing "/"
+```
+
+- `is_folder="auto"` (default): path ending in `/` treated as folder, otherwise file
+- Explicit: `is_folder=True` or `is_folder=False`
+- Deleting a folder removes all files inside it in a single operation
+
+### The Commit Flow (Step by Step)
+
+When you call `api.create_commit(operations=[...])`, here's the internal sequence:
+
+```
+1. VALIDATE INPUTS
+   ├── parent_commit matches REGEX_COMMIT_OID (40 hex chars)
+   ├── commit_message is non-empty
+   ├── repo_type is one of: "model", "dataset", "space"
+   ├── No reused CommitOperationAdd (checks _is_committed flag)
+   └── Warn if .arrow/.parquet files uploaded to non-dataset repos
+
+2. VALIDATE README (early fail)
+   └── If any operation targets "README.md", validate YAML metadata before uploading anything
+
+3. WARN ON OVERWRITES
+   └── _warn_on_overwriting_operations(): warns if same file updated twice
+       or updated and then deleted in the same commit
+
+4. PREUPLOAD LFS FILES
+   └── preupload_lfs_files() [see below]
+
+5. FETCH FILES TO COPY
+   └── _fetch_files_to_copy(): resolves source file info for CommitOperationCopy
+
+6. DUPLICATE LFS FILES (cross-repo copies)
+   └── _duplicate_lfs_files(): For cross-repo copies, duplicate LFS objects
+       to destination repo before committing
+
+7. REMOVE NO-OP OPERATIONS
+   └── For CommitOperationAdd: skip if _remote_oid == _local_oid (file unchanged)
+   └── For CommitOperationCopy: skip if _dest_oid == _src_oid (identical source/dest)
+   └── If ALL operations are no-op: return early with latest commit info
+
+8. SEND COMMIT
+   └── _send_commit(): POST to /api/{repo_type}s/{repo_id}/commit with
+       all operations serialized
+```
+
+### No-Op Detection (Empty Commit Prevention)
+
+The library intelligently skips files that haven't changed:
+
+- **For CommitOperationAdd**: `_remote_oid` (SHA of existing file on Hub) is compared to `_local_oid` (SHA256 for LFS, SHA1 for regular). Match → skipped.
+- **For CommitOperationCopy**: `_src_oid` compared to `_dest_oid`. Match → skipped.
+- If **all** operations are no-op: returns `CommitInfo` from the latest commit with a warning: "No files have been modified since last commit. Skipping to prevent empty commit."
+
+### Preupload LFS Files Pattern (Power Users)
+
+`preupload_lfs_files()` lets you upload LFS files one at a time, freeing memory between uploads — crucial when generating files on-the-fly:
+
+```python
+from huggingface_hub import CommitOperationAdd, preupload_lfs_files, create_commit
+
+operations = []
+for i in range(5):
+    content = generate_large_binary()  # e.g. model shard
+    addition = CommitOperationAdd(
+        path_in_repo=f"shard_{i}_of_5.bin",
+        path_or_fileobj=content        # bytes or file-like
+    )
+    preupload_lfs_files(repo_id, additions=[addition])  # Uploads + frees memory
+    operations.append(addition)
+
+create_commit(repo_id, operations=operations, commit_message="Commit all shards")
+```
+
+Key details:
+- LFS files only (regular files < 5MB are committed inline)
+- `free_memory=True` (default): `path_or_fileobj` replaced with `b""` after upload
+- `gitignore_content`: optionally pass to check `.gitignore` rules before upload
+- Parallel upload with `num_threads` (default: 5)
+- Uses Xet protocol when available (`hf_xet`), falls back to legacy LFS HTTP
+
+### LFS Upload: Xet vs Legacy
+
+Two upload paths in `_upload_files()`:
+
+| Aspect | Xet Protocol | Legacy LFS HTTP |
+|--------|-------------|-----------------|
+| Deps | `hf_xet` package installed | Always available |
+| Buffered IO | ❌ not supported | ✅ supported |
+| SHA256 | Computed inside `hf_xet` during chunking | Computed client-side first |
+| Flow | Single pass read + upload | Two-pass: hash then upload |
+| Binary IO buffers | Falls back to legacy | Handled natively |
+
+When `hf_xet` is available and no `io.BufferedIOBase` operations exist → Xet path. Otherwise legacy.
+
+### `CommitInfo` Return Type
+
+```python
+@dataclass
+class CommitInfo(str):  # inherits str for backward compat
+    commit_url: str           # URL to view commit on Hub
+    commit_message: str       # First line
+    commit_description: str   # Full description (can be empty)
+    oid: str                  # Commit hash (e.g. "91c54ad1727ee830252e457677f467be0bfd8a57")
+    _endpoint: str | None     # API endpoint used
+    pr_url: str | None        # PR URL if create_pr=True
+    repo_url: RepoUrl         # Computed from commit_url
+    pr_revision: str | None   # Computed from pr_url, e.g. "refs/pr/1"
+    pr_num: int | None        # Computed from pr_url, e.g. 42
+```
+
+### `parent_commit` for Concurrency Safety
+
+Pass `parent_commit` (OID/SHA of expected parent) to prevent race conditions in concurrent workflows:
+
+```python
+# Ensure no one else committed before us
+info = create_commit(
+    repo_id="user/repo",
+    operations=[...],
+    commit_message="sensitive update",
+    parent_commit=known_sha,
+)
+```
+
+- If `revision` doesn't point to `parent_commit` → commit fails
+- If `create_pr=True` → PR created from `parent_commit`
+
+### PR Creation Flow
+
+When `create_pr=True`:
+1. LFS preupload uses `revision=None` (so read-access users can still preupload even without write perms)
+2. Commit is created against the target branch, then a PR discussion is opened
+3. `CommitInfo` returns `pr_url`, `pr_revision` (`refs/pr/N`), and `pr_num`
+
+### High-Level Wrappers
+
+These convenience methods all delegate to `create_commit`:
+
+| Method | What it does |
+|--------|-------------|
+| `upload_file(path_in_repo, path_or_fileobj, repo_id, ...)` | Single file upload via `CommitOperationAdd` |
+| `upload_folder(folder_path, repo_id, ...)` | Recursive folder upload with **parallel** uploads (thread pool), path stripping, allow/ignore patterns |
+| `delete_file(path_in_repo, repo_id, ...)` | Single file delete via `CommitOperationDelete` |
+| `delete_files(paths_in_repo, repo_id, ...)` | Batch file delete |
+| `delete_folder(folder_path, repo_id, ...)` | Folder delete (path must end with `/`) |
+
+### `upload_folder` Advanced Features
+
+```python
+api.upload_folder(
+    folder_path="./local_checkpoints",
+    repo_id="user/repo",
+    path_in_repo="remote/checkpoints",      # strip local prefix
+    allow_patterns=["*.bin", "*.safetensors"],  # only these files
+    ignore_patterns=["*.tmp"],                   # skip these
+    delete_patterns=["*.old"],                   # delete matching remote files first
+    num_threads=10,                              # parallel upload
+    create_pr=True,
+)
+```
+
+- `allow_patterns` / `ignore_patterns`: glob-based file filtering
+- `delete_patterns`: delete matching remote files in the same commit (atomic replacement)
+- `num_threads`: parallelism for upload (default: 5, based on `UPLOAD_BATCH_MAX_NUM_FILES=256`)
+- Path mapping: `os.path.relpath(local_path, folder_path)` → `path_in_repo/relative_path`
+
+### Limits & Constraints
+
+| Constraint | Value |
+|-----------|-------|
+| Max LFS files per commit | 25,000 |
+| Max payload for regular files | 1 GB |
+| LFS batch fetch size | 500 files (`FETCH_LFS_BATCH_SIZE`) |
+| Upload batch chunk | 256 files (`UPLOAD_BATCH_MAX_NUM_FILES`) |
+| Default upload threads | 5 |
+| Cross-region copies | ❌ Not supported |
+| IO buffer + Xet | ❌ Falls back to legacy HTTP |
+
+### Best Practices
+
+1. **Use `upload_folder` with `delete_patterns`** for atomic deployment updates (upload new, delete old in one commit)
+2. **Preupload LFS files** when generating content on-the-fly to keep memory low
+3. **Set `parent_commit`** in concurrent workflows to prevent conflicts
+4. **Use `CommitOperationCopy` for renaming** large LFS files (server-side, no re-upload)
+5. **Validate README metadata offline** before committing (early fail prevents wasted uploads)
+6. **Don't reuse `CommitOperationAdd` objects** — they're mutated during the commit flow
+7. **Check for `RepositoryNotFoundError`** if getting 404s — repo must exist before committing
+8. **For large folders**, batch additions in groups and use `create_pr=True` for safe review
