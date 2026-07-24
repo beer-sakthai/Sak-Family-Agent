@@ -115,5 +115,11 @@
   "hf-datasets-video-processing",
   "hf-hub-cache-deep-dive",
   "hf-inference-client-structured-outputs-deep-dive-v2",
-  "hf-datasets-server-core-endpoints-deep-dive"
+  "hf-datasets-server-core-endpoints-deep-dive",
+  "hf-transformers-torchao-integration-deep-dive",
+  "accelerate-composable-parallelism-deep-dive",
+  "hf-inference-client-chat-completion-source-deep-dive",
+  "hf-diffusers-video-generation-pipeline-deep-dive-v2",
+  "hf-hub-pull-requests-and-discussions-api",
+  "hf-datasets-builder-advanced-patterns"
 ]
