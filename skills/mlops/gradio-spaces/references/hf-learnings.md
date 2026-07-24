@@ -1047,5 +1047,265 @@ btn.click(fn=my_fn, ..., queue=False)                # skip queue
 6. **`api_open=True`** lets programmatic clients bypass the queue (useful for internal services).
 7. **Queue is FIFO** — no priority; long-running streaming jobs block the queue for others.
 8. **Status updates** flow over WebSocket — client libraries can show queue position + ETA.
-9. **`GRADIO_DEFAULT_CONCURRENCY_LIMIT`** env var sets the default before your code runs.
-10. **Cache bypasses queue** — `@gr.Cache()` is free and fast for repeated requests.
+10. **`GRADIO_DEFAULT_CONCURRENCY_LIMIT`** env var sets the default before your code runs.
+11. **Cache bypasses queue** — `@gr.Cache()` is free and fast for repeated requests.
+
+---
+
+## 2026-07-24: hf-gradio-6-chatinterface-deep-dive
+
+### Summary
+Deep dive into `gr.ChatInterface` (Gradio v6.20.0) — Gradio's high-level abstraction for creating chatbot UIs. Covers the full parameter API (30+ parameters), streaming, multimodal input, custom chatbot integration, events (like/submit/retry), history persistence, agent/tool-use patterns, and production configuration (concurrency, caching, API visibility). ChatInterface is the preferred pattern for LLM chatbots on Hugging Face Spaces — replaces manual gr.Chatbot + gr.Textbox wiring in most cases.
+
+### Sources
+- Official docs: https://www.gradio.app/docs/gradio/chatinterface
+- Gradio changelog: https://github.com/gradio-app/gradio/releases
+- Source code: `gradio/chatinterface.py` in `gradio>=6.0`
+
+### Full Parameter API
+
+#### Required
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `fn` | `Callable` | The chat function. Accepts `(message: str, history: list[dict])` and returns/yields `str` | `gr.Component` | `dict` (openai-style) | `list[dict]`. History format: `[{"role": "user"|"assistant", "content": str | {"path": str} | gr.Component}]` |
+
+#### Input Configuration
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `multimodal` | `bool` | `False` | If True, uses `gr.MultimodalTextbox` for file upload support. When True, `fn` receives `{"text": str, "files": list}` instead of plain str |
+| `chatbot` | `gr.Chatbot` | `None` | Custom Chatbot instance for fine-grained control (placeholder, avatar_images, latex_delimiters, sanitize_html, render_markdown, bubble_full_width, show_copy_button, etc.) |
+| `textbox` | `gr.Textbox` | `gr.MultimodalTextbox` | `None` | Custom text input component instance |
+
+#### Additional Inputs/Outputs
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `additional_inputs` | `str` | `Component` | `list[str | Component]` | `None` | Extra components passed as additional args to `fn` after `history`. If not already in a Blocks context, displayed in an accordion below the chatbot |
+| `additional_inputs_accordion` | `str` | `gr.Accordion` | `None` | Custom accordion for additional inputs, defaults to `gr.Accordion(label="Additional Inputs", open=False)` |
+| `additional_outputs` | `Component` | `list[Component]` | `None` | Extra output components — `fn` must return additional values for these. Must already exist in Blocks scope |
+
+#### UX & Appearance
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `editable` | `bool` | `False` | Allow users to edit past messages and regenerate responses |
+| `title` | `str` | `I18nData` | `None` | Title above chatbot in large font, also used as browser tab title |
+| `description` | `str` | `None` | Description below title, accepts Markdown and HTML |
+| `fill_height` | `bool` | `True` | Expand to fill window height |
+| `fill_width` | `bool` | `False` | Expand horizontally to fill container (default: centered + constrained width) |
+| `autofocus` | `bool` | `True` | Auto-focus textbox on page load |
+| `autoscroll` | `bool` | `True` | Auto-scroll to bottom on new messages (pauses if user scrolls up) |
+| `submit_btn` | `str` | `bool` | `True` | Show submit button. String = custom text, False = hide, True = icon-only |
+| `stop_btn` | `str` | `bool` | `True` | Show stop button during generator execution. String = custom text |
+| `show_progress` | `Literal["full","minimal","hidden"]` | `"minimal"` | Progress animation level |
+
+#### Examples
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `examples` | `list[str]` | `list[MultimodalValue]` | `list[list]` | `None` | Sample inputs. Strings for text-only, dicts for multimodal. With additional_inputs, each example is a list: `[message, val1, val2, ...]` |
+| `example_labels` | `list[str]` | `None` | Labels displayed instead of example values |
+| `example_icons` | `list[str]` | `None` | Icon URLs/paths displayed above examples |
+| `run_examples_on_click` | `bool` | `True` | Auto-run example through fn on click (False = only populate input) |
+| `cache_examples` | `bool` | `None` | Cache example outputs. Default True on HF Spaces, False elsewhere |
+| `cache_mode` | `Literal["eager","lazy"]` | `None` | "eager" = cache at launch, "lazy" = cache after first use. Falls back to GRADIO_CACHE_MODE env var, then "eager" |
+
+#### Flagging
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `flagging_mode` | `Literal["never","manual"]` | `None` | "never" hides flag button, "manual" shows it |
+| `flagging_options` | `list[str]` | `tuple[str,...]` | `("Like","Dislike")` | Flag categories. "Like"/"Dislike" render as thumbs up/down icons per bot message |
+| `flagging_dir` | `str` | `".gradio/flagged"` | Directory for flagged data |
+
+#### API & Advanced
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `api_name` | `str` | `None` | API endpoint name (None = use fn name) |
+| `api_description` | `str` | `False` | `None` | API endpoint description (None = use fn docstring, False = hidden) |
+| `api_visibility` | `Literal["public","private","undocumented"]` | `"public"` | API docs visibility |
+| `concurrency_limit` | `int` | `None` | `Literal["default"]` | Max simultaneous submissions. "default" = queue default (1), None = unlimited |
+| `delete_cache` | `tuple[int,int]` | `None` | Auto-delete temp files: `(frequency_seconds, max_age_seconds)`. e.g. `(86400, 86400)` = daily cleanup |
+| `save_history` | `bool` | `False` | Save chat to browser localStorage with side panel for previous conversations |
+| `validator` | `Callable` | `None` | Input validation function, returns `gr.validate()` objects |
+| `analytics_enabled` | `bool` | `None` | Telemetry toggle. Falls back to GRADIO_ANALYTICS_ENABLED env var |
+
+### Events & Methods
+
+ChatInterface inherits event methods from gr.Blocks:
+
+| Method | Description |
+|--------|-------------|
+| `.submit(fn, inputs, outputs, ...)` | Triggered on message submit |
+| `.like(fn, inputs, outputs, ...)` | Attached to Chatbot component — upvote/downvote (only when flagging_options includes "Like"/"Dislike") |
+| `.then(fn, inputs, outputs, ...)` | Chain events after submit |
+| `.success(fn, inputs, outputs, ...)` | Fire on successful completion |
+| `.error(fn, inputs, outputs, ...)` | Fire on error |
+| `.queue(default_concurrency_limit=N)` | Enable queue with concurrency control |
+
+**Key difference from gr.Chatbot.like()**: In ChatInterface, `.like()` is wired through the `flagging_options=["Like","Dislike"]` parameter. The `Chatbot.like()` method is separate — it fires on clicking the thumbs-up/thumbs-down icons and passes `(value: LikeDislikeData, message: dict)` to the handler.
+
+### Streaming Patterns
+
+ChatInterface supports streaming natively via Python generators:
+
+```python
+import gradio as gr
+import time
+
+def stream_response(message, history):
+    """Stream tokens one by one"""
+    response = f"You said: {message}"
+    for i in range(len(response)):
+        time.sleep(0.05)
+        yield response[:i+1]
+
+gr.ChatInterface(
+    fn=stream_response,
+    title="Streaming Chatbot",
+    type="messages"  # or "tuples" for legacy format
+).launch()
+```
+
+The `fn` function must use `yield` instead of `return` for streaming. Each `yield` sends incremental output to the UI. The Gradio client libraries handle SSE (Server-Sent Events) automatically for streaming endpoints.
+
+### Multimodal ChatInterface
+
+Enable file uploads with `multimodal=True`:
+
+```python
+import gradio as gr
+
+def multimodal_chat(message, history):
+    """message = {"text": "describe this", "files": ["/tmp/image.png"]}"""
+    if message["files"]:
+        return f"Received {len(message['files'])} file(s). Text: {message['text']}"
+    return f"You said: {message['text']}"
+
+gr.ChatInterface(
+    fn=multimodal_chat,
+    multimodal=True,
+    title="Multimodal Chat"
+).launch()
+```
+
+When `multimodal=True`:
+- Input uses `gr.MultimodalTextbox` — supports text + file uploads
+- `fn` first arg is a dict `{"text": str, "files": list[file_path]}`
+- Files are uploaded to server temp directory automatically
+- Supported file types depend on `gr.MultimodalTextbox` config (images, audio, video, documents by default)
+
+### Custom Chatbot Component
+
+Pass a pre-configured `gr.Chatbot` for fine control:
+
+```python
+import gradio as gr
+
+chatbot = gr.Chatbot(
+    placeholder="Ask me anything...",
+    avatar_images=("user.png", "bot.png"),
+    latex_delimiters=[{"left": "$", "right": "$", "display": False}],
+    sanitize_html=False,
+    render_markdown=True,
+    bubble_full_width=False,
+    show_copy_button=True,
+)
+
+def respond(message, history):
+    return f"Response to: {message}"
+
+gr.ChatInterface(
+    fn=respond,
+    chatbot=chatbot,
+    title="Customized Chat"
+).launch()
+```
+
+**Custom chatbot + events in Blocks scope** (for `.like()` support):
+
+```python
+import gradio as gr
+
+with gr.Blocks() as demo:
+    chatbot = gr.Chatbot(placeholder="Chat here...")
+    
+    def respond(message, history):
+        return f"You said: {message}"
+    
+    # Wire chatinterface manually in Blocks
+    chat_interface = gr.ChatInterface(
+        fn=respond,
+        chatbot=chatbot,
+    )
+    
+    # Attach like/feedback events
+    chatbot.like(
+        lambda value, msg: print(f"Feedback: {value} on {msg}"),
+        None, None
+    )
+```
+
+### Agent / Tool-Use Patterns
+
+ChatInterface supports OpenAI-style tool messages for agent UIs:
+
+```python
+def agent_response(message, history):
+    """Agent that can use tools"""
+    # ... agent logic ...
+    return [
+        {"role": "assistant", "content": "Let me look that up..."},
+        {"role": "tool", "content": "Tool result", "metadata": {"title": "⚙️ Tool Call"}},
+        {"role": "assistant", "content": "Based on my search, the answer is 42."}
+    ]
+```
+
+The function can return a list of OpenAI-style message dicts. Each dict with `role` and `content` renders as a distinct bubble in the Chatbot. The `metadata` dict supports `title` for tool call labels, and other properties for rich rendering.
+
+### History Format
+
+Two formats supported:
+
+**OpenAI-style (default/recommended)**:
+```python
+history = [
+    {"role": "user", "content": "Hello"},
+    {"role": "assistant", "content": "Hi there!"},
+    {"role": "user", "content": "What's the weather?"},
+]
+```
+
+**Tuples (legacy, Gradio 4.x)**:
+```python
+history = [
+    ("Hello", "Hi there!"),
+    ("What's the weather?", None),  # None = still generating
+]
+```
+
+Set `type="messages"` (default in v6) for OpenAI-style, `type="tuples"` for legacy.
+
+### Concurrency & Production
+
+```python
+gr.ChatInterface(
+    fn=respond,
+    concurrency_limit=5,            # Allow 5 simultaneous chats
+    delete_cache=(3600, 86400),     # Clean temp files hourly if older than 1 day
+    api_name="chat",                # Named endpoint for Gradio client
+    api_visibility="public",        # Expose in API docs
+    save_history=True,              # Browser localStorage persistence
+).queue(default_concurrency_limit=5).launch()
+```
+
+**Zero-cost note for HF Spaces**: ChatInterface runs on free CPU Spaces out of the box. For GPU chatbots, use `@spaces.GPU` decorator on the fn with ZeroGPU. Queue is always active on HF Spaces (no choice). Concurrency is limited in free tier.
+
+### Key Insights
+
+1. **ChatInterface is declarative** — handles message passing, history management, and UI state internally. Avoids manual `gr.Chatbot` + `gr.Textbox` + event wiring in 90% of cases.
+2. **`fn` signature** — `(message, history)` where history is always the *current* history (before the new message is appended). The function doesn't need to manage history appending — Gradio does it.
+3. **Streaming via yield** — Use generator functions for token-by-token output. Gradio sends incremental updates over WebSocket.
+4. **History mutation** — Modifying the history list in-place and returning it enables editing past messages (when `editable=True`).
+5. **`.like()` events** — Only appear when flagging_options includes "Like"/"Dislike". These are rendered as thumbs-up/down icons per bot message.
+6. **`save_history=True`** — Enables conversation sidebar in the UI. History persisted in `localStorage` — survives page refreshes but not shared across browsers.
+7. **Agents work** — Return multiple message dicts with `role: "tool"` for function-call display. Status messages need `metadata: {"title": "⚙️ Processing..."}` for rendering.
+8. **ChatInterface + Blocks** — Wrap in `gr.Blocks` for layout control and additional components, but lose auto-layout convenience.
+9. **`cache_examples=True`** on HF Spaces — Caches example outputs at app start so first user doesn't pay cold-start penalty.
+10. **API unlisted** — Set `api_visibility="private"` to prevent programmatic access while keeping UI functional.
