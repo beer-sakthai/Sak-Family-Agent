@@ -5893,5 +5893,42 @@ Layer types recognized:
 - [KIVI: 2bit KV Cache Quantization Paper](https://huggingface.co/papers/2402.02750)
 - [KV Cache Quantization docs](https://huggingface.co/docs/transformers/en/llm_tutorial_optimization#quantized-cache)
 - [torch.compile guide](https://huggingface.co/docs/transformers/en/torch_compile)
-- [Dynamic Sparse Attention (DSA) in Transformers](https://arxiv.org/abs/2504.11714)
-|
+5897|- [Dynamic Sparse Attention (DSA) in Transformers](https://arxiv.org/abs/2504.11714)
+5898|
+5899|## 2026-07-24: hf-hub-pull-requests-and-discussions-api — Complete Deep Dive (Topic #123)
+5900|
+5901|### Summary
+5902|Comprehensive deep-dive into Hugging Face Hub's Pull Requests and Discussions API. Covers the full lifecycle — creating, reading, commenting, editing, merging, and closing discussions/PRs using the `huggingface_hub` Python SDK (v1.24.0) and the underlying git ref architecture.
+5903|
+5904|### Architecture
+5905|
+5906|1. **No forks.** Contributors push directly to the source repo via `refs/pr/{NUMBER}` refs.
+5907|2. **Discussions and PRs are the same type.** PR is a discussion with `is_pull_request=True` + file changes.
+5908|3. **Draft by default.** Programmatic PRs start in `"draft"` status.
+5909|
+5910|### SDK Methods
+5911|
+5912|| Method | Key Parameters |
+5913||--------|---------------|
+5914|| `create_discussion()` | `repo_id`, `title`, `pull_request=False/True` |
+5915|| `create_pull_request()` | Wrapper for `create_discussion(pull_request=True)` |
+5916|| `get_discussion_details()` | `repo_id`, `discussion_num` |
+5917|| `get_repo_discussions()` | `repo_id`, `author`, `discussion_type`, `discussion_status` |
+5918|| `comment_discussion()` | `repo_id`, `discussion_num`, `comment` |
+5919|| `edit_discussion_comment()` | `repo_id`, `discussion_num`, `comment_id`, `new_content` |
+5920|| `hide_discussion_comment()` | `repo_id`, `discussion_num`, `comment_id` |
+5921|| `change_discussion_status()` | `repo_id`, `discussion_num`, `new_status='open'/'closed'` |
+5922|| `merge_pull_request()` | `repo_id`, `discussion_num` |
+5923|| `rename_discussion()` | `repo_id`, `discussion_num`, `new_title` |
+5924|
+5925|### Best Practice: PR with Changes
+5926|
+5927|```python
+5928|api.create_commit(repo_id=\"user/repo\", operations=[...], create_pr=True)
+5929|```
+5930|
+5931|### Resources
+5932|- Hub docs: https://huggingface.co/docs/hub/en/repositories-pull-requests-discussions
+5933|- Python SDK source (v1.24.0)
+5934|
+5935|---
