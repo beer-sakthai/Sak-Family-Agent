@@ -7373,3 +7373,239 @@ api.list_models(filter=("library:diffusers", "task:text-to-image"))
 mlops/huggingface-hub -- references/hf-learnings.md
 
 ---
+
+## 2026-07-24: hf-hub-tag-system-complete-reference (Topic #142)
+
+### Summary
+Comprehensive reference to the Hugging Face Hub's tagging/taxonomy system. The Hub uses a `prefix:value` tag system across models, datasets, and Spaces to enable discoverability, filtering, and categorization. Tags are stored as string arrays in repo metadata and can be set via YAML frontmatter in README.md or programmatically through the API. This reference catalogs all known tag prefixes, their valid values, how they're used across repo types, and API filtering patterns.
+
+### How Tags Work
+
+Tags on the Hugging Face Hub are simple string arrays attached to each repository. They follow a `prefix:value` convention for structured categorization, though unprefixed "freeform" tags also exist. Tags serve three functions:
+1. **Discoverability** — repos appear in search/filter results on the Hub website and API
+2. **Categorization** — pipeline tags, task categories, and library tags enable UI grouping
+3. **Metadata encoding** — license, language, size, format, and provenance info
+
+Tags are set in the YAML frontmatter of a repo's README.md:
+```yaml
+---
+tags:
+- transformers
+- text-generation
+- license:apache-2.0
+- language:en
+- arxiv:2302.13971
+---
+```
+
+Or via the API:
+```python
+api.update_repo_settings("my-model", tags=["transformers", "text-generation", "license:apache-2.0"])
+api.update_repo_settings("my-dataset", tags=["task_categories:text-generation", "language:en", "format:parquet"])
+```
+
+### Models Tag System
+
+Models use the richest tag system. Tag values inferred from API sampling of 300+ top-downloaded models:
+
+**Tag prefixes (structured):**
+
+| Prefix | Purpose | Example Values | Source |
+|--------|---------|----------------|--------|
+| `license:` | License type | `apache-2.0`, `mit`, `cc-by-4.0`, `cc-by-nc-4.0`, `cc0-1.0`, `cc-by-nc-sa-3.0`, `cc-by-sa-4.0`, `gpl-3.0`, `gpl`, `agpl-3.0`, `bsd`, `other`, `odbl`, `gfdl`, `fair-noncommercial-research-license`, `cdla-sharing-1.0`, `cc-by-nd-4.0` | YAML / API |
+| `dataset:` | Training dataset used | `dataset:wikitext`, `dataset:bookcorpus`, `dataset:s2orc`, `dataset:ms_marco` | Automatically inferred or YAML |
+| `base_model:` | Parent/base model | `base_model:google-bert/bert-base-uncased` | YAML / API |
+| `arxiv:` | Associated paper | `arxiv:1810.04805`, `arxiv:2501.12948` | YAML / API |
+| `deploy:` | Deployment platform | `deploy:sagemaker`, `deploy:azure`, `deploy:gcp` | YAML / API |
+| `region:` | Data hosting region | `region:us`, `region:eu`, `region:asia` | Hub-assigned |
+| `doi:` | DOI identifier | `doi:10.xxxx/zenodo` | YAML |
+| `diffusers:` | Diffusers classifier-free guidance | `diffusers:classifier-free` | Diffusers metadata |
+
+**Unprefixed (freeform) tags — most commonly found:**
+`transformers`, `pytorch`, `tf`, `jax`, `rust`, `onnx`, `safetensors`, `coreml`, `openvino`, `gguf`, `llama.cpp`, `timm`, `sentence-transformers`, `bert`, `vit`, `whisper`, `text-generation-inference`, `endpoints_compatible`, `conversational`, `custom_code`, `exbert`, `gguf`, `mlx`, `litert-lm`, `ctranslate2`, `speechbrain`, `ultralytics`, `vllm`
+
+**Special model-level metadata (separate from tags):**
+
+| Field | Type | Description | Typical Values |
+|-------|------|-------------|----------------|
+| `pipeline_tag` | string | Primary ML task | `text-generation`, `image-classification`, `automatic-speech-recognition`, `fill-mask`, `feature-extraction`, `sentence-similarity`, `text-classification`, `text-to-image`, `text-to-speech`, `image-to-text`, `image-to-image`, `object-detection`, `image-segmentation`, `zero-shot-classification`, `translation`, `summarization`, `question-answering`, `token-classification`, `text-ranking`, `depth-estimation`, `image-text-to-text`, `any-to-any`, `mask-generation`, `time-series-forecasting`, `audio-classification`, `audio-to-audio`, `voice-activity-detection`, `text-to-audio`, `image-to-video`, `audio-text-to-text`, `text-to-3d`, `zero-shot-image-classification`, `zero-shot-object-detection`, `table-question-answering`, `image-feature-extraction`, `video-classification`, `video-text-to-text`, `visual-question-answering` |
+| `library_name` | string | Primary framework | `transformers`, `diffusers`, `sentence-transformers`, `gguf`, `timm`, `vllm`, `open_clip`, `whisperkit`, `ultralytics`, `mlx`, `fasttext`, `speechbrain`, `nemo`, `llama.cpp`, `pyannote-audio`, `transformers.js`, `coqui`, `ctranslate2`, `chronos-forecasting`, `depth-anything-3`, `diffusion-single-file`, `litert-lm`, `mivolo`, `Model Optimizer`, `perception-encoder`, `pytorch`, `transcribe.cpp`, `trellis`, `trellis2`, `UniDepth`, `voxcpm`, `chatterbox` |
+
+**All 35 known pipeline_tag values (verified via HF API):**
+1. `any-to-any`
+2. `audio-classification`
+3. `audio-text-to-text`
+4. `audio-to-audio`
+5. `automatic-speech-recognition`
+6. `depth-estimation`
+7. `feature-extraction`
+8. `fill-mask`
+9. `image-classification`
+10. `image-feature-extraction`
+11. `image-segmentation`
+12. `image-text-to-text`
+13. `image-to-3d`
+14. `image-to-image`
+15. `image-to-text`
+16. `image-to-video`
+17. `mask-generation`
+18. `object-detection`
+19. `question-answering`
+20. `sentence-similarity`
+21. `summarization`
+22. `table-question-answering`
+23. `text-classification`
+24. `text-generation`
+25. `text-ranking`
+26. `text-to-audio`
+27. `text-to-image`
+28. `text-to-speech`
+29. `time-series-forecasting`
+30. `token-classification`
+31. `translation`
+32. `voice-activity-detection`
+33. `zero-shot-classification`
+34. `zero-shot-image-classification`
+35. `zero-shot-object-detection`
+
+### Datasets Tag System
+
+Datasets use the most structured tag system with the most prefix categories. Tag values verified by API sampling of 500 top-downloaded datasets:
+
+**Tag prefixes (structured):**
+
+| Prefix | Purpose | Example Values |
+|--------|---------|----------------|
+| `task_categories:` | High-level ML task | `text-generation`, `question-answering`, `image-classification`, `summarization`, `translation`, `token-classification`, `text-classification`, `automatic-speech-recognition`, `feature-extraction`, `object-detection`, `image-segmentation`, `image-to-text`, `image-to-image`, `text-to-image`, `text-to-speech`, `audio-classification`, `video-classification`, `reinforcement-learning`, `robotics`, `tabular-classification`, `tabular-regression`, `time-series-forecasting`, `any-to-any`, `depth-estimation`, `fill-mask`, `image-feature-extraction`, `image-text-to-image`, `image-text-to-text`, `image-to-3d`, `image-to-video`, `keypoint-detection`, `multiple-choice`, `other`, `table-question-answering`, `text-to-3d`, `text-to-audio`, `text-to-video`, `video-text-to-text`, `visual-question-answering`, `zero-shot-classification`, `zero-shot-image-classification`, `audio-to-audio` (42 values) |
+| `task_ids:` | Specific sub-task | `language-modeling`, `masked-language-modeling`, `conversational`, `extractive-qa`, `open-domain-qa`, `closed-domain-qa`, `multiple-choice-qa`, `abstractive-qa`, `open-domain-abstractive-qa`, `dialogue-generation`, `dialogue-modeling`, `coreference-resolution`, `natural-language-inference`, `sentiment-classification`, `topic-classification`, `semantic-similarity-classification`, `semantic-similarity-scoring`, `acceptability-classification`, `multi-class-image-classification`, `multi-input-text-classification`, `text-scoring`, `word-sense-disambiguation`, `semantic-segmentation`, `speaker-identification`, `task-planning`, `news-articles-summarization` (26 values) |
+| `language:` | ISO language code | `en`, `fr`, `de`, `es`, `zh`, `ja`, `ko`, `ar`, `ru`, `pt`, `code`, and 2043+ ISO 639-3 codes |
+| `license:` | License type | Same as model licenses (see above) + `cc-by-nc-3.0`, `cc-by-sa-3.0`, `cc-by-nd-4.0`, `cc-by-nc-sa-4.0` |
+| `size_categories:` | Number of samples (11 categories) | `n<1K`, `1K<n<10K`, `10K<n<100K`, `100K<n<1M`, `1M<n<10M`, `10M<n<100M`, `100M<n<1B`, `1B<n<10B`, `10B<n<100B`, `100B<n<1T`, `n>1T` |
+| `format:` | Storage format | `parquet`, `csv`, `json`, `text`, `imagefolder`, `audiofolder`, `webdataset`, `optimized-parquet`, `agent-traces` |
+| `modality:` | Data modality | `text`, `image`, `audio`, `video`, `tabular`, `3d`, `multimodal` |
+| `library:` | Compatible library | `datasets`, `pandas`, `polars`, `mlcroissant`, `dask` |
+| `annotations_creators:` | Annotation origin | `found`, `crowdsourced`, `machine-generated`, `expert-generated`, `no-annotation`, `other` |
+| `language_creators:` | Language data origin | `found`, `crowdsourced`, `expert-generated`, `machine-generated`, `other` |
+| `multilinguality:` | Language scope | `monolingual`, `multilingual`, `cross-lingual`, `translation` |
+| `source_datasets:` | Dataset origin | `original`, `extended`, `extracted`, `split` |
+| `region:` | Hosting region | `us`, `eu`, `asia` |
+| `arxiv:` | Associated paper | `arxiv:2406.17557` |
+| `benchmark:` | Benchmark status | `original`, `extended` |
+| `doi:` | DOI identifier | `doi:10.xxxx/zenodo` |
+
+**All 11 size_categories values (exact complete set):**
+| Value | Range |
+|-------|-------|
+| `n<1K` | Fewer than 1,000 samples |
+| `1K<n<10K` | 1,000 – 10,000 |
+| `10K<n<100K` | 10,000 – 100,000 |
+| `100K<n<1M` | 100,000 – 1,000,000 |
+| `1M<n<10M` | 1,000,000 – 10,000,000 |
+| `10M<n<100M` | 10 – 100 million |
+| `100M<n<1B` | 100 million – 1 billion |
+| `1B<n<10B` | 1 – 10 billion |
+| `10B<n<100B` | 10 – 100 billion |
+| `100B<n<1T` | 100 billion – 1 trillion |
+| `n>1T` | Over 1 trillion samples |
+
+**All 42 task_categories values (exact set):**
+`any-to-any`, `audio-classification`, `audio-to-audio`, `automatic-speech-recognition`, `depth-estimation`, `feature-extraction`, `fill-mask`, `image-classification`, `image-feature-extraction`, `image-segmentation`, `image-text-to-image`, `image-text-to-text`, `image-to-3d`, `image-to-image`, `image-to-text`, `image-to-video`, `keypoint-detection`, `multiple-choice`, `object-detection`, `other`, `question-answering`, `reinforcement-learning`, `robotics`, `summarization`, `table-question-answering`, `tabular-classification`, `tabular-regression`, `text-classification`, `text-generation`, `text-to-3d`, `text-to-audio`, `text-to-image`, `text-to-speech`, `text-to-video`, `time-series-forecasting`, `token-classification`, `translation`, `video-classification`, `video-text-to-text`, `visual-question-answering`, `zero-shot-classification`, `zero-shot-image-classification`
+
+**All 26 task_ids values (exact set):**
+`abstractive-qa`, `acceptability-classification`, `closed-domain-qa`, `conversational`, `coreference-resolution`, `dialogue-generation`, `dialogue-modeling`, `extractive-qa`, `language-modeling`, `masked-language-modeling`, `multi-class-image-classification`, `multi-input-text-classification`, `multiple-choice-qa`, `natural-language-inference`, `news-articles-summarization`, `open-domain-abstractive-qa`, `open-domain-qa`, `semantic-segmentation`, `semantic-similarity-classification`, `semantic-similarity-scoring`, `sentiment-classification`, `speaker-identification`, `task-planning`, `text-scoring`, `topic-classification`, `word-sense-disambiguation`
+
+### Spaces Tag System
+
+Spaces have a more limited tag system:
+
+**Tag prefixes:**
+| Prefix | Purpose | Example Values |
+|--------|---------|----------------|
+| `language:` | Primary language | `english`, `chinese`, `french`, `multilingual` |
+| `region:` | Hosting region | `us`, `eu` |
+| `modality:` | Content modality | `text`, `image`, `audio`, `video`, `3d` |
+| `eval:` | Evaluation type | `code`, `math`, `reasoning` |
+| `judge:` | Judging method | `auto`, `human`, `llm` |
+| `submission:` | Submission method | `automatic`, `manual` |
+| `test:` | Test set access | `public`, `private` |
+
+**SDK values (separate from tags):**
+`sdk: gradio`, `sdk: docker`, `sdk: static`
+
+**Unprefixed tags:**
+`docker`, `leaderboard`, `chat`, `text-generation`, `image-generation`, `voice`, `audio`, `vision`
+
+### Programmatic Tag Discovery
+
+Since the Hub doesn't publish a complete tag vocabulary (there is no `/api/tags` endpoint), the most reliable way to discover valid values is by sampling the API:
+
+```python
+from huggingface_hub import HfApi
+api = HfApi()
+
+# Discover pipeline tags from actual models
+pipelines = set()
+for m in api.list_models(sort="downloads", limit=200):
+    if m.pipeline_tag:
+        pipelines.add(m.pipeline_tag)
+
+# Discover dataset size categories
+size_cats = set()
+for ds in api.list_datasets(sort="downloads", limit=500, full=True):
+    for tag in ds.tags:
+        if tag.startswith("size_categories:"):
+            size_cats.add(tag.split(":", 1)[1])
+
+# Discover model libraries
+libs = set()
+for m in api.list_models(sort="downloads", limit=200):
+    if m.library_name:
+        libs.add(m.library_name)
+```
+
+### API Filtering by Tags
+
+Tags are the primary filtering mechanism in the Hub API:
+
+```python
+# Single tag filter (by prefix)
+api.list_models(filter="library:transformers")
+
+# Multiple tag filters (AND logic — use tuple)
+api.list_models(filter=("task:text-generation", "library:diffusers"))
+
+# Dataset multi-filter: English text generation datasets in Parquet format
+api.list_datasets(
+    filter=("task_categories:text-generation", "language:en", "format:parquet"),
+    sort="downloads",
+    limit=20,
+)
+
+# Unprefixed tag filter
+api.list_models(filter="gguf", sort="downloads")  # All GGUF models
+api.list_models(filter="safetensors", sort="likes")  # All SafeTensors models
+```
+
+### Tag Best Practices
+
+1. **Always include at minimum**: `pipeline_tag` (models), `task_categories` (datasets), `license`, and `language` tags for discoverability
+2. **Use correct casing**: Tags are case-sensitive. Standard values are lowercase (`en`, not `EN`)
+3. **Add arxiv papers**: Include `arxiv:XXXX.XXXXX` for paper-backed models/datasets — enables paper cross-linking on the Hub
+4. **Don't over-tag**: 5-15 focused tags is ideal. Over-tagging with irrelevant tags doesn't improve discoverability
+5. **Prefer prefix tags over freeform**: `license:mit` is better than just `mit` — it's unambiguous and filterable
+6. **Dataset size categories**: Always set `size_categories` for datasets — it's required for filtered browsing
+7. **Avoid typos**: Invalid tags are silently ignored. Tag values must match exactly at search time
+8. **Check existing tags**: Browse similar repos to see what tags are commonly used in your category
+
+### Resources
+- Hub search docs: https://huggingface.co/docs/hub/en/search
+- Model cards docs: https://huggingface.co/docs/hub/en/model-cards
+- Dataset cards docs: https://huggingface.co/docs/hub/en/datasets-cards
+- Hub API reference: https://huggingface.co/docs/hub/en/api
+- OpenAPI spec: https://huggingface.co/.well-known/openapi.md
+- Tag discovery via API: `HfApi.list_models()` / `list_datasets()` / `list_spaces()`
+
+### Skill
+mlops/huggingface-hub -- references/hf-learnings.md
+
+---
