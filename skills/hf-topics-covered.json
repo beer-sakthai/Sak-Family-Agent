@@ -158,5 +158,16 @@
   "hf-quantization-methods-comparison",
   "hf-inference-client-tool-use-and-function-calling-deep-dive",
   "hf-diffusers-cogvideo-deep-dive",
-  "hf-mcp-server-enhancements-hf-fs-consolidation"
+  "hf-mcp-server-enhancements-hf-fs-consolidation",
+  "hf-datasets-sort-shuffle-split-shard-deep-dive",
+  "hf-hub-webhooks-and-notifications-api-deep-dive",
+  "hf-hub-models-architecture-and-pipeline-tags",
+  "hf-tokenizers-training-deep-dive",
+  "hf-gradio-chatbot-multimodal-deep-dive",
+  "hf-hub-api-rate-limiting-deep-dive",
+  "hf-transformers-speculative-decoding-deep-dive-v3-mtp-ensemble",
+  "hf-hub-models-architecture-and-pipeline-tags-deep-dive",
+  "lm-evaluation-harness-complete-reference",
+  "hf-transformers-gguf-integration-v2",
+  "spaces-zerogpu-complete-api-architecture-deep-dive"
 ]
