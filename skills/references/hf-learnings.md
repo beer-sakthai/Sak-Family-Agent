@@ -13128,3 +13128,91 @@ Full deep-dive: `mlops/hf-dataset-card-api/references/hf-learnings.md`
 `huggingface_hub` v1.24.0 source: `repocard.py`, `repocard_data.py`  
 Hub validation: `POST https://huggingface.co/api/validate-yaml`  
 Dataset tags: `GET https://huggingface.co/api/datasets-tags-by-type`
+
+## 2026-07-24: hf-diffusers-nunchaku-lite — Nunchaku Lite 4-bit W4A4 Diffusion Inference in Diffusers (Topic #76 Deepening)
+
+### Summary
+Deep-dive on **Nunchaku Lite** — the new native integration of SVDQuant 4-bit diffusion inference directly into Hugging Face Diffusers (PR #14100, July 2026). Unlike weight-only quantization (AWQ, bitsandbytes NF4, GPTQ), SVDQuant quantizes both **weights and activations** (W4A4) using a low-rank SVD correction to handle outliers. The integration means any quantized checkpoint loads with standard `from_pretrained()`, with CUDA kernels fetched automatically from the Hub via the `kernels` package. No separate inference engine, no local CUDA compilation.
+
+### Architecture
+
+**SVDQuant** (arXiv:2411.05007) — the quantization method behind Nunchaku:
+- Moves activation outliers into the weight matrix via a low-rank SVD correction
+- Core weight matrix quantized to 4-bit (INT4 or NVFP4)
+- Outlier residual captured by a small 16-bit low-rank branch (rank=32 default)
+- Fused kernel: low-rank down-projection fused with input quantization, low-rank up-projection fused with 4-bit matmul — eliminates memory overhead of 16-bit branch
+- Result: ~50% VRAM reduction + ~1.35× speedup vs BF16
+
+**Two kernel families in Nunchaku Lite:**
+
+| Kernel | Precision | Use Case | Supported GPUs |
+|--------|-----------|----------|----------------|
+| `svdq_w4a4` | INT4 or NVFP4 | Attention & MLP projections (compute-bound) | INT4: Turing/Ampere/Ada (RTX 30/40, A100, L40S); NVFP4: Blackwell (RTX 50, B200) |
+| `awq_w4a16` | INT4 | Adaptive norm/modulation (memory-bound, precision-sensitive) | Turing/Ampere/Ada |
+
+**Native loading in Diffusers:**
+- Quantized repo is a standard Diffusers pipeline with `quantization_config` in the transformer's `config.json`
+- `NunchakuLiteQuantizer` (in `diffusers/quantizers/nunchaku/`) — validates GPU capability (rejects Hopper/Volta), replaces `nn.Linear` modules with `SVDQW4A4Linear` or `AWQW4A16Linear` via `replace_with_nunchaku_linear()`
+- Kernels downloaded from `rootonchair/nunchaku-lite-kernels` on first use via `kernels.get_kernel()`
+- Keeps exact module structure — schedulers, LoRA, offloading, and `torch.compile` all work normally
+
+### Getting Started
+```python
+pip install -U diffusers transformers accelerate kernels bitsandbytes
+
+import torch
+from diffusers import ErnieImagePipeline
+
+pipe = ErnieImagePipeline.from_pretrained(
+    "lite-infer/ERNIE-Image-Turbo-nunchaku-lite-nvfp4_r32-bnb4-text-encoder",
+    torch_dtype=torch.bfloat16,
+).to("cuda")
+
+image = pipe(
+    prompt="A cinematic portrait of a red fox in a misty forest at sunrise, detailed fur, volumetric light",
+    height=1024, width=1024,
+    num_inference_steps=8, guidance_scale=1.0,
+    generator=torch.Generator("cuda").manual_seed(42),
+).images[0]
+```
+
+### Performance Benchmarks (RTX PRO 6000 Blackwell, 1024×1024)
+
+| Configuration | Full Pipeline | Denoise Loop | Peak VRAM | Speedup |
+|--------------|--------------|--------------|-----------|---------|
+| BF16 baseline | 3.00 s | 2.86 s | 31.1 GB | 1.0× |
+| Nunchaku Lite NVFP4 | 2.27 s | 2.13 s | 20.6 GB | 1.35× |
+| NVFP4 + `torch.compile` | 1.68 s | 1.53 s | 20.6 GB | **1.8×** |
+| NVFP4 + NF4 text encoder | 2.29 s | 2.13 s | 16.0 GB | 1.35× |
+
+### Quantizing Your Own Model
+The `diffuse-compressor` toolkit provides an end-to-end SVDQuant workflow:
+1. **Inspect** — `quantize_hf.py --inspect-config` walks the model, identifies SVDQ targets (linear layers in transformer blocks) and AWQ targets (modulation layers)
+2. **Quantize** — run SVDQuant calibration, producing a safetensors checkpoint with SVDQ/AWQ weights
+3. **Package** — `convert_nunchaku_lite_diffusers.py` combines quantized transformer with base pipeline, writes `nunchaku_lite` config into `transformer/config.json`
+4. **Verify & Push** — load with `DiffusionPipeline.from_pretrained()`, verify outputs, call `pipe.push_to_hub()`
+
+### Structural Rewrites for Maximum Speed
+The original Nunchaku engine achieves higher speedup by fusing QKV projections and other grouped operations — e.g., combining `to_q`, `to_k`, `to_v` into one `to_qkv` module. Nunchaku Lite's generic path cannot infer these rewrites automatically, but they can be expressed via model-specific `TargetConfig` during quantization and runtime adapters at load time.
+
+### Key Takeaways
+1. **W4A4 beats weight-only** — SVDQuant's activation quantization gives actual speedup, not just memory savings
+2. **NVFP4 requires Blackwell** — for RTX 30/40 series, use INT4 variants
+3. **`kernels` package** replaces local CUDA compilation — kernels auto-download from the Hub
+4. **`torch.compile` synergy** — Nunchaku Lite + compile = 1.8× speedup
+5. **NF4 text encoder** — bitsandbytes NF4 on T5/Qwen3 saves ~22% VRAM
+6. **No Hopper/Volta support** — GPU capability validated at load time with clear error messages
+
+### Skill
+mlops/hf-diffusers-cogvideo — references/hf-learnings.md
+
+### References
+- Blog: https://huggingface.co/blog/nunchaku-diffusers (July 23, 2026)
+- Diffusers docs: https://huggingface.co/docs/diffusers/main/en/quantization/nunchaku
+- Integration PR: https://github.com/huggingface/diffusers/pull/14100
+- SVDQuant paper: https://arxiv.org/abs/2411.05007
+- Nunchaku engine: https://github.com/nunchaku-tech/nunchaku
+- diffuse-compressor: https://github.com/rootonchair/diffuse-compressor
+- `kernels` package: https://huggingface.co/kernels/rootonchair/nunchaku-lite-kernels
+- Quantizer source: `diffusers/src/diffusers/quantizers/nunchaku/`
+- `SVDQW4A4Linear` source: `diffusers/src/diffusers/quantizers/nunchaku/utils.py`
