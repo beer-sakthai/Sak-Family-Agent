@@ -989,3 +989,364 @@ df = pl.read_csv("hf://datasets/my-username/my-dataset/train.csv")
 - Hugging Face Buckets guide: https://huggingface.co/docs/huggingface_hub/main/en/guides/buckets
 - hf_transfer (Rust): https://github.com/huggingface/hf_transfer
 - huggingface_hub source (hffs): https://github.com/huggingface/huggingface_hub/blob/main/src/huggingface_hub/hf_file_system.py
+
+## 2026-07-24: hf-datasets-server-advanced-query (Deep Dive — Full API Reference with Real-World Testing)
+
+### Summary
+Deep-dive into the Hugging Face Datasets Server REST API — every endpoint tested live against `stanfordnlp/imdb`. Covers /splits, /first-rows, /rows (with offset/length), /search, /filter (with where/orderby), /parquet, /size, /statistics, /is-valid. Documents real response structures, error behavior, pagination mechanics, the filter predicate syntax, and partial indexing limits (5GB ceiling for /filter).
+
+### Endpoint Reference
+
+#### 1. `/splits` — List configs and splits
+Returns all config/split tuples for a dataset.
+
+```
+GET https://datasets-server.huggingface.co/splits?dataset=stanfordnlp/imdb
+```
+```json
+{
+  "splits": [
+    {"dataset":"stanfordnlp/imdb","config":"plain_text","split":"train"},
+    {"dataset":"stanfordnlp/imdb","config":"plain_text","split":"test"},
+    {"dataset":"stanfordnlp/imdb","config":"plain_text","split":"unsupervised"}
+  ],
+  "pending": [],
+  "failed": []
+}
+```
+
+**Notes:**
+- Always use fully qualified dataset names (e.g. `stanfordnlp/imdb`, not `imdb`)
+- The `pending` and `failed` arrays show splits that are still processing or errored
+
+#### 2. `/first-rows` — Quick preview of first rows
+Returns the first rows of a split with feature metadata. No pagination — always shows exactly 100 rows (the first page).
+
+```
+GET https://datasets-server.huggingface.co/first-rows?dataset=stanfordnlp/imdb&config=plain_text&split=train
+```
+
+**Response structure:**
+```json
+{
+  "dataset": "stanfordnlp/imdb",
+  "config": "plain_text",
+  "split": "train",
+  "features": [
+    {"feature_idx": 0, "name": "text", "type": {"dtype": "string", "_type": "Value"}},
+    {"feature_idx": 1, "name": "label", "type": {"names": ["neg","pos"], "_type": "ClassLabel"}}
+  ],
+  "rows": [
+    {"row_idx": 0, "row": {"text": "...", "label": 0}, "truncated_cells": []}
+  ]
+}
+```
+
+**Feature type mapping:**
+| HF Type | dtype | JSON representation |
+|---------|-------|-------------------|
+| Value   | string/int/float/bool | `{"dtype": "string", "_type": "Value"}` |
+| ClassLabel | class_label | `{"names": ["neg","pos"], "_type": "ClassLabel"}` |
+| Sequence | sequence | `{"_type": "Sequence", "feature": {...}}` |
+
+**Key insight:** ClassLabel features return integer indices in `rows`, not string labels. Map from the `features[].type.names` array.
+
+#### 3. `/rows` — Paginated row access with optional WHERE filter
+```
+GET https://datasets-server.huggingface.co/rows?dataset=stanfordnlp/imdb&config=plain_text&split=train&offset=0&length=3
+```
+
+**Parameters:**
+| Param | Required | Default | Notes |
+|-------|----------|---------|-------|
+| `dataset` | Yes | — | Fully qualified name |
+| `config` | Yes | — | Config/subset name |
+| `split` | Yes | — | Split name |
+| `offset` | No | 0 | Zero-indexed start row |
+| `length` | No | 100 | Max rows per page (max=100) |
+| `where` | No | — | **Predicate string** (not JSON!) |
+
+**Response:**
+```json
+{
+  "features": [...],
+  "rows": [{"row_idx": 0, "row": {...}, "truncated_cells": []}],
+  "num_rows_total": 25000,
+  "num_rows_per_page": 100,
+  "partial": false
+}
+```
+
+**The `where` parameter uses predicate syntax, not JSON:**
+- Correct: `"label">0` or `"label">=0 AND "label"<=1`
+- Correct: `"name"='Simone' OR "children"=0`
+- INCORRECT: `{"label": 1}` (JSON object — silently ignored on `/rows`)
+- INCORRECT: URL-encoded nested JSON like `{"label":{"_eq":1}}` (returns 422)
+
+**Important behavior:** The `/rows` endpoint with `where` applied did NOT actually filter when I passed `{"label":1}` — it silently returned unfiltered rows. The predicate syntax (`"label">0`) is the correct format. For proper filtering, use the dedicated `/filter` endpoint.
+
+**Pagination:** `num_rows_total` gives total rows, `num_rows_per_page` is the page size. Iterate by incrementing `offset` by `length` each request.
+
+#### 4. `/filter` — Full-featured row filtering
+The dedicated filtering endpoint with proper predicate support.
+
+```
+GET https://datasets-server.huggingface.co/filter?dataset=ibm/duorc&config=SelfRC&split=train&where="no_answer"=true&offset=150&length=2
+```
+
+**Supported operators in `where`:**
+| Operator | Example | Note |
+|----------|---------|------|
+| `=` (equals) | `"age"=30` | String values use single quotes: `"name"='Alice'` |
+| `!=` | `"age"!=30` | |
+| `>` / `>=` | `"age">30` | |
+| `<` / `<=` | `"age"<30` | |
+| `AND` | `"age">30 AND "city"='Paris'` | |
+| `OR` | `"age">30 OR "city"='Paris'` | |
+| `NOT` | `NOT "age"=30` | |
+
+**Sorting with `orderby`:**
+- Ascending (default): `orderby="age"`
+- Descending: `orderby="age" DESC`
+
+**Partial indexing warning:**
+Datasets > 5GB are only partially indexed for /filter. Check the `partial` field:
+- `"partial": true` — filtering is on first 5GB only
+- `"partial": false` — full dataset indexed
+
+#### 5. `/search` — Text search within a split
+```
+GET https://datasets-server.huggingface.co/search?dataset=stanfordnlp/imdb&config=plain_text&split=train&query=terrible&limit=2
+```
+
+**Parameters:**
+| Param | Required | Description |
+|-------|----------|-------------|
+| `dataset` | Yes | Fully qualified |
+| `config` | Yes | Subset name |
+| `split` | Yes | Split name |
+| `query` | Yes | Search text |
+| `offset` | No | Pagination offset |
+| `limit` | No | Results per page (max=100) |
+
+**Behavior observed:** The search endpoint returned a 502 Bad Gateway for the imdb dataset with "terrible" — suggesting search may time out on large textual datasets. Tends to work better on smaller or structured datasets.
+
+#### 6. `/parquet` — List available Parquet exports
+```
+GET https://datasets-server.huggingface.co/parquet?dataset=stanfordnlp/imdb
+```
+
+**Response:**
+```json
+{
+  "parquet_files": [
+    {
+      "dataset": "stanfordnlp/imdb",
+      "config": "plain_text",
+      "split": "test",
+      "url": "https://huggingface.co/datasets/stanfordnlp/imdb/resolve/refs%2Fconvert%2Fparquet/plain_text/test/0000.parquet",
+      "filename": "0000.parquet",
+      "size": 20470363
+    },
+    {
+      "dataset": "stanfordnlp/imdb",
+      "config": "plain_text",
+      "split": "train",
+      "url": "https://huggingface.co/datasets/stanfordnlp/imdb/resolve/refs%2Fconvert%2Fparquet/plain_text/train/0000.parquet",
+      "filename": "0000.parquet",
+      "size": 20979968
+    }
+  ],
+  "pending": [],
+  "failed": [],
+  "partial": false
+}
+```
+
+**Key insights:**
+- Parquet URL path uses `refs%2Fconvert%2Fparquet` (URL-encoded `refs/convert/parquet`) — auto-generated by HF
+- Each split has its own Parquet file(s) with size in bytes
+- Multiple Parquet files per split if the dataset is large (sharded)
+
+**Usage with DuckDB/Polars:**
+```python
+from huggingface_hub import HfFileSystem
+import duckdb
+
+fs = HfFileSystem()
+duckdb.register_filesystem(fs)
+url = "hf://datasets/stanfordnlp/imdb/refs%2Fconvert%2Fparquet/plain_text/train/0000.parquet"
+df = duckdb.query(f"SELECT * FROM read_parquet('{url}') WHERE label = 1 LIMIT 10").df()
+```
+
+#### 7. `/size` — Dataset size breakdown
+```
+GET https://datasets-server.huggingface.co/size?dataset=stanfordnlp/imdb&config=plain_text
+```
+
+**Response:**
+```json
+{
+  "size": {
+    "config": {
+      "dataset": "stanfordnlp/imdb",
+      "config": "plain_text",
+      "num_bytes_original_files": 83446840,
+      "num_bytes_parquet_files": 83446840,
+      "num_bytes_memory": 128683449,
+      "num_rows": 100000,
+      "num_columns": 2,
+      "estimated_num_rows": null
+    },
+    "splits": [
+      {
+        "dataset": "stanfordnlp/imdb",
+        "config": "plain_text",
+        "split": "train",
+        "num_bytes_parquet_files": 20979968,
+        "num_bytes_memory": 33090550,
+        "num_rows": 25000,
+        "num_columns": 2,
+        "estimated_num_rows": null
+      }
+    ]
+  },
+  "partial": false
+}
+```
+
+**Field meanings:**
+| Field | Meaning |
+|-------|---------|
+| `num_bytes_original_files` | Size of original (non-Parquet) data files |
+| `num_bytes_parquet_files` | Size of Parquet export files |
+| `num_bytes_memory` | Estimated memory footprint when loaded via `datasets` library |
+| `estimated_num_rows` | Non-null only for datasets too large for exact counting |
+
+**Compression ratio signal:** Compare `num_bytes_parquet_files` vs `num_bytes_memory` to estimate Parquet compression ratio. For imdb: ~20MB vs 33MB per split (~1.6x compression on text).
+
+#### 8. `/statistics` — Column-level statistics
+```
+GET https://datasets-server.huggingface.co/statistics?dataset=stanfordnlp/imdb&config=plain_text&split=train
+```
+
+**Response:**
+```json
+{
+  "num_examples": 25000,
+  "statistics": [
+    {
+      "column_name": "label",
+      "column_type": "class_label",
+      "column_statistics": {
+        "nan_count": 0,
+        "nan_proportion": 0.0,
+        "no_label_count": 0,
+        "no_label_proportion": 0.0,
+        "n_unique": 2,
+        "frequencies": {"neg": 12500, "pos": 12500}
+      }
+    },
+    {
+      "column_name": "text",
+      "column_type": "string_text",
+      "column_statistics": {
+        "nan_count": 0,
+        "nan_proportion": 0.0,
+        "min": 52,
+        "max": 13704,
+        "mean": 1325.07,
+        "median": 979.0,
+        "std": 1003.13,
+        "histogram": {
+          "hist": [17426, 5384, 1490, 535, 147, 11, 4, 2, 0, 1],
+          "bin_edges": [52, 1418, 2784, 4150, 5516, 6882, 8248, 9614, 10980, 12346, 13704]
+        }
+      }
+    }
+  ],
+  "partial": false
+}
+```
+
+**Column type-specific statistics:**
+
+| Column Type | Available Stats | Notes |
+|-------------|----------------|-------|
+| `class_label` | `n_unique`, `frequencies` (map of string→count) | Labels returned as string names |
+| `string_text` | `min`, `max`, `mean`, `median`, `std`, `histogram` | Length stats (char count) |
+| `float` / `int` | `min`, `max`, `mean`, `median`, `std`, `histogram` | Value stats |
+| `bool` | `n_unique`, `frequencies` | |
+| `sequence` | No statistics | Not computed for nested types |
+
+**Histogram interpretation:** 10-bin histogram. `bin_edges` has 11 values (edges of 10 bins). `hist[i]` = count of rows in range `[bin_edges[i], bin_edges[i+1])`.
+
+#### 9. `/is-valid` — Check dataset viewer status
+```
+GET https://datasets-server.huggingface.co/is-valid?dataset=stanfordnlp/imdb
+```
+
+**Response:**
+```json
+{
+  "preview": true,
+  "viewer": true,
+  "search": true,
+  "filter": true,
+  "statistics": true
+}
+```
+
+**Field meaning:** Each boolean indicates if the feature is available for this dataset. Useful for conditional logic before calling other endpoints.
+
+### Error Handling
+
+| Status | Meaning | Example |
+|--------|---------|---------|
+| 200 | Success | Normal response |
+| 404 | Dataset not found or renamed | Removed/renamed datasets |
+| 422 | Invalid parameters | Wrong `where` syntax |
+| 500 | Server error | Internal indexing failure |
+| 502 | Bad Gateway | Timeout on large search queries |
+
+**Error response format:**
+```json
+{"error": "The dataset has been renamed. Please use the current dataset name."}
+```
+or
+```json
+{"error": "Parameter 'where' contains errors or invalid symbols"}
+```
+
+### Performance & Limits
+
+| Endpoint | Max Page Size | Indexing Limit |
+|----------|--------------|----------------|
+| `/rows` | 100 rows/page | Full dataset |
+| `/filter` | 100 rows/page | First 5GB (partial=true if exceeded) |
+| `/search` | 100 rows/page | First 5GB |
+| `/first-rows` | 100 rows (fixed) | Full dataset (preview only) |
+| `/statistics` | — | Full dataset |
+| `/size` | — | Full dataset |
+
+### Best Practices
+
+1. **Always use fully qualified dataset names** (e.g. `stanfordnlp/imdb`, not `imdb`)
+2. **Check `/is-valid` first** before polling other endpoints — it's the fastest way to know what's available
+3. **For row-level queries**, prefer `/rows` with `offset`/`length` pagination over `/filter` if you don't need filtering — `/rows` is simpler and has no 5GB index limit
+4. **For filtered queries**, use `/filter` with **predicate syntax** (not JSON): `"label">0`, NOT `{"label":1}`
+5. **For text search**, use `/search` with short, specific queries — long/common queries may time out on large datasets
+6. **For bulk analysis**, use `/parquet` to get file URLs, then query with DuckDB/Polars via `HfFileSystem` for efficient columnar access
+7. **ClassLabel columns** return integer indices — always check `features[n].type.names` to map indices to string labels
+8. **Handle `partial: true`** — when present, results represent a subset of the data (first 5GB)
+9. **Single config vs multi-config**: Datasets with one config return `/splits` normally; `/configs` endpoint returns "Not Found" for single-config datasets — use `/splits` to discover configs instead
+
+### Resources
+- Datasets Server OpenAPI spec: https://datasets-server.huggingface.co/openapi.json (uses ReDoc)
+- Filter docs: https://huggingface.co/docs/dataset-viewer/en/filter
+- Rows docs: https://huggingface.co/docs/dataset-viewer/en/rows
+- Search docs: https://huggingface.co/docs/dataset-viewer/en/search
+- Parquet docs: https://huggingface.co/docs/dataset-viewer/en/parquet
+- Datasets Server source: https://github.com/huggingface/dataset-viewer
+
+---
