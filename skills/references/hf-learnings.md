@@ -11269,3 +11269,26 @@ Deep dive into PEFT v0.20.0 covering all LoRA initialization strategies (PiSSA, 
 5. trainable_token_indices saves significant VRAM vs full embedding tuning
 6. MoE models need target_parameters + merge_and_unload() for production inference
 7. KappaTune auto-selects the best layers via condition number analysis
+
+---
+
+## 2026-07-24: hf-timm — PyTorch Image Models Deep Dive (Topic #179 — New)
+
+### Summary
+Comprehensive deep-dive into timm (PyTorch Image Models) v1.0.28 — 1,000+ pretrained vision models from 200+ architectures, now part of Hugging Face ecosystem. Covers installation, model creation/listing, inference pipeline, feature extraction (penultimate, multi-scale, intermediate via forward_features/features_only/forward_intermediates), data augmentation (RandAugment, AugMix, random erasing), and Hugging Face Hub integration (push_to_hf_hub, hf_hub: prefix loading). Full document at skills/mlops/hf-timm/references/hf-learnings.md.
+
+### Source
+- https://huggingface.co/docs/timm/en/index
+- https://huggingface.co/docs/timm/en/quickstart
+- https://huggingface.co/docs/timm/en/feature_extraction
+- https://huggingface.co/docs/timm/en/hf_hub
+- GitHub: https://github.com/rwightman/pytorch-image-models
+
+### Key Takeaways
+1. `timm.create_model(model_name, pretrained=True)` works for ALL 1,000+ models — unified interface
+2. Always resolve data config via `timm.data.resolve_data_config(model.pretrained_cfg)` for correct transforms
+3. Feature extraction: `forward_features()` for penultimate, `features_only=True` for multi-scale pyramid, `forward_intermediates()` for flexible layer access
+4. Hub integration: `timm.models.push_to_hf_hub(model, name)` to share, `hf_hub:user/model` prefix to load
+5. Built-in data pipeline with RandAugment, random erasing, Mixup, AugMix via `create_loader()`
+6. Official training script (`train.py`) supports distributed training, AMP, EMA, and extensive aug config
+7. `out_indices` supports negative indexing for convenient last/penultimate feature selection
