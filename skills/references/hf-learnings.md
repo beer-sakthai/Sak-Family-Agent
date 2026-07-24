@@ -4502,4 +4502,263 @@ Structure: `assets/{library}/{namespace}/{subfolder}/`. Integrates with `scan_ca
 - Xet guide: https://huggingface.co/docs/hub/xet/index
 - `scan_cache_dir` docs: https://huggingface.co/docs/huggingface_hub/main/en/package_reference/cache#huggingface_hub.scan_cache_dir
 - `hf cache` CLI: https://huggingface.co/docs/huggingface_hub/main/en/guides/cli#hf-cache
-- CACHEDIR.TAG standard: https://bford.info/cachedir/
+|- CACHEDIR.TAG standard: https://bford.info/cachedir/
+
+## 2026-07-24: hf-inference-client-structured-outputs — Deep Dive v2 (Topic #100)
+
+### Summary
+Deep-dive v2 into Hugging Face `InferenceClient` — covering the v1.24.0 overhaul with OpenAI-compatible aliases, multi-provider routing internals, the Router API for provider comparison, Hub API for model discovery, and advanced patterns (vision/multimodal input, extra_body for provider-specific params, direct provider API keys, third-party billing). Based on official docs at huggingface_hub v1.24.0.
+
+### Key New in v1.24.0
+
+| Feature | What Changed |
+|---------|-------------|
+| **OpenAI alias** | `client.chat.completions.create()` aliases `client.chat_completion()` |
+| **OpenAI init** | `InferenceClient(base_url=..., api_key=...)` mirrors `OpenAI()` |
+| **Provider suffix** | Model id accepts `:fastest`, `:cheapest`, `:preferred`, `:provider-name` |
+| **extra_body** | Pass provider-specific params through to the underlying provider |
+| **Direct API key** | Pass a provider's own API key (billed to them) instead of HF token |
+| **Automatic failover** | Auto provider selection routes to alternative if primary is flagged unavailable |
+| **Router API** | `GET /v1/models` lists all models with per-provider pricing, latency, throughput |
+
+### 1. OpenAI-Compatible Initialization (v1.24.0+)
+
+InferenceClient now accepts the same init kwargs as `openai.OpenAI`:
+
+```python
+# Style 1 — classic HF
+from huggingface_hub import InferenceClient
+client = InferenceClient(model="meta-llama/Meta-Llama-3-8B-Instruct")
+
+# Style 2 — OpenAI-compatible init
+client = InferenceClient(
+    base_url="https://router.huggingface.co/v1",
+    api_key="hf_...",  # alias for token=
+)
+
+# Chat completion both ways
+result = client.chat_completion(messages=[...])          # classic
+result = client.chat.completions.create(messages=[...])   # OpenAI alias
+```
+
+**Key constraint:** `model` and `base_url` are mutually exclusive on init. If you pass `base_url`, the `(/v1)/chat/completions` suffix is appended automatically for chat completion calls. If you pass `model` as a model ID, it's sent as the payload `model` parameter.
+
+### 2. Provider Selection — Three Policies + Suffix Syntax
+
+#### Client-Side (InferenceClient `provider` param)
+```python
+client = InferenceClient(provider="auto")       # fastest (default)
+client = InferenceClient(provider="together")    # force specific provider
+```
+
+#### Model-ID Suffix Syntax
+Append to the model id string for per-call override:
+```python
+result = client.chat_completion(
+    model="deepseek-ai/DeepSeek-R1:fastest",    # fastest provider
+    messages=[...],
+)
+# :cheapest  — lowest price per output token
+# :preferred — user preference order from https://hf.co/settings/inference-providers
+# :groq      — direct provider name (any of the 17 supported providers)
+```
+
+#### Automatic Failover
+When `provider="auto"`, requests are automatically routed to alternative providers if the primary is flagged as unavailable by the validation system. This makes `auto` the most reliable option for production.
+
+### 3. The Router API — Provider Comparison
+
+The router exposes an OpenAI-compatible `GET /v1/models` with full per-provider metadata:
+
+```bash
+# List all served models with provider comparison data
+curl -s https://router.huggingface.co/v1/models | jq '.data[] | {id, providers: [.providers[] | {provider, status, pricing, supports_structured_output, throughput}]}'
+
+# Single model
+curl -s https://router.huggingface.co/v1/models/deepseek-ai/DeepSeek-V4-Pro | jq '.'
+```
+
+**Per-provider fields returned:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `provider` | string | Provider identifier (e.g., "novita", "together") |
+| `status` | string | `live` or `error` |
+| `context_length` | number | Max context for this provider+model combo |
+| `pricing.input` | number | USD per million input tokens |
+| `pricing.output` | number | USD per million output tokens |
+| `is_free` | boolean | Temporary free promo |
+| `supports_tools` | boolean | Tool/function calling support |
+| `supports_structured_output` | boolean | JSON-schema-constrained output |
+| `first_token_latency_ms` | number | Latest validation probe TTFT |
+| `throughput` | number | Output tokens/sec from latest probe |
+| `is_model_author` | boolean | Whether model was published by this provider |
+
+**Use case:** Before calling inference, query this endpoint to find which providers support structured output for your model at the lowest latency, then pin that provider.
+
+### 4. Hub API — Model Discovery for Inference
+
+```bash
+# All models served by any inference provider
+~ curl -s "https://huggingface.co/api/models?inference_provider=all&pipeline_tag=text-generation" | jq ".[].id"
+
+# Models served by a specific provider
+~ curl -s "https://huggingface.co/api/models?inference_provider=fireworks-ai" | jq ".[].id"
+
+# Multiple providers (comma-separated = OR)
+~ curl -s "https://huggingface.co/api/models?inference_provider=nscale,novita&pipeline_tag=image-text-to-text" | jq ".[].id"
+
+# Check if a specific model has inference enabled
+~ curl -s "https://huggingface.co/api/models/google/gemma-3-27b-it?expand[]=inference"
+# Response: {"id": "...", "inference": "warm"} or no "inference" field
+
+# Get per-provider mapping for a model
+~ curl -s "https://huggingface.co/api/models/google/gemma-3-27b-it?expand[]=inferenceProviderMapping"
+```
+
+Same from Python:
+```python
+from huggingface_hub import model_info
+
+info = model_info("google/gemma-3-27b-it", expand="inference")
+print(info.inference)  # "warm" or None
+
+info = model_info("google/gemma-3-27b-it", expand="inferenceProviderMapping")
+print(info.inference_provider_mapping)
+# {'featherless-ai': InferenceProviderMapping(status='live', ...), ...}
+```
+
+CLI equivalent:
+```bash
+hf models ls --warn                              # all served models
+hf models ls --warn --search GLM-5.2              # search served models
+hf models ls --inference-provider fal-ai --pipeline-tag text-to-image
+hf models ls --inference-provider fireworks-ai --sort downloads
+```
+
+### 5. Billing Modes — Three Patterns
+
+```python
+# 1. Hugging Face billing (default)
+client = InferenceClient(api_key="hf_...")  # Uses HF credits/plan
+
+# 2. Bill to Enterprise org
+client = InferenceClient(provider="fal-ai", bill_to="my-org")
+
+# 3. Direct provider API key (billed directly by provider)
+client = InferenceClient(
+    provider="together",
+    api_key="<together_api_key>",  # Not HF token! Provider's own key
+)
+```
+
+Pattern 3 bypasses HF billing and uses your provider account directly, while still using the HF client interface.
+
+### 6. Provider-Specific Parameters (extra_body)
+
+```python
+result = client.chat_completion(
+    model="meta-llama/Meta-Llama-3-8B-Instruct",
+    messages=[...],
+    extra_body={
+        "safety_model": "Meta-Llama/Llama-Guard-7b",  # Together-specific
+        # Any provider-specific param from their API docs
+    },
+)
+```
+
+The `extra_body` dict is passed directly to the provider API. Check the provider's documentation for supported parameters.
+
+### 7. Vision / Multimodal Input
+
+```python
+# Remote URL
+image_url = "https://cdn.britannica.com/61/93061-050-99147DCE/Statue-of-Liberty-Island-New-York-Bay.jpg"
+
+# Or base64-encoded local image
+with open("image.jpeg", "rb") as f:
+    base64_image = base64.b64encode(f.read()).decode("utf-8")
+image_url = f"data:image/jpeg;base64,{base64_image}"
+
+output = client.chat.completions.create(
+    model="meta-llama/Llama-3.2-11B-Vision-Instruct",
+    messages=[{
+        "role": "user",
+        "content": [
+            {"type": "image_url", "image_url": {"url": image_url}},
+            {"type": "text", "text": "Describe this image in one sentence."},
+        ],
+    }],
+)
+```
+
+### 8. Complete Method Surface
+
+All task-specific methods available on InferenceClient (v1.24.0):
+
+| Method | Task | Binary Input |
+|--------|------|-------------|
+| `chat_completion()` | Chat / text generation | — |
+| `text_generation()` | Raw text generation (non-chat) | — |
+| `text_to_image()` | Image generation | — |
+| `image_classification()` | Classify images | bytes, Path, URL |
+| `image_segmentation()` | Segment images | bytes, Path, URL |
+| `image_to_image()` | Image-to-image translation | bytes, Path, URL |
+| `object_detection()` | Detect objects | bytes, Path, URL |
+| `zero_shot_image_classification()` | Zero-shot image classification | bytes, Path, URL |
+| `automatic_speech_recognition()` | Speech-to-text | bytes, Path, URL |
+| `text_to_speech()` | Text-to-speech | — |
+| `text_to_audio()` | Audio generation | — |
+| `audio_classification()` | Audio classification | bytes, Path, URL |
+| `audio_to_audio()` | Audio-to-audio transformation | bytes, Path, URL |
+| `feature_extraction()` | Embeddings | — |
+| `sentence_similarity()` | Compare texts | — |
+| `fill_mask()` | Masked language modeling | — |
+| `summarization()` | Text summarization | — |
+| `translation()` | Machine translation | — |
+| `zero_shot_classification()` | Zero-shot classification | — |
+| `tabular_classification()` | Tabular classification | — |
+| `tabular_regression()` | Tabular regression | — |
+| `document_question_answering()` | Document QA | bytes, Path, URL |
+| `visual_question_answering()` | Visual QA | bytes, Path, URL |
+
+### 9. Streaming Options
+
+```python
+# Basic streaming
+stream = client.chat_completion(messages=[...], model="...", stream=True)
+for chunk in stream:
+    print(chunk.choices[0].delta.content or "", end="")
+
+# With stream_options
+stream = client.chat_completion(
+    messages=[...],
+    model="...",
+    stream=True,
+    stream_options={"include_usage": True},  # returns usage info in final chunk
+)
+```
+
+### 10. Error Handling
+
+```python
+from huggingface_hub import InferenceClient, InferenceTimeoutError, HfHubHTTPError
+
+client = InferenceClient(timeout=30)
+try:
+    result = client.chat_completion(messages=[...], model="...")
+except InferenceTimeoutError:
+    print("Model unavailable or request timed out after 30s")
+except HfHubHTTPError as e:
+    if e.response.status_code == 503:
+        print("Model is loading, retry later")
+    else:
+        print(f"HTTP error: {e}")
+```
+
+### Resources
+- [InferenceClient API reference](https://huggingface.co/docs/huggingface_hub/v1.24.0/en/package_reference/inference_client)
+- [Inference Providers docs](https://huggingface.co/docs/inference-providers/en/index)
+- [Inference Providers Hub API](https://huggingface.co/docs/inference-providers/en/hub-api)
+- [Inference guide](https://huggingface.co/docs/huggingface_hub/en/guides/inference)
+- [hf models ls CLI](https://huggingface.co/docs/huggingface_hub/package_reference/cli#hf-models-list)
