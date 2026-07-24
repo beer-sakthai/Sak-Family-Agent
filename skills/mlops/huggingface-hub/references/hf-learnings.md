@@ -1766,13 +1766,34 @@ except Exception as e:
     print(f"Upload failed: {e}")
 ```
 
+## 2026-07-24: hf-hub-xet-streamed-upload-pipeline-deep-dive — Xet Streamed Multi-Commit Upload Pipeline (Topic #135)
+
+### Summary
+Comprehensive deep-dive into the Xet-backed streamed multi-commit upload pipeline introduced in `huggingface_hub` 1.24.0. See the full entry in `skills/references/hf-learnings.md` (main file). This is a concise reference for the huggingface-hub skill.
+
+### Quick Architecture
+Two-thread pipeline: **Coordinator** scans files 256-at-a-time via `_fetch_upload_modes()`, opens Xet upload-commits, starts uploads in background. **Committer** finalizes Xet uploads, drops unchanged files (dedup), creates git commits with adaptive batch sizes. Backpressure via `batch_queue(maxsize=1)`.
+
+### Key Constants (from `_upload_pipeline.py`)
+| Constant | Value | Purpose |
+|---|---|---|
+| `PREUPLOAD_BATCH_SIZE` | 256 | Files per preupload API call |
+| `COMMIT_SIZE_SCALE` | [20,50,75,100,125,200,250,400,600,1000] | Adaptive batch sizes |
+| `INITIAL_COMMIT_SIZE_INDEX` | 6 | Start at 256 files/commit |
+| `TARGET_COMMIT_DURATION` | 40.0s | Scale up if commits faster |
+| `MAX_COMMIT_INTERVAL` | 300.0s | Force commit if idle |
+| `REGULAR_CONTENT_BYTES_BUDGET` | 100 MB | Regular file payload limit |
+
+### Resume Pattern
+Re-run `upload_folder()` with same args. Already-committed files are detected via `_remote_oid == _local_oid` and dropped. Partially-uploaded Xet chunks are deduplicated by backend. Resume into existing PR: use `revision="refs/pr/N"` instead of `create_pr=True`.
+
 ### Resources
+- Full deep-dive: `skills/references/hf-learnings.md` (Topic #135)
 - huggingface_hub source: https://github.com/huggingface/huggingface_hub
 - `hf_api.py` (upload methods): https://github.com/huggingface/huggingface_hub/blob/main/src/huggingface_hub/hf_api.py
-- `_commit_api.py`: https://github.com/huggingface/huggingface_hub/blob/main/src/huggingface_hub/_commit_api.py
 - `_upload_pipeline.py` (Xet pipeline): https://github.com/huggingface/huggingface_hub/blob/main/src/huggingface_hub/_upload_pipeline.py
-- Hub docs: https://huggingface.co/docs/hub/en/repositories-getting-started
 - Xet docs: https://huggingface.co/docs/hub/en/xet/index
+- `upload_folder` reference: https://huggingface.co/docs/huggingface_hub/package_reference/hf_api#huggingface_hub.HfApi.upload_folder
 
 ### Skill
 huggingface-hub — references/hf-learnings.md

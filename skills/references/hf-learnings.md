@@ -6188,5 +6188,187 @@ hf spaces logs user/space -n 50    # last 50 lines
 - Dev Mode: https://huggingface.co/docs/hub/en/spaces-dev-mode
 - fetch_space_logs: https://huggingface.co/docs/huggingface_hub/package_reference/hf_api#huggingface_hub.HfApi.fetch_space_logs
 
+## 2026-07-24: hf-hub-xet-streamed-upload-pipeline-deep-dive — Xet Streamed Multi-Commit Upload Pipeline (Topic #135)
+
+### Summary
+Comprehensive deep-dive into the Xet-backed streamed multi-commit upload pipeline introduced in `huggingface_hub` 1.24.0. When `hf_xet` is installed (the default), `upload_folder()` no longer uses a single `create_commit()` call — instead it orchestrates a pipelined upload via `_UploadPipeline` that overlaps scanning, uploading, and committing across threads; adaptively batches files per commit; deduplicates unchanged files; and resumes on interruption by re-running the same call. Source: `huggingface_hub/_upload_pipeline.py` (682 lines, copyright 2026).
+
+### Architecture Overview
+
+```
+Coordinator Thread (caller)              Committer Thread
+┌──────────────────────────┐            ┌──────────────────────┐
+│ Walk files 256-at-a-time │──batch──▶  │ Wait for Xet uploads │
+│ via _fetch_upload_modes  │  queue     │ Drop unchanged files │
+│                          │  (maxsize  │ Adaptive size commits │
+│ Open Xet upload-commit   │   = 1)     │ PR creation (lazy)   │
+│ Start xet uploads (bg)   │            │ Send git commit      │
+│ Enqueue batches          │            │ Record success/fail  │
+└──────────────────────────┘            └──────────────────────┘
+         ▲                                        │
+         │ Xet dedup + chunk upload (background)  │
+         │ (single read pass, no Python sha256)   │
+         └────────────────────────────────────────┘
+```
+
+### Key Components
+
+#### 1. `is_xet_available()` — Gate Check
+```python
+def is_xet_available() -> bool:
+    if constants.HF_HUB_DISABLE_XET:  # env var opt-out
+        return False
+    return is_package_available("hf_xet")
+```
+- `hf_xet` is installed by default with `huggingface_hub` (bundled dependency)
+- Disable with `HF_HUB_DISABLE_XET=1` to force the legacy single-commit path
+- Without `hf_xet`, `upload_folder()` falls back to `create_commit()` (warns if >30 files)
+
+#### 2. `_fetch_upload_modes()` — Preupload Classification
+- POSTs to `/api/{repo_type}s/{repo_id}/preupload/{revision}`
+- Sends 256 files at a time (server-side limit) with `path`, `sample` (base64 first bytes), and `size`
+- Each file is classified: `regular` (small git blob, base64 in commit payload), `lfs` (old path, not used by Xet pipeline), or left unset for Xet
+- Sets `_should_ignore` (gitignore matched), `_upload_mode`, `upload_info` (sha256, size, sample)
+- Accepts `gitignore_content` parameter (forwarded from local `.gitignore` if uploaded)
+- Mutates `CommitOperationAdd` objects in-place
+
+#### 3. `_UploadPipeline` — Main Orchestrator
+
+**Initialization:**
+- Creates a `XetSession` with a `token_refresh_url` including `?create_pr=1` if applicable
+- Cache: `xet_commit_kwargs` with token refresh URL, auth headers, and `xet_headers_without_auth()`
+- Extracts `.gitignore` content from the uploaded files if present
+- Creates `_LiveDisplay` progress renderer (3-line TTY or periodic logger)
+
+**Coordinator Loop (`_coordinator_loop`):**
+1. Iterates `add_operations` in chunks of 256 (PREUPLOAD_BATCH_SIZE)
+2. For each chunk, calls `_fetch_upload_modes()`
+3. For each file in chunk:
+   - If `_should_ignore` → skip (gitignore)
+   - If `regular` → tracks `regular_bytes` for budget enforcement
+   - If Xet → opens `batch.xet_commit` (lazy, per batch) and calls `start_upload_file()` or `start_upload_bytes()` — **upload starts immediately in background**
+   - sha256 is computed by `hf_xet` during chunking (single read pass), unless `upload_info.is_hashed` (e.g. resumed)
+4. Flushes the batch when:
+   - File count >= `pacer.target` (adaptive, starts at 256)
+   - OR `regular_bytes` >= 100 MB budget
+   - OR batch age > 5 min (MAX_COMMIT_INTERVAL)
+5. Enqueues each batch via `batch_queue.put()` (maxsize=1 for natural backpressure)
+
+**Committer Loop (`_committer_loop`):**
+- Runs in a daemon thread (`hf-upload-committer`)
+- Polls `batch_queue.get(timeout=0.5)` — exits on sentinel or abort event
+
+**Batch Processing (`_process_batch`):**
+1. **Finalize Xet uploads:** `batch.xet_commit.wait_to_finish()` — blocks until all background uploads complete. Sets `op.upload_info.sha256` from the Xet result and marks `_is_uploaded=True`.
+2. **Drop unchanged files:** Compares `_remote_oid` (from preupload response) with `_local_oid` (computed during hashing). If equal, the file is skipped — its chunks were already deduplicated by Xet, transferring ~0 bytes.
+3. **Commit:** Passes remaining ops to `_commit_with_split()`
+
+**Adaptive Commit Pacer (`_CommitPacer`):**
+- `COMMIT_SIZE_SCALE = [20, 50, 75, 100, 125, 200, 250, 400, 600, 1000]`
+- Starts at index 6 → **256 files per commit**
+- Scales up when commit duration < 40s (TARGET_COMMIT_DURATION) and file count >= target
+- Scales down on failure (index -1), down to minimum 20 files
+- `record_success(duration, nb_files)` / `record_failure()`
+
+**Commit Splitting (`_commit_with_split`):**
+- Tries `_do_commit()` with all ops
+- On failure: calls `pacer.record_failure()`, then recursively splits into `pacer.target`-sized chunks and retries each
+- Minimum split size = `COMMIT_SIZE_SCALE[0]` = 20 files (raises if still failing at this size)
+
+**PR Creation (Lazy, `_do_commit`):**
+- Only creates the PR on the **first** actual batch commit (not for empty all-skipped uploads)
+- Uses `api.create_pull_request()` explicitly (not `?create_pr=1` on commit POST) to avoid duplicate PRs on retry
+- Once created, `commit_revision_quoted` is switched to `refs/pr/N` for all subsequent commits
+- Commit messages: first batch uses `commit_message`, subsequent batches append ` (part N)`
+
+**Resume Pattern:**
+- Re-run `upload_folder()` with same args
+- Already-committed files: preupload returns `_remote_oid == _local_oid` → dropped as unchanged
+- Partially-uploaded Xet chunks: deduplicated by Xet storage backend (~0 bytes transferred)
+- To resume into an existing PR: use `revision="refs/pr/N"` instead of `create_pr=True`
+
+#### 4. `_LiveDisplay` — Progress Rendering
+
+Three-line display on stderr:
+```
+  Preparing   ████████████████████  11,100 / 11,100 ✓
+  Uploading   ██████████████░░░░░░  580 / 603 files  3.8GB · 19.7MB/s
+  Committing  ██████████████████░░  10,800 / 11,100  14 commits
+```
+
+- TTY mode: redraws in-place every 0.5s (`_REFRESH_INTERVAL`)
+- Non-TTY mode: `logger.info()` summary every 30s (`_NON_TTY_LOG_INTERVAL`)
+- Disabled when `are_progress_bars_disabled()` returns True (e.g. agent output mode)
+- Thread-safe counters under `threading.Lock()`
+
+#### 5. Edge Cases
+
+| Scenario | Handling |
+|---|---|
+| **All files unchanged** | `_final_commit_info()` returns last commit on target revision; logs warning; no PR created |
+| **Interrupted mid-upload** | Re-run resumes: committed files skipped, Xet chunks deduplicated |
+| **Empty commit prevention** | Files with `_remote_oid == _local_oid` are dropped before commit |
+| **PR + interruption** | Warning suggests re-run with `revision="refs/pr/N"` instead of `create_pr=True` |
+| **Large regular files** | If `regular_bytes` exceeds 100 MB budget, forces a batch flush |
+| **Upload failure** | Commit splits into smaller chunks recursively; commits retried with backoff |
+| **Repository not found** | `RepositoryNotFoundError` with appended hint message |
+| **Abort during shutdown** | Daemon committer thread joins with 10s timeout; Xet session aborted |
+
+### Key Constants
+
+| Constant | Value | Purpose |
+|---|---|---|
+| `PREUPLOAD_BATCH_SIZE` | 256 | Files per preupload API call |
+| `COMMIT_SIZE_SCALE` | [20,50,75,100,125,200,250,400,600,1000] | Adaptive batch sizes |
+| `INITIAL_COMMIT_SIZE_INDEX` | 6 | Start at 256 files/commit |
+| `TARGET_COMMIT_DURATION` | 40.0s | Scale up if commits faster |
+| `MAX_COMMIT_INTERVAL` | 300.0s | Force commit if idle |
+| `REGULAR_CONTENT_BYTES_BUDGET` | 100 MB | Regular file payload limit |
+
+### Zero-Cost Practical Patterns
+
+```python
+# Upload a dataset folder with auto-resume
+from huggingface_hub import HfApi
+api = HfApi()
+api.upload_folder(
+    folder_path="./my-dataset",
+    repo_id="user/my-dataset",
+    repo_type="dataset",
+    ignore_patterns="**/*.tmp",  # skip temp files
+)
+
+# Upload model checkpoints in PR (safe for CI)
+api.upload_folder(
+    folder_path="./checkpoints",
+    repo_id="user/my-model",
+    repo_type="model",
+    create_pr=True,
+    delete_patterns="**/*.bak",  # auto-clean old backups
+)
+
+# Upload with explicit token
+api.upload_folder(
+    folder_path="./model-artifacts",
+    repo_id="org/my-model",
+    token="hf_...",
+    allow_patterns=["*.safetensors", "*.json", "*.yaml"],
+)
+
+# Resume into existing PR
+api.upload_folder(
+    folder_path="./checkpoints",
+    repo_id="user/my-model",
+    revision="refs/pr/42",  # resume into existing PR
+)
+```
+
+### Resources
+- Source: `huggingface_hub/_upload_pipeline.py` on GitHub
+- `_commit_api.py`: https://github.com/huggingface/huggingface_hub/blob/main/src/huggingface_hub/_commit_api.py
+- `_upload_pipeline.py`: https://github.com/huggingface/huggingface_hub/blob/main/src/huggingface_hub/_upload_pipeline.py
+- Xet docs: https://huggingface.co/docs/hub/en/xet/index
+- `upload_folder` reference: https://huggingface.co/docs/huggingface_hub/package_reference/hf_api#huggingface_hub.HfApi.upload_folder
+
 ### Skill
-gradio-spaces — references/hf-learnings.md
+huggingface-hub — references/hf-learnings.md
