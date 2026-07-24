@@ -8742,3 +8742,383 @@ Xet storage and hf_xet are free for all Hub users - no paid tier required. For B
 - Xet Hub Documentation (https://huggingface.co/docs/hub/xet/index)
 - huggingface_hub utils/_xet.py on GitHub
 - hf_xet PyPI package: hf-xet
+
+## 2026-07-24: hf-inference-client-tool-use-and-function-calling — InferenceClient Tool Calling Deep-Dive (Topic #155)
+
+### Summary
+Deep-dive into Hugging Face `InferenceClient`'s tool-calling / function-calling API (v1.24.0). Covers the full data model (tool definitions, function schemas, tool_choice modes), streaming vs non-streaming tool calls, OpenAI compatibility (`client.chat.completions.create`), multi-turn tool execution loops, integration with MCP, and practical zero-cost patterns for agent workflows.
+
+### Overview
+Hugging Face `InferenceClient` implements the same tool-calling interface as the OpenAI Chat Completions API. This allows LLMs to interact with external tools — functions, APIs, or external services — by generating structured JSON arguments that the client can execute and relay back.
+
+**Verified from huggingface_hub v1.24.0 source code and docs (2026-07-24):**
+- Tool calling works with both synchronous `InferenceClient` and `AsyncInferenceClient`
+- Supported models: any provider model that supports function/tool calling (verify per provider)
+- Available via `client.chat_completion(..., tools=..., tool_choice=...)` or `client.chat.completions.create(..., tools=..., tool_choice=...)`
+- Streaming and non-streaming modes both support tool calls
+
+### Full Data Model
+
+#### Input Types (What You Send)
+
+| Type | Fields | Description |
+|------|--------|-------------|
+| `ChatCompletionInputTool` | `function: ChatCompletionInputFunctionDefinition`, `type: str` | A tool the model may call. `type` is always `"function"` |
+| `ChatCompletionInputFunctionDefinition` | `name: str`, `parameters: Any`, `description: str \| None` | JSON Schema function definition. `parameters` is a JSON Schema object |
+| `ChatCompletionInputToolChoiceClass` | `function: ChatCompletionInputFunctionName` | Force a specific tool by name |
+| `ChatCompletionInputFunctionName` | `name: str` | Just the tool name reference |
+| `ChatCompletionInputToolChoiceEnum` | `Literal["auto", "none", "required"]` | Control tool calling behaviour |
+
+#### Output Types (What You Receive)
+
+| Type | Fields | Description |
+|------|--------|-------------|
+| `ChatCompletionOutputToolCall` | `function: ChatCompletionOutputFunctionDefinition`, `id: str`, `type: str` | A tool call from the model |
+| `ChatCompletionOutputFunctionDefinition` | `arguments: str`, `name: str`, `description: str \| None` | The function to call. `arguments` is a JSON string |
+
+#### Streaming Delta Types
+
+| Type | Fields | Description |
+|------|--------|-------------|
+| `ChatCompletionStreamOutputDelta` | `role: str`, `content: str \| None`, `tool_calls: list[ChatCompletionStreamOutputDeltaToolCall] \| None`, `tool_call_id: str \| None`, `reasoning: str \| None` | Streaming delta that may contain tool call chunks |
+| `ChatCompletionStreamOutputDeltaToolCall` | `function: ChatCompletionStreamOutputFunction`, `id: str`, `index: int`, `type: str` | A streaming tool call delta |
+| `ChatCompletionStreamOutputFunction` | `arguments: str`, `name: str \| None` | `name` is present in the first delta of each tool call, then subsequent deltas accumulate `arguments` |
+
+### Tool Definition (Input)
+
+Each tool is defined with a JSON Schema for its parameters:
+
+```python
+tools = [
+    {
+        "type": "function",
+        "function": {
+            "name": "get_current_weather",
+            "description": "Get the current weather in a given location",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "location": {
+                        "type": "string",
+                        "description": "The city and state, e.g. San Francisco, CA"
+                    },
+                    "unit": {
+                        "type": "string",
+                        "enum": ["celsius", "fahrenheit"]
+                    }
+                },
+                "required": ["location"]
+            }
+        }
+    }
+]
+```
+
+Tools can also be passed as typed objects:
+
+```python
+from huggingface_hub.inference._generated.types.chat_completion import (
+    ChatCompletionInputTool,
+    ChatCompletionInputFunctionDefinition,
+)
+
+tools = [
+    ChatCompletionInputTool(
+        type="function",
+        function=ChatCompletionInputFunctionDefinition(
+            name="get_current_weather",
+            description="Get the current weather in a given location",
+            parameters={
+                "type": "object",
+                "properties": {
+                    "location": {"type": "string", "description": "City and state"},
+                    "unit": {"type": "string", "enum": ["celsius", "fahrenheit"]}
+                },
+                "required": ["location"]
+            }
+        )
+    )
+]
+```
+
+### tool_choice Modes
+
+| Value | Type | Behaviour |
+|-------|------|-----------|
+| `"auto"` | `Literal` | Model decides whether to call a tool or respond with text |
+| `"none"` | `Literal` | Disable tool calling entirely |
+| `"required"` | `Literal` | Force the model to call one of the provided tools |
+| `{"function": {"name": "get_current_weather"}}` | `ChatCompletionInputToolChoiceClass` | Force a specific tool by name |
+
+Default: `None` (which maps to `"auto"` on the server side).
+
+### Non-Streaming Tool Call
+
+```python
+from huggingface_hub import InferenceClient
+
+client = InferenceClient("Qwen/Qwen2.5-7B-Instruct")
+
+response = client.chat_completion(
+    messages=[{"role": "user", "content": "What's the weather in Paris?"}],
+    tools=tools,
+    tool_choice="auto",
+    max_tokens=500,
+)
+
+# Check if the model called a tool
+message = response.choices[0].message
+if message.tool_calls:
+    for tool_call in message.tool_calls:
+        print(f"Tool: {tool_call.function.name}")
+        print(f"Args: {tool_call.function.arguments}")
+        print(f"ID: {tool_call.id}")
+else:
+    print(f"Text response: {message.content}")
+```
+
+**Output structure:**
+```
+response.choices[0].message.tool_calls[0].id            # str - unique call ID
+response.choices[0].message.tool_calls[0].type          # str - "function"
+response.choices[0].message.tool_calls[0].function.name       # str
+response.choices[0].message.tool_calls[0].function.arguments  # str - JSON string
+response.choices[0].finish_reason                      # "eos_token", "stop", or "tool_calls"
+```
+
+### Streaming Tool Calls
+
+When streaming with tools, tool calls come as deltas across multiple chunks:
+
+```python
+stream = client.chat_completion(
+    messages=[{"role": "user", "content": "What's the weather in Paris?"}],
+    tools=tools,
+    tool_choice="auto",
+    stream=True,
+    max_tokens=500,
+)
+
+tool_calls = {}  # Dict[int, dict] - accumulate by index
+for chunk in stream:
+    delta = chunk.choices[0].delta
+    if delta.tool_calls:
+        for tc in delta.tool_calls:
+            idx = tc.index
+            if idx not in tool_calls:
+                tool_calls[idx] = {"id": tc.id, "name": tc.function.name, "arguments": ""}
+            if tc.function.name:
+                tool_calls[idx]["name"] = tc.function.name
+            if tc.id:
+                tool_calls[idx]["id"] = tc.id
+            if tc.function.arguments:
+                tool_calls[idx]["arguments"] += tc.function.arguments
+    elif delta.content:
+        print(delta.content, end="")
+```
+
+**Key streaming behaviour:**
+- First delta for each tool call includes the `name` and `id`
+- Subsequent deltas for the same tool call accumulate `arguments` (a string that builds up to a complete JSON)
+- When `finish_reason` is `"tool_calls"` (or similar), no more content deltas will arrive
+- The final state of each accumulated tool call's arguments is a complete JSON string
+
+### Multi-Turn Tool Execution Loop
+
+The standard agent pattern for executing tools and feeding results back:
+
+```python
+def run_tool_loop(client, messages, tools, max_turns=5):
+    for turn in range(max_turns):
+        response = client.chat_completion(
+            messages=messages,
+            tools=tools,
+            tool_choice="auto",
+            max_tokens=500,
+        )
+        message = response.choices[0].message
+        
+        if not message.tool_calls:
+            # Model responded with text - we're done
+            return message.content
+        
+        # Add assistant's tool call message to history
+        messages.append({
+            "role": "assistant",
+            "content": message.content or "",
+            "tool_calls": [
+                {
+                    "id": tc.id,
+                    "type": tc.type,
+                    "function": {
+                        "name": tc.function.name,
+                        "arguments": tc.function.arguments
+                    }
+                }
+                for tc in message.tool_calls
+            ]
+        })
+        
+        # Execute each tool call
+        for tool_call in message.tool_calls:
+            result = execute_tool(tool_call.function.name, tool_call.function.arguments)
+            messages.append({
+                "role": "tool",
+                "tool_call_id": tool_call.id,
+                "content": str(result)
+            })
+    
+    return "Max turns reached"
+```
+
+**Important message format for tool results:**
+- `tool_call_id` must match the `id` from the model's tool call
+- `role` must be `"tool"`
+- `content` is the tool output as a string
+
+### OpenAI Compatibility
+
+`InferenceClient` provides the same interface as `openai.OpenAI`:
+
+```python
+from huggingface_hub import InferenceClient
+
+client = InferenceClient(
+    model="Qwen/Qwen2.5-7B-Instruct",
+    api_key="hf_...",
+)
+
+# OpenAI-style syntax - exactly the same parameters
+output = client.chat.completions.create(
+    messages=[{"role": "user", "content": "What's the weather in Paris?"}],
+    tools=tools,
+    tool_choice="auto",
+)
+```
+
+**Note:** `client.chat.completions.create` is a **separate method** from `client.chat_completion`, not an alias. Both share the same parameter structure but are implemented independently for full OpenAI response format fidelity.
+
+### Integration with MCP (Model Context Protocol)
+
+Hugging Face `AsyncInferenceClient` integrates with MCP through `MCPClient`:
+
+```python
+from huggingface_hub import AsyncInferenceClient, MCPClient
+
+client = AsyncInferenceClient("Qwen/Qwen2.5-7B-Instruct")
+mcp_client = MCPClient()
+
+# Connect to MCP servers (stdio or SSE)
+await mcp_client.connect_stdio("python my_tool_server.py")
+# or
+await mcp_client.connect_sse("https://my-mcp-server.com/sse")
+
+# MCPClient automatically:
+# 1. Discovers tools from the MCP server
+# 2. Feeds them to the LLM via AsyncInferenceClient
+# 3. Executes tool calls and relays results back
+# 4. Can stream results in real-time
+
+async for chunk in client.process_single_turn_with_tools(messages):
+    if chunk.type == "content":
+        print(chunk.content, end="")
+    elif chunk.type == "tool_call":
+        print(f"\nCalled tool '{chunk.name}'. Result: '{chunk.result}'")
+```
+
+### tool_prompt Parameter
+
+The `tool_prompt` parameter appends custom instructions before the tool definitions:
+
+```python
+response = client.chat_completion(
+    messages=messages,
+    tools=tools,
+    tool_prompt="You MUST call a function for every query. "
+                "Never refuse to use a tool when one is available.",
+    tool_choice="required",
+)
+```
+
+Use cases:
+- Override default tool-calling behaviour
+- Enforce tool usage patterns
+- Add domain-specific instructions about tool usage
+
+### Provider Support
+
+Not all providers support function/tool calling. To check:
+
+```python
+from huggingface_hub import HfApi
+
+api = HfApi()
+info = api.model_info("Qwen/Qwen2.5-7B-Instruct", expand="inferenceProviderMapping")
+for pm in info.inference_provider_mapping:
+    # Check model info for tool support
+    print(f"{pm.provider}: {pm.task}")
+# Also check model card metadata:
+info.card_data.metadata  # Look for 'supports_tools' field
+```
+
+**Known providers with good tool-calling support (as of 2026-07-24):**
+- Together AI
+- DeepInfra
+- Fireworks AI
+- Novita
+- Featherless AI
+
+### Zero-Cost Considerations
+
+- All InferenceClient tool-calling features work with HF Inference's free serverless tier
+- Zero GPU credits consumed for tool definitions, parsing, and multi-turn orchestration
+- Only the actual LLM inference calls cost credits (serverless free tier covers most use cases)
+- MCP integration is client-side only — zero server cost
+- Use `tool_choice="none"` to guarantee no tool calls (saves tokens in classification-only tasks)
+- Streaming saves time but uses roughly the same token count
+- Set tight `max_tokens` to bound tool-heavy conversations
+
+### Error Handling Patterns
+
+```python
+from huggingface_hub import InferenceClient, InferenceTimeoutError, HfHubHTTPError
+
+client = InferenceClient()
+
+try:
+    response = client.chat_completion(
+        messages=messages,
+        tools=tools,
+        tool_choice="auto",
+        max_tokens=500,
+    )
+except InferenceTimeoutError:
+    # Model unavailable or request timed out
+    logger.warning("Tool calling timed out, retrying without tools...")
+    response = client.chat_completion(messages=messages, max_tokens=500)
+except HfHubHTTPError as e:
+    # HTTP error (e.g., 422 if tools format is invalid)
+    if e.response.status_code == 422:
+        logger.error(f"Invalid tool schema: {e}")
+    else:
+        raise
+```
+
+**Common error: HTTP 422** — This usually means an invalid tool definition (e.g., missing `required` field in parameters, or invalid JSON Schema format). Validate tool schemas locally before sending.
+
+### Key Takeaways
+
+1. **Same API as OpenAI** — `InferenceClient.chat.completions.create()` is drop-in compatible with `openai.OpenAI().chat.completions.create()`
+2. **Streaming works with tools** — Tool calls come as deltas across chunks; accumulate by `index`
+3. **Multi-turn loops** — Standard pattern: assistant message with tool_calls → tool result messages → next generation
+4. **MCP integration** — `MCPClient` bridges MCP tool servers with `AsyncInferenceClient` for zero-code tool discovery
+5. **tool_choice fine control** — `"auto"`, `"none"`, `"required"`, or specific tool name
+6. **All zero-cost** — Everything runs client-side; only LLM inference costs apply (free serverless tier available)
+7. **Provider varies** — Not all inference providers support tool calling; verify via `inferenceProviderMapping`
+
+### Resources
+- huggingface_hub InferenceClient docs (https://huggingface.co/docs/huggingface_hub/en/guides/inference)
+- huggingface_hub v1.24.0 source: `_client.py` `chat_completion` method
+- huggingface_hub MCP integration (https://huggingface.co/docs/huggingface_hub/v1.24.0/en/package_reference/mcp)
+- huggingface_hub generated types: `_generated/types/chat_completion.py`
+- OpenAI Chat Completions API reference (for compatibility comparison)
