@@ -113,5 +113,7 @@
   "hf-datasets-audio-processing-deep-dive",
   "hf-datasets-image-processing-deep-dive",
   "hf-datasets-video-processing",
-  "hf-hub-cache-deep-dive"
+  "hf-hub-cache-deep-dive",
+  "hf-inference-client-structured-outputs-deep-dive-v2",
+  "hf-datasets-server-core-endpoints-deep-dive"
 ]
