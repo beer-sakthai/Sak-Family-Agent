@@ -1499,6 +1499,65 @@ hf spaces volume add my-space \
 ### Resources
 - HF Spaces Storage docs: https://huggingface.co/docs/hub/en/spaces-storage
 - Storage Buckets docs: https://huggingface.co/docs/hub/en/storage-buckets
-- huggingface_hub manage-spaces: https://huggingface.co/docs/huggingface_hub/guides/manage-spaces
-- ZeroGPU docs: https://huggingface.co/docs/hub/en/spaces-zerogpu
-- HF Spaces overview: https://huggingface.co/docs/hub/en/spaces-overview
+|- huggingface_hub manage-spaces: https://huggingface.co/docs/huggingface_hub/guides/manage-spaces
+|- ZeroGPU docs: https://huggingface.co/docs/hub/en/spaces-zerogpu
+|- HF Spaces overview: https://huggingface.co/docs/hub/en/spaces-overview
+
+---
+
+## 2026-07-24: hf-smolagents — Deep Dive v2
+
+### Summary
+Comprehensive deep-dive into Hugging Face's smolagents library (v1.26.0). The v1 skill covered basic CodeAgent/ToolCallingAgent usage. This v2 deep-dive adds: multi-agent orchestration via `managed_agents`, agent memory management (inspection and resumption), two tool creation patterns (`@tool` decorator and `Tool` subclass), Human-in-the-Loop via step callbacks and plan customization, async integration with Starlette/anyio, OpenTelemetry telemetry for run inspection, Agentic RAG patterns, and an expanded secure code execution comparison.
+
+### Key Concepts
+
+**Multi-Agent Orchestration:**
+- smolagents supports hierarchical multi-agent systems using `managed_agents` parameter
+- Sub-agents require `name` and `description` attributes — the manager calls them like tools
+- `ToolCallingAgent` is preferred for focused sub-agents (web search, data fetch); `CodeAgent` works as the reasoning manager
+- Systems can nest arbitrarily deep
+
+**Agent Memory:**
+- `agent.memory.steps` contains all steps (PlanningStep, ToolCallStep, FinalAnswerStep, ActionStep)
+- `agent.run(task, reset=True)` starts fresh; `reset=False` preserves memory and resumes
+- Supports human-in-the-loop interruption + resumption with full memory
+
+**Tool Creation:**
+- Two patterns: `@tool` decorator (simple functions) vs `Tool` subclass (complex tools with class attributes)
+- Tools can be pushed to Hub via `tool.push_to_hub()` — requires self-contained imports, `__init__` with only `self`
+
+**Human-in-the-Loop:**
+- `step_callbacks` dict keyed by step type classes (e.g., `{PlanningStep: callback}`)
+- Callback signature: `callback(step, agent, task, **kwargs)`
+- Supports plan approval, modification, and cancellation
+
+**Async Integration:**
+- Use `anyio.to_thread.run_sync(agent.run, task)` to avoid blocking async event loops
+- Pattern works with Starlette, FastAPI, and any ASGI framework
+
+**Telemetry:**
+- OpenTelemetry-based instrumentation via `SmolagentsInstrumentor`
+- Works with Arize Phoenix, Grafana, Datadog, etc.
+- Essential for production agent monitoring — agent runs are non-deterministic and hard to debug from console logs alone
+
+**Agentic RAG:**
+- Agents with retrieval tools can formulate optimized queries, perform multiple retrievals, reason over sources, and self-critique
+- Transforms RAG from rigid pipeline to interactive reasoning process
+- Naturally implements HyDE, self-query refinement, and multi-hop retrieval
+
+**Secure Code Execution:**
+- Four sandbox options: Blaxel (<25ms), E2B (~500ms), Modal (~2s), Docker
+- Only CodeAgent supports sandboxed execution via `executor_type`
+- Blaxel provides fastest cold starts and auto-scaling to zero
+
+### Resources
+- Docs: https://huggingface.co/docs/smolagents/en/index
+- Multi-agent example: https://huggingface.co/docs/smolagents/en/examples/multiagents
+- Agentic RAG: https://huggingface.co/docs/smolagents/en/examples/rag
+- Memory management: https://huggingface.co/docs/smolagents/en/tutorials/memory
+- Tools guide: https://huggingface.co/docs/smolagents/en/tutorials/tools
+- Human-in-the-Loop: https://huggingface.co/docs/smolagents/en/examples/plan_customization
+- Async agents: https://huggingface.co/docs/smolagents/en/examples/async_agent
+- Telemetry: https://huggingface.co/docs/smolagents/en/tutorials/inspect_runs
+- Secure code execution: https://huggingface.co/docs/smolagents/en/tutorials/secure_code_execution
