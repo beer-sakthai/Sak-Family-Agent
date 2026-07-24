@@ -324,6 +324,18 @@ Docker: `ghcr.io/evalstate/hf-mcp-server:latest` (defaults to StreamableHTTP JSO
 
 ## Changelog
 
+**v2.0.0** (2026-07-26) — Consolidation update:
+- hf_fs consolidation (4 tool categories instead of 28)
+- One-click gallery installs (Claude, VSCode, Cursor, Gemini CLI)
+- Native CLI commands: `claude mcp add`, `gemini mcp add`
+- AUTHENTICATE_TOOL for OAuth-based on-the-fly auth
+- SEP-2640 skills directory support (HF_SKILLS_DIR)
+- Stateful connection management (heartbeat, ping, timeout)
+- New env vars: ALLOW_INTERNAL_ADDRESS_HOSTS, GRADIO_SKIP_INITIALIZE
+- Docker + StreamableHTTP JSON mode improvements
+- Web dashboard with tool on/off switching & statistics
+- See `references/hf-learnings.md` for full details
+
 **v1.1.0** (2026-07-24) — Deep dive: source code analysis, 28 built-in tools, bouquet/mix system, proxy tools, full env var reference, transport options, NPM packages.
 **v1.0.0** (2026-07-23) — Initial release covering:
 - HF MCP Server setup and built-in tools

@@ -1,5 +1,28 @@
 # HF Learnings Log
 
+## 2026-07-26: hf-mcp-server-enhancements-hf-fs-consolidation — MCP Server Consolidation & Gallery Install (Topic #44/#90 Deepened)
+
+### Summary
+Deep-dive into the July 2026 Hugging Face MCP Server enhancements. Key changes: `hf_fs` tool consolidation (replacing ~28 separate tools with 4 categories), one-click gallery installations (Claude, VSCode, Cursor, Gemini CLI), native CLI commands (`claude mcp add`, `gemini mcp add`), `AUTHENTICATE_TOOL` for OAuth-based on-the-fly authentication, SEP-2640 skills directory support (`HF_SKILLS_DIR`), stateful connection management (heartbeat, ping, timeout config), and extensive new environment variables. Full document at `skills/SakThai-hf-mcp-server/references/hf-learnings.md`.
+
+### Key Discovery: Architecture Consolidation
+The MCP Server moved from ~28 separate tools to a consolidated architecture centered around the `hf_fs` tool. The changelog states: "The main change is the new hf_fs tool which provides a single interface to repositories, storage, documentation, papers and more. It's equipped with search and lets your assistant naturally navigate Hugging Face in just over 1,000 tokens." This means the bouquet/mix system is being simplified — remaining explicit tools: `hf_fs`, Contribute Repos, Sandboxes, Run & Manage Jobs.
+
+### New Installation Methods
+- **Claude Desktop/claude.ai**: Connector gallery at claude.ai/settings/connectors — click "Hugging Face"
+- **Claude Code**: `claude mcp add hf-mcp-server -t http https://huggingface.co/mcp?login`
+- **Gemini CLI**: `gemini mcp add -t http huggingface https://huggingface.co/mcp?login`
+- **VSCode**: Gallery at code.visualstudio.com/mcp or clickable `vscode:mcp/install?...` deep link
+- **Cursor**: One-click install link with encoded config
+- **URL parameter**: `?no_image_content=true` removes image content from Gradio responses
+
+### Key Implication
+The `AUTHENTICATE_TOOL` env var enables dynamic OAuth — agents can authenticate mid-session without pre-configured tokens. The SEP-2640 skills directory means SakThai skills can be exposed as MCP resources via `skill://` protocol.
+
+**Full document:** `skills/SakThai-hf-mcp-server/references/hf-learnings.md`
+
+---
+
 ## 2026-07-24: hf-hub-openapi-spec-deep-dive — Hub OpenAPI Specification & Programmatic Discovery (Topic #128 Deepened)
 
 ### Summary
