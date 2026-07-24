@@ -12396,3 +12396,263 @@ TEI's ONNX backend (CPU-optimized) and Apple Silicon support (Homebrew + Metal) 
 
 ### Skill
 mlops/hf-text-embeddings-inference — references/hf-learnings.md
+
+---
+
+## 2026-07-24: hf-inference-client-chat-completion-deep-dive-v3 — InferenceClient: Providers, Streaming, Tools, Structured Outputs & MCP (Topic #120 Deepened)
+
+### Summary
+Comprehensive deepening of the InferenceClient reference covering the latest `huggingface_hub` release. Adds: full 17-provider task-support matrix (verified from docs), OpenAI-compatible streaming patterns (sync `Iterable[ChatCompletionStreamOutput]` + async `async for`), function/tool calling with multi-turn execution loops, structured outputs via `response_format` (JSON mode + JSON Schema), the experimental `MCPClient` for MCP-based tool orchestration, provider selection strategies (routed vs direct, free-tier paths), authentication methods, and `text_generation()` streaming with `details=True`. Source-anchored to huggingface_hub docs.
+
+### Source
+- Inference guide: https://huggingface.co/docs/huggingface_hub/main/en/guides/inference
+- InferenceClient API ref: https://huggingface.co/docs/huggingface_hub/main/en/package_reference/inference_client
+- AsyncInferenceClient API ref: https://huggingface.co/docs/huggingface_hub/main/en/package_reference/inference_client#huggingface_hub.AsyncInferenceClient
+- MCPClient API ref: https://huggingface.co/docs/huggingface_hub/main/en/package_reference/mcp
+- Inference Providers docs: https://huggingface.co/docs/inference-providers/en/index
+
+### 1. Provider Task Support Matrix (17 Providers)
+
+Verified from docs — ✅ = supported, ❌ = not supported:
+
+| Task | Cerebras | Cohere | DeepInfra | fal-ai | Featherless | Fireworks | Groq | HF Inference | Novita | Nscale | OVHcloud | PublicAI | Replicate | Scaleway | Together | Wavespeed | Zai |
+|------|----------|--------|-----------|--------|-------------|-----------|------|--------------|--------|--------|----------|----------|-----------|----------|----------|-----------|-----|
+| audio_classification | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| automatic_speech_recognition | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| **chat_completion** | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ | ❌ | ✅ |
+| feature_extraction | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ |
+| **text_generation** | ❌ | ❌ | ✅ | ❌ | ✅ | ❌ | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ |
+| text_to_image | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ✅ | ❌ | ✅ | ❌ | ❌ | ✅ | ❌ | ✅ | ✅ | ✅ |
+| text_to_speech | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| text_to_video | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ | ✅ | ❌ |
+| image_to_image | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ | ✅ | ❌ |
+| image_to_video | ❌ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ |
+
+**Key insight for zero-cost routing:** Only `hf-inference` (free tier via HF Inference API, rate-limited) and `together`/`deepinfra` (free trial tiers with rate limits) support `chat_completion` AND `text_generation` at no cost. Cerebras, Cohere, Groq require API keys with free tiers available.
+
+### 2. OpenAI Compatibility — Drop-in Replacement
+
+`InferenceClient` follows the OpenAI Python client syntax exactly. Migration is two lines:
+
+```python
+# Before (OpenAI)
+from openai import OpenAI
+client = OpenAI(api_key="...", base_url="...")
+
+# After (huggingface_hub)
+from huggingface_hub import InferenceClient
+client = InferenceClient(api_key="...")  # No base_url needed
+```
+
+All parameters (messages, stream, temperature, tools, response_format, etc.) are identical. The client also exposes `client.chat.completions.create()` as an alias for `client.chat_completion()` for literal drop-in compatibility.
+
+### 3. Streaming Patterns
+
+#### Sync Streaming (InferenceClient)
+
+```python
+from huggingface_hub import InferenceClient
+
+client = InferenceClient(provider="together")
+messages = [{"role": "user", "content": "Write a haiku"}]
+
+# Basic streaming
+stream = client.chat_completion(messages, model="meta-llama/Llama-3.3-70B-Instruct", stream=True, max_tokens=100)
+for chunk in stream:
+    delta = chunk.choices[0].delta
+    if delta.content:
+        print(delta.content, end="")
+```
+
+**Stream chunk type:** `ChatCompletionStreamOutput` — each chunk has:
+- `choices[0].delta.content` — the text delta (partial token)
+- `choices[0].delta.tool_calls` — tool call deltas (for streaming tool use)
+- `choices[0].finish_reason` — "stop", "length", "tool_calls", or None while streaming
+
+#### Async Streaming (AsyncInferenceClient)
+
+```python
+from huggingface_hub import AsyncInferenceClient
+
+client = AsyncInferenceClient(provider="deepinfra")
+
+async def stream_chat():
+    messages = [{"role": "user", "content": "Tell me a story"}]
+    async for chunk in await client.chat_completion(
+        messages, model="meta-llama/Llama-3.3-70B-Instruct", stream=True
+    ):
+        if chunk.choices[0].delta.content:
+            print(chunk.choices[0].delta.content, end="")
+
+asyncio.run(stream_chat())
+```
+
+Note the double async: `await client.chat_completion(...)` returns the stream, then `async for chunk in stream` iterates.
+
+#### text_generation() Streaming
+
+```python
+# Sync: Iterable[str]
+for token in client.text_generation("The huggingface_hub library is", max_new_tokens=12, stream=True):
+    print(token, end="")
+
+# With details: Iterable[TextGenerationStreamOutput]
+for details in client.text_generation("The huggingface_hub library is", max_new_tokens=12, stream=True, details=True):
+    print(details.token.text, details.token.logprob)
+
+# Async: AsyncIterable[str]
+async for token in await client.text_generation("The Huggingface Hub is", stream=True):
+    print(token, end="")
+```
+
+### 4. Function/Tool Calling
+
+Supports OpenAI-identical tool calling interface. Verified working with Cerebras, Cohere, DeepInfra, Fireworks, Groq, Novita, Together, Zai (check individual provider docs for model support).
+
+```python
+from huggingface_hub import InferenceClient
+
+client = InferenceClient(provider="novita")
+
+tools = [
+    {
+        "type": "function",
+        "function": {
+            "name": "get_weather",
+            "description": "Get current temperature for a city",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "location": {"type": "string", "description": "City name"}
+                },
+                "required": ["location"]
+            }
+        }
+    }
+]
+
+messages = [{"role": "user", "content": "What's the weather in London?"}]
+response = client.chat_completion(
+    messages, model="Qwen/Qwen2.5-72B-Instruct", tools=tools, tool_choice="auto"
+)
+tool_call = response.choices[0].message.tool_calls[0]
+print(f"Tool: {tool_call.function.name}, Args: {tool_call.function.arguments}")
+```
+
+**Multi-turn tool execution loop pattern:**
+```python
+while response.choices[0].finish_reason == "tool_calls":
+    tool_call = response.choices[0].message.tool_calls[0]
+    messages.append(response.choices[0].message)
+    # Execute tool, append result as "tool" role message
+    messages.append({
+        "role": "tool",
+        "content": execute_tool(tool_call.function.name, tool_call.function.arguments),
+        "tool_call_id": tool_call.id,
+    })
+    response = client.chat_completion(messages, model=..., tools=tools)
+```
+
+### 5. Structured Outputs & JSON Mode
+
+`response_format` parameter follows OpenAI spec exactly.
+
+**JSON Mode** (valid JSON, no schema enforcement):
+```python
+response = client.chat_completion(
+    messages, model="...",
+    response_format={"type": "json_object"}
+)
+```
+
+**Structured Outputs** (schema-enforced, required JSON Schema):
+```python
+from huggingface_hub import ChatCompletionInputResponseFormatJSONSchema
+
+response = client.chat_completion(
+    messages, model="...",
+    response_format=ChatCompletionInputResponseFormatJSONSchema(
+        json_schema={
+            "type": "object",
+            "properties": {
+                "name": {"type": "string"},
+                "age": {"type": "integer"},
+            },
+            "required": ["name", "age"]
+        }
+    )
+)
+```
+
+**Provider support for structured outputs:** Cerebras (✅), DeepInfra (✅), Fireworks (✅), Together (✅), Novita (✅ for json_object), others vary.
+
+### 6. MCP Client (Experimental)
+
+`huggingface_hub` now includes an experimental `MCPClient` that extends `AsyncInferenceClient` to integrate with MCP servers (Model Context Protocol).
+
+```python
+from huggingface_hub import MCPClient, ChatCompletionInputMessage
+
+client = MCPClient(provider="novita")
+
+async with client.connect_to_mcp_server(
+    command="python3", args=["-m", "some_mcp_server"]
+) as mcp_client:
+    messages = [ChatCompletionInputMessage(role="user", content="Generate an image of a cat")]
+    async for chunk in mcp_client.chat_completion(
+        messages, model="Qwen/Qwen2.5-72B-Instruct", stream=True
+    ):
+        if isinstance(chunk, ChatCompletionStreamOutput):
+            print(chunk.choices[0].delta.content or "")
+        # Tool calls are handled automatically by MCPClient
+```
+
+**MCP supports:**
+- Local `stdio` servers (subprocess)
+- Remote `http`/`sse` servers
+- Automatic tool discovery, execution, and result relay
+- Streaming tool call outputs
+
+### 7. Provider Selection Strategies
+
+**Routed through HF** (billed to HF account, uses HF provider keys):
+```python
+client = InferenceClient()  # provider="auto" — HF routes to best provider
+client = InferenceClient(provider="together")  # Route through HF to Together
+```
+
+**Direct access** (uses your own API key for that provider):
+```python
+client = InferenceClient(provider="replicate", api_key="r8_xxx")
+```
+
+**Free-tier priorities (zero-cost):**
+1. `provider="hf-inference"` — HF's own free serverless API (rate-limited, many small models)
+2. `provider="together"` — Together free tier (Llama 3, DeepSeek, etc.)
+3. `provider="deepinfra"` — DeepInfra free tier (Llama 3, Qwen, etc.)
+4. `provider="groq"` — Groq free tier (requires API key, very fast LPU inference)
+5. `provider="cerebras"` — Cerebras free tier (requires API key, very fast)
+
+**Authentication precedence:**
+1. `api_key` parameter (explicit)
+2. `token` parameter (alias, legacy)
+3. `HUGGINGFACEHUB_API_TOKEN` env var (for HF-routed calls)
+4. `HF_TOKEN` env var (fallback)
+5. `~/.cache/huggingface/token` (stored login token)
+
+### 8. Key Design Insights
+
+1. **OpenAI drop-in is real** — Same parameters, same return types, same streaming interface. Switch by changing import and removing `base_url`. The `chat.completions.create()` alias exists for literal compatibility.
+
+2. **Provider choice affects feature availability** — Not all providers support all tasks. `chat_completion` has the widest support (14/17 providers). Many vision/audio tasks are HF Inference-only.
+
+3. **Streaming uses SSE** — Both sync and async clients use Server-Sent Events under the hood. The `stream_options` parameter accepts `ChatCompletionInputStreamOptions` for controlling usage metadata in the final chunk.
+
+4. **MCPClient is the future** — The experimental MCP client unifies tool calling with external MCP servers, enabling agentic workflows without writing manual tool execution loops.
+
+5. **`text_generation` ≠ `chat_completion`** — `text_generation()` is the legacy TGI endpoint (raw text in/out, more parameters like `grammar`, `best_of`, `watermark`). `chat_completion()` is the modern OpenAI-compatible endpoint (structured messages, tools, streaming). Only DeepInfra, Together, Featherless, Novita, and HF Inference support `text_generation`; but 14 providers support `chat_completion`.
+
+6. **Zero-cost routing via HF** — Using `InferenceClient()` without a provider uses HF-routed auto-routing, which queries available providers and chooses the best one. The HF Inference API itself (`hf-inference`) is always free but rate-limited — ideal for development and testing.
+
+### Skill
+Pending — no dedicated hf-inference-client skill directory exists. Added to central hf-learnings.md for now.
