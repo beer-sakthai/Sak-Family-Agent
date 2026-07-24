@@ -216,5 +216,7 @@
   "hf-datasets-5-by-column-batching",
   "hf-gradio-6-chatinterface-deep-dive",
   "hf-gradio-custom-components-deep-dive",
-  "hf-diffusers-nunchaku-lite"
+  "hf-diffusers-nunchaku-lite",
+  "hf-hub-spaces-as-mcp-servers-deep-dive",
+  "hf-hub-jobs-api-deep-dive"
 ]

@@ -1,3 +1,8 @@
+---
+author: SakThai
+license: MIT
+---
+
 # HuggingFace Hub Exceptions & Retry Mechanisms
 
 ## Overview
