@@ -8395,8 +8395,54 @@ api.create_repo(
 - `whoami()`: `huggingface_hub/hf_api.py`
 - `paginate()` helper: `huggingface_hub/utils/_http.py`
 
+
 ### Resources
 - [Hub Organizations Documentation](https://huggingface.co/docs/hub/en/organizations)
 - [Hugging Face Account Settings (Orgs)](https://huggingface.co/settings/organizations)
 - [Hub Repositories Settings (Moving/Transferring)](https://hf.co/docs/hub/repositories-settings#renaming-or-transferring-a-repo)
 - [huggingface_hub API Reference: HfApi](https://huggingface.co/docs/huggingface_hub/en/package_reference/hf_api)
+
+---
+
+## 2026-07-24: hf-gradio-6-render-and-streaming-deep-dive — Gradio 6: `@gr.render` Decorator & Streaming Patterns (Topic #151)
+
+### Summary
+Deep-dive into three major Gradio 6 features: the `@gr.render` decorator for dynamic UIs, async generator streaming for token-by-token chatbot responses, and the v2 `gr.ChatInterface` with multimodal support, additional inputs/outputs, and `gr.load_chat`. Also covers `gr.SelectData`, `gr.validate`, and `gr.Timer` for event handling and validation.
+
+### Key Features
+
+#### 1. `@gr.render` — Dynamic Components at Runtime
+- Decorate a function with `@gr.render(inputs=[...])` to create/destroy components based on state changes
+- Components inside the render function are replaced on every re-render
+- Use `key=` parameter to preserve component values across re-renders
+- Event listeners referencing render-created components must be defined inside the render function
+- Freeze loop variables with default args: `lambda task=task: handler(task)`
+- Custom triggers via `triggers=[...]` parameter; add `demo.load` for initial render
+
+#### 2. Streaming Chatbot Responses
+- Chat function uses `yield` to stream token-by-token
+- Gradio sends only diffs over network (reduces latency)
+- Submit button becomes Stop button during streaming
+- Works with `additional_inputs` and `additional_outputs`
+- Audio streaming with `gr.Audio(streaming=True, autoplay=True)` combined with `input_audio.stream(stream_every=0.5)`
+
+#### 3. `gr.ChatInterface` v2
+- **Multimodal:** `multimodal=True` enables file uploads; message becomes `{"text": ..., "files": [...]}`
+- **Additional outputs:** Return extra values to update separate components
+- **`gr.load_chat()`** — one-line chatbot for any OpenAI-compatible endpoint
+- **Complex return types:** Images, Audio, Video, File, Plot, HTML, Gallery can be returned directly
+- Custom chatbot/textbox components passable via `chatbot=` and `textbox=` parameters
+
+#### 4. Event Data & Validation
+- `gr.SelectData` type hint captures user selection details (value, index)
+- `validator=` kwarg for immediate input validation with per-field granularity
+- `gr.Timer(interval)` for scheduled events via `timer.tick()`
+
+### Zero-Cost Relevance
+All Gradio 6 features work on free CPU HF Spaces. Streaming reduces perceived latency without expensive hardware. `gr.load_chat` points to free local/API endpoints. Efficient `@gr.render` reduces DOM memory on long conversations.
+
+### Resources
+- Full deep-dive: `mlops/gradio-spaces/references/hf-learnings.md`
+- [Dynamic Apps with Render Decorator](https://www.gradio.app/guides/dynamic-apps-with-render-decorator)
+- [Creating a Chatbot Fast](https://www.gradio.app/guides/creating-a-chatbot-fast)
+- [Gradio API Reference](https://www.gradio.app/docs/gradio/chatinterface)
