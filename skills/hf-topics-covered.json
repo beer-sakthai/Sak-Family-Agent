@@ -200,5 +200,6 @@
   "hf-text-embeddings-inference-v2-deepening",
   "hf-inference-client-chat-completion-deep-dive-v3",
   "hf-hub-spaces-as-mcp-servers",
-  "hf-gradio-queue-and-concurrency-optimization-deep-dive"
+  "hf-gradio-queue-and-concurrency-optimization-deep-dive",
+  "hf-datasets-500-new-features-agent-traces-multi-shard-shuffle"
 ]

@@ -1160,9 +1160,218 @@ ds = load_dataset(
 ### Skill
 mlops/hf-datasets-library — references/hf-learnings.md
 
+---
+## 2026-07-24: datasets-5.0.0-new-features — Agent Traces, Multi-Shard Shuffle, Batch-by-Column, New Formats (Topic #203, follow-on)
+
+### Summary
+Deep-dive into the specific new features shipped in `datasets` v5.0.0 (released 2026-06-05) — Agent traces parsing for SFT training, multi-input-shard streaming shuffle (breaking change), `batch(by_column=...)` for robotics episodes, and 4 new data format loaders (Apache Iceberg, TsFile IoT, 3D Mesh, CoNLL/CoNLL-U). This complements the earlier v5 overview (Topic #19) which covered Polars/SQL/Spark connectors.
+
+### Source
+GitHub Release v5.0.0 — https://github.com/huggingface/datasets/releases/tag/5.0.0
+PyPI Latest: 5.0.0
+
+---
+
+## 1. Agent Traces — SFT-Ready Training Data from Agent Logs
+
+**PR:** [#8232](https://github.com/huggingface/datasets/pull/8232) by @lhoestq
+**Dependency:** `teich` library (new optional dep)
+
+`datasets` can now load agent traces (Claude Code, Codex, Pi, etc.) and parse them into a `messages`-format column compatible with SFT training using `trl`.
+
+### How it works
+
+```python
+from datasets import load_dataset
+
+ds = load_dataset("lhoestq/agent-traces-example", split="train")
+ds[0]["messages"]
+# [{'role': 'user', 'content': 'Download a random dataset...'},
+#  {'role': 'assistant', 'content': '...'},
+#  ...]
+```
+
+The `teich` library extracts structured fields from raw trace logs:
+- **`messages`** — chat-style conversation array (user ↔ assistant turns)
+- **`prompt`** — the initial system/user prompt
+- **`tools`** — tools/functions available to the agent
+- **`metadata`** — timing, model info, token counts
+- **`trace`** (renamed from `traces` — **minor breaking change**) — raw step-by-step trace
+
+### Training on agent traces
+
+```bash
+trl sft --dataset-name lhoestq/agent-traces-example ...
+```
+
+### Discovery
+All agent-traces datasets on the Hub can be found at:
+https://huggingface.co/datasets?format=format:agent-traces&sort=trending
+
+### Key insight
+This bridges the gap between agent logging and supervised fine-tuning — you can collect real agent interaction logs, load them as datasets, and train better models from actual usage patterns.
+
+---
+
+## 2. Multi-Shard Shuffle Buffer — Breaking Change to `IterableDataset.shuffle()`
+
+**PR:** [#8194](https://github.com/huggingface/datasets/pull/8194) by @lhoestq
+**Issue:** [#8015](https://github.com/huggingface/datasets/issues/8015)
+
+### The problem
+The old `shuffle()` in streaming mode drew from a **single shard** — after exhausting the initial buffer (~1000 examples), every subsequent example came from the same shard, producing highly correlated (non-random) sequences.
+
+### The fix
+`shuffle()` now draws from **multiple input shards** simultaneously, producing genuinely random ordering throughout training.
+
+```python
+ds = load_dataset(..., streaming=True)
+ds = ds.shuffle(seed=42)
+# or configure manually:
+ds = ds.shuffle(seed=42, buffer_size=1000, max_buffer_input_shards=10)
+```
+
+### Quantitative comparison (1024 shards × 123M items)
+
+| Metric | Before (single shard) | After (multi-shard) |
+|--------|----------------------|---------------------|
+| Cold start diversity | All samples from same ~1 shard | Spread across ~10 shards |
+| Nominal regime | Repeated IDs, correlated | Uniform distribution |
+| Default `max_buffer_input_shards` | 1 (implicit) | **10** |
+
+### Impact
+- True random shuffle across the entire dataset for streaming mode
+- Uses threads to fetch first examples from shards in parallel
+- `state_dict()` / `load_state_dict()` still supported for checkpointing
+- **Breaking change**: old behavior available via `max_buffer_input_shards=1`
+
+---
+
+## 3. `Dataset.batch(by_column=...)` — Grouped Batches
+
+**PR:** [#8172](https://github.com/huggingface/datasets/pull/8172) by @lhoestq
+
+Groups consecutive rows by a column value into a single batch — ideal for **robotics episodes**, **multi-turn conversations**, or any data where rows belong to groups that must not be split.
+
+```python
+from datasets import Dataset
+
+ds = Dataset.from_dict({
+    "episode": [0] * 10 + [1] * 10,
+    "frame": list(range(10)) * 2,
+})
+ds = ds.batch(by_column="episode")
+for x in ds:
+    print(x)
+# {'episode': [0, 0, ..., 0], 'frame': [0, 1, ..., 9]}
+# {'episode': [1, 1, ..., 1], 'frame': [0, 1, ..., 9]}
+```
+
+### Implementation
+- Uses PyArrow `ListArray` accumulation in an Arrow `map()` function
+- Works with both `Dataset` (in-memory) and `IterableDataset` (streaming Parquet)
+- Supports `state_dict()` / `load_state_dict()` for checkpointing
+- **No multiprocessing** support (batch boundaries can span shards)
+
+---
+
+## 4. New Supported Data Formats
+
+### 4a. Apache Iceberg (`iceberg`)
+
+**PR:** [#8148](https://github.com/huggingface/datasets/pull/8148) by @frankliee
+
+Support for loading Apache Iceberg tables directly via `pyiceberg`:
+
+```python
+from pyiceberg.catalog.sql import SqlCatalog
+from datasets import load_dataset
+
+catalog = SqlCatalog("my_catalog", uri="sqlite:///catalog.db", warehouse="/tmp/warehouse")
+ds = load_dataset("iceberg", catalog=catalog, table_identifier="my_table")
+```
+
+Iceberg is the leading open table format for data lakes, supported by Databricks, Snowflake, AWS Glue, Dremio — removes friction of manual export-to-Parquet.
+
+### 4b. TsFile (Apache IoTDB) — `tsfile`
+
+**PR:** [#8160](https://github.com/huggingface/datasets/pull/8160) by @JackieTien97
+
+Loads IoT time-series data from TsFile format with per-device wide format packaging:
+
+```python
+from datasets import load_dataset
+ds = load_dataset("tsfile", data_files="sensor_data.tsfile")
+```
+
+### 4c. 3D Mesh — `Mesh` feature + `MeshFolder` builder
+
+**PR:** [#8055](https://github.com/huggingface/datasets/pull/8055) by @Vinay-Umrethe
+
+Adds `Mesh` as a first-class feature type (mirroring `Image`, `Audio`, `Video`):
+
+```python
+from datasets import load_dataset, Features, Mesh
+
+features = Features({"mesh": Mesh()})
+ds = load_dataset("mesh_folder", data_dir="path/to/meshes/", features=features)
+```
+
+- Self-contained binary formats: **GLB, PLY, STL**
+- Uses PyArrow `struct` for raw bytes + file paths
+- `MeshFolder` builder for directory-based loading
+- Integrated into `WebDataset`, streaming, and push_to_hub
+
+### 4d. CoNLL / CoNLL-U — `.conll` format loader
+
+**PR:** [#8219](https://github.com/huggingface/datasets/pull/8219) by @CrypticCortex
+
+Loads CoNLL-2003, CoNLL-2000, and Universal Dependencies formats directly:
+
+```python
+from datasets import load_dataset
+
+ds = load_dataset(
+    "conll",
+    data_files="train.conll",
+    column_names=["tokens", "pos_tags", "chunk_tags", "ner_tags"],
+)
+# Each example: {"tokens": [...], "pos_tags": [...], "chunk_tags": [...], "ner_tags": [...]}
+```
+
+One sentence per row, each column is a list aligned with the token list. Supports `.conll` and `.conllu` extensions.
+
+---
+
+## 5. Notable Bug Fixes & Improvements
+
+| Fix | PR | Impact |
+|-----|----|--------|
+| Parquet streaming hangs at end of script | [#8176](https://github.com/huggingface/datasets/pull/8176) | Fixes infinite stall on last batch |
+| Parquet `columns` arg fixed | [#8210](https://github.com/huggingface/datasets/pull/8210) | Column selection works correctly with Parquet |
+| Parquet reshard fix | [#8193](https://github.com/huggingface/datasets/pull/8193) | Correct row group distribution after reshard |
+| `fsspec` 2026.4.0 support | [#8175](https://github.com/huggingface/datasets/pull/8175) | Compatibility with latest filesystem spec |
+| Composed splits in streaming | [#8220](https://github.com/huggingface/datasets/pull/8220) | `split="train+validation"` works in streaming mode |
+| `num_proc` in `Dataset.to_sql` | [#7791](https://github.com/huggingface/datasets/pull/7791) | Parallel SQL writes |
+| Map progress bar fix (`load_from_cache_file=False`) | [#8170](https://github.com/huggingface/datasets/pull/8170) | Bar no longer exceeds total |
+| `None` preserved in `Json()` columns | [#8231](https://github.com/huggingface/datasets/pull/8231) | `None` stays `None`, not `"null"` string |
+| Lance dataset streaming `storage_options` fix | [#8166](https://github.com/huggingface/datasets/pull/8166) | Correct credential passing for Lance |
+
+---
+
+### Skill
+mlops/hf-datasets-library — references/hf-learnings.md
+
 ### References
+- https://github.com/huggingface/datasets/releases/tag/5.0.0
 - https://huggingface.co/docs/datasets/en/parquet_processing
 - https://huggingface.co/docs/datasets/v5.0.0/en/package_reference/main_classes#datasets.Dataset.from_parquet
 - https://arrow.apache.org/docs/python/dataset.html#filtering-data
 - https://huggingface.co/docs/datasets/en/stream
 - https://huggingface.co/docs/datasets-server/parquet
+- https://github.com/huggingface/datasets/pull/8232 — Agent traces PR
+- https://github.com/huggingface/datasets/pull/8194 — Multi-shard shuffle PR
+- https://github.com/huggingface/datasets/pull/8172 — batch(by_column) PR
+- https://github.com/huggingface/datasets/pull/8148 — Iceberg support PR
+- https://github.com/huggingface/datasets/pull/8055 — 3D Mesh PR
+- https://github.com/huggingface/datasets/pull/8219 — CoNLL format PR
