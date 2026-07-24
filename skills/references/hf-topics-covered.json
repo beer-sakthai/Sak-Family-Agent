@@ -94,5 +94,14 @@
   "hf-transformers-gguf-integration",
   "hf-spaces-persistent-storage-zero-cost",
   "hf-hub-lfs-architecture",
-  "hf-transformers-hqq-quantization"
+  "hf-transformers-hqq-quantization",
+  "hf-hub-lfs-architecture-deep-dive-v2",
+  "hf-transformers-tool-use-chat-template-deep-dive-v2",
+  "hf-inference-client-structured-outputs",
+  "hf-transformers-5-architecture-deep-dive",
+  "hf-transformers-5-architecture-deep-dive-v2",
+  "hf-hub-storage-buckets-deep-dive",
+  "hf-text-embeddings-inference",
+  "hf-hub-buckets-api-deep-dive",
+  "hf-text-embeddings-inference-v2"
 ]
