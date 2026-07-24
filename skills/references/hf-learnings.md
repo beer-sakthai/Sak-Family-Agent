@@ -13252,3 +13252,80 @@ Deep-dive into the internal implementation of `concatenate_datasets()` and `inte
 
 ### Skill
 mlops/hf-datasets-concatenate-and-interleave — SKILL.md + references/hf-learnings.md
+
+---
+
+## 2026-07-24: hf-hub-storage-limits-and-plans
+
+### Summary
+Deep-dive into Hugging Face Hub's storage limit and quota system — covering storage plans across Free, PRO, Team, and Enterprise tiers; public/private storage quotas, storage add-ons, pay-as-you-go private storage pricing, per-repo limitations (file count, file size, commit size), LFS file management, PR ref cleanup, super-squash history, and tracking LFS file references. Critical knowledge for managing large models/datasets on the Hub without hitting quota limits.
+
+### Key Findings
+
+**Storage Plans (as of July 2026):**
+| Account Type | Public Storage | Private Storage |
+|---|---|---|
+| Free user/org | Best-effort (generous, but no guarantees) | 100 GB |
+| PRO | Up to 10 TB included + add-on available | 1 TB + pay-as-you-go |
+| Team Org | 12 TB base + 1 TB/seat + add-on | 1 TB/seat + pay-as-you-go |
+| Enterprise Org | 200 TB base + 1 TB/seat + add-on (up to 1,000 TB contracts) | 1 TB/seat + pay-as-you-go |
+
+**Public Storage Add-on Pricing (PRO/Team/Enterprise):**
+| Tier | Price |
+|---|---|
+| 1 TB | $12/mo |
+| 5 TB | $60/mo |
+| 10 TB | $120/mo |
+| 20 TB | $240/mo |
+| 50 TB | $500/mo ($10/TB) |
+
+**Private Storage Pay-as-you-go:**
+- Base: $18/TB/mo
+- 50 TB+: $16/TB/mo
+- 200 TB+: $14/TB/mo
+- 500 TB+: $12/TB/mo
+
+**Per-Repository Limitations (Git-backed repos):**
+| Characteristic | Recommended | Hard Limit |
+|---|---|---|
+| Files per repo | < 100k | Soft (performance degrades) |
+| Entries per folder | < 10k | Hard cap: 10k/folder |
+| File size | < 200 GB | Hard cap: 500 GB single file |
+| Commit size | < 100 files | Soft (60s HTTP timeout) |
+| Commits per repo | — | Soft (UI degrades past few thousand) |
+
+**Storage Management Operations:**
+1. **Deleting LFS files**: Via repo Settings > List LFS files > delete. Note: deleting only pointers doesn't free space; requires history rewrite.
+2. **Deleting PR refs**: Closed/merged PRs show a storage notice at bottom with estimated reclaimable space. "Delete ref" is irreversible.
+3. **Super-squash history**: `HfApi.super_squash_history()` compresses entire Git history into single commit. LFS file history is permanently removed. Storage quota updates within 36 hours.
+4. **Tracking LFS origins**: `git log --all -p -S <SHA-256-OID>` to trace which commit introduced an LFS file.
+5. **Preventing commit timeouts**: Use `upload_folder()` / `hf upload` which auto-splits large folders into multiple commits of ~50-100 files.
+
+**Sharing Large Datasets Requirements:**
+- Dataset card required
+- Community-reuse intent
+- Follow repo limitations
+- Use Parquet or WebDataset formats
+- Avoid custom loading scripts
+
+**Grants for Research:**
+- Impact-based grants available for open-source work where paid plans can't cover need
+- Requires evidence (downloads, citations, community adoption)
+- Contact: datasets@huggingface.co or models@huggingface.co
+
+**Key API Methods (huggingface_hub):**
+- `HfApi.super_squash_history(repo_id, repo_type)` — destructive history compaction
+- `HfApi.get_namespace_quota()` — get storage quota info
+- `HfApi.repo_info()` — get repository details including size
+- Upload methods with auto-splitting: `upload_folder()`, `hf upload` CLI
+
+### Resources
+- Official docs: https://huggingface.co/docs/hub/en/storage-limits
+- Billing: https://huggingface.co/docs/hub/en/billing
+- Pricing: https://huggingface.co/pricing
+- Large upload guide: https://huggingface.co/docs/huggingface_hub/main/en/guides/upload
+- git-sizer: https://github.com/github/git-sizer
+- Blog: https://huggingface.co/blog/xethub-joins-hf
+
+### Skill
+mlops/hf-hub-storage-limits — SKILL.md + references/hf-learnings.md
