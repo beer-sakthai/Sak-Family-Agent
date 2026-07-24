@@ -2015,3 +2015,200 @@ For Beer's situation (free tier, no income):
 - LFS pointer deletion: https://huggingface.co/docs/hub/en/storage-limits#deleting-individual-lfs-files
 - Super-squash API: https://huggingface.co/docs/huggingface_hub/main/en/package_reference/hf_api#huggingface_hub.HfApi.super_squash_history
 - Pricing: https://huggingface.co/pricing
+
+## 2026-07-24: hf-transformers-hqq-quantization — Deep Dive (Topic #97)
+
+### Summary
+Half-Quadratic Quantization (HQQ) is a fast, data-free quantization method integrated into Transformers via the `HqqConfig` class. Unlike AWQ/GPTQ, HQQ requires no calibration dataset — it quantizes on-the-fly using a closed-form half-quadratic solver. Supports 8, 4, 3, 2, and even 1-bit quantization for any model modality (LLMs, vision, etc.). Fully compatible with PEFT/QLoRA fine-tuning and `torch.compile`.
+
+### Core Architecture
+
+HQQ replaces `torch.nn.Linear` layers with `HQQLinear` modules that store quantized weights and dequantize on-the-fly during forward passes. The quantization process uses a half-quadratic optimization that finds optimal scale factors without backpropagation or calibration data.
+
+| Feature | Support |
+|---------|---------|
+| Data-free quantization | ✅ — no calibration data needed |
+| Bit widths | 1, 2, 3, 4, 8 |
+| On-the-fly quant | ✅ — quantizes at `from_pretrained()` time |
+| PEFT/QLoRA | ✅ — full PEFT integration |
+| torch.compile | ✅ — fullgraph compatible |
+| Multi-modality | ✅ — LLMs, vision, audio |
+| vLLM integration | ✅ — via gemlite backend |
+| Serialization (HF) | ❌ — weights not serializable via `save_pretrained` |
+
+### Installation
+
+```bash
+pip install hqq
+```
+
+For CUDA kernel support the build happens automatically. Disable with `DISABLE_CUDA=1 pip install hqq`.
+
+For bleeding edge:
+```bash
+pip install git+https://github.com/dropbox/hqq.git
+```
+
+### Basic Usage in Transformers
+
+**Replace all linear layers — 8-bit, group_size=64:**
+```python
+import torch
+from transformers import AutoModelForCausalLM, AutoTokenizer, HqqConfig
+
+quant_config = HqqConfig(nbits=8, group_size=64)
+model = AutoModelForCausalLM.from_pretrained(
+    "meta-llama/Llama-3.1-8B",
+    dtype=torch.float16,
+    device_map="auto",
+    quantization_config=quant_config
+)
+```
+
+**Per-layer dynamic config (MoE-friendly):**
+```python
+q4_config = {'nbits': 4, 'group_size': 64}
+q3_config = {'nbits': 3, 'group_size': 32}
+
+quant_config = HqqConfig(dynamic_config={
+    'self_attn.q_proj': q4_config,
+    'self_attn.k_proj': q4_config,
+    'self_attn.v_proj': q4_config,
+    'self_attn.o_proj': q4_config,
+    'mlp.gate_proj': q3_config,
+    'mlp.up_proj': q3_config,
+    'mlp.down_proj': q3_config,
+})
+
+model = AutoModelForCausalLM.from_pretrained(
+    "meta-llama/Llama-3.1-8B",
+    dtype=torch.float16,
+    device_map="auto",
+    quantization_config=quant_config
+)
+```
+
+### Backends
+
+| Backend | Description | axis | Best for |
+|---------|-------------|------|----------|
+| `PYTORCH` | Pure PyTorch dequant | 0 or 1 | Compatibility, older GPUs |
+| `PYTORCH_COMPILE` | Compiled Pytorch graph | 0 or 1 | Torch.compile workflows |
+| `ATEN` | CUDA dequant kernels | 0 only | Best quality, PEFT training |
+| `gemlite` | Fused 4-bit gemm kernels | 1 only | High-throughput inference |
+| `torchao_int4` | TorchAO tiny_gemm (batch<4) | 1 only | Low-latency single requests |
+
+Set backend globally:
+```python
+from hqq.core.quantize import *
+HQQLinear.set_backend(HQQBackend.PYTORCH)
+```
+
+Enable optimized inference after quantization:
+```python
+from hqq.utils.patching import prepare_for_inference
+prepare_for_inference(model, backend="gemlite")
+```
+
+### Key Parameters
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `nbits` | 4 | Bits per weight (1, 2, 3, 4, 8) |
+| `group_size` | 64 | Weights per group for shared scale/zero |
+| `axis` | 1 | Grouping axis (0=per-output, 1=per-input) |
+| `optimize` | True | Enable half-quadratic optimization |
+
+- `axis=0` gives better quality, especially at low bits, but only ATEN backend supports it
+- `axis=1` is required for gemlite/torchao_int4 fast inference
+- Recommended starting config: `nbits=4, group_size=64, axis=1`
+
+### PEFT/QLoRA Training
+
+Full PEFT integration for fine-tuning quantized models:
+```python
+from hqq.core.peft import PeftUtils
+
+base_lora_params = {
+    'lora_type': 'default', 'r': 32,
+    'lora_alpha': 64, 'dropout': 0.05,
+    'train_dtype': torch.float32
+}
+lora_params = {
+    'self_attn.q_proj': base_lora_params,
+    'self_attn.k_proj': base_lora_params,
+    'self_attn.v_proj': base_lora_params,
+    'self_attn.o_proj': base_lora_params,
+}
+
+PeftUtils.add_lora(model, lora_params)
+HQQLinear.set_backend(HQQBackend.ATEN)  # or PYTORCH_COMPILE
+# Train...
+model.eval()
+PeftUtils.merge_and_unload(model)  # Optional: merge
+```
+
+Also directly supported in HuggingFace PEFT library:
+```python
+from peft import LoraConfig, get_peft_model
+# Standard PEFT API works with HQQ-quantized models
+```
+
+### vLLM Integration
+
+HQQ works with vLLM via gemlite backend for production serving:
+```python
+from hqq.utils.vllm import set_vllm_onthefly_hqq_quant
+from vllm import LLM
+
+skip_modules = ['lm_head', 'visual', 'vision']
+
+# A16W4 HQQ weight-only
+set_vllm_onthefly_hqq_quant(
+    weight_bits=4, group_size=128,
+    quant_mode='int4_weightonly',
+    skip_modules=skip_modules
+)
+
+llm = LLM(model="meta-llama/Llama-3.2-3B-Instruct",
+          max_model_len=4096,
+          gpu_memory_utilization=0.80,
+          dtype=torch.float16)
+```
+
+Supported quant modes for vLLM:
+- `int8_weightonly` — A16W8 INT8
+- `int4_weightonly` — A16W4 HQQ
+- `int8_dynamic` — A8W8 INT8 dynamic
+- `fp8_dynamic` — A8W8 FP8 dynamic
+- `mxfp8_dynamic` — A8W8 MXFP8 dynamic
+- `mxfp4_weightonly` — A16W4 MXFP4
+- `nvfp4_dynamic` — A4W4 NVFP4 dynamic
+
+### Zero-Cost Practical Notes
+
+1. **Data-free is a superpower for free-tier:** Since HQQ needs no calibration, you can quantize a model entirely in CPU RAM + normal GPU VRAM — no need for expensive A100s or calibration runs.
+2. **Best paired with small GPUs:** A 4-bit 8B model fits in ~5GB VRAM, usable on free T4s (15GB) in Spaces or Colab.
+3. **axis=1 + gemlite for speed:** On a T4 you can expect ~30-50 tok/s for 4-bit 7B models.
+4. **No serialization limitation:** HQQ models can't `save_pretrained()` in quantized form — you must re-quantize at load time. This is fine for inference-only setups (cache the original fp16, quantize at load).
+5. **PEFT stays in fp32:** LoRA adapters train in fp32 by default; the HQQ base weights stay quantized. This is memory-efficient.
+6. **torch.compile works with any backend:** Use `PYTORCH_COMPILE` backend or regular `torch.compile` wrapping for additional speed.
+
+### Comparison with Other Quantization Methods
+
+| Method | Calibration? | Bits | Serialize? | torch.compile | vLLM |
+|--------|-------------|------|-----------|--------------|------|
+| HQQ | No | 1-8 | ❌ | ✅ | ✅ |
+| bitsandbytes | No | 4/8 | ✅ | ✅ | ❌ |
+| AWQ | Yes | 4 | ✅ | ❌ | ✅ |
+| GPTQ | Yes | 2-8 | ✅ | ❌ | ✅ |
+| GGUF | No | 1-8 | ✅ | ❌ | ✅ |
+
+### Resources
+- Transformers HQQ docs: https://huggingface.co/docs/transformers/en/quantization/hqq
+- HQQ blog: https://mobiusml.github.io/hqq_blog/
+- HQQ+ (1-bit): https://dropbox.github.io/1bit_blog/
+- HQQ repo (mobiusml): https://github.com/mobiusml/hqq
+- HQQ repo (dropbox fork): https://github.com/dropbox/hqq
+- PEFT HQQ guide: https://huggingface.co/docs/peft/en/developer_guides/quantization#hqq-quantization
+- GemLite fast kernels: https://github.com/dropbox/gemlite
