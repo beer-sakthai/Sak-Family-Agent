@@ -1,10 +1,11 @@
-# SakThai Skill: Transformers VLM Processors
-
-**author:** SakThai  
-**license:** MIT  
-**skill_name:** hf-transformers-vlm-processors  
-**category:** mlops  
-**domain:** Hugging Face Transformers — Multimodal / Vision-Language Models
+---
+name: hf-transformers-vlm-processors
+author: SakThai
+license: MIT
+description: "Deep expertise in Transformers VLM processor classes — bridging image/video inputs with text tokenization for multimodal models like LLaVA, Idefics3, Florence-2, Qwen2-VL, Phi-4-multimodal."
+category: mlops
+domain: Hugging Face Transformers — Multimodal / Vision-Language Models
+---
 
 ## Purpose
 
