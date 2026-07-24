@@ -409,3 +409,257 @@ from huggingface_hub import (
 - **v1.18+**: `HF_ENDPOINT` replaces ad-hoc endpoint configuration
 - **v1.16+**: `HF_TOKEN` becomes canonical auth env var, replacing `HUGGING_FACE_HUB_TOKEN`
 - **v1.14+**: `HF_HUB_CACHE` and `HF_ASSETS_CACHE` become canonical cache vars, replacing `HUGGINGFACE_HUB_CACHE` and `HUGGINGFACE_ASSETS_CACHE`
+
+---
+
+## 14. HF Hub Rate Limits — Complete Reference (2026-07-24) (Topic #166 Deep-Dive)
+
+### Summary
+
+Comprehensive deep-dive into Hugging Face Hub rate limiting — covering the three request buckets, per-plan tier limits, IETF-standard HTTP rate limit headers, the smart retry mechanism in `huggingface_hub` v1.2.0+ with source-level analysis of the exponential backoff and `RateLimitInfo` parsing, practical avoidance patterns, and the billing dashboard gauges. This topic was previously tracked as Topic #166 but never received a dedicated entry.
+
+### Sources
+
+- Official docs: https://huggingface.co/docs/hub/en/rate-limits
+- Source: `huggingface_hub/utils/_http.py` (main branch)
+- Source: `huggingface_hub/errors.py`
+- IETF draft: https://www.ietf.org/archive/id/draft-ietf-httpapi-ratelimit-headers-09.html
+- Billing dashboard: https://huggingface.co/settings/billing
+
+### 14.1 The Three Request Buckets
+
+The Hub classifies all requests into exactly three buckets, each with distinct rate limits:
+
+| Bucket | Description | Examples | Relative Limit |
+|--------|-------------|----------|----------------|
+| **API** | Programmatic Hub API calls | Model/dataset search, repo creation, user management, discussions, comments | Medium |
+| **Resolvers** | `/resolve/` URLs serving user-generated content | Model weight downloads, dataset file access, Space asset URLs | Highest |
+| **Pages** | Web page browsing | Any `.huggingface.co` page rendered for humans | Lowest |
+
+**Resolver Identification:** Any URL containing a `/resolve/` path segment. These are the URLs constructed by open-source libraries (`transformers`, `datasets`, `vLLM`, `llama.cpp`) and AI applications (LM Studio, Jan, ollama) for downloading model/dataset files. HF optimizes infrastructure for Resolver requests, so their limits are the highest.
+
+**Page vs API distinction:** Pages are HTML rendered for human browsing. API calls are programmatic JSON endpoints. All documented in the OpenAPI spec at `/.well-known/openapi.json`.
+
+### 14.2 Per-Plan Rate Limit Tiers
+
+All values are computed over **5-minute fixed windows**, which allows for burstiness:
+
+| Plan | API | Resolvers | Pages |
+|------|-----|-----------|-------|
+| Anonymous (per IP) | 500 | 3,000 | 100 |
+| Free user | 1,000 | 5,000 | 200 |
+| PRO user | 2,500 | 12,000 | 400 |
+| Team organization | 3,000 | 20,000 | 400 |
+| Enterprise organization | 6,000 | 50,000 | 600 |
+| Enterprise Plus org | 10,000 | 100,000 | 1,000 |
+| Enterprise Plus (with Org IP Ranges) | 100,000 | 500,000 | 10,000 |
+| Academia Hub org | 3,000 | 20,000 | 400 |
+
+**Key details:**
+- Anonymous and Free user limits are subject to change based on platform health
+- For organizations, rate limits are applied to **each member individually**, not shared
+- The anonymous limit is **per IP address**, not per device
+- All limits are enforced over 5-minute sliding windows
+
+### 14.3 HTTP Rate Limit Headers
+
+When rate limited, the Hub returns HTTP 429 with standardized headers following IETF draft-ietf-httpapi-ratelimit-headers (v9):
+
+**`RateLimit` header format:**
+```
+RateLimit: "api";r=0;t=55
+```
+Where:
+- `r` = remaining requests in current window
+- `t` = seconds until reset
+
+**`RateLimit-Policy` header format:**
+```
+RateLimit-Policy: "fixed window";"api";q=500;w=300
+```
+Where:
+- `q` = total allowed per window
+- `w` = window duration in seconds
+
+**Example header pair (rate limited):**
+```
+RateLimit: "api";r=0;t=55
+RateLimit-Policy: "fixed window";"api";q=500;w=300
+```
+Meaning: 0 remaining out of 500 API calls, reset in 55 seconds (5-minute window).
+
+The Hub also supports the standard `Retry-After` header mechanism as a fallback.
+
+### 14.4 Source-Level Analysis: huggingface_hub Smart Retry
+
+The `huggingface_hub` library (v1.2.0+) implements automatic retry with smart rate-limit-aware backoff in `utils/_http.py`.
+
+#### `RateLimitInfo` dataclass
+
+```python
+@dataclass
+class RateLimitInfo:
+    resource_type: str      # "api", "resolvers", or "pages"
+    remaining: int           # requests remaining in window
+    reset_in_seconds: int    # seconds until window reset
+    limit: int | None = None       # total allowed per window (from policy header)
+    window_seconds: int | None = None  # window duration (from policy header)
+```
+
+#### Header Parsing with Regex
+
+Two compiled regex patterns drive the parsing:
+
+```python
+# Extracts resource_type, remaining, and reset time from RateLimit header
+_RATELIMIT_REGEX = re.compile(
+    r'\"(?P<resource_type>\w+)\"\s*;\s*r\s*=\s*(?P<r>\d+)\s*;\s*t\s*=\s*(?P<t>\d+)'
+)
+
+# Extracts quota and window from RateLimit-Policy header
+_RATELIMIT_POLICY_REGEX = re.compile(
+    r'q\s*=\s*(?P<q>\d+).*?w\s*=\s*(?P<w>\d+)'
+)
+```
+
+The `parse_ratelimit_headers()` function iterates headers case-insensitively, extracts both headers, and returns a `RateLimitInfo` object (or `None` if no rate-limit header is present).
+
+#### Exponential Backoff with Rate-Limit Awareness
+
+The core retry engine is `_http_backoff_base()` — a generator that wraps httpx requests with retry logic:
+
+**Retry parameters:**
+| Parameter | Default | Purpose |
+|-----------|---------|---------|
+| `max_retries` | 5 | Maximum retry attempts |
+| `base_wait_time` | 1s | Initial wait before first retry |
+| `max_wait_time` | 8s | Maximum wait between retries |
+| `retry_on_exceptions` | `TimeoutException`, `NetworkError`, `RemoteProtocolError` | Transient network failures |
+| `retry_on_status_codes` | 408, 429, 500, 502, 503, 504 | Transient server errors & rate limits |
+
+**Retry flow:**
+```
+1. Send request
+2. Check response status code
+3. If status in retry_on_status_codes:
+   a. If 429 AND RateLimit header present:
+      - Parse ratelimit headers → RateLimitInfo
+      - Use reset_in_seconds + 1s as sleep time  (exact, no exponential backoff)
+   b. Else if Retry-After header present:
+      - Use parsed delay seconds
+   c. Else (5xx errors):
+      - Use exponential backoff: sleep_time = min(max_wait_time, sleep_time * 2)
+   d. If max_retries exceeded: raise error via hf_raise_for_status()
+   e. Else: sleep(actual_sleep), reset IO position, retry
+4. If status NOT in retry_on_status_codes: return response immediately
+```
+
+**Critical distinction:** Unlike generic exponential backoff, when a 429 with RateLimit header is received, the library uses the **exact reset time** from the server (+1s safety margin) rather than multiplying backoff. This avoids unnecessary waiting when the server gives a precise reset window.
+
+```python
+# Line 519 from _http.py:
+if ratelimit_reset is not None:
+    actual_sleep = float(ratelimit_reset) + 1  # +1s to avoid rounding issues
+    logger.warning(f"Rate limited. Waiting {actual_sleep}s before retry [Retry {nb_tries}/{max_retries}].")
+else:
+    actual_sleep = sleep_time
+    logger.warning(f"Retrying in {actual_sleep}s [Retry {nb_tries}/{max_retries}].")
+    # Then: sleep_time = min(max_wait_time, sleep_time * 2)
+```
+
+**IO position preservation:** If the request body is a file/stream object (`io.IOBase` or `SliceFileObj`), the library saves and restores the initial position before each retry — ensuring the file content can be re-sent.
+
+#### Default Retry-After Fallback
+
+When `parse_ratelimit_headers()` returns `None` (missing or unparseable headers), the library falls back to the standard `Retry-After` header. The `_parse_retry_after()` function handles the "delay-seconds" format only (not HTTP-date format):
+
+```python
+def _parse_retry_after(headers: Mapping[str, str]) -> int | None:
+    for key in headers:
+        if key.lower() == "retry-after":
+            value = headers[key]
+            break
+    if value is None:
+        return None
+    value = value.strip()
+    if not value:
+        return None
+    return int(value)  # "Retry-After: 120" → 120 seconds
+```
+
+### 14.5 Checking Rate Limit Status
+
+**Billing Dashboard:** Visit https://huggingface.co/settings/billing to see three real-time gauges (one per request bucket). Each gauge shows:
+- Current requests in the last 5 minutes
+- Allowed requests based on plan
+- Red bar when limit exceeded
+
+**Programmatic detection:** When `huggingface_hub` makes requests, the retry is automatic. If you want to detect rate limits manually:
+
+```python
+from huggingface_hub import HfApi
+from huggingface_hub.utils import RateLimitInfo, parse_ratelimit_headers
+
+api = HfApi()
+
+# The library handles retries automatically, but you can inspect headers:
+response = api._api._session.get(
+    "https://huggingface.co/api/models?search=bert"
+)
+info = parse_ratelimit_headers(dict(response.headers))
+if info and info.remaining == 0:
+    print(f"Rate limited! Reset in {info.reset_in_seconds}s")
+```
+
+### 14.6 Practical Avoidance Patterns
+
+| Pattern | Strategy | Impact |
+|---------|----------|--------|
+| **Always pass HF_TOKEN** | Authenticate every request | Free user: 1,000 vs Anonymous: 500 API calls/5min |
+| **Prefer Resolver URLs over API** | Use `/resolve/` paths directly | Resolver limits are 5× higher than API limits |
+| **Spread requests over time** | Add delays between batch operations | Avoids window exhaustion in single burst |
+| **Use streaming/direct download** | `hf_hub_download()` with local cache | Skips API calls entirely for repeated downloads |
+| **Batch commits with CommitScheduler** | Deduplicate writes into batches | Reduces API call count for file operations |
+| **Use fsspec for filesystem operations** | Skip REST API, use direct storage | No API calls, no rate limits, just filesystem I/O |
+| **Pre-check with file_exists()** | Avoid unnecessary upload operations | Prevents wasteful API calls for unchanged files |
+| **Use Cached downloads** | Let huggingface_hub cache manage versions | Second download is local I/O, zero API calls |
+
+**Most important tip for free users:** Always set `HF_TOKEN` (even a read-only token). The difference between anonymous (500 API/5min) and free user (1,000 API/5min) is significant, and many libraries silently use the anonymous path if no token is configured.
+
+### 14.7 What Happens When Rate Limited
+
+1. Server returns HTTP 429 with `RateLimit` and `RateLimit-Policy` headers
+2. `huggingface_hub` automatically parses headers and waits the exact reset time + 1s
+3. After `max_retries` (5) failures, `hf_raise_for_status()` raises `HfHubHTTPError` with the 429 status
+4. The error includes `request_id` from the response for support debugging
+
+**If using raw HTTP (not huggingface_hub):** You must implement your own retry with exponential backoff and `Retry-After` header parsing. The IETF draft headers are available but not required for basic handling — standard `Retry-After` is also sent.
+
+### 14.8 Granular User Action Rate Limits
+
+Beyond the three main buckets, the Hub enforces limits on specific user actions:
+
+- Repo creation (per time window)
+- Repo commits (per repo + per user)
+- Discussions and comments
+- Moderation actions
+
+**These are NOT documented** and change over time. If hit, users are encouraged to upgrade or contact support.
+
+### 14.9 Key Differences from Standard API Rate Limiting
+
+| Aspect | HF Hub | Typical API |
+|--------|--------|-------------|
+| Window | 5-minute fixed window | Often 1-minute sliding |
+| Headers | IETF draft (v9) standard | Often proprietary format |
+| Retry in SDK | Built-in exponential + exact reset wait | Usually manual |
+| Buckets | 3 distinct types with independent counters | Usually 1 or 2 |
+| Org scope | Per-member, not shared | Often org-wide shared pool |
+
+### References
+
+- https://huggingface.co/docs/hub/en/rate-limits
+- https://huggingface.co/settings/billing
+- `huggingface_hub/utils/_http.py` — `_http_backoff_base()`, `parse_ratelimit_headers()`, `_parse_retry_after()`
+- https://www.ietf.org/archive/id/draft-ietf-httpapi-ratelimit-headers-09.html
+- https://huggingface.co/.well-known/openapi.json
