@@ -12103,7 +12103,7 @@ ctrl.addEventListener('stdout', (e) => ...)
 |
 ---
 
-## 2026-07-24: hf-inference-client-image-input-pipeline-deep-dive — InferenceClient Image Input Handling (Topic #188)
+## 2026-07-24: hf-inference-client-image-input-pipeline-deep-dive — InferenceClient Image Input Handling (Topic #187)
 
 ### Summary
 Source-code deep-dive into the `huggingface_hub` InferenceClient's image input pipeline. The `ContentT` type union accepts 7 input formats: bytes, bytearray, memoryview, BinaryIO (file-like objects), str URLs, str/Path local files, and PIL.Image.Image. The `_open_as_mime_bytes()` function normalizes all types into `MimeBytes` (bytes subclass with `.mime_type`). Key encoding functions: `_b64_encode()` for base64 JSON embedding, `_as_url()` for data URLs in multimodal chat. The `HFInferenceBinaryInputTask` provider handles the raw-binary vs. b64-JSON split based on parameter presence. 8 image task methods (image_classification, image_segmentation, image_to_image, image_to_video, image_to_text, object_detection, text_to_image, visual_question_answering, zero_shot_image_classification) plus document_question_answering. Chat completion uses OpenAI-compatible content parts instead of ContentT.
@@ -12115,3 +12115,209 @@ Source-code deep-dive into the `huggingface_hub` InferenceClient's image input p
 
 ### References
 - huggingface_hub inference source: https://github.com/huggingface/huggingface_hub/blob/main/src/huggingface_hub/inference/
+
+---
+
+## 2026-07-24: hf-transformers-logits-processors-deep-dive — Complete LogitsProcessor System in Transformers v5.14.0 (Topic #189)
+
+### Summary
+Full deep-dive into the `LogitsProcessor` system in HuggingFace `transformers` v5.14.0 (source file: `src/transformers/generation/logits_process.py`, ~3300 lines). Covers the abstract base class, the `LogitsProcessorList` chainer, all 35 built-in processors/warpers across 10 functional categories (temperature warping, top-k/p/H/minP/typical/epsilon/eta sampling, length control, repetition/ngram prevention, sequence biasing, forced tokens, Whisper-specific processors, classifier-free guidance, watermarking, audio-specific), the `supports_continuous_batching` flag, the `__call__` pipeline, how `generate()` wires them, and custom processor authoring patterns.
+
+### Source
+- `logits_process.py`: https://github.com/huggingface/transformers/blob/v5.14.0/src/transformers/generation/logits_process.py
+- Docs: https://huggingface.co/docs/transformers/en/internal/generation_utils
+- Strategies: https://huggingface.co/docs/transformers/en/generation_strategies
+
+### 1. Architecture
+
+```
+LogitsProcessor (abstract base)
+  └─ supports_continuous_batching: bool | None = None
+
+LogitsProcessorList (list subclass)
+  └─ __call__(input_ids, scores, **kwargs) → scores
+       Iterates through each processor, calling them IN ORDER.
+       If a processor's __call__ has extra kwargs parameters beyond
+       (input_ids, scores), they are passed from chain kwargs.
+```
+
+The `generate()` method assembles a `LogitsProcessorList` from generation config parameters. The pipeline is:
+
+```
+raw_logits → LogitsProcessorList chain → modified_logits → sampler (sample/greedy/beam)
+```
+
+Order: typically warpers (temperature → top-k → top-p) first, then processors (repetition penalty → min length → forced tokens → etc.), then normalization.
+
+### 2. Complete Processor Inventory (35 classes)
+
+#### A. Sampling Warpers (modify distribution shape for stochastic decoding)
+
+| Class | `supports_continuous_batching` | Description |
+|-------|-------------------------------|-------------|
+| `TemperatureLogitsWarper` | ✅ True | Divide logits by temperature. `score = score / temp` |
+| `TopKLogitsWarper` | ✅ True | Zero out all logits except the top-k tokens. `k` can be dynamic with `filter_value=-inf` |
+| `TopPLogitsWarper` | ✅ True | Nucleus sampling — keep smallest set of tokens whose cumulative probability ≥ p |
+| `TopHLogitsWarper` | ✅ True | Top-eta sampling — keep tokens with score ≥ `max_score * eta`. Uses `eta_cut_off` parameter |
+| `MinPLogitsWarper` | ✅ True | Keep tokens whose probability ≥ `min_p` (minimum probability threshold). Similar to top-p but uses absolute probability |
+| `TypicalLogitsWarper` | ✅ True | Typical sampling — keep tokens with negative entropy ≥ `mass`. Based on "typicality" principle |
+| `EpsilonLogitsWarper` | ✅ True | Epsilon cutoff — zero out tokens with probability < `epsilon` |
+| `EtaLogitsWarper` | ✅ True | Eta sampling — mixture approach. Filters using both epsilon and eta thresholds. Also known as "eta cutoff" from the Contrastive Search paper |
+
+#### B. Length Control Processors
+
+| Class | `supports_continuous_batching` | Description |
+|-------|-------------------------------|-------------|
+| `MinLengthLogitsProcessor` | ❌ False | Sets EOS probability to `-inf` until `min_length` is reached. **Includes prompt length** |
+| `MinNewTokensLengthLogitsProcessor` | ❌ False | Like MinLength but **ignores prompt** — only counts new tokens. Takes `prompt_length_to_skip` |
+| `ExponentialDecayLengthPenalty` | ❌ False | Exponentially boosts EOS score after a `start_index`. Formula: `penalty = |EOS_score| * (decay_factor^(cur_len - start) - 1)`. Works with a tuple `(start_index, decay_factor)` |
+| `ForcedBOSTokenLogitsProcessor` | ❌ False | Forces the first generated token (`cur_len == 1`) to be BOS token. Used by encoder-decoder models |
+| `ForcedEOSTokenLogitsProcessor` | ❌ False | Forces EOS at `max_length - 1`. Sets all scores to `-inf` except EOS tokens |
+
+#### C. Repetition & N-Gram Prevention
+
+| Class | `supports_continuous_batching` | Description |
+|-------|-------------------------------|-------------|
+| `RepetitionPenaltyLogitsProcessor` | ❌ False | Core repetition penalty. `penalty > 1.0` penalizes, `< 1.0` rewards. Applied per-token via: `if score < 0: score * penalty else: score / penalty`. Supports `prompt_ignore_length` to exclude prompt from penalty. **3D tensor support** for continuous batching |
+| `EncoderRepetitionPenaltyLogitsProcessor` | ❌ False | Inverse penalty — boosts tokens that appear in the prompt. Designed for summarization to avoid hallucination. Uses `encoder_input_ids` |
+| `NoRepeatNGramLogitsProcessor` | ❌ False | Blocks any n-gram that already appeared in the generated sequence. Takes `ngram_size` |
+| `EncoderNoRepeatNGramLogitsProcessor` | ❌ False | Blocks n-grams from the encoder input. Takes `encoder_input_ids` and `ngram_size` |
+
+#### D. Token Suppression
+
+| Class | `supports_continuous_batching` | Description |
+|-------|-------------------------------|-------------|
+| `SuppressTokensAtBeginLogitsProcessor` | ❌ False | Suppresses specific tokens at generation start only (`input_ids.shape[-1] == begin_index`). Used by Whisper for `begin_suppress_tokens` |
+| `SuppressTokensLogitsProcessor` | ❌ False | Suppresses tokens at ALL steps. Used by Whisper's `suppress_tokens` list |
+| `InfNanRemoveLogitsProcessor` | ❌ False | Safety processor: replaces `nan`→0, `+inf`→max_float, `-inf`→min_float |
+
+#### E. Token Sequence Biasing & Constraint
+
+| Class | `supports_continuous_batching` | Description |
+|-------|-------------------------------|-------------|
+| `SequenceBiasLogitsProcessor` | ❌ False | Adds bias (can be `+inf` or `-inf`) to specific token sequences. Uses Trie-based matching for multi-token sequences. Accepts `dict{tuple(tokens): float}` or `list[list[token_ids, float]]` |
+| `NoBadWordsLogitsProcessor` | ❌ False | Inherits from `SequenceBiasLogitsProcessor`. Sets `-inf` bias on bad word token sequences. Auto-filters EOS from bad words |
+| `PrefixConstrainedLogitsProcessor` | ❌ False | Takes a `prefix_allowed_tokens_fn(batch_id, input_ids) → list[int]` function. Masks all non-allowed tokens. Used with beam search (`num_beams` parameter) |
+
+#### F. Normalization
+
+| Class | `supports_continuous_batching` | Description |
+|-------|-------------------------------|-------------|
+| `LogitNormalization` | ❌ False | Applies `log_softmax(dim=-1)` to scores. Needed for beam search when scores must be normalized. Config param: `renormalize_logits=True` |
+
+#### G. Whisper-Specific
+
+| Class | `supports_continuous_batching` | Description |
+|-------|-------------------------------|-------------|
+| `WhisperTimeStampLogitsProcessor` | ❌ False | Complex timestamp processor: (1) forces timestamp pairs, (2) sets non-timestamp logits to `-inf` when timestamp probability is highest, (3) limits initial timestamp index via `max_initial_timestamp_index`, (4) handles `no_timestamps_token_id` |
+| `WhisperNoSpeechDetection` | ❌ False | Detects "no speech" condition from logits. Used for voice activity detection |
+
+#### H. Classifier-Free Guidance
+
+| Class | `supports_continuous_batching` | Description |
+|-------|-------------------------------|-------------|
+| `ClassifierFreeGuidanceLogitsProcessor` | ❌ False | Implements CFG scaling: `logits = unconditional_logits + guidance_scale * (logits - unconditional_logits)`. Takes pre-computed unconditional scores |
+| `UnbatchedClassifierFreeGuidanceLogitsProcessor` | ❌ False | CFG without batch dimension expansion. Runs unconditional pass separately |
+| `DiaClassifierFreeGuidanceLogitsProcessor` | ❌ False | DiA (Dialogue) model CFG variant |
+
+#### I. Watermarking
+
+| Class | `supports_continuous_batching` | Description |
+|-------|-------------------------------|-------------|
+| `WatermarkLogitsProcessor` | ❌ False | KGW (Kirchenbauer et al.) watermarking implementation. Modifies logits to embed watermark signal based on green/red token lists |
+| `SynthIDTextWatermarkLogitsProcessor` | ❌ False | Google DeepMind SynthID text watermarking. Uses a custom state machine (`SynthIDTextWatermarkState`). More sophisticated than KGW — encodes watermark via tournament sampling |
+
+#### J. Audio-Specific (Bark, DiA)
+
+| Class | `supports_continuous_batching` | Description |
+|-------|-------------------------------|-------------|
+| `AlternatingCodebooksLogitsProcessor` | ❌ False | Handles alternating codebook patterns in speech/audio models (like EnCodec) |
+| `BarkEosPrioritizerLogitsProcessor` | ❌ False | Prioritizes EOS tokens for Bark model's semantic/coarse/fine generation |
+| `DiaEOSChannelFilterLogitsProcessor` | ❌ False | Channel-specific EOS filtering for DiA dialogue models |
+| `DiaEOSDelayPatternLogitsProcessor` | ❌ False | Delays EOS generation pattern for DiA dialogue models |
+
+### 3. How `generate()` Assembles the Processor List
+
+The `_get_logits_processor()` and `_get_logits_warper()` methods in `GenerationMixin` build the chain from config parameters:
+
+```python
+# From GenerationConfig or generate() kwargs
+processors = LogitsProcessorList()
+
+# Order matters — typically:
+if min_length is not None:
+    processors.append(MinLengthLogitsProcessor(...))
+if repetition_penalty is not None:
+    processors.append(RepetitionPenaltyLogitsProcessor(...))
+if bad_words_ids is not None:
+    processors.append(NoBadWordsLogitsProcessor(...))
+if exponential_decay_length_penalty is not None:
+    processors.append(ExponentialDecayLengthPenalty(...))
+if forced_eos_token_id is not None:
+    processors.append(ForcedEOSTokenLogitsProcessor(...))
+
+# Warpers (for sampling):
+warpers = LogitsProcessorList()
+if temperature is not None:
+    warpers.append(TemperatureLogitsWarper(temperature))
+if top_k is not None:
+    warpers.append(TopKLogitsWarper(top_k, ...))
+if top_p is not None:
+    warpers.append(TopPLogitsWarper(top_p, ...))
+if min_p is not None:
+    warpers.append(MinPLogitsWarper(min_p, ...))
+if typical_p is not None:
+    warpers.append(TypicalLogitsWarper(typical_p, ...))
+```
+
+Final chain: `warbers + processors + [LogitNormalization()]` if `renormalize_logits=True`.
+
+### 4. Custom LogitsProcessor Pattern
+
+```python
+from transformers.generation.logits_process import LogitsProcessor
+import torch
+
+class MyCustomProcessor(LogitsProcessor):
+    supports_continuous_batching = False
+
+    def __init__(self, param: float):
+        self.param = param
+
+    def __call__(self, input_ids: torch.LongTensor, scores: torch.FloatTensor) -> torch.FloatTensor:
+        # Modify scores in-place or return new tensor
+        scores[:, some_token_id] += self.param
+        return scores
+
+# Usage
+model.generate(
+    ...,
+    logits_processor=LogitsProcessorList([
+        MyCustomProcessor(1.5),
+    ])
+)
+```
+
+Key contract:
+- Input: `input_ids` (batch, seq_len) + `scores` (batch, vocab_size)
+- Output: same-shape `scores`
+- Input may be 3D: (batch, 1, vocab_size) for continuous batching — the processor must handle this dimensionality
+
+### 5. Key Design Insights
+
+1. **`supports_continuous_batching` flag**: `True` only for TemperatureLogitsWarper, TopKLogitsWarper, TopPLogitsWarper, TopHLogitsWarper, and MinPLogitsWarper. ALL other processors set `False` or `None`. This flag gates whether the processor can run inside the optimized continuous batching path in `StaticCache`/`DynamicCache`.
+
+2. **Processor vs Warper naming**: The codebase uses both `*Processor` and `*Warper` as subclasses of `LogitsProcessor`. "Warpers" are specifically for sampling distribution shape modification; "Processors" handle constraints, penalties, forced tokens, etc. But both go into the same `LogitsProcessorList` chain.
+
+3. **N-Gram blocking via Trie**: `SequenceBiasLogitsProcessor` uses a Trie data structure for efficient multi-token sequence matching. This is the same mechanism used by `NoBadWordsLogitsProcessor`.
+
+4. **Beam search awareness**: `PrefixConstrainedLogitsProcessor` explicitly handles `num_beams` — it expands the mask per-beam and per-batch. `LogitNormalization` is critical for beam search correctness.
+
+5. **RepetitionPenalty dual formula**: Uses `score < 0 → score * penalty` (makes negative scores more negative when penalty > 1) and `score >= 0 → score / penalty` (reduces positive scores). This ensures the penalty always reduces the probability of repeated tokens.
+
+6. **ExponentialDecayLengthPenalty doesn't hard-cut**: Unlike `ForcedEOSTokenLogitsProcessor` which forces EOS at exact position, `ExponentialDecayLengthPenalty` gradually boosts EOS probability starting from `start_index`, allowing the model to choose a semantically appropriate ending point.
+
+### References
+- Source: https://github.com/huggingface/transformers/blob/v5.14.0/src/transformers/generation/logits_process.py
+- Generation strategies: https://huggingface.co/docs/transformers/en/generation_strategies
+- Internal generation utils: https://huggingface.co/docs/transformers/en/internal/generation_utils

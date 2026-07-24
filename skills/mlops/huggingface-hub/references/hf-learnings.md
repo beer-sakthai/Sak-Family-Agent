@@ -1529,7 +1529,7 @@ else:
 
 ---
 
-## 2026-07-24: hf-inference-client-image-input-pipeline-deep-dive — Image Input Handling in InferenceClient (Topic #188)
+## 2026-07-24: hf-inference-client-image-input-pipeline-deep-dive — Image Input Handling in InferenceClient (Topic #187)
 
 ### Summary
 Source-code deep-dive into the `huggingface_hub` InferenceClient's complete image input pipeline. Covers the `ContentT` type union (7 accepted formats), the `_open_as_mime_bytes` normalization engine, encoding utilities (`_b64_encode`, `_as_url`, `_bytes_to_image`), the 8 task-specific image methods, provider-specific binary vs. JSON handling, and the multimodal chat completion pattern via OpenAI-compatible data URLs. All findings verified against `huggingface_hub` source code at `/opt/data/.venv-sakthai/lib/python3.14/site-packages/huggingface_hub/inference/`.
@@ -4152,7 +4152,7 @@ Comprehensive deep-dive into `hf_transfer` — Hugging Face's Rust-based downloa
 
 ---
 
-## 2026-07-24: hf-inference-client-image-input-pipeline-deep-dive — Image Input Handling in InferenceClient (Topic #188)
+## 2026-07-24: hf-inference-client-image-input-pipeline-deep-dive — Image Input Handling in InferenceClient (Topic #187)
 
 ### Summary
 Source-code deep-dive into the `huggingface_hub` InferenceClient's complete image input pipeline. Covers the `ContentT` type union (7 accepted formats), the `_open_as_mime_bytes` normalization engine, encoding utilities (`_b64_encode`, `_as_url`, `_bytes_to_image`), the 8 task-specific image methods, provider-specific binary vs. JSON handling, and the multimodal chat completion pattern via OpenAI-compatible data URLs. All findings verified against `huggingface_hub` source code at `/opt/data/.venv-sakthai/lib/python3.14/site-packages/huggingface_hub/inference/`.
