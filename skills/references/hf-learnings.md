@@ -13231,3 +13231,24 @@ Full deep-dive: `mlops/huggingface-hub/references/hf-learnings.md` (topic #213 v
 
 ### Skill
 huggingface-hub — references/hf-learnings.md
+
+## 2026-07-24: hf-datasets-concatenate-and-interleave — Source-Code Deep Dive (Topic #185 v2)
+
+### Summary
+Deep-dive into the internal implementation of `concatenate_datasets()` and `interleave_datasets()` in the `datasets` library (v5.0.0). Covers the Arrow-based map-style implementation (`offsets + arange` index computation, `pyarrow.concat_tables`), the iterable implementation (`CyclingMultiSourcesExamplesIterable` / `RandomlyCyclingMultiSourcesExamplesIterable`), all three stopping strategies (`first_exhausted`, `all_exhausted`, `all_exhausted_without_replacement`), horizontal vs vertical concatenation, resharding for parallelism, and edge cases.
+
+### Source
+- combine.py: https://github.com/huggingface/datasets/blob/5.0.0/src/datasets/combine.py
+- arrow_dataset.py (lines 7030-7240): internal `_concatenate_map_style_datasets` + `_interleave_map_style_datasets`
+- iterable_dataset.py (lines 5196-5450): internal `_concatenate_iterable_datasets` + `_interleave_iterable_datasets`
+
+### Key Insights
+- Map-style interleave concatenates all datasets first, then builds a reordering indices array — no per-element overhead
+- `all_exhausted_without_replacement` uses a chunking algorithm over sorted unique lengths: processes each chunk, removes exhausted datasets, continues with survivors
+- Iterable interleave buffers one example ahead per source to detect exhaustion
+- The `RandomlyCyclingMultiSourcesExamplesIterable` uses `rng.integers()` or `rng.choice()` in batches of 1000 for efficiency
+- `stopping_strategy` is applied per-process in distributed settings, causing up to 1 sample loss per worker with `first_exhausted`
+- `reshard()` before interleaving prevents parallelism bottlenecks from low-shard datasets
+
+### Skill
+mlops/hf-datasets-concatenate-and-interleave — SKILL.md + references/hf-learnings.md
