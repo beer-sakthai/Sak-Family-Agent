@@ -6439,3 +6439,397 @@ Target all 7 projection layers (q, k, v, o, gate, up, down) for best adaptation.
 - https://huggingface.co/microsoft/phi-4
 
 ---
+
+## 2026-07-24: hf-hub-webhooks-crud-api-deep-dive-v2 — Hub Webhooks API Complete Reference (Topic #2 Expanded)
+
+### Summary
+Comprehensive expansion of the HF Hub Webhooks API coverage. Covers the full 7-method CRUD suite (`create_webhook`, `get_webhook`, `update_webhook`, `delete_webhook`, `list_webhooks`, `enable_webhook`, `disable_webhook`), the `WebhookInfo` and `WebhookWatchedItem` data models, event payloads (5 categories: event, repo, code changes, config changes, discussions/PRs, comments), webhook secret HMAC verification, rate limits (1,000/24h), webhook Jobs (trigger HF Jobs instead of HTTP), free-tier limitations, and practical automation patterns. Source: `huggingface_hub/hf_api.py` (huggingface_hub v1.24.0) and HF Hub docs.
+
+### Core API Reference
+
+#### 1. WebhookInfo Data Model
+
+```python
+@dataclass
+class WebhookInfo:
+    id: str                                          # Unique webhook ID (e.g. "639885d811ae2bad2b7ba461")
+    url: str | None                                  # Target URL (None if job-based webhook)
+    job: JobSpec | None                              # Job spec (None if URL-based webhook)
+    watched: list[WebhookWatchedItem]                # Entities being watched
+    domains: list[Literal['repo', 'discussions']]    # Event domains to subscribe to
+    secret: str | None                               # HMAC secret for payload verification
+    disabled: bool                                   # Whether the webhook is disabled
+```
+
+#### 2. WebhookWatchedItem
+
+```python
+@dataclass
+class WebhookWatchedItem:
+    type: Literal['dataset', 'model', 'org', 'space', 'user']
+    name: str
+```
+
+**Watched entity types:**
+| Type | What it watches |
+|------|----------------|
+| `model` | Events on a specific model repo (`user/repo-name`) |
+| `dataset` | Events on a specific dataset repo |
+| `space` | Events on a specific Space repo |
+| `user` | All repos owned by this user |
+| `org` | All repos owned by this organization |
+
+Note: `user` and `org` subscriptions require email request to HF for "all events" mode (see FAQ below).
+
+#### 3. DOMAIN Constants
+
+```python
+WEBHOOK_DOMAIN_T = Literal['repo', 'discussions']
+```
+
+| Domain | Events captured |
+|--------|----------------|
+| `repo` | Push, file changes, settings updates (default) |
+| `discussions` | Discussion creation, comments, PR events |
+
+Both can be combined to receive all event types.
+
+#### 4. Full CRUD API
+
+##### `create_webhook()` — Create a Webhook
+
+```python
+api.create_webhook(
+    url="https://my-service.com/hf-webhook",    # Target URL (mutually exclusive with job_id)
+    # OR
+    job_id="my-job-id",                          # HF Job ID to trigger (mutually exclusive with url)
+    watched=[
+        {"type": "user", "value": "beer-sakthai"},
+        {"type": "model", "value": "beer-sakthai/my-model"},
+    ],
+    domains=["repo", "discussions"],             # Event domains
+    secret="my-hmac-secret",                     # Optional: HMAC secret
+)
+# Returns WebhookInfo
+```
+
+**Key constraints:**
+- `url` and `job_id` are **mutually exclusive** — one must be set, not both
+- `watched` is **required** — at least one entity to watch
+- `domains` is **optional** — defaults to `["repo"]` if omitted
+- `secret` is **optional** — ASCII characters only
+- All parameters except `watched` are keyword-only (marked with `*`)
+
+##### `get_webhook()` — Get Webhook Details
+
+```python
+hook = api.get_webhook("639885d811ae2bad2b7ba461")
+# Returns WebhookInfo with all fields populated
+```
+
+##### `update_webhook()` — Update Existing Webhook
+
+```python
+api.update_webhook(
+    "639885d811ae2bad2b7ba461",
+    url="https://my-service.com/v2/hf-webhook",  # Update URL
+    watched=[{"type": "model", "value": "new-repo"}],  # Replace watched list
+    domains=["repo"],                             # Replace domains
+    secret="new-secret",                          # Replace secret
+)
+```
+
+**Key behavior:** All parameters are **full replacements** — the watched list replaces the previous one entirely (not merged).
+
+##### `list_webhooks()` — List All Webhooks
+
+```python
+webhooks = api.list_webhooks()
+for hook in webhooks:
+    print(f"{hook.id}: {hook.url or hook.job} → {hook.watched}")
+```
+
+Returns a `list[WebhookInfo]` of all webhooks configured for the authenticated user.
+
+##### `enable_webhook()` / `disable_webhook()` — Toggle State
+
+```python
+api.enable_webhook("639885d811ae2bad2b7ba461")   # Set disabled=False → active
+api.disable_webhook("639885d811ae2bad2b7ba461")   # Set disabled=True → inactive
+```
+
+##### `delete_webhook()` — Permanently Delete
+
+```python
+api.delete_webhook("639885d811ae2bad2b7ba461")    # Irreversible
+```
+
+#### 5. Webhook Payload Structure
+
+Each webhook POST delivers a JSON payload with the following top-level fields:
+
+##### Event
+
+```json
+{
+  "event": {
+    "id": "639885d811ae2bad2b7ba461",
+    "type": "update",
+    "scope": "repo-push",     // "repo-push", "repo-change", "discussion", "comment", etc.
+    "action": "create",       // "create", "update", "delete", "close", "reopen", etc.
+    "createdAt": "2024-01-15T10:30:00Z"
+  }
+}
+```
+
+##### Repo
+
+```json
+{
+  "repo": {
+    "type": "model",          // "model", "dataset", "space"
+    "name": "user/repo-name",
+    "fullName": "user/repo-name",
+    "url": "https://huggingface.co/user/repo-name",
+    "private": false,
+    "gated": false,
+    "likes": 42,
+    "downloads": 1000
+  }
+}
+```
+
+##### Code Changes (on push)
+
+```json
+{
+  "codeChanges": {
+    "added": ["new_file.safetensors"],
+    "modified": ["config.json", "README.md"],
+    "removed": ["old_file.bin"]
+  }
+}
+```
+
+##### Config Changes
+
+```json
+{
+  "configChanges": {
+    "modified": ["cardData.library_name", "cardData.base_model"],
+    "added": ["cardData.tags.[0]"]
+  }
+}
+```
+
+##### Discussions and PRs
+
+```json
+{
+  "discussion": {
+    "id": "639885d811ae2bad2b7ba461",
+    "title": "Hello!",
+    "url": {
+      "web": "https://huggingface.co/some-user/some-repo/discussions/3",
+      "api": "https://huggingface.co/api/models/some-user/some-repo/discussions/3"
+    },
+    "status": "open",
+    "author": {"id": "61d2000c3c2083e1c08af22d"},
+    "isPullRequest": true,
+    "changes": {"base": "refs/heads/main"},
+    "num": 3
+  }
+}
+```
+
+##### Comment
+
+```json
+{
+  "comment": {
+    "id": "6398872887bfcfb93a306f18",
+    "author": {"id": "61d2000c3c2083e1c08af22d"},
+    "content": "This adds an env key",
+    "hidden": false,
+    "url": {
+      "web": "https://huggingface.co/some-user/some-repo/discussions/4#6398872887bfcfb93a306f18"
+    }
+  }
+}
+```
+
+#### 6. Webhook Secret & HMAC Verification
+
+When a secret is set, HF sends it as the `X-Webhook-Secret` HTTP header on every request. To verify:
+
+```python
+import hmac, hashlib
+
+def verify_webhook_signature(payload_body: bytes, header_secret: str, expected_secret: str) -> bool:
+    """Verify that the webhook payload came from Hugging Face."""
+    return hmac.compare_digest(header_secret, expected_secret)
+```
+
+**Alternative:** Append secret as query parameter in the URL:
+`https://example.com/webhook?secret=XXX` — useful when header access is difficult.
+
+**Constraints:**
+- Only ASCII characters supported in the secret
+- Set/update via `create_webhook(secret=...)` / `update_webhook(secret=...)`
+- Secret is masked in the UI/API responses (returned as `None` in `WebhookInfo`)
+
+#### 7. Job-Based Webhooks
+
+Instead of sending an HTTP POST, a webhook can trigger a **HF Job**:
+
+```python
+api.create_webhook(
+    job_id="my-automation-job",                   # Job ID from hf jobs
+    watched=[{"type": "user", "value": "beer-sakthai"}],
+    domains=["repo"],
+)
+```
+
+The job receives the same payload as an HTTP webhook would. Jobs run on HF infrastructure and can access Secrets, Datasets, and Models.
+
+**Free-tier note:** Jobs require paid compute. For zero-cost automation, use HTTP webhooks to a free endpoint (e.g., Hermes webhook server, GitHub Actions webhook receiver, or a free-tier cloud function).
+
+#### 8. Rate Limits & Free-Tier Constraints
+
+| Limit | Value |
+|-------|-------|
+| Triggers per webhook per 24h | **1,000** |
+| Increase | Contact HF (PRO/Team/Enterprise) |
+| Webhook creation | Free for all accounts |
+| Max webhooks | Not documented, but generous |
+| URL-based webhooks | Free (you pay for the receiving endpoint) |
+| Job-based webhooks | Paid (Jobs consume compute credits) |
+
+#### 9. CLI Equivalent
+
+The `hf webhooks` subcommand (via `hf` CLI):
+
+```bash
+# List webhooks
+hf webhooks list
+
+# Create webhook
+hf webhooks create \
+  --url https://my-server.com/hf-webhook \
+  --watched user=beer-sakthai \
+  --domains repo,discussions \
+  --secret my-secret
+
+# Get webhook details
+hf webhooks info <webhook-id>
+
+# Update webhook
+hf webhooks update <webhook-id> \
+  --url https://my-server.com/v2/hf-webhook
+
+# Enable/disable
+hf webhooks enable <webhook-id>
+hf webhooks disable <webhook-id>
+
+# Delete
+hf webhooks delete <webhook-id>
+```
+
+Note: CLI uses `user=<name>` syntax (not `"type": "user"` dict format).
+
+#### 10. Practical Automation Patterns
+
+##### Pattern A: Auto-Sync on Push (Using Hermes Webhooks)
+
+```python
+# Setup script — run once
+from huggingface_hub import HfApi
+
+api = HfApi()
+
+# Create webhook that fires on any push to Beer's repos
+hook = api.create_webhook(
+    url="https://hermes-instance.local/webhooks/hf-push",
+    watched=[{"type": "user", "value": "beer-sakthai"}],
+    domains=["repo"],
+    secret=os.environ["WEBHOOK_SECRET"],
+)
+
+print(f"Webhook created: {hook.id}")
+# → Register this URL in Hermes: hermes webhook subscribe hf-push --url ...
+```
+
+##### Pattern B: Monitor PRs on a Specific Model
+
+```python
+api.create_webhook(
+    url="https://my-bot.com/hf-pr-handler",
+    watched=[{"type": "model", "value": "beer-sakthai/my-model"}],
+    domains=["discussions"],            # Only discussion/PR events
+    secret="pr-bot-secret",
+)
+```
+
+##### Pattern C: Mirror Datasets on Update
+
+```python
+api.create_webhook(
+    url="https://my-service.com/mirror",
+    watched=[{"type": "dataset", "value": "beer-sakthai/my-dataset"}],
+    domains=["repo"],
+)
+```
+
+##### Pattern D: Health Check — List and Refresh
+
+```python
+for hook in api.list_webhooks():
+    info = api.get_webhook(hook.id)
+    status = "🟢 active" if not info.disabled else "🔴 disabled"
+    target = info.url or f"job:{info.job}"
+    print(f"{status} {hook.id[:12]} → {target}")
+    print(f"  Watches: {[f'{w.type}:{w.name}' for w in hook.watched]}")
+    print(f"  Domains: {hook.domains}")
+```
+
+##### Pattern E: Development Workflow (Local Testing)
+
+1. Start a local receiver: `python -m http.server 8080` or a webhook receiver
+2. Expose via ngrok: `ngrok http 8080`
+3. Create webhook with ngrok URL
+4. Make test changes on HF, observe payloads
+5. Use HF Webhook Settings → Activity tab → "Replay" to resend events
+
+#### 11. Known Limitations
+
+| Limitation | Detail |
+|------------|--------|
+| **No org webhooks** | Webhooks can only be defined on user accounts, not orgs |
+| **No wildcard/global** | Can't subscribe to "all models on HF" — must email HF for that |
+| **Secret masked** | Once set, secret is never returned in API responses (always `None`) |
+| **No retry policy** | If your endpoint returns non-2xx, HF retries with exponential backoff but no persistent queue |
+| **No event filtering** | Can't filter by event type within a domain — you get all events or none |
+| **No delivery logs API** | Only available via Web UI Settings → Activity tab |
+| **1,000/day limit** | Hard limit per webhook; contact HF for increase |
+
+#### 12. Zero-Cost Best Practices
+
+1. **Use URL-based webhooks (not job-based)** — Jobs cost money; HTTP webhooks to your own endpoint are free
+2. **Host your webhook receiver on a free tier** — Hermes webhook server, GitHub Actions, Cloudflare Workers, PythonAnywhere, or a free HF Space with Gradio/Express
+3. **Use a webhook secret** — Prevents spoofed requests; critical if your endpoint is public
+4. **Validate with HMAC** — Even with secret in URL header, verify every request
+5. **Use `discussions` domain sparingly** — High-traffic repos generate many discussion events; stay under 1,000/day limit
+6. **Monitor activity in Web UI** — Periodically check Activity tab for delivery failures
+7. **Combine with `CommitScheduler`** — Webhook + CommitScheduler = real-time sync without polling
+
+### Resources
+- Official webhooks docs: https://huggingface.co/docs/hub/en/webhooks
+- HfApi reference (webhook methods): https://huggingface.co/docs/huggingface_hub/en/package_reference/hf_api#webhooks
+- Source code: `huggingface_hub/hf_api.py` (search for `def create_webhook`)
+- Webhooks guide (Auto-Train): https://huggingface.co/docs/hub/en/webhooks-guide-auto-retrain
+- Hermes webhook server: `skill_view("hermes-agent", "references/webhooks.md")`
+
+### Skill
+huggingface-hub — references/hf-learnings.md
+
+---
