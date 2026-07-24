@@ -8446,3 +8446,209 @@ All Gradio 6 features work on free CPU HF Spaces. Streaming reduces perceived la
 - [Dynamic Apps with Render Decorator](https://www.gradio.app/guides/dynamic-apps-with-render-decorator)
 - [Creating a Chatbot Fast](https://www.gradio.app/guides/creating-a-chatbot-fast)
 - [Gradio API Reference](https://www.gradio.app/docs/gradio/chatinterface)
+
+## 2026-07-24: hf-hub-security-scanning-deep-dive — Hub Security Scanning Infrastructure (Topic #153)
+
+### Summary
+Deep-dive into the Hugging Face Hub's multi-layered security scanning infrastructure. Covers all five scanning systems: ClamAV malware scanning (every file, every commit), pickle import analysis (opcode-level static analysis), TruffleHog secrets scanning (credential leakage detection), Protect AI Guardian (third-party ML exploit scanning), and JFrog scanner (behavioral ML malware detection). Also covers picklescan library, repository security badges, and the end-to-end scanning pipeline.
+
+### Scanning Architecture Overview
+
+The Hub runs a multi-engine security pipeline on every push/commit:
+
+| Scanner | Type | What It Detects | Trigger |
+|---------|------|-----------------|---------|
+| **ClamAV** | Antivirus | Known malware signatures via ClamAV database | Every file, every commit |
+| **Pickle Import Scanner** | Static analysis | Dangerous imports/REDUCE opcodes in pickle files | Every `.pkl`/`.bin` upload |
+| **TruffleHog** | Secrets scanner | Hard-coded API keys, tokens, credentials | Every push |
+| **Protect AI Guardian** | Third-party ML scanner | Pickle, Keras, and other ML serialization exploits | Public repos, on upload |
+| **JFrog Scanner** | Third-party behavioral | Malicious code inside model weights (low false-positive) | Model files, on upload |
+
+### 1. ClamAV Malware Scanning
+
+Runs every file through [ClamAV](https://www.clamav.net/) open-source antivirus.
+
+- **Triggered per commit** — every file pushed is scanned
+- **Badge system:** Each file gets an `ok`, `infected`, or no badge (queued/scanning/error)
+- **Repository-level warning:** If any file is flagged unsafe, a banner warns users
+- **Owner responsibility:** Repository owner advised to remove suspicious files
+- **Example:** `mcpotato/42-eicar-street` demonstrates infected file badges
+
+```python
+# Programmatic check via HF Hub API
+from huggingface_hub import HfApi
+api = HfApi()
+# Check repo file security status
+# Files have .safety_status: "safe" | "unsafe" | "unknown"
+```
+
+### 2. Pickle Import Scanning (Built-in)
+
+Custom-built scanner that performs **opcode-level static analysis** on pickle files without executing them.
+
+#### How It Works
+
+Uses Python's `pickletools.genops()` to disassemble pickle opcodes:
+
+```python
+import pickletools
+
+# Safe: reads opcodes WITHOUT executing code
+with open('model.pkl', 'rb') as f:
+    ops = list(pickletools.genops(f))
+    for opcode, arg, pos in ops:
+        if opcode.name in ('GLOBAL', 'STACK_GLOBAL', 'REDUCE'):
+            print(f"Dangerous opcode: {opcode.name} -> {arg}")
+```
+
+#### Dangerous Opcodes
+
+| Opcode | Risk |
+|--------|------|
+| `GLOBAL` | Imports any Python module; can pull in `builtins.exec` |
+| `STACK_GLOBAL` | Stack-based variant of GLOBAL |
+| `REDUCE` | Executes a callable with arguments — primary RCE vector |
+| `INST` | Old-style class instantiation with args |
+| `OBJ` | Similar to REDUCE, builds objects |
+
+#### Example: Innocent Pickle
+
+```python
+import pickle
+pickletools.dis(pickle.dumps("hello"))
+# Output: PROTO 4, SHORT_BINUNICODE 'hello', MEMOIZE, STOP
+# No dangerous opcodes
+```
+
+#### Example: Malicious Pickle (using fickling)
+
+```python
+# A pickle that runs exec() on unpickling
+# Opcodes: GLOBAL builtins.exec, REDUCE
+# The import scanner catches GLOBAL + REDUCE combo
+```
+
+#### Safe Import Lists
+
+The Hub maintains safe/unsafe import lists for pickle files:
+
+- **Safe:** `torch.*`, `numpy.*`, `transformers.*`, standard library modules
+- **Unsafe:** `builtins.exec`, `builtins.eval`, `os.system`, `subprocess.*`, `ctypes.*`
+- **Displayed per-file:** Each pickle file's imports shown on the Hub UI
+- **Disclaimer:** Best-effort — users remain responsible for verification
+
+#### Mitigation Stack
+
+1. **Don't use pickle** — prefer `safetensors` for weights
+2. **Trust but verify** — GPG-signed commits guarantee origin
+3. **Use TF/Flax weights** — load with `from_tf=True` or `from_flax=True`
+4. **Alternative serialization** — MsgPack, Protobuf, Cap'n'Proto, Avro, safetensors
+
+### 3. TruffleHog Secrets Scanning
+
+Runs [TruffleHog](https://trufflesecurity.com/trufflehog) on every push to detect hard-coded secrets.
+
+- **Scope:** Detects API keys, tokens, credentials across 700+ service patterns
+- **Two-tier detection:**
+  - **Unverified secrets:** Patterns that look like secrets; may be false-positive
+  - **Verified secrets:** Confirmed working authentication via live provider check
+- **Notification:** Email sent for verified secrets only; opt-out in settings
+- **Coverage:** Not limited to HF tokens — any service credential (AWS, GitHub, OpenAI, etc.)
+
+```python
+# Bad practice detected by scanner:
+api_key = "sk-abc123..."          # ❌ Hard-coded in source
+
+# Good practice:
+import os
+api_key = os.getenv("API_KEY")    # ✅ Environment variable in Secrets
+```
+
+### 4. Protect AI Guardian (Third-party)
+
+[Protect AI](https://protectai.com/)'s [Guardian](https://protectai.com/guardian) scanner.
+
+- **Specialty:** Catches pickle, Keras, and other ML serialization exploits
+- **Knowledge base:** Detailed at [protectai.com/insights/knowledge-base/](https://protectai.com/insights/knowledge-base/)
+- **Integration:** Scans all public repository files on upload
+- **UI:** Dedicated report section per file with detailed findings
+- **Community:** Benefits from [Huntr](https://huntr.com/) bounty reports
+- **Example repo:** `mcpotato/42-eicar-street` shows Protect AI reports inline
+
+### 5. JFrog Scanner (Third-party)
+
+[JFrog](https://jfrog.com/) ML model security scanner.
+
+- **Specialty:** Detects malicious behavior in ML model files
+- **Low false-positives:** Parses code inside model weights and analyzes for malicious intent rather than flagging all code
+- **Behavioral analysis:** Distinguishes between legitimate model code and attack payloads
+- **Partnership blog:** [hf.co/blog/jfrog](https://hf.co/blog/jfrog)
+- **UI:** Reports displayed on individual file cards similar to Protect AI
+
+### 6. Picklescan Library
+
+Third-party standalone scanner by [mmaitre314](https://github.com/mmaitre314/picklescan):
+
+```bash
+pip install picklescan
+picklescan scan --file-path model.pkl
+```
+
+```python
+from picklescan.scanner import scan_file
+result = scan_file("model.pkl")
+print(f"Infected: {result.infected}")
+for issue in result.issues:
+    print(f"  {issue.severity}: {issue.opcode} -> {issue.import_name}")
+```
+
+- Also supports scanning HF Hub repos directly via `--repo-id`
+- Can detect GLOBAL, REDUCE, and other dangerous pickle opcodes
+- Used by some third-party security platforms
+
+### 7. Security Badge System
+
+Every file on the Hub displays a security status:
+
+| Badge | Meaning |
+|-------|---------|
+| ✅ **ok** | Passed all scans; no issues detected |
+| ❌ **infected** | Flagged by at least one scanner |
+| ⏳ *(none)* | Queued, scanning in progress, or scan error (up to a few minutes) |
+
+Repository-level banner shown if any file is unsafe:
+> "As the repository owner, we advise you to remove the suspicious file. The repository will appear back as safe."
+
+### 8. Hub-Wide Security Features
+
+Beyond file scanning:
+
+- **Private repositories** — access-controlled repos
+- **Fine-grained tokens** — scoped to read/write/admin per resource type
+- **SSH keys** — Git over SSH for secure auth
+- **GPG signatures** — signed commits verify file origin
+- **2FA/MFA** — two-factor authentication
+- **Resource Groups** — advanced access control for orgs
+- **SSO** — single sign-on for enterprise
+- **SOC2 Type 2** — annual security certification
+- **GDPR compliance** — data processing agreements available
+
+### Zero-Cost Relevance
+
+All scanning is **free and automatic** — no cost to repo owners or users. The Hub's security infrastructure protects everyone without any paid tier requirement. For zero-cost users (like Beer), this means:
+- Upload models safely without worrying about malicious injections from collaborators
+- Use `safetensors` (free, open-source) instead of pickle for weights
+- Store secrets via HF Spaces Secrets (free) rather than hard-coding
+- Verify file safety programmatically via the Hub API
+
+### Resources
+- [Hub Security Docs](https://huggingface.co/docs/hub/en/security)
+- [Malware Scanning](https://huggingface.co/docs/hub/en/security-malware)
+- [Pickle Scanning](https://huggingface.co/docs/hub/en/security-pickle)
+- [Secrets Scanning](https://huggingface.co/docs/hub/en/security-secrets)
+- [Protect AI Integration](https://huggingface.co/docs/hub/en/security-protectai)
+- [JFrog Integration](https://huggingface.co/docs/hub/en/security-jfrog)
+- [Picklescan Library](https://github.com/mmaitre314/picklescan)
+- [ClamAV](https://www.clamav.net/)
+- [TruffleHog](https://trufflesecurity.com/trufflehog)
+- [JFrog Blog Post](https://hf.co/blog/jfrog)
