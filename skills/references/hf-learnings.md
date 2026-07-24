@@ -3290,7 +3290,7 @@ Comprehensive deep-dive into the Hugging Face Hub Collections API — covering a
 - Source: `huggingface_hub/hf_api.py` lines 9908–10400
 - Hub docs: https://huggingface.co/docs/hub/en/collections
 - Collections page: https://huggingface.co/collections
-|
+
 
 ## 2026-07-24: hf-datasets-library-v5 — Deep Dive v2 (Topic #19, Datasets v5.0.0)
 
