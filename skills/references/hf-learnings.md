@@ -6382,3 +6382,60 @@ Full deep-dive: `mlops/huggingface-hub/references/hf-learnings.md` (Topic #136)
 
 ### Skill
 huggingface-hub — references/hf-learnings.md
+
+---
+
+## 2026-07-24: hf-transformers-phi4-deep-dive — Complete Phi-4 Architecture & Ecosystem Reference (Topic #67 Deep-Dive)
+
+### Summary
+Deep-dive into Microsoft Phi-4 (14B) and its growing ecosystem — covering full architecture, Transformers integration via `Phi3ForCausalLM`, three-pillar data-centric training, inference patterns, Phi-4-mini (3.8B 128K), Phi-4-multimodal (5.6B VLM), and LoRA fine-tuning.
+
+### Core Model: Phi-4 (14B)
+
+- **Architecture:** Dense decoder-only Transformer using `Phi3ForCausalLM` in Transformers (no separate `Phi4ForCausalLM`). Architecture tag is `phi4` but implementation reuses Phi-3 code.
+- **Dimensions:** 40 layers, hidden dim 4,960, intermediate 15,840 (swiGLU), 32 query / 8 KV heads (GQA), vocab 100,352, context 16K, RoPE, LayerNorm pre-norm.
+- **Training:** 1,920 H100-80G GPUs, 21 days, 9.8T tokens, MIT license, Dec 2024.
+- **Key config diffs from Phi-3:** Larger vocab (100,352 vs 32,064), wider intermediate (15,840 vs Phi-3-medium's), more layers (40 vs 32).
+
+### Loading
+```python
+model = AutoModelForCausalLM.from_pretrained("microsoft/phi-4",
+    torch_dtype=torch.bfloat16, device_map="auto")
+```
+
+### Training Innovation: Three-Pillar Recipe
+
+1. **Synthetic pre-training** (~80%) — multi-agent prompting, self-revision, instruction reversal for reasoning-focused synthetic tokens
+2. **Curated organic** (~20%) — filtered web, academic books, code, Q&A
+3. **Post-training** — SFT + pivotal token search DPO + rejection sampling
+
+Result: 14B surpasses GPT-4o on GPQA (56.1 vs 50.6) and MATH (80.4 vs 74.6).
+
+### Zero-Cost Inference
+
+- **4-bit quantization:** ~9GB VRAM via BitsAndBytesConfig (down from 28GB)
+- **GGUF:** Q4_K_M fits in ~8GB RAM via llama.cpp
+- **Inference Providers:** Free via Cerebras, Fireworks, Together AI, etc.
+
+### Phi-4-mini (3.8B, April 2025)
+
+- 128K context via LongRoPE (vs 16K in 14B)
+- Ideal for long-document RAG, agentic workflows
+- Fits on free T4 GPUs with QLoRA fine-tuning
+
+### Phi-4-multimodal (5.6B, May 2025)
+
+- SigLIP vision encoder + Phi-4-mini text decoder
+- Supports interleaved image-text conversations
+- Load with `AutoModelForPreTraining` (not CausalLM)
+
+### LoRA Fine-Tuning
+
+Target all 7 projection layers (q, k, v, o, gate, up, down) for best adaptation. ~0.5% of params trainable. Use QLoRA for free-tier training.
+
+### Resources
+- https://arxiv.org/abs/2412.08905
+- https://github.com/microsoft/Phi-4CookBook
+- https://huggingface.co/microsoft/phi-4
+
+---
