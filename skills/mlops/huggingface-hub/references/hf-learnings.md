@@ -1590,5 +1590,189 @@ fs = HfFileSystem(endpoint="https://huggingface.co", token="hf_...")
 - DuckDB fsspec: https://duckdb.org/docs/guides/python/filesystems
 - Zarr fsspec: https://zarr.readthedocs.io/en/stable/tutorial.html#io-with-fsspec
 
+---
+
+## 2026-07-24: hf-hub-upload-strategies-deep-dive — Complete Upload Reference (Topic #35 Deep-Dive)
+
+### Summary
+Deep-dive into all upload strategies available in `huggingface_hub` for pushing content to the Hugging Face Hub. Covers the full API surface (`upload_file`, `upload_folder`, `create_commit`, `upload_large_folder`), the Xet-powered streamed pipeline, LFS vs regular file handling, multi-commit large-folder uploads, resumability, patterns, limitations, and best practices for zero-cost model/dataset publishing. Source code: `huggingface_hub/hf_api.py`, `huggingface_hub/_commit_api.py`, `huggingface_hub/_upload_pipeline.py` on GitHub.
+
+### Key Concepts
+
+**Three core upload methods:**
+1. **`upload_file`** — single file upload via HTTP POST (up to 50 GB). No git/lfs required. Wraps `create_commit` with one `CommitOperationAdd`.
+2. **`upload_folder`** — upload an entire local folder. With `hf_xet` installed (default): multi-commit streamed pipeline with adaptive batching, resumability, deduplication. Without: single `create_commit` (legacy, warns >30 files).
+3. **`upload_large_folder`** — DEPRECATED. Multi-worker hash+preupload+commit pipeline. Replaced by `upload_folder` with Xet.
+
+**Low-level API:**
+- **`create_commit`** — the foundation. Accepts an iterable of `CommitOperation` objects. Supports up to 25k LFS files and 1 GB regular-file payload per commit.
+
+### CommitOperation Types
+
+| Operation | Purpose | Key Fields |
+|-----------|---------|-----------|
+| `CommitOperationAdd(path_or_fileobj, path_in_repo)` | Upload a file (local path, bytes, or IO stream) | `path_or_fileobj` (str/Path/bytes/BinaryIO), `path_in_repo` (str) |
+| `CommitOperationDelete(path_in_repo, is_folder)` | Delete a file or folder | `path_in_repo` (str), `is_folder` (bool or "auto") |
+| `CommitOperationCopy(path_in_repo, src_path_in_repo, src_repo_id, src_repo_type)` | Copy a file within/across repos | `path_in_repo`, `src_path_in_repo`, optional `src_repo_id`/`src_repo_type` for cross-repo |
+
+### Upload Modes
+
+Files are classified into two modes when uploaded:
+
+**Regular files** — small files stored directly as git blobs. Base64-encoded in the commit payload. Budget: ~100 MB per commit.
+
+**LFS files** — large files tracked by Git LFS. Two-step process:
+1. **Pre-upload**: hash the file, register with LFS batch endpoint, upload chunks to blob storage
+2. **Commit**: reference the LFS pointer in the git commit
+
+The Hub automatically determines which mode applies:
+- Files matching extensions in `.gitattributes` → LFS
+- Files above a size threshold → automatically LFS-tracked
+- Small files → regular git blobs
+
+### Xet-Powered Streamed Upload (Default)
+
+When `hf_xet` is installed (now default with `huggingface_hub`), `upload_folder` uses a **streamed multi-commit pipeline**:
+
+**Architecture:**
+- **Coordinator** (caller thread): walks files, asks Hub (256 at a time) to classify them (regular/xet/ignored). Xet files are registered into a `XetSession` which chunks, deduplicates, and uploads them in background. No Python-side sha256 — `hf_xet` computes it during chunking (single read pass).
+- **Committer** (background thread): joins xet uploads, drops unchanged files (compares remote OIDs), creates git commits for each batch. Runs concurrently with coordinator.
+
+**Key features:**
+- **Adaptive batching**: starts at 250 files/commit, scales up (to 1000) for fast first commits, scales down on failures. Forces a commit every 5 min max.
+- **Resumability**: re-running the same call skips already-committed files (no-op by remote OID comparison) and deduplicates already-uploaded Xet chunks (~0 bytes transferred).
+- **No single-read-pass penalty**: files are hashed during the chunking process, not pre-hashed.
+- **Automatic `.git/` folder exclusion** via `DEFAULT_IGNORE_PATTERNS`.
+
+### Detailed Method Reference
+
+#### `upload_file(path_or_fileobj, path_in_repo, repo_id, ...)`
+
+```python
+from huggingface_hub import upload_file
+
+# From a file path
+upload_file(
+    path_or_fileobj="./local/weights.bin",
+    path_in_repo="checkpoints/weights.bin",
+    repo_id="username/my-model",
+)
+
+# From bytes
+upload_file(
+    path_or_fileobj=b"model data here",
+    path_in_repo="model.bin",
+    repo_id="username/my-model",
+)
+```
+
+**Important params:** `repo_type`, `revision`, `create_pr`, `token`, `commit_message`, `parent_commit`.
+
+**Limits:** Up to 50 GB per file. Assumes repo exists (404 → create it first with `create_repo`).
+
+#### `upload_folder(folder_path, repo_id, ...)`
+
+```python
+from huggingface_hub import upload_folder
+
+# Basic upload — entire folder
+upload_folder(
+    folder_path="./my-model-output",
+    repo_id="username/my-model",
+)
+
+# With patterns and deletion
+upload_folder(
+    folder_path="./checkpoints",
+    path_in_repo="experiment/checkpoints",
+    repo_id="username/my-dataset",
+    repo_type="dataset",
+    ignore_patterns="**/logs/*.txt",        # skip local files
+    delete_patterns="**/logs/*.txt",         # delete matching remote files
+    create_pr=True,                          # open a PR instead of direct push
+)
+```
+
+**Key params:** `path_in_repo`, `allow_patterns`, `ignore_patterns`, `delete_patterns`, `create_pr`, `revision`, `parent_commit`.
+
+**Note:** When `create_pr=True`, PR is always against default branch. Cannot combine with `revision`. For resuming an interrupted upload into an existing PR, use `revision="refs/pr/N"` instead.
+
+#### `create_commit(repo_id, operations, commit_message, ...)`
+
+```python
+from huggingface_hub import create_commit, CommitOperationAdd, CommitOperationDelete
+
+operations = [
+    CommitOperationAdd(path_or_fileobj="./new_weights.bin", path_in_repo="model.bin"),
+    CommitOperationDelete(path_in_repo="old_weights.bin"),
+]
+create_commit(
+    repo_id="username/my-model",
+    operations=operations,
+    commit_message="Update weights and cleanup",
+    num_threads=5,  # parallel upload threads
+)
+```
+
+**Key params:** `num_threads` (default 5), `create_pr`, `parent_commit`, `run_as_future`.
+
+**Limits:** 25k LFS files, 1 GB regular-file payload per commit.
+
+### Cross-Repository Copy
+
+`CommitOperationCopy` enables server-side LFS object duplication:
+
+```python
+CommitOperationCopy(
+    path_in_repo="new/path.bin",              # destination
+    src_path_in_repo="original/path.bin",     # source
+    src_repo_id="source-user/source-repo",     # different repo
+    src_repo_type="model",
+)
+```
+
+LFS objects are duplicated server-side. Regular files are downloaded and re-uploaded. Works within the same HF instance.
+
+### Best Practices for Zero-Cost Uploads
+
+1. **Use Xet uploads** — `pip install hf_xet` is now bundled by default. Gives you resumable, multi-commit uploads for free.
+2. **Prefer `upload_folder` over `upload_file`** — unless you're uploading a single file. The Xet pipeline is more robust.
+3. **Use `delete_patterns` instead of separate delete commits** — `upload_folder` optimizes by skip-deleting files that are being overwritten.
+4. **Creating a new repo?** — call `create_repo()` first, then upload. `upload_*` methods assume the repo exists.
+5. **Large model uploads** — organize checkpoints in folders, use `upload_folder` with Xet. It auto-batches into 250–1000 file commits.
+6. **Atomicity with `parent_commit`** — pass a specific OID to ensure the repo hasn't changed since you last fetched it. Especially useful for workflows with concurrent updates.
+7. **PR-based uploads for review** — use `create_pr=True`. Each call creates a new PR unless you target a specific PR branch with `revision="refs/pr/N"`.
+8. **Avoid `upload_large_folder`** — deprecated. Uses old multi-worker approach without Xet deduplication.
+9. **File size awareness** — single files up to 50 GB via `upload_file`. Above that, split into chunks and upload separately.
+10. **Progress display** — Xet pipeline shows live progress bars on TTY and periodic summary logs on non-TTY (every 30 seconds).
+
+### Error Handling Patterns
+
+```python
+from huggingface_hub import HfApi, RepositoryNotFoundError
+
+api = HfApi()
+try:
+    api.upload_file(
+        path_or_fileobj=b"data",
+        path_in_repo="file.txt",
+        repo_id="user/repo",
+    )
+except RepositoryNotFoundError:
+    api.create_repo(repo_id="user/repo")
+    api.upload_file(...)  # retry
+except Exception as e:
+    # Handle HTTP errors: 400 (bad request), 403 (gated/unauthorized), 413 (payload too large), 503 (overloaded)
+    print(f"Upload failed: {e}")
+```
+
+### Resources
+- huggingface_hub source: https://github.com/huggingface/huggingface_hub
+- `hf_api.py` (upload methods): https://github.com/huggingface/huggingface_hub/blob/main/src/huggingface_hub/hf_api.py
+- `_commit_api.py`: https://github.com/huggingface/huggingface_hub/blob/main/src/huggingface_hub/_commit_api.py
+- `_upload_pipeline.py` (Xet pipeline): https://github.com/huggingface/huggingface_hub/blob/main/src/huggingface_hub/_upload_pipeline.py
+- Hub docs: https://huggingface.co/docs/hub/en/repositories-getting-started
+- Xet docs: https://huggingface.co/docs/hub/en/xet/index
+
 ### Skill
 huggingface-hub — references/hf-learnings.md
