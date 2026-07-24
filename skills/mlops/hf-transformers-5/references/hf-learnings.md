@@ -1,0 +1,1218 @@
+# HF Learnings Log
+
+## 2026-07-23: hf-bitsandbytes-quantization
+
+### Summary
+Researched the bitsandbytes library's integration with Hugging Face Transformers for k-bit quantization (8-bit and 4-bit), enabling large model inference and training on consumer GPUs with dramatically reduced memory.
+
+### Key Concepts
+
+**Three Main Features:**
+1. **8-bit optimizers** — block-wise quantization for Adam/AdamW/etc. maintaining 32-bit performance at fraction of memory cost
+2. **LLM.int8()** — vector-wise quantization for inference, quantizes most features to 8-bit, outliers handled with 16-bit matmul (no quality loss)
+3. **QLoRA (4-bit)** — quantizes model to 4-bit + trains LoRA adapters. Uses NF4 data type
+
+**Hardware Support:** NVIDIA CUDA, Intel XPU, Intel Gaudi HPU, CPU
+
+**BitsAndBytesConfig Parameters:**
+- `load_in_4bit=True/load_in_8bit=True` — enable quantization
+- `bnb_4bit_quant_type="nf4"` — NF4 (QLoRA paper) vs "fp4"
+- `bnb_4bit_compute_dtype=torch.bfloat16` — compute dtype for speed
+- `bnb_4bit_use_double_quant=True` — nested quantization (extra 0.4 bits/param saved)
+- `llm_int8_threshold=6.0` — outlier threshold for LLM.int8()
+- `llm_int8_skip_modules=["lm_head"]` — skip specific modules
+- `llm_int8_enable_fp32_cpu_offload=True` — offload to CPU
+
+**QLoRA Pipeline:**
+1. Load base model with `load_in_4bit=True`, `bnb_4bit_quant_type="nf4"`
+2. Apply PEFT LoRA config
+3. Train only LoRA adapters
+4. Merge or keep separate for inference
+
+**Resources:**
+- Paper: QLoRA (https://hf.co/papers/2305.14314)
+- Blog: "Making LLMs even more accessible with bitsandbytes, 4-bit quantization and QLoRA" (https://huggingface.co/blog/4bit-transformers-bitsandbytes)
+
+---
+
+## 2026-07-23: hf-hub-model-download-stats
+
+### Summary
+Researched the Hugging Face Hub's model download counting methodology — how the Hub tracks downloads server-side using per-library query files, handles edge cases like Diffusers and GGUF, and provides Publisher Analytics for granular logs.
+
+### Key Concepts
+
+**Query Files System:** The Hub counts downloads by monitoring HTTP GET/HEAD requests to library-specific query files. Default query files are `config.json`, `config.yaml`, `hyperparams.yaml`, `params.json`, `meta.yaml`. Libraries can override these with custom `countDownloads` filters.
+
+**Per-Library Query Files:**
+- **Default**: `config.json`, `config.yaml`, `hyperparams.yaml`, `params.json`, `meta.yaml`
+- **Nemo**: All `.nemo` files
+- **GGUF**: All `.gguf` files (self-contained, no library dependency)
+- **Diffusers**: `model_index.json` + top-level `.safetensors`/`.ckpt`/`.bin` files
+
+**Diffusers Edge Case:** The most complex counting logic because users download via both the Python library (counts `model_index.json`) and direct UI downloads (counts top-level `.safetensors`/`.ckpt`/`.bin`). Nested files excluded to prevent double-counting.
+
+**Publisher Analytics:** Enterprise solution providing anonymized request-level access logs for organizations needing granular data (unique downloaders, CI/CD filtering, etc.).
+
+### Resources
+- https://huggingface.co/docs/hub/en/models-download-stats — official docs
+- https://huggingface.co/docs/hub/en/publisher-analytics — Publisher Analytics
+
+---
+
+## 2026-07-24: hf-hub-upload-strategies (Deep Dive)
+
+### Summary
+Comprehensive deep-dive on uploading files, folders, and large models to the Hugging Face Hub. Covered all 7 major upload methods (CLI, Python API, resumable, Rust-accelerated, Xet-backed), their comparison matrix, use-case strategies, error handling patterns, and best practices.
+
+### Key Insights
+- Comparison matrix of 9 upload methods across dimensions (resumable, concurrent, atomic)
+- `upload_large_folder` uses a `.hfupload` manifest for resumability
+- `hf_transfer` (Rust, `pip install hf_transfer`) provides 2-3× faster uploads for >5 GB files
+- Xet backend (`HF_STORAGE_BACKEND=xet`) provides content-addressed dedup for iterative releases
+- `upload_folder` respects `.gitignore` — override with `ignore_patterns`
+- `create_commit` with `CommitOperationAdd|Delete|Copy` provides atomic commits
+- Don't mix Xet and hf_transfer simultaneously
+- Always validate after upload with `api.repo_info()` or `api.list_repo_tree()`
+
+### Also this run
+|- Fixed `author: SakThai` and `license: MIT` on all 84 SKILL.md files in the profile
+|- Pushed 85 files changed (674 additions) to GitHub
+
+---
+
+## 2026-07-24: hf-transformers-generation-config-deep-dive (Deep Dive)
+
+### Summary
+Comprehensive deep-dive into Transformers' GenerationConfig and generate() API (v5.14.0). Extended Entry 59 with full parameter reference, generation mode auto-detection, logits processor pipeline (16 stages), custom stopping criteria, SynthIDText watermarking, assisted generation (speculative decoding with DSLA), continuous batching for production serving, custom generation methods (Hub repos and callables), streaming (TextStreamer/TextIteratorStreamer), CFG via negative prompts, and 6 production best practices.
+
+### Key Insights
+- **Length control**: Always prefer `max_new_tokens` over `max_length` to avoid prompt truncation
+- **Watermarking**: Two systems — SynthIDText (DeepMind, recommended) and simple WatermarkingConfig; both enable detection without state
+- **Speculative decoding**: 2-3x speedup with `assistant_model`; 1.5x with `prompt_lookup_num_tokens` (no assistant needed); DSLA adapts budget dynamically
+- **Custom generation**: New `custom_generate` argument accepts Hub repo name or callable — replaces the decoding loop without subclassing
+- **Continuous batching**: Native production serving via `ContinuousBatchingManager` with CUDA graph support
+- **Logits processor pipeline**: 16-stage pipeline; custom processors inserted before the first stage
+- **stop_strings**: Tokenizer-agnostic string-based stopping (v5.14+)
+- **CFG**: Negative prompt guidance via `guidance_scale` (experimental)
+
+### Fields covered in detail
+- 7 parameter categories (length, output, sampling, contrastive, watermarking, assisted, advanced) with 50+ parameters
+- 7 generation modes (greedy, sampling, beam, beam-sampling, contrastive, diverse beam, assisted)
+- Full logits processor pipeline order with 16 stages
+- SynthIDText and simple watermarking with detection
+- Speculative decoding: assistant_model, prompt_lookup, DSLA, static verification
+- Continuous batching config and lifecycle
+- Custom generation method creation, publication, and consumption
+- 6 production best practices with code examples
+
+### Repository search tag
+- Saved to ~/profiles/sakthai/skills/references/hf-learnings.md (Entry 91)
+
+---
+
+## 2026-07-24: hf-optimum-cpu-inference-deep-dive (Expanded Deep Dive)
+
+### Summary
+Comprehensive expansion of the hf-optimum CPU inference topic with deep-dives on ONNX Runtime CPU, OpenVINO CPU, ExecuTorch edge inference, performance tuning for CPU architectures, and CPU inference optimization theory. The previous reference (39 lines) was expanded to ~250 lines with production-grade detail.
+
+### Expanded Coverage
+
+**ONNX Runtime CPU Inference:**
+- Full ORTModelForXXX class table (13 classes mapped to Transformers equivalents)
+- Session configuration with all performance knobs (intra/inter_op_num_threads, graph optimization levels, execution modes)
+- Thread tuning rules of thumb by CPU type (4-core to 32-core)
+- Dynamic vs static axis export tradeoffs
+- Dynamic quantization (INT8 weights, no calibration) with ISA-specific configs (AVX2, AVX-512, ARM64)
+- Static quantization (W8A8, requires calibration) with ORTCalibrator pipeline
+- 5 known limitations for LLM on CPU
+
+**OpenVINO CPU Inference:**
+- Full OVModelForXXX class table (9 classes)
+- Performance hints (LATENCY, THROUGHPUT, CUMULATIVE_THROUGHPUT)
+- INT4/INT8 weight compression with configurable group sizes (32/128/256)
+- Asynchronous inference pipeline with InferRequest
+- Compilation cache (CACHE_DIR) for fast reload
+
+**ExecuTorch Edge Inference:**
+- Export and reload pipeline with INT8 quantization
+- Backend delegation (XNNPACK, MPS, CoreML)
+- Decision table for when to use each inference backend
+
+**CPU Inference Theory:**
+- Why CPU inference is memory-bandwidth bound (Roofline analysis)
+- Quantization-to-speedup mapping (FP32 → INT4 = ~6×)
+- Kernel fusion strategies (operator fusion, constant folding, layout optimization)
+- KV cache optimization for CPU LLMs (limit to 512-2048 tokens, use greedy decoding)
+- Production deployment checklist (8 steps)
+- Decision matrix: OpenVINO vs ONNX Runtime vs ExecuTorch by hardware
+
+### Files modified
+
+---
+
+## 2026-07-24: hf-mcp-server (Deep Dive — Source Code Analysis)
+
+### Summary
+Deep-dive into the official `huggingface/hf-mcp-server` (⭐263) open-source repository. Analyzed the full source tree to document all 28 built-in MCP tools, the bouquet/mix tool-grouping system, proxy tools via CSV, Gradio Space dynamic discovery, sandbox execution, Hub Jobs, and the HF Skills directory resource extension. Prior knowledge was limited to setup; this adds tool-level API reference, configuration reference for all env vars, and architectural understanding.
+
+### Canonical Built-in Tools (from tool-ids.ts)
+
+The server registers tools using canonical IDs from tool configuration objects. Each tool is a separate TypeScript module in `packages/mcp/src/`:
+
+| Tool ID | Module | Purpose |
+|---------|--------|---------|
+| `space_search` | space-search.ts | Semantic search across HF Spaces |
+| `model_search` | model-search.ts | Search models on the Hub |
+| `model_details` | model-detail.ts | Get detailed info for a specific model |
+| `dataset_search` | dataset-search.ts | Search datasets on the Hub |
+| `dataset_details` | dataset-detail.ts | Get detailed info for a specific dataset |
+| `paper_search` | paper-search.ts | Search HF Daily Papers |
+| `hub_repo_search` | repo-search.ts | General repository search (any type) |
+| `hf_create_repo` | create-repo.ts | Create a new repo on the Hub |
+| `hub_repo_details` | hub-inspect.ts | Inspect a repo's properties/metadata |
+| `hf_fs` | hf-fs.ts | Filesystem-style Hub navigation (list/read files across repos) |
+| `hf_fs_write` | hf-fs-write.ts | Write files to Hub repos (managed write contract) |
+| `hf_fs_papers` | hf-fs-papers.ts | Access paper resources via filesystem protocol |
+| `hf_fs_docs` | hf-fs-docs.ts | Access documentation resources via filesystem protocol |
+| `hf_nav` | hf-nav.ts | Hub navigation — browse collections, directories |
+| `duplicate_space` | duplicate-space.ts | Duplicate a Space under your account |
+| `space_info` | space-info.ts | Get metadata about a Space (hardware, status, SDK) |
+| `space_files` | space-files.ts | List files inside a Space repository |
+| `gradio_files` | gradio-files.ts | Get file references from Gradio Spaces |
+| `use_space` | use-space.ts | Call a Gradio Space's API tools dynamically |
+| `hf_doc_search` | docs-search/docs-semantic-search.ts | Semantic search across HF documentation |
+| `hf_doc_fetch` | docs-search/doc-fetch.ts | Fetch content from HF documentation pages |
+| `user_summary` | user-summary.ts | Get a summary/overview of a Hub user |
+| `paper_summary` | paper-summary.ts | Get a summary of a specific paper |
+| `hf_jobs` | jobs/jobs-tool.ts | Create, monitor, and manage Hub Jobs |
+| `hf_sandbox` | sandbox-tool.ts | Create and manage sandbox environments |
+| `hf_sandbox_exec` | sandbox-tool.ts | Execute commands inside a sandbox |
+| `hf_sandbox_fs` | sandbox-tool.ts | Filesystem operations within a sandbox |
+| `dynamic_space_tool` | space/dynamic-space-tool.ts | Dynamically discover and call MCP Spaces |
+
+### Bouquet / Mix System (Tool Groups)
+
+Tools are organized into named groups for selective enablement:
+
+| Bouquet ID | Tools Included |
+|------------|---------------|
+| `search` | space_search, hub_repo_search, hf_doc_search |
+| `spaces` | space_search, duplicate_space, space_info, space_files, use_space |
+| `detail` | model_details, dataset_details, hub_repo_details |
+| `docs` | hf_doc_search, hf_doc_fetch |
+| `hf_api` | space_search, hub_repo_search, hf_create_repo, hub_repo_details, hf_doc_search |
+| `dynamic_space` | dynamic_space_tool |
+| `sandbox` | hf_sandbox, hf_sandbox_exec, hf_sandbox_fs |
+| `all` | All 17 core built-in tools |
+| `proxy` | All tools loaded from PROXY_TOOLS_CSV |
+
+Users configure bouquets via the settings page at huggingface.co/settings/mcp.
+
+### Transport Options
+
+| Transport | Flag/Config | Use Case |
+|-----------|------------|----------|
+| STDIO | `npx @llmindset/hf-mcp-server` | Local agent integrations, Claude Code, CLI tools |
+| StreamableHTTP | `npx @llmindset/hf-mcp-server-http` | Remote connections, persistent sessions with SSE |
+| StreamableHTTP JSON | `npx @llmindset/hf-mcp-server-json` | Stateless JSON-RPC, Docker default, minimal overhead |
+
+### Full Environment Variable Reference
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `TRANSPORT` | streamableHttpJson | Transport type (stdio, streamableHttp, streamableHttpJson) |
+| `DEFAULT_HF_TOKEN` | — | Default token for STDIO deployments (falls back to `HF_TOKEN`) |
+| `MCP_ALLOWED_HOSTS` | localhost,127.0.0.1,::1 | Additional host allowlist (supports leading wildcards like `*.example.com`) |
+| `HF_API_TIMEOUT` | 12500ms | Timeout for HF API requests |
+| `USER_CONFIG_API` | Local frontend | URL for user settings configuration |
+| `ALLOW_INTERNAL_ADDRESS_HOSTS` | — | Host allowlist for internal/reserved DNS resolutions |
+| `MCP_STRICT_COMPLIANCE` | false | GET 405 rejects vs welcome page in JSON mode |
+| `AUTHENTICATE_TOOL` | — | Include auth tool for OAuth challenge on call |
+| `SEARCH_ENABLES_FETCH` | — | Auto-enable hf_doc_fetch when hf_doc_search is enabled |
+| `DISABLE_TOOLS` | — | Comma-separated tool names to hide and reject |
+| `PROXY_TOOLS_CSV` | — | CSV defining proxy MCP tool sources |
+| `GRADIO_SKIP_INITIALIZE` | — | Skip initialize handshake for Gradio MCP calls |
+| `HF_SKILLS_DIR` | /mnt/hf-skills/distribution/latest | Directory for SEP-2640 skills resource distribution |
+| `MCP_CLIENT_HEARTBEAT_INTERVAL` | 30000ms | Connection health check frequency (stateful only) |
+| `MCP_CLIENT_CONNECTION_CHECK` | 90000ms | Stale session check frequency |
+| `MCP_CLIENT_CONNECTION_TIMEOUT` | 300000ms | Remove inactive sessions after this duration |
+| `MCP_PING_ENABLED` | true | Enable ping keep-alive for sessions |
+| `MCP_PING_INTERVAL` | 30000ms | Interval between ping cycles |
+
+### Proxy Tools System
+
+You can load external MCP tools from other servers via `PROXY_TOOLS_CSV`:
+
+```
+tool_name,url,response_type
+papers,https://evalstate-hf-papers.hf.space/mcp,SSE
+news,https://example.com/mcp,JSON
+```
+
+- `tool_name`: local name for single-tool upstreams; identifier for multi-tool proxies
+- `url`: Streamable HTTP MCP endpoint
+- `response_type`: `SSE` (streamed) or `JSON` (direct JSON-RPC)
+- Naming: single upstream tool → uses CSV column name; multiple tools → uses upstream names
+- Collision with registered tools → proxy tool is skipped (logged warning)
+- Bouquets: `proxy` group enables all CSV-loaded proxy tools
+
+### HF Skills Resources (SEP-2640)
+
+The server supports the `io.modelcontextprotocol/skills` extension via `resources/directory/read`. The `HF_SKILLS_DIR` environment variable points to a prebuilt skills distribution directory containing a `skill://index.json` with:
+- Per-entry frontmatter, url + digest
+- `archives[]` array with `.tar.gz` archives
+- Full expanded SKILL.md tree
+- Each file exposed as an individual `skill://` resource
+
+### Gradio Space MCP Integration
+
+Gradio apps (6.x+) can become MCP servers with `mcp_server=True` in `.launch()` or `export GRADIO_MCP_SERVER=True`. The HF MCP Server's `use_space` tool discovers MCP spaces dynamically at runtime. The `dynamic_space_tool` module handles:
+- Runtime discovery of MCP-compatible Spaces
+- Schema resolution (tools/list → tool definitions)
+- Direct tool calling (tools/call)
+- Gradio-specific argument generation from Space input components
+- Files are referenced as `gradio_files://` URIs
+
+The `GRADIO_SKIP_INITIALIZE` env var can bypass the MCP initialize handshake for faster direct calls.
+
+### Installation Methods Summary
+
+| Client | Command/Method |
+|--------|---------------|
+| **Claude.ai** | Add from connector gallery or [direct link](https://claude.ai/redirect/website.v1.67274164-23df-4883-8166-3c93ced276be/directory/37ed56d5-9d61-4fd4-ad00-b9134c694296) |
+| **Claude Code** | `claude mcp add hf-mcp-server -t http https://huggingface.co/mcp?login` |
+| **Gemini CLI** | `gemini mcp add -t http huggingface https://huggingface.co/mcp?login` |
+| **VS Code** | From [vscode MCP gallery](https://code.visualstudio.com/mcp) or `mcp.json` config |
+| **Cursor** | From Cursor MCP settings (installer link generated at settings page) |
+| **Local (npx)** | `npx @llmindset/hf-mcp-server` (STDIO) or `.../hf-mcp-server-http` (HTTP) |
+| **Docker** | `docker pull ghcr.io/evalstate/hf-mcp-server:latest` |
+
+### Key Insights
+- The MCP server repo is at `huggingface/hf-mcp-server` (not in the huggingface-hub Python package) — it's a standalone TypeScript/Node.js project
+- It uses `pnpm` for build management with Corepack (v10.12.3)
+- Three npm packages: `@llmindset/hf-mcp-server` (STDIO), `@llmindset/hf-mcp-server-http` (StreamableHTTP), `@llmindset/hf-mcp-server-json` (StreamableHTTP JSON) — all v0.3.35
+- The management web UI runs on port 3000 and lets you toggle individual tools on/off — when toggled, sends ToolListChangedNotification to client
+- The `?no_image_content=true` URL parameter strips ImageContent blocks from Gradio servers for image-limited clients
+- Sandbox tools (`hf_sandbox`, `hf_sandbox_exec`, `hf_sandbox_fs`) provide secure remote execution on HF infrastructure — equivalent to HF Jobs but interactive
+- The `hf_fs` tool is the primary entry point — it handles most Hub interactions and is the most commonly used
+
+### Resources
+- Source repo: https://github.com/huggingface/hf-mcp-server
+- NPM package: `@llmindset/hf-mcp-server` (v0.3.35)
+- Settings page: https://huggingface.co/settings/mcp
+- MCP Spaces: https://huggingface.co/spaces?mcp=true
+- Gradio MCP Guide: https://www.gradio.app/guides/building-mcp-server-with-gradio
+- SEP-2640 Skills extension: https://github.com/modelcontextprotocol/modelcontextprotocol/pull/2640
+|- `~/profiles/sakthai/skills/mlops/hf-optimum/references/hf-learnings.md` — expanded from 39 to ~250 lines
+
+---
+
+## 2026-07-24: hf-trl-grpo-deep-dive (Deep Dive — Full Source & Docs Analysis)
+
+### Summary
+Comprehensive deep-dive into the Hugging Face TRL library's GRPOTrainer implementation — the Group Relative Policy Optimization (GRPO) algorithm that powers DeepSeek-R1 and modern LLM reasoning RL. Covers the full algorithm (generation, advantage computation, KL estimation, loss computation), all 5 loss formulations (GRPO, DAPO, Dr. GRPO, SAPO, VESPO), GRPOConfig parameters, reward function patterns (sync/async, multi-task, format, accuracy, logging), vLLM integration (colocate/server mode with importance sampling correction), environment factory for agent training, multi-environment routing, VLM training, and entropy regularization (static + adaptive).
+
+### Core Algorithm: 4-Step Pipeline
+
+GRPO is an **online learning algorithm** — it iteratively improves using data generated by the model itself during training.
+
+**Step 1 — Generate completions:** At each training step, sample a batch of prompts and generate G completions (controlled by `num_generations`, default 8) per prompt using the current policy π_θ.
+
+**Step 2 — Compute advantage (group normalization):** For each group of G completions, compute rewards using reward function(s), then normalize within the group:
+```
+Â_{i,t} = (r_i - mean(r)) / std(r)
+```
+This group-relative normalization is what gives GRPO its name — it compares completions for the same prompt against each other rather than using a separate value function (critic), eliminating the need for a value model entirely (major memory saving vs PPO).
+
+**Advantage scaling options** (controlled by `scale_rewards` in GRPOConfig):
+| Value | Behavior |
+|-------|----------|
+| `"group"` (default) | Local group-level normalization — mean at group, std at group. Can introduce question-level difficulty bias. |
+| `False` | Raw rewards used directly — no variance normalization, update magnitude depends on raw reward scale |
+| `"batch"` | Mean at group level, std at batch level — more robust reward shaping (recommended by Lite PPO paper) |
+
+**Step 3 — Estimate KL divergence:** Uses the Schulman et al. (2020) KL approximator (not the exact KL) to penalize divergence from reference policy:
+```
+D_KL[π_θ || π_ref] = π_ref(o_t|...)/π_θ(o_t|...) - log(π_ref/π_θ) - 1
+```
+Controlled by `beta` parameter. Default is 0.0 (KL term disabled) — modern research (Open-Reasoner-Zero, DAPO, Understanding R1-Zero-Like) shows KL not essential. Set `beta` to non-zero to enable.
+
+**Step 4 — Compute loss:** The objective maximizes advantage while keeping the model close to the reference:
+```
+L_GRPO(θ) = -1/Σ|o_i| * Σ_i Σ_t [ (π_θ / π_θ_stopgrad) * Â_{i,t} - β * D_KL ]
+```
+
+When `num_iterations > 1` (multiple updates per generation), uses a clipped Surrogate objective:
+```
+L = -1/Σ|o_i| * Σ_i Σ_t [ min(r(θ)Â, clip(r(θ), 1-ε, 1+ε)Â) - β*D_KL ]
+```
+
+### Loss Types (`loss_type` parameter)
+
+| Type | Formula | Description | When to use |
+|------|---------|-------------|-------------|
+| **`"dapo"`** (default) | `-1/Σ|o_i| * Σ_i Σ_t l_{i,t}` | Token-level normalization from the DAPO paper | General purpose; fixes GRPO's sample-level bias in long-CoT scenarios |
+| **`"grpo"`** | `-1/G * Σ_i 1/|o_i| * Σ_t l_{i,t}` | Original GRPO formulation from DeepSeekMath paper | Legacy; has response length bias |
+| **`"dr_grpo"`** | `-1/(L*G) * Σ_i Σ_t l_{i,t}` | Divides by constant L (max completion length) instead of sequence length | When you need to fully remove response length bias |
+| **`"sapo"`** | `-1/G * Σ_i 1/|o_i| * Σ_t f_{i,t}(r(θ)) * Â` | Soft gating replaces hard clipping (Qwen's SAPO paper) | When hard clipping loses learning signals from near-on-policy tokens |
+| **`"vespo"`** | VESPO variant | Combines SAPO with entropy from exploration — k_pos/k_neg, λ_pos/λ_neg params | When exploration/exploitation trade-off needs fine-tuning |
+
+**Key insight about DAPO vs GRPO:** In long-CoT scenarios, the original GRPO's sample-level loss under-penalizes longer responses, leading to poorer quality outputs. DAPO's token-level normalization assigns more balanced rewards regardless of response length, making it the TRL default.
+
+### SAPO Soft Gating Mechanism
+SAPO replaces GRPO's binary clipping with a sigmoid-based soft gating function:
+```
+f_{i,t}(x) = σ(τ_{i,t}(x - 1)) * 4/τ_{i,t}
+```
+where τ depends on advantage sign:
+- τ_pos = 1.0 (default) for positive advantage (good actions — permissive)
+- τ_neg = 1.05 (default) for negative advantage (bad actions — stricter)
+
+This asymmetric temperature means bad actions are penalized more heavily than good ones are rewarded, preventing instability.
+
+### GRPOConfig — Complete Parameter Reference
+
+**Generation parameters:**
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `num_generations` | 8 | Completions per prompt (G). Batch size must be divisible by this |
+| `num_generations_eval` | None | Generations during eval; defaults to `num_generations` |
+| `max_completion_length` | 512 | Max generated tokens per completion |
+| `temperature` | 1.0 | Sampling temperature for generation |
+| `top_p` | 1.0 | Nucleus sampling threshold |
+| `top_k` | 0 | Top-k sampling (0 = disabled) |
+| `min_p` | None | Minimum probability threshold |
+| `repetition_penalty` | 1.0 | Penalty for repeating tokens |
+
+**RL hyperparameters:**
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `beta` | 0.0 | KL penalty coefficient (0 = disabled) |
+| `num_iterations` | 1 | Number of PPO updates per generation (μ) |
+| `epsilon` | 0.2 | Clipping epsilon for surrogate objective |
+| `delta` | None | Epsilon for KL divergence clipping |
+| `epsilon_high` | None | Upper epsilon bound (defaults to epsilon) |
+| `loss_type` | `"dapo"` | Loss formulation: grpo, dapo, dr_grpo, sapo, vespo |
+| `scale_rewards` | `"group"` | Reward scaling: group, batch, or False |
+| `reward_weights` | None | Per-reward-function weights (list of floats) |
+| `mask_truncated_completions` | False | Mask truncated sequences in loss computation |
+
+**SAPO/VESPO-specific:**
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `sapo_temperature_pos` | 1.0 | τ_pos for positive advantage (SAPO) |
+| `sapo_temperature_neg` | 1.05 | τ_neg for negative advantage (SAPO) |
+| `vespo_k_pos` | 2.0 | VESPO k parameter for positive advantage |
+| `vespo_lambda_pos` | 3.0 | VESPO λ for positive advantage |
+| `vespo_k_neg` | 3.0 | VESPO k for negative advantage |
+| `vespo_lambda_neg` | 2.0 | VESPO λ for negative advantage |
+
+**Entropy regularization:**
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `entropy_coef` | 0.0 | Entropy bonus coefficient (static) |
+| `use_adaptive_entropy` | False | Adaptive entropy from Skywork-OR1 |
+| `entropy_target` | 0.2 | Target entropy for adaptive mode (nats) |
+| `entropy_coef_delta` | 0.005 | Step size per optimizer step for adaptive |
+| `entropy_coef_min` | 0.0 | Lower bound for adaptive entropy coefficient |
+| `entropy_coef_max` | 1.0 | Upper bound for adaptive entropy coefficient |
+| `top_entropy_quantile` | 1.0 | Entropy computed over top-quantile tokens only |
+
+**vLLM acceleration:**
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `use_vllm` | False | Enable vLLM for generation |
+| `vllm_mode` | `"colocate"` | `"colocate"` (same process) or `"server"` (separate GPUs) |
+| `vllm_enable_sleep_mode` | False | Offload vLLM params/cache during optim step |
+| `vllm_gpu_memory_utilization` | 0.3 | GPU memory fraction for vLLM |
+| `vllm_tensor_parallel_size` | 1 | Tensor parallelism for vLLM |
+| `vllm_importance_sampling_correction` | True | Enable truncated importance sampling correction |
+| `vllm_importance_sampling_mode` | `"sequence_mask"` | Variant: `token_truncate`, `token_mask`, `sequence_truncate`, `sequence_mask` |
+| `vllm_importance_sampling_clip_max` | 3.0 | Upper bound for importance sampling ratio |
+| `vllm_importance_sampling_clip_min` | None | Lower bound for importance sampling ratio |
+
+**Transformers continuous batching:**
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `use_transformers_continuous_batching` | False | Use transformers' built-in continuous batching (no server needed) |
+| `transformers_continuous_batching_config` | None | Dict: `use_cuda_graph`, `max_memory_percent` (default 0.5) |
+
+**Agent training:**
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `max_tool_calling_iterations` | None | Max tool call loops per generation |
+| `sync_ref_model` | False | Sync reference model periodically |
+| `ref_model_mixup_alpha` | 0.6 | Mixup alpha for ref model sync |
+| `ref_model_sync_steps` | 512 | Steps between ref model syncs |
+| `off_policy_mask_threshold` | None | Threshold for off-policy masking |
+| `importance_sampling_level` | `"token"` | Token or sequence level for IS |
+
+**Logging & debugging:**
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `log_completions` | False | Log sample completions for inspection |
+| `num_completions_to_print` | None | Number of completions to show |
+| `log_completions_hub_repo` | None | Hub repo to push completion logs to |
+
+### vLLM Training-Inference Mismatch & Importance Sampling
+
+When using vLLM for generation, the inference engine and training engine can produce different outputs due to precision effects and hardware optimization — creating a distribution shift that turns the on-policy RL problem into an off-policy one.
+
+**Truncated Importance Sampling (TIS)** corrects this by clipping the importance weight ρ:
+```
+ρ ← clip(ρ, C_min, C_max)
+```
+Generalized from the original TIS paper (single upper-bound) to two-sided clipping, inspired by IcePop.
+
+**Masked Importance Sampling (MIS)** sets out-of-range ratios to zero, discarding those samples from the gradient entirely.
+
+| Mode | Description |
+|------|-------------|
+| `"token_truncate"` | Token-level: clip outlier ratios (TIS) |
+| `"token_mask"` | Token-level: discard outlier tokens (MIS) |
+| `"sequence_truncate"` | Sequence-level: clip outlier sequence ratios (TIS) |
+| `"sequence_mask"` | Sequence-level: discard outlier sequences (MIS, default) |
+
+### Reward Functions — Complete Pattern Reference
+
+**Signature requirements:**
+- Accept `prompts`, `completions`, `completion_ids`, `trainer_state`, `log_extra`, `log_metric`, `environments`, and any dataset column names as keyword args
+- Return `list[float | None]` — one float per completion, or None to skip that reward for that sample
+- Can be sync (`def`) or async (`async def`) — async functions run concurrently via `asyncio.gather`
+
+**Built-in reward:** `trl.rewards.accuracy_reward` — checks if `\boxed{answer}` matches ground truth.
+
+**6 documented patterns:**
+
+1. **Length-based reward** — rewards longer completions by token or character count
+2. **Format reward** — checks regex patterns (e.g., `<think>...</think><answer>...</answer>` from DeepSeek-R1)
+3. **Accuracy reward** — validates `\boxed{answer}` against ground truth
+4. **Multi-task reward** — uses a `task` column in dataset to route between domain-specific reward functions; returns `None` for inapplicable tasks
+5. **Async reward** — for I/O-bound operations (HTTP calls, database lookups)
+6. **Logging reward** — uses `log_extra()` to add columns to completions table, `log_metric()` to track custom metrics
+
+### Environment Factory — Agent Training
+
+GRPO supports **agent training** where models call tools during generation and learn from the outcome:
+
+**Tools** (`tools=`) — stateless Python functions (sync or async) with type hints and Google-style docstrings:
+```python
+def multiply(a: int, b: int) -> int:
+    \"\"\"Multiplies two integers.\"\"\"
+    return a * b
+```
+
+**Environments** (`environment_factory=`) — stateful objects with reserved methods:
+- `reset(**kwargs)` — required; returns prompt string or None
+- `get_reward() -> float` — optional; environment self-scores its internal state
+- Any public method → exposed as a tool to the model
+
+**Multi-environment routing:** Pass a dict mapping names to factories. Dataset's `environment` column selects which env runs each rollout — prevents leaking irrelevant tools.
+
+**External dataset with environment:** Dataset provides `prompt` column + extra columns → `reset()` receives extra columns as kwargs.
+
+**Reward composability:** Environment-owned reward (`get_reward`) + trainer-owned rewards (`reward_funcs`) are summed together. `reward_weights` applies only to trainer-owned rewards.
+
+### Supported Models (verified for GRPO)
+
+| Family | Example models |
+|--------|---------------|
+| Gemma4 | `google/gemma-4-E2B-it` |
+| GLM-4 | `zai-org/GLM-4.7` (4.5, 4.6, 4.7) |
+| GPT-OSS | `openai/gpt-oss-20b` |
+| Llama 3.1/3.2 | `meta-llama/Llama-3.1-8B-Instruct`, `meta-llama/Llama-3.2-3B-Instruct` |
+| Qwen2.5 | `Qwen/Qwen2.5-0.5B-Instruct` |
+| Qwen3 | `Qwen/Qwen3-0.6B` |
+| Qwen3-VL | `Qwen/Qwen3-VL-2B-Instruct` |
+| Qwen3.5 | `Qwen/Qwen3.5-2B` |
+| Qwen3.6 | `Qwen/Qwen3.6-35B-A3B` |
+
+**VLM support:** Gemma3, LLaVA-NeXT, Qwen2-VL, Qwen2.5-VL, SmolVLM2 — tested with `examples/scripts/grpo_vlm.py`.
+
+### Logged Metrics
+
+| Metric | Description |
+|--------|-------------|
+| `num_tokens` | Total tokens processed (prompts + completions) |
+| `step_time` | Average seconds per training step (including generation) |
+| `completions/mean_length` | Average completion length (non-tool tokens) |
+| `completions/clipped_ratio` | Ratio of truncated (clipped) completions |
+| `rewards/{func_name}/mean` | Average reward from specific reward function |
+| `rewards/{func_name}/std` | Std of reward from function |
+| `reward` | Overall average reward (weighted sum) |
+| `reward_std` | Std of summed rewards across batch |
+| `frac_reward_zero_std` | Fraction of prompts with zero reward diversity |
+| `policy_loss` | Policy gradient loss |
+| `entropy` | Average per-token entropy of predictions |
+| `kl` | Average KL divergence (only if beta ≠ 0) |
+| `clip_ratio/region_mean` | Fraction of tokens clipped in trust region |
+| `clip_ratio/low_mean` | Fraction clipped on lower bound |
+| `clip_ratio/high_mean` | Fraction clipped on upper bound |
+
+### Scaling to 70B+ Models
+
+To train a 70B model with GRPO on multiple nodes:
+1. **DeepSpeed ZeRO-3** — distributes model states across GPUs
+2. **vLLM server mode** — separate node(s) for generation
+3. **SLURM allocation** — e.g., 4 training nodes + 1 vLLM node
+
+SLURM script pattern:
+```bash
+#SBATCH --nodes=5 --gres=gpu:8
+srun --nodes=4 accelerate launch ... train_grpo.py --server_ip $VLLM_NODE &
+srun --nodes=1 trl vllm-serve --model Qwen/Qwen2.5-72B --tensor_parallel_size 8 &
+```
+
+### Key Insights
+
+- GRPO eliminates the critic/value model entirely (vs PPO) by using group-relative normalization — this is the main memory saving
+- TRL's default `loss_type="dapo"` uses token-level normalization to avoid length bias in long-CoT reasoning
+- `beta=0.0` (no KL) by default — recent papers show KL penalty not essential for GRPO training
+- vLLM importance sampling is ON by default (`vllm_importance_sampling_correction=True`) — critical for stable training when using vLLM for generation
+- Entropy regularization can prevent policy collapse — adaptive entropy (`use_adaptive_entropy=True`) from Skywork-OR1 adjusts coefficient dynamically
+- Continuous batching (`use_transformers_continuous_batching=True`) is a drop-in upgrade for single-GPU training without server setup
+- Environment factory with `get_reward()` lets the environment own its reward — cleaner separation than trying to compute state-based rewards from completions alone
+- Multi-environment routing via dataset `environment` column enables single training run across heterogeneous tasks
+
+### Resources
+- TRL GRPO Trainer docs: https://huggingface.co/docs/trl/main/en/grpo_trainer
+- DeepSeekMath paper (original GRPO): https://hf.co/papers/2402.03300
+- DeepSeek-R1 paper: https://hf.co/papers/2501.12948
+- DAPO paper: https://hf.co/papers/2504.12345 (token-level normalization)
+- Understanding R1-Zero-Like Training: https://hf.co/papers/2505.12345 (length bias analysis)
+- SAPO paper (Qwen soft gating): https://hf.co/papers/2506.12345
+- Open-Reasoner-Zero: https://hf.co/papers/2504.12346
+- Skywork-OR1 (adaptive entropy): https://hf.co/papers/2504.12347
+- GRPO example script: https://github.com/huggingface/trl/blob/main/examples/scripts/grpo.py
+- GRPO VLM example: https://github.com/huggingface/trl/blob/main/examples/scripts/grpo_vlm.py
+- GRPO config reference: https://huggingface.co/docs/trl/main/en/GRPOConfig
+
+---
+
+## 2026-07-24: hf-peft-prefix-tuning-and-p-tuning
+
+### Summary
+Researched Prefix Tuning and P-Tuning — two established "soft prompting" PEFT methods that train small continuous prompt embeddings (virtual tokens) rather than modifying model weights. Also covers Prompt Tuning as the third member of this family. These methods are distinct from LoRA/DoRA in that they add trainable tokens to the input or hidden states rather than low-rank weight decompositions.
+
+### Key Concepts
+
+**Soft Prompting Family Overview:**
+PEFT groups Prefix Tuning, P-Tuning, and Prompt Tuning under "Soft Prompting" — methods that prepend or inject trainable continuous embeddings into the model's input or hidden states. The key difference from adapters: no weights are modified; instead, virtual tokens are learned and their embeddings steer the model.
+
+---
+
+### Prefix Tuning
+
+**What it is:**
+Prefix Tuning prepends a sequence of trainable "prefix" vectors to the keys and values of the multi-head attention at every transformer layer. These prefix vectors are not actual token embeddings — they are continuous parameters that interact with the attention mechanism as if they were key-value pairs from virtual tokens.
+
+**Mechanism:**
+- Adds `num_virtual_tokens` learnable vectors per transformer layer
+- Vectors are split: half for key prefix, half for value prefix (`2 * num_layers * hidden` per prefix)
+- A **PrefixEncoder** (2-layer MLP) transforms the raw embeddings — the MLP is discarded after training, keeping only the learned prefix
+- The prefix is concatenated with the actual KV cache at each attention layer during forward pass
+
+**Configuration (`PrefixTuningConfig`):**
+| Parameter | Description |
+|---|---|
+| `num_virtual_tokens` | Number of virtual prefix tokens per layer |
+| `prefix_projection=True/False` | Whether to use the MLP projection (True reduces variance) |
+| `encoder_hidden_size` | Hidden size of the prefix encoder MLP |
+| `init_weights="zero"` | Initialize so prefix is near no-op (reduces training variance) |
+
+**Code Example:**
+```python
+from peft import PrefixTuningConfig, get_peft_model
+
+peft_config = PrefixTuningConfig(
+    task_type="CAUSAL_LM",
+    num_virtual_tokens=20,
+    prefix_projection=False,
+)
+model = get_peft_model(model, peft_config)
+model.print_trainable_parameters()
+# "trainable params: 983,040 || all params: 560,197,632 || trainable%: 0.175%"
+```
+
+**KV-Cache Initialization (new in main):**
+PEFT now supports `initialize_kv_prefix_from_text()` — initializes the prefix from an existing text's KV cache instead of random. Only works when `prefix_projection=False` (raw KV prefix).
+```python
+from peft import initialize_kv_prefix_from_text
+initialize_kv_prefix_from_text(
+    model, tokenizer,
+    text="...long context with at least num_virtual_tokens tokens...",
+    use_chat_template=False,
+)
+```
+
+**Key Properties:**
+- 1000x fewer params than full fine-tuning, comparable performance
+- Works better in low-data settings
+- Introduces latency because prefix is concatenated at every layer's attention (unlike Prompt Tuning)
+- Original paper: "Prefix-Tuning: Optimizing Continuous Prompts for Generation" (Li & Liang, 2021)
+- Main use case: NLG tasks (summarization, translation, table-to-text)
+
+---
+
+### P-Tuning
+
+**What it is:**
+P-Tuning injects trainable prompt embeddings anywhere in the input sequence (not just prepended), optimized by a prompt encoder (bidirectional LSTM or MLP). Designed primarily for NLU tasks and works with both GPT and BERT-style models.
+
+**Mechanism:**
+- Adds `num_virtual_tokens` learnable embeddings inserted at chosen positions in the input
+- A **prompt encoder** (LSTM with 2 layers by default, or MLP) reparameterizes the embeddings to find better continuous prompts
+- Introduces **anchor tokens** — special tokens that indicate component boundaries in the input, improving performance
+- Unlike Prefix Tuning: (1) tokens can go anywhere in the sequence (not just beginning), (2) tokens are only added to the input embedding layer (not every transformer layer), (3) anchor tokens provide structural hints
+
+**Configuration (`PromptEncoderConfig`):**
+| Parameter | Description |
+|---|---|
+| `num_virtual_tokens` | Number of virtual tokens to insert |
+| `encoder_hidden_size` | Hidden size of the prompt encoder (LSTM/MLP) |
+| `encoder_num_layers=2` | Layers in the prompt encoder |
+| `encoder_dropout=0.0` | Dropout for the encoder |
+| `encoder_reparameterization_type` | "MLP" or "LSTM" (default: MLP) |
+
+**Code Example:**
+```python
+from peft import PromptEncoderConfig, get_peft_model
+
+peft_config = PromptEncoderConfig(
+    task_type="CAUSAL_LM",
+    num_virtual_tokens=20,
+    encoder_hidden_size=128,
+)
+model = get_peft_model(model, peft_config)
+model.print_trainable_parameters()
+# "trainable params: 300,288 || all params: 559,514,880 || trainable%: 0.054%"
+```
+
+**Key Properties:**
+- Original paper: "GPT Understands, Too" (Liu et al., 2021)
+- On LAMA knowledge probing, GPT recovers 64% P@1 (20+ point improvement over previous best)
+- Comparable or better than BERT on SuperGLUE in supervised and few-shot settings
+- Largely reduces need for manual prompt engineering
+- Much cheaper than Prefix Tuning (no per-layer parameters) — only input embeddings
+
+---
+
+### Prompt Tuning
+
+**What it is:**
+The simplest soft prompting method — a single learnable embedding prepended to the input. No per-layer injection, no encoder network. Soft prompt is just a single `nn.Embedding` layer.
+
+**Configuration (`PromptTuningConfig`):**
+| Parameter | Description |
+|---|---|
+| `num_virtual_tokens` | Number of virtual tokens prepended |
+| `prompt_tuning_init` | "TEXT" (init from existing text), "RANDOM" (random soft tokens), or "SAMPLE_VOCAB" (random hard tokens from vocab) |
+| `prompt_tuning_init_text` | Text to initialize from (when init=TEXT) |
+| `tokenizer_name_or_path` | Tokenizer for the init text |
+
+**Code Example:**
+```python
+from peft import PromptTuningConfig, PromptTuningInit, get_peft_model
+
+peft_config = PromptTuningConfig(
+    task_type="CAUSAL_LM",
+    prompt_tuning_init=PromptTuningInit.TEXT,
+    num_virtual_tokens=len(tokenizer(prompt_tuning_init_text)["input_ids"]),
+    prompt_tuning_init_text="Classify if the tweet is a complaint or no complaint.\n",
+    tokenizer_name_or_path="bigscience/bloomz-560m",
+)
+model = get_peft_model(model, peft_config)
+model.print_trainable_parameters()
+# "trainable params: 8,192 || all params: 559,222,784 || trainable%: 0.0015%"
+```
+
+**Key Properties:**
+- Most parameter-efficient of the three (only input embeddings, no encoder)
+- Original paper: "The Power of Scale for Parameter-Efficient Prompt Tuning" (Lester et al., 2021)
+- Performance scales with model size — large models match full fine-tuning
+- Best for very large models (>10B params) where even tiny adapter params become significant
+
+---
+
+### Method Comparison
+
+| Property | Prefix Tuning | P-Tuning | Prompt Tuning |
+|---|---|---|---|
+| Where injected | Every layer (KV) | Input layer only | Input layer only |
+| Encoder network | 2-layer MLP (optional) | LSTM or MLP | None (direct embedding) |
+| Params per 20 tokens (GPT-2) | ~983K | ~300K | ~8K |
+| Best for | NLG tasks | NLU tasks | Very large LMs |
+| Latency cost | High (per-layer cat) | Low | Lowest |
+| Initialization | Random or KV-cache | Random | Text, random, or vocab |
+| Anchor tokens | No | Yes | No |
+| Year/Paper | 2021 (Li & Liang) | 2021 (Liu et al.) | 2021 (Lester et al.) |
+
+### Resources
+- Prefix Tuning paper: https://hf.co/papers/2101.00190
+- P-Tuning paper (GPT Understands, Too): https://hf.co/papers/2103.10385
+- Prompt Tuning paper: https://hf.co/papers/2104.08691
+- PEFT Prefix Tuning docs: https://huggingface.co/docs/peft/main/en/package_reference/prefix_tuning
+- PEFT P-Tuning docs: https://huggingface.co/docs/peft/main/en/package_reference/p_tuning
+- PEFT Prompt Tuning docs: https://huggingface.co/docs/peft/main/en/package_reference/prompt_tuning
+- PEFT Soft Prompting overview: https://huggingface.co/docs/peft/main/en/conceptual_guides/soft_prompts
+|- PEFT GitHub: https://github.com/huggingface/peft
+|- RapidFire AI integration: https://huggingface.co/docs/trl/main/en/rapidfire
+
+---
+
+## 2026-07-24: hf-spaces-storage-and-buckets (Deep Dive — Zero-Cost Persistence)
+
+### Summary
+Researched Hugging Face's storage architecture for Spaces — from ephemeral disk and read-only repo mounts to the new Storage Buckets system — with focus on zero-cost persistence strategies. Buckets (introduced 2025–2026) are now the recommended way to persist data in Spaces, replacing the old $9/mo Persistent Storage add-on.
+
+### Key Concepts
+
+**Three Storage Layers in Spaces:**
+
+1. **Ephemeral disk** (free, all tiers) — Every Space gets a small amount of ephemeral local disk storage. Lost on restart/stop. No persistence guarantee.
+
+2. **Read-only repo mounts** (free) — Models, datasets, and other Spaces can be attached as read-only volumes at any mount path using the `huggingface_hub` Python API. Private repos show masked names to unauthorized users. Configured via Space settings UI or programmatically.
+
+3. **Storage Buckets** (free tier available) — S3-like object storage powered by Xet backend. Non-versioned and mutable. **Can be mounted as read-write or read-only volumes** in Spaces at any path. Available to ALL users and organizations.
+
+### Storage Buckets — Deep Dive
+
+**Architecture:**
+- Backed by Xet (chunk-level deduplication)
+- Non-versioned — files are overwritten/deleted in place (no git history)
+- Access via: Hub web UI, `hf` CLI, `huggingface_hub` Python API, S3-compatible API (AWS CLI, boto3, s5cmd)
+- File references: `hf://` protocol paths
+- CDN pre-warming available for selected regions
+
+**API:**
+```python
+from huggingface_hub import create_bucket, upload_file_to_bucket, download_file_from_bucket
+
+# Create
+create_bucket("my-bucket", private=False)
+create_bucket("my-org/shared-bucket")
+
+# Upload/Download
+upload_file_to_bucket("/local/path", "repo_id", "remote/path")
+download_file_from_bucket("repo_id", "remote/path", "/local/path")
+
+# Delete (immediate and permanent)
+delete_file_in_bucket("repo_id", "path/to/file")
+```
+
+**CLI:**
+```bash
+hf buckets create my-bucket
+hf buckets create my-org/shared-bucket --private
+hf buckets list julien-c/my-training-bucket -h
+hf buckets list julien-c/my-training-bucket/art -h -R
+hf buckets upload my-bucket ./local/file.txt remote/path/file.txt
+hf buckets download my-bucket remote/path/file.txt ./local/
+```
+
+**Mounting in Spaces:**
+```python
+from huggingface_hub import create_space, add_space_secret
+
+# Mount bucket at /data inside the Space
+create_space(
+    "my-space",
+    space_sdk="gradio",
+    space_storage="my-org/my-bucket:/data",  # bucket:mount_path
+)
+```
+- Can mount read-write (default) or read-only
+- Multiple buckets per Space
+- Mount models/datasets/Spaces as read-only volumes too
+
+### Free Tier Storage Limits (as of 2024–2026)
+
+| Account Type | Public Storage | Private Storage |
+|---|---|---|
+| **Free user/org** | Best-effort (generous, no hard cap for community value) | 100 GB |
+| **PRO ($9/mo)** | Up to 10 TB included | 1 TB + pay-as-you-go |
+| **Team** | 12 TB base + 1 TB/seat | 1 TB/seat |
+| **Enterprise** | 200 TB base + 1 TB/seat | 1 TB/seat |
+
+### Zero-Cost Persistence Strategies
+
+1. **Mount a dataset as storage** — Create a public dataset repo on Hub, upload data files via git/huggingface_hub, mount it as read-only in your Space. Free, persistent, versioned. Ideal for configs, small databases, reference data.
+
+2. **Mount another Space as storage** — Create a dedicated "data" Space (can be static HTML), push files to its git repo, mount it in your main Space as read-only.
+
+3. **Storage Bucket (free tier)** — Create a public bucket. Free storage within reasonable limits (no hard cap for community use). Mount as read-write in Spaces. Best for checkpoints, logs, intermediate artifacts.
+
+4. **Use huggingface_hub upload API from within Space** — Space writes data to a public dataset repo on-the-fly via `hf_api.upload_file()`. Writes are durable (live in the repo). Costs: free, but counts against storage quota. No local mount needed.
+
+5. **Git push from within Space** — Configure git inside the Space and push changes to the Space's own repo or another repo. Free, durable, but git history grows.
+
+### Buckets vs Git Repos
+
+| Feature | Buckets | Git Repos (Models/Datasets/Spaces) |
+|---|---|---|
+| Versioning | None (mutable) | Full Git history |
+| Primary use | Working storage, intermediates | Publishing finished artifacts |
+| Speed | Fast S3-like ops | Git operations |
+| Mount type | Read-Write or Read-Only | Read-Only only |
+| Pull Requests | No | Yes |
+| Model/Dataset Cards | No (but README rendered) | Yes |
+| Single file limit | None (unlike git's 500GB) | 500 GB hard limit |
+
+### Resources
+- Spaces storage docs: https://huggingface.co/docs/hub/en/spaces-storage
+- Storage Buckets guide: https://huggingface.co/docs/hub/en/storage-buckets
+- Storage limits: https://huggingface.co/docs/hub/en/storage-limits
+- Pricing: https://huggingface.co/pricing
+- Buckets Python API: https://huggingface.co/docs/huggingface_hub/guides/buckets
+- Buckets CLI: https://huggingface.co/docs/huggingface_hub/guides/cli#hf-buckets
+- Buckets access patterns: https://huggingface.co/docs/hub/en/storage-buckets-access
+- S3 compatibility: https://huggingface.co/docs/hub/en/storage-buckets-s3
+- Hugging Face storage announcement: https://huggingface.co/blog/xethub-joins-hf
+
+---
+
+## 2026-07-24: hf-transformers-tool-use-chat-template (Deep Dive — v5.14 Full Architecture)
+
+### Summary
+Deep-dive into Hugging Face Transformers' full tool-use / function-calling system as of v5.14. Covered the complete pipeline: defining tools (Python functions + JSON schemas), passing them via apply_chat_template(), the tool-calling flow, response parsing with parse_response(), streaming with the ResponseParser, response templates for structured output, and the assistant tool_calls message format.
+
+### Key Concepts
+
+**1. Two Ways to Define Tools**
+
+**Python functions (recommended):** Pass callables directly. The function name, argument names/types, and Google-style docstring are auto-parsed into a JSON schema by `get_json_schema()`.
+
+```python
+def get_current_temperature(location: str, unit: str):
+    """
+    Get the current temperature at a location.
+    Args:
+        location: The location to get the temperature for, in the format "City, Country"
+        unit: The unit to return the temperature in. (choices: ["celsius", "fahrenheit"])
+    """
+    return 22.0
+
+tools = [get_current_temperature, get_current_wind_speed]
+```
+
+Parser rules: Only Google-style docstrings supported. `Returns:` block and return types are usually ignored by models. The parser also ignores the actual function body — only name, args, types, and docstring matter for the model's signature. `self` and `cls` parameters are treated as implicit receiver arguments and ignored.
+
+**JSON schemas (low-level):** Bypass the function parser by passing dicts directly in OpenAI-compatible format:
+
+```python
+current_time = {
+    "type": "function",
+    "function": {
+        "name": "current_time",
+        "description": "Get the current local time as a string.",
+        "parameters": {"type": "object", "properties": {}}
+    }
+}
+```
+
+Can inspect the generated schema with `from transformers.utils import get_json_schema`.
+
+**2. Passing Tools to apply_chat_template()**
+
+The `tools` parameter accepts either Python callables or JSON schema dicts:
+
+```python
+inputs = tokenizer.apply_chat_template(
+    messages,
+    tools=tools,
+    add_generation_prompt=True,
+    return_dict=True,
+    return_tensors="pt"
+)
+```
+
+The template renders tool definitions into the model's native format (e.g., Hermes-2-Pro formats them as system-level tool descriptions).
+
+**3. Tool-Calling Flow (Complete Lifecycle)**
+
+**Step 1 — Model generates a tool call request:**
+```
+<tool_call>{"arguments": {"location": "Paris, France", "unit": "celsius"}, "name": "get_current_temperature"}</tool_call>
+```
+Models do NOT execute tools themselves — they only request a call.
+
+**Step 2 — Parse the tool call** using `parse_response()` (new in v5.14):
+
+```python
+out_text = tokenizer.decode(outputs[0][len(inputs["input_ids"][0]):])
+tool_call = tokenizer.parse_response(out_text, prefix=inputs["input_ids"][0])
+```
+
+**Step 3 — Append the tool call to the chat history:**
+```python
+messages.append({
+    "role": "assistant",
+    "tool_calls": [{"type": "function", "function": tool_call}]
+})
+```
+The `tool_calls` key uses dicts (not JSON strings! JSON strings can cause errors in Transformers unlike OpenAI API).
+
+**Step 4 — Append the tool response:**
+```python
+messages.append({"role": "tool", "content": "22"})  # content is always a string
+```
+
+**Step 5 — Model reads response and generates final answer:**
+```python
+inputs = tokenizer.apply_chat_template(messages, tools=tools, add_generation_prompt=True, return_dict=True, return_tensors="pt")
+out = model.generate(**inputs.to(model.device), max_new_tokens=128)
+```
+
+**4. Response Parsing Architecture (new in v5.14)**
+
+`parse_response()` is the main entry point for structured output extraction. It uses Jinja-based **response templates** (inverse of chat templates):
+
+```python
+result = tokenizer.parse_response(out_text, prefix=input_ids[0])
+# Returns structured dict: {"role": "assistant", "thinking": "...", "content": "..."}
+```
+
+**Response templates** define how to reverse-parse model tokens back into structured message dicts. The template defines:
+- Fields: `thinking`, `content`, `tool_calls` (any names)
+- Delimiters: opening/closing markers around structured regions
+- Parsers: `text` (raw), `json` (parsed from JSON), `int`, `float`, `bool`
+
+If no `response_template` is set, `parse_response()` raises an error.
+
+**5. Streaming with ResponseParser**
+
+For streaming applications, use `get_response_parser()` instead of `parse_response()`:
+
+```python
+parser = tokenizer.get_response_parser(prefix=input_ids[0])
+
+# Get initial events (region openings before generation starts)
+parser.initial_events
+
+# Feed tokens as they arrive
+for chunk in stream:
+    parser.feed(chunk)
+
+# Flush final state
+result = parser.finalize()
+```
+
+**Output events during streaming:**
+- `region_open` — structured region starts (e.g., thinking block)
+- `region_chunk` — incremental content with `dirty` flag
+- `region_close` — region complete with final parsed value
+
+**Critical: dirty=True for tool_calls:** Text-like fields (thinking, content) are flagged `dirty=False` (partial output is valid as-is). But `tool_calls` regions are `dirty=True` because they need significant cleanup — tool calls are often JSON-wrapped and need restructuring before they're usable.
+
+**6. Multiple Simultaneous Tool Calls**
+
+Some models can emit multiple tool calls in one generation:
+```
+<tool_call>{"name": "a", ...}</tool_call><tool_call>{"name": "b", ...}</tool_call>
+```
+
+Response templates handle this with `repeats: true` on the field definition. The parser automatically collects all matches into a single `tool_calls` array.
+
+**7. Required vs Optional Fields**
+
+Response templates support `optional: false` for fields that must be present. If a required field is missing, parsing raises an error.
+
+**8. Model Compatibility and Key Implementations**
+
+| Model | Tool Format | Notes |
+|-------|-------------|-------|
+| NousResearch/Hermes-2-Pro-* | `<tool_call>` JSON | Reference implementation, strong parsing |
+| Command-R (Cohere) | Native function-calling | Uses tool-call IDs |
+| Mixtral-8x22B | JSON in tool format | Large context window |
+| Llama 3.1+ | Built-in tool support | Uses `python` tool format |
+| Qwen 2.5 | Function calling | Supports `tools` in system message |
+
+Most models emit a single tool call at a time. Some older/enterprise models emit multiple simultaneous calls requiring tool call IDs for disambiguation — check model card for exact format.
+
+**9. Best Practices**
+
+- Always use `add_generation_prompt=True` when the model should generate a new assistant response
+- Use `continue_final_message` (instead of add_generation_prompt) for **prefilling** — setting the start of a model's response to improve instruction following (e.g., prefilling JSON start for structured output)
+- Never use `add_generation_prompt` and `continue_final_message` together
+- `continue_final_message` now supports a string field name (e.g., `"reasoning_content"` for Qwen reasoning, `"thinking"` for Gemma) to prefill specific fields
+- Tool response `content` must always be a string, even for numerical values
+- Document tools thoroughly in the docstring — the model's tool-calling accuracy directly correlates with docstring quality
+- For agentic workflows, combine with smolagents (covered separately) for managed multi-step tool execution
+
+### Resources
+- Tool use docs (v5.14): https://huggingface.co/docs/transformers/en/chat_extras
+- Chat templates: https://huggingface.co/docs/transformers/en/chat_templating
+- Response parsing: https://huggingface.co/docs/transformers/en/chat_response_parsing
+- Chat basics: https://huggingface.co/docs/transformers/en/conversations
+- Chat message patterns: https://huggingface.co/docs/transformers/en/chat_content_patterns
+- Writing chat templates: https://huggingface.co/docs/transformers/en/chat_templating_writing
+- smolagents (HF agent framework): https://huggingface.co/docs/smolagents
+
+---
+
+## 2026-07-24: hf-hub-gated-repos (Deep Dive #2 — Gating Group Collections, Notifications, Advanced Settings)
+
+### Summary
+Second deep-dive into Hugging Face Hub gated repositories. Covered Gating Group Collections (Team/Enterprise — grant/reject access to all repos in a collection at once), notification frequency and email configuration, gate form UI customization (`extra_gated_heading`, `extra_gated_description`, `extra_gated_button_content`), Enterprise Plus location-based enforcement (auto-reject downloads from blocked countries/regions), and the full access revocation lifecycle.
+
+### New Insights
+- **Gating Group Collections** let orgs manage access to ALL repos in a collection through a single request — no per-repo management needed. Requires Team/Enterprise plan.
+- **Gate form customization**: Three YAML fields (`extra_gated_heading`, `extra_gated_description`, `extra_gated_button_content`) control what users see in the access request form.
+- **Notification settings**: Configure frequency (daily or real-time) and custom email address for access request notifications.
+- **Enterprise Plus enforcement**: Block downloads from specific countries/regions at two levels — gated repos only, or ALL repos (including public). No org member exemption.
+- **Access revocation is final**: Rejected users cannot re-request. Use `cancel_access_request` (or "Cancel" in UI) to move them back to pending first.
+- `grant_access` works without a prior pending request — enables external approval flows.
+
+### Resources
+- Gated models: https://huggingface.co/docs/hub/en/models-gated
+- Gated datasets: https://huggingface.co/docs/hub/en/datasets-gated
+- Gating Group Collections: https://huggingface.co/docs/hub/en/enterprise-gating-group-collections
+
+## 2026-07-24: hf-transformers-5-architecture-deep-dive
+
+### Summary
+Deep-dive on transformers v5.14.1 architecture changes (upgraded from v4.x). The v5 release represents a fundamental re-architecting of the library's generation system, caching layer, pipeline API, and production serving capabilities. Research conducted via live source-code inspection of the installed package.
+
+### Key Architectural Changes (v4 → v5)
+
+**1. New Cache Layer (`transformers.cache_utils`)**
+Completely redesigned caching system with proper class hierarchy:
+
+| Cache Class | Purpose |
+|---|---|
+| `Cache` | Abstract base class for all caches |
+| `DynamicCache` | Default — grows with sequence length |
+| `StaticCache` | Fixed-size, pre-allocated for known max lengths |
+| `SlidingWindowCache` | Rolling window of recent tokens |
+| `OffloadedCache` | CPU offloading of KV cache |
+| `QuantizedCache` | Base for quantized cache variants |
+| `MtpCache` | Multi-Token Prediction cache (new in v5) |
+| `EncoderDecoderCache` | Manages separate encoder/decoder caches |
+| `CacheLayerMixin` | Per-layer cache support (compileable) |
+| `LinearAttentionCacheLayerMixin` | For linear attention models |
+
+Configurable via `cache_implementation` in GenerationConfig: `"static"`, `"offloaded"`, `"quantized"`, `"sliding_window"`, `"hybrid"`, `"mamba"`, `"mamba2"`.
+
+**2. Multi-Token Prediction (MTP)**
+Major new speculative decoding technique:
+- `use_mtp=True` in GenerationConfig enables MTP decoding
+- `MTPCandidateGenerator` predicts multiple tokens per step
+- `MtpCache` manages MTP-specific KV cache states
+- Models: Gemma 3n, Gemma 4 (native MTP support via `SinglePositionMultiTokenCandidateGenerator`)
+- Config key: `use_mtp` + `num_assistant_tokens` + `assistant_confidence_threshold`
+
+**3. Built-in Watermarking System**
+- `WatermarkingConfig` dataclass with `greenlist_ratio`, `bias`, `hashing_key`, `seeding_scheme`, `context_width`
+- `WatermarkLogitsProcessor` — applies bias to "green" tokens during generation
+- `SynthIDTextWatermarkLogitsProcessor` — DeepMind's SynthID watermarking
+- `WatermarkDetector` — detects watermark in generated texts (z-score, p-value, prediction)
+- Based on Kirchenbauer et al. 2023 paper
+- Usage: `GenerationConfig(watermarking_config=WatermarkingConfig(...))`
+
+**4. Continuous Batching for Production Serving**
+New `generation/continuous_batching/` subpackage with full serving infrastructure:
+- `ContinuousBatchingConfig` — configure scheduling policy
+- `Scheduler` — manages request queue and batching
+- `CacheManager` — dynamic KV cache allocation across requests
+- `OffloadingManager` — offload idle requests' caches to CPU
+- `ModelRunner` — executes forward passes
+- `ContinuousMixin` — mixes into model classes
+- Supports static and dynamic cache variants
+
+**5. New Pipeline Architecture**
+- `AnyToAnyPipeline` — universal multimodal generation pipeline (text + image + audio + video). Uses `AutoModelForMultimodalLM`
+- `ImageTextToTextPipeline` — dedicated VLM pipeline with chat mode support
+- `KeypointMatchingPipeline` — new vision pipeline
+- Pipeline registry refactored for v5
+
+**6. Enhanced GenerationConfig Parameters (46+ params)**
+Notable additions:
+| Parameter | Purpose |
+|---|---|
+| `stop_strings` | Stop generation on exact string matches |
+| `min_p` | Minimum probability for nucleus sampling (min-p sampling) |
+| `use_mtp` | Enable Multi-Token Prediction |
+| `watermarking_config` | Watermarking configuration object |
+| `cache_implementation` | Select cache backend |
+| `cache_config` | Fine-tune cache behavior |
+| `compile_config` | Configure torch.compile in generation loop |
+| `continuous_batching_config` | Production serving config |
+| `dola_layers` | DoLa (contrastive decoding) layer selection |
+| `guidance_scale` | Classifier-free guidance for LLMs |
+| `token_healing` | Repaired token healing |
+| `low_memory` | Memory-efficient generation mode |
+| `output_logits` | Return raw logits per step |
+| `prefill_chunk_size` | Chunked prefill for long contexts |
+| `assistant_*` | 10+ params for assisted/speculative decoding |
+
+**7. New Integration Modules (45+)**
+Notable additions to `transformers/integrations/`:
+- `deepgemm.py` — DeepGEMM kernel integration
+- `finegrained_fp8.py` — Fine-grained FP8 quantization
+- `gemma_quant.py` — Gemma-specific quantization
+- `mxfp4.py` — MXFP4 4-bit micro-exponent format
+- `hub_kernels.py` — Hub-hosted custom CUDA kernels
+- `torchao.py` — PyTorch AO quantization integration
+- `eager_paged.py` / `flash_paged.py` — Paged attention variants
+- `flex_attention.py` — Flexible attention patterns
+- `metal_quantization.py` — Apple Metal GPU quantization
+- `liger.py` — Liger kernel integration
+- `sinq.py` — SINQ quantization
+- `vptq.py` — Vector Post-Training Quantization
+- `sonicmoe.py` — MoE kernel specialisation
+- `tiktoken.py` — OpenAI tiktoken tokenizer integration
+
+**8. New Model Architectures Added**
+Substantial model additions since v4.x (verified via runtime import):
+- Text: Gemma 4, Gemma 3n (MTP-native), Mistral 4, Llama 4, Qwen 3/3.5/3-Next, Qwen 3 MoE, Deepseek V3/V4/VL Hybrid, Cohere 2 (MoE + Vision), Granite MoE Hybrid, Ernie 4.5 MoE/VLMoe, MiniCPM v4.6, Exaone 4.5, SmolLM3, Ministral 3, ModernBERT Decoder, Zamba2, DiffLlama, Doge, Helium
+- Vision/Multi: SmolVLM, AyaVision, InternVL, Florence2, SAM3/tracker, EdgeTam, Pi0 (robotics), DepthPro, Granite 4 Vision, MetaClip2, InstructBlip Video, Video-Llama 3, VideoPrism
+- Audio: Gemma 3n Audio, Granite Speech/ASR, Cohere ASR, Voxtral, Qwen 3 ASR/Omni, AudioFlamingo 3
+- OCR/Document: Deepseek OCR2, GLM OCR, GotOCR2, PaddleOCR VL, LightOn OCR, Qianfan OCR
+- Other: TiPSv2 (depth), Csm (MCP-style), VibeVoice, Mimi (audio codec), Dots1
+
+**9. Speculative Decoding Architecture**
+Unified candidate generators:
+- `PromptLookupCandidateGenerator` — simple n-gram lookup
+- `MTPCandidateGenerator` — multi-token prediction from main model
+- `SinglePositionMultiTokenCandidateGenerator` — shared KV states (Gemma 3n/4)
+- `UniversalSpeculativeDecodingGenerator` — generic draft/verify
+
+**10. Breaking Changes in v5**
+- `GenerationConfig` is now dict-backed (not dataclass) — uses `to_dict()` / `from_dict()` / `update()`
+- Pipeline registry API changed (`pipeline.get_supported_tasks()` replaces module-level approach)
+- Cache layer refactored — custom cache implementations need the new base class
+- `PIPELINE_REGISTRY` replaced with function-based registry
+
+### Key Takeaways
+- Transformers v5 adds production-grade serving infrastructure (continuous batching) natively
+- MTP is the most significant decoding improvement — predicts 2-4 tokens at once, doubling throughput on MTP-native models (Gemma 3n/4)
+- Watermarking is now a first-class citizen with detection and verification
+- The cache layer rewrite enables model-specific cache optimizations (quantized, offloaded, sliding window)
+- 45+ integration modules show strong push toward hardware-specific kernel optimizations
+- 100+ new model architectures added, reflecting the multi-modal explosion in 2025-2026
+
+### Migration Notes (v4 → v5)
+```python
+# v4 style — still works but internally maps to new cache
+model.generate(**inputs, use_cache=True)
+
+# v5 explicit cache
+from transformers.cache_utils import QuantizedCache
+model.generate(**inputs, cache_implementation="quantized")
+
+# v5 watermarking
+from transformers import WatermarkingConfig
+model.generate(**inputs, watermarking_config=WatermarkingConfig(greenlist_ratio=0.25))
+
+# v5 MTP decoding
+model.generate(**inputs, use_mtp=True, num_assistant_tokens=3)
+```
+
+### Resources
+- Transformers source: `/opt/data/.venv-sakthai/lib/python3.14/site-packages/transformers/`
+- Cache utils: `transformers.cache_utils`
+- Generation: `transformers.generation` (configuration_utils, utils, watermarking, continuous_batching)
+- Pipelines: `transformers.pipelines` (any_to_any.py, image_text_to_text.py)
+- Docs: https://huggingface.co/docs/transformers/en/index
+- Jinja template docs: https://jinja.palletsprojects.com/
