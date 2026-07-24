@@ -11110,3 +11110,34 @@ Given Beer's zero-cost constraint and 8 models on HF:
 - Selecting a method: https://huggingface.co/docs/transformers/en/quantization/selecting
 - Benchmark dataset: https://huggingface.co/datasets/derekl35/quantization-benchmarks
 - All individual method docs linked from: https://huggingface.co/docs/transformers/en/quantization/overview
+
+
+---
+
+## 2026-07-24: hf-peft-lora-deep-dive — Complete LoRA Variants & Advanced Training (Topic #177)
+
+### Summary
+Deep dive into PEFT v0.20.0 covering all LoRA initialization strategies (PiSSA, OLoRA, EVA, MiCA, CorDA, LoftQ, LoRA-GA, rsLoRA), advanced training features (DoRA, layer replication, KappaTune, trainable token indices, weight tying), MoE expert parameter targeting (target_parameters), multi-adapter management, merging patterns, and the complete LoraConfig API. Fills the gap since topic #9 (hf-peft-lora) covered only the basics.
+
+### Source
+- PEFT v0.20.0 docs: https://huggingface.co/docs/peft/en/index
+- LoRA reference: https://huggingface.co/docs/peft/en/package_reference/lora
+- Method overview: https://huggingface.co/docs/peft/en/methods/overview
+- PiSSA: https://huggingface.co/papers/2404.02948
+- OLoRA: https://huggingface.co/papers/2406.01775
+- EVA: https://huggingface.co/papers/2410.07170
+- MiCA: https://arxiv.org/abs/2604.01694
+- CorDA: https://huggingface.co/papers/2406.05223
+- DoRA: https://huggingface.co/papers/2402.09353
+- LoRA-GA: https://huggingface.co/papers/2407.05000
+- KappaTune: https://arxiv.org/abs/2506.16289
+- rsLoRA: https://huggingface.co/papers/2312.03732
+
+### Key Takeaways
+1. PEFT v0.20.0 has 32+ methods, LoRA being the most popular
+2. 12 initialization strategies — PiSSA for fast convergence, MiCA for domain adaptation, EVA for adaptive rank allocation, CorDA for knowledge preservation
+3. use_dora=True for direction-aware adaptation; use_rslora=True for stable high-rank training
+4. target_modules="all-linear" is the QLoRA standard
+5. trainable_token_indices saves significant VRAM vs full embedding tuning
+6. MoE models need target_parameters + merge_and_unload() for production inference
+7. KappaTune auto-selects the best layers via condition number analysis

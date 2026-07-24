@@ -41,7 +41,6 @@
   "hf-hub-discussions-api",
   "hf-hub-gated-repos",
   "hf-diffusers-flux-integration",
-  "hf-mcp-server",
   "hf-autotrain-advanced",
   "hf-transformers-pipeline-api",
   "hf-gradio-client-python",
@@ -159,7 +158,7 @@
   "hf-inference-client-tool-use-and-function-calling-deep-dive",
   "hf-diffusers-cogvideo-deep-dive",
   "hf-mcp-server-enhancements-hf-fs-consolidation",
-  "hf-datasets-sort-shuffle-split-shard",
+  "hf-datasets-sort-shuffle-split-shard-deep-dive",
   "hf-hub-webhooks-and-notifications-api-deep-dive",
   "hf-hub-models-architecture-and-pipeline-tags",
   "hf-tokenizers-training-deep-dive",
@@ -167,5 +166,13 @@
   "hf-hub-api-rate-limiting-deep-dive",
   "hf-transformers-speculative-decoding-deep-dive-v3-mtp-ensemble",
   "hf-hub-models-architecture-and-pipeline-tags-deep-dive",
-  "lm-evaluation-harness-complete-reference"
+  "lm-evaluation-harness-complete-reference",
+  "hf-transformers-gguf-integration-v2",
+  "spaces-zerogpu-complete-api-architecture-deep-dive",
+  "hf-custom-model-integration-deep-dive",
+  "hf-datasets-server-parquet-conversion-pipeline",
+  "hf-hub-modelcard-python-api",
+  "hf-gradio-lite",
+  "hf-transformers-qwen3-architecture-deep-dive",
+  "hf-peft-lora-deep-dive"
 ]
