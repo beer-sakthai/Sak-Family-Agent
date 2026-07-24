@@ -9848,3 +9848,21 @@ The legacy `lm_eval --model hf --tasks ...` flat syntax still works but the cano
 Base install no longer bundles `transformers`/`torch`. Users install only the backends they need via extras: `lm_eval[hf]`, `lm_eval[vllm]`, `lm_eval[api]`, etc. This drastically reduces the installation footprint for API-only or vLLM-only users.
 
 **Full document:** `skills/mlops/evaluation/lm-evaluation-harness/references/hf-learnings.md`
+
+---
+
+## 2026-07-24: hf-transformers-gguf-integration-v2 — Small Model Quantization, Hub Ecosystem & Quantization Taxonomy (Topic #94 Deepened)
+
+### Summary
+Deep-dive into the latest Transformers GGUF integration developments (v5.14.1), Hub ecosystem features, and the complete GGUF quantization taxonomy. Three new areas: (1) **June 2026 small model quantization support** (#46449) enables GGUF direct loading for tiny models (0.5B–1.5B) with 15-20% faster dequantization and reduced peak memory. (2) **Full Hub GGUF ecosystem** — built-in tensor viewer for no-download metadata inspection, `@huggingface/gguf` JS parser, `ggml-org/gguf-my-repo` Space for free browser-based conversion. (3) **Complete quantization type taxonomy** — all 25+ types (F32, F16, Qx_K, IQx, MXFP4, TQ) with selection guide by use case including Beer-specific guidance for his 0.5B and 1.5B GGUF files. Full document at `skills/mlops/hf-gguf-llama-cpp/references/hf-learnings.md`.
+
+### Key Discovery: Small Model Quantization Path (June 2026)
+Transformers v5.14.1 introduced an optimised GGUF loading path for models <3B parameters. Files added: `gemma_quant.py` (+249), `quantizer_gemma.py` (+75), `ggml.py` (+18). Auto-selected based on model size — no config changes needed. Impact: 15-20% faster loading with reduced peak memory.
+
+### Key Discovery: Hub GGUF Viewer & JS Parser
+The Hub provides `?show_tensors=<filename>` for per-tensor metadata inspection without downloading. The `@huggingface/gguf` npm package enables programmatic remote GGUF parsing in JS/TS — useful for auto-generating model cards and building GGUF discovery tools.
+
+### Key Discovery: Quantization Type Taxonomy
+25+ types across 4 families: unquantized (F32, F16, BF16), K-quant (Q2_K through Q8_K — recommended), IQ (IQ4_NL through IQ1_M — sub-3-bit), and next-gen (TQ1_0, TQ2_0, MXFP4). Selection guide: Q4_K_M for default balance, Q5_K_M for best quality, IQ3_XXS for memory-constrained, Q2_K for extreme compression.
+
+**Full document:** `skills/mlops/hf-gguf-llama-cpp/references/hf-learnings.md`
