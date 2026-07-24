@@ -196,5 +196,9 @@
   "hf-transformers-5-architecture-registry-system-deep-dive",
   "hf-datasets-faiss-vector-search-deep-dive",
   "hf-hub-webhooks-and-notifications-api-deep-dive-v2",
-  "hf-transformers-inkling"
+  "hf-transformers-inkling",
+  "hf-text-embeddings-inference-v2-deepening",
+  "hf-inference-client-chat-completion-deep-dive-v3",
+  "hf-hub-spaces-as-mcp-servers",
+  "hf-gradio-queue-and-concurrency-optimization-deep-dive"
 ]
