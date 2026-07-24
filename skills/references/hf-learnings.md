@@ -3235,3 +3235,60 @@ Buckets are free to create with a free storage allowance. Per-TB billing above f
 - hf-mount: https://github.com/huggingface/hf-mount
 - HuggingFace Hub Buckets Python guide: https://huggingface.co/docs/huggingface_hub/guides/buckets
 - Xet storage backend: https://huggingface.co/docs/hub/xet/index
+
+---
+
+## 2026-07-24: hf-text-embeddings-inference-v2 — OpenAI-Compatible API, Router Architecture & Matryoshka (Topic #106)
+
+### Summary
+Second deep-dive into TEI covering the OpenAI-compatible `/v1/embeddings` endpoint, the internal router architecture (request pipeline, validation, tokenization, batching, inference), Matryoshka/linear dimension reduction, direct TEI endpoint connection patterns, and Kubernetes deployment patterns.
+
+### OpenAI-Compatible `/v1/embeddings` Endpoint
+
+TEI exposes an OpenAI-compatible embeddings endpoint at `/v1/embeddings` when started:
+
+```bash
+docker run --gpus all -p 8080:80 ... \
+  --model-id WhereIsAI/UAE-Large-V1 \
+  --served-model-name text-embedding-3-large
+```
+
+**Python client (OpenAI SDK):**
+```python
+from openai import OpenAI
+client = OpenAI(base_url="http://localhost:8080/v1", api_key="not-needed")
+response = client.embeddings.create(input="Hello world", model="default", dimensions=256)
+```
+
+**InferenceClient direct connection:**
+```python
+from huggingface_hub import InferenceClient
+client = InferenceClient(base_url="http://localhost:8080")
+embedding = client.feature_extraction("Direct TEI endpoint", normalize=True)
+```
+
+### Router Pipeline
+
+```
+HTTP/gRPC → Router (validate+dispatch) → Tokenizer (tokenize+truncate+prompt) → Batcher (token-aware dynamic batching) → Backend (Candle+FlashAttn+pooling+normalize) → Response Builder (de-batch+format)
+```
+
+Token-aware batching groups requests up to `--max-batch-tokens`, dispatching when full or every ~1ms.
+
+### Matryoshka Dimension Reduction
+
+Supported models: `WhereIsAI/UAE-Large-V1` (1024→256), `Alibaba-NLP/gte-Qwen2-1.5B-instruct`. Use `dimensions=N` in API calls. Enables 75% storage reduction in vector DBs with minimal quality loss.
+
+### Key Tuning Parameters
+
+| Parameter | Recommendation |
+|---|---|
+| `--max-batch-tokens` | Start 16384, increase if GPU mem available |
+| `--auto-truncate` | Always `true` (prevents OOM) |
+| `--pooling` | `auto` (let TEI detect) |
+| `--max-concurrent-requests` | Match expected concurrent load |
+
+### Resources
+- GitHub: https://github.com/huggingface/text-embeddings-inference
+- Docs: https://huggingface.co/docs/text-embeddings-inference/en/index
+- Swagger: https://huggingface.github.io/text-embeddings-inference
