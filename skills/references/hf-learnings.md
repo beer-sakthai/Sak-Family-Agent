@@ -1,5 +1,18 @@
 # HF Learnings Log
 
+## 2026-07-24: hf-transformers-speculative-decoding-deep-dive — v5.14.0 MTP Support & Static Ensemble Verification (Topic #79 Deepened)
+
+### Summary
+Deep-dive into two major generation features added in Transformers v5.14.0 (2026-07-15): (1) **Multi-Token Prediction (MTP) decoding** — `use_mtp=True` enables proper inference-time MTP, auto-loading MTP head weights from the Hub repo and achieving ~1.4× speedup. (2) **Static ensemble verification** — `assistant_ensemble_weight` blends target/draft distributions during speculative decoding, increasing acceptance rates with zero training. Covers usage, design decisions, benchmark data, cache infrastructure (MtpCache), DeepSeek V4 limitations, and paper references. Full document at `skills/mlops/hf-transformers-5/references/hf-learnings.md`.
+
+### Key Discovery: MTP Is Now One Flag
+`model.generate(use_mtp=True, ...)` is all it takes — no separate assistant model, no custom loading code. The `generate()` method automatically scans the repo for MTP head weights, loads them, and integrates with the assisted decoding pipeline. On GLM-4.5-Air this yields 73.68% token acceptance with a 1.4× decoding speedup.
+
+### Key Discovery: Ensemble Verification Is Free Speed
+Static ensemble verification (`assistant_ensemble_weight=0.7`) is a training-free drop-in parameter that relaxes the strict verification distribution from `p_target` to `w * p_target + (1-w) * q_draft`. This provably achieves a Pareto-optimal tradeoff between acceptance rate and distributional bias. The acceptance probability increases from `1 - TV(q,p)` to `1 - w * TV(q,p)`.
+
+---
+
 ## 2026-07-26: hf-mcp-server-enhancements-hf-fs-consolidation — MCP Server Consolidation & Gallery Install (Topic #44/#90 Deepened)
 
 ### Summary

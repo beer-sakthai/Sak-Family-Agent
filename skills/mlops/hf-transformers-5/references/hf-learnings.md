@@ -270,4 +270,191 @@ New `transformers serve` command serves an OpenAI-compatible HTTP endpoint. `tra
 - v5.0.0 Release: https://github.com/huggingface/transformers/releases/tag/v5.0.0
 - Latest v5.14.1 Release: https://github.com/huggingface/transformers/releases/tag/v5.14.1
 - v5 Announcement Blog: https://huggingface.co/blog/transformers-v5
-- Docs: https://huggingface.co/docs/transformers/en/index
+|- Docs: https://huggingface.co/docs/transformers/en/index
+
+---
+
+## 2026-07-24: hf-transformers-speculative-decoding-deep-dive — v5.14.0 New Features: MTP Support & Static Ensemble Verification (Topic #79 Deepened)
+
+### Summary
+Deep dive into two major generation features added in Transformers v5.14.0 (2026-07-15):
+1. **Multi-Token Prediction (MTP) decoding** — proper inference-time MTP support via `use_mtp=True`, auto-loading MTP head weights from the Hub repo and integrating with the assisted decoding framework. ~40% faster decoding on supported models.
+2. **Static ensemble verification** — training-free increase of draft token acceptance rates by blending target/draft distributions via `assistant_ensemble_weight`. Pareto-optimal tradeoff between speed and distributional bias.
+
+Source code: `transformers/generation/configuration_utils.py`, PRs #46229 and #45979 on GitHub. Docs: https://huggingface.co/docs/transformers/en/assisted_decoding.
+
+---
+
+### 1. Multi-Token Prediction (MTP) Decoding — `use_mtp=True`
+
+**PR #46229** by @Cyrilvallez. Adds proper MTP inference support to Transformers' `generate()`.
+
+#### How it works
+
+MTP is a training-time technique (pioneered by DeepSeek V3/R1) where the model is trained with lightweight MTP "heads" that predict N future tokens simultaneously. During inference, these heads act as a built-in draft mechanism — no separate assistant model needed.
+
+**Before v5.14.0:** MTP was only usable during training. Inference required external tools or manual handling of MTP heads.
+
+**After v5.14.0:** A single `use_mtp=True` flag enables MTP decoding:
+
+```python
+from transformers import AutoModelForCausalLM, AutoTokenizer
+
+model_id = "zai-org/GLM-4.5-Air"
+
+model = AutoModelForCausalLM.from_pretrained(model_id, device_map="auto")
+tokenizer = AutoTokenizer.from_pretrained(model_id)
+
+inputs = tokenizer("Hello, who are you and what can you do?", return_tensors="pt").to(model.device)
+
+# Enable MTP — auto-loads MTP head weights from the repo
+out = model.generate(**inputs, use_mtp=True, do_sample=False, max_new_tokens=100)
+```
+
+#### Key design decisions
+
+| Aspect | Detail |
+|--------|--------|
+| **Weight loading** | `generate()` automatically scans the model repo for MTP layer weights and loads them |
+| **Integration** | MTP uses the existing `_assisted_decoding` path — no new decoding method added |
+| **Cache** | Uses `MtpCache` (extends `DynamicCache` with token-offset logic for MTP depth tracking) |
+| **Depth** | `mtp_num_tokens` controls how many tokens to draft per step (default: 1) |
+| **Fallback** | When all candidates are accepted, the bonus token comes from the main model |
+
+#### Benchmark data
+
+On GLM-4.5-Air (single test, official PR):
+
+| Metric | Without MTP | With MTP | Improvement |
+|--------|------------|----------|-------------|
+| Decoding speed | baseline | +40% faster | 1.4× speedup |
+| Token acceptance rate | — | 73.68% | — |
+
+#### Supported models
+
+| Model Family | MTP Support | Notes |
+|-------------|-------------|-------|
+| GLM-4.5-Air | ✅ Full | Reference implementation in PR |
+| DeepSeek V3/R1 | ✅ Conceptual | Pre-v5.14 code had partial support via MtpCache |
+| DeepSeek V4 | ⚠️ Partial | Different MTP layer naming (`e_proj`/`h_proj` split) + quantization — needs ConversionOps fix |
+| Other MTP-trained models | ✅ Automatic | `generate()` scans repo for MTP weights |
+
+**DeepSeek V4 limitation:** The MTP layer naming/conventions changed — `eh_proj` was split into `e_proj` and `h_proj` with quantization. A fix via `ConversionOps` or a model attribute `_mtp_conversions` is expected in a future release.
+
+#### Cache infrastructure
+
+MTP decoding uses `MtpCache`, which extends `DynamicCache`:
+
+```python
+class MtpCache(DynamicCache):
+    # Extends DynamicCache with token-offset logic for MTP depth tracking
+    # MTP depth k runs k+1 tokens ahead
+    def get_query_offset(self) -> int:
+        return self.layer_idx + 1
+```
+
+The `get_query_offset()` method adds `layer_idx + 1` offset — each MTP depth step runs one token ahead in the KV cache.
+
+---
+
+### 2. Static Ensemble Verification — `assistant_ensemble_weight`
+
+**PR #45979** by @kasakh. Adds a training-free method to increase the acceptance rate of speculative decoding by relaxing the verification distribution.
+
+#### The problem
+
+Standard speculative decoding is **lossless** — it guarantees the output distribution matches the target model exactly. But this strictness rejects many plausible tokens, keeping acceptance rates low.
+
+#### The solution
+
+Static ensemble verification blends the target and draft distributions during verification:
+
+```
+v(x) = w * p_target(x) + (1 - w) * q_draft(x)
+```
+
+Where:
+- `v(x)` = ensemble verifier distribution
+- `p_target(x)` = target model distribution
+- `q_draft(x)` = draft model distribution
+- `w` = `assistant_ensemble_weight` (float in (0, 1))
+
+This **provably** achieves the Pareto-optimal tradeoff between acceptance rate and distributional bias (Proposition 1 in the paper). The acceptance probability increases from `1 - TV(q,p)` to `1 - w * TV(q,p)`.
+
+#### Usage
+
+```python
+# Sampling mode — recommended starting value: 0.7
+outputs = model.generate(
+    **inputs,
+    assistant_model=assistant_model,
+    do_sample=True,
+    assistant_ensemble_weight=0.7,
+)
+
+# Greedy mode — compares draft tokens against argmax(v)
+outputs = model.generate(
+    **inputs,
+    assistant_model=assistant_model,
+    do_sample=False,
+    assistant_ensemble_weight=0.7,
+)
+```
+
+#### Parameter behavior
+
+| `assistant_ensemble_weight` | Effect |
+|-----------------------------|--------|
+| `None` (default) | Standard lossless speculative decoding (backward compatible) |
+| `1.0` | Equivalent to standard lossless (mathematically identical) |
+| `0.7` (recommended) | Good balance: ~30% reduction in rejection, minor distribution shift |
+| `0.5` | Equal blend: significantly higher acceptance, larger distributional shift |
+| → `0.0` | Extreme: approaches draft-only (high speed, high distributional bias) |
+
+**Constraint:** Must be in the open interval `(0.0, 1.0)`. Values outside raise `ValueError`.
+
+#### Design decisions (from PR)
+
+1. **Fallback distribution unchanged:** Since `[v-q]+ = w*[p-q]+` normalizes to the same distribution as `[p-q]+`, the standard fallback is used directly for numerical stability.
+
+2. **Acceptance ratio form:** Uses `1 - w + w*(p_i/q_i)` — algebraically equivalent to `v_i/q_i` but avoids constructing the full ensemble distribution (more efficient).
+
+3. **Bonus token:** When all candidates are accepted, the bonus token uses `p` (target) rather than `v`, since `q` at position N+1 is unavailable. This is conservative and documented.
+
+4. **Greedy ensemble:** For `do_sample=False`, compares draft tokens against `argmax(v)` — "greedy under the ensemble verifier."
+
+5. **Requires candidate logits:** Not supported with prompt lookup decoding or other candidate generators that don't return logits.
+
+#### How it integrates
+
+The acceptance ratio computation in `_speculative_sampling`:
+
+```python
+# Standard: accept if uniform_random < p_i / q_i
+# Ensemble:  accept if uniform_random < 1 - w + w * (p_i / q_i)
+```
+
+When `w=1.0`, this reduces to the standard formula. When `w=0.7`, the acceptance threshold is lower, so more tokens are accepted.
+
+#### Paper reference
+
+**Static Ensemble Verification** — arxiv.org/abs/2604.07622. Proposes the ensemble verifier and proves it achieves the Pareto-optimal tradeoff between acceptance rate and distributional bias.
+
+---
+
+### Key Takeaways
+
+1. **Two new generation params in v5.14.0:** `use_mtp` (bool) and `assistant_ensemble_weight` (float)
+2. **MTP is now one flag away:** `model.generate(use_mtp=True)` — auto-loads MTP heads, ~1.4× speedup
+3. **Ensemble verification is free performance:** `assistant_ensemble_weight=0.7` increases acceptance rates with zero training
+4. **Both integrate with existing assisted decoding** — no new code paths, just new parameters
+5. **DeepSeek V4 MTP not yet supported** — pending a fix for renamed/quantized MTP layers
+6. **Ensemble requires candidate logits** — not compatible with prompt lookup decoding
+
+### Resources
+- Assisted decoding docs: https://huggingface.co/docs/transformers/en/assisted_decoding
+- PR #46229 (MTP support): https://github.com/huggingface/transformers/pull/46229
+- PR #45979 (Static ensemble verification): https://github.com/huggingface/transformers/pull/45979
+- Static ensemble paper: https://arxiv.org/abs/2604.07622
+- GenerationConfig source: https://github.com/huggingface/transformers/blob/main/src/transformers/generation/configuration_utils.py
+- Assisted generation blog: https://huggingface.co/blog/assisted-generation
