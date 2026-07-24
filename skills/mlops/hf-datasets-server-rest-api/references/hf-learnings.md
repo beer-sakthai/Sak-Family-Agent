@@ -530,4 +530,627 @@ If a dataset returns `filter: false`, the `/filter` endpoint will not work for i
 - Statistics docs: https://huggingface.co/docs/dataset-viewer/statistics
 - Size docs: https://huggingface.co/docs/dataset-viewer/size
 - OpenAPI spec: https://datasets-server.huggingface.co/openapi.json
-- ReDoc interactive: https://redocly.github.io/redoc/?url=https://datasets-server.huggingface.co/openapi.json#operation/filterRows
+|- ReDoc interactive: https://redocly.github.io/redoc/?url=https://datasets-server.huggingface.co/openapi.json#operation/filterRows
+
+## 2026-07-24: hf-datasets-server-complete-api-deep-dive — All 12 Endpoints
+
+### Summary
+Complete deep-dive into every endpoint of the Hugging Face Datasets Server REST API, verified against real API responses. Covers all 12 endpoints: `/splits`, `/size`, `/first-rows`, `/rows`, `/parquet`, `/info`, `/statistics`, `/search`, `/filter`, `/is-valid`, `/opt-in-out-urls`, `/presidio-entities`. Focused on practical zero-cost data exploration patterns using only `curl` and the free Datasets Server.
+
+### Base URL
+```
+https://datasets-server.huggingface.co
+```
+
+### Endpoint Reference
+
+#### 1. GET /splits — Discover Configs & Splits
+**The discovery entry point.** Lists all configs (subsets) and their splits.
+
+```
+GET /splits?dataset=<namespace/dataset>
+```
+
+**Required:** `dataset`
+**Response:** `{ "splits": [...], "pending": [...], "failed": [...] }`
+
+Each split entry: `{ "dataset": "...", "config": "...", "split": "..." }`
+
+**Pattern — extract unique configs:**
+```python
+import requests
+resp = requests.get("https://datasets-server.huggingface.co/splits?dataset=google/fleurs").json()
+configs = set(s["config"] for s in resp["splits"])
+# → {'af_za', 'am_et', 'ar_eg', ...}  (102 configs for FLEURS)
+```
+
+**Pattern — extract unique splits across all configs:**
+```python
+splits = set((s["config"], s["split"]) for s in resp["splits"])
+```
+
+**Verified response** (rotten_tomatoes):
+```json
+{
+  "splits": [
+    {"dataset": "cornell-movie-review-data/rotten_tomatoes", "config": "default", "split": "train"},
+    {"dataset": "cornell-movie-review-data/rotten_tomatoes", "config": "default", "split": "validation"},
+    {"dataset": "cornell-movie-review-data/rotten_tomatoes", "config": "default", "split": "test"}
+  ],
+  "pending": [],
+  "failed": []
+}
+```
+
+**Error states:**
+- `pending`: Dataset is being processed, retry later
+- `failed`: Dataset processing failed, check dataset format
+- Renamed datasets return: `{"error": "The dataset has been renamed. Please use the current dataset name."}`
+
+---
+
+#### 2. GET /size — Storage & Row Counts
+Returns storage size (original files, Parquet files), memory footprint, and row counts at dataset/config/split level.
+
+```
+GET /size?dataset=<namespace/dataset>[&config=<config>]
+```
+
+**Required:** `dataset`
+**Optional:** `config` (if omitted, returns all configs)
+
+**Verified response** (rotten_tomatoes, all configs):
+```json
+{
+  "size": {
+    "dataset": {
+      "dataset": "cornell-movie-review-data/rotten_tomatoes",
+      "num_bytes_original_files": 881052,
+      "num_bytes_parquet_files": 881052,
+      "num_bytes_memory": 1344051,
+      "num_rows": 10662,
+      "estimated_num_rows": null
+    },
+    "configs": [
+      {
+        "dataset": "cornell-movie-review-data/rotten_tomatoes",
+        "config": "default",
+        "num_bytes_original_files": 881052,
+        "num_bytes_parquet_files": 881052,
+        "num_bytes_memory": 1344051,
+        "num_rows": 10662,
+        "num_columns": 2,
+        "estimated_num_rows": null
+      }
+    ],
+    "splits": [
+      {"dataset": "...", "config": "default", "split": "train", "num_bytes_parquet_files": 698845, "num_bytes_memory": 1072741, "num_rows": 8530, "num_columns": 2, "estimated_num_rows": null},
+      {"dataset": "...", "config": "default", "split": "validation", "num_bytes_parquet_files": 90001, "num_bytes_memory": 135180, "num_rows": 1066, "num_columns": 2},
+      {"dataset": "...", "config": "default", "split": "test", "num_bytes_parquet_files": 92206, "num_bytes_memory": 136130, "num_rows": 1066, "num_columns": 2}
+    ]
+  },
+  "pending": [],
+  "failed": [],
+  "partial": false
+}
+```
+
+**Key metrics explained:**
+| Field | Meaning |
+|-------|---------|
+| `num_bytes_original_files` | Size of original source files (JSONL, CSV, etc.) |
+| `num_bytes_parquet_files` | Size after Parquet conversion (same as original for Parquet-native datasets) |
+| `num_bytes_memory` | Estimated memory footprint when loaded via 🤗 Datasets |
+| `num_rows` | Exact row count |
+| `num_columns` | Number of feature columns |
+| `estimated_num_rows` | For large datasets where exact count is expensive; `null` means exact count was computed |
+
+**Use case — size-aware data selection:**
+```python
+resp = requests.get("https://datasets-server.huggingface.co/size?dataset=google/fleurs").json()
+for c in resp["size"]["configs"]:
+    train_split = next(s for s in resp["size"]["splits"] if s["config"] == c["config"] and s["split"] == "train")
+    print(f"{c['config']}: {c['num_rows']} rows, {c['num_bytes_parquet_files']/1e6:.1f} MB")
+```
+
+---
+
+#### 3. GET /first-rows — Data Preview + Schema
+Returns the first 100 rows of a split, with full feature schema. **Best endpoint for exploring data structure without downloading.**
+
+```
+GET /first-rows?dataset=<ns/ds>&config=<config>&split=<split>
+```
+
+**Required:** `dataset`, `config`, `split`
+
+**Verified response** (rotten_tomatoes train, first 10 of 100 rows):
+```json
+{
+  "dataset": "cornell-movie-review-data/rotten_tomatoes",
+  "config": "default",
+  "split": "train",
+  "features": [
+    {"feature_idx": 0, "name": "text", "type": {"dtype": "string", "_type": "Value"}},
+    {"feature_idx": 1, "name": "label", "type": {"names": ["neg", "pos"], "_type": "ClassLabel"}}
+  ],
+  "rows": [
+    {"row_idx": 0, "row": {"text": "the rock is destined to be...", "label": 1}, "truncated_cells": []},
+    {"row_idx": 1, "row": {"text": "the gorgeously elaborate continuation...", "label": 1}, "truncated_cells": []},
+    ...
+  ]
+}
+```
+
+**Feature types reference:**
+| Type | `_type` | `dtype` / Fields | Example |
+|------|---------|-------------------|---------|
+| Primitive | `Value` | `string`, `int32`, `float64`, `bool` | `{"_type": "Value", "dtype": "string"}` |
+| Class label | `ClassLabel` | `names: ["neg", "pos"]` | `{"_type": "ClassLabel", "names": [...]}` |
+| Sequence | `Sequence` | `feature: {...}` | Nested lists |
+| Image | `Image` | — | Binary, content null in preview |
+| Audio | `Audio` | — | Binary, content null in preview |
+
+**Design notes:**
+- Always returns exactly 100 rows unless split has fewer
+- `truncated_cells` lists cell indices where content was truncated (binary large objects)
+- Features are always returned, even when no rows are available
+- Binary columns (Image, Audio) show `null` in the row data and are listed in `truncated_cells`
+
+---
+
+#### 4. GET /rows — Paginated Row Access
+Returns a slice of rows with offset/length pagination. **Essential for sampling specific parts of a split.**
+
+```
+GET /rows?dataset=<ns/ds>&config=<config>&split=<split>&offset=<int>&length=<int>
+```
+
+**Required:** `dataset`, `config`, `split`
+**Optional:** `offset` (default: 0), `length` (default: 100, max: 100)
+
+**Verified response** (rotten_tomatoes train, offset=5, length=3):
+```json
+{
+  "features": [...],
+  "rows": [
+    {"row_idx": 5, "row": {"text": "the film provides some great insight...", "label": 1}, "truncated_cells": []},
+    {"row_idx": 6, "row": {"text": "offers that rare combination...", "label": 1}, "truncated_cells": []},
+    {"row_idx": 7, "row": {"text": "perhaps no picture ever made...", "label": 1}, "truncated_cells": []}
+  ],
+  "num_rows_total": 8530,
+  "num_rows_per_page": 100,
+  "partial": false
+}
+```
+
+**Pagination pattern — iterate through all rows:**
+```python
+offset = 0
+length = 100
+while True:
+    resp = requests.get(f"https://datasets-server.huggingface.co/rows?dataset=...&config=default&split=train&offset={offset}&length={length}").json()
+    for row in resp["rows"]:
+        process(row["row"])
+    offset += length
+    if offset >= resp["num_rows_total"]:
+        break
+```
+
+**Constraints:**
+- `length` maximum is 100 (server returns error otherwise)
+- `offset` must be ≥ 0
+- `num_rows_total` tells you total rows in the split
+- Response includes full `features` schema with every request
+
+---
+
+#### 5. GET /parquet — Direct Parquet File URLs
+Returns URLs for the Parquet files backing each split. **Enables zero-cost direct Parquet download (no API rate limits).**
+
+```
+GET /parquet?dataset=<ns/ds>
+```
+
+**Required:** `dataset`
+**Optional:** `config` (if omitted, returns all)
+
+**Verified response** (rotten_tomatoes):
+```json
+{
+  "parquet_files": [
+    {"dataset": "cornell-movie-review-data/rotten_tomatoes", "config": "default", "split": "train",
+     "url": "https://huggingface.co/datasets/cornell-movie-review-data/rotten_tomatoes/resolve/refs%2Fconvert%2Fparquet/default/train/0000.parquet",
+     "filename": "0000.parquet", "size": 698845},
+    {"dataset": "...", "config": "default", "split": "validation",
+     "url": ".../validation/0000.parquet", "filename": "0000.parquet", "size": 90001},
+    {"dataset": "...", "config": "default", "split": "test",
+     "url": ".../test/0000.parquet", "filename": "0000.parquet", "size": 92206}
+  ],
+  "pending": [], "failed": [], "partial": false
+}
+```
+
+**Design notes:**
+- URLs point to the `refs/convert/parquet` branch — these are auto-converted Parquet files
+- Large datasets have sharded Parquet files (0000.parquet, 0001.parquet, ...)
+- Files can be downloaded with standard HTTP tools (`curl`, `wget`, `requests`)
+- Parquet is a columnar format — you can read specific columns without loading all data
+- Zero-cost pattern: download only the Parquet files for splits you need, process locally with `polars` or `pyarrow`
+
+---
+
+#### 6. GET /info — Full Dataset Metadata
+Returns the complete dataset metadata, same as what `datasets.get_dataset_config_names()` and `datasets.get_dataset_split_names()` return, without installing the datasets library.
+
+```
+GET /info?dataset=<ns/ds>[&config=<config>]
+```
+
+**Required:** `dataset`
+**Optional:** `config` (if omitted, returns all configs)
+
+**Verified response** (rotten_tomatoes, config=default):
+```json
+{
+  "dataset_info": {
+    "default": {
+      "description": "",
+      "citation": "",
+      "homepage": "",
+      "license": "",
+      "features": {
+        "text": {"dtype": "string", "_type": "Value"},
+        "label": {"names": ["neg", "pos"], "_type": "ClassLabel"}
+      },
+      "builder_name": "parquet",
+      "dataset_name": "rotten_tomatoes",
+      "config_name": "default",
+      "version": {"version_str": "0.0.0", "major": 0, "minor": 0, "patch": 0},
+      "splits": {
+        "train": {"name": "train", "num_bytes": 1072741, "num_examples": 8530, "dataset_name": null},
+        "validation": {"name": "validation", "num_bytes": 135180, "num_examples": 1066, "dataset_name": null},
+        "test": {"name": "test", "num_bytes": 136130, "num_examples": 1066, "dataset_name": null}
+      },
+      "download_size": 881052,
+      "dataset_size": 1344051
+    }
+  },
+  "pending": [], "failed": [], "partial": false
+}
+```
+
+**Use cases:**
+- Check features/types without downloading any data
+- Get split sizes and example counts
+- Verify dataset structure before building a pipeline
+- Determine if a dataset has a specific config
+
+---
+
+#### 7. GET /statistics — Column-Level Descriptive Statistics
+Returns per-column statistics: frequencies for categorical columns, histogram + moments for numeric columns.
+
+```
+GET /statistics?dataset=<ns/ds>&config=<config>&split=<split>
+```
+
+**Required:** `dataset`, `config`, `split`
+
+**Verified response** (rotten_tomatoes train):
+```json
+{
+  "num_examples": 8530,
+  "statistics": [
+    {
+      "column_name": "label",
+      "column_type": "class_label",
+      "column_statistics": {
+        "nan_count": 0, "nan_proportion": 0.0,
+        "no_label_count": 0, "no_label_proportion": 0.0,
+        "n_unique": 2,
+        "frequencies": {"neg": 4265, "pos": 4265}
+      }
+    },
+    {
+      "column_name": "text",
+      "column_type": "string_text",
+      "column_statistics": {
+        "nan_count": 0, "nan_proportion": 0.0,
+        "min": 4, "max": 267, "mean": 113.97, "median": 111.0, "std": 51.05,
+        "histogram": {
+          "hist": [302, 955, 1358, 1701, 1574, 1215, 804, 385, 176, 60],
+          "bin_edges": [4, 31, 58, 85, 112, 139, 166, 193, 220, 247, 267]
+        }
+      }
+    }
+  ],
+  "partial": false
+}
+```
+
+**Column types and their statistics:**
+
+| Column Type | Statistics Provided |
+|-------------|-------------------|
+| `class_label` | nan_count, n_unique, frequencies (value → count) |
+| `string_text` | nan_count, min/max/mean/median/std, histogram (10 bins) |
+| `int` | nan_count, min/max/mean/median/std, histogram (10 bins) |
+| `float` | nan_count, min/max/mean/median/std, histogram (10 bins) |
+| `bool` | nan_count, n_unique, frequencies |
+
+**Use cases:**
+- Class balance check (before training)
+- Feature distribution analysis
+- Detect missing values (nan_count)
+- Understand numeric range for normalization
+
+---
+
+#### 8. GET /search — Full-Text Search
+Searches across all text columns in a split. Returns matching rows with their row indices. Case-insensitive, partial-match.
+
+```
+GET /search?dataset=<ns/ds>&config=<config>&split=<split>&query=<string>[&offset=<int>&length=<int>]
+```
+
+**Required:** `dataset`, `config`, `split`, `query`
+**Optional:** `offset` (default: 0), `length` (default: 100, max: 100)
+
+**Verified response** (search "rock" in rotten_tomatoes train):
+```json
+{
+  "features": [...],
+  "rows": [
+    {"row_idx": 2730, "row": {"text": "morvern rocks .", "label": 1}, "truncated_cells": []},
+    {"row_idx": 26, "row": {"text": "spiderman rocks", "label": 1}, "truncated_cells": []},
+    {"row_idx": 7133, "row": {"text": "as an actor , the rock is aptly named .", "label": 0}, "truncated_cells": []},
+    ...
+  ]
+}
+```
+
+**Design notes:**
+- Search is over all text/string columns simultaneously
+- Results are ordered by relevance (not by row index)
+- `num_rows_total` is NOT returned in search results (unlike `/rows`)
+- Binary/special columns are excluded from search
+- Query is case-insensitive
+
+---
+
+#### 9. GET /filter — Row-Level Filtering
+Filters rows using a SQL-like expression language. Returns matching rows with pagination.
+
+```
+GET /filter?dataset=<ns/ds>&config=<config>&split=<split>&where=<expression>[&offset=<int>&length=<int>]
+```
+
+**Required:** `dataset`, `config`, `split`, `where`
+**Optional:** `offset` (default: 0), `length` (default: 100, max: 100)
+
+**Where expression syntax:**
+| Expression | Example | Meaning |
+|-----------|---------|---------|
+| `column = value` | `Age = 30` | Equality (numeric) |
+| `column = 'value'` | `Sex = 'female'` | Equality (string, single quotes) |
+| `column > value` | `Fare > 50` | Greater than |
+| `column < value` | `Age < 18` | Less than |
+| `column >= value` | `Fare >= 100` | Geq |
+| `column <= value` | `Age <= 12` | Leq |
+| `col1 = v AND col2 > v` | `Pclass = 2 AND "Siblings/Spouses Aboard" > 0` | Logical AND |
+| `"column with spaces" = v` | `"column name" = value` | Quoted column names |
+
+**Known limitations (verified 2026-07-24):**
+- ClassLabel columns may not support direct filtering (return "invalid symbols" error)
+- String equality requires single quotes: `Sex='female'`
+- Numeric columns work reliably (`Age=30`, `Fare>50`)
+- AND operations work correctly
+- The `orderby` parameter is documented but may have issues
+
+**Response format** (matches `/rows` structure):
+```json
+{
+  "features": [...],
+  "rows": [...],
+  "num_rows_total": 33,
+  "num_rows_per_page": 100,
+  "partial": false
+}
+```
+
+---
+
+#### 10. GET /is-valid — Feature Support Check
+Returns which Datasets Server features are available for a given dataset. **Essential pre-flight check before building a pipeline.**
+
+```
+GET /is-valid?dataset=<ns/ds>
+```
+
+**Required:** `dataset`
+
+**Verified response** (rotten_tomatoes):
+```json
+{
+  "preview": true,
+  "viewer": true,
+  "search": true,
+  "filter": true,
+  "statistics": true
+}
+```
+
+**Feature flags:**
+| Flag | Meaning |
+|------|---------|
+| `preview` | `/first-rows` is supported |
+| `viewer` | `/rows` is supported (full data viewer) |
+| `search` | `/search` is supported |
+| `filter` | `/filter` is supported |
+| `statistics` | `/statistics` is supported |
+
+**Error states:** Returns `{"preview":false,"viewer":false,...}` for unsupported datasets.
+
+---
+
+#### 11. GET /opt-in-out-urls — URL Compliance
+Returns statistics about URLs in the dataset that have opt-in/opt-out status for data deletion compliance.
+
+```
+GET /opt-in-out-urls?dataset=<ns/ds>[&config=<config>]
+```
+
+**Required:** `dataset`
+**Optional:** `config`
+
+**Verified response** (rotten_tomatoes — no URL columns):
+```json
+{
+  "urls_columns": [],
+  "has_urls_columns": false,
+  "num_opt_in_urls": 0,
+  "num_opt_out_urls": 0,
+  "num_scanned_rows": 0,
+  "num_urls": 0,
+  "full_scan": false
+}
+```
+
+**Fields:**
+| Field | Meaning |
+|-------|---------|
+| `urls_columns` | Column names containing URLs |
+| `has_urls_columns` | Whether any column contains URLs |
+| `num_opt_in_urls` | Count of opted-in URLs |
+| `num_opt_out_urls` | Count of opted-out URLs |
+| `num_scanned_rows` | Rows scanned for URL detection |
+| `num_urls` | Total URLs found |
+| `full_scan` | Whether all rows were scanned |
+
+---
+
+#### 12. GET /presidio-entities — PII Detection
+Returns counts of rows containing sensitive entities detected by Microsoft Presidio (PII detection).
+
+```
+GET /presidio-entities?dataset=<ns/ds>[&config=<config>]
+```
+
+**Required:** `dataset`
+**Optional:** `config`
+
+**Verified response** (rotten_tomatoes — no PII):
+```json
+{
+  "scanned_columns": [],
+  "num_rows_with_person_entities": 0,
+  "num_rows_with_phone_number_entities": 0,
+  "num_rows_with_email_address_entities": 0,
+  "num_rows_with_sensitive_pii": 0,
+  "num_scanned_rows": 0,
+  "has_scanned_columns": false,
+  "full_scan": true
+}
+```
+
+**Entity types tracked:**
+| Field | Entity |
+|-------|--------|
+| `person_entities` | PERSON (names) |
+| `phone_number_entities` | PHONE_NUMBER |
+| `email_address_entities` | EMAIL_ADDRESS |
+| `sensitive_pii` | Any sensitive PII (combined) |
+
+---
+
+### Quick Reference — All Endpoints At a Glance
+
+| # | Endpoint | Required Params | Optional | Returns |
+|---|----------|----------------|----------|---------|
+| 1 | `/splits` | `dataset` | — | Config/split list |
+| 2 | `/size` | `dataset` | `config` | Storage & row counts |
+| 3 | `/first-rows` | `dataset`, `config`, `split` | — | 100 rows + schema |
+| 4 | `/rows` | `dataset`, `config`, `split` | `offset`, `length` | Paginated rows |
+| 5 | `/parquet` | `dataset` | `config` | Parquet file URLs |
+| 6 | `/info` | `dataset` | `config` | Full metadata |
+| 7 | `/statistics` | `dataset`, `config`, `split` | — | Column stats |
+| 8 | `/search` | `dataset`, `config`, `split`, `query` | `offset`, `length` | Full-text search |
+| 9 | `/filter` | `dataset`, `config`, `split`, `where` | `offset`, `length` | SQL-like filter |
+| 10 | `/is-valid` | `dataset` | — | Feature support flags |
+| 11 | `/opt-in-out-urls` | `dataset` | `config` | URL compliance |
+| 12 | `/presidio-entities` | `dataset` | `config` | PII detection |
+
+### Zero-Cost Patterns
+
+**Pattern 1 — Preview before downloading:**
+```bash
+# Check what features a dataset has without downloading
+curl -s "https://datasets-server.huggingface.co/info?dataset=bigcode/the-stack-v2" | jq '.dataset_info|keys'
+# Check size before committing to download
+curl -s "https://datasets-server.huggingface.co/size?dataset=bigcode/the-stack-v2" | jq '.size.dataset'
+```
+
+**Pattern 2 — Direct Parquet download with column selection:**
+```bash
+# Get the parquet URLs
+curl -s "https://datasets-server.huggingface.co/parquet?dataset=cornell-movie-review-data/rotten_tomatoes" | jq -r '.parquet_files[]|select(.split=="train")|.url'
+# Download and read with polars (selective columns)
+curl -OL <parquet_url>
+python3 -c "import polars as pl; df=pl.read_parquet('0000.parquet',columns=['text']); print(df.head())"
+```
+
+**Pattern 3 — Automated dataset quality check:**
+```python
+def dataset_health_check(dataset_id):
+    """Quick sanity check on any dataset."""
+    import requests
+    base = "https://datasets-server.huggingface.co"
+    valid = requests.get(f"{base}/is-valid?dataset={dataset_id}").json()
+    size = requests.get(f"{base}/size?dataset={dataset_id}").json()
+    splits = requests.get(f"{base}/splits?dataset={dataset_id}").json()
+    return {
+        "features": valid,
+        "total_rows": size.get("size", {}).get("dataset", {}).get("num_rows"),
+        "num_configs": len(size.get("size", {}).get("configs", [])),
+        "num_splits": len(splits.get("splits", [])),
+        "has_pending": len(splits.get("pending", [])) > 0
+    }
+```
+
+**Pattern 4 — Find datasets with balanced classes:**
+```python
+def class_balance(dataset_id, config, split):
+    resp = requests.get(f"https://datasets-server.huggingface.co/statistics?dataset={dataset_id}&config={config}&split={split}").json()
+    for col in resp.get("statistics", []):
+        if col["column_type"] == "class_label":
+            freqs = col["column_statistics"]["frequencies"]
+            total = sum(freqs.values())
+            balance = {k: v/total for k, v in freqs.items()}
+            print(f"{col['column_name']}: {balance}")
+```
+
+### Verified Error States
+
+| Error | Status | Example |
+|-------|--------|---------|
+| Renamed dataset | Response (no specific status) | `{"error": "The dataset has been renamed. Please use the current dataset name."}` |
+| Not found / private | Response | `{"error": "The dataset does not exist, or is not accessible without authentication..."}` |
+| Missing required param | 422 | `{"error": "Parameter 'dataset' is required"}` |
+| Length too large | 422 | `{"error": "Parameter 'length' must not be greater than 100"}` |
+| Invalid where clause | 422 | `{"error": "Parameter 'where' contains errors or invalid symbols"}` |
+| Not ready | 500 | `{"error": "The response is not ready yet. Please retry later."}` |
+
+### Resources
+- Official docs: https://huggingface.co/docs/dataset-viewer/
+- `/splits`: https://huggingface.co/docs/dataset-viewer/splits
+- `/first-rows`: https://huggingface.co/docs/dataset-viewer/first-rows
+- `/rows`: https://huggingface.co/docs/dataset-viewer/rows
+- `/parquet`: https://huggingface.co/docs/dataset-viewer/parquet
+- `/info`: https://huggingface.co/docs/dataset-viewer/info
+- `/search`: https://huggingface.co/docs/dataset-viewer/search
+- `/filter`: https://huggingface.co/docs/dataset-viewer/filter
+- `/statistics`: https://huggingface.co/docs/dataset-viewer/statistics
+- `/size`: https://huggingface.co/docs/dataset-viewer/size
+- OpenAPI spec: https://datasets-server.huggingface.co/openapi.json
+- ReDoc interactive: https://redocly.github.io/redoc/?url=https://datasets-server.huggingface.co/openapi.json
