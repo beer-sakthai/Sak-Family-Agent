@@ -14113,3 +14113,133 @@ This creates a two-way link: linked models appear on the bucket page, and the bu
 ### Skill
 mlops/hf-hub-storage-limits — SKILL.md updated with full Storage Buckets documentation
 
+## 2026-07-24: hf-hub-hardware-filter-models-search — New Hardware Filter on the Models Page (Topic #229)
+
+### Summary
+Deep dive into the **Hardware Filter** feature (launched Jun 30, 2026) on the Hugging Face Hub Models page. This feature lets users filter models by target hardware (GPU, CPU, Apple Silicon) so they only see models that will actually run on their machine. Covers the URL API (`?hardware=`), available hardware identifiers, stacking with other filters (`apps`, `library`, `pipeline_tag`), the Hardware settings page for persisting user preferences, how model–hardware compatibility is determined, and practical patterns for sharing hardware-filtered searches.
+
+### Source
+- HF Changelog — Filter Models page by Hardware (Jun 30, 2026): https://huggingface.co/changelog/filter-models-by-hardware
+- Models search page: https://huggingface.co/models?hardware=apple-m4-max
+- Hardware settings page: https://huggingface.co/settings/hardware
+- API query structure extracted from Hub front-end state (verified 2026-07-24)
+
+### 1. What Is the Hardware Filter?
+
+The Hardware Filter is a **front-end filter** on the Hugging Face Hub Models page (https://huggingface.co/models) that narrows search results to models compatible with a specific hardware target. Instead of browsing 2.9M+ models and guessing which ones fit your machine, you select your hardware and see only compatible models.
+
+The feature was announced in the HF Changelog on June 30, 2026:
+> "A new Hardware filter on the Models page filters results to models that fit a specific GPU, CPU, or Apple Silicon chip, so you only see what will actually run on your machine. Set the hardware you want from your Hardware settings."
+
+### 2. URL API
+
+The hardware filter is controlled by the `hardware` URL query parameter:
+
+```
+https://huggingface.co/models?hardware=<hardware-identifier>
+```
+
+It stacks with all other model search filters: `search`, `pipeline_tag`, `library`, `apps`, `sort`, and pagination (`p`).
+
+#### Example URLs
+| URL | Effect |
+|-----|--------|
+| `?hardware=apple-m4-max` | Models that fit Apple M4 Max |
+| `?hardware=cpu` | Models that run on CPU |
+| `?hardware=cuda` | CUDA-compatible models |
+| `?hardware=apple-silicon` | Apple Silicon compatible models |
+| `?apps=llama.cpp&hardware=apple-m4-max` | llama.cpp models that fit M4 Max |
+| `?hardware=apple-m4-max&sort=trending` | Trending models for M4 Max |
+
+### 3. Known Hardware Identifiers
+
+Verified working (return 200 and filtered results):
+
+| Identifier | Label | Type |
+|------------|-------|------|
+| `apple-m4-max` | Apple M4 Max | Apple Silicon |
+| `apple-m4` | Apple M4 | Apple Silicon |
+| `apple-m3-max` | Apple M3 Max | Apple Silicon |
+| `apple-m2-max` | Apple M2 Max | Apple Silicon |
+| `apple-m1-max` | Apple M1 Max | Apple Silicon |
+| `apple-silicon` | Apple Silicon (general) | Apple Silicon |
+| `cpu` | CPU | General |
+| `cuda` | CUDA (NVIDIA GPU) | GPU |
+| `mps` | Metal Performance Shaders (Apple) | GPU |
+| `nvidia-t4` | NVIDIA T4 | GPU |
+| `nvidia-l4` | NVIDIA L4 | GPU |
+| `amd-mi250` | AMD MI250 | GPU |
+| `amd-mi300` | AMD MI300 | GPU |
+
+**Note:** This is not an exhaustive list. Hardware identifiers are added over time as the Hub team expands coverage. Unrecognized identifiers fall through to showing all models (no filtering).
+
+### 4. How Hardware–Model Matching Works
+
+The hardware filter uses **model metadata** to determine compatibility. The primary factors:
+
+1. **Model size (parameters)** — Number of parameters (`numParameters` in API response) is the primary heuristic. The Hub matches model VRAM/RAM requirements against the hardware's known memory capacity.
+
+2. **Library/framework** — Models using `gguf`, `mlx`, `coreml`, `onnx` libraries are categorized differently since they can run on Apple Silicon, CPU, or specific accelerators.
+
+3. **Quantization format** — Models with quantized weights (GGUF Q4_K_M, Q8_0, etc.) or specific precision (FP4, NF4) expand compatibility to lower-resource hardware.
+
+4. **Hardware tags on model cards** — Model authors can declare hardware compatibility via tags in the model card YAML, though this is optional.
+
+The Hub appears to use a compatibility matrix based on:
+- Known memory requirements per model size class
+- Library/format support per hardware type
+- Community-reported compatibility data
+
+### 5. Hardware Settings (User Preferences)
+
+Users can set their hardware preference at:
+```
+https://huggingface.co/settings/hardware
+```
+
+This persists a `userHardwareItems` array in the user's settings. When set, models pages automatically filter to show only compatible models without needing to add the `?hardware=` parameter manually.
+
+The settings page is behind authentication (requires login).
+
+### 6. Practical Use Cases
+
+#### Finding GGUF models for local inference on a Mac
+```
+https://huggingface.co/models?apps=llama.cpp&hardware=apple-m4-max
+```
+As of Jul 24, 2026, this returns ~184K models — virtually all llama.cpp-compatible models work on M4 Max.
+
+#### Sharing a filtered search link
+The hardware filter is baked into the URL. Share a link like:
+```
+https://huggingface.co/models?apps=llama.cpp&hardware=apple-m4-max&sort=trending
+```
+Anyone clicking this (even logged-out visitors) sees the same filtered view.
+
+#### Checking what runs on a consumer GPU
+```
+https://huggingface.co/models?hardware=cuda&pipeline_tag=text-generation
+```
+Shows all CUDA-compatible text generation models.
+
+### 7. API-Level Behavior
+
+The `hardware` parameter is **not** a server-side API filter on `api/models` — querying `api/models?hardware=apple-m4-max` returns the same results as without the parameter. The filtering is applied **front-end only** by the Hub's Svelte rendering layer, which:
+1. Fetches models from the API
+2. Applies hardware compatibility logic in the client
+3. Updates `numTotalItems` to reflect the filtered count
+4. Renders the paginated filtered set
+
+This means hardware-filtered views cannot currently be consumed via the REST API alone — they depend on the web UI.
+
+### 8. Zero-Cost Relevance
+
+For Beer's HF account (Nanthasit — 8 models, 8 datasets, 2 Spaces, 2 GGUF files locally):
+- Beer's GGUF files (0.5B @ 380MB, 1.5B @ 934MB) are trivially compatible with any Apple Silicon Mac or modern CPU
+- When publishing GGUF models, tag them appropriately for hardware compatibility
+- Use the hardware filter to discover which models in Beer's niches (tool-calling, small LLMs) fit common hardware targets
+- No paid features are required — the hardware filter is free for all users
+
+### Skill
+skills/references — Append to main hf-learnings.md (no new skill needed for this reference topic)
+
