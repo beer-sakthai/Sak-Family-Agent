@@ -197,5 +197,14 @@
   "hf-datasets-faiss-vector-search-deep-dive",
   "hf-hub-webhooks-and-notifications-api-deep-dive-v2",
   "hf-transformers-inkling",
-  "hf-text-embeddings-inference-v2-deepening"
+  "hf-text-embeddings-inference-v2-deepening",
+  "hf-inference-client-chat-completion-deep-dive-v3",
+  "hf-hub-spaces-as-mcp-servers",
+  "hf-gradio-queue-and-concurrency-optimization-deep-dive",
+  "hf-datasets-500-new-features-agent-traces-multi-shard-shuffle",
+  "hf-datasets-500-agent-traces-json-type",
+  "hf-distilabel",
+  "hf-distilabel-source-code-architecture-deep-dive",
+  "hf-spaces-oauth-app-integration",
+  "hf-hub-sandboxes-deep-dive-v2-architecture-and-api"
 ]
