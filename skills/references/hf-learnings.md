@@ -4177,199 +4177,329 @@ with tempfile.NamedTemporaryFile(mode='w', suffix='.json') as f:
 - Migration guide: https://huggingface.co/docs/huggingface_hub/en/migration
 - CLI reference: https://huggingface.co/docs/huggingface_hub/en/guides/cli
 - Source code: `huggingface_hub/hf_api.py` — 161 public methods in v1.24.0
-- Changelog: https://github.com/huggingface/huggingface_hub/releases
+|- Changelog: https://github.com/huggingface/huggingface_hub/releases
 
-## 2026-07-24: hf-datasets-video-processing — Deep Dive (Topic #115)
+---
+
+## 2026-07-24: hf-hub-cache-deep-dive — Cache System Architecture & Management (Deep Dive on Topic #8 hf-hub-cache-and-env)
 
 ### Summary
-Comprehensive deep-dive into Hugging Face `datasets` library's video support — the `Video` feature class, its `torchcodec` backend (FFmpeg-based), the `VideoFolder` dataset builder for zero-code video dataset creation, WebDataset TAR shards for scaling to millions of videos, and Lance native blob storage. Covers the full data flow: encoding, Arrow storage, decoding, streaming, metadata integration, and memory management.
+Comprehensive deep-dive into the Hugging Face Hub's caching system — the file-based cache (`~/.cache/huggingface/hub/`), its 5 internal structures (blobs, refs, snapshots, trees, .no_exist), symlink-based deduplication, the chunk-based Xet cache layer, environment variables for control, and the full suite of inspection/verification/cleanup tools (`hf cache ls/verify/rm/prune` and Python API `scan_cache_dir`/`delete_revisions`). Covers architecture, disk management strategies, zero-cost optimization patterns, limitations, and production best practices.
 
-### Core Architecture — The Video Feature
+### Architecture Overview
 
-The `Video` feature (`datasets.features.Video`) follows the same architectural pattern as `Image` and `Audio`:
+The HF Hub cache uses a **deduplicated symlink architecture** with two layers:
+
+**1. File-based cache** (`~/.cache/huggingface/hub/`) — the standard Git/LFS-based cache
+**2. Chunk-based Xet cache** (`~/.cache/huggingface/xet/`) — optional chunk-level dedup via `hf_xet`
+
+The cache location is controlled by:
+- `HF_HOME` — base dir (default: `~/.cache/huggingface`)
+- `HF_HUB_CACHE` — hub cache dir (default: `$HF_HOME/hub`)
+- `HF_XET_CACHE` — Xet cache dir (default: `$HF_HOME/xet`)
+- `HF_ASSETS_CACHE` — assets cache (default: `$HF_HOME/assets`)
+- `HF_TOKEN_PATH` — token file (default: `$HF_HOME/token`)
+- Falls back to `$XDG_CACHE_HOME/huggingface` if `HF_HOME` not set
+
+### File-Based Cache: 5 Internal Structures
+
+Each cached repo is stored under a directory named `{repo_type}s--{namespace}--{repo_name}` (e.g. `models--bert-base-uncased`).
+
+#### 1. `blobs/` — Deduplicated file storage
+Stores each unique file by its SHA-256 hash as filename. Files are identified by content hash, so identical files across revisions share a single blob. This is the core of disk deduplication.
 
 ```
-Input Types → encode_example() → Arrow struct<bytes: binary, path: string> → decode_example() → torchcodec.VideoDecoder
+blobs/
+  ├── 403450e234d65943a7dcf7e05a771ce3c92faa84dd07db4ac20f592037a1e4bd  (321 MB)
+  ├── 7cb18dc9bafbfcf74629a4b760af1b160957a83e                        (398 B)
+  └── d7edf6bd2a681fb0175f7735299831ee1b22b812                        (1.4 KB)
 ```
 
-**Arrow storage:** `pa.struct({"bytes": pa.binary(), "path": pa.string()})` — identical to Image/Audio storage.
+#### 2. `refs/` — Branch/tag pointer files
+Maps branch/tag names to commit OIDs. Each ref is a small file whose content is the commit hash it points to. Updated whenever you download the latest version of a branch.
 
-#### Constructor Parameters
+```
+refs/
+  └── main    (contains: "2439f60ef33a0d46d85da5001d52aeda5b00ce9f")
+```
 
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `decode` | bool | `True` | Decode into VideoDecoder objects. `False` yields raw dicts |
-| `stream_index` | int \| None | `None` | Which stream from container (default: "best") |
-| `dimension_order` | Literal["NCHW", "NHWC"] | `"NCHW"` | Frame tensor dimension order |
-| `num_ffmpeg_threads` | int | `1` | FFmpeg decode threads (keep at 1) |
-| `device` | str \| torch.device | `"cpu"` | Decode device (CPU or CUDA) |
-| `seek_mode` | Literal["exact", "approximate"] | `"exact"` | Frame seek accuracy vs. speed |
-| `id` | str \| None | `None` | Feature identifier |
+#### 3. `snapshots/` — Revision checkouts via symlinks
+Contains one subdirectory per downloaded commit hash. Each directory contains symlinks pointing to the actual blobs, organized by filename. The content only exists in `blobs/`; `snapshots/` is purely a view layer.
 
-### Input Types — encode_example()
+```
+snapshots/
+  ├── 2439f60ef33a0d46d85da5001d52aeda5b00ce9f/
+  │   ├── README.md -> ../../blobs/d7edf6bd2a681fb0175f7735299831ee1b22b812
+  │   └── pytorch_model.bin -> ../../blobs/403450e234d65943a7dcf7e05a771ce3c92faa84dd07db4ac20f592037a1e4bd
+  └── bbc77c8132af1cc5cf678da3f1ddf2de43606d48/
+      ├── README.md -> ../../blobs/7cb18dc9bafbfcf74629a4b760af1b160957a83e
+      └── pytorch_model.bin -> ../../blobs/403450e234d65943a7dcf7e05a771ce3c92faa84dd07db4ac20f592037a1e4bd
+```
 
-| Input Type | Behaviour |
-|------------|-----------|
-| `str` | Absolute/relative file path → `{"path": str, "bytes": None}` |
-| `pathlib.Path` | Absolute string via `str(value.absolute())` |
-| `bytes` / `bytearray` | In-memory video bytes → `{"path": None, "bytes": bytes}` |
-| `np.ndarray` | Calls `encode_np_array()` — **NotImplementedError** (stub) |
-| `torchcodec.VideoDecoder` | If has `_hf_encoded` (was decoded from datasets), returns stored dict; otherwise **NotImplementedError** |
-| `dict` | Validated and passed through as-is |
+**Key insight:** `pytorch_model.bin` in both revisions points to the **same blob** — the file is not duplicated on disk.
 
-### Decoding — decode_example()
+#### 4. `trees/` — Cached file listing metadata
+JSON files named by commit hash that cache the list of files a repo contains at that commit. Avoids one network call per file during download. Written by `snapshot_download()`, read by both `snapshot_download()` and `hf_hub_download()`.
 
+```
+trees/
+  ├── 2439f60ef33a0d46d85da5001d52aeda5b00ce9f.json
+  └── bbc77c8132af1cc5cf678da3f1ddf2de43606d48.json
+```
+
+**Incremental benefit:** If a tree is cached, `hf_hub_download()` skips the per-file metadata network call. Enables `IncompleteSnapshotError` detection when offline.
+
+#### 5. `.no_exist/` — Negative cache for optional files
+Stores empty marker files for files that are known not to exist on the Hub (e.g., optional tokenizer configs). Saves one HTTP call per optional file on every subsequent load. Structure mirrors `snapshots/`.
+
+```
+.no_exist/aaaaaa/config_that_does_not_exist.json  (empty file)
+```
+
+### CACHEDIR.TAG
+`huggingface_hub` automatically creates a `CACHEDIR.TAG` file in the cache directory following the Cache Directory Tagging Standard. This tells backup tools (Borg, restic, rsync) to exclude the cache from backups, since it's re-downloadable.
+
+### Symlink Limitations
+
+| Environment | Symlink Support | Behavior |
+|-------------|----------------|----------|
+| Linux/macOS | Native | Full dedup, shared blobs |
+| Windows (Dev Mode) | Supported | Same as Linux |
+| Windows (no Dev Mode) | Fallback | Files copied directly to `snapshots/` — no dedup, larger disk usage |
+| `HF_HUB_DISABLE_SYMLINKS=1` | Forced off | Files copied to snapshots; useful for NAS shared across OSes |
+
+A warning is shown on Windows when symlinks aren't available. Suppress with `HF_HUB_DISABLE_SYMLINKS_WARNING=1`.
+
+### Chunk-Based Caching (Xet)
+
+When `hf_xet` is installed, an additional `xet/` directory appears alongside `hub/`:
+
+```
+~/.cache/huggingface/
+  ├── hub/           # Standard file-based cache
+  └── xet/           # Chunk-based cache (Xet)
+       └── {environment_identifier}/
+            ├── chunk_cache/     # CAS-based byte-range cache (disabled by default)
+            ├── shard_cache/     # Upload-efficient shard metadata (soft limit: 4GB)
+            └── staging/         # Resumable upload workspace
+```
+
+- **chunk_cache**: Caches 64KB chunks from CAS for download. **Disabled by default.** Enable with `HF_XET_CHUNK_CACHE_SIZE_BYTES` (e.g. `=10737418240` for 10GB). Uses random eviction policy when full.
+- **shard_cache**: Caches file-to-chunk mapping metadata for uploads. Default soft limit 4GB (`HF_XET_SHARD_CACHE_SIZE_LIMIT`). Deduplicates uploads across commits.
+- **staging**: Workspace for resumable uploads — persists incomplete uploads across restarts.
+
+The Xet cache is fully integrated with `huggingface_hub` — existing APIs (`scan_cache_dir`, `hf cache rm`) treat it transparently.
+
+### Environment Variables Reference
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `HF_HOME` | `~/.cache/huggingface` | Base directory for all HF data |
+| `HF_HUB_CACHE` | `$HF_HOME/hub` | Model/dataset/spaces cache |
+| `HF_XET_CACHE` | `$HF_HOME/xet` | Xet chunk cache |
+| `HF_ASSETS_CACHE` | `$HF_HOME/assets` | Downstream library assets |
+| `HF_TOKEN_PATH` | `$HF_HOME/token` | Auth token file |
+| `HF_HUB_OFFLINE` | — | `=1` disables all HTTP calls |
+| `HF_HUB_DISABLE_SYMLINKS` | — | Force no-symlink mode |
+| `HF_HUB_DISABLE_SYMLINKS_WARNING` | — | Suppress Windows symlink warning |
+| `HF_HUB_ETAG_TIMEOUT` | 10s | Server response timeout for metadata |
+| `HF_HUB_DOWNLOAD_TIMEOUT` | 10s | Download timeout |
+| `HF_HUB_DISABLE_PROGRESS_BARS` | — | `=1` hides tqdm bars |
+| `HF_HUB_DISABLE_IMPLICIT_TOKEN` | — | `=1` only sends token for write ops |
+| `HF_HUB_DISABLE_TELEMETRY` | — | `=1` disables usage telemetry |
+| `HF_HUB_DISABLE_XET` | — | `=1` disables Xet even if installed |
+| `HF_XET_HIGH_PERFORMANCE` | — | `=1` saturates bandwidth + CPU cores |
+| `HF_XET_CHUNK_CACHE_SIZE_BYTES` | 0 | Chunk cache size (0 = disabled) |
+| `HF_XET_SHARD_CACHE_SIZE_LIMIT` | 4GB | Shard cache soft limit |
+| `HF_XET_RECONSTRUCT_WRITE_SEQUENTIALLY` | — | Sequential disk writes for HDDs |
+
+**Deprecated vars (still work but no longer take precedence):**
+| Old | New |
+|-----|-----|
+| `HUGGINGFACE_HUB_CACHE` | `HF_HUB_CACHE` |
+| `HUGGINGFACE_ASSETS_CACHE` | `HF_ASSETS_CACHE` |
+| `HUGGING_FACE_HUB_TOKEN` | `HF_TOKEN` |
+
+### Cache Inspection Tools
+
+#### CLI: `hf cache ls`
+```bash
+# Summary by repo
+hf cache ls
+
+# With revision details
+hf cache ls --revisions
+
+# Filter by size/access time
+hf cache ls --revisions --filter "size>1GB" --filter "accessed>30d"
+
+# Machine-readable output
+hf cache ls --format json
+hf cache ls --format csv
+
+# Quiet mode (IDs only, pipeable)
+hf cache ls --revisions -q
+
+# Sort and limit
+hf cache ls --sort size:desc --limit 5
+
+# Custom cache dir
+hf cache ls --cache-dir /custom/path
+```
+
+#### Python: `scan_cache_dir()`
 ```python
-def decode_example(self, value, token_per_repo_id=None) -> VideoDecoder:
+from huggingface_hub import scan_cache_dir, delete_revisions
+
+# Scan entire cache
+info = scan_cache_dir()
+print(f"Total size: {info.size_on_disk / 1e9:.1f} GB")
+print(f"Cached repos: {len(info.repos)}")
+
+# Iterate repos, revisions, and files
+for repo in info.repos:
+    print(f"{repo.repo_type}/{repo.repo_id}: {repo.size_on_disk / 1e6:.1f} MB")
+    for revision in repo.revisions:
+        for ref in revision.refs:
+            print(f"  Branch/tag: {ref.name} -> {revision.commit_hash}")
+
+# Delete specific revisions
+strategy = info.delete_revisions(
+    "d78aea13fa7ecd06c29e3e46195d6341255065d5",  # commit hash
+)
+print(f"Would free: {strategy.expected_freed_size_str}")
+strategy.execute()  # Actually delete
 ```
 
-1. If `value` is a string, treat as path; otherwise extract `path`/`bytes` from dict
-2. If `bytes` is not None → `VideoDecoder(bytes_, ...)` (in-memory)
-3. If `bytes` is None and path is local → `VideoDecoder(path, ...)`
-4. If `bytes` is None and path is remote (hf://) → `hf_video_reader(path, ...)` — downloads via `xopen()` then decodes
-5. Stores `{"path": ..., "bytes": ...}` as `video._hf_encoded` for re-encoding
-6. Sets `video.metadata.path` to the original path
+Returns 4 dataclasses:
+- `HFCacheInfo` — complete report with `repos`, `size_on_disk`, `warnings`
+- `CachedRepoInfo` — per-repo info: `repo_id`, `repo_type`, `size_on_disk`, `revisions`
+- `CachedRevisionInfo` — per-revision: `commit_hash`, `refs`, `files`, `size_on_disk`
+- `CachedFileInfo` — per-file: `file_name`, `size_on_disk`, `blob_path`
 
-**Requirement:** `torchcodec` must be installed (`config.TORCHCODEC_AVAILABLE`).
-
-### Storage Casting — cast_storage()
-
-| Source Arrow Type | Conversion |
-|-------------------|------------|
-| `pa.string()` | path → `{"bytes": None, "path": string}` |
-| `pa.binary()` / `pa.large_binary()` | bytes → `{"bytes": binary, "path": None}` |
-| `pa.struct({"bytes": binary, "path": string})` | Any subset; missing fields = null |
-| `pa.list_(*)` | numpy array → `encode_np_array()` — **NotImplementedError** |
-
-### TorchCodec — The Backend
-
-`torchcodec` v0.15.0 wraps FFmpeg (v4–v8) and returns PyTorch tensors directly.
-
+#### `try_to_load_from_cache()` — Check cache without network
 ```python
-from torchcodec.decoders import VideoDecoder
-decoder = VideoDecoder("path/to/video.mp4", device="cpu")
-# or from bytes: VideoDecoder(video_bytes, device="cpu")
+from huggingface_hub import try_to_load_from_cache, _CACHED_NO_EXIST
 
-# Metadata
-decoder.metadata  # num_frames, duration_seconds, codec, fps
+result = try_to_load_from_cache(
+    repo_id="bert-base-uncased",
+    filename="config.json",
+    revision="main"
+)
 
-# Indexing API
-frame = decoder[0]                     # [C, H, W] uint8
-batch = decoder[0:-1:20]               # [N, C, H, W]
-batch = decoder.get_frames_at(indices=[2, 100])  # with PTS/duration
-batch = decoder.get_frames_played_at(seconds=[0.5, 10.4])
+if isinstance(result, str):
+    # File is cached: result is the file path
+    pass
+elif result is _CACHED_NO_EXIST:
+    # File known not to exist (negative cache)
+    pass
+else:
+    # Not cached at all
+    pass
 ```
 
-**Encoding (CPU only):**
-```python
-from torchcodec.encoders import Encoder
-encoder = Encoder()
-vs = encoder.add_video(height=H, width=W, frame_rate=30)
-with encoder.open_file("output.mp4"):
-    vs.add_frames(frames_batch)
-```
-
-**Note:** `encode_torchcodec_video()` and `encode_np_array()` in datasets are stubs — no round-trip encoding from numpy or externally-constructed VideoDecoders.
-
-### VideoFolder — Zero-Code Builder
-
-Directory-structured auto-classification datasets:
-
-```
-folder/train/dog/*.mp4, folder/train/cat/*.mp4
-folder/test/dog/*.mp4,  folder/test/cat/*.mp4
-```
-
-```python
-dataset = load_dataset("path/to/folder")  # auto-detect
-# or: load_dataset("videofolder", data_dir="/path/to/folder")
-```
-
-- Labels inferred from subdirectory names
-- Supports train/test/val splits via directory hierarchy
-- `drop_labels=False` if files are flat/mixed
-
-### Metadata Integration (CSV/JSONL/Parquet)
-
-For captions, bboxes, or multi-video rows, add a metadata file alongside videos:
-
-```
-folder/train/metadata.csv
-folder/train/0001.mp4
-folder/train/0002.mp4
-```
-
-**Single video per row:** `file_name,text` columns
-**Multi-video rows:** `input_file_name`/`output_file_name` or `*_file_names` (list)
-**Multiple video lists:** `videos_file_names` field for array columns
-
-The `file_name` value is the relative path from metadata file's directory to the video file.
-
-### WebDataset — TAR-Based Scaling
-
-For 1000s–millions of videos, group in ~1GB TAR archives:
-
-```python
-dataset = load_dataset("webdataset", data_dir="/path/to/folder", split="train")
-# Columns created per file suffix: "mp4", "json", etc.
-```
-
-Each TAR shard contains videos plus metadata files (.json, .txt). Streams without full extraction.
-
-### Lance Format — Native Blob Storage
-
-```python
-schema = pa.schema([
-    pa.field("caption", pa.utf8()),
-    pa.field("video_blob", pa.large_binary(),
-             metadata={"lance-encoding:blob": "true"}),
-])
-```
-
-- Single `videos.lance/` directory: metadata + video blobs
-- Metadata-only scans skip blobs; on-demand fetch
-- `max_bytes_per_file` for shard size control (~5GB default)
-- Upload to Hub via `api.upload_folder()`
-
-### Remote File Handling — hf_video_reader()
-
-Transparently downloads and decodes video from Hub dataset repos:
-
-```python
-def hf_video_reader(path, token_per_repo_id=None, stream="video",
-                    dimension_order="NCHW", num_ffmpeg_threads=1,
-                    device="cpu", seek_mode="exact") -> VideoDecoder:
-```
-
-Resolves HF URL patterns (`hf://`), downloads via `xopen()` with optional auth, passes to VideoDecoder.
-
-### Memory Management Patterns
-
-- **Deferred decode:** `Video(decode=False)` — store paths only
-- **embed_storage():** Inline all video bytes into Arrow (memory-heavy but self-contained)
-- **token_per_repo_id:** `{"user/private-ds": True}` for private repos
-- **Streaming:** `load_dataset(..., streaming=True)` — decode on-demand per row
-
-### Zero-Cost Patterns
-
-1. **Small-scale:** Local VideoFolder + CSV metadata
-2. **Medium-scale:** Stream from Hub — no full download
-3. **Large-scale:** WebDataset TAR shards — stream without extraction
-4. **Self-contained:** Lance format — single directory artifact
-5. **Memory-constrained:** `Video(decode=False)` decode only accessed rows
-6. **No GPU:** CPU decode default; FFmpeg pre-installed on most Linux
-
-### Dependencies
+### Cache Verification
 
 ```bash
-pip install datasets torchcodec
-# Optional: pip install lancedb
-# FFmpeg v4–v8 required (pre-installed on most Linux)
+# CLI: verify checksums for a specific revision
+hf cache verify meta-llama/Llama-3.2-1B-Instruct
+
+# Verify a specific revision hash
+hf cache verify meta-llama/Llama-3.1-8B-Instruct --revision 0e9e39f249a16976918f6564b8830bc894c89659
 ```
 
-### Source Code References
-- `Video` feature: [`src/datasets/features/video.py`](https://github.com/huggingface/datasets/blob/main/src/datasets/features/video.py)
-- Feature registration: [`src/datasets/features/features.py`](https://github.com/huggingface/datasets/blob/main/src/datasets/features/features.py) (Video import at line 50)
-- TorchCodec: [`github.com/pytorch/torchcodec`](https://github.com/pytorch/torchcodec)
-- Docs: https://huggingface.co/docs/datasets/main/en/video_dataset
+Verification checks that every cached blob's SHA-256 matches the Hub. Reports `CorruptedCacheException` if checksums differ.
 
+### Cache Cleanup
+
+#### CLI: `hf cache rm` — Targeted deletion
+```bash
+# Delete entire repo
+hf cache rm model/bert-base-cased
+
+# Delete specific revision (by hash)
+hf cache rm 8f3ad1c
+
+# Bulk delete via filter pipeline
+hf cache rm $(hf cache ls --filter "accessed>1y" -q) -y
+
+# Preview without deleting
+hf cache rm model/t5-small --dry-run
+
+# Skip confirmation
+hf cache rm model/t5-small -y
+
+# Custom cache dir
+hf cache rm --cache-dir /path model/bert-base-cased
+```
+
+#### CLI: `hf cache prune` — Unreferenced & incomplete cleanup
+```bash
+hf cache prune
+```
+Automatically deletes:
+1. Revisions no longer referenced by any branch or tag (`HEAD` detached leftovers)
+2. Any `.incomplete` files from interrupted downloads
+
+#### Python: `delete_revisions()`
+```python
+from huggingface_hub import scan_cache_dir
+
+info = scan_cache_dir()
+# Build strategy for specific revisions
+strategy = info.delete_revisions("commit_hash_1", "commit_hash_2")
+print(strategy.expected_freed_size_str)
+strategy.execute()
+```
+
+**Deletion strategy:**
+1. Snapshot folder symlinks are deleted
+2. Blobs only referenced by deleted revisions are deleted (shared blobs preserved)
+3. Branch/tag refs for deleted revisions are removed
+4. If all revisions of a repo are deleted, the entire repo directory is removed
+
+### Assets Cache (`cached_assets_path()`)
+For downstream libraries that need to cache non-Hub files (processed data, downloads from external URLs, etc.):
+```python
+from huggingface_hub import cached_assets_path
+
+path = cached_assets_path(
+    library_name="datasets",
+    namespace="SQuAD",
+    subfolder="extracted"
+)
+# Returns: ~/.cache/huggingface/assets/datasets/SQuAD/extracted/
+```
+Structure: `assets/{library}/{namespace}/{subfolder}/`. Integrates with `scan_cache_dir` for unified cache management.
+
+### Zero-Cost Disk Management Strategies
+
+1. **Regular pruning:** `hf cache prune` weekly — recovers space from unreferenced revisions
+2. **Age-based cleanup:** `hf cache rm $(hf cache ls --filter "accessed>30d" -q) -y` — removes stale caches
+3. **Size-based targeting:** `hf cache ls --sort size:desc` — identify largest repos
+4. **Offline mode:** `HF_HUB_OFFLINE=1` speeds up loading by skipping refresh checks
+5. **ETAG timeout tuning:** `HF_HUB_ETAG_TIMEOUT=2` on slow connections to fail fast to cache
+6. **CACHEDIR.TAG:** Already present — backup tools skip the cache automatically
+7. **Shared cache:** Set `HF_HUB_CACHE` to a network drive with `HF_HUB_DISABLE_SYMLINKS=1` for multi-machine setups
+8. **Chunk cache:** Only enable `HF_XET_CHUNK_CACHE_SIZE_BYTES` when iterating same files repeatedly; leave disabled (default) for one-shot downloads
+
+### Comparison: File-based vs Xet Cache
+
+| Dimension | File-based | Xet (chunk-based) |
+|-----------|------------|-------------------|
+| **Granularity** | Entire files (SHA-256) | 64KB chunks |
+| **Dedup scope** | Across revisions of same file | Across files, repos, and revisions |
+| **Download speedup** | Cached files load instantly | Chunks shared across variants |
+| **Upload speedup** | No | Yes (shard cache) |
+| **Disk overhead** | Low (symlinks are cheap) | Medium (chunk index) |
+| **Enabled by default** | Yes | No (unless `hf_xet` installed) |
+| **Best for** | Model weight reuse | Iterative training with similar data |
+
+### Resources
+- Manage cache guide: https://huggingface.co/docs/huggingface_hub/en/guides/manage-cache
+- Cache-system reference: https://huggingface.co/docs/huggingface_hub/en/package_reference/cache
+- Environment variables: https://huggingface.co/docs/huggingface_hub/en/package_reference/environment_variables
+- Xet guide: https://huggingface.co/docs/hub/xet/index
+- `scan_cache_dir` docs: https://huggingface.co/docs/huggingface_hub/main/en/package_reference/cache#huggingface_hub.scan_cache_dir
+- `hf cache` CLI: https://huggingface.co/docs/huggingface_hub/main/en/guides/cli#hf-cache
+- CACHEDIR.TAG standard: https://bford.info/cachedir/
