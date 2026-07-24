@@ -4600,3 +4600,85 @@ api.upload_folder(
 6. **Don't reuse `CommitOperationAdd` objects** — they're mutated during the commit flow
 7. **Check for `RepositoryNotFoundError`** if getting 404s — repo must exist before committing
 8. **For large folders**, batch additions in groups and use `create_pr=True` for safe review
+
+## 2026-07-24: hf-hub-repo-likes-engagement-api — Repo Like/Engagement System (Topic #213)
+
+### Summary
+Deep dive into the Hugging Face Hub's repository "like" engagement system — the social signal system for expressing interest in repos. Unlike GitHub's stars, HF uses a "like" (heart) model with a deliberate anti-spam asymmetry: users can unlike via API but can only like through the web UI. Covers the 3 API methods (`list_liked_repos`, `list_repo_likers`, `unlike`), the REST endpoints behind them, the `UserLikes` and `User` dataclasses, how likes integrate into user profiles, and the relationship between likes, engagement, and the trending/discovery system.
+
+### Key API Surface
+
+**`list_liked_repos(user=None)`** → `UserLikes`
+- REST: `GET /api/users/{user}/likes`
+- Returns all public repos a user has liked, categorized by type (models, datasets, spaces, kernels)
+- If user is None, defaults to the authenticated user (requires token)
+- No auth required when querying a public user's likes
+- Returns `UserLikes(user, total, models, datasets, spaces, kernels)` with repo IDs as strings
+- Response shape from API: Array of `{createdAt, repo: {name, type}}` objects
+
+**`list_repo_likers(repo_id, repo_type=None)`** → `Iterable[User]`
+- REST: `GET /api/{repo_type}s/{repo_id}/likers`
+- Returns an iterable of `User` objects for all users who liked a given repo
+- Paginated (uses the `paginate` helper internally)
+- Works across model, dataset, and space repos
+- Each `User` object provides: username, fullname, avatar_url
+
+**`unlike(repo_id, repo_type=None)`** → `None`
+- REST: `DELETE /api/{repo_type}s/{repo_id}/like`
+- Removes the authenticated user's like from a repo
+- Requires authentication (token)
+- **No symmetric `like()` method exists** — anti-spam measure: "To prevent spam usage, it is not possible to like a repository from a script"
+
+### User Profile Likes Integration
+
+The `User` dataclass (`huggingface_hub.hf_api.User`) exposes engagement metrics:
+| Field | Source | Description |
+|-------|--------|-------------|
+| `num_upvotes` | User profile API | Total upvotes the user has received across their repo contributions |
+| `num_likes` | User profile API | Total number of likes the user has given to other repos |
+| `num_followers` | User profile API | Number of users following this user |
+| `num_following` | User profile API | Number of users this user follows |
+
+These come from the user profile API and are resolved from camelCase Hub API fields (`numUpvotes`, `numLikes`, `numFollowers`, `numFollowing`).
+
+### Anti-Spare Architecture
+
+The like system has a deliberate read-write asymmetry:
+- **Read:** Both `list_liked_repos` and `list_repo_likers` are public, no token required for public data
+- **Write (unlike):** `DELETE` endpoint requires auth, but only removes — no ability to add
+- **Write (like):** Only possible through the web UI at huggingface.co (button click on a repo page)
+- This prevents scripted vote manipulation, bot-driven like campaigns, and engagement farming
+
+### Like Count in Repo Info
+
+The like count for a repo is visible via the web UI and can be obtained via:
+- `api.repo_info(repo_id).likes` — the `RepoInfo` object's `likes` attribute (int)
+- The Hub REST API returns like count in repo metadata: `GET /api/models/{repo_id}` or `/api/datasets/{repo_id}` or `/api/spaces/{repo_id}`
+- Like count is part of `RepoInfo.likes` field (an integer)
+- Likes are counted in the trending/ranking algorithms for discovery
+
+### Relationship to Discussion Reactions
+
+The Hub's discussion/PR system has a separate emoji reaction system (not the same as repo likes):
+- Comments and discussion posts support emoji reactions (👍, ❤️, 🚀, 👀, 🎉, 😕, etc.)
+- These are managed through different API endpoints under `/api/{repo_type}s/{repo_id}/discussions/{num}/reactions`
+- The huggingface_hub library doesn't expose a direct reaction API — reactions are embedded in `DiscussionComment` objects returned by `get_discussion_details()`
+- Each reaction has: `emoji` (string like "+1", "heart", "rocket") and list of users who reacted
+- This is a separate system from the repo "like" system
+
+### Key Insights
+- HF uses "likes" (hearts) not "stars" — the REST endpoint paths use `/like` and `/likers`
+- Unlike GitHub stars, HF's system is read-heavy with deliberate write restrictions
+- The `list_liked_repos` API is useful for recommendation/discovery — "users who liked X also liked Y" patterns
+- `list_repo_likers` can be used for community engagement analysis (who's interested in your repos)
+- The `unlike` method exists primarily for cleanup (removing stale likes programmatically)
+- Like count is a search/sortable field in Hub API queries (e.g., sorting by likes)
+- Like events are not real-time streamed through webhooks (no webhook event for likes unlike GitHub stars)
+- To get likes for your own repos, use `list_repo_likers()` in batches or read from `repo_info().likes`
+
+### Sources
+- Source code: `huggingface_hub/hf_api.py` — `HfApi.list_liked_repos`, `HfApi.list_repo_likers`, `HfApi.unlike`
+- Source code: `huggingface_hub/hf_api.py` — `UserLikes` dataclass, `User` dataclass
+- Hub API docs: https://huggingface.co/docs/hub/en/api
+- huggingface_hub docs: https://huggingface.co/docs/huggingface_hub/package_reference/hf_api
+- Discussion reactions documented in `endpoint_helpers.py` (`DiscussionComment.reactions`)

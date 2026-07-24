@@ -206,5 +206,9 @@
   "hf-distilabel",
   "hf-distilabel-source-code-architecture-deep-dive",
   "hf-spaces-oauth-app-integration",
-  "hf-hub-sandboxes-deep-dive-v2-architecture-and-api"
+  "hf-hub-sandboxes-deep-dive-v2-architecture-and-api",
+  "hf-dataset-card-api-hub-tag-taxonomy-validation-deep-dive",
+  "hf-hub-create-commit-atomic-operations-deep-dive",
+  "hf-hub-repo-management-rest-api-deep-dive",
+  "hf-hub-repo-likes-engagement-api"
 ]
