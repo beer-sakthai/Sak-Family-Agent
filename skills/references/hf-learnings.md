@@ -13826,3 +13826,290 @@ language:
 
 ### Skill
 skills/references — Appended to main hf-learnings.md (no new skill needed for this reference topic)
+
+---
+
+## 2026-07-24: hf-hub-storage-limits-and-plans — Deepening with Storage Buckets (Topic #225v2)
+
+### Summary
+Deep-dive into **Storage Buckets** — a brand-new HF Hub repo type offering S3-compatible, non-versioned, mutable object storage built on the Xet backend. Covers architecture (buckets vs Git repos), CLI commands (`hf buckets create/list/cp/sync/rm`), Python API (`create_bucket`, `batch_bucket_files`, `download_bucket_files`, `sync_bucket`, `copy_files`), S3-compatible API gateway at `https://s3.hf.co/<namespace>`, access patterns (hf-mount NFS/FUSE, volume mounts in Jobs/Spaces, `hf://buckets/` fsspec paths), integrations (pandas, DuckDB, Dask, PyArrow, PySpark, 🤗 Datasets, SkyPilot, DVC, rclone, Inspect AI), CDN pre-warming, pricing, and zero-cost patterns for Beer's workflows.
+
+### Source
+- Storage Buckets docs: https://huggingface.co/docs/hub/en/storage-buckets
+- S3 API docs: https://huggingface.co/docs/hub/en/storage-buckets-s3
+- Access Patterns: https://huggingface.co/docs/hub/en/storage-buckets-access
+- Integrations: https://huggingface.co/docs/hub/en/storage-buckets-integrations
+- HF Storage pricing: https://hf.co/storage
+- HF Pricing page: https://huggingface.co/pricing
+- SkyPilot + HF blog: https://huggingface.co/blog/skypilot-hf-storage
+
+### 1. What Are Storage Buckets?
+
+Storage Buckets are a **new repo type** on the Hugging Face Hub providing S3-like object storage, powered by the Xet storage backend. Unlike Git-based repositories (models, datasets, Spaces), buckets are **non-versioned** and **mutable** — files overwrite in place. Designed for:
+
+- Training checkpoints and logs
+- Data processing pipeline intermediates
+- Agent scratch storage (tool outputs, traces, working memory)
+- Rolling backups (old files truly gone when deleted)
+- Large dataset staging before promoting to a versioned repo
+
+### 2. Architecture: Buckets vs Git Repos
+
+| Feature | Git Repos | Storage Buckets |
+|---|---|---|
+| Versioning | Full Git history | None (mutable, overwrite-in-place) |
+| Types | Models, datasets, Spaces | Standalone bucket |
+| Primary use | Publishing finished artifacts | Working / intermediate data |
+| Operations | Hub API, Git push/pull | S3-like sync, cp, rm |
+| Deduplication | Xet chunk-level | Xet chunk-level |
+| Pull Requests | Yes | No |
+| Cards | Model/Dataset cards | Plain README rendered |
+| LFS management | Complex (history rewrite, super-squash) | None (delete = immediate free) |
+
+### 3. CLI Usage
+
+```bash
+# Create a bucket
+hf buckets create my-bucket
+hf buckets create my-org/shared-bucket --private
+
+# List contents with human-readable sizes
+hf buckets list julien-c/my-training-bucket -h
+hf buckets list julien-c/my-training-bucket --tree -h -R
+
+# Upload individual files
+hf buckets cp ./model.safetensors hf://buckets/username/my-bucket/models/model.safetensors
+
+# Pipe from stdin
+cat config.json | hf buckets cp - hf://buckets/username/my-bucket/config.json
+
+# Download to stdout and pipe
+hf buckets cp hf://buckets/username/my-bucket/config.json - | jq .
+
+# Directory sync (rsync-like)
+hf buckets sync ./data hf://buckets/username/my-bucket/data
+hf buckets sync ./data hf://buckets/username/my-bucket/data --delete  # mirror
+hf buckets sync ./data hf://buckets/username/my-bucket/data --dry-run  # preview
+hf buckets sync ./data hf://buckets/username/my-bucket/data --plan sync-plan.jsonl  # plan then apply
+
+# Short alias
+hf sync ./checkpoints hf://buckets/my-org/training-run-42/checkpoints
+
+# Delete (IMMEDIATE — no undo)
+hf buckets rm username/my-bucket/old-model.bin
+hf buckets rm username/my-bucket/logs/ --recursive
+hf buckets rm username/my-bucket/checkpoints/ --recursive --dry-run
+
+# Server-side copy between repos/buckets (instant via Xet chunk hashes)
+hf buckets cp hf://datasets/HuggingFaceFW/fineweb/data hf://buckets/username/fineweb-data
+```
+
+### 4. Python API
+
+```python
+from huggingface_hub import create_bucket, batch_bucket_files, download_bucket_files, sync_bucket, HfApi
+
+# Create
+create_bucket("my-bucket", private=True)
+
+# Upload in batch
+batch_bucket_files("username/my-bucket", add=[
+    ("./model.safetensors", "models/model.safetensors"),
+    ("./config.json", "models/config.json"),
+])
+
+# Download
+download_bucket_files("username/my-bucket", files=[
+    ("models/model.safetensors", "./local/model.safetensors"),
+    ("config.json", "./local/config.json"),
+])
+
+# Sync directories
+sync_bucket("./data", "hf://buckets/username/my-bucket/data")
+sync_bucket("hf://buckets/username/my-bucket/data", "./data")  # reverse direction
+
+# Server-side copy
+HfApi().copy_files("hf://datasets/HuggingFaceFW/fineweb/data", "hf://buckets/username/fineweb-data")
+```
+
+### 5. S3-Compatible API
+
+The gateway at `https://s3.hf.co/<namespace>` lets existing S3 tooling talk to buckets.
+
+**Generate credentials:** User Access Token > dropdown > "Generate S3 credentials" → `HFAK...` key + secret.
+
+**AWS CLI profile:**
+```ini
+[profile hf]
+region = us-east-1
+endpoint_url = https://s3.hf.co/<namespace>
+s3 =
+    addressing_style = path
+    multipart_threshold = 2GB
+    multipart_chunksize = 2GB
+request_checksum_calculation = when_required
+response_checksum_validation = when_required
+```
+
+**boto3:**
+```python
+import boto3
+from botocore.config import Config
+
+s3 = boto3.client("s3",
+    endpoint_url="https://s3.hf.co/<namespace>",
+    aws_access_key_id="HFAK...",
+    aws_secret_access_key="...",
+    config=Config(region_name="us-east-1",
+        s3={"addressing_style": "path"},
+        request_checksum_calculation="when_required",
+        response_checksum_validation="when_required",
+    ),
+)
+s3.upload_file("model.safetensors", "my-bucket", "models/model.safetensors")
+```
+
+**DuckDB (via httpfs):**
+```sql
+INSTALL httpfs; LOAD httpfs;
+CREATE SECRET hf (TYPE s3, KEY_ID 'HFAK...', SECRET '...',
+    ENDPOINT 's3.hf.co/<namespace>', URL_STYLE 'path', REGION 'us-east-1');
+SELECT * FROM read_parquet('s3://my-bucket/data.parquet');
+```
+
+**rclone** (migrate from any S3 source):
+```ini
+[hf]
+type = s3
+provider = Other
+endpoint = https://s3.hf.co/<namespace>
+access_key_id = HFAK...
+secret_access_key = ...
+region = us-east-1
+force_path_style = true
+list_version = 2
+upload_cutoff = 2G
+chunk_size = 2G
+```
+```bash
+rclone copy aws:my-source-bucket hf:my-bucket --progress
+```
+
+**DVC** (version data in git, store in bucket):
+```bash
+dvc remote add -d hf-bucket s3://my-bucket/dvc-store
+dvc remote modify hf-bucket endpointurl https://s3.hf.co/<namespace>
+dvc remote modify hf-bucket region us-east-1
+```
+
+### 6. Access Patterns
+
+| Method | Best For | Details |
+|---|---|---|
+| **hf-mount** | Any tool — mount as local FS | `brew install hf-mount; hf-mount start bucket username/my-bucket /mnt/data` |
+| **Volume mounts** | HF Jobs & Spaces | Managed by platform, no extra setup |
+| **hf:// paths** (fsspec) | Python data tools | pandas, DuckDB, Dask, PyArrow, PySpark |
+| **CLI sync** | Batch transfers, backups | `hf buckets sync` / `hf sync` |
+| **S3 API** | Existing S3 tooling | AWS CLI, boto3, s5cmd, rclone, DVC |
+
+### 7. Integrations
+
+**pandas:**
+```python
+import pandas as pd
+df = pd.read_parquet("hf://buckets/username/my-bucket/data.parquet")
+df.to_parquet("hf://buckets/username/my-bucket/output.parquet")
+```
+
+**Dask:**
+```python
+import dask.dataframe as dd
+df = dd.read_parquet("hf://buckets/username/my-bucket/data.parquet")
+```
+
+**PyArrow:**
+```python
+import pyarrow.parquet as pq
+table = pq.read_table("hf://buckets/username/my-bucket/data.parquet")
+```
+
+**🤗 Datasets:**
+```python
+from datasets import load_dataset
+ds = load_dataset("buckets/username/my-bucket", data_files=["data.parquet"])
+```
+
+**SkyPilot** (mount across 20+ clouds):
+```yaml
+# qwen-sft.yaml
+file_mounts:
+  /base-model:
+    source: hf://Qwen/Qwen2.5-3B
+    store: hf
+    mode: MOUNT
+  /checkpoints:
+    source: hf://buckets/username/qwen-sft
+    store: hf
+    mode: MOUNT
+```
+```bash
+pip install "skypilot[huggingface]"
+hf auth login
+sky launch qwen-sft.yaml
+```
+
+**PySpark:**
+```python
+spark.read.format("huggingface") \
+    .option("data_files", '["data.parquet"]') \
+    .load("buckets/username/my-bucket")
+```
+
+**Direct file ops (fsspec):**
+```python
+from huggingface_hub import hffs
+
+with hffs.open("buckets/username/my-bucket/hello.txt", "w") as f:
+    f.write("Hello world!")
+hffs.cp("buckets/username/my-bucket/hello.txt", "buckets/username/my-bucket/hello2.txt")
+hffs.rm("buckets/username/my-bucket/hello2.txt")
+files = hffs.ls("buckets/username/my-bucket")
+```
+
+### 8. S3 Limitations (Differences from AWS S3)
+
+- No ACLs, bucket policies, object tagging, versioning, lifecycle rules, SSE
+- Only `ListObjectsV2` supported (not V1)
+- No cross-namespace server-side copy
+- No `UploadPartCopy` (copying a part from existing object into multipart upload)
+- Conditional requests: `If-Match`/`If-None-Match` on `PutObject` and `CopyObject` only, not on `GetObject`
+- Multipart uploads expire after 7 days if never completed/aborted
+- User metadata (`x-amz-meta-*`) not stored
+- Single-region gateway (improved via CDN pre-warming)
+- Object key restrictions: no leading/trailing `/`, no `//`, no `../`, no `./`, no `..`, no `\` or `\0`
+
+### 9. CDN Pre-Warming
+
+Buckets can be pre-warmed at creation to cache data at edge locations near specific cloud providers/regions. Useful for training clusters, multi-region pipelines, and distributing large artifacts worldwide. See hf.co/storage for available regions.
+
+### 10. Use Cases Relevant to Beer
+
+1. **Scratch storage for model testing** — no Git history bloat from iterative experiments
+2. **Training checkpoint sync** — `hf sync ./checkpoints hf://buckets/beer/experiments` with dedup
+3. **Dataset staging** — process data in a bucket, promote to versioned Dataset repo when final
+4. **Agent scratch storage** — Hermes/Sak agents could use buckets for intermediate results
+5. **Rolling backups** of Skills/Memory — delete old backups without history penalties
+
+### 11. Linking Models to Buckets
+
+Add to model card YAML:
+```yaml
+buckets:
+- my-org/my-bucket
+```
+
+This creates a two-way link: linked models appear on the bucket page, and the bucket appears as a tag on the model page.
+
+### Skill
+mlops/hf-hub-storage-limits — SKILL.md updated with full Storage Buckets documentation
+
