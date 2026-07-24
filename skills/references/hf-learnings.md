@@ -6372,3 +6372,13 @@ api.upload_folder(
 
 ### Skill
 huggingface-hub — references/hf-learnings.md
+
+## 2026-07-25: hf-hub-repo-lifecycle-management — Repository CRUD & Settings API (Topic #136)
+
+### Summary
+Comprehensive deep-dive into the Hugging Face Hub repository lifecycle management API — `create_repo()`, `delete_repo()`, `repo_info()`, `repo_exists()`, `update_repo_settings()`, `move_repo()`, `duplicate_repo()`, and `super_squash_history()`. Covers all 8 methods with full parameter docs, error handling, data models, REST API equivalents, free-tier constraints, and 4 practical automation patterns. Researched from `huggingface_hub/hf_api.py` source code (v1.24.0+).
+
+Full deep-dive: `mlops/huggingface-hub/references/hf-learnings.md` (Topic #136)
+
+### Skill
+huggingface-hub — references/hf-learnings.md

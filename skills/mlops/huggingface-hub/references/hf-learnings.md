@@ -1795,5 +1795,705 @@ Re-run `upload_folder()` with same args. Already-committed files are detected vi
 - Xet docs: https://huggingface.co/docs/hub/en/xet/index
 - `upload_folder` reference: https://huggingface.co/docs/huggingface_hub/package_reference/hf_api#huggingface_hub.HfApi.upload_folder
 
+## 2026-07-25: hf-hub-repo-lifecycle-management — Repository CRUD & Settings API (Topic #136)
+
+### Summary
+Comprehensive deep-dive into the Hugging Face Hub repository lifecycle management API — creating, reading, updating, deleting, moving, duplicating, and squashing repositories via `huggingface_hub`'s `HfApi` class and the underlying REST API. Covers all six core methods plus settings management, with full parameter documentation, error handling, data models, free-tier constraints, and practical patterns for automated repo management. Source: `huggingface_hub/hf_api.py` on GitHub (v1.24.0+).
+
+### Core Architecture
+
+```
+Repository Lifecycle
+┌────────────────────────────────────────────────────────┐
+│                    HfApi Repo Methods                   │
+├──────────────┬──────────────────┬──────────────────────┤
+│  Creation     │  Reading         │  Modification        │
+├──────────────┼──────────────────┼──────────────────────┤
+│ create_repo() │ repo_info()      │ update_repo_settings │
+│ duplicate_    │ repo_exists()    │ move_repo()          │
+│  repo()      │                  │ super_squash_history │
+│              │                  │ delete_repo()        │
+└──────────────┴──────────────────┴──────────────────────┘
+```
+
+All methods are on a single `HfApi()` instance. Authentication via `HF_TOKEN` env var, cached token file, or explicit `token=` parameter. Default `repo_type` is `"model"`.
+
+---
+
+### 1. `create_repo()` — Repository Creation
+
+The universal creation method for all three repo types (models, datasets, Spaces). There is **no** separate `create_model()` / `create_dataset()` / `create_space()` — everything flows through this single method.
+
+```python
+from huggingface_hub import HfApi, SpaceHardware, SpaceStorage, Volume
+
+api = HfApi()
+
+# Minimal model repo
+url = api.create_repo("user/my-model")
+
+# Private dataset repo
+url = api.create_repo("user/my-dataset", repo_type="dataset", private=True, exist_ok=True)
+
+# Gradio Space with hardware and volumes
+url = api.create_repo(
+    "user/my-space",
+    repo_type="space",
+    space_sdk="gradio",
+    space_hardware=SpaceHardware.CPU_BASIC,
+    space_volumes=[
+        Volume(type="bucket", source="my-bucket", mount_path="/data")
+    ],
+)
+```
+
+#### All Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `repo_id` | `str` | required | `namespace/name` or just `name` (uses your account) |
+| `token` | `str\|bool\|None` | cached | Auth token |
+| `private` | `bool\|None` | `None` | `True` = private. Cannot use with `visibility`. |
+| `visibility` | `Literal["public","private","protected"]\|None` | `None` | Explicit visibility (`"protected"` is Space-only) |
+| `repo_type` | `str\|None` | `"model"` | `"model"`, `"dataset"`, `"space"` |
+| `exist_ok` | `bool` | `False` | If `True`, no error if repo already exists |
+| `resource_group_id` | `str\|None` | `None` | Enterprise Hub resource group |
+| `region` | `Literal["us","eu"]\|None` | `None` | Storage region (requires Team plan+) |
+| `space_sdk` | `str\|None` | `None` | Space SDK: `"gradio"`, `"streamlit"`, `"docker"`, `"static"` |
+| `space_hardware` | `SpaceHardware\|None` | `CPU_BASIC` | Space hardware tier |
+| `space_storage` | `SpaceStorage\|None` | `None` | **Deprecated** — use volumes |
+| `space_sleep_time` | `int\|None` | `None` | Inactivity timeout (seconds). `-1` = never sleep (paid only) |
+| `space_secrets` | `list[dict]\|None` | `None` | `[{"key": "K", "value": "V", "description": "..."}]` |
+| `space_variables` | `list[dict]\|None` | `None` | Public env vars (same format as secrets) |
+| `space_volumes` | `list[Volume]\|None` | `None` | Mounted volumes at creation |
+| `space_template` | `str\|None` | `None` | Seed from official Space template |
+
+#### Returns: `RepoUrl`
+
+`RepoUrl` is a subclass of `str` containing the repo URL, plus:
+- `endpoint` — the HF endpoint URL
+- `repo_type` — model/dataset/space
+- `repo_id` — full `namespace/name`
+
+```python
+url = api.create_repo("user/my-model")
+str(url)              # "https://huggingface.co/user/my-model"
+url.endpoint          # "https://huggingface.co"
+url.repo_type         # "model"
+url.repo_id           # "user/my-model"
+```
+
+#### Error Handling
+
+| Error | Status | When |
+|-------|--------|------|
+| `HfHubHTTPError` (409) + `exist_ok=True` | Silently returns existing repo URL | Repo already exists |
+| `HfHubHTTPError` (409) + `exist_ok=False` | Raises `HfHubHTTPError` | Repo already exists |
+| `HfHubHTTPError` (401) | Insufficient token scope | JWT token without create scope |
+| `HfHubHTTPError` (402) | Payment required | Gradio/Docker Space for free user (Spaces quota) |
+| `HfHubHTTPError` (403) | No write permission | Can't create in that namespace |
+| `ValueError` | Invalid repo type | Not in `REPO_TYPES_WITH_KERNEL` |
+| `ValueError` | Missing `space_sdk` | `repo_type="space"` without specifying SDK |
+| `ValueError` | Invalid Space SDK | Not in `SPACES_SDK_TYPES` |
+
+**Race condition retry:** If the Hub returns 409 with "another conflicting operation is in progress", `create_repo()` automatically retries (infinite loop with no backoff — server-side concurrency guard).
+
+#### `exist_ok` Behavior (Deep Dive)
+
+When `exist_ok=True` and the repo already exists, `create_repo()` accepts:
+- **409 Conflict** — directly returns without raising (fast path, most common)
+- **401 / 402 / 403** — Falls back to calling `repo_info()` to verify existence; if the repo exists, returns its URL; if not, re-raises the original error
+
+This means `exist_ok=True` works even when the token lacks create permissions, as long as the repo already exists and you have read access.
+
+#### Space Template Support
+
+Space templates allow seeding from official templates:
+
+```python
+# List available templates
+templates = api.list_space_templates()
+
+# Create Space from template (by name or repo_id)
+url = api.create_repo(
+    "user/jupyter-space",
+    repo_type="space",
+    space_template="JupyterLab",  # or "SpacesExamples/jupyterlab"
+)
+```
+
+Template resolution logic:
+1. First matches against `template.repo_id` (exact)
+2. Then matches against `template.name` (case-insensitive)
+3. If the template recommends private visibility and user hasn't set visibility, defaults to private
+4. `space_sdk` is automatically set from the template (cannot be overridden)
+
+#### Free Tier Constraints
+
+| Constraint | Detail |
+|------------|--------|
+| **Cost** | Free — all `create_repo()` operations are free |
+| **Space creation limit** | Free tier can create unlimited public Spaces, but paid hardware requires PRO |
+| **Space SDUs** | Free CPU-Basic Spaces get 2 SDU (shared CPU, 16GB RAM, 50GB ephemeral disk) |
+| **Private repos** | Free tier supports unlimited private repos (model, dataset, space) |
+| **Storage bucket repos** | Free tier gets 50GB per bucket in us region |
+| **`region=` parameter** | Requires Team plan — free accounts get default (us) |
+| **`resource_group_id`** | Enterprise Hub only |
+
+---
+
+### 2. `delete_repo()` — Repository Deletion
+
+**IRREVERSIBLE.** Deletes the repo and all its contents from the Hub. No trash/recycle bin.
+
+```python
+# Minimal delete
+api.delete_repo("user/my-model")
+
+# With safety
+api.delete_repo("user/my-model", repo_type="dataset", missing_ok=True)
+
+# Cannot be undone — no confirmation prompt
+```
+
+#### Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `repo_id` | `str` | required | `namespace/name` |
+| `token` | `str\|bool\|None` | cached | Auth token |
+| `repo_type` | `str\|None` | `"model"` | `"model"`, `"dataset"`, `"space"` |
+| `missing_ok` | `bool` | `False` | If `True`, no error if repo doesn't exist |
+
+#### REST Equivalent
+
+```
+DELETE https://huggingface.co/api/repos/{repo_type_prefix}{repo_id}
+```
+
+Server response on success is 200 OK with `{"message": "ok"}`. On failure:
+- 404 → `RepositoryNotFoundError` (if `missing_ok=False`)
+- 403 → insufficient permissions
+
+#### Practical Pattern: Cleanup Script
+
+```python
+def safe_delete(api, repo_id, repo_type=None):
+    """Delete repo with confirmation-style safety."""
+    try:
+        info = api.repo_info(repo_id, repo_type=repo_type)
+        print(f"Deleting: {repo_id} ({info.sha[-8:] if hasattr(info, 'sha') else 'unknown'})")
+        api.delete_repo(repo_id, repo_type=repo_type, missing_ok=True)
+        print(f"✓ Deleted {repo_id}")
+    except Exception as e:
+        print(f"✗ Could not delete {repo_id}: {e}")
+```
+
+---
+
+### 3. `repo_info()` & `repo_exists()` — Reading Repository State
+
+#### `repo_info(repo_id, ...)`
+
+Returns a structured data object with full repository metadata. The return type depends on `repo_type`:
+
+| `repo_type` | Return Type | Key Fields |
+|-------------|-------------|------------|
+| `None` / `"model"` | `ModelInfo` | `sha`, `pipeline_tag`, `config`, `siblings`, `safetensors`, `cardData`, `tags`, `downloads`, `likes` |
+| `"dataset"` | `DatasetInfo` | `sha`, `siblings`, `cardData`, `tags`, `downloads`, `likes`, `dataset_info` |
+| `"space"` | `SpaceInfo` | `sha`, `sdk`, `runtime`, `siblings`, `cardData`, `tags` |
+| `"kernel"` | `KernelInfo` | Limited fields, no expand/files_metadata |
+
+```python
+info = api.repo_info("user/my-model", repo_type="model")
+
+# Basic properties
+info.id              # "user/my-model"
+info.sha             # Current commit OID
+info.private         # bool
+info.downloads       # int
+info.likes           # int
+info.pipeline_tag    # "text-generation"
+info.tags            # ["transformers", "pytorch", ...]
+info.card_data       # ModelCardData (parsed YAML frontmatter)
+
+# Files listing (requires files_metadata=True)
+info = api.repo_info("user/my-model", files_metadata=True)
+for sibling in info.siblings:
+    sibling.rfilename   # "model.safetensors"
+    sibling.size        # File size in bytes
+    if sibling.lfs:
+        sibling.lfs["sha256"]   # LFS pointer SHA256
+        sibling.lfs["size"]     # Actual content size
+```
+
+#### `expand` Parameter
+
+The `expand` parameter controls which additional properties to fetch. This is more efficient than fetching all properties when you only need specific ones.
+
+```python
+# Get trending score and inference details
+info = api.repo_info(
+    "user/my-model",
+    expand=["trendingScore", "inference"]
+)
+info.trending_score   # float
+info.inference        # InferenceStatus
+```
+
+Available expand properties differ by repo type. Common ones:
+- `trendingScore` — trending score (model, dataset, space)
+- `inference` — inference status and widget config (model)
+- `cardMetadata` — full card YAML metadata (model, dataset)
+- `stats` — download/visit statistics (dataset, space)
+
+#### `repo_exists(repo_id, ...)`
+
+Simple boolean check — returns `True`/`False`, never raises.
+
+```python
+if api.repo_exists("facebook/opt-125m"):
+    print("Exists!")
+else:
+    print("Does not exist or is private")
+
+# Works with all repo types
+if api.repo_exists("user/my-space", repo_type="space"):
+    print("Space exists")
+```
+
+**Important:** Returns `False` for private repos you don't have access to (same as non-existent repos). Use `repo_info()` with proper auth to distinguish between "doesn't exist" and "exists but private."
+
+---
+
+### 4. `update_repo_settings()` — Repo Settings Management
+
+Updates repository visibility and gated access settings after creation.
+
+```python
+api.update_repo_settings(
+    "user/my-model",
+    private=False,           # Make public
+    gated="auto",            # Enable gated access (auto-approve)
+)
+
+api.update_repo_settings(
+    "user/my-space",
+    visibility="protected",  # Space-specific: visible but not forkable
+)
+```
+
+#### Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `repo_id` | `str` | required | `namespace/name` |
+| `gated` | `Literal["auto","manual",False]\|None` | `None` | Gated access mode |
+| `private` | `bool\|None` | `None` | `True` = make private. Cannot use with `visibility`. |
+| `visibility` | `Literal["public","private","protected"]\|None` | `None` | Explicit visibility |
+| `token` | `str\|bool\|None` | cached | Auth token |
+| `repo_type` | `str\|None` | `"model"` | `"model"`, `"dataset"`, `"space"` |
+
+#### Gated Access Modes
+
+| Mode | Behavior | Use Case |
+|------|----------|----------|
+| `False` | Anyone can access without signing in | Default, fully open |
+| `"auto"` | Must sign in and accept terms; auto-approved | Models with terms of use |
+| `"manual"` | Must sign in and request access; manually approved by owner | Models under review, sensitive datasets |
+
+```python
+# Enable manual gated access
+api.update_repo_settings(
+    "user/sensitive-model",
+    gated="manual",
+)
+
+# Disable gated access (fully open)
+api.update_repo_settings(
+    "user/sensitive-model",
+    gated=False,
+)
+```
+
+#### REST Equivalent
+
+```
+PUT https://huggingface.co/api/{repo_type}s/{repo_id}/settings
+Content-Type: application/json
+
+{
+  "visibility": "public",
+  "gated": "auto"
+}
+```
+
+#### Error Handling
+
+| Error | When |
+|-------|------|
+| `ValueError` | Invalid `gated` value (not "auto", "manual", or False) |
+| `ValueError` | Invalid `repo_type` |
+| `ValueError` | No settings provided (empty payload) |
+| `RepositoryNotFoundError` | Repo doesn't exist or no access |
+
+---
+
+### 5. `move_repo()` — Repository Rename & Transfer
+
+Renames a repo or transfers it to another namespace. Supports all repo types.
+
+```python
+# Rename within same namespace
+api.move_repo("user/old-name", "user/new-name")
+
+# Transfer to another user/organization
+api.move_repo("user/my-model", "other-user/my-model")
+```
+
+#### Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `from_id` | `str` | required | Current `namespace/name` |
+| `to_id` | `str` | required | Target `namespace/name` |
+| `repo_type` | `str\|None` | `"model"` | Must be explicit for non-model repos |
+| `token` | `str\|bool\|None` | cached | Auth token |
+
+#### Limitations
+
+- Cannot move to a namespace you don't own
+- The `from_id` and `to_id` must both be in `namespace/name` format (with `/`)
+- Redirections from old URL are set up automatically by the Hub
+- Moving a repo does NOT affect downloads/forks — redirects are in place
+
+#### REST Equivalent
+
+```
+POST https://huggingface.co/api/repos/move
+Content-Type: application/json
+
+{
+  "fromRepo": "user/old-name",
+  "toRepo": "user/new-name",
+  "type": "model"
+}
+```
+
+#### Error Handling
+
+| Error | When |
+|-------|------|
+| `ValueError` | `from_id` or `to_id` missing `/` separator |
+| `RepositoryNotFoundError` | Source repo doesn't exist |
+| `HfHubHTTPError` (403) | No permission on source or target namespace |
+
+---
+
+### 6. `duplicate_repo()` — Server-Side Repository Cloning
+
+Full server-side copy preserving complete git history and LFS objects. No local download/upload needed. Zero cost.
+
+```python
+from huggingface_hub import duplicate_repo, SpaceHardware
+
+# Duplicate a model to your account (same name)
+url = duplicate_repo("google/gemma-7b")
+# → RepoUrl('https://huggingface.co/youruser/gemma-7b')
+
+# Duplicate with custom name
+url = duplicate_repo("google/gemma-7b", to_id="myorg/my-gemma-7b")
+
+# Duplicate a dataset
+url = duplicate_repo("openai/gdpval", to_id="myorg/my-gdpval", repo_type="dataset")
+
+# Duplicate a Space with upgraded hardware
+url = duplicate_repo(
+    "multimodalart/dreambooth-training",
+    repo_type="space",
+    space_hardware="t4-medium",
+)
+```
+
+#### Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `from_id` | `str` | required | Source repo ID |
+| `to_id` | `str\|None` | `None` | Target repo ID (`None` = same name under your account) |
+| `repo_type` | `str\|None` | `"model"` | Repo type |
+| `private` | `bool\|None` | `None` | Override privacy (default: same as source) |
+| `visibility` | `str\|None` | `None` | Explicit visibility override |
+| `token` | `str\|bool\|None` | cached | Auth token |
+| `exist_ok` | `bool` | `False` | Don't error if target exists |
+| `space_hardware` | `SpaceHardware\|None` | Same as source | **Space only** — override hardware |
+| `space_storage` | `SpaceStorage\|None` | Same as source | **Deprecated** — use volumes |
+| `space_sleep_time` | `int\|None` | Same as source | **Space only** — override sleep time |
+| `space_secrets` | `list[dict]\|None` | Not copied | **Space only** — set new secrets |
+| `space_variables` | `list[dict]\|None` | Not copied | **Space only** — set new variables |
+| `space_volumes` | `list[Volume]\|None` | Same as source | **Space only** — override volumes |
+
+**Critical note:** Secrets are NEVER copied from the source Space for security reasons. Set them explicitly via `space_secrets=`.
+
+#### Free Tier Notes
+
+| Aspect | Detail |
+|--------|--------|
+| **Cost** | Free — server-side operation |
+| **Disk usage** | The duplicate is a new repo, so it uses separate storage quota |
+| **Space hardware** | Free tier is limited to `CPU_BASIC` unless you have PRO |
+| **Privacy** | Private repos can be duplicated to private repos only (unless you own both) |
+
+---
+
+### 7. `super_squash_history()` — Commit History Compaction
+
+Collapses all commits on a branch into a single commit. Useful for repos with bloated git history from many small uploads.
+
+```python
+api.super_squash_history("user/my-model", commit_message="Initial release")
+
+# Squash a specific branch
+api.super_squash_history("user/my-model", branch="dev", commit_message="Squash dev")
+
+# Works on all repo types
+api.super_squash_history("user/my-dataset", repo_type="dataset")
+```
+
+#### Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `repo_id` | `str` | required | `namespace/name` |
+| `branch` | `str\|None` | `None` | Branch to squash (default: `main`) |
+| `commit_message` | `str\|None` | `None` | Message for the squashed commit |
+| `repo_type` | `str\|None` | `"model"` | Repo type |
+| `token` | `str\|bool\|None` | cached | Auth token |
+
+#### Warnings
+
+- **IRREVERSIBLE** — history cannot be retrieved after squashing
+- **Breaks merge compatibility** — once a branch is squashed, it cannot be merged into another branch (divergent history)
+- **Only works from HEAD** — cannot squash from a non-tip revision
+- **Cannot squash tags** — `BadRequestError` if you pass a tag as branch
+
+#### When to Squash
+
+1. **Before uploading large model files** — reduces LFS storage by removing old unreferenced LFS OIDs (see Topic #98, LFS deep-dive)
+2. **After many small dataset updates** — cleans up hundreds of tiny commits
+3. **Before making a repo public** — removes sensitive info accidentally committed and later removed
+
+```python
+# Typical workflow: upload → squash → upload more
+api.upload_folder(folder_path="./checkpoints", repo_id="user/my-model")
+api.super_squash_history("user/my-model", commit_message="Initial checkpoint")
+api.upload_folder(folder_path="./final-model", repo_id="user/my-model")
+```
+
+---
+
+### 8. REST API Reference (Raw Endpoints)
+
+All `HfApi` methods map to specific REST endpoints. Here are the direct equivalents for scripting (e.g., with `curl` or `httpx`):
+
+| Operation | Method | Endpoint | Auth Required |
+|-----------|--------|----------|---------------|
+| Create repo | `POST` | `/api/repos/create` | Yes (write scope) |
+| Delete repo | `DELETE` | `/api/{repo_type}s/{repo_id}` | Yes (write scope) |
+| Repo info | `GET` | `/api/{repo_type}s/{repo_id}` | No for public |
+| Repo exists | `GET` | `/api/{repo_type}s/{repo_id}` | No for public |
+| Update settings | `PUT` | `/api/{repo_type}s/{repo_id}/settings` | Yes (write scope) |
+| Move repo | `POST` | `/api/repos/move` | Yes (admin on both) |
+| Duplicate repo | `POST` | `/api/{repo_type}s/{from_id}/duplicate` | Yes (write scope) |
+| Squash history | `POST` | `/api/{repo_type}s/{repo_id}/super-squash` | Yes (write scope) |
+
+Repo type URL prefixes: `""` (model), `/datasets/`, `/spaces/`.
+
+Example direct API call:
+```bash
+# Create a model repo
+curl -X POST "https://huggingface.co/api/repos/create" \
+  -H "Authorization: Bearer hf_..." \
+  -H "Content-Type: application/json" \
+  -d '{"name": "my-model", "organization": "myuser", "type": "model", "visibility": "public"}'
+
+# Get repo info
+curl "https://huggingface.co/api/models/meta-llama/Llama-3.2-1B"
+
+# Update repo settings (make private)
+curl -X PUT "https://huggingface.co/api/models/myuser/my-model/settings" \
+  -H "Authorization: Bearer hf_..." \
+  -H "Content-Type: application/json" \
+  -d '{"visibility": "private"}'
+```
+
+---
+
+### 9. Practical Patterns
+
+#### Pattern A: Repository Bootstrap Blueprint
+
+```python
+from huggingface_hub import HfApi
+from huggingface_hub.hf_api import SpaceHardware
+
+api = HfApi()
+
+def bootstrap_model_repo(repo_id, private=True, description=None):
+    """Create a model repo with standard settings."""
+    url = api.create_repo(repo_id, private=private, exist_ok=True)
+    if description:
+        api.update_repo_settings(repo_id, gated="auto" if private else False)
+    print(f"✓ {repo_id} → {url}")
+    return url
+
+def bootstrap_space_repo(repo_id, sdk="gradio", secrets=None):
+    """Create a Space repo with optional secrets."""
+    url = api.create_repo(
+        repo_id,
+        repo_type="space",
+        space_sdk=sdk,
+        space_hardware=SpaceHardware.CPU_BASIC,
+        exist_ok=True,
+        space_secrets=secrets or [],
+    )
+    print(f"✓ Space {repo_id} → {url}")
+    return url
+
+# Usage
+bootstrap_model_repo("beer-sakthai/new-model", private=False, description="My new model")
+bootstrap_space_repo(
+    "beer-sakthai/my-demo",
+    sdk="gradio",
+    secrets=[{"key": "API_KEY", "value": "sk-...", "description": "API key"}]
+)
+```
+
+#### Pattern B: Safe Migration Workflow
+
+```python
+def migrate_repo(api, from_id, to_id, repo_type="model"):
+    """Safely move a repo with verification."""
+    # 1. Verify source exists
+    src_info = api.repo_info(from_id, repo_type=repo_type)
+    print(f"Source: {from_id} ({src_info.sha[:8]})")
+
+    # 2. Check target doesn't already exist
+    if api.repo_exists(to_id, repo_type=repo_type):
+        raise ValueError(f"Target {to_id} already exists!")
+
+    # 3. Move
+    api.move_repo(from_id, to_id, repo_type=repo_type)
+    print(f"Moved: {from_id} → {to_id}")
+
+    # 4. Verify
+    dst_info = api.repo_info(to_id, repo_type=repo_type)
+    assert dst_info.sha == src_info.sha, "SHA mismatch after move!"
+    print(f"✓ Verified: {to_id} ({dst_info.sha[:8]})")
+```
+
+#### Pattern C: Storage Optimization Workflow
+
+```python
+def optimize_repo_storage(api, repo_id, repo_type="model"):
+    """Squash history and verify storage reduction."""
+    info = api.repo_info(repo_id, repo_type=repo_type, files_metadata=True)
+    before_count = len(info.siblings)
+    print(f"Before: {before_count} files")
+
+    api.super_squash_history(repo_id, repo_type=repo_type,
+                             commit_message="Storage optimization")
+    print("✓ History squashed")
+```
+
+#### Pattern D: List and Filter All Your Repos
+
+```python
+# List all repos for a user (uses the search API internally)
+repos = api.list_repos("beer-sakthai", repo_type="model")
+for repo in repos:
+    print(f"{repo.repo_id} ({'private' if repo.private else 'public'}) "
+          f"· {repo.downloads:,} downloads · {repo.likes:,} likes")
+```
+
+---
+
+### 10. Data Models Reference
+
+#### `RepoUrl` (returned by `create_repo()`, `duplicate_repo()`)
+
+| Attribute | Type | Example |
+|-----------|------|---------|
+| `__str__` | `str` | `"https://huggingface.co/user/my-model"` |
+| `endpoint` | `str` | `"https://huggingface.co"` |
+| `repo_type` | `str` | `"model"` |
+| `repo_id` | `str` | `"user/my-model"` |
+
+#### `ModelInfo` (returned by `repo_info()`)
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | `str` | `"user/my-model"` |
+| `sha` | `str` | Current commit OID |
+| `private` | `bool` | Privacy status |
+| `downloads` | `int` | Total downloads |
+| `likes` | `int` | Total likes |
+| `pipeline_tag` | `str\|None` | Task type (e.g. `"text-generation"`) |
+| `library_name` | `str\|None` | Framework (e.g. `"transformers"`) |
+| `tags` | `list[str]` | All tags (library, license, language, region, etc.) |
+| `card_data` | `ModelCardData\|None` | Parsed YAML frontmatter |
+| `siblings` | `list[RepoFile]` | File listing (when `files_metadata=True`) |
+| `safetensors` | `dict\|None` | Safetensors weight metadata |
+| `config` | `dict\|None` | Model config.json |
+| `gated` | `str\|bool\|None` | Gated access mode |
+| `disabled` | `bool` | Whether repo is disabled |
+
+#### `DatasetInfo` (returned by `repo_info()` for datasets)
+
+Same base fields as ModelInfo, plus:
+- `dataset_info` — dataset-specific metadata (features, splits, etc.)
+- `card_data` — includes dataset card YAML
+
+#### `SpaceInfo` (returned by `repo_info()` for spaces)
+
+Same base fields, plus:
+- `sdk` — `"gradio"`, `"streamlit"`, `"docker"`, `"static"`
+- `runtime` — `SpaceRuntime` with stage, hardware, etc.
+
+#### `RepoFile` (`siblings` items)
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `rfilename` | `str` | File path in repo |
+| `size` | `int\|None` | File size (bytes) |
+| `blob_id` | `str\|None` | Git blob OID |
+| `lfs` | `dict\|None` | LFS metadata: `sha256`, `size`, `oid`, `pointerSize` |
+| `type` | `str\|None` | File type |
+
+---
+
+### Key Takeaways
+
+1. **`create_repo()` is universal** — one method for models, datasets, and Spaces. The `space_*` parameters are silently ignored for non-Space repos.
+2. **`exist_ok=True` is your friend** — makes creation idempotent. Use in all automation scripts.
+3. **`update_repo_settings()` is for post-creation changes** — you can toggle visibility and gated access anytime.
+4. **`duplicate_repo()` is zero-cost** — server-side copy, no local download/upload. Secrets are never copied.
+5. **`move_repo()` has input validation** — both `from_id` and `to_id` must have a `/` separator.
+6. **`super_squash_history()` is one-way** — plan your compaction before merging branches or sharing repos.
+7. **`repo_info()` is the Swiss Army knife** — use `expand` for efficient partial data, `files_metadata=True` for full file listing.
+8. **`delete_repo()` has no undo** — always pair with `repo_info()` for a safety check.
+
+### Resources
+- `hf_api.py` source (Repo CRUD): https://github.com/huggingface/huggingface_hub/blob/main/src/huggingface_hub/hf_api.py
+  - `create_repo`: line ~4504
+  - `delete_repo`: line ~4717
+  - `update_repo_settings`: line ~4767
+  - `move_repo`: line ~4846
+  - `repo_info`: line ~3567
+  - `duplicate_repo`: line ~8707
+  - `super_squash_history`: line ~4269
+- Hub REST API docs: https://huggingface.co/docs/hub/en/api
+- Repo settings docs: https://huggingface.co/docs/hub/en/repositories-settings
+
 ### Skill
 huggingface-hub — references/hf-learnings.md
