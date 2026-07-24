@@ -320,3 +320,43 @@ pip install lancedb
 - TorchCodec: [`github.com/pytorch/torchcodec`](https://github.com/pytorch/torchcodec)
 - VideoFolder builder: [`src/datasets/packaged_modules/videofolder/`](https://github.com/huggingface/datasets/tree/main/src/datasets/packaged_modules/videofolder)
 - Docs: https://huggingface.co/docs/datasets/main/en/video_dataset
+
+
+---
+
+## 2026-07-24: Deep Dive v2 — torchcodec 0.15.0 Advanced Features & Practical Patterns
+
+### Summary
+Second deep-dive focusing on **new torchcodec 0.15.0+ features** not covered in the initial deep-dive: in-decoder transforms (`transforms=[]`), `output_dtype` for direct float32/float16 decode, `custom_frame_mappings` for raw FFmpeg filter graphs, the new `samplers` module, `AudioDecoder`/`WavDecoder`, `SimpleVideoDecoder`, enhanced `VideoStreamMetadata` (21+ fields), and `Encoder` improvements. All verified against torchcodec 0.15.0+cu130 and datasets 5.0.0.
+
+### New in 0.15.0+
+
+**1. VideoDecoder new params:**
+- `output_dtype` — decode directly as float32/float16 (range [0.0, 1.0]), eliminating `.float() / 255.0`
+- `transforms` — in-decoder transforms: `Resize`, `CenterCrop`, `RandomCrop`; extensible via `DecoderTransform`
+- `custom_frame_mappings` — raw FFmpeg filter graph expressions (e.g., `"format=gray"` for grayscale)
+
+**2. Samplers module** (`torchcodec.samplers`):
+- Index-based: `clips_at_regular_indices`, `clips_at_random_indices`
+- Time-based: `clips_at_regular_timestamps`, `clips_at_random_timestamps`
+- Policies: `repeat_last`, `wrap`, `error`
+- Returns batched `FrameBatch(N, T, C, H, W)` tensors
+
+**3. Audio** — `AudioDecoder(video_path)` extracts audio from video containers; `WavDecoder` for WAV files; `AudioSamples` dataclass with `data, pts_seconds, duration_seconds, sample_rate`
+
+**4. SimpleVideoDecoder** — method-based API without bracket indexing
+
+**5. Metadata expansion** — 21+ fields including `num_frames_from_header`, `num_frames_from_content`, `average_fps_from_header`, `bit_rate`, `pixel_format`, `color_primaries`, `color_space`, `rotation`, `pixel_aspect_ratio`
+
+**6. CpuFallbackStatus** — tracks GPU decode health: `NO_FALLBACK | FALLBACK | ALWAYS_WAS_CPU`
+
+**7. Encoder** — `Encoder` with `add_video(codec, crf, preset)`, `add_audio()`, `open_file()`, `open_file_like()` for in-memory output
+
+### Key Takeaways
+- In-decoder transforms + typed decode save ~4x memory (no intermediate uint8)
+- Samplers replace manual extraction loops
+- datasets Video (5.0.0) lags torchcodec — new features not exposed through datasets
+- Direct torchcodec use recommended for full capability
+
+### Full reference
+See consolidated `/opt/data/profiles/sakthai/skills/references/hf-learnings.md` for the complete v2 deep-dive with all code examples and parameter tables.

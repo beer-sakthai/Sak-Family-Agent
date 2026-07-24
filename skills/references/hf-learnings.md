@@ -6833,3 +6833,344 @@ for hook in api.list_webhooks():
 huggingface-hub — references/hf-learnings.md
 
 ---
+
+
+## 2026-07-24: hf-datasets-video-processing Deep Dive v2 — torchcodec 0.15.0 Advanced Features & Practical Patterns (Topic #115 — Deepened)
+
+### Summary
+Second deep-dive into Hugging Face video processing, focusing on **new torchcodec 0.15.0+ features not covered in the initial deep-dive**: in-decoder transforms (`transforms=[]` parameter), `output_dtype` for direct float32/float16 decode, `custom_frame_mappings` for raw FFmpeg filter graphs, the new `samplers` module (clip extraction at timestamps/indices, random/regular), `AudioDecoder`/`WavDecoder` for audio-from-video, `SimpleVideoDecoder` for lightweight usage, enhanced `VideoStreamMetadata` (21+ fields), and `Encoder` improvements. All verified against torchcodec 0.15.0+cu130 and datasets 5.0.0 source.
+
+### 1. New VideoDecoder Capabilities (torchcodec 0.15.0+)
+
+Four new parameters since the original coverage:
+
+```python
+from torchcodec.decoders import VideoDecoder
+decoder = VideoDecoder(
+    source,                          # str | Path | bytes | BinaryIO | Tensor
+    transforms=None,                 # NEW: list[DecoderTransform | nn.Module]
+    output_dtype=torch.uint8,        # NEW: torch.uint8 | float32 | float16 | "auto"
+    custom_frame_mappings=None,      # NEW: str | bytes | BinaryIO (FFmpeg filter graph)
+)
+```
+
+#### 1.1 `output_dtype` — Direct Typed Decode
+
+Eliminates per-frame `.float() / 255.0` conversion:
+
+```python
+decoder_f32 = VideoDecoder("video.mp4", output_dtype=torch.float32)
+frame = decoder_f32[0]    # float32 [C, H, W], range [0.0, 1.0]
+
+decoder_f16 = VideoDecoder("video.mp4", output_dtype=torch.float16)
+frame = decoder_f16[0]    # float16 [C, H, W], range [0.0, 1.0]
+```
+
+Verified: `output_dtype=torch.float32` produces float32 tensors normalized to [0.0, 1.0].
+
+#### 1.2 `transforms` — In-Decoder Transform Chain
+
+Transforms applied during decode — eliminates separate post-processing:
+
+```python
+from torchcodec.transforms import Resize, CenterCrop, RandomCrop
+
+decoder = VideoDecoder("video.mp4",
+    transforms=[Resize((224, 224))],
+    output_dtype=torch.float32)
+frame = decoder[0]  # Already (3, 224, 224), float32
+
+# Multiple transforms: resize → center crop
+decoder = VideoDecoder("video.mp4",
+    transforms=[Resize((256, 256)), CenterCrop((224, 224))])
+
+# Random crop for training augmentation
+decoder = VideoDecoder("video.mp4",
+    transforms=[RandomCrop((224, 224))])
+```
+
+**Available transforms:** `Resize(size)`, `CenterCrop(size)`, `RandomCrop(size)` — extensible via `DecoderTransform` ABC (any `nn.Module`).
+
+**Current limitation:** datasets `Video` feature does NOT pass transforms or output_dtype to VideoDecoder. Direct torchcodec only.
+
+#### 1.3 `custom_frame_mappings` — Raw FFmpeg Filter Graphs
+
+```python
+# Grayscale conversion
+decoder = VideoDecoder("video.mp4", custom_frame_mappings="format=gray")
+frame = decoder[0]  # [1, H, W] single-channel
+
+# From bytes or file
+decoder = VideoDecoder("video.mp4", custom_frame_mappings=b"format=gray")
+```
+
+Enables scale, color conversion, deinterlacing, denoising — anything FFmpeg filter graphs support.
+
+### 2. Samplers Module — Clip Extraction (New in 0.15.0+)
+
+The `torchcodec.samplers` module provides clip extraction for video understanding models.
+
+#### 2.1 Index-Based
+
+```python
+from torchcodec.samplers._index_based import clips_at_regular_indices, clips_at_random_indices
+
+# 8 clips, 16 frames each, stride 30
+clips = clips_at_regular_indices(decoder, num_clips=8,
+    num_frames_per_clip=16, num_indices_between_frames=30,
+    policy="repeat_last")  # repeat_last | wrap | error
+
+# 4 random clips, 8 frames each
+random_clips = clips_at_random_indices(decoder, num_clips=4,
+    num_frames_per_clip=8, num_indices_between_frames=15, policy="wrap")
+```
+
+#### 2.2 Time-Based
+
+```python
+from torchcodec.samplers._time_based import clips_at_regular_timestamps, clips_at_random_timestamps
+
+# 6 clips, every 2s, 8 frames each, 0.1s between frames
+clips = clips_at_regular_timestamps(decoder,
+    seconds_between_clip_starts=2.0, num_frames_per_clip=8,
+    seconds_between_frames=0.1, policy="repeat_last")
+
+# Random temporal sampling
+random_clips = clips_at_random_timestamps(decoder, num_clips=4,
+    num_frames_per_clip=16, seconds_between_frames=0.05, policy="wrap")
+```
+
+**Why time-based:** Consistent regardless of frame rate (24fps, 30fps, VFR).
+
+#### 2.3 Policy Options
+
+| Policy | Behaviour | Use Case |
+|--------|-----------|----------|
+| `"repeat_last"` (default) | Repeat last valid frame beyond end | Safe padding |
+| `"wrap"` | Wrap around to beginning | Data augmentation |
+| `"error"` | Raise `IndexError` | Debugging |
+
+### 3. Audio Support
+
+#### 3.1 AudioDecoder — Audio from Video Containers
+
+```python
+from torchcodec.decoders import AudioDecoder
+adec = AudioDecoder("video.mp4")
+samples = adec.get_all_samples()
+# AudioSamples: data=torch.Tensor(num_channels, num_samples)
+print(samples.sample_rate)  # e.g., 48000 Hz
+
+clip = adec.get_samples_played_in_range(start_seconds=0.0, stop_seconds=5.0)
+```
+
+#### 3.2 WavDecoder — WAV Files
+
+```python
+from torchcodec.decoders import WavDecoder
+wav = WavDecoder("audio.wav")
+samples = wav.get_all_samples()  # Same AudioSamples dataclass
+```
+
+#### 3.3 AudioSamples Dataclass
+
+```python
+@dataclass
+class AudioSamples:
+    data: torch.Tensor      # (num_channels, num_samples) or (num_samples,)
+    pts_seconds: float
+    duration_seconds: float
+    sample_rate: int
+```
+
+**Limitation:** datasets `Video` feature does not expose audio.
+
+### 4. SimpleVideoDecoder — Lightweight Access
+
+```python
+from torchcodec.decoders import SimpleVideoDecoder
+decoder = SimpleVideoDecoder("video.mp4")
+frame = decoder.get_frame_at(0)
+batch = decoder.get_frames_at([0, 30, 60])
+all_frames = decoder.get_all_frames(fps=5.0)
+```
+
+No bracket indexing — method-based access only.
+
+### 5. Enhanced VideoStreamMetadata (21+ fields)
+
+```python
+metadata = decoder.metadata
+
+# Standard:
+print(metadata.num_frames, metadata.average_fps, metadata.duration_seconds)
+print(metadata.width, metadata.height, metadata.codec)
+
+# New in 0.15.0+:
+print(metadata.num_frames_from_header)        # Container header count
+print(metadata.num_frames_from_content)       # Actual content scan
+print(metadata.average_fps_from_header)       # Header FPS
+print(metadata.begin_stream_seconds)          # Best available start
+print(metadata.begin_stream_seconds_from_header, metadata.begin_stream_seconds_from_content)
+print(metadata.end_stream_seconds)            # Best available end
+print(metadata.end_stream_seconds_from_content)
+print(metadata.bit_rate)                      # Bit rate
+print(metadata.pixel_format)                  # "yuv420p", "yuv444p"
+print(metadata.color_primaries)               # "bt709", "bt2020"
+print(metadata.color_space)                   # "bt709", "bt2020nc"
+print(metadata.color_transfer_characteristic) # "bt709", "smpte2084"
+print(metadata.pixel_aspect_ratio)            # Fraction width/height
+print(metadata.rotation)                      # Display rotation degrees
+```
+
+### 6. CpuFallbackStatus — GPU Decode Health
+
+```python
+from torchcodec.decoders import CpuFallbackStatus
+decoder = VideoDecoder("video.mp4", device="cuda")
+print(decoder.cpu_fallback)
+# NO_FALLBACK | FALLBACK | ALWAYS_WAS_CPU
+```
+
+### 7. Encoder Features
+
+```python
+from torchcodec.encoders import Encoder
+
+encoder = Encoder()
+vs = encoder.add_video(height=1080, width=1920, frame_rate=30,
+    codec="h264", pixel_format="yuv420p", crf=23, preset="medium")
+aud = encoder.add_audio(sample_rate=48000, num_channels=2)
+
+encoder.open_file("output.mp4")
+with encoder:
+    vs.add_frames(frames_tensor)   # (N, C, H, W) uint8
+    aud.add_samples(audio_tensor)  # (channels, samples)
+
+# In-memory output
+import io
+buf = io.BytesIO()
+encoder.open_file_like(buf, format="mp4")
+# ... write frames/samples ...
+encoder.close()
+encoded_bytes = buf.getvalue()
+```
+
+**Encoder VideoStream parameters:**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `height` | int | required | Frame height |
+| `width` | int | required | Frame width |
+| `frame_rate` | float | required | Target FPS |
+| `codec` | str | None | "h264", "hevc", "av1" |
+| `pixel_format` | str | None | "yuv420p", "yuv444p" |
+| `crf` | int|float | None | Constant Rate Factor (0-51) |
+| `preset` | str|int | None | "ultrafast" to "veryslow" |
+| `extra_options` | dict | None | FFmpeg codec options |
+| `device` | str | "cpu" | Encoding device |
+
+### 8. Practical Zero-Cost Patterns
+
+#### Pattern 1: Frame Extraction at Target FPS
+
+```python
+def extract_frames(video_path: str, target_fps: int = 5) -> torch.Tensor:
+    decoder = VideoDecoder(video_path, output_dtype=torch.float32,
+                           transforms=[Resize((224, 224))])
+    step = max(1, int(decoder.metadata.average_fps / target_fps))
+    frames = decoder.get_frames_in_range(0, len(decoder), step=step)
+    return frames.data  # (N, C, H, W), float32
+```
+
+#### Pattern 2: Training Clip Sampling
+
+```python
+def sample_clips(video_path: str, num_clips=4, frames=8, crop=224):
+    decoder = VideoDecoder(video_path,
+        transforms=[Resize((256, 256)), RandomCrop((crop, crop))],
+        output_dtype=torch.float32)
+    clips = clips_at_random_indices(decoder, num_clips=num_clips,
+        num_frames_per_clip=frames,
+        num_indices_between_frames=max(1, len(decoder) // (frames * 2)),
+        policy="wrap")
+    return clips.data
+```
+
+#### Pattern 3: Aligned Audio-Visual Extraction
+
+```python
+def extract_av(video_path: str, duration: float = 5.0):
+    vdec = VideoDecoder(video_path, transforms=[Resize((224, 224))],
+                        output_dtype=torch.float32)
+    fps = vdec.metadata.average_fps
+    frames = vdec.get_frames_in_range(0,
+        min(len(vdec), int(fps * duration)), step=int(fps / 10))
+    adec = AudioDecoder(video_path)
+    audio = adec.get_samples_played_in_range(0.0, duration)
+    return {"video": frames.data, "audio": audio.data,
+            "sample_rate": audio.sample_rate}
+```
+
+#### Pattern 4: Quick Codec/Format Inspection
+
+```python
+def inspect_video(path: str) -> dict:
+    m = VideoDecoder(path).metadata
+    return {
+        "codec": m.codec, "width": m.width, "height": m.height,
+        "fps": m.average_fps, "frames": m.num_frames,
+        "duration": m.duration_seconds, "bit_rate": m.bit_rate,
+        "pixel_format": m.pixel_format, "color_space": m.color_space,
+        "rotation": m.rotation,
+    }
+```
+
+### 9. Datasets Integration State (datasets 5.0.0)
+
+**Limitations:** `transforms`, `output_dtype`, `custom_frame_mappings` NOT passed through from `datasets.Video` to `VideoDecoder`. Audio decoding not integrated.
+
+**Workarounds:**
+```python
+# Option 1: Apply transforms externally post-decode
+decoder = example["video"]
+frame = decoder[0].float() / 255.0
+
+# Option 2: Re-decode from path with full torchcodec API
+path = example["video"].metadata.path
+decoder = VideoDecoder(path, transforms=[Resize((224, 224))],
+                       output_dtype=torch.float32)
+frame = decoder[0]
+
+# Option 3: Embed storage for self-contained Arrow
+ds = ds.map(lambda x: x)  # Forces embed_storage()
+```
+
+### 10. Dependencies
+
+```bash
+uv pip install datasets torchcodec
+# FFmpeg must be system-available
+ffmpeg -version
+```
+
+torchcodec 0.15.0+cu130 ships prebuilt CUDA extensions. NVDEC GPU via `device="cuda"`.
+
+### Key Insights
+
+1. **In-decoder transforms save memory 4x:** Resize+float32 during decode eliminates intermediate uint8 tensors.
+2. **Samplers replace manual loops:** `clips_at_*` handle boundaries, stride, batch construction in one call.
+3. **Audio-video alignment is free:** `AudioDecoder(video_path)` guarantees perfect timestamp alignment.
+4. **Custom mappings unlock FFmpeg's full power:** Filter graphs chain multi-step processing in a single decode pass.
+5. **datasets Video lags torchcodec:** Newer features not exposed through datasets -- direct torchcodec required.
+
+### Resources
+- torchcodec source: https://github.com/pytorch/torchcodec
+- torchcodec docs: https://meta-pytorch.org/torchcodec
+- datasets Video: https://huggingface.co/docs/datasets/en/video_dataset
+- FFmpeg filters: https://ffmpeg.org/ffmpeg-filters.html
+
+### Skill
+hf-datasets-video-processing -- references/hf-learnings.md
+
+---
