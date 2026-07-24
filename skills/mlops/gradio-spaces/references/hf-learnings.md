@@ -432,4 +432,344 @@ The Python client (`gradio_client`) hit Version 1 in the Gradio 6 era. Key featu
 5. **Python Client users**: stable v1 API now
 6. **Security**: use `gr.Header` for auth, set upload directories narrowly for file MCP
 7. **Performance**: `queue=False` on MCP handlers for 10x speed
+
+---
+
+# HF Space Logs, Monitoring & Debugging — Complete Deep Dive
+
+**Date:** 2026-07-24
+**Topic:** `hf-spaces-logs-monitoring-and-debugging-deep-dive` — Programmatic log access, build/runtime debugging, sleep/wake lifecycle monitoring, zero-cost troubleshooting
+**Author:** SakThai
+**License:** MIT
+
+> On free-tier HF Spaces, containers sleep after inactivity, build logs expire, and runtime crashes produce no alert. This doc covers every available tool for monitoring and debugging Spaces *without spending money*.
+
+---
+
+## 1. The Two Log Streams
+
+Every Space has **two independent log streams**:
+
+| Stream | When | What it contains | Available where |
+|--------|------|-------------------|-----------------|
+| **Build logs** | During `docker build` | Package installs, download progress, compilation errors, `Dockerfile` failures | `fetch_space_logs(build=True)` — available during and after build |
+| **Runtime logs** | While app is running | Python stdout/stderr, Gradio server output, application print/log statements | `fetch_space_logs(build=False)` — live when Space is RUNNING |
+
+**Key insight:** If your Space shows `BUILD_ERROR` status, the runtime logs will be *empty* — you must read the **build logs** to see what went wrong. Conversely, if it shows `RUNNING` but the app doesn't respond, the **runtime logs** are where you look.
+
+---
+
+## 2. Programmatic Log Access with `huggingface_hub`
+
+The primary API is `HfApi.fetch_space_logs()`:
+
+```python
+from huggingface_hub import HfApi
+
+api = HfApi()
+repo_id = "your-username/your-space-name"
+
+# 1. Read runtime logs (drain mode — like `docker logs`)
+for line in api.fetch_space_logs(repo_id=repo_id):
+    print(line, end="")
+
+# 2. Read build logs (for BUILD_ERROR debugging)
+for line in api.fetch_space_logs(repo_id=repo_id, build=True):
+    print(line, end="")
+
+# 3. Stream runtime logs in real time (follow mode, like `tail -f`)
+# Blocks until the server closes the stream — Ctrl-C to stop
+for line in api.fetch_space_logs(repo_id=repo_id, follow=True):
+    print(line, end="")
+```
+
+**Parameters:**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `repo_id` | str | required | `"namespace/space-name"` |
+| `build` | bool | `False` | Get build logs instead of runtime logs |
+| `follow` | bool | `False` | Stream new logs in real time instead of draining |
+| `token` | str | cached | HF token (needed for private spaces) |
+
+**Limitations:**
+- Build logs are **not available indefinitely** — they expire after the next successful build or after some time (exact TTL undocumented)
+- There is no pagination/offset parameter — you get the entire available log output
+- No structured/JSON format — plain text only
+
+---
+
+## 3. CLI Log Access via `hf spaces logs`
+
+The `huggingface_hub` CLI provides the same functionality:
+
+```bash
+# Drain runtime logs
+hf spaces logs username/my-space
+
+# Read build logs
+hf spaces logs username/my-space --build
+
+# Stream in real time
+hf spaces logs username/my-space -f
+
+# Last 50 lines only
+hf spaces logs username/my-space -n 50
+
+# With token explicitly
+hf spaces logs username/my-space --token hf_xxxxx
+```
+
+This is the fastest way to debug during development without opening a browser.
+
+---
+
+## 4. Debugging by Space Status
+
+The Spaces API returns a `runtime` status. Map status → diagnostic action:
+
+| Status | Meaning | What to check |
+|--------|---------|---------------|
+| `NO_APP_FILE` | Missing `app.py` or wrong `app_file` path | Check README.yaml `app_file:` setting |
+| `BUILDING` | Docker image being built | Wait; check logs if it stays here >15 min |
+| `BUILD_ERROR` | Docker build failed | **Read build logs** (`build=True`) — this is the #1 source of truth |
+| `RUNNING` | App is live | Check runtime logs if app isn't responding |
+| `RUNNING_BUILDING` | App serving while new build deploys | Normal during updates |
+| `PAUSED` | Manually stopped by user | Restart via API or UI |
+| `SLEEPING` | Free-tier space went to sleep due to inactivity | Wake by sending an HTTP request |
+| `STOPPED` | Space was deleted/stopped | Check if it still exists |
+
+Check status programmatically:
+
+```python
+info = api.space_info(repo_id)
+print(f"Status: {info.runtime}")
+print(f"Hardware: {info.hardware}")
+print(f"SDK: {info.sdk}")
+```
+
+If the Space's status URL isn't available from `space_info`, you can also fetch it from the runtime API:
+
+```python
+import requests
+resp = requests.get(f"https://huggingface.co/api/spaces/{repo_id}")
+data = resp.json()
+print(f"Status: {data.get('runtime', {}).get('stage', 'unknown')}")
+```
+
+---
+
+## 5. Pause / Restart / Wake Lifecycle Management
+
+Essential for zero-cost monitoring — you must manage the Space lifecycle programmatically:
+
+```python
+from huggingface_hub import HfApi
+api = HfApi()
+
+# Pause a Space (stops billing for paid tiers, reduces resource usage)
+api.pause_space(repo_id)
+
+# Restart a Space (rebuilds container)
+api.restart_space(repo_id)
+
+# Request hardware (wakes a sleeping space if CPU is already assigned)
+api.request_space_hardware(repo_id, hardware="cpu-basic")
+```
+
+**Wake-up detection pattern (sleep → active):**
+
+```python
+import time
+from huggingface_hub import HfApi
+
+api = HfApi()
+repo_id = "username/my-space"
+
+# Trigger a wake by sending a request to the Space
+import requests
+try:
+    requests.get(f"https://{repo_id.replace('/', '-')}.hf.space", timeout=5)
+except:
+    pass  # Space might be sleeping — that's expected
+
+# Poll until running
+for i in range(30):
+    info = api.space_info(repo_id)
+    stage = getattr(info, 'runtime', '') or ''
+    if 'RUNNING' in str(stage):
+        print(f"Space is awake after {i*2} seconds")
+        break
+    time.sleep(2)
+```
+
+---
+
+## 6. Monitoring Build Status on Commit (CI Pattern)
+
+When pushing code to a Space repo, you can poll for a successful build:
+
+```python
+from huggingface_hub import HfApi
+import time
+
+api = HfApi()
+repo_id = "username/my-space"
+MAX_WAIT = 300  # 5 minutes
+
+for elapsed in range(0, MAX_WAIT, 10):
+    info = api.space_info(repo_id)
+    stage = str(getattr(info, 'runtime', ''))
+    
+    if 'BUILD_ERROR' in stage:
+        # Read build logs for the error
+        logs = list(api.fetch_space_logs(repo_id, build=True))
+        raise RuntimeError(f"Build failed:\n{''.join(logs[-50:])}")
+    
+    if 'RUNNING' in stage or 'RUNNING_BUILDING' in stage:
+        print(f"Build succeeded ({elapsed}s)")
+        break
+    
+    time.sleep(10)
+else:
+    print(f"Build timeout after {MAX_WAIT}s")
+```
+
+---
+
+## 7. Environment Variables for Introspection
+
+Every running Space gets built-in environment variables for self-monitoring:
+
+```bash
+SPACE_ID=username/my-space          # Full repo ID
+SPACE_AUTHOR_NAME=username          # Owner
+SPACE_REPO_NAME=my-space            # Repo name
+SPACE_HOST=username-my-space.hf.space  # Public hostname
+SPACE_TITLE=My Space                # Display title
+SPACE_CREATOR_USER_ID=6032...       # Numeric user ID
+ACCELERATOR=none                    # 'none' for CPU, 't4-medium' etc.
+CPU_CORES=4                         # vCPU count
+MEMORY=15Gi                         # RAM
+```
+
+Use these inside your app to log context-aware debug info:
+
+```python
+import os
+print(f"Starting {os.environ.get('SPACE_ID')} on {os.environ.get('ACCELERATOR', 'unknown')}")
+```
+
+---
+
+## 8. Dev Mode — Live SSH Debugging (PRO Feature)
+
+**Note: Dev Mode requires a PRO account.** Documented here for completeness but not available on free tier.
+
+```bash
+# SSH into a running Space
+hf spaces ssh username/my-space
+
+# Auto-enable Dev Mode
+hf spaces ssh username/my-space --auto
+```
+
+Dev Mode mounts the Space's `/app` directory and lets you:
+- Edit code live and restart the app
+- Install packages via `pip`
+- Run `top`, `htop` for resource monitoring
+- Inspect files and directories
+
+Changes are NOT persisted unless you `git add && git commit && git push` from within the container.
+
+---
+
+## 9. Free-Tier Troubleshooting Strategies
+
+Since free accounts don't have Dev Mode or persistent logs, use these workarounds:
+
+### 9a. Self-logging to a Dataset (zero-cost persistence)
+
+```python
+import os
+import json
+from huggingface_hub import HfApi
+
+api = HfApi()
+LOG_DATASET = "username/space-logs"  # Create a dataset repo
+
+def log_to_hub(event: str, details: dict = None):
+    """Append a log entry to a dataset on the Hub."""
+    entry = {
+        "space": os.environ.get("SPACE_ID", "unknown"),
+        "event": event,
+        "details": details or {},
+        "timestamp": __import__("datetime").datetime.utcnow().isoformat()
+    }
+    # Upload as a new line to a shared JSONL file
+    api.upload_file(
+        path_or_fileobj=json.dumps(entry) + "\n",
+        path_in_repo="logs.jsonl",
+        repo_id=LOG_DATASET,
+        repo_type="dataset",
+    )
+```
+
+### 9b. Health check endpoint pattern
+
+Embed a health check in your Gradio app:
+
+```python
+import gradio as gr
+
+def health_check():
+    return {"status": "ok", "accelerator": os.environ.get("ACCELERATOR", "none")}
+
+with gr.Blocks() as demo:
+    # ... your app ...
+    
+    # Hidden health endpoint (accessible via API)
+    health_btn = gr.Button("Check Health", visible=False)
+    health_output = gr.JSON()
+    health_btn.click(fn=health_check, outputs=health_output)
+
+demo.launch()
+```
+
+Then call it from an external monitoring script:
+
+```python
+from gradio_client import Client
+client = Client("username/my-space")
+status = client.predict(api_name="/health_check")
+```
+
+### 9c. Startup self-check
+
+Add a startup log that writes to a dataset to confirm the build succeeded:
+
+```python
+import httpx  # or requests
+
+def notify_startup():
+    try:
+        httpx.post("https://huggingface.co/api/datasets/username/space-logs", ...)
+    except:
+        pass  # Don't crash the app if logging fails
+```
+
+---
+
+## 10. Key Takeaways
+
+1. **Always check `build=True` logs first for BUILD_ERROR** — runtime logs will be empty
+2. **`fetch_space_logs()` is drain-mode by default** — use `follow=True` for tailing
+3. **Build logs expire** — grab them immediately on failure
+4. **Free-tier Spaces sleep after inactivity (~15-30 min)** — send a request to wake, then poll
+5. **No native log retention on free tier** — DIY logging to a dataset is the only zero-cost persistence
+6. **`space_info()` for status + `fetch_space_logs()` for content** = complete debugging toolkit
+7. **CLI is faster than API for interactive debugging** — `hf spaces logs` with flags
+8. **`startup_duration_timeout`** can be configured up to 1h in README.yaml for slow-starting apps
+9. **`preload_from_hub`** speeds up startup by downloading models at build time instead of runtime
+10. **No GPU during Docker build** — build commands cannot access CUDA hardware
 8. **Docs**: Use `https://gradio-docs-mcp.hf.space/gradio_api/mcp/` in any MCP client for instant docs

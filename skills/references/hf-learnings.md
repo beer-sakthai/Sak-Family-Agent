@@ -358,12 +358,13 @@ Comprehensive deep-dive into Transformers' GenerationConfig and generate() API (
 - Speculative decoding: assistant_model, prompt_lookup, DSLA, static verification
 - Continuous batching config and lifecycle
 - Custom generation method creation, publication, and consumption
-- 6 production best practices with code examples
+|- ZeroGPU: https://huggingface.co/docs/hub/en/spaces-gpus#zero-gpu-spaces
 
-### Repository search tag
-- Saved to ~/profiles/sakthai/skills/references/hf-learnings.md (Entry 91)
+### Skill
+huggingface-hub — references/hf-learnings.md
 
 ---
+
 
 ## 2026-07-24: hf-optimum-cpu-inference-deep-dive (Expanded Deep Dive)
 
@@ -849,171 +850,13 @@ srun --nodes=1 trl vllm-serve --model Qwen/Qwen2.5-72B --tensor_parallel_size 8 
 ### Summary
 Researched Prefix Tuning and P-Tuning — two established "soft prompting" PEFT methods that train small continuous prompt embeddings (virtual tokens) rather than modifying model weights. Also covers Prompt Tuning as the third member of this family. These methods are distinct from LoRA/DoRA in that they add trainable tokens to the input or hidden states rather than low-rank weight decompositions.
 
-### Key Concepts
+|- ZeroGPU: https://huggingface.co/docs/hub/en/spaces-gpus#zero-gpu-spaces
 
-**Soft Prompting Family Overview:**
-PEFT groups Prefix Tuning, P-Tuning, and Prompt Tuning under "Soft Prompting" — methods that prepend or inject trainable continuous embeddings into the model's input or hidden states. The key difference from adapters: no weights are modified; instead, virtual tokens are learned and their embeddings steer the model.
-
----
-
-### Prefix Tuning
-
-**What it is:**
-Prefix Tuning prepends a sequence of trainable "prefix" vectors to the keys and values of the multi-head attention at every transformer layer. These prefix vectors are not actual token embeddings — they are continuous parameters that interact with the attention mechanism as if they were key-value pairs from virtual tokens.
-
-**Mechanism:**
-- Adds `num_virtual_tokens` learnable vectors per transformer layer
-- Vectors are split: half for key prefix, half for value prefix (`2 * num_layers * hidden` per prefix)
-- A **PrefixEncoder** (2-layer MLP) transforms the raw embeddings — the MLP is discarded after training, keeping only the learned prefix
-- The prefix is concatenated with the actual KV cache at each attention layer during forward pass
-
-**Configuration (`PrefixTuningConfig`):**
-| Parameter | Description |
-|---|---|
-| `num_virtual_tokens` | Number of virtual prefix tokens per layer |
-| `prefix_projection=True/False` | Whether to use the MLP projection (True reduces variance) |
-| `encoder_hidden_size` | Hidden size of the prefix encoder MLP |
-| `init_weights="zero"` | Initialize so prefix is near no-op (reduces training variance) |
-
-**Code Example:**
-```python
-from peft import PrefixTuningConfig, get_peft_model
-
-peft_config = PrefixTuningConfig(
-    task_type="CAUSAL_LM",
-    num_virtual_tokens=20,
-    prefix_projection=False,
-)
-model = get_peft_model(model, peft_config)
-model.print_trainable_parameters()
-# "trainable params: 983,040 || all params: 560,197,632 || trainable%: 0.175%"
-```
-
-**KV-Cache Initialization (new in main):**
-PEFT now supports `initialize_kv_prefix_from_text()` — initializes the prefix from an existing text's KV cache instead of random. Only works when `prefix_projection=False` (raw KV prefix).
-```python
-from peft import initialize_kv_prefix_from_text
-initialize_kv_prefix_from_text(
-    model, tokenizer,
-    text="...long context with at least num_virtual_tokens tokens...",
-    use_chat_template=False,
-)
-```
-
-**Key Properties:**
-- 1000x fewer params than full fine-tuning, comparable performance
-- Works better in low-data settings
-- Introduces latency because prefix is concatenated at every layer's attention (unlike Prompt Tuning)
-- Original paper: "Prefix-Tuning: Optimizing Continuous Prompts for Generation" (Li & Liang, 2021)
-- Main use case: NLG tasks (summarization, translation, table-to-text)
+### Skill
+huggingface-hub — references/hf-learnings.md
 
 ---
 
-### P-Tuning
-
-**What it is:**
-P-Tuning injects trainable prompt embeddings anywhere in the input sequence (not just prepended), optimized by a prompt encoder (bidirectional LSTM or MLP). Designed primarily for NLU tasks and works with both GPT and BERT-style models.
-
-**Mechanism:**
-- Adds `num_virtual_tokens` learnable embeddings inserted at chosen positions in the input
-- A **prompt encoder** (LSTM with 2 layers by default, or MLP) reparameterizes the embeddings to find better continuous prompts
-- Introduces **anchor tokens** — special tokens that indicate component boundaries in the input, improving performance
-- Unlike Prefix Tuning: (1) tokens can go anywhere in the sequence (not just beginning), (2) tokens are only added to the input embedding layer (not every transformer layer), (3) anchor tokens provide structural hints
-
-**Configuration (`PromptEncoderConfig`):**
-| Parameter | Description |
-|---|---|
-| `num_virtual_tokens` | Number of virtual tokens to insert |
-| `encoder_hidden_size` | Hidden size of the prompt encoder (LSTM/MLP) |
-| `encoder_num_layers=2` | Layers in the prompt encoder |
-| `encoder_dropout=0.0` | Dropout for the encoder |
-| `encoder_reparameterization_type` | "MLP" or "LSTM" (default: MLP) |
-
-**Code Example:**
-```python
-from peft import PromptEncoderConfig, get_peft_model
-
-peft_config = PromptEncoderConfig(
-    task_type="CAUSAL_LM",
-    num_virtual_tokens=20,
-    encoder_hidden_size=128,
-)
-model = get_peft_model(model, peft_config)
-model.print_trainable_parameters()
-# "trainable params: 300,288 || all params: 559,514,880 || trainable%: 0.054%"
-```
-
-**Key Properties:**
-- Original paper: "GPT Understands, Too" (Liu et al., 2021)
-- On LAMA knowledge probing, GPT recovers 64% P@1 (20+ point improvement over previous best)
-- Comparable or better than BERT on SuperGLUE in supervised and few-shot settings
-- Largely reduces need for manual prompt engineering
-- Much cheaper than Prefix Tuning (no per-layer parameters) — only input embeddings
-
----
-
-### Prompt Tuning
-
-**What it is:**
-The simplest soft prompting method — a single learnable embedding prepended to the input. No per-layer injection, no encoder network. Soft prompt is just a single `nn.Embedding` layer.
-
-**Configuration (`PromptTuningConfig`):**
-| Parameter | Description |
-|---|---|
-| `num_virtual_tokens` | Number of virtual tokens prepended |
-| `prompt_tuning_init` | "TEXT" (init from existing text), "RANDOM" (random soft tokens), or "SAMPLE_VOCAB" (random hard tokens from vocab) |
-| `prompt_tuning_init_text` | Text to initialize from (when init=TEXT) |
-| `tokenizer_name_or_path` | Tokenizer for the init text |
-
-**Code Example:**
-```python
-from peft import PromptTuningConfig, PromptTuningInit, get_peft_model
-
-peft_config = PromptTuningConfig(
-    task_type="CAUSAL_LM",
-    prompt_tuning_init=PromptTuningInit.TEXT,
-    num_virtual_tokens=len(tokenizer(prompt_tuning_init_text)["input_ids"]),
-    prompt_tuning_init_text="Classify if the tweet is a complaint or no complaint.\n",
-    tokenizer_name_or_path="bigscience/bloomz-560m",
-)
-model = get_peft_model(model, peft_config)
-model.print_trainable_parameters()
-# "trainable params: 8,192 || all params: 559,222,784 || trainable%: 0.0015%"
-```
-
-**Key Properties:**
-- Most parameter-efficient of the three (only input embeddings, no encoder)
-- Original paper: "The Power of Scale for Parameter-Efficient Prompt Tuning" (Lester et al., 2021)
-- Performance scales with model size — large models match full fine-tuning
-- Best for very large models (>10B params) where even tiny adapter params become significant
-
----
-
-### Method Comparison
-
-| Property | Prefix Tuning | P-Tuning | Prompt Tuning |
-|---|---|---|---|
-| Where injected | Every layer (KV) | Input layer only | Input layer only |
-| Encoder network | 2-layer MLP (optional) | LSTM or MLP | None (direct embedding) |
-| Params per 20 tokens (GPT-2) | ~983K | ~300K | ~8K |
-| Best for | NLG tasks | NLU tasks | Very large LMs |
-| Latency cost | High (per-layer cat) | Low | Lowest |
-| Initialization | Random or KV-cache | Random | Text, random, or vocab |
-| Anchor tokens | No | Yes | No |
-| Year/Paper | 2021 (Li & Liang) | 2021 (Liu et al.) | 2021 (Lester et al.) |
-
-### Resources
-- Prefix Tuning paper: https://hf.co/papers/2101.00190
-- P-Tuning paper (GPT Understands, Too): https://hf.co/papers/2103.10385
-- Prompt Tuning paper: https://hf.co/papers/2104.08691
-- PEFT Prefix Tuning docs: https://huggingface.co/docs/peft/main/en/package_reference/prefix_tuning
-- PEFT P-Tuning docs: https://huggingface.co/docs/peft/main/en/package_reference/p_tuning
-- PEFT Prompt Tuning docs: https://huggingface.co/docs/peft/main/en/package_reference/prompt_tuning
-- PEFT Soft Prompting overview: https://huggingface.co/docs/peft/main/en/conceptual_guides/soft_prompts
-- PEFT GitHub: https://github.com/huggingface/peft
-|- RapidFire AI integration: https://huggingface.co/docs/trl/main/en/rapidfire
-
----
 
 ## 2026-07-24: hf-hub-fsspec (Deep Dive)
 
@@ -5944,12 +5787,13 @@ Comprehensive reference of all 50+ custom exceptions in the `huggingface_hub` li
 - Cache errors: `CacheNotFound`, `CorruptedCacheException`, `IncompleteSnapshotError`
 - OAuth errors: `DeviceCodeError` with `OAuthErrorCode` enum, `OIDCError`
 - Key design patterns: multiple inheritance for backward compat, abstract EntryNotFoundError, error enrichment via `append_to_message()`, request ID tracing
-- 4 practical error handling patterns with code examples
+|- ZeroGPU: https://huggingface.co/docs/hub/en/spaces-gpus#zero-gpu-spaces
 
 ### Skill
 huggingface-hub — references/hf-learnings.md
 
 ---
+
 
 ## 2026-07-24: hf-hub-spaces-api-complete-reference — Complete Spaces API Reference (Topic #131)
 
@@ -6299,9 +6143,50 @@ hf logs user/my-space --build    # build logs
 - Spaces GPU: https://huggingface.co/docs/hub/en/spaces-gpus
 - Spaces storage: https://huggingface.co/docs/hub/en/spaces-storage
 - Spaces config reference: https://huggingface.co/docs/hub/en/spaces-config-reference
-- ZeroGPU: https://huggingface.co/docs/hub/en/spaces-gpus#zero-gpu-spaces
+|- ZeroGPU: https://huggingface.co/docs/hub/en/spaces-gpus#zero-gpu-spaces
 
 ### Skill
 huggingface-hub — references/hf-learnings.md
 
 ---
+
+## 2026-07-24: hf-spaces-logs-monitoring-and-debugging — Deep Dive (Topic #132)
+
+### Summary
+Comprehensive deep-dive into HF Spaces logging, monitoring, and debugging — the programmatic toolkit for diagnosing build failures, runtime crashes, and sleep/wake lifecycle issues without spending money. Covers two log streams (build vs. runtime), `fetch_space_logs()`, `hf spaces logs` CLI, space status codes, lifecycle management, CI build monitoring, built-in env vars, Dev Mode (PRO), and free-tier workarounds (self-logging to dataset, health endpoints).
+
+### Key APIs
+```python
+api.fetch_space_logs(repo_id)                    # drain runtime logs
+api.fetch_space_logs(repo_id, build=True)        # drain build logs
+api.fetch_space_logs(repo_id, follow=True)       # stream runtime logs
+api.space_info(repo_id)                          # status/hardware/sdk
+api.pause_space(repo_id)                         # stop
+api.restart_space(repo_id)                       # rebuild container
+api.request_space_hardware(repo_id, "cpu-basic") # wake or assign hardware
+```
+```bash
+hf spaces logs user/space          # drain runtime
+hf spaces logs user/space --build  # build logs
+hf spaces logs user/space -f       # follow mode
+hf spaces logs user/space -n 50    # last 50 lines
+```
+
+### Status → Diagnosis
+- BUILD_ERROR → read build logs
+- BUILDING >15 min → check build logs
+- RUNNING unresponsive → check runtime logs
+- SLEEPING → wake request + poll until RUNNING
+- PAUSED → api.restart_space()
+
+### Limitations
+- Dev Mode requires PRO; build logs expire after next build; no pagination; free tier sleeps ~15-30 min; no GPU during Docker build
+
+### Resources
+- Manage Spaces: https://huggingface.co/docs/huggingface_hub/guides/manage-spaces
+- Config reference: https://huggingface.co/docs/hub/en/spaces-config-reference
+- Dev Mode: https://huggingface.co/docs/hub/en/spaces-dev-mode
+- fetch_space_logs: https://huggingface.co/docs/huggingface_hub/package_reference/hf_api#huggingface_hub.HfApi.fetch_space_logs
+
+### Skill
+gradio-spaces — references/hf-learnings.md
