@@ -3849,4 +3849,139 @@ The `whoami-v2` response includes a detailed `auth` object:
 - huggingface_hub Webhooks API: `HfApi.list_webhooks()`, `create_webhook()`, etc.
 - Hub OpenAPI spec: `/.well-known/openapi.json` (webhooks, notifications, settings sections)
 - huggingface_hub `WebhookInfo`, `WebhookWatchedItem` dataclasses (v1.24.0+)
-- Hub Settings UI: https://huggingface.co/settings/webhooks
+|- Hub Settings UI: https://huggingface.co/settings/webhooks
+
+## 2026-07-24: hf-hub-api-rate-limiting-deep-dive — Complete Rate Limit System (Topic #167)
+
+### Summary
+Comprehensive guide to Hugging Face Hub rate limits — how the three-bucket system works, the IETF-standard RateLimit HTTP headers, per-plan quotas over 5-minute fixed windows, and best practices for avoiding 429 errors. Source: https://huggingface.co/docs/hub/en/rate-limits and live API response analysis.
+
+### Three Rate Limit Buckets
+
+The Hub enforces limits on three distinct classes of requests:
+
+| Bucket | Description | Example Endpoints |
+|--------|-------------|-------------------|
+| **Hub APIs** | Programmatic API calls | `/api/models`, `/api/datasets`, repo creation, user management |
+| **Resolvers** | File download URLs containing `/resolve/` | Model weight downloads via transformers, vLLM, llama.cpp, LM Studio |
+| **Pages** | HTML web pages on huggingface.co | Human browsing traffic |
+
+### Per-Plan Limits (all over 5-minute fixed windows)
+
+| Plan | API | Resolvers | Pages |
+|------|-----|-----------|-------|
+| Anonymous (per IP) | 500* | 3,000* | 100* |
+| Free user | 1,000* | 5,000* | 200* |
+| PRO user | 2,500 | 12,000 | 400 |
+| Team org | 3,000 | 20,000 | 400 |
+| Enterprise org | 6,000 | 50,000 | 600 |
+| Enterprise Plus org | 10,000 | 100,000 | 1,000 |
+| Enterprise Plus (Org IP Ranges) | 100,000 | 500,000 | 10,000 |
+| Academia Hub org | 3,000 | 20,000 | 400 |
+
+*Anonymous and Free user limits are subject to change based on platform health.
+
+**Important:** Organization limits apply to each member individually, not shared across members.
+
+### HTTP Rate Limit Headers (IETF Draft Standard)
+
+The HF Hub implements `draft-ietf-httpapi-ratelimit-headers` (Version 9). Two headers:
+
+**`RateLimit`** — current status:
+```
+ratelimit: "api";r=499;t=37
+```
+- `"api"` (or `"resolvers"` / `"pages"`) — which bucket
+- `r` — remaining requests in current window
+- `t` — seconds until window reset
+
+**`RateLimit-Policy`** — the policy definition:
+```
+ratelimit-policy: "fixed window";"api";q=500;w=300
+```
+- `"fixed window"` — algorithm type
+- `q` — total allowed per window
+- `w` — window duration in seconds (always 300 / 5 min)
+
+### Live API Response Verified (this session)
+
+```
+HTTP/2 200
+ratelimit: "api";r=499;t=37
+ratelimit-policy: "fixed window";"api";q=500;w=300
+```
+
+Interpretation: 499 of 500 API calls remaining, 37s until next 5-minute window opens. This confirms the anonymous/free tier API limit of ~500/5min.
+
+### Smart Retry in huggingface_hub (v1.2.0+)
+
+The Python SDK includes automatic rate limit handling:
+- On 429 error, SDK parses `RateLimit` header for the `t` (seconds remaining) value
+- Waits exactly that duration before retrying
+- Covers: file downloads (Resolvers) and paginated Hub API calls
+- **Strongly recommended** over custom retry logic
+
+```python
+from huggingface_hub import HfApi
+api = HfApi()
+# SDK handles retries automatically on 429
+models = api.list_models()  # paginated — auto-retried
+```
+
+### Billing Dashboard Monitoring
+
+Rate limit status is visible in real-time at:
+- https://huggingface.co/settings/billing
+
+Three gauges (one per bucket) show:
+- Current request count (last 5 minutes)
+- Allowed request count
+- Red bar when limit is exceeded
+
+Context switcher lets you toggle between user account and orgs.
+
+### What to Do When Rate-Limited (429)
+
+1. **Pass a HF_TOKEN** — most common fix. Anonymous IP limits are lowest.
+2. **Use Resolver endpoints instead of API calls** when possible (5x–10x higher limits)
+3. **Spread requests** over longer periods (5-minute windows allow burstiness)
+4. **Upgrade plan** to PRO (2.5x), Team (3x), or Enterprise (6x–200x)
+5. **Use huggingface_hub** for automatic retry handling
+
+### Granular User Action Limits
+
+Separate from the three main buckets, specific actions have their own undocumented limits:
+- Repo creation
+- Repo commits/pushes
+- Discussions and comments
+- Moderation actions
+
+These limits are not documented and change frequently. Contact support or upgrade for higher quotas.
+
+### Key Differences: API vs Resolver
+
+| Aspect | Hub API | Resolver |
+|--------|---------|----------|
+| Path pattern | `/api/...` | `/.../resolve/...` |
+| Typical usage | Search, list, create repos | Download model files, tokenizer files |
+| Free limit | 1,000/5min | 5,000/5min |
+| Anonymous limit | 500/5min | 3,000/5min |
+| Content served | JSON metadata | Binary blobs (safetensors, etc.) |
+
+### Best Practices
+
+- **Always authenticate** — anonymous limits are lowest and subject to change
+- **Cache resolver results** — don't re-download model files repeatedly
+- **Monitor billing dashboard** to catch approaching limits early
+- **Use huggingface_hub** for all programmatic access to get free smart retry
+- **Prefer Resolver over API** for high-throughput data access
+- **Implement exponential backoff** as fallback if not using huggingface_hub
+- **Check RateLimit header** on every response to anticipate window resets
+
+### References
+- Hub Rate Limits doc: https://huggingface.co/docs/hub/en/rate-limits
+- Hub API Endpoints: https://huggingface.co/docs/hub/en/api
+- OpenAPI spec: https://huggingface.co/.well-known/openapi.json
+- Billing Dashboard: https://huggingface.co/settings/billing
+- huggingface_hub: https://github.com/huggingface/huggingface_hub
+- IETF RateLimit Headers: https://datatracker.ietf.org/doc/draft-ietf-httpapi-ratelimit-headers/

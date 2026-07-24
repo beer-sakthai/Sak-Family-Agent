@@ -1,6 +1,6 @@
-# HF Learnings — Gradio 6: `@gr.render` Decorator & Streaming Patterns
+# HF Learnings — Gradio Chatbot Multimodal: Inputs, Outputs, Thoughts & Agents
 
-**Topic:** `hf-gradio-6-render-and-streaming-deep-dive`
+**Topic:** `hf-gradio-chatbot-multimodal-deep-dive`
 **Date:** 2026-07-24
 **Skill:** mlops/gradio-spaces
 **Author:** SakThai
@@ -8,425 +8,366 @@
 
 ## Overview
 
-Deep-dive into three major Gradio 6 features that transform how dynamic UIs and chatbots are built:
-1. **`@gr.render` decorator** — dynamic creation/removal of components and event listeners at runtime
-2. **Streaming generators** — token-by-token streaming via `yield` in chat functions
-3. **`gr.ChatInterface` v2** — multimodal support, additional inputs/outputs, `gr.load_chat`
-
-These are sourced from the official Gradio docs (guides/03_building-with-blocks/04_dynamic-apps-with-render-decorator.md and guides/05_chatbots/01_creating-a-chatbot-fast.md on Gradio main branch, mid-2026).
+Deep-dive into Gradio 5/6's multimodal chatbot capabilities — how `gr.ChatInterface`
+and `gr.Chatbot` handle text, images, audio, video, and files in the same conversation,
+plus intermediate thought/tool-usage display and agent UIs. Sourced from the official
+Gradio docs (gradio.app main branch, v6.20.0, July 2026).
 
 ---
 
-## 1. The `@gr.render` Decorator
+## 1. Multimodal Input (`multimodal=True`)
 
-Introduced in Gradio 6, `@gr.render` lets you create and destroy components and event listeners dynamically at runtime based on state changes.
+Pass `multimodal=True` to `gr.ChatInterface` to enable file uploads alongside text.
 
-### Basic Pattern
+### How it changes the chat function signature
 
+Normally: `def chat(message: str, history: list[dict]) -> str`
+
+With multimodal:
 ```python
-import gradio as gr
-
-with gr.Blocks() as demo:
-    input_text = gr.Textbox(label="Type something")
-    
-    @gr.render(inputs=[input_text])
-    def render_ui(text):
-        """Creates one Textbox per character in the input."""
-        for char in text:
-            gr.Textbox(value=char, label=f"Char: '{char}'")
+def chat(message: dict, history: list[dict]) -> str:
+    # message = {"text": "user input", "files": ["/path/to/file1", ...]}
+    text = message["text"]
+    files = message.get("files", [])
+    ...
 ```
 
-**How it works:**
-1. Decorate a function with `@gr.render(inputs=[...])`
-2. The function runs automatically when any input component changes
-3. All components created *inside* the function are rendered in order where the `@gr.render` is placed
-4. On re-render, all previously rendered components are replaced with new ones
-5. The `.load` listener and `.change` listener on inputs trigger re-renders by default
+### History format with files
 
-### Custom Triggers
-
-Override the default trigger to only re-render on specific events:
-
+When files are present in history, each message's `content` is a list of content blocks:
 ```python
-with gr.Blocks() as demo:
-    input_text = gr.Textbox(label="Enter text")
-    submit_btn = gr.Button("Submit")
-    
-    @gr.render(inputs=[input_text], triggers=[submit_btn.click])
-    def render_on_submit(text):
-        """Only renders when Submit is clicked, not on every keystroke."""
-        gr.Markdown(f"**You submitted:** {text}")
-        gr.Textbox(value=f"Length: {len(text)}", label="Analysis")
-```
-
-**Important:** If using custom triggers and you want an initial render on page load, add `demo.load` to the trigger list:
-```python
-@gr.render(inputs=[...], triggers=[submit_btn.click, demo.load])
-```
-
-### Preserving Component State with `key=`
-
-When components are re-rendered, their state is lost unless you assign a `key=`:
-
-```python
-with gr.Blocks() as demo:
-    add_btn = gr.Button("Add Textbox")
-    text_count = gr.State(0)
-    
-    @gr.render(inputs=[text_count])
-    def render_textboxes(count):
-        textboxes = []
-        for i in range(count):
-            tb = gr.Textbox(label=f"Textbox {i+1}", key=f"tb_{i}")
-            textboxes.append(tb)
-        
-        merge_btn = gr.Button("Merge", key="merge_btn")
-        output = gr.Textbox(label="Merged Output")
-        
-        def merge(*values):
-            return " | ".join(values)
-        
-        merge_btn.click(
-            merge, inputs=textboxes, outputs=output, key="merge_handler"
-        )
-    
-    add_btn.click(
-        lambda c: c + 1, inputs=text_count, outputs=text_count
-    )
-```
-
-**Key rules for `key=`**:
-- Components with the same `key=` across re-renders preserve their values
-- Parent layout elements (e.g., nested `gr.Row`) must also be keyed consistently
-- Event listeners can also be keyed: `button.click(key='my_handler')` — prevents issues when events finish processing after a re-render
-- Without `key=`, all component values reset on every re-render
-
-### Dynamic Event Listeners Inside Render
-
-Event listeners that reference components created within a render function **must also be defined inside that function**:
-
-```python
-@gr.render(inputs=[text_count])
-def render_textboxes(count):
-    textboxes = []
-    for i in range(count):
-        tb = gr.Textbox(label=f"Textbox {i+1}", key=f"tb_{i}")
-        textboxes.append(tb)
-    
-    merge_btn = gr.Button("Merge")
-    output = gr.Textbox(label="Output")  # defined outside = accessible
-    
-    def merge(*values):
-        return " | ".join(values)
-    
-    # listener INSIDE the render function — OK
-    merge_btn.click(merge, textboxes, output)
-```
-
-### Render with State Variables
-
-When reacting to a list/dict state variable:
-
-```python
-@gr.render(inputs=[tasks_state])
-def render_todo(tasks):
-    """Renders a to-do list from a state variable."""
-    for i, task in enumerate(tasks):
-        with gr.Row(key=f"row_{i}"):
-            gr.Markdown(f"- {task['text']}", key=f"md_{i}")
-            done_btn = gr.Button("✓", key=f"done_{i}")
-            del_btn = gr.Button("✗", key=f"del_{i}")
-            
-            # FREEZE the loop variable with default argument
-            done_btn.click(
-                lambda task=task: mark_done(task), 
-                None, tasks_state
-            )
-            del_btn.click(
-                lambda task=task: delete_task(task), 
-                None, tasks_state
-            )
-```
-
-**Critical pattern:** Use `task=task` as default argument to "freeze" loop variables — without this, all listeners capture the *last* iteration's value.
-
----
-
-## 2. Streaming Chatbots with Generators
-
-Gradio 6 streams chatbot responses token-by-token when your chat function uses `yield`.
-
-### Simple Streaming
-
-```python
-import time
-import gradio as gr
-
-def slow_echo(message, history):
-    for i in range(len(message)):
-        time.sleep(0.3)
-        yield "You typed: " + message[: i+1]
-
-gr.ChatInterface(
-    fn=slow_echo, 
-).launch()
-```
-
-**How it works:**
-- Each `yield` replaces the previous response in the chatbot UI
-- Gradio sends only the "diff" between yields over the network (reduces latency/data)
-- The Submit button turns into a Stop button during streaming — users can cancel mid-generation
-
-### Streaming with Additional Inputs
-
-```python
-def echo(message, history, system_prompt, tokens):
-    response = f"System: {system_prompt}\nMessage: {message}"
-    for i in range(min(len(response), int(tokens))):
-        time.sleep(0.05)
-        yield response[: i+1]
-
-with gr.Blocks() as demo:
-    system_prompt = gr.Textbox("You are helpful AI.", label="System Prompt")
-    slider = gr.Slider(10, 100, render=False)
-    
-    gr.ChatInterface(
-        echo, 
-        additional_inputs=[system_prompt, slider],
-    )
-```
-
-### Streaming Audio Responses
-
-Gradio 6 supports streaming audio output with `gr.Audio(streaming=True, autoplay=True)`:
-
-```python
-def response(state: AppState):
-    """Stream audio chunks as they're generated."""
-    for mp3_bytes in speaking(audio_buffer.getvalue()):
-        yield mp3_bytes, state  # yields audio chunk + updated state
-```
-
-Combined with `input_audio.stream()` for continuous audio capture:
-
-```python
-stream = input_audio.stream(
-    process_audio,
-    [input_audio, state],
-    [input_audio, state],
-    stream_every=0.5,    # capture in 0.5s chunks
-    time_limit=30,
-)
-```
-
----
-
-## 3. `gr.ChatInterface` v2 (Gradio 6)
-
-### Multimodal Chat
-
-`multimodal=True` enables file uploads (images, audio, video, documents):
-
-```python
-def count_images(message, history):
-    num_images = len(message["files"])
-    total_images = 0
-    for msg in history:
-        for content in msg["content"]:
-            if content["type"] == "file":
-                total_images += 1
-    return f"You just uploaded {num_images} images, total: {total_images+num_images}"
-
-demo = gr.ChatInterface(
-    fn=count_images, 
-    multimodal=True,
-    textbox=gr.MultimodalTextbox(
-        file_count="multiple", 
-        file_types=["image"], 
-        sources=["upload", "microphone"]
-    )
-)
-```
-
-**Message format with multimodal:**
-```python
-# The `message` parameter becomes a dict:
-{
-    "text": "user input", 
-    "files": [
-        "path/to/uploaded_file1.jpg",
-        "path/to/uploaded_file2.pdf", 
-    ]
-}
-
-# History uses OpenAI-style format:
 [
     {"role": "user", "content": [
-        {"type": "file", "file": {"path": "image.png"}},
-        {"type": "text", "text": "What's in this image?"}
-    ]},
-    {"role": "assistant", "content": [
-        {"type": "text", "text": "I see a cat."}
+        {"type": "file", "file": {"path": "cat1.png"}},
+        {"type": "file", "file": {"path": "cat2.png"}},
+        {"type": "text", "text": "What's the difference?"}
     ]}
 ]
 ```
 
+### Customizing the textbox
+
+Use `gr.MultimodalTextbox` for fine-grained control:
+```python
+gr.ChatInterface(
+    fn=chat_fn,
+    multimodal=True,
+    textbox=gr.MultimodalTextbox(
+        file_count="multiple",        # "single" or "multiple"
+        file_types=["image", "audio"], # restrict allowed types
+        sources=["upload", "microphone", "clipboard"]  # where files come from
+    )
+)
+```
+
+### Multimodal examples
+
+Examples in multimodal mode use dict format instead of strings:
+```python
+examples=[
+    {"text": "What's in this image?", "files": ["cheetah.jpg"]},
+    {"text": "No files", "files": []}
+]
+```
+
+---
+
+## 2. Multimodal Output — Returning Files & Components
+
+Your chat function can return these Gradio components directly, rendered inline in the chatbot:
+
+| Component     | Usage                           |
+|---------------|----------------------------------|
+| `gr.Image`    | `return gr.Image("photo.png")`  |
+| `gr.Audio`    | `return gr.Audio("sound.wav")`  |
+| `gr.Video`    | `return gr.Video("clip.mp4")`   |
+| `gr.File`     | `return gr.File("doc.pdf")`     |
+| `gr.Plot`     | `return gr.Plot(fig)`           |
+| `gr.HTML`     | `return gr.HTML("<b>bold</b>")` |
+| `gr.Gallery`  | `return gr.Gallery(images)`     |
+
+### Returning multiple messages
+
+Return a list to send the user multiple assistant messages:
+```python
+def echo_multimodal(message, history):
+    response = [f"You wrote: '{message['text']}' and uploaded:"]
+    for file in message.get("files", []):
+        response.append(gr.File(value=file))
+    return response
+```
+
+---
+
+## 3. The `gr.ChatMessage` Dataclass — Thoughts, Tools & Nested Reasoning
+
+`gr.ChatMessage` enables rich assistant messages with intermediate thought accordions
+and nested tool-call traces.
+
+### Schema (v6.20.0)
+
+```python
+MessageContent = Union[str, FileDataDict, FileData, Component]
+
+@dataclass
+class ChatMessage:
+    content: MessageContent | list[MessageContent]
+    role: Literal["user", "assistant"]
+    metadata: MetadataDict = None
+    options: list[OptionDict] = None
+
+class MetadataDict(TypedDict):
+    title:     NotRequired[str]                        # displayed as accordion header
+    id:        NotRequired[int | str]                   # for nesting
+    parent_id: NotRequired[int | str]                   # nest under another thought
+    log:       NotRequired[str]                         # subtitle next to title
+    duration:  NotRequired[float]                       # shown as "(2.3s)"
+    status:    NotRequired[Literal["pending", "done"]]  # spinner vs closed
+
+class OptionDict(TypedDict):
+    label: NotRequired[str]
+    value: str                                          # value sent on click
+```
+
+### Basic thought display
+
+```python
+from gradio import ChatMessage
+import time
+
+def chat_fn(message, history):
+    # Show a thinking step
+    thought = ChatMessage(
+        role="assistant",
+        content="Searching the knowledge base...",
+        metadata={"title": "🧠 Thinking", "status": "pending"}
+    )
+    yield thought
+
+    time.sleep(1)
+
+    # Mark as done
+    thought.metadata["status"] = "done"
+    thought.metadata["duration"] = 1.0
+    yield thought
+
+    # Final answer
+    yield ChatMessage(
+        role="assistant",
+        content="Here's what I found..."
+    )
+```
+
+### Nested thoughts (agent tool traces)
+
+Use `id` and `parent_id` to nest tool calls inside a reasoning step:
+```python
+ChatMessage(
+    role="assistant",
+    content="Calling weather API...",
+    metadata={"title": "🌤️ get_weather", "id": 1, "status": "pending"}
+)
+ChatMessage(
+    role="assistant",
+    content="Parsing response...",
+    metadata={"title": "parse_response", "id": 2, "parent_id": 1, "status": "done"}
+)
+```
+
+### Preset response options
+
+Provide clickable buttons the user can choose:
+```python
+ChatMessage(
+    role="assistant",
+    content="Would you like more details?",
+    options=[
+        {"label": "Yes, tell me more", "value": "tell me more"},
+        {"label": "No, thanks", "value": "no thanks"}
+    ]
+)
+```
+
+---
+
+## 4. Streaming Chatbots
+
+Use `yield` in your chat function for token-by-token streaming. Gradio sends
+diffs (not full messages) over the network — efficient even for long generations.
+
+```python
+def slow_echo(message, history):
+    for i in range(len(message)):
+        time.sleep(0.3)
+        yield "You typed: " + message[: i+1]
+```
+
+While streaming, the Submit button becomes a Stop button to halt generation.
+
+---
+
+## 5. Chat History Persistence (`save_history=True`)
+
+Enable per-user conversation history stored in the browser's local storage:
+
+```python
+gr.ChatInterface(
+    fn=chat_fn,
+    save_history=True
+)
+```
+
+- Each user gets their own private history (no interference between users)
+- Conversations are stored locally in the browser
+- Side panel shows previous conversations for easy switching
+- Works on HF Spaces with multiple concurrent users
+
+---
+
+## 6. User Feedback (Flagging)
+
+```python
+gr.ChatInterface(
+    fn=chat_fn,
+    flagging_mode="manual",      # show thumbs up/down
+    flagging_options=["Like", "Spam", "Inappropriate", "Other"],
+    flagging_dir="flagged_logs"  # where CSV files are saved
+)
+```
+
+- `"Like"` shows a thumbs-up icon (case-sensitive)
+- Other options appear in a dropdown under a flag icon
+- Entire chat history + flagged response saved to CSV
+
+---
+
+## 7. Chatbot Component Customization
+
+```python
+gr.ChatInterface(
+    fn=chat_fn,
+    chatbot=gr.Chatbot(
+        height=400,
+        placeholder="<strong>Ask me anything</strong><br>I'm here to help!",
+        label="Assistant",
+        avatar_images=(None, "https://example.com/bot.png"),
+        show_copy_button=True,
+    ),
+    textbox=gr.Textbox(placeholder="Type here...", container=False, scale=7),
+)
+```
+
+The `placeholder` accepts Markdown/HTML and is shown centered before any messages.
+
+---
+
+## 8. Additional Inputs & Outputs
+
+### Additional Inputs
+
+Expose extra controls (system prompt, temperature slider, etc.):
+```python
+with gr.Blocks() as demo:
+    system_prompt = gr.Textbox("You are helpful.", label="System Prompt")
+    temperature = gr.Slider(0, 2, value=1.0, label="Temperature")
+
+    gr.ChatInterface(
+        fn=chat_fn,
+        additional_inputs=[system_prompt, temperature]
+    )
+```
+
+- Unrendered components appear in an accordion below the chatbot
+- Already-rendered components (in the Blocks context) stay where they are
+
 ### Additional Outputs
 
-Return multiple values to update separate components:
+Return extra values rendered in separate components:
+```python
+with gr.Blocks() as demo:
+    code_out = gr.Code(render=False)  # render after ChatInterface
+
+    with gr.Row():
+        with gr.Column():
+            gr.ChatInterface(
+                chat_fn,
+                additional_outputs=[code_out]
+            )
+        with gr.Column():
+            code_out.render()
+```
 
 ```python
 def chat_fn(message, history):
-    response = "Some text with ```python\nprint('hello')\n``` code"
-    code_block = "print('hello')"
-    yield response, code_block  # updates chatbot + code component
-
-with gr.Blocks() as demo:
-    code_output = gr.Code(label="Extracted Code")
-    
-    gr.ChatInterface(
-        chat_fn,
-        additional_outputs=[code_output],
-    )
-```
-
-### `gr.load_chat` — Instant OpenAI-Compatible Endpoint
-
-One-line chatbot for any OpenAI-compatible API (Ollama, vLLM, etc.):
-
-```python
-import gradio as gr
-gr.load_chat(
-    "http://localhost:11434/v1/",  # Ollama endpoint
-    model="llama3.2",
-    token="***"  # optional
-).launch()
-```
-
-Also works with hosted providers by setting the token parameter.
-
-### Returning Complex Types from Chat
-
-Beyond strings, these Gradio components can be returned inside chat messages:
-
-| Component | Use Case |
-|-----------|----------|
-| `gr.Image` | Generated/analyzed images |
-| `gr.Audio` | Spoken responses, audio clips |
-| `gr.Video` | Generated video clips |
-| `gr.File` | Document downloads |
-| `gr.Plot` | Matplotlib/Plotly charts |
-| `gr.HTML` | Custom rendered HTML |
-| `gr.Gallery` | Multiple images |
-
-**Example — returning an image in chat:**
-```python
-def chat_response(message, history):
-    # Generate an image
-    img_path = generate_image(message)
-    return gr.Image(value=img_path)
+    if "python" in message.lower():
+        return "Here's the code:", gr.Code(language="python", value="print('hello')")
+    else:
+        return "Ask about Python.", None
 ```
 
 ---
 
-## 4. Event Data & Validation
+## 9. Direct Chatbot Value Manipulation
 
-### Gathering Event Data
-
-Use `gr.SelectData` to capture what the user selected:
+Modify the chatbot value with custom events (e.g., a dropdown to prefill history):
 
 ```python
 with gr.Blocks() as demo:
-    textbox = gr.Textbox("The quick brown fox jumped.")
-    output = gr.Textbox(label="Selected Text")
-    
-    def show_selection(evt: gr.SelectData):
-        return f"Selected: '{evt.value}' at index {evt.index}"
-    
-    textbox.select(show_selection, None, output)
-```
+    chatbot = gr.Chatbot()
+    prefill = gr.Radio(["Conversation A", "Conversation B"])
 
-### Input Validation with `validator`
+    def load_conversation(choice):
+        convos = {
+            "Conversation A": [
+                {"role": "user", "content": "Hello"},
+                {"role": "assistant", "content": "Hi there!"}
+            ],
+            ...
+        }
+        return gr.Chatbot(value=convos[choice])
 
-```python
-with gr.Blocks() as demo:
-    age = gr.Number(label="Age", value=25)
-    name = gr.Textbox(label="Name")
-    submit = gr.Button("Submit")
-    output = gr.Textbox(label="Result")
-    
-    def process(age, name):
-        return f"Hello {name}, age {age}"
-    
-    def validate(age, name):
-        errors = []
-        if age < 0 or age > 150:
-            errors.append(gr.validate(False, "Age must be 0-150"))
-        else:
-            errors.append(gr.validate(True))
-        if len(name.strip()) == 0:
-            errors.append(gr.validate(False, "Name is required"))
-        else:
-            errors.append(gr.validate(True))
-        return errors
-    
-    submit.click(
-        process, [age, name], output,
-        validator=validate
-    )
-```
-
-**Benefits of validator:**
-- Runs immediately, bypasses queue — near-instant feedback
-- Returns validation status per input (granular control)
-- Errors displayed differently in UI vs generic exceptions
-
-### Timer-Based Events
-
-```python
-with gr.Blocks() as demo:
-    timer = gr.Timer(5)  # fires every 5 seconds
-    timestamp = gr.Textbox(label="Current Time")
-    
-    def update_time():
-        import datetime
-        return str(datetime.datetime.now())
-    
-    timer.tick(update_time, None, timestamp)
-```
-
-Or use `every=` on a component:
-```python
-timer = gr.Timer(5)
-textbox = gr.Textbox(update_time, inputs=[], every=timer)
+    prefill.change(load_conversation, prefill, chatbot)
 ```
 
 ---
 
-## 5. Zero-Cost Patterns for Gradio 6 on HF Spaces
+## 10. API Endpoint
 
-1. **CPU Spaces are free** — All Gradio 6 features work on free CPU hardware
-2. **Streaming reduces perceived latency** — Yield partial responses immediately instead of waiting for full generation
-3. **`gr.load_chat` with local endpoints** — Point to a free Ollama instance running in a separate Space or locally
-4. **`@gr.render` for memory efficiency** — Only render what's needed, reduce DOM size on long conversations
-5. **Multimodal with small models** — Use free HF Inference API models (e.g., Phi-4, Llama 3.2 Vision) for image analysis
-6. **`gr.Timer` for auto-refresh** — Poll free data sources without JS
+Every `gr.ChatInterface` exposes a REST API at `/fn_name` (default `/chat`):
+
+```python
+gr.ChatInterface(chat_fn, api_name="chat")  # endpoint: /chat
+```
+
+Use the Gradio Python/JS Client to call it:
+
+```python
+from gradio_client import Client
+client = Client("user/my-chat-space")
+result = client.predict("/chat", {"message": "Hello"})
+```
 
 ---
 
-## Source Code References
+## 11. Single-Line Chat from OpenAI-Compatible Endpoint
 
-- `@gr.render`: Gradio Python source — `gradio/blocks.py` (BlockContext._render)
-- `gr.ChatInterface`: `gradio/chat_interface.py`
-- `gr.load_chat`: `gradio/chat_interface.py` — wraps OpenAI-compatible API
-- `gr.SelectData`: `gradio/event_data.py`
-- `gr.validate`: `gradio/validation.py`
-- `gr.Timer`: `gradio/timer.py`
+```python
+gr.load_chat("http://localhost:11434/v1/", model="llama3.2", token="***").launch()
+```
 
-## Resources
+Works with Ollama, vLLM, TGI, or any OpenAI-compatible server.
 
-- [Dynamic Apps with Render Decorator](https://www.gradio.app/guides/dynamic-apps-with-render-decorator)
-- [Creating a Chatbot Fast](https://www.gradio.app/guides/creating-a-chatbot-fast)
-- [ChatInterface Examples](https://www.gradio.app/guides/chatinterface-examples)
-- [Building Conversational Chatbots](https://www.gradio.app/guides/building-conversational-chatbots-with-gradio)
-- [Gradio API Reference](https://www.gradio.app/docs/gradio/chatinterface)
+---
+
+## Key Takeaways
+
+1. `multimodal=True` + `gr.MultimodalTextbox` = users can send text + files together
+2. Chat function returns `gr.Image`, `gr.Audio`, `gr.Video`, `gr.File`, etc. inline
+3. `gr.ChatMessage` with `metadata={"title": ...}` = collapsible thought accordion
+4. Nested thoughts via `id`/`parent_id` for agent tool traces
+5. `save_history=True` = per-user local-storage persistence (free, no backend)
+6. `flagging_mode="manual"` = thumbs up/down feedback, CSV saved locally
+7. Streaming via `yield` — diffs sent over network, Stop button built in
+8. Additional inputs/outputs for extra controls and side panels
+9. Direct chatbot value manipulation for prefill/clear buttons
+10. `gr.load_chat()` for instant OpenAI-compatible endpoints
