@@ -115,8 +115,14 @@ See [`references/hf-hub-cache-and-env.md`](references/hf-hub-cache-and-env.md) �
 - **HfApi utilities:** Programmatic workflows (`create_repo` + `upload_folder`, `snapshot_download`, `CommitOperationAdd/Delete` for atomic commits), token management, Space secrets, webhooks, collections, and common automation patterns.
 - **Troubleshooting:** cache bloat, download timeouts, symlink warnings on Windows, hf_transfer for faster downloads.
 
-### Storage & Automation
-*   **Buckets:** Full S3-like bucket management (`create`, `cp`, `mv`, `rm`, `sync`).
+### Storage — Buckets API (`hf://buckets/...`)
+*   **Buckets (v1.x):** Full S3-like object storage on the Hub — no Git/LFS overhead.
+    - **CLI:** `hf buckets create|list|info|delete|rm|move|cp|sync`
+    - **Python API:** `create_bucket()`, `list_buckets()`, `batch_bucket_files()`, `sync_bucket()`, `download_bucket_files()`
+    - **Sync:** Bidirectional local↔bucket with filter patterns, plan/apply workflow, dry-run
+    - **URL format:** `hf://buckets/{namespace}/{name}(/path)`
+    - **Zero-cost:** Free on Hub's free tier (public unlimited, private with limits)
+    - **Full reference:** [`references/hf-learnings.md`](references/hf-learnings.md) — Buckets deep-dive (Topic #105)
 *   **Cache:** Manage local storage with `hf cache list`, `hf cache prune` (remove detached revisions), and `hf cache verify` (checksum checks). Or use the Python API for fine-grained: `scan_cache_dir().delete_revisions()`.
 *   **Webhooks:** Automate workflows by managing Hub webhooks (`create`, `watch`, `enable`/`disable`).
 *   **Collections:** Organize Hub items into collections (`add-item`, `update`, `list`).
