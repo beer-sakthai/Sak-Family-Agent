@@ -2957,3 +2957,229 @@ This design means: **the first downloader pays the bandwidth cost; all concurren
 
 ### Skill
 huggingface-hub — references/hf-learnings.md
+---
+
+## 2026-07-24: hf-hub-sandboxes -- Sandboxes: Isolated Cloud VMs via Jobs (Topic #148)
+
+### Summary
+Complete deep-dive into the new **Sandbox** feature in `huggingface_hub` v1.22.0+ -- isolated cloud machines that spin up in seconds for running commands, transferring files, and serving ports. Covers both `Sandbox.create()` (dedicated VMs) and `SandboxPool` (shared CPU pool), the full API surface, CLI commands, background processes, port proxying, and cost-model implications. Plus bonus coverage of the simultaneously released **Space Templates** (v1.23.0), **Tree Cache** (v1.22.0), and **Named Jobs** (v1.24.0).
+
+### Architecture Overview
+
+Sandboxes are built on top of **Jobs**: under the hood a sandbox is a Job running a tiny static server that exposes command execution and file transfers over HTTP. This means any Docker image with `/bin/sh` works -- no Python, pip, or agent preinstalled needed (the server binary is injected at startup). Sandboxes inherit Jobs' billing, hardware flavors, namespace permissions, and 24h maximum lifetime.
+
+**Two flavors:**
+
+| Aspect | `Sandbox.create()` | `SandboxPool` |
+|--------|-------------------|---------------|
+| Allocation | 1 Job = 1 sandbox (whole VM) | 1 Job = many sandboxes (packed) |
+| Isolation | Full VM | uid + Landlock (same-user trust) |
+| Cold start | ~6s per sandbox | ~6s first host, then ~1 RTT each |
+| Cost | 1 VM per sandbox | 1 VM amortized across many sandboxes |
+| GPU | Yes | No (CPU only) |
+| Best for | Single sandbox, GPU, untrusted code | Many cheap CPU sandboxes (RL, fan-out) |
+
+### Core API: Sandbox.create()
+
+```python
+from huggingface_hub import Sandbox
+
+# Context manager -- auto-terminates on exit
+with Sandbox.create() as sbx:
+    result = sbx.run("python -c 'print(40 + 2)'")
+    print(result.stdout)  # 42
+
+# With custom image and GPU flavor
+sbx = Sandbox.create(
+    image="pytorch/pytorch:2.6.0-cuda12.4-cudnn9-devel",
+    flavor="a10g-small",
+    idle_timeout=600,
+    env={"MY_VAR": "hello"},
+    secrets={"API_KEY": "sk-..."},
+    volumes=[Volume(...)],
+    forward_hf_token=False,
+)
+```
+
+#### Sandbox.create() Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `image` | `str` | `"python:3.12"` | Any Docker image with `/bin/sh` |
+| `flavor` | `str` | `"cpu-basic"` | Hardware flavor (`cpu-basic`, `a10g-small`, etc.) |
+| `idle_timeout` | `int\|float\|None` | `600` | Auto-shutdown after inactivity (s); None disables |
+| `env` | `dict` | `None` | Environment variables |
+| `secrets` | `dict` | `None` | Encrypted secret env vars |
+| `volumes` | `list[Volume]` | `None` | HF repos/buckets to mount |
+| `namespace` | `str` | `None` | User/org namespace (defaults to current user) |
+| `forward_hf_token` | `bool` | `False` | Inject HF_TOKEN into sandbox |
+| `start_timeout` | `float` | `120.0` | Max seconds to wait for readiness |
+
+### Running Commands
+
+```python
+# Shell string -> runs through /bin/sh -c
+sbx.run("pip install -q numpy && python -c 'import numpy; print(numpy.__version__)'")
+
+# argv list -> exec'd directly (no shell)
+sbx.run(["python", "-c", "import numpy; print(numpy.__version__)"])
+
+# Explicit shell/argv mode
+sbx.run("echo $HOME && ls | wc -l", shell=True)
+sbx.run(["git", "commit", "-m", msg], shell=False)
+
+# Live output streaming + env + cwd + timeout
+sbx.run("make -j4", cwd="/app", env={"CC": "gcc"}, timeout=600,
+    on_stdout=lambda line: print(f"[OUT] {line}"),
+    on_stderr=lambda line: print(f"[ERR] {line}"),
+)
+
+# Non-zero exits -> SandboxCommandError
+result = sbx.run("exit 1", check=False)
+print(result.exit_code, result.stdout, result.stderr)
+
+# Background processes
+bg = sbx.run("python -m http.server 8080", background=True)
+sbx.processes()
+bg.kill()
+
+# stdin
+sbx.run("sort -n", input=b"3\n1\n2\n")
+```
+
+### File Operations
+
+```python
+sbx.files.write("/app/script.py", "print('hello')")
+content = sbx.files.read("/app/script.py")
+sbx.files.delete("/app/script.py")
+sbx.files.write("/app/data/file.txt", b"...")
+sbx.files.list("/app/")
+```
+
+### Port Proxying (proxy_url_for)
+
+```python
+sbx.run("python -m http.server 8080", background=True)
+url = sbx.proxy_url_for(port=8080, path="/", scheme="https://")
+# -> https://<job_id>--8080.hf.jobs/v1/.../proxy/8080/
+```
+
+Protocol-agnostic: use `scheme="wss://"` for WebSocket.
+
+Pool sandbox caveat: Pool sandboxes cannot bind TCP ports (Landlock). Use Unix socket instead.
+
+### Lifecycle & Reconnection
+
+```python
+with Sandbox.create() as sbx:
+    ...
+
+# Manual lifecycle
+sbx = Sandbox.create()
+sbx.run("python train.py")
+sbx.close()       # release local HTTP client (no terminate)
+sbx.kill()        # terminate
+
+# Reconnect from anywhere
+sbx = Sandbox.connect(sandbox_id="<id>", namespace="<user>")
+```
+
+### SandboxPool -- Shared CPU Sandboxes
+
+```python
+from huggingface_hub import SandboxPool
+
+with SandboxPool(image="python:3.12", max_size=10) as pool:
+    sbx = pool.get_sandbox()
+    result = sbx.run("python task.py")
+    sbx.return_to_pool()
+
+    with pool.get_sandbox() as sbx:
+        result = sbx.run("python task.py")
+
+    results = pool.map(my_func, [1, 2, 3, 4, 5])
+```
+
+Pool characteristics:
+- max_size: max concurrent sandboxes (default 10)
+- CPU-only (cpu-basic flavor)
+- uid + Landlock isolation
+- First host ~6s, then ~1 RTT per sandbox
+- Auto-scale hosts
+
+### CLI Commands (hf sandbox)
+
+```bash
+hf sandbox create --image python:3.12 --flavor cpu-basic
+hf sandbox exec <id> -- python -c "print('hi')"
+hf sandbox cp data.csv <id>:/data/data.csv
+hf sandbox cp <id>:/output/results.csv ./results.csv
+hf sandbox ls
+hf sandbox kill <id>
+hf sandbox spawn <id> -- python server.py
+hf sandbox logs <id>
+```
+
+### Cost & Zero-Cost
+
+**Sandboxes require billing.** Built on Jobs which require HF Pro/billing:
+- Free-tier accounts cannot create sandboxes
+- `idle_timeout` (default 10 min) is primary cost control
+- Zero-cost alt: Spaces persistent storage + Gradio/Streamlit; local VMs
+
+### Bonus: Space Templates (v1.23.0)
+
+Seed Spaces from templates:
+
+```bash
+hf spaces templates
+# NAME        REPO_ID                             SDK     PREFERRED_PRIVATE
+# Streamlit   streamlit/streamlit-template-space  docker
+# JupyterLab  SpacesExamples/jupyterlab           docker  Yes
+
+hf repos create my-jupyterlab --type space --template jupyterlab
+```
+
+```python
+create_repo("my-jupyterlab", repo_type="space", space_template="jupyterlab")
+```
+
+- Templates: JupyterLab, Streamlit chatbot, Gradio chatbot, more
+- SDK inferred from template
+- PREFERRED_PRIVATE templates default private
+
+### Bonus: Tree Cache (v1.22.0)
+
+snapshot_download caches repo file listing in `trees/` folder:
+- Cached commit costs 1 network call (branch->hash resolve)
+- Skips per-file HEAD for Xet files
+- Raises `IncompleteSnapshotError` on cache miss + network failure
+
+### Bonus: Named Jobs (v1.24.0)
+
+```bash
+hf jobs run --name training-v2 python:3.12 python train.py
+hf jobs labels <job_id> --name training-v2
+hf jobs scheduled run @hourly --name hourly-task python:3.12 python -c 'print("hello")'
+```
+
+```python
+run_job("python:3.12", command="python train.py", name="training-v2")
+create_scheduled_job("@hourly", "python:3.12", "python task.py", name="hourly-task")
+```
+
+Names optional, stored as `name` label, shown in UI.
+
+### Resources
+- Sandbox guide: https://huggingface.co/docs/huggingface_hub/main/en/guides/sandbox
+- Sandbox reference: https://huggingface.co/docs/huggingface_hub/main/en/package_reference/sandbox
+- Jobs reference: https://huggingface.co/docs/huggingface_hub/main/en/package_reference/jobs
+- v1.22.0 release (Sandboxes, Tree Cache, CLI rebuild): https://github.com/huggingface/huggingface_hub/releases/tag/v1.22.0
+- v1.23.0 release (Space Templates): https://github.com/huggingface/huggingface_hub/releases/tag/v1.23.0
+- v1.24.0 release (Named Jobs): https://github.com/huggingface/huggingface_hub/releases/tag/v1.24.0
+- CLI guide: https://huggingface.co/docs/huggingface_hub/main/en/guides/cli
+- Spaces docs: https://huggingface.co/docs/hub/en/spaces
+
+### Skill
+mlops/huggingface-hub -- references/hf-learnings.md
