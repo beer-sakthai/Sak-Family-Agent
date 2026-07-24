@@ -130,5 +130,181 @@ When `offloading=True`:
 - Multi-Query Attention paper: https://huggingface.co/papers/1911.02150
 - Grouped-Query Attention paper: https://huggingface.co/papers/2305.13245
 
----
+|---
 
+## 2026-07-24: hf-transformers-5-architecture-registry-system-deep-dive (Topic #195)
+
+### Summary
+Source-verified deep-dive into the Transformers v5 Architecture Registry system — the complete pipeline by which config classes are mapped to model classes, remote code is resolved, and custom models register themselves with AutoModel/AutoConfig. Covers `_LazyAutoMapping`, `CONFIG_MAPPING_NAMES` (682 entries), `AutoConfig.register()`, `AutoModel.register()`, the `from_pretrained` resolution flow (local vs. remote code), `_get_model_class`, `register_for_auto_class`, `model_type_to_module_name`, and `get_class_from_dynamic_module`. All findings verified against `transformers==5.14.1` source.
+
+### Key Concepts
+
+**Two-Level Registration:** Transformers v5 uses a two-level registration system:
+
+1. **`AutoConfig` — Config-level registry** (string → config class): `AutoConfig.register(model_type, config_class)` adds to `CONFIG_MAPPING` (a `_LazyAutoMapping` keyed by string model_type like `"llama"`, `"qwen2"`) — 682 entries.
+2. **`AutoModel` — Model-level registry** (config class → model class): `AutoModel.register(config_class, model_class)` adds to `cls._model_mapping` (another `_LazyAutoMapping` keyed by config class).
+
+**`_LazyAutoMapping` — The Core (source: `transformers.models.auto.auto_factory`):**
+An `OrderedDict` subclass that lazy-loads model/config classes from `transformers.models.{module_name}` only when accessed. Contains:
+- `_config_mapping`: `{model_type: config_class_name}` — maps model type strings to config class names (e.g., `"llama"` → `"LlamaConfig"`)
+- `_model_mapping`: `{model_type: model_class_name}` — maps model type strings to model class names
+- `_reverse_config_mapping`: `{config_class_name: model_type}` — reverse lookup
+- `_extra_content`: `{config_class: model_class}` — for user-registered custom models (overrides native mappings)
+- `_modules`: `{module_name: module}` — cache of imported model modules
+
+**Key behaviours:**
+- **Lazy loading**: Classes are imported only when accessed via `__getitem__` or `keys()`
+- **Module resolution**: Uses `model_type_to_module_name(model_type)` which normalizes dashes to underscores (e.g., `"command-r"` → `"command_r"`)
+- **Import path**: `from transformers.models.{module_name} import {class_name}`
+- **`register(key, value, exist_ok=False)`**: Inserts into `_extra_content`. Skips registration if the config class module starts with `"transformers."` — this prevents native configs from being permanently remapped to custom models when `trust_remote_code=False` is later specified.
+
+### AutoModel.from_pretrained() Resolution Flow
+
+```
+from_pretrained(model_name, ...)
+  │
+  ├── 1. Load config.json → config = AutoConfig.from_pretrained(...)
+  │
+  ├── 2. Check PEFT adapter config (find_adapter_config_file)
+  │      If found, redirect base_model_name_or_path
+  │
+  ├── 3. Determine code source:
+  │      has_remote_code = "auto_map" in config and cls.__name__ in config.auto_map
+  │      has_local_code   = type(config) in cls._model_mapping
+  │
+  ├── 4. Resolve trust_remote_code via resolve_trust_remote_code()
+  │
+  ├── 5. Dispatch:
+  │      ├── REMOTE CODE (has_remote_code && trust_remote_code && !explicit_local_code):
+  │      │     class_ref = config.auto_map[cls.__name__]  # e.g., "modeling_lm.py--MyModel"
+  │      │     model_class = get_class_from_dynamic_module(class_ref, ...)
+  │      │     cls.register(config.__class__, model_class, exist_ok=True)
+  │      │     model_class.register_for_auto_class(auto_class=cls)
+  │      │     model_class = add_generation_mixin_to_remote_model(model_class)
+  │      │     return model_class.from_pretrained(...)
+  │      │
+  │      └── LOCAL CODE (has_local_code):
+  │            model_class = _get_model_class(config, cls._model_mapping)
+  │            # If composite model, extract text_config and its quantization_config
+  │            return model_class.from_pretrained(...)
+  │
+  └── 6. (Error if neither remote nor local code available)
+```
+
+**Remote Code Resolution (`config.auto_map`):**
+The `auto_map` dict in `config.json` maps Auto class names to Python class references:
+```json
+{
+  "auto_map": {
+    "AutoConfig": "configuration_my_model.MyModelConfig",
+    "AutoModel": "modeling_my_model.MyModel",
+    "AutoModelForCausalLM": "modeling_my_model.MyModelForCausalLM"
+  }
+}
+```
+- Format: `"module_path.ClassName"` or `"repo_id--module_path.ClassName"` (cross-repo)
+- `get_class_from_dynamic_module()` downloads the repo's code files to local cache and dynamically imports the class
+- After loading, `cls.register()` adds to `_extra_content` for fast subsequent lookups
+- `register_for_auto_class()` sets `cls._auto_class` on the model class for serialization
+
+### `_get_model_class()` — Sub-Architecture Selection
+
+```python
+def _get_model_class(config, model_mapping):
+    supported_models = model_mapping[type(config)]
+    if not isinstance(supported_models, (list, tuple)):
+        return supported_models
+
+    name_to_model = {model.__name__: model for model in supported_models}
+    architectures = getattr(config, "architectures", [])
+    for arch in architectures:
+        if arch in name_to_model:
+            return name_to_model[arch]
+
+    # Fallback to first element
+    return supported_models[0]
+```
+
+This handles cases where one config maps to multiple model classes (e.g., `LlamaConfig` → `LlamaModel`, `LlamaForCausalLM`, `LlamaForSequenceClassification`). The `config.architectures` field (e.g., `["LlamaForCausalLM"]`) selects the correct one. If absent, the first registered model class is used.
+
+### Custom Model Registration (User-Side)
+
+```python
+from transformers import AutoConfig, AutoModel
+
+# 1. Register the config
+AutoConfig.register("my_model", MyModelConfig)
+
+# 2. Register the model (with error checking)
+AutoModel.register(MyModelConfig, MyModel, exist_ok=False)
+
+# 3. Mark the model class for auto-serialization
+MyModel.register_for_auto_class("AutoModel")
+
+# 4. Now use normally
+model = AutoModel.from_pretrained("path/to/model")
+```
+
+The `exist_ok=False` default raises if the config class is already mapped. Set to `True` for hot-reloading or overrides.
+
+### Important Guard: Native Config Protection
+
+```python
+# In _LazyAutoMapping.register():
+if getattr(key, "__module__", "").startswith("transformers."):
+    return  # Skip — native configs can't be permanently remapped
+```
+
+This ensures that if a remote-code model reuses a native Transformers config (e.g., `LlamaConfig`), the registration is silently skipped. Without this, every subsequent `from_pretrained` call would resolve to the custom model even with `trust_remote_code=False`, because the custom class would sit in `_extra_content` and take priority. Instead, the remote/native disambiguation happens only at `trust_remote_code` time via `resolve_trust_remote_code()`.
+
+### `model_type_to_module_name()` Normalization
+
+```python
+model_type_to_module_name("command-r")  # → "command_r"
+model_type_to_module_name("qwen2_moe")  # → "qwen2_moe"
+model_type_to_module_name("phi4")        # → "phi4"
+```
+
+Simply replaces hyphens with underscores. Module names match the model type string (underscore-normalized).
+
+### `register_for_auto_class()` — Serialization Support
+
+```python
+@classmethod
+def register_for_auto_class(cls, auto_class="AutoModel"):
+    import transformers.models.auto as auto_module
+    if not hasattr(auto_module, auto_class):
+        raise ValueError(f"{auto_class} is not a valid auto class.")
+    cls._auto_class = auto_class
+```
+
+Sets `cls._auto_class` so that when `save_pretrained()` writes `config.json`, it includes the correct `auto_map` entry for the model's Auto class. Required for custom models that should be loadable with `AutoModel.from_pretrained()` after re-upload.
+
+### `add_generation_mixin_to_remote_model()` — Backward Compat
+
+For backward compatibility with pre-v4.45 models (when `PreTrainedModel` stopped inheriting `GenerationMixin`):
+- Checks if model inherits `torch.nn.Module`
+- Checks if it already directly inherits `GenerationMixin`
+- Checks if it has custom `generate()` or `prepare_inputs_for_generation()`
+- If needed, creates a new `type()` dynamically: `type(model_class.__name__, (model_class, GenerationMixin), {**model_class.__dict__})`
+
+### All AutoModel* Classes in v5.14.1
+
+53 Auto classes total. Key groups:
+- **Core**: `AutoModel`, `AutoModelForPreTraining`, `AutoModelForCausalLM`, `AutoModelForSeq2SeqLM`, `AutoModelForMaskedLM`
+- **Vision**: `AutoModelForImageClassification`, `AutoModelForObjectDetection`, `AutoModelForSemanticSegmentation`, `AutoModelForVideoClassification`, `AutoBackbone`
+- **Audio**: `AutoModelForAudioClassification`, `AutoModelForCTC`, `AutoModelForSpeechSeq2Seq`, `AutoModelForTextToSpectrogram`
+- **Multimodal**: `AutoModelForImageTextToText`, `AutoModelForMultimodalLM`, `AutoModelForImageToImage`, `AutoModelForVisualQuestionAnswering`, `AutoModelForDocumentQuestionAnswering`
+- **Special**: `AutoModelForKeypointDetection`, `AutoModelForKeypointMatching`, `AutoModelForPointmapEstimation`, `AutoModelForNormalEstimation`
+- **Other**: `AutoProcessor`, `AutoTokenizer`, `AutoFeatureExtractor`, `AutoImageProcessor`, `AutoVideoProcessor`
+
+### Sources
+- `transformers.models.auto.auto_factory` — `_LazyAutoMapping`, `_get_model_class`, `add_generation_mixin_to_remote_model`, `model_type_to_module_name`, `resolve_trust_remote_code`
+- `transformers.models.auto.configuration_auto` — `CONFIG_MAPPING`, `CONFIG_MAPPING_NAMES` (682 entries)
+- `transformers.models.auto.modeling_auto` — AutoModel source (register, from_pretrained)
+- `transformers.models.auto.tokenization_auto` — AutoTokenizer
+- `transformers.modeling_utils` — `register_for_auto_class`
+- Docs: https://huggingface.co/docs/transformers/en/model_doc/auto
+- Source: https://github.com/huggingface/transformers/tree/main/src/transformers/models/auto
+
+|

@@ -189,5 +189,9 @@
   "hf-transformers-logits-processors-deep-dive",
   "hf-hub-configuration-and-environment-variables",
   "hf-dataset-card-api",
-  "hf-repo-creation-publishing-automation"
+  "hf-repo-creation-publishing-automation",
+  "hf-async-inference-client-patterns",
+  "hf-hub-contents-api-deep-dive",
+  "hf-datasets-tool-calling-format-advanced-deep-dive-v2",
+  "hf-transformers-5-architecture-registry-system-deep-dive"
 ]
