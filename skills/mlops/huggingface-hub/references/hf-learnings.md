@@ -2495,5 +2495,109 @@ Same base fields, plus:
 - Hub REST API docs: https://huggingface.co/docs/hub/en/api
 - Repo settings docs: https://huggingface.co/docs/hub/en/repositories-settings
 
+---
+## 2026-07-24: hf-inference-client-provider-fallback-and-routing — Provider Discovery & Fallback Chains (Topic #143)
+
+### Summary
+Deep-dive into building practical provider fallback chains using Hugging Face `InferenceClient`. Covers programmatic provider discovery via `model_info(expand='inferenceProviderMapping')`, the `InferenceProviderMapping` data model, building multi-provider fallback chains with `AsyncInferenceClient`, Router API `/v1/models` for provider comparison, direct provider API key integration, and real provider availability patterns verified against `huggingface_hub` v1.24.0.
+
+### Core Discovery API — inferenceProviderMapping
+
+The Hub's `expand=inferenceProviderMapping` parameter reveals which providers serve a model and their status.
+
+```python
+from huggingface_hub import HfApi
+
+api = HfApi()
+info = api.model_info("microsoft/phi-4", expand="inferenceProviderMapping")
+for pm in info.inference_provider_mapping:
+    print(f"{pm.provider:25s} | status={pm.status:10s} | task={pm.task}")
+# Output (verified live on 2026-07-24):
+#   featherless-ai            | status=live       | task=conversational
+#   deepinfra                 | status=live       | task=conversational
+```
+
+#### InferenceProviderMapping Data Model
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `provider` | `str` | Provider identifier (e.g. `"featherless-ai"`, `"deepinfra"`, `"together"`) |
+| `hf_model_id` | `str` | The original Hugging Face model ID |
+| `provider_id` | `str` | Provider's internal model name (may differ from HF ID) |
+| `status` | `str` | `"live"` = available, other values = degraded/unavailable |
+| `task` | `str` | Inference task (e.g. `"conversational"`, `"text-to-image"`) |
+| `adapter` | `str\|None` | LoRA adapter if applicable |
+| `adapter_weights_path` | `str\|None` | Path to adapter weights |
+| `type` | `str\|None` | Model type |
+
+**Key insight:** Not all models have providers. Models with no mapping must be run locally.
+
+### Real Provider Availability Patterns
+
+Testing against `huggingface_hub` v1.24.0 on 2026-07-24:
+
+| Model | Live Providers | Total |
+|-------|---------------|-------|
+| `microsoft/phi-4` | featherless-ai, deepinfra | 2/2 |
+| `Qwen/Qwen2.5-7B-Instruct` | featherless-ai, together | 2/2 |
+| `Qwen/Qwen3-32B` | featherless-ai, deepinfra, nscale | 3/5 |
+| `meta-llama/Meta-Llama-3.1-8B-Instruct` | novita, deepinfra, nscale | 3/4 |
+| `google/gemma-2-2b-it` | featherless-ai | 1/1 |
+| `NousResearch/Hermes-3-Llama-3.1-8B` | featherless-ai | 1/1 |
+| `mistralai/Mistral-7B-Instruct-v0.3` | _(none live)_ | 0/1 |
+
+**Patterns observed:**
+- **featherless-ai** is the most common free provider
+- **deepinfra** and **nscale** are frequent secondary providers
+- **together** covers selective popular models
+- Empty live-provider sets happen — always check before routing
+
+### Provider Selection — Three-Layer System
+
+#### Layer 1: Client-Level Default
+```python
+client = InferenceClient(provider="auto")     # fastest available (default)
+client = InferenceClient(provider="deepinfra") # pin to specific provider
+```
+
+#### Layer 2: Per-Call Override via Model-ID Suffix
+```python
+result = client.chat_completion(
+    model="Qwen/Qwen3-32B:fastest",  # :cheapest, :preferred, :provider-name
+    messages=[...],
+)
+```
+
+#### Layer 3: Runtime Provider Detection
+```python
+def get_live_providers(model_id: str) -> list[str]:
+    info = HfApi().model_info(model_id, expand="inferenceProviderMapping")
+    return [pm.provider for pm in info.inference_provider_mapping if pm.status == "live"]
+```
+
+### Fallback Chain Pattern
+```python
+async def chat_with_fallback(messages, model="microsoft/phi-4", providers=None, timeout=15.0):
+    if providers is None:
+        providers = get_live_providers(model) or ["auto"]
+    for provider in providers:
+        client = AsyncInferenceClient(provider=provider, timeout=timeout)
+        try:
+            result = await client.chat_completion(model=model, messages=messages, max_tokens=256)
+            return result
+        except Exception:
+            continue
+        finally:
+            await client.close()
+    raise RuntimeError(f"All providers failed for {model}")
+```
+
+### Full reference in main hf-learnings.md
+
+### Resources
+- [InferenceClient API reference](https://huggingface.co/docs/huggingface_hub/v1.24.0/en/package_reference/inference_client)
+- [Inference Providers docs](https://huggingface.co/docs/inference-providers/en/index)
+- [Router API](https://router.huggingface.co/v1/models)
+
 ### Skill
 huggingface-hub — references/hf-learnings.md
