@@ -1525,3 +1525,370 @@ mlops/hf-datasets-library — references/hf-learnings.md
 - https://github.com/huggingface/datasets/pull/8148 — Iceberg support PR
 - https://github.com/huggingface/datasets/pull/8055 — 3D Mesh PR
 - https://github.com/huggingface/datasets/pull/8219 — CoNLL format PR
+
+---
+
+## 2026-07-24: hf-datasets-pytorch-integration-deep-dive
+
+### Summary
+Deep-dive into how Hugging Face `datasets` integrates with PyTorch — covering `with_format("torch")`, `set_transform()`, zero-copy Arrow→tensor conversion, PyTorch DataLoader integration, multi-worker loading, streaming with workers, distributed splitting, N-dimensional array handling, and the `StatefulDataLoader` checkpointing pattern.
+
+### Key API Surface
+
+#### `with_format("torch")` — Format the Dataset for PyTorch
+
+```python
+from datasets import Dataset
+ds = Dataset.from_dict({"data": [[1, 2], [3, 4], [5, 6]]})
+
+# Set format to PyTorch (zero-copy from Arrow)
+ds = ds.with_format("torch")
+ds[0]  # {'data': tensor([1, 2])}
+ds[:2] # {'data': tensor([[1, 2], [3, 4]])}
+```
+
+**GPU device support:**
+```python
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+ds = ds.with_format("torch", device=device)  # loads tensors directly on GPU
+```
+
+**Column filtering with format:**
+```python
+# Only return specific columns as tensors
+ds = ds.with_format("torch", columns=["input_ids", "attention_mask"])
+```
+
+**`output_all_columns` — mix of tensor and non-tensor columns:**
+```python
+ds = ds.with_format("torch", columns=["data"], output_all_columns=True)
+# Returns {'data': tensor([1, 2]), 'label': 0} — label stays as Python int
+```
+
+**`formatted_as()` — temporary format without mutating the dataset:**
+```python
+with ds.formatted_as("torch", device="cuda"):
+    batch = ds[0]  # tensors on GPU
+# outside the context, original format is restored
+```
+
+#### N-Dimensional Array Handling
+
+**Fixed shape → single tensor (efficient):**
+```python
+from datasets import Dataset, Features, Array2D
+
+data = [[[1, 2], [3, 4]], [[5, 6], [7, 8]]]
+features = Features({"data": Array2D(shape=(2, 2), dtype='int32')})
+ds = Dataset.from_dict({"data": data}, features=features)
+ds = ds.with_format("torch")
+ds[:2]["data"].shape  # torch.Size([2, 2, 2]) — single tensor
+```
+
+**Variable shape → list of tensors (slower):**
+```python
+data = [[[1, 2], [3]], [[4, 5, 6], [7, 8]]]  # varying shapes
+ds = Dataset.from_dict({"data": data})
+ds = ds.with_format("torch")
+ds[0]  # {'data': [tensor([1, 2]), tensor([3])]}
+```
+
+**Critical performance rule:** Always explicitly declare `Array2D`, `Array3D`, `Array4D`, or `Array5D` features with fixed shapes. The library falls back to slow shape comparison logic when shapes aren't declared.
+
+#### Image Feature Type → Tensor
+
+```python
+from datasets import Features, Image
+
+features = Features({"image": Image()})
+ds = Dataset.from_dict({"image": ["path/to/img.png"]}, features=features)
+ds = ds.with_format("torch")
+ds[0]["image"].shape  # torch.Size([512, 512, 4]) — HWC, uint8
+ds[:2]["image"].shape # torch.Size([2, 512, 512, 4])
+```
+
+#### Audio Feature Type → Tensor
+
+```python
+from datasets import Features, Audio
+
+features = Features({"audio": Audio()})
+ds = Dataset.from_dict({"audio": ["path/to/audio.wav"]}, features=features)
+ds = ds.with_format("torch")
+ds[0]["audio"]["array"]          # tensor of waveform samples
+ds[0]["audio"]["sampling_rate"]  # tensor(44100)
+```
+
+#### ClassLabel → Tensor
+
+```python
+from datasets import Features, ClassLabel
+
+features = Features({"label": ClassLabel(names=["neg", "pos"])})
+ds = Dataset.from_dict({"label": [0, 0, 1]}, features=features)
+ds = ds.with_format("torch")
+ds[:3]  # {'label': tensor([0, 0, 1])}
+```
+
+**String/binaries are unchanged** — PyTorch only supports numeric types.
+
+#### `set_transform()` — On-the-Fly Transforms (No Cache File)
+
+```python
+def encode(batch):
+    """Applied per-batch during DataLoader iteration — no cache files written."""
+    return tokenizer(batch["text"], padding="longest", truncation=True, return_tensors="pt")
+
+# with_transform returns a context that applies `encode` on every __getitem__ call
+ds = ds.with_transform(encode)
+
+# Against: returns tokenizer output directly
+ds[0]  # {'input_ids': tensor([...]), 'attention_mask': tensor([...])}
+```
+
+**Key traits:**
+- No cache file is written — transform runs fresh every access
+- Use `with_transform()` for tokenization inside a DataLoader to avoid storing pre-tokenized data
+- Combine with `with_format("torch")` for base tensor conversion + custom transform for specialized output
+
+#### `set_format()` vs `with_transform()` — The Difference
+
+| Method | Cached? | Purpose |
+|--------|---------|---------|
+| `with_format("torch")` | No (zero-copy) | Converts Arrow arrays to PyTorch tensors on-the-fly |
+| `with_transform(fn)` | No | Passes rows through a user-defined callable on every access |
+| `map(fn)` | Yes (to Arrow cache) | Persists processed data to disk as Arrow tables |
+
+Use `with_format()` for fast tensor access. Use `with_transform()` for tokenization inside DataLoaders. Use `map()` when you need to precompute and persist results.
+
+### PyTorch DataLoader Integration
+
+A `Dataset` object (map-style) can be passed directly to `torch.utils.data.DataLoader`:
+
+```python
+import numpy as np
+from datasets import Dataset
+from torch.utils.data import DataLoader
+
+ds = Dataset.from_dict({
+    "data": np.random.rand(16),
+    "label": np.random.randint(0, 2, size=16)
+}).with_format("torch")
+
+dataloader = DataLoader(ds, batch_size=4)
+for batch in dataloader:
+    print(batch)
+    # {'data': tensor([...]), 'label': tensor([...])}
+```
+
+**With custom collation (e.g., `DataCollatorForLanguageModeling`):**
+
+```python
+from transformers import DataCollatorForLanguageModeling
+from transformers import AutoTokenizer
+
+tokenizer = AutoTokenizer.from_pretrained("distilbert-base-uncased")
+collator = DataCollatorForLanguageModeling(tokenizer)
+
+ds = load_dataset("wikitext", "wikitext-2-raw-v1", split="train", streaming=True)
+ds = ds.map(lambda x: tokenizer(x["text"]), batched=True)
+dataloader = DataLoader(ds, batch_size=8, collate_fn=collator)
+```
+
+**`IterableDataset` (streaming) with DataLoader:**
+
+```python
+ds = load_dataset("bigcode/the-stack", split="train", streaming=True)
+dataloader = DataLoader(ds, batch_size=32)  # works directly
+# IterableDataset inherits from torch.utils.data.IterableDataset
+```
+
+### Multi-Worker Data Loading
+
+#### Map-Style Dataset with Workers
+
+```python
+# Save to disk for worker-safe reloading
+from datasets import load_from_disk
+
+ds.save_to_disk("my_dataset")
+ds = load_from_disk("my_dataset").with_format("torch")
+
+dataloader = DataLoader(ds, batch_size=32, num_workers=4)
+```
+
+**How it works:**
+- Each worker process reloads the dataset from the Arrow-mapped files
+- Arrow memory-mapped files are **shared** across processes (OS-level shared memory)
+- Workers don't duplicate the data in RAM — they re-map the same files
+- Each worker gets a subset of the dataset's shards
+
+#### Streaming (IterableDataset) with Workers
+
+```python
+ds = load_dataset("deepmind/code_contests", streaming=True, split="train")
+print(ds.num_shards)  # 39
+dataloader = DataLoader(ds, batch_size=32, num_workers=4)
+```
+
+**How it works:**
+- Each worker is assigned a **subset of shards** to stream from
+- `num_workers` can't exceed `num_shards` — each worker needs at least one shard
+- Workers stream independently from remote or local storage
+
+#### Sharding with `to_iterable_dataset()` for Fine-Grained Control
+
+```python
+# Convert a map-style dataset to sharded iterable
+ds = load_dataset("ethz/food101")
+iterable_ds = ds.to_iterable_dataset(num_shards=64)
+iterable_ds = iterable_ds.shuffle(buffer_size=10_000)
+
+# 64 shards ÷ 4 workers = 16 shards per worker
+dataloader = DataLoader(iterable_ds, num_workers=4)
+```
+
+### Distributed Training Support
+
+#### `split_dataset_by_node()`
+
+```python
+import os
+from datasets.distributed import split_dataset_by_node
+
+rank = int(os.environ["RANK"])
+world_size = int(os.environ["WORLD_SIZE"])
+
+# Works for both Dataset and IterableDataset
+ds = split_dataset_by_node(ds, rank=rank, world_size=world_size)
+```
+
+**For map-style Dataset:**
+- Each node gets a contiguous chunk of data (rank 0 = first chunk)
+- Contiguous chunks maximize throughput (sequential disk reads)
+
+**For IterableDataset:**
+- If `num_shards % world_size == 0`, shards are evenly assigned across nodes (optimal)
+- Otherwise, each node keeps 1 example out of `world_size`, skipping others
+- ⚠️ If shuffling in distributed mode, set a **fixed seed** in `IterableDataset.shuffle(seed=...)` so all nodes use the same shuffled shard list
+
+#### Combine with DataLoader and Workers
+
+```python
+# Each node gets its split, then uses 4 workers each
+ds = split_dataset_by_node(ds, rank=rank, world_size=world_size)
+dl = DataLoader(ds, batch_size=32, num_workers=4)
+```
+
+### Checkpoint DataLoader State (Resume Training)
+
+```python
+from torchdata.stateful_dataloader import StatefulDataLoader
+
+ds = load_dataset("deepmind/code_contests", streaming=True, split="train")
+dataloader = StatefulDataLoader(ds, batch_size=32, num_workers=4)
+
+# Save checkpoint mid-epoch
+state_dict = dataloader.state_dict()
+torch.save(state_dict, "dataloader_state.pt")
+
+# Resume from checkpoint
+dataloader.load_state_dict(torch.load("dataloader_state.pt"))
+```
+
+This works because `IterableDataset` implements `state_dict()` and `load_state_dict()`.
+
+### Shuffling in Streaming Mode
+
+```python
+# Buffer-based approximate shuffling
+shuffled = ds.shuffle(seed=42, buffer_size=10_000)
+```
+
+**How buffer shuffling works:**
+1. Fill a buffer with the first `buffer_size` examples
+2. Randomly sample from the buffer (with replacement)
+3. Replace sampled examples with new ones from the stream
+4. Larger buffer = better shuffle quality, more memory
+5. Default buffer size = 1,000
+
+**Epoch reshuffling:**
+```python
+for epoch in range(epochs):
+    shuffled_dataset.set_epoch(epoch)  # seed = initial_seed + epoch
+    for example in shuffled_dataset:
+        ...
+```
+
+### batching via `.batch()` Method
+
+```python
+# Direct batching without DataLoader (streaming)
+batched = ds.batch(batch_size=32)
+batched = ds.batch(batch_size=32, drop_last_batch=True)
+
+for batch in batched:
+    print(batch)  # list of dicts
+```
+
+### Training Loop Example
+
+```python
+import torch
+from torch.utils.data import DataLoader
+from transformers import AutoModelForMaskedLM, DataCollatorForLanguageModeling
+from datasets import load_dataset
+
+# Streaming dataset
+dataset = load_dataset("wikitext", "wikitext-2-raw-v1", split="train", streaming=True)
+dataset = dataset.shuffle(seed=42, buffer_size=10_000)
+dataset = dataset.with_format("torch")
+
+# DataLoader with collator
+tokenizer = AutoTokenizer.from_pretrained("distilbert-base-uncased")
+collator = DataCollatorForLanguageModeling(tokenizer)
+dataloader = DataLoader(dataset, batch_size=8, collate_fn=collator)
+
+# Training
+model = AutoModelForMaskedLM.from_pretrained("distilbert-base-uncased")
+model.train().to("cuda")
+
+for batch in dataloader:
+    batch = {k: v.to("cuda") for k, v in batch.items()}
+    outputs = model(**batch)
+    loss = outputs.loss
+    loss.backward()
+    optimizer.step()
+```
+
+### Key Insights
+
+1. **Zero-copy is the killer feature** — Arrow→PyTorch tensor conversion via `with_format("torch")` is nearly free (just metadata). No serialization or memcpy.
+
+2. **Pre-define array shapes** for N-dimensional data. Without explicit `Array2D`/`Array3D` features, the library does expensive shape comparison and falls back to list-of-tensors.
+
+3. **`with_transform()` for tokenization** inside a DataLoader — avoids writing pre-tokenized data to cache, saving disk space and time.
+
+4. **`map()` caches by default** — fingerprint-based caching means re-running the same map loads from cache. Use `load_from_cache_file=False` for non-deterministic transforms.
+
+5. **Worker-based loading with map-style datasets** requires `save_to_disk()` first — the Arrow files must exist on disk for workers to memory-map them.
+
+6. **Streaming `num_workers` is shard-limited** — you can't have more workers than shards. Use `to_iterable_dataset(num_shards=N)` to increase shard count.
+
+7. **Distributed splitting** with `split_dataset_by_node()` works for both map and iterable datasets, but iterable shard-count-based splitting is more efficient when `num_shards % world_size == 0`.
+
+8. **`StatefulDataLoader`** from `torchdata` enables mid-epoch checkpoint/resume — essential for long training runs on preemptible infrastructure.
+
+9. **String/binary columns are silently ignored** by `with_format("torch")` — they stay as Python objects.
+
+10. **`formatted_as()` context manager** is the safest way to use temporary tensor formats without mutating the dataset.
+
+### Sources
+- https://huggingface.co/docs/datasets/en/use_with_pytorch — official guide
+- https://huggingface.co/docs/datasets/en/stream — streaming guide
+- https://huggingface.co/docs/datasets/en/process — process guide
+- https://huggingface.co/docs/datasets/en/package_reference/main_classes — Dataset API reference
+- Source: `src/datasets/formatting/formatting.py` — formatting internals
+- Source: `src/datasets/distributed.py` — `split_dataset_by_node`
+- https://pytorch.org/docs/stable/data.html — PyTorch DataLoader docs
+- https://github.com/pytorch/data — StatefulDataLoader

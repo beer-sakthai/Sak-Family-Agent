@@ -210,5 +210,7 @@
   "hf-dataset-card-api-hub-tag-taxonomy-validation-deep-dive",
   "hf-hub-create-commit-atomic-operations-deep-dive",
   "hf-hub-repo-management-rest-api-deep-dive",
-  "hf-hub-repo-likes-engagement-api"
+  "hf-hub-repo-likes-engagement-api",
+  "hf-hub-exceptions-retry-deep-dive",
+  "hf-datasets-pytorch-integration-deep-dive"
 ]
