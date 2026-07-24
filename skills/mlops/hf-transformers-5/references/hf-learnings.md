@@ -458,3 +458,273 @@ When `w=1.0`, this reduces to the standard formula. When `w=0.7`, the acceptance
 - Static ensemble paper: https://arxiv.org/abs/2604.07622
 - GenerationConfig source: https://github.com/huggingface/transformers/blob/main/src/transformers/generation/configuration_utils.py
 - Assisted generation blog: https://huggingface.co/blog/assisted-generation
+
+---
+
+## 2026-07-24: hf-transformers-qwen3 (Qwen3 & Qwen3.5 Architecture Deep Dive)
+
+### Summary
+Deep-dive into the Qwen3 and Qwen3.5 model family architectures within Hugging Face Transformers v5.14.1. Covers the full ecosystem: Qwen3 (dense + MoE), Qwen3Next (512-expert MoE), Qwen3.5 (hybrid linear+full attention), Qwen3VL/VLMoe (vision-language), Qwen3OmniMoe (omni-modal + speech), and Qwen3ASR (speech recognition). Verified against Transformers v5.14.1 source and model configs. Qwen3 models have 16M+ downloads each, making them one of the most-used open-source model families.
+
+### QwenModel Family Tree (Transformers v5)
+
+```
+Qwen3 (qwen3)            Dense decoder, full attention, QK-norm, head_dim=128
+Qwen3 MoE (qwen3_moe)    128 experts, 8 active/tok, GQA 32→4
+Qwen3Next (qwen3_next)   512 experts, 10 active/tok, hybrid linear/full attn, 48L
+Qwen3VL (qwen3_vl)       Vision-language (dense encoder + Qwen3)
+Qwen3VLMoe (qwen3_vl_moe) Vision-language + MoE
+Qwen3.5 (qwen3_5)        Hybrid: 3 linear + 1 full attn, head_dim=256, vocab 248k
+Qwen3.5 MoE (qwen3_5_moe) 256 experts, hybrid attn, 40 layers, GQA 16→2
+Qwen3OmniMoe              Omni-modal: text+vision+audio, MoE
+Qwen3ASR                  Automatic speech recognition (encoder-decoder)
+```
+
+### 1. Qwen3 Dense (`model_type: qwen3`)
+
+**Architecture:** Standard Transformer decoder with causal attention.
+
+**Key innovations vs. Llama-style:**
+- **QK Normalization** — both query and key projections go through `Qwen3RMSNorm` on the head dimension BEFORE RoPE. This is unlike Llama (which doesn't norm Q/K) and OLMo (which norms both, but OLMo normalizes the full hidden dim before projection).
+- **Configurable `head_dim`** — head dimension is an explicit config field (`head_dim: 128`), not derived from `hidden_size / num_attention_heads`. This allows non-standard head dimensions.
+- **Layer-type routing** — each layer's attention type is specified in the `layer_types` array. Default is all `full_attention`, but can be `sliding_attention` per-layer. The attention module reads `self.sliding_window = config.sliding_window if self.layer_type == "sliding_attention" else None` and passes it to flash attention.
+- **`rope_parameters` dict** — RoPE configuration is packed into a dict with `rope_theta`, `rope_type`, and optionally `partial_rotary_factor`. This is the v5 convention.
+- **Vocabulary size:** 151,936 tokens (vs Qwen2's 152,064 — a slight reduction).
+
+**Default configuration (8B class):**
+```
+hidden_size: 4096
+intermediate_size: 22016
+num_attention_heads: 32
+num_key_value_heads: 32  (no GQA in the dense variant!)
+head_dim: 128
+num_hidden_layers: 32
+max_position_embeddings: 32768
+vocab_size: 151936
+layer_types: ['full_attention'] × 32
+sliding_window: None
+max_window_layers: 28
+```
+
+### 2. Qwen3 MoE (`model_type: qwen3_moe`)
+
+**Architecture:** Mixture of Experts with 128 experts and 8 active per token.
+
+**Components:**
+- `Qwen3MoeAttention` — same QK-norm attention as dense
+- `Qwen3MoeTopKRouter` — simple linear router + softmax + top-k selection
+  - `router_logits = F.linear(hidden_states, weight)` → softmax → top-k
+  - Optional `norm_topk_prob` to renormalize routing weights
+- `Qwen3MoeExperts` — sparse expert computation
+- `Qwen3MoeSparseMoeBlock` — dispatcher that reshapes inputs → routes → experts → combines
+- `Qwen3MoeMLP` — shared dense MLP used when no MoE
+
+**Config highlights:**
+```
+num_experts: 128
+num_experts_per_tok: 8
+hidden_size: 2048
+intermediate_size: 6144        (shared/dense intermediate)
+moe_intermediate_size: 768     (per-expert intermediate)
+num_attention_heads: 32
+num_key_value_heads: 4         (GQA 8:1 ratio)
+norm_topk_prob: False
+router_aux_loss_coef: 0.001
+output_router_logits: False
+decoder_sparse_step: 1         (every layer uses MoE)
+mlp_only_layers: []            (all layers use MoE)
+vocab_size: 151936
+```
+
+### 3. Qwen3Next (`model_type: qwen3_next`)
+
+**Architecture:** Next-generation MoE with 512 experts + hybrid attention. This is the largest Qwen architecture on the Hub.
+
+**Landmark specs:**
+```
+num_experts: 512
+num_experts_per_tok: 10
+num_hidden_layers: 48
+hidden_size: 2048
+head_dim: 256
+num_attention_heads: 16
+num_key_value_heads: 2         (most extreme GQA yet — 8:1)
+intermediate_size: 5632
+moe_intermediate_size: 512
+shared_expert_intermediate_size: 512
+norm_topk_prob: True           (re-normalizes routing probs)
+partial_rotary_factor: 0.25   (only 25% of dims get RoPE)
+vocab_size: 151936
+```
+
+**Hybrid attention pattern (same as Qwen3.5) — 3 linear + 1 full, repeated:**
+```
+layer_types: ['linear_attention', 'linear_attention', 'linear_attention', 'full_attention',
+              'linear_attention', 'linear_attention', 'linear_attention', 'full_attention', ...]
+```
+The linear attention blocks use `Qwen3_5GatedDeltaNet` (same class as Qwen3.5).
+
+### 4. Qwen3.5 Dense (`model_type: qwen3_5`)
+
+**Architecture:** Multimodal hybrid model combining linear attention (GatedDeltaNet) and full attention (standard scaled dot-product) at a 3:1 ratio, with a separate vision encoder for image/video understanding.
+
+**Revolutionary features:**
+- **Hybrid token mixing** — 24 linear attention layers + 8 full attention layers (interleaved 3:1)
+- **GatedDeltaNet** — the linear attention mechanism (see below)
+- **Native multimodal** — vision encoder (ViT-based, 27 layers) with spatial/temporal patch embedding
+- **Extended vocabulary** — 248,320 tokens (64% larger than Qwen3's 151k)
+- **Partial RoPE** — only 25% of attention dimensions get rotary embeddings
+
+**Config highlights (multimodal wrapper):**
+```
+model_type: qwen3_5
+vocab_size: 248320
+
+text_config (qwen3_5_text):
+  hidden_size: 4096
+  head_dim: 256              (double Qwen3's 128)
+  intermediate_size: 12288
+  num_attention_heads: 16
+  num_key_value_heads: 4     (GQA 4:1)
+  partial_rotary_factor: 0.25
+  max_position_embeddings: 32768
+
+vision_config (qwen3_5_vision):
+  depth: 27
+  hidden_size: 1152
+  num_heads: 16
+  patch_size: 16
+  spatial_merge_size: 2
+  temporal_patch_size: 2
+  out_hidden_size: 3584       (projects to text hidden size)
+```
+
+### 5. GatedDeltaNet — The Linear Attention Engine
+
+**What it is:** A gated delta rule network with causal convolution, combining ideas from DeltaNet (Yang et al., 2024), Mamba (SSM discretization), and gating mechanisms.
+
+**Architecture:**
+```
+Input → in_proj_qkv (Q+K+V) → Conv1d (kernel=4, groups=dim, causal)
+     → in_proj_z (gating)   → in_proj_b (beta) → in_proj_a (alpha)
+     → Delta rule recurrence (chunked or recurrent mode)
+     → out_proj → output
+```
+
+**Key components:**
+1. **Causal Conv1d** — depthwise conv with kernel_size=4 on combined QKV, captures local patterns before the recurrent step
+2. **Discretization** — `dt_bias` (per-head learned bias) and `log_A` (per-head learned decay), similar to Mamba/SSM discretization
+3. **Delta rule** — `A` decay matrix + `dt` (step size) control how quickly past context is forgotten, inspired by DeltaNet's gated delta attention
+4. **Gating** — Separate `in_proj_z` for output gating, `in_proj_b` for beta modulation, `in_proj_a` for alpha modulation
+5. **Two computation modes:**
+   - **Chunked** (`chunk_gated_delta_rule`) — parallel within chunks, O(N) across chunks
+   - **Recurrent** (`recurrent_gated_delta_rule`) — linear-time sequential, good for generation
+
+**Performance:** The linear attention mechanism is O(N) in sequence length vs O(N²) for full attention, enabling longer context at lower cost. The 3:1 hybrid ratio provides a good trade-off: linear layers handle most tokens efficiently, while full-attention layers (every 4th) provide long-range recall.
+
+**Dependencies for fast path:**
+- `flash-linear-attention` (fla) — https://github.com/fla-org/flash-linear-attention
+- `causal-conv1d` — https://github.com/Dao-AILab/causal-conv1d
+
+### 6. Qwen3.5 MoE (`model_type: qwen3_5_moe`)
+
+**Architecture:** 256-expert MoE with shared expert + hybrid 3:1 linear/full attention.
+
+**Key diffs from Qwen3MoE:**
+```
+Qwen3MoE → Qwen3.5MoE
+- 128 experts → 256 experts
+- 32 layers → 40 layers
+- GQA 32→4 → GQA 16→2
+- All full attention → Hybrid 3:1 linear/full
+- Vocab 151k → 248k
+```
+
+**Config highlights:**
+```
+num_experts: 256
+num_experts_per_tok: 8
+num_hidden_layers: 40
+shared_expert_intermediate_size: 512
+moe_intermediate_size: 512
+hidden_size: 2048
+head_dim: 256
+num_attention_heads: 16
+num_key_value_heads: 2         (16:2 = 8:1 GQA ratio)
+vocab_size: 248320
+```
+
+### 7. Vision-Language Models (Qwen3VL, Qwen3VLMoe, Qwen3_5)
+
+All Qwen VL models share a similar two-tower design:
+- **Vision encoder** — ViT-style with patch embedding, spatial merge, and optional temporal patch for video
+- **Text decoder** — The corresponding LLM (Qwen3, Qwen3MoE, or Qwen3.5MoE)
+- **Vision projector** — A `PatchMerger` that maps vision encoder outputs to text embedding space
+
+Qwen3.5VLMoe (`qwen3_5_moe_vl`) adds:
+- A separate `vision_config` within the MoE text config
+- Video support via temporal patch embedding (temporal_patch_size=2)
+- Special tokens: `image_token_id=248056`, `video_token_id=248057`, `vision_start=248053`, `vision_end=248054`
+
+### 8. Qwen3ASR (`model_type: qwen3_asr`)
+
+**Architecture:** Encoder-decoder for speech recognition. Uses a dedicated audio encoder (`Qwen3ASREncoder`) with CTC-style token classification head.
+
+**Components:**
+- `Qwen3ASREncoder` — stacks of self-attention + conv layers for audio features
+- `Qwen3ASRFeatureExtractor` — mel-spectrogram extraction
+- `Qwen3ASRProcessor` — combines feature extractor + tokenizer
+- `Qwen3ASRForConditionalGeneration` — seq2seq with decoder
+- `Qwen3ASRForTokenClassification` — CTC head for alignment-free ASR
+
+### 9. Usage Patterns
+
+**Basic Qwen3 text generation:**
+```python
+from transformers import AutoModelForCausalLM, AutoTokenizer
+
+model = AutoModelForCausalLM.from_pretrained("Qwen/Qwen3-8B")
+tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen3-8B")
+
+messages = [{"role": "user", "content": "What is MoE architecture?"}]
+inputs = tokenizer.apply_chat_template(messages, return_tensors="pt", add_generation_prompt=True)
+outputs = model.generate(inputs, max_new_tokens=256)
+print(tokenizer.decode(outputs[0], skip_special_tokens=True))
+```
+
+**Qwen3.5 with hybrid attention (fast path):**
+```python
+# For optimal performance with GatedDeltaNet, install:
+#   pip install flash-linear-attention causal-conv1d
+#
+# Without them, Transformers falls back to pure PyTorch implementation.
+# The fallback is functional but ~2-3x slower for long sequences.
+
+model = AutoModelForCausalLM.from_pretrained("Qwen/Qwen3.5-9B")
+# Model auto-selects attention implementation based on available kernels
+```
+
+**Checking MoE config at runtime:**
+```python
+from transformers import AutoConfig
+config = AutoConfig.from_pretrained("Qwen/Qwen3-235B-A14B")
+print(f"Experts: {config.num_experts}, Active/tok: {config.num_experts_per_tok}")
+print(f"GQA: {config.num_attention_heads} heads → {config.num_key_value_heads} KV heads")
+```
+
+### 10. Key Takeaways
+
+1. **Qwen3 introduced QK-norm + sliding window attention** — the foundation that made all subsequent variants possible
+2. **Qwen3MoE pioneered massive MoE at scale** — 128 experts with 8 active, now used in production by Alibaba Cloud
+3. **Qwen3.5's hybrid architecture is a breakthrough** — 3:1 linear-to-full attention ratio with GatedDeltaNet enables O(N) inference cost for most layers while maintaining full-attention quality every 4th layer
+4. **Qwen3Next pushes MoE to 512 experts** — the largest open-source MoE architecture in Transformers
+5. **Vocabulary doubled from Qwen3 (151k) to Qwen3.5 (248k)** — better tokenization efficiency for Chinese + multilingual + code
+6. **Extreme GQA** — Qwen3.5MoE uses only 2 KV heads for 16 attention heads (8:1), reducing KV cache pressure by 8×
+7. **Transformers v5 model-type convention** — all Qwen variants use distinct `model_type` values (`qwen3`, `qwen3_moe`, `qwen3_5`, `qwen3_5_moe`, etc.) enabling auto-class resolution via `AutoModel`
+
+### Resources
+- Qwen3 model card: https://huggingface.co/Qwen/Qwen3-8B
+- Qwen3.5 model card: https://huggingface.co/Qwen/Qwen3.5-9B
+- Transformers Qwen3 docs: https://huggingface.co/docs/transformers/main/en/model_doc/qwen3
+- Gated Delta Net paper: Yang et al., "Parallelizing Linear Transformers with the Delta Rule" (2024)
+- Flash Linear Attention: https://github.com/fla-org/flash-linear-attention

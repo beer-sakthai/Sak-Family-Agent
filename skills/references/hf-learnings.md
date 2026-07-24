@@ -1,6 +1,6 @@
 # HF Learnings Log
 
-## 2026-07-24: hf-gradio-lite — Serverless Gradio in the Browser with Pyodide/WebAssembly (Topic #176)
+## 2026-07-24: hf-gradio-lite — Serverless Gradio in the Browser with Pyodide/WebAssembly (Topic #174)
 
 ### Summary
 Comprehensive deep-dive on Gradio Lite (`@gradio/lite` v5.45.0) — the JavaScript library that runs Gradio apps entirely in the browser via Pyodide (Python compiled to WebAssembly). Covers architecture, CDN setup, multi-file apps with `<gradio-file>`, dependency management with `<gradio-requirements>`, Hugging Face Static Spaces integration (free, serverless), browser-based ML with `transformers-js`, theming, benefits, limitations, and production patterns.
@@ -218,7 +218,7 @@ gr.Interface(analyze, "textbox", "json").launch()
 
 ---
 
-## 2026-07-24: hf-hub-modelcard-python-api — Complete ModelCard & CardData Python API Reference (Topic #175)
+## 2026-07-24: hf-hub-modelcard-python-api — Complete ModelCard & CardData Python API Reference (Topic #173)
 
 ### Summary
 Comprehensive reference for the Hugging Face Hub's Python `ModelCard` API from `huggingface_hub` — the programmatic interface for creating, reading, updating, and publishing model cards (and dataset/Space cards) on the Hub. Covers the full class hierarchy (`RepoCard` → `ModelCard`/`DatasetCard`/`SpaceCard`), metadata with `ModelCardData`, structured evaluation results with `EvalResult`, Jinja2 template-based card creation, `metadata_update()` for lightweight changes, validation against Hub rules, and push-to-Hub workflows including PR-based contributions.
