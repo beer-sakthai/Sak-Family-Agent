@@ -13213,6 +13213,21 @@ mlops/hf-diffusers-cogvideo — references/hf-learnings.md
 - SVDQuant paper: https://arxiv.org/abs/2411.05007
 - Nunchaku engine: https://github.com/nunchaku-tech/nunchaku
 - diffuse-compressor: https://github.com/rootonchair/diffuse-compressor
-- `kernels` package: https://huggingface.co/kernels/rootonchair/nunchaku-lite-kernels
-- Quantizer source: `diffusers/src/diffusers/quantizers/nunchaku/`
-- `SVDQW4A4Linear` source: `diffusers/src/diffusers/quantizers/nunchaku/utils.py`
+|- `kernels` package: https://huggingface.co/kernels/rootonchair/nunchaku-lite-kernels
+|- Quantizer source: `diffusers/src/diffusers/quantizers/nunchaku/`
+|- `SVDQW4A4Linear` source: `diffusers/src/diffusers/quantizers/nunchaku/utils.py`
+
+---
+
+## 2026-07-24: hf-hub-repo-likes-engagement-api-deep-dive-v2 — Downloads, Trending Score, and Discovery API (Topic #213 Deepening)
+
+**author:** SakThai
+**license:** MIT
+
+### Summary
+Deepening of the Hub Engagement API with coverage of downloads metrics (30-day + all-time), trending score, search sort/expand parameters by engagement, and the full REST API surface. Completes the engagement picture: likes from v1 + downloads + trending + discovery.
+
+Full deep-dive: `mlops/huggingface-hub/references/hf-learnings.md` (topic #213 v2)
+
+### Skill
+huggingface-hub — references/hf-learnings.md

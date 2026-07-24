@@ -218,5 +218,7 @@
   "hf-gradio-custom-components-deep-dive",
   "hf-diffusers-nunchaku-lite",
   "hf-hub-spaces-as-mcp-servers-deep-dive",
-  "hf-hub-jobs-api-deep-dive"
+  "hf-hub-jobs-api-deep-dive",
+  "hf-datasets-parquet-column-selection-deep-dive",
+  "hf-hub-repo-likes-engagement-api-deep-dive-v2"
 ]

@@ -4682,3 +4682,264 @@ The Hub's discussion/PR system has a separate emoji reaction system (not the sam
 - Hub API docs: https://huggingface.co/docs/hub/en/api
 - huggingface_hub docs: https://huggingface.co/docs/huggingface_hub/package_reference/hf_api
 - Discussion reactions documented in `endpoint_helpers.py` (`DiscussionComment.reactions`)
+
+---
+
+## 2026-07-24: hf-hub-repo-likes-engagement-api-deep-dive-v2 — Downloads, Trending Score, and Discovery API (Topic #213 Deepening)
+
+**author:** SakThai
+**license:** MIT
+
+### Summary
+
+Extension of the Hub Engagement API deep-dive covering the three remaining engagement dimensions beyond the likes system: **downloads metrics** (30-day + all-time, counting methodology), **trending score** (how repos rank on the Hub), and the **search/discovery API parameters** that surface engagement data. Together with the likes API from the previous deep-dive, this completes the full Hub engagement picture.
+
+---
+
+### 1. Downloads Metrics — `downloads` and `downloads_all_time`
+
+Every repository exposes two download counters. These are **read-only** fields available through `repo_info()`, `model_info()`, and the search/list APIs.
+
+| Field | huggingface_hub Attribute | API Field | Scope |
+|-------|--------------------------|-----------|-------|
+| 30-day downloads | `ModelInfo.downloads` / `DatasetInfo.downloads` / `SpaceInfo.downloads` | `downloads` | Last 30 days |
+| All-time downloads | `ModelInfo.downloads_all_time` / `DatasetInfo.downloads_all_time` | `downloadsAllTime` | Cumulated since creation |
+
+```python
+from huggingface_hub import HfApi
+api = HfApi()
+
+info = api.model_info("bert-base-uncased")
+print(f"30-day: {info.downloads}")          # int | None
+print(f"All-time: {info.downloads_all_time}")  # int | None
+```
+
+**Key properties:**
+- Both fields are integers (`int | None`)
+- `downloads_all_time` is only present when `expand=True` is passed in `list_models()`/`list_datasets()` or when using `model_info()`/`dataset_info()` directly
+- For model info, `downloads` and `downloads_all_time` are always included
+- For search/list endpoints, they must be requested via `expand=["downloads", "downloadsAllTime"]`
+
+#### How Downloads Are Counted (Server-Side Methodology)
+
+Download counting is **server-side only** — no client-side instrumentation or analytics payloads. Every HTTP `GET` and `HEAD` request to designated "query files" increments the counter.
+
+**Default query files** (when no library is specified):
+- `config.json`, `config.yaml`, `hyperparams.yaml`, `params.json`, `meta.yaml`
+
+**Library-specific overrides** — the Hub maintains open-source code (`/api/event` endpoint config) that maps libraries to custom download query patterns:
+
+| Library | Query Files |
+|---------|------------|
+| Default (no library) | `config.json`, `config.yaml`, `hyperparams.yaml`, `params.json`, `meta.yaml` |
+| nemo | All `.nemo` files |
+| GGUF | All files (GGUF files are self-contained) |
+| diffusers | Top-level `.safetensors` + files loaded by the diffusers library |
+| Custom libraries | Add via PR to [huggingface/hub-internal-download-stats](https://github.com/huggingface/hub-internal-download-stats) |
+
+**Double-counting rules:**
+- **GGUF**: All GGUF files counted — cloning a whole repo double-counts each file, but most users download single GGUF files
+- **Diffusers**: Special filter avoids double-counting nested safetensors/pickle weights loaded via the library vs. direct downloads (Auto1111, LoRA UIs)
+- **General**: The `config.json` query file is the single counter by default to avoid counting one model download as N file downloads
+
+#### Publisher Analytics for Granular Data
+
+Organizations that need more detailed download data (distinguish config.json from weights, exclude CI/CD, count unique downloaders) can use **Publisher Analytics** — anonymized request-level access logs.
+
+Features:
+- Raw access logs for all models/datasets published by an organization
+- Can distinguish file types, filter out CI/CD traffic
+- Deduplicate by unique IPs for unique downloader counts
+- Requires an organization account (not available for individual users)
+
+---
+
+### 2. Trending Score — `trending_score`
+
+Every repository type (model, dataset, space) has a **`trending_score`** — an integer value computed server-side that measures recent engagement velocity.
+
+```python
+info = api.model_info("bert-base-uncased")
+print(f"Trending score: {info.trending_score}")  # int | None
+```
+
+**Availability:**
+- Exposed in `ModelInfo.trending_score`, `DatasetInfo.trending_score`, `SpaceInfo.trending_score`
+- Only available when requesting with `expand=True` in list/search APIs or via `model_info()`/`dataset_info()`/`space_info()`
+- The Hub API JSON field is `trendingScore` (camelCase)
+
+**How it's used:**
+- Sort parameter in `list_models()`, `list_datasets()`, `list_spaces()` — sort by `"trending_score"`
+- Drives the default "Trending" sort on the Hub web UI
+- Collections can also be sorted by `"trending"` (for `CollectionSort_T`)
+- Daily Papers use `"trending"` as a sort option
+
+**Known behavior:**
+- Trending is recency-weighted — repos with spikes in likes/downloads get higher scores
+- The exact formula is proprietary/server-side but correlates with: recent likes + recent downloads + velocity (change over short time window)
+- Not documented publicly; the raw `trendingScore` is an opaque integer
+
+**Type definition:**
+```python
+ModelSort_T = Literal["created_at", "downloads", "last_modified", "likes", "trending_score"]
+DatasetSort_T = Literal["created_at", "downloads", "last_modified", "likes", "trending_score"]
+SpaceSort_T = Literal["created_at", "last_modified", "likes", "trending_score"]
+CollectionSort_T = Literal["lastModified", "trending", "upvotes"]
+DailyPapersSort_T = Literal["publishedAt", "trending"]
+```
+
+---
+
+### 3. Search & Discovery by Engagement — Sort and Expand Parameters
+
+The list/search APIs (`list_models()`, `list_datasets()`, `list_spaces()`) support sorting by engagement metrics and expanding responses to include them.
+
+#### Sort Options
+
+```python
+# Sort models by likes (descending)
+api.list_models(sort="likes", direction=-1)
+
+# Sort by trending score
+api.list_models(sort="trending_score", direction=-1)
+
+# Sort by downloads
+api.list_models(sort="downloads", direction=-1)
+
+# Sort by last_modified (for recently updated)
+api.list_models(sort="last_modified", direction=-1)
+```
+
+| Sort Value | Sorts By | Available For |
+|------------|----------|---------------|
+| `"likes"` | Like count | models, datasets, spaces |
+| `"downloads"` | 30-day download count | models, datasets |
+| `"trending_score"` | Trending score | models, datasets, spaces |
+| `"last_modified"` | Last commit date | models, datasets, spaces |
+| `"created_at"` | Creation date | models, datasets |
+
+**Direction:** `direction=1` (ascending) or `direction=-1` (descending, default).
+
+#### Expand Parameters
+
+The `expand` parameter controls which optional fields are included in list/search API responses. Engagement-related expand values:
+
+```python
+# Include all engagement metrics in search results
+api.list_models(
+    expand=["downloads", "downloadsAllTime", "likes", "trendingScore"],
+    sort="likes",
+    limit=10
+)
+```
+
+| Expand Value | What It Adds |
+|--------------|-------------|
+| `"downloads"` | Include 30-day download count |
+| `"downloadsAllTime"` | Include all-time download count |
+| `"likes"` | Include like count |
+| `"trendingScore"` | Include trending score |
+| `"lastModified"` | Include last modification timestamp |
+| `"createdAt"` | Include creation timestamp |
+
+**Performance note:** Each expand value adds one sub-query server-side. Only request what you need. Without expand, list endpoints return minimal metadata only.
+
+**Full expand options for models:**
+```python
+ExpandableModelFields = Literal[
+    "author", "cardData", "config", "createdAt", "disabled",
+    "downloads", "downloadsAllTime", "evalResults", "gated",
+    "gguf", "inference", "inferenceProviderMapping", "lastModified",
+    "library_name", "likes", "mask_token", "model-index",
+    "pipeline_tag", "private", "safetensors", "sha", "siblings",
+    "spaces", "tags", "transformersInfo", "trendingScore",
+    "widgetData", "resourceGroup"
+]
+```
+
+---
+
+### 4. REST API Endpoints for Engagement
+
+All engagement endpoints are available directly via REST without the Python library:
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/models/{repo_id}` | GET | Full model info including likes, downloads, trendingScore (requires no auth for public repos) |
+| `/api/models/{repo_id}/like` | POST | Like a repo (web UI only — blocked in scripts) |
+| `/api/models/{repo_id}/like` | DELETE | Unlike a repo (requires auth, usable from API) |
+| `/api/models/{repo_id}/likers` | GET | List users who liked a repo |
+| `/api/users/{user}/likes` | GET | List repos liked by a user |
+| `/api/models` | GET | List/search models with sort, expand, filter |
+| `/api/datasets` | GET | List/search datasets with sort, expand, filter |
+| `/api/spaces` | GET | List/search spaces with sort, expand, filter |
+
+Replace `models` with `datasets` or `spaces` for dataset/space endpoints. The `/api/event` endpoint (not public) handles download counting internal logic.
+
+---
+
+### 5. Complete Engagement Data Model
+
+The full engagement state of a repository can be read from `repo_info()` which returns `RepoInfo` (or `ModelInfo`/`DatasetInfo`/`SpaceInfo`):
+
+```python
+from huggingface_hub import HfApi
+
+api = HfApi()
+info = api.repo_info("bert-base-uncased", repo_type="model")
+
+# Likes
+print(f"Likes: {info.likes}")                              # int
+
+# Downloads
+print(f"Downloads (30d): {info.downloads}")                # int
+print(f"Downloads (all time): {info.downloads_all_time}")  # int | None
+
+# Trending
+print(f"Trending score: {info.trending_score}")            # int | None
+
+# Last modified timestamp
+print(f"Last modified: {info.last_modified}")              # datetime | None
+
+# Created timestamp
+print(f"Created at: {info.created_at}")                    # datetime | None
+
+# Is repo private/disabled/gated
+print(f"Private: {info.private}")
+print(f"Disabled: {info.disabled}")
+print(f"Gated: {info.gated}")
+```
+
+For search results (bulk), use list endpoints with expand:
+
+```python
+# Top 100 most-liked models
+for model in api.list_models(sort="likes", expand=["likes", "downloads"], limit=100):
+    print(f"{model.modelId:50s} ❤️ {model.likes:>5}  ⬇️ {model.downloads:>8}")
+```
+
+---
+
+### 6. Key Insights & Practical Patterns
+
+1. **Likes + downloads are independent signals:** A model can have many downloads but few likes (utility usage) or many likes but few downloads (community buzz).
+
+2. **Trending score is the composite signal:** It combines both dimensions with recency weighting. Use `sort="trending_score"` for "what's hot now" discovery.
+
+3. **Expand is your friend for bulk queries:** Without expand, list endpoints return minimal data. Always pass `expand=["likes", "downloads"]` when you need engagement data in bulk.
+
+4. **Downloads counting has edge cases:** GGUF counts all files (potential double-counting), diffusers has special filters. Use Publisher Analytics for definitive numbers.
+
+5. **Unlike-only API is asymmetric by design:** Scripts can only unlike, never like. This prevents bot-driven engagement farming. Likes must come from real users through the web UI.
+
+6. **Engagement feeds discovery:** The Hub's search ranking and "trending" views use these metrics. More engagement → more visibility → more engagement (compounding effect).
+
+7. **Zero-cost relevance:** All engagement APIs are free and public-readable. No token needed to read likes, downloads, or trending score for public repos. Perfect for Beer's analytics and discovery needs.
+
+### Sources
+- Source code: `huggingface_hub/hf_api.py` — `ModelInfo`, `DatasetInfo`, `SpaceInfo`, `RepoInfo` fields (`likes`, `downloads`, `downloadsAllTime`, `trendingScore`)
+- Source code: `huggingface_hub/hf_api.py` — `list_models()` sort/expand parameters
+- Source code: `huggingface_hub/hf_api.py` — `ModelSort_T`, `DatasetSort_T`, `SpaceSort_T` type definitions
+- Hub API docs: https://huggingface.co/docs/hub/en/api
+- Download stats methodology: https://huggingface.co/docs/hub/en/models-download-stats
+- Hub docs: https://huggingface.co/docs/hub/en/repositories-getting-started
