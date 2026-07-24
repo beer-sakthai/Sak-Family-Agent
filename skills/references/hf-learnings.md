@@ -11114,6 +11114,134 @@ Given Beer's zero-cost constraint and 8 models on HF:
 
 ---
 
+## 2026-07-24: hf-vllm-transformers-modeling-backend-native-deep-dive — Native-Speed vLLM Transformers Modeling Backend (Topic #51 Deepened)
+
+### Summary
+Deep-dive into the **native-speed vLLM transformers modeling backend** (July 2026) — the architectural leap that makes any Hugging Face Transformers model run inside vLLM at native vLLM speed, without writing a custom port. Uses `torch.fx` static analysis + AST source rewriting to dynamically fuse operations at runtime, matching hand-optimized kernels. Covers architecture, pattern detection, the fuser engine, parallelism, limitations, and relationship to the prior-generation integration.
+
+### Source
+- Blog: https://huggingface.co/blog/native-speed-vllm-transformers-backend (Harry Mellor & Lysandre, Jul 8, 2026)
+- vLLM source: `vllm/model_executor/models/transformers/` — `base.py`, `causal.py`, `moe.py`, `pooling.py`, `multimodal.py`, `fuser.py`, `fx_utils.py`, `utils.py`
+- Fusers: `vllm/model_executor/models/transformers/fusers/` — `base.py`, `glu.py`, `qkv.py`, `rms_norm.py`, `moe.py`
+- CLI flag: `--model-impl transformers`
+
+### 1. What Changed: Second-Generation Integration
+
+The **first-generation** integration (2025) plugged vLLM's attention implementation at runtime into transformers models, making them run inside the vLLM engine — but many optimizations (Tensor Parallel, Expert Parallel, fused kernels, compilation) still required a custom native vLLM implementation to reach peak performance.
+
+The **second-generation** (July 2026) dynamically applies inference-specific layer fusions at runtime via `torch.fx` static analysis. This closes the gap — models using the transformers backend now match or exceed native vLLM throughput.
+
+Key results (Qwen3 models, 8×H100):
+- **Qwen3-4B** (dense, 1 GPU): transformers backend meets native throughput
+- **Qwen3-32B** (dense, TP=2): transformers backend meets native throughput
+- **Qwen3-235B-A22B-FP8** (MoE, DP+EP, 8 GPUs): transformers backend meets native throughput
+
+### 2. Architecture & Two-Phase Pipeline
+
+The system has two phases:
+
+**Phase 1 — Class-level Analysis (once per model class):**
+1. `Fusers.__init__` iterates all `model.modules()`, calling `get_fuser(type(m))`
+2. `get_fuser` checks if the module has ≥2 `nn.Linear` children (projection fusion candidates) or is a leaf module (RMSNorm candidates)
+3. Calls `trace(module)` — uses `_AllLeafTracer` (treats every submodule as a leaf) with `_SizedProxy` for shape inference, producing a partial `fx.Graph` even on failure
+4. Passes the graph through each fuser class's `match()` method in order: `GLUFuser`, `QKVFuser`, `RMSNormFuser`
+5. If a `StackedFuser` matches, calls `update_forward()` which uses AST rewriting to manipulate the forward source at the Python `ast` level — replacing the individual projection calls with a single merged call
+6. Results are cached per class (via `@cached(cache={}, key=type)`) — so only analyzed once
+
+**Phase 2 — Instance-level Application:**
+1. `Base.recursive_replace()` walks the instantiated model
+2. For each module, checks `fusers[type(module)]` — if a fuser matches and validates
+3. Calls `fuser.fuse(module)` which builds the merged vLLM layer (e.g., `QKVParallelLinear`) and binds the compiled forward
+4. The module retains its original class but the forward is replaced with the fused version
+
+### 3. The Fuser Engine (fx_utils.py)
+
+The tracing engine in `fx_utils.py` provides:
+
+- **`_AllLeafTracer`**: Custom `fx.Tracer` that treats all submodules as leaves, keeping the graph at the right granularity for pattern matching
+- **`_SizedProxy`**: Proxies with inferred `len()` — enables tracing through shape unpacking like `(*input_shape, -1, head_dim)` via `_infer_len()` which walks the graph's `operator.getitem` chain
+- **`trace(module)`**: Returns a partial `fx.Graph` on failure (vs raising) — graphs are only evidence for matching, and patterns sit at the top of forwards
+- **`recover_forward(cls)`**: Parses forward source via `inspect.getsource` + `ast.parse`, strips decorators/annotations for safe recompilation
+- **`compile_forward(funcdef, fn)`**: Compiles the rewritten AST in `fn`'s module so tracebacks point at the original source file
+- **`single_self_call(funcdef, name)`**: Locates the unique `self.<name>(arg)` call — ensures AST rewrites agree with fx matches
+- **`innermost_block(block, node)`**: Finds the statement list containing a node for in-place replacement
+- **`replace_expr(module, old, new)`**: Identity-based expression replacement in the AST
+- **`peel(node)`**: Strips dtype-cast wrappers (`.to()`, `.float()`, `.half()`, etc.)
+- **`is_fn`/`is_method`/`is_op`**: Predicates for matching `torch.*`, `F.*`, `operator.*`, and `Tensor.*` calls
+
+### 4. Concrete Fusers
+
+**4.1 `GLUFuser`** — GLU/GELU activation fusions:
+Matches the pattern `silu(x) * gate(x)` or `gelu(x) * gate(x)` where both projections are sibling `nn.Linear` modules. Fuses the two linears into a single `MergedColumnParallelLinear`, reducing memory traffic.
+
+**4.2 `QKVFuser`** — QKV projection fusion:
+Matches the pattern where Q, K, V projections are three sibling `nn.Linear` modules. Fuses into `QKVParallelLinear`, enabling the TP-aware fused kernel that computes all three projections in one pass.
+
+**4.3 `RMSNormFuser`** — RMSNorm fusion:
+Matches raw tensor math patterns (no submodules) for RMSNorm-shaped computations. Fuses into the vLLM fused RMSNorm kernel. Modules with `RMSNorm` in their class name that don't match trigger a warning about being left unfused.
+
+**4.4 `MoEBlockFuser`** (moe.py) — Mixture-of-Experts fusion:
+The most complex fuser. Routes an HF MoE block through vLLM's `FusedMoE` with vLLM's own routing. Uses AST rewriting to:
+- Replace the router linear with vLLM's routing
+- Replace the expert MLP with `FusedMoE` (supports Expert Parallel)
+- Handle shared experts, scalar gates, sigmoid gating
+- Detect and preserve the MoE block's attention/MLP separation
+- 500+ lines of AST pattern matching for all MoE architectures
+
+### 5. Parallelism Support
+
+The fused operations directly enable parallelization:
+
+- **MergedColumnParallelLinear + QKVParallelLinear**: These fused blocks allow vLLM to infer Tensor Parallel (TP) plans automatically. `ColumnParallelLinear` shards the weight column-wise across GPUs; `RowParallelLinear` shards row-wise.
+- **Expert Parallel (EP)**: The MoE fuser enables EP by routing experts through `FusedMoE` which distributes experts across GPUs.
+- **Pipeline Parallel (PP)**: PP plans are inferred when the decoder block list is easily identifiable.
+- **Fully compilable**: Fused models pass through `torch.compile` and CUDA graphs, same as dedicated vLLM implementations.
+
+### 6. Usage
+
+```bash
+# Basic: any HF model with a single GPU
+vllm serve Qwen/Qwen3-4B --model-impl transformers
+
+# Tensor Parallel
+vllm serve Qwen/Qwen3-32B --model-impl transformers --tensor-parallel-size 2
+
+# MoE with Expert Parallel
+vllm serve Qwen/Qwen3-235B-A22B-FP8 --model-impl transformers \
+  --data-parallel-size 8 --enable-expert-parallel
+
+# Memory-constrained: reduce context length
+vllm serve Qwen/Qwen3-235B-A22B-FP8 --model-impl transformers \
+  --max-model-len 8192
+```
+
+The `--model-impl transformers` flag composes with all other vLLM arguments.
+
+### 7. Limitations & Roadmap
+
+- **Linear attention models** are not currently supported (roadmap: "soon")
+- **Custom Hub models** (code living in a HF repo) are unlikely to work — they must be written in compliant transformers style
+- **Not all architectures fuse equally** — the pattern matcher only handles architectures it can structurally match (requires identifiable decoder blocks, standard projection patterns)
+- **Fuser detection is conservative** — if a pattern is ambiguous, the module is left unfused rather than risking incorrect behavior
+- **One-time warmup cost** — `torch.fx` tracing + AST compilation happens once per model class on first load
+
+### 8. Key Architectural Insight
+
+The key insight is that the system is **dual-level**: class-level analysis is done once and cached (via `@cached(cache={}, key=type)` on `get_fuser`), while instance-level application happens per-model-load. The `@support_torch_compile` decorator on `Base` ensures the whole model remains `torch.compile`-compatible even after fusion.
+
+The use of `ast` (not `fx` graph rewriting) for forward replacement is deliberate — AST rewriting preserves the surrounding Python logic (conditionals, loops, auxiliary computations) while only replacing the matched operation. `fx` is used only for *detection*, never for *execution*.
+
+### 9. Comparison: Before vs After
+
+| Aspect | First-gen (2025) | Second-gen (July 2026) |
+|--------|-----------------|----------------------|
+| Attention impl | vLLM attention | vLLM attention + TP/EP fused |
+| Fusions | None (manual) | GLU, QKV, RMSNorm, MoE (auto) |
+| Analysis | None | torch.fx + AST rewriting |
+| Speed vs native | Slower | Equal or better |
+| Custom models needed | No | No (if compliant) |
+| Setup | `--model-impl transformers` | Same flag, better perf |
+
 ## 2026-07-24: hf-peft-lora-deep-dive — Complete LoRA Variants & Advanced Training (Topic #177)
 
 ### Summary
