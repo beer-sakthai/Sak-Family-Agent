@@ -1,6 +1,6 @@
 # HF Learnings Log
 
-## 2026-07-24: hf-distilabel — AI Feedback & Synthetic Data Framework (Topic #206)
+## 2026-07-24: hf-distilabel — AI Feedback & Synthetic Data Framework (Topic #205)
 
 ### Summary
 Comprehensive deep-dive into **distilabel v1.5.3** — the Argilla/Hugging Face ecosystem framework for synthetic data generation and AI feedback. Distilabel provides a DAG-based pipeline architecture for generating, evaluating, and transforming datasets using LLMs. It supports 15+ LLM providers, 30+ pre-built tasks (text generation, evol-instruct, preference scoring, quality filtering, structured generation), local and distributed execution (Ray), and seamless Hub integration via `Distiset.push_to_hub()`.
