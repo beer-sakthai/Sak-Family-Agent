@@ -7053,3 +7053,357 @@ Orgs on Team/Enterprise plans can enforce token policies:
 |**Scope** | Full per-user scopes | Repo-scoped or read-only user | Org-scoped |
 |**Plan required** | Free | Free | Enterprise |
 |**Token prefix** | `hf_oauth_` | `hf_jwt_` (repo) / `hf_oauth_` (user) | `hf_oauth_` |
+
+---
+
+## 2026-07-27: hf-spaces-oauth-app-integration — Complete Spaces OAuth Guide (Topic #208)
+
+### Summary
+Comprehensive guide to adding a **"Sign-In with HF"** button to Hugging Face Spaces using OAuth 2.0 / OpenID Connect. Covers the automatic OAuth app creation via Space config (`hf_oauth: true`), the full list of scopes, the authorization code flow with PKCE, device code flow for CLIs, CIMD (Client ID Metadata Documents) for ephemeral apps, Gradio's built-in OAuth support, huggingface.js integration, and Python device code examples. Complements the existing OAuth token presets and token exchange content above.
+
+### Sources
+- Official docs: https://huggingface.co/docs/hub/en/spaces-oauth
+- General OAuth page: https://huggingface.co/docs/hub/en/oauth
+- CIMD spec: https://datatracker.ietf.org/doc/draft-ietf-oauth-client-id-metadata-document/
+- OpenID metadata: https://huggingface.co/.well-known/openid-configuration
+- Gradio OAuth guide: https://www.gradio.app/guides/sharing-your-app#o-auth-login-via-hugging-face
+- huggingface.js OAuth: https://huggingface.co/docs/huggingface.js/hub/README#oauth-login
+- Reference Space (Gradio): https://huggingface.co/spaces/Wauplin/gradio-oauth-test
+- Reference Space (JS/static): https://huggingface.co/spaces/huggingfacejs/client-side-oauth
+
+### 1. Architecture Overview
+
+HF Spaces OAuth uses the **authorization code flow** with PKCE (Proof Key for Code Exchange by OAuth public clients). There are two modes:
+
+| Mode | Setup Effort | Auth Method | Best For |
+|------|-------------|-------------|----------|
+| **Automatic (Spaces)** | Minimal — one YAML line | Auto-provisioned OAuth app via Space metadata | Gradio/Streamlit/Docker Spaces |
+| **Manual (External)** | Register app in settings | Manual client ID + secret creation | Websites, CLIs, non-Space apps |
+
+Spaces automatically create and associate an OAuth app when `hf_oauth: true` is set in the Space's config. No manual app creation needed.
+
+```
+User's Browser           HF OAuth Server          Your Space
+     │                        │                      │
+     │── authorize request ──→│                      │
+     │                        │── consent modal ──→  │
+     │←── auth code ──────────│                      │
+     │── token exchange ────→│                      │
+     │←── access token ──────│                      │
+     │── API calls ──────────│─────────────────────→│
+```
+
+### 2. Automatic OAuth in Spaces (The Easy Way)
+
+#### Step 1: Enable in Space Metadata
+
+Add to your Space's `README.md`:
+
+```yaml
+hf_oauth: true
+# optional: token duration (default 480 min, max 43200 min = 30 days)
+hf_oauth_expiration_minutes: 480
+# optional: request additional scopes beyond openid + profile
+hf_oauth_scopes:
+  - read-repos
+  - inference-api
+# optional: restrict auth to specific org members
+hf_oauth_authorized_org:
+  - ORG_NAME1
+  - ORG_NAME2
+```
+
+#### Step 2: Environment Variables Injected
+
+The Space runtime automatically injects these environment variables:
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `OAUTH_CLIENT_ID` | Public client ID | `Spaces_abc123` |
+| `OAUTH_CLIENT_SECRET` | Client secret (keep private) | `sk-...` |
+| `OAUTH_SCOPES` | Comma-separated scope list | `openid,profile,inference-api` |
+| `OPENID_PROVIDER_URL` | OpenID metadata endpoint | `https://huggingface.co` |
+
+Use them anywhere in your code: `os.getenv("OAUTH_CLIENT_ID")`.
+
+#### Step 3: Redirect URLs
+
+Any URL targeting your Space can be a redirect URI. Use `SPACE_HOST` (another environment variable):
+
+```python
+import os
+redirect_uri = f"https://{os.getenv('SPACE_HOST')}/login/callback"
+```
+
+### 3. OAuth Scopes — Complete Reference
+
+#### Always Included (mandatory, no extra config needed)
+
+| Scope | Grants |
+|-------|--------|
+| `openid` | ID token (user identity) |
+| `profile` | Username, avatar, name from user profile |
+
+#### Optional (add via `hf_oauth_scopes`)
+
+| Scope | Grants | Use Case |
+|-------|--------|----------|
+| `email` | User's email address | User verification |
+| `read-billing` | Whether user has payment method set up | Check subscription status |
+| `read-repos` | Read access to user's personal repos | List user repos |
+| `gated-repos` | Read content from gated repos user has access to | Access gated model weights |
+| `contribute-repos` | Create repos + access app-created repos | Allow users to push to their own Spaces |
+| `write-repos` | Write/read to user's personal repos | Edit configs, push datasets |
+| `manage-repos` | Full repo access + create/delete repos | Admin-like access |
+| `read-collections` | Read user's personal collections | Browse collections |
+| `write-collections` | Write/read + create/delete collections | Manage collections |
+| `inference-api` | Call Inference Providers on user's behalf | Serverless inference using user's quota |
+| `jobs` | Run HF Jobs | Scheduled inference/training |
+| `webhooks` | Manage webhooks | Subscribe to Hub events |
+| `write-discussions` | Open/interact with discussions and PRs | Community engagement |
+
+**Important:** Scopes are additive — more scopes = more trust. Only request what you need.
+
+### 4. The OAuth Flow — Step by Step
+
+#### Authorization Code Flow with PKCE (Spaces)
+
+**Step A — Build the authorize URL:**
+```
+https://huggingface.co/oauth/authorize?
+  redirect_uri={REDIRECT_URI}&
+  scope=openid%20profile&
+  client_id={CLIENT_ID}&
+  state={STATE}&
+  code_challenge={SHA256_CODE_VERIFIER}&
+  code_challenge_method=S256
+```
+
+- `STATE`: cryptographically random string (validated on callback — prevents CSRF)
+- `code_challenge`: SHA-256 hash of a random `code_verifier` string (PKCE — prevents auth code interception)
+- Always use PKCE for public clients (Spaces apps are public by nature)
+
+**Step B — Handle the callback:**
+User authorizes → HF redirects to `{REDIRECT_URI}?code={AUTH_CODE}&state={STATE}`
+- Verify `state` matches what you sent
+- Exchange `code` for tokens
+
+**Step C — Token exchange (POST to `https://huggingface.co/oauth/token`):**
+```
+POST /oauth/token
+Content-Type: application/x-www-form-urlencoded
+Authorization: Basic {base64(client_id:client_secret)}
+
+client_id={CLIENT_ID}&
+code={AUTH_CODE}&
+grant_type=authorization_code&
+redirect_uri={REDIRECT_URI}&
+code_verifier={ORIGINAL_CODE_VERIFIER}
+```
+
+**Response:**
+```json
+{
+  "access_token": "hf_oauth_...",
+  "token_type": "bearer",
+  "expires_in": 28800,
+  "id_token": "eyJ..."
+}
+```
+
+- `access_token` — Bearer token for API calls (prefix: `hf_oauth_`)
+- `id_token` — JWT containing user identity claims (username, avatar URL, name)
+- Tokens expire in 8 hours by default, no refresh token
+
+#### Device Code Flow (CLI / Headless)
+
+For CLI tools that can't open a browser redirect:
+
+**Step 1 — Request device code (POST to `/oauth/device`):**
+```
+POST https://huggingface.co/oauth/device
+Content-Type: application/x-www-form-urlencoded
+
+client_id={CLIENT_ID}
+scope=openid profile
+```
+
+For apps with a secret, add: `Authorization: Basic {base64(client_id:client_secret)}`
+
+**Response:**
+```json
+{
+  "device_code": "abc-def-ghi",
+  "user_code": "HF-1234",
+  "verification_uri": "https://huggingface.co/oauth/authorize",
+  "verification_uri_complete": "https://huggingface.co/oauth/authorize?user_code=HF-1234",
+  "expires_in": 900,
+  "interval": 5
+}
+```
+
+**Step 2 — Poll for token (POST to `/oauth/token`):**
+```
+POST https://huggingface.co/oauth/token
+Content-Type: application/x-www-form-urlencoded
+
+client_id={CLIENT_ID}
+device_code={DEVICE_CODE}
+grant_type=urn:ietf:params:oauth:grant-type:device_code
+```
+
+Poll every `interval` seconds until user completes auth in browser.
+
+**Python device code example (public app, no secret):**
+```python
+import httpx, time, webbrowser
+
+CLIENT_ID = "your-client-id"
+client = httpx.Client()
+
+# Step 1: request device code
+resp = client.post("https://huggingface.co/oauth/device", data={
+    "client_id": CLIENT_ID,
+    "scope": "openid profile",
+})
+device = resp.json()
+print(f"Go to {device['verification_uri_complete']} and enter code: {device['user_code']}")
+webbrowser.open(device["verification_uri_complete"])
+
+# Step 2: poll for token
+for _ in range(device["expires_in"] // device["interval"]):
+    time.sleep(device["interval"])
+    resp = client.post("https://huggingface.co/oauth/token", data={
+        "client_id": CLIENT_ID,
+        "device_code": device["device_code"],
+        "grant_type": "urn:ietf:params:oauth:grant-type:device_code",
+    })
+    if resp.status_code == 200:
+        token = resp.json()["access_token"]
+        print(f"Authenticated! Token: {token[:20]}...")
+        break
+    elif resp.status_code == 400 and resp.json().get("error") == "authorization_pending":
+        continue  # user hasn't completed auth yet
+```
+
+### 5. Gradio Built-in OAuth (Zero-Code Option)
+
+Gradio Spaces have **built-in OAuth support** that requires no custom OAuth code. Add `hf_oauth: true` to Space metadata, then use `gr.OAuthView` or `gr.OAuthIdentity`:
+
+```python
+import gradio as gr
+
+# Option 1: Check authentication in any function
+def greet(request: gr.Request):
+    if request.oauth_user:
+        return f"Hello, {request.oauth_user['name']}!"
+    return "Please sign in."
+
+# Option 2: Use OAuth-protected views
+with gr.Blocks() as demo:
+    gr.OAuthView(gr.Markdown("🔒 You are logged in!"))
+    gr.OAuthButton("Sign in with HF")
+
+demo.launch()
+```
+
+Gradio automatically handles the redirect, token exchange, and user info retrieval. The `request.oauth_user` dict contains:
+```python
+{
+  "sub": "user_id",
+  "name": "Display Name",
+  "preferred_username": "username",
+  "avatar_url": "https://cdn-avatars.huggingface.co/...",
+  "email": "user@example.com",  # only if `email` scope requested
+}
+```
+
+### 6. JavaScript / Static Spaces (huggingface.js)
+
+For static Spaces built with JavaScript, use `@huggingface/hub`:
+
+```javascript
+import { oauthLoginUrl, oauthHandleRedirectIfPresent } from "@huggingface/hub";
+
+const oauthResult = await oauthHandleRedirectIfPresent();
+
+if (!oauthResult) {
+  window.location.href = await oauthLoginUrl();
+}
+
+// Access token + user info available
+console.log(oauthResult.accessToken);
+console.log(oauthResult.userInfo);
+```
+
+The library reads `OAUTH_CLIENT_ID` from the environment, handles PKCE automatically, and manages the full redirect flow.
+
+### 7. CIMD (Client ID Metadata Documents)
+
+Hugging Face supports **Client ID Metadata Documents** (CIMD), an IETF draft standard for automated OAuth app creation. This is useful for ephemeral environments or MCP clients.
+
+Instead of manually creating an OAuth app, the server reads metadata from `/.well-known/oauth-client-metadata/{client_id}`:
+
+```
+https://huggingface.co/.well-known/oauth-client-metadata/Spaces_abc123
+```
+
+This allows:
+- Automated app discovery
+- No settings page registration needed
+- Metadata includes redirect URIs, scopes, and app info
+
+**Implementation example:** HuggingChat's PR #1978 shows how CIMD works in practice.
+
+### 8. Organization Restriction
+
+Restrict OAuth to organization members only:
+
+```yaml
+# Single org
+hf_oauth_authorized_org: MY_ORG
+
+# Multiple orgs
+hf_oauth_authorized_org:
+  - ORG_1
+  - ORG_2
+```
+
+Unauthorized users see "You are not authorized to use this Space" on sign-in.
+
+### 9. Security & Production Patterns
+
+| Pattern | Implementation |
+|---------|---------------|
+| **Always use PKCE** | Public client (no secret) apps must use code_challenge + code_verifier |
+| **Validate state** | Prevents CSRF on callback — generate random string, verify on return |
+| **HTTPS only** | Redirect URIs must use HTTPS (Spaces auto-provide it) |
+| **Short expiration** | Default 8h (480 min); max 30 days (43200 min) |
+| **Use target=_blank** | Open auth in new tab to avoid iframe cookie issues |
+| **Scoped tokens** | Request minimum scopes needed — never `manage-repos` unless required |
+| **Secret rotation** | Space OAuth secrets are auto-managed, no manual rotation needed |
+| **Audit logging** | Enterprise orgs get audit logs of all token exchanges |
+
+### 10. Limitations & Constraints
+
+| Constraint | Detail |
+|------------|--------|
+| No refresh tokens | User must re-auth after expiration |
+| Max expiration | 30 days (43200 minutes) |
+| Scope changes | Require re-authorization from user |
+| Device code max polling | 15 minutes (900 seconds) before device_code expires |
+| Redirect URI scheme | HTTPS only (Spaces enforce this automatically) |
+| Gradio version | OAuth support requires Gradio 4.x+ (built-in since ~4.0) |
+| Static Spaces | Must use JS library or implement OAuth manually |
+
+### References
+- https://huggingface.co/docs/hub/en/spaces-oauth
+- https://huggingface.co/docs/hub/en/oauth
+- https://huggingface.co/.well-known/openid-configuration
+- https://www.gradio.app/guides/sharing-your-app#o-auth-login-via-hugging-face
+- https://huggingface.co/docs/huggingface.js/hub/README#oauth-login
+- https://github.com/huggingface/chat-ui/pull/1978 (CIMD example)
+- https://datatracker.ietf.org/doc/draft-ietf-oauth-client-id-metadata-document/
+- https://huggingface.co/docs/hub/spaces-overview#helper-environment-variables
+- Gradio OAuth reference Space: https://huggingface.co/spaces/Wauplin/gradio-oauth-test
+- Static JS OAuth reference: https://huggingface.co/spaces/huggingfacejs/client-side-oauth
