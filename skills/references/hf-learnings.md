@@ -1,5 +1,319 @@
 # HF Learnings Log
 
+## 2026-07-24: hf-custom-model-integration-deep-dive — Complete Guide to Integrating Custom PyTorch Models into Transformers (Topic #55 Deepened)
+
+### Summary
+Comprehensive deep-dive into the process of integrating custom PyTorch models into the Hugging Face Transformers ecosystem — enabling them to work with AutoClass APIs, `from_pretrained()`, `push_to_hub()`, and the Hub's remote code loading. Covers the full pipeline: configuration class, model class, AutoClass registration, Hub upload structure, `register_for_auto_class()`, `trust_remote_code` loading, and security considerations. Based on the official Transformers docs as of v5.14.0.
+
+### Source
+- Customizing models: https://huggingface.co/docs/transformers/en/custom_models
+- Loading custom models: https://huggingface.co/docs/transformers/en/models#custom-models
+- Model sharing: https://huggingface.co/docs/transformers/en/model_sharing
+- Legacy model contribution: https://huggingface.co/docs/transformers/en/add_new_model
+- Published: 2026-07-24, Transformers v5.14.0
+
+### 1. Architecture: The Three-Layer Integration Pattern
+
+A custom model needs three things to integrate with Transformers:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  1. Configuration Class (subclass of PreTrainedConfig)       │
+│     └─ Defines model architecture hyperparameters            │
+│     └─ Must define model_type (unique string identifier)     │
+├─────────────────────────────────────────────────────────────┤
+│  2. Model Class (subclass of PreTrainedModel)                │
+│     └─ Defines forward pass, layers, initialization          │
+│     └─ Must define config_class pointing to config           │
+├─────────────────────────────────────────────────────────────┤
+│  3. AutoClass Registration                                   │
+│     └─ AutoConfig.register("model_type", ConfigClass)        │
+│     └─ AutoModel.register(ConfigClass, ModelClass)           │
+│     └─ AutoModelForTask.register(ConfigClass, TaskModel)     │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### 2. Step 1: Create the Configuration Class
+
+The configuration class must inherit from `PreTrainedConfig` and define:
+- `model_type`: A unique string identifier (must not conflict with existing models)
+- Model-specific parameters with sensible defaults
+- The `__init__` method that accepts all parameters
+
+```python
+from transformers import PretrainedConfig
+
+class ResnetConfig(PretrainedConfig):
+    model_type = "resnet"  # Must be unique across all Transformers models
+
+    def __init__(
+        self,
+        block_type="bottleneck",
+        stem_width=64,
+        stem_type="deep",
+        avg_down=False,
+        num_labels=1000,
+        **kwargs,
+    ):
+        self.block_type = block_type
+        self.stem_width = stem_width
+        self.stem_type = stem_type
+        self.avg_down = avg_down
+        self.num_labels = num_labels
+        super().__init__(**kwargs)
+```
+
+**Key rules:**
+- `model_type` MUST be unique — check against existing model types in Transformers
+- Store all params as `self.xxx` before calling `super().__init__()`
+- Pass remaining `**kwargs` to super for compatibility
+- `PreTrainedConfig` provides serialization (`to_dict()`, `to_json_string()`, `save_pretrained()`) automatically
+- The config serializes to JSON when saved with `save_pretrained()` — only JSON-serializable attributes survive
+
+### 3. Step 2: Create the Model Class
+
+The model class must inherit from `PreTrainedModel` and define:
+- `config_class`: Points to the config class (critical for AutoClass loading)
+- `base_model_prefix`: Short prefix for model submodules (e.g., "model", "resnet", "transformer")
+- The `__init__` method that accepts the config
+- The `forward` method defining the computation
+
+```python
+import torch.nn as nn
+from transformers import PreTrainedModel
+
+class ResnetModel(PreTrainedModel):
+    config_class = ResnetConfig
+    base_model_prefix = "model"
+
+    def __init__(self, config):
+        super().__init__(config)
+        # Build model from config params
+        self.model = ResNet(
+            block_type=config.block_type,
+            stem_width=config.stem_width,
+            stem_type=config.stem_type,
+            avg_down=config.avg_down,
+        )
+        # Initialize weights using provided method
+        self.post_init()  # Calls _init_weights if defined
+
+    def _init_weights(self, module):
+        if isinstance(module, nn.Linear):
+            module.weight.data.normal_(mean=0.0, std=self.config.initializer_range)
+        elif isinstance(module, nn.Embedding):
+            module.weight.data.normal_(mean=0.0, std=self.config.initializer_range)
+
+    def forward(self, pixel_values, labels=None):
+        outputs = self.model(pixel_values)
+        return outputs
+```
+
+**Key rules:**
+- Always call `super().__init__(config)` first
+- `post_init()` must be called after building layers — it triggers weight initialization, gradient checkpointing setup, and mixed precision support
+- `PreTrainedModel` provides: `from_pretrained()`, `save_pretrained()`, `push_to_hub()`, `to()`, `half()`, `bfloat16()`, `eval()`, `train()`, device_map support, gradient checkpointing, and more
+- For task-specific models (e.g., classification), add a head:
+
+```python
+class ResnetModelForImageClassification(PreTrainedModel):
+    config_class = ResnetConfig
+    base_model_prefix = "model"
+
+    def __init__(self, config):
+        super().__init__(config)
+        self.model = ResNet(...)
+        self.classifier = nn.Linear(config.hidden_size, config.num_labels)
+        self.post_init()
+
+    def forward(self, pixel_values, labels=None):
+        outputs = self.model(pixel_values)
+        logits = self.classifier(outputs)
+        loss = None
+        if labels is not None:
+            loss = nn.functional.cross_entropy(logits, labels)
+        return (loss, logits) if loss is not None else (logits,)
+```
+
+### 4. Step 3: AutoClass Registration
+
+Register your custom model so AutoModel can find it:
+
+```python
+from transformers import AutoConfig, AutoModel, AutoModelForImageClassification
+
+AutoConfig.register("resnet", ResnetConfig)
+AutoModel.register(ResnetConfig, ResnetModel)
+AutoModelForImageClassification.register(ResnetConfig, ResnetModelForImageClassification)
+```
+
+**The registration contract:**
+- `AutoConfig.register(model_type, config_class)` — model_type must equal `ConfigClass.model_type`
+- `AutoModel.register(config_class, model_class)` — first arg must equal `ModelClass.config_class`
+- Registration is global — once registered, `AutoModel.from_pretrained()` can find it
+- Multiple AutoModelFor* classes can be registered for the same config
+
+**Verification:**
+```python
+model = AutoModel.from_pretrained("your-username/your-model")  # ✓
+model = AutoModelForImageClassification.from_pretrained("your-username/your-model")  # ✓
+config = AutoConfig.from_pretrained("your-username/your-model")  # ✓
+```
+
+### 5. Step 4: Upload to the Hub
+
+**Repository directory structure:**
+
+```
+.
+└── your-model-repo/
+    ├── __init__.py              # Empty, enables Python import
+    ├── configuration_resnet.py  # Contains ResnetConfig
+    ├── modeling_resnet.py       # Contains ResnetModel, ResnetModelForImageClassification
+    ├── config.json              # Serialized config (auto-generated)
+    ├── model.safetensors        # Model weights (auto-generated)
+    └── README.md                # Model card
+```
+
+**Critical:** Unlike built-in models, custom model code must be **bundled in the repo** because `from_pretrained()` with `trust_remote_code=True` imports the code from the repo.
+
+**Steps to prepare:**
+```python
+from resnet_model.configuration_resnet import ResnetConfig
+from resnet_model.modeling_resnet import ResnetModel, ResnetModelForImageClassification
+
+ResnetConfig.register_for_auto_class()
+ResnetModel.register_for_auto_class("AutoModel")
+ResnetModelForImageClassification.register_for_auto_class("AutoModelForImageClassification")
+```
+`register_for_auto_class()` adds `auto_map` to config.json:
+```json
+{
+  "auto_map": {
+    "AutoConfig": "your-repo-name--ResnetConfig",
+    "AutoModel": "your-repo-name--ResnetModel",
+    "AutoModelForImageClassification": "your-repo-name--ResnetModelForImageClassification"
+  }
+}
+```
+
+Then instantiate, load weights, push:
+```python
+resnet50d_config = ResnetConfig(block_type="bottleneck", stem_width=32, ...)
+resnet50d = ResnetModelForImageClassification(resnet50d_config)
+import timm
+pretrained_model = timm.create_model("resnet50d", pretrained=True)
+resnet50d.model.load_state_dict(pretrained_model.state_dict())
+resnet50d.push_to_hub("custom-resnet50d")
+```
+
+### 6. Step 5: Loading Custom Models
+
+Users load with `trust_remote_code=True`:
+
+```python
+from transformers import AutoModelForImageClassification
+
+# Basic loading
+model = AutoModelForImageClassification.from_pretrained(
+    "sgugger/custom-resnet50d", trust_remote_code=True
+)
+
+# Pinned to specific revision (security best practice)
+model = AutoModelForImageClassification.from_pretrained(
+    "sgugger/custom-resnet50d",
+    trust_remote_code=True,
+    revision="ed94a7c6247d8aedce4647f00f20de6875b5b292"
+)
+```
+
+**Loading flow:**
+1. Download `config.json` from repo → read `auto_map`
+2. Download and execute `configuration_resnet.py` from repo
+3. Download and execute `modeling_resnet.py` from repo
+4. Load safetensors weights → return model
+
+### 7. Security Considerations
+
+| Concern | Mitigation |
+|---------|-----------|
+| Remote code execution | Hub malware scanning; still trust carefully |
+| Changed model code | Pin to a specific commit hash |
+| Malicious imports | Review downloaded code before running |
+| Supply chain attacks | Only load custom models from trusted users |
+
+```python
+# Maximum security pattern
+model = AutoModel.from_pretrained(
+    "trusted-user/custom-model",
+    trust_remote_code=True,
+    revision="abc123def456",
+    token=False,
+)
+```
+
+### 8. The `auto_map` Format
+
+```json
+{
+  "auto_map": {
+    "AutoConfig": "my_username--ResnetConfig",
+    "AutoModel": "my_username--ResnetModel",
+    "AutoModelForImageClassification": "my_username--ResnetModelForImageClassification"
+  }
+}
+```
+
+**Convention:** `repo_namespace--ClassName` (double dash). `repo_namespace` is the HF username or org. Multiple `AutoModelFor*` entries can map to different classes.
+
+### 9. Common Pitfalls
+
+| Pitfall | Symptom | Fix |
+|---------|---------|-----|
+| `model_type` collision | Silent overwrite | Choose unique model_type |
+| Missing `post_init()` | Uninitialized weights | Add `self.post_init()` |
+| Wrong config_class | Silent registration failure | Ensure config_class matches |
+| Non-serializable config | `to_dict()` crash | Use JSON types only |
+| Missing `__init__.py` | ImportError in remote loading | Add empty `__init__.py` |
+| Relative imports | ImportError | Replace with absolute imports from `transformers` |
+| No auto_map | Manual class lookup needed | Call `register_for_auto_class()` |
+
+### 10. Multi-Task Models
+
+Edit `auto_map` directly in config.json:
+```json
+{
+  "auto_map": {
+    "AutoConfig": "my_username--ResnetConfig",
+    "AutoModelForImageClassification": "my_username--ResnetModelForImageClassification",
+    "AutoModelForObjectDetection": "my_username--ResnetModelForObjectDetection"
+  }
+}
+```
+
+### 11. Legacy Full Integration
+
+The alternative (contributing to transformers source) requires: fork, cookiecutter, ~8 files, CI checks, PR review. **For Beer's 8 models, the custom model pattern above is the right choice.**
+
+### 12. Zero-Cost Application for Beer
+
+1. **Known architectures** (Llama, Phi, etc.) → `AutoModel.from_pretrained()` directly
+2. **Modified architectures** → Custom model pattern, small files, zero storage cost
+3. **GGUF models** → `transformers.GGUFModel` or llama.cpp
+4. **Pipeline API** → Works with `pipeline(task, model="...", trust_remote_code=True)`
+5. **Inference Endpoints** → Custom models work, but serverless only supports pre-integrated architectures
+
+### Resources
+- https://huggingface.co/docs/transformers/en/custom_models
+- https://huggingface.co/docs/transformers/en/models#custom-models
+- https://huggingface.co/docs/transformers/en/model_sharing
+- https://huggingface.co/docs/transformers/en/add_new_model
+- https://github.com/huggingface/transformers/blob/main/src/transformers/configuration_utils.py
+- https://github.com/huggingface/transformers/blob/main/src/transformers/modeling_utils.py
+
+---
+# HF Learnings Log
+
 ## 2026-07-30: hf-hub-models-architecture-and-pipeline-tags — Complete HF Model Tag Taxonomy Deep Dive (Topic #164 Deepened)
 
 ### Summary
