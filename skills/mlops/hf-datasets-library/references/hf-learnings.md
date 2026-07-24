@@ -574,3 +574,411 @@ This ensures two datasets with different:
 - PyArrow IPC: https://arrow.apache.org/docs/python/ipc.html
 - Parquet format: https://parquet.apache.org/docs/
 - HF Dataset Viewer: https://huggingface.co/docs/hub/en/datasets-viewer
+
+---
+
+## 2026-07-24: hf-datasets-streaming-iterable-dataset — Deep Dive (Topic #146)
+
+### Summary
+Complete deep-dive into streaming datasets with the `datasets` library's `IterableDataset` class. Streaming lets you process datasets larger than available RAM by fetching and decoding data on-the-fly without writing Arrow cache files. Covers all operations on iterable datasets, checkpoint/resume for training loops, and memory-efficient patterns for zero-cost environments.
+
+### Why Stream?
+
+| Factor | Regular `Dataset` | `IterableDataset` |
+|--------|-------------------|-------------------|
+| Memory | Loads all → memory-maps full Arrow file | Processes one shard at a time |
+| Disk cache | Writes `.arrow` files to cache dir | No cache files created |
+| Random access | Yes (index-based) | No (sequential iteration only) |
+| Shuffle | Full Fisher-Yates shuffle | Buffer-based approximate shuffle |
+| Map speed | Multi-process (`num_proc`) | Single-process by default |
+| Use case | Datasets < available RAM | Datasets > RAM, or zero-cache env |
+
+**Zero-cost fit:** Streaming is ideal when disk space is limited, when you're on a free-tier machine, or when you only need a subset of the data.
+
+### Loading a Streaming Dataset
+
+```python
+from datasets import load_dataset
+
+# Stream from the Hub — no download, no cache
+ds_iter = load_dataset("SetFit/ag_news", split="train", streaming=True)
+print(type(ds_iter))  # <class 'datasets.iterable_dataset.IterableDataset'>
+print(ds_iter)        # IterableDataset({num_shards: 1, num_examples: ~120000})
+
+# Get first few samples
+for i, example in enumerate(ds_iter):
+    if i >= 5:
+        break
+    print(example["text"][:50])
+```
+
+**Multiple splits:**
+```python
+dataset = load_dataset("SetFit/ag_news", streaming=True)
+# dataset is a DatasetDict with IterableDataset values
+train = dataset["train"]
+test = dataset["test"]
+```
+
+### Column Indexing (Select Subset of Columns)
+
+Reduce bandwidth by selecting only the columns you need before iterating:
+
+```python
+# Before any iteration — select columns
+ds_iter = ds_iter.select_columns(["text", "label"])
+# Now only "text" and "label" are fetched from the Hub
+```
+
+### Convert from Regular Dataset
+
+```python
+# Convert an already-loaded Dataset to IterableDataset
+regular_ds = load_dataset("SetFit/ag_news", split="train")  # full download
+iter_ds = regular_ds.to_iterable_dataset()
+```
+
+### Core Operations
+
+#### 1. Take / Skip (Dataset Slicing)
+
+```python
+# Take first N examples
+first_100 = ds_iter.take(100)
+
+# Skip first N examples
+skip_100 = ds_iter.skip(100)
+
+# Chain: get examples 100–200
+slice_100_200 = ds_iter.skip(100).take(100)
+```
+
+#### 2. Shuffle
+
+Uses a **buffer-based shuffle** — fills a buffer of `buffer_size` examples from the start, then randomly yields from it, refilling as it goes:
+
+```python
+shuffled = ds_iter.shuffle(seed=42, buffer_size=10_000)
+```
+
+**Important limitations:**
+- Larger buffer = better shuffle but more memory
+- shuffle buffer is per-shard, not global
+- Examples before the buffer is full are less random (cold start)
+- For true global shuffle, use `reshuffle_at_each_epoch=True` in the DataLoader
+
+**Reshuffle** (re-seed between epochs):
+```python
+shuffled = ds_iter.shuffle(seed=42, buffer_size=10_000, reshuffle_at_each_epoch=True)
+```
+When `reshuffle_at_each_epoch=True`, each full iteration through the dataset re-seeds the shuffle, producing a different order each epoch.
+
+#### 3. Split Dataset
+
+**Shard** — split into N chunks:
+```python
+# Get shard 0 of 10 shards
+shard_0 = ds_iter.shard(num_shards=10, index=0)
+
+# Check how many shards the dataset has internally
+print(ds_iter.num_shards)  # e.g., 1 for single-shard datasets
+```
+
+**Note:** `num_shards` refers to the underlying Parquet/Arrow shard files in the dataset, not the shards you create with `.shard()`. `.shard()` creates logical splits and iterates over all internal shards.
+
+#### 4. Concatenate
+
+Chain two or more iterable datasets sequentially:
+```python
+from datasets import concatenate_datasets
+
+# After iterating through ds1, continues with ds2
+combined = concatenate_datasets([ds1, ds2])
+```
+
+#### 5. Interleave (Probabilistic Mixing)
+
+Mix multiple datasets with controlled probabilities:
+```python
+from datasets import interleave_datasets
+
+mixed = interleave_datasets(
+    [ds_en, ds_fr, ds_de],
+    probabilities=[0.5, 0.3, 0.2],
+    seed=42,
+    stopping_strategy="all_exhausted"  # or "first_exhausted"
+)
+```
+
+**Stopping strategies:**
+- `"all_exhausted"` (default): iterate until all source datasets are exhausted
+- `"first_exhausted"`: stop when the first dataset runs out
+
+#### 6. Rename, Remove, Cast
+
+```python
+# Rename a column
+renamed = ds_iter.rename_column("original_name", "new_name")
+
+# Remove columns
+no_label = ds_iter.remove_columns(["label"])
+
+# Cast feature types
+casted = ds_iter.cast_column("label", ClassLabel(names=["bad", "good"]))
+```
+
+**Performance note:** `remove_columns()` on IterableDataset avoids copying data — it simply skips the column during iteration. This is faster than `map(remove_columns=...)`.
+
+#### 7. Map (Transform)
+
+`.map()` on IterableDataset processes elements one at a time (no multi-processing):
+
+```python
+def tokenize_fn(examples):
+    return tokenizer(examples["text"], truncation=True, padding="max_length")
+
+tokenized = ds_iter.map(tokenize_fn)
+```
+
+**Batch processing** (more efficient for tokenization):
+```python
+def tokenize_batch(examples):
+    return tokenizer(examples["text"], truncation=True, padding="max_length")
+
+tokenized = ds_iter.map(tokenize_batch, batched=True, batch_size=1000)
+```
+
+**Remove input columns after map:**
+```python
+tokenized = ds_iter.map(
+    tokenize_batch,
+    batched=True,
+    batch_size=1000,
+    remove_columns=["text"]  # drops after processing
+)
+```
+
+#### 8. Filter
+
+```python
+def is_long_enough(example):
+    return len(example["text"]) > 100
+
+filtered = ds_iter.filter(is_long_enough)
+```
+
+**Filter with batching:**
+```python
+def filter_batch(examples):
+    return [len(t) > 100 for t in examples["text"]]
+
+filtered = ds_iter.filter(filter_batch, batched=True)
+```
+
+#### 9. Batch (Group into Batches)
+
+```python
+batched = ds_iter.batch(batch_size=32)
+# Yields dict-of-lists with 32 examples each
+for batch in batched:
+    print(batch["text"][0])  # first example in batch
+    # process batch...
+```
+
+**Drop last incomplete batch:**
+```python
+batched = ds_iter.batch(batch_size=32, drop_last_when_output_with_smaller_batch=False)
+# The default keeps the last incomplete batch; set to True to drop it
+```
+
+### Streaming in a Training Loop
+
+#### Basic Training Loop
+
+```python
+for epoch in range(num_epochs):
+    for batch in ds_iter.batch(batch_size=32):
+        outputs = model(**batch)
+        loss = outputs.loss
+        loss.backward()
+        optimizer.step()
+        optimizer.zero_grad()
+```
+
+#### Checkpoint / Resume (Iteration State)
+
+`IterableDataset` supports checkpoint and resume via `state_dict()` / `load_state_dict()`:
+
+```python
+# Before training, create the iterable
+train_ds = load_dataset("deepmind/code_contests", streaming=True, split="train")
+
+# Inside training loop — save checkpoint
+state = train_ds.state_dict()  # saves current shard index + example offset
+torch.save({"model_state": model.state_dict(), "data_state": state}, "checkpoint.pt")
+
+# Resume
+ckpt = torch.load("checkpoint.pt")
+model.load_state_dict(ckpt["model_state"])
+train_ds.load_state_dict(ckpt["data_state"])  # resumes exactly where we left off
+
+for batch in train_ds.batch(batch_size=32):
+    # continues from checkpoint position
+    ...
+```
+
+**How checkpoint works internally:**
+- `state_dict()` stores the current shard index and the example offset within that shard
+- `load_state_dict()` skips already-consumed shards entirely, then skips the offset within the current shard
+- Resuming is **fast** — it doesn't re-read consumed shards, but isn't instantaneous because it must skip to the correct offset in the current shard
+
+**Integration with `StatefulDataLoader` (torchdata):**
+```python
+from torchdata.stateful_dataloader import StatefulDataLoader
+
+dataloader = StatefulDataLoader(train_ds, batch_size=32, num_workers=4)
+state_dict = dataloader.state_dict()  # uses train_ds.state_dict()
+# save...
+dataloader.load_state_dict(state_dict)  # resumes exactly
+```
+
+**Limitation with shuffle:** When using `.shuffle()`, the shuffle buffer state is **lost** on resume — the buffer is refilled with new data, so some examples may be seen again or missed.
+
+### Save (Push to Hub)
+
+Save an IterableDataset to the Hub (iterates fully and uploads Parquet):
+```python
+ds_iter.push_to_hub("username/my-dataset")
+```
+
+For multi-shard parallel upload:
+```python
+ds_iter.push_to_hub("username/my-dataset", num_proc=8)
+```
+
+Reload later:
+```python
+reloaded = load_dataset("username/my-dataset")
+```
+
+### Export to File
+
+| Format | Method |
+|--------|--------|
+| CSV | `ds_iter.to_csv("path/to/data.csv")` |
+| JSON | `ds_iter.to_json("path/to/data.json")` |
+| Parquet | `ds_iter.to_parquet("path/to/data.parquet")` |
+| SQL | `ds_iter.to_sql("sqlite:///db.sqlite", table_name="data")` |
+| Pandas | `ds_iter.to_pandas()` |
+| Polars | `ds_iter.to_polars()` |
+| Dict | `ds_iter.to_dict()` |
+
+Shard-aware export (one file per shard):
+```python
+num_shards = ds_iter.num_shards
+for index in range(num_shards):
+    shard = ds_iter.shard(index, num_shards)
+    shard.to_parquet(f"data-{index:05d}.parquet")
+```
+
+### Practical Zero-Cost Patterns
+
+#### Pattern 1: Preview Dataset Structure Without Download
+```python
+ds = load_dataset("bigdataset/name", split="train", streaming=True)
+# Check schema from first example
+sample = next(iter(ds))
+print(sample.keys())
+print(sample["text"][:100])
+```
+
+#### Pattern 2: Sample N Random Rows (Approximate)
+```python
+import random
+
+ds = load_dataset("bigdataset/name", split="train", streaming=True)
+# Shuffle with a reasonable buffer, take N
+sample = ds.shuffle(seed=42, buffer_size=5000).take(100)
+for row in sample:
+    print(row["text"])
+```
+
+#### Pattern 3: Stream → Tokenize → Train (End-to-End)
+```python
+from transformers import AutoTokenizer
+from datasets import load_dataset
+
+tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
+ds = load_dataset("bigdataset/name", split="train", streaming=True)
+
+def tokenize(batch):
+    return tokenizer(
+        batch["text"],
+        truncation=True,
+        padding="max_length",
+        max_length=512,
+    )
+
+tokenized = ds.map(tokenize, batched=True, batch_size=1000, remove_columns=["text"])
+# tokenized yields dicts with input_ids, attention_mask, token_type_ids
+for batch in tokenized.batch(batch_size=16):
+    # Use in training loop
+    pass
+```
+
+#### Pattern 4: Streaming WebDataset-style
+For large sharded datasets (e.g., LAION), you can stream directly:
+```python
+ds = load_dataset(
+    "laion/laion2B-en",
+    streaming=True,
+    split="train",
+    # WebDataset-style shards stream without local caching
+)
+```
+
+#### Pattern 5: Cache-Control for Streaming
+```python
+# Force re-download even if cached
+ds = load_dataset("...", streaming=True, download_mode="force_redownload")
+
+# Don't cache at all
+ds = load_dataset("...", streaming=True, cache_dir=None)
+```
+
+### Performance Considerations
+
+| Aspect | Recommendation |
+|--------|---------------|
+| **Batch size in `.map()`** | 100–1000 is sweet spot for tokenization |
+| **Shuffle buffer** | Start at 10K, adjust based on memory |
+| **Column selection** | Use `select_columns()` before any `.map()` or iteration |
+| **Remove columns in map** | Use `remove_columns` parameter in `.map()` — it's free |
+| **Multi-shard datasets** | Leverage `num_shards` for parallel processing |
+| **Checkpoint frequency** | Every 1000–10000 steps for training resume |
+| **Filter before map** | Filter first to reduce map workload |
+
+### Internal Architecture
+
+`IterableDataset` is implemented in `datasets/iterable_dataset.py`. Key classes:
+
+- **`IterableDataset`**: Main user-facing class, wraps a `_BaseIterableDataset` which forms a chain of transformations
+- **`ShardDistributedReader` / `WorkerDistributedReader`**: Handle multi-shard/worker reading
+- **`BufferShuffledExamplesMixin`**: Provides the shuffle buffer state management
+- **`state_dict()` / `load_state_dict()`**: Checkpoint serialization via tracking shard index + example offset
+
+The transformation chain is lazy — no computation happens until iteration begins. Each `.map()`, `.filter()`, `.shuffle()` call adds a wrapper to the chain.
+
+### Key Limitations
+
+1. **No `len()`** for multi-shard streaming datasets (unknown total until full iteration)
+2. **No random access** — cannot index like `ds[42]`
+3. **Shuffle is approximate** — buffer-based, not global Fisher-Yates
+4. **Single-process `.map()`** — no `num_proc` for parallel processing
+5. **Shuffle buffer lost on checkpoint resume** — buffer is drained and refilled
+6. **Network-dependent** — iterating requires network access to the Hub
+
+### Source
+- Official docs: https://huggingface.co/docs/datasets/en/stream
+- IterableDataset API: https://huggingface.co/docs/datasets/en/package_reference/main_classes#datasets.IterableDataset
+- Datasets source: `/opt/data/.venv-sakthai/lib/python3.14/site-packages/datasets/iterable_dataset.py`
