@@ -8254,3 +8254,126 @@ This makes merges **reproducible** — anyone with the same config and base mode
 - https://huggingface.co/docs/optimum/executorch/overview — ExecuTorch with Optimum
 - https://onnxruntime.ai/docs/performance/tune-performance.html — ONNX Runtime tuning
 - https://docs.openvino.ai/2024/performance-tuning-guide.html — OpenVINO tuning
+
+---
+
+## 2026-07-24: hf-datasets-server-configs-subsets (Deep Dive)
+
+### Summary
+Comprehensive deep-dive into the Hugging Face Datasets Server's config/subset system — how datasets are organized into configurations (subsets) containing splits, how to discover and query them via the REST API, and practical patterns for multi-config dataset exploration without downloading the full dataset.
+
+### Why Configs Matter
+Many datasets on the Hub are organized into **configurations** (also called *subsets*) — sub-datasets within a larger dataset. Common patterns:
+
+- **Multi-language**: Each language is a config (e.g., `facebook/multilingual_librispeech` has 7 configs: german, french, spanish, portuguese, italian, dutch, polish)
+- **Multi-task**: Each task is a config (e.g., `ibm/duorc` had ParaphraseRC and SelfRC configs)
+- **Multi-domain**: Each domain/subject is a config
+- **Default**: Single-config datasets use `"default"` as the config name
+
+Every query to the Datasets Server that involves data content **must specify a config** for multi-config datasets. The `/splits` endpoint is the discovery mechanism.
+
+### Server Base URL
+```
+https://datasets-server.huggingface.co
+```
+
+### Endpoint Reference
+
+#### 1. `/splits` — List All Splits & Discover Configs
+**The primary discovery endpoint.** Returns all splits across all configs for a dataset.
+
+```
+GET /splits?dataset=<namespace/dataset>
+```
+
+**Response:**
+```json
+{
+  "splits": [
+    { "dataset": "facebook/multilingual_librispeech", "config": "german", "split": "train" },
+    { "dataset": "facebook/multilingual_librispeech", "config": "german", "split": "dev" },
+    ...
+  ],
+  "pending": [],
+  "failed": []
+}
+```
+
+**Config discovery pattern:**
+```python
+import requests
+resp = requests.get("https://datasets-server.huggingface.co/splits?dataset=facebook/multilingual_librispeech").json()
+configs = set(s["config"] for s in resp["splits"])
+# → {'german', 'french', 'spanish', 'portuguese', 'italian', 'dutch', 'polish'}
+```
+
+**Example datasets:**
+| Dataset | Configs | Splits per Config |
+|---------|---------|-------------------|
+| `SetFit/ag_news` | 1 (default) | train, test |
+| `facebook/multilingual_librispeech` | 7 (language) | train, dev, test, 9_hours, 1_hours |
+| `google/fleurs` | 103 (language) | train, validation, test |
+
+#### 2. `/info` — Get Dataset Configuration Metadata
+Returns full metadata about all configs, including features/schema, row counts, and default config.
+
+```
+GET /info?dataset=<namespace/dataset>
+```
+
+#### 3. `/parquet` — List Parquet Files Per Config
+```
+GET /parquet?dataset=<ds>&config=<config_name>
+```
+
+#### 4. `/first-rows` — Preview Rows for a Config+Split
+```
+GET /first-rows?dataset=<ds>&config=<config_name>&split=<split_name>
+```
+
+Must specify all three parameters (dataset, config, split).
+
+#### 5. `/size` — Get Size Stats Per Config
+```
+GET /size?dataset=<ds>&config=<config_name>
+```
+
+#### 6.-10. Other endpoints (rows, search, filter, statistics, croissant) all support the `config` parameter.
+
+### Key Differences: Single-Config vs Multi-Config
+
+| Aspect | Single-Config | Multi-Config |
+|--------|--------------|--------------|
+| Config name | Usually `"default"` or auto | Explicit per language/task |
+| `/splits` | 1 config → N splits | M configs × N splits each |
+| `/parquet` | Works without `config=` | **Requires** `config=` param |
+| `/first-rows` | Works without `config=` | **Requires** `config=` param |
+| `/info` | 1 config in dataset_info.configs | Full config dictionary |
+| Discovery | Just use config="default" | Call `/splits` first |
+
+### Error Handling
+| HTTP Code | Meaning | Common Cause |
+|-----------|---------|-------------|
+| 400 | Bad Request | Missing required `config` parameter for multi-config dataset |
+| 401 | Unauthorized | Private/gated dataset without valid token |
+| 404 | Not Found | Dataset renamed or doesn't exist |
+| 422 | Unprocessable Content | Statistics endpoint on incompatible data |
+| 500 | Server Error | Dataset processing failed |
+| 501 | Not Implemented | Dataset format not supported by viewer |
+
+### Best Practices
+1. **Always call `/splits` first** to discover configs before accessing other endpoints
+2. **Cache config lists** — they don't change frequently
+3. **Handle missing configs gracefully** — some configs may be `pending` or `failed`
+4. **Use `config=default`** as fallback for single-config datasets that may not mention config explicitly
+5. **Parquet is cheapest** — for analytics, always prefer Parquet files over row-by-row API calls
+6. **Rate-limit generously** — the server precomputes responses, but burst requests may be throttled
+
+### Resources
+- Official docs: https://huggingface.co/docs/dataset-viewer/en/splits
+- Conceptual guide (configs & splits): https://huggingface.co/docs/dataset-viewer/en/configs_and_splits
+- API reference: https://huggingface.co/docs/dataset-viewer/en/index
+- Parquet processing guide: https://huggingface.co/docs/dataset-viewer/en/parquet_process
+- OpenAPI spec: https://datasets-server.huggingface.co/openapi.json
+- Hub dataset configuration: https://huggingface.co/docs/hub/datasets-data-files-configuration
+- GitHub: https://github.com/huggingface/dataset-viewer
