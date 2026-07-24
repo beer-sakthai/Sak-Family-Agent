@@ -12373,3 +12373,26 @@ Comprehensive deep-dive into programmatic repository lifecycle management on Hug
 
 ### Skill
 mlops/hf-repo-creation-publishing-automation — references/hf-learnings.md
+
+---
+
+## 2026-07-24: hf-text-embeddings-inference-v2 — TEI Deepening: Qwen3, Gemma3, ModernBERT, ONNX, Sequence Classification & Reranker Support (Topic #104 Deepened)
+
+### Summary
+Deepened the TEI reference with latest features from v1.9+ upstream. Added: supported model architectures (Qwen3, Gemma3, ModernBERT, GTE, MPNet, Mistral), full MTEB-ranked model table (20 models with rankings), Sequence Classification & Reranker support (new `/rerank` and `/predict` endpoints with 5 supported reranker/classification models), ONNX weight loading via the `ort` feature flag, Apple Silicon/Metal Homebrew install (`brew install text-embeddings-inference`), token-based dynamic batching deep-dive with `--max-batch-tokens` tuning formula, and updated CLI argument reference. Full document at `skills/mlops/hf-text-embeddings-inference/references/hf-learnings.md`.
+
+### Key Discovery: TEI Now Serves More Than Embeddings
+TEI added support for Sequence Classification models in v0.4.0 and has since expanded to serve rerankers and sentiment analysis via new `/rerank` and `/predict` endpoints. This makes TEI a unified inference server for all text understanding tasks, not just embeddings.
+
+### Key Discovery: 5 New Architecture Families Since Initial Coverage
+- **Qwen3 Embed** — Top-ranked MTEB models (#2/#3/#4) from Qwen team
+- **Gemma3** — Google's embeddinggemma-300m (gated, MTEB rank #8)
+- **ModernBERT** — answerdotai's efficient BERT replacement
+- **Mistral** — Salesforce SFR-Embedding-2_R (MTEB rank #18)
+- **GTE** — Alibaba's GTE-Qwen2 family (MTEB ranks #6/#15)
+
+### Key Discovery: ONNX + Metal = Zero-Cost Paths
+TEI's ONNX backend (CPU-optimized) and Apple Silicon support (Homebrew + Metal) provide two entirely free deployment paths. Models up to 500M params run well on M-series hardware. The ORT backend enables CPU serving without GPU costs.
+
+### Skill
+mlops/hf-text-embeddings-inference — references/hf-learnings.md
