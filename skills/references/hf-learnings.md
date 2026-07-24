@@ -5950,3 +5950,218 @@ Layer types recognized:
 5950|huggingface-hub — references/hf-learnings.md
 5951|
 5952|---
+
+
+## 2026-07-25: HfApi v1.24 New APIs Deep Dive — Compute Jobs, Buckets, Papers & Access Management (Deepening Topic #112 hf-hub-python-api-v2)
+
+### Summary
+Comprehensive deep-dive into four major new API surfaces added in huggingface_hub v1.24.0 not covered in the earlier HfApi v2 reference: Compute Jobs, Buckets (object storage), Daily Papers, and Gated Repo Access Management. Source-verified against the actual codebase.
+
+---
+
+### 1. Compute Jobs API (run_job, create_scheduled_job, run_uv_job)
+
+Run Docker containers on HF infrastructure — ad-hoc or on a CRON schedule. cpu-basic flavor is $0.000167/min (~$0.01/hr).
+
+#### Key Methods
+
+| Method | Purpose | Returns |
+|--------|---------|---------|
+| run_job() | Run one-off ad-hoc compute job | JobInfo |
+| run_uv_job() | Run UV Python script (auto deps) | JobInfo |
+| create_scheduled_job() | CRON-scheduled job | ScheduledJobInfo |
+| create_scheduled_uv_job() | Scheduled UV script job | ScheduledJobInfo |
+| list_jobs() | List jobs (filter: status, labels) | Iterable[JobInfo] |
+| list_jobs_hardware() | Available hardware flavors with pricing | list[JobHardwareInfo] |
+| inspect_job() | Get detailed job info | JobInfo |
+| fetch_job_logs() | Fetch/stream job logs | Iterable[str] |
+| fetch_job_metrics() | Live job metrics | dict |
+| wait_for_job() | Block until target stage | JobInfo |
+| cancel_job() | Cancel a running job | None |
+| inspect_scheduled_job() | Scheduled job details | ScheduledJobInfo |
+| list_scheduled_jobs() | List all scheduled jobs | Iterable[ScheduledJobInfo] |
+| trigger_scheduled_job() | Immediately trigger a scheduled job | Job |
+| suspend_scheduled_job() / resume_scheduled_job() | Pause/resume | None |
+
+#### run_job() Parameters
+```python
+api.run_job(
+    image="python:3.12",
+    command=["python", "-c", "print('hello')"],
+    env={"KEY": "value"},
+    secrets={"SECRET": "value"},
+    flavor="cpu-basic",
+    timeout="5m",
+    name="my-job",
+    labels={"env": "test"},
+    volumes=[Volume(...)],
+    expose=[8000],
+    ssh=False,
+    namespace="username",
+)
+```
+
+#### run_uv_job() — UV Script Jobs
+```python
+api.run_uv_job(
+    script="https://raw.githubusercontent.com/.../train.py",
+    script_args=["--model", "Qwen/Qwen2-0.5B"],
+    dependencies=["trl", "torch"],
+    python="3.12",
+)
+```
+Uses ghcr.io/astral-sh/uv:python3.12-bookworm, auto-installs deps.
+
+#### create_scheduled_job() — CRON Jobs
+```python
+api.create_scheduled_job(
+    image="python:3.12",
+    command=["python", "daily.py"],
+    schedule="@daily",
+    suspend=False,
+    concurrency=False,
+)
+```
+Schedule: `*/5 * * * *` (5min), `0 9 * * 1` (Mon 9AM), @hourly, @daily, @weekly.
+
+#### Volume Dataclass
+```python
+from huggingface_hub import Volume
+
+vol = Volume(type="dataset", source="username/dataset",
+             mount_path="/data", revision="main")
+vol = Volume(type="bucket", source="username/my-bucket",
+             mount_path="/output")
+vol = Volume(type="model", source="username/model",
+             mount_path="/weights", path="subfolder")
+```
+Fields: type (bucket|model|dataset|space), source, mount_path, revision, read_only, path.
+
+#### JobInfo and Log Streaming
+```python
+job = api.run_job(image="python:3.12", command=[...])
+job.id             # unique job ID
+job.created_at     # datetime with tz
+job.status.stage   # QUEUED -> RUNNING -> COMPLETED|ERROR|CANCELED
+
+for line in api.fetch_job_logs(job_id=job.id):
+    print(line)
+for line in api.fetch_job_logs(job_id=job.id, follow=True):
+    print(line)
+job = api.wait_for_job(job_id=job.id)
+job = api.wait_for_job(job_id=job.id, timeout=300)
+```
+
+---
+
+### 2. Buckets API — Object Storage (create_bucket, sync_bucket)
+
+Object storage on HF Hub. Mountable into Jobs/Spaces as Volume.
+
+#### Key Methods
+
+| Method | Purpose |
+|--------|---------|
+| create_bucket() | Create bucket (public/private, region) |
+| bucket_info() | Get bucket metadata (size, file count) |
+| delete_bucket() | Delete a bucket |
+| move_bucket() | Move/rename a bucket |
+| list_buckets() | List buckets under a namespace |
+| sync_bucket() | rsync-like sync: local <-> bucket |
+| list_bucket_tree() | List files (tree view) |
+| download_bucket_files() | Download files from bucket |
+| batch_bucket_files() | Batch add/copy/delete files |
+| get_bucket_file_metadata() | File metadata |
+| get_bucket_paths_info() | Path information |
+
+#### Usage
+```python
+url = create_bucket(bucket_id="my-bucket")
+url.bucket_id     # "user/my-bucket"
+url.uri.to_uri()  # "hf://buckets/user/my-bucket"
+
+info = bucket_info(bucket_id="user/first-bucket")
+info.size         # 551879671 (bytes)
+info.total_files  # 12
+
+api.sync_bucket("./data", "hf://buckets/user/my-bucket")
+api.sync_bucket("hf://buckets/user/my-bucket", "./data")
+api.sync_bucket("./data", "hf://buckets/user/my-bucket",
+                include=["*.safetensors"], delete=True)
+plan = api.sync_bucket("./data", "hf://buckets/user/my-bucket", dry_run=True)
+plan.summary()
+api.sync_bucket("./data", "hf://buckets/user/my-bucket", plan="plan.jsonl")
+api.sync_bucket(apply="plan.jsonl")
+```
+
+---
+
+### 3. Papers API — Daily Papers Discovery
+
+Access HF Daily Papers with AI summaries, keywords, linked resources.
+
+#### Key Methods
+
+| Method | Purpose |
+|--------|---------|
+| list_daily_papers() | Papers by date/week/month |
+| list_papers() | Search by query string |
+| paper_info() | Full details (linked models/datasets/spaces) |
+| read_paper() | Get markdown content |
+
+#### Usage
+```python
+papers = list(api.list_daily_papers(date="2025-10-29"))
+paper = papers[0]
+paper.id, paper.title, paper.ai_summary, paper.ai_keywords
+paper.authors, paper.upvotes, paper.comments
+paper.github_repo, paper.github_stars
+
+detail = api.paper_info("2310.06825")
+detail.linked_models, detail.linked_datasets, detail.linked_spaces
+
+list(api.list_daily_papers(week="2025-W09"))
+list(api.list_daily_papers(month="2025-02"))
+list(api.list_daily_papers(sort="trending"))
+list(api.list_papers(query="quantization"))
+list(api.list_daily_papers(p=1, limit=20))
+```
+
+---
+
+### 4. Gated Repo Access Management
+
+Full lifecycle for user access to gated repos.
+
+#### Key Methods
+
+| Method | Purpose |
+|--------|---------|
+| list_pending_access_requests() | Pending (unprocessed) requests |
+| list_accepted_access_requests() | Previously accepted grants |
+| list_rejected_access_requests() | Rejected requests |
+| accept_access_request() | Approve a pending request |
+| reject_access_request() | Deny a pending request |
+| cancel_access_request() | Revoke granted access |
+| grant_access() | Directly grant without prior request |
+
+#### AccessRequest
+```python
+req = list(list_pending_access_requests("meta-llama/Llama-2-7b"))[0]
+req.username, req.fullname, req.status, req.timestamp
+```
+
+#### Lifecycle Examples
+```python
+for req in list(list_pending_access_requests("org/gated-model")):
+    accept_access_request("org/gated-model", req.username)
+
+grant_access("org/gated-model", "user3")
+cancel_access_request("org/gated-model", "user1")
+```
+
+---
+
+### Skill
+huggingface-hub -- references/hf-learnings.md
+---
