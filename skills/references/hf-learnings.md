@@ -10036,3 +10036,116 @@ Comprehensive deep-dive into Hugging Face Spaces ZeroGPU — the free dynamic GP
 
 ### Resource
 Full document: `skills/mlops/spaces-zerogpu/references/hf-learnings.md`
+
+---
+
+## 2026-07-24: hf-quantization-methods-comparison-v2 — Official Benchmark Data + Production Decision Guide (Topic #158 Deepened)
+
+### Summary
+Deep-dive into the **official Transformers quantization benchmarks** released alongside the new "Selecting a quantization method" guide. This is the first time HF published standardized, apples-to-apples benchmark data comparing 15+ quantization methods across accuracy (4 benchmarks), throughput (tok/s), peak VRAM, and quantization time — on Llama 3.1 8B and 70B on A100/H100 GPUs. Covers new findings: torch.compile speedups, Marlin kernel gains, calibration time trade-offs, and the catastrophic accuracy collapse of certain methods at 70B.
+
+### Source
+- Selecting a quantization method: https://huggingface.co/docs/transformers/en/quantization/selecting
+- Benchmark dataset: https://huggingface.co/datasets/derekl35/quantization-benchmarks
+- Published: 2026-07-24, Transformers v5.14.0
+
+### Key Discovery: First Official HF Quantization Benchmarks
+
+| Quant Method | Bits | Avg Acc (8B) | Throughput (8B) | VRAM (8B) | Quant Time (8B) | Avg Acc (70B) | Throughput (70B) | VRAM (70B) | Quant Time (70B) |
+|---|---|---|---|---|---|---|---|---|---|
+| **baseline (bf16)** | 16 | 0.6106 | 38.82 tok/s | 16.77 GB | — | 0.6929 | 9.73 tok/s | 142.27 GB | — |
+| **AWQ** | 4 | 0.6006 | 43.09 | 8.12 GB | ~10 min | 0.6795 | 15.74 | 43.75 GB | ~1 hr |
+| **GPTQModel** | 4 | — | 36.83 | 6.32 GB | ~23 min | — | 14.84 | 40.58 GB | — |
+| **AutoGPTQ** | 4 | 0.5953 | 43.71 | 6.49 GB | ~30 min | 0.6836 | 0.46 ❗ | 42.40 GB | ~2 hr |
+| **bnb (nf4)** | 4 | 0.6020 | 24.35 | 6.44 GB | ~1 min | 0.6838 | 11.27 | 44.63 GB | ~2 min |
+| **HQQ** | 4 | 0.6031 | 34.44 | 6.72 GB | instant | 0.6805 | 13.92 | 44.50 GB | ~10 min |
+| **optimum-quanto (w4a16)** | 4 | 0.5966 | 31.22 | 6.58 GB | ~30 sec | **0.3597** ❗ | 12.97 | 80.39 GB | ~2 min |
+| **torchao (int4wo)** | 4 | 0.5959 | 24.98 | 6.50 GB | ~20 sec | **0.3629** ❗ | 10.56 | 41.61 GB | ~2 min |
+| **HIGGS** | 4 | 0.5930 | 28.35 | 6.82 GB | ~5 min | **0.3578** ❗ | 11.61 | 41.53 GB | ~6 min |
+| **bnb (llm.int8)** | 8 | 0.6086 | 20.75 | 9.71 GB | ~20 sec | 0.6618 | 6.87 | 74.26 GB | ~2 min |
+| **HQQ (8 bit)** | 8 | 0.6117 | 9.07 | 10.60 GB | ~80 sec | 0.6958 | 0.98 | 80.52 GB | ~10 min |
+| **optimum-quanto (int8wo)** | 8 | 0.6110 | 15.59 | 9.82 GB | ~20 sec | 0.6611 | 1.79 | 74.21 GB | ~2 min |
+| **torchao (int8wo)** | 8 | 0.6111 | 5.98 | 13.07 GB | ~30 sec | 0.6931 | 0.65 | 89.85 GB | ~2 min |
+| **fbgemm (fp8)** | 8 | 0.6095 | 33.83 | 10.01 GB | ~30 sec | 0.6924 | 13.61 | 74.05 GB | ~6 min |
+| **compressed-tensors (fp8)** | 8 | 0.6073 | — | — | — | 0.6918 | — | — | — |
+| **VPTQ** | 2 | 0.5414 | 32.35 | 5.29 GB | ~2 hr | 0.6409 | 6.29 | 24.90 GB | ~19 hr |
+| **AQLM + PV** | 2 | 0.5708 | 22.28 | 4.84 GB | ~1 day | 0.6635 | 6.75 | 23.13 GB | **10-14 days** ❗ |
+| **AutoGPTQ (2 bit)** | 2 | **0.3645** ❗ | 6.25 | 11.02 GB | ~26 min | **0.4119** ❗ | — | — | — |
+
+❗ = notable failure mode (near-random accuracy, throughput collapse, or impractical quantization time)
+
+### Key Discovery: torch.compile Transformations
+
+torch.compile can radically alter the quantization landscape:
+
+| Method | Model | Without torch.compile | With torch.compile | Speedup |
+|---|---|---|---|---|
+| **torchao (int4wo)** | Llama 3.1 8B | 24.98 tok/s | **85.76 tok/s** | **3.4×** |
+| **torchao (int8wo)** | Llama 3.1 8B | 5.98 tok/s | **43.79 tok/s** | **7.3×** |
+| **torchao (int4wo)** | Llama 3.1 70B | 10.56 tok/s | **18.95 tok/s** | 1.8× |
+| **HIGGS (4 bit)** | Llama 3.1 70B | 11.61 tok/s | 12.38 tok/s | 1.07× |
+| **AQLM + PV (2 bit)** | Llama 3.1 8B | 22.28 tok/s | 27.27 tok/s | 1.2× |
+| **VPTQ (2 bit)** | Llama 3.1 8B | 32.35 tok/s | 31.48 tok/s | 0.97× (slight regression) |
+| **baseline (bf16)** | Llama 3.1 8B | 38.82 tok/s | 79.27 tok/s | **2.0×** |
+
+**torchao benefits most from torch.compile** — it's practically required for good performance with torchao. HQQ and AWQ don't need it (they have their own kernels).
+
+### Key Discovery: Marlin Kernel Impact
+
+GPTQModel supports Marlin kernels (only for 4-bit, group_size=128):
+
+| Method | Without Marlin | With Marlin | Speedup |
+|---|---|---|---|
+| GPTQModel (4-bit) Llama 3.1 8B | 36.83 tok/s | 37.84 tok/s | 1.03× |
+| GPTQModel (4-bit) Llama 3.1 70B | 14.84 tok/s | 15.28 tok/s | 1.03× |
+
+Marlin gives modest (~3%) throughput gains. Not transformative — but consistent.
+
+### Key Discovery: Catastrophic Accuracy Collapse at 70B for Multiple Methods
+
+Several on-the-fly 4-bit methods that work acceptably on 8B models **collapse to near-random accuracy on 70B**:
+
+| Method | Avg Acc (8B) | Avg Acc (70B) | Delta |
+|---|---|---|---|
+| **optimum-quanto (w4a16)** | 0.5966 | **0.3597** | -0.2369 — **near random** |
+| **torchao (int4wo)** | 0.5959 | **0.3629** | -0.2330 — **near random** |
+| **HIGGS (4 bit)** | 0.5930 | **0.3578** | -0.2352 — **near random** |
+
+While AWQ, GPTQModel, bnb-nf4, and HQQ maintain good accuracy at 70B (drop <0.02 from baseline). This is a critical finding: **on-the-fly 4-bit quantization methods that bypass calibration (quanto, torchao, HIGGS) fail catastrophically on larger models.** The exception is HQQ, which maintains accuracy through its half-quadratic approach despite being on-the-fly.
+
+### Key Discovery: Quantization Time vs. Quality Trade-off
+
+| Time Class | Methods | Best for |
+|---|---|---|
+| **Instant (<2 min)** | bnb-nf4, bnb-int8, torchao, quanto, HQQ, fbgemm, HIGGS | Rapid iteration, prototyping, zero-cost deployment |
+| **Quick (2-30 min)** | AWQ (8B), GPTQModel (8B), HQQ (70B) | Production 4-bit with good quality |
+| **Hours** | AWQ (70B ~1hr), AutoGPTQ (70B ~2hr), VPTQ (8B ~2hr) | Best quality 4-bit on large models |
+| **Days** | AQLM (8B ~1 day), VPTQ (70B ~19hr), AQLM (70B **10-14 days**) | Extreme 2-bit compression, research only |
+
+### Key Discovery: Quantization Method Selection Guideline (Updated)
+
+Based on the new benchmark data, the decision tree simplifies to:
+
+1. **Need QLoRA fine-tuning?** → bitsandbytes (nf4). Only mature option.
+2. **Need on-the-fly 4-bit for inference?** → HQQ (best accuracy/speed balance) or bnb-nf4 (most mature, but slower)
+3. **Need best 4-bit quality with pre-quantized model?** → AWQ (8B: ~10 min calibrate, best accuracy; 70B: ~1 hr but excellent retention)
+4. **Need 8-bit with zero accuracy loss?** → fbgemm fp8 (33.83 tok/s on 8B) or bnb-int8 (20.75 tok/s) or torchao int8wo + torch.compile (43.79 tok/s)
+5. **Need extreme compression (2-bit, sub-6GB)?** → AQLM for quality or VPTQ for speed, but prepare for multi-day quantization
+6. **On Apple Silicon?** → GGUF (not benchmarked here) remains the best choice
+7. **Using torch.compile?** → torchao int4wo + compile = 85.76 tok/s (fastest 4-bit in the benchmarks)
+
+### Zero-Cost Recommendations (Updated with Benchmark Data)
+
+Given Beer's zero-cost constraint and 8 models on HF:
+
+1. **Serverless inference** → Pre-quantized GGUF models (free, no GPU)
+2. **Local CPU testing** → GGUF Q4_K_M (single file, any hardware)
+3. **Free GPU (Colab/ZeroGPU) fine-tuning** → bitsandbytes nf4 + PEFT (QLoRA) — ~1 min to quantize, ~6.44 GB VRAM, accuracy 0.6020 vs 0.6106 baseline (98.6% retained)
+4. **Free GPU inference** → HQQ 4-bit (instant quantize, 34.44 tok/s, 6.72 GB, accuracy 0.6031 — **best accuracy-per-dollar of any on-the-fly method**)
+5. **Quantizing Beer's own models for release** → AWQ 4-bit (best quality, but needs ~10 min calibration) or GGUF (widest compatibility)
+6. **AVOID on 70B-class models**: quanto int4, torchao int4wo, HIGGS — they collapse to random accuracy
+
+### Resources (Updated)
+- Selecting a method: https://huggingface.co/docs/transformers/en/quantization/selecting
+- Benchmark dataset: https://huggingface.co/datasets/derekl35/quantization-benchmarks
+- All individual method docs linked from: https://huggingface.co/docs/transformers/en/quantization/overview
