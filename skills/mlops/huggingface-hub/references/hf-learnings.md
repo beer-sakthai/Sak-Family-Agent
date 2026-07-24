@@ -4286,3 +4286,53 @@ answers = client.visual_question_answering(
 - `_common.py`: https://github.com/huggingface/huggingface_hub/blob/main/src/huggingface_hub/inference/_common.py
 - `_client.py`: https://github.com/huggingface/huggingface_hub/blob/main/src/huggingface_hub/inference/_client.py
 - `hf_inference.py` provider: https://github.com/huggingface/huggingface_hub/blob/main/src/huggingface_hub/inference/_providers/hf_inference.py
+
+---
+## 2026-07-24: hf-hub-sandboxes-deep-dive — HF Sandboxes (Topic #148)
+
+### Summary
+Deep-dive into HF Sandboxes — isolated cloud machines built on Jobs for remote code execution, with GPU/CPU options, volume mounts from Hub repos/buckets, secrets injection, and persistent reconnection from any machine. All zero-cost with cpu-basic.
+
+### Architecture
+| Mode | Description | Use Case | Cost |
+|------|-------------|----------|------|
+| Dedicated | One sandbox = one Job VM | GPU, untrusted code | Free cpu-basic |
+| Pool | Shared host, landlock-isolated | Cheap CPU scale | Free tier eligible |
+
+### CLI
+```bash
+# Create
+hf sandbox create
+hf sandbox create --flavor t4-small
+hf sandbox create --pool pool-ab12 --env LOG=debug
+hf sandbox create -v hf://buckets/ns/b:/mnt/data
+
+# Exec / Spawn / Cp / Kill
+hf sandbox exec <id> -- python -c "print(42)"
+hf sandbox spawn <id> -- python -m http.server 8000
+hf sandbox cp data.csv <id>:/data/
+hf sandbox kill <id>
+hf sandbox kill --all
+
+# Pools
+hf sandbox pool create --per-host 50
+hf sandbox pool ls
+```
+
+### Python SDK
+```python
+from huggingface_hub import HfApi
+api = HfApi()
+s = api.create_sandbox(flavor="cpu-basic",
+    volumes=["hf://datasets/org/ds:/data:ro"])
+s.exec("python -c 'print(42)'")
+s.cp("result.json", "/app/result.json")
+api.get_sandbox("<id>")  # reattach
+api.delete_sandbox("<id>")
+```
+
+### Key Points
+1. Sandboxes outlive the client — create once, reconnect anywhere.
+2. Volume mounts (hf:// URIs) avoid data downloads.
+3. Secrets injection only for dedicated mode.
+4. Zero-cost default: cpu-basic + pool mode.
