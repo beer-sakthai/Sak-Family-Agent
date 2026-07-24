@@ -5130,3 +5130,82 @@ print(result)
 - [Datasets Server base URL](https://datasets-server.huggingface.co)
 - [huggingface_hub datasets_server module](https://huggingface.co/docs/huggingface_hub/en/package_reference/datasets_server)
 - [DuckDB remote Parquet](https://duckdb.org/docs/data/parquet/overview.html)
+
+---
+
+## 2026-07-24: hf-transformers-torchao-integration-deep-dive (Topic #119)
+
+### Summary
+Deep-dive into torchao (PyTorch Architecture Optimization) and its integration with Hugging Face Transformers v5.x. torchao is PyTorch's native quantization and optimization library, providing composable high-performance data types for inference and training. The integration is accessed via `TorchAoConfig` in Transformers, which accepts `AOBaseConfig` objects from `torchao.quantization`. As of torchao >= 0.15, the old string-based API was removed — all configs must be `AOBaseConfig` subclass instances. This is distinct from bitsandbytes (NVIDIA-only) — torchao supports CUDA, Intel XPU, and CPU.
+
+### Key Concepts
+
+**TorchAoConfig** — The bridge between Transformers and torchao. Passed as `quantization_config` to `AutoModelForCausalLM.from_pretrained()`.
+
+**AOBaseConfig subclasses** — The quantization configs you pass to `TorchAoConfig`:
+
+| Config | Dtype | Use Case |
+|--------|-------|----------|
+| `Float8DynamicActivationFloat8WeightConfig` | A16W8-FP8 | H100 GPU (FP8 tensor cores) |
+| `Float8WeightOnlyConfig` | A16W8-FP8 | H100 GPU (weight-only) |
+| `Int8DynamicActivationInt8WeightConfig` | A8W8-INT8 | A100 GPU, Intel XPU, CPU |
+| `Int8WeightOnlyConfig` | A16W8-INT8 | A100, XPU, CPU |
+| `Int4WeightOnlyConfig` | A16W4-INT4 | A100, H100, XPU (batch=1) |
+| `GemliteUIntXWeightOnlyConfig` | 4/8-bit | A100/H100 (batch=N, autotuned) |
+| `Int4WeightOnlyConfig(layout=MarlinSparseLayout())` | INT4+2:4 Sparse | H100 with sparse checkpoints |
+| `PrototypeInt4WeightOnlyConfig` | INT4 | CPU (torchao >= 0.15) |
+| `IntxWeightOnlyConfig` | Arbitrary INTx | Custom bit-width quantization |
+| `Int8DynamicActivationInt4WeightConfig` | A8W4-Mixed | Per-layer mixed quantization |
+
+### Hardware Compatibility
+
+| Hardware | CUDA | XPU | CPU |
+|----------|------|-----|-----|
+| CUDA Versions | cu118, cu126, cu128 | — | — |
+| XPU Versions | — | PyTorch 2.8 | — |
+| FP8 (H100) | ✅ | — | — |
+| INT8 (A100) | ✅ | ✅ | ✅ |
+| INT4 (Consumer) | ✅ | ✅ | ✅ (>=0.15) |
+
+### Critical API Change (torchao >= 0.15)
+- **OLD (removed):** `TorchAoConfig("int4_weight_only")` — string-based API
+- **NEW (required):** `TorchAoConfig(quant_type=Int4WeightOnlyConfig(group_size=128))` — object-based API
+- Serialization (save_pretrained / push_to_hub) only works with torchao >= 0.15
+
+### Per-Module Quantization
+`FqnToConfig` enables layer-specific quantization:
+
+1. **Skip layers:** `{"_default": config, "model.layers.0.self_attn.q_proj": None}` 
+2. **Different configs per layer (regex):** Keys starting with `re:` use regex matching
+3. **Different configs per layer (exact FQN):** Use exact module path as key
+
+### Auto-Compilation Pattern
+```python
+quantization_config = TorchAoConfig(quant_type=quant_config)
+quantized_model = AutoModelForCausalLM.from_pretrained(
+    model_id, dtype="auto", device_map="auto",
+    quantization_config=quantization_config
+)
+# auto-compile via cache_implementation="static"
+output = quantized_model.generate(**inputs, max_new_tokens=10, cache_implementation="static")
+```
+Setting `cache_implementation="static"` auto-compiles with `torch.compile`. The model recompiles on batch size / max_new_tokens changes. Pass `disable_compile=True` to skip compilation.
+
+### Device-Specific Notes
+
+- **CPU INT4:** Requires `Int4CPULayout()` in `Int4WeightOnlyConfig`. Only CPU-serialized models can be re-loaded on CPU.
+- **INT4 cross-device limitation:** INT4 layouts are device-specific — quantize and load on the same device.
+- **INT8/FP8 are portable:** Can quantize on CPU, load on CUDA.
+
+### Recommended Settings
+```python
+torchao.quantization.utils.recommended_inductor_config_setter()
+```
+
+### Resources
+- [Transformers torchao docs (source)](https://github.com/huggingface/transformers/blob/main/docs/source/en/quantization/torchao.md)
+- [torchao quantization API](https://github.com/pytorch/ao/blob/main/torchao/quantization/quant_api.py)
+- [torchao README](https://github.com/pytorch/ao#torchao-pytorch-architecture-optimization)
+- [Benchmarks](https://github.com/pytorch/ao/tree/main/torchao/quantization#benchmarks)
+- [Colab: Torchao Demo](https://colab.research.google.com/github/huggingface/notebooks/blob/main/transformers_doc/en/quantization/torchao.ipynb)
+|
