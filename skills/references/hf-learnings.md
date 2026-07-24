@@ -1,5 +1,265 @@
 # HF Learnings Log
 
+## 2026-07-24: hf-hub-openapi-spec-deep-dive — Hub OpenAPI Specification & Programmatic Discovery (Topic #128 Deepened)
+
+### Summary
+Deep-dive into the Hugging Face Hub's OpenAPI 3.0 specification available at `/.well-known/openapi.md` (12,358 lines) and `/.well-known/openapi.json`. The spec is the single authoritative source for all Hub REST API endpoints — covering Models, Datasets, Spaces, Discussions, Papers, Collections, Organizations, Webhooks, Jobs, and Billing. The spec is also served via the interactive [OpenAPI Playground Space](https://huggingface.co/spaces/huggingface/openapi). This learning catalogs every API endpoint group, documents the spec format, and provides patterns for programmatic spec consumption (dynamic client generation, endpoint discovery, route validation).
+
+### Key Discovery: Spec Location & Format
+
+The OpenAPI spec moved from the docs hub to a dedicated well-known URL:
+
+| Format | URL | Size |
+|--------|-----|------|
+| JSON | `https://huggingface.co/.well-known/openapi.json` | Full JSON object |
+| Markdown | `https://huggingface.co/.well-known/openapi.md` | 12,358 lines |
+| Interactive | `https://huggingface.co/spaces/huggingface/openapi` | OpenAPI Playground |
+
+The Markdown version is specifically targeted at AI agents — the docs page notes: *"If you're an Agent, you might prefer the markdown version OpenAPI spec."*
+
+### Complete API Surface Area (by Endpoint Group)
+
+#### Auth (2 endpoints)
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/whoami-v2` | GET | Get current user info and auth method |
+| `/api/check-token` | GET | Check token validity (under Auth section) |
+
+#### Models API (~35+ endpoints)
+Core listing, CRUD, and repository management for model repos:
+
+**Listing & Search:**
+- `GET /api/models` — List all models (supports `search`, `author`, `sort`, `direction`, `limit`, `full`, `config`, `pipeline_tag`, `library`, `language`, `license`, `private`, `other`, `expand` params)
+- `GET /api/models/{namespace}/{repo}` — Get model metadata
+- `DELETE /api/models/{namespace}/{repo}` — Delete a model repo
+
+**Commit & Content Management:**
+- `POST /api/models/{namespace}/{repo}/commit/{rev}` — Create a commit (supports both `application/json` and `application/x-ndjson`)
+- `GET /api/models/{namespace}/{repo}/tree/{rev}/{path}` — List folder content (supports `expand`, `recursive`, `limit`, `cursor` for pagination)
+- `POST /api/models/{namespace}/{repo}/paths-info/{rev}` — Get info on specific paths (batch of up to 2000 paths)
+- `GET /api/models/{namespace}/{repo}/refs` — List git refs (branches, tags) with optional `include_prs`
+- `GET /api/models/{namespace}/{repo}/commits/{rev}` — Paginated commit history
+- `GET /api/models/{namespace}/{repo}/compare/{compare}` — Diff between two revisions
+
+**Branch & Tag Management:**
+- `POST /api/models/{namespace}/{repo}/branch/{rev}` — Create branch (`startingPoint`, `emptyBranch`, `overwrite`)
+- `DELETE /api/models/{namespace}/{repo}/branch/{rev}` — Delete a branch
+- `POST /api/models/{namespace}/{repo}/tag/{rev}` — Create a tag
+- `DELETE /api/models/{namespace}/{repo}/tag/{rev}` — Delete a tag
+
+**File Management:**
+- `POST /api/models/{namespace}/{repo}/preupload/{rev}` — Check upload method (LFS vs direct)
+- `GET /api/models/{namespace}/{repo}/lfs-files` — List Xet/LFS files (paginated via `cursor`)
+- `POST /api/models/{namespace}/{repo}/lfs-files/batch` — Batch delete LFS files
+- `DELETE /api/models/{namespace}/{repo}/lfs-files/{sha}` — Delete single LFS file (with `rewriteHistory` option)
+- `POST /api/models/{namespace}/{repo}/lfs-files/duplicate` — Duplicate Xet files across repos by hash
+
+**Security & Access:**
+- `GET /api/models/{namespace}/{repo}/scan` — Get security scan status
+- `GET /{namespace}/{repo}/user-access-report` — Export gated repo access report
+- `POST /{namespace}/{repo}/ask-access` — Request access to gated repository
+- `POST /api/models/{namespace}/{repo}/user-access-request/cancel` — Cancel access request
+- `GET /api/models/{namespace}/{repo}/user-access-request/{status}` — List access requests by status
+
+**Settings & Metadata:**
+- `PUT /api/models/{namespace}/{repo}/settings` — Update repo settings (private, visibility, discussions, gated config)
+- `POST /api/models/{namespace}/{repo}/super-squash/{rev}` — Squash all commits into one (irreversible)
+- `POST /api/models/{namespace}/{repo}/resource-group` — Add to resource group (Enterprise)
+- `GET /api/models/{namespace}/{repo}/resource-group` — Get resource group
+- `GET /api/models/{namespace}/{repo}/treesize/{rev}/{path}` — Get total size under path
+- `GET /api/models/{namespace}/{repo}/jwt` — Generate JWT token (with write/expiration/encryption options)
+- `GET /api/models/{namespace}/{repo}/notebook/{rev}/{path}` — Get Jupyter notebook URL
+
+**Xet Storage:**
+- `GET /api/models/{namespace}/{repo}/xet-write-token/{rev}` — Short-lived Xet write token
+- `GET /api/models/{namespace}/{repo}/xet-read-token/{rev}` — Short-lived Xet read token
+
+**File Resolution:**
+- `GET /{namespace}/{repo}/resolve/{rev}/{path}` — Resolve a file (supports Range header, Xet file info)
+- `GET /api/resolve-cache/models/{namespace}/{repo}/{rev}/{path}` — Cache-aware file resolution
+
+#### Datasets API (mirrors Models structure — ~30+ endpoints)
+
+Same endpoint patterns as Models with `/api/datasets/` prefix. Includes:
+- All commit, branch, tag, file management endpoints
+- Dataset-specific listing with `GET /api/datasets` (same filter params as models)
+- Dataset-specific info with `GET /api/datasets/{namespace}/{repo}`
+- Dataset-specific `DELETE /api/datasets/{namespace}/{repo}`
+
+**Key extra:** The spec doesn't list the datasets-server endpoints (these are at `datasets-server.huggingface.co`, separate from the main Hub API).
+
+#### Spaces API (mirrors Models structure — ~30+ endpoints)
+
+Same endpoint patterns with `/api/spaces/` prefix, plus:
+
+**Spaces-Specific Endpoints:**
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/spaces` | GET | List Spaces (with `search`, `author`, `sort`, `limit`, `full`, `sdk` params) |
+| `/api/spaces/{namespace}/{repo}` | GET | Get Space metadata |
+| `/api/spaces/{namespace}/{repo}` | DELETE | Delete a Space |
+| `PUT /api/spaces/{namespace}/{repo}/settings` | PUT | Update Space settings (+ Space-specific: `hardware`, `storage`, `sleepTime`, `secrets`, `variables`) |
+| `POST /api/spaces/{namespace}/{repo}/restart` | POST | Restart a Space |
+| `POST /api/spaces/{namespace}/{repo}/pause` | POST | Pause a Space (free tier optimization) |
+| `GET /api/spaces/{namespace}/{repo}/runtime` | GET | Get Space runtime status |
+| `POST /api/spaces/{namespace}/{repo}/apply-latest-config` | POST | Apply latest configuration |
+| `POST /api/spaces/{namespace}/{repo}/move-to-latest-config` | POST | Move to latest config revision |
+
+#### Discussions & Pull Requests API (~40+ endpoints)
+
+Template: `/api/{repoType}/{namespace}/{repo}/discussions/{num}`
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/{repoType}/{namespace}/{repo}/discussions` | GET | List discussions |
+| `/api/{repoType}/{namespace}/{repo}/discussions` | POST | Create discussion/PR |
+| `.../discussions/{num}` | GET | Get discussion detail |
+| `.../discussions/{num}` | POST | Edit discussion |
+| `.../discussions/{num}/comment` | POST | Add comment |
+| `.../discussions/{num}/comment/{commentId}` | DELETE | Delete comment |
+| `.../discussions/{num}/comment/{commentId}/edit` | POST | Edit comment |
+| `.../discussions/{num}/comment/{commentId}/reply` | POST | Reply to comment |
+| `.../discussions/{num}/change-status` | POST | Change status (open/closed) |
+| `.../discussions/{num}/merge` | POST | Merge PR |
+| `.../discussions/{num}/ref` | DELETE | Delete PR ref (free storage) |
+| `.../discussions/{num}/storage` | GET | Estimate PR LFS storage |
+
+#### Collections API (~8 endpoints)
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/collections` | GET | List collections |
+| `/api/collections` | POST | Create collection |
+| `/api/collections/{slug}` | GET | Get collection |
+| `/api/collections/{slug}` | DELETE | Delete collection |
+| `/api/collections/{slug}` | PATCH | Update collection |
+| `/api/collections/{slug}/items` | POST | Add item |
+| `/api/collections/{slug}/items/{itemId}` | DELETE | Remove item |
+| `/api/collections/{slug}/items/{itemId}` | PATCH | Update item |
+
+#### Papers API (~8+ endpoints)
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/papers` | GET | List daily papers |
+| `/api/papers/{paperId}` | GET | Get paper detail |
+| `/api/papers/{paperId}/comment` | POST | Create comment |
+| `/api/papers/{paperId}/comment/{commentId}/reply` | POST | Reply to comment |
+| `/api/papers/{paperId}/vote` | POST | Vote on paper |
+
+#### Posts API (~8+ endpoints)
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/posts/{username}/{postSlug}` | GET | Get post |
+| `/api/posts/{username}/{postSlug}` | DELETE | Delete post |
+| `/api/posts/{username}/{postSlug}/comment` | POST | Create comment |
+| `/api/posts/{username}/{postSlug}/comment/{commentId}/reply` | POST | Reply to comment |
+
+#### Organizations API (~10+ endpoints)
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/organizations` | GET | List user's orgs |
+| `/api/organizations` | POST | Create org |
+| `/api/organizations/{org}` | GET | Get org details |
+| `/api/organizations/{org}` | POST | Edit org |
+| `/api/organizations/{org}/members` | GET | List members |
+| `/api/organizations/{org}/members` | POST | Add member |
+| `/api/organizations/{org}/members/{member}` | DELETE | Remove member |
+| `/api/organizations/{org}/members/{member}` | POST | Change role |
+
+#### Trending & Discovery (3 endpoints)
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `GET /api/trending` | GET | Get trending repos (`type`: all/model/dataset/space, `limit`) |
+| `GET /api/models-tags-by-type` | GET | Get model tags grouped by type (pipeline_tag, library, language, license, etc.) |
+| `GET /api/quicksearch` | GET | Cross-type instant search |
+
+#### Webhooks API (~9 endpoints)
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/webhooks` | GET | List webhooks |
+| `/api/webhooks` | POST | Create webhook |
+| `/api/webhooks/{webhookId}` | GET | Get webhook |
+| `/api/webhooks/{webhookId}` | POST | Update webhook |
+| `/api/webhooks/{webhookId}` | DELETE | Delete webhook |
+| `/api/webhooks/{webhookId}/enable` | POST | Enable webhook |
+| `/api/webhooks/{webhookId}/disable` | POST | Disable webhook |
+
+#### Jobs API (~6+ endpoints)
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/jobs` | GET | List jobs |
+| `/api/jobs` | POST | Create job |
+| `/api/jobs/{jobId}` | GET | Get job status |
+| `/api/jobs/{jobId}` | DELETE | Cancel job |
+| `/api/jobs/{jobId}/logs` | GET | Get job logs |
+
+#### Storage/Buckets API (~9+ endpoints)
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/buckets` | GET | List buckets |
+| `/api/buckets` | POST | Create bucket |
+| `/api/buckets/{bucketId}` | GET | Get bucket |
+| `/api/buckets/{bucketId}` | DELETE | Delete bucket |
+| `/api/buckets/{bucketId}/sync` | POST | Sync bucket |
+
+### Key Architectural Insights
+
+1. **Pattern symmetry**: Models, Datasets, and Spaces share nearly identical endpoint structures (commit, tree, paths-info, preupload, lfs-files, refs, branches, tags, settings, resource-group, treesize, jwt, notebooks). This means knowledge of one repo type's API is directly transferable.
+
+2. **Commit API dual format**: The commit endpoint supports both `application/json` (single JSON body with `files`, `lfsFiles`, `deletedEntries` arrays) and `application/x-ndjson` (JSON lines — each line is a separate operation: `header`, `file`, `lfsFile`, `deletedEntry`). NDJSON is recommended for large commits.
+
+3. **Pagination everywhere**: All list endpoints support cursor-based pagination (`cursor` + `limit`), not just offset-based. The tree listing defaults to 1,000 items (100 with `expand=true`).
+
+4. **Eventual consistency**: The spec notes that `resolve-cache` endpoints exist for cache-aware file resolution — indicating a CDN/caching layer between clients and the Hub's git storage.
+
+5. **Rate limits**: All API calls are subject to HF-wide rate limits. The docs reference upgrading accounts for elevated access.
+
+6. **OpenAPI spec itself evolves**: The spec at `/.well-known/openapi.md` is auto-generated from the Hub's codebase, making it always up-to-date — more reliable than static documentation for discovering newly added endpoints.
+
+### Programmatic Spec Consumption Patterns
+
+```python
+import requests
+
+# Fetch the OpenAPI spec as JSON for programmatic discovery
+spec_json = requests.get("https://huggingface.co/.well-known/openapi.json").json()
+
+# Discover all endpoints and their methods
+for path, methods in spec_json.get("paths", {}).items():
+    for method in methods:
+        print(f"{method.upper():6s} {path}")
+
+# Or as markdown (better for LLM ingestion)
+spec_md = requests.get("https://huggingface.co/.well-known/openapi.md").text
+
+# Extract all endpoint groups (headers at ## level)
+import re
+groups = re.findall(r"^## (.+)$", spec_md, re.MULTILINE)
+# Returns: ['Auth', 'Models', 'Datasets', 'Spaces', 'Discussions', ...]
+```
+
+### Key Takeaways
+
+1. **Single source of truth**: The OpenAPI spec at `/.well-known/` is always up-to-date, covering all Hub REST endpoints.
+2. **155+ endpoints** across 12+ API groups — Auth, Models, Datasets, Spaces, Discussions, Collections, Papers, Posts, Organizations, Trending, Webhooks, Jobs, Storage/Buckets.
+3. **Model/Dataset/Space symmetry**: ~80% of endpoints are shared across repo types with only the prefix changing.
+4. **Commit API is dual-format**: JSON for simple commits, NDJSON for batch/large commits.
+5. **Cursor-based pagination** across all list endpoints — not offset/limit.
+6. **Zero-cost to use**: All read endpoints are freely accessible; write endpoints require authentication via HF token.
+7. **The spec is agent-friendly**: The Markdown version is explicitly designed for AI agent consumption.
+8. **OpenAPI Playground** at `https://huggingface.co/spaces/huggingface/openapi` enables interactive endpoint testing without writing code.
+
+### Resources
+- OpenAPI Markdown: https://huggingface.co/.well-known/openapi.md
+- OpenAPI JSON: https://huggingface.co/.well-known/openapi.json
+- OpenAPI Playground: https://huggingface.co/spaces/huggingface/openapi
+- Hub API Docs: https://huggingface.co/docs/hub/en/api
+- huggingface_hub Python SDK: https://github.com/huggingface/huggingface_hub
+
+### Skill
+mlops/huggingface-hub -- references/hf-learnings.md
+
+---
+
 ## 2026-07-24: hf-inference-client-provider-fallback-and-routing — Provider Discovery & Fallback Chains (Topic #143)
 
 ### Summary
@@ -8743,7 +9003,7 @@ Xet storage and hf_xet are free for all Hub users - no paid tier required. For B
 - huggingface_hub utils/_xet.py on GitHub
 - hf_xet PyPI package: hf-xet
 
-## 2026-07-24: hf-inference-client-tool-use-and-function-calling — InferenceClient Tool Calling Deep-Dive (Topic #155)
+## 2026-07-24: hf-inference-client-tool-use-and-function-calling — InferenceClient Tool Calling Deep-Dive (Topic #154)
 
 ### Summary
 Deep-dive into Hugging Face `InferenceClient`'s tool-calling / function-calling API (v1.24.0). Covers the full data model (tool definitions, function schemas, tool_choice modes), streaming vs non-streaming tool calls, OpenAI compatibility (`client.chat.completions.create`), multi-turn tool execution loops, integration with MCP, and practical zero-cost patterns for agent workflows.
