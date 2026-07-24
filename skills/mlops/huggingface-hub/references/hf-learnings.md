@@ -3249,3 +3249,86 @@ Direct from `huggingface_hub` v1.24.0 source code analysis:
 - [Hub Organizations Docs](https://huggingface.co/docs/hub/en/organizations)
 - [Hugging Face Account Settings (Orgs)](https://huggingface.co/settings/organizations)
 - [huggingface_hub API Reference: HfApi](https://huggingface.co/docs/huggingface_hub/en/package_reference/hf_api)
+
+
+---
+
+## 2026-07-24: hf-hub-xet-storage-and-hf-xet — Xet Storage & hf_xet Rust Accelerator Deep Dive (Topic #154)
+
+### Summary
+Deep-dive into Xet storage, the Rust-based content-addressable storage system powering the Hugging Face Hub, and its Python client `hf_xet`. Covers the architecture (chunk-level deduplication, XORBs, CAS), the replacement of `hf_transfer` with `hf_xet`, the token refresh system, cache optimization via tree listing, and configuration via env vars. Sources: huggingface_hub v1.24.0 source code analysis and HF Hub Xet docs.
+
+### Architecture Overview
+
+Xet is a **content-addressable storage (CAS)** system built specifically for AI/ML development on the Hugging Face Hub. It replaces the older Git LFS-based storage backend.
+
+**Key differences from Git LFS:**
+- **Chunk-level deduplication** — identical chunks across different files stored only once (not possible with LFS's file-level storage)
+- **Smaller uploads** — only new/changed chunks are transferred
+- **Faster downloads** — parallel chunk retrieval with presigned URLs
+- **Immutable chunks (XORBs)** — broken into blocks called xorbs, reassembled on request
+
+### Architecture Flow
+
+1. Files are broken into immutable chunks (xorbs)
+2. Chunks are stored in the content-addressable service (CAS)
+3. LFS SHA256 hash -> reconstruction metadata (ranges within xorbs + presigned URLs)
+4. `hf_xet` downloads xorb ranges in parallel and writes files to disk
+5. Short-lived Xet access tokens are refreshed automatically via the refresh API
+
+### hf_xet Python Package
+
+| Property | Value |
+|----------|-------|
+| Package name | hf-xet (pip), imported as hf_xet |
+| Current version | 1.5.2 (installed in this env) |
+| Purpose | Rust-based download/upload accelerator for the HF Hub |
+| Relationship to hf_transfer | hf_transfer is DEPRECATED - use hf_xet instead |
+| Bundled with | huggingface_hub >= 0.32.0 (automatically installed) |
+| Summary | Fast transfer of large files with the Hugging Face Hub |
+
+### How hf_xet Integrates with huggingface_hub
+
+**Runtime detection** - `_runtime.py` checks for `hf_xet` package at import time via `is_xet_available()`.
+
+**Download flow** - `file_download.py` contains the `xet_get()` function.
+
+**XetFileData dataclass** - `utils/_xet.py`:
+- `file_hash` (str): Xet content hash for file identification in CAS
+- `refresh_route` (str): URL to refresh the short-lived Xet access token
+
+**Token refresh URL format:**
+```
+{ENDPOINT}/api/{repo_type}s/{repo_id}/xet-{read|write}-token/{revision}
+```
+
+**XetTokenType enum:** READ / WRITE
+
+**XetSessionHolder** - thread-safe session management for free-threaded Python (3.14t):
+- Uses threading.Lock for thread safety
+- Supports safe re-creation after sigint_abort() or fork
+- Automatically refreshes tokens as needed
+
+### Cache Optimization - Tree Listing
+
+When Xet is enabled, the Hub API's /tree listing response includes Xet metadata (xet_hash, lfs_sha256, lfs_size). This allows hf_xet to skip the HEAD request that regular downloads need, since Xet downloads don't rely on the /resolve redirect.
+
+### Configuration
+
+| Env Variable | Purpose |
+|-------------|---------|
+| HF_HUB_DISABLE_XET | Set to disable Xet even if hf_xet is installed |
+| (default) | Xet enabled by default when hf_xet package is available |
+
+### Zero-Cost Relevance
+
+Xet storage and hf_xet are free for all Hub users - no paid tier required. For Beer's zero-cost setup:
+- hf_xet is already bundled with huggingface_hub v1.24.0
+- Faster downloads save time on model/dataset downloads without any cost
+- Chunk-level deduplication means the Hub stores less data overall
+
+### Resources
+- HF Hub Download Guide (https://huggingface.co/docs/huggingface_hub/en/guides/download)
+- Xet Hub Documentation (https://huggingface.co/docs/hub/xet/index)
+- huggingface_hub utils/_xet.py on GitHub
+- hf_xet PyPI package: hf-xet
