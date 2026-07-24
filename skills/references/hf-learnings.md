@@ -2212,3 +2212,398 @@ Supported quant modes for vLLM:
 - HQQ repo (dropbox fork): https://github.com/dropbox/hqq
 - PEFT HQQ guide: https://huggingface.co/docs/peft/en/developer_guides/quantization#hqq-quantization
 - GemLite fast kernels: https://github.com/dropbox/gemlite
+
+---
+
+## 2026-07-24: hf-hub-lfs-architecture — Deep Dive v2 (LFS Batch API Internals, Pointer Format, Deduplication, Advanced Management)
+
+### Summary
+Second-pass deep-dive into Hugging Face Hub's Git LFS architecture, covering the LFS Batch API specification in full detail (operations, requests, responses, error codes, transfer adapters), the LFS pointer file specification (format, verification, creation), content-addressable storage deduplication across repos and forks, `.gitattributes` configuration for HF repos, Raw API direct download pattern, advanced LFS debugging, and practical management patterns for staying within free-tier storage limits with minimal overhead.
+
+### 1. LFS Batch API — Full Specification
+
+The Git LFS Batch API is the core protocol for transferring large files between client and server. It operates as an HTTP JSON API.
+
+#### Protocol Endpoint
+
+```
+POST {endpoint}/{repo_type}/{repo_id}.git/info/lfs/objects/batch
+```
+
+Where:
+- `endpoint` = `https://huggingface.co` (default) or `https://huggingface.co/datasets/{org}/{repo}` (for datasets via dataset URL)
+- `repo_type` = explicit path to repo (inferred by the Hub), e.g. `https://huggingface.co/{org}/{repo}` for models
+- The `.git` suffix is standard Git LFS convention
+
+#### Request Body
+
+```json
+{
+  "operation": "upload" | "download",
+  "transfers": ["xet", "lfs-multipart-upload", "lfs-standalone-file", "basic"],
+  "ref": {
+    "name": "refs/heads/main"
+  },
+  "objects": [
+    {
+      "oid": "sha256:abcdef...",
+      "size": 1234567890
+    }
+  ],
+  "hash_algo": "sha256"
+}
+```
+
+**Required fields:**
+- `operation`: `"upload"` or `"download"` — determines whether the server returns upload URLs (with auth tokens) or download URLs
+- `objects`: array of OID+size pairs identifying the files to transfer
+
+**Optional fields:**
+- `transfers`: ordered array of preferred transfer protocols. The server responds with the first supported one. If omitted, `["basic"]` is assumed.
+- `ref`: Git ref name. For uploads, this helps the server validate permissions on the target branch/tag
+- `hash_algo`: hash algorithm used. Default is `sha256`.
+
+**Transfer adapters (in priority order as requested by `huggingface_hub`):**
+| Adapter | Identifier | Description |
+|---------|-----------|-------------|
+| Xet | `xet` | Content-deduplicated chunked transfer (new default for HF) |
+| LFS Multipart | `lfs-multipart-upload` | Chunked upload for very large files |
+| LFS Standalone | `lfs-standalone-file` | Single-file upload via presigned URL |
+| Basic | `basic` | Raw HTTP PUT with basic auth |
+
+**Hub-specific extension:** The Hub's LFS server (not standard Git LFS) may return additional metadata about the repository state, storage quota usage, and whether the file already exists on the server (deduplication shunt).
+
+#### Response Body (success, 200)
+
+```json
+{
+  "transfer": "xet",
+  "objects": [
+    {
+      "oid": "sha256:abcdef...",
+      "size": 1234567890,
+      "authenticated": true,
+      "actions": {
+        "upload": {
+          "href": "https://...",
+          "header": {
+            "Authorization": "Bearer <token>",
+            "Content-Type": "application/octet-stream"
+          },
+          "expires_at": "2026-07-24T12:00:00Z"
+        },
+        "verify": {
+          "href": "https://...",
+          "header": {
+            "Authorization": "Bearer <token>"
+          }
+        }
+      }
+    },
+    {
+      "oid": "sha256:def...",
+      "size": 987654321,
+      "authenticated": true,
+      "actions": null
+    }
+  ]
+}
+```
+
+**Key response fields:**
+- `transfer`: the transfer adapter the server selected (may differ from what was requested)
+- `objects[].actions`: `null` means the object already exists at the target OID (dedup shunt) — no upload needed!
+- `objects[].actions.upload`: presigned URL + headers for uploading the file content
+- `objects[].actions.verify`: optional URL to verify the upload was stored correctly after upload completes
+- `objects[].expires_at`: ISO 8601 timestamp after which the presigned URL expires
+
+#### Response Body (error, 4xx/5xx)
+
+```json
+{
+  "message": "Quota exceeded",
+  "request_id": "abc-123",
+  "documentation_url": "https://huggingface.co/docs/hub/en/storage-limits"
+}
+```
+
+**Common error conditions:**
+| Status | Message | Meaning |
+|--------|---------|---------|
+| 401 | Bad credentials | Token invalid or missing |
+| 403 | Forbidden | No write permission on the repo |
+| 403 | Quota exceeded | Storage limit reached for private repos |
+| 404 | Not found | Repo does not exist |
+| 422 | Invalid objects | OID or size validation failed |
+| 429 | Too many requests | Rate limited — back off and retry |
+| 507 | Insufficient storage | Private storage cap reached |
+
+**Rate limiting:** The Hub applies per-user rate limits on LFS batch operations (~100 req/min). When hit, the server returns 429 with a `Retry-After` header. The `huggingface_hub` client library handles retry with exponential backoff automatically.
+
+### 2. LFS Pointer File Format
+
+Git LFS replaces large files with small pointer files in the actual Git repository. The pointer file is what Git tracks — the real content goes to the LFS store.
+
+#### Canonical Pointer File
+
+```
+version https://git-lfs.github.com/spec/v1
+oid sha256:4ac7d8e5a7a0a2e4c0c5a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8
+size 4127389056
+```
+
+**Specification:** The pointer file MUST:
+1. Be exactly 3 lines (with trailing newline on each, total 4 newlines including final blank)
+2. Line 1: `version https://git-lfs.github.com/spec/v1\n`
+3. Line 2: `oid sha256:<64-char lowercase hex>\n`
+4. Line 3: `size <decimal integer>\n`
+5. No trailing whitespace on any line
+6. The OID format is exactly `sha256:` followed by 64 lowercase hex characters
+7. The size is in bytes, decimal format, no leading zeros
+
+**Verification:** The Hub validates pointer files at push time — if the pointer format is invalid (wrong version, malformed OID, missing size), the push is rejected.
+
+**Hub extension:** In addition to the standard pointer file, `huggingface_hub` uses a companion cache (in `~/.cache/huggingface/hub/`) that maps `{repo_id}/{commit_hash}/{path_in_repo}` to the OID. This is how the library resolves LFS files without needing to query Git at all — it's a flat-file index that avoids Git metadata calls.
+
+#### Detecting LFS Files in Python
+
+```python
+from huggingface_hub import HfApi
+api = HfApi()
+
+# List files in a repo — files returned as dicts with 'lfs' field
+files = api.get_repo_tree(repo_id="user/repo")
+lfs_files = [f for f in files if f.get("lfs")]
+
+# Each LFS file entry has:
+# - lfs['oid']: the SHA-256 OID (in hex)
+# - lfs['size']: original file size
+# - lfs['pointerSize']: size of the pointer file (typically ~120 bytes)
+```
+
+### 3. Content-Addressable Storage — Deduplication Mechanics
+
+The Hub stores LFS content in a **content-addressable store** keyed by SHA-256 OID.
+
+#### How CSD Works
+
+```
+File A (~/model-00001-of-00002.safetensors) → SHA-256 OID → Store at /objects/4a/c7/d8e5...
+File B (fork of same repo, same file) → SHA-256 OID (IDENTICAL) → Files already exists, no re-upload
+```
+
+**Implications for free-tier users:**
+1. **Forks cost zero extra storage:** If you fork a repo, even if the fork is private, you don't pay for the content already stored. The Hub stores content once by OID. This is true even across repos — if file `abc.safetensors` in `user/repo1` has the same SHA-256 as `abc.safetensors` in `user/repo2`, it's stored only once.
+2. **Cross-repo deduplication:** Two separate repos with identical LFS files share the same underlying storage. The storage quota counts only unique new content.
+3. **Commit history is not deduplicated:** Different commits that modify an LFS file each store a NEW OID (because the SHA changes when the file changes). Old OIDs remain stored and referenced in the Git history. This is why old LFS versions consume space even after file deletion.
+4. **Super-squash is the only escape:** Compressing history via `api.super_squash_history()` drops old LFS OIDs that are no longer referenced by any commit in the new single-commit history.
+
+#### Verifying Deduplication
+
+```python
+# Check if a file already exists on the Hub without uploading
+from huggingface_hub import HfApi
+api = HfApi()
+
+# The batch API's preupload check does this automatically:
+# objects with actions=null in the batch response = already exists, dedup'd
+```
+
+### 4. `.gitattributes` — LFS Pattern Configuration for HF Repos
+
+The Hub's default LFS patterns are configured server-side but can be overridden locally.
+
+#### Hub's Default LFS Patterns
+
+These file extensions are automatically tracked via LFS by the Hub server:
+```
+*.safetensors filter=lfs diff=lfs merge=lfs -text
+*.bin filter=lfs diff=lfs merge=lfs -text
+*.pt filter=lfs diff=lfs merge=lfs -text
+*.pth filter=lfs diff=lfs merge=lfs -text
+*.ckpt filter=lfs diff=lfs merge=lfs -text
+*.gguf filter=lfs diff=lfs merge=lfs -text
+*.ggml filter=lfs diff=lfs merge=lfs -text
+*.h5 filter=lfs diff=lfs merge=lfs -text
+*.onnx filter=lfs diff=lfs merge=lfs -text
+*.tar filter=lfs diff=lfs merge=lfs -text
+*.gz filter=lfs diff=lfs merge=lfs -text
+*.zip filter=lfs diff=lfs merge=lfs -text
+*.zst filter=lfs diff=lfs merge=lfs -text
+*.jsonl filter=lfs diff=lfs merge=lfs -text (for very large dataset files)
+*.parquet filter=lfs diff=lfs merge=lfs -text
+```
+
+**Custom patterns:** You can override by providing a `.gitattributes` file in your repo root:
+
+```gitattributes
+# Track extra formats as LFS
+*.msgpack filter=lfs diff=lfs merge=lfs -text
+*.npy filter=lfs diff=lfs merge=lfs -text
+
+# Force small files to be stored inline (NOT LFS) — saves pointer overhead
+*.config -filter -diff -merge
+*.json -filter -diff -merge
+*.yaml -filter -diff -merge
+*.txt -filter -diff -merge
+```
+
+**Note:** The Hub server has the final say. If the Hub server considers a file too large (>1 MB) and NOT on a tracked pattern, the push will fail with a connection error because the Git remote helper expects LFS for large blobs.
+
+#### Un-tracking Files from LFS
+
+If you accidentally pushed a large file as regular Git (not LFS) and it bloated the repo:
+
+```bash
+# 1. Install git-lfs
+git lfs install
+
+# 2. Migrate the file from Git to LFS
+git lfs migrate import --include="path/to/large/file.bin" --everything
+
+# 3. Force push (destructive — coordinate with collaborators)
+git push --force origin main
+```
+
+### 5. Raw API — Direct LFS File Downloads Without Git
+
+The Hub's Raw API allows direct HTTP downloads of LFS files without needing the Git LFS client:
+
+```
+GET https://huggingface.co/{repo_id}/raw/{branch}/{path}
+```
+
+But for LFS files, the raw endpoint returns the **pointer file** (not the real content). To get real content directly:
+
+```
+# Direct LFS download URL:
+GET https://huggingface.co/{repo_id}/resolve/{branch}/{path}
+
+# With huggingface_hub:
+from huggingface_hub import hf_hub_download
+path = hf_hub_download(repo_id="user/repo", filename="model.safetensors", repo_type="model")
+```
+
+**The `resolve` endpoint** auto-redirects to the LFS content's CDN URL. This is the recommended URL for downloading model weights in scripts, Colab notebooks, and Spaces.
+
+**Streaming support:**
+```python
+# Stream large models without fully downloading
+from huggingface_hub import hf_hub_download
+import torch
+
+# With `hf_hub_download`, use `local_files_only=False` to force fresh download
+# Or use the datasets library with streaming for dataset content
+
+# For models, load directly from Hub using transformers with device_map:
+from transformers import AutoModelForCausalLM
+model = AutoModelForCausalLM.from_pretrained("user/repo", device_map="auto")
+# Downloads LFS weights on-the-fly via the resolve endpoint
+```
+
+**Cache behavior:** `hf_hub_download` returns the cached path. Subsequent calls with the same `repo_id` + `filename` return the cached copy instantly. Use `force_download=True` to bypass cache.
+
+### 6. LFS on Free Tier — Advanced Management Patterns
+
+#### Monitoring LFS Usage
+
+```python
+from huggingface_hub import HfApi
+
+api = HfApi()
+
+# Get repo info including LFS file listing
+repo_info = api.repo_info(repo_id="user/repo", files_metadata=True)
+
+# Count LFS files
+lfs_count = sum(1 for f in repo_info.siblings if f.lfs)
+lfs_total_size = sum(f.lfs["size"] for f in repo_info.siblings if f.lfs)
+
+print(f"LFS files: {lfs_count}")
+print(f"Total LFS size: {lfs_total_size / 1e9:.2f} GB")
+```
+
+#### Finding and Deleting Orphaned LFS References
+
+```python
+# List all LFS files across all branches/tags
+# (requires git CLI access to the cloned repo)
+import subprocess
+
+# Find all LFS OIDs referenced by current HEAD
+result = subprocess.run(
+    ["git", "lfs", "ls-files", "--all", "--name-only"],
+    capture_output=True, text=True
+)
+referenced_oids = set(result.stdout.strip().split('\n'))
+
+# Find LFS files in the cache that are NOT referenced
+# (these consume space but are not needed for current checkout)
+# Cache is at ~/.cache/huggingface/hub/
+```
+
+#### Git LFS Cleanup Commands
+
+```bash
+# Check how much space LFS cache is using
+du -sh ~/.cache/huggingface/hub/
+
+# Prune local LFS cache (removes unreferenced objects)
+git lfs prune
+
+# Check LFS cache health
+git lfs fsck  # Verifies all LFS files checkout correctly
+
+# List all LFS files in a repo (from any checkout)
+git lfs ls-files --all
+```
+
+#### LFS Across All Files in a Repo (Using the Web API)
+
+```bash
+# List all files in a repo with LFS status
+curl -s https://huggingface.co/api/models/{org}/{repo} | \
+    jq '.siblings[] | select(.lfs != null) | {path: .rfilename, size: .lfs.size, oid: .lfs.oid}'
+
+# Get total LFS storage used by a repo
+curl -s https://huggingface.co/api/models/{org}/{repo} | \
+    jq '[.siblings[] | select(.lfs != null) | .lfs.size] | add | . / 1e9 | "\(.) GB"'
+```
+
+#### Avoiding LFS Bloat on Free Tier
+
+**The biggest hidden storage sink** is **version history**. Every time you push an updated LFS file, the old version's OID remains stored. Over 10 updates, that's 10× the storage cost for the same file.
+
+**Strategies:**
+1. **One-shot uploads:** When possible, push the final version of a file rather than iterating locally and pushing updates
+2. **Super-squash before major storage increases:** Before uploading a large model to a repo with history, run `api.super_squash_history("user/repo")` to reset the commit history to a single commit
+3. **Use Xet for iterative updates:** Xet's chunk-level deduplication is more efficient than LFS's whole-file deduplication for iterative releases — only changed chunks are uploaded
+4. **Delete old LFS versions via UI:** Go to Repo Settings → "List LFS files" → Delete obsolete versions
+5. **Watch for deleted branches:** Merged branches and stale PRs often hold LFS references. After cleanup, run super-squash to truly free the space
+
+### 7. LFS and Xet — Dual Protocol Strategy
+
+The Hub now supports both traditional LFS and the Xet storage backend. Understanding when each is better helps optimize storage:
+
+| Scenario | Best Protocol | Reason |
+|----------|--------------|--------|
+| First upload of a model | LFS (traditional) | Stable, fastest for single-shot large uploads |
+| Iterative updates to large files | Xet | Chunk-level dedup, only uploads changed bytes |
+| Many small LFS files | LFS | Xet overhead not worth it for <10 MB files |
+| CI/CD pipeline pushing daily | Xet with `HF_XET_HIGH_PERFORMANCE=1` | Bandwidth saturation + dedup |
+| Dataset with incremental additions | Xet | Append-only chunks dedup naturally |
+
+**Detection of which protocol was used:**
+- LFS-stored files: show up in "List LFS files" in Settings
+- Xet-stored files: handled transparently — the Hub API abstracts the backend. Check `HF_STORAGE_BACKEND` env var to see which is active.
+
+### Resources
+- Git LFS Batch API spec: https://github.com/git-lfs/git-lfs/blob/main/docs/api/batch.md
+- Git LFS Pointer file spec: https://github.com/git-lfs/git-lfs/blob/main/docs/pointer.md
+- Git LFS file locking: https://github.com/git-lfs/git-lfs/blob/main/docs/api/locking.md
+- HF Storage limits: https://huggingface.co/docs/hub/en/storage-limits
+- HF Xet docs: https://huggingface.co/docs/xet/en/index
+- huggingface_hub LFS source: https://github.com/huggingface/huggingface_hub/blob/main/src/huggingface_hub/lfs.py
+- huggingface_hub upload guide: https://huggingface.co/docs/huggingface_hub/en/guides/upload
+- HF API endpoint: https://huggingface.co/api/models/{org}/{repo}
+- Git LFS migration docs: https://git-lfs.com/
