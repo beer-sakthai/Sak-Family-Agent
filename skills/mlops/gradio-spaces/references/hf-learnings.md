@@ -573,3 +573,479 @@ Works with Ollama, vLLM, TGI, or any OpenAI-compatible server.
 8. Additional inputs/outputs for extra controls and side panels
 9. Direct chatbot value manipulation for prefill/clear buttons
 10. `gr.load_chat()` for instant OpenAI-compatible endpoints
+
+---
+
+# HF Learnings — Gradio Queue & Concurrency Optimization
+
+**Topic:** `hf-gradio-queue-and-concurrency-optimization-deep-dive`
+**Date:** 2026-07-24
+**Skill:** mlops/gradio-spaces
+**Author:** SakThai
+**License:** MIT
+
+## Overview
+
+Deep-dive into Gradio's queue system (v6.20.0) — how requests are serialized, parallelized, batched, and prioritized. Covers the `demo.queue()` configuration, per-event `concurrency_limit`, the `batch` mode for grouped inference, client-side status tracking, Spaces-specific throughput optimization, and the internal queue architecture.
+
+**Key insight:** Without `.queue()` on a Spaces deployment, every user beyond the first gets `"Too many requests"` errors — the queue is mandatory for any multi-user deployment.
+
+---
+
+## 1. Queue Architecture — How Requests Flow
+
+```
+User Request
+    │
+    ▼
+┌─────────────────────┐
+│  FastAPI Endpoint   │  ← always running
+│  (api_open=True)    │     bypasses queue
+└─────────────────────┘
+    │
+    ▼
+┌─────────────────────┐
+│  Queue (redis-less) │  ← in-process asyncio queue
+│  max_size=N         │     rejects if full
+│  default_concurrency=1│  default: 1 job at a time
+└─────────────────────┘
+    │
+    ▼
+┌─────────────────────┐
+│  Worker Pool        │  ← asyncio tasks
+│  (up to concurrency)│     executes fn()
+└─────────────────────┘
+    │
+    ▼
+   Response
+```
+
+The queue is **in-process** (no Redis dependency). It uses Python's `asyncio.Queue` under the hood. Each Gradio process has one queue instance. For horizontal scaling, each process has its own queue — no shared queue across processes.
+
+### Key parameters (from `gradio.Queue` source — v6.20.0)
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `status_update_rate` | `float \| "auto"` | `"auto"` | How often to send position/progress updates. "auto" = send after each job finishes. A float = interval in seconds. |
+| `api_open` | `bool \| None` | `None` | If True, REST API routes bypass the queue entirely. Requests go straight to the event handler. |
+| `max_size` | `int \| None` | `None` | Max queued events. `None` = unlimited. When full, new events are rejected with a "queue is full" message. |
+| `default_concurrency_limit` | `int \| None` | `1` | The default concurrency for event listeners that don't specify their own. Also settable via `GRADIO_DEFAULT_CONCURRENCY_LIMIT` env var. |
+
+---
+
+## 2. Basic Queue Configuration
+
+### Minimal (required for multi-user)
+
+```python
+demo = gr.Interface(fn=my_fn, inputs="text", outputs="text")
+demo.queue()             # enables queue with all defaults
+demo.launch()
+```
+
+### Tuned for throughput
+
+```python
+demo = gr.Interface(fn=my_fn, inputs="text", outputs="text")
+demo.queue(
+    default_concurrency_limit=5,   # 5 parallel executions
+    max_size=20,                    # max 20 queued
+    status_update_rate="auto",      # tell users their position
+)
+demo.launch()
+```
+
+### With Blocks
+
+```python
+with gr.Blocks() as demo:
+    btn = gr.Button("Generate")
+    output = gr.Textbox()
+
+    btn.click(fn=generate, inputs=gr.Textbox(), outputs=output)
+
+demo.queue(max_size=10, default_concurrency_limit=3)
+demo.launch()
+```
+
+---
+
+## 3. Per-Event Concurrency Control
+
+Different events in the same app can have different concurrency limits — critical when mixing fast (text) and slow (image) endpoints.
+
+### concurrency_limit
+
+```python
+with gr.Blocks() as demo:
+    text_btn = gr.Button("Quick Text")
+    image_btn = gr.Button("Slow Image")
+    output = gr.Textbox()
+
+    # Fast endpoint — allow parallelism
+    text_btn.click(
+        fn=quick_text,
+        inputs=gr.Textbox(),
+        outputs=output,
+        concurrency_limit=10,       # up to 10 parallel
+    )
+
+    # Slow GPU endpoint — serialize to avoid OOM
+    image_btn.click(
+        fn=slow_image_gen,
+        inputs=gr.Textbox(),
+        outputs=output,
+        concurrency_limit=1,        # one at a time
+    )
+
+demo.queue(default_concurrency_limit=5)
+demo.launch()
+```
+
+**Important:** `concurrency_limit` on an event cannot exceed the queue's `default_concurrency_limit`. If `default_concurrency_limit=5`, the max per-event is also 5 unless adjusted at the queue level.
+
+### concurrency_id — Group related events
+
+Events sharing the same `concurrency_id` are serialized together — even if they're different endpoints:
+
+```python
+btn_1.click(fn=model_a, ..., concurrency_limit=2, concurrency_id="gpu")
+btn_2.click(fn=model_b, ..., concurrency_limit=2, concurrency_id="gpu")
+# Both share the same GPU pool — combined concurrency is 2
+```
+
+---
+
+## 4. Queue Bypass Patterns
+
+### api_open = True — REST routes skip queue
+
+When `api_open=True`, direct REST API calls (e.g., via `gradio_client`) bypass the queue. Use this for trusted internal services where you want low latency at the cost of overloading the server.
+
+```python
+demo.queue(api_open=True)
+```
+
+### queue=False on individual events
+
+Skip the queue for specific events even when the global queue is enabled:
+
+```python
+btn.click(fn=immediate_fn, ..., queue=False)
+```
+
+Useful for: UI-only operations (toggle settings, clear fields) that don't need queue sequencing.
+
+---
+
+## 5. Batch Processing Mode
+
+For high-throughput inference, enable `batch=True` — Gradio groups multiple inputs and sends them as a batch to your function.
+
+### How it works
+
+```python
+def batch_fn(texts: list[str]) -> list[str]:
+    # texts is a list of all pending inputs
+    return [t.upper() for t in texts]
+
+with gr.Blocks() as demo:
+    inp = gr.Textbox()
+    out = gr.Textbox()
+    inp.submit(
+        fn=batch_fn,
+        inputs=inp,
+        outputs=out,
+        batch=True,                    # enable batching
+        max_batch_size=4,              # max inputs per batch
+    )
+
+demo.queue(default_concurrency_limit=1)
+demo.launch()
+```
+
+### Batch parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `batch` | `bool` | `False` | Enable batch processing mode |
+| `max_batch_size` | `int` | `4` | Max inputs in a single batch |
+| `batch_concurrency` | `int` | `1` (from queue default) | How many batches to process in parallel |
+
+### When to use batching
+
+- **High-throughput, low-latency models** (e.g., text classification, embedding)
+- **GPU inference** where batching improves utilization
+- **Stateless functions** (no gr.State dependency)
+
+### When NOT to use batching
+
+- Functions that depend on `gr.State` (state is per-session, not batchable)
+- Streaming generators (yield doesn't work with batch=True)
+- Functions with side effects (logging per request, external API calls)
+
+---
+
+## 6. Progress Tracking with Queue
+
+`gr.Progress()` works hand-in-hand with the queue system:
+
+```python
+def long_task(progress=gr.Progress()):
+    progress(0, desc="Starting...")
+    for i in progress.tqdm(range(100), desc="Processing"):
+        time.sleep(0.1)
+    return "Done!"
+
+demo = gr.Interface(fn=long_task, inputs=None, outputs="text")
+demo.queue()
+demo.launch()
+```
+
+The queue delivers progress updates to the client at `status_update_rate` intervals. Each client gets their own progress bar — no cross-user interference.
+
+### Client-side status (JS Client)
+
+```javascript
+const app = await Client.connect("user/my-space", { events: ["data", "status"] });
+const sub = app.submit("/predict", { text: "hello" });
+
+for await (const msg of sub) {
+    if (msg.type === "status") {
+        console.log(msg.position, msg.eta, msg.stage);
+        // { position: 2, eta: 15, stage: "pending" }
+        // → "You are #2 in queue, ~15s wait"
+    }
+    if (msg.type === "data") {
+        console.log(msg.data);  // actual result
+    }
+}
+```
+
+### Status payload fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `queue` | `bool` | Whether this request went through the queue |
+| `stage` | `"pending" \| "error" \| "complete" \| "generating"` | Current request stage |
+| `position` | `int` | Queue position (0 = processing now) |
+| `eta` | `int` | Estimated seconds until processing starts |
+| `size` | `int` | Total queue size |
+| `progress_data` | `array` | Per-task progress from `gr.Progress()` |
+
+---
+
+## 7. Spaces-Specific Queue Optimization
+
+### The `GRADIO_DEFAULT_CONCURRENCY_LIMIT` env var
+
+Set this in your Space's Settings → Repository Secrets:
+
+```
+GRADIO_DEFAULT_CONCURRENCY_LIMIT=5
+```
+
+This sets the default value before your Python code runs — useful for overriding the default when you can't modify the app code (e.g., third-party Spaces).
+
+### Spaces hardware and concurrency guidance
+
+| Hardware | Recommended default_concurrency_limit | Notes |
+|----------|---------------------------------------|-------|
+| CPU basic | 2-5 | Lightweight models only; CPU is shared |
+| CPU upgrade | 5-10 | More CPU cores available |
+| ZeroGPU | 1-3 | GPU is queued separately via `@spaces.GPU` |
+| T4 small | 2-4 | Small GPU memory; watch for OOM |
+| A10G | 4-8 | Larger GPU; good for batch inference |
+
+### Common anti-patterns on Spaces
+
+1. **Not calling `.queue()`** — Without it, only one concurrent user is supported. Always call `demo.queue()`.
+2. **`concurrency_limit > GPU memory allows`** — If your model takes 8GB and you set concurrency_limit=4, you'll hit OOM. Start conservative.
+3. **`max_size` too small** — A popular Space may get hundreds of requests. Set `max_size` high enough (or `None`).
+4. **Forgetting `GRADIO_DEFAULT_CONCURRENCY_LIMIT` in Docker Spaces** — Environment variables set in Space Settings aren't available at build time, only at runtime.
+
+### Spaces sleep/wake and queue drain
+
+When a Space goes to sleep, queued requests are lost. The client sees the Space as "sleeping" via the `status_callback`. Upon wake, the queue is fresh (empty). Solutions:
+
+- **PRO users** can disable sleeping
+- **Client-side retry**: Use the JS Client's `status_callback` to retry after the Space wakes
+- **ZeroGPU Spaces** don't sleep (but have GPU queue wait times)
+
+---
+
+## 8. Queue Internals (Source Architecture)
+
+From Gradio v6.20.0 source (`gradio/queueing.py`):
+
+### Queue is asyncio-based
+
+```python
+# Simplified architecture
+class Queue:
+    def __init__(self):
+        self._queue: asyncio.Queue = asyncio.Queue(maxsize=max_size)
+        self._events: dict[str, Event] = {}
+        self._workers: dict[int, asyncio.Task] = {}
+
+    async def start(self):
+        # Spawn worker tasks
+        for i in range(self.concurrency_limit):
+            worker = asyncio.create_task(self._worker_loop(i))
+            self._workers[i] = worker
+
+    async def _worker_loop(self, worker_id):
+        while True:
+            event = await self._queue.get()
+            await self._process_event(event)
+```
+
+### Key internal behaviors
+
+- **No priority queue**: FIFO (first-in, first-out) — no priority levels for different event types
+- **No preemption**: Once an event starts processing, it runs to completion
+- **Per-worker isolation**: Each worker handles one event at a time; events don't share worker state
+- **Status broadcast**: After each job completion, the queue broadcasts status updates to ALL connected clients (not just the ones waiting)
+- **Cleanup**: Events are removed from `_events` dict after completion to prevent memory leaks
+
+### WebSocket protocol
+
+The queue communicates with the browser via WebSocket:
+```
+Client → Server: { "type": "send_data", "data": {...}, "fn_index": 0 }
+Server → Client: { "type": "estimation", "queue_position": 2, "rank_eta": 15.0 }
+Server → Client: { "type": "process_generating" | "process_completed", "output": {...} }
+Server → Client: { "type": "progress", "progress_data": [...] }
+```
+
+---
+
+## 9. Queue + Streaming
+
+Streaming (generator functions with `yield`) works with the queue but has special behavior:
+
+```python
+def stream_fn(message, history):
+    for i in range(10):
+        time.sleep(0.5)
+        yield f"Token {i}"   # streamed via queue WebSocket
+
+demo = gr.ChatInterface(fn=stream_fn)
+demo.queue()
+demo.launch()
+```
+
+**How streaming interacts with concurrency:**
+- A streaming function holds its worker slot for the entire duration
+- While streaming, no other event can use that worker slot
+- If `default_concurrency_limit=1` and one user is streaming, ALL other users wait
+- **Fix**: Set `concurrency_limit` higher or use a separate `concurrency_id` for non-streaming events
+
+---
+
+## 10. Queue + `@gr.Cache()` (Gradio 5+)
+
+Cached results bypass the queue entirely:
+
+```python
+@gr.Cache()
+def expensive_fn(text):
+    return model.generate(text)
+
+demo = gr.Interface(fn=expensive_fn, inputs="text", outputs="text")
+demo.queue()
+demo.launch()
+```
+
+When a cached result exists, the user gets it immediately without entering the queue. The cache key is computed from input values.
+
+**Limitations for Spaces:**
+- Cache is in-memory (lost on Space restart)
+- Cache directory (`GRADIO_CACHE_DIR`) can be pointed to persistent storage
+- Not compatible with `batch=True`
+
+---
+
+## 11. Measuring Queue Performance
+
+### Expected throughput formula
+
+```
+Throughput (req/s) ≈ concurrency_limit / avg_latency_per_request
+```
+
+Example: `concurrency_limit=5`, each request takes 2s → ~2.5 req/s.
+
+### max_size sizing
+
+```
+max_size = concurrency_limit × (expected_burst_duration / avg_latency)
+```
+
+Example: `concurrency_limit=5`, expect 30-second burst, 2s latency → `max_size = 5 × (30/2) = 75`
+
+### Spawning more workers (Docker Spaces)
+
+In a Docker Space, you can run multiple Gradio processes behind a reverse proxy, each with its own queue. This is the only way to scale beyond a single process's concurrency:
+
+```yaml
+# Dockerfile approach — multi-process via supervisord or gunicorn
+# Each process has its own queue, HF Spaces LB distributes randomly
+```
+
+---
+
+## 12. Decision Matrix
+
+| Scenario | queue() config | Per-event settings |
+|----------|---------------|-------------------|
+| Single-user demo | Not needed | — |
+| Multi-user, fast (<100ms) | `default_concurrency_limit=10` | `concurrency_limit` per event optional |
+| Multi-user, GPU-bound | `default_concurrency_limit=2-4` | Set per-event carefully |
+| Mixed fast+slow | Moderate base | Low concurrency on GPU, high on CPU |
+| High-throughput, tiny model | `batch=True, max_batch_size=16` | `batch_concurrency=2` |
+| Streaming chatbot | `default_concurrency_limit=3-5` | Higher for streaming, lower for GPU |
+| ZeroGPU Space | `default_concurrency_limit=3` | `@spaces.GPU` controls GPU queue separately |
+
+---
+
+## 13. Quick Reference — Commands
+
+```python
+# Enable queue with defaults
+demo.queue()
+
+# Full configuration
+demo.queue(
+    default_concurrency_limit=5,
+    max_size=50,
+    status_update_rate="auto",
+)
+
+# Allow REST API bypass
+demo.queue(api_open=True)
+
+# Per-event fine control
+btn.click(fn=my_fn, ..., concurrency_limit=3)       # limit parallelism
+btn.click(fn=my_fn, ..., concurrency_id="gpu_pool")  # group under one pool
+btn.click(fn=my_fn, ..., batch=True, max_batch_size=8)  # batch mode
+btn.click(fn=my_fn, ..., queue=False)                # skip queue
+
+# Environment variable
+# GRADIO_DEFAULT_CONCURRENCY_LIMIT=5
+```
+
+---
+
+## Key Takeaways
+
+1. **Always call `.queue()`** on multi-user Spaces — without it, only one user works at a time.
+2. **`default_concurrency_limit`** controls the global parallelism level; start at 1 and increase while watching for OOM.
+3. **Per-event `concurrency_limit`** lets you give fast endpoints more workers and slow GPU ones fewer.
+4. **`concurrency_id`** groups events that share a resource (same GPU, same API rate limit).
+5. **`batch=True`** groups multiple inputs into one function call — great for embedding/classification models.
+6. **`api_open=True`** lets programmatic clients bypass the queue (useful for internal services).
+7. **Queue is FIFO** — no priority; long-running streaming jobs block the queue for others.
+8. **Status updates** flow over WebSocket — client libraries can show queue position + ETA.
+9. **`GRADIO_DEFAULT_CONCURRENCY_LIMIT`** env var sets the default before your code runs.
+10. **Cache bypasses queue** — `@gr.Cache()` is free and fast for repeated requests.
