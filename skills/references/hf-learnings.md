@@ -2607,440 +2607,182 @@ The Hub now supports both traditional LFS and the Xet storage backend. Understan
 - huggingface_hub upload guide: https://huggingface.co/docs/huggingface_hub/en/guides/upload
 - HF API endpoint: https://huggingface.co/api/models/{org}/{repo}
 |- Git LFS migration docs: https://git-lfs.com/
-|- HF storage limits docs: https://huggingface.co/docs/hub/en/storage-limits
 
-## 2026-07-24: hf-transformers-tool-use-chat-template — Deep Dive v2 (Topic #78, depth++)
+## 2026-07-24: hf-inference-client-structured-outputs — Deep Dive (Topic #100)
 
 ### Summary
-Comprehensive deep-dive into tool-use and function-calling support across the Hugging Face ecosystem — Transformers chat templates, huggingface_hub `InferenceClient`, and provider-level routing. Covers automatic tool schema generation from Python functions, the `tools` parameter in `apply_chat_template`, the `tool_use` template key for multi-template models, `ChatCompletionInputTool` types, tool choice strategies, provider-level tool handling across 15+ providers, and end-to-end patterns for zero-cost agent tool calling.
 
-### Part 1: Transformers Chat Template Tool Support
+Comprehensive deep-dive into Hugging Face InferenceClient's **Structured Outputs**, **JSON Mode**, and **Tool/Function Calling** capabilities. These three features form a continuum of structured generation — from unvalidated JSON (JSON Mode) to schema-enforced JSON (Structured Outputs) to dynamic function selection (Tool Calling). All follow OpenAI-compatible API specs for easy migration. Combined with TGI's grammar-based guidance engine (powered by the `outlines` library), these features enable reliable programmatic consumption of LLM outputs without parsing errors.
 
-#### The `tools` Parameter in `apply_chat_template`
+### The Three Structured Generation Modes
 
-Since Transformers 4.42+, `PreTrainedTokenizerBase.apply_chat_template()` accepts a `tools` parameter:
+| Mode | What It Does | When To Use | Cost/Complexity |
+|------|-------------|-------------|-----------------|
+| **JSON Mode** (`response_format={"type": "json_object"}`) | Forces valid JSON output, no schema enforcement | Quick data extraction, prototyping | Lowest — any provider that supports it |
+| **Structured Outputs** (`response_format={"type": "json_schema", "json_schema": {...}}`) | Enforces a specific JSON Schema compliant output | Production pipelines, database inserts, API responses | Medium — requires schema definition |
+| **Tool Calling** (OpenAI `tools` parameter) | Model decides whether to call a function and with which args | Agent workflows, function dispatching, RAG tool use | Highest — requires tool definitions + handling logic |
 
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `tools` | `list[dict \| Callable] \| None` | `None` | A list of tools (JSON schemas or callable functions) accessible to the model. If the template doesn't support function calling, this has no effect. |
-| `documents` | `list[dict[str, str]] \| None` | `None` | A list of documents for RAG-style grounded generation. |
-| `add_generation_prompt` | `bool` | `False` | Add tokens indicating the start of an assistant message. |
-| `continue_final_message` | `bool \| str` | `False` | Continue the final message instead of starting a new one; pass a field name (e.g. `"reasoning_content"`) to prefill a specific field. |
-| `return_assistant_tokens_mask` | `bool` | `False` | Return a mask indicating which tokens belong to the assistant's response (requires `{% generation %}` in template). |
+### JSON Mode vs Structured Outputs — Key Difference
 
-#### Multi-Template Models and the `tool_use` Key
+**JSON Mode** (`type: "json_object"`) only guarantees syntactically valid JSON. The model can output any shape — keys, nesting, data types all vary. Use it when you just need parseable output and can handle variation.
 
-Some tokenizers store multiple chat templates in a dict. When a model has:
-```python
-tokenizer.chat_template = {
-    "default": "<standard template>",
-    "tool_use": "<tool-use template>",
-}
-```
+**Structured Outputs** (`type: "json_schema"`) guarantees both valid JSON AND compliance with a specified [JSON Schema](https://json-schema.org/). The model's output is constrained to match your schema exactly — field names, types, required fields, nested structures all enforced. Use it when downstream code depends on a fixed contract.
 
-The `get_chat_template(tools=tools)` method auto-selects the `"tool_use"` template when tools are provided and no explicit `chat_template` argument is passed. If no `"tool_use"` key exists, it falls back to the `"default"` template (which may or may not support tools — older models simply ignore the tools parameter silently).
-
-**Models known to have `tool_use` templates:** Cohere Command-R family (`CohereForAI/c4ai-command-r-v01`). Other models (Llama 3.x, Qwen 2.5, Mistral, DeepSeek) use their `default` template and handle tools via Jinja logic built into the template string itself (typically using OpenAI-compatible format).
-
-#### Automatic Function Conversion via `get_json_schema`
-
-The `transformers.utils.chat_template_utils.get_json_schema()` function converts a Python callable with type hints and a Google-format docstring into a JSON tool schema:
+### Implementation — Structured Outputs with InferenceClient
 
 ```python
-from transformers.utils import get_json_schema
+from huggingface_hub import InferenceClient
 
-def get_weather(location: str, units: str = "celsius") -> dict:
-    """Get current weather for a location.
-
-    Args:
-        location: The city name, e.g. 'Bangkok'
-        units: Temperature unit (choices: ["celsius", "fahrenheit"])
-    """
-    return {"temp": 25, "units": units}
-
-schema = get_json_schema(get_weather)
-# {
-#     "name": "get_weather",
-#     "description": "Get current weather for a location.",
-#     "parameters": {
-#         "type": "object",
-#         "properties": {
-#             "location": {"type": "string", "description": "The city name, e.g. 'Bangkok'"},
-#             "units": {"type": "string", "enum": ["celsius", "fahrenheit"], "description": "Temperature unit"}
-#         },
-#         "required": ["location"]
-#     }
-# }
-```
-
-**Key constraints:**
-- The function **must** have a docstring — `DocstringParsingException` is raised otherwise
-- Each parameter **must** have a description in the Google-format `Args:` block
-- Parameters without type hints default to `{"type": "object"}`
-- `(choices: [...])` at end of a description line generates `enum` in the schema
-- `self`/`cls` (receiver args) are automatically excluded
-- A `Returns:` block is optional but included in the schema if present
-- `Image` type → `{"type": "image"}` (if PIL available); `torch.Tensor` → `{"type": "audio"}`
-
-#### Type Hint → JSON Schema Mapping
-
-Handled by `_get_json_schema_type()`:
-
-| Python Type | JSON Schema |
-|-------------|-------------|
-| `int` | `{"type": "integer"}` |
-| `float` | `{"type": "number"}` |
-| `str` | `{"type": "string"}` |
-| `bool` | `{"type": "boolean"}` |
-| `None` / `NoneType` | `{"type": "null"}` |
-| `Any` | `{}` (no type constraint) |
-| `Literal["a", "b"]` | `{"type": "string", "enum": ["a", "b"]}` |
-| `Union[str, int]` | `{"anyOf": [{"type": "string"}, {"type": "integer"}]}` |
-| `list[str]` | `{"type": "array", "items": {"type": "string"}}` |
-| `dict[str, Any]` | `{"type": "object"}` |
-| `Image` (PIL) | `{"type": "image"}` |
-| `torch.Tensor` | `{"type": "audio"}` |
-| `Optional[str]` | `{"anyOf": [{"type": "string"}, {"type": "null"}]}` |
-
-### Part 2: Docstring Parsing Internals
-
-The `chat_template_utils` module uses regex-based docstring parsing:
-
-| Regex | Purpose |
-|-------|---------|
-| `description_re` | Extracts the function description (text before `Args:`, `Returns:`, `Raises:`) |
-| `args_re` | Extracts the `Args:` block |
-| `args_split_re` | Splits args into `{name: description}` pairs using lookahead for the next arg name |
-| `returns_re` | Extracts the `Returns:` block |
-
-The parser enforces strict validation — every Python argument in the function signature must have a corresponding description in the docstring, or `DocstringParsingException` is raised. This catches documentation drift at schema-generation time.
-
-### Part 3: huggingface_hub InferenceClient Tool Calling
-
-#### Core Types
-
-The `huggingface_hub` library (v0.24+) provides fully-typed tool calling:
-
-```python
-from huggingface_hub import (
-    InferenceClient,
-    ChatCompletionInputTool,
-    ChatCompletionInputFunctionDefinition,
-    ChatCompletionInputToolChoiceClass,
-    ChatCompletionInputToolChoiceEnum,
-    ChatCompletionOutputFunctionDefinition,
-)
-```
-
-**Type hierarchy:**
-
-| Class | Fields | Purpose |
-|-------|--------|---------|
-| `ChatCompletionInputTool` | `function: ChatCompletionInputFunctionDefinition`, `type: str` | Input tool definition |
-| `ChatCompletionInputFunctionDefinition` | `name: str`, `parameters: Any`, `description: str \| None` | Function schema for input |
-| `ChatCompletionOutputFunctionDefinition` | `name: str`, `arguments: str`, `description: str \| None` | Function call returned by model |
-| `ChatCompletionInputToolChoiceClass` | `function: ChatCompletionInputFunctionName` | Force a specific tool |
-| `ChatCompletionInputToolChoiceEnum` | Literal values: `"auto"`, `"none"`, `"required"` | Tool choice mode |
-
-**Creating a tool:**
-```python
-tool = ChatCompletionInputTool(
-    function=ChatCompletionInputFunctionDefinition(
-        name="get_weather",
-        description="Get current weather for a city",
-        parameters={
-            "type": "object",
-            "properties": {
-                "location": {
-                    "type": "string",
-                    "description": "The city name"
-                }
+# Define a JSON Schema for structured output
+json_schema = {
+    "name": "book",
+    "schema": {
+        "properties": {
+            "name": {"title": "Name", "type": "string"},
+            "authors": {
+                "items": {"type": "string"},
+                "title": "Authors",
+                "type": "array",
             },
-            "required": ["location"]
-        }
-    ),
-    type="function"
+        },
+        "required": ["name", "authors"],
+        "title": "Book",
+        "type": "object",
+    },
+    "strict": True,  # Enforce strict schema compliance
+}
+
+client = InferenceClient(provider="cerebras")
+completion = client.chat.completions.create(
+    model="Qwen/Qwen3-32B",
+    messages=[
+        {"role": "system", "content": "Extract the books information."},
+        {"role": "user", "content": "I recently read 'The Great Gatsby' by F. Scott Fitzgerald."},
+    ],
+    response_format={
+        "type": "json_schema",
+        "json_schema": json_schema,
+    },
 )
-# Also accepts plain dicts (OpenAI-compatible format)
-tool_dict = {
+print(completion.choices[0].message)
+# => {"name": "The Great Gatsby", "authors": ["F. Scott Fitzgerald"]}
+```
+
+### JSON Mode — Quick & Lightweight
+
+```python
+completion = client.chat.completions.create(
+    model="Qwen/Qwen3-32B",
+    messages=[{"role": "user", "content": "List 3 colors as JSON."}],
+    response_format={"type": "json_object"},
+)
+# Output is valid JSON but shape not guaranteed
+```
+
+### Tool/Function Calling — OpenAI-Compatible
+
+```python
+tools = [{
     "type": "function",
     "function": {
         "name": "get_weather",
         "description": "Get current weather for a city",
         "parameters": {
             "type": "object",
-            "properties": {"location": {"type": "string"}},
+            "properties": {
+                "location": {"type": "string", "description": "City name"},
+                "unit": {"type": "string", "enum": ["celsius", "fahrenheit"]}
+            },
             "required": ["location"]
         }
     }
-}
-```
+}]
 
-All types inherit from `BaseInferenceType`, which is a subclass of `dict` — so typed objects can be used as dicts interchangeably.
-
-#### Full Tool Calling Flow
-
-```python
-client = InferenceClient("meta-llama/Meta-Llama-3-70B-Instruct", token=token)
-
-messages = [
-    {"role": "system", "content": "Use tools to answer questions."},
-    {"role": "user", "content": "What's the weather in San Francisco?"}
-]
-
-tools = [
-    {
-        "type": "function",
-        "function": {
-            "name": "get_current_weather",
-            "description": "Get the current weather",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "location": {
-                        "type": "string",
-                        "description": "The city and state, e.g. San Francisco, CA"
-                    },
-                    "format": {
-                        "type": "string",
-                        "enum": ["celsius", "fahrenheit"],
-                        "description": "Temperature unit"
-                    }
-                },
-                "required": ["location", "format"]
-            }
-        }
-    }
-]
-
-response = client.chat_completion(
-    messages=messages,
+completion = client.chat.completions.create(
+    model="Qwen/Qwen3-32B",
+    messages=[{"role": "user", "content": "What's the weather in Bangkok?"}],
     tools=tools,
     tool_choice="auto",
-    max_tokens=500,
 )
-
-# Access tool calls
-tool_call = response.choices[0].message.tool_calls[0].function
-print(f"Tool: {tool_call.name}")
-print(f"Args: {tool_call.arguments}")
-# Tool: get_current_weather
-# Args: {'location': 'San Francisco, CA', 'format': 'fahrenheit'}
+# completion.choices[0].message.tool_calls contains the function calls
 ```
 
-#### Tool Choice Strategies
+### The `response_format` Argument — API Details
 
-| `tool_choice` | Behaviour | Use Case |
-|--------------|-----------|----------|
-| `"auto"` (default) | Model decides whether to call a tool | General-purpose |
-| `"none"` | Model must respond with text, no tool calls | When you want pure text generation |
-| `"required"` | Model must call one of the provided tools | Force tool use in every response |
-| `{"function": {"name": "my_tool"}}` | Force a specific tool | When you know which tool must be used |
+The `response_format` parameter in `InferenceClient.chat.completions.create()` accepts one of three types:
 
-The typed equivalent for specific tool forcing:
-```python
-from huggingface_hub import ChatCompletionInputFunctionName, ChatCompletionInputToolChoiceClass
+| Type | Description |
+|------|-------------|
+| `ChatCompletionInputResponseFormatText` | Text output (default) |
+| `ChatCompletionInputResponseFormatJSONObject` | JSON mode — `{"type": "json_object"}` |
+| `ChatCompletionInputResponseFormatJSONSchema` | Structured Outputs — `{"type": "json_schema", "json_schema": {...}}` |
 
-tool_choice = ChatCompletionInputToolChoiceClass(
-    function=ChatCompletionInputFunctionName(name="get_weather")
-)
-```
-
-#### The `tool_prompt` Parameter
-
-An optional string prepended before tool definitions in the prompt. Useful for instructing the model on how to use tools. Example values:
-
-- `"Don't make assumptions about what values to plug into functions. Ask for clarification if a user request is ambiguous."`
-- `"Call only the tools you need. If you can answer without a tool, do so."`
-- `"You have access to the following tools. Use them to fulfill the user's request."`
-
-When `tool_prompt` is set, it is injected into the payload and the provider helper formats it into the conversation at the appropriate position (typically as a system message or prepended to the user message).
-
-#### Streaming Tool Calls
+### Async Client for Concurrent Structured Requests
 
 ```python
-stream = client.chat_completion(
-    messages=messages,
-    tools=tools,
-    stream=True,
-)
-for chunk in stream:
-    if chunk.choices[0].delta.tool_calls:
-        print(chunk.choices[0].delta.tool_calls)
-    # Each chunk contains incremental tool call data
-    # The final chunk assembles complete tool_calls
+from huggingface_hub import AsyncInferenceClient
+import asyncio
+
+async def extract_multiple(texts: list[str]):
+    async with AsyncInferenceClient(provider="cerebras") as client:
+        tasks = [
+            client.chat.completions.create(
+                model="Qwen/Qwen3-32B",
+                messages=[{"role": "system", "content": "Extract entities."},
+                          {"role": "user", "content": t}],
+                response_format={"type": "json_schema", "json_schema": schema},
+            )
+            for t in texts
+        ]
+        return await asyncio.gather(*tasks)
 ```
 
-Streaming tool calls emit partial `ChatCompletionStreamOutputDeltaToolCall` objects. The caller must accumulate `arguments` across chunks and parse the final concatenated JSON string.
+### How It Works Under the Hood — TGI Guidance Engine
 
-### Part 4: Provider-Level Tool Handling
+Text Generation Inference (TGI) implements structured generation via **guidance** — grammar-based token masking powered by the `outlines` library:
 
-The `InferenceClient` supports tool calling across **15+ conversational providers**, each translating the standard parameters to their native API format:
+1. **Grammar compilation:** The JSON Schema or tool definition is compiled into a finite state machine (FSM).
+2. **Forward pass:** The model runs a forward pass over the batch, returning token probabilities.
+3. **Masking:** A processor applies the grammar mask — tokens not allowed by the grammar have their probabilities set to zero.
+4. **Sampling:** The model samples from the remaining (masked) distribution.
+5. **State update:** The chosen token updates the FSM state, preparing for the next pass.
 
-| Provider | Tool Support Notes |
-|----------|-------------------|
-| `hf-inference` | Routes to HF Inference API; supports tools for models that handle them |
-| `together` | Full OpenAI-compatible tool calling |
-| `fireworks-ai` | Full OpenAI-compatible tool calling |
-| `groq` | Full tool calling on supported models |
-| `deepinfra` | OpenAI-compatible tool calling |
-| `cohere` | Native tool use format |
-| `cerebras` | Tool calling supported |
-| `openai` | Direct OpenAI API tool calling |
-| `novita` | Tool calling supported |
-| `nscale` | Tool calling supported |
-| `featherless-ai` | Tool calling supported |
-| `ovhcloud`, `scaleway`, `zai-org`, `publicai` | Tool calling supported |
+This happens at each generation step, ensuring 100% compliance with the grammar/schema.
 
-**Auto-routing:** When `provider="auto"` (default), the `AutoRouterConversationalTask` selects the best provider for the requested model, automatically handling tool parameters.
+**Key insight for zero-cost users:** Providers that run TGI under the hood (Cerebras, Novita, DeepInfra) generally support structured outputs. Providers using vLLM (Together AI, Fireworks) may support it via vLLM's own guided decoding. Check provider docs.
 
-**Extra provider-specific parameters:** Use `extra_body={}` to pass provider-specific tool parameters:
-```python
-response = client.chat_completion(
-    messages=messages,
-    tools=tools,
-    extra_body={"parallel_tool_calls": True}  # Some providers support this
-)
-```
+### Provider Support Matrix (Serverless Inference)
 
-### Part 5: End-to-End Zero-Cost Tool Calling Pattern
+Support varies by provider. Verified patterns as of July 2026:
 
-For Beer's Sak Family Agents (zero-cost constraint), the optimal tool-calling pattern:
+| Provider | JSON Mode | Structured Outputs | Tool Calling | Backend |
+|----------|-----------|-------------------|--------------|---------|
+| Cerebras | ✓ | ✓ | ✓ | TGI-based |
+| Novita | ✓ | ✓ | ✓ | TGI-based |
+| DeepInfra | ✓ | ✓ | ✓ | TGI-based |
+| Together AI | ✓ | Partial | ✓ | vLLM |
+| Fireworks | ✓ | Partial | ✓ | vLLM |
+| Replicate | ✓ | Partial | ✓ | Custom |
+| Groq | ✓ | ✓ | ✓ | Custom/LPU |
+| Fal AI | ✓ | — | — | Custom |
 
-```python
-from huggingface_hub import InferenceClient
+*Partial* = schema enforcement but may not support `strict: True`.
 
-client = InferenceClient(token=HF_TOKEN)  # Uses free HF Inference API
+### Zero-Cost Best Practices
 
-# Define tools as simple dicts (no dependency on transformers)
-tools = [
-    {
-        "type": "function",
-        "function": {
-            "name": "search_knowledge",
-            "description": "Search the knowledge base for information",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "query": {"type": "string", "description": "Search query"}
-                },
-                "required": ["query"]
-            }
-        }
-    }
-]
-
-# Use a free-tier model
-messages = [{"role": "user", "content": "What is the capital of France?"}]
-
-response = client.chat_completion(
-    model="HuggingFaceH4/zephyr-7b-beta",  # Free on HF Inference
-    messages=messages,
-    tools=tools,
-    tool_choice="auto",
-    max_tokens=512,
-)
-
-# Process response
-if response.choices[0].message.tool_calls:
-    for tc in response.choices[0].message.tool_calls:
-        func = tc.function
-        print(f"Call {func.name}({func.arguments})")
-        # Execute tool and append result to messages
-        messages.append({
-            "role": "tool",
-            "tool_call_id": tc.id,
-            "content": str(execute_tool(func.name, func.arguments))
-        })
-    # Get follow-up response
-    final = client.chat_completion(messages=messages, tools=tools, max_tokens=512)
-    print(final.choices[0].message.content)
-```
-
-**Important note on free-tier models:** Smaller models (3B-8B params) often have unreliable tool-calling quality. Best free-tier performers for tool calling include:
-- `meta-llama/Meta-Llama-3-70B-Instruct` (when available free)
-- `mistralai/Mistral-7B-Instruct-v0.3`
-- `Qwen/Qwen2.5-7B-Instruct`
-- `HuggingFaceH4/zephyr-7b-beta` (limited)
-
-For reliable zero-cost tool calling, consider using GGUF models locally (Beer has 0.5B and 1.5B GGUF) with llama.cpp, though small models struggle with reliable tool-use.
-
-### Part 6: LLM-Parallel Tool Execution Pattern
-
-For agent loops that call multiple tools, the parallel execution pattern reduces round-trips:
-
-```python
-def agent_loop(messages, tools, max_steps=5):
-    client = InferenceClient(token=HF_TOKEN)
-
-    for step in range(max_steps):
-        response = client.chat_completion(
-            messages=messages,
-            tools=tools,
-            tool_choice="auto",
-            max_tokens=512,
-        )
-        msg = response.choices[0].message
-
-        if not msg.tool_calls:
-            # Model responded with text — we're done
-            return msg.content
-
-        # Execute all tool calls in parallel
-        tool_results = {}
-        for tc in msg.tool_calls:
-            fn = tc.function
-            tool_results[tc.id] = execute_tool_async(fn.name, fn.arguments)
-
-        # Append tool results
-        assistant_msg = {"role": "assistant", "content": msg.content or "", "tool_calls": msg.tool_calls}
-        messages.append(assistant_msg)
-        for tc in msg.tool_calls:
-            messages.append({
-                "role": "tool",
-                "tool_call_id": tc.id,
-                "content": json.dumps(tool_results[tc.id])
-            })
-
-    return "Max steps reached"
-```
-
-### Part 7: Comparison — Tool Call Formats by Model Family
-
-Different model families use distinct chat template formats for tool definitions:
-
-| Model Family | Tool Format | Example Syntax |
-|-------------|-------------|----------------|
-| **Llama 3.x** | OpenAI-compatible JSON in `{%- for tool in tools %}` | Standard function JSON schema embedded in template Jinja |
-| **Qwen 2.5** | OpenAI-compatible + `tool_calls` in messages | `<|tool_call|>\n{"name": "...", "arguments": {...}}` |
-| **Mistral / Zephyr** | OpenAI-compatible JSON schema | `<|tool|>` sections with function definitions |
-| **Cohere Command-R** | Native `tool_use` template | Separate `tool_use` template key with parameter_definitions format |
-| **DeepSeek** | OpenAI-compatible | Standard function calling |
-| **Phi-4** | OpenAI-compatible in default template | Function definitions in system message |
-| **Gemma 2** | OpenAI-compatible | Function definitions at template level |
-| **DBRX** | OpenAI-compatible | Standard format |
-
-### Key Takeaways
-
-1. **The `tools` parameter in `apply_chat_template`** is the universal entry point for tool formatting in Transformers. Models with a `"tool_use"` template key auto-select it when tools are provided.
-
-2. **`get_json_schema()`** enables Python-first tool definitions — write a typed function with a docstring, get a JSON schema automatically. Zero manual schema maintenance.
-
-3. **`huggingface_hub`'s `InferenceClient`** provides the lowest-friction path to tool calling across 15+ providers with a single unified API. Send tools as dicts or typed objects, get typed responses back.
-
-4. **Tool choice is programmable** — `"auto"`, `"none"`, `"required"`, or force a specific function by name.
-
-5. **Zero-cost tool calling is possible** through the free HF Inference API with models like Zephyr, Mistral-7B, or Qwen2.5-7B, though quality varies with model size.
-
-6. **Streamed tool calls** require accumulator logic to concatenate partial `arguments` across chunks.
-
-7. **The `tool_prompt` parameter** lets you inject system-level guidance about tool usage.
+1. **Prefer JSON Schema over regex/string parsing** — Structured Outputs eliminate the most common failure mode in agent pipelines (malformed JSON).
+2. **Use `strict: True` for production** — Without strict mode, the schema acts as a hint rather than a constraint.
+3. **Short schemas generate faster** — Complex deeply nested schemas increase FSM compilation time and per-step overhead.
+4. **Combine tools with system prompts** — A system prompt that says "You MUST call a function for every query" improves tool-calling reliability.
+5. **`tool_choice: "required"`** — Force the model to always call a tool (useful for classification workflows).
+6. **Fallback chain:** Structured Outputs → JSON Mode → raw text with regex parsing. Start with the cheapest option that meets reliability needs.
+7. **Rate limits:** Free-tier providers (especially Cerebras, Novita) have tighter rate limits on structured generation due to the FSM overhead per token.
 
 ### Resources
-- Transformers chat templating guide: https://huggingface.co/docs/transformers/en/chat_templating
-- Transformers chat extras (tools): https://huggingface.co/docs/transformers/en/chat_extras#passing-tools
-- huggingface_hub InferenceClient: https://huggingface.co/docs/huggingface_hub/en/guides/inference
-- huggingface_hub tool types source: https://github.com/huggingface/huggingface_hub/blob/main/src/huggingface_hub/inference/_generated/types/chat_completion.py
-- Transformers chat_template_utils: https://github.com/huggingface/transformers/blob/main/src/transformers/utils/chat_template_utils.py
-- Cohere Command-R tool use template: https://huggingface.co/CohereForAI/c4ai-command-r-v01
-- HF Inference API docs: https://huggingface.co/docs/api-inference/en/index
+
+- InferenceClient reference: https://huggingface.co/docs/huggingface_hub/en/package_reference/inference_client
+- Inference providers guide: https://huggingface.co/docs/huggingface_hub/en/guides/inference
+- TGI Guidance docs: https://huggingface.co/docs/text-generation-inference/en/conceptual/guidance
+- OpenAI-compatible structured outputs: https://platform.openai.com/docs/guides/structured-outputs
+- JSON Schema spec: https://json-schema.org/
+- `outlines` library (FSM grammar engine): https://github.com/dottxt-ai/outlines
