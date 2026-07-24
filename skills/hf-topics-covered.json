@@ -121,5 +121,6 @@
   "hf-inference-client-chat-completion-source-deep-dive",
   "hf-diffusers-video-generation-pipeline-deep-dive-v2",
   "hf-hub-pull-requests-and-discussions-api",
-  "hf-datasets-builder-advanced-patterns"
+  "hf-datasets-builder-advanced-patterns",
+  "hf-hub-storage-management-deep-dive-v2"
 ]
