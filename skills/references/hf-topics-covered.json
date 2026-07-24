@@ -104,5 +104,6 @@
   "hf-text-embeddings-inference",
   "hf-hub-buckets-api-deep-dive",
   "hf-text-embeddings-inference-v2",
-  "hf-datasets-library-v5"
+  "hf-datasets-library-v5",
+  "hf-hub-trending-and-discovery-api"
 ]

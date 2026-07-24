@@ -3290,3 +3290,76 @@ Comprehensive deep-dive into the Hugging Face Hub Collections API — covering a
 - Source: `huggingface_hub/hf_api.py` lines 9908–10400
 - Hub docs: https://huggingface.co/docs/hub/en/collections
 - Collections page: https://huggingface.co/collections
+
+---
+
+## 2026-07-24: hf-hub-trending-and-discovery-api
+
+### Summary
+Comprehensive deep-dive into the Hugging Face Hub's trending, search, and discovery API surface — covering `/api/trending`, the model/dataset/space listing APIs with sort/filter/search capabilities, `/api/quicksearch` for cross-type search, Daily Papers and paper search, documentation search, and the Python `huggingface_hub` SDK wrappers. Live-researched from real API endpoints and source code analysis.
+
+### Key Endpoints
+
+#### 1. GET /api/trending — Trending Repos
+Returns repos currently trending on the Hub. Mixes models, datasets, and Spaces. Parameters: `type` (all/dataset/model/space) and `limit` (default 30, 10 per type). Returns `{ "recentlyTrending": [...] }` with repo metadata including id, downloads, likes, pipeline_tag, numParameters, lastModified, authorData (avatar, plan, followerCount).
+
+**Snapshot (2026-07-24):** baidu/Unlimited-OCR, thinkingmachines/Inkling, upstage/Solar-Open2-250B, GLM-5.2 trending among models.
+
+#### 2. Python `list_models()` / `list_datasets()` / `list_spaces()`
+
+All accept `sort`, `search`, `filter`, `author`, `limit`, `expand`.
+
+**Sort options:**
+| Resource | Sort Values |
+|----------|------------|
+| Models | `created_at`, `downloads`, `last_modified`, `likes`, `trending_score` |
+| Datasets | `created_at`, `downloads`, `last_modified`, `likes`, `trending_score` |
+| Spaces | `created_at`, `last_modified`, `likes`, `trending_score` |
+
+**Python → REST mapping:** `created_at`→`createdAt`, `last_modified`→`lastModified`, `trending_score`→`trendingScore`, `downloads`→`downloads`, `likes`→`likes`.
+
+**Model filters:** `search` (free-text), `author`, `filter` (library/task/tag), `pipeline_tag`, `num_parameters` (range `"min:6B,max:128B"`), `gated`, `inference` (`"warm"`), `inference_provider`, `apps` (ollama/vllm), `emissions_thresholds`, `expand` (trendingScore, inference, gguf, safetensors, etc.).
+
+**Dataset filters:** `search`, `author`, `filter`, `gated`, `benchmark`, `language`, `size_categories`, `task_categories`.
+
+**Space filters:** `search`, `author`, `filter`, `datasets`, `models`, `linked`.
+
+#### 3. GET /api/quicksearch — Cross-type Search
+One endpoint for models, datasets, spaces, orgs, users, papers, collections, and buckets. Parameters: `q`, `type`, `namespace`, `pipeline`, `library`, `limit`, `exclude`.
+
+#### 4. Daily Papers & Paper Search
+- `GET /api/daily_papers` — parameters: `limit`, `date`, `week`, `month`, `sort` (publishedAt/trending), `submitter`, `p`
+- `GET /api/papers/search?q=...` — hybrid semantic + full-text paper search
+- `GET /api/papers?cursor=...&limit=...` — list papers by publication date
+
+#### 5. GET /api/docs/search — Documentation Search
+Search across ALL 50+ HF documentation products. Parameters: `q` (required), `product` (hub/transformers/diffusers/gradio/smolagents/peft/trl/etc.), `limit`. Also `GET /api/docs/search/full-text`.
+
+#### 6. OpenAPI Specification
+- Playground: https://huggingface.co/spaces/huggingface/openapi
+- JSON: https://huggingface.co/.well-known/openapi.json
+- Agent-ready Markdown: https://huggingface.co/.well-known/openapi.md
+
+### Practical Workflows
+
+```python
+from huggingface_hub import HfApi
+api = HfApi()
+
+# Trending models
+trending = list(api.list_models(sort="trending_score", limit=20))
+
+# Most downloaded text-gen
+popular = list(api.list_models(sort="downloads", pipeline_tag="text-generation", limit=10))
+
+# Latest from an author
+new = list(api.list_models(sort="created_at", author="meta", limit=5))
+
+# Parameter range sorted by likes
+mid = list(api.list_models(num_parameters="min:6B,max:128B", sort="likes", limit=10))
+
+# Search with full metadata
+found = list(api.list_models(search="qwen", expand=["trendingScore", "inference", "gguf"], limit=5))
+for m in found:
+    print(f"{m.id}: {m.likes} likes, score={getattr(m, 'trendingScore', 'N/A')}")
+```
