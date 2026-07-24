@@ -1460,3 +1460,45 @@ python ${llama_cpp_dir}/convert-hf-to-gguf.py ${hf_model_directory} \
 - GGUF models: https://huggingface.co/models?library=gguf
 
 ---
+
+## 2026-07-24: hf-spaces-persistent-storage-zero-cost — Deeper Dive
+
+### Summary
+Research into persisting data across HF Space restarts without spending money. Covers four strategies for zero-cost persistent storage: (A) Dataset Hub as persistent storage via `huggingface_hub` API, (B) mounting models/datasets as free read-only volumes, (C) using the Space's own git repo (with caveats), and (D) external free services. Comprehensive analysis of which approaches work under Beer's zero-cost constraint.
+
+### Key Takeaways
+
+1. **Ephemeral disk is the enemy**: All Space disk (50GB) is lost on restart, stop, or sleep. Nothing written to `/data` or `/tmp` survives.
+
+2. **Dataset repos are the free persistent storage backend**: Every HF account gets free Dataset repo storage with Git LFS. Use `HfApi.upload_file()` to persist state from a Space — zero cost.
+
+3. **Mount models/datasets as read-only volumes for free**: Via `update_space_volume()` or `hf spaces volume add`, any public (or accessible private) repo can be mounted as a read-only filesystem inside the Space — free and no startup download time.
+
+4. **Storage Buckets cost money**: 0 GB free tier for personal accounts. Not usable under zero-cost constraint. The S3-compatible API is bucket-only.
+
+5. **Avoid writing to the Space's own git repo**: This triggers a rebuild + restart (infinite loop potential). Only safe for one-shot initialization or user-triggered saves.
+
+6. **ZeroGPU + storage**: Load models at module level (CUDA emulation in `@spaces.GPU`). Push results to Dataset repos. Mount reference data as volumes.
+
+7. **Practical patterns**: Chat history persistence, periodic snapshots (every 5 min), first-boot detection via `file_exists()`, unique timestamped filenames to avoid concurrent write conflicts.
+
+8. **Limitations**: No real-time sync, no writable mounts for free, ~50MB max per API upload, API rate limits (~100 req/min), 404 handling on first boot required.
+
+### Commands Reference
+```bash
+# Mount a dataset as read-only volume
+hf spaces volume add my-space \
+  --repo beer-sakthai/my-dataset \
+  --repo-type dataset \
+  --mount-path /data/reference
+
+# List mounted volumes (from Space settings UI)
+# Visible in Space → actions dropdown → Volumes
+```
+
+### Resources
+- HF Spaces Storage docs: https://huggingface.co/docs/hub/en/spaces-storage
+- Storage Buckets docs: https://huggingface.co/docs/hub/en/storage-buckets
+- huggingface_hub manage-spaces: https://huggingface.co/docs/huggingface_hub/guides/manage-spaces
+- ZeroGPU docs: https://huggingface.co/docs/hub/en/spaces-zerogpu
+- HF Spaces overview: https://huggingface.co/docs/hub/en/spaces-overview
