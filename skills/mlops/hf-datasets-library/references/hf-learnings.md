@@ -48,350 +48,529 @@ example = ds[0]["audio"]
 ```
 
 **The decoded dict contains:**
-- `path` — original file path (str)
-- `array` — waveform as 1D NumPy float32 array (values in [-1.0, 1.0])
-- `sampling_rate` — sample rate in Hz (int)
+- `path` (`str`): Original file path
+- `array` (`np.ndarray`): Audio waveform with shape `(channels,)` or `(channels, samples)`
+- `sampling_rate` (`int`): Sample rate in Hz
 
-### 2. Audio Feature Configuration
+### 2. Loading and Decoding Audio
 
-The `Audio` feature constructor accepts:
+**Streaming audio from Hub (zero local download):**
+```python
+ds_stream = load_dataset("PolyAI/minds14", "en-US", split="train", streaming=True)
+for i, example in enumerate(ds_stream):
+    audio = example["audio"]  # decoded on-demand
+    if i > 2:
+        break
+```
+
+**Local files:**
+```python
+from datasets import Dataset, Audio
+
+ds = Dataset.from_dict({"audio": ["/path/to/file1.wav", "/path/to/file2.wav"]})
+ds = ds.cast_column("audio", Audio())
+```
+
+**Audio sampling:** Audio files are decoded at their native sampling rate by default. You can resample by specifying `sampling_rate`:
+```python
+from datasets import Audio
+
+# Force all audio to 16kHz
+ds = ds.cast_column("audio", Audio(sampling_rate=16000))
+```
+
+### 3. Advanced Audio Processing
+
+**Batch decode and resample via `.map()`:**
+```python
+def process_audio(batch):
+    audios = batch["audio"]
+    # audios are already decoded dicts with 'array' and 'sampling_rate'
+    batch["processed"] = [{"array": a["array"] * 0.5, "sampling_rate": a["sampling_rate"]} for a in audios]
+    return batch
+
+ds = ds.map(process_audio, batched=True, batch_size=100)
+```
+
+**Memory-efficient decoding:** Audio features are decoded lazily only when accessed. Use `Audio(decode=False)` to store raw bytes without decoding:
+```python
+ds = ds.cast_column("audio", Audio(decode=False))
+# {'path': '/path/to/file.wav', 'bytes': None}  # no array decoded
+```
+
+### 4. Resources
+- https://huggingface.co/docs/datasets/en/audio_dataset
+- https://huggingface.co/docs/datasets/en/audio_process
+- https://huggingface.co/docs/datasets/en/package_reference/main_classes#datasets.Audio
+
+---
+
+## 2026-07-24: hf-datasets-image-processing-deep-dive — Complete Image Pipeline (Topic #114)
+
+### Summary
+Deep-dive into image processing with Hugging Face `datasets` — covering the `Image` feature type, loading strategies (paths, PIL, bytes), resizing, map-based preprocessing, streaming, WebDataset, Lance, and integration with Transformers image processors.
+
+### 1. The `Image` Feature Type
 
 ```python
-Audio(sampling_rate=16000, mono=True, decode=True, id=None)
+from datasets import Image, load_dataset
+
+ds = load_dataset("nateraw/food", split="train")
+example = ds[0]["image"]
+# Returns: PIL.Image.Image (decoded on-demand)
+```
+
+**Input types for encoding:**
+| Input | Behaviour |
+|-------|-----------|
+| `str` | Loaded as file path |
+| `pathlib.Path` | Absolute path |
+| `bytes` / `bytearray` | In-memory image bytes |
+| `PIL.Image.Image` | Encoded to bytes (JPEG default) |
+| `dict` with `{"path": ..., "bytes": ...}` | Pass-through |
+
+**Decode options:**
+```python
+Image(decode=True)    # Default: decode to PIL Image
+Image(decode=False)   # Store as {path, bytes} dict, no decode
+```
+
+### 2. Storage Layer
+
+Arrow storage uses `struct<bytes: binary, path: string>` — identical pattern to Audio and Video features.
+
+**Cast from string (path):** `cast_storage()` converts `pa.string()` → struct by treating the string as a path.
+
+**PIL auto-detection:** When creating a TypedSequence with PIL images, the writer auto-detects `PIL.Image.Image` objects and encodes them:
+```python
+# Auto-encoded when building:
+ds = Dataset.from_dict({"image": [pil_img1, pil_img2]})
+# Features are inferred as Image()
+```
+
+### 3. Preprocessing
+
+**Via `.map()` with batched decode:**
+```python
+from datasets import Features, Image
+
+def transform(batch):
+    batch["image"] = [img.resize((224, 224)) for img in batch["image"]]
+    return batch
+
+ds = ds.map(transform, batched=True, batch_size=100)
+```
+
+### 4. Resources
+- https://huggingface.co/docs/datasets/en/image_dataset
+- https://huggingface.co/docs/datasets/en/package_reference/main_classes#datasets.Image
+
+---
+
+## 2026-07-24: hf-datasets-arrow-parquet-writer-internals (Topic #126) — Datasets v5 Serialization Deep Dive
+
+### Summary
+Complete architecture deep-dive into how Hugging Face `datasets` v5.0.0 serializes data — the Arrow IPC and Parquet writer pipelines, type inference via `TypedSequence`/`OptimizedTypedSequence`, batch sizing across Arrow record batches and Parquet row groups, schema building with embedded metadata, content-defined chunking (CDC), fingerprint-based caching, and sharding for parallel generation. Source-verified against the installed v5.0.0 codebase.
+
+### 1. Writer Architecture Overview
+
+Datasets v5 has two writer classes in `arrow_writer.py`:
+
+```
+ArrowWriter (base)          → writes Arrow IPC format (.arrow files)
+  └── ParquetWriter (subclass) → writes Apache Parquet format (.parquet files)
+```
+
+Both are used through `DatasetBuilder` in `builder.py`, which orchestrates the full generate → write → finalize pipeline.
+
+**Write flow:**
+```
+Generator → examples dicts → ArrowWriter.write() → buffered in current_examples
+    → write_examples_on_file() → _write_batch() → pa.Table.from_arrays()
+    → _write_table() → pa.RecordBatchStreamWriter.write_table() (Arrow) / pq.ParquetWriter.write_table() (Parquet)
+    → finalize() → close stream → return (num_examples, num_bytes)
+```
+
+### 2. ArrowWriter — Full API
+
+```python
+class ArrowWriter:
+    def __init__(
+        self,
+        schema: Optional[pa.Schema] = None,
+        features: Optional[Features] = None,
+        path: Optional[str] = None,
+        stream: Optional[pa.NativeFile] = None,
+        fingerprint: Optional[str] = None,
+        writer_batch_size: Optional[int] = None,    # Max records per Arrow batch
+        disable_nullable: bool = False,
+        update_features: bool = False,
+        on_mixed_types: Optional[Literal["use_json"]] = "use_json",
+        with_metadata: bool = True,
+        unit: str = "examples",
+        embed_local_files: bool = False,
+        storage_options: Optional[dict] = None,
+    )
+```
+
+#### Constructor Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `schema` | `pa.Schema` | None | Pre-defined Arrow schema (alternative to `features`) |
+| `features` | `Features` | None | `datasets.Features` dict — used to build schema |
+| `path` | `str` | None | Local/remote filesystem path for output file |
+| `stream` | `pa.NativeFile` | None | Open arrow write stream (mutually exclusive with path) |
+| `fingerprint` | `str` | None | Dataset state fingerprint — embedded in metadata |
+| `writer_batch_size` | `int` | dynamic | Arrow record batch size (in rows) |
+| `disable_nullable` | `bool` | False | Set all fields non-nullable in schema |
+| `update_features` | `bool` | False | Allow schema evolution (extend features from incoming data) |
+| `on_mixed_types` | `str` | "use_json" | Strategy for mixed-type columns: encode to JSON |
+| `with_metadata` | `bool` | True | Embed DatasetInfo + fingerprint in schema metadata |
+| `unit` | `str` | "examples" | Unit label for logging |
+| `embed_local_files` | `bool` | False | Embed local file bytes into the table |
+| `storage_options` | `dict` | None | Filesystem options (passed to fsspec) |
+
+#### Core Methods
+
+| Method | Purpose |
+|--------|---------|
+| `write(example)` | Buffer a single dict example; flush when batch size reached |
+| `write_row(row)` | Buffer a single-row `pa.Table`; flush when batch size reached |
+| `write_batch(batch_examples)` | Write a full batch dict`<str, list>` immediately (flushes buffered examples first) |
+| `write_table(pa_table)` | Write a `pa.Table` immediately (flushes buffered rows first) |
+| `finalize(close_stream=True)` | Flush buffers, close writer and stream, return (num_examples, num_bytes) |
+
+**Important detail about `write()`:** Uses the `writer_batch_size` to control memory. For image/audio/video datasets, the batch size auto-tunes down via `get_arrow_writer_batch_size_from_features()`:
+- Image datasets: `config.ARROW_RECORD_BATCH_SIZE_FOR_IMAGE_DATASETS` (default: 100)
+- Audio datasets: `config.ARROW_RECORD_BATCH_SIZE_FOR_AUDIO_DATASETS` (default: 100)
+- Video datasets: `config.ARROW_RECORD_BATCH_SIZE_FOR_VIDEO_DATASETS` (default: 10)
+- Binary datasets: `config.ARROW_RECORD_BATCH_SIZE_FOR_BINARY_DATASETS` (default: 100)
+
+This prevents Arrow buffer overflows (each record batch must be < 2GB uncompressed). The SDK scans features recursively via `_visit()` to determine the strictest limit.
+
+#### Internal Buffering
+
+`ArrowWriter` maintains **two** separate write-pools:
+1. `current_examples`: list of `(example_dict, key)` tuples — flushed via `write_examples_on_file()`
+2. `current_rows`: list of single-row `pa.Table` objects — flushed via `write_rows_on_file()`
+
+When a new `write_batch()` or `write_table()` comes in, the corresponding pool is flushed first (FIFO ordering preserved).
+
+### 3. ParquetWriter — Parquet-Specific Configuration
+
+```python
+class ParquetWriter(ArrowWriter):
+    def __init__(self, *args, use_content_defined_chunking=True, write_page_index=True, **kwargs):
 ```
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
-| `sampling_rate` | None | Target sample rate. None = keep original. Set to resample on-the-fly |
-| `mono` | True | Convert stereo to mono by averaging channels |
-| `decode` | True | If False, returns raw file path/bytes instead of decoded array |
+| `use_content_defined_chunking` | `True` | Enable CDC (content-defined chunking) — sets metadata flag + `DEFAULT_CDC_OPTIONS` dict |
+| `write_page_index` | `True` | Write page index for fast row-group-level skipping |
 
-**Backend selection** (auto-detected, can be overridden via env):
-- `soundfile` — default, requires `soundfile` (libsndfile)
-- `torchaudio` — if torchaudio installed, preferred for GPU tensors
-- `librosa` — if librosa installed, supports more formats
-- `torchcodec` — new accelerated decoder in datasets v5+
+#### Compression Strategy (auto-configured)
 
-Backend priority: `torchcodec` > `torchaudio` > `librosa` > `soundfile`
-Override with: `export HF_DATASETS_AUDIO_BACKEND=torchaudio`
-
-### 3. Loading Audio Datasets
-
-#### From the Hub
-```python
-# Standard ASR dataset
-ds = load_dataset("librispeech_asr", "clean", split="train.100")
-
-# Audio classification dataset
-ds = load_dataset("superb", "ks", split="train")
-
-# Speech translation
-ds = load_dataset("covost2", "en_de", split="train")
-```
-
-#### From Local Files — AudioFolder
-```python
-# Folder structure: folder/audio/001.wav, folder/metadata.csv
-ds = load_dataset("audiofolder", data_dir="./my_audio_data/")
-# metadata.csv must have a 'file_name' column pointing to audio files
-```
-
-**metadata.csv format:**
-```csv
-file_name,transcript,speaker_id,duration
-001.wav,hello world,spk1,3.2
-002.wav,good morning,spk2,2.8
-```
-
-For multiple audio fields per row:
-```csv
-input_file_name,output_file_name,label
-input1.wav,output1.wav,clean
-```
-
-For lists of audio files (field must end in `_file_names`):
-```csv
-recordings_file_names,speaker_ids
-"[001_r0.wav,001_r1.wav]","[spk1,spk2]"
-```
-
-#### From ZIP Archives
-```python
-# Archives inside data_dir
-# data_dir/train.zip, data_dir/test.zip
-ds = load_dataset("audiofolder", data_dir="./data/", split="train")
-```
-
-Each ZIP can contain audio files + a metadata.csv at the root.
-
-#### WebDataset (TAR archives for large-scale)
-```python
-# TAR archives: data/train/00000.tar, data/train/00001.tar ...
-# Inside each tar: same-prefix files like:
-#   e39871fd.mp3
-#   e39871fd.json   (transcript/metadata)
-ds = load_dataset("webdataset", data_dir="./data/train/", split="train")
-```
-
-### 4. On-the-Fly Resampling with `cast_column`
-
-The most efficient way to resample: use `cast_column` with a new `Audio` feature. Decoding + resampling happens lazily — only when you access the audio.
+ParquetWriter auto-configures compression per-column based on feature type:
 
 ```python
-from datasets import Audio
-
-# Resample EVERYTHING to 16kHz on-the-fly
-ds_16khz = ds.cast_column("audio", Audio(sampling_rate=16000))
-
-# Verify
-print(ds_16khz[0]["audio"]["sampling_rate"])  # 16000
+compression={
+    col: "none" if require_storage_embed(feature) else "snappy"
+    for col, feature in self._features.items()
+}
+use_dictionary=[col for col, feature in self._features.items() if not require_storage_embed(feature)]
+column_encoding={
+    col: "PLAIN" for col, feature in self._features.items() if require_storage_embed(feature)
+}
 ```
 
-**Performance note:** Casting does NOT process the full dataset — it only changes the *decoding configuration*. The actual resample runs once per example when first accessed, then cached by Apache Arrow.
+**Rule:** Columns that embed external files (Image, Audio, Video — binary bytes) use:
+- `compression="none"` — binary data is already compressed
+- `use_dictionary=False` — high cardinality makes dict encoding wasteful
+- `encoding="PLAIN"` — no further encoding
 
-### 5. Map-Based Preprocessing
+Other columns get:
+- `compression="snappy"` — fast, good compression ratio
+- `use_dictionary=True` — dictionary encoding for low-cardinality string columns
 
-For ASR or audio classification, use `map()` with a `transformers` processor:
+#### Writer Batch Size for Parquet Row Groups
+
+The `writer_batch_size` parameter in ParquetWriter controls **Parquet row group size**, NOT Arrow record batch size (which is a separate concept). Two heuristics determine the optimal size:
+
+**A) Feature-based (`get_writer_batch_size_from_features()`):**
+Uses `PARQUET_ROW_GROUP_SIZE_FOR_*` config constants for Image/Audio/Video/Binary — similar to Arrow batch sizing but tuned for Parquet columnar storage.
+
+**B) Data-size-based (`get_writer_batch_size_from_data_size()`):**
+```python
+def get_writer_batch_size_from_data_size(num_rows: int, num_bytes: int) -> int:
+    return max(1, num_rows * MAX_ROW_GROUP_SIZE // num_bytes) if num_bytes > 0 else 1
+```
+Aims for row groups of **100MB uncompressed** maximum — matching HF Dataset Viewer expectations for fast random access.
+
+#### Content-Defined Chunking (CDC)
+
+When `use_content_defined_chunking=True` (default), the writer sets Parquet key-value metadata:
+```python
+{"content_defined_chunking": json.dumps(DEFAULT_CDC_OPTIONS)}
+```
+
+Default CDC options from `config.py`:
+- `config.DEFAULT_CDC_OPTIONS` — controls how Parquet splits data into chunks at natural boundaries
+- CDC splits on content boundaries rather than fixed row counts, enabling more efficient deduplication and compression
+- Supported by modern Parquet readers for predicate pushdown at chunk granularity
+
+To disable: `ParquetWriter(..., use_content_defined_chunking=False)`
+
+### 4. TypedSequence — Type Inference & Encoding
+
+`TypedSequence` is the core data-normalization layer. It wraps a list/iterable of raw Python data and converts it to a `pa.Array` with proper type handling.
 
 ```python
-from transformers import AutoProcessor
-from datasets import Audio
-
-processor = AutoProcessor.from_pretrained("facebook/wav2vec2-base-960h")
-
-def prepare_asr(batch):
-    audio = batch["audio"]
-    # Use get_all_samples() for the raw tensor (datasets v5+)
-    samples = audio.get_all_samples()
-    inputs = processor(
-        samples.data,
-        sampling_rate=audio["sampling_rate"],
-        return_tensors="np",
+class TypedSequence:
+    def __init__(
+        self,
+        data: Iterable,
+        type: Optional[FeatureType] = None,
+        try_type: Optional[FeatureType] = None,
+        optimized_int_type: Optional[FeatureType] = None,
+        on_mixed_types: Optional[Literal["use_json"]] = None,
     )
-    batch["input_values"] = inputs.input_values[0]
-    batch["input_length"] = len(batch["input_values"])
-    # Tokenize transcript
-    with processor.as_target_processor():
-        batch["labels"] = processor(batch["sentence"]).input_ids
-    return batch
-
-ds = ds.map(prepare_asr, remove_columns=ds.column_names)
 ```
 
-**Key tips for map() with audio:**
-- Include the `audio` column in the map to trigger resampling
-- Use `remove_columns=ds.column_names` to free memory after feature extraction
-- Use `num_proc=N` for parallel processing (but audio decoding is I/O bound)
-- Use `batched=True` with `batch_size` for faster throughput on small files
+**Three type modes:**
 
-### 6. Audio Filtering
+| Mode | Parameter | Behaviour |
+|------|-----------|-----------|
+| **Strict** | `type` | Enforces exact feature type; raises on mismatch |
+| **Trial** | `try_type` | Attempts the type; falls back to inferred type on failure |
+| **Inferred** | both None | Auto-detect from data content |
 
-#### By Duration
-```python
-def is_short_enough(audio):
-    return len(audio["array"]) / audio["sampling_rate"] < 30.0  # < 30 sec
+**Auto-detection pipeline (when both type and try_type are None):**
 
-ds_filtered = ds.filter(is_short_enough)
-```
+1. **Custom object check** — `_infer_custom_type_and_encode()`:
+   - PIL images → `Image()` feature + encode to bytes
+   - pdfplumber PDFs → `Pdf()` feature + encode
+   - Returns `(encoded_data, feature_type)` — data is immediately encoded
 
-#### By Sample Rate
-```python
-ds_filtered = ds.filter(lambda x: x["audio"]["sampling_rate"] == 16000)
-```
+2. **Arrow array construction** — `pa.array()`:
+   - `_ArrayXDExtensionType` → uses `to_pyarrow_listarray()`
+   - `np.ndarray` → `numpy_to_pyarrow_listarray()`
+   - Lists → `cast_to_python_objects()` then `pa.array()`
 
-#### With IterableDataset (streaming)
-```python
-ds_iter = ds.to_iterable_dataset()
-ds_filtered = ds_iter.filter(lambda x: x["audio"]["sampling_rate"] == 16000)
-```
+3. **Mixed-type handling** — when `on_mixed_types="use_json"`:
+   - Scans for struct columns that intermix different types
+   - Encodes them as JSON strings using `ujson_dumps()`
+   - Uses `pyarrow.json.read_json()` for parsing
+   - Iteratively discovers fields that change types between rows
 
-### 7. Audio Augmentation (CPU-only)
+**Overflow protection:** On overflow errors, raises `OverflowError` with suggestion to reduce `writer_batch_size`.
 
-For training, augment waveforms directly in-map:
+#### OptimizedTypedSequence — Column-Aware Int Optimization
 
 ```python
-import numpy as np
-
-def add_noise(batch, noise_level=0.005):
-    audio = batch["audio"]
-    waveform = audio["array"].copy()
-    noise = np.random.randn(len(waveform)) * noise_level
-    waveform = waveform + noise
-    # Clip to [-1, 1]
-    waveform = np.clip(waveform, -1.0, 1.0)
-    batch["audio"]["array"] = waveform
-    return batch
-
-ds_aug = ds.map(add_noise)
+class OptimizedTypedSequence(TypedSequence):
+    def __init__(self, data, type=None, try_type=None, col=None, ...):
 ```
 
-**Augmentations that work purely on the waveform array:**
-- Gaussian noise injection (as above)
-- Speed perturbation (resample + pitch shift via librosa)
-- Gain/volume adjustment (multiply by factor)
-- Time stretch (librosa.effects.time_stretch)
-- Random crop of long audio
-- Mixup (averaging two waveforms)
+Auto-reduces integer precision for known ML columns when no explicit type is given:
 
-For `speed_perturbation`:
-```python
-import librosa
+| Column | Optimized Type | Rationale |
+|--------|---------------|-----------|
+| `attention_mask` | `int8` | Binary tensor (0/1); never needs >1 byte |
+| `special_tokens_mask` | `int8` | Binary mask |
+| `input_ids` | `int32` | Typical vocab 0-50k, max ~500k; int64 wastes 4 bytes/token |
+| `token_type_ids` | `int8` | Binary mask (values 0,1,2 in XLNet) |
 
-def speed_perturb(batch, speed=0.9):
-    audio = batch["audio"]
-    waveform = audio["array"]
-    sr = audio["sampling_rate"]
-    # Time-stretch without pitch shift
-    stretched = librosa.effects.time_stretch(y=waveform, rate=speed)
-    batch["audio"]["array"] = stretched
-    return batch
-```
+This saves significant storage for tokenized datasets: if `input_ids` is stored as `int64` by default, switching to `int32` halves storage.
 
-### 8. Streaming Audio Datasets
+**Important:** Optimization only applies when the type would otherwise be fully inferred (no explicit `type` or `try_type`). The actual optimal type is verified — if data doesn't fit (`"not in range"` error), it falls back gracefully to `int64`.
 
-For datasets too large to fit in memory:
+### 5. Schema Building & Metadata
+
+Schema is constructed in `_build_schema()`:
 
 ```python
-ds_stream = load_dataset(
-    "librispeech_asr", "clean", split="train",
-    streaming=True
-)
-
-# Stream processing works with map
-ds_processed = ds_stream.map(prepare_asr, remove_columns=ds_stream.column_names)
-
-# Iterate without loading everything
-for i, example in enumerate(ds_processed):
-    if i > 100:
-        break
-    # Process example...
+def _build_schema(self, inferred_schema: pa.Schema):
+    # Case 1: features provided, update_features=False (default)
+    #   → Use original features/schema, ignore inferred
+    # Case 2: features provided, update_features=True
+    #   → Keep existing features for matching fields, use inferred for new fields
+    # Case 3: no features provided
+    #   → Use fully inferred features from data
 ```
 
-**Streaming considerations:**
-- `cast_column` works with streaming — resamples on-the-fly
-- `map` in streaming mode processes one example at a time (no `num_proc`)
-- Shuffling requires a buffer: `ds_stream.shuffle(buffer_size=1000, seed=42)`
-- Can't use `select` with arbitrary indices; use `take(N)` or `skip(N)`
+**Metadata embedding** (`_build_metadata()`):
+```python
+{"huggingface": json.dumps({
+    "info": {"features": asdict(features)},
+    "fingerprint": fingerprint,
+})}
+```
 
-### 9. Audio Decoding Backend Comparison
+This metadata is stored in the Arrow schema (key `"huggingface"`) and survives Parquet conversion. It's how `Dataset.from_parquet()` can reconstruct the original `Features` without a separate config file.
 
-| Backend | Formats | Pros | Cons |
-|---------|---------|------|------|
-| `soundfile` | WAV, FLAC, OGG, PCM | Fast, lightweight | No MP3 support |
-| `torchaudio` | WAV, MP3, FLAC, OGG, OPUS | GPU tensors, wide format support | Heavy dependency |
-| `librosa` | WAV, MP3, OGG, FLAC | Rich DSP features | ~4x slower, large dep |
-| `torchcodec` | WAV, MP3, FLAC | Fastest, minimal memory copies | Depends on torch + torchcodec |
+### 6. Fingerprinting & Caching (fingerprint.py)
 
-On a typical CPU:
-- `torchcodec` ~3x faster than `soundfile` for WAV decoding
-- `librosa` ~4x slower than `soundfile` for MP3
-- `torchaudio` adds ~50% overhead vs `soundfile` for simple formats
+**Purpose:** Provide one deterministic fingerprint per dataset state. After every transform (`.map()`, `.select()`, `.filter()`, etc.), the fingerprint updates. Re-running the same transforms in a different session yields the same fingerprint, enabling cache reuse.
 
-### 10. Long Audio Chunking
-
-For long audio files (>30s) that need to be split for ASR:
+**Core mechanism:**
 
 ```python
-def chunk_audio(batch, chunk_sec=30.0, hop_sec=15.0):
-    audio = batch["audio"]
-    waveform = audio["array"]
-    sr = audio["sampling_rate"]
-    chunk_len = int(chunk_sec * sr)
-    hop_len = int(hop_sec * sr)
-
-    chunks = []
-    start = 0
-    while start < len(waveform):
-        end = min(start + chunk_len, len(waveform))
-        chunk = waveform[start:end]
-        # Pad last chunk if needed
-        if len(chunk) < chunk_len:
-            chunk = np.pad(chunk, (0, chunk_len - len(chunk)))
-        chunks.append(chunk)
-        start += hop_len
-
-    return {"chunks": chunks, "chunk_count": len(chunks)}
-
-# Flatten nested structure
-ds_chunked = ds.map(chunk_audio, remove_columns=ds.column_names)
-# Use .flatten() or manual iteration over chunks
+class Hasher:
+    # Uses xxhash for deterministic hashing of Python objects
+    # Supports: scalars, bytes, str, list, tuple, dict, set, bool, None, slice,
+    #   datetime, np.ndarray, torch.Tensor, tf.Tensor, jax.Array, pa.Table,
+    #   pa.ChunkedArray, pa.Array, functions, callables, partial, code objects
 ```
 
-### 11. Audio Column Schemas (CastColumn + Features)
+**Cache flow:**
+1. `Dataset.map(fn)` → compute fingerprint of fn + input fingerprint
+2. Check cache path `~/.cache/huggingface/datasets/<fingerprint>/`
+3. If cache exists → memory-map and return
+4. If not → apply transform, write to cache, update fingerprint
 
-When creating a dataset from scratch with audio:
+**Caching can be disabled:**
+```python
+dataset.map(fn, disable_nullable=True)  # no caching
+# Or globally:
+from datasets import disable_caching
+disable_caching()
+```
+
+**Temporary cache:** `_TempCacheDir` manages temp Arrow files with cleanup that properly releases Arrow references before deleting to avoid Windows permission errors.
+
+### 7. Sharding for Parallel Generation (utils/sharding.py)
+
+**`_number_of_shards_in_gen_kwargs(gen_kwargs)`** — Counts parallel shards from generator kwargs. When `gen_kwargs` contains lists, each list entry represents a data source shard. Constraint: all lists must have the same length (or only one list exists) — otherwise sharding is "ambiguous" and raises `RuntimeError`.
+
+**`_split_gen_kwargs(gen_kwargs, max_num_jobs)`** — Distributes shard indices across worker processes:
+```python
+# gen_kwargs = {"data_dir": ["shard0", "shard1", ..., "shard9"]}
+# max_num_jobs = 3
+# Returns: [
+#   {"data_dir": ["shard0", "shard1", "shard2", "shard3"]},
+#   {"data_dir": ["shard4", "shard5", "shard6"]},
+#   {"data_dir": ["shard7", "shard8", "shard9"]},
+# ]
+```
+
+**`_distribute_shards(num_shards, max_num_jobs)`** — Divides N shards into M jobs as evenly as possible, preserving order. Uses:
+```python
+num_shards_per_job = num_shards // max_num_jobs
+remainder = num_shards % max_num_jobs
+# First `remainder` jobs get one extra shard each
+```
+
+**Shuffling:** `_shuffle_gen_kwargs()` shuffles all same-length lists identically to keep entangled data (e.g., shard + shard_metadata) in sync.
+
+### 8. Complete Write Pipeline Flow
+
+```
+DatasetBuilder._prepare_split()
+  ↓
+for gen_kwargs in _split_gen_kwargs(gen_kwargs, num_proc):
+  ↓ worker process
+  DatasetBuilder._run_split_generators()
+    ↓
+  for generator in split_generators:
+    ↓
+    for example in generator():
+    ↓
+    ArrowWriter.write(example)     # buffer in-memory
+      ↓ when batch_size reached
+    write_examples_on_file()
+      ↓
+    _write_batch()
+      ↓ TypedSequence → pa.array() for each column
+      ↓ pa.Table.from_arrays()
+      ↓
+    _write_table()
+      ↓ table_cast() to match schema
+      ↓ embed_local_files() if enabled
+      ↓
+    pa_writer.write_table()        # Arrow IPC stream
+    # OR pq_writer.write_table()   # Parquet columnar + row groups
+      ↓
+  finalize()
+    ↓ flush remaining buffers, close writer, close stream
+    ↓ return (num_examples, num_bytes)
+```
+
+### 9. BuilderConfig & Config ID System
+
+`BuilderConfig` (in `builder.py`) defines dataset configuration uniqueness:
 
 ```python
-from datasets import Dataset, Features, Audio, Value
-
-features = Features({
-    "audio": Audio(sampling_rate=16000),
-    "text": Value("string"),
-    "label": Value("int32"),
-})
-
-data = [
-    {"audio": "/path/to/file1.wav", "text": "hello", "label": 0},
-    {"audio": "/path/to/file2.wav", "text": "world", "label": 1},
-]
-
-ds = Dataset.from_list(data, features=features)
+@dataclass
+class BuilderConfig:
+    name: str = "default"
+    version: Optional[Version] = Version("0.0.0")
+    data_dir: Optional[str] = None
+    data_files: Optional[Union[DataFilesDict, DataFilesPatternsDict]] = None
+    description: Optional[str] = None
 ```
 
-### 12. Integration with Hugging Face Hub Audio Models
+**`create_config_id()`** generates a unique cache directory identifier:
 
-#### ASR with Whisper via datasets streaming
-```python
-from transformers import pipeline
-from datasets import load_dataset
+1. Start with config `name`
+2. Add suffix for config_kwargs (excluding name, version):
+   - String/bool/int/float kwargs → `key=value` encoding, hashed if >32 chars
+   - Complex kwargs → full hash
+3. If custom_features provided → hash features into suffix
+4. `MAX_DATASET_CONFIG_ID_READABLE_LENGTH` limits raw suffix length
 
-# Stream 1% of Common Voice
-ds = load_dataset("mozilla-foundation/common_voice_17_0", "en", split="train", streaming=True)
-ds = ds.take(500)
+This ensures two datasets with different:
+- data_files patterns
+- config kwargs
+- custom features
 
-pipe = pipeline("automatic-speech-recognition", model="openai/whisper-small")
+...get different cache directories even if they share the same `BuilderConfig.name`.
 
-for example in ds:
-    result = pipe(example["audio"])
-    print(f"Transcribed: {result['text']}")
-```
+### 10. Zero-Cost Best Practices
 
-#### Audio Classification
-```python
-classifier = pipeline(
-    "audio-classification",
-    model="superb/wav2vec2-base-superb-ks"
-)
+1. **Choose the right format:**
+   - Arrow IPC (`.arrow`): Fastest for read/write, good for single-node ML
+   - Parquet (`.parquet`): Best for cloud storage, column pruning, and HF Dataset Viewer compatibility
+   - JSONL (`.jsonl`): Human-readable, but 5-10x slower than Arrow for large datasets
 
-result = classifier(ds[0]["audio"])
-print(f"Top class: {result[0]['label']} ({result[0]['score']:.3f})")
-```
+2. **Pre-define `Features`** when creating datasets — saves the cost of schema inference and ensures deterministic type behavior.
 
-### 13. Performance Best Practices
+3. **Set `writer_batch_size` for memory-constrained environments:**
+   ```python
+   # Smaller row groups for Parquet (default aims for 100MB)
+   # For image datasets, use smaller batches
+   ArrowWriter(features=features, writer_batch_size=50)
+   ```
 
-| Goal | Approach |
-|------|----------|
-| **Speed up loading** | Use `streaming=True` for large datasets |
-| **Reduce memory** | Use `cast_column` + access only needed examples |
-| **Batch preprocessing** | Use `map(batched=True, batch_size=100)` |
-| **Parallel decode** | Use `num_proc=os.cpu_count()` in map |
-| **Resample once** | Always cast_column BEFORE map to avoid double decode |
-| **Free disk space** | Cache only decoded tensors, not raw files |
-| **Shuffle streaming** | Use `shuffle(seed=42, buffer_size=1000)` |
+4. **Disable nullable for production datasets** — saves storage by not tracking nullability in schema:
+   ```python
+   ArrowWriter(features=features, disable_nullable=True)
+   ```
 
-### 14. Common Pitfalls
+5. **Use `embed_local_files=False`** for datasets with external files — only embed bytes when you need self-contained Arrow files.
 
-| Pitfall | Solution |
-|---------|----------|
-| MP3 files silently fail to decode | Install `torchaudio` or `librosa` (soundfile doesn't handle MP3) |
-| Out-of-memory on large dataset | Use `streaming=True` |
-| Audio sounds wrong after resample | Check `sampling_rate` parameter; match model's expected sr |
-| `map()` slow on audio | Add `remove_columns` to reduce data shuffled between processes |
-| Stereo files cause shape mismatch | Set `mono=True` in `Audio()` or convert manually |
-| I/O bottleneck on HDD | Use `num_proc=1` or `streaming=True` to avoid thrashing |
+6. **Prefont `OptimizedTypedSequence` column optimization** — naming your columns `input_ids`, `attention_mask`, etc. triggers automatic int precision reduction in `OptimizedTypedSequence`.
 
-### Sources
-- https://huggingface.co/docs/datasets/en/audio_dataset
-- https://huggingface.co/docs/datasets/en/audio_process
-- datasets v5.0.0 installed at `/opt/data/.venv-sakthai/lib/python3.14/site-packages/datasets/`
-- datasets Audio feature: https://huggingface.co/docs/datasets/en/package_reference/main_classes#datasets.Audio
+7. **Prefer `ParquetWriter` over `ArrowWriter`** when uploading to the Hub — HF Dataset Viewer reads Parquet natively and can do predicate pushdown.
+
+8. **Use streaming for large-to-huge datasets** — `load_dataset(streaming=True)` avoids writing Arrow files entirely.
+
+### 11. Source Code Map
+
+| Module | Key Contents | Lines |
+|--------|-------------|-------|
+| `arrow_writer.py` | `ArrowWriter`, `ParquetWriter`, `TypedSequence`, `OptimizedTypedSequence` | 828 |
+| `builder.py` | `DatasetBuilder`, `BuilderConfig`, `_prepare_split`, `_run_split_generators`, `_download_and_prepare` | 1916 |
+| `table.py` | `table_cast`, `cast_array_to_feature`, `embed_table_storage` | 2482 |
+| `config.py` | Batch size constants, CDC options, feature-based batch/row-group defaults | 277 |
+| `fingerprint.py` | `Hasher`, caching control, `_TempCacheDir` | 480 |
+| `utils/sharding.py` | `_number_of_shards_in_gen_kwargs`, `_split_gen_kwargs`, `_distribute_shards` | 92 |
+| `features/features.py` | Feature type system, `_visit()`, `get_nested_type()`, `cast_to_python_objects()` | ~4000 |
+
+### 12. Resources
+- ArrowWriter source: `/opt/data/.venv-sakthai/lib/python3.14/site-packages/datasets/arrow_writer.py`
+- Builder source: `/opt/data/.venv-sakthai/lib/python3.14/site-packages/datasets/builder.py`
+- Table source: `/opt/data/.venv-sakthai/lib/python3.14/site-packages/datasets/table.py`
+- PyArrow IPC: https://arrow.apache.org/docs/python/ipc.html
+- Parquet format: https://parquet.apache.org/docs/
+- HF Dataset Viewer: https://huggingface.co/docs/hub/en/datasets-viewer
