@@ -1,5 +1,223 @@
 # HF Learnings Log
 
+## 2026-07-24: hf-gradio-lite — Serverless Gradio in the Browser with Pyodide/WebAssembly (Topic #176)
+
+### Summary
+Comprehensive deep-dive on Gradio Lite (`@gradio/lite` v5.45.0) — the JavaScript library that runs Gradio apps entirely in the browser via Pyodide (Python compiled to WebAssembly). Covers architecture, CDN setup, multi-file apps with `<gradio-file>`, dependency management with `<gradio-requirements>`, Hugging Face Static Spaces integration (free, serverless), browser-based ML with `transformers-js`, theming, benefits, limitations, and production patterns.
+
+### Source
+- npm: `@gradio/lite` v5.45.0 — https://www.npmjs.com/package/@gradio/lite
+- CDN: https://cdn.jsdelivr.net/npm/@gradio/lite/dist/lite.js
+- Pyodide: https://pyodide.org/en/stable/
+- HF Static Spaces: https://huggingface.co/docs/hub/en/spaces-overview
+- Playground: https://www.gradio.app/playground
+
+### 1. What Is Gradio Lite?
+
+Gradio Lite (`@gradio/lite`) is a **JavaScript library** that brings Gradio applications into the browser without a backend server. It uses [Pyodide](https://pyodide.org/en/stable/) — a CPython port compiled to WebAssembly via Emscripten — to execute Python code directly in the browser's JavaScript runtime.
+
+Key architecture:
+```
+Browser
+├── HTML page with <gradio-lite> tags
+├── Pyodide runtime (WebAssembly, ~8-15 MB)
+│   ├── Python interpreter
+│   ├── gradio library
+│   └── user Python code
+└── User interaction (no server round-trip)
+```
+
+### 2. Getting Started — CDN Setup
+
+The simplest way to use Gradio Lite is via the CDN. Create a single `index.html`:
+
+```html
+<html>
+  <head>
+    <script type="module" crossorigin src="https://cdn.jsdelivr.net/npm/@gradio/lite/dist/lite.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@gradio/lite/dist/lite.css" />
+  </head>
+  <body>
+    <gradio-lite>
+import gradio as gr
+
+def greet(name):
+    return "Hello, " + name + "!"
+
+gr.Interface(greet, "textbox", "textbox").launch()
+    </gradio-lite>
+  </body>
+</html>
+```
+
+The app runs completely client-side — open the HTML file in any modern browser and it works without a web server.
+
+### 3. Multi-File Apps with `<gradio-file>`
+
+For real applications, split Python code across multiple files using `<gradio-file>` tags. Exactly one file must have the `entrypoint` attribute:
+
+```html
+<gradio-lite>
+
+<gradio-file name="app.py" entrypoint>
+import gradio as gr
+from utils import add
+
+demo = gr.Interface(fn=add, inputs=["number", "number"], outputs="number")
+demo.launch()
+</gradio-file>
+
+<gradio-file name="utils.py">
+def add(a, b):
+    return a + b
+</gradio-file>
+
+</gradio-lite>
+```
+
+Each `<gradio-file>` behaves as a separate module — `utils.py` can be imported by `app.py` using standard Python import syntax.
+
+### 4. Dependencies with `<gradio-requirements>`
+
+Not all Pyodide packages are pre-loaded. Use `<gradio-requirements>` tags to install additional packages via `micropip`:
+
+```html
+<gradio-lite>
+
+<gradio-requirements>
+transformers_js_py
+numpy
+scikit-learn
+</gradio-requirements>
+
+<gradio-file name="app.py" entrypoint>
+from transformers_js import import_transformers_js
+import gradio as gr
+
+transformers = await import_transformers_js()
+pipeline = transformers.pipeline
+pipe = await pipeline('sentiment-analysis')
+
+async def classify(text):
+    return await pipe(text)
+
+gr.Interface(classify, "textbox", "json").launch()
+</gradio-file>
+
+</gradio-lite>
+```
+
+**Pyodide compatibility**: `gradio`, `numpy`, `scikit-learn`, `transformers_js_py`, `matplotlib`, `Pillow` all work. Not every PyPI package is available — check Pyodide's package index first.
+
+### 5. Hugging Face Static Spaces — Free Hosting
+
+Gradio Lite apps deploy to **Hugging Face Static Spaces** — a free hosting tier that serves static HTML/JS/CSS with zero server compute. Unlike Gradio or Docker Spaces (which need a paid CPU/GPU plan), Static Spaces are **completely free**.
+
+Setup on HF:
+1. Create a new Space at https://huggingface.co/new-space
+2. Select **"Static HTML"** as the Space SDK
+3. Upload your `index.html` (with `<gradio-lite>` tags)
+4. Done — your app runs at `https://huggingface.co/spaces/USERNAME/SPACE-NAME`
+
+Live example: https://huggingface.co/spaces/abidlabs/gradio-lite-classify
+
+### 6. Theming
+
+Add a `theme` attribute to `<gradio-lite>` to force the color scheme:
+
+```html
+<gradio-lite theme="dark">
+  <!-- your Python code -->
+</gradio-lite>
+
+<gradio-lite theme="light">
+  <!-- your Python code -->
+</gradio-lite>
+```
+
+Without the attribute, Gradio Lite respects the user's system theme (prefers-color-scheme).
+
+### 7. Benefits
+
+| Benefit | Description |
+|---------|-------------|
+| **Serverless** | No backend infrastructure, no VPS, no Docker — pure static hosting |
+| **Zero Cost** | HF Static Spaces are free; no GPU/CPU compute charges |
+| **Low Latency** | All computation happens locally — no network round-trips |
+| **Privacy** | User data never leaves the browser — no server-side logging |
+| **Offline Capable** | After initial load, can run without internet (except package CDN deps) |
+| **Simple Deployment** | Single HTML file or static file upload, no CI/CD needed |
+
+### 8. Limitations
+
+| Limitation | Impact |
+|------------|--------|
+| **Cold Start (5-15s)** | Pyodide runtime must download and initialize on first visit |
+| **Package Restriction** | Only Pyodide-compatible wheels (check Pyodide's package index) |
+| **Browser Memory** | Large models can exceed browser tab memory limits (~2 GB) |
+| **No GPU (WebGL limited)** | Pyodide does not support CUDA; WebGL/WebGPU not yet available for PyTorch |
+| **Single-threaded** | Python GIL + browser main thread — async helps but no true parallelism |
+| **No File System** | Pyodide provides a virtual in-memory FS — no persistent disk storage |
+
+### 9. Browser ML with transformers-js
+
+Gradio Lite can run Hugging Face models directly in the browser via `transformers_js_py` — a Python wrapper around [Transformers.js](https://huggingface.co/docs/transformers.js/index) (ONNX Runtime Web):
+
+Supported tasks (in-browser, no server):
+- Sentiment analysis
+- Text classification
+- Zero-shot classification
+- Feature extraction / embeddings
+- Question answering
+- Summarization
+- Translation
+
+Example — real in-browser ML:
+```python
+from transformers_js import import_transformers_js
+import gradio as gr
+
+transformers = await import_transformers_js()
+pipe = await transformers.pipeline('sentiment-analysis')
+
+async def analyze(text):
+    result = await pipe(text)
+    return result
+
+gr.Interface(analyze, "textbox", "json").launch()
+```
+
+### 10. Version & Compatibility
+
+- **`@gradio/lite` latest**: 5.45.0 (npm)
+- **Gradio compatibility**: Gradio 5.x (Gradio Lite versioning is independent of Gradio PyPI versioning)
+- **Pyodide version**: Bundled in lite.js — updates with each Gradio Lite release
+- **Browser support**: Chrome, Firefox, Safari, Edge (modern evergreen browsers)
+- **No Node.js required**: Everything runs in the browser
+
+### 11. Best Practices
+
+1. **Keep apps small**: Large Gradio apps with many dependencies increase cold-start time
+2. **Use `async` for ML pipelines**: Transformers-js operations are async — use `async def` in Gradio
+3. **Prefer static HTML Spaces**: Free and simpler than Docker Spaces for Lite apps
+4. **Minimize Pyodide packages**: Each package adds to load time; only include what you need
+5. **Test in multiple browsers**: Pyodide/WebAssembly behavior can vary between engines
+6. **Provide cold-start feedback**: Show a loading indicator — users expect 5-15s initial delay
+7. **Combine with HF OAuth**: Static Spaces support client-side OAuth for user login
+
+### 12. When to Use vs Alternatives
+
+| Use Case | Recommendation |
+|----------|---------------|
+| Simple demo, no server, zero cost | Gradio Lite + Static Space |
+| Large model inference (1B+ params) | Gradio + ZeroGPU (needs GPU) |
+| Production API with scaling | Gradio + Docker Space (paid) |
+| Offline/battery-sensitive | Gradio Lite (browser-only) |
+| Real-time collaboration | Gradio + HuggingChat |
+| Heavy Python deps (PyTorch, etc.) | Gradio + Docker Space (server-side) |
+
+---
+
 ## 2026-07-24: hf-hub-modelcard-python-api — Complete ModelCard & CardData Python API Reference (Topic #175)
 
 ### Summary
