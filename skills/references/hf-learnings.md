@@ -1814,4 +1814,204 @@ Comprehensive deep-dive into Hugging Face's smolagents library (v1.26.0). The v1
 - Human-in-the-Loop: https://huggingface.co/docs/smolagents/en/examples/plan_customization
 - Async agents: https://huggingface.co/docs/smolagents/en/examples/async_agent
 - Telemetry: https://huggingface.co/docs/smolagents/en/tutorials/inspect_runs
-- Secure code execution: https://huggingface.co/docs/smolagents/en/tutorials/secure_code_execution
+|- Secure code execution: https://huggingface.co/docs/smolagents/en/tutorials/secure_code_execution
+
+---
+
+## 2026-07-24: hf-hub-lfs-architecture — Deep Dive (Deepening on LFS Mechanics)
+
+### Summary
+Comprehensive deep-dive into Hugging Face Hub's Git LFS (Large File Storage) architecture — the underlying protocol that makes hosting multi-GB model weights, datasets, and Spaces possible. Covers the LFS batch API, pointer file mechanics, the `UploadInfo`/`post_lfs_batch_info` pipeline in `huggingface_hub`, storage quota tiers (free/PRO/Team/Enterprise), the Xet protocol replacing `hf_transfer`, LFS file management (deleting, tracking, super-squash), and practical zero-cost strategies for staying within free tier limits.
+
+### Core Architecture
+
+**What Git LFS is on the Hub:** Hugging Face uses an extended Git LFS v1 protocol to handle large binary files. When you `git push` a file matching LFS patterns (`.bin`, `.safetensors`, `.pt`, etc.), Git LFS intercepts it and:
+
+1. **Replaces the file locally with a pointer file** — a tiny text file containing the SHA-256 OID and file size
+2. **Uploads the real content** to the Hub's content-addressable LFS store (keyed by SHA-256)
+3. **Pushes the pointer** to the Git repository
+
+This means the Git repo stays lightweight — the heavy content lives in a separate blob store, deduplicated by content hash.
+
+### LFS Batch API (Preupload Protocol)
+
+The `post_lfs_batch_info()` function in `huggingface_hub.lfs` implements the [Git LFS Batch API spec](https://github.com/git-lfs/git-lfs/blob/main/docs/api/batch.md):
+
+```python
+def post_lfs_batch_info(
+    upload_infos: Iterable[UploadInfo],
+    token: str | None,
+    repo_type: str,
+    repo_id: str,
+    revision: str | None = None,
+    endpoint: str | None = None,
+    headers: dict[str, str] | None = None,
+    transfers: list[str] | None = None,
+) -> tuple[list[dict], list[dict], str | None]:
+```
+
+**Flow:**
+1. Client sends a batch request to `{endpoint}/{repo_type}/{repo_id}.git/info/lfs/objects/batch`
+2. Request body contains JSON with `operation`, `objects` (list of OID+size), `transfers` (preferred transfer protocols)
+3. Hub responds with per-object instructions — either `upload` actions (with URLs + headers) or an `error` (e.g., file already exists, quota exceeded)
+4. Client then uploads each file using the provided URL
+
+**Protocol-specific headers:**
+```python
+LFS_HEADERS = {
+    "Accept": "application/vnd.git-lfs+json",
+    "Content-Type": "application/vnd.git-lfs+json",
+}
+```
+These are required for LFS API calls. The response format follows the Git LFS v1 spec.
+
+### UploadInfo — Smart, Lazy SHA-256
+
+The `UploadInfo` class was designed for efficiency:
+
+```python
+class UploadInfo:
+    def __init__(self, size: int, sample: bytes, sha256=None, source_path=None):
+        ...
+```
+
+**Lazy hashing:** Creating `UploadInfo.from_path()` reads only the first **512 bytes** (the `sample`). The full SHA-256 is computed on-demand only when `.sha256` is accessed. This is critical because:
+- Some files may be uploaded via Xet protocol which computes SHA during upload (single read pass)
+- Avoiding eager SHA saves one full file read per file in batch operations
+- The 512-byte sample is used by the server for content-type sniffing
+
+```python
+@classmethod
+def from_path(cls, path: str):
+    size = getsize(path)
+    with open(path, "rb") as file:
+        sample = file.peek(512)[:512]  # Only reads first 512 bytes!
+    return cls(size=size, sample=sample, source_path=path)
+```
+
+### LFS Multipart Upload
+
+For very large files, the Hub supports multipart uploads via the `lfs-multipart-upload` command:
+
+```python
+LFS_MULTIPART_UPLOAD_COMMAND = "lfs-multipart-upload"
+```
+
+The `SliceFileObj` utility (from `huggingface_hub.utils._lfs`) handles splitting large files into chunks for parallel upload. Each chunk is uploaded independently, and the Hub reassembles them server-side.
+
+Key constants in `huggingface_hub`:
+- **Max LFS files per commit:** 25,000
+- **Max regular (non-LFS) payload:** 1 GB per commit
+- **Individual file size limit:** 500 GB hard cap (200 GB recommended)
+
+### Storage Quota Tiers (as of 2026-07-24)
+
+| Account Type | Public Storage | Private Storage |
+|---|---|---|
+| **Free user/org** | Best-effort (no hard limit, but expect throttling beyond low GBs) | **100 GB** |
+| **PRO** | Up to 10 TB included + add-on available | 1 TB + pay-as-you-go |
+| **Team** | 12 TB base + 1 TB/seat + add-on | 1 TB/seat + pay-as-you-go |
+| **Enterprise** | 200 TB base + 1 TB/seat + add-on | 1 TB/seat + pay-as-you-go |
+
+**Public Storage Add-on pricing:**
+| Tier | Price |
+|---|---|
+| 1 TB | $12/mo |
+| 5 TB | $60/mo |
+| 10 TB | $120/mo |
+| 20 TB | $240/mo |
+| 50 TB | $500/mo |
+
+**Private Storage Pay-as-you-go:** $18/TB/mo base, discounted to $16/TB/mo at 50 TB+, $14/TB/mo at 200 TB+, $12/TB/mo at 500 TB+.
+
+**Free tier critical insight:** "Best-effort" means there's no hard cap for public repos on free tier, but the Hub may throttle or restrict accounts that exceed reasonable usage. The 100 GB private storage limit IS a hard cap.
+
+### Repository Limitations
+
+| Characteristic | Recommended | Notes |
+|---|---|---|
+| Total files per repo | < 100,000 | Merge data into fewer files |
+| Entries per folder | < 10,000 | Use subdirectories |
+| File size | < 200 GB | 500 GB absolute hard limit |
+| Commit operations | < 100 files* | `upload_folder` auto-splits |
+
+*\* Not relevant for `git` CLI directly*
+
+### Xet Protocol (Replacing hf_transfer)
+
+**Key change:** `hf_transfer` (the Rust upload accelerator via `pip install hf_transfer`) has been **removed** in favor of `hf_xet`. The old `HF_HUB_ENABLE_HF_TRANSFER=1` env var is deprecated.
+
+**How to enable Xet:**
+```bash
+# Environment variable approach
+export HF_STORAGE_BACKEND=xet
+export HF_XET_HIGH_PERFORMANCE=1  # Saturates bandwidth + CPU
+
+# Or set in Python
+from huggingface_hub import HfApi
+api = HfApi(storage_backend="xet")
+```
+
+**Xet advantages over hf_transfer:**
+- Content-addressed deduplication for iterative releases (only uploads changed chunks)
+- High-performance mode (`HF_XET_HIGH_PERFORMANCE=1`) saturates available bandwidth
+- Single-pass SHA computation (no separate hash step before upload)
+- Integrated into the core upload pipeline, not a separate package
+
+**Warning:** Do NOT mix Xet and the legacy multipart transfer simultaneously.
+
+### LFS File Management
+
+#### Deleting LFS Files (Freeing Space)
+
+1. **Individual LFS files:** Repo Settings → "List LFS files" → Actions → Delete
+2. **PR refs:** Close/merge PR first, then use "Delete ref" at bottom of PR page
+3. **Super-squash history:** Via Python API:
+   ```python
+   api.super_squash_history(repo_id="user/repo")
+   ```
+   ⚠️ Destructive — compresses all Git history into one commit, removing old LFS versions. Space freed within 36 hours.
+
+#### Tracking LFS File Origins
+
+When an LFS file's origin is unclear:
+```bash
+git log --all -p -S <SHA-256-OID>
+```
+
+#### Key Points
+- Deleting LFS pointers (the text files in Git) does **NOT** free storage space
+- Old LFS versions persist in commit history — only super-squash or deleting the LFS file itself truly removes them
+- Set `lfs.skipdownloaderrors=true` in `.gitconfig` to avoid errors when checking out branches with deleted LFS content
+
+### Grants for High-Impact Open-Source
+
+Free-tier users with genuine community impact (downloads, citations, adoption) can apply for additional storage grants:
+- Contact `datasets@huggingface.co` (datasets) or `models@huggingface.co` (models)
+- Provide evidence of community impact (download numbers, citations, adoption)
+- Evaluated case-by-case — not guaranteed
+
+### Practical Zero-Cost Strategies
+
+For Beer's situation (free tier, no income):
+
+1. **Stay public:** Public repos have "best-effort" unlimited storage; private repos hit 100 GB hard cap
+2. **Keep repos lean:** < 100K files, < 10K entries per folder, files < 200 GB each
+3. **Use Parquet/WebDataset:** Merge many small JSON files into fewer Parquet files for efficient storage and faster loading
+4. **Use `upload_folder`:** Auto-splits large folders into multiple commits, avoids commit timeouts
+5. **Prune regularly:** Delete unused LFS files via Settings → List LFS files; super-squash if history balloons
+6. **Avoid LFS on tiny files:** Files under ~1 MB don't benefit from LFS and may even hurt performance
+7. **Use Xet for iterative uploads:** `HF_STORAGE_BACKEND=xet` with `HF_XET_HIGH_PERFORMANCE=1` for content-deduped updates to existing repos
+8. **Apply for a grant** if you build something with genuine community impact
+9. **Monitor usage:** Check `https://huggingface.co/settings/billing` for storage dashboard
+10. **Delete stale PR branches:** Large files sitting in unmerged PR branches eat quota even though they never merged
+
+### Resources
+- Storage limits: https://huggingface.co/docs/hub/en/storage-limits
+- Upload guide: https://huggingface.co/docs/huggingface_hub/en/guides/upload
+- LFS source: https://github.com/huggingface/huggingface_hub/blob/main/src/huggingface_hub/lfs.py
+- LFS batch API spec: https://github.com/git-lfs/git-lfs/blob/main/docs/api/batch.md
+- Xet docs: https://huggingface.co/docs/xet/en/index
+- LFS pointer deletion: https://huggingface.co/docs/hub/en/storage-limits#deleting-individual-lfs-files
+- Super-squash API: https://huggingface.co/docs/huggingface_hub/main/en/package_reference/hf_api#huggingface_hub.HfApi.super_squash_history
+- Pricing: https://huggingface.co/pricing
