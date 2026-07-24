@@ -3511,3 +3511,342 @@ Xet storage and hf_xet are free for all Hub users - no paid tier required. For B
 - Xet Hub Documentation (https://huggingface.co/docs/hub/xet/index)
 - huggingface_hub utils/_xet.py on GitHub
 - hf_xet PyPI package: hf-xet
+
+---
+
+## 2026-07-24: hf-hub-webhooks-and-notifications-api-deep-dive — Webhooks, Notifications & User Settings API (Topic #163)
+
+### Summary
+Deep-dive into the Hugging Face Hub's user-facing API surface covering three areas: **Webhooks** (event-driven repo notifications to external URLs/Jobs), **Notifications** (in-Hub alerts for discussions, PRs, mentions), and **User Settings** (notification prefs, watch settings, MCP tools config, billing/usage, repository list, webhook CRUD). All accessible via the `huggingface_hub` Python library (v1.24.0) methods and the Hub REST API (documented in OpenAPI spec).
+
+---
+
+### 1. Webhooks API — Event-Driven Automation
+
+Webhooks send HTTP POST requests to a specified URL (or trigger a Hub Job) when events happen on watched repos (pushes, discussion activity, PR merges). This is the Hub's primary automation mechanism — zero-cost, no server needed.
+
+#### REST Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/settings/webhooks` | List all webhooks |
+| POST | `/api/settings/webhooks` | Create webhook |
+| GET | `/api/settings/webhooks/{webhookId}` | Get webhook details |
+| POST | `/api/settings/webhooks/{webhookId}` | Update webhook |
+| DELETE | `/api/settings/webhooks/{webhookId}` | Delete webhook |
+| POST | `/api/settings/webhooks/{webhookId}/{action}` | `enable` or `disable` |
+| POST | `/api/settings/webhooks/{webhookId}/replay/{logId}` | Replay a webhook delivery |
+
+#### Python API (`HfApi` methods)
+
+```python
+from huggingface_hub import HfApi
+
+api = HfApi()
+
+# List
+webhooks: list[WebhookInfo] = api.list_webhooks()
+
+# Create (URL-based)
+api.create_webhook(
+    url="https://my-server.example.com/hf-webhook",
+    watched=[{"type": "user", "name": "beer-sakthai"}],
+    domains=["repo", "discussions"],
+    secret="my-webhook-secret",
+)
+
+# Create (Job-based) — triggers a Hub Job instead of HTTP POST
+api.create_webhook(
+    job_id="job-id-from-hf-jobs",
+    watched=[{"type": "model", "name": "mistralai/Mistral-7B-v0.1"}],
+    domains=["repo"],
+)
+
+# Update
+api.update_webhook(
+    webhook_id="abc123",
+    url="https://new-url.example.com/hook",
+    watched=[{"type": "org", "name": "huggingface"}],
+)
+
+# Enable/Disable
+api.enable_webhook("abc123")
+api.disable_webhook("abc123")
+
+# Delete
+api.delete_webhook("abc123")
+```
+
+#### Data Models
+
+**`WebhookInfo`** (dataclass):
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | `str` | Unique webhook ID |
+| `url` | `str | None` | HTTP endpoint URL (or None if Job-based) |
+| `job` | `JobSpec | None` | Job specification (or None if URL-based) |
+| `watched` | `list[WebhookWatchedItem]` | Repos/users/orgs being watched |
+| `domains` | `list[WEBHOOK_DOMAIN_T]` | Event domains: `"repo"`, `"discussions"` |
+| `secret` | `str | None` | HMAC secret for signature verification |
+| `disabled` | `bool` | Whether webhook is inactive |
+
+**`WebhookWatchedItem`** (dataclass):
+| Field | Type | Description |
+|-------|------|-------------|
+| `type` | `Literal["dataset", "model", "org", "space", "user"]` | Entity type to watch |
+| `name` | `str` | Entity name (repo ID, org name, username) |
+
+**`WEBHOOK_DOMAIN_T`** = `Literal["repo", "discussions"]`
+- `"repo"` — pushes, branch/tag changes, file modifications
+- `"discussions"` — new comments, PR merges, discussion status changes
+
+#### Webhook Secret Verification
+
+When a secret is set, each webhook POST includes an `X-Webhook-Signature` header with an HMAC-SHA256 signature of the request body, using the secret as the key. Verify on your server:
+
+```python
+import hmac, hashlib
+
+def verify_webhook_signature(body: bytes, secret: str, signature_header: str) -> bool:
+    expected = hmac.new(secret.encode(), body, hashlib.sha256).hexdigest()
+    return hmac.compare_digest(expected, signature_header)
+```
+
+#### Best Practices
+- **Use Job-based triggers** for Hub-native workflows (no external server needed).
+- **Set a secret** to verify payload authenticity.
+- **Watch org-level** to cover all repos in an org.
+- **Use `domains=["repo"]`** for file-change automation (CI/CD pipelines).
+- **Use `domains=["discussions"]`** for community/moderation bots.
+- **Monitor webhook logs** via the Hub UI (`Settings > Webhooks > {hook} > Logs`).
+
+---
+
+### 2. Notifications API — In-Hub Alerts
+
+The Notifications API manages the bell icon alerts on the Hub (discussion replies, PR merges, mentions, access requests).
+
+#### REST Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/notifications` | List notifications (paginated, filterable) |
+| POST | `/api/notifications/mark-as-read` | Mark notifications as read |
+| DELETE | `/api/notifications` | Delete notifications |
+
+#### GET `/api/notifications` Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `p` | `int` | `0` | Page number (0-indexed) |
+| `readStatus` | `"all" \| "unread"` | `"all"` | Filter by read status |
+| `repoType` | enum | — | Filter by repo type (`dataset`, `model`, `space`, `bucket`, `kernel`) |
+| `repoName` | `string` | — | Filter by repo name |
+| `postAuthor` | `string` | — | Filter by notification author |
+| `paperId` | `string` | — | Filter by paper |
+| `articleId` | `string` | — | Filter by article |
+| `mention` | `"all" \| "participating" \| "mentions"` | `"all"` | Filter by mention/participation type |
+| `lastUpdate` | `datetime` (ISO 8601) | — | Filter by last update timestamp (regex-validated) |
+
+#### DELETE Parameters (same as GET, plus:)
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `applyToAll` | `bool` | `False` | If true, deletes all matching notifications instead of just the current page |
+
+#### Usage Pattern (Python)
+
+```python
+import requests
+
+headers = {"Authorization": f"Bearer {HF_TOKEN}"}
+
+# List unread notifications
+resp = requests.get(
+    "https://huggingface.co/api/notifications",
+    params={"readStatus": "unread", "p": 0},
+    headers=headers,
+)
+notifications = resp.json()
+
+# Mark as read
+requests.post(
+    "https://huggingface.co/api/notifications/mark-as-read",
+    json={"ids": [n["id"] for n in notifications]},
+    headers=headers,
+)
+
+# Delete all repo-type notifications
+requests.delete(
+    "https://huggingface.co/api/notifications",
+    params={"repoType": "model", "applyToAll": True},
+    headers=headers,
+)
+```
+
+> **Note:** The `huggingface_hub` library does NOT yet expose notification-specific methods. Use direct `requests` or `HfApi._inner_whoami` for now.
+
+---
+
+### 3. User Settings API
+
+Settings endpoints manage user preferences, billing/usage, webhooks, MCP tools, and repository listings.
+
+#### Endpoint Reference
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/whoami-v2` | Current user + auth info |
+| GET | `/api/settings/repositories` | List user repos (with search, type filter, sort) |
+| PATCH | `/api/settings/notifications` | Update notification preferences |
+| PATCH | `/api/settings/watch` | Update auto-watch settings |
+| GET | `/api/settings/mcp` | Get user's MCP tools configuration |
+| GET | `/api/settings/webhooks` | List webhooks (also under Webhooks) |
+| POST | `/api/settings/papers/claim` | Claim paper authorship |
+| GET | `/api/settings/billing/usage` | Get usage stats |
+| GET | `/api/settings/billing/usage-v2` | Get usage stats (v2) |
+| GET | `/api/settings/billing/usage-by-inference-session` | Per-session usage |
+| GET | `/api/settings/billing/usage/jobs` | Jobs usage |
+| GET | `/api/settings/billing/usage/live` | Stream usage (SSE) |
+| GET | `/api/settings/webhooks/{webhookId}/replay/{logId}` | Replay webhook delivery |
+
+#### `GET /api/settings/repositories` Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `search` | `string` | — | Case-insensitive substring match on repo name |
+| `type` | enum | — | Filter by type: `dataset`, `model`, `space`, `bucket`, `kernel` |
+| `limit` | `int` | — | Max results |
+| `sort` | `"storage" \| "updatedAt"` | `"storage"` | Sort field |
+| `direction` | `"asc" \| "desc"` | `"desc"` | Sort direction |
+
+#### User Profile & Identity Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/whoami-v2` | Full user info + auth method + token details |
+| GET | `/oauth/userinfo` | OAuth user info (OpenID Connect) |
+| GET | `/api/users/{username}/overview` | Public user overview page data |
+| GET | `/api/users/{username}/likes` | User's liked repos |
+| GET | `/api/users/{username}/socials` | User's social links |
+| GET | `/api/users/{username}/avatar` | User avatar URL |
+| GET | `/api/avatars/{namespace}` | Generic avatar endpoint |
+
+#### `whoami()` Python Method
+
+```python
+from huggingface_hub import HfApi
+
+api = HfApi()
+me = api.whoami()
+# Returns dict with keys:
+# - id: str (MongoDB ObjectId hex)
+# - name: str
+# - fullname: str
+# - email: str
+# - canPay: bool
+# - isPro: bool
+# - isStaff: bool
+# - avatarUrl: str
+# - orgs: list of org memberships
+# - auth: dict (token info, role, fine-grained permissions)
+
+# Cached variant (avoids redundant API calls in-session)
+me_cached = api.whoami(cache=True)
+```
+
+#### `update_repo_settings()` — Repo-Level Settings
+
+```python
+# Change gated access, visibility, or privacy on a repo
+api.update_repo_settings(
+    repo_id="beer-sakthai/my-model",
+    gated="auto",       # "auto" | "manual" | False
+    private=False,      # bool
+    visibility="public",  # "public" | "private"
+)
+```
+
+---
+
+### 4. Organization Settings API
+
+Organizations have their own settings surface area, managed via the Hub REST API.
+
+#### Endpoint Reference
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/organizations/{name}/members` | List members |
+| PUT | `/api/organizations/{name}/members/{username}/role` | Change member role |
+| GET | `/api/organizations/{name}/settings/network-security` | Get network security rules |
+| PATCH | `/api/organizations/{name}/settings/network-security` | Update network security |
+| GET | `/api/organizations/{name}/settings/repositories` | List org repos |
+| POST | `/api/organizations/{name}/settings/tokens/revoke` | Revoke member token |
+| GET | `/api/organizations/{name}/audit-log/export` | Export audit log |
+| GET | `/api/organizations/{name}/avatar` | Get avatar |
+| POST | `/api/organizations/{name}/resource-groups` | Create resource group |
+| GET/PATCH/DELETE | `/api/organizations/{name}/resource-groups/{id}` | Manage resource groups |
+| POST | `/api/organizations/{name}/resource-groups/{id}/users` | Add users to resource group |
+| PATCH/DELETE | `/api/organizations/{name}/resource-groups/{id}/users/{username}` | Manage user in resource group |
+| GET | `/api/organizations/{name}/service-accounts` | List service accounts |
+| POST | `/api/organizations/{name}/service-accounts` | Create service account |
+| GET/DELETE | `/api/organizations/{name}/service-accounts/{id}` | Get/delete service account |
+| POST | `/api/organizations/{name}/service-accounts/{id}/tokens` | Create SA token |
+| PATCH/DELETE | `/api/organizations/{name}/service-accounts/{id}/tokens/{tokenId}` | Manage SA token |
+| POST | `/api/organizations/{name}/service-accounts/{id}/tokens/{tokenId}/rotate` | Rotate SA token |
+| GET | `/api/organizations/{name}/socials` | Get social handles |
+| GET | `/api/organizations/{name}/billing/usage` | Get org usage |
+| GET | `/api/organizations/{name}/billing/usage-v2` | Get org usage v2 |
+| GET | `/api/organizations/{name}/billing/usage-by-inference-session` | Per-session usage |
+| GET | `/api/organizations/{name}/billing/usage-by-resource-group` | Per-resource-group usage |
+| GET | `/api/organizations/{name}/billing/usage/live` | Stream org usage |
+
+---
+
+### 5. Token & Auth Details
+
+The `whoami-v2` response includes a detailed `auth` object:
+
+```json
+{
+  "auth": {
+    "type": "access-token",
+    "accessToken": {
+      "displayName": "my-token-name",
+      "role": "write",
+      "fineGrained": {
+        "scoped": [{
+          "entity": {
+            "_id": "abc123def456...",
+            "name": "beer-sakthai",
+            "type": "user"
+          },
+          "permissions": ["write"]
+        }]
+      }
+    }
+  }
+}
+```
+
+**Token roles:** `read`, `write`, `god`, `fineGrained`
+- `fineGrained` tokens have scoped permissions with per-entity type (dataset, model, space, bucket, kernel, collection, org, user, resource-group, oauth app) and per-repo granularity.
+
+---
+
+### 6. Zero-Cost Relevance
+
+- **Webhooks are free** — no paid tier required for webhook creation or delivery.
+- **Notifications API is free** — accessible with any valid HF token.
+- **Settings & whoami API is free** — no usage limits documented.
+- **Org management API is free** for public orgs; some Enterprise features (SCIM, audit log, network security) may require Enterprise plan.
+- **Usage/billing endpoints** are read-only and free — useful for monitoring consumption without cost.
+- **Resource Groups** are an Enterprise feature (not zero-cost).
+
+### Resources
+- Hub Webhooks Guide: https://huggingface.co/docs/hub/en/webhooks
+- huggingface_hub Webhooks API: `HfApi.list_webhooks()`, `create_webhook()`, etc.
+- Hub OpenAPI spec: `/.well-known/openapi.json` (webhooks, notifications, settings sections)
+- huggingface_hub `WebhookInfo`, `WebhookWatchedItem` dataclasses (v1.24.0+)
+- Hub Settings UI: https://huggingface.co/settings/webhooks
