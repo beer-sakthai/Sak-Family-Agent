@@ -5931,237 +5931,377 @@ Layer types recognized:
 5932|- Hub docs: https://huggingface.co/docs/hub/en/repositories-pull-requests-discussions
 5933|- Python SDK source (v1.24.0)
 5933|
-5934|## 2026-07-24: hf-hub-exception-reference — Complete Exception Hierarchy (Topic #130)
-5935|
-5936|### Summary
-5937|Comprehensive reference of all 50+ custom exceptions in the `huggingface_hub` library — full inheritance hierarchy, attributes, when each error is raised, `hf_raise_for_status()` dispatch logic, and error-handling best practices for production use.
-5938|
-5939|### Key Coverage
-5940|- Full exception hierarchy tree with 50+ classes across 15 categories (HTTP, cache, inference, TGI, auth, validation, safetensors, DDUF, sandbox, CLI, etc.)
-5941|- `HfHubHTTPError` base class with `request_id`, `server_message`, `response`, `request` attributes
-5942|- `hf_raise_for_status()` — status-code → exception dispatch logic (400→BadRequestError, 403 gated→GatedRepoError, etc.)
-5943|- TGI errors: `OverloadedError`, `ValidationError`, `IncompleteGenerationError`, `GenerationError`, `UnknownError`
-5944|- Cache errors: `CacheNotFound`, `CorruptedCacheException`, `IncompleteSnapshotError`
-5945|- OAuth errors: `DeviceCodeError` with `OAuthErrorCode` enum, `OIDCError`
-5946|- Key design patterns: multiple inheritance for backward compat, abstract EntryNotFoundError, error enrichment via `append_to_message()`, request ID tracing
-5947|- 4 practical error handling patterns with code examples
-5948|
-5949|### Skill
-5950|huggingface-hub — references/hf-learnings.md
-5951|
-5952|---
-
-
-## 2026-07-25: HfApi v1.24 New APIs Deep Dive — Compute Jobs, Buckets, Papers & Access Management (Deepening Topic #112 hf-hub-python-api-v2)
+## 2026-07-24: hf-hub-exception-reference — Complete Exception Hierarchy (Topic #130)
 
 ### Summary
-Comprehensive deep-dive into four major new API surfaces added in huggingface_hub v1.24.0 not covered in the earlier HfApi v2 reference: Compute Jobs, Buckets (object storage), Daily Papers, and Gated Repo Access Management. Source-verified against the actual codebase.
+Comprehensive reference of all 50+ custom exceptions in the `huggingface_hub` library — full inheritance hierarchy, attributes, when each error is raised, `hf_raise_for_status()` dispatch logic, and error-handling best practices for production use.
+
+### Key Coverage
+- Full exception hierarchy tree with 50+ classes across 15 categories (HTTP, cache, inference, TGI, auth, validation, safetensors, DDUF, sandbox, CLI, etc.)
+- `HfHubHTTPError` base class with `request_id`, `server_message`, `response`, `request` attributes
+- `hf_raise_for_status()` — status-code → exception dispatch logic (400→BadRequestError, 403 gated→GatedRepoError, etc.)
+- TGI errors: `OverloadedError`, `ValidationError`, `IncompleteGenerationError`, `GenerationError`, `UnknownError`
+- Cache errors: `CacheNotFound`, `CorruptedCacheException`, `IncompleteSnapshotError`
+- OAuth errors: `DeviceCodeError` with `OAuthErrorCode` enum, `OIDCError`
+- Key design patterns: multiple inheritance for backward compat, abstract EntryNotFoundError, error enrichment via `append_to_message()`, request ID tracing
+- 4 practical error handling patterns with code examples
+
+### Skill
+huggingface-hub — references/hf-learnings.md
 
 ---
 
-### 1. Compute Jobs API (run_job, create_scheduled_job, run_uv_job)
+## 2026-07-24: hf-hub-spaces-api-complete-reference — Complete Spaces API Reference (Topic #131)
 
-Run Docker containers on HF infrastructure — ad-hoc or on a CRON schedule. cpu-basic flavor is $0.000167/min (~$0.01/hr).
+### Summary
+Comprehensive reference of the Hugging Face Hub Spaces API — all 24 `HfApi` methods for managing Spaces, the creation flow via `create_repo()`, data models (`SpaceInfo`, `SpaceRuntime`, `Volume`, `SpaceVariable`, `SpaceSecret`), enums (`SpaceHardware`, `SpaceStorage`, `SpaceStage`), and CLI equivalents. Covers zero-cost deployment patterns, dev mode, secrets/variables management, storage volumes, sleep scheduling, and common automation workflows.
 
-#### Key Methods
+### Core Architecture
 
-| Method | Purpose | Returns |
-|--------|---------|---------|
-| run_job() | Run one-off ad-hoc compute job | JobInfo |
-| run_uv_job() | Run UV Python script (auto deps) | JobInfo |
-| create_scheduled_job() | CRON-scheduled job | ScheduledJobInfo |
-| create_scheduled_uv_job() | Scheduled UV script job | ScheduledJobInfo |
-| list_jobs() | List jobs (filter: status, labels) | Iterable[JobInfo] |
-| list_jobs_hardware() | Available hardware flavors with pricing | list[JobHardwareInfo] |
-| inspect_job() | Get detailed job info | JobInfo |
-| fetch_job_logs() | Fetch/stream job logs | Iterable[str] |
-| fetch_job_metrics() | Live job metrics | dict |
-| wait_for_job() | Block until target stage | JobInfo |
-| cancel_job() | Cancel a running job | None |
-| inspect_scheduled_job() | Scheduled job details | ScheduledJobInfo |
-| list_scheduled_jobs() | List all scheduled jobs | Iterable[ScheduledJobInfo] |
-| trigger_scheduled_job() | Immediately trigger a scheduled job | Job |
-| suspend_scheduled_job() / resume_scheduled_job() | Pause/resume | None |
+Spaces are managed through the `HfApi` class in `huggingface_hub` (v1.24.0). There is **no dedicated `create_space()` method** — Spaces are created via `create_repo(repo_type="space", ...)` with Space-specific parameters. All other operations (runtime management, secrets, logs, hardware scaling) have dedicated methods.
 
-#### run_job() Parameters
+```
+┌─────────────────────────────────────────────────────┐
+│                  HfApi Space Methods                 │
+├─────────────────┬───────────────────┬───────────────┤
+│  Lifecycle       │  Configuration    │  Query        │
+├─────────────────┼───────────────────┼───────────────┤
+│  create_repo()   │  add_space_secret │  space_info() │
+│  duplicate_space │  delete_space_sec │  list_spaces()│
+│  restart_space() │  get_space_secrets│  search_spaces│
+│  pause_space()   │  add_space_variab │  get_space_run│
+│  request_space_  │  delete_space_var │  list_spaces_ │
+│   hardware()     │  get_space_variab │  list_space_t │
+│  request_space_  │  set_space_volum  │  fetch_space_l│
+│   storage()      │  delete_space_vol │               │
+│  set_space_sleep │  enable_space_dev │               │
+│  delete_space_   │  disable_space_de │               │
+│   storage()      │  wait_for_space() │               │
+└─────────────────┴───────────────────┴───────────────┘
+```
+
+### Creating a Space
+
+Spaces are created with `create_repo(repo_type="space")`:
+
 ```python
-api.run_job(
-    image="python:3.12",
-    command=["python", "-c", "print('hello')"],
-    env={"KEY": "value"},
-    secrets={"SECRET": "value"},
-    flavor="cpu-basic",
-    timeout="5m",
-    name="my-job",
-    labels={"env": "test"},
-    volumes=[Volume(...)],
-    expose=[8000],
-    ssh=False,
-    namespace="username",
+from huggingface_hub import HfApi, SpaceHardware, SpaceStorage, Volume
+
+api = HfApi()
+
+# Minimal — creates a free CPU-basic Gradio Space
+url = api.create_repo(
+    repo_id="username/my-space",
+    repo_type="space",
+    space_sdk="gradio",          # "gradio", "docker", "static"
+    exist_ok=True,
+)
+
+# With hardware, storage, secrets, and volumes
+url = api.create_repo(
+    repo_id="username/my-space",
+    repo_type="space",
+    space_sdk="gradio",
+    space_hardware=SpaceHardware.CPU_BASIC,
+    space_storage=SpaceStorage.SMALL,
+    space_sleep_time=300,        # sleep after 5 min inactivity
+    space_secrets=[{"key": "HF_TOKEN", "value": "hf_...", "description": "token"}],
+    space_variables=[{"key": "MY_VAR", "value": "val"}],
+    space_volumes=[Volume(type="bucket", source="username/my-bucket", mount_path="/data")],
+    space_template="gradio-hello-world",
+    private=True,
 )
 ```
 
-#### run_uv_job() — UV Script Jobs
-```python
-api.run_uv_job(
-    script="https://raw.githubusercontent.com/.../train.py",
-    script_args=["--model", "Qwen/Qwen2-0.5B"],
-    dependencies=["trl", "torch"],
-    python="3.12",
-)
-```
-Uses ghcr.io/astral-sh/uv:python3.12-bookworm, auto-installs deps.
+**Key parameters** (all prefixed `space_` for `create_repo`):
+- `space_sdk`: `"gradio"`, `"docker"`, `"static"`, or `"streamlit"`
+- `space_hardware`: `SpaceHardware` enum (see below)
+- `space_storage`: `SpaceStorage` enum (`SMALL`, `MEDIUM`, `LARGE`)
+- `space_sleep_time`: int — seconds of inactivity before sleep (GPU spaces only)
+- `space_secrets`: `list[dict]` — each with `key`, `value`, optional `description`
+- `space_variables`: `list[dict]` — same structure as secrets
+- `space_volumes`: `list[Volume]` — bucket/model/dataset mounts
+- `space_template`: `str` — template repo ID or short name (use `list_space_templates()`)
 
-#### create_scheduled_job() — CRON Jobs
-```python
-api.create_scheduled_job(
-    image="python:3.12",
-    command=["python", "daily.py"],
-    schedule="@daily",
-    suspend=False,
-    concurrency=False,
-)
-```
-Schedule: `*/5 * * * *` (5min), `0 9 * * 1` (Mon 9AM), @hourly, @daily, @weekly.
+### SpaceHardware Options
 
-#### Volume Dataclass
+| Enum Name | Value | Cost Tier | Use Case |
+|-----------|-------|-----------|----------|
+| `CPU_BASIC` | `"cpu-basic"` | **Free** | Lightweight demos, simple Gradio apps |
+| `CPU_UPGRADE` | `"cpu-upgrade"` | Paid | CPU-intensive apps |
+| `ZERO_A10G` | `"zero-a10g"` | **Free** | ZeroGPU — A10G for free (NVIDIA) |
+| `T4_SMALL` | `"t4-small"` | Paid | Small GPU demos |
+| `T4_MEDIUM` | `"t4-medium"` | Paid | Medium GPU demos |
+| `L4X1` | `"l4x1"` | Paid | 1×L4 |
+| `L4X4` | `"l4x4"` | Paid | 4×L4 |
+| `L40SX1` | `"l40sx1"` | Paid | 1×L40S |
+| `L40SX4` | `"l40sx4"` | Paid | 4×L40S |
+| `L40SX8` | `"l40sx8"` | Paid | 8×L40S |
+| `A10G_SMALL` | `"a10g-small"` | Paid | 1×A10G (small) |
+| `A10G_LARGE` | `"a10g-large"` | Paid | 1×A10G (large) |
+| `A10G_LARGEX2` | `"a10g-largex2"` | Paid | 2×A10G |
+| `A10G_LARGEX4` | `"a10g-largex4"` | Paid | 4×A10G |
+| `A100_LARGE` | `"a100-large"` | Paid | 1×A100 |
+| `A100X4` | `"a100x4"` | Paid | 4×A100 |
+| `A100X8` | `"a100x8"` | Paid | 8×A100 |
+
+**Zero-cost note:** Only `CPU_BASIC` and `ZERO_A10G` are free. All GPU hardware incurs cost. ZeroGPU (`ZERO_A10G`) is a free tier for A10G but has usage limits and automatic eviction.
+
+### SpaceStorage Options
+
+| Enum Name | Value | Description |
+|-----------|-------|-------------|
+| `SMALL` | `"small"` | Default — free for CPU_BASIC |
+| `MEDIUM` | `"medium"` | Additional disk space |
+| `LARGE` | `"large"` | Maximum disk space |
+
+### SpaceStage States
+
+| Stage | Meaning |
+|-------|---------|
+| `NO_APP_FILE` | No app file found (misconfigured) |
+| `CONFIG_ERROR` | Configuration error |
+| `BUILDING` | Building container |
+| `BUILD_ERROR` | Build failed |
+| `RUNNING` | Space is live |
+| `RUNNING_BUILDING` | Live but rebuilding |
+| `RUNTIME_ERROR` | App crashed at runtime |
+| `DELETING` | Being deleted |
+| `STOPPED` | Stopped |
+| `PAUSED` | Manually paused |
+| `APP_STARTING` | Application starting |
+| `RUNNING_APP_STARTING` | Running but restarting |
+
+### All 24 HfApi Space Methods
+
+#### Lifecycle Methods
+
+| Method | Signature | Description |
+|--------|-----------|-------------|
+| `duplicate_space()` | `(from_id, to_id=None, *, private, visibility, exist_ok, hardware, storage, sleep_time, secrets, variables)` | Duplicate an existing Space. Creates a copy in your account with optional hardware/storage overrides. |
+| `restart_space()` | `(repo_id, *, factory_reboot=False)` | Restart a running or paused Space. `factory_reboot=True` forces a full rebuild from scratch. |
+| `pause_space()` | `(repo_id)` | Pause a Space. Different from sleeping — stays paused until manually restarted. No compute cost while paused. |
+| `request_space_hardware()` | `(repo_id, hardware, *, sleep_time)` | Scale hardware up/down. Use `SpaceHardware.CPU_BASIC` to downgrade to free tier. |
+| `request_space_storage()` | `(repo_id, storage)` | Request additional persistent storage. |
+| `delete_space_storage()` | `(repo_id)` | Remove persistent storage, revert to ephemeral. |
+| `set_space_sleep_time()` | `(repo_id, sleep_time)` | Set inactivity timeout (seconds) before auto-sleep. Only applies to GPU Spaces. |
+| `enable_space_dev_mode()` | `(repo_id)` | Enable dev mode — exposes container for live debugging. |
+| `disable_space_dev_mode()` | `(repo_id)` | Disable dev mode, restart without debug access. |
+
+#### Secrets & Variables
+
+| Method | Signature | Description |
+|--------|-----------|-------------|
+| `add_space_secret()` | `(repo_id, key, value, *, description)` | Add or update a secret. Values are **write-only** — cannot be read back. |
+| `delete_space_secret()` | `(repo_id, key)` | Delete a secret. |
+| `get_space_secrets()` | `(repo_id)` | List secret metadata (key, description, last update). Values are never returned. |
+| `add_space_variable()` | `(repo_id, key, value, *, description)` | Add or update an environment variable. |
+| `delete_space_variable()` | `(repo_id, key)` | Delete a variable. |
+| `get_space_variables()` | `(repo_id)` | Get all variables as `dict[str, SpaceVariable]`. Values are returned. |
+
+#### Volumes (Storage Mounts)
+
+| Method | Signature | Description |
+|--------|-----------|-------------|
+| `set_space_volumes()` | `(repo_id, volumes: list[Volume])` | Atomically replace all mounted volumes. |
+| `delete_space_volumes()` | `(repo_id)` | Remove all volumes. |
+
+The `Volume` dataclass:
 ```python
 from huggingface_hub import Volume
 
-vol = Volume(type="dataset", source="username/dataset",
-             mount_path="/data", revision="main")
-vol = Volume(type="bucket", source="username/my-bucket",
-             mount_path="/output")
-vol = Volume(type="model", source="username/model",
-             mount_path="/weights", path="subfolder")
+Volume(
+    type="bucket",          # "bucket", "model", "dataset", "space"
+    source="user/my-bucket",  # repo ID or bucket name
+    mount_path="/data",       # container mount point (must start with /)
+    revision="main",          # git revision (for repos, not buckets)
+    read_only=False,          # writable for buckets, read-only for repos
+    path=None,                # sub-path within source
+)
 ```
-Fields: type (bucket|model|dataset|space), source, mount_path, revision, read_only, path.
 
-#### JobInfo and Log Streaming
+Volume types:
+- **Buckets:** Read-write mounts (free for public buckets). Use for writable persistent storage.
+- **Models/Datasets/Spaces:** Read-only mounts from other repos. Defaults to `"main"` revision.
+
+#### Query & Info
+
+| Method | Signature | Description |
+|--------|-----------|-------------|
+| `space_info()` | `(repo_id, *, revision, timeout, files_metadata, expand)` | Get full Space metadata. Returns `SpaceInfo`. |
+| `get_space_runtime()` | `(repo_id)` | Get runtime status. Returns `SpaceRuntime` with stage, hardware, sleep_time, storage, dev_mode, volumes. |
+| `fetch_space_logs()` | `(repo_id, *, build=False, follow=False)` | Stream runtime or build logs. Iterable of log lines. |
+| `wait_for_space()` | `(repo_id, *, timeout=None, poll_interval=1.0)` | Block until Space reaches a terminal stage (RUNNING, BUILD_ERROR, etc.). Returns `SpaceRuntime`. |
+| `list_spaces()` | `(*, filter, author, search, datasets, models, linked, sort, limit, expand, full)` | List all Spaces matching filters. |
+| `search_spaces()` | `(query, *, filter, sdk, include_non_running)` | Semantic search across Spaces. |
+| `list_spaces_hardware()` | `(token)` | List available hardware options with pricing. |
+| `list_space_templates()` | `(token)` | List official Space templates. |
+
+### Data Models
+
+#### SpaceInfo (returned by `space_info()`, `list_spaces()`)
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | `str` | Full repo ID (`user/space`) |
+| `author` | `str \| None` | Owner username |
+| `card_data` | `SpaceCardData \| None` | YAML card metadata |
+| `created_at` | `datetime \| None` | Creation timestamp |
+| `datasets` | `list[str] \| None` | Linked datasets |
+| `disabled` | `bool \| None` | Admin-disabled flag |
+| `gated` | `Literal['auto','manual',False] \| None` | Gated access mode |
+| `host` | `str \| None` | Host URL |
+| `last_modified` | `datetime \| None` | Last modification |
+| `likes` | `int \| None` | Like count |
+| `models` | `list[str] \| None` | Linked models |
+| `private` | `bool \| None` | Visibility |
+| `resource_group` | `dict \| None` | Enterprise resource group |
+| `runtime` | `SpaceRuntime \| None` | Current runtime info |
+| `sdk` | `str \| None` | SDK type (gradio/docker/static/streamlit) |
+| `sha` | `str \| None` | Git commit SHA |
+| `siblings` | `list[RepoSibling] \| None` | File listing |
+| `subdomain` | `str \| None` | Space subdomain |
+| `tags` | `list[str] \| None` | Tags |
+| `trending_score` | `int \| None` | Trending rank |
+| `used_storage` | `int \| None` | Bytes used |
+
+#### SpaceRuntime (returned by `get_space_runtime()`, `wait_for_space()`, `restart_space()`, etc.)
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `stage` | `SpaceStage` | Current state (RUNNING, BUILDING, PAUSED, etc.) |
+| `hardware` | `SpaceHardware \| None` | Currently active hardware |
+| `requested_hardware` | `SpaceHardware \| None` | Pending hardware upgrade/downgrade |
+| `sleep_time` | `int \| None` | Auto-sleep timeout in seconds |
+| `storage` | `SpaceStorage \| None` | Current storage tier |
+| `dev_mode` | `bool` | Dev mode enabled? |
+| `volumes` | `list[Volume] \| None` | Currently mounted volumes |
+| `raw` | `dict` | Raw API response |
+
+### Automation Patterns
+
+#### Pattern 1: Create and wait for a Space to be ready
+
 ```python
-job = api.run_job(image="python:3.12", command=[...])
-job.id             # unique job ID
-job.created_at     # datetime with tz
-job.status.stage   # QUEUED -> RUNNING -> COMPLETED|ERROR|CANCELED
+from huggingface_hub import HfApi
 
-for line in api.fetch_job_logs(job_id=job.id):
-    print(line)
-for line in api.fetch_job_logs(job_id=job.id, follow=True):
-    print(line)
-job = api.wait_for_job(job_id=job.id)
-job = api.wait_for_job(job_id=job.id, timeout=300)
+api = HfApi()
+api.create_repo(
+    repo_id="user/my-demo",
+    repo_type="space",
+    space_sdk="gradio",
+    exist_ok=True,
+)
+runtime = api.wait_for_space("user/my-demo", timeout=300)
+assert runtime.stage.value == "RUNNING", f"Space failed: {runtime.stage}"
+print(f"Space live at https://huggingface.co/spaces/user/my-demo")
 ```
 
----
+#### Pattern 2: Zero-cost deployment (CPU, no paid extras)
 
-### 2. Buckets API — Object Storage (create_bucket, sync_bucket)
-
-Object storage on HF Hub. Mountable into Jobs/Spaces as Volume.
-
-#### Key Methods
-
-| Method | Purpose |
-|--------|---------|
-| create_bucket() | Create bucket (public/private, region) |
-| bucket_info() | Get bucket metadata (size, file count) |
-| delete_bucket() | Delete a bucket |
-| move_bucket() | Move/rename a bucket |
-| list_buckets() | List buckets under a namespace |
-| sync_bucket() | rsync-like sync: local <-> bucket |
-| list_bucket_tree() | List files (tree view) |
-| download_bucket_files() | Download files from bucket |
-| batch_bucket_files() | Batch add/copy/delete files |
-| get_bucket_file_metadata() | File metadata |
-| get_bucket_paths_info() | Path information |
-
-#### Usage
 ```python
-url = create_bucket(bucket_id="my-bucket")
-url.bucket_id     # "user/my-bucket"
-url.uri.to_uri()  # "hf://buckets/user/my-bucket"
-
-info = bucket_info(bucket_id="user/first-bucket")
-info.size         # 551879671 (bytes)
-info.total_files  # 12
-
-api.sync_bucket("./data", "hf://buckets/user/my-bucket")
-api.sync_bucket("hf://buckets/user/my-bucket", "./data")
-api.sync_bucket("./data", "hf://buckets/user/my-bucket",
-                include=["*.safetensors"], delete=True)
-plan = api.sync_bucket("./data", "hf://buckets/user/my-bucket", dry_run=True)
-plan.summary()
-api.sync_bucket("./data", "hf://buckets/user/my-bucket", plan="plan.jsonl")
-api.sync_bucket(apply="plan.jsonl")
+api.create_repo(
+    repo_id="user/free-demo",
+    repo_type="space",
+    space_sdk="gradio",
+    space_hardware=SpaceHardware.CPU_BASIC,   # free
+    exist_ok=True,
+)
 ```
 
----
+#### Pattern 3: Scale down to free after GPU work
 
-### 3. Papers API — Daily Papers Discovery
-
-Access HF Daily Papers with AI summaries, keywords, linked resources.
-
-#### Key Methods
-
-| Method | Purpose |
-|--------|---------|
-| list_daily_papers() | Papers by date/week/month |
-| list_papers() | Search by query string |
-| paper_info() | Full details (linked models/datasets/spaces) |
-| read_paper() | Get markdown content |
-
-#### Usage
 ```python
-papers = list(api.list_daily_papers(date="2025-10-29"))
-paper = papers[0]
-paper.id, paper.title, paper.ai_summary, paper.ai_keywords
-paper.authors, paper.upvotes, paper.comments
-paper.github_repo, paper.github_stars
-
-detail = api.paper_info("2310.06825")
-detail.linked_models, detail.linked_datasets, detail.linked_spaces
-
-list(api.list_daily_papers(week="2025-W09"))
-list(api.list_daily_papers(month="2025-02"))
-list(api.list_daily_papers(sort="trending"))
-list(api.list_papers(query="quantization"))
-list(api.list_daily_papers(p=1, limit=20))
+api.request_space_hardware("user/gpu-demo", SpaceHardware.CPU_BASIC)
+# Waits for downgrade to complete
+runtime = api.wait_for_space("user/gpu-demo", timeout=120)
 ```
 
----
+#### Pattern 4: Set up secrets programmatically
 
-### 4. Gated Repo Access Management
-
-Full lifecycle for user access to gated repos.
-
-#### Key Methods
-
-| Method | Purpose |
-|--------|---------|
-| list_pending_access_requests() | Pending (unprocessed) requests |
-| list_accepted_access_requests() | Previously accepted grants |
-| list_rejected_access_requests() | Rejected requests |
-| accept_access_request() | Approve a pending request |
-| reject_access_request() | Deny a pending request |
-| cancel_access_request() | Revoke granted access |
-| grant_access() | Directly grant without prior request |
-
-#### AccessRequest
 ```python
-req = list(list_pending_access_requests("meta-llama/Llama-2-7b"))[0]
-req.username, req.fullname, req.status, req.timestamp
+api.add_space_secret("user/my-space", "API_KEY", "sk-...", description="OpenAI key")
+api.add_space_variable("user/my-space", "LOG_LEVEL", "info")
 ```
 
-#### Lifecycle Examples
+#### Pattern 5: Duplicate an existing Space (template-style)
+
 ```python
-for req in list(list_pending_access_requests("org/gated-model")):
-    accept_access_request("org/gated-model", req.username)
-
-grant_access("org/gated-model", "user3")
-cancel_access_request("org/gated-model", "user1")
+url = api.duplicate_space(
+    from_id="gradio/hello-world",
+    to_id="user/my-hello",
+    hardware=SpaceHardware.CPU_BASIC,
+    exist_ok=True,
+)
 ```
 
----
+#### Pattern 6: Mount a bucket for persistent writable storage
+
+```python
+from huggingface_hub import Volume
+
+api.set_space_volumes("user/my-space", [
+    Volume(type="bucket", source="user/my-bucket", mount_path="/data")
+])
+# Inside the Space: /data/ is writable and persists across restarts
+```
+
+#### Pattern 7: Check and restart a failed Space
+
+```python
+runtime = api.get_space_runtime("user/my-space")
+if runtime.stage.value in ("RUNTIME_ERROR", "BUILD_ERROR", "PAUSED"):
+    new_runtime = api.restart_space("user/my-space")
+    print(f"Restarted: stage={new_runtime.stage.value}")
+```
+
+#### Pattern 8: Fetch build logs for debugging failures
+
+```python
+for line in api.fetch_space_logs("user/my-space", build=True):
+    print(line, end="")
+```
+
+### CLI Equivalents
+
+The `hf` CLI provides Space management through several subcommands:
+
+```bash
+# Create a Space
+hf repos create user/my-space --type space --sdk gradio
+
+# Duplicate
+hf repos duplicate source-space user/my-copy
+
+# Hardware management
+hf repos update user/my-space --hardware cpu-basic
+
+# Secrets
+hf secrets list user/my-space
+hf secrets add user/my-space KEY VALUE
+
+# Volumes
+hf spaces volumes ls user/my-space
+hf spaces volumes set user/my-space --volume bucket=user/my-bucket:/data
+
+# Dev mode
+hf spaces dev-mode user/my-space
+
+# Logs
+hf logs user/my-space            # runtime logs
+hf logs user/my-space --build    # build logs
+```
+
+### Resources
+- `huggingface_hub` Python SDK v1.24.0 — `HfApi` class
+- Hub docs: https://huggingface.co/docs/hub/en/spaces-overview
+- Spaces settings: https://huggingface.co/docs/hub/en/spaces-settings
+- Spaces GPU: https://huggingface.co/docs/hub/en/spaces-gpus
+- Spaces storage: https://huggingface.co/docs/hub/en/spaces-storage
+- Spaces config reference: https://huggingface.co/docs/hub/en/spaces-config-reference
+- ZeroGPU: https://huggingface.co/docs/hub/en/spaces-gpus#zero-gpu-spaces
 
 ### Skill
-huggingface-hub -- references/hf-learnings.md
+huggingface-hub — references/hf-learnings.md
+
 ---
