@@ -7877,3 +7877,26 @@ api.list_models(filter="safetensors", sort="likes")  # All SafeTensors models
 mlops/huggingface-hub -- references/hf-learnings.md
 
 ---
+
+## 2026-07-24: smolagents Multi-Agent Orchestration Patterns (Topic #144 — Deep Dive on hf-agents-course)
+
+### Summary
+Deep-dive into smolagents v1.26.0 multi-agent orchestration patterns from the official HF Agents Course. Covers CodeAgent vs ToolCallingAgent paradigms, manager-worker hierarchy with managed_agents, custom tool construction with @tool, agent memory management (replay, dynamic mutation, step callbacks, step-by-step execution), and best practices for building reliable multi-agent systems. Full content in mlops/hf-agents-course/references/hf-learnings.md.
+
+### Key Findings
+- **CodeAgent** (code synthesis) for reasoning/planning; **ToolCallingAgent** (JSON tool calls) for reliable dispatching. Choice depends on task complexity.
+- **Multi-agent = manager + workers**: Manager (CodeAgent) receives task, plans, and delegates via managed_agents list. Workers need explicit `name` and `description`.
+- **Agent memory is mutable**: Access `agent.memory.steps` to read/modify history, replay runs, or inject prior context. Step callbacks (`step_callbacks=[]`) enable live memory editing.
+- **Custom tools** require type annotations, clear docstring parameter formats, and verbose logging via `print()` for LLM self-correction.
+
+### Resources
+- https://huggingface.co/learn/agents-course/unit2/smolagents/introduction
+- https://huggingface.co/docs/smolagents/main/en/guided_tour
+- https://huggingface.co/docs/smolagents/main/en/examples/multiagents
+- https://huggingface.co/docs/smolagents/main/en/tutorials/building_good_agents
+- https://huggingface.co/docs/smolagents/main/en/tutorials/memory
+
+### Skill
+mlops/hf-agents-course -- references/hf-learnings.md
+
+---
