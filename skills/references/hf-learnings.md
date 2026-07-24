@@ -11527,3 +11527,258 @@ Note that float8 and float4 dtypes are stored as raw bytes (mapped to `np.uint8`
 5. `save_model()` / `load_model()` handle shared storage deduplication via storage-pointer grouping and overlapping-address refinement
 6. All framework adapters use zero-copy loading: `torch.frombuffer`, `np.frombuffer`, `paddle.base.core.frombuffer`
 7. `get_slice()` enables lazy sub-tensor reads without loading the full tensor into memory
+
+---
+
+## 2026-07-24: hf-hub-models-api-query-language-complete — Exhaustive Reference of the Hub Models/Datasets/Spaces API Query Language (Topic #181)
+
+### Summary
+Complete deep-dive into the **Hugging Face Hub REST API query language** used by `/api/models`, `/api/datasets`, and `/api/spaces`. Covers every query parameter, the `HfApi` Python wrapper signatures, filter tag syntax, pagination mechanism, sort keys, expand projections, the `num_parameters` range syntax, `inference_provider` filtering, `gated` filtering, `apps` filtering, and cross-repo-type differences. Source: `huggingface_hub` v1.24.0 source code (`hf_api.py`) and HF API docs.
+
+### 1. Architecture — Three Endpoints, One Pattern
+
+All three repo types share the same paginated REST API pattern:
+
+```
+GET https://huggingface.co/api/models?param1=value1&param2=value2
+GET https://huggingface.co/api/datasets?param1=value1&param2=value2
+GET https://huggingface.co/api/spaces?param1=value1&param2=value2
+```
+
+The Python wrapper is `HfApi.list_models()`, `HfApi.list_datasets()`, `HfApi.list_spaces()` — all in `huggingface_hub.hf_api.HfApi`. Each returns a lazy `Iterable` using `paginate()` which walks `Link` headers (GitHub-style).
+
+### 2. Models API — Complete Parameter Reference
+
+All parameters below are keyword-only (`*` separator in the signature):
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `filter` | `str \| Iterable[str] \| None` | Tag-based filter. Multiple values join as AND. See §4 for syntax. |
+| `author` | `str \| None` | Filter by user/org that owns the model |
+| `apps` | `str \| list[str] \| None` | Filter by app support (e.g. `"ollama"`, `["ollama", "vllm"]`) |
+| `gated` | `bool \| None` | `True` = only gated, `False` = only non-gated, `None` = both |
+| `inference` | `Literal["warm"] \| None` | `"warm"` = models served by at least one Inference Provider |
+| `inference_provider` | `Literal["all"] \| str \| list[str] \| None` | Filter by specific provider (e.g. `"cohere"`, `"together"`). `"all"` = any provider |
+| `search` | `str \| None` | Substring match on model ID (replaces deprecated `model_name`) |
+| `trained_dataset` | `str \| list[str] \| None` | Filter by dataset tag (prepends `dataset:` prefix automatically) |
+| `pipeline_tag` | `str \| None` | Filter by pipeline task (e.g. `"text-generation"`, `"image-classification"`) |
+| `num_parameters` | `str \| None` | Range syntax: `"min:6B,max:128B"`, `"min:6B"`, `"max:128B"`. Supports B/M/K suffixes |
+| `emissions_thresholds` | `tuple[float,float] \| None` | Min/max CO₂ in grams. Requires `cardData=True` |
+| `sort` | `ModelSort_T \| None` | One of: `"created_at"`, `"downloads"`, `"last_modified"`, `"likes"`, `"trending_score"` |
+| `limit` | `int \| None` | Max results. `None` = all (paginated). |
+| `expand` | `list[ExpandModelProperty_T] \| None` | Return only listed properties (mutually exclusive with `full`, `cardData`, `fetch_config`) |
+| `full` | `bool \| None` | Fetch all data (`last_modified`, `sha`, files, `tags`). Auto-enabled when `filter` is used |
+| `cardData` | `bool` | Fetch YAML metadata (carbon emissions, metrics, datasets) |
+| `fetch_config` | `bool` | Fetch model `config.json` (excluded from `full` due to size) |
+| `token` | `bool \| str \| None` | Auth token. `None` = cached token, `False` = disable auth |
+
+**Internal mapping of `sort` values to REST API keys:**
+```python
+{
+    "last_modified"  → "lastModified"
+    "trending_score" → "trendingScore"
+    "created_at"     → "createdAt"
+    "downloads"      → "downloads"
+    "likes"          → "likes"
+}
+```
+
+### 3. Datasets & Spaces API Differences
+
+**Datasets** (`HfApi.list_datasets`) adds dataset-specific parameters:
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `benchmark` | `Literal[True] \| Literal["official"] \| str \| None` | Filter by benchmark |
+| `dataset_name` | `str \| None` | Exact dataset ID |
+| `language_creators` | `str \| list[str] \| None` | Filter by language creators tag |
+| `language` | `str \| list[str] \| None` | Filter by language tag |
+| `multilinguality` | `str \| list[str] \| None` | Filter by multilinguality tag |
+| `size_categories` | `str \| list[str] \| None` | Filter by size category |
+| `task_categories` | `str \| list[str] \| None` | Filter by task category |
+| `task_ids` | `str \| list[str] \| None` | Filter by specific task ID |
+
+Missing from datasets compared to models: `apps`, `inference`, `inference_provider`, `pipeline_tag`, `num_parameters`, `emissions_thresholds`, `cardData`, `fetch_config`.
+
+**Spaces** (`HfApi.list_spaces`) adds Space-specific parameters:
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `datasets` | `str \| Iterable[str] \| None` | Filter Spaces that use these datasets |
+| `models` | `str \| Iterable[str] \| None` | Filter Spaces that use these models |
+| `linked` | `bool` | Only return Spaces linked to the authenticated user |
+
+Missing from spaces compared to models: `inference`, `inference_provider`, `pipeline_tag`, `num_parameters`, `emissions_thresholds`, `cardData`, `fetch_config`, `trained_dataset`.
+
+### 4. Filter Tag Syntax — The `filter` Parameter
+
+The `filter` parameter accepts Hugging Face Hub **tags** (not free-form text). Tags come from the Hub's taxonomy system (`HfApi.get_model_tags()`, `HfApi.get_dataset_tags()`).
+
+**Valid tag categories and examples:**
+
+| Category | Example Tags |
+|----------|-------------|
+| **library** | `"transformers"`, `"pytorch"`, `"gguf"`, `"diffusers"`, `"peft"`, `"timm"`, `"sentence-transformers"`, `"keras-hub"`, `"mlx"` |
+| **pipeline_tag** | `"text-classification"`, `"text-generation"`, `"image-classification"`, `"object-detection"`, `"automatic-speech-recognition"` |
+| **language** | `"en"`, `"zh"`, `"fr"`, `"th"`, `"ja"`, `"ko"`, `"code"` |
+| **license** | `"license:apache-2.0"`, `"license:mit"`, `"license:llama3.1"`, `"license:cc-by-nc-4.0"` |
+| **dataset** | `"dataset:teknium/OpenHermes-2.5"` (auto-prepended by `trained_dataset` parameter) |
+| **region** | `"region:us"`, `"region:eu"` |
+| **deploy** | `"endpoints_compatible"`, `"deploy:azure"`, `"deploy:sagemaker"` |
+| **other** | `"text-generation-inference"`, `"text-embeddings-inference"`, `"custom_code"`, `"4-bit"`, `"8-bit"`, `"merge"`, `"moe"`, `"eval-results"` |
+
+**Multiple filters** join as AND — the API returns only models matching ALL specified tags:
+```python
+# PyTorch AND text-generation AND English
+api.list_models(filter=["pytorch", "text-generation", "en"])
+```
+
+**Pipeline tags** can also be passed via the dedicated `pipeline_tag` parameter — functionally equivalent to including it in `filter`. The difference: `pipeline_tag` is a single string, while `filter` can hold multiple tags.
+
+### 5. Expand Projections — `expand` Parameter
+
+The `expand` parameter accepts a list of `ExpandModelProperty_T` values — 30 properties:
+
+```
+author, baseModels, cardData, childrenModelCount, config, createdAt, disabled,
+downloads, downloadsAllTime, evalResults, gated, gguf, inference,
+inferenceProviderMapping, lastModified, library_name, likes, mask_token,
+model-index, pipeline_tag, private, resourceGroup, safetensors, sha, siblings,
+spaces, tags, transformersInfo, trendingScore, usedStorage, widgetData
+```
+
+**Rules:**
+- When `expand` is used, **only the listed properties** are returned in the response
+- `expand` is **mutually exclusive** with `full`, `cardData`, and `fetch_config`
+- Use `expand` for bandwidth optimization — fetch exactly what you need
+
+**Datasets expand properties** (`ExpandDatasetProperty_T`): cardData, config, createdAt, disabled, downloads, gated, lastModified, sha, siblings, tags.
+**Spaces expand properties** (`ExpandSpaceProperty_T`): cardData, createdAt, disabled, lastModified, private, sdk, siblings, tags, runtime, storage.
+
+### 6. Pagination — Link-Header Based
+
+The Hub uses GitHub-style Link header pagination (from `huggingface_hub.utils._pagination.paginate()`):
+```python
+# First request: GET /api/models?param=value
+# Response includes Link header:
+# <https://huggingface.co/api/models?param=value&page=2>; rel="next"
+# Subsequent pages followed automatically
+```
+
+Key behaviors:
+- **No explicit `page` parameter** in the Python API — pagination is automatic
+- **`limit`** controls the page size. When set, the iterator stops after `limit` items
+- **`limit=None`** fetches ALL pages (use with care — could be thousands of items)
+- The raw REST API accepts `?limit=N&pagination=next` query parameters directly
+
+### 7. Special Parameters Deep Dive
+
+#### `inference_provider` — Provider Availability
+Filters models served by specific Inference Providers. Valid providers include: `"together"`, `"replicate"`, `"cohere"`, `"fal-ai"`, `"fireworks-ai"`, `"hyperbolic"`, `"deepinfra"`, `"novita"`, `"baseten"`, `"lepton"`, `"awselastic"`, and many more. Pass `"all"` to get any model with at least one provider.
+
+#### `apps` — App/Framework Support
+Filters models that support specific applications: `"ollama"`, `"vllm"`, `"llamacpp"`, `"tgi"`, `"tei"`, `"xinference"`, `"lmstudio"`, etc. Multiple values mean models supporting ANY of the listed apps.
+
+#### `num_parameters` — Range Syntax
+```
+"min:1B"         → at least 1 billion parameters
+"max:10B"        → at most 10 billion parameters
+"min:500M,max:7B" → 500 million to 7 billion parameters
+"min:1B,max:1B"  → exactly 1 billion (approx.)
+```
+Suffixes: `B` (billions), `M` (millions), `K` (thousands).
+
+#### `gated` — Access Control
+- `True` → only gated models (requires token for access)
+- `False` → only non-gated models
+- `None` (default) → both
+
+#### `emissions_thresholds` — Carbon Footprint
+Requires `cardData=True`. Takes `(min_co2_g, max_co2_g)`. Only returns models with CO₂ emissions data in their model card.
+
+### 8. Response Model — `ModelInfo` Key Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | `str` | Full model ID (e.g. `"bert-base-uncased"`) |
+| `author` | `str \| None` | Owner user/org |
+| `pipeline_tag` | `str \| None` | Primary pipeline task |
+| `library_name` | `str \| None` | Primary framework/library |
+| `tags` | `list[str]` | All tags assigned to the model |
+| `downloads` | `int` | Monthly download count |
+| `downloads_all_time` | `int \| None` | All-time downloads (requires `expand`) |
+| `likes` | `int` | Like count |
+| `trending_score` | `int \| None` | Trending rank score (higher = more trending) |
+| `created_at` | `datetime \| None` | Creation timestamp |
+| `last_modified` | `datetime \| None` | Last modification timestamp |
+| `gated` | `Literal["auto", "manual", False] \| None` | Gated access level |
+| `disabled` | `bool \| None` | Whether model is disabled |
+| `private` | `bool \| None` | Whether model is private |
+| `safetensors` | `dict \| None` | safetensors metadata (parameter count, dtypes) |
+| `gguf` | `dict \| None` | GGUF metadata (if applicable) |
+| `config` | `dict \| None` | Model config (requires `fetch_config=True`) |
+| `cardData` | `dict \| None` | YAML card metadata (requires `cardData=True`) |
+| `siblings` | `list[RepoFile] \| None` | Files in the repo |
+| `spaces` | `list[str] \| None` | Spaces using this model |
+| `inference` | `str \| None` | Inference status (`"warm"` if served) |
+| `inference_provider_mapping` | `dict \| None` | Provider → status mapping |
+| `base_models` | `list[dict] \| None` | Models this model is derived from |
+| `children_model_count` | `int \| None` | Number of child models |
+| `widget_data` | `list[dict] \| None` | Inference widget example data |
+| `model_index` | `dict \| None` | Model index data |
+| `transformers_info` | `dict \| None` | Transformers-specific metadata |
+| `security_repo_status` | `dict \| None` | Security scan status |
+| `eval_results` | `dict \| None` | Evaluation results |
+| `used_storage` | `int \| None` | Storage used in bytes |
+
+### 9. Practical Examples
+
+```python
+from huggingface_hub import HfApi
+api = HfApi()
+
+# 1. Find trending text-generation models under 10B params
+models = api.list_models(
+    filter=["text-generation", "pytorch"],
+    sort="trending_score",
+    num_parameters="max:10B",
+    limit=20
+)
+
+# 2. Check if a model is available via inference providers
+models = api.list_models(
+    search="meta-llama/Llama-3.2-3B",
+    inference="warm",
+    expand=["inference", "inferenceProviderMapping"]
+)
+
+# 3. Find models with exact params (1B-7B range, sorted by likes)
+models = api.list_models(
+    filter="text-generation",
+    num_parameters="min:1B,max:7B",
+    sort="likes",
+    limit=10
+)
+
+# 4. Get gated models from a specific author
+models = api.list_models(
+    author="meta-llama",
+    gated=True,
+    full=True
+)
+
+# 5. List models with their configs
+model_infos = api.list_models(search="qwen/Qwen2.5-7B", fetch_config=True)
+
+# 6. Direct REST call (curl-equivalent):
+# curl -s "https://huggingface.co/api/models?search=bert&filter=pytorch&sort=downloads&limit=5"
+```
+
+### Key Takeaways
+1. The Hub API query language is unified across models, datasets, and spaces — each variant adds its own parameters
+2. The `filter` parameter accepts Hub taxonomy tags (library, pipeline, language, license, etc.), AND-joined when multiple
+3. `expand` provides bandwidth-efficient projections — always prefer it over `full` when you only need specific fields
+4. `num_parameters` uses `"min:X,max:Y"` range syntax with B/M/K suffixes
+5. Pagination is automatic via Link headers; `limit` controls max results
+6. The Python `HfApi` wrapper maps Pythonic names (snake_case) to REST API keys (camelCase)
+|
