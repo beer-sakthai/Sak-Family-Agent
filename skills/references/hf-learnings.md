@@ -7171,6 +7171,205 @@ torchcodec 0.15.0+cu130 ships prebuilt CUDA extensions. NVDEC GPU via `device="c
 - FFmpeg filters: https://ffmpeg.org/ffmpeg-filters.html
 
 ### Skill
-hf-datasets-video-processing -- references/hf-learnings.md
+|hf-datasets-video-processing -- references/hf-learnings.md
+
+## 2026-07-24: hf-hub-search-discovery-api — Deep Dive (Topic #141)
+
+### Summary
+Comprehensive deep-dive into the Hugging Face Hub Search & Discovery API — how to search, filter, sort, and paginate through models, datasets, and Spaces using both the REST API (`GET /api/models`, `/api/datasets`, `/api/spaces`) and the Python `huggingface_hub` wrappers (`list_models()`, `list_datasets()`, `list_spaces()`). Covers every query parameter, filter prefix, sort mode, expand option, and the `paginate()` mechanism. Also covers the `/api/quicksearch` endpoint for cross-type instant search. Focused on zero-cost patterns — all endpoints are public and free.
+
+### Core Architecture — Three REST Endpoints
+
+The Hub exposes three parallel listing endpoints with the same pagination mechanism:
+
+| Endpoint | Python wrapper | Returns |
+|----------|---------------|---------|
+| `GET /api/models` | `api.list_models(...)` | `ModelInfo` |
+| `GET /api/datasets` | `api.list_datasets(...)` | `DatasetInfo` |
+| `GET /api/spaces` | `api.list_spaces(...)` | `SpaceInfo` |
+
+All three use the same `paginate()` helper: fetch the first page, parse the `Link` header for the next page URL, and yield items lazily. This is the same Link-header pagination format as the GitHub API.
+
+### Pagination — Link-Header Based
+
+```python
+# Internal paginate() logic (from huggingface_hub.utils._pagination):
+def paginate(path, params, headers):
+    r = session.get(path, params=params, headers=headers)
+    hf_raise_for_status(r)
+    yield from r.json()
+    next_page = _get_next_page(r)  # parses Link header
+    while next_page is not None:
+        r = http_backoff("GET", next_page, headers=headers)
+        hf_raise_for_status(r)
+        yield from r.json()
+        next_page = _get_next_page(r)
+```
+
+- First response includes `Link` header with `rel="next"` — subsequent pages are pre-encoded URLs
+- Pages are fetched on-demand via generator — iteration stops at `limit` or absent Link header
+- Client-side `limit` uses `itertools.islice` to cap iteration
+
+### list_models() — Full Parameter Reference
+
+**Signature** (all keyword-only after `self`):
+
+```python
+def list_models(self, *,
+    filter, author, apps, gated, inference, inference_provider,
+    trained_dataset, search, pipeline_tag, num_parameters,
+    emissions_thresholds, sort, limit, expand, full,
+    cardData, fetch_config, token,
+) -> Iterable[ModelInfo]:
+```
+
+**HTTP query params mapping:**
+
+| Python param | HTTP key | Values |
+|---|---|---|
+| `filter` | `?filter=` | Tag string (see Filter Prefix System below) |
+| `author` | `?author=` | Username or org |
+| `apps` | `?apps=` | `ollama`, `vllm`, etc. |
+| `gated` | `?gated=` | `true` / `false` |
+| `inference` | `?inference=` | `warm` — models with active provider |
+| `inference_provider` | `?inference_provider=` | `all` or name: `together`, `cohere`, `fal-ai` |
+| `search` | `?search=` | Text match on model ID |
+| `pipeline_tag` | `?pipeline_tag=` | `text-classification`, etc. |
+| `num_parameters` | `?num_parameters=` | Range: `min:6B,max:128B`, `min:70B`, `max:500M` |
+| `sort` | `?sort=` | `lastModified`, `trendingScore`, `createdAt`, `downloads`, `likes` |
+| `limit` | `?limit=` | Items per page |
+| `full` | `?full=true` | Returns siblings, sha, tags, lastModified |
+| `cardData` | `?cardData=true` | YAML metadata |
+| `config` | `?config=true` | Config JSON |
+| `expand` | `?expand=` | List of property names |
+
+**Expand values for list_models:** `author`, `cardData`, `config`, `createdAt`, `disabled`, `downloads`, `downloadsAllTime`, `evalResults`, `gated`, `gguf`, `inference`, `inferenceProviderMapping`, `lastModified`, `library_name`, `likes`, `mask_token`, `model-index`, `pipeline_tag`, `private`, `safetensors`, `sha`, `siblings`, `spaces`, `tags`, `transformersInfo`, `trendingScore`, `widgetData`, `resourceGroup`
+
+### Filter Prefix System — Cross-Domain Tagging
+
+| Prefix | Domain | Example |
+|--------|--------|---------|
+| `dataset:` | Trained on dataset | `dataset:wikitext` |
+| `library:` | Using library | `library:transformers` |
+| `language:` | Language | `language:en` |
+| `task_categories:` | Task category | `task_categories:text-classification` |
+| `task_ids:` | Specific task | `task_ids:language-modeling` |
+| `language_creators:` | Curation method | `language_creators:crowdsourced` |
+| `multilinguality:` | Multilingual | `multilinguality:monolingual` |
+| `size_categories:` | Dataset size | `size_categories:100K<n<1M` |
+
+**Practical examples:**
+
+```python
+api = HfApi()
+
+# LoRA / PEFT models
+api.list_models(filter="peft")
+
+# Text classification with transformers
+api.list_models(filter=("library:transformers", "task:text-classification"))
+
+# Russian language modeling datasets
+api.list_datasets(filter=("language:ru", "task_ids:language-modeling"))
+
+# Gated BERT-like models
+api.list_models(search="bert", gated=True)
+
+# Spaces using Mistral
+api.list_spaces(models="mistralai/Mistral-7B-v0.1")
+
+# Official benchmark datasets
+api.list_datasets(benchmark="official")
+```
+
+### list_datasets() — Dataset-Specific Parameters
+
+```python
+def list_datasets(self, *,
+    filter, author, gated, search, sort, limit, expand, full, token,
+    benchmark, dataset_name,
+    language_creators, language, multilinguality,
+    size_categories, task_categories, task_ids,
+) -> Iterable[DatasetInfo]:
+```
+
+**Expand for datasets:** `author`, `cardData`, `citation`, `createdAt`, `disabled`, `description`, `downloads`, `downloadsAllTime`, `gated`, `lastModified`, `likes`, `mainSize`, `paperswithcode_id`, `private`, `siblings`, `sha`, `tags`, `trendingScore`, `usedStorage`, `resourceGroup`
+
+### list_spaces() — Space-Specific Parameters
+
+```python
+def list_spaces(self, *,
+    filter, author, search, sort, limit, expand, full, token,
+    datasets, models, linked,
+) -> Iterable[SpaceInfo]:
+```
+
+**Expand for spaces:** `author`, `cardData`, `datasets`, `disabled`, `lastModified`, `createdAt`, `likes`, `models`, `private`, `runtime`, `sdk`, `siblings`, `sha`, `subdomain`, `tags`, `trendingScore`, `usedStorage`, `resourceGroup`
+
+### Quicksearch — Cross-Type Instant Search
+
+`GET /api/quicksearch?q=llama&limit=5&type=model`
+
+| Param | Type | Description |
+|-------|------|-------------|
+| `q` | string | Search query |
+| `limit` | int | Max per type |
+| `type` | string | `model`, `dataset`, `space`, `paper` |
+| `library` | string | Library filter |
+| `pipeline` | string | Pipeline tag |
+| `exclude` | array | Exclude types |
+| `namespace` | string | Author/org |
+| `spacesTags` | array | Space-specific tags |
+
+Returns `{"models": [...], "datasets": [...], "spaces": [...], "papers": [...]}` — ideal for autocomplete/search suggestions.
+
+### Advanced Zero-Cost Patterns
+
+**1. Find GGUF (CPU-friendly) models:**
+```python
+gguf_models = api.list_models(filter="gguf", sort="downloads", limit=10)
+```
+
+**2. Find models with active inference provider:**
+```python
+warm = list(api.list_models(inference="warm", sort="likes", limit=50))
+```
+
+**3. Parameter-range search:**
+```python
+# 1B-10B params, sorted by likes
+for m in api.list_models(num_parameters="min:1B,max:10B", sort="likes", limit=20):
+    print(f"{m.modelId}: {m.likes} likes")
+```
+
+**4. Multi-tag filtering:**
+```python
+# Diffusers + Stable Diffusion
+api.list_models(filter=("library:diffusers", "task:text-to-image"))
+```
+
+### Rate Limits & Auth
+- Public endpoints are free — no token needed for read-only public repo listing
+- Subject to HF-wide rate limits (429 → `http_backoff` auto-retries)
+- Auth token required for private repos, gated repos, and write operations
+
+### Key Takeaways
+1. Three parallel endpoints (`/api/models`, `/api/datasets`, `/api/spaces`) share identical pagination/sort/expand architecture
+2. The `filter` prefix system is the Swiss Army knife — `library:`, `dataset:`, `language:`, `task_categories:`
+3. `expand` is bandwidth-efficient; use it instead of `full=true` for targeted field selection
+4. `search` matches repo IDs textually; `filter` uses tag-based exact matching
+5. Pagination is automatic via Link header — the Python client handles it transparently
+6. `quicksearch` is the fastest path for cross-type autocomplete/dashboard use cases
+7. All endpoints are zero-cost — no paid tier needed for discovery
+
+### Resources
+- `huggingface_hub` source: `hf_api.py` L2398–2970
+- OpenAPI spec: https://huggingface.co/.well-known/openapi.md
+- Hub search docs: https://huggingface.co/docs/hub/en/search
+- Hub API docs: https://huggingface.co/docs/hub/en/api
+- Pagination source: `huggingface_hub.utils._pagination`
+
+### Skill
+mlops/huggingface-hub -- references/hf-learnings.md
 
 ---
