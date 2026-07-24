@@ -1,5 +1,41 @@
 # HF Learnings Log
 
+## 2026-07-30: hf-hub-models-architecture-and-pipeline-tags — Complete HF Model Tag Taxonomy Deep Dive (Topic #164 Deepened)
+
+### Summary
+Comprehensive deep-dive into the Hugging Face Hub's model tag taxonomy — the
+complete classification system that powers discovery, filtering, and widget
+selection across 1M+ models. Covers all 47 official pipeline tags, the 6 tag
+categories (pipeline, library, language, license, architecture, auto-generated),
+the automatic tag inference pipeline (transformers config → Architecture-to-
+Pipeline mapping gist → tag-based fallback → default), search/filter API
+patterns, and the conversational widget special case. Full document at
+`skills/mlops/hf-hub-models-tags/references/hf-learnings.md`.
+
+### Key Discovery: 47 Official Pipeline Tags
+Confirmed via the `/tasks` page: 47 distinct pipeline tags covering text (13),
+vision (22), audio (5), multimodal (2), tabular (2), RL (1), time-series (1),
+and any-to-any (1). `conversational` is NOT a pipeline tag — it's a companion
+boolean tag that activates the chat widget only when paired with
+`text-generation` or `image-text-to-text`.
+
+### Key Discovery: Tag Inference Priority Chain
+1. Explicit `pipeline_tag:` in model card YAML
+2. Transformers `config.json` → `architectures[]` mapped via a reference gist
+3. Library-specific detection (sentence-transformers modules.json, etc.)
+4. First matching task tag from `tags[]` in model card metadata
+5. Fallback: `feature-extraction`
+
+### Key Discovery: No Public Tag Registry API
+Unlike datasets (`/api/tags`), there is no public auth-free endpoint to
+enumerate model tags. The taxonomy must be reconstructed from the /tasks HTML,
+live API queries, the OpenAPI spec, and the widgets doc's architecture mapping
+gist.
+
+**Full document:** `skills/mlops/hf-hub-models-tags/references/hf-learnings.md`
+
+---
+
 ## 2026-07-24: hf-transformers-speculative-decoding-deep-dive — v5.14.0 MTP Support & Static Ensemble Verification (Topic #79 Deepened)
 
 ### Summary
