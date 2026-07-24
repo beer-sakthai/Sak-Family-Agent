@@ -677,4 +677,199 @@ Tested on `nyu-mll/glue` MRPC split (3,668 rows) with Datasets v5.0.0:
 - Dataset API ref (v5.0.0): https://huggingface.co/docs/datasets/main/en/package_reference/main_classes#datasets.Dataset
 - IterableDataset API ref: https://huggingface.co/docs/datasets/main/en/package_reference/main_classes#datasets.IterableDataset
 - Datasets source: `/opt/data/.venv-sakthai/lib/python3.14/site-packages/datasets/arrow_dataset.py`
+
+## 2026-07-24: hf-datasets-concatenate-and-interleave-deep-dive — Combining Datasets
+
+> Research date: 2026-07-24
+> Docs: https://huggingface.co/docs/datasets/en/process
+> Author: SakThai · Main Lead of the House & Master of Hugging Face
+> License: MIT
+
+### Summary
+
+🤗 Datasets provides two primary functions for combining datasets:
+- **`concatenate_datasets()`** — stack datasets vertically (append rows) or horizontally (merge columns)
+- **`interleave_datasets()`** — mix datasets by alternating or probabilistically sampling examples
+
+Both work with regular `Dataset` and `IterableDataset` (streaming) objects.
+
+### 1. `concatenate_datasets()`
+
+#### Vertical Concatenation (`axis=0`, default)
+
+Stacks datasets row-wise. All datasets **must share the same column types/features** or the operation raises.
+
+```python
+from datasets import concatenate_datasets, load_dataset
+
+stories = load_dataset("ajibawa-2023/General-Stories-Collection", split="train")
+stories = stories.select_columns(["text"])
+
+wiki = load_dataset("wikimedia/wikipedia", "20231101.en", split="train")
+wiki = wiki.select_columns(["text"])
+
+# Features must match type
+assert stories.features.type == wiki.features.type
+
+bert_dataset = concatenate_datasets([stories, wiki])
+# Result: len(stories) + len(wiki) rows, same features
+```
+
+**Key invariant:** `concatenate_datasets([ds.shard(n, i) for i in range(n)])` recovers the original dataset in order.
+
+#### Horizontal Concatenation (`axis=1`)
+
+Merges columns side-by-side. Datasets **must have the same number of rows**:
+
+```python
+stories_ids = stories.map(lambda x, i: {"id": i}, with_indices=True)
+stories_with_ids = concatenate_datasets([stories, stories_ids], axis=1)
+```
+
+#### API Signature
+
+```python
+concatenate_datasets(
+    dsets: list,
+    info: Optional[DatasetInfo] = None,
+    split: Optional[NamedSplit] = None,
+    axis: int = 0
+) -> Dataset
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `dsets` | `list[Dataset]` | Datasets to concatenate (≥2) |
+| `info` | `Optional[DatasetInfo]` | Override merged dataset info |
+| `split` | `Optional[NamedSplit]` | Assign a named split |
+| `axis` | `int` | `0`=vertical (rows), `1`=horizontal (columns) |
+
+### 2. `interleave_datasets()`
+
+Mixes datasets by taking alternating or probability-weighted examples. Supports three **stopping strategies**:
+
+#### Default: Alternating (`first_exhausted`)
+
+Without probabilities, examples are taken in round-robin order:
+
+```python
+from datasets import Dataset, interleave_datasets
+
+d1 = Dataset.from_dict({"a": [0, 1, 2]})
+d2 = Dataset.from_dict({"a": [10, 11, 12]})
+d3 = Dataset.from_dict({"a": [20, 21, 22]})
+
+dataset = interleave_datasets([d1, d2, d3])
+dataset["a"]  # [0, 10, 20, 1, 11, 21, 2, 12, 22]
+```
+
+#### With Probabilities
+
+Defines sampling weights. Each example is drawn from a random dataset according to probabilities:
+
+```python
+dataset = interleave_datasets(
+    [d1, d2, d3],
+    probabilities=[0.7, 0.2, 0.1],
+    seed=42
+)
+```
+
+With `first_exhausted` (default): stops as soon as any dataset runs out — this is a **subsampling** strategy. Result length ≤ min(dataset lengths).
+
+#### Stopping Strategies
+
+| Strategy | Behaviour |
+|----------|-----------|
+| `first_exhausted` (default) | Stop when *any* dataset runs out. Subsampling. |
+| `all_exhausted` | Continue until every sample from every dataset has been seen at least once. **Oversampling** — exhausted datasets wrap around. |
+| `all_exhausted_without_replacement` | Every sample seen exactly once. Equal to alternating if sizes match. |
+
+**`all_exhausted` example:**
+
+```python
+# d1=3 rows, d2=4 rows, d3=5 rows
+dataset = interleave_datasets([d1, d2, d3], stopping_strategy="all_exhausted")
+# Cycles through shorter datasets until all have been fully consumed
+```
+
+#### With IterableDataset (Streaming)
+
+```python
+es_dataset = load_dataset('allenai/c4', 'es', split='train', streaming=True)
+fr_dataset = load_dataset('allenai/c4', 'fr', split='train', streaming=True)
+
+multilingual = interleave_datasets([es_dataset, fr_dataset])
+# Alternates: es, fr, es, fr, ...
+
+# With probabilities + oversampling:
+multilingual = interleave_datasets(
+    [es_dataset, fr_dataset],
+    probabilities=[0.8, 0.2],
+    seed=42,
+    stopping_strategy="all_exhausted"
+)
+```
+
+#### Sharding Behaviour
+
+When using sharding with interleaved IterableDatasets, the interleaved dataset's shard count = **minimum** of input shard counts. Each new shard contains at least 1 shard from every input dataset:
+
+```
+Input shards:  [32, 48, 128]
+Interleaved:   min = 32 shards
+Per new shard: 1 from ds1, 1-2 from ds2, 4 from ds3
+```
+
+#### API Signature
+
+```python
+interleave_datasets(
+    datasets: list,
+    probabilities: Optional[list[float]] = None,
+    seed: Optional[int] = None,
+    info: Optional[DatasetInfo] = None,
+    split: Optional[NamedSplit] = None,
+    stopping_strategy: Literal[
+        'first_exhausted',
+        'all_exhausted',
+        'all_exhausted_without_replacement'
+    ] = 'first_exhausted'
+) -> Dataset | IterableDataset
+```
+
+### 3. Key Differences
+
+| Aspect | `concatenate_datasets()` | `interleave_datasets()` |
+|--------|------------------------|------------------------|
+| Data flow | All of A, then all of B | Alternating/probabilistic |
+| Row count | Sum of all inputs | Varies by strategy |
+| Column requirement | Same types (axis=0) or same rows (axis=1) | Same types |
+| Dataset types | `Dataset` only | `Dataset` + `IterableDataset` |
+| Probabilities | No | Yes |
+| Stopping strategies | N/A | 3 strategies |
+| Use case | Training on combined corpora | Multi-domain balanced training, language mixing |
+
+### 4. Practical Patterns
+
+**Multi-language training:** Use `interleave_datasets()` with probabilities to control language distribution:
+
+```python
+datasets = [load_dataset(..., lang, split="train", streaming=True) for lang in langs]
+probs = [0.5, 0.3, 0.2]  # 50% English, 30% French, 20% Spanish
+mixed = interleave_datasets(datasets, probabilities=probs, seed=42)
+```
+
+**Adding metadata columns:** Use `concatenate_datasets(axis=1)` to attach IDs or metadata:
+
+```python
+ds_with_ids = concatenate_datasets([original, id_dataset], axis=1)
+```
+
+**Reassembling shards:** `concatenate_datasets(shards)` recovers the original order — useful after distributed processing.
+
+### Source
+- Official process docs: https://huggingface.co/docs/datasets/en/process
+- API ref: https://huggingface.co/docs/datasets/v4.8.4/en/package_reference/main_classes#datasets.concatenate_datasets
+- Stream guide: https://huggingface.co/docs/datasets/en/stream
 - Live test: datasets v5.0.0 on MRPC (3,668 rows), verified this session
