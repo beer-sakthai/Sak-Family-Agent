@@ -1,5 +1,401 @@
 # HF Learnings Log
 
+## 2026-07-24: hf-hub-modelcard-python-api — Complete ModelCard & CardData Python API Reference (Topic #175)
+
+### Summary
+Comprehensive reference for the Hugging Face Hub's Python `ModelCard` API from `huggingface_hub` — the programmatic interface for creating, reading, updating, and publishing model cards (and dataset/Space cards) on the Hub. Covers the full class hierarchy (`RepoCard` → `ModelCard`/`DatasetCard`/`SpaceCard`), metadata with `ModelCardData`, structured evaluation results with `EvalResult`, Jinja2 template-based card creation, `metadata_update()` for lightweight changes, validation against Hub rules, and push-to-Hub workflows including PR-based contributions.
+
+### Source
+- Hugging Face Hub docs — Model Cards: https://huggingface.co/docs/hub/en/model-cards
+- huggingface_hub Model Cards guide: https://huggingface.co/docs/huggingface_hub/main/en/guides/model-cards
+- huggingface_hub cards package reference: https://huggingface.co/docs/huggingface_hub/main/en/package_reference/cards
+- Source: `huggingface_hub/repocard.py` (RepoCard, ModelCard, DatasetCard, SpaceCard, CardData, ModelCardData, DatasetCardData, SpaceCardData, EvalResult, metadata_update)
+- Default template: `src/huggingface_hub/templates/modelcard_template.md`
+
+### 1. Class Hierarchy
+
+```
+RepoCard (base class)
+├── content (str) — read/write, parses YAML header + Markdown body
+├── data (CardData subclass) — parsed metadata
+├── text (str) — body text (read-only, excludes metadata header)
+│
+├── ModelCard (repo_type="model")
+│   └── data: ModelCardData
+├── DatasetCard (repo_type="dataset")
+│   └── data: DatasetCardData
+└── SpaceCard (repo_type="space")
+    └── data: SpaceCardData
+```
+
+The `RepoCard` base class handles all YAML parsing and serialization. Subclasses only set default `repo_type`.
+
+### 2. Loading Cards
+
+```python
+from huggingface_hub import ModelCard, DatasetCard
+
+# Load from Hub repo
+card = ModelCard.load("nateraw/vit-base-beans")
+card.data.language  # 'en'
+card.data.tags      # ['generated_from_trainer', 'image-classification', 'pytorch']
+card.text           # '# My Model Card\n\n...' (no YAML header)
+card.content        # '---\nlanguage: en\n...\n---\n\n# My Model Card\n...' (full)
+
+# Load from local file
+card = ModelCard.load("/path/to/README.md")
+
+# Load with repo_type hint
+card = DatasetCard.load("username/my-dataset")
+```
+
+**Loading flow:**
+1. If `repo_id_or_path` has a `/`, fetch `README.md` from the Hub via HfApi
+2. If it's a local path, read the file directly
+3. Parse YAML frontmatter (between `---` delimiters) into `card.data`
+4. Remaining text becomes `card.text`
+
+### 3. Creating Cards from Text
+
+```python
+content = """
+---
+language: en
+license: mit
+pipeline_tag: image-classification
+---
+
+# My Model Card
+
+This model was trained on...
+"""
+
+card = ModelCard(content)
+card.data.to_dict()
+# {'language': 'en', 'license': 'mit', 'pipeline_tag': 'image-classification'}
+
+# With f-strings for dynamic content
+card_data = ModelCardData(language="en", license="mit", library_name="timm")
+content = f"""
+---
+{card_data.to_yaml()}
+---
+
+# My Model
+
+Created by @beer-sakthai
+"""
+card = ModelCard(content)
+```
+
+### 4. Creating Cards from Jinja2 Templates
+
+Requires `jinja2` installed. Two built-in templates exist:
+- `modelcard_template.md` (for ModelCard)
+- `datasetcard_template.md` (for DatasetCard)
+
+```python
+from huggingface_hub import ModelCard, ModelCardData
+
+card_data = ModelCardData(
+    language="en",
+    license="mit",
+    library_name="transformers",
+    tags=["text-generation", "llama"],
+    datasets=["HuggingFaceFW/fineweb"],
+)
+
+# Using the default template
+card = ModelCard.from_template(
+    card_data,
+    model_id="my-llama-model",
+    model_description="Fine-tuned Llama 4 on FineWeb",
+    developers="Beer SakThai",
+    repo="https://huggingface.co/beer-sakthai",
+)
+
+# Using a custom template file
+card = ModelCard.from_template(
+    card_data=card_data,
+    template_path="./my_custom_template.md",
+    custom_var="any value",  # passed to jinja template
+)
+```
+
+**Default template sections** (from `modelcard_template.md`):
+- Model description
+- Intended uses & limitations
+- Training data
+- Training procedure (hyperparameters, compute)
+- Evaluation results
+- Environmental impact (CO2)
+- Technical specifications
+- Citation information
+
+**Custom template pattern:**
+```markdown
+---
+{{ card_data }}
+---
+
+# Model Card for {{ model_id }}
+
+{{ model_description }}
+
+## Intended Use
+{{ intended_use | default("") }}
+```
+
+### 5. ModelCardData — Metadata Reference
+
+```python
+from huggingface_hub import ModelCardData
+
+card_data = ModelCardData(
+    # Core identifiers
+    language="en",                         # ISO 639-1 code or list
+    license="mit",                         # Standard license identifier
+    license_name="Custom License",         # Name (for custom licenses)
+    license_link="https://example.com",    # URL (for custom licenses)
+    library_name="transformers",           # HF-integrated library name
+    pipeline_tag="text-generation",        # Task identifier
+    
+    # Relationships
+    base_model="meta-llama/Llama-4-8B",    # Source model ID (str or list[str])
+    datasets=["HuggingFaceFW/fineweb"],    # Training dataset IDs
+    
+    # Discoverability
+    tags=["llama", "fine-tuned"],          # Custom tags for filtering
+    metrics=["accuracy"],                  # Metric names from hf.co/metrics
+    
+    # Evaluation results (structured)
+    model_name="my-model",                 # Leaderboard name
+    eval_results=[
+        EvalResult(
+            task_type="text-generation",
+            dataset_type="lambada",
+            dataset_name="LAMBADA",
+            metric_type="perplexity",
+            metric_value=8.5,
+        ),
+    ],
+    
+    # Additional arbitrary metadata
+    ignore_metadata_errors=False,
+    **{"custom_field": "value"},           # Additional kwargs → YAML keys
+)
+
+card_data.to_dict()      # → dict ready for YAML serialization
+card_data.to_yaml()      # → YAML block string
+card_data["language"]    # → 'en' (dict-like access)
+card_data.pop("tags")    # → ['llama', 'fine-tuned']
+```
+
+**Key design:**
+- `ModelCardData` behaves like a dict (get, pop, set) but does NOT inherit from dict — this allows controlled `to_dict()`/`to_yaml()` export with custom logic for `eval_results` → `model-index` conversion.
+- Additional `**kwargs` are preserved as extra YAML keys.
+- `model-name` is auto-derived from repo name if not provided.
+
+### 6. EvalResult — Structured Evaluation Results
+
+```python
+from huggingface_hub import EvalResult
+
+result = EvalResult(
+    task_type="image-classification",  # Required: task type identifier
+    dataset_type="beans",              # Required: dataset type identifier
+    dataset_name="Beans",              # Required: human-readable dataset name
+    metric_type="accuracy",            # Required: metric identifier
+    metric_value=0.95,                 # Required: numeric score
+    task_name="Image Classification",  # Optional: human-readable task
+    metric_name="Accuracy",            # Optional: human-readable metric (defaults to metric_type)
+    metric_config="default",           # Optional: metric configuration name
+)
+
+# Multiple results → list
+card_data = ModelCardData(
+    model_name="my-model",
+    eval_results=[
+        EvalResult(task_type="text-generation", dataset_type="lambada", dataset_name="LAMBADA", metric_type="perplexity", metric_value=8.5),
+        EvalResult(task_type="text-generation", dataset_type="wikitext",  dataset_name="WikiText-2", metric_type="perplexity", metric_value=9.2),
+    ]
+)
+```
+
+**How it serializes in YAML:**
+```yaml
+model-index:
+- name: my-model
+  results:
+  - task:
+      type: text-generation
+    dataset:
+      name: LAMBADA
+      type: lambada
+    metrics:
+    - type: perplexity
+      value: 8.5
+  - task:
+      type: text-generation
+    dataset:
+      name: WikiText-2
+      type: wikitext
+    metrics:
+    - type: perplexity
+      value: 9.2
+```
+
+This is the same format recognized by PapersWithCode leaderboards.
+
+### 7. Pushing Cards to the Hub
+
+```python
+# Create a card
+card = ModelCard.from_template(
+    ModelCardData(language="en", license="mit"),
+    model_description="My fine-tuned model",
+)
+
+# Push directly to a repo's README.md
+url = card.push_to_hub("username/my-model")
+# → https://huggingface.co/username/my-model/blob/main/README.md
+
+# Push as a pull request (no write access required)
+card.push_to_hub("username/my-model", create_pr=True)
+# Result: a PR at https://huggingface.co/username/my-model/discussions/N
+
+# Customize commit
+card.push_to_hub(
+    "username/my-model",
+    commit_message="docs: update model card with eval results",
+    commit_description="Added LAMBADA perplexity results",
+    revision="main",
+    parent_commit="abc1234",  # Ensures repo hasn't changed
+)
+```
+
+**push_to_hub parameters:**
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `repo_id` | str | required | Target repo (e.g. "user/model") |
+| `token` | str | stored token | HF auth token |
+| `repo_type` | str | "model" | One of "model", "dataset", "space" |
+| `commit_message` | str | "Update README.md" | Commit title |
+| `commit_description` | str | None | Extended description |
+| `revision` | str | "main" | Git branch/ref |
+| `create_pr` | bool | False | Push as a PR instead of direct commit |
+| `parent_commit` | str | None | Enforce parent SHA for safety |
+
+### 8. Saving and Loading Locally
+
+```python
+# Save to a file
+card.save("/tmp/my_model_card.md")
+
+# Load from a local file
+card = ModelCard.load("/tmp/my_model_card.md")
+```
+
+### 9. Validation
+
+```python
+# Validate metadata against Hub rules (requires internet)
+card.validate()
+# Raises ValueError if invalid, HTTPError if API fails
+```
+
+Validation checks are pulled from the Hub's validation API. Common failures:
+- Invalid license identifier
+- Invalid pipeline_tag
+- Malformed model-index structure
+
+### 10. metadata_update() — Lightweight Metadata Changes
+
+For quick metadata updates without loading the full card:
+
+```python
+from huggingface_hub import metadata_update
+
+# Set a new pipeline_tag
+metadata_update("username/my-cool-model", {"pipeline_tag": "image-classification"})
+
+# Overwrite existing values
+metadata_update(
+    "username/my-cool-model",
+    {"pipeline_tag": "text-generation"},
+    overwrite=True,
+)
+
+# Create a PR (no write access needed)
+metadata_update(
+    "someone/model",
+    {"pipeline_tag": "text-classification"},
+    create_pr=True,
+)
+```
+
+**Important:** `overwrite` defaults to `False` — without it, updating an existing key raises an error. Always pass `overwrite=True` when modifying existing metadata.
+
+### 11. DatasetCard & SpaceCard — Analogous APIs
+
+```python
+from huggingface_hub import DatasetCard, DatasetCardData, SpaceCard, SpaceCardData
+
+# Dataset card
+card_data = DatasetCardData(
+    language=["en"],
+    license="mit",
+    annotations_creators="crowdsourced",
+    task_categories=["text-classification"],
+    task_ids=["sentiment-analysis"],
+    multilinguality="monolingual",
+    pretty_name="My Dataset",
+    size_categories="10K<n<100K",
+)
+card = DatasetCard.from_template(card_data, pretty_name=card_data.pretty_name)
+card.push_to_hub("username/my-dataset", repo_type="dataset")
+
+# Space card
+space_data = SpaceCardData(
+    title="My Space",
+    sdk="gradio",
+    sdk_version="5.0",
+    python_version="3.11",
+    license="mit",
+)
+space_card = SpaceCard(space_data)
+```
+
+### 12. Best Practices
+
+1. **Always use from_template for new cards** — the default template includes all recommended sections for discoverability
+2. **Include eval_results** — they populate the `model-index` which feeds PapersWithCode leaderboards
+3. **Set `base_model`** — this enables the model lineage graph on the Hub (fine-tune, merge, quantized relations)
+4. **Set `library_name` explicitly** — post-August 2024 repos don't auto-detect transformers
+5. **Use `create_pr=True`** for repos you don't own — it's the standard open-source contribution pattern
+6. **Bundle `metadata_update` for quick fixes** — no need to construct full cards for single-field changes
+7. **Validate before pushing** — `card.validate()` catches issues early
+
+### 13. Zero-Cost Implications for Beer
+
+- ModelCard API is **100% free** — no GPU, no API credits, no paid tier required
+- Cards live in the repo's `README.md` — no additional storage cost
+- Programmatic card updates fit perfectly into CI/CD pipelines for Beer's 8 models
+- `EvalResult` integration with Open LLM Leaderboard gives free exposure
+- Default Jinja2 template is MIT-licensed and free to customize
+
+### Resources
+- https://huggingface.co/docs/hub/en/model-cards — Hub model card guide
+- https://huggingface.co/docs/huggingface_hub/main/en/guides/model-cards — huggingface_hub guide
+- https://huggingface.co/docs/huggingface_hub/main/en/package_reference/cards — API reference
+- Default template: `src/huggingface_hub/templates/modelcard_template.md` in huggingface_hub repo
+- https://github.com/huggingface/huggingface_hub/blob/main/src/huggingface_hub/repocard.py — source code
+
+### Skill
+mlops/huggingface-hub -- references/hf-learnings.md
+
+---
+
 ## 2026-07-25: hf-datasets-server-parquet-conversion-pipeline (Deep Dive) — Parquet Conversion Architecture Internals (Topic #174 Deepened)
 
 ### Summary
