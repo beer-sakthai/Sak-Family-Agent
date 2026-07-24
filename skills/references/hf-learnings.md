@@ -12101,3 +12101,17 @@ ctrl.addEventListener('stdout', (e) => ...)
 - Pyodide: https://pyodide.org/
 - Static Spaces: https://huggingface.co/docs/hub/en/spaces-static
 |
+---
+
+## 2026-07-24: hf-inference-client-image-input-pipeline-deep-dive — InferenceClient Image Input Handling (Topic #188)
+
+### Summary
+Source-code deep-dive into the `huggingface_hub` InferenceClient's image input pipeline. The `ContentT` type union accepts 7 input formats: bytes, bytearray, memoryview, BinaryIO (file-like objects), str URLs, str/Path local files, and PIL.Image.Image. The `_open_as_mime_bytes()` function normalizes all types into `MimeBytes` (bytes subclass with `.mime_type`). Key encoding functions: `_b64_encode()` for base64 JSON embedding, `_as_url()` for data URLs in multimodal chat. The `HFInferenceBinaryInputTask` provider handles the raw-binary vs. b64-JSON split based on parameter presence. 8 image task methods (image_classification, image_segmentation, image_to_image, image_to_video, image_to_text, object_detection, text_to_image, visual_question_answering, zero_shot_image_classification) plus document_question_answering. Chat completion uses OpenAI-compatible content parts instead of ContentT.
+
+### Source Code Files Analyzed
+- huggingface_hub/inference/_common.py — ContentT type, _open_as_mime_bytes, _b64_encode, _as_url, _bytes_to_image
+- huggingface_hub/inference/_client.py — 8 image task methods, chat_completion multimodal pattern
+- huggingface_hub/inference/_providers/hf_inference.py — HFInferenceTask vs HFInferenceBinaryInputTask
+
+### References
+- huggingface_hub inference source: https://github.com/huggingface/huggingface_hub/blob/main/src/huggingface_hub/inference/

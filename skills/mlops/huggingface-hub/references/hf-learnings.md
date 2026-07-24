@@ -1525,7 +1525,144 @@ else:
 ### Resources
 - Manage cache guide: https://huggingface.co/docs/huggingface_hub/en/guides/manage-cache
 - Cache-system reference: https://huggingface.co/docs/huggingface_hub/en/package_reference/cache
-- Environment variables: https://huggingface.co/docs/huggingface_hub/en/package_reference/environment_variables
+|- Env vars: https://huggingface.co/docs/huggingface_hub/package_reference/environment_variables
+
+---
+
+## 2026-07-24: hf-inference-client-image-input-pipeline-deep-dive — Image Input Handling in InferenceClient (Topic #188)
+
+### Summary
+Source-code deep-dive into the `huggingface_hub` InferenceClient's complete image input pipeline. Covers the `ContentT` type union (7 accepted formats), the `_open_as_mime_bytes` normalization engine, encoding utilities (`_b64_encode`, `_as_url`, `_bytes_to_image`), the 8 task-specific image methods, provider-specific binary vs. JSON handling, and the multimodal chat completion pattern via OpenAI-compatible data URLs. All findings verified against `huggingface_hub` source code at `/opt/data/.venv-sakthai/lib/python3.14/site-packages/huggingface_hub/inference/`.
+
+### Source
+- huggingface_hub inference/_common.py: https://github.com/huggingface/huggingface_hub/blob/main/src/huggingface_hub/inference/_common.py
+- huggingface_hub inference/_client.py: https://github.com/huggingface/huggingface_hub/blob/main/src/huggingface_hub/inference/_client.py
+- huggingface_hub inference/_providers/hf_inference.py: https://github.com/huggingface/huggingface_hub/blob/main/src/huggingface_hub/inference/_providers/hf_inference.py
+
+### 1. The ContentT Type System
+
+The core type alias `ContentT` (in `_common.py` line 48) defines all 7 accepted image input formats:
+
+```python
+ContentT = Union[bytes, BinaryIO, PathT, UrlT, "Image", bytearray, memoryview]
+# Where:
+PathT = Union[str, Path]
+UrlT  = str  # Must start with http:// or https:// (checked at runtime)
+```
+
+| # | Type | Example | Use Case |
+|---|------|---------|----------|
+| 1 | `bytes` | `open("img.jpg","rb").read()` | Raw file bytes in memory |
+| 2 | `bytearray` | `bytearray(data)` | Mutable byte buffer |
+| 3 | `memoryview` | `memoryview(data)` | Zero-copy buffer view |
+| 4 | `BinaryIO` (duck-typed via `.read()`) | `open("img.jpg","rb")` | File-like stream objects |
+| 5 | `str` (URL) | `"https://example.com/img.jpg"` | Remote image (auto-downloaded) |
+| 6 | `str`/`Path` (local path) | `"img.jpg"` or `Path("img.jpg")` | Local file (auto-opened) |
+| 7 | `PIL.Image.Image` | `Image.open("img.jpg")` | In-memory PIL Image object |
+
+**Key insight:** The `str` type is ambiguous — checked at runtime: if it starts with `http://` or `https://` it's treated as a URL and downloaded; otherwise treated as a local file path.
+
+### 2. The Normalization Engine: `_open_as_mime_bytes()`
+
+This function (lines 126–189 in `_common.py`) converts any `ContentT` input to `MimeBytes` (bytes subclass with `.mime_type` attribute). Processing order (first-match wins):
+
+```
+Input
+├── None → return None
+├── bytes → MimeBytes(content) [no mime type]
+├── bytearray/memoryview → MimeBytes(bytes(content)) [no mime type]
+├── duck-type .read() → MimeBytes(f.read(), mime=guess_type(f.name))
+│   (raises TypeError if .read() returns str instead of bytes)
+├── str starting with http:// or https:// → HTTP GET download
+│   → MimeBytes(response.content, mime=Content-Type header or guess)
+├── str (not URL) → treated as Path; raises FileNotFoundError if missing
+├── Path → MimeBytes(path.read_bytes(), mime=guess_type(path))
+├── PIL.Image.Image → save to BytesIO (format preserved, default PNG)
+│   → MimeBytes(buffer.getvalue(), mime=f"image/{fmt.lower()}")
+└── Any other type → TypeError
+```
+
+**MimeType detection priority:** BinaryIO→`.name` attribute guess, URL→HTTP Content-Type header, Path→file extension guess, PIL image→format metadata, raw bytes→None.
+
+### 3. Encoding Utilities
+
+| Function | Input | Output | Used By |
+|----------|-------|--------|---------|
+| `_b64_encode(content) → str` | Any ContentT | Base64 string (no prefix) | `document_qa()`, `visual_qa()` — embeds image in JSON body |
+| `_as_url(content, default_mime) → str` | Any ContentT | `data:{mime};base64,{data}` data URL | Chat completion multimodal content parts |
+| `_bytes_to_image(content) → Image` | Raw bytes | PIL.Image | `text_to_image()`, `image_to_image()`, `image_to_video()` |
+| `_b64_to_image(str) → Image` | Base64 string | PIL.Image | Client-side post-processing |
+
+**`_as_url` shortcut:** URLs starting with `http://`, `https://`, or `data:` pass through unchanged — no re-encoding.
+
+### 4. Image Methods on InferenceClient
+
+All 8 image methods in `_client.py` accept `image: ContentT`:
+
+| Method | Line | Returns | API Task |
+|--------|------|---------|----------|
+| `image_classification()` | 1163 | `list[ImageClassificationOutputElement]` | image-classification |
+| `image_segmentation()` | 1213 | `list[ImageSegmentationOutputElement]` | image-segmentation |
+| `image_to_image()` | 1281 | `Image` (PIL) | image-to-image |
+| `image_to_video()` | 1357 | `bytes` | image-to-video |
+| `image_to_text()` | 1436 | `ImageToTextOutput` | image-to-text |
+| `object_detection()` | 1482 | `list[ObjectDetectionOutputElement]` | object-detection |
+| `text_to_image()` | 2439 | `Image` (PIL) | text-to-image (no image input) |
+| `visual_question_answering()` | 3048 | `list[VisualQuestionAnsweringOutputElement]` | visual-question-answering |
+| `zero_shot_image_classification()` | 3210 | `list[ZeroShotImageClassificationOutputElement]` | zero-shot-image-classification |
+
+`document_question_answering()` (line 937) also accepts `image: ContentT` and always passes `{"question": ..., "image": _b64_encode(image)}`.
+
+### 5. Provider-Specific Image Handling
+
+**`HFInferenceTask`** (JSON-based): For text tasks — raises `ValueError` on binary inputs.
+
+**`HFInferenceBinaryInputTask`** (binary-capable, lines 72–101):
+- **No parameters** → raw bytes via `_open_as_mime_bytes(inputs)` with auto-detected MIME
+- **With parameters** → base64 in JSON: `{"inputs": _b64_encode(inputs), "parameters": ...}`
+
+### 6. Chat Completion Multimodal Pattern
+
+`chat_completion()` does NOT accept `ContentT` for images — users provide pre-encoded URLs:
+```python
+messages = [{"role": "user", "content": [
+    {"type": "image_url", "image_url": {"url": "data:image/jpeg;base64,..."}},
+    {"type": "text", "text": "Describe this image."},
+]}]
+```
+
+### 7. Key Architectural Insights
+
+1. **Dual pathway:** Every image method supports raw binary (no parameters, minimal overhead) or b64 JSON (with parameters, +33% size).
+2. **Lazy PIL import:** Only needed when passing PIL Image objects or receiving image output. Bytes/URLs/Paths work without PIL.
+3. **String ambiguity risk:** A plain string is always treated as a path first — can cause confusing `FileNotFoundError`.
+4. **Chat completion gap:** Unlike task methods, `chat_completion()` has no `ContentT` convenience — users must encode manually.
+5. **BinaryIO duck-typing:** Matches any `.read()` object — including text streams (raises `TypeError` at runtime).
+
+### 8. Zero-Cost Patterns
+
+```python
+from huggingface_hub import InferenceClient
+client = InferenceClient()  # free tier
+
+# Classification — auto-selects HF's recommended free model
+result = client.image_classification("cat.jpg")
+
+# Captioning — free via recommended model
+caption = client.image_to_text("https://example.com/photo.jpg")
+
+# VQA — specify a free model explicitly
+answers = client.visual_question_answering(
+    image="scene.jpg",
+    question="How many people?",
+    model="google/vit-base-patch16-224",
+)
+```
+
+### References
+- `_common.py`: https://github.com/huggingface/huggingface_hub/blob/main/src/huggingface_hub/inference/_common.py
+- `_client.py`: https://github.com/huggingface/huggingface_hub/blob/main/src/huggingface_hub/inference/_client.py
+- `hf_inference.py` provider: https://github.com/huggingface/huggingface_hub/blob/main/src/huggingface_hub/inference/_providers/hf_inference.py
 - Xet guide: https://huggingface.co/docs/hub/xet/index
 - `scan_cache_dir` docs: https://huggingface.co/docs/huggingface_hub/main/en/package_reference/cache#huggingface_hub.scan_cache_dir
 - `hf cache` CLI: https://huggingface.co/docs/huggingface_hub/main/en/guides/cli#hf-cache
@@ -4011,4 +4148,141 @@ Comprehensive deep-dive into `hf_transfer` — Hugging Face's Rust-based downloa
 - huggingface_hub Xet utils: https://github.com/huggingface/huggingface_hub/blob/main/src/huggingface_hub/utils/_xet.py
 - hf_transfer PyPI: https://pypi.org/pypi/hf_transfer/
 - Xet docs: https://huggingface.co/docs/hub/en/xet
-- Env vars: https://huggingface.co/docs/huggingface_hub/package_reference/environment_variables
+|- Env vars: https://huggingface.co/docs/huggingface_hub/package_reference/environment_variables
+
+---
+
+## 2026-07-24: hf-inference-client-image-input-pipeline-deep-dive — Image Input Handling in InferenceClient (Topic #188)
+
+### Summary
+Source-code deep-dive into the `huggingface_hub` InferenceClient's complete image input pipeline. Covers the `ContentT` type union (7 accepted formats), the `_open_as_mime_bytes` normalization engine, encoding utilities (`_b64_encode`, `_as_url`, `_bytes_to_image`), the 8 task-specific image methods, provider-specific binary vs. JSON handling, and the multimodal chat completion pattern via OpenAI-compatible data URLs. All findings verified against `huggingface_hub` source code at `/opt/data/.venv-sakthai/lib/python3.14/site-packages/huggingface_hub/inference/`.
+
+### Source
+- huggingface_hub inference/_common.py: https://github.com/huggingface/huggingface_hub/blob/main/src/huggingface_hub/inference/_common.py
+- huggingface_hub inference/_client.py: https://github.com/huggingface/huggingface_hub/blob/main/src/huggingface_hub/inference/_client.py
+- huggingface_hub inference/_providers/hf_inference.py: https://github.com/huggingface/huggingface_hub/blob/main/src/huggingface_hub/inference/_providers/hf_inference.py
+
+### 1. The ContentT Type System
+
+The core type alias `ContentT` (in `_common.py` line 48) defines all 7 accepted image input formats:
+
+```python
+ContentT = Union[bytes, BinaryIO, PathT, UrlT, "Image", bytearray, memoryview]
+# Where:
+PathT = Union[str, Path]
+UrlT  = str  # Must start with http:// or https:// (checked at runtime)
+```
+
+| # | Type | Example | Use Case |
+|---|------|---------|----------|
+| 1 | `bytes` | `open("img.jpg","rb").read()` | Raw file bytes in memory |
+| 2 | `bytearray` | `bytearray(data)` | Mutable byte buffer |
+| 3 | `memoryview` | `memoryview(data)` | Zero-copy buffer view |
+| 4 | `BinaryIO` (duck-typed via `.read()`) | `open("img.jpg","rb")` | File-like stream objects |
+| 5 | `str` (URL) | `"https://example.com/img.jpg"` | Remote image (auto-downloaded) |
+| 6 | `str`/`Path` (local path) | `"img.jpg"` or `Path("img.jpg")` | Local file (auto-opened) |
+| 7 | `PIL.Image.Image` | `Image.open("img.jpg")` | In-memory PIL Image object |
+
+**Key insight:** The `str` type is ambiguous — checked at runtime: if it starts with `http://` or `https://` it's treated as a URL and downloaded; otherwise treated as a local file path.
+
+### 2. The Normalization Engine: `_open_as_mime_bytes()`
+
+This function (lines 126–189 in `_common.py`) converts any `ContentT` input to `MimeBytes` (bytes subclass with `.mime_type` attribute). Processing order (first-match wins):
+
+```
+Input
+├── None → return None
+├── bytes → MimeBytes(content) [no mime type]
+├── bytearray/memoryview → MimeBytes(bytes(content)) [no mime type]
+├── duck-type .read() → MimeBytes(f.read(), mime=guess_type(f.name))
+│   (raises TypeError if .read() returns str instead of bytes)
+├── str starting with http:// or https:// → HTTP GET download
+│   → MimeBytes(response.content, mime=Content-Type header or guess)
+├── str (not URL) → treated as Path; raises FileNotFoundError if missing
+├── Path → MimeBytes(path.read_bytes(), mime=guess_type(path))
+├── PIL.Image.Image → save to BytesIO (format preserved, default PNG)
+│   → MimeBytes(buffer.getvalue(), mime=f"image/{fmt.lower()}")
+└── Any other type → TypeError
+```
+
+**MimeType detection priority:** BinaryIO→`.name` attribute guess, URL→HTTP Content-Type header, Path→file extension guess, PIL image→format metadata, raw bytes→None.
+
+### 3. Encoding Utilities
+
+| Function | Input | Output | Used By |
+|----------|-------|--------|---------|
+| `_b64_encode(content) → str` | Any ContentT | Base64 string (no prefix) | `document_qa()`, `visual_qa()` — embeds image in JSON body |
+| `_as_url(content, default_mime) → str` | Any ContentT | `data:{mime};base64,{data}` data URL | Chat completion multimodal content parts |
+| `_bytes_to_image(content) → Image` | Raw bytes | PIL.Image | `text_to_image()`, `image_to_image()`, `image_to_video()` |
+| `_b64_to_image(str) → Image` | Base64 string | PIL.Image | Client-side post-processing |
+
+**`_as_url` shortcut:** URLs starting with `http://`, `https://`, or `data:` pass through unchanged — no re-encoding.
+
+### 4. Image Methods on InferenceClient
+
+All 8 image methods in `_client.py` accept `image: ContentT`:
+
+| Method | Line | Returns | API Task |
+|--------|------|---------|----------|
+| `image_classification()` | 1163 | `list[ImageClassificationOutputElement]` | image-classification |
+| `image_segmentation()` | 1213 | `list[ImageSegmentationOutputElement]` | image-segmentation |
+| `image_to_image()` | 1281 | `Image` (PIL) | image-to-image |
+| `image_to_video()` | 1357 | `bytes` | image-to-video |
+| `image_to_text()` | 1436 | `ImageToTextOutput` | image-to-text |
+| `object_detection()` | 1482 | `list[ObjectDetectionOutputElement]` | object-detection |
+| `text_to_image()` | 2439 | `Image` (PIL) | text-to-image (no image input) |
+| `visual_question_answering()` | 3048 | `list[VisualQuestionAnsweringOutputElement]` | visual-question-answering |
+| `zero_shot_image_classification()` | 3210 | `list[ZeroShotImageClassificationOutputElement]` | zero-shot-image-classification |
+
+`document_question_answering()` (line 937) also accepts `image: ContentT` and always passes `{"question": ..., "image": _b64_encode(image)}`.
+
+### 5. Provider-Specific Image Handling
+
+**`HFInferenceTask`** (JSON-based): For text tasks — raises `ValueError` on binary inputs.
+
+**`HFInferenceBinaryInputTask`** (binary-capable, lines 72–101):
+- **No parameters** → raw bytes via `_open_as_mime_bytes(inputs)` with auto-detected MIME
+- **With parameters** → base64 in JSON: `{"inputs": _b64_encode(inputs), "parameters": ...}`
+
+### 6. Chat Completion Multimodal Pattern
+
+`chat_completion()` does NOT accept `ContentT` for images — users provide pre-encoded URLs:
+```python
+messages = [{"role": "user", "content": [
+    {"type": "image_url", "image_url": {"url": "data:image/jpeg;base64,..."}},
+    {"type": "text", "text": "Describe this image."},
+]}]
+```
+
+### 7. Key Architectural Insights
+
+1. **Dual pathway:** Every image method supports raw binary (no parameters, minimal overhead) or b64 JSON (with parameters, +33% size).
+2. **Lazy PIL import:** Only needed when passing PIL Image objects or receiving image output. Bytes/URLs/Paths work without PIL.
+3. **String ambiguity risk:** A plain string is always treated as a path first — can cause confusing `FileNotFoundError`.
+4. **Chat completion gap:** Unlike task methods, `chat_completion()` has no `ContentT` convenience — users must encode manually.
+5. **BinaryIO duck-typing:** Matches any `.read()` object — including text streams (raises `TypeError` at runtime).
+
+### 8. Zero-Cost Patterns
+
+```python
+from huggingface_hub import InferenceClient
+client = InferenceClient()  # free tier
+
+# Classification — auto-selects HF's recommended free model
+result = client.image_classification("cat.jpg")
+
+# Captioning — free via recommended model
+caption = client.image_to_text("https://example.com/photo.jpg")
+
+# VQA — specify a free model explicitly
+answers = client.visual_question_answering(
+    image="scene.jpg",
+    question="How many people?",
+    model="google/vit-base-patch16-224",
+)
+```
+
+### References
+- `_common.py`: https://github.com/huggingface/huggingface_hub/blob/main/src/huggingface_hub/inference/_common.py
+- `_client.py`: https://github.com/huggingface/huggingface_hub/blob/main/src/huggingface_hub/inference/_client.py
+- `hf_inference.py` provider: https://github.com/huggingface/huggingface_hub/blob/main/src/huggingface_hub/inference/_providers/hf_inference.py
