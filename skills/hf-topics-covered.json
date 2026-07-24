@@ -145,7 +145,7 @@
   "hf-token-presets-fine-grained-tokens-v3",
   "hf-datasets-streaming-iterable-dataset",
   "hf-huggingface-hub-download-lifecycle",
-  "hf-hub-sandboxes",
+  "hf-hub-sandboxes-deep-dive",
   "hf-datasets-from-parquet",
   "hf-hub-organization-management-api",
   "hf-gradio-6-render-and-streaming-deep-dive",
@@ -154,5 +154,6 @@
   "hf-hub-xet-storage-and-hf-xet",
   "hf-inference-client-tool-use-and-function-calling",
   "hf-hub-openapi-spec-deep-dive",
-  "hf-quantization-methods-comparison"
+  "hf-quantization-methods-comparison",
+  "hf-inference-client-tool-use-and-function-calling-deep-dive"
 ]
