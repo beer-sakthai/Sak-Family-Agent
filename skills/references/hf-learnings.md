@@ -13093,3 +13093,19 @@ mlops/hf-hub-configuration — references/hf-learnings.md
 - `huggingface_hub/utils/_http.py` — `_http_backoff_base()`, `parse_ratelimit_headers()`, `_parse_retry_after()`
 - https://www.ietf.org/archive/id/draft-ietf-httpapi-ratelimit-headers-09.html
 - https://huggingface.co/.well-known/openapi.json
+
+## 2026-07-24: hf-datasets-500-agent-traces-json-type — Datasets v5.0.0 Deep-Dive (Topic #205+)
+
+### Summary
+Datasets v5.0.0 (June 5, 2026) introduced: **Agent traces** parsing via `teich`, **Json() type** for mixed-type tool-calling data in Arrow/Parquet, **multi-shard shuffle** (breaking change — true randomization in streaming), **batch(by_column=...)** for episode grouping, **Storage Buckets** integration (`hf://` URIs), and 4 new formats (Iceberg, TsFile, 3D mesh, CoNLL). Beer's 8 tool-calling datasets can be tagged `format:agent-traces` for auto-detection and direct training pipeline integration.
+
+### Key Takeaways for Beer
+1. **Tag datasets** with `format:agent-traces` in repo card for discoverability
+2. **Json() type** handles tool-calling data's mixed-type fields — use `on_mixed_types="use_json"` in `from_list()`/`map()`
+3. **Multi-shard shuffle** is the new default — `max_buffer_input_shards=1` for old behavior
+4. **batch(by_column=...)** groups tool-use episodes by session ID
+5. **Storage Buckets** let Beer load raw JSONL from HF buckets → process → push as curated dataset
+
+### Source
+Full deep-dive: `mlops/hf-datasets-library/references/hf-learnings.md`  
+Release: https://github.com/huggingface/datasets/releases/tag/5.0.0

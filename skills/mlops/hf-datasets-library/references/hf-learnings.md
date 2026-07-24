@@ -1358,6 +1358,156 @@ One sentence per row, each column is a list aligned with the token list. Support
 | Lance dataset streaming `storage_options` fix | [#8166](https://github.com/huggingface/datasets/pull/8166) | Correct credential passing for Lance |
 
 ---
+## 2026-07-24: hf-datasets-500-agent-traces-json-type — v5.0.0 Agent Traces, Json() Type & Features (Topic #205)
+
+### Summary
+Datasets v5.0.0 (June 5, 2026) introduced major features for tool-calling/agent data: native **Agent traces** parsing via `teich`, the **Json() type** for arbitrary JSON in Arrow/Parquet, **multi-shard shuffling** in streaming mode (breaking change), **batch(by_column=...)** for episode-based grouping, storage buckets integration, and 4 new input formats (Iceberg, TsFile, 3D mesh, CoNLL).
+
+### 1. Agent Traces — Native Agent Training Data Loading
+
+The `teich` library (new optional dependency) parses agent traces from **claude_code**, **pi**, **codex**, and others into standard `messages` format for SFT training with `trl`:
+
+```python
+from datasets import load_dataset
+
+# Auto-detected format:agent-traces — loads with teich parser
+ds = load_dataset("lhoestq/agent-traces-example", split="train")
+ds[0]["messages"]
+# [{'role': 'user', 'content': 'Download a random dataset...'}, ...]
+
+# Train directly
+# trl sft --dataset-name lhoestq/agent-traces-example ...
+```
+
+**How it works:**
+- `teich` library parses raw trace formats (JSONL with structured turn logs)
+- Converts to `messages` column fitting OpenAI-style chat format
+- Additional fields: `agent_trace_prompt`, `sent_at`, `count`
+- Dataset repo format tag `format:agent-traces` enables auto-detection
+- Discover all agent-traces datasets: https://huggingface.co/datasets?format=format:agent-traces&sort=trending
+
+**Why it matters for Beer:** Beer's 8 tool-calling datasets can be tagged with `format:agent-traces` for discoverability and loaded directly into training pipelines without custom parsing.
+
+### 2. Json() Type — Mixed-Type Fields in Arrow/Parquet
+
+Tool-calling datasets often have fields mixing `str`, `int`, `float`, `dict`, `list` — normally rejected by Arrow's strict schema. The `Json()` type stores such data as JSON strings internally while presenting as native Python objects:
+
+```python
+from datasets import Features, Value, Json
+
+features = Features({
+    "messages": [{"role": Value("string"), "content": Json()}],
+    "tool_calls": Json(),
+})
+
+ds = load_dataset("json", data_files="tool_data.jsonl", features=features)
+ds[0]["tool_calls"]  # -> [{"name": "search", "args": {"q": "..."}}]
+```
+
+**Auto-detection** with `on_mixed_types="use_json"`:
+```python
+ds = Dataset.from_list(data, on_mixed_types="use_json")
+# Mixed-type fields are auto-assigned Json() type
+```
+
+**Key properties:**
+- Serialized as JSON string in Arrow, deserialized on access
+- Supports `None` (preserved as `None`, not string `"null"`)
+- Compatible with `.map()`, `.cast()`, `.from_dict()`, `.from_list()`
+- Round-trips through Parquet with metadata preservation
+
+### 3. Multi-Shard Shuffle — True Randomization in Streaming
+
+**Breaking change in v5.0.0:** `IterableDataset.shuffle()` now pulls from multiple input shards simultaneously, solving the cold-start problem where only one shard's data appeared in the shuffle buffer:
+
+```python
+ds = load_dataset(..., streaming=True)
+ds = ds.shuffle(seed=42)  # uses max_buffer_input_shards=10 by default
+
+# Explicit configuration:
+ds = ds.shuffle(seed=42, buffer_size=1000, max_buffer_input_shards=10)
+
+# Old behavior (single shard):
+ds = ds.shuffle(seed=42, max_buffer_input_shards=1)
+```
+
+**Before vs After:**
+- Before: cold-start samples all came from shard 0 only (cluster of same shard)
+- After: first 10 samples come from 10 different shards (truly distributed)
+- Threads fetch first examples from input shards in parallel
+- `state_dict()` / `load_state_dict()` checkpointing still works
+
+### 4. batch(by_column=...) — Episode/Group Batching
+
+For robotics, tool-use episodes, or any data grouped by a key:
+
+```python
+from datasets import Dataset
+
+ds = Dataset.from_dict({
+    "episode": [0] * 10 + [1] * 10,
+    "frame": list(range(10)) * 2
+})
+batched = ds.batch(by_column="episode")
+for x in batched:
+    print(x)
+# {'episode': [0, 0, ..., 0], 'frame': [0, 1, ..., 9]}
+# {'episode': [1, 1, ..., 1], 'frame': [0, 1, ..., 9]}
+```
+
+Groups consecutive rows with same value in `by_column` into single batch rows. Works with both `Dataset` and `IterableDataset`.
+
+### 5. Storage Buckets Integration (v4.8.0+)
+
+Load raw data directly from Hugging Face Storage Buckets — no local intermediate:
+
+```python
+from datasets import load_dataset
+
+# Load raw data from a Storage Bucket
+ds = load_dataset("buckets/username/data-bucket", data_files=["*.jsonl"])
+
+# Or using hf:// URIs
+ds = load_dataset("json", data_files=["hf://buckets/username/data-bucket/*.jsonl"])
+
+# Process and publish the AI-ready dataset
+ds = ds.map(...).filter(...)
+ds.push_to_hub("username/my-dataset-ready-for-training")
+```
+
+Also fixes multiprocessed `push_to_hub` on macOS (now uses `spawn` instead of `fork`).
+
+### 6. New Supported Formats in v5.0.0
+
+| Format | Builder | Use Case |
+|--------|---------|----------|
+| **Apache Iceberg** | `load_dataset("iceberg", ...)` | Large-scale tabular data with ACID transactions |
+| **TsFile** (Apache IoTDB) | `load_dataset("tsfile", ...)` | Time-series IoT data, per-device wide format |
+| **3D Mesh** | `load_dataset("mesh_folder", ...)` | 3D graphics, robotics simulation, CAD |
+| **CoNLL** | `load_dataset("conll", ...)` / `conllu` | NER, POS tagging, parsing (CoNLL-2003/2000/U) |
+
+### 7. Other Notable Fixes in v5.0.0
+
+- **Parquet streaming hang fix** — no more infinite stall at end of script
+- **Parquet `columns` arg fix** — column selection works correctly
+- **Parquet reshard fix** — correct row group distribution
+- **Composed splits in streaming** — `split="train+validation"` now works
+- **`None` in Json() columns** — stays `None`, not `"null"` string
+- **Map progress bar fix** — `load_from_cache_file=False` no longer exceeds total
+- **Lance streaming `storage_options`** — correct credential passing
+
+### Source
+- Official v5.0.0 release: https://github.com/huggingface/datasets/releases/tag/5.0.0
+- Agent traces PR: https://github.com/huggingface/datasets/pull/8232
+- Multi-shard shuffle PR: https://github.com/huggingface/datasets/pull/8194
+- batch(by_column) PR: https://github.com/huggingface/datasets/pull/8172
+- Iceberg support PR: https://github.com/huggingface/datasets/pull/8148
+- 3D Mesh PR: https://github.com/huggingface/datasets/pull/8055
+- CoNLL format PR: https://github.com/huggingface/datasets/pull/8219
+- Storage buckets: https://huggingface.co/docs/datasets/en/loading#storage-buckets
+- Json() type PR: https://github.com/huggingface/datasets/pull/8027
+
+---
 
 ### Skill
 mlops/hf-datasets-library — references/hf-learnings.md
