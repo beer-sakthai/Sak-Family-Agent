@@ -9574,7 +9574,7 @@ Since Beer has no income (zero-cost constraint) and owns 8 models on HF:
 - optimum-quanto: https://github.com/huggingface/optimum-quanto
 - torchao: https://github.com/pytorch/ao
 - AQLM: https://github.com/Vahe1994/AQLM
-|- GGUF Hub Docs: https://huggingface.co/docs/hub/en/models-gguf
+- GGUF Hub Docs: https://huggingface.co/docs/hub/en/models-gguf
 
 ---
 
@@ -9778,4 +9778,3 @@ For Beer's 8 datasets (tool-calling training data), these operations are directl
 - https://huggingface.co/docs/datasets/v4.8.4/process
 - https://huggingface.co/docs/datasets/v4.8.4/en/package_reference/main_classes
 - https://huggingface.co/docs/datasets/v4.8.4/en/loading#slice-splits
-|
