@@ -13627,3 +13627,202 @@ Note: Native `hf://buckets/` support in the DuckDB CLI is expected in a future r
 
 ### Skill
 mlops/hf-data-studio-sql-console — Create new SKILL.md + references/hf-learnings.md
+
+## 2026-07-24: hf-hub-repositories-licenses-complete-reference — Complete Guide to HF Hub Repo Licenses (Topic #227)
+
+### Summary
+Comprehensive reference covering the license system on the Hugging Face Hub for all repo types (models, datasets, Spaces). Covers all 70+ supported license identifiers, how to specify licenses in repo card metadata, the difference between SPDX-standard and custom AI-specific licenses (OpenRAIL, Llama Community License, Gemma Terms, etc.), `license_name` field for custom licenses, and best practices for adding LICENSE files.
+
+### Source
+- HF Hub Docs — Licenses: https://huggingface.co/docs/hub/en/repositories-licenses
+- SPDX License List: https://spdx.org/licenses/
+- Model Card metadata spec: https://github.com/huggingface/hub-docs/blob/main/modelcard.md
+- Dataset Card metadata spec: https://github.com/huggingface/hub-docs/blob/main/datasetcard.md
+
+### 1. How Licenses Work on the HF Hub
+
+Every repository on the Hugging Face Hub (model, dataset, or Space) **must** declare a license in its card metadata (YAML front matter in `README.md`). The license:
+
+- Appears as a badge/tag at the top of the repo page
+- Is indexed by the Hub search — users can filter by license
+- Helps downstream users understand reuse permissions
+- Is **required** for model repos submitted to the Open LLM Leaderboard
+
+The license field in the YAML front matter uses the format:
+```yaml
+---
+license: <identifier>
+---
+```
+
+### 2. All Supported License Identifiers (70+)
+
+**Standard Open Source Licenses:**
+| License | Identifier |
+|---------|-----------|
+| Apache License 2.0 | `apache-2.0` |
+| MIT | `mit` |
+| BSD 2-clause | `bsd-2-clause` |
+| BSD 3-clause | `bsd-3-clause` |
+| BSD 3-clause Clear | `bsd-3-clause-clear` |
+| BSD license family | `bsd` |
+| GNU GPL v2.0 | `gpl-2.0` |
+| GNU GPL v3.0 | `gpl-3.0` |
+| GNU GPL family | `gpl` |
+| GNU LGPL v2.1 | `lgpl-2.1` |
+| GNU LGPL v3.0 | `lgpl-3.0` |
+| GNU LGPL family | `lgpl` |
+| GNU AGPL v3.0 | `agpl-3.0` |
+| Mozilla Public License 2.0 | `mpl-2.0` |
+| Eclipse Public License 1.0 | `epl-1.0` |
+| Eclipse Public License 2.0 | `epl-2.0` |
+| ISC | `isc` |
+| zLib License | `zlib` |
+| The Unlicense | `unlicense` |
+| Boost Software License 1.0 | `bsl-1.0` |
+| Artistic License 2.0 | `artistic-2.0` |
+| Academic Free License v3.0 | `afl-3.0` |
+| Educational Community License v2.0 | `ecl-2.0` |
+| Microsoft Public License | `ms-pl` |
+| PostgreSQL License | `postgresql` |
+| SIL Open Font License 1.1 | `ofl-1.1` |
+| University of Illinois/NCSA | `ncsa` |
+| Open Software License 3.0 | `osl-3.0` |
+| LaTeX Project Public License v1.3c | `lppl-1.3c` |
+| EUPL 1.1 | `eupl-1.1` |
+| EUPL 1.2 | `eupl-1.2` |
+| Etalab Open License 2.0 | `etalab-2.0` |
+| WTFPL | `wtfpl` |
+
+**Creative Commons Licenses:**
+| License | Identifier |
+|---------|-----------|
+| CC0 1.0 Universal | `cc0-1.0` |
+| CC BY 2.0 | `cc-by-2.0` |
+| CC BY 2.5 | `cc-by-2.5` |
+| CC BY 3.0 | `cc-by-3.0` |
+| CC BY 4.0 | `cc-by-4.0` |
+| CC BY-SA 3.0 | `cc-by-sa-3.0` |
+| CC BY-SA 4.0 | `cc-by-sa-4.0` |
+| CC BY-NC 2.0 | `cc-by-nc-2.0` |
+| CC BY-NC 3.0 | `cc-by-nc-3.0` |
+| CC BY-NC 4.0 | `cc-by-nc-4.0` |
+| CC BY-ND 4.0 | `cc-by-nd-4.0` |
+| CC BY-NC-ND 3.0 | `cc-by-nc-nd-3.0` |
+| CC BY-NC-ND 4.0 | `cc-by-nc-nd-4.0` |
+| CC BY-NC-SA 2.0 | `cc-by-nc-sa-2.0` |
+| CC BY-NC-SA 3.0 | `cc-by-nc-sa-3.0` |
+| CC BY-NC-SA 4.0 | `cc-by-nc-sa-4.0` |
+| CC license family | `cc` |
+
+**Data-Specific Licenses:**
+| License | Identifier |
+|---------|-----------|
+| Community Data License Agreement — Sharing 1.0 | `cdla-sharing-1.0` |
+| Community Data License Agreement — Permissive 1.0 | `cdla-permissive-1.0` |
+| Community Data License Agreement — Permissive 2.0 | `cdla-permissive-2.0` |
+| Computational Use of Data Agreement | `c-uda` |
+| Open Data Commons Attribution | `odc-by` |
+| Open Database License | `odbl` |
+| Open Data Commons Public Domain Dedication | `pddl` |
+| GNU Free Documentation License | `gfdl` |
+| Lesser GPL for Linguistic Resources | `lgpl-lr` |
+
+**AI/Model-Specific Licenses:**
+| License | Identifier |
+|---------|-----------|
+| OpenRAIL license family | `openrail` |
+| BigScience OpenRAIL-M | `bigscience-openrail-m` |
+| CreativeML OpenRAIL-M | `creativeml-openrail-m` |
+| BigScience BLOOM RAIL 1.0 | `bigscience-bloom-rail-1.0` |
+| BigCode Open RAIL-M v1 | `bigcode-openrail-m` |
+| Open Rail++-M | `openrail++` |
+| DeepFloyd IF Research License | `deepfloyd-if-license` |
+| FAIR Noncommercial Research License | `fair-noncommercial-research-license` |
+| H Research License | `h-research` |
+| Intel Research Use License | `intel-research` |
+| Apple Sample Code License | `apple-ascl` |
+| Apple Model License for Research | `apple-amlr` |
+| Open Model, Data & Weights License Agreement 1.0 | `openmdw-1.0` |
+| Open Model, Data & Weights License Agreement 1.1 | `openmdw-1.1` |
+| Llama 2 Community License | `llama2` |
+| Llama 3 Community License | `llama3` |
+| Llama 3.1 Community License | `llama3.1` |
+| Llama 3.2 Community License | `llama3.2` |
+| Llama 3.3 Community License | `llama3.3` |
+| Llama 4 Community License | `llama4` |
+| Grok 2 Community License | `grok2-community` |
+| Gemma Terms of Use | `gemma` |
+
+**Special:**
+| License | Identifier |
+|---------|-----------|
+| Unknown | `unknown` |
+| Other | `other` |
+
+### 3. Using `license: other` with Custom License Names
+
+When your license is not in the predefined list, use `license: other` plus a `license_name` field:
+```yaml
+---
+license: other
+license_name: My Custom License v1.0
+license_link: https://example.com/my-license
+---
+```
+
+Best practices for custom licenses:
+- Always include a `LICENSE` file in the repo root with the full license text
+- Use `license_name` for a human-readable display name
+- Optionally use `license_link` for a URL to the full license
+- Contact HF to add commonly-used licenses to the official list
+
+### 4. How the HF Hub Processes Licenses
+
+- **Display**: The license badge appears on the repo page header, next to the task/library tags
+- **Search**: Users can filter repos by license on the Hub (e.g., `?license=mit`)
+- **Metadata extraction**: The Hub's backend parses `license` from YAML front matter and normalizes it
+- **Leaderboard requirements**: The Open LLM Leaderboard requires models to have an `apache-2.0`, `mit`, `openrail*`, or compatible license to qualify
+- **Gated repos**: Some licenses (e.g., `llama3`, `gemma`) trigger license acceptance flow for gated repos
+
+### 5. License in Model vs Dataset vs Space Cards
+
+**Model cards** (`models/<org>/<repo>/README.md`):
+```yaml
+---
+license: apache-2.0
+library_name: transformers
+tags:
+- text-generation
+---
+```
+
+**Dataset cards** (`datasets/<org>/<repo>/README.md`):
+```yaml
+---
+license: cc0-1.0
+annotations_creators:
+- machine-generated
+language:
+- en
+---
+```
+
+**Space cards** — Spaces can optionally have a license but it's less common since Spaces are apps, not distributable assets.
+
+### 6. Practical Tips for Beer's Repos
+
+- Beer's 8 datasets (tool-calling data): Use `license: cc-by-4.0` or `license: apache-2.0` depending on preference — CC-BY-4.0 is common for datasets
+- Beer's 6 text-generation models: Use `license: apache-2.0` (open) or applicable community license (if fine-tuned from a gated model like Llama)
+- Beer's 2 GGUF files: Same license as the source model
+- Always include a `LICENSE` file in the repo root with full text
+- For existing repos, verify the license field is correctly set in YAML
+
+### Resources
+- HF Licenses docs: https://huggingface.co/docs/hub/en/repositories-licenses
+- SPDX License List: https://spdx.org/licenses/
+- Model Card metadata spec: https://github.com/huggingface/hub-docs/blob/main/modelcard.md
+- Dataset Card metadata spec: https://github.com/huggingface/hub-docs/blob/main/datasetcard.md
+
+### Skill
+skills/references — Appended to main hf-learnings.md (no new skill needed for this reference topic)
