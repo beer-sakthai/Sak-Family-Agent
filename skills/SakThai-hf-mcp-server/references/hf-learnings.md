@@ -164,3 +164,126 @@ All transports start a Management Web interface on `http://localhost:3000/`:
 - https://github.com/huggingface/hf-mcp-server
 - https://huggingface.co/mcp
 - https://www.gradio.app/guides/building-mcp-server-with-gradio
+
+---
+
+## 2026-07-24: hf-hub-spaces-as-mcp-servers — How Gradio Spaces Become MCP Tools (Topic #201)
+
+### Summary
+Deep-dive into the **Spaces as MCP servers** feature — where any Gradio Space on the Hub can expose its functions as callable MCP tools with `mcp_server=True`. Covers architecture, badge system, Dynamic Spaces, client setup, ZeroGPU quotas, and composability patterns. Verified against https://huggingface.co/docs/hub/en/spaces-mcp-servers.
+
+### Architecture
+
+The Spaces-as-MCP system has four layers:
+
+1. **Gradio Space** — a Gradio app deployed to HF Spaces with `demo.launch(mcp_server=True)`
+2. **MCP Badge** — grey badge auto-added to MCP-enabled Spaces; clicking it offers "Add to MCP tools"
+3. **Hub MCP Settings** — at `https://huggingface.co/settings/mcp`, users manage Space tools, Dynamic Spaces toggle, and Remove Embedded Images toggle
+4. **MCP Client** — the AI assistant (Claude Code, Cursor, VS Code, Codex, etc.)
+
+### Creating an MCP-enabled Space
+
+```python
+# pip install "gradio[mcp]"
+import gradio as gr
+
+def letter_counter(word: str, letter: str) -> int:
+    """Count occurrences of a letter in a word.
+    Args:
+        word: The word to search in
+        letter: The letter to count
+    Returns:
+        Number of times the letter appears
+    """
+    return word.lower().count(letter.lower())
+
+demo = gr.Interface(fn=letter_counter,
+                    inputs=["text", "text"],
+                    outputs="number")
+demo.launch(mcp_server=True)   # ← single flag enables MCP
+```
+
+**Requirements:**
+- `gradio[mcp]` package
+- Type hints on all function parameters and return values
+- Docstrings on exposed functions (become tool descriptions)
+- `mcp_server=True` in `demo.launch()`
+
+After pushing to a Gradio Space, the MCP badge appears automatically. Functions become callable MCP tools with typed arguments and descriptions.
+
+### Adding Existing Spaces as Tools
+
+Browse compatible Spaces (grey MCP badge on card), click badge → "Add to MCP tools" → confirm. The Space appears under "Spaces Tools" in MCP settings and becomes available to the client.
+
+### Dynamic Spaces
+
+The **Dynamic Spaces** toggle enables runtime discovery: the AI assistant can find and use MCP-compatible Spaces on-the-fly without manual addition. Ideal for open-ended tasks where the right tool isn't known in advance.
+
+### Remove Embedded Images
+
+Strips images from Gradio Space MCP responses. Useful when the client has limited image rendering or text-only output is preferred.
+
+### ZeroGPU Considerations
+
+- MCP calls to ZeroGPU Spaces consume the user's quota
+- Free accounts: limited daily GPU minutes
+- PRO accounts: 40 min/day ZeroGPU (8x free), ~600 images/day on FLUX.1-schnell
+- Calls fail when quota is exhausted
+
+### Composability: Mixing Spaces as Tools
+
+Any MCP-compatible Space becomes a composable tool. An AI assistant can chain Spaces:
+```
+User: "Generate a video with audio describing this image."
+  → Space A (image understanding) extracts description
+  → Space B (video generation) creates video  
+  → Space C (TTS) generates narration
+  → Combined result returned
+```
+
+### Gradio MCP Protocol Details
+
+Under the hood:
+1. Generates MCP server manifest from Gradio app function signatures
+2. Each `gr.Interface` or `gr.ChatInterface` function becomes an MCP tool
+3. Tool name = Python function name, description = docstring
+4. Parameters from type hints, return from return annotation
+5. Manifest served at `/.well-known/mcp` endpoint
+6. Hub's MCP Server proxies calls to the Space's Gradio endpoint
+
+### Client Integration
+
+Works with any MCP-compatible client: Claude Code (`claude mcp add`), Cursor, VS Code, Codex, OpenCode, ChatGPT, Zed. Each client reads the user's MCP settings from the Hub.
+
+### Comparison: Built-in vs Community MCP Tools
+
+| Aspect | Built-in (hf_fs, etc.) | Community Spaces |
+|--------|------------------------|-----------------|
+| Source | `huggingface/hf-mcp-server` | Any Gradio Space |
+| Discovery | Always available | Manual add or Dynamic Spaces |
+| Maintenance | HF team | Space author |
+| Tool count | 4 categories | Unlimited |
+| ZeroGPU | N/A | Consumes user quota |
+
+### Use Cases
+
+1. **Image gen**: FLUX, SDXL as MCP tools
+2. **Audio**: TTS, STT, music gen Spaces
+3. **Video**: Video diffusion Spaces (e.g., LTX Video)
+4. **LLM inference**: Chat Spaces via MCP
+5. **Multi-modal chains**: Image → caption → audio pipeline
+
+### Best Practices
+
+- Clear type hints and docstrings on exposed functions
+- Descriptive function names (become tool names)
+- Test in regular Gradio UI before enabling MCP
+- Set appropriate timeouts for long-running tools
+- Consider ZeroGPU quota — prefer lightweight models for frequent calls
+- Use `pip install "gradio[mcp]"` in requirements.txt
+
+### Sources
+- HF Spaces as MCP servers: https://huggingface.co/docs/hub/en/spaces-mcp-servers
+- HF MCP settings: https://huggingface.co/settings/mcp
+- Gradio MCP guide: https://www.gradio.app/guides/building-mcp-server-with-gradio
+- HF Changelog (Jul 22, 2026): https://huggingface.co/changelog/hf-mcp-server
