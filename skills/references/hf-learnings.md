@@ -11272,7 +11272,7 @@ Deep dive into PEFT v0.20.0 covering all LoRA initialization strategies (PiSSA, 
 
 ---
 
-## 2026-07-24: hf-timm — PyTorch Image Models Deep Dive (Topic #179 — New)
+## 2026-07-24: hf-timm — PyTorch Image Models Deep Dive (Topic #178 — New)
 
 ### Summary
 Comprehensive deep-dive into timm (PyTorch Image Models) v1.0.28 — 1,000+ pretrained vision models from 200+ architectures, now part of Hugging Face ecosystem. Covers installation, model creation/listing, inference pipeline, feature extraction (penultimate, multi-scale, intermediate via forward_features/features_only/forward_intermediates), data augmentation (RandAugment, AugMix, random erasing), and Hugging Face Hub integration (push_to_hf_hub, hf_hub: prefix loading). Full document at skills/mlops/hf-timm/references/hf-learnings.md.

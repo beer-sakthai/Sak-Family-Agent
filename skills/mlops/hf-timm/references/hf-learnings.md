@@ -1,6 +1,6 @@
 # HF Learnings — hf-timm
 
-## 2026-07-24: hf-timm — PyTorch Image Models Deep Dive (Topic #179 — New)
+## 2026-07-24: hf-timm — PyTorch Image Models Deep Dive (Topic #178 — New)
 
 ### Summary
 Comprehensive deep-dive into `timm` (PyTorch Image Models) v1.0.28 — the library of 1,000+ pretrained vision models now part of the Hugging Face ecosystem. Covers installation, model creation/listing, inference pipeline, feature extraction (penultimate, multi-scale, intermediate), data augmentation and transforms, Hugging Face Hub integration, the official training script, and key configuration parameters.
