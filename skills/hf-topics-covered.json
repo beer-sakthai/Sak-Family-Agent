@@ -144,6 +144,7 @@
   "hf-agents-course-multi-agent-orchestration-deep-dive",
   "hf-token-presets-fine-grained-tokens-v3",
   "hf-datasets-streaming-iterable-dataset",
+  "hf-datasets-streaming-iterable-dataset-v2",
   "hf-huggingface-hub-download-lifecycle",
   "hf-hub-sandboxes-deep-dive",
   "hf-datasets-from-parquet",
@@ -155,5 +156,7 @@
   "hf-inference-client-tool-use-and-function-calling",
   "hf-hub-openapi-spec-deep-dive",
   "hf-quantization-methods-comparison",
-  "hf-inference-client-tool-use-and-function-calling-deep-dive"
+  "hf-inference-client-tool-use-and-function-calling-deep-dive",
+  "hf-diffusers-cogvideo-deep-dive",
+  "hf-mcp-server-enhancements-hf-fs-consolidation"
 ]
