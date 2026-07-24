@@ -7900,3 +7900,25 @@ Deep-dive into smolagents v1.26.0 multi-agent orchestration patterns from the of
 mlops/hf-agents-course -- references/hf-learnings.md
 
 ---
+
+## 2026-07-24: hf-huggingface-hub-download-lifecycle — `hf_hub_download()` Internals (Topic #147)
+
+### Summary
+Complete deep-dive into the internal working of `hf_hub_download()` — the primary entry-point for downloading files from the Hugging Face Hub. Covers the full download lifecycle: metadata HEAD call with CDN redirect following, cache lookup via `try_to_load_from_cache()`, the `.no_exist` cache for known-missing files, concurrent download protection via `WeakFileLock` (fcntl/flock), HTTP streaming download with automatic resume/retry (up to 5 attempts), Xet-accelerated downloads via `xet_get()` (parallel chunked downloads from CAS server), atomic per-process temp files for correctness on broken-flock filesystems (NFS/Lustre), symlink creation from `snapshots/` to `blobs/`, the `local_dir` path with etag matching and sha256 fallback, dry-run mode (`DryRunFileInfo`), and all environment variables. Source-verified against huggingface_hub v1.24.0 file_download.py (2026 lines, on GitHub at `src/huggingface_hub/file_download.py`).
+
+### Key Findings
+- **Cache-first architecture**: `try_to_load_from_cache()` checks `snapshots/`, `refs/`, and `.no_exist/` before any network call. The `.no_exist` cache prevents repeated 404 HEAD requests.
+- **Two download methods**: HTTP streaming (`http_get()`) for standard repos, Xet chunked download (`xet_get()`) for Xet-enabled repos (default since v0.32.0). Files > 50GB require Xet.
+- **Robust concurrency**: `WeakFileLock` (fcntl) serializes downloads, but on NFS/Lustre where `flock()` is a no-op, per-process temp files (`{uuid}.incomplete`) ensure correctness — the last process to rename wins.
+- **local_dir optimization**: Uses `download_metadata.json` + etag/SHA256 matching to avoid re-downloading files that haven't changed, plus cache fallback before network.
+- **6 retries max**: HTTP download auto-retries 5 times (1s sleep) on transient network errors. Metadata HEAD retries once with 60s timeout.
+
+### Resources
+- Source: https://github.com/huggingface/huggingface_hub/blob/main/src/huggingface_hub/file_download.py
+- Download guide: https://huggingface.co/docs/huggingface_hub/en/guides/download
+- Full content in huggingface-hub -- references/hf-learnings.md
+
+### Skill
+huggingface-hub -- references/hf-learnings.md
+
+---

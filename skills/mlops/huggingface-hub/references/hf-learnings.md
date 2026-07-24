@@ -2601,3 +2601,359 @@ async def chat_with_fallback(messages, model="microsoft/phi-4", providers=None, 
 
 ### Skill
 huggingface-hub — references/hf-learnings.md
+
+---
+
+## 2026-07-24: hf-huggingface-hub-download-lifecycle — `hf_hub_download()` Internals Deep Dive (Topic #147)
+
+### Summary
+Complete deep-dive into the internal working of `hf_hub_download()` — the primary entry-point for downloading files from the Hugging Face Hub. Covers the full download lifecycle: metadata HEAD call with redirect following, cache lookup via `try_to_load_from_cache()`, the `.no_exist` cache for known-missing files, concurrent download protection via `WeakFileLock`, HTTP streaming with resume/retry, Xet-accelerated downloads via `xet_get()`, atomic temp-file writes with `_download_to_tmp_and_move()`, symlink creation in the cache, the `local_dir` path (metadata + etag matching), and environment variable tuning. Source-verified against `huggingface_hub` v1.24.0 file_download.py (2026 lines).
+
+### Architecture Overview
+
+`hf_hub_download()` is the central function for all Hugging Face Hub downloads — used by Transformers, Diffusers, Datasets, and every other HF library. It manages two distinct paths:
+
+```
+hf_hub_download()
+├── local_dir is set → _hf_hub_download_to_local_dir()
+│   ├── File metadata stored in .cache/huggingface/ subfolder
+│   ├── Etag matching to avoid redownloads
+│   └── Fallback to cache_dir if file is cached
+└── local_dir is None → _hf_hub_download_to_cache_dir()
+    ├── Cache-first: try_to_load_from_cache()
+    ├── Metadata HEAD call
+    ├── Lock-based concurrent download protection
+    └── Symlink-based deduplication
+```
+
+### 1. Cache-First Path: `try_to_load_from_cache()`
+
+Before making any network call, the function checks the local cache:
+
+```python
+from huggingface_hub import try_to_load_from_cache, _CACHED_NO_EXIST
+
+# Returns one of:
+#   - str:        path to the cached file
+#   - _CACHED_NO_EXIST:  special sentinel object if file's non-existence was cached
+#   - None:       file is not cached at all
+result = try_to_load_from_cache("bert-base-uncased", "config.json",
+                                  revision="main", repo_type="model")
+```
+
+**Cache lookup algorithm:**
+1. Resolve `revision` via `refs/` directory (e.g. `main` → `2439f60ef33a0d46d85da5001d52aeda5b00ce9f`)
+2. Check `.no_exist/{revision}/{filename}` — if file is known to not exist, immediately return `_CACHED_NO_EXIST` (avoids repeated 404 HEAD calls)
+3. Look for `snapshots/{commit_hash}/{filename}` — if the symlink exists, return its resolved path
+4. Return `None` if not found
+
+**Key insight:** The `.no_exist` cache is a silent efficiency hack. When a HEAD request returns 404, the fact is recorded in `.no_exist/{revision}/{filename}` as an empty file. Future calls skip the network entirely until the ref is updated.
+
+### 2. Metadata HEAD Call: `get_hf_file_metadata()`
+
+When the cache misses, the function issues a HEAD request to the Hub to get file metadata:
+
+```python
+from huggingface_hub.file_download import get_hf_file_metadata, HfFileMetadata
+
+url = hf_hub_url("bert-base-uncased", "config.json", revision="main")
+metadata = get_hf_file_metadata(url, ...)
+# HfFileMetadata(
+#     commit_hash="2439f60...",
+#     etag="7cb18dc9bafbfcf74629a4b760af1b160957a83e",
+#     location="https://huggingface.co/bert-base-uncased/resolve/main/config.json",
+#     size=398,
+#     xet_file_data=None  # or XetFileData if Xet-enabled repo
+# )
+```
+
+**HEAD request flow:**
+1. Build the URL: `https://huggingface.co/{repo_id}/resolve/{revision}/{filename}`
+2. Send HEAD with `Accept-Encoding: identity` to get real file size (not compressed)
+3. Follow redirects using `_httpx_follow_relative_redirects_with_backoff()` — handles CDN redirects to CloudFront
+4. Parse response headers:
+   - `X-Repo-Commit` → `commit_hash`
+   - `X-Linked-Etag` (preferred) or `ETag` → `etag`
+   - `X-Linked-Size` (preferred) or `Content-Length` → `size`
+   - `X-Xet-*` headers → `xet_file_data` (via `parse_xet_file_data_from_response()`)
+5. The `location` returned may be a CDN URL (CloudFront) for large files
+
+**Tree cache optimization:** When `tree_cache_folder` is set (local_dir mode with a commit_hash), the metadata can be reconstructed from a cached tree listing, **skipping the HEAD call entirely**. This is a significant speedup for repos with many files.
+
+**Error handling in `_get_metadata_or_catch_error()`:**
+- `local_files_only=True` → immediately returns `OfflineModeIsEnabled` error
+- Network errors (timeout, connection) → returns exception, triggers cache fallback
+- HTTP 404 → returns exception, might cache as `.no_exist`
+- HTTP 429/5xx → on first call returns error, on retry (60s timeout) retries once more
+
+### 3. Concurrent Download Protection: `WeakFileLock`
+
+Two concurrent processes downloading the same file simultaneously would corrupt the cache. The solution is file-based locking:
+
+```python
+from huggingface_hub.utils import WeakFileLock
+
+lock_path = os.path.join(locks_dir, repo_folder_name(...), f"{etag}.lock")
+with WeakFileLock(lock_path):
+    # Only one process enters this section per unique file (identified by etag)
+    _download_to_tmp_and_move(...)
+    _create_symlink(blob_path, pointer_path, new_blob=True)
+```
+
+**Lock behavior:**
+- Located at `{cache_dir}/.locks/{repo_type}s--{namespace}--{repo_name}/{etag}.lock`
+- Uses `fcntl.flock()` on Linux/Mac, `msvcrt.locking()` on Windows
+- **Best-effort only:** On some filesystems (Lustre, GPFS, NFS), `flock()` silently succeeds for all callers. In that case, the lock is broken but correctness is maintained by the per-process temp file (see §5).
+- The lock protects both the download AND the symlink creation atomically
+
+### 4. Download Methods: HTTP vs Xet
+
+Once the lock is acquired, `_download_to_tmp_and_move()` decides the download method:
+
+```python
+if xet_file_data is not None and is_xet_available():
+    # Xet-accelerated download
+    xet_get(incomplete_path=tmp_path, xet_file_data=xet_file_data, ...)
+else:
+    # Standard HTTP streaming download
+    http_get(url_to_download, temp_file, headers=headers, ...)
+```
+
+#### 4a. HTTP Download: `http_get()`
+
+```python
+from huggingface_hub.file_download import http_get
+
+http_get(
+    url,                          # URL to download from
+    temp_file,                    # file-like object to write to
+    resume_size=0,                # bytes already downloaded (for resume)
+    headers=headers,
+    expected_size=expected_size,  # used for progress bar and validation
+    tqdm_class=tqdm_class,
+)
+```
+
+**HTTP download flow:**
+1. Set `Range` header if `resume_size > 0` (supports resume)
+2. Files > 50GB (`MAX_HTTP_DOWNLOAD_SIZE`) raise ValueError — must use Xet
+3. Stream with `http_stream_backoff()` (retry on 408, 429 status codes)
+4. If requested Range but got HTTP 200 (server ignored Range), truncate and restart from 0
+5. Read `Content-Range` or `Content-Length` to get total size
+6. Fall back to `expected_size` if no size header (compressed responses)
+7. Stream in chunks (`DOWNLOAD_CHUNK_SIZE`) with progress bar
+8. **Auto-retry:** On `httpx.ConnectError`, `TimeoutException`, or `RemoteProtocolError`:
+   - Log warning, `time.sleep(1)`, retry up to 5 times
+   - Reuses the same progress bar across retries (no double-counting)
+9. **Size validation:** After download, verifies `expected_size == temp_file.tell()`. Mismatch raises `OSError` with clear message.
+
+#### 4b. Xet Download: `xet_get()`
+
+For repos using Xet storage (the default since huggingface_hub v0.32.0):
+
+```python
+xet_get(
+    incomplete_path=tmp_path,
+    xet_file_data=xet_file_data,  # from HEAD response headers
+    headers=headers,
+    expected_size=expected_size,
+)
+```
+
+**Xet download flow:**
+1. Opens a `new_file_download_group()` session with:
+   - `token_refresh_url` from xet_file_data (short-lived tokens)
+   - `custom_headers` (without auth: Xet handles auth differently)
+   - `progress_callback` for dual progress bars (transfer + reconstruction)
+2. Calls `group.start_download_file(XetFileInfo(hash, size), path)`:
+   - Registers download task → starts immediately in background
+   - Queries CAS server: "how is this file split into chunks?"
+   - Server responds with: chunk list + presigned S3 URLs
+   - Downloads chunks in parallel (auto-caches for future reuse)
+   - Reassembles chunks → writes file to disk
+3. On `KeyboardInterrupt`: calls `abort_xet_session()` for clean shutdown
+
+**Key advantage:** Chunk-based deduplication. If a model file changes only slightly between versions, only the changed chunks need to be re-downloaded. This is fundamentally different from LFS where the entire file must be re-downloaded.
+
+### 5. Atomic Write: Per-Process Temp Files
+
+The most subtle correctness mechanism in the download system:
+
+```python
+# NOT this (shared incomplete path would corrupt on broken locks):
+# tmp_path = incomplete_path  # .incomplete file (shared across processes)
+
+# This (process-unique temp file):
+tmp_path = incomplete_path.with_name(
+    f"{incomplete_path.stem}.{uuid.uuid4().hex[:8]}.incomplete"
+)
+
+# Download to unique temp
+with tmp_path.open("wb") as f:
+    http_get(url_to_download, f, ...)
+
+# Atomic rename to final blob path
+_chmod_and_move(tmp_path, destination_path)
+```
+
+**Why this matters:** On NFS/Lustre/GPFS filesystems, `flock()` is a no-op. Without per-process temp files, concurrent downloads would append to the same incomplete file, causing corruption. With unique temp files, a broken lock only wastes bandwidth — each process downloads independently and the last one to rename wins.
+
+**The rename is atomic** on POSIX systems (`os.rename()` on same filesystem). After the move, `blobs/{etag}` is a complete file. Any subsequent process that loses the race will find the blob already exists and skip the download.
+
+### 6. Symlink Creation: `_create_symlink()`
+
+After the blob is written, the function creates a symlink from `snapshots/{commit_hash}/{filename}` → `blobs/{etag}`:
+
+```python
+from huggingface_hub.file_download import _create_symlink
+
+_create_symlink(src=blob_path, dst=pointer_path, new_blob=True)
+```
+
+**Symlink logic:**
+1. Remove existing symlink file at dst (if any)
+2. Compute **relative** symlink source (e.g., `../../../blobs/{etag}`) — this is intentional! Relative paths survive cache directory moves and work better on Windows
+3. Check symlink support on the volume (`are_symlinks_supported()`):
+   - Test once per cache directory at first use, cache result
+4. If symlinks supported: `os.symlink(relative_src, abs_dst)`
+5. If symlinks NOT supported (Windows without Developer Mode):
+   - `new_blob=True`: Move the blob file to the snapshot path (no symlink at all)
+   - `new_blob=False`: Copy the blob (conservative — blob may be referenced elsewhere)
+
+**Windows considerations:**
+- If path > 255 chars, prefix with `\\?\`
+- Symlink support requires Developer Mode or admin privileges
+- If different volumes: `os.path.relpath()` raises `ValueError`, fallback to `shutil.copyfile()`
+
+### 7. Ref Caching: `_cache_commit_hash_for_specific_revision()`
+
+After a successful download, the mapping from revision (tag/branch) to commit_hash is cached:
+
+```python
+_cache_commit_hash_for_specific_revision(storage_folder, revision, commit_hash)
+```
+
+This writes a file at `refs/{revision}` containing the commit hash. Writing is **atomic** (tmp file + rename) so concurrent readers never see a partially written file. Only written if `revision != commit_hash` — commit hashes don't need mapping.
+
+### 8. The `local_dir` Path
+
+When `local_dir` is provided, the download goes through a different code path:
+
+```python
+local_path = _hf_hub_download_to_local_dir(
+    local_dir="/path/to/local",
+    repo_id="bert-base-uncased",
+    filename="config.json",
+    ...
+)
+```
+
+**local_dir architecture:**
+```
+local_dir/
+├── config.json                    # actual file
+├── pytorch_model.bin              # actual file
+└── .cache/huggingface/
+    ├── download_metadata.json     # mapping filename → {commit_hash, etag}
+    └── tree_cache/                # cached tree listings per commit_hash
+```
+
+**Optimization flow:**
+1. **Quick return:** If file exists + metadata has matching commit_hash → return immediately (no HEAD call)
+2. **HEAD call:** Get `etag`, `commit_hash`, `expected_size`
+3. **Etag match:** If local file exists + etag matches → update metadata, return (no download)
+4. **Etag = sha256 fallback:** If metadata is missing but etag is a SHA256 hash (LFS file), compute local file hash and compare → if match, update metadata, return (avoids re-downloading large LFS files!)
+5. **Cache fallback:** Before downloading, check if file exists in main cache (`try_to_load_from_cache()`) → copy from cache instead of downloading
+6. **Full download:** Download via temp file + atomic rename, then write metadata
+
+**Key difference from cache mode:** local_dir uses `download_metadata.json` for state tracking instead of the full cache directory structure. Files are stored directly in `local_dir` without symlinks.
+
+### 9. Environment Variables Tuning
+
+| Variable | Default | Effect |
+|----------|---------|--------|
+| `HF_HOME` | `~/.cache/huggingface` | Base directory for all HF caches |
+| `HF_HUB_CACHE` | `$HF_HOME/hub` | Cache directory for Hub downloads |
+| `HF_HUB_DOWNLOAD_TIMEOUT` | `10` (seconds) | Timeout for HTTP download requests |
+| `HF_HUB_ETAG_TIMEOUT` | `10` | Timeout for HEAD metadata requests (env var takes precedence over function arg) |
+| `HF_HUB_DISABLE_SYMLINKS` | (not set) | Disable symlink usage; fall back to file copies |
+| `HF_HUB_DISABLE_SYMLINKS_WARNING` | (not set) | Suppress the symlink warning on Windows |
+| `HF_HUB_DISABLE_PROGRESS_BARS` | (not set) | Disable all progress bars |
+| `HF_HUB_DISABLE_XET` | (not set) | Force legacy HTTP path instead of Xet |
+| `HF_ENDPOINT` | `https://huggingface.co` | Override the Hub endpoint URL |
+| `HF_TOKEN` | (not set) | Default authentication token |
+| `HF_HUB_ENABLE_HF_TRANSFER` | (deprecated) | Old Rust download accelerator; use Xet instead |
+
+### 10. Dry-Run Mode
+
+Since huggingface_hub v1.24.0, `hf_hub_download()` supports dry runs:
+
+```python
+from huggingface_hub import hf_hub_download, DryRunFileInfo
+
+info = hf_hub_download("bert-base-uncased", "pytorch_model.bin", dry_run=True)
+# DryRunFileInfo(
+#     commit_hash="2439f60ef33a0d46d85da5001d52aeda5b00ce9f",
+#     file_size=440473133,
+#     filename="pytorch_model.bin",
+#     local_path="/.../snapshots/2439f60/.../pytorch_model.bin",
+#     is_cached=True,
+#     will_download=False
+# )
+```
+
+Dry-run skips the actual download but performs:
+1. Cache lookup (`try_to_load_from_cache`)
+2. Metadata HEAD call (unless `local_files_only=True`)
+3. Returns `DryRunFileInfo` with `is_cached` and `will_download` flags
+
+### 11. Error Handling Reference
+
+| Error | Raised When |
+|-------|-------------|
+| `RepositoryNotFoundError` | Repo doesn't exist or is private without access |
+| `RevisionNotFoundError` | Branch/tag/commit doesn't exist |
+| `RemoteEntryNotFoundError` | File doesn't exist in the repo |
+| `LocalEntryNotFoundError` | `local_files_only=True` and file not in cache |
+| `OfflineModeIsEnabled` | Network is disabled or unavailable |
+| `ValueError` | File > 50GB without Xet installed |
+| `OSError` | ETag can't be determined; file size mismatch |
+| `EnvironmentError` | `token=True` but token file not found |
+
+### Concurrency Model Summary
+
+```
+Process A: hf_hub_download("model", "weights.bin")
+├── try_to_load_from_cache() → None (not cached)
+├── get_hf_file_metadata() → HEAD request → {etag: "abc123", ...}
+├── WeakFileLock(".locks/model/abc123.lock")
+│   ├── tmp = blobs/abc123.{uuid}.incomplete (unique per process!)
+│   ├── http_get(url, tmp) → stream chunks → tmp written
+│   ├── os.replace(tmp → blobs/abc123) → atomic
+│   └── _create_symlink(blobs/abc123 → snapshots/{hash}/weights.bin)
+└── return snapshot_path
+
+Process B (concurrent, same file):
+├── try_to_load_from_cache() → None
+├── get_hf_file_metadata() → same etag
+├── WeakFileLock(".locks/model/abc123.lock") → blocks on A's lock
+│   ├── (A releases lock → B acquires it)
+│   ├── blobs/abc123 EXISTS NOW (A wrote it) → skip download
+│   ├── pointer_path → symlink already exists → skip
+│   └── return pointer_path
+└── Returns immediately (no download)
+```
+
+This design means: **the first downloader pays the bandwidth cost; all concurrent waiters get the cached file for free.**
+
+### Resources
+- Source: `file_download.py` in `huggingface_hub` (2026 lines) — https://github.com/huggingface/huggingface_hub/blob/main/src/huggingface_hub/file_download.py
+- Download guide: https://huggingface.co/docs/huggingface_hub/en/guides/download
+- Cache guide: https://huggingface.co/docs/huggingface_hub/en/guides/manage-cache
+- Cache reference: https://huggingface.co/docs/huggingface_hub/en/package_reference/cache
+- File download reference: https://huggingface.co/docs/huggingface_hub/v1.24.0/en/package_reference/file_download
+- Xet storage docs: https://huggingface.co/docs/hub/en/xet
+- `_CACHED_NO_EXIST`: https://github.com/huggingface/huggingface_hub/blob/main/src/huggingface_hub/file_download.py#L63
+
+### Skill
+huggingface-hub — references/hf-learnings.md
