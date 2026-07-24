@@ -5208,4 +5208,262 @@ torchao.quantization.utils.recommended_inductor_config_setter()
 - [torchao README](https://github.com/pytorch/ao#torchao-pytorch-architecture-optimization)
 - [Benchmarks](https://github.com/pytorch/ao/tree/main/torchao/quantization#benchmarks)
 - [Colab: Torchao Demo](https://colab.research.google.com/github/huggingface/notebooks/blob/main/transformers_doc/en/quantization/torchao.ipynb)
+
+---
+
+## 2026-07-24: hf-diffusers-video-generation-pipeline — Complete Ecosystem Deep Dive (Topic #81, Deepened)
+
+### Summary
+
+A comprehensive survey of ALL video generation pipelines in Hugging Face Diffusers (main branch, post-v0.39.0). The video pipeline ecosystem has exploded to **20+ distinct pipelines** covering text-to-video (T2V), image-to-video (I2V), first-last-frame-to-video (FLF2V), character animation, controllable video generation, and video editing.
+
+### Comparison of All Video Pipelines
+
+| Pipeline | Class | Params | T2V | I2V | Other Modes | Scheduler | Notes |
+|---|---|---|---|---|---|---|---|
+| **Allegro** | `AllegroPipeline` | ~2B | ✅ | ❌ | — | Flow matching | Short-form T2V |
+| **AnyFlow** | `AnyFlowPipeline` | Variable | ✅ | ❌ | — | Flow matching | Fast generation |
+| **ChronoEdit** | `ChronoEditPipeline` | Variable | ❌ | ❌ | Video editing | DDIM | Frame-based editing |
+| **CogVideoX** | `CogVideoXPipeline` | 2B/5B | ✅ | ✅ (I2V) | — | DDIM/DPM | Flagship, 3D causal VAE |
+| **ConsisID** | `ConsisIDPipeline` | Variable | ✅ | ✅ | Identity-consistent | Flow matching | Face-consistent video |
+| **Cosmos** | `CosmosPipeline` | Variable | ✅ | ✅ | World model | Flow matching | NVIDIA world model |
+| **Cosmos3** | `Cosmos3Pipeline` | Variable | ✅ | ✅ | World model | Flow matching | Next-gen Cosmos |
+| **Framepack** | `FramepackPipeline` | Variable | ❌ | ❌ | Frame interpolation | — | Frame packing |
+| **Helios** | `HeliosPipeline` | Variable | ✅ | ❌ | — | Flow matching | High-quality T2V |
+| **HunyuanVideo** | `HunyuanVideoPipeline` | ~13B | ✅ | ❌ | — | DDIM | Tencent's model |
+| **HunyuanVideo1.5** | `HunyuanVideo1_5Pipeline` | ~13B | ✅ | ❌ | — | DDIM | Improved version |
+| **Kandinsky 5.0 Video** | — | — | ✅ | ❌ | — | — | Kandinsky 5.0 video module |
+| **Latte** | `LattePipeline` | Variable | ✅ | ❌ | — | DDIM | Latent diffusion T2V |
+| **LTX-2** | `LTXVideoPipeline` | ~2B | ✅ | ❌ | — | Flow matching | Lightweight T2V |
+| **Mochi** | `MochiPipeline` | 10B | ✅ | ❌ | — | FlowMatchEuler | Genmo, AsymmDiT, Apache 2.0 |
+| **Motif-Video** | `MotifVideoPipeline` | Variable | ✅ | ❌ | Motion control | — | Motion-conditioned |
+| **SkyReels-V2** | `SkyReelsPipeline` | Variable | ✅ | ❌ | — | — | Skywork video |
+| **Stable Video Diffusion** | `StableVideoDiffusionPipeline` | ~2.5B | ❌ | ✅ | Frame interpolation | — | Stability AI |
+| **Wan** | `WanPipeline` | 1.3B/14B | ✅ | ✅ | FLF2V, VACE, Animate | FlowMatch | Multi-stage denoising, two transformers |
+
+### Detailed Pipeline Deep Dives
+
+#### 1. CogVideoX (THUDM)
+
+**Architecture:** T5 encoder → 3D Causal VAE → CogVideoXTransformer3DModel (spatio-temporal full attention) → DDIM/DPM scheduler.
+
+**Key Features:**
+- Available in 2B and 5B parameter variants
+- 3D causal VAE reduces flickering vs frame-wise VAEs
+- Supports both DDIM and DPM schedulers
+- `CogVideoXImageToVideoPipeline` variant for I2V
+- LoRA support via `load_lora_weights()`
+- torchao Int8 weight-only quantization
+- `fuse_qkv_projections()` for speed
+
+**Optimal Settings:**
+- T2V: 1360×768 resolution, 81–161 frames at 16 fps
+- I2V: Width 768–1360, Height 758 (must be divisible by 16)
+- `max_sequence_length` defaults to 226 (T5 tokens)
+
+**Memory-Saving:**
+- `enable_model_cpu_offload()`: 19 GB → 33 GB without
+- `enable_sequential_cpu_offload()`: <4 GB (very slow)
+- `enable_tiling()` + model offload: 11 GB
+- `enable_layerwise_casting(FP8)`: layer-cast weights to FP8 at runtime
+
+#### 2. Mochi 1 (Genmo)
+
+**Architecture:** T5-XXL encoder → Asymmetric Diffusion Transformer (AsymmDiT, 10B params) → AutoencoderKLMochi → FlowMatchEulerDiscreteScheduler.
+
+**Key Innovations:**
+- **AsymmDiT:** Non-square QKV and output projection layers (Q/K projections smaller than V/O) to reduce memory
+- Single T5-XXL text encoder (no dual encoders)
+- Released under Apache 2.0 license
+- `force_zeros_for_empty_prompt` option (zeros CFG unconditional, matches Genmo impl)
+
+**Optimal Settings:**
+- 480×848 resolution (default)
+- `num_frames`: 19–163 frames
+- `num_inference_steps`: 28 (fast) to 64 (quality)
+- `guidance_scale`: 3.5–4.5
+- `max_sequence_length`: 256
+- `variant="bf16"` for 22 GB VRAM variant
+
+**Quantization:**
+```python
+from transformers import BitsAndBytesConfig
+from diffusers import BitsAndBytesConfig as DiffusersBitsAndBytesConfig, MochiTransformer3DModel
+
+# 8-bit quantized T5
+text_encoder_8bit = T5EncoderModel.from_pretrained(
+    "genmo/mochi-1-preview", subfolder="text_encoder",
+    quantization_config=BitsAndBytesConfig(load_in_8bit=True),
+    torch_dtype=torch.float16,
+)
+# 8-bit quantized transformer
+transformer_8bit = MochiTransformer3DModel.from_pretrained(
+    "genmo/mochi-1-preview", subfolder="transformer",
+    quantization_config=DiffusersBitsAndBytesConfig(load_in_8bit=True),
+    torch_dtype=torch.float16,
+)
+```
+
+**Multi-GPU:** Supports `device_map="auto"` + `max_memory` to split the transformer across GPUs.
+
+**Original Repo Precision:** Text encoder + VAE in FP32, DiT in BF16 with `EFFICIENT_ATTENTION` backend. Diffusers doesn't yet support per-stage dtypes — use autocast + manual encoding to reproduce.
+
+**Single File Loading:** Supports `MochiTransformer3DModel.from_single_file()` for ComfyUI repackaged checkpoints. FP8 single files NOT yet supported.
+
+#### 3. Wan 2.1 / 2.2 (Wan-AI)
+
+**Architecture:** UMT5 encoder → WanTransformer3DModel(s) → AutoencoderKLWan → FlowMatchEulerDiscreteScheduler.
+
+**Key Innovations:**
+- **Two-stage denoising:** Wan 2.2 introduces `transformer_2` — a second transformer for low-noise stages, with `boundary_ratio` controlling the split. Stage 1 (high noise) runs on `transformer`, Stage 2 (low noise) runs on `transformer_2`.
+- Supports both 1.3B (consumer GPU, 8.19 GB VRAM) and 14B (high quality) variants
+- Available in 6 model flavors: T2V 1.3B, T2V 14B, I2V 14B-480P, I2V 14B-720P, FLF2V 14B-720P, VACE
+- **Wan 2.2** adds: T2V 14B, I2V 14B, TI2V 5B, Animate 14B
+
+**Model Variants:**
+
+| Model ID | Type | Params | Notes |
+|---|---|---|---|
+| `Wan-AI/Wan2.1-T2V-1.3B-Diffusers` | T2V | 1.3B | Consumer GPU friendly |
+| `Wan-AI/Wan2.1-T2V-14B-Diffusers` | T2V | 14B | High quality |
+| `Wan-AI/Wan2.1-I2V-14B-480P-Diffusers` | I2V | 14B | ~480p output |
+| `Wan-AI/Wan2.1-I2V-14B-720P-Diffusers` | I2V | 14B | ~720p output |
+| `Wan-AI/Wan2.1-FLF2V-14B-720P-Diffusers` | FLF2V | 14B | First+Last frame → video |
+| `Wan-AI/Wan2.1-VACE-14B-Diffusers` | VACE | 14B | Any-to-video controllable |
+| `Wan-AI/Wan2.2-T2V-14B-Diffusers` | T2V | 14B | Two-stage denoising |
+| `Wan-AI/Wan2.2-I2V-14B-Diffusers` | I2V | 14B | Two-stage denoising |
+| `Wan-AI/Wan2.2-TI2V-5B-Diffusers` | TI2V | 5B | Text+Image → video |
+| `Wan-AI/Wan2.2-Animate-14B-Diffusers` | Animate | 14B | Character animation |
+
+**Memory Optimization (14B under 13 GB VRAM):**
+```python
+from diffusers.hooks.group_offloading import apply_group_offloading
+
+# Block-level for text encoder
+apply_group_offloading(text_encoder, onload_device="cuda",
+    offload_device="cpu", offload_type="block_level", num_blocks_per_group=4)
+
+# Leaf-level for transformer
+transformer.enable_group_offload(onload_device="cuda",
+    offload_device="cpu", offload_type="leaf_level", use_stream=True)
+```
+
+**Wan VACE (Any-to-Video Controllable Generation):** Supports depth, pose, sketch, flow, grayscale, scribble, layout, bounding box conditioning. Uses mask-based paradigm: black mask = condition area (preserve), white mask = generation area.
+
+**Wan-Animate:** Character animation + replacement. Two modes: `"animate"` (animate character) and `"replace"` (replace character in scene). Requires preprocessed pose_video + face_video.
+
+**Key Notes:**
+- Frames formula: `k = (num_frames - 1) / 4`
+- Lower flow_shift (2.0–5.0) for low-res, higher (7.0–12.0) for high-res
+- `AutoencoderKLWan` should use `torch.float32` for best decoding quality
+- Supports LightX2V LoRAs for speed
+- Wan 2.2: LoRAs only load into first transformer by default; set `load_into_transformer_2=True` for second
+
+#### 4. HunyuanVideo (Tencent)
+
+- ~13B parameter T2V model
+- Uses DDIM scheduler
+- `HunyuanVideo1_5Pipeline` available with improvements
+- Standard memory optimization techniques apply
+
+#### 5. Stable Video Diffusion (Stability AI)
+
+- I2V only (no T2V)
+- Takes a single image and generates video
+- Uses frame interpolation approach
+- Smaller model size (~2.5B)
+
+#### 6. LTX Video / LTX-2
+
+- Lightweight T2V (~2B params)
+- Flow matching scheduler
+- Consumer GPU friendly
+
+### Common Architecture Patterns
+
+All Diffusers video pipelines share this structure:
+1. **Text Encoder** — T5, UMT5, or CLIP (encodes prompt)
+2. **VAE** — 3D video autoencoder (spatial + temporal compression), specific per model:
+   - `AutoencoderKLCogVideoX` (CogVideoX)
+   - `AutoencoderKLMochi` (Mochi)
+   - `AutoencoderKLWan` (Wan)
+   - Standard `AutoencoderKL` (SVD)
+3. **Transformer** — 3D diffusion transformer with spatial + temporal attention:
+   - `CogVideoXTransformer3DModel`
+   - `MochiTransformer3DModel` (AsymmDiT)
+   - `WanTransformer3DModel`
+   - `HunyuanVideoTransformer3DModel`
+4. **Scheduler** — DDIM, DPM, FlowMatchEuler, or UniPCMultistep
+
+### Scheduler Choices
+
+| Pipeline | Default Scheduler | Alternate |
+|---|---|---|
+| CogVideoX | `CogVideoXDDIMScheduler` | `CogVideoXDPMScheduler` |
+| Mochi | `FlowMatchEulerDiscreteScheduler` | — |
+| Wan | `FlowMatchEulerDiscreteScheduler` | `UniPCMultistepScheduler` |
+| HunyuanVideo | DDIM | — |
+| SVD | — | Various |
+
+### Memory Optimization Comparison
+
+| Technique | How It Works | Best For |
+|---|---|---|
+| `enable_model_cpu_offload()` | Offloads entire sub-modules to CPU when not in use | General purpose, good balance |
+| `enable_sequential_cpu_offload()` | Offloads individual layers sequentially | Minimal VRAM (<4 GB), but very slow |
+| `enable_vae_tiling()` | Processes VAE decode in tiles | Reduces VAE peak memory by 50%+ |
+| `enable_vae_slicing()` | Slices VAE input for batch processing | Complements tiling |
+| Group offloading | Offloads groups of layers (block_level or leaf_level) | Wan, Flux — more granular than model-level |
+| `enable_layerwise_casting()` | Casts weights layer-by-layer at runtime to FP8 | CogVideoX |
+| `PipelineQuantizationConfig` | Applies quantizers (torchao, bitsandbytes) to specific modules | CogVideoX, Mochi |
+| `device_map="auto"` + `max_memory` | Splits model across multiple GPUs | Multi-GPU setups |
+
+### Quantization Support
+
+| Pipeline | bitsandbytes | torchao | FP8 casting | Notes |
+|---|---|---|---|---|
+| CogVideoX | ❌ | ✅ (Int8WeightOnly) | ✅ (layerwise_casting) | ~16 GB with int8 |
+| Mochi | ✅ | ❌ | ❌ (single file FP8 not supported) | ~22 GB with bf16 variant |
+| Wan | ❌ | ❌ | ❌ | Group offload instead |
+| HunyuanVideo | ❌ | ❌ | ❌ | Standard offload |
+
+### LoRA Support
+
+| Pipeline | `load_lora_weights()` | `set_adapters()` | Notes |
+|---|---|---|---|
+| CogVideoX | ✅ | ✅ | Community LoRAs on HF Hub |
+| Wan 2.1 | ✅ | ✅ | LightX2V LoRAs for speed |
+| Wan 2.2 | ✅ | ✅ | `load_into_transformer_2=True` |
+| Mochi | ❌ | ❌ | Not yet supported |
+| HunyuanVideo | ❌ | ❌ | Not yet supported |
+
+### AutoPipeline for Video
+
+`AutoPipelineForTextToVideo` and `AutoPipelineForImageToVideo` auto-detect the correct pipeline class from the model ID. However, this is less reliable than explicit pipeline classes due to the variety of model architectures.
+
+### Export Utilities
+
+- `diffusers.utils.export_to_video(frames, path, fps=X)` — exports list of PIL images to MP4
+- `diffusers.utils.load_video(path)` — loads video as list of PIL frames
+- `diffusers.video_processor.VideoProcessor` — low-level video processing (VAE scale factor, normalization)
+- `from_image_bytes_to_video()` — helper for converting images
+
+### Video Pipeline Ecosystem Summary
+
+The Diffusers video ecosystem has matured significantly, with the `main` branch now supporting over 20 video pipelines. Key strategic takeaways:
+- **Wan** is the most comprehensive ecosystem (T2V, I2V, FLF2V, VACE, Animate) with the strongest consumer GPU support (1.3B at 8 GB)
+- **CogVideoX** remains the best-documented and most LoRA-friendly option
+- **Mochi** is the strongest open-source quality contender (10B AsymmDiT, Apache 2.0)
+- **Two-stage denoising** (Wan 2.2) represents the next architectural evolution in video diffusion
+- **Controllable video** (Wan VACE, Animate) is the frontier — mask-based conditioning for depth/pose/face
+
+### References
+- [Diffusers Video Pipelines Docs (main)](https://huggingface.co/docs/diffusers/main/en/api/pipelines/video)
+- [Mochi Pipeline Docs](https://huggingface.co/docs/diffusers/main/en/api/pipelines/mochi)
+- [CogVideoX Pipeline Docs](https://huggingface.co/docs/diffusers/main/en/api/pipelines/cogvideox)
+- [Wan Pipeline Docs](https://huggingface.co/docs/diffusers/main/en/api/pipelines/wan)
+- [HunyuanVideo Pipeline Docs](https://huggingface.co/docs/diffusers/main/en/api/pipelines/hunyuan_video)
+- [Diffusers Reduce Memory Guide](https://huggingface.co/docs/diffusers/main/en/optimization/memory)
+- [Genmo Mochi 1](https://github.com/genmoai/models)
+- [Wan-AI GitHub](https://github.com/Wan-AI/Wan)
 |
