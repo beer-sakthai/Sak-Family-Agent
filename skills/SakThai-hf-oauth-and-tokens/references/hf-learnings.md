@@ -6642,5 +6642,322 @@ Users select which orgs to grant access to during authorization.
 | Token endpoint | `POST https://huggingface.co/oauth/token` |
 | Authorize endpoint | `GET https://huggingface.co/oauth/authorize` |
 | Device endpoint | `POST https://huggingface.co/oauth/device` |
-| WhoAmI API | `GET https://huggingface.co/api/whoami-v2` |
-| RFC 8693 | https://www.rfc-editor.org/rfc/rfc8693.html |
+|| WhoAmI API | `GET https://huggingface.co/api/whoami-v2` |
+|| RFC 8693 | https://www.rfc-editor.org/rfc/rfc8693.html |
+|| RFC 8628 (Device Code) | https://www.rfc-editor.org/rfc/rfc8628.html |
+
+---
+## Entry 86: HF Hub Auth Deep-Dive — Device Code OAuth, Trusted Publishers API & Token Exchange in Practice
+**Date:** 2026-07-24
+**Topic:** `hf-hub-oauth-and-token-management` — Deep-dive into practical implementation of Device Code OAuth (Python polling loop), Trusted Publishers API (OIDC keyless CI/CD), and Token Exchange (RFC 8693) for organizations
+
+### 1. Device Code OAuth — Full Python Implementation
+
+Device Code flow is the primary authentication mechanism for CLIs, headless servers, and Hermes agents that cannot open a browser to redirect back.
+
+#### Step 1: Create a Public OAuth App (PKCE-compatible)
+- Visit https://huggingface.co/settings/applications/new
+- Create an app with `token_endpoint_auth_method = none` (no client secret)
+- For CIMD-automated creation: host `/.well-known/oauth-cimd.json` on your domain with `token_endpoint_auth_method: "none"`
+- PKCE is used automatically when no client secret is provided
+
+#### Step 2: Request Device Code
+
+```python
+import httpx
+import webbrowser
+import time
+import json
+
+CLIENT_ID = "your-public-client-id"
+
+# Step 1: Get device code
+resp = httpx.post(
+    "https://huggingface.co/oauth/device",
+    data={"client_id": CLIENT_ID},
+)
+device_data = resp.json()
+# {
+#   "device_code": "xxx",
+#   "user_code": "ABCD-1234",
+#   "verification_uri": "https://huggingface.co/device",
+#   "verification_uri_complete": "https://huggingface.co/device?user_code=ABCD-1234",
+#   "interval": 5,
+#   "expires_in": 900
+# }
+
+print(f"Open: {device_data['verification_uri_complete']}")
+print(f"Enter code: {device_data['user_code']}")
+webbrowser.open(device_data['verification_uri_complete'])
+```
+
+#### Step 3: Poll for Token
+
+```python
+def poll_for_token(client_id: str, device_code: str, interval: int = 5, timeout: int = 900):
+    """Poll the token endpoint until the user authorizes or the code expires."""
+    start = time.time()
+    while time.time() - start < timeout:
+        resp = httpx.post(
+            "https://huggingface.co/oauth/token",
+            data={
+                "grant_type": "urn:ietf:params:oauth:grant-type:device_code",
+                "device_code": device_code,
+                "client_id": client_id,
+            },
+        )
+        if resp.status_code == 200:
+            return resp.json()
+        error = resp.json().get("error")
+        if error == "authorization_pending":
+            time.sleep(interval)
+            continue
+        elif error == "slow_down":
+            interval += 5  # back off per RFC 8628
+            time.sleep(interval)
+            continue
+        elif error == "expired_token":
+            raise TimeoutError("Device code expired — user did not authorize in time")
+        elif error == "access_denied":
+            raise PermissionError("User denied authorization")
+        else:
+            raise RuntimeError(f"Unexpected error: {error}")
+    raise TimeoutError("Polling timed out")
+
+# On success, returns:
+# {
+#   "access_token": "hf_oauth_...",
+#   "token_type": "bearer",
+#   "expires_in": 28800,
+#   "scope": "openid profile email read-repos",
+#   "id_token": "eyJ...",
+#   "issued_token_type": "urn:ietf:params:oauth:token-type:access_token"
+# }
+```
+
+#### Step 4: Use the Token
+
+```python
+# Verify identity via whoami
+whoami = httpx.get(
+    "https://huggingface.co/api/whoami-v2",
+    headers={"Authorization": f"Bearer {token['access_token']}"},
+)
+print(whoami.json()["name"])  # e.g., "beer-sakthai"
+
+# Use with huggingface_hub
+from huggingface_hub import HfApi
+api = HfApi(token=token["access_token"])
+models = api.list_models()
+```
+
+**Key considerations:**
+- Tokens expire after 8 hours (28800s). No refresh token is issued — re-authenticate via device flow.
+- The `id_token` is a JWT. Decode its payload (without verification for debugging) using `jwt.decode(id_token, options={"verify_signature": False})`.
+- For headless environments without a browser, print `verification_uri_complete` as a QR code or direct URL.
+
+### 2. Trusted Publishers — CI/CD OIDC Keyless Auth (API Reference)
+
+Trusted Publishers let CI/CD workflows get a short-lived HF token without storing any `HF_TOKEN` secret, by exchanging the CI provider's OIDC identity token.
+
+#### Architecture
+
+```
+┌──────────┐  1. mint ID token   ┌──────────┐  2. POST /oauth/token   ┌────────────┐
+│ CI job   │ ──────────────────▶ │ CI OIDC  │ ──────────────────────▶│ huggingface│
+│          │                     │ issuer   │                         │ /oauth/    │
+│          │ ◀────────────────────────────────────────────────────────│ token      │
+└──────────┘        3. short-lived HF token (valid 1h)                └────────────┘
+```
+
+#### Two Flavors
+
+**Repo-scoped token:**
+- Configure Trusted Publisher on a specific repo (Settings → Trusted Publishers)
+- Token can read/write only that repo
+- Pushes attributed to synthetic `[OIDC]` system user
+- Token prefix: `hf_jwt_...`
+
+**User-scoped token:**
+- Configure Trusted Publisher on a user account
+- Token can read gated repos the user has access to, uses user's rate limits
+- Read-only: `gated-repos` scope only. Cannot write or read private repos.
+- Token prefix: `hf_oauth_...`
+
+#### Raw API — Exchange OIDC Token (Python)
+
+```python
+import httpx, os
+
+# Get the OIDC token from CI environment
+id_token = os.environ.get("HF_OIDC_ID_TOKEN") or os.environ.get("ID_TOKEN") or os.environ.get("CIRCLE_OIDC_TOKEN_V2")
+
+resp = httpx.post(
+    "https://huggingface.co/oauth/token",
+    json={
+        "grant_type": "urn:ietf:params:oauth:grant-type:token-exchange",
+        "subject_token_type": "urn:ietf:params:oauth:token-type:id_token",
+        "subject_token": id_token,
+        "resource": "beer-sakthai",  # username for user-scoped, or "acme/model" for repo-scoped
+    },
+)
+if resp.status_code == 200:
+    hf_token = resp.json()["access_token"]
+    # hf_token expires in 3600 seconds (1 hour) — re-exchange for long jobs
+else:
+    error = resp.json().get("error", "unknown")
+    print(f"Exchange failed: {error}")
+```
+
+#### CI Provider Examples
+
+**GitHub Actions:**
+```yaml
+jobs:
+  publish:
+    permissions:
+      id-token: write  # required to mint OIDC token
+    steps:
+      - name: Download gated model
+        env:
+          HF_OIDC_RESOURCE: beer-sakthai
+        run: hf download acme/gated-model
+```
+
+**GitLab CI:**
+```yaml
+job:
+  id_tokens:
+    HF_ID_TOKEN:
+      aud: https://huggingface.co
+  script:
+    - HF_OIDC_ID_TOKEN=$HF_ID_TOKEN HF_OIDC_RESOURCE=beer-sakthai hf download acme/gated-model
+```
+
+**CircleCI:**
+```yaml
+version: 2.1
+jobs:
+  publish:
+    steps:
+      - run: |
+          HF_OIDC_ID_TOKEN=$CIRCLE_OIDC_TOKEN_V2 HF_OIDC_RESOURCE=beer-sakthai hf download acme/gated-model
+```
+
+#### Error Handling for Trusted Publishers
+
+| `error` | Cause | Fix |
+|---------|-------|-----|
+| `invalid_request` | Missing/malformed parameter or bad resource format | Check `resource` syntax |
+| `invalid_grant` | Repo/user not found; no publisher matches; claim mismatch; signature/audience failed; account locked | Verify Trusted Publisher config, audience claim, and issuer URL |
+
+The `hf` CLI surfaces `(Request ID: ...)` on failure — include this in support requests.
+
+#### Security Model
+
+- Tokens are short-lived (60 min). No refresh token. Long jobs must re-exchange.
+- Repo tokens are repo-scoped only — cannot touch other repos.
+- Claims are matched exactly — no regex, no prefix matching.
+- Every exchange is logged in audit logs with last-used timestamp.
+- Configure claims per provider (e.g., only `repo:owner/name:ref:refs/heads/main` for main-branch-only access).
+
+### 3. Token Exchange for Organizations (RFC 8693) — Enterprise
+
+Enterprise orgs can programmatically issue tokens for members by email, without requiring each member to create their own token.
+
+#### Prerequisites
+- Enterprise plan
+- OAuth app bound to the organization
+- Org admin creates the app at Settings → Applications
+
+#### Authentication
+
+```bash
+# Basic Auth with client_id:client_secret
+AUTH_HEADER=$(echo -n "client_id:client_secret" | base64)
+
+curl -X POST "https://huggingface.co/oauth/token" \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -H "Authorization: Basic $AUTH_HEADER" \
+  -d "grant_type=urn:ietf:params:oauth:grant-type:token-exchange" \
+  -d "subject_token=user@yourorg.com" \
+  -d "subject_token_type=urn:huggingface:token-type:user-email"
+```
+
+#### Python Implementation
+
+```python
+import httpx, base64
+
+client_id = "your-client-id"
+client_secret = "your-client-secret"
+auth = base64.b64encode(f"{client_id}:{client_secret}".encode()).decode()
+
+resp = httpx.post(
+    "https://huggingface.co/oauth/token",
+    data={
+        "grant_type": "urn:ietf:params:oauth:grant-type:token-exchange",
+        "subject_token": "user@yourorg.com",
+        "subject_token_type": "urn:huggingface:token-type:user-email",
+    },
+    headers={"Authorization": f"Basic {auth}"},
+)
+token = resp.json()
+# access_token, token_type, expires_in, scope, issued_token_type
+```
+
+#### Scope Control
+
+By default, issued tokens inherit all scopes configured on the OAuth app. Request specific scopes via the `scope` parameter:
+
+```python
+resp = httpx.post(
+    "https://huggingface.co/oauth/token",
+    data={
+        "grant_type": "urn:ietf:params:oauth:grant-type:token-exchange",
+        "subject_token": "user@yourorg.com",
+        "subject_token_type": "urn:huggingface:token-type:user-email",
+        "scope": "openid profile read-repos",  # restrict to only needed scopes
+    },
+    headers={"Authorization": f"Basic {auth}"},
+)
+```
+
+**Security constraints:**
+- Organization-scoped only: tokens access resources within the org only
+- No personal private repos or other orgs
+- Short-lived: 8 hours default (admin-configurable up to 30 days)
+- No refresh tokens
+- All exchanges logged in org audit logs
+
+#### Error Responses
+
+| Error | Description |
+|-------|-------------|
+| `invalid_client` | Client not authorized for token exchange, or app not bound to org |
+| `invalid_grant` | User not found in the bound organization |
+| `invalid_scope` | Requested scope is not valid |
+
+### 4. Organization Token Policies (Team/Enterprise)
+
+Orgs on Team/Enterprise plans can enforce token policies:
+
+**Pending Approval:** Fine-grained tokens scoped to the org require admin approval. Until approved, they show an orange hourglass icon and cannot access org resources. Admins auto-approve their own tokens.
+
+**Denied:** Token gets 403 on org resources but works outside the org. Can be later approved by an admin without recreation.
+
+**Revoked (Enterprise only):** Permanent — token must be deleted and recreated. 403 with message: *"Your token has been revoked by the organization administrator..."* Only affects the revoking org.
+
+**Fine-grained-only policy:** Orgs can require fine-grained tokens globally. Read/write tokens get 403 on org resources.
+
+### Key Differences Between Auth Mechanisms
+
+| | Device Code OAuth | Trusted Publishers | Token Exchange |
+|---|---|---|---|
+|**Use case** | CLI / headless auth | CI/CD pipelines | Enterprise org member tokens |
+|**Auth method** | Browser-based consent | OIDC identity token | Client secret + user email |
+|**Token lifetime** | 8 hours | 1 hour | 8 hours (configurable to 30d) |
+|**Refresh** | No — re-auth | No — re-exchange | No |
+|**Scope** | Full per-user scopes | Repo-scoped or read-only user | Org-scoped |
+|**Plan required** | Free | Free | Enterprise |
+|**Token prefix** | `hf_oauth_` | `hf_jwt_` (repo) / `hf_oauth_` (user) | `hf_oauth_` |
