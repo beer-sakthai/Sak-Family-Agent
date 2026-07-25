@@ -17942,3 +17942,68 @@ print(logs.logs[-20:])
 
 ### Skill
 hf-hub-hfapi-method-catalog — Complete HfApi method reference catalog: 100+ methods in 12 domains (Repo CRUD, File Ops, Metadata, Collections, Discussions, Spaces, Webhooks, Inference, User/Org, Security, Jobs, Storage Buckets). Each method with signature, return type, and purpose. Practical patterns for automation workflows. Zero-cost usage guidance.
+
+---
+
+## 2026-07-25: hf-hub-foundry-enterprise-deployment-curation — Hugging Face Models on Microsoft Foundry Managed Compute: Curation, Security Screening and Enterprise Deployment (Topic #289)
+
+### Summary
+Comprehensive deep-dive on the integration between Hugging Face and Microsoft Foundry Managed Compute — announced at Microsoft Build 2026. Covers the full curation pipeline Microsoft runs to bring open-weight HF models into the Foundry Model Catalog: trending model identification, license review, trust_remote_code remediation, CVE-scanned container images on 6 runtimes (vLLM, SGLang, TensorRT-LLM, NIM, TEI, llama.cpp, hf-serve), weight pre-staging in Azure storage for private-network deployments, deployment templates (runtime + accelerator + context-length tuning), OpenAI-compatible SDK scoring, and integration with Foundry Agents. Also covers the parallel SageMaker Studio one-click deep-link integration from HF model pages to AWS SageMaker Studio (July 2026).
+
+### Sources
+- Hugging Face Blog: https://huggingface.co/blog/microsoft/foundry-managed-compute (July 7, 2026)
+- Hugging Face Blog: https://huggingface.co/blog/amazon/one-click-to-sagemaker-studio (July 7, 2026)
+- Foundry Managed Compute documentation (Microsoft)
+- HF Collection on Foundry Model Catalog
+
+### Key Details
+
+#### Curation Pipeline (Multi-Stage)
+1. Trend identification — HF and Microsoft jointly identify trending models based on community signals, partner requests, customer demand
+2. Compliance and security screening — license review vs Microsoft enterprise distribution policy; repository inspected for trust_remote_code patterns and custom executable code; any model requiring third-party Python at load time is either remediated (code reviewed) or excluded
+3. Runtime build and scan — Microsoft builds inference container images on supported runtimes (vLLM, SGLang, TRT-LLM, NIM, TEI, llama.cpp), scans for CVEs, signs, publishes to Microsoft-managed container registry
+4. Weight upload — model weights pulled from HF once, validated against model card, stored in Microsoft-managed Azure storage in serving regions
+5. Validation and catalog publish — every model + runtime + accelerator combination tested for API conformance and performance (latency, throughput, TTFT, ITDT), then published with one-click deploy
+
+#### Supported Runtimes
+- vLLM: High-throughput LLM serving (default; any Transformers model runs day-of-release)
+- SGLang: Structured outputs, agentic workloads (JSON/regex/grammar-constrained generation)
+- TensorRT-LLM: NVIDIA-optimized latency/throughput
+- NIM: NVIDIA inference microservices
+- TEI: Embeddings, rerank, sequence classification
+- llama.cpp: CPU/small-GPU for GGUF models
+- hf-serve: Vision, audio, segmentation, non-LLM models
+
+#### Deployment Templates
+Named, versioned assets that pin: runtime, accelerator family and count, context length, runtime-specific tuning.
+
+Example for Qwen3-32B:
+- qwen--qwen3-32b--40k-nvidia-a100 — vLLM, 1x A100 80GB, 40K context
+- qwen--qwen3-32b--40k-nvidia-h100 — vLLM, 1x H100 80GB, 40K context
+- qwen--qwen3-32b--128k-nvidia-2xa100 — vLLM, 2x A100 80GB, 128K context
+- qwen--qwen3-32b--128k-nvidia-2xh100 — vLLM, 2x H100 80GB, 128K context
+
+Each template pre-tuned with: runtime settings, tool-call/reasoning parsers, scoring path, health probes, request concurrency, model-specific context-extension settings.
+
+#### SageMaker Studio Integration (Parallel Launch)
+- Deep-link buttons on HF model pages: Customize on SageMaker AI (fine-tuning) and Deploy on SageMaker AI (endpoint)
+- Pre-configured IAM policy (AmazonSageMakerModelCustomizationCoreAccess) auto-created
+- GPU quota visibility inline in instance selection UI
+- Supports SFT, DPO, RLVR, RLAIF training jobs
+- Context preserved end-to-end — no need to re-select model in SageMaker
+
+#### Key Enterprise Features
+- Private networking — deployments inside private networks without outbound access to HF Hub (weights pre-staged in Azure)
+- Auto-upgraded runtimes — container updates, runtime upgrades, CVE patches applied automatically without redeployment
+- Unified endpoint — Managed Compute, pay-per-token, and provisioned throughput share the same SDK, auth, observability, billing
+- Global + Data Zone deployments — residency and sovereignty support
+- Observability — Azure Monitor metrics, per-deployment billing tags
+- Agent integration — Foundry Agents connect to Collection models via admin-connected models
+
+#### Zero-Cost Notes
+- Model discovery, browsing, and curation information on HF is free
+- Enterprise Managed Compute is paid (per-accelerator-hour pricing) but the curation pipeline and deployment templates are managed by Microsoft as part of the service
+- SageMaker deep-link integration is free — you only pay for SageMaker compute when you run training or inference
+
+### Skill
+hf-hub-foundry-enterprise-deployment-curation — Hugging Face models on Microsoft Foundry Managed Compute: full enterprise curation pipeline (trending identification to license screening to trust_remote_code remediation to CVE-scanned runtime builds to weight pre-staging to catalog publishing), 7 supported runtimes (vLLM, SGLang, TRT-LLM, NIM, TEI, llama.cpp, hf-serve), deployment templates, OpenAI-compatible scoring, Foundry Agents integration, parallel SageMaker Studio integration, and enterprise deployment patterns.

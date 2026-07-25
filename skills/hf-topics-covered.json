@@ -268,5 +268,6 @@
   "hf-spaces-lifecycle-sleep-pause-billing-duration",
   "mergekit-hf-merging",
   "mergekit-hf-merging-deep-dive-v2",
-  "hf-hub-skypilot-storage-integration"
+  "hf-hub-skypilot-storage-integration",
+  "hf-hub-foundry-enterprise-deployment-curation"
 ]
