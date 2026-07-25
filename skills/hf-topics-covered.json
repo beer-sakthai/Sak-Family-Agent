@@ -310,6 +310,5 @@
   "hf-hub-hf-uri-mount-volume-system-source-deep-dive-v2",
   "hf-transformers-pipeline-registry-system-deep-dive",
   "hf-kernels-ecosystem-deep-dive",
-  "hf-inference-mcp-client-agent-framework-deep-dive",
-  "hf-hub-dduf-format"
+  "hf-inference-mcp-client-agent-framework-deep-dive"
 ]

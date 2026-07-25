@@ -5199,42 +5199,59 @@ N/A — added to existing `mlops/huggingface-hub/` skill references.
 - huggingface_hub v1.24.0 source: `_commit_api.py` (full pipeline: 1075 lines)
 - huggingface_hub v1.24.0 source: `lfs.py:53-100` (UploadInfo)
 - https://github.com/huggingface/huggingface_hub/issues/1085#issuecomment-1265208073 (ndjson commit design)
+|
 
----
-
-## 2026-07-25: hf-diffusers-wan-video-generation
+## 2026-07-25: hf-datasets-configuration-system-complete-reference
 
 ### Summary
-Deep dive into the **Wan2.1/Wan2.2** open video foundation model family by the Wan Team (Alibaba) and its complete integration into Hugging Face Diffusers. Wan is a suite of diffusion transformer (DiT) models for video generation with consumer-grade 1.3B variant (8.19 GB VRAM) through enterprise 14B models. Five pipeline classes, VACE controllable generation, character animation (Wan-Animate), and LoRA support.
+Comprehensive deep dive into the Hugging Face Datasets configuration system (v5.0.0). Covers the full lifecycle of dataset configurations: BuilderConfig base class, BUILDER_CONFIGS predefined configs, DEFAULT_CONFIG_NAME selection, config ID generation with suffix hashing, YAML metadata configs from README.md, dataset_infos.json serialization, config resolution in load_dataset(), cache directory architecture, packaged module configs, and integration with the Datasets Server.
 
-### Supported Pipelines
-1. **WanPipeline** — Text-to-Video (UMT5 encoder + WanTransformer3D + AutoencoderKLWan)
-2. **WanImageToVideoPipeline** — Image-to-Video (+ CLIPVisionModel)
-3. **WanAnimatePipeline** — Character animation/replacement (animate/replace modes)
-4. **WanVACEPipeline** — Any-to-Video controllable generation (depth, pose, sketch, bbox, inpainting, subject, composition)
-5. **WanVideoToVideoPipeline** — Video-to-Video translation
+### Key Findings
 
-### Model Variants
-- T2V 1.3B (consumer GPU, 8.19 GB) / T2V 14B / I2V 14B 480P/720P
-- FLF2V 14B 720P (First+Last Frame to Video)
-- VACE 1.3B / 14B (controllable generation)
-- Wan2.2: T2V 14B, I2V 14B, TI2V 5B, Animate 14B
+**BuilderConfig (@dataclass):**
+- 5 fields: name (default: "default"), version (default: "0.0.0"), data_dir, data_files, description
+- Validates Windows-incompatible chars in name
+- create_config_id() generates unique cache ID with suffix from config_kwargs, custom_features, data_files
 
-### Architecture
-- WanTransformer3D: 3D DiT with causal attention, RoPE, fused QKV, dual-stage denoising
-- AutoencoderKLWan: 3D VAE with AvgDown3D, 8× spatial / 4× temporal compression
-- Text: UMT5 (multilingual, 512 ctx), Image: CLIPVision (I2V)
-- Scheduler: FlowMatchEulerDiscreteScheduler or UniPCMultistepScheduler with flow_shift
+**Config Resolution (3 paths):**
+1. No config specified → DEFAULT_CONFIG_NAME or single config or raise
+2. String config_name → lookup in builder_configs dict
+3. Custom → instantiate BUILDER_CONFIG_CLASS with kwargs
+Plus override path: deepcopy predefined config + apply kwargs
 
-### Key Features
-- Visual text generation (Chinese + English)
-- Memory optimization: group offloading, quantization, single-file loading
-- LoRA via WanLoraLoaderMixin (load_lora_weights/set_adapters)
-- Wan2.2 dual-denoiser: LoRA load_into_transformer_2 flag
-- VACE mask convention: black=preserve, white=generate
-- License: Apache 2.0
+**Config ID:**
+- Base = config.name
+- Suffix added when config_kwargs/features/data_files differ from predefined
+- URL-encoded string if all primitive values and ≤32 chars; SHA256 hash otherwise
+- Max readable length: 255 chars (truncated + hashed if exceeded)
+
+**MetadataConfigs (YAML configs field):**
+- Dict[config_name → params] parsed from DatasetCardData
+- Validates data_files format (str, list of str, or split-based list)
+- Auto-generates default detection via name="default" or default: true
+- _from_exported_parquet_files_and_dataset_infos() auto-creates configs from Parquet export
+
+**Cache Directory:** {dataset_name}/{config_id}/{version}/{hash}/ with namespace prefix for Hub repos.
+
+**Packaged Module Configs:**
+- csv → CsvConfig (sep, header, names)
+- json → JsonConfig (field, features)
+- parquet → ParquetConfig (features)
+- imagefolder → ImageFolderConfig (drop_labels, drop_metadata)
+- audiofolder → AudioFolderConfig (sampling_rate)
+- text → TextConfig (sample_by)
 
 ### Skill Created
-`hf-diffusers-wan-video-generation/` — SKILL.md + references/hf-learnings.md
+hf-datasets-configuration-system/ — complete reference with architecture, API surface, config ID system, YAML metadata format, cache layout, and practical usage examples.
 
----
+### Sources
+- datasets v5.0.0 source: builder.py (BuilderConfig: lines 100-212, DatasetBuilder._create_builder_config: lines 503-592)
+- datasets v5.0.0 source: info.py (DatasetInfo: lines 91-280, DatasetInfosDict: lines 334-440)
+- datasets v5.0.0 source: utils/metadata.py (MetadataConfigs: lines 46-189)
+- datasets v5.0.0 source: load.py (create_builder_configs_from_metadata_configs: lines 320-374, BuilderConfigsParameters: lines 377-392)
+- datasets v5.0.0 source: config.py (constants: lines 236-248)
+- huggingface_hub v1.24.0 source: repocard_data.py (DatasetCardData constructor)
+- https://huggingface.co/docs/datasets/main/en/loading#configurations-and-splits
+- https://huggingface.co/docs/datasets/main/en/dataset_script#multiple-configurations
+
+|
