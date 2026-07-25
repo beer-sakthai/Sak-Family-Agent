@@ -16695,3 +16695,157 @@ mlops/hf-spaces-lifecycle — Complete reference for HF Spaces lifecycle:
 auto-sleep (free 48h vs paid custom), manual pause/resume, per-minute billing
 model, ZeroGPU dynamic allocation with daily quotas, programmatic hardware
 control via HfApi, SSE streaming, and zero-cost operation strategies
+
+---
+
+## 2026-07-25: mergekit-hf-merging — MergeKit: Complete Model Merging Toolkit for Hugging Face Hub (Topic #269)
+
+### Summary
+Comprehensive deep-dive on MergeKit (arcee-ai/mergekit), the open-source toolkit for merging large language models. MergeKit enables combining multiple pre-trained models into single checkpoints through weight-space interpolation, operating entirely on CPU or with as little as 8 GB VRAM. Covers the full merge method taxonomy (17+ methods), YAML configuration syntax (slices, models, parameters, tokenizer), Hub upload workflow via huggingface-cli, multi-stage merging (mergekit-multi), Mixture-of-Experts conversion (mergekit-moe), LoRA extraction (mergekit-extract-lora), tokenizer transplantation (mergekit-tokensurgeon), evolutionary search methods, and practical zero-cost operation patterns for merging on CPU-only hardware.
+
+### Merge Methods Overview
+
+| Method | Value(s) | # Models | Base? | Core Idea |
+|--------|----------|----------|-------|-----------|
+| **Linear** | `linear` | ≥2 | - | Weighted average of parameters (model soups) |
+| **SLERP** | `slerp` | 2 | ✓ | Spherical linear interpolation on hypersphere |
+| **NuSLERP** | `nuslerp` | 2 | * | Enhanced SLERP with flexible weighting, task vector SLERP |
+| **Multi-SLERP** | `multislerp` | ≥2 | * | Barycentric SLERP for >2 models |
+| **Karcher Mean** | `karcher` | ≥2 | - | Riemannian barycenter on manifolds |
+| **Task Arithmetic** | `task_arithmetic` | ≥2 | ✓ | Linear combination of task vectors (deltas from base) |
+| **TIES** | `ties` | ≥2 | ✓ | Task arithmetic + sparsification + sign consensus (remove interference) |
+| **DARE** | `dare_linear`, `dare_ties` | ≥2 | ✓ | Task arithmetic + random pruning + rescaling |
+| **DELLA** | `della`, `della_linear` | ≥2 | ✓ | Adaptive magnitude-based pruning of task vectors |
+| **Model Breadcrumbs** | `breadcrumbs`, `breadcrumbs_ties` | ≥2 | ✓ | Outlier removal (small & large diffs) from task vectors |
+| **SCE** | `sce` | ≥2 | ✓ | Adaptive matrix-level weighting by parameter variance |
+| **RAM** | `ram`, `ramplus_tl` | ≥2 | ✓ | Random assignment merging |
+| **Model Stock** | `model_stock` | ≥3 | ✓ | Geometric weight calculation for linear interpolation |
+| **Nearswap** | `nearswap` | 2 | ✓ | Interpolate only where parameters are similar |
+| **Arcee Fusion** | `arcee_fusion` | 2 | ✓ | Dynamic thresholding for fusing important changes |
+| **Passthrough** | `passthrough` | 1 | - | Direct tensor copy (for frankenmerging/layer stacking) |
+
+**Base model column:** ✓ = required, * = optional, - = not applicable
+
+### YAML Configuration
+
+Two mutually exclusive top-level specs:
+
+**Slices mode** — piecewise assembly from layer blocks:
+```yaml
+merge_method: slerp
+slices:
+  - model: model1
+  - model: model2
+    parameters:
+      weight: 0.5  # per-slice weight
+parameters:
+  t: 0.5  # interpolation factor (slerp)
+```
+
+**Models mode** — entire models as merge inputs:
+```yaml
+merge_method: ties
+base_model: mistralai/Mistral-7B-v0.1
+models:
+  - model: model1
+    parameters:
+      weight: 1.0
+      density: 0.5  # TIES sparsification
+  - model: model2
+    parameters:
+      weight: 0.5
+      density: 0.3
+dtype: bfloat16
+tokenizer:
+  source: union
+```
+
+Key configuration fields:
+- `dtype`: data type for merge (float16, bfloat16, float32)
+- `tokenizer`: modern config — `source: union|base|<path>`, per-token embedding control
+- `tokenizer_source`: legacy field (union|base|<path>)
+- `chat_template`: "auto" | "alpaca" | "chatml" | "llama3" | "mistral" | "exaone" or custom Jinja2
+- `parameters`: scoped at global → model → slice → source levels (decreasing precedence)
+
+### Hub Upload Workflow
+
+```bash
+# 1. Run merge (CPU-only, zero-cost)
+mergekit-yaml ./config.yml ./merged-model --lazy-unpickle --allow-crimes
+
+# 2. Edit auto-generated README.md with model card info
+
+# 3. Login and upload
+huggingface-cli login  # token with write permission
+huggingface-cli upload your_ns/merged-model ./merged-model .
+```
+
+MergeKit auto-generates a README with merge metadata (method, input models, parameters, citation) for the model card. No separate model card creation needed.
+
+### Advanced Features
+
+- **Multi-stage merging** (`mergekit-multi`): chain merges where later stages consume earlier outputs — YAML with multiple config sections
+- **MoE Merging** (`mergekit-moe`): convert dense models → Mixture of Experts by splitting feed-forward layers across experts
+- **LoRA Extraction** (`mergekit-extract-lora`): extract PEFT-compatible low-rank approximations from fine-tuned models
+- **Tokenizer Transplantation** (`mergekit-tokensurgeon`): align vocabulary between models for speculative decoding or cross-tokenizer distillation
+- **Evolutionary Methods**: genetic algorithm search for optimal merge weights (docs/evolve.md)
+- **Raw PyTorch Merging** (`mergekit-pytorch`): merge arbitrary `.pt`/`.safetensors` checkpoints outside Transformers
+
+### Zero-Cost Operation
+
+- **Entirely CPU-runnable**: `--lazy-unpickle` loads tensors lazily; no GPU needed
+- **No inference credits consumed**: merging is local computation, not inference
+- **Free Hub uploads**: the HF Hub hosts merged models at zero cost
+- **Recommended for Beer**: Beer's hardware (380 MB 0.5B GGUF, 934 MB 1.5B GGUF) can run mergekit for small models; for larger models, use CPU-only mode with `--allow-crimes` flag
+
+### Source
+- MergeKit GitHub: https://github.com/arcee-ai/mergekit
+- MergeKit README: https://github.com/arcee-ai/mergekit/blob/main/README.md
+- Merge Methods Guide: https://github.com/arcee-ai/mergekit/blob/main/docs/merge_methods.md
+- MoE Merging: https://github.com/arcee-ai/mergekit/blob/main/docs/moe.md
+- Multi-Stage Merging: https://github.com/arcee-ai/mergekit/blob/main/docs/multimerge.md
+- Evolutionary Merge: https://github.com/arcee-ai/mergekit/blob/main/docs/evolve.md
+- EMNLP Paper: https://aclanthology.org/2024.emnlp-industry.36/
+- FrankenSteinAI (hosted UI): https://frankenstein-ai.com/
+
+### Skill
+SakThai-mergekit-hf-merging — Complete reference for MergeKit toolkit:
+17+ merge methods (linear, SLERP, TIES, DARE, passthrough, etc.), YAML config
+syntax, tokenizer handling (union/base/per-token), Hub upload workflow,
+multi-stage and MoE merging, LoRA extraction, evolutionary search,
+tokenizer transplantation, and zero-cost CPU-only operation patterns
+
+---
+
+## 2026-07-25: mergekit-hf-merging-deep-dive-v2 — MergeKit Advanced Features Deep-Dive (Topic #270)
+
+### Summary
+Deep-dive on the advanced MergeKit features beyond basic merge methods: dense-to-MoE conversion (mergekit-moe), evolutionary parameter optimization (mergekit-evolve), multi-stage chaining (mergekit-multi), raw PyTorch checkpoint merging (mergekit-pytorch), LoRA extraction via SVD (mergekit-extract-lora), tokenizer transplantation (mergekit-tokensurgeon), fine-grained parameter control with tensor name filters, gradient interpolation, and modern tokenizer configuration with per-token embedding override.
+
+### New Learnings (beyond v1)
+
+1. **mergekit-moe Gate Modes**: Three modes — `hidden` (hidden state from prompts, best quality, default), `cheap_embed` (raw token embeddings, low hardware), `random` (for sparse upcycling/further training). Shared expert support with `residual_scale` for Qwen MoE architecture.
+
+2. **mergekit-evolve CMA-ES**: Uses Covariance Matrix Adaptation Evolution Strategy with LM Eval Harness tasks. Three scheduling strategies: `pool` (one actor/GPU), `buffered` (concurrent on same GPU), `serial` (Ray placement groups). Supports in-memory merging and vLLM backend.
+
+3. **mergekit-multi Chaining**: YAML documents separated by `---`. Named intermediates referenced by name in later stages. `--lazy` flag skips cached intermediates.
+
+4. **mergekit-pytorch**: Applies merge algorithms to arbitrary `.pt`/`.safetensors` (non-Transformers models). No layer slicing or tokenizer support.
+
+5. **mergekit-extract-lora**: SVD-based extraction of PEFT-compatible LoRA adapters. Options: `--max-rank`, `--embed-lora`, `--distribute-scale`, regex filtering, `--sv-epsilon` for singular value thresholding.
+
+6. **mergekit-tokensurgeon**: Transplants tokenizers between models for speculative decoding draft models or cross-tokenizer distillation.
+
+7. **Fine-Grained Parameters**: Four-level precedence + tensor name filters (`self_attn`, `mlp`, etc.) for different merge weights per module type. Gradient interpolation arrays for per-layer-varying weights.
+
+8. **Tokenizer Configuration**: New `tokenizer` block with `tokens` map for per-token embedding override and `pad_to_multiple_of`. Legacy `tokenizer_source` maintained for backward compatibility but fields are mutually exclusive.
+
+### Sources
+- MergeKit GitHub: https://github.com/arcee-ai/mergekit
+- Merge Methods Guide: https://github.com/arcee-ai/mergekit/blob/main/docs/merge_methods.md
+- MoE Merging: https://github.com/arcee-ai/mergekit/blob/main/docs/moe.md
+- Multi-Stage Merging: https://github.com/arcee-ai/mergekit/blob/main/docs/multimerge.md
+- Evolutionary Merge: https://github.com/arcee-ai/mergekit/blob/main/docs/evolve.md
+
+### Skill
+SakThai-mergekit-hf-merging v2.0.0 — Complete MergeKit reference with all advanced features, configuration patterns, and zero-cost operation guidelines.

@@ -263,5 +263,9 @@
   "hf-hub-spaces-templates-complete-deep-dive",
   "hf-hub-inference-widgets-provider-system-deep-dive",
   "hf-hub-repo-move-delete-management",
-  "hf-hub-doi-digital-object-identifiers"
+  "hf-hub-doi-digital-object-identifiers",
+  "hf-hub-doi-deep-dive-datacite-metadata-schema",
+  "hf-spaces-lifecycle-sleep-pause-billing-duration",
+  "mergekit-hf-merging",
+  "mergekit-hf-merging-deep-dive-v2"
 ]

@@ -259,5 +259,13 @@
   "hf-inference-endpoints-deep-dive-v2",
   "hf-hub-docker-registry-deep-dive-v2",
   "hf-hub-model-dependents-deep-dive-v2-tag-system-merge-chains",
-  "hf-inference-client-openai-compatibility-and-structured-outputs"
+  "hf-inference-client-openai-compatibility-and-structured-outputs",
+  "hf-hub-spaces-templates-complete-deep-dive",
+  "hf-hub-inference-widgets-provider-system-deep-dive",
+  "hf-hub-repo-move-delete-management",
+  "hf-hub-doi-digital-object-identifiers",
+  "hf-hub-doi-deep-dive-datacite-metadata-schema",
+  "hf-spaces-lifecycle-sleep-pause-billing-duration",
+  "mergekit-hf-merging",
+  "mergekit-hf-merging-deep-dive-v2"
 ]
