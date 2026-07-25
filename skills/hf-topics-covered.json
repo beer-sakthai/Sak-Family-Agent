@@ -325,5 +325,6 @@
   "hf-hub-api-error-handling-source-deep-dive",
   "hf-hub-storage-buckets-spaces-persistent-storage-deep-dive",
   "hf-sandboxes-v3-deep-dive",
-  "hf-inference-client-streaming-patterns"
+  "hf-inference-client-streaming-patterns",
+  "hf-hub-model-hub-mixin-integration"
 ]
