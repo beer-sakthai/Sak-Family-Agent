@@ -105,6 +105,7 @@ This skill encodes how to communicate with the project owner and primary user, *
 ## Link & Delivery Verification
 
 - **Verify every external link before sending.** If you provide a URL (Colab notebook, GitHub repo, HF model, documentation page), confirm it returns HTTP 200 and the content is valid. Beer has been burned by empty/broken links before.
+- **Always send links as clickable Markdown** — `` `[text](url)` `` format. Beer said "Is not link" when I sent raw URLs without the markdown link syntax. A raw `https://...` is NOT a clickable link in his view. Always wrap URLs: `[HF Profile](https://huggingface.co/Nanthasit)` not `https://huggingface.co/Nanthasit`.
 - **For Colab notebooks:** The `#url=` import format is unreliable. Use the GitHub repo path format: `https://colab.research.google.com/github/beer-sakthai/sakthai-skills/blob/main/notebooks/<name>.ipynb`
 - **If you can't verify the link**, say so instead of presenting a dead link.
 

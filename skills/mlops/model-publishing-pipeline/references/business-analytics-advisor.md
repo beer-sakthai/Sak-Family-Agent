@@ -66,3 +66,23 @@ Browser (React) -> Vercel (Express + Gemini) -> GPT API
 - Cold start delay on first request
 - Dedup logic is essential (model repeats itself)
 - Model knows nothing about the business — all context in prompt
+- **Disambiguate use case before building**: If the user says "analytics" or "KPI" (not "chat"), confirm it's structured data → bullet recommendations, NOT conversational AI. Beer corrected "Not for chat, for analytics" — the distinction matters for system prompt design.
+
+## RAG Integration
+
+For better recommendations, add RAG context from the business database:
+
+1. **Index operational data** from SQLite DB (metrics, orders, waste records, targets) into embeddings
+2. **Store vectors** in a JSON file indexed alongside the advisor server
+3. **On each request**, inject relevant past data as context into the prompt:
+   ```
+   Recent data:
+   - Metric: Sales=1250, COGS=38%, Waste=12%
+   - Order: Item=California Rolls, Qty=24
+   - Alert: Supply delay notice
+   ```
+4. **The 0.5B uses this context** to ground its recommendations in actual business history
+
+Implementation: `fp_rag_server.py` indexes the Food-Penguin SQLite DB. `advisor_server_0.5b.py` reads `rag_index.json` at request time and injects recent data points into the prompt. No separate RAG server needed — the index file is queried inline.
+
+See `beer-sakthai/Food-Penguin-Limited` for the production implementation.
