@@ -1,111 +1,63 @@
 # HF Learnings Log
 
-## 2026-07-25: hf-inference-router-openai-compatible-endpoint — Practical Patterns Deep-Dive (Topic #363)
+## 2026-07-25: hf-hub-security-scanning-deep-dive — Hugging Face Hub Security Scanning Architecture and Workflows (Topic #185)
 
 ### Summary
-Comprehensive deep-dive into the HF Inference Router's practical usage patterns — covering the new **Responses API (beta)** with event-driven streaming and Remote MCP, **structured outputs** with Pydantic/JSON Schema via both `chat.completions` and `responses` APIs, **function calling** execution patterns with tool_choice control, advanced **pricing model** (free tier, Custom Provider Key, Organization billing), and the full **18-provider ecosystem** with capability matrix. Builds on Topic #361 (Router architecture and API surface) to add real-world usage patterns, zero-cost strategies, and the latest Inference Providers features.
+Deep dive into Hugging Face Hub's security scanning infrastructure — the automated pipeline that scans every model, dataset, and Space upload for malware, secrets, unsafe content, and license violations. Covers the four scanning layers (Pickle scanning via PickleScan from Trail of Bits, ClamAV antivirus, secrets/credential detection, safety moderation), how scan results are displayed as badges on repo pages, API access to scan status, handling of false positives, and best practices for secure model publishing.
 
 ### Key Findings
+- **Four scanning layers**: Pickle exploit detection (opcode-level static analysis), ClamAV (malware signatures), secrets detection (regex pattern matching for API keys, tokens, private keys), safety moderation (text/image content policy)
+- **Quarantine for critical findings**: Confirmed malware triggers automatic repo hiding and download blocking; non-critical issues show warning badges
+- **Secrets redaction ≠ removal**: Hub viewer shows `[REDACTED]` but the raw Git object still contains the secret — credentials must be rotated
+- **safetensors is the solution**: Eliminates pickle-based code execution risk entirely; supported by Transformers, Diffusers, PEFT, and most modern frameworks
+- **API-accessible**: `HfApi.repo_info(expand=["securityScanStatus"])` returns per-layer scan results for CI/CD integration
+- **False positives possible**: ClamAV can flag statistical weight patterns; pickle opcodes like `__import__` may be flagged even for legitimate dynamic architecture loading — appealable through Hub support
 
-| Area | Finding |
-|------|---------|
-| **Responses API** | New OpenAI-compatible unified interface with event streaming, `.parse()` for typed outputs, Remote MCP tools, reasoning effort controls |
-| **Structured outputs** | Two approaches: `chat.completions` with `response_format` (JSON Schema) or `responses.parse()` with Pydantic (typed objects) |
-| **Function calling** | Full lifecycle: define schema → model decides → execute tool → return result; `tool_choice` controls (auto/required/specific/none) |
-| **Remote MCP** | Responses API can call server-hosted MCP tools directly with `server_url`, `allowed_tools`, `require_approval` |
-| **Pricing** | Free: $0.10/mo, PRO: $2.00/mo, Team: $2/seat. Custom Provider Key bypasses HF billing. Organization billing via `X-HF-Bill-To` |
-| **Free providers** | Some providers offer free inference (`is_free: true`). Check via `/v1/models`. Groq offers free inference with tool support |
-| **18 providers** | Full capability matrix: only HF Inference supports all tasks (chat, image, video, audio). Third parties focus on chat completion |
-| **Event streaming** | `stream=True` with `responses.create()` yields `response.created`, `output_text.delta`, `response.completed` events |
-| **Agent integrations** | Dedicated guides for OpenCode, Pi, Codex, Claude Code, Hermes Agent — drop-in OpenAI-compatible setup |
-
-### Zero-Cost Patterns
-- Use `:cheapest` policy or check `is_free` in `/v1/models` for free routing
-- Responses API works on free models with tool support
-- Custom Provider Key lets you use existing provider free tiers
-- $0.10/mo credit covers hundreds of lightweight calls
-- Cache responses and batch requests to conserve credits
-
-### Skill Updated
-`hf-inference-router-openai-compatible-endpoint/` — SKILL.md + references/hf-learnings.md with practical patterns deep-dive.
-
-### Sources
-- https://huggingface.co/docs/inference-providers/en/guides/responses-api
-- https://huggingface.co/docs/inference-providers/en/guides/structured-output
-- https://huggingface.co/docs/inference-providers/en/guides/function-calling
-- https://huggingface.co/docs/inference-providers/en/pricing
-- https://huggingface.co/docs/inference-providers/en/index
-- https://huggingface.co/docs/inference-providers/en/guides/first-api-call
-- https://huggingface.co/docs/inference-providers/en/guides/building-first-app
+### Skill Created
+`hf-hub-security-scanning-deep-dive/` — SKILL.md (author: SakThai, license: MIT) + references/hf-learnings.md with scanning architecture, detection layers, badge reference, API patterns, false positive handling, and secure publishing best practices for models, datasets, and Spaces.
 
 ---
 
-## 2026-07-25: hf-gradio-server-mode — Gradio 6 Server Mode (gr.Server) Complete Reference (Topic #351)
+## 2026-07-25: hf-transformers-deepseek-v4-deep-dive — DeepSeek V4 Architecture Complete Reference (Topic #358)
 
 ### Summary
-Comprehensive deep dive into Gradio 6's `gr.Server` (Server mode) — introduced in 6.10.0. A FastAPI-based API server that exposes Gradio's queue, SSE streaming, concurrency control, and MCP capabilities **without a UI**. Unlike `gr.Blocks()` which renders a full web interface, `gr.Server` is designed for pure API/microservice deployment with OpenAPI docs, standard FastAPI routes (`.get()`, `.post()`, etc.), and built-in Gradio event infrastructure. Key insight: `gr.Server` inherits directly from FastAPI (via `gradio.routes.App`), so all standard FastAPI methods work directly.
+Deep dive into the **DeepSeek V4** architecture as implemented in Transformers 5.14.1 (`models/deepseek_v4/`). DeepSeek V4 is a Mixture-of-Experts (MoE) decoder-only transformer introducing three novel attention mechanisms (Sliding, Compressed Sparse CSA, Heavily Compressed HCA), a Lightning Indexer for sparse attention routing, Manifold-Constrained Hyper-Connections (mHC), Grouped Output Projection, and Hash-MoE bootstrapping. Models V4-Flash (43L, 64H, 256E) and V4-Pro are defined.
 
 ### Key Findings
-- **True FastAPI inheritance**: `gr.Server` is an actual FastAPI subclass — can use middleware, routers, dependency injection, WebSocket, sub-applications
-- **`@server.api()` decorator**: Registers functions as Gradio API endpoints with queue, SSE streaming, concurrency control, batch processing
-- **MCP namespace**: `server.mcp.tool()`, `server.mcp.resource()`, `server.mcp.prompt()` — native MCP decorators on the server instance
-- **Dual decorator pattern**: Stack `@server.mcp.tool()` + `@server.api()` on same function for both Gradio API + MCP tool
-- **Deferred registration**: `@server.api()` functions stored in `_deferred_apis` list, only registered at `launch()` time
-- **No Gradio frontend**: Server mode doesn't load/serve frontend JS/CSS — lighter and faster startup than `gr.Blocks`
-- **Full OpenAPI docs**: Automatic at `/docs` (Swagger), `/redoc` (ReDoc), `/openapi.json`
-- **ZeroGPU support**: Since 6.12.0
-- **Auth via FastAPI deps**: `auth_dependency` parameter supports OAuth2, JWT, API keys
-- **Env var**: `GRADIO_SERVER_MODE_ENABLED=1` set on launch
-
-### API Surface
-- `server.api(fn, name, queue, concurrency_limit, batch, stream_every, ...)` — Gradio endpoint decorator
-- `server.mcp.tool(name)` / `.resource(uri)` / `.prompt(name)` — MCP decorators
-- All FastAPI methods: `.get()`, `.post()`, `.add_middleware()`, `.include_router()`, etc.
-- `server.launch(server_name, server_port, auth_dependency, mcp_server, ...)` — start server
+- **Three attention types**: Sliding (local window 128), CSA (compress_rate=4 with Lightning Indexer), HCA (compress_rate=128 without indexer). Per-layer schedule: 2× HCA bootstrap + CSA/HCA interleave.
+- **Lightning Indexer**: Scaled-down compressor at index_head_dim=128, scores queries with `Σ_h w_{t,h} · ReLU(q_{t,h} · K^IComp_s)`, keeps top-512 entries. Reduces compressed attention cost.
+- **CSA's two-series overlap**: Ca (previous window) + Cb (current window) = 2m effective width, softmax-gated with position bias.
+- **Grouped Output Projection**: Split heads into g=8 (Flash) or 16 (Pro) groups, each projected to o_lora_rank=1024, mixed to hidden_size.
+- **Hash-MoE bootstrap**: First 3 layers route via frozen `tid2eid[input_ids]` (no learned router), rest use standard top-6-of-256 routed MoE with sqrtsoftplus scoring.
+- **Interleaved Partial RoPE**: qk_rope_head_dim=64 (Flash) out of 512 head_dim. Two rope types: "main" (θ=10000) for sliding; "compress" (θ=160000, YaRN optional) for CSA/HCA.
+- **mHC with Sinkhorn-Knopp**: 20 iterations for doubly-stochastic projection of residual mapping.
+- **Shared-KV MQA**: Single KV head broadcast to all query heads.
+- **Expert Parallelism only**: MoE parallelism, grouped-GEMM on experts, attention replicated.
 
 ### Skill Created
-`hf-gradio-server-mode/` — complete skill with SKILL.md and references/hf-learnings.md (256 lines, full API reference, 8 usage patterns, comparison matrix, MCP integration deep dive).
+`hf-transformers-deepseek-v4-deep-dive/` — SKILL.md (author: SakThai, license: MIT) + references/hf-learnings.md. Based on Transformers 5.14.1 source analysis.
 
 ---
 
-## 2026-07-25: hf-gradio-6-native-plot-components — Gradio 6 Native Plot Components Complete Reference (Topic #351)
+## 2026-07-25: model-routing-agent-systems-deep-dive
 
 ### Summary
-Comprehensive deep dive into Gradio 6's native plot component family (`gr.LinePlot`, `gr.ScatterPlot`, `gr.BarPlot`, and the generic `gr.Plot`). These components provide declarative, DataFrame-backed charting with client-side rendering (built on Vega-Altair), eliminating the need for matplotlib/plotly for common use cases. All three share the **identical API** with over 20 dedicated parameters for axis configuration, color mapping, binning, aggregation, tooltips, and layout.
+
+Deep dive into model routing for agentic systems — why classification-based routing fails, the three hidden dimensions (caching economics, invisible complexity, infrastructure latency), and how optimization-based routing explores cost-accuracy frontiers. Synthesizes IBM Research's production routing work with Ai2/Shippy's agent architecture patterns (soul/skills/config, deterministic CLI abstraction, sandboxed hosting). 
+
+Key insight: Routing isn't about choosing models — it's about optimizing systems. Models are one variable among caching behavior, infrastructure state, compliance constraints, and workload patterns.
 
 ### Key Findings
-- **Three native plot components**: `gr.LinePlot`, `gr.ScatterPlot`, `gr.BarPlot` — all share identical constructor API
-- **Client-side rendering**: Uses Vega-Altair in browser; no server CPU for rendering
-- **Direct DataFrame input**: Accepts `pd.DataFrame` directly, or a callable returning one
-- **Built-in binning/aggregation**: `x_bin` (numeric size or datetime string like "1h") + `y_aggregate` (sum/mean/median/min/max)
-- **Color series**: `color` parameter splits data into multiple series; `color_map` for custom colors
-- **Interactive events**: `.change()`, `.select()` (with `SelectData`), `.double_click()`
-- **Tooltip modes**: `"axis"`, `"all"`, `"none"`, or `list[str]` of columns
-- **Axis limits**: `x_lim`/`y_lim` as `[min, None]` tuples for one-sided constraints
-- **Sort control**: `sort` parameter for categorical x — `"x"`, `"-x"`, `"y"`, `"-y"`, or explicit list
-- **gr.Plot fallback**: For matplotlib/plotly/bokeh/altair figures when custom rendering is needed
-- **Performance advantage**: Native plots send DataFrame as JSON to browser → 10-100x smaller payload than serialized mpl figures
 
-### API Parameters (shared by LinePlot, ScatterPlot, BarPlot)
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `value` | `pd.DataFrame \| Callable \| None` | Data or callable returning data |
-| `x` | `str` | X-axis column name |
-| `y` | `str \| list[str]` | Y-axis column name(s), must be numeric |
-| `color` | `str \| None` | Column for series splitting |
-| `title` | `str \| None` | Chart title |
-| `x_title` / `y_title` | `str \| None` | Axis titles |
-| `color_title` | `str \| None` | Legend title |
-| `x_bin` | `str \| float \| None` | X grouping: number (numeric) or "1h"/"15m" (datetime) |
-| `y_aggregate` | `Literal` | "sum", "mean", "median", "min", "max" |
-| `x_lim` / `y_lim` | `list[float \| None]` | Axis bounds |
-| `color_map` | `dict[str, str]` | Series → color mapping |
-| `sort` | `str \| list[str]` | Categorical sort order |
-| `tooltip` | `str \| list[str]` | Tooltip content mode |
-| `height` | `int \| None` | Plot height in px |
+- **Cost ≠ sticker price.** Caching dominates real cost. Claude Sonnet 4.6 cost $79 vs GPT-4.1's $155 on identical tasks (417 AppWorld tasks) despite Sonnet's higher sticker pricing — because Sonnet's lower cache-read pricing offset 3x more reasoning steps.
+- **Difficulty is often invisible at routing time.** A "simple" summarization request may trigger complex multi-step workflows; a technically dense prompt may be handled efficiently by a smaller specialized model.
+- **Latency is dominated by infrastructure, not model size.** Hardware, cache warmth, endpoint load, and routing granularity all matter more than pure model speed.
+- **Optimization over classification.** IBM's router treats routing as a multi-objective optimization problem, producing cost-accuracy frontiers with ~6ms overhead per task.
+- **Skill-based routing via agent anatomy.** Shippy's soul/skills/config architecture enables routing by task domain — geospatial queries to specialized models, complex analysis to frontier models.
 
 ### Skill Created
-`hf-gradio-6-native-plot-components/` — complete skill with SKILL.md and references/hf-learnings.md.
+
+`model-routing-agent-systems-deep-dive/` — complete reference with routing dimensions, optimization approach, cost-accuracy frontier analysis, agent architecture patterns, and practical routing strategies.
 
 ---
 
@@ -6410,115 +6362,96 @@ Deep dive into Hugging Face Spaces secrets and environment variables management.
 
 ---
 
-## 2026-07-25: hf-hub-model-download-stats-deep-dive — Download Counting Methodology Deep Dive
+## 2026-07-25: hf-inference-endpoints-custom-containers-deep-dive
 
 ### Summary
-Source-level deep dive into the HF Hub model download counting system — query files mechanism, per-library `countDownloads` config in `huggingface.js/packages/tasks/src/model-libraries.ts` (200+ libraries), ElasticSearch query-string DSL over `path`/`path_prefix`/`path_extension`/`path_filename` fields, diffusers double-counting prevention (regex on root-level files only), GGUF always-counted-by-default behavior, Publisher Analytics CSV export API for Team/Enterprise, and granular request-level logs for Enterprise Plus.
+Deep-dive into deploying custom Docker containers to Hugging Face Inference Endpoints (dedicated). Covers the full lifecycle: FastAPI server patterns with ModelManager lifecycle, model mounting at `/repository`, Docker packaging with uv, endpoint configuration (hardware, auth, autoscaling, scale-to-zero, tags, env vars), analytics/monitoring via OpenMetrics API for Prometheus/Grafana, security (PrivateLink, secret env vars), client integration patterns, and cost comparison with zero-cost alternatives.
 
-### Key Findings
-| Finding | Detail |
-|---------|--------|
-| **Server-side counting** | No client instrumentation — every GET/HEAD to a query file path increments the counter via ElasticSearch |
-| **Default query files** | `config.json`, `config.yaml`, `hyperparams.yaml`, `params.json`, `meta.yaml` — when no library-specific `countDownloads` is defined |
-| **countDownloads patterns** | 5 patterns: single config path, extension wildcard, specific model file, combined OR, library-specific config |
-| **Diffusers edge case** | Uses `bool.should` with 4 rules + `minimum_should_match:1` — captures both library and UI downloads without double-counting nested files |
-| **GGUF exception** | All `.gguf` files counted unconditionally (self-contained format, no library dependency) |
-| **Source location** | `huggingface.js/packages/tasks/src/model-libraries.ts` — open-source, PRs welcome |
-| **Publisher Analytics** | CSV export API at `huggingface.co/organizations/{org}/settings/publisher-analytics/download-breakdown` |
-| **Granular logs** | Enterprise Plus add-on — request-level logs with anonymized user/IP hashing, HTTP status/method, country/region |
-| **ElasticSearch fields** | `path` (full path), `path_prefix` (directory), `path_extension` (extension), `path_filename` (name without extension) |
+### Key Architecture
+- **ModelManager pattern**: Class-based model lifecycle with `load()`, `unload()`, `get()` methods + FastAPI lifespan hooks for startup/shutdown
+- **Health endpoint**: Returns 503 until model is ready — platform uses this to gate traffic
+- **`/repository` mount**: Model weights are NEVER baked into the image; platform downloads from Hub and mounts at container start
+- **Docker best practices**: Non-root user (`appuser`), layer caching (deps before code), `--platform linux/amd64` for Mac builds, uv for fast dependency resolution
 
-### Skill Created/Updated
-`hf-hub-model-download-stats/` — comprehensive skill with SKILL.md (author:SakThai, license:MIT) and references/hf-learnings.md with full source-level documentation.
+### Configuration Reference
+- **Hardware**: AWS/Azure/GCP, CPU/GPU/INF2, multiple region options
+- **Auth modes**: Private (token required), Public (no auth), Authenticated (any HF account)
+- **Autoscaling**: Scale-to-zero after inactivity (default 1h), min/max replicas, GPU utilization or pending requests as trigger
+- **Environment vars**: Default (plain) and Secret (encrypted) env vars
+- **Network**: Public internet (default) or AWS PrivateLink for VPC-restricted access
+
+### Analytics (OpenMetrics API)
+- Exports metrics in OpenMetrics format (Prometheus-compatible)
+- Metrics: requests by HTTP class, latency distribution (p50/p90/p95/p99), CPU/GPU/memory utilization, replication count
+- Integration with Prometheus, Grafana, Datadog
+- Team/Enterprise feature
+
+### Cost Reality
+- Custom containers require paid GPU instances ($0.10-$4.50/h)
+- For zero-cost development: Serverless Inference Providers, ZeroGPU Spaces, or local GGUF inference are the alternatives
+
+### Skill Created
+`hf-inference-endpoints-custom-containers/` — SKILL.md (author: SakThai, license: MIT) + references/hf-learnings.md with complete documentation.
 
 ### Sources
-- https://huggingface.co/docs/hub/en/models-download-stats
-- https://huggingface.co/docs/hub/en/publisher-analytics
-- https://github.com/huggingface/huggingface.js/blob/main/packages/tasks/src/model-libraries.ts
-- https://github.com/huggingface/huggingface.js/blob/main/packages/tasks/src/model-libraries-downloads.ts
-- https://github.com/huggingface/huggingface.js/pull/885/files
-
+- https://huggingface.co/docs/inference-endpoints/en/engines/custom_container — "Deploy with your own container"
+- https://huggingface.co/docs/inference-endpoints/en/guides/configuration — "Configuration"
+- https://huggingface.co/docs/inference-endpoints/en/guides/analytics — "Analytics and Metrics"
+- https://huggingface.co/docs/inference-endpoints/en/guides/autoscaling — "Auto Scaling"
+- https://huggingface.co/docs/inference-endpoints/en/guides/security — "Security & Compliance"
 
 ---
 
-## 2026-07-25: hf-foundry-managed-compute — HF Models on Foundry Managed Compute (Topic #364)
+## 2026-07-25: hf-datasets-5-release — Hugging Face Datasets 5.0.0 New Features Complete Reference (Topic #353)
 
 ### Summary
-Comprehensive deep-dive into **Hugging Face models on Microsoft Foundry Managed Compute** — a curated catalog of open-weight models from the HF ecosystem, refreshed weekly, deployable in one click onto Foundry Managed Compute (Microsoft's managed GPU PaaS). Announced at Microsoft Build 2026 (July 7, 2026). Covers the curation pipeline, supported runtimes (vLLM, SGLang, TEI, llama.cpp, TensorRT-LLM, NIM, hf-serve), deployment templates, Python SDK + OpenAI SDK patterns, private networking, and enterprise security model. Distinct from HF's own enterprise features — this is the operational layer Microsoft runs on top of the open ecosystem.
+Deep dive into Hugging Face Datasets **v5.0.0** (June 5, 2026) — a major version from 4.8.5 introducing agent trace parsing (via `teich` library for SFT on coding agent traces), multi-shard streaming shuffle (dramatically better randomness), `batch(by_column="episode")` for robotics, and four new format support additions: Apache Iceberg, TsFile (IoTDB), 3D Mesh (MeshFolder builder), and CoNLL/CoNLL-U. Also covers critical Parquet streaming fixes, Lance storage options, composed streaming splits, and `to_sql` num_proc.
+
+### Key Features
+- **Agent Traces:** `load_dataset()` now parses coding agent traces (Claude Code, Codex, Pi) via optional `teich` dependency → produces `messages` column ready for SFT with `trl`. Discoverable via `?format=format:agent-traces` filter on Hub.
+- **Multi-Shard Shuffle:** `ds.shuffle(seed=42, max_buffer_input_shards=10)` — new default pulls from 10 input shards concurrently. Fixes cold-start clustering. Old behavior: `max_buffer_input_shards=1`.
+- **Batch by Column:** `ds.batch(by_column="episode")` — groups consecutive rows by column value into full batches. Built for robotics episode grouping.
+- **Apache Iceberg:** `load_dataset("iceberg://catalog/namespace/table")` — direct data lakehouse ingestion.
+- **TsFile (IoTDB):** Time-series columnar format for industrial IoT sensor data.
+- **3D Mesh + MeshFolder:** Loads `.obj/.stl/.ply/.glb` mesh files into structured datasets with `embed_external_files=True`.
+- **CoNLL/CoNLL-U:** Native NER/chunking/dependency parsing format loader.
+- **Key Fixes:** Parquet streaming hang fixed, Lance storage_options fixed, composed splits in streaming, `Json()` null handling, `to_sql` num_proc, `map` progress bar fix.
+
+### Breaking Changes
+1. Streaming shuffle now multi-shard by default — revert with `max_buffer_input_shards=1`
+2. `Json()` columns: `None` stays `None` (not `"null"` string) — validate downstream null handling
+3. Agent traces need optional `teich` dependency
+
+### Skill Created
+`hf-datasets-5-release/` — SKILL.md (author: SakThai, license: MIT) + references/hf-learnings.md.
+
+### Sources
+- https://github.com/huggingface/datasets/releases/tag/5.0.0 — Official release notes
+- https://pypi.org/project/teich/ — Teich library
+
+---
+
+## 2026-07-25: hf-inference-endpoints-advanced-operations — Autoscaling, Analytics, and Custom Router for Production Inference (Topic #366)
+
+### Summary
+
+Comprehensive deep-dive into three advanced operational features of Hugging Face Inference Endpoints (dedicated): **autoscaling** (dynamic replica adjustment based on hardware utilization or pending requests), **analytics & monitoring** (real-time dashboard, latency distributions, OpenMetrics API for Prometheus/Grafana/Datadog), and **custom router** (deploying your own load balancing logic for precise control over routing decisions). Builds on the foundational Inference Endpoints coverage to focus on the **operational layer** — how to keep endpoints healthy, cost-efficient, and responsive under varying load.
 
 ### Key Findings
 
 | Area | Finding |
 |------|---------|
-| **Curation pipeline** | 5 stages: identify → screen (license, trust_remote_code) → build/scan runtimes → upload weights to Azure → validate & publish |
-| **Runtimes** | vLLM (default LLM), SGLang (structured outputs), TEI (embeddings), llama.cpp (CPU/GGUF), TensorRT-LLM/NIM (NVIDIA), hf-serve (vision/audio) |
-| **Deployment templates** | Named versioned assets pinning runtime + accelerator + context length + tuning — e.g., Qwen3-32B has 4 templates (40k/128k × A100/H100) |
-| **Deploy SDK** | `CognitiveServicesManagementClient.managed_compute_deployments.begin_create_or_update()` with `acceleratorType`, model URI, deployment template ID |
-| **Score SDK** | OpenAI SDK at `https://{ACCOUNT}.services.ai.azure.com/openai/v1` — same endpoint as all Foundry models |
-| **Private network** | No outbound internet to HF Hub needed — weights pre-staged in Azure, runtimes in Microsoft-managed registry |
-| **Enterprise features** | RBAC, private networking, Azure Policy, content safety, guardrails, AI Red Teaming Agent, unified billing |
-| **Roadmap** | Broader coverage, additional accelerators, Bring Your Own Weights |
+| **Scale-to-zero** | After 1h inactivity, endpoint goes idle (0 replicas). Cold start returns 503; use `X-Scale-Up-Timeout` header to hold requests with configurable timeout. |
+| **Hardware utilization** | Default autoscaling trigger — new replica added when avg GPU/CPU utilization exceeds 80% over a 1-minute window. Scale-up every 1min, scale-down every 2min with 300s stabilization. |
+| **Pending requests** | Leading indicator — triggers scale-up when >1.5 pending requests per replica in the past 20 seconds. More responsive than hardware metrics. |
+| **Analytics dashboard** | 6 panels: HTTP requests (by status code), pending requests, latency distribution (p50/p90/p95/p99), running replicas, compute (CPU/GPU/Memory/VRAM). Per-replica or aggregated view. |
+| **OpenMetrics API** | Beta, Team/Enterprise feature. Exports latency, HTTP requests, CPU/GPU/memory metrics at `GET /v2/endpoint/{ns}/{name}/open-metrics`. Compatible with Prometheus, Grafana, Datadog. |
+| **Custom router** | Deploy your own router image alongside replicas. Controls load balancing via `POST /_custom_router/set-backends` and `GET /_custom_router/health` endpoints. API-only configuration. |
+| **queued-least-latency** | Reference router implementation. Uses EWMA latency tracking, FIFO queue, and least-loaded dispatch. New replicas are preferred (latency=0), so fresh capacity is used immediately on scale-up. |
+| **Batching tradeoff** | For LLMs (batching increases throughput), raise `CUSTOM_ROUTER_LATENCY_THRESHOLD` (e.g., 65s) to allow concurrent requests. For diffusion/no batching benefit, keep default (3s) for one-at-a-time. |
+| **Router backpressure** | When all replicas loaded, requests queue. `QUEUE_MAX_SIZE` (1000) and `QUEUE_TIMEOUT` (1200s) control overflow behavior — dropped requests return 503. |
 
 ### Skill Created
-`hf-foundry-managed-compute/` — SKILL.md (author: SakThai, license: MIT) + references/hf-learnings.md with full documentation.
-
-### Sources
-- https://huggingface.co/blog/microsoft/foundry-managed-compute
-- https://learn.microsoft.com/en-us/azure/ai-foundry/
-
----
-
-## 2026-07-25: hf-inference-router-openai-compatible-endpoint — HF Inference Router OpenAI-Compatible Endpoint (Topic #361)
-
-### Summary
-Comprehensive deep dive into Hugging Face's Inference Router (`https://router.huggingface.co/v1`) — the OpenAI-compatible proxy endpoint providing server-side provider selection, auto-failover, and unified access to 16+ providers through a single OpenAI SDK-compatible API. Unlike InferenceClient (client-side routing), the Router processes provider selection server-side using model ID suffixes (`:fastest`, `:cheapest`, `:preferred`, `:provider-name`). Endpoint provides `/v1/models` for model discovery with per-provider metadata (pricing, latency, throughput, context length, tool support). Currently chat completions only.
-
-### Key Findings
-- **Server-side routing**: Provider selection happens on the proxy, not the client — model ID suffix determines provider/policy
-- **`/v1/models` endpoint**: Lists all chat models with rich provider metadata (pricing, latency, throughput, context_length, supports_tools, supports_structured_output, is_free)
-- **Policy suffixes**: `:fastest` (default, highest throughput), `:cheapest` (lowest output price), `:preferred` (user preference order), `:provider-name` (explicit, e.g., `:groq`)
-- **Auto-failover**: Built-in — if selected provider is unhealthy, falls through to next available
-- **Drop-in OpenAI replacement**: Change base URL to `https://router.huggingface.co/v1` and API key to HF token
-- **Limitation**: Chat completions only — image gen, embeddings, audio need InferenceClient
-- **Free tier**: Check `is_free` field per provider in `/v1/models`; `hf-inference` provider offers free CPU inference for classic models
-
-### API Surface
-- `GET /v1/models` — list all chat models with provider metadata
-- `POST /v1/chat/completions` — create chat completion (streaming, tools, structured outputs supported per provider)
-- Auth: Bearer token (fine-grained with `inference.serverless.write` permission)
-
-### Skill Created
-`hf-inference-router-openai-compatible-endpoint/` — SKILL.md (author: SakThai, license: MIT) + references/hf-learnings.md with full documentation.
-
----
-
-## 2026-07-25: hf-jobs-serving-vllm — One-Command Model Serving on HF Jobs (Topic #365)
-
-### Summary
-
-Comprehensive deep-dive into running inference servers on Hugging Face Jobs using the `hf jobs run` CLI one-command pattern. Unlike the Python SDK approach (covered in `hf-jobs-api-deep-dive`), the CLI provides a zero-friction path: `hf jobs run --detach --expose <port> --flavor <hardware> -s HF_TOKEN <image> -- <server-command>`. Supports vLLM (default), SGLang, llama.cpp, and any HTTP server. Covers the full lifecycle — deployment, authentication, endpoint URL format, model download acceleration, billing, and cost optimization.
-
-### Key Findings
-
-| Area | Finding |
-|------|---------|
-| **CLI one-liner** | `hf jobs run --detach --expose 8000 --flavor a10g-small -s HF_TOKEN vllm/vllm-openai -- vllm serve <model>` |
-| **`--` separator** | Required when the job command has its own flags — separates `hf jobs run` options from the command's args |
-| **`--detach`** | Returns immediately; server runs in background until cancelled or timeout |
-| **`--expose <port>`** | Makes ports reachable at `https://{job.id}--{port}.hf.jobs` |
-| **`-s HF_TOKEN`** | Forwards your HF token as a secret for authenticated model downloads |
-| **Default timeout** | 30 minutes; set `--timeout` to override |
-| **Cancel** | `hf jobs cancel <job_id>` — stops billing immediately |
-| **Auth for endpoint** | Exposed ports require Bearer token with `read` access to the job's namespace |
-| **OpenAI-compatible** | vLLM, SGLang, llama.cpp all speak the OpenAI-compatible API |
-| **Pricing** | Pay-per-minute for hardware + $0.01/min for exposed ports (flat) |
-
-### Skill Created
-`hf-jobs-serving-vllm/` — SKILL.md (author: SakThai, license: MIT) + references/hf-learnings.md with full CLI patterns, pricing reference, and best practices.
-
-### Sources
-- https://huggingface.co/docs/hub/en/jobs-serving
-- https://huggingface.co/blog/vllm-jobs
-- https://huggingface.co/docs/hub/en/jobs-pricing
+`hf-inference-endpoints-advanced-operations/` — SKILL.md (author: SakThai, license: MIT) + references/hf-learnings.md covering autoscaling strategies (scale-to-zero, hardware/pending triggers, timing), analytics dashboard (all 6 panels, OpenMetrics API, integration with monitoring stacks), custom router (architecture, contract, API config, queued-least-latency reference implementation tuning, building your own router).
 
 ---
