@@ -16057,3 +16057,22 @@ The leaderboard intentionally uses CPU-only evaluation to:
 
 ### Skill
 mlops/hf-open-llm-leaderboard — Open LLM Leaderboard v2 evaluation methodology, submission workflow, and reproducibility guide
+
+---
+
+## 2026-07-25: hf-llm-course-comprehensive-deep-dive — Complete HF LLM/NLP Course Curriculum & Implementation Guide (Topic #248)
+
+### Summary
+Comprehensive deep-dive into the Hugging Face LLM/NLP Course (https://huggingface.co/learn/llm-course) — the flagship educational resource covering the full transformer model lifecycle. The course spans 8 chapters and ~70 units across natural language processing, transformer architectures (encoder-only, decoder-only, encoder-decoder), model fine-tuning (Trainer API, custom loops with Accelerate), dataset processing (Arrow, streaming, Parquet, FAISS search), tokenizer training (BPE, WordPiece, Unigram), Hub sharing (model cards, YAML, push_to_hub), and production deployment (TGI, vLLM, ONNX, quantization). Covers libraries: transformers v5.x, datasets v5.x, tokenizers, accelerate, huggingface_hub.
+
+### Key Sections
+- **Ch1**: Transformer architecture theory, NLP fundamentals, inference strategies, bias/limitations
+- **Ch2**: Pipeline API internals, AutoModel/AutoTokenizer, padding/truncation, optimized deployment
+- **Ch3**: Fine-tuning with Trainer API, TrainingArguments, custom training loops with Accelerate
+- **Ch4**: Hub orientation, model sharing, model card YAML, widget configuration
+- **Ch5**: Datasets library: local loading, slicing/shuffling, streaming, Parquet, FAISS semantic search
+- **Ch6**: Tokenizers library: BPE/WordPiece/Unigram algorithms, training custom tokenizers, offset mapping
+- **Ch7**: Task-specific fine-tuning: token classification (NER), MLM, translation, summarization, causal LM
+
+### Skill
+mlops/hf-llm-course — Hugging Face LLM/NLP Course complete curriculum documentation, covering transformers, datasets, tokenizers, fine-tuning, Hub sharing, and production deployment patterns
