@@ -4883,3 +4883,123 @@ job = api.run_uv_job("run_eval.py", volumes=[vol], flavor="cpu-upgrade")
 
 ---
 
+## 2026-07-25: hf-spaces-hot-reload-architecture-deep-dive — Hot Reload & Dev Mode for Spaces
+
+### Summary
+Comprehensive source-code deep-dive into the Hugging Face Spaces Hot Reload system (`huggingface_hub._hot_reload`), which enables live code reloading on running Spaces without full container rebuilds. Built on top of **Dev Mode** (a PRO/Team feature that keeps the container alive between restarts), the Hot Reload infrastructure uses Server-Sent Events (SSE) to push incremental code changes to individual replicas. This is the first time the full internal architecture of this system has been documented from source.
+
+### Architecture Overview
+
+The Hot Reload system has three layers:
+
+1. **Dev Mode** — Toggle on/off via `enable_space_dev_mode()`/`disable_space_dev_mode()`. Keeps the Space container running while the application restarts. Required before hot reloading can work. Available on PRO and Team & Enterprise plans.
+
+2. **Commit with `_hot_reload=True`** — Pass the private `_hot_reload=True` parameter to `create_commit()` (or `upload_folder()` which wraps it). This adds `?hot_reload=1` as a query parameter to the commit API endpoint (`POST /api/{type}s/{repo_id}/commit/{revision}`), signalling the Hub to notify all running replicas.
+
+3. **SSE-based Reload Client** — Each running Space replica runs a reload server on port **7887** (subdomain-based: `{space}--7887.hf.space`). The `ReloadClient` connects to this endpoint and streams reload events via SSE.
+
+### Source Code Structure
+
+All hot reload source lives under `huggingface_hub/_hot_reload/` (Copyright 2026, new in v1.24.0):
+
+| File | Purpose |
+|------|---------|
+| `__init__.py` | Package marker (license only, no exports) |
+| `types.py` | TypedDict definitions for all reload API request/response shapes |
+| `sse_client.py` | Vendored SSE client (from `mpetazzoni/sseclient`, Apache-2.0) |
+| `client.py` | `ReloadClient` and `multi_replica_reload_events()` — core Hot Reload logic |
+
+### Types Reference (`types.py`)
+
+**Operation Types** (the actual events streamed during reload):
+
+| Type | Kind | Description |
+|------|------|-------------|
+| `ReloadOperationObject` | `"add"` / `"update"` / `"delete"` | File-level object change: `objectType`, `objectName`, `region` |
+| `ReloadOperationRun` | `"run"` | Execute code block: `codeLines`, `stdout`, `stderr` |
+| `ReloadOperationException` | `"exception"` | Runtime exception with `traceback` string |
+| `ReloadOperationError` | `"error"` | Fatal reload error with `traceback` |
+| `ReloadOperationUI` | `"ui"` | UI change notification: `updated: bool` |
+| `ReloadOperationFile` | `"file"` | File creation notification: `created: bool` |
+
+**API Request/Response Types:**
+
+| TypedDict | Purpose |
+|-----------|---------|
+| `ApiCreateReloadRequest` | `{filepath, contents, reloadId?}` — trigger a reload on a specific file |
+| `ApiCreateReloadResponseSuccess` | `{status: "created", reloadId: str}` |
+| `ApiCreateReloadResponseError` | `{status: "alreadyReloading" | "fileNotFound"}` |
+| `ApiGetReloadRequest` | `{reloadId: str}` — poll/pull reload events by ID |
+| `ApiGetReloadEventSourceData` | Stream of `ReloadOperation*` events emitted during reload |
+| `ApiGetStatusRequest` | `{revision: str}` — check if a revision has been reloaded |
+| `ApiGetStatusResponse` | `{reloading: bool, uncommitted: list[str]}` |
+| `ApiFetchContentsRequest` | `{filepath: str}` — fetch file contents from running Space |
+| `ApiFetchContentsResponse` | `{status: "ok" | "fileNotFound", contents?: str}` |
+
+### ReloadClient (`client.py`)
+
+Key design:
+- Each replica is addressed by its `replica_hash` via the `--replicas/+{hash}` URL path segment
+- GET reload returns an SSE stream — events are parsed by the vendored `SSEClient`
+- Non-200/204 status codes raise exceptions; 204 means "reloadId not found" (retryable)
+- 20-second client timeout (`CLIENT_TIMEOUT`)
+
+### Multi-Replica Coordination (`multi_replica_reload_events()`)
+
+This function:
+1. Creates one `ReloadClient` per replica hash
+2. For each replica, calls `get_reload(commit_sha)` with up to `max_retries` retries
+3. Tracks all events from the first replica as the reference (`first_client_events`)
+4. For subsequent replicas, checks if their stream matches the first replica's events exactly
+5. **Deduplication**: events that are identical across replicas are suppressed; only the first replica's events are yielded, plus a `fullMatch` marker for replicas that match exactly
+6. **Partial match**: if a replica diverges mid-stream, replay backlog then yield fresh events
+
+### SpaceRuntime Integration
+
+The `SpaceRuntime` dataclass (in `_space_api.py`) exposes hot reload state:
+- `dev_mode: bool` — is dev mode enabled?
+- `hot_reloading: SpaceHotReloading | None` — active reload if any
+
+`SpaceHotReloading.status` is `"created"` (reload initiated), `"canceled"` (reload aborted), or `None` (pending). The `replica_statuses` field contains per-replica status tuples.
+
+### Dev Mode API
+```python
+api.enable_space_dev_mode("user/my-space")   # POST /api/spaces/{id}/dev-mode {"enabled": True}
+api.disable_space_dev_mode("user/my-space")  # POST /api/spaces/{id}/dev-mode {"enabled": False}
+```
+
+### End-to-End Flow
+1. Enable Dev Mode → keeps container alive
+2. Commit with `_hot_reload=True` → `POST .../commit/main?hot_reload=1`
+3. Hub notifies running replicas → each replica streams SSE events on port 7887
+4. Events: object add/update/delete, code run, UI update, file create (or exception/error)
+5. Poll `get_space_runtime()` → `hot_reloading.status` to verify completion
+
+### Key Design Decisions
+1. **SSE over WebSocket** — simpler, unidirectional, HTTP-based
+2. **Per-replica port naming** — `--7887` subdomain avoids port conflicts
+3. **First-replica dedup** — first replica's events are canonical; subsequent matching replicas yield `fullMatch`
+4. **Private `_hot_reload`** — experimental/PRO-only, not in public docs
+5. **10 retries** — 2s sleep on 204 (reloadId propagation delay)
+
+### Zero-Cost Relevance
+- Dev Mode requires PRO ($9/mo) — not on free tier
+- Understanding the architecture helps with debugging Spaces and contributing to `huggingface_hub` open source
+- The vendored `sse_client.py` (Apache-2.0) is reusable for any SSE integration
+
+### Files Analyzed
+| File | Lines |
+|------|-------|
+| `huggingface_hub/_hot_reload/types.py` | 121 |
+| `huggingface_hub/_hot_reload/sse_client.py` | 144 |
+| `huggingface_hub/_hot_reload/client.py` | 130 |
+| `huggingface_hub/hf_api.py` (rel. sections) | ~120 |
+| `huggingface_hub/_space_api.py` (rel. sections) | ~30 |
+| `huggingface_hub/_commit_api.py` (rel. sections) | ~20 |
+| **Total code analyzed** | **~565 lines** |
+
+### Skill Updated
+`mlops/huggingface-hub/` — added Hot Reload & Dev Mode reference to `references/hf-learnings.md`
+
+---
+
