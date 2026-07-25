@@ -1,5 +1,24 @@
 # HF Learnings Log
 
+## 2026-07-25: hf-trl-v1-comprehensive — TRL v1.9.0 Complete Taxonomy & RLHF Toolkit (Topic #250)
+
+### Summary
+Comprehensive deep-dive on Hugging Face TRL v1.9.0 — the post-training library for transformer language model alignment. Covers the complete trainer taxonomy (4 categories, 14 trainers), what's new in TRL v1 (March 2026), multi-environment agentic RL with GRPOTrainer (Harbor/OpenEnv), all 5 GRPO loss formulations (DAPO, GRPO, VESPO, SAPO, Dr.GRPO), KTO stability graduation, vLLM co-location for online methods, Liger Kernel integration, reward function design patterns, data format standards, PEFT/DeepSpeed interop, and practical zero-cost pathways.
+
+### Source
+- TRL Docs: https://huggingface.co/docs/trl/en/index (v1.9.0)
+- TRL GitHub: https://github.com/huggingface/trl
+- TRL v1 Blog: https://huggingface.co/blog/trl-v1 (March 27, 2026)
+- OpenEnv Blog: https://huggingface.co/blog/openenv (October 23, 2025)
+- TRL VLM Alignment: https://huggingface.co/blog/trl-vlm-alignment (August 7, 2025)
+- vLLM Co-location: https://huggingface.co/blog/vllm-colocate (June 3, 2025)
+- Liger GRPO: https://huggingface.co/blog/liger-grpo (May 25, 2025)
+
+### Skill
+mlops/hf-trl-deep-dive — Hugging Face TRL v1.9.0 comprehensive reference: 14 trainers across 4 categories (online/offline/reward/distillation), multi-environment GRPO, KTO stability, vLLM/DeepSpeed/PEFT interop, Liger Kernel, OpenEnv/Harbor, VLM alignment
+
+---
+
 ## 2026-07-24: hf-gradio-lite — Serverless Gradio in the Browser with Pyodide/WebAssembly (Topic #174)
 
 ### Summary
