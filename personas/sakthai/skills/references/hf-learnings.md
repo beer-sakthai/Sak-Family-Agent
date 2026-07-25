@@ -1,5 +1,33 @@
 # HF Learnings Log
 
+## 2026-07-25: hf-gradio-server-mode — Gradio 6 Server Mode (gr.Server) Complete Reference (Topic #352)
+
+### Summary
+Comprehensive deep dive into Gradio 6's `gr.Server` (Server mode) — introduced in 6.10.0. A FastAPI-based API server that exposes Gradio's queue, SSE streaming, concurrency control, and MCP capabilities **without a UI**. Unlike `gr.Blocks()` which renders a full web interface, `gr.Server` is designed for pure API/microservice deployment with OpenAPI docs, standard FastAPI routes (`.get()`, `.post()`, etc.), and built-in Gradio event infrastructure. Key insight: `gr.Server` inherits directly from FastAPI (via `gradio.routes.App`), so all standard FastAPI methods work directly.
+
+### Key Findings
+- **True FastAPI inheritance**: `gr.Server` is an actual FastAPI subclass — can use middleware, routers, dependency injection, WebSocket, sub-applications
+- **`@server.api()` decorator**: Registers functions as Gradio API endpoints with queue, SSE streaming, concurrency control, batch processing
+- **MCP namespace**: `server.mcp.tool()`, `server.mcp.resource()`, `server.mcp.prompt()` — native MCP decorators on the server instance
+- **Dual decorator pattern**: Stack `@server.mcp.tool()` + `@server.api()` on same function for both Gradio API + MCP tool
+- **Deferred registration**: `@server.api()` functions stored in `_deferred_apis` list, only registered at `launch()` time
+- **No Gradio frontend**: Server mode doesn't load/serve frontend JS/CSS — lighter and faster startup than `gr.Blocks`
+- **Full OpenAPI docs**: Automatic at `/docs` (Swagger), `/redoc` (ReDoc), `/openapi.json`
+- **ZeroGPU support**: Since 6.12.0
+- **Auth via FastAPI deps**: `auth_dependency` parameter supports OAuth2, JWT, API keys
+- **Env var**: `GRADIO_SERVER_MODE_ENABLED=1` set on launch
+
+### API Surface
+- `server.api(fn, name, queue, concurrency_limit, batch, stream_every, ...)` — Gradio endpoint decorator
+- `server.mcp.tool(name)` / `.resource(uri)` / `.prompt(name)` — MCP decorators
+- All FastAPI methods: `.get()`, `.post()`, `.add_middleware()`, `.include_router()`, etc.
+- `server.launch(server_name, server_port, auth_dependency, mcp_server, ...)` — start server
+
+### Skill Created
+`hf-gradio-server-mode/` — complete skill with SKILL.md and references/hf-learnings.md (256 lines, full API reference, 8 usage patterns, comparison matrix, MCP integration deep dive).
+
+---
+
 ## 2026-07-25: hf-gradio-6-native-plot-components — Gradio 6 Native Plot Components Complete Reference (Topic #351)
 
 ### Summary
@@ -36,868 +64,49 @@ Comprehensive deep dive into Gradio 6's native plot component family (`gr.LinePl
 | `tooltip` | `str \| list[str]` | Tooltip content mode |
 | `height` | `int \| None` | Plot height in px |
 
-### Events
-| Event | Description | Event Data |
-|-------|-------------|------------|
-| `.change()` | Triggered on value change | - |
-| `.select()` | User selects/deselects | `SelectData` (value=label, selected=bool) |
-| `.double_click()` | User double-clicks | - |
+### Skill Created
+`hf-gradio-6-native-plot-components/` — complete skill with SKILL.md and references/hf-learnings.md.
 
 ---
 
-## 2026-07-30: hf-hub-models-architecture-and-pipeline-tags — Complete HF Model Tag Taxonomy Deep Dive (Topic #164 Deepened)
+## 2026-07-24: hf-hub-exceptions-retry-deep-dive
 
 ### Summary
-Comprehensive deep-dive into the Hugging Face Hub's model tag taxonomy — the
-complete classification system that powers discovery, filtering, and widget
-selection across 1M+ models. Covers all 47 official pipeline tags, the 6 tag
-categories (pipeline, library, language, license, architecture, auto-generated),
-the automatic tag inference pipeline (transformers config → Architecture-to-
-Pipeline mapping gist → tag-based fallback → default), search/filter API
-patterns, and the conversational widget special case. Full document at
-`skills/mlops/hf-hub-models-tags/references/hf-learnings.md`.
+Deep dive into the `huggingface_hub v1.24.0` exception hierarchy (40+ custom exception types) and built-in retry/backoff mechanism. Covers `HfHubHTTPError` with its 10+ subclasses, `http_backoff()` with exponential backoff and rate-limit awareness, session management, and practical error handling patterns.
 
-### Key Discovery: 47 Official Pipeline Tags
-Confirmed via the `/tasks` page: 47 distinct pipeline tags covering text (13),
-vision (22), audio (5), multimodal (2), tabular (2), RL (1), time-series (1),
-and any-to-any (1). `conversational` is NOT a pipeline tag — it's a companion
-boolean tag that activates the chat widget only when paired with
-`text-generation` or `image-text-to-text`.
+### Key Findings
+- **HfHubHTTPError(HTTPError, OSError)** base with `.request_id`, `.server_message`, `.response`, `.append_to_message()`
+- http_backoff defaults: max_retries=5, base_wait=1s, max_wait=8s, retry on (408, 429, 500, 502, 503, 504) + network exceptions
+- Rate limit parsing via `Ratelimit` and `Retry-After` headers (IETF draft)
+- 40+ exception types including RepositoryNotFoundError, GatedRepoError, RevisionNotFoundError, BadRequestError, TextGenerationError hierarchy
+- Session management: get_session(), close_session(), set_client_factory()
+- Disable retries: pass empty tuples to retry_on_exceptions/retry_on_status_codes
 
-### Key Discovery: Tag Inference Priority Chain
-1. Explicit `pipeline_tag:` in model card YAML
-2. Transformers `config.json` → `architectures[]` mapped via a reference gist
-3. Library-specific detection (sentence-transformers modules.json, etc.)
-4. First matching task tag from `tags[]` in model card metadata
-5. Fallback: `feature-extraction`
-
-### Key Discovery: No Public Tag Registry API
-Unlike datasets (`/api/tags`), there is no public auth-free endpoint to
-enumerate model tags. The taxonomy must be reconstructed from the /tasks HTML,
-live API queries, the OpenAPI spec, and the widgets doc's architecture mapping
-gist.
-
-**Full document:** `skills/mlops/hf-hub-models-tags/references/hf-learnings.md`
+### Skill Created
+`mlops/hf-hub-exceptions-retry/` — complete reference with hierarchy diagram, retry parameters, and usage patterns.
 
 ---
 
-## 2026-07-24: hf-transformers-speculative-decoding-deep-dive — v5.14.0 MTP Support & Static Ensemble Verification (Topic #79 Deepened)
+## 2026-07-24: hf-datasets-faiss-vector-search-deep-dive
 
 ### Summary
-Deep-dive into two major generation features added in Transformers v5.14.0 (2026-07-15): (1) **Multi-Token Prediction (MTP) decoding** — `use_mtp=True` enables proper inference-time MTP, auto-loading MTP head weights from the Hub repo and achieving ~1.4× speedup. (2) **Static ensemble verification** — `assistant_ensemble_weight` blends target/draft distributions during speculative decoding, increasing acceptance rates with zero training. Covers usage, design decisions, benchmark data, cache infrastructure (MtpCache), DeepSeek V4 limitations, and paper references. Full document at `skills/mlops/hf-transformers-5/references/hf-learnings.md`.
-
-### Key Discovery: MTP Is Now One Flag
-`model.generate(use_mtp=True, ...)` is all it takes — no separate assistant model, no custom loading code. The `generate()` method automatically scans the repo for MTP head weights, loads them, and integrates with the assisted decoding pipeline. On GLM-4.5-Air this yields 73.68% token acceptance with a 1.4× decoding speedup.
-
-### Key Discovery: Ensemble Verification Is Free Speed
-Static ensemble verification (`assistant_ensemble_weight=0.7`) is a training-free drop-in parameter that relaxes the strict verification distribution from `p_target` to `w * p_target + (1-w) * q_draft`. This provably achieves a Pareto-optimal tradeoff between acceptance rate and distributional bias. The acceptance probability increases from `1 - TV(q,p)` to `1 - w * TV(q,p)`.
-
----
-
-## 2026-07-26: hf-mcp-server-enhancements-hf-fs-consolidation — MCP Server Consolidation & Gallery Install (Topic #44/#90 Deepened)
-
-### Summary
-Deep-dive into the July 2026 Hugging Face MCP Server enhancements. Key changes: `hf_fs` tool consolidation (replacing ~28 separate tools with 4 categories), one-click gallery installations (Claude, VSCode, Cursor, Gemini CLI), native CLI commands (`claude mcp add`, `gemini mcp add`), `AUTHENTICATE_TOOL` for OAuth-based on-the-fly authentication, SEP-2640 skills directory support (`HF_SKILLS_DIR`), stateful connection management (heartbeat, ping, timeout config), and extensive new environment variables. Full document at `skills/SakThai-hf-mcp-server/references/hf-learnings.md`.
-
-### Key Discovery: Architecture Consolidation
-The MCP Server moved from ~28 separate tools to a consolidated architecture centered around the `hf_fs` tool. The changelog states: "The main change is the new hf_fs tool which provides a single interface to repositories, storage, documentation, papers and more. It's equipped with search and lets your assistant naturally navigate Hugging Face in just over 1,000 tokens." This means the bouquet/mix system is being simplified — remaining explicit tools: `hf_fs`, Contribute Repos, Sandboxes, Run & Manage Jobs.
-
-### New Installation Methods
-- **Claude Desktop/claude.ai**: Connector gallery at claude.ai/settings/connectors — click "Hugging Face"
-- **Claude Code**: `claude mcp add hf-mcp-server -t http https://huggingface.co/mcp?login`
-- **Gemini CLI**: `gemini mcp add -t http huggingface https://huggingface.co/mcp?login`
-- **VSCode**: Gallery at code.visualstudio.com/mcp or clickable `vscode:mcp/install?...` deep link
-- **Cursor**: One-click install link with encoded config
-- **URL parameter**: `?no_image_content=true` removes image content from Gradio responses
-
-### Key Implication
-The `AUTHENTICATE_TOOL` env var enables dynamic OAuth — agents can authenticate mid-session without pre-configured tokens. The SEP-2640 skills directory means SakThai skills can be exposed as MCP resources via `skill://` protocol.
-
-**Full document:** `skills/SakThai-hf-mcp-server/references/hf-learnings.md`
-
----
-
-## 2026-07-24: hf-hub-openapi-spec-deep-dive — Hub OpenAPI Specification & Programmatic Discovery (Topic #128 Deepened)
-
-### Summary
-Deep-dive into the Hugging Face Hub's OpenAPI 3.0 specification available at `/.well-known/openapi.md` (12,358 lines) and `/.well-known/openapi.json`. The spec is the single authoritative source for all Hub REST API endpoints — covering Models, Datasets, Spaces, Discussions, Papers, Collections, Organizations, Webhooks, Jobs, and Billing. The spec is also served via the interactive [OpenAPI Playground Space](https://huggingface.co/spaces/huggingface/openapi). This learning catalogs every API endpoint group, documents the spec format, and provides patterns for programmatic spec consumption (dynamic client generation, endpoint discovery, route validation).
-
-### Key Discovery: Spec Location & Format
-
-The OpenAPI spec moved from the docs hub to a dedicated well-known URL:
-
-| Format | URL | Size |
-|--------|-----|------|
-| JSON | `https://huggingface.co/.well-known/openapi.json` | Full JSON object |
-| Markdown | `https://huggingface.co/.well-known/openapi.md` | 12,358 lines |
-| Interactive | `https://huggingface.co/spaces/huggingface/openapi` | OpenAPI Playground |
-
-The Markdown version is specifically targeted at AI agents — the docs page notes: *"If you're an Agent, you might prefer the markdown version OpenAPI spec."*
-
-### Complete API Surface Area (by Endpoint Group)
-
-#### Auth (2 endpoints)
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/whoami-v2` | GET | Get current user info and auth method |
-| `/api/check-token` | GET | Check token validity (under Auth section) |
-
-#### Models API (~35+ endpoints)
-Core listing, CRUD, and repository management for model repos:
-
-**Listing & Search:**
-- `GET /api/models` — List all models (supports `search`, `author`, `sort`, `direction`, `limit`, `full`, `config`, `pipeline_tag`, `library`, `language`, `license`, `private`, `other`, `expand` params)
-- `GET /api/models/{namespace}/{repo}` — Get model metadata
-- `DELETE /api/models/{namespace}/{repo}` — Delete a model repo
-
-**Commit & Content Management:**
-- `POST /api/models/{namespace}/{repo}/commit/{rev}` — Create a commit (supports both `application/json` and `application/x-ndjson`)
-- `GET /api/models/{namespace}/{repo}/tree/{rev}/{path}` — List folder content (supports `expand`, `recursive`, `limit`, `cursor` for pagination)
-- `POST /api/models/{namespace}/{repo}/paths-info/{rev}` — Get info on specific paths (batch of up to 2000 paths)
-- `GET /api/models/{namespace}/{repo}/refs` — List git refs (branches, tags) with optional `include_prs`
-- `GET /api/models/{namespace}/{repo}/commits/{rev}` — Paginated commit history
-- `GET /api/models/{namespace}/{repo}/compare/{compare}` — Diff between two revisions
-
-**Branch & Tag Management:**
-- `POST /api/models/{namespace}/{repo}/branch/{rev}` — Create branch (`startingPoint`, `emptyBranch`, `overwrite`)
-- `DELETE /api/models/{namespace}/{repo}/branch/{rev}` — Delete a branch
-- `POST /api/models/{namespace}/{repo}/tag/{rev}` — Create a tag
-- `DELETE /api/models/{namespace}/{repo}/tag/{rev}` — Delete a tag
-
-**File Management:**
-- `POST /api/models/{namespace}/{repo}/preupload/{rev}` — Check upload method (LFS vs direct)
-- `GET /api/models/{namespace}/{repo}/lfs-files` — List Xet/LFS files (paginated via `cursor`)
-- `POST /api/models/{namespace}/{repo}/lfs-files/batch` — Batch delete LFS files
-- `DELETE /api/models/{namespace}/{repo}/lfs-files/{sha}` — Delete single LFS file (with `rewriteHistory` option)
-- `POST /api/models/{namespace}/{repo}/lfs-files/duplicate` — Duplicate Xet files across repos by hash
-
-**Security & Access:**
-- `GET /api/models/{namespace}/{repo}/scan` — Get security scan status
-- `GET /{namespace}/{repo}/user-access-report` — Export gated repo access report
-- `POST /{namespace}/{repo}/ask-access` — Request access to gated repository
-- `POST /api/models/{namespace}/{repo}/user-access-request/cancel` — Cancel access request
-- `GET /api/models/{namespace}/{repo}/user-access-request/{status}` — List access requests by status
-
-**Settings & Metadata:**
-- `PUT /api/models/{namespace}/{repo}/settings` — Update repo settings (private, visibility, discussions, gated config)
-- `POST /api/models/{namespace}/{repo}/super-squash/{rev}` — Squash all commits into one (irreversible)
-- `POST /api/models/{namespace}/{repo}/resource-group` — Add to resource group (Enterprise)
-- `GET /api/models/{namespace}/{repo}/resource-group` — Get resource group
-- `GET /api/models/{namespace}/{repo}/treesize/{rev}/{path}` — Get total size under path
-- `GET /api/models/{namespace}/{repo}/jwt` — Generate JWT token (with write/expiration/encryption options)
-- `GET /api/models/{namespace}/{repo}/notebook/{rev}/{path}` — Get Jupyter notebook URL
-
-**Xet Storage:**
-- `GET /api/models/{namespace}/{repo}/xet-write-token/{rev}` — Short-lived Xet write token
-- `GET /api/models/{namespace}/{repo}/xet-read-token/{rev}` — Short-lived Xet read token
-
-**File Resolution:**
-- `GET /{namespace}/{repo}/resolve/{rev}/{path}` — Resolve a file (supports Range header, Xet file info)
-- `GET /api/resolve-cache/models/{namespace}/{repo}/{rev}/{path}` — Cache-aware file resolution
-
-#### Datasets API (mirrors Models structure — ~30+ endpoints)
-
-Same endpoint patterns as Models with `/api/datasets/` prefix. Includes:
-- All commit, branch, tag, file management endpoints
-- Dataset-specific listing with `GET /api/datasets` (same filter params as models)
-- Dataset-specific info with `GET /api/datasets/{namespace}/{repo}`
-- Dataset-specific `DELETE /api/datasets/{namespace}/{repo}`
-
-**Key extra:** The spec doesn't list the datasets-server endpoints (these are at `datasets-server.huggingface.co`, separate from the main Hub API).
-
-#### Spaces API (mirrors Models structure — ~30+ endpoints)
-
-Same endpoint patterns with `/api/spaces/` prefix, plus:
-
-**Spaces-Specific Endpoints:**
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/spaces` | GET | List Spaces (with `search`, `author`, `sort`, `limit`, `full`, `sdk` params) |
-| `/api/spaces/{namespace}/{repo}` | GET | Get Space metadata |
-| `/api/spaces/{namespace}/{repo}` | DELETE | Delete a Space |
-| `PUT /api/spaces/{namespace}/{repo}/settings` | PUT | Update Space settings (+ Space-specific: `hardware`, `storage`, `sleepTime`, `secrets`, `variables`) |
-| `POST /api/spaces/{namespace}/{repo}/restart` | POST | Restart a Space |
-| `POST /api/spaces/{namespace}/{repo}/pause` | POST | Pause a Space (free tier optimization) |
-| `GET /api/spaces/{namespace}/{repo}/runtime` | GET | Get Space runtime status |
-| `POST /api/spaces/{namespace}/{repo}/apply-latest-config` | POST | Apply latest configuration |
-| `POST /api/spaces/{namespace}/{repo}/move-to-latest-config` | POST | Move to latest config revision |
-
-#### Discussions & Pull Requests API (~40+ endpoints)
-
-Template: `/api/{repoType}/{namespace}/{repo}/discussions/{num}`
-
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/{repoType}/{namespace}/{repo}/discussions` | GET | List discussions |
-| `/api/{repoType}/{namespace}/{repo}/discussions` | POST | Create discussion/PR |
-| `.../discussions/{num}` | GET | Get discussion detail |
-| `.../discussions/{num}` | POST | Edit discussion |
-| `.../discussions/{num}/comment` | POST | Add comment |
-| `.../discussions/{num}/comment/{commentId}` | DELETE | Delete comment |
-| `.../discussions/{num}/comment/{commentId}/edit` | POST | Edit comment |
-| `.../discussions/{num}/comment/{commentId}/reply` | POST | Reply to comment |
-| `.../discussions/{num}/change-status` | POST | Change status (open/closed) |
-| `.../discussions/{num}/merge` | POST | Merge PR |
-| `.../discussions/{num}/ref` | DELETE | Delete PR ref (free storage) |
-| `.../discussions/{num}/storage` | GET | Estimate PR LFS storage |
-
-#### Collections API (~8 endpoints)
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/collections` | GET | List collections |
-| `/api/collections` | POST | Create collection |
-| `/api/collections/{slug}` | GET | Get collection |
-| `/api/collections/{slug}` | DELETE | Delete collection |
-| `/api/collections/{slug}` | PATCH | Update collection |
-| `/api/collections/{slug}/items` | POST | Add item |
-| `/api/collections/{slug}/items/{itemId}` | DELETE | Remove item |
-| `/api/collections/{slug}/items/{itemId}` | PATCH | Update item |
-
-#### Papers API (~8+ endpoints)
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/papers` | GET | List daily papers |
-| `/api/papers/{paperId}` | GET | Get paper detail |
-| `/api/papers/{paperId}/comment` | POST | Create comment |
-| `/api/papers/{paperId}/comment/{commentId}/reply` | POST | Reply to comment |
-| `/api/papers/{paperId}/vote` | POST | Vote on paper |
-
-#### Posts API (~8+ endpoints)
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/posts/{username}/{postSlug}` | GET | Get post |
-| `/api/posts/{username}/{postSlug}` | DELETE | Delete post |
-| `/api/posts/{username}/{postSlug}/comment` | POST | Create comment |
-| `/api/posts/{username}/{postSlug}/comment/{commentId}/reply` | POST | Reply to comment |
-
-#### Organizations API (~10+ endpoints)
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/organizations` | GET | List user's orgs |
-| `/api/organizations` | POST | Create org |
-| `/api/organizations/{org}` | GET | Get org details |
-| `/api/organizations/{org}` | POST | Edit org |
-| `/api/organizations/{org}/members` | GET | List members |
-| `/api/organizations/{org}/members` | POST | Add member |
-| `/api/organizations/{org}/members/{member}` | DELETE | Remove member |
-| `/api/organizations/{org}/members/{member}` | POST | Change role |
-
-#### Trending & Discovery (3 endpoints)
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `GET /api/trending` | GET | Get trending repos (`type`: all/model/dataset/space, `limit`) |
-| `GET /api/models-tags-by-type` | GET | Get model tags grouped by type (pipeline_tag, library, language, license, etc.) |
-| `GET /api/quicksearch` | GET | Cross-type instant search |
-
-#### Webhooks API (~9 endpoints)
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/webhooks` | GET | List webhooks |
-| `/api/webhooks` | POST | Create webhook |
-| `/api/webhooks/{webhookId}` | GET | Get webhook |
-| `/api/webhooks/{webhookId}` | POST | Update webhook |
-| `/api/webhooks/{webhookId}` | DELETE | Delete webhook |
-| `/api/webhooks/{webhookId}/enable` | POST | Enable webhook |
-| `/api/webhooks/{webhookId}/disable` | POST | Disable webhook |
-
-#### Jobs API (~6+ endpoints)
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/jobs` | GET | List jobs |
-| `/api/jobs` | POST | Create job |
-| `/api/jobs/{jobId}` | GET | Get job status |
-| `/api/jobs/{jobId}` | DELETE | Cancel job |
-| `/api/jobs/{jobId}/logs` | GET | Get job logs |
-
-#### Storage/Buckets API (~9+ endpoints)
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/buckets` | GET | List buckets |
-| `/api/buckets` | POST | Create bucket |
-| `/api/buckets/{bucketId}` | GET | Get bucket |
-| `/api/buckets/{bucketId}` | DELETE | Delete bucket |
-| `/api/buckets/{bucketId}/sync` | POST | Sync bucket |
-
-### Key Architectural Insights
-
-1. **Pattern symmetry**: Models, Datasets, and Spaces share nearly identical endpoint structures (commit, tree, paths-info, preupload, lfs-files, refs, branches, tags, settings, resource-group, treesize, jwt, notebooks). This means knowledge of one repo type's API is directly transferable.
-
-2. **Commit API dual format**: The commit endpoint supports both `application/json` (single JSON body with `files`, `lfsFiles`, `deletedEntries` arrays) and `application/x-ndjson` (JSON lines — each line is a separate operation: `header`, `file`, `lfsFile`, `deletedEntry`). NDJSON is recommended for large commits.
-
-3. **Pagination everywhere**: All list endpoints support cursor-based pagination (`cursor` + `limit`), not just offset-based. The tree listing defaults to 1,000 items (100 with `expand=true`).
-
-4. **Eventual consistency**: The spec notes that `resolve-cache` endpoints exist for cache-aware file resolution — indicating a CDN/caching layer between clients and the Hub's git storage.
-
-5. **Rate limits**: All API calls are subject to HF-wide rate limits. The docs reference upgrading accounts for elevated access.
-
-6. **OpenAPI spec itself evolves**: The spec at `/.well-known/openapi.md` is auto-generated from the Hub's codebase, making it always up-to-date — more reliable than static documentation for discovering newly added endpoints.
-
-### Programmatic Spec Consumption Patterns
-
-```python
-import requests
-
-# Fetch the OpenAPI spec as JSON for programmatic discovery
-spec_json = requests.get("https://huggingface.co/.well-known/openapi.json").json()
-
-# Discover all endpoints and their methods
-for path, methods in spec_json.get("paths", {}).items():
-    for method in methods:
-        print(f"{method.upper():6s} {path}")
-
-# Or as markdown (better for LLM ingestion)
-spec_md = requests.get("https://huggingface.co/.well-known/openapi.md").text
-
-# Extract all endpoint groups (headers at ## level)
-import re
-groups = re.findall(r"^## (.+)$", spec_md, re.MULTILINE)
-# Returns: ['Auth', 'Models', 'Datasets', 'Spaces', 'Discussions', ...]
-```
-
-### Key Takeaways
-
-1. **Single source of truth**: The OpenAPI spec at `/.well-known/` is always up-to-date, covering all Hub REST endpoints.
-2. **155+ endpoints** across 12+ API groups — Auth, Models, Datasets, Spaces, Discussions, Collections, Papers, Posts, Organizations, Trending, Webhooks, Jobs, Storage/Buckets.
-3. **Model/Dataset/Space symmetry**: ~80% of endpoints are shared across repo types with only the prefix changing.
-4. **Commit API is dual-format**: JSON for simple commits, NDJSON for batch/large commits.
-5. **Cursor-based pagination** across all list endpoints — not offset/limit.
-6. **Zero-cost to use**: All read endpoints are freely accessible; write endpoints require authentication via HF token.
-7. **The spec is agent-friendly**: The Markdown version is explicitly designed for AI agent consumption.
-8. **OpenAPI Playground** at `https://huggingface.co/spaces/huggingface/openapi` enables interactive endpoint testing without writing code.
-
-### Resources
-- OpenAPI Markdown: https://huggingface.co/.well-known/openapi.md
-- OpenAPI JSON: https://huggingface.co/.well-known/openapi.json
-- OpenAPI Playground: https://huggingface.co/spaces/huggingface/openapi
-- Hub API Docs: https://huggingface.co/docs/hub/en/api
-- huggingface_hub Python SDK: https://github.com/huggingface/huggingface_hub
-
-### Skill
-mlops/huggingface-hub -- references/hf-learnings.md
-
----
-
-## 2026-07-24: hf-inference-client-provider-fallback-and-routing — Provider Discovery & Fallback Chains (Topic #143)
-
-### Summary
-Deep-dive into building practical provider fallback chains using Hugging Face `InferenceClient`. Covers programmatic provider discovery via `model_info(expand='inferenceProviderMapping')`, the `InferenceProviderMapping` data model, building multi-provider fallback chains with `AsyncInferenceClient`, Router API `/v1/models` for provider comparison, direct provider API key integration, and real provider availability patterns verified against `huggingface_hub` v1.24.0.
-
-### Core Discovery API — inferenceProviderMapping
-
-The Hub's `expand=inferenceProviderMapping` parameter reveals which providers serve a model and their status. This is the programmatic foundation for any fallback strategy.
-
-```python
-from huggingface_hub import HfApi
-
-api = HfApi()
-info = api.model_info("microsoft/phi-4", expand="inferenceProviderMapping")
-for pm in info.inference_provider_mapping:
-    print(f"{pm.provider:25s} | status={pm.status:10s} | task={pm.task}")
-# Output (verified live on 2026-07-24):
-#   featherless-ai            | status=live       | task=conversational
-#   deepinfra                 | status=live       | task=conversational
-```
-
-#### InferenceProviderMapping Data Model
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `provider` | `str` | Provider identifier (e.g. `"featherless-ai"`, `"deepinfra"`, `"together"`) |
-| `hf_model_id` | `str` | The original Hugging Face model ID |
-| `provider_id` | `str` | Provider's internal model name (may differ from HF ID) |
-| `status` | `str` | `"live"` = available, other values = degraded/unavailable |
-| `task` | `str` | Inference task (e.g. `"conversational"`, `"text-to-image"`) |
-| `adapter` | `str\|None` | LoRA adapter if applicable |
-| `adapter_weights_path` | `str\|None` | Path to adapter weights |
-| `type` | `str\|None` | Model type |
-
-**Key insight:** Not all models have providers. Only models actively served by at least one inference provider return a non-empty `inference_provider_mapping`. Models with no mapping must be run locally or via Inference Endpoints.
-
-### Real Provider Availability Patterns
-
-Testing against `huggingface_hub` v1.24.0 on 2026-07-24:
-
-| Model | Live Providers | Total |
-|-------|---------------|-------|
-| `microsoft/phi-4` | featherless-ai, deepinfra | 2/2 |
-| `Qwen/Qwen2.5-7B-Instruct` | featherless-ai, together | 2/2 |
-| `Qwen/Qwen3-32B` | featherless-ai, deepinfra, nscale | 3/5 |
-| `meta-llama/Meta-Llama-3.1-8B-Instruct` | novita, deepinfra, nscale | 3/4 |
-| `google/gemma-2-2b-it` | featherless-ai | 1/1 |
-| `NousResearch/Hermes-3-Llama-3.1-8B` | featherless-ai | 1/1 |
-| `mistralai/Mistral-7B-Instruct-v0.3` | _(none live)_ | 0/1 |
-
-**Patterns observed:**
-- **featherless-ai** is the most common free provider — serves almost all popular models
-- **deepinfra** and **nscale** are frequent secondary providers
-- **together** covers selective popular models (Qwen, Llama families)
-- **novita** appears on well-known Llama-family models
-- Empty live-provider sets happen — always check before routing
-
-### Provider Selection — Three-Layer System
-
-#### Layer 1: Client-Level Default (on InferenceClient init)
-
-```python
-from huggingface_hub import InferenceClient
-
-# Auto — fastest available (default)
-client = InferenceClient(provider="auto")
-
-# Pin to specific provider
-client = InferenceClient(provider="deepinfra")
-```
-
-#### Layer 2: Per-Call Override via Model-ID Suffix
-
-```python
-# Suffix syntax overrides the client-level default for this call
-result = client.chat_completion(
-    model="Qwen/Qwen3-32B:fastest",     # fastest provider
-    messages=[...],
-)
-# :cheapest   — lowest price per output token
-# :preferred  — user preference from hf.co/settings/inference-providers
-# :cerebras   — any supported provider name (17+ providers)
-```
-
-#### Layer 3: Provider Detection at Runtime (Discovery API)
-
-```python
-def get_live_providers(model_id: str) -> list[str]:
-    """Return list of live provider names for a model."""
-    try:
-        info = HfApi().model_info(model_id, expand="inferenceProviderMapping")
-        return [pm.provider for pm in info.inference_provider_mapping if pm.status == "live"]
-    except Exception:
-        return []
-
-# Usage
-live = get_live_providers("Qwen/Qwen3-32B")
-print(live)  # ['featherless-ai', 'deepinfra', 'nscale']
-```
-
-### Building a Provider Fallback Chain
-
-The most reliable multi-provider pattern uses `AsyncInferenceClient` for concurrent fallback attempts:
-
-```python
-import asyncio
-from huggingface_hub import InferenceClient, AsyncInferenceClient
-
-async def try_provider(client: AsyncInferenceClient, model: str, messages: list, timeout: float = 15.0):
-    """Try a single provider, return result or None on failure."""
-    try:
-        result = await client.chat_completion(
-            model=model, messages=messages, max_tokens=256,
-        )
-        return result
-    except Exception as e:
-        return None
-
-async def chat_with_fallback(
-    messages: list,
-    model: str = "microsoft/phi-4",
-    providers: list[str] | None = None,
-    timeout_per_provider: float = 15.0,
-):
-    """Try providers in order, fall through on failure."""
-    if providers is None:
-        providers = get_live_providers(model) or ["auto"]
-
-    for provider in providers:
-        client = AsyncInferenceClient(provider=provider, timeout=timeout_per_provider)
-        result = await try_provider(client, model, messages, timeout_per_provider)
-        await client.close()
-        if result is not None:
-            return result
-        print(f"Provider {provider} failed, trying next...")
-
-    raise RuntimeError(f"All {len(providers)} providers failed for {model}")
-
-# Usage
-# result = asyncio.run(chat_with_fallback(
-#     messages=[{"role": "user", "content": "Hello!"}],
-#     model="microsoft/phi-4",
-# ))
-```
-
-#### Concurrent Fallback (Race Pattern)
-
-When you need the fastest response and don't care which provider serves it:
-
-```python
-async def chat_concurrent_race(
-    messages: list,
-    model: str = "microsoft/phi-4",
-    providers: list[str] | None = None,
-    timeout: float = 20.0,
-):
-    """Fire requests to all providers concurrently, return first success."""
-    if providers is None:
-        providers = get_live_providers(model) or ["auto"]
-
-    async def try_one(provider: str) -> tuple[str, dict | None]:
-        try:
-            client = AsyncInferenceClient(provider=provider, timeout=timeout)
-            result = await client.chat_completion(
-                model=model, messages=messages, max_tokens=256,
-            )
-            await client.close()
-            return (provider, result)
-        except:
-            return (provider, None)
-
-    tasks = [try_one(p) for p in providers]
-    for coro in asyncio.as_completed(tasks):
-        provider, result = await coro
-        if result is not None:
-            # Cancel remaining tasks
-            for t in tasks:
-                t.close()
-            return (provider, result)
-
-    raise RuntimeError(f"All providers failed for {model}")
-```
-
-### Router API — Provider Comparison
-
-The Router API (`GET /v1/models`) provides richer data than `inferenceProviderMapping`, including pricing, latency, and structured output support:
-
-```python
-import httpx
-import json
-
-def get_provider_details(model_id: str) -> list[dict]:
-    """Get detailed provider info from Router API."""
-    resp = httpx.get(f"https://router.huggingface.co/v1/models/{model_id}", timeout=10)
-    resp.raise_for_status()
-    return resp.json().get("providers", [])
-
-# Compare providers for a model
-providers = get_provider_details("Qwen/Qwen3-32B")
-for p in providers:
-    print(f"{p['provider']:20s} | "
-          f"live={p.get('status') == 'live':5} | "
-          f"TTFT={p.get('first_token_latency_ms', '?'):>8}ms | "
-          f"t/s={p.get('throughput', '?'):>6} | "
-          f"tools={p.get('supports_tools', '?'):5} | "
-          f"struct={p.get('supports_structured_output', '?'):5} | "
-          f"free={p.get('is_free', '?'):5}")
-```
-
-**Router API per-provider fields:**
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `provider` | str | Provider identifier |
-| `status` | str | `live` or `error` |
-| `context_length` | int | Max context for this provider+model |
-| `pricing.input` | float | USD per million input tokens |
-| `pricing.output` | float | USD per million output tokens |
-| `is_free` | bool | Temporary free promo |
-| `supports_tools` | bool | Tool/function calling |
-| `supports_structured_output` | bool | JSON-schema output |
-| `first_token_latency_ms` | int | Latest TTFT from validation probe |
-| `throughput` | number | Output tokens/sec |
-| `is_model_author` | bool | Provider published this model |
-
-### Direct Provider API Keys (Billing Bypass)
-
-Pass a provider's own API key to use your account directly, bypassing HF billing:
-
-```python
-# HF billing (default)
-client = InferenceClient(api_key="hf_...")
-
-# Direct provider billing — use their API key
-client = InferenceClient(
-    provider="together",
-    api_key="<together_api_key>",  # NOT HF token
-)
-```
-
-**When to use this:**
-- Your provider account has free credits (Together AI gives $1 free, many offer trial credits)
-- You need higher rate limits than HF distribution allows
-- You want to use the HF client but bill directly to your provider account
-
-### Zero-Cost Best Practices
-
-1. **Default to `provider="auto"`** — HF routes to the fastest/reliably available provider automatically with failover built in
-2. **Check `inferenceProviderMapping` before critical calls** — saves timeout on models with no live providers
-3. **Use suffix syntax for one-off provider pins** — `model_id:provider-name` avoids needing a separate `provider` param
-4. **Race concurrent providers for latency-sensitive tasks** — issue requests simultaneously to the 2-3 fastest providers, take the first response
-5. **Cache provider mappings** — the response is stable; don't call `model_info(expand=...)` before every inference
-6. **Always set a timeout** — default is 60s; 15-30s is better for interactive use
-7. **Handle 503 gracefully** — providers may need to cold-start; retry with backoff
-8. **Monitor `is_free` on Router API** — some providers offer free tiers temporarily; build your fallback order to prefer free providers
-
-### Resources
-- [InferenceClient API reference](https://huggingface.co/docs/huggingface_hub/v1.24.0/en/package_reference/inference_client)
-- [Inference Providers docs](https://huggingface.co/docs/inference-providers/en/index)
-- [Router API](https://router.huggingface.co/v1/models)
-- [Hub API — Inference provider discovery](https://huggingface.co/docs/inference-providers/en/hub-api)
-- [Inference settings (preferred providers)](https://huggingface.co/settings/inference-providers)
-
-### Skill
-huggingface-hub — references/hf-learnings.md
-
----
-
-## 2026-07-24: hf-hub-commit-api — Deep Dive (Topic #57)
-
-### Summary
-Comprehensive deep-dive into Hugging Face Hub's Commit API — the low-level foundation for all file operations on the Hub. Covers all three `CommitOperation` types (Add, Delete, Copy), the `create_commit()` entry point, high-level wrappers (`upload_file`, `upload_folder`, `copy_files`), the `CommitScheduler` for periodic pushes, `preupload_lfs_files` for memory-constrained large uploads, and `list_repo_commits` for inspecting history. Focused on practical patterns that work under zero-cost constraints.
-
-### Core Architecture
-
-The Hub Commit API follows a three-operation model:
-
-| Operation | Purpose | Fields |
-|---|---|---|
-| `CommitOperationAdd` | Upload/create a file | `path_in_repo`, `path_or_fileobj` (str Path bytes or BinaryIO) |
-| `CommitOperationDelete` | Remove a file or folder | `path_in_repo` |
-| `CommitOperationCopy` | Copy within/across repos (server-side) | `src_path_in_repo`, `path_in_repo`, optional `src_revision`, `src_repo_id`, `src_repo_type` |
-
-All three inherit from `CommitOperation` and are passed as a list to `create_commit()`.
-
-### create_commit() Parameters
-
-```python
-api.create_commit(
-    repo_id="user/repo",
-    operations=[...],           # List[CommitOperation] — will be mutated!
-    commit_message="msg",       # Required, non-empty
-    commit_description=None,    # Optional longer description
-    token=None,                 # Defaults to cached token
-    repo_type=None,             # None/model, dataset, space
-    revision=None,              # Branch name or commit OID (default: main)
-    create_pr=False,            # Open a PR instead of committing directly
-    num_threads=5,              # Concurrent upload threads for LFS files
-    parent_commit=None,         # OID to enforce linear history (optimistic locking)
-    run_as_future=False,        # Non-blocking background execution
-)
-```
-
-**Critical constraints:**
-- Max **25k LFS files** per commit
-- Max **1GB payload** for regular (non-LFS) files
-- The input `operations` list **will be mutated** — do not reuse objects
-- Repo must already exist; create it first with `create_repo()`
-- Empty `commit_message` raises `ValueError`
-
-### CommitOperationAdd — Three Input Modes
-
-```python
-# 1. From local file path
-CommitOperationAdd(path_in_repo="weights.bin", path_or_fileobj="./local/weights.bin")
-
-# 2. From bytes in memory
-CommitOperationAdd(path_in_repo="config.json", path_or_fileobj=b'{"key": "value"}')
-
-# 3. From binary file object (supports seek/tell)
-with open("data.bin", "rb") as f:
-    CommitOperationAdd(path_in_repo="data.bin", path_or_fileobj=f)
-```
-
-Internally computes `UploadInfo` (SHA256 for LFS, SHA1 for regular files) and compares against the remote OID to skip unchanged files (preventing empty commits).
-
-The `as_file()` context manager yields a `BinaryIO` from any input type, optionally with tqdm progress bar:
-```python
-with operation.as_file(with_tqdm=True) as f:
-    httpx.put(..., data=f)
-```
-
-### CommitOperationCopy — Server-Side Copies
-
-```python
-# Copy within same repo
-CommitOperationCopy(src_path_in_repo="image.png", path_in_repo="backup/image.png")
-
-# Copy from another repo
-CommitOperationCopy(
-    src_path_in_repo="weights.safetensors",
-    path_in_repo="weights.safetensors",
-    src_repo_id="other-user/source-model",
-    src_repo_type="model",
-    src_revision="main",       # Optional: specify source branch
-)
-```
-
-**Key details:**
-- Zero data transfer — server-side operation, no download/upload cost
-- Works across repos but NOT across storage regions
-- Also works with Buckets via `api.copy_files(source, destination)` using `hf://` URIs
-
-### CommitInfo Return Value
-
-```python
-@dataclass
-class CommitInfo(str):
-    commit_url: str        # e.g. "https://huggingface.co/user/repo/commit/abc123"
-    commit_message: str
-    commit_description: str
-    oid: str               # Full SHA commit hash
-    pr_url: str | None     # Set when create_pr=True
-    pr_revision: str | None  # e.g. "refs/pr/1"
-    pr_num: int | None
-    repo_url: RepoUrl      # Parsed repo info
-```
-
-Inherits from `str` for backward compatibility (the string value is the commit URL).
-
-### High-Level Wrappers
-
-#### upload_file() — Single File
-
-```python
-api.upload_file(
-    path_or_fileobj="/path/to/local/README.md",  # or bytes or BinaryIO
-    path_in_repo="README.md",
-    repo_id="user/test-dataset",
-    repo_type="dataset",
-)
-```
-
-#### upload_folder() — Directory Upload (Recommended)
-
-```python
-api.upload_folder(
-    folder_path="./logs",
-    repo_id="user/trained-model",
-    path_in_repo="experiment/logs/",
-    allow_patterns="*.txt",        # Upload only .txt files
-    ignore_patterns="**/temp/*",   # Exclude temp files
-    delete_patterns="*.txt",       # Delete remote .txt files before upload
-)
-```
-
-**Auto-batching:** When `hf_xet` is installed (default since huggingface_hub v0.32.0), `upload_folder()` automatically splits large folders into multiple commits with "(part 2)", "(part 3)" suffixes. It's **resumable** — re-run the same call after interruption and already-committed files are skipped, chunks are deduplicated.
-
-**Performance:** Set `HF_XET_HIGH_PERFORMANCE=1` to saturate bandwidth and CPU cores. The legacy `HF_HUB_ENABLE_HF_TRANSFER=1` is deprecated.
-
-#### copy_files() — Server-Side Cross-Repo Copy
-
-```python
-# Copy single file between repos
-api.copy_files(
-    "hf://username/source-model/weights.safetensors",
-    "hf://username/target-model/weights.safetensors",
-)
-
-# Copy entire folder (rsync-style with trailing /)
-api.copy_files(
-    "hf://datasets/username/source-dataset/data/",
-    "hf://datasets/username/target-dataset/data/",
-)
-
-# Duplicate within same repo
-api.copy_files(
-    "hf://username/my-model/config.json",
-    "hf://username/my-model/backup/config.json",
-)
-```
-
-**Folder semantics:**
-- Trailing `/` on source → copies **contents** (rsync-style, no nesting)
-- No trailing `/` on source → copies **folder itself** (cp -r style, nests inside destination)
-
-### CommitScheduler — Periodic Background Uploads
-
-```python
-from huggingface_hub import CommitScheduler
-
-scheduler = CommitScheduler(
-    repo_id="user/feedback-data",
-    repo_type="dataset",
-    folder_path="/local/data",
-    path_in_repo="data",
-    every=10,                    # minutes between commits
-    allow_patterns="*.jsonl",
-    squash_history=False,        # Set True to keep repo history manageable
-)
-```
-
-**Key design properties:**
-- **Append-only assumption:** Only add new files or append to existing ones. Deleting/overwriting may corrupt the repo.
-- **No empty commits:** Automatically skips if no changes detected.
-- **Thread-safe:** Use `scheduler.lock` context manager for concurrent writes from multiple threads.
-- **Error resilience:** Silent failure on network errors — retries at next interval.
-- **Context manager:** Use `with CommitScheduler(...) as scheduler:` to ensure clean shutdown + final commit.
-
-**Custom push_to_hub():** Override to transform data before upload (e.g., zip PNGs, aggregate logs):
-```python
-class ZipScheduler(CommitScheduler):
-    def push_to_hub(self):
-        png_files = list(self.folder_path.glob("*.png"))
-        if not png_files:
-            return
-        # ... zip and upload via self.api.upload_file(...)
-        for png in png_files:
-            png.unlink()  # clean up local files
-```
-
-### preupload_lfs_files — Memory-Constrained Large Uploads
-
-For cases where you generate large shards in memory and want a single commit:
-
-```python
-from huggingface_hub import CommitOperationAdd, preupload_lfs_files, create_commit
-
-operations = []
-for i in range(5):
-    content = generate_shard()  # generates bytes
-    addition = CommitOperationAdd(path_in_repo=f"shard_{i}.bin", path_or_fileobj=content)
-    preupload_lfs_files(repo_id, additions=[addition])  # upload to S3 now
-    operations.append(addition)
-
-# Single commit referencing all pre-uploaded files
-create_commit(repo_id, operations=operations, commit_message="All shards")
-```
-
-**⚠ Caveat:** Until the commit is made, pre-uploaded files are NOT accessible on the Hub. The `CommitOperationAdd` objects are **mutated** (binary content removed from the object) during preupload.
-
-### list_repo_commits — Inspecting History
-
-```python
-commits = api.list_repo_commits("gpt2")
-# Sorted by date, newest first
-
-initial_commit = commits[-1]  # Last is the initial commit
-# GitCommitInfo(
-#     commit_id='9b865efde13a30...',
-#     authors=['system'],
-#     created_at=datetime(...),
-#     title='initial commit',
-#     message='',
-# )
-```
-
-Useful for finding the initial commit OID to create an empty branch:
-```python
-api.create_branch("gpt2", "new_empty_branch", revision=initial_commit.commit_id)
-```
-
-### Zero-Cost Best Practices
-
-1. **Prefer `upload_folder()` with `hf_xet`** — automatic batching, resumability, and deduplication are free and reduce API calls.
-2. **Use `CommitOperationCopy` for file duplication** — server-side copies cost nothing and move zero bytes.
-3. **Schedule with `CommitScheduler`** — avoid per-event commits; batch every 5-10 minutes to stay under rate limits (~100 req/min).
-4. **Check `_remote_oid` before uploading** — `create_commit` already deduplicates unchanged files, but you can pre-check with `file_exists()` on the Hub API.
-5. **Avoid empty PRs** — opening PRs without real changes wastes rate limit budget.
-6. **Never reuse `CommitOperation` objects** — they get mutated during upload; create fresh operations per commit.
-7. **Use `repo_type="dataset"` for persistent storage** — datasets get generous LFS storage for free and integrate with `CommitScheduler`.
-
-### Resources
-- Upload guide: https://huggingface.co/docs/huggingface_hub/en/guides/upload
-- HfApi reference: https://huggingface.co/docs/huggingface_hub/en/package_reference/hf_api
-- CommitScheduler: https://huggingface.co/docs/huggingface_hub/en/package_reference/hf_api#huggingface_hub.CommitScheduler
-- Repository limitations: https://huggingface.co/docs/hub/en/repositories-limitations
-- HF URIs syntax: https://huggingface.co/docs/huggingface_hub/en/package_reference/utilities#huggingface_hub.HfUri
-- Xet storage overview: https://huggingface.co/docs/hub/en/xet
-
----
+Deep dive into FAISS vector search integration in Hugging Face Datasets. Covers the full API surface: add_faiss_index (with factory strings, GPU, custom indexes, metric types), query via get_nearest_examples/search, persistence with save/load_faiss_index, and advanced direct FAISS index access for range_search. FAISS enables datasets to function as vector databases for RAG, semantic search, and deduplication — all without external services.
+
+### Key API
+- `add_faiss_index(column, index_name, device, string_factory, metric_type, custom_index, batch_size, train_size, faiss_verbose, dtype)` — create index
+- `get_nearest_examples(index_name, query, k)` — retrieve closest examples with scores
+- `search(index_name, query, k)` — returns scores + indices only
+- `save_faiss_index(index_name, file)` — serialize to .faiss file
+- `load_faiss_index(index_name, file, device, storage_options)` — reload from disk/remote URI
+- `get_index(index_name).faiss_index` — access raw FAISS index for advanced operations
+
+### Key Insights
+- Default index type is IndexFlatL2 (exact, brute-force). For speed use string_factory: IVF, HNSW, PQ
+- GPU support via device parameter (single, all, or specific GPUs)
+- Remote URI loading (S3, HTTP) supported since datasets v2.11.0
+- train_size must be set for IVF-type indexes (k-means clustering step)
+- Index is NOT saved with ds.save_to_disk() — must use save_faiss_index() separately
+- FAISS is in-memory; use GPUs or quantized indexes for large-scale
 
 ## 2026-07-23: hf-bitsandbytes-quantization
 
@@ -1003,13 +212,12 @@ Comprehensive deep-dive into Transformers' GenerationConfig and generate() API (
 - Speculative decoding: assistant_model, prompt_lookup, DSLA, static verification
 - Continuous batching config and lifecycle
 - Custom generation method creation, publication, and consumption
-|- ZeroGPU: https://huggingface.co/docs/hub/en/spaces-gpus#zero-gpu-spaces
+- 6 production best practices with code examples
 
-### Skill
-huggingface-hub — references/hf-learnings.md
+### Repository search tag
+- Saved to ~/profiles/sakthai/skills/references/hf-learnings.md (Entry 91)
 
 ---
-
 
 ## 2026-07-24: hf-optimum-cpu-inference-deep-dive (Expanded Deep Dive)
 
@@ -1495,8567 +703,5698 @@ srun --nodes=1 trl vllm-serve --model Qwen/Qwen2.5-72B --tensor_parallel_size 8 
 ### Summary
 Researched Prefix Tuning and P-Tuning — two established "soft prompting" PEFT methods that train small continuous prompt embeddings (virtual tokens) rather than modifying model weights. Also covers Prompt Tuning as the third member of this family. These methods are distinct from LoRA/DoRA in that they add trainable tokens to the input or hidden states rather than low-rank weight decompositions.
 
-|- ZeroGPU: https://huggingface.co/docs/hub/en/spaces-gpus#zero-gpu-spaces
+### Key Concepts
 
-### Skill
-huggingface-hub — references/hf-learnings.md
+**Soft Prompting Family Overview:**
+PEFT groups Prefix Tuning, P-Tuning, and Prompt Tuning under "Soft Prompting" — methods that prepend or inject trainable continuous embeddings into the model's input or hidden states. The key difference from adapters: no weights are modified; instead, virtual tokens are learned and their embeddings steer the model.
 
 ---
 
+### Prefix Tuning
 
-## 2026-07-24: hf-hub-fsspec (Deep Dive)
+**What it is:**
+Prefix Tuning prepends a sequence of trainable "prefix" vectors to the keys and values of the multi-head attention at every transformer layer. These prefix vectors are not actual token embeddings — they are continuous parameters that interact with the attention mechanism as if they were key-value pairs from virtual tokens.
 
-### Summary
-Comprehensive deep-dive into Hugging Face Hub's fsspec integration via `HfFileSystem` — a Pythonic file-system interface to the Hub that enables treating remote repositories and buckets as local filesystems. Used by pandas, DuckDB, Zarr, Dask, Polars, and any library supporting the fsspec protocol. Covers architecture, URL scheme, 60+ methods, authentication, integrations, performance tradeoffs, and production best practices.
+**Mechanism:**
+- Adds `num_virtual_tokens` learnable vectors per transformer layer
+- Vectors are split: half for key prefix, half for value prefix (`2 * num_layers * hidden` per prefix)
+- A **PrefixEncoder** (2-layer MLP) transforms the raw embeddings — the MLP is discarded after training, keeping only the learned prefix
+- The prefix is concatenated with the actual KV cache at each attention layer during forward pass
 
-### Architecture
-
-**HfFileSystem** (`huggingface_hub.hf_file_system.HfFileSystem`) extends `fsspec.AbstractFileSystem` and wraps `HfApi` behind a file-system API. It provides:
-
-- **Module-level singleton**: `huggingface_hub.hffs` — a cached, pre-configured instance. Same as `HfFileSystem.current()`.
-- **Inheritance chain**: `HfFileSystem` → `AbstractFileSystem` → `object` (from the `fsspec` library)
-- **Constructor**: `HfFileSystem(*args, endpoint=None, token=None, block_size=None, expand_info=None, **storage_options)`
-  - `endpoint`: Custom HF Hub endpoint URL
-  - `token`: HF token (bool/str/None). `True` = use cached token, `str` = use directly
-  - `block_size`: Block size for file transfers
-  - `expand_info`: Whether to expand directory info (default: auto)
-- **Caching**: The singleton is shared across sessions via `current()`. To create an isolated instance, pass a unique token or endpoint.
-
-### URL Scheme
-
-```
-hf://[<repo_type_prefix>]<repo_id>[@<revision>]/<path/in/repo>
-```
-
-| Component | Example | Description |
-|---|---|---|
-| **Protocol** | `hf://` | Required for fsspec integrations; optional when using HfFileSystem directly |
-| **Prefix** | `datasets/`, `spaces/`, `buckets/` | Models have no prefix; datasets use `datasets/`; Spaces use `spaces/` |
-| **Repo ID** | `username/model-name` | Full repository identifier |
-| **Revision** | `@main`, `@v1.0`, `@abc123` | Branch, tag, or commit hash. NOT compatible with buckets |
-| **Path** | `/data/train.csv` | Path inside the repository |
-
-**Examples:**
-- `hf://bert-base-uncased/config.json` — model file
-- `hf://datasets/username/my-dataset/data/train.csv` — dataset file  
-- `hf://spaces/username/my-space/app.py` — Space file
-- `hf://buckets/username/my-bucket/experiment.parquet` — bucket file
-- `hf://username/model@dev/tokenizer.json` — specific revision
-
-### Complete Method Reference (60+ methods)
-
-**Directory & File Listing:**
-
-| Method | Signature | Description |
-|---|---|---|
-| `ls` | `(path, detail=True, refresh=False, revision=None, **kwargs)` | List directory contents. `detail=True` returns dicts with size/type/mtime; `detail=False` returns path strings |
-| `glob` | `(path, maxdepth=None, **kwargs)` | Find files by glob-matching. Supports `**` recursive patterns |
-| `find` | `(path, maxdepth=None, withdirs=False, detail=False, refresh=False, revision=None)` | Recursively list all files below path. Like `ls -R` |
-| `walk` | `(path, *args, **kwargs)` | Generator yielding `(dirpath, dirnames, filenames)` tuples |
-| `tree` | — | Display directory tree |
-| `du` | — | Disk usage (alias) |
-| `disk_usage` | `(path, total=True, maxdepth=None)` | Calculate storage used |
-
-**File Operations:**
-
-| Method | Signature | Description |
-|---|---|---|
-| `open` | `(path, mode='rb', block_size=None, cache_options=None, compression=None, **kwargs)` | Open file for read/write. **Default is binary (`'rb'`)** unlike Python's `open`. Use `'r'`/`'w'` for text. Append modes (`'a'`/`'ab'`) NOT supported |
-| `cat_file` | `(path, start=None, end=None, **kwargs)` | Get file content as bytes (with optional byte range) |
-| `read_text` | `(path, encoding=None, errors=None, newline=None, **kwargs)` | Get file content as string. Pass `revision=` for specific branch |
-| `write_text` | `(path, value, encoding=None, errors=None, newline=None, **kwargs)` | Write string content to remote file |
-| `read_bytes` | `(path)` | Read raw bytes |
-| `pipe_file` | `(path, value)` | Write bytes directly |
-| `head` | `(path, size=1024)` | Read first N bytes |
-| `tail` | `(path, size=1024)` | Read last N bytes |
-| `read_block` | — | Read a block of bytes |
-| `cat_ranges` | — | Read multiple byte ranges efficiently |
-
-**File System Operations:**
-
-| Method | Signature | Description |
-|---|---|---|
-| `info` | `(path, refresh=False, revision=None)` | Get file/directory metadata (size, type, created, modified) |
-| `exists` | `(path, **kwargs)` | Check if path exists |
-| `isfile` / `isdir` | `(path)` | Type checks |
-| `stat` | — | File stats |
-| `size` / `sizes` | — | File size(s) |
-| `checksum` | — | File checksum |
-| `created` / `modified` | — | Timestamps |
-| `sign` | `(path, expiration=100)` | Generate signed URL (for temporary access) |
-| `url` | — | Get public URL |
-
-**Copy, Move, Delete:**
-
-| Method | Signature | Description |
-|---|---|---|
-| `cp` / `copy` | `(path1, path2, **kwargs)` | Copy file(s) between paths (remote-to-remote) |
-| `mv` / `move` / `rename` | `(path1, path2, recursive=False, maxdepth=None)` | Move/rename file(s) |
-| `rm` / `delete` | `(path, recursive=False, maxdepth=None, revision=None)` | Delete file(s). Use `recursive=True` for directories |
-| `rm_file` | — | Delete single file |
-
-**Local ↔ Remote Transfers:**
-
-| Method | Signature | Description |
-|---|---|---|
-| `get_file` | `(rpath, lpath, callback=None, outfile=None)` | Copy remote file to local filesystem |
-| `put_file` | `(lpath, rpath, callback=None, mode='overwrite')` | Copy local file to remote repository |
-| `get` / `download` | — | Batch download files |
-| `put` / `upload` | — | Batch upload files |
-
-**Directory Management:**
-
-| Method | Signature | Description |
-|---|---|---|
-| `mkdir` / `makedirs` | `(path, create_parents=True)` | Create directory (actually creates a `.gitkeep` since HF Hub doesn't have empty dirs) |
-| `rmdir` | — | Remove directory |
-| `touch` | — | Create empty file |
-| `makedir` / `mkdirs` | — | Directory variants |
-
-**Other:**
-
-| Method | Description |
+**Configuration (`PrefixTuningConfig`):**
+| Parameter | Description |
 |---|---|
-| `get_mapper` | Get a `zarr.Mapping`-like interface for array storage |
-| `expand_path` | Expand glob patterns in paths |
-| `invalidate_cache` | Clear the filesystem listing cache |
-| `clear_instance_cache` | Clear all cached HfFileSystem instances |
-| `resolve_path` / `unstrip_protocol` | Path resolution utilities |
-| `transaction_type` / `start_transaction` / `end_transaction` | Transaction support |
+| `num_virtual_tokens` | Number of virtual prefix tokens per layer |
+| `prefix_projection=True/False` | Whether to use the MLP projection (True reduces variance) |
+| `encoder_hidden_size` | Hidden size of the prefix encoder MLP |
+| `init_weights="zero"` | Initialize so prefix is near no-op (reduces training variance) |
 
-### Integrations (Full Ecosystem)
-
-**Pandas:**
+**Code Example:**
 ```python
-import pandas as pd
-# Read from Hub
-df = pd.read_csv("hf://datasets/my-username/my-dataset/train.csv")
-df = pd.read_parquet("hf://datasets/my-username/my-dataset/data.parquet")
-df = pd.read_json("hf://my-username/my-model/config.json")
-# Write to Hub  
-df.to_csv("hf://datasets/my-username/my-dataset/test.csv")
-df.to_parquet("hf://buckets/my-username/my-bucket/results.parquet")
+from peft import PrefixTuningConfig, get_peft_model
+
+peft_config = PrefixTuningConfig(
+    task_type="CAUSAL_LM",
+    num_virtual_tokens=20,
+    prefix_projection=False,
+)
+model = get_peft_model(model, peft_config)
+model.print_trainable_parameters()
+# "trainable params: 983,040 || all params: 560,197,632 || trainable%: 0.175%"
 ```
 
-**DuckDB (remote SQL queries on Hub files):**
+**KV-Cache Initialization (new in main):**
+PEFT now supports `initialize_kv_prefix_from_text()` — initializes the prefix from an existing text's KV cache instead of random. Only works when `prefix_projection=False` (raw KV prefix).
 ```python
-from huggingface_hub import HfFileSystem
-import duckdb
-
-fs = HfFileSystem()
-duckdb.register_filesystem(fs)
-fs_file = "hf://datasets/my-username/my-dataset/train.parquet"
-df = duckdb.query(f"SELECT col1, COUNT(*) FROM '{fs_file}' GROUP BY col1").df()
+from peft import initialize_kv_prefix_from_text
+initialize_kv_prefix_from_text(
+    model, tokenizer,
+    text="...long context with at least num_virtual_tokens tokens...",
+    use_chat_template=False,
+)
 ```
 
-**Zarr (array store):**
-```python
-import zarr, numpy as np
-# Write
-with zarr.open_group("hf://my-username/my-model/embeddings", mode="w") as root:
-    root.zeros('experiment_0', shape=(50000, 1000), chunks=(10000, 1000), dtype='f4')
-# Read
-with zarr.open_group("hf://my-username/my-model/embeddings", mode="r") as root:
-    first_row = root["embeddings/experiment_0"][0]
-```
+**Key Properties:**
+- 1000x fewer params than full fine-tuning, comparable performance
+- Works better in low-data settings
+- Introduces latency because prefix is concatenated at every layer's attention (unlike Prompt Tuning)
+- Original paper: "Prefix-Tuning: Optimizing Continuous Prompts for Generation" (Li & Liang, 2021)
+- Main use case: NLG tasks (summarization, translation, table-to-text)
 
-**Dask & Polars:**
-```python
-# Dask
-import dask.dataframe as dd
-df = dd.read_csv("hf://datasets/my-username/my-dataset/*.csv")
+---
 
-# Polars
-import polars as pl
-df = pl.read_csv("hf://datasets/my-username/my-dataset/train.csv")
-```
+### P-Tuning
 
-### Authentication
+**What it is:**
+P-Tuning injects trainable prompt embeddings anywhere in the input sequence (not just prepended), optimized by a prompt encoder (bidirectional LSTM or MLP). Designed primarily for NLU tasks and works with both GPT and BERT-style models.
 
-| Method | Code |
+**Mechanism:**
+- Adds `num_virtual_tokens` learnable embeddings inserted at chosen positions in the input
+- A **prompt encoder** (LSTM with 2 layers by default, or MLP) reparameterizes the embeddings to find better continuous prompts
+- Introduces **anchor tokens** — special tokens that indicate component boundaries in the input, improving performance
+- Unlike Prefix Tuning: (1) tokens can go anywhere in the sequence (not just beginning), (2) tokens are only added to the input embedding layer (not every transformer layer), (3) anchor tokens provide structural hints
+
+**Configuration (`PromptEncoderConfig`):**
+| Parameter | Description |
 |---|---|
-| **Default (cached token)** | `from huggingface_hub import hffs` (uses token from `huggingface-cli login`) |
-| **Programmatic** | `HfFileSystem(token="hf_...")` or `HfFileSystem(token=True)` for cached |
-| **Via singleton** | `hffs = HfFileSystem(token=os.getenv("HF_TOKEN"))` |
-| **Endpoint override** | `HfFileSystem(endpoint="https://huggingface.co", token=...)` |
+| `num_virtual_tokens` | Number of virtual tokens to insert |
+| `encoder_hidden_size` | Hidden size of the prompt encoder (LSTM/MLP) |
+| `encoder_num_layers=2` | Layers in the prompt encoder |
+| `encoder_dropout=0.0` | Dropout for the encoder |
+| `encoder_reparameterization_type` | "MLP" or "LSTM" (default: MLP) |
 
-**⚠ Security:** Never hardcode tokens in source code. Use environment variables, `huggingface-cli login`, or secret management.
+**Code Example:**
+```python
+from peft import PromptEncoderConfig, get_peft_model
 
-### Performance Considerations
+peft_config = PromptEncoderConfig(
+    task_type="CAUSAL_LM",
+    num_virtual_tokens=20,
+    encoder_hidden_size=128,
+)
+model = get_peft_model(model, peft_config)
+model.print_trainable_parameters()
+# "trainable params: 300,288 || all params: 559,514,880 || trainable%: 0.054%"
+```
 
-| Aspect | Detail |
+**Key Properties:**
+- Original paper: "GPT Understands, Too" (Liu et al., 2021)
+- On LAMA knowledge probing, GPT recovers 64% P@1 (20+ point improvement over previous best)
+- Comparable or better than BERT on SuperGLUE in supervised and few-shot settings
+- Largely reduces need for manual prompt engineering
+- Much cheaper than Prefix Tuning (no per-layer parameters) — only input embeddings
+
+---
+
+### Prompt Tuning
+
+**What it is:**
+The simplest soft prompting method — a single learnable embedding prepended to the input. No per-layer injection, no encoder network. Soft prompt is just a single `nn.Embedding` layer.
+
+**Configuration (`PromptTuningConfig`):**
+| Parameter | Description |
 |---|---|
-| **Overhead** | HfFileSystem adds ~10-20% overhead vs direct HfApi calls due to fsspec compatibility layer |
-| **Caching** | Directory listings are cached. Use `refresh=True` or `invalidate_cache()` for fresh data |
-| **Best for** | Ad-hoc analysis, prototyping, and when library integration (pandas/DuckDB) is needed |
-| **Production** | Use `HfApi` methods (`api.upload_file`, `api.hf_hub_download`) for critical paths |
-| **Large files** | `hf_transfer` (Rust-accelerated) is NOT used by HfFileSystem; use `hf_hub_download` for large model weights |
-| **Rate limits** | Each filesystem operation maps to at least 1 REST API call; batch operations for efficiency |
+| `num_virtual_tokens` | Number of virtual tokens prepended |
+| `prompt_tuning_init` | "TEXT" (init from existing text), "RANDOM" (random soft tokens), or "SAMPLE_VOCAB" (random hard tokens from vocab) |
+| `prompt_tuning_init_text` | Text to initialize from (when init=TEXT) |
+| `tokenizer_name_or_path` | Tokenizer for the init text |
 
-### Limitations
+**Code Example:**
+```python
+from peft import PromptTuningConfig, PromptTuningInit, get_peft_model
 
-1. **No append** — modes `"a"` and `"ab"` not supported
-2. **`hf_transfer` not integrated** — does not use the Rust-accelerated upload/download backend
-3. **Binary mode default** — `open()` defaults to `'rb'`, unlike Python's built-in `open`
-4. **Revision + buckets** — `revision` parameter incompatible with bucket paths
-5. **No atomic multi-file commits** — each write is a separate commit. Use `HfApi.create_commit()` for atomic multi-file operations
-6. **No empty directories** — the Hub doesn't support empty dirs; `mkdir` creates a `.gitkeep` marker
-7. **Not for streaming training** — not designed for high-throughput streaming; use `datasets` library or `HfApi.hf_hub_download` for model weight streaming
+peft_config = PromptTuningConfig(
+    task_type="CAUSAL_LM",
+    prompt_tuning_init=PromptTuningInit.TEXT,
+    num_virtual_tokens=len(tokenizer(prompt_tuning_init_text)["input_ids"]),
+    prompt_tuning_init_text="Classify if the tweet is a complaint or no complaint.\n",
+    tokenizer_name_or_path="bigscience/bloomz-560m",
+)
+model = get_peft_model(model, peft_config)
+model.print_trainable_parameters()
+# "trainable params: 8,192 || all params: 559,222,784 || trainable%: 0.0015%"
+```
 
-### Comparison: HfFileSystem vs HfApi
+**Key Properties:**
+- Most parameter-efficient of the three (only input embeddings, no encoder)
+- Original paper: "The Power of Scale for Parameter-Efficient Prompt Tuning" (Lester et al., 2021)
+- Performance scales with model size — large models match full fine-tuning
+- Best for very large models (>10B params) where even tiny adapter params become significant
 
-| Dimension | HfFileSystem | HfApi |
-|---|---|---|
-| **API style** | File-system (POSIX-like) | REST/object-oriented |
-| **Speed** | ~10-20% slower | Direct, minimal overhead |
-| **Integration** | pandas, DuckDB, Zarr, Dask, Polars | Direct upload/download/commit |
-| **Atomic commits** | No (per-file) | Yes (`create_commit`) |
-| **Streaming** | No | Yes (`hf_hub_download`) |
-| **Cache control** | Limited | Full (resumable downloads, local cache) |
-| **Best for** | Data science, ad-hoc analysis | Production pipelines, CI/CD |
+---
 
-### Best Practices
+### Method Comparison
 
-1. **Use `hffs` singleton for ad-hoc** — the module-level `hffs` uses your cached credentials
-2. **Pass `revision=` explicitly** — avoid accidental writes to `main`
-3. **Prefers `detail=False` for `ls()`** — reduces API calls when only paths are needed
-4. **Batch writes via HfApi for commits** — use `api.create_commit(operations=[...])` for atomic multi-file changes
-5. **Clear cache for refresh** — call `hffs.invalidate_cache()` when you know the Hub state changed externally
-6. **Use `hf://` URL in integrations** — libraries detect the protocol and use fsspec automatically
-7. **Avoid for model weight downloads** — use `hf_hub_download` for large checkpoints (it supports resumption, `hf_transfer`, and local caching)
+| Property | Prefix Tuning | P-Tuning | Prompt Tuning |
+|---|---|---|---|
+| Where injected | Every layer (KV) | Input layer only | Input layer only |
+| Encoder network | 2-layer MLP (optional) | LSTM or MLP | None (direct embedding) |
+| Params per 20 tokens (GPT-2) | ~983K | ~300K | ~8K |
+| Best for | NLG tasks | NLU tasks | Very large LMs |
+| Latency cost | High (per-layer cat) | Low | Lowest |
+| Initialization | Random or KV-cache | Random | Text, random, or vocab |
+| Anchor tokens | No | Yes | No |
+| Year/Paper | 2021 (Li & Liang) | 2021 (Liu et al.) | 2021 (Lester et al.) |
 
 ### Resources
-- HfFileSystem guide: https://huggingface.co/docs/huggingface_hub/main/en/guides/hf_file_system
-- HfFileSystem API reference: https://huggingface.co/docs/huggingface_hub/main/en/package_reference/hf_file_system
-- fsspec documentation: https://filesystem-spec.readthedocs.io/en/latest/
-- Hugging Face Buckets guide: https://huggingface.co/docs/huggingface_hub/main/en/guides/buckets
-- hf_transfer (Rust): https://github.com/huggingface/hf_transfer
-- huggingface_hub source (hffs): https://github.com/huggingface/huggingface_hub/blob/main/src/huggingface_hub/hf_file_system.py
-
-## 2026-07-24: hf-datasets-server-advanced-query (Deep Dive — Full API Reference with Real-World Testing)
-
-### Summary
-Deep-dive into the Hugging Face Datasets Server REST API — every endpoint tested live against `stanfordnlp/imdb`. Covers /splits, /first-rows, /rows (with offset/length), /search, /filter (with where/orderby), /parquet, /size, /statistics, /is-valid. Documents real response structures, error behavior, pagination mechanics, the filter predicate syntax, and partial indexing limits (5GB ceiling for /filter).
-
-### Endpoint Reference
-
-#### 1. `/splits` — List configs and splits
-Returns all config/split tuples for a dataset.
-
-```
-GET https://datasets-server.huggingface.co/splits?dataset=stanfordnlp/imdb
-```
-```json
-{
-  "splits": [
-    {"dataset":"stanfordnlp/imdb","config":"plain_text","split":"train"},
-    {"dataset":"stanfordnlp/imdb","config":"plain_text","split":"test"},
-    {"dataset":"stanfordnlp/imdb","config":"plain_text","split":"unsupervised"}
-  ],
-  "pending": [],
-  "failed": []
-}
-```
-
-**Notes:**
-- Always use fully qualified dataset names (e.g. `stanfordnlp/imdb`, not `imdb`)
-- The `pending` and `failed` arrays show splits that are still processing or errored
-
-#### 2. `/first-rows` — Quick preview of first rows
-Returns the first rows of a split with feature metadata. No pagination — always shows exactly 100 rows (the first page).
-
-```
-GET https://datasets-server.huggingface.co/first-rows?dataset=stanfordnlp/imdb&config=plain_text&split=train
-```
-
-**Response structure:**
-```json
-{
-  "dataset": "stanfordnlp/imdb",
-  "config": "plain_text",
-  "split": "train",
-  "features": [
-    {"feature_idx": 0, "name": "text", "type": {"dtype": "string", "_type": "Value"}},
-    {"feature_idx": 1, "name": "label", "type": {"names": ["neg","pos"], "_type": "ClassLabel"}}
-  ],
-  "rows": [
-    {"row_idx": 0, "row": {"text": "...", "label": 0}, "truncated_cells": []}
-  ]
-}
-```
-
-**Feature type mapping:**
-| HF Type | dtype | JSON representation |
-|---------|-------|-------------------|
-| Value   | string/int/float/bool | `{"dtype": "string", "_type": "Value"}` |
-| ClassLabel | class_label | `{"names": ["neg","pos"], "_type": "ClassLabel"}` |
-| Sequence | sequence | `{"_type": "Sequence", "feature": {...}}` |
-
-**Key insight:** ClassLabel features return integer indices in `rows`, not string labels. Map from the `features[].type.names` array.
-
-#### 3. `/rows` — Paginated row access with optional WHERE filter
-```
-GET https://datasets-server.huggingface.co/rows?dataset=stanfordnlp/imdb&config=plain_text&split=train&offset=0&length=3
-```
-
-**Parameters:**
-| Param | Required | Default | Notes |
-|-------|----------|---------|-------|
-| `dataset` | Yes | — | Fully qualified name |
-| `config` | Yes | — | Config/subset name |
-| `split` | Yes | — | Split name |
-| `offset` | No | 0 | Zero-indexed start row |
-| `length` | No | 100 | Max rows per page (max=100) |
-| `where` | No | — | **Predicate string** (not JSON!) |
-
-**Response:**
-```json
-{
-  "features": [...],
-  "rows": [{"row_idx": 0, "row": {...}, "truncated_cells": []}],
-  "num_rows_total": 25000,
-  "num_rows_per_page": 100,
-  "partial": false
-}
-```
-
-**The `where` parameter uses predicate syntax, not JSON:**
-- Correct: `"label">0` or `"label">=0 AND "label"<=1`
-- Correct: `"name"='Simone' OR "children"=0`
-- INCORRECT: `{"label": 1}` (JSON object — silently ignored on `/rows`)
-- INCORRECT: URL-encoded nested JSON like `{"label":{"_eq":1}}` (returns 422)
-
-**Important behavior:** The `/rows` endpoint with `where` applied did NOT actually filter when I passed `{"label":1}` — it silently returned unfiltered rows. The predicate syntax (`"label">0`) is the correct format. For proper filtering, use the dedicated `/filter` endpoint.
-
-**Pagination:** `num_rows_total` gives total rows, `num_rows_per_page` is the page size. Iterate by incrementing `offset` by `length` each request.
-
-#### 4. `/filter` — Full-featured row filtering
-The dedicated filtering endpoint with proper predicate support.
-
-```
-GET https://datasets-server.huggingface.co/filter?dataset=ibm/duorc&config=SelfRC&split=train&where="no_answer"=true&offset=150&length=2
-```
-
-**Supported operators in `where`:**
-| Operator | Example | Note |
-|----------|---------|------|
-| `=` (equals) | `"age"=30` | String values use single quotes: `"name"='Alice'` |
-| `!=` | `"age"!=30` | |
-| `>` / `>=` | `"age">30` | |
-| `<` / `<=` | `"age"<30` | |
-| `AND` | `"age">30 AND "city"='Paris'` | |
-| `OR` | `"age">30 OR "city"='Paris'` | |
-| `NOT` | `NOT "age"=30` | |
-
-**Sorting with `orderby`:**
-- Ascending (default): `orderby="age"`
-- Descending: `orderby="age" DESC`
-
-**Partial indexing warning:**
-Datasets > 5GB are only partially indexed for /filter. Check the `partial` field:
-- `"partial": true` — filtering is on first 5GB only
-- `"partial": false` — full dataset indexed
-
-#### 5. `/search` — Text search within a split
-```
-GET https://datasets-server.huggingface.co/search?dataset=stanfordnlp/imdb&config=plain_text&split=train&query=terrible&limit=2
-```
-
-**Parameters:**
-| Param | Required | Description |
-|-------|----------|-------------|
-| `dataset` | Yes | Fully qualified |
-| `config` | Yes | Subset name |
-| `split` | Yes | Split name |
-| `query` | Yes | Search text |
-| `offset` | No | Pagination offset |
-| `limit` | No | Results per page (max=100) |
-
-**Behavior observed:** The search endpoint returned a 502 Bad Gateway for the imdb dataset with "terrible" — suggesting search may time out on large textual datasets. Tends to work better on smaller or structured datasets.
-
-#### 6. `/parquet` — List available Parquet exports
-```
-GET https://datasets-server.huggingface.co/parquet?dataset=stanfordnlp/imdb
-```
-
-**Response:**
-```json
-{
-  "parquet_files": [
-    {
-      "dataset": "stanfordnlp/imdb",
-      "config": "plain_text",
-      "split": "test",
-      "url": "https://huggingface.co/datasets/stanfordnlp/imdb/resolve/refs%2Fconvert%2Fparquet/plain_text/test/0000.parquet",
-      "filename": "0000.parquet",
-      "size": 20470363
-    },
-    {
-      "dataset": "stanfordnlp/imdb",
-      "config": "plain_text",
-      "split": "train",
-      "url": "https://huggingface.co/datasets/stanfordnlp/imdb/resolve/refs%2Fconvert%2Fparquet/plain_text/train/0000.parquet",
-      "filename": "0000.parquet",
-      "size": 20979968
-    }
-  ],
-  "pending": [],
-  "failed": [],
-  "partial": false
-}
-```
-
-**Key insights:**
-- Parquet URL path uses `refs%2Fconvert%2Fparquet` (URL-encoded `refs/convert/parquet`) — auto-generated by HF
-- Each split has its own Parquet file(s) with size in bytes
-- Multiple Parquet files per split if the dataset is large (sharded)
-
-**Usage with DuckDB/Polars:**
-```python
-from huggingface_hub import HfFileSystem
-import duckdb
-
-fs = HfFileSystem()
-duckdb.register_filesystem(fs)
-url = "hf://datasets/stanfordnlp/imdb/refs%2Fconvert%2Fparquet/plain_text/train/0000.parquet"
-df = duckdb.query(f"SELECT * FROM read_parquet('{url}') WHERE label = 1 LIMIT 10").df()
-```
-
-#### 7. `/size` — Dataset size breakdown
-```
-GET https://datasets-server.huggingface.co/size?dataset=stanfordnlp/imdb&config=plain_text
-```
-
-**Response:**
-```json
-{
-  "size": {
-    "config": {
-      "dataset": "stanfordnlp/imdb",
-      "config": "plain_text",
-      "num_bytes_original_files": 83446840,
-      "num_bytes_parquet_files": 83446840,
-      "num_bytes_memory": 128683449,
-      "num_rows": 100000,
-      "num_columns": 2,
-      "estimated_num_rows": null
-    },
-    "splits": [
-      {
-        "dataset": "stanfordnlp/imdb",
-        "config": "plain_text",
-        "split": "train",
-        "num_bytes_parquet_files": 20979968,
-        "num_bytes_memory": 33090550,
-        "num_rows": 25000,
-        "num_columns": 2,
-        "estimated_num_rows": null
-      }
-    ]
-  },
-  "partial": false
-}
-```
-
-**Field meanings:**
-| Field | Meaning |
-|-------|---------|
-| `num_bytes_original_files` | Size of original (non-Parquet) data files |
-| `num_bytes_parquet_files` | Size of Parquet export files |
-| `num_bytes_memory` | Estimated memory footprint when loaded via `datasets` library |
-| `estimated_num_rows` | Non-null only for datasets too large for exact counting |
-
-**Compression ratio signal:** Compare `num_bytes_parquet_files` vs `num_bytes_memory` to estimate Parquet compression ratio. For imdb: ~20MB vs 33MB per split (~1.6x compression on text).
-
-#### 8. `/statistics` — Column-level statistics
-```
-GET https://datasets-server.huggingface.co/statistics?dataset=stanfordnlp/imdb&config=plain_text&split=train
-```
-
-**Response:**
-```json
-{
-  "num_examples": 25000,
-  "statistics": [
-    {
-      "column_name": "label",
-      "column_type": "class_label",
-      "column_statistics": {
-        "nan_count": 0,
-        "nan_proportion": 0.0,
-        "no_label_count": 0,
-        "no_label_proportion": 0.0,
-        "n_unique": 2,
-        "frequencies": {"neg": 12500, "pos": 12500}
-      }
-    },
-    {
-      "column_name": "text",
-      "column_type": "string_text",
-      "column_statistics": {
-        "nan_count": 0,
-        "nan_proportion": 0.0,
-        "min": 52,
-        "max": 13704,
-        "mean": 1325.07,
-        "median": 979.0,
-        "std": 1003.13,
-        "histogram": {
-          "hist": [17426, 5384, 1490, 535, 147, 11, 4, 2, 0, 1],
-          "bin_edges": [52, 1418, 2784, 4150, 5516, 6882, 8248, 9614, 10980, 12346, 13704]
-        }
-      }
-    }
-  ],
-  "partial": false
-}
-```
-
-**Column type-specific statistics:**
-
-| Column Type | Available Stats | Notes |
-|-------------|----------------|-------|
-| `class_label` | `n_unique`, `frequencies` (map of string→count) | Labels returned as string names |
-| `string_text` | `min`, `max`, `mean`, `median`, `std`, `histogram` | Length stats (char count) |
-| `float` / `int` | `min`, `max`, `mean`, `median`, `std`, `histogram` | Value stats |
-| `bool` | `n_unique`, `frequencies` | |
-| `sequence` | No statistics | Not computed for nested types |
-
-**Histogram interpretation:** 10-bin histogram. `bin_edges` has 11 values (edges of 10 bins). `hist[i]` = count of rows in range `[bin_edges[i], bin_edges[i+1])`.
-
-#### 9. `/is-valid` — Check dataset viewer status
-```
-GET https://datasets-server.huggingface.co/is-valid?dataset=stanfordnlp/imdb
-```
-
-**Response:**
-```json
-{
-  "preview": true,
-  "viewer": true,
-  "search": true,
-  "filter": true,
-  "statistics": true
-}
-```
-
-**Field meaning:** Each boolean indicates if the feature is available for this dataset. Useful for conditional logic before calling other endpoints.
-
-### Error Handling
-
-| Status | Meaning | Example |
-|--------|---------|---------|
-| 200 | Success | Normal response |
-| 404 | Dataset not found or renamed | Removed/renamed datasets |
-| 422 | Invalid parameters | Wrong `where` syntax |
-| 500 | Server error | Internal indexing failure |
-| 502 | Bad Gateway | Timeout on large search queries |
-
-**Error response format:**
-```json
-{"error": "The dataset has been renamed. Please use the current dataset name."}
-```
-or
-```json
-{"error": "Parameter 'where' contains errors or invalid symbols"}
-```
-
-### Performance & Limits
-
-| Endpoint | Max Page Size | Indexing Limit |
-|----------|--------------|----------------|
-| `/rows` | 100 rows/page | Full dataset |
-| `/filter` | 100 rows/page | First 5GB (partial=true if exceeded) |
-| `/search` | 100 rows/page | First 5GB |
-| `/first-rows` | 100 rows (fixed) | Full dataset (preview only) |
-| `/statistics` | — | Full dataset |
-| `/size` | — | Full dataset |
-
-### Best Practices
-
-1. **Always use fully qualified dataset names** (e.g. `stanfordnlp/imdb`, not `imdb`)
-2. **Check `/is-valid` first** before polling other endpoints — it's the fastest way to know what's available
-3. **For row-level queries**, prefer `/rows` with `offset`/`length` pagination over `/filter` if you don't need filtering — `/rows` is simpler and has no 5GB index limit
-4. **For filtered queries**, use `/filter` with **predicate syntax** (not JSON): `"label">0`, NOT `{"label":1}`
-5. **For text search**, use `/search` with short, specific queries — long/common queries may time out on large datasets
-6. **For bulk analysis**, use `/parquet` to get file URLs, then query with DuckDB/Polars via `HfFileSystem` for efficient columnar access
-7. **ClassLabel columns** return integer indices — always check `features[n].type.names` to map indices to string labels
-8. **Handle `partial: true`** — when present, results represent a subset of the data (first 5GB)
-9. **Single config vs multi-config**: Datasets with one config return `/splits` normally; `/configs` endpoint returns "Not Found" for single-config datasets — use `/splits` to discover configs instead
-
-### Resources
-- Datasets Server OpenAPI spec: https://datasets-server.huggingface.co/openapi.json (uses ReDoc)
-- Filter docs: https://huggingface.co/docs/dataset-viewer/en/filter
-- Rows docs: https://huggingface.co/docs/dataset-viewer/en/rows
-- Search docs: https://huggingface.co/docs/dataset-viewer/en/search
-- Parquet docs: https://huggingface.co/docs/dataset-viewer/en/parquet
-- Datasets Server source: https://github.com/huggingface/dataset-viewer
+- Prefix Tuning paper: https://hf.co/papers/2101.00190
+- P-Tuning paper (GPT Understands, Too): https://hf.co/papers/2103.10385
+- Prompt Tuning paper: https://hf.co/papers/2104.08691
+- PEFT Prefix Tuning docs: https://huggingface.co/docs/peft/main/en/package_reference/prefix_tuning
+- PEFT P-Tuning docs: https://huggingface.co/docs/peft/main/en/package_reference/p_tuning
+- PEFT Prompt Tuning docs: https://huggingface.co/docs/peft/main/en/package_reference/prompt_tuning
+- PEFT Soft Prompting overview: https://huggingface.co/docs/peft/main/en/conceptual_guides/soft_prompts
+|- PEFT GitHub: https://github.com/huggingface/peft
+|- RapidFire AI integration: https://huggingface.co/docs/trl/main/en/rapidfire
 
 ---
 
-## 2026-07-24: hf-transformers-gguf-integration (Deep Dive)
+## 2026-07-24: hf-spaces-storage-and-buckets (Deep Dive — Zero-Cost Persistence)
 
 ### Summary
-Comprehensive deep-dive into the Transformers v4.46+ GGUF integration — loading GGUF format models directly via `AutoModelForCausalLM.from_pretrained()` with `gguf_file` parameter, without requiring llama.cpp Python bindings. Covers the GGUF format architecture, all quantization types (Q2_K through Q8_0 with bit-widths and formulas), the hub integration (GGUF viewer, JS parser, model discovery), conversion workflow, supported architectures, and production best practices.
-
-### GGUF Format Overview
-GGUF (GPT-Generated Unified Format) is a **single-file binary format** that bundles both model metadata and tensors, designed for use with GGML/llama.cpp — a fast C/C++ inference framework. Unlike tensor-only formats (safetensors), GGUF encodes:
-- Standardized metadata header (architecture, tokenizer config, hyperparameters)
-- All tensor weights in a single file
-- Support for many quantized data types (2-bit through 8-bit)
-
-**Key advantages:**
-- Single-file deployment (no `model-00001-of-00002.safetensors` splits)
-- Extreme memory efficiency via quantization (4-bit and below)
-- Community standard for local/edge inference (LlamaFile, Ollama, LM Studio)
-- Hub-native viewer for inspecting metadata & tensors without downloading
-
-### Transformers GGUF Integration (v4.46+)
-Starting in Transformers v4.46, you can load GGUF models **directly** without llama-cpp-python:
-
-```python
-from transformers import AutoTokenizer, AutoModelForCausalLM
-
-model_id = "TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF"
-filename = "tinyllama-1.1b-chat-v1.0.Q6_K.gguf"
-
-tokenizer = AutoTokenizer.from_pretrained(model_id, gguf_file=filename)
-model = AutoModelForCausalLM.from_pretrained(
-    model_id,
-    gguf_file=filename,
-    dtype=torch.float16  # or torch.bfloat16, torch.float32
-)
-```
-
-**Mechanism:** The `gguf_file` parameter tells Transformers to locate the specified GGUF file within the model repo, parse its metadata header to determine the architecture (e.g., LlamaForCausalLM, MistralForCausalLM), and load the weights into the appropriate PyTorch model class — converting quantized weights back to the specified float dtype.
-
-### Supported Architectures
-| Architecture | Transformers Class |
-|---|---|
-| Llama / Llama-2 / Llama-3 | `LlamaForCausalLM` |
-| Mistral | `MistralForCausalLM` |
-| Qwen2 | `Qwen2ForCausalLM` |
-| Qwen2MoE | `Qwen2MoeForCausalLM` |
-| Phi-3 | `Phi3ForCausalLM` |
-| Bloom | `BloomForCausalLM` |
-| Falcon | `FalconForCausalLM` |
-| StableLM | `StableLmForCausalLM` |
-| GPT2 | `GPT2LMHeadModel` |
-| Starcoder2 | `Starcoder2ForCausalLM` |
-| Whisper | `WhisperForConditionalGeneration` |
-
-### Complete GGUF Quantization Type Reference
-All quantization types from the GGUF specification, as documented on the Hub:
-
-| Type | Bits/Weight | Block Structure | Category |
-|------|-------------|----------------|----------|
-| `F32` | 32 | — | Unquantized (float) |
-| `F16` | 16 | — | Half-precision |
-| `BF16` | 16 | — | Brain float |
-| `F64` | 64 | — | Double-precision |
-| `Q8_0` | 8.0 | Block of 32 weights | Round-to-nearest |
-| `Q8_1` | 8.0 | Block of 32 weights | Round-to-nearest + min |
-| `Q6_K` | 6.5625 | Super-blocks: 16×16 weights | K-quant |
-| `Q5_0` | 5.0 | Block of 32 weights | Legacy round-to-nearest |
-| `Q5_1` | 5.0 | Block of 32 weights | Legacy round-to-nearest + min |
-| `Q5_K_M/S` | 5.5 | Super-blocks: 8×32 weights | K-quant (recommended) |
-| `Q4_0` | 4.0 | Block of 32 weights | Legacy round-to-nearest |
-| `Q4_1` | 4.0 | Block of 32 weights | Legacy round-to-nearest + min |
-| `Q4_K_M/S` | 4.5 | Super-blocks: 8×32 weights | K-quant (recommended) |
-| `Q3_K_S/M/L` | 3.44 | Super-blocks: 16×16 weights | K-quant |
-| `Q2_K` | 2.625 | Super-blocks: 16×16 weights | K-quant |
-| `IQ4_NL` | 4.25 | Super-blocks: 256 weights | Importance-aware |
-| `IQ3_XXS` | 3.44 | Super-blocks: 256 weights | Importance-aware |
-| `IQ2_XXS` | 2.06 | Super-blocks: 256 weights | Importance-aware |
-| `IQ1_S` | 1.56 | Super-blocks: 256 weights | Importance-aware |
-| `F4` | 4 | — | 4-bit Microscaling Block Float |
-
-**Picking the right quantization:** K-quant types (Q2_K–Q6_K) are the recommended family — they use importance-aware block sizing. Q4_K_M is the default choice for most users (4.5 bpw, good quality). Q5_K_M for higher quality when you have the memory. Q2_K for extreme compression (small but reduced reasoning). The newer IQ (Importance-aware Quant) types push below 3 bits for specialized use cases.
-
-### GGUF ↔ Transformers Conversion Workflow
-**HF → GGUF:** Use llama.cpp's conversion script:
-```bash
-python ${llama_cpp_dir}/convert-hf-to-gguf.py ${hf_model_directory} \
-    --outfile model.q4_k_m.gguf --outtype q4_k_m
-```
-
-**GGUF → Transformers:** Load directly with `gguf_file` parameter. Once loaded, you can continue training with PEFT LoRA, export to safetensors, or convert back to GGUF.
-
-### Hub Integration Features
-1. **GGUF File Viewer** — Built-in viewer showing metadata & tensor info on model pages
-2. **@huggingface/gguf parser** — JS package that parses GGUF metadata from remote URLs
-3. **Tag filtering** — https://huggingface.co/models?library=gguf
-4. **Library tag** — Repos use `library_name: gguf` in YAML frontmatter
-
-### Production Best Practices
-1. **Q4_K_M** for best quality/size trade-off; Q5_K_M for higher quality
-2. **Load with bfloat16** on compatible hardware for optimal dequantization speed
-3. **GGUF for deployment**, safetensors for training — or load GGUF then PEFT LoRA
-4. **Key publishers:** TheBloke, MaziyarPanahi, Bartowski, QuantFactory
-5. **Always specify `--outtype`** when converting; default may not match needs
-
-### Resources
-- Transformers GGUF docs: https://huggingface.co/docs/transformers/en/gguf
-- Hub GGUF docs: https://huggingface.co/docs/hub/en/gguf
-- llama.cpp repo: https://github.com/ggml-org/llama.cpp
-- JS parser: `@huggingface/gguf` on npm
-- GGUF models: https://huggingface.co/models?library=gguf
-
----
-
-## 2026-07-24: hf-spaces-persistent-storage-zero-cost — Full Deep Dive v2 (Topic #95, Updated 2026-07-24)
-
-### Summary
-Comprehensive deep-dive into persisting data across Hugging Face Space restarts without spending money. Covers all five zero-cost persistence strategies: (A) Storage Buckets (new — free tier, read-write mounts, recommended), (B) Dataset repos via Hub API, (C) read-only volumes for models/datasets, (D) Space's own git repo (with heavy caveats), and (E) external free services. Includes the new `Volume` API in `huggingface_hub`, ZeroGPU integration patterns, Space lifecycle management, and practical code examples for each strategy.
-
-### MAJOR CORRECTIONS from Previous Coverage
-
-| Old (v1) Claim | New (v2) Reality | Source |
-|---|---|---|
-| Storage Buckets cost money, 0 GB free tier | **Buckets are free to create with a free storage allowance** — pricing is per-TB above free tier | HF docs July 2026 |
-| No writable mounts for free | **Buckets support read-write mounts** in Spaces (models/datasets remain read-only) | HF Spaces Storage doc |
-| `update_space_volume()` is the API | **Deprecated/replaced by `set_space_volumes()`** using the `Volume` dataclass | huggingface_hub API |
-| `hf spaces volume add` CLI | **Replaced by `hf spaces volumes set`** (atomic replace) and `hf spaces volumes ls` | CLI reference |
-
-### Strategy Comparison Matrix
-
-| Strategy | Writable? | Free? | Survives Restart? | Latency | Max Size | Setup Complexity |
-|---|---|---|---|---|---|---|
-| **A. Storage Bucket** (recommended) | ✅ Read-Write | ✅ Free tier | ✅ Yes — mounted as volume | Filesystem-native | Free allowance | Low |
-| **B. Dataset Repo via API** | ✅ Write via API | ✅ Free | ✅ Yes | API latency (~100ms) | LFS storage limit | Medium |
-| **C. Read-only Volume** (model/dataset) | ❌ Read-only | ✅ Free | ✅ Yes (mount persists) | Filesystem-native | Repo limit | Low |
-| **D. Space's own git repo** | ⚠️ Yes (write) | ✅ Free | ✅ Yes (committed) | Seconds (build+restart) | Space disk (50GB) | Low but DANGEROUS |
-| **E. External free service** | ✅ | ✅ Free | ✅ Yes | Network latency | Varies | High |
-
-### Strategy A: Storage Buckets (Recommended — New Free Tier)
-
-**Buckets are the recommended way to persist data in your Space** as of July 2026. They support read-write mounts directly into the Space container.
-
-#### Creating a Bucket
-
-```bash
-# CLI
-hf buckets create my-space-data
-
-# Python
-from huggingface_hub import create_bucket
-create_bucket("my-space-data")
-```
-
-#### Mounting as a Read-Write Volume (New Volume API)
-
-The old `update_space_volume()` / `hf spaces volume add` APIs are **replaced**. Use the `Volume` dataclass and `set_space_volumes()`:
-
-```python
-from huggingface_hub import HfApi, Volume
-
-api = HfApi()
-
-# Mount a bucket as read-write volume at Space creation
-api.create_repo(
-    repo_id="username/my-space",
-    repo_type="space",
-    space_sdk="gradio",
-    space_volumes=[
-        Volume(
-            type="bucket",
-            source="username/my-bucket",
-            mount_path="/data",       # default: read-write
-        ),
-    ],
-)
-
-# Mount on existing Space (replaces ALL existing volumes)
-api.set_space_volumes(
-    repo_id="username/my-space",
-    volumes=[
-        Volume(type="bucket", source="username/my-bucket", mount_path="/data"),
-        Volume(type="model",  source="username/basemodel", mount_path="/models", read_only=True),
-    ],
-)
-
-# Check current volumes
-runtime = api.get_space_runtime(repo_id="username/my-space")
-for v in runtime.volumes:
-    print(f"{v.type}: {v.source} -> {v.mount_path} ({'ro' if v.read_only else 'rw'})")
-
-# Remove all volumes
-api.delete_space_volumes(repo_id="username/my-space")
-```
-
-#### CLI for Volumes (New Syntax)
-
-```bash
-# List mounted volumes
-hf spaces volumes ls username/my-space
-
-# Set (replace) all volumes — atomically replaces previous mounts
-hf spaces volumes set username/my-space \
-  --volume bucket=username/my-bucket:/data \
-  --volume model=username/basemodel:/models:ro
-
-# Delete all volumes
-hf spaces volumes delete username/my-space
-```
-
-#### Inside the Space — Read/Write to Volume
-
-Once mounted, the bucket appears as a local filesystem path. No API calls needed:
-
-```python
-# Write — persists across restarts
-with open("/data/counter.txt", "w") as f:
-    f.write(str(count))
-
-# Read — survives restarts, sleep, rebuilds
-if os.path.exists("/data/counter.txt"):
-    with open("/data/counter.txt") as f:
-        count = int(f.read().strip())
-
-# List files in the bucket
-import os
-for fname in os.listdir("/data"):
-    print(fname)
-```
-
-**Key advantage:** Filesystem semantics — no API calls, no rate limits, no latency beyond local I/O.
-
-#### Pricing Reality for Free Accounts
-
-- **Free to create** — zero cost to create a bucket
-- **Free storage allowance** — basic personal accounts get free bucket storage
-- **Above free tier** — billed per-TB, see hf.co/storage
-- **Enterprise** — dedup-based billing (shared chunks reduce billed footprint)
-
-For Beer's use case (small configs, chat logs, state files) — stays within free tier indefinitely.
-
-### Strategy B: Dataset Repo via Hub API (Classic Fallback)
-
-Use when you can't use buckets (e.g., need Git versioning, or access from non-Space environments). Every HF account gets free Dataset repo storage with Git LFS.
-
-```python
-from huggingface_hub import HfApi
-import json, os
-
-api = HfApi()
-DATASET_ID = "username/my-space-state"
-HF_TOKEN = os.environ["HF_TOKEN"]  # Set as Space secret
-
-def save_state(state: dict):
-    """Persist state dict to Dataset repo."""
-    api.upload_file(
-        path_or_fileobj=json.dumps(state).encode(),
-        path_in_repo="state.json",
-        repo_id=DATASET_ID,
-        repo_type="dataset",
-        token=HF_TOKEN,
-    )
-
-def load_state() -> dict:
-    """Load state from Dataset repo. Returns {} on first boot."""
-    from huggingface_hub import hf_hub_download
-    try:
-        path = hf_hub_download(
-            repo_id=DATASET_ID,
-            filename="state.json",
-            repo_type="dataset",
-            token=HF_TOKEN,
-        )
-        with open(path) as f:
-            return json.load(f)
-    except Exception:
-        return {}  # First boot — no file yet
-```
-
-**Limitations (unchanged from v1):**
-- ~50MB max per `upload_file` call (use `upload_folder` or `CommitScheduler` for larger)
-- API rate limits: ~100 requests/min for free tier
-- ~100ms+ latency per API call
-- No atomic read-modify-write — handle concurrent write conflicts
-- `upload_file` overwrites atomically but doesn't lock
-
-### Strategy C: Read-Only Volumes (Models/Datasets/Spaces)
-
-Models, datasets, and other Spaces can be mounted as **read-only** volumes for free. Use for reference data, model weights, configuration files.
-
-```python
-from huggingface_hub import HfApi, Volume
-
-api = HfApi()
-
-# Mount at creation
-api.create_repo(
-    repo_id="username/my-space",
-    repo_type="space",
-    space_sdk="gradio",
-    space_volumes=[
-        Volume(type="model",   source="meta-llama/Llama-3.2-3B", mount_path="/models/llama", read_only=True),
-        Volume(type="dataset", source="username/my-ref-data",   mount_path="/data/ref",     read_only=True),
-    ],
-)
-
-# Attach to existing Space
-api.set_space_volumes(
-    repo_id="username/my-space",
-    volumes=[
-        Volume(type="model", source="username/my-model", mount_path="/models", read_only=True),
-    ],
-)
-```
-
-**Inside the Space:**
-```python
-# Files are immediately available — no download code needed
-with open("/models/llama/config.json") as f:
-    config = json.load(f)
-```
-
-**Benefits vs downloading at runtime:**
-- Zero startup delay — files are mounted, not downloaded
-- No ephemeral disk usage for reference data
-- Works seamlessly with all file-access patterns
-
-### Strategy D: Space's Own Git Repo (Use with Extreme Caution)
-
-Writing into the Space's own git repo triggers an automatic rebuild + restart. Pattern: one-shot initialization or explicit user-triggered save.
-
-```python
-from huggingface_hub import HfApi
-import os
-
-api = HfApi()
-SPACE_ID = os.environ["SPACE_ID"]  # Built-in env var
-
-# DANGEROUS — triggers rebuild
-api.upload_file(
-    path_or_fileobj=b"data",
-    path_in_repo="persistent/data.txt",
-    repo_id=SPACE_ID,
-    repo_type="space",
-)
-
-# SAFER — commit via PR (no immediate rebuild, but needs merge)
-from huggingface_hub import create_commit, CommitOperationAdd
-create_commit(
-    repo_id=SPACE_ID,
-    repo_type="space",
-    operations=[CommitOperationAdd(path_in_repo="data.txt", path_or_fileobj=b"data")],
-    commit_message="save state",
-    create_pr=True,  # PRs don't trigger automatic rebuild
-)
-```
-
-**⚠️ Warnings:**
-- Every push to default branch triggers `BUILDING` stage — ~30-120s downtime
-- Writing frequently can create an infinite loop: write → rebuild → boot → write → rebuild...
-- Only safe for: user-triggered "Save" buttons, initial setup, infrequent checkpoint saves
-- PR-based saves avoid auto-rebuild but still consume git history
-
-### Strategy E: External Free Services
-
-When HF-native options are insufficient, free external services can supplement:
-
-| Service | Free Tier | Use Case |
-|---|---|---|
-| **Supabase** | 500 MB DB, 2 GB bandwidth | Structured data, real-time sync |
-| **MongoDB Atlas** | 512 MB shared cluster | Document storage, JSON state |
-| **Cloudflare KV** | 100k reads/day, 1k writes/day | Key-value state, configs |
-| **Vercel Blob** | 250 MB, 5 GB bandwidth | Binary artifacts, images |
-| **GitHub Gist API** | Unlimited gists via API | Config files, small state |
-
-**Trade-off:** Adds network dependency and external credentials. Only use when HF-native options don't fit.
-
-### ZeroGPU + Storage Integration
-
-Beer: Free personal accounts can host **up to 2 ZeroGPU Spaces** if account is in good standing (verified email, older than 30 days). Daily quota: **5 minutes GPU time** for free accounts (40 min for PRO).
-
-```python
-import spaces
-import os
-from huggingface_hub import HfApi
-
-HF_TOKEN = os.environ["HF_TOKEN"]
-api = HfApi()
-
-# Load model at module level (runs once on CPU)
-model = load_my_model()
-
-@spaces.GPU
-def generate(prompt: str) -> str:
-    """GPU is allocated only during this function call."""
-    return model.generate(prompt)
-
-# Persist results to a bucket (always accessible)
-def save_result(prompt: str, output: str):
-    import json
-    with open("/data/results.jsonl", "a") as f:
-        f.write(json.dumps({"prompt": prompt, "output": output}) + "\n")
-```
-
-**ZeroGPU storage best practices:**
-- Load model weights from a mounted model volume (read-only, no startup delay)
-- Write inference results to a mounted bucket volume (persistent)
-- Use `@spaces.GPU(duration=...)` for accurate GPU time estimation
-- Module-level model loading (not inside `@spaces.GPU`) avoids re-loading per call
-- Prep models with ahead-of-time compilation (`torch.export`) for ZeroGPU efficiency
-
-### Practical Patterns
-
-#### Pattern 1: First-Boot Detection
-
-```python
-import os
-
-BOOT_FLAG = "/data/.initialized"
-
-def is_first_boot() -> bool:
-    return not os.path.exists(BOOT_FLAG)
-
-def mark_initialized():
-    with open(BOOT_FLAG, "w") as f:
-        f.write("1")
-```
-
-#### Pattern 2: Periodic State Snapshots
-
-```python
-import threading, json, time
-
-snapshot_interval = 300  # 5 minutes
-
-def snapshot_loop(state_getter):
-    while True:
-        time.sleep(snapshot_interval)
-        state = state_getter()
-        # Write directly to bucket volume
-        with open("/data/snapshot.json", "w") as f:
-            json.dump(state, f)
-
-# Start in background
-threading.Thread(target=snapshot_loop, args=(lambda: current_state,), daemon=True).start()
-```
-
-#### Pattern 3: Concurrent-Write Safe Logging
-
-```python
-import json, time, os
-
-LOG_FILE = "/data/event_log.jsonl"
-
-def log_event(event: dict):
-    event["_ts"] = time.time()
-    # Append-only pattern — safe for concurrent Gradio requests
-    with open(LOG_FILE, "a") as f:
-        f.write(json.dumps(event) + "\n")
-```
-
-#### Pattern 4: Chat History Persistence (Bucket Volume)
-
-```python
-import json, os
-
-HISTORY_FILE = "/data/chat_history.json"
-
-def load_history() -> list:
-    if os.path.exists(HISTORY_FILE):
-        with open(HISTORY_FILE) as f:
-            return json.load(f)
-    return []
-
-def append_message(role: str, content: str):
-    history = load_history()
-    history.append({"role": role, "content": content})
-    with open(HISTORY_FILE, "w") as f:
-        json.dump(history, f)
-    return history
-```
-
-### Migration Guide: v1 (Dataset API) → v2 (Bucket Volume)
-
-If you have existing Spaces using the old Dataset-API pattern, migrate to bucket volumes:
-
-1. **Create a bucket**: `hf buckets create my-space-data`
-2. **Copy existing data**: Download from dataset, upload to bucket
-3. **Mount the bucket**: Use `api.set_space_volumes()` with the Volume dataclass
-4. **Update app code**: Replace `api.upload_file()` / `hf_hub_download()` calls with direct filesystem I/O to `/data/`
-5. **Clean up**: Remove old Dataset API calls and rate-limit handling
-
-### Limitations & Edge Cases
-
-| Issue | Mitigation |
-|---|---|
-| Bucket volume mount replaces ALL existing volumes | Read current volumes first, append new one |
-| Model/dataset volumes are read-only | Use bucket for writes, model mounts for reference data only |
-| Buckets are not versioned | Take periodic snapshots to a dataset repo if history needed |
-| Space goes to sleep after 48h inactivity (free CPU) | Use `HF_API` to wake: `api.restart_space(repo_id)` |
-| ZeroGPU has 5 min daily quota (free) | Optimize GPU calls, cache results, batch requests |
-| Bucket not available from outside Spaces | Use Dataset API for cross-environment access |
-| Volume changes trigger Space rebuild | Batch volume changes together in one `set_space_volumes()` call |
-
-### Updated Resources (July 2026)
-
-- HF Spaces Storage: https://huggingface.co/docs/hub/en/spaces-storage
-- Storage Buckets: https://huggingface.co/docs/hub/en/storage-buckets
-- huggingface_hub Manage Spaces: https://huggingface.co/docs/huggingface_hub/guides/manage-spaces
-- Volume API (new): `from huggingface_hub import Volume`
-- ZeroGPU docs: https://huggingface.co/docs/hub/en/spaces-zerogpu
-- HF Spaces Overview: https://huggingface.co/docs/hub/en/spaces-overview
-- Buckets Pricing: https://huggingface.co/docs/hub/en/storage-buckets#pricing
-
----
-
-## 2026-07-24: hf-smolagents — Deep Dive v2
-
-### Summary
-Comprehensive deep-dive into Hugging Face's smolagents library (v1.26.0). The v1 skill covered basic CodeAgent/ToolCallingAgent usage. This v2 deep-dive adds: multi-agent orchestration via `managed_agents`, agent memory management (inspection and resumption), two tool creation patterns (`@tool` decorator and `Tool` subclass), Human-in-the-Loop via step callbacks and plan customization, async integration with Starlette/anyio, OpenTelemetry telemetry for run inspection, Agentic RAG patterns, and an expanded secure code execution comparison.
+Researched Hugging Face's storage architecture for Spaces — from ephemeral disk and read-only repo mounts to the new Storage Buckets system — with focus on zero-cost persistence strategies. Buckets (introduced 2025–2026) are now the recommended way to persist data in Spaces, replacing the old $9/mo Persistent Storage add-on.
 
 ### Key Concepts
 
-**Multi-Agent Orchestration:**
-- smolagents supports hierarchical multi-agent systems using `managed_agents` parameter
-- Sub-agents require `name` and `description` attributes — the manager calls them like tools
-- `ToolCallingAgent` is preferred for focused sub-agents (web search, data fetch); `CodeAgent` works as the reasoning manager
-- Systems can nest arbitrarily deep
+**Three Storage Layers in Spaces:**
 
-**Agent Memory:**
-- `agent.memory.steps` contains all steps (PlanningStep, ToolCallStep, FinalAnswerStep, ActionStep)
-- `agent.run(task, reset=True)` starts fresh; `reset=False` preserves memory and resumes
-- Supports human-in-the-loop interruption + resumption with full memory
+1. **Ephemeral disk** (free, all tiers) — Every Space gets a small amount of ephemeral local disk storage. Lost on restart/stop. No persistence guarantee.
 
-**Tool Creation:**
-- Two patterns: `@tool` decorator (simple functions) vs `Tool` subclass (complex tools with class attributes)
-- Tools can be pushed to Hub via `tool.push_to_hub()` — requires self-contained imports, `__init__` with only `self`
+2. **Read-only repo mounts** (free) — Models, datasets, and other Spaces can be attached as read-only volumes at any mount path using the `huggingface_hub` Python API. Private repos show masked names to unauthorized users. Configured via Space settings UI or programmatically.
 
-**Human-in-the-Loop:**
-- `step_callbacks` dict keyed by step type classes (e.g., `{PlanningStep: callback}`)
-- Callback signature: `callback(step, agent, task, **kwargs)`
-- Supports plan approval, modification, and cancellation
+3. **Storage Buckets** (free tier available) — S3-like object storage powered by Xet backend. Non-versioned and mutable. **Can be mounted as read-write or read-only volumes** in Spaces at any path. Available to ALL users and organizations.
 
-**Async Integration:**
-- Use `anyio.to_thread.run_sync(agent.run, task)` to avoid blocking async event loops
-- Pattern works with Starlette, FastAPI, and any ASGI framework
+### Storage Buckets — Deep Dive
 
-**Telemetry:**
-- OpenTelemetry-based instrumentation via `SmolagentsInstrumentor`
-- Works with Arize Phoenix, Grafana, Datadog, etc.
-- Essential for production agent monitoring — agent runs are non-deterministic and hard to debug from console logs alone
+**Architecture:**
+- Backed by Xet (chunk-level deduplication)
+- Non-versioned — files are overwritten/deleted in place (no git history)
+- Access via: Hub web UI, `hf` CLI, `huggingface_hub` Python API, S3-compatible API (AWS CLI, boto3, s5cmd)
+- File references: `hf://` protocol paths
+- CDN pre-warming available for selected regions
 
-**Agentic RAG:**
-- Agents with retrieval tools can formulate optimized queries, perform multiple retrievals, reason over sources, and self-critique
-- Transforms RAG from rigid pipeline to interactive reasoning process
-- Naturally implements HyDE, self-query refinement, and multi-hop retrieval
-
-**Secure Code Execution:**
-- Four sandbox options: Blaxel (<25ms), E2B (~500ms), Modal (~2s), Docker
-- Only CodeAgent supports sandboxed execution via `executor_type`
-- Blaxel provides fastest cold starts and auto-scaling to zero
-
-### Resources
-- Docs: https://huggingface.co/docs/smolagents/en/index
-- Multi-agent example: https://huggingface.co/docs/smolagents/en/examples/multiagents
-- Agentic RAG: https://huggingface.co/docs/smolagents/en/examples/rag
-- Memory management: https://huggingface.co/docs/smolagents/en/tutorials/memory
-- Tools guide: https://huggingface.co/docs/smolagents/en/tutorials/tools
-- Human-in-the-Loop: https://huggingface.co/docs/smolagents/en/examples/plan_customization
-- Async agents: https://huggingface.co/docs/smolagents/en/examples/async_agent
-- Telemetry: https://huggingface.co/docs/smolagents/en/tutorials/inspect_runs
-|- Secure code execution: https://huggingface.co/docs/smolagents/en/tutorials/secure_code_execution
-
----
-
-## 2026-07-24: hf-hub-lfs-architecture — Deep Dive (Deepening on LFS Mechanics)
-
-### Summary
-Comprehensive deep-dive into Hugging Face Hub's Git LFS (Large File Storage) architecture — the underlying protocol that makes hosting multi-GB model weights, datasets, and Spaces possible. Covers the LFS batch API, pointer file mechanics, the `UploadInfo`/`post_lfs_batch_info` pipeline in `huggingface_hub`, storage quota tiers (free/PRO/Team/Enterprise), the Xet protocol replacing `hf_transfer`, LFS file management (deleting, tracking, super-squash), and practical zero-cost strategies for staying within free tier limits.
-
-### Core Architecture
-
-**What Git LFS is on the Hub:** Hugging Face uses an extended Git LFS v1 protocol to handle large binary files. When you `git push` a file matching LFS patterns (`.bin`, `.safetensors`, `.pt`, etc.), Git LFS intercepts it and:
-
-1. **Replaces the file locally with a pointer file** — a tiny text file containing the SHA-256 OID and file size
-2. **Uploads the real content** to the Hub's content-addressable LFS store (keyed by SHA-256)
-3. **Pushes the pointer** to the Git repository
-
-This means the Git repo stays lightweight — the heavy content lives in a separate blob store, deduplicated by content hash.
-
-### LFS Batch API (Preupload Protocol)
-
-The `post_lfs_batch_info()` function in `huggingface_hub.lfs` implements the [Git LFS Batch API spec](https://github.com/git-lfs/git-lfs/blob/main/docs/api/batch.md):
-
+**API:**
 ```python
-def post_lfs_batch_info(
-    upload_infos: Iterable[UploadInfo],
-    token: str | None,
-    repo_type: str,
-    repo_id: str,
-    revision: str | None = None,
-    endpoint: str | None = None,
-    headers: dict[str, str] | None = None,
-    transfers: list[str] | None = None,
-) -> tuple[list[dict], list[dict], str | None]:
+from huggingface_hub import create_bucket, upload_file_to_bucket, download_file_from_bucket
+
+# Create
+create_bucket("my-bucket", private=False)
+create_bucket("my-org/shared-bucket")
+
+# Upload/Download
+upload_file_to_bucket("/local/path", "repo_id", "remote/path")
+download_file_from_bucket("repo_id", "remote/path", "/local/path")
+
+# Delete (immediate and permanent)
+delete_file_in_bucket("repo_id", "path/to/file")
 ```
 
-**Flow:**
-1. Client sends a batch request to `{endpoint}/{repo_type}/{repo_id}.git/info/lfs/objects/batch`
-2. Request body contains JSON with `operation`, `objects` (list of OID+size), `transfers` (preferred transfer protocols)
-3. Hub responds with per-object instructions — either `upload` actions (with URLs + headers) or an `error` (e.g., file already exists, quota exceeded)
-4. Client then uploads each file using the provided URL
-
-**Protocol-specific headers:**
-```python
-LFS_HEADERS = {
-    "Accept": "application/vnd.git-lfs+json",
-    "Content-Type": "application/vnd.git-lfs+json",
-}
-```
-These are required for LFS API calls. The response format follows the Git LFS v1 spec.
-
-### UploadInfo — Smart, Lazy SHA-256
-
-The `UploadInfo` class was designed for efficiency:
-
-```python
-class UploadInfo:
-    def __init__(self, size: int, sample: bytes, sha256=None, source_path=None):
-        ...
-```
-
-**Lazy hashing:** Creating `UploadInfo.from_path()` reads only the first **512 bytes** (the `sample`). The full SHA-256 is computed on-demand only when `.sha256` is accessed. This is critical because:
-- Some files may be uploaded via Xet protocol which computes SHA during upload (single read pass)
-- Avoiding eager SHA saves one full file read per file in batch operations
-- The 512-byte sample is used by the server for content-type sniffing
-
-```python
-@classmethod
-def from_path(cls, path: str):
-    size = getsize(path)
-    with open(path, "rb") as file:
-        sample = file.peek(512)[:512]  # Only reads first 512 bytes!
-    return cls(size=size, sample=sample, source_path=path)
-```
-
-### LFS Multipart Upload
-
-For very large files, the Hub supports multipart uploads via the `lfs-multipart-upload` command:
-
-```python
-LFS_MULTIPART_UPLOAD_COMMAND = "lfs-multipart-upload"
-```
-
-The `SliceFileObj` utility (from `huggingface_hub.utils._lfs`) handles splitting large files into chunks for parallel upload. Each chunk is uploaded independently, and the Hub reassembles them server-side.
-
-Key constants in `huggingface_hub`:
-- **Max LFS files per commit:** 25,000
-- **Max regular (non-LFS) payload:** 1 GB per commit
-- **Individual file size limit:** 500 GB hard cap (200 GB recommended)
-
-### Storage Quota Tiers (as of 2026-07-24)
-
-| Account Type | Public Storage | Private Storage |
-|---|---|---|
-| **Free user/org** | Best-effort (no hard limit, but expect throttling beyond low GBs) | **100 GB** |
-| **PRO** | Up to 10 TB included + add-on available | 1 TB + pay-as-you-go |
-| **Team** | 12 TB base + 1 TB/seat + add-on | 1 TB/seat + pay-as-you-go |
-| **Enterprise** | 200 TB base + 1 TB/seat + add-on | 1 TB/seat + pay-as-you-go |
-
-**Public Storage Add-on pricing:**
-| Tier | Price |
-|---|---|
-| 1 TB | $12/mo |
-| 5 TB | $60/mo |
-| 10 TB | $120/mo |
-| 20 TB | $240/mo |
-| 50 TB | $500/mo |
-
-**Private Storage Pay-as-you-go:** $18/TB/mo base, discounted to $16/TB/mo at 50 TB+, $14/TB/mo at 200 TB+, $12/TB/mo at 500 TB+.
-
-**Free tier critical insight:** "Best-effort" means there's no hard cap for public repos on free tier, but the Hub may throttle or restrict accounts that exceed reasonable usage. The 100 GB private storage limit IS a hard cap.
-
-### Repository Limitations
-
-| Characteristic | Recommended | Notes |
-|---|---|---|
-| Total files per repo | < 100,000 | Merge data into fewer files |
-| Entries per folder | < 10,000 | Use subdirectories |
-| File size | < 200 GB | 500 GB absolute hard limit |
-| Commit operations | < 100 files* | `upload_folder` auto-splits |
-
-*\* Not relevant for `git` CLI directly*
-
-### Xet Protocol (Replacing hf_transfer)
-
-**Key change:** `hf_transfer` (the Rust upload accelerator via `pip install hf_transfer`) has been **removed** in favor of `hf_xet`. The old `HF_HUB_ENABLE_HF_TRANSFER=1` env var is deprecated.
-
-**How to enable Xet:**
-```bash
-# Environment variable approach
-export HF_STORAGE_BACKEND=xet
-export HF_XET_HIGH_PERFORMANCE=1  # Saturates bandwidth + CPU
-
-# Or set in Python
-from huggingface_hub import HfApi
-api = HfApi(storage_backend="xet")
-```
-
-**Xet advantages over hf_transfer:**
-- Content-addressed deduplication for iterative releases (only uploads changed chunks)
-- High-performance mode (`HF_XET_HIGH_PERFORMANCE=1`) saturates available bandwidth
-- Single-pass SHA computation (no separate hash step before upload)
-- Integrated into the core upload pipeline, not a separate package
-
-**Warning:** Do NOT mix Xet and the legacy multipart transfer simultaneously.
-
-### LFS File Management
-
-#### Deleting LFS Files (Freeing Space)
-
-1. **Individual LFS files:** Repo Settings → "List LFS files" → Actions → Delete
-2. **PR refs:** Close/merge PR first, then use "Delete ref" at bottom of PR page
-3. **Super-squash history:** Via Python API:
-   ```python
-   api.super_squash_history(repo_id="user/repo")
-   ```
-   ⚠️ Destructive — compresses all Git history into one commit, removing old LFS versions. Space freed within 36 hours.
-
-#### Tracking LFS File Origins
-
-When an LFS file's origin is unclear:
-```bash
-git log --all -p -S <SHA-256-OID>
-```
-
-#### Key Points
-- Deleting LFS pointers (the text files in Git) does **NOT** free storage space
-- Old LFS versions persist in commit history — only super-squash or deleting the LFS file itself truly removes them
-- Set `lfs.skipdownloaderrors=true` in `.gitconfig` to avoid errors when checking out branches with deleted LFS content
-
-### Grants for High-Impact Open-Source
-
-Free-tier users with genuine community impact (downloads, citations, adoption) can apply for additional storage grants:
-- Contact `datasets@huggingface.co` (datasets) or `models@huggingface.co` (models)
-- Provide evidence of community impact (download numbers, citations, adoption)
-- Evaluated case-by-case — not guaranteed
-
-### Practical Zero-Cost Strategies
-
-For Beer's situation (free tier, no income):
-
-1. **Stay public:** Public repos have "best-effort" unlimited storage; private repos hit 100 GB hard cap
-2. **Keep repos lean:** < 100K files, < 10K entries per folder, files < 200 GB each
-3. **Use Parquet/WebDataset:** Merge many small JSON files into fewer Parquet files for efficient storage and faster loading
-4. **Use `upload_folder`:** Auto-splits large folders into multiple commits, avoids commit timeouts
-5. **Prune regularly:** Delete unused LFS files via Settings → List LFS files; super-squash if history balloons
-6. **Avoid LFS on tiny files:** Files under ~1 MB don't benefit from LFS and may even hurt performance
-7. **Use Xet for iterative uploads:** `HF_STORAGE_BACKEND=xet` with `HF_XET_HIGH_PERFORMANCE=1` for content-deduped updates to existing repos
-8. **Apply for a grant** if you build something with genuine community impact
-9. **Monitor usage:** Check `https://huggingface.co/settings/billing` for storage dashboard
-10. **Delete stale PR branches:** Large files sitting in unmerged PR branches eat quota even though they never merged
-
-### Resources
-- Storage limits: https://huggingface.co/docs/hub/en/storage-limits
-- Upload guide: https://huggingface.co/docs/huggingface_hub/en/guides/upload
-- LFS source: https://github.com/huggingface/huggingface_hub/blob/main/src/huggingface_hub/lfs.py
-- LFS batch API spec: https://github.com/git-lfs/git-lfs/blob/main/docs/api/batch.md
-- Xet docs: https://huggingface.co/docs/xet/en/index
-- LFS pointer deletion: https://huggingface.co/docs/hub/en/storage-limits#deleting-individual-lfs-files
-- Super-squash API: https://huggingface.co/docs/huggingface_hub/main/en/package_reference/hf_api#huggingface_hub.HfApi.super_squash_history
-- Pricing: https://huggingface.co/pricing
-
-## 2026-07-24: hf-transformers-hqq-quantization — Deep Dive (Topic #97)
-
-### Summary
-Half-Quadratic Quantization (HQQ) is a fast, data-free quantization method integrated into Transformers via the `HqqConfig` class. Unlike AWQ/GPTQ, HQQ requires no calibration dataset — it quantizes on-the-fly using a closed-form half-quadratic solver. Supports 8, 4, 3, 2, and even 1-bit quantization for any model modality (LLMs, vision, etc.). Fully compatible with PEFT/QLoRA fine-tuning and `torch.compile`.
-
-### Core Architecture
-
-HQQ replaces `torch.nn.Linear` layers with `HQQLinear` modules that store quantized weights and dequantize on-the-fly during forward passes. The quantization process uses a half-quadratic optimization that finds optimal scale factors without backpropagation or calibration data.
-
-| Feature | Support |
-|---------|---------|
-| Data-free quantization | ✅ — no calibration data needed |
-| Bit widths | 1, 2, 3, 4, 8 |
-| On-the-fly quant | ✅ — quantizes at `from_pretrained()` time |
-| PEFT/QLoRA | ✅ — full PEFT integration |
-| torch.compile | ✅ — fullgraph compatible |
-| Multi-modality | ✅ — LLMs, vision, audio |
-| vLLM integration | ✅ — via gemlite backend |
-| Serialization (HF) | ❌ — weights not serializable via `save_pretrained` |
-
-### Installation
-
-```bash
-pip install hqq
-```
-
-For CUDA kernel support the build happens automatically. Disable with `DISABLE_CUDA=1 pip install hqq`.
-
-For bleeding edge:
-```bash
-pip install git+https://github.com/dropbox/hqq.git
-```
-
-### Basic Usage in Transformers
-
-**Replace all linear layers — 8-bit, group_size=64:**
-```python
-import torch
-from transformers import AutoModelForCausalLM, AutoTokenizer, HqqConfig
-
-quant_config = HqqConfig(nbits=8, group_size=64)
-model = AutoModelForCausalLM.from_pretrained(
-    "meta-llama/Llama-3.1-8B",
-    dtype=torch.float16,
-    device_map="auto",
-    quantization_config=quant_config
-)
-```
-
-**Per-layer dynamic config (MoE-friendly):**
-```python
-q4_config = {'nbits': 4, 'group_size': 64}
-q3_config = {'nbits': 3, 'group_size': 32}
-
-quant_config = HqqConfig(dynamic_config={
-    'self_attn.q_proj': q4_config,
-    'self_attn.k_proj': q4_config,
-    'self_attn.v_proj': q4_config,
-    'self_attn.o_proj': q4_config,
-    'mlp.gate_proj': q3_config,
-    'mlp.up_proj': q3_config,
-    'mlp.down_proj': q3_config,
-})
-
-model = AutoModelForCausalLM.from_pretrained(
-    "meta-llama/Llama-3.1-8B",
-    dtype=torch.float16,
-    device_map="auto",
-    quantization_config=quant_config
-)
-```
-
-### Backends
-
-| Backend | Description | axis | Best for |
-|---------|-------------|------|----------|
-| `PYTORCH` | Pure PyTorch dequant | 0 or 1 | Compatibility, older GPUs |
-| `PYTORCH_COMPILE` | Compiled Pytorch graph | 0 or 1 | Torch.compile workflows |
-| `ATEN` | CUDA dequant kernels | 0 only | Best quality, PEFT training |
-| `gemlite` | Fused 4-bit gemm kernels | 1 only | High-throughput inference |
-| `torchao_int4` | TorchAO tiny_gemm (batch<4) | 1 only | Low-latency single requests |
-
-Set backend globally:
-```python
-from hqq.core.quantize import *
-HQQLinear.set_backend(HQQBackend.PYTORCH)
-```
-
-Enable optimized inference after quantization:
-```python
-from hqq.utils.patching import prepare_for_inference
-prepare_for_inference(model, backend="gemlite")
-```
-
-### Key Parameters
-
-| Parameter | Default | Description |
-|-----------|---------|-------------|
-| `nbits` | 4 | Bits per weight (1, 2, 3, 4, 8) |
-| `group_size` | 64 | Weights per group for shared scale/zero |
-| `axis` | 1 | Grouping axis (0=per-output, 1=per-input) |
-| `optimize` | True | Enable half-quadratic optimization |
-
-- `axis=0` gives better quality, especially at low bits, but only ATEN backend supports it
-- `axis=1` is required for gemlite/torchao_int4 fast inference
-- Recommended starting config: `nbits=4, group_size=64, axis=1`
-
-### PEFT/QLoRA Training
-
-Full PEFT integration for fine-tuning quantized models:
-```python
-from hqq.core.peft import PeftUtils
-
-base_lora_params = {
-    'lora_type': 'default', 'r': 32,
-    'lora_alpha': 64, 'dropout': 0.05,
-    'train_dtype': torch.float32
-}
-lora_params = {
-    'self_attn.q_proj': base_lora_params,
-    'self_attn.k_proj': base_lora_params,
-    'self_attn.v_proj': base_lora_params,
-    'self_attn.o_proj': base_lora_params,
-}
-
-PeftUtils.add_lora(model, lora_params)
-HQQLinear.set_backend(HQQBackend.ATEN)  # or PYTORCH_COMPILE
-# Train...
-model.eval()
-PeftUtils.merge_and_unload(model)  # Optional: merge
-```
-
-Also directly supported in HuggingFace PEFT library:
-```python
-from peft import LoraConfig, get_peft_model
-# Standard PEFT API works with HQQ-quantized models
-```
-
-### vLLM Integration
-
-HQQ works with vLLM via gemlite backend for production serving:
-```python
-from hqq.utils.vllm import set_vllm_onthefly_hqq_quant
-from vllm import LLM
-
-skip_modules = ['lm_head', 'visual', 'vision']
-
-# A16W4 HQQ weight-only
-set_vllm_onthefly_hqq_quant(
-    weight_bits=4, group_size=128,
-    quant_mode='int4_weightonly',
-    skip_modules=skip_modules
-)
-
-llm = LLM(model="meta-llama/Llama-3.2-3B-Instruct",
-          max_model_len=4096,
-          gpu_memory_utilization=0.80,
-          dtype=torch.float16)
-```
-
-Supported quant modes for vLLM:
-- `int8_weightonly` — A16W8 INT8
-- `int4_weightonly` — A16W4 HQQ
-- `int8_dynamic` — A8W8 INT8 dynamic
-- `fp8_dynamic` — A8W8 FP8 dynamic
-- `mxfp8_dynamic` — A8W8 MXFP8 dynamic
-- `mxfp4_weightonly` — A16W4 MXFP4
-- `nvfp4_dynamic` — A4W4 NVFP4 dynamic
-
-### Zero-Cost Practical Notes
-
-1. **Data-free is a superpower for free-tier:** Since HQQ needs no calibration, you can quantize a model entirely in CPU RAM + normal GPU VRAM — no need for expensive A100s or calibration runs.
-2. **Best paired with small GPUs:** A 4-bit 8B model fits in ~5GB VRAM, usable on free T4s (15GB) in Spaces or Colab.
-3. **axis=1 + gemlite for speed:** On a T4 you can expect ~30-50 tok/s for 4-bit 7B models.
-4. **No serialization limitation:** HQQ models can't `save_pretrained()` in quantized form — you must re-quantize at load time. This is fine for inference-only setups (cache the original fp16, quantize at load).
-5. **PEFT stays in fp32:** LoRA adapters train in fp32 by default; the HQQ base weights stay quantized. This is memory-efficient.
-6. **torch.compile works with any backend:** Use `PYTORCH_COMPILE` backend or regular `torch.compile` wrapping for additional speed.
-
-### Comparison with Other Quantization Methods
-
-| Method | Calibration? | Bits | Serialize? | torch.compile | vLLM |
-|--------|-------------|------|-----------|--------------|------|
-| HQQ | No | 1-8 | ❌ | ✅ | ✅ |
-| bitsandbytes | No | 4/8 | ✅ | ✅ | ❌ |
-| AWQ | Yes | 4 | ✅ | ❌ | ✅ |
-| GPTQ | Yes | 2-8 | ✅ | ❌ | ✅ |
-| GGUF | No | 1-8 | ✅ | ❌ | ✅ |
-
-### Resources
-- Transformers HQQ docs: https://huggingface.co/docs/transformers/en/quantization/hqq
-- HQQ blog: https://mobiusml.github.io/hqq_blog/
-- HQQ+ (1-bit): https://dropbox.github.io/1bit_blog/
-- HQQ repo (mobiusml): https://github.com/mobiusml/hqq
-- HQQ repo (dropbox fork): https://github.com/dropbox/hqq
-- PEFT HQQ guide: https://huggingface.co/docs/peft/en/developer_guides/quantization#hqq-quantization
-- GemLite fast kernels: https://github.com/dropbox/gemlite
-
----
-
-## 2026-07-24: hf-hub-lfs-architecture — Deep Dive v2 (LFS Batch API Internals, Pointer Format, Deduplication, Advanced Management)
-
-### Summary
-Second-pass deep-dive into Hugging Face Hub's Git LFS architecture, covering the LFS Batch API specification in full detail (operations, requests, responses, error codes, transfer adapters), the LFS pointer file specification (format, verification, creation), content-addressable storage deduplication across repos and forks, `.gitattributes` configuration for HF repos, Raw API direct download pattern, advanced LFS debugging, and practical management patterns for staying within free-tier storage limits with minimal overhead.
-
-### 1. LFS Batch API — Full Specification
-
-The Git LFS Batch API is the core protocol for transferring large files between client and server. It operates as an HTTP JSON API.
-
-#### Protocol Endpoint
-
-```
-POST {endpoint}/{repo_type}/{repo_id}.git/info/lfs/objects/batch
-```
-
-Where:
-- `endpoint` = `https://huggingface.co` (default) or `https://huggingface.co/datasets/{org}/{repo}` (for datasets via dataset URL)
-- `repo_type` = explicit path to repo (inferred by the Hub), e.g. `https://huggingface.co/{org}/{repo}` for models
-- The `.git` suffix is standard Git LFS convention
-
-#### Request Body
-
-```json
-{
-  "operation": "upload" | "download",
-  "transfers": ["xet", "lfs-multipart-upload", "lfs-standalone-file", "basic"],
-  "ref": {
-    "name": "refs/heads/main"
-  },
-  "objects": [
-    {
-      "oid": "sha256:abcdef...",
-      "size": 1234567890
-    }
-  ],
-  "hash_algo": "sha256"
-}
-```
-
-**Required fields:**
-- `operation`: `"upload"` or `"download"` — determines whether the server returns upload URLs (with auth tokens) or download URLs
-- `objects`: array of OID+size pairs identifying the files to transfer
-
-**Optional fields:**
-- `transfers`: ordered array of preferred transfer protocols. The server responds with the first supported one. If omitted, `["basic"]` is assumed.
-- `ref`: Git ref name. For uploads, this helps the server validate permissions on the target branch/tag
-- `hash_algo`: hash algorithm used. Default is `sha256`.
-
-**Transfer adapters (in priority order as requested by `huggingface_hub`):**
-| Adapter | Identifier | Description |
-|---------|-----------|-------------|
-| Xet | `xet` | Content-deduplicated chunked transfer (new default for HF) |
-| LFS Multipart | `lfs-multipart-upload` | Chunked upload for very large files |
-| LFS Standalone | `lfs-standalone-file` | Single-file upload via presigned URL |
-| Basic | `basic` | Raw HTTP PUT with basic auth |
-
-**Hub-specific extension:** The Hub's LFS server (not standard Git LFS) may return additional metadata about the repository state, storage quota usage, and whether the file already exists on the server (deduplication shunt).
-
-#### Response Body (success, 200)
-
-```json
-{
-  "transfer": "xet",
-  "objects": [
-    {
-      "oid": "sha256:abcdef...",
-      "size": 1234567890,
-      "authenticated": true,
-      "actions": {
-        "upload": {
-          "href": "https://...",
-          "header": {
-            "Authorization": "Bearer <token>",
-            "Content-Type": "application/octet-stream"
-          },
-          "expires_at": "2026-07-24T12:00:00Z"
-        },
-        "verify": {
-          "href": "https://...",
-          "header": {
-            "Authorization": "Bearer <token>"
-          }
-        }
-      }
-    },
-    {
-      "oid": "sha256:def...",
-      "size": 987654321,
-      "authenticated": true,
-      "actions": null
-    }
-  ]
-}
-```
-
-**Key response fields:**
-- `transfer`: the transfer adapter the server selected (may differ from what was requested)
-- `objects[].actions`: `null` means the object already exists at the target OID (dedup shunt) — no upload needed!
-- `objects[].actions.upload`: presigned URL + headers for uploading the file content
-- `objects[].actions.verify`: optional URL to verify the upload was stored correctly after upload completes
-- `objects[].expires_at`: ISO 8601 timestamp after which the presigned URL expires
-
-#### Response Body (error, 4xx/5xx)
-
-```json
-{
-  "message": "Quota exceeded",
-  "request_id": "abc-123",
-  "documentation_url": "https://huggingface.co/docs/hub/en/storage-limits"
-}
-```
-
-**Common error conditions:**
-| Status | Message | Meaning |
-|--------|---------|---------|
-| 401 | Bad credentials | Token invalid or missing |
-| 403 | Forbidden | No write permission on the repo |
-| 403 | Quota exceeded | Storage limit reached for private repos |
-| 404 | Not found | Repo does not exist |
-| 422 | Invalid objects | OID or size validation failed |
-| 429 | Too many requests | Rate limited — back off and retry |
-| 507 | Insufficient storage | Private storage cap reached |
-
-**Rate limiting:** The Hub applies per-user rate limits on LFS batch operations (~100 req/min). When hit, the server returns 429 with a `Retry-After` header. The `huggingface_hub` client library handles retry with exponential backoff automatically.
-
-### 2. LFS Pointer File Format
-
-Git LFS replaces large files with small pointer files in the actual Git repository. The pointer file is what Git tracks — the real content goes to the LFS store.
-
-#### Canonical Pointer File
-
-```
-version https://git-lfs.github.com/spec/v1
-oid sha256:4ac7d8e5a7a0a2e4c0c5a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8
-size 4127389056
-```
-
-**Specification:** The pointer file MUST:
-1. Be exactly 3 lines (with trailing newline on each, total 4 newlines including final blank)
-2. Line 1: `version https://git-lfs.github.com/spec/v1\n`
-3. Line 2: `oid sha256:<64-char lowercase hex>\n`
-4. Line 3: `size <decimal integer>\n`
-5. No trailing whitespace on any line
-6. The OID format is exactly `sha256:` followed by 64 lowercase hex characters
-7. The size is in bytes, decimal format, no leading zeros
-
-**Verification:** The Hub validates pointer files at push time — if the pointer format is invalid (wrong version, malformed OID, missing size), the push is rejected.
-
-**Hub extension:** In addition to the standard pointer file, `huggingface_hub` uses a companion cache (in `~/.cache/huggingface/hub/`) that maps `{repo_id}/{commit_hash}/{path_in_repo}` to the OID. This is how the library resolves LFS files without needing to query Git at all — it's a flat-file index that avoids Git metadata calls.
-
-#### Detecting LFS Files in Python
-
-```python
-from huggingface_hub import HfApi
-api = HfApi()
-
-# List files in a repo — files returned as dicts with 'lfs' field
-files = api.get_repo_tree(repo_id="user/repo")
-lfs_files = [f for f in files if f.get("lfs")]
-
-# Each LFS file entry has:
-# - lfs['oid']: the SHA-256 OID (in hex)
-# - lfs['size']: original file size
-# - lfs['pointerSize']: size of the pointer file (typically ~120 bytes)
-```
-
-### 3. Content-Addressable Storage — Deduplication Mechanics
-
-The Hub stores LFS content in a **content-addressable store** keyed by SHA-256 OID.
-
-#### How CSD Works
-
-```
-File A (~/model-00001-of-00002.safetensors) → SHA-256 OID → Store at /objects/4a/c7/d8e5...
-File B (fork of same repo, same file) → SHA-256 OID (IDENTICAL) → Files already exists, no re-upload
-```
-
-**Implications for free-tier users:**
-1. **Forks cost zero extra storage:** If you fork a repo, even if the fork is private, you don't pay for the content already stored. The Hub stores content once by OID. This is true even across repos — if file `abc.safetensors` in `user/repo1` has the same SHA-256 as `abc.safetensors` in `user/repo2`, it's stored only once.
-2. **Cross-repo deduplication:** Two separate repos with identical LFS files share the same underlying storage. The storage quota counts only unique new content.
-3. **Commit history is not deduplicated:** Different commits that modify an LFS file each store a NEW OID (because the SHA changes when the file changes). Old OIDs remain stored and referenced in the Git history. This is why old LFS versions consume space even after file deletion.
-4. **Super-squash is the only escape:** Compressing history via `api.super_squash_history()` drops old LFS OIDs that are no longer referenced by any commit in the new single-commit history.
-
-#### Verifying Deduplication
-
-```python
-# Check if a file already exists on the Hub without uploading
-from huggingface_hub import HfApi
-api = HfApi()
-
-# The batch API's preupload check does this automatically:
-# objects with actions=null in the batch response = already exists, dedup'd
-```
-
-### 4. `.gitattributes` — LFS Pattern Configuration for HF Repos
-
-The Hub's default LFS patterns are configured server-side but can be overridden locally.
-
-#### Hub's Default LFS Patterns
-
-These file extensions are automatically tracked via LFS by the Hub server:
-```
-*.safetensors filter=lfs diff=lfs merge=lfs -text
-*.bin filter=lfs diff=lfs merge=lfs -text
-*.pt filter=lfs diff=lfs merge=lfs -text
-*.pth filter=lfs diff=lfs merge=lfs -text
-*.ckpt filter=lfs diff=lfs merge=lfs -text
-*.gguf filter=lfs diff=lfs merge=lfs -text
-*.ggml filter=lfs diff=lfs merge=lfs -text
-*.h5 filter=lfs diff=lfs merge=lfs -text
-*.onnx filter=lfs diff=lfs merge=lfs -text
-*.tar filter=lfs diff=lfs merge=lfs -text
-*.gz filter=lfs diff=lfs merge=lfs -text
-*.zip filter=lfs diff=lfs merge=lfs -text
-*.zst filter=lfs diff=lfs merge=lfs -text
-*.jsonl filter=lfs diff=lfs merge=lfs -text (for very large dataset files)
-*.parquet filter=lfs diff=lfs merge=lfs -text
-```
-
-**Custom patterns:** You can override by providing a `.gitattributes` file in your repo root:
-
-```gitattributes
-# Track extra formats as LFS
-*.msgpack filter=lfs diff=lfs merge=lfs -text
-*.npy filter=lfs diff=lfs merge=lfs -text
-
-# Force small files to be stored inline (NOT LFS) — saves pointer overhead
-*.config -filter -diff -merge
-*.json -filter -diff -merge
-*.yaml -filter -diff -merge
-*.txt -filter -diff -merge
-```
-
-**Note:** The Hub server has the final say. If the Hub server considers a file too large (>1 MB) and NOT on a tracked pattern, the push will fail with a connection error because the Git remote helper expects LFS for large blobs.
-
-#### Un-tracking Files from LFS
-
-If you accidentally pushed a large file as regular Git (not LFS) and it bloated the repo:
-
-```bash
-# 1. Install git-lfs
-git lfs install
-
-# 2. Migrate the file from Git to LFS
-git lfs migrate import --include="path/to/large/file.bin" --everything
-
-# 3. Force push (destructive — coordinate with collaborators)
-git push --force origin main
-```
-
-### 5. Raw API — Direct LFS File Downloads Without Git
-
-The Hub's Raw API allows direct HTTP downloads of LFS files without needing the Git LFS client:
-
-```
-GET https://huggingface.co/{repo_id}/raw/{branch}/{path}
-```
-
-But for LFS files, the raw endpoint returns the **pointer file** (not the real content). To get real content directly:
-
-```
-# Direct LFS download URL:
-GET https://huggingface.co/{repo_id}/resolve/{branch}/{path}
-
-# With huggingface_hub:
-from huggingface_hub import hf_hub_download
-path = hf_hub_download(repo_id="user/repo", filename="model.safetensors", repo_type="model")
-```
-
-**The `resolve` endpoint** auto-redirects to the LFS content's CDN URL. This is the recommended URL for downloading model weights in scripts, Colab notebooks, and Spaces.
-
-**Streaming support:**
-```python
-# Stream large models without fully downloading
-from huggingface_hub import hf_hub_download
-import torch
-
-# With `hf_hub_download`, use `local_files_only=False` to force fresh download
-# Or use the datasets library with streaming for dataset content
-
-# For models, load directly from Hub using transformers with device_map:
-from transformers import AutoModelForCausalLM
-model = AutoModelForCausalLM.from_pretrained("user/repo", device_map="auto")
-# Downloads LFS weights on-the-fly via the resolve endpoint
-```
-
-**Cache behavior:** `hf_hub_download` returns the cached path. Subsequent calls with the same `repo_id` + `filename` return the cached copy instantly. Use `force_download=True` to bypass cache.
-
-### 6. LFS on Free Tier — Advanced Management Patterns
-
-#### Monitoring LFS Usage
-
-```python
-from huggingface_hub import HfApi
-
-api = HfApi()
-
-# Get repo info including LFS file listing
-repo_info = api.repo_info(repo_id="user/repo", files_metadata=True)
-
-# Count LFS files
-lfs_count = sum(1 for f in repo_info.siblings if f.lfs)
-lfs_total_size = sum(f.lfs["size"] for f in repo_info.siblings if f.lfs)
-
-print(f"LFS files: {lfs_count}")
-print(f"Total LFS size: {lfs_total_size / 1e9:.2f} GB")
-```
-
-#### Finding and Deleting Orphaned LFS References
-
-```python
-# List all LFS files across all branches/tags
-# (requires git CLI access to the cloned repo)
-import subprocess
-
-# Find all LFS OIDs referenced by current HEAD
-result = subprocess.run(
-    ["git", "lfs", "ls-files", "--all", "--name-only"],
-    capture_output=True, text=True
-)
-referenced_oids = set(result.stdout.strip().split('\n'))
-
-# Find LFS files in the cache that are NOT referenced
-# (these consume space but are not needed for current checkout)
-# Cache is at ~/.cache/huggingface/hub/
-```
-
-#### Git LFS Cleanup Commands
-
-```bash
-# Check how much space LFS cache is using
-du -sh ~/.cache/huggingface/hub/
-
-# Prune local LFS cache (removes unreferenced objects)
-git lfs prune
-
-# Check LFS cache health
-git lfs fsck  # Verifies all LFS files checkout correctly
-
-# List all LFS files in a repo (from any checkout)
-git lfs ls-files --all
-```
-
-#### LFS Across All Files in a Repo (Using the Web API)
-
-```bash
-# List all files in a repo with LFS status
-curl -s https://huggingface.co/api/models/{org}/{repo} | \
-    jq '.siblings[] | select(.lfs != null) | {path: .rfilename, size: .lfs.size, oid: .lfs.oid}'
-
-# Get total LFS storage used by a repo
-curl -s https://huggingface.co/api/models/{org}/{repo} | \
-    jq '[.siblings[] | select(.lfs != null) | .lfs.size] | add | . / 1e9 | "\(.) GB"'
-```
-
-#### Avoiding LFS Bloat on Free Tier
-
-**The biggest hidden storage sink** is **version history**. Every time you push an updated LFS file, the old version's OID remains stored. Over 10 updates, that's 10× the storage cost for the same file.
-
-**Strategies:**
-1. **One-shot uploads:** When possible, push the final version of a file rather than iterating locally and pushing updates
-2. **Super-squash before major storage increases:** Before uploading a large model to a repo with history, run `api.super_squash_history("user/repo")` to reset the commit history to a single commit
-3. **Use Xet for iterative updates:** Xet's chunk-level deduplication is more efficient than LFS's whole-file deduplication for iterative releases — only changed chunks are uploaded
-4. **Delete old LFS versions via UI:** Go to Repo Settings → "List LFS files" → Delete obsolete versions
-5. **Watch for deleted branches:** Merged branches and stale PRs often hold LFS references. After cleanup, run super-squash to truly free the space
-
-### 7. LFS and Xet — Dual Protocol Strategy
-
-The Hub now supports both traditional LFS and the Xet storage backend. Understanding when each is better helps optimize storage:
-
-| Scenario | Best Protocol | Reason |
-|----------|--------------|--------|
-| First upload of a model | LFS (traditional) | Stable, fastest for single-shot large uploads |
-| Iterative updates to large files | Xet | Chunk-level dedup, only uploads changed bytes |
-| Many small LFS files | LFS | Xet overhead not worth it for <10 MB files |
-| CI/CD pipeline pushing daily | Xet with `HF_XET_HIGH_PERFORMANCE=1` | Bandwidth saturation + dedup |
-| Dataset with incremental additions | Xet | Append-only chunks dedup naturally |
-
-**Detection of which protocol was used:**
-- LFS-stored files: show up in "List LFS files" in Settings
-- Xet-stored files: handled transparently — the Hub API abstracts the backend. Check `HF_STORAGE_BACKEND` env var to see which is active.
-
-### Resources
-- Git LFS Batch API spec: https://github.com/git-lfs/git-lfs/blob/main/docs/api/batch.md
-- Git LFS Pointer file spec: https://github.com/git-lfs/git-lfs/blob/main/docs/pointer.md
-- Git LFS file locking: https://github.com/git-lfs/git-lfs/blob/main/docs/api/locking.md
-- HF Storage limits: https://huggingface.co/docs/hub/en/storage-limits
-- HF Xet docs: https://huggingface.co/docs/xet/en/index
-- huggingface_hub LFS source: https://github.com/huggingface/huggingface_hub/blob/main/src/huggingface_hub/lfs.py
-- huggingface_hub upload guide: https://huggingface.co/docs/huggingface_hub/en/guides/upload
-- HF API endpoint: https://huggingface.co/api/models/{org}/{repo}
-|- Git LFS migration docs: https://git-lfs.com/
-
-## 2026-07-24: hf-inference-client-structured-outputs — Deep Dive (Topic #100)
-
-### Summary
-
-Comprehensive deep-dive into Hugging Face InferenceClient's **Structured Outputs**, **JSON Mode**, and **Tool/Function Calling** capabilities. These three features form a continuum of structured generation — from unvalidated JSON (JSON Mode) to schema-enforced JSON (Structured Outputs) to dynamic function selection (Tool Calling). All follow OpenAI-compatible API specs for easy migration. Combined with TGI's grammar-based guidance engine (powered by the `outlines` library), these features enable reliable programmatic consumption of LLM outputs without parsing errors.
-
-### The Three Structured Generation Modes
-
-| Mode | What It Does | When To Use | Cost/Complexity |
-|------|-------------|-------------|-----------------|
-| **JSON Mode** (`response_format={"type": "json_object"}`) | Forces valid JSON output, no schema enforcement | Quick data extraction, prototyping | Lowest — any provider that supports it |
-| **Structured Outputs** (`response_format={"type": "json_schema", "json_schema": {...}}`) | Enforces a specific JSON Schema compliant output | Production pipelines, database inserts, API responses | Medium — requires schema definition |
-| **Tool Calling** (OpenAI `tools` parameter) | Model decides whether to call a function and with which args | Agent workflows, function dispatching, RAG tool use | Highest — requires tool definitions + handling logic |
-
-### JSON Mode vs Structured Outputs — Key Difference
-
-**JSON Mode** (`type: "json_object"`) only guarantees syntactically valid JSON. The model can output any shape — keys, nesting, data types all vary. Use it when you just need parseable output and can handle variation.
-
-**Structured Outputs** (`type: "json_schema"`) guarantees both valid JSON AND compliance with a specified [JSON Schema](https://json-schema.org/). The model's output is constrained to match your schema exactly — field names, types, required fields, nested structures all enforced. Use it when downstream code depends on a fixed contract.
-
-### Implementation — Structured Outputs with InferenceClient
-
-```python
-from huggingface_hub import InferenceClient
-
-# Define a JSON Schema for structured output
-json_schema = {
-    "name": "book",
-    "schema": {
-        "properties": {
-            "name": {"title": "Name", "type": "string"},
-            "authors": {
-                "items": {"type": "string"},
-                "title": "Authors",
-                "type": "array",
-            },
-        },
-        "required": ["name", "authors"],
-        "title": "Book",
-        "type": "object",
-    },
-    "strict": True,  # Enforce strict schema compliance
-}
-
-client = InferenceClient(provider="cerebras")
-completion = client.chat.completions.create(
-    model="Qwen/Qwen3-32B",
-    messages=[
-        {"role": "system", "content": "Extract the books information."},
-        {"role": "user", "content": "I recently read 'The Great Gatsby' by F. Scott Fitzgerald."},
-    ],
-    response_format={
-        "type": "json_schema",
-        "json_schema": json_schema,
-    },
-)
-print(completion.choices[0].message)
-# => {"name": "The Great Gatsby", "authors": ["F. Scott Fitzgerald"]}
-```
-
-### JSON Mode — Quick & Lightweight
-
-```python
-completion = client.chat.completions.create(
-    model="Qwen/Qwen3-32B",
-    messages=[{"role": "user", "content": "List 3 colors as JSON."}],
-    response_format={"type": "json_object"},
-)
-# Output is valid JSON but shape not guaranteed
-```
-
-### Tool/Function Calling — OpenAI-Compatible
-
-```python
-tools = [{
-    "type": "function",
-    "function": {
-        "name": "get_weather",
-        "description": "Get current weather for a city",
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "location": {"type": "string", "description": "City name"},
-                "unit": {"type": "string", "enum": ["celsius", "fahrenheit"]}
-            },
-            "required": ["location"]
-        }
-    }
-}]
-
-completion = client.chat.completions.create(
-    model="Qwen/Qwen3-32B",
-    messages=[{"role": "user", "content": "What's the weather in Bangkok?"}],
-    tools=tools,
-    tool_choice="auto",
-)
-# completion.choices[0].message.tool_calls contains the function calls
-```
-
-### The `response_format` Argument — API Details
-
-The `response_format` parameter in `InferenceClient.chat.completions.create()` accepts one of three types:
-
-| Type | Description |
-|------|-------------|
-| `ChatCompletionInputResponseFormatText` | Text output (default) |
-| `ChatCompletionInputResponseFormatJSONObject` | JSON mode — `{"type": "json_object"}` |
-| `ChatCompletionInputResponseFormatJSONSchema` | Structured Outputs — `{"type": "json_schema", "json_schema": {...}}` |
-
-### Async Client for Concurrent Structured Requests
-
-```python
-from huggingface_hub import AsyncInferenceClient
-import asyncio
-
-async def extract_multiple(texts: list[str]):
-    async with AsyncInferenceClient(provider="cerebras") as client:
-        tasks = [
-            client.chat.completions.create(
-                model="Qwen/Qwen3-32B",
-                messages=[{"role": "system", "content": "Extract entities."},
-                          {"role": "user", "content": t}],
-                response_format={"type": "json_schema", "json_schema": schema},
-            )
-            for t in texts
-        ]
-        return await asyncio.gather(*tasks)
-```
-
-### How It Works Under the Hood — TGI Guidance Engine
-
-Text Generation Inference (TGI) implements structured generation via **guidance** — grammar-based token masking powered by the `outlines` library:
-
-1. **Grammar compilation:** The JSON Schema or tool definition is compiled into a finite state machine (FSM).
-2. **Forward pass:** The model runs a forward pass over the batch, returning token probabilities.
-3. **Masking:** A processor applies the grammar mask — tokens not allowed by the grammar have their probabilities set to zero.
-4. **Sampling:** The model samples from the remaining (masked) distribution.
-5. **State update:** The chosen token updates the FSM state, preparing for the next pass.
-
-This happens at each generation step, ensuring 100% compliance with the grammar/schema.
-
-**Key insight for zero-cost users:** Providers that run TGI under the hood (Cerebras, Novita, DeepInfra) generally support structured outputs. Providers using vLLM (Together AI, Fireworks) may support it via vLLM's own guided decoding. Check provider docs.
-
-### Provider Support Matrix (Serverless Inference)
-
-Support varies by provider. Verified patterns as of July 2026:
-
-| Provider | JSON Mode | Structured Outputs | Tool Calling | Backend |
-|----------|-----------|-------------------|--------------|---------|
-| Cerebras | ✓ | ✓ | ✓ | TGI-based |
-| Novita | ✓ | ✓ | ✓ | TGI-based |
-| DeepInfra | ✓ | ✓ | ✓ | TGI-based |
-| Together AI | ✓ | Partial | ✓ | vLLM |
-| Fireworks | ✓ | Partial | ✓ | vLLM |
-| Replicate | ✓ | Partial | ✓ | Custom |
-| Groq | ✓ | ✓ | ✓ | Custom/LPU |
-| Fal AI | ✓ | — | — | Custom |
-
-*Partial* = schema enforcement but may not support `strict: True`.
-
-### Zero-Cost Best Practices
-
-1. **Prefer JSON Schema over regex/string parsing** — Structured Outputs eliminate the most common failure mode in agent pipelines (malformed JSON).
-2. **Use `strict: True` for production** — Without strict mode, the schema acts as a hint rather than a constraint.
-3. **Short schemas generate faster** — Complex deeply nested schemas increase FSM compilation time and per-step overhead.
-4. **Combine tools with system prompts** — A system prompt that says "You MUST call a function for every query" improves tool-calling reliability.
-5. **`tool_choice: "required"`** — Force the model to always call a tool (useful for classification workflows).
-6. **Fallback chain:** Structured Outputs → JSON Mode → raw text with regex parsing. Start with the cheapest option that meets reliability needs.
-7. **Rate limits:** Free-tier providers (especially Cerebras, Novita) have tighter rate limits on structured generation due to the FSM overhead per token.
-
-### Resources
-
-- InferenceClient reference: https://huggingface.co/docs/huggingface_hub/en/package_reference/inference_client
-- Inference providers guide: https://huggingface.co/docs/huggingface_hub/en/guides/inference
-- TGI Guidance docs: https://huggingface.co/docs/text-generation-inference/en/conceptual/guidance
-- OpenAI-compatible structured outputs: https://platform.openai.com/docs/guides/structured-outputs
-- JSON Schema spec: https://json-schema.org/
-- `outlines` library (FSM grammar engine): https://github.com/dottxt-ai/outlines
-## 2026-07-24: hf-hub-storage-buckets — Deep Dive (New Feature, Topic #103)
-
-### Summary
-Comprehensive deep-dive into Hugging Face **Storage Buckets** — a brand-new repo type providing S3-like object storage on the Hub, powered by the Xet storage backend. Unlike Git-based repositories (models, datasets, Spaces), buckets are non-versioned and mutable: designed for training checkpoints, logs, intermediate artifacts, agent scratch storage, and any large collection of files that doesn't need version control. Buckets have a **free storage allowance** and are available to all users.
-
-### Buckets vs Repositories — Key Differences
-
-| Feature            | Repositories (Git-based)        | Storage Buckets                     |
-| ------------------ | ------------------------------- | ----------------------------------- |
-| Versioning         | Full Git history                | None (mutable, overwrite-in-place)  |
-| Types              | Models, Datasets, Spaces        | Standalone bucket                   |
-| Primary use case   | Publishing finished artifacts   | Working storage / intermediate data |
-| Operations         | Hub API, Git push/pull          | S3-like `sync`, `cp`, `rm`          |
-| Deduplication      | Xet chunk-level                 | Xet chunk-level                     |
-| Pull Requests      | Yes                             | No                                  |
-| Model/Dataset Cards| Yes                             | No (but plain README rendered)      |
-
-### Creating a Bucket
-
-**From Hub UI:** Visit huggingface.co/new-bucket, choose owner, name, public/private visibility, optional CDN pre-warming regions.
-
-**From CLI:**
+**CLI:**
 ```bash
 hf buckets create my-bucket
 hf buckets create my-org/shared-bucket --private
+hf buckets list julien-c/my-training-bucket -h
+hf buckets list julien-c/my-training-bucket/art -h -R
+hf buckets upload my-bucket ./local/file.txt remote/path/file.txt
+hf buckets download my-bucket remote/path/file.txt ./local/
 ```
 
-**From Python:**
+**Mounting in Spaces:**
 ```python
-from huggingface_hub import create_bucket
-create_bucket("my-bucket")
-create_bucket("my-org/shared-bucket", private=True)
+from huggingface_hub import create_space, add_space_secret
+
+# Mount bucket at /data inside the Space
+create_space(
+    "my-space",
+    space_sdk="gradio",
+    space_storage="my-org/my-bucket:/data",  # bucket:mount_path
+)
 ```
+- Can mount read-write (default) or read-only
+- Multiple buckets per Space
+- Mount models/datasets/Spaces as read-only volumes too
 
-### Managing Files
+### Free Tier Storage Limits (as of 2024–2026)
 
-All bucket file references use hf://buckets/ paths.
+| Account Type | Public Storage | Private Storage |
+|---|---|---|
+| **Free user/org** | Best-effort (generous, no hard cap for community value) | 100 GB |
+| **PRO ($9/mo)** | Up to 10 TB included | 1 TB + pay-as-you-go |
+| **Team** | 12 TB base + 1 TB/seat | 1 TB/seat |
+| **Enterprise** | 200 TB base + 1 TB/seat | 1 TB/seat |
 
-**Upload/Download/Sync:**
-```bash
-hf buckets cp ./model.safetensors hf://buckets/username/my-bucket/models/
-hf buckets cp hf://buckets/username/my-bucket/config.json - | jq .
-hf buckets sync ./data hf://buckets/username/my-bucket/data --delete
-```
+### Zero-Cost Persistence Strategies
 
-The sync command supports --include/--exclude filters, --dry-run, and a plan-and-apply workflow (--plan sync-plan.jsonl then --apply).
+1. **Mount a dataset as storage** — Create a public dataset repo on Hub, upload data files via git/huggingface_hub, mount it as read-only in your Space. Free, persistent, versioned. Ideal for configs, small databases, reference data.
 
-**Server-Side Copy (brand-new feature):**
-```bash
-hf buckets cp hf://datasets/HuggingFaceFW/fineweb/data hf://buckets/username/fineweb-data
-```
-Only Xet-tracked files (large) copied server-side instantly; small non-Xet files auto-downloaded and re-uploaded. Source and destination must be in the same storage region.
+2. **Mount another Space as storage** — Create a dedicated "data" Space (can be static HTML), push files to its git repo, mount it in your main Space as read-only.
 
-### Access Patterns
+3. **Storage Bucket (free tier)** — Create a public bucket. Free storage within reasonable limits (no hard cap for community use). Mount as read-write in Spaces. Best for checkpoints, logs, intermediate artifacts.
 
-| Method | Best for |
-|--------|----------|
-| hf-mount | Mount as local filesystem via NFS/FUSE |
-| Volume mounts | HF Jobs & Spaces |
-| hf:// paths (fsspec) | Python data tools (pandas, DuckDB) |
-| CLI sync | Batch transfers, backups |
-| S3 API | AWS CLI, boto3, s5cmd |
+4. **Use huggingface_hub upload API from within Space** — Space writes data to a public dataset repo on-the-fly via `hf_api.upload_file()`. Writes are durable (live in the repo). Costs: free, but counts against storage quota. No local mount needed.
 
-**Python via HfFileSystem:**
-```python
-import pandas as pd
-df = pd.read_parquet("hf://buckets/username/my-bucket/data.parquet")
+5. **Git push from within Space** — Configure git inside the Space and push changes to the Space's own repo or another repo. Free, durable, but git history grows.
 
-import duckdb
-from huggingface_hub import HfFileSystem
-duckdb.register_filesystem(HfFileSystem())
-```
+### Buckets vs Git Repos
 
-### Key Use Cases for Zero-Cost
-
-1. Training checkpoints & logs - overwrite-in-place, no Git history accumulation
-2. Data processing pipelines - staging area for intermediate results
-3. Agentic storage - Hub-native scratch for AI agents (tool outputs, working memory)
-4. Rolling backups - old files truly gone when deleted (unlike Git repos)
-5. Linking models to buckets - two-way link via model card YAML
-
-### Pricing
-
-Buckets are free to create with a free storage allowance. Per-TB billing above free tier. Enterprise plans get dedup-based billing. CDN pre-warming available at hf.co/storage.
+| Feature | Buckets | Git Repos (Models/Datasets/Spaces) |
+|---|---|---|
+| Versioning | None (mutable) | Full Git history |
+| Primary use | Working storage, intermediates | Publishing finished artifacts |
+| Speed | Fast S3-like ops | Git operations |
+| Mount type | Read-Write or Read-Only | Read-Only only |
+| Pull Requests | No | Yes |
+| Model/Dataset Cards | No (but README rendered) | Yes |
+| Single file limit | None (unlike git's 500GB) | 500 GB hard limit |
 
 ### Resources
-- Storage Buckets docs: https://huggingface.co/docs/hub/en/storage-buckets
-- Access Patterns: https://huggingface.co/docs/hub/en/storage-buckets-access
-- S3-Compatible API: https://huggingface.co/docs/hub/en/storage-buckets-s3
-- hf-mount: https://github.com/huggingface/hf-mount
-- HuggingFace Hub Buckets Python guide: https://huggingface.co/docs/huggingface_hub/guides/buckets
-- Xet storage backend: https://huggingface.co/docs/hub/xet/index
+- Spaces storage docs: https://huggingface.co/docs/hub/en/spaces-storage
+- Storage Buckets guide: https://huggingface.co/docs/hub/en/storage-buckets
+- Storage limits: https://huggingface.co/docs/hub/en/storage-limits
+- Pricing: https://huggingface.co/pricing
+- Buckets Python API: https://huggingface.co/docs/huggingface_hub/guides/buckets
+- Buckets CLI: https://huggingface.co/docs/huggingface_hub/guides/cli#hf-buckets
+- Buckets access patterns: https://huggingface.co/docs/hub/en/storage-buckets-access
+- S3 compatibility: https://huggingface.co/docs/hub/en/storage-buckets-s3
+- Hugging Face storage announcement: https://huggingface.co/blog/xethub-joins-hf
 
 ---
 
-## 2026-07-24: hf-hub-collections-api-deep-dive — Full API Reference & Patterns (Topic #107)
+## 2026-07-24: hf-transformers-tool-use-chat-template (Deep Dive — v5.14 Full Architecture)
 
 ### Summary
-Comprehensive deep-dive into the Hugging Face Hub Collections API — covering all 7 collection methods from source (`huggingface_hub` v1.x), the `list_collections` pagination engine with 3 sort modes and 2 filter axes, the `Collection` and `CollectionItem` data classes, 6 item types (model, dataset, space, paper, collection, bucket), and practical patterns for programmatic curation, batch population, and integration with other Hub features.
+Deep-dive into Hugging Face Transformers' full tool-use / function-calling system as of v5.14. Covered the complete pipeline: defining tools (Python functions + JSON schemas), passing them via apply_chat_template(), the tool-calling flow, response parsing with parse_response(), streaming with the ResponseParser, response templates for structured output, and the assistant tool_calls message format.
 
-### Core Data Types
+### Key Concepts
 
-**`CollectionItemType_T`** = `Literal["model", "dataset", "space", "paper", "collection", "bucket"]`
+**1. Two Ways to Define Tools**
 
-**`CollectionSort_T`** = `Literal["lastModified", "trending", "upvotes"]`
-
-**`CollectionItem`** fields: `item_object_id` (DB id), `item_id` (Hub ID), `item_type`, `position`, `note` (max 500 chars)
-
-**`Collection`** fields: `slug`, `title`, `owner`, `items`, `last_updated`, `position`, `private`, `theme`, `upvotes`, `description` (max 150 chars), `url` (property)
-
-### Method Reference
-
-| Method | Endpoint | Purpose |
-|--------|----------|---------|
-| `list_collections()` | GET `/api/collections` | List with filters (owner, item, sort, limit) — items truncated to 4 |
-| `get_collection()` | GET `/api/collections/{slug}` | Full collection with ALL items |
-| `create_collection()` | POST `/api/collections` | Create new (title, namespace, description, private, exists_ok) |
-| `update_collection_metadata()` | PATCH `/api/collections/{slug}` | Update title/desc/position/private/theme |
-| `delete_collection()` | DELETE `/api/collections/{slug}` | Irreversible! Supports `missing_ok` |
-| `add_collection_item()` | POST `/api/collections/{slug}/items` | Add item (item_id, item_type, note, exists_ok) |
-| `update_collection_item()` | PATCH `/api/collections/{slug}/items/{id}` | Edit note/position (uses `item_object_id`) |
-| `delete_collection_item()` | DELETE `/api/collections/{slug}/items/{id}` | Remove item (uses `item_object_id`) |
-
-### Key Behaviors & Pitfalls
-
-1. **`list_collections` truncates items to 4** — always use `get_collection()` for full item lists
-2. **`item_object_id` vs `item_id`** — modify/delete operations require the internal DB id, NOT the Hub repo ID
-3. **No `theme` on `create_collection`** — must be set via `update_collection_metadata()` after creation
-4. **Slug changes on title update** — prefix changes but trailing hash stays the same; old slug URL breaks
-5. **Description capped at 150 chars** — silently truncated; notes capped at 500 chars
-6. **6 item types**: model, dataset, space, paper, collection, bucket
-7. **`exists_ok` on create_collection catches HTTP 409** — returns existing collection if slug collision
-8. **Hub Web UI features NOT in API**: item images, history, drag-and-drop, gating group collections, resource group assignment
-
-### 6 Practical Patterns
-
-1. **Batch population** — iterate model lists with `exists_ok=True` and try/except for resilience
-2. **Trending discovery** — combine `list_models()` search with `add_collection_item()`
-3. **Cross-user mirror** — `get_collection()` source → `create_collection()` dest with all items copied
-4. **Research project page** — paper + model + dataset in one collection with notes
-5. **Annotated curation** — use `note` fields for ratings/status emoji (⭐ ⚠ 🔄)
-6. **Auto-curation via cron** — daily cron to maintain a "Trending Today" collection
-
-### Resources
-- Source: `huggingface_hub/hf_api.py` lines 9908–10400
-- Hub docs: https://huggingface.co/docs/hub/en/collections
-- Collections page: https://huggingface.co/collections
-
----
-
-## 2026-07-24: hf-hub-python-api-v2 — Complete HfApi v1.x Reference (Topic #6 — Deep Dive v2)
-
-### Summary
-Comprehensive deep-dive into the **`huggingface_hub` Python library (v1.24.0)** — 161 public `HfApi` methods covering the complete Hugging Face Hub API surface. This is a v2 deep dive of Topic #6 (originally covered early in the learning cycle) and focuses on the **v1.x architecture** which introduced major new features: Buckets object storage, Webhooks API, Hub Jobs, Scheduled UV Jobs, Branches/Tags API, Discussion API, Access Request management, LFS management, Safetensors metadata inspection, Daily Papers API, and expanded Space management (25 methods). All methods also available as top-level functions in `huggingface_hub`.
-
-### v1.x vs 0.x — Key Differences
-
-| Area | 0.x (old) | 1.x (current) |
-|------|-----------|---------------|
-| **API class** | `HfApi` (limited methods) | `HfApi` (161 methods) |
-| **Object storage** | Git + LFS only | **Buckets** (`hf://buckets/...`) — Git-free, S3-compatible |
-| **Jobs** | None | `run_job`, `run_uv_job`, `create_scheduled_job`, `create_scheduled_uv_job` |
-| **Webhooks** | None | Full CRUD: `create_webhook`, `get_webhook`, `update_webhook`, `delete_webhook`, etc. |
-| **Collections** | Manual REST only | 8 methods: `list_collections`, `get_collection`, `create_collection`, etc. |
-| **Discussions** | None | 8 methods: `create_discussion`, `comment_discussion`, `get_discussion_details`, etc. |
-| **Branches/Tags** | `main` only | `create_branch`, `delete_branch`, `create_tag`, `delete_tag`, `list_repo_refs` |
-| **Access requests** | None | 7 methods for gated repo access management |
-| **LFS management** | None | `list_lfs_files`, `permanently_delete_lfs_files`, `verify_repo_checksums` |
-| **Space management** | Minimal (`space_info`) | 25 methods — secrets, variables, storage, volumes, dev mode, sleep, etc. |
-| **Safetensors metadata** | None | `get_safetensors_metadata`, `parse_safetensors_file_metadata` |
-| **Large uploads** | `upload_folder` | + `upload_large_folder` (resumable, parallel, with progress reports) |
-| **Repo refactoring** | None | `move_repo`, `duplicate_repo`, `super_squash_history`, `update_repo_settings` |
-| **License** | apache-2.0 | apache-2.0 (unchanged) |
-
-### Core Architecture
-
-The `huggingface_hub` library provides three interfaces to the same REST API:
-
-1. **`HfApi` class** — The full-featured Python API. Instantiate once, reuse.
-2. **Top-level functions** — Convenience wrappers (e.g., `upload_file()` calls `HfApi().upload_file()`).
-3. **`hf` CLI** — Shell-level access for scripting.
-
-All three authenticate via `HF_TOKEN` env var, cached token file, or explicit `token=` parameter.
-
-#### HfApi Initialization
+**Python functions (recommended):** Pass callables directly. The function name, argument names/types, and Google-style docstring are auto-parsed into a JSON schema by `get_json_schema()`.
 
 ```python
-from huggingface_hub import HfApi
+def get_current_temperature(location: str, unit: str):
+    """
+    Get the current temperature at a location.
+    Args:
+        location: The location to get the temperature for, in the format "City, Country"
+        unit: The unit to return the temperature in. (choices: ["celsius", "fahrenheit"])
+    """
+    return 22.0
 
-# Default (reads HF_TOKEN env var)
-api = HfApi()
-
-# Custom endpoint and token
-api = HfApi(
-    endpoint="https://huggingface.co",  # or a HF Enterprise endpoint
-    token="hf_...",                      # explicit token
-    library_name="my-app",               # telemetry
-    library_version="1.0",
-    user_agent="MyApp/1.0",
-)
+tools = [get_current_temperature, get_current_wind_speed]
 ```
 
-**Token precedence:** `token=` param > `HF_TOKEN` env > cached token in `~/.cache/huggingface/token`.
+Parser rules: Only Google-style docstrings supported. `Returns:` block and return types are usually ignored by models. The parser also ignores the actual function body — only name, args, types, and docstring matter for the model's signature. `self` and `cls` parameters are treated as implicit receiver arguments and ignored.
 
-### 1. Repository CRUD (6 methods)
+**JSON schemas (low-level):** Bypass the function parser by passing dicts directly in OpenAI-compatible format:
 
 ```python
-# Create
-url = api.create_repo("my-model", repo_type="model", private=True, exist_ok=True)
-
-# Info (returns RepoInfo with all metadata)
-info = api.repo_info("user/my-model", repo_type="model", expand=["trendingScore", "inference"])
-
-# Exists
-exists = api.repo_exists("user/my-model", repo_type="dataset")
-
-# Settings (update description, private status, etc.)
-api.update_repo_settings("user/my-model", description="Updated description",
-                          private=True, gated="auto")
-
-# Move (rename/transfer)
-api.move_repo("old-user/model", "new-user/model")
-
-# Duplicate (clone across namespaces)
-url = api.duplicate_repo("source-user/model", "my-model", repo_type="model",
-                          exist_ok=True)
-
-# Delete (irreversible)
-api.delete_repo("user/my-model", repo_type="model", missing_ok=True)
-
-# Squash history into one commit
-api.super_squash_history("user/my-model", commit_message="Initial release")
-```
-
-**`duplicate_repo`** — incredibly useful for model/dataset/space cloning. Supports passing `hardware`, `storage`, `sleep_time`, `secrets`, `variables` for Space duplication. This is the programmatic equivalent of the Hub UI's "Duplicate Space" button.
-
-**`super_squash_history`** — collapses an entire repo's commit history into a single commit. Useful for repos with bloated Git histories from many small uploads. Works on models, datasets, and Spaces. Branch-optional (defaults to `main`).
-
-### 2. File Operations (22 methods)
-
-#### Commit Operations — The Foundation
-
-All file modifications flow through `create_commit()` with three operation types:
-
-```python
-from huggingface_hub import CommitOperationAdd, CommitOperationDelete, CommitOperationCopy
-
-# Add files
-ops = [
-    CommitOperationAdd(path_in_repo="config.json", path_or_fileobj=b'{"key": "val"}'),
-    CommitOperationAdd(path_in_repo="model.safetensors", path_or_fileobj="./local/model.safetensors"),
-]
-
-# Delete files
-ops.append(CommitOperationDelete(path_in_repo="old_weights.bin"))
-
-# Copy files (server-side — no download/upload needed)
-ops.append(CommitOperationCopy(
-    src_path_in_repo="backup/config.json",
-    path_in_repo="config.json",
-    src_revision="backup-branch"  # optional, same repo by default
-))
-
-# Server-side cross-repo copy
-ops.append(CommitOperationCopy(
-    src_path_in_repo="tokenizer.json",
-    path_in_repo="tokenizer.json",
-    src_repo_id="other-user/source-model",
-    src_repo_type="model",
-    src_revision="main"
-))
-
-# Execute
-commit = api.create_commit(
-    repo_id="user/my-model",
-    operations=ops,
-    commit_message="Update config and clean up",
-    commit_description="Multi-operation commit",
-    repo_type="model",
-    revision="main",
-    create_pr=False,           # Set True to open a PR instead
-    num_threads=5,             # Parallel LFS uploads
-    parent_commit=None,        # Optimistic locking: enforce linear history
-)
-```
-
-**Critical constraints:**
-- Max **25,000 LFS files** per commit
-- Max **1 GB** payload for regular (non-LFS) files
-- The `operations` list **will be mutated** — do not reuse objects
-- Empty `commit_message` raises `ValueError`
-- `parent_commit` provides optimistic locking — set to the current HEAD OID to prevent conflicts
-
-#### High-Level Upload/Download Wrappers
-
-```python
-# Upload single file
-api.upload_file(
-    path_or_fileobj=b"content",
-    path_in_repo="config.json",
-    repo_id="user/my-model",
-    repo_type="model",
-)
-
-# Upload entire folder
-api.upload_folder(
-    folder_path="./model_output/",
-    repo_id="user/my-model",
-    repo_type="model",
-    allow_patterns=["*.safetensors", "*.json"],
-    ignore_patterns=["*.tmp", "__pycache__/*"],
-    commit_message="Upload model outputs",
-    delete_patterns=["old_*.bin"],  # delete matching files first
-)
-
-# Upload large folders (resumable, parallel, progress reporting)
-api.upload_large_folder(
-    repo_id="user/my-model",
-    folder_path="./large-model/",
-    repo_type="model",
-    num_workers=8,            # parallel threads
-    print_report=True,        # progress every 60s
-    print_report_every=30,    # seconds between reports
-    allow_patterns=["*.safetensors"],
-)
-
-# Download single file
-path = api.hf_hub_download(
-    repo_id="user/my-model",
-    filename="config.json",
-    revision="main",
-    local_dir="./models/my-model/",
-    local_dir_use_symlinks=False,  # True = symlink to cache
-    cache_dir="/custom/cache/path",
-    force_download=False,
-    resume_download=True,
-)
-
-# Download snapshot (entire repo)
-local_path = api.snapshot_download(
-    repo_id="user/my-model",
-    revision="main",
-    allow_patterns=["*.safetensors", "*.json"],
-    ignore_patterns=["*.bin", "*.pt"],
-    local_dir="./models/my-model/",
-    cache_dir=None,  # None = download directly to local_dir
-)
-
-# Check file existence
-exists = api.file_exists("user/my-model", "config.json", repo_type="model")
-
-# Get file metadata (size, commit info, LFS status, last modified)
-meta = api.get_hf_file_metadata(
-    url="https://huggingface.co/user/my-model/resolve/main/config.json"
-)
-print(f"Size: {meta.size}, Commit: {meta.commit_hash}, LFS: {meta.lfs}")
-```
-
-**`upload_large_folder` vs `upload_folder`:**
-- `upload_large_folder` is designed for **hundreds/thousands of large files** — uses multiple workers, prints periodic progress, handles retries
-- `upload_folder` is simpler and synchronous — good for smaller uploads (<100 files, <1GB)
-
-#### File Listing & Tree Inspection
-
-```python
-# List files at root
-files = api.list_repo_files("user/my-model", repo_type="model")
-
-# List files with tree structure (recursive, with folder metadata)
-tree = list(api.list_repo_tree(
-    "user/my-model",
-    path_in_repo="checkpoints/",
-    recursive=True,
-    expand=True,  # include file sizes and commit info
-    revision="main",
-    repo_type="model",
-))
-for item in tree:
-    if isinstance(item, RepoFile):
-        print(f"FILE: {item.path} ({item.size} bytes, LFS={item.lfs})")
-    elif isinstance(item, RepoFolder):
-        print(f"DIR:  {item.path}")
-
-# Get paths info for specific files
-paths = api.get_paths_info(
-    "user/my-model",
-    paths=["config.json", "model.safetensors", "nonexistent.txt"],
-    expand=True,
-    repo_type="model",
-)
-```
-
-### 3. Bucket API — Object Storage (11 methods)
-
-Buckets are the **biggest new feature** in v1.x — Git-free, S3-compatible object storage.
-
-```python
-# Create a bucket
-bucket_url = api.create_bucket("my-bucket", private=True, exist_ok=True)
-# Returns: BucketUrl("hf://buckets/user/my-bucket")
-
-# List all buckets
-all_buckets = list(api.list_buckets(search="my-"))
-
-# List files in a bucket (tree)
-files = list(api.list_bucket_tree("user/my-bucket", recursive=True))
-
-# Get bucket info (metadata, policy, storage used)
-info = api.bucket_info("user/my-bucket")
-
-# Get metadata for a specific file
-meta = api.get_bucket_file_metadata("user/my-bucket", "data/file.parquet")
-
-# Move/rename bucket
-api.move_bucket("user/old-name", "user/new-name")
-
-# Delete bucket (irreversible)
-api.delete_bucket("user/my-bucket", missing_ok=True)
-
-# Batch operations (add, copy, delete in one call)
-api.batch_bucket_files(
-    "user/my-bucket",
-    add=[(b"content", "new_file.txt"), ("./local/data.parquet", "data.parquet")],
-    copy=[("user/source-bucket", "file.txt", "user/my-bucket", "backup/file.txt")],
-    delete=["old_file.txt"],
-)
-
-# Sync local ↔ bucket (bidirectional)
-plan = api.sync_bucket(
-    source="./data/",
-    dest="hf://buckets/user/my-bucket",
-    delete=True,        # delete remote files not in source
-    dry_run=True,       # preview before applying
-)
-# Returns SyncPlan — inspect and then call sync_bucket again with --apply
-
-# Download specific files from bucket
-api.download_bucket_files(
-    "user/my-bucket",
-    files=[("remote/data.csv", "./local/data.csv")],
-)
-
-# Get paths info for arbitrary paths
-paths = list(api.get_bucket_paths_info(
-    "user/my-bucket",
-    paths=["file1.txt", "file2.txt", "subdir/"],
-))
-```
-
-**Bucket sync workflow:**
-```python
-# Step 1: Plan
-plan = api.sync_bucket("./data", "hf://buckets/user/my-bucket", dry_run=True)
-print(f"Files to upload: {len(plan.to_add)}, to delete: {len(plan.to_delete)}")
-
-# Step 2: Apply (no dry_run)
-result = api.sync_bucket("./data", "hf://buckets/user/my-bucket", delete=True)
-```
-
-### 4. Space Management (25 methods)
-
-The most method-rich area of the API. All operations for managing Spaces programmatically.
-
-```python
-# Read operations
-info = api.space_info("user/my-space")
-runtime = api.get_space_runtime("user/my-space")
-print(f"Stage: {runtime.stage}, Hardware: {runtime.hardware}, SDG: {runtime.sdk}")
-
-# Secrets management
-api.add_space_secret("user/my-space", "API_KEY", "sk-...")
-api.add_space_variable("user/my-space", "MODEL_NAME", "gpt-4o")
-secrets = api.get_space_secrets("user/my-space")   # returns dict of SpaceSecret
-vars = api.get_space_variables("user/my-space")     # returns dict of SpaceVariable
-api.delete_space_secret("user/my-space", "API_KEY")
-api.delete_space_variable("user/my-space", "MODEL_NAME")
-
-# Hardware & storage
-api.request_space_hardware("user/my-space", SpaceHardware.T4_MEDIUM, sleep_time=300)
-api.request_space_storage("user/my-space", SpaceStorage.SMALL)  # +50GB persistent
-api.delete_space_storage("user/my-space")                        # remove persistent storage
-api.set_space_sleep_time("user/my-space", sleep_time=900)       # 15 min inactivity timeout
-api.set_space_volumes("user/my-space", volumes=[Volume(...)])
-api.delete_space_volumes("user/my-space")
-
-# Lifecycle
-api.pause_space("user/my-space")
-api.restart_space("user/my-space", factory_reboot=True)  # full factory reset
-api.enable_space_dev_mode("user/my-space")
-api.disable_space_dev_mode("user/my-space")
-
-# Logs
-logs = list(api.fetch_space_logs("user/my-space", build=False, follow=False))
-
-# Discovery
-for space in api.list_spaces(author="user", sort="trending", limit=10):
-    print(f"{space.id}: {space.likes} likes")
-
-results = list(api.search_spaces("flux", sdk="gradio"))
-
-templates = list(api.list_space_templates())
-
-# Management & Duplication
-url = api.duplicate_space(
-    "source-user/template-space",
-    "my-new-space",
-    hardware=SpaceHardware.T4_MEDIUM,
-    storage=SpaceStorage.SMALL,
-    sleep_time=300,
-    secrets=[{"key": "API_KEY", "value": "sk-..."}],
-    variables=[{"key": "MODEL", "value": "flux.1-dev"}],
-    exist_ok=True,
-)
-
-# Wait for Space to be running
-runtime = api.wait_for_space("user/my-space", timeout=300, poll_interval=5)
-print(f"Space is {runtime.stage}")
-```
-
-**Hardware tiers** (`SpaceHardware` constants): `CPU`, `CPU_UPGRADE`, `T4_SMALL`, `T4_MEDIUM`, `A10G_SMALL`, `A10G_LARGE`, `A100_LARGE`, `H100`, `ZERO_GPU`.
-
-**Storage tiers** (`SpaceStorage` constants): `SMALL` (50GB), `MEDIUM`, `LARGE`.
-
-### 5. Hub Jobs — Run Compute on HF Infrastructure (20 methods)
-
-HF Hub Jobs let you run containerized and Python script workloads directly on HF infrastructure.
-
-#### Quick Script Jobs (UV Jobs — most practical)
-
-```python
-# Run a Python script with dependencies — zero setup
-job = api.run_uv_job(
-    script="""
-import requests, json
-r = requests.get('https://huggingface.co/api/models?sort=downloads&limit=5')
-results = r.json()
-for m in results:
-    print(f\"{m['id']}: {m['downloads']} downloads\")
-""",
-    dependencies=["requests"],
-    python="3.12",
-    timeout=300,
-    name="top-models-poller",
-)
-job_id = job.job_id
-
-# Wait for completion
-finished = api.wait_for_job(job_id, timeout=600)
-print(f"Status: {finished.status}")
-
-# Fetch logs
-logs = list(api.fetch_job_logs(job_id=job_id))
-for line in logs:
-    print(line)
-```
-
-#### Container-Based Jobs
-
-```python
-# Full container job
-job = api.run_job(
-    image="python:3.12-slim",
-    command=["python", "-c", "print('hello from HF job')"],
-    flavor="cpu",            # or "t4", "a10g", etc.
-    timeout=300,
-    name="my-job",
-    secrets={"MY_SECRET": "..."},
-)
-
-# Scheduled job (cron)
-cron_job = api.create_scheduled_job(
-    image="python:3.12-slim",
-    command=["python", "/app/script.py"],
-    schedule="0 */6 * * *",   # every 6 hours
-    flavor="cpu",
-    timeout=3600,
-    name="daily-pipeline",
-    env={"ENV": "production"},
-    labels={"project": "monitoring"},
-)
-
-# Scheduled UV job (python script with dependencies)
-cron_uv = api.create_scheduled_uv_job(
-    script="print('hello world')",
-    dependencies=["requests", "torch"],
-    schedule="0 0 * * *",     # daily at midnight
-    python="3.12",
-    timeout=600,
-    name="daily-report",
-)
-
-# List & manage jobs
-for job in api.list_jobs(status="completed", namespace="user", timeout=3600):
-    print(f"{job.job_id}: {job.status}")
-
-scheduled = api.list_scheduled_jobs()
-
-# Lifecycle
-api.cancel_job(job_id="...")
-api.suspend_scheduled_job("...")
-api.resume_scheduled_job("...")
-api.trigger_scheduled_job("...")   # manual trigger
-
-# Inspect
-details = api.inspect_job(job_id="...")
-sched_details = api.inspect_scheduled_job("...")
-
-# Metrics & logs
-metrics = list(api.fetch_job_metrics(job_id="..."))
-logs = list(api.fetch_job_logs(job_id="...", tail=100))
-
-# Available hardware
-hardware = api.list_jobs_hardware()
-for hw in hardware:
-    print(f"{hw.flavor}: {hw.cpus} CPUs, {hw.memory}GB RAM")
-```
-
-**UV Jobs** are the most convenient for quick tasks — they auto-install dependencies, no Docker image needed. Perfect for cron-based data collection, model evaluation, API polling.
-
-### 6. Webhook API (7 methods)
-
-Full CRUD for Hub webhooks, which fire on repo events (push, PR, discussion, etc.).
-
-```python
-# Create webhook
-hook = api.create_webhook(
-    url="https://my-service.com/hf-webhook",
-    watched=[
-        {"type": "model", "id": "user/*"},     # all models under user
-        {"type": "dataset", "id": "specific-dataset"},
-    ],
-    domains=["repo", "discussion"],   # event types to listen for
-    secret="whsec_...",               # for payload verification
-)
-webhook_id = hook.id
-
-# Read
-hook_info = api.get_webhook(webhook_id)
-
-# Update
-api.update_webhook(
-    webhook_id,
-    url="https://my-service.com/v2/hf-webhook",
-    watched=[{"type": "model", "id": "user/*"}],
-)
-
-# Toggle
-api.enable_webhook(webhook_id)
-api.disable_webhook(webhook_id)
-
-# List all webhooks
-for hook in api.list_webhooks():
-    print(f"{hook.id}: {hook.url} (enabled={hook.enabled})")
-
-# Delete
-api.delete_webhook(webhook_id)
-```
-
-**Webhook domains:** `"repo"` (pushes, file changes), `"discussion"` (PRs, comments, issues), `"collection"` (collection events).
-
-**Watched items:** Use `"user/*"` to watch everything under a namespace, or specific repo IDs.
-
-### 7. Collections API (8 methods)
-
-```python
-# List collections with filters
-collections = list(api.list_collections(
-    owner="user",
-    item="user/my-model",
-    sort="lastModified",
-    limit=20,
-))
-
-# Get full collection (all items — list_collections truncates to 4)
-collection = api.get_collection("user/collection-slug")
-for item in collection.items:
-    print(f"{item.item_type}: {item.item_id} — {item.note}")
-
-# Create
-new_coll = api.create_collection(
-    title="My Curated Models",
-    namespace="user",            # org or username
-    description="Best models for X",  # max 150 chars
-    private=False,
-    exists_ok=True,
-)
-# NOTE: theme cannot be set on creation — use update_collection_metadata
-
-# Update
-api.update_collection_metadata(
-    "user/slug",
-    description="Updated description",
-    private=True,
-    theme="blue",
-)
-
-# Add items
-api.add_collection_item(
-    "user/slug",
-    item_id="user/model",
-    item_type="model",
-    note="Great for X task",     # max 500 chars
-    exists_ok=True,
-)
-
-# Modify items (uses item_object_id, not item_id)
-api.update_collection_item("user/slug", item_object_id="...", note="Updated note")
-
-# Delete items
-api.delete_collection_item("user/slug", item_object_id="...")
-
-# Delete collection
-api.delete_collection("user/slug", missing_ok=True)
-```
-
-**6 item types:** `"model"`, `"dataset"`, `"space"`, `"paper"`, `"collection"`, `"bucket"`.
-
-**Critical:** `list_collections` truncates items to 4 per collection. Always use `get_collection()` for full item details. Item modification/deletion uses the internal `item_object_id` (DB id), not the Hub repo ID.
-
-### 8. Discussions & Pull Requests (8 methods)
-
-```python
-# List discussions
-discussions = api.get_repo_discussions("user/my-model", repo_type="model")
-
-# Create a discussion (issue or PR)
-disc = api.create_discussion(
-    "user/my-model",
-    title="Add support for batch inference",
-    repo_type="model",
-    discussion_type="issue",     # or "pull_request"
-)
-
-# Comment
-api.comment_discussion("user/my-model", disc.num, comment="Great idea!")
-
-# Edit comment
-api.edit_discussion_comment("user/my-model", disc.num, comment_id="...",
-                              new_comment="Updated suggestion")
-
-# Hide comment (moderator only)
-api.hide_discussion_comment("user/my-model", disc.num, comment_id="...")
-
-# Rename discussion
-api.rename_discussion("user/my-model", disc.num, new_title="Better title")
-
-# Change status
-api.change_discussion_status("user/my-model", disc.num,
-                              new_status="closed", comment="Resolved")
-
-# Get details
-details = api.get_discussion_details("user/my-model", disc.num, repo_type="model")
-for event in details.events:
-    print(f"{event.type}: {event.created_at}")
-
-# Merge pull request (creates a commit)
-api.merge_pull_request("user/my-model", pr_number=42, comment="LGTM!")
-```
-
-### 9. Access Request Management — Gated Repos (7 methods)
-
-For repos with `gated="auto"` or `gated="manual"`:
-
-```python
-# List pending requests
-pending = api.list_pending_access_requests("user/gated-model", repo_type="model")
-
-# Accept
-for req in pending:
-    api.accept_access_request("user/gated-model", req.username, repo_type="model")
-
-# Reject
-api.reject_access_request("user/gated-model", "blocked-user", repo_type="model")
-
-# Cancel (by requestor)
-api.cancel_access_request("user/gated-model", repo_type="model")
-
-# List handled requests
-accepted = api.list_accepted_access_requests("user/gated-model")
-rejected = api.list_rejected_access_requests("user/gated-model")
-
-# Grant access directly (without a request)
-api.grant_access("user/gated-model", "user-to-grant", repo_type="model")
-```
-
-### 10. Branches & Tags (5 methods)
-
-```python
-# Create branch
-api.create_branch("user/my-repo", branch="experiment-fp8",
-                  repo_type="model")
-
-# Delete branch
-api.delete_branch("user/my-repo", branch="old-branch",
-                  repo_type="model")
-
-# Create tag
-api.create_tag("user/my-repo", tag="v1.0",
-               repo_type="model", revision="main")
-
-# Delete tag
-api.delete_tag("user/my-repo", tag="v1.0", repo_type="model")
-
-# List all refs (branches + tags + PRs)
-refs = api.list_repo_refs("user/my-repo", repo_type="model",
-                           include_pull_requests=True)
-for branch in refs.branches:
-    print(f"Branch: {branch.name} ({branch.target_commit[:8]})")
-for tag in refs.converted_tags:
-    print(f"Tag: {tag.name} → {tag.target_commit[:8]}")
-for tag in refs.tags:
-    print(f"Lightweight tag: {tag.name}")
-```
-
-### 11. LFS & Safetensors Management (5 methods)
-
-```python
-# List LFS files in repo
-lfs_files = list(api.list_lfs_files("user/my-model", repo_type="model"))
-for f in lfs_files:
-    print(f"{f.path}: {f.size} bytes, oid={f.oid[:12]}...")
-
-# Permanently delete LFS files (removes from history!)
-api.permanently_delete_lfs_files("user/my-model", repo_type="model",
-                                  paths=["old-large-file.bin"])
-
-# Verify checksums of downloaded files
-result = api.verify_repo_checksums("user/my-model", local_dir="./models/my-model/",
-                                    repo_type="model")
-print(f"Matched: {result.matched}/{result.total}, Failed: {result.failed}")
-
-# Get safetensors metadata (all tensors, dtypes, shapes)
-meta = api.get_safetensors_metadata("user/my-model", repo_type="model")
-for tensor_name, tensor_meta in meta.parameters.items():
-    print(f"{tensor_name}: shape={tensor_meta.shape}, dtype={tensor_meta.dtype}")
-
-# Parse safetensors file metadata without downloading full file
-file_meta = api.parse_safetensors_file_metadata(
-    "user/my-model", "model.safetensors", repo_type="model"
-)
-```
-
-### 12. Model, Dataset & Space Discovery (12 methods)
-
-```python
-# Models
-for model in api.list_models(
-    sort="downloads",
-    direction=-1,
-    limit=10,
-    pipeline_tag="text-generation",
-    expand=["inference", "trendingScore"],
-):
-    print(f"{model.id}: {model.downloads:,} downloads, "
-          f"likes={model.likes}, trending={getattr(model, 'trendingScore', 'N/A')}")
-
-# Tags
-model_tags = api.get_model_tags()   # all model tags with counts
-
-# Datasets
-for ds in api.list_datasets(sort="trending", limit=10):
-    print(f"{ds.id}: {ds.likes} likes, tags={ds.cardData.get('annotations_creators', [])}")
-
-ds_info = api.dataset_info("user/dataset", expand=["parquet"])
-# Check parquet availability
-if ds_info.cardData:
-    print(f"Configs: {ds_info.cardData.get('configs', [])}")
-
-# Daily Papers
-for paper in api.list_daily_papers(limit=10, sort="trending"):
-    print(f"{paper.title} — {paper.upvotes} upvotes")
-    print(f"  Authors: {', '.join(a['name'] for a in paper.authors)}")
-
-# Spaces
-for space in api.list_spaces(sdk="gradio", sort="likes", limit=10):
-    print(f"{space.id}: SDK={space.sdk}, runtime={space.runtime.stage}")
-
-# User info
-user = api.whoami()
-print(f"User: {user['name']}, Token: {user['auth']['type']}")
-
-# Liked / following
-likes = api.list_liked_repos("user")
-for like in likes.models:
-    print(f"Liked model: {like.id}")
-```
-
-### 13. Utility & Housekeeping (10 methods)
-
-```python
-# Get full repo name (resolves relative IDs)
-full = api.get_full_repo_name("my-model", organization="org-name")
-
-# Check revision existence
-exists = api.revision_exists("user/my-model", "main", repo_type="model")
-
-# List repo likers
-for user in api.list_repo_likers("user/my-model", repo_type="model"):
-    print(f"{user['user']}: {user['fullname']}")
-
-# List user repos
-for repo in api.list_user_repos("user", repo_type="model"):
-    print(f"{repo.repo_id}: {repo.type}")
-
-# List user followers/following
-for follower in api.list_user_followers("user"):
-    print(follower['user'])
-
-# Org info
-org = api.get_organization_overview("org-name")
-for member in api.list_organization_members("org-name"):
-    print(f"{member['user']} ({member.get('role', 'member')})")
-
-# Pre-upload LFS files (for memory-constrained environments)
-api.preupload_lfs_files(
-    repo_id="user/my-model",
-    operations=ops,
-    repo_type="model",
-)
-
-# List repo commits
-for commit in api.list_repo_commits("user/my-model", repo_type="model", limit=10):
-    print(f"{commit.oid[:8]}: {commit.title} ({commit.date})")
-
-# Run as future (non-blocking commit)
-future = api.run_as_future(
-    api.create_commit,
-    repo_id="user/my-model",
-    operations=ops,
-    commit_message="Async upload",
-)
-```
-
-### 14. Zero-Cost Patterns — Practical Recipes
-
-#### Recipe 1: Automated Model Card Update (cron-friendly)
-
-```python
-from huggingface_hub import HfApi
-api = HfApi()
-
-# Read existing model card
-info = api.model_info("user/my-model", expand=["cardData"])
-current_card = info.cardData or {}
-
-# Update card data
-current_card.update({
-    "metrics": [{"accuracy": 0.95}],
-    "widget": [{"text": "Sample input"}],
-})
-api.update_repo_settings("user/my-model", card_data=current_card)
-```
-
-#### Recipe 2: Daily Dataset Stats Collection (UV Job)
-
-```python
-# Run this daily via create_scheduled_uv_job
-import json
-from huggingface_hub import HfApi
-api = HfApi()
-
-results = []
-for model in api.list_models(sort="downloads", direction=-1, limit=50):
-    results.append({"id": model.id, "downloads": model.downloads, "likes": model.likes})
-
-# Store in a bucket
-api.create_bucket("daily-stats", exist_ok=True)
-import tempfile
-with tempfile.NamedTemporaryFile(mode='w', suffix='.json') as f:
-    json.dump({"date": "2026-07-24", "models": results}, f)
-    f.flush()
-    api.sync_bucket(f.name, "hf://buckets/user/daily-stats/top-models.json")
-```
-
-#### Recipe 3: Space Duplication with Configuration
-
-```python
-# Duplicate a Gradio Space with all secrets and storage
-url = api.duplicate_space(
-    "user/template-space",
-    "my-new-space",
-    hardware="t4-medium",
-    storage="small",
-    sleep_time=300,
-    secrets=[{"key": "HF_TOKEN", "value": "hf_..."}],
-    variables=[{"key": "MODEL_ID", "value": "user/my-model"}],
-    exist_ok=True,
-)
-api.wait_for_space("user/my-new-space")
-```
-
-#### Recipe 4: Bucket as Job Artifact Store
-
-```python
-# In a scheduled UV job
-from huggingface_hub import HfApi
-import json, tempfile
-
-api = HfApi()
-results = {"status": "ok", "count": 42, "generated_at": "2026-07-24T07:00:00Z"}
-
-with tempfile.NamedTemporaryFile(mode='w', suffix='.json') as f:
-    json.dump(results, f)
-    f.flush()
-    api.batch_bucket_files(
-        "artifact-bucket",
-        add=[(f.name, f"reports/daily-2026-07-24.json")],
-    )
-```
-
-### 15. All 161 HfApi Methods — Full Reference
-
-| Category | Count | Methods |
-|----------|-------|---------|
-| **Repository CRUD** | 6 | `create_repo`, `delete_repo`, `repo_info`, `repo_exists`, `update_repo_settings`, `move_repo`, `duplicate_repo`, `super_squash_history` |
-| **File Operations** | 22 | `create_commit`, `upload_file`, `upload_folder`, `upload_large_folder`, `hf_hub_download`, `snapshot_download`, `file_exists`, `get_hf_file_metadata`, `list_repo_files`, `list_repo_tree`, `list_repo_commits`, `get_paths_info`, `copy_files`, `delete_file`, `delete_files`, `delete_folder`, `preupload_lfs_files`, `parse_safetensors_file_metadata`, `get_safetensors_metadata`, `list_lfs_files`, `permanently_delete_lfs_files`, `verify_repo_checksums` |
-| **Buckets** | 12 | `create_bucket`, `bucket_info`, `delete_bucket`, `list_buckets`, `move_bucket`, `sync_bucket`, `batch_bucket_files`, `list_bucket_tree`, `download_bucket_files`, `get_bucket_file_metadata`, `get_bucket_paths_info`, `list_buckets` |
-| **Spaces** | 25 | `space_info`, `get_space_runtime`, `list_spaces`, `search_spaces`, `list_space_templates`, `add_space_secret`, `get_space_secrets`, `delete_space_secret`, `add_space_variable`, `get_space_variables`, `delete_space_variable`, `request_space_hardware`, `request_space_storage`, `delete_space_storage`, `set_space_volumes`, `delete_space_volumes`, `set_space_sleep_time`, `pause_space`, `restart_space`, `duplicate_space`, `enable_space_dev_mode`, `disable_space_dev_mode`, `fetch_space_logs`, `wait_for_space`, `list_spaces_hardware` |
-| **Jobs** | 20 | `run_job`, `run_uv_job`, `create_scheduled_job`, `create_scheduled_uv_job`, `list_jobs`, `list_scheduled_jobs`, `cancel_job`, `wait_for_job`, `fetch_job_logs`, `fetch_job_metrics`, `inspect_job`, `inspect_scheduled_job`, `suspend_scheduled_job`, `resume_scheduled_job`, `trigger_scheduled_job`, `delete_scheduled_job`, `update_job_labels`, `update_scheduled_job_labels`, `list_jobs_hardware`, `sync_job_volume` |
-| **Webhooks** | 7 | `create_webhook`, `get_webhook`, `update_webhook`, `delete_webhook`, `list_webhooks`, `enable_webhook`, `disable_webhook` |
-| **Collections** | 8 | `list_collections`, `get_collection`, `create_collection`, `update_collection_metadata`, `delete_collection`, `add_collection_item`, `update_collection_item`, `delete_collection_item` |
-| **Discussions** | 8 | `get_repo_discussions`, `create_discussion`, `comment_discussion`, `edit_discussion_comment`, `hide_discussion_comment`, `rename_discussion`, `change_discussion_status`, `merge_pull_request` |
-| **Access Requests** | 7 | `list_pending_access_requests`, `list_accepted_access_requests`, `list_rejected_access_requests`, `accept_access_request`, `reject_access_request`, `cancel_access_request`, `grant_access` |
-| **Branches & Tags** | 5 | `create_branch`, `delete_branch`, `create_tag`, `delete_tag`, `list_repo_refs` |
-| **Discovery** | 12 | `list_models`, `model_info`, `get_model_tags`, `list_datasets`, `dataset_info`, `get_dataset_tags`, `list_dataset_parquet_files`, `list_spaces`, `space_info`, `list_daily_papers`, `search_spaces`, `get_dataset_leaderboard` |
-| **User & Org** | 8 | `whoami`, `get_user_overview`, `list_user_followers`, `list_user_following`, `list_user_repos`, `get_organization_overview`, `list_organization_members`, `list_organization_followers` |
-| **Utilities** | 10 | `get_full_repo_name`, `revision_exists`, `list_repo_likers`, `list_liked_repos`, `run_as_future`, `auth_check`, `like`, `unlike`, `super_squash_history`, `verify_repo_checksums` |
-
-### Resources
-- Official API docs: https://huggingface.co/docs/huggingface_hub/en/index
-- HfApi reference: https://huggingface.co/docs/huggingface_hub/en/package_reference/hf_api
-- Migration guide: https://huggingface.co/docs/huggingface_hub/en/migration
-- CLI reference: https://huggingface.co/docs/huggingface_hub/en/guides/cli
-- Source code: `huggingface_hub/hf_api.py` — 161 public methods in v1.24.0
-|- Changelog: https://github.com/huggingface/huggingface_hub/releases
-
----
-
-## 2026-07-24: hf-hub-cache-deep-dive — Cache System Architecture & Management (Deep Dive on Topic #8 hf-hub-cache-and-env)
-
-### Summary
-Comprehensive deep-dive into the Hugging Face Hub's caching system — the file-based cache (`~/.cache/huggingface/hub/`), its 5 internal structures (blobs, refs, snapshots, trees, .no_exist), symlink-based deduplication, the chunk-based Xet cache layer, environment variables for control, and the full suite of inspection/verification/cleanup tools (`hf cache ls/verify/rm/prune` and Python API `scan_cache_dir`/`delete_revisions`). Covers architecture, disk management strategies, zero-cost optimization patterns, limitations, and production best practices.
-
-### Architecture Overview
-
-The HF Hub cache uses a **deduplicated symlink architecture** with two layers:
-
-**1. File-based cache** (`~/.cache/huggingface/hub/`) — the standard Git/LFS-based cache
-**2. Chunk-based Xet cache** (`~/.cache/huggingface/xet/`) — optional chunk-level dedup via `hf_xet`
-
-The cache location is controlled by:
-- `HF_HOME` — base dir (default: `~/.cache/huggingface`)
-- `HF_HUB_CACHE` — hub cache dir (default: `$HF_HOME/hub`)
-- `HF_XET_CACHE` — Xet cache dir (default: `$HF_HOME/xet`)
-- `HF_ASSETS_CACHE` — assets cache (default: `$HF_HOME/assets`)
-- `HF_TOKEN_PATH` — token file (default: `$HF_HOME/token`)
-- Falls back to `$XDG_CACHE_HOME/huggingface` if `HF_HOME` not set
-
-### File-Based Cache: 5 Internal Structures
-
-Each cached repo is stored under a directory named `{repo_type}s--{namespace}--{repo_name}` (e.g. `models--bert-base-uncased`).
-
-#### 1. `blobs/` — Deduplicated file storage
-Stores each unique file by its SHA-256 hash as filename. Files are identified by content hash, so identical files across revisions share a single blob. This is the core of disk deduplication.
-
-```
-blobs/
-  ├── 403450e234d65943a7dcf7e05a771ce3c92faa84dd07db4ac20f592037a1e4bd  (321 MB)
-  ├── 7cb18dc9bafbfcf74629a4b760af1b160957a83e                        (398 B)
-  └── d7edf6bd2a681fb0175f7735299831ee1b22b812                        (1.4 KB)
-```
-
-#### 2. `refs/` — Branch/tag pointer files
-Maps branch/tag names to commit OIDs. Each ref is a small file whose content is the commit hash it points to. Updated whenever you download the latest version of a branch.
-
-```
-refs/
-  └── main    (contains: "2439f60ef33a0d46d85da5001d52aeda5b00ce9f")
-```
-
-#### 3. `snapshots/` — Revision checkouts via symlinks
-Contains one subdirectory per downloaded commit hash. Each directory contains symlinks pointing to the actual blobs, organized by filename. The content only exists in `blobs/`; `snapshots/` is purely a view layer.
-
-```
-snapshots/
-  ├── 2439f60ef33a0d46d85da5001d52aeda5b00ce9f/
-  │   ├── README.md -> ../../blobs/d7edf6bd2a681fb0175f7735299831ee1b22b812
-  │   └── pytorch_model.bin -> ../../blobs/403450e234d65943a7dcf7e05a771ce3c92faa84dd07db4ac20f592037a1e4bd
-  └── bbc77c8132af1cc5cf678da3f1ddf2de43606d48/
-      ├── README.md -> ../../blobs/7cb18dc9bafbfcf74629a4b760af1b160957a83e
-      └── pytorch_model.bin -> ../../blobs/403450e234d65943a7dcf7e05a771ce3c92faa84dd07db4ac20f592037a1e4bd
-```
-
-**Key insight:** `pytorch_model.bin` in both revisions points to the **same blob** — the file is not duplicated on disk.
-
-#### 4. `trees/` — Cached file listing metadata
-JSON files named by commit hash that cache the list of files a repo contains at that commit. Avoids one network call per file during download. Written by `snapshot_download()`, read by both `snapshot_download()` and `hf_hub_download()`.
-
-```
-trees/
-  ├── 2439f60ef33a0d46d85da5001d52aeda5b00ce9f.json
-  └── bbc77c8132af1cc5cf678da3f1ddf2de43606d48.json
-```
-
-**Incremental benefit:** If a tree is cached, `hf_hub_download()` skips the per-file metadata network call. Enables `IncompleteSnapshotError` detection when offline.
-
-#### 5. `.no_exist/` — Negative cache for optional files
-Stores empty marker files for files that are known not to exist on the Hub (e.g., optional tokenizer configs). Saves one HTTP call per optional file on every subsequent load. Structure mirrors `snapshots/`.
-
-```
-.no_exist/aaaaaa/config_that_does_not_exist.json  (empty file)
-```
-
-### CACHEDIR.TAG
-`huggingface_hub` automatically creates a `CACHEDIR.TAG` file in the cache directory following the Cache Directory Tagging Standard. This tells backup tools (Borg, restic, rsync) to exclude the cache from backups, since it's re-downloadable.
-
-### Symlink Limitations
-
-| Environment | Symlink Support | Behavior |
-|-------------|----------------|----------|
-| Linux/macOS | Native | Full dedup, shared blobs |
-| Windows (Dev Mode) | Supported | Same as Linux |
-| Windows (no Dev Mode) | Fallback | Files copied directly to `snapshots/` — no dedup, larger disk usage |
-| `HF_HUB_DISABLE_SYMLINKS=1` | Forced off | Files copied to snapshots; useful for NAS shared across OSes |
-
-A warning is shown on Windows when symlinks aren't available. Suppress with `HF_HUB_DISABLE_SYMLINKS_WARNING=1`.
-
-### Chunk-Based Caching (Xet)
-
-When `hf_xet` is installed, an additional `xet/` directory appears alongside `hub/`:
-
-```
-~/.cache/huggingface/
-  ├── hub/           # Standard file-based cache
-  └── xet/           # Chunk-based cache (Xet)
-       └── {environment_identifier}/
-            ├── chunk_cache/     # CAS-based byte-range cache (disabled by default)
-            ├── shard_cache/     # Upload-efficient shard metadata (soft limit: 4GB)
-            └── staging/         # Resumable upload workspace
-```
-
-- **chunk_cache**: Caches 64KB chunks from CAS for download. **Disabled by default.** Enable with `HF_XET_CHUNK_CACHE_SIZE_BYTES` (e.g. `=10737418240` for 10GB). Uses random eviction policy when full.
-- **shard_cache**: Caches file-to-chunk mapping metadata for uploads. Default soft limit 4GB (`HF_XET_SHARD_CACHE_SIZE_LIMIT`). Deduplicates uploads across commits.
-- **staging**: Workspace for resumable uploads — persists incomplete uploads across restarts.
-
-The Xet cache is fully integrated with `huggingface_hub` — existing APIs (`scan_cache_dir`, `hf cache rm`) treat it transparently.
-
-### Environment Variables Reference
-
-| Variable | Default | Purpose |
-|----------|---------|---------|
-| `HF_HOME` | `~/.cache/huggingface` | Base directory for all HF data |
-| `HF_HUB_CACHE` | `$HF_HOME/hub` | Model/dataset/spaces cache |
-| `HF_XET_CACHE` | `$HF_HOME/xet` | Xet chunk cache |
-| `HF_ASSETS_CACHE` | `$HF_HOME/assets` | Downstream library assets |
-| `HF_TOKEN_PATH` | `$HF_HOME/token` | Auth token file |
-| `HF_HUB_OFFLINE` | — | `=1` disables all HTTP calls |
-| `HF_HUB_DISABLE_SYMLINKS` | — | Force no-symlink mode |
-| `HF_HUB_DISABLE_SYMLINKS_WARNING` | — | Suppress Windows symlink warning |
-| `HF_HUB_ETAG_TIMEOUT` | 10s | Server response timeout for metadata |
-| `HF_HUB_DOWNLOAD_TIMEOUT` | 10s | Download timeout |
-| `HF_HUB_DISABLE_PROGRESS_BARS` | — | `=1` hides tqdm bars |
-| `HF_HUB_DISABLE_IMPLICIT_TOKEN` | — | `=1` only sends token for write ops |
-| `HF_HUB_DISABLE_TELEMETRY` | — | `=1` disables usage telemetry |
-| `HF_HUB_DISABLE_XET` | — | `=1` disables Xet even if installed |
-| `HF_XET_HIGH_PERFORMANCE` | — | `=1` saturates bandwidth + CPU cores |
-| `HF_XET_CHUNK_CACHE_SIZE_BYTES` | 0 | Chunk cache size (0 = disabled) |
-| `HF_XET_SHARD_CACHE_SIZE_LIMIT` | 4GB | Shard cache soft limit |
-| `HF_XET_RECONSTRUCT_WRITE_SEQUENTIALLY` | — | Sequential disk writes for HDDs |
-
-**Deprecated vars (still work but no longer take precedence):**
-| Old | New |
-|-----|-----|
-| `HUGGINGFACE_HUB_CACHE` | `HF_HUB_CACHE` |
-| `HUGGINGFACE_ASSETS_CACHE` | `HF_ASSETS_CACHE` |
-| `HUGGING_FACE_HUB_TOKEN` | `HF_TOKEN` |
-
-### Cache Inspection Tools
-
-#### CLI: `hf cache ls`
-```bash
-# Summary by repo
-hf cache ls
-
-# With revision details
-hf cache ls --revisions
-
-# Filter by size/access time
-hf cache ls --revisions --filter "size>1GB" --filter "accessed>30d"
-
-# Machine-readable output
-hf cache ls --format json
-hf cache ls --format csv
-
-# Quiet mode (IDs only, pipeable)
-hf cache ls --revisions -q
-
-# Sort and limit
-hf cache ls --sort size:desc --limit 5
-
-# Custom cache dir
-hf cache ls --cache-dir /custom/path
-```
-
-#### Python: `scan_cache_dir()`
-```python
-from huggingface_hub import scan_cache_dir, delete_revisions
-
-# Scan entire cache
-info = scan_cache_dir()
-print(f"Total size: {info.size_on_disk / 1e9:.1f} GB")
-print(f"Cached repos: {len(info.repos)}")
-
-# Iterate repos, revisions, and files
-for repo in info.repos:
-    print(f"{repo.repo_type}/{repo.repo_id}: {repo.size_on_disk / 1e6:.1f} MB")
-    for revision in repo.revisions:
-        for ref in revision.refs:
-            print(f"  Branch/tag: {ref.name} -> {revision.commit_hash}")
-
-# Delete specific revisions
-strategy = info.delete_revisions(
-    "d78aea13fa7ecd06c29e3e46195d6341255065d5",  # commit hash
-)
-print(f"Would free: {strategy.expected_freed_size_str}")
-strategy.execute()  # Actually delete
-```
-
-Returns 4 dataclasses:
-- `HFCacheInfo` — complete report with `repos`, `size_on_disk`, `warnings`
-- `CachedRepoInfo` — per-repo info: `repo_id`, `repo_type`, `size_on_disk`, `revisions`
-- `CachedRevisionInfo` — per-revision: `commit_hash`, `refs`, `files`, `size_on_disk`
-- `CachedFileInfo` — per-file: `file_name`, `size_on_disk`, `blob_path`
-
-#### `try_to_load_from_cache()` — Check cache without network
-```python
-from huggingface_hub import try_to_load_from_cache, _CACHED_NO_EXIST
-
-result = try_to_load_from_cache(
-    repo_id="bert-base-uncased",
-    filename="config.json",
-    revision="main"
-)
-
-if isinstance(result, str):
-    # File is cached: result is the file path
-    pass
-elif result is _CACHED_NO_EXIST:
-    # File known not to exist (negative cache)
-    pass
-else:
-    # Not cached at all
-    pass
-```
-
-### Cache Verification
-
-```bash
-# CLI: verify checksums for a specific revision
-hf cache verify meta-llama/Llama-3.2-1B-Instruct
-
-# Verify a specific revision hash
-hf cache verify meta-llama/Llama-3.1-8B-Instruct --revision 0e9e39f249a16976918f6564b8830bc894c89659
-```
-
-Verification checks that every cached blob's SHA-256 matches the Hub. Reports `CorruptedCacheException` if checksums differ.
-
-### Cache Cleanup
-
-#### CLI: `hf cache rm` — Targeted deletion
-```bash
-# Delete entire repo
-hf cache rm model/bert-base-cased
-
-# Delete specific revision (by hash)
-hf cache rm 8f3ad1c
-
-# Bulk delete via filter pipeline
-hf cache rm $(hf cache ls --filter "accessed>1y" -q) -y
-
-# Preview without deleting
-hf cache rm model/t5-small --dry-run
-
-# Skip confirmation
-hf cache rm model/t5-small -y
-
-# Custom cache dir
-hf cache rm --cache-dir /path model/bert-base-cased
-```
-
-#### CLI: `hf cache prune` — Unreferenced & incomplete cleanup
-```bash
-hf cache prune
-```
-Automatically deletes:
-1. Revisions no longer referenced by any branch or tag (`HEAD` detached leftovers)
-2. Any `.incomplete` files from interrupted downloads
-
-#### Python: `delete_revisions()`
-```python
-from huggingface_hub import scan_cache_dir
-
-info = scan_cache_dir()
-# Build strategy for specific revisions
-strategy = info.delete_revisions("commit_hash_1", "commit_hash_2")
-print(strategy.expected_freed_size_str)
-strategy.execute()
-```
-
-**Deletion strategy:**
-1. Snapshot folder symlinks are deleted
-2. Blobs only referenced by deleted revisions are deleted (shared blobs preserved)
-3. Branch/tag refs for deleted revisions are removed
-4. If all revisions of a repo are deleted, the entire repo directory is removed
-
-### Assets Cache (`cached_assets_path()`)
-For downstream libraries that need to cache non-Hub files (processed data, downloads from external URLs, etc.):
-```python
-from huggingface_hub import cached_assets_path
-
-path = cached_assets_path(
-    library_name="datasets",
-    namespace="SQuAD",
-    subfolder="extracted"
-)
-# Returns: ~/.cache/huggingface/assets/datasets/SQuAD/extracted/
-```
-Structure: `assets/{library}/{namespace}/{subfolder}/`. Integrates with `scan_cache_dir` for unified cache management.
-
-### Zero-Cost Disk Management Strategies
-
-1. **Regular pruning:** `hf cache prune` weekly — recovers space from unreferenced revisions
-2. **Age-based cleanup:** `hf cache rm $(hf cache ls --filter "accessed>30d" -q) -y` — removes stale caches
-3. **Size-based targeting:** `hf cache ls --sort size:desc` — identify largest repos
-4. **Offline mode:** `HF_HUB_OFFLINE=1` speeds up loading by skipping refresh checks
-5. **ETAG timeout tuning:** `HF_HUB_ETAG_TIMEOUT=2` on slow connections to fail fast to cache
-6. **CACHEDIR.TAG:** Already present — backup tools skip the cache automatically
-7. **Shared cache:** Set `HF_HUB_CACHE` to a network drive with `HF_HUB_DISABLE_SYMLINKS=1` for multi-machine setups
-8. **Chunk cache:** Only enable `HF_XET_CHUNK_CACHE_SIZE_BYTES` when iterating same files repeatedly; leave disabled (default) for one-shot downloads
-
-### Comparison: File-based vs Xet Cache
-
-| Dimension | File-based | Xet (chunk-based) |
-|-----------|------------|-------------------|
-| **Granularity** | Entire files (SHA-256) | 64KB chunks |
-| **Dedup scope** | Across revisions of same file | Across files, repos, and revisions |
-| **Download speedup** | Cached files load instantly | Chunks shared across variants |
-| **Upload speedup** | No | Yes (shard cache) |
-| **Disk overhead** | Low (symlinks are cheap) | Medium (chunk index) |
-| **Enabled by default** | Yes | No (unless `hf_xet` installed) |
-| **Best for** | Model weight reuse | Iterative training with similar data |
-
-### Resources
-- Manage cache guide: https://huggingface.co/docs/huggingface_hub/en/guides/manage-cache
-- Cache-system reference: https://huggingface.co/docs/huggingface_hub/en/package_reference/cache
-- Environment variables: https://huggingface.co/docs/huggingface_hub/en/package_reference/environment_variables
-- Xet guide: https://huggingface.co/docs/hub/xet/index
-- `scan_cache_dir` docs: https://huggingface.co/docs/huggingface_hub/main/en/package_reference/cache#huggingface_hub.scan_cache_dir
-- `hf cache` CLI: https://huggingface.co/docs/huggingface_hub/main/en/guides/cli#hf-cache
-|- CACHEDIR.TAG standard: https://bford.info/cachedir/
-
-## 2026-07-24: hf-inference-client-structured-outputs — Deep Dive v2 (Topic #100)
-
-### Summary
-Deep-dive v2 into Hugging Face `InferenceClient` — covering the v1.24.0 overhaul with OpenAI-compatible aliases, multi-provider routing internals, the Router API for provider comparison, Hub API for model discovery, and advanced patterns (vision/multimodal input, extra_body for provider-specific params, direct provider API keys, third-party billing). Based on official docs at huggingface_hub v1.24.0.
-
-### Key New in v1.24.0
-
-| Feature | What Changed |
-|---------|-------------|
-| **OpenAI alias** | `client.chat.completions.create()` aliases `client.chat_completion()` |
-| **OpenAI init** | `InferenceClient(base_url=..., api_key=...)` mirrors `OpenAI()` |
-| **Provider suffix** | Model id accepts `:fastest`, `:cheapest`, `:preferred`, `:provider-name` |
-| **extra_body** | Pass provider-specific params through to the underlying provider |
-| **Direct API key** | Pass a provider's own API key (billed to them) instead of HF token |
-| **Automatic failover** | Auto provider selection routes to alternative if primary is flagged unavailable |
-| **Router API** | `GET /v1/models` lists all models with per-provider pricing, latency, throughput |
-
-### 1. OpenAI-Compatible Initialization (v1.24.0+)
-
-InferenceClient now accepts the same init kwargs as `openai.OpenAI`:
-
-```python
-# Style 1 — classic HF
-from huggingface_hub import InferenceClient
-client = InferenceClient(model="meta-llama/Meta-Llama-3-8B-Instruct")
-
-# Style 2 — OpenAI-compatible init
-client = InferenceClient(
-    base_url="https://router.huggingface.co/v1",
-    api_key="hf_...",  # alias for token=
-)
-
-# Chat completion both ways
-result = client.chat_completion(messages=[...])          # classic
-result = client.chat.completions.create(messages=[...])   # OpenAI alias
-```
-
-**Key constraint:** `model` and `base_url` are mutually exclusive on init. If you pass `base_url`, the `(/v1)/chat/completions` suffix is appended automatically for chat completion calls. If you pass `model` as a model ID, it's sent as the payload `model` parameter.
-
-### 2. Provider Selection — Three Policies + Suffix Syntax
-
-#### Client-Side (InferenceClient `provider` param)
-```python
-client = InferenceClient(provider="auto")       # fastest (default)
-client = InferenceClient(provider="together")    # force specific provider
-```
-
-#### Model-ID Suffix Syntax
-Append to the model id string for per-call override:
-```python
-result = client.chat_completion(
-    model="deepseek-ai/DeepSeek-R1:fastest",    # fastest provider
-    messages=[...],
-)
-# :cheapest  — lowest price per output token
-# :preferred — user preference order from https://hf.co/settings/inference-providers
-# :groq      — direct provider name (any of the 17 supported providers)
-```
-
-#### Automatic Failover
-When `provider="auto"`, requests are automatically routed to alternative providers if the primary is flagged as unavailable by the validation system. This makes `auto` the most reliable option for production.
-
-### 3. The Router API — Provider Comparison
-
-The router exposes an OpenAI-compatible `GET /v1/models` with full per-provider metadata:
-
-```bash
-# List all served models with provider comparison data
-curl -s https://router.huggingface.co/v1/models | jq '.data[] | {id, providers: [.providers[] | {provider, status, pricing, supports_structured_output, throughput}]}'
-
-# Single model
-curl -s https://router.huggingface.co/v1/models/deepseek-ai/DeepSeek-V4-Pro | jq '.'
-```
-
-**Per-provider fields returned:**
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `provider` | string | Provider identifier (e.g., "novita", "together") |
-| `status` | string | `live` or `error` |
-| `context_length` | number | Max context for this provider+model combo |
-| `pricing.input` | number | USD per million input tokens |
-| `pricing.output` | number | USD per million output tokens |
-| `is_free` | boolean | Temporary free promo |
-| `supports_tools` | boolean | Tool/function calling support |
-| `supports_structured_output` | boolean | JSON-schema-constrained output |
-| `first_token_latency_ms` | number | Latest validation probe TTFT |
-| `throughput` | number | Output tokens/sec from latest probe |
-| `is_model_author` | boolean | Whether model was published by this provider |
-
-**Use case:** Before calling inference, query this endpoint to find which providers support structured output for your model at the lowest latency, then pin that provider.
-
-### 4. Hub API — Model Discovery for Inference
-
-```bash
-# All models served by any inference provider
-~ curl -s "https://huggingface.co/api/models?inference_provider=all&pipeline_tag=text-generation" | jq ".[].id"
-
-# Models served by a specific provider
-~ curl -s "https://huggingface.co/api/models?inference_provider=fireworks-ai" | jq ".[].id"
-
-# Multiple providers (comma-separated = OR)
-~ curl -s "https://huggingface.co/api/models?inference_provider=nscale,novita&pipeline_tag=image-text-to-text" | jq ".[].id"
-
-# Check if a specific model has inference enabled
-~ curl -s "https://huggingface.co/api/models/google/gemma-3-27b-it?expand[]=inference"
-# Response: {"id": "...", "inference": "warm"} or no "inference" field
-
-# Get per-provider mapping for a model
-~ curl -s "https://huggingface.co/api/models/google/gemma-3-27b-it?expand[]=inferenceProviderMapping"
-```
-
-Same from Python:
-```python
-from huggingface_hub import model_info
-
-info = model_info("google/gemma-3-27b-it", expand="inference")
-print(info.inference)  # "warm" or None
-
-info = model_info("google/gemma-3-27b-it", expand="inferenceProviderMapping")
-print(info.inference_provider_mapping)
-# {'featherless-ai': InferenceProviderMapping(status='live', ...), ...}
-```
-
-CLI equivalent:
-```bash
-hf models ls --warn                              # all served models
-hf models ls --warn --search GLM-5.2              # search served models
-hf models ls --inference-provider fal-ai --pipeline-tag text-to-image
-hf models ls --inference-provider fireworks-ai --sort downloads
-```
-
-### 5. Billing Modes — Three Patterns
-
-```python
-# 1. Hugging Face billing (default)
-client = InferenceClient(api_key="hf_...")  # Uses HF credits/plan
-
-# 2. Bill to Enterprise org
-client = InferenceClient(provider="fal-ai", bill_to="my-org")
-
-# 3. Direct provider API key (billed directly by provider)
-client = InferenceClient(
-    provider="together",
-    api_key="<together_api_key>",  # Not HF token! Provider's own key
-)
-```
-
-Pattern 3 bypasses HF billing and uses your provider account directly, while still using the HF client interface.
-
-### 6. Provider-Specific Parameters (extra_body)
-
-```python
-result = client.chat_completion(
-    model="meta-llama/Meta-Llama-3-8B-Instruct",
-    messages=[...],
-    extra_body={
-        "safety_model": "Meta-Llama/Llama-Guard-7b",  # Together-specific
-        # Any provider-specific param from their API docs
-    },
-)
-```
-
-The `extra_body` dict is passed directly to the provider API. Check the provider's documentation for supported parameters.
-
-### 7. Vision / Multimodal Input
-
-```python
-# Remote URL
-image_url = "https://cdn.britannica.com/61/93061-050-99147DCE/Statue-of-Liberty-Island-New-York-Bay.jpg"
-
-# Or base64-encoded local image
-with open("image.jpeg", "rb") as f:
-    base64_image = base64.b64encode(f.read()).decode("utf-8")
-image_url = f"data:image/jpeg;base64,{base64_image}"
-
-output = client.chat.completions.create(
-    model="meta-llama/Llama-3.2-11B-Vision-Instruct",
-    messages=[{
-        "role": "user",
-        "content": [
-            {"type": "image_url", "image_url": {"url": image_url}},
-            {"type": "text", "text": "Describe this image in one sentence."},
-        ],
-    }],
-)
-```
-
-### 8. Complete Method Surface
-
-All task-specific methods available on InferenceClient (v1.24.0):
-
-| Method | Task | Binary Input |
-|--------|------|-------------|
-| `chat_completion()` | Chat / text generation | — |
-| `text_generation()` | Raw text generation (non-chat) | — |
-| `text_to_image()` | Image generation | — |
-| `image_classification()` | Classify images | bytes, Path, URL |
-| `image_segmentation()` | Segment images | bytes, Path, URL |
-| `image_to_image()` | Image-to-image translation | bytes, Path, URL |
-| `object_detection()` | Detect objects | bytes, Path, URL |
-| `zero_shot_image_classification()` | Zero-shot image classification | bytes, Path, URL |
-| `automatic_speech_recognition()` | Speech-to-text | bytes, Path, URL |
-| `text_to_speech()` | Text-to-speech | — |
-| `text_to_audio()` | Audio generation | — |
-| `audio_classification()` | Audio classification | bytes, Path, URL |
-| `audio_to_audio()` | Audio-to-audio transformation | bytes, Path, URL |
-| `feature_extraction()` | Embeddings | — |
-| `sentence_similarity()` | Compare texts | — |
-| `fill_mask()` | Masked language modeling | — |
-| `summarization()` | Text summarization | — |
-| `translation()` | Machine translation | — |
-| `zero_shot_classification()` | Zero-shot classification | — |
-| `tabular_classification()` | Tabular classification | — |
-| `tabular_regression()` | Tabular regression | — |
-| `document_question_answering()` | Document QA | bytes, Path, URL |
-| `visual_question_answering()` | Visual QA | bytes, Path, URL |
-
-### 9. Streaming Options
-
-```python
-# Basic streaming
-stream = client.chat_completion(messages=[...], model="...", stream=True)
-for chunk in stream:
-    print(chunk.choices[0].delta.content or "", end="")
-
-# With stream_options
-stream = client.chat_completion(
-    messages=[...],
-    model="...",
-    stream=True,
-    stream_options={"include_usage": True},  # returns usage info in final chunk
-)
-```
-
-### 10. Error Handling
-
-```python
-from huggingface_hub import InferenceClient, InferenceTimeoutError, HfHubHTTPError
-
-client = InferenceClient(timeout=30)
-try:
-    result = client.chat_completion(messages=[...], model="...")
-except InferenceTimeoutError:
-    print("Model unavailable or request timed out after 30s")
-except HfHubHTTPError as e:
-    if e.response.status_code == 503:
-        print("Model is loading, retry later")
-    else:
-        print(f"HTTP error: {e}")
-```
-
-### Resources
-- [InferenceClient API reference](https://huggingface.co/docs/huggingface_hub/v1.24.0/en/package_reference/inference_client)
-- [Inference Providers docs](https://huggingface.co/docs/inference-providers/en/index)
-- [Inference Providers Hub API](https://huggingface.co/docs/inference-providers/en/hub-api)
-- [Inference guide](https://huggingface.co/docs/huggingface_hub/en/guides/inference)
-- [hf models ls CLI](https://huggingface.co/docs/huggingface_hub/package_reference/cli#hf-models-list)
-
-## 2026-07-25: hf-datasets-server-core-endpoints-deep-dive
-
-### Summary
-Comprehensive deep-dive into the Hugging Face Datasets Server REST API — the zero-download way to inspect, query, and analyze datasets on the Hub. Covers all core endpoints (`/splits`, `/size`, `/statistics`, `/parquet`, `/first-rows`, `/rows`, `/is-valid`, `/configs`), their request/response schemas, and practical integration patterns with Python, DuckDB, and Polars. Based on real API responses from `datasets-server.huggingface.co`.
-
-### Base URL
-```
-https://datasets-server.huggingface.co
-```
-All endpoints are GET requests. The `dataset` parameter is the Hub dataset ID (e.g., `stanfordnlp/imdb`). For datasets with configs (subsets), `config` and `split` parameters are required on most endpoints.
-
----
-
-### 1. `/is-valid` — Quick Health Check
-**Purpose:** Check whether a dataset is fully processed and available on the Datasets Server.
-
-**Request:**
-```
-GET /is-valid?dataset=stanfordnlp/imdb
-```
-
-**Response:**
-```json
-{"preview": true, "viewer": true, "search": true, "filter": true, "statistics": true}
-```
-
-**Fields:**
-| Field | Meaning |
-|-------|---------|
-| `preview` | First-rows endpoint is available |
-| `viewer` | Full rows endpoint is available |
-| `search` | Search endpoint is available |
-| `filter` | Filter endpoint is available |
-| `statistics` | Statistics endpoint is available |
-
-**Use case:** Before building a dataset explorer tool, call `/is-valid` to check which capabilities are enabled. Some datasets may have `preview: true` but `search: false`.
-
----
-
-### 2. `/configs` — List Dataset Configs (Subsets)
-**Purpose:** List all available configs (subsets) for a dataset.
-
-**Request:**
-```
-GET /configs?dataset=bigcode/the-stack
-```
-
-**Key detail:** Many popular datasets (GLUE, SUPERGLUE) expose multiple configs for different subtasks. Always call `/configs` first when exploring an unfamiliar dataset.
-
----
-
-### 3. `/splits` — List Splits Per Config
-**Purpose:** List all splits (train/test/validation) for each config.
-
-**Request:**
-```
-GET /splits?dataset=stanfordnlp/imdb
-```
-
-**Response:**
-```json
-{
-  "splits": [
-    {"dataset": "stanfordnlp/imdb", "config": "plain_text", "split": "train"},
-    {"dataset": "stanfordnlp/imdb", "config": "plain_text", "split": "test"},
-    {"dataset": "stanfordnlp/imdb", "config": "plain_text", "split": "unsupervised"}
-  ],
-  "pending": [],
-  "failed": []
-}
-```
-
-**Error handling:** `pending` and `failed` arrays list configs still processing or errored. Retry failed configs after a few minutes.
-
----
-
-### 4. `/size` — Dataset Size Overview
-**Purpose:** Get byte sizes, row counts, and column counts at dataset/config/split level.
-
-**Request:**
-```
-GET /size?dataset=stanfordnlp/imdb
-```
-
-**Response (tiered — dataset → configs → splits):**
-```json
-{
-  "size": {
-    "dataset": {
-      "num_bytes_original_files": 83446840,
-      "num_bytes_parquet_files": 83446840,
-      "num_bytes_memory": 128683449,
-      "num_rows": 100000
-    },
-    "configs": [{
-      "config": "plain_text",
-      "num_rows": 100000, "num_columns": 2
-    }],
-    "splits": [
-      {"config": "plain_text", "split": "train",
-        "num_bytes_parquet_files": 20979968, "num_bytes_memory": 33090550,
-        "num_rows": 25000, "num_columns": 2},
-      {"config": "plain_text", "split": "test",
-        "num_bytes_parquet_files": 20470363, "num_rows": 25000},
-      {"config": "plain_text", "split": "unsupervised",
-        "num_bytes_parquet_files": 41996509, "num_rows": 50000}
-    ]
-  }
-}
-```
-
-**Key metrics:**
-| Metric | Meaning |
-|--------|---------|
-| `num_bytes_original_files` | Size of original source files |
-| `num_bytes_parquet_files` | Size after Parquet conversion |
-| `num_bytes_memory` | Projected RAM if loaded into Python (≥ parquet due to object overhead) |
-| `num_rows` | Exact row count |
-| `num_columns` | Number of feature columns |
-
-**Memory-to-parquet ratio:** `num_bytes_memory / num_bytes_parquet_files` varies: text ~1.5×, numerics ~2–4×, binary ~1×. Use this to decide if streaming is needed.
-
-**Use case:** Before downloading, check `num_bytes_memory` — if it exceeds available RAM, use streaming or DuckDB remote Parquet queries.
-
----
-
-### 5. `/first-rows` — Schema + First 100 Rows
-**Purpose:** Get the feature schema and first 100 rows to understand dataset structure.
-
-**Request:**
-```
-GET /first-rows?dataset=stanfordnlp/imdb&config=plain_text&split=train
-```
-
-**Feature type taxonomy:**
-| `_type` | `dtype`/detail | Meaning |
-|---------|----------------|---------|
-| `Value` | `string` | Text column |
-| `Value` | `int32`/`int64` | Integer column |
-| `Value` | `float32`/`float64` | Float column |
-| `ClassLabel` | `names: [...]` | Categorical with named labels |
-| `Image` | — | Image column |
-| `Audio` | — | Audio column |
-| `Sequence` | `[inner_type]` | List/array of inner values |
-
-**`truncated_cells`:** Cells >~100KB are truncated; indices appear here. Use `/rows` or Parquet for full content.
-
-**Use case:** The canonical "dataset sniffing" tool — verify column names, types, and labels before coding any loading logic.
-
----
-
-### 6. `/rows` — Paginated Row Access
-**Purpose:** Access any contiguous slice of rows.
-
-**Request:**
-```
-GET /rows?dataset=stanfordnlp/imdb&config=plain_text&split=train&length=3&offset=100
-```
-
-**Limitations:**
-- Max `length`: **500 rows** per request (hard limit)
-- Max `offset`: **5M rows** (beyond that, use Parquet snapshots)
-- Large cells may be truncated
-
-**Use case:** Paginated UIs or pulling small validation samples.
-
----
-
-### 7. `/parquet` — Parquet Snapshot URLs (Most Powerful)
-**Purpose:** Get direct URLs to Parquet snapshot files for each split. Query with DuckDB/Polars **without any HF datasets library code**.
-
-**Request:**
-```
-GET /parquet?dataset=stanfordnlp/imdb
-```
-
-**Response:**
-```json
-{
-  "parquet_files": [
-    {"config": "plain_text", "split": "train",
-      "url": "https://huggingface.co/datasets/stanfordnlp/imdb/resolve/refs%2Fconvert%2Fparquet/plain_text/train/0000.parquet",
-      "size": 20979968},
-    {"config": "plain_text", "split": "test",
-      "url": "...", "size": 20470363},
-    {"config": "plain_text", "split": "unsupervised",
-      "url": "...", "size": 41996509}
-  ]
-}
-```
-
-**Practical integration — DuckDB (zero-install, HTTP range requests):**
-```python
-import duckdb
-
-url = "https://huggingface.co/datasets/stanfordnlp/imdb/resolve/refs%2Fconvert%2Fparquet/plain_text/train/0000.parquet"
-result = duckdb.sql(f"""
-  SELECT label, COUNT(*) as cnt FROM read_parquet('{url}') GROUP BY label
-""").fetchall()
-print(result)  # [(0, 12500), (1, 12500)]
-```
-
-**Practical integration — Polars:**
-```python
-import polars as pl
-url = "..."  # from /parquet endpoint
-df = pl.read_parquet(url)
-print(df.group_by("label").len())
-```
-
-**Multi-file datasets — query all shards at once:**
-```python
-files = [...]  # from /parquet endpoint
-queries = [
-    f"SELECT '{f['split']}' as split, COUNT(*) as cnt FROM read_parquet('{f['url']}')"
-    for f in files
-]
-result = duckdb.sql(" UNION ALL BY NAME ".join(queries)).fetchdf()
-```
-
-**Performance:** DuckDB's `read_parquet` uses HTTP range requests — it only fetches bytes for queried columns. For wide datasets this is drastically faster than downloading.
-
-**Zero-cost:** Parquet URLs are **free** — no auth needed for public datasets, no rate limits, no credits.
-
----
-
-### 8. `/statistics` — Column-Level Statistics
-**Purpose:** Per-column stats including histograms, unique counts, min/max, and null proportions.
-
-**Request:**
-```
-GET /statistics?dataset=stanfordnlp/imdb&config=plain_text&split=train
-```
-
-**Response:**
-```json
-{
-  "num_examples": 25000,
-  "statistics": [
-    {
-      "column_name": "label",
-      "column_type": "class_label",
-      "column_statistics": {
-        "nan_count": 0, "nan_proportion": 0.0,
-        "n_unique": 2,
-        "frequencies": {"neg": 12500, "pos": 12500}
-      }
-    },
-    {
-      "column_name": "text",
-      "column_type": "string_text",
-      "column_statistics": {
-        "nan_count": 0, "min": 52, "max": 13704,
-        "mean": 1325.06, "median": 979.0, "std": 1003.13,
-        "histogram": {"hist": [17426, 5384, 1490, 535, 147, 11, 4, 2, 0, 1], "num_bins": 10}
-      }
+current_time = {
+    "type": "function",
+    "function": {
+        "name": "current_time",
+        "description": "Get the current local time as a string.",
+        "parameters": {"type": "object", "properties": {}}
     }
-  ]
 }
 ```
 
-**Column type-specific stats:**
-| `column_type` | Available |
-|---------------|-----------|
-| `class_label` | `nan_count`, `n_unique`, `frequencies` |
-| `string_text` | `nan_count`, `min`/`max`/`mean`/`median`/`std` of length, `histogram` |
-| `int`/`float` | `nan_count`, `min`, `max`, `mean`, `median`, `std`, `histogram` |
-| `bool` | `n_unique` (2), `frequencies` |
-| `sequence`/`image`/`audio`/`video` | No statistics computed |
+Can inspect the generated schema with `from transformers.utils import get_json_schema`.
 
-**Use case:** Validate class balance, text length distribution (set `max_length`), missing values, feature ranges — all before training.
+**2. Passing Tools to apply_chat_template()**
 
----
+The `tools` parameter accepts either Python callables or JSON schema dicts:
 
-### 9. `/search` — Keyword Search
-**Purpose:** Substring search within dataset split.
-
-**Request:**
-```
-GET /search?dataset=...&config=plain_text&split=train&query=terrible&length=3
-```
-
-**Limitation:** Only available when `/is-valid` returns `"search": true`. Substring match on all string columns — no BM25/semantic ranking.
-
----
-
-### 10. `/filter` — Column-Based Filtering
-**Request:**
-```
-GET /filter?dataset=...&where=label=0&length=3
-```
-
-Equality-only on specific columns. Equivalent to SQL `WHERE label=0`.
-
----
-
-### 11. Python Helpers (huggingface_hub)
 ```python
-from huggingface_hub.datasets_server import (
-    get_dataset_splits, get_dataset_configs, get_dataset_size,
-    get_dataset_first_rows, get_dataset_parquet_files, get_dataset_statistics,
+inputs = tokenizer.apply_chat_template(
+    messages,
+    tools=tools,
+    add_generation_prompt=True,
+    return_dict=True,
+    return_tensors="pt"
 )
-
-configs = get_dataset_configs("stanfordnlp/imdb")
-splits = get_dataset_splits("stanfordnlp/imdb")
-size = get_dataset_size("stanfordnlp/imdb")
-rows = get_dataset_first_rows("stanfordnlp/imdb", "plain_text", "train")
-stats = get_dataset_statistics("stanfordnlp/imdb", "plain_text", "train")
 ```
 
----
+The template renders tool definitions into the model's native format (e.g., Hermes-2-Pro formats them as system-level tool descriptions).
 
-### 12. Complete Integration Workflow
+**3. Tool-Calling Flow (Complete Lifecycle)**
+
+**Step 1 — Model generates a tool call request:**
+```
+<tool_call>{"arguments": {"location": "Paris, France", "unit": "celsius"}, "name": "get_current_temperature"}</tool_call>
+```
+Models do NOT execute tools themselves — they only request a call.
+
+**Step 2 — Parse the tool call** using `parse_response()` (new in v5.14):
+
 ```python
-import json, urllib.request, duckdb
-
-DS = "stanfordnlp/imdb"
-BASE = "https://datasets-server.huggingface.co"
-
-def json_get(path):
-    with urllib.request.urlopen(f"{BASE}{path}") as r:
-        return json.loads(r.read())
-
-# 1. Health check
-valid = json_get(f"/is-valid?dataset={DS}")
-print(f"Available: preview={valid['preview']} stats={valid['statistics']}")
-
-# 2. List splits
-splits = json_get(f"/splits?dataset={DS}")["splits"]
-for s in splits:
-    print(f"  {s['config']}/{s['split']}")
-
-# 3. Get size
-ds_size = json_get(f"/size?dataset={DS}")["size"]["dataset"]
-print(f"Rows: {ds_size['num_rows']}, Memory: {ds_size['num_bytes_memory']/1e6:.1f}MB")
-
-# 4. Query via Parquet + DuckDB
-parquet_files = json_get(f"/parquet?dataset={DS}")["parquet_files"]
-queries = [
-    f"SELECT '{pf['split']}' as split, COUNT(*) as cnt FROM read_parquet('{pf['url']}')"
-    for pf in parquet_files
-]
-result = duckdb.sql(" UNION ALL BY NAME ".join(queries)).fetchdf()
-print(result)
+out_text = tokenizer.decode(outputs[0][len(inputs["input_ids"][0]):])
+tool_call = tokenizer.parse_response(out_text, prefix=inputs["input_ids"][0])
 ```
 
----
+**Step 3 — Append the tool call to the chat history:**
+```python
+messages.append({
+    "role": "assistant",
+    "tool_calls": [{"type": "function", "function": tool_call}]
+})
+```
+The `tool_calls` key uses dicts (not JSON strings! JSON strings can cause errors in Transformers unlike OpenAI API).
 
-### 13. Key Design Principles
-1. **Zero-download exploration** — All endpoints return JSON. Inspect any public dataset without downloading.
-2. **Parquet as interchange** — Parquet is columnar, compressed, queryable via HTTP range requests, works with any data tool.
-3. **Config → Split → Row hierarchy** — Always go: `/configs` → `/splits` → `/first-rows` (or `/rows`).
-4. **Cached results** — Datasets Server processes once on upload. No per-query compute cost.
-5. **Large dataset strategy** — For >5M rows, use `/parquet` + DuckDB remote reads (fetch only needed columns).
+**Step 4 — Append the tool response:**
+```python
+messages.append({"role": "tool", "content": "22"})  # content is always a string
+```
 
----
+**Step 5 — Model reads response and generates final answer:**
+```python
+inputs = tokenizer.apply_chat_template(messages, tools=tools, add_generation_prompt=True, return_dict=True, return_tensors="pt")
+out = model.generate(**inputs.to(model.device), max_new_tokens=128)
+```
+
+**4. Response Parsing Architecture (new in v5.14)**
+
+`parse_response()` is the main entry point for structured output extraction. It uses Jinja-based **response templates** (inverse of chat templates):
+
+```python
+result = tokenizer.parse_response(out_text, prefix=input_ids[0])
+# Returns structured dict: {"role": "assistant", "thinking": "...", "content": "..."}
+```
+
+**Response templates** define how to reverse-parse model tokens back into structured message dicts. The template defines:
+- Fields: `thinking`, `content`, `tool_calls` (any names)
+- Delimiters: opening/closing markers around structured regions
+- Parsers: `text` (raw), `json` (parsed from JSON), `int`, `float`, `bool`
+
+If no `response_template` is set, `parse_response()` raises an error.
+
+**5. Streaming with ResponseParser**
+
+For streaming applications, use `get_response_parser()` instead of `parse_response()`:
+
+```python
+parser = tokenizer.get_response_parser(prefix=input_ids[0])
+
+# Get initial events (region openings before generation starts)
+parser.initial_events
+
+# Feed tokens as they arrive
+for chunk in stream:
+    parser.feed(chunk)
+
+# Flush final state
+result = parser.finalize()
+```
+
+**Output events during streaming:**
+- `region_open` — structured region starts (e.g., thinking block)
+- `region_chunk` — incremental content with `dirty` flag
+- `region_close` — region complete with final parsed value
+
+**Critical: dirty=True for tool_calls:** Text-like fields (thinking, content) are flagged `dirty=False` (partial output is valid as-is). But `tool_calls` regions are `dirty=True` because they need significant cleanup — tool calls are often JSON-wrapped and need restructuring before they're usable.
+
+**6. Multiple Simultaneous Tool Calls**
+
+Some models can emit multiple tool calls in one generation:
+```
+<tool_call>{"name": "a", ...}</tool_call><tool_call>{"name": "b", ...}</tool_call>
+```
+
+Response templates handle this with `repeats: true` on the field definition. The parser automatically collects all matches into a single `tool_calls` array.
+
+**7. Required vs Optional Fields**
+
+Response templates support `optional: false` for fields that must be present. If a required field is missing, parsing raises an error.
+
+**8. Model Compatibility and Key Implementations**
+
+| Model | Tool Format | Notes |
+|-------|-------------|-------|
+| NousResearch/Hermes-2-Pro-* | `<tool_call>` JSON | Reference implementation, strong parsing |
+| Command-R (Cohere) | Native function-calling | Uses tool-call IDs |
+| Mixtral-8x22B | JSON in tool format | Large context window |
+| Llama 3.1+ | Built-in tool support | Uses `python` tool format |
+| Qwen 2.5 | Function calling | Supports `tools` in system message |
+
+Most models emit a single tool call at a time. Some older/enterprise models emit multiple simultaneous calls requiring tool call IDs for disambiguation — check model card for exact format.
+
+**9. Best Practices**
+
+- Always use `add_generation_prompt=True` when the model should generate a new assistant response
+- Use `continue_final_message` (instead of add_generation_prompt) for **prefilling** — setting the start of a model's response to improve instruction following (e.g., prefilling JSON start for structured output)
+- Never use `add_generation_prompt` and `continue_final_message` together
+- `continue_final_message` now supports a string field name (e.g., `"reasoning_content"` for Qwen reasoning, `"thinking"` for Gemma) to prefill specific fields
+- Tool response `content` must always be a string, even for numerical values
+- Document tools thoroughly in the docstring — the model's tool-calling accuracy directly correlates with docstring quality
+- For agentic workflows, combine with smolagents (covered separately) for managed multi-step tool execution
 
 ### Resources
-- [Datasets Server docs](https://huggingface.co/docs/dataset-viewer/main/en/valid)
-- [Splits endpoint](https://huggingface.co/docs/dataset-viewer/main/en/splits)
-- [First rows](https://huggingface.co/docs/dataset-viewer/main/en/first_rows)
-- [Size endpoint](https://huggingface.co/docs/dataset-viewer/main/en/size)
-- [Parquet endpoint](https://huggingface.co/docs/dataset-viewer/main/en/parquet)
-- [Statistics endpoint](https://huggingface.co/docs/dataset-viewer/main/en/statistics)
-- [Datasets Server base URL](https://datasets-server.huggingface.co)
-- [huggingface_hub datasets_server module](https://huggingface.co/docs/huggingface_hub/en/package_reference/datasets_server)
-- [DuckDB remote Parquet](https://duckdb.org/docs/data/parquet/overview.html)
+- Tool use docs (v5.14): https://huggingface.co/docs/transformers/en/chat_extras
+- Chat templates: https://huggingface.co/docs/transformers/en/chat_templating
+- Response parsing: https://huggingface.co/docs/transformers/en/chat_response_parsing
+- Chat basics: https://huggingface.co/docs/transformers/en/conversations
+- Chat message patterns: https://huggingface.co/docs/transformers/en/chat_content_patterns
+- Writing chat templates: https://huggingface.co/docs/transformers/en/chat_templating_writing
+- smolagents (HF agent framework): https://huggingface.co/docs/smolagents
+
+---
+
+## 2026-07-24: hf-hub-gated-repos (Deep Dive #2 — Gating Group Collections, Notifications, Advanced Settings)
+
+### Summary
+Second deep-dive into Hugging Face Hub gated repositories. Covered Gating Group Collections (Team/Enterprise — grant/reject access to all repos in a collection at once), notification frequency and email configuration, gate form UI customization (`extra_gated_heading`, `extra_gated_description`, `extra_gated_button_content`), Enterprise Plus location-based enforcement (auto-reject downloads from blocked countries/regions), and the full access revocation lifecycle.
+
+### New Insights
+- **Gating Group Collections** let orgs manage access to ALL repos in a collection through a single request — no per-repo management needed. Requires Team/Enterprise plan.
+- **Gate form customization**: Three YAML fields (`extra_gated_heading`, `extra_gated_description`, `extra_gated_button_content`) control what users see in the access request form.
+- **Notification settings**: Configure frequency (daily or real-time) and custom email address for access request notifications.
+- **Enterprise Plus enforcement**: Block downloads from specific countries/regions at two levels — gated repos only, or ALL repos (including public). No org member exemption.
+- **Access revocation is final**: Rejected users cannot re-request. Use `cancel_access_request` (or "Cancel" in UI) to move them back to pending first.
+- `grant_access` works without a prior pending request — enables external approval flows.
+
+### Resources
+- Gated models: https://huggingface.co/docs/hub/en/models-gated
+- Gated datasets: https://huggingface.co/docs/hub/en/datasets-gated
+- Gating Group Collections: https://huggingface.co/docs/hub/en/enterprise-gating-group-collections
+
+## 2026-07-24: hf-transformers-5-architecture-deep-dive
+
+### Summary
+Deep-dive on transformers v5.14.1 architecture changes (upgraded from v4.x). The v5 release represents a fundamental re-architecting of the library's generation system, caching layer, pipeline API, and production serving capabilities. Research conducted via live source-code inspection of the installed package.
+
+### Key Architectural Changes (v4 → v5)
+
+**1. New Cache Layer (`transformers.cache_utils`)**
+Completely redesigned caching system with proper class hierarchy:
+
+| Cache Class | Purpose |
+|---|---|
+| `Cache` | Abstract base class for all caches |
+| `DynamicCache` | Default — grows with sequence length |
+| `StaticCache` | Fixed-size, pre-allocated for known max lengths |
+| `SlidingWindowCache` | Rolling window of recent tokens |
+| `OffloadedCache` | CPU offloading of KV cache |
+| `QuantizedCache` | Base for quantized cache variants |
+| `MtpCache` | Multi-Token Prediction cache (new in v5) |
+| `EncoderDecoderCache` | Manages separate encoder/decoder caches |
+| `CacheLayerMixin` | Per-layer cache support (compileable) |
+| `LinearAttentionCacheLayerMixin` | For linear attention models |
+
+Configurable via `cache_implementation` in GenerationConfig: `"static"`, `"offloaded"`, `"quantized"`, `"sliding_window"`, `"hybrid"`, `"mamba"`, `"mamba2"`.
+
+**2. Multi-Token Prediction (MTP)**
+Major new speculative decoding technique:
+- `use_mtp=True` in GenerationConfig enables MTP decoding
+- `MTPCandidateGenerator` predicts multiple tokens per step
+- `MtpCache` manages MTP-specific KV cache states
+- Models: Gemma 3n, Gemma 4 (native MTP support via `SinglePositionMultiTokenCandidateGenerator`)
+- Config key: `use_mtp` + `num_assistant_tokens` + `assistant_confidence_threshold`
+
+**3. Built-in Watermarking System**
+- `WatermarkingConfig` dataclass with `greenlist_ratio`, `bias`, `hashing_key`, `seeding_scheme`, `context_width`
+- `WatermarkLogitsProcessor` — applies bias to "green" tokens during generation
+- `SynthIDTextWatermarkLogitsProcessor` — DeepMind's SynthID watermarking
+- `WatermarkDetector` — detects watermark in generated texts (z-score, p-value, prediction)
+- Based on Kirchenbauer et al. 2023 paper
+- Usage: `GenerationConfig(watermarking_config=WatermarkingConfig(...))`
+
+**4. Continuous Batching for Production Serving**
+New `generation/continuous_batching/` subpackage with full serving infrastructure:
+- `ContinuousBatchingConfig` — configure scheduling policy
+- `Scheduler` — manages request queue and batching
+- `CacheManager` — dynamic KV cache allocation across requests
+- `OffloadingManager` — offload idle requests' caches to CPU
+- `ModelRunner` — executes forward passes
+- `ContinuousMixin` — mixes into model classes
+- Supports static and dynamic cache variants
+
+**5. New Pipeline Architecture**
+- `AnyToAnyPipeline` — universal multimodal generation pipeline (text + image + audio + video). Uses `AutoModelForMultimodalLM`
+- `ImageTextToTextPipeline` — dedicated VLM pipeline with chat mode support
+- `KeypointMatchingPipeline` — new vision pipeline
+- Pipeline registry refactored for v5
+
+**6. Enhanced GenerationConfig Parameters (46+ params)**
+Notable additions:
+| Parameter | Purpose |
+|---|---|
+| `stop_strings` | Stop generation on exact string matches |
+| `min_p` | Minimum probability for nucleus sampling (min-p sampling) |
+| `use_mtp` | Enable Multi-Token Prediction |
+| `watermarking_config` | Watermarking configuration object |
+| `cache_implementation` | Select cache backend |
+| `cache_config` | Fine-tune cache behavior |
+| `compile_config` | Configure torch.compile in generation loop |
+| `continuous_batching_config` | Production serving config |
+| `dola_layers` | DoLa (contrastive decoding) layer selection |
+| `guidance_scale` | Classifier-free guidance for LLMs |
+| `token_healing` | Repaired token healing |
+| `low_memory` | Memory-efficient generation mode |
+| `output_logits` | Return raw logits per step |
+| `prefill_chunk_size` | Chunked prefill for long contexts |
+| `assistant_*` | 10+ params for assisted/speculative decoding |
+
+**7. New Integration Modules (45+)**
+Notable additions to `transformers/integrations/`:
+- `deepgemm.py` — DeepGEMM kernel integration
+- `finegrained_fp8.py` — Fine-grained FP8 quantization
+- `gemma_quant.py` — Gemma-specific quantization
+- `mxfp4.py` — MXFP4 4-bit micro-exponent format
+- `hub_kernels.py` — Hub-hosted custom CUDA kernels
+- `torchao.py` — PyTorch AO quantization integration
+- `eager_paged.py` / `flash_paged.py` — Paged attention variants
+- `flex_attention.py` — Flexible attention patterns
+- `metal_quantization.py` — Apple Metal GPU quantization
+- `liger.py` — Liger kernel integration
+- `sinq.py` — SINQ quantization
+- `vptq.py` — Vector Post-Training Quantization
+- `sonicmoe.py` — MoE kernel specialisation
+- `tiktoken.py` — OpenAI tiktoken tokenizer integration
+
+**8. New Model Architectures Added**
+Substantial model additions since v4.x (verified via runtime import):
+- Text: Gemma 4, Gemma 3n (MTP-native), Mistral 4, Llama 4, Qwen 3/3.5/3-Next, Qwen 3 MoE, Deepseek V3/V4/VL Hybrid, Cohere 2 (MoE + Vision), Granite MoE Hybrid, Ernie 4.5 MoE/VLMoe, MiniCPM v4.6, Exaone 4.5, SmolLM3, Ministral 3, ModernBERT Decoder, Zamba2, DiffLlama, Doge, Helium
+- Vision/Multi: SmolVLM, AyaVision, InternVL, Florence2, SAM3/tracker, EdgeTam, Pi0 (robotics), DepthPro, Granite 4 Vision, MetaClip2, InstructBlip Video, Video-Llama 3, VideoPrism
+- Audio: Gemma 3n Audio, Granite Speech/ASR, Cohere ASR, Voxtral, Qwen 3 ASR/Omni, AudioFlamingo 3
+- OCR/Document: Deepseek OCR2, GLM OCR, GotOCR2, PaddleOCR VL, LightOn OCR, Qianfan OCR
+- Other: TiPSv2 (depth), Csm (MCP-style), VibeVoice, Mimi (audio codec), Dots1
+
+**9. Speculative Decoding Architecture**
+Unified candidate generators:
+- `PromptLookupCandidateGenerator` — simple n-gram lookup
+- `MTPCandidateGenerator` — multi-token prediction from main model
+- `SinglePositionMultiTokenCandidateGenerator` — shared KV states (Gemma 3n/4)
+- `UniversalSpeculativeDecodingGenerator` — generic draft/verify
+
+**10. Breaking Changes in v5**
+- `GenerationConfig` is now dict-backed (not dataclass) — uses `to_dict()` / `from_dict()` / `update()`
+- Pipeline registry API changed (`pipeline.get_supported_tasks()` replaces module-level approach)
+- Cache layer refactored — custom cache implementations need the new base class
+- `PIPELINE_REGISTRY` replaced with function-based registry
+
+### Key Takeaways
+- Transformers v5 adds production-grade serving infrastructure (continuous batching) natively
+- MTP is the most significant decoding improvement — predicts 2-4 tokens at once, doubling throughput on MTP-native models (Gemma 3n/4)
+- Watermarking is now a first-class citizen with detection and verification
+- The cache layer rewrite enables model-specific cache optimizations (quantized, offloaded, sliding window)
+- 45+ integration modules show strong push toward hardware-specific kernel optimizations
+- 100+ new model architectures added, reflecting the multi-modal explosion in 2025-2026
+
+### Migration Notes (v4 → v5)
+```python
+# v4 style — still works but internally maps to new cache
+model.generate(**inputs, use_cache=True)
+
+# v5 explicit cache
+from transformers.cache_utils import QuantizedCache
+model.generate(**inputs, cache_implementation="quantized")
+
+# v5 watermarking
+from transformers import WatermarkingConfig
+model.generate(**inputs, watermarking_config=WatermarkingConfig(greenlist_ratio=0.25))
+
+# v5 MTP decoding
+model.generate(**inputs, use_mtp=True, num_assistant_tokens=3)
+```
+
+### Resources
+- Transformers source: `/opt/data/.venv-sakthai/lib/python3.14/site-packages/transformers/`
+- Cache utils: `transformers.cache_utils`
+- Generation: `transformers.generation` (configuration_utils, utils, watermarking, continuous_batching)
+- Pipelines: `transformers.pipelines` (any_to_any.py, image_text_to_text.py)
+- Docs: https://huggingface.co/docs/transformers/en/index
+- Jinja template docs: https://jinja.palletsprojects.com/
+
+---
+
+## 2026-07-24: hf-text-embeddings-inference-v2 — OpenAI-Compatible API, Router Architecture & Matryoshka
+
+### Summary
+Second deep-dive into TEI covering the OpenAI-compatible `/v1/embeddings` endpoint, the internal router architecture (request pipeline, validation, tokenization, batching, inference), Matryoshka/linear dimension reduction, direct TEI endpoint connection patterns, and Kubernetes deployment patterns.
+
+### OpenAI-Compatible `/v1/embeddings` Endpoint
+
+TEI exposes an OpenAI-compatible embeddings endpoint at `/v1/embeddings` when started, enabling drop-in replacement for OpenAI clients:
+
+```bash
+docker run --gpus all -p 8080:80 ... \
+  --model-id WhereIsAI/UAE-Large-V1 \
+  --served-model-name text-embedding-3-large
+```
+
+**Request format (OpenAI-compatible):**
+```bash
+curl http://localhost:8080/v1/embeddings \
+  -X POST \
+  -H "Content-Type: application/json" \
+  -d '{
+    "input": "The food was delicious",
+    "model": "text-embedding-3-large",
+    "encoding_format": "float",
+    "dimensions": 256
+  }'
+```
+
+**Python client (OpenAI SDK):**
+```python
+from openai import OpenAI
+client = OpenAI(base_url="http://localhost:8080/v1", api_key="not-needed")
+response = client.embeddings.create(
+    input="Hello world",
+    model="text-embedding-3-large",
+    dimensions=256
+)
+```
+
+### Router Architecture & Pipeline
+
+```
+HTTP/gRPC Request → Router (validate + dispatch) → Tokenizer (tokenize + truncate + prompt) → Batcher (token-aware dynamic batching) → Backend (Candle inference + pooling + normalize) → Response Builder (de-batch + format)
+```
+
+**Token-aware batching:** Groups requests into batches up to `--max-batch-tokens`. Each GPU kernel invocation processes exactly the right number of tokens — no wasted compute.
+
+### Matryoshka Dimension Reduction
+
+TEI supports linear dimension reduction for models trained with Matryoshka representation learning. Supported models include `WhereIsAI/UAE-Large-V1` (dims 1024/768/512/256) and `Alibaba-NLP/gte-Qwen2-1.5B-instruct`. Use `dimensions` parameter in API calls.
+
+### Direct TEI Endpoint Connection
+
+```python
+from huggingface_hub import InferenceClient
+client = InferenceClient(base_url="http://localhost:8080")
+embedding = client.feature_extraction("Direct connection", normalize=True)
+```
+
+### Kubernetes Deployment & Best Practices
+
+Full K8s deployment spec (Deployment + Service) with liveness/readiness probes, resource limits, and Prometheus metrics. Key tuning: `--max-batch-tokens` (start 16384), `--auto-truncate true`, pre-warm with dummy request, use CPU for <50 req/s.
+
+### Resources
+- GitHub: https://github.com/huggingface/text-embeddings-inference
+- TEI Docs: https://huggingface.co/docs/text-embeddings-inference/en/index
+- Swagger API: https://huggingface.github.io/text-embeddings-inference
+- gRPC proto: https://github.com/huggingface/text-embeddings-inference/blob/main/proto/tei.proto
+
+---
+
+## 2026-07-24: hf-hub-trending-and-discovery-api
+
+### Summary
+Comprehensive deep-dive into the Hugging Face Hub's trending, search, and discovery API surface — covering `/api/trending`, the model/dataset/space listing APIs with sort/filter/search capabilities, `/api/quicksearch` for cross-type search, Daily Papers and paper search, documentation search, and the Python `huggingface_hub` SDK wrappers.
+
+### Key Endpoints
+
+#### 1. GET /api/trending — Trending Repos
+Returns repos that are currently trending on the Hub. Mixes models, datasets, and Spaces.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `type` | `all` \| `dataset` \| `model` \| `space` | Filter by type (default: `all`) |
+| `limit` | integer | Max items (default appears to be 30: 10 each) |
+
+**Response shape:** `{ "recentlyTrending": [{ "repoData": { ... }, "repoType": "model"|"dataset"|"space" }] }`
+
+Each `repoData` contains: `id`, `author`, `authorData` (fullname, avatar, type/plan, followerCount), `downloads`, `likes`, `gated`, `private`, `lastModified`, `pipeline_tag`, `numParameters`, `availableInferenceProviders`, `isLikedByUser`, `repoType`.
+
+**Real data snapshot (2026-07-24):**
+- Top trending models: baidu/Unlimited-OCR (2.9K likes, 2.4M downloads), thinkingmachines/Inkling (1.5K likes), poolside/Laguna-S-2.1, upstage/Solar-Open2-250B, prism-ml/Ternary-Bonsai-27B-gguf, zai-org/GLM-5.2
+- Top datasets: wikimedia/wikipedia (1.3K likes, 254K downloads), Glint-Research/Fable-5-traces (662 likes), openbmb/UltraX-Preview
+- Top Spaces: selfit-camera/Omni-Image-Editor (2.2K likes), prithivMLmods/Qwen-Image-Edit-2511-LoRAs-Fast (2.0K), baidu/Unlimited-OCR
+
+#### 2. Python `list_models()` / `list_datasets()` / `list_spaces()`
+
+All three accept `sort`, `search`, `filter`, `author`, `limit`, and `expand` parameters.
+
+**Sort values (ModelSort_T / DatasetSort_T / SpaceSort_T):**
+| Resource | Sort Options |
+|----------|-------------|
+| Models | `created_at`, `downloads`, `last_modified`, `likes`, `trending_score` |
+| Datasets | `created_at`, `downloads`, `last_modified`, `likes`, `trending_score` |
+| Spaces | `created_at`, `last_modified`, `likes`, `trending_score` |
+
+**REST API mapping** (from `huggingface_hub` source):
+| Python SDK | REST API |
+|-----------|----------|
+| `created_at` | `createdAt` |
+| `last_modified` | `lastModified` |
+| `trending_score` | `trendingScore` |
+| `downloads` | `downloads` |
+| `likes` | `likes` |
+
+**Model filtering options:**
+- `search` (str): Free-text search in model IDs
+- `author` (str): Filter by user/org
+- `filter` (str|list): Library, language, task, tag filters
+- `pipeline_tag` (str): `text-generation`, `image-text-to-text`, etc.
+- `num_parameters` (str): Range syntax like `"min:6B,max:128B"`
+- `gated` (bool): Filter by gated status
+- `inference` (`"warm"`): Models currently served by any provider
+- `inference_provider` (str|list): Models served by specific provider
+- `apps` (str|list): Models supporting specific apps like `"ollama"`, `"vllm"`
+- `emissions_thresholds` (tuple): Carbon footprint range in grams
+- `expand` (list): Request additional properties in response — `"trendingScore"`, `"inference"`, `"inferenceProviderMapping"`, `"gguf"`, `"safetensors"`, `"downloadsAllTime"`, `"evalResults"`, `"spaces"`, `"widgetData"`, `"cardData"`, `"config"`, etc.
+
+**Dataset filtering:**
+- `search`, `author`, `filter`, `gated`
+- `benchmark`, `language_creators`, `language`, `multilinguality`, `size_categories`, `task_categories`, `task_ids`
+
+**Space filtering:**
+- `search`, `author`, `filter`
+- `datasets`, `models` (linked resources)
+- `linked` (bool): Only linked Spaces
+
+#### 3. GET /api/quicksearch — Cross-resource Search
+One endpoint to search models, datasets, spaces, orgs, users, papers, collections, and buckets.
+
+| Parameter | Description |
+|-----------|-------------|
+| `q` | Search query |
+| `type` | Resource type filter |
+| `namespace` | Namespace filter |
+| `pipeline` | Comma-separated pipeline types |
+| `library` | Library filter |
+| `limit` | Max results |
+| `exclude` | Array of resources to exclude |
+| `reposFilter` | Additional repo filter |
+| `spacesTags` | Filter Spaces by tag |
+
+#### 4. Daily Papers & Paper Search
+
+**GET /api/daily_papers** — Get daily paper submissions
+| Parameter | Description |
+|-----------|-------------|
+| `limit` | Max results (default 50) |
+| `date` | Specific date |
+| `week` | Week filter |
+| `month` | Month filter |
+| `sort` | `publishedAt` or `trending` |
+| `submitter` | Filter by submitter |
+| `p` | Page number |
+
+**GET /api/papers/search?q=...** — Hybrid semantic + full-text paper search over arXiv-indexed papers.
+
+**GET /api/papers?cursor=...&limit=...** — List papers sorted by publication date.
+
+#### 5. GET /api/docs/search — Documentation Search
+Search across ALL Hugging Face documentation products.
+
+| Parameter | Description |
+|-----------|-------------|
+| `q` (required) | Search query |
+| `product` | One of: `hub`, `transformers`, `diffusers`, `datasets`, `gradio`, `smolagents`, `huggingface_hub`, `peft`, `accelerate`, `optimum`, `tokenizers`, `trl`, `tgi`, `tei`, `setfit`, `bitsandbytes`, `sentence_transformers`, `chat-ui`, and 40+ more |
+| `limit` | Max results |
+
+Also available: `GET /api/docs/search/full-text?q=...` for full-text-only search.
+
+### Practical Discovery Workflows
+
+```python
+from huggingface_hub import HfApi
+
+api = HfApi()
+
+# 1. Get trending models this week
+trending = list(api.list_models(sort="trending_score", limit=20))
+
+# 2. Most downloaded text-generation models
+popular = list(api.list_models(
+    sort="downloads", pipeline_tag="text-generation", limit=10
+))
+
+# 3. Latest models by a specific author
+new_from_author = list(api.list_models(
+    sort="created_at", author="meta", limit=5
+))
+
+# 4. Models with specific parameter range sorted by likes
+mid_size = list(api.list_models(
+    num_parameters="min:6B,max:128B", sort="likes", limit=10
+))
+
+# 5. Search models by name with full metadata
+results = list(api.list_models(
+    search="qwen", expand=["trendingScore", "inference", "gguf"], limit=5
+))
+for m in results:
+    print(f"{m.id}: {m.likes} likes, trendingScore={getattr(m, 'trendingScore', 'N/A')}")
+
+# 6. Trending datasets
+trending_datasets = list(api.list_datasets(sort="trending_score", limit=10))
+
+# 7. Trending Spaces
+trending_spaces = list(api.list_spaces(sort="trending_score", limit=10))
+```
+
+### Raw API Calls (no SDK needed)
+
+```bash
+# Trending repos
+curl -s "https://huggingface.co/api/trending?type=model&limit=5"
+
+# Models sorted by trending score (REST — note camelCase)
+curl -s "https://huggingface.co/api/models?sort=trendingScore&limit=5"
+
+# Models sorted by downloads
+curl -s "https://huggingface.co/api/models?sort=downloads&direction=-1&limit=5"
+
+# Search models by text
+curl -s "https://huggingface.co/api/models?search=llama&sort=likes&direction=-1"
+
+# Daily papers
+curl -s "https://huggingface.co/api/daily_papers?limit=5&sort=trending"
+
+# Quick search
+curl -s "https://huggingface.co/api/quicksearch?q=image+generation&limit=5"
+```
+
+### Key URLs
+| Resource | URL |
+|----------|-----|
+| OpenAPI Playground | https://huggingface.co/spaces/huggingface/openapi |
+| OpenAPI JSON | https://huggingface.co/.well-known/openapi.json |
+| OpenAPI Markdown (agent-ready) | https://huggingface.co/.well-known/openapi.md |
+| Models page | https://huggingface.co/models |
+| Daily Papers | https://huggingface.co/papers |
+|| Hub API docs | https://huggingface.co/docs/hub/en/api |
+|| `huggingface_hub` docs | https://huggingface.co/docs/huggingface_hub/en/index |
+
+---
+
+## 2026-07-24: hf-datasets-server-filter-search-statistics-deep-dive — Live Verified API Behavior
+
+### Summary
+Deep-dive into the Datasets Server's `/filter`, `/search`, `/statistics`, `/size`, and `/first-rows` endpoints with **live API verification** against real datasets. Discovered critical syntax requirements for `/filter` (column names in double quotes, string values in single quotes), the `partial` flag behavior, and pitfalls with renamed datasets. All findings verified with real HTTP calls using Python `urllib`.
+
+### Key Verified Findings
+1. **`/filter` syntax** — Column names MUST be in double quotes: `"Id"=1`. String values MUST be in single quotes: `"Species"='Iris-setosa'`. Use `urllib.parse.urlencode()` for correct URL encoding.
+2. **`/filter` operators** — `=`, `<>`, `>`, `>=`, `<`, `<=`, `AND`, `OR`, `NOT` all verified working.
+3. **`/filter orderby`** — Supports `orderby="column"` and `orderby="column" DESC`.
+4. **`partial` flag** — `true` means only first 5GB indexed; results may be incomplete.
+5. **`/search` has no score** — The `score` field is NOT returned in search results (contrary to older docs).
+6. **`/statistics` may return empty** — Even on numeric columns, if stats aren't pre-computed.
+7. **`is-valid` is essential** — Always call first to check which features (preview, filter, search, statistics) are enabled.
+8. **Renamed datasets** — `ibm/duorc` (docs example) returns 404; `mnist` also 404. Always verify dataset existence.
 
 ---
 
 ## 2026-07-24: hf-transformers-torchao-integration-deep-dive (Topic #119)
 
 ### Summary
-Deep-dive into torchao (PyTorch Architecture Optimization) and its integration with Hugging Face Transformers v5.x. torchao is PyTorch's native quantization and optimization library, providing composable high-performance data types for inference and training. The integration is accessed via `TorchAoConfig` in Transformers, which accepts `AOBaseConfig` objects from `torchao.quantization`. As of torchao >= 0.15, the old string-based API was removed — all configs must be `AOBaseConfig` subclass instances. This is distinct from bitsandbytes (NVIDIA-only) — torchao supports CUDA, Intel XPU, and CPU.
+Deep-dive into torchao (PyTorch Architecture Optimization) and its integration with Hugging Face Transformers v5.x. torchao is PyTorch's native quantization and optimization library providing composable high-performance data types via `TorchAoConfig`. Key API change: torchao >= 0.15 removed string-based configs — all configs must be `AOBaseConfig` subclass instances. Supports CUDA, Intel XPU, and CPU (not just NVIDIA like bitsandbytes).
 
-### Key Concepts
+### Key Configs
+- `Float8DynamicActivationFloat8WeightConfig` — H100 GPU (FP8 tensor cores)
+- `Int8DynamicActivationInt8WeightConfig` — A100, XPU, CPU (INT8)
+- `Int4WeightOnlyConfig` — Consumer GPUs, CPU with `Int4CPULayout()` (INT4)
+- `GemliteUIntXWeightOnlyConfig` — A100/H100 batch inference (autotuned)
+- `FqnToConfig` — Per-module quantization with regex or exact FQN
 
-**TorchAoConfig** — The bridge between Transformers and torchao. Passed as `quantization_config` to `AutoModelForCausalLM.from_pretrained()`.
+### Critical Details
+- Auto-compile via `cache_implementation="static"` in `.generate()`
+- INT4 layouts are device-specific — quantize and load on same device
+- INT8/FP8 are portable across devices
+- Serialization (save_pretrained/push_to_hub) requires torchao >= 0.15
+- CPU INT4 requires `PrototypeInt4WeightOnlyConfig` or `Int4CPULayout()`
 
-**AOBaseConfig subclasses** — The quantization configs you pass to `TorchAoConfig`:
-
-| Config | Dtype | Use Case |
-|--------|-------|----------|
-| `Float8DynamicActivationFloat8WeightConfig` | A16W8-FP8 | H100 GPU (FP8 tensor cores) |
-| `Float8WeightOnlyConfig` | A16W8-FP8 | H100 GPU (weight-only) |
-| `Int8DynamicActivationInt8WeightConfig` | A8W8-INT8 | A100 GPU, Intel XPU, CPU |
-| `Int8WeightOnlyConfig` | A16W8-INT8 | A100, XPU, CPU |
-| `Int4WeightOnlyConfig` | A16W4-INT4 | A100, H100, XPU (batch=1) |
-| `GemliteUIntXWeightOnlyConfig` | 4/8-bit | A100/H100 (batch=N, autotuned) |
-| `Int4WeightOnlyConfig(layout=MarlinSparseLayout())` | INT4+2:4 Sparse | H100 with sparse checkpoints |
-| `PrototypeInt4WeightOnlyConfig` | INT4 | CPU (torchao >= 0.15) |
-| `IntxWeightOnlyConfig` | Arbitrary INTx | Custom bit-width quantization |
-| `Int8DynamicActivationInt4WeightConfig` | A8W4-Mixed | Per-layer mixed quantization |
-
-### Hardware Compatibility
-
-| Hardware | CUDA | XPU | CPU |
-|----------|------|-----|-----|
-| CUDA Versions | cu118, cu126, cu128 | — | — |
-| XPU Versions | — | PyTorch 2.8 | — |
-| FP8 (H100) | ✅ | — | — |
-| INT8 (A100) | ✅ | ✅ | ✅ |
-| INT4 (Consumer) | ✅ | ✅ | ✅ (>=0.15) |
-
-### Critical API Change (torchao >= 0.15)
-- **OLD (removed):** `TorchAoConfig("int4_weight_only")` — string-based API
-- **NEW (required):** `TorchAoConfig(quant_type=Int4WeightOnlyConfig(group_size=128))` — object-based API
-- Serialization (save_pretrained / push_to_hub) only works with torchao >= 0.15
-
-### Per-Module Quantization
-`FqnToConfig` enables layer-specific quantization:
-
-1. **Skip layers:** `{"_default": config, "model.layers.0.self_attn.q_proj": None}` 
-2. **Different configs per layer (regex):** Keys starting with `re:` use regex matching
-3. **Different configs per layer (exact FQN):** Use exact module path as key
-
-### Auto-Compilation Pattern
-```python
-quantization_config = TorchAoConfig(quant_type=quant_config)
-quantized_model = AutoModelForCausalLM.from_pretrained(
-    model_id, dtype="auto", device_map="auto",
-    quantization_config=quantization_config
-)
-# auto-compile via cache_implementation="static"
-output = quantized_model.generate(**inputs, max_new_tokens=10, cache_implementation="static")
-```
-Setting `cache_implementation="static"` auto-compiles with `torch.compile`. The model recompiles on batch size / max_new_tokens changes. Pass `disable_compile=True` to skip compilation.
-
-### Device-Specific Notes
-
-- **CPU INT4:** Requires `Int4CPULayout()` in `Int4WeightOnlyConfig`. Only CPU-serialized models can be re-loaded on CPU.
-- **INT4 cross-device limitation:** INT4 layouts are device-specific — quantize and load on the same device.
-- **INT8/FP8 are portable:** Can quantize on CPU, load on CUDA.
-
-### Recommended Settings
-```python
-torchao.quantization.utils.recommended_inductor_config_setter()
-```
 
 ### Resources
-- [Transformers torchao docs (source)](https://github.com/huggingface/transformers/blob/main/docs/source/en/quantization/torchao.md)
-- [torchao quantization API](https://github.com/pytorch/ao/blob/main/torchao/quantization/quant_api.py)
-- [torchao README](https://github.com/pytorch/ao#torchao-pytorch-architecture-optimization)
-- [Benchmarks](https://github.com/pytorch/ao/tree/main/torchao/quantization#benchmarks)
-- [Colab: Torchao Demo](https://colab.research.google.com/github/huggingface/notebooks/blob/main/transformers_doc/en/quantization/torchao.ipynb)
+- [Source docs](https://github.com/huggingface/transformers/blob/main/docs/source/en/quantization/torchao.md)
+- [torchao GitHub](https://github.com/pytorch/ao)
+
+### Files modified
+- `~/profiles/sakthai/skills/mlops/hf-datasets-server-rest-api/references/hf-learnings.md` — appended full deep-dive entry (+262 lines)
+- `~/profiles/sakthai/cron/hf-topics-covered.json` — added `hf-datasets-server-filter-search-statistics-deep-dive`
+---
+
+## 2026-07-24: accelerate-composable-parallelism-deep-dive (Topic #120)
+
+### Summary
+Deep-dive into Hugging Face Accelerate v1.14.0's new composable parallelism system via `ParallelismConfig` — inspired by torchtitan's `ParallelDims`. This replaces the old `torch_tp_plugin` approach with a unified device-mesh-based framework supporting 2D (FSDP2 + TP), 3D (HSDP + TP/CP), and 4D (all dimensions: sharded DP + replicate DP + TP + CP/SP) parallelism configurations. All source-verified against the installed accelerate package.
+
+### Core Architecture — ParallelismConfig
+
+`ParallelismConfig` is a dataclass that describes the parallelism topology via dimension sizes:
+
+```python
+from accelerate import ParallelismConfig
+
+config = ParallelismConfig(
+    dp_replicate_size=1,   # DDP replicas (pure data parallel)
+    dp_shard_size=8,       # FSDP sharded data parallel
+    tp_size=4,             # tensor parallelism
+    cp_size=1,             # context parallelism (future)
+    cp_backend="torch",    # only "torch" currently supported
+    sp_size=1,             # sequence parallelism (DeepSpeed Ulysses)
+    sp_backend="deepspeed",# only "deepspeed" currently supported
+)
+```
+
+Pass it to `Accelerator`:
+```python
+accelerator = Accelerator(parallelism_config=config)
+```
+
+### Dimension Name System
+
+| Dim Name | Source | Meaning |
+|----------|--------|---------|
+| `dp_replicate` | `dp_replicate_size` | Pure DDP replication dimension |
+| `dp_shard` | `dp_shard_size` | FSDP sharding dimension |
+| `dp_shard_cp` | dp_shard + cp (flattened) | Joint FSDP+CP mesh (models are sharded across both) |
+| `dp_cp` | dp_replicate + dp_shard + cp | Loss averaging across all data+context dims |
+| `dp` | dp_replicate + dp_shard (flattened) | Aggregate data parallel dimension |
+| `tp` | `tp_size` | Tensor parallelism |
+| `cp` | `cp_size` | Context parallelism |
+| `sp` | `sp_size` | Sequence parallelism |
+
+### Parallelism Topologies
+
+| Config | Pattern | Description |
+|--------|---------|-------------|
+| `dp_shard > 1, dp_replicate == 1` | Pure FSDP | Model fully sharded across dp_shard dimension |
+| `dp_replicate > 1, dp_shard == 1` | ❌ Invalid with TP/CP | Pure DDP + TP not supported (must shard) |
+| `dp_replicate > 1, dp_shard > 1` | HSDP (Hybrid Sharded DP) | Replicate DP on outer, FSDP shard on inner |
+| `both == 1` | No DP | Single process or TP/CP only |
+
+### Dimensionality Patterns
+
+| Dimensions active | Name | Example |
+|-------------------|------|---------|
+| dp_shard + tp | **2D (FSDP + TP)** | 32 GPUs: dp_shard=8, tp=4 |
+| dp_shard + tp + cp | **3D (FSDP + TP + CP)** | 64 GPUs: dp_shard=8, tp=4, cp=2 |
+| dp_shard + tp + sp | **3D (FSDP + TP + DeepSpeed SP)** | 64 GPUs: dp_shard=8, tp=4, sp=2 |
+| dp_replicate + dp_shard + tp | **3D (HSDP + TP)** | 64 GPUs: dp_rep=2, dp_shard=8, tp=4 |
+| all five | **4D (all)** | 128 GPUs: dp_rep=2, dp_shard=8, tp=4, cp/sp=2 |
+
+### Validation Rules
+
+1. **CP and SP are mutually exclusive** — cannot set both > 1 simultaneously
+2. **TP or CP with pure DP (dp_replicate > 1, dp_shard == 1) is invalid** — must use FSDP
+3. **Total size must match `num_processes`** — product of all sizes must equal total GPUs (except DeepSpeed SP)
+4. **Minimum value per dimension is 1**
+5. **Valid cp_backend**: `"torch"` only; **sp_backend**: `"deepspeed"` only
+
+### Handler Classes
+
+Each active dimension can be configured with a handler:
+
+- **TorchTensorParallelConfig**: `enable_async_tp` (reserved, warns "not supported")
+- **TorchContextParallelConfig**: `cp_comm_strategy` — `"allgather"` (default) or `"alltoall"`
+- **DeepSpeedSequenceParallelConfig**: `sp_seq_length`, `sp_seq_length_is_variable`, `sp_attn_implementation` (FA2/FA3/SDPA or hub kernel)
+
+Auto-created when size > 1 and no handler provided.
+
+### Environment Variable Configuration
+
+All fields configurable via env vars for SLURM integration:
+
+| Env Var | Default |
+|---------|---------|
+| `PARALLELISM_CONFIG_DP_SHARD_SIZE` | `"1"` |
+| `PARALLELISM_CONFIG_TP_SIZE` | `"1"` |
+| `PARALLELISM_CONFIG_CP_SIZE` | `"1"` |
+| `PARALLELISM_CONFIG_SP_SIZE` | `"1"` |
+| `PARALLELISM_CONFIG_CP_COMM_STRATEGY` | `"allgather"` |
+
+```python
+# All values read from env
+config = ParallelismConfig()
+acc = Accelerator(parallelism_config=config)
+```
+
+### Accessing Rank Information
+
+```python
+acc.tensor_parallel_rank       # 0..tp_size-1
+acc.data_parallel_rank         # replicate dimension rank
+acc.data_parallel_shard_rank   # shard dimension rank
+acc.is_composable_parallelism_enabled  # True if FSDP2
+acc.parallelism_config         # The config object
+acc.torch_device_mesh          # The PyTorch DeviceMesh
+```
+
+### Key Insights
+
+1. **ParallelismConfig replaces `torch_tp_plugin`** — old param is deprecated.
+2. **FSDP2 + TP = the new standard** — device mesh dimensions replace manual FSDP wrapping.
+3. **DeepSpeed SP bypasses device mesh** — DeepSpeed manages groups globally.
+4. **CP and SP are mutually exclusive** — choose based on interconnect.
+5. **Handler auto-creation** — just set sizes, handlers auto-instantiate.
+6. **Early topology validation** — catches config errors at init time.
+
+### Known Limitations (from source)
+- `pipeline_parallel_rank` and `context_parallel_rank` raise `NotImplementedError`
+- `enable_async_tp` accepted but warns "not supported"
+- `should_save_model` returns `True` for all ranks (pending optimization)
+
+### Resources
+- Source: `/opt/data/.venv-sakthai/lib/python3.14/site-packages/accelerate/parallelism_config.py`
+1645|- Accelerate docs: https://huggingface.co/docs/accelerate/en/index
+1646|- torchtitan ParallelDims: https://github.com/pytorch/torchtitan/blob/main/torchtitan/distributed/parallel_dims.py
+1647|
+1648|### Files modified
+1649|- `~/profiles/sakthai/skills/mlops/hf-accelerate/SKILL.md` — created
+1650|- `~/profiles/sakthai/skills/mlops/hf-accelerate/references/hf-learnings.md` — created (+288 lines)
+1651|- `~/profiles/sakthai/cron/hf-topics-covered.json` — updated
+1652|
+1653|---
+1654|
+1655|## 2026-07-24: hf-hub-storage-management — Deep Dive V2
+1656|
+1657|### Summary
+1658|Comprehensive deep-dive into Hugging Face Hub storage management — monitoring, freeing, and managing storage across all repo types. Researched from `huggingface_hub` source code (v1.24+, `hf_api.py`) and official Hub docs. Covered 11+ API methods including `list_user_repos()`, `list_lfs_files()`, `permanently_delete_lfs_files()`, `list_repo_refs()`, `delete_branch()`, `super_squash_history()`, `set_space_volumes()`, `repo_info().used_storage`, `list_repo_tree()`, and `upload_large_folder()` (deprecated).
+1659|
+1660|### Key Insights
+1661|- **`list_user_repos()`** returns `RepoStorageInfo` with per-repo byte count + % of namespace quota — best starting point for storage audit
+1662|- **`permanently_delete_lfs_files()`** with `rewrite_history=True` is the only way to truly reclaim LFS storage; deleting `.gitattributes` pointers alone doesn't work
+1663|- **`set_space_volumes()`** replaces the deprecated `request_space_storage()` — mounts model/dataset/bucket volumes in Spaces via the Volume API
+1664|- **`upload_folder()`** in multi-commit mode (default) now supersedes the deprecated `upload_large_folder()`
+1665|- Super-squash (`super_squash_history()`) compresses entire Git history to 1 commit but quota takes up to 36 hours to update
+1666|- LFS objects are identified by SHA-256 OID, not paths — a single OID may be referenced across multiple paths/commits
+1667|- Storage Buckets are S3-compatible, accessed via `hf://buckets/`, and deploy via Volume API into Spaces
+1668|
+1669|### Resources
+1670|- `huggingface_hub` source: `hf_api.py` lines 88, 1647, 1981, 3567, 3828, 4034, 4269, 4349, 6179, 7002, 8990
+1671|- Hub docs: https://huggingface.co/docs/hub/en/storage-limits
+1672|- Python API ref: https://huggingface.co/docs/huggingface_hub/en/package_reference/hf_api
+1673|
+1674|### Files modified
+1675|- `~/profiles/sakthai/skills/mlops/hf-hub-storage-management/SKILL.md` — added YAML frontmatter (existing file)
+1676|- `~/profiles/sakthai/skills/mlops/hf-hub-storage-management/references/hf-learnings.md` — created (+256 lines)
+1677|- `~/profiles/sakthai/skills/mlops/hf-datasets-video-processing/SKILL.md` — added YAML frontmatter
+1678|- `~/profiles/sakthai/skills/mlops/hf-datasets-image-processing/SKILL.md` — added YAML frontmatter
+1679|- `~/profiles/sakthai/skills/mlops/hf-accelerate/SKILL.md` — added YAML frontmatter
+1680|- `~/profiles/sakthai/cron/hf-topics-covered.json` — updated
+
+## 2026-07-24: hf-hub-pull-requests-and-discussions-api — Complete Deep Dive (Topic #123)
+
+### Summary
+Comprehensive deep-dive into Hugging Face Hub's Pull Requests and Discussions API. Covers the full lifecycle — creating, reading, commenting, editing, merging, and closing discussions/PRs using the `huggingface_hub` Python SDK (v1.24.0) and the underlying git ref architecture. This topic was previously tracked but had no learning content written; this fills the gap with authoritative source-verified documentation.
+
+### Architecture — How Hub PRs Actually Work
+
+The Hub's PR system is intentionally different from GitHub's fork-based model:
+
+1. **No forks.** Contributors push directly to the source repo via special git refs.
+2. **Custom refs, not branches.** PRs use `refs/pr/{NUMBER}` refs (not `refs/heads/`). These are not fetched by default when cloning.
+3. **Discussions and PRs are the same type.** They share the same list view, same API, same data model. A PR is a discussion with `is_pull_request=True` and file changes attached.
+4. **Draft by default.** Programmatically created PRs start in `"draft"` status. They must be manually published before merging.
+
+### Full Python SDK Method Reference
+
+From `huggingface_hub.HfApi` (v1.24.0):
+
+| Method | Purpose | Key Parameters |
+|--------|---------|---------------|
+| `create_discussion()` | Create discussion or PR | `repo_id`, `title`, `pull_request=False/True` |
+| `create_pull_request()` | Wrapper for PR creation | `repo_id`, `title` (thin wrapper) |
+| `get_discussion_details()` | Fetch full PR/discussion | `repo_id`, `discussion_num` |
+| `get_repo_discussions()` | List all discussions/PRs | `repo_id`, `author`, `discussion_type`, `discussion_status` |
+| `comment_discussion()` | Post comment | `repo_id`, `discussion_num`, `comment` |
+| `edit_discussion_comment()` | Edit comment | `repo_id`, `discussion_num`, `comment_id`, `new_content` |
+| `hide_discussion_comment()` | Hide comment (irreversible) | `repo_id`, `discussion_num`, `comment_id` |
+| `change_discussion_status()` | Open/close | `repo_id`, `discussion_num`, `new_status` |
+| `merge_pull_request()` | Merge PR | `repo_id`, `discussion_num` |
+| `rename_discussion()` | Rename title | `repo_id`, `discussion_num`, `new_title` |
+
+### Filtering
+
+**DiscussionTypeFilter:** `"all"`, `"pull_request"`, `"discussion"`
+**DiscussionStatusFilter:** `"open"`, `"closed"`, `"all"`
+
+`get_repo_discussions()` returns an **iterator** of `Discussion` objects (summary). Use `get_discussion_details()` for full details including diff and events.
+
+### Status Lifecycle
+
+```
+create_discussion(pull_request=True) → status="draft"
+  → Publish (web UI only) → "open" → merge → "merged"
+                                   → close → "closed"
+create_discussion(pull_request=False) → "open" → "closed"
+```
+
+### Preferred PR Creation with Changes
+
+```python
+from huggingface_hub import HfApi, CommitOperationAdd
+
+api = HfApi()
+api.create_commit(
+    repo_id="user/repo",
+    operations=[CommitOperationAdd(path_in_repo="file.txt", path_or_fileobj=b"content")],
+    commit_message="Add file via PR",
+    create_pr=True,  # Creates PR atomically with changes
+)
+```
+
+### Git Workflow
+
+```bash
+# Fetch PR locally
+git fetch origin refs/pr/42:pr/42
+git checkout pr/42
+# Push changes
+git push origin pr/42:refs/pr/42
+
+# Fetch ALL PRs
+git fetch origin refs/pr/*:refs/remotes/origin/pr/*
+```
+
+### Zero-Cost Notes
+- All API calls are free-tier supported
+- PR refs take storage — delete after merge to stay within 5GB free limit
+- `create_commit(create_pr=True)` combines PR + changes in one call
+
+### Resources
+- Hub docs: https://huggingface.co/docs/hub/en/repositories-pull-requests-discussions
+- Python SDK source: `huggingface_hub.hf_api` (v1.24.0)
+- CLI: `huggingface-cli discussions --help`
+
+---
+### Files modified
+- `~/profiles/sakthai/skills/SakThai-hf-pull-requests-discussions/SKILL.md` — created with author/license
+- `~/profiles/sakthai/skills/SakThai-hf-pull-requests-discussions/references/hf-learnings.md` — created (+211 lines)
+- `~/profiles/sakthai/cron/hf-topics-covered.json` — updated
+- `~/profiles/sakthai/skills/references/hf-learnings.md` — appended
 
 ---
 
-## 2026-07-24: hf-diffusers-video-generation-pipeline — Complete Ecosystem Deep Dive (Topic #81, Deepened)
+## 2026-07-24: hf-datasets-server-data-preview-rows-search-filter-deep-dive
 
 ### Summary
+Deep-dive into the Hugging Face Datasets Server's data preview and query endpoints — `/first-rows`, `/rows`, `/search`, `/filter`, `/statistics`, and `/croissant`. All verified live against the production API at `https://datasets-server.huggingface.co`. Covers exact response formats, SQL-like filter syntax, pagination behavior, and practical zero-cost patterns.
 
-A comprehensive survey of ALL video generation pipelines in Hugging Face Diffusers (main branch, post-v0.39.0). The video pipeline ecosystem has exploded to **20+ distinct pipelines** covering text-to-video (T2V), image-to-video (I2V), first-last-frame-to-video (FLF2V), character animation, controllable video generation, and video editing.
-
-### Comparison of All Video Pipelines
-
-| Pipeline | Class | Params | T2V | I2V | Other Modes | Scheduler | Notes |
-|---|---|---|---|---|---|---|---|
-| **Allegro** | `AllegroPipeline` | ~2B | ✅ | ❌ | — | Flow matching | Short-form T2V |
-| **AnyFlow** | `AnyFlowPipeline` | Variable | ✅ | ❌ | — | Flow matching | Fast generation |
-| **ChronoEdit** | `ChronoEditPipeline` | Variable | ❌ | ❌ | Video editing | DDIM | Frame-based editing |
-| **CogVideoX** | `CogVideoXPipeline` | 2B/5B | ✅ | ✅ (I2V) | — | DDIM/DPM | Flagship, 3D causal VAE |
-| **ConsisID** | `ConsisIDPipeline` | Variable | ✅ | ✅ | Identity-consistent | Flow matching | Face-consistent video |
-| **Cosmos** | `CosmosPipeline` | Variable | ✅ | ✅ | World model | Flow matching | NVIDIA world model |
-| **Cosmos3** | `Cosmos3Pipeline` | Variable | ✅ | ✅ | World model | Flow matching | Next-gen Cosmos |
-| **Framepack** | `FramepackPipeline` | Variable | ❌ | ❌ | Frame interpolation | — | Frame packing |
-| **Helios** | `HeliosPipeline` | Variable | ✅ | ❌ | — | Flow matching | High-quality T2V |
-| **HunyuanVideo** | `HunyuanVideoPipeline` | ~13B | ✅ | ❌ | — | DDIM | Tencent's model |
-| **HunyuanVideo1.5** | `HunyuanVideo1_5Pipeline` | ~13B | ✅ | ❌ | — | DDIM | Improved version |
-| **Kandinsky 5.0 Video** | — | — | ✅ | ❌ | — | — | Kandinsky 5.0 video module |
-| **Latte** | `LattePipeline` | Variable | ✅ | ❌ | — | DDIM | Latent diffusion T2V |
-| **LTX-2** | `LTXVideoPipeline` | ~2B | ✅ | ❌ | — | Flow matching | Lightweight T2V |
-| **Mochi** | `MochiPipeline` | 10B | ✅ | ❌ | — | FlowMatchEuler | Genmo, AsymmDiT, Apache 2.0 |
-| **Motif-Video** | `MotifVideoPipeline` | Variable | ✅ | ❌ | Motion control | — | Motion-conditioned |
-| **SkyReels-V2** | `SkyReelsPipeline` | Variable | ✅ | ❌ | — | — | Skywork video |
-| **Stable Video Diffusion** | `StableVideoDiffusionPipeline` | ~2.5B | ❌ | ✅ | Frame interpolation | — | Stability AI |
-| **Wan** | `WanPipeline` | 1.3B/14B | ✅ | ✅ | FLF2V, VACE, Animate | FlowMatch | Multi-stage denoising, two transformers |
-
-### Detailed Pipeline Deep Dives
-
-#### 1. CogVideoX (THUDM)
-
-**Architecture:** T5 encoder → 3D Causal VAE → CogVideoXTransformer3DModel (spatio-temporal full attention) → DDIM/DPM scheduler.
-
-**Key Features:**
-- Available in 2B and 5B parameter variants
-- 3D causal VAE reduces flickering vs frame-wise VAEs
-- Supports both DDIM and DPM schedulers
-- `CogVideoXImageToVideoPipeline` variant for I2V
-- LoRA support via `load_lora_weights()`
-- torchao Int8 weight-only quantization
-- `fuse_qkv_projections()` for speed
-
-**Optimal Settings:**
-- T2V: 1360×768 resolution, 81–161 frames at 16 fps
-- I2V: Width 768–1360, Height 758 (must be divisible by 16)
-- `max_sequence_length` defaults to 226 (T5 tokens)
-
-**Memory-Saving:**
-- `enable_model_cpu_offload()`: 19 GB → 33 GB without
-- `enable_sequential_cpu_offload()`: <4 GB (very slow)
-- `enable_tiling()` + model offload: 11 GB
-- `enable_layerwise_casting(FP8)`: layer-cast weights to FP8 at runtime
-
-#### 2. Mochi 1 (Genmo)
-
-**Architecture:** T5-XXL encoder → Asymmetric Diffusion Transformer (AsymmDiT, 10B params) → AutoencoderKLMochi → FlowMatchEulerDiscreteScheduler.
-
-**Key Innovations:**
-- **AsymmDiT:** Non-square QKV and output projection layers (Q/K projections smaller than V/O) to reduce memory
-- Single T5-XXL text encoder (no dual encoders)
-- Released under Apache 2.0 license
-- `force_zeros_for_empty_prompt` option (zeros CFG unconditional, matches Genmo impl)
-
-**Optimal Settings:**
-- 480×848 resolution (default)
-- `num_frames`: 19–163 frames
-- `num_inference_steps`: 28 (fast) to 64 (quality)
-- `guidance_scale`: 3.5–4.5
-- `max_sequence_length`: 256
-- `variant="bf16"` for 22 GB VRAM variant
-
-**Quantization:**
-```python
-from transformers import BitsAndBytesConfig
-from diffusers import BitsAndBytesConfig as DiffusersBitsAndBytesConfig, MochiTransformer3DModel
-
-# 8-bit quantized T5
-text_encoder_8bit = T5EncoderModel.from_pretrained(
-    "genmo/mochi-1-preview", subfolder="text_encoder",
-    quantization_config=BitsAndBytesConfig(load_in_8bit=True),
-    torch_dtype=torch.float16,
-)
-# 8-bit quantized transformer
-transformer_8bit = MochiTransformer3DModel.from_pretrained(
-    "genmo/mochi-1-preview", subfolder="transformer",
-    quantization_config=DiffusersBitsAndBytesConfig(load_in_8bit=True),
-    torch_dtype=torch.float16,
-)
+### Base URL
 ```
-
-**Multi-GPU:** Supports `device_map="auto"` + `max_memory` to split the transformer across GPUs.
-
-**Original Repo Precision:** Text encoder + VAE in FP32, DiT in BF16 with `EFFICIENT_ATTENTION` backend. Diffusers doesn't yet support per-stage dtypes — use autocast + manual encoding to reproduce.
-
-**Single File Loading:** Supports `MochiTransformer3DModel.from_single_file()` for ComfyUI repackaged checkpoints. FP8 single files NOT yet supported.
-
-#### 3. Wan 2.1 / 2.2 (Wan-AI)
-
-**Architecture:** UMT5 encoder → WanTransformer3DModel(s) → AutoencoderKLWan → FlowMatchEulerDiscreteScheduler.
-
-**Key Innovations:**
-- **Two-stage denoising:** Wan 2.2 introduces `transformer_2` — a second transformer for low-noise stages, with `boundary_ratio` controlling the split. Stage 1 (high noise) runs on `transformer`, Stage 2 (low noise) runs on `transformer_2`.
-- Supports both 1.3B (consumer GPU, 8.19 GB VRAM) and 14B (high quality) variants
-- Available in 6 model flavors: T2V 1.3B, T2V 14B, I2V 14B-480P, I2V 14B-720P, FLF2V 14B-720P, VACE
-- **Wan 2.2** adds: T2V 14B, I2V 14B, TI2V 5B, Animate 14B
-
-**Model Variants:**
-
-| Model ID | Type | Params | Notes |
-|---|---|---|---|
-| `Wan-AI/Wan2.1-T2V-1.3B-Diffusers` | T2V | 1.3B | Consumer GPU friendly |
-| `Wan-AI/Wan2.1-T2V-14B-Diffusers` | T2V | 14B | High quality |
-| `Wan-AI/Wan2.1-I2V-14B-480P-Diffusers` | I2V | 14B | ~480p output |
-| `Wan-AI/Wan2.1-I2V-14B-720P-Diffusers` | I2V | 14B | ~720p output |
-| `Wan-AI/Wan2.1-FLF2V-14B-720P-Diffusers` | FLF2V | 14B | First+Last frame → video |
-| `Wan-AI/Wan2.1-VACE-14B-Diffusers` | VACE | 14B | Any-to-video controllable |
-| `Wan-AI/Wan2.2-T2V-14B-Diffusers` | T2V | 14B | Two-stage denoising |
-| `Wan-AI/Wan2.2-I2V-14B-Diffusers` | I2V | 14B | Two-stage denoising |
-| `Wan-AI/Wan2.2-TI2V-5B-Diffusers` | TI2V | 5B | Text+Image → video |
-| `Wan-AI/Wan2.2-Animate-14B-Diffusers` | Animate | 14B | Character animation |
-
-**Memory Optimization (14B under 13 GB VRAM):**
-```python
-from diffusers.hooks.group_offloading import apply_group_offloading
-
-# Block-level for text encoder
-apply_group_offloading(text_encoder, onload_device="cuda",
-    offload_device="cpu", offload_type="block_level", num_blocks_per_group=4)
-
-# Leaf-level for transformer
-transformer.enable_group_offload(onload_device="cuda",
-    offload_device="cpu", offload_type="leaf_level", use_stream=True)
+https://datasets-server.huggingface.co
 ```
+No auth required for public datasets. Gated/private datasets need `Authorization: Bearer ***` header.
 
-**Wan VACE (Any-to-Video Controllable Generation):** Supports depth, pose, sketch, flow, grayscale, scribble, layout, bounding box conditioning. Uses mask-based paradigm: black mask = condition area (preserve), white mask = generation area.
+### Endpoint Reference (Verified Live)
 
-**Wan-Animate:** Character animation + replacement. Two modes: `"animate"` (animate character) and `"replace"` (replace character in scene). Requires preprocessed pose_video + face_video.
-
-**Key Notes:**
-- Frames formula: `k = (num_frames - 1) / 4`
-- Lower flow_shift (2.0–5.0) for low-res, higher (7.0–12.0) for high-res
-- `AutoencoderKLWan` should use `torch.float32` for best decoding quality
-- Supports LightX2V LoRAs for speed
-- Wan 2.2: LoRAs only load into first transformer by default; set `load_into_transformer_2=True` for second
-
-#### 4. HunyuanVideo (Tencent)
-
-- ~13B parameter T2V model
-- Uses DDIM scheduler
-- `HunyuanVideo1_5Pipeline` available with improvements
-- Standard memory optimization techniques apply
-
-#### 5. Stable Video Diffusion (Stability AI)
-
-- I2V only (no T2V)
-- Takes a single image and generates video
-- Uses frame interpolation approach
-- Smaller model size (~2.5B)
-
-#### 6. LTX Video / LTX-2
-
-- Lightweight T2V (~2B params)
-- Flow matching scheduler
-- Consumer GPU friendly
-
-### Common Architecture Patterns
-
-All Diffusers video pipelines share this structure:
-1. **Text Encoder** — T5, UMT5, or CLIP (encodes prompt)
-2. **VAE** — 3D video autoencoder (spatial + temporal compression), specific per model:
-   - `AutoencoderKLCogVideoX` (CogVideoX)
-   - `AutoencoderKLMochi` (Mochi)
-   - `AutoencoderKLWan` (Wan)
-   - Standard `AutoencoderKL` (SVD)
-3. **Transformer** — 3D diffusion transformer with spatial + temporal attention:
-   - `CogVideoXTransformer3DModel`
-   - `MochiTransformer3DModel` (AsymmDiT)
-   - `WanTransformer3DModel`
-   - `HunyuanVideoTransformer3DModel`
-4. **Scheduler** — DDIM, DPM, FlowMatchEuler, or UniPCMultistep
-
-### Scheduler Choices
-
-| Pipeline | Default Scheduler | Alternate |
-|---|---|---|
-| CogVideoX | `CogVideoXDDIMScheduler` | `CogVideoXDPMScheduler` |
-| Mochi | `FlowMatchEulerDiscreteScheduler` | — |
-| Wan | `FlowMatchEulerDiscreteScheduler` | `UniPCMultistepScheduler` |
-| HunyuanVideo | DDIM | — |
-| SVD | — | Various |
-
-### Memory Optimization Comparison
-
-| Technique | How It Works | Best For |
-|---|---|---|
-| `enable_model_cpu_offload()` | Offloads entire sub-modules to CPU when not in use | General purpose, good balance |
-| `enable_sequential_cpu_offload()` | Offloads individual layers sequentially | Minimal VRAM (<4 GB), but very slow |
-| `enable_vae_tiling()` | Processes VAE decode in tiles | Reduces VAE peak memory by 50%+ |
-| `enable_vae_slicing()` | Slices VAE input for batch processing | Complements tiling |
-| Group offloading | Offloads groups of layers (block_level or leaf_level) | Wan, Flux — more granular than model-level |
-| `enable_layerwise_casting()` | Casts weights layer-by-layer at runtime to FP8 | CogVideoX |
-| `PipelineQuantizationConfig` | Applies quantizers (torchao, bitsandbytes) to specific modules | CogVideoX, Mochi |
-| `device_map="auto"` + `max_memory` | Splits model across multiple GPUs | Multi-GPU setups |
-
-### Quantization Support
-
-| Pipeline | bitsandbytes | torchao | FP8 casting | Notes |
-|---|---|---|---|---|
-| CogVideoX | ❌ | ✅ (Int8WeightOnly) | ✅ (layerwise_casting) | ~16 GB with int8 |
-| Mochi | ✅ | ❌ | ❌ (single file FP8 not supported) | ~22 GB with bf16 variant |
-| Wan | ❌ | ❌ | ❌ | Group offload instead |
-| HunyuanVideo | ❌ | ❌ | ❌ | Standard offload |
-
-### LoRA Support
-
-| Pipeline | `load_lora_weights()` | `set_adapters()` | Notes |
-|---|---|---|---|
-| CogVideoX | ✅ | ✅ | Community LoRAs on HF Hub |
-| Wan 2.1 | ✅ | ✅ | LightX2V LoRAs for speed |
-| Wan 2.2 | ✅ | ✅ | `load_into_transformer_2=True` |
-| Mochi | ❌ | ❌ | Not yet supported |
-| HunyuanVideo | ❌ | ❌ | Not yet supported |
-
-### AutoPipeline for Video
-
-`AutoPipelineForTextToVideo` and `AutoPipelineForImageToVideo` auto-detect the correct pipeline class from the model ID. However, this is less reliable than explicit pipeline classes due to the variety of model architectures.
-
-### Export Utilities
-
-- `diffusers.utils.export_to_video(frames, path, fps=X)` — exports list of PIL images to MP4
-- `diffusers.utils.load_video(path)` — loads video as list of PIL frames
-- `diffusers.video_processor.VideoProcessor` — low-level video processing (VAE scale factor, normalization)
-- `from_image_bytes_to_video()` — helper for converting images
-
-### Video Pipeline Ecosystem Summary
-
-The Diffusers video ecosystem has matured significantly, with the `main` branch now supporting over 20 video pipelines. Key strategic takeaways:
-- **Wan** is the most comprehensive ecosystem (T2V, I2V, FLF2V, VACE, Animate) with the strongest consumer GPU support (1.3B at 8 GB)
-- **CogVideoX** remains the best-documented and most LoRA-friendly option
-- **Mochi** is the strongest open-source quality contender (10B AsymmDiT, Apache 2.0)
-- **Two-stage denoising** (Wan 2.2) represents the next architectural evolution in video diffusion
-- **Controllable video** (Wan VACE, Animate) is the frontier — mask-based conditioning for depth/pose/face
-
-### References
-- [Diffusers Video Pipelines Docs (main)](https://huggingface.co/docs/diffusers/main/en/api/pipelines/video)
-- [Mochi Pipeline Docs](https://huggingface.co/docs/diffusers/main/en/api/pipelines/mochi)
-- [CogVideoX Pipeline Docs](https://huggingface.co/docs/diffusers/main/en/api/pipelines/cogvideox)
-- [Wan Pipeline Docs](https://huggingface.co/docs/diffusers/main/en/api/pipelines/wan)
-- [HunyuanVideo Pipeline Docs](https://huggingface.co/docs/diffusers/main/en/api/pipelines/hunyuan_video)
-- [Diffusers Reduce Memory Guide](https://huggingface.co/docs/diffusers/main/en/optimization/memory)
-- [Genmo Mochi 1](https://github.com/genmoai/models)
-- [Wan-AI GitHub](https://github.com/Wan-AI/Wan)
-|
-## 2026-07-24: hf-hub-pull-requests-and-discussions-api — Full Guide (Topic #122)
-
-### Summary
-Comprehensive deep-dive into the Hugging Face Hub's Pull Requests and Discussions system — the community collaboration layer for models, datasets, Spaces, and storage repos. Covers the no-fork ref-based PR architecture, the web UI lifecycle (draft → open → merged/closed), programmatic API via `huggingface_hub`, and the `hf discussions` CLI. Key insight: HF PRs do NOT use forks — contributors push to custom git refs (e.g. `refs/pr/42`) directly on the source repo.
-
-### Architecture — No Fork, All Ref
-
-HF's PR system is fundamentally different from GitHub:
-
-| Feature | GitHub PR | HF Hub PR |
-|---------|-----------|-----------|
-| Fork required | Yes — fork + branch | No — push to `refs/pr/N` on source repo |
-| Where changes live | Fork's branch | Custom git ref `refs/pr/{N}` on source repo |
-| Clone visibility | Not fetched by default | Not fetched by default (intentional) |
-| Distinction from Issues | Separate systems | PRs and Discussions share the same list |
-| Streamlined for ML | No | Yes — model/dataset/Space-specific defaults |
-
-### PR Lifecycle
-
-```
-Draft (default when created via advanced mode / API)
-  │
-  ▼
-Open (Publish button)
-  │
-  ├── Merged  → optional: delete ref to free storage
-  └── Closed  → optional: delete ref to free storage
-```
-
-**Draft → Open:** Draft is the default when creating a PR via "Advanced mode" or via `create_pull_request()` API. The Publish button converts it to Open. This transition is **one-way** — you cannot go back to draft.
-
-**Closing/Merging:** After close or merge, a banner appears showing storage freed by deleting the PR ref. Clicking "Delete ref" removes `refs/pr/{N}` permanently — this is **irreversible**.
-
-### Web UI Features
-
-| Feature | Who Can Use |
-|---------|-------------|
-| Edit title | Author, repo writer, or org write-access |
-| Pin discussion | Write-access to repo |
-| Lock discussion | Write-access to repo (prevents new comments) |
-| Edit comment | Comment author or write-access |
-| Hide comment | Write-access (irreversible — content hidden forever) |
-| Markdown + LaTeX | Everyone (`$$...$$` for display, `\\\\(...\\\\)` for inline) |
-
-### Git — Working with PRs Locally
-
+#### 1. `/is-valid` — Check Dataset Capabilities
 ```bash
-# Fetch a specific PR (e.g. PR #42)
-git fetch origin refs/pr/42:pr/42
-git checkout pr/42
-
-# Make changes and push back to the PR
-git commit -m "Add your change"
-git push origin pr/42:refs/pr/42
-
-# Fetch ALL PRs (git magician mode)
-git config remote.origin.fetch "+refs/pr/*:refs/remotes/origin/pr/*"
-git fetch origin
-git checkout pr/42
+curl "https://datasets-server.huggingface.co/is-valid?dataset=Salesforce/wikitext"
+# -> {"preview":true,"viewer":true,"search":true,"filter":true,"statistics":true}
 ```
+Returns which features (preview, viewer, search, filter, statistics) are available.
 
-### Programmatic API — huggingface_hub
-
-#### List Discussions/PRs
-
-```python
-from huggingface_hub import get_repo_discussions
-
-# Iterate all discussions/PRs
-for discussion in get_repo_discussions(repo_id="bigscience/bloom"):
-    print(f"{discussion.num} - {discussion.title}, pr: {discussion.is_pull_request}")
-
-# Filter by author, type, status
-for discussion in get_repo_discussions(
-    repo_id="bigscience/bloom",
-    author="ArthurZ",
-    discussion_type="pull_request",  # or "discussion"
-    discussion_status="open",          # or "closed"
-):
-    print(f"{discussion.num} - {discussion.title}")
-
-# Get a flat list
-discussions_list = list(get_repo_discussions(repo_id="bert-base-uncased"))
-```
-
-#### Get Detailed PR Info
-
-```python
-from huggingface_hub import get_discussion_details
-
-details = get_discussion_details(
-    repo_id="bigscience/bloom-1b3",
-    discussion_num=2
-)
-# Returns DiscussionWithDetails with:
-#   .num, .title, .author, .status, .is_pull_request
-#   .events — all comments, commits, status changes, renames
-#   .diff — raw git diff (PR only)
-#   .target_branch — "refs/heads/main"
-#   .merge_commit_oid — None if not merged
-```
-
-#### Create PR from a Commit
-
-The easiest way to propose changes: set `create_pr=True` on any commit operation.
-
-```python
-from huggingface_hub import metadata_update, upload_file, upload_folder, delete_file, delete_folder
-
-# Update model card metadata via PR
-metadata_update(
-    repo_id="username/repo_name",
-    metadata={"tags": ["computer-vision", "awesome-model"]},
-    create_pr=True,
-)
-
-# Upload file via PR
-upload_file(
-    path_or_fileobj="local_file.bin",
-    path_in_repo="remote_file.bin",
-    repo_id="username/repo_name",
-    create_pr=True,
-)
-```
-
-#### Create Discussion/PR from Scratch
-
-```python
-from huggingface_hub import create_discussion, create_pull_request
-
-# Create a discussion
-disc = create_discussion(
-    repo_id="username/repo-name",
-    title="Hi from the huggingface_hub library!",
-)
-
-# Create a pull request (starts in DRAFT mode)
-pr = create_pull_request(
-    repo_id="username/repo-name",
-    title="Fix tokenizer config",
-)
-```
-
-#### Manage PRs
-
-```python
-from huggingface_hub import (
-    comment_discussion,
-    edit_discussion_comment,
-    rename_discussion,
-    change_discussion_status,
-    merge_pull_request,
-)
-
-# Add a comment
-comment_discussion(repo_id="username/repo-name", discussion_num=5, body="LGTM!")
-
-# Rename
-rename_discussion(repo_id="username/repo-name", discussion_num=5, title="Better title")
-
-# Open/Close
-change_discussion_status(repo_id="username/repo-name", discussion_num=5, new_status="closed")
-
-# Merge a PR
-merge_pull_request(repo_id="username/repo-name", discussion_num=5)
-```
-
-### CLI — hf discussions
-
-All operations available from the command line — useful for CI pipelines and scripting.
-
+#### 2. `/splits` — List All Splits and Subsets
 ```bash
-# List all discussions/PRs (supports --type: model/dataset/space)
-hf discussions list username/repo-name
-
-# List discussions on a dataset repo
-hf discussions list username/dataset-repo --type dataset
-
-# Get details + comments
-hf discussions info username/repo-name 5
-
-# Create discussion
-hf discussions create username/repo-name --title "Bug report" --body "Description here"
-
-# Create pull request
-hf discussions create username/repo-name --title "Fix typo" --pull-request
-
-# Comment
-hf discussions comment username/repo-name 5 --body "LGTM!"
-
-# Merge
-hf discussions merge username/repo-name 5 --yes
-
-# Show diff
-hf discussions diff username/repo-name 5
+curl "https://datasets-server.huggingface.co/splits?dataset=Salesforce/wikitext&config=wikitext-2-raw-v1"
 ```
 
-### Storage Management
-
-After closing or merging a PR, a banner shows **estimated storage that could be freed** by deleting the PR's git ref:
-
-```
-Changes in this PR are now part of main.
-Delete ref to free ~X MB of storage.
-```
-
-Click "Delete ref" to permanently remove `refs/pr/{N}`. This is especially useful when:
-- The main branch was squashed-merged (PR branch retains full history)
-- Files were deleted in main but remain in PR branch history
-- Large binary files were added during development
-
-### Key Design Decisions
-
-1. **No forks = lower friction.** Contributors don't need to maintain fork sync. Changes go directly to the source repo under custom refs that don't pollute the default clone.
-2. **PRs == Discussions.** Unified list reduces UX complexity. A Discussion becomes a PR when it has code changes attached.
-3. **Draft → Open is one-way.** Prevents abuse of toggling between states.
-4. **PR ref deletion is irreversible.** Storage savings come with the cost of losing history — design APIs accordingly.
-5. **`create_pr=True` is the recommended pattern.** Simplest way to contribute: just write files as normal, add one parameter.
-
-### Zero-Cost Relevance
-
-- **Free to use**: No cost to create/comment/merge PRs. Storage costs only apply to the PR ref itself.
-- **Free storage cleanup**: Deleting closed/merged PR refs reclaims storage on free tier.
-- **CI/CD scripting**: `hf discussions merge` + `hf discussions diff` can be wired into free GitHub Actions.
-- **No fork needed**: Avoids the storage cost of maintaining a full fork on the Hub.
-
-### References
-- [HF Hub Docs: Pull Requests and Discussions](https://huggingface.co/docs/hub/en/repositories-pull-requests-discussions)
-- [huggingface_hub: Interact with Discussions and PRs](https://huggingface.co/docs/huggingface_hub/main/en/guides/community)
-- [HfApi Discussion Methods Reference](https://huggingface.co/docs/huggingface_hub/main/en/package_reference/hf_api#huggingface_hub.HfApi.get_repo_discussions)
-- [CLI: hf discussions](https://huggingface.co/docs/huggingface_hub/main/en/guides/cli#hf-discussions)
-- [Repository Settings](https://huggingface.co/docs/hub/en/repositories-settings)
-
-## 2026-07-24: hf-transformers-kv-cache-architecture-deep-dive-v2 — Source Code Analysis from cache_utils.py
-
-### Summary
-Comprehensive source-level deep-dive into the 🤗 Transformers KV Cache architecture (cache_utils.py, ~2056 lines, Transformers v5.14+). Covers the full two-tier class hierarchy: **CacheLayerMixin** (per-layer state) and **Cache** (layer container with dispatch). Explains all dynamic, static, quantized, linear-attention, and hybrid cache variants, plus the config-driven auto-dispatch system, GPU offloading, and torch.compile support.
-
-### Architecture Overview
-
-The KV Cache system has a clean separation of concerns:
-- **CacheLayerMixin** — manages a single layer's key/value tensors (or conv/recurrent states for linear-attention)
-- **Cache** — an ordered container of `CacheLayerMixin` objects, one per model layer
-
-New in v5: The old `tuple[tuple[torch.Tensor]]` format is fully replaced by Cache objects. The legacy `past_key_values` parameter now accepts any Cache subclass, and model configs drive automatic layer-type dispatch.
-
-### Layer-Level Hierarchy
-
-#### Base: `CacheLayerMixin` (ABC)
-```
-CacheLayerMixin
-├── DynamicLayer              — grows via torch.cat (default generative)
-├── DynamicSlidingWindowLayer — grows up to sliding_window, then rotates
-├── DynamicIndexedLayer       — DynamicLayer + indexer key cache (DSA)
-├── StaticLayer               — preallocated tensor, index_copy_, torch.compile
-├── StaticSlidingWindowLayer  — static + sliding window
-├── StaticIndexedLayer        — static + DSA indexer
-├── QuantizedLayer (abstract) — KIVI-style two-tier
-│   ├── QuantoQuantizedLayer  — optimum-quanto backend (qint2/qint4)
-│   └── HQQQuantizedLayer     — HQQ backend (nbits 1–8)
-└── LinearAttentionCacheLayerMixin (ABC)
-    └── LinearAttentionLayer  — conv + recurrent states, no KV dim
-        ├── LinearAttentionAndFullAttentionLayer            — hybrid dynamic
-        ├── LinearAttentionAndSlidingWindowAttentionLayer   — hybrid sliding
-        ├── LinearAttentionAndStaticFullAttentionLayer      — hybrid static
-        └── LinearAttentionAndStaticSlidingWindowAttentionLayer
+#### 3. `/size` — Dataset Size (Rows + Bytes)
+**Verified response (2026-07-24):**
+```json
+{
+  "size": {
+    "config": { "dataset": "Salesforce/wikitext", "config": "wikitext-2-raw-v1", "num_bytes_original_files": 7747362, "num_bytes_parquet_files": 7747362, "num_bytes_memory": 13055524, "num_rows": 44836, "num_columns": 1 },
+    "splits": [
+      {"split": "test", "num_rows": 4358, "num_bytes_memory": 1391252},
+      {"split": "train", "num_rows": 36718, "num_bytes_memory": 10720370},
+      {"split": "validation", "num_rows": 3760, "num_bytes_memory": 943902}
+    ]
+  },
+  "partial": false
+}
 ```
 
-All layers auto-register via `__init_subclass__` into `DYNAMIC_LAYER_TYPE_MAPPING` or `STATIC_LAYER_TYPE_MAPPING` by setting `_layer_type`.
+#### 4. `/first-rows` — Preview First Rows (VERIFIED)
+- Returns exactly 100 rows (default page size)
+- Fields: `features`, `rows[]` (each with `row_idx`, `row`, `truncated_cells`)
+- No `num_rows_total` — use `/size` for total count
+- `split` parameter is required
 
-#### DynamicLayer (the default)
-- Shapes: `[batch_size, num_heads, seq_len, head_dim]`, grows by `torch.cat`
-- Key methods: `lazy_initialization`, `update` (cat), `crop`, `reorder_cache`, `batch_repeat_interleave`, `batch_select_indices`
-- `get_max_length()` returns `-1` (no maximum)
-- `reset()` zeros in-place (preserves tensor objects); `offload()` moves to CPU
+#### 5. `/rows` — Download Arbitrary Slices (VERIFIED)
+- `offset` (default: 0), `length` (default/max: 100)
+- Same format as `/first-rows` but with controllable offset
 
-#### DynamicSlidingWindowLayer
-- Adds `sliding_window` param; cache limited to last `sliding_window-1` tokens
-- Tracks `cumulative_length` separately (theoretical total, beyond window)
-- `record_past` mode: keeps full KV until `crop()` is called (for speculative decoding rollback)
-- Returns FULL states in `update()` even though only window is stored — critical correctness detail
+#### 6. `/search` — Full-Text Search (VERIFIED)
+- Query scanned across ALL text columns
+- Returns absolute `row_idx` (not renumbered)
+- No total match count exposed
+- Pagination via `offset`/`length`
 
-#### StaticLayer (for torch.compile/export)
-- Preallocates zero tensors of shape `[batch_size, num_heads, max_cache_len, head_dim]`
-- Updates use `index_copy_` in-place (preserves static memory address)
-- `mark_static_address()` tags tensors for cudagraphs compatibility
-- `is_compileable = True`
-- The `cumulative_length` is a **tensor** (not Python int) to avoid graph breaks
+#### 7. `/filter` — SQL-Like WHERE Filtering (VERIFIED)
+**WHERE Syntax Rules (from docs + verified):**
+- Column names MUST be in double quotes: `"text"`
+- String values MUST be in single quotes: `'hello'`
+- Numeric values unquoted: `label=1`
+- Operators: `=`, `<>`, `>`, `>=`, `<`, `<=`, `LIKE`, `NOT LIKE`
+- Combinators: `AND`, `OR`, `NOT`, parentheses
+- `LIKE` wildcards: `%` (any sequence), `_` (single char)
+- **Only endpoint that returns `num_rows_total`** (total matching rows)
 
-#### StaticSlidingWindowLayer
-- Combines preallocation with sliding window rotation
-- When full and one token arrives: uses `tensor.roll(-1, dims=-2)` followed by overwrite at `index=-1` — avoids cat entirely for token-by-token generation
-- For multi-token prefill on full cache: uses `cat` fallback
-- Tracks both `cumulative_length` (tensor) and `cumulative_length_int` (Python int) — the int avoids data-dependent control flow in compiled regions
+#### 8. `/statistics` — Column Statistics (VERIFIED)
+**Verified response for wikitext train split:**
+- `num_examples`: 36718 (total rows in split)
+- String columns: length stats (min/max/mean/median/std + histogram)
+- Numeric columns: value stats
+- `class_label` columns: frequency counts
+- Histogram: 10 bins with `hist` (counts) and `bin_edges` (boundaries)
 
-#### DynamicIndexedLayer / StaticIndexedLayer
-- Extra `indexer_keys` cache of shape `[batch_size, seq_len, index_head_dim]` for Dynamic Sparse Attention (DSA)
-- Used by GLM MoE DSA, DeepSeek V3/V2
-- `update_indexer()` mirrors the same cat (dynamic) or index_copy_ (static) pattern
-- All lifecycle methods (crop, reset, offload, reorder) are extended to cover the indexer
+#### 9. `/parquet` — Get Parquet File URLs (VERIFIED)
+- Returns per-split Parquet URLs under `refs/convert/parquet`
+- Usable with DuckDB, Polars, Pandas, cuDF, PySpark, ClickHouse, PostgreSQL
 
-#### QuantizedLayer / QuantoQuantizedLayer / HQQQuantizedLayer
-- KIVI-style two-tier cache: full-precision residual buffer (default 128 tokens) + quantized storage
-- When residual fills up, dequantize + concatenate full precision → re-quantize all → discard full precision
-- Quanto backend: `qint2` (2-bit) or `qint4` (4-bit), per-channel, MaxOptimizer
-- HQQ backend: nbits 1–8, group_size configurable, separate quantize/dequantize steps
-- **Only supported for models with ALL full_attention layers** — raises error for sliding/hybrid
-- Quantized only at the layer level; the Cache container (`QuantizedCache`) dispatches them
+#### 10. `/info` — Dataset Metadata (VERIFIED)
+- Returns `dataset_info` with description, features, splits, sizes
 
-#### LinearAttentionLayer
-- No KV dimension; stores `conv_states` (1D conv buffer) and `recurrent_states` (SSM state)
-- Static shapes by design — `is_compileable = True`, `supports_early_init = False`
-- `update_conv_state()` pads/preserves conv kernel window; `update_recurrent_state()` copies in-place
-- Hybrid variants combine LinearAttentionLayer with DynamicLayer or StaticLayer using MRO
+#### 11. `/croissant` — ML-Commons Croissant Metadata
+- Structured ML dataset metadata for interoperability
 
-### Cache Container Classes
+### Pagination Behavior Summary
 
-```
-Cache (base)
-├── DynamicCache         — lazy layer creation, config-driven dispatch
-├── StaticCache          — preallocated all layers at init (compile/export)
-├── QuantizedCache       — quantized KV, KIVI-style
-├── EncoderDecoderCache  — self_attention + cross_attention caches
-└── MtpCache             — Multi-Token Prediction offset handling
-```
+| Endpoint | Max Length | Has `offset` | `num_rows_total` |
+|----------|-----------|-------------|-----------------|
+| `/first-rows` | N/A (always 100) | No | null |
+| `/rows` | 100 | Yes | null |
+| `/search` | 100 | Yes | null |
+| `/filter` | 100 | Yes | **Yes** |
+| `/size` | N/A | N/A | Has split counts |
+| `/statistics` | N/A | N/A | Has `num_examples` |
 
-#### Cache Base Class
-- Constructor: pass pre-built `layers` list OR `layer_class_to_replicate` (lazy append)
-- `update()` dispatches to `layers[layer_idx].update()`, handling lazy append if needed
-- Offloading: uses a dedicated `prefetch_stream` (CUDA stream) to async prefetch next layer from CPU while current layer computes
-- `offload_only_non_sliding=True` by default — sliding layers are small enough to keep resident
-- `is_linear`, `is_sliding`, `is_compileable` properties introspect all layers
-- `early_initialization()` creates fake zero-size tensors for torch.export compatibility
+### Error States (Verified)
 
-#### DynamicCache
-- Constructor accepts `config` OR `ddp_cache_data` (for distributed) OR neither (lazy DynamicLayer)
-- When `config` provided: calls `get_layer_types_and_kwargs(config)` → dispatches per-layer types from `DYNAMIC_LAYER_TYPE_MAPPING`
-- `__iter__` yields `(keys, values, sliding_window_tensor)` tuples for backward compatibility
-- This is the default cache for all generative models if no explicit cache is passed
+| Error | Status | Example |
+|-------|--------|---------|
+| Renamed dataset | 200 body | `{"error":"The dataset has been renamed..."}` |
+| Not found / private | 200 body | `{"error":"The dataset does not exist..."}` |
+| Missing param | 422 | `{"error":"Parameter 'dataset' is required"}` |
+| Length too large | 422 | `{"error":"Parameter 'length' must not be greater than 100"}` |
+| Invalid WHERE | 422 | `{"error":"Parameter 'where' contains errors or invalid symbols"}` |
 
-#### StaticCache
-- Requires both `config` and `max_cache_len`
-- Dispatches from `STATIC_LAYER_TYPE_MAPPING`
-- Preallocates ALL layers at init time — zero tensors ready for `index_copy_`
-- Used automatically when `model.generate()` detects static cache usage
-- Marked `**kwargs` in constructor for backward compatibility
+### Key Takeaways
+1. `/first-rows` gives 100 rows free — quick inspection without download
+2. Use `/size` for total row counts — `/rows` and `/search` don't return totals
+3. `/filter` is the only endpoint returning `num_rows_total`
+4. WHERE syntax is SQL-like: double-quoted columns, single-quoted strings
+5. Search is case-sensitive
+6. Parquet URLs enable zero-cost analytics with DuckDB/Polars
+7. All endpoints are completely free — no API keys for public datasets
 
-#### QuantizedCache
-- Accepts `backend` ("quanto" or "hqq") and quantization params
-- Validates all layers are `full_attention` (the only type currently supported)
-- Creates one `QuantoQuantizedLayer` or `HQQQuantizedLayer` per hidden layer
+### Resources
+- Docs: https://huggingface.co/docs/dataset-viewer/
+- OpenAPI: https://datasets-server.huggingface.co/openapi.json
+- Source: https://github.com/huggingface/dataset-viewer
 
-#### EncoderDecoderCache
-- Holds two Cache objects: `self_attention_cache` and `cross_attention_cache`
-- DDP support: can reconstruct from flat tuple `(self_k, self_v, cross_k, cross_v, ...)`
-- `is_updated` tracks which cross-attention layers have been populated
+---
 
-#### MtpCache
-- Extends DynamicCache for Multi-Token Prediction (MTP) heads (DeepSeek V3 R1)
-- `get_query_offset()` adds `layer_idx + 1` offset — MTP depth k runs k+1 tokens ahead
-- `get_mask_sizes()` adjusts kv_offset accordingly
-
-### Config-Driven Layer Type Dispatch
-
-`get_layer_types_and_kwargs(config)` reads:
-1. `config.layer_types` — explicit list (e.g., ["full_attention", "linear_attention", "hybrid", ...])
-2. If absent: infers from `config.sliding_window` → all `sliding_attention`, or `config.attention_chunk_size` → all `chunked_attention`, else all `full_attention`
-3. Shared layers: subtracts `num_kv_shared_layers` from the list
-4. Returns `layer_types` + `layer_kwargs` dict with `sliding_window`, `number_of_states`, etc.
-
-Layer types recognized:
-| Type | Dynamic Mapping | Static Mapping |
-|------|----------------|----------------|
-| full_attention | DynamicLayer | StaticLayer |
-| sliding_attention | DynamicSlidingWindowLayer | StaticSlidingWindowLayer |
-| chunked_attention | DynamicSlidingWindowLayer | StaticSlidingWindowLayer |
-| conv | LinearAttentionLayer | LinearAttentionLayer |
-| moe | LinearAttentionLayer | LinearAttentionLayer |
-| linear_attention | LinearAttentionLayer | LinearAttentionLayer |
-| hybrid | LinearAttentionAndFullAttentionLayer | LinearAttentionAndStaticFullAttentionLayer |
-| hybrid_sliding | LinearAttentionAndSlidingWindowAttentionLayer | LinearAttentionAndStaticSlidingWindowAttentionLayer |
-| deepseek_sparse_attention | DynamicIndexedLayer | StaticIndexedLayer |
-
-### GPU Offloading Architecture
-
-- Enabled via `offloading=True` in Cache constructor
-- Creates a dedicated `torch.Stream()` for async prefetch
-- After each layer's `update()`:
-  1. Wait for prefetch stream to finish
-  2. Kick off prefetch for next non-sliding, non-linear layer
-  3. Offload current layer (if eligible) to CPU
-- `prefetch()` circles back to layer 0 when reaching the end of the list
-- Linear-attention layers never offloaded (no KV to save)
-- Sliding layers skipped when `offload_only_non_sliding=True` (they're small)
-
-### torch.compile / cudagraphs Considerations
-
-- `StaticLayer` (and variants) are `is_compileable = True`
-- `DynamicLayer` is NOT compileable — `torch.cat` changes tensor shapes
-- `mark_static_address()` on preallocated tensors prevents cudagraph recompilation
-- `cumulative_length` is a `torch.Tensor` (not Python int) in static layers to avoid graph breaks
-- `StaticSlidingWindowLayer` uses `tensor.roll(-1)` for single-token updates — avoids dynamic shapes
-- `index_copy_` fallback for MPS etc. when `NotImplementedError` is raised
-
-### Deprecations
-
-- `SlidingWindowCache` → renamed to `StaticCache` in v5
-- `get_max_cache_shape()` → `get_max_length()` (v5.16 removal target)
-- `max_cache_len` property → `get_max_length()` method
-- `max_batch_size` property → `batch_size` property
-
-### Zero-Cost Relevance
-
-- **Free to use**: All cache classes are in-memory only, no API costs
-- **Memory optimization**: Sliding window and quantized caches reduce GPU memory for long generations
-- **Compile speed**: StaticCache + torch.compile provides free inference speedup
-- **No cloud needed**: Offloading trades GPU memory for CPU RAM at zero monetary cost
-
-### Key Source File
-- `transformers/src/transformers/cache_utils.py` (~2056 lines, latest main branch)
-
-### References
-- [Transformers cache_utils.py source](https://github.com/huggingface/transformers/blob/main/src/transformers/cache_utils.py)
-- [KIVI: 2bit KV Cache Quantization Paper](https://huggingface.co/papers/2402.02750)
-- [KV Cache Quantization docs](https://huggingface.co/docs/transformers/en/llm_tutorial_optimization#quantized-cache)
-- [torch.compile guide](https://huggingface.co/docs/transformers/en/torch_compile)
-5897|- [Dynamic Sparse Attention (DSA) in Transformers](https://arxiv.org/abs/2504.11714)
-5898|
-5899|## 2026-07-24: hf-hub-pull-requests-and-discussions-api — Complete Deep Dive (Topic #123)
-5900|
-5901|### Summary
-5902|Comprehensive deep-dive into Hugging Face Hub's Pull Requests and Discussions API. Covers the full lifecycle — creating, reading, commenting, editing, merging, and closing discussions/PRs using the `huggingface_hub` Python SDK (v1.24.0) and the underlying git ref architecture.
-5903|
-5904|### Architecture
-5905|
-5906|1. **No forks.** Contributors push directly to the source repo via `refs/pr/{NUMBER}` refs.
-5907|2. **Discussions and PRs are the same type.** PR is a discussion with `is_pull_request=True` + file changes.
-5908|3. **Draft by default.** Programmatic PRs start in `"draft"` status.
-5909|
-5910|### SDK Methods
-5911|
-5912|| Method | Key Parameters |
-5913||--------|---------------|
-5914|| `create_discussion()` | `repo_id`, `title`, `pull_request=False/True` |
-5915|| `create_pull_request()` | Wrapper for `create_discussion(pull_request=True)` |
-5916|| `get_discussion_details()` | `repo_id`, `discussion_num` |
-5917|| `get_repo_discussions()` | `repo_id`, `author`, `discussion_type`, `discussion_status` |
-5918|| `comment_discussion()` | `repo_id`, `discussion_num`, `comment` |
-5919|| `edit_discussion_comment()` | `repo_id`, `discussion_num`, `comment_id`, `new_content` |
-5920|| `hide_discussion_comment()` | `repo_id`, `discussion_num`, `comment_id` |
-5921|| `change_discussion_status()` | `repo_id`, `discussion_num`, `new_status='open'/'closed'` |
-5922|| `merge_pull_request()` | `repo_id`, `discussion_num` |
-5923|| `rename_discussion()` | `repo_id`, `discussion_num`, `new_title` |
-5924|
-5925|### Best Practice: PR with Changes
-5926|
-5927|```python
-5928|api.create_commit(repo_id=\"user/repo\", operations=[...], create_pr=True)
-5929|```
-5930|
-5931|### Resources
-5932|- Hub docs: https://huggingface.co/docs/hub/en/repositories-pull-requests-discussions
-5933|- Python SDK source (v1.24.0)
-5933|
 ## 2026-07-24: hf-hub-exception-reference — Complete Exception Hierarchy (Topic #130)
 
 ### Summary
-Comprehensive reference of all 50+ custom exceptions in the `huggingface_hub` library — full inheritance hierarchy, attributes, when each error is raised, `hf_raise_for_status()` dispatch logic, and error-handling best practices for production use.
+Comprehensive reference of all 50+ custom exceptions in the `huggingface_hub` library — full inheritance hierarchy, attributes, when each error is raised, `hf_raise_for_status()` dispatch logic, and error-handling best practices for production use. Source: `huggingface_hub/errors.py` on GitHub.
 
 ### Key Coverage
-- Full exception hierarchy tree with 50+ classes across 15 categories (HTTP, cache, inference, TGI, auth, validation, safetensors, DDUF, sandbox, CLI, etc.)
-- `HfHubHTTPError` base class with `request_id`, `server_message`, `response`, `request` attributes
-- `hf_raise_for_status()` — status-code → exception dispatch logic (400→BadRequestError, 403 gated→GatedRepoError, etc.)
-- TGI errors: `OverloadedError`, `ValidationError`, `IncompleteGenerationError`, `GenerationError`, `UnknownError`
-- Cache errors: `CacheNotFound`, `CorruptedCacheException`, `IncompleteSnapshotError`
-- OAuth errors: `DeviceCodeError` with `OAuthErrorCode` enum, `OIDCError`
-- Key design patterns: multiple inheritance for backward compat, abstract EntryNotFoundError, error enrichment via `append_to_message()`, request ID tracing
-|- ZeroGPU: https://huggingface.co/docs/hub/en/spaces-gpus#zero-gpu-spaces
+- Full exception hierarchy tree (50+ classes, 15 categories)
+- `HfHubHTTPError` base class with request_id, server_message, response, request attrs
+- `hf_raise_for_status()` dispatch: 400→BadRequestError, 403 gated→GatedRepoError, 404 Revision→RevisionNotFoundError, etc.
+- TGI errors: OverloadedError, ValidationError, IncompleteGenerationError, GenerationError, UnknownError
+- Cache errors: CacheNotFound, CorruptedCacheException, IncompleteSnapshotError
+- OAuth: DeviceCodeError with OAuthErrorCode enum, OIDCError for Trusted Publishers
+- 4 practical error-handling patterns (broad catch, network-vs-hub, offline fallback, gated detection)
 
-### Skill
-huggingface-hub — references/hf-learnings.md
+### Repository search tag
+- Saved to huggingface-hub skill's references/hf-learnings.md
 
 ---
 
-
-## 2026-07-24: hf-hub-spaces-api-complete-reference — Complete Spaces API Reference (Topic #131)
+## 2026-07-24: hf-hub-upload-strategies-deep-dive — Complete Upload Reference (Topic #35 Deep-Dive)
 
 ### Summary
-Comprehensive reference of the Hugging Face Hub Spaces API — all 24 `HfApi` methods for managing Spaces, the creation flow via `create_repo()`, data models (`SpaceInfo`, `SpaceRuntime`, `Volume`, `SpaceVariable`, `SpaceSecret`), enums (`SpaceHardware`, `SpaceStorage`, `SpaceStage`), and CLI equivalents. Covers zero-cost deployment patterns, dev mode, secrets/variables management, storage volumes, sleep scheduling, and common automation workflows.
+Deep-dive into all upload strategies available in `huggingface_hub` for pushing content to the Hugging Face Hub. Covers the full API surface (`upload_file`, `upload_folder`, `create_commit`, `upload_large_folder`), the Xet-powered streamed pipeline, LFS vs regular file handling, multi-commit large-folder uploads, resumability, patterns, limitations, and best practices for zero-cost model/dataset publishing.
+
+### Key Concepts
+- **Three core methods:** `upload_file` (single file, ≤50GB), `upload_folder` (folder with Xet streamed multi-commit pipeline by default), `upload_large_folder` (DEPRECATED)
+- **Low-level:** `create_commit` with `CommitOperationAdd/Delete/Copy` operations (25k LFS files, 1 GB regular payload per commit)
+- **Xet pipeline architecture:** Coordinator walks files, classifies 256 at a time, registers xet files into `XetSession` for background upload. Committer thread batches commits (adaptive 250→1000 files, forced every 5 min). Resumable: already-uploaded chunks deduplicated (~0 bytes).
+- **LFS flow:** Pre-upload (hash + register + upload chunks to blob storage) → Commit (LFS pointer reference)
+- **Regular files:** Base64-encoded in commit payload (~100 MB budget per commit)
+- `upload_folder` with `create_pr=True` opens against default branch. Resuming an interrupted PR upload uses `revision="refs/pr/N"`
+- `CommitOperationCopy` enables cross-repository LFS object duplication (server-side)
+
+### Repository search tag
+- Saved to huggingface-hub skill's references/hf-learnings.md
+
+---
+
+## 2026-07-24: hf-smolagents-deep-dive-v2 — Complete smolagents v1.26.0 Reference (Topic #14 Deep-Dive)
+
+### Summary
+Deep-dive into `smolagents` v1.26.0 — Hugging Face's open-source agent library. Covers the two agent types (CodeAgent and ToolCallingAgent), multi-model support (InferenceClientModel, LiteLLMModel, TransformersModel, MLXModel, AmazonBedrockModel, AzureOpenAIModel), the tool system (decorator-based, class-based, Hub tools, Space-as-tool, LangChain adapters, MCP integration), multi-agent orchestration via managed_agents, planning steps (planning_interval), final_answer validation (final_answer_checks), Gradio UI integration, CLI utilities (smolagent, webagent), secure code execution (local sandbox + Modal/E2B/Docker executors), and best practices for building reliable agents.
 
 ### Core Architecture
 
-Spaces are managed through the `HfApi` class in `huggingface_hub` (v1.24.0). There is **no dedicated `create_space()` method** — Spaces are created via `create_repo(repo_type="space", ...)` with Space-specific parameters. All other operations (runtime management, secrets, logs, hardware scaling) have dedicated methods.
+**Two Agent Types:**
 
-```
-┌─────────────────────────────────────────────────────┐
-│                  HfApi Space Methods                 │
-├─────────────────┬───────────────────┬───────────────┤
-│  Lifecycle       │  Configuration    │  Query        │
-├─────────────────┼───────────────────┼───────────────┤
-│  create_repo()   │  add_space_secret │  space_info() │
-│  duplicate_space │  delete_space_sec │  list_spaces()│
-│  restart_space() │  get_space_secrets│  search_spaces│
-│  pause_space()   │  add_space_variab │  get_space_run│
-│  request_space_  │  delete_space_var │  list_spaces_ │
-│   hardware()     │  get_space_variab │  list_space_t │
-│  request_space_  │  set_space_volum  │  fetch_space_l│
-│   storage()      │  delete_space_vol │               │
-│  set_space_sleep │  enable_space_dev │               │
-│  delete_space_   │  disable_space_de │               │
-│   storage()      │  wait_for_space() │               │
-└─────────────────┴───────────────────┴───────────────┘
-```
+| Agent | Action Format | Tool Interface | Strengths | When to Use |
+|-------|--------------|----------------|-----------|-------------|
+| `CodeAgent` | Python code snippets | Tools as Python functions (bindings) | Composable, flexible, emergent reasoning | Multi-step reasoning, dynamic logic, combining tools |
+| `ToolCallingAgent` | JSON tool calls | Tools with JSON schema | Reliable, validated, interoperable | Simple atomic tools, high-reliability dispatching |
 
-### Creating a Space
+### Model Classes (smolagents v1.26.0)
 
-Spaces are created with `create_repo(repo_type="space")`:
+| Class | Provider | Extra Required |
+|-------|----------|----------------|
+| `InferenceClientModel` | HF Inference Providers (Cerebras, Cohere, Fal, Fireworks, HF-Inference, Hyperbolic, Nebius, Novita, Replicate, SambaNova, Together, etc.) | None (free HF account has included credits) |
+| `LiteLLMModel` | 100+ models via LiteLLM (OpenAI, Anthropic, Ollama, etc.) | `smolagents[litellm]` |
+| `TransformersModel` | Local transformers pipeline | `smolagents[transformers]` |
+| `MLXModel` | Apple MLX (local) | `smolagents[mlx-lm]` |
+| `AzureOpenAIModel` | Azure OpenAI | `smolagents[openai]` |
+| `AmazonBedrockModel` | AWS Bedrock | `smolagents[bedrock]` |
+
+All model classes accept keyword arguments (temperature, max_tokens, top_p, etc.) forwarded to completion calls.
+
+### Key Initialization Parameters
 
 ```python
-from huggingface_hub import HfApi, SpaceHardware, SpaceStorage, Volume
-
-api = HfApi()
-
-# Minimal — creates a free CPU-basic Gradio Space
-url = api.create_repo(
-    repo_id="username/my-space",
-    repo_type="space",
-    space_sdk="gradio",          # "gradio", "docker", "static"
-    exist_ok=True,
-)
-
-# With hardware, storage, secrets, and volumes
-url = api.create_repo(
-    repo_id="username/my-space",
-    repo_type="space",
-    space_sdk="gradio",
-    space_hardware=SpaceHardware.CPU_BASIC,
-    space_storage=SpaceStorage.SMALL,
-    space_sleep_time=300,        # sleep after 5 min inactivity
-    space_secrets=[{"key": "HF_TOKEN", "value": "hf_...", "description": "token"}],
-    space_variables=[{"key": "MY_VAR", "value": "val"}],
-    space_volumes=[Volume(type="bucket", source="username/my-bucket", mount_path="/data")],
-    space_template="gradio-hello-world",
-    private=True,
+CodeAgent(
+    tools=[...],                       # List[Tool] — the agent's toolbox
+    model=InferenceClientModel(),      # LLM engine
+    add_base_tools=False,              # Add DuckDuckGo search + Python executor + Transcriber
+    instructions="Always ...",         # Custom instructions appended to system prompt
+    additional_authorized_imports=[],  # CodeAgent only: allow extra Python imports
+    max_steps=20,                      # Max ReAct steps before forced stop
+    planning_interval=None,            # Run planning step every N steps
+    final_answer_checks=[],            # Validation funcs before accepting final answer
+    managed_agents=[],                  # Sub-agents this agent can delegate to
+    executor_type="local",             # "local" | "blaxel" | "e2b" | "modal" | "docker"
+    code_block_tags=("```python", "```"),  # CodeAgent: code block delimiters
+    stream_outputs=False,              # Stream intermediate outputs
+    use_structured_outputs_internally=False, # Use structured generation per step
 )
 ```
 
-**Key parameters** (all prefixed `space_` for `create_repo`):
-- `space_sdk`: `"gradio"`, `"docker"`, `"static"`, or `"streamlit"`
-- `space_hardware`: `SpaceHardware` enum (see below)
-- `space_storage`: `SpaceStorage` enum (`SMALL`, `MEDIUM`, `LARGE`)
-- `space_sleep_time`: int — seconds of inactivity before sleep (GPU spaces only)
-- `space_secrets`: `list[dict]` — each with `key`, `value`, optional `description`
-- `space_variables`: `list[dict]` — same structure as secrets
-- `space_volumes`: `list[Volume]` — bucket/model/dataset mounts
-- `space_template`: `str` — template repo ID or short name (use `list_space_templates()`)
+ToolCallingAgent additionally supports `max_tool_threads` for parallel tool calls.
 
-### SpaceHardware Options
+### Tools System
 
-| Enum Name | Value | Cost Tier | Use Case |
-|-----------|-------|-----------|----------|
-| `CPU_BASIC` | `"cpu-basic"` | **Free** | Lightweight demos, simple Gradio apps |
-| `CPU_UPGRADE` | `"cpu-upgrade"` | Paid | CPU-intensive apps |
-| `ZERO_A10G` | `"zero-a10g"` | **Free** | ZeroGPU — A10G for free (NVIDIA) |
-| `T4_SMALL` | `"t4-small"` | Paid | Small GPU demos |
-| `T4_MEDIUM` | `"t4-medium"` | Paid | Medium GPU demos |
-| `L4X1` | `"l4x1"` | Paid | 1×L4 |
-| `L4X4` | `"l4x4"` | Paid | 4×L4 |
-| `L40SX1` | `"l40sx1"` | Paid | 1×L40S |
-| `L40SX4` | `"l40sx4"` | Paid | 4×L40S |
-| `L40SX8` | `"l40sx8"` | Paid | 8×L40S |
-| `A10G_SMALL` | `"a10g-small"` | Paid | 1×A10G (small) |
-| `A10G_LARGE` | `"a10g-large"` | Paid | 1×A10G (large) |
-| `A10G_LARGEX2` | `"a10g-largex2"` | Paid | 2×A10G |
-| `A10G_LARGEX4` | `"a10g-largex4"` | Paid | 4×A10G |
-| `A100_LARGE` | `"a100-large"` | Paid | 1×A100 |
-| `A100X4` | `"a100x4"` | Paid | 4×A100 |
-| `A100X8` | `"a100x8"` | Paid | 8×A100 |
+**Three ways to define tools:**
 
-**Zero-cost note:** Only `CPU_BASIC` and `ZERO_A10G` are free. All GPU hardware incurs cost. ZeroGPU (`ZERO_A10G`) is a free tier for A10G but has usage limits and automatic eviction.
-
-### SpaceStorage Options
-
-| Enum Name | Value | Description |
-|-----------|-------|-------------|
-| `SMALL` | `"small"` | Default — free for CPU_BASIC |
-| `MEDIUM` | `"medium"` | Additional disk space |
-| `LARGE` | `"large"` | Maximum disk space |
-
-### SpaceStage States
-
-| Stage | Meaning |
-|-------|---------|
-| `NO_APP_FILE` | No app file found (misconfigured) |
-| `CONFIG_ERROR` | Configuration error |
-| `BUILDING` | Building container |
-| `BUILD_ERROR` | Build failed |
-| `RUNNING` | Space is live |
-| `RUNNING_BUILDING` | Live but rebuilding |
-| `RUNTIME_ERROR` | App crashed at runtime |
-| `DELETING` | Being deleted |
-| `STOPPED` | Stopped |
-| `PAUSED` | Manually paused |
-| `APP_STARTING` | Application starting |
-| `RUNNING_APP_STARTING` | Running but restarting |
-
-### All 24 HfApi Space Methods
-
-#### Lifecycle Methods
-
-| Method | Signature | Description |
-|--------|-----------|-------------|
-| `duplicate_space()` | `(from_id, to_id=None, *, private, visibility, exist_ok, hardware, storage, sleep_time, secrets, variables)` | Duplicate an existing Space. Creates a copy in your account with optional hardware/storage overrides. |
-| `restart_space()` | `(repo_id, *, factory_reboot=False)` | Restart a running or paused Space. `factory_reboot=True` forces a full rebuild from scratch. |
-| `pause_space()` | `(repo_id)` | Pause a Space. Different from sleeping — stays paused until manually restarted. No compute cost while paused. |
-| `request_space_hardware()` | `(repo_id, hardware, *, sleep_time)` | Scale hardware up/down. Use `SpaceHardware.CPU_BASIC` to downgrade to free tier. |
-| `request_space_storage()` | `(repo_id, storage)` | Request additional persistent storage. |
-| `delete_space_storage()` | `(repo_id)` | Remove persistent storage, revert to ephemeral. |
-| `set_space_sleep_time()` | `(repo_id, sleep_time)` | Set inactivity timeout (seconds) before auto-sleep. Only applies to GPU Spaces. |
-| `enable_space_dev_mode()` | `(repo_id)` | Enable dev mode — exposes container for live debugging. |
-| `disable_space_dev_mode()` | `(repo_id)` | Disable dev mode, restart without debug access. |
-
-#### Secrets & Variables
-
-| Method | Signature | Description |
-|--------|-----------|-------------|
-| `add_space_secret()` | `(repo_id, key, value, *, description)` | Add or update a secret. Values are **write-only** — cannot be read back. |
-| `delete_space_secret()` | `(repo_id, key)` | Delete a secret. |
-| `get_space_secrets()` | `(repo_id)` | List secret metadata (key, description, last update). Values are never returned. |
-| `add_space_variable()` | `(repo_id, key, value, *, description)` | Add or update an environment variable. |
-| `delete_space_variable()` | `(repo_id, key)` | Delete a variable. |
-| `get_space_variables()` | `(repo_id)` | Get all variables as `dict[str, SpaceVariable]`. Values are returned. |
-
-#### Volumes (Storage Mounts)
-
-| Method | Signature | Description |
-|--------|-----------|-------------|
-| `set_space_volumes()` | `(repo_id, volumes: list[Volume])` | Atomically replace all mounted volumes. |
-| `delete_space_volumes()` | `(repo_id)` | Remove all volumes. |
-
-The `Volume` dataclass:
+1. **Decorator approach** (`@tool`):
 ```python
-from huggingface_hub import Volume
+from smolagents import tool
+@tool
+def my_tool(param: str) -> str:
+    """Description. Args: param: description."""
+    return result
+```
 
-Volume(
-    type="bucket",          # "bucket", "model", "dataset", "space"
-    source="user/my-bucket",  # repo ID or bucket name
-    mount_path="/data",       # container mount point (must start with /)
-    revision="main",          # git revision (for repos, not buckets)
-    read_only=False,          # writable for buckets, read-only for repos
-    path=None,                # sub-path within source
+2. **Class-based** (Tool subclass):
+```python
+from smolagents import Tool
+class MyTool(Tool):
+    name = "my_tool"
+    description = "..."
+    inputs = {"param": {"type": "string", "description": "..."}}
+    output_type = "string"
+    def forward(self, param: str) -> str:
+        return result
+```
+
+3. **Loaded from Hub**:
+```python
+tool = load_tool("user/tool-name", trust_remote_code=True)
+```
+
+**Tool sources:**
+- `Tool.from_space(space_id, name, description)` — wrap any HF Space as a tool
+- `Tool.from_langchain(langchain_tool)` — convert LangChain tools
+- `ToolCollection.from_hub(collection_slug)` — load tools from a Hub collection
+- `ToolCollection.from_mcp(server_parameters)` — load tools from MCP servers (Stdio, Streamable HTTP, legacy SSE)
+- `WebSearchTool()` — DuckDuckGo search (from `[toolkit]` extra)
+- `PythonInterpreterTool()` — safe Python execution (CodeAgent has this natively)
+
+### MCP Integration
+
+```python
+from mcp import StdioServerParameters
+from smolagents import ToolCollection, CodeAgent, InferenceClientModel
+
+model = InferenceClientModel()
+server_parameters = StdioServerParameters(
+    command="uvx",
+    args=["--quiet", "pubmedmcp@0.1.3"],
+    env={"UV_PYTHON": "3.12", **os.environ},
+)
+
+with ToolCollection.from_mcp(server_parameters, trust_remote_code=True) as tool_collection:
+    agent = CodeAgent(tools=[*tool_collection.tools], model=model, add_base_tools=True)
+    agent.run("Find a remedy for hangover.")
+```
+
+MCP supports three transport modes:
+- **Stdio**: subprocess via stdin/stdout (use `StdioServerParameters`)
+- **Streamable HTTP**: modern HTTP transport (`{"url": "...", "transport": "streamable-http"}`)
+- **SSE**: legacy HTTP+SSE (`{"url": "...", "transport": "sse"}` — deprecated)
+
+MCP tools also support `structured_output=True` for JSON output schemas.
+
+### Multi-Agent Orchestration
+
+Pass managed agents via `managed_agents=[]` parameter. Each managed agent needs a `name` and `description`. The parent agent can delegate sub-tasks by "calling" a managed agent as if it were a tool:
+
+```python
+web_agent = CodeAgent(
+    name="web_agent",
+    description="Searches the web for information",
+    tools=[WebSearchTool()],
+    model=InferenceClientModel(),
+)
+data_agent = CodeAgent(
+    name="data_agent",
+    description="Analyzes data and computes results",
+    tools=[],
+    model=InferenceClientModel(),
+    additional_authorized_imports=["pandas", "numpy"],
+)
+
+orchestrator = CodeAgent(
+    tools=[],
+    model=InferenceClientModel(model_id="Qwen/Qwen2.5-72B-Instruct"),
+    managed_agents=[web_agent, data_agent],
+)
+orchestrator.run("Find population of Tokyo and compute its square root.")
+```
+
+### CodeAgent Security Model
+
+- **Local executor**: Python interpreter sandbox — safe imports only (math, print), additional imports authorized via `additional_authorized_imports`
+- **No imports by default** outside a safe list — prevents arbitrary code execution
+- **Submodule access blocked** unless explicitly authorized (e.g., `"numpy.random"` or `"numpy.*"`)
+- **Remote executors**: Blaxel, E2B, Docker, Modal for full isolation
+- **Warning**: Do not add unsafe imports — LLM can generate arbitrary code
+
+### Planning Steps
+
+Activate with `planning_interval=N`. Every N steps, the agent pauses tool execution to reflect:
+- Update a list of known facts
+- Plan next steps based on accumulated information
+- No tool calls during planning — pure reasoning step
+
+```python
+agent = CodeAgent(
+    tools=[search_tool, image_generation_tool],
+    model=InferenceClientModel(model_id="Qwen/Qwen2.5-72B-Instruct"),
+    planning_interval=3,
 )
 ```
 
-Volume types:
-- **Buckets:** Read-write mounts (free for public buckets). Use for writable persistent storage.
-- **Models/Datasets/Spaces:** Read-only mounts from other repos. Defaults to `"main"` revision.
-
-#### Query & Info
-
-| Method | Signature | Description |
-|--------|-----------|-------------|
-| `space_info()` | `(repo_id, *, revision, timeout, files_metadata, expand)` | Get full Space metadata. Returns `SpaceInfo`. |
-| `get_space_runtime()` | `(repo_id)` | Get runtime status. Returns `SpaceRuntime` with stage, hardware, sleep_time, storage, dev_mode, volumes. |
-| `fetch_space_logs()` | `(repo_id, *, build=False, follow=False)` | Stream runtime or build logs. Iterable of log lines. |
-| `wait_for_space()` | `(repo_id, *, timeout=None, poll_interval=1.0)` | Block until Space reaches a terminal stage (RUNNING, BUILD_ERROR, etc.). Returns `SpaceRuntime`. |
-| `list_spaces()` | `(*, filter, author, search, datasets, models, linked, sort, limit, expand, full)` | List all Spaces matching filters. |
-| `search_spaces()` | `(query, *, filter, sdk, include_non_running)` | Semantic search across Spaces. |
-| `list_spaces_hardware()` | `(token)` | List available hardware options with pricing. |
-| `list_space_templates()` | `(token)` | List official Space templates. |
-
-### Data Models
-
-#### SpaceInfo (returned by `space_info()`, `list_spaces()`)
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `id` | `str` | Full repo ID (`user/space`) |
-| `author` | `str \| None` | Owner username |
-| `card_data` | `SpaceCardData \| None` | YAML card metadata |
-| `created_at` | `datetime \| None` | Creation timestamp |
-| `datasets` | `list[str] \| None` | Linked datasets |
-| `disabled` | `bool \| None` | Admin-disabled flag |
-| `gated` | `Literal['auto','manual',False] \| None` | Gated access mode |
-| `host` | `str \| None` | Host URL |
-| `last_modified` | `datetime \| None` | Last modification |
-| `likes` | `int \| None` | Like count |
-| `models` | `list[str] \| None` | Linked models |
-| `private` | `bool \| None` | Visibility |
-| `resource_group` | `dict \| None` | Enterprise resource group |
-| `runtime` | `SpaceRuntime \| None` | Current runtime info |
-| `sdk` | `str \| None` | SDK type (gradio/docker/static/streamlit) |
-| `sha` | `str \| None` | Git commit SHA |
-| `siblings` | `list[RepoSibling] \| None` | File listing |
-| `subdomain` | `str \| None` | Space subdomain |
-| `tags` | `list[str] \| None` | Tags |
-| `trending_score` | `int \| None` | Trending rank |
-| `used_storage` | `int \| None` | Bytes used |
-
-#### SpaceRuntime (returned by `get_space_runtime()`, `wait_for_space()`, `restart_space()`, etc.)
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `stage` | `SpaceStage` | Current state (RUNNING, BUILDING, PAUSED, etc.) |
-| `hardware` | `SpaceHardware \| None` | Currently active hardware |
-| `requested_hardware` | `SpaceHardware \| None` | Pending hardware upgrade/downgrade |
-| `sleep_time` | `int \| None` | Auto-sleep timeout in seconds |
-| `storage` | `SpaceStorage \| None` | Current storage tier |
-| `dev_mode` | `bool` | Dev mode enabled? |
-| `volumes` | `list[Volume] \| None` | Currently mounted volumes |
-| `raw` | `dict` | Raw API response |
-
-### Automation Patterns
-
-#### Pattern 1: Create and wait for a Space to be ready
+### Final Answer Validation
 
 ```python
-from huggingface_hub import HfApi
-
-api = HfApi()
-api.create_repo(
-    repo_id="user/my-demo",
-    repo_type="space",
-    space_sdk="gradio",
-    exist_ok=True,
-)
-runtime = api.wait_for_space("user/my-demo", timeout=300)
-assert runtime.stage.value == "RUNNING", f"Space failed: {runtime.stage}"
-print(f"Space live at https://huggingface.co/spaces/user/my-demo")
-```
-
-#### Pattern 2: Zero-cost deployment (CPU, no paid extras)
-
-```python
-api.create_repo(
-    repo_id="user/free-demo",
-    repo_type="space",
-    space_sdk="gradio",
-    space_hardware=SpaceHardware.CPU_BASIC,   # free
-    exist_ok=True,
-)
-```
-
-#### Pattern 3: Scale down to free after GPU work
-
-```python
-api.request_space_hardware("user/gpu-demo", SpaceHardware.CPU_BASIC)
-# Waits for downgrade to complete
-runtime = api.wait_for_space("user/gpu-demo", timeout=120)
-```
-
-#### Pattern 4: Set up secrets programmatically
-
-```python
-api.add_space_secret("user/my-space", "API_KEY", "sk-...", description="OpenAI key")
-api.add_space_variable("user/my-space", "LOG_LEVEL", "info")
-```
-
-#### Pattern 5: Duplicate an existing Space (template-style)
-
-```python
-url = api.duplicate_space(
-    from_id="gradio/hello-world",
-    to_id="user/my-hello",
-    hardware=SpaceHardware.CPU_BASIC,
-    exist_ok=True,
-)
-```
-
-#### Pattern 6: Mount a bucket for persistent writable storage
-
-```python
-from huggingface_hub import Volume
-
-api.set_space_volumes("user/my-space", [
-    Volume(type="bucket", source="user/my-bucket", mount_path="/data")
-])
-# Inside the Space: /data/ is writable and persists across restarts
-```
-
-#### Pattern 7: Check and restart a failed Space
-
-```python
-runtime = api.get_space_runtime("user/my-space")
-if runtime.stage.value in ("RUNTIME_ERROR", "BUILD_ERROR", "PAUSED"):
-    new_runtime = api.restart_space("user/my-space")
-    print(f"Restarted: stage={new_runtime.stage.value}")
-```
-
-#### Pattern 8: Fetch build logs for debugging failures
-
-```python
-for line in api.fetch_space_logs("user/my-space", build=True):
-    print(line, end="")
-```
-
-### CLI Equivalents
-
-The `hf` CLI provides Space management through several subcommands:
-
-```bash
-# Create a Space
-hf repos create user/my-space --type space --sdk gradio
-
-# Duplicate
-hf repos duplicate source-space user/my-copy
-
-# Hardware management
-hf repos update user/my-space --hardware cpu-basic
-
-# Secrets
-hf secrets list user/my-space
-hf secrets add user/my-space KEY VALUE
-
-# Volumes
-hf spaces volumes ls user/my-space
-hf spaces volumes set user/my-space --volume bucket=user/my-bucket:/data
-
-# Dev mode
-hf spaces dev-mode user/my-space
-
-# Logs
-hf logs user/my-space            # runtime logs
-hf logs user/my-space --build    # build logs
-```
-
-### Resources
-- `huggingface_hub` Python SDK v1.24.0 — `HfApi` class
-- Hub docs: https://huggingface.co/docs/hub/en/spaces-overview
-- Spaces settings: https://huggingface.co/docs/hub/en/spaces-settings
-- Spaces GPU: https://huggingface.co/docs/hub/en/spaces-gpus
-- Spaces storage: https://huggingface.co/docs/hub/en/spaces-storage
-- Spaces config reference: https://huggingface.co/docs/hub/en/spaces-config-reference
-|- ZeroGPU: https://huggingface.co/docs/hub/en/spaces-gpus#zero-gpu-spaces
-
-### Skill
-huggingface-hub — references/hf-learnings.md
-
----
-
-## 2026-07-24: hf-spaces-logs-monitoring-and-debugging — Deep Dive (Topic #132)
-
-### Summary
-Comprehensive deep-dive into HF Spaces logging, monitoring, and debugging — the programmatic toolkit for diagnosing build failures, runtime crashes, and sleep/wake lifecycle issues without spending money. Covers two log streams (build vs. runtime), `fetch_space_logs()`, `hf spaces logs` CLI, space status codes, lifecycle management, CI build monitoring, built-in env vars, Dev Mode (PRO), and free-tier workarounds (self-logging to dataset, health endpoints).
-
-### Key APIs
-```python
-api.fetch_space_logs(repo_id)                    # drain runtime logs
-api.fetch_space_logs(repo_id, build=True)        # drain build logs
-api.fetch_space_logs(repo_id, follow=True)       # stream runtime logs
-api.space_info(repo_id)                          # status/hardware/sdk
-api.pause_space(repo_id)                         # stop
-api.restart_space(repo_id)                       # rebuild container
-api.request_space_hardware(repo_id, "cpu-basic") # wake or assign hardware
-```
-```bash
-hf spaces logs user/space          # drain runtime
-hf spaces logs user/space --build  # build logs
-hf spaces logs user/space -f       # follow mode
-hf spaces logs user/space -n 50    # last 50 lines
-```
-
-### Status → Diagnosis
-- BUILD_ERROR → read build logs
-- BUILDING >15 min → check build logs
-- RUNNING unresponsive → check runtime logs
-- SLEEPING → wake request + poll until RUNNING
-- PAUSED → api.restart_space()
-
-### Limitations
-- Dev Mode requires PRO; build logs expire after next build; no pagination; free tier sleeps ~15-30 min; no GPU during Docker build
-
-### Resources
-- Manage Spaces: https://huggingface.co/docs/huggingface_hub/guides/manage-spaces
-- Config reference: https://huggingface.co/docs/hub/en/spaces-config-reference
-- Dev Mode: https://huggingface.co/docs/hub/en/spaces-dev-mode
-- fetch_space_logs: https://huggingface.co/docs/huggingface_hub/package_reference/hf_api#huggingface_hub.HfApi.fetch_space_logs
-
-## 2026-07-24: hf-hub-xet-streamed-upload-pipeline-deep-dive — Xet Streamed Multi-Commit Upload Pipeline (Topic #135)
-
-### Summary
-Comprehensive deep-dive into the Xet-backed streamed multi-commit upload pipeline introduced in `huggingface_hub` 1.24.0. When `hf_xet` is installed (the default), `upload_folder()` no longer uses a single `create_commit()` call — instead it orchestrates a pipelined upload via `_UploadPipeline` that overlaps scanning, uploading, and committing across threads; adaptively batches files per commit; deduplicates unchanged files; and resumes on interruption by re-running the same call. Source: `huggingface_hub/_upload_pipeline.py` (682 lines, copyright 2026).
-
-### Architecture Overview
-
-```
-Coordinator Thread (caller)              Committer Thread
-┌──────────────────────────┐            ┌──────────────────────┐
-│ Walk files 256-at-a-time │──batch──▶  │ Wait for Xet uploads │
-│ via _fetch_upload_modes  │  queue     │ Drop unchanged files │
-│                          │  (maxsize  │ Adaptive size commits │
-│ Open Xet upload-commit   │   = 1)     │ PR creation (lazy)   │
-│ Start xet uploads (bg)   │            │ Send git commit      │
-│ Enqueue batches          │            │ Record success/fail  │
-└──────────────────────────┘            └──────────────────────┘
-         ▲                                        │
-         │ Xet dedup + chunk upload (background)  │
-         │ (single read pass, no Python sha256)   │
-         └────────────────────────────────────────┘
-```
-
-### Key Components
-
-#### 1. `is_xet_available()` — Gate Check
-```python
-def is_xet_available() -> bool:
-    if constants.HF_HUB_DISABLE_XET:  # env var opt-out
+def must_be_integer(final_answer: str, agent_memory=None) -> bool:
+    try:
+        int(final_answer)
+        return True
+    except ValueError:
         return False
-    return is_package_available("hf_xet")
-```
-- `hf_xet` is installed by default with `huggingface_hub` (bundled dependency)
-- Disable with `HF_HUB_DISABLE_XET=1` to force the legacy single-commit path
-- Without `hf_xet`, `upload_folder()` falls back to `create_commit()` (warns if >30 files)
 
-#### 2. `_fetch_upload_modes()` — Preupload Classification
-- POSTs to `/api/{repo_type}s/{repo_id}/preupload/{revision}`
-- Sends 256 files at a time (server-side limit) with `path`, `sample` (base64 first bytes), and `size`
-- Each file is classified: `regular` (small git blob, base64 in commit payload), `lfs` (old path, not used by Xet pipeline), or left unset for Xet
-- Sets `_should_ignore` (gitignore matched), `_upload_mode`, `upload_info` (sha256, size, sample)
-- Accepts `gitignore_content` parameter (forwarded from local `.gitignore` if uploaded)
-- Mutates `CommitOperationAdd` objects in-place
-
-#### 3. `_UploadPipeline` — Main Orchestrator
-
-**Initialization:**
-- Creates a `XetSession` with a `token_refresh_url` including `?create_pr=1` if applicable
-- Cache: `xet_commit_kwargs` with token refresh URL, auth headers, and `xet_headers_without_auth()`
-- Extracts `.gitignore` content from the uploaded files if present
-- Creates `_LiveDisplay` progress renderer (3-line TTY or periodic logger)
-
-**Coordinator Loop (`_coordinator_loop`):**
-1. Iterates `add_operations` in chunks of 256 (PREUPLOAD_BATCH_SIZE)
-2. For each chunk, calls `_fetch_upload_modes()`
-3. For each file in chunk:
-   - If `_should_ignore` → skip (gitignore)
-   - If `regular` → tracks `regular_bytes` for budget enforcement
-   - If Xet → opens `batch.xet_commit` (lazy, per batch) and calls `start_upload_file()` or `start_upload_bytes()` — **upload starts immediately in background**
-   - sha256 is computed by `hf_xet` during chunking (single read pass), unless `upload_info.is_hashed` (e.g. resumed)
-4. Flushes the batch when:
-   - File count >= `pacer.target` (adaptive, starts at 256)
-   - OR `regular_bytes` >= 100 MB budget
-   - OR batch age > 5 min (MAX_COMMIT_INTERVAL)
-5. Enqueues each batch via `batch_queue.put()` (maxsize=1 for natural backpressure)
-
-**Committer Loop (`_committer_loop`):**
-- Runs in a daemon thread (`hf-upload-committer`)
-- Polls `batch_queue.get(timeout=0.5)` — exits on sentinel or abort event
-
-**Batch Processing (`_process_batch`):**
-1. **Finalize Xet uploads:** `batch.xet_commit.wait_to_finish()` — blocks until all background uploads complete. Sets `op.upload_info.sha256` from the Xet result and marks `_is_uploaded=True`.
-2. **Drop unchanged files:** Compares `_remote_oid` (from preupload response) with `_local_oid` (computed during hashing). If equal, the file is skipped — its chunks were already deduplicated by Xet, transferring ~0 bytes.
-3. **Commit:** Passes remaining ops to `_commit_with_split()`
-
-**Adaptive Commit Pacer (`_CommitPacer`):**
-- `COMMIT_SIZE_SCALE = [20, 50, 75, 100, 125, 200, 250, 400, 600, 1000]`
-- Starts at index 6 → **256 files per commit**
-- Scales up when commit duration < 40s (TARGET_COMMIT_DURATION) and file count >= target
-- Scales down on failure (index -1), down to minimum 20 files
-- `record_success(duration, nb_files)` / `record_failure()`
-
-**Commit Splitting (`_commit_with_split`):**
-- Tries `_do_commit()` with all ops
-- On failure: calls `pacer.record_failure()`, then recursively splits into `pacer.target`-sized chunks and retries each
-- Minimum split size = `COMMIT_SIZE_SCALE[0]` = 20 files (raises if still failing at this size)
-
-**PR Creation (Lazy, `_do_commit`):**
-- Only creates the PR on the **first** actual batch commit (not for empty all-skipped uploads)
-- Uses `api.create_pull_request()` explicitly (not `?create_pr=1` on commit POST) to avoid duplicate PRs on retry
-- Once created, `commit_revision_quoted` is switched to `refs/pr/N` for all subsequent commits
-- Commit messages: first batch uses `commit_message`, subsequent batches append ` (part N)`
-
-**Resume Pattern:**
-- Re-run `upload_folder()` with same args
-- Already-committed files: preupload returns `_remote_oid == _local_oid` → dropped as unchanged
-- Partially-uploaded Xet chunks: deduplicated by Xet storage backend (~0 bytes transferred)
-- To resume into an existing PR: use `revision="refs/pr/N"` instead of `create_pr=True`
-
-#### 4. `_LiveDisplay` — Progress Rendering
-
-Three-line display on stderr:
-```
-  Preparing   ████████████████████  11,100 / 11,100 ✓
-  Uploading   ██████████████░░░░░░  580 / 603 files  3.8GB · 19.7MB/s
-  Committing  ██████████████████░░  10,800 / 11,100  14 commits
-```
-
-- TTY mode: redraws in-place every 0.5s (`_REFRESH_INTERVAL`)
-- Non-TTY mode: `logger.info()` summary every 30s (`_NON_TTY_LOG_INTERVAL`)
-- Disabled when `are_progress_bars_disabled()` returns True (e.g. agent output mode)
-- Thread-safe counters under `threading.Lock()`
-
-#### 5. Edge Cases
-
-| Scenario | Handling |
-|---|---|
-| **All files unchanged** | `_final_commit_info()` returns last commit on target revision; logs warning; no PR created |
-| **Interrupted mid-upload** | Re-run resumes: committed files skipped, Xet chunks deduplicated |
-| **Empty commit prevention** | Files with `_remote_oid == _local_oid` are dropped before commit |
-| **PR + interruption** | Warning suggests re-run with `revision="refs/pr/N"` instead of `create_pr=True` |
-| **Large regular files** | If `regular_bytes` exceeds 100 MB budget, forces a batch flush |
-| **Upload failure** | Commit splits into smaller chunks recursively; commits retried with backoff |
-| **Repository not found** | `RepositoryNotFoundError` with appended hint message |
-| **Abort during shutdown** | Daemon committer thread joins with 10s timeout; Xet session aborted |
-
-### Key Constants
-
-| Constant | Value | Purpose |
-|---|---|---|
-| `PREUPLOAD_BATCH_SIZE` | 256 | Files per preupload API call |
-| `COMMIT_SIZE_SCALE` | [20,50,75,100,125,200,250,400,600,1000] | Adaptive batch sizes |
-| `INITIAL_COMMIT_SIZE_INDEX` | 6 | Start at 256 files/commit |
-| `TARGET_COMMIT_DURATION` | 40.0s | Scale up if commits faster |
-| `MAX_COMMIT_INTERVAL` | 300.0s | Force commit if idle |
-| `REGULAR_CONTENT_BYTES_BUDGET` | 100 MB | Regular file payload limit |
-
-### Zero-Cost Practical Patterns
-
-```python
-# Upload a dataset folder with auto-resume
-from huggingface_hub import HfApi
-api = HfApi()
-api.upload_folder(
-    folder_path="./my-dataset",
-    repo_id="user/my-dataset",
-    repo_type="dataset",
-    ignore_patterns="**/*.tmp",  # skip temp files
-)
-
-# Upload model checkpoints in PR (safe for CI)
-api.upload_folder(
-    folder_path="./checkpoints",
-    repo_id="user/my-model",
-    repo_type="model",
-    create_pr=True,
-    delete_patterns="**/*.bak",  # auto-clean old backups
-)
-
-# Upload with explicit token
-api.upload_folder(
-    folder_path="./model-artifacts",
-    repo_id="org/my-model",
-    token="hf_...",
-    allow_patterns=["*.safetensors", "*.json", "*.yaml"],
-)
-
-# Resume into existing PR
-api.upload_folder(
-    folder_path="./checkpoints",
-    repo_id="user/my-model",
-    revision="refs/pr/42",  # resume into existing PR
+agent = CodeAgent(
+    tools=[],
+    model=InferenceClientModel(),
+    final_answer_checks=[must_be_integer],
 )
 ```
+
+### Debugging Best Practices (from official docs)
+
+1. **Use a stronger LLM** — many agent errors are actually LLM reasoning failures
+2. **Provide more information** — use `instructions` parameter, enrich tool descriptions, be verbose in task
+3. **Change prompt templates** (last resort) — access via `agent.prompt_templates["system_prompt"]` (Jinja2 template with placeholders)
+4. **Simplify workflows** — group related tools into one to reduce LLM calls; prefer deterministic logic over agentic decisions
+
+### Tool Design Best Practices
+
+- **Good logging**: Use `print()` in `forward()` to log execution details the LLM can use
+- **Clear descriptions**: Specify exact input format (e.g., `"%m/%d/%y %H:%M:%S"` for datetimes)
+- **Error handling**: Raise `ValueError` with helpful messages including context
+- **Structured output**: For tools with JSON output schema, set `output_schema` dict — agents can chain tool calls confidently when schema is known
+
+### CLI Tools
+
+```bash
+# One-shot mode
+smolagent "Plan a trip to Tokyo between Mar 28 and Apr 7." \
+  --model-type "InferenceClientModel" \
+  --model-id "Qwen/Qwen2.5-Coder-32B-Instruct" \
+  --imports "pandas numpy" \
+  --tools "web_search"
+
+# Interactive mode (launches without prompt)
+smolagent
+
+# Web agent CLI
+webagent "Find the latest AI news"
+```
+
+### Agent Persistence & Sharing
+
+- `agent.save(output_dir)` — saves code, tools, prompt templates, app.py, requirements.txt
+- `agent.push_to_hub(repo_id)` — upload as Gradio Space
+- `agent.from_hub(repo_id)` / `agent.from_folder(folder)` — load saved agents
+- `agent.to_dict()` / `MultiStepAgent.from_dict()` — serialize/deserialize to dict
+
+### Repository search tag
+- Saved to cron/hf-learnings.md
+- Cross-reference: hf-agents-course skill
 
 ### Resources
-- Source: `huggingface_hub/_upload_pipeline.py` on GitHub
-- `_commit_api.py`: https://github.com/huggingface/huggingface_hub/blob/main/src/huggingface_hub/_commit_api.py
-- `_upload_pipeline.py`: https://github.com/huggingface/huggingface_hub/blob/main/src/huggingface_hub/_upload_pipeline.py
-- Xet docs: https://huggingface.co/docs/hub/en/xet/index
-- `upload_folder` reference: https://huggingface.co/docs/huggingface_hub/package_reference/hf_api#huggingface_hub.HfApi.upload_folder
-
-### Skill
-huggingface-hub — references/hf-learnings.md
-
-## 2026-07-25: hf-hub-repo-lifecycle-management — Repository CRUD & Settings API (Topic #136)
-
-### Summary
-Comprehensive deep-dive into the Hugging Face Hub repository lifecycle management API — `create_repo()`, `delete_repo()`, `repo_info()`, `repo_exists()`, `update_repo_settings()`, `move_repo()`, `duplicate_repo()`, and `super_squash_history()`. Covers all 8 methods with full parameter docs, error handling, data models, REST API equivalents, free-tier constraints, and 4 practical automation patterns. Researched from `huggingface_hub/hf_api.py` source code (v1.24.0+).
-
-Full deep-dive: `mlops/huggingface-hub/references/hf-learnings.md` (Topic #136)
-
-### Skill
-huggingface-hub — references/hf-learnings.md
+- Official docs: https://huggingface.co/docs/smolagents/en/index (v1.26.0)
+- Source code: https://github.com/huggingface/smolagents
+- Conceptual guide (intro to agents): https://huggingface.co/docs/smolagents/en/conceptual_guides/intro_agents
+- Guided tour: https://huggingface.co/docs/smolagents/en/guided_tour
+- Building good agents tutorial: https://huggingface.co/docs/smolagents/en/tutorials/building_good_agents
+- Secure code execution: https://huggingface.co/docs/smolagents/en/tutorials/secure_code_execution
+- Install: `pip install 'smolagents[toolkit]'` for default tools, `smolagents[litellm]` for multi-provider, `smolagents[transformers]` for local models
 
 ---
 
 ## 2026-07-24: hf-transformers-phi4-deep-dive — Complete Phi-4 Architecture & Ecosystem Reference (Topic #67 Deep-Dive)
 
 ### Summary
-Deep-dive into Microsoft Phi-4 (14B) and its growing ecosystem — covering full architecture, Transformers integration via `Phi3ForCausalLM`, three-pillar data-centric training, inference patterns, Phi-4-mini (3.8B 128K), Phi-4-multimodal (5.6B VLM), and LoRA fine-tuning.
+Deep-dive into Microsoft Phi-4 (14B) and its growing ecosystem — covering the full architecture (dense decoder-only Transformer with Phi-3-derived internals), the three-pillar data-centric training recipe (synthetic pre-training, curated organic data, advanced post-training with pivotal token search DPO), Transformers integration via `Phi3ForCausalLM`, inference patterns (full precision, 4-bit quantized, GGUF), chat template format, Phi-4-mini (3.8B), Phi-4-multimodal (5.6B), LoRA fine-tuning recipes, and practical deployment strategies for zero-cost environments.
 
 ### Core Model: Phi-4 (14B)
 
-- **Architecture:** Dense decoder-only Transformer using `Phi3ForCausalLM` in Transformers (no separate `Phi4ForCausalLM`). Architecture tag is `phi4` but implementation reuses Phi-3 code.
-- **Dimensions:** 40 layers, hidden dim 4,960, intermediate 15,840 (swiGLU), 32 query / 8 KV heads (GQA), vocab 100,352, context 16K, RoPE, LayerNorm pre-norm.
-- **Training:** 1,920 H100-80G GPUs, 21 days, 9.8T tokens, MIT license, Dec 2024.
-- **Key config diffs from Phi-3:** Larger vocab (100,352 vs 32,064), wider intermediate (15,840 vs Phi-3-medium's), more layers (40 vs 32).
-
-### Loading
-```python
-model = AutoModelForCausalLM.from_pretrained("microsoft/phi-4",
-    torch_dtype=torch.bfloat16, device_map="auto")
-```
-
-### Training Innovation: Three-Pillar Recipe
-
-1. **Synthetic pre-training** (~80%) — multi-agent prompting, self-revision, instruction reversal for reasoning-focused synthetic tokens
-2. **Curated organic** (~20%) — filtered web, academic books, code, Q&A
-3. **Post-training** — SFT + pivotal token search DPO + rejection sampling
-
-Result: 14B surpasses GPT-4o on GPQA (56.1 vs 50.6) and MATH (80.4 vs 74.6).
-
-### Zero-Cost Inference
-
-- **4-bit quantization:** ~9GB VRAM via BitsAndBytesConfig (down from 28GB)
-- **GGUF:** Q4_K_M fits in ~8GB RAM via llama.cpp
-- **Inference Providers:** Free via Cerebras, Fireworks, Together AI, etc.
-
-### Phi-4-mini (3.8B, April 2025)
-
-- 128K context via LongRoPE (vs 16K in 14B)
-- Ideal for long-document RAG, agentic workflows
-- Fits on free T4 GPUs with QLoRA fine-tuning
-
-### Phi-4-multimodal (5.6B, May 2025)
-
-- SigLIP vision encoder + Phi-4-mini text decoder
-- Supports interleaved image-text conversations
-- Load with `AutoModelForPreTraining` (not CausalLM)
-
-### LoRA Fine-Tuning
-
-Target all 7 projection layers (q, k, v, o, gate, up, down) for best adaptation. ~0.5% of params trainable. Use QLoRA for free-tier training.
-
-### Resources
-- https://arxiv.org/abs/2412.08905
-- https://github.com/microsoft/Phi-4CookBook
-- https://huggingface.co/microsoft/phi-4
-
----
-
-## 2026-07-24: hf-hub-webhooks-crud-api-deep-dive-v2 — Hub Webhooks API Complete Reference (Topic #2 Expanded)
-
-### Summary
-Comprehensive expansion of the HF Hub Webhooks API coverage. Covers the full 7-method CRUD suite (`create_webhook`, `get_webhook`, `update_webhook`, `delete_webhook`, `list_webhooks`, `enable_webhook`, `disable_webhook`), the `WebhookInfo` and `WebhookWatchedItem` data models, event payloads (5 categories: event, repo, code changes, config changes, discussions/PRs, comments), webhook secret HMAC verification, rate limits (1,000/24h), webhook Jobs (trigger HF Jobs instead of HTTP), free-tier limitations, and practical automation patterns. Source: `huggingface_hub/hf_api.py` (huggingface_hub v1.24.0) and HF Hub docs.
-
-### Core API Reference
-
-#### 1. WebhookInfo Data Model
-
-```python
-@dataclass
-class WebhookInfo:
-    id: str                                          # Unique webhook ID (e.g. "639885d811ae2bad2b7ba461")
-    url: str | None                                  # Target URL (None if job-based webhook)
-    job: JobSpec | None                              # Job spec (None if URL-based webhook)
-    watched: list[WebhookWatchedItem]                # Entities being watched
-    domains: list[Literal['repo', 'discussions']]    # Event domains to subscribe to
-    secret: str | None                               # HMAC secret for payload verification
-    disabled: bool                                   # Whether the webhook is disabled
-```
-
-#### 2. WebhookWatchedItem
-
-```python
-@dataclass
-class WebhookWatchedItem:
-    type: Literal['dataset', 'model', 'org', 'space', 'user']
-    name: str
-```
-
-**Watched entity types:**
-| Type | What it watches |
-|------|----------------|
-| `model` | Events on a specific model repo (`user/repo-name`) |
-| `dataset` | Events on a specific dataset repo |
-| `space` | Events on a specific Space repo |
-| `user` | All repos owned by this user |
-| `org` | All repos owned by this organization |
-
-Note: `user` and `org` subscriptions require email request to HF for "all events" mode (see FAQ below).
-
-#### 3. DOMAIN Constants
-
-```python
-WEBHOOK_DOMAIN_T = Literal['repo', 'discussions']
-```
-
-| Domain | Events captured |
-|--------|----------------|
-| `repo` | Push, file changes, settings updates (default) |
-| `discussions` | Discussion creation, comments, PR events |
-
-Both can be combined to receive all event types.
-
-#### 4. Full CRUD API
-
-##### `create_webhook()` — Create a Webhook
-
-```python
-api.create_webhook(
-    url="https://my-service.com/hf-webhook",    # Target URL (mutually exclusive with job_id)
-    # OR
-    job_id="my-job-id",                          # HF Job ID to trigger (mutually exclusive with url)
-    watched=[
-        {"type": "user", "value": "beer-sakthai"},
-        {"type": "model", "value": "beer-sakthai/my-model"},
-    ],
-    domains=["repo", "discussions"],             # Event domains
-    secret="my-hmac-secret",                     # Optional: HMAC secret
-)
-# Returns WebhookInfo
-```
-
-**Key constraints:**
-- `url` and `job_id` are **mutually exclusive** — one must be set, not both
-- `watched` is **required** — at least one entity to watch
-- `domains` is **optional** — defaults to `["repo"]` if omitted
-- `secret` is **optional** — ASCII characters only
-- All parameters except `watched` are keyword-only (marked with `*`)
-
-##### `get_webhook()` — Get Webhook Details
-
-```python
-hook = api.get_webhook("639885d811ae2bad2b7ba461")
-# Returns WebhookInfo with all fields populated
-```
-
-##### `update_webhook()` — Update Existing Webhook
-
-```python
-api.update_webhook(
-    "639885d811ae2bad2b7ba461",
-    url="https://my-service.com/v2/hf-webhook",  # Update URL
-    watched=[{"type": "model", "value": "new-repo"}],  # Replace watched list
-    domains=["repo"],                             # Replace domains
-    secret="new-secret",                          # Replace secret
-)
-```
-
-**Key behavior:** All parameters are **full replacements** — the watched list replaces the previous one entirely (not merged).
-
-##### `list_webhooks()` — List All Webhooks
-
-```python
-webhooks = api.list_webhooks()
-for hook in webhooks:
-    print(f"{hook.id}: {hook.url or hook.job} → {hook.watched}")
-```
-
-Returns a `list[WebhookInfo]` of all webhooks configured for the authenticated user.
-
-##### `enable_webhook()` / `disable_webhook()` — Toggle State
-
-```python
-api.enable_webhook("639885d811ae2bad2b7ba461")   # Set disabled=False → active
-api.disable_webhook("639885d811ae2bad2b7ba461")   # Set disabled=True → inactive
-```
-
-##### `delete_webhook()` — Permanently Delete
-
-```python
-api.delete_webhook("639885d811ae2bad2b7ba461")    # Irreversible
-```
-
-#### 5. Webhook Payload Structure
-
-Each webhook POST delivers a JSON payload with the following top-level fields:
-
-##### Event
-
-```json
-{
-  "event": {
-    "id": "639885d811ae2bad2b7ba461",
-    "type": "update",
-    "scope": "repo-push",     // "repo-push", "repo-change", "discussion", "comment", etc.
-    "action": "create",       // "create", "update", "delete", "close", "reopen", etc.
-    "createdAt": "2024-01-15T10:30:00Z"
-  }
-}
-```
-
-##### Repo
-
-```json
-{
-  "repo": {
-    "type": "model",          // "model", "dataset", "space"
-    "name": "user/repo-name",
-    "fullName": "user/repo-name",
-    "url": "https://huggingface.co/user/repo-name",
-    "private": false,
-    "gated": false,
-    "likes": 42,
-    "downloads": 1000
-  }
-}
-```
-
-##### Code Changes (on push)
-
-```json
-{
-  "codeChanges": {
-    "added": ["new_file.safetensors"],
-    "modified": ["config.json", "README.md"],
-    "removed": ["old_file.bin"]
-  }
-}
-```
-
-##### Config Changes
-
-```json
-{
-  "configChanges": {
-    "modified": ["cardData.library_name", "cardData.base_model"],
-    "added": ["cardData.tags.[0]"]
-  }
-}
-```
-
-##### Discussions and PRs
-
-```json
-{
-  "discussion": {
-    "id": "639885d811ae2bad2b7ba461",
-    "title": "Hello!",
-    "url": {
-      "web": "https://huggingface.co/some-user/some-repo/discussions/3",
-      "api": "https://huggingface.co/api/models/some-user/some-repo/discussions/3"
-    },
-    "status": "open",
-    "author": {"id": "61d2000c3c2083e1c08af22d"},
-    "isPullRequest": true,
-    "changes": {"base": "refs/heads/main"},
-    "num": 3
-  }
-}
-```
-
-##### Comment
-
-```json
-{
-  "comment": {
-    "id": "6398872887bfcfb93a306f18",
-    "author": {"id": "61d2000c3c2083e1c08af22d"},
-    "content": "This adds an env key",
-    "hidden": false,
-    "url": {
-      "web": "https://huggingface.co/some-user/some-repo/discussions/4#6398872887bfcfb93a306f18"
-    }
-  }
-}
-```
-
-#### 6. Webhook Secret & HMAC Verification
-
-When a secret is set, HF sends it as the `X-Webhook-Secret` HTTP header on every request. To verify:
-
-```python
-import hmac, hashlib
-
-def verify_webhook_signature(payload_body: bytes, header_secret: str, expected_secret: str) -> bool:
-    """Verify that the webhook payload came from Hugging Face."""
-    return hmac.compare_digest(header_secret, expected_secret)
-```
-
-**Alternative:** Append secret as query parameter in the URL:
-`https://example.com/webhook?secret=XXX` — useful when header access is difficult.
-
-**Constraints:**
-- Only ASCII characters supported in the secret
-- Set/update via `create_webhook(secret=...)` / `update_webhook(secret=...)`
-- Secret is masked in the UI/API responses (returned as `None` in `WebhookInfo`)
-
-#### 7. Job-Based Webhooks
-
-Instead of sending an HTTP POST, a webhook can trigger a **HF Job**:
-
-```python
-api.create_webhook(
-    job_id="my-automation-job",                   # Job ID from hf jobs
-    watched=[{"type": "user", "value": "beer-sakthai"}],
-    domains=["repo"],
-)
-```
-
-The job receives the same payload as an HTTP webhook would. Jobs run on HF infrastructure and can access Secrets, Datasets, and Models.
-
-**Free-tier note:** Jobs require paid compute. For zero-cost automation, use HTTP webhooks to a free endpoint (e.g., Hermes webhook server, GitHub Actions webhook receiver, or a free-tier cloud function).
-
-#### 8. Rate Limits & Free-Tier Constraints
-
-| Limit | Value |
-|-------|-------|
-| Triggers per webhook per 24h | **1,000** |
-| Increase | Contact HF (PRO/Team/Enterprise) |
-| Webhook creation | Free for all accounts |
-| Max webhooks | Not documented, but generous |
-| URL-based webhooks | Free (you pay for the receiving endpoint) |
-| Job-based webhooks | Paid (Jobs consume compute credits) |
-
-#### 9. CLI Equivalent
-
-The `hf webhooks` subcommand (via `hf` CLI):
-
-```bash
-# List webhooks
-hf webhooks list
-
-# Create webhook
-hf webhooks create \
-  --url https://my-server.com/hf-webhook \
-  --watched user=beer-sakthai \
-  --domains repo,discussions \
-  --secret my-secret
-
-# Get webhook details
-hf webhooks info <webhook-id>
-
-# Update webhook
-hf webhooks update <webhook-id> \
-  --url https://my-server.com/v2/hf-webhook
-
-# Enable/disable
-hf webhooks enable <webhook-id>
-hf webhooks disable <webhook-id>
-
-# Delete
-hf webhooks delete <webhook-id>
-```
-
-Note: CLI uses `user=<name>` syntax (not `"type": "user"` dict format).
-
-#### 10. Practical Automation Patterns
-
-##### Pattern A: Auto-Sync on Push (Using Hermes Webhooks)
-
-```python
-# Setup script — run once
-from huggingface_hub import HfApi
-
-api = HfApi()
-
-# Create webhook that fires on any push to Beer's repos
-hook = api.create_webhook(
-    url="https://hermes-instance.local/webhooks/hf-push",
-    watched=[{"type": "user", "value": "beer-sakthai"}],
-    domains=["repo"],
-    secret=os.environ["WEBHOOK_SECRET"],
-)
-
-print(f"Webhook created: {hook.id}")
-# → Register this URL in Hermes: hermes webhook subscribe hf-push --url ...
-```
-
-##### Pattern B: Monitor PRs on a Specific Model
-
-```python
-api.create_webhook(
-    url="https://my-bot.com/hf-pr-handler",
-    watched=[{"type": "model", "value": "beer-sakthai/my-model"}],
-    domains=["discussions"],            # Only discussion/PR events
-    secret="pr-bot-secret",
-)
-```
-
-##### Pattern C: Mirror Datasets on Update
-
-```python
-api.create_webhook(
-    url="https://my-service.com/mirror",
-    watched=[{"type": "dataset", "value": "beer-sakthai/my-dataset"}],
-    domains=["repo"],
-)
-```
-
-##### Pattern D: Health Check — List and Refresh
-
-```python
-for hook in api.list_webhooks():
-    info = api.get_webhook(hook.id)
-    status = "🟢 active" if not info.disabled else "🔴 disabled"
-    target = info.url or f"job:{info.job}"
-    print(f"{status} {hook.id[:12]} → {target}")
-    print(f"  Watches: {[f'{w.type}:{w.name}' for w in hook.watched]}")
-    print(f"  Domains: {hook.domains}")
-```
-
-##### Pattern E: Development Workflow (Local Testing)
-
-1. Start a local receiver: `python -m http.server 8080` or a webhook receiver
-2. Expose via ngrok: `ngrok http 8080`
-3. Create webhook with ngrok URL
-4. Make test changes on HF, observe payloads
-5. Use HF Webhook Settings → Activity tab → "Replay" to resend events
-
-#### 11. Known Limitations
-
-| Limitation | Detail |
-|------------|--------|
-| **No org webhooks** | Webhooks can only be defined on user accounts, not orgs |
-| **No wildcard/global** | Can't subscribe to "all models on HF" — must email HF for that |
-| **Secret masked** | Once set, secret is never returned in API responses (always `None`) |
-| **No retry policy** | If your endpoint returns non-2xx, HF retries with exponential backoff but no persistent queue |
-| **No event filtering** | Can't filter by event type within a domain — you get all events or none |
-| **No delivery logs API** | Only available via Web UI Settings → Activity tab |
-| **1,000/day limit** | Hard limit per webhook; contact HF for increase |
-
-#### 12. Zero-Cost Best Practices
-
-1. **Use URL-based webhooks (not job-based)** — Jobs cost money; HTTP webhooks to your own endpoint are free
-2. **Host your webhook receiver on a free tier** — Hermes webhook server, GitHub Actions, Cloudflare Workers, PythonAnywhere, or a free HF Space with Gradio/Express
-3. **Use a webhook secret** — Prevents spoofed requests; critical if your endpoint is public
-4. **Validate with HMAC** — Even with secret in URL header, verify every request
-5. **Use `discussions` domain sparingly** — High-traffic repos generate many discussion events; stay under 1,000/day limit
-6. **Monitor activity in Web UI** — Periodically check Activity tab for delivery failures
-7. **Combine with `CommitScheduler`** — Webhook + CommitScheduler = real-time sync without polling
-
-### Resources
-- Official webhooks docs: https://huggingface.co/docs/hub/en/webhooks
-- HfApi reference (webhook methods): https://huggingface.co/docs/huggingface_hub/en/package_reference/hf_api#webhooks
-- Source code: `huggingface_hub/hf_api.py` (search for `def create_webhook`)
-- Webhooks guide (Auto-Train): https://huggingface.co/docs/hub/en/webhooks-guide-auto-retrain
-- Hermes webhook server: `skill_view("hermes-agent", "references/webhooks.md")`
-
-### Skill
-huggingface-hub — references/hf-learnings.md
-
----
-
-
-## 2026-07-24: hf-datasets-video-processing Deep Dive v2 — torchcodec 0.15.0 Advanced Features & Practical Patterns (Topic #115 — Deepened)
-
-### Summary
-Second deep-dive into Hugging Face video processing, focusing on **new torchcodec 0.15.0+ features not covered in the initial deep-dive**: in-decoder transforms (`transforms=[]` parameter), `output_dtype` for direct float32/float16 decode, `custom_frame_mappings` for raw FFmpeg filter graphs, the new `samplers` module (clip extraction at timestamps/indices, random/regular), `AudioDecoder`/`WavDecoder` for audio-from-video, `SimpleVideoDecoder` for lightweight usage, enhanced `VideoStreamMetadata` (21+ fields), and `Encoder` improvements. All verified against torchcodec 0.15.0+cu130 and datasets 5.0.0 source.
-
-### 1. New VideoDecoder Capabilities (torchcodec 0.15.0+)
-
-Four new parameters since the original coverage:
-
-```python
-from torchcodec.decoders import VideoDecoder
-decoder = VideoDecoder(
-    source,                          # str | Path | bytes | BinaryIO | Tensor
-    transforms=None,                 # NEW: list[DecoderTransform | nn.Module]
-    output_dtype=torch.uint8,        # NEW: torch.uint8 | float32 | float16 | "auto"
-    custom_frame_mappings=None,      # NEW: str | bytes | BinaryIO (FFmpeg filter graph)
-)
-```
-
-#### 1.1 `output_dtype` — Direct Typed Decode
-
-Eliminates per-frame `.float() / 255.0` conversion:
-
-```python
-decoder_f32 = VideoDecoder("video.mp4", output_dtype=torch.float32)
-frame = decoder_f32[0]    # float32 [C, H, W], range [0.0, 1.0]
-
-decoder_f16 = VideoDecoder("video.mp4", output_dtype=torch.float16)
-frame = decoder_f16[0]    # float16 [C, H, W], range [0.0, 1.0]
-```
-
-Verified: `output_dtype=torch.float32` produces float32 tensors normalized to [0.0, 1.0].
-
-#### 1.2 `transforms` — In-Decoder Transform Chain
-
-Transforms applied during decode — eliminates separate post-processing:
-
-```python
-from torchcodec.transforms import Resize, CenterCrop, RandomCrop
-
-decoder = VideoDecoder("video.mp4",
-    transforms=[Resize((224, 224))],
-    output_dtype=torch.float32)
-frame = decoder[0]  # Already (3, 224, 224), float32
-
-# Multiple transforms: resize → center crop
-decoder = VideoDecoder("video.mp4",
-    transforms=[Resize((256, 256)), CenterCrop((224, 224))])
-
-# Random crop for training augmentation
-decoder = VideoDecoder("video.mp4",
-    transforms=[RandomCrop((224, 224))])
-```
-
-**Available transforms:** `Resize(size)`, `CenterCrop(size)`, `RandomCrop(size)` — extensible via `DecoderTransform` ABC (any `nn.Module`).
-
-**Current limitation:** datasets `Video` feature does NOT pass transforms or output_dtype to VideoDecoder. Direct torchcodec only.
-
-#### 1.3 `custom_frame_mappings` — Raw FFmpeg Filter Graphs
-
-```python
-# Grayscale conversion
-decoder = VideoDecoder("video.mp4", custom_frame_mappings="format=gray")
-frame = decoder[0]  # [1, H, W] single-channel
-
-# From bytes or file
-decoder = VideoDecoder("video.mp4", custom_frame_mappings=b"format=gray")
-```
-
-Enables scale, color conversion, deinterlacing, denoising — anything FFmpeg filter graphs support.
-
-### 2. Samplers Module — Clip Extraction (New in 0.15.0+)
-
-The `torchcodec.samplers` module provides clip extraction for video understanding models.
-
-#### 2.1 Index-Based
-
-```python
-from torchcodec.samplers._index_based import clips_at_regular_indices, clips_at_random_indices
-
-# 8 clips, 16 frames each, stride 30
-clips = clips_at_regular_indices(decoder, num_clips=8,
-    num_frames_per_clip=16, num_indices_between_frames=30,
-    policy="repeat_last")  # repeat_last | wrap | error
-
-# 4 random clips, 8 frames each
-random_clips = clips_at_random_indices(decoder, num_clips=4,
-    num_frames_per_clip=8, num_indices_between_frames=15, policy="wrap")
-```
-
-#### 2.2 Time-Based
-
-```python
-from torchcodec.samplers._time_based import clips_at_regular_timestamps, clips_at_random_timestamps
-
-# 6 clips, every 2s, 8 frames each, 0.1s between frames
-clips = clips_at_regular_timestamps(decoder,
-    seconds_between_clip_starts=2.0, num_frames_per_clip=8,
-    seconds_between_frames=0.1, policy="repeat_last")
-
-# Random temporal sampling
-random_clips = clips_at_random_timestamps(decoder, num_clips=4,
-    num_frames_per_clip=16, seconds_between_frames=0.05, policy="wrap")
-```
-
-**Why time-based:** Consistent regardless of frame rate (24fps, 30fps, VFR).
-
-#### 2.3 Policy Options
-
-| Policy | Behaviour | Use Case |
-|--------|-----------|----------|
-| `"repeat_last"` (default) | Repeat last valid frame beyond end | Safe padding |
-| `"wrap"` | Wrap around to beginning | Data augmentation |
-| `"error"` | Raise `IndexError` | Debugging |
-
-### 3. Audio Support
-
-#### 3.1 AudioDecoder — Audio from Video Containers
-
-```python
-from torchcodec.decoders import AudioDecoder
-adec = AudioDecoder("video.mp4")
-samples = adec.get_all_samples()
-# AudioSamples: data=torch.Tensor(num_channels, num_samples)
-print(samples.sample_rate)  # e.g., 48000 Hz
-
-clip = adec.get_samples_played_in_range(start_seconds=0.0, stop_seconds=5.0)
-```
-
-#### 3.2 WavDecoder — WAV Files
-
-```python
-from torchcodec.decoders import WavDecoder
-wav = WavDecoder("audio.wav")
-samples = wav.get_all_samples()  # Same AudioSamples dataclass
-```
-
-#### 3.3 AudioSamples Dataclass
-
-```python
-@dataclass
-class AudioSamples:
-    data: torch.Tensor      # (num_channels, num_samples) or (num_samples,)
-    pts_seconds: float
-    duration_seconds: float
-    sample_rate: int
-```
-
-**Limitation:** datasets `Video` feature does not expose audio.
-
-### 4. SimpleVideoDecoder — Lightweight Access
-
-```python
-from torchcodec.decoders import SimpleVideoDecoder
-decoder = SimpleVideoDecoder("video.mp4")
-frame = decoder.get_frame_at(0)
-batch = decoder.get_frames_at([0, 30, 60])
-all_frames = decoder.get_all_frames(fps=5.0)
-```
-
-No bracket indexing — method-based access only.
-
-### 5. Enhanced VideoStreamMetadata (21+ fields)
-
-```python
-metadata = decoder.metadata
-
-# Standard:
-print(metadata.num_frames, metadata.average_fps, metadata.duration_seconds)
-print(metadata.width, metadata.height, metadata.codec)
-
-# New in 0.15.0+:
-print(metadata.num_frames_from_header)        # Container header count
-print(metadata.num_frames_from_content)       # Actual content scan
-print(metadata.average_fps_from_header)       # Header FPS
-print(metadata.begin_stream_seconds)          # Best available start
-print(metadata.begin_stream_seconds_from_header, metadata.begin_stream_seconds_from_content)
-print(metadata.end_stream_seconds)            # Best available end
-print(metadata.end_stream_seconds_from_content)
-print(metadata.bit_rate)                      # Bit rate
-print(metadata.pixel_format)                  # "yuv420p", "yuv444p"
-print(metadata.color_primaries)               # "bt709", "bt2020"
-print(metadata.color_space)                   # "bt709", "bt2020nc"
-print(metadata.color_transfer_characteristic) # "bt709", "smpte2084"
-print(metadata.pixel_aspect_ratio)            # Fraction width/height
-print(metadata.rotation)                      # Display rotation degrees
-```
-
-### 6. CpuFallbackStatus — GPU Decode Health
-
-```python
-from torchcodec.decoders import CpuFallbackStatus
-decoder = VideoDecoder("video.mp4", device="cuda")
-print(decoder.cpu_fallback)
-# NO_FALLBACK | FALLBACK | ALWAYS_WAS_CPU
-```
-
-### 7. Encoder Features
-
-```python
-from torchcodec.encoders import Encoder
-
-encoder = Encoder()
-vs = encoder.add_video(height=1080, width=1920, frame_rate=30,
-    codec="h264", pixel_format="yuv420p", crf=23, preset="medium")
-aud = encoder.add_audio(sample_rate=48000, num_channels=2)
-
-encoder.open_file("output.mp4")
-with encoder:
-    vs.add_frames(frames_tensor)   # (N, C, H, W) uint8
-    aud.add_samples(audio_tensor)  # (channels, samples)
-
-# In-memory output
-import io
-buf = io.BytesIO()
-encoder.open_file_like(buf, format="mp4")
-# ... write frames/samples ...
-encoder.close()
-encoded_bytes = buf.getvalue()
-```
-
-**Encoder VideoStream parameters:**
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `height` | int | required | Frame height |
-| `width` | int | required | Frame width |
-| `frame_rate` | float | required | Target FPS |
-| `codec` | str | None | "h264", "hevc", "av1" |
-| `pixel_format` | str | None | "yuv420p", "yuv444p" |
-| `crf` | int|float | None | Constant Rate Factor (0-51) |
-| `preset` | str|int | None | "ultrafast" to "veryslow" |
-| `extra_options` | dict | None | FFmpeg codec options |
-| `device` | str | "cpu" | Encoding device |
-
-### 8. Practical Zero-Cost Patterns
-
-#### Pattern 1: Frame Extraction at Target FPS
-
-```python
-def extract_frames(video_path: str, target_fps: int = 5) -> torch.Tensor:
-    decoder = VideoDecoder(video_path, output_dtype=torch.float32,
-                           transforms=[Resize((224, 224))])
-    step = max(1, int(decoder.metadata.average_fps / target_fps))
-    frames = decoder.get_frames_in_range(0, len(decoder), step=step)
-    return frames.data  # (N, C, H, W), float32
-```
-
-#### Pattern 2: Training Clip Sampling
-
-```python
-def sample_clips(video_path: str, num_clips=4, frames=8, crop=224):
-    decoder = VideoDecoder(video_path,
-        transforms=[Resize((256, 256)), RandomCrop((crop, crop))],
-        output_dtype=torch.float32)
-    clips = clips_at_random_indices(decoder, num_clips=num_clips,
-        num_frames_per_clip=frames,
-        num_indices_between_frames=max(1, len(decoder) // (frames * 2)),
-        policy="wrap")
-    return clips.data
-```
-
-#### Pattern 3: Aligned Audio-Visual Extraction
-
-```python
-def extract_av(video_path: str, duration: float = 5.0):
-    vdec = VideoDecoder(video_path, transforms=[Resize((224, 224))],
-                        output_dtype=torch.float32)
-    fps = vdec.metadata.average_fps
-    frames = vdec.get_frames_in_range(0,
-        min(len(vdec), int(fps * duration)), step=int(fps / 10))
-    adec = AudioDecoder(video_path)
-    audio = adec.get_samples_played_in_range(0.0, duration)
-    return {"video": frames.data, "audio": audio.data,
-            "sample_rate": audio.sample_rate}
-```
-
-#### Pattern 4: Quick Codec/Format Inspection
-
-```python
-def inspect_video(path: str) -> dict:
-    m = VideoDecoder(path).metadata
-    return {
-        "codec": m.codec, "width": m.width, "height": m.height,
-        "fps": m.average_fps, "frames": m.num_frames,
-        "duration": m.duration_seconds, "bit_rate": m.bit_rate,
-        "pixel_format": m.pixel_format, "color_space": m.color_space,
-        "rotation": m.rotation,
-    }
-```
-
-### 9. Datasets Integration State (datasets 5.0.0)
-
-**Limitations:** `transforms`, `output_dtype`, `custom_frame_mappings` NOT passed through from `datasets.Video` to `VideoDecoder`. Audio decoding not integrated.
-
-**Workarounds:**
-```python
-# Option 1: Apply transforms externally post-decode
-decoder = example["video"]
-frame = decoder[0].float() / 255.0
-
-# Option 2: Re-decode from path with full torchcodec API
-path = example["video"].metadata.path
-decoder = VideoDecoder(path, transforms=[Resize((224, 224))],
-                       output_dtype=torch.float32)
-frame = decoder[0]
-
-# Option 3: Embed storage for self-contained Arrow
-ds = ds.map(lambda x: x)  # Forces embed_storage()
-```
-
-### 10. Dependencies
-
-```bash
-uv pip install datasets torchcodec
-# FFmpeg must be system-available
-ffmpeg -version
-```
-
-torchcodec 0.15.0+cu130 ships prebuilt CUDA extensions. NVDEC GPU via `device="cuda"`.
-
-### Key Insights
-
-1. **In-decoder transforms save memory 4x:** Resize+float32 during decode eliminates intermediate uint8 tensors.
-2. **Samplers replace manual loops:** `clips_at_*` handle boundaries, stride, batch construction in one call.
-3. **Audio-video alignment is free:** `AudioDecoder(video_path)` guarantees perfect timestamp alignment.
-4. **Custom mappings unlock FFmpeg's full power:** Filter graphs chain multi-step processing in a single decode pass.
-5. **datasets Video lags torchcodec:** Newer features not exposed through datasets -- direct torchcodec required.
-
-### Resources
-- torchcodec source: https://github.com/pytorch/torchcodec
-- torchcodec docs: https://meta-pytorch.org/torchcodec
-- datasets Video: https://huggingface.co/docs/datasets/en/video_dataset
-- FFmpeg filters: https://ffmpeg.org/ffmpeg-filters.html
-
-### Skill
-|hf-datasets-video-processing -- references/hf-learnings.md
-
-## 2026-07-24: hf-hub-search-discovery-api — Deep Dive (Topic #141)
-
-### Summary
-Comprehensive deep-dive into the Hugging Face Hub Search & Discovery API — how to search, filter, sort, and paginate through models, datasets, and Spaces using both the REST API (`GET /api/models`, `/api/datasets`, `/api/spaces`) and the Python `huggingface_hub` wrappers (`list_models()`, `list_datasets()`, `list_spaces()`). Covers every query parameter, filter prefix, sort mode, expand option, and the `paginate()` mechanism. Also covers the `/api/quicksearch` endpoint for cross-type instant search. Focused on zero-cost patterns — all endpoints are public and free.
-
-### Core Architecture — Three REST Endpoints
-
-The Hub exposes three parallel listing endpoints with the same pagination mechanism:
-
-| Endpoint | Python wrapper | Returns |
-|----------|---------------|---------|
-| `GET /api/models` | `api.list_models(...)` | `ModelInfo` |
-| `GET /api/datasets` | `api.list_datasets(...)` | `DatasetInfo` |
-| `GET /api/spaces` | `api.list_spaces(...)` | `SpaceInfo` |
-
-All three use the same `paginate()` helper: fetch the first page, parse the `Link` header for the next page URL, and yield items lazily. This is the same Link-header pagination format as the GitHub API.
-
-### Pagination — Link-Header Based
-
-```python
-# Internal paginate() logic (from huggingface_hub.utils._pagination):
-def paginate(path, params, headers):
-    r = session.get(path, params=params, headers=headers)
-    hf_raise_for_status(r)
-    yield from r.json()
-    next_page = _get_next_page(r)  # parses Link header
-    while next_page is not None:
-        r = http_backoff("GET", next_page, headers=headers)
-        hf_raise_for_status(r)
-        yield from r.json()
-        next_page = _get_next_page(r)
-```
-
-- First response includes `Link` header with `rel="next"` — subsequent pages are pre-encoded URLs
-- Pages are fetched on-demand via generator — iteration stops at `limit` or absent Link header
-- Client-side `limit` uses `itertools.islice` to cap iteration
-
-### list_models() — Full Parameter Reference
-
-**Signature** (all keyword-only after `self`):
-
-```python
-def list_models(self, *,
-    filter, author, apps, gated, inference, inference_provider,
-    trained_dataset, search, pipeline_tag, num_parameters,
-    emissions_thresholds, sort, limit, expand, full,
-    cardData, fetch_config, token,
-) -> Iterable[ModelInfo]:
-```
-
-**HTTP query params mapping:**
-
-| Python param | HTTP key | Values |
-|---|---|---|
-| `filter` | `?filter=` | Tag string (see Filter Prefix System below) |
-| `author` | `?author=` | Username or org |
-| `apps` | `?apps=` | `ollama`, `vllm`, etc. |
-| `gated` | `?gated=` | `true` / `false` |
-| `inference` | `?inference=` | `warm` — models with active provider |
-| `inference_provider` | `?inference_provider=` | `all` or name: `together`, `cohere`, `fal-ai` |
-| `search` | `?search=` | Text match on model ID |
-| `pipeline_tag` | `?pipeline_tag=` | `text-classification`, etc. |
-| `num_parameters` | `?num_parameters=` | Range: `min:6B,max:128B`, `min:70B`, `max:500M` |
-| `sort` | `?sort=` | `lastModified`, `trendingScore`, `createdAt`, `downloads`, `likes` |
-| `limit` | `?limit=` | Items per page |
-| `full` | `?full=true` | Returns siblings, sha, tags, lastModified |
-| `cardData` | `?cardData=true` | YAML metadata |
-| `config` | `?config=true` | Config JSON |
-| `expand` | `?expand=` | List of property names |
-
-**Expand values for list_models:** `author`, `cardData`, `config`, `createdAt`, `disabled`, `downloads`, `downloadsAllTime`, `evalResults`, `gated`, `gguf`, `inference`, `inferenceProviderMapping`, `lastModified`, `library_name`, `likes`, `mask_token`, `model-index`, `pipeline_tag`, `private`, `safetensors`, `sha`, `siblings`, `spaces`, `tags`, `transformersInfo`, `trendingScore`, `widgetData`, `resourceGroup`
-
-### Filter Prefix System — Cross-Domain Tagging
-
-| Prefix | Domain | Example |
-|--------|--------|---------|
-| `dataset:` | Trained on dataset | `dataset:wikitext` |
-| `library:` | Using library | `library:transformers` |
-| `language:` | Language | `language:en` |
-| `task_categories:` | Task category | `task_categories:text-classification` |
-| `task_ids:` | Specific task | `task_ids:language-modeling` |
-| `language_creators:` | Curation method | `language_creators:crowdsourced` |
-| `multilinguality:` | Multilingual | `multilinguality:monolingual` |
-| `size_categories:` | Dataset size | `size_categories:100K<n<1M` |
-
-**Practical examples:**
-
-```python
-api = HfApi()
-
-# LoRA / PEFT models
-api.list_models(filter="peft")
-
-# Text classification with transformers
-api.list_models(filter=("library:transformers", "task:text-classification"))
-
-# Russian language modeling datasets
-api.list_datasets(filter=("language:ru", "task_ids:language-modeling"))
-
-# Gated BERT-like models
-api.list_models(search="bert", gated=True)
-
-# Spaces using Mistral
-api.list_spaces(models="mistralai/Mistral-7B-v0.1")
-
-# Official benchmark datasets
-api.list_datasets(benchmark="official")
-```
-
-### list_datasets() — Dataset-Specific Parameters
-
-```python
-def list_datasets(self, *,
-    filter, author, gated, search, sort, limit, expand, full, token,
-    benchmark, dataset_name,
-    language_creators, language, multilinguality,
-    size_categories, task_categories, task_ids,
-) -> Iterable[DatasetInfo]:
-```
-
-**Expand for datasets:** `author`, `cardData`, `citation`, `createdAt`, `disabled`, `description`, `downloads`, `downloadsAllTime`, `gated`, `lastModified`, `likes`, `mainSize`, `paperswithcode_id`, `private`, `siblings`, `sha`, `tags`, `trendingScore`, `usedStorage`, `resourceGroup`
-
-### list_spaces() — Space-Specific Parameters
-
-```python
-def list_spaces(self, *,
-    filter, author, search, sort, limit, expand, full, token,
-    datasets, models, linked,
-) -> Iterable[SpaceInfo]:
-```
-
-**Expand for spaces:** `author`, `cardData`, `datasets`, `disabled`, `lastModified`, `createdAt`, `likes`, `models`, `private`, `runtime`, `sdk`, `siblings`, `sha`, `subdomain`, `tags`, `trendingScore`, `usedStorage`, `resourceGroup`
-
-### Quicksearch — Cross-Type Instant Search
-
-`GET /api/quicksearch?q=llama&limit=5&type=model`
-
-| Param | Type | Description |
-|-------|------|-------------|
-| `q` | string | Search query |
-| `limit` | int | Max per type |
-| `type` | string | `model`, `dataset`, `space`, `paper` |
-| `library` | string | Library filter |
-| `pipeline` | string | Pipeline tag |
-| `exclude` | array | Exclude types |
-| `namespace` | string | Author/org |
-| `spacesTags` | array | Space-specific tags |
-
-Returns `{"models": [...], "datasets": [...], "spaces": [...], "papers": [...]}` — ideal for autocomplete/search suggestions.
-
-### Advanced Zero-Cost Patterns
-
-**1. Find GGUF (CPU-friendly) models:**
-```python
-gguf_models = api.list_models(filter="gguf", sort="downloads", limit=10)
-```
-
-**2. Find models with active inference provider:**
-```python
-warm = list(api.list_models(inference="warm", sort="likes", limit=50))
-```
-
-**3. Parameter-range search:**
-```python
-# 1B-10B params, sorted by likes
-for m in api.list_models(num_parameters="min:1B,max:10B", sort="likes", limit=20):
-    print(f"{m.modelId}: {m.likes} likes")
-```
-
-**4. Multi-tag filtering:**
-```python
-# Diffusers + Stable Diffusion
-api.list_models(filter=("library:diffusers", "task:text-to-image"))
-```
-
-### Rate Limits & Auth
-- Public endpoints are free — no token needed for read-only public repo listing
-- Subject to HF-wide rate limits (429 → `http_backoff` auto-retries)
-- Auth token required for private repos, gated repos, and write operations
-
-### Key Takeaways
-1. Three parallel endpoints (`/api/models`, `/api/datasets`, `/api/spaces`) share identical pagination/sort/expand architecture
-2. The `filter` prefix system is the Swiss Army knife — `library:`, `dataset:`, `language:`, `task_categories:`
-3. `expand` is bandwidth-efficient; use it instead of `full=true` for targeted field selection
-4. `search` matches repo IDs textually; `filter` uses tag-based exact matching
-5. Pagination is automatic via Link header — the Python client handles it transparently
-6. `quicksearch` is the fastest path for cross-type autocomplete/dashboard use cases
-7. All endpoints are zero-cost — no paid tier needed for discovery
-
-### Resources
-- `huggingface_hub` source: `hf_api.py` L2398–2970
-- OpenAPI spec: https://huggingface.co/.well-known/openapi.md
-- Hub search docs: https://huggingface.co/docs/hub/en/search
-- Hub API docs: https://huggingface.co/docs/hub/en/api
-- Pagination source: `huggingface_hub.utils._pagination`
-
-### Skill
-mlops/huggingface-hub -- references/hf-learnings.md
-
----
-
-## 2026-07-24: hf-hub-tag-system-complete-reference (Topic #142)
-
-### Summary
-Comprehensive reference to the Hugging Face Hub's tagging/taxonomy system. The Hub uses a `prefix:value` tag system across models, datasets, and Spaces to enable discoverability, filtering, and categorization. Tags are stored as string arrays in repo metadata and can be set via YAML frontmatter in README.md or programmatically through the API. This reference catalogs all known tag prefixes, their valid values, how they're used across repo types, and API filtering patterns.
-
-### How Tags Work
-
-Tags on the Hugging Face Hub are simple string arrays attached to each repository. They follow a `prefix:value` convention for structured categorization, though unprefixed "freeform" tags also exist. Tags serve three functions:
-1. **Discoverability** — repos appear in search/filter results on the Hub website and API
-2. **Categorization** — pipeline tags, task categories, and library tags enable UI grouping
-3. **Metadata encoding** — license, language, size, format, and provenance info
-
-Tags are set in the YAML frontmatter of a repo's README.md:
-```yaml
----
-tags:
-- transformers
-- text-generation
-- license:apache-2.0
-- language:en
-- arxiv:2302.13971
----
-```
-
-Or via the API:
-```python
-api.update_repo_settings("my-model", tags=["transformers", "text-generation", "license:apache-2.0"])
-api.update_repo_settings("my-dataset", tags=["task_categories:text-generation", "language:en", "format:parquet"])
-```
-
-### Models Tag System
-
-Models use the richest tag system. Tag values inferred from API sampling of 300+ top-downloaded models:
-
-**Tag prefixes (structured):**
-
-| Prefix | Purpose | Example Values | Source |
-|--------|---------|----------------|--------|
-| `license:` | License type | `apache-2.0`, `mit`, `cc-by-4.0`, `cc-by-nc-4.0`, `cc0-1.0`, `cc-by-nc-sa-3.0`, `cc-by-sa-4.0`, `gpl-3.0`, `gpl`, `agpl-3.0`, `bsd`, `other`, `odbl`, `gfdl`, `fair-noncommercial-research-license`, `cdla-sharing-1.0`, `cc-by-nd-4.0` | YAML / API |
-| `dataset:` | Training dataset used | `dataset:wikitext`, `dataset:bookcorpus`, `dataset:s2orc`, `dataset:ms_marco` | Automatically inferred or YAML |
-| `base_model:` | Parent/base model | `base_model:google-bert/bert-base-uncased` | YAML / API |
-| `arxiv:` | Associated paper | `arxiv:1810.04805`, `arxiv:2501.12948` | YAML / API |
-| `deploy:` | Deployment platform | `deploy:sagemaker`, `deploy:azure`, `deploy:gcp` | YAML / API |
-| `region:` | Data hosting region | `region:us`, `region:eu`, `region:asia` | Hub-assigned |
-| `doi:` | DOI identifier | `doi:10.xxxx/zenodo` | YAML |
-| `diffusers:` | Diffusers classifier-free guidance | `diffusers:classifier-free` | Diffusers metadata |
-
-**Unprefixed (freeform) tags — most commonly found:**
-`transformers`, `pytorch`, `tf`, `jax`, `rust`, `onnx`, `safetensors`, `coreml`, `openvino`, `gguf`, `llama.cpp`, `timm`, `sentence-transformers`, `bert`, `vit`, `whisper`, `text-generation-inference`, `endpoints_compatible`, `conversational`, `custom_code`, `exbert`, `gguf`, `mlx`, `litert-lm`, `ctranslate2`, `speechbrain`, `ultralytics`, `vllm`
-
-**Special model-level metadata (separate from tags):**
-
-| Field | Type | Description | Typical Values |
-|-------|------|-------------|----------------|
-| `pipeline_tag` | string | Primary ML task | `text-generation`, `image-classification`, `automatic-speech-recognition`, `fill-mask`, `feature-extraction`, `sentence-similarity`, `text-classification`, `text-to-image`, `text-to-speech`, `image-to-text`, `image-to-image`, `object-detection`, `image-segmentation`, `zero-shot-classification`, `translation`, `summarization`, `question-answering`, `token-classification`, `text-ranking`, `depth-estimation`, `image-text-to-text`, `any-to-any`, `mask-generation`, `time-series-forecasting`, `audio-classification`, `audio-to-audio`, `voice-activity-detection`, `text-to-audio`, `image-to-video`, `audio-text-to-text`, `text-to-3d`, `zero-shot-image-classification`, `zero-shot-object-detection`, `table-question-answering`, `image-feature-extraction`, `video-classification`, `video-text-to-text`, `visual-question-answering` |
-| `library_name` | string | Primary framework | `transformers`, `diffusers`, `sentence-transformers`, `gguf`, `timm`, `vllm`, `open_clip`, `whisperkit`, `ultralytics`, `mlx`, `fasttext`, `speechbrain`, `nemo`, `llama.cpp`, `pyannote-audio`, `transformers.js`, `coqui`, `ctranslate2`, `chronos-forecasting`, `depth-anything-3`, `diffusion-single-file`, `litert-lm`, `mivolo`, `Model Optimizer`, `perception-encoder`, `pytorch`, `transcribe.cpp`, `trellis`, `trellis2`, `UniDepth`, `voxcpm`, `chatterbox` |
-
-**All 35 known pipeline_tag values (verified via HF API):**
-1. `any-to-any`
-2. `audio-classification`
-3. `audio-text-to-text`
-4. `audio-to-audio`
-5. `automatic-speech-recognition`
-6. `depth-estimation`
-7. `feature-extraction`
-8. `fill-mask`
-9. `image-classification`
-10. `image-feature-extraction`
-11. `image-segmentation`
-12. `image-text-to-text`
-13. `image-to-3d`
-14. `image-to-image`
-15. `image-to-text`
-16. `image-to-video`
-17. `mask-generation`
-18. `object-detection`
-19. `question-answering`
-20. `sentence-similarity`
-21. `summarization`
-22. `table-question-answering`
-23. `text-classification`
-24. `text-generation`
-25. `text-ranking`
-26. `text-to-audio`
-27. `text-to-image`
-28. `text-to-speech`
-29. `time-series-forecasting`
-30. `token-classification`
-31. `translation`
-32. `voice-activity-detection`
-33. `zero-shot-classification`
-34. `zero-shot-image-classification`
-35. `zero-shot-object-detection`
-
-### Datasets Tag System
-
-Datasets use the most structured tag system with the most prefix categories. Tag values verified by API sampling of 500 top-downloaded datasets:
-
-**Tag prefixes (structured):**
-
-| Prefix | Purpose | Example Values |
-|--------|---------|----------------|
-| `task_categories:` | High-level ML task | `text-generation`, `question-answering`, `image-classification`, `summarization`, `translation`, `token-classification`, `text-classification`, `automatic-speech-recognition`, `feature-extraction`, `object-detection`, `image-segmentation`, `image-to-text`, `image-to-image`, `text-to-image`, `text-to-speech`, `audio-classification`, `video-classification`, `reinforcement-learning`, `robotics`, `tabular-classification`, `tabular-regression`, `time-series-forecasting`, `any-to-any`, `depth-estimation`, `fill-mask`, `image-feature-extraction`, `image-text-to-image`, `image-text-to-text`, `image-to-3d`, `image-to-video`, `keypoint-detection`, `multiple-choice`, `other`, `table-question-answering`, `text-to-3d`, `text-to-audio`, `text-to-video`, `video-text-to-text`, `visual-question-answering`, `zero-shot-classification`, `zero-shot-image-classification`, `audio-to-audio` (42 values) |
-| `task_ids:` | Specific sub-task | `language-modeling`, `masked-language-modeling`, `conversational`, `extractive-qa`, `open-domain-qa`, `closed-domain-qa`, `multiple-choice-qa`, `abstractive-qa`, `open-domain-abstractive-qa`, `dialogue-generation`, `dialogue-modeling`, `coreference-resolution`, `natural-language-inference`, `sentiment-classification`, `topic-classification`, `semantic-similarity-classification`, `semantic-similarity-scoring`, `acceptability-classification`, `multi-class-image-classification`, `multi-input-text-classification`, `text-scoring`, `word-sense-disambiguation`, `semantic-segmentation`, `speaker-identification`, `task-planning`, `news-articles-summarization` (26 values) |
-| `language:` | ISO language code | `en`, `fr`, `de`, `es`, `zh`, `ja`, `ko`, `ar`, `ru`, `pt`, `code`, and 2043+ ISO 639-3 codes |
-| `license:` | License type | Same as model licenses (see above) + `cc-by-nc-3.0`, `cc-by-sa-3.0`, `cc-by-nd-4.0`, `cc-by-nc-sa-4.0` |
-| `size_categories:` | Number of samples (11 categories) | `n<1K`, `1K<n<10K`, `10K<n<100K`, `100K<n<1M`, `1M<n<10M`, `10M<n<100M`, `100M<n<1B`, `1B<n<10B`, `10B<n<100B`, `100B<n<1T`, `n>1T` |
-| `format:` | Storage format | `parquet`, `csv`, `json`, `text`, `imagefolder`, `audiofolder`, `webdataset`, `optimized-parquet`, `agent-traces` |
-| `modality:` | Data modality | `text`, `image`, `audio`, `video`, `tabular`, `3d`, `multimodal` |
-| `library:` | Compatible library | `datasets`, `pandas`, `polars`, `mlcroissant`, `dask` |
-| `annotations_creators:` | Annotation origin | `found`, `crowdsourced`, `machine-generated`, `expert-generated`, `no-annotation`, `other` |
-| `language_creators:` | Language data origin | `found`, `crowdsourced`, `expert-generated`, `machine-generated`, `other` |
-| `multilinguality:` | Language scope | `monolingual`, `multilingual`, `cross-lingual`, `translation` |
-| `source_datasets:` | Dataset origin | `original`, `extended`, `extracted`, `split` |
-| `region:` | Hosting region | `us`, `eu`, `asia` |
-| `arxiv:` | Associated paper | `arxiv:2406.17557` |
-| `benchmark:` | Benchmark status | `original`, `extended` |
-| `doi:` | DOI identifier | `doi:10.xxxx/zenodo` |
-
-**All 11 size_categories values (exact complete set):**
-| Value | Range |
-|-------|-------|
-| `n<1K` | Fewer than 1,000 samples |
-| `1K<n<10K` | 1,000 – 10,000 |
-| `10K<n<100K` | 10,000 – 100,000 |
-| `100K<n<1M` | 100,000 – 1,000,000 |
-| `1M<n<10M` | 1,000,000 – 10,000,000 |
-| `10M<n<100M` | 10 – 100 million |
-| `100M<n<1B` | 100 million – 1 billion |
-| `1B<n<10B` | 1 – 10 billion |
-| `10B<n<100B` | 10 – 100 billion |
-| `100B<n<1T` | 100 billion – 1 trillion |
-| `n>1T` | Over 1 trillion samples |
-
-**All 42 task_categories values (exact set):**
-`any-to-any`, `audio-classification`, `audio-to-audio`, `automatic-speech-recognition`, `depth-estimation`, `feature-extraction`, `fill-mask`, `image-classification`, `image-feature-extraction`, `image-segmentation`, `image-text-to-image`, `image-text-to-text`, `image-to-3d`, `image-to-image`, `image-to-text`, `image-to-video`, `keypoint-detection`, `multiple-choice`, `object-detection`, `other`, `question-answering`, `reinforcement-learning`, `robotics`, `summarization`, `table-question-answering`, `tabular-classification`, `tabular-regression`, `text-classification`, `text-generation`, `text-to-3d`, `text-to-audio`, `text-to-image`, `text-to-speech`, `text-to-video`, `time-series-forecasting`, `token-classification`, `translation`, `video-classification`, `video-text-to-text`, `visual-question-answering`, `zero-shot-classification`, `zero-shot-image-classification`
-
-**All 26 task_ids values (exact set):**
-`abstractive-qa`, `acceptability-classification`, `closed-domain-qa`, `conversational`, `coreference-resolution`, `dialogue-generation`, `dialogue-modeling`, `extractive-qa`, `language-modeling`, `masked-language-modeling`, `multi-class-image-classification`, `multi-input-text-classification`, `multiple-choice-qa`, `natural-language-inference`, `news-articles-summarization`, `open-domain-abstractive-qa`, `open-domain-qa`, `semantic-segmentation`, `semantic-similarity-classification`, `semantic-similarity-scoring`, `sentiment-classification`, `speaker-identification`, `task-planning`, `text-scoring`, `topic-classification`, `word-sense-disambiguation`
-
-### Spaces Tag System
-
-Spaces have a more limited tag system:
-
-**Tag prefixes:**
-| Prefix | Purpose | Example Values |
-|--------|---------|----------------|
-| `language:` | Primary language | `english`, `chinese`, `french`, `multilingual` |
-| `region:` | Hosting region | `us`, `eu` |
-| `modality:` | Content modality | `text`, `image`, `audio`, `video`, `3d` |
-| `eval:` | Evaluation type | `code`, `math`, `reasoning` |
-| `judge:` | Judging method | `auto`, `human`, `llm` |
-| `submission:` | Submission method | `automatic`, `manual` |
-| `test:` | Test set access | `public`, `private` |
-
-**SDK values (separate from tags):**
-`sdk: gradio`, `sdk: docker`, `sdk: static`
-
-**Unprefixed tags:**
-`docker`, `leaderboard`, `chat`, `text-generation`, `image-generation`, `voice`, `audio`, `vision`
-
-### Programmatic Tag Discovery
-
-Since the Hub doesn't publish a complete tag vocabulary (there is no `/api/tags` endpoint), the most reliable way to discover valid values is by sampling the API:
-
-```python
-from huggingface_hub import HfApi
-api = HfApi()
-
-# Discover pipeline tags from actual models
-pipelines = set()
-for m in api.list_models(sort="downloads", limit=200):
-    if m.pipeline_tag:
-        pipelines.add(m.pipeline_tag)
-
-# Discover dataset size categories
-size_cats = set()
-for ds in api.list_datasets(sort="downloads", limit=500, full=True):
-    for tag in ds.tags:
-        if tag.startswith("size_categories:"):
-            size_cats.add(tag.split(":", 1)[1])
-
-# Discover model libraries
-libs = set()
-for m in api.list_models(sort="downloads", limit=200):
-    if m.library_name:
-        libs.add(m.library_name)
-```
-
-### API Filtering by Tags
-
-Tags are the primary filtering mechanism in the Hub API:
-
-```python
-# Single tag filter (by prefix)
-api.list_models(filter="library:transformers")
-
-# Multiple tag filters (AND logic — use tuple)
-api.list_models(filter=("task:text-generation", "library:diffusers"))
-
-# Dataset multi-filter: English text generation datasets in Parquet format
-api.list_datasets(
-    filter=("task_categories:text-generation", "language:en", "format:parquet"),
-    sort="downloads",
-    limit=20,
-)
-
-# Unprefixed tag filter
-api.list_models(filter="gguf", sort="downloads")  # All GGUF models
-api.list_models(filter="safetensors", sort="likes")  # All SafeTensors models
-```
-
-### Tag Best Practices
-
-1. **Always include at minimum**: `pipeline_tag` (models), `task_categories` (datasets), `license`, and `language` tags for discoverability
-2. **Use correct casing**: Tags are case-sensitive. Standard values are lowercase (`en`, not `EN`)
-3. **Add arxiv papers**: Include `arxiv:XXXX.XXXXX` for paper-backed models/datasets — enables paper cross-linking on the Hub
-4. **Don't over-tag**: 5-15 focused tags is ideal. Over-tagging with irrelevant tags doesn't improve discoverability
-5. **Prefer prefix tags over freeform**: `license:mit` is better than just `mit` — it's unambiguous and filterable
-6. **Dataset size categories**: Always set `size_categories` for datasets — it's required for filtered browsing
-7. **Avoid typos**: Invalid tags are silently ignored. Tag values must match exactly at search time
-8. **Check existing tags**: Browse similar repos to see what tags are commonly used in your category
-
-### Resources
-- Hub search docs: https://huggingface.co/docs/hub/en/search
-- Model cards docs: https://huggingface.co/docs/hub/en/model-cards
-- Dataset cards docs: https://huggingface.co/docs/hub/en/datasets-cards
-- Hub API reference: https://huggingface.co/docs/hub/en/api
-- OpenAPI spec: https://huggingface.co/.well-known/openapi.md
-- Tag discovery via API: `HfApi.list_models()` / `list_datasets()` / `list_spaces()`
-
-### Skill
-mlops/huggingface-hub -- references/hf-learnings.md
-
----
-
-## 2026-07-24: smolagents Multi-Agent Orchestration Patterns (Topic #144 — Deep Dive on hf-agents-course)
-
-### Summary
-Deep-dive into smolagents v1.26.0 multi-agent orchestration patterns from the official HF Agents Course. Covers CodeAgent vs ToolCallingAgent paradigms, manager-worker hierarchy with managed_agents, custom tool construction with @tool, agent memory management (replay, dynamic mutation, step callbacks, step-by-step execution), and best practices for building reliable multi-agent systems. Full content in mlops/hf-agents-course/references/hf-learnings.md.
-
-### Key Findings
-- **CodeAgent** (code synthesis) for reasoning/planning; **ToolCallingAgent** (JSON tool calls) for reliable dispatching. Choice depends on task complexity.
-- **Multi-agent = manager + workers**: Manager (CodeAgent) receives task, plans, and delegates via managed_agents list. Workers need explicit `name` and `description`.
-- **Agent memory is mutable**: Access `agent.memory.steps` to read/modify history, replay runs, or inject prior context. Step callbacks (`step_callbacks=[]`) enable live memory editing.
-- **Custom tools** require type annotations, clear docstring parameter formats, and verbose logging via `print()` for LLM self-correction.
-
-### Resources
-- https://huggingface.co/learn/agents-course/unit2/smolagents/introduction
-- https://huggingface.co/docs/smolagents/main/en/guided_tour
-- https://huggingface.co/docs/smolagents/main/en/examples/multiagents
-- https://huggingface.co/docs/smolagents/main/en/tutorials/building_good_agents
-- https://huggingface.co/docs/smolagents/main/en/tutorials/memory
-
-### Skill
-mlops/hf-agents-course -- references/hf-learnings.md
-
----
-
-## 2026-07-24: hf-huggingface-hub-download-lifecycle — `hf_hub_download()` Internals (Topic #147)
-
-### Summary
-Complete deep-dive into the internal working of `hf_hub_download()` — the primary entry-point for downloading files from the Hugging Face Hub. Covers the full download lifecycle: metadata HEAD call with CDN redirect following, cache lookup via `try_to_load_from_cache()`, the `.no_exist` cache for known-missing files, concurrent download protection via `WeakFileLock` (fcntl/flock), HTTP streaming download with automatic resume/retry (up to 5 attempts), Xet-accelerated downloads via `xet_get()` (parallel chunked downloads from CAS server), atomic per-process temp files for correctness on broken-flock filesystems (NFS/Lustre), symlink creation from `snapshots/` to `blobs/`, the `local_dir` path with etag matching and sha256 fallback, dry-run mode (`DryRunFileInfo`), and all environment variables. Source-verified against huggingface_hub v1.24.0 file_download.py (2026 lines, on GitHub at `src/huggingface_hub/file_download.py`).
-
-### Key Findings
-- **Cache-first architecture**: `try_to_load_from_cache()` checks `snapshots/`, `refs/`, and `.no_exist/` before any network call. The `.no_exist` cache prevents repeated 404 HEAD requests.
-- **Two download methods**: HTTP streaming (`http_get()`) for standard repos, Xet chunked download (`xet_get()`) for Xet-enabled repos (default since v0.32.0). Files > 50GB require Xet.
-- **Robust concurrency**: `WeakFileLock` (fcntl) serializes downloads, but on NFS/Lustre where `flock()` is a no-op, per-process temp files (`{uuid}.incomplete`) ensure correctness — the last process to rename wins.
-- **local_dir optimization**: Uses `download_metadata.json` + etag/SHA256 matching to avoid re-downloading files that haven't changed, plus cache fallback before network.
-- **6 retries max**: HTTP download auto-retries 5 times (1s sleep) on transient network errors. Metadata HEAD retries once with 60s timeout.
-
-### Resources
-- Source: https://github.com/huggingface/huggingface_hub/blob/main/src/huggingface_hub/file_download.py
-- Download guide: https://huggingface.co/docs/huggingface_hub/en/guides/download
-- Full content in huggingface-hub -- references/hf-learnings.md
-
-### Skill
-huggingface-hub -- references/hf-learnings.md
-
----
-
-## 2026-07-24: hf-hub-organization-management-api — Managing Organizations, Members, Repos, and Teams (Topic #150)
-
-### Summary
-Comprehensive deep-dive into the Hugging Face Hub Organization Management ecosystem — covering the full lifecycle of organizations on the Hub: Python SDK (`huggingface_hub` `HfApi`) methods, REST API endpoints, data models (`Organization`, `User`), repo lifecycle under org namespaces, resource groups (Enterprise), and the web UI management interface. Built entirely from source code analysis of `huggingface_hub` v1.24.0.
-
-### Core Architecture
-
-Organizations on the Hugging Face Hub are **namespace containers** that own models, datasets, Spaces, and buckets. They provide:
-- **Shared ownership** — repos belong to the org, not any individual
-- **Role-based access** — members have reader/writer/admin roles
-- **Resource groups** (Enterprise) — granular access control within an org
-- **Team plan** — paid tier with additional features (private repos, higher rate limits)
-- **Verification** — verified badge for official orgs
-
-API endpoint base: `https://huggingface.co/api/organizations/{organization}`
-
-### Data Models
-
-#### Organization Dataclass
-
-```python
-@dataclass
-class Organization:
-    avatar_url: str
-    name: str                        # Unique org name on Hub
-    fullname: str                    # Display name
-    details: str | None = None       # Description/mission
-    is_verified: bool | None = None  # Official org badge
-    is_following: bool | None = None # Auth user follows this org?
-    num_users: int | None = None     # Member count
-    num_models: int | None = None    # Models owned
-    num_spaces: int | None = None    # Spaces owned
-    num_datasets: int | None = None  # Datasets owned
-    num_followers: int | None = None # Follower count
-    num_papers: int | None = None    # Authored papers
-    plan: str | None = None          # "enterprise", "team", or None
-```
-
-#### User Dataclass (member context)
-
-```python
-@dataclass
-class User:
-    username: str
-    fullname: str
-    avatar_url: str
-    details: str | None = None
-    is_following: bool | None = None
-    is_pro: bool | None = None
-    num_models: int | None = None
-    num_datasets: int | None = None
-    num_spaces: int | None = None
-    num_discussions: int | None = None
-    num_papers: int | None = None
-    num_upvotes: int | None = None
-    num_likes: int | None = None
-    num_following: int | None = None
-    num_followers: int | None = None
-    orgs: list[Organization] | None = None  # Orgs the user belongs to
-```
-
-**Key attributes available from JSON response:**
-| JSON field | Python field | Type | Description |
-|------------|-------------|------|-------------|
-| `avatarUrl` | `avatar_url` | `str` | Avatar URL |
-| `name` | `name` | `str` | Unique org name |
-| `fullname` | `fullname` | `str` | Display name |
-| `details` | `details` | `str\|None` | Description |
-| `isVerified` | `is_verified` | `bool\|None` | Badge status |
-| `isFollowing` | `is_following` | `bool\|None` | Auth user follows? |
-| `numUsers` | `num_users` | `int\|None` | Member count |
-| `numModels` | `num_models` | `int\|None` | Model count |
-| `numSpaces` | `num_spaces` | `int\|None` | Space count |
-| `numDatasets` | `num_datasets` | `int\|None` | Dataset count |
-| `numFollowers` | `num_followers` | `int\|None` | Follower count |
-| `numPapers` | `num_papers` | `int\|None` | Paper count |
-| `plan` | `plan` | `str\|None` | Plan type |
-
-### Python SDK — Reading Org Information
-
-#### get_organization_overview() — Org Profile
-
-```python
-from huggingface_hub import HfApi
-
-api = HfApi()
-org = api.get_organization_overview("huggingface")
-
-print(f"Name: {org.fullname}")          # "Hugging Face"
-print(f"Handle: {org.name}")             # "huggingface"
-print(f"Description: {org.details}")     # "We're on a journey..."
-print(f"Members: {org.num_users}")       # e.g., 150
-print(f"Models: {org.num_models}")       # e.g., 30000+
-print(f"Datasets: {org.num_datasets}")   # e.g., 5000+
-print(f"Spaces: {org.num_spaces}")       # e.g., 2000+
-print(f"Followers: {org.num_followers}") # e.g., 10000+
-print(f"Papers: {org.num_papers}")       # e.g., 50+
-print(f"Verified: {org.is_verified}")    # True
-print(f"Plan: {org.plan}")               # "enterprise"
-```
-
-**REST endpoint:** `GET /api/organizations/{organization}/overview`
-
-**Error handling:**
-```python
-from huggingface_hub import HfApi
-from requests.exceptions import HTTPError
-
-api = HfApi()
-try:
-    org = api.get_organization_overview("non-existent-org")
-except HTTPError as e:
-    if e.response.status_code == 404:
-        print("Organization does not exist on the Hub")
-```
-
-#### list_organization_members() — Member Roster
-
-```python
-from huggingface_hub import HfApi
-
-api = HfApi()
-members = api.list_organization_members("huggingface")
-
-for member in members:
-    print(f"{member.username:20s} | {member.fullname:30s} | pro={member.is_pro}")
-```
-
-Returns an `Iterable[User]` — uses pagination internally via the `paginate()` helper.
-
-**REST endpoint:** `GET /api/organizations/{organization}/members`
-
-#### list_organization_followers() — Follower List
-
-```python
-from huggingface_hub import HfApi
-
-api = HfApi()
-followers = api.list_organization_followers("huggingface")
-
-for follower in followers:
-    print(f"{follower.username} — {follower.fullname}")
-```
-
-Returns an `Iterable[User]` — uses pagination.
-
-**REST endpoint:** `GET /api/organizations/{organization}/followers`
-
-### Python SDK — Creating & Managing Repos Under an Org
-
-#### Creating Repos in an Org Namespace
-
-Use `create_repo()` with an org-prefixed `repo_id`:
-
-```python
-from huggingface_hub import HfApi
-
-api = HfApi()
-url = api.create_repo(
-    repo_id="my-org/my-model",
-    repo_type="model",
-    private=False,           # or True for private
-    exist_ok=False,          # set True to avoid error if exists
-)
-print(url)  # https://huggingface.co/my-org/my-model
-```
-
-**Token requirements:** The authenticated user must be a member of the org with at least **write** permission. Read-only members cannot create repos under the org namespace.
-
-**Supported repo types:**
-| repo_type | Description |
-|-----------|-------------|
-| `None` (default) | Model |
-| `"dataset"` | Dataset |
-| `"space"` | Space |
-
-**Enterprise: Resource Groups:**
-```python
-api.create_repo(
-    repo_id="my-org/restricted-model",
-    repo_type="model",
-    resource_group_id="66670e5163145ca562cb1988",  # Enterprise only
-)
-```
-
-Resource groups allow org admins to define which members can access specific repos. The `resource_group_id` can be found in the URL of the resource's page on the Hub.
-
-#### Moving/Transferring Repos
-
-```python
-from huggingface_hub import HfApi
-
-api = HfApi()
-# Transfer a repo from a user to an org
-api.move_repo(
-    from_id="my-user/my-model",
-    to_id="my-org/my-model",
-    repo_type="model",
-)
-# Transfer between orgs
-api.move_repo(
-    from_id="org-a/my-model",
-    to_id="org-b/my-model",
-)
-```
-
-**Limitations (per HF docs):**
-- Moving repos across namespaces requires appropriate permissions in both source and target
-- Cannot move repos with the same name in target namespace
-- LFS objects are preserved
-- Git history is fully preserved
-
-#### Duplicating Repos
-
-Server-side copy — preserves full git history and LFS without local download:
-
-```python
-from huggingface_hub import HfApi
-
-api = HfApi()
-# Duplicate a model to an org
-api.duplicate_repo(
-    from_id="google/gemma-2-2b",
-    to_id="my-org/gemma-2-2b-fork",
-    repo_type="model",
-)
-```
-
-#### Updating Repo Settings
-
-```python
-from huggingface_hub import HfApi
-
-api = HfApi()
-# Change visibility to private
-api.update_repo_settings(
-    repo_id="my-org/my-model",
-    private=True,
-)
-# Enable gated access (manual approval)
-api.update_repo_settings(
-    repo_id="my-org/my-model",
-    gated="manual",  # "auto" for auto-approve, False to disable
-)
-# Or set visibility directly
-api.update_repo_settings(
-    repo_id="my-org/my-space",
-    visibility="protected",  # "public", "private", or "protected" (Spaces only)
-)
-```
-
-#### Listing All Repos Under an Org
-
-```python
-from huggingface_hub import list_user_repos
-
-# List all repos for an organization
-repos = list(list_user_repos(namespace="my-org"))
-for repo in repos:
-    print(f"{repo.id:40s} | type={repo.type:10s} | size={repo.size}")
-```
-
-**REST endpoint:** `GET /api/organizations/{namespace}/settings/repositories`
-
-#### Deleting Repos
-
-```python
-from huggingface_hub import HfApi
-
-api = HfApi()
-api.delete_repo(
-    repo_id="my-org/old-model",
-    repo_type="model",
-    missing_ok=True,  # Don't error if already gone
-)
-# CAUTION: This is IRREVERSIBLE
-```
-
-### Whoami — Understanding Your Org Affiliations
-
-```python
-from huggingface_hub import whoami
-
-info = whoami()
-print(f"User: {info['name']}")
-for org in info.get('orgs', []):
-    print(f"  Org: {org['name']} — role: {org.get('role', 'N/A')}")
-```
-
-The `whoami` response includes:
-```python
-{
-    "name": "beer-sakthai",
-    "fullname": "Beer Sakthai",
-    "email": "beer@example.com",
-    "canPay": False,
-    "isPro": False,
-    "orgs": [
-        {
-            "name": "my-org",
-            "fullname": "My Organization",
-            "avatarUrl": "https://...",
-            "role": "admin"  # "admin", "write", or "read"
-        }
-    ]
-}
-```
-
-**Cache support:** Pass `cache=True` to `whoami()` to cache the result for the duration of the Python process. Useful when calling `whoami` multiple times, as this endpoint is heavily rate-limited.
-
-### REST API — Organization Endpoints Reference
-
-Base URL: `https://huggingface.co`
-
-| Method | Endpoint | SDK Method | Description |
-|--------|----------|-----------|-------------|
-| `GET` | `/api/organizations/{org}/overview` | `get_organization_overview()` | Org profile |
-| `GET` | `/api/organizations/{org}/members` | `list_organization_members()` | Paginated member list |
-| `GET` | `/api/organizations/{org}/followers` | `list_organization_followers()` | Paginated follower list |
-| `GET` | `/api/organizations/{org}/settings/repositories` | `list_user_repos(namespace=org)` | All repos with storage info |
-| `POST` | `/api/repos/create` | `create_repo()` | Create repo under org* |
-| `POST` | `/api/repos/move` | `move_repo()` | Transfer/move repo* |
-| `POST` | `/api/repos/duplicate` | `duplicate_repo()` | Server-side copy* |
-| `DELETE` | `/api/repos/delete` | `delete_repo()` | Delete repo* |
-| `POST` | `/api/repos/{repo}/settings` | `update_repo_settings()` | Update visibility/gating |
-
-*Requires token with write/admin role in org
-
-### Web UI Management
-
-#### Organization Settings Page
-
-URL: `https://huggingface.co/{org}/settings`
-
-Available settings:
-- **Profile** — name, description, avatar
-- **Members** — invite, remove, change roles (admin/write/read)
-- **Billing** — plan upgrades, payment methods
-- **Resource Groups** (Enterprise) — granular access control
-- **OAuth Apps** — connected applications
-- **Webhooks** — org-level webhooks
-- **Audit Log** — Enterprise, tracks all actions
-
-#### Member Roles
-
-| Role | Description |
-|------|-------------|
-| **Admin** | Full control — manage members, billing, settings, all repos |
-| **Write** | Create and push to repos under org namespace |
-| **Read** | Read-only access to public org repos; cannot create/push |
-
-**Role management is only available via the web UI** — there is no Python SDK method to invite/remove members or change roles programmatically.
-
-#### Creating an Organization
-
-Via web UI only — visit `https://huggingface.co/settings/organizations` → "New Organization":
-- Requires a unique name (username-style, alphanumeric + hyphens)
-- Full name (display name)
-- Description (optional)
-- Auto-creates you as the sole admin member
-
-### CLI Interaction
-
-The `hf` CLI has limited direct org commands, but many commands accept org-prefixed repo IDs:
-
-```bash
-# List repos with `hf` (requires token):
-hf download my-org/my-model --help
-
-# Upload to org namespace:
-hf upload my-org/my-model ./local_dir .
-
-# List files in org repo:
-hf ls hf://my-org/my-model
-```
-
-The `whoami` response from `hf` CLI includes org affiliations:
-```bash
-hf auth login  # login first
-# then check user info
-```
-
-### Organization Discovery
-
-#### Finding Orgs a User Belongs To
-
-```python
-from huggingface_hub import whoami
-
-info = whoami()
-user_orgs = info.get('orgs', [])
-for org in user_orgs:
-    print(f"{org['name']} ({org.get('role', '?')})")
-```
-
-#### Finding Org Repos by Type
-
-```python
-from huggingface_hub import HfApi
-
-api = HfApi()
-
-# List models in an org using Hub search API
-models = api.list_models(author="huggingface")
-for model in models:
-    print(model.modelId)
-
-# List datasets
-datasets = api.list_datasets(author="huggingface")
-for ds in datasets:
-    print(ds.id)
-```
-
-### Enterprise Features: Resource Groups
-
-Resource groups are an Enterprise Hub feature that enable fine-grained access control within an org:
-
-```python
-# Create a repo in a specific resource group
-api.create_repo(
-    repo_id="my-org/enterprise-model",
-    repo_type="model",
-    resource_group_id="66670e5163145ca562cb1988",
-)
-```
-
-**Characteristics:**
-- Only Enterprise orgs can use resource groups
-- Resource group ID is found in the URL of the resource's page
-- Members assigned to a resource group can access repos within that group
-- Non-members cannot see the repo exists (even if they are org members)
-- Repository visibility (public/private) is separate from resource group access
-
-### Best Practices
-
-1. **Use org namespaces for team projects** — repos owned by orgs survive member turnover
-2. **Check whoami before operations** — verify you have the right org role before creating repos
-3. **Cache whoami responses** — use `cache=True` when calling `whoami()` multiple times (rate-limited)
-4. **Use `exist_ok=True` in scripts** — prevents errors from race conditions in automation
-5. **Prefer `missing_ok=True` for deletions** — idempotent cleanup in cron jobs
-6. **Resource groups for sensitive models** — restrict access within an org without making repos private
-7. **Transfer vs. duplicate** — use `move_repo` for ownership change, `duplicate_repo` for forks
-8. **Plan restrictions** — Free orgs have public-only repos; private repos require Team/Enterprise
-
-### Limitations & Gotchas
-
-- **No SDK for member management** — invite/remove/role-change is web UI only
-- **No API for creating orgs** — must use web UI
-- **Creating repos under org requires write+ role** — read-only members cannot create repos
-- **Resource groups are Enterprise-only** — not available on free or Team plans
-- **Org names must be unique across all Hub users** — can't use a name that's already a username
-- **Role info not available via `get_organization_overview()`** — use `whoami()` for the auth user's role
-- **`num_users` field can be stale** — might not update immediately after member changes
-- **Rate limiting on whoami** — cache results if calling frequently
-- **Plan downgrade restrictions** — may lose private repos on downgrade from Team/Enterprise
-
-### Source Code References
-
-- `Organization` dataclass: `huggingface_hub/hf_api.py` (Organization class)
-- `get_organization_overview()`: `huggingface_hub/hf_api.py` — REST: `GET /api/organizations/{org}/overview`
-- `list_organization_members()`: `huggingface_hub/hf_api.py` — REST: `GET /api/organizations/{org}/members`
-- `list_organization_followers()`: `huggingface_hub/hf_api.py` — REST: `GET /api/organizations/{org}/followers`
-- `create_repo()`: `huggingface_hub/hf_api.py` — REST: `POST /api/repos/create`
-- `move_repo()`: `huggingface_hub/hf_api.py` — REST: `POST /api/repos/move`
-- `duplicate_repo()`: `huggingface_hub/hf_api.py` — REST: `POST /api/repos/duplicate`
-- `delete_repo()`: `huggingface_hub/hf_api.py` — REST: `DELETE /api/repos/delete`
-- `update_repo_settings()`: `huggingface_hub/hf_api.py` — REST: `POST /api/repos/{repo}/settings`
-- `list_user_repos()`: `huggingface_hub/hf_api.py` — REST: `GET /api/organizations/{org}/settings/repositories`
-- `User` dataclass: `huggingface_hub/hf_api.py`
-- `whoami()`: `huggingface_hub/hf_api.py`
-- `paginate()` helper: `huggingface_hub/utils/_http.py`
-
-
-### Resources
-- [Hub Organizations Documentation](https://huggingface.co/docs/hub/en/organizations)
-- [Hugging Face Account Settings (Orgs)](https://huggingface.co/settings/organizations)
-- [Hub Repositories Settings (Moving/Transferring)](https://hf.co/docs/hub/repositories-settings#renaming-or-transferring-a-repo)
-- [huggingface_hub API Reference: HfApi](https://huggingface.co/docs/huggingface_hub/en/package_reference/hf_api)
-
----
-
-## 2026-07-24: hf-gradio-6-render-and-streaming-deep-dive — Gradio 6: `@gr.render` Decorator & Streaming Patterns (Topic #151)
-
-### Summary
-Deep-dive into three major Gradio 6 features: the `@gr.render` decorator for dynamic UIs, async generator streaming for token-by-token chatbot responses, and the v2 `gr.ChatInterface` with multimodal support, additional inputs/outputs, and `gr.load_chat`. Also covers `gr.SelectData`, `gr.validate`, and `gr.Timer` for event handling and validation.
-
-### Key Features
-
-#### 1. `@gr.render` — Dynamic Components at Runtime
-- Decorate a function with `@gr.render(inputs=[...])` to create/destroy components based on state changes
-- Components inside the render function are replaced on every re-render
-- Use `key=` parameter to preserve component values across re-renders
-- Event listeners referencing render-created components must be defined inside the render function
-- Freeze loop variables with default args: `lambda task=task: handler(task)`
-- Custom triggers via `triggers=[...]` parameter; add `demo.load` for initial render
-
-#### 2. Streaming Chatbot Responses
-- Chat function uses `yield` to stream token-by-token
-- Gradio sends only diffs over network (reduces latency)
-- Submit button becomes Stop button during streaming
-- Works with `additional_inputs` and `additional_outputs`
-- Audio streaming with `gr.Audio(streaming=True, autoplay=True)` combined with `input_audio.stream(stream_every=0.5)`
-
-#### 3. `gr.ChatInterface` v2
-- **Multimodal:** `multimodal=True` enables file uploads; message becomes `{"text": ..., "files": [...]}`
-- **Additional outputs:** Return extra values to update separate components
-- **`gr.load_chat()`** — one-line chatbot for any OpenAI-compatible endpoint
-- **Complex return types:** Images, Audio, Video, File, Plot, HTML, Gallery can be returned directly
-- Custom chatbot/textbox components passable via `chatbot=` and `textbox=` parameters
-
-#### 4. Event Data & Validation
-- `gr.SelectData` type hint captures user selection details (value, index)
-- `validator=` kwarg for immediate input validation with per-field granularity
-- `gr.Timer(interval)` for scheduled events via `timer.tick()`
-
-### Zero-Cost Relevance
-All Gradio 6 features work on free CPU HF Spaces. Streaming reduces perceived latency without expensive hardware. `gr.load_chat` points to free local/API endpoints. Efficient `@gr.render` reduces DOM memory on long conversations.
-
-### Resources
-- Full deep-dive: `mlops/gradio-spaces/references/hf-learnings.md`
-- [Dynamic Apps with Render Decorator](https://www.gradio.app/guides/dynamic-apps-with-render-decorator)
-- [Creating a Chatbot Fast](https://www.gradio.app/guides/creating-a-chatbot-fast)
-- [Gradio API Reference](https://www.gradio.app/docs/gradio/chatinterface)
-
-## 2026-07-24: hf-hub-security-scanning-deep-dive — Hub Security Scanning Infrastructure (Topic #152)
-
-### Summary
-Deep-dive into the Hugging Face Hub's multi-layered security scanning infrastructure. Covers all five scanning systems: ClamAV malware scanning (every file, every commit), pickle import analysis (opcode-level static analysis), TruffleHog secrets scanning (credential leakage detection), Protect AI Guardian (third-party ML exploit scanning), and JFrog scanner (behavioral ML malware detection). Also covers picklescan library, repository security badges, and the end-to-end scanning pipeline.
-
-### Scanning Architecture Overview
-
-The Hub runs a multi-engine security pipeline on every push/commit:
-
-| Scanner | Type | What It Detects | Trigger |
-|---------|------|-----------------|---------|
-| **ClamAV** | Antivirus | Known malware signatures via ClamAV database | Every file, every commit |
-| **Pickle Import Scanner** | Static analysis | Dangerous imports/REDUCE opcodes in pickle files | Every `.pkl`/`.bin` upload |
-| **TruffleHog** | Secrets scanner | Hard-coded API keys, tokens, credentials | Every push |
-| **Protect AI Guardian** | Third-party ML scanner | Pickle, Keras, and other ML serialization exploits | Public repos, on upload |
-| **JFrog Scanner** | Third-party behavioral | Malicious code inside model weights (low false-positive) | Model files, on upload |
-
-### 1. ClamAV Malware Scanning
-
-Runs every file through [ClamAV](https://www.clamav.net/) open-source antivirus.
-
-- **Triggered per commit** — every file pushed is scanned
-- **Badge system:** Each file gets an `ok`, `infected`, or no badge (queued/scanning/error)
-- **Repository-level warning:** If any file is flagged unsafe, a banner warns users
-- **Owner responsibility:** Repository owner advised to remove suspicious files
-- **Example:** `mcpotato/42-eicar-street` demonstrates infected file badges
-
-```python
-# Programmatic check via HF Hub API
-from huggingface_hub import HfApi
-api = HfApi()
-# Check repo file security status
-# Files have .safety_status: "safe" | "unsafe" | "unknown"
-```
-
-### 2. Pickle Import Scanning (Built-in)
-
-Custom-built scanner that performs **opcode-level static analysis** on pickle files without executing them.
-
-#### How It Works
-
-Uses Python's `pickletools.genops()` to disassemble pickle opcodes:
-
-```python
-import pickletools
-
-# Safe: reads opcodes WITHOUT executing code
-with open('model.pkl', 'rb') as f:
-    ops = list(pickletools.genops(f))
-    for opcode, arg, pos in ops:
-        if opcode.name in ('GLOBAL', 'STACK_GLOBAL', 'REDUCE'):
-            print(f"Dangerous opcode: {opcode.name} -> {arg}")
-```
-
-#### Dangerous Opcodes
-
-| Opcode | Risk |
-|--------|------|
-| `GLOBAL` | Imports any Python module; can pull in `builtins.exec` |
-| `STACK_GLOBAL` | Stack-based variant of GLOBAL |
-| `REDUCE` | Executes a callable with arguments — primary RCE vector |
-| `INST` | Old-style class instantiation with args |
-| `OBJ` | Similar to REDUCE, builds objects |
-
-#### Example: Innocent Pickle
-
-```python
-import pickle
-pickletools.dis(pickle.dumps("hello"))
-# Output: PROTO 4, SHORT_BINUNICODE 'hello', MEMOIZE, STOP
-# No dangerous opcodes
-```
-
-#### Example: Malicious Pickle (using fickling)
-
-```python
-# A pickle that runs exec() on unpickling
-# Opcodes: GLOBAL builtins.exec, REDUCE
-# The import scanner catches GLOBAL + REDUCE combo
-```
-
-#### Safe Import Lists
-
-The Hub maintains safe/unsafe import lists for pickle files:
-
-- **Safe:** `torch.*`, `numpy.*`, `transformers.*`, standard library modules
-- **Unsafe:** `builtins.exec`, `builtins.eval`, `os.system`, `subprocess.*`, `ctypes.*`
-- **Displayed per-file:** Each pickle file's imports shown on the Hub UI
-- **Disclaimer:** Best-effort — users remain responsible for verification
-
-#### Mitigation Stack
-
-1. **Don't use pickle** — prefer `safetensors` for weights
-2. **Trust but verify** — GPG-signed commits guarantee origin
-3. **Use TF/Flax weights** — load with `from_tf=True` or `from_flax=True`
-4. **Alternative serialization** — MsgPack, Protobuf, Cap'n'Proto, Avro, safetensors
-
-### 3. TruffleHog Secrets Scanning
-
-Runs [TruffleHog](https://trufflesecurity.com/trufflehog) on every push to detect hard-coded secrets.
-
-- **Scope:** Detects API keys, tokens, credentials across 700+ service patterns
-- **Two-tier detection:**
-  - **Unverified secrets:** Patterns that look like secrets; may be false-positive
-  - **Verified secrets:** Confirmed working authentication via live provider check
-- **Notification:** Email sent for verified secrets only; opt-out in settings
-- **Coverage:** Not limited to HF tokens — any service credential (AWS, GitHub, OpenAI, etc.)
-
-```python
-# Bad practice detected by scanner:
-api_key = "sk-abc123..."          # ❌ Hard-coded in source
-
-# Good practice:
-import os
-api_key = os.getenv("API_KEY")    # ✅ Environment variable in Secrets
-```
-
-### 4. Protect AI Guardian (Third-party)
-
-[Protect AI](https://protectai.com/)'s [Guardian](https://protectai.com/guardian) scanner.
-
-- **Specialty:** Catches pickle, Keras, and other ML serialization exploits
-- **Knowledge base:** Detailed at [protectai.com/insights/knowledge-base/](https://protectai.com/insights/knowledge-base/)
-- **Integration:** Scans all public repository files on upload
-- **UI:** Dedicated report section per file with detailed findings
-- **Community:** Benefits from [Huntr](https://huntr.com/) bounty reports
-- **Example repo:** `mcpotato/42-eicar-street` shows Protect AI reports inline
-
-### 5. JFrog Scanner (Third-party)
-
-[JFrog](https://jfrog.com/) ML model security scanner.
-
-- **Specialty:** Detects malicious behavior in ML model files
-- **Low false-positives:** Parses code inside model weights and analyzes for malicious intent rather than flagging all code
-- **Behavioral analysis:** Distinguishes between legitimate model code and attack payloads
-- **Partnership blog:** [hf.co/blog/jfrog](https://hf.co/blog/jfrog)
-- **UI:** Reports displayed on individual file cards similar to Protect AI
-
-### 6. Picklescan Library
-
-Third-party standalone scanner by [mmaitre314](https://github.com/mmaitre314/picklescan):
-
-```bash
-pip install picklescan
-picklescan scan --file-path model.pkl
-```
-
-```python
-from picklescan.scanner import scan_file
-result = scan_file("model.pkl")
-print(f"Infected: {result.infected}")
-for issue in result.issues:
-    print(f"  {issue.severity}: {issue.opcode} -> {issue.import_name}")
-```
-
-- Also supports scanning HF Hub repos directly via `--repo-id`
-- Can detect GLOBAL, REDUCE, and other dangerous pickle opcodes
-- Used by some third-party security platforms
-
-### 7. Security Badge System
-
-Every file on the Hub displays a security status:
-
-| Badge | Meaning |
-|-------|---------|
-| ✅ **ok** | Passed all scans; no issues detected |
-| ❌ **infected** | Flagged by at least one scanner |
-| ⏳ *(none)* | Queued, scanning in progress, or scan error (up to a few minutes) |
-
-Repository-level banner shown if any file is unsafe:
-> "As the repository owner, we advise you to remove the suspicious file. The repository will appear back as safe."
-
-### 8. Hub-Wide Security Features
-
-Beyond file scanning:
-
-- **Private repositories** — access-controlled repos
-- **Fine-grained tokens** — scoped to read/write/admin per resource type
-- **SSH keys** — Git over SSH for secure auth
-- **GPG signatures** — signed commits verify file origin
-- **2FA/MFA** — two-factor authentication
-- **Resource Groups** — advanced access control for orgs
-- **SSO** — single sign-on for enterprise
-- **SOC2 Type 2** — annual security certification
-- **GDPR compliance** — data processing agreements available
-
-### Zero-Cost Relevance
-
-All scanning is **free and automatic** — no cost to repo owners or users. The Hub's security infrastructure protects everyone without any paid tier requirement. For zero-cost users (like Beer), this means:
-- Upload models safely without worrying about malicious injections from collaborators
-- Use `safetensors` (free, open-source) instead of pickle for weights
-- Store secrets via HF Spaces Secrets (free) rather than hard-coding
-- Verify file safety programmatically via the Hub API
-
-### Resources
-- [Hub Security Docs](https://huggingface.co/docs/hub/en/security)
-- [Malware Scanning](https://huggingface.co/docs/hub/en/security-malware)
-- [Pickle Scanning](https://huggingface.co/docs/hub/en/security-pickle)
-- [Secrets Scanning](https://huggingface.co/docs/hub/en/security-secrets)
-- [Protect AI Integration](https://huggingface.co/docs/hub/en/security-protectai)
-- [JFrog Integration](https://huggingface.co/docs/hub/en/security-jfrog)
-- [Picklescan Library](https://github.com/mmaitre314/picklescan)
-- [ClamAV](https://www.clamav.net/)
-- [TruffleHog](https://trufflesecurity.com/trufflehog)
-- [JFrog Blog Post](https://hf.co/blog/jfrog)
-
----
-
-## 2026-07-24: hf-hub-xet-storage-and-hf-xet — Xet Storage & hf_xet Rust Accelerator Deep Dive (Topic #154)
-
-### Summary
-Deep-dive into Xet storage, the Rust-based content-addressable storage system powering the Hugging Face Hub, and its Python client hf_xet.
-
-
----
-
-## 2026-07-24: hf-hub-xet-storage-and-hf-xet — Xet Storage & hf_xet Rust Accelerator Deep Dive (Topic #154)
-
-### Summary
-Deep-dive into Xet storage, the Rust-based content-addressable storage system powering the Hugging Face Hub, and its Python client `hf_xet`. Covers the architecture (chunk-level deduplication, XORBs, CAS), the replacement of `hf_transfer` with `hf_xet`, the token refresh system, cache optimization via tree listing, and configuration via env vars. Sources: huggingface_hub v1.24.0 source code analysis and HF Hub Xet docs.
-
-### Architecture Overview
-
-Xet is a **content-addressable storage (CAS)** system built specifically for AI/ML development on the Hugging Face Hub. It replaces the older Git LFS-based storage backend.
-
-**Key differences from Git LFS:**
-- **Chunk-level deduplication** — identical chunks across different files stored only once (not possible with LFS's file-level storage)
-- **Smaller uploads** — only new/changed chunks are transferred
-- **Faster downloads** — parallel chunk retrieval with presigned URLs
-- **Immutable chunks (XORBs)** — broken into blocks called xorbs, reassembled on request
-
-### Architecture Flow
-
-1. Files are broken into immutable chunks (xorbs)
-2. Chunks are stored in the content-addressable service (CAS)
-3. LFS SHA256 hash -> reconstruction metadata (ranges within xorbs + presigned URLs)
-4. `hf_xet` downloads xorb ranges in parallel and writes files to disk
-5. Short-lived Xet access tokens are refreshed automatically via the refresh API
-
-### hf_xet Python Package
+**Architecture:** Dense decoder-only Transformer. In Transformers, Phi-4 is loaded via the `Phi3ForCausalLM` class — there is no separate `Phi4ForCausalLM`. The architecture tag in model config is `phi4`, but the implementation reuses the Phi-3 code paths with minimal adjustments. This means all existing Phi-3 infrastructure (attention backends, device mapping, quantization) works identically.
 
 | Property | Value |
 |----------|-------|
-| Package name | hf-xet (pip), imported as hf_xet |
-| Current version | 1.5.2 (installed in this env) |
-| Purpose | Rust-based download/upload accelerator for the HF Hub |
-| Relationship to hf_transfer | hf_transfer is DEPRECATED - use hf_xet instead |
-| Bundled with | huggingface_hub >= 0.32.0 (automatically installed) |
-| Summary | Fast transfer of large files with the Hugging Face Hub |
+| Parameters | 14B |
+| Layers | 40 |
+| Attention heads | 32 (query), 8 (key/value — GQA) |
+| Hidden dim | 4,960 |
+| Intermediate dim | 15,840 (swiGLU) |
+| Vocab size | 100,352 |
+| Max position | 16,384 |
+| Norm | LayerNorm (pre-norm) |
+| Activation | SwiGLU |
+| Positional encoding | RoPE |
+| Attention | Grouped Query Attention (GQA) with 8 KV heads |
+| Training hardware | 1,920 H100-80G GPUs |
+| Training tokens | 9.8T |
+| Training duration | 21 days |
+| License | MIT |
+| Release date | December 12, 2024 |
 
-### How hf_xet Integrates with huggingface_hub
+**Position of Phi-4 in Transformers model registry:** The model uses the `Phi3ForCausalLM` class. The configuration class is `Phi3Config` with `model_type="phi3"`. To load:
+```python
+import torch
+from transformers import AutoModelForCausalLM, AutoTokenizer
 
-**Runtime detection** - `_runtime.py` checks for `hf_xet` package at import time via `is_xet_available()`.
-
-**Download flow** - `file_download.py` contains the `xet_get()` function.
-
-**XetFileData dataclass** - `utils/_xet.py`:
-- `file_hash` (str): Xet content hash for file identification in CAS
-- `refresh_route` (str): URL to refresh the short-lived Xet access token
-
-**Token refresh URL format:**
+model = AutoModelForCausalLM.from_pretrained(
+    "microsoft/phi-4",
+    torch_dtype=torch.bfloat16,
+    device_map="auto",
+    trust_remote_code=False,  # No custom code needed — uses standard phi3
+)
+tokenizer = AutoTokenizer.from_pretrained("microsoft/phi-4")
 ```
-{ENDPOINT}/api/{repo_type}s/{repo_id}/xet-{read|write}-token/{revision}
+
+**Key config differences from Phi-3:** Phi-4 uses a larger vocab size (100,352 vs Phi-3-mini's 32,064), wider intermediate size (15,840), and more layers (40 vs 32 in Phi-3-medium). The `Phi3Config` parameters align but these dimension changes are significant.
+
+### Three-Pillar Training Recipe
+
+Phi-4's core innovation is its **data-quality-first** approach:
+
+1. **Synthetic Data for Pre-training + Mid-training** (~80% of total tokens): Multi-agent prompting, self-revision workflows, and instruction reversal to generate high-quality reasoning-focused synthetic tokens. Seeds come from high-educational-value organic data. Designed to induce stronger reasoning and problem-solving capabilities directly in pre-training rather than relying on post-training alone.
+
+2. **Curated Organic Data** (~20% of total tokens): Meticulously filtered web content, licensed academic books, code repositories, and Q&A datasets. Filtered for educational value and reasoning density.
+
+3. **Advanced Post-training:**
+   - **Supervised Fine-Tuning (SFT):** New high-quality SFT datasets covering instruct-following, truthfulness, helpfulness, and safety
+   - **Pivotal Token Search DPO:** A novel technique that identifies tokens in the response where the model's decision most impacts downstream quality, then generates DPO preference pairs anchored at those tokens. More efficient than random-pair DPO.
+   - **Rejection Sampling:** Further refines outputs by generating multiple candidates and selecting the best
+
+**Key result:** Phi-4 surpasses GPT-4o on STEM QA (GPQA: 56.1 vs 50.6) and MATH (80.4 vs 74.6) with only 14B parameters, proving data quality can overcome scale disadvantage.
+
+### Benchmarks (OpenAI SimpleEval, temp=0.5)
+
+| Benchmark | Phi-4 (14B) | Phi-3 (14B) | Qwen 2.5 (14B) | GPT-4o-mini | Llama-3.3 (70B) | GPT-4o |
+|-----------|-------------|-------------|-----------------|-------------|-----------------|--------|
+| MMLU | 84.8 | 77.9 | 79.9 | 81.8 | 86.3 | **88.1** |
+| GPQA | **56.1** | 31.2 | 42.9 | 40.9 | 49.1 | 50.6 |
+| MGSM | 80.6 | 53.5 | 79.6 | 86.5 | 89.1 | **90.4** |
+| MATH | **80.4** | 44.6 | 75.6 | 73.0 | 66.3* | 74.6 |
+| HumanEval | 82.6 | 67.8 | 72.1 | 86.2 | 78.9* | **90.6** |
+| DROP | 75.5 | 68.3 | 85.5 | 79.3 | **90.2** | 80.9 |
+| SimpleQA | 3.0 | 7.6 | 5.4 | 9.9 | 20.9 | **39.4** |
+
+*Llama scores below Meta's reported values due to SimpleEval formatting strictness.
+
+### Chat Template & Tokenization
+
+Phi-4 uses the standard `phi` chat template inherited from Phi-3 (`<|im_start|>`, `<|im_sep|>`, `<|im_end|>` tokens):
+```
+<|im_start|>system<|im_sep|>
+You are a helpful assistant.<|im_end|>
+<|im_start|>user<|im_sep|>
+How do I bake a cake?<|im_end|>
+<|im_start|>assistant<|im_sep|>
 ```
 
-**XetTokenType enum:** READ / WRITE
+**Tokenizer:** Uses the same tokenizer as Phi-3 (based on OpenAI's tiktoken cl100k_base with additional special tokens). Vocabulary size is expanded to 100,352 tokens from 32,064 in Phi-3-mini.
 
-**XetSessionHolder** - thread-safe session management for free-threaded Python (3.14t):
-- Uses threading.Lock for thread safety
-- Supports safe re-creation after sigint_abort() or fork
-- Automatically refreshes tokens as needed
+### Inference Patterns (Zero-Cost Focused)
 
-### Cache Optimization - Tree Listing
+**1. Transformers Pipeline (standard):**
+```python
+pipe = pipeline("text-generation", model="microsoft/phi-4",
+                model_kwargs={"torch_dtype": "auto"}, device_map="auto")
+outputs = pipe(messages, max_new_tokens=512, temperature=0.7)
+```
 
-When Xet is enabled, the Hub API's /tree listing response includes Xet metadata (xet_hash, lfs_sha256, lfs_size). This allows hf_xet to skip the HEAD request that regular downloads need, since Xet downloads don't rely on the /resolve redirect.
+**2. 4-bit Quantization with bitsandbytes:**
+```python
+from transformers import BitsAndBytesConfig
 
-### Configuration
+bnb_config = BitsAndBytesConfig(load_in_4bit=True, bnb_4bit_quant_type="nf4",
+                                bnb_4bit_compute_dtype=torch.bfloat16,
+                                bnb_4bit_use_double_quant=True)
+model = AutoModelForCausalLM.from_pretrained("microsoft/phi-4",
+    quantization_config=bnb_config, device_map="auto")
+```
+Reduces VRAM from ~28GB (bf16) to ~9GB (4-bit) — enabling inference on free-tier GPUs.
 
-| Env Variable | Purpose |
-|-------------|---------|
-| HF_HUB_DISABLE_XET | Set to disable Xet even if hf_xet is installed |
-| (default) | Xet enabled by default when hf_xet package is available |
+**3. GGUF via llama.cpp:** Community GGUF quants available on HF Hub. Phi-4 Q4_K_M fits in ~8GB RAM:
+```bash
+# Via llama.cpp
+./llama-cli -m phi-4-Q4_K_M.gguf -p "User: Hello\nAssistant:" -n 256
+```
 
-### Zero-Cost Relevance
+**4. Inference Providers (serverless, zero-cost):** Available through multiple HF Inference Providers (Cerebras, Fireworks, Together AI, etc.) — free account credits cover usage.
 
-Xet storage and hf_xet are free for all Hub users - no paid tier required. For Beer's zero-cost setup:
-- hf_xet is already bundled with huggingface_hub v1.24.0
-- Faster downloads save time on model/dataset downloads without any cost
-- Chunk-level deduplication means the Hub stores less data overall
+### Phi-4-mini (3.8B)
 
-### Resources
-- HF Hub Download Guide (https://huggingface.co/docs/huggingface_hub/en/guides/download)
-- Xet Hub Documentation (https://huggingface.co/docs/hub/xet/index)
-- huggingface_hub utils/_xet.py on GitHub
-- hf_xet PyPI package: hf-xet
+Released April 2025. A smaller variant of Phi-4 optimized for edge/mobile deployment:
 
-## 2026-07-24: hf-inference-client-tool-use-and-function-calling — InferenceClient Tool Calling Deep-Dive (Topic #154)
+| Property | Value |
+|----------|-------|
+| Parameters | 3.8B |
+| Layers | 32 |
+| Hidden dim | 3,072 |
+| Attention heads | 24 (query), 4 (KV — GQA) |
+| Vocab size | 100,352 |
+| Context length | 128K (via LongRoPE extension) |
+| Intermediate dim | 8,192 |
+| Training tokens | 5T+ |
+| Release | April 2025 |
 
-### Summary
-Deep-dive into Hugging Face `InferenceClient`'s tool-calling / function-calling API (v1.24.0). Covers the full data model (tool definitions, function schemas, tool_choice modes), streaming vs non-streaming tool calls, OpenAI compatibility (`client.chat.completions.create`), multi-turn tool execution loops, integration with MCP, and practical zero-cost patterns for agent workflows.
+**Key difference from Phi-4 (14B):** Phi-4-mini extends context to 128K via LongRoPE (while Phi-4 14B is limited to 16K). This makes it suitable for long-document RAG and agentic workflows. On many benchmarks Phi-4-mini approaches the 14B model's performance while being 4× smaller.
 
-### Overview
-Hugging Face `InferenceClient` implements the same tool-calling interface as the OpenAI Chat Completions API. This allows LLMs to interact with external tools — functions, APIs, or external services — by generating structured JSON arguments that the client can execute and relay back.
+**Loading:**
+```python
+model = AutoModelForCausalLM.from_pretrained("microsoft/Phi-4-mini-instruct",
+    torch_dtype=torch.bfloat16, device_map="auto")
+```
 
-**Verified from huggingface_hub v1.24.0 source code and docs (2026-07-24):**
-- Tool calling works with both synchronous `InferenceClient` and `AsyncInferenceClient`
-- Supported models: any provider model that supports function/tool calling (verify per provider)
-- Available via `client.chat_completion(..., tools=..., tool_choice=...)` or `client.chat.completions.create(..., tools=..., tool_choice=...)`
-- Streaming and non-streaming modes both support tool calls
+### Phi-4-multimodal (5.6B)
 
-### Full Data Model
+Released May 2025. A multimodal variant supporting text + image inputs:
 
-#### Input Types (What You Send)
+| Property | Value |
+|----------|-------|
+| Parameters | 5.6B (incl. vision encoder) |
+| Vision encoder | SigLIP (336px resolution) |
+| Text decoder | Based on Phi-4-mini backbone |
+| Context length | 128K text |
+| Input | Text + images |
+| Output | Text |
+| Release | May 2025 |
 
-| Type | Fields | Description |
-|------|--------|-------------|
-| `ChatCompletionInputTool` | `function: ChatCompletionInputFunctionDefinition`, `type: str` | A tool the model may call. `type` is always `"function"` |
-| `ChatCompletionInputFunctionDefinition` | `name: str`, `parameters: Any`, `description: str \| None` | JSON Schema function definition. `parameters` is a JSON Schema object |
-| `ChatCompletionInputToolChoiceClass` | `function: ChatCompletionInputFunctionName` | Force a specific tool by name |
-| `ChatCompletionInputFunctionName` | `name: str` | Just the tool name reference |
-| `ChatCompletionInputToolChoiceEnum` | `Literal["auto", "none", "required"]` | Control tool calling behaviour |
+Uses a simple projector to align SigLIP vision embeddings with the Phi-4-mini text decoder. Supports interleaved image-text inputs for multi-turn vision conversations.
 
-#### Output Types (What You Receive)
+**Loading:**
+```python
+processor = AutoProcessor.from_pretrained("microsoft/Phi-4-multimodal-instruct")
+model = AutoModelForPreTraining.from_pretrained("microsoft/Phi-4-multimodal-instruct",
+    torch_dtype=torch.bfloat16, device_map="auto")
+```
 
-| Type | Fields | Description |
-|------|--------|-------------|
-| `ChatCompletionOutputToolCall` | `function: ChatCompletionOutputFunctionDefinition`, `id: str`, `type: str` | A tool call from the model |
-| `ChatCompletionOutputFunctionDefinition` | `arguments: str`, `name: str`, `description: str \| None` | The function to call. `arguments` is a JSON string |
+Note: `AutoModelForPreTraining` (not `AutoModelForCausalLM`) because the model has separate vision encoder weights that need special handling.
 
-#### Streaming Delta Types
+### LoRA Fine-Tuning Patterns
 
-| Type | Fields | Description |
-|------|--------|-------------|
-| `ChatCompletionStreamOutputDelta` | `role: str`, `content: str \| None`, `tool_calls: list[ChatCompletionStreamOutputDeltaToolCall] \| None`, `tool_call_id: str \| None`, `reasoning: str \| None` | Streaming delta that may contain tool call chunks |
-| `ChatCompletionStreamOutputDeltaToolCall` | `function: ChatCompletionStreamOutputFunction`, `id: str`, `index: int`, `type: str` | A streaming tool call delta |
-| `ChatCompletionStreamOutputFunction` | `arguments: str`, `name: str \| None` | `name` is present in the first delta of each tool call, then subsequent deltas accumulate `arguments` |
-
-### Tool Definition (Input)
-
-Each tool is defined with a JSON Schema for its parameters:
+Phi-4 can be fine-tuned efficiently using PEFT LoRA. The recommended approach:
 
 ```python
-tools = [
-    {
-        "type": "function",
-        "function": {
-            "name": "get_current_weather",
-            "description": "Get the current weather in a given location",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "location": {
-                        "type": "string",
-                        "description": "The city and state, e.g. San Francisco, CA"
-                    },
-                    "unit": {
-                        "type": "string",
-                        "enum": ["celsius", "fahrenheit"]
-                    }
-                },
-                "required": ["location"]
-            }
-        }
-    }
-]
-```
+from peft import LoraConfig, get_peft_model
 
-Tools can also be passed as typed objects:
-
-```python
-from huggingface_hub.inference._generated.types.chat_completion import (
-    ChatCompletionInputTool,
-    ChatCompletionInputFunctionDefinition,
+lora_config = LoraConfig(
+    r=16,
+    lora_alpha=32,
+    target_modules=["q_proj", "k_proj", "v_proj", "o_proj",
+                    "gate_proj", "up_proj", "down_proj"],
+    lora_dropout=0.05,
+    bias="none",
+    task_type="CAUSAL_LM",
 )
 
-tools = [
-    ChatCompletionInputTool(
-        type="function",
-        function=ChatCompletionInputFunctionDefinition(
-            name="get_current_weather",
-            description="Get the current weather in a given location",
-            parameters={
-                "type": "object",
-                "properties": {
-                    "location": {"type": "string", "description": "City and state"},
-                    "unit": {"type": "string", "enum": ["celsius", "fahrenheit"]}
-                },
-                "required": ["location"]
-            }
-        )
-    )
-]
-```
-
-### tool_choice Modes
-
-| Value | Type | Behaviour |
-|-------|------|-----------|
-| `"auto"` | `Literal` | Model decides whether to call a tool or respond with text |
-| `"none"` | `Literal` | Disable tool calling entirely |
-| `"required"` | `Literal` | Force the model to call one of the provided tools |
-| `{"function": {"name": "get_current_weather"}}` | `ChatCompletionInputToolChoiceClass` | Force a specific tool by name |
-
-Default: `None` (which maps to `"auto"` on the server side).
-
-### Non-Streaming Tool Call
-
-```python
-from huggingface_hub import InferenceClient
-
-client = InferenceClient("Qwen/Qwen2.5-7B-Instruct")
-
-response = client.chat_completion(
-    messages=[{"role": "user", "content": "What's the weather in Paris?"}],
-    tools=tools,
-    tool_choice="auto",
-    max_tokens=500,
+model = AutoModelForCausalLM.from_pretrained(
+    "microsoft/phi-4", torch_dtype=torch.bfloat16, device_map="auto"
 )
-
-# Check if the model called a tool
-message = response.choices[0].message
-if message.tool_calls:
-    for tool_call in message.tool_calls:
-        print(f"Tool: {tool_call.function.name}")
-        print(f"Args: {tool_call.function.arguments}")
-        print(f"ID: {tool_call.id}")
-else:
-    print(f"Text response: {message.content}")
+model = get_peft_model(model, lora_config)
+model.print_trainable_parameters()  # ~0.5% of total params
 ```
 
-**Output structure:**
-```
-response.choices[0].message.tool_calls[0].id            # str - unique call ID
-response.choices[0].message.tool_calls[0].type          # str - "function"
-response.choices[0].message.tool_calls[0].function.name       # str
-response.choices[0].message.tool_calls[0].function.arguments  # str - JSON string
-response.choices[0].finish_reason                      # "eos_token", "stop", or "tool_calls"
-```
+**Recommended target_modules:** Unlike Llama which just uses q/k/v/o, Phi-4 benefits from also targeting the gate/up/down projections in the FFN (swiGLU) for better task adaptation.
 
-### Streaming Tool Calls
-
-When streaming with tools, tool calls come as deltas across multiple chunks:
-
+**QLoRA:** Use with 4-bit base model for fine-tuning on free-tier GPUs (T4 16GB):
 ```python
-stream = client.chat_completion(
-    messages=[{"role": "user", "content": "What's the weather in Paris?"}],
-    tools=tools,
-    tool_choice="auto",
-    stream=True,
-    max_tokens=500,
-)
-
-tool_calls = {}  # Dict[int, dict] - accumulate by index
-for chunk in stream:
-    delta = chunk.choices[0].delta
-    if delta.tool_calls:
-        for tc in delta.tool_calls:
-            idx = tc.index
-            if idx not in tool_calls:
-                tool_calls[idx] = {"id": tc.id, "name": tc.function.name, "arguments": ""}
-            if tc.function.name:
-                tool_calls[idx]["name"] = tc.function.name
-            if tc.id:
-                tool_calls[idx]["id"] = tc.id
-            if tc.function.arguments:
-                tool_calls[idx]["arguments"] += tc.function.arguments
-    elif delta.content:
-        print(delta.content, end="")
+model = AutoModelForCausalLM.from_pretrained("microsoft/phi-4",
+    quantization_config=bnb_config, device_map="auto")
+# Then apply LoRA on top
 ```
-
-**Key streaming behaviour:**
-- First delta for each tool call includes the `name` and `id`
-- Subsequent deltas for the same tool call accumulate `arguments` (a string that builds up to a complete JSON)
-- When `finish_reason` is `"tool_calls"` (or similar), no more content deltas will arrive
-- The final state of each accumulated tool call's arguments is a complete JSON string
-
-### Multi-Turn Tool Execution Loop
-
-The standard agent pattern for executing tools and feeding results back:
-
-```python
-def run_tool_loop(client, messages, tools, max_turns=5):
-    for turn in range(max_turns):
-        response = client.chat_completion(
-            messages=messages,
-            tools=tools,
-            tool_choice="auto",
-            max_tokens=500,
-        )
-        message = response.choices[0].message
-        
-        if not message.tool_calls:
-            # Model responded with text - we're done
-            return message.content
-        
-        # Add assistant's tool call message to history
-        messages.append({
-            "role": "assistant",
-            "content": message.content or "",
-            "tool_calls": [
-                {
-                    "id": tc.id,
-                    "type": tc.type,
-                    "function": {
-                        "name": tc.function.name,
-                        "arguments": tc.function.arguments
-                    }
-                }
-                for tc in message.tool_calls
-            ]
-        })
-        
-        # Execute each tool call
-        for tool_call in message.tool_calls:
-            result = execute_tool(tool_call.function.name, tool_call.function.arguments)
-            messages.append({
-                "role": "tool",
-                "tool_call_id": tool_call.id,
-                "content": str(result)
-            })
-    
-    return "Max turns reached"
-```
-
-**Important message format for tool results:**
-- `tool_call_id` must match the `id` from the model's tool call
-- `role` must be `"tool"`
-- `content` is the tool output as a string
-
-### OpenAI Compatibility
-
-`InferenceClient` provides the same interface as `openai.OpenAI`:
-
-```python
-from huggingface_hub import InferenceClient
-
-client = InferenceClient(
-    model="Qwen/Qwen2.5-7B-Instruct",
-    api_key="hf_...",
-)
-
-# OpenAI-style syntax - exactly the same parameters
-output = client.chat.completions.create(
-    messages=[{"role": "user", "content": "What's the weather in Paris?"}],
-    tools=tools,
-    tool_choice="auto",
-)
-```
-
-**Note:** `client.chat.completions.create` is a **separate method** from `client.chat_completion`, not an alias. Both share the same parameter structure but are implemented independently for full OpenAI response format fidelity.
-
-### Integration with MCP (Model Context Protocol)
-
-Hugging Face `AsyncInferenceClient` integrates with MCP through `MCPClient`:
-
-```python
-from huggingface_hub import AsyncInferenceClient, MCPClient
-
-client = AsyncInferenceClient("Qwen/Qwen2.5-7B-Instruct")
-mcp_client = MCPClient()
-
-# Connect to MCP servers (stdio or SSE)
-await mcp_client.connect_stdio("python my_tool_server.py")
-# or
-await mcp_client.connect_sse("https://my-mcp-server.com/sse")
-
-# MCPClient automatically:
-# 1. Discovers tools from the MCP server
-# 2. Feeds them to the LLM via AsyncInferenceClient
-# 3. Executes tool calls and relays results back
-# 4. Can stream results in real-time
-
-async for chunk in client.process_single_turn_with_tools(messages):
-    if chunk.type == "content":
-        print(chunk.content, end="")
-    elif chunk.type == "tool_call":
-        print(f"\nCalled tool '{chunk.name}'. Result: '{chunk.result}'")
-```
-
-### tool_prompt Parameter
-
-The `tool_prompt` parameter appends custom instructions before the tool definitions:
-
-```python
-response = client.chat_completion(
-    messages=messages,
-    tools=tools,
-    tool_prompt="You MUST call a function for every query. "
-                "Never refuse to use a tool when one is available.",
-    tool_choice="required",
-)
-```
-
-Use cases:
-- Override default tool-calling behaviour
-- Enforce tool usage patterns
-- Add domain-specific instructions about tool usage
-
-### Provider Support
-
-Not all providers support function/tool calling. To check:
-
-```python
-from huggingface_hub import HfApi
-
-api = HfApi()
-info = api.model_info("Qwen/Qwen2.5-7B-Instruct", expand="inferenceProviderMapping")
-for pm in info.inference_provider_mapping:
-    # Check model info for tool support
-    print(f"{pm.provider}: {pm.task}")
-# Also check model card metadata:
-info.card_data.metadata  # Look for 'supports_tools' field
-```
-
-**Known providers with good tool-calling support (as of 2026-07-24):**
-- Together AI
-- DeepInfra
-- Fireworks AI
-- Novita
-- Featherless AI
-
-### Zero-Cost Considerations
-
-- All InferenceClient tool-calling features work with HF Inference's free serverless tier
-- Zero GPU credits consumed for tool definitions, parsing, and multi-turn orchestration
-- Only the actual LLM inference calls cost credits (serverless free tier covers most use cases)
-- MCP integration is client-side only — zero server cost
-- Use `tool_choice="none"` to guarantee no tool calls (saves tokens in classification-only tasks)
-- Streaming saves time but uses roughly the same token count
-- Set tight `max_tokens` to bound tool-heavy conversations
-
-### Error Handling Patterns
-
-```python
-from huggingface_hub import InferenceClient, InferenceTimeoutError, HfHubHTTPError
-
-client = InferenceClient()
-
-try:
-    response = client.chat_completion(
-        messages=messages,
-        tools=tools,
-        tool_choice="auto",
-        max_tokens=500,
-    )
-except InferenceTimeoutError:
-    # Model unavailable or request timed out
-    logger.warning("Tool calling timed out, retrying without tools...")
-    response = client.chat_completion(messages=messages, max_tokens=500)
-except HfHubHTTPError as e:
-    # HTTP error (e.g., 422 if tools format is invalid)
-    if e.response.status_code == 422:
-        logger.error(f"Invalid tool schema: {e}")
-    else:
-        raise
-```
-
-**Common error: HTTP 422** — This usually means an invalid tool definition (e.g., missing `required` field in parameters, or invalid JSON Schema format). Validate tool schemas locally before sending.
 
 ### Key Takeaways
 
-1. **Same API as OpenAI** — `InferenceClient.chat.completions.create()` is drop-in compatible with `openai.OpenAI().chat.completions.create()`
-2. **Streaming works with tools** — Tool calls come as deltas across chunks; accumulate by `index`
-3. **Multi-turn loops** — Standard pattern: assistant message with tool_calls → tool result messages → next generation
-4. **MCP integration** — `MCPClient` bridges MCP tool servers with `AsyncInferenceClient` for zero-code tool discovery
-5. **tool_choice fine control** — `"auto"`, `"none"`, `"required"`, or specific tool name
-6. **All zero-cost** — Everything runs client-side; only LLM inference costs apply (free serverless tier available)
-7. **Provider varies** — Not all inference providers support tool calling; verify via `inferenceProviderMapping`
+1. **No separate phi4 model class** — Phi-4 uses `Phi3ForCausalLM` in Transformers. All Phi-3 tooling works transparently.
+2. **Data quality beats scale** — Synthetic pre-training data + pivotal token DPO enables 14B model to rival 70B+ models on reasoning.
+3. **Three-model ecosystem** — Phi-4 (14B flagship), Phi-4-mini (3.8B edge), Phi-4-multimodal (5.6B VLM) cover different deployment scenarios.
+4. **128K context in mini** — Phi-4-mini and multimodal extend to 128K via LongRoPE, unlike the 16K limit of the 14B model.
+5. **Perfect for zero-cost fine-tuning** — 4-bit QLoRA on Phi-4-mini (3.8B) fits easily on free T4/Kaggle GPUs.
+6. **MIT licensed** — All variants released under MIT license for full commercial use.
+7. **Chat template is `<|im_start|>` format** — Standard across Phi family, compatible with existing tooling.
 
 ### Resources
-|- huggingface_hub InferenceClient docs (https://huggingface.co/docs/huggingface_hub/en/guides/inference)
-|- huggingface_hub v1.24.0 source: `_client.py` `chat_completion` method
-|- huggingface_hub MCP integration (https://huggingface.co/docs/huggingface_hub/v1.24.0/en/package_reference/mcp)
-|- huggingface_hub generated types: `_generated/types/chat_completion.py`
-|- OpenAI Chat Completions API reference (for compatibility comparison)
+- https://huggingface.co/microsoft/phi-4 — Model card
+- https://arxiv.org/abs/2412.08905 — Phi-4 Technical Report
+- https://github.com/microsoft/Phi-4CookBook — Official cookbook with inference/finetuning recipes
+- https://huggingface.co/microsoft/Phi-4-mini-instruct — Phi-4-mini model
+- https://huggingface.co/microsoft/Phi-4-multimodal-instruct — Phi-4-multimodal model
+- https://huggingface.co/docs/transformers/main/en/model_doc/phi3 — Transformers Phi-3 docs (used for Phi-4 too)
+- https://azure.microsoft.com/en-us/blog/empowering-innovation-with-phi-4-microsofts-new-open-model/ — Official blog
 
 ---
 
-## 2026-07-24: hf-quantization-methods-comparison — Comprehensive Quantization Method Comparison (Topic #157)
+## 2026-07-24: hf-transformers-vlm-processors
 
 ### Summary
-Comprehensive comparison of every quantization method supported in Hugging Face Transformers, based on the official Transformers v5.14.0 quantization overview. Covers 21 methods across dimensions: bit-depth, hardware support, on-the-fly vs. calibration, PEFT compatibility, serialization, performance characteristics, and zero-cost recommendations for Beer's models.
+Researched how Transformers handles Vision-Language Model (VLM) processing through the processor abstraction layer. Processors combine an image processor (or video processor) with a tokenizer, handling the bridging of visual features with text tokenization for multimodal models like LLaVA, Idefics3, Florence-2, Qwen2-VL, and Phi-4-multimodal.
 
-### Source
-Official Transformers Quantization Overview: https://huggingface.co/docs/transformers/en/quantization/overview
-Published: 2026-07-24, Transformers v5.14.0
+### Key Concepts
 
-### Complete Method Comparison Matrix
+**Processor Architecture:**
+1. **`ProcessorMixin` base class** (in `transformers.processing_utils`) — provides the `__call__` interface accepting `images`, `text`, `videos`, `audio` as optional inputs
+2. **`ImageProcessingMixin`** — standard image preprocessing (resize, crop, rescale, normalize, pad) with model-specific defaults
+3. **`TokenizersBackend`** — wraps any HF tokenizer with unified encode/decode interface
+4. **Processor classes merge both** — each VLM has its own processor (e.g., `LlavaProcessor`, `Idefics3Processor`, `Florence2Processor`)
 
-| Method | Bits | On-the-fly | CPU | CUDA | ROCm | Metal (Apple) | Intel GPU | torch.compile | PEFT FT | Serializable | Notes |
-|--------|------|-----------|-----|------|------|--------------|-----------|--------------|---------|-------------|-------|
-| **AQLM** | 1/2 | ❌ | 🟢 | 🟢 | 🔴 | 🔴 | 🟢 | 🟢 | 🟢 | 🟢 | Extreme compression; groups 8-16 weights together |
-| **AutoRound** | 2/3/4/8 | ❌ | 🟢 | 🟢 | 🔴 | 🔴 | 🟢 | 🔴 | 🔴 | 🟢 | Intel's weight-rounding optimization |
-| **AWQ** | 4 | ❌ | 🟢 | 🟢 | 🟢 | 🔴 | 🟢 | ❓ | 🟢 | 🟢 | Activation-aware; most popular 4-bit |
-| **bitsandbytes** | 4/8 | 🟢 | 🟢 | 🟢 | 🟡 | 🟡 | 🟢 | 🟢 | 🟢 | 🟢 | Most mature; NF4 for QLoRA |
-| **compressed-tensors** | 1/8 | ❌ | 🟢 | 🟢 | 🟢 | 🔴 | 🔴 | 🔴 | 🟢 | 🟢 | Neural Magic's sparsity+quant |
-| **EETQ** | 8 | 🟢 | 🔴 | 🟢 | 🔴 | 🔴 | 🔴 | ❓ | 🟢 | 🟢 | NetEase Easy Efficient Transformer |
-| **Four Over Six** | 4 | 🟢 | 🟢 | 🟢 | 🔴 | 🔴 | 🔴 | 🟢 | 🔴 | 🟢 | MIT; 4-bit via 6-bit intermediate |
-| **FP-Quant** | 4 | 🟢 | 🔴 | 🟢 | 🔴 | 🔴 | 🔴 | 🟢 | 🔴 | 🟢 | IST; FP8-based 4-bit quantization |
-| **GGUF/llama.cpp** | 1–8 | 🟢 | 🟢 | 🟢 | 🔴 | 🟢 | 🟢 | 🔴 | 🔴 | See Notes | Separate format; NOT serializable in Transformers |
-| **GPTQModel** | 2/3/4/8 | ❌ | 🟢 | 🟢 | 🟢 | 🟢 | 🟢 | 🔴 | 🟢 | 🟢 | Replaced AutoGPTQ; requires calibration |
-| **HIGGS** | 2/4 | 🟢 | 🔴 | 🟢 | 🔴 | 🔴 | 🔴 | 🟢 | 🔴 | 🟢 | HanGuo's FLUTE-based quantization |
-| **HQQ** | 1–8 | 🟢 | 🟢 | 🟢 | 🔴 | 🔴 | 🟢 | 🟢 | 🟢 | 🔴 | No calibration needed; half-quadratic |
-| **Metal** | 2/4/8 | 🟢 | 🔴 | 🔴 | 🔴 | 🟢 | 🔴 | 🔴 | 🔴 | 🟢 | Apple Silicon only (Hub Kernels) |
-| **optimum-quanto** | 2/4/8 | 🟢 | 🟢 | 🟢 | 🔴 | 🟢 | 🟢 | 🟢 | 🔴 | 🔴 | HF's own; lightweight, no heavy deps |
-| **SINQ** | 2/3/4/6/8 | 🟢 | 🟢 | 🟢 | 🟡 | 🟡 | 🟡 | 🟡 | 🔴 | 🟢 | Huawei; sparse+integer quantization |
-| **FBGEMM_FP8** | 8 | 🟢 | 🔴 | 🟢 | 🔴 | 🔴 | 🔴 | 🔴 | 🔴 | 🟢 | PyTorch FBGEMM FP8 |
-| **torchao** | 4/8 | 🟢 | 🟢 | 🟢 | 🔴 | 🟡 | 🟢 | — | 🟢 | 🟢 | PyTorch native; Int4/FP8/NF4 |
-| **VPTQ** | 1–8 | ❌ | 🔴 | 🟢 | 🟡 | 🔴 | 🔴 | 🟢 | 🔴 | 🟢 | Microsoft; vectorized PTQ |
-| **FINEGRAINED_FP8** | 8 | 🟢 | 🔴 | 🟢 | 🔴 | 🔴 | 🟢 | 🔴 | 🔴 | 🟢 | Built-in Transformers |
-| **SpQR** | 3 | ❌ | 🔴 | 🟢 | 🔴 | 🔴 | 🔴 | 🟢 | 🔴 | 🟢 | Sparse-plus-quantized |
-| **Quark** | 2/4/6/8/9/16 | ❌ | 🟢 | 🟢 | 🟢 | 🟢 | 🟢 | ❓ | 🔴 | 🔴 | AMD; widest bit range |
+**Common Preprocessing Pipeline:**
+1. Image → resize to model-specific size (e.g., 336×336 for LLaVA, 384×384 for Idefics3, 1024×1024 for Florence-2)
+2. Convert to tensor, rescale to [0,1], normalize with model-specific mean/std
+3. Text → apply chat template (if messages format) → tokenize
+4. Insert image tokens (`<image>`, `<|image|>`, `<img>`) into text at correct positions
+5. Return `BatchFeature` dict with `pixel_values`, `input_ids`, `attention_mask`
 
-Legend: 🟢 = Supported, 🟡 = Partial/Experimental, 🔴 = Not Supported, ❓ = Unknown, — = Native
+**Image Token Strategies:**
+- **LLaVA-style:** Single `<image>` token replaced by vision encoder's patch embeddings. `vision_feature_select_strategy="default"` keeps all patches; `"full"` includes CLS token.
+- **Idefics3-style:** Multiple `<image>` tokens per image, dynamically computed based on image resolution
+- **Florence-2-style:** Fixed task prompt tokens + image embedding via DaViT encoder (no `<image>` token insertion)
+- **Qwen2-VL-style:** Uses `|<image_pad|*N|>` pattern where N is the number of image patches
 
-### Key Decision Dimensions
+**Key Processor Parameters:**
+- `image_processor` / `tokenizer` — the sub-components
+- `patch_size` — vision encoder patch size
+- `vision_feature_select_strategy` — "default" vs "full" vs "cls_patch"
+- `chat_template` — Jinja template for conversation formatting
+- `image_token` — special token for image location
+- `num_additional_image_tokens` — extra appended tokens (e.g., CLS)
 
-#### 1. On-the-Fly vs. Calibration Required
-- **On-the-fly** (no calibration data needed): bitsandbytes, HQQ, optimum-quanto, torchao, GGUF (pre-quantized), EETQ, Four Over Six, FP-Quant, HIGGS, Metal, SINQ, FBGEMM_FP8, FINEGRAINED_FP8
-- **Calibration required** (need sample dataset): AWQ, GPTQModel, AQLM, AutoRound, compressed-tensors, VPTQ, SpQR, Quark
+**VLM Processor Reference Table:**
 
-#### 2. PEFT (LoRA/QLoRA) Fine-Tuning Compatible
-- **🟢 Supported:** AQLM, AWQ, bitsandbytes, compressed-tensors, EETQ, GPTQModel, HQQ, torchao
-- **🔴 Not Supported:** AutoRound, Four Over Six, FP-Quant, GGUF, HIGGS, Metal, optimum-quanto, SINQ, FBGEMM_FP8, VPTQ, FINEGRAINED_FP8, SpQR, Quark
-
-#### 3. Serializable (can be saved & reloaded in Transformers)
-- **🟢 Yes:** AQLM, AutoRound, AWQ, bitsandbytes, compressed-tensors, EETQ, Four Over Six, FP-Quant, GPTQModel, HIGGS, Metal, SINQ, FBGEMM_FP8, torchao, VPTQ, FINEGRAINED_FP8, SpQR
-- **🔴 No / Partial:** HQQ (not serializable in Transformers), optimum-quanto (not serializable), GGUF (separate format, use `gguf_file` parameter), Quark (not serializable)
-
-#### 4. Hardware Coverage
-- **Most universal** (CPU+CUDA+ROCm): bitsandbytes, torchao, AQLM, compressed-tensors, AutoRound, AWQ, GPTQModel
-- **Apple Silicon (Metal):** AWQ, bitsandbytes (🟡), torchao (🟡), GGUF, Metal (native), optimum-quanto, GPTQModel, SINQ (🟡), Quark — for best Apple support, use GGUF or optimum-quanto
-- **Intel GPU:** bitsandbytes, HQQ, torchao, SINQ (🟡), GPTQModel, AWQ, FINEGRAINED_FP8, AutoRound, Quark, optimum-quanto, GGUF
-
-### Detailed Method Profiles
-
-#### bitsandbytes (Mature, Most Widely Used)
-- **Bits:** 4 (NF4/FP4) and 8 (LLM.int8())
-- **Install:** `pip install bitsandbytes`
-- **Key Feature:** On-the-fly quantization — no calibration data needed. QLoRA enables 4-bit fine-tuning with LoRA adapters.
-- **Usage:** `model = AutoModelForCausalLM.from_pretrained(..., load_in_4bit=True, bnb_4bit_quant_type="nf4")`
-- **Limitations:** ROCm and Metal support are partial (🟡). 4-bit inference slower than AWQ/GPTQ on some benchmarks.
-- **Best for:** Quick memory reduction, QLoRA fine-tuning, prototyping on consumer GPUs.
-
-#### AWQ (Activation-Aware Weight Quantization)
-- **Bits:** 4
-- **Install:** `pip install autoawq` (note: downgrades Transformers to 4.47.1)
-- **Key Feature:** Preserves 1% of weights as FP16 based on activation importance, achieving 4-bit with minimal perplexity loss. Very fast inference.
-- **Usage:** Load pre-quantized models: `AutoModelForCausalLM.from_pretrained("model-awq")`
-- **Limitations:** Requires calibration data to quantize. Cannot quantize on-the-fly — must use pre-quantized models or quantize offline.
-- **Best for:** Production 4-bit inference on CUDA GPUs; best quality-per-bit ratio at 4-bit.
-
-#### GPTQModel (Successor to AutoGPTQ)
-- **Bits:** 2, 3, 4, 8
-- **Install:** `pip install gptqmodel --no-build-isolation`
-- **Key Feature:** Layer-wise quantization minimizing output error via second-order optimization (Hessian-based). Multiple bit-widths.
-- **Usage:** `GPTQConfig(bits=4, dataset="c4", tokenizer=tokenizer)` then `from_pretrained(..., quantization_config=gptq_config)`
-- **Limitations:** Calibration required (need representative dataset). Slower to quantize than on-the-fly methods.
-- **Best for:** When you need flexible bit-widths (2/3/4/8) with good quality; supports Apple Silicon.
-
-#### GGUF / llama.cpp (Ecosystem Standard for Local Inference)
-- **Bits:** Q2_K through Q8_0, plus F32/F16/BF16/F64
-- **Key Feature:** Single-file format with metadata header and all weights bundled. Community standard for local inference (Ollama, LM Studio, LlamaFile).
-- **Usage in Transformers:** `AutoModelForCausalLM.from_pretrained(..., gguf_file="model.q4_K_M.gguf")`
-- **Limitations:** NOT PEFT-compatible. NOT serializable back to Transformers format (separate ecosystem). No torch.compile support.
-- **Hardware:** CPU native, CUDA via llama.cpp backend, Metal native on Apple Silicon.
-- **Best for:** Local/edge deployment, Apple Silicon users, CPU inference, Ollama/LM Studio workflow.
-
-#### HQQ (Half-Quadratic Quantization)
-- **Bits:** 1, 2, 3, 4, 8
-- **Install:** `pip install hqq`
-- **Key Feature:** On-the-fly quantization without calibration data. Supports per-layer configs. 4-bit fused kernels reach 200 tok/s on RTX 4090.
-- **Usage:** `HqqConfig(nbits=4, group_size=64)` then `from_pretrained(..., quantization_config=hqq_config)`
-- **Limitations:** Not serializable in Transformers (🔴). No ROCm support. Relatively newer/lower adoption.
-- **Best for:** Rapid quantization of any model without calibration; extreme 1-2 bit for research.
-
-#### optimum-quanto (HuggingFace's Lightweight Option)
-- **Bits:** 2, 4, 8
-- **Install:** `pip install optimum-quanto`
-- **Key Feature:** Lightweight, no heavy dependencies. Works out of the box with any model. Supports torch.compile.
-- **Usage:** `quantize_model(model, weights=torch.qint4, activations=torch.qfloat8)`
-- **Limitations:** NOT serializable (cannot save/load quantized state). No PEFT support. Limited ecosystem maturity.
-- **Best for:** Quick experiments, torch.compile integration, when you want minimal deps.
-
-#### torchao (PyTorch Native)
-- **Bits:** 4 (int4/NF4), 8 (FP8 dynamic/weight-only)
-- **Install:** `pip install torchao` (comes with PyTorch 2.6+)
-- **Key Feature:** Native PyTorch integration. Supports Int4, FP8, NF4 dtypes. Composable with torch.compile and PEFT.
-- **Usage:** `from torchao.quantization import quantize_` then `quantize_(model, int4_weight_only())`
-- **Limitations:** ROCm support 🟡. Newer, fewer pre-quantized models on the Hub.
-- **Best for:** PyTorch native workflows, production deployment with torch.compile, when you want tight integration.
-
-#### AQLM (Additive Quantization of Language Models)
-- **Bits:** 1–2 (extreme compression)
-- **Install:** `pip install aqlm[gpu,cpu]` (Python 3.10+ only)
-- **Key Feature:** Groups 8-16 weights together and represents them as additive combinations of codewords. Achieves 2-bit with competitive perplexity.
-- **Usage:** `AutoModelForCausalLM.from_pretrained("ISTA-DASLab/Mixtral-8x7b-AQLM-2Bit-1x16-hf")`
-- **Limitations:** Python 3.10+ only. Limited model availability. Primarily for research at extreme compression levels.
-- **Best for:** Extreme memory constraint scenarios (sub-2 GB models), research on ultra-low-bit quantization.
-
-### Practical Decision Flowchart
-
-```
-Q: What hardware do you have?
-├── Apple Silicon (Metal)
-│   └── GGUF (Ollama) → best ecosystem support
-│   └── optimum-quanto → lightweight, on-the-fly
-│   └── AWQ → best 4-bit quality if pre-quantized model exists
-├── CPU-only
-│   └── GGUF (llama.cpp) → best CPU performance
-│   └── bitsandbytes → on-the-fly, mature
-│   └── optimum-quanto → lightweight
-├── NVIDIA GPU (CUDA)
-│   ├── Need PEFT fine-tuning?
-│   │   ├── Yes → bitsandbytes (QLoRA) or HQQ (on-the-fly)
-│   │   └── No → AWQ (best quality) or GPTQ (flexible bits)
-│   ├── Need on-the-fly?
-│   │   ├── Yes → bitsandbytes, HQQ, torchao
-│   │   └── No → AWQ, GPTQModel (better quality)
-│   └── Extreme memory constraint?
-│       └── AQLM (1-2 bit) or HQQ (1 bit)
-└── AMD GPU (ROCm)
-    └── bitsandbytes 🟡 or AWQ or GPTQModel or Quark
-```
-
-### Zero-Cost Recommendations for Beer's 8 Models
-
-Since Beer has no income (zero-cost constraint) and owns 8 models on HF:
-
-1. **For serverless inference on HF:** Use pre-quantized GGUF models (free via HuggingChat or Inference Providers) — no cost, no GPU needed.
-2. **For local testing on CPU:** Download GGUF models (Q4_K_M) — single file, easy to test, works on any hardware.
-3. **For fine-tuning (if GPU access via free tiers):** bitsandbytes + PEFT (QLoRA) — on-the-fly 4-bit, no calibration needed, free Colab/ZeroGPU compatible.
-4. **For deploying on HF Spaces ZeroGPU:** torchao or bitsandbytes — both work in free Spaces with ZeroGPU (NVIDIA A10G).
-5. **For pushing quantized versions of Beer's own models:** Choose AWQ (best quality at 4-bit) or GGUF (widest compatibility) depending on target audience.
+| Model | Image Processor | Tokenizer | Image Token | Special |
+|---|---|---|---|---|
+| LLaVA 1.5/1.6 | LlavaImageProcessor | LlamaTokenizer | `<image>` | Patch embedding + MLP projection |
+| LLaVA-NeXT | LlavaNextImageProcessor | LlamaTokenizer | `<image>` | Dynamic high-res grid support |
+| Idefics3 | Idefics3ImageProcessor | GemmaTokenizer | `<image>` | Per-res flexible splitting |
+| Florence-2 | CLIPImageProcessor | BERTTokenizer | (none) | Task prompts; encoder-decoder |
+| Qwen2-VL | Qwen2VLImageProcessor | Qwen2Tokenizer | `|<image_pad|*N|>` | 3D RoPE in vision tower |
+| Phi-4-multimodal | CLIPImageProcessor | Phi3Tokenizer | `<|image_1|>` | CLIP vision + whisper audio |
 
 ### Resources
-- Transformers Quantization Overview: https://huggingface.co/docs/transformers/en/quantization/overview
-- bitsandbytes: https://github.com/bitsandbytes-foundation/bitsandbytes
-- AWQ (AutoAWQ): https://github.com/casper-hansen/AutoAWQ
-- GPTQModel: https://github.com/ModelCloud/GPTQModel
-- HQQ: https://github.com/mobiusml/hqq/
-- optimum-quanto: https://github.com/huggingface/optimum-quanto
-- torchao: https://github.com/pytorch/ao
-- AQLM: https://github.com/Vahe1994/AQLM
-- GGUF Hub Docs: https://huggingface.co/docs/hub/en/models-gguf
+- https://huggingface.co/docs/transformers/main/en/processing_utils
+- https://huggingface.co/docs/transformers/main/en/model_doc/llava
+- https://huggingface.co/docs/transformers/main/en/model_doc/idefics3
+- https://huggingface.co/docs/transformers/main/en/model_doc/florence2
+- https://huggingface.co/docs/transformers/main/en/model_doc/qwen2_vl
+- https://github.com/huggingface/transformers/blob/main/src/transformers/models/llava/processing_llava.py
 
 ---
 
-## 2026-07-27: hf-datasets-sort-shuffle-split-shard — Dataset Process Operations Deep Dive (Topic #18 Deepened)
+## 2026-07-24: hf-diffusers-cogvideo-deep-dive
 
 ### Summary
-Deep-dive into the 🤗 Datasets library's core processing pipeline (datasets v4.8.4). Covers every major Dataset method for sorting, shuffling, selecting, filtering, splitting, sharding, renaming, casting, flattening, mapping, batching, concatenating, interleaving, formatting, saving, and exporting — the complete data transformation toolkit.
+Researched the CogVideoX integration in Diffusers — a family of diffusion transformer models (2B and 5B parameters) by THUDM for text-to-video, image-to-video, and video-to-video generation. Covered the 3D causal VAE (`AutoencoderKLCogVideoX`), expert transformer with adaptive LayerNorm (`CogVideoXTransformer3DModel`), T5 text encoder, all four pipelines (T2V, I2V, V2V, FunControl), memory optimization techniques, LoRA support, and quantization via torchao.
 
-### 1. Sort, Shuffle, Select, Split & Shard
+### Key Concepts
 
-#### `Dataset.sort()`
-Sorts by a column's values. Returns a new Dataset sorted in ascending or descending order. Efficient because Arrow columnar storage makes column access cheap.
+**Architecture Components:**
+1. **3D Causal VAE** — compresses video along spatial AND temporal dimensions using 3D causal convolutions, reducing sequence length and preventing flickering
+2. **Expert DiT** — diffusion transformer with adaptive LayerNorm (adaLN) for text-video fusion; uses 3D full attention for accurate motion capture
+3. **T5 Text Encoder** — frozen `t5-v1_1-xxl` provides text conditioning embeddings (max 226 tokens)
+4. **Custom Schedulers** — `CogVideoXDDIMScheduler` and `CogVideoXDPMScheduler`
+
+**Four Pipelines:**
+1. `CogVideoXPipeline` — T2V, best at 1360×768, default 48 frames (6s @ 8fps)
+2. `CogVideoXImageToVideoPipeline` — I2V, width 768–1360, height 758
+3. `CogVideoXVideoToVideoPipeline` — V2V with `strength` control (default 0.8)
+4. `CogVideoXFunControlPipeline` — controlled generation with spatial conditioning
+
+**Memory Optimization Options (5B model):**
+- `enable_model_cpu_offload()`: 19GB VRAM (from 33GB)
+- `enable_sequential_cpu_offload()`: <4GB VRAM (very slow)
+- `enable_tiling()`: 11GB (with offload)
+- TorchAO Int8 + FP8 layerwise casting: ~16GB
+- `apply_group_offloading()`: efficient grouped offloading
+
+**Key Hyperparameters:**
+- `guidance_scale`: 6.0 (default)
+- `num_inference_steps`: 50
+- `num_frames`: 48 (T2V), 49 (I2V)
+- `use_dynamic_cfg`: False (adaptive CFG scaling)
+- `max_sequence_length`: 226 (T5 tokens)
+- `strength` (V2V): 0.8
+
+**Model Variants:**
+- CogVideoX-2b: 2B params, ~20GB unoptimized
+- CogVideoX-5b: 5B params, ~33GB unoptimized, ~16GB quantized
+- CogVideoX-5b-I2V: 5B, specialized for image-to-video
+
+**Pipeline Components:**
+- `tokenizer`: T5Tokenizer
+- `text_encoder`: T5EncoderModel
+- `vae`: AutoencoderKLCogVideoX
+- `transformer`: CogVideoXTransformer3DModel
+- `scheduler`: CogVideoXDDIMScheduler | CogVideoXDPMScheduler
+
+### Resources
+- https://huggingface.co/docs/diffusers/main/en/api/pipelines/cogvideox
+- https://arxiv.org/abs/2408.06072
+- https://huggingface.co/THUDM/CogVideoX-5b
+- https://huggingface.co/zai-org/CogVideoX-2b
+- https://github.com/THUDM/CogVideo
+
+---
+
+
+## 2026-07-24: hf-hub-api-rate-limiting-deep-dive
+
+### Summary
+Deep-dive into the Hugging Face Hub's rate limiting system — how limits work across three request buckets (API, Resolvers, Pages), the IETF-standard HTTP headers returned on limit hits, tier-based quotas per plan level, and the smart retry mechanism built into `huggingface_hub` v1.2.0+.
+
+### Key Concepts
+
+**Three Request Buckets:**
+1. **Hub APIs** — programmatic endpoints (model/dataset search, repo creation, user management). Documented in Hub API Endpoints.
+2. **Resolvers** — URLs with `/resolve/` serving user-generated content (file downloads by transformers, datasets, vLLM, llama.cpp, LM Studio, ollama, etc.). Highest rate limits because infrastructure is optimized for them.
+3. **Pages** — Web pages on huggingface.co. Lowest rate limits (human browsing patterns).
+
+**Window:** All limits are calculated over **5-minute fixed windows**, allowing burstiness.
+
+**HTTP Headers (IETF draft-ietf-httpapi-ratelimit-headers v9):**
+| Header | Example |
+|--------|---------|
+| `RateLimit` | `"api|pages|resolvers";r=[remaining];t=[seconds until reset]` |
+| `RateLimit-Policy` | `"fixed window";"api||pages||resolvers";q=[total allowed];w=[window seconds]` |
+
+Headers follow the standard format: policy name, bucket names, remaining count (r), time-to-reset (t), quota limit (q), window duration (w).
+
+**Tier Limits (as of Sep 2025, per 5-min window):**
+| Plan | API | Resolvers | Pages |
+|------|-----|-----------|-------|
+| Anonymous (per IP) | 500* | 3,000* | 100* |
+| Free user | 1,000* | 5,000* | 200* |
+| PRO user | 2,500 | 12,000 | 400 |
+| Team org | 3,000 | 20,000 | 400 |
+| Enterprise org | 6,000 | 50,000 | 600 |
+| Enterprise Plus | 10,000 | 100,000 | 1,000 |
+| Enterprise Plus + IP ranges | 100,000 | 500,000 | 10,000 |
+| Academia Hub org | 3,000 | 20,000 | 400 |
+
+*Anonymous/Free limits may change depending on platform health.
+Note: Org rate limits apply per member, not shared.
+
+**Smart Retry (`huggingface_hub` >=1.2.0):**
+When a 429 error occurs, the SDK automatically parses the `RateLimit` header to extract exact seconds until reset, then waits precisely before retrying. This applies to file downloads (Resolvers) and paginated Hub API calls (list models, datasets, spaces, etc.). **Always use `huggingface_hub` for programmatic access** to benefit from this.
+
+**First Thing to Check Under Rate Limiting:**
+The number one cause of rate limiting is not passing a `HF_TOKEN`. Always pass HF_TOKEN downstream to all libraries/applications downloading from the Hub.
+
+**Granular Action Limits:**
+Separate (undocumented) rate limits apply to specific actions: repo creation, repo commits, discussions/comments, moderation actions. These change frequently and are not currently published.
+
+**Billing Dashboard:**
+Real-time gauge at `https://huggingface.co/settings/billing` shows current (last 5 min) requests vs allowed per bucket. Turns red when exceeded. Context switcher lets you toggle between user and org accounts.
+
+**Strategies When Rate-Limited:**
+1. Always pass `HF_TOKEN`
+2. Spread requests over longer periods
+3. Replace Hub API calls with Resolver calls when possible (Resolver limits are highest)
+4. Upgrade to PRO/Team/Enterprise
+
+### Resources
+- https://huggingface.co/docs/hub/en/rate-limits — official docs
+- https://huggingface.co/settings/billing — real-time rate limit dashboard
+- IETF Draft: https://datatracker.ietf.org/doc/draft-ietf-httpapi-ratelimit-headers/
+- https://huggingface.co/docs/huggingface_hub/index — huggingface_hub library
+
+---
+
+## 2026-07-24: hf-datasets-server-parquet-conversion-pipeline — How the Datasets Server Auto-Converts Hub Datasets to Parquet
+
+### Summary
+Deep-dive into the Hugging Face Datasets Server's Parquet conversion pipeline — how 100,000+ datasets on the Hub are automatically converted from their original format (CSV, JSONL, Parquet, image directories, audio folders, etc.) to columnar Parquet files on a special `refs/convert/parquet` branch. Covers the server architecture (job queue, workers, cache), the three core job types, the 5 GB size limit, the `/parquet` API endpoint, and practical query patterns using DuckDB/ Pandas/ Polars.
+
+### Source Documentation
+- Datasets Viewer Parquet Guide: https://huggingface.co/docs/dataset-viewer/en/parquet
+- Parquet Conversion Overview: https://huggingface.co/docs/dataset-viewer/en/parquet_process
+- Server Infrastructure: https://huggingface.co/docs/dataset-viewer/en/server
+- Source Repo: https://github.com/huggingface/dataset-viewer
+
+### Three-Component Server Architecture
+
+- **Job Queue (MongoDB)**: Three job types — `/splits` (discovers configs/splits), `/first-rows` (previews 100 rows), `/parquet` (downloads → converts → publishes)
+- **Workers**: Poll queue, execute preprocessing, store results in cache. Configurable via env vars (MIN_ROWS, MAX_ROWS, MAX_JOBS_PER_USER/ORG).
+- **Cache (MongoDB)**: Pre-computed responses for instant API return. `/rows`, `/search`, `/filter` are on-demand (using DuckDB on cached Parquet).
+
+### Parquet Conversion Lifecycle
+
+1. Dataset uploaded/updated on Hub → viewer detects changes
+2. `/parquet` job enqueued → worker loads dataset via `datasets` library
+3. Worker converts each split to Parquet format
+4. Parquet files published to **`refs/convert/parquet`** Git branch (parallel to main)
+5. Files available via `GET /parquet` API endpoint
+
+### Key Characteristics
+
+- **Size limit**: Public datasets < 5 GB auto-converted; ≥ 5 GB skipped. Private: PRO/Enterprise only.
+- **Branch**: `refs/convert/parquet` — read-only for users, auto-maintained by server
+- **Sharding**: Large splits split into multiple files (e.g., `train-00000-of-00003.parquet`)
+- **Schema**: Mirrors `datasets.Features` — INT32, INT64, FLOAT, STRING, BOOLEAN, LIST, Image/Audio as BYTE_ARRAY
+- **Compression**: Snappy, ZSTD, GZIP, LZ4 — auto-selected per column
+
+### API Endpoint: `GET /parquet`
+
 ```python
-dataset = dataset.sort("label")
-dataset = dataset.sort("timestamp", reverse=True)
+import requests
+resp = requests.get("https://datasets-server.huggingface.co/parquet",
+                    params={"dataset": "ibm/duorc"}).json()
+for pf in resp["parquet_files"]:
+    print(pf["url"])  # Raw Parquet URL on refs/convert/parquet branch
 ```
 
-#### `Dataset.shuffle()`
-Randomly shuffles the dataset. Accepts a `seed` for reproducibility and a `generator` for numpy RNG. Important: shuffling is **lazy** in buffered mode — the dataset is shuffled only when iterated.
+Response fields per file: `dataset`, `config`, `split`, `url`, `size`, `num_rows`, `parquet_files_count`. Also returns `pending` and `failed` arrays.
+
+### Query Patterns (Zero-Cost)
+
+**DuckDB (pushdown queries — most efficient):**
 ```python
-dataset = dataset.shuffle(seed=42)
-import numpy as np
-rng = np.random.default_rng(42)
-dataset = dataset.shuffle(generator=rng)
+import duckdb
+urls = [p["url"] for p in resp["parquet_files"]]
+duckdb.sql("SELECT COUNT(*), COUNT(DISTINCT title) FROM read_parquet(urls) WHERE LENGTH(text) > 1000").fetchall()
 ```
 
-#### `Dataset.select()` and `Dataset.filter()`
-- **`select(indices)`**: Index-based selection. Takes an iterable of row indices and returns a new Dataset containing only those rows. Extremely fast — no data copy since Arrow uses zero-copy slicing.
-  ```python
-  dataset = dataset.select([0, 1, 2, 42, 99])
-  dataset = dataset.select(range(1000))
-  ```
-- **`filter(function)`**: Row-wise boolean filtering. Function receives one row (as a dict) and returns `True` to keep it. Supports `num_proc` for multiprocessing and `input_columns` to limit columns passed to the function.
-  ```python
-  dataset = dataset.filter(lambda x: x["label"] == 1, num_proc=4)
-  dataset = dataset.filter(lambda x: len(x["text"]) > 50)
-  ```
-
-#### `Dataset.train_test_split()`
-The canonical method for creating train/test splits. Returns a `DatasetDict`.
-- `test_size` or `train_size`: float (proportion) or int (count). Default test_size=0.1.
-- `seed`: for reproducibility.
-- `stratify_by_column`: for **stratified splitting** — critical for imbalanced classification.
-- `shuffle`: whether to shuffle before splitting (default True).
-
+**Pandas:**
 ```python
-splits = dataset.train_test_split(test_size=0.2, seed=42)
-train = splits["train"]
-test = splits["test"]
-# Stratified split — preserves class distribution
-splits = dataset.train_test_split(test_size=0.2, seed=42, stratify_by_column="label")
+dfs = [pd.read_parquet(url) for url in urls]
+df = pd.concat(dfs, ignore_index=True)
 ```
 
-#### `Dataset.shard()`
-Splits the dataset into `num_shards` approximately equal shards, returns shard `index`. Essential for distributed processing.
+**Polars (lazy):**
 ```python
-shard_0 = dataset.shard(num_shards=8, index=0)
-shard_0 = dataset.shard(num_shards=8, index=0, contiguous=False)
-```
-With `contiguous=False`, shards are created in interleaved (round-robin) order.
-
-### 2. Rename, Remove, Cast & Flatten
-
-#### `Dataset.rename_column()`
-```python
-dataset = dataset.rename_column("old_name", "new_name")
+df = pl.scan_parquet(urls).collect()
 ```
 
-#### `Dataset.remove_columns()`
-Faster than using `map()` with `remove_columns` — doesn't copy data of remaining columns.
-```python
-dataset = dataset.remove_columns("unused_column")
-dataset = dataset.remove_columns(["col1", "col2"])
-```
+### Limitations
+- 5 GB public limit; larger datasets need manual conversion
+- Conversion is batch-only (no incremental updates)
+- Full re-conversion on dataset changes
+- Image/Audio stored as opaque bytes — need `datasets` library to decode
+- Branch URL encodes `%2F`: `refs%2Fconvert%2Fparquet`
 
-#### `Dataset.cast()` and `Dataset.cast_column()`
-- `cast(new_features)`: Cast all columns to new features.
-- `cast_column(column, feature)`: Cast a single column, efficient.
+### Resources
+- https://huggingface.co/docs/dataset-viewer/en/parquet
+- https://huggingface.co/docs/dataset-viewer/en/parquet_process
+- https://huggingface.co/docs/dataset-viewer/en/server
+- https://github.com/huggingface/dataset-viewer
+|- https://parquet.apache.org/
+|
 
-```python
-from datasets import ClassLabel, Value
-new_features = dataset.features.copy()
-new_features["label"] = ClassLabel(names=["bad", "good"])
-new_features["text"] = Value("large_string")
-dataset = dataset.cast(new_features)
-# Or per-column:
-dataset = dataset.cast_column("label", ClassLabel(names=["bad", "good"]))
-```
+## 2026-07-24: hf-datasets-tool-calling-format
 
-#### `Dataset.flatten()`
-Flattens nested struct columns into top-level columns.
+### Summary
+Researched the canonical dataset format for tool-calling/function-calling fine-tuning with Hugging Face Transformers. Covers message dict structure (OpenAI-compatible with HF extensions), JSON schema tool definitions, Python function vs. dict-based tool specification, dataset columns/rows for training, chat template rendering patterns, response parsing (new in v5.14), and best practices for building tool-calling training datasets.
 
-### 3. Map — The Swiss Army Knife
+### Key Concepts
 
-`Dataset.map()` is the most powerful transformation. Applies a function to every row (or batch).
+**Message structure:** Assistant tool calls use `{"role": "assistant", "tool_calls": [{"type": "function", "function": {"name": ..., "arguments": {...}}}]}`. Tool results use `{"role": "tool", "content": "string_result"}`.
 
-Key parameters: `function` (callable), `num_proc` (multiprocessing), `batched` (batch mode), `batch_size` (default 1000), `remove_columns`, `input_columns`, `load_from_cache_file` (cache control), `writer_batch_size` (cache write buffer), `fn_kwargs` (extra kwargs to function).
+**Tool definitions:** Passed via `apply_chat_template(messages, tools=...)`. Two formats: (1) Python functions with Google-style docstrings (signature + args parsed automatically), (2) JSON schema dicts with `type: "function"`, `name`, `description`, `parameters`. `get_json_schema()` converts functions to schemas.
 
-```python
-def tokenize(batch, tokenizer):
-    return tokenizer(batch["text"], truncation=True, padding="max_length")
-dataset = dataset.map(tokenize, batched=True, batch_size=256,
-                       fn_kwargs={"tokenizer": tokenizer})
-```
+**Training dataset:** Recommended columns: `messages` (list[dict] conversation), `tools` (list[dict] tool schemas), optional `source`. Training prep: use `add_generation_prompt=False`, pass tools to `apply_chat_template`, tokenize full sequence. Use loss masking in SFTTrainer.
 
-**Cache fingerprint**: Every `map()` call has a unique fingerprint (hash of previous fingerprint + transform args). Enables deterministic caching. Disable with `load_from_cache_file=False`.
+**Response parsing (v5.14):** `tokenizer.parse_response(out_text, prefix=input_ids)` returns structured dict with thinking, tool_calls, content fields. Streaming via `tokenizer.get_response_parser(prefix=...)` yields region_open/region_chunk/region_close events. Tool calls emit `dirty=True` chunks (raw JSON) until `region_close` provides parsed dict.
 
-### 4. Batch Operations
-
-#### `Dataset.with_format()`
-Changes output format lazily (no data copy until iteration).
-```python
-dataset.with_format("torch")
-dataset.with_format("numpy", columns=["input_ids", "attention_mask"])
-dataset.with_format("tensorflow")
-dataset.with_format("pandas")
-dataset.with_format("jax")
-```
-
-#### `Dataset.flatten_indices()`
-After select/filter/shard, the underlying Arrow table may use indirection via index mapping. `flatten_indices()` makes a contiguous copy — needed before `with_format("torch")` after filtering.
-
-### 5. Concatenate & Interleave
-
-#### `concatenate_datasets()`
-```python
-from datasets import concatenate_datasets
-combined = concatenate_datasets([dataset1, dataset2, dataset3])
-```
-
-#### `interleave_datasets()`
-```python
-from datasets import interleave_datasets
-# Weighted — 70% from dataset1, 30% from dataset2
-combined = interleave_datasets(
-    [dataset1, dataset2], probabilities=[0.7, 0.3], seed=42
-)
-# Continue until all datasets exhausted
-combined = interleave_datasets(
-    [dataset1, dataset2], stopping_strategy="all_exhausted"
-)
-```
-
-### 6. Save & Export
-
-- **`save_to_disk()` / `load_from_disk()`**: Arrow format (fast local reload).
-- **`push_to_hub()`**: Upload to Hub with optional `num_proc` parallel upload.
-- **Export**: `to_csv()`, `to_json()`, `to_parquet()` (compressed), `to_sql()`, `to_pandas()`, `to_dict()`, `to_iterable_dataset()`.
-
-All export methods support `hf://` paths for direct Hub upload:
-```python
-dataset.to_csv("hf://datasets/username/repo/path/to/file.csv")
-dataset.to_parquet("hf://buckets/username/bucket/path/to/file.parquet")
-```
-
-### 7. DatasetDict Operations
-
-DatasetDict applies methods to every split:
-```python
-splits = dataset.train_test_split(test_size=0.2, seed=42)
-splits = splits.map(tokenize, batched=True)
-splits = splits.rename_column("old", "new")
-splits = splits.remove_columns(["unused"])
-splits = splits.cast(new_features)
-splits.save_to_disk("/path/to/dataset")
-splits.push_to_hub("username/my_dataset")
-```
-
-### Key Design Insight: Arrow-Based Zero-Copy
-
-The datasets library uses Apache Arrow as its memory format. Operations like `select()`, `shard()`, and `filter()` use **indirection (indices arrays)** rather than data copying:
-- `select()` is O(1) in memory.
-- `shard()` creates new views, not copies.
-- `flatten_indices()` needed only for contiguous copy.
-- `remove_columns()` without `map()` is zero-copy for remaining columns.
-
-### Best Practices
-
-1. **Use `remove_columns` in `map()`** to avoid keeping unnecessary columns.
-2. **Batch maps** with `batched=True` for tokenization — 10-100x faster.
-3. **Set `num_proc`** for CPU-bound operations.
-4. **Disable cache** with `load_from_cache_file=False` when debugging.
-5. **Use stratified splits** (`stratify_by_column`) for classification datasets.
-6. **`flatten_indices()` before `with_format("torch")`** after filtering/sharding.
-7. **`interleave_datasets()` with probabilities** for mixing domain datasets.
-8. **Use `shard()` for distributed training** — each worker loads one shard.
-9. **Save as Parquet** for long-term storage (compressed), Arrow for local caching (fast reload).
-
-### Zero-Cost Relevance
-
-All operations are **100% free** — no API calls, no GPU, no inference credits. They run entirely locally on Apache Arrow.
-
-For Beer's 8 datasets (tool-calling training data), these operations are directly applicable:
-- Split into train/validation for evaluation
-- Shard for parallel processing
-- Map to format data for different model architectures
-- Filter by task type
-- Rename/cast columns for consistency
+**Key pitfalls:** Always stringify tool `content`; arguments as dict not JSON string; test with `tokenize=False` first; check model card for specific special-token format; `continue_final_message` for prefill but not with `add_generation_prompt`.
 
 ### References
-- https://huggingface.co/docs/datasets/v4.8.4/process
-- https://huggingface.co/docs/datasets/v4.8.4/en/package_reference/main_classes
-- https://huggingface.co/docs/datasets/v4.8.4/en/loading#slice-splits
+- https://huggingface.co/docs/transformers/en/chat_extras
+- https://huggingface.co/docs/transformers/en/chat_response_parsing
+- https://huggingface.co/docs/transformers/en/chat_templating
+- https://github.com/huggingface/transformers/blob/main/src/transformers/utils/chat_template_utils.py
 
 ---
 
-## 2026-07-24: lm-evaluation-harness-complete-reference — EleutherAI LM Evaluation Harness v0.4.0+ Complete Guide (Topic #170, New)
+## 2026-07-24: hf-transformers-cache-hierarchy-deep-dive
 
 ### Summary
-Complete deep-dive into the LM Evaluation Harness — the industry-standard framework for benchmarking LLMs on 60+ academic benchmarks. Covers the v0.4.0 CLI refactoring (`lm-eval run`/`ls`/`validate` subcommands), lighter install with model backend extras (`hf`, `vllm`, `sglang`, `api`), YAML config file support, Python API (`simple_evaluate`, `EvaluatorConfig`, `evaluate`), thinking/reasoning model evaluation (`enable_thinking`, `think_end_token`), task creation via YAML+Jinja2, filter pipelines (regex, majority vote, self-consistency), multi-GPU parallelism strategies (data parallel, model parallel, tensor parallel), and HF Hub logging integration. Full document at `skills/mlops/evaluation/lm-evaluation-harness/references/hf-learnings.md`.
+Comprehensive deep-dive into the Transformers KV cache class hierarchy (cache_utils.py, ~2056 lines). Covers the complete Cache container hierarchy (DynamicCache, StaticCache, QuantizedCache, EncoderDecoderCache, MtpCache), the CacheLayerMixin layer hierarchy (dynamic, static, sliding window, quantized, linear attention, hybrid), the cache_implementation parameter in generate(), and the offloading infrastructure.
 
-### Key Discovery: CLI Now Uses Subcommands
-The legacy `lm_eval --model hf --tasks ...` flat syntax still works but the canonical interface is now `lm-eval run` (evaluate), `lm-eval ls` (list tasks/groups/tags), and `lm-eval validate` (validate configs). YAML config files via `--config` enable reusable, shareable evaluation plans.
+### Key Concepts
 
-### Key Discovery: Thinking Model Support
-`enable_thinking=True` and `think_end_token` (string or token ID) strip CoT reasoning traces from models like Qwen3/DeepSeek-R1 before metric computation. Token ID form (`think_end_token=200008`) avoids edge cases. Only compatible with generative (`generate_until`) tasks.
+**Architecture:** Two levels — Cache layers (one per model layer, storing key/value states) and Cache containers (list of layers, user-facing API).
 
-### Key Discovery: Three Python Entry Points
-`simple_evaluate()` for quick scripts, `EvaluatorConfig.from_config()` for config-driven workflows, and `evaluate()` for full control. All return structured dicts with results, configs, versions, and optional per-sample logs.
+**Layer Class Hierarchy:**
+- DynamicLayer — grows dynamically via torch.cat (default)
+  - DynamicSlidingWindowLayer — caps at sliding_window size
+  - DynamicIndexedLayer — for DeepSeek sparse attention
+  - QuantizedLayer — KIVI-style quantized KV cache
+    - QuantoQuantizedLayer (Optimum Quanto backend)
+    - HQQQuantizedLayer (HQQ backend)
+- StaticLayer — pre-allocated static tensor
+  - StaticSlidingWindowLayer / StaticIndexedLayer
+- LinearAttentionCacheLayerMixin — for Mamba/linear attention
+  - LinearAttentionLayer / hybrid combinations
 
-### Key Discovery: v0.4.0 Decoupled Backends
-Base install no longer bundles `transformers`/`torch`. Users install only the backends they need via extras: `lm_eval[hf]`, `lm_eval[vllm]`, `lm_eval[api]`, etc. This drastically reduces the installation footprint for API-only or vLLM-only users.
+**Layer Type Dispatch:** Config strings map to layer classes via DYNAMIC_LAYER_TYPE_MAPPING:
+| Config Type | Dynamic | Static |
+|---|---|---|
+| full_attention | DynamicLayer | StaticLayer |
+| sliding_attention | DynamicSlidingWindowLayer | StaticSlidingWindowLayer |
+| conv/moe/linear_attention | LinearAttentionLayer | LinearAttentionLayer |
+| hybrid | LinearAttentionAndFullAttentionLayer | LinearAttentionAndStaticFullAttentionLayer |
+| hybrid_sliding | LinearAttentionAndSlidingWindowAttentionLayer | LinearAttentionAndStaticSlidingWindowAttentionLayer |
+| deepseek_sparse_attention | DynamicIndexedLayer | StaticIndexedLayer |
 
-**Full document:** `skills/mlops/evaluation/lm-evaluation-harness/references/hf-learnings.md`
+**Cache Containers:**
+- DynamicCache(config, offloading=False) — default, auto-detects sliding/hybrid structure
+- StaticCache(config, max_cache_len) — for torch.compile/export, pre-allocated
+- QuantizedCache(backend, config, nbits=4, residual_length=128) — KIVI quantized, two backends (quanto/hqq)
+- EncoderDecoderCache(self_attn_cache, cross_attn_cache) — for encoder-decoder models
+- MtpCache(DynamicCache) — Multi-Token Prediction, adds query offset logic
+
+**cache_implementation values in generate():**
+| Value | Class | Use Case |
+|---|---|---|
+| "dynamic" | DynamicCache() | Default, general use |
+| "static" | StaticCache(config, max_cache_len) | torch.compile, fixed-length gen |
+| "offloaded" | DynamicCache(offloading=True) | GPU memory constrained |
+| "offloaded_static" | StaticCache(..., offloading=True) | GPU mem + fixed length |
+| "quantized" | QuantizedCache(backend, config) | Long generation, memory critical |
+
+**Offloading:** GPU→CPU via separate torch.Stream for non-blocking transfers. only_non_sliding=True keeps small sliding layers on GPU. Includes prefetch/offload lifecycle with circular search for next offloaded layer.
+
+### Resources
+- Source: transformers/src/transformers/cache_utils.py (~2056 lines)
+- Docs (cache_implementation): https://huggingface.co/docs/transformers/main/en/main_classes/text_generation
+- Tutorial: https://huggingface.co/docs/transformers/main/en/llm_tutorial_optimization
+- KIVI paper: https://huggingface.co/papers/2402.02750
 
 ---
 
-## 2026-07-24: hf-transformers-gguf-integration-v2 — Small Model Quantization, Hub Ecosystem & Quantization Taxonomy (Topic #94 Deepened)
+## 2026-07-24: hf-gradio-lite-deep-dive — Complete Gradio Lite Architecture Reference (Topic #175 Deep-Dive)
 
 ### Summary
-Deep-dive into the latest Transformers GGUF integration developments (v5.14.1), Hub ecosystem features, and the complete GGUF quantization taxonomy. Three new areas: (1) **June 2026 small model quantization support** (#46449) enables GGUF direct loading for tiny models (0.5B–1.5B) with 15-20% faster dequantization and reduced peak memory. (2) **Full Hub GGUF ecosystem** — built-in tensor viewer for no-download metadata inspection, `@huggingface/gguf` JS parser, `ggml-org/gguf-my-repo` Space for free browser-based conversion. (3) **Complete quantization type taxonomy** — all 25+ types (F32, F16, Qx_K, IQx, MXFP4, TQ) with selection guide by use case including Beer-specific guidance for his 0.5B and 1.5B GGUF files. Full document at `skills/mlops/hf-gguf-llama-cpp/references/hf-learnings.md`.
+Deep-dive into `@gradio/lite` — Gradio's serverless runtime that runs entire Gradio apps inside the browser using Pyodide (Python for WebAssembly). Covers the architecture, custom element API (`<gradio-lite>`), Wasm worker pipeline, filesystem virtualization, ASGI-over-Wasm protocol, package installation via micropip, the Playground mode, limitations, and the official deprecation/archival status (frozen at version 5.45.0 in the `gradio-app/gradio-lite` repo).
 
-### Key Discovery: Small Model Quantization Path (June 2026)
-Transformers v5.14.1 introduced an optimised GGUF loading path for models <3B parameters. Files added: `gemma_quant.py` (+249), `quantizer_gemma.py` (+75), `ggml.py` (+18). Auto-selected based on model size — no config changes needed. Impact: 15-20% faster loading with reduced peak memory.
+### Quick Facts
 
-### Key Discovery: Hub GGUF Viewer & JS Parser
-The Hub provides `?show_tensors=<filename>` for per-tensor metadata inspection without downloading. The `@huggingface/gguf` npm package enables programmatic remote GGUF parsing in JS/TS — useful for auto-generating model cards and building GGUF discovery tools.
+| Attribute | Value |
+|-----------|-------|
+| Package | `@gradio/lite` (npm), v5.45.0 (final) |
+| License | Apache-2.0 |
+| Runtime | Pyodide v0.27.3 (Python 3.12 Wasm) |
+| CDN | `https://cdn.jsdelivr.net/npm/@gradio/lite/dist/lite.js` |
+| Worker | DedicatedWorker (default) or SharedWorker (`shared-worker` attr) |
+| Status | **Archived** — no longer maintained as of Gradio 5.x line |
 
-### Key Discovery: Quantization Type Taxonomy
-25+ types across 4 families: unquantized (F32, F16, BF16), K-quant (Q2_K through Q8_K — recommended), IQ (IQ4_NL through IQ1_M — sub-3-bit), and next-gen (TQ1_0, TQ2_0, MXFP4). Selection guide: Q4_K_M for default balance, Q5_K_M for best quality, IQ3_XXS for memory-constrained, Q2_K for extreme compression.
+### Architecture
 
-**Full document:** `skills/mlops/hf-gguf-llama-cpp/references/hf-learnings.md`
+Gradio Lite has a four-layer architecture:
+
+```
+┌─────────────────────────────────────────────┐
+│  Browser DOM                                │
+│  ┌─────────────────────────────────┐        │
+│  │  <gradio-lite> Custom Element   │        │
+│  │  ┌──────────┐ ┌──────────────┐ │        │
+│  │  │ LiteIndex│ │  Playground  │ │        │
+│  │  │ (Svelte) │ │  (Svelte)    │ │        │
+│  │  └────┬─────┘ └──────────────┘ │        │
+│  │       │                        │        │
+│  │  ┌────▼────────┐               │        │
+│  │  │ WorkerProxy │               │        │
+│  │  │ (EventTarget)│              │        │
+│  │  └────┬────────┘              │        │
+│  └───────┼─────────────────────────┘        │
+│          │ postMessage (MessageChannel)      │
+├──────────┼──────────────────────────────────┤
+│  Wasm Worker (WebWorker)                     │
+│  ┌───────▼──────────────────────────┐       │
+│  │  Pyodide v0.27.3                  │       │
+│  │  ┌─────────────────┐             │       │
+│  │  │ Python 3.12     │  gradio.whl │       │
+│  │  │ + micropip      │  gradio_    │       │
+│  │  │ + gradio        │  client.whl │       │
+│  │  └─────────────────┘             │       │
+│  ├──────────────────────────────────┤       │
+│  │  ASGI Gateway: Wasm → HTTP proxy │       │
+│  └──────────────────────────────────┘       │
+└─────────────────────────────────────────────┘
+```
+
+### Layer 1: Custom Element (`<gradio-lite>`)
+
+The entry point is a **custom HTML element** registered via `customElements.define('gradio-lite', ...)`. When the browser encounters `<gradio-lite>` in HTML, it:
+
+1. Parses attributes from the element (`theme`, `embed`, `eager`, `shared-worker`, `playground`, `layout`, etc.)
+2. Parses child elements (`<gradio-file>`, `<gradio-requirements>`, `<gradio-code>`)
+3. Extracts Python source code from text content or named files
+4. Creates a `WorkerProxy` to communicate with the Pyodide Web Worker
+5. Mounts a Svelte `LiteIndex` component that renders the Gradio UI proxied from Wasm
+
+**Supported Attributes:**
+
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `theme` | `"light"\|"dark"` | system | Force theme mode |
+| `embed` | boolean | false | Embed mode (no padding) |
+| `eager` | boolean | false | Load immediately vs lazy |
+| `shared-worker` | boolean | false | Use SharedWorker (tab-sharing) |
+| `playground` | boolean | false | Enable code editor overlay |
+| `layout` | `"vertical"\|"horizontal"` | horizontal | Playground layout |
+| `info` | boolean | false | Show info banner |
+| `container` | boolean | true | Show container chrome |
+| `initial-height` | string | `"300px"` | Initial height before render |
+| `auto-scroll` | boolean | false | Auto-scroll to output |
+| `control-page-title` | boolean | false | Set page title from app |
+| `app-mode` | boolean | false | Full app mode |
+
+**Child Elements:**
+
+| Tag | Purpose | Attributes |
+|-----|---------|------------|
+| `<gradio-file>` | Virtual file in Wasm FS | `name` (required), `entrypoint`, `url` |
+| `<gradio-requirements>` | requirements.txt content | — |
+| `<gradio-code>` | Python source code | — |
+
+### Layer 2: WorkerProxy (Main Thread Bridge)
+
+`WorkerProxy` (in `@gradio/wasm`) manages the Web Worker lifecycle:
+
+1. **Creates worker** — using `CrossOriginWorkerMaker` to handle cross-origin CDN scripts
+2. **Two-phase initialization:**
+   - Phase 1 (`init-env`): Loads Pyodide runtime + Gradio wheels
+   - Phase 2 (`init-app`): Writes files, installs requirements, sets up FS
+3. **Message protocol** — Async request-response via `MessageChannel`:
+   ```
+   Main Thread → postMessage({type, data}) → Worker → reply:success | reply:error
+   ```
+4. **Events dispatched:**
+   - `initialization-completed` — ready to run
+   - `initialization-error` — Pyodide/wheel load failure
+   - `progress-update` — loading status text
+   - `stdout` / `stderr` — Python output forwarding
+   - `python-error` — runtime error in user code
+   - `modules-auto-loaded` — auto-import completion
+
+### Layer 3: Web Worker (Pyodide Runtime)
+
+The worker (`js/wasm/src/webworker/index.ts`) performs:
+
+1. **Pyodide bootstrap:**
+   - Loads `pyodide.js` v0.27.3 via `importScripts`
+   - Installs `micropip` for pure-Python package management
+   - Loads Gradio wheels (`gradio.whl` + `gradio_client.whl`)
+   - Mocks `os.link` (not available in Wasm)
+   - Mocks `anyio.to_thread.run_sync` (no threading in Wasm)
+
+2. **Filesystem virtualization:**
+   - Python files are written to a virtual FS in the worker's memory (`/home/pyodide/app/`)
+   - Support for inline file content and remote URLs
+   - Emscripten virtual FS persists only in worker memory
+
+3. **ASGI-over-Wasm protocol:**
+   - Gradio's ASGI app is registered via `gradio.wasm_utils.get_registered_app()`
+   - HTTP requests from the browser are serialized to ASGI scopes and passed to Python
+   - Responses are streamed back via `send()` events
+   - Proxied fetch (`wasm_proxied_fetch`) intercepts API calls from Gradio JS client
+   - SSE (Server-Sent Events) are proxied via `wasm_proxied_stream_factory`
+
+4. **Package installation with retries:**
+   - `installPackages()` wraps `micropip.install()` with up to 3 retries
+   - `patchRequirements()` handles version compatibility
+   - `verifyRequirements()` checks if packages are installable in Pyodide
+   - Supports `keep_going=True` to continue despite partial failures
+
+### Layer 4: Network Proxy (wasm_proxied_fetch)
+
+Since the Wasm worker doesn't have native HTTP access, all network requests must be proxied:
+
+```python
+# In the LiteIndex.svelte:
+class LiteClient extends Client {
+    fetch(input, init) {
+        return wasm_proxied_fetch(worker_proxy, input, init)
+    }
+    stream(url) {
+        return wasm_proxied_stream_factory(worker_proxy, url)
+    }
+}
+```
+
+The proxy:
+1. Serializes the JS `Request` into a message to the worker
+2. Worker passes it to the ASGI app as an ASGI scope
+3. ASGI app processes it and sends back response events
+4. Worker reassembles the response and returns it to the JS `LiteClient`
+
+### Usage Patterns
+
+**Pattern 1: Simple Inline App (Zero Config)**
+```html
+<gradio-lite>
+import gradio as gr
+
+def greet(name):
+    return "Hello, " + name + "!"
+
+gr.Interface(greet, "textbox", "textbox").launch()
+</gradio-lite>
+```
+
+**Pattern 2: Multi-File App with Entrypoint**
+```html
+<gradio-lite>
+<gradio-file name="app.py" entrypoint>
+import gradio as gr
+from utils import add
+
+demo = gr.Interface(fn=add, inputs=["number","number"], outputs="number")
+demo.launch()
+</gradio-file>
+<gradio-file name="utils.py">
+def add(a, b): return a + b
+</gradio-file>
+</gradio-lite>
+```
+
+**Pattern 3: With External Dependencies**
+```html
+<gradio-lite>
+<gradio-requirements>
+transformers_js_py
+numpy
+</gradio-requirements>
+<gradio-file name="app.py" entrypoint>
+from transformers_js import import_transformers_js
+import gradio as gr
+
+transformers = await import_transformers_js()
+pipe = await transformers.pipeline('sentiment-analysis')
+
+async def classify(text):
+    return await pipe(text)
+
+gr.Interface(classify, "textbox", "json").launch()
+</gradio-file>
+</gradio-lite>
+```
+
+**Pattern 4: From Remote URL**
+```html
+<gradio-lite>
+<gradio-file name="app.py" entrypoint
+    url="https://huggingface.co/spaces/user/demo/raw/main/app.py">
+</gradio-file>
+</gradio-lite>
+```
+
+**Pattern 5: Playground Mode (Editable by Users)**
+```html
+<gradio-lite playground layout="vertical">
+import gradio as gr
+gr.Interface(lambda x: f"Hello {x}!", "text", "text").launch()
+</gradio-lite>
+```
+
+### JavaScript API
+
+Beyond the custom element, `@gradio/lite` exposes a programmatic API:
+
+```javascript
+const controller = createGradioApp({
+    target: document.getElementById('app'),
+    code: 'import gradio as gr\ngr.Interface(...).launch()',
+    requirements: ['numpy'],
+    files: {'utils.py': {data: 'def add(a,b): return a+b'}},
+    entrypoint: 'app.py',
+    themeMode: 'dark',
+    eager: true,
+    sharedWorkerMode: false
+})
+
+// Controller methods:
+controller.run_code('print("hello")')          // Execute Python code
+controller.run_file('app.py')                  // Execute a file
+controller.write('file.txt', 'content')        // Write to Wasm FS
+controller.rename('old.py', 'new.py')          // Rename in Wasm FS
+controller.unlink('file.txt')                  // Delete from Wasm FS
+controller.install(['numpy'])                  // Install packages
+controller.unmount()                           // Destroy the app
+
+// Events:
+controller.addEventListener('stdout', (e) => console.log(e.detail))
+controller.addEventListener('stderr', (e) => console.error(e.detail))
+controller.addEventListener('python-error', (e) => console.error(e.detail))
+controller.addEventListener('initialization-error', (e) => ...)
+```
+
+### Playground (`Playground.svelte`)
+
+The Playground wraps the Gradio app with a **code editor overlay** that allows users to edit the Python code and re-run (Ctrl+Enter or Cmd+Enter). Features:
+- Syntax-highlighted code editor (monaco-based via `@gradio/code`)
+- Lightning icon for "run" affordance
+- Two layouts: vertical (code top, output bottom) and horizontal (code left, output right)
+- Theme syncs with system/browser preference
+- The `handle_theme_mode()` method checks URL params (`__theme`) before system preference
+- Progress updates shown during loading ("Loading Pyodide...", "Loading Gradio wheels...")
+
+### Limitations (Verified from Source)
+
+1. **Initial load time** — 5-15 seconds to download + initialize Pyodide + Gradio wheels
+2. **Package availability** — Only pure-Python packages installable via micropip; no C extensions unless pre-built for Wasm
+3. **No threading** — `anyio.to_thread.run_sync` is mocked to run synchronously
+4. **No `os.link`** — mocked to a no-op for `aiofiles` compatibility
+5. **Memory** — limited by browser tab (typically 2-4 GB Wasm heap)
+6. **Single-threaded Python** — Global Interpreter Lock in Pyodide
+7. **No GPU** — no CUDA, no WebGPU bindings for PyTorch (only `transformers-js` for browser-side ML)
+8. **Archived** — frozen at v5.45.0, no future updates
+
+### Key Architectural Insights from Source Analysis
+
+1. **The wheel build pipeline:** `pnpm pybuild` runs `hatch build -t lite` to build `gradio.whl`, then `pyodide py-compile` for bytecode optimization (faster loading).
+
+2. **Cross-origin worker trick:** `CrossOriginWorkerMaker` creates a same-origin blob: URL wrapper around the CDN worker script to bypass cross-origin restrictions.
+
+3. **ASGI scope conversion:** The worker converts JS HTTP request objects into Python ASGI scopes with careful byte-encoding of headers, query strings, and raw paths.
+
+4. **Module unloading:** `unload_local_modules.py` provides `unload_local_modules()` to clear Python modules between app runs (important for Playground's re-run cycle).
+
+5. **Code completion:** A `CodeCompleter` class provides tab-completion in the Playground editor via Jedi (Python static analysis).
+
+6. **Random entropy:** Wasm doesn't have `os.urandom` — a `random.ts` module provides seeded random number generation using JavaScript's `crypto.getRandomValues`.
+
+7. **Fake host header:** A `FAKE_LITE_HOST` constant is used for the host header in proxied requests since there's no real server.
+
+8. **Static Spaces integration:** Gradio Lite apps can be hosted as **Hugging Face Static Spaces** (zero-cost, no server) — just push the HTML file to a Space repo.
+
+### Reference
+
+- Source repo (archived): https://github.com/gradio-app/gradio-lite
+- CDN package: https://www.jsdelivr.com/package/npm/@gradio/lite
+- NPM: https://www.npmjs.com/package/@gradio/lite
+- Pyodide: https://pyodide.org/
+- Static Spaces guide: https://huggingface.co/docs/hub/en/spaces-static
+- Gradio Playground: https://www.gradio.app/playground
+---
+
+## 2026-07-24: hf-inference-client-image-input-pipeline-deep-dive
+
+### Summary
+Deep-dive into the `huggingface_hub` InferenceClient image input pipeline. The `ContentT` type union accepts 7 input formats (bytes, bytearray, memoryview, BinaryIO, str URL, str/Path, PIL.Image). The `_open_as_mime_bytes()` function normalizes all 7 into `MimeBytes` with mime type detection. Two encoding paths: `_b64_encode()` for JSON payloads and `_as_url()` for data URLs. The `HFInferenceBinaryInputTask` provider sends raw bytes (no params) or b64 JSON (with params). 8 image task methods on the client, plus `chat_completion()` multimodal via OpenAI-compatible content parts.
+
+### References
+- `_common.py`: https://github.com/huggingface/huggingface_hub/blob/main/src/huggingface_hub/inference/_common.py
+- `_client.py`: https://github.com/huggingface/huggingface_hub/blob/main/src/huggingface_hub/inference/_client.py
+- `hf_inference.py`: https://github.com/huggingface/huggingface_hub/blob/main/src/huggingface_hub/inference/_providers/hf_inference.py
 
 ---
 
-## 2026-07-24: hf-datasets-sort-shuffle-split-shard — Dataset Sort, Shuffle, Split & Shard Deep Dive (Topic #162 Deepened)
+## 2026-07-24: hf-async-inference-client-patterns
 
 ### Summary
-Comprehensive deep-dive into the 🤗 Datasets library's row-rearrangement methods — `sort()`, `shuffle()`, `select()`, `filter()`, `train_test_split()`, and `shard()` — tested live against Datasets v5.0.0 with the MRPC dataset (3,668 rows). Covers the new v5.0.0 API signatures (multi-column sort, `null_placement`, `stratify_by_column`), the critical indices-mapping performance trap, the `flatten_indices()` escape hatch, and the IterableDataset buffer-shuffle alternative. Full document at `skills/mlops/hf-datasets-library/references/hf-learnings.md`.
+Deep dive into Hugging Face's `AsyncInferenceClient` — the async counterpart to `InferenceClient` built on `asyncio` and `httpx`. Covers initialization, streaming, concurrent inference patterns (asyncio.gather, semaphore throttling), error handling, timeouts, MCP client integration (which extends AsyncInferenceClient), OpenAI-compatible async patterns, and performance comparison with synchronous client. The async client enables true single-thread concurrency with coroutines (few KB each vs ~8MB per thread) and non-blocking streaming via `async for`.
 
-### Key Discovery: v5.0.0 sort() API Changes
-`sort()` now accepts `column_names` (plural) — a single string or sequence of strings — and supports per-column `reverse` as either a single bool or a per-column sequence. `null_placement` controls where null rows appear:
+### Key Concepts
 
+**Architecture:** AsyncInferenceClient mirrors every method of InferenceClient but uses async/await with httpx.AsyncClient. All constructor params identical (model, provider, token/api_key, timeout, headers, bill_to, cookies, base_url). Method signatures strictly the same — only calling convention differs.
+
+**Streaming Patterns:**
+- Chat completion: `async for token in await client.chat_completion(messages, stream=True):`
+- Text generation: `async for token in await client.text_generation(prompt, stream=True):`
+- stream=True makes the method return an async iterable, not a list
+
+**Concurrent Inference:**
+- `results = await asyncio.gather(*[classify(url) for url in urls])`
+- Semaphore throttling: `async with sem:` wrapping each call for rate-limited providers
+- HTTP connection pool shared across all concurrent tasks — no per-request connection overhead
+
+**OpenAI-Compatible Async:**
 ```python
-# Single-column sort
-sorted_ds = ds.sort("label")           # ascending (default)
-sorted_rev = ds.sort("label", reverse=True)  # descending
-
-# Multi-column sort (v5.0.0+)
-sorted_multi = ds.sort(["label", "idx"], reverse=[False, True])
-
-# Null placement (v5.0.0+)
-sorted_nulls_first = ds.sort("label", null_placement="at_start")
+output = await client.chat.completions.create(model=..., messages=..., stream=True)
+async for chunk in output:
+    print(chunk.choices[0].delta.content)
 ```
 
-The sort creates an **indices mapping** — a list of integer indices sorted by column values, used to reorder rows on access. This is memory-efficient (only stores `n` int32 values) but adds indirection on every read.
+**Timeout:** Default = no timeout (waits indefinitely). Set `timeout=30` at client init. Raises `InferenceTimeoutError`.
 
-### Key Discovery: shuffle() — Performance Trap
-`shuffle()` randomly permutes the indices mapping. **After shuffle, all subsequent row access becomes ~10× slower** because data is no longer read contiguously from the Arrow table:
+**Binary Inputs:** Same as sync — bytes, file objects, paths, remote URLs. Auto-downloaded before sending.
 
-```python
-shuffled = ds.shuffle(seed=42)  # fast (O(n) permutation), but...
-print(shuffled[0])  # slow — random seek in Arrow table
+**MCP Client Integration:** MCPClient extends AsyncInferenceClient — fundamentally async. `add_mcp_server(type="stdio"|"sse")` for tool discovery. `process_single_turn_with_tools()` returns async iterable.
+
+**Sync vs Async Decision:** Sync for scripts/notebooks; async for servers/agents/batch inference. Async coroutines use few KB vs ~8MB thread stack. Streaming in async mode processes tokens without blocking event loop.
+
+**All Methods Available:** Text (chat_completion, text_generation, fill_mask, feature_extraction, sentence_similarity, summarization, question_answering), Image (text_to_image, image_classification, image_segmentation, image_to_image, image_to_text, image_to_video, zero_shot_image_classification), Audio (audio_classification, audio_to_audio, automatic_speech_recognition, text_to_speech), Multimodal (document_question_answering, visual_question_answering), Management (get_endpoint_info, list_deployed_models, health_check).
+
+### References
+- Guide: https://huggingface.co/docs/huggingface_hub/main/en/guides/inference#async-client
+- Package ref: https://huggingface.co/docs/huggingface_hub/main/en/package_reference/inference_client
+- MCP docs: https://huggingface.co/docs/huggingface_hub/main/en/package_reference/mcp
+
+## 2026-07-24: hf-datasets-tool-calling-format-advanced (Deep Dive #2)
+
+### Summary
+Extended tool-calling dataset format research with advanced JSON schema patterns (Union types, Literal types, nested objects, `(choices: ...)` enum parsing), multi-turn and parallel tool calling patterns (tool_call_id conventions), continue_final_message with reasoning models (v5.14+), dataset validation techniques (schema validation, Features casting, TRL response_template), and best practices for publishing tool-calling datasets.
+
+### Key Concepts
+
+**Advanced JSON Schema Patterns:**
+- Union types (`str | int`) → `{"type": ["string", "integer"]}`; `None` in Union → `{"nullable": true}`
+- Mixed complex types → expressed as `anyOf` array
+- `Literal` types → `{"enum": [...]}`, same as `(choices: ...)` docstring suffix
+- `(choices: ["a", "b"])` docstring suffix → auto-generated `enum` in schema; requires JSON array syntax
+- Nested `list[dict]` → `{"type": "array", "items": {"type": "object"}}` (no recursive inference)
+- `dict[str, bool]` → `{"type": "object", "additionalProperties": {"type": "boolean"}}`
+
+**Multi-Turn & Parallel Calls:**
+- Multi-turn: sequential tool_call → tool → tool_call → tool → text pattern
+- Parallel calls: multiple tool_calls in one assistant message (Qwen2.5, Llama 3.1+)
+- `tool_call_id` linking: positional matching when absent; explicit IDs when present
+- Tool response matching: Llama requires `call_xxx`, Mistral/Cohere use positional-only
+
+**continue_final_message v5.14+:**
+- Accepts string field name: `continue_final_message="reasoning_content"` (Qwen) or `"thinking"` (Gemma)
+- Prefilling content closes reasoning block; prefilling reasoning field keeps it open
+- Mutually exclusive with add_generation_prompt
+- Pipeline auto-detects assistant prefill and switches modes
+
+**Dataset Validation:**
+- Custom validator function checks: message order, tool_calls structure, tool→assistant adjacency, content types
+- datasets Features schema enforces structure at creation time
+- SFTTrainer response_template masks non-assistant tokens for correct loss computation
+- Hub dataset viewer parses messages column and supports ?search= queries
+
+**Best Practices:** Store tools as JSON schema in `tools` column, Parquet format for efficiency, always test with `apply_chat_template(tokenize=False)`, use response_template in SFTTrainer, include `tool-calling` tag for discoverability.
+
+### Sources
+- Transformers chat_template_utils.py (source analysis): Union/Literal/choices parsing
+- Transformers docs (v5.14.0): chat_templating.md, conversations.md
+- Transformers tokenization_utils_base.py: apply_chat_template() signature
+- datasets library Features API
+
+---
+
+## 2026-07-24: hf-transformers-5-architecture-registry-system-deep-dive (Topic #195)
+
+### Summary
+Source-verified deep-dive into the Transformers v5 Architecture Registry system — the complete pipeline by which config classes are mapped to model classes, remote code is resolved, and custom models register themselves with AutoModel/AutoConfig. Covers `_LazyAutoMapping`, `CONFIG_MAPPING_NAMES` (682 entries), `AutoConfig.register()`, `AutoModel.register()`, the `from_pretrained` resolution flow (local vs. remote code), `_get_model_class`, `register_for_auto_class`, `model_type_to_module_name`, and `get_class_from_dynamic_module`. All findings verified against `transformers==5.14.1` source.
+
+### Key Concepts
+
+**Two-Level Registration:** Transformers v5 uses a two-level registration system:
+
+1. **`AutoConfig` — Config-level registry** (string → config class): `AutoConfig.register(model_type, config_class)` adds to `CONFIG_MAPPING` (a `_LazyAutoMapping` keyed by string model_type like `"llama"`, `"qwen2"`) — 682 entries.
+2. **`AutoModel` — Model-level registry** (config class → model class): `AutoModel.register(config_class, model_class)` adds to `cls._model_mapping` (another `_LazyAutoMapping` keyed by config class).
+
+**`_LazyAutoMapping` — The Core (source: `transformers.models.auto.auto_factory`):**
+An `OrderedDict` subclass that lazy-loads model/config classes from `transformers.models.{module_name}` only when accessed. Contains:
+- `_config_mapping`: `{model_type: config_class_name}` — maps model type strings to config class names (e.g., `"llama"` → `"LlamaConfig"`)
+- `_model_mapping`: `{model_type: model_class_name}` — maps model type strings to model class names
+- `_reverse_config_mapping`: `{config_class_name: model_type}` — reverse lookup
+- `_extra_content`: `{config_class: model_class}` — for user-registered custom models (overrides native mappings)
+- `_modules`: `{module_name: module}` — cache of imported model modules
+
+**Key behaviours:**
+- **Lazy loading**: Classes are imported only when accessed via `__getitem__` or `keys()`
+- **Module resolution**: Uses `model_type_to_module_name(model_type)` which normalizes dashes to underscores (e.g., `"command-r"` → `"command_r"`)
+- **Import path**: `from transformers.models.{module_name} import {class_name}`
+- **`register(key, value, exist_ok=False)`**: Inserts into `_extra_content`. Skips registration if the config class module starts with `"transformers."` — this prevents native configs from being permanently remapped to custom models when `trust_remote_code=False` is later specified.
+
+### AutoModel.from_pretrained() Resolution Flow
+
+```
+from_pretrained(model_name, ...)
+  │
+  ├── 1. Load config.json → config = AutoConfig.from_pretrained(...)
+  │
+  ├── 2. Check PEFT adapter config (find_adapter_config_file)
+  │      If found, redirect base_model_name_or_path
+  │
+  ├── 3. Determine code source:
+  │      has_remote_code = "auto_map" in config and cls.__name__ in config.auto_map
+  │      has_local_code   = type(config) in cls._model_mapping
+  │
+  ├── 4. Resolve trust_remote_code via resolve_trust_remote_code()
+  │
+  ├── 5. Dispatch:
+  │      ├── REMOTE CODE (has_remote_code && trust_remote_code && !explicit_local_code):
+  │      │     class_ref = config.auto_map[cls.__name__]  # e.g., "modeling_lm.py--MyModel"
+  │      │     model_class = get_class_from_dynamic_module(class_ref, ...)
+  │      │     cls.register(config.__class__, model_class, exist_ok=True)
+  │      │     model_class.register_for_auto_class(auto_class=cls)
+  │      │     model_class = add_generation_mixin_to_remote_model(model_class)
+  │      │     return model_class.from_pretrained(...)
+  │      │
+  │      └── LOCAL CODE (has_local_code):
+  │            model_class = _get_model_class(config, cls._model_mapping)
+  │            # If composite model, extract text_config and its quantization_config
+  │            return model_class.from_pretrained(...)
+  │
+  └── 6. (Error if neither remote nor local code available)
 ```
 
-**The fix:** `flatten_indices()` rewrites the entire dataset to disk, materializing the shuffled order into a contiguous Arrow table:
+**Remote Code Resolution (`config.auto_map`):**
+The `auto_map` dict in `config.json` maps Auto class names to Python class references:
+```json
+{
+  "auto_map": {
+    "AutoConfig": "configuration_my_model.MyModelConfig",
+    "AutoModel": "modeling_my_model.MyModel",
+    "AutoModelForCausalLM": "modeling_my_model.MyModelForCausalLM"
+  }
+}
+```
+- Format: `"module_path.ClassName"` or `"repo_id--module_path.ClassName"` (cross-repo)
+- `get_class_from_dynamic_module()` downloads the repo's code files to local cache and dynamically imports the class
+- After loading, `cls.register()` adds to `_extra_content` for fast subsequent lookups
+- `register_for_auto_class()` sets `cls._auto_class` on the model class for serialization
+
+### `_get_model_class()` — Sub-Architecture Selection
 
 ```python
-# Slow access after shuffle
-shuffled = ds.shuffle(seed=42)
+def _get_model_class(config, model_mapping):
+    supported_models = model_mapping[type(config)]
+    if not isinstance(supported_models, (list, tuple)):
+        return supported_models
 
-# Rewrite to disk — restores contiguous access speed
-flattened = shuffled.flatten_indices()  # ~60ms for 3,668 rows
-print(flattened[0])  # fast again
+    name_to_model = {model.__name__: model for model in supported_models}
+    architectures = getattr(config, "architectures", [])
+    for arch in architectures:
+        if arch in name_to_model:
+            return name_to_model[arch]
+
+    # Fallback to first element
+    return supported_models[0]
 ```
 
-`flatten_indices()` copies all data to a new cache file. For large datasets, this is a one-time cost worth paying if you'll do many random accesses.
+This handles cases where one config maps to multiple model classes (e.g., `LlamaConfig` → `LlamaModel`, `LlamaForCausalLM`, `LlamaForSequenceClassification`). The `config.architectures` field (e.g., `["LlamaForCausalLM"]`) selects the correct one. If absent, the first registered model class is used.
 
-### Key Discovery: IterableDataset Buffer Shuffle
-For streaming/large datasets, use `IterableDataset.shuffle()` — a buffer-based approximate shuffle that avoids creating indices mappings entirely:
+### Custom Model Registration (User-Side)
 
 ```python
-iterable = dataset.to_iterable_dataset(num_shards=128)
-shuffled = iterable.shuffle(seed=42, buffer_size=10_000)
+from transformers import AutoConfig, AutoModel
+
+# 1. Register the config
+AutoConfig.register("my_model", MyModelConfig)
+
+# 2. Register the model (with error checking)
+AutoModel.register(MyModelConfig, MyModel, exist_ok=False)
+
+# 3. Mark the model class for auto-serialization
+MyModel.register_for_auto_class("AutoModel")
+
+# 4. Now use normally
+model = AutoModel.from_pretrained("path/to/model")
 ```
 
-**How it works:** Fills a buffer from all shards, randomly selects one to yield, replaces it. Buffer size controls shuffle quality — larger = better randomness. Also shuffles shard order. No `flatten_indices()` needed because there's no indices mapping.
+The `exist_ok=False` default raises if the config class is already mapped. Set to `True` for hot-reloading or overrides.
 
-**Per-epoch re-shuffle:** Use `set_epoch(epoch)` to change the effective seed per epoch:
-```python
-for epoch in range(5):
-    shuffled.set_epoch(epoch)
-    for example in shuffled:
-        ...
-```
-
-### Key Discovery: select() vs filter()
-Two filtering approaches with different performance characteristics:
-
-| Aspect | `select()` | `filter()` |
-|--------|-----------|------------|
-| **Input** | List of integer indices | Callable predicate |
-| **Memory** | Stores indices list (efficient) | Materializes all data matching predicate |
-| **Speed** | O(n) — just creates index list | O(n × fn_cost) — evaluates function on every row |
-| **Use case** | Known positions | Dynamic conditions |
-| **with_indices** | N/A | ✅ `filter(fn, with_indices=True)` passes `(example, idx)` |
+### Important Guard: Native Config Protection
 
 ```python
-# select — known positions, instant
-subset = ds.select([0, 10, 20, 30, 40])
-
-# filter — dynamic condition (evaluates all rows)
-result = ds.filter(lambda x: x["label"] == 1)  # ~0.01s for 3,668 rows
-
-# filter with indices
-even = ds.filter(lambda ex, idx: idx % 2 == 0, with_indices=True)
+# In _LazyAutoMapping.register():
+if getattr(key, "__module__", "").startswith("transformers."):
+    return  # Skip — native configs can't be permanently remapped
 ```
 
-Both create indices mappings, with the same `flatten_indices()` escape hatch for speed recovery.
+This ensures that if a remote-code model reuses a native Transformers config (e.g., `LlamaConfig`), the registration is silently skipped. Without this, every subsequent `from_pretrained` call would resolve to the custom model even with `trust_remote_code=False`, because the custom class would sit in `_extra_content` and take priority. Instead, the remote/native disambiguation happens only at `trust_remote_code` time via `resolve_trust_remote_code()`.
 
-### Key Discovery: train_test_split() with Stratification
-`train_test_split()` creates train/test splits with optional stratified sampling:
+### `model_type_to_module_name()` Normalization
 
 ```python
-# Basic split
-split = ds.train_test_split(test_size=0.1, seed=42)
-
-# Stratified split (v5.0.0+) — preserves class proportions
-stratified = ds.train_test_split(test_size=0.2, stratify_by_column="label", seed=42)
-
-# Absolute count
-split = ds.train_test_split(test_size=100, train_size=500)
+model_type_to_module_name("command-r")  # → "command_r"
+model_type_to_module_name("qwen2_moe")  # → "qwen2_moe"
+model_type_to_module_name("phi4")        # → "phi4"
 ```
 
-Returns a `DatasetDict` with `"train"` and `"test"` keys. Default `shuffle=True` — set `shuffle=False` to preserve order (e.g., time-series).
+Simply replaces hyphens with underscores. Module names match the model type string (underscore-normalized).
 
-### Key Discovery: shard() — Contiguous vs Round-Robin
-`shard()` splits a dataset into `num_shards` equal chunks:
+### `register_for_auto_class()` — Serialization Support
 
 ```python
-# Default: contiguous (splits dataset into sequential blocks)
-shard_0 = ds.shard(num_shards=4, index=0)  # rows 0–916
-shard_1 = ds.shard(num_shards=4, index=1)  # rows 917–1833
-
-# Round-robin: distributes rows 0,4,8... to shard 0 → better for imbalanced sorted data
-shard_2 = ds.shard(num_shards=4, index=2, contiguous=False)
+@classmethod
+def register_for_auto_class(cls, auto_class="AutoModel"):
+    import transformers.models.auto as auto_module
+    if not hasattr(auto_module, auto_class):
+        raise ValueError(f"{auto_class} is not a valid auto class.")
+    cls._auto_class = auto_class
 ```
 
-| Parameter | `contiguous=True` (default) | `contiguous=False` |
-|-----------|-----------------------------|-------------------|
-| **Distribution** | Sequential blocks | Round-robin |
-| **Shard locality** | Rows are adjacent | Rows interleaved across shards |
-| **Use case** | Split large file into chunks | Distributed processing / worker assignment |
-| **Random access after** | Fast (contiguous) | Slow (scattered indices) |
+Sets `cls._auto_class` so that when `save_pretrained()` writes `config.json`, it includes the correct `auto_map` entry for the model's Auto class. Required for custom models that should be loadable with `AutoModel.from_pretrained()` after re-upload.
 
-### Best Practices
+### `add_generation_mixin_to_remote_model()` — Backward Compat
 
-1. **For exploration/analysis:** Use `select()` over `filter()` when indices are known — it avoids evaluating a function on every row
-2. **After shuffle/filter:** Call `flatten_indices()` if you'll do repeated random access — the one-time rewrite cost pays off quickly
-3. **For large datasets (streaming):** Use `IterableDataset.shuffle(buffer_size)` — no indices mapping, no speed penalty
-4. **For model training:** Use `IterableDataset.shuffle()` with `set_epoch()` for per-epoch reshuffling; avoid `Dataset.shuffle()` + `flatten_indices()` at scale
-5. **For train/test split:** Use `stratify_by_column` to maintain class balance — critical for imbalanced classification datasets
-6. **For distributed processing:** Use `shard(contiguous=False)` (round-robin) for balanced worker assignment when data is sorted by a label column
-7. **Per-epoch shuffling order:** `shuffle() → flatten_indices()` once, then save the flattened dataset and reload each epoch — faster than re-shuffling from scratch
+For backward compatibility with pre-v4.45 models (when `PreTrainedModel` stopped inheriting `GenerationMixin`):
+- Checks if model inherits `torch.nn.Module`
+- Checks if it already directly inherits `GenerationMixin`
+- Checks if it has custom `generate()` or `prepare_inputs_for_generation()`
+- If needed, creates a new `type()` dynamically: `type(model_class.__name__, (model_class, GenerationMixin), {**model_class.__dict__})`
 
-### Live Test Results (verified this session)
-Tested on `nyu-mll/glue` MRPC split (3,668 rows) with Datasets v5.0.0:
-- `sort(label)`: 0.001s — instant (creates indices mapping)
-- `shuffle(seed=42)`: 0.003s — fast (permutes indices)
-- `flatten_indices()`: 0.062s — rewrites 3,668 rows to disk
-- `filter(label==1)`: 2,474 matching rows — ~0.01s for 3,668 evaluations
-- `train_test_split(test_size=0.1)`: 3,301 train + 367 test — balanced split
-- `shard(4, 0)`: 917 rows per shard — equal distribution
+### All AutoModel* Classes in v5.14.1
+
+53 Auto classes total. Key groups:
+- **Core**: `AutoModel`, `AutoModelForPreTraining`, `AutoModelForCausalLM`, `AutoModelForSeq2SeqLM`, `AutoModelForMaskedLM`
+- **Vision**: `AutoModelForImageClassification`, `AutoModelForObjectDetection`, `AutoModelForSemanticSegmentation`, `AutoModelForVideoClassification`, `AutoBackbone`
+- **Audio**: `AutoModelForAudioClassification`, `AutoModelForCTC`, `AutoModelForSpeechSeq2Seq`, `AutoModelForTextToSpectrogram`
+- **Multimodal**: `AutoModelForImageTextToText`, `AutoModelForMultimodalLM`, `AutoModelForImageToImage`, `AutoModelForVisualQuestionAnswering`, `AutoModelForDocumentQuestionAnswering`
+- **Special**: `AutoModelForKeypointDetection`, `AutoModelForKeypointMatching`, `AutoModelForPointmapEstimation`, `AutoModelForNormalEstimation`
+- **Other**: `AutoProcessor`, `AutoTokenizer`, `AutoFeatureExtractor`, `AutoImageProcessor`, `AutoVideoProcessor`
+
+### Sources
+- `transformers.models.auto.auto_factory` — `_LazyAutoMapping`, `_get_model_class`, `add_generation_mixin_to_remote_model`, `model_type_to_module_name`, `resolve_trust_remote_code`
+- `transformers.models.auto.configuration_auto` — `CONFIG_MAPPING`, `CONFIG_MAPPING_NAMES` (682 entries)
+- `transformers.models.auto.modeling_auto` — AutoModel source (register, from_pretrained)
+- `transformers.models.auto.tokenization_auto` — AutoTokenizer
+- `transformers.modeling_utils` — `register_for_auto_class`
+- Docs: https://huggingface.co/docs/transformers/en/model_doc/auto
+- Source: https://github.com/huggingface/transformers/tree/main/src/transformers/models/auto
+
+## 2026-07-24: hf-hub-sandboxes-deep-dive (deepening #148)
+
+### Summary
+Deep dive into Hugging Face Sandboxes — on-demand isolated cloud machines for running code, AI-generated scripts, batch eval, and RL rollouts. Built on HF Jobs with a static sbx-server binary. Two modes: dedicated (full VM, GPU) and pooled (uid+Landlock, CPU-only).
+
+### Architecture
+- No dedicated service — sandbox = HF Job running ~640KB static Rust binary (zero deps, any image with /bin/sh)
+- Bootstrap: wget/curl from CDN (~6s cold start) or fallback from mounted volume (+2-3s)
+- Hand-rolled HTTP/1.1 for live streaming (NDJSON event streams for exec)
+- Port 49983 (deliberately uncommon)
+
+### Auth (stateless)
+- Proxy gate: HF token → Jobs proxy
+- Application gate: HMAC-SHA256 per-sandbox token from HF token + public nonce
+- Reconnect from anywhere, token never enters sandbox (unless opt-in)
+
+### Dedicated (Sandbox.create)
+- One Job = one VM, full isolation, GPU-capable
+- Cold start ~5.8s, run() p50 ~110ms, file transfer ~340-441 MiB/s
+- kill() cancels the Job
+
+### Pooled (SandboxPool)
+- Many sandboxes per host VM via uid + Landlock isolation
+- Create = mkdir + chown + ruleset ~1ms server-side
+- 1000 sandboxes in ~16s total (~$0.0009), vs ~$0.06 for dedicated
+- Blocked: cross-sandbox /proc read, signal, ptrace, TCP bind, abstract unix sockets
+- Not blocked: resource DoS, process-list metadata (shared kernel)
+
+### Key API
+- Sandbox.create(image, flavor, idle_timeout, env, secrets, volumes, forward_hf_token)
+- Sandbox.connect(id) — from anywhere
+- sbx.run(cmd, shell, env, cwd, timeout, stdin, on_stdout, on_stderr, check, background)
+- sbx.files.{write,read_text,upload,download,list,stat,exists,mkdir,delete}
+- sbx.proxy_url_for(port, path, scheme) + sbx.proxy_headers
+- SandboxPool(image, flavor, sandboxes_per_host=50, warm_up=1)
+- pool.create(env, idle_timeout, forward_hf_token)
+- CLI: hf sandbox {create,exec,cp,spawn,process,kill,pool} — full parity
 
 ### Source
-- Official docs (process): https://huggingface.co/docs/datasets/en/process
-- Dataset API ref (v5.0.0): https://huggingface.co/docs/datasets/main/en/package_reference/main_classes#datasets.Dataset
-- IterableDataset API ref: https://huggingface.co/docs/datasets/main/en/package_reference/main_classes#datasets.IterableDataset
-- Datasets source: `/opt/data/.venv-sakthai/lib/python3.14/site-packages/datasets/arrow_dataset.py`
-- Live test: datasets v5.0.0 on MRPC (3,668 rows), verified this session
+- https://huggingface.co/docs/huggingface_hub/guides/sandbox
+- https://huggingface.co/docs/huggingface_hub/concepts/sandbox
+- https://huggingface.co/docs/huggingface_hub/package_reference/sandbox
+- https://github.com/huggingface/sandbox-server
+
+## 2026-07-24: hf-hub-repo-likes-engagement-api — Repo Like/Engagement System (Topic #213)
+
+### Summary
+Deep dive into the Hugging Face Hub's repository "like" engagement system — the social signal system for expressing interest in repos. Unlike GitHub's stars, HF uses a "like" (heart) model with a deliberate anti-spam asymmetry: users can unlike via API but can only like through the web UI. Covers the 3 API methods (`list_liked_repos`, `list_repo_likers`, `unlike`), the REST endpoints behind them, the `UserLikes` and `User` dataclasses, how likes integrate into user profiles, and the relationship between likes, engagement, and the trending/discovery system.
+
+### Key API Surface
+
+**`list_liked_repos(user=None)`** → `UserLikes`
+- REST: `GET /api/users/{user}/likes`
+- Returns all public repos a user has liked, categorized by type (models, datasets, spaces, kernels)
+- If user is None, defaults to the authenticated user (requires token)
+- No auth required when querying a public user's likes
+- Returns `UserLikes(user, total, models, datasets, spaces, kernels)` with repo IDs as strings
+- Response shape from API: Array of `{createdAt, repo: {name, type}}` objects
+
+**`list_repo_likers(repo_id, repo_type=None)`** → `Iterable[User]`
+- REST: `GET /api/{repo_type}s/{repo_id}/likers`
+- Returns an iterable of `User` objects for all users who liked a given repo
+- Paginated (uses the `paginate` helper internally)
+- Works across model, dataset, and space repos
+- Each `User` object provides: username, fullname, avatar_url
+
+**`unlike(repo_id, repo_type=None)`** → `None`
+- REST: `DELETE /api/{repo_type}s/{repo_id}/like`
+- Removes the authenticated user's like from a repo
+- Requires authentication (token)
+- **No symmetric `like()` method exists** — anti-spam measure: "To prevent spam usage, it is not possible to like a repository from a script"
+
+### User Profile Likes Integration
+
+The `User` dataclass (`huggingface_hub.hf_api.User`) exposes engagement metrics:
+| Field | Source | Description |
+|-------|--------|-------------|
+| `num_upvotes` | User profile API | Total upvotes the user has received across their repo contributions |
+| `num_likes` | User profile API | Total number of likes the user has given to other repos |
+| `num_followers` | User profile API | Number of users following this user |
+| `num_following` | User profile API | Number of users this user follows |
+
+These come from the user profile API and are resolved from camelCase Hub API fields (`numUpvotes`, `numLikes`, `numFollowers`, `numFollowing`).
+
+### Anti-Spam Architecture
+
+The like system has a deliberate read-write asymmetry:
+- **Read:** Both `list_liked_repos` and `list_repo_likers` are public, no token required for public data
+- **Write (unlike):** `DELETE` endpoint requires auth, but only removes — no ability to add
+- **Write (like):** Only possible through the web UI at huggingface.co (button click on a repo page)
+- This prevents scripted vote manipulation, bot-driven like campaigns, and engagement farming
+
+### Like Count in Repo Info
+
+The like count for a repo is visible via the web UI and can be obtained via:
+- `api.repo_info(repo_id).likes` — the `RepoInfo` object's `likes` attribute (int)
+- The Hub REST API returns like count in repo metadata: `GET /api/models/{repo_id}` or `/api/datasets/{repo_id}` or `/api/spaces/{repo_id}`
+- Like count is part of `RepoInfo.likes` field (an integer)
+- Likes are counted in the trending/ranking algorithms for discovery
+
+### Relationship to Discussion Reactions
+
+The Hub's discussion/PR system has a separate emoji reaction system (not the same as repo likes):
+- Comments and discussion posts support emoji reactions (👍, ❤️, 🚀, 👀, 🎉, 😕, etc.)
+- These are managed through different API endpoints under `/api/{repo_type}s/{repo_id}/discussions/{num}/reactions`
+- The huggingface_hub library doesn't expose a direct reaction API — reactions are embedded in `DiscussionComment` objects returned by `get_discussion_details()`
+- Each reaction has: `emoji` (string like "+1", "heart", "rocket") and list of users who reacted
+- This is a separate system from the repo "like" system
+
+### Key Insights
+- HF uses "likes" (hearts) not "stars" — the REST endpoint paths use `/like` and `/likers`
+- Unlike GitHub stars, HF's system is read-heavy with deliberate write restrictions
+- The `list_liked_repos` API is useful for recommendation/discovery — "users who liked X also liked Y" patterns
+- `list_repo_likers` can be used for community engagement analysis (who's interested in your repos)
+- The `unlike` method exists primarily for cleanup (removing stale likes programmatically)
+- Like count is a search/sortable field in Hub API queries (e.g., sorting by likes)
+- Like events are not real-time streamed through webhooks (no webhook event for likes unlike GitHub stars)
+- To get likes for your own repos, use `list_repo_likers()` in batches or read from `repo_info().likes`
+
+### Sources
+- Source code: `huggingface_hub/hf_api.py` — `HfApi.list_liked_repos`, `HfApi.list_repo_likers`, `HfApi.unlike`
+- Source code: `huggingface_hub/hf_api.py` — `UserLikes` dataclass, `User` dataclass
+- Hub API docs: https://huggingface.co/docs/hub/en/api
+- huggingface_hub docs: https://huggingface.co/docs/huggingface_hub/package_reference/hf_api
+- Discussion reactions documented in `endpoint_helpers.py` (`DiscussionComment.reactions`)
+
+---
+
+## 2026-07-24: hf-hub-jobs-api-deep-dive
+
+### Summary
+Deep dive into the Hugging Face Hub **Jobs API** — a compute platform for running AI/data workloads on HF infrastructure. Jobs support any hardware from CPUs to A100s & H200s, with pay-as-you-go pricing. The API is exposed through `huggingface_hub` (`HfApi.run_job`, `run_uv_job`, `create_scheduled_job`, etc.), the `hf` CLI, and the Jobs HTTP API. Includes support for Docker images, UV scripts, cron scheduling, volume mounting (buckets/repos), port exposition, SSH access, metrics/logs streaming, and webhook integration.
+
+### Key Data Structures (in `huggingface_hub._jobs_api`)
+
+| Class | Purpose |
+|-------|---------|
+| `JobHardware(str, Enum)` | Hardware flavors: CPU_BASIC, T4_SMALL, A10G_LARGE, A100_LARGE, H200, L40SX8, etc. |
+| `JobStage(str, Enum)` | Job lifecycle: SCHEDULING, RUNNING, COMPLETED, CANCELED, ERROR, DELETED |
+| `JobStatus` | Stage + message + expose_urls + ssh_url |
+| `JobInfo` | Full job metadata: id, timestamps, image/space, command, env, secrets, flavor, labels, volumes, status, durations, owner, initiator |
+| `JobDurations` | Timing: scheduling_secs, running_secs, total_secs |
+| `JobInitiator` | What triggered the job: type(user/org/scheduled-job), id, name |
+| `JobOwner` | Owner: id, name, type |
+| `JobSpec` | Job specification (image, command, env, flavor, timeout, labels, volumes, expose, ssh) |
+| `ScheduledJobInfo` | Scheduled job: id, schedule (cron), suspend, concurrency, status, owner, job_spec |
+| `ScheduledJobStatus` | last_job, next_job_run_at |
+| `JobHardwareInfo` | Available hardware: name, pretty_name, cpu, ram, ephemeral_storage, accelerator, cost |
+| `JobAccelerator` | GPU details: type, model, quantity, vram, manufacturer |
+| `Volume` (in `_space_api.py`) | Volume to mount: type(bucket/model/dataset/space), source, mount_path, revision, read_only, path |
+
+### HfApi Methods
+
+**Run Jobs:**
+- `run_job(*, image, command, env, secrets, flavor, timeout, name, labels, volumes, expose, ssh, namespace)` → `JobInfo` — run a Docker-based job
+- `run_uv_job(script, *, script_args, dependencies, python, image, env, secrets, flavor, timeout, name, labels, volumes, expose, ssh, namespace)` → `JobInfo` — run a UV script job (auto-generates Dockerfile from script dependencies)
+
+**Inspect/Monitor:**
+- `inspect_job(*, job_id, namespace)` → `JobInfo` — get full job status
+- `list_jobs(*, status, labels, namespace)` → `Iterable[JobInfo]` — filter by status/labels
+- `fetch_job_logs(*, job_id, namespace, follow, tail)` → `Iterable[str]` — stream logs
+- `fetch_job_metrics(*, job_id, namespace)` → `Iterable[dict]` — live metrics (CPU, GPU, memory, etc.)
+- `wait_for_job(job_id, *, timeout, poll_interval, stages, namespace)` → `JobInfo` — block until job reaches a stage
+- `cancel_job(*, job_id, namespace)` → `None` — cancel a running job
+
+**Labels:**
+- `update_job_labels(*, job_id, labels, namespace)` → `JobInfo` — replace all labels
+
+**Hardware:**
+- `list_jobs_hardware()` → `list[JobHardwareInfo]` — list available hardware with pricing
+
+**Scheduled Jobs:**
+- `create_scheduled_job(*, image, command, schedule, suspend, concurrency, env, secrets, flavor, timeout, name, labels, volumes, expose, ssh, namespace)` → `ScheduledJobInfo`
+- `create_scheduled_uv_job(script, *, schedule, suspend, concurrency, deps, python, image, ...)` → `ScheduledJobInfo`
+- `list_scheduled_jobs(*, namespace)` → `list[ScheduledJobInfo]`
+- `inspect_scheduled_job(*, scheduled_job_id, namespace)` → `ScheduledJobInfo`
+- `suspend_scheduled_job(*, scheduled_job_id, namespace)` → `None` — pause
+- `resume_scheduled_job(*, scheduled_job_id, namespace)` → `None` — unpause
+- `trigger_scheduled_job(*, scheduled_job_id, namespace)` → `JobInfo` — immediate one-shot run
+- `update_scheduled_job_labels(*, scheduled_job_id, labels, namespace)` → `ScheduledJobInfo`
+- `delete_scheduled_job(*, scheduled_job_id, namespace)` → `None`
+
+**Volumes & Artifacts:**
+- `sync_job_volume(source, mount_path, *, remote_name, read_only, namespace)` → `Volume` — sync a local dir to a bucket and return a Volume ready to mount
+
+### REST API Endpoints (inferred from source)
+- `POST /api/jobs` — create/run a job
+- `GET /api/jobs/{job_id}` — inspect
+- `GET /api/jobs` — list (with query params: status, labels)
+- `POST /api/jobs/{job_id}/cancel` — cancel
+- `GET /api/jobs/{job_id}/logs` — fetch logs
+- `GET /api/jobs/{job_id}/metrics` — fetch metrics
+- `PATCH /api/jobs/{job_id}/labels` — update labels
+- `POST /api/scheduled-jobs` — create scheduled job
+- `GET /api/scheduled-jobs` — list scheduled
+- `GET /api/scheduled-jobs/{id}` — inspect scheduled
+- `POST /api/scheduled-jobs/{id}/trigger` — trigger immediate run
+- `POST /api/scheduled-jobs/{id}/suspend` — pause
+- `POST /api/scheduled-jobs/{id}/resume` — unpause
+- `DELETE /api/scheduled-jobs/{id}` — delete
+- `PATCH /api/scheduled-jobs/{id}/labels` — update labels
+- `GET /api/jobs/hardware` — list available hardware
+
+### Hardware Flavors & Pricing
+CPU: cpu-basic (2 vCPU, 16 GB, $0.000167/min), cpu-upgrade, cpu-performance, cpu-xl
+GPU: t4-small, t4-medium, l4x1, l4x4, l40sx1, l40sx4, l40sx8, a10g-small, a10g-large, a10g-largex2/x4, a100-large, a100x4/x8, h200, h200x2/x4/x8, rtx-pro-6000 series
+Each `JobHardwareInfo` exposes: name, pretty_name, cpu, ram, ephemeral_storage, accelerator (model + vram + quantity), unit_cost_micro_usd, unit_cost_usd, unit_label
+
+### UV Job Magic
+`run_uv_job` is the most convenient entry point. Instead of building a Docker image, you provide:
+- `script`: path/URL to a Python script (or inline command)
+- `dependencies`: list of pip packages (or use script's inline `# /// script` metadata)
+- `python`: Python version (e.g. "3.12")
+It auto-builds a Docker image under the hood — no Dockerfile needed.
+
+### Schedule Syntax
+Supports both named presets: `@annually`, `@yearly`, `@monthly`, `@weekly`, `@daily`, `@hourly`, and standard CRON expressions (e.g., `'0 9 * * 1'` = 9 AM every Monday).
+
+### Volume Mounting
+Volumes allow mounting HF buckets, models, datasets, or Spaces inside the job container:
+```python
+from huggingface_hub import Volume
+Volume(type="bucket", source="username/my-bucket", mount_path="/data", read_only=False)
+Volume(type="model", source="username/my-model", mount_path="/model", revision="main")
+Volume(type="dataset", source="username/my-dataset", mount_path="/dataset", path="subfolder")
+```
+`sync_job_volume()` makes it easy to sync local directories to a bucket and get back a ready-to-use Volume.
+
+### SSH Access
+Jobs can be started with `ssh=True`. This gives:
+- `job.status.ssh_url` — e.g. `ssh://687fb7...d998@ssh.hf.jobs`
+- Full SSH access to the container while it's running
+- Requires SSH key registered at https://huggingface.co/settings/keys
+- Useful for debugging, interactive work, and attaching tools
+
+### Port Exposition
+Jobs can expose container ports via `expose=[8000, 8080]`. Each gets a public URL:
+- `https://<job_id>--8000.hf.jobs`, `https://<job_id>--8080.hf.jobs`
+- Access requires HF token with read access to the namespace
+- Perfect for web servers, APIs, dashboards
+
+### Key Insights
+- Jobs are serverless compute on HF's own infrastructure — no cluster management needed
+- Pay-per-second billing (only for seconds used, unlike Spaces which bill hourly)
+- `run_uv_job` is the simplest way to get started — no Docker knowledge needed
+- Scheduled jobs use familiar cron syntax, perfect for ETL, model retraining, daily reports
+- Volumes bridge buckets (persistent storage) with job containers
+- SSH and port exposition make Jobs suitable for interactive debugging and short-lived services
+- Jobs integrate with webhooks for automation workflows
+- The Jobs API is in `huggingface_hub` v1.24.0+ (newer than Spaces hardware API)
+- Currently Jobs are a paid service — no free tier (unlike Spaces ZeroGPU)
+- Job IDs are exposed in URLs like `https://huggingface.co/jobs/{owner}/{job_id}`
+
+### Sources
+- Source code: `huggingface_hub/_jobs_api.py` — all data structures (JobInfo, JobStage, JobHardware, ScheduledJobInfo, etc.)
+- Source code: `huggingface_hub/hf_api.py` — `HfApi.run_job`, `run_uv_job`, `create_scheduled_job`, `list_jobs`, `inspect_job`, `fetch_job_logs`, `fetch_job_metrics`, `sync_job_volume`, etc.
+- Source code: `huggingface_hub/_space_api.py` — `Volume` dataclass
+- Hub docs: https://huggingface.co/docs/hub/en/jobs
+- huggingface_hub docs: https://huggingface.co/docs/huggingface_hub/package_reference/hf_api
+
+---
+
+## 2026-07-24: hf-datasets-parquet-column-selection-deep-dive — Column Projection and Filter Pushdown Deep Dive
+
+### Summary
+Deep-dive into the Hugging Face Datasets library's Parquet integration covering column projection (columns=), filter/predicate pushdown (filters=), row group skipping via Parquet column statistics, fragment scan options (v4.2.0+), content-defined chunking in to_parquet(), and practical zero-cost analytics patterns with DuckDB, Polars, and the hf:// protocol.
+
+### Key Findings
+- Column projection (columns= param): filters at the PyArrow scan level, reads only requested column chunks from disk. Nested prefixes work ("a" -> a.b, a.c).
+- Filter pushdown (filters= param): accepts ds.Expression, list[tuple] (AND), or list[list[tuple]] (DNF). Internally calls pq.filters_to_expression() -> parquet_fragment.to_batches(filter=...). Row group min/max statistics skip entire row groups when filter cannot match.
+- FragmentScanOptions (v4.2.0): ParquetFragmentScanOptions with custom CacheOptions(prefetch_limit, range_size_limit) for tuning HTTP range reads on remote Parquet.
+- Content-defined chunking (CDC): Enabled by default in to_parquet(). Splits row groups at content-defined boundaries (256KB-1MB) using DEFAULT_CDC_OPTIONS. Pass use_content_defined_chunking=False to disable.
+- Batch size auto-tuning: Targets MAX_ROW_GROUP_SIZE = "100MB" uncompressed per row group. Separate overrides for audio/image/binary datasets.
+- Compression strategy: Snappy for normal columns, none for media columns (Image/Audio), PLAIN encoding for media, dictionary encoding for text.
+- Streaming + filters: Row group skipping works identically in streaming mode - non-matching row groups are never downloaded.
+- Zero-cost external queries: DuckDB and Polars both support native Parquet predicate pushdown and column projection when reading directly from hf:// URLs.
+
+### Skill Created
+mlops/hf-datasets-parquet-column-selection/ - complete reference with source-code-verified architecture, API surface, config constants, performance patterns, and pitfalls.
+
+### Sources
+- Source code: src/datasets/arrow_dataset.py - from_parquet() line 1491, to_parquet() line 5625
+- Source code: src/datasets/io/parquet.py - ParquetDatasetReader, ParquetDatasetWriter
+- Source code: src/datasets/packaged_modules/parquet/parquet.py - ParquetConfig, Parquet._generate_tables()
+- Source code: src/datasets/config.py - MAX_ROW_GROUP_SIZE, DEFAULT_CDC_OPTIONS, USE_PARQUET_EXPORT
+
+---
+
+## 2026-07-24: gr.Workflow — Gradio's Visual AI Pipeline Builder (source-code deep dive)
+
+### Summary
+Deep dive into Gradio's `gr.Workflow` system (gradio ≥ 6.17, current 6.20.0), a complete visual AI pipeline builder embedded in Gradio. Covers the Workflow class, WorkflowCanvas component, WorkflowGraph schema v2 parser/executor, 19 server functions, curated operator catalog, auth model, and API endpoint registration.
+
+### Key Findings
+
+1. **Architecture**: `Workflow(Blocks)` extends `gr.Blocks` with `mode="workflow"`. Contains a `WorkflowCanvas` (both BlockContext and Component) that renders the Svelte-based visual canvas. Cannot be nested in other Blocks.
+
+2. **Workflow Graph Schema v2**: JSON with four node roles: `references` (I/O data sources), `operators` (processing nodes — Spaces / Models / bound fns / datasets), `subjects` (outputs → API endpoints), `edges` (connections between ports).
+
+3. **Three modes of use**: graph-only (`graph=`), bind-only (`bind=[fns]`), auto-wired (`bind + edges=`). When `graph` file exists, `edges` is ignored with a warning.
+
+4. **Operator execution**: `call_space()` via gradio_client, `call_model()` via InferenceClient, `call_fn()` for bound Python functions, `fetch_dataset()` via datasets-server API. Each with structured error responses (error/error_type/suggestion).
+
+5. **Auth model**: Write token from HF login (local) or OAuth (Spaces). `save_workflow` enforces write access. Write-access link printed at launch for local mode. `_resolve_token()` checks data → OAuth → local in priority.
+
+6. **API endpoints**: Each subject becomes a named Gradio API endpoint via `WorkflowEndpointManager`. Re-syncs on every save. Bound functions get `predict_fn_<name>` endpoints. Supports both server-side and client-side execution.
+
+7. **Curated catalog**: Ships a bundled snapshot of validated Spaces/models from `gradio/workflow-curated` HF dataset. Cached in-memory for 3600s with bundled JSON fallback. Search prioritizes ZeroGPU → featured → fastest latency.
+
+8. **Port types**: Scalar types (int→number, float→number, bool→boolean, rest→text). Media types (image/audio/video/file/gallery/model3d) travel as `{path/url}` dicts.
+
+9. **Thread safety**: `_save_lock` serializes writes. 5 MB payload limit. Bound functions run via `anyio.to_thread.run_sync`. Concurrent search via `ThreadPoolExecutor(max_workers=4)`.
+
+10. **Key version history**: 6.17.0 introduced Workflow + WorkflowCanvas, 6.19.0 added subgraph API endpoint exposure, 6.20.0 added curated catalog with ZeroGPU sorting + canvas UX improvements.
+
+### Skill Created
+`mlops/gradio-workflow/` — complete skill with SKILL.md documenting Workflow API, architecture, usage patterns, server functions, graph schema, and dependencies.
+
+### Sources
+- Source code: `gradio/workflow.py` (1,880 lines) — Workflow class, 19 server functions, curated search
+- Source code: `gradio/workflow_api.py` (885 lines) — WorkflowGraph, topo-sort, executor, WorkflowEndpointManager
+- Source code: `gradio/components/workflowcanvas.py` (126 lines) — WorkflowCanvas component
+- Demo: `demo/workflow/run.py` — product marketing image pipeline
+- Demo: `demo/workflow_api/run.py` — API-exposed shout + reverse
+- Gradio changelog: 6.17.0–6.20.0
+- HF Hub: `gradio/workflow-curated` dataset + bundled `_workflow_curated_snapshot.json`
+
+---
+
+## 2026-07-25: hf-hub-user-and-org-profile-api — Hub User and Organization Profile API Reference
+
+### Summary
+Complete deep-dive into the Hugging Face Hub's User and Organization Profile API, covering the REST endpoints, the `huggingface_hub` Python SDK methods, the `User` and `Organization` dataclasses, social graph (followers/following), likes and repo enumeration, and the `whoami` authentication endpoint.
+
+### Key Findings
+
+1. **Core API Endpoints (REST)**:
+   - `GET /api/whoami-v2` — Authenticated user info (requires token). Returns `{ "name", "fullname", "email", "canPay", "isPro", "orgs": [...] }`. Cached by Hugging Face with strict rate limits (429 is common for frequent calls).
+   - `GET /api/users/{username}/overview` — Public user profile. Returns `{ "user", "fullname", "avatarUrl", "isPro", "details", "numModels", "numDatasets", "numSpaces", "numDiscussions", "numPapers", "numUpvotes", "numLikes", "numFollowing", "numFollowers", "orgs": [...] }`.
+   - `GET /api/organizations/{org}/overview` — Public organization profile. Returns `{ "avatarUrl", "name", "fullname", "details", "isVerified", "isFollowing", "numUsers", "numModels", "numSpaces", "numDatasets", "numFollowers", "numPapers", "plan" }`.
+   - `GET /api/users/{username}/followers` — Paginated list of followers (each a `User` object).
+   - `GET /api/users/{username}/following` — Paginated list of users followed by this user.
+   - `GET /api/organizations/{org}/followers` — Paginated list of org followers.
+   - `GET /api/organizations/{org}/members` — Paginated list of org members.
+   - `GET /api/settings/repositories` — All repos for the authenticated user (with storage info). Requires auth.
+   - `GET /api/organizations/{org}/settings/repositories` — All repos for an org.
+   - `GET /api/{repo_type}s/{repo_id}/likers` — Users who liked a specific repo.
+   - `GET /api/users/{username}/likes` — What a user has liked (models, datasets, spaces, etc.).
+
+2. **Python SDK (huggingface_hub)**:
+
+   **User class** (`hf_api.py:1750`):
+   - Fields: `username`, `fullname`, `avatar_url`, `details`, `is_following`, `is_pro`, `num_models`, `num_datasets`, `num_spaces`, `num_discussions`, `num_papers`, `num_upvotes`, `num_likes`, `num_following`, `num_followers`, `orgs` (list of `Organization`)
+   - Constructed from snake_case-mapped JSON (e.g., `numModels` → `num_models`).
+   - Forward-compatible: unknown fields merged via `__dict__.update(**kwargs)`.
+
+   **Organization class** (`hf_api.py:1683`):
+   - Fields: `avatar_url`, `name`, `fullname`, `details`, `is_verified`, `is_following`, `num_users`, `num_models`, `num_spaces`, `num_datasets`, `num_followers`, `num_papers`, `plan`
+   - Same forward-compatibility pattern as User.
+
+   **UserLikes class** (`hf_api.py:1614`):
+   - Fields: `user` (str), `total` (int), `datasets` (list[str]), `kernels` (list[str]), `models` (list[str]), `spaces` (list[str])
+
+   **Key HfApi methods**:
+   - `whoami(token, *, cache=False)` → dict — calls `/api/whoami-v2`. Cache=True caches per-token for process lifetime. Raises `LocalTokenNotFoundError` if no token, `HfHubHTTPError(401)` for invalid token, `HfHubHTTPError(429)` on rate limit.
+   - `get_user_overview(username)` → User — calls `/api/users/{username}/overview`. HTTP 404 raised as `HfHubHTTPError`.
+   - `get_organization_overview(organization)` → Organization — calls `/api/organizations/{org}/overview`.
+   - `list_user_followers(username)` → Iterable[User] — paginated via `paginate()` helper.
+   - `list_user_following(username)` → Iterable[User] — paginated.
+   - `list_organization_followers(organization)` → Iterable[User] — paginated.
+   - `list_organization_members(organization)` → Iterable[User] — paginated.
+   - `list_user_repos(namespace=None)` → Iterable[RepoStorageInfo] — auth required; if namespace omitted, returns authenticated user's repos. Calls `/api/settings/repositories` or `/api/organizations/{namespace}/settings/repositories`.
+   - `list_repo_likers(repo_id, repo_type)` → Iterable[User] — paginated list of users who liked a repo.
+
+   **RepoStorageInfo class** (`hf_api.py:1644`):
+   - Fields: `id` (str), `type` (str: model/dataset/space/bucket), `updated_at` (datetime), `visibility` (str: public/private), `storage` (int: bytes), `storage_percent` (float)
+
+   **Usage pattern for iteration**:
+   ```python
+   api = HfApi()
+   for follower in api.list_user_followers("username"):
+       print(follower.username, follower.fullname)
+   ```
+   All paginated methods use the internal `paginate()` helper which handles cursor-based pagination transparently.
+
+3. **Social Graph Architecture**:
+   - Follow/following relationships are unidirectional (Twitter-style).
+   - Both users and organizations have follower/following counts in their `User`/`Organization` objects.
+   - The `is_following` field on a `User` object is relative to the **authenticated user** — only populated when making authenticated requests.
+   - Orgs don't have a `following` concept — only `followers` and `members`.
+   - Member list for orgs requires auth (at minimum, read access to the org).
+   - Pagination uses the same `paginate()` helper as all other HF API list endpoints — transparent cursor management.
+
+4. **Rate Limiting and Security**:
+   - `/api/whoami-v2` is **intentionally heavily rate-limited** for security reasons. The SDK suggests caching with `whoami(cache=True)`.
+   - Other user/org endpoints are subject to standard HF API rate limits.
+   - Token management: `whoami()` requires a valid token. Uses token resolution chain: explicit arg → `HF_TOKEN` env var → `~/.cache/huggingface/token` → Google Colab secrets.
+   - Error messages are descriptive: invalid token, Colab token, env variable token, or stored token issues are distinguished.
+   - Public user/org overview endpoints can be called without authentication.
+
+5. **Forward Compatibility**:
+   - Both `User` and `Organization` dataclasses use `self.__dict__.update(**kwargs)` after consuming known fields, making them resilient to API additions.
+   - New fields added to the API response are accessible as attributes even if not defined in the dataclass.
+
+6. **Usage Realms**:
+   - **Profile pages**: The overview endpoints drive the public user/org profile pages at `huggingface.co/{username}`.
+   - **Repositories page**: `list_user_repos()` powers the "Repositories" tab with storage usage stats.
+   - **Social features**: Follower/following feeds, search indexing, recommendations.
+   - **Org management**: Member listing, admin dashboards, billing/plan info.
+   - **Personalization**: `whoami()` used for token verification, feature gating, and personalization.
+
+### Sources
+- Source code: `huggingface_hub/hf_api.py` — `User` class (line 1750), `Organization` class (line 1683), `UserLikes` class (line 1614), `RepoStorageInfo` (line 1644), `get_user_overview` (line 11401), `get_organization_overview` (line 11428), `list_user_followers` (line 11511), `list_user_following` (line 11539), `list_organization_followers` (line 11455), `list_organization_members` (line 11483), `list_user_repos` (line 3160), `list_repo_likers` (line 3201), `whoami` (line 2305)
+- Hub docs: https://huggingface.co/docs/hub/en/api (Hub API Endpoints)
+- huggingface_hub docs: https://huggingface.co/docs/huggingface_hub/package_reference/hf_api
+
+---
+
+## 2026-07-25: hf-auth-login-internals-deep-dive
+
+### Summary
+Complete source-code deep dive into the huggingface_hub v1.24.0 authentication pipeline across four modules: _login.py, utils/_auth.py, utils/_oauth_device.py, and _oidc.py. Covers the full token resolution chain (OIDC -> env -> file -> Colab), two-file token storage system (active token file + INI-based multi-token store), transparent OAuth refresh with cross-process safety, all three login entry points (device code OAuth, notebook widget, terminal prompt), token validation pipeline, logout/multi-token switching, and RFC 8628/8693 protocol implementations.
+
+### Key Findings
+- Token resolution is layered: OIDC -> HF_TOKEN env -> file with refresh -> Google Colab; each short-circuits
+- OAuth tokens have expiry-aware transparent refresh with 24h margin, 300s recheck interval, and WeakFileLock for cross-process safety
+- Device Code OAuth (RFC 8628) implementation in _oauth_device.py handles slow_down, expired_token, and access_denied states with network resilience
+- OIDC Trusted Publishers support GitHub Actions natively, with any-provider compat via HF_OIDC_ID_TOKEN env var
+- Secret files use 0o600/0o700 permissions on POSIX; INI stored tokens use configparser with interpolation disabled
+
+### Skill Created/Updated
+`SakThai-hf-oauth-and-tokens/` — new Entry 146 in references/hf-learnings.md with 11 sections covering the complete implementation.
+
+---
+
+## 2026-07-25: hf-hub-model-dependents — Model Dependents & Children Discovery API (Topic #253)
+
+### Summary
+Complete reference for the Hugging Face Hub Model Dependents system — how models declare parent relationships, how the Hub tracks children by type (finetune, quantized, adapter, merge), and the full API surface for discovering dependents via REST API and Python library. There is NO dedicated `/dependents` endpoint; instead, dependents discovery is a composition of `expand` parameters on the model info endpoint and `filter` on the list models endpoint.
+
+### Key Findings
+- **base_model YAML field** — Models declare parent via `base_model: org/model` in card frontmatter; the Hub auto-classifies the relationship
+- **Four relationship types** — `finetune` (fine-tuned), `quantized` (GGUF, AWQ, etc.), `adapter` (LoRA/DoRA/PEFT), `merge` (model merges)
+- **childrenModelCount via expand** — `GET /api/models/{id}?expand[]=childrenModelCount` returns `{adapter: N, merge: N, quantized: N, finetune: N}`
+- **baseModels via expand** — `expand[]=baseModels` returns `{relation: str, models: [{_id, id}]}` showing parent(s)
+- **Children list via filter** — `GET /api/models?filter=base_model:org/model` lists actual descendant models, sortable and paginable
+- **spaces via expand** — `expand[]=spaces` returns list of Spaces using the model (can be 100+)
+- **No dedicated /children or /dependents endpoint** — All dependents discovery is through these expansion and filter patterns
+- **Python: model_info(expand=...)** — `ModelInfo.children_model_count` (dict), `ModelInfo.base_models` (dict), `ModelInfo.spaces` (list)
+- **Python: list_models(filter="base_model:...")** — enumerate children with full pagination support
+- **Recursive** — Children can themselves have children; e.g., `unsloth/Phi-3.5-mini-instruct` has 244 adapters of its own despite being a child of `microsoft/Phi-3.5-mini-instruct`
+
+### Skill Created
+|`mlops/hf-hub-model-dependents/` — Complete reference for HF Hub Model Dependents API with REST endpoints and Python patterns.
+
+---
+
+## 2026-07-25: hf-datasets-server-size-limits-and-optimization — Dataset Viewer 5GB Limit, Partial Conversion & Size Optimization Strategies (Topic #255)
+
+### Summary
+Comprehensive reference for size limitations and optimization strategies in the Hugging Face Dataset Viewer/Datasets Server. Covers the 5GB auto-conversion limit, partial Parquet conversion with `partial-` split prefix, TooBigContentError and its common messages, sharding at ~500MB per file, row group sizing best practices with `write_page_index=True`, Parquet-native dataset exceptions, zero-cost workarounds using datasets library streaming (which bypasses size limits entirely), column pruning, config-based splitting, DuckDB predicate pushdown, and practical decision guide for working with datasets over 5GB.
+
+### Source
+- HF Hub Data Studio docs: https://huggingface.co/docs/hub/en/datasets-viewer ("Large scale datasets" section)
+- Dataset Viewer Parquet docs: https://huggingface.co/docs/dataset-viewer/en/parquet
+- Data Files Configuration (TooBigContentError): https://huggingface.co/docs/hub/en/datasets-data-files-configuration
+- Dataset Viewer GitHub: https://github.com/huggingface/dataset-viewer
+
+### 1. The 5GB Auto-Conversion Limit
+
+The Dataset Viewer auto-converts every dataset on the Hub to Parquet format — but **only up to 5GB**. This is the central size constraint of the viewer ecosystem.
+
+**How the limit works by dataset type:**
+
+| Dataset Type | <= 5GB | > 5GB |
+|---|---|---|
+| **Native Parquet** | Full viewer, sorting, filtering, search on all data | Viewer works for all data but sorting/filtering/search limited to first 5GB |
+| **Non-Parquet (CSV, JSONL, etc.)** | Full conversion to Parquet on `refs/convert/parquet` branch | Only first 5GB auto-converted to Parquet; viewer shows "partial" indicator |
+| **WebDataset / image directories** | Full preview, all features enabled | Preview only first 5GB; "partial" message shown; search/filter on first 5GB only |
+
+The "partial" state is surfaced in three ways:
+1. **Parquet API response** (`GET /parquet`) — `"partial": true` field in the JSON
+2. **Split directory naming** — splits >5GB use `partial-train` instead of `train` prefix
+3. **UI banner** — informational message on the dataset page
+
+### 2. Sharding Strategy
+
+Datasets smaller than 5GB are sharded into Parquet files of **~500MB each**:
+
+```
+dataset/
+├── refs/convert/parquet/
+│   └── config/
+│       ├── train-00000-of-00004.parquet  (~500 MB)
+│       ├── train-00001-of-00004.parquet  (~500 MB)
+│       ├── train-00002-of-00004.parquet  (~500 MB)
+│       ├── train-00003-of-00004.parquet  (~500 MB)
+│       └── test-00000-of-00001.parquet   (~< 500 MB)
+```
+
+Sharding at 500MB ensures:
+- Workers can process splits in parallel
+- Partial downloads (you can read only the shards you need)
+- DuckDB/Polars projection pushdown works efficiently per shard
+- Git LFS stays within reasonable per-file sizes
+
+### 3. Row Group Sizing and TooBigContentError
+
+**TooBigContentError** occurs when individual row groups in a Parquet file exceed the viewer's scan limit. This is one of the most common configuration errors.
+
+Common error messages:
+- `"Parquet error: Scan size limit exceeded"`
+- `"The size of the content of the first rows exceeds the maximum supported size"`
+
+**Root causes:**
+
+| Cause | Why it happens | Fix |
+|---|---|---|
+| Row groups too large | Parquet files with row groups >100-300MB uncompressed force the scanner to load too much data | Set smaller row groups when writing Parquet |
+| Very large values in first rows | Single cells with multi-MB strings (base64, JSON blobs, long documents) | Move large payloads to separate files |
+| No page index | Without `write_page_index=True`, the scanner can't skip irrelevant pages | Write with `write_page_index=True` |
+| Column contains oversized data | Parquet scanner reads entire row group for the requested column | Prune columns, use `columns` parameter in read |
+
+**Prevention checklist:**
+```python
+import pyarrow.parquet as pq
+
+# GOOD: small row groups, page index enabled
+pq.write_table(
+    table,
+    "output.parquet",
+    row_group_size=100_000,          # ~10-50 MB per group
+    write_page_index=True,           # enables page-level skipping
+    write_statistics=True,           # enables min/max statistics
+    compression="zstd",              # better compression ratio
+)
+
+# BAD: single large row group, no index
+pq.write_table(table, "output.parquet")  # single row group = TooBigContentError
+```
+
+### 4. Parquet-Native Dataset Exception
+
+When a dataset **already uses Parquet format natively**, the viewer does NOT re-convert it. Instead, it creates **symbolic links** on the `refs/convert/parquet` branch pointing to the original Parquet files on the main branch.
+
+However, there's an exception: **if the original row group size is too large**, new Parquet files are still generated with properly sized row groups. This ensures the viewer API remains fast regardless of the original file's structure.
+
+**Practical implication:** If you upload a Parquet dataset with 500MB+ row groups, the viewer will still convert it (using compute resources) to fix the row group sizing. To avoid this, write Parquet files with 100-300MB row groups from the start.
+
+### 5. Dataset Preview vs Full Viewer
+
+For the biggest datasets (>5GB and not natively Parquet or not auto-converted), the dataset page shows a **preview of the first 100 rows** instead of a full-featured viewer.
+
+This applies when:
+- Dataset is over 5GB
+- Not natively in Parquet format
+- Has not been auto-converted to Parquet
+
+The preview shows:
+- 100 rows (no pagination)
+- Column names and basic data types
+- No sorting, filtering, or search
+- No statistics or histograms
+
+**Detection:** Check `GET /is-valid?dataset=...` — if `"preview": false`, the dataset is in preview-only mode.
+
+### 6. Optimization Strategies for Large Datasets
+
+#### Strategy A: Split into Configs (Subsets)
+
+The most effective strategy for datasets near or over 5GB. By splitting into logical configurations, each config stays under 5GB:
+
+```yaml
+# dataset README.md
+configs:
+- config_name: part_1
+  data_files:
+  - split: train
+    path: "data/part_1/*.jsonl"
+- config_name: part_2
+  data_files:
+  - split: train
+    path: "data/part_2/*.jsonl"
+```
+
+Each config gets its own Parquet conversion independently. This is the **recommended approach** for large datasets.
+
+#### Strategy B: Column Pruning
+
+If your dataset has many columns but only a few are needed for exploration:
+- Use `columns` parameter in DuckDB/Polars when querying Parquet URLs
+- Store wide but sparse columns separately from frequently-queried columns
+
+#### Strategy C: Use Datasets Library Streaming (Bypasses 5GB Limit Entirely)
+
+The `datasets` library's streaming mode does NOT use the Datasets Server's Parquet cache. It reads directly from original source files — no size limit:
+
+```python
+from datasets import load_dataset
+
+# Streaming bypasses the Datasets Server entirely
+ds = load_dataset("bigcode/the-stack-v2", split="train", streaming=True)
+for i, example in enumerate(ds):
+    if i >= 100:
+        break
+    print(example["content"][:200])
+```
+
+This works for **any dataset size** but requires downloading data on each iteration (no server-side caching).
+
+#### Strategy D: DuckDB Predicate Pushdown
+
+When querying Parquet files that DO exist (within the 5GB converted set), use DuckDB for efficient filtering:
+
+```python
+import duckdb
+
+# DuckDB pushes filters to Parquet metadata — only downloads relevant bytes
+result = duckdb.sql("""
+    SELECT title, text
+    FROM read_parquet('https://huggingface.co/datasets/.../refs%2Fconvert%2Fparquet/.../*.parquet')
+    WHERE LENGTH(text) > 100 AND title LIKE '%machine learning%'
+    LIMIT 50
+""").fetchall()
+```
+
+This is **zero-cost** — predicate pushdown means you only transfer the matching rows' bytes, not the entire file.
+
+#### Strategy E: Upload Pre-Converted Parquet
+
+If you control the dataset creation pipeline, upload datasets already in Parquet format with proper row group sizing. This:
+- Avoids the viewer's conversion compute
+- Ensures consistent performance
+- Allows full-featured viewer for Parquet-native datasets of any size (sorting/filtering/search still limited to 5GB)
+
+### 7. Practical Decision Guide
+
+| Dataset Size | Format | Strategy |
+|---|---|---|
+| < 1 GB | Any | Default — auto-conversion works perfectly |
+| 1-5 GB | Any | Default — auto-conversion works, may be sharded across 2-10 files |
+| 5-50 GB | Non-Parquet | Split into configs OR use `datasets` streaming OR upload as Parquet with proper row groups |
+| 5-50 GB | Parquet with small row groups | Upload as-is — full viewer, but search/filter limited to first 5GB |
+| 5-50 GB | Parquet with large row groups | Regenerate with `row_group_size=100000` and `write_page_index=True` |
+| 50+ GB | Any | Must use `datasets` streaming or DuckDB direct Parquet reading; viewer will show 100-row preview only |
+| Any | Private (non-PRO) | Viewer disabled — use `datasets` library directly |
+
+### 8. Programmatic Detection
+
+Check the viewer state programmatically before building workflows:
+
+```python
+import requests
+
+def check_dataset_viewer_state(dataset_name: str) -> dict:
+    """Check if a dataset's viewer can handle the full dataset."""
+    base = "https://datasets-server.huggingface.co"
+
+    # 1. Check validity
+    valid = requests.get(f"{base}/is-valid?dataset={dataset_name}").json()
+
+    # 2. Check Parquet conversion status
+    parquet = requests.get(f"{base}/parquet?dataset={dataset_name}").json()
+
+    # 3. Check size
+    size = requests.get(f"{base}/size?dataset={dataset_name}").json()
+
+    return {
+        "has_preview": valid.get("preview", False),
+        "has_full_viewer": valid.get("viewer", False),
+        "has_search": valid.get("search", False),
+        "has_filter": valid.get("filter", False),
+        "parquet_partial": parquet.get("partial", False),
+        "parquet_pending": len(parquet.get("pending", [])),
+        "parquet_failed": len(parquet.get("failed", [])),
+        "total_rows": sum(s["num_rows"] for s in size.get("sizes", [])),
+        "total_bytes": sum(s["num_bytes_parquet_files"] for s in size.get("sizes", [])),
+    }
+```
+
+### 9. Summary of Key Numbers
+
+| Parameter | Value |
+|---|---|
+| Auto-conversion limit | 5 GB |
+| Parquet shard target size | ~500 MB |
+| Recommended row group size | 100-300 MB uncompressed (100K rows) |
+| Preview-only threshold | >5 GB non-Parquet datasets |
+| Parquet-native full viewer limit | Unlimited display, but 5GB for search/filter |
+| Row group scan limit | ~100-300 MB uncompressed per group |
+| Dataset viewer max rows per page | 100 rows |
+| Dataset viewer max pagination | 100 rows per `/rows` request |
+
+### Skill
+mlops/hf-datasets-server-rest-api — Dataset Viewer size limits (5GB auto-conversion limit, partial conversion, sharding at 500MB), TooBigContentError prevention, row group sizing best practices, and optimization strategies for large datasets including config splitting, datasets streaming, column pruning, and DuckDB predicate pushdown
+
+---
+
+## 2026-07-25: hf-hub-repo-move-delete-management — Repo Transfer, Rename, Deletion & Settings API (Topic #265)
+
+### Summary
+Complete reference for Hugging Face Hub repository lifecycle management covering six core operations: `move_repo()` (rename and transfer between namespaces), `delete_repo()` (permanent deletion), `duplicate_repo()` (server-side copy), `repo_exists()` (existence checking), `update_repo_settings()` (visibility, gating), and `permanently_delete_lfs_files()` (LFS cleanup). Includes REST API endpoints, allowed/forbidden move operations, error handling patterns, rate limits, and practical examples.
+
+### Key Findings
+- **`move_repo(from_id, to_id)`** — renames OR transfers. Old URL auto-redirects. Download counts and likes preserved. NOT allowed: user→user transfer, org→non-self-user transfer.
+- **`delete_repo(repo_id, missing_ok)`** — IRREVERSIBLE. Sends DELETE to `/api/repos/delete`. Raises `RepositoryNotFoundError` if `missing_ok=False` (default).
+- **`duplicate_repo(from_id, to_id)`** — server-side copy preserving full git + LFS history. Returns `RepoUrl`. Supports Space-specific config (hardware, storage, secrets, env vars).
+- **`repo_exists(repo_id)`** — returns `True` even for gated repos (catches `GatedRepoError`). Only `False` when truly not found.
+- **`update_repo_settings()`** — controls `private`/`public` visibility and `gated` mode (`"auto"`, `"manual"`, or `False`). Supports Space-specific `"protected"` visibility. `private` and `visibility` params are mutually exclusive.
+- **`permanently_delete_lfs_files()`** — removes specific LFS files from git history with optional `rewrite_history`. IRREVERSIBLE. Use `list_lfs_files()` first to enumerate candidates.
+
+### REST Endpoints
+- `POST /api/repos/move` — move/rename/transfer repo
+- `DELETE /api/repos/delete` — delete repo
+- `POST /api/repos/{repo_type}/duplicate` — duplicate repo
+
+### Skill Created
+`SakThai-hf-repo-move-delete-management/` — Complete reference with 11 sections covering all repo lifecycle operations, allowed move operations table, error handling, and practical patterns.
+
+---
+
+## 2026-07-25: hf-hub-doi-digital-object-identifiers — Digital Object Identifiers for Models and Datasets on HF Hub (Topic #266)
+
+### Summary
+Comprehensive reference for DOI (Digital Object Identifier) support on the Hugging Face Hub. DOIs are persistent identifiers that uniquely identify models and datasets, making them citable in academic publications (analogous to an ISBN). DOIs are managed via DataCite, generated through the repo Settings UI (no programmatic API), and lock repositories against deletion/rename/visibility change. Supports versioning via new DOI generation per revision.
+
+### Key Findings
+- **Generation**: Exclusive through Hub UI → repo Settings → DOI section → "Generate DOI" → accept DataCite terms → optional author customization
+- **No API**: `huggingface_hub` library has no DOI methods in `HfApi`; the interactive DataCite consent flow prevents CLI/API generation
+- **Versioning**: Push a new revision → "Generate new DOI" → old DOI deprecated, fresh DOI assigned for the new snapshot
+- **Locking**: DOI-locked repos cannot be deleted, renamed, or made private without HF support intervention (`website@huggingface.co`)
+- **Free**: No cost to generate DOIs on HF Hub
+- **Citation**: DOI badge appears automatically in the model/dataset header after generation
+- **Scope**: Models and datasets only (not Spaces)
+
+### Sources
+- HF Hub DOI Docs: https://huggingface.co/docs/hub/en/doi
+- Announcement Blog: https://huggingface.co/blog/introducing-doi
+- DataCite: https://datacite.org
+
+### Skill
+hf-hub-doi — Digital Object Identifiers on Hugging Face Hub: generation workflow, DataCite integration, versioning semantics, repo locking restrictions, and citation integration
+
+---
+
+## 2026-07-25: hf-spaces-configuration-reference — Complete Spaces YAML Configuration System (Topic #274)
+
+### Summary
+Complete reference for Hugging Face Spaces YAML configuration system covering all 30+ configuration parameters (`sdk`, `python_version`, `sdk_version`, `app_file`, `suggested_hardware`, `preload_from_hub`, `custom_headers`, `hf_oauth`, etc.), 18 hardware flavors (2 CPU + 16 GPU from `cpu-basic` Free to `a100x8` $20/hr), built-in environment variables (9 standard + 4 OAuth), OAuth configuration, model preloading for cold-start optimization, SDK-specific behavior (Gradio, Docker, Static, Streamlit), networking (ports 80/443/8080), lifecycle (sleep after 48h, pause, replicas), and programmatic hardware configuration via huggingface_hub.
+
+### Key Findings
+- **sdk**: `gradio` (default), `docker`, `static`, `streamlit` — framework selection
+- **python_version**: defaults to 3.10, any 3.x/3.x.x valid
+- **suggested_hardware**: 18 flavors from `cpu-basic` (Free) to `a100x8` ($20.00/hr)
+- **Static Spaces**: free for everyone, no paid plan required; uses `app_build_command` + `app_file`
+- **Preload**: `preload_from_hub` loads models at build time into HF cache, reducing cold-start latency
+- **OAuth**: `hf_oauth: true` with scopes, expiry (max 30 days), org restriction; exposes OAUTH_CLIENT_ID/ SECRET/SCOPES, OPENID_PROVIDER_URL env vars
+- **Custom headers**: only COEP (`require-corp`), COOP (`same-origin`), CORP allowed; all lowercase
+- **Sleep**: Free Spaces sleep after 48h; paid run indefinitely unless custom sleep set
+- **Replicas**: horizontal scaling via `POST /api/spaces/{ns}/{repo}/replicas`
+- **Ports**: only 80, 443, 8080 accessible; all others blocked
+
+### Sources
+- HF Spaces Configuration Reference: https://huggingface.co/docs/hub/en/spaces-config-reference
+- HF Spaces GPU Upgrades: https://huggingface.co/docs/hub/en/spaces-gpus
+- HF Spaces Overview: https://huggingface.co/docs/hub/en/spaces-overview
+
+### Skill Created
+`mlops/hf-spaces-configuration/` — Complete YAML config reference with all parameters, hardware specs table, env vars, OAuth, preloading, SDK-specifics, and programmatic API patterns.
+
+## 2026-07-25: hf-hub-doi-deep-dive-v2 — DataCite Metadata Schema & API Integration (Topic #267)
+
+### Summary
+Deep dive into DataCite integration layer of HF DOIs. Researched DataCite kernel-4 XML metadata schema, element mapping from HF repos to DataCite, DataCite REST API for querying HF DOIs, citation generation via content negotiation, and programmatic patterns for DOI discovery. Discovered that HF sends minimal metadata (no descriptions, subjects, licenses, affiliations) to DataCite and that HF's own API exposes no `doi` field — DataCite API is the only programmatic source.
+
+### Key Findings
+
+**HF DOI Identity:**
+- Prefix `10.57967/hf/` — publisher always `"Hugging Face"`, version = git SHA
+- Resource types: `Dataset` or `Model` (DataCite Kernel 4 controlled list)
+- Two states: `findable` (active) and `registered` (deprecated previous version)
+- No DOI field in `huggingface_hub` library or HF REST API
+
+**Metadata Gaps (not sent to DataCite):**
+- No `descriptions`/abstract — model card context is lost
+- No `subjects`/keywords
+- No `rightsList`/license info
+- No `relatedIdentifiers` (papers, code, datasets)
+- No `affiliation` on creators
+- No `fundingReferences`
+
+**DataCite REST API Patterns:**
+- `GET /dois?query=10.57967/hf` — search all HF DOIs
+- `GET /dois/10.57967%2Fhf%2F8345` — single DOI metadata (with base64-encoded XML)
+- Content negotiation via `Accept` header for BibTeX/RIS/CSL citations
+- Free, no-auth read-only access
+
+### Sources
+- DataCite API: https://api.datacite.org/dois (with live queries against actual HF DOIs)
+- DataCite Kernel 4 Schema: https://schema.datacite.org/meta/kernel-4.5/
+- HF Docs (raw): https://raw.githubusercontent.com/huggingface/hub-docs/main/docs/hub/doi.md
+
+### Skill Updated
+`hf-hub-doi/` → v2.0.0 with full DataCite schema reference, programmatic patterns, and citation generation.
+
+---
+
+## 2026-07-25: hf-hub-rate-limits-deep-dive-v2 — Source Code Internals & Advanced Patterns (Deeper on Topic #249)
+
+### Summary
+Deep-dive into the actual `huggingface_hub v1.24.0` source code implementing rate limit handling. Covers the `_http_backoff_base()` internal function, the precise regex patterns for parsing IETF RateLimit headers, how `http_backoff()` integrates rate-limit-aware waiting with exponential backoff, `hf_raise_for_status()` 429 error message construction, `HfApi` pagination internals, Storage Buckets rate limits, and practical code patterns for custom handling.
+
+### Source Code Reference
+- huggingface_hub v1.24.0 source: `huggingface_hub/utils/_http.py` (lines 55–920)
+- Rate limit regex + parser: lines 75–135
+- `_http_backoff_base()`: lines 430–527
+- `http_backoff()` wrapper: lines 530–610
+- `hf_raise_for_status()` 429 handling: lines 895–914
+
+---
+
+### 1. Exact Regex Patterns for Rate Limit Header Parsing
+
+The library uses two compiled regex patterns:
+
+**`_RATELIMIT_REGEX`** — Parses the `RateLimit` response header:
+```python
+_RATELIMIT_REGEX = re.compile(
+    r'\"(?P<resource_type>\w+)\"\s*;\s*r\s*=\s*(?P<r>\d+)\s*;\s*t\s*=\s*(?P<t>\d+)'
+)
+```
+Matches patterns like: `"api";r=0;t=55`
+- `resource_type` → `"api"`, `"resolvers"`, or `"pages"`
+- `r` → remaining requests in current window
+- `t` → seconds until window reset
+
+**`_RATELIMIT_POLICY_REGEX`** — Parses the `RateLimit-Policy` response header:
+```python
+_RATELIMIT_POLICY_REGEX = re.compile(
+    r'q\s*=\s*(?P<q>\d+).*?w\s*=\s*(?P<w>\d+)'
+)
+```
+Matches patterns like: `"fixed window";"api";q=500;w=300`
+- `q` → quota per window
+- `w` → window duration in seconds (always 300 = 5 min)
+
+These regexes are CASE-INSENSITIVE for header key lookup (lowercased in `parse_ratelimit_headers()`), but case-sensitive for the header value matching.
+
+---
+
+### 2. The `RateLimitInfo` Data Class
+
+```python
+@dataclass(frozen=True)
+class RateLimitInfo:
+    resource_type: str
+    remaining: int
+    reset_in_seconds: int
+    limit: int | None = None
+    window_seconds: int | None = None
+```
+- Frozen (immutable) dataclass returned by `parse_ratelimit_headers()`
+- `limit` and `window_seconds` are `Optional` because they come from the `RateLimit-Policy` header which may not always be present
+- Used both for logging/display AND for the automatic retry delay calculation
+
+---
+
+### 3. The Full Auto-Retry Flow in `_http_backoff_base()`
+
+This is the core function shared by both `http_backoff()` (regular requests) and `http_stream_backoff()` (streaming). Here's the complete retry lifecycle:
+
+```python
+def _http_backoff_base(
+    method, url, *,
+    max_retries=5,            # Max attempts before giving up
+    base_wait_time=1,         # Initial sleep (seconds)
+    max_wait_time=8,          # Cap on exponential backoff
+    retry_on_exceptions,      # Default: TimeoutException, NetworkError, RemoteProtocolError
+    retry_on_status_codes,    # Default: (408, 429, 500, 502, 503, 504)
+    stream=False,
+    **kwargs,
+):
+```
+
+**The loop:**
+
+1. **Attempt request** via `client.request()` or `client.stream()`
+2. **`_should_retry(response)`** closure checks:
+   - If status code NOT in `retry_on_status_codes` → stop (success)
+   - If `nb_tries > max_retries` → call `hf_raise_for_status()` (will raise, or return)
+   - If status is **429** → parse `RateLimit` header via `parse_ratelimit_headers()` to get `reset_in_seconds`
+   - If `Retry-After` header present → fallback to `_parse_retry_after()`
+   - Return `True` (should retry) for all other retryable status codes
+3. **Wait logic:**
+   - If rate limited → `actual_sleep = float(ratelimit_reset) + 1` (adds +1s safety margin)
+   - Otherwise → `actual_sleep = sleep_time` (exponential: 1s, 2s, 4s, 8s... capped at `max_wait_time=8s`)
+4. **Exponential backoff:** `sleep_time = min(max_wait_time, sleep_time * 2)`
+5. **File-object cursor reset:** If `data` kwarg is a file/IO object, saves and restores `.tell()` position between retries to allow re-sending upload bodies.
+
+**Key insight:** When rate limited, the huggingface_hub library respects the server's precise reset time (+1s safety margin), rather than using exponential backoff. This is much more efficient than blindly backing off.
+
+---
+
+### 4. `hf_raise_for_status()` — The 429 Error Message Generator
+
+When a 429 response would not be retried (n_tries exhausted), `hf_raise_for_status()` constructs a detailed error message:
+
+```python
+elif response.status_code == 429:
+    ratelimit_info = parse_ratelimit_headers(response.headers)
+    if ratelimit_info is not None:
+        message = (
+            f"\n\n429 Too Many Requests: you have reached your "
+            f"'{ratelimit_info.resource_type}' rate limit."
+        )
+        message += f"\nRetry after {ratelimit_info.reset_in_seconds} seconds"
+        if ratelimit_info.limit is not None and ratelimit_info.window_seconds is not None:
+            message += (
+                f" ({ratelimit_info.remaining}/{ratelimit_info.limit} requests remaining"
+                f" in current {ratelimit_info.window_seconds}s window)."
+            )
+    else:
+        message = f"\n\n429 Too Many Requests for url: {response.url}."
+```
+
+This produces user-friendly messages like:
+```
+429 Too Many Requests: you have reached your 'api' rate limit.
+Retry after 55 seconds (0/500 requests remaining in current 300s window).
+```
+
+---
+
+### 5. How `HfApi` Iteration Methods Handle Rate Limits
+
+The `HfApi.list_models()`, `list_datasets()`, `list_spaces()` methods all return **lazy iterators** (`Iterator[Model]`) rather than lists. Internally, they call:
+
+```python
+items: Iterator = api_iterate(  # or _fetch_with_pagination
+    endpoint,                # e.g., "/api/models"
+    params=params,
+    headers=headers,
+    ...
+)
+items = islice(items, limit)  # truncate to requested limit
+```
+
+The `api_iterate` function paginates automatically through the Hub API, using `http_backoff()` internally so rate limits are handled transparently. This means:
+- You don't need to manage pagination yourself
+- Rate limits are automatically respected between page fetches
+- The iterator is lazy — it only fetches pages as you iterate
+
+**Practical implication:** When using `list_models()`, you can safely iterate through thousands of items. The library handles backoff between pages automatically. The old pattern of manually calling `next_page()` is obsolete.
+
+---
+
+### 6. Storage Buckets Rate Limits
+
+As of July 2026, HF's **Storage Buckets** feature has its own rate limit handling via a dedicated regex:
+
+```python
+BUCKET_API_REGEX = re.compile(
+    r"""
+        ^https?://[^/]+
+        /api/buckets/
+    """,
+    flags=re.VERBOSE,
+)
+```
+
+This regex identifies bucket API URLs (`/api/buckets/...`) separately from repo URLs. Bucket API calls fall under the general `api` rate limit bucket, but the library tracks the URL pattern to provide accurate error messages. The `_parse_bucket_id_from_url()` function extracts `namespace/name` from bucket URLs for better error context.
+
+**Rate limit environment variables for downloads:**
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `HF_HUB_DOWNLOAD_TIMEOUT` | 10s | Per-request timeout for file downloads |
+| `HF_HUB_ETAG_TIMEOUT` | 10s | Timeout for HEAD requests checking file freshness |
+| `HF_HUB_DEFAULT_TIMEOUT` | 10s | General request timeout |
+| `HF_HUB_OFFLINE` | unset | When set to `1`, no network calls made (uses cache only) |
+
+---
+
+### 7. Custom Rate Limit Handling Patterns
+
+#### 7.1 Manual Rate Limit Header Parsing
+
+```python
+from huggingface_hub.utils import parse_ratelimit_headers
+
+# After receiving a response with rate limit headers
+info = parse_ratelimit_headers(response.headers)
+if info and info.remaining < 10:
+    print(f"Approaching rate limit: {info.remaining}/{info.limit} remaining")
+    time.sleep(info.reset_in_seconds)  # Wait for window reset
+```
+
+#### 7.2 Disabling Auto-Retry (for custom handling)
+
+```python
+from huggingface_hub.utils import http_backoff
+
+# Disable all retries — handle 429 yourself
+response = http_backoff(
+    "GET", url,
+    retry_on_exceptions=(),
+    retry_on_status_codes=()
+)
+```
+
+#### 7.3 Custom Retry Configuration
+
+```python
+# Aggressive retry for critical operations
+response = http_backoff(
+    "POST", url,
+    max_retries=10,
+    base_wait_time=0.5,
+    max_wait_time=30,
+    retry_on_status_codes=(429, 500, 502, 503, 504)
+)
+```
+
+#### 7.4 Using `_httpx_follow_relative_redirects_with_backoff`
+
+For scenarios where you need to follow redirects AND handle rate limits:
+
+```python
+# Internal helper that follows relative redirects with auto-backoff
+from huggingface_hub.utils._http import _httpx_follow_relative_redirects_with_backoff
+
+response = _httpx_follow_relative_redirects_with_backoff(
+    "GET", url,
+    retry_on_errors=True,  # enables 429/5xx/timeout retry
+)
+```
+
+This is used internally by the Hub for download flows that may redirect to CDN endpoints.
+
+#### 7.5 Proactive Rate Limit Monitoring in Long-Running Jobs
+
+```python
+import os
+import time
+from huggingface_hub import HfApi, RateLimitInfo
+
+api = HfApi()
+
+# Monitor rate limit consumption during pagination
+consumed = 0
+for model in api.list_models(task="text-classification", limit=1000):
+    process(model)
+    consumed += 1
+    if consumed % 100 == 0:
+        # Check billing dashboard to see real-time usage
+        print(f"Processed {consumed} models...")
+        time.sleep(0.5)
+```
+
+---
+
+### 8. Rate Limit Handling Architecture (Complete Flow)
+
+```
+User Code (HfApi.list_models)
+    │
+    ▼
+api_iterate() / _fetch_with_pagination()
+    │  Uses http_backoff() internally
+    ▼
+http_backoff(method, url, ...)
+    │
+    ▼
+_http_backoff_base(method, url, ...)
+    │
+    ├──► client.request(method, url)  ──► HTTP Response
+    │         │                              │
+    │         │                         ┌────▼────┐
+    │         │                    ┌─────┤ 429?    ├─────┐
+    │         │                    │     └─────────┘     │
+    │         │                    │  No                 │ Yes
+    │         │                    ▼                     ▼
+    │         │             return response     parse_ratelimit_headers()
+    │         │                                      │
+    │         │                               ┌──────▼──────┐
+    │         │                               │ reset_in_sec│
+    │         │                               │   = 55s     │
+    │         │                               └──────┬──────┘
+    │         │                                      │
+    │         │                               sleep(55 + 1)
+    │         │                                      │
+    │         │                               retry ──► back to top
+    │         │
+    │    If Exception (network error):
+    │         sleep(exponential: 1s, 2s, 4s... max 8s)
+    │         retry ──► back to top
+    │
+    ▼
+Returned to caller as lazy iterator
+```
+
+---
+
+## 2026-07-25: hf-jobs-complete-ecosystem-deep-dive
+
+### Summary
+Comprehensive deep dive into the Hugging Face **Jobs** compute platform — a pay-as-you-go infrastructure service for running AI/data workloads on HF hardware (CPU, GPU up to H200/RTX PRO 6000, TPU). Jobs provide a UV-like and Docker-like CLI, Python API, HTTP API, scheduling, webhooks, volume mounting (Hub repos, Storage Buckets, local dirs), SSH access, and exposed ports for temporary inference servers.
+
+### Key Concepts
+
+**CLI Interfaces:**
+- `hf jobs uv run <script>` — UV-like: auto-installs deps, runs Python scripts in one command
+- `hf jobs run <image> <command>` — Docker-like: specify any Docker image + command
+- `hf jobs uv run --with trl --flavor a10g-small train.py` — GPU training in one line
+- Default timeout: **30 minutes** (use `--timeout 6h` for long runs)
+- `--detach` for background execution, `--name` for labeling
+
+**Hardware Flavors (from $0.01/hr CPU to $40/hr 8×H200):**
+| Flavor | HW | Cost/hr |
+|--------|-----|---------|
+| `cpu-basic` | 2 vCPU, 16 GB | $0.01 |
+| `cpu-upgrade` | 8 vCPU, 32 GB | $0.03 |
+| `cpu-xl` | 16 vCPU, 124 GB | $1.00 |
+| `t4-small` | 1×T4 (16 GB) | $0.40 |
+| `a10g-small` | 1×A10G (24 GB) | $1.00 |
+| `a100-large` | 1×A100 (80 GB) | $2.50 |
+| `h200` | 1×H200 (141 GB) | $5.00 |
+| `l40sx1` | 1×L40S (48 GB) | $1.80 |
+| `rtx-pro-6000` | 1×RTX PRO 6000 (96 GB) | $2.75 |
+- Get live list: `hf jobs hardware` or `list_jobs_hardware()`
+
+**Pricing & Billing:**
+- Billed **per minute** only while Starting or Running (no cost during build, no cost after failure)
+- Default timeout 30 min prevents runaway costs
+- Exposed ports: +$0.01/hr flat rate
+- Bill to org: `--namespace my-org-name`
+- Bill to Resource Group (Enterprise): `--namespace <resource-group-id>`
+- Requires positive credit balance at https://huggingface.co/settings/billing
+
+**Volume Mounting (`-v` / `--volume`):**
+- `hf://models/<org>/<repo>:/mount/path` — model repos (read-only)
+- `hf://datasets/<org>/<repo>:/mount/path` — dataset repos (read-only)
+- `hf://buckets/<user>/<bucket>:/mount/path` — Storage Buckets (read-write by default)
+- `hf://datasets/<org>/<repo>/subfolder:/mount/path` — subfolder mounts
+- Local dir: `./training-data:/data:rw` — synced to `jobs-artifacts` bucket automatically
+- Multiple volumes by repeating `-v`; read-only via `:ro` suffix
+- Python API: `Volume(type="dataset", source="org/repo", mount_path="/data")`
+
+**Environment Variables & Secrets:**
+- Built-in: `JOB_ID`, `ACCELERATOR`, `CPU_CORES`, `MEMORY`
+- User env: `-e KEY=value` or `--env-file .env`
+- Secrets: `-s KEY=value` (encrypted server-side) or `--secrets-file .env.secrets`
+- `--secrets HF_TOKEN` passes your logged-in token automatically
+- Webhook-triggered jobs get `WEBHOOK_PAYLOAD`, `WEBHOOK_REPO_ID`, `WEBHOOK_REPO_TYPE`, `WEBHOOK_SECRET`
+
+**Lifecycle Management:**
+- `hf jobs ps` — list jobs (use `-a` for all, `--filter` for filtering)
+- `hf jobs logs <id>` — stream/fetch logs
+- `hf jobs stats <id>` — live CPU/GPU/memory/network metrics
+- `hf jobs inspect <id>` — full job metadata as JSON
+- `hf jobs wait <id>` — block until terminal state (exit 0 = all completed)
+- `hf jobs cancel <id>` — stop billing immediately
+- `hf jobs ssh <id>` — interactive SSH into running job (requires SSH key at https://huggingface.co/settings/keys)
+
+**Scheduled Jobs:**
+- `hf jobs scheduled uv run @hourly script.py` — cron-like scheduling
+- Supports: `@annually`, `@yearly`, `@monthly`, `@weekly`, `@daily`, `@hourly`, or CRON (`"*/5 * * * *"`)
+- Manage: `hf jobs scheduled ps`, `inspect`, `suspend`, `resume`, `trigger`, `delete`
+
+**Webhook Automation:**
+- `create_webhook(job_id=job_id, watched=[...], domains=["repo", "discussion"], secret="...")`
+- Triggers job on repo/discussion events (create, delete, update, move)
+- Payload delivered as `WEBHOOK_PAYLOAD` env var inside the job
+
+**Serving Models via Exposed Ports:**
+- `--expose 8000` — port becomes reachable at `https://<job_id>--8000.hf.jobs`
+- Requires Bearer token with read access to job's namespace
+- Start vLLM: `hf jobs run --detach --expose 8000 --flavor a10g-small vllm/vllm-openai vllm serve <model>`
+- Start llama.cpp: `hf jobs run --detach --expose 8080 --flavor a10g-small ghcr.io/ggml-org/llama.cpp:server-cuda -- /app/llama serve -hf <model> --host 0.0.0.0 --port 8080`
+- Must listen on `0.0.0.0` (llama.cpp defaults to `127.0.0.1`)
+- Mount model repo as volume for faster startup (skip download)
+- Multiple ports: `--expose 8000 --expose 8001`
+
+**SSH Access:**
+- `--ssh` flag at job creation, connect with `hf jobs ssh <id>`
+- Requires SSH public key registered at Hugging Face settings
+- Remote forwarding: `ssh -R 8080:localhost:8080 <id>@ssh.hf.jobs`
+- Not supported for scheduled jobs
+
+**Large Dataset Processing:**
+- Streaming: `load_dataset(..., streaming=True)` — no disk needed
+- `hf://` scanning: Polars/DuckDB/pandas scan Hub Parquet directly, pushing filters down
+- Mounting: `-v hf://datasets/<repo>:/data` — lazy file access for tools needing local paths
+- Common Crawl example: stream WET files from bucket via `hffs.open()`, parse with fastwarc
+- Persist results to Storage Buckets (write to mounted path, survives job)
+
+**Python API:**
+- `run_job(image, command, flavor, timeout, secrets, volumes, expose, ...)`
+- `run_uv_job(script, dependencies, flavor, ...)`
+- `list_jobs(status, labels)`, `inspect_job(id)`, `wait_for_job(id)`, `cancel_job(id)`
+- `fetch_job_logs(id)`, `fetch_job_metrics(id)`
+- `list_jobs_hardware()` — get available flavors
+
+**Integration Ecosystem:**
+- TRL Jobs Training: SFT, GRPO, DPO recipes with hardware selection
+- Unsloth on Jobs: ~2× faster training, ~60% less VRAM
+- Transformers example scripts: run directly via URL
+- UV Scripts org: ready-to-run scripts (OCR, batch inference, classification)
+- Coding Agent Skills: `hugging-face-jobs` skill for Claude Code / Cursor
+- Sandboxes: built on Jobs, interactive environments for agents
+
+### Key Insights
+- Jobs are **not free** — require positive credit balance. For Beer's zero-cost constraint, Jobs are useful for understanding the platform but actual usage requires pre-paid credits.
+- SSH + exposed ports make Jobs viable as ephemeral dev environments and temporary inference servers
+- UV integration (`hf jobs uv run`) eliminates needing to write Dockerfiles for Python workloads
+- Volume mounting with `hf://` URLs enables processing datasets far larger than the job's ephemeral storage
+- The `hf jobs wait` command with exit-code chaining makes Jobs composable in CI/CD pipelines
+- Webhook-triggered Jobs enable fully automated MLOps: push a model → webhook → Job runs evaluation → results pushed back
+- Scheduled Jobs replace cron for periodic tasks (daily model re-evaluation, data ingestion)
+- Exposed ports billed at flat $0.01/hr regardless of how many ports — cheap for temporary endpoints
+
+### Skill Alignment
+This deep dive covers the complete Jobs ecosystem. For reference material under the existing `mlops/hf-hub-jobs-api` skill, see `references/hf-learnings.md`.
+
+---
+
+## 2026-07-24: hf-hub-notification-and-watching-system
+
+### Summary
+Deep dive into the Hugging Face Hub's notification and watching system — the web UI features for watching users/orgs/repos, the `/api/notifications` REST API (list, mark-read, delete), muting repositories and discussions, and notification settings. The watching feature is web-only (no Python `huggingface_hub` library support); the notifications API however works with Bearer token auth and is fully programmable.
+
+### Key API Surface (`/api/notifications`)
+
+**GET — List notifications:**
+```
+GET /api/notifications?limit=20&start=0&type=repo&read=false
+```
+- Params: `limit`, `start`, `type` (repo/discussion/mention/all), `read` (bool)
+- Response: `{notifications: [...], count: {view, all, unread}, start}`
+- Each notification: `{updatedAt, read, discussionEventId, repo: {name, type}, type, discussion: {id, num, title, status, isPullRequest, participating}}`
+
+**POST /mark-as-read — Mark notifications as read:**
+```
+POST /api/notifications/mark-as-read
+{"discussionIds": ["id1"]}  # specific, or {} for all
+→ {"success": true}
+```
+
+**DELETE — Delete/clear notifications:**
+```
+DELETE /api/notifications?applyToAll=true    # all
+DELETE /api/notifications  {"discussionIds": ["id1"]}  # specific
+→ {"success": true}
+```
+
+### Watching Mechanism
+- **Web-only feature** — no `huggingface_hub` library methods for watch/unwatch
+- `/api/watching` endpoint exists but requires **cookie-based web session auth**, not Bearer token
+- Watch users/orgs via "Watch repos" button on their profile, or from settings page
+- Default: auto-watch all orgs you're a member of
+- Watch individual repos independently of user/org watches
+
+### Muting
+- **Mute a repo:** Context menu → "Mute notifications" (exceptions: direct mentions & participation still notify)
+- **Mute a discussion/PR:** Mute icon in discussion header (blocks ALL notifications including direct mentions)
+- Muted repos list visible in notification settings
+
+### Notification Settings (`/settings/notifications`)
+- Per-activity-type channel config (email, web, or both)
+- Quick search to add users/orgs to watch list
+- Checkbox to unsubscribe from users/orgs
+- Muted repos management
+
+### Key Limitations
+- No Python library support for watching/notifications in `huggingface_hub` v1.24.0
+- Watching is web-only (cookie auth, not token)
+- For programmable event handling, use Webhooks API instead
+
+### Skill Created
+`hf-hub-notification-watching/` — complete reference with API endpoints, web UI patterns, and usage examples.
+
+---
+
+## 2026-07-25: hf-hub-embedding-badges-oembed-deep-dive
+
+### Summary
+Comprehensive deep dive into embedding Hugging Face Hub content (Spaces, datasets, models) in external websites using shields.io badges, Open Graph social cards, and the Hub's embed/iframe infrastructure. Covers Spaces embedding (direct URL, iframe, Gradio WebComponents), dataset viewer embedding, shields.io badge patterns (static with HF logo + dynamic from API), OG social card URLs, the oEmbed API (auth required), SQL console embeds via REST API, and protected Space embedding.
+
+### Key Embedding Patterns
+
+**Spaces — Iframe (all Space types):**
+```html
+<iframe src="https://{namespace}-{space-name}.hf.space" frameborder="0" width="850" height="450"></iframe>
+```
+
+**Spaces — Gradio WebComponents (Gradio-only, faster, auto-resize):**
+```html
+<script type="module" src="https://gradio.s3-us-west-2.amazonaws.com/{version}/gradio.js"></script>
+<gradio-app src="https://{namespace}-{space-name}.hf.space"></gradio-app>
+```
+
+**Dataset Viewer Embed (iframe):**
+```
+https://huggingface.co/datasets/{namespace}/{dataset-name}/embed/viewer
+```
+Parameters: `config`, `split`, `filter`, `search`, `row`
+
+**Shields.io Static Badges with HF Logo:**
+```md
+![HF](https://img.shields.io/badge/HuggingFace-{name}-FFD21E?logo=huggingface)
+![Model](https://img.shields.io/static/v1?label=Model&message={name}&color=blue&logo=huggingface)
+```
+
+**Shields.io Dynamic Badges from HF API:**
+```md
+![Downloads](https://img.shields.io/badge/dynamic/json?url=https://huggingface.co/api/models/{model}&query=downloads&label=Downloads)
+```
+
+**OG Social Cards (auto-generated at predictable URL):**
+```
+https://cdn-thumbnails.huggingface.co/social-thumbnails/{type}/{namespace}/{repo}.png
+```
+Where `type` is `models`, `datasets`, or `spaces`.
+
+**oEmbed API** (requires Bearer token auth — returns 401 without):
+```
+GET /api/oembed?url=https://huggingface.co/{type}/{namespace}/{repo}
+Authorization: Bearer {token}
+```
+
+**SQL Console Embeds via REST API:**
+| Method | Endpoint |
+|--------|----------|
+| POST | `/api/{repoType}/{namespace}/{repo}/sql-console/embed` |
+| PATCH | `/api/{repoType}/{namespace}/{repo}/sql-console/embed/{id}` |
+| DELETE | `/api/{repoType}/{namespace}/{repo}/sql-console/embed/{id}` |
+
+### Key Findings
+- Spaces are the most embeddable HF asset — 3 methods: direct URL, iframe, WebComponents
+- Dataset viewer has dedicated embed URL with filter/search/subset/split query params
+- Model inference widgets are **not iframe-embeddable** — Svelte component on model page only
+- shields.io has no dedicated HF badge service — use `?logo=huggingface` on static or dynamic JSON badges
+- OG social cards are auto-generated from repo metadata at a predictable CDN URL pattern
+- oEmbed API exists at `/api/oembed` but requires authentication (not public/oEmbed-standard)
+- Protected Spaces keep source private while allowing public embedding
+- SQL Console embeds are fully manageable via REST API (CRUD operations)
+
+### Resources
+- [Spaces Embed Docs](https://huggingface.co/docs/hub/en/spaces-embed)
+- [Dataset Viewer Embed Docs](https://huggingface.co/docs/hub/en/datasets-viewer)
+- [Shields.io Badges](https://shields.io/badges)
+- [HF OpenAPI Spec](https://huggingface.co/.well-known/openapi.json)
+- [HF Brand Assets](https://huggingface.co/brand)
+
+### Skill Created
+`hf-hub-embedding-badges/` — complete reference with all embedding patterns, badge APIs, SQL console embed API, and OG card URLs.
+
+---
+
+
+---
+
+## 2026-07-25: hf-spaces-hardware-tiers-deep-dive
+
+### Summary
+Comprehensive deep dive into all Hugging Face Spaces hardware options: CPU tiers, GPU accelerators, ZeroGPU, billing model, programmatic configuration, replicas, streaming telemetry, and best practices. Based on the official HF Spaces doc, pricing page, and GPU upgrades guide.
+
+### Complete Hardware Tier Reference
+
+**CPU Tiers:**
+
+| Name | vCPU | Memory | Disk | Hourly Price | Notes |
+|------|------|--------|------|-------------|-------|
+| CPU Basic | 2 vCPU | 16 GB | 50 GB | **Free** | Goes to sleep after 48h inactivity. Creating new Spaces on compute requires paid plan; Static Spaces are always free. |
+| CPU Upgrade | 8 vCPU | 32 GB | 50 GB | $0.03/hr | Runs indefinitely by default. Can set custom sleep time. |
+
+**GPU Tiers:**
+
+| Name | vCPU | Memory | GPU | VRAM | Disk | Hourly Price |
+|------|------|--------|-----|------|------|-------------|
+| Nvidia T4 - small | 4 vCPU | 15 GB | 1× T4 | 16 GB | 50 GB | $0.40 |
+| Nvidia T4 - medium | 8 vCPU | 30 GB | 1× T4 | 16 GB | 100 GB | $0.60 |
+| 1× Nvidia L4 | 8 vCPU | 30 GB | 1× L4 | 24 GB | 400 GB | $0.80 |
+| 4× Nvidia L4 | 48 vCPU | 186 GB | 4× L4 | 96 GB | 3200 GB | $3.80 |
+| 1× Nvidia L40S | 8 vCPU | 62 GB | 1× L40S | 48 GB | 380 GB | $1.80 |
+| 4× Nvidia L40S | 48 vCPU | 382 GB | 4× L40S | 192 GB | 3200 GB | $8.30 |
+| 8× Nvidia L40S | 192 vCPU | 1534 GB | 8× L40S | 384 GB | 6500 GB | $23.50 |
+| Nvidia A10G - small | 4 vCPU | 15 GB | 1× A10G | 24 GB | 110 GB | $1.00 |
+| Nvidia A10G - large | 12 vCPU | 46 GB | 1× A10G | 24 GB | 200 GB | $1.50 |
+| 2× Nvidia A10G - large | 24 vCPU | 92 GB | 2× A10G | 48 GB | 1000 GB | $3.00 |
+| 4× Nvidia A10G - large | 48 vCPU | 184 GB | 4× A10G | 96 GB | 2000 GB | $5.00 |
+| Nvidia A100 - large | 12 vCPU | 142 GB | 1× A100 | 80 GB | 1000 GB | $2.50 |
+| 4× Nvidia A100 | 48 vCPU | 568 GB | 4× A100 | 320 GB | 4000 GB | $10.00 |
+| 8× Nvidia A100 | 96 vCPU | 1136 GB | 8× A100 | 640 GB | 8000 GB | $20.00 |
+
+**ZeroGPU (PRO required, $9/mo):** Nvidia RTX Pro 6000 Blackwell (dynamic allocation), up to 96 GB VRAM, free with PRO. 8× higher PRO quota, highest queue priority.
+
+**H100 removed December 2025** — no longer available for Spaces.
+
+### Billing Model
+
+- By the minute on selected hardware; only Starting/Running states billed
+- Free hardware auto-sleeps after 48h; woken by any visitor
+- Paid hardware runs indefinitely; custom sleep time settable; sleeping not billed
+- Pausing stops billing; auto-suspension on failure stops billing
+- Each replica billed independently
+
+### Programmatic Configuration
+
+```python
+from huggingface_hub import HfApi
+api = HfApi()
+api.request_space_hardware(repo_id="user/space", flavor="t4-small", sleep_time=3600)
+```
+
+Flavor values: `cpu-basic`, `cpu-upgrade`, `t4-small`, `t4-medium`, `l4x1`, `l4x4`, `l40sx1`, `l40sx4`, `l40sx8`, `a10g-small`, `a10g-large`, `a10g-largex2`, `a10g-largex4`, `a100-large`, `a100x4`, `a100x8`.
+
+### Key Takeaways for Zero-Cost Users
+1. **CPU Basic** — only free always-on compute (2 vCPU, 16 GB, 50 GB, auto-sleeps)
+2. **Static Spaces** — always free for everyone regardless of plan
+3. **ZeroGPU** — requires PRO ($9/mo); free-with-PRO GPU option
+4. **Community GPU Grants** — apply for free GPU upgrades from Space Settings
+5. **Pause unused paid Spaces** — paused time is not billed
+6. **Set sleep time on paid hardware** — sleeping stops billing
+
+### Skill Created
+`mlops/hf-spaces-hardware-tiers/` — complete reference with full hardware spec tables, billing model, programmatic configuration API, environment variables, and zero-cost optimization strategies.
+
+## 2026-07-25: hf-hub-hfuri-mount-volume-system — HfUri, HfMount, and Volume API for Spaces & Jobs
+
+### Summary
+Deep dive into the new Hugging Face Hub URI system (`hf://`), Mount specifications (`hf://...:<MOUNT_PATH>[:ro|:rw]`), and the Volume API for Space/Job resource mounting. Introduced in `huggingface_hub v1.24.0`. The `HfUri` dataclass provides a unified parser for identifying any Hub resource (model, dataset, space, kernel, or bucket) along with an optional revision and sub-path. `HfMount` extends this with a local mount path and read-only flag. The `Volume` dataclass (with `set_space_volumes`/`delete_space_volumes` API) replaces the deprecated `request_space_storage` for Spaces, while `sync_job_volume` enables local-to-bucket syncing for Job volumes.
+
+### Key Components
+
+**1. HfUri — Canonical Hub Resource Identifier**
+- Grammar: `hf://[<TYPE>/]<ID>[@<REVISION>][/<PATH>]`
+- Type prefixes (plural mandated): `models/`, `datasets/`, `spaces/`, `kernels/`, `buckets/`
+- Default type (no prefix): `model`
+- Special ref handling: `refs/pr/N` and `refs/convert/<name>` matched eagerly (contain `/`)
+- Revisions with `/` not matching special refs are URL-encoded as `%2F`
+- Bucket URIs never carry a revision
+- Accepted URI types from source: `model`, `dataset`, `space`, `kernel`, `bucket`
+- Properties: `.type`, `.id`, `.revision` (optional), `.path_in_repo` (default `""`), `.is_bucket`, `.is_repo`
+- `.to_uri()` — renders canonical `hf://` string
+- `.to_url(endpoint)` — renders Hugging Face web URL (e.g. `https://huggingface.co/org/model`)
+
+**2. HfMount — Mount Specification**
+- Grammar: `hf://[<TYPE>/]<ID>[@<REVISION>][/<PATH>]:<MOUNT_PATH>[:ro|:rw]`
+- Fields: `source` (HfUri), `mount_path` (absolute, starts with `/`), `read_only` (optional bool)
+- `.to_uri()` — renders mount URI
+- Parsing: `parse_hf_mount(mount_str)` returns `HfMount`
+- Mount path always starts with `:/` delimiter; uses rfind to handle edge cases
+
+**3. Volume Class — API-facing mount descriptor**
+```python
+@dataclass
+class Volume:
+    type: Literal["bucket", "model", "dataset", "space"]
+    source: str              # repo or bucket ID
+    mount_path: str          # absolute path in container
+    revision: str | None     # git revision (repos only)
+    read_only: bool | None   # True for repos, default False for buckets
+    path: str | None         # subfolder prefix inside resource
+```
+- `.to_dict()` — serializes to Hub API JSON payload (uses camelCase keys)
+- `.to_uri()` — renders as `hf://` mount URI via `HfMount`
+
+**4. set_space_volumes / delete_space_volumes — New Space Volume API**
+- `api.set_space_volumes(repo_id, volumes)` — replaces ALL volumes on a Space; raises `BadRequestError` on static Spaces
+- `api.delete_space_volumes(repo_id)` — removes ALL volumes from a Space; raises `BadRequestError` if none attached
+- `api.get_space_runtime(repo_id)` — returns `SpaceRuntime` with `.volumes: list[Volume] | None`
+- `request_space_storage` deprecated in v1.24.0, will be removed in v2.0
+
+**5. sync_job_volume — Job Volume Sync**
+- `api.sync_job_volume(source, mount_path, *, remote_name, read_only, namespace)` returns `Volume`
+- Syncs local directory to `{namespace}/jobs-artifacts` bucket (auto-created private)
+- Uses same sync logic as `sync_bucket` — re-syncing only uploads new/modified files
+- Default subfolder name derived from directory path + hostname; pass `remote_name` for fixed name
+- Read-only by default; pass `read_only=False` for Job output volumes
+- Empty directories get `.keep` placeholder so volume mounts succeed
+- Returns a `Volume` ready for `run_job`/`run_uv_job`/`create_scheduled_job`/`create_scheduled_uv_job`
+
+**6. duplicate_repo with space_volumes**
+- `api.duplicate_repo(from_id, to_id, *, repo_type, space_volumes=..., ...)` — new unified duplication API
+- `duplicate_space()` deprecated in favor of `duplicate_repo(repo_type="space")`
+- `space_volumes` parameter accepts `list[Volume]` for the duplicate
+
+**7. Web URL to HF URI Parsing**
+- `parse_hf_uri()` accepts both `hf://` URIs and Hugging Face web URLs (auto-detected)
+- Supported URL routes: `blob`, `resolve`, `raw`, `tree`, `blame` (repos); `resolve`, `tree` (buckets)
+- User/org pages, listing pages, and non-location routes (commit, discussions, settings, edit) rejected
+- Self-hosted endpoints supported via `endpoint` parameter
+- Constants: `HF_PROTOCOL="hf://"`, `HF_URI_TYPE_PREFIXES={models: model, datasets: dataset, spaces: space, kernels: kernel, buckets: bucket}`, `HF_URL_HOSTS={hf.co, huggingface.co, hub-ci.huggingface.co}`
+
+### Key Design Decisions
+- Singular type names rejected with helpful error
+- `HfUri` is frozen/hashable — safe for caching and use as dict keys
+- Mount paths use rfind(`:/`) to avoid splitting on `:` in Windows-style paths
+- Bucket URIs explicitly reject revision markers (`@`)
+- `Volume.to_uri()` uses HfMount internally for CLI compatibility
+- Model URLs are at root; others under type prefix
+
+### API Integration
+- SpaceRuntime includes `volumes: list[Volume] | None` field populated from API response
+- `SpaceRuntime` also tracks `dev_mode: bool`, `storage: SpaceStorage | None`, `hot_reloading: SpaceHotReloading | None`
+- Volumes in SpaceRuntime are created via `Volume(**v)` from raw API dict
+
+### Practical Usage
+```python
+from huggingface_hub import HfApi, Volume, parse_hf_uri, parse_hf_mount
+
+# Parse URIs and web URLs
+uri = parse_hf_uri("hf://datasets/my-org/my-dataset@v1/train.csv")
+uri.to_url()  # full Hugging Face web URL
+
+# Mount specification
+mount = parse_hf_mount("hf://models/org/model:/models:ro")
+mount.to_uri()  # canonical mount URI
+
+# Volume for Spaces API
+api = HfApi()
+volumes = [
+    Volume(type="bucket", source="my-org/my-bucket", mount_path="/data"),
+    Volume(type="model", source="other-org/base-model", mount_path="/model", read_only=True),
+]
+api.set_space_volumes("my-org/my-space", volumes)
+runtime = api.get_space_runtime("my-org/my-space")
+for vol in runtime.volumes:
+    print(f"{vol.type}: {vol.source} -> {vol.mount_path}")
+
+# Volume for Jobs
+vol = api.sync_job_volume("./inputs", mount_path="/inputs", remote_name="eval-data-v3")
+job = api.run_uv_job("run_eval.py", volumes=[vol], flavor="cpu-upgrade")
+```
+
+### Zero-Cost Relevance
+- Volumes for Spaces are available on free CPU Basic hardware (static Spaces not supported)
+- `sync_job_volume` syncs to free `jobs-artifacts` bucket (public unlimited, private with limits)
+- Mounting models/datasets as volumes costs nothing extra — read-only references to existing resources
+- Bucket volumes may incur storage costs for large data; keep buckets public for free unlimited storage
+- The `hf://` URI system itself is free — a standardized way to reference Hub resources
+
+### Skill Updated
+`mlops/huggingface-hub/` — added HfUri/HfMount/Volume reference to `references/hf-learnings.md`
+
+---
+
+## 2026-07-25: hf-spaces-hot-reload-architecture-deep-dive — Hot Reload & Dev Mode for Spaces
+
+### Summary
+Comprehensive source-code deep-dive into the Hugging Face Spaces Hot Reload system (`huggingface_hub._hot_reload`), which enables live code reloading on running Spaces without full container rebuilds. Built on top of **Dev Mode** (a PRO/Team feature that keeps the container alive between restarts), the Hot Reload infrastructure uses Server-Sent Events (SSE) to push incremental code changes to individual replicas. This is the first time the full internal architecture of this system has been documented from source.
+
+### Architecture Overview
+
+The Hot Reload system has three layers:
+
+1. **Dev Mode** — Toggle on/off via `enable_space_dev_mode()`/`disable_space_dev_mode()`. Keeps the Space container running while the application restarts. Required before hot reloading can work. Available on PRO and Team & Enterprise plans.
+
+2. **Commit with `_hot_reload=True`** — Pass the private `_hot_reload=True` parameter to `create_commit()` (or `upload_folder()` which wraps it). This adds `?hot_reload=1` as a query parameter to the commit API endpoint (`POST /api/{type}s/{repo_id}/commit/{revision}`), signalling the Hub to notify all running replicas.
+
+3. **SSE-based Reload Client** — Each running Space replica runs a reload server on port **7887** (subdomain-based: `{space}--7887.hf.space`). The `ReloadClient` connects to this endpoint and streams reload events via SSE.
+
+### Source Code Structure
+
+All hot reload source lives under `huggingface_hub/_hot_reload/` (Copyright 2026, new in v1.24.0):
+
+| File | Purpose |
+|------|---------|
+| `__init__.py` | Package marker (license only, no exports) |
+| `types.py` | TypedDict definitions for all reload API request/response shapes |
+| `sse_client.py` | Vendored SSE client (from `mpetazzoni/sseclient`, Apache-2.0) |
+| `client.py` | `ReloadClient` and `multi_replica_reload_events()` — core Hot Reload logic |
+
+### Types Reference (`types.py`)
+
+**Operation Types** (the actual events streamed during reload):
+
+| Type | Kind | Description |
+|------|------|-------------|
+| `ReloadOperationObject` | `"add"` / `"update"` / `"delete"` | File-level object change: `objectType`, `objectName`, `region` |
+| `ReloadOperationRun` | `"run"` | Execute code block: `codeLines`, `stdout`, `stderr` |
+| `ReloadOperationException` | `"exception"` | Runtime exception with `traceback` string |
+| `ReloadOperationError` | `"error"` | Fatal reload error with `traceback` |
+| `ReloadOperationUI` | `"ui"` | UI change notification: `updated: bool` |
+| `ReloadOperationFile` | `"file"` | File creation notification: `created: bool` |
+
+**API Request/Response Types:**
+
+| TypedDict | Purpose |
+|-----------|---------|
+| `ApiCreateReloadRequest` | `{filepath, contents, reloadId?}` — trigger a reload on a specific file |
+| `ApiCreateReloadResponseSuccess` | `{status: "created", reloadId: str}` |
+| `ApiCreateReloadResponseError` | `{status: "alreadyReloading" | "fileNotFound"}` |
+| `ApiGetReloadRequest` | `{reloadId: str}` — poll/pull reload events by ID |
+| `ApiGetReloadEventSourceData` | Stream of `ReloadOperation*` events emitted during reload |
+| `ApiGetStatusRequest` | `{revision: str}` — check if a revision has been reloaded |
+| `ApiGetStatusResponse` | `{reloading: bool, uncommitted: list[str]}` |
+| `ApiFetchContentsRequest` | `{filepath: str}` — fetch file contents from running Space |
+| `ApiFetchContentsResponse` | `{status: "ok" | "fileNotFound", contents?: str}` |
+
+### ReloadClient (`client.py`)
+
+Key design:
+- Each replica is addressed by its `replica_hash` via the `--replicas/+{hash}` URL path segment
+- GET reload returns an SSE stream — events are parsed by the vendored `SSEClient`
+- Non-200/204 status codes raise exceptions; 204 means "reloadId not found" (retryable)
+- 20-second client timeout (`CLIENT_TIMEOUT`)
+
+### Multi-Replica Coordination (`multi_replica_reload_events()`)
+
+This function:
+1. Creates one `ReloadClient` per replica hash
+2. For each replica, calls `get_reload(commit_sha)` with up to `max_retries` retries
+3. Tracks all events from the first replica as the reference (`first_client_events`)
+4. For subsequent replicas, checks if their stream matches the first replica's events exactly
+5. **Deduplication**: events that are identical across replicas are suppressed; only the first replica's events are yielded, plus a `fullMatch` marker for replicas that match exactly
+6. **Partial match**: if a replica diverges mid-stream, replay backlog then yield fresh events
+
+### SpaceRuntime Integration
+
+The `SpaceRuntime` dataclass (in `_space_api.py`) exposes hot reload state:
+- `dev_mode: bool` — is dev mode enabled?
+- `hot_reloading: SpaceHotReloading | None` — active reload if any
+
+`SpaceHotReloading.status` is `"created"` (reload initiated), `"canceled"` (reload aborted), or `None` (pending). The `replica_statuses` field contains per-replica status tuples.
+
+### Dev Mode API
+```python
+api.enable_space_dev_mode("user/my-space")   # POST /api/spaces/{id}/dev-mode {"enabled": True}
+api.disable_space_dev_mode("user/my-space")  # POST /api/spaces/{id}/dev-mode {"enabled": False}
+```
+
+### End-to-End Flow
+1. Enable Dev Mode → keeps container alive
+2. Commit with `_hot_reload=True` → `POST .../commit/main?hot_reload=1`
+3. Hub notifies running replicas → each replica streams SSE events on port 7887
+4. Events: object add/update/delete, code run, UI update, file create (or exception/error)
+5. Poll `get_space_runtime()` → `hot_reloading.status` to verify completion
+
+### Key Design Decisions
+1. **SSE over WebSocket** — simpler, unidirectional, HTTP-based
+2. **Per-replica port naming** — `--7887` subdomain avoids port conflicts
+3. **First-replica dedup** — first replica's events are canonical; subsequent matching replicas yield `fullMatch`
+4. **Private `_hot_reload`** — experimental/PRO-only, not in public docs
+5. **10 retries** — 2s sleep on 204 (reloadId propagation delay)
+
+### Zero-Cost Relevance
+- Dev Mode requires PRO ($9/mo) — not on free tier
+- Understanding the architecture helps with debugging Spaces and contributing to `huggingface_hub` open source
+- The vendored `sse_client.py` (Apache-2.0) is reusable for any SSE integration
+
+### Files Analyzed
+| File | Lines |
+|------|-------|
+| `huggingface_hub/_hot_reload/types.py` | 121 |
+| `huggingface_hub/_hot_reload/sse_client.py` | 144 |
+| `huggingface_hub/_hot_reload/client.py` | 130 |
+| `huggingface_hub/hf_api.py` (rel. sections) | ~120 |
+| `huggingface_hub/_space_api.py` (rel. sections) | ~30 |
+| `huggingface_hub/_commit_api.py` (rel. sections) | ~20 |
+| **Total code analyzed** | **~565 lines** |
+
+### Skill Updated
+`mlops/huggingface-hub/` — added Hot Reload & Dev Mode reference to `references/hf-learnings.md`
+
+---
+
+## 2026-07-25: hf-hub-daily-papers-and-paper-pages-deep-dive
+
+### Summary
+Deep-dive into the Hugging Face Daily Papers and Paper Pages ecosystem — the API
+endpoints (`/api/daily_papers`, `/api/papers/{id}`, `/api/papers?`), data
+structures, linking mechanism via arxiv tags, discussion system, authorship
+claims, paper indexing, markdown content delivery, and programmatic discovery
+patterns. Verified by live queries to all endpoints.
+
+### Key Findings
+- **5 API endpoints** for papers: daily_papers (latest 50), date-filtered, paper detail, search (max 3 results), browse/sort
+- **Paper detail** includes `linkedModels`, `linkedDatasets`, `linkedSpaces` with full repo metadata
+- **Linking mechanism**: arxiv tags (`arxiv:XXXX.YYYYY`) in repo card tags, auto-extracted from README URLs
+- **Discussion system**: Svelte-embedded in HTML data-props, NO public REST API
+- **Markdown content** available at `/buckets/huggingchat/papers-content/resolve/{folder}/{id}.md`
+- **Paper authorship**: auto-match by email, manual claim via settings, profile visibility toggle
+- **Indexing**: auto on visiting `hf.co/papers/{id}`, can also search + index from papers page
+
+### Skill Created
+`mlops/hf-hub-daily-papers-and-paper-pages/` — complete SKILL.md + references/hf-learnings.md with API reference, data structures, code patterns
+
+---
+
+## 2026-07-25: hf-inference-mcp-client-agent-framework-deep-dive — HF Inference MCP Client & Agent Framework (Topic #313)
+
+### Summary
+Deep dive into the Hugging Face Inference MCP Client and Agent framework built into `huggingface_hub` v1.24+. Covers the `MCPClient` class (core client connecting to MCP servers: stdio, SSE, HTTP/StreamableHTTP), tool discovery and management (tool name deduplication, allowed_tools filtering), `process_single_turn_with_tools()` for streaming chat completions with automatic tool execution, the `Agent` class for multi-turn agent loops (max 10 turns, exit tools `task_complete`/`ask_question`), the `hf app` CLI entry point, and the Tiny Agent config format (`agent.json` with `inputs`/`servers`/`model`/`provider`). Key distinction: this is the CLIENT side of MCP (consuming tools from MCP servers) vs. the HF Hub MCP Server (exposing HF Hub as an MCP server).
+
+### Key Findings
+- **MCPClient is async-only** — requires `async with` / `await` for all operations
+- **Three server types**: stdio (local processes), SSE (remote streaming), HTTP (StreamableHTTP)
+- **Tool deduplication**: first server wins if two provide same tool name
+- **allowed_tools filtering**: server-side at connection time, not per-request
+- **Auto-converts MCP tools** to `ChatCompletionInputTool` OpenAI format
+- **Agent loop**: max 10 turns, exits on `task_complete`, `ask_question`, or direct model response
+- **Exit optimization**: returns early if first 2 chunks contain no tool calls
+- **Binary content** (images, audio): summarized, not embedded in text stream
+- **Separate from HF MCP Server**: this is a *client* that *consumes* MCP servers
+
+### Source
+- `huggingface_hub/inference/_mcp/mcp_client.py` (395 lines)
+- `huggingface_hub/inference/_mcp/agent.py` (100 lines)
+- `huggingface_hub/inference/_mcp/cli.py` (245 lines)
+- `huggingface_hub/inference/_mcp/constants.py` (81 lines)
+- `huggingface_hub/inference/_mcp/types.py` (45 lines)
+- `huggingface_hub/inference/_mcp/utils.py` (130 lines)
+- Public API: `from huggingface_hub import MCPClient`
+
+### Skill Created
+`mlops/hf-inference-mcp-client/` — HF Inference MCP Client & Agent Framework: complete reference with API details, server types, agent loop architecture, CLI patterns, and code examples.
+
+---
+
+## 2026-07-25: hf-cli-agent-mode-deep-dive — Hugging Face hf CLI Agent-Optimized Mode (Topic #314)
+
+### Summary
+Deep dive into the `hf` CLI v1.9.0+ agent-optimized mode. Covers auto-detection of coding agents (Claude Code, Codex, Cursor, etc.), dual rendering (human vs agent output formats), the auto-generated skill system, safe retry semantics (`--exist-ok`, `--yes`, `--dry-run`), next-command hints, composable output (`-q`, `--json`, `--quiet`), and the benchmark results comparing CLI vs curl/Python SDK across ~1,000 graded runs on 18 Hub tasks. The CLI achieves 94% task success on Sonnet (vs 84% without it) and burns 1.3–6× fewer tokens on complex multi-step workflows.
+
+### Key Findings
+
+| Aspect | Detail |
+|--------|--------|
+| **Detection** | Reads CLAUDECODE, CODEX_SANDBOX, AI_AGENT, CURSOR env vars |
+| **Agent output** | TSV format, no truncation, no ANSI, ISO 8601, all tags, stderr guidance |
+| **Human output** | Aligned tables, ANSI color, truncated to fit, green ✅ on success |
+| **Skill effect** | ~30% fewer tool calls (10.4→6.9 Sonnet, 10.1→7.3 GPT-5.5) |
+| **Safe retry** | --exist-ok, -y/--yes, --dry-run on destructive/data-move commands |
+| **Token savings** | 1.3–1.8× overall, 2.4–6× on multi-step tasks (bucket sync, org ranking) |
+| **Simple reads** | Near parity or cheaper via curl/SDK (0.3–0.5×) |
+| **Error handling** | Errors go to stderr with fix command; never prompts in agent mode |
+
+### Benchmark Detail (18 tasks, ~1,000 graded runs)
+
+| Agent | Tool | Success | Self-report errors | Token vs baseline |
+|-------|------|---------|-------------------|-------------------|
+| Claude Code (Sonnet 4.6) | `hf` CLI | **0.94** | 2/163 | baseline |
+|  | curl/Python SDK | 0.84 | 11/163 | 1.3–1.6× |
+| Codex (GPT-5.5) | `hf` CLI | **0.93** | 3/163 | baseline |
+|  | curl/Python SDK | 0.92 | 10/163 | 1.6–1.8× |
+
+Per-task token ratios for curl/SDK vs CLI (GPT-5.5): bucket create+sync+prune 6.0×, rank org trending models 4.1×, repo create+branch+tag / delete files / copy files across repos 2.4× each. Simple reads: batch model metadata 0.5×, count dataset rows 0.3×.
+
+### Agent Harness Registration
+Any agent harness can register by PR to `agent-harnesses.ts` in huggingface.js. Guide at `/docs/hub/agents-overview#register-your-agent-harness`.
+
+### Skill Created
+`mlops/hf-cli-agent-mode/` — SKILL.md + references/hf-learnings.md covering agent-optimized CLI design, detection, rendering modes, skill system, benchmark results, and best practices.
+
+### Sources
+- https://huggingface.co/blog/hf-cli-for-agents (primary source)
+- https://huggingface.co/docs/huggingface_hub/guides/cli
+- https://huggingface.co/docs/hub/agents-overview
+
+
+---
+
+## 2026-07-25: hf-transformers-tipsv2 (Topic #316 — New)
+
+### Summary
+Deep-dive into TIPSv2 (Text-Image Pre-training with Spatial awareness v2) — Google DeepMind's contrastive vision-language encoder family added in Transformers v5.14.0. Covers dual-class-token architecture (alt-text + synthetic caption supervised), iBOT++ pretraining objective, zero-shot classification, DPT head for depth/normal/segmentation, and full HF integration. Key innovation: unmasked tokens contribute to masked image modeling loss, dramatically improving patch-text alignment.
+
+### Key Findings
+- **Dual class tokens**: CLS1 (web alt-text) + CLS2 (PaliGemma synthetic captions) via repurposed register tokens
+- **iBOT++**: unmasked patches also contribute to loss — student surpasses teacher in patch-text alignment
+- **448×448 images**, 14×14 patches → 32×32 grid
+- **Text encoder limits**: ReLU activation, max 64 tokens, BPE tokenizer
+- **3 tasks with DPT**: depth estimation (meters), normal estimation (XYZ), semantic segmentation in one forward pass
+- **Tipsv2Model** returns normalized embeddings; **get_image_features/get_text_features** return raw (unnormalized)
+- **Available sizes**: b14 (base) and l16 (large), each with/without DPT head
+- **Collection**: https://huggingface.co/collections/google/tipsv2
+
+### Skill Created
+`mlops/hf-transformers-tipsv2/` — SKILL.md + references/hf-learnings.md covering architecture, configs, usage patterns, API surface, and comparisons to CLIP/SigLIP.
+
+### Sources
+- https://huggingface.co/docs/transformers/main/en/model_doc/tipsv2
+- https://huggingface.co/docs/transformers/main/en/model_doc/tipsv2_dpt
+- https://huggingface.co/papers/2604.12012
+|- Transformers v5.14.0 release notes
+
+---
+
+## 2026-07-26: hf-hub-create-commit-pipeline-source-code-deep-dive (Topic #318 — Deepening)
+
+### Summary
+Source-code-level deep dive into the `HfApi.create_commit()` pipeline in `huggingface_hub==1.24.0`. Covers the full lifecycle: validation → upload mode resolution (`_fetch_upload_modes`) → LFS pre-upload (`_upload_files` with Xet path or legacy LFS path) → copy duplication → no-op detection → payload assembly (`_prepare_commit_payload`) → ndjson POST to `/commit`. Key insight: the pipeline is a two-phase protocol where file _metadata_ is resolved in phase 1 and _content_ is uploaded in phase 2, all before the actual commit HTTP request.
+
+### Pipeline Architecture
+
+```
+create_commit()
+├── 1. Validate inputs (commit_message, parent_commit OID, repo_type, README.md YAML)
+├── 2. Separate operations: additions, copies, deletions
+├── 3. preupload_lfs_files()
+│   ├── 3a. _fetch_upload_modes() — POST /preupload/{revision} for each batch of 256 files
+│   │   Returns: uploadMode ("lfs"|"regular"), shouldIgnore, remote OID
+│   │   Payload: {path, sample (first 512B base64), size}
+│   │   + gitIgnore content if .gitignore is committed
+│   ├── 3b. Filter: skip already-uploaded, gitignored, regular files
+│   └── 3c. _upload_files() — content upload
+│       ├── Xet path (preferred): hf_xet session.new_upload_commit() — chunk-based CAS
+│       │   - start_upload_file() for file paths, start_upload_bytes() for bytes
+│       │   - sha256 backfilled from hf_xet result (single read pass)
+│       └── Legacy LFS path: post_lfs_batch_info() → _upload_lfs_files()
+│           - SHA256 computed in parallel via ThreadPoolExecutor
+│           - LFS batch API: actions with "upload" URLs
+│           - Supports "basic" and "multipart" transfers
+│           - thread_map for parallel upload
+├── 4. _fetch_files_to_copy() — resolve copy sources (LFS metadata vs raw content download)
+├── 5. _duplicate_lfs_files() — cross-repo LFS copy via /lfs-files/duplicate endpoint
+├── 6. Remove no-op operations (file unchanged: _remote_oid == _local_oid)
+├── 7. _send_commit()
+│   ├── _prepare_commit_payload() → ndjson stream
+│   │   Line 1: {"key":"header","value":{"summary","description","parentCommit"}}
+│   │   Per operation:
+│   │     - regular file: {"key":"file","value":{"content":"base64","path":"...","encoding":"base64"}}
+│   │     - LFS file: {"key":"lfsFile","value":{"path":"...","algo":"sha256","oid":"...","size":N}}
+│   │     - delete: {"key":"deletedFile"|"deletedFolder","value":{"path":"..."}}
+│   │     - copy: {"key":"file"|"lfsFile"} (same as add but content sourced from files_to_copy)
+│   ├── POST /api/{repo_type}s/{repo_id}/commit/{revision} (Content-Type: application/x-ndjson)
+│   │   params: create_pr=1, hot_reload=1
+│   └── Response: {commitUrl, commitOid, pullRequestUrl}
+└── 8. Mark additions as _is_committed = True
+```
+
+### Key Source Details
+
+**UploadInfo (lfs.py:53-100):** Lazy SHA256 computation — only first 512 bytes read at construction time. Full SHA256 on first access. Can be backfilled by Xet upload to avoid double-read.
+
+**_fetch_upload_modes() (_commit_api.py:698-780):** POSTs batches of 256 files to `/preupload/{revision}`. Server responds with upload mode per file. Empty files (size==0) are forced to "regular" mode (S3 rejects empty LFS uploads). gitignore filtering is server-side with `shouldIgnore` flag.
+
+**_upload_files() (_commit_api.py:378-448):** Xet path preferred when `hf_xet` is available (no BufferedIOBase ops). Xet chunks files, deduplicates chunks via content-addressable storage (CAS), uploads in parallel. Legacy path: LFS batch API with SHA256 computation, actions parsing, parallel multipart/basic uploads.
+
+**_send_commit() (_commit_api.py:1008-1075):** Builds ndjson payload and POSTs to /commit. Supports `retry_on_error` with http_backoff (opt-in; risk of duplicate commits on lost response). Response parsed into CommitInfo(commit_url, commit_message, oid, pr_url).
+
+**CommitOperationAdd mutations during pipeline:**
+1. `_upload_mode` — set by _fetch_upload_modes
+2. `_should_ignore` — set by _fetch_upload_modes (gitignore)
+3. `_remote_oid` — set by _fetch_upload_modes (for no-op detection)
+4. `_is_uploaded` — set after preupload_lfs_files
+5. `_is_committed` — set after commit success
+6. `path_or_fileobj` → `b""` — freed after upload if `free_memory=True`
+
+**No-op optimization:** If `_remote_oid == _local_oid`, file is skipped entirely. LFS local OID = SHA256 hex; regular local OID = git-style SHA1. Entire commit is skipped if all ops are no-ops (returns last commit info).
+
+**Limits:** 25k LFS files per commit, 1GB regular file payload, 256 files per preupload batch, 500 files per FETCH_LFS_BATCH_SIZE, 500 files per DUPLICATE_LFS_BATCH_SIZE.
+
+### Skill Created
+N/A — added to existing `mlops/huggingface-hub/` skill references.
+
+### Sources
+- huggingface_hub v1.24.0 source: `hf_api.py:4943-5217` (create_commit)
+- huggingface_hub v1.24.0 source: `hf_api.py:5219-5380` (preupload_lfs_files)
+- huggingface_hub v1.24.0 source: `_commit_api.py` (full pipeline: 1075 lines)
+- huggingface_hub v1.24.0 source: `lfs.py:53-100` (UploadInfo)
+- https://github.com/huggingface/huggingface_hub/issues/1085#issuecomment-1265208073 (ndjson commit design)
+|
+
+## 2026-07-25: hf-datasets-configuration-system-complete-reference
+
+### Summary
+Comprehensive deep dive into the Hugging Face Datasets configuration system (v5.0.0). Covers the full lifecycle of dataset configurations: BuilderConfig base class, BUILDER_CONFIGS predefined configs, DEFAULT_CONFIG_NAME selection, config ID generation with suffix hashing, YAML metadata configs from README.md, dataset_infos.json serialization, config resolution in load_dataset(), cache directory architecture, packaged module configs, and integration with the Datasets Server.
+
+### Key Findings
+
+**BuilderConfig (@dataclass):**
+- 5 fields: name (default: "default"), version (default: "0.0.0"), data_dir, data_files, description
+- Validates Windows-incompatible chars in name
+- create_config_id() generates unique cache ID with suffix from config_kwargs, custom_features, data_files
+
+**Config Resolution (3 paths):**
+1. No config specified → DEFAULT_CONFIG_NAME or single config or raise
+2. String config_name → lookup in builder_configs dict
+3. Custom → instantiate BUILDER_CONFIG_CLASS with kwargs
+Plus override path: deepcopy predefined config + apply kwargs
+
+**Config ID:**
+- Base = config.name
+- Suffix added when config_kwargs/features/data_files differ from predefined
+- URL-encoded string if all primitive values and ≤32 chars; SHA256 hash otherwise
+- Max readable length: 255 chars (truncated + hashed if exceeded)
+
+**MetadataConfigs (YAML configs field):**
+- Dict[config_name → params] parsed from DatasetCardData
+- Validates data_files format (str, list of str, or split-based list)
+- Auto-generates default detection via name="default" or default: true
+- _from_exported_parquet_files_and_dataset_infos() auto-creates configs from Parquet export
+
+**Cache Directory:** {dataset_name}/{config_id}/{version}/{hash}/ with namespace prefix for Hub repos.
+
+**Packaged Module Configs:**
+- csv → CsvConfig (sep, header, names)
+- json → JsonConfig (field, features)
+- parquet → ParquetConfig (features)
+- imagefolder → ImageFolderConfig (drop_labels, drop_metadata)
+- audiofolder → AudioFolderConfig (sampling_rate)
+- text → TextConfig (sample_by)
+
+### Skill Created
+hf-datasets-configuration-system/ — complete reference with architecture, API surface, config ID system, YAML metadata format, cache layout, and practical usage examples.
+
+### Sources
+- datasets v5.0.0 source: builder.py (BuilderConfig: lines 100-212, DatasetBuilder._create_builder_config: lines 503-592)
+- datasets v5.0.0 source: info.py (DatasetInfo: lines 91-280, DatasetInfosDict: lines 334-440)
+- datasets v5.0.0 source: utils/metadata.py (MetadataConfigs: lines 46-189)
+- datasets v5.0.0 source: load.py (create_builder_configs_from_metadata_configs: lines 320-374, BuilderConfigsParameters: lines 377-392)
+- datasets v5.0.0 source: config.py (constants: lines 236-248)
+- huggingface_hub v1.24.0 source: repocard_data.py (DatasetCardData constructor)
+- https://huggingface.co/docs/datasets/main/en/loading#configurations-and-splits
+|- https://huggingface.co/docs/datasets/main/en/dataset_script#multiple-configurations
+|
+|---
+|
+|## 2026-07-25: hf-hub-local-agents-with-llamacpp — HF Hub Local Agents with llama.cpp (Topic #324)
+|
+|### Summary
+|Deep dive into HF Hub's "Local Agents with llama.cpp" workflow. Covers running Pi, OpenClaw, Hermes Agent, OpenCode, and llama-agent (C++ binary, zero deps) with llama.cpp server backend using HF GGUF models. Key innovation: hardware profiling at huggingface.co/settings/hardware + one-click `llama-server -hf` commands.
+|
+|### 5 Agent Frameworks
+|| Agent | Config Location | Notes |
+||-------|----------------|-------|
+|| Pi | ~/.pi/agent/models.json | npm install -g @mariozechner/pi-coding-agent |
+|| OpenClaw | openclaw onboard CLI | Supports local memory search via node-llama-cpp |
+|| Hermes Agent | ~/.hermes/config.yaml | custom provider + session_search for embeddings |
+|| OpenCode | ~/.config/opencode/opencode.json | Uses @ai-sdk/openai-compatible |
+|| llama-agent | cmake binary | Zero deps, in-process tool calls, subagent + MCP support |
+|
+|### Sources
+|- https://huggingface.co/docs/hub/en/agents-local
+|- https://huggingface.co/docs/hub/en/agents
+|- https://huggingface.co/settings/hardware
+|
+|### Skill Created
+|`hf-hub-local-agents-with-llamacpp/` — reference with exact config files for all 5 agent frameworks, architecture diagram, local memory search patterns.
+|
+
+---
+# HF Learnings — HF Sandboxes v3: Background Processes, Port Proxy, Pool Management, and Source Architecture
+
+## 2026-07-25: hf-sandboxes-v3-deep-dive — Hugging Face Sandbox API: Complete Source Architecture & Advanced Patterns (Topic #327)
+
+### Summary
+Source-code-level deep dive into the complete Hugging Face Sandboxes system as of `huggingface_hub v1.24.0` (released 2026-07-17). The sandbox API has evolved significantly since the initial deep-dive (Topic #148), gaining background process support (v1.22.0), port proxy for in-sandbox servers (v1.22.0), SandboxPool with cache persistence and cross-process host discovery (v1.22.0), and parallel file transfers for large files. The system is built entirely on HF Jobs — a sandbox is just a Job running a ~640KB static Rust binary (`sbx-server`), with no dedicated infrastructure beyond the Job API. This document covers the full 1764-line `_sandbox.py` module, the 159-line `_sandbox_cache.py` module, and the 480-line CLI surface.
+
+### Source Files Analyzed
+
+| File | Lines | Purpose |
+|------|-------|---------|
+| `huggingface_hub/_sandbox.py` | 1764 | Core Sandbox + SandboxPool implementation |
+| `huggingface_hub/_sandbox_cache.py` | 159 | Best-effort pool cache for cross-process host reuse |
+| `huggingface_hub/cli/sandbox.py` | 480 | CLI commands (`hf sandbox *`) |
+| `huggingface_hub/errors.py` | 609 | SandboxError, SandboxCommandError exception types |
+
+### Public API
+
+```python
+from huggingface_hub import Sandbox, SandboxPool, SandboxCommandResult, SandboxProcess
+from huggingface_hub.errors import SandboxError, SandboxCommandError
+```
+
+---
+
+### 1. Architecture Overview
+
+Sandboxes have **zero dedicated infrastructure** — they are HF Jobs running a static Rust binary. This design choice means they inherit Jobs' billing, hardware flavors (cpu-basic → H200), namespace permissions, and volume system for free.
+
+```
+User Code
+  ↓
+Sandbox.create() / SandboxPool.create()
+  ↓
+HfApi.run_job()       ← Jobs API creates a VM
+  │  [image: python:3.12, flavor: cpu-basic, expose: 49983]
+  ↓
+Job starts on infra
+  │  Bootstrap script (wget/curl sbx-server binary)
+  │  Token auth via HMAC-SHA256
+  ↓
+sbx-server (Rust binary) running on port 49983
+  │  Hand-rolled HTTP/1.1 server
+  │  NDJSON event streams for exec
+  │  /health, /exec, /files/*, /processes, /proxy/*, /v1/sandboxes/*
+  ↓
+Sandbox._server (httpx.Client) → base_url/job-id--49983.hf.jobs
+```
+
+**Two modes:**
+
+| Mode | Class | Isolation | GPU | Cold Start | Cost Profile |
+|------|-------|-----------|-----|------------|--------------|
+| Dedicated | `Sandbox.create()` | Full VM | ✅ Yes | ~5-7s | One Job per sandbox |
+| Shared/Pooled | `SandboxPool.create()` | uid + Landlock LSM | ❌ No | ~1ms server-side | Many sandboxes per host VM |
+
+**Bootstrap sequence (in `/bin/sh`):**
+1. Download `sbx-server` from HF bucket with `wget`/`curl` (fast ~6s cold start)
+2. Fallback: read from always-mounted server bucket via FUSE (+2-3s)
+3. Execute binary on port 49983 with derived auth token
+4. Server starts, begins health-check polling
+5. `Sandbox` client polls `/health` until 200 → ready
+
+**Key constants:**
+```python
+SANDBOX_SERVER_PORT = 49983      # In-job server port (deliberately uncommon)
+SANDBOX_LABEL = "hf-sandbox"     # Label on every sandbox job
+MODE_LABEL = "hf-sandbox-mode"   # "dedicated" or "pool"
+MODE_DEDICATED = "dedicated"
+MODE_POOL = "pool"
+POOL_LABEL = "hf-sandbox-pool"   # Pool name label
+NONCE_LABEL = "hf-sandbox-nonce" # Public nonce for token derivation
+DEFAULT_IMAGE = "python:3.12"
+DEFAULT_IDLE_TIMEOUT = 600       # 10 minutes
+SANDBOX_MAX_LIFETIME = "24h"     # Absolute max job lifetime
+DEFAULT_SANDBOXES_PER_HOST = 50  # Pool sandboxes per host VM
+SHARED_ID_SEP = "."              # Separator in shared sandbox ids: <host_job_id>.<local_id>
+```
+
+---
+
+### 2. Stateless Authentication System
+
+Sandbox auth is **entirely stateless** — no database, no stored tokens, no session state.
+
+**Two-layer security:**
+1. **Transport layer (proxy gate):** The Jobs proxy (`.hf.jobs`) validates the user's HF token — only authenticated users can reach the sandbox server
+2. **Application layer (sandbox gate):** A per-sandbox HMAC-SHA256 token, derived from the user's HF token + a public nonce, authenticates every API request inside the sandbox
+
+**Token derivation (never sends HF token to sandbox):**
+```python
+def _derive_sandbox_token(hf_token: str, nonce: str) -> str:
+    return hmac.new(
+        hf_token.encode(),
+        f"hf-sandbox:{nonce}".encode(),
+        hashlib.sha256
+    ).hexdigest()
+```
+
+**Flow during creation:**
+1. Client generates random `nonce = token_hex(16)`
+2. Client computes `sandbox_token = _derive_sandbox_token(hf_token, nonce)`
+3. Nonce is stored as the `hf-sandbox-nonce` job label (public)
+4. Sandbox token is sent as `SBX_TOKEN` in job secrets (encrypted server-side)
+5. When reconnecting: read nonce from job labels, recompute token locally
+6. HTTP requests carry: `Authorization: Bearer {hf_token}` + `X-Sandbox-Token: {sandbox_token}`
+
+**Reconnection from any machine:**
+```python
+# No local state needed — token is recomputed from job metadata
+sandbox = Sandbox.connect("job_id_here")
+```
+The server validates both headers: the HF token (proxy gate) and the sandbox token (application gate). If the HF token changes (e.g., regenerated), reconnection fails — the sandbox token is bound to the original HF token via HMAC.
+
+---
+
+### 3. Data Structures
+
+#### SandboxCommandResult
+```python
+@dataclass
+class SandboxCommandResult:
+    exit_code: int | None
+    stdout: str
+    stderr: str
+    signal: int | None = None
+    timed_out: bool = False
+    duration_ms: int = 0
+
+    @property
+    def ok(self) -> bool:
+        return self.exit_code == 0
+```
+
+#### SandboxProcess (background processes, v1.22.0+)
+```python
+@dataclass
+class SandboxProcess:
+    pid: int
+    cmd: str | List[str]
+    _sandbox: "Sandbox"  # back-reference for kill(), excluded from repr/eq
+    tag: str | None = None
+    started_at_ms: int | None = None
+    running: bool = True
+    exit_code: int | None = None
+
+    def kill(self) -> None:
+        """Terminate the background process (idempotent server-side)."""
+        self._sandbox._request("DELETE", f"/processes/{self.pid}")
+```
+
+#### FileEntry
+```python
+@dataclass
+class FileEntry:
+    name: str
+    path: str
+    type: Literal["file", "dir", "symlink"]
+    size: int
+    mtime_ms: int | None = None
+    mode: str = ""
+```
+
+#### _SandboxServer (internal transport)
+```python
+class _SandboxServer:
+    """HTTP transport to one sbx-server instance — a dedicated job or a shared host."""
+    def __init__(self, *, job_id, owner, image, base_url, nonce,
+                 sandbox_token, api, max_connections=10, capacity=0):
+        self.job_id = job_id
+        self.owner = owner
+        self._image = image
+        self.base_url = base_url
+        self.nonce = nonce
+        self._api = api
+        self._auth_token = _effective_token(api)
+        self._sandbox_token = sandbox_token
+        self.capacity = capacity     # Max sandboxes this host can pack (pool mode)
+        self.live = 0                # Current sandbox count
+        self.verified = True         # False for hosts from cache (unverified)
+
+        # Single httpx.Client for all operations (thread-safe!)
+        self._client = httpx.Client(
+            headers={"Authorization": f"Bearer {self._auth_token}",
+                     "X-Sandbox-Token": sandbox_token},
+            limits=httpx.Limits(max_connections=max_connections,
+                                max_keepalive_connections=max_connections),
+            follow_redirects=True,
+        )
+```
+
+#### CachedHost & PoolCache (cache layer)
+```python
+@dataclass
+class CachedHost:
+    job_id: str
+    owner: str
+    base_url: str           # Does not change while the job lives
+    nonce: str              # For re-deriving sandbox token
+    capacity: int           # Max sandboxes
+    live: int               # Last observed count (may be stale)
+    updated_at: float = 0.0
+
+@dataclass
+class PoolCache:
+    pool_id: str
+    image: str
+    flavor: str
+    sandboxes_per_host: int
+    max_hosts: int | None
+    idle_timeout: int | None
+    namespace: str | None
+    hosts: List[CachedHost] = field(default_factory=list)
+    version: int = 1
+    updated_at: float = 0.0
+```
+
+---
+
+### 4. Sandbox (Dedicated Mode)
+
+#### Creating a Dedicated Sandbox
+
+```python
+Sandbox.create(
+    image: str = "python:3.12",
+    flavor: str = "cpu-basic",
+    idle_timeout: int | float | str | None = 600,
+    env: dict[str, Any] | None = None,
+    secrets: dict[str, Any] | None = None,
+    volumes: List[Volume] | None = None,
+    namespace: str | None = None,
+    forward_hf_token: bool = False,
+    start_timeout: float = 120.0,
+    token: str | None = None,
+) -> Sandbox
+```
+
+**Creation flow (source `_sandbox.py` lines 512-611):**
+1. Generate random nonce + derive sandbox token
+2. Build job spec via `_bootstrap_job_spec()` — generates bootstrap command, env vars, secrets, volumes
+3. Call `api.run_job()` with `image`, `flavor`, command, env, secrets, labels (SANDBOX_LABEL, MODE_DEDICATED, NONCE_LABEL), volumes, and `expose=[SANDBOX_SERVER_PORT]`
+4. Build `_SandboxServer` from returned job info (`from_job()`)
+5. Wait for server readiness via `wait_ready(start_timeout)` — polls `/health` every 150ms, checks job stage every 2s
+6. If startup fails: cancel the job (cleanup billable resource) before re-raising
+7. Returns `Sandbox(id=job.id, server=server, local_id=None, owns_sandbox=True, owns_server=True)`
+
+**Recovery from failed startup:**
+```python
+# In Sandbox.create(), lines 601-610:
+except Exception:
+    try:
+        api.cancel_job(job_id=job.id, namespace=job.owner.name)
+    except Exception as e:
+        logger.warning(f"Failed to cancel sandbox job {job.id} after startup failure: {e}")
+    if server is not None:
+        server.close()
+    raise
+```
+
+#### Reconnecting
+
+```python
+Sandbox.connect(sandbox_id: str, *, namespace: str | None = None,
+                token: str | None = None) -> Sandbox
+```
+
+**Two paths (source lines 613-650):**
+- **Shared sandbox** (`.` in id): Split `host_job_id.local_id`, connect to host, verify local_id exists on host
+- **Dedicated sandbox**: Inspect job by id, verify it's a sandbox (has SANDBOX_LABEL), verify it's still RUNNING, recompute token from nonce, build server transport
+
+Returns a Sandbox with `owns_sandbox=False` (exiting `with` block won't kill it).
+
+#### Running Commands
+
+```python
+# Foreground (waits for completion, streams output live)
+result: SandboxCommandResult = sbx.run(
+    cmd="python train.py --epochs 10",
+    shell=True,                          # infer from cmd type: True for str
+    env={"LR": "0.001"},                 # extra env vars for this command
+    cwd="/workspace",                    # working directory
+    timeout=300.0,                       # kill after this many seconds
+    stdin="y\n",                         # stdin data
+    on_stdout=lambda chunk: print(chunk, end=""),  # live stdout callback
+    on_stderr=lambda chunk: print(chunk, end=""),  # live stderr callback
+    check=True,                          # raise SandboxCommandError on non-zero exit
+)
+
+# Background (returns immediately, process runs detached)
+process: SandboxProcess = sbx.run(
+    cmd="uvicorn app:app --host 0.0.0.0 --port 8000",
+    background=True,
+)
+```
+
+**Execution architecture (source lines 725-816):**
+- Foreground: POST `/v1/exec` (or `/v1/sandboxes/<local_id>/exec` in pool mode) with NDJSON streaming
+  - Server sends events: `stdout`, `stderr`, `exit`
+  - Client accumulates stdout/stderr in lists
+  - On `exit` event: construct SandboxCommandResult with exit_code, stdout, stderr, signal, timed_out, duration_ms
+  - If check=True and non-zero exit: raise SandboxCommandError
+- Background: POST `/v1/processes` (returns just `{"pid": N, "tag": "..."}`)
+
+**NDJSON event stream format:**
+```json
+{"event": "stdout", "data": "Hello "}
+{"event": "stdout", "data": "World\n"}
+{"event": "exit", "exit_code": 0, "signal": null, "timed_out": false, "duration_ms": 45}
+```
+
+Keepalive pings (every 15s from server) are filtered out:
+```python
+def _iter_events(response):
+    for line in response.iter_lines():
+        if not line:
+            continue
+        event = json.loads(line)
+        if event.get("event") != "ping":
+            yield event
+```
+
+#### Background Process Management (v1.22.0+)
+
+```python
+# List all background processes
+processes: List[SandboxProcess] = sbx.processes()
+
+# Stop a specific process
+proc = sbx.run("python long_task.py", background=True)
+proc.kill()   # DELETE /processes/{pid}
+
+# Process properties
+proc.pid           # int
+proc.cmd           # original command
+proc.running       # bool
+proc.exit_code     # None if still running, int if completed
+proc.tag           # optional user tag
+proc.started_at_ms # timestamp
+```
+
+Completed processes stay in the listing (with `running=False` and `exit_code`) until the sandbox is deleted.
+
+#### File Operations
+
+```python
+sbx.files.read(path) -> bytes              # GET /files/read?path=...
+sbx.files.read_text(path) -> str           # wrapper around read()
+sbx.files.write(path, data, mode=None)     # PUT /files/write
+sbx.files.upload(local_path, path)         # upload local file
+sbx.files.download(path, local_path)       # download to local file
+sbx.files.list(path) -> List[FileEntry]    # GET /files/list
+sbx.files.stat(path) -> FileEntry          # GET /files/stat
+sbx.files.exists(path) -> bool             # check existence
+sbx.files.delete(path, recursive=False)    # DELETE /files/delete
+sbx.files.mkdir(path)                      # POST /files/mkdir
+```
+
+**Path semantics:**
+- **Dedicated mode**: paths are absolute on the container filesystem
+- **Pool (shared) mode**: paths are rooted at the sandbox's private home directory — a leading `/` is taken relative to that home
+
+#### Parallel File Transfers (v1.22.0+)
+
+Files >2MB are automatically transferred using parallel ranged requests for bandwidth aggregation:
+
+```python
+class SandboxFiles:
+    PARALLEL_THRESHOLD = 2 * 1024 * 1024   # 2MB — above this, use parallel
+    PARALLEL_CHUNK_SIZE = 1 * 1024 * 1024  # 1MB per chunk
+    PARALLEL_MAX_WORKERS = 16              # up to 16 concurrent connections
+```
+
+The parallel transfer uses `ThreadPoolExecutor` with ranged GET/PUT requests:
+```python
+def _read_ranges(self, path, size):
+    def fetch(rng):
+        offset, length = rng
+        response = self._sandbox._request(
+            "GET", "/files/read",
+            params={"path": path, "offset": offset, "length": length}
+        )
+        return response.content
+    return self._parallel(self._ranges(size), fetch)
+```
+
+This compensates for the per-TCP-stream bandwidth-delay product limitation (~2 MiB/s at ~100ms RTT through the Jobs proxy).
+
+#### Port Proxy (v1.22.0+)
+
+Allows accessing a server running *inside* the sandbox from outside:
+
+```python
+url = sandbox.proxy_url_for(
+    port=8000,
+    path="/api/health",
+    scheme="https://"        # or "wss://" for WebSocket
+)
+# Returns: https://<job_id>--49983.hf.jobs/v1/proxy/8000/api/health
+
+headers = sandbox.proxy_headers
+# Returns: {"Authorization": "Bearer <hf_token>",
+#           "X-Sandbox-Token": "<sandbox_token>"}
+```
+
+**Pool vs dedicated differences:**
+- **Pool/shared sandbox**: Cannot bind TCP (Landlock restriction). Must bind a **unix socket** at `$SBX_PROXY_DIR/<port>.sock`:
+  ```python
+  # Inside sandbox:
+  import uvicorn
+  uvicorn.run(app, uds=f"{os.environ['SBX_PROXY_DIR']}/8000.sock")
+  ```
+- **Dedicated sandbox**: Bind normal TCP port on `127.0.0.1:<port>` (can also expose directly via job proxy without port proxy)
+
+**WebSocket support:**
+```python
+url = sandbox.proxy_url_for(8000, "/ws", scheme="wss://")
+import websockets
+async with websockets.connect(url, additional_headers=sandbox.proxy_headers) as ws:
+    await ws.send("hello")
+```
+
+The proxy is protocol-agnostic — only the client-side scheme changes.
+
+---
+
+### 5. SandboxPool (Shared/Pooled Mode)
+
+SandboxPool packs many lightweight sandboxes onto shared host VMs, each isolated by uid + Landlock LSM. One host = one HF Job (a VM). Up to 50 sandboxes per host by default.
+
+#### Creating a Pool
+
+```python
+pool = SandboxPool(
+    image="python:3.12",
+    flavor="cpu-basic",
+    sandboxes_per_host=50,
+    warm_up=1,                # Pre-provision 1 host in constructor
+    max_hosts=None,           # Optional cost ceiling
+    name=None,                # Random if omitted (e.g. "pool-ab12cd34ef56")
+    idle_timeout=600,         # Host idle timeout (no sandboxes → shutdown)
+    namespace=None,
+    start_timeout=120.0,
+    token=None,
+)
+```
+
+The constructor blocks until `warm_up` hosts are ready. Uses threading locks to serialize concurrent operations.
+
+#### Creating Sandboxes in a Pool
+
+```python
+with SandboxPool(image="python:3.12", warm_up=2) as pool:
+    boxes = [pool.create(env={"WORKER_ID": str(i)})
+             for i in range(100)]   # Packed across warm hosts
+    print(boxes[0].run("echo hi").stdout)
+```
+
+`pool.create()` (source lines 1134-1235) implements a **pack-retry loop**:
+
+1. **Reserve** a slot on a known host with free capacity (`host.live < host.capacity`)
+2. **Discover** warm hosts via job labels if no capacity (one-shot per create)
+3. **Boot** a new host if still no capacity (under `_boot_lock` to serialize)
+4. **Create** sandbox on reserved host via `POST /v1/sandboxes`
+5. **Retry** (up to `_MAX_PACK_ROUNDS=8`) if host filled between reservation and create
+6. **Rollback** all newly booted hosts if any step fails
+
+**Key design decisions:**
+- `_boot_lock` serializes host creation — a burst of `create()` calls queue here, and each new host frees `sandboxes_per_host` slots for waiting threads
+- `_adopt_pending_host()` detects hosts already `SCHEDULING` for this pool (started by another process or earlier create) and waits for them instead of booting duplicates
+- All-or-nothing teardown: if `create()` fails after booting new hosts, cancel them to prevent billing leaks
+
+#### Pool Reconnection
+
+```python
+# Reattach to a pool from any machine
+pool = SandboxPool.connect("pool-ab12cd34ef56")
+sandbox = pool.create()  # uses existing warm hosts
+```
+
+**Two paths (source lines 1052-1105):**
+1. **Fast path**: Local cache hit → rebuild pool from `PoolCache` with no HTTP. Hosts are verified lazily on first `create()`
+2. **Cold path**: Find running host via job labels (`MODE_LABEL=pool` + `POOL_LABEL`), rebuild config from host's env vars (`SBX_CAPACITY`, `SBX_IDLE_TIMEOUT`, `SBX_MAX_HOSTS`)
+
+#### Warming Hosts
+
+```python
+pool.warm(num_hosts=2)
+# Pre-provisions 2 empty hosts (or adopts existing ones). Returns list of host job ids.
+```
+
+Creates hosts that carry the pool label and config in env vars. Cross-process discoverable: another machine can `SandboxPool.connect(pool_id)` and find them. Hosts persist until killed or idle-timed-out.
+
+#### Pool Properties
+
+```python
+pool.num_hosts      # int — host jobs provisioned
+pool.num_sandboxes  # int — sandboxes currently handed out
+pool.host_ids       # List[str] — host job ids
+```
+
+#### Pool Cleanup
+
+```python
+pool.close()  # For owned pools: cancels all host jobs + sandboxes, deletes cache
+              # For connect()'d handles: releases HTTP clients only, leaves hosts running
+
+# Context manager:
+with SandboxPool(...) as pool:
+    ...
+# Automatically calls close()
+```
+
+---
+
+### 6. Pool Cache System (v1.22.0+)
+
+The cache lives at `~/.cache/huggingface/sandbox/pools/<pool_id>.json` with a companion `.lock` file.
+
+**Cache operations (source `_sandbox_cache.py`):**
+```python
+# Read: returns None if missing/corrupt/incompatible version
+cache = read_pool_cache(pool_id)  # → PoolCache | None
+
+# Write: upserts hosts by job_id, removes dead_host_ids, atomic write
+save_pool_cache(pool_id, image=..., flavor=..., sandboxes_per_host=...,
+                max_hosts=..., idle_timeout=..., namespace=...,
+                hosts=[CachedHost(...)], dead_host_ids={"job_id_1"})
+
+# Delete: removes cache file
+delete_pool_cache(pool_id)
+```
+
+**Cache design principles:**
+- **Best-effort**: Save failures are logged but never raised. Read failures silently return None.
+- **Concurrency-safe**: Uses `WeakFileLock` with 5s timeout. Read-merge-write: reads existing, upserts by job_id, removes dead hosts.
+- **Atomic writes**: Writes to temp file then `os.replace()` — readers never see partial content.
+- **Versioned**: Cache version `_CACHE_VERSION=1` — incompatible versions are silently dropped.
+
+**Dead host pruning:** Hosts found dead during this session are tracked in `self._dead_host_ids` and removed from the cache on save. This prevents stale entries from lingering.
+
+**Cross-process sharing flow:**
+```
+Process A           → Creates SandboxPool → warms hosts → saves cache
+Process B           → SandboxPool.connect() → reads cache (zero HTTP)
+Process B.create()  → First request to cached host → succeeds → host verified
+                     └─ Host gone → drops it, discovers via labels, boots replacement
+```
+
+---
+
+### 7. Host Discovery & Cross-Process Sharing
+
+Pools use **label-based discovery** via the Jobs API to find hosts across processes:
+
+```python
+def _discover_hosts(self):
+    known = {host.job_id for host in self._hosts}
+    matches = [
+        job for job in self._api.list_jobs(
+            status="RUNNING",
+            labels={MODE_LABEL: MODE_POOL, POOL_LABEL: self.name},
+            namespace=self._namespace,
+        )
+        if job.id not in known
+    ]
+    for job in matches:
+        server = _connect_host(self._api, job.id, namespace=self._namespace)
+        # Read host's actual capacity from env, live count from server
+        server.capacity = int(env.get("SBX_CAPACITY", self.sandboxes_per_host))
+        server.live = len(server.request("GET", "/v1/sandboxes").json())
+        self._hosts.append(server)
+```
+
+**Cross-process adoption prevents over-provisioning:**
+```python
+def _adopt_pending_host(self):
+    """Find a host already SCHEDULING for this pool → wait for it instead of booting."""
+    pending = next((
+        job for job in self._api.list_jobs(
+            status="SCHEDULING",
+            labels={MODE_LABEL: MODE_POOL, POOL_LABEL: self.name},
+            namespace=self._namespace,
+        )
+        if job.id not in known
+    ), None)
+    # Wait for it to reach RUNNING + server ready
+```
+
+---
+
+### 8. Parallel Host Provisioning
+
+When multiple hosts need to be booted (e.g., `warm_up=4`), they are booted in parallel:
+
+```python
+def _provision_hosts(self, num_new: int) -> List[_SandboxServer]:
+    with ThreadPoolExecutor(max_workers=min(num_new, 32)) as executor:
+        futures = [executor.submit(self._boot_host) for _ in range(num_new)]
+    # Collect all results; if any fail, cancel all booted hosts
+    booted: List[_SandboxServer] = []
+    error: Exception | None = None
+    for future in futures:
+        try:
+            booted.append(future.result())
+        except Exception as e:
+            error = e
+    if error is not None:
+        for server in booted:
+            server.cancel_job()  # Cancel already-booted hosts
+        raise error
+    return booted
+```
+
+---
+
+### 9. CLI Surface (hf sandbox)
+
+Full CLI parity with the Python API, auto-detecting agent mode for token-efficient output.
+
+| Command | Purpose |
+|---------|---------|
+| `hf sandbox create [image]` | Create a dedicated sandbox (or shared with `--pool`) |
+| `hf sandbox exec <id> -- <cmd>` | Run a command in an existing sandbox |
+| `hf sandbox cp <src> <dst>` | Copy files to/from a sandbox |
+| `hf sandbox spawn <id> -- <cmd>` | Start a background process |
+| `hf sandbox process ls <id>` | List background processes |
+| `hf sandbox process kill <id> <pid>` | Stop a background process |
+| `hf sandbox kill <id>` | Terminate a sandbox |
+| `hf sandbox pool create [name]` | Create a shared pool |
+| `hf sandbox pool connect <id>` | Reattach to a pool |
+| `hf sandbox pool delete <id>` | Delete a pool (terminates all hosts) |
+| `hf sandbox pool ls` | List pools with running hosts |
+
+**Key CLI features:**
+- `--pool` flag on `hf sandbox create` for pooled mode
+- `--flavor`, `--idle-timeout`, `--env`, `--secret`, `--volume` flags
+- Auto-detects namespace from sandbox id format (`namespace/id`)
+- Process commands work on both dedicated and pooled sandboxes
+
+---
+
+### 10. Resource Limits & Safety
+
+| Constraint | Value | Where Enforced |
+|------------|-------|----------------|
+| Max sandbox lifetime | 24h | `SANDBOX_MAX_LIFETIME` constant |
+| Default idle timeout | 10 min | `DEFAULT_IDLE_TIMEOUT = 600` |
+| Default sandboxes per host | 50 | `DEFAULT_SANDBOXES_PER_HOST` |
+| Max pack retries | 8 | `_MAX_PACK_ROUNDS` |
+| Parallel transfer threshold | 2MB | `SandboxFiles.PARALLEL_THRESHOLD` |
+| Max parallel workers | 16 | `SandboxFiles.PARALLEL_MAX_WORKERS` |
+| Server port | 49983 | `SANDBOX_SERVER_PORT` |
+| Wait timeout | 120s default | `start_timeout` parameter |
+| Cache lock timeout | 5s | `_LOCK_TIMEOUT` in cache module |
+
+**SandboxPool limits:**
+- `max_hosts` provides a cost ceiling — when reached and all hosts are full, `create()` raises `SandboxError`
+- Hosts auto-terminate on idle (no sandboxes) after `idle_timeout`
+- `Sandbox.create()` dedicated sandboxes have no built-in limit beyond the 24h max lifetime
+
+---
+
+### 11. Error Handling
+
+```python
+# SandboxError — base for all sandbox-specific errors
+from huggingface_hub.errors import SandboxError, SandboxCommandError
+
+# Raised when run(check=True) exits non-zero
+try:
+    result = sbx.run("python failing_script.py")
+except SandboxCommandError as e:
+    print(f"Command failed: {e.cmd}")
+    print(f"Exit code: {e.result.exit_code}")
+    print(f"stderr: {e.result.stderr}")
+
+# Generic sandbox errors (connection, auth, resource limits)
+except SandboxError as e:
+    print(f"Sandbox error: {e}")
+    # Has .status_code attribute for HTTP-level errors
+```
+
+**Error recovery patterns from source:**
+- Startup failure → cancel the job (prevents billing leak)
+- Host unreachable from cache → drop host, fall back to discovery
+- Host full between reservation and create → retry up to 8 rounds
+- Partial host boot failure → cancel all booted hosts (all-or-nothing)
+- Parallel transfer failure → standard httpx error propagation
+
+---
+
+### 12. Complete Request Lifecycle
+
+```
+User code
+  ↓
+Sandbox.create(image="python:3.12", flavor="cpu-basic")
+  │
+  ├─ HfApi.run_job()      ─── POST /api/jobs
+  │   │                       Returns: JobInfo with expose_urls
+  │   └─ Job labels: hf-sandbox=1, hf-sandbox-mode=dedicated, hf-sandbox-nonce=<nonce>
+  │
+  ├─ _SandboxServer.from_job() — reads base_url from expose_urls
+  │
+  ├─ Sandbox.wait_ready()
+  │   │  Loop until /health returns 200 or job terminal:
+  │   │  ├─ GET /health every 150ms
+  │   │  └─ inspect_job every 2s (check for terminal stage)
+  │   └─ On terminal: read last 20 log lines, raise SandboxError
+  │
+  ├─ Return Sandbox(id=job.id, server=..., owns_sandbox=True)
+  │
+  ├─ sbx.run("python train.py")
+  │   │
+  │   └─ POST /v1/exec
+  │       │  Streaming NDJSON:
+  │       │  {"event": "stdout", "data": "Epoch 1/10..."}
+  │       │  {"event": "stdout", "data": "Loss: 0.23"}
+  │       │  {"event": "exit", "exit_code": 0, "duration_ms": 45000}
+  │       └─ Return SandboxCommandResult(exit_code=0, stdout=..., stderr=...)
+  │
+  ├─ sbx.files.download("/output/model.pt", "./model.pt")
+  │   │
+  │   └─ Parallel GET /files/read with ranged requests (>2MB)
+  │
+  └─ sbx.kill()  (or exiting `with` block)
+      │
+      └─ _server.cancel_job()  ─── POST /api/jobs/{id}/cancel
+          └─ _server.close() — close httpx.Client
+```
+
+---
+
+### 13. Best Practices
+
+**Context managers prevent billing leaks:** Always use `with` blocks — the `__exit__` cancels the job on any exception, so a crash mid-computation doesn't leave a billable orphan:
+```python
+with Sandbox.create(flavor="a10g-small") as sbx:
+    sbx.run("python train.py")  # any exception → job cancelled
+```
+
+**Pre-provision pool hosts for latency-sensitive workloads:** `warm_up=3` pre-boots hosts in the constructor. Without it, the first `create()` pays a cold start.
+
+**Use `--pool` for CPU fan-out:** A pooled sandbox costs ~$0.0009 each (amortized across 50 per host) vs ~$0.06 for a dedicated one.
+
+**Large files auto-parallelize:** Files >2MB use 16 concurrent ranged connections. No manual tuning needed.
+
+**Set `idle_timeout` aggressively:** The default 10 minutes is generous for most workloads. Shorten to `"30s"` or `60` for bursty batch jobs to reclaim resources faster.
+
+**Forward HF token sparingly:** `forward_hf_token=True` injects your token into the sandbox as `HF_TOKEN`. Only enable when the code inside needs Hub access (e.g., pushing models).
+
+**Verify sandbox is running before connecting:** `Sandbox.connect()` inspects the job — if it's in a terminal stage, it raises immediately with the status message.
+
+**Use `sbx.run(background=True)` for servers:** Start a web server or API in the background, then use `sbx.proxy_url_for()` to reach it from outside.
+
+---
+
+### Sources
+
+- Source code: `huggingface_hub/_sandbox.py` (1764 lines, v1.24.0) — complete Sandbox and SandboxPool implementation
+- Source code: `huggingface_hub/_sandbox_cache.py` (159 lines, v1.24.0) — pool cache persistence
+- Source code: `huggingface_hub/cli/sandbox.py` (480 lines, v1.24.0) — CLI implementation
+- Source code: `huggingface_hub/errors.py` (609 lines, v1.24.0) — SandboxError + SandboxCommandError
+- Official docs: https://huggingface.co/docs/huggingface_hub/guides/sandbox
+- Official docs: https://huggingface.co/docs/huggingface_hub/package_reference/sandbox
+- GitHub: https://github.com/huggingface/sandbox-server (sbx-server Rust binary)
+- Release notes: huggingface_hub v1.22.0 (SandboxPool, background processes, port proxy)
+
+---
+
+## 2026-07-25: hf-inference-client-streaming-patterns — InferenceClient Streaming Chat Completion Patterns Deep Dive (Topic #328)
+
+### Summary
+Source-code-level deep dive into the complete streaming chat completion system in `huggingface_hub v1.24.0`. Covers the SSE event stream wire format, `_stream_chat_completion_response()` and `_format_chat_completion_stream_output()` internals, the sync vs async streaming interface, combining streaming with tools/function calling and structured outputs (`response_format`), provider-specific streaming behavior, stream lifecycle management (error handling, timeout, cancellation), `stream_options` for usage tracking, and practical patterns for real-time agent and chatbot applications.
+
+### Key Findings
+- **SSE wire format**: `data:` prefix lines with JSON payloads, `data: [DONE]` sentinel, empty keepalive lines filtered silently
+- **Token-by-token stream**: Each SSE event carries a `ChatCompletionStreamOutput` with `choices[0].delta.content` containing one token
+- **Tool calls in stream**: Tool call arguments arrive split across chunks — `id` and `name` only in first chunk, `arguments` as incremental string that must be concatenated
+- **Async mirror**: `AsyncInferenceClient` uses `response.aiter_lines()` instead of `response.iter_lines()`, with identical chunk structure
+- **Stream options**: `ChatCompletionInputStreamOptions(include_usage=True)` adds a final chunk with `usage` populated
+- **Error layers**: HTTP errors (pre-stream), server errors (mid-stream via `error` field), network errors (connection drop) — each handled differently
+- **Provider normalization**: `_format_chat_completion_stream_output` normalizes all providers into same `ChatCompletionStreamOutput` format
+- **Stateless reconnection**: Possible because each stream starts a new HTTP request — partial responses can be used as context for reconnection
+
+### Skill Created
+`hf-inference-client-streaming-patterns/` — complete reference with SSE wire format, sync/async patterns, tools + streaming, structured outputs + streaming, provider-specific behavior, error handling, and practical patterns.
+
+### Sources
+- `huggingface_hub/inference/_client.py` — `InferenceClient.chat_completion()` with streaming overloads
+- `huggingface_hub/inference/_common.py` — `_stream_chat_completion_response()`, `_format_chat_completion_stream_output()`
+- `huggingface_hub/inference/_async_client.py` — `AsyncInferenceClient`
+- `huggingface_hub/inference/_generated/types/chat_completion.py` — `ChatCompletionStreamOutput`, `ChatCompletionStreamOutputDelta`
+- Official docs: https://huggingface.co/docs/huggingface_hub/main/en/package_reference/inference_client
+
+---
+
+## 2026-07-25: hf-hub-model-hub-mixin-integration — ModelHubMixin: Integrating Custom Frameworks with the Hub (Topic #329)
+
+### Summary
+Source-level deep dive into `ModelHubMixin` and `PyTorchModelHubMixin` in `huggingface_hub v1.24.0` (`hub_mixin.py`, 834 lines). Covers the two approaches to integrate any ML framework with the Hub — standalone helper functions (`push_to_hub_*`/`from_pretrained_*`) and class inheritance via `ModelHubMixin` — with full API surface of both, source architecture (config auto-serialization, model card generation, `__init_subclass__` inspection, `__new__` config propagation, custom coders for non-JSON types), and concrete implementation details of `PyTorchModelHubMixin` (safetensors loading, map_location, strict, eval mode, pickle fallback).
+
+### Key Findings
+- **Two approaches exist**: Helpers (full flexibility, high maintenance) vs Mixin (contract-based, lower maintenance, full param surface from HF)
+- **`__init_subclass__`** inspects `__init__` signature once at class definition — stores parameter names, default values, custom types for automatic config serialization
+- **`config.json` auto-generated** from `__init__` defaults + passed values — no manual config writing needed
+- **`from_pretrained` reads config** from Hub or local directory, decodes custom types, populates `model_kwargs` matching `__init__` params
+- **`push_to_hub`** creates repo via `HfApi.create_repo(exist_ok=True)`, saves to temp dir via `save_pretrained`, uploads folder atomically
+- **Model card auto-generated** from Jinja2 template + metadata — overridable by writing `README.md` in `_save_pretrained`
+- **`PyTorchModelHubMixin`** saves as `model.safetensors`, loads safetensors (GPU support for safetensors >=0.4.3), falls back to `pytorch_model.bin` for legacy models
+- **Custom coders** (`coders=` dict) handle non-JSON types — dataclasses handled automatically
+- **`map_location`** and `strict` are extra user-facing params passed via `**model_kwargs`
+- **`model.eval()`** called on load; user must call `model.train()` for training
+
+### Key API
+- `ModelHubMixin` — base class with `save_pretrained()`, `from_pretrained()`, `push_to_hub()`, `generate_model_card()`
+- Override `_save_pretrained(self, save_directory: Path)` and `_from_pretrained(cls, *, model_id, revision, cache_dir, force_download, local_files_only, token, **model_kwargs)`
+- `PyTorchModelHubMixin(ModelHubMixin)` — ready-to-use for PyTorch `nn.Module` subclasses
+- Metadata: `library_name`, `tags`, `repo_url`, `paper_url`, `docs_url`, `license`, `pipeline_tag`, `language`, `model_card_template`, `coders`
+
+### Skill Created
+`hf-hub-model-hub-mixin-integration/` — complete reference with approach comparison, source architecture, public/private API tables, PyTorchMixin implementation details, metadata customization, custom coders, and best practices.
+
+### Sources
+- Source code: `huggingface_hub/hub_mixin.py` (v1.24.0, 834 lines) — complete `ModelHubMixin`, `PyTorchModelHubMixin`, `MixinInfo`, `_load_dataclass`
+- Official docs: https://huggingface.co/docs/huggingface_hub/en/guides/integrations
+- Package reference: https://huggingface.co/docs/huggingface_hub/en/package_reference/mixins
+- GitHub: https://github.com/huggingface/huggingface_hub
+
+---
+
+## 2026-07-25: hf-datasets-server-filter-endpoint — Datasets Server `/filter` endpoint with DuckDB SQL WHERE (Topic #330)
+
+### Summary
+Complete reference for the Hugging Face Datasets Server `/filter` endpoint, which enables server-side row filtering using DuckDB SQL WHERE clauses without downloading the full dataset. Covers the full API surface (parameters, response format, pagination, ORDER BY), DuckDB SQL dialect supported (operators, column quoting rules, value formatting), column type handling (Value, ClassLabel, Sequence, Image/Audio), partial indexing for large datasets (>5GB), and practical patterns for numeric, string, ClassLabel, and combined filters with code examples. Also covers the four supporting endpoints: `/statistics`, `/size`, `/info`, `/parquet` and how they complement filtering workflows.
+
+### Key Findings
+- **Dedicated endpoint:** `/filter` (NOT `/rows`) — `/rows` doesn't support WHERE at all, only `offset`/`length`
+- **Column quoting:** DuckDB SQL requires double-quoted column names: `"column_name" = value` (unquoted names fail with 422)
+- **String quoting:** Single quotes for string values: `"col" = 'text'`
+- **ClassLabel:** Filter by integer index (0-based), NOT by name string
+- **Supported operators:** `=`, `!=`, `<`, `>`, `<=`, `>=`, `LIKE`, `GLOB`, `IS NULL`, `IS NOT NULL`, `AND`, `OR`
+- **NOT supported:** `IN`, `NOT` (keyword prefix), `BETWEEN` — all return 422
+- **LIKE vs GLOB:** LIKE is case-insensitive with `%` wildcard; GLOB is case-sensitive with `*` wildcard
+- **Partial indexing:** Datasets >5GB Parquet only index first 5GB; `"partial": true` in response
+- **Max rows:** 100 per request (pagination via `offset` parameter)
+- **ORDER BY:** Supported via `orderby` parameter (e.g., `orderby="idx" DESC`)
+- **Related endpoints:** `/statistics` (column stats), `/size` (storage info), `/info` (schema), `/parquet` (file list), `/rows` (unfiltered access), `/search` (full-text)
+
+### Key Code Patterns
+```python
+# Basic filter — double-quoted columns, single-quoted strings
+response = requests.get("https://datasets-server.huggingface.co/filter", params={
+    "dataset": "nyu-mll/glue",
+    "config": "sst2",
+    "split": "train",
+    "where": '"label" = 1 AND "sentence" LIKE \'%funny%\'',
+    "length": 10,
+})
+
+# Pagination through results
+page = 0
+while total is None or page * page_size < total:
+    response = requests.get(..., params={..., "offset": page * page_size})
+    data = response.json()
+    if data.get("partial"): break
+    page += 1
+```
+
+### Skill Created
+`hf-datasets-server-filter-endpoint/` — complete reference with full API spec, DuckDB SQL dialect reference (operator matrix, type handling, encoding), practical patterns (pagination, ORDER BY, multi-column), partial indexing details, related endpoints comparison, and URL encoding guide.
+
+### Sources
+- OpenAPI spec: `https://datasets-server.huggingface.co/openapi.json` (verified 2026-07-25)
+- Official docs: `https://huggingface.co/docs/dataset-viewer/en/filter`
+- Live API tests against GLUE SST2, CoLA, MRPC, STSB datasets via `/filter`, `/statistics`, `/size`, `/info`, `/parquet`, `/rows`
+
+---
+
+## 2026-07-25: hf-accelerate-deep-dive
+
+### Summary
+Complete deep-dive on Hugging Face Accelerate v1.14.0 — the unified distributed training/inference API. Covers the full Accelerator class with 50+ methods, CLI toolkit (accelerate config/launch/env/estimate-memory/test), mixed precision (fp16/bf16/fp8 via TransformersEngine, torchao, and deprecated MS-AMP), big model inference (init_empty_weights, load_checkpoint_and_dispatch, device_map strategies, CPU/disk offload, chained hooks), FSDP integration (all sharding strategies, auto-wrap, checkpoints), DeepSpeed integration (ZeRO 1-3, NVMe offload, MoE), FSDP vs DeepSpeed comparison matrix with data precision differences, gradient accumulation patterns, experiment tracking (8 backends), memory estimation, torch.compile/dynamo integration, and production deployment checklist.
+
+### Key Findings
+- **The 4-line magic pattern**: `Accelerator()`, `prepare()`, `accelerate.backward()`, `accelerate launch` — covers 90% of distributed training needs
+- **gather_for_metrics > gather**: Always use `gather_for_metrics()` for evaluation — it handles uneven batch sizes correctly across processes
+- **FSDP vs DeepSpeed tradeoff**: FSDP uses less memory on optimizer states with few GPUs (flat params stay in torch_dtype). DeepSpeed always upcasts to fp32 during preparation. Choose FSDP for PyTorch-native, DeepSpeed for MoE/NVMe/custom configs
+- **FP8 only benefits at scale**: TransformersEngine FP8 only shows performance gains at 1B+ parameters. MS-AMP is deprecated (unmaintained since 2023, CUDA 12.x incompatible). torchao is the modern path.
+- **Big model inference**: Always `init_empty_weights()` → `load_checkpoint_and_dispatch(device_map="auto")`. Mark residual-connected modules with `no_split_module_classes`. Use `balanced_low_0` for generation tasks.
+- **Memory estimation is free CLI**: `accelerate estimate-memory {model}` reports inference + training memory without loading the model — zero-cost planning.
+- **Gradient accumulation is built-in**: `accelerator.accumulate()` — don't implement manual accumulation.
+- **Sharded checkpoints via save_model**: `accelerator.save_model()` produces shards with index.json — compatible with `from_pretrained()`.
+- **Dynamo + FSDP**: Always set `--fsdp_use_orig_params true` when combining torch.compile with FSDP.
+
+### Skill Created
+`mlops/hf-accelerate/` — complete reference with SKILL.md + deep-dive reference.
+
+---
+
+## 2026-07-25: hf-hub-cli-rebuilt — huggingface_hub CLI Rebuilt (v1.22–v1.24) + Job Naming, Space Templates, Sandboxes (Topic #336)
+
+### Summary
+Comprehensive reference for the rebuilt `hf` CLI and new features shipped in huggingface_hub v1.22.0, v1.23.0, and v1.24.0 (all July 2026). Covers the Click-based CLI rebuild (replacing Typer), Sandboxes (`Sandbox.create`, `SandboxPool`, `hf sandbox`), tree-cached snapshot downloads, Space templates, Job naming, CLI extensions, deprecations, breaking changes, and the complete post-rebuild CLI command tree.
+
+### Key Features by Version
+- **v1.22.0** (Jul 3): Sandboxes (isolated cloud VMs on top of Jobs), tree cache for snapshot_download, CLI rebuilt on Click (drops Typer), `hf discussions edit`, `hf cache ls/prune incomplete`, `hf jobs scheduled trigger`, `sync_job_volume` helper, `upload_large_folder` deprecated, case-sensitive patterns, http_backoff Retry-After support
+- **v1.23.0** (Jul 9): Space templates (seed Spaces from official templates), `hf extensions update`, smoother Xet downloads
+- **v1.24.0** (Jul 17): Job naming (`--name` flag, `name` parameter on `run_job`/`run_uv_job`/create_scheduled variants), `hf jobs labels <id> --name`, CLI-first README, Xet download rate fix
+
+### Key Code Patterns
+```python
+# Sandbox
+from huggingface_hub import Sandbox
+with Sandbox.create(image="python:3.12") as sbx:
+    sbx.files.write("/app/main.py", "print(40 + 2)")
+    proc = sbx.run("python /app/main.py", background=True)
+    print(sbx.proxy_url_for(8080))
+
+# Space template
+from huggingface_hub import create_repo
+create_repo("my-jupyterlab", repo_type="space", space_template="jupyterlab")
+
+# Named job
+from huggingface_hub import run_job
+run_job("python:3.12", command=["python", "train.py"], name="training-v2")
+```
+
+### Skill Created
+`hf-hub-cli-rebuilt/` — complete reference with CLI command tree, version-by-version feature matrix, code patterns, deprecations/breaking changes, and official doc links.
+
+### Sources
+- Release notes: https://github.com/huggingface/huggingface_hub/releases (v1.22.0, v1.23.0, v1.24.0)
+- CLI Guide: https://huggingface.co/docs/huggingface_hub/en/guides/cli
+- CLI Reference: https://huggingface.co/docs/huggingface_hub/en/package_reference/cli
+- Sandboxes Guide: https://huggingface.co/docs/huggingface_hub/en/guides/sandbox
+|- Jobs Guide: https://huggingface.co/docs/huggingface_hub/en/guides/jobs
+|- Live API research via GitHub release payloads and HF docs (verified 2026-07-25)
+
+---
+
+## 2026-07-25: hf-hub-search-discovery-api-deep-dive — Hugging Face Hub Search & Discovery API Complete Reference
+
+### Summary
+Comprehensive deep-dive into the Hugging Face Hub's Search & Discovery API — the REST endpoints and Python SDK methods for searching models, datasets, spaces, collections, papers, and users on the Hub. Covers the full surface: `/api/models`, `/api/datasets`, `/api/spaces`, `/api/spaces/semantic-search`, `/api/collections`, and `/api/papers` endpoints with their complete query parameter syntax (filter, search, sort, expand, pagination), the `HfApi` Python SDK equivalents (`list_models`, `list_datasets`, `list_spaces`, `search_spaces`, `list_collections`, `list_papers`, `list_daily_papers`), semantic search for Spaces (embedding-based + full-text fallback), filter tag taxonomy (pipeline tags, library, dataset, language), sort value translation (Python snake_case → REST camelCase), and pagination via the Hub's paginate helper.
+
+### Verified Through Live API Testing
+- All sort values and filter combinations tested against live `api.huggingface.co` endpoints
+- Semantic search endpoint confirmed working with 100+ result categories
+- REST API sort parameter values confirmed: `downloads`, `likes`, `createdAt`, `lastModified`, `trendingScore` (not the Python-layer `snake_case`)
+- Multi-filter queries work with repeated `filter` query params
+- `modelId` key in response vs `datasetName` vs `id` varies by endpoint type
+
+### Source
+- huggingface_hub v1.24.0 source: `hf_api.py` (lines 162–248, 2415–2920)
+- REST API tested live: `https://huggingface.co/api/models`, `/api/datasets`, `/api/spaces`, `/api/spaces/semantic-search`
+- CLI models/datasets/spaces commands: `cli/models.py`, `cli/datasets.py`, `cli/spaces.py`
+- Hub docs (Search): https://huggingface.co/docs/hub/en/search
+
+### Skill Created
+`hf-hub-search-discovery-api/` — complete reference for HF Hub Search & Discovery: REST endpoints, Python SDK methods, query parameter reference tables, filter tag categories, sort value mapping, pagination patterns, and multi-filter search strategies.
+---
+
+## 2026-07-25: hf-distilabel-deep-dive — Complete Synthetic Data Pipeline Framework (v1.5.3)
+
+### Summary
+Comprehensive deep dive into distilabel v1.5.3 — Argilla's framework for building synthetic data generation and AI feedback pipelines. Covers pipeline DAG architecture, step types, column-based data flow, all 16+ LLM integrations, 40+ built-in tasks, Distiset output management, caching, Ray distribution, custom step authoring, and real-world patterns for SFT/DPO/RLHF training data generation.
+
+### Key Findings
+
+**Architecture:**
+- DAG-based pipeline with three step types: GeneratorStep (root), Step (transform), Task (LLM-powered)
+- Steps connected via `>>` operator; data flows as batches of dicts
+- Pipeline returns Distiset (dict of HF Datasets, one per leaf step)
+
+**LLM Providers (16+):**
+- TransformersLLM (local CPU/GPU), InferenceEndpointsLLM (HF IEs), OpenAILLM, OllamaLLM, LlamaCppLLM, AnthropicLLM, VertexAILLM, MistralLLM, CohereLLM, GroqLLM, TogetherLLM, ClientvLLM, MlxLLM, LiteLLM, MixtureOfAgentsLLM, AzureOpenAILLM, AnyscaleLLM
+
+**Task Catalog (40+):**
+- SFT: TextGeneration, SelfInstruct, MagpieGenerator, Genstruct, EvolInstruct, EvolQuality, EvolComplexity, URIAL, InstructionBacktranslation
+- DPO/RLHF: UltraFeedback, PairRM, FormatChatGenerationDPO, FormatTextGenerationDPO, PreferenceToArgilla
+- Evaluation: ComplexityScorer, QualityScorer, PrometheusEval, CLAIR
+- Specialized: ChatGeneration, ImageGeneration, GenerateEmbeddings, MathShepherd, StructuredGeneration, BitextRetrievalGenerator, etc.
+
+**Key Features:**
+- Automatic caching with content-addressable keys
+- Runtime parameter overrides (reuse pipeline with different configs)
+- StepResources for parallelism (Ray only)
+- Column mappings (input_mappings/output_mappings)
+|- Distiset with push_to_hub, train_test_split, save_to_disk
+|- Structured output with Pydantic models
+
+### Skill Created
+`hf-distilabel-deep-dive/` — SKILL.md with author:SakThai, license:MIT + references/hf-learnings.md with full reference.
+
+---
+
+## 2026-07-25: hf-spaces-secrets-management-deep-dive
+
+### Summary
+Deep dive into Hugging Face Spaces secrets and environment variables management. Covers the conceptual difference between secrets (write-once, private, not forked) and variables (readable, visible, forked), the complete Python API surface (6 methods), REST API endpoints, Docker-specific buildtime vs runtime behavior, the Secrets Scanner, and zero-cost automation patterns.
+
+### Key Findings
+- **Secrets vs Variables** — fundamentally different security models. Secrets: write-once, value never readable, NOT duplicated on fork. Variables: fully readable, publicly visible, duplicated on fork.
+- **6 API methods** on `HfApi`: `get_space_secrets()`, `add_space_secret()`, `delete_space_secret()`, `get_space_variables()`, `add_space_variable()`, `delete_space_variable()`
+- **REST endpoints**: `GET|POST|DELETE /api/spaces/{repo_id}/secrets` and `GET|POST|DELETE /api/spaces/{repo_id}/variables`
+- **SpaceSecret dataclass**: key, description (str|None), updated_at (datetime|None) — no value field
+- **SpaceVariable dataclass**: key, value (str), description (str|None), updated_at (datetime|None) — value IS readable
+- **Docker buildtime secrets**: Use `RUN --mount=type=secret,id=KEY` in Dockerfile for build-time secret access
+- **Docker buildtime variables**: Use `ARG KEY` in Dockerfile and pass via `--build-arg`
+- **Runtime**: Both secrets and variables are injected as environment variables — `os.getenv("KEY")` works identically for both
+- **At Space creation**: Pass `space_secrets=[{"key":..., "value":..., "description":...}]` and `space_variables=[...]` to `create_repo()`
+- **Secrets Scanner**: HF automatically scans Spaces for hardcoded secrets and notifies owners
+- **Zero-cost**: All API operations are free — no usage cost for managing secrets programmatically
+
+### Skill Created
+`hf-spaces-secrets-management-deep-dive/` — SKILL.md with author:SakThai, license:MIT + references/hf-learnings.md with full reference.
+
+---
+
+## 2026-07-25: hf-hub-model-download-stats-deep-dive — Download Counting Methodology Deep Dive
+
+### Summary
+Source-level deep dive into the HF Hub model download counting system — query files mechanism, per-library `countDownloads` config in `huggingface.js/packages/tasks/src/model-libraries.ts` (200+ libraries), ElasticSearch query-string DSL over `path`/`path_prefix`/`path_extension`/`path_filename` fields, diffusers double-counting prevention (regex on root-level files only), GGUF always-counted-by-default behavior, Publisher Analytics CSV export API for Team/Enterprise, and granular request-level logs for Enterprise Plus.
+
+### Key Findings
+| Finding | Detail |
+|---------|--------|
+| **Server-side counting** | No client instrumentation — every GET/HEAD to a query file path increments the counter via ElasticSearch |
+| **Default query files** | `config.json`, `config.yaml`, `hyperparams.yaml`, `params.json`, `meta.yaml` — when no library-specific `countDownloads` is defined |
+| **countDownloads patterns** | 5 patterns: single config path, extension wildcard, specific model file, combined OR, library-specific config |
+| **Diffusers edge case** | Uses `bool.should` with 4 rules + `minimum_should_match:1` — captures both library and UI downloads without double-counting nested files |
+| **GGUF exception** | All `.gguf` files counted unconditionally (self-contained format, no library dependency) |
+| **Source location** | `huggingface.js/packages/tasks/src/model-libraries.ts` — open-source, PRs welcome |
+| **Publisher Analytics** | CSV export API at `huggingface.co/organizations/{org}/settings/publisher-analytics/download-breakdown` |
+| **Granular logs** | Enterprise Plus add-on — request-level logs with anonymized user/IP hashing, HTTP status/method, country/region |
+| **ElasticSearch fields** | `path` (full path), `path_prefix` (directory), `path_extension` (extension), `path_filename` (name without extension) |
+
+### Skill Created/Updated
+`hf-hub-model-download-stats/` — comprehensive skill with SKILL.md (author:SakThai, license:MIT) and references/hf-learnings.md with full source-level documentation.
+
+### Sources
+- https://huggingface.co/docs/hub/en/models-download-stats
+- https://huggingface.co/docs/hub/en/publisher-analytics
+- https://github.com/huggingface/huggingface.js/blob/main/packages/tasks/src/model-libraries.ts
+- https://github.com/huggingface/huggingface.js/blob/main/packages/tasks/src/model-libraries-downloads.ts
+- https://github.com/huggingface/huggingface.js/pull/885/files
+

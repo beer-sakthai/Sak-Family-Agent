@@ -348,5 +348,6 @@
   "hf-mcp-server-v2-consolidation-deep-dive",
   "hf-inference-endpoints-custom-containers-deep-dive",
   "hf-hub-model-download-stats-deep-dive",
-  "hf-gradio-6-native-plot-components"
+  "hf-gradio-6-native-plot-components",
+  "hf-gradio-server-mode"
 ]
