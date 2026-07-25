@@ -33,7 +33,6 @@ PERSONA_SKILL_PREFIXES: dict[str, str] = {
     "sakthai": "SakThai-",
     "saksee": "SakSee-",
     "saksit": "SakSit-",
-    "saktan": "SakTan-",
     "sakjules": "SakJules-",
 }
 

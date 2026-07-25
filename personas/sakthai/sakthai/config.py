@@ -43,8 +43,8 @@ LIBRARY_DIR = REPO_ROOT / "library"
 PERSONAS_DIR = REPO_ROOT / "personas"
 SHARED_SKILLS_DIR = PERSONAS_DIR / "shared" / "skills"
 
-# The six Sak Family personas `sakthai chat --persona` can address.
-PERSONA_NAMES: tuple[str, ...] = ("sakking", "sakthai", "saksee", "saksit", "saktan", "sakjules")
+# The five Sak Family personas `sakthai chat --persona` can address.
+PERSONA_NAMES: tuple[str, ...] = ("sakking", "sakthai", "saksee", "saksit", "sakjules")
 
 
 def persona_soul_path(persona: str) -> Path:
