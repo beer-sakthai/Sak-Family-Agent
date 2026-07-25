@@ -1,3 +1,14 @@
+---
+name: hf-hub-repo-settings
+author: SakThai
+license: MIT
+title: HF Hub Repo Settings, Visibility & Tags Management
+category: mlops
+tags: [hub, repo-settings, visibility, gated, tags, collections, api]
+description: Manage repository settings, visibility, gated access, tags, and metadata on the Hugging Face Hub through the huggingface_hub Python API.
+version: 1.0.0
+---
+
 # HF Hub Repo Settings, Visibility & Tags Management
 
 Manage repository settings, visibility, gated access, tags, and metadata on the Hugging Face Hub through the `huggingface_hub` Python API.

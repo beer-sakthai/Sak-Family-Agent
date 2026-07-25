@@ -5026,3 +5026,35 @@ patterns. Verified by live queries to all endpoints.
 
 ---
 
+## 2026-07-25: hf-inference-mcp-client-agent-framework-deep-dive — HF Inference MCP Client & Agent Framework (Topic #313)
+
+### Summary
+Deep dive into the Hugging Face Inference MCP Client and Agent framework built into `huggingface_hub` v1.24+. Covers the `MCPClient` class (core client connecting to MCP servers: stdio, SSE, HTTP/StreamableHTTP), tool discovery and management (tool name deduplication, allowed_tools filtering), `process_single_turn_with_tools()` for streaming chat completions with automatic tool execution, the `Agent` class for multi-turn agent loops (max 10 turns, exit tools `task_complete`/`ask_question`), the `hf app` CLI entry point, and the Tiny Agent config format (`agent.json` with `inputs`/`servers`/`model`/`provider`). Key distinction: this is the CLIENT side of MCP (consuming tools from MCP servers) vs. the HF Hub MCP Server (exposing HF Hub as an MCP server).
+
+### Key Findings
+- **MCPClient is async-only** — requires `async with` / `await` for all operations
+- **Three server types**: stdio (local processes), SSE (remote streaming), HTTP (StreamableHTTP)
+- **Tool deduplication**: first server wins if two provide same tool name
+- **allowed_tools filtering**: server-side at connection time, not per-request
+- **Auto-converts MCP tools** to `ChatCompletionInputTool` OpenAI format
+- **Agent loop**: max 10 turns, exits on `task_complete`, `ask_question`, or direct model response
+- **Exit optimization**: returns early if first 2 chunks contain no tool calls
+- **Binary content** (images, audio): summarized, not embedded in text stream
+- **Separate from HF MCP Server**: this is a *client* that *consumes* MCP servers
+
+### Source
+- `huggingface_hub/inference/_mcp/mcp_client.py` (395 lines)
+- `huggingface_hub/inference/_mcp/agent.py` (100 lines)
+- `huggingface_hub/inference/_mcp/cli.py` (245 lines)
+- `huggingface_hub/inference/_mcp/constants.py` (81 lines)
+- `huggingface_hub/inference/_mcp/types.py` (45 lines)
+- `huggingface_hub/inference/_mcp/utils.py` (130 lines)
+- Public API: `from huggingface_hub import MCPClient`
+
+### Skill Created
+`mlops/hf-inference-mcp-client/` — HF Inference MCP Client & Agent Framework: complete reference with API details, server types, agent loop architecture, CLI patterns, and code examples.
+
+---
+
+
+
