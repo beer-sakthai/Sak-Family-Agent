@@ -16095,3 +16095,28 @@ Comprehensive deep-dive into the Hugging Face LLM/NLP Course (https://huggingfac
 
 ### Skill
 mlops/hf-llm-course — Hugging Face LLM/NLP Course complete curriculum documentation, covering transformers, datasets, tokenizers, fine-tuning, Hub sharing, and production deployment patterns
+
+---
+
+## 2026-07-25: hf-dataset-viewer-croissant-metadata (Topic #252)
+
+### Summary
+Deep-dive into the Hugging Face Dataset Viewer's Croissant metadata endpoint — a JSON-LD metadata format built on schema.org by MLCommons that standardizes ML dataset descriptions for indexing, searching, and programmatic loading. The endpoint at `GET /api/datasets/{dataset}/croissant` auto-generates Croissant metadata for every Hub dataset convertible to Parquet, documenting the dataset name, description, distribution (Parquet file references via FileObject/FileSet), record sets (configs/subsets), and field definitions with schema.org data types.
+
+### Key Points
+- **Croissant** = ML dataset metadata format by MLCommons, built on schema.org, serialized as JSON-LD
+- **Two endpoints**: Hub API (`/api/datasets/{name}/croissant`) — enriched with Hub metadata; raw backend (`datasets-server.huggingface.co/croissant-crumbs`)
+- **Availability**: All public datasets < 5GB convertible to Parquet; private datasets require PRO/Enterprise
+- **Structure**: `distribution` (FileObject for repo + FileSet per config's Parquet files) + `recordSet` (RecordSet per config, each with `field` array of columns)
+- **Type mapping**: schema.org types — `sc:Text`, `sc:Integer`, `sc:Float`, `sc:Boolean`, `sc:DateTime`, `sc:ImageObject`; sequences use `repeated: true`, nested use `subField`
+- **mlcroissant library**: `Dataset(jsonld=url)` loads directly from Croissant metadata
+- **Use cases**: Dataset discovery/search indexing, schema inspection without download, cross-platform interop (Kaggle, OpenML), ETL pipeline schema source
+
+### Sources
+- Dataset Viewer Croissant Docs: https://huggingface.co/docs/dataset-viewer/main/en/croissant
+- Dataset Viewer GitHub: https://github.com/huggingface/dataset-viewer
+- Croissant Spec: http://mlcommons.org/croissant/
+- mlcroissant: https://github.com/mlcommons/croissant/tree/main/python/mlcroissant
+
+### Skill
+mlops/hf-datasets-server-rest-api — the Croissant metadata endpoint for ML dataset discovery and programmatic consumption
