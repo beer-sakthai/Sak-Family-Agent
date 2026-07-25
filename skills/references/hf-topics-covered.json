@@ -364,6 +364,5 @@
   "hf-foundry-managed-compute",
   "hf-jobs-serving-vllm",
   "hf-inference-endpoints-advanced-operations",
-  "hf-trackio-experiment-tracking",
-  "hf-inference-providers-deepening-hub-api-pricing-agent-integrations"
+  "hf-trackio-experiment-tracking"
 ]
