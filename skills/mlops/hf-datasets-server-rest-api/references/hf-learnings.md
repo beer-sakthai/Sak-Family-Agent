@@ -961,7 +961,7 @@ mlops/hf-datasets-server-rest-api — the Croissant metadata endpoint for ML dat
 
 ---
 
-## 2026-07-25: hf-datasets-server-size-limits-and-optimization — Dataset Viewer 5GB Limit, Partial Conversion & Size Optimization Strategies (Topic #256)
+## 2026-07-25: hf-datasets-server-size-limits-and-optimization — Dataset Viewer 5GB Limit, Partial Conversion & Size Optimization Strategies (Topic #255)
 
 ### Summary
 Comprehensive reference for size limitations and optimization strategies in the Hugging Face Dataset Viewer/Datasets Server. Covers the 5GB auto-conversion limit, partial Parquet conversion with `partial-` split prefix, TooBigContentError and its common messages, sharding at ~500MB per file, row group sizing best practices with `write_page_index=True`, Parquet-native dataset exceptions, zero-cost workarounds using datasets library streaming (which bypasses size limits entirely), column pruning, config-based splitting, DuckDB predicate pushdown, and practical decision guide for working with datasets over 5GB.
