@@ -1,0 +1,260 @@
+{
+  "jobs": [
+    {
+      "id": "e2bc7fc1b683",
+      "name": "Learning Loop - Nightly Review",
+      "prompt": "You are SakThai running the nightly Learning Loop.\n\nYour mission: Review today's sessions, consolidate memory, update skills, and sync to GitHub.\n\n1. Review recent sessions for lessons and corrections\n2. Consolidate memory \u2014 prune stale entries, merge duplicates\n3. Patch skills if workflows were corrected or improved\n4. Sync to GitHub:\n```\ncd /opt/data/sakthai-skills-repo\ncp -a ~/profiles/sakthai/skills/. .\ngit add -A\ngit commit -m \"learning-loop: <date> \u2014 memory + skill updates\"\ngit push origin main\n```\n5. Deliver a compact report with changes made and anomalies detected",
+      "skills": [
+        "environment-automation",
+        "user-communication"
+      ],
+      "skill": "environment-automation",
+      "model": null,
+      "provider": null,
+      "provider_snapshot": "opencode-go",
+      "model_snapshot": "deepseek-v4-flash",
+      "base_url": null,
+      "script": null,
+      "no_agent": false,
+      "context_from": null,
+      "schedule": {
+        "kind": "cron",
+        "expr": "0 2 * * *",
+        "display": "0 2 * * *"
+      },
+      "schedule_display": "0 2 * * *",
+      "repeat": {
+        "times": null,
+        "completed": 13
+      },
+      "enabled": true,
+      "state": "scheduled",
+      "paused_at": null,
+      "paused_reason": null,
+      "created_at": "2026-07-10T08:46:40.466617+00:00",
+      "next_run_at": "2026-07-24T02:00:00+00:00",
+      "last_run_at": "2026-07-23T02:10:04.160208+00:00",
+      "last_status": "ok",
+      "last_error": null,
+      "last_delivery_error": null,
+      "deliver": "origin",
+      "origin": {
+        "platform": "telegram",
+        "chat_id": "8618306046",
+        "chat_name": "Beer",
+        "thread_id": null,
+        "user_id": "8618306046"
+      },
+      "enabled_toolsets": [
+        "web",
+        "terminal",
+        "file",
+        "skills"
+      ],
+      "workdir": null,
+      "fire_claim": null
+    },
+    {
+      "id": "85e01dd6da53",
+      "name": "HF Learn &amp; Improve Skills",
+      "prompt": "You are SakThai on a learning and skill-building mission.\n\n**Your task:** Every tick, learn ONE new thing about Hugging Face, improve/create a skill, AND sync everything to GitHub.\n\n**Step-by-step:**\n\n### 1. Read the tracker\nRead `~/profiles/sakthai/cron/hf-topics-covered.json` \u2014 a JSON array of topics already covered.\n\n### 2. Pick a brand-new HF topic\nNot in the tracker. Scope across ALL of Hugging Face:\n- **Models:** architectures, safetensors, GGUF, AWQ, GPTQ, bitsandbytes, quantization, Transformers\n- **Datasets:** creation, streaming, Parquet, SQL queries, evaluation, splits, configs, loading\n- **Spaces:** Gradio, Streamlit, ZeroGPU, secrets, hardware, Docker, dev-mode, hot-reload\n- **Hub API:** webhooks, collections, discussions, PRs, tags, cards, metadata, search\n- **Inference:** serverless API, Dedicated Endpoints, scale-to-zero, TGI, vLLM, Providers, rate limits\n- **Training:** AutoTrain, TRL, PEFT, LoRA, QLoRA, DeepSpeed, FSDP, Axolotl, TRL, SFTTrainer\n- **CLI:** hf commands (auth, repos, datasets, models, upload, download, buckets, extensions, skills, env)\n- **Libraries:** Diffusers, Tokenizers, Datasets, Accelerate, Optimum, Gradio, Safetensors\n- **Community:** Orgs, Papers, Leaderboards, Gated models, Licensing, Badges\n- **Infrastructure:** Inference Endpoints pricing, Docker images, Spaces hardware flavors, CI/CD\n- **Policies:** Gated repos, dataset privacy, OSS licensing, DUA agreements\n\n### 3. Research\nUse web_search to dig into real usage \u2014 commands, API patterns, code snippets, recent updates, best practices. Get concrete.\n\n### 4. Improve a skill\nBased on what you learned, use `skill_manage` to:\n- **Patch** an existing HF skill (`skill_manage(action='patch')`) with the new knowledge\n- OR **Create** a new skill (`skill_manage(action='create')`) if it's substantial and doesn't fit existing ones\n- OR **Append** to a cumulative reference file (`skill_manage(action='write_file', file_path='references/hf-learnings.md')`)\n\n### 5. Sync to GitHub\nAfter making skill changes, run these commands:\n```\ncd /opt/data/sakthai-skills-repo\ncp -a ~/profiles/sakthai/skills/. .\ngit add -A\ngit commit -m \"learn: <topic> \u2014 <what changed>\"\ngit push origin main\n```\n\n### 6. Update the tracker\nWrite the FULL updated JSON array to `~/profiles/sakthai/cron/hf-topics-covered.json` with the new topic appended.\n\n### 7. Deliver\nCompact report (2-4 paragraphs) covering: what you learned, what skill change you made, and the GitHub commit hash.\n\n**Rules:**\n- ALWAYS check the tracker first. DO NOT repeat topics.\n- Each tick MUST produce something genuinely different from all previous ticks.\n- If a skill you patched had wrong info, fix it properly, not partially.\n- Narrow broad topics (not \"Inference Endpoints\" but \"scale-to-zero on Inference Endpoints\").\n- First-run (empty tracker `[]`): pick a great starting topic.\n- Do steps 5 and 6 BEFORE your final response.",
+      "skills": [],
+      "skill": null,
+      "model": null,
+      "provider": null,
+      "provider_snapshot": "opencode-go",
+      "model_snapshot": "deepseek-v4-flash",
+      "base_url": null,
+      "script": null,
+      "no_agent": false,
+      "context_from": null,
+      "schedule": {
+        "kind": "once",
+        "run_at": "2026-07-23T11:55:21.495694+00:00",
+        "display": "once in 1m"
+      },
+      "schedule_display": "once in 1m",
+      "repeat": {
+        "times": null,
+        "completed": 4
+      },
+      "enabled": false,
+      "state": "completed",
+      "paused_at": null,
+      "paused_reason": null,
+      "created_at": "2026-07-23T11:17:22.215404+00:00",
+      "next_run_at": null,
+      "last_run_at": "2026-07-23T11:58:34.231402+00:00",
+      "last_status": "ok",
+      "last_error": null,
+      "last_delivery_error": null,
+      "deliver": "origin",
+      "origin": {
+        "platform": "telegram",
+        "chat_id": "8618306046",
+        "chat_name": "Beer",
+        "thread_id": null,
+        "user_id": "8618306046"
+      },
+      "enabled_toolsets": [
+        "web",
+        "terminal",
+        "file",
+        "skills"
+      ],
+      "workdir": null,
+      "fire_claim": null
+    },
+    {
+      "id": "a7a8316188eb",
+      "name": "HF Trending Models",
+      "prompt": "You are SakThai on a HF trend watch.\n\nFetch the current trending models on Hugging Face Hub using web_search for \"huggingface trending models today\" and check hf.co/trending.\n\nDeliver a compact report of the top 5 trending models:\n- Model name and creator\n- What it does (1 line)\n- Why it's trending (1 line)\n- Download count or stars if available\n\nAfter reporting, use `skill_manage` to save findings \u2014 patch an existing skill or write to `references/hf-trending-models.md`.\n\nThen sync to GitHub:\n```\ncd /opt/data/sakthai-skills-repo\ncp -a ~/profiles/sakthai/skills/. .\ngit add -A\ngit commit -m \"trending: <date/tick> \u2014 notable models\"\ngit push origin main\n```\n\nKeep it concise \u2014 3-4 paragraphs max. Include links. Each tick MUST report fresh trending data.",
+      "skills": [],
+      "skill": null,
+      "model": null,
+      "provider": null,
+      "provider_snapshot": "opencode-go",
+      "model_snapshot": "deepseek-v4-flash",
+      "base_url": null,
+      "script": null,
+      "no_agent": false,
+      "context_from": null,
+      "schedule": {
+        "kind": "once",
+        "run_at": "2026-07-23T12:09:56.712041+00:00",
+        "display": "once in 1m"
+      },
+      "schedule_display": "once in 1m",
+      "repeat": {
+        "times": null,
+        "completed": 3
+      },
+      "enabled": false,
+      "state": "completed",
+      "paused_at": null,
+      "paused_reason": null,
+      "created_at": "2026-07-23T11:34:17.992028+00:00",
+      "next_run_at": null,
+      "last_run_at": "2026-07-23T12:19:20.007547+00:00",
+      "last_status": "ok",
+      "last_error": null,
+      "last_delivery_error": null,
+      "deliver": "origin",
+      "origin": {
+        "platform": "telegram",
+        "chat_id": "8618306046",
+        "chat_name": "Beer",
+        "thread_id": null,
+        "user_id": "8618306046"
+      },
+      "enabled_toolsets": [
+        "web",
+        "terminal",
+        "skills"
+      ],
+      "workdir": null,
+      "fire_claim": null
+    },
+    {
+      "id": "5a9cb57ab00a",
+      "name": "HF Papers Daily",
+      "prompt": "You are SakThai checking HF Papers of the Day.\n\nUse web_search to find the latest papers featured on huggingface.co/papers for today. Also check hf.co/papers for trending ML research.\n\nDeliver a compact report of the top 3 papers:\n- Title and link\n- What it's about (1-2 sentences)\n- Why it matters / key contribution\n\nAfter reporting, use `skill_manage` to save findings \u2014 patch an existing skill or write to `references/hf-papers.md`.\n\nThen sync to GitHub:\n```\ncd /opt/data/sakthai-skills-repo\ncp -a ~/profiles/sakthai/skills/. .\ngit add -A\ngit commit -m \"papers: <date/tick> \u2014 new ML research\"\ngit push origin main\n```\n\nKeep it concise. Each tick MUST feel fresh and different.",
+      "skills": [],
+      "skill": null,
+      "model": null,
+      "provider": null,
+      "provider_snapshot": "opencode-go",
+      "model_snapshot": "deepseek-v4-flash",
+      "base_url": null,
+      "script": null,
+      "no_agent": false,
+      "context_from": null,
+      "schedule": {
+        "kind": "once",
+        "run_at": "2026-07-23T12:09:57.719533+00:00",
+        "display": "once in 1m"
+      },
+      "schedule_display": "once in 1m",
+      "repeat": {
+        "times": null,
+        "completed": 3
+      },
+      "enabled": false,
+      "state": "completed",
+      "paused_at": null,
+      "paused_reason": null,
+      "created_at": "2026-07-23T11:34:19.016904+00:00",
+      "next_run_at": null,
+      "last_run_at": "2026-07-23T12:21:24.247191+00:00",
+      "last_status": "ok",
+      "last_error": null,
+      "last_delivery_error": null,
+      "deliver": "origin",
+      "origin": {
+        "platform": "telegram",
+        "chat_id": "8618306046",
+        "chat_name": "Beer",
+        "thread_id": null,
+        "user_id": "8618306046"
+      },
+      "enabled_toolsets": [
+        "web",
+        "terminal",
+        "skills"
+      ],
+      "workdir": null,
+      "fire_claim": null
+    },
+    {
+      "id": "58293300f91a",
+      "name": "HF New Cool Spaces",
+      "prompt": "You are SakThai watching for new and interesting Hugging Face Spaces.\n\nUse web_search to find recently created or trending Spaces on huggingface.co/spaces. Look for:\n- Unique or creative apps\n- Useful demos (Gradio/Streamlit)\n- New ZeroGPU Spaces\n- Spaces with high \u2b50 or likes\n\nDeliver a compact report of the top 3 most interesting Spaces found:\n- Space name and creator\n- What it does (1 line)\n- Why it's notable (1 line)\n\nAfter reporting, use `skill_manage` to save findings \u2014 patch an existing skill or write to `references/hf-spaces.md`.\n\nThen sync to GitHub:\n```\ncd /opt/data/sakthai-skills-repo\ncp -a ~/profiles/sakthai/skills/. .\ngit add -A\ngit commit -m \"spaces: <date/tick> \u2014 new HF Spaces\"\ngit push origin main\n```\n\nKeep it concise. Each report MUST be different from previous ones.",
+      "skills": [],
+      "skill": null,
+      "model": null,
+      "provider": null,
+      "provider_snapshot": "opencode-go",
+      "model_snapshot": "deepseek-v4-flash",
+      "base_url": null,
+      "script": null,
+      "no_agent": false,
+      "context_from": null,
+      "schedule": {
+        "kind": "once",
+        "run_at": "2026-07-23T12:09:58.726853+00:00",
+        "display": "once in 1m"
+      },
+      "schedule_display": "once in 1m",
+      "repeat": {
+        "times": null,
+        "completed": 3
+      },
+      "enabled": false,
+      "state": "completed",
+      "paused_at": null,
+      "paused_reason": null,
+      "created_at": "2026-07-23T11:34:20.034448+00:00",
+      "next_run_at": null,
+      "last_run_at": "2026-07-23T12:20:36.904142+00:00",
+      "last_status": "ok",
+      "last_error": null,
+      "last_delivery_error": null,
+      "deliver": "origin",
+      "origin": {
+        "platform": "telegram",
+        "chat_id": "8618306046",
+        "chat_name": "Beer",
+        "thread_id": null,
+        "user_id": "8618306046"
+      },
+      "enabled_toolsets": [
+        "web",
+        "terminal",
+        "skills"
+      ],
+      "workdir": null,
+      "fire_claim": null
+    }
+  ],
+  "updated_at": "2026-07-23T12:21:24.247398+00:00"
+}
