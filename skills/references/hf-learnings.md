@@ -6398,3 +6398,29 @@ Source-level deep dive into the HF Hub model download counting system — query 
 - https://github.com/huggingface/huggingface.js/blob/main/packages/tasks/src/model-libraries-downloads.ts
 - https://github.com/huggingface/huggingface.js/pull/885/files
 
+
+---
+
+## 2026-07-25: hf-inference-router-openai-compatible-endpoint — HF Inference Router OpenAI-Compatible Endpoint (Topic #361)
+
+### Summary
+Comprehensive deep dive into Hugging Face's Inference Router (`https://router.huggingface.co/v1`) — the OpenAI-compatible proxy endpoint providing server-side provider selection, auto-failover, and unified access to 16+ providers through a single OpenAI SDK-compatible API. Unlike InferenceClient (client-side routing), the Router processes provider selection server-side using model ID suffixes (`:fastest`, `:cheapest`, `:preferred`, `:provider-name`). Endpoint provides `/v1/models` for model discovery with per-provider metadata (pricing, latency, throughput, context length, tool support). Currently chat completions only.
+
+### Key Findings
+- **Server-side routing**: Provider selection happens on the proxy, not the client — model ID suffix determines provider/policy
+- **`/v1/models` endpoint**: Lists all chat models with rich provider metadata (pricing, latency, throughput, context_length, supports_tools, supports_structured_output, is_free)
+- **Policy suffixes**: `:fastest` (default, highest throughput), `:cheapest` (lowest output price), `:preferred` (user preference order), `:provider-name` (explicit, e.g., `:groq`)
+- **Auto-failover**: Built-in — if selected provider is unhealthy, falls through to next available
+- **Drop-in OpenAI replacement**: Change base URL to `https://router.huggingface.co/v1` and API key to HF token
+- **Limitation**: Chat completions only — image gen, embeddings, audio need InferenceClient
+- **Free tier**: Check `is_free` field per provider in `/v1/models`; `hf-inference` provider offers free CPU inference for classic models
+
+### API Surface
+- `GET /v1/models` — list all chat models with provider metadata
+- `POST /v1/chat/completions` — create chat completion (streaming, tools, structured outputs supported per provider)
+- Auth: Bearer token (fine-grained with `inference.serverless.write` permission)
+
+### Skill Created
+`hf-inference-router-openai-compatible-endpoint/` — SKILL.md (author: SakThai, license: MIT) + references/hf-learnings.md with full documentation.
+
+---
