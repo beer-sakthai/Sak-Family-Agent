@@ -6242,3 +6242,36 @@ Comprehensive deep-dive into the Hugging Face Hub's Search & Discovery API — t
 
 ### Skill Created
 `hf-hub-search-discovery-api/` — complete reference for HF Hub Search & Discovery: REST endpoints, Python SDK methods, query parameter reference tables, filter tag categories, sort value mapping, pagination patterns, and multi-filter search strategies.
+---
+
+## 2026-07-25: hf-distilabel-deep-dive — Complete Synthetic Data Pipeline Framework (v1.5.3)
+
+### Summary
+Comprehensive deep dive into distilabel v1.5.3 — Argilla's framework for building synthetic data generation and AI feedback pipelines. Covers pipeline DAG architecture, step types, column-based data flow, all 16+ LLM integrations, 40+ built-in tasks, Distiset output management, caching, Ray distribution, custom step authoring, and real-world patterns for SFT/DPO/RLHF training data generation.
+
+### Key Findings
+
+**Architecture:**
+- DAG-based pipeline with three step types: GeneratorStep (root), Step (transform), Task (LLM-powered)
+- Steps connected via `>>` operator; data flows as batches of dicts
+- Pipeline returns Distiset (dict of HF Datasets, one per leaf step)
+
+**LLM Providers (16+):**
+- TransformersLLM (local CPU/GPU), InferenceEndpointsLLM (HF IEs), OpenAILLM, OllamaLLM, LlamaCppLLM, AnthropicLLM, VertexAILLM, MistralLLM, CohereLLM, GroqLLM, TogetherLLM, ClientvLLM, MlxLLM, LiteLLM, MixtureOfAgentsLLM, AzureOpenAILLM, AnyscaleLLM
+
+**Task Catalog (40+):**
+- SFT: TextGeneration, SelfInstruct, MagpieGenerator, Genstruct, EvolInstruct, EvolQuality, EvolComplexity, URIAL, InstructionBacktranslation
+- DPO/RLHF: UltraFeedback, PairRM, FormatChatGenerationDPO, FormatTextGenerationDPO, PreferenceToArgilla
+- Evaluation: ComplexityScorer, QualityScorer, PrometheusEval, CLAIR
+- Specialized: ChatGeneration, ImageGeneration, GenerateEmbeddings, MathShepherd, StructuredGeneration, BitextRetrievalGenerator, etc.
+
+**Key Features:**
+- Automatic caching with content-addressable keys
+- Runtime parameter overrides (reuse pipeline with different configs)
+- StepResources for parallelism (Ray only)
+- Column mappings (input_mappings/output_mappings)
+- Distiset with push_to_hub, train_test_split, save_to_disk
+- Structured output with Pydantic models
+
+### Skill Created
+`hf-distilabel-deep-dive/` — SKILL.md with author:SakThai, license:MIT + references/hf-learnings.md with full reference.

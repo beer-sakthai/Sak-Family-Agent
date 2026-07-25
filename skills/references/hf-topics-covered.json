@@ -327,5 +327,6 @@
   "hf-sandboxes-v3-deep-dive",
   "hf-inference-client-streaming-patterns",
   "hf-hub-model-hub-mixin-integration",
-  "hf-datasets-server-filter-endpoint"
+  "hf-hub-spaces-python-sdk-v2",
+  "hf-distilabel-deep-dive-v2"
 ]
