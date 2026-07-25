@@ -69,7 +69,6 @@ export standalone repository snapshots with `scripts/export_agent_repo.py` or
 - `services/` — service pitches/specs not yet part of the package (e.g.
   `hugging-face-dataset-publishing/`).
 - `training/` — Hugging Face Jobs fine-tune + model-serving scripts.
-- `.jules/` — config for the Jules automation/CI helper.
 
 ### Sak Family Agents
 
