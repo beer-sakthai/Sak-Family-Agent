@@ -1,74 +1,5 @@
 # HF Learnings Log
 
-## 2026-07-25: hf-gradio-server-mode — Gradio 6 Server Mode (gr.Server) Complete Reference (Topic #351)
-
-### Summary
-Comprehensive deep dive into Gradio 6's `gr.Server` (Server mode) — introduced in 6.10.0. A FastAPI-based API server that exposes Gradio's queue, SSE streaming, concurrency control, and MCP capabilities **without a UI**. Unlike `gr.Blocks()` which renders a full web interface, `gr.Server` is designed for pure API/microservice deployment with OpenAPI docs, standard FastAPI routes (`.get()`, `.post()`, etc.), and built-in Gradio event infrastructure. Key insight: `gr.Server` inherits directly from FastAPI (via `gradio.routes.App`), so all standard FastAPI methods work directly.
-
-### Key Findings
-- **True FastAPI inheritance**: `gr.Server` is an actual FastAPI subclass — can use middleware, routers, dependency injection, WebSocket, sub-applications
-- **`@server.api()` decorator**: Registers functions as Gradio API endpoints with queue, SSE streaming, concurrency control, batch processing
-- **MCP namespace**: `server.mcp.tool()`, `server.mcp.resource()`, `server.mcp.prompt()` — native MCP decorators on the server instance
-- **Dual decorator pattern**: Stack `@server.mcp.tool()` + `@server.api()` on same function for both Gradio API + MCP tool
-- **Deferred registration**: `@server.api()` functions stored in `_deferred_apis` list, only registered at `launch()` time
-- **No Gradio frontend**: Server mode doesn't load/serve frontend JS/CSS — lighter and faster startup than `gr.Blocks`
-- **Full OpenAPI docs**: Automatic at `/docs` (Swagger), `/redoc` (ReDoc), `/openapi.json`
-- **ZeroGPU support**: Since 6.12.0
-- **Auth via FastAPI deps**: `auth_dependency` parameter supports OAuth2, JWT, API keys
-- **Env var**: `GRADIO_SERVER_MODE_ENABLED=1` set on launch
-
-### API Surface
-- `server.api(fn, name, queue, concurrency_limit, batch, stream_every, ...)` — Gradio endpoint decorator
-- `server.mcp.tool(name)` / `.resource(uri)` / `.prompt(name)` — MCP decorators
-- All FastAPI methods: `.get()`, `.post()`, `.add_middleware()`, `.include_router()`, etc.
-- `server.launch(server_name, server_port, auth_dependency, mcp_server, ...)` — start server
-
-### Skill Created
-`hf-gradio-server-mode/` — complete skill with SKILL.md and references/hf-learnings.md (256 lines, full API reference, 8 usage patterns, comparison matrix, MCP integration deep dive).
-
----
-
-## 2026-07-25: hf-gradio-6-native-plot-components — Gradio 6 Native Plot Components Complete Reference (Topic #351)
-
-### Summary
-Comprehensive deep dive into Gradio 6's native plot component family (`gr.LinePlot`, `gr.ScatterPlot`, `gr.BarPlot`, and the generic `gr.Plot`). These components provide declarative, DataFrame-backed charting with client-side rendering (built on Vega-Altair), eliminating the need for matplotlib/plotly for common use cases. All three share the **identical API** with over 20 dedicated parameters for axis configuration, color mapping, binning, aggregation, tooltips, and layout.
-
-### Key Findings
-- **Three native plot components**: `gr.LinePlot`, `gr.ScatterPlot`, `gr.BarPlot` — all share identical constructor API
-- **Client-side rendering**: Uses Vega-Altair in browser; no server CPU for rendering
-- **Direct DataFrame input**: Accepts `pd.DataFrame` directly, or a callable returning one
-- **Built-in binning/aggregation**: `x_bin` (numeric size or datetime string like "1h") + `y_aggregate` (sum/mean/median/min/max)
-- **Color series**: `color` parameter splits data into multiple series; `color_map` for custom colors
-- **Interactive events**: `.change()`, `.select()` (with `SelectData`), `.double_click()`
-- **Tooltip modes**: `"axis"`, `"all"`, `"none"`, or `list[str]` of columns
-- **Axis limits**: `x_lim`/`y_lim` as `[min, None]` tuples for one-sided constraints
-- **Sort control**: `sort` parameter for categorical x — `"x"`, `"-x"`, `"y"`, `"-y"`, or explicit list
-- **gr.Plot fallback**: For matplotlib/plotly/bokeh/altair figures when custom rendering is needed
-- **Performance advantage**: Native plots send DataFrame as JSON to browser → 10-100x smaller payload than serialized mpl figures
-
-### API Parameters (shared by LinePlot, ScatterPlot, BarPlot)
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `value` | `pd.DataFrame \| Callable \| None` | Data or callable returning data |
-| `x` | `str` | X-axis column name |
-| `y` | `str \| list[str]` | Y-axis column name(s), must be numeric |
-| `color` | `str \| None` | Column for series splitting |
-| `title` | `str \| None` | Chart title |
-| `x_title` / `y_title` | `str \| None` | Axis titles |
-| `color_title` | `str \| None` | Legend title |
-| `x_bin` | `str \| float \| None` | X grouping: number (numeric) or "1h"/"15m" (datetime) |
-| `y_aggregate` | `Literal` | "sum", "mean", "median", "min", "max" |
-| `x_lim` / `y_lim` | `list[float \| None]` | Axis bounds |
-| `color_map` | `dict[str, str]` | Series → color mapping |
-| `sort` | `str \| list[str]` | Categorical sort order |
-| `tooltip` | `str \| list[str]` | Tooltip content mode |
-| `height` | `int \| None` | Plot height in px |
-
-### Skill Created
-`hf-gradio-6-native-plot-components/` — complete skill with SKILL.md and references/hf-learnings.md.
-
----
-
 ## 2026-07-24: hf-hub-exceptions-retry-deep-dive
 
 ### Summary
@@ -6370,31 +6301,69 @@ Deep dive into Hugging Face Spaces secrets and environment variables management.
 
 ---
 
-## 2026-07-25: hf-hub-model-download-stats-deep-dive — Download Counting Methodology Deep Dive
+## 2026-07-25: hf-inference-endpoints-custom-containers-deep-dive
 
 ### Summary
-Source-level deep dive into the HF Hub model download counting system — query files mechanism, per-library `countDownloads` config in `huggingface.js/packages/tasks/src/model-libraries.ts` (200+ libraries), ElasticSearch query-string DSL over `path`/`path_prefix`/`path_extension`/`path_filename` fields, diffusers double-counting prevention (regex on root-level files only), GGUF always-counted-by-default behavior, Publisher Analytics CSV export API for Team/Enterprise, and granular request-level logs for Enterprise Plus.
+Deep-dive into deploying custom Docker containers to Hugging Face Inference Endpoints (dedicated). Covers the full lifecycle: FastAPI server patterns with ModelManager lifecycle, model mounting at `/repository`, Docker packaging with uv, endpoint configuration (hardware, auth, autoscaling, scale-to-zero, tags, env vars), analytics/monitoring via OpenMetrics API for Prometheus/Grafana, security (PrivateLink, secret env vars), client integration patterns, and cost comparison with zero-cost alternatives.
 
-### Key Findings
-| Finding | Detail |
-|---------|--------|
-| **Server-side counting** | No client instrumentation — every GET/HEAD to a query file path increments the counter via ElasticSearch |
-| **Default query files** | `config.json`, `config.yaml`, `hyperparams.yaml`, `params.json`, `meta.yaml` — when no library-specific `countDownloads` is defined |
-| **countDownloads patterns** | 5 patterns: single config path, extension wildcard, specific model file, combined OR, library-specific config |
-| **Diffusers edge case** | Uses `bool.should` with 4 rules + `minimum_should_match:1` — captures both library and UI downloads without double-counting nested files |
-| **GGUF exception** | All `.gguf` files counted unconditionally (self-contained format, no library dependency) |
-| **Source location** | `huggingface.js/packages/tasks/src/model-libraries.ts` — open-source, PRs welcome |
-| **Publisher Analytics** | CSV export API at `huggingface.co/organizations/{org}/settings/publisher-analytics/download-breakdown` |
-| **Granular logs** | Enterprise Plus add-on — request-level logs with anonymized user/IP hashing, HTTP status/method, country/region |
-| **ElasticSearch fields** | `path` (full path), `path_prefix` (directory), `path_extension` (extension), `path_filename` (name without extension) |
+### Key Architecture
+- **ModelManager pattern**: Class-based model lifecycle with `load()`, `unload()`, `get()` methods + FastAPI lifespan hooks for startup/shutdown
+- **Health endpoint**: Returns 503 until model is ready — platform uses this to gate traffic
+- **`/repository` mount**: Model weights are NEVER baked into the image; platform downloads from Hub and mounts at container start
+- **Docker best practices**: Non-root user (`appuser`), layer caching (deps before code), `--platform linux/amd64` for Mac builds, uv for fast dependency resolution
 
-### Skill Created/Updated
-`hf-hub-model-download-stats/` — comprehensive skill with SKILL.md (author:SakThai, license:MIT) and references/hf-learnings.md with full source-level documentation.
+### Configuration Reference
+- **Hardware**: AWS/Azure/GCP, CPU/GPU/INF2, multiple region options
+- **Auth modes**: Private (token required), Public (no auth), Authenticated (any HF account)
+- **Autoscaling**: Scale-to-zero after inactivity (default 1h), min/max replicas, GPU utilization or pending requests as trigger
+- **Environment vars**: Default (plain) and Secret (encrypted) env vars
+- **Network**: Public internet (default) or AWS PrivateLink for VPC-restricted access
+
+### Analytics (OpenMetrics API)
+- Exports metrics in OpenMetrics format (Prometheus-compatible)
+- Metrics: requests by HTTP class, latency distribution (p50/p90/p95/p99), CPU/GPU/memory utilization, replication count
+- Integration with Prometheus, Grafana, Datadog
+- Team/Enterprise feature
+
+### Cost Reality
+- Custom containers require paid GPU instances ($0.10-$4.50/h)
+- For zero-cost development: Serverless Inference Providers, ZeroGPU Spaces, or local GGUF inference are the alternatives
+
+### Skill Created
+`hf-inference-endpoints-custom-containers/` — SKILL.md (author: SakThai, license: MIT) + references/hf-learnings.md with complete documentation.
 
 ### Sources
-- https://huggingface.co/docs/hub/en/models-download-stats
-- https://huggingface.co/docs/hub/en/publisher-analytics
-- https://github.com/huggingface/huggingface.js/blob/main/packages/tasks/src/model-libraries.ts
-- https://github.com/huggingface/huggingface.js/blob/main/packages/tasks/src/model-libraries-downloads.ts
-- https://github.com/huggingface/huggingface.js/pull/885/files
+- https://huggingface.co/docs/inference-endpoints/en/engines/custom_container — "Deploy with your own container"
+- https://huggingface.co/docs/inference-endpoints/en/guides/configuration — "Configuration"
+- https://huggingface.co/docs/inference-endpoints/en/guides/analytics — "Analytics and Metrics"
+- https://huggingface.co/docs/inference-endpoints/en/guides/autoscaling — "Auto Scaling"
+- https://huggingface.co/docs/inference-endpoints/en/guides/security — "Security & Compliance"
 
+---
+
+## 2026-07-25: hf-datasets-5-release — Hugging Face Datasets 5.0.0 New Features Complete Reference (Topic #353)
+
+### Summary
+Deep dive into Hugging Face Datasets **v5.0.0** (June 5, 2026) — a major version from 4.8.5 introducing agent trace parsing (via `teich` library for SFT on coding agent traces), multi-shard streaming shuffle (dramatically better randomness), `batch(by_column="episode")` for robotics, and four new format support additions: Apache Iceberg, TsFile (IoTDB), 3D Mesh (MeshFolder builder), and CoNLL/CoNLL-U. Also covers critical Parquet streaming fixes, Lance storage options, composed streaming splits, and `to_sql` num_proc.
+
+### Key Features
+- **Agent Traces:** `load_dataset()` now parses coding agent traces (Claude Code, Codex, Pi) via optional `teich` dependency → produces `messages` column ready for SFT with `trl`. Discoverable via `?format=format:agent-traces` filter on Hub.
+- **Multi-Shard Shuffle:** `ds.shuffle(seed=42, max_buffer_input_shards=10)` — new default pulls from 10 input shards concurrently. Fixes cold-start clustering. Old behavior: `max_buffer_input_shards=1`.
+- **Batch by Column:** `ds.batch(by_column="episode")` — groups consecutive rows by column value into full batches. Built for robotics episode grouping.
+- **Apache Iceberg:** `load_dataset("iceberg://catalog/namespace/table")` — direct data lakehouse ingestion.
+- **TsFile (IoTDB):** Time-series columnar format for industrial IoT sensor data.
+- **3D Mesh + MeshFolder:** Loads `.obj/.stl/.ply/.glb` mesh files into structured datasets with `embed_external_files=True`.
+- **CoNLL/CoNLL-U:** Native NER/chunking/dependency parsing format loader.
+- **Key Fixes:** Parquet streaming hang fixed, Lance storage_options fixed, composed splits in streaming, `Json()` null handling, `to_sql` num_proc, `map` progress bar fix.
+
+### Breaking Changes
+1. Streaming shuffle now multi-shard by default — revert with `max_buffer_input_shards=1`
+2. `Json()` columns: `None` stays `None` (not `"null"` string) — validate downstream null handling
+3. Agent traces need optional `teich` dependency
+
+### Skill Created
+`hf-datasets-5-release/` — SKILL.md (author: SakThai, license: MIT) + references/hf-learnings.md.
+
+### Sources
+- https://github.com/huggingface/datasets/releases/tag/5.0.0 — Official release notes
+- https://pypi.org/project/teich/ — Teich library
