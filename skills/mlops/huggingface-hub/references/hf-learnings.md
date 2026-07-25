@@ -1,5 +1,21 @@
 # HF Learnings — Hugging Face Hub
 
+## 2026-07-25: hf-cli-agent-mode-deep-dive — hf CLI Agent-Optimized Mode (Topic #314)
+
+### Summary
+Deep dive into the `hf` CLI v1.9.0+ agent-optimized mode. Auto-detects coding agents (CLAUDECODE, CODEX_SANDBOX, AI_AGENT, CURSOR env vars), switches to TSV output with no truncation, full tags, ISO timestamps. Ships auto-generated skill (~30% fewer tool calls). Benchmarked: 94% success on Sonnet (vs 84% curl/SDK), 1.3–6× fewer tokens on multi-step tasks.
+
+### Key Points
+- **Dual rendering**: Same command → human (table/ANSI) or agent (TSV/full) output
+- **Skill**: `hf skills add` installs; `hf skills preview` shows; ~30% fewer tool calls
+- **Safe retry**: `--exist-ok`, `--yes`, `--dry-run` for idempotent ops
+- **Benchmark**: 18 tasks × 3 tools × 10 reps × 2 agents = ~1,000 graded runs
+- **Register harness**: PR to `agent-harnesses.ts` in huggingface.js
+
+See skill `mlops/hf-cli-agent-mode/` for full SKILL.md and deeper reference.
+
+---
+
 ## 2026-07-24: hf-hub-exception-reference — Complete Exception Hierarchy (Topic #130)
 
 ### Summary

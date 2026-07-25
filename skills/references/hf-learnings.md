@@ -5056,30 +5056,45 @@ Deep dive into the Hugging Face Inference MCP Client and Agent framework built i
 
 ---
 
-## 2026-07-25: hf-datasets-from-parquet — Dataset.from_parquet() Source Code Deep Dive
+## 2026-07-25: hf-cli-agent-mode-deep-dive — Hugging Face hf CLI Agent-Optimized Mode (Topic #314)
 
 ### Summary
-Deep-dive into the Hugging Face Datasets library's `Dataset.from_parquet()` and `Dataset.to_parquet()` methods. Covers the complete call chain from the static method through `ParquetDatasetReader`, the `Parquet` ArrowBasedBuilder, and PyArrow's `ParquetFileFormat` fragment scanning. Includes full API surface, row group sharding architecture, filter pushdown via `pq.filters_to_expression()`, column projection, content-defined chunking (CDC), compression strategy per column type, bad file handling (v4.2.0+), `FragmentScanOptions` for remote Parquet caching, and integration with the Datasets Server `/parquet` endpoint for zero-cost analytics.
-
-### Source Documentation
-- Source code: `src/datasets/arrow_dataset.py` — `from_parquet()` line 1491, `to_parquet()` line 5625
-- Source code: `src/datasets/io/parquet.py` — `ParquetDatasetReader`, `ParquetDatasetWriter`
-- Source code: `src/datasets/packaged_modules/parquet/parquet.py` — `ParquetConfig`, `Parquet._generate_tables()`
-- Source code: `src/datasets/config.py` — `MAX_ROW_GROUP_SIZE`, `DEFAULT_CDC_OPTIONS`, `USE_PARQUET_EXPORT`
+Deep dive into the `hf` CLI v1.9.0+ agent-optimized mode. Covers auto-detection of coding agents (Claude Code, Codex, Cursor, etc.), dual rendering (human vs agent output formats), the auto-generated skill system, safe retry semantics (`--exist-ok`, `--yes`, `--dry-run`), next-command hints, composable output (`-q`, `--json`, `--quiet`), and the benchmark results comparing CLI vs curl/Python SDK across ~1,000 graded runs on 18 Hub tasks. The CLI achieves 94% task success on Sonnet (vs 84% without it) and burns 1.3–6× fewer tokens on complex multi-step workflows.
 
 ### Key Findings
-- **Row group sharding**: `_generate_more_gen_kwargs()` splits each Parquet file into individual row group fragments — `(file, (rg_id,))` per fragment. This enables lazy row-group-at-a-time loading in streaming mode.
-- **Filter pushdown**: `filters=` is converted via `pq.filters_to_expression()` → PyArrow's native `to_batches(filter=...)`. Row group column min/max statistics skip non-matching groups entirely (no download for remote files).
-- **Column projection**: `columns=` reads only selected column chunks from Parquet. Supports nested prefix matching (`"a"` selects `a.b`, `a.c`). Combined with `features=`, columns and features must match or ValueError.
-- **FragmentScanOptions (v4.2.0+)**: `ParquetFragmentScanOptions(cache_options=CacheOptions(prefetch_limit=1, range_size_limit=32MiB))` for tuning HTTP range requests — increase `range_size_limit` to 128MiB for fewer requests on large columns.
-- **Bad file handling (v4.2.0+)**: Three modes — `"error"` (raise), `"warn"` (skip+warning), `"skip"` (quiet skip). Skips bad files during schema inference too.
-- **CDC**: Content-defined chunking at 256KB-1MB boundaries enabled by default (`DEFAULT_CDC_OPTIONS`). More stable row group boundaries than PyArrow defaults across data changes. Metadata written into file.
-- **Compression strategy**: Snappy for normal columns, `"none"` for media (Image/Audio/Binary), dictionary encoding for text, PLAIN encoding for media columns.
-- **Batch size**: Auto-tuned — targets `MAX_ROW_GROUP_SIZE = "100MB"` uncompressed per row group, with separate overrides for audio/image/binary/video datasets.
-- **Streaming limitation**: `from_parquet()` always returns map-style Dataset. Use `load_dataset("parquet", data_files=..., streaming=True)` for true streaming.
-- **Remote URI writing**: Supports hf://, s3://, gs:// via fsspec. `storage_options` dict passed to fsspec.open().
+
+| Aspect | Detail |
+|--------|--------|
+| **Detection** | Reads CLAUDECODE, CODEX_SANDBOX, AI_AGENT, CURSOR env vars |
+| **Agent output** | TSV format, no truncation, no ANSI, ISO 8601, all tags, stderr guidance |
+| **Human output** | Aligned tables, ANSI color, truncated to fit, green ✅ on success |
+| **Skill effect** | ~30% fewer tool calls (10.4→6.9 Sonnet, 10.1→7.3 GPT-5.5) |
+| **Safe retry** | --exist-ok, -y/--yes, --dry-run on destructive/data-move commands |
+| **Token savings** | 1.3–1.8× overall, 2.4–6× on multi-step tasks (bucket sync, org ranking) |
+| **Simple reads** | Near parity or cheaper via curl/SDK (0.3–0.5×) |
+| **Error handling** | Errors go to stderr with fix command; never prompts in agent mode |
+
+### Benchmark Detail (18 tasks, ~1,000 graded runs)
+
+| Agent | Tool | Success | Self-report errors | Token vs baseline |
+|-------|------|---------|-------------------|-------------------|
+| Claude Code (Sonnet 4.6) | `hf` CLI | **0.94** | 2/163 | baseline |
+|  | curl/Python SDK | 0.84 | 11/163 | 1.3–1.6× |
+| Codex (GPT-5.5) | `hf` CLI | **0.93** | 3/163 | baseline |
+|  | curl/Python SDK | 0.92 | 10/163 | 1.6–1.8× |
+
+Per-task token ratios for curl/SDK vs CLI (GPT-5.5): bucket create+sync+prune 6.0×, rank org trending models 4.1×, repo create+branch+tag / delete files / copy files across repos 2.4× each. Simple reads: batch model metadata 0.5×, count dataset rows 0.3×.
+
+### Agent Harness Registration
+Any agent harness can register by PR to `agent-harnesses.ts` in huggingface.js. Guide at `/docs/hub/agents-overview#register-your-agent-harness`.
 
 ### Skill Created
-`hf-datasets-from-parquet/` — complete reference with source-code-verified API surface, architecture details, config constants, performance patterns, and practical examples.
+`mlops/hf-cli-agent-mode/` — SKILL.md + references/hf-learnings.md covering agent-optimized CLI design, detection, rendering modes, skill system, benchmark results, and best practices.
 
----
+### Sources
+- https://huggingface.co/blog/hf-cli-for-agents (primary source)
+- https://huggingface.co/docs/huggingface_hub/guides/cli
+- https://huggingface.co/docs/hub/agents-overview
+
+
+
