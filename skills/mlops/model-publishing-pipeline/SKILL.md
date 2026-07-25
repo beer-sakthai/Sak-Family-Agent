@@ -361,7 +361,7 @@ This skill ships with detailed reference files:
 | `references/full-eval-pipeline.md` | Full three-dimensional evaluation: speed (tok/s) + BFCL tool-calling + coding benchmark, combined into one report. Covers all GGUF models. |
 | **`references/controlled-benchmark-comparison.md`** 🆕 | Compare fine-tuned model vs base model side-by-side on same hardware — speed, tool-calling, format |
 | **`references/post-publishing-exposure.md`** 🆕 | Cross-link on base model pages, HF Collections with notes, discussion posts, healing cron |
-| `benchmark/v6-benchmark.ipynb` *(pending)* | Pre-built Kaggle/Colab notebook template to run 100-step LoRA + 5-category validation on the v6 dataset. Create from the notebook structure table above when needed. |
+| **`references/verified-benchmark-2026-07-25.md`** 🆕 | Trust-pass evaluation of all GGUF models: 1.5B 5/5, 0.5B 4/5, Coder 5/5, speed benchmarks |
 
 
 ## Trust Pass — Quality Review Before Publishing
