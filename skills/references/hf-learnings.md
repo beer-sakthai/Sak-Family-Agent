@@ -14243,3 +14243,403 @@ For Beer's HF account (Nanthasit — 8 models, 8 datasets, 2 Spaces, 2 GGUF file
 ### Skill
 skills/references — Append to main hf-learnings.md (no new skill needed for this reference topic)
 
+## 2026-07-24: hf-transformers-deepseek-r1-architecture-deep-dive — DeepSeek-R1: Architecture, RL Training Pipeline, and Transformers Integration (Topic #230)
+
+### Summary
+Comprehensive deep-dive on DeepSeek-R1 — the first-generation reasoning model from DeepSeek that achieved OpenAI-o1-comparable performance via pure reinforcement learning. Covers the DeepSeek-V3 base architecture (671B MoE with Multi-head Latent Attention), the GRPO training methodology that eliminates the need for human-annotated reasoning chains, the distillation pipeline for dense smaller models, Hugging Face Transformers integration, chat template format, and practical usage patterns.
+
+### Source
+- Paper: https://arxiv.org/abs/2501.12948 — "DeepSeek-R1: Incentivizing Reasoning Capability in LLMs via Reinforcement Learning" (Nature, Vol 645, 2025)
+- DeepSeek-V3 Paper: https://arxiv.org/abs/2412.19437
+- DeepSeekMath (GRPO) Paper: https://arxiv.org/abs/2402.03300
+- HF Model: https://huggingface.co/deepseek-ai/DeepSeek-R1
+- Transformers Docs: https://huggingface.co/docs/transformers/main/en/model_doc/deepseek_v3
+- TRL GRPO Trainer: https://huggingface.co/docs/trl/main/en/grpo_trainer
+- GitHub: https://github.com/deepseek-ai/DeepSeek-R1
+
+### 1. What Is DeepSeek-R1?
+
+DeepSeek-R1 is a **reasoning language model** trained via large-scale reinforcement learning (RL) that demonstrated for the first time that complex reasoning capabilities (self-verification, reflection, chain-of-thought search) can emerge purely through RL without supervised fine-tuning on human reasoning demonstrations.
+
+Two model variants were released:
+- **DeepSeek-R1-Zero**: Trained via pure RL on the base model (DeepSeek-V3-Base) without any SFT cold-start data. Showed emergent reasoning but suffered from poor readability and language mixing.
+- **DeepSeek-R1**: Full pipeline with cold-start SFT data → RL → rejection sampling → SFT → RL. Achieves OpenAI-o1-comparable performance.
+
+Both models achieved **state-of-the-art results** on math (AIME 2024: 79.8%), coding (Codeforces: 96.3 percentile), and STEM reasoning benchmarks.
+
+### 2. Base Architecture: DeepSeek-V3
+
+DeepSeek-R1 is built on the **DeepSeek-V3** architecture — a 671B total parameter Mixture-of-Experts (MoE) model with 37B activated parameters per token.
+
+#### 2.1 Core Config
+
+```json
+{
+  "architectures": ["DeepseekV3ForCausalLM"],
+  "model_type": "deepseek_v3",
+  "hidden_size": 7168,
+  "num_hidden_layers": 61,
+  "num_attention_heads": 128,
+  "num_key_value_heads": 128,
+  "intermediate_size": 18432,
+  "vocab_size": 129280,
+  "max_position_embeddings": 163840,
+  "torch_dtype": "bfloat16"
+}
+```
+
+#### 2.2 Multi-head Latent Attention (MLA)
+
+MLA is a key innovation for efficient inference. Instead of projecting the full KV cache, it compresses keys and values into a low-rank latent space:
+
+- **KV compression**: `kv_lora_rank=512` (down from full head dims)
+- **Query compression**: `q_lora_rank=1536`
+- **NoPE head dim**: `qk_nope_head_dim=128` — standard attention dimensions
+- **RoPE head dim**: `qk_rope_head_dim=64` — dimensions that receive rotary embeddings
+- **Value head dim**: `v_head_dim=128` — per-head value dimension
+
+This dramatically reduces the KV cache size — from `2 × 128 × 128 × 4 bytes = 131 KB` per layer to `512 × 4 bytes = 2 KB` per layer in compressed form (before the up-projection). For 61 layers, this saves ~7.7 MB per token vs. standard MHA.
+
+#### 2.3 DeepSeekMoE Architecture
+
+DeepSeek-R1 uses a fine-grained MoE with:
+- **256 routed experts** (`n_routed_experts: 256`)
+- **8 experts per token** (`num_experts_per_tok: 8`)
+- **1 shared expert** (`n_shared_experts: 1`) — always active for every token
+- **Grouped routing**: 8 groups (`n_group: 8`), top-4 groups selected (`topk_group: 4`)
+- **Sigmoid scoring** (`scoring_func: sigmoid`) for expert selection
+- **Auxiliary-loss-free balancing** (`topk_method: noaux_tc`) — the first model to deploy this at scale, avoiding the performance degradation that auxiliary load-balancing losses can cause
+- **Routed scaling factor**: `routed_scaling_factor: 2.5`
+
+The MoE intermediate size is `moe_intermediate_size: 2048` per expert, with standard FFN intermediate `intermediate_size: 18432` used by the shared expert and dense layers.
+
+The first 3 layers use dense FFN (`first_k_dense_replace: 3`) with MoE starting from layer 4.
+
+#### 2.4 Multi-Token Prediction (MTP)
+
+DeepSeek-V3 introduces a **multi-token prediction** training objective:
+- `num_nextn_predict_layers: 1` — one additional prediction head
+- The model predicts the next token AND the token after next simultaneously
+- Improves training efficiency and sample efficiency
+- At inference, only the main head is used (the MTP head is discarded)
+
+#### 2.5 YaRN RoPE Scaling
+
+To support long contexts (163,840 tokens), DeepSeek-V3 uses **YaRN** (Yet another RoPE extensioN) scaling:
+```json
+{
+  "rope_scaling": {
+    "type": "yarn",
+    "factor": 40,
+    "original_max_position_embeddings": 4096,
+    "beta_fast": 32,
+    "beta_slow": 1,
+    "mscale": 1.0,
+    "mscale_all_dim": 1.0
+  }
+}
+```
+
+The scaling factor of 40 extends from 4K to 163K context. `beta_fast=32` and `beta_slow=1` control the ramp of the NTK-aware interpolation.
+
+#### 2.6 FP8 Quantization
+
+The model uses FP8 quantization natively:
+```json
+{
+  "quantization_config": {
+    "quant_method": "fp8",
+    "activation_scheme": "dynamic",
+    "fmt": "e4m3",
+    "weight_block_size": [128, 128]
+  }
+}
+```
+
+Dynamic per-tensor activation quantization with e4m3 format and 128×128 weight block sizes. Transformers handles FP8 loading automatically — no manual quantization configuration needed.
+
+### 3. Training Pipeline: From Base Model to Reasoner
+
+#### 3.1 DeepSeek-R1-Zero: Pure RL
+
+R1-Zero is notable as **the first open research to validate that reasoning capabilities can be incentivized purely through RL without SFT**.
+
+- **Starting point**: DeepSeek-V3-Base (pre-trained only)
+- **RL algorithm**: GRPO (Group Relative Policy Optimization)
+- **Reward signal**: Verifiable tasks only (math correctness, code pass@k tests) — no process reward model
+- **Emergent behaviors**: Self-verification ("Let me double-check..."), reflection ("Wait, that might be wrong..."), and long chain-of-thought search
+- **Limitations**: Poor readability, language mixing, endless repetition
+
+#### 3.2 DeepSeek-R1: Full Pipeline
+
+The full R1 pipeline has **four stages**:
+
+**Stage 1 — Cold-Start SFT**:
+- Collected thousands of long CoT examples using few-shot prompting + human refinement
+- Fine-tuned DeepSeek-V3-Base on this cold-start data to produce a seed reasoning model
+- This addresses R1-Zero's readability issues before RL begins
+
+**Stage 2 — Reasoning RL**:
+- Applied GRPO on the cold-start model using verifiable rewards
+- Language consistency reward added to prevent language mixing
+- Model develops advanced reasoning patterns (reflection, backtracking)
+
+**Stage 3 — Rejection Sampling + SFT**:
+- Used the Stage 2 model to generate millions of reasoning trajectories
+- Applied rejection sampling: kept only correct solutions with clean formatting
+- Combined with non-reasoning SFT data (writing, translation, QA) for general capabilities
+- Trained for 2 epochs on ~800K samples total
+
+**Stage 4 — RL for All Scenarios**:
+- Final RL stage combining verifiable rewards for reasoning tasks
+- Added preference-based rewards for general tasks (helpfulness, harmlessness)
+- Produces the final DeepSeek-R1 model
+
+#### 3.3 GRPO Algorithm (Group Relative Policy Optimization)
+
+GRPO, introduced in the DeepSeekMath paper (arxiv:2402.03300), is the core RL algorithm. Unlike PPO which requires a value function (critic) model, GRPO uses **group-level reward comparison**:
+
+**Step 1 — Generate Completions**: For each prompt `q`, sample G completions `{o_1, o_2, ..., o_G}` from the current policy `π_θ`.
+
+**Step 2 — Compute Advantage**: Normalize rewards within the group:
+```
+Â_i,t = (r_i - mean(r)) / std(r)
+```
+This gives GRPO its name — the advantage is *relative* to the group. The standard deviation scaling can be disabled (`scale_rewards=False`) or computed at batch level (`scale_rewards="batch"`) for more robust training.
+
+**Step 3 — Estimate KL Divergence**: Use the Schulman et al. (2020) unbiased approximator:
+```
+D_KL[π_θ || π_ref] = π_ref(o_i,t | q, o_i,<t) / π_θ(o_i,t | q, o_i,<t)
+                      - log(π_ref(o_i,t | q, o_i,<t) / π_θ(o_i,t | q, o_i,<t)) - 1
+```
+
+**Step 4 — Compute Loss**:
+```
+L_GRPO(θ) = -1/Σ|o_i| * Σ_i Σ_t [ (π_θ(o_i,t) / π_θ(o_i,t)_no_grad) * Â_i,t - β * D_KL ]
+```
+
+Key advantage: GRPO **eliminates the need for a value function model**, reducing memory and compute by ~50% compared to PPO. The TRL `GRPOConfig` supports all these knobs including `scale_rewards`, `beta` (KL penalty coefficient), and the number of generations per prompt.
+
+### 4. Distillation: Smaller Dense Models
+
+DeepSeek-R1 generates high-quality reasoning traces that are then used to fine-tune smaller dense models. This distillation approach outperforms training small models with RL directly.
+
+#### 4.1 Distilled Model Variants
+
+| Model | Base Architecture | Params | Hidden | Layers | Heads | Downloads |
+|-------|------------------|--------|--------|--------|-------|-----------|
+| R1-Distill-Qwen-1.5B | Qwen2ForCausalLM | 1.5B | 1536 | 28 | 12 | 664K |
+| R1-Distill-Qwen-7B | Qwen2ForCausalLM | 7B | 4096 | 28 | 32 | 281K |
+| R1-Distill-Llama-8B | LlamaForCausalLM | 8B | 4096 | 32 | 32 | 369K |
+| R1-Distill-Qwen-14B | Qwen2ForCausalLM | 14B | 5120 | 40 | 40 | 442K |
+| R1-Distill-Qwen-32B | Qwen2ForCausalLM | 32B | 5120 | 64 | 40 | 866K |
+| R1-Distill-Llama-70B | LlamaForCausalLM | 70B | 8192 | 80 | 64 | 871K |
+
+#### 4.2 Key Insight
+
+The 32B distilled model (R1-Distill-Qwen-32B) **outperforms OpenAI-o1-mini** across multiple benchmarks, demonstrating that reasoning patterns from large MoE models can be effectively compressed into dense architectures.
+
+The distilled models use the **base model's original tokenizer and vocabulary** (Qwen2: 151,936 vocab, Llama3: 128,256 vocab), not the DeepSeek-R1 tokenizer (129,280 vocab).
+
+### 5. Hugging Face Transformers Integration
+
+#### 5.1 Model Support
+
+DeepSeek-R1 is fully supported in Transformers as model type `deepseek_v3`:
+
+- **AutoModel**: `DeepseekV3Model`
+- **AutoModelForCausalLM**: `DeepseekV3ForCausalLM`
+- **AutoConfig**: `DeepseekV3Config`
+
+The model uses the standard `transformers` version `4.46.3+`. Loading is straightforward:
+
+```python
+from transformers import AutoModelForCausalLM, AutoTokenizer
+
+model = AutoModelForCausalLM.from_pretrained(
+    "deepseek-ai/DeepSeek-R1",
+    device_map="auto",
+    torch_dtype="auto"  # auto-detects bfloat16
+)
+tokenizer = AutoTokenizer.from_pretrained("deepseek-ai/DeepSeek-R1")
+```
+
+#### 5.2 Chat Template Format
+
+DeepSeek-R1 uses a custom Jinja2 chat template with unique delimiters:
+
+```
+<｜begin▁of▁sentence｜><｜User｜>Hello, how are you?<｜Assistant｜><think>
+Let me think about this...
+</think>
+I'm doing great! How can I help you today?<｜end▁of▁sentence｜>
+```
+
+Key tokens:
+- `<｜begin▁of▁sentence｜>` — BOS token (token_id: 0)
+- `<｜end▁of▁sentence｜>` — EOS token (token_id: 1), also used as pad token
+- `<｜User｜>` — User message prefix
+- `<｜Assistant｜>` — Assistant message prefix
+- `<｜tool▁calls▁begin｜>` / `<｜tool▁call▁begin｜>` — Tool calling markers
+
+The chat template collects system prompts, then renders user messages with `<｜User｜>` and assistant messages with `<｜Assistant｜>`. When `add_generation_prompt=True`, it appends `<｜Assistant｜>` to trigger generation.
+
+Usage:
+```python
+messages = [
+    {"role": "user", "content": "What is 2+2?"}
+]
+inputs = tokenizer.apply_chat_template(
+    messages,
+    tokenize=True,
+    add_generation_prompt=True,
+    return_tensors="pt"
+).to(model.device)
+
+outputs = model.generate(inputs, max_new_tokens=500)
+response = tokenizer.decode(outputs[0][inputs.shape[1]:])
+```
+
+#### 5.3 The Thinking Tag
+
+DeepSeek-R1 models typically output reasoning within `<think>` tags before the final answer. This is part of the model's trained behavior, not a template feature. Example output:
+
+```
+<｜Assistant｜><think>
+Okay, the user is asking about... Let me work through this step by step...
+First, I need to consider...
+</think>
+The answer is 42.
+```
+
+The `<think>` section contains the model's internal chain-of-thought reasoning. Applications can parse this section out for display or keep it for transparency. The `add_generation_prompt=True` triggers the `<｜Assistant｜>` token which causes the model to start its thinking process.
+
+#### 5.4 FP8 Loading
+
+Transformers automatically handles FP8 quantization. The model can be loaded with:
+```python
+model = AutoModelForCausalLM.from_pretrained(
+    "deepseek-ai/DeepSeek-R1",
+    device_map="auto"
+)
+```
+The quantization config (`fp8` with dynamic activation scheme, e4m3 format, 128×128 weight blocks) is loaded automatically from the model's `quantization_config`. Official recommendation: minimum 2 nodes of 8×H100 (16 GPUs) to run in FP8.
+
+#### 5.5 Pipeline Usage
+
+```python
+from transformers import pipeline
+
+pipe = pipeline(
+    "text-generation",
+    model="deepseek-ai/DeepSeek-R1",
+    device_map="auto"
+)
+
+result = pipe(
+    [{"role": "user", "content": "Solve: 3x + 7 = 22"}],
+    max_new_tokens=500,
+    do_sample=True,
+    temperature=0.6
+)
+print(result[0]["generated_text"][-1]["content"])
+```
+
+### 6. GRPO Training with TRL
+
+For fine-tuning reasoning models with DeepSeek-R1-like methodology, Hugging Face TRL provides the `GRPOTrainer`:
+
+```python
+from trl import GRPOTrainer, GRPOConfig
+from transformers import AutoModelForCausalLM, AutoTokenizer
+
+model = AutoModelForCausalLM.from_pretrained("path/to/base-model")
+tokenizer = AutoTokenizer.from_pretrained("path/to/base-model")
+
+training_args = GRPOConfig(
+    output_dir="reasoning-model",
+    per_device_train_batch_size=2,
+    num_generations=8,       # G: completions per prompt
+    max_prompt_length=1024,
+    max_completion_length=1024,
+    beta=0.04,               # KL penalty
+    scale_rewards=False,     # disable std scaling
+    learning_rate=1e-6,
+)
+
+trainer = GRPOTrainer(
+    model=model,
+    reward_funcs=[math_reward_func, format_reward_func],
+    args=training_args,
+    train_dataset=dataset,
+    tokenizer=tokenizer,
+)
+trainer.train()
+```
+
+Key GRPOConfig parameters:
+- `num_generations` (G): Number of completions per prompt for group comparison
+- `beta`: KL divergence penalty coefficient
+- `scale_rewards`: Whether to normalize rewards by group std (True/False/"batch")
+- `reward_funcs`: List of reward functions (verifiable + preference)
+- `max_prompt_length` / `max_completion_length`: Sequence length limits
+
+### 7. vLLM and TGI Support
+
+#### 7.1 vLLM
+DeepSeek-R1 is supported in vLLM with MLA-optimized kernels. Key settings:
+- Requires vLLM >= 0.6.0
+- Uses custom CUDA kernels for MLA attention (not standard FlashAttention)
+- Tensor parallelism is required (minimum 2 GPUs due to model size)
+- Recommended: `--tensor-parallel-size 8` for full model
+
+#### 7.2 TGI (Text Generation Inference)
+TGI supports DeepSeek-R1 with:
+- Flash MLA kernels for efficient inference
+- Continuous batching with PagedAttention
+- Quantization: FP8 native, GPTQ available for distill models
+
+### 8. Zero-Cost Relevance
+
+For Beer's setup (no GPU budget, 8 models + 8 datasets on HF):
+
+- **Distilled models are the practical entry point**: R1-Distill-Qwen-1.5B (380 MB) and R1-Distill-Qwen-7B (4 GB) run on CPU via GGUF or llama.cpp
+- **GGUF availability**: Multiple community GGUF quantizations exist for all 6 distill models (e.g., `bartowski/DeepSeek-R1-Distill-Qwen-7B-GGUF`)
+- **Use case**: Beer's tool-calling agent stack can use R1-Distill-Qwen-1.5B as a local reasoning engine for task planning, without needing GPU
+- **GRPO for fine-tuning**: If Beer gains access to GPU credits in the future, the TRL GRPOTrainer is the go-to implementation for RL-based reasoning training
+- **No paid features required**: The Distill models, TRL, and Transformers are all free and open-source
+
+### 9. Architecture Diagram (Mental Model)
+
+```
+DeepSeek-R1 (671B Total / 37B Active)
+├── Embedding Layer (129,280 vocab)
+├── 3 Dense Layers (layers 0-2)
+│   └── Standard Self-Attention + FFN
+├── 58 MoE Layers (layers 3-60)
+│   ├── Multi-head Latent Attention (MLA)
+│   │   ├── Q projection: 128 heads × 192 dim (1536 LoRA + 128 RoPE)
+│   │   ├── K compression: kv_lora_rank=512 (latent)
+│   │   ├── V compression: kv_lora_rank=512 (latent)
+│   │   └── Output: v_head_dim=128 per head
+│   └── DeepSeekMoE FFN
+│       ├── 1 Shared Expert (always active)
+│       ├── 256 Routed Experts (top-8 per token)
+│       │   └── Grouped routing: 8 groups → top-4 groups
+│       └── Sigmoid score + noaux_tc balancing
+├── MTP Head (1 extra prediction layer)
+├── LM Head (vocab projection)
+└── Training Objective
+    ├── Pre-training: MTP loss
+    └── Post-training: GRPO (RL) + SFT
+```
+
+### 10. Key Files in Transformers Source
+
+The relevant Transformers source files for DeepSeek-V3:
+- `src/transformers/models/deepseek_v3/configuration_deepseek.py` — `DeepseekV3Config`
+- `src/transformers/models/deepseek_v3/modeling_deepseek.py` — `DeepseekV3ForCausalLM`
+- `src/transformers/models/deepseek_v3/__init__.py` — auto-registration
+
+### Skill
+skills/references — Append to main hf-learnings.md (no new skill needed for this reference topic)
