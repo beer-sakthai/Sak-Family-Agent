@@ -958,3 +958,243 @@ for record in dataset.record_sets["ParaphraseRC"].records:
 
 ### Skill
 mlops/hf-datasets-server-rest-api — the Croissant metadata endpoint for ML dataset discovery and programmatic consumption
+
+---
+
+## 2026-07-25: hf-datasets-server-size-limits-and-optimization — Dataset Viewer 5GB Limit, Partial Conversion & Size Optimization Strategies (Topic #256)
+
+### Summary
+Comprehensive reference for size limitations and optimization strategies in the Hugging Face Dataset Viewer/Datasets Server. Covers the 5GB auto-conversion limit, partial Parquet conversion with `partial-` split prefix, TooBigContentError and its common messages, sharding at ~500MB per file, row group sizing best practices with `write_page_index=True`, Parquet-native dataset exceptions, zero-cost workarounds using datasets library streaming (which bypasses size limits entirely), column pruning, config-based splitting, DuckDB predicate pushdown, and practical decision guide for working with datasets over 5GB.
+
+### Source
+- HF Hub Data Studio docs: https://huggingface.co/docs/hub/en/datasets-viewer ("Large scale datasets" section)
+- Dataset Viewer Parquet docs: https://huggingface.co/docs/dataset-viewer/en/parquet
+- Data Files Configuration (TooBigContentError): https://huggingface.co/docs/hub/en/datasets-data-files-configuration
+- Dataset Viewer GitHub: https://github.com/huggingface/dataset-viewer
+
+### 1. The 5GB Auto-Conversion Limit
+
+The Dataset Viewer auto-converts every dataset on the Hub to Parquet format — but **only up to 5GB**. This is the central size constraint of the viewer ecosystem.
+
+**How the limit works by dataset type:**
+
+| Dataset Type | <= 5GB | > 5GB |
+|---|---|---|
+| **Native Parquet** | Full viewer, sorting, filtering, search on all data | Viewer works for all data but sorting/filtering/search limited to first 5GB |
+| **Non-Parquet (CSV, JSONL, etc.)** | Full conversion to Parquet on `refs/convert/parquet` branch | Only first 5GB auto-converted to Parquet; viewer shows "partial" indicator |
+| **WebDataset / image directories** | Full preview, all features enabled | Preview only first 5GB; "partial" message shown; search/filter on first 5GB only |
+
+The "partial" state is surfaced in three ways:
+1. **Parquet API response** (`GET /parquet`) — `"partial": true` field in the JSON
+2. **Split directory naming** — splits >5GB use `partial-train` instead of `train` prefix
+3. **UI banner** — informational message on the dataset page
+
+### 2. Sharding Strategy
+
+Datasets smaller than 5GB are sharded into Parquet files of **~500MB each**:
+
+```
+dataset/
+├── refs/convert/parquet/
+│   └── config/
+│       ├── train-00000-of-00004.parquet  (~500 MB)
+│       ├── train-00001-of-00004.parquet  (~500 MB)
+│       ├── train-00002-of-00004.parquet  (~500 MB)
+│       ├── train-00003-of-00004.parquet  (~500 MB)
+│       └── test-00000-of-00001.parquet   (~< 500 MB)
+```
+
+Sharding at 500MB ensures:
+- Workers can process splits in parallel
+- Partial downloads (you can read only the shards you need)
+- DuckDB/Polars projection pushdown works efficiently per shard
+- Git LFS stays within reasonable per-file sizes
+
+### 3. Row Group Sizing and TooBigContentError
+
+**TooBigContentError** occurs when individual row groups in a Parquet file exceed the viewer's scan limit. This is one of the most common configuration errors.
+
+Common error messages:
+- `"Parquet error: Scan size limit exceeded"`
+- `"The size of the content of the first rows exceeds the maximum supported size"`
+
+**Root causes:**
+| Cause | Why it happens | Fix |
+|---|---|---|
+| Row groups too large | Parquet files with row groups >100-300MB uncompressed force the scanner to load too much data | Set smaller row groups when writing Parquet |
+| Very large values in first rows | Single cells with multi-MB strings (base64, JSON blobs, long documents) | Move large payloads to separate files |
+| No page index | Without `write_page_index=True`, the scanner can't skip irrelevant pages | Write with `write_page_index=True` |
+| Column contains oversized data | Parquet scanner reads entire row group for the requested column | Prune columns, use `columns` parameter in read |
+
+**Prevention checklist:**
+```python
+import pyarrow.parquet as pq
+
+# GOOD: small row groups, page index enabled
+pq.write_table(
+    table,
+    "output.parquet",
+    row_group_size=100_000,          # ~10-50 MB per group
+    write_page_index=True,           # enables page-level skipping
+    write_statistics=True,           # enables min/max statistics
+    compression="zstd",              # better compression ratio
+)
+
+# BAD: single large row group, no index
+pq.write_table(table, "output.parquet")  # single row group = TooBigContentError
+```
+
+### 4. Parquet-Native Dataset Exception
+
+When a dataset **already uses Parquet format natively**, the viewer does NOT re-convert it. Instead, it creates **symbolic links** on the `refs/convert/parquet` branch pointing to the original Parquet files on the main branch.
+
+However, there's an exception: **if the original row group size is too large**, new Parquet files are still generated with properly sized row groups. This ensures the viewer API remains fast regardless of the original file's structure.
+
+**Practical implication:** If you upload a Parquet dataset with 500MB+ row groups, the viewer will still convert it (using compute resources) to fix the row group sizing. To avoid this, write Parquet files with 100-300MB row groups from the start.
+
+### 5. Dataset Preview vs Full Viewer
+
+For the **biggest datasets** (>5GB and not natively Parquet or not auto-converted), the dataset page shows a **preview of the first 100 rows** instead of a full-featured viewer.
+
+This applies when:
+- Dataset is over 5GB
+- Not natively in Parquet format
+- Has not been auto-converted to Parquet
+
+The preview shows:
+- 100 rows (no pagination)
+- Column names and basic data types
+- No sorting, filtering, or search
+- No statistics or histograms
+
+**Detection:** Check `GET /is-valid?dataset=...` — if `"preview": false`, the dataset is in preview-only mode.
+
+### 6. Optimization Strategies for Large Datasets
+
+#### Strategy A: Split into Configs (Subsets)
+
+The most effective strategy for datasets near or over 5GB. By splitting into logical configurations, each config stays under 5GB:
+
+```yaml
+# dataset README.md
+configs:
+- config_name: part_1
+  data_files:
+  - split: train
+    path: "data/part_1/*.jsonl"
+- config_name: part_2
+  data_files:
+  - split: train
+    path: "data/part_2/*.jsonl"
+```
+
+Each config gets its own Parquet conversion independently. This is the **recommended approach** for large datasets.
+
+#### Strategy B: Column Pruning
+
+If your dataset has many columns but only a few are needed for exploration:
+- Use `columns` parameter in DuckDB/Polars when querying Parquet URLs
+- Store wide but sparse columns separately from frequently-queried columns
+
+#### Strategy C: Use Datasets Library Streaming (Bypasses 5GB Limit Entirely)
+
+The `datasets` library's streaming mode does NOT use the Datasets Server's Parquet cache. It reads directly from original source files — no size limit:
+
+```python
+from datasets import load_dataset
+
+# Streaming bypasses the Datasets Server entirely
+ds = load_dataset("bigcode/the-stack-v2", split="train", streaming=True)
+for i, example in enumerate(ds):
+    if i >= 100:
+        break
+    print(example["content"][:200])
+```
+
+This works for **any dataset size** but requires downloading data on each iteration (no server-side caching).
+
+#### Strategy D: DuckDB Predicate Pushdown
+
+When querying Parquet files that DO exist (within the 5GB converted set), use DuckDB for efficient filtering:
+
+```python
+import duckdb
+
+# DuckDB pushes filters to Parquet metadata — only downloads relevant bytes
+result = duckdb.sql("""
+    SELECT title, text
+    FROM read_parquet('https://huggingface.co/datasets/.../refs%2Fconvert%2Fparquet/.../*.parquet')
+    WHERE LENGTH(text) > 100 AND title LIKE '%machine learning%'
+    LIMIT 50
+""").fetchall()
+```
+
+This is **zero-cost** — predicate pushdown means you only transfer the matching rows' bytes, not the entire file.
+
+#### Strategy E: Upload Pre-Converted Parquet
+
+If you control the dataset creation pipeline, upload datasets already in Parquet format with proper row group sizing. This:
+- Avoids the viewer's conversion compute
+- Ensures consistent performance
+- Allows full-featured viewer for Parquet-native datasets of any size (sorting/filtering/search still limited to 5GB)
+
+### 7. Practical Decision Guide
+
+| Dataset Size | Format | Strategy |
+|---|---|---|
+| < 1 GB | Any | Default — auto-conversion works perfectly |
+| 1-5 GB | Any | Default — auto-conversion works, may be sharded across 2-10 files |
+| 5-50 GB | Non-Parquet | Split into configs OR use `datasets` streaming OR upload as Parquet with proper row groups |
+| 5-50 GB | Parquet with small row groups | Upload as-is — full viewer, but search/filter limited to first 5GB |
+| 5-50 GB | Parquet with large row groups | Regenerate with `row_group_size=100000` and `write_page_index=True` |
+| 50+ GB | Any | Must use `datasets` streaming or DuckDB direct Parquet reading; viewer will show 100-row preview only |
+| Any | Private (non-PRO) | Viewer disabled — use `datasets` library directly |
+
+### 8. Programmatic Detection
+
+Check the viewer state programmatically before building workflows:
+
+```python
+import requests
+
+def check_dataset_viewer_state(dataset_name: str) -> dict:
+    """Check if a dataset's viewer can handle the full dataset."""
+    base = "https://datasets-server.huggingface.co"
+    
+    # 1. Check validity
+    valid = requests.get(f"{base}/is-valid?dataset={dataset_name}").json()
+    
+    # 2. Check Parquet conversion status
+    parquet = requests.get(f"{base}/parquet?dataset={dataset_name}").json()
+    
+    # 3. Check size
+    size = requests.get(f"{base}/size?dataset={dataset_name}").json()
+    
+    return {
+        "has_preview": valid.get("preview", False),
+        "has_full_viewer": valid.get("viewer", False),
+        "has_search": valid.get("search", False),
+        "has_filter": valid.get("filter", False),
+        "parquet_partial": parquet.get("partial", False),
+        "parquet_pending": len(parquet.get("pending", [])),
+        "parquet_failed": len(parquet.get("failed", [])),
+        "total_rows": sum(s["num_rows"] for s in size.get("sizes", [])),
+        "total_bytes": sum(s["num_bytes_parquet_files"] for s in size.get("sizes", [])),
+    }
+```
+
+### 9. Summary of Key Numbers
+
+| Parameter | Value |
+|-----------|-------|
+| Auto-conversion limit | 5 GB |
+| Parquet shard target size | ~500 MB |
+| Recommended row group size | 100-300 MB uncompressed (100K rows) |
+| Preview-only threshold | >5 GB non-Parquet datasets |
+| Parquet-native full viewer limit | Unlimited display, but 5GB for search/filter |
+| Row group scan limit | ~100-300 MB uncompressed per group |
+| Dataset viewer max rows per page | 100 rows |
+| Dataset viewer max pagination | 100 rows per `/rows` request |
+
+### Skill
+mlops/hf-datasets-server-rest-api — Dataset Viewer size limits (5GB auto-conversion limit, partial conversion, sharding at 500MB), TooBigContentError prevention, row group sizing best practices, and optimization strategies for large datasets including config splitting, datasets streaming, column pruning, and DuckDB predicate pushdown

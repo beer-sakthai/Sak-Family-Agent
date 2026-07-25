@@ -1,5 +1,22 @@
 # HF Learnings Log
 
+## 2026-07-25: hf-inference-providers-comprehensive-architecture — Hugging Face Inference Providers Complete Ecosystem Deep-Dive (Topic #255)
+
+### Summary
+Comprehensive deep-dive on Hugging Face Inference Providers — the multi-provider serverless inference platform launched January 2025 and continuously expanded through 2026. Covers the full architecture (router proxy layer, provider selection policies, authentication modes), all 17+ partner providers with their supported task types, Hub integration points (widgets, playground, Data Studio AI, model search), client SDK usage patterns (Python, JavaScript, HTTP, OpenAI-compatible), billing model (free tier, PRO, Enterprise, custom API keys), security & compliance (SOC2 Type 2, TLS, 30-day log retention, no data storage), agent framework integrations, and zero-cost pathways for development.
+
+### Source
+- Inference Providers Docs: https://huggingface.co/docs/inference-providers/en/index
+- Hub Integration: https://huggingface.co/docs/inference-providers/en/hub-integration
+- Security & Compliance: https://huggingface.co/docs/inference-providers/en/security
+- Announcement Blog: https://huggingface.co/blog/inference-providers
+- Hub Inference Providers: https://huggingface.co/docs/hub/en/models-inference
+
+### Skill
+hf-inference-providers — Hugging Face Inference Providers comprehensive reference: multi-provider serverless inference architecture, 17+ providers, router proxy with selection policies (:fastest/:cheapest/:preferred), Hub integration (widgets, playground, Data Studio AI), client SDK patterns, billing model, security, agent integrations, and zero-cost pathways
+
+---
+
 ## 2026-07-25: hf-trl-v1-comprehensive — TRL v1.9.0 Complete Taxonomy & RLHF Toolkit (Topic #250)
 
 ### Summary
