@@ -5003,3 +5003,26 @@ api.disable_space_dev_mode("user/my-space")  # POST /api/spaces/{id}/dev-mode {"
 
 ---
 
+## 2026-07-25: hf-hub-daily-papers-and-paper-pages-deep-dive
+
+### Summary
+Deep-dive into the Hugging Face Daily Papers and Paper Pages ecosystem — the API
+endpoints (`/api/daily_papers`, `/api/papers/{id}`, `/api/papers?`), data
+structures, linking mechanism via arxiv tags, discussion system, authorship
+claims, paper indexing, markdown content delivery, and programmatic discovery
+patterns. Verified by live queries to all endpoints.
+
+### Key Findings
+- **5 API endpoints** for papers: daily_papers (latest 50), date-filtered, paper detail, search (max 3 results), browse/sort
+- **Paper detail** includes `linkedModels`, `linkedDatasets`, `linkedSpaces` with full repo metadata
+- **Linking mechanism**: arxiv tags (`arxiv:XXXX.YYYYY`) in repo card tags, auto-extracted from README URLs
+- **Discussion system**: Svelte-embedded in HTML data-props, NO public REST API
+- **Markdown content** available at `/buckets/huggingchat/papers-content/resolve/{folder}/{id}.md`
+- **Paper authorship**: auto-match by email, manual claim via settings, profile visibility toggle
+- **Indexing**: auto on visiting `hf.co/papers/{id}`, can also search + index from papers page
+
+### Skill Created
+`mlops/hf-hub-daily-papers-and-paper-pages/` — complete SKILL.md + references/hf-learnings.md with API reference, data structures, code patterns
+
+---
+
