@@ -182,3 +182,76 @@ Bills all requests from this client to an Enterprise Hub organization account.
 
 ---
 
+## 2026-07-25: hf-inference-client-openai-compatibility-and-structured-outputs — InferenceClient OpenAI-Compatible Interface, Tool Calling, Structured Outputs & MCP Client Deep-Dive (Topic #262)
+
+### Summary
+Deep-dive on the Hugging Face `InferenceClient` v1.24.0's advanced patterns — covering the full OpenAI-compatible interface (`client.chat.completions.create` alias), function/tool calling with `tool_choice` parameter (`"auto"`, `"required"`, specific tool name), structured outputs / JSON mode via `response_format` with `json_schema` and regex grammar, streaming with `stream_options`, `extra_body` for provider-specific parameters, the experimental `MCPClient` for Model Context Protocol integration, and the `tiny-agents` CLI.
+
+### Key Discoveries
+
+**1. OpenAI Compatibility Layer**
+- `InferenceClient` fully aliases `OpenAI` client: replace `from openai import OpenAI` with `from huggingface_hub import InferenceClient`, `client = OpenAI(...)` with `client = InferenceClient(...)`
+- `client.chat.completions.create` is a full alias for `client.chat_completion()` — identical inputs and outputs
+- `base_url` parameter aliases `model` (for URL-based endpoints); `api_key` aliases `token`
+- Both sync `InferenceClient` and `AsyncInferenceClient` support this pattern
+- Local endpoint support: pass `model="http://localhost:8080"` for any OpenAI-compatible local server (llama.cpp, vLLM, TGI, Ollama, LiteLLM)
+
+**2. Function/Tool Calling**
+- Uses same interface as OpenAI Chat Completions API
+- Tool definition format: `{"type": "function", "function": {"name": ..., "description": ..., "parameters": {...}}}`
+- `tool_choice` parameter options:
+  - `"auto"` (default) — model decides whether to call a tool
+  - `"required"` — model MUST call a tool
+  - `{"type": "function", "function": {"name": "tool_name"}}` — force specific tool
+- `tool_prompt` — optional prompt appended before tools for guidance
+- Provider support varies: Cerebras, Cohere, DeepInfra, Fireworks AI, Groq, HF Inference, Novita, Together, etc.
+- Output: `response.choices[0].message.tool_calls[0].function.arguments`
+
+**3. Structured Outputs & JSON Mode**
+- Enabled via `response_format` parameter
+- Two modes:
+  - `{"type": "json_schema", "json_schema": {"name": "...", "schema": {...}, "strict": true}}` — schema-enforced structured outputs
+  - `{"type": "json_object"}` — JSON mode (any valid JSON, no schema enforcement)
+- Also supports regex grammar via `response_format={"type": "regex", "value": "pattern"}`
+- Provider-specific support; check provider docs for compatible models
+
+**4. Streaming Options**
+- `stream=True` enables token-by-token streaming via SSE
+- `stream_options` parameter: `{"include_usage": true}` to include token usage in final stream chunk
+- Async streaming: `async for chunk in await client.chat.completions.create(..., stream=True):`
+- Stream output type: `ChatCompletionStreamOutput` with `.choices[0].delta.content`
+
+**5. MCP Client Integration (Experimental)**
+- `huggingface_hub` now includes `MCPClient` class extending `AsyncInferenceClient`
+- Connects to MCP servers (stdio scripts or http/sse services) for external tool access
+- Usage: `async with MCPClient(provider="novita", model="Qwen/Qwen2.5-72B-Instruct") as client:`
+- Add MCP servers: `await client.add_mcp_server(type="sse", url="<mcp_server_url>")`
+- Process tool-augmented conversations: `client.process_single_turn_with_tools(messages)`
+- Higher-level `Agent` class (Tiny Agent): runs conversational agents with MCP tools
+- CLI: `tiny-agents run <agent_repo_id>` for command-line agent execution
+
+**6. Provider & Billing**
+- 17+ providers supported; `provider` parameter selects one (default: "auto" → fastest)
+- Provider routing order configurable at https://hf.co/settings/inference-providers
+- `bill_to="<org_name>"` for Enterprise Hub org-level billing
+- `extra_body` passes provider-specific parameters (e.g., Together AI safety model)
+
+**7. Advanced Tips**
+- Timeout: `InferenceClient(timeout=30)` raises `InferenceTimeoutError` after N seconds
+- Binary inputs accept `bytes`, file-like objects (`open("file", "rb")`), local paths (`Path`), URLs (`str`), and `PIL.Image`
+- Task-specific mapping: `client.chat_completion` works with any `text-generation` pipeline model
+
+### Zero-Cost Note
+All patterns work with the free HF Inference API (`provider="hf-inference"`) using a free HF token. No paid services required for development and testing. Provider routing defaults to "fastest" which picks from available free-tier options.
+
+### Sources
+- Inference guide: https://huggingface.co/docs/huggingface_hub/main/en/guides/inference
+- API reference: https://huggingface.co/docs/huggingface_hub/main/en/package_reference/inference_client
+- Inference types: https://huggingface.co/docs/huggingface_hub/main/en/package_reference/inference_types
+- MCP client: https://huggingface.co/docs/huggingface_hub/main/en/package_reference/mcp
+- Inference Providers: https://huggingface.co/docs/inference-providers/en/index
+
+### Skill
+hf-async-inference-client — Hugging Face InferenceClient advanced patterns: OpenAI compatibility, tool calling with tool_choice, structured outputs/JSON mode via response_format, streaming with stream_options, MCP client integration, and Tiny Agents
+
+---

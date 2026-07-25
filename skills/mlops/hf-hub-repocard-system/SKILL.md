@@ -2,8 +2,8 @@
 
 **Skill:** Programmatic creation, loading, validation, and management of model/dataset/space cards on the Hugging Face Hub using the `huggingface_hub` library.
 
-**Author:** SakThai
-**License:** MIT
+author: SakThai
+license: MIT
 
 ## Overview
 

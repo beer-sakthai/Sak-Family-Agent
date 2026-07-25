@@ -2,8 +2,8 @@
 
 **Skill:** Complete understanding of how the Hugging Face Hub resolves Git revisions (branches, tags, commit SHAs, special refs) across REST APIs, file downloads, file system operations, and local cache.
 
-**Author:** SakThai
-**License:** MIT
+author: SakThai
+license: MIT
 
 ## Overview
 

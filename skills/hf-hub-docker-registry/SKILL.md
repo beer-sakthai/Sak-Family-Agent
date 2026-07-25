@@ -1,7 +1,7 @@
 # hf-hub-docker-registry — Hugging Face Hub Docker Registry
 
-**author:** SakThai  
-**license:** MIT  
+author: SakThai
+license: MIT
 
 ## Overview
 

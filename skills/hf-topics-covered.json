@@ -257,6 +257,5 @@
   "hf-optimum-exporters-model-conversion-pipeline",
   "hf-hub-daily-papers-and-paper-pages",
   "hf-inference-endpoints-deep-dive-v2",
-  "hf-hub-docker-registry-deep-dive-v2",
-  "hf-hub-model-dependents-deep-dive-v2-tag-system-merge-chains"
+  "hf-hub-docker-registry-deep-dive-v2"
 ]

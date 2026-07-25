@@ -1,7 +1,7 @@
 # Gradio Workflow (`gr.Workflow`)
 
-**author:** SakThai  
-**license:** MIT  
+author: SakThai
+license: MIT
 **domain:** gradio, workflow, visual-pipeline, ai-canvas  
 **Hermes skill name:** `Gradio-Workflow`  
 **tags:** `gradio`, `workflow`, `visual-programming`, `hf-spaces`, `pipeline`
