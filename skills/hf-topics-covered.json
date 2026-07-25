@@ -233,5 +233,6 @@
   "hf-hub-agent-harnesses-registry",
   "hf-datasets-cache-management-deep-dive",
   "gr-workflow-source-deep-dive",
-  "hf-hub-spaces-build-runtime-api"
+  "hf-hub-spaces-build-runtime-api",
+  "huggingface-hub-http-request-lifecycle-source-deep-dive"
 ]

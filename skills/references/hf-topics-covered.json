@@ -227,5 +227,6 @@
   "hf-hub-repositories-licenses-complete-reference",
   "hf-hub-storage-limits-and-plans-storage-buckets-deepening",
   "hf-hub-hardware-filter-models-search",
-  "hf-datasets-cache-management-deep-dive"
+  "hf-datasets-cache-management-deep-dive",
+  "huggingface-hub-http-request-lifecycle-source-deep-dive"
 ]
