@@ -15337,3 +15337,339 @@ model = AutoModelForCausalLM.from_pretrained("model-id", quantization_config=con
 
 ### Skill
 mlops/huggingface-hub — Hub API, MCP Server, CLI, Agent Skills, and agent integration
+
+---
+
+## 2026-07-25: hf-inference-client-internals-deep-dive — Session Management, Error Recovery & Caching Architecture (Topic #241 Deepening)
+
+### Summary
+Deep-dive into the internal architecture of Hugging Face's `InferenceClient` and `AsyncInferenceClient` from `huggingface_hub` — covering connection pooling via global `httpx.Client`, timeout/retry semantics, the full error class hierarchy (InferenceTimeoutError, HfHubHTTPError, rate limiting), streaming protocols (SSE for chat/text-gen vs buffered reads for vision/audio), provider routing for multi-provider inference, and practical caching strategies for zero-cost optimization. Based on source-code analysis of `huggingface_hub/inference/_client.py`, `_common.py`, `_providers.py`, and `utils/_http.py`.
+
+### Sources
+- `huggingface_hub` source code: `src/huggingface_hub/inference/_client.py` (InferenceClient, AsyncInferenceClient)
+- `huggingface_hub` source code: `src/huggingface_hub/inference/_common.py` (stream parsers, raise_text_generation_error)
+- `huggingface_hub` source code: `src/huggingface_hub/inference/_providers.py` (provider routing)
+- `huggingface_hub` source code: `src/huggingface_hub/utils/_http.py` (get_session, rate limit parsing, retry-after, global client factory)
+- `huggingface_hub` source code: `src/huggingface_hub/errors.py` (full error class hierarchy)
+- Official docs: https://huggingface.co/docs/huggingface_hub/main/en/package_reference/inference_client
+
+### 1. Global Session Architecture
+
+The `InferenceClient` does NOT create its own HTTP session. Instead, it relies on a **single global `httpx.Client`** managed by `get_session()`:
+
+```python
+from huggingface_hub.utils import get_session
+
+# Returns a module-level singleton — shared across ALL InferenceClient instances
+session = get_session()
+```
+
+**How it works:**
+- `_GLOBAL_CLIENT` is a module-level variable in `huggingface_hub/utils/_http.py`
+- First call to `get_session()` initializes it using `_GLOBAL_CLIENT_FACTORY()` (default: `httpx.Client()`)
+- A thread lock (`_CLIENT_LOCK`) protects initialization
+- The client is never closed automatically — registered via `atexit` for cleanup
+- Customization: `set_client_factory(callable)` replaces the factory for custom transport, proxies, or timeouts
+
+**Implications:**
+1. **Connection pooling** is automatic — HTTP keep-alive, TCP connection reuse across calls
+2. **No per-client isolation** — headers, cookies from one `InferenceClient` affect the global session's state (though InferenceClient sends per-request headers)
+3. **Thread-safe** — `httpx.Client` is designed for concurrent use
+4. **Custom transport** possible via `set_client_factory(lambda: httpx.Client(transport=...) )`
+
+### 2. Timeout Semantics
+
+The `timeout` parameter in `InferenceClient.__init__()` behaves differently from httpx defaults:
+
+```python
+client = InferenceClient(timeout=None)   # Default: loops until server available
+client = InferenceClient(timeout=30.0)   # 30-second limit per request
+```
+
+**When `timeout=None` (default):**
+- The client passes `None` to `httpx.Client.stream(timeout=None)`
+- httpx interprets `None` as no timeout — waits indefinitely
+- Intended for serverless inference where models may cold-start (10-30s)
+- **Caveat:** If the server hangs indefinitely, the client hangs too — no application-level timeout
+
+**When `timeout=<float>`:**
+- Passed directly to httpx as the total request timeout
+- Covers: connection establishment, TLS handshake, response headers, body streaming
+- If exceeded: `httpx.TimeoutException` → caught by `_inner_post` → raised as `InferenceTimeoutError`
+
+**Internal flow:**
+```
+httpx raises TimeoutError (or any httpx timeout variant)
+  → caught by `except TimeoutError` in _inner_post
+  → raise InferenceTimeoutError(f"Inference call timed out: {url}")
+```
+
+**Key insight:** Timeout is for the entire request (connect + send + receive), not broken into separate connect/read/pool timeouts. For granular control, create a custom httpx transport and use `set_client_factory()`.
+
+### 3. Error Classification & Recovery
+
+The client defines a rich error hierarchy:
+
+```
+HTTPError (httpx)
+└── HfHubHTTPError
+    ├── BadRequestError (HTTP 400)
+    ├── RepositoryNotFoundError (HTTP 404)
+    ├── RevisionNotFoundError (HTTP 404)
+    ├── GatedRepoError (HTTP 403)
+    ├── DisabledRepoError
+    ├── RemoteEntryNotFoundError
+    ├── BucketNotFoundError
+    └── JobNotFoundError
+
+TimeoutError (builtin)
+└── InferenceTimeoutError (HTTPError)
+
+TextGenerationError (HTTPError)
+├── ValidationError
+└── GenerationError
+```
+
+**`_inner_post` error handling:**
+```python
+try:
+    response = get_session().stream("POST", url, json=..., headers=..., timeout=self.timeout)
+    hf_raise_for_status(response)  # raises HfHubHTTPError for non-2xx
+except TimeoutError:
+    raise InferenceTimeoutError(...)
+except HfHubHTTPError:
+    if error.response.status_code == 422:
+        # Append validation details to error message
+    raise
+```
+
+**HTTP 503 behavior:** The serverless inference API returns HTTP 503 when the model is loading (cold-start). The client does NOT handle 503 specially in `_inner_post` — instead, `hf_raise_for_status` converts 503 to a `HfHubHTTPError`. The caller can catch `HfHubHTTPError` and check `error.response.status_code == 503` to implement retry with backoff.
+
+**Recommended retry pattern:**
+```python
+import time
+from huggingface_hub import InferenceClient
+from huggingface_hub.errors import HfHubHTTPError, InferenceTimeoutError
+
+client = InferenceClient(timeout=30)
+
+def infer_with_retry(**kwargs, max_retries=3, base_delay=2.0):
+    for attempt in range(max_retries):
+        try:
+            return client.chat_completion(**kwargs)
+        except InferenceTimeoutError:
+            if attempt == max_retries - 1:
+                raise
+            time.sleep(base_delay * (2 ** attempt))  # exponential backoff
+        except HfHubHTTPError as e:
+            if e.response.status_code == 503:  # model loading
+                time.sleep(base_delay * (2 ** attempt))
+                continue
+            raise  # non-recoverable error
+```
+
+### 4. Provider Routing
+
+The `provider` parameter controls which inference backend serves the request:
+
+```python
+client = InferenceClient(provider="auto")      # Default: fastest provider
+client = InferenceClient(provider="hf-inference")  # HF's own serverless API
+client = InferenceClient(provider="together")  # Third-party provider
+```
+
+**Provider resolution:**
+1. `get_provider_helper(provider, task, model)` creates a provider-specific helper
+2. `helper.prepare_request(inputs, parameters, headers, model, api_key)` normalizes inputs and builds the request
+3. The provider helper selects the endpoint URL, formats the payload, and adds authentication
+4. `provider="auto"` uses configured routing (configurable at https://hf.co/settings/inference-providers) — options: "fastest", "cheapest", "preferred"
+
+**Supported providers (as of v1.24.0):**
+`cerebras`, `cohere`, `deepinfra`, `fal-ai`, `featherless-ai`, `fireworks-ai`, `groq`, `hf-inference`, `novita`, `nscale`, `openai`, `ovhcloud`, `publicai`, `replicate`, `scaleway`, `together`, `wavespeed`, `zai-org`
+
+**Key design choice:** Providers are resolved per-request, not cached. Each task call (e.g., `audio_classification`, `chat_completion`) calls `get_provider_helper()` independently even if using the same model.
+
+### 5. Streaming Architecture
+
+Two distinct streaming paths exist:
+
+**Text Generation / Chat Completion (SSE):**
+```python
+# _stream_text_generation_response — parses SSE events
+# _stream_chat_completion_response — parses SSE events with delta fields
+for chunk in client.chat_completion(messages, stream=True):
+    print(chunk.choices[0].delta.content)
+```
+- Returns `Iterable[str]` via `response.iter_lines()`
+- Each line is a raw SSE event (data: {...})
+- Stream parsers handle: chunk parsing, token aggregation, stop conditions
+- Uses `ExitStack` to manage the streaming context
+
+**Other Tasks (non-streaming):**
+```python
+result = client.audio_classification("audio.flac")  # returns full response
+result = client.text_generation(prompt)              # returns full text
+```
+- Single response via `response.read()`
+- All task-specific methods (40+ tasks) use either pattern
+
+**Streaming lifecycle:**
+```
+client.chat_completion(stream=True)
+  → _inner_post(stream=True)
+    → get_session().stream("POST", url, ...)  # httpx stream context
+    → response.iter_lines()                    # SSE line iterator
+  → _stream_chat_completion_response(response) # wraps in chunk parser
+  → async for / for loop consumes chunks
+  → ExitStack ensures response body is consumed and connection released
+```
+
+### 6. Rate Limiting & Headers
+
+The `utils/_http.py` module includes full rate limit parsing following the IETF draft:
+
+```python
+from huggingface_hub.utils import parse_ratelimit_headers
+
+# Headers from response: ratelimit, ratelimit-policy
+# "ratelimit": '"api";r=0;t=55' → resource="api", remaining=0, reset_in=55s
+# "ratelimit-policy": '"fixed window";"api";q=500;w=300' → limit=500, window=300s
+
+info = parse_ratelimit_headers(response.headers)
+if info and info.remaining == 0:
+    wait_seconds = info.reset_in_seconds
+    print(f"Rate limited. Reset in {wait_seconds}s")
+```
+
+**Important:** The `InferenceClient` does NOT automatically handle rate limits — no built-in retry or queue management. Rate limit parsing is available in the utils but must be manually integrated.
+
+**Retry-After header:**
+```python
+from huggingface_hub.utils._http import _parse_retry_after
+wait = _parse_retry_after(response.headers)  # Returns seconds or None
+```
+
+### 7. Caching Patterns for Zero-Cost Optimization
+
+The `InferenceClient` has **zero built-in caching**. Every call hits the network. For serverless inference (which is free but rate-limited), caching identical requests is essential.
+
+**Pattern 1: In-memory cache with TTL (for repeated prompts):**
+```python
+from functools import lru_cache
+
+client = InferenceClient()
+
+@lru_cache(maxsize=128)
+def classify_audio_cached(audio_bytes: bytes, model: str) -> list:
+    return client.audio_classification(audio_bytes, model=model)
+```
+
+**Pattern 2: diskcache for persistence across restarts:**
+```python
+import diskcache
+from huggingface_hub import InferenceClient
+
+cache = diskcache.Cache("/tmp/hf-inference-cache")
+client = InferenceClient(timeout=30)
+
+def cached_inference(prompt: str, model: str = "meta-llama/Llama-3.2-3B-Instruct"):
+    key = f"{model}:{prompt}"
+    if key in cache:
+        return cache[key]
+    result = client.text_generation(prompt, model=model, max_new_tokens=512)
+    cache.set(key, result, expire=3600)  # 1-hour TTL
+    return result
+```
+
+**Pattern 3: Async batch deduplication (for concurrent identical requests):**
+```python
+import asyncio
+from huggingface_hub import AsyncInferenceClient
+
+_pending: dict[str, asyncio.Future] = {}
+
+async def deduped_chat(client: AsyncInferenceClient, messages: list, model: str):
+    import json
+    key = f"{model}:{json.dumps(messages, sort_keys=True)}"
+    if key in _pending:
+        return await _pending[key]
+    future = asyncio.get_event_loop().create_future()
+    _pending[key] = future
+    try:
+        result = await client.chat_completion(messages=messages, model=model)
+        future.set_result(result)
+        return result
+    except Exception as e:
+        future.set_exception(e)
+        raise
+    finally:
+        del _pending[key]
+```
+
+### 8. AsyncInferenceClient Differences
+
+`AsyncInferenceClient` mirrors `InferenceClient` with identical API but async internal:
+
+| Aspect | InferenceClient | AsyncInferenceClient |
+|--------|----------------|---------------------|
+| Session | `get_session()` → sync httpx.Client | `get_async_session()` → async httpx.AsyncClient |
+| Stream | `response.iter_lines()` (sync generator) | `response.aiter_lines()` (async generator) |
+| Context | `ExitStack.enter_context()` | `AsyncExitStack.enter_async_context()` |
+| Provider routing | Same `get_provider_helper()` | Same (sync helper, but async HTTP) |
+| Error types | Identical | Identical |
+
+**Key caveat:** The async client uses a separate global session (`_GLOBAL_ASYNC_CLIENT` vs `_GLOBAL_CLIENT`). Customizing the async factory is done via `set_async_client_factory()`.
+
+### 9. Practical Optimization Tips for Free Tier
+
+| Strategy | Implementation | Impact |
+|----------|---------------|--------|
+| Connection reuse | Default `get_session()` pools connections automatically | Reduces TLS handshake latency by ~300-500ms per request |
+| Model pinning | Always pass `model="org/model"` to avoid auto-selection overhead | Avoids extra provider resolution step |
+| Batch requests | For independent tasks, use `asyncio.gather()` with AsyncInferenceClient | Up to 10x throughput on concurrent requests |
+| Minimum token count | Set `max_new_tokens=1` for classification tasks that only need yes/no | Reduces response time and token cost |
+| Cache identical prompts | Use `lru_cache` or `diskcache` to avoid re-hitting the API for exact repeats | Zero-cost for repeated queries |
+| Monitor rate limits | Parse response headers with `parse_ratelimit_headers()` | Avoids silent failures from throttling |
+| Set explicit timeout | `timeout=15` for most tasks, `timeout=60` for text generation | Prevents hangs on cold-start failures |
+| Avoid per-call client creation | Reuse one `InferenceClient` instance | No global session re-initialization |
+
+### 10. Architecture Diagram (Request Lifecycle)
+
+```
+InferenceClient.__init__(model, provider, timeout, headers, cookies)
+  │
+  ├── self.model = model
+  ├── self.provider = get_provider_routing(provider)
+  ├── self.timeout = timeout
+  └── self.exit_stack = ExitStack()
+
+client.chat_completion(messages, stream=False)
+  │
+  ├── get_provider_helper(provider, task="chat-completion", model)
+  │   └── provider_helper.prepare_request(messages, headers, model, api_key)
+  │       └── Returns: RequestParameters(url, json, data, headers, task)
+  │
+  ├── _inner_post(request_parameters, stream=False)
+  │   │
+  │   ├── get_session()  → global httpx.Client (shared singleton)
+  │   ├── session.stream("POST", url, json=..., headers=..., timeout=...)
+  │   ├── hf_raise_for_status(response)  → raises HfHubHTTPError if non-2xx
+  │   ├── if stream=True: return response.iter_lines()  → SSE parser
+  │   └── if stream=False: return response.read()  → raw bytes
+  │
+  ├── Parse bytes into ChatCompletionOutput (pydantic model)
+  └── Return typed result to caller
+```
+
+### 11. Best Practices for Reliability
+
+1. **Always set an explicit timeout** for production use — `timeout=None` can hang forever
+2. **Wrap calls in retry logic** with exponential backoff for HTTP 503 and timeout errors
+3. **Prefer `AsyncInferenceClient`** for multiple parallel requests — sessions are thread-safe
+4. **Do NOT set a custom client factory** unless you need custom transport (proxies, IPv6, custom TLS) — the default handles pooling well
+5. **Use `with InferenceClient() as client:`** or call `client.close()` to clean up streaming contexts — the `ExitStack` ensures response bodies are consumed
+6. **For long-running services**, create one `InferenceClient` at module level and reuse it — avoid per-request instantiation
+7. **Check rate limit headers** after every request if running near quota — implement self-throttling
+
+### Skill
+hf-async-inference-client — Async inference patterns, concurrent requests, streaming, MCP integration
