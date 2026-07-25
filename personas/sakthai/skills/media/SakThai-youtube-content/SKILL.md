@@ -1,4 +1,6 @@
 ---
+author: SakThai
+license: MIT
 name: SakThai-youtube-content
 description: "YouTube transcripts to summaries, threads, blogs."
 platforms: [linux, macos, windows]

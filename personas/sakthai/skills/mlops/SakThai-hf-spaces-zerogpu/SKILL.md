@@ -1,4 +1,6 @@
 ---
+author: SakThai
+license: MIT
 name: SakThai-hf-spaces-zerogpu
 title: Hugging Face Spaces ZeroGPU
 description: >

@@ -1,4 +1,6 @@
 ---
+author: SakThai
+license: MIT
 name: SakThai-hf-safetensors
 description: "Hugging Face SafeTensors: secure, fast, framework-agnostic tensor serialization format — alternatives to pickle/PyTorch, with mmap, sharding, and audit-backed safety."
 tags: [huggingface, safetensors, serialization, security, mlops]

@@ -1,4 +1,6 @@
 ---
+author: SakThai
+license: MIT
 name: SakThai-plan
 description: "Plan mode: write an actionable Markdown plan to .hermes/p..."
 version: 1.0.0

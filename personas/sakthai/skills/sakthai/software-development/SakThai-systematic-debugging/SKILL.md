@@ -1,4 +1,6 @@
 ---
+author: SakThai
+license: MIT
 name: SakThai-systematic-debugging
 description: "4-phase root cause debugging: understand bugs before fixing."
 version: 1.0.0

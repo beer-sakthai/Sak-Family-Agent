@@ -1,4 +1,6 @@
 ---
+author: SakThai
+license: MIT
 name: SakThai-playwright
 description: "Playwright browser automation testing and scraping."
 version: 1.0.0

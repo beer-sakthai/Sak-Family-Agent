@@ -4,6 +4,7 @@ category: software-development
 description: Orchestrates static analysis, vulnerability scanning, and automated patching into a continuous security workflow.
 version: 1.0.0
 author: Gemini Code Assist
+license: MIT
 platforms: [linux, macos, windows]
 metadata:
   hermes:

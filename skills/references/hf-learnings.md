@@ -14828,3 +14828,15 @@ This is an opt-in system. User counts reflect registrations, not runtime telemet
 
 ### Skill
 mlops/hf-hub-models-tags/SKILL.md — search, filter, and discover models by hardware and pipeline tags
+
+---
+
+## 2026-07-25: hf-hub-user-and-org-profile-api — User and Organization Profile API (Topic #232)
+
+### Summary
+Comprehensive reference on the Hugging Face Hub's User and Organization profile API. Covers all REST endpoints (`/api/users/{username}/overview`, `/api/organizations/{name}/overview`, follower/following/member lists), the `huggingface_hub` Python API (8 methods including `get_user_overview`, `list_user_followers`, `list_organization_members`, `list_user_repos`), data models (`User` and `Organization` dataclasses with all fields), and key insights (no write API for profiles, public-by-default, paginated social graph, whoami rate-limits). See full detail in `mlops/huggingface-hub/references/hf-learnings.md`.
+
+### Sources
+- Source code: `huggingface_hub/hf_api.py` — User/Organization management methods and dataclasses
+- Hub API: `https://huggingface.co/api/users/{username}/overview`
+- huggingface_hub docs: package_reference/community

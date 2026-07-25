@@ -1,4 +1,6 @@
 ---
+author: SakThai
+license: MIT
 name: SakThai-excalidraw
 description: "Hand-drawn Excalidraw JSON diagrams (arch, flow, seq)."
 version: 1.0.0

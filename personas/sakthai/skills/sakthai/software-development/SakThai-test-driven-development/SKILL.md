@@ -1,4 +1,6 @@
 ---
+author: SakThai
+license: MIT
 name: SakThai-test-driven-development
 description: "TDD: enforce RED-GEEN-REFACTOR, tests before code."
 version: 1.0.0

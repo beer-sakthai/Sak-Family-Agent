@@ -1,4 +1,6 @@
 ---
+author: SakThai
+license: MIT
 name: SakThai-ascii-video
 description: "ASCII video: convert video/audio to colored ASCII MP4/GIF."
 platforms: [linux, macos, windows]

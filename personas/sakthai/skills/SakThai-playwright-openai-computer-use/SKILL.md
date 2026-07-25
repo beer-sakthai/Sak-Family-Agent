@@ -1,6 +1,8 @@
 ---
 name: SakThai-playwright-openai-computer-use
 category: dogfood
+author: SakThai
+license: MIT
 description: Record Playwright browser sessions into OpenAI Computer-Using Agent formatted
   JSONL bundles for cross-tool agent narratives, replay, and audit.
 version: 1.0.0

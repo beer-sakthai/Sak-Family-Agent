@@ -4934,7 +4934,7 @@ for model in api.list_models(sort="likes", expand=["likes", "downloads"], limit=
 
 6. **Engagement feeds discovery:** The Hub's search ranking and "trending" views use these metrics. More engagement → more visibility → more engagement (compounding effect).
 
-7. **Zero-cost relevance:** All engagement APIs are free and public-readable. No token needed to read likes, downloads, or trending score for public repos. Perfect for Beer's analytics and discovery needs.
+|7. **Zero-cost relevance:** All engagement APIs are free and public-readable. No token needed to read likes, downloads, or trending score for public repos. Perfect for Beer's analytics and discovery needs.
 
 ### Sources
 - Source code: `huggingface_hub/hf_api.py` — `ModelInfo`, `DatasetInfo`, `SpaceInfo`, `RepoInfo` fields (`likes`, `downloads`, `downloadsAllTime`, `trendingScore`)
@@ -4943,3 +4943,186 @@ for model in api.list_models(sort="likes", expand=["likes", "downloads"], limit=
 - Hub API docs: https://huggingface.co/docs/hub/en/api
 - Download stats methodology: https://huggingface.co/docs/hub/en/models-download-stats
 - Hub docs: https://huggingface.co/docs/hub/en/repositories-getting-started
+
+---
+
+## 2026-07-25: hf-hub-user-and-org-profile-api — User and Organization Profile API (Topic #232)
+
+### Summary
+Comprehensive reference on the Hugging Face Hub's User and Organization profile API — the REST endpoints and `huggingface_hub` Python methods for reading public user/org profiles, managing repositories, navigating the social graph (followers/following), and understanding profile data models. Profile management (bio, avatar, settings) is web-UI only — there is no public API for updating profiles.
+
+### REST API Endpoints
+
+#### User Endpoints
+| Endpoint | Method | Auth | Description |
+|---|---|---|---|
+| `/api/users/{username}/overview` | GET | No | Full public user profile |
+| `/api/users/{username}/followers` | GET | No | Paginated list of followers (User objects) |
+| `/api/users/{username}/following` | GET | No | Paginated list of users this user follows |
+
+#### Organization Endpoints
+| Endpoint | Method | Auth | Description |
+|---|---|---|---|
+| `/api/organizations/{name}/overview` | GET | No | Full public org profile |
+| `/api/organizations/{name}/members` | GET | No | Paginated list of org members (User objects) |
+| `/api/organizations/{name}/followers` | GET | No | Paginated list of org followers |
+
+#### Authenticated Endpoints
+| Endpoint | Method | Auth | Description |
+|---|---|---|---|
+| `/api/whoami-v2` | GET | Token | Current user's full profile + orgs + token info |
+| `/api/settings/repositories` | GET | Token | Authed user's repos with storage info |
+| `/api/organizations/{name}/settings/repositories` | GET | Token | Org's repos with storage info |
+
+### huggingface_hub Python API
+
+#### User/Org Profile Methods
+All available as both `HfApi` instance methods and module-level functions:
+
+| Method | Returns | Description |
+|---|---|---|
+| `get_user_overview(username)` | `User` | Fetch user profile (no auth needed for public users) |
+| `get_organization_overview(org)` | `Organization` | Fetch org profile (no auth needed) |
+| `whoami(token)` | `dict` | Current user's auth session + org membership |
+| `list_user_repos(namespace=None)` | `Iterable[RepoStorageInfo]` | List repos with storage (authed); namespace=org name for org repos |
+
+#### Social Graph Methods
+| Method | Returns | Description |
+|---|---|---|
+| `list_user_followers(username)` | `Iterable[User]` | Paginated followers |
+| `list_user_following(username)` | `Iterable[User]` | Paginated following list |
+| `list_organization_members(org)` | `Iterable[User]` | Paginated org members |
+| `list_organization_followers(org)` | `Iterable[User]` | Paginated org followers |
+
+### Data Models
+
+#### User Object
+Returned by `get_user_overview()`, `list_user_followers()`, etc.
+
+| Field | Type | Source Key | Description |
+|---|---|---|---|
+| `username` | `str` | `user` | Unique HF username |
+| `fullname` | `str` | `fullname` | Display name |
+| `avatar_url` | `str` | `avatarUrl` | CDN URL for avatar image |
+| `details` | `str | None` | Bio/description from profile |
+| `is_following` | `bool | None` | Whether authed user follows them |
+| `is_pro` | `bool | None` | HF Pro subscriber? |
+| `user_type` | `str | None` | `"user"` or `"org"` |
+| `num_models` | `int | None` | Model count |
+| `num_datasets` | `int | None` | Dataset count |
+| `num_spaces` | `int | None` | Spaces count |
+| `num_buckets` | `int | None` | Storage bucket count |
+| `num_discussions` | `int | None` | Discussion count |
+| `num_papers` | `int | None` | Paper count |
+| `num_upvotes` | `int | None` | Received upvotes |
+| `num_likes` | `int | None` | Likes given |
+| `num_followers` | `int | None` | Follower count |
+| `num_following` | `int | None` | Following count |
+| `num_following_orgs` | `int | None` | Orgs following |
+| `orgs` | `list[Organization]` | Organizations they belong to (minimal: id, name, fullname, avatarUrl) |
+| `createdAt` | `str (ISO 8601)` | Account creation date |
+
+#### Organization Object
+Returned by `get_organization_overview()`, `list_organization_members()`, etc.
+
+| Field | Type | Source Key | Description |
+|---|---|---|---|
+| `name` | `str` | `name` | Unique org name |
+| `fullname` | `str` | `fullname` | Display name |
+| `avatar_url` | `str` | `avatarUrl` | CDN URL for avatar |
+| `details` | `str | None` | Org description |
+| `is_verified` | `bool | None` | Verified badge? |
+| `is_following` | `bool | None` | Whether authed user follows |
+| `num_users` | `int | None` | Member count |
+| `num_models` | `int | None` | Models owned |
+| `num_spaces` | `int | None` | Spaces owned |
+| `num_datasets` | `int | None` | Datasets owned |
+| `num_buckets` | `int | None` | Buckets owned |
+| `num_papers` | `int | None` | Papers authored |
+| `num_followers` | `int | None` | Follower count |
+| `plan` | `str | None` | Subscription plan (`"enterprise"`, `"team"`, `"pro"`, etc.) |
+
+### Profile Management (Web UI Only, No API)
+
+The following profile settings have **no public API** — they can only be changed through the web UI:
+- **Avatar:** `https://huggingface.co/settings/profile` — upload/replace avatar image
+- **Bio/Details:** Same settings page — text area for user description
+- **Full name:** Same settings page
+- **Social links:** Website URL in profile
+- **Account settings:** Email, password, 2FA at `https://huggingface.co/settings/account`
+
+There is no `follow_user()` or `unfollow_user()` method in `huggingface_hub`. Follow/unfollow actions also require the web UI.
+
+### Practical Code Examples
+
+#### Fetch and display a user profile
+```python
+from huggingface_hub import get_user_overview
+
+user = get_user_overview("Nanthasit")
+print(f"{user.fullname} (@{user.username})")
+print(f"Bio: {user.details}")
+print(f"Models: {user.num_models} | Datasets: {user.num_datasets} | Spaces: {user.num_spaces}")
+print(f"Followers: {user.num_followers} | Following: {user.num_following}")
+```
+
+#### List all followers of a user
+```python
+from huggingface_hub import list_user_followers
+
+for follower in list_user_followers("Nanthasit"):
+    print(f"{follower.fullname} (@{follower.username}) — {follower.num_models} models")
+```
+
+#### List org members
+```python
+from huggingface_hub import list_organization_members
+
+for member in list_organization_members("litert-community"):
+    print(f"Member: {member.fullname} (@{member.username})")
+```
+
+#### Get authenticated user's repos with storage info
+```python
+from huggingface_hub import list_user_repos
+
+for repo in list_user_repos():
+    storage_mb = repo.storage / (1024 * 1024)
+    print(f"{repo.type:8s} {repo.id:40s} {storage_mb:6.1f} MB ({repo.visibility})")
+```
+
+#### Check how many users are in an org
+```python
+from huggingface_hub import get_organization_overview
+
+org = get_organization_overview("litert-community")
+print(f"{org.fullname}: {org.num_users} members, {org.num_models} models, {org.num_followers} followers")
+```
+
+### Key Insights
+
+1. **No write API for profiles:** Hugging Face intentionally does not expose profile-editing endpoints via the public API. All profile management goes through the web UI at `huggingface.co/settings/profile`. This prevents bot-driven profile manipulation.
+
+2. **Public-by-default:** User overviews and org overviews are fully public (no token required). Great for analytics and discovery — you can scrape org membership, follower counts, and model counts without authentication.
+
+3. **Paginated social graph:** `list_user_followers()`, `list_user_following()`, `list_organization_members()`, and `list_organization_followers()` all return `Iterable` — internally using Hugging Face's `paginate()` helper that yields items from cursor-based pagination. No manual page management needed.
+
+4. **User vs Organization distinction:** The `type` field distinguishes `"user"` from `"org"` accounts. Org profiles have different field sets (`num_users` vs `num_following`, `plan` vs `is_pro`).
+
+5. **Repo listing includes storage:** `list_user_repos()` returns `RepoStorageInfo` with `storage` (bytes) and `storage_percent` — useful for monitoring disk usage and staying within free tier limits. Requires authentication.
+
+6. **whoami is rate-limited:** The `/api/whoami-v2` endpoint is heavily rate-limited for security. Use `whoami(cache=True)` to cache the result for the duration of the Python process.
+
+### Zero-Cost Relevance
+- All public endpoints require no token — 100% free for read-only access
+- `list_user_repos()` with storage info helps Beer track his HF storage usage (16 models, 8 datasets, 2 Spaces, 2 buckets — within free tier)
+- User/org profile data is useful for building analytics dashboards, discovering collaborators, and identifying popular model authors
+- No API costs or rate limits for public reads — usable in cron jobs and automation
+
+### Sources
+- Source code: `huggingface_hub/hf_api.py` — `get_user_overview()`, `get_organization_overview()`, `whoami()`, `list_user_followers()`, `list_user_following()`, `list_organization_members()`, `list_organization_followers()`, `list_user_repos()`
+- Source code: `huggingface_hub/hf_api.py` — `User` dataclass, `Organization` dataclass, `RepoStorageInfo` dataclass
+- Hub API: https://huggingface.co/api/users/{username}/overview
+- Hub API: https://huggingface.co/api/organizations/{name}/overview
+- User settings: https://huggingface.co/settings/profile
+- huggingface_hub docs: https://huggingface.co/docs/huggingface_hub/en/package_reference/community

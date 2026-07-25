@@ -1,4 +1,6 @@
 ---
+author: SakThai
+license: MIT
 name: SakThai-simplify-code
 description: "Parallel 3-Agent cleanup of recent code changes."
 version: 1.0.0

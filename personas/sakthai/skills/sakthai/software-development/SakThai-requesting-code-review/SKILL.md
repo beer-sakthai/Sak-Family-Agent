@@ -1,4 +1,6 @@
 ---
+author: SakThai
+license: MIT
 name: SakThai-requesting-code-review
 description: "Pre-commit review: security scan, quality gates, auto-fix."
 version: 1.0.0

@@ -1,4 +1,6 @@
 ---
+author: SakThai
+license: MIT
 name: SakThai-himalaya
 description: "Himalaya CLI: IMAP/SMTP email from terminal."
 version: 1.0.0

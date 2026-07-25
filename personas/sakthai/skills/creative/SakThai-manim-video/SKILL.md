@@ -1,4 +1,6 @@
 ---
+author: SakThai
+license: MIT
 name: SakThai-manim-video
 description: "Manim CE animations: 3Blue1Brown math/algo videos."
 version: 1.0.0

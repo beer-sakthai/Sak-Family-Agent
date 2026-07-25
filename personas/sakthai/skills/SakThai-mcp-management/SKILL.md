@@ -1,6 +1,8 @@
 ---
 name: SakThai-mcp-management
 category: autonomous-ai-agents
+author: SakThai
+license: MIT
 description: Set up, troubleshoot, and manage Hermes MCP servers — including OAuth
   flows, config patching when write_file/patch are blocked, and verification patterns.
 version: 1.0.0

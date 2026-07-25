@@ -1,4 +1,6 @@
 ---
+author: SakThai
+license: MIT
 name: SakThai-songwriting-and-ai-music
 description: "Songwriting craft and Suno AI music prompts."
 tags: [songwriting, music, suno, parody, lyrics, creative]

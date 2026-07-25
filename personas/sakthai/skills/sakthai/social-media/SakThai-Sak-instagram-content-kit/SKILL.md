@@ -1,4 +1,6 @@
 ---
+author: SakThai
+license: MIT
 name: SakThai-Sak-instagram-content-kit
 description: "Instagram Content Kit: post, search, media, v2 API."
 version: 1.0.0

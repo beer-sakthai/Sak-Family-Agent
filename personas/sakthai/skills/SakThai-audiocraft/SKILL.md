@@ -1,6 +1,8 @@
 ---
 name: SakThai-audiocraft
 category: mlops
+author: SakThai
+license: MIT
 description: 'AudioCraft: MusicGen text-to-music, AudioGen text-to-sound.'
 version: 1.0.0
 platforms:

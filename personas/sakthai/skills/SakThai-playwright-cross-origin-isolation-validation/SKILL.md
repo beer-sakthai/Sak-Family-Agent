@@ -1,6 +1,8 @@
 ---
 name: SakThai-playwright-cross-origin-isolation-validation
 category: playwright-growth
+author: SakThai
+license: MIT
 description: Use when verifying Cross-Origin Isolation (COOP/COEP) and SharedArrayBuffer
   capabilities with Playwright.
 version: 1.0.0

@@ -1,4 +1,6 @@
 ---
+author: SakThai
+license: MIT
 name: SakThai-cycle-trust
 description: "Verify the shipped work is safe to rely on."
 version: 1.0.0

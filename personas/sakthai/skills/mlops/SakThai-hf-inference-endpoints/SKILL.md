@@ -1,4 +1,6 @@
 ---
+author: SakThai
+license: MIT
 name: SakThai-hf-inference-endpoints
 description: "Hugging Face Inference Endpoints: dedicated, scalable model hosting on HF infrastructure — hardware selection, autoscaling, private networking, custom handlers, and the deployment lifecycle."
 tags: [huggingface, inference, endpoints, deployment, serving, autoscaling, gpu, mlops]

@@ -1,4 +1,6 @@
 ---
+author: SakThai
+license: MIT
 name: SakThai-p5js
 description: "p5.js sketches: gen art, shaders, interactive, 3D."
 version: 1.0.0

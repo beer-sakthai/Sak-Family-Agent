@@ -1,4 +1,6 @@
 ---
+author: SakThai
+license: MIT
 name: SakThai-spike
 description: "Throwaway experiments to validate an idea before build."
 version: 1.0.0

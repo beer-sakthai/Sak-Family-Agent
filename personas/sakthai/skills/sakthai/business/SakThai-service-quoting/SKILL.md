@@ -1,4 +1,6 @@
 ---
+author: SakThai
+license: MIT
 name: SakThai-service-quoting
 description: "Use when constructing a customer quote from stored pricing..."
 version: 1.0.0

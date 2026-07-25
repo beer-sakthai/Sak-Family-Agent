@@ -11,6 +11,8 @@ metadata:
   hermes:
     tags: [computer-use, macos, desktop, automation, gui]
     category: desktop
+author: SakThai
+license: MIT
     related_skills: [browser]
 ---
 

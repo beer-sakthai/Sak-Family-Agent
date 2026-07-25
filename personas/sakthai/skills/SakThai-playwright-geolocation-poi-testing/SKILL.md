@@ -1,6 +1,8 @@
 ---
 name: SakThai-playwright-geolocation-poi-testing
 category: playwright-growth
+author: SakThai
+license: MIT
 description: 'Automate browser location-based workflows with Playwright: set geolocation/POI
   coordinates, intercept location-based API responses, verify nearby results and region-dependent
   UI. Use for mapping, geofencing, delivery, travel, and distance-based logic.'

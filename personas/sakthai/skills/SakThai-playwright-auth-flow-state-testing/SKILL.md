@@ -1,6 +1,8 @@
 ---
 name: SakThai-playwright-auth-flow-state-testing
 category: playwright-growth
+author: SakThai
+license: MIT
 description: 'Scripted auth workflow coverage: login, session reuse, logout, and redirect
   state transitions with Playwright.'
 version: 1.0.0

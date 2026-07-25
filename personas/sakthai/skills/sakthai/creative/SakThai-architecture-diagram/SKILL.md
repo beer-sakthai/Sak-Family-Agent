@@ -1,4 +1,6 @@
 ---
+author: SakThai
+license: MIT
 name: SakThai-architecture-diagram
 description: "Dark-themed SVG architecture/cloud/infra diagrams as HTML."
 version: 1.0.0

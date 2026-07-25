@@ -1,4 +1,6 @@
 ---
+author: SakThai
+license: MIT
 name: SakThai-node-inspect-debugger
 description: "Debug Node.js via --inspect + Chrome DevTools Protocol CLI."
 version: 1.0.0

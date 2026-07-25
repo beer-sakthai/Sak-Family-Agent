@@ -3,6 +3,8 @@ name: SakThai-hf-smolagents
 title: "Hugging Face smolagents"
 description: "Lightweight HF agent framework — CodeAgent, ToolCallingAgent, model/tool integrations, secure execution, and CLI patterns."
 category: "mlops"
+author: SakThai
+license: MIT
 ---
 
 # Hugging Face smolagents

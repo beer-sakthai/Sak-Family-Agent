@@ -1,6 +1,8 @@
 ---
 name: SakThai-playwright-service-worker-testing
 category: playwright-growth
+author: SakThai
+license: MIT
 description: 'Use when testing/verifying service worker behaviors with Playwright:
   route SW fetch/handle events, mock caches/offline, assert indexedDB writes, and
   enable reproducible SW-driven scenarios in E2E and CI.'

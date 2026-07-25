@@ -1,4 +1,6 @@
 ---
+author: SakThai
+license: MIT
 name: SakThai-cycle-care
 description: "Audit correctness, safety, and performance before shipping."
 version: 1.0.0

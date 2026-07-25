@@ -1,4 +1,6 @@
 ---
+author: SakThai
+license: MIT
 name: SakThai-hermes-agent-skill-authoring
 description: "Author in-repo SKIL.md: frontmatter, validator, structure."
 version: 1.0.0

@@ -1,4 +1,6 @@
 ---
+author: SakThai
+license: MIT
 name: SakThai-python-debugpy
 description: "Debug Python: pdb REPL + debugpy remote (DAP)."
 version: 1.0.0
