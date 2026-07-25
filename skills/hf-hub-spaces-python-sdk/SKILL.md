@@ -1,7 +1,7 @@
 # Hugging Face Spaces Python SDK
 
-**author: SakThai**
-**license: MIT**
+author: SakThai
+license: MIT
 
 Comprehensive reference for the `huggingface_hub` Spaces management API — the programmatic interface for managing Spaces on the Hugging Face Hub. Covers all space lifecycle operations, runtime management, secrets/variables, volumes, logging, dev mode, and semantic search.
 
