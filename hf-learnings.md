@@ -6454,6 +6454,25 @@ Deep dive into the Hugging Face Datasets Server's Parquet Conversion Pipeline �
 - https://github.com/huggingface/datasets-server – services/worker/src/worker/job_runners/config/parquet.py
 - https://github.com/huggingface/datasets-server – services/worker/src/worker/job_runners/dataset/parquet.py
 - https://github.com/huggingface/datasets-server – libs/libcommon/src/libcommon/parquet_utils.py
-- https://github.com/huggingface/datasets-server – libs/libcommon/src/libcommon/viewer_utils/parquet_metadata.py
-- https://github.com/huggingface/datasets-server – libs/libviewer/src/parquet.rs
-- https://huggingface.co/docs/dataset-viewer/parquet
+|- https://github.com/huggingface/datasets-server – libs/libcommon/src/libcommon/viewer_utils/parquet_metadata.py
+|- https://github.com/huggingface/datasets-server – libs/libviewer/src/parquet.rs
+|- https://huggingface.co/docs/dataset-viewer/parquet
+
+---
+
+## 2026-07-25: hf-fineweb-dataset-processing-pipeline — FineWeb & FineWeb-Edu: Hugging Face's Web-Scale Dataset Processing Pipeline (Topic #379)
+
+### Summary
+Deep dive into the FineWeb dataset family — the complete pipeline for processing CommonCrawl web data at petabyte scale for LLM pretraining using the `datatrove` library. Covers the 7-stage processing pipeline (URL filtering, Trafilatura text extraction, FastText language filtering at >=0.65 threshold, Gopher/C4/FineWeb quality heuristics, per-dump MinHash deduplication with 14x8 hash configuration, PII anonymization), the educational quality classifier for FineWeb-Edu (trained on Llama3-70B-Instruct synthetic annotations of 500K samples, threshold >=3 on 0-5 scale), FineWeb-2's 846-language multilingual expansion, ablation methodology (1.8B models on 27B/350B tokens), and three usage patterns (datatrove streaming, huggingface_hub snapshot, datasets streaming).
+
+### Key Findings
+- **Scale**: FineWeb = 18.5T tokens / 50.4TB / 96 dumps; FineWeb-Edu = 1.3T tokens educational subset; FineWeb-2 = 846 languages
+- **Per-dump dedup > global dedup**: Ablations showed individually deduplicated dumps outperform global deduplication
+- **Educational classifier**: Llama3-70B-Instruct outperformed jury (Mixtral-8x7B + 8x22B) — jury scores were too generous, reducing precision
+- **Deliberate avoidance of ML toxicity filtering**: Because classifiers disproportionately filter specific dialects/identities
+- **Code content limitation**: Code under-represented; recommend supplementing with The Stack v2
+- **datatrove execution**: Slurm-based, 8000 parallel tasks, 4-stage MinHash sub-pipeline with sequential dependencies
+- **Recommended dumps**: CC-MAIN-2023-50 / 2024-10 / 2024-18 for training below 550B tokens
+
+### Skill Created
+`hf-fineweb-dataset-processing/` — SKILL.md (author: SakThai, license: MIT) + references/hf-learnings.md with complete processing pipeline, quality filtering details, educational classifier methodology, ablation analysis, and usage patterns.

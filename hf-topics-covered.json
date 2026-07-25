@@ -373,5 +373,6 @@
   "hf-hub-dataset-card-metadata-comprehensive-reference",
   "hf-inference-client-image-generation-patterns",
   "hf-hub-evaluation-results",
-  "hf-datasets-server-parquet-conversion-pipeline-deep-dive"
+  "hf-datasets-server-parquet-conversion-pipeline-deep-dive",
+  "hf-fineweb-dataset-processing-pipeline"
 ]
