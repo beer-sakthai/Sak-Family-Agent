@@ -425,7 +425,8 @@ This skill ships with detailed reference files:
 | `references/function-calling-prompt-optimization.md` | Optimal prompt + inference settings for 5/5 tool-calling via llama.cpp |
 | `references/business-analytics-advisor.md` | Small GGUF (0.5B) as KPI analytics advisor — structured business recommendations, not chat |
 | **`references/post-publishing-exposure.md`** | Cross-link on base model pages, HF Collections with notes, discussion posts, healing cron |
-| **`references/model-evaluation-honesty.md`** | Methodology rules: format matching, multi-trial, engine limitations, conservative claims |
+| `references/dataset-integrity-safety.md` | Append-don't-overwrite protocol, recovery script, cache gotchas — added 2026-07-25 after 2 data loss incidents |
+| `references/model-evaluation-honesty.md` | Methodology rules: format matching, multi-trial, engine limitations, conservative claims |
 | **`references/model-safety-testing.md`** | Safety test categories (harmful prompt compliance, refusal diagnosis, consistency, irrelevance). How to diagnose refusal patterns and fix training gaps. |
 
 

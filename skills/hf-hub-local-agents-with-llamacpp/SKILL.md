@@ -1,76 +1,77 @@
 ---
-name: hf-hub-local-agents-with-llamacpp
+name: hf-hub-local-apps-and-agents
 author: SakThai
 license: MIT
-description: "Running local coding agents (Pi, OpenClaw, Hermes, OpenCode, llama-agent) with llama.cpp server backend using HF Hub models."
-version: 1.0.0
-tags: [huggingface, hf, agents, local, llama.cpp, GGUF, coding-agent, Pi, OpenClaw, Hermes, OpenCode, llama-agent]
+description: "Complete reference for running Hugging Face Hub models locally via Local Apps (llama.cpp, Ollama, Jan, LM Studio) and connecting local coding agents (Pi, OpenClaw, Hermes, OpenCode, llama-agent). Covers hardware profiling, the `-hf` flag architecture, cache management, zero-cost patterns, and troubleshooting."
+version: 2.0.0
+tags: [huggingface, hf, agents, local, llama.cpp, GGUF, coding-agent, Pi, OpenClaw, Hermes, OpenCode, llama-agent, Ollama, LM-Studio, Jan, local-apps]
+related_skills:
+  - hf-hub-hardware-profile
+  - hf-gguf-llama-cpp
+  - hf-hub-local-apps
+  - hf-transformers-gguf-integration-v2
 ---
 
-# HF Hub Local Agents with llama.cpp
+# HF Hub Local Apps & Agents
 
-Run coding agents entirely on your own hardware using llama.cpp as the model server. The Hugging Face Hub provides the model discovery, hardware profiling, and one-click llama.cpp commands to bridge HF GGUF models with local agent frameworks.
+Run Hugging Face models on your own hardware with one-click commands from the Hub. This skill covers both **Local Apps** (the HF Hub ecosystem for local deployment) and **Local Agents** (coding agents that connect to local inference servers).
 
-## When to Use
+## Local Apps Ecosystem
 
-- You want a Claude Code / Codex-like experience running locally with no cloud costs
-- You need fully private, air-gapped coding agent workflows
-- You want to experiment with different GGUF quants of models like Gemma, Qwen, Llama on your own hardware
-- You're building agent toolchains that need local inference
+The Hugging Face Hub provides **four supported local apps** for running models locally:
 
-## Supported Agent Frameworks
-
-| Agent | Setup Mechanism | Config File |
-|-------|----------------|-------------|
-| **Pi** | `~/.pi/agent/models.json` | npm package, direct llama.cpp integration |
-| **OpenClaw** | `openclaw onboard` CLI | Built-in CLI wizard |
-| **Hermes Agent** | `~/.hermes/config.yaml` | YAML config with custom provider |
-| **OpenCode** | `~/.config/opencode/opencode.json` | JSON provider config |
-| **llama-agent** | C++ binary, no deps | CLI flags + cmake build |
+| App | Command | API Port | GPU | Best For |
+|-----|---------|----------|-----|----------|
+| **llama.cpp** | `llama-server -hf user/repo:quant` | `:8080` | Manual build flags | Performance, agents, shared HF cache |
+| **Ollama** | `ollama run hf.co/user/repo:quant` | `:11434` | Auto-detected | Easy multi-model switching |
+| **LM Studio** | GUI launch from HF model page | `:1234` | Auto-detected | GUI, developer tools |
+| **Jan** | GUI launch from HF model page | `:1337` | Auto-detected | ChatGPT-like experience, RAG |
 
 ## Architecture
 
 ```
-┌─────────┐     OpenAI-compatible API     ┌──────────────────┐
-│  Agent  │ ───────────────────────────▶  │  llama.cpp server │
-│  (Pi,   │ ◀───────────────────────────  │  (local model)    │
-│  Hermes,│      responses + tool calls    │  GGUF format     │
-│  etc.)  │                                └──────────────────┘
-     │
-     ▼
-  Your files,
-  terminal, IDE
+HF Hub Model Page → "Use this model" → llama.cpp/Ollama/Jan/LM Studio
+                                               ↓
+                                  Local Inference Server
+                                  (OpenAI-compatible API)
+                                               ↓
+                                    Agent (Pi, Hermes, etc.)
 ```
 
-## Steps to Run
+## Key Features
 
-1. **Configure hardware**: Visit `huggingface.co/settings/hardware` and set your local hardware profile
-2. **Select llama.cpp**: Enable llama.cpp as your inference engine in Local Apps settings
-3. **Find a model**: Browse/buy llama.cpp-compatible GGUF models on HF
-4. **Launch server**: `llama-server -hf ggml-org/gemma-4-26b-a4b-it-GGUF:Q4_K_M`
-5. **Connect agent**: Configure agent to point at `http://localhost:8080/v1`
+- **Hardware Profiling**: `huggingface.co/settings/hardware` — set your GPU/RAM, HF tells you which models fit
+- **Shared HF Cache**: llama.cpp `-hf` downloads go to `~/.cache/huggingface/hub/` — shared with transformers
+- **One-click commands**: Model cards auto-generate `llama-server -hf ...` or `ollama run hf.co/...` commands
+- **Zero-cost**: No cloud API bills — runs entirely on your hardware
 
-## Local Memory Search
+## Quick Start
 
-Both Hermes Agent and OpenClaw support local embedding models for memory/semantic search via llama.cpp:
+```bash
+# 1. Configure hardware at huggingface.co/settings/hardware
+# 2. Enable local apps at huggingface.co/settings/local-apps
+# 3. Find a model with GGUF support
+# 4. Copy the command from "Use this model" → llama.cpp
 
-- Hermes: `session_search` in `~/.hermes/config.yaml` points at same local server
-- OpenClaw: Uses `node-llama-cpp` to run `EmbeddingGemma-300M` locally
+llama-server -hf ggml-org/gemma-3-1b-it-GGUF
+# → OpenAI-compatible API at http://localhost:8080/v1
+```
 
-## Key Concepts
+## Agent Integration
 
-| Concept | Detail |
-|---------|--------|
-| **llama.cpp server** | OpenAI-compatible API server running GGUF models locally |
-| **Hardware profiling** | HF settings page tells you which models fit your GPU/RAM |
-| **Model autodownload** | `-hf` flag downloads GGUF model from HF automatically |
-| **Vision support** | Pi supports vision by adding `"input": ["text", "image"]` to model config |
-| **llama-agent** | All-in-one binary: agent loop built directly into llama.cpp — no Node/Python deps |
+| Agent | Config File | Key Setting |
+|-------|-------------|-------------|
+| **Pi** | `~/.pi/agent/models.json` | `baseUrl: http://localhost:8080/v1` |
+| **Hermes** | `~/.hermes/config.yaml` | `provider: custom`, `base_url: http://127.0.0.1:8080/v1` |
+| **OpenCode** | `~/.config/opencode/opencode.json` | `baseURL: http://127.0.0.1:8080/v1` |
+| **llama-agent** | CLI flags | `-hf user/repo:quant` (C++, zero deps) |
+| **OpenClaw** | `openclaw onboard` | Select custom-api-key, point at `localhost:8080` |
 
-## Related Topics
-
-- HF CLI Agent Mode
-- HF MCP Server integration
-- HF Agent Skills
-- GGUF model quantization and selection
-- Local Apps on HF Hub
+See `references/hf-learnings.md` for the full deep-dive (~400 lines) covering:
+- Hardware profiling architecture
+- `-hf` flag internals (shared cache, auto-download, resume)
+- Cross-app comparison matrix
+- Agent framework comparison
+- Zero-cost patterns for limited hardware
+- Troubleshooting guide
+- Building custom local apps
