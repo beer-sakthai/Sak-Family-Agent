@@ -1,4 +1,0 @@
-# file: /opt/data/sakthai-skills-repo/personas/sakthai/sakthai/telegram/workflow_executor.py
-# hypothesis_version: 6.158.1
-
-['--', '--fast', '--stateless', '--with-skills', '-m', 'run', 'sakthai']

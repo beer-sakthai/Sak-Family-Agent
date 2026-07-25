@@ -1,4 +1,0 @@
-# file: /opt/data/sakthai-skills-repo/personas/sakthai/sakthai/dashboard/data.py
-# hypothesis_version: 6.158.1
-
-[0.0, 100.0, 200, 1000, 86400, '%Y-%m-%d', '**', '-', ':', 'SOUL.md', 'Unknown', '`', 'agent', 'amount', 'client', 'conversion_rate', 'converted', 'database', 'date', 'docs', 'email', 'facts', 'fallback_stub', 'generated_at', 'growth', 'handle', 'id', 'key', 'kind', 'kpis', 'label', 'labels', 'lead', 'model', 'monthly', 'mrr', 'name', 'observations', 'phone', 'query', 'recent_facts', 'recent_leads', 'recent_revenue', 'revenue', 'revenue_growth', 'role', 'servicequotebot', 'setup', 'source', 'subscription', 'team_roster', 'top_observations', 'total', 'total_facts', 'total_facts_delta', 'total_leads', 'total_observations', 'total_revenue', 'type', 'utf-8', 'value', 'values', '|']
