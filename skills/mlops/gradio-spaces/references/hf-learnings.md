@@ -1969,4 +1969,307 @@ The `Workflow` class supports **curated workflows** loaded from a HF Dataset (`g
 - GitHub: https://github.com/gradio-app/gradio
 - Gradio Workflows guide: https://www.gradio.app/guides/creating-a-workflow
 - Gradio API: https://www.gradio.app/docs/workflow
-- Changelog: https://github.com/gradio-app/gradio/blob/main/CHANGELOG.md
+| Changelog: https://github.com/gradio-app/gradio/blob/main/CHANGELOG.md
+
+---
+
+## 2026-07-25: hf-gradio-6-render-decorator-deep-dive — Gradio 6 `@gr.render()` Decorator: Dynamic Layouts & Reactive Rendering
+
+### Summary
+Deep-dive into **Gradio 6's `@gr.render()` decorator** — the reactive rendering system that enables dynamic component layouts in Blocks apps. Unlike traditional Gradio where component trees are declared once at build time, `@gr.render()` re-runs the function body on every input change, rebuilding components and event listeners dynamically. Covers the full API (inputs, triggers, trigger_mode, queue, concurrency), component key preservation (`key` + `preserved_by_key`), event listener keys across re-renders, integration with Sidebar/Navbar components, and five production-worthy patterns for zero-cost Spaces.
+
+### Sources
+- Gradio docs — `@gr.render`: https://www.gradio.app/docs/gradio/render
+- Gradio docs — Blocks layout: https://www.gradio.app/docs/gradio/blocks
+- Gradio docs — Sidebar component: https://www.gradio.app/docs/gradio/sidebar
+- Gradio docs — Navbar component: https://www.gradio.app/docs/gradio/navbar
+- Gradio docs — Server: https://www.gradio.app/docs/gradio/server
+- Gradio source: https://github.com/gradio-app/gradio
+
+---
+
+### 1. What `@gr.render()` Does
+
+`@gr.render()` is a **reactive layout decorator** for Gradio Blocks. It transforms a regular Python function into a dynamically re-rendering UI generator:
+
+```python
+import gradio as gr
+
+with gr.Blocks() as demo:
+    textbox = gr.Textbox(label="Enter text")
+    @gr.render(inputs=textbox)
+    def show_message(text):
+        if not text:
+            gr.Markdown("Please enter some text.")
+        else:
+            gr.Markdown(f"You entered: **{text}**")
+demo.launch()
+```
+
+**Key behavior:**
+- Every time **any input** changes (or a **trigger** fires), the decorated function is called again
+- Inside the function body, components **created each call** replace the previous render's components
+- Components created **outside** the `@gr.render()` scope persist across re-renders (static)
+- The function receives the **current values** of all inputs as arguments
+
+### 2. Full API Reference
+
+#### `@gr.render(inputs, triggers, queue, trigger_mode, concurrency_limit, concurrency_id, show_progress)`
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `inputs` | `list[Component] \| Component \| None` | `None` | Input components whose `.change()` triggers re-render. If the function takes no args, use empty list. |
+| `triggers` | `list[Trigger] \| Trigger \| None` | `None` | Explicit triggers (e.g. `[btn.click, number.change]`). If `None`, listens to `.change()` of all inputs. |
+| `queue` | `bool` | `True` | Whether to place the render on the queue (for rate-limited Spaces). |
+| `trigger_mode` | `'once' \| 'multiple' \| 'always_last' \| None` | `'always_last'` | Concurrency for re-renders. `'once'` blocks until complete; `'multiple'` allows concurrent re-renders; `'always_last'` queues subsequent triggers. |
+| `concurrency_limit` | `int \| None \| 'default'` | `None` | Max simultaneous render executions. `None` = unlimited. `'default'` = use queue default (typically 1). |
+| `concurrency_id` | `str \| None` | `None` | Group this render with other events sharing the same ID for concurrency limiting. |
+| `show_progress` | `'full' \| 'minimal' \| 'hidden'` | `'full'` | Progress animation style during re-render. |
+
+#### Trigger Sources
+
+The **`triggers`** parameter is more flexible than inputs alone:
+
+```python
+btn = gr.Button("Refresh")
+number = gr.Number(value=5)
+
+# Re-render only on button click, not on number change
+@gr.render(inputs=number, triggers=[btn.click])
+def my_layout(n):
+    gr.Markdown(f"Count: {n}")
+```
+
+Without `triggers`, the default is `.change()` on all `inputs`. With explicit triggers, you control **exactly** when re-renders fire.
+
+### 3. Component Key Preservation
+
+This is the most nuanced part of `@gr.render()`. Every re-render **replaces all components** in the function body. Without key preservation, user state (text typed, slider position, etc.) is **lost** on every re-render.
+
+#### The `key` Parameter
+
+Each component inside `@gr.render()` can take a `key` parameter:
+
+```python
+@gr.render(inputs=items_count)
+def dynamic_form(count):
+    for i in range(count):
+        # key preserves this Textbox across re-renders
+        gr.Textbox(label=f"Item {i+1}", key=f"item_{i}")
+```
+
+When Gradio re-renders, if a component has the **same key** as one from the previous render, it reuses the DOM node — preserving user input, scroll position, and focus.
+
+**Rules:**
+- Keys must be **unique** within a render scope
+- Keys are **scoped** to the `@gr.render()` function (two render functions can use the same keys without conflict)
+- Keys can be `int`, `str`, or `tuple[int | str, ...]`
+- Components without a `key` are **destroyed and recreated** on every render
+
+#### The `preserved_by_key` Parameter
+
+Some component parameters are **not preserved across re-renders** even when `key` is set. Use `preserved_by_key` to whitelist specific parameters:
+
+```python
+gr.Textbox(
+    value="default",
+    label="Name",
+    key="name_field",
+    preserved_by_key=["value"]  # Keep user-typed value across re-renders
+)
+```
+
+Without `preserved_by_key=["value"]`, the `value` parameter would be **reset** to `"default"` on every re-render. Only parameters listed in `preserved_by_key` retain user-modified state.
+
+**Supported by:** All components with user-modifiable state (Textbox, Slider, Dropdown, Checkbox, Radio, Number, etc.)
+
+#### Event Listener Key Preservation
+
+Event listeners inside `@gr.render()` can also have keys:
+
+```python
+@gr.render(inputs=textbox)
+def ui(text):
+    btn = gr.Button("Submit", key="submit_btn")
+    output = gr.Textbox(label="Result", key="output")
+
+    btn.click(
+        fn=handle_submit,
+        inputs=textbox,
+        outputs=output,
+        key="submit_event"  # Preserves this listener across re-renders
+    )
+```
+
+The `key` on `.click()` (and other event listeners) ensures the event binding persists across re-renders, preventing stale closures and double-binding.
+
+### 4. Integration with New Gradio 6 Components
+
+#### `gr.Sidebar` Inside Render
+
+Sidebar can be used within `@gr.render()` for dynamic collapsible panels:
+
+```python
+with gr.Blocks() as demo:
+    mode = gr.Radio(["simple", "advanced"], label="Mode", value="simple")
+
+    @gr.render(inputs=mode)
+    def dynamic_sidebar(mode):
+        with gr.Sidebar(position="left", open=True):
+            gr.Markdown("## Controls")
+            if mode == "advanced":
+                gr.Slider(0, 1, value=0.5, label="Threshold")
+                gr.Checkbox(label="Normalize")
+            else:
+                gr.Number(value=42, label="Value")
+        gr.Markdown("## Main Content")
+        gr.Textbox(label="Result")
+```
+
+Sidebar inside `@gr.render()` enables context-sensitive control panels that morph based on user selection.
+
+#### `gr.Navbar` and Multipage with Render
+
+Navbar + Render = dynamic page routing:
+
+```python
+with gr.Blocks() as demo:
+    page_state = gr.State("home")
+
+    with gr.Row():
+        home_btn = gr.Button("Home")
+        about_btn = gr.Button("About")
+
+    @gr.render(inputs=page_state, triggers=[home_btn.click, about_btn.click])
+    def router(page):
+        if page == "home":
+            gr.Markdown("# Home Page")
+            gr.Textbox(label="Search")
+        elif page == "about":
+            gr.Markdown("# About Page")
+            gr.HTML("<p>Version 1.0</p>")
+```
+
+This pattern enables **SPA-like routing** in Gradio without page reloads — all state lives in memory.
+
+### 5. Five Production Patterns
+
+#### Pattern 1: Configurable Form Builder
+
+```python
+@gr.render(inputs=field_count)
+def build_form(n):
+    fields = []
+    for i in range(n):
+        t = gr.Textbox(label=f"Field {i+1}", key=f"field_{i}")
+        fields.append(t)
+    submit = gr.Button("Submit", key="submit_btn")
+    output = gr.JSON(label="Output", key="output")
+
+    submit.click(
+        lambda *vals: {f"field_{i}": v for i, v in enumerate(vals)},
+        inputs=fields,
+        outputs=output,
+        key="submit_action"
+    )
+```
+
+#### Pattern 2: Multi-Step Wizard
+
+```python
+@gr.render(inputs=step)
+def wizard(step):
+    if step == 1:
+        gr.Markdown("### Step 1: Name")
+        name = gr.Textbox(label="Your name", key="name")
+        next_btn = gr.Button("Next", key="next1")
+        next_btn.click(lambda: 2, None, step, key="go_step2")
+    elif step == 2:
+        gr.Markdown("### Step 2: Confirm")
+        gr.Markdown(f"Name: {name.value}")
+        back = gr.Button("Back", key="back2")
+        confirm = gr.Button("Confirm", key="confirm2")
+        back.click(lambda: 1, None, step, key="back_step1")
+        confirm.click(lambda: 3, None, step, key="go_step3")
+```
+
+**Note:** Accessing `name.value` across renders requires `key` preservation + `gr.State` or storing values outside render scope.
+
+#### Pattern 3: Live Data Dashboard
+
+```python
+@gr.render(inputs=refresh_btn, triggers=[refresh_btn.click])
+def dashboard():
+    import json, urllib.request
+    data = json.loads(urllib.request.urlopen("https://api.example.com/status").read())
+    gr.Number(value=data["cpu"], label="CPU %", key="cpu")
+    gr.Number(value=data["memory"], label="Memory %", key="mem")
+    gr.JSON(value=data, label="Full", key="full")
+```
+
+Re-render on button click fetches fresh data and rebuilds the dashboard.
+
+#### Pattern 4: Dynamic Chat Interface Overlay
+
+```python
+@gr.render(inputs=use_chat)
+def chat_or_form(use_chat):
+    if use_chat:
+        gr.ChatInterface(fn=chat_fn, key="chat")
+    else:
+        gr.Textbox(label="Message", key="msg")
+        gr.Button("Send", key="send")
+```
+
+#### Pattern 5: Conditional Sidebar Configuration
+
+```python
+@gr.render(inputs=config_mode)
+def config_panel(mode):
+    with gr.Sidebar(position="left", open=mode != "view"):
+        gr.Markdown(f"### {mode.title()} Mode")
+        if mode == "edit":
+            gr.Textbox(label="Title", key="title")
+            gr.ColorPicker(label="Color", key="color")
+        elif mode == "view":
+            gr.Markdown("Read-only mode — click Edit to change")
+```
+
+### 6. Zero-Cost Deployment Considerations
+
+For free CPU Spaces:
+
+| Concern | Mitigation |
+|---------|-----------|
+| **Frequent re-renders** — each re-render re-executes the function | Keep render functions lightweight; move heavy computation outside (use `gr.State` or cached helpers) |
+| **Queue pressure** — queued renders compete with other events | Set `concurrency_limit=1` and `trigger_mode='always_last'` to drop stale renders |
+| **Component count** — many components per render increases memory | Use `key` + `.unrender()` patterns; Gradio reuses DOM nodes with keys |
+| **Sidebar inside render** — Sidebar animation on every re-render | Keep Sidebar outside render if it doesn't change; only wrap the inner content |
+| **State loss** — re-render resets component values | Always use `preserved_by_key` on user-modifiable components |
+
+### 7. Render vs. `gr.on` / `change()` — When to Use Which
+
+| Approach | Best For | Trade-off |
+|----------|----------|-----------|
+| `@gr.render()` | Dynamic component **count**, structure, layout | Re-runs entire function; higher overhead |
+| `gr.on(...).then(...)` | Single value **updates** without layout change | Only updates outputs; can't add/remove components |
+| `component.change(fn, ...)` | Individual component reactivity | Manual wiring; no structural changes |
+| `gr.Blocks.load()` | Initial layout setup only | Runs once at app start |
+
+**Rule of thumb:** If you need to **show/hide** or **add/remove** components, use `@gr.render()`. If you just need to update values, use `.change()` or `gr.on()`.
+
+### 8. Known Limitations (Gradio 6.20)
+
+1. **No async render functions** — The decorated function cannot be `async def`. For async work, move awaits inside a sync wrapper.
+2. **One render function per `inputs` scope** — You CAN have multiple `@gr.render()` functions in the same Blocks app, but each must have distinct inputs/triggers.
+3. **`gr.State` inside render** — `gr.State` declared inside `@gr.render()` is recreated on each render. Declare persistent state **outside** the render scope.
+4. **No streaming outputs inside render** — `gr.Chatbot` with streaming works, but `gr.Textbox` with `streaming=True` inside render may conflict with re-render.
+5. **SSR / Gradio Lite** — `@gr.render()` works in Gradio Lite (Pyodide/WASM) but re-render performance depends on browser memory.
+
+### Resources
+- Gradio render docs: https://www.gradio.app/docs/gradio/render
+- Gradio Source: https://github.com/gradio-app/gradio
+- Gradio Blocks guide: https://www.gradio.app/guides/blocks-and-event-listeners
+- Dynamic apps guide: https://www.gradio.app/guides/dynamic-apps-with-the-render-decorator
+- Sidebar docs: https://www.gradio.app/docs/gradio/sidebar
+- Navbar docs: https://www.gradio.app/docs/gradio/navbar
