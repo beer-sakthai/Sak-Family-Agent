@@ -344,7 +344,96 @@ for model_id in MODELS:
 
 ---
 
-## 7. Related Skills
+## 7. Honest Assessment & Benchmark Reporting
+
+A model card's most important job is **accuracy** — misleading claims damage trust more than missing features.
+
+### When to Say "Pending" Not "5/5"
+
+If you cannot fully verify a benchmark score due to infrastructure limits (no GPU, wrong inference engine, single-trial methodology), **do not publish a score**. Use one of:
+
+```yaml
+# Best — honest about limitations
+- name: Tool-Calling
+  value: "Pending — requires Ollama/server for proper evaluation"
+  
+# Acceptable — if you have partial data
+- name: Tool-Calling  
+  value: "Preliminary: see Honest Assessment section"
+
+# Never — unverified claim that may be wrong
+- name: Tool-Calling
+  value: "5/5"  # ❌ Only if you can prove it with multi-trial methodology
+```
+
+### Multi-Trial Benchmark Requirement
+
+Single-trial benchmarks are misleading. Run **5 trials minimum** and report the pass rate:
+
+```markdown
+## Benchmark
+
+| Test | Pass rate | Trials |
+|------|:---------:|:------:|
+| get_weather | 5/5 | ✅ |
+| search_web | 3/5 | ⚠️ |
+| irrelevance | 5/5 | ✅ |
+```
+
+### Format Matching Is Critical
+
+The model's **training format** must match the **testing format**:
+- If trained on OpenAI `tool_calls` JSON, test with that format — not raw XML
+- If trained on ChatML + `<tool>` tags, test with that format
+- Document the test format in the model card
+
+### Safety Warnings
+
+If the model has known safety gaps (e.g., complies with harmful instructions), document them prominently:
+
+```markdown
+## Safety Warning
+
+This model may comply with harmful instructions. **Do not use for 
+security-critical applications.** Guardrails required before production use.
+```
+
+### Optimal Settings Section
+
+After benchmarks, add a settings table so users can reproduce results:
+
+```markdown
+## Recommended Settings
+
+| Parameter | Value | Why |
+|-----------|-------|-----|
+| System prompt | "You are a function-calling assistant." | Triggers tool output |
+| Temperature | 0.01 | Maximum consistency |
+| Threads | 2 | Best on 2-core CPU |
+```
+
+### Honest Assessment Pattern
+
+When benchmark scores are preliminary or limited, add a standalone note:
+
+```markdown
+## Honest Assessment
+
+The benchmark scores above are based on preliminary testing. This model
+requires proper infrastructure (Ollama, llama.cpp server, or Transformers
+pipeline) to evaluate correctly. Verified results coming soon.
+```
+
+### Pitfalls
+
+- **Never publish unverified claims** — test first, publish second
+- **Document methodology** — engine, quantization, temperature, thread count
+- **Include failure cases** — don't cherry-pick only passing tests
+- **Multi-trial** — a single pass doesn't prove reliability
+- **Format match** — testing with wrong format produces misleading failures
+- **Base model comparison** — test the base model too, to identify inherited limitations vs fine-tuning damage
+
+## 8. Related Skills
 
 - `huggingface-hub` — General HF Hub CLI and Python library usage
 - `hf-inference-providers` — Understanding Inference Providers behind widgets
@@ -355,7 +444,8 @@ for model_id in MODELS:
 
 | File | Covers |
 |------|--------|
-| [`references/batch-model-card-workflow.md`](references/batch-model-card-workflow.md) | End-to-end pipeline for generating and uploading README.md cards across multiple repos: discover all models under an author, analyze configs/adapter_config/training_metrics, generate structured cards with YAML frontmatter, batch upload via `HfApi.upload_file`, and verify |
+| [`references/batch-model-card-workflow.md`](references/batch-model-card-workflow.md) | End-to-end pipeline for batch model card generation and upload across multiple repos |
+| [`references/benchmark-integrity.md`](references/benchmark-integrity.md) | Lessons from real benchmark failures: single-trial traps, wrong-format testing, base-model comparison, safety baselines |
 
 ## References
 

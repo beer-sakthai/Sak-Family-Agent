@@ -3,7 +3,7 @@ name: user-communication
 author: SakThai
 license: MIT
 description: "Communication preferences and interaction conventions for the primary user (Beer / beer-sakthai). Apply on every interaction."
-version: 1.8.0
+version: 1.9.0
 metadata:
   hermes:
     tags: [communication, user-preferences, english-only, direct-response, zero-cost]

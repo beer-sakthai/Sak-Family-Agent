@@ -6491,3 +6491,34 @@ Comprehensive deep dive into Hugging Face's Inference Router (`https://router.hu
 `hf-inference-router-openai-compatible-endpoint/` — SKILL.md (author: SakThai, license: MIT) + references/hf-learnings.md with full documentation.
 
 ---
+
+## 2026-07-25: hf-jobs-serving-vllm — One-Command Model Serving on HF Jobs (Topic #365)
+
+### Summary
+
+Comprehensive deep-dive into running inference servers on Hugging Face Jobs using the `hf jobs run` CLI one-command pattern. Unlike the Python SDK approach (covered in `hf-jobs-api-deep-dive`), the CLI provides a zero-friction path: `hf jobs run --detach --expose <port> --flavor <hardware> -s HF_TOKEN <image> -- <server-command>`. Supports vLLM (default), SGLang, llama.cpp, and any HTTP server. Covers the full lifecycle — deployment, authentication, endpoint URL format, model download acceleration, billing, and cost optimization.
+
+### Key Findings
+
+| Area | Finding |
+|------|---------|
+| **CLI one-liner** | `hf jobs run --detach --expose 8000 --flavor a10g-small -s HF_TOKEN vllm/vllm-openai -- vllm serve <model>` |
+| **`--` separator** | Required when the job command has its own flags — separates `hf jobs run` options from the command's args |
+| **`--detach`** | Returns immediately; server runs in background until cancelled or timeout |
+| **`--expose <port>`** | Makes ports reachable at `https://{job.id}--{port}.hf.jobs` |
+| **`-s HF_TOKEN`** | Forwards your HF token as a secret for authenticated model downloads |
+| **Default timeout** | 30 minutes; set `--timeout` to override |
+| **Cancel** | `hf jobs cancel <job_id>` — stops billing immediately |
+| **Auth for endpoint** | Exposed ports require Bearer token with `read` access to the job's namespace |
+| **OpenAI-compatible** | vLLM, SGLang, llama.cpp all speak the OpenAI-compatible API |
+| **Pricing** | Pay-per-minute for hardware + $0.01/min for exposed ports (flat) |
+
+### Skill Created
+`hf-jobs-serving-vllm/` — SKILL.md (author: SakThai, license: MIT) + references/hf-learnings.md with full CLI patterns, pricing reference, and best practices.
+
+### Sources
+- https://huggingface.co/docs/hub/en/jobs-serving
+- https://huggingface.co/blog/vllm-jobs
+- https://huggingface.co/docs/hub/en/jobs-pricing
+
+---

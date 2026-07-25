@@ -360,5 +360,7 @@
   "hf-hub-cli-rebuilt-extensions-skills-marketplace-deep-dive",
   "hf-inference-router-openai-compatible-endpoint",
   "hf-hub-webhooks-practical-patterns-deep-dive",
-  "hf-inference-router-practical-patterns-deep-dive"
+  "hf-inference-router-practical-patterns-deep-dive",
+  "hf-foundry-managed-compute",
+  "hf-jobs-serving-vllm"
 ]
