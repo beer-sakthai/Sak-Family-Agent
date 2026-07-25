@@ -247,6 +247,21 @@ build/bin/llama-quantize \
     ./merged/model-Q4_K_M.gguf Q4_K_M
 ```
 
+### Prompt Optimization Before Benchmarking
+
+**CRITICAL: The prompt format dramatically affects benchmark scores.** A model that scores 4/5 with one system prompt may score 5/5 with a better one. Always optimize the prompt BEFORE running the final benchmark:
+
+1. **Identify failure patterns** — run a quick 5-test sweep (get_weather, search_web, calculate, get_time, irrelevance)
+2. **Test 3-4 system prompt variants** on the failing test(s):
+   - Simple: "You are a helpful assistant. You have access to tools but only use them when needed."
+   - Explicit rules: "RULES: Call tools ONLY for weather, search, calculation, time. Answer general knowledge directly."
+   - Few-shot: Provide examples of when to call vs not call tools
+   - Strict: "NEVER call a tool for general knowledge questions. Answer directly."
+3. **The simplest prompt often works best** — Variant A (simple, permissive) frequently outperforms stricter variants because it doesn't make the model overly cautious
+4. **Run the full benchmark with the optimal variant** — then save results with verified flag
+
+**Key finding from 2026-07-25:** The 0.5B model scored 3/5 with a complex system prompt but 4/5 with the simple "you have access to tools but only use them when needed" prompt. The 1.5B reached 5/5 with the same simple prompt. Overly strict prompts caused the model to refuse valid tool calls AND fail irrelevance tests.
+
 ### Run BFCL benchmark
 
 The benchmark evaluates tool-calling across categories:

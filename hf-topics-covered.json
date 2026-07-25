@@ -354,5 +354,7 @@
   "hf-datasets-5-release",
   "model-routing-agent-systems-deep-dive",
   "hf-gemma3-deep-dive",
-  "hf-inference-providers-source-architecture-deep-dive"
+  "hf-inference-providers-source-architecture-deep-dive",
+  "hf-datasets-server-filter-endpoint-source-deep-dive",
+  "hf-transformers-deepseek-v4-deep-dive"
 ]
