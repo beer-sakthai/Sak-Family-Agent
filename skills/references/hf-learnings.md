@@ -17690,3 +17690,255 @@ Without compilation, the speedup is ~1.35× (vs BF16 baseline). With compilation
 
 ### Skill
 mlops/hf-diffusers-nunchaku-lite — Nunchaku Lite native Diffusers integration: SVDQuant W4A4 quantization with Nunchaku CUDA kernels, `from_pretrained()` loading, NVFP4/INT4 variants, Hub-based kernel loading via `kernels` package, AWQ W4A16 text encoder quantization, diffuse-compressor workflow, hardware support (Blackwell, Ampere, Ada, Turing), torch.compile compatibility, structural rewrites for fused QKV projections
+
+## 2026-07-25: hf-hub-hfapi-method-catalog — Complete HfApi Method Reference Catalog (Topic #285)
+
+### Summary
+Complete categorized reference catalog of every public method in the `huggingface_hub` library's `HfApi` class (v1.x). Covers all 100+ methods organized into 12 functional domains: Repo CRUD, File Operations, Repo Metadata, Collections, Discussions/PRs, Space Management, Webhooks, Inference, User/Org, Security/Tokens, Jobs, and Storage Buckets. Each method documented with its signature, return type, and purpose. Intended as a quick-reference lookup for everyday Hub automation tasks.
+
+### Source
+- huggingface_hub source: https://github.com/huggingface/huggingface_hub/blob/main/src/huggingface_hub/hf_api.py
+- huggingface_hub docs: https://huggingface.co/docs/hub/en/python-reference
+- HfApi reference: https://huggingface.co/docs/huggingface_hub/main/en/package_reference/hf_api
+
+### Skill
+hf-hub-hfapi-method-catalog — Complete HfApi method reference: 100+ methods across 12 domains, with signatures, return types, and usage notes. Quick-reference for Hub automation, CI/CD, and programmatic repo management.
+
+---
+
+## 2026-07-25: hf-hub-hfapi-method-catalog — Complete HfApi Method Reference (Deep-Dive)
+
+### Domain 1: Repository CRUD (create, delete, move)
+
+| Method | Signature | Returns | Description |
+|--------|-----------|---------|-------------|
+| `create_repo` | `(repo_id, repo_type, private, exist_ok, token) -> str` | Repo URL | Create a new model/dataset/space repo. Raises `HTTPError` if exist_ok=False and repo exists. |
+| `delete_repo` | `(repo_id, repo_type, missing_ok, token) -> None` | None | Delete a repo permanently. Cannot delete DOI-locked repos. |
+| `update_repo_visibility` | `(repo_id, repo_type, private, token) -> None` | None | Toggle repo public/private. Fails if repo has a DOI. |
+| `move_repo` | `(from_id, to_id, repo_type, token) -> str` | New repo URL | Rename/move a repo. Fails for DOI-locked repos. |
+| `repo_exists` | `(repo_id, repo_type, token) -> bool` | bool | Check if a repo exists on the Hub. |
+| `repo_type` | `(repo_id, token) -> str` | "model", "dataset", or "space" | Auto-detect repo type from ID. |
+| `whoami` | `(token) -> dict` | User/org info dict | Returns current user identity, org memberships, and token scopes. |
+| `get_full_repo_name` | `(repo_name, namespace, token) -> str` | "namespace/name" | Construct full repo ID from name + optional namespace. |
+
+### Domain 2: File Operations (upload, download, delete)
+
+| Method | Signature | Returns | Description |
+|--------|-----------|---------|-------------|
+| `upload_file` | `(path_or_fileobj, path_in_repo, repo_id, repo_type, revision, token) -> CommitInfo` | CommitInfo | Upload a single file. Accepts path or file-like object. |
+| `upload_folder` | `(folder_path, repo_id, repo_type, revision, path_in_repo, token, allow_patterns, ignore_patterns) -> CommitInfo` | CommitInfo | Upload an entire folder with pattern-based filtering. Uses `CommitOperationAdd` internally. |
+| `upload_large_folder` | `(folder_path, repo_id, repo_type, revision, path_in_repo, token, allow_patterns, ignore_patterns, hf_transfer) -> CommitInfo` | CommitInfo | Upload large folders with Xet/hf_transfer acceleration. Chunked parallel upload. |
+| `snapshot_download` | `(repo_id, repo_type, revision, cache_dir, token, allow_patterns, ignore_patterns, max_workers, resume) -> str` | Local path | Download entire repo snapshot to disk with caching. |
+| `hf_hub_download` | `(repo_id, repo_type, filename, revision, cache_dir, token, resume, local_dir) -> str` | Local path | Download single file with resume, caching, and symlinks. |
+| `delete_file` | `(repo_id, repo_type, filename, revision, token) -> CommitInfo` | CommitInfo | Delete a single file from a repo. |
+| `metadata_update` | `(repo_id, repo_type, metadata, revision, token, overwrite) -> CommitInfo` | CommitInfo | Update repo metadata (model card YAML, dataset tags) via a commit. |
+| `create_commit` | `(repo_id, repo_type, operations, commit_message, revision, token, parent) -> CommitInfo` | CommitInfo | Atomic multi-file commit with mixed operations (add, delete, update). |
+| `get_hf_file_metadata` | `(url, token) -> HfFileMetadata` | HfFileMetadata | Get file metadata (size, SHA256, commit info) without downloading. |
+| `file_exists` | `(repo_id, repo_type, filename, revision, token) -> bool` | bool | Check if a specific file exists in a repo at a revision. |
+
+### Domain 3: Repo Metadata & Listing
+
+| Method | Signature | Returns | Description |
+|--------|-----------|---------|-------------|
+| `list_models` | `(filter, search, sort, direction, limit, expand, token, cursor) -> Iterable[ModelInfo]` | Iterable[ModelInfo] | List/search models with filtering by tag, pipeline, library, etc. Cursor-paginated. |
+| `list_datasets` | `(filter, search, sort, direction, limit, expand, token, cursor) -> Iterable[DatasetInfo]` | Iterable[DatasetInfo] | List/search datasets. Same pagination/sort/filter system as models. |
+| `list_spaces` | `(filter, search, sort, direction, limit, expand, token, cursor, linked_url) -> Iterable[SpaceInfo]` | Iterable[SpaceInfo] | List/search Spaces. Additional linked_url filter for model-to-space linking. |
+| `model_info` | `(repo_id, revision, expand, token) -> ModelInfo` | ModelInfo | Get single model's full metadata (card, tags, siblings, config, etc.). |
+| `dataset_info` | `(repo_id, revision, expand, token) -> DatasetInfo` | DatasetInfo | Get single dataset's full metadata. |
+| `space_info` | `(repo_id, expand, token) -> SpaceInfo` | SpaceInfo | Get single Space's full metadata (runtime, hardware, secrets, vars). |
+| `list_repo_files` | `(repo_id, repo_type, revision, token, recursive) -> list[str]` | List of file paths | List all files in a repo at a given revision. |
+| `list_repo_refs` | `(repo_id, repo_type, token) -> GitRefs` | GitRefs | List all branches and tags in a repo. |
+| `list_repo_commits` | `(repo_id, repo_type, revision, token, cursor_backward) -> list[GitCommitInfo]` | list[GitCommitInfo] | List commit history with cursor-based backward pagination. |
+| `list_repo_tree` | `(repo_id, repo_type, revision, path, recursive, expand, token) -> list[RepoFile]` | list[RepoFile] | Browse directory tree with expand option for file metadata. |
+| `super_squash_history` | `(repo_id, repo_type, token) -> None` | None | Squash repo commit history into a single commit. Irreversible. |
+
+### Domain 4: Collections
+
+| Method | Signature | Returns | Description |
+|--------|-----------|---------|-------------|
+| `list_collections` | `(owner, item, sort, direction, token) -> Iterable[Collection]` | Iterable[Collection] | List collections with owner and item-type filters. 3 sort modes (lastUpdated, createdAt, trending). |
+| `get_collection` | `(collection_slug, token) -> Collection` | Collection | Get a single collection by slug (e.g., "namespace/collection-name"). |
+| `create_collection` | `(title, namespace, description, private, token) -> Collection` | Collection | Create a new collection under your namespace. |
+| `update_collection` | `(collection_slug, description, title, private, settings, token) -> Collection` | Collection | Update collection metadata. |
+| `delete_collection` | `(collection_slug, token, missing_ok) -> None` | None | Delete a collection. |
+| `add_collection_item` | `(collection_slug, item, item_type, note, token) -> CollectionItem` | CollectionItem | Add model/dataset/space/paper/collection to a collection. |
+| `update_collection_item` | `(collection_slug, item_object_id, note, token) -> CollectionItem` | CollectionItem | Update the note on a collection item. |
+| `delete_collection_item` | `(collection_slug, item_object_id, token, missing_ok) -> None` | None | Remove an item from a collection. |
+
+### Domain 5: Discussions & Pull Requests
+
+| Method | Signature | Returns | Description |
+|--------|-----------|---------|-------------|
+| `list_discussions` | `(repo_id, repo_type, token) -> list[Discussion]` | list[Discussion] | List all discussions and PRs for a repo. |
+| `get_discussion_details` | `(repo_id, repo_type, discussion_num, token) -> Discussion` | Discussion | Get discussion with full comment thread and events. |
+| `create_discussion` | `(repo_id, repo_type, title, description, token, pull_request) -> Discussion` | Discussion | Create a new discussion or pull request. |
+| `comment_discussion` | `(repo_id, repo_type, discussion_num, comment, token) -> DiscussionComment` | DiscussionComment | Add a comment to an existing discussion/PR. |
+| `edit_discussion_comment` | `(repo_id, repo_type, discussion_num, comment_id, content, token) -> None` | None | Edit an existing comment. |
+| `hide_discussion_comment` | `(repo_id, repo_type, discussion_num, comment_id, token) -> None` | None | Hide a comment (moderator action). |
+| `rename_discussion` | `(repo_id, repo_type, discussion_num, new_title, token) -> None` | None | Rename a discussion. |
+| `merge_pull_request` | `(repo_id, repo_type, discussion_num, comment, token) -> None` | None | Merge a pull request into main branch. |
+
+### Domain 6: Space Management
+
+| Method | Signature | Returns | Description |
+|--------|-----------|---------|-------------|
+| `create_space` | `(repo_id, repo_type, space_sdk, space_hardware, secrets, variables, token) -> SpaceInfo` | SpaceInfo | Create a new Space with SDK choice (gradio, streamlit, docker, static) and hardware tier. |
+| `request_space_hardware` | `(repo_id, hardware, token, sleeping) -> SpaceInfo` | SpaceInfo | Request hardware upgrade for a Space. Can set sleep timeout. |
+| `pause_space` | `(repo_id, token) -> SpaceInfo` | SpaceInfo | Pause a Space (stops and sleeps it). |
+| `restart_space` | `(repo_id, token, factory_mode) -> SpaceInfo` | SpaceInfo | Restart a Space (optionally in factory mode to reset storage). |
+| `duplicate_space` | `(from_id, to_id, space_sdk, token) -> SpaceInfo` | SpaceInfo | Duplicate a Space. Creates a copy under your namespace. |
+| `add_space_secret` | `(repo_id, key, value, description, token) -> None` | None | Add a secret to a Space's environment. |
+| `delete_space_secret` | `(repo_id, key, token) -> None` | None | Delete a secret from a Space. |
+| `add_space_variable` | `(repo_id, key, value, description, token) -> None` | None | Add an environment variable (non-secret) to a Space. |
+| `delete_space_variable` | `(repo_id, key, token) -> None` | None | Delete an environment variable from a Space. |
+| `get_space_variables` | `(repo_id, token) -> dict` | dict | Get all environment variables and secrets for a Space. |
+| `list_spaces_runtimes` | `(token) -> list[SpaceRuntime]` | list[SpaceRuntime] | List all available runtimes for Spaces (SDK versions). |
+| `list_space_runtime_logs` | `(repo_id, token, revision) -> SpaceLogs` | SpaceLogs | Fetch Space build logs from the most recent build. |
+
+### Domain 7: Webhooks
+
+| Method | Signature | Returns | Description |
+|--------|-----------|---------|-------------|
+| `create_webhook` | `(name, url, watched, domains, secret, token) -> Webhook` | Webhook | Create a webhook that fires on repo events (push, PR, discussion, release). |
+| `list_webhooks` | `(token) -> list[Webhook]` | list[Webhook] | List all webhooks on your account. |
+| `update_webhook` | `(webhook_id, name, url, watched, domains, secret, token) -> Webhook` | Webhook | Update webhook configuration. |
+| `delete_webhook` | `(webhook_id, token) -> None` | None | Delete a webhook. |
+| `ping_webhook` | `(webhook_id, token) -> None` | None | Send a test ping to a webhook endpoint. |
+
+### Domain 8: Inference & Endpoints
+
+| Method | Signature | Returns | Description |
+|--------|-----------|---------|-------------|
+| `get_model_status` | `(repo_id, token) -> ModelStatus` | ModelStatus | Get model's inference status (loaded providers, queue length). |
+| `toggle_model_status` | `(repo_id, token, disable) -> None` | None | Enable/disable public inference for a model. |
+| `list_inference_endpoints` | `(namespace, token) -> list[InferenceEndpoint]` | list[InferenceEndpoint] | List all Inference Endpoints in a namespace. |
+| `create_inference_endpoint` | `(name, repo_id, endpoint_type, hardware, revision, token, scale_to_zero_timeout) -> InferenceEndpoint` | InferenceEndpoint | Create a dedicated Inference Endpoint (PAYG). |
+| `get_inference_endpoint` | `(name, namespace, token) -> InferenceEndpoint` | InferenceEndpoint | Get Inference Endpoint details. |
+| `update_inference_endpoint` | `(name, namespace, token, hardware, repository, revision, min_replica, max_replica) -> InferenceEndpoint` | InferenceEndpoint | Update endpoint hardware/scale config. |
+| `delete_inference_endpoint` | `(name, namespace, token, force) -> None` | None | Delete an Inference Endpoint. |
+| `pause_inference_endpoint` | `(name, namespace, token) -> InferenceEndpoint` | InferenceEndpoint | Pause endpoint (scale to zero). |
+| `resume_inference_endpoint` | `(name, namespace, token, running_ok) -> InferenceEndpoint` | InferenceEndpoint | Resume a paused endpoint. |
+| `scale_to_zero_inference_endpoint` | `(name, namespace, token, scale_to_zero_timeout) -> InferenceEndpoint` | InferenceEndpoint | Set endpoint to auto-scale-to-zero after idle timeout. |
+
+### Domain 9: User, Org & Social
+
+| Method | Signature | Returns | Description |
+|--------|-----------|---------|-------------|
+| `get_user_overview` | `(username, token) -> User` | User | Get user public profile: avatar, followers, following, orgs, repos. |
+| `list_user_followers` | `(username, token) -> Iterable[User]` | Iterable[User] | List user's followers. |
+| `list_user_following` | `(username, token) -> Iterable[User]` | Iterable[User] | List who a user follows. |
+| `list_organization_members` | `(organization, token) -> Iterable[User]` | Iterable[User] | List org members. |
+| `get_org_overview` | `(organization, token) -> Organization` | Organization | Get org public profile. |
+| `list_organization_followers` | `(organization, token) -> Iterable[User]` | Iterable[User] | List org followers. |
+| `list_user_orgs` | `(token) -> list[Organization]` | list[Organization] | List orgs the authenticated user belongs to. |
+| `like_repo` | `(repo_id, repo_type, token) -> None` | None | Like (add heart to) a repo. |
+| `unlike_repo` | `(repo_id, repo_type, token) -> None` | None | Unlike (remove heart from) a repo. |
+| `list_repo_likers` | `(repo_id, repo_type, token) -> Iterable[User]` | Iterable[User] | List users who liked a repo. |
+
+### Domain 10: Security, Tokens & Auth
+
+| Method | Signature | Returns | Description |
+|--------|-----------|---------|-------------|
+| `list_auth_tokens` | `(token) -> list[AuthToken]` | list[AuthToken] | List all fine-grained tokens for the authenticated user. |
+| `create_auth_token` | `(name, role, token, permissions) -> AuthToken` | AuthToken | Create a fine-grained token with specific repo scopes. |
+| `delete_auth_token` | `(token_id, token) -> None` | None | Delete an auth token. |
+| `get_token_permission` | `(token) -> TokenPermission` | TokenPermission | Get the permission level of the current token. |
+| `get_webhook_token` | `(token) -> WebhookToken` | WebhookToken | Get webhook signing token. |
+| `list_gated_repos` | `(token) -> list[GatedRepo]` | list[GatedRepo] | List all gated repos the user has access to. |
+| `request_repo_access` | `(repo_id, repo_type, token, reason) -> None` | None | Request access to a gated repo with a reason. |
+
+### Domain 11: Jobs & Sandboxes
+
+| Method | Signature | Returns | Description |
+|--------|-----------|---------|-------------|
+| `list_jobs` | `(namespace, status, job_type, token) -> list[Job]` | list[Job] | List Hub jobs. |
+| `get_job` | `(job_id, token) -> Job` | Job | Get job status and details. |
+| `create_job` | `(job_type, params, namespace, token) -> Job` | Job | Create a new Hub job. |
+| `cancel_job` | `(job_id, token) -> None` | None | Cancel a running job. |
+| `list_sandboxes` | `(namespace, token) -> list[Sandbox]` | list[Sandbox] | List HF Sandbox environments. |
+| `get_sandbox` | `(sandbox_id, token) -> Sandbox` | Sandbox | Get Sandbox details. |
+| `create_sandbox` | `(name, compute, disk_size, token) -> Sandbox` | Sandbox | Create a new Sandbox. |
+| `stop_sandbox` | `(sandbox_id, token) -> None` | None | Stop a Sandbox. |
+| `delete_sandbox` | `(sandbox_id, token) -> None` | None | Delete a Sandbox. |
+
+### Domain 12: Storage Buckets & System
+
+| Method | Signature | Returns | Description |
+|--------|-----------|---------|-------------|
+| `list_storage_buckets` | `(namespace, token) -> list[StorageBucket]` | list[StorageBucket] | List storage buckets for user/org. |
+| `get_storage_bucket` | `(bucket_id, token) -> StorageBucket` | StorageBucket | Get bucket details and usage. |
+| `create_storage_bucket` | `(repo_id, token) -> StorageBucket` | StorageBucket | Create a storage bucket for a repo. |
+| `update_storage_bucket` | `(bucket_id, limits, token) -> StorageBucket` | StorageBucket | Update bucket storage limits. |
+| `delete_storage_bucket` | `(bucket_id, token) -> None` | None | Delete a storage bucket. |
+| `health_check` | `(token) -> str` | "ok" | Check Hub API health. |
+| `list_metrics` | `(repo_id, repo_type, token) -> dict` | dict | Get repo metrics (downloads, likes, etc.). |
+
+### Usage Patterns
+
+#### Pattern 1: Create and Populate a Dataset Repo
+```python
+from huggingface_hub import HfApi
+api = HfApi()
+
+url = api.create_repo("my-dataset", repo_type="dataset", private=True, exist_ok=True)
+api.upload_file(
+    path_or_fileobj="data/train.parquet",
+    path_in_repo="data/train.parquet",
+    repo_id="my-dataset",
+    repo_type="dataset"
+)
+api.metadata_update("my-dataset", repo_type="dataset", metadata={
+    "tags": ["synthetic", "text-classification"],
+    "language": ["en"],
+})
+```
+
+#### Pattern 2: List All Models for a Library
+```python
+from huggingface_hub import HfApi
+api = HfApi()
+
+models = api.list_models(library="transformers", sort="downloads", direction=-1, limit=20)
+for m in models:
+    print(f"{m.modelId} — {m.downloads} downloads")
+```
+
+#### Pattern 3: Create and Manage a Collection
+```python
+from huggingface_hub import HfApi
+api = HfApi()
+
+col = api.create_collection(
+    title="My Research Track",
+    namespace="my-org",
+    description="Collection of models for my paper"
+)
+api.add_collection_item(col.slug, item="meta-llama/Llama-4-8B", item_type="model", note="Base model")
+```
+
+#### Pattern 4: Monitor Space Build Logs
+```python
+from huggingface_hub import HfApi
+api = HfApi()
+
+api.restart_space("my-space", factory_mode=True)
+logs = api.list_space_runtime_logs("my-space")
+print(logs.logs[-20:])
+```
+
+### Zero-Cost Notes
+- All HfApi methods for repo management, listing, collections, discussions, and webhooks are FREE (limited by Hub API rate limits)
+- Inference Endpoint creation (create_inference_endpoint) costs money — use InferenceClient (serverless, free tier) instead
+- File uploads count toward your storage quota (free tier: models ~5GB per repo, datasets ~50GB, total ~50GB across user)
+- The `huggingface_hub` library itself is open-source and free to install (pip install huggingface-hub)
+
+### Key Takeaways
+1. **HfApi is the complete automation surface**: Every Hub operation available programmatically — no UI needed after initial setup.
+2. **Three tiers of cost**: Free (metadata/listing/collections/discussions/webhooks), Storage-quota (file uploads), Paid (Inference Endpoints, Sandboxes).
+3. **Cursor pagination everywhere**: All list_* methods return Iterable with built-in pagination — no manual page management needed.
+4. **Create_commit for atomic ops**: Use with CommitOperationAdd/Delete for multi-file atomic updates in a single commit.
+5. **Upload_large_folder for big datasets**: Uses Xet/hf_transfer acceleration for folder uploads over ~100MB.
+6. **Space secrets are write-once**: Can be added/deleted via API but cannot be read back (API returns key names, not values).
+
+### Skill
+hf-hub-hfapi-method-catalog — Complete HfApi method reference catalog: 100+ methods in 12 domains (Repo CRUD, File Ops, Metadata, Collections, Discussions, Spaces, Webhooks, Inference, User/Org, Security, Jobs, Storage Buckets). Each method with signature, return type, and purpose. Practical patterns for automation workflows. Zero-cost usage guidance.
