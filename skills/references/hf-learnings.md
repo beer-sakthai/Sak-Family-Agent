@@ -6157,3 +6157,24 @@ while total is None or page * page_size < total:
 - OpenAPI spec: `https://datasets-server.huggingface.co/openapi.json` (verified 2026-07-25)
 - Official docs: `https://huggingface.co/docs/dataset-viewer/en/filter`
 - Live API tests against GLUE SST2, CoLA, MRPC, STSB datasets via `/filter`, `/statistics`, `/size`, `/info`, `/parquet`, `/rows`
+
+---
+
+## 2026-07-25: hf-accelerate-deep-dive
+
+### Summary
+Complete deep-dive on Hugging Face Accelerate v1.14.0 — the unified distributed training/inference API. Covers the full Accelerator class with 50+ methods, CLI toolkit (accelerate config/launch/env/estimate-memory/test), mixed precision (fp16/bf16/fp8 via TransformersEngine, torchao, and deprecated MS-AMP), big model inference (init_empty_weights, load_checkpoint_and_dispatch, device_map strategies, CPU/disk offload, chained hooks), FSDP integration (all sharding strategies, auto-wrap, checkpoints), DeepSpeed integration (ZeRO 1-3, NVMe offload, MoE), FSDP vs DeepSpeed comparison matrix with data precision differences, gradient accumulation patterns, experiment tracking (8 backends), memory estimation, torch.compile/dynamo integration, and production deployment checklist.
+
+### Key Findings
+- **The 4-line magic pattern**: `Accelerator()`, `prepare()`, `accelerate.backward()`, `accelerate launch` — covers 90% of distributed training needs
+- **gather_for_metrics > gather**: Always use `gather_for_metrics()` for evaluation — it handles uneven batch sizes correctly across processes
+- **FSDP vs DeepSpeed tradeoff**: FSDP uses less memory on optimizer states with few GPUs (flat params stay in torch_dtype). DeepSpeed always upcasts to fp32 during preparation. Choose FSDP for PyTorch-native, DeepSpeed for MoE/NVMe/custom configs
+- **FP8 only benefits at scale**: TransformersEngine FP8 only shows performance gains at 1B+ parameters. MS-AMP is deprecated (unmaintained since 2023, CUDA 12.x incompatible). torchao is the modern path.
+- **Big model inference**: Always `init_empty_weights()` → `load_checkpoint_and_dispatch(device_map="auto")`. Mark residual-connected modules with `no_split_module_classes`. Use `balanced_low_0` for generation tasks.
+- **Memory estimation is free CLI**: `accelerate estimate-memory {model}` reports inference + training memory without loading the model — zero-cost planning.
+- **Gradient accumulation is built-in**: `accelerator.accumulate()` — don't implement manual accumulation.
+- **Sharded checkpoints via save_model**: `accelerator.save_model()` produces shards with index.json — compatible with `from_pretrained()`.
+- **Dynamo + FSDP**: Always set `--fsdp_use_orig_params true` when combining torch.compile with FSDP.
+
+### Skill Created
+`mlops/hf-accelerate/` — complete reference with SKILL.md + deep-dive reference.

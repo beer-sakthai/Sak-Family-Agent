@@ -327,8 +327,5 @@
   "hf-sandboxes-v3-deep-dive",
   "hf-inference-client-streaming-patterns",
   "hf-hub-model-hub-mixin-integration",
-  "hf-datasets-server-filter-endpoint",
-  "hf-datasets-tabular-loading-comprehensive",
-  "hf-hub-agent-traces-deep-dive",
-  "hf-hub-agent-traces-deep-dive-v2"
+  "hf-datasets-server-filter-endpoint"
 ]
