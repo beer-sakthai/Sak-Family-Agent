@@ -1,5 +1,8 @@
 # HF Learnings Log
 
+**author:** SakThai
+**license:** MIT
+
 ## 2026-07-25: hf-hub-agents-ecosystem-complete-deep-dive — Full HF Hub Agents Ecosystem Overhaul
 
 ### Summary
@@ -417,6 +420,331 @@ The Sak Thai agent system (Hermes profiles) already uses Skills in a similar way
 
 4. **Zero-cost barrier**: The entire ecosystem works on free tier — free inference, free Spaces (CPU), free ZeroGPU (limited), free CLI, free SDK. This aligns perfectly with Beer's constraints.
 
+|---
+
+## 2026-07-25: hf-transformers-pipeline-registry-system-deep-dive — Transformers v5 Pipeline Registry & Custom Task Registration
+
+**author:** SakThai
+**license:** MIT
+**Source:** Transformers v5.14.1 source code (`transformers.pipelines.base`, `transformers.pipelines.__init__`)
+**Research method:** Direct source analysis — `PipelineRegistry`, `pipeline()`, `PIPELINE_REGISTRY`, `SUPPORTED_TASKS`, `TASK_ALIASES`, `clean_custom_task`, `get_task`
+
+---
+
+### Summary
+
+Complete deep dive into the **Transformers v5 Pipeline Registry System** — the engine behind `pipeline(task=..., model=...)` resolution. This covers the `PipelineRegistry` class, the 27 supported tasks + 3 aliases, the custom pipeline registration API (both runtime and from model config), task resolution flow, and practical patterns for registering custom pipelines. This is the internal plumbing Beer would need if he ever publishes a custom model with a custom pipeline task.
+
+---
+
+### 1. PipelineRegistry — The Core Registry
+
+The `PipelineRegistry` class lives in `transformers.pipelines.base` and is instantiated once as `PIPELINE_REGISTRY` in `transformers.pipelines.__init__`:
+
+```python
+class PipelineRegistry:
+    def __init__(self, supported_tasks: dict[str, Any], task_aliases: dict[str, str]) -> None:
+        self.supported_tasks = supported_tasks    # canonical task definitions
+        self.task_aliases = task_aliases           # alias → canonical name map
+
+    def get_supported_tasks(self) -> list[str]:
+        # Returns sorted list of all task names + aliases
+
+    def check_task(self, task: str) -> tuple[str, dict, Any]:
+        # Resolves aliases → validates → returns (normalized_task, task_dict, task_options)
+        # Raises KeyError if unknown
+
+    def register_pipeline(self, task, pipeline_class, pt_model=None, default=None, type=None):
+        # Registers a new pipeline or overwrites an existing one
+
+    def to_dict(self):
+        return self.supported_tasks
+```
+
+**Instantiation** (in `transformers.pipelines.__init__.py`):
+
+```python
+PIPELINE_REGISTRY = PipelineRegistry(supported_tasks=SUPPORTED_TASKS, task_aliases=TASK_ALIASES)
+```
+
+---
+
+### 2. TASK_ALIASES — Friendly Names
+
+Three aliases are defined:
+
+| Alias | Resolves To |
+|-------|-------------|
+| `"sentiment-analysis"` | `"text-classification"` |
+| `"ner"` | `"token-classification"` |
+| `"text-to-speech"` | `"text-to-audio"` |
+
+These are resolved in `check_task()` before looking up the canonical task.
+
+---
+
+### 3. SUPPORTED_TASKS — The 27 Canonical Tasks (v5.14.1)
+
+Each task definition is a dict with:
+- `impl` — the Pipeline subclass (e.g., `TextGenerationPipeline`)
+- `pt` — tuple of compatible AutoModel classes (e.g., `(AutoModelForCausalLM,)`)
+- `default` — `{'model': ('model_id', 'revision')}` for default model
+- `type` — modality hint: `'text'`, `'image'`, `'audio'`, `'video'`, `'multimodal'`
+
+| Task | Type | Pipeline Class | Default Model |
+|------|------|---------------|---------------|
+| `any-to-any` | multimodal | `AnyToAnyPipeline` | `google/gemma-3n-E4B-it` |
+| `audio-classification` | audio | `AudioClassificationPipeline` | `superb/wav2vec2-base-superb-ks` |
+| `automatic-speech-recognition` | multimodal | `AutomaticSpeechRecognitionPipeline` | `facebook/wav2vec2-base-960h` |
+| `depth-estimation` | image | `DepthEstimationPipeline` | `Intel/dpt-large` |
+| `document-question-answering` | multimodal | `DocumentQuestionAnsweringPipeline` | `impira/layoutlm-document-qa` |
+| `feature-extraction` | text | `FeatureExtractionPipeline` | `distilbert/distilbert-base-cased` |
+| `fill-mask` | text | `FillMaskPipeline` | `distilbert/distilroberta-base` |
+| `image-classification` | image | `ImageClassificationPipeline` | `google/vit-base-patch16-224` |
+| `image-feature-extraction` | image | `ImageFeatureExtractionPipeline` | `google/vit-base-patch16-224` |
+| `image-segmentation` | multimodal | `ImageSegmentationPipeline` | `facebook/detr-resnet-50-panoptic` |
+| `image-text-to-text` | multimodal | `ImageTextToTextPipeline` | `Qwen/Qwen3-VL-2B-Instruct` |
+| `keypoint-matching` | image | `KeypointMatchingPipeline` | `magic-leap-community/superglue_outdoor` |
+| `mask-generation` | multimodal | `MaskGenerationPipeline` | `facebook/sam-vit-huge` |
+| `object-detection` | multimodal | `ObjectDetectionPipeline` | `facebook/detr-resnet-50` |
+| `table-question-answering` | text | `TableQuestionAnsweringPipeline` | `google/tapas-base-finetuned-wtq` |
+| `text-classification` | text | `TextClassificationPipeline` | `distilbert/distilbert-base-uncased-finetuned-sst-2-english` |
+| `text-generation` | text | `TextGenerationPipeline` | `HuggingFaceTB/SmolLM3-3B` |
+| `text-to-audio` | text | `TextToAudioPipeline` | `suno/bark-small` |
+| `token-classification` | text | `TokenClassificationPipeline` | `dbmdz/bert-large-cased-finetuned-conll03-english` |
+| `video-classification` | video | `VideoClassificationPipeline` | `MCG-NJU/videomae-base-finetuned-kinetics` |
+| `zero-shot-audio-classification` | multimodal | `ZeroShotAudioClassificationPipeline` | `laion/clap-htsat-fused` |
+| `zero-shot-classification` | text | `ZeroShotClassificationPipeline` | `facebook/bart-large-mnli` |
+| `zero-shot-image-classification` | multimodal | `ZeroShotImageClassificationPipeline` | `openai/clip-vit-base-patch32` |
+| `zero-shot-object-detection` | multimodal | `ZeroShotObjectDetectionPipeline` | `google/owlvit-base-patch32` |
+
+---
+
+### 4. Pipeline Resolution Flow (from `pipeline()` function)
+
+When `pipeline(task="text-generation", model="...")` is called, the resolution order is:
+
+```
+1. Check model's config.json for 'custom_pipelines'
+   ├── Yes → clean_custom_task() → resolve impl class via get_class_from_dynamic_module()
+   │          Requires trust_remote_code=True
+   └── No  → Go to step 2
+
+2. If no task provided and model is string:
+   → get_task(model) → calls hf_api().model_info() → reads pipeline_tag → returns task
+
+3. If task in custom_tasks:
+   → Use the custom task implementation
+
+4. Otherwise:
+   → check_task(task) → PIPELINE_REGISTRY.check_task()
+      ├── Resolves alias (e.g., "ner" → "token-classification")
+      └── Looks up in supported_tasks → returns (normalized_task, task_info, options)
+
+5. If no model provided:
+   → get_default_model_and_revision(targeted_task, task_options)
+      → loads default model + revision from task definition
+
+6. Load model:
+   → load_model(model, model_classes=targeted_task['pt'], ...)
+      → Tries each class in 'pt' tuple in order
+      → Falls back to float32 if dtype fails
+
+7. Resolve processors:
+   → _resolve_tokenizer()    — if pipeline_class._load_tokenizer is True
+   → _resolve_image_processor()
+   → _resolve_feature_extractor()
+   → _resolve_processor()
+   → _resolve_video_processor()
+
+8. Instantiate pipeline:
+   → pipeline_class(model=model, task=task, tokenizer=..., ...)
+```
+
+---
+
+### 5. Runtime Registration — `register_pipeline()`
+
+Custom pipelines can be registered at runtime:
+
+```python
+from transformers.pipelines import PIPELINE_REGISTRY
+from transformers.pipelines.feature_extraction import FeatureExtractionPipeline
+
+PIPELINE_REGISTRY.register_pipeline(
+    task='my-custom-task',
+    pipeline_class=FeatureExtractionPipeline,
+    pt_model=None,                    # optional: AutoModel classes
+    default={'model': 'bert-base-uncased'},  # default model for this task
+    type='text'                       # modality hint
+)
+```
+
+Key behaviors:
+- If `task` already exists, it overwrites with a warning
+- If `pt_model` is None, it becomes `()`
+- If `pt_model` is a single class, it's wrapped in a tuple
+- Sets `pipeline_class._registered_impl = {task: task_impl}` on the class
+- The `default` parameter can be a dict or a string (string is auto-wrapped)
+
+After registration, `PIPELINE_REGISTRY.get_supported_tasks()` includes the new task and `pipeline(task='my-custom-task')` works immediately.
+
+---
+
+### 6. Custom Pipelines from Model Config (Remote Code)
+
+Models on the Hub can define custom pipelines in their `config.json`:
+
+```json
+{
+  "custom_pipelines": {
+    "my-custom-task": {
+      "impl": "custom_module.MyCustomPipeline",
+      "pt": ["AutoModelForSequenceClassification"]
+    }
+  }
+}
+```
+
+When a model with this config is loaded:
+1. `pipeline()` detects `config.custom_pipelines` is non-empty
+2. If no task is specified and exactly one custom task exists, auto-selects it
+3. Calls `clean_custom_task(task_info)` which resolves `pt` class name strings to actual classes
+4. Loads the implementation via `get_class_from_dynamic_module()` (requires `trust_remote_code=True`)
+
+This is how **custom model repos with custom pipeline code** work on the Hub.
+
+---
+
+### 7. Auto-Inference from Model's pipeline_tag
+
+When `pipeline(model='some-model')` is called without a task:
+
+```python
+def get_task(model: str, token=None):
+    info = hf_api().model_info(model, token=token)
+    if not info.pipeline_tag:
+        raise RuntimeError("No pipeline_tag set")
+    if info.library_name not in {'transformers', 'timm'}:
+        raise RuntimeError("Not a transformers/timm model")
+    return info.pipeline_tag
+```
+
+This is why every model on the Hub needs a correct `pipeline_tag` in its metadata — it's the auto-detection mechanism.
+
+---
+
+### 8. Pipeline Class Hierarchy
+
+```
+Pipeline (base)
+├── ChunkPipeline (for chunked processing: ASR, zero-shot, etc.)
+│   ├── AutomaticSpeechRecognitionPipeline
+│   ├── ZeroShotClassificationPipeline
+│   ├── ZeroShotImageClassificationPipeline
+│   ├── ZeroShotAudioClassificationPipeline
+│   ├── ZeroShotObjectDetectionPipeline
+│   ├── DocumentQuestionAnsweringPipeline
+│   ├── TableQuestionAnsweringPipeline
+│   ├── TextToAudioPipeline
+│   └── ImageTextToTextPipeline
+├── AudioClassificationPipeline
+├── DepthEstimationPipeline
+├── FeatureExtractionPipeline
+├── FillMaskPipeline
+├── ImageClassificationPipeline
+├── ImageFeatureExtractionPipeline
+├── ImageSegmentationPipeline
+├── KeypointMatchingPipeline
+├── MaskGenerationPipeline
+├── ObjectDetectionPipeline
+├── TextClassificationPipeline
+├── TextGenerationPipeline
+├── TokenClassificationPipeline
+├── VideoClassificationPipeline
+└── AnyToAnyPipeline
+```
+
+The `ChunkPipeline` subclass is used when a single input may need multiple forward passes (e.g., long audio split into chunks, or multiple candidates for zero-shot). It has `preprocess()` returning an iterable, and `postprocess()` aggregating results.
+
+---
+
+### 9. Default Model Loading
+
+```python
+def get_default_model_and_revision(targeted_task, task_options):
+    defaults = targeted_task["default"]
+    if task_options:                # e.g., for "text-generation" with "llama" option
+        if task_options not in defaults:
+            raise RuntimeError(...)
+        model = defaults[task_options]
+    else:
+        model = defaults["model"]
+    return model.split("@") if isinstance(model, str) else (model[0], model[1])
+```
+
+The default value format is `('model_id', 'revision')` as a tuple, or a string if no revision.
+
+---
+
+### 10. Practical Patterns for Beer's Usage
+
+#### 10.1 Register a custom pipeline for a fine-tuned model
+```python
+from transformers.pipelines import PIPELINE_REGISTRY
+
+# After fine-tuning a custom model type, register the pipeline
+PIPELINE_REGISTRY.register_pipeline(
+    task='my-custom-classification',
+    pipeline_class=MyCustomPipeline,
+    pt_model=(AutoModelForSequenceClassification,),
+    default={'model': 'beer-sakthai/my-finetuned-model'},
+    type='text'
+)
+
+# Now use it like any built-in pipeline
+pipe = pipeline(task='my-custom-classification')
+```
+
+#### 10.2 Publishing a model with custom pipeline on Hub
+Include `custom_pipelines` in `config.json`:
+```json
+{
+  "custom_pipelines": {
+    "my-custom-task": {
+      "impl": "modeling_file.MyPipeline",
+      "pt": ["AutoModelForCausalLM"]
+    }
+  },
+  "pipeline_tag": "my-custom-task"
+}
+```
+Users load with: `pipeline(model="beer-sakthai/my-model", trust_remote_code=True)`
+
+#### 10.3 Debugging unknown task errors
+```python
+from transformers.pipelines import PIPELINE_REGISTRY
+# All valid tasks
+tasks = PIPELINE_REGISTRY.get_supported_tasks()
+# Or check if a specific task exists
+try:
+    task, info, _ = PIPELINE_REGISTRY.check_task("my-task")
+except KeyError as e:
+    print(f"Unknown task: {e}")
+```
+
+#### 10.4 Overriding a default model for a task
+```python
+PIPELINE_REGISTRY.register_pipeline(
+    'text-generation',
+    TextGenerationPipeline,
+    pt_model=AutoModelForCausalLM,
+    default={'model': ('beer-sakthai/my-model', 'main')},
+    type='text'
+)
+# Now pipeline('text-generation') defaults to my model
+```
+
 ---
 
 ### Changelog
@@ -424,3 +752,4 @@ The Sak Thai agent system (Hermes profiles) already uses Skills in a similar way
 | Date | Topic | Key Discovery |
 |------|-------|---------------|
 | 2026-07-25 | HF Hub Agents Ecosystem Overhaul | Docs reorganized with new Agents section (8 pages), Agent Skills (10 skills at agentskills.io), `huggingface_hub[mcp]` SDK with Agent/MCPClient classes, Spaces as MCP servers with one-click badge addition, `tiny-agents` CLI, ZeroGPU integration, Local Agents with llama.cpp, Session Traces Format. Complete strategic pivot to agent-first Hub. |
+| 2026-07-25 | Transformers v5 Pipeline Registry & Custom Task Registration | Full source analysis of `PipelineRegistry` — 27 canonical tasks + 3 aliases, `register_pipeline()` API for runtime registration, custom pipeline loading from model config.json (`custom_pipelines`), task resolution flow (alias → lookup → model load → processor resolve → instantiate), auto-inference from `pipeline_tag`, ChunkPipeline hierarchy, and practical patterns for custom pipeline registration and Hub model publishing. |
