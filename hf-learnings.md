@@ -6556,3 +6556,29 @@ print(response.output_parsed)
 - https://huggingface.co/docs/inference-providers/en/pricing
 - https://huggingface.co/docs/inference-providers/en/hub-api
 - https://router.huggingface.co/v1/models
+
+---
+
+## 2026-07-25: hf-aqlm-quantization — AQLM: Additive Quantization for Extreme LLM Compression (Topic #389)
+
+### Summary
+Deep dive into AQLM (Additive Quantization of Language Models) — an extreme compression method from ISTA-DASLab (NeurIPS 2024, ICML 2024) that quantizes groups of 8–16 weights together as a sum of multiple vector codes, capturing interdependencies between weights. Unlike element-wise methods (GPTQ, AWQ, HQQ), AQLM achieves 1–2 bits per parameter while retaining high accuracy through multi-codebook additive decomposition.
+
+### Key Findings
+- **Multi-codebook architecture**: Weight groups reconstructed as Σ codebook vector selections, not individual quantized scalars
+- **1-bit viable with PV-Tuning**: Llama-2-7B at 1.34 GB (1×8 g8 scheme) achieves WikiText-2 PPL 7.85 — ~90% compression vs FP16
+- **Four inference kernels**: Triton (K×N, ~0.7×), CUDA 1×16 (best accuracy, ~1.3×), CUDA 2×8 (balanced, ~3.0×), Numba K×8 (CPU only, ~4.0×)
+- **PV-Tuning** (NeurIPS 2024 oral): Jointly optimizes discrete code indices via beam search + continuous codebooks + scales — ~1–2 PPL improvement over base AQLM
+- **Training support**: LoRA fine-tuning via PEFT, torch.compile compatible (aqlm≥1.0.2)
+- **Transformers integration**: AqlmConfig + AqlmHfQuantizer in v5.14.0+ — requires `accelerate` + `aqlm`
+- **Notable models**: Llama-3-8B at 2-bit fits 4.1 GB (MMLU 0.65→0.56), Mixtral-8×7B at 12.6 GB, Llama-3-70B at 21.9 GB
+- **Quantization cost**: ~1 day/7B on A100, 10–14 days/70B — multi-GPU reduces linearly
+
+### Skill Created
+`hf-aqlm-quantization/` — SKILL.md (author: SakThai, license: MIT) + references/hf-learnings.md with full architecture, kernel comparison, config API, model zoo, quantization/PV-tuning guide, and practical patterns.
+
+### Sources
+- https://huggingface.co/docs/transformers/en/quantization/aqlm
+- https://github.com/Vahe1994/AQLM
+- https://arxiv.org/abs/2401.06118
+- https://arxiv.org/abs/2405.14852

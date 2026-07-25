@@ -386,5 +386,6 @@
   "hf-hub-sandboxes-python-sdk",
   "hf-croissant-metadata-and-hub-integration-deep-dive",
   "hf-inference-providers-responses-api-deep-dive-v2",
-  "hf-datasets-server-is-valid-endpoint"
+  "hf-datasets-server-is-valid-endpoint",
+  "hf-aqlm-quantization"
 ]
