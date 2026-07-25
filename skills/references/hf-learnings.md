@@ -1,5 +1,45 @@
 # HF Learnings Log
 
+## 2026-07-25: hf-inference-router-openai-compatible-endpoint — Practical Patterns Deep-Dive (Topic #363)
+
+### Summary
+Comprehensive deep-dive into the HF Inference Router's practical usage patterns — covering the new **Responses API (beta)** with event-driven streaming and Remote MCP, **structured outputs** with Pydantic/JSON Schema via both `chat.completions` and `responses` APIs, **function calling** execution patterns with tool_choice control, advanced **pricing model** (free tier, Custom Provider Key, Organization billing), and the full **18-provider ecosystem** with capability matrix. Builds on Topic #361 (Router architecture and API surface) to add real-world usage patterns, zero-cost strategies, and the latest Inference Providers features.
+
+### Key Findings
+
+| Area | Finding |
+|------|---------|
+| **Responses API** | New OpenAI-compatible unified interface with event streaming, `.parse()` for typed outputs, Remote MCP tools, reasoning effort controls |
+| **Structured outputs** | Two approaches: `chat.completions` with `response_format` (JSON Schema) or `responses.parse()` with Pydantic (typed objects) |
+| **Function calling** | Full lifecycle: define schema → model decides → execute tool → return result; `tool_choice` controls (auto/required/specific/none) |
+| **Remote MCP** | Responses API can call server-hosted MCP tools directly with `server_url`, `allowed_tools`, `require_approval` |
+| **Pricing** | Free: $0.10/mo, PRO: $2.00/mo, Team: $2/seat. Custom Provider Key bypasses HF billing. Organization billing via `X-HF-Bill-To` |
+| **Free providers** | Some providers offer free inference (`is_free: true`). Check via `/v1/models`. Groq offers free inference with tool support |
+| **18 providers** | Full capability matrix: only HF Inference supports all tasks (chat, image, video, audio). Third parties focus on chat completion |
+| **Event streaming** | `stream=True` with `responses.create()` yields `response.created`, `output_text.delta`, `response.completed` events |
+| **Agent integrations** | Dedicated guides for OpenCode, Pi, Codex, Claude Code, Hermes Agent — drop-in OpenAI-compatible setup |
+
+### Zero-Cost Patterns
+- Use `:cheapest` policy or check `is_free` in `/v1/models` for free routing
+- Responses API works on free models with tool support
+- Custom Provider Key lets you use existing provider free tiers
+- $0.10/mo credit covers hundreds of lightweight calls
+- Cache responses and batch requests to conserve credits
+
+### Skill Updated
+`hf-inference-router-openai-compatible-endpoint/` — SKILL.md + references/hf-learnings.md with practical patterns deep-dive.
+
+### Sources
+- https://huggingface.co/docs/inference-providers/en/guides/responses-api
+- https://huggingface.co/docs/inference-providers/en/guides/structured-output
+- https://huggingface.co/docs/inference-providers/en/guides/function-calling
+- https://huggingface.co/docs/inference-providers/en/pricing
+- https://huggingface.co/docs/inference-providers/en/index
+- https://huggingface.co/docs/inference-providers/en/guides/first-api-call
+- https://huggingface.co/docs/inference-providers/en/guides/building-first-app
+
+---
+
 ## 2026-07-25: hf-gradio-server-mode — Gradio 6 Server Mode (gr.Server) Complete Reference (Topic #351)
 
 ### Summary

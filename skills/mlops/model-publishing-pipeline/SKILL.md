@@ -398,7 +398,8 @@ This skill ships with detailed reference files:
 | `references/gguf-conversion-refined.md` | Refined HF→GGUF conversion using pre-built llama.cpp binary + pip packages (no CMake build). Updated 2026-07-24. |
 | `scripts/benchmark-sakthai.sh` | Re-runnable BFCL-style benchmark runner for local GGUF models. Tests simple, multi, and irrelevance categories. Saved to `sakthai-skills/scripts/` on GitHub. |
 | `references/full-eval-pipeline.md` | Full three-dimensional evaluation: speed (tok/s) + BFCL tool-calling + coding benchmark, combined into one report. Covers all GGUF models. |
-| **`references/controlled-benchmark-comparison.md`** 🆕 | Compare fine-tuned model vs base model side-by-side on same hardware — speed, tool-calling, format |
+| **`references/controlled-benchmark-comparison.md`** | Compare fine-tuned model vs base model |
+| **`references/function-calling-prompt-optimization.md`** 🆕 | Optimal prompt + inference settings for 5/5 tool-calling via llama.cpp |
 | **`references/post-publishing-exposure.md`** 🆕 | Cross-link on base model pages, HF Collections with notes, discussion posts, healing cron |
 | **`references/model-evaluation-honesty.md`** 🆕 | Methodology rules: format matching, multi-trial, engine limitations, conservative claims |
 
