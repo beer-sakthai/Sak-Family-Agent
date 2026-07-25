@@ -1742,3 +1742,231 @@ __all__ = ['MyTextbox', 'AdditionalClass', 'additional_function']
 8. **Storybook** — https://gradio.app/main/docs/js/storybook for component design system reference.
 9. **Gradio 4 → 5 migration** — must rebuild components. Update `@gradio/preview` via `npm update`, pin `gradio>=4.0,<6.0` in dependencies.
 10. **Zero-cost distribution** — publish to PyPI (free) + HF Spaces demo (free with static CPU Space). No paid accounts required.
+
+---
+
+# HF Learnings — Gradio Workflows Subgraph API & Server-Side Execution (v6.18–6.20)
+
+**Topic:** `gradio-workflows-subgraph-api-deep-dive`
+**Date:** 2026-07-25
+**Skill:** mlops/gradio-spaces
+**Author:** SakThai
+**License:** MIT
+
+## Overview
+
+Deep-dive into the Gradio Workflow subgraph execution system, added across v6.18–v6.20. Prior to this, workflow graphs ran only client-side in the browser canvas. The new `WorkflowEndpointManager` (in `gradio/workflow_api.py`) ports the canvas's TypeScript orchestration to Python, exposing each output subject as a regular Gradio API endpoint via the standard `/info` + `/call` machinery.
+
+This enables:
+- Running workflows headlessly (programmatic API access, no browser needed)
+- Each subgraph (upstream sub-DAG of one output subject) as a named API endpoint
+- Live updates — graph edits take effect without server restart
+- OAuth token injection for downstream HF Hub API calls
+
+## Architecture
+
+```
+Gradio Server
+├── gr.Workflow canvas (JS front-end)
+│   └── workflow-executor.ts — client-side execution
+├── workflow.py — Python Workflow class (high-level API)
+│   ├── WorkflowCanvas component (front-end bridge)
+│   ├── Curated workflow loading from HF Hub dataset
+│   ├── HF search (models, spaces, datasets)
+│   └── Server functions: call_space, call_model, call_fn, fetch_dataset
+└── workflow_api.py — Server-side execution engine (NEW in v6.19)
+    ├── WorkflowGraph — parsed graph model (schema v2)
+    ├── WorkflowExecutor — runs upstream sub-DAG for a subject
+    ├── WorkflowEndpointManager — registers/manages API endpoints
+    └── register_workflow_endpoints() — entry point
+```
+
+## Key Components
+
+### 1. WorkflowGraph — Graph Model (`gradio/workflow_api.py`)
+
+Parses a schema-v2 workflow JSON dict with four collections:
+- **references** — input nodes, data sources, relays
+- **operators** — processing nodes (space, model, fn, dataset)
+- **subjects** — output nodes (what the user marked as outputs)
+- **edges** — connections between nodes
+
+Only schema v2 graphs are executable server-side (the frontend migrates v1→v2 on load).
+
+```python
+graph = WorkflowGraph.from_json(workflow_json)
+# graph.references, graph.operators, graph.subjects, graph.edges
+```
+
+### 2. Graph Algorithms
+
+**`upstream_node_ids(graph, target_id)`** — BFS traversal backward through edges to find all nodes transitively feeding `target_id`. Mirrors `buildUpstreamSubgraph` in `workflow-graph.ts`.
+
+**`topo_sort(node_ids, edges)`** — Kahn's algorithm for topological ordering. Detects cycles that the canvas normally prevents but hand-edited files could create.
+
+**`free_inputs(graph, subgraph_ids)`** — Identifies which reference nodes in the subgraph have no incoming edge (i.e., user must supply them). Returns them in graph declaration order for deterministic API parameters.
+
+**`subject_groups(graph)`** — Groups subjects by weakly-connected component (undirected edge traversal). Each component becomes ONE API endpoint that returns a tuple of outputs — matching Gradio's multi-output convention.
+
+```python
+# One subject → single endpoint
+# Two connected subjects → one endpoint returning a tuple
+# Two disconnected subjects → two separate endpoints
+```
+
+### 3. WorkflowExecutor — Server-Side Execution
+
+`WorkflowExecutor.run(subject_id, inputs, request, token)` executes a single subject's upstream sub-DAG.
+
+`WorkflowExecutor.run_many(subject_ids, inputs, request, token)` executes the combined subgraph for multiple subjects in one pass. **Shared nodes run exactly once** — if two outputs share an intermediate operator, it's computed once and cached in `data_map`.
+
+Execution flow:
+1. Build subgraph node set via `upstream_node_ids()`
+2. Topological sort via `topo_sort()`
+3. Iterate nodes in order:
+   - **Reference (free input)**: `_seed_input()` — takes value from user-supplied inputs dict
+   - **Reference (relay)**: `_relay()` — passes through incoming value
+   - **Subject**: `_relay()` — passes through incoming value to output
+   - **Operator (space)**: `_run_space()` — calls external Space API via `call_space()`
+   - **Operator (model)**: `_run_model()` — calls HF Inference API via `call_model()`
+   - **Operator (fn)**: `_run_fn()` — calls Python function via `call_fn()`
+   - **Operator (dataset)**: `_run_dataset()` — fetches from HF Datasets via `fetch_dataset()`
+
+The `callers` dict maps operator kind → server function, injected so they can be mocked in tests.
+
+### 4. WorkflowEndpointManager — API Endpoint Registration
+
+Registered endpoints are **live** — `sync()` tears down old endpoints and rebuilds from the current graph, then refreshes `/config` and invalidates `/info` cache. This lets the API track live canvas edits without server restart.
+
+Key method: `sync()` — safe to call repeatedly:
+1. `_teardown()` — unrenders old components, removes old event triggers from `blocks.fns`
+2. `_register()` — builds hidden components (rendered in `gr.Column(visible=False)`) and wired `gr.Button.click()` triggers with `api_name=`
+3. `_refresh_app()` — regenerates `blocks.config`, invalidates `app.api_info`
+
+```python
+# Called on every workflow save
+manager.sync()  # returns list of api_names
+```
+
+### 5. Input/Output Marshalling
+
+**Port type → Gradio component mapping** (for API schema):
+
+| Port Type      | Gradio Component      |
+|----------------|----------------------|
+| `"text"`       | `gr.Textbox`         |
+| `"number"`     | `gr.Number`          |
+| `"boolean"`    | `gr.Checkbox`        |
+| `"image"`      | `gr.Image(type="filepath")` |
+| `"audio"`      | `gr.Audio(type="filepath")` |
+| `"video"`      | `gr.Video`           |
+| `"file"`       | `gr.File(type="filepath")`  |
+| `"gallery"`    | `gr.Gallery`         |
+| `"dataframe"`  | `gr.Dataframe`       |
+| `"json"`       | `gr.JSON`            |
+| `"model3d"/"3d"` | `gr.Model3D`       |
+
+Media ports (image, audio, video, file, gallery, model3d) travel as `{path|url}` dicts internally — `MEDIA_PORT_TYPES` set in `workflow_api.py`.
+
+### 6. Multi-Output Response Selection
+
+`_pick_response_item()` handles the case where a remote API returns multiple values but a port expects one:
+1. Explicit `output_index` if set on the port
+2. Positional match (port index matches output array index)
+3. Shape-match by port type (find first output matching expected type)
+4. Fallback to first output
+
+This mirrors the TypeScript `pick_response_item` in `workflow-executor.ts`.
+
+## API Endpoint Naming
+
+Endpoint names are **derived from subject labels** with slugification:
+
+```python
+def _slugify(label: str) -> str:
+    slug = re.sub(r"[^a-z0-9]+", "_", (label or "").strip().lower()).strip("_")
+    return slug or "endpoint"
+```
+
+Deduplication appends `_`, `__`, etc. when subjects share the same slug.
+
+Examples:
+- Subject labeled "Generate Image" → `/generate_image`
+- Subject labeled "Output" → `/output`
+- Two subjects both labeled "Output" → `/output`, `/output_`
+
+## Workflow Server Functions
+
+The four injected server functions (`callers` dict):
+
+| Kind      | Function         | Purpose                                       |
+|-----------|------------------|-----------------------------------------------|
+| `space`   | `call_space`     | Call a remote HF Space's API endpoint         |
+| `model`   | `call_model`     | Call HF Inference API (text-gen, etc.)        |
+| `fn`      | `call_fn`        | Execute a bundled Python function             |
+| `dataset` | `fetch_dataset`  | Fetch rows from a HF Dataset                   |
+
+Each receives `(data: list, request, token)` and returns a JSON string (list of outputs or `{"error": ...}` dict).
+
+## Curated Workflow System
+
+The `Workflow` class supports **curated workflows** loaded from a HF Dataset (`gradio/workflow-curated`):
+
+- **Local bundled snapshot**: `_workflow_curated_snapshot.json` in the gradio package
+- **Live fetch from Hub**: `_fetch_curated_from_hub()` downloads `curated.json` from the dataset
+- **TTL caching**: 3600s cache in `_CURATED_CACHE` dict with threading lock
+- **Search integration**: `search_curated()` runs curated workflows through the search system
+
+## v6.18–6.20 Workflow Ecosystem Evolution
+
+### v6.18.0
+- **Drag selection** — select multiple nodes in the workflow canvas by dragging
+- **Local HF token** — Workflow uses local HF token via write-token auth model
+- **Preserve dropdown/radio/checkbox inputs** across workflow edits
+- **Optional params don't render nodes** on spawn (cleaner canvas)
+- Every component dispatches `change` event on value change
+
+### v6.19.0
+- **Subgraph API** — `gr.Workflow` subgraphs run via the Gradio API, each exposed as a named endpoint
+- **"View API" panel** — see workflow endpoints in the API browser
+- **Runtime language switching** — i18n choices display names update immediately
+
+### v6.20.0
+- **Auto-add node** — click on output port to auto-create and wire a compatible node
+- **Model validation** — validate model ID before invoking inference client
+- **Token injection** — `_token` forwarded to bound functions when no request session
+- **Subgraph I/O** — show downstream output on subgraph run
+- **Workflow UX** — improved input change handling, pipeline UX
+
+## Key Insights
+
+1. **Subgraphs share execution** — `run_many()` with overlapping upstream nodes executes shared operators once, not once per output. Critical for workflows where a single model feeds multiple output subjects.
+
+2. **Live refresh without restart** — `WorkflowEndpointManager.sync()` tears down old hidden components and rebuilds them, then refreshes `/config` and invalidates `/info` cache. Graph edits are reflected immediately.
+
+3. **Hidden component rendering** — Endpoint components are rendered inside `gr.Column(visible=False)` so they register in the Gradio Blocks dependency graph without appearing in the UI. The column container prevents layout pollution.
+
+4. **Schema v2 only** — Only workflow schema v2 is executable server-side. The frontend auto-migrates v1→v2 on load, so saved files are always v2. `WorkflowGraph.from_json()` returns `None` for non-v2.
+
+5. **Token propagation** — The endpoint function signature auto-injects `request` and `OAuthToken` via `special_args`, which the executor passes down to `call_space` / `call_model` / `call_fn` / `fetch_dataset`.
+
+6. **Five operator kinds** — space, model, fn, dataset + the default "space" fallback for unknown kinds. Each has dedicated `_run_*` method with node-specific input resolution.
+
+7. **Security model** — The endpoint manager uses Gradio's built-in event system (hidden `gr.Button` + `.click()`), inheriting the platform's authentication and rate-limiting.
+
+## When to Use
+
+| Scenario | How |
+|----------|-----|
+| Headless workflow execution | Call endpoint via `gradio_client.Client` |
+| CI/CD pipeline with workflow | Hit `/subgraph_name` programmatically |
+| Live workflow as API | Enable workflow + endpoint auto-registers |
+| Complex multi-output pipeline | One endpoint per disconnected component |
+| Zero-cost deployment | CPU Space (free) with workflow + inference |
+
+## Resources
+- Source: `gradio/workflow_api.py` (885 lines) and `gradio/workflow.py` (1880 lines)
+- GitHub: https://github.com/gradio-app/gradio
+- Gradio Workflows guide: https://www.gradio.app/guides/creating-a-workflow
+- Gradio API: https://www.gradio.app/docs/workflow
+- Changelog: https://github.com/gradio-app/gradio/blob/main/CHANGELOG.md
