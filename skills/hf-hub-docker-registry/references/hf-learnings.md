@@ -165,7 +165,7 @@ uv run --image vllm/vllm-openai --flavor l4x4 my-script.py
 
 ---
 
-## 2026-07-25: hf-hub-docker-registry-deep-dive-v2 — Docker Registry V2 API Architecture & Spaces/Jobs Deep-Dive (Topic #260)
+## 2026-07-25: hf-hub-docker-registry-deep-dive-v2 — Docker Registry V2 API Architecture & Spaces/Jobs Deep-Dive (Topic #259)
 
 ### Summary
 Deep-dive on the Hugging Face Docker Container Registry's V2 API implementation, authentication flow, and how it powers Docker Spaces and Jobs. Covers the full Bearer token auth handshake (WWW-Authenticate challenge → token exchange), Docker V2 API endpoint structure (manifests, blobs, tags, catalog), Docker Spaces configuration (SDK setup, build-time secrets via `--mount=type=secret`, runtime env vars, multi-port internal networking, UID 1000 runtime user, no-GPU-during-build constraint), Jobs popular images (vLLM, TRL) with GPU framework image requirements (CUDA toolkit, nvcc, NCCL), local development workflow, and zero-cost pathways for development and testing.
