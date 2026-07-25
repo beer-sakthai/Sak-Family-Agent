@@ -16907,3 +16907,369 @@ def prompt_fn(line, example):
 
 ### Skill
 mlops/hf-lighteval — Complete reference for Hugging Face LightEval evaluation toolkit: architecture (Pipeline, Registry, LightevalModel, EvaluationTracker), 8 evaluation backends, 1000+ tasks across 7 core + optional suites, custom tasks via LightevalTaskConfig, 25+ built-in metrics, CLI subcommands, Python API for in-memory Transformers evaluation, inspect-ai integration, results management with Hub push, auto-discovery of inference providers, and zero-cost evaluation patterns
+
+---
+
+## 2026-07-25: hf-lighteval-deep-dive-v2 — LightEval Python API, Custom Metrics System & EvaluationTracker Internals (Topic #272)
+
+### Summary
+Source-level deep-dive into LightEval's Python API, custom metrics architecture, and the EvaluationTracker logging/reporting module. Based on direct analysis of the v0.11.x source code on GitHub. Covers (1) the `Pipeline` class orchestration loop, (2) `ModelConfig` Pydantic model with YAML/CLI config loading, (3) the full `Metric` dataclass hierarchy (4 types: `SampleLevelMetric`, `CorpusLevelMetric`, `SampleLevelMetricGrouping`, `CorpusLevelMetricGrouping`), (4) the `Metrics` Enum with 40+ pre-built metric entries, (5) how `SampleLevelComputation` and `CorpusLevelComputation` abstract classes work, (6) `LightevalTaskConfig` dataclass with all 20+ configuration fields, (7) `EvaluationTracker` with its 5 sub-loggers (Details, Metrics, Versions, GeneralConfig, TaskConfig), (8) Hub push pipeline (dataset card generation with `DatasetCardData`, per-split organization, MMLU special-case aggregation), (9) TensorBoard and Weights & Biases/Trackio integration, (10) custom metrics and tasks patterns with `Preparator` classes (`GenerativePreparator`, `LoglikelihoodPreparator`, `PerplexityPreparator`), (11) the metric-to-model sampling method mapping (GENERATIVE, LOGPROBS, PERPLEXITY), (12) `Metrics.apply_metric()` dispatching between batched and non-batched computations.
+
+### Python API Architecture
+
+#### 1. Pipeline Orchestration
+The central evaluation engine is `lighteval.pipeline.Pipeline`. It orchestrates:
+1. **Task loading** via `Registry` (task discovery from suite directories + custom task files)
+2. **Model wrapping** via `LightevalModel` abstract interface
+3. **Metric computation** via `apply_metric()` dispatch
+4. **Result tracking** via `EvaluationTracker`
+
+```python
+# Core Pipeline loop (simplified from source)
+pipeline = Pipeline(
+    pipeline_params=PipelineParameters(launcher_type=ParallelismManager.ACCELERATE, ...),
+    evaluation_tracker=EvaluationTracker(output_dir="./results", ...),
+    model=load_model(...),
+    tasks=Registry().get_task_list(...),
+)
+results = pipeline.run()
+```
+
+#### 2. ModelConfig — Pydantic-based Configuration
+```python
+class ModelConfig(BaseModel, extra="forbid"):
+    model_name: str = None
+    generation_parameters: GenerationParameters = GenerationParameters()
+    system_prompt: str | None = None
+    cache_dir: str = "~/.cache/huggingface/lighteval"
+
+    @classmethod
+    def from_path(cls, path: str):  # Load from YAML
+    @classmethod
+    def from_args(cls, args: str):  # Parse from CLI arg string
+    @staticmethod
+    def _parse_args(args: str) -> dict:  # Braces-notation parser for nested gen params
+```
+
+Supports three instantiation paths:
+- Direct Python: `ModelConfig(model_name="meta-llama/Llama-3.1-8B-Instruct", generation_parameters=GenerationParameters(temperature=0.7))`
+- YAML file: `ModelConfig.from_path("model_config.yaml")`
+- CLI string: `ModelConfig.from_args("model_name=gpt2,generation_parameters={temperature=0.7,max_new_tokens=100}")`
+
+#### 3. LightevalTaskConfig — Full Configuration Dataclass
+Contains 20+ fields including:
+- `name`, `prompt_function`, `hf_repo`, `hf_subset`, `metrics`
+- `hf_revision`, `hf_filter_fn`, `hf_avail_splits`, `evaluation_splits`
+- `few_shots_split`, `few_shots_select`, `num_fewshots`
+- `generation_size`, `generation_grammar`, `stop_sequence`, `num_samples`
+- `version`, `truncate_fewshots`
+
+Task string syntax (source): `lighteval eval <model> <task_string>` where task_string is:
+- Single: `"gsm8k"`
+- Subtask: `"bbh:boolean_expressions"`
+- Suite: `"leaderboard"` (convenience alias for the full leaderboard suite)
+- Multiple: `"gsm8k,mmlu_pro"`
+
+### Custom Metrics System
+
+#### 4. Metric Dataclass Hierarchy
+```
+Metric (base dataclass)
+├── SampleLevelMetric    — per-sample, then simple aggregation (mean/min/max)
+├── CorpusLevelMetric    — computed over entire corpus at once
+├── SampleLevelMetricGrouping — grouped per-sample metrics (e.g. BERTScore: P, R, F1)
+└── CorpusLevelMetricGrouping — grouped corpus-level metrics (e.g. ROUGE: 1, 2, L, Lsum)
+```
+
+```python
+@dataclass
+class Metric:
+    metric_name: str                          # Single name or list for groupings
+    higher_is_better: bool
+    category: SamplingMethod                  # GENERATIVE, LOGPROBS, or PERPLEXITY
+    sample_level_fn: SampleLevelComputation | Preparator
+    corpus_level_fn: CorpusLevelComputation | Callable
+    batched_compute: bool = False
+
+    def compute_sample(self, **kwargs) -> dict
+    def get_corpus_aggregations(self) -> dict
+    def __call__(self, sample_params: dict | None):  # Parametric instantiation (e.g. pass@k&n=16)
+```
+
+#### 5. SamplingMethod Enum
+```python
+class SamplingMethod(Enum):
+    GENERATIVE = auto()   # Free-text generation, evaluated via string matching
+    LOGPROBS  = auto()    # Log-probability scoring of given completions
+    PERPLEXITY = auto()   # Perplexity/loss computation over target text
+```
+
+#### 6. Sample-Level Computation
+```python
+class SampleLevelComputation(ABC):
+    @abstractmethod
+    def compute(self, doc: Doc, model_response: ModelResponse, **kwargs):
+        """Returns dict of metric values for one sample."""
+
+# Concrete implementations (all in metrics_sample.py):
+class ExactMatches(SampleLevelComputation):     # Exact match with normalization
+class F1_score(SampleLevelComputation):         # Token F1 score
+class Recall(SampleLevelComputation):           # Recall@k
+class MRR(SampleLevelComputation):             # Mean Reciprocal Rank
+class PassAtK(SampleLevelComputation):         # pass@k for code/STEM
+class GPassAtK(SampleLevelComputation):        # Grouped pass@k
+class MajAtN(SampleLevelComputation):          # Majority vote@n
+class AvgAtN(SampleLevelComputation):          # Average@n
+class BLEU(SampleLevelComputation):            # N-gram BLEU
+class ROUGE(SampleLevelComputation):           # ROUGE summarization
+class BertScore(SampleLevelComputation):       # BERTScore (P, R, F1)
+class BLEURT(SampleLevelComputation):          # BLEURT learned metric
+class StringDistance(SampleLevelComputation):  # Edit distance metrics
+class Faithfulness(SampleLevelComputation):    # SummaC faithfulness
+class Extractiveness(SampleLevelComputation):  # Coverage/density/compression
+class DropMetrics(SampleLevelComputation):     # DROP EM + F1
+class AccGoldLikelihood(SampleLevelComputation):       # Accuracy from gold likelihood
+class LoglikelihoodAcc(SampleLevelComputation):         # Logprob accuracy
+class JudgeLLMSimpleQA(SampleLevelComputation):        # LLM-as-Judge for SimpleQA
+class MultilingualExtractiveMatchMetric(SampleLevelComputation):  # Math expr extraction
+```
+
+#### 7. Corpus-Level Computation
+```python
+class CorpusLevelComputation(ABC):
+    @abstractmethod
+    def compute_corpus(self, items):
+        """Returns aggregated metric value over entire corpus."""
+
+# Implementations (metrics_corpus.py):
+class MatthewsCorrCoef(CorpusLevelComputation)        # Matthews Correlation Coefficient
+class CorpusLevelF1Score(CorpusLevelComputation)       # Corpus F1 (macro/weighted/micro)
+class CorpusLevelPerplexityMetric(CorpusLevelComputation)  # Perplexity from logprobs+durations
+class CorpusLevelTranslationMetric(CorpusLevelComputation) # chrF/chrF++/BLEU corpus translation metrics
+```
+
+#### 8. Preparator Classes (bridge between model output and corpus metric input)
+```python
+class GenerativePreparator(Preparator):
+    @staticmethod
+    def prepare(doc: Doc, model_response: ModelResponse, **kwargs):
+        """Returns GenerativeCorpusMetricInput(golds=..., preds=...)"""
+
+class LoglikelihoodPreparator(Preparator):
+    def __init__(self, is_single_token: bool = False):
+    def prepare(self, doc: Doc, model_response: ModelResponse, **kwargs):
+        """Returns LogprobCorpusMetricInput(golds=..., preds=...)"""
+
+class PerplexityPreparator(Preparator):
+    def __init__(self, units_type: str = "words"):
+    def prepare(self, doc: Doc, model_response: ModelResponse, **kwargs):
+        """Returns PerplexityCorpusMetricInput(logprobs=..., weights=...)"""
+```
+
+#### 9. Metrics Enum — All 40+ Pre-Built Entries
+```python
+class Metrics(Enum):
+    # GENERATIVE metrics
+    exact_match        = SampleLevelMetric(metric_name="em", ...)
+    f1_score          = SampleLevelMetric(metric_name="f1", ...)
+    pass_at_k          = SampleLevelMetric(metric_name="pass@k", ...)     # parametric: pass@k&n={N}
+    g_pass_at_k        = SampleLevelMetricGrouping(...)                    # g-pass@k (code grouping variant)
+    maj_at_n           = SampleLevelMetric(metric_name="maj@n", ...)
+    avg_at_n           = SampleLevelMetric(metric_name="avg@n", ...)
+    bleu_1             = SampleLevelMetric(metric_name="bleu_1", ...)
+    bleu_4             = SampleLevelMetric(metric_name="bleu_4", ...)
+    rouge1             = SampleLevelMetric(metric_name="rouge1", ...)
+    rouge_t5           = CorpusLevelMetricGrouping(metric_name=[...], ...) # Multiple rouge variants
+    bert_score         = SampleLevelMetricGrouping(...)                   # P, R, F1
+    bleurt             = SampleLevelMetric(metric_name="bleurt", ...)
+    drop               = SampleLevelMetricGrouping(...)                   # em, f1 for DROP
+    extractiveness     = SampleLevelMetricGrouping(...)                   # coverage, density, compression
+    faithfulness       = SampleLevelMetric(metric_name="summac", ...)
+    expr_gold_metric   = SampleLevelMetric(metric_name="extractive_match", ...)  # Math
+    copyright          = SampleLevelMetricGrouping(...)                   # Longest common prefix, edit distance/similarity
+
+    # LOGPROBS metrics
+    acc_golds_likelihood  = SampleLevelMetric(metric_name="acc", ...)
+    loglikelihood_acc     = SampleLevelMetric(metric_name="acc", ...)
+    loglikelihood_f1      = CorpusLevelMetric(metric_name="loglikelihood_f1", ...)
+    mrr                   = SampleLevelMetric(metric_name="mrr", ...)
+    recall_at_k           = SampleLevelMetric(metric_name="recall", ...)
+    mcc                   = CorpusLevelMetric(metric_name="mcc", ...)
+
+    # PERPLEXITY metrics
+    prediction_perplexity = SampleLevelMetric(metric_name="ppl", ...)
+    bits_per_byte         = CorpusLevelMetric(metric_name="bits_per_byte", ...)
+    byte_perplexity       = CorpusLevelMetric(metric_name="byte_perplexity", ...)
+
+    # Translation metrics (corpus-level, GENERATIVE)
+    bleu                  = CorpusLevelMetric(metric_name="bleu", ...)
+    chrf                  = CorpusLevelMetric(metric_name="chrf", ...)
+    chrf_plus             = CorpusLevelMetric(metric_name="chrf++", ...)
+```
+
+#### 10. Parametric Metrics (Runtime Parameter Override)
+```python
+# Metrics support runtime parameter override via __call__:
+pass_at_k_metric = Metrics.pass_at_k(sample_params={"k": 3, "n": 16})
+# This both overrides the sample_params and updates metric_name to "pass@k:k=3&n=16"
+```
+
+The `__call__` method (source from metric_utils.py):
+```python
+def __call__(self, sample_params: dict | None):
+    if sample_params is not None:
+        for k, v in sample_params.items():
+            setattr(self.sample_level_fn, k, v)
+    sample_params_name = "&".join(f"{k}={v}" for k, v in sample_params.items())
+    if isinstance(self, MetricGrouping):
+        self.metric_name = [f"{metric}:{sample_params_name}" for metric in self.metric_name]
+    else:
+        self.metric_name = f"{self.metric_name}:{sample_params_name}"
+    return self
+```
+
+#### 11. Metric Dispatch — `apply_metric()` (metrics/__init__.py)
+```python
+def apply_metric(responses: list[ModelResponse], docs: list[Doc], metrics: list[Metric]):
+    """Separates batched and non-batched metrics for efficient computation."""
+    batched_metrics = [m for m in metrics if m.batched_compute]
+    non_batched_metrics = [m for m in metrics if not m.batched_compute]
+
+    # Batched metrics receive ALL responses/docs at once
+    for metric in batched_metrics:
+        metric_outputs = metric.compute_sample(responses=responses, docs=docs)
+        # Can return either list[dict] (one per sample) or dict[str, list[Any]] (one list per metric name)
+
+    # Non-batched metrics receive one response/doc at a time
+    for metric in non_batched_metrics:
+        output.update(metric.compute_sample(model_response=responses[i], doc=docs[i]))
+```
+
+### EvaluationTracker Internals
+
+#### 12. Logger Composition
+```python
+class EvaluationTracker:
+    def __init__(self, ...):
+        self.details_logger = DetailsLogger()              # Per-sample evaluation details
+        self.metrics_logger = MetricsLogger()              # Aggregate metrics
+        self.versions_logger = VersionsLogger()            # Task/dataset version tracking
+        self.general_config_logger = GeneralConfigLogger() # Overall evaluation config
+        self.task_config_logger = TaskConfigLogger()       # Per-task configuration
+
+        self.api = HfApi()                                 # Hub interaction
+        self.fs, self.output_dir = url_to_fs(output_dir)   # Supports local+S3 paths
+```
+
+#### 13. EnhancedJSONEncoder
+```python
+class EnhancedJSONEncoder(json.JSONEncoder):
+    """Handles dataclasses, callables, torch.dtype, Enums in JSON serialization."""
+    def default(self, o):
+        if is_dataclass(o): return asdict(o)
+        if callable(o): return o.__name__ if hasattr(o, "__name__") else o.func.__name__
+        if isinstance(o, torch.dtype): return str(o)
+        if isinstance(o, Enum): return o.name
+```
+
+#### 14. Results Property
+```python
+@property
+def results(self):
+    config_general = asdict(self.general_config_logger)
+    config_general["model_config"] = config_general["model_config"].model_dump()
+    return {
+        "config_general": config_general,
+        "results": self.metrics_logger.metric_aggregated,
+        "versions": self.versions_logger.versions,
+        "config_tasks": self.task_config_logger.tasks_configs,
+        "summary_tasks": self.details_logger.compiled_details,
+        "summary_general": asdict(self.details_logger.compiled_details_over_all_tasks),
+    }
+```
+
+#### 15. Save Pipeline (save() method)
+1. Generates a `date_id` from ISO datetime (colons replaced with hyphens for filesystem compat)
+2. Produces `results_dict` from the `.results` property
+3. Calls `self.save_results(date_id, results_dict)` — writes JSON to output_dir
+4. Converts per-detail entries to 🤗 `Dataset.from_list()` objects
+5. Calls `self.save_details(date_id, details_datasets)` — writes per-task datasets as JSONL
+6. Optionally `push_to_hub()` with:
+   - Creates `DatasetCardData` with config descriptions and latest results
+   - Generates a `DatasetCard` from template
+   - Splits results by eval date with a "latest" alias
+   - Special-case merges for MMLU across all subtasks
+   - Pushes the full dataset card + data to Hub
+7. Optionally `push_to_tensorboard()` via HFSummaryWriter
+8. Optionally `push_to_wandb()` via wandb or Trackio
+
+#### 16. Hub Push — Dataset Card Generation
+```python
+card_data = DatasetCardData(
+    dataset_summary=f"Dataset created during evaluation of [{model_name}]...",
+    repo_url=f"https://huggingface.co/{model_name}",
+    pretty_name=f"Evaluation run of {model_name}",
+    leaderboard_url=leaderboard_url,
+    point_of_contact="clementine@hf.co" if open_llm_leaderboard else None,
+)
+card = DatasetCard.from_template(card_data, ...)
+card.push_to_hub(repo_id, repo_type="dataset")
+```
+
+Each task gets its own dataset config (split by eval date). A special "results" config stores aggregated metrics. MMLU tasks get auto-merged into a combined config.
+
+#### 17. TensorBoard Integration
+Requires nanotron and tensorboardX. Uses `HFSummaryWriter` which can push directly to Hub repos. Key details:
+- Scalar prefix system: `{prefix}/{task_name}/{metric}` and `stderr_{prefix}/{task_name}/{metric}`
+- Bench suite averaging: tasks with `:` subtask names get aggregated (e.g., MMLU:abstract_algebra)
+- Files renamed with global_step prefix for ordering (tensorboard ordering workaround)
+- Trigger-based push to Hub after file renaming
+
+#### 18. Weights & Biases / Trackio Integration
+- Auto-detects Trackio (preferred) or falls back to wandb
+- Reads `WANDB_PROJECT` and `WANDB_SPACE_ID` from environment
+- Logs all aggregated metrics and pushes per-task detail datasets
+
+### Custom Task Patterns
+
+#### 19. Registry Task Loading
+```python
+# Tasks loaded from:
+# 1) Built-in suites: lighteval, leaderboard, harness, helm, bigbench, original, extended
+# 2) Community tasks: dynamically loaded from community_tasks/ directory
+# 3) Custom task files: loaded via --custom-tasks flag (Python file with TASKS_TABLE export)
+# 4) Multilingual tasks: loaded via --load-tasks-multilingual flag
+
+class Registry:
+    def get_task_list(self, task_names: list[str], custom_tasks_file: str | None = None,
+                      load_multilingual: bool = False) -> list[LightevalTask]:
+        # Combines tasks from all sources
+        # Supports task:subtask syntax
+```
+
+#### 20. Community Task System
+```python
+def load_community_tasks():
+    """Dynamically imports community_tasks/*.py modules with TASKS_TABLE exports."""
+    # Path: <lighteval_root>/community_tasks/
+    # Each module must export TASKS_TABLE = list[LightevalTaskConfig]
+```
+
+### Sources
+- LightEval GitHub Source: https://github.com/huggingface/lighteval
+  - `src/lighteval/pipeline.py` — Pipeline orchestration
+  - `src/lighteval/models/abstract_model.py` — ModelConfig Pydantic model
+  - `src/lighteval/metrics/metrics.py` — Metrics Enum with all 40+ entries
+  - `src/lighteval/metrics/metrics_sample.py` — SampleLevelComputation implementations
+  - `src/lighteval/metrics/metrics_corpus.py` — CorpusLevelComputation implementations
+  - `src/lighteval/metrics/utils/metric_utils.py` — Metric dataclass hierarchy
+  - `src/lighteval/metrics/sample_preparator.py` — Preparator classes
+  - `src/lighteval/metrics/__init__.py` — apply_metric() dispatch
+  - `src/lighteval/logging/evaluation_tracker.py` — Full EvaluationTracker
+  - `src/lighteval/tasks/lighteval_task.py` — LightevalTaskConfig
+  - `src/lighteval/tasks/registry.py` — Registry with community task loading
+  - `src/lighteval/metrics/metrics.py` — Inspect-ai scorers (math_scorer, multichoice_scorer)
+- LightEval Docs: https://huggingface.co/docs/lighteval/main/en/index
+
+### Skill
+mlops/hf-lighteval — Enhanced with source-level deep-dive on Python API (Pipeline, ModelConfig, LightevalTaskConfig), custom metrics system (Metric hierarchy, SampleLevelComputation, CorpusLevelComputation, MetricGrouping, Preparator), all 40+ Metrics enum entries, parametric metric override via __call__, batched vs non-batched metric dispatch, EvaluationTracker internals (5 sub-loggers, EnhancedJSONEncoder, save pipeline, Hub dataset card generation, TensorBoard with bench suite averaging, wandb/Trackio), community task system, and inspect-ai scorer integration for math and multiple-choice evals.
