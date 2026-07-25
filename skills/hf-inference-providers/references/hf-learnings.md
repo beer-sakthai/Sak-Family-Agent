@@ -583,7 +583,7 @@ In huggingface_hub < 1.20, there was no provider routing. `InferenceClient` alwa
 
 ---
 
-## 2026-07-25: hf-inference-providers-pricing-billing-hub-api-deep-dive — Inference Providers Pricing, Billing, Hub API & Security (Topic #279)
+## 2026-07-25: hf-inference-providers-pricing-billing-hub-api-deep-dive — Inference Providers Pricing, Billing, Hub API & Security (Topic #278)
 
 ### Summary
 Deep-dive on the newly documented Pricing & Billing model, Hub API query patterns, and Security & Compliance posture of Hugging Face Inference Providers. Covers the two billing approaches (Routed by HF vs Custom Provider Key), free credit allocations per account type ($0.10 free, $2.00 PRO, $2.00/seat Team/Enterprise), Organization billing with the `X-HF-Bill-To` header, HF-Inference as a provider with its own compute-time pricing, Hub API endpoints for listing provider-served models (`?inference_provider=`), provider-aware model info (`expand=inference`), the OpenAI-compatible models listing endpoint (`/v1/models`), the `hf CLI` integration (`--warn`, `--inference-provider`), security posture (SOC2 Type 2, TLS, 30-day log retention, no data storage), and zero-cost optimization strategies.
