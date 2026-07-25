@@ -3,6 +3,177 @@
 **author:** SakThai
 **license:** MIT
 
+## 2026-07-25: SakThai-hf-mcp-server — HF MCP Server v2.0.0 Consolidation Deep Dive
+
+### Summary
+Deep-dive into the **HF MCP Server v2.0.0** consolidation update (published 2026-07-26). This is a major architectural overhaul: the 28 individual tools are consolidated into 4 `hf_fs` tool categories, a new AUTHENTICATE_TOOL enables OAuth-based on-the-fly authentication, one-click gallery installs reduce setup to a single command (`claude mcp add` / `gemini mcp add`), SEP-2640 introduces a skills directory for agent skill registries, and a web dashboard provides real-time tool statistics and on/off switching. This replaces the earlier v1.1.0 28-tool model entirely.
+
+### Sources
+- HF MCP Server GitHub: https://github.com/huggingface/hf-mcp-server
+- HF MCP Settings: https://huggingface.co/settings/mcp
+- HF Changelog: https://huggingface.co/changelog/hf-mcp-server
+- HF MCP Docs: https://huggingface.co/docs/hub/en/agents-mcp
+- Published: 2026-07-26
+
+---
+
+### 1. hf_fs Consolidation: 4 Tool Categories Instead of 28
+
+v2.0.0 replaces the 28 individual tools (space_search, model_search, hf_fs_write, hf_create_repo, etc.) with 4 consolidated `hf_fs` tool categories:
+
+| Category | Prefix | What It Does |
+|----------|--------|-------------|
+| **Search** | `hf_fs search` | Cross-type semantic search across models, datasets, Spaces, papers, docs |
+| **Read** | `hf_fs read` | Read file contents, model cards, dataset cards, Space configs |
+| **Write** | `hf_fs write` | Create repos, write files, update metadata |
+| **Navigate** | `hf_fs nav` | Browse Hub structure, list directories, inspect repo trees |
+
+Instead of 28 separate MCP tools each with their own function signature, the assistant now uses a unified filesystem-style interface:
+
+```
+hf_fs search /models?q=qwen+3+quantized&pipeline_tag=text-generation
+hf_fs read /models/mistralai/Mistral-7B-v0.3
+hf_fs write /models/myuser/my-model/README.md  (content...)
+hf_fs nav /spaces?author=huggingface
+```
+
+**Why this matters**: The old model required the LLM to choose among 28 tools, each with different parameters. The new model uses 4 conceptual operations (CRUD-like) with intuitive paths. Less cognitive load for the LLM → more accurate tool selection.
+
+---
+
+### 2. One-Click Gallery Installs
+
+Each MCP client now has a **gallery page** with a single install command:
+
+| Client | Install Command |
+|--------|----------------|
+| **Claude Desktop** | `claude mcp add hf-mcp` (native Claude CLI) |
+| **Gemini CLI** | `gemini mcp add hf-mcp` (native Gemini CLI) |
+| **VS Code** | Click "Install" in VS Code MCP gallery |
+| **Cursor** | Click "Install" in Cursor MCP gallery |
+| **Zed** | Configuration snippet auto-generated at hf.co/settings/mcp |
+
+The native CLI commands (`claude mcp add`, `gemini mcp add`) are the recommended path for command-line agents. They configure the MCP server automatically — no manual JSON editing required.
+
+---
+
+### 3. AUTHENTICATE_TOOL — OAuth-Based On-the-Fly Auth
+
+New `AUTHENTICATE_TOOL` (enabled/disabled via env var) introduces an **on-the-fly OAuth flow**:
+
+```mermaid
+sequenceDiagram
+    User->>LLM Client: "Create a Space with my data"
+    LLM Client->>HF MCP Server: hf_fs write /spaces/...
+    HF MCP Server->>User: Auth challenge: "Login at hf.co/mcp/auth?code=XYZ"
+    User->>HF Hub: Authorize at auth URL
+    HF Hub->>HF MCP Server: OAuth token grant
+    HF MCP Server->>LLM Client: Token established, retry
+    LLM Client->>HF MCP Server: hf_fs write /spaces/... (with token)
+    HF MCP Server->>User: Done!
+```
+
+**Env var**: `AUTHENTICATE_TOOL=true|false`
+
+Without it, the server relies on `DEFAULT_HF_TOKEN` for all operations. With it, the server can prompt the user to authenticate for specific operations that require elevated permissions — without the user needing to pre-configure a token.
+
+---
+
+### 4. SEP-2640: Skills Directory Support (`HF_SKILLS_DIR`)
+
+New environment variable `HF_SKILLS_DIR` points to a local directory of skill definitions. Skills are structured as:
+
+```
+skills/
+  huggingface/
+    publish-model/
+      SKILL.md          # Skill metadata (name, description, tools needed)
+      steps/             # Step-by-step instructions
+        create-repo.md
+        upload-files.md
+        verify-card.md
+      references/
+        hf-api.md
+    search-datasets/
+      SKILL.md
+      ...
+```
+
+When `HF_SKILLS_DIR` is set, the MCP server exposes a `resolve_skill` tool that an agent can call to load skill definitions — making it a **skill registry** at the MCP level. This bridges the gap between HF Agent Skills (the website at agentskills.io) and the MCP protocol.
+
+**Connection to Hermes Agent**: Hermes agents already use skill files in their profile directories. The SEP-2640 format aligns with the structure Hermes uses, meaning skills authored for Hermes can be consumed by any MCP-compatible agent via the HF MCP Server.
+
+---
+
+### 5. Stateful Connection Management
+
+v2.0.0 introduces heartbeat and timeout management for persistent MCP connections:
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `MCP_CLIENT_HEARTBEAT_INTERVAL` | 30s | How often the server pings the client |
+| `MCP_CLIENT_CONNECTION_TIMEOUT` | 300s (5 min) | Max idle time before connection drop |
+| `MCP_PING_ENABLED` | true | Enable/disable keepalive pings |
+| `MCP_PING_INTERVAL` | 30s | Ping frequency |
+
+Without this, long-running sessions (e.g., iterative Space building) could timeout mid-workflow. With stateful management, the connection stays alive as long as the agent is actively working.
+
+---
+
+### 6. Web Dashboard
+
+v2.0.0 ships with an optional **web dashboard** accessible when running in HTTP/SSE mode:
+
+- **Tool on/off switching**: Toggle individual tools or full tool groups
+- **Usage statistics**: Count of tool calls per tool, success/failure rates
+- **Connection status**: Active connections, ping latency
+- **Log viewer**: Recent server logs
+
+Access at `http://localhost:3000/dashboard` (default port).
+
+---
+
+### 7. New Environment Variables
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `ALLOW_INTERNAL_ADDRESS_HOSTS` | — | Allow connections to internal/private addresses |
+| `GRADIO_SKIP_INITIALIZE` | false | Skip Gradio init (faster startup when not using Spaces) |
+| `AUTHENTICATE_TOOL` | false | Enable OAuth-based on-the-fly authentication |
+| `HF_SKILLS_DIR` | — | Path to SEP-2640 skills directory |
+| `TRANSPORT` | stdio | Transport mode (stdio, streamable-http, streamable-http-json) |
+| `MCP_STRICT_COMPLIANCE` | false | Strict MCP spec compliance mode |
+| `SEARCH_ENABLES_FETCH` | true | Allow search results to trigger content fetches |
+
+---
+
+### 8. NPM & Docker Updates
+
+| Package | Version | Transport |
+|---------|---------|-----------|
+| `@llmindset/hf-mcp-server` | v0.3.35 → v2.0.0 | STDIO |
+| `@llmindset/hf-mcp-server-http` | v0.3.35 → v2.0.0 | StreamableHTTP |
+| `@llmindset/hf-mcp-server-json` | v0.3.35 → v2.0.0 | StreamableHTTP JSON (Docker default) |
+
+Docker image: `ghcr.io/evalstate/hf-mcp-server:latest` — now defaults to StreamableHTTP JSON on port 3000.
+
+---
+
+### 9. Migration Guide: v1 → v2
+
+If upgrading from v1.x (the 28-tool model):
+
+1. **Update packages**: `npm update @llmindset/hf-mcp-server`
+2. **Update config**: Remove any bouquet/mix settings (the 4-category model replaces them)
+3. **Test basic ops**: `hf_fs search /models?q=test`, `hf_fs nav /spaces`
+4. **Optional**: Enable `AUTHENTICATE_TOOL=true` for OAuth flows
+5. **Optional**: Set `HF_SKILLS_DIR` for skills integration
+6. **Downgrade path**: Pin to `@llmindset/hf-mcp-server@0.3.35` if the v2 API breaks existing workflows
+
+The 28-tool API is deprecated but may still be available via `DISABLE_TOOLS` env var for backward compatibility.
+
+---
+
 ## 2026-07-25: hf-hub-agents-ecosystem-complete-deep-dive — Full HF Hub Agents Ecosystem Overhaul
 
 ### Summary
