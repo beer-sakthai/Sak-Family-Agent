@@ -5429,3 +5429,240 @@ The formats are structurally compatible — a Hermes SKILL.md with `author: SakT
 
 ### Skill
 mlops/huggingface-hub — Hub API, MCP Server, CLI, Agent Skills, and agent integration
+
+---
+
+## 2026-07-25: huggingface-hub-http-request-lifecycle-source-deep-dive — Internal HTTP Request Lifecycle of `huggingface_hub`
+
+**Topic:** huggingface-hub-http-request-lifecycle-source-deep-dive  
+**Learned:** 2026-07-25  
+**Author:** SakThai  
+**License:** MIT  
+**Source:** Source code analysis of `huggingface_hub` v1.24.0 (`utils/_http.py`, `utils/_headers.py`, `utils/_auth.py`, `hf_api.py`, `hf_file_system.py`)
+
+### Summary
+
+Deep-dive into the internal HTTP request lifecycle of `huggingface_hub` v1.24.0 — from token resolution → header building → session management → retry/backoff → error refinement. Critical for debugging API failures, optimizing performance, and understanding the full stack of Hub interactions.
+
+### Key Architectural Discovery: `httpx` (not `requests`)
+
+The library uses **`httpx`** as its HTTP backend — not the more common `requests` library. This matters for several reasons:
+
+- `httpx.Client` provides connection pooling, event hooks, and async support natively
+- `timeout=None` by default (infinite), which means connection hangs won't auto-abort
+- `follow_redirects=True` by default on the shared client
+- The `httpx.HTTPStatusError` exception hierarchy differs from `requests`
+
+```python
+# The underlying client
+import httpx
+from huggingface_hub.utils import get_session
+
+client = get_session()
+assert isinstance(client, httpx.Client)  # True
+```
+
+### 1. Token Resolution Pipeline
+
+`get_token()` (`utils/_auth.py`) resolves credentials in this priority order:
+
+1. **OIDC token exchange** (if `HF_OIDC_RESOURCE` env var set) — used by Trusted Publishers in CI environments. Short-lived tokens via OIDC protocol. Failure here raises `OIDCError` (no silent fallback since opting into OIDC is explicit).
+2. **`HF_TOKEN` environment variable** — direct string read. Most common in production/CI.
+3. **Token file** (`~/.cache/huggingface/token`) — cached user token. OAuth tokens with refresh tokens are **transparently refreshed** when close to expiry (network call + file write) before being returned.
+4. **Google Colab secrets vault** (`google.colab.userdata.get("HF_TOKEN")`) — read once per session with a lock to avoid thread-safety issues.
+
+The `get_token_to_send()` function in `_headers.py` handles the decision logic for whether to actually send the token:
+
+- `token=True` → must resolve token or raise `LocalTokenNotFoundError`
+- `token=False` → suppress auth header entirely
+- `token=None` → resolve unless `HF_HUB_DISABLE_IMPLICIT_TOKEN` is set (to avoid unnecessary file reads/OAuth refresh)
+- `token="<explicit string>"` → use as-is
+
+### 2. Header Building (`build_hf_headers`)
+
+The `build_hf_headers()` function constructs:
+
+- **User-Agent**: Composed as `{library_name}/{library_version}; hf_hub/{hf_hub_version}; python/{python_version}`. Optionally appends `torch/{version}` and agent info (detected via `detect_agent()`). Telemetry can be disabled with `HF_HUB_DISABLE_TELEMETRY`.
+- **Authorization**: `Bearer {token}` if token is resolved.
+- **Custom headers**: Additional headers passed via `headers` parameter (merged after default headers, overriding if keys collide).
+
+User-agent origin can be extended via `HF_HUB_USER_AGENT_ORIGIN` environment variable.
+
+### 3. Session Management (`utils/_http.py`)
+
+**Single global client (sync)**: `get_session()` returns a module-level singleton `httpx.Client`:
+
+```python
+def get_session() -> httpx.Client:
+    global _GLOBAL_CLIENT
+    if _GLOBAL_CLIENT is None:
+        with _CLIENT_LOCK:
+            _GLOBAL_CLIENT = _GLOBAL_CLIENT_FACTORY()
+    return _GLOBAL_CLIENT
+```
+
+Default client factory:
+```python
+def default_client_factory() -> httpx.Client:
+    return httpx.Client(
+        event_hooks={"request": [hf_request_event_hook]},
+        follow_redirects=True,
+        timeout=None,
+    )
+```
+
+Key implications:
+- **Thread-safe creation** via `_CLIENT_LOCK` (threading.Lock)
+- **No timeout** (`timeout=None`) — requests can hang indefinitely
+- Connection pool is shared across all requests
+- `atexit.register(close_session)` ensures clean shutdown
+- `os.register_at_fork(after_in_child=close_session)` reinitializes after `fork()` to avoid sharing SSL/connection state
+
+**Custom factory**: `set_client_factory(factory)` replaces the factory, closing any existing client first.
+
+**No shared async client**: `get_async_client()` creates a *new* client on every call (not shared). The async event hook (`async_hf_response_event_hook`) pre-reads response bodies for error handling.
+
+### 4. Event Hooks
+
+**`hf_request_event_hook`** runs before every request:
+
+1. **Offline mode check**: If `HF_HUB_OFFLINE` is set, raises `OfflineModeIsEnabled` immediately.
+2. **Request ID injection**: Adds `X-Amzn-Trace-Id` header (UUID4 if not already present). Also checks `X-Request-Id` first for backward compatibility.
+3. **Debug logging**: Logs method, URL, and auth status. If `HF_DEBUG` is set, also logs a full curl command (with credentials redacted).
+
+**`async_hf_response_event_hook`** (async only): pre-reads error response bodies for status >= 400 to ensure error info is available when the exception is raised, but only if `Content-Length < 1MB` (to avoid OOM).
+
+### 5. Request Execution: Two Paths
+
+#### 5a. Simple requests (most `HfApi` methods)
+Most `HfApi` methods use the pattern:
+```python
+response = get_session().get(url, headers=self._build_hf_headers(token=token))
+hf_raise_for_status(response)
+```
+This uses the shared client directly — no retry logic at this level. Examples: `whoami`, `list_models`, `repo_info`, `list_files`.
+
+#### 5b. Backoff-protected requests (uploads, downloads)
+For operations that need retry resilience (uploads, large downloads), `http_backoff()` is used:
+```python
+response = http_backoff("PUT", upload_url, data=data)
+```
+
+`http_backoff` is used in:
+- Upload operations: `upload_file`, `upload_folder`, `create_commit`
+- File downloads: via `hf_hub_download` / `snapshot_download` (through `_httpx_follow_relative_redirects_with_backoff`)
+- Any `put`/`post` that could fail transiently
+
+### 6. Retry/Backoff Internals (`_http_backoff_base`)
+
+The custom backoff engine (no external `backoff` library dependency):
+
+```
+Default parameters:
+  max_retries = 5
+  base_wait_time = 1s
+  max_wait_time = 8s
+  retry_on_exceptions = (httpx.TimeoutException, httpx.NetworkError, httpx.RemoteProtocolError)
+  retry_on_status_codes = (408, 429, 500, 502, 503, 504)
+```
+
+**Retry flow**:
+
+1. On **exceptions** (timeout, network error, protocol error):
+   - `ConnectError` triggers `close_session()` — invalidates the client to force SSL renegotiation
+   - Exhausts max_retries → re-raises the original exception
+
+2. On **status codes** (429, 5xx, 408):
+   - Checks `ratelimit` header (IETF standard) for `r` (remaining) and `t` (reset-in-seconds)
+   - Falls back to `Retry-After` header (delay-seconds format only, not HTTP-date)
+   - Uses ratelimit reset time + 1s if available, otherwise exponential backoff: `sleep = min(max_wait_time, sleep * 2)`
+
+3. **IO-aware data rewind**: If `data` is a file/IO object, `seek(initial_pos)` is called before each retry to rewind the stream — critical for upload retries.
+
+### 7. Error Refinement (`hf_raise_for_status`)
+
+The `hf_raise_for_status()` function is the single chokepoint for error handling. It:
+
+1. First calls `_warn_on_warning_headers()` to parse `X-HF-Warning` headers (each topic warned once per process).
+
+2. Then refines `HTTPStatusError` into specific exception types based on:
+   - **`X-Error-Code`** header: `RepoNotFound`, `RevisionNotFound`, `EntryNotFound`, `GatedRepo`
+   - **`X-Error-Message`** header: `"Access to this resource is disabled."` → `DisabledRepoError`
+   - **URL patterns**: Parses repo type/ID from URL for richer error context
+   - **Bucket API URLs**: Separate `BucketNotFoundError`
+   - **Job API URLs**: Separate `JobNotFoundError`
+   - **Status codes**: 400 → `BadRequestError`, 403 → `HfHubHTTPError`, 429 → rate-limit specific `HfHubHTTPError`, 416 → range error
+
+3. **Server message extraction**: Tries to parse error body as JSON (`response.json()`), extracting from `error`, `error_description`, and `errors` fields. Falls back to raw text for non-HTML responses.
+
+4. **Request ID enrichment**: Extracts `X-Request-Id`, `X-Amzn-Trace-Id`, or `x-amz-cf-id` and injects into the error message for easier debugging.
+
+```python
+# Exception mapping summary:
+# 404 + X-Error-Code: RepoNotFound  → RepositoryNotFoundError
+# 404 + bucket URL                  → BucketNotFoundError
+# 404 + job URL                     → JobNotFoundError
+# 401 + repo URL                    → RepositoryNotFoundError (ambiguous 401→404)
+# X-Error-Code: RevisionNotFound    → RevisionNotFoundError
+# X-Error-Code: EntryNotFound       → RemoteEntryNotFoundError
+# X-Error-Code: GatedRepo           → GatedRepoError
+# X-Error-Message: "disabled"       → DisabledRepoError
+# 400                               → BadRequestError
+# 403                               → HfHubHTTPError
+# 429                               → HfHubHTTPError (with rate limit info)
+# 416                               → HfHubHTTPError (with range info)
+# All other errors                  → HfHubHTTPError
+```
+
+### 8. Rate Limit Header Parsing
+
+The `parse_ratelimit_headers()` function implements the IETF draft standard (`draft-ietf-httpapi-ratelimit-headers-09`):
+
+```
+Header example:
+  ratelimit: "api";r=0;t=55
+  ratelimit-policy: "fixed window";"api";q=500;w=300
+
+Parsed result:
+  RateLimitInfo(resource_type="api", remaining=0, reset_in_seconds=55, limit=500, window_seconds=300)
+```
+
+The `resource_type` field distinguishes between different rate limit scopes (e.g., `"api"` for general API, `"upload"` for upload-specific limits).
+
+### 9. Debug Facilities
+
+**`HF_DEBUG` environment variable**: When set, every request is logged as a curl command via `_curlify()`, with:
+- `authorization` header redacted (→ `<TOKEN>`)
+- Sensitive body fields redacted (OAuth tokens, client secrets, device codes via `_redact_sensitive_body()`)
+- Body truncated to 1000 chars
+- Streaming bodies shown as `<streaming body>`
+
+**`hf_request_event_hook`** logs every request at debug level with a unique request ID, making it possible to correlate client-side logs with server-side request traces.
+
+### 10. Offline Mode
+
+`HF_HUB_OFFLINE` environment variable → prevents all outgoing requests:
+```python
+if constants.is_offline_mode():
+    raise OfflineModeIsEnabled(
+        f"Cannot reach {request.url}: offline mode is enabled."
+    )
+```
+This is checked in the request event hook — the earliest possible intercept point — before any connection attempt.
+
+### 11. File Download Pipeline (`file_download.py`)
+
+For model/dataset file downloads, an additional HTTP layer exists:
+
+- `_httpx_follow_relative_redirects_with_backoff()` — wraps `http_backoff()` and follows relative `Location` redirects to handle renamed repos. Stops at absolute redirects (which go to CDN).
+- `hf_hub_download` uses `http_backoff()` for metadata checks (HEAD requests) and raw `get_session().stream()` for the actual download, with `resume_size` and `Range` header support.
+- The `hf_transfer` Rust accelerator (`HF_HUB_ENABLE_HF_TRANSFER=1`) bypasses Python entirely for downloads — using a separate native binary that speaks HTTP directly with multithreaded chunking.
+
+### Key Takeaways
+
+1. **`httpx` is the engine**, not `requests` — don't look for `requests.Session` or `requests.adapters` configuration.
+2. **No default timeout** — the global client has `timeout=None`. Set via `set_client_factory` if needed.
+3. **Retry is opt-in** — most read-only `HfApi` methods don't use `http_backoff`; only uploads and downloads do.
+4. **Token resolution is layered** — OIDC → env → file → Colab, each with distinct error semantics.
+5. **Error refinement is URL-aware** — the same 404 means different things depending on whether the URL is a repo, bucket, or job endpoint.
+6. **Rate limit headers follow IETF draft** — parse both resource-specific limits and policy windows.
