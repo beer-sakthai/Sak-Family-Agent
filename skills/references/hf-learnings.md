@@ -5200,4 +5200,41 @@ N/A — added to existing `mlops/huggingface-hub/` skill references.
 - huggingface_hub v1.24.0 source: `lfs.py:53-100` (UploadInfo)
 - https://github.com/huggingface/huggingface_hub/issues/1085#issuecomment-1265208073 (ndjson commit design)
 
-|
+---
+
+## 2026-07-25: hf-diffusers-wan-video-generation
+
+### Summary
+Deep dive into the **Wan2.1/Wan2.2** open video foundation model family by the Wan Team (Alibaba) and its complete integration into Hugging Face Diffusers. Wan is a suite of diffusion transformer (DiT) models for video generation with consumer-grade 1.3B variant (8.19 GB VRAM) through enterprise 14B models. Five pipeline classes, VACE controllable generation, character animation (Wan-Animate), and LoRA support.
+
+### Supported Pipelines
+1. **WanPipeline** — Text-to-Video (UMT5 encoder + WanTransformer3D + AutoencoderKLWan)
+2. **WanImageToVideoPipeline** — Image-to-Video (+ CLIPVisionModel)
+3. **WanAnimatePipeline** — Character animation/replacement (animate/replace modes)
+4. **WanVACEPipeline** — Any-to-Video controllable generation (depth, pose, sketch, bbox, inpainting, subject, composition)
+5. **WanVideoToVideoPipeline** — Video-to-Video translation
+
+### Model Variants
+- T2V 1.3B (consumer GPU, 8.19 GB) / T2V 14B / I2V 14B 480P/720P
+- FLF2V 14B 720P (First+Last Frame to Video)
+- VACE 1.3B / 14B (controllable generation)
+- Wan2.2: T2V 14B, I2V 14B, TI2V 5B, Animate 14B
+
+### Architecture
+- WanTransformer3D: 3D DiT with causal attention, RoPE, fused QKV, dual-stage denoising
+- AutoencoderKLWan: 3D VAE with AvgDown3D, 8× spatial / 4× temporal compression
+- Text: UMT5 (multilingual, 512 ctx), Image: CLIPVision (I2V)
+- Scheduler: FlowMatchEulerDiscreteScheduler or UniPCMultistepScheduler with flow_shift
+
+### Key Features
+- Visual text generation (Chinese + English)
+- Memory optimization: group offloading, quantization, single-file loading
+- LoRA via WanLoraLoaderMixin (load_lora_weights/set_adapters)
+- Wan2.2 dual-denoiser: LoRA load_into_transformer_2 flag
+- VACE mask convention: black=preserve, white=generate
+- License: Apache 2.0
+
+### Skill Created
+`hf-diffusers-wan-video-generation/` — SKILL.md + references/hf-learnings.md
+
+---
