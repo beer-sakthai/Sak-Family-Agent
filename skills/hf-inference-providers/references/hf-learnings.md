@@ -1271,3 +1271,296 @@ For Beer's zero-cost constraint, here's how to maximize free Inference Providers
 5. **Monitor usage** at https://hf.co/settings/inference-providers — track per-model and per-provider spend
 6. **Batch model checks with the Hub API** — use `inference_provider=all` to discover which models are available before coding against them
 7. **Use `hf models ls --warm`** to find freely-available models before committing to a specific one
+
+---
+
+## 2026-07-25 v2: Deepening — Inference Providers Hub API, Pricing Model, and Agent Integration Setup (Deepening on Topic #357)
+
+### Summary
+Builds on the source architecture deep-dive above to cover three operational layers not addressed by the Python client internals: (1) the **Hub REST API** for querying models by inference provider, (2) the **pricing & billing model** with monthly credits, BYOK (Bring Your Own Key), and organization billing, and (3) **step-by-step agent integration setup guides** for Hermes Agent, OpenCode, Codex, and Claude Code.
+
+---
+
+### 1. Hub API for Inference Providers
+
+The `GET /api/models` endpoint supports an `inference_provider` query parameter for filtering models by which provider serves them. This is the programmatic way to discover available models.
+
+#### 1.1 Query a Specific Provider
+
+```bash
+# List all models served by Fireworks AI
+curl -s "https://huggingface.co/api/models?inference_provider=fireworks-ai" | jq '.[].modelId'
+```
+
+Returns all models available through that provider. Can be combined with other filters:
+
+```bash
+# Text-to-image models on Fal AI
+curl -s "https://huggingface.co/api/models?inference_provider=fal-ai&pipeline_tag=text-to-image" | jq '.[].modelId'
+```
+
+#### 1.2 Multi-Provider Query
+
+Pass comma-separated provider names:
+
+```bash
+# Models served by Novita OR Nscale
+curl -s "https://huggingface.co/api/models?inference_provider=nscale,novita&pipeline_tag=image-text-to-text" | jq '.[].modelId'
+```
+
+#### 1.3 All Provider-Served Models
+
+Use `all` to list every model served by at least one inference provider:
+
+```bash
+curl -s "https://huggingface.co/api/models?inference_provider=all&limit=50" | jq '.[].modelId'
+
+# CLI equivalent — much more readable
+hf models ls --warm
+```
+
+The `--warm` flag on `hf models ls` is the CLI wrapper for `inference_provider=all`.
+
+#### 1.4 Provider Discovery per Model
+
+Each model returned with `full=true` includes an `inferenceProviderMapping` field (visible with `expand=["inferenceProviderMapping"]`). This field lists every provider that serves the model and their supported tasks:
+
+```python
+from huggingface_hub import HfApi
+api = HfApi()
+
+# Get provider mapping for a specific model
+info = api.model_info("deepseek-ai/DeepSeek-V4-Flash", expand=["inferenceProviderMapping"])
+if info.inference_provider_mapping:
+    for provider, tasks in info.inference_provider_mapping.items():
+        print(f"{provider}: {tasks}")
+```
+
+#### 1.5 Provider List (17 providers, verified 2026-07-25)
+
+| Provider | Slug | Specialties |
+|----------|------|-------------|
+| Cerebras | `cerebras` | High-throughput LLM inference, text/image-text-to-text |
+| Cohere | `cohere` | RAG, embeddings, text generation |
+| DeepInfra | `deepinfra` | Broad LLM coverage, vision models |
+| Fal AI | `fal-ai` | Image generation (FLUX, Stable Diffusion), video, audio |
+| Featherless AI | `featherless-ai` | Open LLM hosting |
+| Fireworks AI | `fireworks-ai` | Fast LLM inference, tool calling, vision |
+| Groq | `groq` | Ultra-fast LPU inference, open models |
+| HF Inference | `hf-inference` | HF's own inference servers, broad model support |
+| Novita | `novita` | Broad model catalog, image generation |
+| Nscale | `nscale` | European cloud, Llama models |
+| OVHcloud AI Endpoints | `ovhcloud` | European cloud provider, vision models |
+| Public AI | `publicai` | Open models, vision-language |
+| Replicate | `replicate` | Image gen (FLUX, SD), video, audio |
+| Scaleway | `scaleway` | European cloud, open LLMs |
+| Together | `together` | Broad LLM + vision catalog, fine-tuning |
+| WaveSpeed AI | `wavespeed` | Image gen, efficient inference |
+| Z.ai | `zai-org` | GLM models, open LLMs |
+
+#### 1.6 Python SDK Equivalent
+
+```python
+from huggingface_hub import HfApi
+api = HfApi()
+
+# Models by a specific provider
+for model in api.list_models(inference_provider="fireworks-ai", limit=10):
+    print(model.modelId)
+
+# Models available through any provider (all warm models)
+for model in api.list_models(inference_provider="all", limit=10):
+    print(model.modelId)
+
+# With additional filters
+for model in api.list_models(
+    inference_provider="together",
+    pipeline_tag="text-generation",
+    sort="downloads",
+    limit=5,
+):
+    print(model.modelId, model.downloads)
+```
+
+---
+
+### 2. Pricing & Billing Model
+
+#### 2.1 Monthly Free Credits
+
+Every Hugging Face user receives **monthly free credits** to experiment with Inference Providers. Credits:
+
+- Auto-apply when routing requests through Hugging Face (Routed by HF billing)
+- For Team or Enterprise orgs, credits are shared among all members
+- Replenish monthly; unused credits expire
+- Enough for hundreds of small inference calls (text generation, classification, etc.)
+
+#### 2.2 Two Billing Models
+
+| Model | How It Works | Best For |
+|-------|-------------|----------|
+| **Routed by HF** | Request routes through HF → provider; HF bills you at provider rates (no markup). Monthly credits apply. | Simplicity, experimentation, consolidated billing |
+| **Bring Your Own Key (BYOK)** | You set a custom provider API key in HF Settings → Inference Providers. Requests route through HF but billed directly by the provider using your key. | Existing provider accounts, specific provider features not available via HF routing |
+
+**Pricing policy:** Hugging Face charges the same rates as the provider with **zero markup**. They pass through provider costs directly.
+
+#### 2.3 Organization Billing
+
+To bill to a Team or Enterprise organization (to use organization-shared credits):
+
+- Set the `X-Org-Name` header or org parameter in your requests
+- Otherwise, personal credits are used
+- Team/Enterprise credits are shared across all members
+
+#### 2.4 No Additional API Key Needed
+
+For Routed by HF billing, **no provider API keys are needed**. The user's HF token (with "Make calls to Inference Providers" permission) is sufficient. Provider keys are only needed for BYOK billing.
+
+#### 2.5 Token Permissions
+
+Required HF token permissions:
+- **Read** (default: reads public repos, gated models user has access to)
+- **"Make calls to Inference Providers"** — **explicitly required** for inference API calls
+
+Create/manage tokens at: https://hf.co/settings/tokens
+
+---
+
+### 3. Agent Integration Setup Guides
+
+HF Inference Providers integrate directly with the major terminal AI agent frameworks. Here are the step-by-step setup guides.
+
+#### 3.1 Hermes Agent
+
+Hermes Agent is an open-source AI agent CLI by Nous Research. It natively supports HF Inference Providers, giving access to 200+ open models from 17+ providers through a single interface.
+
+**Setup:**
+
+1. **Create/Get HF Token** — Go to https://hf.co/settings/tokens, create a token with "Make calls to Inference Providers" permission
+2. **Configure Hermes Agent:**
+   ```bash
+   # Method 1: Set env var
+   export HERMES_PROVIDER=hf
+   export HF_TOKEN=hf_...
+   
+   # Method 2: Use hermes CLI config
+   hermes config set provider hf
+   hermes config set hf_token hf_...
+   ```
+3. **Select model** — Hermes Agent uses HF model IDs directly:
+   ```bash
+   hermes --model deepseek-ai/DeepSeek-V4-Flash
+   ```
+4. **Provider routing suffixes work too:**
+   ```bash
+   hermes --model deepseek-ai/DeepSeek-V4-Flash:fastest
+   ```
+
+For full configuration including routing suffixes and permanent config, see the Hermes Agent HF configuration guide at `/docs/inference-providers/en/integrations/hermes-agent`.
+
+#### 3.2 OpenCode (opencode-go)
+
+OpenCode is an AI coding agent for the terminal that natively supports HF Inference Providers.
+
+**Setup:**
+
+1. **Create HF Token** — with "Make calls to Inference Providers" permission
+2. **Authenticate:**
+   ```bash
+   opencode auth login
+   # Select: Hugging Face
+   # Enter: hf_... token
+   ```
+   Or via environment:
+   ```bash
+   export HF_TOKEN=hf_...
+   ```
+3. **Select model** — OpenCode picks a default; override with:
+   ```bash
+   opencode --model deepseek-ai/DeepSeek-V4-Flash
+   ```
+4. **Switch models interactively** — Use the `model` command in the OpenCode TUI
+5. **Organization billing** — To bill to an org instead of personal account:
+   ```bash
+   export HF_ORG_NAME="your-org-name"
+   # Or configure in OpenCode settings
+   ```
+6. **GitHub Actions** — OpenCode can also run open models in CI via Inference Providers (see the guide at `/docs/inference-providers/en/integrations/opencode`)
+
+#### 3.3 Codex (by OpenAI)
+
+Codex is a terminal AI coding agent that supports HF Inference Providers.
+
+**Setup:**
+
+1. **Create HF Token** with inference permissions
+2. **Configure Codex:**
+   ```bash
+   codex config set provider hf
+   codex config set hf_token hf_...
+   ```
+3. **Use with any HF model:**
+   ```bash
+   codex --model Qwen/Qwen3-32B
+   ```
+
+References: `/docs/inference-providers/en/integrations/codex`
+
+#### 3.4 Claude Code (by Anthropic)
+
+Claude Code can use HF Inference Providers as its backend.
+
+**Setup:**
+
+```bash
+# Set HF as the provider
+export CLAUDE_CODE_PROVIDER=hf
+export HF_TOKEN=hf_...
+
+# Or use the HF extension: hf extensions install hf-claude
+```
+
+References: `/docs/inference-providers/en/integrations/claude-code`
+
+#### 3.5 Other Integrations
+
+| Agent | Setup Pattern | Doc Link |
+|-------|--------------|----------|
+| **Pi** | Configure provider to `hf` with HF token | `/docs/inference-providers/en/integrations/pi` |
+| **Vision Agents** | Use HF token with inference permissions | `/docs/inference-providers/en/integrations/visionagents` |
+| **MacWhisper** | Audio transcription provider | `/docs/inference-providers/en/integrations/macwhisper` |
+| **Data Designer** | Data analysis with HF models | `/docs/inference-providers/en/integrations/datadesigner` |
+
+---
+
+### 4. Security & Compliance
+
+| Aspect | Detail |
+|--------|--------|
+| **Data storage** | HF does **not** store request body or response for training. Logs kept for debugging up to a limited period. |
+| **Encryption** | TLS/SSL for data in transit |
+| **Certification** | Hugging Face Hub is **SOC2 Type 2 certified** |
+| **Provider data handling** | Each provider is responsible for their own data handling; refer to their individual security policies |
+| **Token security** | Use fine-grained tokens with only the needed permissions; never expose tokens in code |
+
+---
+
+### 5. Key Insights from Docs Research
+
+1. **`inference_provider` filter** works on `GET /api/models` and supports single provider, comma-separated multi-provider, or `all` for all warm models — this is different from the `filter=` tag-based system
+2. **Model page widgets, Inference Playground, and Data Studio AI** are all backed by Inference Providers — no separate backend needed
+3. **No markup pricing** — HF passes through provider costs at the same rate
+4. **Monthly credits auto-apply** for Routed by HF billing; no coupon codes needed
+5. **BYOK requires provider-specific keys** set in HF Settings; HF still routes the request but the provider bills your account directly
+6. **`hf models ls --warm`** is the CLI equivalent of `inference_provider=all` — use it to discover which models are available without spending credits
+7. **Hermes Agent and OpenCode** have the most mature HF Inference Providers integrations with full model ID support and provider routing suffixes
+
+### Sources
+- https://huggingface.co/docs/inference-providers/en/hub-api — Hub API for Inference Providers
+- https://huggingface.co/docs/inference-providers/en/pricing — Pricing and Billing
+- https://huggingface.co/docs/inference-providers/en/integrations/hermes-agent — Hermes Agent integration
+- https://huggingface.co/docs/inference-providers/en/integrations/opencode — OpenCode integration
+- https://huggingface.co/docs/inference-providers/en/security — Security & Compliance
+- https://huggingface.co/docs/inference-providers/en/tasks/chat-completion — Chat Completion task reference
+- Verified via `GET /api/models?inference_provider=fireworks-ai` and related API calls, 2026-07-25
+|

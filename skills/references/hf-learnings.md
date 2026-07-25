@@ -6588,3 +6588,37 @@ Comprehensive deep-dive into running inference servers on Hugging Face Jobs usin
 - https://huggingface.co/docs/hub/en/jobs-pricing
 
 ---
+
+## 2026-07-25: hf-inference-providers-deepening — Inference Providers Hub API, Pricing, and Agent Integrations (Deepening on Topic #357)
+
+### Summary
+Deep-dive into the operational layer of HF Inference Providers: the **Hub REST API** for querying models by provider (`?inference_provider=`), the **pricing & billing model** (Routed by HF vs BYOK, monthly credits, organization billing), **agent integration setup guides** (Hermes Agent, OpenCode, Codex, Claude Code, Pi), and security/compliance (SOC2, TLS, data retention). Complements the existing source architecture deep-dive with real-world usage patterns.
+
+### Key Findings
+
+| Area | Finding |
+|------|---------|
+| **Hub API query** | `GET /api/models?inference_provider=fireworks-ai` filters by provider; `all` returns all warm models; comma-separated for multi-provider |
+| **CLI equivalent** | `hf models ls --warm` wraps `inference_provider=all` |
+| **Per-model providers** | Use `expand=["inferenceProviderMapping"]` on `model_info()` to see which providers serve a model |
+| **17 providers** | Cerebras, Cohere, DeepInfra, Fal AI, Featherless AI, Fireworks, Groq, HF Inference, Novita, Nscale, OVHcloud, Public AI, Replicate, Scaleway, Together, WaveSpeedAI, Z.ai |
+| **Billing: Routed by HF** | Free monthly credits auto-apply; no provider keys needed; zero markup |
+| **Billing: BYOK** | Set custom provider API key in HF Settings; provider bills your account directly |
+| **Organization billing** | Team/Enterprise credits shared among members; set `X-Org-Name` header |
+| **Token permissions** | Must have "Make calls to Inference Providers" permission on HF token |
+| **Hermes Agent** | `export HERMES_PROVIDER=hf` + `export HF_TOKEN=hf_...` |
+| **OpenCode** | `opencode auth login` → select Hugging Face → enter token |
+| **Security** | SOC2 Type 2; TLS/SSL; no data stored for training |
+| **Zero-cost** | Monthly free credits + BYOK for provider-specific free tiers + `:cheapest` routing suffix |
+
+### Sources
+- https://huggingface.co/docs/inference-providers/en/hub-api
+- https://huggingface.co/docs/inference-providers/en/pricing
+- https://huggingface.co/docs/inference-providers/en/integrations/hermes-agent
+- https://huggingface.co/docs/inference-providers/en/integrations/opencode
+- https://huggingface.co/docs/inference-providers/en/security
+- Verified via API calls: `GET /api/models?inference_provider=fireworks-ai`, `GET /api/models?inference_provider=all`, `model_info(expand=["inferenceProviderMapping"])`, 2026-07-25
+
+### Skill Updated
+`hf-inference-providers/` — SKILL.md updated with billing models, agent integration commands, security info; references/hf-learnings.md appended with 292-line deep-dive (1565 total lines).
+|
