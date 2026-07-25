@@ -16267,3 +16267,25 @@ Comprehensive deep-dive on the Hugging Face Hub's papers ecosystem — the daily
 
 ### Skill
 hf-hub-daily-papers — Hugging Face Hub Daily Papers & Paper Pages deep reference: API endpoints, data model, linking papers to models/datasets/Spaces, submission/curation, and programmatic access via huggingface_hub
+
+---
+
+## 2026-07-25: hf-hub-model-dependents-deep-dive-v2-tag-system-merge-chains — Deep-Dive v2: Tag System, Merge Models, Real-World Chains & Advanced Discovery (Topic #253)
+
+### Summary
+Deepened coverage of the Hugging Face Hub Model Dependents system with live API-verified findings. Covers the three overlapping dependency registration mechanisms (card YAML, Hub-auto tags, baseModels expand), the dual-tag system (`base_model:X` + `base_model:{relation}:X`) that enables type-specific filtering, real dependency chains (e.g., `google/gemma-2-2b → gemma-2-2b-it → gemma-2-2b-it-GGUF`), multi-parent merge model patterns with their tag format, the `base_model` YAML field's supported formats (string, list, dict), the Hub's heuristic auto-classification logic (file-based detection of adapter/quantized/merge/finetune), advanced discovery patterns (ancestry traversal, type-filtered children listing, complete ecosystem profiling), and edge cases (cross-org deps, recursive children, missing cardData).
+
+### Key Findings (from live API tests)
+- **Dual-tag system**: Models get `base_model:parent` AND `base_model:{relation}:parent` tags — use type-specific prefix for filtering by relation type
+- **Merge models** use `base_model:merge:parent1`, `base_model:merge:parent2` with card data `base_model: [parent1, parent2]`
+- **Chains are single-hop** — `base_models` only shows immediate parent, traverse manually for full ancestry
+- **Auto-classification**: Hub infers `adapter` (adapter_config.json), `quantized` (GGUF/AWQ/GPTQ/HQQ), `merge` (multi-base + merge tag), `finetune` (standard weights)
+- **Cross-org**: Children can be in different orgs than parent (e.g., `bartowski/gemma-2-2b-it-GGUF` is child of `google/gemma-2-2b-it`)
+
+### Real Verified Data
+- `google/gemma-2-2b-it` — 997 finetunes + 188 quantized + 476 adapters + 19 merges = 1,680 total children
+- `bert-base-uncased` — 6,837 finetunes + 134 adapters + 27 quantized + 7 merges = 7,005 total children
+- `John6666/one-obsession-17-red-sdxl` — merge of `Laxhar/noobai-XL-1.0` + `OnomaAIResearch/Illustrious-XL-v2.0`
+
+### Skill
+mlops/hf-hub-model-dependents — Hugging Face Hub Model Dependents API: how models declare parent relationships, the tag-based dependency system, children discovery by type (finetune/quantized/adapter/merge), multi-parent merge models, dependency chain traversal, and ecosystem profiling.
