@@ -16267,3 +16267,550 @@ Comprehensive deep-dive on the Hugging Face Hub's papers ecosystem — the daily
 
 ### Skill
 hf-hub-daily-papers — Hugging Face Hub Daily Papers & Paper Pages deep reference: API endpoints, data model, linking papers to models/datasets/Spaces, submission/curation, and programmatic access via huggingface_hub
+
+---
+
+## 2026-07-25: hf-hub-model-dependents-deep-dive-v2-tag-system-merge-chains — Deep-Dive v2: Tag System, Merge Models, Real-World Chains & Advanced Discovery (Topic #253)
+
+### Summary
+Deepened coverage of the Hugging Face Hub Model Dependents system with live API-verified findings. Covers the three overlapping dependency registration mechanisms (card YAML, Hub-auto tags, baseModels expand), the dual-tag system (`base_model:X` + `base_model:{relation}:X`) that enables type-specific filtering, real dependency chains (e.g., `google/gemma-2-2b → gemma-2-2b-it → gemma-2-2b-it-GGUF`), multi-parent merge model patterns with their tag format, the `base_model` YAML field's supported formats (string, list, dict), the Hub's heuristic auto-classification logic (file-based detection of adapter/quantized/merge/finetune), advanced discovery patterns (ancestry traversal, type-filtered children listing, complete ecosystem profiling), and edge cases (cross-org deps, recursive children, missing cardData).
+
+### Key Findings (from live API tests)
+- **Dual-tag system**: Models get `base_model:parent` AND `base_model:{relation}:parent` tags — use type-specific prefix for filtering by relation type
+- **Merge models** use `base_model:merge:parent1`, `base_model:merge:parent2` with card data `base_model: [parent1, parent2]`
+- **Chains are single-hop** — `base_models` only shows immediate parent, traverse manually for full ancestry
+- **Auto-classification**: Hub infers `adapter` (adapter_config.json), `quantized` (GGUF/AWQ/GPTQ/HQQ), `merge` (multi-base + merge tag), `finetune` (standard weights)
+- **Cross-org**: Children can be in different orgs than parent (e.g., `bartowski/gemma-2-2b-it-GGUF` is child of `google/gemma-2-2b-it`)
+
+### Real Verified Data
+- `google/gemma-2-2b-it` — 997 finetunes + 188 quantized + 476 adapters + 19 merges = 1,680 total children
+- `bert-base-uncased` — 6,837 finetunes + 134 adapters + 27 quantized + 7 merges = 7,005 total children
+- `John6666/one-obsession-17-red-sdxl` — merge of `Laxhar/noobai-XL-1.0` + `OnomaAIResearch/Illustrious-XL-v2.0`
+
+### Skill
+mlops/hf-hub-model-dependents — Hugging Face Hub Model Dependents API: how models declare parent relationships, the tag-based dependency system, children discovery by type (finetune/quantized/adapter/merge), multi-parent merge models, dependency chain traversal, and ecosystem profiling.
+
+---
+
+## 2026-07-25: hf-inference-client-openai-compatibility-and-structured-outputs — Inference Client OpenAI API Compatibility & Structured Outputs Deep Dive (Topic #262)
+
+### Summary
+Comprehensive deep-dive on Hugging Face `InferenceClient`'s OpenAI API compatibility layer and structured output capabilities. Covers the OpenAI-compatible `client.chat.completions.create()` syntax (drop-in replacement for `openai.OpenAI`), JSON Schema and regex grammar for structured outputs via `response_format`, JSON mode vs structured outputs distinction, function/tool calling with OpenAI-compatible schemas, streaming support, full parameter reference, provider compatibility matrix, and practical patterns for each feature.
+
+### Source
+- HF InferenceClient docs: https://huggingface.co/docs/huggingface_hub/main/en/guides/inference
+- HF InferenceClient API reference: https://huggingface.co/docs/huggingface_hub/main/en/package_reference/inference_client
+- InferenceClient.chat_completion: https://huggingface.co/docs/huggingface_hub/main/en/package_reference/inference_client#huggingface_hub.InferenceClient.chat_completion
+- Inference Providers docs: https://huggingface.co/docs/inference-providers/en/index
+
+### Skill
+hf-inference-client-openai — Hugging Face InferenceClient OpenAI compatibility deep reference: chat.completions.create API, structured outputs (JSON Schema/regex), JSON mode, function calling, streaming, full parameter surface, 17+ provider support, and drop-in OpenAI migration patterns
+---
+
+## 2026-07-25: hf-hub-spaces-build-runtime-api-deep-dive-v3-space-templates — Space Templates: The Complete New Feature (Topic #263)
+
+### Summary
+Deep-dive on Hugging Face Space Templates — a new feature released in `huggingface_hub` v1.23.0 (July 9, 2026) that lets users seed Spaces from 28 official templates instead of starting from scratch. Covers the full API surface (`list_space_templates()`, `SpaceTemplate` dataclass, `create_repo(space_template=...)`), CLI commands (`hf spaces templates`, `hf repos create --template`), template resolution logic (name vs repo_id lookup, case-insensitive matching, preferred_private auto-visibility, auto SDK detection), the 28 templates across 3 SDK categories (Docker, Static, Gradio), the underlying REST endpoint, zero-cost pathways via Static templates, and integration with the broader Spaces ecosystem.
+
+### Source
+- huggingface_hub v1.23.0 source: `HfApi.list_space_templates()`, `HfApi.create_repo()`, `SpaceTemplate` dataclass
+- HF API endpoint: `GET https://huggingface.co/api/spaces/templates`
+- HF Spaces templates CLI: `hf spaces templates --help`
+- HF repos create CLI: `hf repos create --help`
+- Release notes: https://github.com/huggingface/huggingface_hub/releases/tag/v1.23.0
+
+### Skill
+mlops/hf-hub-spaces-build-runtime-api — Complete Space Templates reference: 28 official templates across Docker/Static/Gradio SDKs, API & CLI usage, template resolution, preferred_private auto-visibility, zero-cost Static Space pathways
+
+### 1. What Are Space Templates?
+
+Space Templates let you seed a new Hugging Face Space from an **official pre-built template** instead of starting from an empty repository. Each template is itself a Space repo on the Hub, containing all the boilerplate code, configuration, and dependencies needed for a particular app framework.
+
+Benefits over starting from scratch:
+- **Zero boilerplate** — the template provides app code, Dockerfile, requirements, and config
+- **Framework auto-detection** — SDK (Gradio, Docker, Static) is inferred from the template
+- **Smart defaults** — templates with `preferred_private=True` auto-create private Spaces without user action
+- **28 ready-to-use templates** as of 2026-07-25, covering data science dashboards, ML demos, static sites, and observability tools
+
+### 2. API Surface
+
+#### 2.1 `HfApi.list_space_templates()`
+
+```python
+from huggingface_hub import HfApi
+
+api = HfApi()
+templates = api.list_space_templates()  # -> list[SpaceTemplate]
+```
+
+Returns all official Space templates. The `SpaceTemplate` dataclass has 4 fields:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `name` | `str` | Human-friendly name (e.g. `"JupyterLab"`, `"Streamlit"`) |
+| `repo_id` | `str` | Full Hub repo ID (e.g. `"SpacesExamples/jupyterlab"`) |
+| `sdk` | `str` | SDK type — `"docker"`, `"static"`, or `"gradio"` |
+| `preferred_private` | `bool` | If True, new Spaces from this template default to private |
+
+#### 2.2 `create_repo(space_template=...)`
+
+```python
+from huggingface_hub import HfApi
+
+api = HfApi()
+
+# Using repo_id (full identifier)
+api.create_repo(
+    repo_id="my-user/my-notebook",
+    repo_type="space",
+    space_template="SpacesExamples/jupyterlab",
+)
+
+# Using short name (human-friendly, case-insensitive)
+api.create_repo(
+    repo_id="my-user/my-streamlit-app",
+    repo_type="space",
+    space_template="Streamlit",
+)
+```
+
+Key behavior:
+- Accepts either `repo_id` (e.g. `"SpacesExamples/jupyterlab"`) or short `name` (e.g. `"JupyterLab"`)
+- Case-insensitive matching on name
+- If `space_sdk` is omitted, it's **auto-set** from the template's SDK
+- If `space_sdk` is provided and doesn't match the template's SDK, raises `ValueError`
+- If template has `preferred_private=True` and no visibility is explicitly set, the Space is created as **private**
+
+### 3. Template Resolution Algorithm (Source-Verified)
+
+From `HfApi.create_repo()` source code, the resolution follows this exact logic:
+
+```python
+# Pseudocode of the actual implementation
+resolved_space_template = None
+if space_template is not None:
+    if repo_type != "space":
+        raise ValueError("space_template only valid with repo_type='space'")
+    
+    all_templates = api.list_space_templates(token=token)
+    template = None
+    
+    # Try matching by repo_id first, then by name (case-insensitive)
+    for candidate in all_templates:
+        if candidate.repo_id == space_template:
+            template = candidate
+            break
+        if candidate.name.lower() == space_template.lower():
+            template = candidate
+            break
+    
+    if template is None:
+        raise ValueError(f"Unknown Space template '{space_template}'")
+    
+    resolved_space_template = template.repo_id
+    
+    # Auto-private if template recommends it and user didn't set visibility
+    if template.preferred_private and private is None and visibility is None:
+        resolved_visibility = "private"
+    
+    # Auto-set SDK to match template
+    if space_sdk is not None and space_sdk != template.sdk:
+        raise ValueError(f"space_sdk must match template SDK. Got {space_sdk}, expected {template.sdk}")
+    space_sdk = template.sdk
+
+# Payload sent to the Hub API
+payload["sdk"] = space_sdk
+if resolved_space_template is not None:
+    payload["template"] = resolved_space_template
+```
+
+### 4. The 28 Official Templates (Live API-Verified)
+
+#### Docker SDK (17 templates) — Full container environments
+
+| # | Name | repo_id | Preferred Private |
+|---|------|---------|:---:|
+| 1 | Streamlit | `streamlit/streamlit-template-space` | No |
+| 2 | JupyterLab | `SpacesExamples/jupyterlab` | **Yes** |
+| 3 | Argilla | `argilla/argilla-template-space` | No |
+| 4 | Livebook | `livebook-dev/livebook` | No |
+| 5 | LabelStudio | `LabelStudio/LabelStudio` | No |
+| 6 | AimStack | `aimstack/aim` | No |
+| 7 | Shiny (R) | `posit/shiny-for-r-template` | No |
+| 8 | Shiny (Python) | `posit/shiny-for-python-template` | No |
+| 9 | ZenML | `zenml/zenml` | No |
+| 10 | ChatUI | `huggingchat/chat-ui-template` | No |
+| 11 | Panel | `Panel-Org/panel-template` | No |
+| 12 | Giskard | `giskardai/giskard` | No |
+| 13 | Quarto | `posit/quarto-template` | No |
+| 14 | marimo | `marimo-team/marimo-app-template` | No |
+| 15 | Evidence | `evidence-dev/template-app` | No |
+| 16 | Langfuse | `langfuse/langfuse-template-space` | No |
+| 17 | Plotly | `plotly/dash-app-template` | No |
+
+#### Static SDK (6 templates) — Pure frontend, no backend server
+
+| # | Name | repo_id | Preferred Private |
+|---|------|---------|:---:|
+| 18 | Paper Project | `nerfies/paper-template` | No |
+| 19 | Gradio-Lite | `gradio/gradio-lite-template` | No |
+| 20 | Transformers.js | `static-templates/transformers.js` | No |
+| 21 | React | `static-templates/react` | No |
+| 22 | Svelte | `static-templates/svelte` | No |
+| 23 | Vue | `static-templates/vue` | No |
+
+#### Gradio SDK (5 templates) — Gradio app blueprints
+
+| # | Name | repo_id | Preferred Private |
+|---|------|---------|:---:|
+| 24 | chatbot | `gradio-templates/chatbot` | No |
+| 25 | text-to-image | `gradio-templates/text-to-image-gradio-template` | No |
+| 26 | leaderboard | `gradio-templates/leaderboard` | No |
+| 27 | Trackio | `gradio-templates/trackio-dashboard` | No |
+| 28 | Workflow | `gradio-templates/workflow` | No |
+
+**Notable detail:** Only **JupyterLab** (`SpacesExamples/jupyterlab`) has `preferred_private=True` — this makes sense because Jupyter notebooks often contain sensitive data and experiments.
+
+### 5. CLI Integration
+
+#### Listing templates
+
+```bash
+hf spaces templates
+```
+
+Outputs a TSV-like table with columns: `name`, `repo_id`, `sdk`, `preferred_private`.
+
+Format options:
+```bash
+hf spaces templates --json         # JSON output
+hf spaces templates --format quiet  # One ID per line (repo_ids)
+hf spaces templates --format human  # Human-readable table
+```
+
+#### Creating a Space from a template
+
+```bash
+# Using full repo_id
+hf repos create my-jupyterlab --type space --template SpacesExamples/jupyterlab
+
+# Using short name
+hf repos create my-streamlit --type space --template Streamlit
+```
+
+The `--space-sdk` flag is optional when `--template` is provided — it's auto-set from the template.
+
+### 6. Underlying REST API
+
+```http
+GET https://huggingface.co/api/spaces/templates
+Authorization: Bearer hf_****
+```
+
+Response format:
+```json
+{
+  "templates": [
+    {
+      "sdk": "docker",
+      "name": "Streamlit",
+      "repoId": "streamlit/streamlit-template-space",
+      "preferredPrivate": false
+    }
+  ]
+}
+```
+
+The `create_repo` API call sends the resolved `repo_id` in the `template` field of the JSON body:
+```json
+{
+  "name": "my-space",
+  "type": "space",
+  "sdk": "docker",
+  "template": "streamlit/streamlit-template-space"
+}
+```
+
+### 7. Zero-Cost Pathways
+
+| Template Type | Cost Model | Details |
+|--------------|------------|---------|
+| **Static templates** (Paper Project, Gradio-Lite, Transformers.js, React, Svelte, Vue) | **Free** | Static Spaces require no server, no GPU — 100% free, never sleep |
+| **Gradio templates** (chatbot, text-to-image, leaderboard, Trackio, Workflow) | **Free on CPU Basic** | Free CPU-tier Spaces, sleep after 48h inactivity, wake on traffic |
+| **Docker templates** (Streamlit, JupyterLab, etc.) | **Free on CPU Basic** | Can run on free CPU tier; upgraded hardware costs $0.03–$2.50/hr |
+| **JupyterLab** (preferred_private=True) | Free or paid | Auto-private by default; runs on Docker, use CPU Basic for $0 |
+
+All templates can be developed and tested entirely on free-tier infrastructure.
+
+### 8. Integration Points with Other Spaces APIs
+
+Space Templates work naturally with all existing Spaces management APIs:
+
+```python
+# Create from template, upgrade hardware, set sleep, add secrets
+api.create_repo(
+    repo_id="my-user/my-app",
+    repo_type="space",
+    space_template="Streamlit",
+    space_hardware="cpu-upgrade",
+    space_sleep_time=1800,
+    space_secrets=[{"key": "API_KEY", "value": "my_key"}],
+)
+
+# Wait for it to be ready
+runtime = api.wait_for_space("my-user/my-app", timeout=300)
+print(f"Space is {runtime.stage} on {runtime.hardware}")
+```
+
+### 9. Edge Cases & Design Notes
+
+1. **Only official templates** — `list_space_templates()` returns only HF-curated templates. User-created Spaces cannot be used as templates via this API.
+2. **Template Spaces themselves are regular Spaces** — looking at e.g. `streamlit/streamlit-template-space`, it's just a normal Space repo with a Dockerfile, `app.py`, and `README.md` that serves as the template source.
+3. **Non-unique name matching** — name resolution is case-insensitive but there's no protection against name collisions. The resolution loop returns the *first* match; currently no two templates share the same name, so this is not an issue.
+4. **SDK enforcement** — since `space_sdk` is auto-set to match the template, users cannot mix-and-match SDKs with templates. A Streamlit template always produces a Docker SDK Space.
+5. **No `duplicate_repo` integration** — `duplicate_repo()` does not support `space_template`; templates only work with `create_repo`.
+6. **Visibility inheritance** — only `preferred_private=True` triggers auto-visibility; all other templates default to public unless explicitly set.
+
+### 10. Practical Examples
+
+#### Create a JupyterLab Space for data analysis
+
+```python
+from huggingface_hub import HfApi
+
+api = HfApi()
+api.create_repo(
+    repo_id="my-user/data-analysis",
+    repo_type="space",
+    space_template="JupyterLab",  # Auto-private, Docker SDK
+)
+```
+
+#### Create a static documentation site with Vue
+
+```python
+api.create_repo(
+    repo_id="my-user/docs",
+    repo_type="space",
+    space_template="Vue",  # Static SDK, 100% free
+)
+```
+
+#### List all available templates programmatically
+
+```python
+from huggingface_hub import list_space_templates
+
+templates = list_space_templates()
+docker_templates = [t for t in templates if t.sdk == "docker"]
+static_templates = [t for t in templates if t.sdk == "static"]
+gradio_templates = [t for t in templates if t.sdk == "gradio"]
+
+print(f"Docker: {len(docker_templates)}, Static: {len(static_templates)}, Gradio: {len(gradio_templates)}")
+# Output: Docker: 17, Static: 6, Gradio: 5
+```
+
+### Zero-Cost Note
+All research was performed via API calls to `GET /api/spaces/templates` (read-only, free), source code inspection of `huggingface_hub` (MIT license), and the `hf` CLI help output. Creating Spaces from templates on free-tier hardware (CPU Basic or Static) costs $0.
+
+---
+
+## 2026-07-25: hf-hub-doi-digital-object-identifiers — Digital Object Identifiers for Models and Datasets on HF Hub (Topic #266)
+
+### Summary
+Comprehensive reference for DOI (Digital Object Identifier) support on the Hugging Face Hub. DOIs are persistent identifiers that uniquely identify models and datasets, making them citable in academic publications (analogous to an ISBN). DOIs are managed via DataCite, generated through the repo Settings UI (no programmatic API), and lock repositories against deletion/rename/visibility change. Supports versioning via new DOI generation per revision.
+
+### Key Findings
+- **Generation**: Exclusive through Hub UI → repo Settings → DOI section → "Generate DOI" → accept DataCite terms → optional author customization
+- **No API**: `huggingface_hub` library has no DOI methods in `HfApi`; the interactive DataCite consent flow prevents CLI/API generation
+- **Versioning**: Push a new revision → "Generate new DOI" → old DOI deprecated, fresh DOI assigned for the new snapshot
+- **Locking**: DOI-locked repos cannot be deleted, renamed, or made private without HF support intervention (`website@huggingface.co`)
+- **Free**: No cost to generate DOIs on HF Hub
+- **Citation**: DOI badge appears automatically in the model/dataset header after generation
+- **Scope**: Models and datasets only (not Spaces)
+
+### Sources
+- HF Hub DOI Docs: https://huggingface.co/docs/hub/en/doi
+- Announcement Blog: https://huggingface.co/blog/introducing-doi
+- DataCite: https://datacite.org
+
+### Skill
+hf-hub-doi — Digital Object Identifiers on Hugging Face Hub: generation workflow, DataCite integration, versioning semantics, repo locking restrictions, and citation integration
+
+---
+
+## 2026-07-25: hf-spaces-lifecycle — Hugging Face Spaces Sleep, Pause, Billing & Duration (Topic #268)
+
+### Summary
+Comprehensive deep-dive on Hugging Face Spaces lifecycle management — covering
+the complete sleep/pause/billing lifecycle for free (cpu-basic) and paid (GPU
+upgraded) hardware tiers.
+
+**Free tier (cpu-basic):** Auto-sleep after 48h inactivity, no custom sleep time
+configuration, any visitor can wake the Space. Manual pause also available.
+
+**Paid hardware (GPU upgraded):** Runs indefinitely by default. Custom sleep
+time configurable via Settings UI or `api.request_space_hardware()` with
+`sleep_time` parameter. No billing while asleep. Wakes automatically on visitor.
+
+**Pause/Resume:** Manual pause on all tiers from Settings tab. Only the owner
+can resume a paused Space. Paused time is NOT billed.
+
+**Billing model:** Per-minute metered only during `Starting` and `Running`
+states. Build phase is NOT billed. Auto-suspend on repeated failures halts
+billing. To stop billing, pause the Space or downgrade to cpu-basic.
+
+**ZeroGPU dynamic GPU allocation:**
+- `@spaces.GPU` decorator for per-request GPU allocation
+- Default function duration: 60 seconds (configurable via `duration=120`)
+- Dynamic duration: pass a callable returning needed seconds
+- Daily quotas: Free=5min, PRO=40min, Team/Org=40min, Enterprise=60min
+- Quota resets 24h after first GPU usage
+- PRO+ can extend at $1/10min
+- `torch.compile()` NOT supported; use AOT compilation (torch 2.8+)
+- GPU size: `large` (half RTX Pro 6000) or `xlarge` (full, 2× quota)
+- Free accounts: max 2 ZeroGPU Spaces
+- Shorter durations → better queue priority
+
+**Programmatic control via HfApi:**
+```python
+api.request_space_hardware(repo_id="user/my-space", hardware="t4-medium", sleep_time=30)
+api.pause_space("user/my-space")
+api.resume_space("user/my-space")
+```
+
+**Live monitoring:** SSE streaming endpoints for build/run logs, events, and
+metrics at `/api/spaces/{ns}/{repo}/logs/{build|run}` with optional `?tail=N`.
+
+### Source
+- HF Spaces Overview: https://huggingface.co/docs/hub/en/spaces-overview
+- HF Spaces GPU: https://huggingface.co/docs/hub/en/spaces-gpus
+- HF Spaces ZeroGPU: https://huggingface.co/docs/hub/en/spaces-zerogpu
+- HF Spaces Settings: https://huggingface.co/docs/hub/en/spaces-settings
+- HF Spaces Config: https://huggingface.co/docs/hub/en/spaces-config-reference
+- ZeroGPU AOT Blog: https://huggingface.co/blog/zerogpu-aoti
+
+### Skill
+mlops/hf-spaces-lifecycle — Complete reference for HF Spaces lifecycle:
+auto-sleep (free 48h vs paid custom), manual pause/resume, per-minute billing
+model, ZeroGPU dynamic allocation with daily quotas, programmatic hardware
+control via HfApi, SSE streaming, and zero-cost operation strategies
+
+---
+
+## 2026-07-25: mergekit-hf-merging — MergeKit: Complete Model Merging Toolkit for Hugging Face Hub (Topic #269)
+
+### Summary
+Comprehensive deep-dive on MergeKit (arcee-ai/mergekit), the open-source toolkit for merging large language models. MergeKit enables combining multiple pre-trained models into single checkpoints through weight-space interpolation, operating entirely on CPU or with as little as 8 GB VRAM. Covers the full merge method taxonomy (17+ methods), YAML configuration syntax (slices, models, parameters, tokenizer), Hub upload workflow via huggingface-cli, multi-stage merging (mergekit-multi), Mixture-of-Experts conversion (mergekit-moe), LoRA extraction (mergekit-extract-lora), tokenizer transplantation (mergekit-tokensurgeon), evolutionary search methods, and practical zero-cost operation patterns for merging on CPU-only hardware.
+
+### Merge Methods Overview
+
+| Method | Value(s) | # Models | Base? | Core Idea |
+|--------|----------|----------|-------|-----------|
+| **Linear** | `linear` | ≥2 | - | Weighted average of parameters (model soups) |
+| **SLERP** | `slerp` | 2 | ✓ | Spherical linear interpolation on hypersphere |
+| **NuSLERP** | `nuslerp` | 2 | * | Enhanced SLERP with flexible weighting, task vector SLERP |
+| **Multi-SLERP** | `multislerp` | ≥2 | * | Barycentric SLERP for >2 models |
+| **Karcher Mean** | `karcher` | ≥2 | - | Riemannian barycenter on manifolds |
+| **Task Arithmetic** | `task_arithmetic` | ≥2 | ✓ | Linear combination of task vectors (deltas from base) |
+| **TIES** | `ties` | ≥2 | ✓ | Task arithmetic + sparsification + sign consensus (remove interference) |
+| **DARE** | `dare_linear`, `dare_ties` | ≥2 | ✓ | Task arithmetic + random pruning + rescaling |
+| **DELLA** | `della`, `della_linear` | ≥2 | ✓ | Adaptive magnitude-based pruning of task vectors |
+| **Model Breadcrumbs** | `breadcrumbs`, `breadcrumbs_ties` | ≥2 | ✓ | Outlier removal (small & large diffs) from task vectors |
+| **SCE** | `sce` | ≥2 | ✓ | Adaptive matrix-level weighting by parameter variance |
+| **RAM** | `ram`, `ramplus_tl` | ≥2 | ✓ | Random assignment merging |
+| **Model Stock** | `model_stock` | ≥3 | ✓ | Geometric weight calculation for linear interpolation |
+| **Nearswap** | `nearswap` | 2 | ✓ | Interpolate only where parameters are similar |
+| **Arcee Fusion** | `arcee_fusion` | 2 | ✓ | Dynamic thresholding for fusing important changes |
+| **Passthrough** | `passthrough` | 1 | - | Direct tensor copy (for frankenmerging/layer stacking) |
+
+**Base model column:** ✓ = required, * = optional, - = not applicable
+
+### YAML Configuration
+
+Two mutually exclusive top-level specs:
+
+**Slices mode** — piecewise assembly from layer blocks:
+```yaml
+merge_method: slerp
+slices:
+  - model: model1
+  - model: model2
+    parameters:
+      weight: 0.5  # per-slice weight
+parameters:
+  t: 0.5  # interpolation factor (slerp)
+```
+
+**Models mode** — entire models as merge inputs:
+```yaml
+merge_method: ties
+base_model: mistralai/Mistral-7B-v0.1
+models:
+  - model: model1
+    parameters:
+      weight: 1.0
+      density: 0.5  # TIES sparsification
+  - model: model2
+    parameters:
+      weight: 0.5
+      density: 0.3
+dtype: bfloat16
+tokenizer:
+  source: union
+```
+
+Key configuration fields:
+- `dtype`: data type for merge (float16, bfloat16, float32)
+- `tokenizer`: modern config — `source: union|base|<path>`, per-token embedding control
+- `tokenizer_source`: legacy field (union|base|<path>)
+- `chat_template`: "auto" | "alpaca" | "chatml" | "llama3" | "mistral" | "exaone" or custom Jinja2
+- `parameters`: scoped at global → model → slice → source levels (decreasing precedence)
+
+### Hub Upload Workflow
+
+```bash
+# 1. Run merge (CPU-only, zero-cost)
+mergekit-yaml ./config.yml ./merged-model --lazy-unpickle --allow-crimes
+
+# 2. Edit auto-generated README.md with model card info
+
+# 3. Login and upload
+huggingface-cli login  # token with write permission
+huggingface-cli upload your_ns/merged-model ./merged-model .
+```
+
+MergeKit auto-generates a README with merge metadata (method, input models, parameters, citation) for the model card. No separate model card creation needed.
+
+### Advanced Features
+
+- **Multi-stage merging** (`mergekit-multi`): chain merges where later stages consume earlier outputs — YAML with multiple config sections
+- **MoE Merging** (`mergekit-moe`): convert dense models → Mixture of Experts by splitting feed-forward layers across experts
+- **LoRA Extraction** (`mergekit-extract-lora`): extract PEFT-compatible low-rank approximations from fine-tuned models
+- **Tokenizer Transplantation** (`mergekit-tokensurgeon`): align vocabulary between models for speculative decoding or cross-tokenizer distillation
+- **Evolutionary Methods**: genetic algorithm search for optimal merge weights (docs/evolve.md)
+- **Raw PyTorch Merging** (`mergekit-pytorch`): merge arbitrary `.pt`/`.safetensors` checkpoints outside Transformers
+
+### Zero-Cost Operation
+
+- **Entirely CPU-runnable**: `--lazy-unpickle` loads tensors lazily; no GPU needed
+- **No inference credits consumed**: merging is local computation, not inference
+- **Free Hub uploads**: the HF Hub hosts merged models at zero cost
+- **Recommended for Beer**: Beer's hardware (380 MB 0.5B GGUF, 934 MB 1.5B GGUF) can run mergekit for small models; for larger models, use CPU-only mode with `--allow-crimes` flag
+
+### Source
+- MergeKit GitHub: https://github.com/arcee-ai/mergekit
+- MergeKit README: https://github.com/arcee-ai/mergekit/blob/main/README.md
+- Merge Methods Guide: https://github.com/arcee-ai/mergekit/blob/main/docs/merge_methods.md
+- MoE Merging: https://github.com/arcee-ai/mergekit/blob/main/docs/moe.md
+- Multi-Stage Merging: https://github.com/arcee-ai/mergekit/blob/main/docs/multimerge.md
+- Evolutionary Merge: https://github.com/arcee-ai/mergekit/blob/main/docs/evolve.md
+- EMNLP Paper: https://aclanthology.org/2024.emnlp-industry.36/
+- FrankenSteinAI (hosted UI): https://frankenstein-ai.com/
+
+### Skill
+SakThai-mergekit-hf-merging — Complete reference for MergeKit toolkit:
+17+ merge methods (linear, SLERP, TIES, DARE, passthrough, etc.), YAML config
+syntax, tokenizer handling (union/base/per-token), Hub upload workflow,
+multi-stage and MoE merging, LoRA extraction, evolutionary search,
+tokenizer transplantation, and zero-cost CPU-only operation patterns
