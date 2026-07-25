@@ -16849,3 +16849,61 @@ Deep-dive on the advanced MergeKit features beyond basic merge methods: dense-to
 
 ### Skill
 SakThai-mergekit-hf-merging v2.0.0 — Complete MergeKit reference with all advanced features, configuration patterns, and zero-cost operation guidelines.
+
+---
+
+## 2026-07-25: hf-lighteval — Hugging Face LightEval: All-in-One LLM Evaluation Toolkit (Topic #271)
+
+### Summary
+Comprehensive deep-dive on Hugging Face LightEval (v0.11.x) — the all-in-one toolkit for evaluating LLMs across multiple backends. Built by the HF Leaderboard and Evals Team (2,500+ GitHub stars, MIT license). Covers the full architecture (Pipeline, Registry, LightevalModel abstract interface, EvaluationTracker), all 8 evaluation backends (inspect-ai preferred, accelerate, vllm, sglang, nanotron, TGI, Inference Endpoints, LiteLLM, Inference Providers), 1000+ supported evaluation tasks across 7 core suites (lighteval, leaderboard, harness, helm, bigbench, original, extended) plus community and multilingual suites, custom task definitions via LightevalTaskConfig, 25+ built-in metrics (ExactMatch, F1, BLEU, ROUGE, BERTScore, Perplexity, PassAtK, MajAtN, LLM-as-Judge, Faithfulness, Extractiveness, and more), three sampling methods (GENERATIVE, LOGPROBS, PERPLEXITY), result management (push-to-hub, per-sample details, re-evaluation from cached responses), CLI with full typer-based subcommands (`lighteval eval`, `lighteval accelerate`, `lighteval vllm`, `lighteval sglang`, `lighteval endpoint` with 4 sub-endpoints), Python API for in-memory model evaluation with Transformers, model configuration (YAML/args/class), inspect-ai integration as preferred backend for API-served models, auto-discovery of live inference providers via HF API, and zero-cost evaluation patterns using free Inference Providers, small CPU models, and Hub result hosting.
+
+### Architecture Pipeline
+1. **Registry** — Task discovery from suite directories; matches task names to LightevalTaskConfig objects
+2. **Pipeline** — Orchestrates model loading, task execution, metric computation
+3. **LightevalModel** — Abstract interface with async/sync execution (greedy_until, loglikelihood, loglikelihood_rolling)
+4. **ParallelismManager** — Enum supporting ACCELERATE, NANOTRON, VLLM, SGLANG, TGI, OPENAI, CUSTOM, NONE
+5. **EvaluationTracker** — Results logging with per-task, per-sample detail storage
+
+### Key Features
+1. **8 Entry Points**: `eval` (inspect-ai, preferred), `accelerate`, `vllm`, `sglang`, `nanotron`, `endpoint inference-endpoint`, `endpoint tgi`, `endpoint litellm`, `endpoint inference-providers`, `custom`
+2. **1000+ Tasks**: 9 suite categories with popular benchmarks (MMLU, GSM8K, MATH, GPQA, IFEval, BBH, HellaSwag, ARC, HLE, SimpleQA, AIME, etc.)
+3. **Task String Syntax**: `"gsm8k"` for single, `"bbh:boolean_expressions"` for subtask, `"gsm8k,mmlu_pro"` for multiple, `"leaderboard"` for suite
+4. **Custom Tasks**: Define `LightevalTaskConfig` with `TASKS_TABLE` export; load via `--custom-tasks` flag
+5. **Model Config**: YAML files or CLI args for model_name, generation_parameters (temperature, top_p, max_new_tokens), system_prompt, cache_dir
+6. **22 Model Parameters on CLI**: max_tokens, temperature, top_p, top_k, seed, stop_seqs, num_choices, frequency_penalty, presence_penalty, logit_bias, best_of, log_probs, top_logprobs, cache_prompt, reasoning_effort, reasoning_tokens, reasoning_history, response_format, parallel_tool_calls, max_tool_output, internal_tools, model_args
+7. **Per-sample Details**: Caching with `--save-details`, re-evaluation via `--load-responses-from-details-date-id`
+8. **Result Push**: `--repo-id` creates a Hub Space with browsable results; `--public` flag controls visibility
+9. **Auto Provider Discovery**: `:all` suffix on model names finds all live HF Inference Providers
+10. **Reasoning Tag Removal**: Automatic stripping of `<think>` tags (or custom pairs) before metric computation
+
+### Custom Task Example
+```python
+from lighteval.tasks.lighteval_task import LightevalTaskConfig
+
+TASKS_TABLE = [
+    LightevalTaskConfig(
+        name="my_custom_qa",
+        suite="custom",
+        prompt_function="prompt_fn",
+        hf_repo="my-org/my-dataset",
+        hf_subset="default",
+        hf_avail_splits=["train", "test"],
+        evaluation_splits=["test"],
+        few_shots=[],
+        metric=["my_metric"],
+    )
+]
+
+def prompt_fn(line, example):
+    return f"Question: {line['question']}\nAnswer:"
+```
+
+### Sources
+- LightEval GitHub: https://github.com/huggingface/lighteval
+- LightEval Docs: https://huggingface.co/docs/lighteval/main/en/index
+- Inspect-ai: https://inspect.aisi.org.uk/
+- HF Inference Providers: https://huggingface.co/docs/inference-providers/en/index
+- Open LLM Leaderboard: https://huggingface.co/spaces/open-llm-leaderboard/open_llm_leaderboard
+
+### Skill
+mlops/hf-lighteval — Complete reference for Hugging Face LightEval evaluation toolkit: architecture (Pipeline, Registry, LightevalModel, EvaluationTracker), 8 evaluation backends, 1000+ tasks across 7 core + optional suites, custom tasks via LightevalTaskConfig, 25+ built-in metrics, CLI subcommands, Python API for in-memory Transformers evaluation, inspect-ai integration, results management with Hub push, auto-discovery of inference providers, and zero-cost evaluation patterns
