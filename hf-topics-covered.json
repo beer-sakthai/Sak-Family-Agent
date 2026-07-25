@@ -226,5 +226,6 @@
   "hf-data-studio-sql-console-deep-dive",
   "hf-hub-repositories-licenses-complete-reference",
   "hf-hub-storage-limits-and-plans-storage-buckets-deepening",
-  "hf-hub-hardware-filter-models-search"
+  "hf-hub-hardware-filter-models-search",
+  "hf-datasets-cache-management-deep-dive"
 ]
