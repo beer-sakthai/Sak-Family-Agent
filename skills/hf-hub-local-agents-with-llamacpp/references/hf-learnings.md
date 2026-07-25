@@ -507,14 +507,147 @@ gguf_files = [s for s in siblings if s.rfilename.endswith(".gguf")]
 
 ---
 
+|---
+
+### 2026-07-26-v3: llama.cpp Ecosystem Expansion — WebUI, Multimodal, WebGPU, and HF Integration Updates
+
+**Topic deepened:** `hf-hub-local-agents-with-llamacpp` — research based on llama.cpp README (main branch, 2026-07-26) and HF changelog.
+
+#### Key New Features in llama.cpp (as of July 2026)
+
+| Feature | Status | What It Means for HF Users |
+|---------|--------|---------------------------|
+| **Built-in WebUI** | ✅ Live | Run `llama-server` and open `http://localhost:8080` for a browser-based chat interface. No separate frontend needed. Guide: https://github.com/ggml-org/llama.cpp/discussions/16938 |
+| **Multimodal in llama-server** | ✅ Supported | Server accepts image inputs via the OpenAI-compatible API. Supports LLaVA, Qwen-VL, and other multimodal GGUF models. PR: #12898 |
+| **WebGPU browser inference** | ✅ Live | Run GGUF models directly in the browser via WebGPU. See demo: https://reeselevine.github.io/llamas-on-the-web/ |
+| **GPT-OSS + MXFP4 native** | ✅ Merged | NVIDIA collaboration: native MXFP4 quantization format for GPT-OSS models. Enables 4-bit weights + 4-bit activations on RTX GPUs. PR: #15091 |
+| **HF Inference Endpoints GGUF** | ✅ Live | HF Inference Endpoints now support GGUF models out of the box — deploy local-style GGUF models to the cloud. Discussion: https://github.com/ggml-org/llama.cpp/discussions/9669 |
+| **GGUF Editor on HF Spaces** | ✅ Live | Web-based GGUF metadata editor at https://huggingface.co/spaces/CISCai/gguf-editor — edit model metadata, quantization params, and tokenizer config without CLI tools |
+| **VS Code extension for FIM** | ✅ Live | https://github.com/ggml-org/llama.vscode — Fill-In-the-Middle code completions in VS Code using local llama.cpp server |
+| **Vim/Neovim plugin for FIM** | ✅ Live | https://github.com/ggml-org/llama.vim — Same FIM completions for Vim/Neovim users |
+
+#### HF Cache Migration (Already Documented, Now Standard Behavior)
+
+The `-hf` flag in llama.cpp now downloads models into the **standard Hugging Face cache** (`~/.cache/huggingface/hub/`), sharing it with `huggingface_hub`, `transformers`, and all other HF tools. This means:
+- A model downloaded via `llama-cli -hf user/repo` is immediately available to Python scripts using `huggingface_hub` or `transformers` without re-downloading
+- Environment variable `LLAMA_CACHE` can override the cache location (defaults to HF's standard cache)
+- Symlinks and LFS handling are done internally — no manual `.git/` management needed
+
+#### Updated Architecture Diagram
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│                    Hugging Face Hub                           │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌─────────────┐  │
+│  │ Hardware  │  │ Model    │  │ GGUF     │  │ Inference   │  │
+│  │ Profile   │  │ Page     │  │ Editor   │  │ Endpoints   │  │
+│  │ Settings  │  │ -hf btn  │  │ (Space)  │  │ (Cloud GGUF)│  │
+│  └────┬─────┘  └────┬─────┘  └────┬─────┘  └──────┬──────┘  │
+└───────┼─────────────┼─────────────┼────────────────┼─────────┘
+        │             │             │                │
+        ▼             ▼             ▼                ▼
+   ┌─────────────────────────────────────────────────────┐
+   │              llama.cpp Ecosystem                     │
+   │                                                      │
+   │  ┌──────────────┐  ┌──────────────┐                 │
+   │  │  llama-cli   │  │ llama-server │                 │
+   │  │  (CLI chat)  │  │  (REST API)  │                 │
+   │  └──────┬───────┘  └──────┬───────┘                 │
+   │         │                 │                          │
+   │         ▼                 ▼                          │
+   │  ┌──────────────┐  ┌──────────────┐                 │
+   │  │  WebUI       │  │ OpenAI-API   │                 │
+   │  │  Browser UI  │  │ Compatible   │                 │
+   │  │  :8080/chat  │  │ :8080/v1     │                 │
+   │  └──────────────┘  └──────┬───────┘                 │
+   │                           │                          │
+   │                           ▼                          │
+   │                    ┌──────────────┐                  │
+   │                    │  Integrations│                  │
+   │                    │  ┌────────┐  │                  │
+   │                    │  │VS Code │  │                  │
+   │                    │  │ Vim    │  │                  │
+   │                    │  │ WebGPU │  │                  │
+   │                    │  │ Agents │  │                  │
+   │                    │  └────────┘  │                  │
+   │                    └──────────────┘                  │
+   │                                                      │
+   │  Shared Cache: ~/.cache/huggingface/hub/             │
+   │  (models--user--repo/)                               │
+   └─────────────────────────────────────────────────────┘
+```
+
+#### New llama-server API Endpoints (Multimodal)
+
+When `llama-server` is running with a multimodal GGUF model:
+
+```
+POST /v1/chat/completions
+{
+  "model": "qwen-vl",
+  "messages": [
+    {
+      "role": "user",
+      "content": [
+        {"type": "image_url", "image_url": {"url": "data:image/png;base64,..."}},
+        {"type": "text", "text": "Describe this image"}
+      ]
+    }
+  ]
+}
+```
+
+This follows the same OpenAI-compatible multimodal format. The model handles both text and vision inputs through the same chat endpoint.
+
+#### Zero-Cost Patterns Expansion
+
+| Pattern | What's New | Cost |
+|---------|-----------|------|
+| **WebUI instead of Gradio** | llama.cpp's built-in WebUI eliminates the need for a separate Gradio/Streamlit Space for simple chat interfaces | Free (local) |
+| **GGUF Editor on HF Spaces** | Edit GGUF metadata (model name, context length, EOS token, chat template) without installing any tools | Free (HF Space) |
+| **GGUF on HF Inference Endpoints** | Deploy your local GGUF models to the cloud for sharing with others — no Dockerfile needed | Pay-per-use |
+| **WebGPU browser inference** | Run models entirely in the browser via WebGPU — no server, no install | Free (user's GPU) |
+| **VS Code FIM with local model** | Code completions using your local GGUF model — no internet, no API costs | Free (local) |
+
+#### WebUI Quick Start
+
+```bash
+# Start server with a model and open WebUI
+llama-server -hf ggml-org/gemma-3-1b-it-GGUF --webui
+
+# Then open http://localhost:8080 in your browser
+# The WebUI provides:
+# - Chat interface with streaming
+# - Model configuration panel
+# - Conversation history
+# - System prompt editor
+```
+
+#### Key Takeaways for Sak-Family-Agent
+
+1. **llama.cpp WebUI** means Beer can run a full chat interface without Gradio — useful for quick demos or testing on low-resource machines
+2. **Shared HF cache** means models downloaded via `-hf` are immediately available to Python tooling — no duplication, no manual symlinks
+3. **GGUF Editor Space** enables editing model metadata without CLI — useful for fixing model cards, tokenizer configs, or chat templates in GGUF files
+4. **VS Code FIM** connects local GGUF models to code editor — enabled by `llama-server` running as OpenAI-compatible backend
+5. **WebGPU** opens the door to running Beer's GGUF models in browser-based demos without any server infrastructure
+
+---
+---
+
 ### Sources
 - https://huggingface.co/docs/hub/en/local-apps — Official HF Local Apps documentation
 - https://huggingface.co/docs/hub/en/gguf-llamacpp — llama.cpp + HF GGUF usage guide
 - https://huggingface.co/settings/local-apps — Local Apps settings page
 - https://huggingface.co/settings/hardware — Hardware profiling settings
-- https://github.com/ggml-org/llama.cpp — llama.cpp README (HF `-hf` flag, shared cache)
+- https://github.com/ggml-org/llama.cpp — llama.cpp README (HF `-hf` flag, shared cache, WebUI, multimodal, WebGPU)
+- https://github.com/ggml-org/llama.cpp/discussions/16938 — WebUI guide
+- https://github.com/ggml-org/llama.cpp/discussions/9669 — HF Inference Endpoints GGUF support
+- https://huggingface.co/spaces/CISCai/gguf-editor — GGUF Editor Space
+- https://github.com/ggml-org/llama.vscode — VS Code FIM extension
+- https://github.com/ggml-org/llama.vim — Vim/Neovim FIM plugin
+- https://reeselevine.github.io/llamas-on-the-web/ — WebGPU demo
 - https://huggingface.co/docs/hub/en/agents-local — Local agents documentation
 - https://github.com/gary149/llama-agent — llama-agent C++ native agent
 
 ### Skill Updated
-`hf-hub-local-agents-with-llamacpp/` — expanded from 116 to ~400 lines with complete Local Apps ecosystem coverage including hardware profiling, `-hf` architecture, cross-app comparison, zero-cost patterns, and troubleshooting guide.
+`hf-hub-local-agents-with-llamacpp/` — v3: Added coverage of llama.cpp WebUI, multimodal server, WebGPU inference, GPT-OSS MXFP4 support, HF Inference Endpoints GGUF, GGUF Editor Space, VS Code/Vim FIM plugins, and updated architecture diagram. Updated sources with new references.
