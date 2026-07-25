@@ -15144,3 +15144,196 @@ The formats are structurally compatible — a Hermes SKILL.md with `author: SakT
 
 ### Skill
 mlops/huggingface-hub — Hub API, MCP Server, CLI, Agent Skills, and agent integration
+
+## 2026-07-25: hf-transformers-quantization-method-selection-comprehensive — Complete Decision Framework for All 22 Quantization Methods (Topic #240)
+
+### Summary
+Comprehensive deep-dive on all 22 quantization methods supported in Transformers v5.14.0. Covers the full decision framework — on-the-fly vs calibration-based, inference vs fine-tuning, hardware compatibility (NVIDIA CUDA, AMD ROCm, Intel XPU/HPU, Apple Metal, CPU), bit-depth tradeoffs (8/4/2/1-bit), PEFT compatibility, serialization support, and benchmark comparisons. Goes deeper than individual method docs by connecting them into a single actionable reference with selection guidelines.
+
+### Sources
+- Transformers quantization overview: https://huggingface.co/docs/transformers/en/quantization/overview
+- Selecting a quantization method: https://huggingface.co/docs/transformers/en/quantization/selecting
+- Transformers v5.14.0 docs (individual quantization pages for each method)
+
+---
+
+### 1. The 22 Methods at a Glance
+
+Transformers v5.14.0 supports **22 distinct quantization methods**, categorized by whether they require calibration:
+
+**On-the-fly (no calibration needed — 14 methods):**
+bitsandbytes (4/8-bit), HQQ (1-8-bit), SINQ (2-8-bit), torchao (4/8-bit), Quanto (2/4/8-bit), EETQ (8-bit), FourOverSix (4-bit), FP-Quant (4-bit), HIGGS (2/4-bit), Metal (2/4/8-bit), FBGEMM_FP8 (8-bit), FINEGRAINED_FP8 (8-bit), GGUF/GGML/llama.cpp (1-8-bit), MXFP4 (4-bit)
+
+**Calibration-based (requires dataset — 8 methods):**
+GPTQ (2/3/4/8-bit), AWQ (4-bit), AQLM (1/2-bit), Quark (2/4/6/8/9/16-bit), SpQR (3-bit), VPTQ (1-8-bit), AutoRound (2/3/4/8-bit), compressed-tensors (1/8-bit)
+
+---
+
+### 2. Decision Framework
+
+#### Step 1: Determine Your Use Case
+
+| Use Case | Best Methods | Why |
+|---|---|---|
+| Load & go inference, no calibration | bitsandbytes, HQQ, SINQ, torchao | Zero setup, no dataset needed |
+| Maximum 4-bit accuracy | AWQ, GPTQ | Calibration recovers accuracy |
+| Fine-tuning with PEFT (QLoRA) | bitsandbytes | Most tested, widest PEFT compatibility |
+| Apple Silicon / Metal | Metal, GGUF, bitsandbytes (partial) | Metal-specific kernels available |
+| Intel GPU (XPU) | bitsandbytes, GPTQ, Quark, AWQ, Quanto, SINQ | Wide Intel support |
+| CPU-only inference | bitsandbytes, HQQ, GGUF, Quanto, SINQ, AQLM | No GPU required |
+| Extreme compression (<4-bit) | AQLM (1-2-bit), HQQ (1-bit), VPTQ (1-8-bit), SpQR (3-bit) | Maximum memory savings |
+| Fast quantization speed | HQQ (seconds), SINQ (seconds), bitsandbytes (seconds) | No calibration step |
+| torch.compile integration | HQQ, SINQ, torchao, AQLM, HIGGS, FourOverSix, Quanto, FP-Quant | JIT-compiled kernels |
+| ROCm (AMD GPU) | AWQ, GPTQ, compressed-tensors, Quark | Limited but growing |
+
+#### Step 2: Pick by Hardware
+
+**NVIDIA CUDA:** All 22 methods supported.
+**AMD ROCm:** AWQ 🟢, GPTQ 🟢, compressed-tensors 🟢, Quark 🟢, bitsandbytes 🟡 (partial), SINQ 🟡 (partial).
+**Intel XPU:** 15 methods supported — bitsandbytes, GPTQ, AWQ, AQLM, AutoRound, Quanto, GGUF, HQQ, Quark, SINQ, EETQ, FBGEMM_FP8, FINEGRAINED_FP8, torchao, FourOverSix.
+**Intel HPU (Gaudi):** bitsandbytes 🟢, GPTQ 🟢.
+**Apple Metal (M-series):** Metal 🟢, GGUF 🟢, bitsandbytes 🟡 (partial), SINQ 🟡 (partial), torchao 🟡 (partial), Quark 🟢, Quanto 🟢.
+**CPU:** bitsandbytes 🟢, HQQ 🟢, GGUF 🟢, Quanto 🟢, SINQ 🟢, AQLM 🟢, AWQ 🟢, GPTQ 🟢, AutoRound 🟢, Quark 🟢, torchao 🟢 (fp32 only), FourOverSix 🟢, compressed-tensors 🟢.
+
+#### Step 3: Pick by Bit Depth
+
+| Depth | Methods | Memory Savings |
+|---|---|---|
+| 8-bit | bitsandbytes (int8), HQQ, Quanto, torchao, EETQ, FBGEMM_FP8, FINEGRAINED_FP8, GGUF | ~2x vs bf16 |
+| 4-bit | bitsandbytes (nf4/fp4), AWQ, GPTQ, HQQ, Quanto, SINQ, FourOverSix, FP-Quant, HIGGS, Metal, MXFP4, GGUF | ~4x vs bf16 |
+| 2-3-bit | GPTQ (2-3b), AQLM (1-2b), HQQ (1-8b), HIGGS (2b), SpQR (3b), VPTQ (1-8b), SINQ (2-3b), AutoRound (2-4b), Quark (2-16b) | 6-8x vs bf16 |
+| 1-bit | AQLM (1b), HQQ (1b), compressed-tensors (1b), VPTQ (1b), GGUF (1b) | 16x+ vs bf16 |
+
+---
+
+### 3. Inference-Focused Methods
+
+#### On-the-Fly (No Calibration)
+
+**bitsandbytes** — The most widely-used method. `BitsAndBytesConfig(load_in_4bit=True, bnb_4bit_quant_type="nf4", bnb_4bit_compute_dtype=torch.bfloat16)`. Supports 4-bit NF4/FP4 and 8-bit int8. PEFT/QLoRA compatible. Primary optimization for NVIDIA CUDA, with Intel XPU support. No calibration needed. Nested (double) quantization saves additional ~0.4 bits/parameter.
+
+**HQQ (Half-Quadratic Quantization)** — Fastest on-the-fly quantization (seconds). Uses `HqqConfig(nbits=4, group_size=64)`. Supports 1-8 bits. Multiple backend kernels (GemLite, torch.compile). No calibration data needed. Accuracy degrades below 4-bit. Not serializable via Transformers' `save_pretrained()`.
+
+**SINQ** — Fast, high-quality on-the-fly quantization. `SinqConfig(n_bits=4, group_size=32)`. Supports 2-8 bits. GemLite kernel backend for fast inference. No calibration. Super-fast quantization process. Slower 3-bit inference (no GemLite available for 3-bit).
+
+**torchao** — Strong torch.compile integration. `TorchAoConfig("int4wo", group_size=128)`. Flexible quantization schemes (int4wo, int8wo, int8dq, fp8). Python-only, no binary dependencies via PyTorch's native AO. 4-bit int4wo accuracy may not match GPTQ/AWQ. Not serializable via `save_pretrained()`.
+
+**optimum-quanto** — HuggingFace-native. `QuantoConfig(weights="int4")`. Pure Python, no binary deps. Supports 2/4/8-bit. CPU, CUDA, Metal, Intel XPU. 🟢 torch.compile. Not serializable by Transformers. No PEFT fine-tuning.
+
+**Other on-the-fly:** EETQ (8-bit, NVIDIA CUDA only), FourOverSix (4-bit, theoretical 4.58-bit), FP-Quant (4-bit, NVIDIA CUDA), HIGGS (2/4-bit, NVIDIA CUDA), Metal (Apple M-series only), FBGEMM_FP8 (8-bit, NVIDIA CUDA), FINEGRAINED_FP8 (8-bit, built-in NVIDIA), GGUF/llama.cpp (1-8-bit, cross-platform).
+
+#### Calibration-Based (Higher Accuracy)
+
+**GPTQ** — `GPTQConfig(bits=4, dataset="c4", group_size=128, damp_percent=0.01)`. Calibration ~20 min on A100 for 8B model. Needs dataset. Many pre-quantized models on Hub. PEFT compatible. CPU/CUDA/ROCm/Intel XPU/Metal. Compiler support: 🟢 ROCm, 🔴 CUDA.
+
+**AWQ** — `AwqConfig(bits=4, group_size=128, zero_point=True)`. Calibration ~10 min on A100 for 8B (half of GPTQ). Often surpasses GPTQ on specific tasks by analyzing activation magnitudes. Many pre-quantized models. PEFT compatible. CUDA/ROCm. Compiler: 🟢 ROCm.
+
+**compressed-tensors** — Loading only, not quantization within Transformers. Supports FP8/sparse formats. Neural Magic backed. `CompressedTensorsConfig()`.
+
+---
+
+### 4. Fine-Tuning
+
+For QLoRA-style fine-tuning, **bitsandbytes** is the most established path:
+
+```python
+from transformers import BitsAndBytesConfig, AutoModelForCausalLM
+from peft import LoraConfig, get_peft_model
+
+bnb_config = BitsAndBytesConfig(
+    load_in_4bit=True,
+    bnb_4bit_quant_type="nf4",
+    bnb_4bit_use_double_quant=True,
+    bnb_4bit_compute_dtype=torch.bfloat16
+)
+
+model = AutoModelForCausalLM.from_pretrained(
+    "model-id", quantization_config=bnb_config, device_map="auto"
+)
+model = get_peft_model(model, LoraConfig(...))
+```
+
+Other PEFT-compatible methods: AQLM 🟢, AWQ 🟢, bitsandbytes 🟢, compressed-tensors 🟢, EETQ 🟢, GPTQ 🟢, HQQ 🟢.
+
+Non-PEFT-compatible: AutoRound 🔴, FourOverSix 🔴, FP-Quant 🔴, HIGGS 🔴, Metal 🔴, Quanto 🔴, SINQ 🔴, SpQR 🔴, VPTQ 🔴, FBGEMM_FP8 🔴, FINEGRAINED_FP8 🔴, Quark 🔴, torchao ❓.
+
+---
+
+### 5. Serialization Support
+
+Methods that support `model.save_pretrained()` (serializable):
+AQLM 🟢, AutoRound 🟢, AWQ 🟢, bitsandbytes 🟢, compressed-tensors 🟢, EETQ 🟢, FourOverSix 🟢, FP-Quant 🟢, GPTQ 🟢, HIGGS 🟢, HQQ 🔴 (not serializable), Metal 🟢, Quanto 🔴, SINQ 🟢, SpQR 🟢, VPTQ 🟢, FBGEMM_FP8 🟢, FINEGRAINED_FP8 🟢, Quark 🔴, torchao 🟢🔴 (partial), GGUF 🔴 (separate format).
+
+---
+
+### 6. Benchmark Results (from official docs — Llama 3.1 8B/70B on A100 80GB)
+
+- bf16 baseline: 1.00 acc — 16.0 GB VRAM — 125 tok/s
+- 8-bit (bnb-int8): 0.99 acc — 8.5 GB — 124 tok/s
+- 4-bit (AWQ): 0.98 acc — 5.8 GB — 123 tok/s
+- 4-bit (GPTQ): 0.98 acc — 5.8 GB — 106 tok/s (124 with Marlin)
+- 4-bit (HQQ): 0.97 acc — 5.9 GB — 132 tok/s (with torch.compile)
+- 4-bit (bnb-nf4): 0.97 acc — 6.1 GB — 82 tok/s (117 with torch.compile)
+- 2-bit (GPTQ): 0.91 acc — 5.2 GB — 130 tok/s
+
+**Key takeaways:**
+1. 8-bit methods preserve accuracy nearly perfectly (~0.99 baseline)
+2. 4-bit AWQ/GPTQ lead accuracy (~0.98) but need calibration
+3. HQQ + torch.compile offers fastest 4-bit throughput (132 tok/s)
+4. Marlin kernels significantly boost GPTQ (124 vs 106 tok/s)
+5. Sub-4-bit (2-bit) shows noticeable accuracy drop (~0.91)
+
+---
+
+### 7. Complete API Config Classes
+
+All quantization configs are available at `transformers` top level:
+- `BitsAndBytesConfig` — bitsandbytes
+- `AwqConfig` — AWQ
+- `GPTQConfig` — GPTQ (for AutoGPTQ)
+- `GptqConfig` — GPTQ (for GPTQModel)
+- `HqqConfig` — HQQ
+- `AqlmConfig` — AQLM
+- `EetqConfig` — EETQ
+- `QuantoConfig` — optimum-quanto
+- `TorchAoConfig` — torchao
+- `BitNetConfig` — BitNet
+- `CompressedTensorsConfig` — compressed-tensors
+- `FbgemmFp8Config` — FBGEMM_FP8
+- `FineGrainedFP8Config` — FINEGRAINED_FP8
+- `FourOverSixConfig` — FourOverSix
+- `FPQuantConfig` — FP-Quant
+- `HIGGSConfig` — HIGGS
+- `MetalConfig` — Metal (Apple)
+- `MXFP4Config` — MXFP4
+- `QuarkConfig` — Quark
+- `SinqConfig` — SINQ
+- `VptqConfig` — VPTQ
+- `SpQRConfig` — SpQR
+- `AutoRoundConfig` — AutoRound
+
+Usage pattern:
+```python
+from transformers import AutoModelForCausalLM, <Method>Config
+config = <Method>Config(...)
+model = AutoModelForCausalLM.from_pretrained("model-id", quantization_config=config)
+```
+
+---
+
+### Quick-Start Recommendations
+
+| Scenario | Recommended Method |
+|---|---|
+| First time quantizing | bitsandbytes (nf4) |
+| Best 4-bit accuracy | AWQ or GPTQ with Marlin |
+| Fastest load time | HQQ (seconds) |
+| QLoRA fine-tuning | bitsandbytes (nf4 + double quant) |
+| Apple Silicon | Metal or GGUF |
+| CPU inference | GGUF or Quanto |
+| Production deployment | AWQ (pre-quantized) |
+| Research/extreme compression | AQLM or VPTQ |
+| torch.compile pipeline | HQQ or torchao |
+
+### Skill
+mlops/huggingface-hub — Hub API, MCP Server, CLI, Agent Skills, and agent integration
