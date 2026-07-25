@@ -595,7 +595,110 @@ Tags on the Hub correspond to Git tags on the repo. They are useful for marking 
 
 ---
 
-## 6. Direct Hub API (REST)
+## 6. Dataset Management Patterns
+
+### 6.1 Appending to an Existing Dataset
+
+When you need to **add** examples to an existing dataset on the Hub (rather than replace it), follow the download-append-reupload pattern:
+
+```python
+from huggingface_hub import hf_hub_download, HfApi
+import json
+
+# 1. Download existing
+path = hf_hub_download("user/my-dataset", "data/train.jsonl",
+                       repo_type="dataset", force_download=True)
+with open(path) as f:
+    existing = [json.loads(line) for line in f if line.strip()]
+
+# 2. Load your new examples
+with open("my_new_examples.jsonl") as f:
+    new_examples = [json.loads(line) for line in f if line.strip()]
+
+# 3. Combine and write
+combined = existing + new_examples
+combined_path = "/tmp/train_combined.jsonl"
+with open(combined_path, "w") as f:
+    for ex in combined:
+        f.write(json.dumps(ex, ensure_ascii=False) + "\n")
+
+# 4. Upload (replaces the existing file, so include ALL examples)
+api = HfApi()
+api.upload_file(
+    path_or_fileobj=combined_path,
+    path_in_repo="data/train.jsonl",
+    repo_id="user/my-dataset",
+    repo_type="dataset",
+    commit_message=f"Add {len(new_examples)} new examples (was {len(existing)}, now {len(combined)})",
+)
+```
+
+**Critical pitfall:** `upload_file` **replaces** the target file entirely — it does not merge or append server-side. Always download first and combine locally. An upload without downloading first will silently overwrite the entire dataset.
+
+### 6.2 Tool-Calling Dataset Format
+
+Tool-calling training datasets on the Hub use **OpenAI-style `tool_calls` arrays** under a `"messages"` key. Do NOT use `<tool_call>` markup in content strings.
+
+**✅ Correct format (Hub convention):**
+
+```python
+{
+  "messages": [
+    {"role": "system", "content": "You are a helpful assistant."},
+    {"role": "user", "content": "What's the weather in Tokyo?"},
+    {
+      "role": "assistant",
+      "content": None,
+      "tool_calls": [
+        {
+          "id": "call_00000001",
+          "type": "function",
+          "function": {
+            "name": "get_weather",
+            "arguments": "{\"location\": \"Tokyo\"}"
+          }
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "tool_call_id": "call_00000001",
+      "content": "{\"temperature\": 28, \"condition\": \"sunny\"}"
+    },
+    {"role": "assistant", "content": "Tokyo is 28°C and sunny."}
+  ],
+  "tools": [...]
+}
+```
+
+**Key rules:**
+- Use `"messages"` top-level key (not `"conversations"`)
+- Tool calls in `"tool_calls"` list, not embedded in `content`
+- Arguments are **stringified JSON** (not a raw dict)
+- Each call needs a unique `"id"` (e.g. `"call_xxxxxxxx"`)
+- Tool results: `"role": "tool"` with matching `"tool_call_id"`
+- Assistant `content` is `null` when tool calls are present
+- Parallel calls: put multiple objects in the same `tool_calls` array
+
+**Converting from `<tool_call>` markup to OpenAI format:** parse each `<tool_call>\n{"name":"X","arguments":{...}}\n</tool_call>` block, assign a unique call id, create the `tool_calls` array, and pair tool results via ordered matching.
+
+### 6.3 `hf upload` CLI Path Pitfall
+
+The CLIs `hf upload` command requires an explicit `path_in_repo` — passing `"."` fails with `Error: Invalid value`. Always use a specific path:
+
+```bash
+# ✅ Correct
+hf upload user/my-repo local_file.jsonl data/train.jsonl
+
+# ❌ Wrong — fails with path error
+hf upload user/my-repo local_file.jsonl .
+```
+
+When the CLI gives cryptic path errors, fall back to `HfApi.upload_file()` — it handles path parsing consistently and gives clearer error messages.
+
+---
+
+## 7. Direct Hub API (REST)
 
 The `HfApi` Python client wraps the Hub's REST API. The underlying HTTP endpoints are:
 
@@ -611,7 +714,7 @@ Using `HfApi` is preferred over raw HTTP — it handles auth, retries, LFS uploa
 
 ---
 
-## 7. Rate Limiting & Best Practices
+## 9. Rate Limiting & Best Practices
 
 ### Rate Limits
 - Unauthenticated: ~100 requests/minute
@@ -635,7 +738,7 @@ Using `HfApi` is preferred over raw HTTP — it handles auth, retries, LFS uploa
 
 ---
 
-## 8. Repo Type Comparison
+## 9. Repo Type Comparison
 
 | Aspect | Model | Dataset | Space |
 |--------|-------|---------|-------|
