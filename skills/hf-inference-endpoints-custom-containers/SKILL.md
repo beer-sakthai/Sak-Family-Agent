@@ -15,9 +15,9 @@ Deep-dive into deploying custom Docker containers to Hugging Face Inference Endp
 ## References
 - `references/hf-learnings.md` — full research notes
 
-|## Metadata
+## Metadata
 - **author**: SakThai
 - **license**: MIT
 - **created**: 2026-07-25
 - **deepened**: 2026-07-25 (Custom Router, updated Dockerfile pattern, Download Pattern, Endpoint States)
-- **topic**: hf-inference-endpoints-custom-containers-deep-dive|
+- **topic**: hf-inference-endpoints-custom-containers-deep-dive
