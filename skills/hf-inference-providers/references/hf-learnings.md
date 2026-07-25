@@ -384,4 +384,199 @@ Based on the roadmap and continuous updates since January 2025 launch:
 
 ---
 
-*Skill: hf-inference-providers — Hugging Face Inference Providers comprehensive reference: multi-provider serverless inference architecture, 17+ providers, router proxy with selection policies (:fastest/:cheapest/:preferred), Hub integration (widgets, playground, Data Studio AI), client SDK patterns, billing model, security (SOC2, TLS, no data storage), agent integrations, and zero-cost development pathways*
+## 2026-07-25: hf-inference-client-provider-routing-source-deep-dive — huggingface_hub v1.24.0 Provider Routing System Source-Code Deep Dive (Topic #278)
+
+### Summary
+Source-code deep dive into the huggingface_hub v1.24.0 `huggingface_hub.inference._providers` package — the complete provider routing system that dispatches InferenceClient requests to 18 partner providers. Covers the full class hierarchy (`TaskProviderHelper` → 30+ provider-specific task helpers), the request preparation pipeline (5-step prepare chain), the `get_provider_helper()` routing logic (3 decision paths: auto-router, auto-select from mapping, explicit provider), the `PROVIDERS` registry dict, the `AutoRouterConversationalTask` server-side routing singleton, the `_fetch_inference_provider_mapping()` Hub API contract, the `_OpenAIProxy` OpenAI compatibility layer, and the `_client.py` integration points for text_generation, chat_completion, and other tasks.
+
+### Source
+- huggingface_hub v1.24.0 source (installed at `/opt/data/.venv/lib/python3.13/site-packages/huggingface_hub/inference/`)
+- `_providers/__init__.py` — PROVIDERS registry, get_provider_helper(), CONVERSATIONAL_AUTO_ROUTER
+- `_providers/_common.py` — TaskProviderHelper, InferenceProviderMapping, AutoRouterConversationalTask
+- `_providers/<name>.py` — 18 provider-specific modules
+- `_client.py` — InferenceClient with provider parameter and OpenAI proxy
+- Inference Providers Docs: https://huggingface.co/docs/inference-providers/en/index
+
+### 1. Architecture Overview
+
+The provider routing system is a client-side dispatch layer inside `huggingface_hub` that sits between user code and 18 partner inference providers. Every `InferenceClient` method (`text_generation`, `chat_completion`, `text_to_image`, etc.) routes through this system.
+
+```
+User Code → InferenceClient.method() 
+  → get_provider_helper(provider, task, model) 
+    → returns TaskProviderHelper subclass instance
+  → helper.prepare_request(inputs, parameters, headers, model, api_key) 
+    → helper.get_response(data, request_parameters)
+  → parsed response returned to user
+```
+
+### 2. Package Layout
+
+```
+huggingface_hub/inference/
+  _client.py                  # InferenceClient (user-facing)
+  _generated/                 # Typed parameters/outputs
+  _providers/
+    __init__.py               # PROVIDERS registry, get_provider_helper()
+    _common.py                # Base classes: TaskProviderHelper, InferenceProviderMapping, AutoRouterConversationalTask
+    hf_inference.py           # HF-Inference provider (17+ tasks, the fallback)
+    cerebras.py, cohere.py, deepinfra.py, fal_ai.py, featherless_ai.py,
+    fireworks_ai.py, groq.py, novita.py, nscale.py, openai.py,
+    ovhcloud.py, publicai.py, replicate.py, scaleway.py, together.py,
+    wavespeed.py, zai_org.py  # 18 partner provider modules
+```
+
+### 3. Class Hierarchy
+
+```
+TaskProviderHelper (base)
+  ├── _prepare_api_key()    — token from user or local login
+  ├── _prepare_mapping_info() — Hub model → provider mapping
+  ├── _prepare_headers()    — default HF headers + overrides
+  ├── _prepare_url()        — base URL + route
+  │     ├── _prepare_base_url()   — per-provider base URL
+  │     └── _prepare_route()      — per-provider path suffix
+  ├── _prepare_payload_as_dict()  — JSON payload generation
+  ├── _prepare_payload_as_bytes() — binary payload generation
+  └── get_response()        — HTTP call + response parsing
+```
+
+Concrete subclasses (30+) are per-provider per-task:
+- **Text generation**: `DeepInfraTextGenerationTask`, `TogetherTextGenerationTask`, `FeatherlessTextGenerationTask`, `NovitaTextGenerationTask`, `HFInferenceTask`
+- **Conversational**: `CerebrasConversationalTask`, `CohereConversationalTask`, `DeepInfraConversationalTask`, `FeatherlessConversationalTask`, `FireworksAIConversationalTask`, `GroqConversationalTask`, `NovitaConversationalTask`, `NscaleConversationalTask`, `OpenAIConversationalTask`, `OVHcloudConversationalTask`, `PublicAIConversationalTask`, `ScalewayConversationalTask`, `TogetherConversationalTask`, `ZaiConversationalTask`, `HFInferenceConversational`
+- **Image generation**: `FalAITextToImageTask`, `TogetherTextToImageTask`, `ReplicateTextToImageTask`, `NscaleTextToImageTask`, `WavespeedAITextToImageTask`, `ZaiTextToImageTask`
+- **Speech/audio**: `DeepInfraAutomaticSpeechRecognitionTask`, `FalAIAutomaticSpeechRecognitionTask`, `ReplicateAutomaticSpeechRecognitionTask`
+- **Feature extraction**: `TogetherFeatureExtractionTask`, `ScalewayFeatureExtractionTask`, `HFInferenceFeatureExtractionTask`
+- **Video generation**: `FalAITextToVideoTask`, `TogetherTextToVideoTask`, `NovitaTextToVideoTask`, `WavespeedAITextToVideoTask`, `FalAIImageToVideoTask`, `WavespeedAIImageToVideoTask`, `TogetherImageToVideoTask`
+- **Image-to-image**: `TogetherImageToImageTask`, `ReplicateImageToImageTask`, `FalAIImageToImageTask`, `WavespeedAIImageToImageTask`
+
+### 4. Routing Logic: get_provider_helper()
+
+The `get_provider_helper()` function (in `_providers/__init__.py`) implements a 3-path decision tree:
+
+```
+Caller: InferenceClient.method(model, provider=...)
+  │
+  ├─ Path 1: No model + no/auto provider, OR model is HTTP URL
+  │   → provider = "hf-inference" (legacy fallback)
+  │
+  ├─ Path 2: provider is None
+  │   → provider = "auto"
+  │   (If conversational: return CONVERSATIONAL_AUTO_ROUTER singleton)
+  │   (Else: fetch provider mapping from Hub, use first provider)
+  │
+  └─ Path 3: Explicit provider string (e.g., "together")
+      → Look up in PROVIDERS dict
+      → If task found, return provider's task helper instance
+      → If task not found, raise ValueError
+```
+
+**Auto mode for non-conversational tasks**: calls `_fetch_inference_provider_mapping(model)` which fetches `HfApi().model_info(model, expand=["inferenceProviderMapping"])` from the Hub. Returns an ordered list of `InferenceProviderMapping` objects (ordered by user's preference in https://hf.co/settings/inference-providers). The first mapping's `.provider` is selected.
+
+**Conversational auto-router**: uses `AutoRouterConversationalTask` singleton — routes to `https://router.huggingface.co` which does server-side provider selection. This avoids an extra API call to fetch the provider mapping and lets the server apply user preferences directly.
+
+### 5. Request Preparation Pipeline
+
+When `text_generation()` (or any method) is called, the client:
+1. Resolves the model ID (user-provided or default)
+2. Calls `get_provider_helper(self.provider, task="text-generation", model=model_id)`
+3. Calls `helper.prepare_request(inputs, parameters, headers, model, api_key)` which runs 5 steps:
+   - `_prepare_api_key()`: uses user-provided API key, or `get_token()`, or raises
+   - `_prepare_mapping_info()`: if explicit provider, looks up hardcoded or fetched mapping; if auto-router, returns dummy mapping
+   - `_prepare_headers()`: merges `build_hf_headers()` with user headers
+   - `_prepare_url()`: constructs `{base_url}/{route}` — base URLs are per-provider (e.g. `https://api.together.xyz`), routes are per-task (e.g. `v1/chat/completions`)
+   - `_prepare_payload_as_dict()`: converts inputs+parameters to provider-specific JSON format
+4. Calls `helper.get_response(data, request_parameters)` — sends HTTP request to provider
+
+### 6. Provider Base URL Mapping
+
+Each provider class hardcodes its base URL and route pattern. Key examples:
+
+| Provider | Base URL | Chat Route | Text Gen Route |
+|----------|----------|------------|----------------|
+| Together AI | `https://api.together.xyz` | `v1/chat/completions` | `v1/completions` |
+| DeepInfra | `https://api.deepinfra.com` | `v1/openai/chat/completions` | `v1/inference/{model_id}` |
+| Fireworks AI | `https://api.fireworks.ai` | `v1/chat/completions` | — |
+| Groq | `https://api.groq.com` | `openai/v1/chat/completions` | — |
+| Cerebras | `https://api.cerebras.ai` | `v1/chat/completions` | — |
+| Novita | `https://api.novita.ai` | `v3/openai/chat/completions` | `v3/openai/completions` |
+| Fal AI | `https://fal.run` | — | — |
+| Replicate | `https://api.replicate.com` | — | — |
+| Scaleway | `https://api.scaleway.ai` | `v1/chat/completions` | — |
+
+The `hf-inference` provider uses `https://api-inference.huggingface.co/models/{model_id}` as its base.
+
+### 7. AutoRouterConversationalTask
+
+A singleton instantiated at import time. Key specialization:
+- Base URL: `https://router.huggingface.co` (no `/auto` path prefix)
+- `_prepare_base_url()`: validates API key is an HF token (`hf_...`); non-HF keys raise `ValueError`
+- `_prepare_mapping_info()`: returns a dummy `InferenceProviderMapping` with `providerId=model` (no Hub API call needed)
+- This is the only path where server-side routing happens — the router.hf.co endpoint handles provider selection based on user preferences stored on the server
+
+### 8. OpenAI Compatibility Layer
+
+`InferenceClient` has an `_OpenAIProxy` that aliases `client.chat` as `ProxyClientChat`:
+- `client.chat.completions.create(...)` maps to `client.chat_completion(...)`
+- `client.chat.completions.create(stream=True)` maps to `client.chat_completion(stream=True)`
+- This allows drop-in replacement of `openai.OpenAI()` with `huggingface_hub.InferenceClient()`
+
+The proxy is initialized lazily via a `@property` on InferenceClient.
+
+### 9. HF-Inference (Legacy Fallback)
+
+The `hf-inference` provider handles 17+ task types via two helper classes:
+- `HFInferenceTask` — for text-in/text-out tasks (text-generation, classification, translation, etc.)
+- `HFInferenceBinaryInputTask` — for tasks with binary inputs (image, audio)
+- `HFInferenceConversational` — for chat completion via the old TGI endpoint
+- `HFInferenceFeatureExtractionTask` — for embedding generation
+
+These route to `https://api-inference.huggingface.co/models/{model_id}` and use the standard HF Inference API protocol.
+
+### 10. Provider-Specific Customizations
+
+Each provider module can override any of the 6 hook methods in `TaskProviderHelper`:
+
+- **Together/Auth**: Some providers append `Authorization: Bearer {key}` in `_prepare_headers()` while others (Scaleway, Novita) handle it via the payload
+- **Payload format**: Together's conversational payload uses `model: provider_id`; DeepInfra uses `model` in the body; others use URL path segments
+- **Route construction**: Together uses `v1/completions` for text gen, `v1/chat/completions` for chat; DeepInfra uses a model-specific route like `v1/inference/{model_id}`; Novita uses `v3/openai/chat/completions`
+- **Response parsing**: Each `get_response()` override handles the provider's specific response schema and error format
+
+### 11. Key Design Decisions
+
+1. **Singleton helpers**: All provider task helpers are instantiated once at import time in the `PROVIDERS` dict — no per-request allocation overhead
+2. **Lazy Hub API calls**: Provider mapping is only fetched when `provider="auto"` — explicit provider selection bypasses the Hub API call entirely
+3. **Server-side routing for chat**: Conversational tasks use `AutoRouterConversationalTask` which avoids a client-side Hub API call and lets the server select the optimal provider
+4. **OpenAI compatibility at two levels**: Both at the client init (`base_url`/`api_key` aliases) and at the method level (`client.chat.completions.create`)
+5. **HF token vs external keys**: The system distinguishes HF tokens from external provider keys — HF tokens route through the router proxy for billing, while external keys go directly to the provider
+
+### 12. Error Handling
+
+- Missing provider → `ValueError` with all valid provider names listed
+- Unsupported task for provider → `ValueError` with available tasks listed
+- Missing model when provider="auto" → `ValueError`
+- Non-HF token with auto-router → `ValueError`
+- No provider mapping found for model → `ValueError` from `_fetch_inference_provider_mapping`
+- `bill_to` header with external API key → `UserWarning` (ignored)
+
+### 13. Comparison with Previous Architecture
+
+In huggingface_hub < 1.20, there was no provider routing. `InferenceClient` always used `api-inference.huggingface.co` directly. The provider system was added in v1.20+ and fully matured in v1.24.0 with:
+- 18 partner providers
+- Per-provider task-specific helpers
+- Auto-router for conversational models
+- OpenAI API compatibility layer
+- `bill_to` header support
+
+### Sources
+- huggingface_hub v1.24.0 source:
+  - `huggingface_hub/inference/_providers/__init__.py` — PROVIDERS registry + get_provider_helper
+  - `huggingface_hub/inference/_providers/_common.py` — TaskProviderHelper → AutoRouterConversationalTask
+  - `huggingface_hub/inference/_providers/<provider>.py` — 18 provider modules
+  - `huggingface_hub/inference/_client.py` — InferenceClient integration
+- Inference Providers Docs: https://huggingface.co/docs/inference-providers/en/index
+- Hub API: https://huggingface.co/docs/hub/en/models-inference
+- Provider settings: https://hf.co/settings/inference-providers
+
+### Skill
+hf-inference-providers — Enhanced with source-level deep dive on huggingface_hub v1.24.0 `_providers/` package: TaskProviderHelper class hierarchy (6 overridable methods), 30+ per-provider-per-task helpers, get_provider_helper() 3-path routing logic, AutoRouterConversationalTask singleton, PROVIDERS registry, _fetch_inference_provider_mapping Hub API contract, OpenAI compatibility layer via _OpenAIProxy, and provider-specific customizations across 18 partner providers including Together, DeepInfra, Fireworks AI, Groq, Fal AI, Replicate, Novita, Scaleway, and the hf-inference legacy fallback.
