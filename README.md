@@ -158,3 +158,4 @@ See [LICENSE](LICENSE), [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md), and [SECURITY.
   <a href="https://huggingface.co/spaces/Nanthasit/sakthai-leaderboard"><img src="https://img.shields.io/badge/🏆-Leaderboard-238636" alt="Leaderboard"/></a>
 </p>
 <!-- tested: 2026-07-25 | status: pass | suite: full -->
+
