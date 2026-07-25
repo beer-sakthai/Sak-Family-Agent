@@ -393,14 +393,14 @@
     "archived_at": null,
     "created_at": "2026-07-24T01:23:11.744219+00:00",
     "created_by": null,
-    "last_patched_at": "2026-07-24T01:23:59.395307+00:00",
-    "last_used_at": "2026-07-24T01:23:46.707655+00:00",
-    "last_viewed_at": "2026-07-24T01:23:46.700030+00:00",
-    "patch_count": 3,
+    "last_patched_at": "2026-07-25T06:57:06.414935+00:00",
+    "last_used_at": "2026-07-25T06:56:47.795485+00:00",
+    "last_viewed_at": "2026-07-25T06:56:47.792368+00:00",
+    "patch_count": 4,
     "pinned": false,
     "state": "active",
-    "use_count": 2,
-    "view_count": 2
+    "use_count": 3,
+    "view_count": 3
   },
   "hf-hub-collections": {
     "archived_at": null,
@@ -784,13 +784,13 @@
     "created_at": "2026-07-09T14:17:07.954996+00:00",
     "created_by": "agent",
     "last_patched_at": "2026-07-24T10:23:11.273637+00:00",
-    "last_used_at": "2026-07-24T10:23:21.993405+00:00",
-    "last_viewed_at": "2026-07-24T10:23:21.989546+00:00",
+    "last_used_at": "2026-07-25T06:56:41.848288+00:00",
+    "last_viewed_at": "2026-07-25T06:56:41.845986+00:00",
     "patch_count": 99,
     "pinned": false,
     "state": "active",
-    "use_count": 116,
-    "view_count": 116
+    "use_count": 117,
+    "view_count": 117
   },
   "node-inspect-debugger": {
     "archived_at": null,
@@ -1018,13 +1018,13 @@
     "created_at": "2026-07-09T13:11:56.358035+00:00",
     "created_by": "agent",
     "last_patched_at": "2026-07-24T10:22:43.652598+00:00",
-    "last_used_at": "2026-07-24T10:22:29.693623+00:00",
-    "last_viewed_at": "2026-07-24T10:22:29.690469+00:00",
+    "last_used_at": "2026-07-25T06:56:35.848994+00:00",
+    "last_viewed_at": "2026-07-25T06:56:35.846371+00:00",
     "patch_count": 37,
     "pinned": false,
     "state": "active",
-    "use_count": 82,
-    "view_count": 69
+    "use_count": 83,
+    "view_count": 70
   },
   "weights-and-biases": {
     "archived_at": null,

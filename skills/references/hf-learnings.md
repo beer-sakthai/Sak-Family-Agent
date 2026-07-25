@@ -17279,7 +17279,7 @@ mlops/hf-lighteval — Enhanced with source-level deep-dive on Python API (Pipel
 ## 2026-07-25: hf-trl-dapo-gspo-deep-dive — From GRPO to DAPO and GSPO: Algorithms, Design Motivations, and Implementation (Topic #282)
 
 ### Summary
-Comprehensive deep-dive on the evolution from GRPO to DAPO and GSPO — the three key reinforcement learning algorithms for LLM reasoning post-training. Covers the GRPO foundation (group-based advantage normalization, token-level importance sampling with clipping), DAPO's four targeted improvements (Clip-Higher, Dynamic Sampling, Token-Level Gradient Loss, Overlong Reward Shaping), GSPO's fundamental shift from token-level to sequence-level optimization for MoE stability, and the additional loss types now available in TRL's GRPOTrainer (Dr. GRPO, SAPO). Based on the DAPO paper (ByteDance/Volcengine), the GSPO paper (Qwen team), TRL v1.9.0+ documentation, and community blog analysis.
+Comprehensive deep-dive on the evolution from GRPO to DAPO and GSPO — the three key reinforcement learning algorithms for LLM reasoning post-training. Covers the GRPO foundation (group-based advantage normalization, token-level importance sampling with clipping), DAPO's four targeted improvements (Clip-Higher, Dynamic Sampling, Token-Level Gradient Loss, Overlong Reward Shaping), GSPO's fundamental shift from token-level to sequence-level optimization for MoE stability, and the additional loss types now available in TRL's GRPOTrainer (Dr. GRPO, SAPO). Based on the DAPO paper (ByteDance/Volcengine), the GSPO paper (Qwen team), TRL v1.9.0+ documentation, and community blog analysis. (281st entry in tracker.)
 
 ### Source
 - DAPO Paper: https://arxiv.org/abs/2504.05764 — "DAPO: An Open-Source LLM Reinforcement Learning System at Scale"

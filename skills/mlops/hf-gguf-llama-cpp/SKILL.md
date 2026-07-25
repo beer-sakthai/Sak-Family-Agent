@@ -43,20 +43,34 @@ model = AutoModelForCausalLM.from_pretrained(model_id, gguf_file=filename, dtype
 
 ## Converting Between Formats
 
-### HF → GGUF (for llama.cpp inference)
+### HF → GGUF (for llama.cpp inference) — Refined Pipeline
 
-Use the official llama.cpp conversion script:
+The official `convert_hf_to_gguf.py` script requires the `gguf-py` package and `sentencepiece`. Use this tested pipeline instead of building from CMake:
 
 ```bash
-# Save your trained model first
-tokenizer.save_pretrained("directory")
-model.save_pretrained("directory")
+# 1. Install dependencies
+pip install gguf sentencepiece protobuf
 
-# Convert to GGUF
-python ${path_to_llama_cpp}/convert_hf_to_gguf.py directory
+# 2. Download convert script from llama.cpp repo
+curl -sL "https://raw.githubusercontent.com/ggml-org/llama.cpp/refs/heads/master/convert_hf_to_gguf.py" -o convert_hf_to_gguf.py
+
+# 3. Convert HF model → FP16 GGUF
+python3 convert_hf_to_gguf.py ./hf-model-dir \
+    --outfile ./model-f16.gguf --outtype f16
+
+# 4. Quantize to Q4_K_M
+/path/to/llama-quantize ./model-f16.gguf ./model-Q4_K_M.gguf Q4_K_M
 ```
 
-The `convert_hf_to_gguf.py` script lives in the [llama.cpp repository](https://github.com/ggerganov/llama.cpp/blob/master/convert_hf_to_gguf.py).
+**GGUF file size reference (Q4_K_M):**
+
+| Model | Q4_K_M Size |
+|-------|-------------|
+| 0.5B (Qwen2.5) | **380 MB** |
+| 1.5B (Qwen2.5) | **934 MB** |
+| Code 1.5B | **1.12 GB** |
+| Vision 7B (LLaVA) | **3.9 GB** |
+| TTS Kokoro 82M (Q8_0) | **141 MB** |
 
 ### GGUF → HF (for training/fine-tuning)
 
