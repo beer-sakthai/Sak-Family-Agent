@@ -16120,3 +16120,58 @@ Deep-dive into the Hugging Face Dataset Viewer's Croissant metadata endpoint —
 
 ### Skill
 mlops/hf-datasets-server-rest-api — the Croissant metadata endpoint for ML dataset discovery and programmatic consumption
+
+---
+
+## 2026-07-25: hf-hub-docker-registry — Hugging Face Hub Docker Registry Complete Reference (Topic #254)
+
+### Summary
+Comprehensive deep-dive on the Hugging Face Hub Docker Container Registry — the standard Docker V2 registry at `registry.hf.space` that powers Docker-based Spaces, Jobs batch inference, and local development workflows. Covers registry authentication (HF tokens), Docker Spaces build/runtime constraints, Jobs popular images (vLLM, TRL), secrets management, local execution with `docker run`, storage persistence patterns, and zero-cost pathways for development.
+
+### Source
+- HF Docker Spaces SDK: https://huggingface.co/docs/hub/en/spaces-sdks-docker
+- HF Run Spaces with Docker: https://huggingface.co/docs/hub/en/spaces-run-with-docker
+- HF Jobs Popular Images: https://huggingface.co/docs/hub/en/jobs-popular-images
+- Docker Registry V2 API: https://distribution.github.io/distribution/
+- Registry endpoint: `registry.hf.space` (verified responding with Docker V2 auth challenge)
+
+### Skill
+hf-hub-docker-registry — Hugging Face Hub Docker Registry complete reference: authentication with HF tokens at `registry.hf.space`, Docker Spaces build/runtime constraints, Jobs popular images, secrets management, local execution, zero-cost development pathways
+
+### 1. What Is the HF Docker Registry?
+
+The Hugging Face Hub Docker Registry is a standard **Docker Distribution V2 registry** that allows users to store, share, and deploy container images alongside models, datasets, and Spaces on the HF Hub. It is accessed at `registry.hf.space` and supports `docker login`, `docker pull`, and `docker push` via standard Docker V2 API protocol with Bearer token authentication.
+
+### 2. Authentication
+
+Authenticate using your Hugging Face username and a User Access Token (write scope for pushes):
+```bash
+echo $HF_TOKEN | docker login registry.hf.space -u $HF_USERNAME --password-stdin
+```
+
+### 3. Key Constraints for Docker Spaces
+
+- **UID 1000**: Container runs as user ID 1000 — create matching user in Dockerfile
+- **No GPU at build time**: `nvidia-smi` or `torch.cuda.is_available()` will fail during `docker build`
+- **Ephemeral storage**: Filesystem resets on restart — use Storage Buckets for persistence
+- **Secrets at build time**: Use `RUN --mount=type=secret` (Docker BuildKit)
+- **Networking**: Only ports 80, 443, 8080 allowed for outbound
+
+### 4. Jobs Popular Images
+
+| Image | Use Case | Example |
+|-------|----------|---------|
+| `vllm/vllm-openai` | LLM batch inference | `uv run --image vllm/vllm-openai --flavor l4x4` |
+| `huggingface/trl` | Post-training (SFT, GRPO) | `uv run --image huggingface/trl --flavor a100-large` |
+
+### 5. Local Development
+
+```bash
+git clone https://huggingface.co/spaces/owner/space-name
+cd space-name
+docker build -t test-space .
+docker run -p 7860:7860 test-space
+```
+
+### 6. Zero-Cost Note
+Docker Spaces require a paid plan (except ZeroGPU which is Gradio-only). Local Docker development is free. Jobs have free CPU tiers.
