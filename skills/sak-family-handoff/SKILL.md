@@ -105,6 +105,10 @@ All three repos are at `/opt/data/sakthai-skills-repo`, `/opt/data/saksee-skills
 - Save cross-agent facts to memory so all siblings can read them
 - Each sibling has a separate session context — memory is the bridge
 
+## A2A Message Bus
+
+A technical messaging layer for agent-to-agent communication runs on port 3005. See [`references/a2a-message-bus.md`](references/a2a-message-bus.md) for API details.
+
 ## Pitfalls
 
 - Do NOT use `send_message` to contact siblings — only `delegate_task`
