@@ -1,0 +1,102 @@
+{
+  "jobs": [
+    {
+      "id": "e2bc7fc1b683",
+      "name": "Learning Loop - Nightly Review",
+      "prompt": "You are SakThai running the nightly Learning Loop.\n\nYour mission: Review today's sessions, consolidate memory, patch skills if needed, and report.\n\nStep 1 \u2014 REVIEW: Call session_search() with no query to browse recent sessions. Look for:\n- User corrections (\"actually\", \"no\", \"wrong\", \"instead\")\n- New preferences or instructions\n- Workflow improvements discovered during the day\n- Errors that were resolved\n\nStep 2 \u2014 ANALYZE: Call supermemory_profile() and supermemory_search(query=\"lesson OR correction OR preference OR fix\", limit=10). Check if any corrections or preferences are missing from memory.\n\nStep 3 \u2014 CONSOLIDATE: If you find stale/duplicate/outdated memory entries, clean them up with supermemory_forget(). If you find important new facts that aren't saved, save them with supermemory_store(). Keep memory lean \u2014 entries over 30 days old that aren't referenced should be pruned unless they are still relevant (user identity, environment facts, hard rules).\n\nStep 4 \u2014 UPDATE SKILLS: If a workflow was corrected (e.g., a command that failed was replaced with a working alternative), patch the relevant skill using skill_manage(action='patch'). Don't create new skills without user approval.\n\nStep 5 \u2014 REPORT: Summarize what you found, what you changed (memory items removed/added, skills patched), and any anomalies. Be concise \u2014 Beer reads this in the morning.\n\nHard rules:\n- Zero cost \u2014 no paid API calls, no GPU, no subscriptions\n- Only report meaningful changes. If nothing notable happened, say \"Nothing to report \u2014 all quiet.\"\n- Keep the report under 500 words\n- Do NOT modify SOUL.md \u2014 that's a manual decision\n- Do NOT create or delete skills \u2014 only patch existing ones if workflows were corrected",
+      "skills": [
+        "environment-automation",
+        "user-communication"
+      ],
+      "skill": "environment-automation",
+      "model": null,
+      "provider": null,
+      "provider_snapshot": "opencode-go",
+      "model_snapshot": "deepseek-v4-flash",
+      "base_url": null,
+      "script": null,
+      "no_agent": false,
+      "context_from": null,
+      "schedule": {
+        "kind": "cron",
+        "expr": "0 2 * * *",
+        "display": "0 2 * * *"
+      },
+      "schedule_display": "0 2 * * *",
+      "repeat": {
+        "times": null,
+        "completed": 6
+      },
+      "enabled": true,
+      "state": "scheduled",
+      "paused_at": null,
+      "paused_reason": null,
+      "created_at": "2026-07-10T08:46:40.466617+00:00",
+      "next_run_at": "2026-07-17T02:00:00+00:00",
+      "last_run_at": "2026-07-16T02:11:36.879110+00:00",
+      "last_status": "ok",
+      "last_error": null,
+      "last_delivery_error": null,
+      "deliver": "origin",
+      "origin": {
+        "platform": "telegram",
+        "chat_id": "8618306046",
+        "chat_name": "Beer",
+        "thread_id": null,
+        "user_id": "8618306046"
+      },
+      "enabled_toolsets": null,
+      "workdir": null,
+      "fire_claim": null
+    },
+    {
+      "id": "a86a9cee34e3",
+      "name": "Daily Briefing",
+      "prompt": "You are SakThai running the Daily Briefing.\n\nRun these checks and deliver a compact morning report:\n\n1. SYSTEM: Check if gateway processes are running by running: ps aux | grep -E 'hermes|gateway' | grep -v grep | wc -l in terminal. Expected: at least 2 (sakthai gateway + watchdog).\n\n2. MEMORY: Check supermemory_profile() for active memory count. Flag if critically low or high.\n\n3. RECENT: Call session_search() with no query, limit 2 to see if anything happened since last briefing.\n\n4. DELIVER: One-line summary of each check. Format:\n\n\ud83c\udf05 Daily Briefing \u2014 [date]\n\u2022 Gateway: [OK/ISSUE] \u2014 [X] processes\n\u2022 Memory: [X] entries \u2014 [OK/FULL/NEEDS ATTENTION]\n\u2022 Recent: [brief summary of latest session, or \"No activity since last report\"]\n\u2022 Action needed: [YES/NO] \u2014 [details if yes]\n\nBe concise. If everything is fine, say \"All clear.\"",
+      "skills": [
+        "environment-automation"
+      ],
+      "skill": "environment-automation",
+      "model": null,
+      "provider": null,
+      "provider_snapshot": "opencode-go",
+      "model_snapshot": "deepseek-v4-flash",
+      "base_url": null,
+      "script": null,
+      "no_agent": false,
+      "context_from": null,
+      "schedule": {
+        "kind": "cron",
+        "expr": "0 9 * * *",
+        "display": "0 9 * * *"
+      },
+      "schedule_display": "0 9 * * *",
+      "repeat": {
+        "times": null,
+        "completed": 7
+      },
+      "enabled": true,
+      "state": "scheduled",
+      "paused_at": null,
+      "paused_reason": null,
+      "created_at": "2026-07-10T08:46:41.483071+00:00",
+      "next_run_at": "2026-07-17T09:00:00+00:00",
+      "last_run_at": "2026-07-16T09:08:01.641433+00:00",
+      "last_status": "ok",
+      "last_error": null,
+      "last_delivery_error": null,
+      "deliver": "origin",
+      "origin": {
+        "platform": "telegram",
+        "chat_id": "8618306046",
+        "chat_name": "Beer",
+        "thread_id": null,
+        "user_id": "8618306046"
+      },
+      "enabled_toolsets": null,
+      "workdir": null,
+      "fire_claim": null
+    }
+  ],
+  "updated_at": "2026-07-16T09:08:01.641910+00:00"
+}

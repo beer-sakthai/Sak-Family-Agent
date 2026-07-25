@@ -244,5 +244,16 @@
   "hf-open-llm-leaderboard-deep-dive-v2",
   "hf-hub-spaces-build-runtime-api",
   "hf-hub-spaces-build-runtime-api-deep-dive",
-  "huggingface-hub-http-request-lifecycle-source-deep-dive"
+  "huggingface-hub-http-request-lifecycle-source-deep-dive",
+  "hf-llm-course-comprehensive-deep-dive",
+  "hf-hub-rate-limits",
+  "hf-trl-v1-comprehensive",
+  "hf-auth-login-internals-deep-dive",
+  "hf-dataset-viewer-croissant-metadata",
+  "hf-hub-model-dependents",
+  "hf-hub-docker-registry",
+  "hf-inference-providers-comprehensive-architecture",
+  "hf-datasets-server-size-limits-and-optimization",
+  "hf-optimum-exporters-model-conversion-pipeline",
+  "hf-hub-daily-papers-and-paper-pages"
 ]
