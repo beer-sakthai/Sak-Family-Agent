@@ -5252,6 +5252,29 @@ hf-datasets-configuration-system/ — complete reference with architecture, API 
 - datasets v5.0.0 source: config.py (constants: lines 236-248)
 - huggingface_hub v1.24.0 source: repocard_data.py (DatasetCardData constructor)
 - https://huggingface.co/docs/datasets/main/en/loading#configurations-and-splits
-- https://huggingface.co/docs/datasets/main/en/dataset_script#multiple-configurations
-
+|- https://huggingface.co/docs/datasets/main/en/dataset_script#multiple-configurations
+|
+|---
+|
+|## 2026-07-25: hf-hub-local-agents-with-llamacpp — HF Hub Local Agents with llama.cpp (Topic #324)
+|
+|### Summary
+|Deep dive into HF Hub's "Local Agents with llama.cpp" workflow. Covers running Pi, OpenClaw, Hermes Agent, OpenCode, and llama-agent (C++ binary, zero deps) with llama.cpp server backend using HF GGUF models. Key innovation: hardware profiling at huggingface.co/settings/hardware + one-click `llama-server -hf` commands.
+|
+|### 5 Agent Frameworks
+|| Agent | Config Location | Notes |
+||-------|----------------|-------|
+|| Pi | ~/.pi/agent/models.json | npm install -g @mariozechner/pi-coding-agent |
+|| OpenClaw | openclaw onboard CLI | Supports local memory search via node-llama-cpp |
+|| Hermes Agent | ~/.hermes/config.yaml | custom provider + session_search for embeddings |
+|| OpenCode | ~/.config/opencode/opencode.json | Uses @ai-sdk/openai-compatible |
+|| llama-agent | cmake binary | Zero deps, in-process tool calls, subagent + MCP support |
+|
+|### Sources
+|- https://huggingface.co/docs/hub/en/agents-local
+|- https://huggingface.co/docs/hub/en/agents
+|- https://huggingface.co/settings/hardware
+|
+|### Skill Created
+|`hf-hub-local-agents-with-llamacpp/` — reference with exact config files for all 5 agent frameworks, architecture diagram, local memory search patterns.
 |
