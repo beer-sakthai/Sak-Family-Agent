@@ -346,6 +346,7 @@ This skill ships with detailed reference files:
 | `references/bfcl-benchmark.md` | BFCL test categories, prompt templates, evaluation criteria, CPU inference notes |
 | `references/synthetic-dataset-generation.md` | Workflow for creating/improving tool-calling fine-tuning datasets: analyzing, filtering, defining schemas, generating synthetic conversations, validating, uploading |
 | `references/trust-pass-quality-review.md` | Structured quality review: response naturalness, tool_call_id validation, duplicate detection, schema coverage audits |
+| `references/model-card-enrichment-workflow.md` | Batch enrichment of all model cards with branding, family cross-links, benchmark comparisons, Ollama guides, and hardware requirements |
 | `references/dataset-comparison.md` | A/B comparison between dataset versions: metrics, schemas, density, HF repo status — 'check v5 vs v6 what changed' workflow |
 | `references/training-plan-workflow.md` | HF CLI asset-discovery commands, dataset notebook inspection, GPU cost verification, plan presentation template |
 | `references/hf-cli-quirks.md` | `hf` CLI gotchas: `--author` vs `--owner`, `--format json`, PATH setup, token precedence — reference for Phase 1 Pre-Flight Audit commands |
