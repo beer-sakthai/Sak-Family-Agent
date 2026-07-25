@@ -4946,7 +4946,7 @@ for model in api.list_models(sort="likes", expand=["likes", "downloads"], limit=
 
 ---
 
-## 2026-07-25: hf-hub-user-and-org-profile-api — User and Organization Profile API (Topic #232)
+## 2026-07-25: hf-hub-user-and-org-profile-api — User and Organization Profile API (Topic #231)
 
 ### Summary
 Comprehensive reference on the Hugging Face Hub's User and Organization profile API — the REST endpoints and `huggingface_hub` Python methods for reading public user/org profiles, managing repositories, navigating the social graph (followers/following), and understanding profile data models. Profile management (bio, avatar, settings) is web-UI only — there is no public API for updating profiles.
