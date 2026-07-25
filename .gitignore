@@ -9,3 +9,9 @@ __pycache__/
 .venv/
 personas/saktan/
 personas/*/sakthai/
+
+# HF cache directories
+.hub/
+
+# Agent self-evolution artifacts
+personas/sakthai/agent-self-evolution/output/
