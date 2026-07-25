@@ -4618,3 +4618,79 @@ DELETE /api/notifications  {"discussionIds": ["id1"]}  # specific
 
 ---
 
+## 2026-07-25: hf-hub-embedding-badges-oembed-deep-dive
+
+### Summary
+Comprehensive deep dive into embedding Hugging Face Hub content (Spaces, datasets, models) in external websites using shields.io badges, Open Graph social cards, and the Hub's embed/iframe infrastructure. Covers Spaces embedding (direct URL, iframe, Gradio WebComponents), dataset viewer embedding, shields.io badge patterns (static with HF logo + dynamic from API), OG social card URLs, the oEmbed API (auth required), SQL console embeds via REST API, and protected Space embedding.
+
+### Key Embedding Patterns
+
+**Spaces — Iframe (all Space types):**
+```html
+<iframe src="https://{namespace}-{space-name}.hf.space" frameborder="0" width="850" height="450"></iframe>
+```
+
+**Spaces — Gradio WebComponents (Gradio-only, faster, auto-resize):**
+```html
+<script type="module" src="https://gradio.s3-us-west-2.amazonaws.com/{version}/gradio.js"></script>
+<gradio-app src="https://{namespace}-{space-name}.hf.space"></gradio-app>
+```
+
+**Dataset Viewer Embed (iframe):**
+```
+https://huggingface.co/datasets/{namespace}/{dataset-name}/embed/viewer
+```
+Parameters: `config`, `split`, `filter`, `search`, `row`
+
+**Shields.io Static Badges with HF Logo:**
+```md
+![HF](https://img.shields.io/badge/HuggingFace-{name}-FFD21E?logo=huggingface)
+![Model](https://img.shields.io/static/v1?label=Model&message={name}&color=blue&logo=huggingface)
+```
+
+**Shields.io Dynamic Badges from HF API:**
+```md
+![Downloads](https://img.shields.io/badge/dynamic/json?url=https://huggingface.co/api/models/{model}&query=downloads&label=Downloads)
+```
+
+**OG Social Cards (auto-generated at predictable URL):**
+```
+https://cdn-thumbnails.huggingface.co/social-thumbnails/{type}/{namespace}/{repo}.png
+```
+Where `type` is `models`, `datasets`, or `spaces`.
+
+**oEmbed API** (requires Bearer token auth — returns 401 without):
+```
+GET /api/oembed?url=https://huggingface.co/{type}/{namespace}/{repo}
+Authorization: Bearer {token}
+```
+
+**SQL Console Embeds via REST API:**
+| Method | Endpoint |
+|--------|----------|
+| POST | `/api/{repoType}/{namespace}/{repo}/sql-console/embed` |
+| PATCH | `/api/{repoType}/{namespace}/{repo}/sql-console/embed/{id}` |
+| DELETE | `/api/{repoType}/{namespace}/{repo}/sql-console/embed/{id}` |
+
+### Key Findings
+- Spaces are the most embeddable HF asset — 3 methods: direct URL, iframe, WebComponents
+- Dataset viewer has dedicated embed URL with filter/search/subset/split query params
+- Model inference widgets are **not iframe-embeddable** — Svelte component on model page only
+- shields.io has no dedicated HF badge service — use `?logo=huggingface` on static or dynamic JSON badges
+- OG social cards are auto-generated from repo metadata at a predictable CDN URL pattern
+- oEmbed API exists at `/api/oembed` but requires authentication (not public/oEmbed-standard)
+- Protected Spaces keep source private while allowing public embedding
+- SQL Console embeds are fully manageable via REST API (CRUD operations)
+
+### Resources
+- [Spaces Embed Docs](https://huggingface.co/docs/hub/en/spaces-embed)
+- [Dataset Viewer Embed Docs](https://huggingface.co/docs/hub/en/datasets-viewer)
+- [Shields.io Badges](https://shields.io/badges)
+- [HF OpenAPI Spec](https://huggingface.co/.well-known/openapi.json)
+- [HF Brand Assets](https://huggingface.co/brand)
+
+### Skill Created
+`hf-hub-embedding-badges/` — complete reference with all embedding patterns, badge APIs, SQL console embed API, and OG card URLs.
+
+---
+
