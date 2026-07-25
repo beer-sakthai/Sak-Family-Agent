@@ -18007,3 +18007,126 @@ Each template pre-tuned with: runtime settings, tool-call/reasoning parsers, sco
 
 ### Skill
 hf-hub-foundry-enterprise-deployment-curation — Hugging Face models on Microsoft Foundry Managed Compute: full enterprise curation pipeline (trending identification to license screening to trust_remote_code remediation to CVE-scanned runtime builds to weight pre-staging to catalog publishing), 7 supported runtimes (vLLM, SGLang, TRT-LLM, NIM, TEI, llama.cpp, hf-serve), deployment templates, OpenAI-compatible scoring, Foundry Agents integration, parallel SageMaker Studio integration, and enterprise deployment patterns.
+
+## 2026-07-25: hf-hub-service-accounts-and-tokens — Hugging Face Hub Service Accounts, Fine-Grained Tokens, and Token Management API (Topic #290)
+
+### Summary
+Comprehensive deep-dive on the Hugging Face Hub token management ecosystem — covering the full lifecycle of access tokens, service accounts, enterprise token policies, OIDC-based CI/CD keyless authentication, and the programmatic API for org-level access control. This is foundational knowledge for anyone building automated workflows, CI/CD pipelines, or enterprise integrations on the Hub.
+
+### Sources
+- Security Tokens: https://huggingface.co/docs/hub/en/security-tokens
+- Enterprise Token Management: https://huggingface.co/docs/hub/en/enterprise-tokens-management
+- Enterprise Service Accounts: https://huggingface.co/docs/hub/en/enterprise-service-accounts
+- Trusted Publishers / OIDC CI/CD: https://huggingface.co/docs/hub/en/trusted-publishers
+- Programmatic User Access Control: https://huggingface.co/docs/hub/en/programmatic-user-access-control
+- OAuth / Token Exchange: https://huggingface.co/docs/hub/en/oauth
+- huggingface_hub source: `utils/_auth.py` (v1.24.0)
+
+### Key Details
+
+#### 1. User Access Token Types
+Three token roles, each with different scope:
+- **Read token**: read-only access to repos the user can read (public + private gated). Use for inference-only or download-only scenarios.
+- **Write token**: read + write to repos the user has write access to. Use for training, pushing, modifying model cards.
+- **Fine-grained token**: scoped to specific resources (single model, dataset, or org repos). **Use for production** — limits blast radius if leaked. Granular permissions: read, write, or manage on specific repos.
+
+#### 2. Token Resolution Priority Chain (`get_token()`)
+The `huggingface_hub` library (v1.24.0) resolves tokens in strict priority:
+1. **OIDC token** (`HF_OIDC_RESOURCE` env var set) → short-lived CI token via Trusted Publishers
+2. **Environment variable** → `HF_TOKEN` (primary) or `HUGGING_FACE_HUB_TOKEN` (backward compat)
+3. **Token file** → `~/.cache/huggingface/token` (with transparent OAuth refresh)
+4. **Google Colab** → `google.colab.userdata.get("HF_TOKEN")`
+Returns `None` if none found. OIDC failure raises explicitly (no silent fallback).
+
+#### 3. OIDC / Trusted Publishers (CI/CD Keyless Auth)
+Keyless authentication from CI providers — no HF token stored as a CI secret.
+- **Supported providers**: GitHub Actions (native minting), GitLab CI (`id_tokens`), CircleCI (`OIDC_TOKEN`), Bitbucket Pipelines, and any OIDC-compliant provider (AWS, GCP, Buildkite, custom IdP)
+- **Exchange**: CI mints an OIDC ID token → POST to `https://huggingface.co/oauth/token` with `grant_type=urn:ietf:params:oauth:grant-type:token-exchange` and `subject_token_type=urn:ietf:params:oauth:token-type:id_token`
+- **Cli scoping**: `HF_OIDC_RESOURCE=<repo>` (repo-scoped) or `HF_OIDC_RESOURCE=<username>` (user-scoped — reads gated repos, uses account rate limits)
+- **Token lifetime**: 60 minutes max. Cached in-process with 5-min refresh margin. No refresh token — re-exchange for long jobs.
+- **Committer attribution**: pushes attributed to a synthetic `system` user with issuer/subject reference.
+- **CI integration**: `hf auth login` in GitHub Actions auto-detects the provider, performs exchange, and sets the token. On GitLab/CircleCI/Bitbucket, set `HF_OIDC_ID_TOKEN` env var to the provider's OIDC token.
+- **Config**: Hub Settings → Authentication → CI/CD Access to configure trusted publishers for repo-scoped or user-scoped access.
+
+#### 4. Fine-Grained Token Architecture
+- Scoped to **specific repos** + **specific permissions** (read/write/manage)
+- Can be shared within an org without exposing other repos
+- Enterprise orgs can **require** fine-grained-only tokens (reject read/write tokens with 403)
+- Per-token permission granularity includes: repo contents, discussions, inference, org settings (member management), collections
+- Token names visible only to org admins when approval policy is enabled
+
+#### 5. Enterprise Token Management (Team & Enterprise)
+Organization administrators can enforce token policies:
+- **Approval workflow**: fine-grained tokens scoped to an org that requires admin approval enter a `pending` state. Admin must approve before the token can access org resources. Admin-created tokens auto-approved.
+- **Denial**: blocks approval-based access. Non-permanent — a denied token can later be approved (no re-creation needed). Token still works for resources outside the org.
+- **Revocation**: permanent at the org level. Cannot be undone even if policy changes. Token must be deleted and re-created. Revocation only affects the revoking org.
+- **Fine-grained-only policy**: org requires all tokens accessing its resources to be fine-grained. Read/write tokens rejected with 403: `"access to this resource requires a fine-grained token"`.
+
+#### 6. Service Accounts (Enterprise)
+Organization-owned identities for programmatic access (CI/CD, automation scripts, backend integrations):
+- **Decoupled from individuals** — workflows keep running as team members change
+- **No interactive login** — no password, no HF avatar/bio. Accessed exclusively via issued fine-grained tokens
+- **Scope levels**: org-wide permissions (applies to all repos) or per-repo scoping (specific repos only)
+- **Token lifecycle**: create → view once (store securely) → rotate (new value, old stops immediately) → revoke
+- **Not billable** — does not consume a paid seat
+- **Use cases**: CI/CD pipelines pushing models, automation scripts, backend services needing scoped org access
+
+#### 7. OAuth Token Exchange for Organizations (RFC 8693)
+Enterprise feature for programmatic token issuance without interactive user consent:
+- **Architecture**: org-bound OAuth app with `token_exchange` privilege → backend authenticates via client credentials → issues scoped tokens for org members (identified by email)
+- **Token scope**: org resources only (models, datasets, Spaces, collections owned by the org). Read-only outside org (public collections, public gated repos the user has access to)
+- **Restrictions**: no user personal private repos, no cross-org private repos
+- **Lifetime**: 8 hours default (configurable up to 30 days). No refresh tokens.
+- **Audit logging**: all exchanges logged in org's audit log
+- **CI alternative**: OIDC Trusted Publishers for keyless CI without per-member token issuance
+
+#### 8. Programmatic Token Revocation
+Admins can revoke a token programmatically by raw token value (for automated secrets scanning):
+```bash
+curl -X POST "https://huggingface.co/api/organizations/{org}/tokens/revoke" \
+  -H "Authorization: Bearer $ADMIN_HF_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"token": "'"${LEAKED_HF_TOKEN}"'"}'
+```
+Admins cannot revoke their own token.
+
+#### 9. huggingface_hub Auth Internals
+- **`HfFolder`**: legacy token file management at `~/.cache/huggingface/token`
+- **`get_token()`**: resolves token through priority chain with transparent OAuth refresh
+- **`get_stored_tokens()`**: returns dict of token_name → token_value for all stored tokens
+- **`_get_token_by_name(name)`**: retrieve a specific stored token by its display name
+- **`_save_token(token, name, refresh_token, expires_at)`**: persist a token with optional OAuth metadata
+- **`_clean_token(token)`**: strip whitespace/newlines from token string
+- **OAuth refresh**: cached in-process with 24h refresh margin; retries every 5 min on failure; warns once per process
+
+#### 10. Programmatic User Access Control API
+Manage org member roles and resource group membership via REST API:
+- `PUT /api/organizations/{org}/members/{username}/role` — set org role + resource group assignments
+- `GET /api/organizations/{org}/resource-groups` — list resource groups with IDs
+- `POST /api/organizations/{org}/resource-groups/{rg_id}/users` — batch-add users to resource group
+- `POST /api/organizations/{org}/resource-groups/{rg_id}/settings` — enable/disable auto-join
+- Requires fine-grained token with "Write access to organizations settings / member management" permission
+
+### Zero-Cost Notes
+- User Access Tokens (read, write, fine-grained) are **free** for all Hub users
+- Fine-grained tokens are the **recommended free option** for production: limit blast radius at no cost
+- Trusted Publishers / OIDC CI/CD is **free** — no HF plan needed, works with free CI tiers
+- Service Accounts are included with **Enterprise plan** (not available on free/Team)
+- Token Exchange (RFC 8693) requires **Enterprise plan**
+- Token management policies (approval, fine-grained-only) are **Team & Enterprise** features
+- Programmatic user access control API works with any org that has a subscription
+- The `huggingface_hub` library auth features are **open-source and free**
+
+### Best Practices
+1. **One token per app/usage** — enables isolated revocation without impacting other workflows
+2. **Fine-grained tokens for production** — scope to exactly the repos and permissions needed
+3. **Per-app naming** — name tokens descriptively (e.g., "prod-inference-server", "ci-model-publisher")
+4. **Rotate regularly** — especially after potential exposure; use the rotate action (new value, old stops immediately)
+5. **Never hardcode** — use env vars (`HF_TOKEN`), CI secrets (with OIDC as preferred alternative), or `huggingface_hub` login
+6. **OIDC > static tokens in CI** — eliminates secret storage risk; tokens are short-lived (60 min) and repo-scoped
+7. **Monitor org token usage** — Enterprise token management provides listing, audit trails, and revocation
+8. **Store tokens securely** — tokens are displayed only at creation/rotation time; store in a secrets manager
+9. **Least privilege** — request only the scopes your application actually needs
+
+### Skill
+hf-hub-service-accounts-and-tokens — Hugging Face Hub token management ecosystem: User Access Token types (read, write, fine-grained), token resolution priority chain (OIDC → env → file → Colab), OIDC Trusted Publishers for CI/CD keyless auth (GitHub Actions, GitLab CI, CircleCI, Bitbucket, any OIDC provider), fine-grained token architecture with repo-scoped permissions, Enterprise token management policies (approval workflow, denial, revocation, fine-grained-only requirement), Service Accounts (org-owned identities with per-repo or org-wide token scoping), OAuth Token Exchange (RFC 8693) for enterprise token issuance, programmatic token revocation API, Programmatic User Access Control API (member roles, resource groups, auto-join), and huggingface_hub auth internals (get_token, get_stored_tokens, OAuth refresh, OIDC caching).
