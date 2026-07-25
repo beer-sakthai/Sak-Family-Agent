@@ -116,3 +116,4 @@ A technical messaging layer for agent-to-agent communication runs on port 3005. 
 - A leaf subagent (default role) CANNOT delegate further. If nested delegation is needed, use `role='orchestrator'`
 - The pipeline is sequential by default — parallel stages can be used when tasks are independent
 - Always verify Verify's output too — subagent summaries are self-reports
+- **Dataset operations: NEVER trust a subagent to append without verification.** Subagents can overwrite the entire dataset instead of appending. ALWAYS: (1) check original remote count before dispatch, (2) compare remote count after, (3) keep backup commit hash to revert, (4) only delegate data generation, never the upload
