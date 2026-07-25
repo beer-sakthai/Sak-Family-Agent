@@ -3,7 +3,7 @@ name: environment-automation
 author: SakThai
 license: MIT
 description: "Machine-specific facts and conventions for efficient task execution on this Hermes workspace"
-version: 1.10.0
+version: 1.10.1
 metadata:
   hermes:
     tags: [environment, automation, paths, conventions, workspace]
