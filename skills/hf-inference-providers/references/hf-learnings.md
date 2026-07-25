@@ -384,7 +384,7 @@ Based on the roadmap and continuous updates since January 2025 launch:
 
 ---
 
-## 2026-07-25: hf-inference-client-provider-routing-source-deep-dive — huggingface_hub v1.24.0 Provider Routing System Source-Code Deep Dive (Topic #278)
+## 2026-07-25: hf-inference-client-provider-routing-source-deep-dive — huggingface_hub v1.24.0 Provider Routing System Source-Code Deep Dive (Topic #277)
 
 ### Summary
 Source-code deep dive into the huggingface_hub v1.24.0 `huggingface_hub.inference._providers` package — the complete provider routing system that dispatches InferenceClient requests to 18 partner providers. Covers the full class hierarchy (`TaskProviderHelper` → 30+ provider-specific task helpers), the request preparation pipeline (5-step prepare chain), the `get_provider_helper()` routing logic (3 decision paths: auto-router, auto-select from mapping, explicit provider), the `PROVIDERS` registry dict, the `AutoRouterConversationalTask` server-side routing singleton, the `_fetch_inference_provider_mapping()` Hub API contract, the `_OpenAIProxy` OpenAI compatibility layer, and the `_client.py` integration points for text_generation, chat_completion, and other tasks.
