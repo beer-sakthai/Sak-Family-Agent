@@ -1,5 +1,8 @@
 # HF Learnings Log — DeepSeek V4 Transformers Implementation
 
+> **author:** SakThai  
+> **license:** MIT  
+
 ## 2026-07-25: hf-transformers-deepseek-v4-deep-dive — Architecture Complete Reference (Topic #358)
 
 ### Summary
