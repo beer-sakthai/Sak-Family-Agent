@@ -6428,3 +6428,32 @@ Deep dive into Hugging Face Datasets **v5.0.0** (June 5, 2026) — a major versi
 ### Sources
 - https://github.com/huggingface/datasets/releases/tag/5.0.0 — Official release notes
 - https://pypi.org/project/teich/ — Teich library
+
+---
+
+## 2026-07-25: hf-datasets-server-parquet-conversion-pipeline-deep-dive — Datasets Server Parquet Conversion Pipeline Complete Architecture (Topic #376)
+
+### Summary
+Deep dive into the Hugging Face Datasets Server's Parquet Conversion Pipeline — the automated system that converts every dataset on the Hub to Parquet format. Covers two conversion paths (copy for Parquet-native, stream-convert for other formats), byte-level read/write tracking, partial export for large datasets (>5GB), modality-specific row group sizes, file naming/sharding conventions, metadata storage, the Rust libviewer engine for page-pruned queries, and the API endpoints (`/parquet`, `/api/datasets/{dataset}/parquet`).
+
+### Key Findings
+- **Two paths:** Copy path uses `CommitOperationCopy` for Parquet-native datasets (fast). Convert path uses `StreamingDownloadManager` + `_prepare_split(file_format="parquet")` for other formats.
+- **Read tracking:** `track_reads` wraps fsspec `open()` to count bytes read per file. Used for partial export estimation.
+- **Write limiting:** `limit_parquet_writes` patches `pyarrow.parquet.ParquetWriter` + generator to stop at 5GB limit.
+- **Partial export:** Dir prefix `partial-` (e.g., `partial-train/`), split info estimated via read/size ratio.
+- **Modality tuning:** Row group size = 100 for images, configurable low for audio/video/PDF/binary, 1000 default for text.
+- **Sharding:** `{config}/{split}/{shard:04d}.parquet`, max 10K files/dir, `-partN` suffix for overflow.
+- **Rust libviewer:** `LimitedAsyncReader` enforces scan size limits at byte level for efficient page pruning.
+- **Metadata:** Stored in dedicated dir, loaded via `RowsIndex`, enables schema/row-count/column-stats without re-download.
+
+### Skill Created
+`hf-datasets-server-parquet-conversion-pipeline-deep-dive/` — SKILL.md (author: SakThai, license: MIT) + references/hf-learnings.md with full architecture, source code analysis, and API reference.
+
+### Sources
+- https://github.com/huggingface/datasets-server – services/worker/src/worker/job_runners/config/parquet_and_info.py
+- https://github.com/huggingface/datasets-server – services/worker/src/worker/job_runners/config/parquet.py
+- https://github.com/huggingface/datasets-server – services/worker/src/worker/job_runners/dataset/parquet.py
+- https://github.com/huggingface/datasets-server – libs/libcommon/src/libcommon/parquet_utils.py
+- https://github.com/huggingface/datasets-server – libs/libcommon/src/libcommon/viewer_utils/parquet_metadata.py
+- https://github.com/huggingface/datasets-server – libs/libviewer/src/parquet.rs
+- https://huggingface.co/docs/dataset-viewer/parquet

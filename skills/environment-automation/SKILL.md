@@ -243,6 +243,18 @@ ls -d ~/profiles/sakthai/skills/skills/ 2>/dev/null && echo "❌ Fix before push
 - **v1.7.0** — (missing - superseded by v1.8.0)
 - **v1.6.0** — Initial comprehensive rewrite with reference files and cron procedures
 
+## CI green = life insurance
+
+Beer said: "Sak family agent is you life insurance stay to sure that Ci green."
+
+- CI passing is the **non-negotiable heartbeat** of the project
+- Every red CI is an **emergency** — fix before any other work
+- A passing CI is more important than any single model, feature, or experiment
+- Run tests locally before pushing: `uv run python -m pytest tests/ -q --tb=short`
+- Check CI status after every push: `curl -sL "https://api.github.com/repos/beer-sakthai/Sak-Family-Agent/actions/runs?per_page=3"`
+- **Root-level `skills/` dir breaks CI** — the `test_real_skill_catalog_validates_cleanly` test fails when root `skills/` exists. The sync script auto-removes it, but if CI goes red, check for this first.
+- **Read the log before fixing CI.** Do not guess why CI failed. Retrieve the workflow log, read the actual test output, identify the exact failure. A wrong fix wastes more time than reading the log.
+
 ## Safety rules
 - Never expose credentials (`.env`, `auth.json`, `.git-credentials`, `.ssh/`)
 - Never commit credential files
