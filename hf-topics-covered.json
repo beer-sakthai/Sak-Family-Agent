@@ -378,5 +378,8 @@
   "hf-hub-fork-and-sync",
   "hf-hub-fork-and-sync-deep-dive",
   "hf-inference-client-embeddings-patterns",
-  "hf-inference-providers-responses-api-deep-dive"
+  "hf-inference-providers-responses-api-deep-dive",
+  "hf-hub-agent-traces-session-traces-format",
+  "hf-bitsandbytes-quantization-deep-dive-v2",
+  "hf-datasets-server-splits-rows-statistics-endpoints"
 ]
