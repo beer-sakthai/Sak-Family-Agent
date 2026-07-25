@@ -252,7 +252,7 @@ def test_persona_scaffold_is_composable(tmp_path: Path, persona: str) -> None:
 
 
 def test_all_personas_have_skill_prefixes() -> None:
-    for persona, prefix in skills.PERSONA_SKILL_PREFIXES.items():
+    for _persona, prefix in skills.PERSONA_SKILL_PREFIXES.items():
         assert prefix.endswith("-")
 
 
