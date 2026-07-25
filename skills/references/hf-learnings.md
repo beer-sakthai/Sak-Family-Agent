@@ -17273,3 +17273,204 @@ def load_community_tasks():
 
 ### Skill
 mlops/hf-lighteval — Enhanced with source-level deep-dive on Python API (Pipeline, ModelConfig, LightevalTaskConfig), custom metrics system (Metric hierarchy, SampleLevelComputation, CorpusLevelComputation, MetricGrouping, Preparator), all 40+ Metrics enum entries, parametric metric override via __call__, batched vs non-batched metric dispatch, EvaluationTracker internals (5 sub-loggers, EnhancedJSONEncoder, save pipeline, Hub dataset card generation, TensorBoard with bench suite averaging, wandb/Trackio), community task system, and inspect-ai scorer integration for math and multiple-choice evals.
+
+---
+
+## 2026-07-25: hf-trl-dapo-gspo-deep-dive — From GRPO to DAPO and GSPO: Algorithms, Design Motivations, and Implementation (Topic #282)
+
+### Summary
+Comprehensive deep-dive on the evolution from GRPO to DAPO and GSPO — the three key reinforcement learning algorithms for LLM reasoning post-training. Covers the GRPO foundation (group-based advantage normalization, token-level importance sampling with clipping), DAPO's four targeted improvements (Clip-Higher, Dynamic Sampling, Token-Level Gradient Loss, Overlong Reward Shaping), GSPO's fundamental shift from token-level to sequence-level optimization for MoE stability, and the additional loss types now available in TRL's GRPOTrainer (Dr. GRPO, SAPO). Based on the DAPO paper (ByteDance/Volcengine), the GSPO paper (Qwen team), TRL v1.9.0+ documentation, and community blog analysis.
+
+### Source
+- DAPO Paper: https://arxiv.org/abs/2504.05764 — "DAPO: An Open-Source LLM Reinforcement Learning System at Scale"
+- GSPO Paper: https://arxiv.org/abs/2505. — Qwen Team, "GSPO: Group Sequence Policy Optimization"
+- Community Blog: https://huggingface.co/blog/NormalUhr/grpo-to-dapo-and-gspo — "From GRPO to DAPO and GSPO: What, Why, and How" (Aug 2025)
+- TRL Docs (main): https://huggingface.co/docs/trl/main/en/grpo_trainer — GRPOTrainer with loss_type support
+- GRPO Paper: https://arxiv.org/abs/2402.03300 — "DeepSeekMath: Pushing the Limits of Mathematical Reasoning in Open Language Models"
+- Understanding R1-Zero: https://arxiv.org/abs/2505. — "Understanding R1-Zero-Like Training: A Critical Perspective"
+
+### 1. The GRPO Foundation
+
+GRPO (Group Relative Policy Optimization) is the baseline from which DAPO and GSPO evolved. It removes the value model (critic network) from PPO, replacing it with group-based advantage normalization:
+
+**Core Objective:**
+
+```
+J_GRPO(θ) = E [ 1/G Σ_i 1/|o_i| Σ_t (min(r_i,t(θ)·Â_i, clip(r_i,t(θ), 1-ε, 1+ε)·Â_i) − β·D_KL(π_θ || π_ref)) ]
+```
+
+Where:
+- **Importance ratio**: r_i,t(θ) = π_θ(o_i,t | q, o_i,<t) / π_θ_old(o_i,t | q, o_i,<t)
+- **Advantage**: Â_i = (r_i − mean(r)) / std(r) — group-normalized within the batch of G samples
+- **Clipping**: clip(r, 1-ε, 1+ε) prevents the policy ratio from drifting too far (>20% by default)
+- **KL penalty**: β·D_KL keeps the policy close to the reference model (often disabled in practice, β=0)
+
+**Key insight**: The sign of Â_i and r_i,t together determine update direction:
+- Â_i > 0 & r_i,t > 1: Reinforce a good action the new policy already prefers
+- Â_i < 0 & r_i,t < 1: Correct a bad action the new policy is already avoiding
+- Â_i > 0 & r_i,t < 1: The new policy is becoming less likely to produce a good action (undesirable)
+- Â_i < 0 & r_i,t > 1: The new policy is becoming more likely to produce a bad action (undesirable)
+
+**Limitations that motivated DAPO/GSPO:**
+1. Clipping kills gradient for tokens with r_i,t > 1+ε even if Â_i > 0 (good tokens capped)
+2. Uniform sampling wastes compute when all G responses get same reward (zero advantage)
+3. Sample-level loss averaging dilutes gradients from long, high-quality responses
+4. Per-token importance sampling introduces high variance in MoE architectures
+
+### 2. DAPO — Four Targeted Improvements
+
+DAPO (Dynamic Advantage Policy Optimization, ByteDance 2025) preserves the GRPO framework while fixing four specific weaknesses:
+
+#### 2.1 Clip-Higher (Asymmetric Clipping)
+
+**Problem**: When the old policy assigns very low probability to a token that happens to be good (high advantage), the upper clip bound (1+ε) prevents the new policy from significantly increasing that token's probability. This creates a "Matthew effect" — tokens the old policy was already good at get reinforced, while tokens it was bad at stay suppressed.
+
+**Solution**: Raise the upper clip bound while keeping the lower bound fixed:
+
+```
+clip(r_i,t(θ), 1-ε_low, 1+ε_high)   where ε_high > ε_low
+```
+
+Typically ε_high=0.28, ε_low=0.2. This gives more room for "good but unlikely" tokens to grow their probability.
+
+#### 2.2 Dynamic Sampling
+
+**Problem**: For any given prompt, if all G sampled responses receive identical rewards (all 0 or all 1), the group advantage Â_i becomes zero for all responses, contributing zero gradient. This wastes generation compute.
+
+**Solution**: Enforce diversity in sampled responses per prompt:
+
+```
+s.t. 0 < |{o_i | is_equivalent(a, o_i)}| < G
+```
+
+This ensures the sampled set contains both correct and incorrect answers. If all G responses are the same quality, additional samples are drawn until the constraint is met.
+
+#### 2.3 Token-Level Gradient Loss
+
+**Problem**: GRPO's loss averages gradients per-sample first, then across the batch:
+```
+L_GRPO = −1/G Σ_i 1/|o_i| Σ_t l_i,t
+```
+A 200-token response gives each token weight (1/200)×(1/G), while a 10-token response gives (1/10)×(1/G). Short responses dominate gradient updates.
+
+**Solution**: DAPO averages over the total token count across all samples:
+```
+L_DAPO = −1/Σ|o_i| Σ_i Σ_t l_i,t
+```
+Every token has equal weight regardless of its parent response length. This prevents gradient dilution for long, high-quality responses and corrects the length bias.
+
+#### 2.4 Overlong Reward Shaping
+
+**Problem**: Excessively long responses consume compute and often indicate incoherent reasoning.
+
+**Solution**: Linear penalty for tokens beyond a first threshold, scaling up to cancel the correctness reward entirely at a second threshold. This softly discourages verbosity without hard truncation.
+
+### 3. GSPO — Sequence-Level Optimization for MoE Stability
+
+GSPO (Group Sequence Policy Optimization, Qwen Team 2025) addresses a structural limitation of GRPO that DAPO's token-level fixes cannot resolve: the instability of per-token importance sampling in Mixture-of-Experts architectures.
+
+#### 3.1 The Problem with Token-Level IS in MoE
+
+In GRPO, importance sampling is performed per-token:
+```
+r_i,t = π_θ(o_i,t | ...) / π_θ_old(o_i,t | ...)
+```
+
+This works for dense models where all parameters contribute to every token. But in MoE:
+- Different tokens activate different expert subsets
+- The routing decisions introduce additional stochasticity
+- A single token's importance ratio cannot meaningfully correct for distribution shift
+- The per-token variance inflates dramatically, causing gradient noise and instability
+
+**Practical symptom**: During long MoE training runs, the model can suddenly collapse — even resuming from checkpoint or tuning hyperparameters may not recover it.
+
+#### 3.2 Routing Replay (Pre-GSPO Workaround)
+
+Before GSPO, practitioners used Routing Replay — recording expert activation patterns during inference and enforcing the same routing during training. While effective, this:
+- Greatly increases engineering complexity
+- Limits performance by constraining routing
+- Adds memory overhead for storing routing tables
+
+#### 3.3 GSPO's Solution
+
+GSPO shifts optimization granularity from token-level to **sequence-level**:
+
+```
+L_GSPO = −1/G Σ_i [ min(r_i·Â_i, clip(r_i, 1-ε, 1+ε)·Â_i) ]
+```
+
+Where r_i = π_θ(o_i | q) / π_θ_old(o_i | q) is computed over the **entire sequence**, not per-token.
+
+**Implications:**
+- Eliminates the need for Routing Replay entirely
+- Reduces variance by pooling the importance signal across the full sequence
+- Naturally handles the token-expert assignment variability in MoE
+- Aligns reward granularity (response-level) with optimization granularity (sequence-level)
+- Only high-quality samples contribute meaningfully to updates
+
+The key insight: We evaluate the model based on full responses (rewards are response-level), yet GRPO trains it token-by-token. GSPO aligns these by optimizing at the sequence level — the same granularity as the reward signal.
+
+**Adoption**: The Qwen3 series uses GSPO for post-training, demonstrating its effectiveness in production-scale MoE models.
+
+### 4. Additional Loss Types in TRL's GRPOTrainer
+
+Beyond DAPO and GSPO, TRL's GRPOTrainer supports several other loss formulations via the `loss_type` parameter:
+
+| Loss Type | How to Enable | Key Idea |
+|-----------|--------------|----------|
+| **GRPO** | `loss_type="grpo"` (default) | Sample-level normalization: 1/G · 1/|o_i| |
+| **DAPO** | `loss_type="dapo"` | Token-level normalization: 1/Σ|o_i| |
+| **Dr. GRPO** | `loss_type="dr_grpo"` | Divide by a constant (max completion length) instead of actual length — fully removes length bias |
+| **SAPO** | `loss_type="sapo"` | Replaces hard clipping with soft sigmoid-gated gating: f(x) = σ(τ(x-1))·4τ. Uses asymmetric temperatures τ_pos=1.0, τ_neg=1.05 for stricter penalization of bad actions |
+
+**Dr. GRPO** formula:
+```
+L_Dr_GRPO = −1/(L_max·G) Σ_i Σ_t l_i,t
+```
+Where L_max is the maximum completion length in the batch. This completely removes the length bias introduced by sample- or token-level normalization.
+
+**SAPO** (Soft-gated Advantage Policy Optimization):
+- Uses temperature-controlled sigmoid gating instead of hard clip
+- f_i,t(x) = σ(τ_i,t·(x-1)) · 4/τ_i,t
+- Asymmetric temperatures τ_neg > τ_pos ensure stricter penalization
+- Retains useful learning signals from "near-on-policy" tokens while suppressing extreme deviation noise
+
+### 5. Practical Guidance
+
+#### When to Use Each Variant
+
+| Scenario | Recommended Loss Type |
+|----------|---------------------|
+| Dense model, standard reasoning tasks | GRPO (default) |
+| Long chain-of-thought with dense model | DAPO (token-level loss prevents gradient dilution) |
+| MoE model (e.g., Qwen3, DeepSeek) | GSPO (sequence-level avoids per-token IS variance) |
+| Length bias is critical | Dr. GRPO (constant normalization fully removes bias) |
+| Training instability with hard clipping | SAPO (soft gating smooths extreme updates) |
+
+#### Key Configuration Parameters
+
+In `GRPOConfig`:
+- `loss_type`: `"grpo"`, `"dapo"`, `"dr_grpo"`, `"sapo"` (GSPO not yet exposed as separate loss_type in current TRL)
+- `epsilon_low`: Lower clip bound (default: 0.2)
+- `epsilon_high`: Upper clip bound (default: 0.28 for Clip-Higher)
+- `scale_rewards`: Whether to normalize rewards by std (can disable or set to "batch")
+- `beta`: KL penalty coefficient (typically 0.0 in modern practice)
+- `entropy_coef`: Entropy regularization coefficient
+- `use_adaptive_entropy`: Dynamically adjust entropy coefficient based on target
+
+### 6. Key Takeaways
+
+1. **GRPO → DAPO → GSPO represents an evolution of RL-based LLM training**, not a revolution — each builds on the previous while fixing specific identified weaknesses.
+
+2. **DAPO's Clip-Higher** solves the "Matthew effect" where good but unlikely tokens get their gradients killed by symmetric clipping.
+
+3. **DAPO's Token-Level Loss** addresses the practical problem that GRPO's sample-level averaging dilutes gradients from long responses — critical for long-CoT training scenarios.
+
+4. **GSPO's sequence-level optimization** is the most fundamental change, addressing the root cause of MoE instability rather than patching symptoms.
+
+5. **The trend is toward simpler, more aligned optimization**: Reward granularity (response-level) should match optimization granularity — sequence-level in GSPO aligns them perfectly.
+
+6. **TRL's GRPOTrainer supports multiple loss types** under a unified training API, making it easy to experiment with different formulations without changing the training infrastructure.
+
+### Skill
+mlops/hf-trl-dapo-gspo — Deep-dive on DAPO and GSPO algorithms for LLM RL post-training. Covers GRPO foundation (group-based advantage, token-level IS with clipping), DAPO's four improvements (Clip-Higher asymmetric clipping, Dynamic Sampling for reward diversity, Token-Level Gradient Loss to prevent length bias, Overlong Reward Shaping), GSPO's sequence-level shift for MoE stability (eliminating Routing Replay), and TRL's loss_type options (GRPO, DAPO, Dr. GRPO, SAPO) with practical guidance for dense vs. MoE models.
