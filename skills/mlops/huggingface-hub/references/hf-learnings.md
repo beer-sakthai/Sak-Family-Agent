@@ -5666,3 +5666,124 @@ For model/dataset file downloads, an additional HTTP layer exists:
 4. **Token resolution is layered** — OIDC → env → file → Colab, each with distinct error semantics.
 5. **Error refinement is URL-aware** — the same 404 means different things depending on whether the URL is a repo, bucket, or job endpoint.
 6. **Rate limit headers follow IETF draft** — parse both resource-specific limits and policy windows.
+
+## 2026-07-25: hf-hub-hfuri-mount-volume-system — HfUri, HfMount, and Volume API for Spaces & Jobs
+
+### Summary
+Deep dive into the new Hugging Face Hub URI system (`hf://`), Mount specifications (`hf://...:<MOUNT_PATH>[:ro|:rw]`), and the Volume API for Space/Job resource mounting. Introduced in `huggingface_hub v1.24.0`. The `HfUri` dataclass provides a unified parser for identifying any Hub resource (model, dataset, space, kernel, or bucket) along with an optional revision and sub-path. `HfMount` extends this with a local mount path and read-only flag. The `Volume` dataclass (with `set_space_volumes`/`delete_space_volumes` API) replaces the deprecated `request_space_storage` for Spaces, while `sync_job_volume` enables local-to-bucket syncing for Job volumes.
+
+### Key Components
+
+**1. HfUri — Canonical Hub Resource Identifier**
+- Grammar: `hf://[<TYPE>/]<ID>[@<REVISION>][/<PATH>]`
+- Type prefixes (plural mandated): `models/`, `datasets/`, `spaces/`, `kernels/`, `buckets/`
+- Default type (no prefix): `model`
+- Special ref handling: `refs/pr/N` and `refs/convert/<name>` matched eagerly (contain `/`)
+- Revisions with `/` not matching special refs are URL-encoded as `%2F`
+- Bucket URIs never carry a revision
+- Accepted URI types from source: `model`, `dataset`, `space`, `kernel`, `bucket`
+- Properties: `.type`, `.id`, `.revision` (optional), `.path_in_repo` (default `""`), `.is_bucket`, `.is_repo`
+- `.to_uri()` — renders canonical `hf://` string
+- `.to_url(endpoint)` — renders Hugging Face web URL (e.g. `https://huggingface.co/org/model`)
+
+**2. HfMount — Mount Specification**
+- Grammar: `hf://[<TYPE>/]<ID>[@<REVISION>][/<PATH>]:<MOUNT_PATH>[:ro|:rw]`
+- Fields: `source` (HfUri), `mount_path` (absolute, starts with `/`), `read_only` (optional bool)
+- `.to_uri()` — renders mount URI
+- Parsing: `parse_hf_mount(mount_str)` returns `HfMount`
+- Mount path always starts with `:/` delimiter; uses rfind to handle edge cases
+
+**3. Volume Class — API-facing mount descriptor**
+```python
+@dataclass
+class Volume:
+    type: Literal["bucket", "model", "dataset", "space"]
+    source: str              # repo or bucket ID
+    mount_path: str          # absolute path in container
+    revision: str | None     # git revision (repos only)
+    read_only: bool | None   # True for repos, default False for buckets
+    path: str | None         # subfolder prefix inside resource
+```
+- `.to_dict()` — serializes to Hub API JSON payload (uses camelCase keys)
+- `.to_uri()` — renders as `hf://` mount URI via `HfMount`
+
+**4. set_space_volumes / delete_space_volumes — New Space Volume API**
+- `api.set_space_volumes(repo_id, volumes)` — replaces ALL volumes on a Space; raises `BadRequestError` on static Spaces
+- `api.delete_space_volumes(repo_id)` — removes ALL volumes from a Space; raises `BadRequestError` if none attached
+- `api.get_space_runtime(repo_id)` — returns `SpaceRuntime` with `.volumes: list[Volume] | None`
+- `request_space_storage` deprecated in v1.24.0, will be removed in v2.0
+
+**5. sync_job_volume — Job Volume Sync**
+- `api.sync_job_volume(source, mount_path, *, remote_name, read_only, namespace)` returns `Volume`
+- Syncs local directory to `{namespace}/jobs-artifacts` bucket (auto-created private)
+- Uses same sync logic as `sync_bucket` — re-syncing only uploads new/modified files
+- Default subfolder name derived from directory path + hostname; pass `remote_name` for fixed name
+- Read-only by default; pass `read_only=False` for Job output volumes
+- Empty directories get `.keep` placeholder so volume mounts succeed
+- Returns a `Volume` ready for `run_job`/`run_uv_job`/`create_scheduled_job`/`create_scheduled_uv_job`
+
+**6. duplicate_repo with space_volumes**
+- `api.duplicate_repo(from_id, to_id, *, repo_type, space_volumes=..., ...)` — new unified duplication API
+- `duplicate_space()` deprecated in favor of `duplicate_repo(repo_type="space")`
+- `space_volumes` parameter accepts `list[Volume]` for the duplicate
+
+**7. Web URL to HF URI Parsing**
+- `parse_hf_uri()` accepts both `hf://` URIs and Hugging Face web URLs (auto-detected)
+- Supported URL routes: `blob`, `resolve`, `raw`, `tree`, `blame` (repos); `resolve`, `tree` (buckets)
+- User/org pages, listing pages, and non-location routes (commit, discussions, settings, edit) rejected
+- Self-hosted endpoints supported via `endpoint` parameter
+- Constants: `HF_PROTOCOL="hf://"`, `HF_URI_TYPE_PREFIXES={models: model, datasets: dataset, spaces: space, kernels: kernel, buckets: bucket}`, `HF_URL_HOSTS={hf.co, huggingface.co, hub-ci.huggingface.co}`
+
+### Key Design Decisions
+- Singular type names rejected with helpful error
+- `HfUri` is frozen/hashable — safe for caching and use as dict keys
+- Mount paths use rfind(`:/`) to avoid splitting on `:` in Windows-style paths
+- Bucket URIs explicitly reject revision markers (`@`)
+- `Volume.to_uri()` uses HfMount internally for CLI compatibility
+- Model URLs are at root; others under type prefix
+
+### API Integration
+- SpaceRuntime includes `volumes: list[Volume] | None` field populated from API response
+- `SpaceRuntime` also tracks `dev_mode: bool`, `storage: SpaceStorage | None`, `hot_reloading: SpaceHotReloading | None`
+- Volumes in SpaceRuntime are created via `Volume(**v)` from raw API dict
+
+### Practical Usage
+```python
+from huggingface_hub import HfApi, Volume, parse_hf_uri, parse_hf_mount
+
+# Parse URIs and web URLs
+uri = parse_hf_uri("hf://datasets/my-org/my-dataset@v1/train.csv")
+uri.to_url()  # full Hugging Face web URL
+
+# Mount specification
+mount = parse_hf_mount("hf://models/org/model:/models:ro")
+mount.to_uri()  # canonical mount URI
+
+# Volume for Spaces API
+api = HfApi()
+volumes = [
+    Volume(type="bucket", source="my-org/my-bucket", mount_path="/data"),
+    Volume(type="model", source="other-org/base-model", mount_path="/model", read_only=True),
+]
+api.set_space_volumes("my-org/my-space", volumes)
+runtime = api.get_space_runtime("my-org/my-space")
+for vol in runtime.volumes:
+    print(f"{vol.type}: {vol.source} -> {vol.mount_path}")
+
+# Volume for Jobs
+vol = api.sync_job_volume("./inputs", mount_path="/inputs", remote_name="eval-data-v3")
+job = api.run_uv_job("run_eval.py", volumes=[vol], flavor="cpu-upgrade")
+```
+
+### Zero-Cost Relevance
+- Volumes for Spaces are available on free CPU Basic hardware (static Spaces not supported)
+- `sync_job_volume` syncs to free `jobs-artifacts` bucket (public unlimited, private with limits)
+- Mounting models/datasets as volumes costs nothing extra — read-only references to existing resources
+- Bucket volumes may incur storage costs for large data; keep buckets public for free unlimited storage
+- The `hf://` URI system itself is free — a standardized way to reference Hub resources
+
+### Skill Updated
+`mlops/huggingface-hub/` — added HfUri/HfMount/Volume reference to `references/hf-learnings.md`
+
+---
+
