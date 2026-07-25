@@ -6645,4 +6645,37 @@ Major deepening of custom container knowledge: discovered the **Custom Router** 
 
 ### Skill Deepened
 `hf-inference-endpoints-custom-containers/` — references/hf-learnings.md appended with ~290-line deepening section (now 708 total lines). SKILL.md already has `author: SakThai` and `license: MIT`.
+
+---
+
+## 2026-07-25: hf-hub-dataset-card-metadata-comprehensive-reference — Dataset Card YAML Metadata System (Topic #375 Deepening)
+
+### Summary
+Comprehensive deep-dive into the Hugging Face dataset card YAML metadata system — the structured front matter that goes at the top of dataset `README.md` files. Covers every field in `DatasetCardData`, the validated values for each field (annotations_creators, language_creators, multilinguality, size_categories, source_datasets, task_categories, task_ids), license identifiers (standard + custom), config_names, train_eval_index, the `extra_gated` gating configuration, and the `huggingface_hub` Python API for creating and pushing dataset cards programmatically.
+
+### Key Findings
+
+| Area | Finding |
+|------|---------|
+| **Location** | Dataset card YAML goes between `---` delimiters at the **top** of `README.md`. Validated at push time by the Hub. |
+| **Programmatic API** | `DatasetCardData()` class in `huggingface_hub.repocard_data` — instantiate with keyword args and pass to `DatasetCard.from_template(card_data, ...)`. |
+| **Push to Hub** | `card.push_to_hub(repo_id, repo_type="dataset")` — creates or updates README.md with validated YAML. |
+| **License system** | Standard identifiers from HF's license catalog + `other` with `license_name` + `license_link` for custom licenses. |
+| **Gating** | `extra_gated` section in YAML controls dataset access gating — agreement form, fields, and requirements. |
+| **Task taxonomy** | `task_categories` and `task_ids` pull from HF's task taxonomy at `huggingface.js/packages/tasks/src/tasks.ts`. |
+| **Size categories** | Controlled vocabulary: `n<1K`, `1K<n<10K`, `10K<n<100K`, `100K<n<1M`, `1M<n<10M`, `10M<n<100M`, `100M<n<1B`, `1B<n<10B`, `10B<n<100B`, `100B<n<1T`, `n>1T`, `other`. |
+| **Config names** | `config_names` field lists available dataset configurations (e.g., subsets like `fr`, `en` for multilingual datasets). |
+
+### Sources
+- `huggingface_hub` source: `src/huggingface_hub/repocard_data.py` — `DatasetCardData` dataclass definition
+- `huggingface_hub` source: `src/huggingface_hub/repocard.py` — `DatasetCard.from_template()` and `push_to_hub()`
+- Hub docs: https://huggingface.co/docs/hub/en/datasets-overview
+- Hub docs: https://huggingface.co/docs/hub/en/repositories-licenses
+- Hub docs: https://huggingface.co/docs/hub/en/repositories-gated
+- Model card spec: https://github.com/huggingface/hub-docs/blob/main/modelcard.md
+- Task taxonomy: `huggingface.js/packages/tasks/src/tasks.ts`
+- Verified via `huggingface_hub` source code inspection, 2026-07-25
+
+### Skill Deepened
+`hf-hub-dataset-card-metadata-comprehensive-reference/` — `references/hf-learnings.md` created. SKILL.md already has `author: SakThai` and `license: MIT`.
 |

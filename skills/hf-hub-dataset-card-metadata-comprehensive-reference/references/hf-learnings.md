@@ -1,427 +1,203 @@
-# HF Learnings: Dataset Card Metadata — Complete Reference
+# HF Learnings — Dataset Card Metadata Complete Reference
 
-## Topic
-`hf-hub-dataset-card-metadata-comprehensive-reference`
+## 2026-07-25: hf-hub-dataset-card-metadata-comprehensive-reference — Dataset Card YAML Metadata System (Topic #375 Deepening)
 
-## Date
-2026-07-26
+### Summary
+Deep-dive into the Hugging Face dataset card YAML metadata system — the structured front matter that goes at the top of dataset `README.md` files. Covers every field in `DatasetCardData`, the validated values for each field (annotations_creators, language_creators, multilinguality, size_categories, source_datasets, task_categories, task_ids), license identifiers (standard + custom), config_names, train_eval_index, the `extra_gated` gating configuration, and the `huggingface_hub` Python API for creating and pushing dataset cards programmatically.
 
-## Sources
-- https://huggingface.co/docs/hub/en/datasets-cards — Dataset Cards
-- https://github.com/huggingface/hub-docs/blob/main/datasetcard.md — Dataset Card specifications
-- https://huggingface.co/docs/hub/en/datasets-manual-configuration — Manual Configuration
-- https://huggingface.co/docs/hub/en/repositories-licenses — License identifiers
-- https://huggingface.co/api/tasks — Pipeline/task taxonomy
-- https://github.com/huggingface/huggingface.js/blob/main/packages/tasks/src/dataset-libraries.ts — Supported dataset libraries
-- https://huggingface.co/docs/hub/en/datasets-gated — Gated datasets
-- https://huggingface.co/docs/hub/en/repositories-licenses — License table
-- https://github.com/huggingface/huggingface_hub/blob/main/src/huggingface_hub/templates/datasetcard_template.md — Dataset card template
+### Key Findings
 
----
+| Area | Finding |
+|------|---------|
+| **Location** | Dataset card YAML goes between `---` delimiters at the **top** of `README.md`. Validated at push time by the Hub. |
+| **Programmatic API** | `DatasetCardData()` class in `huggingface_hub.repocard_data` — instantiate with keyword args and pass to `DatasetCard.from_template(card_data, ...)`. |
+| **Push to Hub** | `card.push_to_hub(repo_id, repo_type="dataset")` — creates or updates README.md with validated YAML. |
+| **License system** | Standard identifiers from HF's license catalog + `other` with `license_name` + `license_link` for custom licenses. |
+| **Gating** | `extra_gated` section in YAML controls dataset access gating — agreement form, fields, and requirements. |
+| **Task taxonomy** | `task_categories` and `task_ids` pull from HF's task taxonomy at `huggingface.js/packages/tasks/src/tasks.ts`. |
+| **Size categories** | Controlled vocabulary: `n<1K`, `1K<n<10K`, `10K<n<100K`, `100K<n<1M`, `1M<n<10M`, `10M<n<100M`, `100M<n<1B`, `1B<n<10B`, `10B<n<100B`, `100B<n<1T`, `n>1T`, `other`. |
+| **Config names** | `config_names` field lists available dataset configurations (e.g., subsets like `fr`, `en` for multilingual datasets). |
 
-## Summary
+### Dataset Card YAML Fields — Complete Reference
 
-Comprehensive reference on the Hugging Face dataset card YAML metadata system. Dataset cards are `README.md` files in dataset repos with a YAML frontmatter block that controls how the dataset appears on the Hub — including discoverability (tags, licenses, tasks), configuration (splits, subsets, data files), gating (access control), and rich metadata (features, sizes, creators). Proper metadata is essential for making datasets findable, reusable, and correctly documented.
+#### Required / Common Fields
 
----
+| Field | Type | Description | Example |
+|-------|------|-------------|---------|
+| `license` | str or list[str] | License(s) for the dataset | `mit`, `apache-2.0`, `[mit, cc-by-4.0]` |
+| `language` | list[str] | ISO 639-1/2/3 codes or special values | `[en, fr, code, multilingual]` |
+| `pretty_name` | str | Human-readable name | `"Common Voice Corpus 17.0"` |
+| `task_categories` | str or list[str] | High-level task category | `text-classification` |
+| `task_ids` | str or list[str] | Specific task | `sentiment-classification` |
 
-## 1. YAML Metadata Frontmatter
+#### Descriptive Fields
 
-Every dataset card starts with a YAML frontmatter block delimited by `---`:
+| Field | Type | Description | Allowed Values |
+|-------|------|-------------|----------------|
+| `annotations_creators` | str or list[str] | How annotations were created | `found`, `crowdsourced`, `expert-generated`, `machine-generated`, `no-annotation`, `other` |
+| `language_creators` | str or list[str] | How text data was created | `found`, `crowdsourced`, `expert-generated`, `machine-generated`, `other` |
+| `multilinguality` | str or list[str] | Language coverage | `monolingual`, `multilingual`, `translation`, `other` |
+| `size_categories` | str or list[str] | Number of examples | See table above |
+| `source_datasets` | list[str] | Original or extended | `original`, `extended` (plus optional dataset IDs) |
+| `config_names` | str or list[str] | Available configs/subset names | `[fr, en, de]` for a multilingual dataset |
+| `paperswithcode_id` | str | PapersWithCode dataset ID | `common-voice` |
+
+#### Evaluation Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `train-eval-index` | dict | Evaluation spec for automated benchmarking on the Hub. Contains `config`, `task`, `task_id`, `splits`, `col_mapping`, `metadata` sections. |
+
+#### Gating Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `extra_gated` | dict | Configuration for dataset access gating (user must agree to terms before viewing/downloading) |
+| `extra_gated.prompt` | str | Message shown to users before granting access |
+| `extra_gated.fields` | list[dict] | Form fields: `name`, `type` (text, checkbox, etc.), `required` |
+| `extra_gated.groups` | list[str] | HF org groups that are auto-approved |
+
+### License Identifiers — Complete Reference
+
+Hugging Face maintains a license registry at `https://huggingface.co/docs/hub/repositories-licenses`. The most common:
+
+| Identifier | License | SPDX |
+|------------|---------|------|
+| `apache-2.0` | Apache License 2.0 | Apache-2.0 |
+| `mit` | MIT License | MIT |
+| `bsd-2-clause` | BSD 2-Clause | BSD-2-Clause |
+| `bsd-3-clause` | BSD 3-Clause | BSD-3-Clause |
+| `cc-by-4.0` | Creative Commons Attribution 4.0 | CC-BY-4.0 |
+| `cc-by-sa-4.0` | CC Attribution-ShareAlike 4.0 | CC-BY-SA-4.0 |
+| `cc0-1.0` | CC Zero v1.0 Universal | CC0-1.0 |
+| `gpl-2.0` | GNU General Public License v2.0 | GPL-2.0-only |
+| `gpl-3.0` | GNU General Public License v3.0 | GPL-3.0-only |
+| `lgpl-2.1` | GNU Lesser General Public License v2.1 | LGPL-2.1-only |
+| `lgpl-3.0` | GNU Lesser General Public License v3.0 | LGPL-3.0-only |
+| `agpl-3.0` | GNU Affero General Public License v3.0 | AGPL-3.0-only |
+| `mpl-2.0` | Mozilla Public License 2.0 | MPL-2.0 |
+| `unlicense` | The Unlicense | Unlicense |
+| `deepseek` | DeepSeek License | Custom |
+| `llama2` | Llama 2 Community License | Custom |
+| `falcon-180B` | TII Falcon 180B License | Custom |
+| `other` | Custom license | — |
+
+When `license: other`, you MUST also provide:
+- `license_name: str` — a short identifier for your license
+- `license_link: str` — either a relative path (`LICENSE`) or absolute URL to the license text
+
+### Task Categories & Task IDs
+
+Task categories and IDs are defined in `huggingface.js/packages/tasks/src/tasks.ts`. Key categories:
+
+| Category | Example Task IDs |
+|----------|-----------------|
+| `text-classification` | `sentiment-classification`, `topic-classification`, `natural-language-inference` |
+| `token-classification` | `named-entity-recognition`, `part-of-speech` |
+| `text-generation` | `language-modeling`, `dialogue-generation` |
+| `fill-mask` | `fill-mask` |
+| `summarization` | `summarization` |
+| `translation` | `translation` |
+| `question-answering` | `extractive-qa`, `open-domain-qa`, `multiple-choice-qa` |
+| `text2text-generation` | `text2text-generation` |
+| `image-classification` | `image-classification` |
+| `object-detection` | `object-detection`, `face-detection` |
+| `image-segmentation` | `instance-segmentation`, `semantic-segmentation`, `panoptic-segmentation` |
+| `text-to-image` | `text-to-image` |
+| `image-to-text` | `image-to-text`, `image-captioning`, `optical-character-recognition` |
+| `automatic-speech-recognition` | `automatic-speech-recognition` |
+| `text-to-speech` | `text-to-speech` |
+| `audio-classification` | `audio-classification` |
+| `tabular-classification` | `tabular-classification` |
+| `tabular-regression` | `tabular-regression` |
+| `reinforcement-learning` | `reinforcement-learning` |
+| `robotics` | `robotics` |
+| `other` | `other` |
+
+### Complete YAML Example
 
 ```yaml
 ---
+pretty_name: "My Fine-Tuning Dataset"
 language:
 - en
 - fr
-license: apache-2.0
-pretty_name: "My Dataset"
-tags:
-- image-classification
-- biology
+license: mit
 task_categories:
-- image-classification
----
-```
-
-### Complete Field Reference
-
-| Field | Required | Type | Description |
-|-------|----------|------|-------------|
-| `language` | Optional | List of ISO 639-1 codes | Languages present in the dataset (e.g., `en`, `fr`, `zh`) |
-| `pretty_name` | Recommended | String | Human-readable display name |
-| `license` | Recommended | String | License identifier from the HF license table |
-| `license_name` | Conditional | String | Custom license name (required if `license: other`) |
-| `license_link` | Conditional | String | Path to license file in repo (e.g., `LICENSE`) or URL |
-| `license_details` | Legacy | String | Deprecated, use `license_name` + `license_link` instead |
-| `tags` | Optional | List of strings | Tags for discoverability — can include modalities, tasks, libraries, arxiv IDs, etc. |
-| `task_categories` | Recommended | List of strings | Top-level task categories from the HF pipeline taxonomy |
-| `task_ids` | Optional | List of strings | Specific subtask IDs |
-| `annotations_creators` | Optional | List of strings | Who created the annotations |
-| `language_creators` | Optional | List of strings | Who created the language data |
-| `language_details` | Optional | List of BCP-47 codes | Language+region codes (e.g., `fr-FR`, `en-US`) |
-| `size_categories` | Recommended | List of strings | Size bucket of the dataset |
-| `source_datasets` | Optional | List of strings | Source datasets this was derived from |
-| `paperswithcode_id` | Optional | String | Dataset ID on PapersWithCode |
-| `extra_gated_fields` | Conditional | List | Custom fields for gated access |
-| `extra_gated_prompt` | Conditional | String | Custom access agreement prompt |
-| `configs` | Optional | List | Dataset subset/configuration definitions |
-| `dataset_info` | Optional | Object | Programmatic metadata (features, splits, sizes) |
-
----
-
-## 2. License Identifiers
-
-Licenses use string identifiers from the [HF license table](https://huggingface.co/docs/hub/en/repositories-licenses). Using a valid identifier causes the license badge to render on the dataset page.
-
-### Most Common Licenses
-
-| License | Identifier |
-|---------|-----------|
-| Apache 2.0 | `apache-2.0` |
-| MIT | `mit` |
-| Creative Commons Zero v1.0 | `cc0-1.0` |
-| CC-BY-4.0 | `cc-by-4.0` |
-| CC-BY-SA-4.0 | `cc-by-sa-4.0` |
-| CC-BY-NC-4.0 | `cc-by-nc-4.0` |
-| BSD 3-Clause | `bsd-3-clause` |
-| MIT | `mit` |
-| Open Data Commons | `odc-by` |
-| Open Database License | `odbl` |
-| Community Data License Agreement — Permissive v2.0 | `cdla-permissive-2.0` |
-| Community Data License Agreement — Sharing v1.0 | `cdla-sharing-1.0` |
-| PDDL (Public Domain) | `pddl` |
-| GNU GPL v3.0 | `gpl-3.0` |
-| GNU LGPL v3.0 | `lgpl-3.0` |
-| Llama 3.3 Community | `llama3.3` |
-| AI Model License | varies (e.g., `openrail`, `creativeml-openrail-m`) |
-
-### Custom Licenses
-
-If your license isn't in the table, use:
-```yaml
-license: other
-license_name: my-custom-license-1.0
-license_link: LICENSE  # or URL to remote license file
-```
-
----
-
-## 3. Task Categories (Pipelines)
-
-Task categories come from the [HF Tasks API](https://huggingface.co/api/tasks). Use these as `task_categories` values.
-
-### All Valid Task Categories
-
-| Category | Use Case |
-|----------|----------|
-| `text-classification` | Sentiment, spam, etc. |
-| `token-classification` | NER, POS tagging |
-| `question-answering` | Extractive/abstractive QA |
-| `summarization` | Text summarization |
-| `translation` | Machine translation |
-| `text-generation` | Language modeling, completion |
-| `fill-mask` | Masked language modeling |
-| `text-to-image` | Image generation from text |
-| `image-to-text` | Captioning, OCR |
-| `image-classification` | Image classification |
-| `image-segmentation` | Semantic/instance segmentation |
-| `object-detection` | Object detection |
-| `image-to-image` | Image enhancement, style transfer |
-| `depth-estimation` | Depth map prediction |
-| `video-classification` | Video classification |
-| `automatic-speech-recognition` | Speech-to-text |
-| `text-to-speech` | TTS |
-| `audio-classification` | Audio/sound classification |
-| `audio-to-audio` | Audio enhancement, source separation |
-| `feature-extraction` | Embeddings |
-| `sentence-similarity` | Semantic similarity |
-| `text-ranking` | Ranking/search |
-| `table-question-answering` | Table QA |
-| `tabular-classification` | Tabular classification |
-| `tabular-regression` | Tabular regression |
-| `visual-question-answering` | VQA |
-| `document-question-answering` | Document QA |
-| `zero-shot-classification` | Zero-shot |
-| `zero-shot-image-classification` | Zero-shot image |
-| `text-to-3d` | 3D generation |
-| `image-to-3d` | 3D from image |
-| `image-text-to-text` | Vision-language |
-| `image-text-to-image` | Image editing |
-| `image-text-to-video` | Video from text+image |
-| `video-text-to-text` | Video QA |
-| `any-to-any` | Multimodal any-to-any |
-| `mask-generation` | Mask generation |
-| `keypoint-detection` | Keypoint detection |
-| `reinforcement-learning` | RL |
-| `visual-document-retrieval` | Document retrieval |
-| `unconditional-image-generation` | Raw image gen |
-
-### Subtask IDs (`task_ids`)
-
-For finer granularity, use subtask names. Examples:
-- For `question-answering`: `extractive-qa`, `abstractive-qa`, `open-domain-qa`
-- For `image-classification`: `multi-class-image-classification`, `multi-label-image-classification`, `single-label-image-classification`
-- For `text-classification`: `sentiment-classification`, `topic-classification`, `language-identification`
-- For `token-classification`: `named-entity-recognition`, `part-of-speech-tagging`
-
----
-
-## 4. Size Categories
-
-Size categories describe the number of elements (rows/examples) in the dataset. Use ranges:
-
-| Identifier | Meaning |
-|-----------|---------|
-| `n<1K` | Fewer than 1,000 examples |
-| `1K<n<10K` | 1,000 to 10,000 |
-| `10K<n<100K` | 10,000 to 100,000 |
-| `100K<n<1M` | 100,000 to 1 million |
-| `1M<n<10M` | 1 million to 10 million |
-| `10M<n<100M` | 10 million to 100 million |
-| `100M<n<1B` | 100 million to 1 billion |
-| `1B<n` | More than 1 billion |
-
-```yaml
-size_categories:
-- 100K<n<1M
-```
-
----
-
-## 5. Modality Tags
-
-The Hub auto-detects dataset modality from file types, but you can force-set it with tags:
-
-| Tag | Modality |
-|-----|----------|
-| `3d` | 3D data (point clouds, meshes) |
-| `audio` | Audio/speech |
-| `geospatial` | GIS, remote sensing |
-| `image` | Images |
-| `tabular` | Tabular/structured data |
-| `text` | Text |
-| `timeseries` | Time-series data |
-| `video` | Video |
-
-```yaml
-tags:
-- audio
-```
-
----
-
-## 6. Library Association Tags
-
-Associate libraries that can natively load the dataset. The dataset page shows these as integration badges.
-
-Valid library tags:
-- `argilla`
-- `dask`
-- `datasets` (🤗 Datasets)
-- `distilabel`
-- `fiftyone`
-- `mlcroissant`
-- `pandas`
-- `webdataset`
-
-```yaml
-tags:
-- datasets
-- pandas
-```
-
-To propose a new library, see the [supported libraries source](https://github.com/huggingface/huggingface.js/blob/main/packages/tasks/src/dataset-libraries.ts).
-
----
-
-## 7. Creators
-
-### Annotations Creators
-
-Who created the annotations/labels:
-
-| Value | Meaning |
-|-------|---------|
-| `crowdsourced` | Via crowdsourcing (e.g., Mechanical Turk) |
-| `expert-generated` | Subject matter experts |
-| `found` | Extracted from existing sources |
-| `machine-generated` | Automatically generated |
-| `no-annotation` | No annotations |
-
-### Language Creators
-
-Who created/collected the language data (same values as annotations creators):
-
-```yaml
+- text-classification
+task_ids:
+- sentiment-classification
 annotations_creators:
 - crowdsourced
 language_creators:
-- found
-```
-
----
-
-## 8. Source Datasets
-
-If the dataset is derived from other HF datasets, reference them:
-
-```yaml
+- crowdsourced
+multilinguality:
+- multilingual
+size_categories:
+- 100K<n<1M
 source_datasets:
-- wikipedia
-- laion/laion-2b
-- bigcode/the-stack-v2
-```
-
-This creates cross-links between dataset pages.
-
----
-
-## 9. Language Details
-
-For language+region specificity, use BCP-47 codes:
-
-```yaml
-language:
+- original
+config_names:
 - en
 - fr
-language_details:
-- en-US
-- fr-FR
-```
-
----
-
-## 10. Configurations (Subsets)
-
-Define named subsets (configs) with custom data files and splits:
-
-```yaml
-configs:
-- config_name: default
-  data_files:
-  - split: train
-    path: data/train.csv
-  - split: test
-    path: data/test.csv
-- config_name: processed
-  data_files:
-  - split: train
-    path: data/processed_train.parquet
-```
-
-Each config can define:
-- `config_name`: Unique name for the subset
-- `data_files`: List of split→path mappings
-- Builder-specific parameters
-
----
-
-## 11. Dataset Info (Programmatic Metadata)
-
-The `dataset_info` block stores machine-readable metadata about features, splits, and sizes. This can be auto-generated using `datasets-cli`:
-
-```yaml
-dataset_info:
-  features:
-    - name: id
-      dtype: int32
-    - name: text
-      dtype: string
-    - name: label
-      dtype: int32
-  config_name: default
+train-eval-index:
+- config: en
+  task: text-classification
+  task_id: sentiment-classification
   splits:
-    - name: train
-      num_bytes: 79317110
-      num_examples: 87599
-    - name: test
-      num_bytes: 5842710
-      num_examples: 10570
-  download_size: 35142551
-  dataset_size: 89789763
-```
-
-Supporting multiple configs:
-```yaml
-dataset_info:
-  - config_name: config_a
-    features: ...
-  - config_name: config_b
-    features: ...
-```
-
+    train: train
+    validation: validation
+    test: test
+  col_mapping:
+    text: text
+    label: target
+  metadata:
+    - name: Accuracy
+      type: accuracy
 ---
+```
 
-## 12. Gated Datasets
-
-Restrict dataset access with gating. Define custom fields users must fill:
+### Gating (Dataset Access Control) Example
 
 ```yaml
-extra_gated_fields:
-- Name: text
-- Affiliation: text
-- Email: text
-- I agree to use this dataset only for non-commercial purposes: checkbox
-extra_gated_prompt: "By clicking access, you agree to the dataset terms."
+---
+extra_gated:
+  prompt: "By clicking 'Agree', you confirm that you will use this dataset only for non-commercial research purposes."
+  fields:
+    - name: name
+      type: text
+      required: true
+    - name: affiliation
+      type: text
+      required: true
+    - name: commercial_use
+      type: checkbox
+      label: "I will not use this dataset for commercial purposes"
+      required: true
+  groups:
+    - academic-researchers
+---
 ```
 
-See [Gated Datasets](https://huggingface.co/docs/hub/en/datasets-gated) for full docs.
+### Best Practices
 
----
+1. **Always include `pretty_name`** — makes the dataset searchable and identifiable
+2. **List ALL task categories** — not just the primary one; improves discoverability
+3. **Use standard license identifiers** — avoid `other` unless absolutely necessary
+4. **Include `config_names`** — especially important for multilingual/multi-config datasets
+5. **Use `source_datasets: original`** for new datasets, or list source dataset IDs for derived datasets
+6. **`size_categories`** — use the controlled vocabulary; the Hub may reject invalid values
+7. **`train-eval-index`** — include only if you want automated benchmarking. Complex to set up correctly
 
-## 13. Paper Linking
+### Sources
+- `huggingface_hub` source: `src/huggingface_hub/repocard_data.py` — `DatasetCardData` dataclass definition
+- `huggingface_hub` source: `src/huggingface_hub/repocard.py` — `DatasetCard.from_template()` and `push_to_hub()`
+- Hub docs: https://huggingface.co/docs/hub/en/datasets-overview
+- Hub docs: https://huggingface.co/docs/hub/en/repositories-licenses
+- Hub docs: https://huggingface.co/docs/hub/en/repositories-gated
+- Model card spec: https://github.com/huggingface/hub-docs/blob/main/modelcard.md
+- Task taxonomy: `huggingface.js/packages/tasks/src/tasks.ts`
+- Verified via `huggingface_hub` source code inspection, 2026-07-25
 
-If the dataset card includes a link to a Paper page (HF paper page or arxiv URL), the Hub auto-extracts the arXiv ID and adds `arxiv:<PAPER_ID>` as a dataset tag:
-
-```markdown
-See [the paper](https://arxiv.org/abs/2401.12345) for details.
-```
-
-This enables:
-- Clicking through to the paper page
-- Filtering for other models/datasets citing the same paper
-
----
-
-## 14. Best Practices
-
-### Completeness checklist
-- ✅ `pretty_name` — set a human-readable name
-- ✅ `license` — use a valid identifier or `other` + `license_name`/`license_link`
-- ✅ `task_categories` — at least one from the HF pipeline taxonomy
-- ✅ `size_categories` — accurate size bucket
-- ✅ `language` — list all languages
-- ✅ `tags` — include modality, library, and discovery tags
-- ✅ Source datasets if derived from other HF repos
-- ✅ `dataset_info` — auto-generated for programmatic use
-- ✅ Paper link if published
-
-### Discoverability
-- Use multiple relevant `task_categories` tags
-- Add modality tags to match the data type
-- Tag libraries that can load your dataset
-- Write a good README description alongside metadata
-- Use specific `tags` for domain-specific vocab (e.g., `biology`, `medical`, `legal`)
-
-### Common pitfalls
-- ❌ Using invalid license string → license won't render as badge
-- ❌ Typos in task categories → won't match filter system
-- ❌ Missing `---` at start and end → YAML not parsed
-- ❌ Duplicate keys in YAML → validation error
-- ❌ Too many generic tags → reduces filtering effectiveness
-
----
-
-## 15. Metadata UI on Hub
-
-When creating or editing a dataset README.md on the Hub web UI, a Metadata UI form helps fill the main metadata fields without writing YAML manually. This is available in the dataset repo editor.
-
----
-
-## 16. Template
-
-The official dataset card template is available at:
-https://github.com/huggingface/huggingface_hub/blob/main/src/huggingface_hub/templates/datasetcard_template.md
-
-Use it as a starting point for new dataset cards.
+### Skill Deepened
+`hf-hub-dataset-card-metadata-comprehensive-reference/` — `references/hf-learnings.md` created (this file). SKILL.md already has `author: SakThai` and `license: MIT`.
