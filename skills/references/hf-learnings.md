@@ -16192,3 +16192,60 @@ docker run -p 7860:7860 test-space
 
 ### 6. Zero-Cost Note
 Docker Spaces require a paid plan (except ZeroGPU which is Gradio-only). Local Docker development is free. Jobs have free CPU tiers.
+
+---
+
+## 2026-07-25: hf-optimum-exporters-model-conversion-pipeline (Topic #257)
+
+### Summary
+Comprehensive deep-dive on 🤗 Optimum's exporters framework — the model conversion pipeline for transforming Transformers/Diffusers/timm/Sentence-Transformers models into serialized formats (ONNX, OpenVINO, TFLite, Neuron) for production inference. Covers the full architecture: configuration objects per architecture, `TasksManager` for task discovery, `optimum-cli export` command, per-format CLI flags, ONNX opset selection and dynamo exporter, dtype casting (fp32/fp16/bf16), optimize levels (O1-O4), past key/value caching, dynamic vs static axes, monolith vs split exports, and zero-cost pathways.
+
+### Source
+- Optimum ONNX Overview: https://huggingface.co/docs/optimum-onnx/onnx/overview
+- Export a Model to ONNX: https://huggingface.co/docs/optimum-onnx/onnx/usage_guides/export_a_model
+- Optimum Exporters Overview: https://huggingface.co/docs/optimum/main/en/exporters/overview
+- Optimum TFLite Overview: https://huggingface.co/docs/optimum/en/exporters/tflite/overview
+- Optimum GitHub: https://github.com/huggingface/optimum
+- Optimum ONNX GitHub: https://github.com/huggingface/optimum-onnx
+
+### Key Points
+
+**1. Exporters Architecture**
+- Optimum's `exporters` module supports 4 formats: ONNX (via `optimum-onnx`), OpenVINO (via `optimum-intel`), TFLite (via Optimum core), Neuron (via `optimum-neuron`).
+- For each format, configuration objects (`~optimum.exporters.<format>.model_configs.<Architecture>Config`) define the export details — input/output names, dynamic axes, opset, and post-processing.
+- The `TasksManager` class handles task discovery and validation across all supported architectures.
+
+**2. ONNX Export (optimum-onnx)**
+- CLI: `optimum-cli export onnx --model <model_id> <output_dir>`
+- Auto-detects task from Hub metadata; override with `--task`.
+- Task variants: `with-past` suffix (e.g., `text-generation-with-past`) enables KV-cache reuse in decoder loops.
+- Input shapes overrides: `--batch_size`, `--sequence_length`, `--num_choices` (text), `--width`, `--height`, `--num_channels` (image), `--feature_size`, `--nb_max_frames`, `--audio_sequence_length` (audio), `--point_batch_size`, `--nb_points_per_image` (SAM).
+- Opset: default depends on architecture; set via `--opset`. Dynamo exporter (`--dynamo`) recommended for opset >= 18 (uses `torch.export.export` instead of deprecated TorchScript).
+- Dtypes: `--dtype fp32` (default), `fp16`, `bf16`.
+- Optimization levels (`--optimize`): O1 (basic), O2 (extended + transformer fusions), O3 (O2 + GELU approx), O4 (O3 + fp16 mixed precision, GPU-only).
+- Monolith export (`--monolith`): forces single ONNX file; default split for encoder-decoder models.
+- Post-processing: merges decoder + decoder-with-past models into one by default; disable with `--no-post-process`.
+- Slim optimization (`--slim`): uses `onnxslim` to optimize the exported graph.
+- Validation: after export, validates outputs match reference model with configurable `--atol`.
+- Framework: `--framework pt` only (PyTorch); TensorFlow exports handled via Transformers' `TFPreTrainedModel.from_pretrained()` auto-conversion.
+
+**3. TFLite Export**
+- CLI: `optimum-cli export tflite --model <model_id> <output_dir>`
+- Supports 16 architectures: Albert, BERT, Camembert, ConvBert, Deberta, DebertaV2, DistilBert, Electra, Flaubert, MobileBert, MPNet, ResNet, Roberta, RoFormer, XLM, XLMRoberta.
+- TensorFlow models with PyTorch weights auto-convert via Transformers' `from_pretrained()`.
+
+**4. Config Objects and TasksManager**
+- `TasksManager.get_supported_tasks_for_model_type("distilbert", "onnx")` returns all supported ONNX tasks.
+- Each supported architecture has a dedicated config class in `~optimum.exporters.onnx.model_configs`.
+- The `model_type` key in the model's `config.json` maps to the appropriate config object.
+- Configs define: `DUMMY_INPUT_GENERATOR` (for validation), `TASK_TO_COMMON_OUTPUTS` (output name mapping), `ONNX_OPSET` (default opset).
+
+**5. Workflow Integration**
+- Export → Load with `ORTModelForXxx.from_pretrained(output_dir)` — same Hugging Face API.
+- ORTModel can export directly: `ORTModelForQuestionAnswering.from_pretrained("model-id", export=True)`.
+- Encoder-decoder models export to 2+ ONNX files (encoder.onnx, decoder.onnx, decoder_with_past.onnx).
+- Past KV caching enabled by default for decoder models; produces smaller exported graph for generation.
+
+**6. Zero-Cost Note**
+All exports run locally on CPU (default `--device cpu`). No GPU or paid services required. The `optimum[onnx]` package is MIT-licensed and free. For OpenVINO export, install `optimum-intel[openvino]` separately.
+`
