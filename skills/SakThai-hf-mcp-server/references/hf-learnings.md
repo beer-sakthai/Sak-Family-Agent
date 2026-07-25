@@ -1,288 +1,426 @@
-# HF Learnings — Spaces as MCP Servers: Deep Dive (2026-07-24)
+# HF Learnings Log
 
-## 2026-07-24: hf-hub-spaces-as-mcp-servers-deep-dive — Complete Workflow Reference
+## 2026-07-25: hf-hub-agents-ecosystem-complete-deep-dive — Full HF Hub Agents Ecosystem Overhaul
 
 ### Summary
-Deep-dive into the Hugging Face Spaces as MCP servers feature — the **zero-code** way to expose any public Gradio Space with an MCP badge as a callable tool in any MCP-compatible client (Claude Desktop, Cursor, VS Code, Claude Code, Cline). Also covers the developer workflow for building custom MCP servers with Gradio.
+Complete deep-dive into the newly restructured **HF Hub Agents section** (discovered at https://huggingface.co/docs/hub/en/index — sidebar reorganization as of July 2026). The Hub docs now dedicate an entire top-level **Agents** section with 8 pages: Agents Overview, HF CLI for AI Agents, HF MCP Server, HF Agent Skills, Building with the SDK, Local Agents with llama.cpp, Agent Libraries, and Session Traces Format. This represents a strategic pivot by Hugging Face to position the Hub as the central registry and runtime for AI agents — not just models/datasets/Spaces.
 
-This is distinct from the `hf-mcp-server` CLI tool (which connects the whole HF Hub via 28+ tools). Spaces-as-MCP-servers is about **individual Spaces** acting as discrete MCP tools that can be mixed and matched.
+### Key Structural Changes
+- The old "Hub" docs sidebar had no dedicated Agents section — now it's a top-level category listed alongside Repositories, Models, Datasets, Spaces, Storage Buckets, Jobs.
+- The MCP Server doc moved from experimental/obscure to a first-class page under Agents.
+- **Three entirely new pages**: Agent Skills, Building with the SDK, Session Traces Format.
+- **Two redesigned pages**: Agents Overview (new intro), HF CLI for AI Agents (rewritten for agent use cases).
+- **Cross-linking**: The entire ecosystem now references each other (e.g., the MCP page links to Skills page, SDK page links to MCP page, Spaces page links to MCP servers page).
 
-### Sources
-- Official Hub docs: https://huggingface.co/docs/hub/en/spaces-mcp-servers
-- Gradio MCP guide: https://www.gradio.app/guides/building-mcp-server-with-gradio
-- MCP Settings page: https://huggingface.co/settings/mcp
-- Browse MCP Spaces: https://huggingface.co/spaces?mcp=true
-- Changelog: https://huggingface.co/changelog/hf-mcp-server
-
----
-
-## 1. The Core Concept: Zero-Code Spaces → MCP Tools
-
-Any **public Gradio Space** that has a visible **MCP badge** (grey badge on Space card) can be added to your MCP client as a tool **without writing a single line of code**. The Space's `launch(mcp_server=True)` automatically generates an MCP schema at `/gradio_api/mcp/schema` that lists all callable functions with their type hints and docstrings as tool definitions.
-
-Key differentiator: Unlike the `hf-mcp-server` (which connects the entire HF Hub through one server), Spaces-as-MCP-servers treats **each Space as an individual tool**. You can add as many Spaces as you want, and they appear as separate tools in your client.
-
----
-
-## 2. User Workflow: Adding Spaces to Your MCP Tools
-
-### Prerequisites
-- A Hugging Face token with **READ** permissions
-- An MCP-compatible client (Claude Desktop, Cursor, VS Code, Claude Code, Cline, Zed, etc.)
-
-### Step 1: Configure your MCP Client
-1. Go to https://huggingface.co/settings/mcp
-2. Select your MCP client from the list (VS Code, Cursor, Claude Code, etc.)
-3. Follow the setup instructions — the page generates the exact configuration snippet for your client
-
-### Step 2: Find a Compatible Space
-1. Browse https://huggingface.co/spaces?mcp=true
-2. Look for the **grey MCP badge** on any Space card
-3. The badge indicates the Space is MCP-compatible (has `mcp_server=True` in its launch config)
-
-### Step 3: Add the Space
-1. Click the **MCP badge** on the Space card
-2. Choose **"Add to MCP tools"**
-3. Confirm when asked
-4. The Space should appear in your MCP Server settings under the "Spaces Tools" section
-
-### Step 4: Use the Tool
-1. If your MCP client is configured correctly, the Space's tools are **available instantly**
-2. Most MCP clients list what tools are currently loaded — verify the Space appears
-3. The LLM can now call the Space's functions as tools, with the docstrings and type hints informing its usage
-
-### ZeroGPU Considerations
-- For ZeroGPU Spaces, your daily quota is consumed when the tool is called
-- **Free users**: ~5 minutes of daily ZeroGPU quota
-- **PRO users**: 40 minutes of daily quota (8× more), e.g., up to 600 FLUX.1-schnell images/day
+### Source
+- HF Hub Docs (main): https://huggingface.co/docs/hub/en/index
+- Agents Overview: https://huggingface.co/docs/hub/en/agents
+- HF MCP Server: https://huggingface.co/docs/hub/en/agents-mcp
+- HF Agent Skills: https://huggingface.co/docs/hub/en/agents-skills
+- Building with the SDK: https://huggingface.co/docs/hub/en/agents-sdk
+- Spaces as MCP servers: https://huggingface.co/docs/hub/en/spaces-mcp-servers
+- MCP Settings: https://huggingface.co/settings/mcp
+- Skills registry: https://agentskills.io
+- Published: 2026-07-25
 
 ---
 
-## 3. Developer Workflow: Building an MCP-Compatible Space
+### 1. Agents Overview (New Page)
 
-### Minimal Setup
+The new **Agents Overview** page serves as an entry point to the entire ecosystem. It introduces:
+- The concept of "AI agents" as assistants that can use tools and follow instructions
+- How HF fits in: as a registry, compute provider, and MCP server host
+- Links to all sub-pages in the Agents section
+
+**Key takeaway**: This page didn't exist before. The old docs had no unified "agents" entry point.
+
+---
+
+### 2. Hugging Face CLI for AI Agents (Redesigned)
+
+Previously just "CLI" docs, now specifically targeted at AI agents. New features:
+- The `hf` CLI is positioned as the primary interface for agents to interact with the Hub
+- Key commands agents use: `hf download`, `hf upload`, `hf repo create`, `hf space create`, `hf job create`
+- Includes agent-specific usage patterns (non-interactive, token-based auth)
+- Links to MCP Server setup for one-click installation
+
+**Installation**:
+```bash
+pip install huggingface_hub[cli]
+# or via brew
+brew install huggingface-cli
+```
+
+---
+
+### 3. Hugging Face MCP Server (Complete Rewrite v3)
+
+The MCP Server page at `/docs/hub/en/agents-mcp` is a **complete rewrite** from the previous version. Key changes:
+
+#### 3.1 Setup Flow Simplified
+- Settings page at `huggingface.co/settings/mcp` generates **client-specific** config snippets
+- Supported clients: **Codex, Cursor, VS Code extensions, Zed, Claude Desktop, ChatGPT**
+- Client-specific instructions — no more generic "paste this JSON" for all clients
+- The settings page is now the **canonical entry point** — users are told NOT to write config by hand
+
+#### 3.2 Built-in Tools (hf_fs Consolidation Complete)
+The previous 28-tool surface has been fully consolidated into the `hf_fs` tool:
+
+| Tool | Description |
+|------|-------------|
+| `hf_fs` | Core hub navigation — search models, datasets, Spaces, papers, docs (replaces 17+ individual tools) |
+| Contribute Repos | Create repos and write files to them |
+| Sandboxes | Create and use sandboxes (includes file management) |
+| Run & Manage Jobs | Run, monitor, and schedule Jobs on HF infrastructure |
+
+**The `hf_fs` tool handles most tasks**. It enables semantic search of documents and Spaces.
+
+#### 3.3 Community Tools (Spaces) — New Interactive Model
+- Browse MCP-compatible Spaces at `https://huggingface.co/spaces?mcp=true`
+- Add a Space to your MCP tools directly from its **card badge** — grey MCP badge on any Space card
+- Click the badge → "Add to MCP tools" → confirm → Space is listed in your MCP settings
+- Gradio MCP apps expose functions as tools with arguments and descriptions
+- **Dynamic Spaces**: toggle to let your assistant discover and use MCP-compatible Spaces at runtime without manual addition
+- **Remove Embedded Images**: option for clients with limited image support
+
+#### 3.4 ZeroGPU Support
+- ZeroGPU Spaces work with MCP, using your quota when tools are called
+- PRO users get 40 min/day (8× free quota)
+- Example: up to 600 FLUX.1-schnell images/day on PRO
+
+#### 3.5 Key URLs
+| Resource | URL |
+|----------|-----|
+| MCP Settings | https://huggingface.co/settings/mcp |
+| MCP Doc Page | https://huggingface.co/docs/hub/en/agents-mcp |
+| Changelog | https://huggingface.co/changelog/hf-mcp-server |
+| MCP Spaces | https://huggingface.co/spaces?mcp=true |
+| Gradio MCP Guide | https://www.gradio.app/guides/building-mcp-server-with-gradio |
+| HF MCP Server (project) | https://huggingface.co/mcp |
+
+---
+
+### 4. Hugging Face Agent Skills (Entirely New)
+
+This is a **brand new page** and ecosystem. HF now provides a curated set of **Skills** for AI builders.
+
+#### 4.1 What Are Skills?
+Each Skill is a self-contained `SKILL.md` that an agent follows while working on a task. Skills work with all major coding agents: **Claude Code, OpenAI Codex, Google Gemini CLI, and Cursor**.
+
+#### 4.2 Installation
+```bash
+# register the skills marketplace
+/plugin marketplace add huggingface/skills
+# install a specific Skill
+/plugin install <skill-name>@huggingface/skills
+```
+
+#### 4.3 Available Skills (10 total)
+
+| Skill | What It Does |
+|-------|-------------|
+| `hf-cli` | Hub operations via the hf CLI: download, upload, manage repos, run jobs |
+| `huggingface-datasets` | Explore datasets, paginate rows, search text, apply filters |
+| `huggingface-llm-trainer` | Train or fine-tune LLMs with TRL (SFT, DPO, GRPO) on HF Jobs |
+| `huggingface-vision-trainer` | Train object detection and image classification models |
+| `huggingface-community-evals` | Run evaluations against models on the Hub on local hardware |
+| `huggingface-trackio` | Track and visualize ML training experiments with Trackio |
+| `huggingface-papers` | Look up and read HF paper pages in markdown |
+| `huggingface-paper-publisher` | Publish and manage research papers on the Hub |
+| `huggingface-tool-builder` | Build reusable scripts for HF API operations |
+| `gradio` | Build Gradio web UIs and demos |
+| `transformers-js` | Run ML models in JavaScript/TypeScript with WebGPU/WASM |
+
+#### 4.4 Usage Pattern
+Once installed, mention the Skill directly in your prompt:
+- "Use the HF model trainer Skill to fine-tune Qwen3-0.6B with SFT on the Capybara dataset"
+- "Use the HF evaluation Skill to add benchmark results to my model card"
+- "Use the HF datasets Skill to create a new dataset from these examples"
+
+Your agent loads the corresponding `SKILL.md` instructions and helper scripts automatically.
+
+#### 4.5 Skills Ecosystem Resources
+- Skills Repository: Browse and contribute at agentskills.io
+- Skills Format: Specification at agentskills.io
+- CLI Guide: Hugging Face CLI for AI Agents
+- MCP Guide: Use alongside Skills
+
+#### 4.6 Relationship to MCP
+Skills and MCP are complementary:
+- **MCP Server** provides tools to the agent (search, file ops, jobs)
+- **Skills** provide instructions to the agent (workflows, best practices, domain knowledge)
+- An agent can use both: MCP for Hub access + Skills for domain-specific workflows
+
+---
+
+### 5. Building Agents with the HF SDK (Entirely New)
+
+A completely new page documenting the `huggingface_hub[mcp]` SDK for building MCP-powered agents.
+
+#### 5.1 Installation
+```bash
+pip install "huggingface_hub[mcp]"
+```
+
+#### 5.2 Quick Start: Run an Agent
+The fastest way is via the **`tiny-agents` CLI**:
+```bash
+tiny-agents run julien-c/flux-schnell-generator
+```
+This loads an agent from the tiny-agents collection, connects to its MCP servers, and starts an interactive chat.
+
+#### 5.3 Using the Agent Class
+The `Agent` class manages the chat loop and MCP tool execution. It uses **Inference Providers** to run the LLM.
+
 ```python
-# 1. Install with MCP extras
-# pip install "gradio[mcp]"
+from huggingface_hub import Agent
+import asyncio
 
-# 2. Write your app with type hints and docstrings
+agent = Agent(
+    model="Qwen/Qwen2.5-72B-Instruct",
+    provider="novita",
+    servers=[
+        {
+            "type": "sse",
+            "url": "https://evalstate-flux1-schnell.hf.space/gradio_api/mcp/sse"
+        }
+    ]
+)
+
+async def main():
+    async for chunk in agent.run("Generate an image of a sunset"):
+        if hasattr(chunk, 'choices'):
+            delta = chunk.choices[0].delta
+            if delta.content:
+                print(delta.content, end="")
+
+asyncio.run(main())
+```
+
+#### 5.4 Using MCPClient Directly
+For more control, use `MCPClient` to manage MCP servers and tool calls directly:
+
+```python
+import asyncio
+from huggingface_hub import MCPClient
+
+async def main():
+    async with MCPClient(
+        model="Qwen/Qwen2.5-72B-Instruct",
+        provider="novita",
+    ) as client:
+        # Connect to an MCP server
+        await client.add_mcp_server(
+            type="sse", 
+            url="https://evalstate-flux1-schnell.hf.space/gradio_api/mcp/sse"
+        )
+        
+        # Process a request with tools
+        messages = [{"role": "user", "content": "Generate an image of a sunset"}]
+        
+        async for chunk in client.process_single_turn_with_tools(messages):
+            if hasattr(chunk, 'choices'):
+                delta = chunk.choices[0].delta
+                if delta.content:
+                    print(delta.content, end="")
+
+asyncio.run(main())
+```
+
+#### 5.5 Sharing Your Agent
+Contribute agents to the **tiny-agents collection** on the Hub. Each agent needs:
+- `agent.json` — Agent configuration (required)
+- `PROMPT.md` or `AGENTS.md` — System prompt (optional)
+- `EXAMPLES.md` — Sample prompts and use cases (optional)
+
+#### 5.6 SDK Architecture
+```
+┌──────────────────────────────────────┐
+│            Your Application           │
+│  ┌────────────────────────────────┐  │
+│  │  Agent Class (chat loop)       │  │
+│  │  ┌──────────┐ ┌─────────────┐ │  │
+│  │  │ MCPClient│ │ LLM (Infer.)│ │  │
+│  │  └──────────┘ └─────────────┘ │  │
+│  └────────────────────────────────┘  │
+│            │                          │
+│     SSE Connection                    │
+│            │                          │
+│    ┌───────┴────────┐                 │
+│    │ MCP Server(s)  │                 │
+│    │ (HF / Gradio)  │                 │
+│    └────────────────┘                 │
+└──────────────────────────────────────┘
+```
+
+#### 5.7 Key Resources
+- huggingface_hub MCP Reference — Python API docs
+- tiny-agents Documentation — JS API docs
+- Inference Providers — Available LLM providers
+- tiny-agents Collection — Browse community agents
+- MCP Server Guide — Connect to the HF MCP Server
+
+---
+
+### 6. Spaces as MCP Servers (New Dedicated Page)
+
+Previously a sub-section, now a **dedicated page** at `/docs/hub/en/spaces-mcp-servers`.
+
+#### 6.1 One-Click Space Addition
+- Any public Space with a visible **MCP badge** (grey badge) can be added as a callable tool
+- No code required — just click the badge → "Add to MCP tools"
+- Add as many Spaces as you want
+
+#### 6.2 Setup Flow
+1. From your Hub MCP settings, select your MCP client
+2. Follow the client-specific setup instructions
+3. Need a valid HF token with READ permissions
+4. Browse compatible Spaces → click MCP badge → Add to MCP tools
+5. Restart client → tools appear automatically
+
+#### 6.3 Building Your Own MCP-Compatible Gradio Space
+```python
+# Install Gradio with MCP support
+pip install "gradio[mcp]"
+
+# Create your app with clear type hints and docstrings
 import gradio as gr
 
 def letter_counter(word: str, letter: str) -> int:
     """Count occurrences of a letter in a word.
-
+    
     Args:
         word: The word to search in
         letter: The letter to count
-
-    Returns:
-        Number of times the letter appears in the word
     """
-    return word.lower().count(letter.lower())
+    return word.count(letter)
 
 demo = gr.Interface(
     fn=letter_counter,
-    inputs=["text", "text"],
-    outputs="number",
+    inputs=[gr.Textbox("strawberry"), gr.Textbox("r")],
+    outputs=[gr.Number()],
+    title="Letter Counter",
+    api_name="predict"
 )
-demo.launch(mcp_server=True)  # <-- THIS enables MCP
+
+demo.launch(mcp_server=True)  # ← exposes MCP schema automatically
 ```
 
-### How Tool Conversion Works
-| Aspect | Behavior |
-|--------|----------|
-| **Function name** | Becomes the MCP tool name |
-| **Docstring** | Becomes the tool description for the LLM |
-| **Type hints** | Define the input parameter schema |
-| **Default values** | From `gr.Textbox("default")` — used if LLM doesn't specify |
-| **Multiple functions** | Each Gradio event handler becomes a separate MCP tool |
+Push to Spaces → automatic MCP badge → anyone can add as a tool with one click.
 
-### Environment Variable Alternative
-```bash
-export GRADIO_MCP_SERVER=True
-# Then launch normally — no code change needed
-```
+#### 6.4 Converting an Existing Space
+1. Duplicate the Space
+2. Add docstrings to functions you want exposed as tools
+3. Add `mcp_server=True` in `.launch()`
+4. Redeploy
 
-### Schema Endpoint
-- **URL**: `http://your-server:port/gradio_api/mcp/schema`
-- **Visual**: "View API" link in the Gradio app footer → click "MCP" tab
-- **Config URL** for MCP clients: `http://your-server:port/gradio_api/mcp/`
+#### 6.5 Mixing Spaces
+Since HF Spaces is the largest directory of AI apps, users are encouraged to mix Spaces for creative workflows. Example: combine `Lightricks/ltx-video-distilled` (video generation) with `ResembleAI/Chatterbox` (audio/TTS) in Claude Code to generate a video with audio.
 
-### Converting an Existing Space
-1. **Duplicate** the Space (if not yours)
-2. **Add docstrings** to functions you want exposed as tools
-3. **Add** `mcp_server=True` in `demo.launch()`
-4. Re-deploy — the MCP badge appears automatically
+#### 6.6 ZeroGPU Integration
+For ZeroGPU Spaces, quota is consumed when the MCP tool is called:
+- Free users: ~5 min quota
+- PRO users: 40 min daily quota (8× more)
 
 ---
 
-## 4. Authentication Patterns
+### 7. Other New Agents Pages
 
-### Public Spaces
-No auth needed — the Space's tools are publicly callable.
+#### 7.1 Local Agents with llama.cpp
+- New page documenting how to run local agents using llama.cpp
+- Enables fully offline agent workflows
+- Complements the cloud-based MCP server approach
 
-### Private Spaces
-Provide your HF token in the MCP client config:
-```json
-{
-  "mcpServers": {
-    "my-private-space": {
-      "url": "https://username-my-private-space.hf.space/gradio_api/mcp/",
-      "headers": {
-        "Authorization": "Bearer YOUR_HF_TOKEN"
-      }
-    }
-  }
-}
-```
+#### 7.2 Agent Libraries
+- Documents supported libraries for building agents: smolagents, transformers agents, OpenAIAgent, etc.
+- Links to each library's documentation
+- Positions HF as library-agnostic (supports any MCP-compatible framework)
 
-### gr.Request — Access Request Headers
+#### 7.3 Session Traces Format
+- New page documenting the format for agent session traces
+- Includes JSON schema for capture/playback of agent sessions
+- Enables debugging, replay, and optimization of agent workflows
+
+---
+
+### 8. Practical Implications for Beer's Usage
+
+#### Zero-Cost Agent Setup
+Since Beer has no income:
+1. **MCP Server via CLI**: `npx @llmindset/hf-mcp-server` (free, runs locally)
+2. **Agent SDK**: `huggingface_hub[mcp]` with free Inference Providers
+3. **Skills**: Install free skills from huggingface/skills marketplace
+4. **Spaces**: Use existing free Gradio Spaces as MCP tools
+5. **ZeroGPU**: Free tier gives ~5 min/day GPU for Space tools
+
+#### Agent SDK Free-Tier Strategy
 ```python
-def my_tool(x: str, request: gr.Request):
-    """Tool that inspects incoming request headers."""
-    return str(dict(request.headers))
+from huggingface_hub import Agent, MCPClient
+# Use free inference providers (novita, together, etc.)
+agent = Agent(
+    model="Qwen/Qwen2.5-72B-Instruct",  # free via novita provider
+    provider="novita",
+    servers=[{"type": "sse", "url": "..."}]
+)
 ```
 
-### gr.Header — Extract Specific Header
-```python
-def make_api_request(
-    prompt: str,
-    x_api_token: gr.Header
-):
-    """Make a request authenticated with the caller's token."""
-    return "Hello!" if not x_api_token else "Hello with token!"
-```
-The MCP connection UI automatically displays which headers the server expects when `gr.Header` is used.
+#### Skills Integration with Sak Thai Family
+The Sak Thai agent system (Hermes profiles) already uses Skills in a similar way to the HF Agent Skills format. The `~/profiles/sakthai/skills/` directory mirrors the concept. Key insight: HF's Agent Skills format at agentskills.io could serve as a reference for improving our own skill format.
 
 ---
 
-## 5. Performance Tuning
-
-| Setting | Effect | Trade-off |
-|---------|--------|-----------|
-| `queue=False` in event handlers | Up to **10× throughput** increase | Disables progress notifications |
-| `queue=True` (default) | Shows progress for long tasks | Higher latency per request |
-
-Rule of thumb: short tasks (analytics, transforms) → `queue=False`; long tasks (video gen, batch processing) → `queue=True`.
-
----
-
-## 6. STDIO Transport for File Uploads
-
-Gradio automatically generates an **additional STDIO-based MCP server** for file uploads:
-- Can upload files to any remote Gradio app
-- Returns a URL usable for subsequent tool calls
-- Useful when the client doesn't support URL-based file references
-
-By default, the Gradio MCP server accepts input images/files as full URLs (`https://...`).
-
----
-
-## 7. Hub MCP Settings Integration
-
-The full ecosystem uses **https://huggingface.co/settings/mcp** as the central hub:
-
-| Feature | Description |
-|---------|-------------|
-| **MCP Client config** | Select your client, get exact config snippet |
-| **Spaces Tools section** | All your added Spaces listed here |
-| **Dynamic Spaces** | Option to dynamically discover and call MCP Spaces at runtime |
-| **Remove Embedded Images** | Strip Gradio image output (useful for limited image support) |
-| **Authentication** | Token-based auth integration with your HF account |
-
-### One-Click Client Connections
-MCP-compatible clients can connect via:
-| Client | Connection Method |
-|--------|-----------------|
-| **Claude Desktop** | Connector gallery at `https://claude.ai/settings/connectors` |
-| **Claude Code** | `claude mcp add hf-mcp-server -t http https://huggingface.co/mcp?login` |
-| **Cursor** | One-click install from https://cursor.com |
-| **VS Code** | Gallery at `https://code.visualstudio.com/mcp` |
-| **Gemini CLI** | `gemini mcp add -t http huggingface https://huggingface.co/mcp?login` |
-
----
-
-## 8. Architecture: How MCP Server Works in Gradio
+### 9. Complete HF Agents Ecosystem Diagram
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                    MCP Client                            │
-│    (Claude Desktop, Cursor, VS Code, Cline, etc.)        │
-└─────────────┬───────────────────────────────────────────┘
-              │ HTTP or STDIO
-              ▼
-┌─────────────────────────────────────────────────────────┐
-│              Gradio MCP Server                            │
-│              (your-app.hf.space)                          │
+│                  HF Hub Agents Ecosystem                  │
 ├─────────────────────────────────────────────────────────┤
-│  Discover:  GET  /gradio_api/mcp/schema  → Tool list     │
-│  Call:       POST /gradio_api/mcp/       → Tool execute  │
-│  File I/O:   STDIO transport (auto-generated)            │
-├─────────────────────────────────────────────────────────┤
-│  Tool 1: letter_counter(word: str, letter: str) → int    │
-│  Tool 2: generate_image(prompt: str) → file             │
-│  ...                                                    │
+│                                                          │
+│  ┌──────────────┐    ┌───────────────────────────────┐  │
+│  │   MCP Server  │    │      Agent Skills              │  │
+│  │  (Tool Layer) │    │    (Instruction Layer)        │  │
+│  ├──────────────┤    ├───────────────────────────────┤  │
+│  │ hf_fs search │    │ hf-cli, datasets, llm-trainer │  │
+│  │ Sandboxes    │    │ vision-trainer, evals, papers  │  │
+│  │ Jobs         │    │ tool-builder, gradio           │  │
+│  │ Community    │    │ transformers-js                │  │
+│  │   Spaces     │    │                               │  │
+│  └──────┬───────┘    └──────────────┬────────────────┘  │
+│         │                           │                    │
+│         └───────────┬───────────────┘                    │
+│                     │                                    │
+│  ┌──────────────────▼────────────────────────────────┐  │
+│  │           HF SDK (huggingface_hub[mcp])             │  │
+│  │  Agent Class  /  MCPClient  /  tiny-agents CLI     │  │
+│  └──────────────────┬────────────────────────────────┘  │
+│                     │                                    │
+│  ┌──────────────────▼────────────────────────────────┐  │
+│  │     Clients: Codex, Cursor, VS Code, Claude       │  │
+│  │            Desktop, Zed, ChatGPT, Gemini CLI       │  │
+│  └────────────────────────────────────────────────────┘  │
+│                                                          │
+│  ┌────────────────────────────────────────────────────┐  │
+│  │     Complementary: llama.cpp (local), smolagents   │  │
+│  └────────────────────────────────────────────────────┘  │
 └─────────────────────────────────────────────────────────┘
 ```
 
-### MCP URL Structure
-| Endpoint | Purpose |
-|----------|---------|
-| `https://username-space-name.hf.space/gradio_api/mcp/` | MCP server endpoint (add to client config) |
-| `https://username-space-name.hf.space/gradio_api/mcp/schema` | JSON schema of all available tools |
-| `https://username-space-name.hf.space/gradio_api/mcp/sse` | SSE (Server-Sent Events) transport |
+---
+
+### 10. Future Trends Observed
+
+1. **Skills as the new plugin format**: HF is betting on SKILL.md as the standard for agent instructions. This is similar to how plugins worked in ChatGPT but open-source and cross-platform.
+
+2. **MCP as the universal tool protocol**: Every Gradio Space can become an MCP server with one flag. This creates a massive network effect — the 200k+ existing Spaces are potentially MCP-able.
+
+3. **HF as agent orchestrator**: The combination of MCP Server (tools) + Skills (instructions) + SDK (runtime) + Spaces (community tools) + Jobs (compute) positions HF as the end-to-end platform for AI agents, not just a model hub.
+
+4. **Zero-cost barrier**: The entire ecosystem works on free tier — free inference, free Spaces (CPU), free ZeroGPU (limited), free CLI, free SDK. This aligns perfectly with Beer's constraints.
 
 ---
 
-## 9. Creative Use Cases: Mixing Spaces
+### Changelog
 
-Since HF Spaces is the largest directory of AI apps, you can:
-
-- **Image gen + TTS**: Use FLUX.1-schnell to generate an image, then feed it to a TTS Space for audio description
-- **Video + Audio**: Use LTX-Video to generate a clip, then Chatterbox for voice-over (demoed officially)
-- **OCR + Translation**: Extract text from an image, then translate to any language
-- **Classification + Visualization**: Classify an image, then create a data visualization of the results
-
-The official docs demonstrate this with Lightricks/ltx-video-distilled + ResembleAI/Chatterbox in Claude Code.
-
----
-
-## 10. Comparison: HF MCP Server vs Spaces MCP Tools
-
-| Feature | HF MCP Server (`hf-mcp-server`) | Spaces MCP Tools (this doc) |
-|---------|----------------------------------|------------------------------|
-| **Scope** | Full Hub: search models, datasets, Spaces, papers | Individual Space as one tool |
-| **Added by** | Pasting generated config at settings/mcp | Clicking MCP badge on Space card |
-| **Tools exposed** | 28 built-in tools (hf_fs, sandbox, jobs, etc.) | Space's own functions |
-| **Customization** | Proxy tools, bouquets, env vars | Just the Space's API |
-| **Best for** | Hub exploration, repo management, compute | Specific AI tasks (gen, analysis, processing) |
-| **Auth** | Token in config | Public: none; Private: Bearer token |
-| **ZeroGPU** | N/A (uses HF infra) | Space's own quota consumed |
-
-Both can be used **together** — the HF MCP Server for Hub search/management, Spaces MCP tools for task-specific AI.
-
----
-
-## 11. Key URLs Reference
-
-| Resource | URL |
-|----------|-----|
-| MCP Settings (central config) | https://huggingface.co/settings/mcp |
-| Browse MCP-compatible Spaces | https://huggingface.co/spaces?mcp=true |
-| Hub docs: Spaces as MCP servers | https://huggingface.co/docs/hub/en/spaces-mcp-servers |
-| Gradio guide: Building MCP server | https://www.gradio.app/guides/building-mcp-server-with-gradio |
-| HF MCP Server docs | https://huggingface.co/docs/hub/en/agents-hf-mcp-server |
-| MCP changelog | https://huggingface.co/changelog/hf-mcp-server |
-| HF MCP Server (GitHub) | https://github.com/huggingface/hf-mcp-server |
-| Gradio MCP package | `pip install "gradio[mcp]"` |
-
----
-
-## 12. Changelog / Recent Updates
-
-- **2026-07-24**: Full docs published for "Spaces as MCP servers" workflow
-- **2026-07-22**: HF MCP Server v2.0 consolidation with hf_fs, one-click gallery installs
-- **2026-06+**: Gradio adds `mcp_server=True` parameter to `launch()`
-- **2026-05+**: Gradio supports `gr.Header` for clean header extraction
-- **2026-04+**: MCP badge appears on compatible Spaces; `spaces?mcp=true` filter live
-- **2026-03+**: Initial MCP integration in Gradio (experimental)
+| Date | Topic | Key Discovery |
+|------|-------|---------------|
+| 2026-07-25 | HF Hub Agents Ecosystem Overhaul | Docs reorganized with new Agents section (8 pages), Agent Skills (10 skills at agentskills.io), `huggingface_hub[mcp]` SDK with Agent/MCPClient classes, Spaces as MCP servers with one-click badge addition, `tiny-agents` CLI, ZeroGPU integration, Local Agents with llama.cpp, Session Traces Format. Complete strategic pivot to agent-first Hub. |
