@@ -245,5 +245,6 @@
   "hf-hub-spaces-build-runtime-api",
   "hf-hub-spaces-build-runtime-api-deep-dive",
   "huggingface-hub-http-request-lifecycle-source-deep-dive",
-  "hf-llm-course-comprehensive-deep-dive"
+  "hf-llm-course-comprehensive-deep-dive",
+  "hf-hub-rate-limits"
 ]
