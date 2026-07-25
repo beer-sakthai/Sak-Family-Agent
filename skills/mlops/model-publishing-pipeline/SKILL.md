@@ -262,7 +262,31 @@ build/bin/llama-quantize \
 
 **Key finding from 2026-07-25:** The 0.5B model scored 3/5 with a complex system prompt but 4/5 with the simple "you have access to tools but only use them when needed" prompt. The 1.5B reached 5/5 with the same simple prompt. Overly strict prompts caused the model to refuse valid tool calls AND fail irrelevance tests.
 
-### Run BFCL benchmark
+### Run BFCL benchmark — Critical Methodology
+
+**⚠️ 2026-07-25 QUALITY FAILURE:** Earlier benchmarks claiming 4/5 and 5/5 were misleading because the test format didn't match the training format. The model was trained on OpenAl `tool_calls` JSON format but was tested with `<tool_call>` XML tags. Always verify format match before trusting results.
+
+**Step 1: Verify training data format**
+Check what format the training data uses by examining a training sample's assistant messages for `tool_calls` fields.
+
+**Step 2: Choose correct benchmark format**
+- **OpenAl `tool_calls` format** (JSON in assistant message): Use HF Transformers or Ollama API — llama.cpp CLI cannot produce structured JSON output
+- **`<tool_call>` XML tags** (text generation): Works with any engine but must match training data
+
+**Step 3: Multi-trial methodology — single trial is NOT enough**
+Run 5 trials per test case and report pass rate as a percentage. A model scoring 5/5 on one trial might score 0/5 on the next. Never report single-run results.
+
+**Step 4: Distinguish model vs engine capability**
+- The MODEL may support tool-calling (trained on OpenAl format)
+- The INFERENCE ENGINE (llama.cpp CLI) generates free text — it cannot enforce structured JSON output
+- Benchmark scores from llama.cpp CLI reflect text generation, not true function calling
+- Qualify all scores: "Text-based tool-calling via llama.cpp (N/5)"
+
+**Step 5: Report honest scores**
+- Never claim scores based on single-trial results
+- Always note inference engine and output format tested
+- Cross-validate: if a model scores 5/5 in one test but fails with prompt changes, the score is unreliable
+- When results are inconsistent, report the truth: "Tool-calling: inconsistent, output format mismatch"
 
 The benchmark evaluates tool-calling across categories:
 
@@ -376,7 +400,7 @@ This skill ships with detailed reference files:
 | `references/full-eval-pipeline.md` | Full three-dimensional evaluation: speed (tok/s) + BFCL tool-calling + coding benchmark, combined into one report. Covers all GGUF models. |
 | **`references/controlled-benchmark-comparison.md`** 🆕 | Compare fine-tuned model vs base model side-by-side on same hardware — speed, tool-calling, format |
 | **`references/post-publishing-exposure.md`** 🆕 | Cross-link on base model pages, HF Collections with notes, discussion posts, healing cron |
-| **`references/verified-benchmark-2026-07-25.md`** 🆕 | Trust-pass evaluation of all GGUF models: 1.5B 5/5, 0.5B 4/5, Coder 5/5, speed benchmarks |
+| **`references/model-evaluation-honesty.md`** 🆕 | Methodology rules: format matching, multi-trial, engine limitations, conservative claims |
 
 
 ## Trust Pass — Quality Review Before Publishing
@@ -394,6 +418,12 @@ The Trust pass is not optional. It catches issues that automated validation miss
 
 ## Pitfalls
 
+- **Benchmark format mismatch**: Training data may use OpenAl `tool_calls` JSON format while benchmarks test `<tool_call>` XML tags. These are incompatible — verify format match before claiming scores.
+- **Single-trial benchmarks mislead**: A model scoring 5/5 on one run may score 0/5 on the next. Always use multi-trial (5+ runs) and report pass rate as percentage.
+- **llama.cpp CLI ≠ function calling**: llama.cpp generates free text. It cannot produce structured `tool_calls` JSON output. To test real function calling, use Ollama API or HF Transformers pipeline.
+- **Subagent dataset corruption**: Subagents may overwrite datasets instead of appending. Always verify original remote count before dispatching, compare after, and keep a backup commit hash for revert.
+- **Model card honesty over vanity**: A high but misleading benchmark score damages trust. Report honest scores with methodology notes, even if lower.
+- **Regex model card edits create duplicates**: Repeated regex find-and-replace on remote model cards can create duplicate sections, corrupt formatting, and leave stale headers. Instead: download the card once with hf_hub_download, edit it fully in Python, validate locally, then upload a single clean version. Never upload partial fixes.
 - **Merge OOM on T4**: 7B merge may fail on Kaggle's 16GB T4. Push only the adapter from the notebook, run merge separately on a machine with 32GB+ RAM.
 - **CPU benchmark too slow**: 1.5B Q4_K_M at ~10 tok/s on 2 vCPU. Each test takes 1-2 min. For full 7-test BFCL, expect 15-20 min on CPU.
 - **Kaggle session timeout**: Sessions disconnect after ~9 hours inactivity. Save checkpoints. The notebook uses `save_steps` to persist progress.

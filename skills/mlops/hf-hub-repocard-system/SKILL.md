@@ -1,9 +1,15 @@
+---
+name: hf-hub-repocard-system
+author: SakThai
+license: MIT
+description: Programmatic creation, loading, validation, and management of repository cards on the Hugging Face Hub
+category: mlops
+tags: [huggingface, model-cards, metadata, hub]
+---
+
 # HF Hub RepoCard System (huggingface_hub)
 
 **Skill:** Programmatic creation, loading, validation, and management of model/dataset/space cards on the Hugging Face Hub using the `huggingface_hub` library.
-
-author: SakThai
-license: MIT
 
 ## Overview
 
@@ -39,6 +45,11 @@ The RepoCard system in `huggingface_hub` (v1.24.0) provides a full Python API fo
 - Default templates: `modelcard_template.md`, `datasetcard_template.md` (Jinja2)
 - Templates receive `card_data.to_yaml()` and any keyword arguments
 - Custom templates supported via `template_path` or `template_str`
+
+## Pitfalls
+
+- **Regex find-and-replace on remote cards creates duplicates** — downloading, partial-replacing, and re-uploading multiple times creates duplicate sections and stale headers. Instead: download once with `hf_hub_download`, edit fully in Python, validate locally (check section count), then upload ONE clean version. Never upload partial fixes.
+- Avoid pushing partial edits — each push creates a git commit. Multiple partial pushes leave messy history.
 
 ## Reference
 - Source: `huggingface_hub/repocard.py`, `huggingface_hub/repocard_data.py`
