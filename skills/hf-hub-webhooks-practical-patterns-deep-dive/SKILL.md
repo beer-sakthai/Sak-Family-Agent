@@ -1,7 +1,7 @@
 # HF Hub Webhooks — Practical Patterns
 
-**author:** SakThai  
-**license:** MIT  
+author: SakThai
+license: MIT
 **model:** deepseek-v4-flash  
 **created:** 2026-07-25  
 **topic:** hf-hub-webhooks-practical-patterns-deep-dive  
