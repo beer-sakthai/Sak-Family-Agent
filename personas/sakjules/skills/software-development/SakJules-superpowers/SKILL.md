@@ -38,8 +38,3 @@ Never rely on self-certification. You must prove code correctness:
 4. **Run and Verify Pass**: Confirm the test suite runs and passes cleanly.
 5. **Run Lint and Security Checks**: Execute Ruff formatting and Bandit security scans to ensure codebase hygiene before committing.
 
-## 3. Progress Logging
-Always record technical takeaways in the appropriate Jules journal:
-- **SQL / DB optimizations**: Record in `.jules/bolt.md`.
-- **UI / UX improvements**: Record in `.jules/palette.md`.
-- **Security / Secrets / Safety**: Record in `.jules/sentinel.md`.

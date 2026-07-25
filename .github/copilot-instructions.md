@@ -2,7 +2,7 @@
 
 Purpose
 - Quick, focused guidance for Copilot/CLI assistants working in this repository.
-- Consult these files for deeper context: README.md, CLAUDE.md, GEMINI.md, CONTRIBUTING.md and docs/*.
+- Consult these files for deeper context: README.md, CLAUDE.md, CONTRIBUTING.md and docs/*.
 
 1) Build, test, and lint (commands)
 - Install (preferred, reproducible):
@@ -53,7 +53,7 @@ Purpose
 - Ollama networking: prefer 127.0.0.1 (not localhost) for Ollama hosts to avoid IPv6 resolution issues.
 
 4) Important files to consult
-- README.md, CLAUDE.md, GEMINI.md (project-specific assistant guidance).
+- README.md, CLAUDE.md (project-specific assistant guidance).
 - CONTRIBUTING.md (quality bar, CI gates, test examples).
 - docs/architecture.md, docs/plugins.md, docs/runtimes.md (detailed diagrams and flows).
 - sakthai/agent/tools.py (BUILTIN_TOOLS) and sakthai/memory/store.py (MemoryStore) — the two critical seams.
@@ -63,7 +63,7 @@ Purpose
 - Use git worktrees for isolated development if multiple agents/devs share the checkout (see CONTRIBUTING.md).
 
 6) AI assistant configs
-- This repository contains CLAUDE.md and GEMINI.md. Copilot sessions should read them before making repository-wide recommendations.
+- This repository contains CLAUDE.md. Copilot sessions should read it before making repository-wide recommendations.
 
 7) When editing code
 - Make surgical edits only. Validate with ruff, mypy, bandit, pytest locally before suggesting a PR. Update docs (README, docs/, CLAUDE.md) if behavior or conventions change.
