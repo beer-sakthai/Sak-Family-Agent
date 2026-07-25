@@ -374,5 +374,9 @@
   "hf-inference-client-image-generation-patterns",
   "hf-hub-evaluation-results",
   "hf-datasets-server-parquet-conversion-pipeline-deep-dive",
-  "hf-fineweb-dataset-processing-pipeline"
+  "hf-fineweb-dataset-processing-pipeline",
+  "hf-hub-fork-and-sync",
+  "hf-hub-fork-and-sync-deep-dive",
+  "hf-inference-client-embeddings-patterns",
+  "hf-inference-providers-responses-api-deep-dive"
 ]

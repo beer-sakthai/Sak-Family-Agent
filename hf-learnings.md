@@ -6476,3 +6476,83 @@ Deep dive into the FineWeb dataset family — the complete pipeline for processi
 
 ### Skill Created
 `hf-fineweb-dataset-processing/` — SKILL.md (author: SakThai, license: MIT) + references/hf-learnings.md with complete processing pipeline, quality filtering details, educational classifier methodology, ablation analysis, and usage patterns.
+
+---
+
+## 2026-07-25: hf-inference-providers-responses-api-deep-dive — Hugging Face Inference Providers Responses API (beta) Complete Architecture (Topic #381)
+
+### Summary
+Deep dive into the Hugging Face **Inference Providers Responses API (beta)** — a unified OpenAI-compatible interface exposed at `https://router.huggingface.co/v1` that wraps all Inference Providers behind a single endpoint. Unlike the legacy `InferenceClient` or direct provider APIs, the Responses API provides a `client.responses.create()` pattern with native support for tool orchestration, event-driven streaming, structured outputs (Pydantic `.parse()`), reasoning effort controls, **Remote MCP tool execution**, and multi-provider routing strategies (`:fastest`, `:cheapest`, `:preferred`, explicit provider pinning). Free tier includes $0.10/mo credits ($2/mo for PRO) covering moderate usage.
+
+### Key Findings
+
+#### 1. Architecture
+- **Endpoint**: `https://router.huggingface.co/v1` — OpenAI SDK compatible, uses existing `openai` Python/TS packages
+- **Auth**: `HF_TOKEN` with "Make calls to Inference Providers" permission
+- **Model selection**: `<model_id>:<provider>` for explicit provider, or `<model_id>:<policy>` for automatic routing
+- **Policies**: `:fastest` (lowest latency, default), `:cheapest` (lowest cost), `:preferred` (user's provider ordering in HF settings)
+
+#### 2. Provider Routing Strategies
+- **`:fastest`** — selects provider with lowest `first_token_latency_ms`; re-evaluated per request
+- **`:cheapest`** — selects provider with lowest combined `pricing.input + pricing.output` per token
+- **`:preferred`** — follows user's ranked provider list in HF account settings
+- **Explicit** — e.g. `openai/gpt-oss-120b:groq` locks to Groq
+- **Fallback**: Router does NOT switch mid-stream on error; retry at application level
+
+#### 3. Remote MCP Execution
+The Responses API introduces **server-side MCP tool execution** — first HF inference feature to natively support MCP:
+- **Schema**: `{"type": "mcp", "server_label": "...", "server_url": "...", "allowed_tools": [...], "require_approval": "never"|"always"|"on_first_use"}`
+- **No MCP client needed** — HF router handles MCP client role
+- **Limitation**: MCP servers must be public HTTPS; no local/Unix sockets
+
+#### 4. Event-Driven Streaming Events
+When `stream=True`:
+| Event | Description |
+|-------|-------------|
+| `response.created` | Session initialized |
+| `response.in_progress` | Generating |
+| `output_text.delta` | Text chunk |
+| `output_text.done` | Text segment complete |
+| `tool_call.delta` | Partial tool call args |
+| `tool_call.done` | Full tool call ready |
+| `response.completed` | Response finished |
+| `response.failed` | Error occurred |
+
+#### 5. Structured Outputs
+```python
+response = client.responses.parse(
+    model="openai/gpt-oss-120b:groq",
+    input=[...],
+    text_format=CalendarEvent,  # Pydantic model
+)
+print(response.output_parsed)
+```
+
+#### 6. Multi-Provider Discovery
+- `GET /api/models?inference_provider=groq` — models by provider
+- `GET /api/models?inference_provider=all` — any served model
+- `GET /router.huggingface.co/v1/models` — OpenAI-compatible list with pricing/latency per provider
+- `model_info(id, expand="inference")` — returns "warm" if served
+
+#### 7. Billing
+| Account | Credits/mo |
+|---------|------------|
+| Free | $0.10 |
+| PRO | $2.00 |
+| Team/Enterprise | $2.00/seat |
+
+#### 8. Zero-Cost Patterns
+1. Credits cover widgets, Playground, API calls
+2. `:cheapest` routing picks lowest-cost provider
+3. Remote MCP via free servers or HF Spaces
+4. `.parse()` reduces retry costs from malformed JSON
+
+### Skill Created
+`hf-inference-providers-responses-api-deep-dive/` — SKILL.md (author: SakThai, license: MIT) + references/hf-learnings.md.
+
+### Sources
+- https://huggingface.co/docs/inference-providers/en/guides/responses-api
+- https://huggingface.co/docs/inference-providers/en/guides/function-calling
+- https://huggingface.co/docs/inference-providers/en/pricing
+- https://huggingface.co/docs/inference-providers/en/hub-api
+- https://router.huggingface.co/v1/models
