@@ -122,11 +122,13 @@ See [Training Overview](https://sbert.net/docs/sentence_transformer/training_ove
 4. **CrossEncoder != SentenceTransformer**: CrossEncoder takes pairs, SentenceTransformer takes single texts.
 5. **Model naming**: Always use the full HF Hub ID.
 6. **Training memory**: Use LoRA via PEFT for efficient fine-tuning of large models.
+7. **Uploading to HF requires ALL config files**: When uploading via `api.upload_folder()`, `IndexError: index out of range in self` means tokenizer config files are missing from the Hub repo. Fix: upload ALL files from the model directory — `tokenizer.json`, `tokenizer_config.json`, `config.json`, `vocab.txt`, `special_tokens_map.json`, `modules.json`, `config_sentence_transformers.json` — not just weights. `model.save()` handles this correctly; `api.upload_file()` needs explicit upload of each config file. Always verify after upload by loading back from HF and encoding a test sentence.
 
 ## Reference Files
 
 - `references/quickstart.py` — Runnable Python snippets for all 3 model types
 - `references/hf-ecosystem-facts.md` — Live API research data (PyPI stats, GitHub stats, top-10 model rankings, July 2026)
+- `references/rag-agent-knowledge.md` — Build a RAG semantic search system over agent SOULs and skills: embedding, index storage, HTTP query API, memory management, pitfalls.
 
 ## Links
 

@@ -2,46 +2,77 @@
 name: hf-trl-deep-dive
 author: SakThai
 license: MIT
-description: "Deep-dive reference for the Hugging Face TRL library — every trainer (SFT, DPO, GRPO, PPO, Reward, KTO, ORPO, CPO), TRLPipeline chaining, data formatting, vLLM integration, PEFT interop, and production best practices."
-version: 1.0.0
-tags: [TRL, RLHF, DPO, GRPO, PPO, SFT, Alignment, FineTuning, HuggingFace, RL]
-related_skills: [hf-smol-course]
+description: "Comprehensive reference for Hugging Face TRL v1.9.0 — all 14 trainers (4 categories: online, offline, reward, distillation), multi-environment GRPO, KTO stability, vLLM/DeepSpeed/PEFT interop, Liger Kernel, OpenEnv/Harbor, VLM alignment."
+version: 2.0.0
+tags: [TRL, RLHF, DPO, GRPO, PPO, SFT, KTO, RLOO, PRM, Alignment, FineTuning, HuggingFace, RL, vLLM, LigerKernel]
+related_skills: [hf-smol-course, hf-smolagents, hf-cookbook]
 ---
 
-# TRL (Transformer Reinforcement Learning) — Deep Dive
+# TRL v1.9.0 — Complete Post-Training Toolkit
 
-Complete reference for the [TRL library](https://huggingface.co/docs/trl) — alignment and RL fine-tuning for LLMs.
+Complete reference for the [TRL library v1.9.0](https://huggingface.co/docs/trl/en/index) — alignment and RL fine-tuning for LLMs/VLMs. **TRL v1** (March 2026) was a major rewrite adding 6 new trainers, multi-environment agentic RL, VLM alignment, and knowledge distillation.
 
 ## When to Use
 
-- User wants to align a model after SFT (DPO, GRPO, PPO)
-- User asks about which preference optimization method to choose
-- User needs to chain SFT → DPO in one pipeline
+- User wants to align a model after SFT (DPO, GRPO, KTO)
+- User asks which preference optimization method to choose from 14 options
+- User needs to chain SFT → alignment in one pipeline
 - User hits errors with TRL data formatting, packing, or vLLM integration
-- User needs reward model training for RLHF
+- User needs reward model training for RLHF or process rewards
+- User wants knowledge distillation (GKD, MiniLLM)
+- User is doing reasoning/RL fine-tuning with GRPO + reward functions
 
 ## Quick Install
 
 ```bash
 pip install trl transformers accelerate peft datasets bitsandbytes
-# For GRPO/PPO with fast rollout generation:
-pip install vllm
+# For online methods with fast rollout generation:
+pip install vllm        # GRPO, RLOO, OnlineDPO, NashMD, XPO ⚡️
+# Optional speedups:
+pip install liger-kernel  # Fused GRPO ops (~40% memory savings)
+# For sandboxed environments:
+pip install harbor openenv
 ```
 
-## Architecture Overview
+## Architecture Overview — 4 Categories, 14 Trainers
 
-TRL v0.15+ provides these trainers:
+TRL v1.9.0 organizes trainers into 4 categories:
 
-| Trainer | Method | Data Required | Reference Model | When to Use |
-|---------|--------|---------------|-----------------|-------------|
-| **SFTTrainer** | Supervised fine-tuning | Prompts + completions | No | First step — always start here |
-| **DPOTrainer** | Direct Preference Optimization | Chosen/rejected pairs | Yes | Best all-round alignment |
-| **GRPOTrainer** | Group Relative Policy Opt. | Prompts + reward fns | No | Reasoning tasks, multi-reward |
-| **PPOTrainer** | Proximal Policy Optimization | Prompts + reward model | Yes | Full RLHF loop |
-| **RewardTrainer** | Reward modeling | Chosen/rejected pairs | No | Train a reward model for PPO/GRPO |
-| **KTOTrainer** | Kahneman-Tversky Opt. | Completions + binary label | Yes | When only positive examples available |
-| **ORPOTrainer** | Odds Ratio Preference Opt. | Chosen/rejected pairs | No | Reference-free DPO alternative |
-| **CPOTrainer** | Contrastive Preference Opt. | Chosen/rejected pairs | No | Contrastive approach |
+### Online Methods (RL-based, generate during training)
+
+| Trainer | Status | vLLM ⚡️ | Data | Ref Model | Use Case |
+|---------|--------|----------|------|-----------|----------|
+| **GRPOTrainer** | ✅ Stable | ⚡️ | Prompts + reward fns | No | Reasoning tasks, multi-reward (DAPO default) |
+| **RLOOTrainer** | ✅ Stable | ⚡️ | Prompts + reward fns | No | REINFORCE LOO, non-Gaussian rewards |
+| **OnlineDPOTrainer** | 🧪 | ⚡️ | Prompts + reward model | Yes | On-policy DPO, stronger alignment |
+| **NashMDTrainer** | 🧪 | ⚡️ | Prompts + reward model | Yes | Game-theoretic alignment |
+| **PPOTrainer** | 🧪 | ❌ | Prompts + reward model | Yes | Legacy — GRPO supersedes |
+| **XPOTrainer** | 🧪 | ⚡️ | Prompts + reward model | Yes | Exploit-Explore for creative tasks |
+
+### Offline Methods (static dataset)
+
+| Trainer | Status | Data Required | Ref Model | Use Case |
+|---------|--------|---------------|-----------|----------|
+| **SFTTrainer** | ✅ Stable | Prompts + completions | No | First step — always start here |
+| **DPOTrainer** | ✅ Stable | Chosen/rejected pairs | Yes | Best all-round alignment |
+| **KTOTrainer** | ✅ Stable | Completion + label | Yes | Unpaired/preference-on-label |
+| **BCOTrainer** | 🧪 | Chosen/rejected pairs | No | Binary CE variant |
+| **CPOTrainer** | 🧪 | Chosen/rejected pairs | No | Contrastive, reference-free |
+| **ORPOTrainer** | 🧪 | Chosen/rejected pairs | No | Odds ratio, reference-free |
+
+### Reward Modeling
+
+| Trainer | Status | Description |
+|---------|--------|-------------|
+| **RewardTrainer** | ✅ Stable | Bradley-Terry reward model |
+| **PRMTrainer** | 🧪 | Process Reward Model (step-level) |
+
+### Knowledge Distillation
+
+| Trainer | Status | Description |
+|---------|--------|-------------|
+| **GKDTrainer** | 🧪 | Generalized KD (KL-divergence) |
+| **MiniLLMTrainer** | 🧪 | Generative distillation (sequence-level) |
 
 ## Detailed Trainer Usage
 
@@ -211,8 +242,34 @@ trainer.train()
 - Returns list of float rewards (one per completion)
 - Uses vLLM automatically if `vllm` is installed (set `use_vllm=False` to disable)
 - No reference model needed — policy is self-regularizing
+- **Loss types** (TRL v1): `loss_type="dapo"` (default), `"grpo"`, `"vespo"`, `"sapo"`, `"dr_grpo"`
+- **Multi-environment** (TRL v1): Pass dict of reward function sets per env name
+- **Liger Kernel**: Install `liger-kernel` for fused GRPO ops (~40% memory savings)
 
-### 4. PPOTrainer — Classic RLHF Loop
+### 3b. RLOOTrainer — REINFORCE Leave-One-Out (TRL v1+)
+
+```python
+from trl import RLOOTrainer
+
+# Similar API to GRPOTrainer but uses LOO variance reduction
+trainer = RLOOTrainer(
+    model=model,
+    reward_funcs=[accuracy_reward],
+    args=TrainingArguments(
+        output_dir="./rloo-model",
+        per_device_train_batch_size=2,
+        gradient_accumulation_steps=4,
+        learning_rate=5e-6,
+        max_steps=200,
+    ),
+    train_dataset=dataset,
+)
+trainer.train()
+```
+
+**Use when:** Reward distribution is naturally non-Gaussian (e.g., binary pass/fail, sparse rewards). RLOO's leave-one-out baseline handles non-smooth rewards better than GRPO's group normalization.
+
+### 4. PPOTrainer — Classic RLHF Loop (🧪 Experimental)
 
 ```python
 from trl import PPOTrainer, PPOConfig, AutoModelForCausalLMWithValueHead
@@ -273,7 +330,9 @@ trainer = RewardTrainer(
 trainer.train()
 ```
 
-### 6. KTOTrainer — Kahneman-Tversky Optimization
+### 6. KTOTrainer — Kahneman-Tversky Optimization ✅ (Stable since TRL v1)
+
+KTO is now **stable** (graduated from 🧪). KTO only needs a completion + binary label (good/bad) — no paired data required.
 
 ```python
 from trl import KTOTrainer
@@ -282,7 +341,7 @@ from trl import KTOTrainer
 # label=True → desirable completion, label=False → undesirable
 kto_trainer = KTOTrainer(
     model=model,
-    ref_model=ref_model,
+    ref_model=ref_model,  # auto-copies model if None
     tokenizer=tokenizer,
     args=TrainingArguments(...),
     train_dataset=kto_dataset,  # has prompt, completion, label
@@ -381,7 +440,12 @@ merged = PeftModel.from_pretrained(base_model, adapter_path).merge_and_unload()
 
 ## vLLM Integration
 
-GRPOTrainer auto-detects vLLM for fast rollout generation:
+All ⚡️-marked online trainers (GRPO, RLOO, OnlineDPO, NashMD, XPO) use vLLM for fast rollout generation:
+
+- **GRPOTrainer** auto-detects vLLM and uses it by default
+- **Co-location mode** (vllm_device="cuda:0") runs vLLM on the same GPU as training, sharing memory
+- **Separate GPU mode** (vllm_device="cuda:1") runs vLLM on a dedicated GPU for maximum throughput
+- **LoRA support**: Set `vllm_enable_lora=True` in trainer config for PEFT + vLLM
 
 ```python
 # Install: pip install vllm
@@ -394,6 +458,7 @@ trainer = GRPOTrainer(
     use_vllm=True,  # default if vllm installed
     vllm_device="cuda:0",  # same GPU or separate
     vllm_gpu_memory_utilization=0.3,  # reserve memory for training
+    vllm_enable_lora=False,  # set True for PEFT + vLLM
 )
 ```
 
@@ -402,15 +467,19 @@ For PPO, vLLM replaces the model's own generate for rollout collection.
 ## Common Pitfalls
 
 1. **Skipping SFT before alignment** — DPO/GRPO on a base model is much worse. Always SFT first.
-2. **Wrong data format** — DPO expects `{prompt, chosen, rejected}` keys, not just `{input, output}`.
-3. **Reference model mismatch** — DPO ref_model must be the same as the SFT model state; use `ref_model=None` to auto-copy.
-4. **Packing DPOTrainer** — DPO does NOT support `packing=True` (unlike SFT). Each row must be a single example.
-5. **GRPO with tiny batch** — GRPO needs 8+ generations per prompt to get meaningful group-relative advantages.
+2. **Wrong data format** — DPO expects `{prompt, chosen, rejected}` keys, not just `{input, output}`. KTO expects `{prompt, completion, label}` (binary). GRPO expects just `{prompt}` + reward functions.
+3. **Reference model mismatch** — DPO ref_model must be the same as the SFT model state; use `ref_model=None` to auto-copy. For KTO, ref_model is also required.
+4. **Packing DPOTrainer** — DPO does NOT support `packing=True` (unlike SFT). Each row must be a single example. Same for KTO and all non-SFT trainers.
+5. **GRPO with tiny batch** — GRPO needs 8+ generations per prompt to get meaningful group-relative advantages. RLOO can work with fewer if rewards are sparse.
 6. **Tokenizer padding side** — Set `tokenizer.pad_token = tokenizer.eos_token` and `padding_side="right"` (or "left" for DPO).
-7. **vLLM + GRPO memory** — vLLM consumes ~30% extra GPU memory. Subtract via `vllm_gpu_memory_utilization`.
+7. **vLLM + online training memory** — vLLM consumes ~30% extra GPU memory. Subtract via `vllm_gpu_memory_utilization`. Liger Kernel reduces GRPO memory by ~40%.
 8. **TRLPipeline multiple GPUs** — Not well tested with distributed. Use individual trainers for multi-GPU.
 9. **Beta too low in DPO** — Beta < 0.01 can cause collapse. Keep between 0.01 and 0.5.
 10. **Reward over-optimization** — Train reward models on diverse data; eval on held-out prompts to detect hacking.
+11. **KTO without ref_model** — Unlike CPO/ORPO, KTO still requires a reference model. Use `ref_model=None` to auto-copy from model.
+12. **DPO loss_type selection** — TRL v1 supports: `"dpo"`, `"ipo"`, `"kto_pair"`, `"cpo"`, `"simpo"`. IPO is more stable but slower convergence. SimPO is reference-model-free.
+13. **GRPO loss_type="dapo" is default** — DAPO uses token-level normalization to avoid length bias. If you notice training instability with very long sequences, switch to `loss_type="grpo"` (sample-level).
+14. **Process rewards (PRM)** — PRMTrainer is experimental. Requires step-level reward annotations. Useful for math/code chain-of-thought evaluation.
 
 ## Evaluation
 
@@ -440,7 +509,9 @@ print(pipe("Explain RLHF in one sentence:", max_new_tokens=100)[0]["generated_te
 
 See [`references/external-links.md`](references/external-links.md) for paper links, release notes, and a recommended reading order.
 
-- [TRL Documentation](https://huggingface.co/docs/trl)
-- [TRL GitHub](https://github.com/huggingface/trl)
-- [TRL Library v0.15 Release Notes](https://github.com/huggingface/trl/releases)
+- [TRL Documentation v1.9.0](https://huggingface.co/docs/trl/en/index) — Full API
+- [TRL GitHub](https://github.com/huggingface/trl) — Source code, issues, examples
+- [TRL v1 Blog Post](https://huggingface.co/blog/trl-v1) — Major release announcement (March 2026)
+- [OpenEnv](https://huggingface.co/blog/openenv) — Open agent evaluation environment
+- [smol-course](https://github.com/huggingface/smol-course) — Learn post-training with TRL
 - [HF Alignment Handbook](https://github.com/huggingface/alignment-handbook)

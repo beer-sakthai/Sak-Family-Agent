@@ -20,1259 +20,1181 @@ Every query to the Datasets Server that involves data content **must specify a c
 https://datasets-server.huggingface.co
 ```
 
-### Endpoint Reference
+### Endpoint: `GET /splits` — Discover Configs & Splits
 
-#### 1. `/splits` — List All Splits & Discover Configs
-**The primary discovery endpoint.** Returns all splits across all configs for a dataset.
-
-```
-GET /splits?dataset=<namespace/dataset>
-```
-
-**Response:**
-```json
-{
-  "splits": [
-    { "dataset": "facebook/multilingual_librispeech", "config": "german", "split": "train" },
-    { "dataset": "facebook/multilingual_librispeech", "config": "german", "split": "dev" },
-    ...
-  ],
-  "pending": [],
-  "failed": []
-}
-```
-
-**Config discovery pattern** — extract unique configs from the response:
-```python
-import requests
-resp = requests.get("https://datasets-server.huggingface.co/splits?dataset=facebook/multilingual_librispeech").json()
-configs = set(s["config"] for s in resp["splits"])
-# → {'german', 'french', 'spanish', 'portuguese', 'italian', 'dutch', 'polish'}
-```
-
-**Example datasets:**
-| Dataset | Configs | Splits per Config |
-|---------|---------|-------------------|
-| `SetFit/ag_news` | 1 (default) | train, test |
-| `facebook/multilingual_librispeech` | 7 (language) | train, dev, test, 9_hours, 1_hours |
-| `google/fleurs` | 103 (language) | train, validation, test |
-
-#### 2. `/info` — Get Dataset Configuration Metadata
-Returns full metadata about all configs, including features/schema, row counts, and default config.
-
-```
-GET /info?dataset=<namespace/dataset>
-```
-
-The response contains a `dataset_info` object with a `configs` dictionary keyed by config name. Each config entry includes:
-- `features`: column names and their data types
-- `num_rows`: total row count
-- `num_columns`: number of columns
-- `num_bytes`: size in bytes
-
-**Known limitation:** `default` config field may be `null` for datasets with explicit config names.
-
-#### 3. `/parquet` — List Parquet Files Per Config
-Returns Parquet file URLs for a specific config. **Required parameter when dataset has multiple configs.**
-
-```
-GET /parquet?dataset=<ds>&config=<config_name>
-```
-
-**Response:**
-```json
-{
-  "parquet_files": [
-    {"dataset": "...", "config": "german", "split": "1_hours", "url": "https://...", "size": 15655132, "num_rows": 1824},
-    {"dataset": "...", "config": "german", "split": "train", "url": "https://...", "size": 424187311, "num_rows": 55136}
-  ]
-}
-```
-
-Each parquet file entry has: `dataset`, `config`, `split`, `url`, `size` (bytes), `num_rows`.
-
-#### 4. `/first-rows` — Preview Rows for a Config+Split
-Returns the first 100 rows of data for a specific config + split.
-
-```
-GET /first-rows?dataset=<ds>&config=<config_name>&split=<split_name>
-```
-
-**Must specify all three parameters** (`dataset`, `config`, `split`) — returns HTTP 400 if any are missing.
-
-**Response** includes:
-- `features`: schema (column name → dtype)
-- `rows`: array of row objects with `row_idx` and `row` (column→value dict)
-- `num_rows`: total rows in this split (may be `null` for large datasets)
-
-#### 5. `/size` — Get Size Stats Per Config
-Returns byte counts and row counts for a specific config.
-
-```
-GET /size?dataset=<ds>&config=<config_name>
-```
-
-**Response fields:**
-```json
-{
-  "size": {
-    "config": {
-      "dataset": "...",
-      "config": "german",
-      "num_bytes_original_files": 31526161821,
-      "num_bytes_parquet_files": 31526161821,
-      "num_bytes_memory": 30393068029,
-      "num_rows": 479240,
-      "num_columns": 10
-    },
-    "splits": [ ... per-split breakdowns ... ]
-  }
-}
-```
-
-#### 6. `/rows` — Download Specific Row Range
-Download a slice of rows by index range for a config+split.
-
-```
-GET /rows?dataset=<ds>&config=<config_name>&split=<split_name>&offset=0&length=100
-```
-
-#### 7. `/search` — Full-Text Search Within a Config
-Full-text search on a config+split's data.
-
-```
-GET /search?dataset=<ds>&config=<config_name>&split=<split_name>&query=<search_term>
-```
-
-#### 8. `/filter` — Filter Rows Within a Config
-Filter rows by conditions on a config+split.
-
-```
-GET /filter?dataset=<ds>&config=<config_name>&split=<split_name>&where=<condition>
-```
-
-#### 9. `/statistics` — Column Statistics
-Get statistics for numeric/string columns in a config.
-
-```
-GET /statistics?dataset=<ds>&config=<config_name>
-```
-
-Note: Some configs return HTTP 422 if statistics aren't computable (e.g., audio datasets).
-
-#### 10. `/croissant` — Croissant Metadata
-Get ML-Commons Croissant metadata for a dataset config.
-
-```
-GET /croissant?dataset=<ds>&config=<config_name>
-```
-
-### Authentication
-Public datasets on the Datasets Server are accessible without auth. Private/gated datasets require a Hugging Face token:
-```
-Authorization: Bearer hf_...
-```
-Without token, private datasets return HTTP 401.
-
-### Practical Patterns
-
-#### Pattern 1: Discover and List All Configs
 ```python
 import requests
 
-def list_configs(dataset):
-    resp = requests.get(f"https://datasets-server.huggingface.co/splits?dataset={dataset}").json()
-    configs = set(s["config"] for s in resp.get("splits", []))
-    return sorted(configs)
-
-# Multi-language speech dataset
-configs = list_configs("facebook/multilingual_librispeech")
-# → ['dutch', 'french', 'german', 'italian', 'polish', 'portuguese', 'spanish']
-
-# 103-language dataset
-configs = list_configs("google/fleurs")
-# → ['af_za', 'am_et', 'ar_eg', ... 103 total]
+response = requests.get("https://datasets-server.huggingface.co/splits", params={
+    "dataset": "facebook/multilingual_librispeech",
+})
+# Returns: list of {dataset, config, split} objects
 ```
 
-#### Pattern 2: Explore a Single Config Deeply
-```python
-def explore_config(dataset, config):
-    base = "https://datasets-server.huggingface.co"
-    info = requests.get(f"{base}/info?dataset={dataset}").json()
-    size = requests.get(f"{base}/size?dataset={dataset}&config={config}").json()
-    preview = requests.get(
-        f"{base}/first-rows?dataset={dataset}&config={config}&split=train"
-    ).json()
-    return {"info": info, "size": size, "preview": preview}
-```
+Returns every (config, split) pair for the dataset. Single-config datasets return one config named `"default"`.
 
-#### Pattern 3: Parquet Analytics Across All Configs
-```python
-def get_all_parquet(dataset):
-    configs = list_configs(dataset)
-    parquet_by_config = {}
-    for cfg in configs:
-        resp = requests.get(
-            f"https://datasets-server.huggingface.co/parquet?dataset={dataset}&config={cfg}"
-        ).json()
-        parquet_by_config[cfg] = resp.get("parquet_files", [])
-    return parquet_by_config
-```
+**Key behaviors:**
+- Lists ALL configs and their splits in one call
+- The only way to programmatically discover which configs exist
+- Response includes `dataset`, `config`, and `split` strings
+- Splits are typical: train, test, validation, dev, etc.
 
-#### Pattern 4: Filter and Query Without Download
-```python
-# Search for specific text in a config+split
-resp = requests.get(
-    "https://datasets-server.huggingface.co/search",
-    params={"dataset": "facebook/multilingual_librispeech", "config": "german",
-            "split": "train", "query": "example"}
-).json()
-
-# Filter rows by condition
-resp = requests.get(
-    "https://datasets-server.huggingface.co/filter",
-    params={"dataset": "facebook/multilingual_librispeech", "config": "german",
-            "split": "train", "where": "audio_id IS NOT NULL"}
-).json()
-```
-
-### Key Differences Between Single-Config and Multi-Config Datasets
-
-| Aspect | Single-Config | Multi-Config |
-|--------|--------------|--------------|
-| Config name | Usually `"default"` or auto | Explicit per language/task |
-| `/splits` | 1 config → N splits | M configs × N splits each |
-| `/parquet` | Works without `config=` | **Requires** `config=` param |
-| `/first-rows` | Works without `config=` | **Requires** `config=` param |
-| `/info` | Config-less response dataset_info.configs has 1 entry | Full config dict with all configs |
-| Discovery | Just use config="default" | Call `/splits` first |
-
-### Error Handling
-| HTTP Code | Meaning | Common Cause |
-|-----------|---------|-------------|
-| 400 | Bad Request | Missing required `config` parameter for multi-config dataset |
-| 401 | Unauthorized | Private/gated dataset without valid token |
-| 404 | Not Found | Dataset renamed or doesn't exist |
-| 422 | Unprocessable Content | Statistics endpoint on incompatible data |
-| 500 | Server Error | Dataset processing failed |
-| 501 | Not Implemented | Dataset format not supported by viewer |
-
-### Best Practices
-1. **Always call `/splits` first** to discover configs before accessing other endpoints
-2. **Cache config lists** — they don't change frequently
-3. **Handle missing configs gracefully** — some configs may be `pending` or `failed`
-4. **Use `config=default`** as fallback for single-config datasets that may not mention config explicitly
-5. **Parquet is cheapest** — for analytics, always prefer Parquet files over row-by-row API calls
-6. **Rate-limit generously** — the server precomputes responses, but burst requests may be throttled
-
-### Resources
-- Official docs: https://huggingface.co/docs/dataset-viewer/en/splits
-- Conceptual guide (configs & splits): https://huggingface.co/docs/dataset-viewer/en/configs_and_splits
-- API reference: https://huggingface.co/docs/dataset-viewer/en/index
-- Parquet processing guide: https://huggingface.co/docs/dataset-viewer/en/parquet_process
-- OpenAPI spec: https://datasets-server.huggingface.co/openapi.json
-- Hub dataset configuration: https://huggingface.co/docs/hub/datasets-data-files-configuration
-|- GitHub: https://github.com/huggingface/dataset-viewer
-
----
-
-## 2026-07-24: hf-datasets-server-filter-search-statistics-deep-dive — Live Verified API Behavior
-
-### Summary
-Comprehensive deep-dive into the Datasets Server's `/filter`, `/search`, `/statistics`, `/size`, and `/first-rows` endpoints with **live API verification** against real datasets (`scikit-learn/iris`, `stanfordnlp/imdb`). Documents the exact syntax requirements for the `where` parameter (the most error-prone part), the `partial` flag behavior, and known limitations discovered through real endpoint calls.
-
-### Methodology
-All findings verified live via Python `urllib` against `https://datasets-server.huggingface.co`. No SDK dependencies — raw API calls that work from any environment.
-
----
-
-### 1. `/filter` — Precise Syntax Reference
-
-The `/filter` endpoint is the most powerful but most error-prone. It requires **very specific syntax** that is not obvious from error messages (which generically say "contains errors or invalid symbols").
-
-#### Essential Syntax Rules (Verified)
-
-| Rule | Example | Notes |
-|------|---------|-------|
-| **Column names in double quotes** | `"Id"=1` | REQUIRED — bare `Id=1` fails with 422 |
-| **String values in single quotes** | `"Species"='Iris-setosa'` | REQUIRED — double quotes on values also fail |
-| **Numeric values unquoted** | `"PetalLengthCm">5.0` | Integers and floats work bare |
-| **Operators with spaces** | `"Id" >= 3` | Spaces around operators are fine when URL-encoded |
-| **AND/OR in uppercase** | `"Id">=3 AND "Id"<=5` | Must be uppercase |
-| **NOT operator** | `NOT "label"=0` | Prefix with NOT (verified working) |
-| **orderby parameter** | `orderby="Id"` | Column name in double quotes; supports `DESC` suffix |
-| **orderby DESC** | `orderby="Id" DESC` | Sorts descending |
-
-#### Verified Working Examples
+### Endpoint: `GET /first-rows` — Preview Data
 
 ```python
-import urllib.request, urllib.parse, json
-
-def filter_dataset(dataset, config, split, where, orderby=None, offset=0, length=10):
-    """Generic filter function with proper URL encoding."""
-    params = {
-        'dataset': dataset, 'config': config, 'split': split,
-        'where': where, 'offset': str(offset), 'length': str(length)
-    }
-    if orderby:
-        params['orderby'] = orderby
-    url = 'https://datasets-server.huggingface.co/filter?' + urllib.parse.urlencode(params)
-    req = urllib.request.Request(url, headers={'User-Agent': 'SakThai/1.0'})
-    with urllib.request.urlopen(req, timeout=15) as r:
-        return json.loads(r.read())
-
-# Exact match integer
-result = filter_dataset('scikit-learn/iris', 'default', 'train', '"Id"=1')
-# → 1 row, Id=1, Species=Iris-setosa
-
-# Range with AND
-result = filter_dataset('scikit-learn/iris', 'default', 'train', '"Id">=3 AND "Id"<=5', orderby='"Id"')
-# → 3 rows (Id=3,4,5)
-
-# String match (single quotes!)
-result = filter_dataset('scikit-learn/iris', 'default', 'train', '"Species"=\'Iris-setosa\'', orderby='"Id"')
-# → 50 rows (all setosa)
-
-# Not equal
-result = filter_dataset('scikit-learn/iris', 'default', 'train', '"Id"<>3', orderby='"Id"')
-# → 149 rows (everything except Id=3)
-
-# Float comparison
-result = filter_dataset('scikit-learn/iris', 'default', 'train', '"PetalLengthCm">5.0', orderby='"Id"')
-# → 42 rows (long-petal varieties)
-
-# OR operator
-result = filter_dataset('stanfordnlp/imdb', 'plain_text', 'train', '"label"=0 OR "label"=1')
-# → 25000 total rows (entire dataset)
-
-# DESC ordering
-result = filter_dataset('stanfordnlp/imdb', 'plain_text', 'train', '"label"=1', orderby='"label" DESC')
-# → Label=1 rows, ordered descending
+response = requests.get("https://datasets-server.huggingface.co/first-rows", params={
+    "dataset": "ibm/duorc",
+    "config": "ParaphraseRC",  # REQUIRED for multi-config datasets
+})
 ```
 
-#### Common Failures & Their Real Error Messages
+Returns the **first 100 rows** plus feature metadata (column names, types). The `config` parameter is required if the dataset has multiple configs.
 
-| Attempted Syntax | Error | Root Cause |
-|-----------------|-------|------------|
-| `where=Id=1` | 422 "contains errors or invalid symbols" | Missing double quotes on column |
-| `where="Species"="Iris-setosa"` | 422 "contains errors or invalid symbols" | String value needs SINGLE quotes |
-| `/filter?dataset=scikit-learn/iris` (no config) | 422 "Parameter 'dataset' is required" | dataset value incorrectly encoded |
-
-**Critical encoding insight:** Use `urllib.parse.urlencode()` to build the full query string. Manual string construction with `urllib.parse.quote(where)` is error-prone. The `urlencode` function correctly encodes double quotes (`%22`), single quotes, spaces, and special characters.
-
-#### The `partial` Flag
-
-The response includes a `partial` boolean:
-- `partial: false` — All data indexed; filter covers the entire dataset
-- `partial: true` — Only first 5GB of data indexed; results may be incomplete
-
-For **imdb** (83 MB original, ~128 MB in memory): `partial=false` — fully indexed.
-For datasets >5GB: only the first 5GB is indexed; filtering may miss matching rows in unindexed portions.
-
-#### The `orderby` Parameter
-
-Supports single column ordering:
-- `orderby="column_name"` — ascending (default)
-- `orderby="column_name" DESC` — descending
-
-Column name must be in double quotes within the URL parameter value. Sorting is applied AFTER filtering, so `num_rows_total` reflects total matching rows, not the sorted result.
-
----
-
-### 2. `/search` — Full-Text Search Behavior (Verified)
+### Endpoint: `GET /rows` — Slice Arbitrary Rows
 
 ```python
-import urllib.request, json
-
-url = "https://datasets-server.huggingface.co/search?dataset=stanfordnlp/imdb&config=plain_text&split=train&query=terrible&offset=0&length=3"
-req = urllib.request.Request(url, headers={'User-Agent': 'SakThai/1.0'})
-with urllib.request.urlopen(req, timeout=15) as r:
-    result = json.loads(r.read())
+response = requests.get("https://datasets-server.huggingface.co/rows", params={
+    "dataset": "ibm/duorc",
+    "config": "ParaphraseRC",
+    "split": "train",
+    "offset": 0,
+    "length": 100,
+})
 ```
 
-**Verified behavior:**
-- **Text search across all text columns** — searches every column of type `string` (or text-like)
-- **No `score` in response** — contrary to older docs, the response rows do NOT include a relevance score
-- **Returns `num_rows_total`** — total count of matching rows (1563 for "terrible" in imdb train)
-- **Works with numeric column names too** — searching "setosa" on iris returns all 50 setosa rows because the Species column matches
-- **Max 100 rows per request** — use `offset`/`length` for pagination
-- **No advanced query syntax** — just plain text, no AND/OR/wildcards in search query
+Paginates through any split by offset+length. No config parameter needed if dataset is single-config.
 
-**Parameters:** `dataset` (req), `config` (req for multi-config), `split` (req), `query` (req), `offset` (opt, default 0), `length` (opt, default/max 100)
-
----
-
-### 3. `/statistics` — Column Statistics (Verified)
+### Endpoint: `GET /parquet` — List Parquet Files
 
 ```python
-url = "https://datasets-server.huggingface.co/statistics?dataset=scikit-learn/iris&config=default&split=train"
+response = requests.get("https://datasets-server.huggingface.co/parquet", params={
+    "dataset": "ibm/duorc",
+})
 ```
 
-**Verified behavior:**
-- Returns schema (column names + dtypes) for all columns
-- For numeric columns (`int64`, `float64`): returns min, max, mean, std (when data available)
-- For string columns: returns column name only (no min/max/etc.)
-- **Some datasets return empty statistics objects** even for numeric columns — statistics must be pre-computed by the server
-- Audio/image datasets typically return 422 — statistics are not computable for non-tabular data
+Returns the list of Parquet files auto-generated by the dataset viewer for each config/split. These files live on a special `refs/convert/parquet` branch on the dataset repo.
 
-**Known 422 cases:** Audio datasets (speech, music), image datasets, datasets with non-tabular features.
-
----
-
-### 4. `/size` — Dataset Size Info (Verified)
+### Endpoint: `GET /size` — Dataset Size
 
 ```python
-url = "https://datasets-server.huggingface.co/size?dataset=stanfordnlp/imdb&config=plain_text"
+response = requests.get("https://datasets-server.huggingface.co/size", params={
+    "dataset": "ibm/duorc",
+    "config": "ParaphraseRC",
+})
 ```
 
-**Verified response for imdb (with config):**
-```json
-{
-  "size": {
-    "config": {
-      "dataset": "stanfordnlp/imdb", "config": "plain_text",
-      "num_bytes_original_files": 83446840,
-      "num_bytes_parquet_files": 83446840,
-      "num_bytes_memory": 128683449,
-      "num_rows": 100000, "num_columns": 2
-    },
-    "splits": [
-      { "config": "plain_text", "split": "train", "num_bytes_parquet_files": 20979968, ... },
-      { "config": "plain_text", "split": "test", ... },
-      { "config": "plain_text", "split": "unsupervised", ... }
-    ]
-  }
-}
-```
+Returns `num_rows` and `num_bytes` for each split. Useful for estimating memory requirements before loading.
 
-**Key fields:**
-- `num_bytes_original_files` — raw file size on disk
-- `num_bytes_parquet_files` — Parquet export size (usually same as original for text data)
-- `num_bytes_memory` — estimated memory footprint when loaded (includes Arrow overhead)
-- `num_rows` — total rows across all splits (imdb: 100K = 25K train + 25K test + 50K unsupervised)
-- `estimated_num_rows` — for large datasets where exact count is unavailable (null if exact)
-
-**Without config:** Returns dataset-level aggregate. Config parameter is optional for single-config datasets but recommended for accuracy. Without config, returns `null` for some per-config fields.
-
-**Without config (dataset-level):** Returns aggregate across all configs. Some per-split data may be absent.
-
----
-
-### 5. `/first-rows` — Data Preview (Verified)
+### Endpoint: `GET /search` — Full-Text Search
 
 ```python
-url = "https://datasets-server.huggingface.co/first-rows?dataset=stanfordnlp/imdb&config=plain_text&split=train"
+response = requests.get("https://datasets-server.huggingface.co/search", params={
+    "dataset": "ibm/duorc",
+    "config": "ParaphraseRC",
+    "split": "train",
+    "query": "quantum",
+})
 ```
 
-**Verified:**
-- Always returns first 100 rows (not configurable — no offset/length parameters)
-- Returns `features` (schema) and `rows` array with `row_idx` + `row` (column→value dict)
-- Returns `num_rows` for the split
-- **Must specify all three**: dataset, config, AND split — missing split returns 400
-- For multi-config datasets, config is required and missing it returns 400
+Full-text search across string columns. Uses Elasticsearch-like syntax. Searches all string columns unless specified.
 
----
-
-### 6. `/is-valid` — Feature Detection (Verified)
-
-This endpoint is critical for determining which features work for a given dataset:
+### Endpoint: `GET /filter` — Filter Rows
 
 ```python
-url = "https://datasets-server.huggingface.co/is-valid?dataset=stanfordnlp/imdb"
-# → {"preview":true, "viewer":true, "search":true, "filter":true, "statistics":true}
+response = requests.get("https://datasets-server.huggingface.co/filter", params={
+    "dataset": "ibm/duorc",
+    "config": "ParaphraseRC",
+    "split": "train",
+    "where": "question_type==how",
+})
 ```
 
-**Verified on multiple datasets:**
-| Dataset | preview | viewer | search | filter | statistics |
-|---------|---------|--------|--------|--------|------------|
-| `wikimedia/wikipedia` | true | true | true | true | true |
-| `stanfordnlp/imdb` | true | true | true | true | true |
-| `scikit-learn/iris` | true | true | true | true | true |
+SQL-style filtering using DuckDB's WHERE syntax. Supported operators: `==`, `!=`, `<`, `>`, `<=`, `>=`, `LIKE`, `NOT LIKE`, `IN`, `NOT IN`, `AND`, `OR`, `NOT`.
 
-If a dataset returns `filter: false`, the `/filter` endpoint will not work for it (likely because it doesn't have Parquet export or is too large).
+### Endpoint: `GET /statistics` — Column Statistics
 
----
-
-### 7. Dataset Availability Pitfalls (Verified)
-
-| Pitfall | Example | Behavior |
-|---------|---------|----------|
-| **Renamed datasets** | `ibm/duorc` (404) | Classic NLP datasets have been renamed or removed. Always check `hf.co/datasets` for current names. |
-| **Missing datasets** | `mnist` (404) | Even well-known datasets may not exist on the Hub or may be named differently. |
-| **No Parquet export** | Various | Filter/search/statistics require Parquet backend. `is-valid` will show `false` for these features. |
-| **Config required** | Multi-config without config | Returns 400 "Bad Request" — use `/splits` first to discover configs. |
-
----
-
-### 8. Rate Limits & Production Considerations (Verified)
-
-- Public rate limits are undocumented but reasonable (20+ sequential requests worked without throttling)
-- Responses are pre-computed and cached — `/first-rows` and `/splits` return instantly
-- `/search` and `/filter` may have slightly higher latency on large datasets (tested imdb: ~2-3 seconds for filter)
-- For production: cache responses locally, add retry with exponential backoff on 5xx errors
-- For large-scale analytics: download Parquet files (listing via `/parquet`) and query locally with DuckDB/Polars instead of row-by-row API calls
-
----
-
-### Key Takeaways
-
-1. **`/filter` syntax is strict:** column names in `"double quotes"`, string values in `'single quotes'`, URL-encode everything with `urlencode()`. This is the #1 source of errors.
-2. **`/is-valid` is your first call** — always check which features are enabled before building queries.
-3. **`/parquet` is always cheaper** — for any analytics beyond simple lookups, use Parquet files with DuckDB/Polars.
-4. **The `partial` flag tells you if you got all data** — `partial: true` means only 5GB was indexed; results may be incomplete for large datasets.
-5. **`/search` is simple text search** — no relevance scores in response; use it for keyword discovery, not ranked retrieval.
-6. **`/size` gives memory+disk estimates** — `num_bytes_memory` is typically ~1.5x `num_bytes_parquet_files` due to Arrow overhead.
-7. **Classic datasets may be missing or renamed** — always verify dataset existence before coding against specific dataset names.
-
-### Resources
-- Filter docs: https://huggingface.co/docs/dataset-viewer/filter
-- Search docs: https://huggingface.co/docs/dataset-viewer/search
-- Statistics docs: https://huggingface.co/docs/dataset-viewer/statistics
-- Size docs: https://huggingface.co/docs/dataset-viewer/size
-- OpenAPI spec: https://datasets-server.huggingface.co/openapi.json
-|- ReDoc interactive: https://redocly.github.io/redoc/?url=https://datasets-server.huggingface.co/openapi.json#operation/filterRows
-
-## 2026-07-24: hf-datasets-server-complete-api-deep-dive — All 12 Endpoints
-
-### Summary
-Complete deep-dive into every endpoint of the Hugging Face Datasets Server REST API, verified against real API responses. Covers all 12 endpoints: `/splits`, `/size`, `/first-rows`, `/rows`, `/parquet`, `/info`, `/statistics`, `/search`, `/filter`, `/is-valid`, `/opt-in-out-urls`, `/presidio-entities`. Focused on practical zero-cost data exploration patterns using only `curl` and the free Datasets Server.
-
-### Base URL
-```
-https://datasets-server.huggingface.co
+```python
+response = requests.get("https://datasets-server.huggingface.co/statistics", params={
+    "dataset": "ibm/duorc",
+    "config": "ParaphraseRC",
+})
 ```
 
-### Endpoint Reference
+Returns column-level statistics: min, max, mean, std, null count, unique count, histogram buckets (for numeric columns), and value counts (for categorical columns). Generated from Parquet metadata.
 
-#### 1. GET /splits — Discover Configs & Splits
-**The discovery entry point.** Lists all configs (subsets) and their splits.
+### Endpoint: `GET /info` — Full Dataset Metadata
 
+```python
+response = requests.get("https://datasets-server.huggingface.co/info", params={
+    "dataset": "ibm/duorc",
+})
 ```
-GET /splits?dataset=<namespace/dataset>
+
+Returns the full dataset info from `dataset_info.json` including features/schema, citation, homepage, license, etc.
+
+### Endpoint: `GET /is-valid` — Validation Check
+
+```python
+response = requests.get("https://datasets-server.huggingface.co/is-valid", params={
+    "dataset": "ibm/duorc",
+})
 ```
 
-**Required:** `dataset`
-**Response:** `{ "splits": [...], "pending": [...], "failed": [...] }`
+Returns `{"valid": true}` or `{"valid": false}` — whether the dataset viewer can load this dataset without errors. Useful for CI pipelines.
 
-Each split entry: `{ "dataset": "...", "config": "...", "split": "..." }`
+### Query Patterns
 
-**Pattern — extract unique configs:**
+**Pattern: Get all rows from a multi-config dataset using pagination:**
 ```python
 import requests
-resp = requests.get("https://datasets-server.huggingface.co/splits?dataset=google/fleurs").json()
-configs = set(s["config"] for s in resp["splits"])
-# → {'af_za', 'am_et', 'ar_eg', ...}  (102 configs for FLEURS)
+
+def get_all_rows(dataset, config, split="train", page_size=100):
+    rows = []
+    offset = 0
+    while True:
+        resp = requests.get("https://datasets-server.huggingface.co/rows", params={
+            "dataset": dataset, "config": config, "split": split,
+            "offset": offset, "length": page_size,
+        }).json()
+        batch = resp.get("rows", [])
+        if not batch:
+            break
+        rows.extend(batch)
+        offset += page_size
+    return rows
 ```
 
-**Pattern — extract unique splits across all configs:**
+**Pattern: Discover and iterate all configs:**
 ```python
-splits = set((s["config"], s["split"]) for s in resp["splits"])
+splits_resp = requests.get("https://datasets-server.huggingface.co/splits", params={
+    "dataset": "facebook/multilingual_librispeech",
+}).json()
+
+configs = set(item["config"] for item in splits_resp)
+for config in configs:
+    # Now you can query first-rows, rows, size, etc. per config
+    pass
 ```
 
-**Verified response** (rotten_tomatoes):
-```json
-{
-  "splits": [
-    {"dataset": "cornell-movie-review-data/rotten_tomatoes", "config": "default", "split": "train"},
-    {"dataset": "cornell-movie-review-data/rotten_tomatoes", "config": "default", "split": "validation"},
-    {"dataset": "cornell-movie-review-data/rotten_tomatoes", "config": "default", "split": "test"}
-  ],
-  "pending": [],
-  "failed": []
-}
-```
-
-**Error states:**
-- `pending`: Dataset is being processed, retry later
-- `failed`: Dataset processing failed, check dataset format
-- Renamed datasets return: `{"error": "The dataset has been renamed. Please use the current dataset name."}`
-
----
-
-#### 2. GET /size — Storage & Row Counts
-Returns storage size (original files, Parquet files), memory footprint, and row counts at dataset/config/split level.
-
-```
-GET /size?dataset=<namespace/dataset>[&config=<config>]
-```
-
-**Required:** `dataset`
-**Optional:** `config` (if omitted, returns all configs)
-
-**Verified response** (rotten_tomatoes, all configs):
-```json
-{
-  "size": {
-    "dataset": {
-      "dataset": "cornell-movie-review-data/rotten_tomatoes",
-      "num_bytes_original_files": 881052,
-      "num_bytes_parquet_files": 881052,
-      "num_bytes_memory": 1344051,
-      "num_rows": 10662,
-      "estimated_num_rows": null
-    },
-    "configs": [
-      {
-        "dataset": "cornell-movie-review-data/rotten_tomatoes",
-        "config": "default",
-        "num_bytes_original_files": 881052,
-        "num_bytes_parquet_files": 881052,
-        "num_bytes_memory": 1344051,
-        "num_rows": 10662,
-        "num_columns": 2,
-        "estimated_num_rows": null
-      }
-    ],
-    "splits": [
-      {"dataset": "...", "config": "default", "split": "train", "num_bytes_parquet_files": 698845, "num_bytes_memory": 1072741, "num_rows": 8530, "num_columns": 2, "estimated_num_rows": null},
-      {"dataset": "...", "config": "default", "split": "validation", "num_bytes_parquet_files": 90001, "num_bytes_memory": 135180, "num_rows": 1066, "num_columns": 2},
-      {"dataset": "...", "config": "default", "split": "test", "num_bytes_parquet_files": 92206, "num_bytes_memory": 136130, "num_rows": 1066, "num_columns": 2}
-    ]
-  },
-  "pending": [],
-  "failed": [],
-  "partial": false
-}
-```
-
-**Key metrics explained:**
-| Field | Meaning |
-|-------|---------|
-| `num_bytes_original_files` | Size of original source files (JSONL, CSV, etc.) |
-| `num_bytes_parquet_files` | Size after Parquet conversion (same as original for Parquet-native datasets) |
-| `num_bytes_memory` | Estimated memory footprint when loaded via 🤗 Datasets |
-| `num_rows` | Exact row count |
-| `num_columns` | Number of feature columns |
-| `estimated_num_rows` | For large datasets where exact count is expensive; `null` means exact count was computed |
-
-**Use case — size-aware data selection:**
+**Pattern: Parquet-backed analytics with DuckDB:**
 ```python
-resp = requests.get("https://datasets-server.huggingface.co/size?dataset=google/fleurs").json()
-for c in resp["size"]["configs"]:
-    train_split = next(s for s in resp["size"]["splits"] if s["config"] == c["config"] and s["split"] == "train")
-    print(f"{c['config']}: {c['num_rows']} rows, {c['num_bytes_parquet_files']/1e6:.1f} MB")
+import duckdb
+
+# Get Parquet file URLs
+parquet_resp = requests.get("https://datasets-server.huggingface.co/parquet", params={
+    "dataset": "ibm/duorc",
+    "config": "ParaphraseRC",
+}).json()
+
+# Query directly with DuckDB (no download needed)
+urls = [p["url"] for p in parquet_resp["parquet_files"]]
+result = duckdb.sql(f"""
+    SELECT COUNT(*) as total,
+           COUNT(DISTINCT question) as unique_questions
+    FROM read_parquet({urls})
+""").fetchall()
 ```
 
----
-
-#### 3. GET /first-rows — Data Preview + Schema
-Returns the first 100 rows of a split, with full feature schema. **Best endpoint for exploring data structure without downloading.**
-
-```
-GET /first-rows?dataset=<ns/ds>&config=<config>&split=<split>
-```
-
-**Required:** `dataset`, `config`, `split`
-
-**Verified response** (rotten_tomatoes train, first 10 of 100 rows):
-```json
-{
-  "dataset": "cornell-movie-review-data/rotten_tomatoes",
-  "config": "default",
-  "split": "train",
-  "features": [
-    {"feature_idx": 0, "name": "text", "type": {"dtype": "string", "_type": "Value"}},
-    {"feature_idx": 1, "name": "label", "type": {"names": ["neg", "pos"], "_type": "ClassLabel"}}
-  ],
-  "rows": [
-    {"row_idx": 0, "row": {"text": "the rock is destined to be...", "label": 1}, "truncated_cells": []},
-    {"row_idx": 1, "row": {"text": "the gorgeously elaborate continuation...", "label": 1}, "truncated_cells": []},
-    ...
-  ]
-}
-```
-
-**Feature types reference:**
-| Type | `_type` | `dtype` / Fields | Example |
-|------|---------|-------------------|---------|
-| Primitive | `Value` | `string`, `int32`, `float64`, `bool` | `{"_type": "Value", "dtype": "string"}` |
-| Class label | `ClassLabel` | `names: ["neg", "pos"]` | `{"_type": "ClassLabel", "names": [...]}` |
-| Sequence | `Sequence` | `feature: {...}` | Nested lists |
-| Image | `Image` | — | Binary, content null in preview |
-| Audio | `Audio` | — | Binary, content null in preview |
-
-**Design notes:**
-- Always returns exactly 100 rows unless split has fewer
-- `truncated_cells` lists cell indices where content was truncated (binary large objects)
-- Features are always returned, even when no rows are available
-- Binary columns (Image, Audio) show `null` in the row data and are listed in `truncated_cells`
-
----
-
-#### 4. GET /rows — Paginated Row Access
-Returns a slice of rows with offset/length pagination. **Essential for sampling specific parts of a split.**
-
-```
-GET /rows?dataset=<ns/ds>&config=<config>&split=<split>&offset=<int>&length=<int>
-```
-
-**Required:** `dataset`, `config`, `split`
-**Optional:** `offset` (default: 0), `length` (default: 100, max: 100)
-
-**Verified response** (rotten_tomatoes train, offset=5, length=3):
-```json
-{
-  "features": [...],
-  "rows": [
-    {"row_idx": 5, "row": {"text": "the film provides some great insight...", "label": 1}, "truncated_cells": []},
-    {"row_idx": 6, "row": {"text": "offers that rare combination...", "label": 1}, "truncated_cells": []},
-    {"row_idx": 7, "row": {"text": "perhaps no picture ever made...", "label": 1}, "truncated_cells": []}
-  ],
-  "num_rows_total": 8530,
-  "num_rows_per_page": 100,
-  "partial": false
-}
-```
-
-**Pagination pattern — iterate through all rows:**
-```python
-offset = 0
-length = 100
-while True:
-    resp = requests.get(f"https://datasets-server.huggingface.co/rows?dataset=...&config=default&split=train&offset={offset}&length={length}").json()
-    for row in resp["rows"]:
-        process(row["row"])
-    offset += length
-    if offset >= resp["num_rows_total"]:
-        break
-```
-
-**Constraints:**
-- `length` maximum is 100 (server returns error otherwise)
-- `offset` must be ≥ 0
-- `num_rows_total` tells you total rows in the split
-- Response includes full `features` schema with every request
-
----
-
-#### 5. GET /parquet — Direct Parquet File URLs
-Returns URLs for the Parquet files backing each split. **Enables zero-cost direct Parquet download (no API rate limits).**
-
-```
-GET /parquet?dataset=<ns/ds>
-```
-
-**Required:** `dataset`
-**Optional:** `config` (if omitted, returns all)
-
-**Verified response** (rotten_tomatoes):
-```json
-{
-  "parquet_files": [
-    {"dataset": "cornell-movie-review-data/rotten_tomatoes", "config": "default", "split": "train",
-     "url": "https://huggingface.co/datasets/cornell-movie-review-data/rotten_tomatoes/resolve/refs%2Fconvert%2Fparquet/default/train/0000.parquet",
-     "filename": "0000.parquet", "size": 698845},
-    {"dataset": "...", "config": "default", "split": "validation",
-     "url": ".../validation/0000.parquet", "filename": "0000.parquet", "size": 90001},
-    {"dataset": "...", "config": "default", "split": "test",
-     "url": ".../test/0000.parquet", "filename": "0000.parquet", "size": 92206}
-  ],
-  "pending": [], "failed": [], "partial": false
-}
-```
-
-**Design notes:**
-- URLs point to the `refs/convert/parquet` branch — these are auto-converted Parquet files
-- Large datasets have sharded Parquet files (0000.parquet, 0001.parquet, ...)
-- Files can be downloaded with standard HTTP tools (`curl`, `wget`, `requests`)
-- Parquet is a columnar format — you can read specific columns without loading all data
-- Zero-cost pattern: download only the Parquet files for splits you need, process locally with `polars` or `pyarrow`
-
----
-
-#### 6. GET /info — Full Dataset Metadata
-Returns the complete dataset metadata, same as what `datasets.get_dataset_config_names()` and `datasets.get_dataset_split_names()` return, without installing the datasets library.
-
-```
-GET /info?dataset=<ns/ds>[&config=<config>]
-```
-
-**Required:** `dataset`
-**Optional:** `config` (if omitted, returns all configs)
-
-**Verified response** (rotten_tomatoes, config=default):
-```json
-{
-  "dataset_info": {
-    "default": {
-      "description": "",
-      "citation": "",
-      "homepage": "",
-      "license": "",
-      "features": {
-        "text": {"dtype": "string", "_type": "Value"},
-        "label": {"names": ["neg", "pos"], "_type": "ClassLabel"}
-      },
-      "builder_name": "parquet",
-      "dataset_name": "rotten_tomatoes",
-      "config_name": "default",
-      "version": {"version_str": "0.0.0", "major": 0, "minor": 0, "patch": 0},
-      "splits": {
-        "train": {"name": "train", "num_bytes": 1072741, "num_examples": 8530, "dataset_name": null},
-        "validation": {"name": "validation", "num_bytes": 135180, "num_examples": 1066, "dataset_name": null},
-        "test": {"name": "test", "num_bytes": 136130, "num_examples": 1066, "dataset_name": null}
-      },
-      "download_size": 881052,
-      "dataset_size": 1344051
-    }
-  },
-  "pending": [], "failed": [], "partial": false
-}
-```
-
-**Use cases:**
-- Check features/types without downloading any data
-- Get split sizes and example counts
-- Verify dataset structure before building a pipeline
-- Determine if a dataset has a specific config
-
----
-
-#### 7. GET /statistics — Column-Level Descriptive Statistics
-Returns per-column statistics: frequencies for categorical columns, histogram + moments for numeric columns.
-
-```
-GET /statistics?dataset=<ns/ds>&config=<config>&split=<split>
-```
-
-**Required:** `dataset`, `config`, `split`
-
-**Verified response** (rotten_tomatoes train):
-```json
-{
-  "num_examples": 8530,
-  "statistics": [
-    {
-      "column_name": "label",
-      "column_type": "class_label",
-      "column_statistics": {
-        "nan_count": 0, "nan_proportion": 0.0,
-        "no_label_count": 0, "no_label_proportion": 0.0,
-        "n_unique": 2,
-        "frequencies": {"neg": 4265, "pos": 4265}
-      }
-    },
-    {
-      "column_name": "text",
-      "column_type": "string_text",
-      "column_statistics": {
-        "nan_count": 0, "nan_proportion": 0.0,
-        "min": 4, "max": 267, "mean": 113.97, "median": 111.0, "std": 51.05,
-        "histogram": {
-          "hist": [302, 955, 1358, 1701, 1574, 1215, 804, 385, 176, 60],
-          "bin_edges": [4, 31, 58, 85, 112, 139, 166, 193, 220, 247, 267]
-        }
-      }
-    }
-  ],
-  "partial": false
-}
-```
-
-**Column types and their statistics:**
-
-| Column Type | Statistics Provided |
-|-------------|-------------------|
-| `class_label` | nan_count, n_unique, frequencies (value → count) |
-| `string_text` | nan_count, min/max/mean/median/std, histogram (10 bins) |
-| `int` | nan_count, min/max/mean/median/std, histogram (10 bins) |
-| `float` | nan_count, min/max/mean/median/std, histogram (10 bins) |
-| `bool` | nan_count, n_unique, frequencies |
-
-**Use cases:**
-- Class balance check (before training)
-- Feature distribution analysis
-- Detect missing values (nan_count)
-- Understand numeric range for normalization
-
----
-
-#### 8. GET /search — Full-Text Search
-Searches across all text columns in a split. Returns matching rows with their row indices. Case-insensitive, partial-match.
-
-```
-GET /search?dataset=<ns/ds>&config=<config>&split=<split>&query=<string>[&offset=<int>&length=<int>]
-```
-
-**Required:** `dataset`, `config`, `split`, `query`
-**Optional:** `offset` (default: 0), `length` (default: 100, max: 100)
-
-**Verified response** (search "rock" in rotten_tomatoes train):
-```json
-{
-  "features": [...],
-  "rows": [
-    {"row_idx": 2730, "row": {"text": "morvern rocks .", "label": 1}, "truncated_cells": []},
-    {"row_idx": 26, "row": {"text": "spiderman rocks", "label": 1}, "truncated_cells": []},
-    {"row_idx": 7133, "row": {"text": "as an actor , the rock is aptly named .", "label": 0}, "truncated_cells": []},
-    ...
-  ]
-}
-```
-
-**Design notes:**
-- Search is over all text/string columns simultaneously
-- Results are ordered by relevance (not by row index)
-- `num_rows_total` is NOT returned in search results (unlike `/rows`)
-- Binary/special columns are excluded from search
-- Query is case-insensitive
-
----
-
-#### 9. GET /filter — Row-Level Filtering
-Filters rows using a SQL-like expression language. Returns matching rows with pagination.
-
-```
-GET /filter?dataset=<ns/ds>&config=<config>&split=<split>&where=<expression>[&offset=<int>&length=<int>]
-```
-
-**Required:** `dataset`, `config`, `split`, `where`
-**Optional:** `offset` (default: 0), `length` (default: 100, max: 100)
-
-**Where expression syntax:**
-| Expression | Example | Meaning |
-|-----------|---------|---------|
-| `column = value` | `Age = 30` | Equality (numeric) |
-| `column = 'value'` | `Sex = 'female'` | Equality (string, single quotes) |
-| `column > value` | `Fare > 50` | Greater than |
-| `column < value` | `Age < 18` | Less than |
-| `column >= value` | `Fare >= 100` | Geq |
-| `column <= value` | `Age <= 12` | Leq |
-| `col1 = v AND col2 > v` | `Pclass = 2 AND "Siblings/Spouses Aboard" > 0` | Logical AND |
-| `"column with spaces" = v` | `"column name" = value` | Quoted column names |
-
-**Known limitations (verified 2026-07-24):**
-- ClassLabel columns may not support direct filtering (return "invalid symbols" error)
-- String equality requires single quotes: `Sex='female'`
-- Numeric columns work reliably (`Age=30`, `Fare>50`)
-- AND operations work correctly
-- The `orderby` parameter is documented but may have issues
-
-**Response format** (matches `/rows` structure):
-```json
-{
-  "features": [...],
-  "rows": [...],
-  "num_rows_total": 33,
-  "num_rows_per_page": 100,
-  "partial": false
-}
-```
-
----
-
-#### 10. GET /is-valid — Feature Support Check
-Returns which Datasets Server features are available for a given dataset. **Essential pre-flight check before building a pipeline.**
-
-```
-GET /is-valid?dataset=<ns/ds>
-```
-
-**Required:** `dataset`
-
-**Verified response** (rotten_tomatoes):
-```json
-{
-  "preview": true,
-  "viewer": true,
-  "search": true,
-  "filter": true,
-  "statistics": true
-}
-```
-
-**Feature flags:**
-| Flag | Meaning |
+### HTTP Status Codes
+| Code | Meaning |
 |------|---------|
-| `preview` | `/first-rows` is supported |
-| `viewer` | `/rows` is supported (full data viewer) |
-| `search` | `/search` is supported |
-| `filter` | `/filter` is supported |
-| `statistics` | `/statistics` is supported |
+| 200 | Success |
+| 404 | Dataset not found |
+| 422 | Invalid parameters (e.g., missing config for multi-config dataset) |
+| 500 | Internal server error |
+| 503 | Server busy (retry after backoff) |
 
-**Error states:** Returns `{"preview":false,"viewer":false,...}` for unsupported datasets.
-
----
-
-#### 11. GET /opt-in-out-urls — URL Compliance
-Returns statistics about URLs in the dataset that have opt-in/opt-out status for data deletion compliance.
-
-```
-GET /opt-in-out-urls?dataset=<ns/ds>[&config=<config>]
-```
-
-**Required:** `dataset`
-**Optional:** `config`
-
-**Verified response** (rotten_tomatoes — no URL columns):
-```json
-{
-  "urls_columns": [],
-  "has_urls_columns": false,
-  "num_opt_in_urls": 0,
-  "num_opt_out_urls": 0,
-  "num_scanned_rows": 0,
-  "num_urls": 0,
-  "full_scan": false
-}
-```
-
-**Fields:**
-| Field | Meaning |
-|-------|---------|
-| `urls_columns` | Column names containing URLs |
-| `has_urls_columns` | Whether any column contains URLs |
-| `num_opt_in_urls` | Count of opted-in URLs |
-| `num_opt_out_urls` | Count of opted-out URLs |
-| `num_scanned_rows` | Rows scanned for URL detection |
-| `num_urls` | Total URLs found |
-| `full_scan` | Whether all rows were scanned |
-
----
-
-#### 12. GET /presidio-entities — PII Detection
-Returns counts of rows containing sensitive entities detected by Microsoft Presidio (PII detection).
-
-```
-GET /presidio-entities?dataset=<ns/ds>[&config=<config>]
-```
-
-**Required:** `dataset`
-**Optional:** `config`
-
-**Verified response** (rotten_tomatoes — no PII):
-```json
-{
-  "scanned_columns": [],
-  "num_rows_with_person_entities": 0,
-  "num_rows_with_phone_number_entities": 0,
-  "num_rows_with_email_address_entities": 0,
-  "num_rows_with_sensitive_pii": 0,
-  "num_scanned_rows": 0,
-  "has_scanned_columns": false,
-  "full_scan": true
-}
-```
-
-**Entity types tracked:**
-| Field | Entity |
-|-------|--------|
-| `person_entities` | PERSON (names) |
-| `phone_number_entities` | PHONE_NUMBER |
-| `email_address_entities` | EMAIL_ADDRESS |
-| `sensitive_pii` | Any sensitive PII (combined) |
-
----
-
-### Quick Reference — All Endpoints At a Glance
-
-| # | Endpoint | Required Params | Optional | Returns |
-|---|----------|----------------|----------|---------|
-| 1 | `/splits` | `dataset` | — | Config/split list |
-| 2 | `/size` | `dataset` | `config` | Storage & row counts |
-| 3 | `/first-rows` | `dataset`, `config`, `split` | — | 100 rows + schema |
-| 4 | `/rows` | `dataset`, `config`, `split` | `offset`, `length` | Paginated rows |
-| 5 | `/parquet` | `dataset` | `config` | Parquet file URLs |
-| 6 | `/info` | `dataset` | `config` | Full metadata |
-| 7 | `/statistics` | `dataset`, `config`, `split` | — | Column stats |
-| 8 | `/search` | `dataset`, `config`, `split`, `query` | `offset`, `length` | Full-text search |
-| 9 | `/filter` | `dataset`, `config`, `split`, `where` | `offset`, `length` | SQL-like filter |
-| 10 | `/is-valid` | `dataset` | — | Feature support flags |
-| 11 | `/opt-in-out-urls` | `dataset` | `config` | URL compliance |
-| 12 | `/presidio-entities` | `dataset` | `config` | PII detection |
-
-### Zero-Cost Patterns
-
-**Pattern 1 — Preview before downloading:**
-```bash
-# Check what features a dataset has without downloading
-curl -s "https://datasets-server.huggingface.co/info?dataset=bigcode/the-stack-v2" | jq '.dataset_info|keys'
-# Check size before committing to download
-curl -s "https://datasets-server.huggingface.co/size?dataset=bigcode/the-stack-v2" | jq '.size.dataset'
-```
-
-**Pattern 2 — Direct Parquet download with column selection:**
-```bash
-# Get the parquet URLs
-curl -s "https://datasets-server.huggingface.co/parquet?dataset=cornell-movie-review-data/rotten_tomatoes" | jq -r '.parquet_files[]|select(.split=="train")|.url'
-# Download and read with polars (selective columns)
-curl -OL <parquet_url>
-python3 -c "import polars as pl; df=pl.read_parquet('0000.parquet',columns=['text']); print(df.head())"
-```
-
-**Pattern 3 — Automated dataset quality check:**
-```python
-def dataset_health_check(dataset_id):
-    """Quick sanity check on any dataset."""
-    import requests
-    base = "https://datasets-server.huggingface.co"
-    valid = requests.get(f"{base}/is-valid?dataset={dataset_id}").json()
-    size = requests.get(f"{base}/size?dataset={dataset_id}").json()
-    splits = requests.get(f"{base}/splits?dataset={dataset_id}").json()
-    return {
-        "features": valid,
-        "total_rows": size.get("size", {}).get("dataset", {}).get("num_rows"),
-        "num_configs": len(size.get("size", {}).get("configs", [])),
-        "num_splits": len(splits.get("splits", [])),
-        "has_pending": len(splits.get("pending", [])) > 0
-    }
-```
-
-**Pattern 4 — Find datasets with balanced classes:**
-```python
-def class_balance(dataset_id, config, split):
-    resp = requests.get(f"https://datasets-server.huggingface.co/statistics?dataset={dataset_id}&config={config}&split={split}").json()
-    for col in resp.get("statistics", []):
-        if col["column_type"] == "class_label":
-            freqs = col["column_statistics"]["frequencies"]
-            total = sum(freqs.values())
-            balance = {k: v/total for k, v in freqs.items()}
-            print(f"{col['column_name']}: {balance}")
-```
-
-### Verified Error States
-
-| Error | Status | Example |
-|-------|--------|---------|
-| Renamed dataset | Response (no specific status) | `{"error": "The dataset has been renamed. Please use the current dataset name."}` |
-| Not found / private | Response | `{"error": "The dataset does not exist, or is not accessible without authentication..."}` |
-| Missing required param | 422 | `{"error": "Parameter 'dataset' is required"}` |
-| Length too large | 422 | `{"error": "Parameter 'length' must not be greater than 100"}` |
-| Invalid where clause | 422 | `{"error": "Parameter 'where' contains errors or invalid symbols"}` |
-| Not ready | 500 | `{"error": "The response is not ready yet. Please retry later."}` |
-
-### Resources
-- Official docs: https://huggingface.co/docs/dataset-viewer/
-- `/splits`: https://huggingface.co/docs/dataset-viewer/splits
-- `/first-rows`: https://huggingface.co/docs/dataset-viewer/first-rows
-- `/rows`: https://huggingface.co/docs/dataset-viewer/rows
-- `/parquet`: https://huggingface.co/docs/dataset-viewer/parquet
-- `/info`: https://huggingface.co/docs/dataset-viewer/info
-- `/search`: https://huggingface.co/docs/dataset-viewer/search
-- `/filter`: https://huggingface.co/docs/dataset-viewer/filter
-- `/statistics`: https://huggingface.co/docs/dataset-viewer/statistics
-- `/size`: https://huggingface.co/docs/dataset-viewer/size
-- OpenAPI spec: https://datasets-server.huggingface.co/openapi.json
-- ReDoc interactive: https://redocly.github.io/redoc/?url=https://datasets-server.huggingface.co/openapi.json
-
----
-
-## 2026-07-24: hf-datasets-server-data-preview-rows-search-filter-deep-dive
-
-### Summary
-Deep-dive into the Hugging Face Datasets Server's data preview and query endpoints — `/first-rows`, `/rows`, `/search`, `/filter`, `/statistics`, and `/croissant`. All verified live against the production API at `https://datasets-server.huggingface.co`. Covers exact response formats, SQL-like filter syntax, pagination behavior, and practical zero-cost patterns.
-
-### Base URL
-```
-https://datasets-server.huggingface.co
-```
-No auth required for public datasets. Gated/private datasets need `Authorization: Bearer ***` header.
-
-### Endpoint Reference (Verified Live)
-
-#### 1. `/is-valid` — Check Dataset Capabilities
-```bash
-curl "https://datasets-server.huggingface.co/is-valid?dataset=Salesforce/wikitext"
-# -> {"preview":true,"viewer":true,"search":true,"filter":true,"statistics":true}
-```
-Returns which features (preview, viewer, search, filter, statistics) are available.
-
-#### 2. `/splits` — List All Splits and Subsets
-```bash
-curl "https://datasets-server.huggingface.co/splits?dataset=Salesforce/wikitext&config=wikitext-2-raw-v1"
-```
-
-#### 3. `/size` — Dataset Size (Rows + Bytes)
-**Verified response (2026-07-24):**
-```json
-{
-  "size": {
-    "config": { "dataset": "Salesforce/wikitext", "config": "wikitext-2-raw-v1", "num_bytes_original_files": 7747362, "num_bytes_parquet_files": 7747362, "num_bytes_memory": 13055524, "num_rows": 44836, "num_columns": 1 },
-    "splits": [
-      {"split": "test", "num_rows": 4358, "num_bytes_memory": 1391252},
-      {"split": "train", "num_rows": 36718, "num_bytes_memory": 10720370},
-      {"split": "validation", "num_rows": 3760, "num_bytes_memory": 943902}
-    ]
-  },
-  "partial": false
-}
-```
-
-#### 4. `/first-rows` — Preview First Rows (VERIFIED)
-- Returns exactly 100 rows (default page size)
-- Fields: `features`, `rows[]` (each with `row_idx`, `row`, `truncated_cells`)
-- No `num_rows_total` — use `/size` for total count
-- `split` parameter is required
-
-#### 5. `/rows` — Download Arbitrary Slices (VERIFIED)
-- `offset` (default: 0), `length` (default/max: 100)
-- Same format as `/first-rows` but with controllable offset
-
-#### 6. `/search` — Full-Text Search (VERIFIED)
-- Query scanned across ALL text columns
-- Returns absolute `row_idx` (not renumbered)
-- No total match count exposed
-- Pagination via `offset`/`length`
-
-#### 7. `/filter` — SQL-Like WHERE Filtering (VERIFIED)
-**WHERE Syntax Rules (from docs + verified):**
-- Column names MUST be in double quotes: `"text"`
-- String values MUST be in single quotes: `'hello'`
-- Numeric values unquoted: `label=1`
-- Operators: `=`, `<>`, `>`, `>=`, `<`, `<=`, `LIKE`, `NOT LIKE`
-- Combinators: `AND`, `OR`, `NOT`, parentheses
-- `LIKE` wildcards: `%` (any sequence), `_` (single char)
-- **Only endpoint that returns `num_rows_total`** (total matching rows)
-
-#### 8. `/statistics` — Column Statistics (VERIFIED)
-**Verified response for wikitext train split:**
-- `num_examples`: 36718 (total rows in split)
-- String columns: length stats (min/max/mean/median/std + histogram)
-- Numeric columns: value stats
-- `class_label` columns: frequency counts
-- Histogram: 10 bins with `hist` (counts) and `bin_edges` (boundaries)
-
-#### 9. `/parquet` — Get Parquet File URLs (VERIFIED)
-- Returns per-split Parquet URLs under `refs/convert/parquet`
-- Usable with DuckDB, Polars, Pandas, cuDF, PySpark, ClickHouse, PostgreSQL
-
-#### 10. `/info` — Dataset Metadata (VERIFIED)
-- Returns `dataset_info` with description, features, splits, sizes
-
-#### 11. `/croissant` — ML-Commons Croissant Metadata
-- Structured ML dataset metadata for interoperability
-
-### Pagination Behavior Summary
-
-| Endpoint | Max Length | Has `offset` | `num_rows_total` |
-|----------|-----------|-------------|-----------------|
-| `/first-rows` | N/A (always 100) | No | null |
-| `/rows` | 100 | Yes | null |
-| `/search` | 100 | Yes | null |
-| `/filter` | 100 | Yes | **Yes** |
-| `/size` | N/A | N/A | Has split counts |
-| `/statistics` | N/A | N/A | Has `num_examples` |
-
-### Error States (Verified)
-
-| Error | Status | Example |
-|-------|--------|---------|
-| Renamed dataset | 200 body | `{"error":"The dataset has been renamed..."}` |
-| Not found / private | 200 body | `{"error":"The dataset does not exist..."}` |
-| Missing param | 422 | `{"error":"Parameter 'dataset' is required"}` |
-| Length too large | 422 | `{"error":"Parameter 'length' must not be greater than 100"}` |
-| Invalid WHERE | 422 | `{"error":"Parameter 'where' contains errors or invalid symbols"}` |
-
-### Key Takeaways
-1. `/first-rows` gives 100 rows free — quick inspection without download
-2. Use `/size` for total row counts — `/rows` and `/search` don't return totals
-3. `/filter` is the only endpoint returning `num_rows_total`
-4. WHERE syntax is SQL-like: double-quoted columns, single-quoted strings
-5. Search is case-sensitive
-6. Parquet URLs enable zero-cost analytics with DuckDB/Polars
-7. All endpoints are completely free — no API keys for public datasets
+### Pitfalls
+1. **Config required for multi-config datasets** — Missing `config` on `/first-rows`, `/rows`, `/size`, etc. returns 422.
+2. **Rate limiting** — Public anonymous access is throttled. Authenticated requests get higher limits.
+3. **Rows endpoint returns cached data** — Data is pre-computed by the server background worker, not real-time.
+4. **Large text truncation** — The first-rows endpoint caps cell display at ~1000 chars.
+5. **Search/filter on demand** — Unlike most endpoints, `/search` and `/filter` are computed on demand (not pre-cached). They may be slow on large datasets.
 
 ### Resources
 - Docs: https://huggingface.co/docs/dataset-viewer/
 - OpenAPI: https://datasets-server.huggingface.co/openapi.json
 - Source: https://github.com/huggingface/dataset-viewer
+
+---
+
+## 2026-07-24: hf-datasets-server-parquet-conversion-pipeline — How the Datasets Server Auto-Converts Hub Datasets to Parquet (Topic #175)
+
+### Summary
+Deep-dive into the Hugging Face Datasets Server's Parquet conversion pipeline — how 100,000+ datasets on the Hub are automatically converted from their original format (CSV, JSONL, Parquet, image directories, audio folders, etc.) to columnar Parquet files on a special `refs/convert/parquet` branch. Covers the server architecture (job queue, workers, cache), the three core job types, the 5 GB size limit, storage on a parallel Git branch, the `/parquet` API endpoint, and practical query patterns using DuckDB, Pandas, and Polars on the generated Parquet files.
+
+### Source Documentation
+- Datasets Viewer Parquet Guide: https://huggingface.co/docs/dataset-viewer/en/parquet
+- Parquet Conversion Overview: https://huggingface.co/docs/dataset-viewer/en/parquet_process
+- Server Infrastructure: https://huggingface.co/docs/dataset-viewer/en/server
+- Data Types: https://huggingface.co/docs/dataset-viewer/en/data_types
+- Source Repo: https://github.com/huggingface/dataset-viewer
+
+### 1. Architecture: The Three-Component Server
+
+The datasets viewer has a three-component backend architecture:
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│                    Dataset Viewer Server                      │
+├─────────────────┬─────────────────────┬──────────────────────┤
+│    Job Queue    │      Workers        │        Cache         │
+│   (MongoDB)     │  (executors)        │     (MongoDB)        │
+├─────────────────┼─────────────────────┼──────────────────────┤
+│ - /splits       │  Poll queue →       │  Pre-computed        │
+│ - /first-rows   │  process →          │  responses for       │
+│ - /parquet      │  store in cache     │  instant return      │
+└─────────────────┴─────────────────────┴──────────────────────┘
+         ↑                                    ↓
+┌──────────────────────────────────────────────────────────────┐
+│                    Web API (User-Facing)                      │
+│  /splits, /first-rows, /rows, /search, /filter, /parquet…   │
+└──────────────────────────────────────────────────────────────┘
+```
+
+#### 1.1 Job Queue (MongoDB)
+The job queue is a list of jobs stored in MongoDB. Three job types correspond to three API endpoints:
+
+| Job | Endpoint | Description |
+|-----|----------|-------------|
+| `/splits` | `GET /splits` | Refreshes dataset metadata, discovers configs and splits |
+| `/first-rows` | `GET /first-rows` | Gets first 100 rows of each split (feeds the web preview) |
+| `/parquet` | `GET /parquet` | **Downloads entire dataset, converts to Parquet, publishes to Hub** |
+
+Not all endpoints have background jobs — `/rows`, `/search`, and `/filter` are computed on demand from the cached Parquet files using DuckDB as the query engine.
+
+#### 1.2 Workers
+Workers poll the job queue, execute the preprocessing, and store results in the cache. Configurable via environment variables:
+- `MIN_ROWS` / `MAX_ROWS` — control row limits per worker
+- `MAX_JOBS_PER_DATASET_USER` / `MAX_JOBS_PER_DATASET_ORG` — rate-limit job creation
+- Full reference: worker configuration env vars in the dataset-viewer repo
+
+#### 1.3 Cache (MongoDB)
+Completed job results are stored in MongoDB. User-facing API requests hit the cache — no recomputation on each request. This is why the datasets viewer returns results nearly instantaneously even for large datasets.
+
+### 2. The Parquet Conversion Process
+
+#### 2.1 When Conversion Happens
+The `/parquet` job is triggered when:
+1. A dataset is uploaded/updated on the Hub
+2. The dataset viewer detects new or changed data
+3. The job queue picks it up and a worker executes the conversion
+
+#### 2.2 Conversion Steps
+1. **Load** — Worker loads the dataset using the `datasets` library (supports all formats: CSV, JSONL, Parquet, text, image directories, audio folders, etc.)
+2. **Convert** — Each split's data is converted to Apache Parquet format
+3. **Publish** — Parquet files are published to a special `refs/convert/parquet` Git branch on the dataset repository
+
+#### 2.3 The `refs/convert/parquet` Branch
+The Parquet files DO NOT live on the main branch. They are published on a parallel branch called `refs/convert/parquet`. This branch:
+- Is automatically created and maintained by the dataset viewer
+- Mirrors the main branch's dataset structure
+- Contains one `.parquet` file per (config, split) combination
+- Is read-only for users (only the dataset viewer server can write to it)
+- Is visible on the Hub under the dataset's "Branch" selector
+
+**Example branch:** https://huggingface.co/datasets/fancyzhx/amazon_polarity/tree/refs/convert/parquet
+
+#### 2.4 Size Limit
+- **Public datasets**: Auto-converted if **under 5 GB** in total size
+- **Datasets ≥ 5 GB**: Not converted automatically (too expensive for free tier)
+- **Private datasets**: Conversion available only for PRO users or Enterprise Hub organizations
+- **Already-Parquet datasets**: Published as-is, no re-conversion needed
+
+### 3. Parquet File Structure
+
+#### 3.1 Naming Convention
+```
+dataset_name/
+├── refs/convert/parquet/
+│   ├── default/
+│   │   ├── train-00000-of-00001.parquet
+│   │   └── test-00000-of-00001.parquet
+│   └── config_name/
+│       ├── train-00000-of-00003.parquet
+│       ├── train-00001-of-00003.parquet
+│       ├── train-00002-of-00003.parquet
+│       └── test-00000-of-00001.parquet
+```
+
+- One `.parquet` file per (config, split) combination
+- Large splits are **sharded** into multiple files (e.g., `train-00000-of-00003.parquet`)
+- Sharding happens when a single split would produce a file > ~500 MB
+
+#### 3.2 Schema & Data Types
+The Parquet schema mirrors the dataset's `Features` definition. Common type mappings:
+
+| Hugging Face Feature | Parquet Type | Notes |
+|---------------------|-------------|-------|
+| `Value("int32")` | INT32 | Direct mapping |
+| `Value("int64")` | INT64 | Direct mapping |
+| `Value("float32")` | FLOAT | Direct mapping |
+| `Value("string")` | BYTE_ARRAY (UTF8) | Dictionary encoding for low-cardinality |
+| `Value("bool")` | BOOLEAN | Direct mapping |
+| `Sequence(feature)` | LIST | Repeated field |
+| `Image()` | BYTE_ARRAY | Raw bytes (original format) |
+| `Audio()` | BYTE_ARRAY | Raw bytes (original format) |
+| `ClassLabel(names=...)` | INT32 + dictionary | Enum stored as integer |
+
+### 4. The `/parquet` API Endpoint
+
+```python
+import requests
+
+response = requests.get(
+    "https://datasets-server.huggingface.co/parquet",
+    params={"dataset": "ibm/duorc"}
+)
+data = response.json()
+```
+
+**Response structure:**
+```json
+{
+  "parquet_files": [
+    {
+      "dataset": "ibm/duorc",
+      "config": "ParaphraseRC",
+      "split": "train",
+      "url": "https://huggingface.co/datasets/ibm/duorc/resolve/refs%2Fconvert%2Fparquet/ParaphraseRC/train-00000-of-00001.parquet",
+      "size": 12345678,
+      "num_rows": 1000,
+      "parquet_files_count": 1
+    }
+  ],
+  "pending": [],
+  "failed": []
+}
+```
+
+The `url` field points to the raw Parquet file on the `refs/convert/parquet` branch. These URLs can be used directly by any Parquet-compatible tool.
+
+### 5. Query Methods for Parquet Files
+
+#### 5.1 DuckDB (Recommended)
+```python
+import duckdb
+import requests
+
+resp = requests.get("https://datasets-server.huggingface.co/parquet",
+                    params={"dataset": "wikipedia/20220301.en"}).json()
+urls = [p["url"] for p in resp["parquet_files"]]
+
+# Direct SQL queries on remote Parquet files
+result = duckdb.sql("""
+    SELECT COUNT(*) as total_rows,
+           COUNT(DISTINCT title) as unique_titles
+    FROM read_parquet(urls)
+    WHERE LENGTH(text) > 1000
+""").fetchall()
+```
+
+DuckDB supports **projection pushdown** and **filter predicate pushdown** on Parquet, meaning it only downloads the necessary bytes from remote URLs. This makes it practical to query multi-GB datasets without downloading them fully.
+
+#### 5.2 Pandas
+```python
+import pandas as pd
+import requests
+
+resp = requests.get("https://datasets-server.huggingface.co/parquet",
+                    params={"dataset": "squad"}).json()
+urls = [p["url"] for p in resp["parquet_files"]]
+# Filters out the config (config is in the URL path)
+dfs = [pd.read_parquet(url) for url in urls]
+df = pd.concat(dfs, ignore_index=True)
+```
+
+#### 5.3 Polars
+```python
+import polars as pl
+import requests
+
+resp = requests.get("https://datasets-server.huggingface.co/parquet",
+                    params={"dataset": "squad"}).json()
+urls = [p["url"] for p in resp["parquet_files"]]
+df = pl.scan_parquet(urls).collect()
+```
+
+#### 5.4 ClickHouse
+```sql
+-- ClickHouse table function
+SELECT count(*) FROM url('https://huggingface.co/datasets/squad/resolve/refs%2Fconvert%2Fparquet/default/train-00000-of-00001.parquet', Parquet);
+```
+
+#### 5.5 PostgreSQL (pgai)
+PostgreSQL can query Parquet files via the `pgai` extension's `pg_read_parquet()` function.
+
+### 6. Parquet Format Benefits for Datasets
+
+| Feature | Benefit |
+|---------|---------|
+| **Columnar storage** | Only read columns you need (projection pushdown) |
+| **Row group statistics** | Skip entire row groups that don't match filters (min/max/null stats) |
+| **Per-column compression** | Snappy, ZSTD, GZIP, LZ4 — chosen automatically by Parquet writer |
+| **Schema evolution** | Add/drop columns without rewriting the entire file |
+| **Splittable** | Parquet files can be split across workers for parallel processing |
+| **Predicate pushdown** | Filters applied at the storage layer before data is read |
+| **Cross-platform** | Supported by every major data processing framework |
+
+### 7. Limitations & Edge Cases
+
+1. **5 GB limit for public datasets** — Datasets larger than 5 GB are not auto-converted. Workaround: use `datasets` library to load and convert manually.
+2. **Conversion takes time** — Large datasets may take hours to convert after upload. Check the `/parquet` endpoint's `pending` array for in-progress conversions.
+3. **Failed conversions** — Some datasets fail to convert due to unsupported formats, schema issues, or memory limits. Check the `failed` array for details.
+4. **Branch encoding** — The `refs/convert/parquet` branch URL contains `%2F` encoding (`refs%2Fconvert%2Fparquet`). Use the API response's `url` field rather than constructing URLs manually.
+5. **No streaming write-back** — The conversion is batch-only. Incremental updates trigger a full re-conversion.
+6. **Image/Audio stored as raw bytes** — Image and Audio columns are stored as opaque BYTE_ARRAY in Parquet. You need the `datasets` library to decode these properly.
+
+### 8. Zero-Cost Strategies
+
+- **Parquet-backed analytics is free** — Query remote Parquet files via DuckDB without downloading the full dataset. Only the relevant bytes are transferred.
+- **Use DuckDB for filtering** — Cheap predicate pushdown means you can filter multi-GB datasets with minimal data transfer.
+- **Monitor `/parquet` endpoint** — Check if conversion is pending before attempting to load a recently-uploaded dataset.
+- **Small datasets are always free** — Any public dataset under 5 GB is automatically available as Parquet at no cost to the user.
+- **Script auto-download with caching** — Use conditional HTTP requests (ETags/If-Modified-Since) to avoid re-downloading unchanged Parquet files.
+
+## 2026-07-25: hf-datasets-server-parquet-conversion-pipeline (Deep Dive) — Parquet Conversion Architecture Internals
+
+### Summary
+Comprehensive deep-dive into the Hugging Face Datasets Server's Parquet conversion pipeline — how datasets of any format (CSV, JSONL, image dirs, etc.) are automatically converted to Apache Parquet for efficient remote querying. Covers the full conversion architecture, sharding strategy, partial export handling, parquet-native datasets, the `refs/convert/parquet` branch internals, the `RowsIndex` class from the source code, and zero-cost analytical querying patterns.
+
+### Source
+- Dataset Viewer Parquet docs: https://huggingface.co/docs/dataset-viewer/en/parquet
+- Parquet Conversion Process: https://huggingface.co/docs/dataset-viewer/en/parquet_process
+- Source: `libcommon/parquet_utils.py` in https://github.com/huggingface/dataset-viewer
+- Published: 2026-07-25, Dataset Viewer latest
+
+### 1. Why Parquet?
+
+Parquet is a **columnar storage format** optimized for analytics — data is divided into **row groups**, and within each row group data is stored by **column** rather than by row. Each column chunk is independently compressed using algorithms like Snappy, Zstd, or LZ4. This design enables:
+
+- **Predicate pushdown** — Only read the columns you need, skip irrelevant row groups
+- **Compression** — Columnar layout compresses better than row-oriented formats (same data types cluster together)
+- **Schema evolution** — Columns can be added without rewriting entire files
+- **Page-level indexing** — Min/max statistics per page enable skipping non-matching pages during scans
+
+The Datasets Server auto-converts every dataset (CSV, JSONL, Parquet-native, directories of images/audio) to Parquet for fast querying regardless of original format.
+
+### 2. The Conversion Pipeline Architecture
+
+```
+┌──────────────────────────────┐
+│  User uploads dataset (any   │
+│  format: CSV, JSONL, images, │
+│  audio, Parquet, etc.)       │
+└──────────────┬───────────────┘
+               ▼
+┌──────────────────────────────┐
+│  Datasets Server detects new │
+│  or updated dataset          │
+└──────────────┬───────────────┘
+               ▼
+┌──────────────────────────────┐
+│  Conversion job spawns:      │
+│  ┌────────────────────────┐  │
+│  │ 1. Read source format  │  │
+│  │ 2. Stream to Arrow     │  │
+│  │ 3. Write Parquet       │  │
+│  │ 4. Upload to Hub       │  │
+│  └────────────────────────┘  │
+└──────────────┬───────────────┘
+               ▼
+┌──────────────────────────────┐
+│  Published to                │
+│  refs/convert/parquet branch │
+│  (parallel to main)          │
+└──────────────┬───────────────┘
+               ▼
+┌──────────────────────────────┐
+│  Available via:              │
+│  - /parquet API endpoint     │
+│  - Hub /api/parquet endpoint │
+│  - Direct file access        │
+└──────────────────────────────┘
+```
+
+### 3. The `refs/convert/parquet` Branch
+
+Parquet files are published to a **separate branch** named `refs/convert/parquet` that parallels the main branch.
+
+**Why a separate branch?**
+- Avoids inflating the main branch with generated files
+- Allows the Datasets Server to manage Parquet files independently of user edits
+- Enables clean separation between source data and derived analytics format
+- The branch uses `%2F` encoding in URLs (`refs%2Fconvert%2Fparquet`) because `/` is not allowed in branch names
+
+**Directory structure on the branch:**
+```
+refs/convert/parquet/
+  ├── config_name/           # e.g., "default", "ParaphraseRC", "en"
+  │   ├── train/             # split name (or "partial-train" if partial)
+  │   │   ├── 0000.parquet   # shard 0
+  │   │   ├── 0001.parquet   # shard 1
+  │   │   └── ...
+  │   ├── validation/
+  │   └── test/
+  └── another_config/
+      └── ...
+```
+
+**Direct file resolution URL pattern:**
+```
+https://huggingface.co/datasets/{dataset}/resolve/refs%2Fconvert%2Fparquet/{config}/{split}/{shard}.parquet
+```
+
+### 4. Sharded Parquet Files (500MB Shards)
+
+Big datasets are **partitioned into shards** of approximately **500MB each** to enable efficient distributed and streaming access.
+
+**Shard filename convention:**
+```
+{dataset-name}-{split}-{shard-index:04d}-of-{total-shards:04d}.parquet
+# Example: fineweb-edu-train-0000-of-0004.parquet
+```
+
+**Key properties:**
+- Each shard targets ~500MB uncompressed
+- Shard indices are zero-indexed and contiguous
+- Splits with only one shard still get the `0000-of-0001` naming
+- Shards are listed in ascending order by the API responses
+- The `/parquet` endpoint returns a flat list of URLs per split, not a range — you iterate over the list
+
+**How sharding is decided:**
+The conversion process calculates the total dataset size and splits into shards of ~500MB. For very large datasets (like FineWeb-Edu with billions of rows), you might get thousands of shards per split.
+
+### 5. Partial Parquet Export
+
+The Parquet version can be **partial** in two specific cases:
+
+**Case A: Non-Parquet source datasets > 5GB**
+When the original dataset is larger than **5GB** and not already Parquet, the Datasets Server generates Parquet files up to **5GB total** and stops. The split directory is prefixed with `"partial-"` (e.g., `partial-train` instead of `train`).
+
+**Case B: Parquet-native datasets with oversized row groups**
+If the dataset is already in Parquet format but contains row groups larger than the recommended size (**100-300MB uncompressed**), the server may re-convert to split large row groups. The recommended row group size is 100-300MB because Parquet is streamed row-group-by-row-group in most data libraries — larger row groups consume more memory during streaming reads.
+
+**How to detect a partial export (from source code):**
+```python
+# libcommon/parquet_utils.py
+PARTIAL_PREFIX = "partial-"
+
+def parquet_export_is_partial(parquet_file_url: str) -> bool:
+    """Check if the Parquet export is the full dataset or partial.
+    Returns True if the split directory starts with 'partial-'."""
+    split_dir = parquet_file_url.rsplit("/", 2)[1]
+    return split_dir.startswith("partial-")
+```
+
+**Implications:**
+- Partial exports only contain the first ~5GB of data
+- The dataset viewer will show reduced rows
+- Full export requires either: smaller source dataset, PRO subscription, or manual conversion via the `datasets` library
+- The `rows` endpoint still works on partial exports — it just returns fewer rows
+
+### 6. Parquet-Native Datasets (Zero-Copy)
+
+When the source dataset is **already in Parquet format**, no conversion is needed:
+
+```
+refs/convert/parquet/{config}/{split}/{shard}.parquet
+  │
+  └── (symbolic link / redirect to the original file)
+```
+
+**Exception:** If the original Parquet files have **oversized row groups** (>300MB), the server still re-converts to split them into smaller row groups for optimal API performance.
+
+**How to check if your dataset is Parquet-native:**
+1. Upload speed — Parquet uploads are immediately available (no conversion delay)
+2. The `/parquet` endpoint responds immediately after upload
+3. Row group sizes can be inspected via the Hub's Parquet metadata sidebar
+
+**Parquet metadata sidebar on the Hub:**
+Files on datasets with `.parquet` extension show a metadata panel revealing:
+- Number of row groups
+- Row group sizes (compressed and uncompressed)
+- Column statistics (null counts, min/max values)
+- Compression codec used
+
+### 7. The `/parquet` API Endpoints (Two Flavors)
+
+#### 7.1 Datasets Server Endpoint: `GET /parquet`
+
+```
+https://datasets-server.huggingface.co/parquet?dataset={dataset_name}
+```
+
+**Optional query params:** `config` (subset name), `split` (train/validation/test)
+
+**Response structure:**
+```json
+{
+  "parquet_files": {
+    "{config}": {
+      "{split}": [
+        "https://huggingface.co/api/datasets/{dataset}/parquet/{config}/{split}/{index}.parquet"
+      ]
+    }
+  },
+  "pending": [...],   // Configs still being converted
+  "failed": [...]     // Configs that failed conversion
+}
+```
+
+**Response example (from FineWeb-Edu):**
+```json
+{
+  "default": {
+    "train": [
+      "https://huggingface.co/api/datasets/HuggingFaceFW/fineweb-edu/parquet/default/train/0.parquet",
+      "https://huggingface.co/api/datasets/HuggingFaceFW/fineweb-edu/parquet/default/train/1.parquet",
+      "..."
+    ]
+  }
+}
+```
+
+#### 7.2 Hub API Endpoint: `GET /api/datasets/{dataset}/parquet`
+
+```
+https://huggingface.co/api/datasets/{dataset}/parquet
+```
+
+**Optional path segments:** `/{config}/{split}` for filtered results
+
+**Response** — Same structure as the datasets-server endpoint, but using Hub authentication.
+
+**Shard-level URL resolution:**
+```
+https://huggingface.co/api/datasets/{dataset}/parquet/{config}/{split}/{shard_index}.parquet
+# This redirects to:
+https://huggingface.co/datasets/{dataset}/resolve/refs%2Fconvert%2Fparquet/{config}/{split}/{shard_index:04d}.parquet
+```
+
+### 8. Source Code Architecture (from `parquet_utils.py`)
+
+The core implementation lives in `libcommon/parquet_utils.py` in the dataset-viewer repo (302 lines). Key components:
+
+#### 8.1 Exception Hierarchy
+```python
+class EmptyParquetMetadataError(Exception):    # No parquet files found
+class ParquetResponseFormatError(Exception):    # Invalid API response
+class FileSystemError(Exception):               # Filesystem access error
+class TooBigRows(Exception):                    # Scan size limit exceeded
+class SchemaMismatchError(Exception):           # Schema changed between shards
+```
+
+#### 8.2 ParquetFileMetadataItem (TypedDict)
+```python
+class ParquetFileMetadataItem(TypedDict):
+    dataset: str
+    config: str
+    split: str
+    url: str
+    filename: str
+    size: int
+    num_rows: int
+    parquet_metadata_subpath: str
+```
+
+Each Parquet file in the index has its URL, size, row count, and metadata path. The `parquet_metadata_subpath` references a cached metadata file on the server's filesystem for fast access without re-reading the Parquet file headers.
+
+#### 8.3 RowsIndex — The Query Engine
+```python
+class RowsIndex:
+    def __init__(self, dataset, config, split, parquet_metadata_directory,
+                 max_scan_size=None, hf_token=None, hf_endpoint=None, data_store=None):
+        self._init_dataset_info()    # Load parquet file list from cached step
+        self._init_viewer_index()    # Create libviewer.Dataset for row-group/page pruning
+```
+
+**`_init_dataset_info()`** flow:
+1. Load cached `config-parquet-metadata` from MongoDB (previous pipeline step)
+2. Filter Parquet files matching the requested config + split
+3. Sort by filename for deterministic ordering
+4. Calculate total rows (`num_rows_total = sum(f["num_rows"] for f in self.parquet_files)`)
+5. Detect partial export via `parquet_export_is_partial()`
+6. Load Arrow schema from features or from the first Parquet metadata file
+
+**`_init_viewer_index()`** flow:
+1. Transform Parquet file metadata into `libviewer.Dataset` format
+2. Extract revision from URL (encoded in the `refs/convert/parquet` branch reference)
+3. Create `lv.Dataset` with metadata store pointing to local parquet metadata cache
+
+#### 8.4 Query Execution with Page Pruning
+```python
+@alru_cache(maxsize=1)  # Cache per RowsIndex instance
+async def query(self, offset: int, length: int) -> tuple[pa.Table, list[str]]:
+    return await self.query_libviewer_index(offset=offset, length=length)
+```
+
+**`query_libviewer_index()`** uses `libviewer.Dataset.scan()` which performs:
+1. **Row-group pruning** — Skip row groups that don't contain the requested row range
+2. **Page-level pruning** — Use min/max statistics from the page index to skip irrelevant pages within a row group
+3. **Column projection** — Only deserialize the requested columns
+
+**Important:** The scan size is bounded by `max_scan_size`. If exceeded, `TooBigRows` is raised with a suggestion to either:
+- Ensure Parquet files contain a page index (for random access without loading entire row groups)
+- Use smaller row-group sizes when serializing Parquet files
+
+#### 8.5 Schema Casting
+```python
+parts = [
+    cast_table_to_schema(pa.Table.from_batches([batch]), self.features.arrow_schema)
+    for batch in batches
+]
+table = pa.concat_tables(parts)
+```
+
+All batches are cast to the canonical schema from Hugging Face datasets `Features`. If casting fails (e.g., type mismatch due to schema evolution between shards), a `SchemaMismatchError` is raised.
+
+#### 8.6 Binary Column Truncation (Disabled)
+```python
+def truncate_binary_columns(table: pa.Table, max_binary_length: int, features: Features):
+    if max_binary_length < 0:
+        return table, []
+    # Truncates binary values to max_binary_length bytes
+```
+
+Binary column truncation is implemented but disabled (line 300: `max_binary_length=-1`). The code note says it's disabled because they can't iterate on small batches in `sync_scan()` and truncate batches per batch yet.
+
+### 9. The Split Suffix Convention for Multi-Part Datasets
+
+For datasets split across multiple "parts" (not to be confused with shards), there's a `-part{N}` suffix convention:
+
+```python
+# For paths like "en/train-part0/0000.parquet", "en/train-part1/0000.parquet"
+PART_SUFFIX = "-part{}"
+```
+
+This is used when datasets themselves have multiple parts that are logically separate partitions of the same split. The `-` character is forbidden in split names, so it doesn't create directory name collisions with actual split directories.
+
+### 10. Practical Usage Patterns
+
+#### 10.1 Loading Parquet with DuckDB (Zero-Cost Analytics)
+```python
+import duckdb
+
+# Query remote Parquet files from the Hub
+con = duckdb.connect()
+result = con.execute("""
+    SELECT COUNT(*) as total_rows,
+           COUNT(DISTINCT column_name) as unique_values
+    FROM read_parquet('https://huggingface.co/api/datasets/{dataset}/parquet/{config}/{train}/*.parquet')
+    WHERE some_column > 100
+""").fetchall()
+```
+
+DuckDB performs **predicate pushdown** — only the relevant row groups and columns are fetched over HTTP.
+
+#### 10.2 Loading with PyArrow
+```python
+import pyarrow.parquet as pq
+import pyarrow.dataset as ds
+
+# Read remote Parquet with filtering
+dataset = ds.dataset(
+    "https://huggingface.co/api/datasets/{dataset}/parquet/{config}/{train}/0.parquet",
+    format="parquet"
+)
+table = dataset.to_table(filter=ds.field("column") > 100)
+```
+
+#### 10.3 Programmatic Discovery
+```python
+import requests
+
+# Step 1: Get list of configs and splits
+splits = requests.get(
+    "https://datasets-server.huggingface.co/splits",
+    params={"dataset": "my-dataset"}
+).json()
+
+# Step 2: Get Parquet URLs for a specific config+split
+parquet = requests.get(
+    "https://datasets-server.huggingface.co/parquet",
+    params={"dataset": "my-dataset"}
+).json()
+
+# Step 3: Inspect first Parquet file's metadata
+first_url = parquet["parquet_files"]["default"]["train"][0]
+meta = pq.read_metadata(first_url.replace(
+    "https://huggingface.co/api/datasets/",
+    "https://huggingface.co/datasets/"
+).replace(
+    "/parquet/", "/resolve/refs%2Fconvert%2Fparquet/"
+))
+print(f"Rows: {meta.num_rows}, Row groups: {meta.num_row_groups}")
+```
+
+#### 10.4 Check if Export is Complete (Partial Detection)
+```python
+def is_partial_export(parquet_url: str) -> bool:
+    """Check if a Parquet export URL points to a partial export."""
+    split_dir = parquet_url.rsplit("/", 2)[1]
+    return split_dir.startswith("partial-")
+```
+
+### 11. Error Handling & Edge Cases
+
+| Error Pattern | Cause | Mitigation |
+|---|---|---|
+| `EmptyParquetMetadataError` | No Parquet files found for the config+split | Verify the dataset has been converted; check `/parquet` endpoint status |
+| `SchemaMismatchError` | Parquet shards have different schemas | Re-dataset with consistent schema across all shards |
+| `TooBigRows` | Query would scan too many bytes for page-pruned access | Check Parquet files have page indexes; use smaller row groups |
+| `FileSystemError` | Cannot read Parquet metadata from local cache | Server-side cache miss; trigger re-conversion |
+| Missing config in response | Dataset has multiple configs but none match | Use `/splits` to discover all configs first |
+| Dataset renamed | Source dataset moved | Use current dataset name (check error message for hint) |
+
+### 12. Zero-Cost Strategies for Parquet on Hugging Face
+
+1. **Free serverless analytics** — Query remote Parquet files via DuckDB or PyArrow without downloading. Only the necessary bytes are transferred.
+2. **Predicate pushdown is free** — Filtering on Parquet before data transfer means you can analyze multi-TB datasets from a laptop.
+3. **5GB free tier** — Any public dataset under 5 GB is automatically fully converted to Parquet at no cost.
+4. **Partial exports still useful** — Even partial 5GB Parquet exports are valuable for prototyping and schema exploration.
+5. **No GPU needed** — Parquet analytics is CPU-only, no inference credits involved.
+6. **Hub API rate limits apply** — Unauthenticated requests are heavily rate-limited. Use an HF token for reasonable quotas. See rate limiting docs.
+7. **Manual conversion for >5GB** — Use `datasets` library with streaming + `to_parquet()` to create your own sharded Parquet files for larger datasets.
+
+### Resources
+- Parquet API docs: https://huggingface.co/docs/dataset-viewer/en/parquet
+- Parquet Conversion Process: https://huggingface.co/docs/dataset-viewer/en/parquet_process
+- Dataset Viewer Source: https://github.com/huggingface/dataset-viewer
+  - Core logic: `libs/libcommon/src/libcommon/parquet_utils.py`
+  - API implementation: `libs/libapi/`
+  - Worker jobs: `services/worker/`
+- Server Infrastructure: https://huggingface.co/docs/dataset-viewer/en/server
+- DuckDB + Parquet: https://duckdb.org/docs/data/parquet
+- Apache Parquet: https://parquet.apache.org/
+- OpenAPI spec: https://datasets-server.huggingface.co/openapi.json
+|- Datasets Server endpoint: https://datasets-server.huggingface.co/parquet
+|- Hub API endpoint: https://huggingface.co/api/datasets/{dataset}/parquet
+
+---
+
+## 2026-07-25: hf-dataset-viewer-croissant-metadata (Topic #252)
+
+### Summary
+Deep-dive into the HF Dataset Viewer's Croissant metadata endpoint — a JSON-LD format built on schema.org by MLCommons that describes ML datasets in a standardized, machine-readable way. The endpoint auto-generates Croissant metadata for every Hub dataset convertible to Parquet, documenting the dataset's name, description, distribution (Parquet file references), record sets, field definitions with data types, and relationships between subsets.
+
+### Key Concepts
+
+**What is Croissant?**
+- Metadata format built on schema.org (https://schema.org/Dataset)
+- Created by MLCommons (mlcommons.org) to standardize ML dataset descriptions
+- Uses JSON-LD serialization with a controlled vocabulary under the `cr:` namespace (http://mlcommons.org/croissant/)
+- Aims to help indexing, searching, and programmatic loading of ML datasets
+- Supported by the `mlcroissant` Python library for direct dataset consumption
+
+**API Endpoints**
+1. **Hub API (primary):** `GET https://huggingface.co/api/datasets/{dataset}/croissant`
+   - Returns enriched JSON-LD combining Hub metadata + dataset viewer crumbs
+   - Enriches the raw Croissant crumbs with Hub-side info (name, description, URL)
+
+2. **Dataset Viewer API (backend):** `GET https://datasets-server.huggingface.co/croissant-crumbs`
+   - Raw Croissant metadata generation without Hub enrichment
+   - Generated by the dataset-viewer worker infrastructure
+
+**JSON-LD Structure**
+The response is a standard JSON-LD payload with these key sections:
+
+```json
+{
+  "@context": { ... },
+  "@type": "sc:Dataset",
+  "distribution": [
+    { "@type": "cr:FileObject", "contentUrl": "...", "encodingFormat": "git+https" },
+    { "@type": "cr:FileSet", "includes": "config/*/*.parquet", "encodingFormat": "application/x-parquet" }
+  ],
+  "recordSet": [
+    {
+      "@type": "cr:RecordSet",
+      "name": "config_name",
+      "field": [
+        { "@type": "cr:Field", "name": "column_name", "dataType": "sc:Text",
+          "source": { "fileSet": { "@id": "..." }, "extract": { "column": "column_name" } } }
+      ]
+    }
+  ]
+}
+```
+
+**Data Type Mappings**
+HF dataset columns → schema.org types:
+- Text → `sc:Text` | Integer → `sc:Integer` | Float → `sc:Float`
+- Boolean → `sc:Boolean` | Date/Time → `sc:DateTime`
+- Image → `sc:ImageObject` | Sequence → `repeated: true`
+- Nested/Struct → `subField` array
+
+**Availability**
+- All public datasets under 5GB convertible to Parquet
+- Private: requires PRO user or Enterprise Hub org
+- Auto-updated via webhook-triggered Parquet conversion
+
+### Python Example
+```python
+import requests
+headers = {"Authorization": f"Bearer {API_TOKEN}"}
+resp = requests.get(
+    "https://huggingface.co/api/datasets/ibm/duorc/croissant", headers=headers)
+croissant = resp.json()
+for rs in croissant["recordSet"]:
+    print(f"Config: {rs['name']}")
+    for f in rs["field"]:
+        print(f"  {f['name']}: {f['dataType']}")
+```
+
+### mlcroissant Library
+```python
+from mlcroissant import Dataset
+dataset = Dataset(jsonld="https://huggingface.co/api/datasets/ibm/duorc/croissant")
+for record in dataset.record_sets["ParaphraseRC"].records:
+    print(record["question"])
+```
+
+### Sources
+- Dataset Viewer Docs: https://huggingface.co/docs/dataset-viewer/main/en/croissant
+- Dataset Viewer GitHub: https://github.com/huggingface/dataset-viewer
+- Croissant Format Spec: http://mlcommons.org/croissant/
+- mlcroissant Library: https://github.com/mlcommons/croissant/tree/main/python/mlcroissant
+
+### Skill
+mlops/hf-datasets-server-rest-api — the Croissant metadata endpoint for ML dataset discovery and programmatic consumption
+
+---
+
+## 2026-07-25: hf-datasets-server-size-limits-and-optimization — Dataset Viewer 5GB Limit, Partial Conversion & Size Optimization Strategies (Topic #255)
+
+### Summary
+Comprehensive reference for size limitations and optimization strategies in the Hugging Face Dataset Viewer/Datasets Server. Covers the 5GB auto-conversion limit, partial Parquet conversion with `partial-` split prefix, TooBigContentError and its common messages, sharding at ~500MB per file, row group sizing best practices with `write_page_index=True`, Parquet-native dataset exceptions, zero-cost workarounds using datasets library streaming (which bypasses size limits entirely), column pruning, config-based splitting, DuckDB predicate pushdown, and practical decision guide for working with datasets over 5GB.
+
+### Source
+- HF Hub Data Studio docs: https://huggingface.co/docs/hub/en/datasets-viewer ("Large scale datasets" section)
+- Dataset Viewer Parquet docs: https://huggingface.co/docs/dataset-viewer/en/parquet
+- Data Files Configuration (TooBigContentError): https://huggingface.co/docs/hub/en/datasets-data-files-configuration
+- Dataset Viewer GitHub: https://github.com/huggingface/dataset-viewer
+
+### 1. The 5GB Auto-Conversion Limit
+
+The Dataset Viewer auto-converts every dataset on the Hub to Parquet format — but **only up to 5GB**. This is the central size constraint of the viewer ecosystem.
+
+**How the limit works by dataset type:**
+
+| Dataset Type | <= 5GB | > 5GB |
+|---|---|---|
+| **Native Parquet** | Full viewer, sorting, filtering, search on all data | Viewer works for all data but sorting/filtering/search limited to first 5GB |
+| **Non-Parquet (CSV, JSONL, etc.)** | Full conversion to Parquet on `refs/convert/parquet` branch | Only first 5GB auto-converted to Parquet; viewer shows "partial" indicator |
+| **WebDataset / image directories** | Full preview, all features enabled | Preview only first 5GB; "partial" message shown; search/filter on first 5GB only |
+
+The "partial" state is surfaced in three ways:
+1. **Parquet API response** (`GET /parquet`) — `"partial": true` field in the JSON
+2. **Split directory naming** — splits >5GB use `partial-train` instead of `train` prefix
+3. **UI banner** — informational message on the dataset page
+
+### 2. Sharding Strategy
+
+Datasets smaller than 5GB are sharded into Parquet files of **~500MB each**:
+
+```
+dataset/
+├── refs/convert/parquet/
+│   └── config/
+│       ├── train-00000-of-00004.parquet  (~500 MB)
+│       ├── train-00001-of-00004.parquet  (~500 MB)
+│       ├── train-00002-of-00004.parquet  (~500 MB)
+│       ├── train-00003-of-00004.parquet  (~500 MB)
+│       └── test-00000-of-00001.parquet   (~< 500 MB)
+```
+
+Sharding at 500MB ensures:
+- Workers can process splits in parallel
+- Partial downloads (you can read only the shards you need)
+- DuckDB/Polars projection pushdown works efficiently per shard
+- Git LFS stays within reasonable per-file sizes
+
+### 3. Row Group Sizing and TooBigContentError
+
+**TooBigContentError** occurs when individual row groups in a Parquet file exceed the viewer's scan limit. This is one of the most common configuration errors.
+
+Common error messages:
+- `"Parquet error: Scan size limit exceeded"`
+- `"The size of the content of the first rows exceeds the maximum supported size"`
+
+**Root causes:**
+| Cause | Why it happens | Fix |
+|---|---|---|
+| Row groups too large | Parquet files with row groups >100-300MB uncompressed force the scanner to load too much data | Set smaller row groups when writing Parquet |
+| Very large values in first rows | Single cells with multi-MB strings (base64, JSON blobs, long documents) | Move large payloads to separate files |
+| No page index | Without `write_page_index=True`, the scanner can't skip irrelevant pages | Write with `write_page_index=True` |
+| Column contains oversized data | Parquet scanner reads entire row group for the requested column | Prune columns, use `columns` parameter in read |
+
+**Prevention checklist:**
+```python
+import pyarrow.parquet as pq
+
+# GOOD: small row groups, page index enabled
+pq.write_table(
+    table,
+    "output.parquet",
+    row_group_size=100_000,          # ~10-50 MB per group
+    write_page_index=True,           # enables page-level skipping
+    write_statistics=True,           # enables min/max statistics
+    compression="zstd",              # better compression ratio
+)
+
+# BAD: single large row group, no index
+pq.write_table(table, "output.parquet")  # single row group = TooBigContentError
+```
+
+### 4. Parquet-Native Dataset Exception
+
+When a dataset **already uses Parquet format natively**, the viewer does NOT re-convert it. Instead, it creates **symbolic links** on the `refs/convert/parquet` branch pointing to the original Parquet files on the main branch.
+
+However, there's an exception: **if the original row group size is too large**, new Parquet files are still generated with properly sized row groups. This ensures the viewer API remains fast regardless of the original file's structure.
+
+**Practical implication:** If you upload a Parquet dataset with 500MB+ row groups, the viewer will still convert it (using compute resources) to fix the row group sizing. To avoid this, write Parquet files with 100-300MB row groups from the start.
+
+### 5. Dataset Preview vs Full Viewer
+
+For the **biggest datasets** (>5GB and not natively Parquet or not auto-converted), the dataset page shows a **preview of the first 100 rows** instead of a full-featured viewer.
+
+This applies when:
+- Dataset is over 5GB
+- Not natively in Parquet format
+- Has not been auto-converted to Parquet
+
+The preview shows:
+- 100 rows (no pagination)
+- Column names and basic data types
+- No sorting, filtering, or search
+- No statistics or histograms
+
+**Detection:** Check `GET /is-valid?dataset=...` — if `"preview": false`, the dataset is in preview-only mode.
+
+### 6. Optimization Strategies for Large Datasets
+
+#### Strategy A: Split into Configs (Subsets)
+
+The most effective strategy for datasets near or over 5GB. By splitting into logical configurations, each config stays under 5GB:
+
+```yaml
+# dataset README.md
+configs:
+- config_name: part_1
+  data_files:
+  - split: train
+    path: "data/part_1/*.jsonl"
+- config_name: part_2
+  data_files:
+  - split: train
+    path: "data/part_2/*.jsonl"
+```
+
+Each config gets its own Parquet conversion independently. This is the **recommended approach** for large datasets.
+
+#### Strategy B: Column Pruning
+
+If your dataset has many columns but only a few are needed for exploration:
+- Use `columns` parameter in DuckDB/Polars when querying Parquet URLs
+- Store wide but sparse columns separately from frequently-queried columns
+
+#### Strategy C: Use Datasets Library Streaming (Bypasses 5GB Limit Entirely)
+
+The `datasets` library's streaming mode does NOT use the Datasets Server's Parquet cache. It reads directly from original source files — no size limit:
+
+```python
+from datasets import load_dataset
+
+# Streaming bypasses the Datasets Server entirely
+ds = load_dataset("bigcode/the-stack-v2", split="train", streaming=True)
+for i, example in enumerate(ds):
+    if i >= 100:
+        break
+    print(example["content"][:200])
+```
+
+This works for **any dataset size** but requires downloading data on each iteration (no server-side caching).
+
+#### Strategy D: DuckDB Predicate Pushdown
+
+When querying Parquet files that DO exist (within the 5GB converted set), use DuckDB for efficient filtering:
+
+```python
+import duckdb
+
+# DuckDB pushes filters to Parquet metadata — only downloads relevant bytes
+result = duckdb.sql("""
+    SELECT title, text
+    FROM read_parquet('https://huggingface.co/datasets/.../refs%2Fconvert%2Fparquet/.../*.parquet')
+    WHERE LENGTH(text) > 100 AND title LIKE '%machine learning%'
+    LIMIT 50
+""").fetchall()
+```
+
+This is **zero-cost** — predicate pushdown means you only transfer the matching rows' bytes, not the entire file.
+
+#### Strategy E: Upload Pre-Converted Parquet
+
+If you control the dataset creation pipeline, upload datasets already in Parquet format with proper row group sizing. This:
+- Avoids the viewer's conversion compute
+- Ensures consistent performance
+- Allows full-featured viewer for Parquet-native datasets of any size (sorting/filtering/search still limited to 5GB)
+
+### 7. Practical Decision Guide
+
+| Dataset Size | Format | Strategy |
+|---|---|---|
+| < 1 GB | Any | Default — auto-conversion works perfectly |
+| 1-5 GB | Any | Default — auto-conversion works, may be sharded across 2-10 files |
+| 5-50 GB | Non-Parquet | Split into configs OR use `datasets` streaming OR upload as Parquet with proper row groups |
+| 5-50 GB | Parquet with small row groups | Upload as-is — full viewer, but search/filter limited to first 5GB |
+| 5-50 GB | Parquet with large row groups | Regenerate with `row_group_size=100000` and `write_page_index=True` |
+| 50+ GB | Any | Must use `datasets` streaming or DuckDB direct Parquet reading; viewer will show 100-row preview only |
+| Any | Private (non-PRO) | Viewer disabled — use `datasets` library directly |
+
+### 8. Programmatic Detection
+
+Check the viewer state programmatically before building workflows:
+
+```python
+import requests
+
+def check_dataset_viewer_state(dataset_name: str) -> dict:
+    """Check if a dataset's viewer can handle the full dataset."""
+    base = "https://datasets-server.huggingface.co"
+    
+    # 1. Check validity
+    valid = requests.get(f"{base}/is-valid?dataset={dataset_name}").json()
+    
+    # 2. Check Parquet conversion status
+    parquet = requests.get(f"{base}/parquet?dataset={dataset_name}").json()
+    
+    # 3. Check size
+    size = requests.get(f"{base}/size?dataset={dataset_name}").json()
+    
+    return {
+        "has_preview": valid.get("preview", False),
+        "has_full_viewer": valid.get("viewer", False),
+        "has_search": valid.get("search", False),
+        "has_filter": valid.get("filter", False),
+        "parquet_partial": parquet.get("partial", False),
+        "parquet_pending": len(parquet.get("pending", [])),
+        "parquet_failed": len(parquet.get("failed", [])),
+        "total_rows": sum(s["num_rows"] for s in size.get("sizes", [])),
+        "total_bytes": sum(s["num_bytes_parquet_files"] for s in size.get("sizes", [])),
+    }
+```
+
+### 9. Summary of Key Numbers
+
+| Parameter | Value |
+|-----------|-------|
+| Auto-conversion limit | 5 GB |
+| Parquet shard target size | ~500 MB |
+| Recommended row group size | 100-300 MB uncompressed (100K rows) |
+| Preview-only threshold | >5 GB non-Parquet datasets |
+| Parquet-native full viewer limit | Unlimited display, but 5GB for search/filter |
+| Row group scan limit | ~100-300 MB uncompressed per group |
+| Dataset viewer max rows per page | 100 rows |
+| Dataset viewer max pagination | 100 rows per `/rows` request |
+
+### Skill
+mlops/hf-datasets-server-rest-api — Dataset Viewer size limits (5GB auto-conversion limit, partial conversion, sharding at 500MB), TooBigContentError prevention, row group sizing best practices, and optimization strategies for large datasets including config splitting, datasets streaming, column pruning, and DuckDB predicate pushdown

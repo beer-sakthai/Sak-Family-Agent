@@ -1,6 +1,7 @@
 ---
 name: claude-code
-author: Hermes
+author: SakThai
+license: MIT
 description: Delegate coding tasks to Claude Code CLI.
 version: 0.1.0
 platforms: [linux, macos, windows]

@@ -43,20 +43,34 @@ model = AutoModelForCausalLM.from_pretrained(model_id, gguf_file=filename, dtype
 
 ## Converting Between Formats
 
-### HF → GGUF (for llama.cpp inference)
+### HF → GGUF (for llama.cpp inference) — Refined Pipeline
 
-Use the official llama.cpp conversion script:
+The official `convert_hf_to_gguf.py` script requires the `gguf-py` package and `sentencepiece`. Use this tested pipeline instead of building from CMake:
 
 ```bash
-# Save your trained model first
-tokenizer.save_pretrained("directory")
-model.save_pretrained("directory")
+# 1. Install dependencies
+pip install gguf sentencepiece protobuf
 
-# Convert to GGUF
-python ${path_to_llama_cpp}/convert_hf_to_gguf.py directory
+# 2. Download convert script from llama.cpp repo
+curl -sL "https://raw.githubusercontent.com/ggml-org/llama.cpp/refs/heads/master/convert_hf_to_gguf.py" -o convert_hf_to_gguf.py
+
+# 3. Convert HF model → FP16 GGUF
+python3 convert_hf_to_gguf.py ./hf-model-dir \
+    --outfile ./model-f16.gguf --outtype f16
+
+# 4. Quantize to Q4_K_M
+/path/to/llama-quantize ./model-f16.gguf ./model-Q4_K_M.gguf Q4_K_M
 ```
 
-The `convert_hf_to_gguf.py` script lives in the [llama.cpp repository](https://github.com/ggerganov/llama.cpp/blob/master/convert_hf_to_gguf.py).
+**GGUF file size reference (Q4_K_M):**
+
+| Model | Q4_K_M Size |
+|-------|-------------|
+| 0.5B (Qwen2.5) | **380 MB** |
+| 1.5B (Qwen2.5) | **934 MB** |
+| Code 1.5B | **1.12 GB** |
+| Vision 7B (LLaVA) | **3.9 GB** |
+| TTS Kokoro 82M (Q8_0) | **141 MB** |
 
 ### GGUF → HF (for training/fine-tuning)
 
@@ -134,3 +148,9 @@ For BFCL-style tool-calling benchmarks, local setup details, and scoring — see
 2. **File selection**: Always match the exact filename; repos contain many GGUF variants
 3. **Conversion round-trips**: Converting HF→GGUF→HF loses quantization metadata (the weights become full-precision)
 4. **llama.cpp version**: Use a recent version of llama.cpp for best architecture support and performance
+5. **llama.cpp CLI does NOT support structured function calling**: The CLI generates free text. It cannot produce OpenAl `tool_calls` JSON output natively. Even if the GGUF model has a chat template with function calling support, llama.cpp CLI will not enforce JSON output structure. To test function calling, use:
+   - Ollama API (import GGUF and call via `/api/chat` with tools parameter)
+   - HF Transformers pipeline (applies chat template with tool schema)
+   - llama.cpp server mode (`llama-server`) with grammar-constrained generation
+   Do NOT claim function calling scores based on llama.cpp CLI text output — it tests text generation, not tool-calling capability.
+6. **llama-cli runaway on CPU

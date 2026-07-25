@@ -1,339 +1,797 @@
-# HF Learnings: Accelerate Composable Parallelism
+# HF Learnings: hf-accelerate-deep-dive
 
-## 2026-07-24: accelerate-composable-parallelism-deep-dive (Topic #120)
+**Date:** 2026-07-25
+**Topic:** Comprehensive deep-dive into Hugging Face Accelerate v1.14.0
+**Skill:** `mlops/hf-accelerate/`
 
-### Summary
-Deep-dive into Hugging Face Accelerate v1.14.0's new composable parallelism system via `ParallelismConfig` — inspired by torchtitan's `ParallelDims`. This replaces the old `torch_tp_plugin` approach with a unified device-mesh-based framework supporting 2D (FSDP2 + TP), 3D (HSDP + TP/CP), and 4D (all dimensions: sharded DP + replicate DP + TP + CP/SP) parallelism configurations. All source-verified against the installed accelerate package.
+## Summary
 
-### Core Architecture — ParallelismConfig
+Complete deep-dive on Hugging Face Accelerate (v1.14.0, installed currently). Covers the full Accelerator class API, all 50+ methods, the CLI toolkit (`accelerate config`, `launch`, `estimate-memory`, `env`, `test`), big model inference with device maps and CPU/disk offload, FSDP and DeepSpeed integration with comparison matrix, mixed-precision modes (fp16/bf16/fp8 via TE/MS-AMP/torchao), gradient accumulation patterns, experiment tracking, memory estimation for zero-cost planning, and production deployment checklist. Previous coverage (#17 in the tracker) was shallow; this is a proper deep-dive.
 
-`ParallelismConfig` is a dataclass that describes the parallelism topology via dimension sizes:
+---
+
+## 1. Architecture Overview
+
+Accelerate enables the same PyTorch code to run across any distributed configuration by adding just four lines:
 
 ```python
-from accelerate import ParallelismConfig
-
-config = ParallelismConfig(
-    dp_replicate_size=1,   # DDP replicas (pure data parallel)
-    dp_shard_size=8,       # FSDP sharded data parallel
-    tp_size=4,             # tensor parallelism
-    cp_size=1,             # context parallelism (future)
-    cp_backend="torch",    # only "torch" currently supported
-    sp_size=1,             # sequence parallelism (DeepSpeed Ulysses)
-    sp_backend="deepspeed",# only "deepspeed" currently supported
+from accelerate import Accelerator
+accelerator = Accelerator()
+model, optimizer, training_dataloader, scheduler = accelerator.prepare(
+    model, optimizer, training_dataloader, scheduler
 )
+# in the training loop:
+accelerator.backward(loss)
 ```
 
-Pass it to `Accelerator`:
-```python
-accelerator = Accelerator(parallelism_config=config)
+Then launch via:
+```bash
+accelerate launch {my_script.py}
 ```
 
-### Dimension Name System
+Under the hood, Accelerate:
+- Detects the hardware environment (GPUs, TPUs, CPU)
+- Configures device placement, mixed precision, and distributed strategy
+- Wraps model/optimizer/dataloader with distributed-aware versions
+- Handles gradient synchronization across processes
+- Manages RNG state synchronization
 
-| Dim Name | Source | Meaning |
-|----------|--------|---------|
-| `dp_replicate` | `dp_replicate_size` | Pure DDP replication dimension |
-| `dp_shard` | `dp_shard_size` | FSDP sharding dimension |
-| `dp_shard_cp` | dp_shard + cp (flattened) | Joint FSDP+CP mesh (models are sharded across both) |
-| `dp_cp` | dp_replicate + dp_shard + cp | Loss averaging across all data+context dims |
-| `dp` | dp_replicate + dp_shard (flattened) | Aggregate data parallel dimension |
-| `tp` | `tp_size` | Tensor parallelism |
-| `cp` | `cp_size` | Context parallelism |
-| `sp` | `sp_size` | Sequence parallelism |
+### Key Components Diagram
 
-### Parallelism Topologies (`dp_replicate_size` × `dp_shard_size`)
-
-| Config | Pattern | Description |
-|--------|---------|-------------|
-| `dp_shard > 1, dp_replicate == 1` | Pure FSDP | Model fully sharded across dp_shard dimension |
-| `dp_replicate > 1, dp_shard == 1` | ❌ Invalid with TP/CP | Pure DDP + TP not supported (must shard) |
-| `dp_replicate > 1, dp_shard > 1` | HSDP (Hybrid Sharded DP) | Replicate DP on outer, FSDP shard on inner |
-| `both == 1` | No DP | Single process or TP/CP only |
-
-### Dimensionality Patterns
-
-| Dimensions active | Name | Example Use Case |
-|-------------------|------|------------------|
-| dp_shard + tp | **2D (FSDP + TP)** | 32 GPUs: dp_shard=8, tp_size=4 |
-| dp_shard + tp + cp | **3D (FSDP + TP + CP)** | 64 GPUs: dp_shard=8, tp=4, cp=2 |
-| dp_shard + tp + sp | **3D (FSDP + TP + DeepSpeed SP)** | 64 GPUs: dp_shard=8, tp=4, sp=2 |
-| dp_replicate + dp_shard + tp | **3D (HSDP + TP)** | 64 GPUs: dp_rep=2, dp_shard=8, tp=4 |
-| all five | **4D (all)** | 128 GPUs: dp_rep=2, dp_shard=8, tp=4, cp/sp=2 |
-
-### Validation Rules (from `__post_init__`)
-
-1. **CP and SP are mutually exclusive** — cannot set both > 1 simultaneously
-2. **TP or CP with pure DP (dp_replicate > 1, dp_shard == 1) is invalid** — must use FSDP (dp_shard > 1) as the foundation for composing with TP/CP
-3. **Total size must match `num_processes`** — `dp_replicate * dp_shard * tp * cp * sp` must equal total GPUs (unless DeepSpeed SP handles groups globally)
-4. **Minimum value per dimension is 1**
-5. **Valid cp_backend values**: `"torch"` only (currently)
-6. **Valid sp_backend values**: `"deepspeed"` only (currently)
-
-### Handlers (Configuring Sub-Parallelism)
-
-Each active parallelism dimension can be configured with a handler object:
-
-#### TorchTensorParallelConfig
-
-```python
-from accelerate.utils import TorchTensorParallelConfig
-
-tp_handler = TorchTensorParallelConfig(
-    enable_async_tp=False  # reserved for future use
-)
+```
+Accelerator
+├── device (torch.device)
+├── distributed_type (DistributedType)
+├── mixed_precision (str: 'no'/'fp16'/'bf16'/'fp8')
+├── num_processes (int)
+├── process_index (int)
+├── local_process_index (int)
+├── state (AcceleratorState)
+│   ├── AcceleratorState (global distributed state)
+│   ├── PartialState (process-local state)
+│   └── DistributedType (enum: NO, MULTI_GPU, MULTI_NPU, MULTI_XPU, DEEPSPEED, FSDP, TPU, MEGATRON_LM)
+├── sync_gradients (bool)
+└── optimizer_step_was_skipped (bool)
 ```
 
-Requirements:
-- PyTorch >= BETA_TP_AVAILABLE_PYTORCH_VERSION
-- transformers >= BETA_TP_AVAILABLE_TRANSFORMERS_VERSION
+---
 
-Auto-created when `tp_size > 1` and no handler provided.
+## 2. Accelerator Class — Complete Method Reference
 
-#### TorchContextParallelConfig
-
-```python
-from accelerate.utils import TorchContextParallelConfig
-
-cp_handler = TorchContextParallelConfig(
-    cp_comm_strategy="allgather"  # or "alltoall"
-)
-```
-
-| Parameter | Options | Default | Description |
-|-----------|---------|---------|-------------|
-| `cp_comm_strategy` | `"allgather"`, `"alltoall"` | `"allgather"` | Communication strategy for context parallelism |
-
-Auto-created when `cp_size > 1` and no handler provided.
-Requirements: PyTorch >= BETA_CP_AVAILABLE_PYTORCH_VERSION (2.2+)
-
-#### DeepSpeedSequenceParallelConfig
-
-```python
-from accelerate.utils import DeepSpeedSequenceParallelConfig
-
-sp_handler = DeepSpeedSequenceParallelConfig(
-    sp_seq_length=4096,         # Fixed sequence length
-    sp_seq_length_is_variable=True,  # Variable-length batches
-    sp_attn_implementation="flash_attention_2",  # or "sdpa", "flash_attention_3"
-)
-```
+### Construction Parameters
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `sp_seq_length` | int or None | None | Fixed seq len (required if is_variable=False) |
-| `sp_seq_length_is_variable` | bool | True | Handle variable-length batches |
-| `sp_attn_implementation` | str or None | None | FA2, FA3, SDPA, or hub kernel (e.g. "kernels-community/flash-attn2") |
+| `device_placement` | `bool` | `True` | Auto-place objects on device |
+| `mixed_precision` | `str` | env var or `'no'` | `'no'`, `'fp16'`, `'bf16'`, `'fp8'` |
+| `gradient_accumulation_steps` | `int` | `1` | Steps before gradient sync |
+| `cpu` | `bool` | `False` | Force CPU execution |
+| `dataloader_config` | `DataLoaderConfiguration` | — | Dataloader behavior config |
+| `deepspeed_plugin` | `DeepSpeedPlugin` or dict | — | DeepSpeed configuration |
+| `fsdp_plugin` | `FullyShardedDataParallelPlugin` | — | FSDP configuration |
+| `megatron_lm_plugin` | `MegatronLMPlugin` | — | Megatron-LM configuration |
+| `rng_types` | `list[str]` | `['generator']` | RNG sync at each iteration |
+| `log_with` | `list[str]` | — | Logger names (`'tensorboard'`, `'wandb'`, etc.) |
+| `project_config` | `ProjectConfiguration` | — | Checkpoint/logging config |
+| `project_dir` | `str`, `PathLike` | — | Storage directory |
+| `step_scheduler_with_optimizer` | `bool` | `True` | Step scheduler with optimizer |
+| `kwargs_handlers` | `list[KwargsHandler]` | — | Custom handlers for distributed objects |
+| `dynamo_backend` | `str` | `'no'` | TorchDynamo backend |
+| `dynamo_plugin` | `TorchDynamoPlugin` | — | Fine-grained dynamo config |
+| `gradient_accumulation_plugin` | `GradientAccumulationPlugin` | — | Advanced grad accum config |
 
-Default fallbacks from env vars:
-- `PARALLELISM_CONFIG_SP_SEQ_LENGTH_IS_VARIABLE` (default "true")
-- `PARALLELISM_CONFIG_SP_SEQ_LENGTH`
-- `PARALLELISM_CONFIG_SP_ATTN_IMPLEMENTATION`
+### Core Methods (50+ total)
 
-**Validation:**
-- `"eager"` and `"flex_attention"` NOT supported for SP (raises ValueError)
-- Hub-hosted kernels must contain "flash-attn" and have a "/" in the name
-
-Auto-created when `sp_size > 1` and no handler provided.
-
-### Custom Handler Assignment
+#### `accelerator.prepare(*objects)`
+Wraps model, optimizer, dataloader, scheduler for distributed training. The single most important method.
 
 ```python
-config = ParallelismConfig(
-    dp_shard_size=8,
-    tp_size=4,
-    cp_size=2,
-    tp_handler=TorchTensorParallelConfig(enable_async_tp=False),
-    cp_handler=TorchContextParallelConfig(cp_comm_strategy="alltoall"),
+model, optimizer, dataloader, scheduler = accelerator.prepare(
+    model, optimizer, dataloader, scheduler
 )
 ```
 
-If handler is set for a dimension with size=1, a warning is issued and the handler is ignored.
+- Moves model to correct device
+- Wraps model in DDP/FSDP/DeepSpeed as configured
+- Shards dataloader across processes
+- Wraps optimizer for gradient scaling
 
-### Environment Variable Configuration
+#### `accelerator.backward(loss)`
+Replaces `loss.backward()`. Scales gradients according to gradient accumulation plugin and calls correct backward based on configuration.
 
-All `ParallelismConfig` fields can be set via environment variables, enabling SLURM/launcher integration without code changes:
-
-| Env Var | Maps to | Default |
-|---------|---------|---------|
-| `PARALLELISM_CONFIG_DP_REPLICATE_SIZE` | `dp_replicate_size` | `"1"` |
-| `PARALLELISM_CONFIG_DP_SHARD_SIZE` | `dp_shard_size` | `"1"` |
-| `PARALLELISM_CONFIG_TP_SIZE` | `tp_size` | `"1"` |
-| `PARALLELISM_CONFIG_CP_SIZE` | `cp_size` | `"1"` |
-| `PARALLELISM_CONFIG_CP_BACKEND` | `cp_backend` | `"torch"` |
-| `PARALLELISM_CONFIG_SP_SIZE` | `sp_size` | `"1"` |
-| `PARALLELISM_CONFIG_SP_BACKEND` | `sp_backend` | `"deepspeed"` |
-| `PARALLELISM_CONFIG_CP_COMM_STRATEGY` | cp_handler.cp_comm_strategy | `"allgather"` |
-| `PARALLELISM_CONFIG_SP_SEQ_LENGTH` | sp_handler.sp_seq_length | None |
-| `PARALLELISM_CONFIG_SP_SEQ_LENGTH_IS_VARIABLE` | sp_handler.sp_seq_length_is_variable | `"true"` |
-| `PARALLELISM_CONFIG_SP_ATTN_IMPLEMENTATION` | sp_handler.sp_attn_implementation | None |
-
-### Device Mesh Construction
-
-When `Accelerator.__init__()` receives a `parallelism_config`, it calls:
+#### `accelerator.accumulate(*models)`
+Context manager for gradient accumulation. Inside the block, gradients are accumulated across `gradient_accumulation_steps` without syncing.
 
 ```python
-self.state.device_mesh = parallelism_config.get_device_mesh(self.device.type)
+for batch in dataloader:
+    with accelerator.accumulate(model):
+        outputs = model(inputs)
+        loss = loss_fn(outputs, labels)
+        accelerator.backward(loss)
+        optimizer.step()
+        scheduler.step()
+        optimizer.zero_grad()
 ```
 
-This builds a PyTorch `DeviceMesh` using `torch.distributed.init_device_mesh()` with canonical mesh dimension order:
+#### `accelerator.gather(tensor)`
+Gather tensors across all processes and concatenate on first dimension. For evaluation metrics.
 
-```
-dp_replicate → dp_shard → cp → sp → tp
-```
+#### `accelerator.gather_for_metrics(input_data, use_gather_object=False)`
+Like gather but drops duplicates in the last batch on distributed systems. Always use this for metric computation.
 
-**Flattened joint meshes** for FSDP:
-- `["dp_replicate", "dp_shard"]` → flattened as `"dp"` 
-- `["dp_shard", "cp"]` → flattened as `"dp_shard_cp"`
-- `["dp_replicate", "dp_shard", "cp"]` → flattened as `"dp_cp"`
+#### `accelerator.unwrap_model(model)`
+Returns the original unwrapped model (removes DDP/FSDP wrappers). Essential for saving.
 
-**Sequence Parallel (DeepSpeed) exception:** When `sp_backend="deepspeed"` and `sp_size > 1`, device mesh creation is skipped entirely — DeepSpeed manages its own process groups globally via `initialize_sequence_parallel()`.
+#### `accelerator.save_state(output_dir)`
+Saves model, optimizer, scheduler, RNG, and registered objects to directory.
 
-### Accessing Rank Information
+#### `accelerator.load_state(input_dir)`
+Loads a previously saved state.
+
+#### `accelerator.save_model(model, save_directory, ...)`
+Saves model in a format suitable for inference. Can shard checkpoints.
+
+#### `accelerator.get_state_dict(model, unwrap=True)`
+Returns state dict potentially without full precision.
+
+#### `accelerator.clip_grad_norm_(parameters, max_norm)`
+Gradient clipping — replaces `torch.nn.utils.clip_grad_norm_`.
+
+#### `accelerator.clip_grad_value_(parameters, clip_value)`
+Gradient value clipping — replaces `torch.nn.utils.clip_grad_value_`.
+
+#### `accelerator.autocast()`
+Context manager for automatic mixed precision (fp16/bf16).
 
 ```python
-# After Accelerator init
-acc = Accelerator(parallelism_config=config)
-
-acc.tensor_parallel_rank       # → 0..tp_size-1 (or 0 if TP not enabled)
-acc.data_parallel_rank         # → replicate dimension rank
-acc.data_parallel_shard_rank   # → shard dimension rank
-
-# Properties
-acc.is_composable_parallelism_enabled  # True if FSDP2
-acc.parallelism_config                # The config object
-acc.torch_device_mesh                  # The PyTorch DeviceMesh
+with accelerator.autocast():
+    outputs = model(inputs)
 ```
 
-**Note:** `pipeline_parallel_rank` and `context_parallel_rank` both raise `NotImplementedError` — pipeline and context parallelism are reserved for future use in the rank API.
+#### `accelerator.join_uneven_inputs(joinables, even_batches=None)`
+Context manager for handling uneven dataset sizes in distributed settings. Wraps `torch.distributed.algorithms.join`.
 
-### FSDP2 Integration
+#### `accelerator.main_process_first()`
+Context manager — main process (rank 0) enters first, others wait.
 
-The composable parallelism system requires **FSDP2** (FSDP version 2, native to PyTorch >= 2.2). Key differences from FSDP1:
+#### `accelerator.local_main_process_first()`
+Like main_process_first but for local processes only.
 
-| Feature | FSDP1 | FSDP2 (used by ParallelismConfig) |
-|---------|-------|----------------------------------|
-| Sharding strategy | Policy objects (`FULL_SHARD`, `SHARD_GRAD_OP`, `NO_SHARD`) | `dp_shard_size` dimension from device mesh |
-| Composition | Manual wrapping or auto-wrap policy | Automatic via `dp_shard_cp` flattened mesh |
-| TP integration | Not natively composable | Built-in via device mesh dimensions |
-| Init | `FullyShardedDataParallel` wrapper | `fully_shard(model)` on the model |
+#### `accelerator.on_main_process` / `accelerator.on_local_main_process`
+Decorators for running functions only on main/local main process.
 
-`accelerator.is_fsdp2` property returns `True` when using FSDP2.
+#### `accelerator.wait_for_everyone()`
+Sync point — blocks until all processes reach this call.
 
-### Accelerator.prepare() with ParallelismConfig
+#### `accelerator.free_memory()`
+Releases all references and calls garbage collector. Use between trainings.
 
-When `prepare_model()` is called with a parallelism config:
+#### `accelerator.clear()`
+Alias for `free_memory()`.
 
-1. **Deepspeed SP:** If `sp_backend="deepspeed"` and `sp_size > 1`, DeepSpeed process groups are set up
-2. **TP (fsdp2):** If `tp_size > 1`, the model's `tp_size` attribute is validated against `parallelism_config.tp_size`. The model is expected to have TP applied before being passed to accelerator.
-3. **Sequence parallelism** is configured via `sp_backend` and passes the handler's config to DeepSpeed
+#### `accelerator.end_training()`
+Stops trackers, destroys process group. Must call at end.
 
-### Practical Patterns
+#### `accelerator.set_trigger()` / `accelerator.check_trigger()`
+Inter-process signaling — set a flag on one process, check from another.
 
-#### Pattern 1: FSDP2 + TP (2D, 32 GPUs)
+#### `accelerator.print(obj)`
+Print only from main process (avoids spam).
 
-```python
-from accelerate import Accelerator, ParallelismConfig
+#### `accelerator.log(values, step=None)`
+Log metrics through all initialized trackers.
 
-config = ParallelismConfig(
-    dp_shard_size=8,
-    tp_size=4,
-)
-acc = Accelerator(parallelism_config=config)
+#### `accelerator.init_trackers(project_name, config=None)`
+Initialize experiment tracking.
 
-# Model should already have TP applied
-# (e.g., via transformers' TensorParallelPreTrainedModel)
-model = ...  # tp_size=4 applied
-model = acc.prepare_model(model)
-```
+#### `accelerator.get_tracker(name)`
+Get a specific tracker by name.
 
-#### Pattern 2: HSDP + TP (3D, 64 GPUs)
+#### `accelerator.skip_first_batches(dataloader, num_batches)`
+Skip N batches — useful for resuming from checkpoint mid-epoch.
 
-```python
-config = ParallelismConfig(
-    dp_replicate_size=2,
-    dp_shard_size=8,
-    tp_size=4,
-)
-# Total: 2 × 8 × 4 = 64 GPUs
-# Outer 2x DDP replicas, inner 8x FSDP shards, 4x TP per group
-```
+#### `accelerator.split_between_processes(list_or_tensor)`
+Split data evenly across processes.
 
-#### Pattern 3: FSDP + TP + DeepSpeed SP (3D, 64 GPUs)
+#### `accelerator.reduce(tensor, reduction='sum')`
+Reduce tensor across all processes.
 
-```python
-config = ParallelismConfig(
-    dp_shard_size=8,
-    tp_size=4,
-    sp_size=2,
-    sp_backend="deepspeed",
-    sp_handler=DeepSpeedSequenceParallelConfig(
-        sp_attn_implementation="flash_attention_2",
-        sp_seq_length_is_variable=True,
-    ),
-)
-```
+#### `accelerator.pad_across_processes(tensor, dim=0, pad_index=0)`
+Pad tensors to same size across processes for gather.
 
-#### Pattern 4: All Environment Variables (SLURM-friendly)
+#### `accelerator.autocast_cache_enabled` property
+Controls whether autocast caching is enabled.
+
+---
+
+## 3. CLI Toolkit
+
+### `accelerate config`
+Interactive configuration wizard. Creates `default_config.yaml`.
 
 ```bash
-# In SLURM script or .env
-export PARALLELISM_CONFIG_DP_SHARD_SIZE=8
-export PARALLELISM_CONFIG_TP_SIZE=4
-export PARALLELISM_CONFIG_SP_SIZE=2
-export PARALLELISM_CONFIG_SP_BACKEND=deepspeed
-export PARALLELISM_CONFIG_SP_ATTN_IMPLEMENTATION=flash_attention_2
-
-# Then launch normally — no code changes needed
-accelerate launch train.py
+accelerate config                 # interactive
+accelerate config default         # minimal config with only mixed_precision
+accelerate config update          # update existing to latest defaults
 ```
+
+Config file location: `~/.cache/huggingface/accelerate/default_config.yaml` (or `HF_HOME/accelerate/`)
+
+### `accelerate launch`
+Launches training script on distributed hardware.
+
+```bash
+accelerate launch [options] training_script.py --training_args
+
+# Key options:
+# --cpu                          Force CPU
+# --multi_gpu                    Multi-GPU distributed
+# --tpu                          TPU training
+# --num_processes N              Total processes
+# --num_machines N               Multi-node
+# --mixed_precision {no,fp16,bf16,fp8}
+# --use_deepspeed                Enable DeepSpeed
+# --use_fsdp                     Enable FSDP
+# --gpu_ids "0,1,2"              Specific GPUs
+# -m                             Run as python module
+# -q, --quiet                    Silence stack traces
+```
+
+### `accelerate env`
+Prints environment info — always include when filing bugs.
+
+### `accelerate estimate-memory {model_name}`
+Estimates vRAM needed for model inference/training without loading it.
+
+```bash
+accelerate estimate-memory bigscience/bloom-176b --dtypes float16 int8
+```
+
+- Uses model metadata from Hub
+- Reports memory for loading + training estimates
+- Supports `--library_name` (timm, transformers)
+- Supports `--trust_remote_code`
+
+### `accelerate test`
+Validates configuration by running test script.
+
+### `accelerate tpu-config`
+Manages TPU pod setup and command execution.
+
+---
+
+## 4. Mixed Precision Training
+
+### FP16 (Automatic Mixed Precision — AMP)
+- Enabled via `mixed_precision="fp16"` or `--mixed_precision fp16`
+- Uses PyTorch native `torch.cuda.amp`
+- Forward pass in fp16, master weights in fp32
+- Loss scaling via `GradientScaler`
+- Works on all NVIDIA GPUs with CUDA compute ≥ 7.0
+
+### BF16 (Brain Floating Point)
+- Enabled via `mixed_precision="bf16"`
+- No loss scaling needed (same exponent range as fp32)
+- Requires Ampere or newer NVIDIA GPU, or TPU
+- Better training stability than fp16
+
+### FP8 Training
+
+Three backends:
+
+#### TransformersEngine (TE) — Recommended
+- Drop-in replacement for `nn.Linear` and `nn.LayerNorm`
+- Selects FP8 for GEMM layers, BF16 for everything else
+- Configured via `FP8RecipeKwargs`:
 
 ```python
-# train.py — reads env vars automatically
-from accelerate import Accelerator, ParallelismConfig
-config = ParallelismConfig()  # all values from env
-acc = Accelerator(parallelism_config=config)
+from accelerate.utils import FP8RecipeKwargs
+
+kwargs_handler = FP8RecipeKwargs(
+    margin=0,                    # gradient scaling margin
+    interval=1,                  # scaling factor recompute interval
+    fp8_format="HYBRID",         # HYBRID (train) or E4M3 (eval)
+    amax_history_len=16,         # history for scaling
+    amax_compute_algo="max",     # max or most_recent
+    override_linear_precision=(False, False, False)  # fprop, dgrad, wgrad
+)
+accelerator = Accelerator(mixed_precision="fp8", kwargs_handlers=[kwargs_handler])
 ```
 
-#### Pattern 5: Checkpoint Save/Load with Device Mesh
+- Performance gains only visible for models with billions+ parameters
+- CLI flags: `--fp8_backend te`, `--fp8_format`, `--fp8_margin`, etc.
+
+#### MS-AMP (Microsoft) — Deprecated
+- Three optimization levels (O1, O2, O3)
+- O1: fp8 comm + fp16 weights + fp32 optimizer
+- O2: fp8 comm + fp16 weights + fp8/fp16 optimizer states
+- O3: fp8 weights + fp16 master weights (DeepSpeed only)
+- **Unmaintained since 2023** — do not use for new projects
+- Incompatible with CUDA 12.x+, modern NCCL, PyTorch 2.2+
+
+#### torchao (PyTorch Native)
+- Native PyTorch FP8 via `torch.ao`
+- Set `--fp8_backend torchao`
+- Most modern, actively maintained
+
+### Precision Comparison
+
+| Backend | Computation | Weights | Optimizer | Comm | Memory Savings |
+|---------|------------|---------|-----------|------|----------------|
+| FP16 AMP | fp16 | fp32 | fp32+fp32 | fp32 | 2× vs fp32 |
+| TE | fp8 | fp32 | fp32+fp32 | fp32 | ~1.5× vs fp16 |
+| torchao | fp8 | varies | varies | varies | varies |
+| MS-AMP O1 | fp8 | fp16 | fp32+fp32 | fp8 | ~2× vs fp16 |
+| MS-AMP O2 | fp8 | fp16 | fp8+fp16 | fp8 | ~3× vs fp16 |
+
+---
+
+## 5. Big Model Inference
+
+### Problem
+Loading a 6B+ param model requires 2 copies in RAM (initialization + checkpoint), easily exceeding available memory.
+
+### Solution: 3-Step Process
+
+#### Step 1: `init_empty_weights()`
+Initialize model on meta device — zero RAM usage.
 
 ```python
-# Save (only one process per non-data-parallel group)
-if acc.should_save_model:
-    acc.save_model(model, "checkpoint.pt")
+from accelerate import init_empty_weights
+from transformers import AutoConfig, AutoModelForCausalLM
 
-# Load
-model = acc.prepare_model(model)
-acc.load_state("checkpoint.pt")
+config = AutoConfig.from_pretrained("bigscience/bloom-176b")
+with init_empty_weights():
+    model = AutoModelForCausalLM.from_config(config)
 ```
 
-The `should_save_model` property returns `True` for all ranks currently (due to pending optimization — see source comment about `save_safe_file` slowness).
+Behind the scenes, uses PyTorch 1.9+'s `meta` device. Parameters are created but occupy no memory.
 
-### Key Insights
+#### Step 2: `load_checkpoint_and_dispatch()`
+Loads checkpoint (full or sharded) and dispatches across devices.
 
-1. **ParallelismConfig replaces `torch_tp_plugin`** — The old `torch_tp_plugin` parameter is deprecated in favor of `parallelism_config`. If both are provided, `torch_tp_plugin` is ignored with a deprecation warning.
+```python
+from accelerate import load_checkpoint_and_dispatch
 
-2. **FSDP2 + TP = the new standard** — The combo eliminates the need for manual `FullyShardedDataParallel` wrapping with policy objects. Device mesh dimensions handle everything.
+model = load_checkpoint_and_dispatch(
+    model,
+    checkpoint="path/to/checkpoint",
+    device_map="auto",
+    no_split_module_classes=["BloomBlock"],
+    max_memory={0: "30GiB", 1: "46GiB", "cpu": "80GiB"}
+)
+```
 
-3. **DeepSpeed SP bypasses device mesh** — DeepSpeed manages its own SP groups globally via `initialize_sequence_parallel()`. The device mesh is not built when DeepSpeed SP is active (avoids conflicts).
+#### Step 3: Run inference normally
+Accelerate adds hooks to move data between devices transparently.
 
-4. **CP and SP are mutually exclusive** — You cannot use both context parallelism and sequence parallelism simultaneously. Choose based on hardware: CP for dense GPU interconnects (NVLink), SP for large-scale multi-node where ring communication dominates.
+```python
+outputs = model.generate(input_ids)
+```
 
-5. **Handler auto-creation** simplifies setup — Just set `tp_size=4` and `TorchTensorParallelConfig()` is auto-created with defaults. Handlers only needed for non-default configuration.
+### Device Map Strategies
 
-6. **Validation catches topology errors early** — Common mistakes like combining TP with pure DDP (no FSDP sharding) are caught at Accelerator initialization time.
+| Strategy | Behavior |
+|----------|----------|
+| `"auto"` | Evenly split across all GPUs + CPU offload. Same as `"balanced"`. |
+| `"balanced"` | Even split across detected GPUs. |
+| `"balanced_low_0"` | Even split on GPUs 1+, GPU 0 gets leftovers. Good for generate(). |
+| `"sequential"` | Fill GPU 0, then GPU 1, etc. |
+| Custom dict | Manually specify `{"layer_name": device_id}` for each module. |
 
-### Known Limitations (from source)
+### Device Map Memory Limits
 
-- `pipeline_parallel_rank` raises `NotImplementedError` — pipeline parallelism not yet supported
-- `context_parallel_rank` raises `NotImplementedError` — CP rank API not exposed yet
-- `enable_async_tp` in `TorchTensorParallelConfig` is accepted but warns "not supported"
-- `should_save_model` currently returns `True` for all ranks (temporary workaround for slow `save_safe_file`)
+```python
+from accelerate import infer_auto_device_map
 
-### Resources
-- Source: `/opt/data/.venv-sakthai/lib/python3.14/site-packages/accelerate/parallelism_config.py`
-- Source: `/opt/data/.venv-sakthai/lib/python3.14/site-packages/accelerate/utils/dataclasses.py` (lines 2206–2313)
-- Source: `/opt/data/.venv-sakthai/lib/python3.14/site-packages/accelerate/accelerator.py` (lines 454–476, 1887–1905)
-- Accelerate docs: https://huggingface.co/docs/accelerate/en/index
-- torchtitan ParallelDims: https://github.com/pytorch/torchtitan/blob/main/torchtitan/distributed/parallel_dims.py
-- PyTorch DeviceMesh: https://pytorch.org/docs/stable/distributed.html#torch.distributed.device_mesh.DeviceMesh
-- FSDP2 docs: https://pytorch.org/docs/stable/distributed.fsdp.html
+device_map = infer_auto_device_map(
+    model,
+    max_memory={0: "10GiB", 1: "10GiB", "cpu": "30GiB"}
+)
+```
+
+**Important:** First CUDA allocation uses 1-2GB for kernels. Adjust max_memory accordingly.
+
+### Offload Modes
+
+| Mode | Function | Memory | Speed | Use Case |
+|------|----------|--------|-------|----------|
+| CPU Offload | `cpu_offload(model, device)` | High CPU RAM | Moderate | Model fits on 1 GPU with CPU spillover |
+| CPU+Hook | `cpu_offload_with_hook(model, device)` | Lower | Faster loop | Pipeline-style inference in loop |
+| Disk Offload | `disk_offload(model, dir, device)` | Disk space | Slow | Extreme cases, no CPU RAM |
+| Full Dispatch | `load_checkpoint_and_dispatch()` | Mixed | Best | Multi-GPU with partial offload |
+
+### Chained CPU Offload (Pipeline Pattern)
+
+```python
+model_1, hook_1 = cpu_offload_with_hook(model_1, device)
+model_2, hook_2 = cpu_offload_with_hook(model_2, device, prev_module_hook=hook_1)
+model_3, hook_3 = cpu_offload_with_hook(model_3, device, prev_module_hook=hook_2)
+
+hid_1 = model_1(input)
+for i in range(50):
+    hid_2 = model_2(hid_1)
+hid_3 = model_3(hid_3)
+hook_3.offload()
+```
+
+### Sharded Checkpoints
+
+Format:
+```
+checkpoint_dir/
+├── index.json          # Maps param_name → shard_file
+├── first_state_dict.bin
+├── second_state_dict.bin
+└── ...
+```
+
+`index.json` structure:
+```json
+{
+  "linear1.weight": "first_state_dict.bin",
+  "linear1.bias": "first_state_dict.bin",
+  "linear2.weight": "second_state_dict.bin",
+  "linear2.bias": "second_state_dict.bin"
+}
+```
+
+### Known Limitations
+
+1. Auto device map may over-allocate CPU RAM — move modules to disk if OOM
+2. Naive model parallelism — only one GPU active at a time
+3. No pre-fetching for CPU/disk offloaded weights
+4. Disk offload very slow without NVMe
+5. `load_checkpoint_and_dispatch()` performs no key validation
+
+---
+
+## 6. FSDP Integration (PyTorch Fully Sharded Data Parallel)
+
+### What FSDP Does
+- Shards model parameters, gradients, and optimizer states across GPUs
+- All-gathers parameters on-demand for forward/backward
+- Reduce-scatters gradients after backward
+- Dramatically reduces per-GPU memory
+
+### Configuration
+
+Via CLI:
+```bash
+accelerate launch \
+  --use_fsdp \
+  --fsdp_sharding_strategy 1 \            # 1=FULL_SHARD, 2=SHARD_GRAD_OP, 3=NO_SHARD
+  --fsdp_offload_params true \
+  --fsdp_auto_wrap_policy TRANSFORMER_BASED_WRAP \
+  --fsdp_transformer_layer_cls_to_wrap BloomBlock \
+  --fsdp_state_dict_type SHARDED_STATE_DICT \
+  --fsdp_forward_prefetch true \
+  --fsdp_backward_prefetch BACKWARD_PRE \
+  --fsdp_cpu_ram_efficient_loading true \
+  --fsdp_sync_module_states true \
+  --fsdp_use_orig_params true \
+  --fsdp_activation_checkpointing true \
+  training_script.py
+```
+
+Via Plugin:
+```python
+from accelerate import Accelerator
+from accelerate.utils import FullyShardedDataParallelPlugin
+from torch.distributed.fsdp import ShardingStrategy
+
+fsdp_plugin = FullyShardedDataParallelPlugin(
+    sharding_strategy=ShardingStrategy.FULL_SHARD,
+    cpu_offload=True,
+    auto_wrap_policy="TRANSFORMER_BASED_WRAP",
+    transformer_layer_cls_to_wrap=["BloomBlock"],
+)
+
+accelerator = Accelerator(fsdp_plugin=fsdp_plugin)
+```
+
+### Sharding Strategies
+
+| Strategy | Parameters | Gradients | Optimizer | Memory |
+|----------|-----------|-----------|-----------|--------|
+| `FULL_SHARD` (1) | Sharded | Sharded | Sharded | Lowest |
+| `SHARD_GRAD_OP` (2) | Replicated | Sharded | Sharded | Medium |
+| `NO_SHARD` (3) | Replicated | Replicated | Replicated | Highest |
+
+### Key CLI Flags
+
+| Flag | Description |
+|------|-------------|
+| `--fsdp_offload_params` | Offload params + gradients to CPU |
+| `--fsdp_min_num_params` | Min params for auto wrap |
+| `--fsdp_sharding_strategy` | 1 (FULL_SHARD), 2 (SHARD_GRAD_OP), 3 (NO_SHARD) |
+| `--fsdp_auto_wrap_policy` | `TRANSFORMER_BASED_WRAP`, `SIZE_BASED_WRAP`, `NO_WRAP` |
+| `--fsdp_transformer_layer_cls_to_wrap` | Class name for transformer wrapping |
+| `--fsdp_backward_prefetch_policy` | `BACKWARD_PRE`, `BACKWARD_POST` |
+| `--fsdp_state_dict_type` | `FULL_STATE_DICT`, `SHARDED_STATE_DICT`, `LOCAL_STATE_DICT` |
+| `--fsdp_forward_prefetch` | Prefetch next params in forward |
+| `--fsdp_use_orig_params` | Required for `torch.compile` |
+| `--fsdp_cpu_ram_efficient_loading` | Load weights only on rank 0 |
+| `--fsdp_sync_module_states` | Broadcast params from rank 0 |
+| `--fsdp_activation_checkpointing` | Free intermediate activations |
+
+### Checkpointing
+
+- `FULL_STATE_DICT`: Consolidates to single rank (slow for large models)
+- `SHARDED_STATE_DICT`: Per-rank shards (fast, needs consolidation for inference)
+- Use `FULL_STATE_DICT` for easy downstream loading
+- Use `SHARDED_STATE_DICT` for fast training checkpoints
+
+---
+
+## 7. DeepSpeed Integration
+
+### ZeRO Stages
+
+| Stage | Parameters | Gradients | Optimizer | Memory Saved |
+|-------|-----------|-----------|-----------|-------------|
+| ZeRO-1 | Replicated | Replicated | Partitioned | 4× (optimizer) |
+| ZeRO-2 | Replicated | Partitioned | Partitioned | 8× (optimizer + gradients) |
+| ZeRO-3 | Partitioned | Partitioned | Partitioned | Linear with GPUs |
+
+### Configuration
+
+Via config file:
+```bash
+accelerate launch \
+  --use_deepspeed \
+  --zero_stage 3 \
+  --offload_optimizer_device cpu \
+  --offload_param_device cpu \
+  --gradient_accumulation_steps auto \
+  --gradient_clipping auto \
+  --zero3_init_flag true \
+  --zero3_save_16bit_model true \
+  --deepspeed_config_file ds_config.json \
+  training_script.py
+```
+
+Via Plugin:
+```python
+from accelerate import Accelerator
+from accelerate.utils import DeepSpeedPlugin
+
+deepspeed_plugin = DeepSpeedPlugin(zero_stage=3, gradient_accumulation_steps="auto")
+accelerator = Accelerator(deepspeed_plugin=deepspeed_plugin)
+```
+
+### Key CLI Flags
+
+| Flag | Description |
+|------|-------------|
+| `--zero_stage` | 1, 2, or 3 |
+| `--offload_optimizer_device` | `none`, `cpu`, `nvme` |
+| `--offload_param_device` | `none`, `cpu`, `nvme` |
+| `--gradient_accumulation_steps` | Use `auto` to inherit from Accelerator |
+| `--gradient_clipping` | Use `auto` to inherit |
+| `--zero3_init_flag` | Enable `deepspeed.zero.Init` for massive models |
+| `--zero3_save_16bit_model` | Save consolidated 16-bit weights |
+| `--deepspeed_config_file` | Custom DS config file (for advanced options) |
+| `--deepspeed_moe_layer_cls_names` | MoE layer class names for ZeRO |
+
+### DeepSpeed Config File (Advanced)
+
+For settings not exposed via CLI, use `--deepspeed_config_file`:
+```json
+{
+  "train_batch_size": 32,
+  "gradient_accumulation_steps": 4,
+  "zero_optimization": {
+    "stage": 3,
+    "contiguous_gradients": true,
+    "overlap_comm": true,
+    "reduce_scatter": true,
+    "stage3_max_live_parameters": 1e9,
+    "stage3_max_reuse_distance": 1e9,
+    "stage3_prefetch_bucket_size": 5e7,
+    "stage3_param_persistence_threshold": 1e5
+  },
+  "fp16": {
+    "enabled": true,
+    "loss_scale": 0,
+    "loss_scale_window": 1000
+  }
+}
+```
+
+---
+
+## 8. FSDP vs DeepSpeed — Comparison Matrix
+
+| Feature | FSDP | DeepSpeed |
+|---------|------|-----------|
+| Sharding | `FULL_SHARD`=ZeRO-3, `SHARD_GRAD_OP`=ZeRO-2 | ZeRO stages 1-3 |
+| Offload | All-or-nothing (params+grads+opt) | Flexible (params vs opt, CPU vs NVMe) |
+| Prefetching | `forward_prefetch`, `backward_prefetch` | Auto based on hyperparams |
+| Model Loading | Explicit `cpu_ram_efficient_loading` | Auto with ZeRO-3 |
+| Auto Wrap | `TRANSFORMER_BASED_WRAP` / `SIZE_BASED_WRAP` | Transparent |
+| torch.compile | Needs `--fsdp_use_orig_params true` | Transparent |
+| Checkpointing | `SHARDED_STATE_DICT` or `FULL_STATE_DICT` | `zero_to_fp32.py` script |
+| Precision (prep) | Flat params in `torch_dtype` | Flat params in fp32 (more memory) |
+| Precision (optim) | Optimizer in `torch_dtype` (lower mem) | Optimizer always fp32 (upcasted) |
+| MoE | Not native | Supported via `--deepspeed_moe_layer_cls_names` |
+| Pipeline Parallel | No | Supported |
+| Community | PyTorch native | Broader ecosystem |
+
+### Data Precision Differences (Important!)
+
+| Framework | Loading | Preparation | Training | Optimizer |
+|-----------|---------|-------------|----------|-----------|
+| FSDP (no MP) | bf16 | bf16 | bf16 | bf16 |
+| FSDP (bf16 MP) | bf16 | fp32 | bf16 | fp32 |
+| DeepSpeed (bf16) | bf16 | fp32 | bf16 | fp32 |
+
+Key insight: DeepSpeed ALWAYS upcasts flat params to fp32 during preparation, consuming more memory with few GPUs. FSDP can optionally keep them in lower precision.
+
+---
+
+## 9. Gradient Accumulation
+
+### Basic Pattern
+```python
+accelerator = Accelerator(gradient_accumulation_steps=4)
+model, optimizer, dataloader = accelerator.prepare(model, optimizer, dataloader)
+
+for batch in dataloader:
+    with accelerator.accumulate(model):
+        outputs = model(inputs)
+        loss = loss_fn(outputs, labels)
+        accelerator.backward(loss)
+        optimizer.step()
+        optimizer.zero_grad()
+```
+
+### How It Works
+- Inside `accumulate()`: gradients are accumulated without syncing
+- At the boundary: gradients are synced (all-reduced) across processes
+- Optimizer step is taken only at sync points
+- `sync_gradients` property indicates whether gradients are being synced
+
+### Gradient Accumulation Plugin
+For more control:
+```python
+from accelerate.utils import GradientAccumulationPlugin
+
+plugin = GradientAccumulationPlugin(
+    num_steps=4,
+    adjust_scheduler=True,  # Auto-adjust LR scheduler
+)
+accelerator = Accelerator(gradient_accumulation_plugin=plugin)
+```
+
+---
+
+## 10. Experiment Tracking
+
+### Supported Trackers
+- TensorBoard (`"tensorboard"`)
+- WandB (`"wandb"`)
+- MLflow (`"mlflow"`)
+- Comet ML (`"comet_ml"`)
+- Aim (`"aim"`)
+- DVCLive (`"dvclive"`)
+- TrackIO (`"trackio"`)
+- SwanLab (`"swanlab"`)
+- Custom (`GeneralTracker` subclass)
+- `"all"` — auto-detect all available
+
+### Initialization
+```python
+accelerator = Accelerator(log_with=["tensorboard", "wandb"])
+accelerator.init_trackers(
+    "my_project",
+    config={"learning_rate": 1e-4, "batch_size": 32}
+)
+```
+
+### Logging
+```python
+accelerator.log({"train/loss": loss.item(), "train/accuracy": acc}, step=step)
+```
+
+### Checkpoint Integration
+```python
+accelerator.save_state("checkpoint_dir")
+accelerator.load_state("checkpoint_dir")
+```
+
+### At End of Training
+```python
+accelerator.end_training()
+```
+
+---
+
+## 11. Dynamo Backend Integration
+
+```python
+accelerator = Accelerator(dynamo_backend="inductor")
+# or
+from accelerate.utils import TorchDynamoPlugin
+plugin = TorchDynamoPlugin(backend="inductor", mode="max-autotune")
+accelerator = Accelerator(dynamo_plugin=plugin)
+```
+
+Supported backends: `"eager"`, `"aot_eager"`, `"inductor"`, `"aot_ts_nvfuser"`, `"nvprims_nvfuser"`, `"cudagraphs"`, `"fx2trt"`, `"onnxrt"`, `"ipex"`
+
+---
+
+## 12. Memory Estimation (Zero-Cost Planning)
+
+```bash
+# Estimate memory for inference
+accelerate estimate-memory meta-llama/Llama-2-7b-hf --dtypes float16
+
+# Estimate for multiple dtypes
+accelerate estimate-memory bigscience/bloom-176b --dtypes float32 float16 int8
+
+# With custom library
+accelerate estimate-memory timm/resnet50 --library_name timm --dtypes float16
+```
+
+**Uses:**
+- Model metadata from Hugging Face Hub
+- Parameter counts × bytes per parameter
+- Training estimate ≈ 4× inference estimate (for Adam)
+- Add ~20% to result for real allocation
+
+---
+
+## 13. Production Deployment Checklist
+
+1. **Configure**: Run `accelerate config` or use config file
+2. **Wrap**: Add Accelerator + 4 lines to training script
+3. **Replace**: `loss.backward()` → `accelerator.backward(loss)`
+4. **Accumulate**: Wrap training loop in `accelerator.accumulate(model)` for grad accum
+5. **Clip**: Use `accelerator.clip_grad_norm_()` instead of torch's
+6. **Save**: Use `accelerator.save_model()` or `accelerator.get_state_dict()` for checkpointing
+7. **Gather**: Use `accelerator.gather_for_metrics()` for evaluation
+8. **Log**: Use `accelerator.log()` for metrics
+9. **Clean**: Call `accelerator.end_training()` at end
+10. **Launch**: Use `accelerate launch` with appropriate config
+
+### Inference-First Checklist (Zero-Cost)
+
+1. Use `init_empty_weights()` to avoid OOM
+2. Use `load_checkpoint_and_dispatch()` with `device_map="auto"`
+3. Set `max_memory` to avoid CPU crashes
+4. Mark residual-connected modules with `no_split_module_classes`
+5. For single-GPU: use `cpu_offload()` if model > GPU memory
+6. For multi-GPU: use `device_map="balanced_low_0"` for generation tasks
+7. Always validate with `accelerate env` before filing bugs
+8. Use `accelerate estimate-memory` before deployment
+
+---
+
+## 14. Key Insights
+
+- **The 4-line magic**: `Accelerator()`, `prepare()`, `accelerate.backward()`, `accelerate launch` — this is all you need for 90% of distributed training.
+- **Memory estimation is free**: Use `accelerate estimate-memory` before committing to any model — zero-cost planning.
+- **Gradient accumulation is built in**: Don't implement it manually; use `accelerator.accumulate()`.
+- **`gather_for_metrics` > `gather`**: Always use `gather_for_metrics()` for evaluation — it handles uneven batches correctly.
+- **FSDP vs DeepSpeed**: Choose FSDP for PyTorch-native experience, DeepSpeed for MoE/NVMe offload/custom configs. FSDP uses less memory on optimizer states with few GPUs.
+- **Big model inference**: Always start with `init_empty_weights()` + `load_checkpoint_and_dispatch(device_map="auto")`. Add `max_memory` cautiously.
+- **Chained CPU offload**: For pipeline-style models, `cpu_offload_with_hook()` with `prev_module_hook` keeps models on GPU during loops.
+- **FP8 is experimental**: Only beneficial for 1B+ param models. Use TE backend (not MS-AMP, which is deprecated).
+- **Save model format**: `accelerator.save_model()` produces sharded checkpoints compatible with `from_pretrained()`.
+- **Dynamo + FSDP**: Always set `--fsdp_use_orig_params true` when combining with torch.compile.
+
+---
+
+## Skill Created
+`mlops/hf-accelerate/` — complete reference with SKILL.md + this learning reference.
+
+## Repository Search Tags
+- `accelerate.Accelerator` — main class API
+- `accelerate launch` — CLI launcher
+- `init_empty_weights` — meta device initialization
+- `load_checkpoint_and_dispatch` — big model loading + device mapping
+- `device_map` — model distribution strategy
+- `FSDP vs DeepSpeed` — comparison matrix
+- `gather_for_metrics` — correct metric gathering
+- `FP8 training` — low-precision training backends

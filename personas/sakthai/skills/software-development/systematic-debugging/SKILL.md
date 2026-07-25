@@ -56,6 +56,15 @@ Use for ANY technical issue:
 - You're in a hurry (rushing guarantees rework)
 - Someone wants it fixed NOW (systematic is faster than thrashing)
 
+## Prerequisites
+
+- **Reproducible symptom:** You need a clear, repeatable way to observe the bug — a failing test, an error log, or a consistent wrong output. Without a way to reproduce, systematic debugging cannot begin.
+- **Source code access:** Read access to the relevant codebase, including recent git history
+- **Test infrastructure:** A test framework (pytest, unittest, etc.) or scriptable environment to build tight feedback loops
+- **Environment parity:** The debugging environment should match the environment where the bug was observed (same OS, dependencies, config)
+- **Systematic mindset:** Willingness to follow the 4-phase process without jumping to fixes. If you're tempted to guess-and-check, pause and re-read the Iron Law.
+- **Git access:** For checking recent changes and bisecting commits when needed
+
 ## The Four Phases
 
 You MUST complete each phase before proceeding to the next.
@@ -348,6 +357,33 @@ If you catch yourself thinking:
 | "Reference too long, I'll adapt the pattern" | Partial understanding guarantees bugs. Read it completely. |
 | "I see the problem, let me fix it" | Seeing symptoms ≠ understanding root cause. |
 | "One more fix attempt" (after 2+ failures) | 3+ failures = architectural problem. Question the pattern, don't fix again. |
+
+## Pitfalls
+
+- **Skipping Phase 1 (Root Cause):** The most common failure mode. The urge to fix before understanding is strong. Every minute spent on Phase 1 saves ten minutes of guesswork later.
+- **Weak feedback loop:** A loop that doesn't actually test the specific symptom (e.g., "it doesn't crash" instead of "the third retry should time out") leads to false positives during verification. Always tighten the loop.
+- **Changing multiple variables at once:** When you modify two things and the problem goes away, you don't know which fix worked — or if they interacted. Change one thing at a time.
+- **Ignoring the Rule of Three:** After 3+ failed fix attempts, continuing to try more fixes is a trap. The problem is architectural at that point. Stop and discuss.
+- **No regression test:** If you fix the bug without writing a test that reproduces it, the fix will regress. Always add a test before fixing.
+- **Flaky repro gone green:** A non-deterministic bug may appear fixed just because you got lucky on that run. Run the fix multiple times to be sure.
+- **Confirmation bias:** Once you have a hypothesis, it's tempting to see evidence that supports it and ignore evidence that contradicts. Actively try to disprove your hypothesis.
+- **Scope creep in fixes:** "While I'm here" refactoring during a bug fix adds risk and makes it harder to isolate what resolved the issue. Fix one thing.
+- **Not cleaning up debug instrumentation:** Temporary print statements, logging tags, and diagnostic code left in the codebase cause confusion. Clean up after every debugging session.
+
+## Verification
+
+Before declaring a bug fixed:
+
+- [ ] Root cause clearly identified and documented (Phase 1 completed)
+- [ ] A failing test (or automated repro) was written BEFORE the fix
+- [ ] The test failed for the expected reason (confirmed RED)
+- [ ] Only one change was made to address the root cause
+- [ ] The test now passes (confirmed GREEN)
+- [ ] The full test suite passes with no regressions
+- [ ] The fix was verified multiple times (for non-deterministic bugs, 10+ runs)
+- [ ] Debug instrumentation (print statements, log tags) cleaned up
+- [ ] If 3+ fixes were attempted before success: architectural discussion occurred
+- [ ] Commit message references the root cause, not just the symptom
 
 ## Quick Reference
 

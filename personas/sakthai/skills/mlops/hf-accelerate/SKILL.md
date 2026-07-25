@@ -2,33 +2,39 @@
 name: hf-accelerate
 author: SakThai
 license: MIT
-title: HF Accelerate
-category: mlops
-tags: [accelerate, distributed-training, mixed-precision, fsdp, deepspeed]
-related_skills:
-  - huggingface-hub
-  - hf-transformers-5
-  - hf-peft-lora
-description: Covers Hugging Face Accelerate library — distributed training engine with Accelerator, mixed precision, and composable parallelism.
+description: Comprehensive deep-dive on Hugging Face Accelerate (v1.14.0) — the Accelerator class, distributed training, mixed precision, big model inference, FSDP, DeepSpeed, FP8 training, CLI, and production patterns.
 version: 1.0.0
+type: skill
+tags: [accelerate, distributed-training, mixed-precision, fsdp, deepspeed, big-model-inference, fp8, training]
+related_skills:
+  - mlops/hf-transformers-tipsv2
+  - mlops/hf-transformers-memory-estimation
+  - mlops/hf-kernels-ecosystem
+  - mlops/model-publishing-pipeline
+  - mlops/hf-deepspeed
+references:
+  - references/hf-learnings.md
 ---
 
-## Description
-Covers Hugging Face Accelerate library (v1.14.0+) — the zero-boilerplate distributed training engine. Includes the Accelerator class, mixed precision (FP16/BF16/FP8), GradScaler, DeepSpeed/FSDP integration, and the new Composable Parallelism system (`ParallelismConfig`) for 2D/3D/4D parallel training with FSDP2 + Tensor/Context/Sequence Parallelism. Focused on patterns that work under zero-cost constraints.
+# HF Accelerate Deep Dive
 
-## Key Resources
-- [Accelerate docs](https://huggingface.co/docs/accelerate/en/index)
-- [ParallelismConfig API](https://huggingface.co/docs/accelerate/en/package_reference/accelerator#accelerate.utils.ParallelismConfig)
-- [FSDP2 docs](https://pytorch.org/docs/stable/distributed.fsdp.html)
-- [torchtitan ParallelDims](https://github.com/pytorch/torchtitan/blob/main/torchtitan/distributed/parallel_dims.py)
-- [Accelerate GitHub](https://github.com/huggingface/accelerate)
+Complete reference for Hugging Face Accelerate v1.14.0 — the unified API for distributed training and inference.
 
-## Topics Covered
-- `ParallelismConfig`: dp_replicate_size, dp_shard_size, tp_size, cp_size, sp_size
-- Composable parallelism: 2D (FSDP+TP), 3D (HSDP+TP/CP), 4D (all dimensions)
-- TorchTensorParallelConfig: async TP support
-- TorchContextParallelConfig: allgather/alltoall comm strategies
-- DeepSpeedSequenceParallelConfig: Ulysses/ALSD attention
-- Device mesh construction: init_device_mesh with mesh_dim_names
-- Environment variable configuration (PARALLELISM_CONFIG_*)
-- FSDP2: native composable sharding without policy objects
+## Core Concepts
+
+- **Accelerator class** — main entry point; manages device placement, mixed precision, gradient accumulation, distributed state
+- **`accelerate launch`** — CLI launcher for multi-process/multi-GPU/multi-node scripts
+- **`accelerate config`** — interactive or default configuration generation
+- **Big Model Inference** — `init_empty_weights`, `load_checkpoint_and_dispatch`, device maps, CPU/disk offload
+- **FSDP Integration** — fully sharded data parallelism via PyTorch FSDP
+- **DeepSpeed Integration** — ZeRO stages, optimizer/parameter offload, NVMe
+- **Mixed Precision** — fp16, bf16, fp8 (TransformersEngine, MS-AMP legacy, torchao)
+- **Experiment Tracking** — TensorBoard, WandB, MLflow, Comet, Aim, DVCLive, SwanLab
+- **Gradient Accumulation** — `accumulate()` context manager
+- **Memory Estimation** — `accelerate estimate-memory` CLI
+
+## References
+
+- `~/profiles/sakthai/skills/mlops/hf-accelerate/references/hf-learnings.md` — complete deep-dive reference
+- Official docs: https://huggingface.co/docs/accelerate
+- Source: https://github.com/huggingface/accelerate

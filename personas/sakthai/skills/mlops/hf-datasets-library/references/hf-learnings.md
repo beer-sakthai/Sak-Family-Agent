@@ -677,4 +677,1410 @@ Tested on `nyu-mll/glue` MRPC split (3,668 rows) with Datasets v5.0.0:
 - Dataset API ref (v5.0.0): https://huggingface.co/docs/datasets/main/en/package_reference/main_classes#datasets.Dataset
 - IterableDataset API ref: https://huggingface.co/docs/datasets/main/en/package_reference/main_classes#datasets.IterableDataset
 - Datasets source: `/opt/data/.venv-sakthai/lib/python3.14/site-packages/datasets/arrow_dataset.py`
+
+## 2026-07-24: hf-datasets-concatenate-and-interleave-deep-dive — Combining Datasets
+
+> Research date: 2026-07-24
+> Docs: https://huggingface.co/docs/datasets/en/process
+> Author: SakThai · Main Lead of the House & Master of Hugging Face
+> License: MIT
+
+### Summary
+
+🤗 Datasets provides two primary functions for combining datasets:
+- **`concatenate_datasets()`** — stack datasets vertically (append rows) or horizontally (merge columns)
+- **`interleave_datasets()`** — mix datasets by alternating or probabilistically sampling examples
+
+Both work with regular `Dataset` and `IterableDataset` (streaming) objects.
+
+### 1. `concatenate_datasets()`
+
+#### Vertical Concatenation (`axis=0`, default)
+
+Stacks datasets row-wise. All datasets **must share the same column types/features** or the operation raises.
+
+```python
+from datasets import concatenate_datasets, load_dataset
+
+stories = load_dataset("ajibawa-2023/General-Stories-Collection", split="train")
+stories = stories.select_columns(["text"])
+
+wiki = load_dataset("wikimedia/wikipedia", "20231101.en", split="train")
+wiki = wiki.select_columns(["text"])
+
+# Features must match type
+assert stories.features.type == wiki.features.type
+
+bert_dataset = concatenate_datasets([stories, wiki])
+# Result: len(stories) + len(wiki) rows, same features
+```
+
+**Key invariant:** `concatenate_datasets([ds.shard(n, i) for i in range(n)])` recovers the original dataset in order.
+
+#### Horizontal Concatenation (`axis=1`)
+
+Merges columns side-by-side. Datasets **must have the same number of rows**:
+
+```python
+stories_ids = stories.map(lambda x, i: {"id": i}, with_indices=True)
+stories_with_ids = concatenate_datasets([stories, stories_ids], axis=1)
+```
+
+#### API Signature
+
+```python
+concatenate_datasets(
+    dsets: list,
+    info: Optional[DatasetInfo] = None,
+    split: Optional[NamedSplit] = None,
+    axis: int = 0
+) -> Dataset
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `dsets` | `list[Dataset]` | Datasets to concatenate (≥2) |
+| `info` | `Optional[DatasetInfo]` | Override merged dataset info |
+| `split` | `Optional[NamedSplit]` | Assign a named split |
+| `axis` | `int` | `0`=vertical (rows), `1`=horizontal (columns) |
+
+### 2. `interleave_datasets()`
+
+Mixes datasets by taking alternating or probability-weighted examples. Supports three **stopping strategies**:
+
+#### Default: Alternating (`first_exhausted`)
+
+Without probabilities, examples are taken in round-robin order:
+
+```python
+from datasets import Dataset, interleave_datasets
+
+d1 = Dataset.from_dict({"a": [0, 1, 2]})
+d2 = Dataset.from_dict({"a": [10, 11, 12]})
+d3 = Dataset.from_dict({"a": [20, 21, 22]})
+
+dataset = interleave_datasets([d1, d2, d3])
+dataset["a"]  # [0, 10, 20, 1, 11, 21, 2, 12, 22]
+```
+
+#### With Probabilities
+
+Defines sampling weights. Each example is drawn from a random dataset according to probabilities:
+
+```python
+dataset = interleave_datasets(
+    [d1, d2, d3],
+    probabilities=[0.7, 0.2, 0.1],
+    seed=42
+)
+```
+
+With `first_exhausted` (default): stops as soon as any dataset runs out — this is a **subsampling** strategy. Result length ≤ min(dataset lengths).
+
+#### Stopping Strategies
+
+| Strategy | Behaviour |
+|----------|-----------|
+| `first_exhausted` (default) | Stop when *any* dataset runs out. Subsampling. |
+| `all_exhausted` | Continue until every sample from every dataset has been seen at least once. **Oversampling** — exhausted datasets wrap around. |
+| `all_exhausted_without_replacement` | Every sample seen exactly once. Equal to alternating if sizes match. |
+
+**`all_exhausted` example:**
+
+```python
+# d1=3 rows, d2=4 rows, d3=5 rows
+dataset = interleave_datasets([d1, d2, d3], stopping_strategy="all_exhausted")
+# Cycles through shorter datasets until all have been fully consumed
+```
+
+#### With IterableDataset (Streaming)
+
+```python
+es_dataset = load_dataset('allenai/c4', 'es', split='train', streaming=True)
+fr_dataset = load_dataset('allenai/c4', 'fr', split='train', streaming=True)
+
+multilingual = interleave_datasets([es_dataset, fr_dataset])
+# Alternates: es, fr, es, fr, ...
+
+# With probabilities + oversampling:
+multilingual = interleave_datasets(
+    [es_dataset, fr_dataset],
+    probabilities=[0.8, 0.2],
+    seed=42,
+    stopping_strategy="all_exhausted"
+)
+```
+
+#### Sharding Behaviour
+
+When using sharding with interleaved IterableDatasets, the interleaved dataset's shard count = **minimum** of input shard counts. Each new shard contains at least 1 shard from every input dataset:
+
+```
+Input shards:  [32, 48, 128]
+Interleaved:   min = 32 shards
+Per new shard: 1 from ds1, 1-2 from ds2, 4 from ds3
+```
+
+#### API Signature
+
+```python
+interleave_datasets(
+    datasets: list,
+    probabilities: Optional[list[float]] = None,
+    seed: Optional[int] = None,
+    info: Optional[DatasetInfo] = None,
+    split: Optional[NamedSplit] = None,
+    stopping_strategy: Literal[
+        'first_exhausted',
+        'all_exhausted',
+        'all_exhausted_without_replacement'
+    ] = 'first_exhausted'
+) -> Dataset | IterableDataset
+```
+
+### 3. Key Differences
+
+| Aspect | `concatenate_datasets()` | `interleave_datasets()` |
+|--------|------------------------|------------------------|
+| Data flow | All of A, then all of B | Alternating/probabilistic |
+| Row count | Sum of all inputs | Varies by strategy |
+| Column requirement | Same types (axis=0) or same rows (axis=1) | Same types |
+| Dataset types | `Dataset` only | `Dataset` + `IterableDataset` |
+| Probabilities | No | Yes |
+| Stopping strategies | N/A | 3 strategies |
+| Use case | Training on combined corpora | Multi-domain balanced training, language mixing |
+
+### 4. Practical Patterns
+
+**Multi-language training:** Use `interleave_datasets()` with probabilities to control language distribution:
+
+```python
+datasets = [load_dataset(..., lang, split="train", streaming=True) for lang in langs]
+probs = [0.5, 0.3, 0.2]  # 50% English, 30% French, 20% Spanish
+mixed = interleave_datasets(datasets, probabilities=probs, seed=42)
+```
+
+**Adding metadata columns:** Use `concatenate_datasets(axis=1)` to attach IDs or metadata:
+
+```python
+ds_with_ids = concatenate_datasets([original, id_dataset], axis=1)
+```
+
+**Reassembling shards:** `concatenate_datasets(shards)` recovers the original order — useful after distributed processing.
+
+### Source
+- Official process docs: https://huggingface.co/docs/datasets/en/process
+- API ref: https://huggingface.co/docs/datasets/v4.8.4/en/package_reference/main_classes#datasets.concatenate_datasets
+- Stream guide: https://huggingface.co/docs/datasets/en/stream
 - Live test: datasets v5.0.0 on MRPC (3,668 rows), verified this session
+---
+
+## 2026-07-24: hf-datasets-from-parquet — Loading Parquet Files with `datasets` Library (Topic #149 Deepened)
+
+### Summary
+Comprehensive deep-dive into loading Parquet data with the `datasets` library (v5.0.0). Covers `Dataset.from_parquet()` (path, columns, filters, num_proc, fragment_scan_options, on_bad_files), `load_dataset()` with auto-detected parquet format, the `ParquetConfig` options (split, streaming), pyarrow filter predicate pushdown for efficient column/row pruning, multi-file loading with sharding, integration with the Datasets Server `/parquet` endpoint for server-side conversions, and practical performance patterns.
+
+### Source
+- huggingface/datasets source: `src/datasets/io/parquet.py` (ParquetDatasetReader)
+- huggingface/datasets source: `src/datasets/packaged_modules/parquet/parquet.py` (Parquet builder)
+- Official docs: https://huggingface.co/docs/datasets/en/parquet_processing
+- API reference: https://huggingface.co/docs/datasets/v5.0.0/en/package_reference/main_classes#datasets.Dataset.from_parquet
+- PyArrow Dataset docs: https://arrow.apache.org/docs/python/generated/pyarrow.dataset.ParquetFragmentScanOptions.html
+
+### 1. `Dataset.from_parquet()` — Core API
+
+```python
+from datasets import Dataset
+
+# Single file
+ds = Dataset.from_parquet("data/train-00000-of-00001.parquet")
+
+# Multiple files (sharded dataset)
+ds = Dataset.from_parquet([
+    "data/train-00000-of-00004.parquet",
+    "data/train-00001-of-00004.parquet",
+    "data/train-00002-of-00004.parquet",
+    "data/train-00003-of-00004.parquet",
+])
+
+# Select columns only (saves I/O)
+ds = Dataset.from_parquet("data.parquet", columns=["text", "label"])
+
+# Filter rows on load — predicate pushdown to Parquet metadata
+ds = Dataset.from_parquet(
+    "data.parquet",
+    filters=[("label", "==", 1)]       # only rows where label == 1
+)
+
+# Compound filter
+ds = Dataset.from_parquet(
+    "data.parquet",
+    filters=[("label", "==", 1), ("split", "in", ["train", "val"])]
+)
+
+# Multi-process parsing (num_proc)
+ds = Dataset.from_parquet(
+    ["shard-1.parquet", "shard-2.parquet", "shard-3.parquet"],
+    num_proc=3                   # one process per file
+)
+```
+
+**Full parameter reference:**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `path_or_paths` | `PathLike \| list[PathLike]` | required | Single Parquet file path or list of paths |
+| `split` | `NamedSplit` | `None` | Split name to assign (e.g., `"train"`, `"test"`) |
+| `features` | `Features` | `None` | Explicit feature schema (auto-detected if None) |
+| `cache_dir` | `str` | `~/.cache/huggingface/datasets` | Cache directory for Arrow data |
+| `keep_in_memory` | `bool` | `False` | Copy all data in-memory instead of memory-mapping |
+| `columns` | `list[str]` | `None` | Subset of columns to load (prunes at read time) |
+| `num_proc` | `int` | `None` | Parallel reading across files (v2.8.0+) |
+| `filters` | `Expression \| list[tuple] \| list[list[tuple]]` | `None` | Predicate pushdown filter — prunes rows at source |
+| `fragment_scan_options` | `ParquetFragmentScanOptions` | `None` | Scan tuning (buffering, caching) (v4.2.0+) |
+| `on_bad_files` | `"error" \| "warn" \| "skip"` | `"error"` | Behavior on unreadable files (v4.2.0+) |
+| `**kwargs` | any | — | Passed to `ParquetConfig` |
+
+### 2. Filter Predicate Pushdown — Deep Dive
+
+Filters are evaluated at the **Parquet metadata level** — row group statistics (`min`, `max`, `null_count`) are checked before any I/O. This means entire row groups can be skipped without decompression.
+
+**Filter format — tuple list:**
+```python
+# Simple: [("column", "op", value)]
+filters = [("age", ">=", 18)]
+
+# AND: multiple tuples in same list
+filters = [("age", ">=", 18), ("country", "==", "US")]
+
+# OR: list of lists (each inner list is AND-ed)
+filters = [("age", ">=", 18), [("country", "==", "US"), ("country", "==", "CA")]]
+# = (age >= 18) AND (country == "US" OR country == "CA")
+```
+
+**Filter format — pyarrow Expression (more expressive):**
+```python
+import pyarrow.dataset as pds
+
+# Equivalent to tuple list
+filt = (pds.field("age") >= 18) & (pds.field("country") == "US")
+
+ds = Dataset.from_parquet("data.parquet", filters=filt)
+```
+
+**Supported operators:** `==`, `!=`, `<`, `<=`, `>`, `>=`, `in`, `not in`
+
+**Performance impact:** For a 10 GB Parquet file partitioned into 64 MB row groups, a selective filter can skip 95%+ of row groups, reducing read to ~500 MB and load time from minutes to seconds.
+
+### 3. `load_dataset()` with Parquet — Auto-Detection
+
+`load_dataset()` automatically detects Parquet files by extension (`.parquet`):
+
+```python
+from datasets import load_dataset
+
+# From local directory of parquet files
+ds = load_dataset("parquet", data_dir="./my-data/")
+# or explicitly:
+ds = load_dataset("parquet", data_files="data/*.parquet")
+
+# From Hugging Face Hub (auto-detects parquet if no loading script)
+ds = load_dataset("username/my-parquet-dataset", split="train")
+
+# Force parquet builder
+ds = load_dataset(
+    "parquet",
+    data_files={
+        "train": "train-*.parquet",
+        "test": "test-*.parquet",
+    }
+)
+
+# With streaming
+ds = load_dataset("parquet", data_files="big.parquet", streaming=True)
+```
+
+**The auto-detection logic** (from `packaged_modules/parquet/parquet.py`):
+1. When `load_dataset()` is called with a dataset path, it first checks for a loading script
+2. If none found, it inspects the repo's file extensions
+3. If `.parquet` files dominate, it uses the `Parquet` packaged builder
+4. The builder reads file metadata (schema, row count) without loading data
+
+### 4. Streaming Parquet Data
+
+```python
+# Streaming reads rows on-demand — no local cache
+ds = load_dataset("parquet", data_files="huge.parquet", streaming=True)
+
+# IterableDataset methods
+for i, example in enumerate(ds):
+    if i > 100:
+        break
+    print(example["text"])
+
+# Take/skip/shuffle
+sample = ds.take(1000)               # first 1000
+ds_filtered = ds.filter(lambda x: x["label"] == 1)
+```
+
+**When to stream:**
+- Dataset too large for available disk
+- Iterating once (training epoch over large corpus)
+- Exploring data before deciding to download
+
+**When NOT to stream:**
+- Multiple random-access passes needed
+- Index-based lookups (`ds[5000]`)
+- Shuffling before training (use `IterableDataset.shuffle()` instead)
+
+### 5. Datasets Server `/parquet` Endpoint Integration
+
+The Datasets Server exposes a `/parquet` endpoint that returns URLs to pre-converted Parquet files for any compatible dataset:
+
+```python
+import requests
+
+# Get parquet URLs for a dataset
+resp = requests.get(
+    "https://datasets-server.huggingface.co/parquet?dataset=imdb"
+)
+parquet_data = resp.json()
+parquet_files = parquet_data["parquet_files"]
+
+# {'dataset': 'imdb', 'config': 'plain_text', 'split': 'train',
+#  'url': 'https://.../imdb/plain_text/train/0000.parquet'}
+
+# Load directly from URLs
+ds = load_dataset(
+    "parquet",
+    data_files={"train": [p["url"] for p in parquet_files]},
+    streaming=True
+)
+```
+
+**Key `/parquet` response fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `dataset` | `str` | Dataset name |
+| `config` | `str` | Configuration/subset name |
+| `split` | `str` | Split name |
+| `url` | `str` | HTTPS URL to the Parquet file |
+| `size` | `int` | File size in bytes |
+| `columns` | `list[str]` | Column names in the file |
+
+**Practical pattern — zero-cost Hub querying without downloading:**
+```python
+from datasets import load_dataset
+
+# Stream a Hub dataset from its Parquet conversion
+ds = load_dataset(
+    "parquet",
+    data_files={
+        "train": [
+            "https://huggingface.co/datasets/username/dataset/resolve/refs%2Fconvert%2Fparquet/train/0000.parquet"
+        ]
+    },
+    streaming=True
+)
+
+# or use the datasets-server API for auto-discovery
+import requests, json
+url = "https://datasets-server.huggingface.co/parquet?dataset=username/dataset"
+files = requests.get(url).json()["parquet_files"]
+ds = load_dataset("parquet", data_files={"train": [f["url"] for f in files]})
+```
+
+### 6. Performance Patterns
+
+**Pattern 1: Column selection first, filter second**
+```python
+# BEST — prune columns AND rows at read time (most efficient)
+ds = Dataset.from_parquet("big.parquet", columns=["id", "text", "label"], filters=[("label", "==", 1)])
+```
+
+**Pattern 2: Parallelize across shards**
+```python
+# Each file processed in parallel
+files = [f"shard-{i:05d}-of-00010.parquet" for i in range(10)]
+ds = Dataset.from_parquet(files, num_proc=4, columns=["text"])
+```
+
+**Pattern 3: Fragment scan options for memory-constrained environments**
+```python
+import pyarrow.dataset as pds
+
+opts = pds.ParquetFragmentScanOptions(
+    use_buffered_stream=True,     # smaller reads
+    buffer_size=8192,             # 8 KB read buffer
+)
+ds = Dataset.from_parquet("big.parquet", fragment_scan_options=opts)
+```
+
+**Pattern 4: Chaining from_parquet with dataset operations**
+```python
+ds = (
+    Dataset
+    .from_parquet("data.parquet", filters=[("lang", "==", "en")])
+    .select_columns(["text", "label"])
+    .shuffle(seed=42)
+    .select(range(10000))
+)
+```
+
+### 7. `ParquetConfig` Tuning
+
+When using `load_dataset("parquet", ...)`, the `ParquetConfig` class controls behavior:
+
+```python
+from datasets import load_dataset
+from datasets.packaged_modules.parquet.parquet import ParquetConfig
+
+ds = load_dataset(
+    "parquet",
+    data_files="data.parquet",
+    split="train",
+    streaming=True,
+    parquet_config=ParquetConfig(
+        features=None,          # auto-detect
+        schema=None,            # optional pyarrow schema
+        batch_size=10000,       # rows per read batch (default: auto)
+    )
+)
+```
+
+### 8. Known Limitations
+
+1. **Appending is not supported** — `from_parquet` creates a new Dataset; use `datasets.concatenate_datasets()` to merge
+2. **Nested schema differences** — if Parquet files in a list have different schemas, loading may fail (use `features` to force schema)
+3. **Predicate pushdown varies** — not all Parquet writers generate equally useful statistics for filter pruning
+4. **Remote URLs** — `from_parquet()` does NOT accept HTTPS URLs directly (use `load_dataset("parquet", data_files="https://...")` with streaming instead)
+5. **`fragment_scan_options` is PyArrow-specific** — only works with the PyArrow-backed reader
+
+### Skill
+mlops/hf-datasets-library — references/hf-learnings.md
+
+---
+## 2026-07-24: datasets-5.0.0-new-features — Agent Traces, Multi-Shard Shuffle, Batch-by-Column, New Formats (Topic #203, follow-on)
+
+### Summary
+Deep-dive into the specific new features shipped in `datasets` v5.0.0 (released 2026-06-05) — Agent traces parsing for SFT training, multi-input-shard streaming shuffle (breaking change), `batch(by_column=...)` for robotics episodes, and 4 new data format loaders (Apache Iceberg, TsFile IoT, 3D Mesh, CoNLL/CoNLL-U). This complements the earlier v5 overview (Topic #19) which covered Polars/SQL/Spark connectors.
+
+### Source
+GitHub Release v5.0.0 — https://github.com/huggingface/datasets/releases/tag/5.0.0
+PyPI Latest: 5.0.0
+
+---
+
+## 1. Agent Traces — SFT-Ready Training Data from Agent Logs
+
+**PR:** [#8232](https://github.com/huggingface/datasets/pull/8232) by @lhoestq
+**Dependency:** `teich` library (new optional dep)
+
+`datasets` can now load agent traces (Claude Code, Codex, Pi, etc.) and parse them into a `messages`-format column compatible with SFT training using `trl`.
+
+### How it works
+
+```python
+from datasets import load_dataset
+
+ds = load_dataset("lhoestq/agent-traces-example", split="train")
+ds[0]["messages"]
+# [{'role': 'user', 'content': 'Download a random dataset...'},
+#  {'role': 'assistant', 'content': '...'},
+#  ...]
+```
+
+The `teich` library extracts structured fields from raw trace logs:
+- **`messages`** — chat-style conversation array (user ↔ assistant turns)
+- **`prompt`** — the initial system/user prompt
+- **`tools`** — tools/functions available to the agent
+- **`metadata`** — timing, model info, token counts
+- **`trace`** (renamed from `traces` — **minor breaking change**) — raw step-by-step trace
+
+### Training on agent traces
+
+```bash
+trl sft --dataset-name lhoestq/agent-traces-example ...
+```
+
+### Discovery
+All agent-traces datasets on the Hub can be found at:
+https://huggingface.co/datasets?format=format:agent-traces&sort=trending
+
+### Key insight
+This bridges the gap between agent logging and supervised fine-tuning — you can collect real agent interaction logs, load them as datasets, and train better models from actual usage patterns.
+
+---
+
+## 2. Multi-Shard Shuffle Buffer — Breaking Change to `IterableDataset.shuffle()`
+
+**PR:** [#8194](https://github.com/huggingface/datasets/pull/8194) by @lhoestq
+**Issue:** [#8015](https://github.com/huggingface/datasets/issues/8015)
+
+### The problem
+The old `shuffle()` in streaming mode drew from a **single shard** — after exhausting the initial buffer (~1000 examples), every subsequent example came from the same shard, producing highly correlated (non-random) sequences.
+
+### The fix
+`shuffle()` now draws from **multiple input shards** simultaneously, producing genuinely random ordering throughout training.
+
+```python
+ds = load_dataset(..., streaming=True)
+ds = ds.shuffle(seed=42)
+# or configure manually:
+ds = ds.shuffle(seed=42, buffer_size=1000, max_buffer_input_shards=10)
+```
+
+### Quantitative comparison (1024 shards × 123M items)
+
+| Metric | Before (single shard) | After (multi-shard) |
+|--------|----------------------|---------------------|
+| Cold start diversity | All samples from same ~1 shard | Spread across ~10 shards |
+| Nominal regime | Repeated IDs, correlated | Uniform distribution |
+| Default `max_buffer_input_shards` | 1 (implicit) | **10** |
+
+### Impact
+- True random shuffle across the entire dataset for streaming mode
+- Uses threads to fetch first examples from shards in parallel
+- `state_dict()` / `load_state_dict()` still supported for checkpointing
+- **Breaking change**: old behavior available via `max_buffer_input_shards=1`
+
+---
+
+## 3. `Dataset.batch(by_column=...)` — Grouped Batches
+
+**PR:** [#8172](https://github.com/huggingface/datasets/pull/8172) by @lhoestq
+
+Groups consecutive rows by a column value into a single batch — ideal for **robotics episodes**, **multi-turn conversations**, or any data where rows belong to groups that must not be split.
+
+```python
+from datasets import Dataset
+
+ds = Dataset.from_dict({
+    "episode": [0] * 10 + [1] * 10,
+    "frame": list(range(10)) * 2,
+})
+ds = ds.batch(by_column="episode")
+for x in ds:
+    print(x)
+# {'episode': [0, 0, ..., 0], 'frame': [0, 1, ..., 9]}
+# {'episode': [1, 1, ..., 1], 'frame': [0, 1, ..., 9]}
+```
+
+### Implementation
+- Uses PyArrow `ListArray` accumulation in an Arrow `map()` function
+- Works with both `Dataset` (in-memory) and `IterableDataset` (streaming Parquet)
+- Supports `state_dict()` / `load_state_dict()` for checkpointing
+- **No multiprocessing** support (batch boundaries can span shards)
+
+---
+
+## 4. New Supported Data Formats
+
+### 4a. Apache Iceberg (`iceberg`)
+
+**PR:** [#8148](https://github.com/huggingface/datasets/pull/8148) by @frankliee
+
+Support for loading Apache Iceberg tables directly via `pyiceberg`:
+
+```python
+from pyiceberg.catalog.sql import SqlCatalog
+from datasets import load_dataset
+
+catalog = SqlCatalog("my_catalog", uri="sqlite:///catalog.db", warehouse="/tmp/warehouse")
+ds = load_dataset("iceberg", catalog=catalog, table_identifier="my_table")
+```
+
+Iceberg is the leading open table format for data lakes, supported by Databricks, Snowflake, AWS Glue, Dremio — removes friction of manual export-to-Parquet.
+
+### 4b. TsFile (Apache IoTDB) — `tsfile`
+
+**PR:** [#8160](https://github.com/huggingface/datasets/pull/8160) by @JackieTien97
+
+Loads IoT time-series data from TsFile format with per-device wide format packaging:
+
+```python
+from datasets import load_dataset
+ds = load_dataset("tsfile", data_files="sensor_data.tsfile")
+```
+
+### 4c. 3D Mesh — `Mesh` feature + `MeshFolder` builder
+
+**PR:** [#8055](https://github.com/huggingface/datasets/pull/8055) by @Vinay-Umrethe
+
+Adds `Mesh` as a first-class feature type (mirroring `Image`, `Audio`, `Video`):
+
+```python
+from datasets import load_dataset, Features, Mesh
+
+features = Features({"mesh": Mesh()})
+ds = load_dataset("mesh_folder", data_dir="path/to/meshes/", features=features)
+```
+
+- Self-contained binary formats: **GLB, PLY, STL**
+- Uses PyArrow `struct` for raw bytes + file paths
+- `MeshFolder` builder for directory-based loading
+- Integrated into `WebDataset`, streaming, and push_to_hub
+
+### 4d. CoNLL / CoNLL-U — `.conll` format loader
+
+**PR:** [#8219](https://github.com/huggingface/datasets/pull/8219) by @CrypticCortex
+
+Loads CoNLL-2003, CoNLL-2000, and Universal Dependencies formats directly:
+
+```python
+from datasets import load_dataset
+
+ds = load_dataset(
+    "conll",
+    data_files="train.conll",
+    column_names=["tokens", "pos_tags", "chunk_tags", "ner_tags"],
+)
+# Each example: {"tokens": [...], "pos_tags": [...], "chunk_tags": [...], "ner_tags": [...]}
+```
+
+One sentence per row, each column is a list aligned with the token list. Supports `.conll` and `.conllu` extensions.
+
+---
+
+## 5. Notable Bug Fixes & Improvements
+
+| Fix | PR | Impact |
+|-----|----|--------|
+| Parquet streaming hangs at end of script | [#8176](https://github.com/huggingface/datasets/pull/8176) | Fixes infinite stall on last batch |
+| Parquet `columns` arg fixed | [#8210](https://github.com/huggingface/datasets/pull/8210) | Column selection works correctly with Parquet |
+| Parquet reshard fix | [#8193](https://github.com/huggingface/datasets/pull/8193) | Correct row group distribution after reshard |
+| `fsspec` 2026.4.0 support | [#8175](https://github.com/huggingface/datasets/pull/8175) | Compatibility with latest filesystem spec |
+| Composed splits in streaming | [#8220](https://github.com/huggingface/datasets/pull/8220) | `split="train+validation"` works in streaming mode |
+| `num_proc` in `Dataset.to_sql` | [#7791](https://github.com/huggingface/datasets/pull/7791) | Parallel SQL writes |
+| Map progress bar fix (`load_from_cache_file=False`) | [#8170](https://github.com/huggingface/datasets/pull/8170) | Bar no longer exceeds total |
+| `None` preserved in `Json()` columns | [#8231](https://github.com/huggingface/datasets/pull/8231) | `None` stays `None`, not `"null"` string |
+| Lance dataset streaming `storage_options` fix | [#8166](https://github.com/huggingface/datasets/pull/8166) | Correct credential passing for Lance |
+
+---
+## 2026-07-24: hf-datasets-500-agent-traces-json-type — v5.0.0 Agent Traces, Json() Type & Features (Topic #205)
+
+### Summary
+Datasets v5.0.0 (June 5, 2026) introduced major features for tool-calling/agent data: native **Agent traces** parsing via `teich`, the **Json() type** for arbitrary JSON in Arrow/Parquet, **multi-shard shuffling** in streaming mode (breaking change), **batch(by_column=...)** for episode-based grouping, storage buckets integration, and 4 new input formats (Iceberg, TsFile, 3D mesh, CoNLL).
+
+### 1. Agent Traces — Native Agent Training Data Loading
+
+The `teich` library (new optional dependency) parses agent traces from **claude_code**, **pi**, **codex**, and others into standard `messages` format for SFT training with `trl`:
+
+```python
+from datasets import load_dataset
+
+# Auto-detected format:agent-traces — loads with teich parser
+ds = load_dataset("lhoestq/agent-traces-example", split="train")
+ds[0]["messages"]
+# [{'role': 'user', 'content': 'Download a random dataset...'}, ...]
+
+# Train directly
+# trl sft --dataset-name lhoestq/agent-traces-example ...
+```
+
+**How it works:**
+- `teich` library parses raw trace formats (JSONL with structured turn logs)
+- Converts to `messages` column fitting OpenAI-style chat format
+- Additional fields: `agent_trace_prompt`, `sent_at`, `count`
+- Dataset repo format tag `format:agent-traces` enables auto-detection
+- Discover all agent-traces datasets: https://huggingface.co/datasets?format=format:agent-traces&sort=trending
+
+**Why it matters for Beer:** Beer's 8 tool-calling datasets can be tagged with `format:agent-traces` for discoverability and loaded directly into training pipelines without custom parsing.
+
+### 2. Json() Type — Mixed-Type Fields in Arrow/Parquet
+
+Tool-calling datasets often have fields mixing `str`, `int`, `float`, `dict`, `list` — normally rejected by Arrow's strict schema. The `Json()` type stores such data as JSON strings internally while presenting as native Python objects:
+
+```python
+from datasets import Features, Value, Json
+
+features = Features({
+    "messages": [{"role": Value("string"), "content": Json()}],
+    "tool_calls": Json(),
+})
+
+ds = load_dataset("json", data_files="tool_data.jsonl", features=features)
+ds[0]["tool_calls"]  # -> [{"name": "search", "args": {"q": "..."}}]
+```
+
+**Auto-detection** with `on_mixed_types="use_json"`:
+```python
+ds = Dataset.from_list(data, on_mixed_types="use_json")
+# Mixed-type fields are auto-assigned Json() type
+```
+
+**Key properties:**
+- Serialized as JSON string in Arrow, deserialized on access
+- Supports `None` (preserved as `None`, not string `"null"`)
+- Compatible with `.map()`, `.cast()`, `.from_dict()`, `.from_list()`
+- Round-trips through Parquet with metadata preservation
+
+### 3. Multi-Shard Shuffle — True Randomization in Streaming
+
+**Breaking change in v5.0.0:** `IterableDataset.shuffle()` now pulls from multiple input shards simultaneously, solving the cold-start problem where only one shard's data appeared in the shuffle buffer:
+
+```python
+ds = load_dataset(..., streaming=True)
+ds = ds.shuffle(seed=42)  # uses max_buffer_input_shards=10 by default
+
+# Explicit configuration:
+ds = ds.shuffle(seed=42, buffer_size=1000, max_buffer_input_shards=10)
+
+# Old behavior (single shard):
+ds = ds.shuffle(seed=42, max_buffer_input_shards=1)
+```
+
+**Before vs After:**
+- Before: cold-start samples all came from shard 0 only (cluster of same shard)
+- After: first 10 samples come from 10 different shards (truly distributed)
+- Threads fetch first examples from input shards in parallel
+- `state_dict()` / `load_state_dict()` checkpointing still works
+
+### 4. batch(by_column=...) — Episode/Group Batching
+
+For robotics, tool-use episodes, or any data grouped by a key:
+
+```python
+from datasets import Dataset
+
+ds = Dataset.from_dict({
+    "episode": [0] * 10 + [1] * 10,
+    "frame": list(range(10)) * 2
+})
+batched = ds.batch(by_column="episode")
+for x in batched:
+    print(x)
+# {'episode': [0, 0, ..., 0], 'frame': [0, 1, ..., 9]}
+# {'episode': [1, 1, ..., 1], 'frame': [0, 1, ..., 9]}
+```
+
+Groups consecutive rows with same value in `by_column` into single batch rows. Works with both `Dataset` and `IterableDataset`.
+
+### 5. Storage Buckets Integration (v4.8.0+)
+
+Load raw data directly from Hugging Face Storage Buckets — no local intermediate:
+
+```python
+from datasets import load_dataset
+
+# Load raw data from a Storage Bucket
+ds = load_dataset("buckets/username/data-bucket", data_files=["*.jsonl"])
+
+# Or using hf:// URIs
+ds = load_dataset("json", data_files=["hf://buckets/username/data-bucket/*.jsonl"])
+
+# Process and publish the AI-ready dataset
+ds = ds.map(...).filter(...)
+ds.push_to_hub("username/my-dataset-ready-for-training")
+```
+
+Also fixes multiprocessed `push_to_hub` on macOS (now uses `spawn` instead of `fork`).
+
+### 6. New Supported Formats in v5.0.0
+
+| Format | Builder | Use Case |
+|--------|---------|----------|
+| **Apache Iceberg** | `load_dataset("iceberg", ...)` | Large-scale tabular data with ACID transactions |
+| **TsFile** (Apache IoTDB) | `load_dataset("tsfile", ...)` | Time-series IoT data, per-device wide format |
+| **3D Mesh** | `load_dataset("mesh_folder", ...)` | 3D graphics, robotics simulation, CAD |
+| **CoNLL** | `load_dataset("conll", ...)` / `conllu` | NER, POS tagging, parsing (CoNLL-2003/2000/U) |
+
+### 7. Other Notable Fixes in v5.0.0
+
+- **Parquet streaming hang fix** — no more infinite stall at end of script
+- **Parquet `columns` arg fix** — column selection works correctly
+- **Parquet reshard fix** — correct row group distribution
+- **Composed splits in streaming** — `split="train+validation"` now works
+- **`None` in Json() columns** — stays `None`, not `"null"` string
+- **Map progress bar fix** — `load_from_cache_file=False` no longer exceeds total
+- **Lance streaming `storage_options`** — correct credential passing
+
+### Source
+- Official v5.0.0 release: https://github.com/huggingface/datasets/releases/tag/5.0.0
+- Agent traces PR: https://github.com/huggingface/datasets/pull/8232
+- Multi-shard shuffle PR: https://github.com/huggingface/datasets/pull/8194
+- batch(by_column) PR: https://github.com/huggingface/datasets/pull/8172
+- Iceberg support PR: https://github.com/huggingface/datasets/pull/8148
+- 3D Mesh PR: https://github.com/huggingface/datasets/pull/8055
+- CoNLL format PR: https://github.com/huggingface/datasets/pull/8219
+- Storage buckets: https://huggingface.co/docs/datasets/en/loading#storage-buckets
+- Json() type PR: https://github.com/huggingface/datasets/pull/8027
+
+---
+
+### Skill
+mlops/hf-datasets-library — references/hf-learnings.md
+
+### References
+- https://github.com/huggingface/datasets/releases/tag/5.0.0
+- https://huggingface.co/docs/datasets/en/parquet_processing
+- https://huggingface.co/docs/datasets/v5.0.0/en/package_reference/main_classes#datasets.Dataset.from_parquet
+- https://arrow.apache.org/docs/python/dataset.html#filtering-data
+- https://huggingface.co/docs/datasets/en/stream
+- https://huggingface.co/docs/datasets-server/parquet
+- https://github.com/huggingface/datasets/pull/8232 — Agent traces PR
+- https://github.com/huggingface/datasets/pull/8194 — Multi-shard shuffle PR
+- https://github.com/huggingface/datasets/pull/8172 — batch(by_column) PR
+- https://github.com/huggingface/datasets/pull/8148 — Iceberg support PR
+- https://github.com/huggingface/datasets/pull/8055 — 3D Mesh PR
+- https://github.com/huggingface/datasets/pull/8219 — CoNLL format PR
+
+---
+
+## 2026-07-24: hf-datasets-pytorch-integration-deep-dive
+
+### Summary
+Deep-dive into how Hugging Face `datasets` integrates with PyTorch — covering `with_format("torch")`, `set_transform()`, zero-copy Arrow→tensor conversion, PyTorch DataLoader integration, multi-worker loading, streaming with workers, distributed splitting, N-dimensional array handling, and the `StatefulDataLoader` checkpointing pattern.
+
+### Key API Surface
+
+#### `with_format("torch")` — Format the Dataset for PyTorch
+
+```python
+from datasets import Dataset
+ds = Dataset.from_dict({"data": [[1, 2], [3, 4], [5, 6]]})
+
+# Set format to PyTorch (zero-copy from Arrow)
+ds = ds.with_format("torch")
+ds[0]  # {'data': tensor([1, 2])}
+ds[:2] # {'data': tensor([[1, 2], [3, 4]])}
+```
+
+**GPU device support:**
+```python
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+ds = ds.with_format("torch", device=device)  # loads tensors directly on GPU
+```
+
+**Column filtering with format:**
+```python
+# Only return specific columns as tensors
+ds = ds.with_format("torch", columns=["input_ids", "attention_mask"])
+```
+
+**`output_all_columns` — mix of tensor and non-tensor columns:**
+```python
+ds = ds.with_format("torch", columns=["data"], output_all_columns=True)
+# Returns {'data': tensor([1, 2]), 'label': 0} — label stays as Python int
+```
+
+**`formatted_as()` — temporary format without mutating the dataset:**
+```python
+with ds.formatted_as("torch", device="cuda"):
+    batch = ds[0]  # tensors on GPU
+# outside the context, original format is restored
+```
+
+#### N-Dimensional Array Handling
+
+**Fixed shape → single tensor (efficient):**
+```python
+from datasets import Dataset, Features, Array2D
+
+data = [[[1, 2], [3, 4]], [[5, 6], [7, 8]]]
+features = Features({"data": Array2D(shape=(2, 2), dtype='int32')})
+ds = Dataset.from_dict({"data": data}, features=features)
+ds = ds.with_format("torch")
+ds[:2]["data"].shape  # torch.Size([2, 2, 2]) — single tensor
+```
+
+**Variable shape → list of tensors (slower):**
+```python
+data = [[[1, 2], [3]], [[4, 5, 6], [7, 8]]]  # varying shapes
+ds = Dataset.from_dict({"data": data})
+ds = ds.with_format("torch")
+ds[0]  # {'data': [tensor([1, 2]), tensor([3])]}
+```
+
+**Critical performance rule:** Always explicitly declare `Array2D`, `Array3D`, `Array4D`, or `Array5D` features with fixed shapes. The library falls back to slow shape comparison logic when shapes aren't declared.
+
+#### Image Feature Type → Tensor
+
+```python
+from datasets import Features, Image
+
+features = Features({"image": Image()})
+ds = Dataset.from_dict({"image": ["path/to/img.png"]}, features=features)
+ds = ds.with_format("torch")
+ds[0]["image"].shape  # torch.Size([512, 512, 4]) — HWC, uint8
+ds[:2]["image"].shape # torch.Size([2, 512, 512, 4])
+```
+
+#### Audio Feature Type → Tensor
+
+```python
+from datasets import Features, Audio
+
+features = Features({"audio": Audio()})
+ds = Dataset.from_dict({"audio": ["path/to/audio.wav"]}, features=features)
+ds = ds.with_format("torch")
+ds[0]["audio"]["array"]          # tensor of waveform samples
+ds[0]["audio"]["sampling_rate"]  # tensor(44100)
+```
+
+#### ClassLabel → Tensor
+
+```python
+from datasets import Features, ClassLabel
+
+features = Features({"label": ClassLabel(names=["neg", "pos"])})
+ds = Dataset.from_dict({"label": [0, 0, 1]}, features=features)
+ds = ds.with_format("torch")
+ds[:3]  # {'label': tensor([0, 0, 1])}
+```
+
+**String/binaries are unchanged** — PyTorch only supports numeric types.
+
+#### `set_transform()` — On-the-Fly Transforms (No Cache File)
+
+```python
+def encode(batch):
+    """Applied per-batch during DataLoader iteration — no cache files written."""
+    return tokenizer(batch["text"], padding="longest", truncation=True, return_tensors="pt")
+
+# with_transform returns a context that applies `encode` on every __getitem__ call
+ds = ds.with_transform(encode)
+
+# Against: returns tokenizer output directly
+ds[0]  # {'input_ids': tensor([...]), 'attention_mask': tensor([...])}
+```
+
+**Key traits:**
+- No cache file is written — transform runs fresh every access
+- Use `with_transform()` for tokenization inside a DataLoader to avoid storing pre-tokenized data
+- Combine with `with_format("torch")` for base tensor conversion + custom transform for specialized output
+
+#### `set_format()` vs `with_transform()` — The Difference
+
+| Method | Cached? | Purpose |
+|--------|---------|---------|
+| `with_format("torch")` | No (zero-copy) | Converts Arrow arrays to PyTorch tensors on-the-fly |
+| `with_transform(fn)` | No | Passes rows through a user-defined callable on every access |
+| `map(fn)` | Yes (to Arrow cache) | Persists processed data to disk as Arrow tables |
+
+Use `with_format()` for fast tensor access. Use `with_transform()` for tokenization inside DataLoaders. Use `map()` when you need to precompute and persist results.
+
+### PyTorch DataLoader Integration
+
+A `Dataset` object (map-style) can be passed directly to `torch.utils.data.DataLoader`:
+
+```python
+import numpy as np
+from datasets import Dataset
+from torch.utils.data import DataLoader
+
+ds = Dataset.from_dict({
+    "data": np.random.rand(16),
+    "label": np.random.randint(0, 2, size=16)
+}).with_format("torch")
+
+dataloader = DataLoader(ds, batch_size=4)
+for batch in dataloader:
+    print(batch)
+    # {'data': tensor([...]), 'label': tensor([...])}
+```
+
+**With custom collation (e.g., `DataCollatorForLanguageModeling`):**
+
+```python
+from transformers import DataCollatorForLanguageModeling
+from transformers import AutoTokenizer
+
+tokenizer = AutoTokenizer.from_pretrained("distilbert-base-uncased")
+collator = DataCollatorForLanguageModeling(tokenizer)
+
+ds = load_dataset("wikitext", "wikitext-2-raw-v1", split="train", streaming=True)
+ds = ds.map(lambda x: tokenizer(x["text"]), batched=True)
+dataloader = DataLoader(ds, batch_size=8, collate_fn=collator)
+```
+
+**`IterableDataset` (streaming) with DataLoader:**
+
+```python
+ds = load_dataset("bigcode/the-stack", split="train", streaming=True)
+dataloader = DataLoader(ds, batch_size=32)  # works directly
+# IterableDataset inherits from torch.utils.data.IterableDataset
+```
+
+### Multi-Worker Data Loading
+
+#### Map-Style Dataset with Workers
+
+```python
+# Save to disk for worker-safe reloading
+from datasets import load_from_disk
+
+ds.save_to_disk("my_dataset")
+ds = load_from_disk("my_dataset").with_format("torch")
+
+dataloader = DataLoader(ds, batch_size=32, num_workers=4)
+```
+
+**How it works:**
+- Each worker process reloads the dataset from the Arrow-mapped files
+- Arrow memory-mapped files are **shared** across processes (OS-level shared memory)
+- Workers don't duplicate the data in RAM — they re-map the same files
+- Each worker gets a subset of the dataset's shards
+
+#### Streaming (IterableDataset) with Workers
+
+```python
+ds = load_dataset("deepmind/code_contests", streaming=True, split="train")
+print(ds.num_shards)  # 39
+dataloader = DataLoader(ds, batch_size=32, num_workers=4)
+```
+
+**How it works:**
+- Each worker is assigned a **subset of shards** to stream from
+- `num_workers` can't exceed `num_shards` — each worker needs at least one shard
+- Workers stream independently from remote or local storage
+
+#### Sharding with `to_iterable_dataset()` for Fine-Grained Control
+
+```python
+# Convert a map-style dataset to sharded iterable
+ds = load_dataset("ethz/food101")
+iterable_ds = ds.to_iterable_dataset(num_shards=64)
+iterable_ds = iterable_ds.shuffle(buffer_size=10_000)
+
+# 64 shards ÷ 4 workers = 16 shards per worker
+dataloader = DataLoader(iterable_ds, num_workers=4)
+```
+
+### Distributed Training Support
+
+#### `split_dataset_by_node()`
+
+```python
+import os
+from datasets.distributed import split_dataset_by_node
+
+rank = int(os.environ["RANK"])
+world_size = int(os.environ["WORLD_SIZE"])
+
+# Works for both Dataset and IterableDataset
+ds = split_dataset_by_node(ds, rank=rank, world_size=world_size)
+```
+
+**For map-style Dataset:**
+- Each node gets a contiguous chunk of data (rank 0 = first chunk)
+- Contiguous chunks maximize throughput (sequential disk reads)
+
+**For IterableDataset:**
+- If `num_shards % world_size == 0`, shards are evenly assigned across nodes (optimal)
+- Otherwise, each node keeps 1 example out of `world_size`, skipping others
+- ⚠️ If shuffling in distributed mode, set a **fixed seed** in `IterableDataset.shuffle(seed=...)` so all nodes use the same shuffled shard list
+
+#### Combine with DataLoader and Workers
+
+```python
+# Each node gets its split, then uses 4 workers each
+ds = split_dataset_by_node(ds, rank=rank, world_size=world_size)
+dl = DataLoader(ds, batch_size=32, num_workers=4)
+```
+
+### Checkpoint DataLoader State (Resume Training)
+
+```python
+from torchdata.stateful_dataloader import StatefulDataLoader
+
+ds = load_dataset("deepmind/code_contests", streaming=True, split="train")
+dataloader = StatefulDataLoader(ds, batch_size=32, num_workers=4)
+
+# Save checkpoint mid-epoch
+state_dict = dataloader.state_dict()
+torch.save(state_dict, "dataloader_state.pt")
+
+# Resume from checkpoint
+dataloader.load_state_dict(torch.load("dataloader_state.pt"))
+```
+
+This works because `IterableDataset` implements `state_dict()` and `load_state_dict()`.
+
+### Shuffling in Streaming Mode
+
+```python
+# Buffer-based approximate shuffling
+shuffled = ds.shuffle(seed=42, buffer_size=10_000)
+```
+
+**How buffer shuffling works:**
+1. Fill a buffer with the first `buffer_size` examples
+2. Randomly sample from the buffer (with replacement)
+3. Replace sampled examples with new ones from the stream
+4. Larger buffer = better shuffle quality, more memory
+5. Default buffer size = 1,000
+
+**Epoch reshuffling:**
+```python
+for epoch in range(epochs):
+    shuffled_dataset.set_epoch(epoch)  # seed = initial_seed + epoch
+    for example in shuffled_dataset:
+        ...
+```
+
+### batching via `.batch()` Method
+
+```python
+# Direct batching without DataLoader (streaming)
+batched = ds.batch(batch_size=32)
+batched = ds.batch(batch_size=32, drop_last_batch=True)
+
+for batch in batched:
+    print(batch)  # list of dicts
+```
+
+### Training Loop Example
+
+```python
+import torch
+from torch.utils.data import DataLoader
+from transformers import AutoModelForMaskedLM, DataCollatorForLanguageModeling
+from datasets import load_dataset
+
+# Streaming dataset
+dataset = load_dataset("wikitext", "wikitext-2-raw-v1", split="train", streaming=True)
+dataset = dataset.shuffle(seed=42, buffer_size=10_000)
+dataset = dataset.with_format("torch")
+
+# DataLoader with collator
+tokenizer = AutoTokenizer.from_pretrained("distilbert-base-uncased")
+collator = DataCollatorForLanguageModeling(tokenizer)
+dataloader = DataLoader(dataset, batch_size=8, collate_fn=collator)
+
+# Training
+model = AutoModelForMaskedLM.from_pretrained("distilbert-base-uncased")
+model.train().to("cuda")
+
+for batch in dataloader:
+    batch = {k: v.to("cuda") for k, v in batch.items()}
+    outputs = model(**batch)
+    loss = outputs.loss
+    loss.backward()
+    optimizer.step()
+```
+
+### Key Insights
+
+1. **Zero-copy is the killer feature** — Arrow→PyTorch tensor conversion via `with_format("torch")` is nearly free (just metadata). No serialization or memcpy.
+
+2. **Pre-define array shapes** for N-dimensional data. Without explicit `Array2D`/`Array3D` features, the library does expensive shape comparison and falls back to list-of-tensors.
+
+3. **`with_transform()` for tokenization** inside a DataLoader — avoids writing pre-tokenized data to cache, saving disk space and time.
+
+4. **`map()` caches by default** — fingerprint-based caching means re-running the same map loads from cache. Use `load_from_cache_file=False` for non-deterministic transforms.
+
+5. **Worker-based loading with map-style datasets** requires `save_to_disk()` first — the Arrow files must exist on disk for workers to memory-map them.
+
+6. **Streaming `num_workers` is shard-limited** — you can't have more workers than shards. Use `to_iterable_dataset(num_shards=N)` to increase shard count.
+
+7. **Distributed splitting** with `split_dataset_by_node()` works for both map and iterable datasets, but iterable shard-count-based splitting is more efficient when `num_shards % world_size == 0`.
+
+8. **`StatefulDataLoader`** from `torchdata` enables mid-epoch checkpoint/resume — essential for long training runs on preemptible infrastructure.
+
+9. **String/binary columns are silently ignored** by `with_format("torch")` — they stay as Python objects.
+
+10. **`formatted_as()` context manager** is the safest way to use temporary tensor formats without mutating the dataset.
+
+### Sources
+- https://huggingface.co/docs/datasets/en/use_with_pytorch — official guide
+- https://huggingface.co/docs/datasets/en/stream — streaming guide
+- https://huggingface.co/docs/datasets/en/process — process guide
+- https://huggingface.co/docs/datasets/en/package_reference/main_classes — Dataset API reference
+- Source: `src/datasets/formatting/formatting.py` — formatting internals
+- Source: `src/datasets/distributed.py` — `split_dataset_by_node`
+- https://pytorch.org/docs/stable/data.html — PyTorch DataLoader docs
+- https://github.com/pytorch/data — StatefulDataLoader
+
+## 2026-07-24: hf-datasets-5-by-column-batching — `batch(by_column=...)` for Grouped Batches (Added v4.9.0, Extended in v5.0.0)
+
+### Summary
+The `Dataset.batch()` and `IterableDataset.batch()` methods accept `by_column` (single column name or list of column names) to group successive rows that share identical values in the specified column(s) into the same batch. This is critical for:
+- **Robotics:** group frames by episode
+- **RL/RLHF:** group trajectory steps by rollout ID
+- **Time-series:** group readings by session or user
+- **Multi-turn conversations:** group turns by conversation ID
+
+### API
+
+```python
+from datasets import Dataset
+
+ds = Dataset.from_dict({
+    "episode": [0]*10 + [1]*10,
+    "frame": list(range(10))*2,
+})
+
+# Group by episode — each batch = one full episode
+batched_ds = ds.batch(by_column="episode")
+for b in batched_ds:
+    print(b)
+# {'episode': [0,0,0,0,0,0,0,0,0,0], 'frame': [0,1,2,3,4,5,6,7,8,9]}
+# {'episode': [1,1,1,1,1,1,1,1,1,1], 'frame': [0,1,2,3,4,5,6,7,8,9]}
+
+# Multiple columns
+ds.batch(by_column=["episode", "split"])
+
+# Also works with datasets in streaming mode
+stream_ds = ds.to_iterable_dataset()
+for b in stream_ds.batch(by_column="episode"):
+    print(b)
+```
+
+### How It Works (Internal Architecture)
+
+The `by_column` feature uses `_batch_accumulate_arrow_table_by_columns()` from `datasets.table.py`:
+
+1. **Accumulation phase:** Successive mini-batches (from `map()` with `batched=True`) are compared against the accumulator. If all rows in the new mini-batch share the same column value(s) as the accumulated rows, the mini-batch is appended to the accumulator and an *empty* batched table is returned (so the upstream pipeline sees zero rows, effectively deferring the batch).
+
+2. **Cut phase:** When a row with a different column value is found, all accumulated rows are concatenated into a single Arrow table, then cut at boundaries where the `by_column` value(s) change. `pc.indices_nonzero()` detects the cut points. Each segment becomes one batch entry.
+
+3. **Last batch handling:** For `Dataset.batch()` (non-streaming), if the last batch might be incomplete, it's kept in `tables_accumulator` and returned when `length` is known. The `drop_last_batch` parameter controls whether incomplete final batches are dropped.
+
+### Key Design Details
+
+| Aspect | Detail |
+|--------|--------|
+| **Comparator** | Uses `pyarrow.compute.not_equal()` — zero-copy, vectorized |
+| **Cut detection** | `pc.indices_nonzero()` on the diff array of the key column(s) |
+| **Batch assembly** | `pa.ListArray.from_arrays(offsets, column)` creates nested list arrays |
+| **Feature schema** | Output features auto-convert to `List(feature)` for all columns |
+| **Accumulator** | Python list of `pa.Table` objects, max-1 incomplete batch held |
+| **Streaming** | Same algorithm, but `length=None` means "don't know if batch is complete" so accumulation is greedy |
+| **Multi-column** | Requires ALL specified columns to match; uses `pc.or_()` across diff arrays |
+| **Parallelism** | `num_proc` raises `NotImplementedError` for `by_column` mode — must be single-process |
+
+### Performance Characteristics
+
+- **Memory:** The accumulator holds at most one incomplete batch worth of Arrow data (typically small). The cut operation uses Arrow's zero-copy slicing where possible.
+- **Time:** O(n) where n = number of rows. The `pc.not_equal()` and `pc.indices_nonzero()` operations are vectorized in C++.
+- **Batch size param:** When using `by_column`, `batch_size` controls the mini-batch size fed to the map function (internal detail), NOT the output batch size. Output batch size is determined by the number of rows sharing each column value.
+
+### Comparison: `by_column` vs. `group_by`
+
+| Feature | `batch(by_column=...)` | Manual `group_by` |
+|---------|----------------------|--------------------|
+| Preserves order | ✅ Successive groups in order | ❌ Requires sort/partition |
+| Streaming | ✅ Works with IterableDataset | ❌ Requires full dataset |
+| Returns | Batched Dataset (nested lists) | Depends on implementation |
+| Memory | O(max group size) | O(unique values × groups) |
+| Use case | Sequential grouped data | Arbitrary grouping |
+
+### Source
+- `src/datasets/table.py` → `_batch_accumulate_arrow_table_by_columns()`
+- `src/datasets/arrow_dataset.py` → `Dataset.batch()`
+- `src/datasets/iterable_dataset.py` → `IterableDataset.batch()`
+- Doc: https://huggingface.co/docs/datasets/en/package_reference/main_classes#datasets.Dataset.batch
+|- Added in v4.9.0 (2025), extended in v5.0.0 (2026-06-05)
+
+---
+
+## 2026-07-25: hf-datasets-fs-remote-filesystems
+
+### Summary
+Deep-dive into the Hugging Face Datasets library's integration with remote filesystems via `fsspec` — covering S3, GCS, Azure, and Oracle cloud storage imports, publishing cloud datasets to the Hub, Storage Buckets (`hf://buckets/`), streaming from remote paths, and the `HfFileSystem` / `hffs` APIs. Based on the official filesystems guide (v4.8.4+).
+
+### Key Concepts
+
+**Architecture:**
+- The datasets library uses `fsspec` (filesystem spec) as an abstraction layer to access remote storage providers
+- `fsspec` provides a unified API across S3 (`s3fs`), GCS (`gcsfs`), Azure (`adlfs`), Oracle (`ocifs`), and others
+- All filesystem implementations support the same core methods: `glob()`, `open()`, `download()`, `upload()`, `ls()`, `info()`
+- The Hub integrates with fsspec via `HfFileSystem` (from `huggingface_hub`), using `hf://` URIs
+
+**Supported Cloud Providers:**
+
+| Provider | Filesystem | Package |
+|----------|-----------|---------|
+| Amazon S3 | s3fs | `pip install s3fs` |
+| Google Cloud Storage | gcsfs | `pip install gcsfs` |
+| Azure Blob/DataLake | adlfs | `pip install adlfs` |
+| Oracle Cloud Storage | ocifs | `pip install ocifs` |
+| Hugging Face Hub | HfFileSystem | Built into `huggingface_hub` |
+
+**Pattern 1: Import from cloud → Publish to Hub**
+```python
+import fsspec
+from huggingface_hub import create_repo, upload_folder
+
+fs = fsspec.filesystem("s3")  # or "gcs", "abfs", "adl", "oci"
+data_dir = "path/to/my/data/"
+pattern = "*.parquet"
+data_files = fs.glob(data_dir + pattern)
+
+create_repo("username/my-dataset", repo_type="dataset")
+
+for data_files in batched(tqdm(fs.glob(data_dir + pattern)), 100):
+    with TemporaryDirectory() as tmp_dir:
+        tmp_files = [os.path.join(tmp_dir, x[len(data_dir):]) for x in data_files]
+        fs.download(data_files, tmp_files)
+        upload_folder(repo_id="username/my-dataset", folder_path=tmp_dir, repo_type="dataset")
+
+ds = load_dataset("username/my-dataset")
+```
+
+**Pattern 2: Import raw data to Storage Buckets (v4.8.4+)**
+```python
+from huggingface_hub import create_bucket, sync_bucket
+from datasets import load_dataset
+
+create_bucket("username/my-bucket")
+bucket_location = "hf://buckets/username/my-bucket/path/to/raw/files"
+
+for data_files in batched(tqdm(fs.glob(data_dir + pattern)), 100):
+    with TemporaryDirectory() as tmp_dir:
+        tmp_files = [os.path.join(tmp_dir, x[len(data_dir):]) for x in data_files]
+        fs.download(data_files, tmp_files)
+        sync_bucket(tmp_dir, bucket_location)
+
+ds = load_dataset(bucket_location, streaming=True)
+ds = ds.map(...).filter(...)
+ds.push_to_hub("username/my-dataset", num_proc=4)
+```
+
+**Pattern 3: Custom file parsing from buckets**
+```python
+from datasets import IterableDataset
+from huggingface_hub import hffs
+
+data_files = hffs.find(bucket_files_location)
+ds = IterableDataset.from_dict({"data_file": data_files}, num_shards=1024)
+
+def parse_data_files(data_files):
+    return {"col_1": [...], "col_2": [...]}
+
+ds = ds.map(parse_data_files, batched=True, input_column=["data_file"])
+ds.push_to_hub("username/my-dataset", num_proc=4)
+```
+
+**Pattern 4: Direct Hub file access via HfFileSystem**
+```python
+from huggingface_hub import HfFileSystem
+
+fs = HfFileSystem()
+fs.ls("hf://datasets/username/dataset/data/")
+with fs.open("hf://datasets/username/dataset/data/train.parquet") as f:
+    content = f.read()
+fs.copy("hf://username/source/weights.safetensors", "hf://username/target/weights.safetensors")
+fs.exists("hf://username/my-model/config.json")
+```
+
+**Key APIs:**
+- `fsspec.filesystem("provider")` — instantiate any cloud FS
+- `fs.glob(pattern)`, `fs.open(path)`, `fs.download(src, dest)`, `fs.info(path)`
+- `huggingface_hub.hffs.find(uri)` — discover files in Hub Storage Buckets
+- `IterableDataset.from_dict(..., num_shards=N)` — parallel processing from file list
+- `create_bucket()` / `sync_bucket()` — Storage Bucket management (v4.8.4+)
+
+**Zero-Cost Considerations:**
+- Cloud storage egress costs may apply (S3, GCS, Azure)
+- HF Hub datasets storage is free up to quota
+- `streaming=True` avoids local disk when loading directly from cloud
+- Batched uploads (100 files/batch) with `TemporaryDirectory` minimize local temp usage
+- `num_shards` enables parallel processing without loading all files into memory
+
+**Key Differences from hf-hub-fsspec:**
+- Covers **datasets + fsspec** pipeline: cloud storage → HF datasets
+- `hffs` is a higher-level helper for bucket file enumeration
+- v4.8.4 added Storage Bucket integration via `sync_bucket` and `hf://buckets/` URIs

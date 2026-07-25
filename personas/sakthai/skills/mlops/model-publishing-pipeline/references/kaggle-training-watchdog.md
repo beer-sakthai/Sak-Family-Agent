@@ -57,3 +57,5 @@ cronjob(action='create', name='Kaggle Training Watchdog',
 - `kaggle kernels delete` is interactive (prompts yes/no) — never call from scripts
 - Status string matching is fragile — Kaggle may change enum values. Use grep with `-oP '"\K[^"]+(?=")'` to extract the quoted status from CLI output
 - The `kaggle kernels output` command may download to unexpected paths if run from a repo directory — always specify `-p` with an explicit output directory
+- **Pushing a new version does NOT trigger execution.** Kaggle v2.x CLI uploads the code but the kernel sits idle until the scheduler runs it. To force immediate execution, change the kernel slug (create a new kernel). Kaggle auto-runs kernels on creation.
+- **Version pushes after an error do not re-run.** If v5 errored, pushing v6 does not re-run it. A new slug is the only reliable trigger from CLI.

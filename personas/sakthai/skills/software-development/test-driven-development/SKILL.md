@@ -35,6 +35,15 @@ Write the test first. Watch it fail. Write minimal code to pass.
 
 Thinking "skip TDD just this once"? Stop. That's rationalization.
 
+## Prerequisites
+
+- **Test framework available:** You need a working test runner (pytest, unittest, Jest, etc.) configured for the project. Install if missing before starting.
+- **Existing test convention:** Know how the project structures tests — where test files go, naming conventions, fixtures, and common patterns. Follow existing style.
+- **Working baseline:** The test suite should be passing before you start. A failing suite means you can't tell if your new code broke something.
+- **Clear success criteria:** You must know what "correct" looks like for each behavior before writing the test. Vague requirements produce un-testable code.
+- **Environment ready:** The project must be runnable locally — dependencies installed, database set up, environment variables configured.
+- **Discipline:** Willingness to delete code when you violate the Iron Law. TDD requires strict adherence to the RED → GREEN → REFACTOR cycle. Half-measures defeat the purpose.
+
 ## The Iron Law
 
 ```
@@ -274,7 +283,20 @@ If you catch yourself doing any of these, delete the code and restart with TDD:
 
 **All of these mean: Delete code. Start over with TDD.**
 
-## Verification Checklist
+## Pitfalls
+
+- **Skipping RED verification:** Writing a test and immediately writing implementation without watching it fail first. You never prove the test actually catches the bug.
+- **Testing implementation, not behavior:** Tests that assert on internal method calls, private functions, or implementation details break during refactoring. Test what the code does, not how.
+- **One giant test instead of many focused tests:** A single test that checks 10 behaviors makes it impossible to tell which one failed. Split into one assertion per test.
+- **Over-mocking:** Mocking everything creates tests that verify mock behavior rather than real behavior. Use real objects whenever possible; mock only at system boundaries.
+- **Missing edge cases:** Only testing the happy path. Add tests for empty inputs, null values, error conditions, boundary values, concurrent access, and security constraints.
+- **Brittle tests:** Tests that fail due to unrelated changes (formatting, comments, whitespace) waste time. Tests should verify behavior, not structure.
+- **Writing all tests first (horizontal slicing):** Writing a full test suite before any implementation leads to brittle, disconnected tests. Use vertical tracer bullets instead (one RED→GREEN cycle per behavior).
+- **Refactoring without tests first:** Changing code structure without a safety net. Write tests for the existing behavior first, then refactor.
+- **Ignoring test slowness:** Tests that take minutes to run discourage running them frequently. Keep unit tests fast (milliseconds). Move slow integration tests to a separate suite.
+- **TDD abandonment under pressure:** The first thing dropped in a crunch is TDD — which is exactly when it's most valuable. Stick to the cycle even (especially) when the deadline looms.
+
+## Verification
 
 Before marking work complete:
 
@@ -286,6 +308,11 @@ Before marking work complete:
 - [ ] Output pristine (no errors, warnings)
 - [ ] Tests use real code (mocks only if unavoidable)
 - [ ] Edge cases and errors covered
+- [ ] Full test suite passes with no regressions (not just the new tests)
+- [ ] Each test name clearly describes the behavior it verifies
+- [ ] No production code exists without a corresponding failing test (the Iron Law)
+- [ ] REFACTOR phase completed — duplication removed, names improved, code simplified
+- [ ] Tests remain green after refactoring
 
 Can't check all boxes? You skipped TDD. Start over.
 

@@ -7053,3 +7053,559 @@ Orgs on Team/Enterprise plans can enforce token policies:
 |**Scope** | Full per-user scopes | Repo-scoped or read-only user | Org-scoped |
 |**Plan required** | Free | Free | Enterprise |
 |**Token prefix** | `hf_oauth_` | `hf_jwt_` (repo) / `hf_oauth_` (user) | `hf_oauth_` |
+
+---
+
+## 2026-07-27: hf-spaces-oauth-app-integration — Complete Spaces OAuth Guide (Topic #208)
+
+### Summary
+Comprehensive guide to adding a **"Sign-In with HF"** button to Hugging Face Spaces using OAuth 2.0 / OpenID Connect. Covers the automatic OAuth app creation via Space config (`hf_oauth: true`), the full list of scopes, the authorization code flow with PKCE, device code flow for CLIs, CIMD (Client ID Metadata Documents) for ephemeral apps, Gradio's built-in OAuth support, huggingface.js integration, and Python device code examples. Complements the existing OAuth token presets and token exchange content above.
+
+### Sources
+- Official docs: https://huggingface.co/docs/hub/en/spaces-oauth
+- General OAuth page: https://huggingface.co/docs/hub/en/oauth
+- CIMD spec: https://datatracker.ietf.org/doc/draft-ietf-oauth-client-id-metadata-document/
+- OpenID metadata: https://huggingface.co/.well-known/openid-configuration
+- Gradio OAuth guide: https://www.gradio.app/guides/sharing-your-app#o-auth-login-via-hugging-face
+- huggingface.js OAuth: https://huggingface.co/docs/huggingface.js/hub/README#oauth-login
+- Reference Space (Gradio): https://huggingface.co/spaces/Wauplin/gradio-oauth-test
+- Reference Space (JS/static): https://huggingface.co/spaces/huggingfacejs/client-side-oauth
+
+### 1. Architecture Overview
+
+HF Spaces OAuth uses the **authorization code flow** with PKCE (Proof Key for Code Exchange by OAuth public clients). There are two modes:
+
+| Mode | Setup Effort | Auth Method | Best For |
+|------|-------------|-------------|----------|
+| **Automatic (Spaces)** | Minimal — one YAML line | Auto-provisioned OAuth app via Space metadata | Gradio/Streamlit/Docker Spaces |
+| **Manual (External)** | Register app in settings | Manual client ID + secret creation | Websites, CLIs, non-Space apps |
+
+Spaces automatically create and associate an OAuth app when `hf_oauth: true` is set in the Space's config. No manual app creation needed.
+
+```
+User's Browser           HF OAuth Server          Your Space
+     │                        │                      │
+     │── authorize request ──→│                      │
+     │                        │── consent modal ──→  │
+     │←── auth code ──────────│                      │
+     │── token exchange ────→│                      │
+     │←── access token ──────│                      │
+     │── API calls ──────────│─────────────────────→│
+```
+
+### 2. Automatic OAuth in Spaces (The Easy Way)
+
+#### Step 1: Enable in Space Metadata
+
+Add to your Space's `README.md`:
+
+```yaml
+hf_oauth: true
+# optional: token duration (default 480 min, max 43200 min = 30 days)
+hf_oauth_expiration_minutes: 480
+# optional: request additional scopes beyond openid + profile
+hf_oauth_scopes:
+  - read-repos
+  - inference-api
+# optional: restrict auth to specific org members
+hf_oauth_authorized_org:
+  - ORG_NAME1
+  - ORG_NAME2
+```
+
+#### Step 2: Environment Variables Injected
+
+The Space runtime automatically injects these environment variables:
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `OAUTH_CLIENT_ID` | Public client ID | `Spaces_abc123` |
+| `OAUTH_CLIENT_SECRET` | Client secret (keep private) | `sk-...` |
+| `OAUTH_SCOPES` | Comma-separated scope list | `openid,profile,inference-api` |
+| `OPENID_PROVIDER_URL` | OpenID metadata endpoint | `https://huggingface.co` |
+
+Use them anywhere in your code: `os.getenv("OAUTH_CLIENT_ID")`.
+
+#### Step 3: Redirect URLs
+
+Any URL targeting your Space can be a redirect URI. Use `SPACE_HOST` (another environment variable):
+
+```python
+import os
+redirect_uri = f"https://{os.getenv('SPACE_HOST')}/login/callback"
+```
+
+### 3. OAuth Scopes — Complete Reference
+
+#### Always Included (mandatory, no extra config needed)
+
+| Scope | Grants |
+|-------|--------|
+| `openid` | ID token (user identity) |
+| `profile` | Username, avatar, name from user profile |
+
+#### Optional (add via `hf_oauth_scopes`)
+
+| Scope | Grants | Use Case |
+|-------|--------|----------|
+| `email` | User's email address | User verification |
+| `read-billing` | Whether user has payment method set up | Check subscription status |
+| `read-repos` | Read access to user's personal repos | List user repos |
+| `gated-repos` | Read content from gated repos user has access to | Access gated model weights |
+| `contribute-repos` | Create repos + access app-created repos | Allow users to push to their own Spaces |
+| `write-repos` | Write/read to user's personal repos | Edit configs, push datasets |
+| `manage-repos` | Full repo access + create/delete repos | Admin-like access |
+| `read-collections` | Read user's personal collections | Browse collections |
+| `write-collections` | Write/read + create/delete collections | Manage collections |
+| `inference-api` | Call Inference Providers on user's behalf | Serverless inference using user's quota |
+| `jobs` | Run HF Jobs | Scheduled inference/training |
+| `webhooks` | Manage webhooks | Subscribe to Hub events |
+| `write-discussions` | Open/interact with discussions and PRs | Community engagement |
+
+**Important:** Scopes are additive — more scopes = more trust. Only request what you need.
+
+### 4. The OAuth Flow — Step by Step
+
+#### Authorization Code Flow with PKCE (Spaces)
+
+**Step A — Build the authorize URL:**
+```
+https://huggingface.co/oauth/authorize?
+  redirect_uri={REDIRECT_URI}&
+  scope=openid%20profile&
+  client_id={CLIENT_ID}&
+  state={STATE}&
+  code_challenge={SHA256_CODE_VERIFIER}&
+  code_challenge_method=S256
+```
+
+- `STATE`: cryptographically random string (validated on callback — prevents CSRF)
+- `code_challenge`: SHA-256 hash of a random `code_verifier` string (PKCE — prevents auth code interception)
+- Always use PKCE for public clients (Spaces apps are public by nature)
+
+**Step B — Handle the callback:**
+User authorizes → HF redirects to `{REDIRECT_URI}?code={AUTH_CODE}&state={STATE}`
+- Verify `state` matches what you sent
+- Exchange `code` for tokens
+
+**Step C — Token exchange (POST to `https://huggingface.co/oauth/token`):**
+```
+POST /oauth/token
+Content-Type: application/x-www-form-urlencoded
+Authorization: Basic {base64(client_id:client_secret)}
+
+client_id={CLIENT_ID}&
+code={AUTH_CODE}&
+grant_type=authorization_code&
+redirect_uri={REDIRECT_URI}&
+code_verifier={ORIGINAL_CODE_VERIFIER}
+```
+
+**Response:**
+```json
+{
+  "access_token": "hf_oauth_...",
+  "token_type": "bearer",
+  "expires_in": 28800,
+  "id_token": "eyJ..."
+}
+```
+
+- `access_token` — Bearer token for API calls (prefix: `hf_oauth_`)
+- `id_token` — JWT containing user identity claims (username, avatar URL, name)
+- Tokens expire in 8 hours by default, no refresh token
+
+#### Device Code Flow (CLI / Headless)
+
+For CLI tools that can't open a browser redirect:
+
+**Step 1 — Request device code (POST to `/oauth/device`):**
+```
+POST https://huggingface.co/oauth/device
+Content-Type: application/x-www-form-urlencoded
+
+client_id={CLIENT_ID}
+scope=openid profile
+```
+
+For apps with a secret, add: `Authorization: Basic {base64(client_id:client_secret)}`
+
+**Response:**
+```json
+{
+  "device_code": "abc-def-ghi",
+  "user_code": "HF-1234",
+  "verification_uri": "https://huggingface.co/oauth/authorize",
+  "verification_uri_complete": "https://huggingface.co/oauth/authorize?user_code=HF-1234",
+  "expires_in": 900,
+  "interval": 5
+}
+```
+
+**Step 2 — Poll for token (POST to `/oauth/token`):**
+```
+POST https://huggingface.co/oauth/token
+Content-Type: application/x-www-form-urlencoded
+
+client_id={CLIENT_ID}
+device_code={DEVICE_CODE}
+grant_type=urn:ietf:params:oauth:grant-type:device_code
+```
+
+Poll every `interval` seconds until user completes auth in browser.
+
+**Python device code example (public app, no secret):**
+```python
+import httpx, time, webbrowser
+
+CLIENT_ID = "your-client-id"
+client = httpx.Client()
+
+# Step 1: request device code
+resp = client.post("https://huggingface.co/oauth/device", data={
+    "client_id": CLIENT_ID,
+    "scope": "openid profile",
+})
+device = resp.json()
+print(f"Go to {device['verification_uri_complete']} and enter code: {device['user_code']}")
+webbrowser.open(device["verification_uri_complete"])
+
+# Step 2: poll for token
+for _ in range(device["expires_in"] // device["interval"]):
+    time.sleep(device["interval"])
+    resp = client.post("https://huggingface.co/oauth/token", data={
+        "client_id": CLIENT_ID,
+        "device_code": device["device_code"],
+        "grant_type": "urn:ietf:params:oauth:grant-type:device_code",
+    })
+    if resp.status_code == 200:
+        token = resp.json()["access_token"]
+        print(f"Authenticated! Token: {token[:20]}...")
+        break
+    elif resp.status_code == 400 and resp.json().get("error") == "authorization_pending":
+        continue  # user hasn't completed auth yet
+```
+
+### 5. Gradio Built-in OAuth (Zero-Code Option)
+
+Gradio Spaces have **built-in OAuth support** that requires no custom OAuth code. Add `hf_oauth: true` to Space metadata, then use `gr.OAuthView` or `gr.OAuthIdentity`:
+
+```python
+import gradio as gr
+
+# Option 1: Check authentication in any function
+def greet(request: gr.Request):
+    if request.oauth_user:
+        return f"Hello, {request.oauth_user['name']}!"
+    return "Please sign in."
+
+# Option 2: Use OAuth-protected views
+with gr.Blocks() as demo:
+    gr.OAuthView(gr.Markdown("🔒 You are logged in!"))
+    gr.OAuthButton("Sign in with HF")
+
+demo.launch()
+```
+
+Gradio automatically handles the redirect, token exchange, and user info retrieval. The `request.oauth_user` dict contains:
+```python
+{
+  "sub": "user_id",
+  "name": "Display Name",
+  "preferred_username": "username",
+  "avatar_url": "https://cdn-avatars.huggingface.co/...",
+  "email": "user@example.com",  # only if `email` scope requested
+}
+```
+
+### 6. JavaScript / Static Spaces (huggingface.js)
+
+For static Spaces built with JavaScript, use `@huggingface/hub`:
+
+```javascript
+import { oauthLoginUrl, oauthHandleRedirectIfPresent } from "@huggingface/hub";
+
+const oauthResult = await oauthHandleRedirectIfPresent();
+
+if (!oauthResult) {
+  window.location.href = await oauthLoginUrl();
+}
+
+// Access token + user info available
+console.log(oauthResult.accessToken);
+console.log(oauthResult.userInfo);
+```
+
+The library reads `OAUTH_CLIENT_ID` from the environment, handles PKCE automatically, and manages the full redirect flow.
+
+### 7. CIMD (Client ID Metadata Documents)
+
+Hugging Face supports **Client ID Metadata Documents** (CIMD), an IETF draft standard for automated OAuth app creation. This is useful for ephemeral environments or MCP clients.
+
+Instead of manually creating an OAuth app, the server reads metadata from `/.well-known/oauth-client-metadata/{client_id}`:
+
+```
+https://huggingface.co/.well-known/oauth-client-metadata/Spaces_abc123
+```
+
+This allows:
+- Automated app discovery
+- No settings page registration needed
+- Metadata includes redirect URIs, scopes, and app info
+
+**Implementation example:** HuggingChat's PR #1978 shows how CIMD works in practice.
+
+### 8. Organization Restriction
+
+Restrict OAuth to organization members only:
+
+```yaml
+# Single org
+hf_oauth_authorized_org: MY_ORG
+
+# Multiple orgs
+hf_oauth_authorized_org:
+  - ORG_1
+  - ORG_2
+```
+
+Unauthorized users see "You are not authorized to use this Space" on sign-in.
+
+### 9. Security & Production Patterns
+
+| Pattern | Implementation |
+|---------|---------------|
+| **Always use PKCE** | Public client (no secret) apps must use code_challenge + code_verifier |
+| **Validate state** | Prevents CSRF on callback — generate random string, verify on return |
+| **HTTPS only** | Redirect URIs must use HTTPS (Spaces auto-provide it) |
+| **Short expiration** | Default 8h (480 min); max 30 days (43200 min) |
+| **Use target=_blank** | Open auth in new tab to avoid iframe cookie issues |
+| **Scoped tokens** | Request minimum scopes needed — never `manage-repos` unless required |
+| **Secret rotation** | Space OAuth secrets are auto-managed, no manual rotation needed |
+| **Audit logging** | Enterprise orgs get audit logs of all token exchanges |
+
+### 10. Limitations & Constraints
+
+| Constraint | Detail |
+|------------|--------|
+| No refresh tokens | User must re-auth after expiration |
+| Max expiration | 30 days (43200 minutes) |
+| Scope changes | Require re-authorization from user |
+| Device code max polling | 15 minutes (900 seconds) before device_code expires |
+| Redirect URI scheme | HTTPS only (Spaces enforce this automatically) |
+| Gradio version | OAuth support requires Gradio 4.x+ (built-in since ~4.0) |
+| Static Spaces | Must use JS library or implement OAuth manually |
+
+### References
+- https://huggingface.co/docs/hub/en/spaces-oauth
+- https://huggingface.co/docs/hub/en/oauth
+- https://huggingface.co/.well-known/openid-configuration
+- https://www.gradio.app/guides/sharing-your-app#o-auth-login-via-hugging-face
+- https://huggingface.co/docs/huggingface.js/hub/README#oauth-login
+- https://github.com/huggingface/chat-ui/pull/1978 (CIMD example)
+- https://datatracker.ietf.org/doc/draft-ietf-oauth-client-id-metadata-document/
+- https://huggingface.co/docs/hub/spaces-overview#helper-environment-variables
+- Gradio OAuth reference Space: https://huggingface.co/spaces/Wauplin/gradio-oauth-test
+- Static JS OAuth reference: https://huggingface.co/spaces/huggingfacejs/client-side-oauth
+
+---
+
+## Entry 146: huggingface_hub Authentication Pipeline — Source-Code Deep Dive (2026-07-25)
+**Date:** 2026-07-25
+**Topic:** hf-auth-login-internals-deep-dive — The complete internal implementation of login/logout/token management in huggingface_hub v1.24.0
+
+### Modules Involved
+
+The authentication pipeline spans four modules:
+
+| Module | File | Role |
+|--------|------|------|
+| _login.py | huggingface_hub/_login.py | High-level user-facing API: login(), logout(), auth_switch(), auth_list(), notebook_login(), interpreter_login() |
+| utils/_auth.py | huggingface_hub/utils/_auth.py | Token resolution, storage, refresh: get_token(), _save_token(), OIDC token exchange, transparent OAuth token refresh |
+| utils/_oauth_device.py | huggingface_hub/utils/_oauth_device.py | Pure protocol implementation of Device Code OAuth (RFC 8628) and OAuth token refresh — no UI, no persistence, just HTTP |
+| _oidc.py | huggingface_hub/_oidc.py | CI/CD Trusted Publishers — OIDC id token minting + RFC 8693 token exchange for keyless auth |
+
+### 1. Token Resolution Chain (get_token())
+
+The single entry point for all auth is get_token() (in utils/_auth.py). Resolution order:
+
+1. HF_OIDC_RESOURCE set? -> OIDC token exchange (Trusted Publishers)
+2. HF_TOKEN env var? -> from environment (HF_TOKEN -> HUGGING_FACE_HUB_TOKEN for backward compat)
+3. ~/.cache/huggingface/token? -> from file, with transparent OAuth refresh
+4. Google Colab vault? -> google.colab.userdata.get("HF_TOKEN")
+5. None -> not logged in
+
+Key design: each step short-circuits. If OIDC is configured, it takes precedence over everything (and raises on failure — no silent fallback). The Colab path runs only once per process (global _IS_GOOGLE_COLAB_CHECKED flag with per-process secret cache _GOOGLE_COLAB_SECRET, thread-safe via Lock()).
+
+### 2. Token Storage System
+
+Tokens are stored in two files:
+
+**Active token file** (HF_TOKEN_PATH):
+- Single raw token value (just the string, no metadata)
+- Created/updated by _write_secret() which sets 0o600 file mode + 0o700 parent dir mode (POSIX only; best-effort on Windows)
+
+**Stored tokens file** (HF_STORED_TOKENS_PATH):
+- INI format using configparser (interpolation disabled to preserve % in tokens)
+- Each section is a token name, with fields:
+  - hf_token (required) — the actual token value
+  - refresh_token (optional) — OAuth refresh token
+  - expires_at (optional) — Unix timestamp of token expiry
+- Written atomically via _write_secret() — same restrictive permissions
+
+### 3. OAuth Token Refresh Pipeline
+
+OAuth tokens obtained via browser-based login have refresh_token and expires_at. The _get_token_from_file_refreshed() function in utils/_auth.py transparently refreshes them:
+
+get_token() -> _get_token_from_file_refreshed(token)
+  -> _get_token_from_file() (read raw token)
+  -> _refresh_oauth_token_if_needed(token)
+
+Key mechanics:
+- **In-process cache** (_OAUTH_REFRESH_CACHE): avoids re-reading stored tokens file (and re-hitting the network) on every get_token() call — critical since get_token() runs on every HTTP request
+- **Recheck interval**: _OAUTH_RECHECK_INTERVAL = 300s (5 min) when no metadata or refresh failed
+- **Refresh margin**: _OAUTH_REFRESH_MARGIN = 86400s (24 hours) — refreshes when less than 1 day of validity remains
+- **Cross-process safety**: uses WeakFileLock on HF_STORED_TOKENS_PATH with 30s timeout to prevent multiple processes invalidating each other's refresh token
+- **Graceful failure**: refresh failures never raise — the expired token is returned (API will reject it) and a warning is logged at most once per process (_OAUTH_REFRESH_WARNED global flag)
+- **Refresh token rotation**: the server may rotate refresh tokens; the old refresh token is kept if the response doesn't include a new one
+
+### 4. Login Entry Points
+
+**login(token=None)** (default path):
+1. If token passed directly -> _validate_and_save_token(token, add_to_git_credential)
+2. If no token -> auto-detect environment:
+   - In a notebook: delegates to notebook_login()
+   - In a terminal: delegates to interpreter_login()
+
+**notebook_login()**:
+1. Checks skip_if_logged_in (default True) — returns early if get_token() is not None
+2. Falls back to interpreter_login() if IPython not available
+3. Calls request_device_code() to get device + user code
+4. Displays HTML widget with verification URL + code
+5. Calls poll_device_token(device_info) to poll for authorization
+6. On success: _save_oauth_token(response) -> _validate_and_save_token(response["access_token"])
+7. On failure: displays error in HTML widget
+
+**interpreter_login()**:
+1. Checks skip_if_logged_in
+2. Offers a choice via select_choice(): browser-based OAuth vs paste existing token
+3. Browser choice: calls _device_code_login()
+4. Paste choice: prompts for token with getpass(), calls _validate_and_save_token()
+
+### 5. Token Validation Pipeline (_validate_and_save_token)
+
+When a token is provided (from any login path), the validation chain is:
+
+1. **Org token rejection**: tokens starting with api_org raise ValueError immediately
+2. **whoami(token) call**: validates against /api/whoami-v2
+3. **Extract metadata**:
+   - name -> HF username
+   - auth.accessToken.displayName -> token display name (or oauth-{username} for OAuth tokens)
+   - auth.accessToken.role -> permission role (logged as info)
+4. **Persist**: _save_token(token, token_name, refresh_token, expires_at) -> stored_tokens INI
+5. **Set active**: _set_active_token(token_name, add_to_git_credential):
+   - Writes token to HF_TOKEN_PATH via _write_secret()
+   - Optionally sets git credential helper
+6. **Env var override warning**: warns if HF_TOKEN env var is set (overrides stored token)
+
+### 6. Logout Pipeline
+
+**logout(token_name=None)**:
+- No token_name -> delete ALL stored tokens: unlink both HF_TOKEN_PATH and HF_STORED_TOKENS_PATH
+- Specific token_name -> _logout_from_token():
+  1. Remove the token's section from stored_tokens INI
+  2. If it was the active token, unlink HF_TOKEN_PATH
+- **Always** calls unset_git_credential() to clean git credentials
+- **Post-logout checks**: warns if still logged in via Colab secret or env variable (raises OSError for Colab/Env — user must manually clear those)
+
+### 7. Token Switching (auth_switch)
+
+auth_switch(token_name):
+1. Looks up token by name in stored_tokens INI via _get_token_by_name()
+2. Writes it to HF_TOKEN_PATH -> becomes active
+3. Optionally sets git credential
+4. Warns if HF_TOKEN env var overrides the switch
+
+### 8. OIDC / Trusted Publishers (_oidc.py)
+
+The zero-cost, no-secret auth for CI/CD:
+
+**Flow**: CI provider mints an OIDC id token -> exchanges at /oauth/token using RFC 8693 token-exchange grant with id_token subject type
+
+**Supported providers**: GitHub Actions only (native minting via ACTIONS_ID_TOKEN_REQUEST_URL env vars). Any OIDC-compatible provider can pass a pre-minted token via HF_OIDC_ID_TOKEN env var.
+
+**In-process caching**: _OIDC_TOKEN_CACHE with expires_at check (300s refresh margin) — avoids re-exchanging on every get_token() call during long CI runs.
+
+**Scope via HF_OIDC_RESOURCE env var**: repo path (e.g. username/model) for write tokens, or bare username for gated-repo read tokens.
+
+### 9. Device Code OAuth (RFC 8628) — Pure Protocol
+
+utils/_oauth_device.py contains two functions:
+
+**request_device_code()**:
+- POST with client_id (constant)
+- Normalizes response: defaults interval to 5s, expires_in to 900s
+- Returns typed dict DeviceCodeInfo
+
+**poll_device_token()**:
+- Polls token endpoint with grant_type=device_code + device_code + client_id
+- Handles OAuth error states per RFC 8628:
+  - authorization_pending -> call on_pending callback, keep polling
+  - slow_down -> increase poll interval by 5s
+  - expired_token -> raise with EXPIRED_TOKEN error code
+  - access_denied -> raise with ACCESS_DENIED
+  - Unknown errors -> raise with the raw error code
+- Network resilience: HTTP 5xx, JSON parse failures, proxy errors silently retried — only the expires_in deadline bounds total wait
+- Returns OAuthTokenResponse typed dict
+
+**refresh_access_token()**:
+- POST with grant_type=refresh_token + refresh_token + client_id
+- Raises DeviceCodeError with invalid_grant on expiry/revocation
+- Used by utils/_auth.py::_refresh_oauth_token_if_needed()
+
+### 10. Security-Critical Design Details
+
+| Feature | Implementation |
+|---------|---------------|
+| Secret file permissions | 0o600 file + 0o700 parent directory, best-effort on Windows |
+| INI interpolation disabled | configparser(interpolation=None) — prevents % in tokens from being interpreted |
+| OAuth refresh thread-safe | WeakFileLock for cross-process; _OAUTH_REFRESH_LOCK for in-process |
+| OIDC cache | Per-process _OIDC_TOKEN_LOCK + _OIDC_TOKEN_CACHE globals |
+| Colab secret | Per-process _GOOGLE_COLAB_SECRET_LOCK + globals |
+| Rate-limited endpoint | whoami() heavily rate-limited; whoami(cache=True) caches per-token |
+| Token validation | Server-side via /api/whoami-v2 — never trusts local token format |
+| Git credential helper | Detects configured helpers before setting |
+
+### 11. Constants Reference
+
+| Constant | Purpose |
+|----------|---------|
+| HF_TOKEN_PATH | Active token file |
+| HF_STORED_TOKENS_PATH | Multi-token INI store |
+| ENDPOINT | Hub API base URL |
+| DEVICE_CODE_OAUTH_CLIENT_ID | OAuth client ID for device code |
+| HF_HUB_DOWNLOAD_TIMEOUT | HTTP timeout for OAuth requests |
+| _OAUTH_REFRESH_MARGIN (86400s) | Refresh margin for OAuth tokens |
+| _OAUTH_RECHECK_INTERVAL (300s) | Re-check interval on refresh failure |
+| _OIDC_REFRESH_MARGIN (300s) | Refresh margin for OIDC tokens |
+
+### Sources
+- Source code: huggingface_hub/_login.py
+- Source code: huggingface_hub/utils/_auth.py
+- Source code: huggingface_hub/utils/_oauth_device.py
+- Source code: huggingface_hub/_oidc.py
+- Source code: huggingface_hub/constants.py
+- Docs: Trusted Publishers
+- RFC 8628 (Device Code OAuth), RFC 8693 (Token Exchange)
+
+
+---
+
+## Entry 146: huggingface_hub Authentication Pipeline — Source-Code Deep Dive (2026-07-25)
+**Date:** 2026-07-25  
+**Topic:**   
+
+### Modules Involved
+
+...
+

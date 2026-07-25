@@ -1,5 +1,21 @@
 # HF Learnings — Hugging Face Hub
 
+## 2026-07-25: hf-cli-agent-mode-deep-dive — hf CLI Agent-Optimized Mode (Topic #314)
+
+### Summary
+Deep dive into the `hf` CLI v1.9.0+ agent-optimized mode. Auto-detects coding agents (CLAUDECODE, CODEX_SANDBOX, AI_AGENT, CURSOR env vars), switches to TSV output with no truncation, full tags, ISO timestamps. Ships auto-generated skill (~30% fewer tool calls). Benchmarked: 94% success on Sonnet (vs 84% curl/SDK), 1.3–6× fewer tokens on multi-step tasks.
+
+### Key Points
+- **Dual rendering**: Same command → human (table/ANSI) or agent (TSV/full) output
+- **Skill**: `hf skills add` installs; `hf skills preview` shows; ~30% fewer tool calls
+- **Safe retry**: `--exist-ok`, `--yes`, `--dry-run` for idempotent ops
+- **Benchmark**: 18 tasks × 3 tools × 10 reps × 2 agents = ~1,000 graded runs
+- **Register harness**: PR to `agent-harnesses.ts` in huggingface.js
+
+See skill `mlops/hf-cli-agent-mode/` for full SKILL.md and deeper reference.
+
+---
+
 ## 2026-07-24: hf-hub-exception-reference — Complete Exception Hierarchy (Topic #130)
 
 ### Summary
@@ -1525,7 +1541,144 @@ else:
 ### Resources
 - Manage cache guide: https://huggingface.co/docs/huggingface_hub/en/guides/manage-cache
 - Cache-system reference: https://huggingface.co/docs/huggingface_hub/en/package_reference/cache
-- Environment variables: https://huggingface.co/docs/huggingface_hub/en/package_reference/environment_variables
+|- Env vars: https://huggingface.co/docs/huggingface_hub/package_reference/environment_variables
+
+---
+
+## 2026-07-24: hf-inference-client-image-input-pipeline-deep-dive — Image Input Handling in InferenceClient (Topic #187)
+
+### Summary
+Source-code deep-dive into the `huggingface_hub` InferenceClient's complete image input pipeline. Covers the `ContentT` type union (7 accepted formats), the `_open_as_mime_bytes` normalization engine, encoding utilities (`_b64_encode`, `_as_url`, `_bytes_to_image`), the 8 task-specific image methods, provider-specific binary vs. JSON handling, and the multimodal chat completion pattern via OpenAI-compatible data URLs. All findings verified against `huggingface_hub` source code at `/opt/data/.venv-sakthai/lib/python3.14/site-packages/huggingface_hub/inference/`.
+
+### Source
+- huggingface_hub inference/_common.py: https://github.com/huggingface/huggingface_hub/blob/main/src/huggingface_hub/inference/_common.py
+- huggingface_hub inference/_client.py: https://github.com/huggingface/huggingface_hub/blob/main/src/huggingface_hub/inference/_client.py
+- huggingface_hub inference/_providers/hf_inference.py: https://github.com/huggingface/huggingface_hub/blob/main/src/huggingface_hub/inference/_providers/hf_inference.py
+
+### 1. The ContentT Type System
+
+The core type alias `ContentT` (in `_common.py` line 48) defines all 7 accepted image input formats:
+
+```python
+ContentT = Union[bytes, BinaryIO, PathT, UrlT, "Image", bytearray, memoryview]
+# Where:
+PathT = Union[str, Path]
+UrlT  = str  # Must start with http:// or https:// (checked at runtime)
+```
+
+| # | Type | Example | Use Case |
+|---|------|---------|----------|
+| 1 | `bytes` | `open("img.jpg","rb").read()` | Raw file bytes in memory |
+| 2 | `bytearray` | `bytearray(data)` | Mutable byte buffer |
+| 3 | `memoryview` | `memoryview(data)` | Zero-copy buffer view |
+| 4 | `BinaryIO` (duck-typed via `.read()`) | `open("img.jpg","rb")` | File-like stream objects |
+| 5 | `str` (URL) | `"https://example.com/img.jpg"` | Remote image (auto-downloaded) |
+| 6 | `str`/`Path` (local path) | `"img.jpg"` or `Path("img.jpg")` | Local file (auto-opened) |
+| 7 | `PIL.Image.Image` | `Image.open("img.jpg")` | In-memory PIL Image object |
+
+**Key insight:** The `str` type is ambiguous — checked at runtime: if it starts with `http://` or `https://` it's treated as a URL and downloaded; otherwise treated as a local file path.
+
+### 2. The Normalization Engine: `_open_as_mime_bytes()`
+
+This function (lines 126–189 in `_common.py`) converts any `ContentT` input to `MimeBytes` (bytes subclass with `.mime_type` attribute). Processing order (first-match wins):
+
+```
+Input
+├── None → return None
+├── bytes → MimeBytes(content) [no mime type]
+├── bytearray/memoryview → MimeBytes(bytes(content)) [no mime type]
+├── duck-type .read() → MimeBytes(f.read(), mime=guess_type(f.name))
+│   (raises TypeError if .read() returns str instead of bytes)
+├── str starting with http:// or https:// → HTTP GET download
+│   → MimeBytes(response.content, mime=Content-Type header or guess)
+├── str (not URL) → treated as Path; raises FileNotFoundError if missing
+├── Path → MimeBytes(path.read_bytes(), mime=guess_type(path))
+├── PIL.Image.Image → save to BytesIO (format preserved, default PNG)
+│   → MimeBytes(buffer.getvalue(), mime=f"image/{fmt.lower()}")
+└── Any other type → TypeError
+```
+
+**MimeType detection priority:** BinaryIO→`.name` attribute guess, URL→HTTP Content-Type header, Path→file extension guess, PIL image→format metadata, raw bytes→None.
+
+### 3. Encoding Utilities
+
+| Function | Input | Output | Used By |
+|----------|-------|--------|---------|
+| `_b64_encode(content) → str` | Any ContentT | Base64 string (no prefix) | `document_qa()`, `visual_qa()` — embeds image in JSON body |
+| `_as_url(content, default_mime) → str` | Any ContentT | `data:{mime};base64,{data}` data URL | Chat completion multimodal content parts |
+| `_bytes_to_image(content) → Image` | Raw bytes | PIL.Image | `text_to_image()`, `image_to_image()`, `image_to_video()` |
+| `_b64_to_image(str) → Image` | Base64 string | PIL.Image | Client-side post-processing |
+
+**`_as_url` shortcut:** URLs starting with `http://`, `https://`, or `data:` pass through unchanged — no re-encoding.
+
+### 4. Image Methods on InferenceClient
+
+All 8 image methods in `_client.py` accept `image: ContentT`:
+
+| Method | Line | Returns | API Task |
+|--------|------|---------|----------|
+| `image_classification()` | 1163 | `list[ImageClassificationOutputElement]` | image-classification |
+| `image_segmentation()` | 1213 | `list[ImageSegmentationOutputElement]` | image-segmentation |
+| `image_to_image()` | 1281 | `Image` (PIL) | image-to-image |
+| `image_to_video()` | 1357 | `bytes` | image-to-video |
+| `image_to_text()` | 1436 | `ImageToTextOutput` | image-to-text |
+| `object_detection()` | 1482 | `list[ObjectDetectionOutputElement]` | object-detection |
+| `text_to_image()` | 2439 | `Image` (PIL) | text-to-image (no image input) |
+| `visual_question_answering()` | 3048 | `list[VisualQuestionAnsweringOutputElement]` | visual-question-answering |
+| `zero_shot_image_classification()` | 3210 | `list[ZeroShotImageClassificationOutputElement]` | zero-shot-image-classification |
+
+`document_question_answering()` (line 937) also accepts `image: ContentT` and always passes `{"question": ..., "image": _b64_encode(image)}`.
+
+### 5. Provider-Specific Image Handling
+
+**`HFInferenceTask`** (JSON-based): For text tasks — raises `ValueError` on binary inputs.
+
+**`HFInferenceBinaryInputTask`** (binary-capable, lines 72–101):
+- **No parameters** → raw bytes via `_open_as_mime_bytes(inputs)` with auto-detected MIME
+- **With parameters** → base64 in JSON: `{"inputs": _b64_encode(inputs), "parameters": ...}`
+
+### 6. Chat Completion Multimodal Pattern
+
+`chat_completion()` does NOT accept `ContentT` for images — users provide pre-encoded URLs:
+```python
+messages = [{"role": "user", "content": [
+    {"type": "image_url", "image_url": {"url": "data:image/jpeg;base64,..."}},
+    {"type": "text", "text": "Describe this image."},
+]}]
+```
+
+### 7. Key Architectural Insights
+
+1. **Dual pathway:** Every image method supports raw binary (no parameters, minimal overhead) or b64 JSON (with parameters, +33% size).
+2. **Lazy PIL import:** Only needed when passing PIL Image objects or receiving image output. Bytes/URLs/Paths work without PIL.
+3. **String ambiguity risk:** A plain string is always treated as a path first — can cause confusing `FileNotFoundError`.
+4. **Chat completion gap:** Unlike task methods, `chat_completion()` has no `ContentT` convenience — users must encode manually.
+5. **BinaryIO duck-typing:** Matches any `.read()` object — including text streams (raises `TypeError` at runtime).
+
+### 8. Zero-Cost Patterns
+
+```python
+from huggingface_hub import InferenceClient
+client = InferenceClient()  # free tier
+
+# Classification — auto-selects HF's recommended free model
+result = client.image_classification("cat.jpg")
+
+# Captioning — free via recommended model
+caption = client.image_to_text("https://example.com/photo.jpg")
+
+# VQA — specify a free model explicitly
+answers = client.visual_question_answering(
+    image="scene.jpg",
+    question="How many people?",
+    model="google/vit-base-patch16-224",
+)
+```
+
+### References
+- `_common.py`: https://github.com/huggingface/huggingface_hub/blob/main/src/huggingface_hub/inference/_common.py
+- `_client.py`: https://github.com/huggingface/huggingface_hub/blob/main/src/huggingface_hub/inference/_client.py
+- `hf_inference.py` provider: https://github.com/huggingface/huggingface_hub/blob/main/src/huggingface_hub/inference/_providers/hf_inference.py
 - Xet guide: https://huggingface.co/docs/hub/xet/index
 - `scan_cache_dir` docs: https://huggingface.co/docs/huggingface_hub/main/en/package_reference/cache#huggingface_hub.scan_cache_dir
 - `hf cache` CLI: https://huggingface.co/docs/huggingface_hub/main/en/guides/cli#hf-cache
@@ -3849,4 +4002,1924 @@ The `whoami-v2` response includes a detailed `auth` object:
 - huggingface_hub Webhooks API: `HfApi.list_webhooks()`, `create_webhook()`, etc.
 - Hub OpenAPI spec: `/.well-known/openapi.json` (webhooks, notifications, settings sections)
 - huggingface_hub `WebhookInfo`, `WebhookWatchedItem` dataclasses (v1.24.0+)
-- Hub Settings UI: https://huggingface.co/settings/webhooks
+|- Hub Settings UI: https://huggingface.co/settings/webhooks
+
+## 2026-07-24: hf-hub-api-rate-limiting-deep-dive — Complete Rate Limit System (Topic #167)
+
+### Summary
+Comprehensive guide to Hugging Face Hub rate limits — how the three-bucket system works, the IETF-standard RateLimit HTTP headers, per-plan quotas over 5-minute fixed windows, and best practices for avoiding 429 errors. Source: https://huggingface.co/docs/hub/en/rate-limits and live API response analysis.
+
+### Three Rate Limit Buckets
+
+The Hub enforces limits on three distinct classes of requests:
+
+| Bucket | Description | Example Endpoints |
+|--------|-------------|-------------------|
+| **Hub APIs** | Programmatic API calls | `/api/models`, `/api/datasets`, repo creation, user management |
+| **Resolvers** | File download URLs containing `/resolve/` | Model weight downloads via transformers, vLLM, llama.cpp, LM Studio |
+| **Pages** | HTML web pages on huggingface.co | Human browsing traffic |
+
+### Per-Plan Limits (all over 5-minute fixed windows)
+
+| Plan | API | Resolvers | Pages |
+|------|-----|-----------|-------|
+| Anonymous (per IP) | 500* | 3,000* | 100* |
+| Free user | 1,000* | 5,000* | 200* |
+| PRO user | 2,500 | 12,000 | 400 |
+| Team org | 3,000 | 20,000 | 400 |
+| Enterprise org | 6,000 | 50,000 | 600 |
+| Enterprise Plus org | 10,000 | 100,000 | 1,000 |
+| Enterprise Plus (Org IP Ranges) | 100,000 | 500,000 | 10,000 |
+| Academia Hub org | 3,000 | 20,000 | 400 |
+
+*Anonymous and Free user limits are subject to change based on platform health.
+
+**Important:** Organization limits apply to each member individually, not shared across members.
+
+### HTTP Rate Limit Headers (IETF Draft Standard)
+
+The HF Hub implements `draft-ietf-httpapi-ratelimit-headers` (Version 9). Two headers:
+
+**`RateLimit`** — current status:
+```
+ratelimit: "api";r=499;t=37
+```
+- `"api"` (or `"resolvers"` / `"pages"`) — which bucket
+- `r` — remaining requests in current window
+- `t` — seconds until window reset
+
+**`RateLimit-Policy`** — the policy definition:
+```
+ratelimit-policy: "fixed window";"api";q=500;w=300
+```
+- `"fixed window"` — algorithm type
+- `q` — total allowed per window
+- `w` — window duration in seconds (always 300 / 5 min)
+
+### Live API Response Verified (this session)
+
+```
+HTTP/2 200
+ratelimit: "api";r=499;t=37
+ratelimit-policy: "fixed window";"api";q=500;w=300
+```
+
+Interpretation: 499 of 500 API calls remaining, 37s until next 5-minute window opens. This confirms the anonymous/free tier API limit of ~500/5min.
+
+### Smart Retry in huggingface_hub (v1.2.0+)
+
+The Python SDK includes automatic rate limit handling:
+- On 429 error, SDK parses `RateLimit` header for the `t` (seconds remaining) value
+- Waits exactly that duration before retrying
+- Covers: file downloads (Resolvers) and paginated Hub API calls
+- **Strongly recommended** over custom retry logic
+
+```python
+from huggingface_hub import HfApi
+api = HfApi()
+# SDK handles retries automatically on 429
+models = api.list_models()  # paginated — auto-retried
+```
+
+### Billing Dashboard Monitoring
+
+Rate limit status is visible in real-time at:
+- https://huggingface.co/settings/billing
+
+Three gauges (one per bucket) show:
+- Current request count (last 5 minutes)
+- Allowed request count
+- Red bar when limit is exceeded
+
+Context switcher lets you toggle between user account and orgs.
+
+### What to Do When Rate-Limited (429)
+
+1. **Pass a HF_TOKEN** — most common fix. Anonymous IP limits are lowest.
+2. **Use Resolver endpoints instead of API calls** when possible (5x–10x higher limits)
+3. **Spread requests** over longer periods (5-minute windows allow burstiness)
+4. **Upgrade plan** to PRO (2.5x), Team (3x), or Enterprise (6x–200x)
+5. **Use huggingface_hub** for automatic retry handling
+
+### Granular User Action Limits
+
+Separate from the three main buckets, specific actions have their own undocumented limits:
+- Repo creation
+- Repo commits/pushes
+- Discussions and comments
+- Moderation actions
+
+These limits are not documented and change frequently. Contact support or upgrade for higher quotas.
+
+### Key Differences: API vs Resolver
+
+| Aspect | Hub API | Resolver |
+|--------|---------|----------|
+| Path pattern | `/api/...` | `/.../resolve/...` |
+| Typical usage | Search, list, create repos | Download model files, tokenizer files |
+| Free limit | 1,000/5min | 5,000/5min |
+| Anonymous limit | 500/5min | 3,000/5min |
+| Content served | JSON metadata | Binary blobs (safetensors, etc.) |
+
+### Best Practices
+
+- **Always authenticate** — anonymous limits are lowest and subject to change
+- **Cache resolver results** — don't re-download model files repeatedly
+- **Monitor billing dashboard** to catch approaching limits early
+- **Use huggingface_hub** for all programmatic access to get free smart retry
+- **Prefer Resolver over API** for high-throughput data access
+- **Implement exponential backoff** as fallback if not using huggingface_hub
+- **Check RateLimit header** on every response to anticipate window resets
+
+### References
+- Hub Rate Limits doc: https://huggingface.co/docs/hub/en/rate-limits
+- Hub API Endpoints: https://huggingface.co/docs/hub/en/api
+- OpenAPI spec: https://huggingface.co/.well-known/openapi.json
+- Billing Dashboard: https://huggingface.co/settings/billing
+- huggingface_hub: https://github.com/huggingface/huggingface_hub
+- IETF RateLimit Headers: https://datatracker.ietf.org/doc/draft-ietf-httpapi-ratelimit-headers/
+
+## 2026-07-24: hf-hub-hf_transfer-rust-download-accelerator-deep-dive — Topic #186
+
+### Summary
+Comprehensive deep-dive into `hf_transfer` — Hugging Face's Rust-based download/upload accelerator. Covers Rust implementation (PyO3+reqwest+tokio), parallel HTTP Range chunking, the `download()` and `multipart_upload()` functions, and — critically — its **deprecation** in favor of Xet (`HF_XET_HIGH_PERFORMANCE`). Research from source code at huggingface/hf_transfer and huggingface/huggingface_hub.
+
+### Key Findings
+
+1. **Architecture**: Rust native Python extension (PyO3 0.26), reqwest 0.12 HTTP/2, tokio 1.42 multi-threaded runtime, semaphore-based concurrency via `FuturesUnordered`.
+
+2. **Download**: Splits files into configurable chunks, each fetched via HTTP `Range: bytes=start-stop`, writing directly to file with `seek`+`write_all`. Exponential backoff retry (base=300ms, jitter=random(0..500), cap=10s).
+
+3. **Upload**: S3-style multipart upload with pre-signed URLs. Each chunk PUT with `FramedRead` streaming body. Returns part ETags for completion.
+
+4. **⚠️ CRITICAL — Deprecated**: `hf_transfer` is no longer used in `huggingface_hub`. `HF_HUB_ENABLE_HF_TRANSFER` triggers `FutureWarning`. Replaced by `HF_XET_HIGH_PERFORMANCE=1` with the `hf_xet` package.
+
+5. **Replacement (Xet)**: Content-addressed, deduplicated transfers via `hf_xet` Rust package. Provides `XetSession` for lifecycle management, fork-safe `XetSessionHolder`, and token-based auth at `/api/{repo_type}s/{repo_id}/xet-{read|write}-token/{revision}`.
+
+6. **For zero-cost environments**: Standard `hf_hub_download()` handles caching, resumption, and progress bars transparently. The Rust accelerator is only relevant on very high-bandwidth (>500 MB/s) infrastructure.
+
+### References
+- hf_transfer: https://github.com/huggingface/hf_transfer
+- huggingface_hub constants.py: https://github.com/huggingface/huggingface_hub/blob/main/src/huggingface_hub/constants.py
+- huggingface_hub Xet utils: https://github.com/huggingface/huggingface_hub/blob/main/src/huggingface_hub/utils/_xet.py
+- hf_transfer PyPI: https://pypi.org/pypi/hf_transfer/
+- Xet docs: https://huggingface.co/docs/hub/en/xet
+|- Env vars: https://huggingface.co/docs/huggingface_hub/package_reference/environment_variables
+
+---
+
+## 2026-07-24: hf-inference-client-image-input-pipeline-deep-dive — Image Input Handling in InferenceClient (Topic #187)
+
+### Summary
+Source-code deep-dive into the `huggingface_hub` InferenceClient's complete image input pipeline. Covers the `ContentT` type union (7 accepted formats), the `_open_as_mime_bytes` normalization engine, encoding utilities (`_b64_encode`, `_as_url`, `_bytes_to_image`), the 8 task-specific image methods, provider-specific binary vs. JSON handling, and the multimodal chat completion pattern via OpenAI-compatible data URLs. All findings verified against `huggingface_hub` source code at `/opt/data/.venv-sakthai/lib/python3.14/site-packages/huggingface_hub/inference/`.
+
+### Source
+- huggingface_hub inference/_common.py: https://github.com/huggingface/huggingface_hub/blob/main/src/huggingface_hub/inference/_common.py
+- huggingface_hub inference/_client.py: https://github.com/huggingface/huggingface_hub/blob/main/src/huggingface_hub/inference/_client.py
+- huggingface_hub inference/_providers/hf_inference.py: https://github.com/huggingface/huggingface_hub/blob/main/src/huggingface_hub/inference/_providers/hf_inference.py
+
+### 1. The ContentT Type System
+
+The core type alias `ContentT` (in `_common.py` line 48) defines all 7 accepted image input formats:
+
+```python
+ContentT = Union[bytes, BinaryIO, PathT, UrlT, "Image", bytearray, memoryview]
+# Where:
+PathT = Union[str, Path]
+UrlT  = str  # Must start with http:// or https:// (checked at runtime)
+```
+
+| # | Type | Example | Use Case |
+|---|------|---------|----------|
+| 1 | `bytes` | `open("img.jpg","rb").read()` | Raw file bytes in memory |
+| 2 | `bytearray` | `bytearray(data)` | Mutable byte buffer |
+| 3 | `memoryview` | `memoryview(data)` | Zero-copy buffer view |
+| 4 | `BinaryIO` (duck-typed via `.read()`) | `open("img.jpg","rb")` | File-like stream objects |
+| 5 | `str` (URL) | `"https://example.com/img.jpg"` | Remote image (auto-downloaded) |
+| 6 | `str`/`Path` (local path) | `"img.jpg"` or `Path("img.jpg")` | Local file (auto-opened) |
+| 7 | `PIL.Image.Image` | `Image.open("img.jpg")` | In-memory PIL Image object |
+
+**Key insight:** The `str` type is ambiguous — checked at runtime: if it starts with `http://` or `https://` it's treated as a URL and downloaded; otherwise treated as a local file path.
+
+### 2. The Normalization Engine: `_open_as_mime_bytes()`
+
+This function (lines 126–189 in `_common.py`) converts any `ContentT` input to `MimeBytes` (bytes subclass with `.mime_type` attribute). Processing order (first-match wins):
+
+```
+Input
+├── None → return None
+├── bytes → MimeBytes(content) [no mime type]
+├── bytearray/memoryview → MimeBytes(bytes(content)) [no mime type]
+├── duck-type .read() → MimeBytes(f.read(), mime=guess_type(f.name))
+│   (raises TypeError if .read() returns str instead of bytes)
+├── str starting with http:// or https:// → HTTP GET download
+│   → MimeBytes(response.content, mime=Content-Type header or guess)
+├── str (not URL) → treated as Path; raises FileNotFoundError if missing
+├── Path → MimeBytes(path.read_bytes(), mime=guess_type(path))
+├── PIL.Image.Image → save to BytesIO (format preserved, default PNG)
+│   → MimeBytes(buffer.getvalue(), mime=f"image/{fmt.lower()}")
+└── Any other type → TypeError
+```
+
+**MimeType detection priority:** BinaryIO→`.name` attribute guess, URL→HTTP Content-Type header, Path→file extension guess, PIL image→format metadata, raw bytes→None.
+
+### 3. Encoding Utilities
+
+| Function | Input | Output | Used By |
+|----------|-------|--------|---------|
+| `_b64_encode(content) → str` | Any ContentT | Base64 string (no prefix) | `document_qa()`, `visual_qa()` — embeds image in JSON body |
+| `_as_url(content, default_mime) → str` | Any ContentT | `data:{mime};base64,{data}` data URL | Chat completion multimodal content parts |
+| `_bytes_to_image(content) → Image` | Raw bytes | PIL.Image | `text_to_image()`, `image_to_image()`, `image_to_video()` |
+| `_b64_to_image(str) → Image` | Base64 string | PIL.Image | Client-side post-processing |
+
+**`_as_url` shortcut:** URLs starting with `http://`, `https://`, or `data:` pass through unchanged — no re-encoding.
+
+### 4. Image Methods on InferenceClient
+
+All 8 image methods in `_client.py` accept `image: ContentT`:
+
+| Method | Line | Returns | API Task |
+|--------|------|---------|----------|
+| `image_classification()` | 1163 | `list[ImageClassificationOutputElement]` | image-classification |
+| `image_segmentation()` | 1213 | `list[ImageSegmentationOutputElement]` | image-segmentation |
+| `image_to_image()` | 1281 | `Image` (PIL) | image-to-image |
+| `image_to_video()` | 1357 | `bytes` | image-to-video |
+| `image_to_text()` | 1436 | `ImageToTextOutput` | image-to-text |
+| `object_detection()` | 1482 | `list[ObjectDetectionOutputElement]` | object-detection |
+| `text_to_image()` | 2439 | `Image` (PIL) | text-to-image (no image input) |
+| `visual_question_answering()` | 3048 | `list[VisualQuestionAnsweringOutputElement]` | visual-question-answering |
+| `zero_shot_image_classification()` | 3210 | `list[ZeroShotImageClassificationOutputElement]` | zero-shot-image-classification |
+
+`document_question_answering()` (line 937) also accepts `image: ContentT` and always passes `{"question": ..., "image": _b64_encode(image)}`.
+
+### 5. Provider-Specific Image Handling
+
+**`HFInferenceTask`** (JSON-based): For text tasks — raises `ValueError` on binary inputs.
+
+**`HFInferenceBinaryInputTask`** (binary-capable, lines 72–101):
+- **No parameters** → raw bytes via `_open_as_mime_bytes(inputs)` with auto-detected MIME
+- **With parameters** → base64 in JSON: `{"inputs": _b64_encode(inputs), "parameters": ...}`
+
+### 6. Chat Completion Multimodal Pattern
+
+`chat_completion()` does NOT accept `ContentT` for images — users provide pre-encoded URLs:
+```python
+messages = [{"role": "user", "content": [
+    {"type": "image_url", "image_url": {"url": "data:image/jpeg;base64,..."}},
+    {"type": "text", "text": "Describe this image."},
+]}]
+```
+
+### 7. Key Architectural Insights
+
+1. **Dual pathway:** Every image method supports raw binary (no parameters, minimal overhead) or b64 JSON (with parameters, +33% size).
+2. **Lazy PIL import:** Only needed when passing PIL Image objects or receiving image output. Bytes/URLs/Paths work without PIL.
+3. **String ambiguity risk:** A plain string is always treated as a path first — can cause confusing `FileNotFoundError`.
+4. **Chat completion gap:** Unlike task methods, `chat_completion()` has no `ContentT` convenience — users must encode manually.
+5. **BinaryIO duck-typing:** Matches any `.read()` object — including text streams (raises `TypeError` at runtime).
+
+### 8. Zero-Cost Patterns
+
+```python
+from huggingface_hub import InferenceClient
+client = InferenceClient()  # free tier
+
+# Classification — auto-selects HF's recommended free model
+result = client.image_classification("cat.jpg")
+
+# Captioning — free via recommended model
+caption = client.image_to_text("https://example.com/photo.jpg")
+
+# VQA — specify a free model explicitly
+answers = client.visual_question_answering(
+    image="scene.jpg",
+    question="How many people?",
+    model="google/vit-base-patch16-224",
+)
+```
+
+### References
+- `_common.py`: https://github.com/huggingface/huggingface_hub/blob/main/src/huggingface_hub/inference/_common.py
+- `_client.py`: https://github.com/huggingface/huggingface_hub/blob/main/src/huggingface_hub/inference/_client.py
+- `hf_inference.py` provider: https://github.com/huggingface/huggingface_hub/blob/main/src/huggingface_hub/inference/_providers/hf_inference.py
+
+---
+## 2026-07-24: hf-hub-sandboxes-deep-dive — HF Sandboxes (Topic #148)
+
+### Summary
+Deep-dive into HF Sandboxes — isolated cloud machines built on Jobs for remote code execution, with GPU/CPU options, volume mounts from Hub repos/buckets, secrets injection, and persistent reconnection from any machine. All zero-cost with cpu-basic.
+
+### Architecture
+| Mode | Description | Use Case | Cost |
+|------|-------------|----------|------|
+| Dedicated | One sandbox = one Job VM | GPU, untrusted code | Free cpu-basic |
+| Pool | Shared host, landlock-isolated | Cheap CPU scale | Free tier eligible |
+
+### CLI
+```bash
+# Create
+hf sandbox create
+hf sandbox create --flavor t4-small
+hf sandbox create --pool pool-ab12 --env LOG=debug
+hf sandbox create -v hf://buckets/ns/b:/mnt/data
+
+# Exec / Spawn / Cp / Kill
+hf sandbox exec <id> -- python -c "print(42)"
+hf sandbox spawn <id> -- python -m http.server 8000
+hf sandbox cp data.csv <id>:/data/
+hf sandbox kill <id>
+hf sandbox kill --all
+
+# Pools
+hf sandbox pool create --per-host 50
+hf sandbox pool ls
+```
+
+### Python SDK
+```python
+from huggingface_hub import HfApi
+api = HfApi()
+s = api.create_sandbox(flavor="cpu-basic",
+    volumes=["hf://datasets/org/ds:/data:ro"])
+s.exec("python -c 'print(42)'")
+s.cp("result.json", "/app/result.json")
+api.get_sandbox("<id>")  # reattach
+api.delete_sandbox("<id>")
+```
+
+### Key Points
+1. Sandboxes outlive the client — create once, reconnect anywhere.
+2. Volume mounts (hf:// URIs) avoid data downloads.
+3. Secrets injection only for dedicated mode.
+4. Zero-cost default: cpu-basic + pool mode.
+
+## 2026-07-24: hf-hub-create-commit-atomic-operations-deep-dive — `create_commit` API with CommitOperationAdd/Copy/Delete (Topic #211)
+
+### Summary
+Deep-dive into the `create_commit` API — the core programmatic interface for atomic multi-file operations on the Hugging Face Hub. Covers the three `CommitOperation` types (`Add`, `Copy`, `Delete`), the full commit lifecycle (preupload → LFS batch → commit), no-op detection, cross-repo copies, Xet vs legacy LFS upload, the `preupload_lfs_files` power-user pattern, `CommitInfo` return type, and high-level wrappers (`upload_file`, `upload_folder`, `delete_file`, `delete_folder`). Source: `huggingface_hub/_commit_api.py` and `huggingface_hub/hf_api.py` (v1.24.0).
+
+### Core Architecture
+
+`create_commit` is the foundation that all Hub write operations build on. It accepts a list of `CommitOperation` objects (mutated in-place during processing — do NOT reuse objects across commits) and returns a `CommitInfo`.
+
+#### Type Alias
+
+```python
+CommitOperation = Union[CommitOperationAdd, CommitOperationCopy, CommitOperationDelete]
+```
+
+### Three Operation Types
+
+#### 1. `CommitOperationAdd` — Upload Files
+
+```python
+@dataclass
+class CommitOperationAdd:
+    path_in_repo: str                          # e.g. "checkpoints/weights.bin"
+    path_or_fileobj: str | Path | bytes | BinaryIO  # Local path, bytes, or buffered IO
+    # Internal (set during commit):
+    _upload_mode: UploadMode | None = None     # "lfs" or "regular"
+    _remote_oid: str | None = None             # SHA of existing file on Hub (for no-op detection)
+    _local_oid: str | None = None              # SHA256 (LFS) or SHA1 (regular) of local content
+    _is_uploaded: bool = False                 # True once LFS upload completes
+    _is_committed: bool = False                # True once commit is sent
+```
+
+- `path_or_fileobj` accepts: `str` (file path), `Path`, `bytes` (in-memory content), or `io.BufferedIOBase` (must support `seek()` + `tell()`)
+- `upload_info` (computed in `__post_init__`): stores SHA256, file size, etc. via `UploadInfo.from_path()`, `UploadInfo.from_bytes()`, or `UploadInfo.from_fileobj()`
+- Use `.as_file()` context manager to read content regardless of input type:
+  ```python
+  with operation.as_file(with_tqdm=True) as f:
+      content = f.read()
+  ```
+- `.b64content()` returns base64-encoded bytes for inline content
+
+#### 2. `CommitOperationCopy` — Server-Side File Copy
+
+```python
+@dataclass
+class CommitOperationCopy:
+    src_path_in_repo: str                      # Source file path
+    path_in_repo: str                          # Destination file path
+    src_revision: str | None = None            # Git revision of source (default: current commit)
+    src_repo_id: str | None = None             # Cross-repo source (e.g. "user/source-model")
+    src_repo_type: str | None = None           # Required when src_repo_id set ("model"/"dataset"/"space")
+    # Internal:
+    _src_oid: str | None = None
+    _dest_oid: str | None = None
+    _is_duplicated: bool = False
+```
+
+- LFS files are copied **server-side** (no download/upload needed)
+- Regular (non-LFS) files are downloaded and re-uploaded as part of the commit
+- Cross-repo copies require same storage region (cross-region not supported)
+- Combine with `CommitOperationDelete` to rename an LFS file on the Hub:
+  ```python
+  operations = [
+      CommitOperationCopy(src_path_in_repo="old_name.bin", path_in_repo="new_name.bin"),
+      CommitOperationDelete(path_in_repo="old_name.bin"),
+  ]
+  ```
+
+#### 3. `CommitOperationDelete` — Delete Files or Folders
+
+```python
+@dataclass
+class CommitOperationDelete:
+    path_in_repo: str                          # File path or folder path (ending in "/")
+    is_folder: bool | Literal["auto"] = "auto" # Auto-detects by trailing "/"
+```
+
+- `is_folder="auto"` (default): path ending in `/` treated as folder, otherwise file
+- Explicit: `is_folder=True` or `is_folder=False`
+- Deleting a folder removes all files inside it in a single operation
+
+### The Commit Flow (Step by Step)
+
+When you call `api.create_commit(operations=[...])`, here's the internal sequence:
+
+```
+1. VALIDATE INPUTS
+   ├── parent_commit matches REGEX_COMMIT_OID (40 hex chars)
+   ├── commit_message is non-empty
+   ├── repo_type is one of: "model", "dataset", "space"
+   ├── No reused CommitOperationAdd (checks _is_committed flag)
+   └── Warn if .arrow/.parquet files uploaded to non-dataset repos
+
+2. VALIDATE README (early fail)
+   └── If any operation targets "README.md", validate YAML metadata before uploading anything
+
+3. WARN ON OVERWRITES
+   └── _warn_on_overwriting_operations(): warns if same file updated twice
+       or updated and then deleted in the same commit
+
+4. PREUPLOAD LFS FILES
+   └── preupload_lfs_files() [see below]
+
+5. FETCH FILES TO COPY
+   └── _fetch_files_to_copy(): resolves source file info for CommitOperationCopy
+
+6. DUPLICATE LFS FILES (cross-repo copies)
+   └── _duplicate_lfs_files(): For cross-repo copies, duplicate LFS objects
+       to destination repo before committing
+
+7. REMOVE NO-OP OPERATIONS
+   └── For CommitOperationAdd: skip if _remote_oid == _local_oid (file unchanged)
+   └── For CommitOperationCopy: skip if _dest_oid == _src_oid (identical source/dest)
+   └── If ALL operations are no-op: return early with latest commit info
+
+8. SEND COMMIT
+   └── _send_commit(): POST to /api/{repo_type}s/{repo_id}/commit with
+       all operations serialized
+```
+
+### No-Op Detection (Empty Commit Prevention)
+
+The library intelligently skips files that haven't changed:
+
+- **For CommitOperationAdd**: `_remote_oid` (SHA of existing file on Hub) is compared to `_local_oid` (SHA256 for LFS, SHA1 for regular). Match → skipped.
+- **For CommitOperationCopy**: `_src_oid` compared to `_dest_oid`. Match → skipped.
+- If **all** operations are no-op: returns `CommitInfo` from the latest commit with a warning: "No files have been modified since last commit. Skipping to prevent empty commit."
+
+### Preupload LFS Files Pattern (Power Users)
+
+`preupload_lfs_files()` lets you upload LFS files one at a time, freeing memory between uploads — crucial when generating files on-the-fly:
+
+```python
+from huggingface_hub import CommitOperationAdd, preupload_lfs_files, create_commit
+
+operations = []
+for i in range(5):
+    content = generate_large_binary()  # e.g. model shard
+    addition = CommitOperationAdd(
+        path_in_repo=f"shard_{i}_of_5.bin",
+        path_or_fileobj=content        # bytes or file-like
+    )
+    preupload_lfs_files(repo_id, additions=[addition])  # Uploads + frees memory
+    operations.append(addition)
+
+create_commit(repo_id, operations=operations, commit_message="Commit all shards")
+```
+
+Key details:
+- LFS files only (regular files < 5MB are committed inline)
+- `free_memory=True` (default): `path_or_fileobj` replaced with `b""` after upload
+- `gitignore_content`: optionally pass to check `.gitignore` rules before upload
+- Parallel upload with `num_threads` (default: 5)
+- Uses Xet protocol when available (`hf_xet`), falls back to legacy LFS HTTP
+
+### LFS Upload: Xet vs Legacy
+
+Two upload paths in `_upload_files()`:
+
+| Aspect | Xet Protocol | Legacy LFS HTTP |
+|--------|-------------|-----------------|
+| Deps | `hf_xet` package installed | Always available |
+| Buffered IO | ❌ not supported | ✅ supported |
+| SHA256 | Computed inside `hf_xet` during chunking | Computed client-side first |
+| Flow | Single pass read + upload | Two-pass: hash then upload |
+| Binary IO buffers | Falls back to legacy | Handled natively |
+
+When `hf_xet` is available and no `io.BufferedIOBase` operations exist → Xet path. Otherwise legacy.
+
+### `CommitInfo` Return Type
+
+```python
+@dataclass
+class CommitInfo(str):  # inherits str for backward compat
+    commit_url: str           # URL to view commit on Hub
+    commit_message: str       # First line
+    commit_description: str   # Full description (can be empty)
+    oid: str                  # Commit hash (e.g. "91c54ad1727ee830252e457677f467be0bfd8a57")
+    _endpoint: str | None     # API endpoint used
+    pr_url: str | None        # PR URL if create_pr=True
+    repo_url: RepoUrl         # Computed from commit_url
+    pr_revision: str | None   # Computed from pr_url, e.g. "refs/pr/1"
+    pr_num: int | None        # Computed from pr_url, e.g. 42
+```
+
+### `parent_commit` for Concurrency Safety
+
+Pass `parent_commit` (OID/SHA of expected parent) to prevent race conditions in concurrent workflows:
+
+```python
+# Ensure no one else committed before us
+info = create_commit(
+    repo_id="user/repo",
+    operations=[...],
+    commit_message="sensitive update",
+    parent_commit=known_sha,
+)
+```
+
+- If `revision` doesn't point to `parent_commit` → commit fails
+- If `create_pr=True` → PR created from `parent_commit`
+
+### PR Creation Flow
+
+When `create_pr=True`:
+1. LFS preupload uses `revision=None` (so read-access users can still preupload even without write perms)
+2. Commit is created against the target branch, then a PR discussion is opened
+3. `CommitInfo` returns `pr_url`, `pr_revision` (`refs/pr/N`), and `pr_num`
+
+### High-Level Wrappers
+
+These convenience methods all delegate to `create_commit`:
+
+| Method | What it does |
+|--------|-------------|
+| `upload_file(path_in_repo, path_or_fileobj, repo_id, ...)` | Single file upload via `CommitOperationAdd` |
+| `upload_folder(folder_path, repo_id, ...)` | Recursive folder upload with **parallel** uploads (thread pool), path stripping, allow/ignore patterns |
+| `delete_file(path_in_repo, repo_id, ...)` | Single file delete via `CommitOperationDelete` |
+| `delete_files(paths_in_repo, repo_id, ...)` | Batch file delete |
+| `delete_folder(folder_path, repo_id, ...)` | Folder delete (path must end with `/`) |
+
+### `upload_folder` Advanced Features
+
+```python
+api.upload_folder(
+    folder_path="./local_checkpoints",
+    repo_id="user/repo",
+    path_in_repo="remote/checkpoints",      # strip local prefix
+    allow_patterns=["*.bin", "*.safetensors"],  # only these files
+    ignore_patterns=["*.tmp"],                   # skip these
+    delete_patterns=["*.old"],                   # delete matching remote files first
+    num_threads=10,                              # parallel upload
+    create_pr=True,
+)
+```
+
+- `allow_patterns` / `ignore_patterns`: glob-based file filtering
+- `delete_patterns`: delete matching remote files in the same commit (atomic replacement)
+- `num_threads`: parallelism for upload (default: 5, based on `UPLOAD_BATCH_MAX_NUM_FILES=256`)
+- Path mapping: `os.path.relpath(local_path, folder_path)` → `path_in_repo/relative_path`
+
+### Limits & Constraints
+
+| Constraint | Value |
+|-----------|-------|
+| Max LFS files per commit | 25,000 |
+| Max payload for regular files | 1 GB |
+| LFS batch fetch size | 500 files (`FETCH_LFS_BATCH_SIZE`) |
+| Upload batch chunk | 256 files (`UPLOAD_BATCH_MAX_NUM_FILES`) |
+| Default upload threads | 5 |
+| Cross-region copies | ❌ Not supported |
+| IO buffer + Xet | ❌ Falls back to legacy HTTP |
+
+### Best Practices
+
+1. **Use `upload_folder` with `delete_patterns`** for atomic deployment updates (upload new, delete old in one commit)
+2. **Preupload LFS files** when generating content on-the-fly to keep memory low
+3. **Set `parent_commit`** in concurrent workflows to prevent conflicts
+4. **Use `CommitOperationCopy` for renaming** large LFS files (server-side, no re-upload)
+5. **Validate README metadata offline** before committing (early fail prevents wasted uploads)
+6. **Don't reuse `CommitOperationAdd` objects** — they're mutated during the commit flow
+7. **Check for `RepositoryNotFoundError`** if getting 404s — repo must exist before committing
+8. **For large folders**, batch additions in groups and use `create_pr=True` for safe review
+
+## 2026-07-24: hf-hub-repo-likes-engagement-api — Repo Like/Engagement System (Topic #213)
+
+### Summary
+Deep dive into the Hugging Face Hub's repository "like" engagement system — the social signal system for expressing interest in repos. Unlike GitHub's stars, HF uses a "like" (heart) model with a deliberate anti-spam asymmetry: users can unlike via API but can only like through the web UI. Covers the 3 API methods (`list_liked_repos`, `list_repo_likers`, `unlike`), the REST endpoints behind them, the `UserLikes` and `User` dataclasses, how likes integrate into user profiles, and the relationship between likes, engagement, and the trending/discovery system.
+
+### Key API Surface
+
+**`list_liked_repos(user=None)`** → `UserLikes`
+- REST: `GET /api/users/{user}/likes`
+- Returns all public repos a user has liked, categorized by type (models, datasets, spaces, kernels)
+- If user is None, defaults to the authenticated user (requires token)
+- No auth required when querying a public user's likes
+- Returns `UserLikes(user, total, models, datasets, spaces, kernels)` with repo IDs as strings
+- Response shape from API: Array of `{createdAt, repo: {name, type}}` objects
+
+**`list_repo_likers(repo_id, repo_type=None)`** → `Iterable[User]`
+- REST: `GET /api/{repo_type}s/{repo_id}/likers`
+- Returns an iterable of `User` objects for all users who liked a given repo
+- Paginated (uses the `paginate` helper internally)
+- Works across model, dataset, and space repos
+- Each `User` object provides: username, fullname, avatar_url
+
+**`unlike(repo_id, repo_type=None)`** → `None`
+- REST: `DELETE /api/{repo_type}s/{repo_id}/like`
+- Removes the authenticated user's like from a repo
+- Requires authentication (token)
+- **No symmetric `like()` method exists** — anti-spam measure: "To prevent spam usage, it is not possible to like a repository from a script"
+
+### User Profile Likes Integration
+
+The `User` dataclass (`huggingface_hub.hf_api.User`) exposes engagement metrics:
+| Field | Source | Description |
+|-------|--------|-------------|
+| `num_upvotes` | User profile API | Total upvotes the user has received across their repo contributions |
+| `num_likes` | User profile API | Total number of likes the user has given to other repos |
+| `num_followers` | User profile API | Number of users following this user |
+| `num_following` | User profile API | Number of users this user follows |
+
+These come from the user profile API and are resolved from camelCase Hub API fields (`numUpvotes`, `numLikes`, `numFollowers`, `numFollowing`).
+
+### Anti-Spare Architecture
+
+The like system has a deliberate read-write asymmetry:
+- **Read:** Both `list_liked_repos` and `list_repo_likers` are public, no token required for public data
+- **Write (unlike):** `DELETE` endpoint requires auth, but only removes — no ability to add
+- **Write (like):** Only possible through the web UI at huggingface.co (button click on a repo page)
+- This prevents scripted vote manipulation, bot-driven like campaigns, and engagement farming
+
+### Like Count in Repo Info
+
+The like count for a repo is visible via the web UI and can be obtained via:
+- `api.repo_info(repo_id).likes` — the `RepoInfo` object's `likes` attribute (int)
+- The Hub REST API returns like count in repo metadata: `GET /api/models/{repo_id}` or `/api/datasets/{repo_id}` or `/api/spaces/{repo_id}`
+- Like count is part of `RepoInfo.likes` field (an integer)
+- Likes are counted in the trending/ranking algorithms for discovery
+
+### Relationship to Discussion Reactions
+
+The Hub's discussion/PR system has a separate emoji reaction system (not the same as repo likes):
+- Comments and discussion posts support emoji reactions (👍, ❤️, 🚀, 👀, 🎉, 😕, etc.)
+- These are managed through different API endpoints under `/api/{repo_type}s/{repo_id}/discussions/{num}/reactions`
+- The huggingface_hub library doesn't expose a direct reaction API — reactions are embedded in `DiscussionComment` objects returned by `get_discussion_details()`
+- Each reaction has: `emoji` (string like "+1", "heart", "rocket") and list of users who reacted
+- This is a separate system from the repo "like" system
+
+### Key Insights
+- HF uses "likes" (hearts) not "stars" — the REST endpoint paths use `/like` and `/likers`
+- Unlike GitHub stars, HF's system is read-heavy with deliberate write restrictions
+- The `list_liked_repos` API is useful for recommendation/discovery — "users who liked X also liked Y" patterns
+- `list_repo_likers` can be used for community engagement analysis (who's interested in your repos)
+- The `unlike` method exists primarily for cleanup (removing stale likes programmatically)
+- Like count is a search/sortable field in Hub API queries (e.g., sorting by likes)
+- Like events are not real-time streamed through webhooks (no webhook event for likes unlike GitHub stars)
+- To get likes for your own repos, use `list_repo_likers()` in batches or read from `repo_info().likes`
+
+### Sources
+- Source code: `huggingface_hub/hf_api.py` — `HfApi.list_liked_repos`, `HfApi.list_repo_likers`, `HfApi.unlike`
+- Source code: `huggingface_hub/hf_api.py` — `UserLikes` dataclass, `User` dataclass
+- Hub API docs: https://huggingface.co/docs/hub/en/api
+- huggingface_hub docs: https://huggingface.co/docs/huggingface_hub/package_reference/hf_api
+- Discussion reactions documented in `endpoint_helpers.py` (`DiscussionComment.reactions`)
+
+---
+
+## 2026-07-24: hf-hub-repo-likes-engagement-api-deep-dive-v2 — Downloads, Trending Score, and Discovery API (Topic #213 Deepening)
+
+**author:** SakThai
+**license:** MIT
+
+### Summary
+
+Extension of the Hub Engagement API deep-dive covering the three remaining engagement dimensions beyond the likes system: **downloads metrics** (30-day + all-time, counting methodology), **trending score** (how repos rank on the Hub), and the **search/discovery API parameters** that surface engagement data. Together with the likes API from the previous deep-dive, this completes the full Hub engagement picture.
+
+---
+
+### 1. Downloads Metrics — `downloads` and `downloads_all_time`
+
+Every repository exposes two download counters. These are **read-only** fields available through `repo_info()`, `model_info()`, and the search/list APIs.
+
+| Field | huggingface_hub Attribute | API Field | Scope |
+|-------|--------------------------|-----------|-------|
+| 30-day downloads | `ModelInfo.downloads` / `DatasetInfo.downloads` / `SpaceInfo.downloads` | `downloads` | Last 30 days |
+| All-time downloads | `ModelInfo.downloads_all_time` / `DatasetInfo.downloads_all_time` | `downloadsAllTime` | Cumulated since creation |
+
+```python
+from huggingface_hub import HfApi
+api = HfApi()
+
+info = api.model_info("bert-base-uncased")
+print(f"30-day: {info.downloads}")          # int | None
+print(f"All-time: {info.downloads_all_time}")  # int | None
+```
+
+**Key properties:**
+- Both fields are integers (`int | None`)
+- `downloads_all_time` is only present when `expand=True` is passed in `list_models()`/`list_datasets()` or when using `model_info()`/`dataset_info()` directly
+- For model info, `downloads` and `downloads_all_time` are always included
+- For search/list endpoints, they must be requested via `expand=["downloads", "downloadsAllTime"]`
+
+#### How Downloads Are Counted (Server-Side Methodology)
+
+Download counting is **server-side only** — no client-side instrumentation or analytics payloads. Every HTTP `GET` and `HEAD` request to designated "query files" increments the counter.
+
+**Default query files** (when no library is specified):
+- `config.json`, `config.yaml`, `hyperparams.yaml`, `params.json`, `meta.yaml`
+
+**Library-specific overrides** — the Hub maintains open-source code (`/api/event` endpoint config) that maps libraries to custom download query patterns:
+
+| Library | Query Files |
+|---------|------------|
+| Default (no library) | `config.json`, `config.yaml`, `hyperparams.yaml`, `params.json`, `meta.yaml` |
+| nemo | All `.nemo` files |
+| GGUF | All files (GGUF files are self-contained) |
+| diffusers | Top-level `.safetensors` + files loaded by the diffusers library |
+| Custom libraries | Add via PR to [huggingface/hub-internal-download-stats](https://github.com/huggingface/hub-internal-download-stats) |
+
+**Double-counting rules:**
+- **GGUF**: All GGUF files counted — cloning a whole repo double-counts each file, but most users download single GGUF files
+- **Diffusers**: Special filter avoids double-counting nested safetensors/pickle weights loaded via the library vs. direct downloads (Auto1111, LoRA UIs)
+- **General**: The `config.json` query file is the single counter by default to avoid counting one model download as N file downloads
+
+#### Publisher Analytics for Granular Data
+
+Organizations that need more detailed download data (distinguish config.json from weights, exclude CI/CD, count unique downloaders) can use **Publisher Analytics** — anonymized request-level access logs.
+
+Features:
+- Raw access logs for all models/datasets published by an organization
+- Can distinguish file types, filter out CI/CD traffic
+- Deduplicate by unique IPs for unique downloader counts
+- Requires an organization account (not available for individual users)
+
+---
+
+### 2. Trending Score — `trending_score`
+
+Every repository type (model, dataset, space) has a **`trending_score`** — an integer value computed server-side that measures recent engagement velocity.
+
+```python
+info = api.model_info("bert-base-uncased")
+print(f"Trending score: {info.trending_score}")  # int | None
+```
+
+**Availability:**
+- Exposed in `ModelInfo.trending_score`, `DatasetInfo.trending_score`, `SpaceInfo.trending_score`
+- Only available when requesting with `expand=True` in list/search APIs or via `model_info()`/`dataset_info()`/`space_info()`
+- The Hub API JSON field is `trendingScore` (camelCase)
+
+**How it's used:**
+- Sort parameter in `list_models()`, `list_datasets()`, `list_spaces()` — sort by `"trending_score"`
+- Drives the default "Trending" sort on the Hub web UI
+- Collections can also be sorted by `"trending"` (for `CollectionSort_T`)
+- Daily Papers use `"trending"` as a sort option
+
+**Known behavior:**
+- Trending is recency-weighted — repos with spikes in likes/downloads get higher scores
+- The exact formula is proprietary/server-side but correlates with: recent likes + recent downloads + velocity (change over short time window)
+- Not documented publicly; the raw `trendingScore` is an opaque integer
+
+**Type definition:**
+```python
+ModelSort_T = Literal["created_at", "downloads", "last_modified", "likes", "trending_score"]
+DatasetSort_T = Literal["created_at", "downloads", "last_modified", "likes", "trending_score"]
+SpaceSort_T = Literal["created_at", "last_modified", "likes", "trending_score"]
+CollectionSort_T = Literal["lastModified", "trending", "upvotes"]
+DailyPapersSort_T = Literal["publishedAt", "trending"]
+```
+
+---
+
+### 3. Search & Discovery by Engagement — Sort and Expand Parameters
+
+The list/search APIs (`list_models()`, `list_datasets()`, `list_spaces()`) support sorting by engagement metrics and expanding responses to include them.
+
+#### Sort Options
+
+```python
+# Sort models by likes (descending)
+api.list_models(sort="likes", direction=-1)
+
+# Sort by trending score
+api.list_models(sort="trending_score", direction=-1)
+
+# Sort by downloads
+api.list_models(sort="downloads", direction=-1)
+
+# Sort by last_modified (for recently updated)
+api.list_models(sort="last_modified", direction=-1)
+```
+
+| Sort Value | Sorts By | Available For |
+|------------|----------|---------------|
+| `"likes"` | Like count | models, datasets, spaces |
+| `"downloads"` | 30-day download count | models, datasets |
+| `"trending_score"` | Trending score | models, datasets, spaces |
+| `"last_modified"` | Last commit date | models, datasets, spaces |
+| `"created_at"` | Creation date | models, datasets |
+
+**Direction:** `direction=1` (ascending) or `direction=-1` (descending, default).
+
+#### Expand Parameters
+
+The `expand` parameter controls which optional fields are included in list/search API responses. Engagement-related expand values:
+
+```python
+# Include all engagement metrics in search results
+api.list_models(
+    expand=["downloads", "downloadsAllTime", "likes", "trendingScore"],
+    sort="likes",
+    limit=10
+)
+```
+
+| Expand Value | What It Adds |
+|--------------|-------------|
+| `"downloads"` | Include 30-day download count |
+| `"downloadsAllTime"` | Include all-time download count |
+| `"likes"` | Include like count |
+| `"trendingScore"` | Include trending score |
+| `"lastModified"` | Include last modification timestamp |
+| `"createdAt"` | Include creation timestamp |
+
+**Performance note:** Each expand value adds one sub-query server-side. Only request what you need. Without expand, list endpoints return minimal metadata only.
+
+**Full expand options for models:**
+```python
+ExpandableModelFields = Literal[
+    "author", "cardData", "config", "createdAt", "disabled",
+    "downloads", "downloadsAllTime", "evalResults", "gated",
+    "gguf", "inference", "inferenceProviderMapping", "lastModified",
+    "library_name", "likes", "mask_token", "model-index",
+    "pipeline_tag", "private", "safetensors", "sha", "siblings",
+    "spaces", "tags", "transformersInfo", "trendingScore",
+    "widgetData", "resourceGroup"
+]
+```
+
+---
+
+### 4. REST API Endpoints for Engagement
+
+All engagement endpoints are available directly via REST without the Python library:
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/models/{repo_id}` | GET | Full model info including likes, downloads, trendingScore (requires no auth for public repos) |
+| `/api/models/{repo_id}/like` | POST | Like a repo (web UI only — blocked in scripts) |
+| `/api/models/{repo_id}/like` | DELETE | Unlike a repo (requires auth, usable from API) |
+| `/api/models/{repo_id}/likers` | GET | List users who liked a repo |
+| `/api/users/{user}/likes` | GET | List repos liked by a user |
+| `/api/models` | GET | List/search models with sort, expand, filter |
+| `/api/datasets` | GET | List/search datasets with sort, expand, filter |
+| `/api/spaces` | GET | List/search spaces with sort, expand, filter |
+
+Replace `models` with `datasets` or `spaces` for dataset/space endpoints. The `/api/event` endpoint (not public) handles download counting internal logic.
+
+---
+
+### 5. Complete Engagement Data Model
+
+The full engagement state of a repository can be read from `repo_info()` which returns `RepoInfo` (or `ModelInfo`/`DatasetInfo`/`SpaceInfo`):
+
+```python
+from huggingface_hub import HfApi
+
+api = HfApi()
+info = api.repo_info("bert-base-uncased", repo_type="model")
+
+# Likes
+print(f"Likes: {info.likes}")                              # int
+
+# Downloads
+print(f"Downloads (30d): {info.downloads}")                # int
+print(f"Downloads (all time): {info.downloads_all_time}")  # int | None
+
+# Trending
+print(f"Trending score: {info.trending_score}")            # int | None
+
+# Last modified timestamp
+print(f"Last modified: {info.last_modified}")              # datetime | None
+
+# Created timestamp
+print(f"Created at: {info.created_at}")                    # datetime | None
+
+# Is repo private/disabled/gated
+print(f"Private: {info.private}")
+print(f"Disabled: {info.disabled}")
+print(f"Gated: {info.gated}")
+```
+
+For search results (bulk), use list endpoints with expand:
+
+```python
+# Top 100 most-liked models
+for model in api.list_models(sort="likes", expand=["likes", "downloads"], limit=100):
+    print(f"{model.modelId:50s} ❤️ {model.likes:>5}  ⬇️ {model.downloads:>8}")
+```
+
+---
+
+### 6. Key Insights & Practical Patterns
+
+1. **Likes + downloads are independent signals:** A model can have many downloads but few likes (utility usage) or many likes but few downloads (community buzz).
+
+2. **Trending score is the composite signal:** It combines both dimensions with recency weighting. Use `sort="trending_score"` for "what's hot now" discovery.
+
+3. **Expand is your friend for bulk queries:** Without expand, list endpoints return minimal data. Always pass `expand=["likes", "downloads"]` when you need engagement data in bulk.
+
+4. **Downloads counting has edge cases:** GGUF counts all files (potential double-counting), diffusers has special filters. Use Publisher Analytics for definitive numbers.
+
+5. **Unlike-only API is asymmetric by design:** Scripts can only unlike, never like. This prevents bot-driven engagement farming. Likes must come from real users through the web UI.
+
+6. **Engagement feeds discovery:** The Hub's search ranking and "trending" views use these metrics. More engagement → more visibility → more engagement (compounding effect).
+
+|7. **Zero-cost relevance:** All engagement APIs are free and public-readable. No token needed to read likes, downloads, or trending score for public repos. Perfect for Beer's analytics and discovery needs.
+
+### Sources
+- Source code: `huggingface_hub/hf_api.py` — `ModelInfo`, `DatasetInfo`, `SpaceInfo`, `RepoInfo` fields (`likes`, `downloads`, `downloadsAllTime`, `trendingScore`)
+- Source code: `huggingface_hub/hf_api.py` — `list_models()` sort/expand parameters
+- Source code: `huggingface_hub/hf_api.py` — `ModelSort_T`, `DatasetSort_T`, `SpaceSort_T` type definitions
+- Hub API docs: https://huggingface.co/docs/hub/en/api
+- Download stats methodology: https://huggingface.co/docs/hub/en/models-download-stats
+- Hub docs: https://huggingface.co/docs/hub/en/repositories-getting-started
+
+---
+
+## 2026-07-25: hf-hub-user-and-org-profile-api — User and Organization Profile API (Topic #231)
+
+### Summary
+Comprehensive reference on the Hugging Face Hub's User and Organization profile API — the REST endpoints and `huggingface_hub` Python methods for reading public user/org profiles, managing repositories, navigating the social graph (followers/following), and understanding profile data models. Profile management (bio, avatar, settings) is web-UI only — there is no public API for updating profiles.
+
+### REST API Endpoints
+
+#### User Endpoints
+| Endpoint | Method | Auth | Description |
+|---|---|---|---|
+| `/api/users/{username}/overview` | GET | No | Full public user profile |
+| `/api/users/{username}/followers` | GET | No | Paginated list of followers (User objects) |
+| `/api/users/{username}/following` | GET | No | Paginated list of users this user follows |
+
+#### Organization Endpoints
+| Endpoint | Method | Auth | Description |
+|---|---|---|---|
+| `/api/organizations/{name}/overview` | GET | No | Full public org profile |
+| `/api/organizations/{name}/members` | GET | No | Paginated list of org members (User objects) |
+| `/api/organizations/{name}/followers` | GET | No | Paginated list of org followers |
+
+#### Authenticated Endpoints
+| Endpoint | Method | Auth | Description |
+|---|---|---|---|
+| `/api/whoami-v2` | GET | Token | Current user's full profile + orgs + token info |
+| `/api/settings/repositories` | GET | Token | Authed user's repos with storage info |
+| `/api/organizations/{name}/settings/repositories` | GET | Token | Org's repos with storage info |
+
+### huggingface_hub Python API
+
+#### User/Org Profile Methods
+All available as both `HfApi` instance methods and module-level functions:
+
+| Method | Returns | Description |
+|---|---|---|
+| `get_user_overview(username)` | `User` | Fetch user profile (no auth needed for public users) |
+| `get_organization_overview(org)` | `Organization` | Fetch org profile (no auth needed) |
+| `whoami(token)` | `dict` | Current user's auth session + org membership |
+| `list_user_repos(namespace=None)` | `Iterable[RepoStorageInfo]` | List repos with storage (authed); namespace=org name for org repos |
+
+#### Social Graph Methods
+| Method | Returns | Description |
+|---|---|---|
+| `list_user_followers(username)` | `Iterable[User]` | Paginated followers |
+| `list_user_following(username)` | `Iterable[User]` | Paginated following list |
+| `list_organization_members(org)` | `Iterable[User]` | Paginated org members |
+| `list_organization_followers(org)` | `Iterable[User]` | Paginated org followers |
+
+### Data Models
+
+#### User Object
+Returned by `get_user_overview()`, `list_user_followers()`, etc.
+
+| Field | Type | Source Key | Description |
+|---|---|---|---|
+| `username` | `str` | `user` | Unique HF username |
+| `fullname` | `str` | `fullname` | Display name |
+| `avatar_url` | `str` | `avatarUrl` | CDN URL for avatar image |
+| `details` | `str | None` | Bio/description from profile |
+| `is_following` | `bool | None` | Whether authed user follows them |
+| `is_pro` | `bool | None` | HF Pro subscriber? |
+| `user_type` | `str | None` | `"user"` or `"org"` |
+| `num_models` | `int | None` | Model count |
+| `num_datasets` | `int | None` | Dataset count |
+| `num_spaces` | `int | None` | Spaces count |
+| `num_buckets` | `int | None` | Storage bucket count |
+| `num_discussions` | `int | None` | Discussion count |
+| `num_papers` | `int | None` | Paper count |
+| `num_upvotes` | `int | None` | Received upvotes |
+| `num_likes` | `int | None` | Likes given |
+| `num_followers` | `int | None` | Follower count |
+| `num_following` | `int | None` | Following count |
+| `num_following_orgs` | `int | None` | Orgs following |
+| `orgs` | `list[Organization]` | Organizations they belong to (minimal: id, name, fullname, avatarUrl) |
+| `createdAt` | `str (ISO 8601)` | Account creation date |
+
+#### Organization Object
+Returned by `get_organization_overview()`, `list_organization_members()`, etc.
+
+| Field | Type | Source Key | Description |
+|---|---|---|---|
+| `name` | `str` | `name` | Unique org name |
+| `fullname` | `str` | `fullname` | Display name |
+| `avatar_url` | `str` | `avatarUrl` | CDN URL for avatar |
+| `details` | `str | None` | Org description |
+| `is_verified` | `bool | None` | Verified badge? |
+| `is_following` | `bool | None` | Whether authed user follows |
+| `num_users` | `int | None` | Member count |
+| `num_models` | `int | None` | Models owned |
+| `num_spaces` | `int | None` | Spaces owned |
+| `num_datasets` | `int | None` | Datasets owned |
+| `num_buckets` | `int | None` | Buckets owned |
+| `num_papers` | `int | None` | Papers authored |
+| `num_followers` | `int | None` | Follower count |
+| `plan` | `str | None` | Subscription plan (`"enterprise"`, `"team"`, `"pro"`, etc.) |
+
+### Profile Management (Web UI Only, No API)
+
+The following profile settings have **no public API** — they can only be changed through the web UI:
+- **Avatar:** `https://huggingface.co/settings/profile` — upload/replace avatar image
+- **Bio/Details:** Same settings page — text area for user description
+- **Full name:** Same settings page
+- **Social links:** Website URL in profile
+- **Account settings:** Email, password, 2FA at `https://huggingface.co/settings/account`
+
+There is no `follow_user()` or `unfollow_user()` method in `huggingface_hub`. Follow/unfollow actions also require the web UI.
+
+### Practical Code Examples
+
+#### Fetch and display a user profile
+```python
+from huggingface_hub import get_user_overview
+
+user = get_user_overview("Nanthasit")
+print(f"{user.fullname} (@{user.username})")
+print(f"Bio: {user.details}")
+print(f"Models: {user.num_models} | Datasets: {user.num_datasets} | Spaces: {user.num_spaces}")
+print(f"Followers: {user.num_followers} | Following: {user.num_following}")
+```
+
+#### List all followers of a user
+```python
+from huggingface_hub import list_user_followers
+
+for follower in list_user_followers("Nanthasit"):
+    print(f"{follower.fullname} (@{follower.username}) — {follower.num_models} models")
+```
+
+#### List org members
+```python
+from huggingface_hub import list_organization_members
+
+for member in list_organization_members("litert-community"):
+    print(f"Member: {member.fullname} (@{member.username})")
+```
+
+#### Get authenticated user's repos with storage info
+```python
+from huggingface_hub import list_user_repos
+
+for repo in list_user_repos():
+    storage_mb = repo.storage / (1024 * 1024)
+    print(f"{repo.type:8s} {repo.id:40s} {storage_mb:6.1f} MB ({repo.visibility})")
+```
+
+#### Check how many users are in an org
+```python
+from huggingface_hub import get_organization_overview
+
+org = get_organization_overview("litert-community")
+print(f"{org.fullname}: {org.num_users} members, {org.num_models} models, {org.num_followers} followers")
+```
+
+### Key Insights
+
+1. **No write API for profiles:** Hugging Face intentionally does not expose profile-editing endpoints via the public API. All profile management goes through the web UI at `huggingface.co/settings/profile`. This prevents bot-driven profile manipulation.
+
+2. **Public-by-default:** User overviews and org overviews are fully public (no token required). Great for analytics and discovery — you can scrape org membership, follower counts, and model counts without authentication.
+
+3. **Paginated social graph:** `list_user_followers()`, `list_user_following()`, `list_organization_members()`, and `list_organization_followers()` all return `Iterable` — internally using Hugging Face's `paginate()` helper that yields items from cursor-based pagination. No manual page management needed.
+
+4. **User vs Organization distinction:** The `type` field distinguishes `"user"` from `"org"` accounts. Org profiles have different field sets (`num_users` vs `num_following`, `plan` vs `is_pro`).
+
+5. **Repo listing includes storage:** `list_user_repos()` returns `RepoStorageInfo` with `storage` (bytes) and `storage_percent` — useful for monitoring disk usage and staying within free tier limits. Requires authentication.
+
+6. **whoami is rate-limited:** The `/api/whoami-v2` endpoint is heavily rate-limited for security. Use `whoami(cache=True)` to cache the result for the duration of the Python process.
+
+### Zero-Cost Relevance
+- All public endpoints require no token — 100% free for read-only access
+- `list_user_repos()` with storage info helps Beer track his HF storage usage (16 models, 8 datasets, 2 Spaces, 2 buckets — within free tier)
+- User/org profile data is useful for building analytics dashboards, discovering collaborators, and identifying popular model authors
+- No API costs or rate limits for public reads — usable in cron jobs and automation
+
+### Sources
+- Source code: `huggingface_hub/hf_api.py` — `get_user_overview()`, `get_organization_overview()`, `whoami()`, `list_user_followers()`, `list_user_following()`, `list_organization_members()`, `list_organization_followers()`, `list_user_repos()`
+- Source code: `huggingface_hub/hf_api.py` — `User` dataclass, `Organization` dataclass, `RepoStorageInfo` dataclass
+- Hub API: https://huggingface.co/api/users/{username}/overview
+- Hub API: https://huggingface.co/api/organizations/{name}/overview
+- User settings: https://huggingface.co/settings/profile
+- huggingface_hub docs: https://huggingface.co/docs/huggingface_hub/en/package_reference/community
+
+---
+
+## 2026-07-25: hf-hub-agent-harnesses-registry — HF Agent Harnesses Registry, MCP Server & Agent Ecosystem (Topic #233)
+
+### Summary
+Deep-dive into the Hugging Face Hub's new **Agent Ecosystem** — a dedicated docs section (Agents Overview, HF MCP Server, HF CLI for AI Agents, Agent Skills, SDK, Local Agents, Session Traces) plus a new **`/api/agent-harnesses`** REST endpoint that returns a registry of AI agents / harnesses known to the Hub. This is how `huggingface_hub` identifies which agent it's running inside (e.g., Claude Code, Codex, Cursor) and reports agent-attributed usage on Hub requests.
+
+### Sources
+- HF Hub Agents docs: https://huggingface.co/docs/hub/en/agents
+- Agents Overview: https://huggingface.co/docs/hub/en/agents-overview
+- HF MCP Server: https://huggingface.co/docs/hub/en/agents-mcp
+- HF CLI for AI Agents: https://huggingface.co/docs/hub/en/agents-cli
+- Agent Skills: https://huggingface.co/docs/hub/en/agents-skills
+- SDK docs: https://huggingface.co/docs/hub/en/agents-sdk
+- Local Agents: https://huggingface.co/docs/hub/en/agents-local
+- Session Traces Format: https://huggingface.co/docs/hub/en/session-traces-format
+- OpenAPI spec: https://huggingface.co/.well-known/openapi.md
+- Agent harnesses source: `@huggingface/tasks` package — `agent-harnesses.ts`
+- MCP Settings: https://huggingface.co/settings/mcp
+
+### 1. Hub Agents Documentation (New Section)
+
+The Hugging Face Hub now has a dedicated **Agents** section in its docs with 8 sub-pages:
+
+| Page | URL | Purpose |
+|------|-----|---------|
+| Agents Overview | `/docs/hub/en/agents-overview` | Connecting chat & coding agents to the Hub |
+| HF CLI for AI Agents | `/docs/hub/en/agents-cli` | Using `hf` CLI from coding agents |
+| HF MCP Server | `/docs/hub/en/agents-mcp` | MCP protocol server for AI assistants |
+| HF Agent Skills | `/docs/hub/en/agents-skills` | Pre-built skills (agentskills.io) |
+| Building agents with HF SDK | `/docs/hub/en/agents-sdk` | Python/JS SDK for building agents |
+| Local Agents with llama.cpp | `/docs/hub/en/agents-local` | Running agents locally |
+| Agent Libraries | `/docs/hub/en/agents-libraries` | Catalog of agent libraries |
+| Session Traces Format | `/docs/hub/en/session-traces-format` | Standard format for agent traces |
+
+### 2. `/api/agent-harnesses` — The Agent Registry Endpoint
+
+A new REST endpoint in the Hub API:
+
+```
+GET /api/agent-harnesses
+```
+
+Returns the registry of all AI agents / harnesses known to the Hub, along with the **standard environment variables used to detect them**. This is how the Hub knows what agent is making a request.
+
+**How it works:**
+- `huggingface_hub` detects which agent harness it's running inside by checking environment variables
+- When making Hub API calls, it includes the harness name in the user-agent header
+- Registered harnesses get attributed by name in Hub usage analytics and the public agent usage dataset
+- Unregistered tools are only counted in the aggregate "unknown" share
+
+**To register a harness:** Open a PR adding an entry to `agent-harnesses.ts` in the `@huggingface/tasks` package. Entry fields include: name, display label, environment variable detection patterns, docs URL, and repo URL.
+
+### 3. HF MCP Server
+
+The Hugging Face MCP Server connects MCP-compatible AI assistants to the Hub:
+
+- **Configuration:** Generated at https://huggingface.co/settings/mcp — picks your client type and produces the exact snippet
+- **Supported clients:** Cursor, VS Code, Zed, Claude Desktop, ChatGPT, Codex, and any MCP-compatible client
+- **Built-in tools:** The `hf_fs` tool enables semantic searches of docs and Spaces
+- **Community tools:** Gradio MCP-compatible Spaces expose their functions as tools with arguments and descriptions
+- **Capabilities:** Search models/datasets/Spaces, read docs, schedule Jobs, use Sandboxes, run community tools
+
+To connect: `claude mcp add hf-mcp-server -t http "https://huggingface.co/mcp?login"`
+
+### 4. HF CLI for AI Agents
+
+The `hf` CLI now has first-class agent support:
+
+- **CLI Skill:** `hf skills add --global` installs the CLI skill so coding agents know every `hf` command
+- **Claude Code integration:** `/plugin marketplace add huggingface/skills` then `/plugin install hf-cli@huggingface/skills`
+- **Agent workflow:** Agents can search models, manage datasets/buckets, launch Spaces, run Jobs — all via the CLI
+
+### 5. Agent Skills Platform (agentskills.io)
+
+A new skill marketplace at agentskills.io allows agents to install task-specific capabilities:
+- Skills work alongside MCP or standalone
+- Published by Hugging Face as `huggingface/skills` on the plugin marketplace
+- Skills provide guidance for AI/ML workflows (HF CLI, model handling, etc.)
+
+### 6. Session Traces Format
+
+Standardized JSON format for recording agent sessions interacting with the Hub. Enables traceability and reproducibility of agent actions.
+
+### 7. Key Takeaways
+
+1. **The agent ecosystem is a first-class Hub feature** — not an afterthought. Dedicated docs, API endpoint, and CLI integration.
+2. **Attribution is opt-in via environment variable detection.** Registering your harness gives named attribution in Hub analytics.
+3. **MCP is the primary integration protocol.** The HF MCP Server exposes Hub tools via MCP for any compatible assistant.
+4. **Skills are a complementary layer** to MCP, providing task-specific procedural guidance for coding agents.
+5. **The registry is open-source** — agent-harnesses.ts in the `@huggingface/tasks` package accepts PRs for new harnesses.
+
+### Skill
+mlops/huggingface-hub — Hub API, MCP Server, CLI, and agent integration
+
+---
+
+## 2026-07-25: hf-agent-skills-complete-reference — HF Agent Skills Platform: Complete Specification & Ecosystem (Deep-Dive of Topic #233)
+
+### Summary
+Complete deep-dive on the **Agent Skills** ecosystem — an open, lightweight format for extending AI agents with specialized knowledge and workflows. Covers the open specification (agentskills.io), the `SKILL.md` format with YAML frontmatter, progressive disclosure loading model, directory structure conventions, the Hugging Face curated skill catalog (11 official skills), the `hf skills add` CLI, installation patterns for all major coding agents, the validation tooling (`skills-ref`), and how this relates to the Sak Family Agents' own skill system.
+
+### Sources
+- Agent Skills Overview: https://agentskills.io/home.md
+- Specification: https://agentskills.io/specification.md
+- Quickstart: https://agentskills.io/skill-creation/quickstart.md
+- HF Agent Skills (Hub docs): https://huggingface.co/docs/hub/en/agents-skills
+- HF CLI for AI Agents: https://huggingface.co/docs/hub/en/agents-cli
+- Validation tool: https://github.com/agentskills/agentskills/tree/main/skills-ref
+- Best practices: https://agentskills.io/skill-creation/best-practices.md
+- Client Showcase: https://agentskills.io/clients.md
+- GitHub: https://github.com/agentskills/agentskills
+- Discord: https://discord.gg/MKPE9g8aUy
+
+### 1. What Are Agent Skills?
+
+Agent Skills are an **open, lightweight format** (originally developed by Anthropic, now community-governed) for extending AI agent capabilities with specialized knowledge and repeatable workflows. A skill is a folder containing a `SKILL.md` file with metadata and instructions plus optional scripts, references, and assets.
+
+```tree
+my-skill/
+├── SKILL.md          # Required: metadata + instructions
+├── scripts/          # Optional: executable code
+├── references/       # Optional: documentation
+├── assets/           # Optional: templates, resources
+└── ...               # Any additional files or directories
+```
+
+**Key properties:**
+- **Portable** — version-controlled folders, shareable via git
+- **Cross-product** — same skill works in Claude Code, VS Code, Cursor, OpenCode, Gemini CLI, Copilot, Codex, and 30+ more clients
+- **Progressive disclosure** — agents load only metadata at startup, full instructions on activation, resources on demand
+
+### 2. The `SKILL.md` Format (Specification)
+
+#### Frontmatter Fields
+
+| Field | Required | Constraints |
+|-------|----------|-------------|
+| `name` | Yes | 1-64 chars, lowercase alphanumeric + hyphens, must match directory name |
+| `description` | Yes | 1-1024 chars, describes what + when to use |
+| `license` | No | License name or reference to bundled file |
+| `compatibility` | No | 1-500 chars, environment requirements |
+| `metadata` | No | Arbitrary key-value map |
+| `allowed-tools` | No | Space-separated pre-approved tools (experimental) |
+
+**Minimal example:**
+```yaml
+---
+name: skill-name
+description: A description of what this skill does and when to use it.
+---
+```
+
+**Full example with optional fields:**
+```yaml
+---
+name: pdf-processing
+description: Extract PDF text, fill forms, merge files. Use when handling PDFs.
+license: Apache-2.0
+compatibility: Requires Python 3.14+ and uv
+metadata:
+  author: example-org
+  version: "1.0"
+allowed-tools: Bash(git:*) Bash(jq:*) Read
+---
+```
+
+#### Naming Rules
+- Only lowercase letters (`a-z`), digits (`0-9`), and hyphens (`-`)
+- Must not start or end with a hyphen
+- No consecutive hyphens (`--`)
+- Must match the parent directory name
+
+#### Body Content
+The Markdown body after frontmatter contains instructions. Recommended sections:
+- Step-by-step instructions
+- Examples of inputs and outputs
+- Common edge cases
+
+Agents load the body on activation. Keep under 500 lines; move reference material to separate files.
+
+### 3. Progressive Disclosure Model
+
+Agents load skills in three stages to minimize context usage:
+
+| Stage | What's Loaded | Token Cost | When |
+|-------|---------------|------------|------|
+| Discovery | `name` + `description` | ~100 tokens | At startup for all skills |
+| Activation | Full `SKILL.md` body | < 5000 tokens recommended | When task matches description |
+| Execution | Referenced files (scripts/, references/, assets/) | Variable | Only when needed |
+
+This means agents can have hundreds of skills available without filling their context window.
+
+### 4. Hugging Face Curated Skills Catalog
+
+HF publishes 11 official skills at `huggingface/skills` on the Claude Code plugin marketplace:
+
+| Skill | What It Does |
+|-------|-------------|
+| `hf-cli` | Hub operations via the `hf` CLI: download, upload, manage repos, run jobs |
+| `huggingface-datasets` | Explore datasets, paginate rows, search text, apply filters |
+| `huggingface-llm-trainer` | Train or fine-tune LLMs with TRL (SFT, DPO, GRPO) on HF Jobs |
+| `huggingface-vision-trainer` | Train object detection and image classification models |
+| `huggingface-community-evals` | Run evaluations against models on the Hub on local hardware |
+| `huggingface-trackio` | Track and visualize ML training experiments with Trackio |
+| `huggingface-papers` | Look up and read HF paper pages in markdown |
+| `huggingface-paper-publisher` | Publish and manage research papers on the Hub |
+| `huggingface-tool-builder` | Build reusable scripts for HF API operations |
+| `gradio` | Build Gradio web UIs and demos |
+| `transformers-js` | Run ML models in JavaScript/TypeScript with WebGPU/WASM |
+
+### 5. Installation Methods
+
+#### Method 1: `hf skills add` (HF CLI — recommended)
+```bash
+# Global install (works with Codex, Cursor, OpenCode, anything loading from ~/.agents/skills)
+hf skills add --global
+# For Claude Code specifically
+hf skills add --claude --global
+# Project-local install
+hf skills add
+# Project-local for Claude Code
+hf skills add --claude
+```
+The skill is generated from the locally installed CLI version — always up to date.
+
+#### Method 2: Claude Code Plugin Marketplace
+```
+/plugin marketplace add huggingface/skills
+/plugin install hf-cli@huggingface/skills
+```
+
+#### Method 3: Manual Directory
+Create a `.agents/skills/<skill-name>/SKILL.md` file in your project (works with VS Code, Cursor, and other clients that scan `.agents/skills/`).
+
+### 6. Compatible Clients (30+)
+
+Major agents supporting the Agent Skills format:
+
+| Client | Provider |
+|--------|----------|
+| Claude Code | Anthropic |
+| GitHub Copilot | GitHub/Microsoft |
+| VS Code | Microsoft |
+| Cursor | Cursor |
+| OpenAI Codex | OpenAI |
+| Gemini CLI | Google |
+| Junie | JetBrains |
+| OpenCode | SST |
+| OpenHands | OpenHands |
+| Goose | Block |
+| Roo Code | Roo Code |
+| Factory | Factory AI |
+| Letta | Letta AI |
+| And 15+ more... | |
+
+### 7. Validation Tooling
+
+The `skills-ref` library validates skill format:
+
+```bash
+pip install skills-ref   # or equivalent
+skills-ref validate ./my-skill
+```
+
+Checks: valid YAML frontmatter, name matches directory, correct field types, no naming violations.
+
+### 8. Zero-Cost Relevance for Beer/SakThai
+
+- **Skills are free** — no paid service required. Everything is file-based and open-source.
+- **The Sak Family Agents already use a skill-based architecture** (Hermes skills at `~/.hermes/skills/`). The Agent Skills format provides a complementary, cross-product standard that SakThai agents could adopt for sharing skills with the wider ecosystem.
+- **Beer can publish his own skills** on agentskills.io or distribute them via GitHub — no HF Pro needed.
+- **The `hf-cli` skill** is directly useful: it teaches any agent how to use the `hf` CLI for Hub operations, complementing the HF MCP Server.
+- **Cross-installable**: Sak skills written in Agent Skills format would work in Claude Code, Cursor, Copilot, etc. — making Beer's workflows portable.
+
+### 9. Key Distinction: Hermes Skills vs. Agent Skills
+
+| Aspect | Hermes Skills | Agent Skills |
+|--------|--------------|--------------|
+| Format | YAML frontmatter + body in a `SKILL.md` | YAML frontmatter + body in a `SKILL.md` |
+| Name field | `name:` in YAML frontmatter | `name:` in YAML frontmatter |
+| Author field | `author: SakThai` (required) | `metadata.author` (optional) |
+| License field | `license: MIT` (required) | `license:` (optional) |
+| Location | `~/.hermes/skills/` | `.agents/skills/` or plugin marketplace |
+| Client | Hermes agent only | Any Agent Skills-compatible client (30+) |
+| Load model | At startup via skill_view | Progressive disclosure |
+| Extra dirs | `references/` only | `scripts/`, `references/`, `assets/` |
+| Validation | Built into Hermes | `skills-ref` CLI |
+| Publishing | Private git repo | agentskills.io, GitHub, plugin marketplaces |
+
+The formats are structurally compatible — a Hermes SKILL.md with `author: SakThai` and `license: MIT` can serve as a valid Agent Skills SKILL.md with minimal adjustment.
+
+### 10. Skill Creators' Resources
+
+- **Quickstart**: Create a skill in 5 minutes — https://agentskills.io/skill-creation/quickstart.md
+- **Best practices**: Well-scoped, calibrated skills — https://agentskills.io/skill-creation/best-practices.md
+- **Optimizing descriptions**: Test and improve trigger reliability — https://agentskills.io/skill-creation/optimizing-descriptions.md
+- **Evaluating skills**: Eval-driven quality iteration — https://agentskills.io/skill-creation/evaluating-skills.md
+- **Using scripts**: Bundling executable code — https://agentskills.io/skill-creation/using-scripts.md
+
+### Skill
+mlops/huggingface-hub — Hub API, MCP Server, CLI, Agent Skills, and agent integration
+
+---
+
+## 2026-07-25: huggingface-hub-http-request-lifecycle-source-deep-dive — Internal HTTP Request Lifecycle of `huggingface_hub`
+
+**Topic:** huggingface-hub-http-request-lifecycle-source-deep-dive  
+**Learned:** 2026-07-25  
+**Author:** SakThai  
+**License:** MIT  
+**Source:** Source code analysis of `huggingface_hub` v1.24.0 (`utils/_http.py`, `utils/_headers.py`, `utils/_auth.py`, `hf_api.py`, `hf_file_system.py`)
+
+### Summary
+
+Deep-dive into the internal HTTP request lifecycle of `huggingface_hub` v1.24.0 — from token resolution → header building → session management → retry/backoff → error refinement. Critical for debugging API failures, optimizing performance, and understanding the full stack of Hub interactions.
+
+### Key Architectural Discovery: `httpx` (not `requests`)
+
+The library uses **`httpx`** as its HTTP backend — not the more common `requests` library. This matters for several reasons:
+
+- `httpx.Client` provides connection pooling, event hooks, and async support natively
+- `timeout=None` by default (infinite), which means connection hangs won't auto-abort
+- `follow_redirects=True` by default on the shared client
+- The `httpx.HTTPStatusError` exception hierarchy differs from `requests`
+
+```python
+# The underlying client
+import httpx
+from huggingface_hub.utils import get_session
+
+client = get_session()
+assert isinstance(client, httpx.Client)  # True
+```
+
+### 1. Token Resolution Pipeline
+
+`get_token()` (`utils/_auth.py`) resolves credentials in this priority order:
+
+1. **OIDC token exchange** (if `HF_OIDC_RESOURCE` env var set) — used by Trusted Publishers in CI environments. Short-lived tokens via OIDC protocol. Failure here raises `OIDCError` (no silent fallback since opting into OIDC is explicit).
+2. **`HF_TOKEN` environment variable** — direct string read. Most common in production/CI.
+3. **Token file** (`~/.cache/huggingface/token`) — cached user token. OAuth tokens with refresh tokens are **transparently refreshed** when close to expiry (network call + file write) before being returned.
+4. **Google Colab secrets vault** (`google.colab.userdata.get("HF_TOKEN")`) — read once per session with a lock to avoid thread-safety issues.
+
+The `get_token_to_send()` function in `_headers.py` handles the decision logic for whether to actually send the token:
+
+- `token=True` → must resolve token or raise `LocalTokenNotFoundError`
+- `token=False` → suppress auth header entirely
+- `token=None` → resolve unless `HF_HUB_DISABLE_IMPLICIT_TOKEN` is set (to avoid unnecessary file reads/OAuth refresh)
+- `token="<explicit string>"` → use as-is
+
+### 2. Header Building (`build_hf_headers`)
+
+The `build_hf_headers()` function constructs:
+
+- **User-Agent**: Composed as `{library_name}/{library_version}; hf_hub/{hf_hub_version}; python/{python_version}`. Optionally appends `torch/{version}` and agent info (detected via `detect_agent()`). Telemetry can be disabled with `HF_HUB_DISABLE_TELEMETRY`.
+- **Authorization**: `Bearer {token}` if token is resolved.
+- **Custom headers**: Additional headers passed via `headers` parameter (merged after default headers, overriding if keys collide).
+
+User-agent origin can be extended via `HF_HUB_USER_AGENT_ORIGIN` environment variable.
+
+### 3. Session Management (`utils/_http.py`)
+
+**Single global client (sync)**: `get_session()` returns a module-level singleton `httpx.Client`:
+
+```python
+def get_session() -> httpx.Client:
+    global _GLOBAL_CLIENT
+    if _GLOBAL_CLIENT is None:
+        with _CLIENT_LOCK:
+            _GLOBAL_CLIENT = _GLOBAL_CLIENT_FACTORY()
+    return _GLOBAL_CLIENT
+```
+
+Default client factory:
+```python
+def default_client_factory() -> httpx.Client:
+    return httpx.Client(
+        event_hooks={"request": [hf_request_event_hook]},
+        follow_redirects=True,
+        timeout=None,
+    )
+```
+
+Key implications:
+- **Thread-safe creation** via `_CLIENT_LOCK` (threading.Lock)
+- **No timeout** (`timeout=None`) — requests can hang indefinitely
+- Connection pool is shared across all requests
+- `atexit.register(close_session)` ensures clean shutdown
+- `os.register_at_fork(after_in_child=close_session)` reinitializes after `fork()` to avoid sharing SSL/connection state
+
+**Custom factory**: `set_client_factory(factory)` replaces the factory, closing any existing client first.
+
+**No shared async client**: `get_async_client()` creates a *new* client on every call (not shared). The async event hook (`async_hf_response_event_hook`) pre-reads response bodies for error handling.
+
+### 4. Event Hooks
+
+**`hf_request_event_hook`** runs before every request:
+
+1. **Offline mode check**: If `HF_HUB_OFFLINE` is set, raises `OfflineModeIsEnabled` immediately.
+2. **Request ID injection**: Adds `X-Amzn-Trace-Id` header (UUID4 if not already present). Also checks `X-Request-Id` first for backward compatibility.
+3. **Debug logging**: Logs method, URL, and auth status. If `HF_DEBUG` is set, also logs a full curl command (with credentials redacted).
+
+**`async_hf_response_event_hook`** (async only): pre-reads error response bodies for status >= 400 to ensure error info is available when the exception is raised, but only if `Content-Length < 1MB` (to avoid OOM).
+
+### 5. Request Execution: Two Paths
+
+#### 5a. Simple requests (most `HfApi` methods)
+Most `HfApi` methods use the pattern:
+```python
+response = get_session().get(url, headers=self._build_hf_headers(token=token))
+hf_raise_for_status(response)
+```
+This uses the shared client directly — no retry logic at this level. Examples: `whoami`, `list_models`, `repo_info`, `list_files`.
+
+#### 5b. Backoff-protected requests (uploads, downloads)
+For operations that need retry resilience (uploads, large downloads), `http_backoff()` is used:
+```python
+response = http_backoff("PUT", upload_url, data=data)
+```
+
+`http_backoff` is used in:
+- Upload operations: `upload_file`, `upload_folder`, `create_commit`
+- File downloads: via `hf_hub_download` / `snapshot_download` (through `_httpx_follow_relative_redirects_with_backoff`)
+- Any `put`/`post` that could fail transiently
+
+### 6. Retry/Backoff Internals (`_http_backoff_base`)
+
+The custom backoff engine (no external `backoff` library dependency):
+
+```
+Default parameters:
+  max_retries = 5
+  base_wait_time = 1s
+  max_wait_time = 8s
+  retry_on_exceptions = (httpx.TimeoutException, httpx.NetworkError, httpx.RemoteProtocolError)
+  retry_on_status_codes = (408, 429, 500, 502, 503, 504)
+```
+
+**Retry flow**:
+
+1. On **exceptions** (timeout, network error, protocol error):
+   - `ConnectError` triggers `close_session()` — invalidates the client to force SSL renegotiation
+   - Exhausts max_retries → re-raises the original exception
+
+2. On **status codes** (429, 5xx, 408):
+   - Checks `ratelimit` header (IETF standard) for `r` (remaining) and `t` (reset-in-seconds)
+   - Falls back to `Retry-After` header (delay-seconds format only, not HTTP-date)
+   - Uses ratelimit reset time + 1s if available, otherwise exponential backoff: `sleep = min(max_wait_time, sleep * 2)`
+
+3. **IO-aware data rewind**: If `data` is a file/IO object, `seek(initial_pos)` is called before each retry to rewind the stream — critical for upload retries.
+
+### 7. Error Refinement (`hf_raise_for_status`)
+
+The `hf_raise_for_status()` function is the single chokepoint for error handling. It:
+
+1. First calls `_warn_on_warning_headers()` to parse `X-HF-Warning` headers (each topic warned once per process).
+
+2. Then refines `HTTPStatusError` into specific exception types based on:
+   - **`X-Error-Code`** header: `RepoNotFound`, `RevisionNotFound`, `EntryNotFound`, `GatedRepo`
+   - **`X-Error-Message`** header: `"Access to this resource is disabled."` → `DisabledRepoError`
+   - **URL patterns**: Parses repo type/ID from URL for richer error context
+   - **Bucket API URLs**: Separate `BucketNotFoundError`
+   - **Job API URLs**: Separate `JobNotFoundError`
+   - **Status codes**: 400 → `BadRequestError`, 403 → `HfHubHTTPError`, 429 → rate-limit specific `HfHubHTTPError`, 416 → range error
+
+3. **Server message extraction**: Tries to parse error body as JSON (`response.json()`), extracting from `error`, `error_description`, and `errors` fields. Falls back to raw text for non-HTML responses.
+
+4. **Request ID enrichment**: Extracts `X-Request-Id`, `X-Amzn-Trace-Id`, or `x-amz-cf-id` and injects into the error message for easier debugging.
+
+```python
+# Exception mapping summary:
+# 404 + X-Error-Code: RepoNotFound  → RepositoryNotFoundError
+# 404 + bucket URL                  → BucketNotFoundError
+# 404 + job URL                     → JobNotFoundError
+# 401 + repo URL                    → RepositoryNotFoundError (ambiguous 401→404)
+# X-Error-Code: RevisionNotFound    → RevisionNotFoundError
+# X-Error-Code: EntryNotFound       → RemoteEntryNotFoundError
+# X-Error-Code: GatedRepo           → GatedRepoError
+# X-Error-Message: "disabled"       → DisabledRepoError
+# 400                               → BadRequestError
+# 403                               → HfHubHTTPError
+# 429                               → HfHubHTTPError (with rate limit info)
+# 416                               → HfHubHTTPError (with range info)
+# All other errors                  → HfHubHTTPError
+```
+
+### 8. Rate Limit Header Parsing
+
+The `parse_ratelimit_headers()` function implements the IETF draft standard (`draft-ietf-httpapi-ratelimit-headers-09`):
+
+```
+Header example:
+  ratelimit: "api";r=0;t=55
+  ratelimit-policy: "fixed window";"api";q=500;w=300
+
+Parsed result:
+  RateLimitInfo(resource_type="api", remaining=0, reset_in_seconds=55, limit=500, window_seconds=300)
+```
+
+The `resource_type` field distinguishes between different rate limit scopes (e.g., `"api"` for general API, `"upload"` for upload-specific limits).
+
+### 9. Debug Facilities
+
+**`HF_DEBUG` environment variable**: When set, every request is logged as a curl command via `_curlify()`, with:
+- `authorization` header redacted (→ `<TOKEN>`)
+- Sensitive body fields redacted (OAuth tokens, client secrets, device codes via `_redact_sensitive_body()`)
+- Body truncated to 1000 chars
+- Streaming bodies shown as `<streaming body>`
+
+**`hf_request_event_hook`** logs every request at debug level with a unique request ID, making it possible to correlate client-side logs with server-side request traces.
+
+### 10. Offline Mode
+
+`HF_HUB_OFFLINE` environment variable → prevents all outgoing requests:
+```python
+if constants.is_offline_mode():
+    raise OfflineModeIsEnabled(
+        f"Cannot reach {request.url}: offline mode is enabled."
+    )
+```
+This is checked in the request event hook — the earliest possible intercept point — before any connection attempt.
+
+### 11. File Download Pipeline (`file_download.py`)
+
+For model/dataset file downloads, an additional HTTP layer exists:
+
+- `_httpx_follow_relative_redirects_with_backoff()` — wraps `http_backoff()` and follows relative `Location` redirects to handle renamed repos. Stops at absolute redirects (which go to CDN).
+- `hf_hub_download` uses `http_backoff()` for metadata checks (HEAD requests) and raw `get_session().stream()` for the actual download, with `resume_size` and `Range` header support.
+- The `hf_transfer` Rust accelerator (`HF_HUB_ENABLE_HF_TRANSFER=1`) bypasses Python entirely for downloads — using a separate native binary that speaks HTTP directly with multithreaded chunking.
+
+### Key Takeaways
+
+1. **`httpx` is the engine**, not `requests` — don't look for `requests.Session` or `requests.adapters` configuration.
+2. **No default timeout** — the global client has `timeout=None`. Set via `set_client_factory` if needed.
+3. **Retry is opt-in** — most read-only `HfApi` methods don't use `http_backoff`; only uploads and downloads do.
+4. **Token resolution is layered** — OIDC → env → file → Colab, each with distinct error semantics.
+5. **Error refinement is URL-aware** — the same 404 means different things depending on whether the URL is a repo, bucket, or job endpoint.
+6. **Rate limit headers follow IETF draft** — parse both resource-specific limits and policy windows.
+
+## 2026-07-25: hf-hub-hfuri-mount-volume-system — HfUri, HfMount, and Volume API for Spaces & Jobs
+
+### Summary
+Deep dive into the new Hugging Face Hub URI system (`hf://`), Mount specifications (`hf://...:<MOUNT_PATH>[:ro|:rw]`), and the Volume API for Space/Job resource mounting. Introduced in `huggingface_hub v1.24.0`. The `HfUri` dataclass provides a unified parser for identifying any Hub resource (model, dataset, space, kernel, or bucket) along with an optional revision and sub-path. `HfMount` extends this with a local mount path and read-only flag. The `Volume` dataclass (with `set_space_volumes`/`delete_space_volumes` API) replaces the deprecated `request_space_storage` for Spaces, while `sync_job_volume` enables local-to-bucket syncing for Job volumes.
+
+### Key Components
+
+**1. HfUri — Canonical Hub Resource Identifier**
+- Grammar: `hf://[<TYPE>/]<ID>[@<REVISION>][/<PATH>]`
+- Type prefixes (plural mandated): `models/`, `datasets/`, `spaces/`, `kernels/`, `buckets/`
+- Default type (no prefix): `model`
+- Special ref handling: `refs/pr/N` and `refs/convert/<name>` matched eagerly (contain `/`)
+- Revisions with `/` not matching special refs are URL-encoded as `%2F`
+- Bucket URIs never carry a revision
+- Accepted URI types from source: `model`, `dataset`, `space`, `kernel`, `bucket`
+- Properties: `.type`, `.id`, `.revision` (optional), `.path_in_repo` (default `""`), `.is_bucket`, `.is_repo`
+- `.to_uri()` — renders canonical `hf://` string
+- `.to_url(endpoint)` — renders Hugging Face web URL (e.g. `https://huggingface.co/org/model`)
+
+**2. HfMount — Mount Specification**
+- Grammar: `hf://[<TYPE>/]<ID>[@<REVISION>][/<PATH>]:<MOUNT_PATH>[:ro|:rw]`
+- Fields: `source` (HfUri), `mount_path` (absolute, starts with `/`), `read_only` (optional bool)
+- `.to_uri()` — renders mount URI
+- Parsing: `parse_hf_mount(mount_str)` returns `HfMount`
+- Mount path always starts with `:/` delimiter; uses rfind to handle edge cases
+
+**3. Volume Class — API-facing mount descriptor**
+```python
+@dataclass
+class Volume:
+    type: Literal["bucket", "model", "dataset", "space"]
+    source: str              # repo or bucket ID
+    mount_path: str          # absolute path in container
+    revision: str | None     # git revision (repos only)
+    read_only: bool | None   # True for repos, default False for buckets
+    path: str | None         # subfolder prefix inside resource
+```
+- `.to_dict()` — serializes to Hub API JSON payload (uses camelCase keys)
+- `.to_uri()` — renders as `hf://` mount URI via `HfMount`
+
+**4. set_space_volumes / delete_space_volumes — New Space Volume API**
+- `api.set_space_volumes(repo_id, volumes)` — replaces ALL volumes on a Space; raises `BadRequestError` on static Spaces
+- `api.delete_space_volumes(repo_id)` — removes ALL volumes from a Space; raises `BadRequestError` if none attached
+- `api.get_space_runtime(repo_id)` — returns `SpaceRuntime` with `.volumes: list[Volume] | None`
+- `request_space_storage` deprecated in v1.24.0, will be removed in v2.0
+
+**5. sync_job_volume — Job Volume Sync**
+- `api.sync_job_volume(source, mount_path, *, remote_name, read_only, namespace)` returns `Volume`
+- Syncs local directory to `{namespace}/jobs-artifacts` bucket (auto-created private)
+- Uses same sync logic as `sync_bucket` — re-syncing only uploads new/modified files
+- Default subfolder name derived from directory path + hostname; pass `remote_name` for fixed name
+- Read-only by default; pass `read_only=False` for Job output volumes
+- Empty directories get `.keep` placeholder so volume mounts succeed
+- Returns a `Volume` ready for `run_job`/`run_uv_job`/`create_scheduled_job`/`create_scheduled_uv_job`
+
+**6. duplicate_repo with space_volumes**
+- `api.duplicate_repo(from_id, to_id, *, repo_type, space_volumes=..., ...)` — new unified duplication API
+- `duplicate_space()` deprecated in favor of `duplicate_repo(repo_type="space")`
+- `space_volumes` parameter accepts `list[Volume]` for the duplicate
+
+**7. Web URL to HF URI Parsing**
+- `parse_hf_uri()` accepts both `hf://` URIs and Hugging Face web URLs (auto-detected)
+- Supported URL routes: `blob`, `resolve`, `raw`, `tree`, `blame` (repos); `resolve`, `tree` (buckets)
+- User/org pages, listing pages, and non-location routes (commit, discussions, settings, edit) rejected
+- Self-hosted endpoints supported via `endpoint` parameter
+- Constants: `HF_PROTOCOL="hf://"`, `HF_URI_TYPE_PREFIXES={models: model, datasets: dataset, spaces: space, kernels: kernel, buckets: bucket}`, `HF_URL_HOSTS={hf.co, huggingface.co, hub-ci.huggingface.co}`
+
+### Key Design Decisions
+- Singular type names rejected with helpful error
+- `HfUri` is frozen/hashable — safe for caching and use as dict keys
+- Mount paths use rfind(`:/`) to avoid splitting on `:` in Windows-style paths
+- Bucket URIs explicitly reject revision markers (`@`)
+- `Volume.to_uri()` uses HfMount internally for CLI compatibility
+- Model URLs are at root; others under type prefix
+
+### API Integration
+- SpaceRuntime includes `volumes: list[Volume] | None` field populated from API response
+- `SpaceRuntime` also tracks `dev_mode: bool`, `storage: SpaceStorage | None`, `hot_reloading: SpaceHotReloading | None`
+- Volumes in SpaceRuntime are created via `Volume(**v)` from raw API dict
+
+### Practical Usage
+```python
+from huggingface_hub import HfApi, Volume, parse_hf_uri, parse_hf_mount
+
+# Parse URIs and web URLs
+uri = parse_hf_uri("hf://datasets/my-org/my-dataset@v1/train.csv")
+uri.to_url()  # full Hugging Face web URL
+
+# Mount specification
+mount = parse_hf_mount("hf://models/org/model:/models:ro")
+mount.to_uri()  # canonical mount URI
+
+# Volume for Spaces API
+api = HfApi()
+volumes = [
+    Volume(type="bucket", source="my-org/my-bucket", mount_path="/data"),
+    Volume(type="model", source="other-org/base-model", mount_path="/model", read_only=True),
+]
+api.set_space_volumes("my-org/my-space", volumes)
+runtime = api.get_space_runtime("my-org/my-space")
+for vol in runtime.volumes:
+    print(f"{vol.type}: {vol.source} -> {vol.mount_path}")
+
+# Volume for Jobs
+vol = api.sync_job_volume("./inputs", mount_path="/inputs", remote_name="eval-data-v3")
+job = api.run_uv_job("run_eval.py", volumes=[vol], flavor="cpu-upgrade")
+```
+
+### Zero-Cost Relevance
+- Volumes for Spaces are available on free CPU Basic hardware (static Spaces not supported)
+- `sync_job_volume` syncs to free `jobs-artifacts` bucket (public unlimited, private with limits)
+- Mounting models/datasets as volumes costs nothing extra — read-only references to existing resources
+- Bucket volumes may incur storage costs for large data; keep buckets public for free unlimited storage
+- The `hf://` URI system itself is free — a standardized way to reference Hub resources
+
+### Skill Updated
+`mlops/huggingface-hub/` — added HfUri/HfMount/Volume reference to `references/hf-learnings.md`
+
+---
+
+## 2026-07-25: hf-spaces-hot-reload-architecture-deep-dive — Hot Reload & Dev Mode for Spaces
+
+### Summary
+Comprehensive source-code deep-dive into the Hugging Face Spaces Hot Reload system (`huggingface_hub._hot_reload`), which enables live code reloading on running Spaces without full container rebuilds. Built on top of **Dev Mode** (a PRO/Team feature that keeps the container alive between restarts), the Hot Reload infrastructure uses Server-Sent Events (SSE) to push incremental code changes to individual replicas. This is the first time the full internal architecture of this system has been documented from source.
+
+### Architecture Overview
+
+The Hot Reload system has three layers:
+
+1. **Dev Mode** — Toggle on/off via `enable_space_dev_mode()`/`disable_space_dev_mode()`. Keeps the Space container running while the application restarts. Required before hot reloading can work. Available on PRO and Team & Enterprise plans.
+
+2. **Commit with `_hot_reload=True`** — Pass the private `_hot_reload=True` parameter to `create_commit()` (or `upload_folder()` which wraps it). This adds `?hot_reload=1` as a query parameter to the commit API endpoint (`POST /api/{type}s/{repo_id}/commit/{revision}`), signalling the Hub to notify all running replicas.
+
+3. **SSE-based Reload Client** — Each running Space replica runs a reload server on port **7887** (subdomain-based: `{space}--7887.hf.space`). The `ReloadClient` connects to this endpoint and streams reload events via SSE.
+
+### Source Code Structure
+
+All hot reload source lives under `huggingface_hub/_hot_reload/` (Copyright 2026, new in v1.24.0):
+
+| File | Purpose |
+|------|---------|
+| `__init__.py` | Package marker (license only, no exports) |
+| `types.py` | TypedDict definitions for all reload API request/response shapes |
+| `sse_client.py` | Vendored SSE client (from `mpetazzoni/sseclient`, Apache-2.0) |
+| `client.py` | `ReloadClient` and `multi_replica_reload_events()` — core Hot Reload logic |
+
+### Types Reference (`types.py`)
+
+**Operation Types** (the actual events streamed during reload):
+
+| Type | Kind | Description |
+|------|------|-------------|
+| `ReloadOperationObject` | `"add"` / `"update"` / `"delete"` | File-level object change: `objectType`, `objectName`, `region` |
+| `ReloadOperationRun` | `"run"` | Execute code block: `codeLines`, `stdout`, `stderr` |
+| `ReloadOperationException` | `"exception"` | Runtime exception with `traceback` string |
+| `ReloadOperationError` | `"error"` | Fatal reload error with `traceback` |
+| `ReloadOperationUI` | `"ui"` | UI change notification: `updated: bool` |
+| `ReloadOperationFile` | `"file"` | File creation notification: `created: bool` |
+
+**API Request/Response Types:**
+
+| TypedDict | Purpose |
+|-----------|---------|
+| `ApiCreateReloadRequest` | `{filepath, contents, reloadId?}` — trigger a reload on a specific file |
+| `ApiCreateReloadResponseSuccess` | `{status: "created", reloadId: str}` |
+| `ApiCreateReloadResponseError` | `{status: "alreadyReloading" | "fileNotFound"}` |
+| `ApiGetReloadRequest` | `{reloadId: str}` — poll/pull reload events by ID |
+| `ApiGetReloadEventSourceData` | Stream of `ReloadOperation*` events emitted during reload |
+| `ApiGetStatusRequest` | `{revision: str}` — check if a revision has been reloaded |
+| `ApiGetStatusResponse` | `{reloading: bool, uncommitted: list[str]}` |
+| `ApiFetchContentsRequest` | `{filepath: str}` — fetch file contents from running Space |
+| `ApiFetchContentsResponse` | `{status: "ok" | "fileNotFound", contents?: str}` |
+
+### ReloadClient (`client.py`)
+
+Key design:
+- Each replica is addressed by its `replica_hash` via the `--replicas/+{hash}` URL path segment
+- GET reload returns an SSE stream — events are parsed by the vendored `SSEClient`
+- Non-200/204 status codes raise exceptions; 204 means "reloadId not found" (retryable)
+- 20-second client timeout (`CLIENT_TIMEOUT`)
+
+### Multi-Replica Coordination (`multi_replica_reload_events()`)
+
+This function:
+1. Creates one `ReloadClient` per replica hash
+2. For each replica, calls `get_reload(commit_sha)` with up to `max_retries` retries
+3. Tracks all events from the first replica as the reference (`first_client_events`)
+4. For subsequent replicas, checks if their stream matches the first replica's events exactly
+5. **Deduplication**: events that are identical across replicas are suppressed; only the first replica's events are yielded, plus a `fullMatch` marker for replicas that match exactly
+6. **Partial match**: if a replica diverges mid-stream, replay backlog then yield fresh events
+
+### SpaceRuntime Integration
+
+The `SpaceRuntime` dataclass (in `_space_api.py`) exposes hot reload state:
+- `dev_mode: bool` — is dev mode enabled?
+- `hot_reloading: SpaceHotReloading | None` — active reload if any
+
+`SpaceHotReloading.status` is `"created"` (reload initiated), `"canceled"` (reload aborted), or `None` (pending). The `replica_statuses` field contains per-replica status tuples.
+
+### Dev Mode API
+```python
+api.enable_space_dev_mode("user/my-space")   # POST /api/spaces/{id}/dev-mode {"enabled": True}
+api.disable_space_dev_mode("user/my-space")  # POST /api/spaces/{id}/dev-mode {"enabled": False}
+```
+
+### End-to-End Flow
+1. Enable Dev Mode → keeps container alive
+2. Commit with `_hot_reload=True` → `POST .../commit/main?hot_reload=1`
+3. Hub notifies running replicas → each replica streams SSE events on port 7887
+4. Events: object add/update/delete, code run, UI update, file create (or exception/error)
+5. Poll `get_space_runtime()` → `hot_reloading.status` to verify completion
+
+### Key Design Decisions
+1. **SSE over WebSocket** — simpler, unidirectional, HTTP-based
+2. **Per-replica port naming** — `--7887` subdomain avoids port conflicts
+3. **First-replica dedup** — first replica's events are canonical; subsequent matching replicas yield `fullMatch`
+4. **Private `_hot_reload`** — experimental/PRO-only, not in public docs
+5. **10 retries** — 2s sleep on 204 (reloadId propagation delay)
+
+### Zero-Cost Relevance
+- Dev Mode requires PRO ($9/mo) — not on free tier
+- Understanding the architecture helps with debugging Spaces and contributing to `huggingface_hub` open source
+- The vendored `sse_client.py` (Apache-2.0) is reusable for any SSE integration
+
+### Files Analyzed
+| File | Lines |
+|------|-------|
+| `huggingface_hub/_hot_reload/types.py` | 121 |
+| `huggingface_hub/_hot_reload/sse_client.py` | 144 |
+| `huggingface_hub/_hot_reload/client.py` | 130 |
+| `huggingface_hub/hf_api.py` (rel. sections) | ~120 |
+| `huggingface_hub/_space_api.py` (rel. sections) | ~30 |
+| `huggingface_hub/_commit_api.py` (rel. sections) | ~20 |
+| **Total code analyzed** | **~565 lines** |
+
+### Skill Updated
+`mlops/huggingface-hub/` — added Hot Reload & Dev Mode reference to `references/hf-learnings.md`
+
+---
+

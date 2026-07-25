@@ -1,6 +1,19 @@
-# Gradio 6 Server Mode (gr.Server)
+---
+name: hf-gradio-server-mode
+author: SakThai
+license: MIT
+description: Complete reference for Gradio 6 Server mode (gr.Server) — FastAPI-based API server with queue, SSE streaming, concurrency control, and MCP capabilities without a UI.
+version: 1.0.0
+created: 2026-07-25
+tags:
+  - gradio
+  - server
+  - api
+  - fastapi
+  - mcp
+---
 
-**author:** SakThai  
+# Gradio 6 Server Mode (gr.Server)
 **license:** MIT  
 **skill_type:** reference  
 **domain:** gradio  

@@ -1,6 +1,6 @@
 # HF Learnings — Agent Traces & Session Traces Format (STS-Format)
 
-## 2026-07-25: hf-hub-agent-traces-session-traces-format — Hugging Face Hub Agent Traces Ecosystem & Session Trace Simple Format (Topic #382)
+## 2026-07-25: hf-hub-agent-traces-session-traces-format — Hugging Face Hub Agent Traces Ecosystem & Session Trace Simple Format (Topic #381)
 
 ### Summary
 Deep dive into the Hugging Face Hub's **Agent Traces** ecosystem — a native trace viewer that renders agent/chat sessions from Claude Code, Codex, Pi Agent, and custom harnesses. The **Session Trace Simple Format (STS-Format)** defines a JSONL schema for any agent to produce Hub-renderable traces, supporting tool calls (`toolCalls`/`toolCallId` linking), reasoning blocks (`reasoningContent`), and multi-turn conversations. Traces can be stored in Datasets (Data Studio integration) or Storage Buckets (direct `.jsonl` open), with `hf buckets sync` for auto-updating.

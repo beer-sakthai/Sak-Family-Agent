@@ -105,6 +105,10 @@ All three repos are at `/opt/data/sakthai-skills-repo`, `/opt/data/saksee-skills
 - Save cross-agent facts to memory so all siblings can read them
 - Each sibling has a separate session context — memory is the bridge
 
+## A2A Message Bus
+
+A technical messaging layer for agent-to-agent communication runs on port 3005. See [`references/a2a-message-bus.md`](references/a2a-message-bus.md) for API details.
+
 ## Pitfalls
 
 - Do NOT use `send_message` to contact siblings — only `delegate_task`
@@ -112,3 +116,4 @@ All three repos are at `/opt/data/sakthai-skills-repo`, `/opt/data/saksee-skills
 - A leaf subagent (default role) CANNOT delegate further. If nested delegation is needed, use `role='orchestrator'`
 - The pipeline is sequential by default — parallel stages can be used when tasks are independent
 - Always verify Verify's output too — subagent summaries are self-reports
+- **Dataset operations: NEVER trust a subagent to append without verification.** Subagents can overwrite the entire dataset instead of appending. ALWAYS: (1) check original remote count before dispatch, (2) compare remote count after, (3) keep backup commit hash to revert, (4) only delegate data generation, never the upload

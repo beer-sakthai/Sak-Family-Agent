@@ -131,3 +131,30 @@ pipeline = CogVideoXPipeline.from_pretrained(
 - https://huggingface.co/zai-org/CogVideoX-2b
 - https://github.com/THUDM/CogVideo (original repo)
 - https://huggingface.co/docs/diffusers/main/en/using-diffusers/cogvideo (usage guide)
+
+## 2026-07-24: hf-diffusers-nunchaku-lite — Nunchaku Lite 4-bit W4A4 Diffusion Inference in Diffusers (Topic #76 Deepening)
+
+### Summary
+Deep-dive on **Nunchaku Lite** — the native integration of SVDQuant 4-bit W4A4 diffusion inference into Diffusers. See central `references/hf-learnings.md` for full content.
+
+### Key Points for Diffusers Users
+- Install `kernels` package for auto CUDA kernel download (no local compilation)
+- Use `from_pretrained()` on any Nunchaku Lite checkpoint — works like any Diffusers model
+- Two kernel families: `svdq_w4a4` (INT4/NVFP4 for compute-bound layers) and `awq_w4a16` (INT4 for precision-sensitive modulation layers)
+- Combined with `torch.compile` → 1.8× speedup over BF16
+- Peak VRAM reduction: ~50% (31.1 GB → 16.0 GB with NF4 text encoder)
+- Quantize your own models with `diffuse-compressor` toolkit
+
+### Hardware Support
+| Scheme | Precision | GPUs |
+|--------|-----------|------|
+| `svdq_w4a4` | NVFP4 | Blackwell (RTX 50, B200) |
+| `svdq_w4a4` | INT4 | Turing/Ampere/Ada (RTX 30/40, A100, L40S) |
+| `awq_w4a16` | INT4 | Turing/Ampere/Ada |
+
+### References
+- Blog: https://huggingface.co/blog/nunchaku-diffusers
+- Docs: https://huggingface.co/docs/diffusers/main/en/quantization/nunchaku
+- PR: https://github.com/huggingface/diffusers/pull/14100
+- Nunchaku: https://github.com/nunchaku-tech/nunchaku
+- diffuse-compressor: https://github.com/rootonchair/diffuse-compressor
