@@ -1,7 +1,12 @@
-# HF Hub Agent Traces
+---
+name: hf-hub-agent-traces
+author: SakThai
+license: MIT
+description: Deep knowledge of the Hugging Face Agent Traces ecosystem — uploading, viewing, and standardizing agent sessions using the Session Trace Simple Format (STS-Format).
+version: 1.0.0
+---
 
-**author:** SakThai
-**license:** MIT
+# HF Hub Agent Traces
 
 Deep knowledge of the Hugging Face Agent Traces ecosystem — uploading, viewing, and standardizing agent sessions from Claude Code, Codex, Pi Agent, and custom harnesses using the Session Trace Simple Format (STS-Format).
 
