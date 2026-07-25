@@ -243,6 +243,324 @@ Client Request
 
 ---
 
+## 2026-07-25: hf-hub-rate-limits-deep-dive-v2 — Source Code Internals & Advanced Patterns (Deeper on Topic #249)
+
+### Summary
+Deep-dive into the actual `huggingface_hub v1.24.0` source code implementing rate limit handling. Covers the `_http_backoff_base()` internal function, the precise regex patterns for parsing IETF RateLimit headers, how `http_backoff()` integrates rate-limit-aware waiting with exponential backoff, `hf_raise_for_status()` 429 error message construction, `HfApi` pagination internals, Storage Buckets rate limits, and practical code patterns for custom handling.
+
+### Source Code Reference
+- huggingface_hub v1.24.0 source: `huggingface_hub/utils/_http.py` (lines 55–920)
+- Rate limit regex + parser: lines 75–135
+- `_http_backoff_base()`: lines 430–527
+- `http_backoff()` wrapper: lines 530–610
+- `hf_raise_for_status()` 429 handling: lines 895–914
+
+---
+
+### 1. Exact Regex Patterns for Rate Limit Header Parsing
+
+The library uses two compiled regex patterns:
+
+**`_RATELIMIT_REGEX`** — Parses the `RateLimit` response header:
+```python
+_RATELIMIT_REGEX = re.compile(
+    r'\"(?P<resource_type>\w+)\"\s*;\s*r\s*=\s*(?P<r>\d+)\s*;\s*t\s*=\s*(?P<t>\d+)'
+)
+```
+Matches patterns like: `"api";r=0;t=55`
+- `resource_type` → `"api"`, `"resolvers"`, or `"pages"`
+- `r` → remaining requests in current window
+- `t` → seconds until window reset
+
+**`_RATELIMIT_POLICY_REGEX`** — Parses the `RateLimit-Policy` response header:
+```python
+_RATELIMIT_POLICY_REGEX = re.compile(
+    r'q\s*=\s*(?P<q>\d+).*?w\s*=\s*(?P<w>\d+)'
+)
+```
+Matches patterns like: `"fixed window";"api";q=500;w=300`
+- `q` → quota per window
+- `w` → window duration in seconds (always 300 = 5 min)
+
+These regexes are CASE-INSENSITIVE for header key lookup (lowercased in `parse_ratelimit_headers()`), but case-sensitive for the header value matching.
+
+---
+
+### 2. The `RateLimitInfo` Data Class
+
+```python
+@dataclass(frozen=True)
+class RateLimitInfo:
+    resource_type: str
+    remaining: int
+    reset_in_seconds: int
+    limit: int | None = None
+    window_seconds: int | None = None
+```
+- Frozen (immutable) dataclass returned by `parse_ratelimit_headers()`
+- `limit` and `window_seconds` are `Optional` because they come from the `RateLimit-Policy` header which may not always be present
+- Used both for logging/display AND for the automatic retry delay calculation
+
+---
+
+### 3. The Full Auto-Retry Flow in `_http_backoff_base()`
+
+This is the core function shared by both `http_backoff()` (regular requests) and `http_stream_backoff()` (streaming). Here's the complete retry lifecycle:
+
+```python
+def _http_backoff_base(
+    method, url, *,
+    max_retries=5,            # Max attempts before giving up
+    base_wait_time=1,         # Initial sleep (seconds)
+    max_wait_time=8,          # Cap on exponential backoff
+    retry_on_exceptions,      # Default: TimeoutException, NetworkError, RemoteProtocolError
+    retry_on_status_codes,    # Default: (408, 429, 500, 502, 503, 504)
+    stream=False,
+    **kwargs,
+):
+```
+
+**The loop:**
+
+1. **Attempt request** via `client.request()` or `client.stream()`
+2. **`_should_retry(response)`** closure checks:
+   - If status code NOT in `retry_on_status_codes` → stop (success)
+   - If `nb_tries > max_retries` → call `hf_raise_for_status()` (will raise, or return)
+   - If status is **429** → parse `RateLimit` header via `parse_ratelimit_headers()` to get `reset_in_seconds`
+   - If `Retry-After` header present → fallback to `_parse_retry_after()`
+   - Return `True` (should retry) for all other retryable status codes
+3. **Wait logic:**
+   - If rate limited → `actual_sleep = float(ratelimit_reset) + 1` (adds +1s safety margin)
+   - Otherwise → `actual_sleep = sleep_time` (exponential: 1s, 2s, 4s, 8s... capped at `max_wait_time=8s`)
+4. **Exponential backoff:** `sleep_time = min(max_wait_time, sleep_time * 2)`
+5. **File-object cursor reset:** If `data` kwarg is a file/IO object, saves and restores `.tell()` position between retries to allow re-sending upload bodies.
+
+**Key insight:** When rate limited, the huggingface_hub library respects the server's precise reset time (+1s safety margin), rather than using exponential backoff. This is much more efficient than blindly backing off.
+
+---
+
+### 4. `hf_raise_for_status()` — The 429 Error Message Generator
+
+When a 429 response would not be retried (n_tries exhausted), `hf_raise_for_status()` constructs a detailed error message:
+
+```python
+elif response.status_code == 429:
+    ratelimit_info = parse_ratelimit_headers(response.headers)
+    if ratelimit_info is not None:
+        message = (
+            f"\n\n429 Too Many Requests: you have reached your "
+            f"'{ratelimit_info.resource_type}' rate limit."
+        )
+        message += f"\nRetry after {ratelimit_info.reset_in_seconds} seconds"
+        if ratelimit_info.limit is not None and ratelimit_info.window_seconds is not None:
+            message += (
+                f" ({ratelimit_info.remaining}/{ratelimit_info.limit} requests remaining"
+                f" in current {ratelimit_info.window_seconds}s window)."
+            )
+    else:
+        message = f"\n\n429 Too Many Requests for url: {response.url}."
+```
+
+This produces user-friendly messages like:
+```
+429 Too Many Requests: you have reached your 'api' rate limit.
+Retry after 55 seconds (0/500 requests remaining in current 300s window).
+```
+
+---
+
+### 5. How `HfApi` Iteration Methods Handle Rate Limits
+
+The `HfApi.list_models()`, `list_datasets()`, `list_spaces()` methods all return **lazy iterators** (`Iterator[Model]`) rather than lists. Internally, they call:
+
+```python
+items: Iterator = api_iterate(  # or _fetch_with_pagination
+    endpoint,                # e.g., "/api/models"
+    params=params,
+    headers=headers,
+    ...
+)
+items = islice(items, limit)  # truncate to requested limit
+```
+
+The `api_iterate` function paginates automatically through the Hub API, using `http_backoff()` internally so rate limits are handled transparently. This means:
+- You don't need to manage pagination yourself
+- Rate limits are automatically respected between page fetches
+- The iterator is lazy — it only fetches pages as you iterate
+
+**Practical implication:** When using `list_models()`, you can safely iterate through thousands of items. The library handles backoff between pages automatically. The old pattern of manually calling `next_page()` is obsolete.
+
+---
+
+### 6. Storage Buckets Rate Limits
+
+As of July 2026, HF's **Storage Buckets** feature has its own rate limit handling via a dedicated regex:
+
+```python
+BUCKET_API_REGEX = re.compile(
+    r"""
+        ^https?://[^/]+
+        /api/buckets/
+    """,
+    flags=re.VERBOSE,
+)
+```
+
+This regex identifies bucket API URLs (`/api/buckets/...`) separately from repo URLs. Bucket API calls fall under the general `api` rate limit bucket, but the library tracks the URL pattern to provide accurate error messages. The `_parse_bucket_id_from_url()` function extracts `namespace/name` from bucket URLs for better error context.
+
+**Rate limit environment variables for downloads:**
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `HF_HUB_DOWNLOAD_TIMEOUT` | 10s | Per-request timeout for file downloads |
+| `HF_HUB_ETAG_TIMEOUT` | 10s | Timeout for HEAD requests checking file freshness |
+| `HF_HUB_DEFAULT_TIMEOUT` | 10s | General request timeout |
+| `HF_HUB_OFFLINE` | unset | When set to `1`, no network calls made (uses cache only) |
+
+---
+
+### 7. Custom Rate Limit Handling Patterns
+
+#### 7.1 Manual Rate Limit Header Parsing
+
+```python
+from huggingface_hub.utils import parse_ratelimit_headers
+
+# After receiving a response with rate limit headers
+info = parse_ratelimit_headers(response.headers)
+if info and info.remaining < 10:
+    print(f"Approaching rate limit: {info.remaining}/{info.limit} remaining")
+    time.sleep(info.reset_in_seconds)  # Wait for window reset
+```
+
+#### 7.2 Disabling Auto-Retry (for custom handling)
+
+```python
+from huggingface_hub.utils import http_backoff
+
+# Disable all retries — handle 429 yourself
+response = http_backoff(
+    "GET", url,
+    retry_on_exceptions=(),
+    retry_on_status_codes=()
+)
+```
+
+#### 7.3 Custom Retry Configuration
+
+```python
+# Aggressive retry for critical operations
+response = http_backoff(
+    "POST", url,
+    max_retries=10,
+    base_wait_time=0.5,
+    max_wait_time=30,
+    retry_on_status_codes=(429, 500, 502, 503, 504)
+)
+```
+
+#### 7.4 Using `_httpx_follow_relative_redirects_with_backoff`
+
+For scenarios where you need to follow redirects AND handle rate limits:
+
+```python
+# Internal helper that follows relative redirects with auto-backoff
+from huggingface_hub.utils._http import _httpx_follow_relative_redirects_with_backoff
+
+response = _httpx_follow_relative_redirects_with_backoff(
+    "GET", url,
+    retry_on_errors=True,  # enables 429/5xx/timeout retry
+)
+```
+
+This is used internally by the Hub for download flows that may redirect to CDN endpoints.
+
+#### 7.5 Proactive Rate Limit Monitoring in Long-Running Jobs
+
+```python
+import os
+import time
+from huggingface_hub import HfApi, RateLimitInfo
+
+api = HfApi()
+
+# Monitor rate limit consumption during pagination
+consumed = 0
+for model in api.list_models(task="text-classification", limit=1000):
+    process(model)
+    consumed += 1
+    if consumed % 100 == 0:
+        # Check billing dashboard to see real-time usage
+        # Or use the RateLimit headers from the last response
+        print(f"Processed {consumed} models...")
+        # Optional: pace yourself
+        time.sleep(0.5)
+```
+
+---
+
+### 8. Rate Limit Handling Architecture (Complete Flow)
+
+```
+User Code (HfApi.list_models)
+    │
+    ▼
+api_iterate() / _fetch_with_pagination()
+    │  Uses http_backoff() internally
+    ▼
+http_backoff(method, url, ...)
+    │
+    ▼
+_http_backoff_base(method, url, ...)
+    │
+    ├──► client.request(method, url)  ──► HTTP Response
+    │         │                              │
+    │         │                         ┌────▼────┐
+    │         │                    ┌─────┤ 429?    ├─────┐
+    │         │                    │     └─────────┘     │
+    │         │                    │  No                 │ Yes
+    │         │                    ▼                     ▼
+    │         │             return response     parse_ratelimit_headers()
+    │         │                                      │
+    │         │                               ┌──────▼──────┐
+    │         │                               │ reset_in_sec│
+    │         │                               │   = 55s     │
+    │         │                               └──────┬──────┘
+    │         │                                      │
+    │         │                               sleep(55 + 1)
+    │         │                                      │
+    │         │                               retry ──► back to top
+    │         │
+    │    If Exception (network error):
+    │         sleep(exponential: 1s, 2s, 4s... max 8s)
+    │         retry ──► back to top
+    │
+    ▼
+Returned to caller as lazy iterator
+```
+
+---
+
+### 9. Key Differences from the Exceptions & Retry Skill
+
+| Aspect | Rate Limits Source Code (this section) | hf-hub-exceptions-retry |
+|--------|----------------------------------------|------------------------|
+| **Focus** | Code-level implementation details | Documentation-level error hierarchy |
+| **Covers** | `_http_backoff_base()` internals, regex patterns, 429 error messages, pagination integration | `HfHubHTTPError` subclasses, `http_backoff()` public API, retry parameters |
+| **Regex** | `_RATELIMIT_REGEX` and `_RATELIMIT_POLICY_REGEX` patterns explained | Not covered |
+| **Rate limit flow** | Rate-limit-aware sleep vs exponential backoff branching logic | General backoff formula |
+| **Error messages** | Exact 429 message construction from `hf_raise_for_status()` | Exception class hierarchy |
+
+---
+
+### Sources
+- huggingface_hub v1.24.0 source: `/usr/lib/python*/site-packages/huggingface_hub/utils/_http.py` (lines 55–914)
+- IETF RateLimit Header Fields draft v9: https://www.ietf.org/archive/id/draft-ietf-httpapi-ratelimit-headers-09.html
+- HF Hub Rate Limits doc: https://huggingface.co/docs/hub/rate-limits
+- HF Pricing page: https://huggingface.co/pricing
+
+---
+
 **author**: SakThai
 **license**: MIT
 **updated**: 2026-07-25
