@@ -5121,5 +5121,83 @@ Deep-dive into TIPSv2 (Text-Image Pre-training with Spatial awareness v2) — Go
 - https://huggingface.co/docs/transformers/main/en/model_doc/tipsv2
 - https://huggingface.co/docs/transformers/main/en/model_doc/tipsv2_dpt
 - https://huggingface.co/papers/2604.12012
-- Transformers v5.14.0 release notes
+|- Transformers v5.14.0 release notes
+
+---
+
+## 2026-07-26: hf-hub-create-commit-pipeline-source-code-deep-dive (Topic #318 — Deepening)
+
+### Summary
+Source-code-level deep dive into the `HfApi.create_commit()` pipeline in `huggingface_hub==1.24.0`. Covers the full lifecycle: validation → upload mode resolution (`_fetch_upload_modes`) → LFS pre-upload (`_upload_files` with Xet path or legacy LFS path) → copy duplication → no-op detection → payload assembly (`_prepare_commit_payload`) → ndjson POST to `/commit`. Key insight: the pipeline is a two-phase protocol where file _metadata_ is resolved in phase 1 and _content_ is uploaded in phase 2, all before the actual commit HTTP request.
+
+### Pipeline Architecture
+
+```
+create_commit()
+├── 1. Validate inputs (commit_message, parent_commit OID, repo_type, README.md YAML)
+├── 2. Separate operations: additions, copies, deletions
+├── 3. preupload_lfs_files()
+│   ├── 3a. _fetch_upload_modes() — POST /preupload/{revision} for each batch of 256 files
+│   │   Returns: uploadMode ("lfs"|"regular"), shouldIgnore, remote OID
+│   │   Payload: {path, sample (first 512B base64), size}
+│   │   + gitIgnore content if .gitignore is committed
+│   ├── 3b. Filter: skip already-uploaded, gitignored, regular files
+│   └── 3c. _upload_files() — content upload
+│       ├── Xet path (preferred): hf_xet session.new_upload_commit() — chunk-based CAS
+│       │   - start_upload_file() for file paths, start_upload_bytes() for bytes
+│       │   - sha256 backfilled from hf_xet result (single read pass)
+│       └── Legacy LFS path: post_lfs_batch_info() → _upload_lfs_files()
+│           - SHA256 computed in parallel via ThreadPoolExecutor
+│           - LFS batch API: actions with "upload" URLs
+│           - Supports "basic" and "multipart" transfers
+│           - thread_map for parallel upload
+├── 4. _fetch_files_to_copy() — resolve copy sources (LFS metadata vs raw content download)
+├── 5. _duplicate_lfs_files() — cross-repo LFS copy via /lfs-files/duplicate endpoint
+├── 6. Remove no-op operations (file unchanged: _remote_oid == _local_oid)
+├── 7. _send_commit()
+│   ├── _prepare_commit_payload() → ndjson stream
+│   │   Line 1: {"key":"header","value":{"summary","description","parentCommit"}}
+│   │   Per operation:
+│   │     - regular file: {"key":"file","value":{"content":"base64","path":"...","encoding":"base64"}}
+│   │     - LFS file: {"key":"lfsFile","value":{"path":"...","algo":"sha256","oid":"...","size":N}}
+│   │     - delete: {"key":"deletedFile"|"deletedFolder","value":{"path":"..."}}
+│   │     - copy: {"key":"file"|"lfsFile"} (same as add but content sourced from files_to_copy)
+│   ├── POST /api/{repo_type}s/{repo_id}/commit/{revision} (Content-Type: application/x-ndjson)
+│   │   params: create_pr=1, hot_reload=1
+│   └── Response: {commitUrl, commitOid, pullRequestUrl}
+└── 8. Mark additions as _is_committed = True
+```
+
+### Key Source Details
+
+**UploadInfo (lfs.py:53-100):** Lazy SHA256 computation — only first 512 bytes read at construction time. Full SHA256 on first access. Can be backfilled by Xet upload to avoid double-read.
+
+**_fetch_upload_modes() (_commit_api.py:698-780):** POSTs batches of 256 files to `/preupload/{revision}`. Server responds with upload mode per file. Empty files (size==0) are forced to "regular" mode (S3 rejects empty LFS uploads). gitignore filtering is server-side with `shouldIgnore` flag.
+
+**_upload_files() (_commit_api.py:378-448):** Xet path preferred when `hf_xet` is available (no BufferedIOBase ops). Xet chunks files, deduplicates chunks via content-addressable storage (CAS), uploads in parallel. Legacy path: LFS batch API with SHA256 computation, actions parsing, parallel multipart/basic uploads.
+
+**_send_commit() (_commit_api.py:1008-1075):** Builds ndjson payload and POSTs to /commit. Supports `retry_on_error` with http_backoff (opt-in; risk of duplicate commits on lost response). Response parsed into CommitInfo(commit_url, commit_message, oid, pr_url).
+
+**CommitOperationAdd mutations during pipeline:**
+1. `_upload_mode` — set by _fetch_upload_modes
+2. `_should_ignore` — set by _fetch_upload_modes (gitignore)
+3. `_remote_oid` — set by _fetch_upload_modes (for no-op detection)
+4. `_is_uploaded` — set after preupload_lfs_files
+5. `_is_committed` — set after commit success
+6. `path_or_fileobj` → `b""` — freed after upload if `free_memory=True`
+
+**No-op optimization:** If `_remote_oid == _local_oid`, file is skipped entirely. LFS local OID = SHA256 hex; regular local OID = git-style SHA1. Entire commit is skipped if all ops are no-ops (returns last commit info).
+
+**Limits:** 25k LFS files per commit, 1GB regular file payload, 256 files per preupload batch, 500 files per FETCH_LFS_BATCH_SIZE, 500 files per DUPLICATE_LFS_BATCH_SIZE.
+
+### Skill Created
+N/A — added to existing `mlops/huggingface-hub/` skill references.
+
+### Sources
+- huggingface_hub v1.24.0 source: `hf_api.py:4943-5217` (create_commit)
+- huggingface_hub v1.24.0 source: `hf_api.py:5219-5380` (preupload_lfs_files)
+- huggingface_hub v1.24.0 source: `_commit_api.py` (full pipeline: 1075 lines)
+- huggingface_hub v1.24.0 source: `lfs.py:53-100` (UploadInfo)
+- https://github.com/huggingface/huggingface_hub/issues/1085#issuecomment-1265208073 (ndjson commit design)
+
 |
