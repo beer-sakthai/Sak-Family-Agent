@@ -6441,6 +6441,33 @@ Source-level deep dive into the HF Hub model download counting system — query 
 
 ---
 
+## 2026-07-25: hf-foundry-managed-compute — HF Models on Foundry Managed Compute (Topic #364)
+
+### Summary
+Comprehensive deep-dive into **Hugging Face models on Microsoft Foundry Managed Compute** — a curated catalog of open-weight models from the HF ecosystem, refreshed weekly, deployable in one click onto Foundry Managed Compute (Microsoft's managed GPU PaaS). Announced at Microsoft Build 2026 (July 7, 2026). Covers the curation pipeline, supported runtimes (vLLM, SGLang, TEI, llama.cpp, TensorRT-LLM, NIM, hf-serve), deployment templates, Python SDK + OpenAI SDK patterns, private networking, and enterprise security model. Distinct from HF's own enterprise features — this is the operational layer Microsoft runs on top of the open ecosystem.
+
+### Key Findings
+
+| Area | Finding |
+|------|---------|
+| **Curation pipeline** | 5 stages: identify → screen (license, trust_remote_code) → build/scan runtimes → upload weights to Azure → validate & publish |
+| **Runtimes** | vLLM (default LLM), SGLang (structured outputs), TEI (embeddings), llama.cpp (CPU/GGUF), TensorRT-LLM/NIM (NVIDIA), hf-serve (vision/audio) |
+| **Deployment templates** | Named versioned assets pinning runtime + accelerator + context length + tuning — e.g., Qwen3-32B has 4 templates (40k/128k × A100/H100) |
+| **Deploy SDK** | `CognitiveServicesManagementClient.managed_compute_deployments.begin_create_or_update()` with `acceleratorType`, model URI, deployment template ID |
+| **Score SDK** | OpenAI SDK at `https://{ACCOUNT}.services.ai.azure.com/openai/v1` — same endpoint as all Foundry models |
+| **Private network** | No outbound internet to HF Hub needed — weights pre-staged in Azure, runtimes in Microsoft-managed registry |
+| **Enterprise features** | RBAC, private networking, Azure Policy, content safety, guardrails, AI Red Teaming Agent, unified billing |
+| **Roadmap** | Broader coverage, additional accelerators, Bring Your Own Weights |
+
+### Skill Created
+`hf-foundry-managed-compute/` — SKILL.md (author: SakThai, license: MIT) + references/hf-learnings.md with full documentation.
+
+### Sources
+- https://huggingface.co/blog/microsoft/foundry-managed-compute
+- https://learn.microsoft.com/en-us/azure/ai-foundry/
+
+---
+
 ## 2026-07-25: hf-inference-router-openai-compatible-endpoint — HF Inference Router OpenAI-Compatible Endpoint (Topic #361)
 
 ### Summary
