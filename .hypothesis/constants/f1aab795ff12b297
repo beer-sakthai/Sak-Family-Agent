@@ -1,0 +1,4 @@
+# file: /opt/data/sakthai-skills-repo/personas/sakthai/sakthai/mcp/client.py
+# hypothesis_version: 6.158.1
+
+[1024, ' …[truncated]', '1', '2.0', '2024-11-05', 'COMSPEC', 'HOME', 'LANG', 'LC_ALL', 'LC_CTYPE', 'PATH', 'PATHEXT', 'SYSTEMROOT', 'SystemRoot', 'TEMP', 'TMP', 'TMPDIR', 'USERPROFILE', 'all', 'arguments', 'capabilities', 'clientInfo', 'content', 'description', 'error', 'id', 'initialize', 'inputSchema', 'isError', 'jsonrpc', 'mcp', 'message', 'method', 'name', 'object', 'params', 'properties', 'protocolVersion', 'result', 'sakthai-client', 'text', 'tools', 'tools/call', 'tools/list', 'type', 'version']

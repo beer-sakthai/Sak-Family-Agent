@@ -1,0 +1,4 @@
+# file: /opt/data/sakthai-skills-repo/personas/sakthai/sakthai/cli/cycle.py
+# hypothesis_version: 6.158.1
+
+[', ', '--force', '-f', 'STAGE', 'list', 'next', 'set', 'stage_name', 'status', '▶']

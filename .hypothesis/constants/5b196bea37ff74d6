@@ -1,0 +1,4 @@
+# file: /opt/data/sakthai-skills-repo/personas/sakthai/sakthai/auth.py
+# hypothesis_version: 6.158.1
+
+[1000, '.claude', '.credentials.json', '.gemini', '/', 'ANTHROPIC_API_KEY', 'ANTHROPIC_AUTH_TOKEN', 'CLAUDE_CONFIG_DIR', 'GEMINI_API_KEY', 'GEMINI_HOME', 'GOOGLE_API_KEY', 'OLLAMA_HOST', 'OPENAI_API_BASE', 'OPENAI_API_KEY', 'OPENAI_BASE_URL', 'SAKTHAI_GATEWAY_URL', 'accessToken', 'access_token', 'anthropic', 'antigravity-cli', 'api_key', 'auth_token', 'claudeAiOauth', 'claude_cli', 'expiresAt', 'expiry', 'expiry_date', 'gateway', 'gateway_url', 'gemini_cli', 'google', 'nokey', 'oauth_creds.json', 'ollama_host', 'openai', 'openai_api_base', 'openai_api_key', 'token', 'utf-8']

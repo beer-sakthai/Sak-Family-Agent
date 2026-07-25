@@ -1,0 +1,4 @@
+# file: /opt/data/sakthai-skills-repo/personas/sakthai/sakthai/agent/eval.py
+# hypothesis_version: 6.158.1
+
+[0.0, 384, '_latency_total', 'a', 'avg_latency_s', 'count', 'error_rate', 'had_error', 'input_tokens', 'latency_s', 'model', 'output_tokens', 'per_model', 'total_input_tokens', 'total_output_tokens', 'unknown', 'utf-8', '…']

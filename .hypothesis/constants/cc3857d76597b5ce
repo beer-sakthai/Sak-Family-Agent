@@ -1,0 +1,4 @@
+# file: /opt/data/sakthai-skills-repo/personas/sakthai/sakthai/agent/providers/base.py
+# hypothesis_version: 6.158.1
+
+[0.5, 8.0, 408, 409, 429, 500, 502, 503, 504, 'code', 'content', 'id', 'input_tokens', 'name', 'output_tokens', 'response', 'status_code', 'tool_use', 'type', 'unknown']
