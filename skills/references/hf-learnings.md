@@ -15673,3 +15673,387 @@ client.chat_completion(messages, stream=False)
 
 ### Skill
 hf-async-inference-client — Async inference patterns, concurrent requests, streaming, MCP integration
+
+---
+
+## 2026-07-25: hf-open-llm-leaderboard-deep-dive — Open LLM Leaderboard v2 Evaluation Methodology & Architecture (Topic #40 Deep-Dive)
+
+### Summary
+
+Deep-dive into the Hugging Face Open LLM Leaderboard v2 — the standardized evaluation platform for open-source LLMs. Covers the 6-benchmark methodology, submission pipeline, results dataset architecture, reproducibility commands, model categorization, the community request workflow, and the underlying lm-evaluation-harness integration. Builds on the skill SKILL.md with source-level detail on how evaluations are orchestrated, results are stored, and the leaderboard is maintained.
+
+### Sources
+
+- Open LLM Leaderboard: https://huggingface.co/spaces/open-llm-leaderboard/open_llm_leaderboard
+- Results dataset: https://huggingface.co/datasets/open-llm-leaderboard/results
+- Requests dataset: https://huggingface.co/datasets/open-llm-leaderboard/requests
+- HF fork of lm-eval-harness: https://github.com/huggingface/lm-evaluation-harness
+- EleutherAI LM Eval Harness: https://github.com/EleutherAI/lm-evaluation-harness
+- IFEval paper: https://arxiv.org/abs/2311.07911
+- BBH paper: https://arxiv.org/abs/2210.09261
+- MATH paper: https://arxiv.org/abs/2103.03874
+- GPQA paper: https://arxiv.org/abs/2311.12022
+- MuSR paper: https://arxiv.org/abs/2310.16049
+- MMLU-PRO paper: https://arxiv.org/abs/2406.01574
+
+### 1. Evaluation Architecture Overview
+
+The Open LLM Leaderboard is deployed as a **Docker Space** on Hugging Face (`open-llm-leaderboard/open_llm_leaderboard`), running on **CPU Upgrade** hardware ($0.03/hr). It uses the HF fork of the EleutherAI Language Model Evaluation Harness to run standardized evaluations.
+
+```
+User submits model
+    │
+    ├─→ Validation (model_id exists, format valid)
+    │
+    ├─→ Queued for evaluation
+    │
+    ├─→ lm_eval runs 6 benchmarks:
+    │   ├─ IFEval (0-shot, strict accuracy)
+    │   ├─ BBH (3-shot, 23 subtasks, normalized accuracy)
+    │   ├─ MATH Lvl 5 (4-shot, exact match)
+    │   ├─ GPQA (0-shot, 4-choice, normalized accuracy)
+    │   ├─ MuSR (0-shot, 3 subtasks, normalized accuracy)
+    │   └─ MMLU-PRO (5-shot, 10-choice, accuracy)
+    │
+    ├─→ Results stored in open-llm-leaderboard/results dataset
+    │
+    └─→ Leaderboard updated with average score
+```
+
+### 2. The 6 Benchmarks — Deep-Dive
+
+#### 2.1 IFEval (Instruction Following Evaluation)
+
+- **Task ID in lm-eval**: `IFEval`
+- **Paper**: arxiv.org/abs/2311.07911 (Yi et al., Google)
+- **Shots**: 0-shot
+- **Metric**: `inst_level_strict_acc,none` + `prompt_level_strict_acc,none`
+- **What it tests**: Can the model follow explicit formatting instructions? Prompts like "Write a paragraph about cats. End your paragraph with the word 'meow'." or "Output your answer in JSON format with keys: name, age, city."
+
+**Scoring**: Two levels of strictness:
+- **Instance-level**: Each individual constraint is checked independently
+- **Prompt-level**: All constraints in a prompt must be satisfied
+
+The metric is strict because it checks exact formatting adherence, not semantic correctness. A model that generates correct content but wrong formatting fails.
+
+**Why 0-shot**: IFEval tests inherent instruction-following ability without examples. Few-shot would leak the expected format.
+
+#### 2.2 BBH (Big Bench Hard)
+
+- **Task ID in lm-eval**: `BBH`
+- **Paper**: arxiv.org/abs/2210.09261 (Suzgun et al., Stanford)
+- **Shots**: 3-shot (each of the 23 subtasks gets 3 examples)
+- **Metric**: `acc_norm,none` (Normalized Accuracy — rewards partial credit for multi-choice questions)
+- **Subtasks**: 23 subtasks covering reasoning domains:
+
+| Subtask | Choices | What It Tests |
+|---------|---------|---------------|
+| boolean_expressions | 2 | Evaluating Boolean logic expressions |
+| causal_judgement | 2 | Counterfactual causal reasoning |
+| date_understanding | 6 | Inferring dates from context |
+| disambiguation_qa | 3 | Resolving ambiguous queries |
+| dyck_languages | 4 | Checking balanced parentheses |
+| formal_fallacies | 2 | Identifying logical fallacies |
+| geometric_shapes | 11 | Named-entity recognition for geometric shapes |
+| hyperbaton | 2 | Identifying adjective order correctness |
+| logical_deduction_five_objects | 5 | Deductive reasoning with 5 objects |
+| logical_deduction_seven_objects | 7 | Deductive reasoning with 7 objects |
+| logical_deduction_three_objects | 3 | Deductive reasoning with 3 objects |
+| movie_recommendation | 6 | Movie recommendation based on preferences |
+| multistep_arithmetic_two | 2 | Multi-step arithmetic |
+| navigate | 2 | Following navigation instructions |
+| object_counting | 19 | Counting objects in overlapping descriptions |
+| penguins_in_a_table | 5 | Table-based reasoning about penguins |
+| reasoning_about_colored_objects | 18 | Reasoning about colored objects |
+| ruin_names | 6 | Recovering original movie names from "ruined" versions |
+| salient_translation_error_detection | 6 | Detecting errors in translations |
+| snarks | 2 | Detecting sarcasm |
+| sports_understanding | 2 | Determining if sports sentences are plausible |
+| temporal_sequences | 4 | Temporal ordering of events |
+| tracking_shuffled_objects_five_objects | 5 | Tracking objects through shuffles (5 objects) |
+| tracking_shuffled_objects_seven_objects | 7 | Tracking objects through shuffles (7 objects) |
+| tracking_shuffled_objects_three_objects | 3 | Tracking objects through shuffles (3 objects) |
+| web_of_lies | 2 | Tracking truth/lie chains |
+
+**Normalized Accuracy**: `acc_norm` divides by the number of choices per question. A model that gets 50% on a 2-choice task (where random is 50%) gets 0.0 normalized. This makes BBH scores more comparable across subtasks with different choice counts.
+
+#### 2.3 MATH Lvl 5
+
+- **Task ID in lm-eval**: `math_level_5`
+- **Paper**: arxiv.org/abs/2103.03874 (Hendrycks et al., Berkeley)
+- **Shots**: 4-shot
+- **Metric**: `exact_match,none`
+- **What it tests**: Only the **hardest level** (Level 5) of the MATH dataset — high-school competition problems. Requires LaTeX equation comprehension.
+
+**Scoring**: Exact match of the final answer (typically a number or expression). No partial credit. The model must output the exact formatted answer.
+
+**Why Level 5 only**: Easier levels saturate quickly. Level 5 provides meaningful discrimination even among top models.
+
+#### 2.4 GPQA (Graduate-Level Google-Proof Q&A)
+
+- **Task ID in lm-eval**: `GPQA`
+- **Paper**: arxiv.org/abs/2311.12022 (Rein et al., NYU/Anthropic)
+- **Shots**: 0-shot
+- **Metric**: `acc_norm,none`
+- **Choices**: 4 (multiple choice)
+- **What it tests**: PhD-level domain expert questions in biology, physics, chemistry.
+
+**Design philosophy**: Questions are designed to be "Google-proof" — they require genuine domain expertise, not search. The dataset has **gated access** to minimize contamination. Questions are written and validated by domain experts (PhD candidates and above).
+
+**Gating mechanism**: The GPQA dataset on HF requires authentication and/or acceptance of terms before download. This prevents models from being trained on exact evaluation examples.
+
+#### 2.5 MuSR (Multistep Soft Reasoning)
+
+- **Task ID in lm-eval**: `MuSR`
+- **Paper**: arxiv.org/abs/2310.16049 (Sprague et al., Google)
+- **Shots**: 0-shot
+- **Metric**: `acc_norm,none`
+- **Subtasks**: 3 subtasks, each algorithmically generated:
+
+| Subtask | Choices | Description |
+|---------|---------|-------------|
+| murder_mysteries | 2 | ~1000-word murder mystery narratives — who is the killer? |
+| object_placements | 5 | Spatial reasoning about object placements from narrative descriptions |
+| team_allocation | 3 | Allocating team members based on complex constraints in narrative |
+
+**Key challenge**: Each question is generated from a **parameterized template** with ~1000 words of narrative. Models must integrate reasoning across long-range narrative context. Few models beat random baseline significantly.
+
+**Algorithmic generation**: MuSR questions are generated via templates with randomized parameters (names, objects, locations). This makes contamination nearly impossible since the exact question is never published.
+
+#### 2.6 MMLU-PRO (Massive Multitask Language Understanding - Professional)
+
+- **Task ID in lm-eval**: `mmlu_pro`
+- **Paper**: arxiv.org/abs/2406.01574 (Wang et al., Stanford)
+- **Shots**: 5-shot
+- **Metric**: `acc,none` (plain accuracy)
+- **Choices**: 10 (up from 4 in original MMLU)
+- **What it tests**: The refined version of MMLU — expert-reviewed to remove noisy/ambiguous questions. 10 choices instead of 4 makes guessing harder (random baseline: 10%).
+
+**Improvements over MMLU**:
+- **10 choices** (vs 4): Reduces random guess accuracy from 25% to 10%
+- **Expert review**: Questions vetted by domain experts
+- **Noise removal**: Ambiguous or poorly-phrased questions filtered out
+- **Harder selection**: Only questions where expert agreement was high
+
+### 3. Submission Pipeline
+
+Users submit models for evaluation through a **Space-based interface**:
+
+1. **Navigate** to https://huggingface.co/spaces/open-llm-leaderboard/open_llm_leaderboard
+2. **Enter model ID** (e.g., `username/model-name`)
+3. **Select precision tag** (e.g., `@precision:float16`, `@precision:4bit`)
+4. **Submit** — the model enters the evaluation queue
+
+**Submission validation**:
+- Model ID must exist on the Hub
+- Model must be accessible (not private/gated without auth)
+- Model must have a valid `config.json` or relevant format
+- Duplicate submissions are detected and prevented
+
+**Queue processing**: Evaluations run sequentially on the Space's CPU Upgrade hardware. Each evaluation takes several hours depending on model size. The queue status is visible on the leaderboard page.
+
+### 4. Results Dataset Architecture
+
+Results are stored in **`open-llm-leaderboard/results`** — a HF dataset repository structured as:
+
+```
+results/
+├── configs/
+│   ├── default/               # Main results
+│   │   └── data/
+│   │       └── train-00000-of-00001.parquet  # All results
+│   └── per-model/
+│       └── data/              # Individual model breakdowns
+└── README.md
+```
+
+**Parquet schema** (key fields):
+| Field | Type | Description |
+|-------|------|-------------|
+| `model` | string | HF model ID |
+| `model_type` | string | Category emoji (🟢🟩🔶💬🤝) |
+| `IFEval` | float | Instance-level strict accuracy |
+| `BBH` | float | Normalized accuracy across 23 subtasks |
+| `MATH Lvl 5` | float | Exact match score |
+| `GPQA` | float | Normalized accuracy |
+| `MuSR` | float | Normalized accuracy across 3 subtasks |
+| `MMLU-PRO` | float | Accuracy |
+| `average` | float | Mean of all 6 scores |
+| `precision` | string | Precision tag (e.g., `float16`, `4bit`) |
+| `submission_date` | timestamp | When the evaluation was submitted |
+| `evaluation_date` | timestamp | When evaluation completed |
+| `parameters` | string | Reported parameter count (optional) |
+| `license` | string | Model license |
+| `architecture` | string | Architecture family (e.g., `llama`, `qwen`) |
+
+**Per-model breakdowns**: Clicking the 📄 emoji on the leaderboard reveals per-task breakdown with subtask-level scores.
+
+### 5. lm-eval Harness Integration
+
+The leaderboard uses the **HF fork** of EleutherAI's `lm-evaluation-harness` at `github.com/huggingface/lm-evaluation-harness`.
+
+**Default evaluation command**:
+```bash
+lm-eval \
+    --model_args="pretrained=<model_id>,revision=<revision>,dtype=<dtype>" \
+    --tasks=leaderboard \
+    --batch_size=auto \
+    --output_path=<output_dir>
+```
+
+**For instruction-tuned models** (chat models), two additional flags:
+```bash
+lm-eval \
+    --model_args="pretrained=<model_id>,revision=<revision>,dtype=<dtype>" \
+    --tasks=leaderboard \
+    --batch_size=auto \
+    --output_path=<output_dir> \
+    --apply_chat_template \
+    --fewshot_as_multiturn
+```
+
+**`--apply_chat_template`**: Applies the model's tokenizer chat template to format prompts. Required for instruction-tuned models that expect conversational formatting.
+
+**`--fewshot_as_multiturn`**: Formats few-shot examples as multi-turn conversations instead of a single concatenated prompt. This better reflects how chat models are used in practice.
+
+**Batch size sensitivity**: Results can vary slightly across batch sizes because padding differs. `--batch_size=auto` selects the largest batch that fits in memory, but different hardware (or different batch size settings) may produce slightly different padding → slightly different results.
+
+### 6. Model Categorization System
+
+Models are categorized into 5 types:
+
+| Emoji | Category | Description |
+|-------|----------|-------------|
+| 🟢 | **Pretrained** | Base models trained on text corpora via language modeling objectives (MLM, CLM) |
+| 🟩 | **Continuously Pretrained** | Base models further trained on additional corpora. May include some instruction-following or chat data |
+| 🔶 | **Fine-Tuned** | Pretrained models fine-tuned on domain-specific or task-specific datasets |
+| 💬 | **Chat Models** | Models fine-tuned via RLHF, DPO, KTO, IFT, or other alignment methods for conversational use |
+| 🤝 | **Merges & MoErges** | Models produced by merging existing models (via TIES, DARE, linear interpolation, etc.) or by architectural Mixture-of-Experts combinations without additional training |
+
+**Categorization is self-reported** by the submitter or determined from the model card metadata.
+
+### 7. Community Request System
+
+The **requests dataset** (`open-llm-leaderboard/requests`) tracks community-submitted evaluation requests:
+
+```
+requests/
+├── default/
+│   └── data/
+│       └── train-00000-of-00001.parquet
+└── README.md
+```
+
+Each request contains:
+- Model ID requested
+- Submitter's HF username
+- Status (pending/completed/flagged/rejected)
+- Notes or reasons for rejection
+
+Users can request evaluation of any public model. Requests are reviewed periodically. Flagged models (visible on the leaderboard with "Flagged" prefix) should be ignored — the linked discussion explains why.
+
+### 8. Search & Discovery
+
+The leaderboard supports a powerful search syntax:
+
+| Syntax | Example | Effect |
+|--------|---------|--------|
+| Single term | `llama` | Find models containing "llama" |
+| Semicolon union | `llama; qwen` | Union: models matching either |
+| Tag filter | `@architecture:llama` | Filter by architecture tag |
+| Tag + term | `meta @architecture:llama` | Intersection of "meta" + architecture:llama |
+| Multiple tags | `@architecture:llama @license:apache` | Both tags must match |
+| Regex | `llama-2-(7|13|70)b` | Auto-detected regex patterns |
+| Combined | `meta @architecture:llama; 7b @license:apache` | Union of two filter groups |
+| Precision | `@precision:float16` | Filter by precision |
+
+### 9. Reproducibility Best Practices
+
+To reproduce leaderboard results:
+
+```bash
+# 1. Clone the HF fork (not upstream EleutherAI)
+git clone git@github.com:huggingface/lm-evaluation-harness.git
+cd lm-evaluation-harness
+git checkout main
+pip install -e .
+
+# 2. Run leaderboard task suite
+lm-eval \
+    --model_args="pretrained=meta-llama/Llama-3.2-3B-Instruct,dtype=float16" \
+    --tasks=leaderboard \
+    --batch_size=auto \
+    --apply_chat_template \
+    --fewshot_as_multiturn \
+    --output_path=./results
+
+# 3. Compare with leaderboard scores
+#    Small differences (≤1%) due to batch-size padding variation are expected
+```
+
+**Key reproducibility notes**:
+- The HF fork has specific patches that upstream EleutherAI may not have — always use the HF fork
+- `--apply_chat_template` and `--fewshot_as_multiturn` are critical for chat models
+- Base models (pretrained only) should omit these flags
+- Different hardware (A100 vs T4 vs CPU) may produce minor floating-point differences
+- Precision matters: float16 vs 4-bit quantization changes scores
+
+### 10. Leaderboard Hardware & Infrastructure
+
+| Component | Detail |
+|-----------|--------|
+| **Space SDK** | Docker |
+| **Hardware** | CPU Upgrade (8 vCPU, 32 GB RAM) |
+| **Cost** | $0.03/hr (paid by open-llm-leaderboard org) |
+| **Plan type** | Team organization plan |
+| **Storage** | Results stored in HF Dataset (not Space storage) |
+| **Queue** | Sequential — one evaluation at a time |
+| **Data retention** | Results dataset is permanent; leaderboard shows latest only |
+
+The leaderboard intentionally uses CPU-only evaluation to:
+1. **Fairness**: GPU differences don't affect scores
+2. **Cost**: $0.03/hr vs $0.40+/hr for GPU
+3. **Reproducibility**: CPU evaluation is more deterministic
+
+### 11. v1 to v2 Methodology Changes
+
+| Aspect | v1 (Retired) | v2 (Current) |
+|--------|--------------|--------------|
+| Benchmarks | ARC, HellaSwag, MMLU, TruthfulQA | IFEval, BBH, MATH Lvl 5, GPQA, MuSR, MMLU-PRO |
+| MCQA format | 4-choices standard | Mixed: 2-19 choices, 10 for MMLU-PRO |
+| Instruction following | Not tested | IFEval specifically tests formatting adherence |
+| Math difficulty | MATH (all levels) | MATH Level 5 only (hardest) |
+| Contamination resistance | Low (static datasets) | High (MuSR algorithmic, GPQA gated) |
+| Model categories | Basic (pt, ft) | 5 categories with emoji |
+| Search | Basic text search | Advanced tags, regex, union filters |
+| Submission | Space form | Space form + precision tags |
+
+### 12. Known Limitations & Pitfalls
+
+1. **Batch-size sensitivity**: Results can vary ±1% purely from batch-size padding differences. Use `--batch_size=auto` for reproducibility.
+
+2. **Chat template variance**: Different chat templates (from different tokenizers) produce different prompt formats. The leaderboard standardizes by using the model's own tokenizer template.
+
+3. **Self-reported categories**: Model categories (🟢🟩🔶💬🤝) are self-reported and may not always be accurate.
+
+4. **Precision not standardized**: Models submitted with different precisions (float16, 4bit, 8bit) are compared in the same ranking. Quantized models may score lower.
+
+5. **Submission queue time**: Popular models may wait days in the queue. No priority system exists.
+
+6. **Flagged model handling**: Models marked as "Flagged" appear on the leaderboard with a distracting prefix. Click the discussion link for context — many are flagged for data contamination or suspicious results.
+
+7. **No multi-turn evaluation**: The leaderboard evaluates single-turn responses only. No conversation or multi-turn benchmarks.
+
+8. **Language bias**: All 6 benchmarks are English-only. Multilingual capability is not evaluated.
+
+### 13. Practical Tips for Submissions
+
+- **Use the correct precision tag**: `@precision:float16` for full-precision, `@precision:4bit` for quantized. This affects comparison fairness.
+- **Must submit via the Space UI**: Programmatic submission is not publicly documented.
+- **Set `trust_remote_code=True` in model config**: If your model uses custom modeling code, this is required for evaluation.
+- **Expected timeline**: 1-6 hours per model depending on size. 7B models complete faster than 70B+.
+- **Check results dataset**: Your model's detailed scores appear in the results dataset before they update on the leaderboard.
+- **Community requests**: If you want to see a model evaluated that's not submitted, add it to the requests dataset via the leaderboard UI.
+
+### Skill
+mlops/hf-open-llm-leaderboard — Open LLM Leaderboard v2 evaluation methodology, submission workflow, and reproducibility guide
