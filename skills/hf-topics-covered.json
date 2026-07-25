@@ -377,5 +377,6 @@
   "hf-fineweb-dataset-processing-pipeline",
   "hf-hub-fork-and-sync",
   "hf-hub-fork-and-sync-deep-dive",
-  "hf-inference-client-embeddings-patterns"
+  "hf-inference-client-embeddings-patterns",
+  "hf-datasets-server-splits-rows-statistics-endpoints"
 ]

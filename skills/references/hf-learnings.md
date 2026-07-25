@@ -1,5 +1,16 @@
 # HF Learnings Log
 
+## 2026-07-25: hf-openenv-agentic-execution — Hugging Face OpenEnv v0.4.1: Agentic RL Environments (Topic #385)
+
+### Summary
+Comprehensive deep-dive into **OpenEnv** — Hugging Face's unified framework for building, deploying, and interacting with isolated execution environments for agentic reinforcement learning. Covers architecture (Gymnasium-style API over HTTP/WebSocket), MCP tool integration (ListToolsAction, CallToolAction), Rubric composable reward system, container-first design, cloud sandbox providers (Docker, Daytona, ACA), RL training integration (TRL, Unsloth, torchforge), environment anatomy (openenv.yaml, models, server, client), and zero-cost patterns. OpenEnv v0.4.1 experimental, governed by a technical committee including Meta-PyTorch, Nvidia, and Hugging Face.
+
+**Files updated:** `hf-openenv-agentic-execution/SKILL.md` (author: SakThai, license: MIT) + `references/hf-learnings.md` with full architecture, API reference, MCP integration deep-dive, Rubric system, RL training patterns, zero-cost analysis.
+
+**Sources:** Official OpenEnv docs at huggingface.co/docs/openenv (v0.4.1), GitHub repo huggingface/OpenEnv, tutorials for MCP, TRL, and first environment.
+
+---
+
 ## 2026-07-25: hf-bitsandbytes-quantization-deep-dive-v2 — bitsandbytes v0.50.0: New 4-bit GEMM, MPS, ROCm Stable, CPU Performance (Topic #383)
 
 ### Summary
@@ -6688,3 +6699,30 @@ Comprehensive deep-dive into the Hugging Face dataset card YAML metadata system 
 ### Skill Deepened
 `hf-hub-dataset-card-metadata-comprehensive-reference/` — `references/hf-learnings.md` created. SKILL.md already has `author: SakThai` and `license: MIT`.
 |
+
+## 2026-07-25: hf-datasets-server-splits-rows-statistics-endpoints — Datasets Server Remaining REST Endpoints (Topic #384)
+
+### Summary
+Comprehensive deep-dive into six Datasets Server REST API endpoints that are essential for programmatic dataset exploration but were not yet covered by existing skills: `/splits`, `/first-rows`, `/rows`, `/size`, `/statistics`, and `/is-valid`. Each endpoint was tested against `dair-ai/emotion` with real API responses captured and documented. The `/siblings` endpoint was tested and found non-functional (returns "Not Found"), with an alternative approach using the Hub API recommended.
+
+### Endpoints Covered
+
+| Endpoint | Method | Required Params | Key Response Fields |
+|----------|--------|-----------------|-------------------|
+| `/splits` | GET | dataset | `splits[].{dataset, config, split}`, `pending`, `failed` |
+| `/first-rows` | GET | dataset, config, split | `features[]`, `rows[]`, `truncated_cells` |
+| `/rows` | GET | dataset, config, split (+offset, length) | Same as first-rows + `num_rows_total`, `num_rows_per_page` |
+| `/size` | GET | dataset (+config) | `size.dataset.{num_bytes_original_files, num_bytes_parquet_files, num_bytes_memory, num_rows}` |
+| `/statistics` | GET | dataset, config, split | `num_examples`, `statistics[].{column_name, column_type, column_statistics}` |
+| `/is-valid` | GET | dataset | `{preview, viewer, search, filter, statistics}: bool` |
+
+### Key Findings
+1. **Splits endpoint** is the entry point for multi-config datasets. Essential for discovering available configs before querying.
+2. **First-rows vs Rows**: `/first-rows` is a fixed preview; `/rows` supports pagination via offset/length.
+3. **Size endpoint** provides `num_bytes_memory` for deciding load-vs-stream.
+4. **Statistics endpoint** enables zero-cost EDA with column-type-specific stats.
+5. **`/is-valid`** is a boolean health check — call this first before other API calls.
+6. **`/siblings` is dead** — Returns 404. Use Hub API for file listings.
+
+### Files Created
+`hf-datasets-server-splits-rows-statistics-endpoints/SKILL.md` (14KB) + `references/hf-learnings.md`

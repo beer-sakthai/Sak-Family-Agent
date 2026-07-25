@@ -372,5 +372,6 @@
   "hf-hub-billing-and-subscription-plans",
   "hf-hub-dataset-card-metadata-comprehensive-reference",
   "hf-inference-client-image-generation-patterns",
-  "hf-hub-evaluation-results"
+  "hf-hub-evaluation-results",
+  "hf-datasets-server-splits-rows-statistics-endpoints"
 ]
