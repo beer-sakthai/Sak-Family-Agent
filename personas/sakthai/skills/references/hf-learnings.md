@@ -1,6 +1,6 @@
 # HF Learnings Log
 
-## 2026-07-25: hf-gradio-server-mode — Gradio 6 Server Mode (gr.Server) Complete Reference (Topic #352)
+## 2026-07-25: hf-gradio-server-mode — Gradio 6 Server Mode (gr.Server) Complete Reference (Topic #351)
 
 ### Summary
 Comprehensive deep dive into Gradio 6's `gr.Server` (Server mode) — introduced in 6.10.0. A FastAPI-based API server that exposes Gradio's queue, SSE streaming, concurrency control, and MCP capabilities **without a UI**. Unlike `gr.Blocks()` which renders a full web interface, `gr.Server` is designed for pure API/microservice deployment with OpenAPI docs, standard FastAPI routes (`.get()`, `.post()`, etc.), and built-in Gradio event infrastructure. Key insight: `gr.Server` inherits directly from FastAPI (via `gradio.routes.App`), so all standard FastAPI methods work directly.
