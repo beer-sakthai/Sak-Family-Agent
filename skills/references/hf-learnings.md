@@ -14643,3 +14643,188 @@ The relevant Transformers source files for DeepSeek-V3:
 
 ### Skill
 skills/references — Append to main hf-learnings.md (no new skill needed for this reference topic)
+
+## 2026-07-25: hf-hub-hardware-filter-models-search-deep-dive — Complete HF Hub Hardware Filtering and Model Search API (Topic #229 Deep-Dive)
+
+### Summary
+Complete deep-dive on the Hugging Face Hub hardware filtering system — how GPU/CPU/Apple Silicon compatibility is tracked, surfaced, and queried. Covers the `/hardware` page, the `hardware=` query parameter on the Models API, the `huggingface_hub` Python library's `ModelFilter` with filtering by compute capability, the `accelerator` tag system, and practical zero-cost search patterns for CPU-only hardware.
+
+### Source
+- HF Hardware page: https://huggingface.co/hardware
+- Hub Search docs: https://huggingface.co/docs/hub/en/search
+- Hub API docs: https://huggingface.co/docs/hub/en/api
+- huggingface_hub list_models ref: https://huggingface.co/docs/huggingface_hub/en/package_reference/listing
+- Model search URL: https://huggingface.co/models?hardware=apple-m-series
+
+### 1. The Hardware Page (`/hardware`)
+
+The Hugging Face Hardware page is a community-driven directory that surfaces the GPUs, CPUs, and Apple Silicon chips that HF users actually run. It is a **social proof** pyramid — not a spec sheet.
+
+**Categories tracked:**
+- **GPUs** — NVIDIA (RTX 4090/78.1k users, A100, H100, A6000, RTX 6000 Ada, Tesla, Quadro, Jetson), AMD (Radeon RX 7900 XTX, Instinct MI250/MI300X, W7900), Intel (Arc A770, Data Center GPU Max), Apple (M-series unified)
+- **CPUs** — AMD EPYC 1st–5th gen, AMD Ryzen/Threadripper, Intel Core (11th–14th gen, Ultra), Intel Xeon, Apple Silicon (M1–M4)
+- **Apple Silicon** — M1, M2, M3, M4 in all variants (Pro, Max, Ultra)
+
+Each hardware entry shows **user count** (people who opted in). The "Register your hardware" button lets any logged-in HF user contribute.
+
+**URL:** `https://huggingface.co/hardware?product=<product-slug>`
+
+### 2. Model Search with Hardware Filtering
+
+When browsing models at `https://huggingface.co/models`, the URL query parameter `hardware=` filters results:
+
+```
+https://huggingface.co/models?hardware=apple-m-series&search=qwen
+```
+
+**Common hardware slugs:**
+| Slug | Hardware |
+|------|----------|
+| `apple-m-series` | Apple Silicon (all M-series) |
+| `nvidia-a100` | NVIDIA A100 |
+| `nvidia-h100` | NVIDIA H100 |
+| `nvidia-rtx-4090` | NVIDIA RTX 4090 |
+| `nvidia-rtx-3090` | NVIDIA RTX 3090 |
+| `nvidia-a6000` | NVIDIA RTX A6000 |
+| `nvidia-rtx-6000-ada` | NVIDIA RTX 6000 Ada |
+| `nvidia-rtx-3060` | NVIDIA RTX 3060 |
+| `amd-instinct-mi250` | AMD Instinct MI250 |
+| `amd-instinct-mi300x` | AMD Instinct MI300X |
+| `intel-arc-a770` | Intel Arc A770 |
+| `cpu` | CPU-only compatible models |
+
+### 3. Models REST API — Hardware Query
+
+The Models API supports `hardware` as a first-class parameter:
+
+```
+GET https://huggingface.co/api/models?search=gguf&hardware=cpu&sort=downloads&direction=-1&limit=5
+```
+
+**Full model search API parameters:**
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `search` | string | Full-text search across model cards |
+| `hardware` | string | Hardware compatibility filter slug |
+| `task` | string | Pipeline task (e.g., `text-generation`) |
+| `pipeline_tag` | string | Pipeline tag (e.g., `text-generation`) |
+| `library` | string | Library filter (e.g., `transformers`, `diffusers`) |
+| `sort` | string | Sort field (`downloads`, `likes`, `createdAt`, `lastModified`) |
+| `direction` | int | Sort direction (`-1` descending, `1` ascending) |
+| `limit` | int | Results per page (default 100, max 1000) |
+
+### 4. huggingface_hub Python Library — ModelFilter and HfApi
+
+The Python `huggingface_hub` library provides `HfApi.list_models()`:
+
+```python
+from huggingface_hub import HfApi, ModelFilter
+
+api = HfApi()
+
+# Basic: text-generation models sorted by downloads
+models = api.list_models(
+    task="text-generation",
+    sort="downloads",
+    direction=-1,
+    limit=10
+)
+
+# Using ModelFilter for complex queries
+models = api.list_models(
+    filter=ModelFilter(
+        task="text-generation",
+        library="transformers"
+    ),
+    sort="downloads",
+    direction=-1
+)
+```
+
+**Key note:** The Python `ModelFilter` class does NOT have a dedicated `hardware` parameter yet. Hardware filtering through the Python SDK requires using the `requests` library to call the REST API directly with the `hardware=` query param, or browsing manually through the web UI.
+
+### 5. The Accelerator Tag System
+
+Models declare hardware compatibility via tags in their YAML frontmatter (`README.md`):
+
+```yaml
+tags:
+  - nvidia-a100
+  - nvidia-h100
+  - apple-m-series
+  - cpu
+```
+
+**Dedicated accelerator tags:**
+| Tag | Meaning |
+|-----|---------|
+| `accelerator:GPU` | General GPU compatibility |
+| `accelerator:TensorRT` | Optimized for NVIDIA TensorRT |
+| `accelerator:ONNX_Runtime` | ONNX Runtime compatible |
+| `accelerator:CPU` | CPU inference compatible |
+| `accelerator:DirectML` | DirectML compatible (Windows) |
+| `accelerator:CoreML` | Apple Core ML compatible |
+
+These tags are indexed by the Hub search and appear in both the web UI filters and the REST API responses.
+
+### 6. Full-Text Search (`/search`)
+
+The full-text search endpoint at `https://huggingface.co/search/full-text` searches model cards, dataset cards, and Spaces source code:
+
+```
+https://huggingface.co/search/full-text?q=llama&type=space
+```
+
+**Parameters:**
+- `q` — Query string
+- `type` — Scope (`model`, `dataset`, `space`, or empty for all)
+
+This is different from the model-specific API — it searches content rather than metadata and is useful for finding niche models or apps by description.
+
+### 7. Practical Zero-Cost Patterns for Beer
+
+Beer has no GPU budget and runs CPU-only inference. These patterns cost nothing:
+
+**Find CPU-compatible tool-calling models:**
+```bash
+curl -s "https://huggingface.co/api/models?search=tool+calling&hardware=cpu&pipeline_tag=text-generation&sort=downloads&direction=-1&limit=5"
+```
+
+**Find GGUF quantized models for local CPU inference:**
+```bash
+curl -s "https://huggingface.co/api/models?search=GGUF&pipeline_tag=text-generation&sort=downloads&direction=-1&limit=10"
+```
+
+**Check hardware popularity before choosing a model to optimize:**
+- Open https://huggingface.co/hardware to see what hardware the community uses
+- Filter models by that hardware to see what has been optimized for it
+
+**Web UI bookmarks for quick reference:**
+- `https://huggingface.co/models?pipeline_tag=text-generation&hardware=cpu&sort=downloads` — CPU text-gen models
+- `https://huggingface.co/models?search=gguf&sort=downloads` — Popular GGUF models
+- `https://huggingface.co/models?search=GGUF&pipeline_tag=text-generation&sort=downloads` — GGUF text-gen
+
+### 8. Hardware Registration (How the Data Gets Collected)
+
+Users register their hardware via:
+- **Web UI:** `https://huggingface.co/hardware` → "Register your hardware"
+- **CLI:** `huggingface-cli hardware register`
+
+This is an opt-in system. User counts reflect registrations, not runtime telemetry.
+
+### 9. Limitations and Constraints
+
+1. **No Python SDK hardware filter:** `ModelFilter` in `huggingface_hub` lacks a `hardware` field — must use REST API for hardware-filtered programmatic access
+2. **Incomplete coverage:** Hardware tags depend on model authors adding them; many models have no tags
+3. **User count does not equal usage:** The `/hardware` page shows registered users, not actual inference runtime
+4. **Models-only:** The `hardware=` filter only works for models, not datasets or Spaces
+
+### 10. Related Topics Covered
+- `hf-hub-models-api-deep-dive` (topic #127) — Full Models API reference
+- `hf-hub-models-api-query-language-complete` (topic #182) — Query language
+- `hf-hub-search-discovery-api` (topic #140) — Search and discovery
+- `hf-hub-tag-system-complete-reference` (topic #141) — Tag system
+- `hf-hub-hardware-filter-models-search` (topic #229) — Original entry (this is the deep-dive)
+
+### Skill
+mlops/hf-hub-models-tags/SKILL.md — search, filter, and discover models by hardware and pipeline tags
