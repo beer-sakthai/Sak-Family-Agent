@@ -373,5 +373,15 @@
   "hf-hub-dataset-card-metadata-comprehensive-reference",
   "hf-inference-client-image-generation-patterns",
   "hf-hub-evaluation-results",
-  "hf-datasets-server-splits-rows-statistics-endpoints"
+  "hf-datasets-server-parquet-conversion-pipeline-deep-dive",
+  "hf-fineweb-dataset-processing-pipeline",
+  "hf-hub-fork-and-sync",
+  "hf-hub-fork-and-sync-deep-dive",
+  "hf-inference-client-embeddings-patterns",
+  "hf-inference-providers-responses-api-deep-dive",
+  "hf-hub-agent-traces-session-traces-format",
+  "hf-bitsandbytes-quantization-deep-dive-v2",
+  "hf-datasets-server-splits-rows-statistics-endpoints",
+  "hf-openenv-agentic-execution",
+  "hf-hub-sandboxes-python-sdk"
 ]
