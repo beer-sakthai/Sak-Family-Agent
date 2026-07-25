@@ -6178,3 +6178,44 @@ Complete deep-dive on Hugging Face Accelerate v1.14.0 — the unified distribute
 
 ### Skill Created
 `mlops/hf-accelerate/` — complete reference with SKILL.md + deep-dive reference.
+
+---
+
+## 2026-07-25: hf-hub-cli-rebuilt — huggingface_hub CLI Rebuilt (v1.22–v1.24) + Job Naming, Space Templates, Sandboxes (Topic #336)
+
+### Summary
+Comprehensive reference for the rebuilt `hf` CLI and new features shipped in huggingface_hub v1.22.0, v1.23.0, and v1.24.0 (all July 2026). Covers the Click-based CLI rebuild (replacing Typer), Sandboxes (`Sandbox.create`, `SandboxPool`, `hf sandbox`), tree-cached snapshot downloads, Space templates, Job naming, CLI extensions, deprecations, breaking changes, and the complete post-rebuild CLI command tree.
+
+### Key Features by Version
+- **v1.22.0** (Jul 3): Sandboxes (isolated cloud VMs on top of Jobs), tree cache for snapshot_download, CLI rebuilt on Click (drops Typer), `hf discussions edit`, `hf cache ls/prune incomplete`, `hf jobs scheduled trigger`, `sync_job_volume` helper, `upload_large_folder` deprecated, case-sensitive patterns, http_backoff Retry-After support
+- **v1.23.0** (Jul 9): Space templates (seed Spaces from official templates), `hf extensions update`, smoother Xet downloads
+- **v1.24.0** (Jul 17): Job naming (`--name` flag, `name` parameter on `run_job`/`run_uv_job`/create_scheduled variants), `hf jobs labels <id> --name`, CLI-first README, Xet download rate fix
+
+### Key Code Patterns
+```python
+# Sandbox
+from huggingface_hub import Sandbox
+with Sandbox.create(image="python:3.12") as sbx:
+    sbx.files.write("/app/main.py", "print(40 + 2)")
+    proc = sbx.run("python /app/main.py", background=True)
+    print(sbx.proxy_url_for(8080))
+
+# Space template
+from huggingface_hub import create_repo
+create_repo("my-jupyterlab", repo_type="space", space_template="jupyterlab")
+
+# Named job
+from huggingface_hub import run_job
+run_job("python:3.12", command=["python", "train.py"], name="training-v2")
+```
+
+### Skill Created
+`hf-hub-cli-rebuilt/` — complete reference with CLI command tree, version-by-version feature matrix, code patterns, deprecations/breaking changes, and official doc links.
+
+### Sources
+- Release notes: https://github.com/huggingface/huggingface_hub/releases (v1.22.0, v1.23.0, v1.24.0)
+- CLI Guide: https://huggingface.co/docs/huggingface_hub/en/guides/cli
+- CLI Reference: https://huggingface.co/docs/huggingface_hub/en/package_reference/cli
+- Sandboxes Guide: https://huggingface.co/docs/huggingface_hub/en/guides/sandbox
+- Jobs Guide: https://huggingface.co/docs/huggingface_hub/en/guides/jobs
+- Live API research via GitHub release payloads and HF docs (verified 2026-07-25)
