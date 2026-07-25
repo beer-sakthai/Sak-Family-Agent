@@ -14936,3 +14936,211 @@ Standardized JSON format for recording agent sessions interacting with the Hub. 
 
 ### Skill
 mlops/huggingface-hub — Hub API, MCP Server, CLI, and agent integration
+
+---
+
+## 2026-07-25: hf-agent-skills-complete-reference — HF Agent Skills Platform: Complete Specification & Ecosystem (Deep-Dive of Topic #233)
+
+### Summary
+Complete deep-dive on the **Agent Skills** ecosystem — an open, lightweight format for extending AI agents with specialized knowledge and workflows. Covers the open specification (agentskills.io), the `SKILL.md` format with YAML frontmatter, progressive disclosure loading model, directory structure conventions, the Hugging Face curated skill catalog (11 official skills), the `hf skills add` CLI, installation patterns for all major coding agents, the validation tooling (`skills-ref`), and how this relates to the Sak Family Agents' own skill system.
+
+### Sources
+- Agent Skills Overview: https://agentskills.io/home.md
+- Specification: https://agentskills.io/specification.md
+- Quickstart: https://agentskills.io/skill-creation/quickstart.md
+- HF Agent Skills (Hub docs): https://huggingface.co/docs/hub/en/agents-skills
+- HF CLI for AI Agents: https://huggingface.co/docs/hub/en/agents-cli
+- Validation tool: https://github.com/agentskills/agentskills/tree/main/skills-ref
+- Best practices: https://agentskills.io/skill-creation/best-practices.md
+- Client Showcase: https://agentskills.io/clients.md
+- GitHub: https://github.com/agentskills/agentskills
+- Discord: https://discord.gg/MKPE9g8aUy
+
+### 1. What Are Agent Skills?
+
+Agent Skills are an **open, lightweight format** (originally developed by Anthropic, now community-governed) for extending AI agent capabilities with specialized knowledge and repeatable workflows. A skill is a folder containing a `SKILL.md` file with metadata and instructions plus optional scripts, references, and assets.
+
+```tree
+my-skill/
+├── SKILL.md          # Required: metadata + instructions
+├── scripts/          # Optional: executable code
+├── references/       # Optional: documentation
+├── assets/           # Optional: templates, resources
+└── ...               # Any additional files or directories
+```
+
+**Key properties:**
+- **Portable** — version-controlled folders, shareable via git
+- **Cross-product** — same skill works in Claude Code, VS Code, Cursor, OpenCode, Gemini CLI, Copilot, Codex, and 30+ more clients
+- **Progressive disclosure** — agents load only metadata at startup, full instructions on activation, resources on demand
+
+### 2. The `SKILL.md` Format (Specification)
+
+#### Frontmatter Fields
+
+| Field | Required | Constraints |
+|-------|----------|-------------|
+| `name` | Yes | 1-64 chars, lowercase alphanumeric + hyphens, must match directory name |
+| `description` | Yes | 1-1024 chars, describes what + when to use |
+| `license` | No | License name or reference to bundled file |
+| `compatibility` | No | 1-500 chars, environment requirements |
+| `metadata` | No | Arbitrary key-value map |
+| `allowed-tools` | No | Space-separated pre-approved tools (experimental) |
+
+**Minimal example:**
+```yaml
+---
+name: skill-name
+description: A description of what this skill does and when to use it.
+---
+```
+
+**Full example with optional fields:**
+```yaml
+---
+name: pdf-processing
+description: Extract PDF text, fill forms, merge files. Use when handling PDFs.
+license: Apache-2.0
+compatibility: Requires Python 3.14+ and uv
+metadata:
+  author: example-org
+  version: "1.0"
+allowed-tools: Bash(git:*) Bash(jq:*) Read
+---
+```
+
+#### Naming Rules
+- Only lowercase letters (`a-z`), digits (`0-9`), and hyphens (`-`)
+- Must not start or end with a hyphen
+- No consecutive hyphens (`--`)
+- Must match the parent directory name
+
+#### Body Content
+The Markdown body after frontmatter contains instructions. Recommended sections:
+- Step-by-step instructions
+- Examples of inputs and outputs
+- Common edge cases
+
+Agents load the body on activation. Keep under 500 lines; move reference material to separate files.
+
+### 3. Progressive Disclosure Model
+
+Agents load skills in three stages to minimize context usage:
+
+| Stage | What's Loaded | Token Cost | When |
+|-------|---------------|------------|------|
+| Discovery | `name` + `description` | ~100 tokens | At startup for all skills |
+| Activation | Full `SKILL.md` body | < 5000 tokens recommended | When task matches description |
+| Execution | Referenced files (scripts/, references/, assets/) | Variable | Only when needed |
+
+This means agents can have hundreds of skills available without filling their context window.
+
+### 4. Hugging Face Curated Skills Catalog
+
+HF publishes 11 official skills at `huggingface/skills` on the Claude Code plugin marketplace:
+
+| Skill | What It Does |
+|-------|-------------|
+| `hf-cli` | Hub operations via the `hf` CLI: download, upload, manage repos, run jobs |
+| `huggingface-datasets` | Explore datasets, paginate rows, search text, apply filters |
+| `huggingface-llm-trainer` | Train or fine-tune LLMs with TRL (SFT, DPO, GRPO) on HF Jobs |
+| `huggingface-vision-trainer` | Train object detection and image classification models |
+| `huggingface-community-evals` | Run evaluations against models on the Hub on local hardware |
+| `huggingface-trackio` | Track and visualize ML training experiments with Trackio |
+| `huggingface-papers` | Look up and read HF paper pages in markdown |
+| `huggingface-paper-publisher` | Publish and manage research papers on the Hub |
+| `huggingface-tool-builder` | Build reusable scripts for HF API operations |
+| `gradio` | Build Gradio web UIs and demos |
+| `transformers-js` | Run ML models in JavaScript/TypeScript with WebGPU/WASM |
+
+### 5. Installation Methods
+
+#### Method 1: `hf skills add` (HF CLI — recommended)
+```bash
+# Global install (works with Codex, Cursor, OpenCode, anything loading from ~/.agents/skills)
+hf skills add --global
+# For Claude Code specifically
+hf skills add --claude --global
+# Project-local install
+hf skills add
+# Project-local for Claude Code
+hf skills add --claude
+```
+The skill is generated from the locally installed CLI version — always up to date.
+
+#### Method 2: Claude Code Plugin Marketplace
+```
+/plugin marketplace add huggingface/skills
+/plugin install hf-cli@huggingface/skills
+```
+
+#### Method 3: Manual Directory
+Create a `.agents/skills/<skill-name>/SKILL.md` file in your project (works with VS Code, Cursor, and other clients that scan `.agents/skills/`).
+
+### 6. Compatible Clients (30+)
+
+Major agents supporting the Agent Skills format:
+
+| Client | Provider |
+|--------|----------|
+| Claude Code | Anthropic |
+| GitHub Copilot | GitHub/Microsoft |
+| VS Code | Microsoft |
+| Cursor | Cursor |
+| OpenAI Codex | OpenAI |
+| Gemini CLI | Google |
+| Junie | JetBrains |
+| OpenCode | SST |
+| OpenHands | OpenHands |
+| Goose | Block |
+| Roo Code | Roo Code |
+| Factory | Factory AI |
+| Letta | Letta AI |
+| And 15+ more... | |
+
+### 7. Validation Tooling
+
+The `skills-ref` library validates skill format:
+
+```bash
+pip install skills-ref   # or equivalent
+skills-ref validate ./my-skill
+```
+
+Checks: valid YAML frontmatter, name matches directory, correct field types, no naming violations.
+
+### 8. Zero-Cost Relevance for Beer/SakThai
+
+- **Skills are free** — no paid service required. Everything is file-based and open-source.
+- **The Sak Family Agents already use a skill-based architecture** (Hermes skills at `~/.hermes/skills/`). The Agent Skills format provides a complementary, cross-product standard that SakThai agents could adopt for sharing skills with the wider ecosystem.
+- **Beer can publish his own skills** on agentskills.io or distribute them via GitHub — no HF Pro needed.
+- **The `hf-cli` skill** is directly useful: it teaches any agent how to use the `hf` CLI for Hub operations, complementing the HF MCP Server.
+- **Cross-installable**: Sak skills written in Agent Skills format would work in Claude Code, Cursor, Copilot, etc. — making Beer's workflows portable.
+
+### 9. Key Distinction: Hermes Skills vs. Agent Skills
+
+| Aspect | Hermes Skills | Agent Skills |
+|--------|--------------|--------------|
+| Format | YAML frontmatter + body in a `SKILL.md` | YAML frontmatter + body in a `SKILL.md` |
+| Name field | `name:` in YAML frontmatter | `name:` in YAML frontmatter |
+| Author field | `author: SakThai` (required) | `metadata.author` (optional) |
+| License field | `license: MIT` (required) | `license:` (optional) |
+| Location | `~/.hermes/skills/` | `.agents/skills/` or plugin marketplace |
+| Client | Hermes agent only | Any Agent Skills-compatible client (30+) |
+| Load model | At startup via skill_view | Progressive disclosure |
+| Extra dirs | `references/` only | `scripts/`, `references/`, `assets/` |
+| Validation | Built into Hermes | `skills-ref` CLI |
+| Publishing | Private git repo | agentskills.io, GitHub, plugin marketplaces |
+
+The formats are structurally compatible — a Hermes SKILL.md with `author: SakThai` and `license: MIT` can serve as a valid Agent Skills SKILL.md with minimal adjustment.
+
+### 10. Skill Creators' Resources
+
+- **Quickstart**: Create a skill in 5 minutes — https://agentskills.io/skill-creation/quickstart.md
+- **Best practices**: Well-scoped, calibrated skills — https://agentskills.io/skill-creation/best-practices.md
+- **Optimizing descriptions**: Test and improve trigger reliability — https://agentskills.io/skill-creation/optimizing-descriptions.md
+- **Evaluating skills**: Eval-driven quality iteration — https://agentskills.io/skill-creation/evaluating-skills.md
+- **Using scripts**: Bundling executable code — https://agentskills.io/skill-creation/using-scripts.md
+
+### Skill
+mlops/huggingface-hub — Hub API, MCP Server, CLI, Agent Skills, and agent integration
