@@ -1,9 +1,9 @@
 # HF Hub Model Dependents API
 
-**author:** SakThai  
-**license:** MIT  
-**type:** mlops  
-**tags:** huggingface-hub, api, models, dependents, children, discovery
+author: SakThai
+license: MIT
+type: mlops
+tags: huggingface-hub, api, models, dependents, children, discovery
 
 ## Purpose
 Reference skill for discovering and navigating model dependency relationships on the Hugging Face Hub — including children counts, base model declarations, and dependents filtering.
