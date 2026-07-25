@@ -232,5 +232,6 @@
   "hf-hub-user-and-org-profile-api",
   "hf-hub-agent-harnesses-registry",
   "hf-datasets-cache-management-deep-dive",
-  "gr-workflow-source-deep-dive"
+  "gr-workflow-source-deep-dive",
+  "hf-hub-spaces-build-runtime-api"
 ]
