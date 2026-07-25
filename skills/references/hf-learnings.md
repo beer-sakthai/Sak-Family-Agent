@@ -1,5 +1,14 @@
 # HF Learnings Log
 
+## 2026-07-25: hf-bitsandbytes-quantization-deep-dive-v2 — bitsandbytes v0.50.0: New 4-bit GEMM, MPS, ROCm Stable, CPU Performance (Topic #383)
+
+### Summary
+Comprehensive deep-dive refresh of bitsandbytes quantization covering the **v0.50.0** release (2026-07-25). Includes: new fused 4-bit GEMM kernels for inference (up to 4× faster at batch sizes 2–64), stable AMD ROCm support (out of preview), Apple Silicon MPS backend with all 4-bit and LLM.int8() configurations working, CPU performance improvements (1.1× to 20× on x86-64 and ARM64), Windows ARM64 support, new AdEMAMix optimizer with 8-bit and paged variants, and major breaking changes (min PyTorch 2.4, removed research module, non-blockwise optimizers, and legacy sparse ops). Covers the full memory benchmark comparison (405B QLoRA on 8×H100 with 256GB RAM), 4-bit vs 8-bit vs AWQ vs GPTQ comparison matrix, and complete migration guide from v0.43→v0.50.
+
+**Files updated:** `hf-bitsandbytes-quantization/SKILL.md` (version 2.0.0) + `references/hf-learnings.md` (470 lines, 19KB) with architecture details, hardware matrix, parameter reference, training pipelines, optimizer catalog, and zero-cost patterns.
+
+**Sources:** GitHub releases 0.45.0→0.50.0, Transformers 5 docs, PyPI metadata, official changelog.
+
 ## 2026-07-25: hf-trackio-experiment-tracking — Hugging Face Trackio: Free Experiment Tracking with Buckets and Spaces (Topic #367)
 
 ### Summary
