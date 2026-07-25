@@ -1,5 +1,50 @@
 # HF Learnings Log
 
+## 2026-07-25: hf-gradio-6-native-plot-components — Gradio 6 Native Plot Components Complete Reference (Topic #351)
+
+### Summary
+Comprehensive deep dive into Gradio 6's native plot component family (`gr.LinePlot`, `gr.ScatterPlot`, `gr.BarPlot`, and the generic `gr.Plot`). These components provide declarative, DataFrame-backed charting with client-side rendering (built on Vega-Altair), eliminating the need for matplotlib/plotly for common use cases. All three share the **identical API** with over 20 dedicated parameters for axis configuration, color mapping, binning, aggregation, tooltips, and layout.
+
+### Key Findings
+- **Three native plot components**: `gr.LinePlot`, `gr.ScatterPlot`, `gr.BarPlot` — all share identical constructor API
+- **Client-side rendering**: Uses Vega-Altair in browser; no server CPU for rendering
+- **Direct DataFrame input**: Accepts `pd.DataFrame` directly, or a callable returning one
+- **Built-in binning/aggregation**: `x_bin` (numeric size or datetime string like "1h") + `y_aggregate` (sum/mean/median/min/max)
+- **Color series**: `color` parameter splits data into multiple series; `color_map` for custom colors
+- **Interactive events**: `.change()`, `.select()` (with `SelectData`), `.double_click()`
+- **Tooltip modes**: `"axis"`, `"all"`, `"none"`, or `list[str]` of columns
+- **Axis limits**: `x_lim`/`y_lim` as `[min, None]` tuples for one-sided constraints
+- **Sort control**: `sort` parameter for categorical x — `"x"`, `"-x"`, `"y"`, `"-y"`, or explicit list
+- **gr.Plot fallback**: For matplotlib/plotly/bokeh/altair figures when custom rendering is needed
+- **Performance advantage**: Native plots send DataFrame as JSON to browser → 10-100x smaller payload than serialized mpl figures
+
+### API Parameters (shared by LinePlot, ScatterPlot, BarPlot)
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `value` | `pd.DataFrame \| Callable \| None` | Data or callable returning data |
+| `x` | `str` | X-axis column name |
+| `y` | `str \| list[str]` | Y-axis column name(s), must be numeric |
+| `color` | `str \| None` | Column for series splitting |
+| `title` | `str \| None` | Chart title |
+| `x_title` / `y_title` | `str \| None` | Axis titles |
+| `color_title` | `str \| None` | Legend title |
+| `x_bin` | `str \| float \| None` | X grouping: number (numeric) or "1h"/"15m" (datetime) |
+| `y_aggregate` | `Literal` | "sum", "mean", "median", "min", "max" |
+| `x_lim` / `y_lim` | `list[float \| None]` | Axis bounds |
+| `color_map` | `dict[str, str]` | Series → color mapping |
+| `sort` | `str \| list[str]` | Categorical sort order |
+| `tooltip` | `str \| list[str]` | Tooltip content mode |
+| `height` | `int \| None` | Plot height in px |
+
+### Events
+| Event | Description | Event Data |
+|-------|-------------|------------|
+| `.change()` | Triggered on value change | - |
+| `.select()` | User selects/deselects | `SelectData` (value=label, selected=bool) |
+| `.double_click()` | User double-clicks | - |
+
+---
+
 ## 2026-07-30: hf-hub-models-architecture-and-pipeline-tags — Complete HF Model Tag Taxonomy Deep Dive (Topic #164 Deepened)
 
 ### Summary
