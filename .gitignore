@@ -6,3 +6,6 @@ skills/.usage.json.lock
 __pycache__/
 .hypothesis/
 *.pyc
+.venv/
+personas/saktan/
+personas/*/sakthai/
