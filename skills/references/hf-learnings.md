@@ -5056,5 +5056,30 @@ Deep dive into the Hugging Face Inference MCP Client and Agent framework built i
 
 ---
 
+## 2026-07-25: hf-datasets-from-parquet — Dataset.from_parquet() Source Code Deep Dive
 
+### Summary
+Deep-dive into the Hugging Face Datasets library's `Dataset.from_parquet()` and `Dataset.to_parquet()` methods. Covers the complete call chain from the static method through `ParquetDatasetReader`, the `Parquet` ArrowBasedBuilder, and PyArrow's `ParquetFileFormat` fragment scanning. Includes full API surface, row group sharding architecture, filter pushdown via `pq.filters_to_expression()`, column projection, content-defined chunking (CDC), compression strategy per column type, bad file handling (v4.2.0+), `FragmentScanOptions` for remote Parquet caching, and integration with the Datasets Server `/parquet` endpoint for zero-cost analytics.
 
+### Source Documentation
+- Source code: `src/datasets/arrow_dataset.py` — `from_parquet()` line 1491, `to_parquet()` line 5625
+- Source code: `src/datasets/io/parquet.py` — `ParquetDatasetReader`, `ParquetDatasetWriter`
+- Source code: `src/datasets/packaged_modules/parquet/parquet.py` — `ParquetConfig`, `Parquet._generate_tables()`
+- Source code: `src/datasets/config.py` — `MAX_ROW_GROUP_SIZE`, `DEFAULT_CDC_OPTIONS`, `USE_PARQUET_EXPORT`
+
+### Key Findings
+- **Row group sharding**: `_generate_more_gen_kwargs()` splits each Parquet file into individual row group fragments — `(file, (rg_id,))` per fragment. This enables lazy row-group-at-a-time loading in streaming mode.
+- **Filter pushdown**: `filters=` is converted via `pq.filters_to_expression()` → PyArrow's native `to_batches(filter=...)`. Row group column min/max statistics skip non-matching groups entirely (no download for remote files).
+- **Column projection**: `columns=` reads only selected column chunks from Parquet. Supports nested prefix matching (`"a"` selects `a.b`, `a.c`). Combined with `features=`, columns and features must match or ValueError.
+- **FragmentScanOptions (v4.2.0+)**: `ParquetFragmentScanOptions(cache_options=CacheOptions(prefetch_limit=1, range_size_limit=32MiB))` for tuning HTTP range requests — increase `range_size_limit` to 128MiB for fewer requests on large columns.
+- **Bad file handling (v4.2.0+)**: Three modes — `"error"` (raise), `"warn"` (skip+warning), `"skip"` (quiet skip). Skips bad files during schema inference too.
+- **CDC**: Content-defined chunking at 256KB-1MB boundaries enabled by default (`DEFAULT_CDC_OPTIONS`). More stable row group boundaries than PyArrow defaults across data changes. Metadata written into file.
+- **Compression strategy**: Snappy for normal columns, `"none"` for media (Image/Audio/Binary), dictionary encoding for text, PLAIN encoding for media columns.
+- **Batch size**: Auto-tuned — targets `MAX_ROW_GROUP_SIZE = "100MB"` uncompressed per row group, with separate overrides for audio/image/binary/video datasets.
+- **Streaming limitation**: `from_parquet()` always returns map-style Dataset. Use `load_dataset("parquet", data_files=..., streaming=True)` for true streaming.
+- **Remote URI writing**: Supports hf://, s3://, gs:// via fsspec. `storage_options` dict passed to fsspec.open().
+
+### Skill Created
+`hf-datasets-from-parquet/` — complete reference with source-code-verified API surface, architecture details, config constants, performance patterns, and practical examples.
+
+---
