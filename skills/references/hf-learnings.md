@@ -5097,4 +5097,29 @@ Any agent harness can register by PR to `agent-harnesses.ts` in huggingface.js. 
 - https://huggingface.co/docs/hub/agents-overview
 
 
+---
 
+## 2026-07-25: hf-transformers-tipsv2 (Topic #316 — New)
+
+### Summary
+Deep-dive into TIPSv2 (Text-Image Pre-training with Spatial awareness v2) — Google DeepMind's contrastive vision-language encoder family added in Transformers v5.14.0. Covers dual-class-token architecture (alt-text + synthetic caption supervised), iBOT++ pretraining objective, zero-shot classification, DPT head for depth/normal/segmentation, and full HF integration. Key innovation: unmasked tokens contribute to masked image modeling loss, dramatically improving patch-text alignment.
+
+### Key Findings
+- **Dual class tokens**: CLS1 (web alt-text) + CLS2 (PaliGemma synthetic captions) via repurposed register tokens
+- **iBOT++**: unmasked patches also contribute to loss — student surpasses teacher in patch-text alignment
+- **448×448 images**, 14×14 patches → 32×32 grid
+- **Text encoder limits**: ReLU activation, max 64 tokens, BPE tokenizer
+- **3 tasks with DPT**: depth estimation (meters), normal estimation (XYZ), semantic segmentation in one forward pass
+- **Tipsv2Model** returns normalized embeddings; **get_image_features/get_text_features** return raw (unnormalized)
+- **Available sizes**: b14 (base) and l16 (large), each with/without DPT head
+- **Collection**: https://huggingface.co/collections/google/tipsv2
+
+### Skill Created
+`mlops/hf-transformers-tipsv2/` — SKILL.md + references/hf-learnings.md covering architecture, configs, usage patterns, API surface, and comparisons to CLIP/SigLIP.
+
+### Sources
+- https://huggingface.co/docs/transformers/main/en/model_doc/tipsv2
+- https://huggingface.co/docs/transformers/main/en/model_doc/tipsv2_dpt
+- https://huggingface.co/papers/2604.12012
+- Transformers v5.14.0 release notes
+|
