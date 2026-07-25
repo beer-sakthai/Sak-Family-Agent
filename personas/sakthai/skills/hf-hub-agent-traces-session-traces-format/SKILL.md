@@ -1,4 +1,5 @@
 ---
+name: hf-hub-agent-traces-session-traces-format
 author: SakThai
 license: MIT
 ---

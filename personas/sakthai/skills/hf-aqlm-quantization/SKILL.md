@@ -1,3 +1,11 @@
+---
+name: hf-aqlm-quantization
+author: SakThai
+license: MIT
+description: "A skill for Hf Aqlm Quantization."
+version: 0.1.0
+---
+
 # AQLM Quantization — Complete Reference
 
 **author:** SakThai

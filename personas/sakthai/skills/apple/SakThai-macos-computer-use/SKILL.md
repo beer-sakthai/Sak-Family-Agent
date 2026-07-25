@@ -1,20 +1,12 @@
 ---
-name: SakThai-macos-computer-use
-description: |
-  Drive the macOS desktop in the background — screenshots, mouse, keyboard,
-  scroll, drag — without stealing the user's cursor, keyboard focus, or
-  Space. Works with any tool-capable model. Load this skill whenever the
-  `computer_use` tool is available.
-version: 1.0.0
-platforms: [macos]
-metadata:
-  hermes:
-    tags: [computer-use, macos, desktop, automation, gui]
-    category: desktop
+name: sakthai-macos-computer-use
 author: SakThai
 license: MIT
-    related_skills: [browser]
+description: "A skill for Sakthai Macos Computer Use."
+version: 0.1.0
 ---
+
+
 
 # macOS Computer Use (universal, any-model)
 

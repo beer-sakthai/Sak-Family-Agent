@@ -6616,3 +6616,67 @@ Comprehensive reference for authenticating Git operations on the Hugging Face Hu
 - https://huggingface.co/docs/hub/en/security-git-ssh
 - https://huggingface.co/docs/hub/en/security-gpg
 - https://git-scm.com/book/en/v2/Git-Tools-Signing-Your-Work
+
+## hf-spaces-build-with-ai-agents
+
+### Overview
+**Added:** 2026-07-25 | **Source:** HF Changelog + Hub Docs
+
+On **July 16, 2026**, Hugging Face added an option on the new-space page to build Spaces using AI coding agents. Users copy a generated command into agents like Claude Code, OpenCode, Codex, Gemini CLI, or Cursor, and the agent builds, iterates, and deploys the Space automatically.
+
+**Changelog votes:** 122 upvotes (+117 in one week) — among the highest-rated HF changelog entries.
+
+### Architecture Flow
+```
+User → https://huggingface.co/new-space?setup=agent
+  → selects SDK (Gradio/Docker/Static/Streamlit)
+  → enters Space name and description
+  → clicks "Build with AI Agent"
+  → page generates tailored agent command
+  → user copies command to agent
+  → agent builds Space code, commits, pushes
+  → Space auto-deploys on HF
+```
+
+### Key URL Parameters
+- `?setup=agent` — Opens the AI agent build flow directly
+- `?sdk=gradio` (or `docker`, `static`) — Preselect the Space SDK
+- `?name=my-space` — Preselect the Space name
+
+### Supported Agents
+Works with any coding agent capable of shell execution and Git push:
+- **Claude Code** (Anthropic)
+- **OpenCode** (open-source terminal agent by OpenCode AI)
+- **OpenAI Codex** (CLI agent)
+- **Gemini CLI** (Google)
+- **Cursor** (AI IDE)
+- Any agent with shell + Git capabilities
+
+### Zero-Cost Deployment Options
+| Space Type | Cost | Requirements |
+|-----------|------|-------------|
+| Static HTML/CSS/JS | Free | None |
+| Gradio on ZeroGPU | Free | Personal account in good standing, max 2 Spaces |
+| Gradio (dedicated CPU) | PRO ($9/mo) | Paid plan |
+| Docker | PRO ($9/mo) | Paid plan |
+
+### Use Case Patterns
+1. **Model Demo:** "Create a Gradio Space that loads Qwen3-0.6B via Inference Providers with adjustable generation parameters"
+2. **Paper Reproduction:** "Build a Space reproducing the inference pipeline from [paper URL], with example inputs and result visualizations"
+3. **Local Project Deploy:** "Take model inference code from ./my-project and deploy it as a Space with a Gradio UI"
+4. **From Scratch:** "Build a Space that transcribes uploaded audio files using Whisper-large-v3"
+
+### Best Practices
+- Be specific about SDK, libraries, and UI layout in your instructions
+- Use the `?setup=agent` URL parameter for direct access
+- Iterate naturally — agents can modify and improve across multiple turns
+- Combine with HF Inference Providers for zero-cost model inference in your Space
+- Prefer ZeroGPU Gradio or Static Spaces for zero-cost deployments
+
+### Skill Created
+`hf-spaces-build-with-ai-agents/` — SKILL.md (author: SakThai, license: MIT) + references/hf-learnings.md with complete deep-dive covering architecture, agent command patterns, zero-cost deployment strategies, and practical use cases.
+
+### Sources
+- https://huggingface.co/changelog/spaces-with-agents
+- https://huggingface.co/docs/hub/en/spaces-overview
+- https://huggingface.co/new-space

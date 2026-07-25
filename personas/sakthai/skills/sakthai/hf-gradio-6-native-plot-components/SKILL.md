@@ -1,3 +1,11 @@
+---
+name: hf-gradio-6-native-plot-components
+author: SakThai
+license: MIT
+description: "A skill for Hf Gradio 6 Native Plot Components."
+version: 0.1.0
+---
+
 # Gradio 6 Native Plot Components
 
 **author:** SakThai  

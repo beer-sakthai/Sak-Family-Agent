@@ -1,4 +1,5 @@
 ---
+name: hf-jobs-api-deep-dive
 author: SakThai
 license: MIT
 skill_type: reference

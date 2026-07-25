@@ -1,3 +1,11 @@
+---
+name: hf-transformers-cache-api-deep-dive
+author: SakThai
+license: MIT
+description: "A skill for Hf Transformers Cache Api Deep Dive."
+version: 0.1.0
+---
+
 # Transformers Cache API: DynamicCache, StaticCache, QuantizedCache & More
 
 **author:** SakThai
