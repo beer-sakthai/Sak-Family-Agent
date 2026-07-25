@@ -579,4 +579,218 @@ In huggingface_hub < 1.20, there was no provider routing. `InferenceClient` alwa
 - Provider settings: https://hf.co/settings/inference-providers
 
 ### Skill
-hf-inference-providers — Enhanced with source-level deep dive on huggingface_hub v1.24.0 `_providers/` package: TaskProviderHelper class hierarchy (6 overridable methods), 30+ per-provider-per-task helpers, get_provider_helper() 3-path routing logic, AutoRouterConversationalTask singleton, PROVIDERS registry, _fetch_inference_provider_mapping Hub API contract, OpenAI compatibility layer via _OpenAIProxy, and provider-specific customizations across 18 partner providers including Together, DeepInfra, Fireworks AI, Groq, Fal AI, Replicate, Novita, Scaleway, and the hf-inference legacy fallback.
+|hf-inference-providers — Enhanced with source-level deep dive on huggingface_hub v1.24.0 `_providers/` package: TaskProviderHelper class hierarchy (6 overridable methods), 30+ per-provider-per-task helpers, get_provider_helper() 3-path routing logic, AutoRouterConversationalTask singleton, PROVIDERS registry, _fetch_inference_provider_mapping Hub API contract, OpenAI compatibility layer via _OpenAIProxy, and provider-specific customizations across 18 partner providers including Together, DeepInfra, Fireworks AI, Groq, Fal AI, Replicate, Novita, Scaleway, and the hf-inference legacy fallback.
+
+---
+
+## 2026-07-25: hf-inference-providers-pricing-billing-hub-api-deep-dive — Inference Providers Pricing, Billing, Hub API & Security (Topic #279)
+
+### Summary
+Deep-dive on the newly documented Pricing & Billing model, Hub API query patterns, and Security & Compliance posture of Hugging Face Inference Providers. Covers the two billing approaches (Routed by HF vs Custom Provider Key), free credit allocations per account type ($0.10 free, $2.00 PRO, $2.00/seat Team/Enterprise), Organization billing with the `X-HF-Bill-To` header, HF-Inference as a provider with its own compute-time pricing, Hub API endpoints for listing provider-served models (`?inference_provider=`), provider-aware model info (`expand=inference`), the OpenAI-compatible models listing endpoint (`/v1/models`), the `hf CLI` integration (`--warn`, `--inference-provider`), security posture (SOC2 Type 2, TLS, 30-day log retention, no data storage), and zero-cost optimization strategies.
+
+### Sources
+- Pricing & Billing: https://huggingface.co/docs/inference-providers/en/pricing
+- Hub API: https://huggingface.co/docs/inference-providers/en/hub-api
+- Security & Compliance: https://huggingface.co/docs/inference-providers/en/security
+- Main docs: https://huggingface.co/docs/inference-providers/en/index
+- Hub integration: https://huggingface.co/docs/inference-providers/en/hub-integration
+- Provider settings: https://hf.co/settings/inference-providers
+- Model listing API: https://huggingface.co/api/models?inference_provider=fireworks-ai
+
+### 1. Pricing & Billing Model
+
+#### Free Credits Per Account Type
+
+Every Hugging Face user receives monthly credits to experiment with Inference Providers. Credits auto-apply when requests route through Hugging Face:
+
+| Account Type | Monthly Credits | Extra Usage |
+|---|---|---|
+| Free Users | $0.10 (subject to change) | Yes (credits purchase required) |
+| PRO Users | $2.00 | Yes |
+| Team or Enterprise Organizations | $2.00 per seat | Yes |
+
+- **Team/Enterprise credits are shared** among all org members.
+- Credits apply to **Routed by Hugging Face** billing only, **not** to Custom Provider Key billing.
+- All users can purchase additional credits after exhausting monthly credits — ensures uninterrupted production access.
+
+#### Two Billing Approaches
+
+| Feature | Routed by Hugging Face | Custom Provider Key |
+|---|---|---|
+| How it Works | Request routes through HF to the provider | You set a custom provider key in HF settings |
+| Billing | Pay-as-you-go on your HF account | Billed directly by the provider |
+| Monthly Credits | ✅ Yes — apply to eligible providers | ❌ No |
+| Provider Account Needed | ❌ No | ✅ Yes |
+| Best For | Simplicity, experimentation, consolidated billing | More billing control, existing provider accounts |
+
+**Integration surface** for both approaches: SDKs, Playground, widgets, Data Studio AI.
+
+**Decision guide:**
+- Start with **Routed by HF** for simplicity and to use monthly credits
+- Use **Custom Provider Key** for specific provider features or consistent single-provider usage
+
+#### Pay-as-you-Go Details
+
+- **No markup:** Hugging Face charges you the same rates as the provider — costs are passed through directly.
+- **No infrastructure management:** Just pay for what you use.
+- **Usage tracking:** Visit https://hf.co/settings/inference-providers to see usage broken down by model and provider for the past month.
+- **Organization tracking:** Same detailed view available for orgs under the organization's settings.
+
+#### Organization Billing (Team & Enterprise)
+
+Team & Enterprise orgs can **centralize billing** for all users. Each user keeps their own User Access Token, but requests are billed to the org:
+
+```http
+X-HF-Bill-To: my-org-name
+```
+
+**Resource Groups support** (Enterprise): Attribute inference costs to a specific resource group:
+
+```http
+X-HF-Bill-To: <resource-group-id>
+```
+
+The user's token must be a member of the resource group. Team & Enterprise orgs receive a pool of free usage credits based on seat count.
+
+#### HF-Inference Cost Model
+
+The `hf-inference` provider (formerly "Inference API / serverless") bills differently from external providers:
+
+- **Charged by compute time × hardware price**, not per-token
+- Example: A FLUX.1-dev request taking 10 seconds on a GPU costing $0.00012/sec → billed $0.0012
+- As of July 2025: Focuses mostly on CPU inference (embeddings, text-ranking, text-classification, smaller LLMs like BERT, GPT-2)
+- Still accessible through the same `InferenceClient` API as any other provider
+
+### 2. Hub API for Inference Providers
+
+The Hugging Face Hub provides several API endpoints for interacting with Inference Providers programmatically.
+
+#### List Models by Provider (`inference_provider` query param)
+
+```bash
+# List all models served by Fireworks AI
+curl -s https://huggingface.co/api/models?inference_provider=fireworks-ai | jq '.[].id'
+# Returns: deepseek-ai/DeepSeek-V3-0324, deepseek-ai/DeepSeek-R1, Qwen/QwQ-32B, ...
+
+# Combine with pipeline_tag filter
+curl -s https://huggingface.co/api/models?inference_provider=fal-ai&pipeline_tag=text-to-image | jq '.[].id'
+# Returns: black-forest-labs/FLUX.1-dev, stabilityai/stable-diffusion-3.5-large, ...
+
+# Comma-separated provider list
+curl -s https://huggingface.co/api/models?inference_provider=nscale,novita&pipeline_tag=image-text-to-text | jq '.[].id'
+
+# All models served by any provider
+curl -s https://huggingface.co/api/models?inference_provider=all&pipeline_tag=text-to-video | jq '.[].id'
+# Returns: Wan-AI/Wan2.1-T2V-14B, Lightricks/LTX-Video, tencent/HunyuanVideo, ...
+```
+
+**Available providers** (from docs sidebar): Cerebras, Cohere, DeepInfra, Fal AI, Featherless AI, Fireworks, Groq, HF Inference, Novita, Nscale, OVHcloud AI Endpoints, Public AI, Replicate, Scaleway, Together, WaveSpeedAI, Z.ai
+
+#### Using `hf CLI`
+
+```bash
+# List every model served by at least one provider
+hf models ls --warm
+
+# Search served models for a specific term
+hf models ls --warm --search GLM-5.2
+
+# Filter by provider and task
+hf models ls --inference-provider fal-ai --pipeline-tag text-to-image
+
+# Sort by downloads
+hf models ls --inference-provider fireworks-ai --sort downloads
+```
+
+Flags:
+- `--warm` — only models served by at least one provider
+- `--inference-provider <name>` — filter by specific provider (repeatable for multiple)
+- `--pipeline-tag <tag>` — filter by task type
+- `--search <term>` — search model names
+- `--expand inferenceProviderMapping` — shows which provider serves each model + provider-specific model ID
+- `--json` — machine-readable output
+- `--sort downloads` — order by popularity
+
+#### Get Model Inference Status
+
+Check if a model is served by an inference provider:
+
+```python
+from huggingface_hub import model_info
+
+# Warm model (served by at least one provider)
+info = model_info("google/gemma-3-27b-it", expand="inference")
+print(info.inference)  # 'warm'
+
+# Cold model (not served by any provider)
+info = model_info("manycore-research/SpatialLM-Llama-1B", expand="inference")
+print(info.inference)  # None
+```
+
+The `inference` attribute is either `"warm"` (served) or `None` (not served).
+
+#### OpenAI-Compatible Models Listing
+
+The router exposes an OpenAI-compatible endpoint listing all chat-completion models served by Inference Providers, with provider metadata:
+
+```bash
+curl -s https://router.huggingface.co/v1/models | jq '.data'
+```
+
+Response includes per-model provider info:
+```json
+{
+  "id": "deepseek-ai/DeepSeek-V4-Pro",
+  "object": "model",
+  "created": 1776837885,
+  "owned_by": "deepseek-ai",
+  "architecture": {
+    "input_modalities": ["text"],
+    "output_modalities": ["text"]
+  },
+  "providers": [
+    {
+      "provider": "together",
+      "provider_model_id": "deepseek-ai/DeepSeek-V4-Pro"
+    }
+  ]
+}
+```
+
+This endpoint is useful for:
+- Discovering which chat models are available across all providers
+- Getting provider-specific model IDs for routing
+- Checking model architecture capabilities (modalities)
+- Building model selection UIs
+
+### 3. Security & Compliance
+
+#### Data Security / Privacy
+
+- **No data stored for training:** Hugging Face does not store request body or response when routing requests
+- **Logs:** Kept for debugging for up to 30 days — no user data or tokens stored in logs
+- **In-transit encryption:** TLS/SSL for all Inference Provider routing
+- **External providers:** Each provider is responsible for their own data security policies — refer to their individual policies
+
+#### Hub Security
+
+- **SOC2 Type 2 certified:** The Hugging Face Hub (which Inference Providers is a feature of) maintains SOC2 Type 2 compliance
+- **Hub security documentation:** https://huggingface.co/docs/hub/security
+
+### 4. Zero-Cost Pathways & Optimization
+
+For Beer's zero-cost constraint, here's how to maximize free Inference Providers usage:
+
+1. **Use Routed by HF billing** — takes advantage of the $0.10/mo free credits (enough for hundreds of small inference calls)
+2. **Prefer `hf-inference` for CPU-friendly tasks** — embeddings, text classification, feature extraction — these are cheapest and often free-tier-eligible
+3. **Use `:cheapest` suffix** on model IDs to always route to the lowest-cost provider:
+   ```
+   model="Qwen/Qwen2.5-7B-Instruct:cheapest"
+   ```
+4. **Provider-specific free tiers** — some providers may have their own free tiers accessible via Custom Provider Key
+5. **Monitor usage** at https://hf.co/settings/inference-providers — track per-model and per-provider spend
+6. **Batch model checks with the Hub API** — use `inference_provider=all` to discover which models are available before coding against them
+7. **Use `hf models ls --warm`** to find freely-available models before committing to a specific one
+
+### Skill
+hf-inference-providers — Deepened with Pricing & Billing reference ($0.10 free/$2.00 PRO/$2.00-seat Team credits, routed vs custom key billing, Organization billing with X-HF-Bill-To, HF-Inference compute-time pricing), Hub API query patterns (inference_provider filter, hf CLI --warm, model_info expand=inference, OpenAI-compatible /v1/models endpoint), and Security & Compliance (SOC2 Type 2, TLS, 30-day log retention, no data storage). Updated with the 17-provider canonical listing and zero-cost optimization guidance.
