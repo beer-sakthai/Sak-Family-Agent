@@ -16289,3 +16289,19 @@ Deepened coverage of the Hugging Face Hub Model Dependents system with live API-
 
 ### Skill
 mlops/hf-hub-model-dependents — Hugging Face Hub Model Dependents API: how models declare parent relationships, the tag-based dependency system, children discovery by type (finetune/quantized/adapter/merge), multi-parent merge models, dependency chain traversal, and ecosystem profiling.
+
+---
+
+## 2026-07-25: hf-inference-client-openai-compatibility-and-structured-outputs — Inference Client OpenAI API Compatibility & Structured Outputs Deep Dive (Topic #262)
+
+### Summary
+Comprehensive deep-dive on Hugging Face `InferenceClient`'s OpenAI API compatibility layer and structured output capabilities. Covers the OpenAI-compatible `client.chat.completions.create()` syntax (drop-in replacement for `openai.OpenAI`), JSON Schema and regex grammar for structured outputs via `response_format`, JSON mode vs structured outputs distinction, function/tool calling with OpenAI-compatible schemas, streaming support, full parameter reference, provider compatibility matrix, and practical patterns for each feature.
+
+### Source
+- HF InferenceClient docs: https://huggingface.co/docs/huggingface_hub/main/en/guides/inference
+- HF InferenceClient API reference: https://huggingface.co/docs/huggingface_hub/main/en/package_reference/inference_client
+- InferenceClient.chat_completion: https://huggingface.co/docs/huggingface_hub/main/en/package_reference/inference_client#huggingface_hub.InferenceClient.chat_completion
+- Inference Providers docs: https://huggingface.co/docs/inference-providers/en/index
+
+### Skill
+hf-inference-client-openai — Hugging Face InferenceClient OpenAI compatibility deep reference: chat.completions.create API, structured outputs (JSON Schema/regex), JSON mode, function calling, streaming, full parameter surface, 17+ provider support, and drop-in OpenAI migration patterns
