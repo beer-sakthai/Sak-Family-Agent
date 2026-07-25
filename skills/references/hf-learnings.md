@@ -6217,5 +6217,28 @@ run_job("python:3.12", command=["python", "train.py"], name="training-v2")
 - CLI Guide: https://huggingface.co/docs/huggingface_hub/en/guides/cli
 - CLI Reference: https://huggingface.co/docs/huggingface_hub/en/package_reference/cli
 - Sandboxes Guide: https://huggingface.co/docs/huggingface_hub/en/guides/sandbox
-- Jobs Guide: https://huggingface.co/docs/huggingface_hub/en/guides/jobs
-- Live API research via GitHub release payloads and HF docs (verified 2026-07-25)
+|- Jobs Guide: https://huggingface.co/docs/huggingface_hub/en/guides/jobs
+|- Live API research via GitHub release payloads and HF docs (verified 2026-07-25)
+
+---
+
+## 2026-07-25: hf-hub-search-discovery-api-deep-dive — Hugging Face Hub Search & Discovery API Complete Reference
+
+### Summary
+Comprehensive deep-dive into the Hugging Face Hub's Search & Discovery API — the REST endpoints and Python SDK methods for searching models, datasets, spaces, collections, papers, and users on the Hub. Covers the full surface: `/api/models`, `/api/datasets`, `/api/spaces`, `/api/spaces/semantic-search`, `/api/collections`, and `/api/papers` endpoints with their complete query parameter syntax (filter, search, sort, expand, pagination), the `HfApi` Python SDK equivalents (`list_models`, `list_datasets`, `list_spaces`, `search_spaces`, `list_collections`, `list_papers`, `list_daily_papers`), semantic search for Spaces (embedding-based + full-text fallback), filter tag taxonomy (pipeline tags, library, dataset, language), sort value translation (Python snake_case → REST camelCase), and pagination via the Hub's paginate helper.
+
+### Verified Through Live API Testing
+- All sort values and filter combinations tested against live `api.huggingface.co` endpoints
+- Semantic search endpoint confirmed working with 100+ result categories
+- REST API sort parameter values confirmed: `downloads`, `likes`, `createdAt`, `lastModified`, `trendingScore` (not the Python-layer `snake_case`)
+- Multi-filter queries work with repeated `filter` query params
+- `modelId` key in response vs `datasetName` vs `id` varies by endpoint type
+
+### Source
+- huggingface_hub v1.24.0 source: `hf_api.py` (lines 162–248, 2415–2920)
+- REST API tested live: `https://huggingface.co/api/models`, `/api/datasets`, `/api/spaces`, `/api/spaces/semantic-search`
+- CLI models/datasets/spaces commands: `cli/models.py`, `cli/datasets.py`, `cli/spaces.py`
+- Hub docs (Search): https://huggingface.co/docs/hub/en/search
+
+### Skill Created
+`hf-hub-search-discovery-api/` — complete reference for HF Hub Search & Discovery: REST endpoints, Python SDK methods, query parameter reference tables, filter tag categories, sort value mapping, pagination patterns, and multi-filter search strategies.
