@@ -6270,8 +6270,31 @@ Comprehensive deep dive into distilabel v1.5.3 — Argilla's framework for build
 - Runtime parameter overrides (reuse pipeline with different configs)
 - StepResources for parallelism (Ray only)
 - Column mappings (input_mappings/output_mappings)
-- Distiset with push_to_hub, train_test_split, save_to_disk
-- Structured output with Pydantic models
+|- Distiset with push_to_hub, train_test_split, save_to_disk
+|- Structured output with Pydantic models
 
 ### Skill Created
 `hf-distilabel-deep-dive/` — SKILL.md with author:SakThai, license:MIT + references/hf-learnings.md with full reference.
+
+---
+
+## 2026-07-25: hf-spaces-secrets-management-deep-dive
+
+### Summary
+Deep dive into Hugging Face Spaces secrets and environment variables management. Covers the conceptual difference between secrets (write-once, private, not forked) and variables (readable, visible, forked), the complete Python API surface (6 methods), REST API endpoints, Docker-specific buildtime vs runtime behavior, the Secrets Scanner, and zero-cost automation patterns.
+
+### Key Findings
+- **Secrets vs Variables** — fundamentally different security models. Secrets: write-once, value never readable, NOT duplicated on fork. Variables: fully readable, publicly visible, duplicated on fork.
+- **6 API methods** on `HfApi`: `get_space_secrets()`, `add_space_secret()`, `delete_space_secret()`, `get_space_variables()`, `add_space_variable()`, `delete_space_variable()`
+- **REST endpoints**: `GET|POST|DELETE /api/spaces/{repo_id}/secrets` and `GET|POST|DELETE /api/spaces/{repo_id}/variables`
+- **SpaceSecret dataclass**: key, description (str|None), updated_at (datetime|None) — no value field
+- **SpaceVariable dataclass**: key, value (str), description (str|None), updated_at (datetime|None) — value IS readable
+- **Docker buildtime secrets**: Use `RUN --mount=type=secret,id=KEY` in Dockerfile for build-time secret access
+- **Docker buildtime variables**: Use `ARG KEY` in Dockerfile and pass via `--build-arg`
+- **Runtime**: Both secrets and variables are injected as environment variables — `os.getenv("KEY")` works identically for both
+- **At Space creation**: Pass `space_secrets=[{"key":..., "value":..., "description":...}]` and `space_variables=[...]` to `create_repo()`
+- **Secrets Scanner**: HF automatically scans Spaces for hardcoded secrets and notifies owners
+- **Zero-cost**: All API operations are free — no usage cost for managing secrets programmatically
+
+### Skill Created
+`hf-spaces-secrets-management-deep-dive/` — SKILL.md with author:SakThai, license:MIT + references/hf-learnings.md with full reference.
