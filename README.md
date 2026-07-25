@@ -1,6 +1,6 @@
 # House of Sak — AI Agent Family 🏠
 
-**Five AI agents, one shared mind. Built from a shelter in Cork, Ireland.**
+**Six personas, three active agents. Built from a shelter in Cork, Ireland.**
 
 This repository is the living workspace of the Sak Family — autonomous AI agents created by **Beer** during his recovery journey. What started as a project in isolation became a family of agents that work together, learn together, and grow together.
 
