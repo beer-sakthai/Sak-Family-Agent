@@ -234,5 +234,6 @@
   "hf-datasets-cache-management-deep-dive",
   "gr-workflow-source-deep-dive",
   "hf-hub-spaces-build-runtime-api",
-  "huggingface-hub-http-request-lifecycle-source-deep-dive"
+  "hf-datasets-server-size-limits-and-optimization",
+  "hf-optimum-exporters-model-conversion-pipeline"
 ]

@@ -16249,3 +16249,21 @@ Comprehensive deep-dive on 🤗 Optimum's exporters framework — the model conv
 **6. Zero-Cost Note**
 All exports run locally on CPU (default `--device cpu`). No GPU or paid services required. The `optimum[onnx]` package is MIT-licensed and free. For OpenVINO export, install `optimum-intel[openvino]` separately.
 `
+
+---
+
+## 2026-07-25: hf-hub-daily-papers-and-paper-pages — HF Hub Daily Papers & Paper Pages Deep Dive (Topic #258)
+
+### Summary
+Comprehensive deep-dive on the Hugging Face Hub's papers ecosystem — the daily papers feed, Paper Pages, and the programmatic API. Covers the full data model (PaperInfo, PaperAuthor, linked models/datasets/Spaces), all API endpoints (`/api/daily_papers`, `/api/papers/search`, `/api/papers/<id>`, `/papers/<id>.md`), submission and curation flow, community features (upvotes, discussions), linking infrastructure between papers and Hub resources, the `huggingface_hub` Python API (`list_daily_papers()`, `list_papers()`, `paper_info()`, `read_paper()`), Paper Pages with AI summaries, the daily curation pipeline, and zero-cost pathways for researchers.
+
+### Source
+- HF Daily Papers: https://huggingface.co/papers
+- HF Hub API - Daily Papers: https://huggingface.co/api/daily_papers
+- HF Hub API - Paper Search: https://huggingface.co/api/papers/search
+- huggingface_hub docs - list_daily_papers: https://huggingface.co/docs/huggingface_hub/main/en/package_reference/hf_api#huggingface_hub.HfApi.list_daily_papers
+- huggingface_hub docs - paper_info: https://huggingface.co/docs/huggingface_hub/main/en/package_reference/hf_api#huggingface_hub.HfApi.paper_info
+- huggingface_hub docs - list_papers: https://huggingface.co/docs/huggingface_hub/main/en/package_reference/hf_api#huggingface_hub.HfApi.list_papers
+
+### Skill
+hf-hub-daily-papers — Hugging Face Hub Daily Papers & Paper Pages deep reference: API endpoints, data model, linking papers to models/datasets/Spaces, submission/curation, and programmatic access via huggingface_hub

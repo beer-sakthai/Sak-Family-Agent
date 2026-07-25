@@ -228,5 +228,6 @@
   "hf-hub-storage-limits-and-plans-storage-buckets-deepening",
   "hf-hub-hardware-filter-models-search",
   "hf-datasets-cache-management-deep-dive",
-  "huggingface-hub-http-request-lifecycle-source-deep-dive"
+  "hf-datasets-server-size-limits-and-optimization",
+  "hf-optimum-exporters-model-conversion-pipeline"
 ]
