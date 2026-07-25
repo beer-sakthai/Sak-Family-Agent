@@ -1,5 +1,16 @@
 # HF Learnings Log
 
+## 2026-07-25: hf-openenv-agentic-execution — Hugging Face OpenEnv v0.4.1: Agentic RL Environments (Topic #385)
+
+### Summary
+Comprehensive deep-dive into **OpenEnv** — Hugging Face's unified framework for building, deploying, and interacting with isolated execution environments for agentic reinforcement learning. Covers architecture (Gymnasium-style API over HTTP/WebSocket), MCP tool integration (ListToolsAction, CallToolAction), Rubric composable reward system, container-first design, cloud sandbox providers (Docker, Daytona, ACA), RL training integration (TRL, Unsloth, torchforge), environment anatomy (openenv.yaml, models, server, client), and zero-cost patterns. OpenEnv v0.4.1 experimental, governed by a technical committee including Meta-PyTorch, Nvidia, and Hugging Face.
+
+**Files updated:** `hf-openenv-agentic-execution/SKILL.md` (author: SakThai, license: MIT) + `references/hf-learnings.md` with full architecture, API reference, MCP integration deep-dive, Rubric system, RL training patterns, zero-cost analysis.
+
+**Sources:** Official OpenEnv docs at huggingface.co/docs/openenv (v0.4.1), GitHub repo huggingface/OpenEnv, tutorials for MCP, TRL, and first environment.
+
+---
+
 ## 2026-07-24: hf-hub-exceptions-retry-deep-dive
 
 ### Summary
