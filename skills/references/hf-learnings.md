@@ -16305,3 +16305,310 @@ Comprehensive deep-dive on Hugging Face `InferenceClient`'s OpenAI API compatibi
 
 ### Skill
 hf-inference-client-openai — Hugging Face InferenceClient OpenAI compatibility deep reference: chat.completions.create API, structured outputs (JSON Schema/regex), JSON mode, function calling, streaming, full parameter surface, 17+ provider support, and drop-in OpenAI migration patterns
+---
+
+## 2026-07-25: hf-hub-spaces-build-runtime-api-deep-dive-v3-space-templates — Space Templates: The Complete New Feature (Topic #263)
+
+### Summary
+Deep-dive on Hugging Face Space Templates — a new feature released in `huggingface_hub` v1.23.0 (July 9, 2026) that lets users seed Spaces from 28 official templates instead of starting from scratch. Covers the full API surface (`list_space_templates()`, `SpaceTemplate` dataclass, `create_repo(space_template=...)`), CLI commands (`hf spaces templates`, `hf repos create --template`), template resolution logic (name vs repo_id lookup, case-insensitive matching, preferred_private auto-visibility, auto SDK detection), the 28 templates across 3 SDK categories (Docker, Static, Gradio), the underlying REST endpoint, zero-cost pathways via Static templates, and integration with the broader Spaces ecosystem.
+
+### Source
+- huggingface_hub v1.23.0 source: `HfApi.list_space_templates()`, `HfApi.create_repo()`, `SpaceTemplate` dataclass
+- HF API endpoint: `GET https://huggingface.co/api/spaces/templates`
+- HF Spaces templates CLI: `hf spaces templates --help`
+- HF repos create CLI: `hf repos create --help`
+- Release notes: https://github.com/huggingface/huggingface_hub/releases/tag/v1.23.0
+
+### Skill
+mlops/hf-hub-spaces-build-runtime-api — Complete Space Templates reference: 28 official templates across Docker/Static/Gradio SDKs, API & CLI usage, template resolution, preferred_private auto-visibility, zero-cost Static Space pathways
+
+### 1. What Are Space Templates?
+
+Space Templates let you seed a new Hugging Face Space from an **official pre-built template** instead of starting from an empty repository. Each template is itself a Space repo on the Hub, containing all the boilerplate code, configuration, and dependencies needed for a particular app framework.
+
+Benefits over starting from scratch:
+- **Zero boilerplate** — the template provides app code, Dockerfile, requirements, and config
+- **Framework auto-detection** — SDK (Gradio, Docker, Static) is inferred from the template
+- **Smart defaults** — templates with `preferred_private=True` auto-create private Spaces without user action
+- **28 ready-to-use templates** as of 2026-07-25, covering data science dashboards, ML demos, static sites, and observability tools
+
+### 2. API Surface
+
+#### 2.1 `HfApi.list_space_templates()`
+
+```python
+from huggingface_hub import HfApi
+
+api = HfApi()
+templates = api.list_space_templates()  # -> list[SpaceTemplate]
+```
+
+Returns all official Space templates. The `SpaceTemplate` dataclass has 4 fields:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `name` | `str` | Human-friendly name (e.g. `"JupyterLab"`, `"Streamlit"`) |
+| `repo_id` | `str` | Full Hub repo ID (e.g. `"SpacesExamples/jupyterlab"`) |
+| `sdk` | `str` | SDK type — `"docker"`, `"static"`, or `"gradio"` |
+| `preferred_private` | `bool` | If True, new Spaces from this template default to private |
+
+#### 2.2 `create_repo(space_template=...)`
+
+```python
+from huggingface_hub import HfApi
+
+api = HfApi()
+
+# Using repo_id (full identifier)
+api.create_repo(
+    repo_id="my-user/my-notebook",
+    repo_type="space",
+    space_template="SpacesExamples/jupyterlab",
+)
+
+# Using short name (human-friendly, case-insensitive)
+api.create_repo(
+    repo_id="my-user/my-streamlit-app",
+    repo_type="space",
+    space_template="Streamlit",
+)
+```
+
+Key behavior:
+- Accepts either `repo_id` (e.g. `"SpacesExamples/jupyterlab"`) or short `name` (e.g. `"JupyterLab"`)
+- Case-insensitive matching on name
+- If `space_sdk` is omitted, it's **auto-set** from the template's SDK
+- If `space_sdk` is provided and doesn't match the template's SDK, raises `ValueError`
+- If template has `preferred_private=True` and no visibility is explicitly set, the Space is created as **private**
+
+### 3. Template Resolution Algorithm (Source-Verified)
+
+From `HfApi.create_repo()` source code, the resolution follows this exact logic:
+
+```python
+# Pseudocode of the actual implementation
+resolved_space_template = None
+if space_template is not None:
+    if repo_type != "space":
+        raise ValueError("space_template only valid with repo_type='space'")
+    
+    all_templates = api.list_space_templates(token=token)
+    template = None
+    
+    # Try matching by repo_id first, then by name (case-insensitive)
+    for candidate in all_templates:
+        if candidate.repo_id == space_template:
+            template = candidate
+            break
+        if candidate.name.lower() == space_template.lower():
+            template = candidate
+            break
+    
+    if template is None:
+        raise ValueError(f"Unknown Space template '{space_template}'")
+    
+    resolved_space_template = template.repo_id
+    
+    # Auto-private if template recommends it and user didn't set visibility
+    if template.preferred_private and private is None and visibility is None:
+        resolved_visibility = "private"
+    
+    # Auto-set SDK to match template
+    if space_sdk is not None and space_sdk != template.sdk:
+        raise ValueError(f"space_sdk must match template SDK. Got {space_sdk}, expected {template.sdk}")
+    space_sdk = template.sdk
+
+# Payload sent to the Hub API
+payload["sdk"] = space_sdk
+if resolved_space_template is not None:
+    payload["template"] = resolved_space_template
+```
+
+### 4. The 28 Official Templates (Live API-Verified)
+
+#### Docker SDK (17 templates) — Full container environments
+
+| # | Name | repo_id | Preferred Private |
+|---|------|---------|:---:|
+| 1 | Streamlit | `streamlit/streamlit-template-space` | No |
+| 2 | JupyterLab | `SpacesExamples/jupyterlab` | **Yes** |
+| 3 | Argilla | `argilla/argilla-template-space` | No |
+| 4 | Livebook | `livebook-dev/livebook` | No |
+| 5 | LabelStudio | `LabelStudio/LabelStudio` | No |
+| 6 | AimStack | `aimstack/aim` | No |
+| 7 | Shiny (R) | `posit/shiny-for-r-template` | No |
+| 8 | Shiny (Python) | `posit/shiny-for-python-template` | No |
+| 9 | ZenML | `zenml/zenml` | No |
+| 10 | ChatUI | `huggingchat/chat-ui-template` | No |
+| 11 | Panel | `Panel-Org/panel-template` | No |
+| 12 | Giskard | `giskardai/giskard` | No |
+| 13 | Quarto | `posit/quarto-template` | No |
+| 14 | marimo | `marimo-team/marimo-app-template` | No |
+| 15 | Evidence | `evidence-dev/template-app` | No |
+| 16 | Langfuse | `langfuse/langfuse-template-space` | No |
+| 17 | Plotly | `plotly/dash-app-template` | No |
+
+#### Static SDK (6 templates) — Pure frontend, no backend server
+
+| # | Name | repo_id | Preferred Private |
+|---|------|---------|:---:|
+| 18 | Paper Project | `nerfies/paper-template` | No |
+| 19 | Gradio-Lite | `gradio/gradio-lite-template` | No |
+| 20 | Transformers.js | `static-templates/transformers.js` | No |
+| 21 | React | `static-templates/react` | No |
+| 22 | Svelte | `static-templates/svelte` | No |
+| 23 | Vue | `static-templates/vue` | No |
+
+#### Gradio SDK (5 templates) — Gradio app blueprints
+
+| # | Name | repo_id | Preferred Private |
+|---|------|---------|:---:|
+| 24 | chatbot | `gradio-templates/chatbot` | No |
+| 25 | text-to-image | `gradio-templates/text-to-image-gradio-template` | No |
+| 26 | leaderboard | `gradio-templates/leaderboard` | No |
+| 27 | Trackio | `gradio-templates/trackio-dashboard` | No |
+| 28 | Workflow | `gradio-templates/workflow` | No |
+
+**Notable detail:** Only **JupyterLab** (`SpacesExamples/jupyterlab`) has `preferred_private=True` — this makes sense because Jupyter notebooks often contain sensitive data and experiments.
+
+### 5. CLI Integration
+
+#### Listing templates
+
+```bash
+hf spaces templates
+```
+
+Outputs a TSV-like table with columns: `name`, `repo_id`, `sdk`, `preferred_private`.
+
+Format options:
+```bash
+hf spaces templates --json         # JSON output
+hf spaces templates --format quiet  # One ID per line (repo_ids)
+hf spaces templates --format human  # Human-readable table
+```
+
+#### Creating a Space from a template
+
+```bash
+# Using full repo_id
+hf repos create my-jupyterlab --type space --template SpacesExamples/jupyterlab
+
+# Using short name
+hf repos create my-streamlit --type space --template Streamlit
+```
+
+The `--space-sdk` flag is optional when `--template` is provided — it's auto-set from the template.
+
+### 6. Underlying REST API
+
+```http
+GET https://huggingface.co/api/spaces/templates
+Authorization: Bearer hf_****
+```
+
+Response format:
+```json
+{
+  "templates": [
+    {
+      "sdk": "docker",
+      "name": "Streamlit",
+      "repoId": "streamlit/streamlit-template-space",
+      "preferredPrivate": false
+    }
+  ]
+}
+```
+
+The `create_repo` API call sends the resolved `repo_id` in the `template` field of the JSON body:
+```json
+{
+  "name": "my-space",
+  "type": "space",
+  "sdk": "docker",
+  "template": "streamlit/streamlit-template-space"
+}
+```
+
+### 7. Zero-Cost Pathways
+
+| Template Type | Cost Model | Details |
+|--------------|------------|---------|
+| **Static templates** (Paper Project, Gradio-Lite, Transformers.js, React, Svelte, Vue) | **Free** | Static Spaces require no server, no GPU — 100% free, never sleep |
+| **Gradio templates** (chatbot, text-to-image, leaderboard, Trackio, Workflow) | **Free on CPU Basic** | Free CPU-tier Spaces, sleep after 48h inactivity, wake on traffic |
+| **Docker templates** (Streamlit, JupyterLab, etc.) | **Free on CPU Basic** | Can run on free CPU tier; upgraded hardware costs $0.03–$2.50/hr |
+| **JupyterLab** (preferred_private=True) | Free or paid | Auto-private by default; runs on Docker, use CPU Basic for $0 |
+
+All templates can be developed and tested entirely on free-tier infrastructure.
+
+### 8. Integration Points with Other Spaces APIs
+
+Space Templates work naturally with all existing Spaces management APIs:
+
+```python
+# Create from template, upgrade hardware, set sleep, add secrets
+api.create_repo(
+    repo_id="my-user/my-app",
+    repo_type="space",
+    space_template="Streamlit",
+    space_hardware="cpu-upgrade",
+    space_sleep_time=1800,
+    space_secrets=[{"key": "API_KEY", "value": "my_key"}],
+)
+
+# Wait for it to be ready
+runtime = api.wait_for_space("my-user/my-app", timeout=300)
+print(f"Space is {runtime.stage} on {runtime.hardware}")
+```
+
+### 9. Edge Cases & Design Notes
+
+1. **Only official templates** — `list_space_templates()` returns only HF-curated templates. User-created Spaces cannot be used as templates via this API.
+2. **Template Spaces themselves are regular Spaces** — looking at e.g. `streamlit/streamlit-template-space`, it's just a normal Space repo with a Dockerfile, `app.py`, and `README.md` that serves as the template source.
+3. **Non-unique name matching** — name resolution is case-insensitive but there's no protection against name collisions. The resolution loop returns the *first* match; currently no two templates share the same name, so this is not an issue.
+4. **SDK enforcement** — since `space_sdk` is auto-set to match the template, users cannot mix-and-match SDKs with templates. A Streamlit template always produces a Docker SDK Space.
+5. **No `duplicate_repo` integration** — `duplicate_repo()` does not support `space_template`; templates only work with `create_repo`.
+6. **Visibility inheritance** — only `preferred_private=True` triggers auto-visibility; all other templates default to public unless explicitly set.
+
+### 10. Practical Examples
+
+#### Create a JupyterLab Space for data analysis
+
+```python
+from huggingface_hub import HfApi
+
+api = HfApi()
+api.create_repo(
+    repo_id="my-user/data-analysis",
+    repo_type="space",
+    space_template="JupyterLab",  # Auto-private, Docker SDK
+)
+```
+
+#### Create a static documentation site with Vue
+
+```python
+api.create_repo(
+    repo_id="my-user/docs",
+    repo_type="space",
+    space_template="Vue",  # Static SDK, 100% free
+)
+```
+
+#### List all available templates programmatically
+
+```python
+from huggingface_hub import list_space_templates
+
+templates = list_space_templates()
+docker_templates = [t for t in templates if t.sdk == "docker"]
+static_templates = [t for t in templates if t.sdk == "static"]
+gradio_templates = [t for t in templates if t.sdk == "gradio"]
+
+print(f"Docker: {len(docker_templates)}, Static: {len(static_templates)}, Gradio: {len(gradio_templates)}")
+# Output: Docker: 17, Static: 6, Gradio: 5
+```
+
+### Zero-Cost Note
+All research was performed via API calls to `GET /api/spaces/templates` (read-only, free), source code inspection of `huggingface_hub` (MIT license), and the `hf` CLI help output. Creating Spaces from templates on free-tier hardware (CPU Basic or Static) costs $0.

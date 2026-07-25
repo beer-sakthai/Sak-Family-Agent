@@ -367,3 +367,94 @@ Updated with all endpoints discovered:
 - **`pause_space()`** stops billing completely
 - **Set custom sleep time** on upgraded HW to save during idle periods
 - **Use `space_info(expand=["runtime", "usedStorage"])`** to monitor resource usage
+
+---
+
+## 2026-07-25: Space Templates — Complete Deep-Dive (v1.23.0 Feature)
+
+**Topic Deepening:** hf-hub-spaces-build-runtime-api-deep-dive-v3-space-templates
+
+**Verified via:** Live API call to `GET /api/spaces/templates`, source code inspection of `HfApi.list_space_templates()`, `HfApi.create_repo()`, `SpaceTemplate` dataclass, `hf spaces templates` CLI
+
+**Author:** SakThai
+**License:** MIT
+
+### Key Discovery: Space Templates (New in v1.23.0)
+
+Released in `huggingface_hub` v1.23.0 on July 9, 2026 — this is a **completely new feature** not present when the original skill and v2 deep-dive were written.
+
+### 1. New API Surface
+
+Three additions to the Spaces management API:
+
+1. **`HfApi.list_space_templates()`** → `list[SpaceTemplate]`
+2. **`create_repo(space_template=...)`** — seeds a new Space from a template
+3. **`hf spaces templates`** CLI command
+
+### 2. SpaceTemplate Dataclass
+
+```python
+@dataclass
+class SpaceTemplate:
+    name: str               # Human-friendly name (e.g. "JupyterLab")
+    repo_id: str            # Full Hub repo (e.g. "SpacesExamples/jupyterlab")
+    sdk: str                # "docker" | "static" | "gradio"
+    preferred_private: bool # If True, Space auto-created as private
+```
+
+Constructed from the API response keys `name`, `repoId`, `sdk`, `preferredPrivate`.
+
+### 3. Template Resolution (from create_repo source)
+
+- **Input format**: Accepts `repo_id` (full) or `name` (short, case-insensitive)
+- **Resolution order**: Iterates templates list, tries exact `repo_id` match first, then case-insensitive `name` match
+- **SDK auto-set**: `space_sdk` is set to `template.sdk` if not provided; raises `ValueError` if user-provided SDK doesn't match
+- **Auto-visibility**: If `template.preferred_private` is True and user didn't set `private` or `visibility`, the Space defaults to private
+- **Template value sent in API**: `template.repo_id` (always the full repo ID)
+
+### 4. API Endpoint
+
+```
+GET https://huggingface.co/api/spaces/templates
+→ {"templates": [{"name", "sdk", "repoId", "preferredPrivate"}, ...]}
+```
+
+### 5. Complete Template List (28 verified live)
+
+| SDK | Count | Templates |
+|-----|:-----:|-----------|
+| **Docker** | 17 | Streamlit, JupyterLab, Argilla, Livebook, LabelStudio, AimStack, Shiny (R), Shiny (Python), ZenML, ChatUI, Panel, Giskard, Quarto, marimo, Evidence, Langfuse, Plotly |
+| **Static** | 6 | Paper Project, Gradio-Lite, Transformers.js, React, Svelte, Vue |
+| **Gradio** | 5 | chatbot, text-to-image, leaderboard, Trackio, Workflow |
+
+### 6. CLI Commands
+
+```bash
+# List all templates
+hf spaces templates
+
+# Create Space from template (full repo_id)
+hf repos create my-space --type space --template SpacesExamples/jupyterlab
+
+# Create Space from template (short name)
+hf repos create my-space --type space --template Streamlit
+```
+
+### 7. Zero-Cost Note
+
+**All 5 Static templates** (Paper Project, Gradio-Lite, Transformers.js, React, Svelte, Vue) run on Static Spaces — entirely serverless and 100% free. Docker and Gradio templates can run on free CPU Basic tier. No paid services required to use Space Templates.
+
+### 8. Edge Cases
+
+- `list_space_templates()` requires authentication (HF token)
+- Templates cannot be used with `duplicate_repo()` — only `create_repo()`
+- No user-created templates; only official HF-curated templates
+- `space_sdk` is overwritten by template's SDK — user cannot mix SDK with template
+- `JupyterLab` is the only template with `preferred_private=True`
+
+### 9. Integration with Existing Spaces APIs
+
+Space Templates naturally compose with all other Spaces management APIs:
+- `space_hardware`, `space_sleep_time`, `space_secrets` — work alongside `space_template`
+- `wait_for_space()` — use after creation to wait for template-based Space to be ready
+- `add_space_secret()`, `set_space_volumes()` — all post-creation operations work normally

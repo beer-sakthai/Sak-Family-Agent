@@ -291,26 +291,64 @@ url = api.duplicate_space(
 
 ---
 
-## Space Templates
+## Space Templates (New in v1.23.0 — July 2026)
+
+Space Templates let you seed a new Space from one of **28 official templates** instead of starting empty. The SDK, visibility, and boilerplate are handled automatically.
+
+### Listing Templates
 
 ```python
 from huggingface_hub import list_space_templates
 
-templates = list_space_templates()
+templates = list_space_templates()  # -> list[SpaceTemplate]
 for t in templates:
     print(f"{t.name}: {t.repo_id} (SDK: {t.sdk})")
 ```
 
-`SpaceTemplate` fields: `name`, `repo_id`, `sdk`, `preferred_private`.
-
-Pass `space_template` to `create_repo` to seed a new Space:
+### Creating a Space from a Template
 
 ```python
+# Using short name (case-insensitive, human-friendly)
 api.create_repo(
-    repo_id="my-new-space",
+    repo_id="my-jupyter",
     repo_type="space",
-    space_template="gradio/hello-world-template",
+    space_template="JupyterLab",   # auto-private, Docker SDK
 )
+
+# Using full repo_id
+api.create_repo(
+    repo_id="my-dashboard",
+    repo_type="space",
+    space_template="streamlit/streamlit-template-space",
+)
+```
+
+### Template Resolution Rules
+
+| Rule | Detail |
+|------|--------|
+| **Input format** | Accepts `repo_id` (full) or `name` (short, case-insensitive) |
+| **SDK auto-set** | `space_sdk` is set from template if omitted; raises `ValueError` on mismatch |
+| **Auto-visibility** | If `preferred_private=True` and no visibility set → private |
+| **API payload** | Sends `template` field with the resolved `repo_id` |
+
+### All 28 Templates by SDK
+
+| SDK | Count | Templates |
+|-----|:-----:|-----------|
+| **Docker** | 17 | Streamlit, JupyterLab (private), Argilla, Livebook, LabelStudio, AimStack, Shiny (R), Shiny (Python), ZenML, ChatUI, Panel, Giskard, Quarto, marimo, Evidence, Langfuse, Plotly |
+| **Static** | 6 | Paper Project, Gradio-Lite, Transformers.js, React, Svelte, Vue |
+| **Gradio** | 5 | chatbot, text-to-image, leaderboard, Trackio, Workflow |
+
+### CLI Usage
+
+```bash
+# List templates
+hf spaces templates
+
+# Create from template (use repo_id or short name)
+hf repos create my-lab --type space --template SpacesExamples/jupyterlab
+hf repos create my-lab --type space --template JupyterLab
 ```
 
 ---
