@@ -67,6 +67,7 @@
   "hf-datasets-streaming-iterable-dataset",
   "hf-datasets-streaming-iterable-dataset-v2",
   "hf-datasets-tabular-loading-comprehensive",
+  "hf-datasets-text-processing-pipeline",
   "hf-datasets-tool-calling-format",
   "hf-datasets-tool-calling-format-advanced-deep-dive-v2",
   "hf-datasets-video-processing",
@@ -350,5 +351,8 @@
   "hf-hub-model-download-stats-deep-dive",
   "hf-gradio-6-native-plot-components",
   "hf-gradio-server-mode",
-  "hf-datasets-5-release"
+  "hf-datasets-5-release",
+  "model-routing-agent-systems-deep-dive",
+  "hf-gemma3-deep-dive",
+  "hf-inference-providers-source-architecture-deep-dive"
 ]
