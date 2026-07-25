@@ -14,6 +14,29 @@ metadata:
 
 Use this skill when the user wants a plan instead of execution.
 
+## When to Use
+
+Use this skill when you need to:
+- Design an implementation plan for a multi-step feature before writing code
+- Break down complex requirements into manageable, bite-sized tasks
+- Document the approach, architecture, and file structure before delegating to subagents
+- Align with the user on the approach before committing to implementation
+- Create a detailed spec that can be handed off to another developer or agent
+
+**Don't use for:**
+- Simple one-file changes (just implement directly)
+- Bug fixes that need immediate investigation (use `systematic-debugging`)
+- Code review tasks (use `github-code-review`)
+- Exploratory research or prototyping (use `spike`)
+
+## Prerequisites
+
+- **Clear requirements:** You need a well-defined goal or feature request from the user
+- **Codebase access:** Read access to the relevant repository to inspect existing code, structure, and patterns
+- **Domain awareness:** Understanding of the technology stack and project conventions
+- **Write access to `.hermes/plans/`:** The plan output directory must exist or be creatable in the workspace
+- **No execution needed:** This skill is for planning only — mutating tools (terminal, write_file to non-plan files) should not be used
+
 ## Core behavior
 
 For this turn, you are planning only.
@@ -335,3 +358,31 @@ Frequent commits
 ```
 
 **A good plan makes implementation obvious.**
+
+---
+
+## Pitfalls
+
+- **Over-planning:** Writing excessively detailed plans for trivial changes wastes time. If the change is one file and one concept, implement directly.
+- **Under-specifying:** Vague tasks like "Add authentication" leave too much to the implementer's judgment. Every task must have exact file paths, complete code, and expected outcomes.
+- **Missing context:** The implementer may not know the codebase. Always include architecture decisions, relevant file locations, and conventions they need to follow.
+- **Skipping TDD in plan tasks:** Every code-producing task should include the RED-GREEN-REFACTOR cycle. Plans that skip testing produce untestable, fragile code.
+- **Ignoring edge cases:** Plans that only cover the happy path leave regressions waiting to happen. Include error handling, boundary conditions, and failure scenarios.
+- **Too-large tasks:** Tasks larger than 5 minutes of work lead to sprawling implementations and half-finished states. If a task feels too big, split it.
+- **Stale plans:** The codebase may change between planning and execution. Re-verify assumptions before starting implementation.
+- **No verification step:** A plan without a verification section means you can't tell if the task was done correctly. Every task should state how to verify it.
+
+## Verification
+
+Before marking a plan as complete:
+
+- [ ] Each task is bite-sized (2-5 minutes of focused work)
+- [ ] File paths are exact (not "the model file" but `src/models/user.py`)
+- [ ] Code examples are complete (copy-pasteable, not pseudocode)
+- [ ] Commands are exact with expected output stated
+- [ ] Every code-producing task includes the full TDD cycle (RED → GREEN → REFACTOR)
+- [ ] Edge cases and error handling are addressed
+- [ ] Verification steps exist for each task
+- [ ] The plan could be handed to another developer with no additional context needed
+- [ ] DRY, YAGNI, and TDD principles are applied throughout
+- [ ] Tasks are in logical order (setup first, core functionality, edge cases, cleanup)

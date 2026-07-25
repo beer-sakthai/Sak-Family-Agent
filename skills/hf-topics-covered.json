@@ -268,5 +268,17 @@
   "hf-spaces-lifecycle-sleep-pause-billing-duration",
   "mergekit-hf-merging",
   "mergekit-hf-merging-deep-dive-v2",
-  "hf-hub-skypilot-storage-integration"
+  "hf-lighteval",
+  "hf-lighteval-deep-dive-v2",
+  "hf-hub-js-sdk",
+  "hf-hub-doi-deep-dive-v2-datacite-metadata-api",
+  "hf-spaces-configuration-reference",
+  "hf-gradio-6-theme-customization-deep-dive",
+  "hf-datasets-5-batch-by-column",
+  "hf-inference-client-provider-routing-source-deep-dive",
+  "hf-inference-providers-pricing-billing-hub-api-deep-dive",
+  "hf-hub-rate-limits-deep-dive-v2",
+  "hf-hub-skypilot-storage-integration",
+  "hf-trl-dapo-gspo-deep-dive",
+  "hf-diffusers-nunchaku-lite-native-integration"
 ]

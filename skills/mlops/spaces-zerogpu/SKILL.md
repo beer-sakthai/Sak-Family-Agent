@@ -11,6 +11,12 @@ related_skills: [huggingface-hub]
 
 # Spaces ZeroGPU — Free Dynamic GPU for Gradio
 
+## ⚠️ Gradio Spaces now require PRO (mid-2026)
+
+As of mid-2026, Hugging Face changed its free tier: **creating new Gradio and Streamlit Spaces on CPU/GPU requires a PRO subscription**. The API returns `402 Payment Required`. **Static Spaces** (HTML/CSS/JS) remain completely free.
+
+For existing ZeroGPU Spaces: those created before the policy change continue to work. New Gradio Spaces are blocked for free accounts.
+
 ZeroGPU is Hugging Face's shared infrastructure for **free dynamic GPU allocation** on Spaces. It attaches NVIDIA RTX Pro 6000 Blackwell GPUs to your Gradio app on demand and releases them when idle.
 
 > **Zero-cost first:** ZeroGPU is Hugging Face's only free GPU tier. Use it for demos, inference, and prototyping before considering paid Inference Endpoints or dedicated GPU Spaces.
