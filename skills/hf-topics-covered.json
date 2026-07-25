@@ -329,5 +329,6 @@
   "hf-hub-model-hub-mixin-integration",
   "hf-datasets-server-filter-endpoint",
   "hf-datasets-tabular-loading-comprehensive",
-  "hf-hub-agent-traces-deep-dive"
+  "hf-hub-agent-traces-deep-dive",
+  "hf-hub-agent-traces-deep-dive-v2"
 ]

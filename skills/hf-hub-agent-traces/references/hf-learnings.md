@@ -1,266 +1,295 @@
-# HF Learnings: hf-hub-agent-traces
+# HF Learnings: hf-hub-agent-traces-deep-dive-v2
 
 **Date:** 2026-07-25
-**Topic:** Comprehensive deep-dive into the Hugging Face Agent Traces ecosystem — uploading, viewing, standardizing, and registering agent sessions from Claude Code, Codex, Pi Agent, and custom harnesses using the Session Trace Simple Format (STS-Format) and the HF Hub trace viewer.
+**Topic:** Deep-dive v2 — the `huggingface_hub` harness detection internals, the Hub API registry, and the complete agent trace ecosystem from the client implementation side.
 
 ## Summary
 
-HF Agent Traces is a first-class feature on the Hub that lets users upload agent/chat sessions from coding agents (Claude Code, Codex, Pi Agent) as JSONL files to Datasets or Storage Buckets, then view them in a dedicated trace viewer that renders session timelines, prompts, assistant messages, tool calls, and results. The Session Trace Simple Format (STS-Format) is an open standard for custom harnesses. A public harness registry in the `@huggingface/tasks` package attributes traffic by name and enables branded rendering.
+This deep-dive goes beyond the public docs to cover the actual Python client implementation that detects which agent harness is running (`huggingface_hub.utils._detect_agent`), the live `{ENDPOINT}/api/agent-harnesses` registry served by the Hub, the caching and fallback system, and the complete list of 25 registered harnesses as of July 2026 with their detection strategies.
 
 ---
 
-## 1. Supported Agents (Out of the Box)
+## 1. Harness Detection: The Client-Side Implementation
 
-Three coding agents have native session directory support:
+The public HF docs describe the harness registry as a TypeScript file in `@huggingface/tasks`. **The actual implementation is now a server-side API consumed by the Python client.**
 
-| Agent | Local Session Directory | Upload Method |
-|-------|------------------------|---------------|
-| **Claude Code** | `~/.claude/projects/` | Dataset or Bucket |
-| **Codex** | `~/.codex/sessions/` | Dataset or Bucket |
-| **Pi Agent** | `~/.pi/agent/sessions/` | Dataset or Bucket (also `pi-share-hf` helper) |
+### 1.1 Entry Point: `detect_agent()`
 
-Trace files from these agents are supported without any conversion or modification.
+File: `huggingface_hub/utils/_detect_agent.py` (204 lines)
 
----
-
-## 2. Upload Methods
-
-### 2.1 Via Datasets
-
-```bash
-# Install hf CLI (standalone installer)
-curl -LsSf https://hf.co/cli/install.sh | bash
-hf auth login
-
-# Upload sessions to a dataset
-hf upload <username>/<dataset-name> ~/.codex/sessions . --repo-type dataset
+```python
+def detect_agent() -> Optional[str]:
+    """Return the id of the detected AI agent harness or `None`."""
 ```
 
-### 2.2 Via Storage Buckets (recommended for ongoing sync)
+The function:
+1. Loads the registry (from cache or Hub API)
+2. Iterates through each harness, checking custom `envVars` first
+3. Falls back to matching `standardEnvVars` (`AI_AGENT` and `AGENT`) against harness IDs
+4. If a standard var is set but matches nothing known, returns `"unknown"`
+5. Returns `None` when no agent is detected at all
 
-```bash
-# Sync (one-way) — keeps updating as new sessions land
-hf buckets sync ~/.codex/sessions hf://buckets/<username>/<bucket-name>/codex
+### 1.2 Two-Step Match Strategy
 
-# Shorter alias
-hf sync ~/.codex/sessions hf://buckets/<username>/<bucket-name>/codex
+**Step 1 — Custom env vars per harness:**
+For each harness, if it defines `envVars`, those are checked first. The `_env_vars_match()` function supports two patterns:
+- `"*"` — the variable is set to any non-empty value
+- `"<exact_value>"` — the variable must equal this exact string
+
+```python
+def _env_vars_match(env_vars: dict[str, str]) -> bool:
+    for var, pattern in env_vars.items():
+        value = os.environ.get(var)
+        if not value:
+            continue
+        if pattern == "*":
+            return True
+        if value == pattern:
+            return True
+    return False
 ```
 
-Buckets are especially useful for continuous syncing — each new session written to the local directory is automatically reflected.
+**Step 2 — Standard universal vars:**
+`AI_AGENT` and `AGENT` are treated as a universal standard — any agent can set its harness id here. If the value matches a registered harness id (case-insensitive), that harness is returned.
 
-### 2.3 Using the HF CLI Skill
+### 1.3 Registry Loading: 3-Tier Fallback
 
-For coding agents to run `hf` commands themselves:
-
-```bash
-hf skills add
+```python
+def _load_registry() -> Registry:
 ```
 
-This installs the Hugging Face CLI Skill, giving the agent the ability to run `hf upload`, `hf sync`, and other CLI commands.
+1. **Fresh cache** — reads `~/.cache/huggingface/.agent_harnesses.json` if modified within the last 24 hours
+2. **Hub fetch** — hits `{ENDPOINT}/api/agent-harnesses` with a 3-second timeout; persists result to cache
+3. **Stale cache** — if fetch fails, reuses any cached copy regardless of age
+4. **Empty fallback** — if nothing is available, returns `{"standardEnvVars": [], "harnesses": {}}` (no detection)
 
-### 2.4 Optimized Upload for Pi Agent
+Critical design properties:
+- **Best-effort only:** Timeout is 3 seconds. Any exception is swallowed. Detection must never make a process fail.
+- **No hardcoded list:** The client ships with zero built-in harnesses. Everything comes from the API.
+- **Graceful degradation:** Offline or unreachable Hub → empty registry → `detect_agent()` returns `None`
+- **In-process cache:** The loaded registry is cached in a module-level `_registry` variable so repeated calls don't re-read the file
 
-Pi Agent has a dedicated helper tool `pi-share-hf` that:
-- Collects project sessions
-- Redacts known secrets
-- Runs TruffleHog and LLM-based review
-- Uploads only sessions that pass all checks
+### 1.4 The `is_agent()` Convenience
+
+```python
+def is_agent() -> bool:
+    return detect_agent() is not None
+```
+
+Simple boolean wrapper used by other parts of `huggingface_hub` to adjust behaviour when running inside an agent (e.g., modifying the user-agent header).
+
+### 1.5 Cache File Location
+
+Defined in `huggingface_hub/constants.py`:
+```python
+AGENT_HARNESSES_PATH = os.path.join(HF_HOME, ".agent_harnesses.json")
+```
+Typically resolves to `~/.cache/huggingface/.agent_harnesses.json`.
+
+**TTL:** 24 hours (`_REGISTRY_TTL_SECONDS = 24 * 3600`)
 
 ---
 
-## 3. Viewing Traces
+## 2. The Live Registry: 25 Registered Harnesses
 
-### 3.1 Dataset Traces
+Fetched from `https://huggingface.co/api/agent-harnesses`. The registry has two top-level sections:
 
-1. Navigate to the dataset on the Hub
-2. Open **Data Studio**
-3. Click any row to open the trace viewer
-
-### 3.2 Bucket Traces
-
-1. Navigate to the `.jsonl` file in the Storage Bucket
-2. Open the file directly — the trace viewer renders it inline
-
-### 3.3 Trace Viewer Features
-
-The trace viewer shows:
-- **Session timeline** — chronological view of the entire session
-- **Prompts** — user and system messages with full content
-- **Assistant messages** — model responses, including `reasoningContent` as a separate thinking block
-- **Tool calls** — each function call with `id`, `name`, and `arguments`
-- **Tool results** — stitched next to the call that produced them (matched by `toolCallId`)
-- **Model name** — which model handled the message
-- **Timestamps** — epoch milliseconds for each message
-
-### 3.4 Public Example
-
-**TeichAI/DeepSeek-v4-Pro-Agent** is a public example showing traces in action. Browse more datasets tagged with `traces`.
-
----
-
-## 4. Session Trace Simple Format (STS-Format)
-
-The STS-Format is the open standard for custom harnesses. Files are JSONL (one JSON object per line).
-
-### 4.1 Session Header (First Line)
+### 2.1 Standard Env Vars
 
 ```json
-{
-  "type": "session",
-  "harness": "my-agent",
-  "id": "b1a2c3",
-  "name": "Implementing a new API"
-}
+"standardEnvVars": ["AI_AGENT", "AGENT"]
 ```
 
-**Fields:**
-| Field | Required | Notes |
-|-------|----------|-------|
-| `type` | yes | Must be `"session"` |
-| `harness` | yes | The harness id — tells the Hub which renderer, icon, and label to use |
-| `id` | yes | Unique session id |
-| `name` | no | Human-readable title |
-| `…` | no | Any extra metadata is allowed and ignored |
+Any agent can set `AI_AGENT=my-harness-id` or `AGENT=my-harness-id` and be recognized immediately — no registration needed for basic attribution.
 
-**Currently recognized harness ids:** `llama.app`.
+### 2.2 Complete Harness List (2026-07-25)
 
-Adding a new harness is straightforward: open a PR to `@huggingface/tasks` (see §5).
+| Harness ID | Pretty Label | Env Vars Detected | Notes |
+|---|---|---|---|
+| `antigravity` | Antigravity | `ANTIGRAVITY_AGENT` | Google's Gemini-based agentic dev platform |
+| `augment-cli` | Augment CLI | `AUGMENT_AGENT` | Auggie from Augment Code |
+| `cline` | Cline | `CLINE_ACTIVE` | Open-source VS Code coding agent |
+| `cowork` | Cowork | `CLAUDE_CODE_IS_COWORK` | Anthropic's autonomous knowledge work agent on top of Claude Code |
+| `claude-code` | Claude Code | `CLAUDECODE`, `CLAUDE_CODE` | Anthropic's terminal agentic coding tool |
+| `codex` | Codex | `CODEX_SANDBOX`, `CODEX_CI`, `CODEX_THREAD_ID` | OpenAI's lightweight terminal coding agent |
+| `crush` | Crush | `CRUSH` | Charm's open-source terminal agent |
+| `gemini-cli` | Gemini CLI | `GEMINI_CLI` | Google's Gemini-powered terminal agent |
+| `github-copilot` | GitHub Copilot | `COPILOT_MODEL`, `COPILOT_ALLOW_ALL`, `COPILOT_GITHUB_TOKEN` | GitHub's AI coding assistant |
+| `goose` | Goose | `GOOSE_TERMINAL` | Open-source extensible agent (Block/Agentic AI Foundation) |
+| `hermes-agent` | Hermes Agent | `HERMES_SESSION_ID` | Nous Research's self-improving multi-provider agent |
+| `hi` | hi | (none — matched by standard vars only) | Rust terminal coding agent from Pipe Network |
+| `kilo-code` | Kilo Code | `KILOCODE_FEATURE` | Open-source VS Code/JetBrains/terminal agent |
+| `kiro` | Kiro | `AGENT_CONTEXT_OUT` | AWS's agentic IDE for spec-driven development |
+| `openclaw` | OpenClaw | `OPENCLAW_SHELL` | Self-hosted personal AI assistant |
+| `opencode` | opencode | `OPENCODE_CLIENT` | Open-source terminal coding agent |
+| `pi` | Pi | `PI_CODING_AGENT` | Minimal self-extensible terminal agent |
+| `replit` | Replit | `REPL_ID` | Cloud dev environment with AI agent |
+| `trae` | Trae | `TRAE_AI_SHELL_ID` | ByteDance's AI-powered IDE |
+| `vtcode` | VTCode | `VTCODE=1` (exact match) | Rust coding agent with sandboxing |
+| `warp` | Warp | `TERM_PROGRAM=WarpTerminal` (exact match) | AI-powered terminal |
+| `zed` | Zed | `ZED_TERM` | High-performance code editor with AI panel |
+| `cursor-cli` | Cursor CLI | `CURSOR_AGENT` | Cursor's CLI coding agent |
+| `cursor` | Cursor | `CURSOR_TRACE_ID` | AI-powered code editor |
+| `devin` | Devin | (none — standard vars only) | Autonomous AI software engineer from Cognition |
 
-### 4.2 Messages (Every Following Line)
+**Key pattern observations:**
+- 22 of 25 harnesses use custom env var detection (with `"*"` wildcard pattern)
+- 2 harnesses (`vtcode`, `warp`) use exact value matching
+- 2 harnesses (`hi`, `devin`) have no custom env vars — they rely on `AI_AGENT`/`AGENT` standard vars
+- Codex has the most env vars (3): `CODEX_SANDBOX`, `CODEX_CI`, `CODEX_THREAD_ID`
+- The `envVars` field is optional — when absent, only standard var matching applies
 
-Each line is a message envelope:
-
-```json
-{
-  "type": "message",
-  "message": {
-    "role": "assistant",
-    "content": "…"
-  }
-}
-```
-
-**Message fields:**
-| Field | Required | Notes |
-|-------|----------|-------|
-| `role` | yes | `"user"` · `"assistant"` · `"system"` · `"tool"` |
-| `content` | yes | Text (may be empty) |
-| `reasoningContent` | no | Model reasoning, shown as a separate thinking block |
-| `toolCalls` | no | Assistant tool calls: `[{ "id", "function": { "name", "arguments" } }]` — `arguments` is a JSON string |
-| `toolCallId` | no | On `role: "tool"` messages, links the result to the originating `toolCalls[].id` |
-| `timestamp` | no | Epoch milliseconds |
-| `model` | no | Model name |
-
-**Tool result stitching:** Messages with `role: "tool"` carrying a `toolCallId` are automatically paired with the call that produced them in the viewer.
-
-### 4.3 Full Example
-
-```json
-{"type":"session","harness":"my-agent","id":"abc123","name":"what time is it"}
-{"type":"message","message":{"role":"user","content":"what time is it?"}}
-{"type":"message","message":{"role":"assistant","content":"","toolCalls":[{"id":"t1","function":{"name":"get_time","arguments":"{}"}}]}}
-{"type":"message","message":{"role":"tool","toolCallId":"t1","content":"2026-07-01T15:00:00Z"}}
-{"type":"message","message":{"role":"assistant","content":"it is 15:00 UTC"}}
-```
-
-### 4.4 Alternative: Pi's Session Format
-
-If adopting STS-Format is not feasible, Pi's existing session format (`session-format.md`) is also supported. Add `harness: "..."` to Pi's session-header line so the Hub can attribute the trace to the correct harness.
-
----
-
-## 5. Harness Registry
-
-### 5.1 What It Is
-
-A public registry of agent harnesses (coding agents and tools that interact with the Hub) maintained in the `@huggingface/tasks` package at `agent-harnesses.ts`.
-
-### 5.2 Why Register
-
-- **Named attribution:** When `huggingface_hub` detects it is running inside your harness, it reports the harness id via the user agent on all Hub requests
-- **Branded trace viewer:** Your sessions render with your icon, label, and name
-- **Public dataset:** Your harness appears in the monthly agent usage dataset
-- **Unregistered tools** are counted only in the aggregate "unknown" share
-
-### 5.3 How to Register
-
-Open a Pull Request adding an entry to `agent-harnesses.ts`:
+### 2.3 Harness Info Schema
 
 ```typescript
-{
-  // harness id (entry key) — lowercased, hyphen-separated
-  "my-coding-agent": {
-    prettyLabel: "My Coding Agent",       // user-friendly casing
-    repoUrl: "https://github.com/org/repo",  // optional: source code
-    docsUrl: "https://docs.example.com",     // optional: documentation
-    description: "A short description",      // optional: one line
-  }
+interface HarnessInfo {
+  prettyLabel?: string;    // Display name in UI
+  repoUrl?: string;        // Source code repository
+  docsUrl?: string;        // Documentation URL
+  description?: string;    // One-line description
+  envVars?: Record<string, string>;  // Env var name -> match pattern
 }
 ```
 
-### 5.4 Detection Strategy
-
-Define how the harness is detected from the environment:
-
-| Method | Configuration |
-|--------|--------------|
-| **Standard env var** | If your harness sets `AI_AGENT` or `AGENT`, the value is used directly as the identifier — no extra config needed |
-| **Custom env var** | Set `envVars` mapping variable names to value patterns: `"*"` (any non-empty value), exact string, or `"prefix*"` for prefix matching |
-
-### 5.5 What Happens After
-
-Once merged:
-- `huggingface_hub` traffic (including `hf` CLI) from your harness is attributed by name
-- It appears in the agent usage dataset from the next monthly update
-- The trace viewer picks up your icon and label
+The `envVars` patterns:
+- `"*"` — Match if env var is set to any non-empty value (most common)
+- `"exact_string"` — Match if env var equals this exactly (e.g., `"WarpTerminal"`, `"1"`)
 
 ---
 
-## 6. Privacy and Security
+## 3. How the Registry Differs from Earlier Documentation
 
-**Critical warnings from the official docs:**
+| Old Docs (TypeScript file) | Current Implementation (Hub API) |
+|---|---|
+| Harnesses defined in `@huggingface/tasks` TypeScript file | Served from `{ENDPOINT}/api/agent-harnesses` |
+| User-agent-based attribution | Environment variable detection |
+| Manual PR to add harness | API is updated server-side |
+| Registry shipped with client | Registry fetched live, cached 24h |
+| PR-based rendering per harness | Server-side icon/label rendering |
 
-> Trace files can include prompts, tool inputs, command output, local paths, screenshots, secrets, private code, and personal data.
-
-**Best practices:**
-1. **Review and redact** traces before publishing publicly
-2. **Keep the dataset or bucket private** if unsure what's inside
-3. For Pi Agent, use `pi-share-hf` which runs automated redaction (known secrets pattern matching + TruffleHog + LLM review)
-4. Only sessions that pass all checks are uploaded
-
----
-
-## 7. Integration with the Broader HF Agent Ecosystem
-
-| HF Agent Feature | Relationship to Agent Traces |
-|-----------------|------------------------------|
-| **HF MCP Server** | Coding agents (Claude Code, Codex) use MCP to search/access Hub; their sessions can be captured as traces |
-| **HF Agent Skills** | Skills give agents task-specific guidance; traces capture how agents used them |
-| **HF CLI for Agents** | `hf upload` and `hf sync` are the primary upload mechanisms for traces |
-| **Storage Buckets** | Buckets enable continuous sync for trace directories |
-| **Data Studio** | Primary viewer for dataset-hosted traces |
-| **Session Traces Format** | The standard for custom harness interoperability |
+The client-side detection code was added to `huggingface_hub` in 2026 (copyright 2026 in the source). This replaced the older PR-based TypeScript approach.
 
 ---
 
-## 8. Key API Endpoints and Operations
+## 4. The `hf skills add` Connection
 
-While agent traces are primarily a CLI-driven workflow, the underlying Hub operations use:
+When the `hf` CLI runs inside a detected agent, `detect_agent()` identifies which harness is active. The CLI uses this to:
+- Attribute Hub API traffic to the correct harness via the user-agent header
+- Customize certain CLI behaviours (e.g., `hf skills add` installs the right skill set for the active agent)
+- Enable agent-specific onboarding flows
 
-- **Dataset creation/management** via `hf` CLI or Hub API
-- **Storage Bucket sync** via `hf buckets sync` (native Xet-backed transport)
-- **File rendering** — the trace viewer is automatically activated for `.jsonl` files matching the STS-Format schema when opened in the Hub UI or Data Studio
+The agent skills themselves are distinct from harness detection: skills provide task-specific guidance to agents, while harness detection identifies *which* agent is running.
 
-No special API endpoint is needed — any Dataset or Bucket containing valid STS-Format `.jsonl` files renders as traces automatically.
+---
+
+## 5. Practical Implications for Custom Harness Builders
+
+To register a new harness today:
+
+1. **Short-term (instant):** Set `AI_AGENT=my-harness-id` in your agent's environment. The `huggingface_hub` client will detect it. The Hub trace viewer will attribute your sessions to `my-harness-id` but without a branded icon/label.
+
+2. **Full registration:** Open an issue or PR to add your harness to the server-side registry at `@huggingface/tasks`. Once merged:
+   - Your env var pattern is added as a custom detection rule
+   - A `prettyLabel`, icon, and description are assigned
+   - Your sessions render with branding in the trace viewer
+   - Traffic from your harness appears in the monthly agent usage dataset
+
+3. **Detection criteria for registration:**
+   - Choose a unique env var your agent sets **reliably** in every session
+   - Prefer `"*"` pattern (any non-empty value) unless you need exact match
+   - Provide `prettyLabel`, repo URL, docs URL, and a one-line description
+
+---
+
+## 6. Architecture Diagram
+
+```
+Agent process (Claude Code, Codex, Pi, ...)
+        │
+        │ Sets env vars (CLAUDECODE, CODEX_SANDBOX, PI_CODING_AGENT, ...)
+        │
+        ▼
+huggingface_hub client
+        │
+        ├─ detect_agent()
+        │    ├─ _get_registry()
+        │    │    ├─ Cache fresh? (24h TTL) → Return cached
+        │    │    ├─ Fetch from /api/agent-harnesses → Cache & return
+        │    │    └─ Hub unreachable? → Use stale cache → Empty
+        │    │
+        │    ├─ Match custom envVars per harness
+        │    ├─ Match standard vars (AI_AGENT, AGENT)
+        │    └─ Return harness_id | "unknown" | None
+        │
+        ├─ Sends harness_id in User-Agent on all Hub API calls
+        └─ Enables agent-specific Hub features (skills, traces, etc.)
+                │
+                ▼
+        Hub trace viewer renders STS-format .jsonl
+        with branded icon & label per harness_id
+```
+
+---
+
+## 7. Key Code Snippets for Implementation Reference
+
+### Registering your harness in a Python agent
+
+```python
+import os
+
+# Simplest approach — set the standard env var
+os.environ["AI_AGENT"] = "my-custom-agent"
+
+# The hf CLI and huggingface_hub will now detect your agent
+```
+
+### Reading the registry directly
+
+```python
+from huggingface_hub.utils._detect_agent import _fetch_registry
+
+registry = _fetch_registry()
+if registry:
+    print(f"Standard vars: {registry['standardEnvVars']}")
+    for hid, info in registry['harnesses'].items():
+        print(f"  {hid}: {info.get('prettyLabel')}")
+```
+
+### Checking if running inside an agent (Python)
+
+```python
+from huggingface_hub.utils._detect_agent import is_agent, detect_agent
+
+if is_agent():
+    harness = detect_agent()
+    print(f"Running inside: {harness}")
+```
+
+---
+
+## 8. Key Differences from Existing Coverage v1
+
+| Aspect | v1 Coverage | v2 Deep-Dive |
+|---|---|---|
+| Harness detection | Mentioned as TypeScript file + PR | Full client implementation (`_detect_agent.py`) |
+| Registry source | `@huggingface/tasks` on GitHub | `{ENDPOINT}/api/agent-harnesses` with caching |
+| Caching mechanism | Not covered | 24h TTL, 3-tier fallback, in-process cache |
+| Env var patterns | Not covered | `"*"` wildcard and exact match documented |
+| Known harnesses | Only `llama.app` mentioned | All 25 harnesses with their exact detection env vars |
+| `detect_agent()` | Not covered | Full source code analysis |
+| Registration path | "open a PR" | Two-tier: instant via env var, branded via registry |
+| Agent identification | User-agent based | Env var based with two-step matching |
 
 ---
 
 ## References
 
-- [HF Hub Docs: Agent Traces](https://huggingface.co/docs/hub/en/agent-traces)
-- [HF Hub Docs: Session Traces Format](https://huggingface.co/docs/hub/en/session-traces-format)
-- [HF Hub Docs: Agents Overview](https://huggingface.co/docs/hub/en/agents-overview)
-- [Agent Harnesses Registry](https://github.com/huggingface/tasks/blob/main/packages/tasks/src/agent-harnesses.ts)
-- [HF CLI Install](https://hf.co/cli/install.sh)
-- [Public Trace Example: TeichAI/DeepSeek-v4-Pro-Agent](https://huggingface.co/datasets/TeichAI/DeepSeek-v4-Pro-Agent)
-- [Pi Agent pi-share-hf](https://huggingface.co/docs/hub/en/agent-traces#find-your-traces)
+- Source: `huggingface_hub/utils/_detect_agent.py` (2026 copyright)
+- Source: `huggingface_hub/constants.py` (AGENT_HARNESSES_PATH)
+- Live registry: `https://huggingface.co/api/agent-harnesses`
+- Cached at: `~/.cache/huggingface/.agent_harnesses.json` (24h TTL)
+- HF Hub Docs: [Agent Traces](https://huggingface.co/docs/hub/en/agent-traces)
+- HF Hub Docs: [Session Traces Format](https://huggingface.co/docs/hub/en/session-traces-format)
+- HF Hub Docs: [Agents Overview](https://huggingface.co/docs/hub/en/agents-overview)
+- Public Trace Example: [TeichAI/DeepSeek-v4-Pro-Agent](https://huggingface.co/datasets/TeichAI/DeepSeek-v4-Pro-Agent)
