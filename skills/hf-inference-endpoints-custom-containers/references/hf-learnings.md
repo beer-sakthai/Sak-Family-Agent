@@ -415,3 +415,295 @@ For Beer's use case (no income), custom Inference Endpoints are not viable. Docu
 `hf-inference-endpoints-custom-containers/` with:
 - `SKILL.md` — topic overview and metadata (author: SakThai, license: MIT)
 - `references/hf-learnings.md` — this full reference
+
+---
+
+## 2026-07-25: Deepening — Custom Router, Updated Official Patterns, Download Pattern (Topic #370 Deepening 1)
+
+### Sources
+- https://huggingface.co/docs/inference-endpoints/en/engines/custom_container (latest)
+- https://huggingface.co/docs/inference-endpoints/en/guides/custom_router (new)
+- https://huggingface.co/docs/inference-endpoints/en/guides/configuration (latest)
+- https://huggingface.co/docs/inference-endpoints/en/guides/foundations (latest)
+
+---
+
+### 11. Custom Router — Custom Load Balancing for Inference Endpoints
+
+The **Custom Router** feature lets you deploy a custom load-balancing proxy alongside your endpoint replicas. It gives precise control over each routing decision — essential when the built-in round-robin doesn't fit your workload.
+
+#### 11.1 When to Use a Custom Router
+
+| Scenario | Built-in LB? | Custom Router? |
+|----------|-------------|----------------|
+| Standard round-robin across replicas | ✅ Default | ❌ Overkill |
+| Queue-based routing (avoid wasting new replicas on burst traffic) | ❌ | ✅ |
+| Latency-aware routing (avoid overloaded replicas) | ❌ | ✅ |
+| Sticky sessions / session affinity | ❌ | ✅ |
+| Weighted routing (heterogeneous replicas) | ❌ | ✅ |
+| Diffusion models (no batching benefit, one request at a time) | ❌ | ✅ queued-least-latency |
+| LLMs with batching throughput benefit | ❌ | ✅ with higher latency threshold |
+
+#### 11.2 Architecture: How Custom Routing Works
+
+```
+                         ┌─────────────────────────────┐
+                         │     User Request             │
+                         └──────────┬──────────────────┘
+                                    │
+                         ┌──────────▼──────────────────┐
+                         │  Router (oldest replica)     │
+                         │  POST /_custom_router/       │
+                         │  set-backends                │
+                         │  GET  /_custom_router/health │
+                         └──────┬───────────────────────┘
+                                │ forwards to chosen replica
+                    ┌───────────┼───────────┐
+                    ▼           ▼           ▼
+              ┌─────────┐ ┌─────────┐ ┌─────────┐
+              │Replica 1│ │Replica 2│ │Replica 3│
+              └─────────┘ └─────────┘ └─────────┘
+```
+
+**How it works:**
+1. The **oldest replica** is elected as the **leader** — all requests go to its router
+2. The router decides which replica should handle each request
+3. On scale-up, scale-down, or rolling update, the platform sends an updated list via `POST /_custom_router/set-backends`
+4. Replicas can reach each other over a private internal network (scoped to the endpoint only)
+
+#### 11.3 Router Contract
+
+Any HTTP server implementing these two endpoints can serve as a custom router:
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| `POST` | `/_custom_router/set-backends` | Receives updated replica list: `{"backends": ["http://<host>:<port>", ...]}` |
+| `GET` | `/_custom_router/health` | Return 200 when router is ready to serve traffic |
+
+The router listens on the port set by `customRouter.port` (default 3000). **Every other request path is treated as a user request to be proxied.**
+
+#### 11.4 Enabling the Custom Router (API Only)
+
+Custom Router can only be enabled via the **API**, not the UI. On endpoint creation or update, add a top-level `customRouter` object:
+
+```python
+import requests
+
+response = requests.post(
+    "https://api.endpoints.huggingface.cloud/v2/endpoint/{namespace}",
+    headers={"Authorization": "Bearer ***"},
+    json={
+        "modelName": "org/model",
+        "customRouter": {
+            "tag": "ghcr.io/huggingface/endpoints-custom-routers/queued-least-latency:1.0.0",
+            "port": 3000,
+            "env": {
+                "CUSTOM_ROUTER_LATENCY_THRESHOLD": "3.0",
+                "CUSTOM_ROUTER_QUEUE_MAX_SIZE": "1000",
+                "CUSTOM_ROUTER_QUEUE_TIMEOUT": "1200"
+            }
+        }
+    }
+)
+```
+
+To remove the custom router on update, send `customRouter: {}` (null tag).
+
+**Note**: When `customRouter` is set, the `loadBalancer` field in `experimentalFeatures` is ignored.
+
+#### 11.5 Reference Implementation: queued-least-latency
+
+The HF-maintained reference router **queued-least-latency** is available at:
+
+```
+ghcr.io/huggingface/endpoints-custom-routers/queued-least-latency:1.0.0
+```
+
+**Strategy**: Incoming requests are pushed onto an in-memory FIFO queue. A dispatcher picks the replica with the lowest EWMA latency that is still under a configurable threshold. Replicas that have never been tried are treated as latency 0 and picked first — so new capacity is used immediately on scale-up.
+
+**Configuration via environment variables**:
+
+| Variable | Default | What it does |
+|----------|---------|-------------|
+| `CUSTOM_ROUTER_LATENCY_THRESHOLD` | 3.0 | Replica is "loaded" when avg latency exceeds this (seconds). New requests stop going to it. |
+| `CUSTOM_ROUTER_EWMA_ALPHA` | 0.3 | How quickly latency average reacts to recent requests (0–1). Higher = more reactive. |
+| `CUSTOM_ROUTER_QUEUE_MAX_SIZE` | 1000 | Max requests in queue; oldest dropped with 503 when full. |
+| `CUSTOM_ROUTER_QUEUE_TIMEOUT` | 1200 | Seconds a request may wait before being dropped with 503. |
+| `CUSTOM_ROUTER_PORT` | 3000 | Port the router listens on. |
+| `CUSTOM_ROUTER_STATE_LOG_INTERVAL` | 30 | Seconds between per-replica state log lines. |
+
+**Tuning by workload**:
+
+| Scenario | Recommended Approach |
+|----------|---------------------|
+| **Diffusion / no batching benefit** | Keep threshold 3.0s — one request at a time per replica. Queue depth 200, timeout 300s. |
+| **LLM / batching increases throughput** | Raise threshold to 65.0s+ — allows concurrent requests for batching. Queue depth 2000. |
+| **Burst traffic + autoscaling** | queued-least-latency handles it: queued requests drain to new replicas on scale-up. |
+| **Heterogeneous replica performance** | EWMA routing naturally avoids slow replicas. |
+
+#### 11.6 Custom Router Metrics (Prometheus)
+
+The router exposes Prometheus metrics at `GET /_custom_router/metrics`:
+
+| Metric | Type | Description |
+|--------|------|-------------|
+| `custom_router_queue_depth` | Gauge | Requests currently waiting in the queue |
+| `custom_router_backend_ewma_latency_seconds` | Gauge | EWMA latency per replica (addr label) |
+| `custom_router_backend_inflight_requests` | Gauge | In-flight requests per replica |
+| `custom_router_requests_dispatched_total` | Counter | Requests successfully forwarded |
+| `custom_router_requests_evicted_total` | Counter | Requests dropped due to full queue |
+| `custom_router_requests_timeout_total` | Counter | Requests dropped due to queue timeout |
+
+`GET /_custom_router/health` also returns a JSON snapshot of current queue depth and per-replica EWMA stats.
+
+#### 11.7 Building Your Own Router
+
+Any image satisfying the Router contract can be dropped in. Minimal Go skeleton:
+
+```go
+func handleSetBackends(w http.ResponseWriter, r *http.Request) {
+    var payload struct {
+        Backends []string `json:"backends"`
+    }
+    json.NewDecoder(r.Body).Decode(&payload)
+    // store backends
+    json.NewEncoder(w).Encode(map[string]bool{"ok": true})
+}
+
+func handleHealth(w http.ResponseWriter, r *http.Request) {
+    json.NewEncoder(w).Encode(map[string]bool{"ok": true})
+}
+
+func handleProxy(w http.ResponseWriter, r *http.Request) {
+    backend := pickBackend() // your custom routing logic
+    // forward request to backend
+}
+```
+
+The full `queued-least-latency` source is available in the `endpoints-custom-routers` repository as a template to fork.
+
+---
+
+### 12. Updated Official Custom Container Patterns (2026-07)
+
+The official custom container guide has been significantly revised since earlier versions:
+
+#### 12.1 Updated FastAPI Server (Official Reference)
+
+The official guide now uses a **complete FastAPI server** with these patterns:
+
+| Pattern | Details |
+|---------|---------|
+| **ModelManager class** | Lifecycle-managed model/tokenizer loading with `load()`, `unload()`, `get()` methods |
+| **FastAPI lifespan** | Async context manager (`@asynccontextmanager`) for startup/shutdown — replaces deprecated `startup`/`shutdown` events |
+| **`ModelNotLoadedError`** | Custom exception; health endpoint returns 503 until model is loaded |
+| **Error handling** | `try/except RuntimeError` on generation returning `HTTPException(500)` |
+| **Timing/logging** | `perf_counter()` for load time and generation duration, structured logging |
+| **Chat template** | `tokenizer.apply_chat_template()` used when tokenizer has a `chat_template` |
+| **Response schema** | Pydantic `GenerateResponse` with `response`, `input_token_count`, `output_token_count` fields |
+
+#### 12.2 Updated Dockerfile Pattern
+
+The official Dockerfile now uses this optimized structure:
+
+```dockerfile
+FROM pytorch/pytorch:2.9.1-cuda12.8-cudnn9-runtime
+
+# Copy uv binary
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
+COPY --from=ghcr.io/astral-sh/uv:latest /uvx /bin/uvx
+
+# Non-root user
+ENV USER=appuser HOME=/home/appuser
+RUN useradd -m -s /bin/bash $USER
+
+WORKDIR /app
+ENV VIRTUAL_ENV=/app/.venv
+ENV PATH="/app/.venv/bin:${PATH}"
+
+# Layer 1: dependencies only (cached unless pyproject.toml changes)
+COPY pyproject.toml uv.lock ./
+RUN uv venv ${VIRTUAL_ENV} \
+    && uv sync --frozen --no-dev --no-install-project
+
+# Layer 2: application code (cached unless main.py changes)
+COPY main.py .
+RUN uv sync --frozen --no-dev
+
+RUN chown -R $USER:$USER /app
+USER $USER
+EXPOSE 8000
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+```
+
+Key improvements over earlier versions:
+- **`uv lock` step** — must be run before `docker build` to create `uv.lock`
+- **`--no-install-project`** — installs dependencies only, not the project itself, for better caching
+- **Two-layer build** — dependencies layer (`--no-install-project`) cached separately from application code layer
+
+#### 12.3 New `uv lock` Requirement
+
+Before building the Docker image, run `uv lock` in your project directory:
+```bash
+cd my-endpoint/
+uv lock
+docker build -t your-org/my-endpoint:v0.1.0 . --platform linux/amd64
+docker push your-org/my-endpoint:v0.1.0
+```
+
+This creates the `uv.lock` file needed for reproducible builds with `uv sync --frozen`.
+
+---
+
+### 13. New Advanced Setting: Download Pattern
+
+The **Download Pattern** advanced setting allows you to specify glob patterns for which model files the platform downloads from the Hub and mounts at `/repository`.
+
+| Setting | Description | Example |
+|---------|-------------|---------|
+| **Download Pattern** | Glob pattern(s) for model file selection | `*.safetensors`, `*`, `model-00001-of-*.safetensors` |
+
+Use cases:
+- **Selective download**: Only download specific shards for large models
+- **Exclude non-essential files**: Skip `.gitignore`, `README.md`, etc. to reduce download time
+- **Custom format**: Only download files in a specific format (e.g., only `.safetensors`, skip `.bin`)
+
+If not specified, all files from the model repository are downloaded.
+
+---
+
+### 14. Endpoint States Reference
+
+Endpoints can be in one of these states:
+
+| State | Meaning |
+|-------|---------|
+| **Running** | Endpoint is ready to serve requests |
+| **Initializing** | Endpoint is starting up (pulling image, mounting model, loading) |
+| **Paused** | Endpoint has been stopped; counts towards quota |
+| **Scaled to Zero** | Endpoint is idle, consuming no compute resources |
+| **Failed** | Endpoint encountered an error and is not operational |
+
+---
+
+### 15. Updated Key Insights
+
+1. **Custom Router is API-only** — cannot be enabled through the UI, only via `POST /v2/endpoint/{namespace}` with `customRouter` config
+2. **queued-least-latency** is the reference implementation — handles burst traffic, EWMA latency tracking, queue-based backpressure
+3. **Router contract is minimal** — just two endpoints (`/set-backends` and `/health`), everything else is proxied
+4. **uv-based Docker builds** — official recommendation now uses `uv lock` + two-layer build with `--no-install-project` for optimal caching
+5. **Download Pattern** — new advanced setting for selective model file downloads
+6. **FastAPI lifespan** — replaces deprecated `startup`/`shutdown` event handlers; use `@asynccontextmanager` instead
+7. **Custom Router metrics** — Prometheus-compatible metrics at `/_custom_router/metrics` for observability
+8. **Building your own router** — any language/framework works as long as it satisfies the two-endpoint contract
+9. **Custom Router and `loadBalancer`** — when custom router is set, the `loadBalancer` field in `experimentalFeatures` is ignored
+10. **Effective for models with no batching benefit** — diffusion models benefit most from queued-least-latency (one request at a time per replica)
+
+---
+
+### 16. Skill Deepened
+
+Existing skill `hf-inference-endpoints-custom-containers/` deepened with:
+- `references/hf-learnings.md` — appended this Deepening section (topics #11–16)
+- `SKILL.md` — already has `author: SakThai` and `license: MIT` (verified)
+- New coverage: Custom Router architecture, contract, configuration, metrics, and building your own router; updated official custom container patterns; Download Pattern; Endpoint States reference

@@ -6621,4 +6621,28 @@ Deep-dive into the operational layer of HF Inference Providers: the **Hub REST A
 
 ### Skill Updated
 `hf-inference-providers/` — SKILL.md updated with billing models, agent integration commands, security info; references/hf-learnings.md appended with 292-line deep-dive (1565 total lines).
+
+---
+
+## 2026-07-25: Deepening — hf-inference-endpoints-custom-containers — Custom Router + Updated Official Patterns (Topic #370 Deepening 1)
+
+### Summary
+Major deepening of custom container knowledge: discovered the **Custom Router** feature for Inference Endpoints (API-only custom load balancing), learned the **updated official Dockerfile + FastAPI patterns** (uv lock, `--no-install-project`, FastAPI lifespan async context manager), **Download Pattern** advanced setting for selective model downloads, and **Endpoint States** reference. Custom Router supports queue-based, latency-aware, weighted, and sticky-session routing with a reference `queued-least-latency` implementation and Prometheus metrics.
+
+### Key New Findings
+| Feature | Finding |
+|---------|---------|
+| **Custom Router** | API-only, deploy alongside replicas. Uses `_custom_router/set-backends` + `_custom_router/health` endpoints. Leader replica pattern. |
+| **queued-least-latency** | Reference router image: `ghcr.io/huggingface/endpoints-custom-routers/queued-least-latency:1.0.0`. EWMA-based latency tracking, FIFO queue, configurable thresholds. Prometheus metrics at `/_custom_router/metrics`. |
+| **Updated Dockerfile** | `uv lock` step, two-layer build (`--no-install-project`), uv venv with frozen sync. |
+| **FastAPI lifespan** | `@asynccontextmanager` replaces deprecated startup/shutdown events. |
+| **Download Pattern** | New advanced setting for glob-based model file selection. |
+
+### Sources
+- https://huggingface.co/docs/inference-endpoints/en/engines/custom_container
+- https://huggingface.co/docs/inference-endpoints/en/guides/custom_router
+- https://huggingface.co/docs/inference-endpoints/en/guides/configuration
+
+### Skill Deepened
+`hf-inference-endpoints-custom-containers/` — references/hf-learnings.md appended with ~290-line deepening section (now 708 total lines). SKILL.md already has `author: SakThai` and `license: MIT`.
 |
