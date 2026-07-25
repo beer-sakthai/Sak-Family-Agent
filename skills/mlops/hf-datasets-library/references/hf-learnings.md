@@ -1972,5 +1972,115 @@ The `by_column` feature uses `_batch_accumulate_arrow_table_by_columns()` from `
 - `src/datasets/arrow_dataset.py` → `Dataset.batch()`
 - `src/datasets/iterable_dataset.py` → `IterableDataset.batch()`
 - Doc: https://huggingface.co/docs/datasets/en/package_reference/main_classes#datasets.Dataset.batch
-- Added in v4.9.0 (2025), extended in v5.0.0 (2026-06-05)
+|- Added in v4.9.0 (2025), extended in v5.0.0 (2026-06-05)
 
+---
+
+## 2026-07-25: hf-datasets-fs-remote-filesystems
+
+### Summary
+Deep-dive into the Hugging Face Datasets library's integration with remote filesystems via `fsspec` — covering S3, GCS, Azure, and Oracle cloud storage imports, publishing cloud datasets to the Hub, Storage Buckets (`hf://buckets/`), streaming from remote paths, and the `HfFileSystem` / `hffs` APIs. Based on the official filesystems guide (v4.8.4+).
+
+### Key Concepts
+
+**Architecture:**
+- The datasets library uses `fsspec` (filesystem spec) as an abstraction layer to access remote storage providers
+- `fsspec` provides a unified API across S3 (`s3fs`), GCS (`gcsfs`), Azure (`adlfs`), Oracle (`ocifs`), and others
+- All filesystem implementations support the same core methods: `glob()`, `open()`, `download()`, `upload()`, `ls()`, `info()`
+- The Hub integrates with fsspec via `HfFileSystem` (from `huggingface_hub`), using `hf://` URIs
+
+**Supported Cloud Providers:**
+
+| Provider | Filesystem | Package |
+|----------|-----------|---------|
+| Amazon S3 | s3fs | `pip install s3fs` |
+| Google Cloud Storage | gcsfs | `pip install gcsfs` |
+| Azure Blob/DataLake | adlfs | `pip install adlfs` |
+| Oracle Cloud Storage | ocifs | `pip install ocifs` |
+| Hugging Face Hub | HfFileSystem | Built into `huggingface_hub` |
+
+**Pattern 1: Import from cloud → Publish to Hub**
+```python
+import fsspec
+from huggingface_hub import create_repo, upload_folder
+
+fs = fsspec.filesystem("s3")  # or "gcs", "abfs", "adl", "oci"
+data_dir = "path/to/my/data/"
+pattern = "*.parquet"
+data_files = fs.glob(data_dir + pattern)
+
+create_repo("username/my-dataset", repo_type="dataset")
+
+for data_files in batched(tqdm(fs.glob(data_dir + pattern)), 100):
+    with TemporaryDirectory() as tmp_dir:
+        tmp_files = [os.path.join(tmp_dir, x[len(data_dir):]) for x in data_files]
+        fs.download(data_files, tmp_files)
+        upload_folder(repo_id="username/my-dataset", folder_path=tmp_dir, repo_type="dataset")
+
+ds = load_dataset("username/my-dataset")
+```
+
+**Pattern 2: Import raw data to Storage Buckets (v4.8.4+)**
+```python
+from huggingface_hub import create_bucket, sync_bucket
+from datasets import load_dataset
+
+create_bucket("username/my-bucket")
+bucket_location = "hf://buckets/username/my-bucket/path/to/raw/files"
+
+for data_files in batched(tqdm(fs.glob(data_dir + pattern)), 100):
+    with TemporaryDirectory() as tmp_dir:
+        tmp_files = [os.path.join(tmp_dir, x[len(data_dir):]) for x in data_files]
+        fs.download(data_files, tmp_files)
+        sync_bucket(tmp_dir, bucket_location)
+
+ds = load_dataset(bucket_location, streaming=True)
+ds = ds.map(...).filter(...)
+ds.push_to_hub("username/my-dataset", num_proc=4)
+```
+
+**Pattern 3: Custom file parsing from buckets**
+```python
+from datasets import IterableDataset
+from huggingface_hub import hffs
+
+data_files = hffs.find(bucket_files_location)
+ds = IterableDataset.from_dict({"data_file": data_files}, num_shards=1024)
+
+def parse_data_files(data_files):
+    return {"col_1": [...], "col_2": [...]}
+
+ds = ds.map(parse_data_files, batched=True, input_column=["data_file"])
+ds.push_to_hub("username/my-dataset", num_proc=4)
+```
+
+**Pattern 4: Direct Hub file access via HfFileSystem**
+```python
+from huggingface_hub import HfFileSystem
+
+fs = HfFileSystem()
+fs.ls("hf://datasets/username/dataset/data/")
+with fs.open("hf://datasets/username/dataset/data/train.parquet") as f:
+    content = f.read()
+fs.copy("hf://username/source/weights.safetensors", "hf://username/target/weights.safetensors")
+fs.exists("hf://username/my-model/config.json")
+```
+
+**Key APIs:**
+- `fsspec.filesystem("provider")` — instantiate any cloud FS
+- `fs.glob(pattern)`, `fs.open(path)`, `fs.download(src, dest)`, `fs.info(path)`
+- `huggingface_hub.hffs.find(uri)` — discover files in Hub Storage Buckets
+- `IterableDataset.from_dict(..., num_shards=N)` — parallel processing from file list
+- `create_bucket()` / `sync_bucket()` — Storage Bucket management (v4.8.4+)
+
+**Zero-Cost Considerations:**
+- Cloud storage egress costs may apply (S3, GCS, Azure)
+- HF Hub datasets storage is free up to quota
+- `streaming=True` avoids local disk when loading directly from cloud
+- Batched uploads (100 files/batch) with `TemporaryDirectory` minimize local temp usage
+- `num_shards` enables parallel processing without loading all files into memory
+
+**Key Differences from hf-hub-fsspec:**
+- Covers **datasets + fsspec** pipeline: cloud storage → HF datasets
+- `hffs` is a higher-level helper for bucket file enumeration
+- v4.8.4 added Storage Bucket integration via `sync_bucket` and `hf://buckets/` URIs
