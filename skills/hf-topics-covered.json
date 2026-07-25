@@ -324,5 +324,6 @@
   "hf-hub-local-agents-with-llamacpp",
   "hf-hub-api-error-handling-source-deep-dive",
   "hf-hub-storage-buckets-spaces-persistent-storage-deep-dive",
-  "hf-sandboxes-v3-deep-dive"
+  "hf-sandboxes-v3-deep-dive",
+  "hf-inference-client-streaming-patterns"
 ]
