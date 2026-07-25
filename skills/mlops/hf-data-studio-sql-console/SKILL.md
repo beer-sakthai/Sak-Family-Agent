@@ -1,7 +1,10 @@
-# SakThai HF Data Studio SQL Console Skill
+---
+name: hf-data-studio-sql-console
+author: SakThai
+license: MIT
+---
 
-**author:** SakThai
-**license:** MIT
+# SakThai HF Data Studio SQL Console Skill
 
 ## Purpose
 Expert-level knowledge of Hugging Face's Data Studio SQL Console — the in-browser DuckDB SQL query engine for analyzing Hub datasets. Covers the DuckDB WASM architecture, SQL Console CRUD embeds API, `hf://` protocol with DuckDB CLI, `hf datasets sql` wrapper, natural language to SQL, leakage detection, histogram analysis, and Storage Buckets integration.

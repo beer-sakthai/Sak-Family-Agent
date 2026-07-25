@@ -5126,3 +5126,98 @@ print(f"{org.fullname}: {org.num_users} members, {org.num_models} models, {org.n
 - Hub API: https://huggingface.co/api/organizations/{name}/overview
 - User settings: https://huggingface.co/settings/profile
 - huggingface_hub docs: https://huggingface.co/docs/huggingface_hub/en/package_reference/community
+
+---
+
+## 2026-07-25: hf-hub-agent-harnesses-registry — HF Agent Harnesses Registry, MCP Server & Agent Ecosystem (Topic #233)
+
+### Summary
+Deep-dive into the Hugging Face Hub's new **Agent Ecosystem** — a dedicated docs section (Agents Overview, HF MCP Server, HF CLI for AI Agents, Agent Skills, SDK, Local Agents, Session Traces) plus a new **`/api/agent-harnesses`** REST endpoint that returns a registry of AI agents / harnesses known to the Hub. This is how `huggingface_hub` identifies which agent it's running inside (e.g., Claude Code, Codex, Cursor) and reports agent-attributed usage on Hub requests.
+
+### Sources
+- HF Hub Agents docs: https://huggingface.co/docs/hub/en/agents
+- Agents Overview: https://huggingface.co/docs/hub/en/agents-overview
+- HF MCP Server: https://huggingface.co/docs/hub/en/agents-mcp
+- HF CLI for AI Agents: https://huggingface.co/docs/hub/en/agents-cli
+- Agent Skills: https://huggingface.co/docs/hub/en/agents-skills
+- SDK docs: https://huggingface.co/docs/hub/en/agents-sdk
+- Local Agents: https://huggingface.co/docs/hub/en/agents-local
+- Session Traces Format: https://huggingface.co/docs/hub/en/session-traces-format
+- OpenAPI spec: https://huggingface.co/.well-known/openapi.md
+- Agent harnesses source: `@huggingface/tasks` package — `agent-harnesses.ts`
+- MCP Settings: https://huggingface.co/settings/mcp
+
+### 1. Hub Agents Documentation (New Section)
+
+The Hugging Face Hub now has a dedicated **Agents** section in its docs with 8 sub-pages:
+
+| Page | URL | Purpose |
+|------|-----|---------|
+| Agents Overview | `/docs/hub/en/agents-overview` | Connecting chat & coding agents to the Hub |
+| HF CLI for AI Agents | `/docs/hub/en/agents-cli` | Using `hf` CLI from coding agents |
+| HF MCP Server | `/docs/hub/en/agents-mcp` | MCP protocol server for AI assistants |
+| HF Agent Skills | `/docs/hub/en/agents-skills` | Pre-built skills (agentskills.io) |
+| Building agents with HF SDK | `/docs/hub/en/agents-sdk` | Python/JS SDK for building agents |
+| Local Agents with llama.cpp | `/docs/hub/en/agents-local` | Running agents locally |
+| Agent Libraries | `/docs/hub/en/agents-libraries` | Catalog of agent libraries |
+| Session Traces Format | `/docs/hub/en/session-traces-format` | Standard format for agent traces |
+
+### 2. `/api/agent-harnesses` — The Agent Registry Endpoint
+
+A new REST endpoint in the Hub API:
+
+```
+GET /api/agent-harnesses
+```
+
+Returns the registry of all AI agents / harnesses known to the Hub, along with the **standard environment variables used to detect them**. This is how the Hub knows what agent is making a request.
+
+**How it works:**
+- `huggingface_hub` detects which agent harness it's running inside by checking environment variables
+- When making Hub API calls, it includes the harness name in the user-agent header
+- Registered harnesses get attributed by name in Hub usage analytics and the public agent usage dataset
+- Unregistered tools are only counted in the aggregate "unknown" share
+
+**To register a harness:** Open a PR adding an entry to `agent-harnesses.ts` in the `@huggingface/tasks` package. Entry fields include: name, display label, environment variable detection patterns, docs URL, and repo URL.
+
+### 3. HF MCP Server
+
+The Hugging Face MCP Server connects MCP-compatible AI assistants to the Hub:
+
+- **Configuration:** Generated at https://huggingface.co/settings/mcp — picks your client type and produces the exact snippet
+- **Supported clients:** Cursor, VS Code, Zed, Claude Desktop, ChatGPT, Codex, and any MCP-compatible client
+- **Built-in tools:** The `hf_fs` tool enables semantic searches of docs and Spaces
+- **Community tools:** Gradio MCP-compatible Spaces expose their functions as tools with arguments and descriptions
+- **Capabilities:** Search models/datasets/Spaces, read docs, schedule Jobs, use Sandboxes, run community tools
+
+To connect: `claude mcp add hf-mcp-server -t http "https://huggingface.co/mcp?login"`
+
+### 4. HF CLI for AI Agents
+
+The `hf` CLI now has first-class agent support:
+
+- **CLI Skill:** `hf skills add --global` installs the CLI skill so coding agents know every `hf` command
+- **Claude Code integration:** `/plugin marketplace add huggingface/skills` then `/plugin install hf-cli@huggingface/skills`
+- **Agent workflow:** Agents can search models, manage datasets/buckets, launch Spaces, run Jobs — all via the CLI
+
+### 5. Agent Skills Platform (agentskills.io)
+
+A new skill marketplace at agentskills.io allows agents to install task-specific capabilities:
+- Skills work alongside MCP or standalone
+- Published by Hugging Face as `huggingface/skills` on the plugin marketplace
+- Skills provide guidance for AI/ML workflows (HF CLI, model handling, etc.)
+
+### 6. Session Traces Format
+
+Standardized JSON format for recording agent sessions interacting with the Hub. Enables traceability and reproducibility of agent actions.
+
+### 7. Key Takeaways
+
+1. **The agent ecosystem is a first-class Hub feature** — not an afterthought. Dedicated docs, API endpoint, and CLI integration.
+2. **Attribution is opt-in via environment variable detection.** Registering your harness gives named attribution in Hub analytics.
+3. **MCP is the primary integration protocol.** The HF MCP Server exposes Hub tools via MCP for any compatible assistant.
+4. **Skills are a complementary layer** to MCP, providing task-specific procedural guidance for coding agents.
+5. **The registry is open-source** — agent-harnesses.ts in the `@huggingface/tasks` package accepts PRs for new harnesses.
+
+### Skill
+mlops/huggingface-hub — Hub API, MCP Server, CLI, and agent integration

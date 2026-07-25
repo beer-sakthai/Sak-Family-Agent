@@ -1,8 +1,11 @@
-# SakThai Distilabel Skill
+---
+name: hf-distilabel
+author: SakThai
+license: MIT
+source: https://github.com/argilla-io/distilabel
+---
 
-**author:** SakThai  
-**license:** MIT  
-**source:** https://github.com/argilla-io/distilabel  
+# SakThai Distilabel Skill
 
 Distilabel is an AI Feedback (AIF) framework for building synthetic datasets with and for LLMs. Created by Argilla (part of the Hugging Face ecosystem), it provides a pipeline-based approach to data generation, evaluation, and transformation using LLMs.
 

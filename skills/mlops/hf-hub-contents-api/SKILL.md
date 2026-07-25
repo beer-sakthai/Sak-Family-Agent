@@ -1,9 +1,12 @@
-# HF Hub Contents API
+---
+name: hf-hub-contents-api
+author: SakThai
+license: MIT
+created: 2026-07-24
+category: mlops/huggingface-hub
+---
 
-**author:** SakThai  
-**license:** MIT  
-**created:** 2026-07-24  
-**category:** mlops/huggingface-hub  
+# HF Hub Contents API
 
 ## Description
 Deep knowledge of the Hugging Face Hub's Repository Contents API — listing, inspecting, and navigating repo file trees, getting path metadata with security scan results and last-commit info, enumerating branches/tags/refs, and querying commit history. Covers `list_repo_tree`, `get_paths_info`, `list_repo_files`, `list_repo_refs`, `list_repo_commits`, and the underlying dataclasses (`RepoFile`, `RepoFolder`, `GitRefs`, `GitRefInfo`, `GitCommitInfo`).
