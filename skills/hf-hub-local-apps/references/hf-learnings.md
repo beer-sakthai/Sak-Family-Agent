@@ -75,6 +75,15 @@ ollama run hf.co/unsloth/gpt-oss-20b-GGUF:Q4_K_M
 - OpenAI-compatible API server built in (`ollama serve`)
 - Supports GGUF models from HF without manual conversion
 
+**Advanced Ollama + HF Integration** (new findings):
+- **Custom quantization**: Override with `:tag` syntax, e.g. `ollama run hf.co/bartowski/Llama-3.2-3B-Instruct-GGUF:IQ3_M`. Case-insensitive. Full filename also works as tag.
+- **Custom chat templates**: Create a `template` file in the HF repo — must be **Go template format** (NOT Jinja), using `.System`, `.Prompt`, `.Response` variables
+- **Custom system prompt**: Create a `system` file in the HF repo with default system text
+- **Custom sampling params**: Create a `params` JSON file in the repo (temperature, top_p, top_k, etc.)
+- **Private GGUFs**: Add `~/.ollama/id_ed25519.pub` SSH key to HF account settings → run private GGUFs with same `ollama run hf.co/{user}/{repo}` syntax
+- **Domain aliases**: Both `hf.co` and `huggingface.co` work
+- **Available**: 45K+ public GGUF checkpoints on the Hub as of July 2026
+
 **Key advantages**:
 - Easiest setup — single binary, minimal configuration
 - Built-in model management (list, pull, rm, show)
@@ -177,6 +186,7 @@ The Hardware settings page (https://huggingface.co/settings/hardware) pairs dire
 
 ### References
 - https://huggingface.co/docs/hub/en/local-apps
+- https://huggingface.co/docs/hub/en/ollama
 - https://huggingface.co/docs/hub/en/lmstudio
 - https://huggingface.co/docs/hub/en/gguf-llamacpp (llama.cpp + HF integration)
 - https://huggingface.co/docs/hub/en/hardware (hardware profile page)
