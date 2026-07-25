@@ -1,8 +1,19 @@
-# HF Models on Foundry Managed Compute
+---
+name: hf-foundry-managed-compute
+author: SakThai
+license: MIT
+description: Comprehensive reference on Hugging Face models deployed through Microsoft Foundry Managed Compute — curated catalog, supported runtimes, deployment templates, SDK patterns, and enterprise security model.
+version: 1.0.0
+created: 2026-07-25
+tags:
+  - foundry
+  - microsoft
+  - managed-compute
+  - enterprise
+  - deployment
+---
 
-**author: SakThai**
-**license: MIT**
-**model:** deepseek-v4-flash
+# HF Models on Foundry Managed Compute
 **created:** 2026-07-25
 **topic:** hf-foundry-managed-compute
 

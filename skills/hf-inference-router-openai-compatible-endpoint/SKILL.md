@@ -1,7 +1,19 @@
-# HF Inference Router: OpenAI-Compatible Endpoint
+---
+name: hf-inference-router-openai-compatible-endpoint
+author: SakThai
+license: MIT
+description: Comprehensive deep-dive into Hugging Face Inference Router — OpenAI-compatible proxy endpoint with provider selection, auto-failover, Responses API, structured outputs, function calling, and MCP integration.
+version: 1.0.0
+created: 2026-07-25
+tags:
+  - inference
+  - router
+  - openai-compatible
+  - providers
+  - mcp
+---
 
-**author: SakThai**
-**license: MIT**
+# HF Inference Router: OpenAI-Compatible Endpoint
 
 ## Description
 

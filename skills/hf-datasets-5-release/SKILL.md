@@ -1,6 +1,18 @@
-# Hugging Face Datasets 5.0.0 — Major New Features
+---
+name: hf-datasets-5-release
+author: SakThai
+license: MIT
+description: Complete reference for Hugging Face Datasets v5.0.0 — agent trace parsing, multi-shard streaming shuffle, Apache Iceberg, TsFile, 3D Mesh, CoNLL, and robotics batch batching.
+version: 1.0.0
+created: 2026-07-25
+tags:
+  - datasets
+  - v5
+  - release
+  - features
+---
 
-**author:** SakThai  
+# Hugging Face Datasets 5.0.0 — Major New Features
 **license:** MIT  
 **skill_type:** reference  
 **domain:** datasets  

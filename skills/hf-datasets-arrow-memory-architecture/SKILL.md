@@ -1,7 +1,19 @@
-# HuggingFace Datasets Arrow Memory Architecture
+---
+name: hf-datasets-arrow-memory-architecture
+author: SakThai
+license: MIT
+description: Deep reference on how HuggingFace Datasets manages memory through Apache Arrow — InMemoryTable vs MemoryMappedTable, ConcatenationTable, replay-based lazy transforms, Arrow memory pools, and streaming memory patterns.
+version: 1.0.0
+created: 2026-07-25
+tags:
+  - datasets
+  - arrow
+  - memory
+  - streaming
+  - performance
+---
 
-**author:** SakThai  
-**license:** MIT  
+# HuggingFace Datasets Arrow Memory Architecture
 **created:** 2026-07-25  
 **type:** reference / deep-dive  
 **depends_on:** hf-datasets-5-release

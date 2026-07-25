@@ -1,9 +1,19 @@
-# DeepSeek V4 Architecture in Transformers 5.14 — Complete Reference
+---
+name: hf-transformers-deepseek-v4-deep-dive
+author: SakThai
+license: MIT
+description: Complete reference on DeepSeek V4 architecture in Transformers 5.14+ — three novel attention mechanisms, Lightning Indexer, Manifold-Constrained Hyper-Connections, Hash-MoE, and full source code layout.
+version: 1.0.0
+created: 2026-07-25
+tags:
+  - deepseek
+  - transformers
+  - moe
+  - attention
+  - architecture
+---
 
-> **author:** SakThai  
-> **license:** MIT  
-> **topic:** `hf-transformers-deepseek-v4-deep-dive`  
-> **last-updated:** 2026-07-25  
+# DeepSeek V4 Architecture in Transformers 5.14 — Complete Reference  
 
 ## Overview
 
