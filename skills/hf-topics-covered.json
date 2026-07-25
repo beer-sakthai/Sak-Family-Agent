@@ -326,5 +326,6 @@
   "hf-hub-storage-buckets-spaces-persistent-storage-deep-dive",
   "hf-sandboxes-v3-deep-dive",
   "hf-inference-client-streaming-patterns",
-  "hf-hub-model-hub-mixin-integration"
+  "hf-hub-model-hub-mixin-integration",
+  "hf-datasets-server-filter-endpoint"
 ]

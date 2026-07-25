@@ -357,6 +357,7 @@ This skill ships with detailed reference files:
 | `references/browser-automation-kaggle.md` | Browser automation for Kaggle web UI when CLI push fails with papermill errors. Chrome install, navigation, auth limitations, fallbacks. |
 | `references/gguf-conversion-refined.md` | Refined HF→GGUF conversion using pre-built llama.cpp binary + pip packages (no CMake build). Updated 2026-07-24. |
 | `scripts/benchmark-sakthai.sh` | Re-runnable BFCL-style benchmark runner for local GGUF models. Tests simple, multi, and irrelevance categories. Saved to `sakthai-skills/scripts/` on GitHub. |
+| `references/full-eval-pipeline.md` | Full three-dimensional evaluation: speed (tok/s) + BFCL tool-calling + coding benchmark, combined into one report. Covers all GGUF models. |
 | `benchmark/v6-benchmark.ipynb` *(pending)* | Pre-built Kaggle/Colab notebook template to run 100-step LoRA + 5-category validation on the v6 dataset. Create from the notebook structure table above when needed. |
 
 

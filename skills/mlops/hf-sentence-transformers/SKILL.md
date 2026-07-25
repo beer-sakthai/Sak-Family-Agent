@@ -128,6 +128,7 @@ See [Training Overview](https://sbert.net/docs/sentence_transformer/training_ove
 
 - `references/quickstart.py` — Runnable Python snippets for all 3 model types
 - `references/hf-ecosystem-facts.md` — Live API research data (PyPI stats, GitHub stats, top-10 model rankings, July 2026)
+- `references/rag-agent-knowledge.md` — Build a RAG semantic search system over agent SOULs and skills: embedding, index storage, HTTP query API, memory management, pitfalls.
 
 ## Links
 

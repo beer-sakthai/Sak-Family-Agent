@@ -275,7 +275,76 @@ extra_gated_fields:
 
 ---
 
-## 6. Related Skills
+## 6. Family-Level Discoverability
+
+When managing a **model family** (multiple related models under one account), add cross-linking and consistent branding to every card.
+
+### Cross-Link Family Table
+
+Append a table linking to sibling models at the bottom of every card:
+
+```markdown
+## Model Family
+
+| Model | Size | Type | Downloads |
+|-------|:----:|:----:|:---------:|
+| [1.5B-merged](https://huggingface.co/user/1.5b) | 934 MB | Tool-calling GGUF | 942 |
+| [0.5B-merged](https://huggingface.co/user/0.5b) | 380 MB | Lightweight GGUF | 785 |
+```
+
+This lets visitors discover the whole family from any single model page. Generate programmatically from `api.model_info()` for each model.
+
+### Consistent Branding Header
+
+Add a branded header after YAML frontmatter:
+
+```markdown
+<div align="center">
+  <h1>🏠 Family Name</h1>
+  <p><em>Part of <strong>Org</strong> — tagline.</em></p>
+  <p>
+    <a href="https://huggingface.co/collections/user/slug">
+      <img src="https://img.shields.io/badge/📦-View%20Family-8A2BE2" alt="Family"/>
+    </a>
+  </p>
+</div>
+
+---
+```
+
+### Conversational Tag for Chat Widget
+
+For text-generation models, add `conversational` tag to enable in-browser chat:
+
+```yaml
+tags:
+  - conversational
+```
+
+Apply via: `content.replace('tags:', 'tags:\\n- conversational', 1)`
+
+### Batch Update Pattern
+
+```python
+for model_id in MODELS:
+    content = read_readme(f'user/{model_id}')
+    if 'conversational' not in content.split('---')[1]:
+        content = content.replace('tags:', 'tags:\\n- conversational', 1)
+    if 'Model Family' not in content:
+        content += FAMILY_TABLE
+    api.upload_file(path_or_fileobj=content.encode(), path_in_repo='README.md',
+                    repo_id=f'user/{model_id}', repo_type='model')
+```
+
+### Pitfalls
+
+- Guard with `if 'X' not in content[:N]` before adding — don't overwrite existing headers
+- Target 5-8 tags — too many dilute search signal
+- Verify badge URLs before pushing
+
+---
+
+## 7. Related Skills
 
 - `huggingface-hub` — General HF Hub CLI and Python library usage
 - `hf-inference-providers` — Understanding Inference Providers behind widgets
