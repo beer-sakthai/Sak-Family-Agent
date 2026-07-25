@@ -227,5 +227,10 @@
   "hf-hub-repositories-licenses-complete-reference",
   "hf-hub-storage-limits-and-plans-storage-buckets-deepening",
   "hf-hub-hardware-filter-models-search",
-  "hf-datasets-cache-management-deep-dive"
+  "hf-transformers-deepseek-r1-architecture-deep-dive",
+  "hf-hub-hardware-filter-models-search-deep-dive",
+  "hf-hub-user-and-org-profile-api",
+  "hf-hub-agent-harnesses-registry",
+  "hf-datasets-cache-management-deep-dive",
+  "gr-workflow-source-deep-dive"
 ]
