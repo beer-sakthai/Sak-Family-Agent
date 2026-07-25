@@ -16612,3 +16612,86 @@ print(f"Docker: {len(docker_templates)}, Static: {len(static_templates)}, Gradio
 
 ### Zero-Cost Note
 All research was performed via API calls to `GET /api/spaces/templates` (read-only, free), source code inspection of `huggingface_hub` (MIT license), and the `hf` CLI help output. Creating Spaces from templates on free-tier hardware (CPU Basic or Static) costs $0.
+
+---
+
+## 2026-07-25: hf-hub-doi-digital-object-identifiers — Digital Object Identifiers for Models and Datasets on HF Hub (Topic #266)
+
+### Summary
+Comprehensive reference for DOI (Digital Object Identifier) support on the Hugging Face Hub. DOIs are persistent identifiers that uniquely identify models and datasets, making them citable in academic publications (analogous to an ISBN). DOIs are managed via DataCite, generated through the repo Settings UI (no programmatic API), and lock repositories against deletion/rename/visibility change. Supports versioning via new DOI generation per revision.
+
+### Key Findings
+- **Generation**: Exclusive through Hub UI → repo Settings → DOI section → "Generate DOI" → accept DataCite terms → optional author customization
+- **No API**: `huggingface_hub` library has no DOI methods in `HfApi`; the interactive DataCite consent flow prevents CLI/API generation
+- **Versioning**: Push a new revision → "Generate new DOI" → old DOI deprecated, fresh DOI assigned for the new snapshot
+- **Locking**: DOI-locked repos cannot be deleted, renamed, or made private without HF support intervention (`website@huggingface.co`)
+- **Free**: No cost to generate DOIs on HF Hub
+- **Citation**: DOI badge appears automatically in the model/dataset header after generation
+- **Scope**: Models and datasets only (not Spaces)
+
+### Sources
+- HF Hub DOI Docs: https://huggingface.co/docs/hub/en/doi
+- Announcement Blog: https://huggingface.co/blog/introducing-doi
+- DataCite: https://datacite.org
+
+### Skill
+hf-hub-doi — Digital Object Identifiers on Hugging Face Hub: generation workflow, DataCite integration, versioning semantics, repo locking restrictions, and citation integration
+
+---
+
+## 2026-07-25: hf-spaces-lifecycle — Hugging Face Spaces Sleep, Pause, Billing & Duration (Topic #268)
+
+### Summary
+Comprehensive deep-dive on Hugging Face Spaces lifecycle management — covering
+the complete sleep/pause/billing lifecycle for free (cpu-basic) and paid (GPU
+upgraded) hardware tiers.
+
+**Free tier (cpu-basic):** Auto-sleep after 48h inactivity, no custom sleep time
+configuration, any visitor can wake the Space. Manual pause also available.
+
+**Paid hardware (GPU upgraded):** Runs indefinitely by default. Custom sleep
+time configurable via Settings UI or `api.request_space_hardware()` with
+`sleep_time` parameter. No billing while asleep. Wakes automatically on visitor.
+
+**Pause/Resume:** Manual pause on all tiers from Settings tab. Only the owner
+can resume a paused Space. Paused time is NOT billed.
+
+**Billing model:** Per-minute metered only during `Starting` and `Running`
+states. Build phase is NOT billed. Auto-suspend on repeated failures halts
+billing. To stop billing, pause the Space or downgrade to cpu-basic.
+
+**ZeroGPU dynamic GPU allocation:**
+- `@spaces.GPU` decorator for per-request GPU allocation
+- Default function duration: 60 seconds (configurable via `duration=120`)
+- Dynamic duration: pass a callable returning needed seconds
+- Daily quotas: Free=5min, PRO=40min, Team/Org=40min, Enterprise=60min
+- Quota resets 24h after first GPU usage
+- PRO+ can extend at $1/10min
+- `torch.compile()` NOT supported; use AOT compilation (torch 2.8+)
+- GPU size: `large` (half RTX Pro 6000) or `xlarge` (full, 2× quota)
+- Free accounts: max 2 ZeroGPU Spaces
+- Shorter durations → better queue priority
+
+**Programmatic control via HfApi:**
+```python
+api.request_space_hardware(repo_id="user/my-space", hardware="t4-medium", sleep_time=30)
+api.pause_space("user/my-space")
+api.resume_space("user/my-space")
+```
+
+**Live monitoring:** SSE streaming endpoints for build/run logs, events, and
+metrics at `/api/spaces/{ns}/{repo}/logs/{build|run}` with optional `?tail=N`.
+
+### Source
+- HF Spaces Overview: https://huggingface.co/docs/hub/en/spaces-overview
+- HF Spaces GPU: https://huggingface.co/docs/hub/en/spaces-gpus
+- HF Spaces ZeroGPU: https://huggingface.co/docs/hub/en/spaces-zerogpu
+- HF Spaces Settings: https://huggingface.co/docs/hub/en/spaces-settings
+- HF Spaces Config: https://huggingface.co/docs/hub/en/spaces-config-reference
+- ZeroGPU AOT Blog: https://huggingface.co/blog/zerogpu-aoti
+
+### Skill
+mlops/hf-spaces-lifecycle — Complete reference for HF Spaces lifecycle:
+auto-sleep (free 48h vs paid custom), manual pause/resume, per-minute billing
+model, ZeroGPU dynamic allocation with daily quotas, programmatic hardware
+control via HfApi, SSE streaming, and zero-cost operation strategies
