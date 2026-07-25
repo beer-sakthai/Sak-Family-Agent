@@ -162,3 +162,249 @@ uv run --image vllm/vllm-openai --flavor l4x4 my-script.py
 | GPU builds | Yes | No (use at runtime only) |
 | Free tier | Public images only | Public images + Static Spaces |
 | Integration | General purpose | Spaces, Jobs, Hub ecosystem |
+
+---
+
+## 2026-07-25: hf-hub-docker-registry-deep-dive-v2 — Docker Registry V2 API Architecture & Spaces/Jobs Deep-Dive (Topic #260)
+
+### Summary
+Deep-dive on the Hugging Face Docker Container Registry's V2 API implementation, authentication flow, and how it powers Docker Spaces and Jobs. Covers the full Bearer token auth handshake (WWW-Authenticate challenge → token exchange), Docker V2 API endpoint structure (manifests, blobs, tags, catalog), Docker Spaces configuration (SDK setup, build-time secrets via `--mount=type=secret`, runtime env vars, multi-port internal networking, UID 1000 runtime user, no-GPU-during-build constraint), Jobs popular images (vLLM, TRL) with GPU framework image requirements (CUDA toolkit, nvcc, NCCL), local development workflow, and zero-cost pathways for development and testing.
+
+### Source
+- Docker Spaces Docs: https://huggingface.co/docs/hub/en/spaces-sdks-docker
+- Jobs Popular Images: https://huggingface.co/docs/hub/en/jobs-popular-images
+- Docker Distribution V2 Spec: https://distribution.github.io/distribution/
+- Registry endpoint (verified): `registry.hf.space`
+- API version check: `GET /v2/` → 401 `WWW-Authenticate: Bearer realm="https://registry.hf.space/v2/auth"`
+- hf CLI for Jobs: `hf jobs uv run --image <image> --flavor <gpu> <script>`
+
+### Skill
+hf-hub-docker-registry — Hugging Face Hub Docker Registry deep-dive: full Docker V2 API implementation, Bearer auth flow, Spaces SDK (docker/app_port/secrets/buildtime-mounts), Jobs popular images (vLLM/TRL), GPU framework image requirements, local development with docker build/run, multi-port networking, and zero-cost pathways
+
+---
+
+### 1. Registry V2 API Architecture
+
+The HF Docker Registry at `registry.hf.space` is a **compliant Docker Distribution V2 API** implementation. It uses the standard OAuth2-style Bearer token authentication mandated by the Docker V2 spec.
+
+#### 1.1 Authentication Flow (Handshake)
+
+```
+Client → Registry: GET /v2/
+Registry → Client: 401 WWW-Authenticate: Bearer realm="https://registry.hf.space/v2/auth",service="registry.hf.space",scope="repository:<ns>/<img>:pull"
+Client → Auth:     GET https://registry.hf.space/v2/auth?service=registry.hf.space&scope=repository:<ns>/<img>:pull  [Authorization: Bearer <HF_TOKEN>]
+Auth → Client:     {"token":"<short-lived-bearer-token>","expires_in":300,"issued_at":"..."}
+Client → Registry: GET /v2/<ns>/<img>/manifests/<tag> [Authorization: Bearer <short-lived-token>]
+Registry → Client: 200 {manifests...}
+```
+
+Key characteristics:
+- Short-lived tokens (300 seconds / 5 minutes)
+- HF user access tokens are exchanged for registry-scoped tokens
+- Scopes are per-repository (`repository:<namespace>/<image>:pull,push`)
+- No anonymous access — all registry operations require authentication
+
+#### 1.2 V2 API Endpoint Structure
+
+| Endpoint | Method | Description | Auth Required |
+|----------|--------|-------------|---------------|
+| `/v2/` | GET | API version check | Yes (returns 401 challenge) |
+| `/v2/_catalog` | GET | List all repositories | Yes |
+| `/v2/<ns>/<repo>/tags/list` | GET | List tags for a repository | Yes |
+| `/v2/<ns>/<repo>/manifests/<tag>` | GET | Get image manifest (by tag) | Yes |
+| `/v2/<ns>/<repo>/manifests/<digest>` | GET | Get image manifest (by digest) | Yes |
+| `/v2/<ns>/<repo>/manifests/<tag>` | PUT | Push image manifest | Yes (write scope) |
+| `/v2/<ns>/<repo>/blobs/<digest>` | GET | Download blob layer | Yes |
+| `/v2/<ns>/<repo>/blobs/<digest>` | HEAD | Check blob existence | Yes |
+| `/v2/<ns>/<repo>/blobs/uploads/` | POST | Start blob upload | Yes (write scope) |
+| `/v2/<ns>/<repo>/blobs/uploads/<uuid>` | PUT | Complete blob upload (monolithic) | Yes |
+| `/v2/<ns>/<repo>/blobs/uploads/<uuid>` | PATCH | Upload blob chunk | Yes |
+| `/v2/auth` | GET | Token exchange endpoint | Yes (HF token) |
+
+#### 1.3 Image Naming Convention
+
+Images in the HF registry follow: `registry.hf.space/<hf-username-or-org>/<image-name>:<tag>`
+
+For **Spaces**, the image name corresponds to the Space name. When you push a Docker Space, your image goes to `registry.hf.space/<your-username>/<space-name>:latest` (or your specific tag).
+
+For **Jobs**, popular prebuilt images are available:
+- `vllm/vllm-openai` — vLLM inference engine with CUDA toolkit
+- `huggingface/trl` — TRL training library
+
+These images are pulled automatically by the Jobs system when specified with `--image`.
+
+---
+
+### 2. Docker Spaces — Custom Containers
+
+#### 2.1 SDK Configuration (README.md YAML)
+
+```yaml
+---
+title: My Docker Space
+emoji: 🐳
+colorFrom: purple
+colorTo: gray
+sdk: docker
+app_port: 7860
+---
+```
+
+- `sdk: docker` — tells the HF platform to build and run a Docker container
+- `app_port: 7860` — the port to expose externally (default: 7860)
+- Multiple internal ports can be used (e.g., Elasticsearch on 9200) but only one external port
+- For multi-port exposure, use Nginx reverse proxy inside the container
+
+#### 2.2 Build-time vs Runtime Variables
+
+| Variable Type | Build-time | Runtime |
+|---------------|-----------|---------|
+| Variables | `ARG` in Dockerfile | Env vars in container |
+| Secrets | `--mount=type=secret` (Docker BuildKit) | Env vars via `os.environ` |
+
+**Build-time Variables:** Passed as Docker `--build-arg`. Declared with `ARG` in the Dockerfile:
+```dockerfile
+ARG MODEL_REPO_NAME
+FROM python:latest
+RUN predict.py $MODEL_REPO_NAME
+```
+
+**Build-time Secrets:** Use Docker BuildKit `--mount=type=secret`:
+```dockerfile
+# Mount secret and use its value
+RUN --mount=type=secret,id=SECRET_EXAMPLE,mode=0444,required=true \
+    git init && \
+    git remote add origin $(cat /run/secrets/SECRET_EXAMPLE)
+```
+
+Secrets are created in the Space Settings tab. Build-time secrets are NOT available as env vars — they must be mounted as files.
+
+#### 2.3 Container Runtime Constraints
+
+| Constraint | Detail |
+|-----------|--------|
+| **No GPU during build** | `docker build` runs on CPU only. CUDA/torch calls in Dockerfile will fail. |
+| **Runtime user** | UID 1000 (not root). Create user in Dockerfile: `RUN useradd -m -u 1000 appuser` |
+| **No bind mounts** | `/data` is persisted; all other paths are ephemeral |
+| **Network** | Outbound HTTPS allowed; inbound on `app_port` only |
+| **Memory** | Varies by Space hardware tier; Static: 512MB, ZeroGPU: 16GB, Paid: up to 192GB |
+| **Disk** | Varies by tier; persistent storage via `/data` (see Spaces Disk Usage) |
+
+#### 2.4 GPU at Runtime
+
+Docker Spaces **do support GPUs at runtime** (unlike during build):
+- **ZeroGPU Spaces** — free GPU runtime (NVIDIA A100) with `spaces-zero-gpu` tag
+- **Paid GPU upgrades** — dedicated GPU (T4, L4, L40S, A100, H100)
+
+For ZeroGPU Spaces specifically:
+```dockerfile
+FROM nvidia/cuda:12.1-runtime-ubuntu22.04
+# ... install your app
+```
+The ZeroGPU system injects `CUDA_VISIBLE_DEVICES` and mounts the GPU device automatically.
+
+#### 2.5 Local Development
+
+```bash
+# Clone the Space repo
+git clone https://huggingface.co/spaces/<owner>/<space-name>
+cd <space-name>
+
+# Build and test locally
+docker build -t test-space .
+docker run -p 7860:7860 test-space
+
+# Access at http://localhost:7860
+```
+
+---
+
+### 3. Jobs Integration — Popular Images
+
+#### 3.1 The `--image` Flag
+
+Jobs use the `hf jobs uv run` command with `--image` to specify a Docker image from the HF registry:
+
+```bash
+hf jobs uv run --image vllm/vllm-openai --flavor l4x4 generate-responses.py
+hf jobs uv run --image huggingface/trl --flavor a100-large -s HF_TOKEN train.py
+```
+
+#### 3.2 Why GPU Framework Images Matter
+
+GPU libraries need more than a Python package — they need **system-level CUDA infrastructure**:
+
+| Component | What it provides |
+|-----------|-----------------|
+| CUDA toolkit | `nvcc`, `ptxas`, CUDA runtime libraries |
+| NCCL | Multi-GPU communication |
+| cuDNN | Deep neural network primitives |
+| FlashInfer | Prebuilt JIT kernels for attention |
+
+Without `--image`, `hf jobs uv run` uses a bare Python image (`ghcr.io/astral-sh/uv:python3.12-bookworm`) that has no CUDA toolkit. This causes errors like:
+```
+RuntimeError: Could not find nvcc and default cuda_home='/usr/local/cuda' doesn't exist
+```
+
+The framework image (`vllm/vllm-openai`, `huggingface/trl`) provides the system stack. UV still installs your script dependencies from PyPI, but they run against the image's pre-configured CUDA environment.
+
+#### 3.3 Available Framework Images (2026-07-25)
+
+| Image | Framework | Use Case | GPU Required |
+|-------|-----------|----------|-------------|
+| `vllm/vllm-openai` | vLLM | Batch inference, OpenAI-compatible serving | Yes (L4/A100/H100) |
+| `huggingface/trl` | TRL | SFT, GRPO, DPO training | Yes (A100) |
+
+Images are stored in the HF Docker Registry and regularly updated.
+
+---
+
+### 4. Zero-Cost Pathways
+
+| Pathway | Cost | Details |
+|---------|------|---------|
+| **Static Docker Spaces** | Free | Always-on, no GPU. Use for APIs, websites, databases |
+| **ZeroGPU Docker Spaces** | Free | GPU on-demand (A100). Include `spaces-zero-gpu` in SDK tags |
+| **Local development** | Free | `docker build` + `docker run` on your machine |
+| **Jobs (CPU)** | Free tier | `hf jobs uv run` without `--flavor` (CPU only, limited quota) |
+| **Jobs (GPU)** | Paid | Requires PRO subscription + GPU quota |
+
+---
+
+### 5. Registry Limitations & Workarounds
+
+| Limitation | Workaround |
+|-----------|-----------|
+| No anonymous pull | Always authenticate via `docker login` or HF token |
+| No GPU during Space build | Use multi-stage builds: build CPU parts, copy GPU binaries |
+| Single external port | Nginx reverse proxy to route to internal services |
+| Build-time secrets require BuildKit | Ensure `DOCKER_BUILDKIT=1` in local env |
+| No custom domains on free tier | Use subdomain under `hf.space` |
+| No `docker push` without write token | Create HF token with `write` or `fine-grained` scope |
+| 5-min token expiry | Registry re-authenticates transparently on each API call |
+
+---
+
+### 6. Debugging & Troubleshooting
+
+```bash
+# 1. Verify registry connectivity
+curl -sI https://registry.hf.space/v2/
+# Expected: HTTP/2 401 with WWW-Authenticate header
+
+# 2. Authenticate
+echo $HF_TOKEN | docker login registry.hf.space -u $HF_USERNAME --password-stdin
+
+# 3. Pull an image
+docker pull registry.hf.space/<namespace>/<image>:<tag>
+
+# 4. Check Docker Space build logs (in Space settings)
+# Look for "Build logs" tab
+
+# 5. Test Space locally
+docker build --no-cache -t test-space . 2>&1
+docker run --rm -p 7860:7860 test-space
+
+# 6. Check runtime logs (Space → Logs tab)
+# Real-time streaming available for running Spaces
+|
