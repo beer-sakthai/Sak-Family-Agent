@@ -148,7 +148,7 @@
   "hf-hub-js-sdk-deep-dive-v2",
   "hf-hub-lfs-architecture",
   "hf-hub-lfs-architecture-deep-dive-v2",
-  "hf-hub-local-agents-with-llamacpp",
+  "hf-hub-local-agents-with-llamacpp-deep-dive-v2-local-apps-ecosystem",
   "hf-hub-local-apps",
   "hf-hub-model-dependents",
   "hf-hub-model-dependents-deep-dive-v2-tag-system-merge-chains",
@@ -364,5 +364,13 @@
   "hf-foundry-managed-compute",
   "hf-jobs-serving-vllm",
   "hf-inference-endpoints-advanced-operations",
-  "hf-trackio-experiment-tracking"
+  "hf-trackio-experiment-tracking",
+  "hf-inference-providers-deepening-hub-api-pricing-agent-integrations",
+  "hf-transformers-deepseek-v4-source-implementation-deep-dive",
+  "hf-datasets-arrow-memory-architecture",
+  "hf-inference-endpoints-custom-containers-deepening-1",
+  "hf-hub-billing-and-subscription-plans",
+  "hf-hub-dataset-card-metadata-comprehensive-reference",
+  "hf-inference-client-image-generation-patterns",
+  "hf-hub-evaluation-results"
 ]
