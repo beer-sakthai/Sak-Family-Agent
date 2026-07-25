@@ -7407,3 +7407,205 @@ Unauthorized users see "You are not authorized to use this Space" on sign-in.
 - https://huggingface.co/docs/hub/spaces-overview#helper-environment-variables
 - Gradio OAuth reference Space: https://huggingface.co/spaces/Wauplin/gradio-oauth-test
 - Static JS OAuth reference: https://huggingface.co/spaces/huggingfacejs/client-side-oauth
+
+---
+
+## Entry 146: huggingface_hub Authentication Pipeline — Source-Code Deep Dive (2026-07-25)
+**Date:** 2026-07-25
+**Topic:** hf-auth-login-internals-deep-dive — The complete internal implementation of login/logout/token management in huggingface_hub v1.24.0
+
+### Modules Involved
+
+The authentication pipeline spans four modules:
+
+| Module | File | Role |
+|--------|------|------|
+| _login.py | huggingface_hub/_login.py | High-level user-facing API: login(), logout(), auth_switch(), auth_list(), notebook_login(), interpreter_login() |
+| utils/_auth.py | huggingface_hub/utils/_auth.py | Token resolution, storage, refresh: get_token(), _save_token(), OIDC token exchange, transparent OAuth token refresh |
+| utils/_oauth_device.py | huggingface_hub/utils/_oauth_device.py | Pure protocol implementation of Device Code OAuth (RFC 8628) and OAuth token refresh — no UI, no persistence, just HTTP |
+| _oidc.py | huggingface_hub/_oidc.py | CI/CD Trusted Publishers — OIDC id token minting + RFC 8693 token exchange for keyless auth |
+
+### 1. Token Resolution Chain (get_token())
+
+The single entry point for all auth is get_token() (in utils/_auth.py). Resolution order:
+
+1. HF_OIDC_RESOURCE set? -> OIDC token exchange (Trusted Publishers)
+2. HF_TOKEN env var? -> from environment (HF_TOKEN -> HUGGING_FACE_HUB_TOKEN for backward compat)
+3. ~/.cache/huggingface/token? -> from file, with transparent OAuth refresh
+4. Google Colab vault? -> google.colab.userdata.get("HF_TOKEN")
+5. None -> not logged in
+
+Key design: each step short-circuits. If OIDC is configured, it takes precedence over everything (and raises on failure — no silent fallback). The Colab path runs only once per process (global _IS_GOOGLE_COLAB_CHECKED flag with per-process secret cache _GOOGLE_COLAB_SECRET, thread-safe via Lock()).
+
+### 2. Token Storage System
+
+Tokens are stored in two files:
+
+**Active token file** (HF_TOKEN_PATH):
+- Single raw token value (just the string, no metadata)
+- Created/updated by _write_secret() which sets 0o600 file mode + 0o700 parent dir mode (POSIX only; best-effort on Windows)
+
+**Stored tokens file** (HF_STORED_TOKENS_PATH):
+- INI format using configparser (interpolation disabled to preserve % in tokens)
+- Each section is a token name, with fields:
+  - hf_token (required) — the actual token value
+  - refresh_token (optional) — OAuth refresh token
+  - expires_at (optional) — Unix timestamp of token expiry
+- Written atomically via _write_secret() — same restrictive permissions
+
+### 3. OAuth Token Refresh Pipeline
+
+OAuth tokens obtained via browser-based login have refresh_token and expires_at. The _get_token_from_file_refreshed() function in utils/_auth.py transparently refreshes them:
+
+get_token() -> _get_token_from_file_refreshed(token)
+  -> _get_token_from_file() (read raw token)
+  -> _refresh_oauth_token_if_needed(token)
+
+Key mechanics:
+- **In-process cache** (_OAUTH_REFRESH_CACHE): avoids re-reading stored tokens file (and re-hitting the network) on every get_token() call — critical since get_token() runs on every HTTP request
+- **Recheck interval**: _OAUTH_RECHECK_INTERVAL = 300s (5 min) when no metadata or refresh failed
+- **Refresh margin**: _OAUTH_REFRESH_MARGIN = 86400s (24 hours) — refreshes when less than 1 day of validity remains
+- **Cross-process safety**: uses WeakFileLock on HF_STORED_TOKENS_PATH with 30s timeout to prevent multiple processes invalidating each other's refresh token
+- **Graceful failure**: refresh failures never raise — the expired token is returned (API will reject it) and a warning is logged at most once per process (_OAUTH_REFRESH_WARNED global flag)
+- **Refresh token rotation**: the server may rotate refresh tokens; the old refresh token is kept if the response doesn't include a new one
+
+### 4. Login Entry Points
+
+**login(token=None)** (default path):
+1. If token passed directly -> _validate_and_save_token(token, add_to_git_credential)
+2. If no token -> auto-detect environment:
+   - In a notebook: delegates to notebook_login()
+   - In a terminal: delegates to interpreter_login()
+
+**notebook_login()**:
+1. Checks skip_if_logged_in (default True) — returns early if get_token() is not None
+2. Falls back to interpreter_login() if IPython not available
+3. Calls request_device_code() to get device + user code
+4. Displays HTML widget with verification URL + code
+5. Calls poll_device_token(device_info) to poll for authorization
+6. On success: _save_oauth_token(response) -> _validate_and_save_token(response["access_token"])
+7. On failure: displays error in HTML widget
+
+**interpreter_login()**:
+1. Checks skip_if_logged_in
+2. Offers a choice via select_choice(): browser-based OAuth vs paste existing token
+3. Browser choice: calls _device_code_login()
+4. Paste choice: prompts for token with getpass(), calls _validate_and_save_token()
+
+### 5. Token Validation Pipeline (_validate_and_save_token)
+
+When a token is provided (from any login path), the validation chain is:
+
+1. **Org token rejection**: tokens starting with api_org raise ValueError immediately
+2. **whoami(token) call**: validates against /api/whoami-v2
+3. **Extract metadata**:
+   - name -> HF username
+   - auth.accessToken.displayName -> token display name (or oauth-{username} for OAuth tokens)
+   - auth.accessToken.role -> permission role (logged as info)
+4. **Persist**: _save_token(token, token_name, refresh_token, expires_at) -> stored_tokens INI
+5. **Set active**: _set_active_token(token_name, add_to_git_credential):
+   - Writes token to HF_TOKEN_PATH via _write_secret()
+   - Optionally sets git credential helper
+6. **Env var override warning**: warns if HF_TOKEN env var is set (overrides stored token)
+
+### 6. Logout Pipeline
+
+**logout(token_name=None)**:
+- No token_name -> delete ALL stored tokens: unlink both HF_TOKEN_PATH and HF_STORED_TOKENS_PATH
+- Specific token_name -> _logout_from_token():
+  1. Remove the token's section from stored_tokens INI
+  2. If it was the active token, unlink HF_TOKEN_PATH
+- **Always** calls unset_git_credential() to clean git credentials
+- **Post-logout checks**: warns if still logged in via Colab secret or env variable (raises OSError for Colab/Env — user must manually clear those)
+
+### 7. Token Switching (auth_switch)
+
+auth_switch(token_name):
+1. Looks up token by name in stored_tokens INI via _get_token_by_name()
+2. Writes it to HF_TOKEN_PATH -> becomes active
+3. Optionally sets git credential
+4. Warns if HF_TOKEN env var overrides the switch
+
+### 8. OIDC / Trusted Publishers (_oidc.py)
+
+The zero-cost, no-secret auth for CI/CD:
+
+**Flow**: CI provider mints an OIDC id token -> exchanges at /oauth/token using RFC 8693 token-exchange grant with id_token subject type
+
+**Supported providers**: GitHub Actions only (native minting via ACTIONS_ID_TOKEN_REQUEST_URL env vars). Any OIDC-compatible provider can pass a pre-minted token via HF_OIDC_ID_TOKEN env var.
+
+**In-process caching**: _OIDC_TOKEN_CACHE with expires_at check (300s refresh margin) — avoids re-exchanging on every get_token() call during long CI runs.
+
+**Scope via HF_OIDC_RESOURCE env var**: repo path (e.g. username/model) for write tokens, or bare username for gated-repo read tokens.
+
+### 9. Device Code OAuth (RFC 8628) — Pure Protocol
+
+utils/_oauth_device.py contains two functions:
+
+**request_device_code()**:
+- POST with client_id (constant)
+- Normalizes response: defaults interval to 5s, expires_in to 900s
+- Returns typed dict DeviceCodeInfo
+
+**poll_device_token()**:
+- Polls token endpoint with grant_type=device_code + device_code + client_id
+- Handles OAuth error states per RFC 8628:
+  - authorization_pending -> call on_pending callback, keep polling
+  - slow_down -> increase poll interval by 5s
+  - expired_token -> raise with EXPIRED_TOKEN error code
+  - access_denied -> raise with ACCESS_DENIED
+  - Unknown errors -> raise with the raw error code
+- Network resilience: HTTP 5xx, JSON parse failures, proxy errors silently retried — only the expires_in deadline bounds total wait
+- Returns OAuthTokenResponse typed dict
+
+**refresh_access_token()**:
+- POST with grant_type=refresh_token + refresh_token + client_id
+- Raises DeviceCodeError with invalid_grant on expiry/revocation
+- Used by utils/_auth.py::_refresh_oauth_token_if_needed()
+
+### 10. Security-Critical Design Details
+
+| Feature | Implementation |
+|---------|---------------|
+| Secret file permissions | 0o600 file + 0o700 parent directory, best-effort on Windows |
+| INI interpolation disabled | configparser(interpolation=None) — prevents % in tokens from being interpreted |
+| OAuth refresh thread-safe | WeakFileLock for cross-process; _OAUTH_REFRESH_LOCK for in-process |
+| OIDC cache | Per-process _OIDC_TOKEN_LOCK + _OIDC_TOKEN_CACHE globals |
+| Colab secret | Per-process _GOOGLE_COLAB_SECRET_LOCK + globals |
+| Rate-limited endpoint | whoami() heavily rate-limited; whoami(cache=True) caches per-token |
+| Token validation | Server-side via /api/whoami-v2 — never trusts local token format |
+| Git credential helper | Detects configured helpers before setting |
+
+### 11. Constants Reference
+
+| Constant | Purpose |
+|----------|---------|
+| HF_TOKEN_PATH | Active token file |
+| HF_STORED_TOKENS_PATH | Multi-token INI store |
+| ENDPOINT | Hub API base URL |
+| DEVICE_CODE_OAUTH_CLIENT_ID | OAuth client ID for device code |
+| HF_HUB_DOWNLOAD_TIMEOUT | HTTP timeout for OAuth requests |
+| _OAUTH_REFRESH_MARGIN (86400s) | Refresh margin for OAuth tokens |
+| _OAUTH_RECHECK_INTERVAL (300s) | Re-check interval on refresh failure |
+| _OIDC_REFRESH_MARGIN (300s) | Refresh margin for OIDC tokens |
+
+### Sources
+- Source code: huggingface_hub/_login.py
+- Source code: huggingface_hub/utils/_auth.py
+- Source code: huggingface_hub/utils/_oauth_device.py
+- Source code: huggingface_hub/_oidc.py
+- Source code: huggingface_hub/constants.py
+- Docs: Trusted Publishers
+- RFC 8628 (Device Code OAuth), RFC 8693 (Token Exchange)
+
+
+---
+
+## Entry 146: huggingface_hub Authentication Pipeline — Source-Code Deep Dive (2026-07-25)
+**Date:** 2026-07-25  
+**Topic:**   
+
+### Modules Involved
+
+...
+
