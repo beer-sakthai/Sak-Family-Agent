@@ -356,5 +356,9 @@
   "hf-gemma3-deep-dive",
   "hf-inference-providers-source-architecture-deep-dive",
   "hf-datasets-server-filter-endpoint-source-deep-dive",
-  "hf-transformers-deepseek-v4-deep-dive"
+  "hf-transformers-deepseek-v4-deep-dive",
+  "hf-hub-cli-rebuilt-extensions-skills-marketplace-deep-dive",
+  "hf-inference-router-openai-compatible-endpoint",
+  "hf-hub-webhooks-practical-patterns-deep-dive",
+  "hf-inference-router-practical-patterns-deep-dive"
 ]

@@ -1,5 +1,23 @@
 # HF Learnings Log
 
+## 2026-07-25: hf-hub-security-scanning-deep-dive — Hugging Face Hub Security Scanning Architecture and Workflows (Topic #185)
+
+### Summary
+Deep dive into Hugging Face Hub's security scanning infrastructure — the automated pipeline that scans every model, dataset, and Space upload for malware, secrets, unsafe content, and license violations. Covers the four scanning layers (Pickle scanning via PickleScan from Trail of Bits, ClamAV antivirus, secrets/credential detection, safety moderation), how scan results are displayed as badges on repo pages, API access to scan status, handling of false positives, and best practices for secure model publishing.
+
+### Key Findings
+- **Four scanning layers**: Pickle exploit detection (opcode-level static analysis), ClamAV (malware signatures), secrets detection (regex pattern matching for API keys, tokens, private keys), safety moderation (text/image content policy)
+- **Quarantine for critical findings**: Confirmed malware triggers automatic repo hiding and download blocking; non-critical issues show warning badges
+- **Secrets redaction ≠ removal**: Hub viewer shows `[REDACTED]` but the raw Git object still contains the secret — credentials must be rotated
+- **safetensors is the solution**: Eliminates pickle-based code execution risk entirely; supported by Transformers, Diffusers, PEFT, and most modern frameworks
+- **API-accessible**: `HfApi.repo_info(expand=["securityScanStatus"])` returns per-layer scan results for CI/CD integration
+- **False positives possible**: ClamAV can flag statistical weight patterns; pickle opcodes like `__import__` may be flagged even for legitimate dynamic architecture loading — appealable through Hub support
+
+### Skill Created
+`hf-hub-security-scanning-deep-dive/` — SKILL.md (author: SakThai, license: MIT) + references/hf-learnings.md with scanning architecture, detection layers, badge reference, API patterns, false positive handling, and secure publishing best practices for models, datasets, and Spaces.
+
+---
+
 ## 2026-07-25: hf-transformers-deepseek-v4-deep-dive — DeepSeek V4 Architecture Complete Reference (Topic #358)
 
 ### Summary
