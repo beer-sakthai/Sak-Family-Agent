@@ -21,7 +21,7 @@ The House of Sak wasn't born from a business plan. It was born from isolation, p
 | **SakThai** 🏠 | Main Lead & HF Master | 379 | `sakthai-skills` | 🟢 Active |
 | **SakKing** 👑 | General Assistant, Infrastructure & Architecture | 290 | `Sak-Family-Agent` (this repo) | 🟢 Active |
 | **SakSee** 🌐 | Web & Browser Specialist | 107 | `saksee-skills` | 🟢 Active |
-| **SakSit** 📱 | Social Media & Storytelling | 431 | `saksit-skills` | 🟢 Active |
+| **SakSit** 📱 | Social Media & Storytelling | 341 | `saksit-skills` | 🟢 Active |
 | **SakJules** ⚙️ | CI/CD Automation | 11 | `Sak-Family-Agent` (deleted) | 🔴 Deleted |
 | **SakTan** 📋 | Daily Operations | — | — | 🔴 Deleted |
 
@@ -41,7 +41,7 @@ Sak-Family-Agent/
 │   ├── saksee/            # Web automation specialist
 │   │   └── skills/        # 18 SakSee-* skills (mirror; auth in saksee-skills: 107)
 │   ├── saksit/            # Social media storyteller
-│   │   └── skills/        # 83 SakSit-* skills (mirror; auth in saksit-skills: 431)
+│   │   └── skills/        # 83 SakSit-* skills (mirror; auth in saksit-skills: 341)
 │   ├── sakjules/          # CI/CD (deleted, skills retained)
 │   │   └── skills/        # 11 SakJules-* skills
 │   └── shared/            # Cross-agent skills (Sak-* prefix)
@@ -166,7 +166,7 @@ Every skill and artifact passes through a structured quality pipeline before del
 
 All verified data below was cross-checked against HF API and filesystem on 2026-07-26:
 
-- **Skill counts** — sourced from **GitHub API** (live, 2026-07-26): SakThai=379, SakKing=290, SakSee=107, SakSit=431, SakJules=11
+- **Skill counts** — sourced from **GitHub API** (live, 2026-07-26): SakThai=379, SakKing=290, SakSee=107, SakSit=341, SakJules=11
 - **Naming compliance** — 100% agent-prefix match verified across 5 personas
 - **GitHub connectivity** — token test `curl` to API confirmed active
 - **Model downloads (live)** — 1.5B=942, Coder=15, 0.5B=785, 7B=534 — pulled from HF API
