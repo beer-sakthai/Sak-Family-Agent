@@ -627,3 +627,29 @@ Reviewed the House of Sak narrative across 17 HF assets and GitHub docs.
 - Datasets have zero House of Sak narrative — add at least the tagline to dataset READMEs
 - Vision and Coder model cards lack the House of Sak section entirely
 - "6 AI agents" claim in model cards should be more precise ("6 agents, 4 active")
+
+## 2026-07-27 (cron — Self-Improvement Audit)
+
+### Repeated Patterns Found
+
+| Pattern | Frequency | Root Cause |
+|---------|:---------:|------------|
+| Stale family download table fix | **8+ cards** | Manual counters in every sibling card; no automation |
+| Full ecosystem re-scan on every cycle | **12+ entries** | Delta check built but never wired into cron pipeline |
+| "LAST REMAINING" campaign keeps growing | **4×** | Each fix discovers another stale card not yet checked |
+| Same "Root Cause" explanation verbatim | **6+ entries** | Journal entry templates duplicated instead of referencing |
+
+### Structural Improvement Needed
+
+The stale-family-table campaign cost ~8 manual card refreshes and still hasn't reached 1.5B-tools (143 dl). Each fix (clone → patch → commit → push → verify) takes ~5 min — 40+ min total with no lasting benefit because every card's table goes stale independently.
+
+**Fix:** Create `hf_sync_family_counts.py` — a single script that:
+1. Reads the HF API for all Nanthasit models
+2. Identifies the family table in each repo's README.md
+3. Patches every download count to match live API in one pass
+4. Commits + pushes all changes
+
+This would be ~2× the effort of one manual fix but eliminates all future cycles. Estimated: 15 min to build, saves 40+ min per repeat cycle.
+
+### Meta-Lesson Captured
+The same pattern was flagged in 3 prior journal entries ("redundant scans," "audit loop without signal," "infrastructure built but never wired"). Flagging isn't fixing. **The next cycle must build the automation, not re-document the pattern.**
