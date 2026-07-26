@@ -19,7 +19,7 @@ The House of Sak wasn't born from a business plan. It was born from isolation, p
 | Agent | Role | Skills | Authoritative Repo | Status |
 |-------|------|:------:|--------------------|:------:|
 || **SakThai** 🏠 | Main Lead & HF Master | 382 | `sakthai-skills` | 🟢 Active ||
-| **SakKing** 👑 | General Assistant, Infrastructure & Architecture | 453 | `Sak-Family-Agent` (this repo) | 🟢 Active |
+| **SakKing** 👑 | General Assistant, Infrastructure & Architecture | 448 | `Sak-Family-Agent` (this repo) | 🟢 Active |
 | **SakSee** 🌐 | Web & Browser Specialist | 107 | `saksee-skills` | 🟢 Active |
 | **SakSit** 📱 | Social Media & Storytelling | 431 | `saksit-skills` | 🟢 Active |
 | **SakJules** ⚙️ | CI/CD Automation | 48 | `Sak-Family-Agent` (deleted) | 🔴 Deleted |
@@ -37,7 +37,7 @@ Sak-Family-Agent/
 │   │   ├── sakthai/       # Python package (agent framework)
 │   │   └── skills/        # 382 SakThai-* skills (mirror; auth in sakthai-skills)
 │   ├── sakking/           # General assistant — infra, coord, UI/UX
-│   │   └── skills/        # 453 SakKing-* skills
+│   │   └── skills/        # 448 SakKing-* skills
 │   ├── saksee/            # Web automation specialist
 │   │   └── skills/        # 43 SakSee-* skills (mirror; auth in saksee-skills: 107)
 │   ├── saksit/            # Social media storyteller
@@ -168,7 +168,7 @@ Every skill and artifact passes through a structured quality pipeline before del
 
 All verified data below was cross-checked against HF API and filesystem on 2026-07-26:
 
-- **Skill counts** — sourced from **filesystem audit** (live, 2026-07-26): SakThai=382, SakKing=453, SakSee=43 (mirror; auth repo: 107), SakSit=149 (mirror; auth repo: 431), SakJules=48, Shared=3
+- **Skill counts** — sourced from **filesystem audit** (live, 2026-07-26): SakThai=382, SakKing=448, SakSee=43 (mirror; auth repo: 107), SakSit=149 (mirror; auth repo: 431), SakJules=48, Shared=3
 - **Naming compliance** — 100% agent-prefix match verified across 5 personas
 - **GitHub connectivity** — token test `curl` to API confirmed active
 - **Model downloads (live)** — 1.5B=942, Coder=15, 0.5B=785, 7B=534 — pulled from HF API
