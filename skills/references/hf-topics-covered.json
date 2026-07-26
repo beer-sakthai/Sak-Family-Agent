@@ -394,5 +394,6 @@
   "hf-hub-audit-logs",
   "hf-spaces-build-with-ai-agents",
   "hf-peft-beyond-lora",
-  "hf-hub-enterprise-sso"
+  "hf-hub-enterprise-sso",
+  "hf-donut-document-understanding"
 ]
