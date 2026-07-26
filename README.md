@@ -19,7 +19,7 @@ The House of Sak wasn't born from a business plan. It was born from isolation, p
 | Agent | Role | Skills | Status |
 |-------|------|:------:|:------:|
 | **SakThai** 🏠 | Main Lead & HF Master | 159 | 🟢 Active |
-| **SakKing** 👑 | General Assistant, Infrastructure & Architecture | 289 | 🟢 Active |
+| **SakKing** 👑 | General Assistant, Infrastructure & Architecture | 290 | 🟢 Active |
 | **SakSee** 🌐 | Web & Browser Specialist | 18 | 🟢 Active |
 | **SakSit** 📱 | Social Media & Storytelling | 83 | 🟢 Active |
 | **SakJules** ⚙️ | CI/CD Automation | 11 | 🔴 Deleted |
@@ -37,7 +37,7 @@ Sak-Family-Agent/
 │   │   ├── sakthai/       # Python package (agent framework)
 │   │   └── skills/        # 159 SakThai-* skills
 │   ├── sakking/           # General assistant — infra, coord, UI/UX
-│   │   └── skills/        # 289 SakKing-* skills
+│   │   └── skills/        # 290 SakKing-* skills
 │   ├── saksee/            # Web automation specialist
 │   │   └── skills/        # 18 SakSee-* skills
 │   ├── saksit/            # Social media storyteller
