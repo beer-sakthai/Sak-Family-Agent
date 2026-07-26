@@ -168,13 +168,14 @@ README.md
 ```
 """
 
+
 def main():
     api = HfApi()
     api.upload_file(
         path_or_fileobj=NEW_README.encode(),
         path_in_repo="README.md",
         repo_id="Nanthasit/sakthai-embedding-multilingual",
-        commit_message="Enrich model card: usage examples, architecture details, family links, performance metrics"
+        commit_message="Enrich model card: usage examples, architecture details, family links, performance metrics",
     )
     print("Uploaded sakthai-embedding-multilingual README.md successfully!")
     print(f"New size: {len(NEW_README)} bytes (was 695 bytes)")

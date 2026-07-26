@@ -1,3 +1,4 @@
+LICENSE
 README.md
 pyproject.toml
 personas/sakthai/sakthai/__init__.py
