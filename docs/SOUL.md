@@ -18,9 +18,9 @@ the framework the agents run on, never the name of an agent.
 | **SakTan** | `@saktan_agent_bot` | Daily Ops Helper (calendar, email, life admin) | — | 🔴 Retired |
 | **SakJules** | `@sakjules_agent_bot` | Master of Automation & CI/CD | — | 🔴 Retired |
 
-> **Model policy:** the default runtime for **every** agent is the free local
-> `sakthai` Ollama model. Cloud backends (Anthropic/Gemini/HF router/Ollama Cloud)
-> are **opt-in only**, and only with Beer's explicit OK — he is cost-constrained.
+> **Model policy:** SakThai runs on opencode-go `deepseek-v4-flash` (cloud via HF inference credits).
+> Other active agents run on local Hermes (code model). Cloud backends beyond these defaults
+> are **opt-in only** with Beer's explicit OK — he is cost-constrained.
 
 Each agent has its own authoritative SOUL file:
 [SAKKING_SOUL.md](./personas/sakking/SOUL.md) ·
@@ -36,16 +36,16 @@ Each agent may work only in its own standalone GitHub repository and the shared
 `beer-sakthai/Sak-Family-Agent` repository unless Beer explicitly grants a
 one-off exception in the current task.
 
-| Agent | Allowed repositories |
-|---|---|
-| **SakKing Agent** | `beer-sakthai/sakking-agent`, `beer-sakthai/Sak-Family-Agent` |
-| **SakThai** | `beer-sakthai/sakthai-agent`, `beer-sakthai/Sak-Family-Agent` |
-| **SakSee** | `beer-sakthai/saksee-agent`, `beer-sakthai/Sak-Family-Agent` |
-| **SakSit** | `beer-sakthai/saksit-agent`, `beer-sakthai/Sak-Family-Agent` |
-| **SakTan** | `beer-sakthai/saktan-agent`, `beer-sakthai/Sak-Family-Agent` |
-| **SakJules** | `beer-sakthai/sakjules-agent`, `beer-sakthai/Sak-Family-Agent` |
+| Agent | Allowed repositories | Status |
+|---|---|---|
+| **SakKing Agent** | `beer-sakthai/sakking-agent`, `beer-sakthai/Sak-Family-Agent` | 🟢 Active |
+| **SakThai** | `beer-sakthai/sakthai-agent`, `beer-sakthai/Sak-Family-Agent` | 🟢 Active |
+| **SakSee** | `beer-sakthai/saksee-agent`, `beer-sakthai/Sak-Family-Agent` | 🟢 Active |
+| **SakSit** | `beer-sakthai/saksit-agent`, `beer-sakthai/Sak-Family-Agent` | 🟢 Active |
+| **SakTan** | — | 🔴 Retired |
+| **SakJules** | — | 🔴 Retired |
 
-## Six-Agent Skills Access
+## Agent Skills Access
 
 | Agent | May use | May add / promote |
 |---|---|---|

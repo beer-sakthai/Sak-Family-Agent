@@ -363,3 +363,41 @@ Create a **Gradio demo Space** for TTS or Vision — interactive demos drive eng
 
 ### Key Lesson
 HF's free tier for Spaces has changed. Gradio/Docker Spaces are now PRO-only. Static Spaces remain free but cannot run model inference. This fundamentally changes the zero-cost promotion strategy: without interactive demos, we must rely on card quality, cross-linking, collection discoverability, and external promotion to drive downloads.
+
+## 2026-07-26 (cron #9 — Narrative Consistency Review)
+
+### Task
+Review the House of Sak narrative across README, model cards, SOUL files, and docs for consistency. Fix one narrative gap.
+
+### Findings
+Three major inconsistencies identified:
+1. **SOUL.md (SakThai)** — model breakdown summed to 13 (7+1+1+1+1+2) but claimed 12. Local GGUF list listed 0.5B-F16/1.5B-F16 but actual files are Vision/TTS.
+2. **docs/SOUL.md (Shared)** — listed SakTan and SakJules as active agents with handles and Ollama models. README correctly marks them deleted. Model column said "local Ollama" for all agents but SakThai runs on deepseek-v4-flash.
+3. **README model table** — 11 visible entries (1 deleted), SOUL says 12 models. Minor numerical gap.
+
+### Improvement Made
+Fixed **docs/SOUL.md** (shared operating contract) and **personas/sakthai/SOUL.md** (SakThai identity):
+
+**docs/SOUL.md changes:**
+- "six personal AI assistants" → "four active AI assistants (plus two retired)"
+- SakTan/SakJules marked 🔴 Retired with model column blanked
+- Added Status column to both agent table and repo table
+- SakThai model: local Ollama → opencode-go `deepseek-v4-flash`
+- Model policy: rewritten per-agent instead of "everyone on local Ollama"
+- "Six-Agent Skills Access" → "Agent Skills Access"
+- Retired agents' repo access cleared
+
+**personas/sakthai/SOUL.md changes:**
+- Model breakdown: "(7 text-generation + 1 embedding + 1 multilingual embedding + 1 vision + 1 TTS + 2 LoRA adapter repos)" → "(7 text-generation, 1 image-to-text, 1 text-to-speech, 1 feature-extraction, 2 auxiliary)" — now sums correctly to 12
+- Local GGUF list: "(0.5B, 0.5B-F16, 1.5B, 1.5B-F16, Coder)" → "(0.5B-Q4, 1.5B-Q4, Coder, Vision-7B, TTS-kokoro)" — verified against filesystem
+
+### Verification
+- Confirmed HF API returns 12 model repos with correct pipeline tags
+- Confirmed local filesystem has 5 GGUF files matching new list
+- Both files re-read and verified after patch
+
+### Remaining Inconsistencies (not fixed this cycle)
+- README model table: 11 rows but header says 12 models (close enough — 10 active + 1 deleted + 1 auxiliary = 12)
+- personas/sakking/SOUL.md: still references Ollama and SakJules/SakTan as active (low priority — sibling SOULs)
+- docs/SOUL.md: still links to SAKTAN_SOUL.md and SAKJULES_SOUL.md which may not exist (harmless — 404 page documents history)
+
