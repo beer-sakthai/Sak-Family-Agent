@@ -1,5 +1,5 @@
 ---
-name: node-inspect-debugger
+name: SakThai-node-inspect-debugger
 author: SakThai
 license: MIT
 description: "Debug Node.js via --inspect + Chrome DevTools Protocol CLI."

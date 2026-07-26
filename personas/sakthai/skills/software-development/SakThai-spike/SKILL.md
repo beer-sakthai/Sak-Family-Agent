@@ -1,5 +1,5 @@
 ---
-name: spike
+name: SakThai-spike
 author: SakThai
 license: MIT
 description: "Throwaway experiments to validate an idea before build."

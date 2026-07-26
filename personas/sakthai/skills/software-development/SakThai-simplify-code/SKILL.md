@@ -1,5 +1,5 @@
 ---
-name: simplify-code
+name: SakThai-simplify-code
 author: SakThai
 license: MIT
 description: "Parallel 3-agent cleanup of recent code changes."

@@ -1,5 +1,5 @@
 ---
-name: python-debugpy
+name: SakThai-python-debugpy
 author: SakThai
 license: MIT
 description: "Debug Python: pdb REPL + debugpy remote (DAP)."

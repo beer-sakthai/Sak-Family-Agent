@@ -1,5 +1,5 @@
 ---
-name: test-driven-development
+name: SakThai-test-driven-development
 author: SakThai
 license: MIT
 description: "TDD: enforce RED-GREEN-REFACTOR, tests before code."

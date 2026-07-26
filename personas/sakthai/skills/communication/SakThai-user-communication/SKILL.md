@@ -1,5 +1,5 @@
 ---
-name: user-communication
+name: SakThai-user-communication
 author: SakThai
 license: MIT
 description: "Communication preferences and interaction conventions for the primary user (Beer / beer-sakthai). Apply on every interaction."

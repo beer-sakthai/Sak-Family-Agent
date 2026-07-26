@@ -1,5 +1,5 @@
 ---
-name: ci-fixer-master-debug
+name: SakThai-ci-fixer-master-debug
 author: Hermes
 license: MIT
 description: Diagnose and fix GitHub Actions CI failures.

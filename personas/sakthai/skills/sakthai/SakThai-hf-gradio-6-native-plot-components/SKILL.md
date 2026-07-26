@@ -1,5 +1,5 @@
 ---
-name: hf-gradio-6-native-plot-components
+name: SakThai-hf-gradio-6-native-plot-components
 author: SakThai
 license: MIT
 description: "A skill for Hf Gradio 6 Native Plot Components."

@@ -1,5 +1,5 @@
 ---
-name: plan
+name: SakThai-plan
 author: SakThai
 license: MIT
 description: "Plan mode: write an actionable markdown plan to .hermes/plans/, no execution. Bite-sized tasks, exact paths, complete code."

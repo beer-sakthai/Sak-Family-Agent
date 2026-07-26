@@ -1,5 +1,5 @@
 ---
-name: systematic-debugging
+name: SakThai-systematic-debugging
 author: SakThai
 license: MIT
 description: "4-phase root cause debugging: understand bugs before fixing."

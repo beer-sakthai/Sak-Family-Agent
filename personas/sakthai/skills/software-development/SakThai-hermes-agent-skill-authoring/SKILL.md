@@ -1,5 +1,5 @@
 ---
-name: hermes-agent-skill-authoring
+name: SakThai-hermes-agent-skill-authoring
 author: SakThai
 license: MIT
 description: "Author in-repo SKILL.md: frontmatter, validator, structure, and writing-quality principles."

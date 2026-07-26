@@ -1,5 +1,5 @@
 ---
-name: requesting-code-review
+name: SakThai-requesting-code-review
 author: SakThai
 license: MIT
 description: "Pre-commit review: security scan, quality gates, auto-fix."

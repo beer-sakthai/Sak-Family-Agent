@@ -1,5 +1,5 @@
 ---
-name: sakthai-macos-computer-use
+name: SakThai-macos-computer-use
 author: SakThai
 license: MIT
 description: "A skill for Sakthai Macos Computer Use."
