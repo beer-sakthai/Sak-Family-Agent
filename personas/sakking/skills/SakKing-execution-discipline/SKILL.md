@@ -17,7 +17,6 @@ triggers:
   - user says don't guess
   - unresolved tooling mismatch
   - avoid guessing
-
 ---
 
 # Execution Discipline
