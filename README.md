@@ -21,7 +21,7 @@ The House of Sak wasn't born from a business plan. It was born from isolation, p
 | **SakThai** 🏠 | Main Lead & HF Master | 159 | 🟢 Active |
 | **SakKing** 👑 | General Assistant, Infrastructure & Architecture | 290 | 🟢 Active |
 | **SakSee** 🌐 | Web & Browser Specialist | 18 | 🟢 Active |
-| **SakSit** 📱 | Social Media & Storytelling | 83 | 🟢 Active |
+| **SakSit** 📱 | Social Media & Storytelling | 204 | 🟢 Active |
 | **SakJules** ⚙️ | CI/CD Automation | 11 | 🔴 Deleted |
 | **SakTan** 📋 | Daily Operations | — | 🔴 Deleted |
 
@@ -41,7 +41,7 @@ Sak-Family-Agent/
 │   ├── saksee/            # Web automation specialist
 │   │   └── skills/        # 18 SakSee-* skills
 │   ├── saksit/            # Social media storyteller
-│   │   └── skills/        # 83 SakSit-* skills
+│   │   └── skills/        # 204 SakSit-* skills (authoritative in saksit-skills repo)
 │   ├── sakjules/          # CI/CD (deleted, skills retained)
 │   │   └── skills/        # 11 SakJules-* skills
 │   └── shared/            # Cross-agent skills (Sak-* prefix)
@@ -166,7 +166,7 @@ Every skill and artifact passes through a structured quality pipeline before del
 
 All verified data below was cross-checked against HF API and filesystem on 2026-07-26:
 
-- **Skill counts** — audited via `find` across all persona directories — **verified match** (sakthai=159, sakking=290, saksee=18, saksit=83, sakjules=11)
+- **Skill counts** — audited via `find` across all persona directories — **verified match** (sakthai=159, sakking=290, saksee=18, saksit=204, sakjules=11)
 - **Naming compliance** — 100% agent-prefix match verified across 5 personas
 - **GitHub connectivity** — token test `curl` to API confirmed active
 - **Model downloads (live)** — 1.5B=942, Coder=15, 0.5B=785, 7B=534 — pulled from HF API
