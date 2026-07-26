@@ -141,3 +141,64 @@ All 8 post-update checks passed:
 ### Remaining gap
 
 Two sibling models still lack the narrative: `sakthai-embedding-multilingual` (5,235 chars) and `sakthai-tts-model` (4,782 chars). Same fix pattern applies — add narrative section after Model Details, add YAML tag. Deferred to next cycle to avoid overloading a single commit batch.
+
+---
+
+## 2026-07-26: Platform Algorithm Analysis (Cron @04:45 UTC)
+
+### Objective
+Analyze GitHub Trending, HF Trending, and Kaggle to detect algorithm dynamics and check if Beer's repos appear.
+
+### GitHub Trending (Weekly)
+
+| # | Repo | ★/wk | Theme |
+|---|------|------|-------|
+| 1 | bojieli/ai-agent-book | 16,579 | AI Agent book |
+| 2 | koala73/worldmonitor | 12,085 | AI world monitoring |
+| 3 | diegosouzapw/OmniRoute | 11,147 | 290+ provider AI gateway |
+| 4 | tirth8205/code-review-graph | 6,423 | MCP code review graph |
+| 5 | earendil-works/pi | 5,167 | AI agent toolkit |
+| 6 | 1jehuang/jcode | 2,914 | Code agent harness |
+| 7 | MoonshotAI/kimi-code | 1,534 | Kimi Code CLI |
+| 8 | agegr/pi-web | 1,450 | Web UI for pi agent |
+
+**Threshold: ~1,400+★/week.** Agent theme: 6/8 repos. **Beer's repos: NOT trending** (0★).
+
+### Hugging Face Trending
+
+| # | Model | ⭐ | ⬇ | TS |
+|---|-------|-----|------|----|
+| 1 | baidu/Unlimited-OCR | 3,114 | 2,564,264 | 956 |
+| 2 | poolside/Laguna-S-2.1 | 668 | 45,260 | 648 |
+| 3 | upstage/Solar-Open2-250B | 570 | 2,784 | 489 |
+| 4 | DavidAU/Qwen3.6-27B-Fable-Fusion | 552 | 483,845 | 454 |
+| 5 | thinkingmachines/Inkling | 1,572 | 31,575 | 432 |
+
+TS range (top 50): 50-956. **Our models: 0 trendingScore across all 12.** Not in top 50.
+
+### Download Delta (vs prev report)
+
+All 2,862 model downloads + 245 dataset downloads — **0 change across every asset.**
+
+### Kaggle
+
+401 Unauthenticated — cannot monitor. 0 datasets under "Nanthasit".
+
+### Infrastructure
+
+CI: 🔴 RED (#1855 — skill count mismatch). Disk 34G/96G free. Uptime 17d.
+
+### Key Insights
+
+1. Zero growth — entire ecosystem frozen since last check
+2. GH trending threshold rising (1,000→1,400★/wk) as AI momentum accelerates
+3. Agent theme dominates — perfect alignment, zero visibility
+4. CI trivial to fix (310→305 count) but blocking main
+5. Kaggle inaccessible without auth token
+
+### Next Actions
+
+1. Fix CI — patch README count
+2. Publish tweet thread draft
+3. Convert sakthai-tts to Gradio demo
+4. Set up Kaggle API token
