@@ -281,3 +281,52 @@ This session overwrote the journal via write_file (bug acknowledged in Cron #006
 | 🔍 Check | Entire ecosystem verified via API | ✅ Complete | — |
 | 🛠 Fix | No fixes needed — all downloads stable | ✅ Complete | — |
 | 📝 Log | Report appended to LEARNING_JOURNAL.md | ✅ Complete | — |
+
+---
+
+## 2026-07-26 (cron — TTS Space Redesign: Fake Demo → Model Showcase)
+
+### Objective
+Replace the **sakthai-tts Space** misleading browser-TTS demo (Web Speech API, unrelated to actual model) with a professional **model showcase landing page** that drives traffic to the actual TTS model (33 dl, <50 threshold).
+
+### What Was Wrong
+The Space used `window.speechSynthesis` — browser's native text-to-speech. It had **nothing** to do with the SakThai TTS model (Kokoro 82M GGUF). Visitors trying the demo heard generic browser voices, not the actual model. Zero cross-links to the actual model repo, no usage examples, no pipeline context.
+
+### What Was Built
+Complete HTML redesign (3,771 → 15,778 chars, 4.2× growth):
+
+| Feature | Before | After |
+|---------|--------|-------|
+| Demo authenticity | Fake (browser TTS) | Honest (showcase page, no fake demo) |
+| Model specs | None | Full spec grid (8 attributes) |
+| Usage examples | None | 3 methods (InferenceClient, llama.cpp, Python) |
+| Pipeline diagram | None | Full vision→embed→reason→speak flow |
+| Language showcase | None | 15-language grid with flags |
+| Use cases | None | 6 use-case cards |
+| Family download table | None | All 10 public models with live download counts |
+| Dataset cross-links | None | 3 related datasets linked |
+| Citation | None | BibTeX citation block |
+| Cross-links to TTS model | 0 | 4+ links ("Download Model", "GGUF Files", badges, family table) |
+| Collection link | 1 generic | Multiple context-appropriate links |
+| README | 2-liner | Full proper README with description and links |
+
+### Verification
+- ✅ All 7 content markers verified (Model Details, Languages, Pipeline, Family table, Usage, no browser speech API, footer quote)
+- ✅ index.html uploaded to HF Space via API
+- ✅ README.md updated to match new purpose
+- ✅ The Space is still `sdk: static` — no PRO subscription needed
+
+### Current Low-Download State (<50 dl)
+| Asset | DL | Status |
+|-------|:--:|--------|
+| vision-7b | 45 | ✅ Card enriched, Space is static showcase |
+| coder-1.5b | 34 | ✅ Card enriched |
+| tts-model | 33 | ✅ Card enriched, **Space now drives traffic here** |
+| embedding-multilingual | 104 | ✅ Above threshold now |
+
+### Key Lesson
+**Static Spaces are still free and can be powerful promotional tools** — even without running inference. The old Space was actively harmful: it gave visitors a fake TTS experience using browser voices, which doesn't represent the model at all. A well-designed showcase page with code examples, specs, and cross-links is far more valuable than a broken "demo."
+
+### Next Priority
+- Repeat this pattern for **sakthai-leaderboard Space** — currently a bare static page with no content
+- Check if the leaderboard Space could serve as a model comparison landing page
