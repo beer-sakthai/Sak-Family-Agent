@@ -47,6 +47,7 @@
   "hf-datasets-builder-advanced-patterns",
   "hf-datasets-cache-management-deep-dive",
   "hf-datasets-concatenate-and-interleave-deep-dive",
+  "hf-datasets-data-validation-quality",
   "hf-datasets-concatenate-and-interleave-source-deep-dive-v2",
   "hf-datasets-configuration-system-complete-reference",
   "hf-datasets-faiss-vector-search-deep-dive",
