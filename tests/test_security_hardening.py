@@ -25,19 +25,19 @@ class TestEnvironmentVariablePinning:
 
     def test_pin_captures_environment_variables(self) -> None:
         """Test that pinning captures environment variables at startup."""
-        os.environ["TEST_VAR"] = "test_value"
+        os.environ["SAKTHAI_SHELL_ALLOW"] = "test_value"
         pinner = EnvironmentVariablePinning()
 
-        assert "TEST_VAR" in pinner._pinned_values
-        assert pinner._pinned_values["TEST_VAR"] == "test_value"
+        assert "SAKTHAI_SHELL_ALLOW" in pinner._pinned_values
+        assert pinner._pinned_values["SAKTHAI_SHELL_ALLOW"] == "test_value"
 
     def test_detects_environment_variable_tampering(self) -> None:
         """Test detection of environment variable changes."""
-        os.environ["TEST_VAR"] = "original_value"
+        os.environ["SAKTHAI_SHELL_ALLOW"] = "original_value"
         pinner = EnvironmentVariablePinning()
 
         # Tamper with variable
-        os.environ["TEST_VAR"] = "modified_value"
+        os.environ["SAKTHAI_SHELL_ALLOW"] = "modified_value"
 
         events = pinner.verify()
         assert any(e.event_type == "env_tampering" for e in events)
@@ -113,10 +113,11 @@ class TestMCPServerValidator:
         """Test generation of sandbox wrapper for MCP servers."""
         wrapper = MCPServerValidator.get_sandbox_wrapper("python -m my_server", timeout_sec=30)
 
-        # Should include timeout and ulimit
-        assert "timeout" in wrapper
-        assert "30" in wrapper
-        assert "ulimit" in wrapper
+        # Should include timeout and ulimit (wrapper is a list of command args)
+        wrapper_str = " ".join(wrapper)
+        assert "timeout" in wrapper_str
+        assert "30" in wrapper_str
+        assert "ulimit" in wrapper_str
 
 
 class TestEnhancedPathValidator:
@@ -446,3 +447,126 @@ class TestSecurityEventStructure:
         )
 
         assert event.details is None
+
+
+class TestAdditionalCoverage:
+    """Additional tests for coverage of edge cases."""
+
+    def test_disable_verification(self) -> None:
+        """Test disabling environment verification."""
+        os.environ["SAKTHAI_SHELL_ALLOW"] = "original"
+        pinner = EnvironmentVariablePinning()
+        pinner.disable_verification()
+
+        # Tamper with variable
+        os.environ["SAKTHAI_SHELL_ALLOW"] = "modified"
+
+        # Verification disabled, so should return no events
+        events = pinner.verify()
+        assert len(events) == 0
+
+    def test_detects_variable_removal(self) -> None:
+        """Test detection when environment variable is removed."""
+        # Ensure variable exists
+        os.environ["SAKTHAI_SHELL_ALLOW"] = "some_value"
+        pinner = EnvironmentVariablePinning()
+
+        # Remove the variable
+        if "SAKTHAI_SHELL_ALLOW" in os.environ:
+            del os.environ["SAKTHAI_SHELL_ALLOW"]
+
+        events = pinner.verify()
+        tampering_events = [e for e in events if e.event_type == "env_tampering"]
+        assert any("removed" in e.message for e in tampering_events)
+
+    def test_detects_variable_addition(self) -> None:
+        """Test detection when new critical variable is added."""
+        # Ensure variable doesn't exist at start
+        if "ANTHROPIC_API_KEY" in os.environ:
+            del os.environ["ANTHROPIC_API_KEY"]
+
+        pinner = EnvironmentVariablePinning()
+
+        # Add the variable after pinning
+        os.environ["ANTHROPIC_API_KEY"] = "new_key"
+
+        events = pinner.verify()
+        tampering_events = [e for e in events if e.event_type == "env_tampering"]
+        assert any("added" in e.message for e in tampering_events)
+
+    def test_symlink_chain_with_max_depth(self, tmp_path: Path) -> None:
+        """Test symlink chain resolution with max depth limit."""
+        # Create a chain of symlinks
+        target = tmp_path / "target.txt"
+        target.write_text("content")
+
+        current = target
+        for i in range(5):
+            link = tmp_path / f"link_{i}"
+            link.symlink_to(current)
+            current = link
+
+        # Resolve with small max_depth
+        resolved, chain = SymlinkDetector.resolve_symlink_chain(current, max_depth=3)
+        # Should stop at max_depth, not traverse all 5 links
+        assert len(chain) == 3
+
+    def test_config_file_check_permissions_with_sensitive_file(self, tmp_path: Path) -> None:
+        """Test permission checking on sensitive config files."""
+        config_file = tmp_path / "sensitive.json"
+        config_file.write_text('{"secret": "value"}')
+
+        # Make file world-readable (0o644)
+        config_file.chmod(0o644)
+
+        monitor = ConfigFileIntegrity([config_file])
+        events = monitor.check_permissions()
+
+        # At minimum, this should not crash
+        assert isinstance(events, list)
+
+    def test_mcp_server_without_args(self) -> None:
+        """Test MCP server validation without args field."""
+        spec = {"name": "minimal-server", "command": "echo hello"}
+
+        is_valid, reason = MCPServerValidator.validate_server_config(spec)
+        assert is_valid
+
+    def test_mcp_server_with_invalid_args(self) -> None:
+        """Test MCP server validation with invalid args (not a list)."""
+        spec = {
+            "name": "bad-server",
+            "command": "echo hello",
+            "args": "not_a_list",
+        }
+
+        is_valid, reason = MCPServerValidator.validate_server_config(spec)
+        assert not is_valid
+        assert "list" in reason
+
+    def test_toctou_atomic_read_nonexistent_file(self, tmp_path: Path) -> None:
+        """Test atomic read on non-existent file."""
+        nonexistent = tmp_path / "nonexistent.txt"
+
+        def check_fn(path: Path) -> bool:
+            return path.exists()
+
+        success, content = TOCTOUPrevention.atomic_check_and_read(nonexistent, check_fn)
+        assert not success
+
+    def test_audit_logger_with_file_path(self, tmp_path: Path) -> None:
+        """Test audit logger writing to a file."""
+        log_file = tmp_path / "audit.log"
+        logger = AuditLogger(log_file)
+
+        event = SecurityEvent(
+            event_type="test",
+            severity="high",
+            message="Test event",
+            timestamp=0.0,
+        )
+
+        logger.log_event(event)
+        assert log_file.exists()
+        content = log_file.read_text()
+        assert "test" in content.lower()

@@ -307,7 +307,7 @@ class EnhancedPathValidator:
             True if suspicious case mixing detected
         """
         # SSH dirs/files with unusual casing
-        suspicious_patterns = [r"\.ssh", r"\.aws", r"\.env", r"id_rsa", r"credentials"]
+        suspicious_patterns = [".ssh", ".aws", ".env", "id_rsa", "credentials"]
         for pattern in suspicious_patterns:
             # Check if path contains this pattern in different case
             lower_pattern = pattern.lower()
