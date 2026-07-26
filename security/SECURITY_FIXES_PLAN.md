@@ -26,7 +26,7 @@ Work top-to-bottom. Check off with date when done.
 
 The 2026-07 audit found that `.gitleaks.toml` previously allowlisted (by exact value):
 1. A Stripe consumer key (`ck_…`)
-2. A Twilio token (`H9hhwS50qwxJIORLdXbIgFHMUeMKyn4h`)
+2. A Twilio token (see audit report for exact value — do not commit actual token)
 
 Both were scrubbed from the working tree but **remain in git history**. If the repository ever goes public (or is accessed by someone with history access), these credentials are compromised.
 
@@ -50,7 +50,7 @@ Both were scrubbed from the working tree but **remain in git history**. If the r
 **Step 2: Twilio Console (2 min)**
 
 1. Go to https://www.twilio.com/console/account/api-keys
-2. Locate the token: `H9hhwS50qwxJIORLdXbIgFHMUeMKyn4h`
+2. Locate the compromised token (see audit report for exact value)
 3. Click "Delete"
 4. Confirm deletion
 5. Generate a new API key (if needed)
@@ -60,7 +60,7 @@ Both were scrubbed from the working tree but **remain in git history**. If the r
 
 ```bash
 # Confirm old credentials no longer work (should fail)
-curl -H "Authorization: Bearer H9hhwS50qwxJIORLdXbIgFHMUeMKyn4h" \
+curl -H "Authorization: Bearer <OLD_TWILIO_TOKEN>" \
   https://api.twilio.com/2010-04-01/Accounts.json
 # Expected: 401 Unauthorized
 
