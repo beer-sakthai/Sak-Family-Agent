@@ -1,6 +1,6 @@
 ---
 name: SakKing-execution-discipline
-version: 1.1.0
+version: 1.3.1
 description: >
   Class-level execution discipline for bounded, evidence-first action.
   Apply whenever the next step is uncertain, a fix is unconfirmed, or the
@@ -69,6 +69,7 @@ grounded in authoritative evidence.
 - Publishing a fix plan that names causes you cannot confirm.
 - Continuing to act after stating you do not know.
 - Acting on an environment state you have not verified in this session.
+- **Trusting display-layer tools (read_file, grep) as byte-level evidence.** When the question is "does this file contain the exact characters I expect," read_file's LINE_NUM| prefix formatting and markdown rendering can obscure backticks, pipes, and whitespace. `read_file` showing a clean file does not prove the file is clean — use `od -c` for byte-level verification. **Do NOT trust `repr()` or `cat -A` either** — the conversation display layer can transform terminal output, replacing placeholders like `<token>` or `$GITHUB_TOKEN` with `***`. The only fully reliable verification is comparing raw hex or bytes against a known-authoritative source (e.g., git object for the committed version). Acting on display-layer output alone is acting on insufficient evidence.
 
 ## Relation to reasoning and debugging skills
 
@@ -79,4 +80,4 @@ defines when not to act.
 
 ## Session evidence
 
-For real cases from this session, see `references/execution-patterns.md`.
+For real cases and pattern examples, see `references/execution-patterns.md`.
