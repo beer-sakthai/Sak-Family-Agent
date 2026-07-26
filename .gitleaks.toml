@@ -13,6 +13,8 @@ paths = [
   # illustrative (placeholder) credentials by design — not real secrets. This
   # is intentionally broad; do not paste real secrets into persona docs.
   '''^personas/.*\.md$''',
+  # Backup archives bundled by the HF Learn cron — not real secrets.
+  '''\.curator_backups/''',
 ]
 regexes = [
   # Documentation placeholders like `sk-xxxxxxxxxxxxxxxx`.
