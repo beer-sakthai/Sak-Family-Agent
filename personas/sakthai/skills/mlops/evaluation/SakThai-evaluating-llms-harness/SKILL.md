@@ -1,5 +1,5 @@
 ---
-name: evaluating-llms-harness
+name: SakThai-evaluating-llms-harness
 author: SakThai
 license: MIT
 description: "lm-eval-harness: benchmark LLMs (MMLU, GSM8K, etc.)."

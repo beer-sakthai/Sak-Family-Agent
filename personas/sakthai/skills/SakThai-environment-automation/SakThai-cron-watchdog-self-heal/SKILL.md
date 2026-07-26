@@ -1,5 +1,5 @@
 ---
-name: cron-watchdog-self-heal
+name: SakThai-cron-watchdog-self-heal
 author: SakThai
 license: MIT
 description: "Auto-resume paused/disabled cron jobs across profiles."

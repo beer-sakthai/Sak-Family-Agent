@@ -1,5 +1,5 @@
 ---
-name: hf-trending-models
+name: SakThai-hf-trending-models
 author: SakThai
 license: MIT
 title: HF Trending Models Reference

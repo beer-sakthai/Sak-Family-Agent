@@ -1,5 +1,5 @@
 ---
-name: hf-evaluate-library
+name: SakThai-hf-evaluate-library
 author: SakThai
 license: MIT
 description: "🤗 Evaluate: load, compute, and save ML metrics (accuracy, F1, BLEU, ROUGE, perplexity) and run evaluator pipelines for text classification, QA, summarization. Covers EvaluationSuite, custom metrics, Hub integration, and visualization."

@@ -1,5 +1,5 @@
 ---
-name: hf-papers
+name: SakThai-hf-papers
 author: SakThai
 license: MIT
 title: HF Papers of the Day

@@ -1,5 +1,5 @@
 ---
-name: weights-and-biases
+name: SakThai-weights-and-biases
 author: SakThai
 license: MIT
 description: "W&B: log ML experiments, sweeps, model registry, dashboards."

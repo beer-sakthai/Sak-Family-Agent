@@ -1,5 +1,5 @@
 ---
-name: hf-spaces
+name: SakThai-hf-spaces
 author: SakThai
 license: MIT
 title: HF Trending Spaces Reference
