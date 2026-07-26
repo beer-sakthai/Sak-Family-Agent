@@ -331,3 +331,11 @@ Earlier ecosystem reports had counted `sakthai-embedding` + `sakthai-context-0.5
 ### Broader audit note
 
 Scanned all 12 model cards + 4 dataset cards + 2 Space cards for model count claims. Only the TTS and food-penguin cards had the stale "14" — other cards either had correct counts (or used open-ended phrasing like `models (0.5B-7B)` without a specific number).
+
+---
+
+## 2026-07-26: Social growth metrics — flat (18:00 UTC)
+
+- **Ecosystem total: 3,142 downloads** (+35 vs 06:10 baseline, but +35 is a reporting artifact — two repos previously excluded from public API are now visible with unchanged counts). **Real organic growth: 0 across all assets.**
+- **Zero social engagement persists** — 0 likes/forks/discussions on all 12 models + 4 datasets + 2 Spaces. The 1 existing like is on the profile card only.
+- **No change to zero-dl cluster** — vision-7b (0), tts-model (0), embedding-multilingual (0), food-penguin-v1 (0) remain undiscovered. Interactive demos are blocked by HF's PRO requirement for Gradio Spaces (402 Payment Detected).
