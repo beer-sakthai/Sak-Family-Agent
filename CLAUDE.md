@@ -16,71 +16,14 @@ ADK / Vertex AI cloud agent is **not** part of v2: there is **no `app/` cloud
 bundle, no `sync-app-package.sh` sync step, and no `sakthai/cloud/` module** here.
 v2 is local-first — the CLI, the agent loop, and the MCP stdio server.
 
-## Monorepo layout
+## Monorepo Structure
 
-This repository is the shared source workspace for the Sak family. The SakThai
-agent's installable core package (`sakthai`) lives at
-`personas/sakthai/sakthai/` — **not** at the repo root (the identically-named
-copies under the other five personas are data snapshots for standalone
-export, not build targets). `library/` still lives at the repo root; there is
-no root-level `skills/` — persona skill trees live under
-`personas/<name>/skills/` (see `personas/README.md`). Everything below this
-section's file-structure diagram gives paths relative to `personas/sakthai/`
-unless noted otherwise. The repo also carries the persona overlays and can
-export standalone repository snapshots with `scripts/export_agent_repo.py` or
-`make export-agent-repos`.
+The repository is the shared source workspace for the Sak family with these key conventions:
 
-- `personas/sakthai/agent-self-evolution/` — DSPy/GEPA self-evolution tool.
-  Standalone Python package, **not** a uv workspace member (disjoint/heavy
-  deps; its `darwinian` extra is unpublished). Build it on its own; the root
-  `uv.lock` stays SakThai-only. Each persona carries its own copy;
-  `personas/sakthai/agent-self-evolution` is canonical.
-- `personas/` — the six Sak Family personas. `scripts/compose_persona.py`
-  rebuilds a persona's tree as `personas/shared/skills/` + a per-persona
-  overlay (overlay wins). `personas/shared/skills/` only holds files that are
-  byte-identical across **all six** personas (currently 3 skills:
-  `Sak-auto-cycle-loop`, `Sak-dogfood`, `Sak-yuanbao`) — `compose()` applies it to every persona
-  unconditionally, so anything less than 6-way-identical stays in each
-  persona's own overlay rather than being deduped (this includes most of
-  `sakking`'s `SakXxx-`-prefixed rollup, which intentionally aggregates the
-  other five personas' skills rather than being a peer overlay). See
-  `personas/README.md`. Skill naming (shared = `Sak-`, per-persona =
-  `Sak<Name>-`, enforced by `sakthai skills validate --naming`) was brought
-  into line via `scripts/rename_skills.py --apply` on 2026-07-07 across all
-  layers; 31 pre-existing collisions remain unrenamed on purpose (a
-  differently-prefixed skill with different content already occupied the
-  target name in each case — mostly a duplicate unprefixed `comfyui` sitting
-  next to an already-correct `Sak<Name>-comfyui`, plus ~27 in `sakking`'s own
-  rollup). Resolving those needs a human call on which content wins per case,
-  not an automated rename — run `sakthai skills validate --naming` to see the
-  current list.
-- `scripts/export_agent_repo.py` (`make export-agent-repos`) references
-  `infra/hermes-agents/` (profiles + systemd units), but only `infra/vm-agents/`
-  exists in this repo — a differently-shaped tree (env-templates + one
-  templated systemd unit, no per-persona `SOUL.md`/`config.yaml`). That part of
-  standalone persona export currently silently no-ops rather than erroring.
-  Unclear whether `infra/hermes-agents/` is meant to be synced in from an
-  external live host at export time, or is a leftover from an incomplete
-  rename to `infra/vm-agents/` — don't guess at a fix without checking with
-  the user first.
-- `infra/vm-agents/` — VM deployment assets for the Telegram bots (env
-  templates, systemd units; config only).
-- `infra/pw-poc/` — Playwright accessibility probe (standalone npm project).
-- `services/` — service pitches/specs not yet part of the package (e.g.
-  `hugging-face-dataset-publishing/`).
-- `training/` — Hugging Face Jobs fine-tune + model-serving scripts.
-
-### Sak Family Agents
-
-**The repository also carries the **Sak Family Agents** — six personas with **SakThai**
-as the **main** (Lead & Orchestrator) and **SakKing**, **SakSee**, **SakSit**,
-**SakTan**, and **SakJules** as the family it coordinates. The authoritative
-per-agent identities are `docs/SOUL.md` + `personas/<name>/SOUL.md`.
-Keep the SakThai-as-lead framing consistent if you touch any of them.
-
-CI (`ci.yml`, `pylint.yml`) scopes ruff/mypy/bandit/pytest/pylint to the
-`sakthai` core only; the colocated trees are not held to this repository's bars.
-**gitleaks still scans the whole tree (`.gitleaks.toml` allowlists persona docs).
+- **Canonical package:** `personas/sakthai/sakthai/` (not repo root)
+- **Personas:** six agents (`SakThai`, `SakKing`, `SakSee`, `SakSit`, `SakTan`, `SakJules`); **SakThai is lead**
+- **Skill naming:** `Sak-` prefix for shared skills, `Sak<Name>-` for per-persona skills (enforced by `sakthai skills validate --naming`)
+- **CI scope:** ruff/mypy/bandit/pytest/pylint scopes to `sakthai` core only; gitleaks scans everything (`.gitleaks.toml` allowlists persona docs)
 
 Everything below this point describes the SakThai agent package itself.
 
@@ -289,48 +232,6 @@ There is no `dashboard.py` here — see the dashboard note below.
   path — aligned with this repo's config-centralization convention. Covered
   by `tests/test_telegram_bot.py` and `tests/test_telegram_workflow_executor.py`.
 
----
-
-## File structure
-
-```text
-Sak-Family-Agent/
-├── personas/sakthai/sakthai/ # Main package (the installable "sakthai" package)
-│   ├── config.py             # Paths & env-var names (single source of truth)
-│   ├── auth.py               # Credential resolution
-│   ├── skills.py             # Skill discovery, parsing, injection
-│   ├── hf.py                 # Hugging Face Hub operations
-│   ├── sakking_skills.py     # Mirror SakKing-learned skills into skills/
-│   ├── agent/
-│   │   ├── loop.py           # run_agent() orchestration
-│   │   ├── tools.py          # BUILTIN_TOOLS registry
-│   │   ├── registry.py       # ToolRegistry class
-│   │   ├── usage.py          # Token tracking
-│   │   └── providers/        # Claude / Gemini / OpenAI / Ollama backends
-│   ├── memory/
-│   │   ├── store.py          # MemoryStore (only SQLite access)
-│   │   ├── provider.py       # System-prompt adapter
-│   │   ├── backup.py         # Timestamped db copy
-│   │   └── sync.py           # Git/HTTP multi-agent sync
-│   ├── mcp/
-│   │   ├── server.py         # Inbound JSON-RPC stdio server
-│   │   ├── client.py         # Outbound stdio client
-│   │   ├── manager.py        # connect_servers() context manager
-│   │   └── servers.py        # MCPServerSpec + spec discovery
-│   ├── cli/                  # Click commands (agent, memory, system, ...)
-│   ├── cycle/                # Dream→Hope→Care→Joy→Trust→Growth state machine
-│   ├── learn/                # capture.py one-shot fact entry
-│   ├── extensions/           # install.py (git-based bundle installer)
-│   ├── dashboard/            # data.py KPI collection (no CLI/frontend); see dashboard note
-│   └── web/                  # HTTP server stub
-├── tests/                    # hermetic test suite, no network
-├── library/                  # 31 curated skills in 11 categories
-├── docs/                     # Architecture & design docs
-├── scripts/                  # Dev utilities (not linted/type-checked)
-├── data/                     # Sample memory exports (JSONL/CSV)
-├── pyproject.toml            # Build config, deps, tool settings
-└── uv.lock                   # Locked deps (used by CI)
-```
 
 ---
 
