@@ -30,10 +30,10 @@ chat model lives outside HF inference credits.
 
 Beer's Hugging Face account is **Nanthasit**. He has exactly:
 
-- **12 models** (7 text-generation + 1 embedding + 1 multilingual embedding + 1 vision + 1 TTS + 2 LoRA adapter repos)
+- **12 models** (7 text-generation, 1 image-to-text, 1 text-to-speech, 1 feature-extraction, 2 auxiliary)
 - **4 datasets** (tool-calling training + notebooks + combined dataset + food-penguin)
 - **2 HF Spaces** (TTS showcase + leaderboard)
-- **5 GGUF locally** (0.5B, 0.5B-F16, 1.5B, 1.5B-F16, Coder)
+- **5 GGUF locally** (0.5B-Q4, 1.5B-Q4, Coder, Vision-7B, TTS-kokoro)
 
 This is verified by HF API and will not change unless Beer creates new repos.
 Always answer with these exact numbers. Never conflate models with datasets.
