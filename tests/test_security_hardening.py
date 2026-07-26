@@ -4,11 +4,7 @@ Tests all attack vectors and defenses identified in the security audit.
 """
 
 import os
-import tempfile
 from pathlib import Path
-from unittest.mock import MagicMock, patch
-
-import pytest
 
 from sakthai.agent.security_hardening import (
     AuditLogger,
@@ -201,7 +197,7 @@ class TestSymlinkDetector:
         try:
             symlink.symlink_to("/root")
 
-            events = SymlinkDetector.detect_dangerous_symlinks(str(symlink))
+            SymlinkDetector.detect_dangerous_symlinks(str(symlink))
             # Should detect the danger (if not running as root with actual /root access)
             # In test environment might not have real /root
         except (OSError, PermissionError):

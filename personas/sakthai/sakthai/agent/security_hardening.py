@@ -16,12 +16,8 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
-import os
 import re
 import stat
-import subprocess
-import sys
-import tempfile
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
@@ -177,12 +173,14 @@ class MCPServerValidator:
             (is_valid, reason) tuple
         """
         # Strict mode: only approved servers allowed
-        if security_level == SecurityLevel.STRICT:
-            if server_spec.get("name") not in MCPServerValidator.APPROVED_SERVERS:
-                return (
-                    False,
-                    f"MCP server '{server_spec.get('name')}' not in approved list (strict mode)",
-                )
+        if (
+            security_level == SecurityLevel.STRICT
+            and server_spec.get("name") not in MCPServerValidator.APPROVED_SERVERS
+        ):
+            return (
+                False,
+                f"MCP server '{server_spec.get('name')}' not in approved list (strict mode)",
+            )
 
         # Check for suspicious patterns in command
         command = server_spec.get("command", "")
@@ -518,9 +516,9 @@ class TOCTOUPrevention:
 
             # Read file
             try:
-                with open(file_path, "r") as f:
+                with open(file_path) as f:
                     content = f.read()
-            except (OSError, IOError):
+            except OSError:
                 return False, "Could not read file"
 
             # Verify file didn't change during read
