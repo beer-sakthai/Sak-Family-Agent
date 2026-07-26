@@ -393,5 +393,8 @@
   "hf-hub-spaces-build-configuration-reference",
   "hf-hub-audit-logs",
   "hf-spaces-build-with-ai-agents",
-  "hf-peft-beyond-lora"
+  "hf-peft-beyond-lora",
+  "hf-hub-publisher-analytics",
+  "hf-kernels-ecosystem-major-updates",
+  "hf-candle"
 ]
