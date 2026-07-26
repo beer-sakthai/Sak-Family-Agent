@@ -91,7 +91,7 @@ Every skill follows the pattern `<AgentPrefix>-<skill-name>`, matching the perso
 
 ### 📊 Dataset
 
-**[sakthai-combined-v7](https://huggingface.co/datasets/Nanthasit/sakthai-combined-v6)** — 2,003 train / 113 test examples:
+**[sakthai-combined-v6](https://huggingface.co/datasets/Nanthasit/sakthai-combined-v6)** — 2,003 train / 113 test examples:
 - Tool-calling conversations (OpenAI format, ~1,380)
 - Multi-turn dialogues with follow-ups (~250)
 - Edge cases & ambiguous queries (~200)
