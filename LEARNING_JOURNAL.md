@@ -202,3 +202,37 @@ CI: 🔴 RED (#1855 — skill count mismatch). Disk 34G/96G free. Uptime 17d.
 2. Publish tweet thread draft
 3. Convert sakthai-tts to Gradio demo
 4. Set up Kaggle API token
+
+---
+
+## 2026-07-26: Narrative Stale Count Fix (Cron Self-Improvement)
+
+### Problem
+
+Two Hugging Face asset cards were claiming **"14 models"** in their House of Sak narrative section, but the live HF API returns **12 models** (excluding the user profile repo). The stale count was propagating incorrect information.
+
+### Cards affected
+
+| Card | Location | Occurrences |
+|------|----------|-------------|
+| **sakthai-tts-model** | `Nanthasit/sakthai-tts-model` | 1 (narrative table) |
+| **food-penguin-v1** | `Nanthasit/food-penguin-v1` | 3 (narrative intro, family links list, closing footer) |
+
+### Root cause
+
+Earlier ecosystem reports had counted `sakthai-embedding` + `sakthai-context-0.5b-tools` (both now private/deleted) plus the profile repo, yielding an inflated "14" that got baked into card text. When these two repos became inaccessible, the narrative count was never corrected.
+
+### Fix applied
+
+- TTS model card: `| Models | 14 |` → `| Models | 12 |`
+- Food-penguin dataset card: `14 models` → `12 models` in all 3 occurrences
+
+### Verification
+
+- ✅ TTS card: line 66 now reads `| Models | 12 |`
+- ✅ Food-penguin card: lines 78, 302, 322 now read `12 models`
+- ✅ Both commits pushed via HF API (`huggingface_hub`)
+
+### Broader audit note
+
+Scanned all 12 model cards + 4 dataset cards + 2 Space cards for model count claims. Only the TTS and food-penguin cards had the stale "14" — other cards either had correct counts (or used open-ended phrasing like `models (0.5B-7B)` without a specific number).
