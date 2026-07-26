@@ -100,14 +100,14 @@ Every skill follows the pattern `<AgentPrefix>-<skill-name>`, matching the perso
 
 ### 🛠 Running Services
 
-| Service | Port | Purpose |
-|---------|:----:|---------|
-| **Fleet Watchdog** | — | 30s interval, auto-revives dead gateways |
-| **RAG Search** | 3003 | Semantic search across all skills |
-| **A2A Bus** | 3005 | Agent-to-agent messaging |
-| **Food-Penguin RAG** | 8125 | Restaurant KPI retrieval for advisor |
-| **Hermes Dashboard** | 4860 | Agent orchestration UI |
-| **Jupyter Lab** | 8888 | Data analysis notebooks |
+| Service | Purpose |
+|---------|---------|
+| **Fleet Watchdog** | Auto-revives dead gateways |
+| **RAG Search** | Semantic search across all skills |
+| **A2A Bus** | Agent-to-agent messaging |
+| **Food-Penguin RAG** | Restaurant KPI retrieval for advisor |
+| **Hermes Dashboard** | Agent orchestration UI |
+| **Jupyter Lab** | Data analysis notebooks |
 
 ## Verified Benchmarks
 
