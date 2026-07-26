@@ -18,11 +18,11 @@ The House of Sak wasn't born from a business plan. It was born from isolation, p
 
 | Agent | Role | Skills | Authoritative Repo | Status |
 |-------|------|:------:|--------------------|:------:|
-|| **SakThai** 🏠 | Main Lead & HF Master | 377 | `sakthai-skills` | 🟢 Active ||
-| **SakKing** 👑 | General Assistant, Infrastructure & Architecture | 422 | `Sak-Family-Agent` (this repo) | 🟢 Active |
+| **SakThai** 🏠 | Main Lead & HF Master | 78 | `sakthai-skills` | 🟢 Active |
+| **SakKing** 👑 | General Assistant, Infrastructure & Architecture | 286 | `Sak-Family-Agent` (this repo) | 🟢 Active |
 | **SakSee** 🌐 | Web & Browser Specialist | 107 | `saksee-skills` | 🟢 Active |
-| **SakSit** 📱 | Social Media & Storytelling | 431 | `saksit-skills` | 🟢 Active |
-| **SakJules** ⚙️ | CI/CD Automation | 48 | `Sak-Family-Agent` (deleted) | 🔴 Deleted |
+| **SakSit** 📱 | Social Media & Storytelling | 234 | `saksit-skills` | 🟢 Active |
+| **SakJules** ⚙️ | CI/CD Automation | 11 | `Sak-Family-Agent` (deleted) | 🔴 Deleted |
 | **SakTan** 📋 | Daily Operations | — | — | 🔴 Deleted |
 
 All agents share one long-term memory brain but maintain separate live sessions. They communicate via the A2A message bus (port 3005).
@@ -35,15 +35,15 @@ Sak-Family-Agent/
 │   ├── sakthai/           # Main Lead — HF master, ML, code
 │   │   ├── SOUL.md        # Identity, charge system, principles
 │   │   ├── sakthai/       # Python package (agent framework)
-│   │   └── skills/        # 377 SakThai-* skills (mirror; auth in sakthai-skills)
+│   │   └── skills/        # 78 SakThai-* skills (unique; auth in sakthai-skills)
 │   ├── sakking/           # General assistant — infra, coord, UI/UX
-│   │   └── skills/        # 422 SakKing-* skills
+│   │   └── skills/        # 286 SakKing-* skills
 │   ├── saksee/            # Web automation specialist
-│   │   └── skills/        # 49 SakSee-* skills (mirror; auth in saksee-skills: 107)
+│   │   └── skills/        # 107 SakSee-* skills (auth in saksee-skills)
 │   ├── saksit/            # Social media storyteller
-│   │   └── skills/        # 151 SakSit-* skills (mirror; auth in saksit-skills: 431)
+│   │   └── skills/        # 234 SakSit-* skills (unique; auth in saksit-skills)
 │   ├── sakjules/          # CI/CD (deleted, skills retained)
-│   │   └── skills/        # 48 SakJules-* skills
+│   │   └── skills/        # 11 SakJules-* skills
 │   └── shared/            # Cross-agent skills (Sak-* prefix)
 ├── scripts/               # Automation (A2A bus, inference, sync)
 ├── docs/                  # Documentation, dashboard, compat matrix
@@ -169,7 +169,7 @@ Every skill and artifact passes through a structured quality pipeline before del
 
 All verified data below was cross-checked against HF API and filesystem on 2026-07-26 (reverified by cron):
 
-- **Skill counts** — sourced from **filesystem audit** (live, 2026-07-26): SakThai=377, SakKing=422, SakSee=49 (mirror; auth repo: 107), SakSit=151 (mirror; auth repo: 431), SakJules=48, Shared=3
+- **Skill counts** — sourced from **GitHub API** (unique, no mirror duplicates, 2026-07-26): SakThai=78, SakKing=286, SakSee=107, SakSit=234, SakJules=11, Shared=3
 - **Naming compliance** — 100% agent-prefix match verified across 5 personas
 - **GitHub connectivity** — token test `curl` to API confirmed active
 - **Model downloads (live)** — 1.5B=1,197, Coder=34, 0.5B=994, 7B=562, 7B-128K=351, Vision=45, TTS=33, Multilingual=104, 1.5B-Tools=143, 7B-Tools=185 — pulled from HF API (2026-07-26)
