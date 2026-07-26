@@ -109,15 +109,6 @@ Every skill follows the pattern `<AgentPrefix>-<skill-name>`, matching the perso
 | **Hermes Dashboard** | 4860 | Agent orchestration UI |
 | **Jupyter Lab** | 8888 | Data analysis notebooks |
 
-### 🤖 Active Crons
-
-| Job | Interval | Status |
-|-----|:--------:|:------:|
-| HF Learn & Improve | Every 1 min | 🟢 Learning |
-| GitHub Auto-Sync | Every 5 min | 🟢 Profiles → GitHub |
-| Family Status Report | Every 15 min | 🟢 Health check |
-| Fleet Watchdog | Every 30s | 🟢 Gateway monitor |
-
 ## Verified Benchmarks
 
 ### Tool-Calling (BFCL, verified 2026-07-25)
@@ -138,6 +129,49 @@ Every skill follows the pattern `<AgentPrefix>-<skill-name>`, matching the perso
 | Refactoring | ✅ Pass |
 | Algorithm | ✅ Pass |
 | **Overall** | **5/5** 🏆 |
+
+## Security & Quality
+
+The Sak Family operates on a **zero-trust, evidence-first** security model enforced across every agent interaction.
+
+### 🔒 Security Controls
+
+| Control | Practice | Verified |
+|---------|----------|:--------:|
+| **Credential isolation** | All API keys, tokens stored in `~/.git-credentials` or `~/.env` — never in code | ✅ |
+| **Push approval gate** | Remote push requires explicit Beer approval per Zero-Exposure policy | ✅ |
+| **No hardcoded secrets** | `gitleaks`, `ruff`, `bandit` scan every PR for credential leaks | ✅ |
+| **SSH auth** | GitHub via ed25519 key + `known_hosts` | ✅ |
+| **Supermemory guard** | Memory store blocked on 402 Payment Required — no silent data loss | ✅ |
+| **Sandbox defaults** | Shell disabled by default — `SAKTHAI_SHELL_ALLOW` must be explicitly set | ✅ |
+| **Fleet gateways** | Each agent runs isolated Hermes profile with its own token and config | ✅ |
+| **A2A bus auth** | Agent-to-agent messaging on port 3005 — no cross-profile data leakage | ✅ |
+
+### 📋 Quality Gates
+
+Every skill and artifact passes through a structured quality pipeline before delivery:
+
+| Gate | What it checks | Tools |
+|------|---------------|-------|
+| **Care** | Heart check — does this serve Beer's real need? | Source doc audit, pricing cross-ref |
+| **Joy** | Ships clean — no broken code, no invented data | `pytest`, `ruff`, CI |
+| **Trust** | Visual + content verification before sign-off | Browser screenshots, link audit |
+| **Growth** | Lessons folded back into memory and skills | `memory` save, skill update |
+| **Evidence Index** | Every claim backed by tool output, not assumption | `evidence-index.md` |
+| **Skill Quality Gate** | Pre-flight checklist: syntax, naming, cross-refs | `skill_view`, `skills_list` |
+| **Infrastructure Drift** | Local FS verified before trusting external logs | `search_files`, `terminal` |
+| **Idempotency** | Script runs must produce same result on second pass | Dry-run before mutate |
+
+### ✅ Evidence-Indexed Facts (proven and confirmed)
+
+All verified data in this repo is backed by real tool execution output, maintained in `evidence-index.md`:
+
+- **Skill counts** — audited via `find` across all persona directories on 2026-07-26
+- **Naming compliance** — 100% agent-prefix match verified across 5 personas
+- **GitHub connectivity** — token test `curl` to API confirmed active
+- **Benchmark scores** — BFCL tool-calling: 5/5 via `lm-eval-harness`
+- **Coding pass** — 5/5 task completion via `pytest` suite
+- **Model downloads** — pulled from HF API, last verified 2026-07-25
 
 ## Legal
 
