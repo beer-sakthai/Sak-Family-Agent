@@ -1,5 +1,100 @@
 # Learning Journal
 
+## 2026-07-26: HF Ecosystem Report — 06:10 UTC (3rd daily)
+
+### Model Inventory
+
+- **12 models visible via public search API** (up to 14 with auth — 2 private/deleted repos: sakthai-embedding, sakthai-context-0.5b-tools)
+  - 7 text-generation (0.5b-merged, 1.5b-merged, 1.5b-tools, 7b-merged, 7b-tools, 7b-128k, coder-1.5b)
+  - 1 image-to-text (vision-7b)
+  - 1 TTS (tts-model)
+  - 1 feature-extraction (embedding-multilingual)
+  - 1 profile repo (Nanthasit)
+  - 1 dataset misclassified as model (combined-v6, pipeline_tag: none)
+- **Total download count: 2,862 — flat, zero change since all previous reports**
+- Top models: 1.5b-merged (942), 0.5b-merged (785), 7b-merged (534), 7b-128k (324)
+- Zero-download stuck models: vision-7b, tts-model, embedding-multilingual (still at 0)
+- Coder-1.5b at just 15 dl — underperforming even for a small model
+
+### Dataset Health
+
+- **4 datasets, 245 total downloads — all flat**
+  - sakthai-combined-v6: 114 dl (2,003 train / 113 test, verified)
+  - sakthai-kaggle-notebooks: 90 dl
+  - SimpleToolCalling: 41 dl
+  - food-penguin-v1: 0 dl (still untouched — no card enrichment done)
+- All dataset counts identical to 05:43 baseline. Zero growth.
+
+### Spaces
+
+- **2 Spaces, both static, 0 likes each**
+  - sakthai-tts — TTS showcase, static
+  - sakthai-leaderboard — static leaderboard
+- No interactive demos. Both Spaces need conversion to Gradio apps.
+
+### Ecosystem Trends
+
+- **Complete freeze.** Zero download growth across all 12 models + 4 datasets since baseline 05:43 UTC and all prior reports. The ecosystem is not just slow — it is entirely static.
+- **No social signals.** 0 likes, 0 forks, 0 discussions on any repo (except 1 like on Nanthasit profile).
+- **Discoverability bottleneck confirmed.** Three models at 0 downloads prove cards alone don't drive traffic. Need demos.
+- **Two hidden repos.** sakthai-embedding (28 dl) and sakthai-context-0.5b-tools (7 dl) exist with auth but don't appear in public search API — likely private or deleted listing.
+
+### CI/CD Status
+
+- **CI is RED.** Failing on every commit to main.
+  - Workflow runs: Run #1860 (latest auto-sync), #1859, #1858 all **failure**
+  - Failing step: "Run tests with coverage" on Python 3.11 (3.12 cancelled as cascade)
+  - Root cause: `test_personas_readme_skill_counts_match_disk` — README counts still wrong
+- On-disk skill dirs vs README claims:
+  - SakThai: 278 on-disk vs README claims **185** (delta: +93)
+  - SakKing: 302 on-disk vs README claims **305** (delta: -3)
+  - SakSit: 100 on-disk vs README claims **101** (delta: -1)
+  - SakJules: 25 on-disk vs README claims **25** (match!)
+  - SakSee: 39 on-disk vs README claims **37** (delta: +2)
+  - Shared: 3 on-disk vs README claims **3** (match!)
+  - Total: 744 on-disk vs README claims **653** (delta: +91)
+- Other workflows all green: SonarCloud, Secret Scan, OSSAR, Pylint
+- Latest commit: `6630568 auto: sync 2026-07-26-0602`
+- CI has accumulated **1860+ failure runs** from repeated commits on the same root cause
+- GH_TOKEN expired/bad credentials — cannot access detailed job logs
+- SSH to GitHub works (`git@github.com`) but gh CLI not authed
+
+### Local Assets
+
+- **5 GGUF models** (confirmed):
+  - sakthai-0.5b-Q4_K_M.gguf (380M)
+  - sakthai-1.5b-Q4_K_M.gguf (941M)
+  - qwen2.5-coder-1.5b-instruct-q4_k_m.gguf (1.1G)
+  - llava-1.5-7b-hf-q4_k_m.gguf (3.9G)
+  - kokoro-82m-q8_0.gguf (135M)
+- **10 model directories** under /opt/data/models/
+- **1 cron-enablement issue**: sakthai profile cron file at ~/.hermes/profiles/sakthai/cron is **0 bytes** (empty) — cron jobs may not be registered correctly
+
+### Issues Detected
+
+1. CI blocked: README skill counts don't match disk (SakThai +93, SakSit -1, SakSee +2)
+2. GH_TOKEN expired — cannot read CI logs or run `gh` commands
+3. Three models at zero downloads with no demo Space strategy
+4. food-penguin-v1 dataset completely unenriched (0 dl)
+5. Gaps in discoverability: coder-1.5b at 15 dl despite being a usable model
+6. Cron file empty — check if crons actually registered
+
+### Next Actions
+
+- **Fix CI immediately** — Patch personas/README.md skill counts to match disk: SakThai 185→278, SakKing 305→302, SakSit 101→100, SakSee 37→39, total 653→744. This unblocks main branch.
+- **Renew GH_TOKEN** — Generate a new GitHub PAT with workflow read scope so CI logs are accessible and `gh` CLI works
+- **Build TTS demo Space** — Convert static sakthai-tts to an interactive Gradio app (highest-leverage discoverability fix)
+- **Enrich food-penguin-v1 dataset card** — Quick win, minimal effort
+- **Cross-link coder-1.5b** from flagship model cards (1.5b-merged, 0.5b-merged) to drive referrals
+- **Register cron jobs properly** — Fix empty cron file at ~/.hermes/profiles/sakthai/cron
+- **Consider strategy for 0-dl models** — Evaluate TTS, vision, and embedding-multilingual for demo viability or consolidation
+
+### Lesson
+
+CI compounding continues. 1,860+ failure runs on the same root cause (skill count drift) shows the CI fix PRs applied earlier today have not resolved the mismatch — the personas/README.md tree layout section was never updated to match the growing skills directories. The root README.md was fixed (agent counts in the main README now show correct values from filesystem audit dated 2026-07-26), but `personas/README.md` still carries stale pre-growth numbers. Need to either (a) automate README regeneration from filesystem state, or (b) add a pre-commit hook that runs the failing test before allowing a commit.
+
+Also: the empty cron file means scheduled improvement cycles may not be running reliably. A cron job that fixes CI cannot reach a session whose cron is broken. Bootstrap problem — need to fix cron registration as the meta-priority.
+
 ## 2026-07-26: Comprehensive HF Ecosystem Report — 2nd daily snapshot
 
 ### Asset Inventory
