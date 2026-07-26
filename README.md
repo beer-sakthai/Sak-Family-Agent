@@ -91,12 +91,14 @@ Every skill follows the pattern `<AgentPrefix>-<skill-name>`, matching the perso
 
 ### 📊 Dataset
 
-**[sakthai-combined-v6](https://huggingface.co/datasets/Nanthasit/sakthai-combined-v6)** — 1,408 examples:
-- Tool-calling conversations (OpenAI format)
-- Multi-turn dialogues with follow-ups
-- Energy-aware examples
+**[sakthai-combined-v7](https://huggingface.co/datasets/Nanthasit/sakthai-combined-v6)** — 2,003 train / 113 test examples:
+- Tool-calling conversations (OpenAI format, ~1,380)
+- Multi-turn dialogues with follow-ups (~250)
+- Edge cases & ambiguous queries (~200)
+- Energy-aware examples (~50)
 - Irrelevance detection (50 general knowledge Q&A)
-- Safety/rejection examples (30 harmful prompt refusals)
+- Safety/rejection examples (73 harmful prompt refusals)
+- Held-out test split (113 examples for unbiased eval)
 
 ### 🛠 Running Services
 
