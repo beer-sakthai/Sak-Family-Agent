@@ -18,7 +18,7 @@ The House of Sak wasn't born from a business plan. It was born from isolation, p
 
 | Agent | Role | Skills | Authoritative Repo | Status |
 |-------|------|:------:|--------------------|:------:|
-| **SakThai** 🏠 | Main Lead & HF Master | 379 | `sakthai-skills` | 🟢 Active |
+|| **SakThai** 🏠 | Main Lead & HF Master | 382 | `sakthai-skills` | 🟢 Active ||
 | **SakKing** 👑 | General Assistant, Infrastructure & Architecture | 453 | `Sak-Family-Agent` (this repo) | 🟢 Active |
 | **SakSee** 🌐 | Web & Browser Specialist | 107 | `saksee-skills` | 🟢 Active |
 | **SakSit** 📱 | Social Media & Storytelling | 431 | `saksit-skills` | 🟢 Active |
@@ -166,7 +166,7 @@ Every skill and artifact passes through a structured quality pipeline before del
 
 All verified data below was cross-checked against HF API and filesystem on 2026-07-26:
 
-- **Skill counts** — sourced from **GitHub API** (live, 2026-07-26): SakThai=379, SakKing=453, SakSee=107, SakSit=431, SakJules=48
+- **Skill counts** — sourced from **filesystem audit** (live, 2026-07-26): SakThai=382, SakKing=453, SakSee=43 (mirror; auth repo: 107), SakSit=149 (mirror; auth repo: 431), SakJules=48, Shared=3
 - **Naming compliance** — 100% agent-prefix match verified across 5 personas
 - **GitHub connectivity** — token test `curl` to API confirmed active
 - **Model downloads (live)** — 1.5B=942, Coder=15, 0.5B=785, 7B=534 — pulled from HF API
