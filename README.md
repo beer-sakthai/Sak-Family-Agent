@@ -86,7 +86,7 @@ Every skill follows the pattern `<AgentPrefix>-<skill-name>`, matching the perso
 | 6 | [Vision 7B](https://huggingface.co/Nanthasit/sakthai-vision-7b) | Multimodal GGUF | 3.9 GB | — | New |
 | 7 | [TTS Model](https://huggingface.co/Nanthasit/sakthai-tts-model) | Speech GGUF | 141 MB | — | New |
 | 8 | [Embedding](https://huggingface.co/Nanthasit/sakthai-embedding) | Semantic search | 80 MB | — | Deleted (model removed from HF) |
-| 9 | [Multilingual](https://huggingface.co/Nanthasit/sakthai-embedding-multilingual) | 50+ languages | 80 MB | — | New |
+| 9 | [Multilingual](https://huggingface.co/Nanthasit/sakthai-embedding-multilingual) | 50+ languages | 488 MB | — | New |
 | 10 | [Tools 1.5B](https://huggingface.co/Nanthasit/sakthai-context-1.5b-tools) | PEFT LoRA adapter | — | — | 115 |
 | 11 | [Tools 7B](https://huggingface.co/Nanthasit/sakthai-context-7b-tools) | PEFT LoRA adapter | — | — | 147 |
 
