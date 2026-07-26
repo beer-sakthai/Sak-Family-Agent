@@ -602,3 +602,28 @@ The delta check still works correctly — it detected the +2 on kaggle-notebooks
 ### Meta-Lesson (Repeated)
 
 Scanning without acting amplifies noise. The ecosystem is stable but not growing. Priority must shift from monitoring to creating — building demos, cross-linking assets, and publishing community content. The next cycle should produce a concrete improvement, not another analysis of the same flat numbers.
+
+## 2026-07-26 (cron: narrative review)
+
+### Narrative Consistency Assessment
+
+Reviewed the House of Sak narrative across 17 HF assets and GitHub docs.
+
+**Inconsistencies found:**
+1. **"6 AI agents" in model cards mismatches reality** — Model cards say "6 AI agents" but only 4 are active (SakJules, SakTan retired). Main README lists "Six personas, four active agents" — correct.
+2. **Collection description was too factual** — "12 models, 4 datasets, 2 Spaces built from a shelter with $0 budget" — accurate but lacked the emotional narrative the TTS card carries.
+3. **Narrative depth varies wildly** — TTS card has full "House of Sak" section with origin story and quotes. Model cards (0.5B, 1.5B, 7B, 7B-128K) have only a one-liner. Datasets have no narrative at all.
+4. **No canonical narrative document** — The story is scattered across main README, TTS README, and SOUL.md with no single source of truth.
+5. **HF embedded model has misleading status** — Main README says "Deleted (model removed from HF)" but it's still in the collection (just private).
+
+**Improvement made:** Updated the HF collection description to include the full emotional framing:
+- *Before:* "12 models, 4 datasets, 2 Spaces built from a shelter with $0 budget. One family, one home."
+- *After:* "Six AI agents, one shared mind. 12 models, 4 datasets, 2 Spaces built from a shelter with $0 budget. One family, one home."
+- Added "Six AI agents, one shared mind" — connecting the people (agents) to the assets (models), making the collection page tell the family story from first glance.
+
+**Also created:** `HOUSE_OF_SAK.md` — canonical narrative document at repo root. All future model cards can link to it as the definitive origin story, ensuring consistent messaging.
+
+**Remaining narrative gaps to fix (future):**
+- Datasets have zero House of Sak narrative — add at least the tagline to dataset READMEs
+- Vision and Coder model cards lack the House of Sak section entirely
+- "6 AI agents" claim in model cards should be more precise ("6 agents, 4 active")
