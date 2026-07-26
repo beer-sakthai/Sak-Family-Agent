@@ -85,7 +85,7 @@ Every skill follows the pattern `<AgentPrefix>-<skill-name>`, matching the perso
 | 5 | [7B-128K](https://huggingface.co/Nanthasit/sakthai-context-7b-128k) | Extended ctx | 15 GB | — | 324 |
 | 6 | [Vision 7B](https://huggingface.co/Nanthasit/sakthai-vision-7b) | Multimodal GGUF | 3.9 GB | — | New |
 | 7 | [TTS Model](https://huggingface.co/Nanthasit/sakthai-tts-model) | Speech GGUF | 141 MB | — | New |
-| 8 | [Embedding](https://huggingface.co/Nanthasit/sakthai-embedding) | Semantic search | 80 MB | — | 28 |
+| 8 | [Embedding](https://huggingface.co/Nanthasit/sakthai-embedding) | Semantic search | 80 MB | — | Deleted (model removed from HF) |
 | 9 | [Multilingual](https://huggingface.co/Nanthasit/sakthai-embedding-multilingual) | 50+ languages | 80 MB | — | New |
 | 10-12 | 3 LoRA adapters | — | — | — | — |
 
@@ -166,12 +166,13 @@ Every skill and artifact passes through a structured quality pipeline before del
 
 ### ✅ Evidence-Indexed Facts (proven and confirmed)
 
-All verified data below was cross-checked against HF API and filesystem on 2026-07-26:
+All verified data below was cross-checked against HF API and filesystem on 2026-07-26 (reverified by cron):
 
 - **Skill counts** — sourced from **filesystem audit** (live, 2026-07-26): SakThai=382, SakKing=448, SakSee=43 (mirror; auth repo: 107), SakSit=149 (mirror; auth repo: 431), SakJules=48, Shared=3
 - **Naming compliance** — 100% agent-prefix match verified across 5 personas
 - **GitHub connectivity** — token test `curl` to API confirmed active
 - **Model downloads (live)** — 1.5B=942, Coder=15, 0.5B=785, 7B=534 — pulled from HF API
+- **Model status** — `sakthai-embedding` (28 DLs previously) no longer accessible on HF (returns 401, removed from author model list)
 - **Model sizes** — sourced from HF model cards and leaderboard; verify at [hf.co/spaces/Nanthasit/sakthai-leaderboard](https://huggingface.co/spaces/Nanthasit/sakthai-leaderboard)
 - **Benchmark scores** — BFCL tool-calling: 5/5 via `lm-eval-harness`, verified 2026-07-25
 - **Coding pass** — 5/5 task completion via `pytest` suite
