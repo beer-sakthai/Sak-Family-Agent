@@ -458,6 +458,34 @@ Fix the biggest model card on the most popular model (sakthai-context-1.5b-merge
 
 ---
 
+## 2026-07-26 (cron — House of Sak Narrative Consistency Fix)
+
+### Finding
+**4 SOUL.md files listed deleted agents (SakTan 🔴, SakJules 🔴) as active siblings.** This was first flagged in the 2026-07-27 Narrative Consistency Audit (see earlier entry) but never acted on.
+
+### Files Fixed (5 files, all SOUL.md)
+| File | What Changed |
+|------|-------------|
+| `personas/sakthai/SOUL.md` | Removed SakJules from active sibling list; model count: 6→7 text-gen, 1→2 LoRA |
+| `personas/sakking/SOUL.md` | Removed SakTan and SakJules from fellow agents list |
+| `personas/saksit/SOUL.md` | Removed SakTan and SakJules from sibling agents list |
+| `personas/saksee/SOUL.md` | Removed SakTan and SakJules from sibling agents list |
+| `personas/sakjules/SOUL.md` | Removed SakTan from sibling agents list |
+
+### Additional Fix: SakThai SOUL.md Model Count
+- `6 text-generation + 1 code GGUF` → `7 text-generation` (coder is pipeline_tag text-generation)
+- `1 LoRA adapter repos` → `2 LoRA adapter repos` (1.5b-tools AND 7b-tools)
+- Math: 7+1+1+1+1+2 = 12 ✓
+
+### Verification
+- ✅ Zero sibling-agent grep hits for deleted agents in any SOUL.md
+- ✅ All 6 agent SOULs consistently list only the 4 active siblings
+
+### Residual (not fixed this cycle)
+- `personas/README.md` mentions "six core agent personas" including saktan/sakjules — historically accurate but stale-feeling
+
+---
+
 ## 2026-07-27 (cron — context-0.5b-tools Card Enrichment)
 
 ### Target
