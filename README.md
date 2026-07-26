@@ -78,17 +78,17 @@ Every skill follows the pattern `<AgentPrefix>-<skill-name>`, matching the perso
 
 | # | Model | Type | Size | Score | Downloads |
 |:-:|-------|------|:----:|:----:|:---------:|
-| 1🥇 | [1.5B-merged](https://huggingface.co/Nanthasit/sakthai-context-1.5b-merged) | Tool-calling GGUF | 934 MB | 🏆 5/5 | **942** |
+| 1🥇 | [1.5B-merged](https://huggingface.co/Nanthasit/sakthai-context-1.5b-merged) | Tool-calling GGUF | 934 MB | 🏆 5/5 | **1,197** |
 | 2🥈 | [Coder 1.5B](https://huggingface.co/Nanthasit/sakthai-coder-1.5b) | Code GGUF | 1.1 GB | 🏆 5/5 | 15 |
-| 3🥉 | [0.5B-merged](https://huggingface.co/Nanthasit/sakthai-context-0.5b-merged) | Lightweight GGUF | 380 MB | 1/5 | **785** |
-| 4 | [7B-merged](https://huggingface.co/Nanthasit/sakthai-context-7b-merged) | Full-size | 15 GB | — | 534 |
-| 5 | [7B-128K](https://huggingface.co/Nanthasit/sakthai-context-7b-128k) | Extended ctx | — | — | 324 |
+| 3🥉 | [0.5B-merged](https://huggingface.co/Nanthasit/sakthai-context-0.5b-merged) | Lightweight GGUF | 380 MB | 1/5 | **994** |
+| 4 | [7B-merged](https://huggingface.co/Nanthasit/sakthai-context-7b-merged) | Full-size | 15 GB | — | 562 |
+| 5 | [7B-128K](https://huggingface.co/Nanthasit/sakthai-context-7b-128k) | Extended ctx | — | — | 351 |
 | 6 | [Vision 7B](https://huggingface.co/Nanthasit/sakthai-vision-7b) | Multimodal GGUF | 3.9 GB | — | New |
 | 7 | [TTS Model](https://huggingface.co/Nanthasit/sakthai-tts-model) | Speech GGUF | 141 MB | — | New |
 | 8 | [Embedding](https://huggingface.co/Nanthasit/sakthai-embedding) | Semantic search | 80 MB | — | Deleted (model removed from HF) |
 | 9 | [Multilingual](https://huggingface.co/Nanthasit/sakthai-embedding-multilingual) | 50+ languages | 488 MB | — | New |
-| 10 | [Tools 1.5B](https://huggingface.co/Nanthasit/sakthai-context-1.5b-tools) | PEFT LoRA adapter | — | — | 115 |
-| 11 | [Tools 7B](https://huggingface.co/Nanthasit/sakthai-context-7b-tools) | PEFT LoRA adapter | — | — | 147 |
+| 10 | [Tools 1.5B](https://huggingface.co/Nanthasit/sakthai-context-1.5b-tools) | PEFT LoRA adapter | — | — | 143 |
+| 11 | [Tools 7B](https://huggingface.co/Nanthasit/sakthai-context-7b-tools) | PEFT LoRA adapter | — | — | 185 |
 
 ### 📊 Dataset
 
@@ -172,7 +172,7 @@ All verified data below was cross-checked against HF API and filesystem on 2026-
 - **Skill counts** — sourced from **filesystem audit** (live, 2026-07-26): SakThai=377, SakKing=422, SakSee=49 (mirror; auth repo: 107), SakSit=151 (mirror; auth repo: 431), SakJules=48, Shared=3
 - **Naming compliance** — 100% agent-prefix match verified across 5 personas
 - **GitHub connectivity** — token test `curl` to API confirmed active
-- **Model downloads (live)** — 1.5B=942, Coder=15, 0.5B=785, 7B=534, 1.5B-Tools=115, 7B-Tools=147 — pulled from HF API
+- **Model downloads (live)** — 1.5B=1,197, Coder=15, 0.5B=994, 7B=562, 7B-128K=351, 1.5B-Tools=143, 7B-Tools=185 — pulled from HF API
 - **Model status** — `sakthai-embedding` (28 DLs previously) no longer accessible on HF (returns 401, removed from author model list); 2 new PEFT LoRA adapters online (`sakthai-context-1.5b-tools`, `sakthai-context-7b-tools`)
 - **Model sizes** — sourced from HF model cards and leaderboard; verify at [hf.co/spaces/Nanthasit/sakthai-leaderboard](https://huggingface.co/spaces/Nanthasit/sakthai-leaderboard)
 - **Benchmark scores** — BFCL tool-calling: 5/5 via `lm-eval-harness`, verified 2026-07-25
