@@ -157,7 +157,7 @@ Every skill and artifact passes through a structured quality pipeline before del
 | **Joy** | Ships clean — no broken code, no invented data | `pytest`, `ruff`, CI |
 | **Trust** | Visual + content verification before sign-off | Browser screenshots, link audit |
 | **Growth** | Lessons folded back into memory and skills | `memory` save, skill update |
-| **Evidence Index** | Every claim backed by tool output, not assumption | `evidence-index.md` |
+| **Evidence Index** | Every claim backed by live HF API + filesystem audit | Cross-check against source |
 | **Skill Quality Gate** | Pre-flight checklist: syntax, naming, cross-refs | `skill_view`, `skills_list` |
 | **Infrastructure Drift** | Local FS verified before trusting external logs | `search_files`, `terminal` |
 | **Idempotency** | Script runs must produce same result on second pass | Dry-run before mutate |
