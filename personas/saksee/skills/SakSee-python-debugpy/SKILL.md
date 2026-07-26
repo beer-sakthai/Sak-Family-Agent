@@ -1,5 +1,6 @@
 ---
 name: SakSee-python-debugpy
+version: 1.0.0
 description: Debug Python: pdb REPL + debugpy remote (DAP).
 category: software-development
 tags: [python, debugger, pdb]

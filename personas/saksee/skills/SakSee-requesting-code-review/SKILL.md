@@ -1,5 +1,6 @@
 ---
 name: SakSee-requesting-code-review
+version: 1.0.0
 description: Pre-commit review: security scan, quality gates, auto-fix.
 category: software-development
 tags: [review, security, quality]

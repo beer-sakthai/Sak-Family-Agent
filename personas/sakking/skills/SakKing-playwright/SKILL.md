@@ -1,5 +1,5 @@
 ---
-name: sakthai-playwright
+name: SakKing-playwright
 description: "Playwright browser automation: installation, script execution, common pitfalls."
 version: 1.0.0
 author: SakThai
