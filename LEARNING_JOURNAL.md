@@ -330,3 +330,37 @@ Complete HTML redesign (3,771 → 15,778 chars, 4.2× growth):
 ### Next Priority
 - Repeat this pattern for **sakthai-leaderboard Space** — currently a bare static page with no content
 - Check if the leaderboard Space could serve as a model comparison landing page
+
+---
+
+## 2026-07-26 (cron — Narrative Consistency Fix: 0.5B-merged Benchmark Scores)
+
+### Objective
+Fix self-contradictory benchmark scores on the **sakthai-context-0.5b-merged** model card (994 dl, second most-downloaded). The card had three different sets of scores within the same page that contradicted each other and the authoritative README.
+
+### Inconsistency Found
+| Source | 1.5B Score | 0.5B Score | 
+|--------|:----------:|:----------:|
+| Card: Benchmark Results table | 4/5 | 3/5 |
+| Card: Comparison table | *pending* | *Pending — see note* |
+| Card: Verified Results section | — | 1/5 |
+| **README (authoritative)** | **5/5 🏆** | **1/5** |
+
+Three different claims for the same models on the same page — with none matching the verified benchmarks.
+
+### What Was Fixed
+1. **Benchmark Results table**: 1.5B=4/5→**5/5 🏆**, 0.5B=3/5→**1/5**
+2. **Comparison table**: 1.5B=*pending*→**5/5 🏆**, 0.5B=*pending*→**1/5**
+3. **Key finding note**: Updated to explain the `<tools>` block requirement and that 0.5B is best for direct Q&A
+4. **Methodology footnote**: Added multi-trial (5 runs), `<tools>` block requirement context
+
+### Verification
+- ✅ README.md fetched back from HF after upload — all 4 changes confirmed
+- ✅ Scores now match the verified README benchmarks exactly
+- ✅ No other model cards had the same inconsistency (spot-checked 1.5B-merged, 7B-merged, 7B-tools, coder — all correct)
+
+### Root Cause
+The 0.5B-merged card was apparently created from an earlier template copy that had preliminary benchmark data, and was never updated when the 1.5B model's verified benchmark (5/5) was finalized. The conflict between the "Benchmark Results" table (showing 4/5) and the "Benchmark Comparison" table (showing "pending") suggests two different editing passes that were never reconciled.
+
+### Meta-Lesson
+Model cards with **duplicate benchmark sections** are prone to drift — when one section gets updated but not the other, the card becomes self-contradictory. The 0.5B-merged card has both a "Benchmark Results" table and a "Benchmark Comparison vs Similar-Sized Models" table that overlap. Consider consolidating into one authoritative benchmark section per card.
