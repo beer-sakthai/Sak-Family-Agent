@@ -22,7 +22,7 @@ import stat
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable, Literal
 
 logger = logging.getLogger(__name__)
 
@@ -155,7 +155,7 @@ class MCPServerValidator:
     """Validate and sanitize external MCP server configurations."""
 
     # Approved external MCP servers (allowlist)
-    APPROVED_SERVERS = {
+    APPROVED_SERVERS: dict[str, dict[str, Any]] = {
         # Add approved servers here
         # Format: "server_name": {"command": "...", "max_timeout": 30}
     }
@@ -258,7 +258,7 @@ class EnhancedPathValidator:
         normalized = []
         for form in EnhancedPathValidator.UNICODE_FORMS:
             try:
-                norm = unicodedata.normalize(form, path)
+                norm = unicodedata.normalize(form, path)  # type: ignore[arg-type]
                 normalized.append(norm)
             except (TypeError, ValueError):
                 pass
@@ -490,7 +490,7 @@ class TOCTOUPrevention:
 
     @staticmethod
     def atomic_check_and_read(
-        file_path: Path, check_fn: callable, max_retries: int = 3
+        file_path: Path, check_fn: Callable[[Path], bool], max_retries: int = 3
     ) -> tuple[bool, str]:
         """Atomically check and read a file without TOCTOU window.
 

@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 from ..memory.store import MemoryStore
 from .guardrails import (
@@ -246,7 +246,9 @@ def check_mcp_server_safety(
     return GuardrailResult(GuardrailAction.ALLOW)
 
 
-def create_pre_execution_guardrail_hardened() -> callable:
+def create_pre_execution_guardrail_hardened() -> Callable[
+    [Tool, dict[str, Any], MemoryStore], GuardrailResult
+]:
     """Create a comprehensive pre-execution guardrail that includes hardening checks.
 
     Returns:
