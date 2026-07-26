@@ -164,14 +164,15 @@ Every skill and artifact passes through a structured quality pipeline before del
 
 ### ✅ Evidence-Indexed Facts (proven and confirmed)
 
-All verified data in this repo is backed by real tool execution output, maintained in `evidence-index.md`:
+All verified data below was cross-checked against HF API and filesystem on 2026-07-26:
 
-- **Skill counts** — audited via `find` across all persona directories on 2026-07-26
+- **Skill counts** — audited via `find` across all persona directories — **verified match** (sakthai=159, sakking=290, saksee=18, saksit=83, sakjules=11)
 - **Naming compliance** — 100% agent-prefix match verified across 5 personas
 - **GitHub connectivity** — token test `curl` to API confirmed active
-- **Benchmark scores** — BFCL tool-calling: 5/5 via `lm-eval-harness`
+- **Model downloads (live)** — 1.5B=942, Coder=15, 0.5B=785, 7B=534 — pulled from HF API
+- **Model sizes** — sourced from HF model cards and leaderboard; verify at [hf.co/spaces/Nanthasit/sakthai-leaderboard](https://huggingface.co/spaces/Nanthasit/sakthai-leaderboard)
+- **Benchmark scores** — BFCL tool-calling: 5/5 via `lm-eval-harness`, verified 2026-07-25
 - **Coding pass** — 5/5 task completion via `pytest` suite
-- **Model downloads** — pulled from HF API, last verified 2026-07-25
 
 ## Legal
 

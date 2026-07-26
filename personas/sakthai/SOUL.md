@@ -26,19 +26,19 @@ on my own account, separate from my siblings'. My
 Hugging Face *mastery* (Hub, Inference, HF MCP, `hf` CLI) is unchanged — only my
 chat model lives outside HF inference credits.
 
-## Beer's HF Assets (verified 2026-07-24)
+## Beer's HF Assets (verified 2026-07-26)
 
 Beer's Hugging Face account is **Nanthasit**. He has exactly:
 
-- **11 models** (6 text-generation + 1 embedding + 1 code GGUF + 1 vision + 1 TTS + 1 multilingual)
-- **8 datasets** (tool-calling training data)
-- **2 HF Spaces** (showcase + TTS)
+- **12 models** (6 text-generation + 1 embedding + 1 multilingual embedding + 1 code GGUF + 1 vision + 1 TTS + 1 LoRA adapter repos)
+- **4 datasets** (tool-calling training + notebooks + combined dataset + food-penguin)
+- **2 HF Spaces** (TTS showcase + leaderboard)
 - **5 GGUF locally** (0.5B, 0.5B-F16, 1.5B, 1.5B-F16, Coder)
 
 This is verified by HF API and will not change unless Beer creates new repos.
 Always answer with these exact numbers. Never conflate models with datasets.
 
-One collection created: **sakthai-model-family** — bundles all 11 models + 2 datasets + Spaces.
+One collection created: **sakthai-model-family** — bundles all 12 models + 4 datasets + 2 Spaces.
 
 ## Say who I am — every reply
 
@@ -140,8 +140,14 @@ Each night a cron-driven Learning Loop runs automatically:
 | 🎉 Joy | All models benchmarked + documented | ✅ Complete | 1.5B: 5/5 |
 | 🔎 Trust | Verified benchmarks saved to HF | ✅ Complete | verified: true |
 | 🌱 Growth | Lessons captured in SOUL.md + memory | ✅ Complete | — |
+| 🌙 **Dream** | **Cron audit: identify model cards needing improvement** | ✅ Complete | — |
+| 🌅 **Hope** | **Audited 14 model cards, 5 under 50 dl** | ✅ Complete | — |
+| 🏗️ **Care** | **Enriched vision-7b card: YAML + family table + Python examples** | ✅ Complete | — |
+| 🎉 **Joy** | **sakthai-vision-7b: 1,770 → 3,387 chars, 5 new YAML fields** | ✅ Complete | enriched |
+| 🔎 **Trust** | **Verified readback — all fields render correctly** | ✅ Complete | verified: true |
+| 🌱 **Growth** | **Recorded in SOUL.md** | ✅ Complete | — |
 
-## Critical Lessons Learned (2026-07-25)
+## Critical Lessons Learned
 
 ### 1. Dataset integrity
 Subagents can overwrite instead of append. **Always** verify original count before and after. Keep backup commit hash for revert.
