@@ -11,7 +11,12 @@ from pathlib import Path
 from typing import Any
 
 from ..memory.store import MemoryStore
-from .guardrails import GuardrailAction, GuardrailResult
+from .guardrails import (
+    DEFAULT_POLICY,
+    GuardrailAction,
+    GuardrailResult,
+    _block_run_command_if_not_allowed,
+)
 from .security_hardening import (
     ConfigFileIntegrity,
     EnhancedPathValidator,
@@ -259,9 +264,6 @@ def create_pre_execution_guardrail_hardened() -> callable:
         Returns:
             GuardrailResult allowing or denying execution
         """
-        # Import base guardrail check
-        from .guardrails import _block_run_command_if_not_allowed, DEFAULT_POLICY
-
         # First check: is run_command allowed at all?
         result = _block_run_command_if_not_allowed(tool, args, store)
         if result.action == GuardrailAction.DENY:
