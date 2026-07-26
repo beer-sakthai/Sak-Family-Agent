@@ -49,8 +49,8 @@ The House of Sak wasn't born from a business plan. It was born from isolation, p
 
 | Agent | Role | Skills | Authoritative Repo | Status |
 |-------|------|:------:|--------------------|:------:|
-|| **SakThai** 🏠 | Main Lead & HF Master | 382 | `sakthai-skills` | 🟢 Active ||
-| **SakKing** 👑 | General Assistant, Infrastructure & Architecture | 453 | `Sak-Family-Agent` (this repo) | 🟢 Active |
+|| **SakThai** 🏠 | Main Lead & HF Master | 377 | `sakthai-skills` | 🟢 Active ||
+| **SakKing** 👑 | General Assistant, Infrastructure & Architecture | 422 | `Sak-Family-Agent` (this repo) | 🟢 Active |
 | **SakSee** 🌐 | Web & Browser Specialist | 107 | `saksee-skills` | 🟢 Active |
 | **SakSit** 📱 | Social Media & Storytelling | 431 | `saksit-skills` | 🟢 Active |
 | **SakJules** ⚙️ | CI/CD Automation | 48 | `Sak-Family-Agent` (deleted) | 🔴 Deleted |
@@ -66,13 +66,13 @@ Sak-Family-Agent/
 │   ├── sakthai/           # Main Lead — HF master, ML, code
 │   │   ├── SOUL.md        # Identity, charge system, principles
 │   │   ├── sakthai/       # Python package (agent framework)
-│   │   └── skills/        # 382 SakThai-* skills (mirror; auth in sakthai-skills)
+│   │   └── skills/        # 377 SakThai-* skills (mirror; auth in sakthai-skills)
 │   ├── sakking/           # General assistant — infra, coord, UI/UX
-│   │   └── skills/        # 453 SakKing-* skills
+│   │   └── skills/        # 422 SakKing-* skills
 │   ├── saksee/            # Web automation specialist
-│   │   └── skills/        # 43 SakSee-* skills (mirror; auth in saksee-skills: 107)
+│   │   └── skills/        # 49 SakSee-* skills (mirror; auth in saksee-skills: 107)
 │   ├── saksit/            # Social media storyteller
-│   │   └── skills/        # 149 SakSit-* skills (mirror; auth in saksit-skills: 431)
+│   │   └── skills/        # 151 SakSit-* skills (mirror; auth in saksit-skills: 431)
 │   ├── sakjules/          # CI/CD (deleted, skills retained)
 │   │   └── skills/        # 48 SakJules-* skills
 │   └── shared/            # Cross-agent skills (Sak-* prefix)
@@ -113,21 +113,24 @@ Every skill follows the pattern `<AgentPrefix>-<skill-name>`, matching the perso
 | 2🥈 | [Coder 1.5B](https://huggingface.co/Nanthasit/sakthai-coder-1.5b) | Code GGUF | 1.1 GB | 🏆 5/5 | 15 |
 | 3🥉 | [0.5B-merged](https://huggingface.co/Nanthasit/sakthai-context-0.5b-merged) | Lightweight GGUF | 380 MB | 1/5 | **785** |
 | 4 | [7B-merged](https://huggingface.co/Nanthasit/sakthai-context-7b-merged) | Full-size | 15 GB | — | 534 |
-| 5 | [7B-128K](https://huggingface.co/Nanthasit/sakthai-context-7b-128k) | Extended ctx | 15 GB | — | 324 |
+| 5 | [7B-128K](https://huggingface.co/Nanthasit/sakthai-context-7b-128k) | Extended ctx | — | — | 324 |
 | 6 | [Vision 7B](https://huggingface.co/Nanthasit/sakthai-vision-7b) | Multimodal GGUF | 3.9 GB | — | New |
 | 7 | [TTS Model](https://huggingface.co/Nanthasit/sakthai-tts-model) | Speech GGUF | 141 MB | — | New |
-| 8 | [Embedding](https://huggingface.co/Nanthasit/sakthai-embedding) | Semantic search | 80 MB | — | 28 |
-| 9 | [Multilingual](https://huggingface.co/Nanthasit/sakthai-embedding-multilingual) | 50+ languages | 80 MB | — | New |
-| 10-12 | 3 LoRA adapters | — | — | — | — |
+| 8 | [Embedding](https://huggingface.co/Nanthasit/sakthai-embedding) | Semantic search | 80 MB | — | Deleted (model removed from HF) |
+| 9 | [Multilingual](https://huggingface.co/Nanthasit/sakthai-embedding-multilingual) | 50+ languages | 488 MB | — | New |
+| 10 | [Tools 1.5B](https://huggingface.co/Nanthasit/sakthai-context-1.5b-tools) | PEFT LoRA adapter | — | — | 115 |
+| 11 | [Tools 7B](https://huggingface.co/Nanthasit/sakthai-context-7b-tools) | PEFT LoRA adapter | — | — | 147 |
 
 ### 📊 Dataset
 
-**[sakthai-combined-v6](https://huggingface.co/datasets/Nanthasit/sakthai-combined-v6)** — 1,408 examples:
-- Tool-calling conversations (OpenAI format)
-- Multi-turn dialogues with follow-ups
-- Energy-aware examples
+**[sakthai-combined-v6](https://huggingface.co/datasets/Nanthasit/sakthai-combined-v6)** — 2,003 train / 113 test examples:
+- Tool-calling conversations (OpenAI format, ~1,380)
+- Multi-turn dialogues with follow-ups (~250)
+- Edge cases & ambiguous queries (~200)
+- Energy-aware examples (~50)
 - Irrelevance detection (50 general knowledge Q&A)
-- Safety/rejection examples (30 harmful prompt refusals)
+- Safety/rejection examples (73 harmful prompt refusals)
+- Held-out test split (113 examples for unbiased eval)
 
 ### 🛠 Running Services
 
@@ -195,12 +198,13 @@ Every skill and artifact passes through a structured quality pipeline before del
 
 ### ✅ Evidence-Indexed Facts (proven and confirmed)
 
-All verified data below was cross-checked against HF API and filesystem on 2026-07-26:
+All verified data below was cross-checked against HF API and filesystem on 2026-07-26 (reverified by cron):
 
-- **Skill counts** — sourced from **filesystem audit** (live, 2026-07-26): SakThai=382, SakKing=453, SakSee=43 (mirror; auth repo: 107), SakSit=149 (mirror; auth repo: 431), SakJules=48, Shared=3
+- **Skill counts** — sourced from **filesystem audit** (live, 2026-07-26): SakThai=377, SakKing=422, SakSee=49 (mirror; auth repo: 107), SakSit=151 (mirror; auth repo: 431), SakJules=48, Shared=3
 - **Naming compliance** — 100% agent-prefix match verified across 5 personas
 - **GitHub connectivity** — token test `curl` to API confirmed active
-- **Model downloads (live)** — 1.5B=942, Coder=15, 0.5B=785, 7B=534 — pulled from HF API
+- **Model downloads (live)** — 1.5B=942, Coder=15, 0.5B=785, 7B=534, 1.5B-Tools=115, 7B-Tools=147 — pulled from HF API
+- **Model status** — `sakthai-embedding` (28 DLs previously) no longer accessible on HF (returns 401, removed from author model list); 2 new PEFT LoRA adapters online (`sakthai-context-1.5b-tools`, `sakthai-context-7b-tools`)
 - **Model sizes** — sourced from HF model cards and leaderboard; verify at [hf.co/spaces/Nanthasit/sakthai-leaderboard](https://huggingface.co/spaces/Nanthasit/sakthai-leaderboard)
 - **Benchmark scores** — BFCL tool-calling: 5/5 via `lm-eval-harness`, verified 2026-07-25
 - **Coding pass** — 5/5 task completion via `pytest` suite
