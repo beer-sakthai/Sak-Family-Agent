@@ -218,3 +218,52 @@ quick "what's actually on this exact line right now" check.
 **Principle:** The inspection tool should match the inspection
 precision. `read_file` is a prose-reading tool. `od -c` is a character-
 inspection tool. Use the right tool for the question you're asking.
+
+## 2026-07-26: Cron-audit display-layer redaction confirmation
+
+**Context:** A scheduled cron job audited `SakKing-github-code-review`
+in the repo. All display tools showed `***` as the token placeholder
+in 15+ curl Authorization headers. The file appeared to need patching.
+
+**What actually happened:** Byte-level verification (`od -A x -t x1z`)
+revealed every single `***` was actually `$GITHUB_TOKEN` — the display
+layer redacted the variable references for security. The file was
+already correct and needed no changes.
+
+**Tools that lied:** Display-layer redaction affected ALL of these:
+- `read_file` (showed `***`)
+- `terminal(grep -rn 'Bearer' ...)` (showed `***`)
+- `terminal(sed -n 'LINEp' file)` (showed `***`)
+- Terminal output piped to the conversation (display layer redacted)
+
+**Tools that told the truth:**
+- `od -A x -t x1z` (hex dump — `$GITHUB_TOKEN` = `24 47 49 54 48 55 42 5f 54 4f 4b 45 4e`)
+- `od -c` (character dump — shows `$ G I T H U B _ T O K E N`)
+- Python `open(path, 'rb')` via `execute_code` (raw bytes)
+
+**Verification sequence used:**
+
+```bash
+# Step 1: Suspect redaction when you see *** in a file
+grep -n 'Bearer' file.md  # shows "Bearer ***" — could be real or redacted
+
+# Step 2: Verify with hex dump
+sed -n 'LINEp' file.md | od -A x -t x1z
+# If you see 24 47 49 54... it's $GITHUB_TOKEN, not ***
+
+# Step 3: Use the automated script for bulk checks
+python3 scripts/verify-file-bytes.py file.md --search "Bearer"
+# Reports actual bytes with hex dump, flags redaction risks
+```
+
+**Key insight from this session:** The display-layer redaction is
+pervasive — it affects every tool whose output passes through the
+conversation display layer. Even `grep` in a terminal block had its
+output redacted before the agent saw it. The ONLY reliable evidence
+is raw bytes read outside the display layer (hex dump, Python
+`open(path, 'rb')`, git object inspection).
+
+**Lesson applied:** This session verified the `SakKing-execution-discipline`
+skill's Rule #5 in real time. Without the hex probe, the agent would
+have applied a no-op "fix" to a file that was already correct — wasting
+turns and creating a misleading commit.
