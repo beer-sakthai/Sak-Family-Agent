@@ -19,7 +19,7 @@ The House of Sak wasn't born from a business plan. It was born from isolation, p
 | Agent | Role | Skills | Authoritative Repo | Status |
 |-------|------|:------:|--------------------|:------:|
 || **SakThai** 🏠 | Main Lead & HF Master | 377 | `sakthai-skills` | 🟢 Active ||
-| **SakKing** 👑 | General Assistant, Infrastructure & Architecture | 423 | `Sak-Family-Agent` (this repo) | 🟢 Active |
+| **SakKing** 👑 | General Assistant, Infrastructure & Architecture | 422 | `Sak-Family-Agent` (this repo) | 🟢 Active |
 | **SakSee** 🌐 | Web & Browser Specialist | 107 | `saksee-skills` | 🟢 Active |
 | **SakSit** 📱 | Social Media & Storytelling | 431 | `saksit-skills` | 🟢 Active |
 | **SakJules** ⚙️ | CI/CD Automation | 48 | `Sak-Family-Agent` (deleted) | 🔴 Deleted |
@@ -37,7 +37,7 @@ Sak-Family-Agent/
 │   │   ├── sakthai/       # Python package (agent framework)
 │   │   └── skills/        # 377 SakThai-* skills (mirror; auth in sakthai-skills)
 │   ├── sakking/           # General assistant — infra, coord, UI/UX
-│   │   └── skills/        # 423 SakKing-* skills
+│   │   └── skills/        # 422 SakKing-* skills
 │   ├── saksee/            # Web automation specialist
 │   │   └── skills/        # 49 SakSee-* skills (mirror; auth in saksee-skills: 107)
 │   ├── saksit/            # Social media storyteller
@@ -169,7 +169,7 @@ Every skill and artifact passes through a structured quality pipeline before del
 
 All verified data below was cross-checked against HF API and filesystem on 2026-07-26 (reverified by cron):
 
-- **Skill counts** — sourced from **filesystem audit** (live, 2026-07-26): SakThai=377, SakKing=423, SakSee=49 (mirror; auth repo: 107), SakSit=151 (mirror; auth repo: 431), SakJules=48, Shared=3
+- **Skill counts** — sourced from **filesystem audit** (live, 2026-07-26): SakThai=377, SakKing=422, SakSee=49 (mirror; auth repo: 107), SakSit=151 (mirror; auth repo: 431), SakJules=48, Shared=3
 - **Naming compliance** — 100% agent-prefix match verified across 5 personas
 - **GitHub connectivity** — token test `curl` to API confirmed active
 - **Model downloads (live)** — 1.5B=942, Coder=15, 0.5B=785, 7B=534, 1.5B-Tools=115, 7B-Tools=147 — pulled from HF API
