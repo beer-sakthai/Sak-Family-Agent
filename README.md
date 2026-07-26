@@ -16,14 +16,14 @@ The House of Sak wasn't born from a business plan. It was born from isolation, p
 
 ## The Family
 
-| Agent | Role | Skills | Status |
-|-------|------|:------:|:------:|
-| **SakThai** 🏠 | Main Lead & HF Master | 159 | 🟢 Active |
-| **SakKing** 👑 | General Assistant, Infrastructure & Architecture | 290 | 🟢 Active |
-| **SakSee** 🌐 | Web & Browser Specialist | 18 | 🟢 Active |
-| **SakSit** 📱 | Social Media & Storytelling | 204 | 🟢 Active |
-| **SakJules** ⚙️ | CI/CD Automation | 11 | 🔴 Deleted |
-| **SakTan** 📋 | Daily Operations | — | 🔴 Deleted |
+| Agent | Role | Skills | Authoritative Repo | Status |
+|-------|------|:------:|--------------------|:------:|
+| **SakThai** 🏠 | Main Lead & HF Master | 379 | `sakthai-skills` | 🟢 Active |
+| **SakKing** 👑 | General Assistant, Infrastructure & Architecture | 290 | `Sak-Family-Agent` (this repo) | 🟢 Active |
+| **SakSee** 🌐 | Web & Browser Specialist | 107 | `saksee-skills` | 🟢 Active |
+| **SakSit** 📱 | Social Media & Storytelling | 431 | `saksit-skills` | 🟢 Active |
+| **SakJules** ⚙️ | CI/CD Automation | 11 | `Sak-Family-Agent` (deleted) | 🔴 Deleted |
+| **SakTan** 📋 | Daily Operations | — | — | 🔴 Deleted |
 
 All agents share one long-term memory brain but maintain separate live sessions. They communicate via the A2A message bus (port 3005).
 
@@ -35,13 +35,13 @@ Sak-Family-Agent/
 │   ├── sakthai/           # Main Lead — HF master, ML, code
 │   │   ├── SOUL.md        # Identity, charge system, principles
 │   │   ├── sakthai/       # Python package (agent framework)
-│   │   └── skills/        # 159 SakThai-* skills
+│   │   └── skills/        # 379 SakThai-* skills (mirror; auth in sakthai-skills)
 │   ├── sakking/           # General assistant — infra, coord, UI/UX
 │   │   └── skills/        # 290 SakKing-* skills
 │   ├── saksee/            # Web automation specialist
-│   │   └── skills/        # 18 SakSee-* skills
+│   │   └── skills/        # 18 SakSee-* skills (mirror; auth in saksee-skills: 107)
 │   ├── saksit/            # Social media storyteller
-│   │   └── skills/        # 204 SakSit-* skills (authoritative in saksit-skills repo)
+│   │   └── skills/        # 83 SakSit-* skills (mirror; auth in saksit-skills: 431)
 │   ├── sakjules/          # CI/CD (deleted, skills retained)
 │   │   └── skills/        # 11 SakJules-* skills
 │   └── shared/            # Cross-agent skills (Sak-* prefix)
@@ -166,7 +166,7 @@ Every skill and artifact passes through a structured quality pipeline before del
 
 All verified data below was cross-checked against HF API and filesystem on 2026-07-26:
 
-- **Skill counts** — audited via `find` across all persona directories — **verified match** (sakthai=159, sakking=290, saksee=18, saksit=204, sakjules=11)
+- **Skill counts** — sourced from **GitHub API** (live, 2026-07-26): SakThai=379, SakKing=290, SakSee=107, SakSit=431, SakJules=11
 - **Naming compliance** — 100% agent-prefix match verified across 5 personas
 - **GitHub connectivity** — token test `curl` to API confirmed active
 - **Model downloads (live)** — 1.5B=942, Coder=15, 0.5B=785, 7B=534 — pulled from HF API
