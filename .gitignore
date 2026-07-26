@@ -8,7 +8,17 @@ __pycache__/
 *.pyc
 .venv/
 personas/saktan/
+# Ignore the legacy per-persona duplicate sakthai package copies, but keep the
+# consolidated shared canonical (personas/shared/sakthai/) tracked — the five
+# personas symlink to it, so it must exist in a fresh checkout (mirrors how
+# personas/shared/agent-self-evolution/ is tracked).
 personas/*/sakthai/
+!personas/shared/sakthai/
+!personas/shared/sakthai/**
+# ...but never the regenerated Python caches inside it (the broad negation
+# above would otherwise re-include them, overriding __pycache__/ and *.pyc).
+personas/shared/sakthai/**/__pycache__/
+personas/shared/sakthai/**/*.pyc
 
 # HF cache directories
 .hub/
