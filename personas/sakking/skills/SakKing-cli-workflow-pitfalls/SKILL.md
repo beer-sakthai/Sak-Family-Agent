@@ -23,4 +23,4 @@ Static documentation (e.g., `CLAUDE.md`, `AGENTS.md`) may become outdated and no
 
 **Workaround:**
 
-Always prioritize `search_files` and `terminal` output (e.g., `git status`, `ls -d`) when verifying the actual existence, Git status, or content of repositories and files. The live filesystem state takes precedence over potentially outdated documentation. Conduct a thorough environment audit using skills like `sakking-environment-audit` to confirm the current state before proceeding with actions based on documentation.
+Always prioritize `search_files` and `terminal` output (e.g., `git status`, `ls -d`) when verifying the actual existence, Git status, or content of repositories and files. The live filesystem state takes precedence over potentially outdated documentation. Conduct a thorough environment audit using skills like `SakKing-environment-audit` to confirm the current state before proceeding with actions based on documentation.
