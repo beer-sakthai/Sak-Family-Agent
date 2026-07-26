@@ -93,7 +93,7 @@ def test_personas_readme_skill_counts_match_disk() -> None:
     }
     assert set(listed) == set(PERSONAS.values()), f"README lists counts for {sorted(listed)}"
     actual = {
-        name: len(list((PERSONAS_DIR / slug / "skills").rglob("SKILL.md")))
+        name: len(list((PERSONAS_DIR / slug / "skills").iterdir()))
         for slug, name in PERSONAS.items()
     }
     assert listed == actual, f"README counts {listed} != on-disk counts {actual}"
