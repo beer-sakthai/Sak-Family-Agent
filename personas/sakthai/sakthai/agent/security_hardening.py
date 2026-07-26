@@ -19,10 +19,11 @@ import logging
 import os
 import re
 import stat
+from collections.abc import Callable
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import Any, Callable, Literal
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
