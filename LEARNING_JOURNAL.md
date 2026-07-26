@@ -111,3 +111,68 @@ Last 5 workflow runs on main: ALL success.
 7. **Add evaluation-results YAML to all model cards** — Only vision-7b has model-index metadata. Adding this to the other 11 models would improve HF search ranking and user trust.
 
 8. **Check private repo access patterns** — sakthai-embedding (34 dl) is private but getting downloads. Verify the intended access mechanism (token-gated? org-shared?) and document for Beer.
+
+---
+
+## 2026-07-26 (cron — Dataset Card Fix: food-penguin-v1)
+
+### Objective
+Fix the **static download badge** on `food-penguin-v1` (15 dl, lowest-download dataset) that showed "0" — making the dataset look untracked — and refresh 5 stale download counts in its Related Assets section.
+
+### What Was Fixed
+
+**Badge:** Static `Downloads-0-lightgrey` → Dynamic JSON endpoint badge that auto-updates via the HF API.
+
+**Related Assets stale counts (5 values):**
+| Asset | Old | New |
+|-------|:---:|:---:|
+| sakthai-context-0.5b-merged | 785 | 994 |
+| sakthai-context-1.5b-merged | 942 | 1,197 |
+| sakthai-context-7b-tools | 147 | 185 |
+| sakthai-combined-v6 | 114 | 150 |
+| SimpleToolCalling | 41 | 43 |
+
+### Root Cause
+The dataset card was created when food-penguin-v1 had 0 downloads and the badges were set statically. Over time, the dataset gained 15 real downloads but the badge never updated. Meanwhile, sibling model download counts in the Related Assets section drifted from their initial values as the ecosystem grew.
+
+### Fix Applied
+- Cloned `Nanthasit/food-penguin-v1` → patched README.md → committed → pushed
+- Commit: `65374e7` on branch `main`
+- Badge verified via live fetch: ✅ dynamic JSON badge with correct `$.downloads` query
+- All 5 related asset counts verified via live fetch: ✅ all match current API data
+
+### Current Ecosystem Status (2026-07-26)
+| Asset | Downloads | Change |
+|-------|:--------:|:------:|
+| 1.5B-merged | 1,197 | — |
+| 0.5B-merged | 994 | — |
+| 7B-merged | 562 | — |
+| 7B-128K | 351 | — |
+| 7B-Tools | 185 | — |
+| 1.5B-Tools | 143 | — |
+| Embedding Multilingual | 104 | — |
+| Vision-7B | 45 | — |
+| Coder-1.5B | 34 | — |
+| TTS-Model | 33 | — |
+| **Datasets:** | | |
+| sakthai-combined-v6 | 150 | — |
+| sakthai-kaggle-notebooks | 92 | — |
+| SimpleToolCalling | 43 | — |
+| food-penguin-v1 | 15 | — |
+| **Total ecosystem downloads** | ~3,993 | — |
+
+### Meta-Lesson
+Dataset badges and cross-links are **not maintained as part of the model-card refresh cycles**. The food-penguin-v1 card had no prior fix pass — it was never on any improvement radar because it's a dataset, not a model. **Datasets need the same scan-and-fix pattern as models.** Next cycle: check `sakthai-combined-v6` and `SimpleToolCalling` for the same badge issues.
+
+### Remaining Low-Download Assets (<50)
+| Asset | DL | Status |
+|-------|:--:|--------|
+| Vision-7B | 45 | ✅ Card complete |
+| Coder-1.5B | 34 | ✅ Card complete |
+| TTS-Model | 33 | ✅ Card complete |
+| food-penguin-v1 | 15 | ✅ Badge fixed this cycle |
+| 0.5B-Tools | 7 | 🔒 Private |
+
+### Next Priority
+- **sakthai-combined-v6** card has **no badges at all** — adding dynamic download + size badges would improve discoverability
+- Dataset ecosystem scan: check all 4 dataset cards for stale cross-links and missing badges
