@@ -25,7 +25,9 @@
   "hf-cli-agent-mode-deep-dive",
   "hf-cli-complete-reference",
   "hf-community-evals-eee-integration",
+  "hf-computer-vision-course",
   "hf-context-engineering-course",
+  "hf-controlnets-diffusers",
   "hf-cookbook-latest-recipes-2026",
   "hf-croissant-metadata-and-hub-integration-deep-dive",
   "hf-custom-model-integration",
@@ -47,9 +49,9 @@
   "hf-datasets-builder-advanced-patterns",
   "hf-datasets-cache-management-deep-dive",
   "hf-datasets-concatenate-and-interleave-deep-dive",
-  "hf-datasets-data-validation-quality",
   "hf-datasets-concatenate-and-interleave-source-deep-dive-v2",
   "hf-datasets-configuration-system-complete-reference",
+  "hf-datasets-data-validation-quality",
   "hf-datasets-faiss-vector-search-deep-dive",
   "hf-datasets-features-schema-casting",
   "hf-datasets-features-schema-casting-deep-dive",
@@ -405,6 +407,5 @@
   "safetensors-format-deep-dive",
   "spaces-with-agents",
   "spaces-zerogpu-complete-api-architecture-deep-dive",
-  "spaces-zerogpu-free-gpu-allocation",
-  "hf-computer-vision-course"
+  "spaces-zerogpu-free-gpu-allocation"
 ]
