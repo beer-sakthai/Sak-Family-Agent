@@ -1,7 +1,6 @@
 ---
 name: SakKing-execution-discipline
-version: 1.0.0
-description: "Sakking Execution Discipline"
+version: 1.1.0
 description: >
   Class-level execution discipline for bounded, evidence-first action.
   Apply whenever the next step is uncertain, a fix is unconfirmed, or the
@@ -75,7 +74,7 @@ grounded in authoritative evidence.
 ## Relation to reasoning and debugging skills
 
 This skill is the execution boundary for reasoning frameworks such as
-`nine-step-reasoning` and debugging workflows like
+structured reasoning skills and debugging workflows like
 `systematic-debugging`. Those skills define how to analyze; this skill
 defines when not to act.
 
