@@ -21,7 +21,36 @@
 - RAG for Food-Penguin advisor added
 - Auto-improve cron active every 5 min
 
+## 2026-07-26
+
+### Ecosystem Improvement (Cron run)
+
+**Target**: `sakthai-vision-7b` (0 downloads, weak card)
+**Improvement**: Full rewrite of README.md
+- Previously: 27 lines, empty Usage section, no code examples
+- Now: 90 lines with structured tables, 4 usage methods (llama.cpp, Python, Ollama, LM Studio), use-cases table, file structure, family cross-links
+- Verified: `hf upload` commit `fa791ee` — card live at HF
+
+### Current ecosystem state
+| Category | Count |
+|----------|-------|
+| Models | 14 (7 public with weights, 2 private, 5 lightweight) |
+| Datasets | 4 |
+| Spaces | 2 |
+| Collection | 1 (sakthai-model-family) |
+
+### Downloads snapshot
+| Model | Downloads |
+|-------|-----------|
+| 1.5B-merged | 942 |
+| 7B-merged | 534 |
+| Coder 1.5B | 15 |
+| Vision 7B | **0** (card improved this run) |
+| Embedding Multilingual | 0 |
+| TTS Model | 0 |
+
 ### Next
 - Train Food-Penguin model on Kaggle T4 GPU
-- Promote 0-dl models (Vision, TTS, Multilingual)
+- Promote embedding-multilingual card next (also 0 dl, 25-line thin card)
+- Improve TTS card if needed (already 184 lines, decent)
 - Richer analytics for Food-Penguin dashboard
