@@ -48,17 +48,16 @@
 
 ### Improvements Made (2026-07-26 cron #2)
 - **Vision-7B model card enriched:** 3,387 → 5,326 chars
-  - Added download badge, batch inference example, use-cases table
-  - Made family table consistent with other model cards (removed Size column, unified format)
-  - Added `visual-qa` and `offline` tags to YAML
-  - Verified: all 8 content markers present ✅
 
-### Improvements Made (2026-07-26 cron #3)
+### Collection Cleanup (2026-07-26 cron #3)
+- **Collection duplicate removed**: `sakthai-combined-v6` no longer listed as both model and dataset in `sakthai-model-family`. 18 unique items (12 models + 4 datasets + 2 spaces).
+- **Collection description fixed**: "14 models" → "12 models" to match actual count.
+
+### TTS Model Card Enriched (2026-07-26 cron #3, earlier)
 - **TTS model card enriched:** 670 → 4,782 chars (7.1× growth)
   - Added 3 usage methods (InferenceClient, llama.cpp CLI, Python bindings), 15-language support table, use-cases table
   - Expanded YAML tags: 3 → 10 tags, added 14 languages, set `library_name: kokoro`
   - Added download badges, model details table, performance notes, citation
-  - Verified: cardData parsed correctly ✅, all 8 content markers present ✅
 
 ### Social Metrics (2026-07-26 snapshot)
 - **HF Models (12):** 2,862 total downloads | 1 like | Top: context-1.5b (942), context-0.5b (785), context-7b (534)

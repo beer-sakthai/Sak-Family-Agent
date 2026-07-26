@@ -140,3 +140,26 @@ All crons delivering to origin with no errors.
 - **CI health degradation**: The CI went from all-green to all-red silently. Need a notification bridge when CI status changes. The existing CI Health Check cron (every 30m) should detect this drift.
 - **Tag vs name mismatch**: The combined-v6 dataset has "v7" in its tags. This happened when v7 enrichment was applied to the v6 repo instead of creating a separate v7 repo. Fix the tags now before the inconsistency propagates further.
 - **Model card metadata gap**: Zero models or datasets have cardData YAML. This hurts HF search ranking and discoverability. Adding even basic license + pipeline_tag + size_categories would improve visibility.
+
+---
+
+## 2026-07-26: Collection Cleanup (Scheduled Cron #004)
+
+### Improvement Made
+- **Fixed collection `sakthai-model-family` duplicate**: removed the `sakthai-combined-v6` entry that was incorrectly listed as a **model** type (duplicating the correct **dataset** entry). Collection now has 18 unique items.
+- **Fixed collection description**: updated from inaccurate "14 models, 4 datasets, 2 Spaces" to accurate **"12 models, 4 datasets, 2 Spaces"** (matching actual count, within 150-char limit).
+- **Verification**: re-fetched collection, confirmed 0 duplicates, 18 items (12 models + 4 datasets + 2 spaces).
+
+### Zero-Download Models (unchanged from last snapshot)
+| Model | Downloads | Status |
+|-------|-----------|--------|
+| vision-7b | 0 | Card enriched yesterday; blocked by missing mmproj |
+| tts-model | 0 | Card already comprehensive (11K chars); needs functional demo Space |
+| embedding-multilingual | 0 | Card enriched yesterday |
+| coder-1.5b | 15 | Needs more cross-promotion |
+| food-penguin-v1 (ds) | 0 | Brand new dataset |
+
+### Remaining Clean-up Items
+- combined-v6 still has "v7" tag (should be removed since it's v6)
+- Dataset card YAML still missing on all 4 datasets
+- SimpleToolCalling tagged "deprecated" but still published
