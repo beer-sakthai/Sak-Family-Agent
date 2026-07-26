@@ -86,7 +86,7 @@ Every skill follows the pattern `<AgentPrefix>-<skill-name>`, matching the perso
 | 6 | [Vision 7B](https://huggingface.co/Nanthasit/sakthai-vision-7b) | Multimodal GGUF | 3.9 GB | — | 45 |
 | 7 | [TTS Model](https://huggingface.co/Nanthasit/sakthai-tts-model) | Speech GGUF | 141 MB | — | 33 |
 | 8 | [Embedding](https://huggingface.co/Nanthasit/sakthai-embedding) | Semantic search | 80 MB | — | Deleted (model removed from HF) |
-| 9 | [Multilingual](https://huggingface.co/Nanthasit/sakthai-embedding-multilingual) | 50+ languages | 488 MB | — | 104 |
+| 9 | [Multilingual](https://huggingface.co/Nanthasit/sakthai-embedding-multilingual) | 50+ languages | 449 MB | — | 104 |
 | 10 | [Tools 1.5B](https://huggingface.co/Nanthasit/sakthai-context-1.5b-tools) | PEFT LoRA adapter | — | — | 143 |
 | 11 | [Tools 7B](https://huggingface.co/Nanthasit/sakthai-context-7b-tools) | PEFT LoRA adapter | — | — | 185 |
 
@@ -172,7 +172,7 @@ All verified data below was cross-checked against HF API and filesystem on 2026-
 - **Skill counts** — sourced from **filesystem audit** (live, 2026-07-26): SakThai=377, SakKing=422, SakSee=49 (mirror; auth repo: 107), SakSit=151 (mirror; auth repo: 431), SakJules=48, Shared=3
 - **Naming compliance** — 100% agent-prefix match verified across 5 personas
 - **GitHub connectivity** — token test `curl` to API confirmed active
-- **Model downloads (live)** — 1.5B=1,197, Coder=34, 0.5B=994, 7B=562, 7B-128K=351, Vision=45, TTS=33, Multilingual=104, 1.5B-Tools=143, 7B-Tools=185 — pulled from HF API
+- **Model downloads (live)** — 1.5B=1,197, Coder=34, 0.5B=994, 7B=562, 7B-128K=351, Vision=45, TTS=33, Multilingual=104, 1.5B-Tools=143, 7B-Tools=185 — pulled from HF API (2026-07-26)
 - **Model status** — `sakthai-embedding` (28 DLs previously) no longer accessible on HF (returns 401, removed from author model list); 2 new PEFT LoRA adapters online (`sakthai-context-1.5b-tools`, `sakthai-context-7b-tools`)
 - **Model sizes** — sourced from HF model cards and leaderboard; verify at [hf.co/spaces/Nanthasit/sakthai-leaderboard](https://huggingface.co/spaces/Nanthasit/sakthai-leaderboard)
 - **Benchmark scores** — BFCL tool-calling: 5/5 via `lm-eval-harness`, verified 2026-07-25
