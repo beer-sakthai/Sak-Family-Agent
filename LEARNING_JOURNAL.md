@@ -364,3 +364,32 @@ The 0.5B-merged card was apparently created from an earlier template copy that h
 
 ### Meta-Lesson
 Model cards with **duplicate benchmark sections** are prone to drift — when one section gets updated but not the other, the card becomes self-contradictory. The 0.5B-merged card has both a "Benchmark Results" table and a "Benchmark Comparison vs Similar-Sized Models" table that overlap. Consider consolidating into one authoritative benchmark section per card.
+
+---
+
+## 2026-07-26 — Cron #009: Vision-7b Card Enrichment
+
+### Action Taken
+Updated **Nanthasit/sakthai-vision-7b** model card — the lowest-traffic vision model:
+
+1. **Removed dead private model references** — Two rows in "Family Links" table pointed to `sakthai-embedding` and `sakthai-context-0.5b-tools` (🔒 private, no longer publicly accessible). These were confusing to visitors who'd see a broken link.
+2. **Added "🌱 Low-Download Gems" section** — Cross-promotes 3 sibling models with <50 downloads (Coder 1.5B, TTS Model, Embedding Multilingual), following the pattern from the TTS card that measurably drove traffic.
+3. **Cleaned up table formatting** — Removed orphan rows, unified table structure.
+
+### Current Ecosystem State
+| Asset Type | Count | Total Downloads |
+|-----------|:-----:|:---------------:|
+| Models (public) | 10 | 3,648 |
+| Datasets | 4 | 300 |
+| Spaces | 2 | 0 (static) |
+
+### Low-Download Watchlist (<50 dl)
+| Model | Downloads | Priority |
+|-------|:---------:|:--------:|
+| vision-7b | 45 | 🟡 Promoted this run |
+| coder-1.5b | 34 | 🟡 Needs next |
+| tts-model | 33 | 🟡 Already has Low-Download Gems |
+| food-penguin-v1 (dataset) | 15 | 🟢 New, growing |
+
+### Result
+✅ vision-7b README updated and committed to HF. Verified via API re-read. Card length 12,871 chars (was 12,162).

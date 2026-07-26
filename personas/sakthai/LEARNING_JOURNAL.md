@@ -440,4 +440,20 @@ Workaround was documented in 4+ skills (hf-api-fallbacks.md, scraping-fallback.m
 Created scripts/hf-fetch-json.sh — a shell wrapper that downloads HF API data (models/datasets/spaces) to /tmp/hf_{type}.json without triggering the pipe blocker.
 
 ### Secondary Issue: Journal Fragmentation
-Two LEARNING_JOURNAL.md files diverged: personas/sakthai/LEARNING_JOURNAL.md (crons #003-#005) and ./LEARNING_JOURNAL.md (crons #006-#008+fixes). These should consolidate to one location.
+Two LEARNING_JOURNAL.md files diverged: personas/sakthai/LEARNING_JOURNAL.md (crons #003-#005) and ./LEARNING_JOURNAL.md (crons #006-#009+fixes). These should consolidate to one location.
+
+---
+
+## 2026-07-26 — Cron #009: Vision-7b Model Card Update
+
+### Action
+Updated the vision-7b model card (45 dl) to:
+1. Remove dead private model references from Family Links table
+2. Add "🌱 Low-Download Gems" section promoting coder-1.5b, tts-model, embedding-multilingual
+3. Clean up table formatting
+
+### Method
+Used `HfApi.create_commit()` with `CommitOperationAdd` to push updated README.md directly to HF. No git clone needed. Verified by re-downloading and checking for key content markers.
+
+### Result
+✅ Card updated from 12,162 → 12,871 chars. Live on HF.
