@@ -1,7 +1,7 @@
 ---
 name: SakThai-hf-spaces-hardware-tiers
 version: 1.0.0
-description: HuggingFace Spaces hardware tiers: CPU, GPU, and accelerators
+description: "HuggingFace Spaces hardware tiers: CPU, GPU, and accelerators"
 author: SakThai
 license: MIT
 model: null

@@ -383,5 +383,6 @@
   "hf-bitsandbytes-quantization-deep-dive-v2",
   "hf-datasets-server-splits-rows-statistics-endpoints",
   "hf-openenv-agentic-execution",
-  "hf-hub-sandboxes-python-sdk"
+  "hf-hub-sandboxes-python-sdk",
+  "hf-computer-vision-course"
 ]
