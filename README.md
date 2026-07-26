@@ -85,7 +85,7 @@ personas/sakthai/sakthai/
 - ✅ **Tool sandbox** — Opt-in shell, allowlisted file reads, SSRF protection
 - ✅ **MCP support** — Both as server (stdio) and client (spawn external servers)
 - ✅ **6-stage cycle** — Dream → Hope → Care → Joy → Trust → Growth state machine
-- ✅ **Skill system** — 69 curated + 70+ user/extension skills, YAML frontmatter parsed
+- ✅ **Skill system** — 31 curated + 70+ user/extension skills, YAML frontmatter parsed
 
 ### 📦 Built-in Tools (10)
 
