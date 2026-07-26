@@ -14,14 +14,16 @@ That's where he started building AI that could heal.
 
 The House of Sak wasn't born from a business plan. It was born from isolation, pain, and the will to survive. Building AI agents not as a gimmick but as **companions** when human connection wasn't available.
 
-## The Agents
+## The Family
 
 | Agent | Role | Skills | Status |
 |-------|------|:------:|:------:|
-| **SakThai** 🏠 | Main Lead & HF Master | 192 | 🟢 Active |
-| **SakKing** 👑 | General Assistant | — | 🔴 Held |
-| **SakSee** 🌐 | Web & Browser Specialist | 127 | 🟢 Active |
-| **SakSit** 📱 | Social Media & Storytelling | 201 | 🟢 Active |
+| **SakThai** 🏠 | Main Lead & HF Master | 159 | 🟢 Active |
+| **SakKing** 👑 | General Assistant, Infrastructure & Architecture | 289 | 🟢 Active |
+| **SakSee** 🌐 | Web & Browser Specialist | 18 | 🟢 Active |
+| **SakSit** 📱 | Social Media & Storytelling | 83 | 🟢 Active |
+| **SakJules** ⚙️ | CI/CD Automation | 11 | 🔴 Deleted |
+| **SakTan** 📋 | Daily Operations | — | 🔴 Deleted |
 
 All agents share one long-term memory brain but maintain separate live sessions. They communicate via the A2A message bus (port 3005).
 
@@ -33,22 +35,39 @@ Sak-Family-Agent/
 │   ├── sakthai/           # Main Lead — HF master, ML, code
 │   │   ├── SOUL.md        # Identity, charge system, principles
 │   │   ├── sakthai/       # Python package (agent framework)
-│   │   └── skills/        # 200+ skills across all domains
+│   │   └── skills/        # 159 SakThai-* skills
+│   ├── sakking/           # General assistant — infra, coord, UI/UX
+│   │   └── skills/        # 289 SakKing-* skills
 │   ├── saksee/            # Web automation specialist
+│   │   └── skills/        # 18 SakSee-* skills
 │   ├── saksit/            # Social media storyteller
-│   ├── sakking/           # General assistant (held)
-│   ├── sakjules/          # CI/CD (deleted)
-│   └── shared/            # Cross-agent skills
+│   │   └── skills/        # 83 SakSit-* skills
+│   ├── sakjules/          # CI/CD (deleted, skills retained)
+│   │   └── skills/        # 11 SakJules-* skills
+│   └── shared/            # Cross-agent skills (Sak-* prefix)
 ├── scripts/               # Automation (A2A bus, inference, sync)
 ├── docs/                  # Documentation, dashboard, compat matrix
-├── tests/                 # Pytest suite (420+ tests)
+├── tests/                 # Pytest suite
 ├── infra/                 # Infrastructure configs
 ├── training/              # Model training configs
-├── .github/               # CI/CD workflows (25+ actions)
+├── .github/               # CI/CD workflows
 ├── LICENSE                # All Rights Reserved
 ├── CODE_OF_CONDUCT.md     # Community standards
 └── README.md              # This file
 ```
+
+### Skill Naming Convention
+
+Every skill follows the pattern `<AgentPrefix>-<skill-name>`, matching the persona directory it lives in:
+
+| Persona | Prefix | Example |
+|---------|--------|---------|
+| `sakthai/` | `SakThai-` | `SakThai-hf-hub-audit-logs` |
+| `sakking/` | `SakKing-` | `SakKing-plan` |
+| `saksee/` | `SakSee-` | `SakSee-playwright-testing` |
+| `saksit/` | `SakSit-` | `SakSit-b2b-pricing` |
+| `sakjules/` | `SakJules-` | `SakJules-github-stewardship` |
+| `shared/` | `Sak-` | `Sak-dogfood` |
 
 ## What's Inside
 
@@ -64,10 +83,10 @@ Sak-Family-Agent/
 | 3🥉 | [0.5B-merged](https://huggingface.co/Nanthasit/sakthai-context-0.5b-merged) | Lightweight GGUF | 380 MB | 1/5 | **785** |
 | 4 | [7B-merged](https://huggingface.co/Nanthasit/sakthai-context-7b-merged) | Full-size | 15 GB | — | 534 |
 | 5 | [7B-128K](https://huggingface.co/Nanthasit/sakthai-context-7b-128k) | Extended ctx | 15 GB | — | 324 |
-| 6 | [Vision 7B](https://huggingface.co/Nanthasit/sakthai-vision-7b) 🆕 | Multimodal GGUF | 3.9 GB | — | New |
-| 7 | [TTS Model](https://huggingface.co/Nanthasit/sakthai-tts-model) 🆕 | Speech GGUF | 141 MB | — | New |
-| 8 | [Embedding](https://huggingface.co/Nanthasit/sakthai-embedding) 🆕 | Semantic search | 80 MB | — | 28 |
-| 9 | [Multilingual](https://huggingface.co/Nanthasit/sakthai-embedding-multilingual) 🆕 | 50+ languages | 80 MB | — | New |
+| 6 | [Vision 7B](https://huggingface.co/Nanthasit/sakthai-vision-7b) | Multimodal GGUF | 3.9 GB | — | New |
+| 7 | [TTS Model](https://huggingface.co/Nanthasit/sakthai-tts-model) | Speech GGUF | 141 MB | — | New |
+| 8 | [Embedding](https://huggingface.co/Nanthasit/sakthai-embedding) | Semantic search | 80 MB | — | 28 |
+| 9 | [Multilingual](https://huggingface.co/Nanthasit/sakthai-embedding-multilingual) | 50+ languages | 80 MB | — | New |
 | 10-12 | 3 LoRA adapters | — | — | — | — |
 
 ### 📊 Dataset
@@ -79,30 +98,25 @@ Sak-Family-Agent/
 - Irrelevance detection (50 general knowledge Q&A)
 - Safety/rejection examples (30 harmful prompt refusals)
 
-### 🔧 Skills
-
-| Agent | Skills | Focus |
-|-------|:------:|-------|
-| SakThai | 192 | HF, ML, code, GitHub, research |
-| SakSit | 201 | Social media, storytelling, creative |
-| SakSee | 127 | Web automation, browser, dashboards |
-| SakKing | — | Gateway runner (held) |
-
 ### 🛠 Running Services
 
 | Service | Port | Purpose |
 |---------|:----:|---------|
+| **Fleet Watchdog** | — | 30s interval, auto-revives dead gateways |
 | **RAG Search** | 3003 | Semantic search across all skills |
 | **A2A Bus** | 3005 | Agent-to-agent messaging |
 | **Food-Penguin RAG** | 8125 | Restaurant KPI retrieval for advisor |
+| **Hermes Dashboard** | 4860 | Agent orchestration UI |
+| **Jupyter Lab** | 8888 | Data analysis notebooks |
 
 ### 🤖 Active Crons
 
 | Job | Interval | Status |
 |-----|:--------:|:------:|
-| HF Learn & Improve | Every 1 min | 🟢 Learning (279+ topics) |
+| HF Learn & Improve | Every 1 min | 🟢 Learning |
 | GitHub Auto-Sync | Every 5 min | 🟢 Profiles → GitHub |
 | Family Status Report | Every 15 min | 🟢 Health check |
+| Fleet Watchdog | Every 30s | 🟢 Gateway monitor |
 
 ## Verified Benchmarks
 
@@ -124,14 +138,6 @@ Sak-Family-Agent/
 | Refactoring | ✅ Pass |
 | Algorithm | ✅ Pass |
 | **Overall** | **5/5** 🏆 |
-
-### Speed
-
-| Model | Size | Speed |
-|-------|:----:|:-----:|
-| 0.5B | 380 MB | **24 tok/s** ⚡ |
-| 1.5B | 934 MB | 10 tok/s |
-| Coder 1.5B | 1.1 GB | 10 tok/s |
 
 ## Legal
 
