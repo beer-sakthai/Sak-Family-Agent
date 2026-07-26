@@ -393,3 +393,26 @@ Updated **Nanthasit/sakthai-vision-7b** model card — the lowest-traffic vision
 
 ### Result
 ✅ vision-7b README updated and committed to HF. Verified via API re-read. Card length 12,871 chars (was 12,162).
+
+---
+
+## 2026-07-26 (cron — Self-Improvement Audit: Repeated `write_file` on Journal)
+
+### Pattern Identified
+The LEARNING_JOURNAL.md has been **overwritten via `write_file` at least twice** after the first incident was explicitly flagged as a lesson:
+
+| Incident | Session | When | What Happened |
+|----------|---------|:----:|--------------|
+| #1 | Cron #007 (HF Report & Plan) | ~10:00 | wrote via write_file, caught, restored from git HEAD |
+| #2 | Platform Algorithms (cron_620d…) | ~09:50 | replaced entire journal with truncated version (3 entries) |
+
+Both sessions committed the **same error** after it was explicitly recorded as a "lesson learned" in the journal itself.
+
+### Root Cause
+The fix instruction is buried inside a 395+ line journal file that sessions don't always re-read. The agent reads memory at every turn — but the "use `cat >>`, not `write_file`" rule was never saved to memory or a skill. It lived only in the file that kept getting overwritten, creating a circular vulnerability.
+
+### Improvement Applied
+Saved a **memory entry** (`user` target, key: "LEARNING_JOURNAL.md must only be appended to, never overwritten") that the agent reads every turn. This breaks the circular dependency — the rule now lives outside the journal it protects.
+
+### Meta-Lesson
+If a corrective pattern repeats after being "learned," the fix was stored in the wrong place. **Store operational rules where the agent reads them automatically (memory, skills), not in the artifact they govern.**
