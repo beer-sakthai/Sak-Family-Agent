@@ -1,7 +1,7 @@
 ---
 name: SakKing-cli-workflow-pitfalls
 description: "CLI-specific pitfalls and workarounds for SakKing Agent workflows."
-version: 1.0.0
+version: 1.1.0
 author: SakKing Agent
 ---
 
@@ -15,7 +15,7 @@ When operating in a CLI environment, direct inter-agent messaging (e.g., using a
 
 **Workaround:**
 
-To hand off a `PLAN.md` or other instructions to a target agent (e.g., SakJules), write the `PLAN.md` directly into the target agent's profile directory (e.g., `/opt/data/profiles/<agent_name>/PLAN.md`). After writing the file, explicitly notify the *user* that the plan has been placed for the target agent.
+To hand off a `PLAN.md` or other instructions to a target agent (e.g., SakJules), write the `PLAN.md` directly into the target agent's persona directory (e.g., `/opt/data/Sak-Family-Agent/personas/<agent_name>/PLAN.md`). After writing the file, explicitly notify the *user* that the plan has been placed for the target agent.
 
 ## Pitfall: Documentation Drift (Live Filesystem vs. Static Docs)
 
