@@ -1,5 +1,5 @@
 ---
-name: hf-hub-local-apps-and-agents
+name: SakThai-hf-hub-local-agents-with-llamacpp
 author: SakThai
 license: MIT
 description: "Complete reference for running Hugging Face Hub models locally via Local Apps (llama.cpp, Ollama, Jan, LM Studio) and connecting local coding agents (Pi, OpenClaw, Hermes, OpenCode, llama-agent). Covers hardware profiling, the `-hf` flag architecture, cache management, zero-cost patterns, and troubleshooting."
