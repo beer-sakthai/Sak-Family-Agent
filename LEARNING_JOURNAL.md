@@ -1,44 +1,78 @@
 # Learning Journal
 
-## 2026-07-26: House of Sak narrative consistency — v7 dataset gap fixed
+## 2026-07-26: Comprehensive HF Ecosystem Report — 2nd daily snapshot
 
-### Narrative Audit Findings
-- **README.md** and **HF dataset card** both said "1,408 examples" (v6) but actual dataset on HF has **2,003 train + 113 test** (v7 content was uploaded but cards never updated)
-- **Shared SOUL.md** (`docs/SOUL.md`) lists SakTan as active but he's deleted — secondary inconsistency
-- **Agent model runtimes** in shared SOUL say "local Ollama" but SakThai actually runs on deepseek-v4-flash
+### Asset Inventory
 
-### Improvement Made
-1. **HF dataset card** — rewrote `Nanthasit/sakthai-combined-v6` README.md: version v6→v7, count 1,408→2,003, added evolution table, test split info, edge case category. Commit pushed.
-2. **Repo README.md** — updated dataset section: v6→v7, 1,408→2,003 train/113 test, added edge cases category, safety count 30→73. Committed locally (push blocked by Zero-Exposure policy).
+- **Models: 14 total** (previously documented as 12 — `sakthai-embedding` and `sakthai-context-0.5b-tools` were missed in earlier curl-scoped listing; Python API confirms 14)
+  - 7 text-generation (0.5b-merged, 0.5b-tools, 1.5b-merged, 1.5b-tools, 7b-128k, 7b-merged, 7b-tools)
+  - 1 coder (1.5b, pipeline_tag text-generation)
+  - 2 embedding (sakthai-embedding + sakthai-embedding-multilingual)
+  - 1 vision (7b)
+  - 1 TTS
+  - 1 profile repo (Nanthasit)
+  - 1 combined-v6 (listed as model by HF API but is a dataset on hub — pipeline_tag: none)
+
+- **Downloads: 2,897** — flat since last snapshot. Top models:
+  - sakthai-context-1.5b-merged: 942 (+0 from last report)
+  - sakthai-context-0.5b-merged: 785 (+0)
+  - sakthai-context-7b-merged: 534 (+0)
+  - sakthai-context-7b-128k: 324 (+0)
+  - sakthai-context-7b-tools: 147 (+0)
+  - sakthai-context-1.5b-tools: 115 (+0)
+  - sakthai-coder-1.5b: 15 (+0)
+  - sakthai-context-0.5b-tools: 7 (+0)
+  - sakthai-embedding: 28 (+0)
+  - Zero-dl stuck: vision-7b, TTS, embedding-multilingual still at 0
+
+- **Datasets: 4 total, 245 combined downloads**
+  - sakthai-combined-v6: 114 dl (2,003 train + 113 test — verified from cache and README)
+  - SimpleToolCalling: 41 dl
+  - sakthai-kaggle-notebooks: 90 dl
+  - food-penguin-v1: 0 dl
+
+- **Spaces: 2** (both static — sakthai-leaderboard, sakthai-tts)
+
+- **Collection: 1** (SakThai Model Family — 17 items: 12 models + 4 datasets + 2 spaces - 1 profile = 17 ✓)
+
+- **GGUF locally: 5** (0.5b, 1.5b, coder, vision, TTS — all Q4_K_M or Q8_0)
+
+### CI/CD Status
+
+- 21 workflows configured
+- CI pipeline (ci.yml) **FAILING** on the last 3 commits to main
+  - Test matrix: 3.11 cancelled, 3.12 failure
+  - Root cause: `test_personas_readme_skill_counts_match_disk` — README claims SakKing has 310 skills, on-disk count is 305 (delta: 5)
+  - Linters + static analysis (ruff, mypy, bandit) presumably pass
+  - 1,313 total failure runs accumulated (most from repeated attempts on same root cause)
+  - 0 open issues, 0 open PRs
+  - Cannot fetch job logs (403 — permissions)
+
+- Other workflows: OSSAR, Pylint, Secret Scan, SonarCloud all passing on latest commit
+- agent-self-evolution workflow: standalone, triggers only on changes to that subdirectory
+
+### Dataset Health
+
+- **sakthai-combined-v6**: Healthy. 2,003 train + 113 test, both JSONL files verified present in cache and on HF hub. README correctly reports v7 content.
+- **SimpleToolCalling**: 41 dl, only 2 files (likely just data + README)
+- **food-penguin-v1**: 0 dl, 4 files — no discoverability, no card enrichment done
+- **sakthai-kaggle-notebooks**: 90 dl, 6 files — reasonable engagement for a notebooks dataset
+
+### Ecosystem Trends
+
+- **Flat growth.** Zero change in any download count since last snapshot (~same day). No engagement signals (likes, forks, discussions) on any repo.
+- **Discoverability bottleneck persists.** Three models at zero downloads despite card enrichment done on embedding-multilingual. Without demo Spaces, cross-linking, or search ranking, cards alone don't drive traffic.
+- **Skill count drift detected.** SakKing README claims 310, on-disk is 305. Process issue: skills deleted/consolidated without updating the README count.
+
+### Next Actions
+
+1. **Fix CI** — Patch README.md SakKing skill count from 310 → 305, push to unblock main branch
+2. **Document 14 models** in SOUL.md (was 12, now corrected to 14 via Python API)
+3. **Enrich food-penguin-v1 card** — zero-dl dataset with no README, quick win for discoverability
+4. **Build a demo Space** for vision-7b or TTS — interactive demo is the most reliable traffic driver
+5. **Set up download trend tracking** — capture weekly snapshots so flat growth is visible as a trend, not just a point-in-time observation
+6. **Investigate CI log access** — 403 on job logs suggests the GITHUB_TOKEN used by this session lacks workflow permissions
 
 ### Lesson
-Cards are not self-updating. Every time a dataset or model gets new content, the corresponding README must be updated explicitly — the hub doesn't auto-detect upload size changes.
 
-## 2026-07-26: Social growth metrics — flat
-
-- **Ecosystem flat:** 2,897 total model downloads, 245 dataset downloads — no change from last snapshot. Context-1.5b leads at 942 dl.
-- **Zero-dl stuck:** Vision, TTS, multilingual embedding still at 0 — card enrichment alone doesn't drive discovery. Need demo Spaces or cross-promotion.
-- **No community signals:** Zero likes across all models, datasets, and Spaces. Organic discoverability is the bottleneck — no search ranking without engagement.
-
-### Summary
-Enriched the model card for **Nanthasit/sakthai-embedding-multilingual** — a BERT-based 384-dim multilingual sentence embedding model. This was our most neglected model card at 695 bytes with an empty Usage section.
-
-### Changes Made
-- **Size**: 695 → 4,809 bytes (6.9× increase)
-- **YAML metadata**: Added `library_name: sentence-transformers`, `bert`, `sentence-transformers`, `feature-extraction` tags
-- **Architecture details**: Added model property table (BERT-base, 384-dim, 118M params, 512 tokens)
-- **4 usage options**: sentence-transformers (recommended), InferenceClient, Transformers direct, curl CLI
-- **Cross-lingual examples**: Multi-language sentence similarity with cosine similarity matrix
-- **Use cases list**: Cross-lingual search, clustering, RAG, zero-shot classification
-- **Performance table**: Dimension, speed, memory, max tokens, similarity metric
-- **Family links**: Link table to all sibling SakThai models + Spaces
-- **File structure**: Complete listing of repo contents
-- Fixed `library_name` — now correctly reports `sentence-transformers` on HF Hub
-
-### Target
-Model had 0 downloads. Enriched card helps discoverability when users search for multilingual sentence embeddings.
-
-### Verification
-- README readback confirms content renders correctly
-- HF API shows `library_name: sentence-transformers` and updated `lastModified`
-- All 10 sibling files preserved intact
+CI failures compound fast when the root cause is a stale number in a README. 1,313 failure runs is an order of magnitude too many — the root cause (SakKing count drift) should have been caught and fixed after the first failure. Need to add a pre-commit hook or PR check that validates README skill counts against disk before merging.
