@@ -26,7 +26,7 @@ SakKing's core operational framework for running the House of Sak. This skill co
 
 ## Prerequisites
 
-- Access to `terminal`, `todo`, `search_files`, `read_file`, `memory`, `supermemory-search` tools.
+- Access to `terminal`, `todo`, `search_files`, `read_file`, `memory`, `session_search` tools.
 - Familiarity with the 6-cycle workflow docs at `docs/cycle/`.
 - Knowledge of sibling profiles and their responsibilities.
 
@@ -38,7 +38,7 @@ Invoke through standard Hermes tool usage — this skill defines the *approach*,
 
 ### Phase 1: Organise & Plan Before Action
 
-1. **Audit current state first.** Use `search_files` to verify the filesystem, `terminal` to check processes, and `supermemory-search` to recall relevant context. Never act on stale memory alone.
+1. **Audit current state first.** Use `search_files` to verify the filesystem, `terminal` to check processes, and `session_search` to recall relevant context. Never act on stale memory alone.
 2. **Define the scope.** What are we solving? What are we NOT solving? Capture this explicitly.
 3. **Break into chunks.** Use `todo` to create a task list with clear IDs, ordered by priority. Only one item `in_progress` at a time.
 4. **Plan the approach.** Write a quick plan in your own reasoning before dispatching any tool call. State: what, why, how, verify.
@@ -51,7 +51,7 @@ Invoke through standard Hermes tool usage — this skill defines the *approach*,
 
 ### Phase 3: Lead the Team
 
-1. **Know your siblings.** SakThai = HF Master / model training. SakSee = Web/Playwright. SakSit = Social Media. SakTan = deleted. SakJules = deleted. Delegate accordingly.
+1. **Know your siblings.** SakThai = HF Master / model training. SakSee = Web/Playwright. SakSit = Social Media. SakTan = Daily Ops (calendar, email, life admin). SakJules = Automation & CI/CD. Delegate accordingly.
 2. **Parallelise wisely.** Use `delegate_task` to dispatch independent workstreams to siblings or subagents. Batch independent tool calls in a single turn.
 3. **Check before delegating.** Verify the sibling's profile exists, process is running, and their gateway is Telegram-connected before expecting a reply.
 
