@@ -6771,3 +6771,30 @@ Inference Providers), and comprehensive evaluation results.
 - https://huggingface.co/blog/thinkingmachines-inkling — Official blog post
 - https://github.com/huggingface/transformers/pull/47347 — Main PR
 - https://huggingface.co/thinkingmachines/Inkling/raw/main/config.json — Full config
+
+---
+
+## 2026-07-26: hf-chat-ui-complete-reference — Chat UI Complete Reference
+
+### Summary
+Deep-dive into Hugging Face Chat UI (v0.20.0) — the open-source SvelteKit chat interface powering HuggingChat at hf.co/chat. Covers local/Docker/Helm installation, environment variable configuration (models, MCP tools, LLM Router, OpenID auth, theming, voice transcription, rate limits, metrics), the SvelteKit architecture, MCP tool integration via the Model Context Protocol, smart LLM routing with the "Omni" virtual model, and deployment to HF Spaces with automatic OAuth app creation.
+
+### Key Coverage
+- **Architecture**: Svelte 5 + SvelteKit 2 + MongoDB + Tailwind CSS 4 + Vite 6
+- **Auto-discovery**: Models fetched from `{OPENAI_BASE_URL}/models` — no manual registration
+- **MCP Integration**: Tool calling via MCP servers with UI controls, health checks, per-model toggles
+- **LLM Router**: Virtual "Omni" model with route-based dispatch (default, multimodal, agentic) using local heuristics
+- **Embedded MongoDB**: Falls back to `mongodb-memory-server` for zero-infrastructure dev
+- **OpenID Auth**: CIMD auto-creation, scoped tokens, email/domain allow-lists
+- **Rate Limits**: Configurable per-user limits (conversations, messages, tools, rate)
+- **All config documented from `.env` template**: 45+ environment variables
+
+### Files Created
+- `mlops/hf-chat-ui-complete-reference/SKILL.md` — Complete reference with 15 sections, table of contents, code examples, environment variable tables, architecture docs, and troubleshooting guide
+
+### Sources
+- https://huggingface.co/docs/chat-ui/en/index — Official docs
+- https://github.com/huggingface/chat-ui — GitHub repository (v0.20.0)
+- https://raw.githubusercontent.com/huggingface/chat-ui/main/.env — Full environment variable template
+- https://raw.githubusercontent.com/huggingface/chat-ui/main/README.md — Project README
+- https://raw.githubusercontent.com/huggingface/chat-ui/main/package.json — Dependencies

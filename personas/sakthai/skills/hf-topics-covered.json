@@ -380,5 +380,6 @@
   "hf-hub-fork-and-sync-deep-dive",
   "hf-inference-client-embeddings-patterns",
   "hf-datasets-server-splits-rows-statistics-endpoints",
-  "hf-computer-vision-course"
+  "hf-computer-vision-course",
+  "hf-chat-ui-complete-reference"
 ]
