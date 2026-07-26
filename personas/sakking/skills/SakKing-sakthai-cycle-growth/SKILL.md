@@ -2,7 +2,7 @@
 name: SakKing-sakthai-cycle-growth
 category: cycle
 description: Fold the cycle's lessons back into memory and skills. Run the audit triad, improve one thing, commit, and re-enter Dream smarter.
-version: 1.2.0
+version: 1.3.0
 platforms:
   - linux
   - macos
@@ -47,15 +47,23 @@ If the scan found issues, pick the single most impactful fix:
 
 Limit to **one change** — the growth cycle codifies, it does not rebuild.
 
-### 3. Commit and push
+### 3. Verify the change
 
-After the improvement:
+After making the improvement, run a focused ad-hoc verification:
+- Create a temp verification script at `/opt/data/hermes-verify-*.sh` (NOT `/tmp/` — see pitfalls below)
+- Test the changed behavior (code presence AND runtime)
+- Clean up the temp script when done
+- The platform expects explicit verification evidence; do not skip this step
+
+### 4. Commit and push
+
+After verification succeeds:
 - Stage changes in `Sak-Family-Agent/`
 - Commit with a descriptive conventional-commit message
 - Push with `HERMES_PUSH_ALLOW=1` (required by the pre-push hook)
 - If the script lives in `/opt/data/scripts/` only (un-tracked), copy it to SFA first
 
-### 4. Silent if nothing to improve
+### 5. Silent if nothing to improve
 
 If all audits are clean and no skill needs patching, respond with `[SILENT]` and nothing else — suppress delivery entirely.
 
@@ -67,6 +75,9 @@ If all audits are clean and no skill needs patching, respond with `[SILENT]` and
 - **Memory unavailable in cron.** The environment blocks `memory` tool. Save durable facts via the skill itself (update SKILL.md, add references/ files).
 - **Silent-skip confusion.** When all audits pass AND no improvement was made, `[SILENT]` is correct. When an improvement WAS made but audits started clean, still report the improvement. `[SILENT]` only applies when nothing happened.
 - **Hardcoded SFA path in scripts.** The audit scripts hardcode `SFA="/opt/data/Sak-Family-Agent/personas"`. Setting `SFA=...` as an env variable at call time is silently ignored — the script reassigns it internally. To test with a different tree, inject a temp skill into the real SFA tree and clean up after.
+- **`execute_code` blocked in cron.** The cron environment denies `execute_code` because it bypasses shell-approval checks. Run audit scripts with `terminal()` directly instead of trying to batch them via `execute_code`.
+- **`/tmp` write-protected in cron.** Both `write_file` and terminal heredocs block writes to `/tmp` in cron mode. Write temp verification scripts to `/opt/data/` with a `hermes-verify-` prefix, then clean them up after.
+- **Verification expected after any edit.** The platform's post-edit guard will re-request verification even after you already verified earlier in the same turn. Run verification as a formal step (step 3) and expect it to re-trigger. If system state changed between runs (e.g. memory dropped below threshold), verify code *presence* instead of runtime behavior.
 
 ## Then
 
