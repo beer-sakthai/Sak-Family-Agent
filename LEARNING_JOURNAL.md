@@ -521,3 +521,84 @@ Fix the biggest model card on the most popular model (sakthai-context-1.5b-merge
 - **context-7b-tools** (147 dl) — needs Pipeline Integration section
 - **context-1.5b-tools** (115 dl) — needs dynamic badge + Pipeline Integration
 
+
+## 2026-07-26 09:03 UTC — Comprehensive Ecosystem Report
+
+### Models — Flat (12 total, 3,648 dl)
+
+All 10 real models show zero download movement since the last baseline. No likes on any model (profile has 1). The family is in a **complete growth stall** — no new discovery vectors activated.
+
+| Tier | Models | Total DL | Status |
+|------|--------|:--------:|:------:|
+| Flagship | 1.5B-merged, 0.5B-merged | 2,191 | Flat — 1.5B at 1,197, 0.5B at 994 (closing on 1K) |
+| Core | 7B-merged, 7B-128K | 913 | Flat at 562 and 351 |
+| Tools | 7B-tools, 1.5B-tools | 328 | Flat at 185 and 143 |
+| Niche | embedding-multilingual (104), vision-7b (45), coder-1.5b (34), tts-model (33) | 216 | Flat across all |
+
+**Structural repos:** Nanthasit/Nanthasit (profile, 0 dl, 1 like), Nanthasit/sakthai-combined-v6 (artifact, 0 dl as model)
+
+### Datasets — Near-Flat (4 total, 300 dl)
+
+Only movement: **sakthai-kaggle-notebooks** gained +2 (90→92). Everything else unchanged.
+
+| Dataset | DL | Since Last Report |
+|---------|:--:|:-----------------:|
+| sakthai-combined-v6 | 150 | +0 (flat) |
+| sakthai-kaggle-notebooks | 92 | **+2** |
+| SimpleToolCalling | 43 | +0 (flat) |
+| food-penguin-v1 | 15 | +0 (flat) |
+
+### Spaces — Stagnant (2 total, 0 likes)
+
+- **sakthai-tts**: 0 likes — no engagement despite being the most interactive demo asset
+- **sakthai-leaderboard**: 0 likes — flat
+
+### GitHub — No Change
+
+- **Sak-Family-Agent**: 0 stars, 0 forks, 0 watchers. Clean working tree. Last commit: `42c7932 auto: sync 2026-07-26-0850`
+- **CI Status**: API rate-limited (unauthenticated). Last known state from journal: all green (5/5 success). 17 workflow files present.
+
+### Collections Health
+
+- **sakthai-model-family**: 18 items (12 models + 4 datasets + 2 spaces) — healthy
+- **sakthai-context-models**: 6 models — healthy
+
+### Delta Summary
+
+| Metric | Last Baseline | Current | Delta |
+|--------|:------------:|:-------:|:-----:|
+| Model downloads | 3,648 | 3,648 | **0** |
+| Dataset downloads | 300 | 300 | **0** |
+| SimpleToolCalling | 43 | 43 | 0 |
+| sakthai-kaggle-notebooks | 90 | 92 | **+2** |
+| food-penguin-v1 | 15 | 15 | 0 |
+| sakthai-combined-v6 | 150 | 150 | 0 |
+| Likes | 1 | 1 | 0 |
+| GitHub stars | 0 | 0 | 0 |
+
+### Pattern Recognition — 3 Cycles, Same Signal
+
+This is the **third consecutive scan** (across Platform Algorithms, Social Growth, and now this report) showing the same flat pattern:
+
+1. Models have not moved in days — no organic discovery
+2. Dataset growth is the only signal, and the growth rate is decelerating (+53, +2, now +0 net)
+3. GitHub has zero community traction
+4. No likes, no comments, no engagement on any asset
+
+The delta check still works correctly — it detected the +2 on kaggle-notebooks — but the signal-to-noise ratio is approaching zero. The active improvement cycles (model card consistency fixes, download count updates) are table-stakes maintenance, not growth drivers.
+
+### Next Actions
+
+1. **HIGH — Shift from passive scanning to active outreach.** Repeated scans of a flat ecosystem yield zero new information. Swap one passive cron for an active improvement cycle (e.g., improve a model card or Space demo on every trigger).
+
+2. **HIGH — Cross-link from dataset to model pages.** The only organic discovery signal is on datasets (300 total downloads across 4 datasets, all growing from baseline). Each dataset card should link to relevant models to funnel discovery.
+
+3. **MEDIUM — sakthai-kaggle-notebooks at 92 dl** is approaching 100. Push it over with a README improvement and cross-post from a model card.
+
+4. **MEDIUM — Enrich the two Spaces.** sakthai-tts has 0 likes despite being a functional TTS demo. A quick redesign or adding a second demo view (e.g., comparative TTS) could help. sakthai-leaderboard also needs content.
+
+5. **LOW — Evaluate food-penguin-v1 dataset.** Its 15 dl despite no model cross-links suggests it's being discovered via HF search for "penguin" or "food" keywords — could be a niche angle to exploit.
+
+### Meta-Lesson (Repeated)
+
+Scanning without acting amplifies noise. The ecosystem is stable but not growing. Priority must shift from monitoring to creating — building demos, cross-linking assets, and publishing community content. The next cycle should produce a concrete improvement, not another analysis of the same flat numbers.
