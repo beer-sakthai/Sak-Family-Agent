@@ -1,5 +1,7 @@
 ---
 name: SakKing-b2b-win-loss-analysis
+version: 1.0.0
+description: "Sakking B2B Win Loss Analysis"
 title: B2B Win-Loss Analysis
 description: >
   Run structured win-loss analysis to find why deals are won or lost.
@@ -12,6 +14,7 @@ triggers:
   - pricing or packaging changes
   - competitive strategy
   - board narrative
+
 ---
 
 # B2B Win-Loss Analysis

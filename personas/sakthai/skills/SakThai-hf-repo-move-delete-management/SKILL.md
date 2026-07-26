@@ -8,10 +8,12 @@ description: >
   and updating visibility/settings of models, datasets, and Spaces via the
   huggingface_hub Python SDK and REST API.
 version: 1.0.0
+description: "Sakthai Hf Repo Move Delete Management"
 metadata:
   hermes:
     tags: [huggingface, hub, api, repositories, management, lifecycle, admin]
     category: mlops
+
 ---
 
 # HF Hub Repo Move, Delete & Lifecycle Management

@@ -1,5 +1,7 @@
 ---
 name: SakKing-ecommerce-unit-economics
+version: 1.0.0
+description: "Sakking Ecommerce Unit Economics"
 title: E-Commerce Unit Economics — Tiered Contribution Margin Ladder
 description: |
   Analyze DTC/e-commerce unit economics using the CM1/CM2/CM3 contribution margin ladder,
@@ -23,6 +25,7 @@ outputs:
   - LTV:CAC ratio, payback period
   - Channel-level blended ROAS adjustment
   - Action list: scale, fix, or kill
+
 ---
 
 # E-Commerce Unit Economics — Tiered Contribution Margin Ladder

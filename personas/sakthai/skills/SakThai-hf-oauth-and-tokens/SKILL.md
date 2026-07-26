@@ -10,10 +10,12 @@ description: >
   Covers token management, supported OAuth scopes, CIMD automated app creation,
   organization token policies, and security best practices.
 version: 1.0.0
+description: "Sakthai Hf Oauth And Tokens"
 metadata:
   hermes:
     tags: [huggingface, oauth, tokens, authentication, openid-connect, security, ci-cd]
     category: productivity
+
 ---
 
 # HF Hub OAuth & Token Management

@@ -1,7 +1,10 @@
 ---
 name: SakThai-hf-hub-notification-watching
+version: 1.0.0
+description: "Sakthai Hf Hub Notification Watching"
 author: SakThai
 license: MIT
+
 ---
 
 # Hugging Face Hub Notifications & Watching System

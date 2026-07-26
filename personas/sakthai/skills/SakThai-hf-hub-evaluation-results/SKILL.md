@@ -2,10 +2,12 @@
 author: SakThai
 license: MIT
 name: SakThai-hf-hub-evaluation-results
+version: 1.0.0
 description: Hugging Face Hub Evaluation Results — decentralized benchmark tracking via .eval_results/ YAML files, benchmark dataset registration with eval.yaml, community-contributed PR-based scores, and verified evaluation tokens.
 model: deepseek-v4-flash
 provider: opencode-go
 type: reference
+
 ---
 
 # Hub Evaluation Results

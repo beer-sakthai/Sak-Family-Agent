@@ -1,5 +1,7 @@
 ---
 name: SakKing-family-health-audit
+version: 1.0.0
+description: "Sakking Family Health Audit"
 description: >-
   SakKing's workflow for systematically checking all Sak Family sibling agents'
   deployment status, diagnosing why they aren't replying, and reporting the
@@ -16,6 +18,7 @@ triggers:
   - sibling status audit
   - family deployment check
   - health audit
+
 ---
 
 # SakKing Family Health Audit

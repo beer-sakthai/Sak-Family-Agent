@@ -1,8 +1,10 @@
 ---
 name: SakKing-market-sizing-frameworks
+version: 1.0.0
 title: Market Sizing Frameworks
 description: Size markets rigorously using Bottom-Up, Top-Down, and Value Theory methods, then triangulate to get a defensible TAM/SAM/SOM. Use this when building pitch decks, planning GTM launch geography, evaluating M&A targets, or answering "how big is this opportunity?"
 tags: [strategy, fundraising, gtm, forecasting, tamsamsom]
+
 ---
 
 # Market Sizing Frameworks

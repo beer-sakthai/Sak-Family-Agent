@@ -1,6 +1,8 @@
 ---
 title: Fundraising Dilution and Pro-Forma Cap Table Modeling
 name: SakKing-fundraising-dilution-cap-table-modeling
+version: 1.0.0
+description: "Sakking Fundraising Dilution Cap Table Modeling"
 description: |
   Model dilution, build pro-forma cap tables, choose between SAFEs/convertible notes/priced rounds,
   and diagnose cap table health before a fundraising round. Use when preparing for a raise,
@@ -28,6 +30,7 @@ outputs:
   - Dilution impact of each instrument (waterfall)
   - ESOP sizing recommendation (pre vs post money)
   - Liquidation preference exit waterfall
+
 ---
 
 # Fundraising Dilution and Pro-Forma Cap Table Modeling

@@ -5,8 +5,10 @@ license: MIT
 skill_type: reference
 domain: hub
 version: 1.0.0
+description: "Sakthai Hf Hub Security Scanning Deep Dive"
 created: 2026-07-25
 updated: 2026-07-25
+
 ---
 
 # Hugging Face Hub Security Scanning — Deep Dive

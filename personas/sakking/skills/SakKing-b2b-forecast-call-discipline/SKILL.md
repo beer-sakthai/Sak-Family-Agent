@@ -1,5 +1,7 @@
 ---
 name: SakKing-b2b-forecast-call-discipline
+version: 1.0.0
+description: "Sakking B2B Forecast Call Discipline"
 title: B2B Forecast Call Discipline
 description: >
   Run weekly forecast calls that actually improve predictability. Covers
@@ -11,6 +13,7 @@ triggers:
   - board/quarterly pipeline reviews
   - improving forecast accuracy
   - sales stage hygiene audits
+
 ---
 
 # B2B Forecast Call Discipline

@@ -1,5 +1,7 @@
 ---
 name: SakKing-guardrailed-elasticity-pricing
+version: 1.0.0
+description: "Sakking Guardrailed Elasticity Pricing"
 title: Guardrailed Elasticity Pricing for SaaS/Subscription Businesses
 description: >
   Optimize subscription prices by integrating segment-level price elasticity, multivariate
@@ -17,6 +19,7 @@ tags:
   - subscription
   - optimization
   - monetization
+
 ---
 
 # Guardrailed Elasticity Pricing

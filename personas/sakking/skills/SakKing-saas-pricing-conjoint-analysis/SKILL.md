@@ -1,5 +1,7 @@
 ---
 name: SakKing-saas-pricing-conjoint-analysis
+version: 1.0.0
+description: "Sakking Saas Pricing Conjoint Analysis"
 description: >
   Design, field, and interpret a choice-based conjoint (CBC) study to
   quantify feature value, willingness-to-pay, and price elasticity for
@@ -22,6 +24,7 @@ tags:
   - market-research
   - monetization
   - pricing-research
+
 ---
 
 # SaaS Pricing Conjoint Analysis — Operational Skill

@@ -2,9 +2,11 @@
 author: SakThai
 license: MIT
 name: SakThai-hf-datasets-image-processing
+version: 1.0.0
 description: Covers the datasets.Image feature — loading, decoding, transforming, encoding, and streaming image data through the Hugging Face datasets library (v5.0.0+).
 role: Main Lead of the House & Master of Hugging Face
 related: [huggingface-hub, hf-datasets-library, hf-computer-vision-course]
+
 ---
 
 # HF Datasets Image Processing

@@ -9,10 +9,12 @@ description: >
   citation workflow, and programmatic patterns for DOI discovery and metadata
   extraction.
 version: 2.0.0
+description: "Sakthai Hf Hub Doi"
 metadata:
   hermes:
     tags: [huggingface, hub, doi, datacite, datasets, models, citation, academic, identifiers, metadata]
     category: mlops
+
 ---
 
 # HF Hub DOI Deep Dive — DataCite Integration & Metadata Schema

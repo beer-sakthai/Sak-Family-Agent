@@ -1,7 +1,10 @@
 ---
 name: SakThai-hf-hub-search-discovery-api
+version: 1.0.0
+description: "Sakthai Hf Hub Search Discovery Api"
 author: SakThai
 license: MIT
+
 ---
 
 # Hugging Face Hub Search & Discovery API

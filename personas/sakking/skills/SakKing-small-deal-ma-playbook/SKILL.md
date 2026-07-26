@@ -1,8 +1,10 @@
 ---
 name: SakKing-small-deal-ma-playbook
+version: 1.0.0
 title: Small Deal M&A Due Diligence & Integration Playbook
 description: Operator-level guide for acquiring, Diligencing, and integrating small deals ($1M–$25M revenue). Use when sourcing bolt-ons, roll-ups, or SMB acquisitions. Covers the R.E.M.A.P. diligence frame, 5-Axis intensity grid, valuation tables, deal protections, and a 170-day integration roadmap.
 tags: [ma, due-diligence, integration, sba, working-capital, valuation]
+
 ---
 
 # Small Deal M&A Due Diligence & Integration Playbook

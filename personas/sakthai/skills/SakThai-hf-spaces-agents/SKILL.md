@@ -8,10 +8,12 @@ description: >
   workflow, the AI prompt generation system, agent-compatible Space templates, and how
   to build, iterate, and publish Spaces programmatically through AI agents.
 version: 1.0.0
+description: "Sakthai Hf Spaces Agents"
 metadata:
   hermes:
     tags: [huggingface, spaces, agents, ai-agents, gradio, claude-code, codex, deployment]
     category: productivity
+
 ---
 
 # Hugging Face Spaces + AI Agents

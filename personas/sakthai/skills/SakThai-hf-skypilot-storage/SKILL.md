@@ -7,10 +7,12 @@ description: >
   Hugging Face Hub with zero-egress storage, using SkyPilot for multi-cloud
   compute orchestration and HF Storage Buckets / Xet for data storage.
 version: 1.0.0
+description: "Sakthai Hf Skypilot Storage"
 metadata:
   hermes:
     tags: [huggingface, skypilot, storage, cloud, multi-cloud]
     category: mlops
+
 ---
 
 # Hugging Face SkyPilot Storage Integration

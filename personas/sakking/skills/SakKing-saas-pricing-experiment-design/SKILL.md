@@ -1,5 +1,7 @@
 ---
 name: SakKing-saas-pricing-experiment-design
+version: 1.0.0
+description: "Sakking Saas Pricing Experiment Design"
 description: >
   Design, run, and roll out statistically valid pricing experiments for SaaS products.
   Covers hypothesis framing, sample-size math, test types (new-user, geo, holdout),
@@ -13,6 +15,7 @@ tags:
   - gtm
   - monetization
   - statistics
+
 ---
 
 # SaaS Pricing Experiment Design & Execution

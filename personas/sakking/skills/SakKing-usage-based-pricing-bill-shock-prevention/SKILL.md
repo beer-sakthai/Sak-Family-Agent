@@ -1,5 +1,6 @@
 ---
 name: SakKing-usage-based-pricing-bill-shock-prevention
+version: 1.0.0
 title: Usage-Based Pricing Bill-Shock Prevention
 description: Operational guardrails and workflow for preventing bill shock, billing disputes, and churn in usage-based / consumption-based B2B SaaS pricing. Covers alert thresholds, spending caps, transparent metering, communication design, and churn-risk monitoring. Use when adopting usage-based pricing, experiencing spikes in billing disputes, designing AI/API product monetization, or when customer success reports surprise invoices.
 triggers:
@@ -8,6 +9,7 @@ triggers:
   - CS team flags "surprise invoice" conversations in health-score reviews
   - Engineer or finance warns that runaway API/AI costs are a revenue risk
   - Building a new AI-native product with token / compute / request-based billing
+
 ---
 
 # Usage-Based Pricing Bill-Shock Prevention

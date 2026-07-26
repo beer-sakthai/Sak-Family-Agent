@@ -1,7 +1,10 @@
 ---
 name: SakThai-hf-hub-fork-and-sync
+version: 1.0.0
+description: "Sakthai Hf Hub Fork And Sync"
 author: SakThai
 license: MIT
+
 ---
 
 # HF Hub Fork & Sync — Server-Side Repo Duplication, File Copy & Bucket Sync

@@ -7,10 +7,12 @@ description: >
   inference, hub, gguf, mcp-client, tiny-agents, tasks, jinja, dduf,
   ollama-utils, and space-header packages.
 version: 2.0.0
+description: "Sakthai Hf Hub Js Sdk"
 metadata:
   hermes:
     tags: [huggingface, javascript, typescript, sdk, inference, hub]
     category: software-development
+
 ---
 
 # huggingface.js — Official Hugging Face TypeScript/JS SDK

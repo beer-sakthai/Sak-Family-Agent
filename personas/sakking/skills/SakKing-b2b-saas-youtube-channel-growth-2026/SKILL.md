@@ -16,7 +16,9 @@ skills_tags:
   - content-strategy
 created: 2026-07-02
 version: 1.0.0
+description: "Sakking B2B Saas Youtube Channel Growth 2026"
 author: SakSit
+
 ---
 
 # B2B SaaS YouTube Channel Growth Strategy 2026

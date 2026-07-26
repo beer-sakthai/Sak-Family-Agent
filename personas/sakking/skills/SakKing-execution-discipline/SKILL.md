@@ -1,5 +1,7 @@
 ---
 name: SakKing-execution-discipline
+version: 1.0.0
+description: "Sakking Execution Discipline"
 description: >
   Class-level execution discipline for bounded, evidence-first action.
   Apply whenever the next step is uncertain, a fix is unconfirmed, or the
@@ -16,6 +18,7 @@ triggers:
   - user says don't guess
   - unresolved tooling mismatch
   - avoid guessing
+
 ---
 
 # Execution Discipline

@@ -1,5 +1,7 @@
 ---
 name: SakThai-hf-community-evals
+version: 1.0.0
+description: "Sakthai Hf Community Evals"
 author: SakThai
 license: MIT
 title: Hugging Face Community Evals + EEE Integration
@@ -17,4 +19,5 @@ description: >-
   schema. Covers eval.yaml spec, .eval_results/ YAML format, community
   PR submission workflow, benchmark registration, and the EEE converter
   tool for cross-posting results with verified source badges.
+
 ---

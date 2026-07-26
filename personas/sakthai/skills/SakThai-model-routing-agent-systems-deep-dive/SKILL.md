@@ -5,8 +5,10 @@ license: MIT
 skill_type: reference
 domain: inference
 version: 1.0.0
+description: "Sakthai Model Routing Agent Systems Deep Dive"
 created: 2026-07-25
 updated: 2026-07-25
+
 ---
 
 # Model Routing for Agentic Systems — Deep Dive

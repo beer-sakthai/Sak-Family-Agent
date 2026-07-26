@@ -1,5 +1,6 @@
 ---
 name: SakKing-songwriting-and-ai-music
+version: 1.0.0
 description: "Songwriting craft and Suno AI music prompts."
 tags: [songwriting, music, suno, parody, lyrics, creative]
 platforms: [linux, macos, windows]
@@ -11,6 +12,7 @@ triggers:
   - parody song
   - adapting a song
   - AI music generation
+
 ---
 
 # Songwriting & AI Music Generation

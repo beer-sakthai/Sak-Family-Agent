@@ -1,7 +1,9 @@
 ---
 name: SakKing-cohort-analysis-operational-framework
+version: 1.0.0
 title: Cohort Analysis Operational Framework
 description: Design, execute, and institutionalize cohort analysis to diagnose churn drivers, model LTV, forecast revenue, and guide growth decisions. Use when building retention strategies, sizing LTV, prioritizing segments, diagnosing growth stalls, or when metrics look healthy but revenue momentum is breaking down.
+
 ---
 
 # Cohort Analysis Operational Framework

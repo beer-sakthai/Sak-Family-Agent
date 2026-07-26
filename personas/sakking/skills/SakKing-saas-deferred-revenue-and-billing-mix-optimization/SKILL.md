@@ -1,5 +1,7 @@
 ---
 name: SakKing-saas-deferred-revenue-and-billing-mix-optimization
+version: 1.0.0
+description: "Sakking Saas Deferred Revenue And Billing Mix Optimization"
 description: >
   Optimize SaaS working capital by engineering contract mix (monthly / annual / multi-year)
   and deferred-revenue timing. Models cash impact of billing frequency, sizes annual discounts,
@@ -13,6 +15,7 @@ tags:
   - cash-flow
   - unit-economics
   - billing
+
 ---
 
 # SaaS Deferred Revenue & Billing Mix Optimization

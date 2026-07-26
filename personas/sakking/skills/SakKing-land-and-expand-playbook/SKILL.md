@@ -1,5 +1,6 @@
 ---
 name: SakKing-land-and-expand-playbook
+version: 1.0.0
 title: Land and Expand Playbook
 description: Operator-level guide for executing B2B SaaS land-and-expand motion to grow ACV within existing accounts. Covers expansion vectors, account scoring, timing benchmarks, product design requirements, and GTM alignment. Use when NRR is <110%, expansion pipeline is stalled, or when building systematic account growth.
 triggers:
@@ -8,6 +9,7 @@ triggers:
   - Need predictable expansion revenue without proportionally increasing new sales
   - Evaluating product design for expansion enablement
   - Designing CSM responsibilities around growth, not just retention
+
 ---
 
 # Land and Expand Playbook

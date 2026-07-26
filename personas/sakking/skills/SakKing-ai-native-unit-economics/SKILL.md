@@ -1,5 +1,7 @@
 ---
 name: SakKing-ai-native-unit-economics
+version: 1.0.0
+description: "Sakking Ai Native Unit Economics"
 title: AI-Native SaaS Unit Economics
 description: >
   Analyze and design unit economics for AI-native SaaS, API products, and
@@ -16,6 +18,7 @@ triggers:
   - modeling inference cost impact on LTV:CAC
   - comparing per-seat, per-token, and credit-based pricing
   - optimizing model routing for cost efficiency
+
 ---
 
 # AI-Native SaaS Unit Economics

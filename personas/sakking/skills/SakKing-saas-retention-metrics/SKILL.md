@@ -1,7 +1,9 @@
 ---
 name: SakKing-saas-retention-metrics
+version: 1.0.0
 title: SaaS Retention Metrics
 description: Calculate and interpret NRR, GRR, logo churn, and expansion revenue for SaaS/ subscription businesses. Use when diagnosing growth quality, sizing expansion pipeline, building board KPI decks, or benchmarking against peers.
+
 ---
 
 # SaaS Retention Metrics

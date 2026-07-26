@@ -1,9 +1,11 @@
 ---
 name: SakKing-cs-capacity-modeling-and-engagement-tiers
+version: 1.0.0
 description: Capacity-plan a Customer Success org by segment, build the right high-touch / low-touch / tech-touch engagement mix, and link CSM headcount to NRR targets — not the lazy "$2M ARR per CSM" rule of thumb.
 category: business
 when-to-use: When sizing CSM hiring, designing engagement tiers, modeling NRR economics, reviewing CS cost, or pressure-testing whether coverage is the reason retention is leaking.
 keywords: customer success capacity planning, CSM-to-ARR ratio, engagement tier model, high-touch low-touch tech-touch, NRR operating model, CSM workload model, CS cost-to-serve
+
 ---
 
 # CS Capacity Modeling & Engagement-Tier Design

@@ -1,8 +1,10 @@
 ---
 name: SakKing-saas-price-increase-execution-playbook
+version: 1.0.0
 title: SaaS Price Increase Execution Playbook
 description: Design, communicate, and execute SaaS price increases on existing customers with controlled churn impact. Covers grandfathering strategy, cohort sequencing, communication cadence, churn impact modeling, and live post-rollout monitoring. Use when leadership has decided to raise prices, when margin expansion is needed, when product value has materially increased, or when preparing a board discussion on pricing power.
 tags: [pricing, gtm, churn, nrr, revenue, b2b-saas]
+
 ---
 
 # SaaS Price Increase Execution Playbook

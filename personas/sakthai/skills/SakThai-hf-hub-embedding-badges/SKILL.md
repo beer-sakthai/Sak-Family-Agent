@@ -1,7 +1,10 @@
 ---
 name: SakThai-hf-hub-embedding-badges
+version: 1.0.0
+description: "Sakthai Hf Hub Embedding Badges"
 author: SakThai
 license: MIT
+
 ---
 
 # Hugging Face Hub Embedding, Badges & oEmbed API

@@ -1,5 +1,7 @@
 ---
 name: SakThai-hf-hub-spaces-custom-domains-replicas-streaming
+version: 1.0.0
+description: "Sakthai Hf Hub Spaces Custom Domains Replicas Streaming"
 author: SakThai
 license: MIT
 title: Hugging Face Spaces — Custom Domains, Replicas, & Streaming Logs/Metrics
@@ -15,4 +17,5 @@ description: >-
   configuration, verification, removal), horizontal scaling via replicas,
   streaming logs and metrics via SSE endpoints, and GPU sleep time
   configuration for cost optimization.
+
 ---

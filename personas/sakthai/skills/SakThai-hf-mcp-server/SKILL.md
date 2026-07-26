@@ -11,10 +11,12 @@ description: >
   MCP servers with Gradio's mcp_server=True flag including private Space auth,
   gr.Request for header inspection, and gr.Header for token extraction.
 version: 1.0.0
+description: "Sakthai Hf Mcp Server"
 metadata:
   hermes:
     tags: [huggingface, mcp, model-context-protocol, agents, gradio, spaces, tools]
     category: productivity
+
 ---
 
 # Hugging Face MCP Server

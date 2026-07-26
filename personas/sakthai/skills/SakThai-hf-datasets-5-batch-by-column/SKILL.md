@@ -10,10 +10,12 @@ description: >
   full API, the Arrow-accumulation strategy, memory behaviour, and
   practical recipes.
 version: 1.0.0
+description: "Sakthai Hf Datasets 5 Batch By Column"
 metadata:
   hermes:
     tags: [huggingface, datasets, iterable-dataset, batch, streaming, arrow, robotics]
     category: mlops
+
 ---
 
 # HF Datasets 5: IterableDataset.batch(by_column=...)

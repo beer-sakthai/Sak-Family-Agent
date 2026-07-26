@@ -1,6 +1,8 @@
 ---
 name: SakKing-directory_summarizer
+version: 1.0.0
 description: Reads files from a specified directory (e.g., root/ or out/data/), summarizes all details, and generates a comprehensive report.
+
 ---
 # Directory Summarizer
 

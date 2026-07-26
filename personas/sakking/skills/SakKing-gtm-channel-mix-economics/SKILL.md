@@ -1,5 +1,6 @@
 ---
 name: SakKing-gtm-channel-mix-economics
+version: 1.0.0
 title: GTM Channel Mix Economics
 triggers:
   - GTM motion selection (PLG vs sales-led vs hybrid)
@@ -8,6 +9,7 @@ triggers:
   - Evaluating new channel launches
   - Diagnosing why blended CAC is rising
 description: Optimize GTM channel mix by evaluating PLG, sales-led, and hybrid motion economics. Models marginal CAC by channel, enforces LTV:CAC and payback benchmarks, and allocates budget to maximize ARR at target efficiency. Use when choosing a GTM motion, scaling beyond seed stage, or when blended CAC increments outpace new ARR.
+
 ---
 
 # GTM Channel Mix Economics

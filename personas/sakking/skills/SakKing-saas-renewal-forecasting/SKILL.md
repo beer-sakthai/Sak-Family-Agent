@@ -1,5 +1,6 @@
 ---
 name: SakKing-saas-renewal-forecasting
+version: 1.0.0
 category: business
 description: Run SaaS contract renewals as a disciplined, forecastable pipeline — not a calendar reminder. Covers renewal stage definitions, owner assignments, risk scoring, coverage benchmarks, T-minus cadence, forecast call hygiene, and protecting price-increase programs from slip. Use when renewal forecast accuracy is below 85%, when the board can't trust the renewal book, when price increases are leaking in the renewal process, or when renewals are treated as an afterthought behind new-business pipeline.
 triggers:
@@ -9,6 +10,7 @@ triggers:
   - CS and Sales are not aligned on who owns which renewals
   - The renewal book grows faster than new business but gets less operational scrutiny
   - You need a repeatable process to scale from $5M to $50M+ ARR where renewals are the majority of bookings
+
 ---
 
 # SaaS Renewal Forecasting & Pipeline Management

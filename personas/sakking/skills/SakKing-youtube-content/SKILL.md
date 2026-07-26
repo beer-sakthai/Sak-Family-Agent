@@ -1,7 +1,9 @@
 ---
 name: SakKing-youtube-content
+version: 1.0.0
 description: "YouTube transcripts to summaries, threads, blogs."
 platforms: [linux, macos, windows]
+
 ---
 
 # YouTube Content Tool

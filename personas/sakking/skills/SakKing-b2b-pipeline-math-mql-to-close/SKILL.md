@@ -1,5 +1,7 @@
 ---
 name: SakKing-b2b-pipeline-math-mql-to-close
+version: 1.0.0
+description: "Sakking B2B Pipeline Math Mql To Close"
 title: B2B Pipeline Math MQL to Close
 description: >
   Model the full B2B funnel from marketing-qualified lead to closed-won
@@ -12,6 +14,7 @@ triggers:
   - quota and headcount planning
   - pipeline coverage reviews
   - marketing budget justification
+
 ---
 
 # B2B Pipeline Math MQL to Close
