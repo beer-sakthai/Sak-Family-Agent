@@ -396,5 +396,12 @@
   "hf-peft-beyond-lora",
   "hf-hub-publisher-analytics",
   "hf-kernels-ecosystem-major-updates",
-  "hf-candle"
+  "hf-candle",
+  "hf-datasets-v5-sql-duckdb-integration",
+  "hf-hub-spaces-build-configuration-reference-deep-dive-v2",
+  "hf-hub-github-actions-trusted-publishers",
+  "hf-hub-pipeline-tags-model-card-enrichment",
+  "hf-hub-pipeline-tags-model-card-enrichment-deep-dive-v2",
+  "hf-datasets-5-release-deep-dive-v2",
+  "hf-argilla"
 ]

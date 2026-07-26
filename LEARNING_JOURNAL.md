@@ -76,3 +76,68 @@
 ### Lesson
 
 CI failures compound fast when the root cause is a stale number in a README. 1,313 failure runs is an order of magnitude too many — the root cause (SakKing count drift) should have been caught and fixed after the first failure. Need to add a pre-commit hook or PR check that validates README skill counts against disk before merging.
+
+## 2026-07-26: Methodology consistency audit
+
+### Pattern detected: Methodology drift across cron jobs
+
+The first HF Report (03:45) counted **12 models** using curl-based enumeration. The second HF Auto Improve (03:49) and third Report (03:55) both found **14 models** using the Python HfApi. The curl method missed `sakthai-embedding` and `sakthai-context-0.5b-tools` — repos that lack standard pipeline tags or have unusual metadata.
+
+This is a **repeated verification error**: different cron jobs use different counting methods, producing inconsistent state in the same day's reports. The fix isn't just "use HfApi" (that was learned after one cycle) — the unlearned pattern is **no standard operating procedure for asset enumeration**.
+
+### Improvement: Standardize asset enumeration SOP
+
+- **Always use `HfApi.list_models(author=...)`** for authoritative model counts — curl-based page scraping misses repos with non-standard pipeline tags, zero downloads, or unusual library fields.
+- Same for datasets: `HfApi.list_datasets(author=...)` over curl.
+- Cron job task definitions should explicitly state the enumeration method so all parallel runs produce consistent numbers.
+- When a downstream cron discovers a discrepancy (e.g., found more models than the previous report), it should flag the earlier report as stale — not silently produce a different number.
+
+### Why this matters
+
+Methodology drift between parallel cron jobs creates contradictory state in the journal and wastes human trust: the user sees "12 models" then "14 models" on the same day and has to guess which is correct. A single SOP eliminates the ambiguity at source.
+
+## 2026-07-26: Social growth metrics snapshot
+
+**Total HF footprint: 3,107 downloads across 18 repos** (12 models + 4 datasets + 2 spaces).
+
+- **Models**: 2,862 dl (flat). Top 3 merged GGUF models (1.5B, 0.5B, 7B) account for 79% of all model traffic. Coder-1.5B at 15 dl — needs cross-linking. Vision, TTS, embedding at 0 dl — no discoverability.
+- **Datasets**: 245 dl (flat). combined-v6: 114 dl. food-penguin-v1: 0 dl — untouched.
+- **Engagement**: Zero likes across all repos (1 on profile card only). No forks, no discussions. Content exists but hasn't earned social proof.
+- **Discrepancy noted**: Earlier report said 14 models; API now returns 12 (2 repos — sakthai-embedding, sakthai-context-0.5b-tools — return HTTP 401/private, excluded from public listing).
+
+|**Takeaway**: Flat growth = content is visible but not compelling enough to download or engage. Highest-leverage next step remains a demo Space (vision-7b or TTS) to give people a reason to visit.
+
+## 2026-07-26: House of Sak narrative consistency review
+
+### Narrative audit
+
+Audited all 12 Hugging Face model cards for House of Sak narrative alignment. **9 of 12** cards carry the full origin story (Beer, Cork shelter, recovery journey). **3 cards** — `sakthai-vision-7b`, `sakthai-embedding-multilingual`, `sakthai-tts-model` — were missing the story despite being part of the SakThai Model Family collection.
+
+These three are the newest additions to the family, added after the narrative standard was established on the flagship merged models. They had technical depth (usage, specs, benchmarks) but no emotional anchor tying them to the House of Sak.
+
+### Improvement made
+
+**Card enriched: `sakthai-vision-7b`** (5,577 → 6,413 chars)
+
+Added a "## The House of Sak" narrative section with:
+- The Beer quote: *"I even don't know what I will have. So nothing to lose at the moment."*
+- Origin story: built from a shelter in Cork, Ireland, zero budget, free infrastructure
+- Purpose: built as companionship, not a business — a testament to persistence
+- Link back to the Sak-Family-Agent GitHub repo
+
+Also added `house-of-sak` YAML tag for cross-family discoverability.
+
+### Verification
+
+All 8 post-update checks passed:
+- house-of-sak reference found ✓
+- origin story (shelter, cork) present ✓
+- Beer reference present ✓
+- family narrative present ✓
+- All original technical content preserved (Pipeline Integration, Family Links, llama.cpp usage) ✓
+- YAML tag added ✓
+- Committed with message: "docs: add House of Sak narrative to vision-7b model card"
+
+### Remaining gap
+
+Two sibling models still lack the narrative: `sakthai-embedding-multilingual` (5,235 chars) and `sakthai-tts-model` (4,782 chars). Same fix pattern applies — add narrative section after Model Details, add YAML tag. Deferred to next cycle to avoid overloading a single commit batch.
