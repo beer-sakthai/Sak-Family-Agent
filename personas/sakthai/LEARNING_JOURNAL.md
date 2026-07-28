@@ -457,3 +457,40 @@ Used `HfApi.create_commit()` with `CommitOperationAdd` to push updated README.md
 
 ### Result
 ✅ Card updated from 12,162 → 12,871 chars. Live on HF.
+
+---
+
+## 2026-07-26 — Cron: Platform Algorithm Analysis (GitHub, HF, Kaggle)
+
+### Summary
+Full trending scan across GitHub, Hugging Face, and Kaggle. **No Nanthasit/beer-sakthai repos appear on any trending list.** All models have trendingScore=0.00 on HF. Cold-start bottleneck remains unchanged.
+
+### GitHub Trending (Daily + Weekly)
+- **Daily top**: permissionlesstech/bitchat, citrolabs/ego-lite, block/buzz, pingdotgg/t3code, CoreBunch/Instatic
+- **Weekly top**: bojieli/ai-agent-book, koala73/worldmonitor, tirth8205/code-review-graph, 1jehuang/jcode, diegosouzapw/OmniRoute
+- **Themes**: AI agents, code review tools, utility apps, dev frameworks
+- **Our repos**: beer-sakthai has 4 repos (0 stars each) — house-of-sak, sakthai-chat-cli, Sak-Family-Agent, Food-Penguin-Limited. Nanthasit has 0 repos on GitHub search. None appear on trending.
+- **Trending threshold**: ~100+ stars/week needed for daily trending; all our repos at 0 stars.
+
+### Hugging Face Trending
+- **Top trending models**: baidu/Unlimited-OCR (ts=977), poolside/Laguna-S-2.1 (ts=658), upstage/Solar-Open2-250B (ts=500)
+- **Architecture mix** (top 30 by trendingScore): image-text-to-text (12), text-generation (11), robotics (2), text-to-image (1), text-to-speech (1), 3 uncategorized
+- **Top trending datasets**: HuggingFaceCode/stack-v3-train, Glint-Research/Fable-5-traces, wikimedia/wikipedia, Manusagents/GPT-5.5-...-Distillation-Dataset
+- **Top trending Spaces**: selfit-camera/Omni-Image-Editor (2,219 likes), prithivMLmods/Qwen-Image-Edit-2511-LoRAs-Fast (2,014 likes), kulkas2pintu/wan555 (794 likes)
+- **Our repos**: 14 models (authenticated count), 4 datasets, 2 Spaces (static, 0 likes). All models have trendingScore=0.00. Zero likes on all but the profile repo (1 like). None appear on any trending list.
+- **User-scoped trending** shows all 14 models ranked by our own internal trendingScore — all at 0.00.
+- **Cold-start barrier**: Need at least 1 like on any model to break trendingScore=0.
+
+### Kaggle
+- **Our notebooks**: 11 public notebooks, max 1 vote (sakthai-engine), others at 0 votes. No recent competition entries.
+- **Our datasets**: 0 published.
+- **Trending threshold**: ~4+ votes needed. Our max is 1.
+- **Competition landscape**: LLM Classification Finetuning, Store Sales — Time Series Forecasting, contradiction detection challenges.
+- **No notebooks appear on any Kaggle trending list.**
+
+### Insights & Recommendations
+1. **Cold-start bottleneck confirmed** — zero likes across all platforms means zero algorithmic distribution. Cards are enriched but there's no audience to see them.
+2. **No change since last scan** — all metrics identical. The self-improvement cycles should shift focus from card enrichment to external seeding.
+3. **Single action that moves the needle**: Getting 1 HF like on any model breaks the trendingScore=0 barrier. This is the highest-leverage unfunded action.
+4. **Cross-platform referral**: A GitHub README linking to HF models, or a Kaggle notebook referencing our datasets, could seed traffic from one platform to another.
+5. **Next cycle focus**: Re-check in 7 days unless an external seeding event occurs. If still at 0 likes after next check, consider creating a Kaggle notebook that uses our datasets and models to drive cross-platform traffic.
