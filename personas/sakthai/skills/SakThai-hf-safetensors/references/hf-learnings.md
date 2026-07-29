@@ -219,16 +219,36 @@ Note that float8 and float4 dtypes are stored as raw bytes (mapped to `np.uint8`
 
 - **MMAP is default** and best for CPU inference — tensors loaded on demand, cached by OS
 - **PREAD for MPS** — avoids double memory consumption from page cache + MTLBuffer
+- **PREAD for constrained environments** — `mmap` can fail on:
+  - NFS/Samba/CIFS network filesystems
+  - FUSE filesystems (common in containers, Docker, sandboxed environments)
+  - Systems with low `vm.max_map_count` (e.g., default 65530 on Linux; large models with many shards can exceed this)
+  - Very large models on low-RAM systems where mmap page cache competes with model memory
+  - When you need deterministic file handle behavior (pread uses regular read syscalls)
+  - **Recommendation**: If you see `SafetensorError` or segfaults loading safetensors from unusual paths, try `backend="pread"` first.
 - **Zero-copy on both save and load** — no intermediate buffer copies in Python
 - **`save_model(force_contiguous=True)`** ensures optimal memory layout but may trigger a memory copy for non-contiguous tensors
-- **`get_slice()`** enables lazy loading of sub-tensors without reading the entire tensor from disk
+- **`get_slice()`** enables lazy loading of sub-tensors without reading the entire tensor from disk; **v0.8.0+** properly handles ellipsis `[...]` and strided slices `[:, ::8]` — before this fix, the step parameter was silently ignored in slicing
 - **`get_tensors()` fast path** on MPS+pread bulk-allocates shared MTLBuffer and fills with parallel pread — dramatically faster than per-tensor reads
+- **GIL-free serialization** (v0.8.0+): `serialize()` and `serialize_file()` release the GIL during writes, enabling true multithreaded saves from Python. Use `concurrent.futures.ThreadPoolExecutor` for parallel model saves.
+- **macOS `F_NOCACHE`** (v0.8.0+): File writes use `F_NOCACHE` for direct I/O, yielding roughly 30% faster `save_file` on Apple Silicon.
+- **`SafetensorError` is picklable** (v0.8.0+): Previously failed in multiprocessing contexts; now propagates correctly across process boundaries.
+
+### 10. v0.8.0 Breaking Changes & Migration
+
+| Change | Impact | Migration |
+|--------|--------|-----------|
+| `serialize`/`serialize_file` now take `TensorSpec` (not plain dicts) | Breaking for low-level API callers | High-level adapters (`safetensors.torch`, etc.) unchanged internally |
+| Minimum Python 3.10 | Python 3.9 no longer supported | Upgrade to Python 3.10+ |
+| `TensorIndexer::Narrow` now requires `step: NonZeroUsize` | Slices are now `start:stop:step` (was start:stop) | Check if using Rust API directly; Python API unaffected |
+| `get_slice` handles ellipsis and strided slices | Fixes silent bug where `[:, ::8]` ignored step | No migration needed — just know it now works correctly |
 
 ### Key Takeaways
 1. safetensors v0.8.0 is a Rust core (`_safetensors_rust.abi3.so`) with six framework adapters — torch is the most complex due to shared tensor detection
 2. Binary format: 8-byte header length prefix → JSON header (8-byte aligned) → raw tensor data sequentially
-3. `safe_open` supports two I/O backends: `mmap` (default, OS-managed page cache) and `pread` (explicit syscall, preferred for Apple MPS)
+3. `safe_open` supports two I/O backends: `mmap` (default, OS-managed page cache) and `pread` (explicit syscall, preferred for Apple MPS, and essential fallback when mmap fails on NFS/FUSE/container filesystems)
 4. `TensorSpec(dtype, shape, data_ptr, data_len)` bridges Python memory to Rust serializer — caller must keep data alive during serialize
 5. `save_model()` / `load_model()` handle shared storage deduplication via storage-pointer grouping and overlapping-address refinement
 6. All framework adapters use zero-copy loading: `torch.frombuffer`, `np.frombuffer`, `paddle.base.core.frombuffer`
-7. `get_slice()` enables lazy sub-tensor reads without loading the full tensor into memory
+7. `get_slice()` enables lazy sub-tensor reads without loading the full tensor into memory; ellipsis/strided slices work correctly in v0.8.0+
+8. **safetensors joined the PyTorch Foundation** (v0.8.0 announcement): strategic endorsement of the format, ensures long-term maintenance and ecosystem integration. Read more: https://huggingface.co/blog/safetensors-joins-pytorch-foundation

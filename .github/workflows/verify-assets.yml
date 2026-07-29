@@ -28,11 +28,16 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Install sakthai package
+        run: |
+          pip install -e personas/sakthai
+
       - name: Run verification script
         run: |
-          python3 personas/sakthai/skills/mlops/mlops-hf-train-manual-upload/scripts/verify_hf_upload.py \
-            https://huggingface.co/datasets/Nanthasit/hf-training-composio-tools-50 \
-            https://huggingface.co/models/Nanthasit/sakthai-context-0.5b-tools
+          python3 -m sakthai.scripts.verify_hf_upload \
+            https://huggingface.co/datasets/Nanthasit/sakthai-combined-v6 \
+            https://huggingface.co/Nanthasit/sakthai-context-1.5b-tools \
+            https://huggingface.co/Nanthasit/sakthai-context-0.5b-merged
         # The script will exit with a non-zero status code if any URL fails,
         # which will automatically fail this step and the entire workflow.
 

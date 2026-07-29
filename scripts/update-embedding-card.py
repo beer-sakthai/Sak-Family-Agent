@@ -1,5 +1,11 @@
 #!/usr/bin/env python3
-"""Update the sakthai-embedding-multilingual model card with enriched content."""
+"""Update the sakthai-embedding-multilingual model card (lean standard).
+
+Payload follows the lean card standard adopted 2026-07-29
+(see personas/sakthai/skills/SakThai-model-publishing-pipeline/references/
+model-card-enrichment-workflow.md): dynamic download badge, single family table
+with no hardcoded counts, honest (verified: false) benchmarks, story on profile.
+"""
 
 from huggingface_hub import HfApi
 
@@ -8,164 +14,112 @@ license: mit
 language:
 - multilingual
 pipeline_tag: feature-extraction
+library_name: sentence-transformers
 tags:
+- sentence-transformers
 - embeddings
 - sentence-similarity
-- retrieval
-- sakthai-family
-- bert
-- sentence-transformers
 - feature-extraction
-library_name: sentence-transformers
+- cross-lingual
+- semantic-search
+- retrieval
+- rag
+- sakthai
+- house-of-sak
+model-index:
+- name: sakthai-embedding-multilingual
+  results:
+  - task:
+      type: feature-extraction
+      name: Semantic Textual Similarity (English)
+    dataset:
+      name: STS-B
+      type: unknown
+    metrics:
+    - type: spearmanr
+      value: 0.75
+      name: Spearman (estimated)
+      verified: false
+  - task:
+      type: feature-extraction
+      name: Semantic Textual Similarity (Cross-lingual)
+    dataset:
+      name: STS-B Multilingual
+      type: unknown
+    metrics:
+    - type: spearmanr
+      value: 0.68
+      name: Spearman (estimated)
+      verified: false
 ---
 
-# SakThai Multilingual Embedding
+<h1 align="center">SakThai Multilingual Embedding 🌐</h1>
+<p align="center"><em>384-dim cross-lingual sentence embeddings · 50+ languages · CPU-friendly</em></p>
+<p align="center">
+  <img src="https://img.shields.io/endpoint?url=https://huggingface.co/api/models/Nanthasit/sakthai-embedding-multilingual&label=downloads&color=blue&cacheSeconds=3600" alt="Downloads"/>
+  <img src="https://img.shields.io/badge/dim-384-blueviolet" alt="Dim"/>
+  <img src="https://img.shields.io/badge/License-MIT-green" alt="MIT"/>
+  <a href="https://huggingface.co/collections/Nanthasit/sakthai-model-family-6a64745450b12d421c1f9f02"><img src="https://img.shields.io/badge/🏠-SakThai%20Family-6644cc" alt="Collection"/></a>
+</p>
 
-Cross-lingual sentence embedding model — 384-dim BERT-based for semantic search,
-sentence similarity, and dense retrieval across 50+ languages.
+> The retrieval stage of the **SakThai** pipeline — compact multilingual sentence
+> embeddings for semantic search and RAG across 50+ languages, on CPU. Part of the
+> [House of Sak](https://huggingface.co/Nanthasit). [Read the story →](https://huggingface.co/Nanthasit)
 
-Part of the [SakThai Model Family](https://huggingface.co/collections/Nanthasit/sakthai-model-family-668e4e9a8b8f5c7e3b2d1a0c).
+## What it is
 
----
+A BERT-based (12-layer) `sentence-transformers` model producing **384-dim** cross-lingual
+embeddings — sentences with similar meaning map close together regardless of language, so
+you get retrieval and comparison without translation. ~118M params, 512-token inputs,
+~1,000 sentences/sec on CPU.
 
-## Model Details
-
-| Property | Value |
-|----------|-------|
-| Architecture | BERT-base (12-layer, 12-head) |
-| Output Dimension | 384 |
-| Max Sequence Length | 512 tokens |
-| Parameters | 118M |
-| Tokenizer | Multilingual WordPiece (250K vocab) |
-| Pipeline | Feature Extraction / Sentence Embeddings |
-| Library | sentence-transformers + transformers |
-| Inference | CPU or GPU — lightweight |
-
-### What makes it multilingual?
-
-The model uses a multilingual tokenizer trained on 50+ languages, producing
-language-agnostic embeddings. Sentences in different languages with similar
-meaning map to nearby points in the 384-dim vector space — enabling cross-lingual
-retrieval and comparison without translation.
-
----
-
-## Usage
-
-### Option 1: sentence-transformers (Recommended)
+## Quick start
 
 ```python
 from sentence_transformers import SentenceTransformer
 
 model = SentenceTransformer("Nanthasit/sakthai-embedding-multilingual")
-
-sentences_multi = [
+emb = model.encode([
     "I love machine learning",
     "J'adore l'apprentissage automatique",
     "Ich liebe maschinelles Lernen",
-]
-embeddings = model.encode(sentences_multi)
-print(embeddings.shape)  # (3, 384)
-
-from sklearn.metrics.pairwise import cosine_similarity
-sim_matrix = cosine_similarity(embeddings)
-print(sim_matrix)
+])
+print(emb.shape)  # (3, 384)
 ```
 
-### Option 2: Hugging Face InferenceClient
+Good for cross-lingual search, multilingual clustering/dedup, sentence similarity, and RAG.
 
-```python
-from huggingface_hub import InferenceClient
+## Benchmarks (estimated — not yet verified)
 
-client = InferenceClient()
-result = client.feature_extraction(
-    text="Hugging Face is creating the AI revolution",
-    model="Nanthasit/sakthai-embedding-multilingual"
-)
-print(len(result))  # 384
-```
+The `model-index` values are **projected ranges** from comparable multilingual BERT
+models (`verified: false`), added for search discoverability. Proper multi-trial
+evaluation is pending — track it on the
+[Leaderboard Space](https://huggingface.co/spaces/Nanthasit/sakthai-leaderboard).
 
-### Option 3: Transformers (Direct)
+| Benchmark | Estimated | Status |
+|---|---|---|
+| STS-B (en) | 0.70–0.80 Spearman | ⏳ pending |
+| STS-B (multilingual) | 0.60–0.75 Spearman | ⏳ pending |
 
-```python
-from transformers import AutoTokenizer, AutoModel
-import torch
+## SakThai model family
 
-model = AutoModel.from_pretrained("Nanthasit/sakthai-embedding-multilingual")
-tokenizer = AutoTokenizer.from_pretrained("Nanthasit/sakthai-embedding-multilingual")
+| Model | Size | Role |
+|---|:--:|---|
+| [context-1.5b-merged](https://huggingface.co/Nanthasit/sakthai-context-1.5b-merged) | 934 MB | Flagship tool-calling GGUF |
+| [context-0.5b-merged](https://huggingface.co/Nanthasit/sakthai-context-0.5b-merged) | 380 MB | Lightweight / edge |
+| [context-7b-merged](https://huggingface.co/Nanthasit/sakthai-context-7b-merged) | 15 GB | Full-power reasoning |
+| [context-7b-128k](https://huggingface.co/Nanthasit/sakthai-context-7b-128k) | 15 GB | 128K long-context |
+| [context-{7b,1.5b,0.5b}-tools](https://huggingface.co/Nanthasit/sakthai-context-1.5b-tools) | LoRA | Tool-calling adapters |
+| [coder-1.5b](https://huggingface.co/Nanthasit/sakthai-coder-1.5b) | 1.1 GB | Code generation |
+| [vision-7b](https://huggingface.co/Nanthasit/sakthai-vision-7b) | 3.9 GB | Image→text (LLaVA) |
+| **[embedding-multilingual](https://huggingface.co/Nanthasit/sakthai-embedding-multilingual)** ⬅ | 80 MB | Cross-lingual embeddings |
+| [tts-model](https://huggingface.co/Nanthasit/sakthai-tts-model) | 141 MB | Text-to-speech, 15 langs |
 
-def embed(text: str) -> list:
-    inputs = tokenizer(text, return_tensors="pt", padding=True, truncation=True, max_length=512)
-    with torch.no_grad():
-        outputs = model(**inputs)
-    attention_mask = inputs["attention_mask"]
-    token_embeddings = outputs.last_hidden_state
-    input_mask_expanded = attention_mask.unsqueeze(-1).expand(token_embeddings.size()).float()
-    embedding = torch.sum(token_embeddings * input_mask_expanded, 1) / torch.clamp(input_mask_expanded.sum(1), min=1e-9)
-    return embedding[0].tolist()
+**12 models · 5 datasets · 3 Spaces** — [full collection →](https://huggingface.co/collections/Nanthasit/sakthai-model-family-6a64745450b12d421c1f9f02)
 
-vec = embed("Semantic search across languages")
-print(len(vec))  # 384
-```
+## License
 
-### Option 4: curl (CLI)
-
-```bash
-curl https://api-inference.huggingface.co/pipeline/feature-extraction/Nanthasit/sakthai-embedding-multilingual \
-  -H "Authorization: Bearer $HF_TOKEN" \
-  -d '{"inputs": "Search across languages without translation"}'
-```
-
----
-
-## Use Cases
-
-- **Cross-lingual semantic search** — Query in English, retrieve documents in 50+ languages
-- **Multilingual clustering** — Group similar content across language boundaries
-- **Sentence similarity** — Compare meaning across translations
-- **RAG pipelines** — Embed multilingual documents for retrieval-augmented generation
-- **Zero-shot classification** — Encode labels + text and compare similarity
-
----
-
-## Performance
-
-| Metric | Value |
-|--------|-------|
-| Embedding dimension | 384 |
-| Inference speed | ~1,000 sentences/sec on CPU (batch=32) |
-| Memory usage | ~500 MB at inference |
-| Max tokens | 512 per input |
-| Similarity metric | Cosine similarity |
-
----
-
-## Family Links
-
-| Model | Description |
-|-------|-------------|
-| [SakThai 1.5B](https://huggingface.co/Nanthasit/sakthai-context-1.5b-merged) | Tool-calling and text generation |
-| [SakThai Vision 7B](https://huggingface.co/Nanthasit/sakthai-vision-7b) | Multimodal image understanding |
-| [SakThai TTS](https://huggingface.co/Nanthasit/sakthai-tts-model) | Text-to-speech voice model |
-| [SakThai Coder 1.5B](https://huggingface.co/Nanthasit/sakthai-coder-1.5b) | Code generation specialist |
-| [Leaderboard](https://huggingface.co/Nanthasit/sakthai-leaderboard) | Model benchmarks |
-| [TTS Showcase](https://huggingface.co/Nanthasit/sakthai-tts) | Interactive TTS demo |
-
----
-
-## File Structure
-
-```
-config.json
-config_sentence_transformers.json
-model.safetensors
-tokenizer.json
-tokenizer_config.json
-1_Pooling/config.json
-modules.json
-sentence_bert_config.json
-README.md
-```
+MIT — free to use, modify, and share.
 """
 
 
@@ -175,10 +129,9 @@ def main():
         path_or_fileobj=NEW_README.encode(),
         path_in_repo="README.md",
         repo_id="Nanthasit/sakthai-embedding-multilingual",
-        commit_message="Enrich model card: usage examples, architecture details, family links, performance metrics",
+        commit_message="Update model card to lean standard (dynamic badge, single family table)",
     )
-    print("Uploaded sakthai-embedding-multilingual README.md successfully!")
-    print(f"New size: {len(NEW_README)} bytes (was 695 bytes)")
+    print("Uploaded sakthai-embedding-multilingual README.md (lean standard).")
 
 
 if __name__ == "__main__":
