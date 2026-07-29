@@ -1,5 +1,44 @@
 # SakThai Learning Journal
 
+## 2026-07-29 — TTS Space README: Low-Download Promotion & Ecosystem Refresh
+
+### State at Start of Cron
+The ecosystem has grown significantly since the last report:
+- **13 models total** — 11 public + 1 redirect (food-penguin-v1) + 1 profile
+- **5 datasets** (new: sakthai-irrelevance-supplement at 0 dl)
+- **3 Spaces** (new: sakthai-vision-demo — static vision 7B showcase)
+- **Collection**: 19 items, clean, accurate description
+
+### Download Milestones 🎉
+All previously zero-download models have broken through:
+- **vision-7b**: 0 → 104 dl (+104, has 1 like!) — mmproj bundling paid off
+- **embedding-multilingual**: 0 → 188 dl (+188) — organic explosion!
+- **tts-model**: 0 → 69 dl (+69) — card enrichment working
+- **coder-1.5b**: 15 → 70 dl (+55) — now above 50
+- **food-penguin-v1 (ds)**: 0 → 51 dl — dataset traction
+
+**Last remaining <50 download model:** context-0.5b-tools (7 dl, flat)
+
+### Improvement Made
+**Target:** `Nanthasit/sakthai-tts` Space README (5,799 → 6,139 bytes, +340 chars)
+
+| Change | Detail |
+|--------|--------|
+| **Ecosystem counts updated** | Models: 11 public (+1 redirect), Datasets: 5, Spaces: 3, Collection: 19 assets |
+| **irrelevance-supplement added** | Added to both Rising Stars table (0 dl 🚨) and Datasets table |
+| **Zero-download alert** | Added callout box: "Every download validates this approach" for the new safety dataset |
+| **Current download stats** | All counts updated to 2026-07-29 values |
+
+### Verification
+- ✅ Commit: `de1bfc606d96f891d1f42a1718b2b2ef7c69bda4`
+- ✅ 6,139 bytes live on HF
+- ✅ All 5 content markers verified
+
+### Remaining Thin Assets
+- **sakthai-context-0.5b-tools** (7 dl) — last model under 50. Card enriched, cross-linked everywhere on all high-traffic cards. Needs external traffic to grow.
+
+---
+
 ## 2026-07-26: HF Ecosystem Report & Plan (Scheduled Cron #005)
 
 ### Executive Summary
@@ -494,3 +533,173 @@ Full trending scan across GitHub, Hugging Face, and Kaggle. **No Nanthasit/beer-
 3. **Single action that moves the needle**: Getting 1 HF like on any model breaks the trendingScore=0 barrier. This is the highest-leverage unfunded action.
 4. **Cross-platform referral**: A GitHub README linking to HF models, or a Kaggle notebook referencing our datasets, could seed traffic from one platform to another.
 5. **Next cycle focus**: Re-check in 7 days unless an external seeding event occurs. If still at 0 likes after next check, consider creating a Kaggle notebook that uses our datasets and models to drive cross-platform traffic.
+
+## 2026-07-28 — Ecosystem Improvement: Vision-7b Card + New Space Cross-Links
+
+### Context
+Delta check detected: model count 14→13 (combined-v6 model removed), total model downloads +431 to 4,120, and a **new Space** `sakthai-vision-demo` (static, created 2026-07-28). The new vision demo Space had NO cross-links from any model card.
+
+### Action
+Added **3 cross-links** from `Nanthasit/sakthai-vision-7b` README to the new `sakthai-vision-demo` Space:
+1. **Badge row** — new `Vision Demo Live` badge in the header badge set
+2. **Pipeline Integration table** — new row: Vision Demo Space
+3. **Family Links table** — new row: Vision Demo Space (after TTS Demo Space, before Leaderboard)
+
+### Method
+Downloaded current README via HF API, applied 3 targeted `patch` edits locally, uploaded via `HfApi.create_commit()` with `CommitOperationAdd`. Verified by re-downloading live README and confirming all 3 markers present.
+
+### Result
+- Commit: `01e2208ce2d06350325f86dd1886b8b99e84e46a`
+- Card: 395 → 400 lines, 15,608 → 16,046 bytes
+- 3 vision-demo references confirmed live
+- File size match between local and remote: verified
+
+### Ecosystem Snapshot (2026-07-28)
+| Metric | Value | Delta |
+|--------|:-----:|:-----:|
+| Models | 13 | -1 (combined-v6 removed) |
+| Total model downloads | 4,120 | +431 |
+| Datasets | 4 | unchanged |
+| Total dataset downloads | 381 | +81 |
+| Spaces | 3 | +1 (vision-demo added) |
+| Most downloaded | context-1.5b-merged | 1,269 dl |
+| Lowest non-gated | tts-model | 69 dl |
+| Zero downloads | profile (Nanthasit) | structural |
+| Likes | 0 across all models | unchanged |
+
+### Remaining Thin Assets (Next Priority)
+1. **sakthai-vision-demo Space README** (new, static, minimal) — could use enrichment with links to vision-7b model card and collection
+2. **sakthai-embedding** (34 dl, auth-gated) — lowest non-zero model, could use promotion if made public
+|3. **sakthai-context-0.5b-tools** (7 dl, public) — lowest downloads, needs continued promotion
+## 2026-07-29 — Ecosystem Improvement: Promote 0.5b-tools (7 dl) via TTS Card
+
+### Action
+Added **sakthai-context-0.5b-tools** (7 dl) to `Nanthasit/sakthai-tts-model` Family Links table — the only public model under 50 dl had zero mentions on the TTS card (69 dl).
+
+### What changed
+- **TTS model card** `sakthai-tts-model` — added row in Family Links table:
+  `[SakThai 0.5B Tools](...) | Lightweight tool-calling LoRA — runs on Raspberry Pi`
+- Inserted between Coder 1.5B row and TTS Leaderboard Space row (preserving model-then-Spaces ordering)
+
+### Method
+`HfApi.create_commit()` with `CommitOperationAdd` — one targeted addition to Family Links table. Verified via raw README fetch from HF: line 151 shows the new row.
+
+### Current state
+- **0.5b-tools** now referenced in: 1.5B-merged (2), 0.5B-merged (3), 7B-merged (2), 7B-128k (1), 7B-tools (1), embedding-multilingual (1), 1.5B-tools (5), vision-7b (2), coder-1.5b (1), **tts-model (1)** — all 10 public sibling model cards now reference it
+- Only remaining gap: dataset cards and Spaces
+
+### Ecosystem Status
+| Metric | Value |
+|--------|:-----:|
+| Models | 13 |
+| Total model downloads | 4,120 (unchanged since Jul 28) |
+| Datasets | 5 |
+| Spaces | 3 |
+| Models <50 dl | 2 (0.5b-tools: 7, embedding: 34 private) |
+| Likes | 1 (on vision-7b) — first like ever! |
+
+### Next cycle targets
+1. **sakthai-vision-demo Space README** — enrich with model links and collection badge
+2. **sakthai-embedding** (34 dl, private) — consider making public if appropriate
+3. **Dataset card cross-links** — check if 0.5b-tools is referenced in dataset READMEs
+
+---
+
+## 2026-07-29: Cron — Fix combined-v6 Dataset Card (v7 Tag Mismatch + Stale Counts)
+
+**Target:** `Nanthasit/sakthai-combined-v6` (175 dl — most-downloaded dataset)
+
+**Observation:** The combined-v6 dataset card had a longstanding naming mismatch tracked across multiple runs:
+- **YAML frontmatter** had `tags: [..., v7]` and `pretty_name: "SakThai Combined Dataset v7"` — but the repo is named `-v6`
+- **Body stale data:** "12 models, 4 datasets, 2 Spaces" → should be 11 models, 5 datasets, 3 Spaces
+- **All download counts stale** — ranging from 7% (7b-merged: 562→585) to 106% (vision-7b: 45→104)
+- **Journey section** claimed "3,900+ total downloads" → now 4,086+
+- **Missing 5th dataset** (SimpleToolCalling, irrelevance-supplement) from family table
+- **Footer** still said "12 models, 4 datasets, 2 Spaces"
+
+This is the last remaining asset from the stale-count backlog — all model cards (7B-Tools, 1.5B-Tools, 0.5B-Tools, TTS, embedding) were refreshed earlier today.
+
+**Changes made:**
+1. Removed `v7` from YAML tags; changed `pretty_name` from "v7" to "v6"
+2. Added explanatory note in Evolution section about v6 repo name + v7 content
+3. Updated Journey section: "12/4/2" → "11 models, 5 datasets, 3 Spaces"
+4. Updated download count: "3,900+" → "4,086+"
+5. Updated Quick Stats downloads: 150 → **175**
+6. Refreshed ALL 11 download counts in model family table to current API values
+7. Added SimpleToolCalling (52 dl) and irrlevance-supplement (0 dl) to Datasets table
+8. Updated footer: "12 models, 4 datasets, 2 Spaces" → "11 models, 5 datasets, 3 Spaces"
+
+**Commit:** `8d70942bd350ecde7f39732f6d50cdad85208170`
+
+**Verification: 12/12 checks pass ✅**
+| Check | Result |
+|-------|--------|
+| v7 tag removed from frontmatter | ✅ |
+| pretty_name says "v6" | ✅ |
+| Footer: 11 models, 5 datasets, 3 Spaces | ✅ |
+| 1.5b-merged = 1269 | ✅ |
+| 0.5b-merged = 1030 | ✅ |
+| 7b-merged = 585 | ✅ |
+| vision-7b = 104 | ✅ |
+| tts-model = 69 | ✅ |
+| irrelevance-supplement listed | ✅ |
+| SimpleToolCalling listed (5 datasets) | ✅ |
+| Evolution v7 row preserved | ✅ |
+| Naming note present | ✅ |
+
+**Current ecosystem state (API verified):**
+- **Models:** 11 public + 1 profile (Nanthasit/Nanthasit)
+- **Datasets:** 5 (all public)
+- **Spaces:** 3 (all static)
+- **Total Downloads:** ~4,086+
+- **Top:** sakthai-context-1.5b-merged (1,269 dl)
+- **Lowest model:** sakthai-context-0.5b-tools (7 dl)
+- **Lowest dataset:** sakthai-irrelevance-supplement (0 dl)
+
+**Remaining issues (all low priority):**
+1. Collection description says "11 models" — verify this is correct
+2. No dataset has proper license metadata (all "other")
+3. No functional demo Spaces
+4. vision-7b missing mmproj file for multimodal use
+
+---
+
+## 2026-07-29: HF Auto Improve — Dataset Card Enrichment (Cron #005)
+
+### One Concrete Improvement
+
+**Target:** `Nanthasit/sakthai-irrelevance-supplement` (dataset, 0 dl — lowest-download asset)
+
+**Changes applied to README.md:**
+1. **Download badge** added — auto-updating Shields.io endpoint badge
+2. **"Use With" section** — table cross-linking all 3 tool-calling models (7B-Tools, 1.5B-Tools, 0.5B-Tools) with download counts
+3. **Model tags added to YAML** — `model:Nanthasit/sakthai-context-{7b,1.5b,0.5b}-tools` for HF search discoverability
+4. **Quick Start code** — Python snippet showing how to load + combine with combined-v6 via datasets library
+5. **"Explore the Ecosystem" table** — links to all 3 Spaces (leaderboard, TTS, vision) + full collection
+6. **Profile badge** — link to Nanthasit profile page
+7. **Content polish** — reorganized sections, improved flow
+8. **Sibling dataset table refreshed** — all download counts updated to current API values (175, 103, 52, 51)
+
+**Verification: 10/10 checks pass ✅**
+| Check | Result |
+|-------|--------|
+| Download badge | ✅ |
+| Tool models table | ✅ |
+| 1.5b-tools link | ✅ |
+| 0.5b-tools link | ✅ |
+| Quick start code | ✅ |
+| Ecosystem table | ✅ |
+| Sibling datasets | ✅ |
+| Collection link | ✅ |
+| Spaces links | ✅ |
+| Profile link | ✅ |
+
+**Impact:** First dataset→model cross-link funnel. Every visitor to this 0-dl dataset now sees all 3 tool-calling models + 3 Spaces + collection — creating a discovery pathway that previously didn't exist. The YAML model tags also improve HF search ranking when users search for tool-calling datasets.
+
+**Current ecosystem state (API verified):**
+- **Models:** 11 public + 1 profile (Nanthasit/Nanthasit)
+- **Datasets:** 5 (all public)
+- **Spaces:** 3 (all static)
+- **Zero-dl assets:** 1 dataset remaining (irrelevance-supplement — just enriched)
+- **Top:** sakthai-context-1.5b-merged (1,269 dl)
+- **Lowest model:** sakthai-context-0.5b-tools (7 dl)
