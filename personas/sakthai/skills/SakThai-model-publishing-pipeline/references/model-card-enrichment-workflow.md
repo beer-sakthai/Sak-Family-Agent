@@ -1,8 +1,8 @@
 # Model Card Standard (Lean) — HF Card Workflow
 
-The canonical rules for writing/updating any `Nanthasit/*` model or dataset card. Cards
-should read like an ML engineer wrote them: accurate, scannable, low-maintenance. Keep the
-House of Sak identity, drop the marketing bloat.
+The canonical rules for writing/updating any `Nanthasit/*` model, dataset, **or Space**
+card. Cards should read like an ML engineer wrote them: accurate, scannable,
+low-maintenance. Keep the House of Sak identity, drop the marketing bloat.
 
 > Adopted 2026-07-29 after a full ecosystem rewrite. This REPLACES the old "enrich every
 > card with a full family table + download counts + comparison tables + Rising Stars"
@@ -56,6 +56,14 @@ House of Sak identity, drop the marketing bloat.
 Datasets follow the same spine: identity → What it is → Quick start (load snippet) →
 structure/stats → trained-models → License. Right-size the card to the content (a 10-example
 dataset does not need a 260-line card).
+
+**Space cards** (`README.md` in a Space repo) follow the same lean rules — same don'ts (no
+funnel, no hardcoded counts, no repeated family tables, story on the profile). Two extra
+constraints: (a) **preserve the Space config frontmatter** (`title`, `emoji`, `colorFrom`,
+`colorTo`, `sdk`, `pinned`) exactly, or the Space breaks — edit only the body and trim
+promo-only tags; (b) the demo page itself (`index.html`) must get its numbers **live from
+the HF API** (`https://huggingface.co/api/models?author=Nanthasit`), never hardcode download
+counts in the page.
 
 ## Canonical family table (copy verbatim; mark the current repo with ⬅)
 
