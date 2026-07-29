@@ -12,6 +12,12 @@ platforms: [linux, macos, windows]
 
 Every model (and dataset) repository on the Hugging Face Hub has a **model card** — a `README.md` file whose YAML frontmatter controls how the Hub displays, filters, and indexes the repo.
 
+> **For `Nanthasit/*` card *bodies*, follow the lean card standard**:
+> `personas/sakthai/skills/SakThai-model-publishing-pipeline/references/model-card-enrichment-workflow.md`.
+> One dynamic download badge (no hardcoded counts), one family table (size + role), story on
+> the profile card only, honest evals, and **no** "Rising Stars"/funnel sections. This file
+> below covers frontmatter/metadata mechanics only.
+
 ## Why It Matters
 
 - The Hub parses the frontmatter to set the model’s **pipeline tag** (text-generation, image-classification, etc.).

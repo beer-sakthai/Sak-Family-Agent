@@ -1,24 +1,96 @@
-# Model Card Enrichment Workflow
+# Model Card Standard (Lean) — HF Card Workflow
 
-Enrich all model cards in an HF account with consistent branding, family cross-links, benchmarks, and professional sections.
+The canonical rules for writing/updating any `Nanthasit/*` model or dataset card. Cards
+should read like an ML engineer wrote them: accurate, scannable, low-maintenance. Keep the
+House of Sak identity, drop the marketing bloat.
 
-## Pattern
+> Adopted 2026-07-29 after a full ecosystem rewrite. This REPLACES the old "enrich every
+> card with a full family table + download counts + comparison tables + Rising Stars"
+> pattern, which produced stale, repetitive, low-credibility cards. **Do not reintroduce
+> that pattern.**
 
-1. **Branding header** — Add "House of Sak" banner with profile + collection badges
-2. **Family cross-link table** — Every card gets a full table of all models with sizes and download counts
-3. **Benchmark comparison** — For LLM models, add a professional comparison vs similar-sized models using real published data (MMLU, BBH from papers) + your own BFCL tool-calling results
-4. **Controlled comparison** — Run the base model side-by-side with your fine-tuned version on the same hardware
-5. **Ollama guide** — Add Modelfile creation steps
-6. **Hardware requirements** — RAM (min/recommended/disk) table
-7. **Training details** — Method, base model, rank, dataset size, context length
+## Global rules (apply to every card)
+
+1. **No hardcoded download numbers anywhere.** Use ONE dynamic badge at the top:
+   ```html
+   <img src="https://img.shields.io/endpoint?url=https://huggingface.co/api/models/Nanthasit/REPO&label=downloads&color=blue&cacheSeconds=3600" alt="Downloads"/>
+   ```
+   (Datasets: `.../api/datasets/Nanthasit/REPO`.) Family tables carry **size + role**, never
+   counts. Hardcoded numbers go stale the moment you push — never emit them, and never emit a
+   `badge/downloads-625-blue`-style static badge.
+2. **One family table per card**, not three. Use the canonical table below verbatim.
+3. **Personal / recovery story lives on the profile card only.** Every other card gets a
+   one-line identity + a `[Read the story →](https://huggingface.co/Nanthasit)` link. Never
+   duplicate the full story across cards.
+4. **Honest evals only.** Never set `verified: true` (that means HF-verified — we are not).
+   Label internal numbers "internal, not third-party verified". `model-index` values must be
+   real numbers (e.g. `100.0`), never strings like `5/5`. Mark base-model reference scores as
+   base-model scores.
+5. **No funnel sections.** Do NOT add "Rising Stars", "Low-Download Gems", "Growing the
+   Garden", "Hidden Gems", "zero-download alert", or multi-bullet "Support the Project"
+   sections. One short support line at most.
+6. **Canonical facts** (never contradict):
+   - Ecosystem size: **12 models · 5 datasets · 3 Spaces**.
+   - Collection URL (full, hashed): `https://huggingface.co/collections/Nanthasit/sakthai-model-family-6a64745450b12d421c1f9f02`
+   - `food-penguin-v1` = **restaurant-analytics tool-calling** dataset (7 functions), NOT image classification.
+   - There is **no** `sakthai-context-paper` repo — never add a "Paper" link to it.
+   - Private English `sakthai-embedding` is superseded by `sakthai-embedding-multilingual`;
+     do not list the private repo in family tables.
+7. **Preserve YAML frontmatter**; only edit content after the closing `---`. Don't re-upload
+   unchanged cards. Spot-check 2–3 cards a few minutes after a batch push (a sibling-agent
+   commit or CDN cache can mask the result).
+
+## Section order (models)
+
+1. `<h1>` + one-line tagline
+2. Badge row (dynamic downloads + license + params/size + collection)
+3. One-blockquote identity + `[Read the story →]` link
+4. `## What it is` — 2–3 sentences: base, method, what it does
+5. `## Quick start` — ONE primary code block (+ one CPU/Ollama line if GGUF)
+6. `## Training` — compact table + one-line architecture
+7. `## Evaluation` — honest table, internal-vs-verified labeled
+8. `## SakThai model family` — the canonical table below (once)
+9. `## Links` — inline, one line
+10. `## License`
+
+Datasets follow the same spine: identity → What it is → Quick start (load snippet) →
+structure/stats → trained-models → License. Right-size the card to the content (a 10-example
+dataset does not need a 260-line card).
+
+## Canonical family table (copy verbatim; mark the current repo with ⬅)
+
+```markdown
+| Model | Size | Role |
+|---|:--:|---|
+| [context-1.5b-merged](https://huggingface.co/Nanthasit/sakthai-context-1.5b-merged) | 934 MB | Flagship tool-calling GGUF |
+| [context-0.5b-merged](https://huggingface.co/Nanthasit/sakthai-context-0.5b-merged) | 380 MB | Lightweight / edge |
+| [context-7b-merged](https://huggingface.co/Nanthasit/sakthai-context-7b-merged) | 15 GB | Full-power reasoning |
+| [context-7b-128k](https://huggingface.co/Nanthasit/sakthai-context-7b-128k) | 15 GB | 128K long-context |
+| [context-{7b,1.5b,0.5b}-tools](https://huggingface.co/Nanthasit/sakthai-context-1.5b-tools) | LoRA | Tool-calling adapters |
+| [coder-1.5b](https://huggingface.co/Nanthasit/sakthai-coder-1.5b) | 1.1 GB | Code generation |
+| [vision-7b](https://huggingface.co/Nanthasit/sakthai-vision-7b) | 3.9 GB | Image→text (LLaVA) |
+| [embedding-multilingual](https://huggingface.co/Nanthasit/sakthai-embedding-multilingual) | 80 MB | Cross-lingual embeddings |
+| [tts-model](https://huggingface.co/Nanthasit/sakthai-tts-model) | 141 MB | Text-to-speech, 15 langs |
+
+**12 models · 5 datasets · 3 Spaces** — [full collection →](https://huggingface.co/collections/Nanthasit/sakthai-model-family-6a64745450b12d421c1f9f02)
+```
+
+## Gathering facts (mechanics unchanged)
+
+Pull architecture from `config.json` (`num_hidden_layers`, `hidden_size`, etc.), LoRA config
+from `adapter_config.json`, YaRN from `config.json` `rope_scaling`. Use official tech reports
+for any base-model reference numbers and **label them as base-model scores**, not this
+fine-tune's.
 
 ## Execution
 
-Iterate over ALL models under the author. Use `HfApi.upload_file()` to update each README.md. Check for existing content before adding to avoid duplicates.
+Iterate over models under the author with `HfApi.upload_file()` to update each `README.md`.
+Preserve frontmatter, skip unchanged cards, verify after push. A worked reference set of lean
+cards already lives on every `Nanthasit/*` repo (rewritten 2026-07-29) — match that style.
 
 ## Pitfalls
 
-- Preserve YAML frontmatter — always insert content AFTER the closing `---`
-- Don't re-upload unchanged cards
-- Use official tech report numbers for comparison tables, not estimates
-- Spot-check 2-3 URLs after batch updates to confirm changes landed
+- Preserve YAML frontmatter — insert content only AFTER the closing `---`.
+- Don't re-upload unchanged cards.
+- Never emit hardcoded download counts or funnel sections (see rules 1 and 5).
+- Spot-check 2–3 cards after a batch push to confirm changes landed and weren't reverted.
