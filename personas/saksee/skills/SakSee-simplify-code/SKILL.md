@@ -1,5 +1,6 @@
 ---
 name: SakSee-simplify-code
+version: 0.1.0
 description: Parallel 3-agent cleanup of recent code changes.
 category: software-development
 tags: [refactoring, cleanup, code-quality]

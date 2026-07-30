@@ -1,5 +1,6 @@
 ---
 name: SakSee-node-inspect-debugger
+version: 0.1.0
 description: Debug Node.js via --inspect + Chrome DevTools Protocol CLI.
 category: software-development
 tags: [nodejs, debugger, cdp]

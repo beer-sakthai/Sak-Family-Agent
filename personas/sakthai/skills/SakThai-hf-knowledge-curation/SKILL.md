@@ -1,5 +1,6 @@
 ---
 name: SakThai-hf-knowledge-curation
+version: 0.1.0
 description: "Autonomous Hugging Face knowledge curation — learning-loop pattern for cron jobs and agents: discover new HF subtopics, avoid duplicates, research from external sources, and author class-level skills. Covers fallback strategies when primary scraping paths fail."
 category: mlops
 author: SakThai

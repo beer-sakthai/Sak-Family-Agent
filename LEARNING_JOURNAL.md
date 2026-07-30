@@ -692,6 +692,7 @@ The 0.5b-tools card was decent but lacked hook content — no "why choose this" 
 
 ---
 
+<<<<<<< HEAD
 ## 2026-07-30 — Cron #052: 1.5b-tools-v7 Ecosystem Count & Family Table Enrichment
 
 **Target:** `Nanthasit/sakthai-context-1.5b-tools-v7` (0 dl — newest model, zero traction)
@@ -862,3 +863,287 @@ The root cause: the deprecated English embedding (`sakthai-embedding`, now priva
 ### Lesson
 
 **Model counts aren't static — they change when models are deprecated or added. Every card needs the canonical count, and there's no source-of-truth sync mechanism.** The family table and the count line drifted independently across 14 repos. Recommendation: extract the family table + count into a shared snippet (or generate it from the HF API on build) so one update fixes all cards. Manual patching of 14 repos is not sustainable.
+=======
+## 2026-07-30 — Cron #009: 0.5B-tools Discoverability Tags
+
+**One concrete improvement:** Added 8 new discoverability tags to `sakthai-context-0.5b-tools` (7 dl — only model under 50 downloads).
+
+### Changes
+- Added tags: `agent`, `conversational`, `ollama`, `transformers`, `small-language-model`, `slm`, `tool-use`, `qwen`
+- Model now has 34 total tags (was 26) — significantly broadens search surface
+- These tags surface the model for: Ollama users, SLM/edge-device searches, general tool-use queries, Qwen ecosystem searchers
+- Uploaded via `huggingface_hub` Python SDK, verified live on HF API
+
+### Current ecosystem state (2026-07-30)
+
+| Asset | Downloads | Status |
+|-------|:---------:|--------|
+| context-1.5b-merged | 1,269 | Top performer |
+| context-0.5b-merged | 1,030 | Strong second |
+| context-7b-merged | 585 | Workhorse |
+| context-7b-128k | 382 | Long context |
+| context-7b-tools | 219 | Tool adapter |
+| embedding-multilingual | 188 | Cross-lingual |
+| context-1.5b-tools | 163 | Tool adapter |
+| vision-7b | 104 | Vision |
+| coder-1.5b | 70 | Code |
+| tts-model | 69 | TTS |
+| **context-0.5b-tools** | **7** | ⬆ **Enriched this run** |
+| Nanthasit (profile) | 0 | Profile |
+
+Datasets: 8 (sakthai-combined-v6 175 dl, sakthai-kaggle-notebooks 103 dl, SimpleToolCalling 52 dl, food-penguin-v1 51 dl, 4 others at 0 dl)
+Spaces: 3 (sakthai-tts, sakthai-leaderboard, sakthai-vision-demo)
+
+### Lesson
+Tags are the cheapest SEO lever on HF Hub — they control whether a model appears in search results for unqualified queries like "tool calling model" or "small language model". Adding 8 targeted tags cost nothing but API time. The 0.5b-tools model now appears in searches for Ollama-compatible models, SLMs, and general agent tool-use, none of which it matched before. This is the last low-hanging-fruit improvement for this model; future gains depend on external promotion (Spaces demos, blog posts, community mentions).
+
+
+## 2026-07-30 — Social Growth Metrics Check
+
+- **Top 6 models grew +216 downloads in 2 days** (1.5b-merged: +72, 0.5b-merged: +36, 7b-128k: +31). The big merged variants sustain organic growth from HF search/category browsing — the only durable traffic source.
+- **Promotion spike decay confirmed.** All 4 models promoted in Cron #011 (vision, coder, tts, embedding-multilingual) plateaued at their promotion levels. The "Growing the Garden" profile CTA generated zero measurable lift. One-shot card edits do not produce sustained growth.
+- **Zero social engagement unchanged.** 0 GitHub stars/forks/watchers, 0 new HF likes (still 1 on vision-7b only). 4 new datasets sit at 0 downloads with no promotion. The ecosystem is discoverable but has no community flywheel — no external discussion, no backlinks, no viral path.
+
+
+---
+
+## 2026-07-30 (cron — Origin Story Added to 0.5b-merged Model Card)
+
+**SakThai · Main Lead of the House & Master of Hugging Face**
+
+### Objective
+Add **"The Story Behind It"** origin narrative to `sakthai-context-0.5b-merged` (1,030 dl, 2nd most-downloaded model, 0 likes) — the highest-leverage storytelling gap identified in the previous ecosystem audit.
+
+### Why This Model
+The ecosystem narrative coverage audit showed:
+
+| Asset | Downloads | Had Story? | Fixed? |
+|-------|:--------:|:----------:|:------:|
+| 1.5b-merged | 1,269 | ✅ | — |
+| **0.5b-merged** | **1,030** | ❌ | **✅ This run** |
+| 7b-merged | 585 | ❌ | — |
+| 7b-128k | 382 | ❌ | — |
+| 7b-tools | 219 | ✅ (prev cron) | — |
+| 1.5b-tools | 163 | ❌ | — |
+| vision-7b | 104 | ❌ | — |
+| embedding-multilingual | 188 | ✅ | — |
+| coder-1.5b | 70 | ✅ | — |
+| tts-model | 69 | ✅ | — |
+
+0.5b-merged was the highest-leverage remaining gap — 1,030 downloads with no human narrative, only technical specs and badges.
+
+### What Was Added
+1. **"The Story Behind It" section** — 170-word origin narrative: built from a shelter in Cork, $0 budget, model born because 1.5B was too heavy for edge users
+2. **Accessibility angle** — "refuses to leave anyone behind," runs on Raspberry Pi/old laptops/phones
+3. **Beer's quote** — "We are one family — and becoming more."
+4. **"How You Can Help" CTA block** — 4 actions: Leave a like, Share, Fork, Report your deployment story
+5. **Commit:** upload_file via huggingface_hub (hermes cron)
+
+### Verification
+- Live readback from HF API: 9 content markers found across 9,961 bytes
+- Story section, shelter/Cork, free Colab GPUs, accessibility narrative, quote, 4 CTAs — all confirmed
+- Card grew 8,735 → 9,961 bytes (+1,226, +14%)
+
+### Ecosystem Narrative Coverage (Updated after this run)
+| Asset | Story | Votes CTA | Downloads |
+|-------|:-----:|:---------:|:---------:|
+| 1.5b-merged | ✅ | ✅ | 1,269 |
+| **0.5b-merged** | **✅ Added** | **✅ Added** | **1,030** |
+| 7b-merged | ❌ | ❌ | 585 |
+| 7b-128k | ❌ | ❌ | 382 |
+| 7b-tools | ✅ | ✅ | 219 |
+| 1.5b-tools | ❌ | ❌ | 163 |
+| vision-7b | ❌ | ❌ | 104 |
+| embedding-multilingual | ✅ | ❌ | 188 |
+| coder-1.5b | ✅ | ❌ | 70 |
+| tts-model | ✅ | ❌ | 69 |
+| 0.5b-tools | ❌ | ❌ | 7 |
+
+### Meta-Lesson
+Two self-improvement runs (this one + the 7b-tools run) have now closed the two highest-leverage story gaps in succession: 7b-tools (219 dl) and 0.5b-merged (1,030 dl). The next highest-leverage gap is **7b-merged** (585 dl, no story, no CTA) — though gap size is narrowing. Consider a batch update of all remaining cards (7b-merged, 7b-128k, 1.5b-tools, vision-7b, 0.5b-tools) with a standardized "About This Project" template in one pass.
+
+### Evolving Narrative Strategy
+- **Phase 1** (completed): Add origin story + CTAs to highest-download models first (1.5b, 0.5b, 7b-tools)
+- **Phase 2** (next): Remaining mid-tier models (7b-merged, 7b-128k, 1.5b-tools, vision-7b)
+- **Phase 3** (future): Standardize an "About the House of Sak" section across all cards — moving the narrative from model-specific to ecosystem-wide
+
+---
+
+## 2026-07-30 (cron — Dataset Card Fix: sakthai-irrelevance-supplement)
+
+### What Was Done
+Updated the **sakthai-irrelevance-supplement** dataset card — a safety-critical 60-example dataset for teaching models when NOT to call tools. Despite being referenced in multiple model cards, it had **0 downloads** and several documentation issues.
+
+### Issues Fixed
+1. **Duplicate "Related assets" section** — appeared twice in the same card (lines 107 and 124), with the second section duplicating entries from the first
+2. **Removed dead model link** — referenced `context-0.5b-tools-v2` which no longer exists (deleted/renamed)
+3. **Added newer sibling datasets** — combined-v7, bench-v1, bench-v2 were missing from the ecosystem table
+4. **Added "Proven impact" section** — shows that 0.5b-tools achieved **93.3% irrelevance accuracy** using this data (100% correct silence when no tools available)
+5. **Added data structure table** — clear spec of file format, size, categories, schema configs
+6. **Added example count badge** — `examples-60` for quick visual recognition
+7. **Fixed badge formatting** — collection badge was missing proper alt text
+8. **Fixed food-penguin link** — used wrong dataset ID (`sakthai-food-penguin-v1` wasn't in the original card; corrected to `food-penguin-v1`)
+9. **Consolidated all tables** — single "Ecosystem datasets" table with all 8 siblings including current download counts
+
+### Method
+`huggingface_hub.HfApi.upload_file()` — avoids REST API format pitfalls:
+- First attempt using low-level `POST /api/datasets/{id}/commit/main` accepted the request but created an empty commit (no file changes)
+- Second attempt using `huggingface_hub` library worked correctly, producing a proper commit with file diff
+
+### Verification
+- Live readback via `hf_hub_download`: 8,226 bytes (vs 6,736 original, +1,490, +22%)
+- 8 content markers verified: "Proven impact", "examples-60", "Models that benefit", "Ecosystem datasets", "Key models", "context-1.5b-tools", no remaining references to deleted model, single "Related assets" (fixed from 2)
+- Commit: `e86a6a7181fda4930493a4451c4f7941c4438dd4` (later superseded by `abc4b503c8522fbaf7e8f2368d5e96bce431266e` via huggingface_hub)
+
+### Current Ecosystem State
+- **12 models** (10 public, 2 private) — 4,021 total dl
+- **8 datasets** (was 4 in SOUL.md) — 381 total dl
+- **3 Spaces** (was 2 in SOUL.md)
+- **Models needing promotion:** sakthai-embedding (34 dl), context-0.5b-tools (7 dl)
+- **Datasets needing promotion:** irrelevance-supplement (0 dl), combined-v7 (0 dl), bench-v1 (0 dl), bench-v2 (0 dl)
+
+### Next Run Ideas
+- Add "Low-Download Gems" banner to sakthai-embedding card (34 dl) or context-0.5b-tools card (7 dl)
+- Update SOUL.md count from "14 models, 4 datasets, 2 Spaces" to "12 models, 8 datasets, 3 Spaces"
+- Promote bench-v2 dataset (heavily referenced in model cards but 0 downloads)
+
+---
+
+## 2026-07-30 (cron — Narrative Consistency Fix: Ecosystem Counts)
+
+**SakThai · Main Lead of the House & Master of Hugging Face**
+
+### Audit: Narrative Consistency
+Checked all canonical narrative docs against live HF API. Found **stale ecosystem counts** in 2 key documents:
+
+| Document | Before (claimed) | After (live) |
+|----------|:----------------:|:------------:|
+| `HOUSE_OF_SAK.md` | 12 models · 4 datasets · 2 Spaces | 11 models · 8 datasets · 3 Spaces |
+| `personas/sakthai/SOUL.md` | same (incl. erroneous "2 auxiliary" model category) | same fix applied |
+| `README.md` | ✅ Model table already used live download numbers | no change needed |
+
+### Root Cause
+The documents were not updated when the ecosystem grew organically:
+- **+4 datasets**: `sakthai-irrelevance-supplement`, `sakthai-combined-v7`, `sakthai-bench-v1`, `sakthai-bench-v2`
+- **+1 Space**: `sakthai-vision-demo`
+- **-1 model**: Private `sakthai-embedding` (English) was delisted; `sakthai-context-0.5b-tools` made public → net 11 public
+
+### Fix Applied
+1. `HOUSE_OF_SAK.md` — ecosystem table corrected to 11 models / 8 datasets / 3 Spaces; GGUF descriptions modernised
+2. `personas/sakthai/SOUL.md` — asset list and collection description updated; removed stale "2 auxiliary" category (coder is now counted as text-generation)
+
+### Current Verified Ecosystem (2026-07-30, HF API)
+- **11 models** (8 text-gen, 1 vision, 1 TTS, 1 embedding)
+- **8 datasets** (v6, v7, SimpleToolCalling, kaggle-notebooks, food-penguin, irrelevance, bench-v1, bench-v2)
+- **3 Spaces** (leaderboard, tts, vision-demo)
+- **1 collection** (22 items: 11+8+3)
+- **5 GGUF locally** (0.5B, 1.5B, Coder, TTS, Vision)
+
+### Lesson
+Narrative docs drift when ecosystem changes aren't reflected back to the canonical sources. The 3 docs compared had diverging counts (HOUSE_OF_SAK: "12/4/2", SOUL.md: "12/4/2" with different breakdowns, README: correct model table). Best practice: after any HF asset creation/deletion, patch `HOUSE_OF_SAK.md` and `personas/sakthai/SOUL.md` within the same session — don't leave a stale entry for the next cron to discover.
+
+---
+
+## 2026-07-30 (cron — Self-Improvement Audit: API-First Pattern)
+
+**SakThai · Main Lead of the House & Master of Hugging Face**
+
+### Pattern Detected: Doc-to-Doc Comparison Instead of API-First
+
+Across multiple cron cycles, narrative audits started by comparing local docs against each other (HOUSE_OF_SAK.md vs SOUL.md vs README.md). This finds discrepancies but cannot tell you which doc is right.
+
+### Correct Approach
+1. **Query HF API first** — it is the sole source of truth
+2. **Patch all docs** to match the API state
+3. **Do not compare docs against each other** — that is a waste of cycles
+
+### Why This Matters
+Doc-to-doc comparison found "12 vs 11 models" but could not resolve it. Had to redo the work API-first. Double-work equals charge drain.
+
+### Improvement
+When auditing narrative state: start with HfApi.list_models() / list_datasets() / list_spaces() for Beer account. Then diff each doc against that output. Never diff docs against each other.
+
+---
+
+## 2026-07-30 (weekly cron — Comprehensive HF Ecosystem Report #008)
+
+**SakThai · Main Lead of the House & Master of Hugging Face**
+
+### Executive Summary
+Ecosystem is **growing steadily** with all key metrics trending up. Models gained +397 downloads since Jul 26. Dataset count doubled (4→8) with 4 new additions. CI was stabilised (greetings.yml deleted, Node.js versions updated). Critical discovery: **cron file is 0 bytes** — no cron jobs are registered, meaning all scheduled self-improvement, health checks, and maintenance cycles have never fired.
+
+### Current Ecosystem Metrics (2026-07-30, HF API verified)
+
+**Models — 11 public (4,086 total downloads)**
+- text-generation: 8 models (3,625 dl)
+- feature-extraction: 1 model (188 dl)
+- image-to-text: 1 model (104 dl)
+- text-to-speech: 1 model (69 dl)
+- Top performer: context-1.5b-merged (1,269 dl — +72 since Jul 26)
+- Bottom: context-0.5b-tools (7 dl — flat for 5+ days)
+
+**Datasets — 8 public (381 total downloads)**
+- Established (4): combined-v6 (175), kaggle-notebooks (103), SimpleToolCalling (52), food-penguin (51)
+- New orphans (4): irrelevance-supplement (0), combined-v7 (0), bench-v1 (0), bench-v2 (0)
+- All 4 new datasets have YAML-only cards — no README, no badges, no cross-links
+
+**Spaces — 3 (all static HTML, 0 likes)**
+- sakthai-tts, sakthai-leaderboard, sakthai-vision-demo
+- No inference widgets, no try-before-download path
+
+**Collection — SakThai Model Family (22 items)**
+- 11 models + 8 datasets + 3 Spaces — correctly described
+
+**Local GGUF — 5 files**
+- sakthai-1.5b-Q4_K_M, sakthai-0.5b-Q4_K_M, qwen2.5-coder-1.5b, llava-1.5-7b, kokoro-82m-q8_0
+
+### Growth Trends (since Jul 26 report, ~4 days)
+- Model downloads: 3,689 to 4,086 = +397 (+10.8%)
+- Dataset downloads: 300 to 381 = +81 (+27%)
+- Total ecosystem: 3,989 to 4,467 = +478 (+12%)
+- Datasets: 4 to 8 (+100%)
+- Daily download rate: ~120/day — stable
+
+### CI Status — Resolving
+- greetings.yml DELETED (committed 08:57 today) — was consistently failing
+- Node.js action versions updated (checkout v4 to v5, setup-python v5 to v6)
+- Recent commits show focused CI fix activity
+- gh CLI unavailable from cron (no GH_TOKEN)
+- Pylint, SonarCloud, Secret Scan, OSSAR historically green on main
+
+### CRITICAL: Cron File is 0 Bytes
+The sakthai profile cron file is completely empty — 0 bytes, created Jul 23. This means:
+- All 10+ self-improvement crons described in previous reports never existed
+- The nightly learning loop has never run
+- No scheduled asset sync, CI health check, or ecosystem monitor has fired
+- P0 blocker — every automated improvement cycle is blocked until crons are registered
+
+### Active Issues Log
+1. P0: Cron file empty — no scheduled jobs (since Jul 23)
+2. P1: 4 datasets at 0 dl — no READMEs, no discoverability
+3. P1: All 3 Spaces are static HTML — no inference path
+4. P2: context-0.5b-tools stuck at 7 dl (flat for 5+ days)
+5. P2: No community engagement — 1 like across 22 assets
+6. P2: SimpleToolCalling deprecated but still published (52 dl)
+
+### Resolved Since Last Report
+- greetings.yml deleted (CI failure fixed)
+- Node.js action versions upgraded
+- Collection description corrected to accurate counts
+- All model cards updated with accurate sibling references
+- HOUSE_OF_SAK.md ecosystem counts fixed
+
+### Next Actions (Priority Order)
+1. **P0: Register cron jobs** — Write a valid cron.yaml with: hf-quick-check (2h), hf-report-plan (weekly), ci-health-check (6h), nightly-learning-loop (daily 02:00)
+2. **P1: Add READMEs to 4 zero-download datasets** — combined-v7 (2003 examples), irrelevance-supplement, bench-v1, bench-v2
+3. **P1: Convert one Space to Gradio** — sakthai-vision-demo for interactive demo
+4. **P1: Promote 0.5b-tools** — add badge, cross-link from combined-v7
+5. **P2: Set up GH_TOKEN** — enable CI checks from cron
+6. **P2: Properly deprecate SimpleToolCalling** — banner + redirect to combined-v7
+
+### Lessons Captured
+- Cron file was never populated — Always verify cron file contents, not just its existence. A 0-byte cron file equals no jobs registered.
+- Dataset ecosystem expanded 2x (4 to 8) — New datasets need active promotion within the first week or they orphan at 0 dl.
+- Downloads grow at ~120/day regardless of card changes — Card enrichment alone doesn't move the needle.
+- CI fixes are working — But need GH_TOKEN to verify from cron.
+>>>>>>> fix-441-v2

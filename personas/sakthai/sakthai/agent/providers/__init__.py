@@ -189,7 +189,7 @@ def _build_google_client() -> Any:
         )
 
     try:
-        credentials = Credentials(token=token)  # type: ignore[no-untyped-call]
+        credentials: Credentials = Credentials(token=token)  # type: ignore[no-untyped-call]
         return genai.Client(
             vertexai=True,
             project=project,

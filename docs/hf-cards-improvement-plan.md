@@ -9,7 +9,7 @@ House of Sak identity.
 **Done:** All 16 cards (11 model + 4 dataset + profile) rewritten to the lean template and
 pushed. Bug fixes (dead paper links, fake `verified:true`, malformed model-index, dupes)
 applied first. Downloads → dynamic badge only; story → profile + link; counts unified to
-**12 models · 5 datasets · 3 Spaces**; food-penguin correctly labeled restaurant-analytics
+**11 models · 8 datasets · 3 Spaces**; food-penguin correctly labeled restaurant-analytics
 tool-calling. Deleted the empty `food-penguin` **model** redirect stub (dataset intact).
 Private English `sakthai-embedding` delisted from family tables (repo kept private).
 
@@ -31,7 +31,7 @@ it's superseded by the multilingual model).
 4. **Honest evals**: label internal scores "internal, not third-party verified". Never
    `verified: true` unless HF-verified. Keep `verified: false` model-index entries.
 5. **Canonical facts** (fix wherever wrong):
-   - Ecosystem size: **12 models · 5 datasets · 3 Spaces**.
+   - Ecosystem size: **11 models · 8 datasets · 3 Spaces**.
    - `food-penguin-v1` = **restaurant-analytics tool-calling** dataset (7 functions),
      NOT "food image classification".
    - License: models Apache-2.0 (Qwen base); datasets state their real license, no

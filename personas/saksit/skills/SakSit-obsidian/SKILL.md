@@ -1,5 +1,6 @@
 ---
 name: SakSit-obsidian
+version: 0.1.0
 description: Read, search, create, and edit notes in the Obsidian vault.
 platforms: [linux, macos, windows]
 ---
