@@ -11,12 +11,11 @@ description: >
   file naming conventions, sharding rules, the config-parquet-and-info job
   runner, and how libviewer's Rust engine enables page-pruned queries.
 version: 1.0.0
-description: "Sakthai Hf Datasets Server Parquet Conversion Pipeline Deep Dive"
 metadata:
   hermes:
     tags: [huggingface, datasets, server, parquet, conversion, pipeline, streaming, rust, pyarrow]
     category: mlops
-
+category: mlops
 ---
 
 # HF Datasets Server Parquet Conversion Pipeline — Complete Architecture

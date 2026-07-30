@@ -7,6 +7,7 @@ version: 1.0.0
 type: reference
 references:
   - references/hf-learnings.md
+category: mlops
 ---
 
 # HF Hub Spaces Persistent Storage

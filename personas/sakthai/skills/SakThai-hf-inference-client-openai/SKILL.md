@@ -4,6 +4,7 @@ author: SakThai
 license: MIT
 description: "Deep reference on HF InferenceClient's OpenAI API compatibility — chat.completions.create, structured outputs (JSON Schema / regex), function calling, and streaming."
 version: 1.0.0
+category: mlops
 tags: [huggingface, inference, client, openai, compatibility, structured-outputs, function-calling, json-schema, streaming]
 platforms: [linux, macos, windows]
 ---

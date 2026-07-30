@@ -8,6 +8,7 @@ metadata:
   hermes:
     tags: [telegram, media, files, images, audio, video]
     category: communication
+category: communication
 ---
 
 # Telegram Media

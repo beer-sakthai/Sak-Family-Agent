@@ -1,10 +1,7 @@
 ---
-name: SakThai-hf-hub-agent-traces-session-traces-format
-version: 1.0.0
-description: "Sakthai Hf Hub Agent Traces Session Traces Format"
 author: SakThai
 license: MIT
-
+category: mlops
 ---
 
 # HF Hub Agent Traces & Session Traces Format

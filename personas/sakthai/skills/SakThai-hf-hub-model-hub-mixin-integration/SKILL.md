@@ -9,12 +9,11 @@ description: >
   card generation, config serialization, and the choice between helpers vs. class
   inheritance approaches.
 version: 1.0.0
-description: "Sakthai Hf Hub Model Hub Mixin Integration"
 metadata:
   hermes:
     tags: [huggingface, hub, mixin, integration, pytorch, model-sharing, serialization]
     category: mlops
-
+category: mlops
 ---
 
 # HF Hub ModelHubMixin: Integrating Custom Frameworks with the Hub

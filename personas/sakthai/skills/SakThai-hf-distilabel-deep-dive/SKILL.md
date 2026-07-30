@@ -1,9 +1,6 @@
 ---
 name: SakThai-hf-distilabel-deep-dive
-author: SakThai
-license: MIT
-description: "A skill for Hf Distilabel Deep Dive."
-version: 0.1.0
+description: # Skill: hf-distilabel-deep-dive
 ---
 
 # Skill: hf-distilabel-deep-dive

@@ -5,6 +5,7 @@ license: MIT
 description: Deep-dive into advanced operational features of Hugging Face Inference Endpoints — autoscaling strategies, OpenMetrics monitoring, and custom router for bespoke load balancing.
 version: 1.0.0
 created: 2026-07-25
+category: mlops
 tags:
   - inference
   - endpoints

@@ -10,14 +10,13 @@ description: >-
   a practical use case for autonomous dataset exploration without loading
   datasets locally.
 version: 1.0.0
-description: "Sakthai Hf Datasets Server Splits Rows Statistics Endpoints"
 created: 2026-07-25
+category: mlops
 tags:
   - datasets-server
   - api
   - datasets
   - rest-api
-
 ---
 
 # HF Datasets Server — Splits, Rows, Statistics Endpoints (Deep Dive)
