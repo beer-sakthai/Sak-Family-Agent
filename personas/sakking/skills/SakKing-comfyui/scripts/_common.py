@@ -21,9 +21,10 @@ import re
 import sys
 import time
 import uuid
-from dataclasses import dataclass
+from collections.abc import Iterator
+from dataclasses import asdict, dataclass, is_dataclass
 from pathlib import Path
-from typing import Any, Iterator
+from typing import Any
 from urllib.parse import urlparse
 
 # Optional: prefer `requests` if installed (better redirects, streaming, header handling)
@@ -825,11 +826,62 @@ def fmt_kv(d: dict) -> str:
     return " ".join(f"{k}={v!r}" for k, v in d.items())
 
 
+_REDACTED = "***REDACTED***"
+_SENSITIVE_KEY_PARTS = {
+    "apikey",
+    "authorization",
+    "bearer",
+    "password",
+    "passwd",
+    "privatekey",
+    "secret",
+    "token",
+}
+_SECRET_KV_RE = re.compile(
+    r"(?i)\b(api[_-]?key|authorization|password|passwd|private[_-]?key|secret|token)\b"
+    r"\s*[:=]\s*(bearer\s+)?(['\"]?)[^\s,;'\"()\[\]{}]+(['\"]?)"
+)
+_BEARER_RE = re.compile(r"(?i)\bbearer\s+[^\s,;'\"()\[\]{}]+")
+_COMFY_TOKEN_RE = re.compile(r"(?i)\bcomfyui-[A-Za-z0-9._-]+\b")
+
+
+def _is_sensitive_key(key: Any) -> bool:
+    if not isinstance(key, str):
+        return False
+    normalized = re.sub(r"[^a-z0-9]", "", key.lower())
+    return normalized in _SENSITIVE_KEY_PARTS or normalized.endswith("apikey")
+
+
+def _redact_sensitive_text(value: str) -> str:
+    """Remove common credential forms from free-form output and log messages."""
+    value = _SECRET_KV_RE.sub(lambda match: f"{match.group(1)}={_REDACTED}", value)
+    value = _BEARER_RE.sub(f"Bearer {_REDACTED}", value)
+    return _COMFY_TOKEN_RE.sub(_REDACTED, value)
+
+
+def _redact_sensitive(value: Any) -> Any:
+    """Return a recursively redacted representation safe for terminal output."""
+    if is_dataclass(value) and not isinstance(value, type):
+        return _redact_sensitive(asdict(value))
+    if isinstance(value, dict):
+        return {
+            key: _REDACTED if _is_sensitive_key(key) else _redact_sensitive(item)
+            for key, item in value.items()
+        }
+    if isinstance(value, list):
+        return [_redact_sensitive(item) for item in value]
+    if isinstance(value, tuple):
+        return tuple(_redact_sensitive(item) for item in value)
+    if isinstance(value, (str, BaseException)):
+        return _redact_sensitive_text(str(value))
+    return value
+
+
 def emit_json(obj: Any, *, indent: int = 2) -> None:
-    """Print JSON to stdout. Centralised so behavior can be tweaked (e.g., --raw)."""
-    print(json.dumps(obj, indent=indent, default=str))
+    """Print JSON to stdout after recursively removing credentials."""
+    print(json.dumps(_redact_sensitive(obj), indent=indent, default=str))
 
 
 def log(msg: str) -> None:
     """stderr log with consistent prefix (so JSON stdout stays clean)."""
-    print(f"[comfyui-skill] {msg}", file=sys.stderr)
+    print(f"[comfyui-skill] {_redact_sensitive_text(msg)}", file=sys.stderr)
