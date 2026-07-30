@@ -1,5 +1,6 @@
 ---
 name: SakSee-apple-reminders
+version: 0.1.0
 description: Manage Apple Reminders via memo CLI.
 platforms: [macos]
 ---

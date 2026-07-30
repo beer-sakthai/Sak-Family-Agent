@@ -1,5 +1,6 @@
 ---
 name: SakSee-spike
+version: 0.1.0
 description: Throwaway experiments to validate an idea before building.
 category: software-development
 tags: [prototype, experiment, validation]

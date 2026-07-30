@@ -1,5 +1,6 @@
 ---
 name: SakSee-plan
+version: 0.1.0
 description: Write an actionable markdown plan to .hermes/plans/, no execution.
 category: software-development
 tags: [planning, documentation]

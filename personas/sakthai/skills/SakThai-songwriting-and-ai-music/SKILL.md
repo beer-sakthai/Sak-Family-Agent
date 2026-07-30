@@ -2,6 +2,7 @@
 author: SakThai
 license: MIT
 name: SakThai-songwriting-and-ai-music
+version: 0.1.0
 description: "Songwriting craft and Suno AI music prompts."
 tags: [songwriting, music, suno, parody, lyrics, creative]
 platforms: [linux, macos, windows]

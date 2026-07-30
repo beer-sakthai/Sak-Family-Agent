@@ -1,5 +1,6 @@
 ---
 name: SakSee-hermes-agent-skill-authoring
+version: 0.1.0
 description: Author SKILL.md files with proper frontmatter and structure.
 category: software-development
 tags: [skill, authoring, documentation]

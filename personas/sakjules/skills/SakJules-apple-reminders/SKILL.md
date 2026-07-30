@@ -1,5 +1,6 @@
 ---
 name: SakJules-apple-reminders
+version: 0.1.0
 description: Manage Apple Reminders via CLI
 tags:
   - apple

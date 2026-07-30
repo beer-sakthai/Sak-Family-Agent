@@ -1,5 +1,6 @@
 ---
 name: SakKing-hf-inference-endpoints
+version: 0.1.0
 description: "Hugging Face Inference Endpoints: dedicated, scalable model hosting on HF infrastructure — hardware selection, autoscaling, private networking, custom handlers, and the deployment lifecycle."
 tags: [huggingface, inference, endpoints, deployment, serving, autoscaling, gpu, mlops]
 platforms: [linux, macos, windows]
