@@ -1,4 +1,5 @@
 ---
+name: SakThai-hf-hub-fork-and-sync
 author: SakThai
 license: MIT
 category: mlops

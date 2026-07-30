@@ -1,4 +1,5 @@
 ---
+name: SakThai-hf-datasets-text-processing-pipeline
 author: SakThai
 license: MIT
 skill_type: reference

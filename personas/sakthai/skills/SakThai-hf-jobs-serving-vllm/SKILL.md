@@ -1,4 +1,5 @@
 ---
+name: SakThai-hf-jobs-serving-vllm
 author: SakThai
 license: MIT
 skill_type: reference

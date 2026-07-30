@@ -1,4 +1,5 @@
 ---
+name: SakThai-hf-hub-models-widgets
 author: SakThai
 license: MIT
 description: >-

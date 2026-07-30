@@ -1,4 +1,5 @@
 ---
+name: SakThai-hf-hub-security-scanning-deep-dive
 author: SakThai
 license: MIT
 skill_type: reference

@@ -1,4 +1,5 @@
 ---
+name: SakThai-hf-transformers-flash-attention-3
 author: SakThai
 license: MIT
 description: >-

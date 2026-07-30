@@ -1,4 +1,5 @@
 ---
+name: SakThai-model-routing-agent-systems-deep-dive
 author: SakThai
 license: MIT
 skill_type: reference

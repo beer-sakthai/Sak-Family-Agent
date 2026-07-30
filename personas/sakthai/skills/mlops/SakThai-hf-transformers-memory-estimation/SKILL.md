@@ -1,4 +1,5 @@
 ---
+name: SakThai-hf-transformers-memory-estimation
 author: SakThai
 license: MIT
 description: >-
