@@ -412,5 +412,7 @@
   "sakthai-hf-datasets-streaming-deep-dive",
   "spaces-with-agents",
   "spaces-zerogpu-complete-api-architecture-deep-dive",
-  "spaces-zerogpu-free-gpu-allocation"
+  "spaces-zerogpu-free-gpu-allocation",
+  "hf-spaces-sign-in-oauth-deep-dive",
+  "hf-sglang-integration"
 ]
