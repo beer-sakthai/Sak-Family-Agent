@@ -333,6 +333,7 @@ Authenticated calls consume the **owner's** quota.
 - Gradio 6 Migration Guide: https://gradio.app/main/guides/gradio-6-migration-guide
 - Detailed migration notes: [references/gradio-6-migration.md](references/gradio-6-migration.md)
 - SSR & env vars: [references/ssr-and-env-vars.md](references/ssr-and-env-vars.md)
-- Minimal starter template: [templates/space-app.py](templates/space-app.py)
+- **Production template (3 modes):** [templates/space-app.py](templates/space-app.py) — Interface, Blocks, ChatInterface
 - Requirements template: [templates/space-requirements.txt](templates/space-requirements.txt)
+- **Deployment checklist:** [references/gradio-space-deployment.md](references/gradio-space-deployment.md) — queue, auth, SSR, OAuth setup
 - Space API invocation patterns: [references/space-api-invocation.md](references/space-api-invocation.md)

@@ -13,9 +13,13 @@ low-maintenance. Keep the House of Sak identity, drop the marketing bloat.
 
 1. **No hardcoded download numbers anywhere.** Use ONE dynamic badge at the top:
    ```html
-   <img src="https://img.shields.io/endpoint?url=https://huggingface.co/api/models/Nanthasit/REPO&label=downloads&color=blue&cacheSeconds=3600" alt="Downloads"/>
+   <img src="https://img.shields.io/badge/dynamic/json?url=https%3A//huggingface.co/api/models/Nanthasit/REPO&query=%24.downloads&label=downloads&color=blue&cacheSeconds=3600" alt="Downloads"/>
    ```
-   (Datasets: `.../api/datasets/Nanthasit/REPO`.) Family tables carry **size + role**, never
+   Use `badge/dynamic/json` with `query=$.downloads`, **not** `endpoint`. The HF API returns
+   repo metadata, not shields' `{schemaVersion,label,message}` contract, so an `endpoint`
+   badge renders the literal text `invalid properties: label, message`. The `url=` value must
+   stay percent-encoded (`https%3A//…`) or shields drops the query string.
+   (Datasets: swap `/api/models/` for `/api/datasets/`.) Family tables carry **size + role**, never
    counts. Hardcoded numbers go stale the moment you push — never emit them, and never emit a
    `badge/downloads-625-blue`-style static badge.
 2. **One family table per card**, not three. Use the canonical table below verbatim.
@@ -30,7 +34,14 @@ low-maintenance. Keep the House of Sak identity, drop the marketing bloat.
    Garden", "Hidden Gems", "zero-download alert", or multi-bullet "Support the Project"
    sections. One short support line at most.
 6. **Canonical facts** (never contradict):
-   - Ecosystem size: **12 models · 5 datasets · 3 Spaces**.
+   - Ecosystem size: **12 models in the family · 8 datasets · 3 Spaces**.
+     Verified against the Hub API on 2026-07-30: there are **15 public model repos**
+     (16 counting the `Nanthasit/Nanthasit` profile repo), **8 public datasets**, and
+     **3 Spaces**. "12 models" is the *curated family* — the 15 minus the
+     `0.5b-exp-lora-masked-v4` tombstone, the stray `combined-v6` model repo, and the
+     private/superseded `sakthai-embedding`. Say "12 models in the family", never a bare
+     "12 models", or it contradicts the profile page a visitor can count for themselves.
+     The old "5 datasets" was simply wrong — do not reintroduce it.
    - Collection URL (full, hashed): `https://huggingface.co/collections/Nanthasit/sakthai-model-family-6a64745450b12d421c1f9f02`
    - `food-penguin-v1` = **restaurant-analytics tool-calling** dataset (7 functions), NOT image classification.
    - There is **no** `sakthai-context-paper` repo — never add a "Paper" link to it.
@@ -52,6 +63,11 @@ low-maintenance. Keep the House of Sak identity, drop the marketing bloat.
 8. `## SakThai model family` — the canonical table below (once)
 9. `## Links` — inline, one line
 10. `## License`
+
+**Datasets have their own SOP** — see [`dataset-card-standard.md`](dataset-card-standard.md),
+which layers Hugging Face's official dataset-card spec (required YAML, closed enums, the
+`configs`/`dataset_info` no-touch rule) on top of these lean rules. Follow it, not this file,
+for anything under `huggingface.co/datasets/Nanthasit/`.
 
 Datasets follow the same spine: identity → What it is → Quick start (load snippet) →
 structure/stats → trained-models → License. Right-size the card to the content (a 10-example
@@ -80,7 +96,7 @@ counts in the page.
 | [embedding-multilingual](https://huggingface.co/Nanthasit/sakthai-embedding-multilingual) | 80 MB | Cross-lingual embeddings |
 | [tts-model](https://huggingface.co/Nanthasit/sakthai-tts-model) | 141 MB | Text-to-speech, 15 langs |
 
-**12 models · 5 datasets · 3 Spaces** — [full collection →](https://huggingface.co/collections/Nanthasit/sakthai-model-family-6a64745450b12d421c1f9f02)
+**12 models in the family · 8 datasets · 3 Spaces** — [full collection →](https://huggingface.co/collections/Nanthasit/sakthai-model-family-6a64745450b12d421c1f9f02)
 ```
 
 ## Gathering facts (mechanics unchanged)

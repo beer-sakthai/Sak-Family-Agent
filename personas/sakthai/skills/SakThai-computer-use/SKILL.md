@@ -9,14 +9,13 @@ description: |
   Windows, Linux. Works with any tool-capable model. Load this skill
   whenever the `computer_use` tool is available.
 version: 2.0.0
-description: "Sakthai Computer Use"
 platforms: [macos, windows, linux]
 metadata:
   hermes:
     tags: [computer-use, desktop, automation, gui, cross-platform]
     category: desktop
     related_skills: [browser]
-
+category: software-development
 ---
 
 # Computer Use (universal, any-model, cross-platform)

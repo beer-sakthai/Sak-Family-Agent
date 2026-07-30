@@ -5,6 +5,7 @@ license: MIT
 description: Deep dive into MLCommons Croissant metadata format and its integration with Hugging Face Hub — the Croissant API endpoint, JSON-LD structure, auto-generation for datasets, and the mlcroissant Python library.
 version: 1.0.0
 created: 2026-07-25
+category: mlops
 tags:
   - croissant
   - metadata

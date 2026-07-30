@@ -121,10 +121,12 @@ Structure each model card with:
 > No hardcoded download counts, no repeated family tables, no "Rising Stars"/funnel sections,
 > story on the profile card only.
 
-**Download badge — use the dynamic endpoint badge, never a hardcoded number**:
+**Download badge — use the dynamic JSON badge, never a hardcoded number**:
 ```html
-<img src="https://img.shields.io/endpoint?url=https://huggingface.co/api/models/Nanthasit/REPO&label=downloads&color=blue&cacheSeconds=3600" alt="Downloads"/>
+<img src="https://img.shields.io/badge/dynamic/json?url=https%3A//huggingface.co/api/models/Nanthasit/REPO&query=%24.downloads&label=downloads&color=blue&cacheSeconds=3600" alt="Downloads"/>
 ```
+Not `shields.io/endpoint` — the HF API does not implement shields' endpoint schema, so that
+form renders `invalid properties: label, message`. Keep `url=` percent-encoded.
 
 ### Step 4: Upload via HfApi.upload_file
 

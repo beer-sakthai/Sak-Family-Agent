@@ -5,6 +5,7 @@ license: MIT
 description: Deep-dive into deploying custom Docker containers to Hugging Face Inference Endpoints — FastAPI server patterns, Docker packaging, model mounting, autoscaling, monitoring, and production best practices.
 version: 1.0.0
 created: 2026-07-25
+category: mlops
 tags:
   - inference
   - endpoints

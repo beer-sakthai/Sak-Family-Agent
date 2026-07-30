@@ -1,15 +1,13 @@
 ---
-name: SakThai-hf-jobs-serving-vllm
 author: SakThai
 license: MIT
 skill_type: reference
 domain: hub
 version: 1.0.0
-description: "Sakthai Hf Jobs Serving Vllm"
 created: 2026-07-25
 updated: 2026-07-25
 topic: hf-jobs-serving-vllm
-
+category: mlops
 ---
 
 # Run a vLLM Server on HF Jobs — One-Command Serving Patterns

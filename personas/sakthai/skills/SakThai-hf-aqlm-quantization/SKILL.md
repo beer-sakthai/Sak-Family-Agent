@@ -2,15 +2,12 @@
 name: SakThai-hf-aqlm-quantization
 author: SakThai
 license: MIT
-description: "A skill for Hf Aqlm Quantization."
-version: 0.1.0
+version: 1.0.0
+description: Complete reference for AQLM (Additive Quantization of Language Models) — theory, configuration, inference, and practical deployment patterns
+category: mlops
 ---
 
 # AQLM Quantization — Complete Reference
-
-**author:** SakThai
-**license:** MIT
-**version:** 1.0.0
 **tags:** quantization, aqlm, compression, transformers, inference, llm
 
 ## Overview

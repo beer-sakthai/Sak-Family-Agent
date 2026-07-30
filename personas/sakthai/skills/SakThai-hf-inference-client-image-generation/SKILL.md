@@ -8,6 +8,7 @@ metadata:
   hermes:
     tags: [huggingface, inference, image-generation, serverless, flux, stable-diffusion]
     category: mlops
+category: mlops
 ---
 
 # InferenceClient Image Generation Patterns

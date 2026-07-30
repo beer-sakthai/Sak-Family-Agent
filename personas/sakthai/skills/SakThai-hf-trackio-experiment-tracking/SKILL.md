@@ -5,6 +5,7 @@ license: MIT
 description: Comprehensive deep-dive into Trackio — Hugging Face's lightweight, free experiment tracking library built on Storage Buckets and Spaces.
 version: 1.0.0
 created: 2026-07-25
+category: mlops
 tags:
   - trackio
   - experiment-tracking

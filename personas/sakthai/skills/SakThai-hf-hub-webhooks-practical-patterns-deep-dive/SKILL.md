@@ -1,9 +1,6 @@
 ---
 name: SakThai-hf-hub-webhooks-practical-patterns-deep-dive
-author: SakThai
-license: MIT
-description: "A skill for Hf Hub Webhooks Practical Patterns Deep Dive."
-version: 0.1.0
+description: # HF Hub Webhooks — Practical Patterns
 ---
 
 # HF Hub Webhooks — Practical Patterns
