@@ -39,7 +39,7 @@ Each agent has its own personality, skill set, and charge cycle — but they sha
 
 | Category | Count | Details |
 |----------|:-----:|---------|
-| **Models** | 14 | 10 text-gen (0.5B–7B merged, tools, 128K, coder, experimental), vision, TTS, sentence embedding, multilingual embedding |
+| **Models** | 13 | 10 text-gen (0.5B–7B merged, tools, 128K, coder, experimental), vision, TTS, multilingual embedding |
 | **Datasets** | 8 | Tool-calling data (v6, v7), combined, notebooks, food-penguin, irrelevance-supplement, benchmarks (v1, v2) |
 | **Spaces** | 3 | TTS showcase, model leaderboard, vision demo |
 | **GGUF (on HF)** | 5 | 0.5B, 1.5B, coder, vision (llava + mmproj), TTS (kokoro) |

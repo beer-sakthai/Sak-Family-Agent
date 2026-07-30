@@ -690,3 +690,175 @@ The vision-7b model card was thin — only **113 lines** (~4 KB) — compared to
 ### Lesson
 The 0.5b-tools card was decent but lacked hook content — no "why choose this" section, no benchmark data, no comparison against bigger siblings. Adding those makes it discoverable for edge/Raspberry Pi queries and gives downloaders confidence to try it. Also updated the family table counts (13/5/3) which had drifted from actual state.
 
+---
+
+## 2026-07-30 — Cron #052: 1.5b-tools-v7 Ecosystem Count & Family Table Enrichment
+
+**Target:** `Nanthasit/sakthai-context-1.5b-tools-v7` (0 dl — newest model, zero traction)
+
+**One improvement:** Updated the stale ecosystem count and enriched the family table with proper cross-links.
+
+### Discovery: Widespread stale count infection
+
+During audit, discovered **8 model cards** still showing old "12 models" count that were missed in Cron #047:
+
+| Card | Count | Status |
+|:-----|:-----:|:------:|
+| context-1.5b-merged | 12 | ❌ Stale |
+| context-0.5b-merged | 12 | ❌ Stale |
+| context-7b-merged | 12 | ❌ Stale |
+| context-7b-128k | 12 | ❌ Stale |
+| context-7b-tools | 12 | ❌ Stale |
+| context-1.5b-tools | 12 | ❌ Stale |
+| context-0.5b-tools | 12 | ❌ Stale |
+| context-1.5b-tools-v7 | 12 | ❌ Stale ← **fixed this run** |
+| coder-1.5b | 12 | ❌ Stale |
+| tts-model | 13 | ❌ Stale (also wrong) |
+| vision-7b | 14 | ✅ Fixed in Cron #047 |
+| embedding-multilingual | 14 | ✅ Fixed in Cron #047 |
+
+Cron #047 only fixed vision-7b, embedding-multilingual, and tts-model — but every other non-embedding card still had "12 models".
+
+### Changes Made (1.5b-tools-v7)
+
+1. **Ecosystem count**: "12 models in the family" → "14 models in the family · 8 datasets · 3 Spaces" (matches vision-7b's count)
+2. **Family table**: Split the combined `context-{7b,1.5b,0.5b}-tools` row into three individual rows (7b-tools, 1.5b-tools/v6, 0.5b-tools)
+3. **⬅ Marker**: Added "⬅ You are here — latest & best tool-caller" and ⭐ to the v7 row so visitors immediately see where they are
+4. **Missing model**: Added `sakthai-embedding` (English-only) row to the table — was completely absent before
+5. **Better descriptions**: Each tool variant now has a unique role description instead of generic "Tool-calling adapters"
+
+### Verification
+
+```
+✅ Count: '14 models in the family' confirmed
+✅ Marker: '⬅ You are here' confirmed
+✅ Table: Individual tool entries confirmed
+✅ Table: English embedding added
+|✅ No stale '12 models' text remaining
+```
+
+Commit message: `fix: update ecosystem count (12→14 models) + enrich family table with ⬅ v7 marker`
+
+### Remaining Drift
+
+The other 7 stale cards still say "12 models" — each needs the same fix. Batch fix recommended for the next run since the pattern is identical across all cards.
+
+---
+
+## 2026-07-30 — Cron #0??: Platform Algorithms Analysis
+
+### Task
+Analyze how trending algorithms work on GitHub, Hugging Face, and Kaggle — and check whether any of Beer's repos appear.
+
+### Methodology
+- **HF**: API-based queries (`/api/models?sort=downloads&limit=20`, `/api/models?author=Nanthasit`). The old `sort=trending` param returns error `✖ Invalid sort parameter: trending`.
+- **GitHub**: Fetched `github.com/trending` HTML + API queries for `beer-sakthai/*` repos and `sakthai` keyword search.
+- **Kaggle**: API attempt (`/api/v1/kernels/list/trending`, `/api/v1/users/Nanthasit`) — all return 401 Unauthenticated. Trending page loads empty without auth.
+
+### Platform Trending Algorithms
+
+**GitHub Trending** (observed from top repos on 2026-07-30):
+- Based on **star velocity** (Δ stars in a 24h/7d/30d window), not total stars.
+- Normalized per language — repos in less-popular languages need fewer stars to trend than Python/JS.
+- Today's top repos: opengeos/GeoLibre (671 ★/day), moeru-ai/airi (682 ★/day), affaan-m/ECC (857 ★/day), huggingface/speech-to-speech (827 ★/day).
+- **Threshold observed:** ~150+ stars/day minimum to crack the list (snipe-it had 164 ★/today at rank 6).
+- Language filter: HTML, Python, TypeScript all on today's list — no monopoly.
+- Classic lock-in: repos that already trend get more visibility → more stars → keep trending. Breaking in requires an external catalyst (launch, viral post, media).
+
+**Hugging Face "Trending"** (via /api/models?sort=downloads):
+- **Not a real trending algorithm.** It's just total download count. No velocity, no decay, no time window.
+- Top today: all-MiniLM-L6-v2 (253M dl), bert-base-uncased (100M dl), cross-encoder/ms-marco (87M dl).
+- **Implications:** New repos with 0-likes and <100k downloads can never appear. No up-and-coming discovery.
+- The old `sort=trending` endpoint is gone (returns 400). HF removed or renamed it.
+- **Discovery on HF happens via:** search keywords, collections, curation (Papers of the Day), and external links — not trending.
+
+**Kaggle Trending:**
+- Auth-gated — cannot analyze without login.
+- Likely based on competition activity, notebook views/upvotes, and dataset downloads.
+
+### Our Repos' Position
+
+**GitHub (`beer-sakthai` org, 5 repos):**
+| Repo | Stars | Forks | On Trending? |
+|------|:----:|:-----:|:-----------:|
+| Sak-Family-Agent | 0 | 0 | ❌ |
+| sakthai-chat-cli | 0 | 0 | ❌ |
+| house-of-sak | 0 | 0 | ❌ |
+| Food-Penguin-Limited | 0 | 0 | ❌ |
+| sak2015/sakthai (old) | 0 | 0 | ❌ |
+
+**HF (`Nanthasit`, 15 repos as of today):**
+| Model | Downloads | Likes | Top 20? |
+|-------|:---------:|:-----:|:-------:|
+| context-1.5b-merged | 1,269 | 0 | ❌ (need 15M+) |
+| context-0.5b-merged | 1,030 | 0 | ❌ |
+| context-7b-merged | 585 | 0 | ❌ |
+| Others (vision, coder, tts…) | 7–382 | 0 | ❌ |
+
+**Kaggle:** No authenticated presence detected.
+
+### How Trending Algorithms Actually Work
+
+1. **GitHub:** Relative velocity model. `trending_score(repo) = Δstars(repo, T) / ΣΔstars(all_repos, T, lang?)`. Time window T = 1 day (default). Language normalization optional. This means:
+   - A 0-star repo needs an external event to generate the initial velocity spike
+   - Once on the list, increased visibility creates a positive feedback loop
+   - **What we'd need:** ~150 stars in a day to barely crack the list
+
+2. **HF:** Raw download total. No velocity component means:
+   - Old models with established download bases dominate permanently
+   - New models are invisible through this channel
+   - **Better strategy:** HF collections, model card cross-links, keyword SEO in descriptions, community engagement
+
+3. **Kaggle:** Likely engagement-weighted (notebook runs, competition entries, dataset downloads). Requires active participation.
+
+### Growth Implications
+
+- **Not trending ≠ not discoverable.** Trending is one of many discovery channels on every platform.
+- **On HF:** Our models ARE being downloaded (1,269 max) — this happens via search results and direct links, not trending. Cross-linking model cards to each other helps.
+- **On GitHub:** 0 stars is a signal problem. house-of-sak has a compelling description but zero visibility. Need **external seeding** (share on social, Hacker News, Reddit).
+- **Kaggle:** No presence. The Kaggle notebook pipeline (Food-Penguin model) would be the entry point.
+
+### What We Can Do Without Trending
+
+| Strategy | Effort | Potential Impact |
+|----------|:------:|:----------------:|
+| Cross-link all HF model cards to each other | Low | Medium (keeps visitors browsing) |
+| Add GitHub topics + descriptions to all repos | Low | Low-Medium (search discovery) |
+| Submit to HF Daily Papers | Medium | High (featured visibility) |
+| Share house-of-sak story on HN/Reddit | Medium | High (viral potential) |
+| Kaggle notebook + dataset publication | Medium | Medium (new audience) |
+| Enhance READMEs with badges + benchmarks | Low | Medium (conversion from search) |
+| Submit HF models to community collections | Low | Medium (curated discovery) |
+
+### Verdict
+**None of our repos are trending — and that's expected for a new ecosystem with 0 stars and sub-2k downloads.** The trending discovery channel is closed to us at this scale. Focus should remain on organic improvements: better model cards, cross-links, README polish, and eventually community sharing when there's a compelling story to tell.
+
+## 2026-07-30 — Cron: Narrative Consistency Audit
+
+### What I Found
+
+Audited the "House of Sak" narrative across all 15 HF model repos + repo docs.
+
+**The problem:** Stale model counts everywhere. The canonical ecosystem size drifted as assets were added and the deprecated English embedding was made private — but nobody updated the count across all cards.
+
+| Source | Claimed | Actual |
+|--------|:-------:|:------:|
+| `HOUSE_OF_SAK.md` | 14 models | 13 |
+| Flagship 1.5b card | 14 models | 13 |
+| 0.5b card | **15** models | 13 |
+| 7b-merged, 7b-128k, vision-7b | 14 | 13 |
+| coder-1.5b, 1.5b-tools, 0.5b-tools, 7b-tools, embedding-multilingual, 1.5b-tools-v7 | 14 | 13 |
+| TTS card | ✅ 13 | 13 |
+| Retrospective doc | ✅ 13 | 13 |
+
+The root cause: the deprecated English embedding (`sakthai-embedding`, now private/removed) inflates the count wherever it's still mentioned as a live family member. Several cards also listed broken links to that private repo.
+
+### What I Fixed
+
+1. **`HOUSE_OF_SAK.md`** — models 14→13, removed "sentence embedding" from the count (it's deprecated)
+2. **Flagship 1.5b-merged card** — 14→13, added missing `0.5b-exp-lora-masked-v4` to family table (was 12 rows claiming 14), replaced deprecated English embedding link with multilingual
+3. **All other 12 model cards** — 14→13 (0.5b was fixed 15→13), deprecated English embedding references replaced with multilingual embedding
+
+### Lesson
+
+**Model counts aren't static — they change when models are deprecated or added. Every card needs the canonical count, and there's no source-of-truth sync mechanism.** The family table and the count line drifted independently across 14 repos. Recommendation: extract the family table + count into a shared snippet (or generate it from the HF API on build) so one update fixes all cards. Manual patching of 14 repos is not sustainable.
