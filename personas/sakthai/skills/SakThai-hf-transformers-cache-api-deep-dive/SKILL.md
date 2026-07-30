@@ -2,8 +2,21 @@
 name: SakThai-hf-transformers-cache-api-deep-dive
 author: SakThai
 license: MIT
-description: "A skill for Hf Transformers Cache Api Deep Dive."
-version: 0.1.0
+description: >-
+  Complete deep-dive into the Transformers modern cache system — DynamicCache,
+  StaticCache, QuantizedCache, EncoderDecoderCache, prefix/prefill caching,
+  iterative generation, CPU offloading, and the cache_implementation API.
+  Covers v4.47+ with updates for v5.14.0.
+category: transformers
+version: 2.0.0
+tags:
+  - kv-cache
+  - inference
+  - optimization
+  - transformers
+  - torch-compile
+  - quantization
+  - memory
 ---
 
 # Transformers Cache API: DynamicCache, StaticCache, QuantizedCache & More
@@ -299,6 +312,146 @@ For `QuantizedCache` with `nbits = B`:
 Memory per layer ≈ 2 × batch_size × num_heads × L × head_dim × (B/8 + residual_factor)
 ```
 
+## Iterative Generation with Cache (Chatbots)
+
+For back-and-forth conversation, a cache eliminates recomputing the entire context at each turn. Initialize an empty cache once, then feed new prompts:
+
+```python
+import torch
+from transformers import AutoTokenizer, AutoModelForCausalLM, DynamicCache
+
+model_id = "meta-llama/Llama-2-7b-chat-hf"
+model = AutoModelForCausalLM.from_pretrained(model_id, dtype=torch.bfloat16, device_map='auto')
+tokenizer = AutoTokenizer.from_pretrained(model_id)
+
+user_prompts = ["Hello, what's your name?", "Btw, yesterday I was on a rock concert."]
+past_key_values = DynamicCache(config=model.config)
+
+messages = []
+for prompt in user_prompts:
+    messages.append({"role": "user", "content": prompt})
+    inputs = tokenizer.apply_chat_template(
+        messages, add_generation_prompt=True, return_tensors="pt", return_dict=True
+    ).to(model.device)
+    input_length = inputs["input_ids"].shape[1]
+    outputs = model.generate(**inputs, do_sample=False, max_new_tokens=256,
+                             past_key_values=past_key_values)
+    completion = tokenizer.decode(outputs[0, input_length:], skip_special_tokens=True)
+    messages.append({"role": "assistant", "content": completion})
+```
+
+> [!WARNING]
+> Some models use special `<think>...</think>` reasoning tokens that may be lost during re-encoding. You might need to manually adjust extra tokens from completions to keep things stable.
+
+## Prefix Caching (Prefill a Cache)
+
+Cache a common prefix prompt once and reuse it to generate multiple different continuations — ideal for "system prompt + user query" patterns:
+
+```python
+import copy
+import torch
+from transformers import AutoModelForCausalLM, AutoTokenizer, StaticCache
+
+model_id = "meta-llama/Llama-2-7b-chat-hf"
+model = AutoModelForCausalLM.from_pretrained(model_id, dtype=torch.bfloat16, device_map={"": 0})
+tokenizer = AutoTokenizer.from_pretrained(model_id)
+
+# Pre-allocate StaticCache with large enough max_cache_len
+prompt_cache = StaticCache(config=model.config, max_cache_len=1024)
+
+INITIAL_PROMPT = "You are a helpful assistant. "
+inputs = tokenizer(INITIAL_PROMPT, return_tensors="pt").to(model.device.type)
+with torch.no_grad():
+    prompt_cache = model(**inputs, past_key_values=prompt_cache).past_key_values
+
+# Reuse cached prefix for different queries
+prompts = ["Help me write a blogpost about travelling.", "What is the capital of France?"]
+for prompt in prompts:
+    new_inputs = tokenizer(INITIAL_PROMPT + prompt, return_tensors="pt").to(model.device.type)
+    past_key_values = copy.deepcopy(prompt_cache)
+    outputs = model.generate(**new_inputs, past_key_values=past_key_values, max_new_tokens=20)
+    print(tokenizer.batch_decode(outputs)[0])
+```
+
+## CPU Tensor Bookkeeping for Compiled Inference
+
+On Neuron/TPU-like backends, keeping generation bookkeeping tensors on CPU avoids compiler retracing:
+
+```python
+# Leave inputs on CPU — only forward inputs move to model device
+inputs = tokenizer("The French Bread Law states", return_tensors="pt")  # NOT .to(model.device)
+output = model.generate(**inputs, do_sample=False, max_new_tokens=20)
+# output is on CPU (follows input device)
+```
+
+## OOM-Resilient Generation
+
+Automatic fallback to offloaded cache on out-of-memory:
+
+```python
+def resilient_generate(model, *args, **kwargs):
+    try:
+        return model.generate(*args, **kwargs)
+    except torch.OutOfMemoryError:
+        print("OOM — retrying with cache_implementation='offloaded'")
+        torch.cuda.empty_cache()
+        kwargs["cache_implementation"] = "offloaded"
+        return model.generate(*args, **kwargs)
+```
+
+## Manual Generation Loop with Cache
+
+Using DynamicCache directly in a custom loop with proper attention mask handling:
+
+```python
+from transformers import AutoModelForCausalLM, AutoTokenizer, DynamicCache
+from accelerate import Accelerator
+
+device = Accelerator().device
+model = AutoModelForCausalLM.from_pretrained(model_id, dtype=torch.bfloat16, device_map=device)
+tokenizer = AutoTokenizer.from_pretrained(model_id)
+
+past_key_values = DynamicCache(config=model.config)
+messages = [{"role": "user", "content": "Hello, what's your name."}]
+inputs = tokenizer.apply_chat_template(messages, add_generation_prompt=True,
+                                       return_tensors="pt", return_dict=True).to(model.device)
+
+generated_ids = inputs.input_ids
+for _ in range(10):
+    outputs = model(**inputs, past_key_values=past_key_values, use_cache=True)
+    next_token_ids = outputs.logits[:, -1:].argmax(-1)
+    generated_ids = torch.cat([generated_ids, next_token_ids], dim=-1)
+    # Extend attention mask for the new token
+    attention_mask = torch.cat([inputs["attention_mask"],
+                                inputs["attention_mask"].new_ones((1, 1))], dim=-1)
+    inputs = {"input_ids": next_token_ids, "attention_mask": attention_mask}
+```
+
+## Quantized Cache Backend Recommendations (v5.14.0+)
+
+| Backend | Supported Bitwidths | Recommended axis-key/axis-value |
+|---------|-------------------|-------------------------------|
+| **HQQ** | int2, int4, int8  | `1` |
+| **Quanto** (default) | int2, int4 | `0` |
+
+```python
+# HQQ backend (int4)
+out = model.generate(..., cache_implementation="quantized",
+                     cache_config={"backend": "hqq"})
+
+# Quanto backend (int4, explicit)
+out = model.generate(..., cache_implementation="quantized",
+                     cache_config={"backend": "quanto", "nbits": 4})
+```
+
+## Comparison Table (Updated v5.14.0)
+
+| Cache Type | Sliding Layers | Offloading | torch.compile() | Memory |
+|------------|:-------------:|:----------:|:---------------:|:------:|
+| DynamicCache | ✅ | ✅ | ❌ | Medium |
+| StaticCache | ✅ | ✅ | ✅ | High (fixed) |
+| QuantizedCache | ❌ | ❌ | ❌ | Low |
+
 ## Practical Recipes
 
 ### Recipe 1: Max throughput with torch.compile
@@ -334,6 +487,20 @@ for token_id in stream_tokens():
     outputs = model(input_ids=token_id, past_key_values=past_key_values, use_cache=True)
     yield decode(outputs.logits)
     past_key_values = outputs.past_key_values
+```
+
+### Recipe 5: Prefix caching for multi-query system prompt
+```python
+# See "Prefix Caching" section for full example
+prompt_cache = StaticCache(config=model.config, max_cache_len=2048)
+with torch.no_grad():
+    prompt_cache = model(**prefix_inputs, past_key_values=prompt_cache).past_key_values
+# Then deepcopy + reuse for each user query
+```
+
+### Recipe 6: OOM-resilient generation
+```python
+outputs = resilient_generate(model, **inputs, max_new_tokens=4096, num_beams=4)
 ```
 
 ## Key Takeaways

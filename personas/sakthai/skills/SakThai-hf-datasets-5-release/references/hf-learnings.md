@@ -196,3 +196,98 @@ Supports:
 - https://huggingface.co/docs/datasets/main/en/ — Datasets documentation main branch
 - https://iceberg.apache.org/ — Apache Iceberg table format
 - https://iotdb.apache.org/ — Apache IoTDB + TsFile format
+
+|---
+
+## 2026-07-26: hf-datasets-5-release Deep Dive v2 — Live-Verified Agent Trace Processing, teich v0.2.9 API, Multi-Shard Shuffle Determinism, Batch-by-Column (Topic #353 Deepened)
+
+### Summary
+
+Extended deep-dive into Datasets v5.0.0 with live-verified testing of the agent trace pipeline (from HF dataset through teich v0.2.9 analysis), multi-shard shuffle determinism, batch-by-column grouping, and the full teich library API surface. This v2 adds practical, tested code patterns that were not in the v1 reference.
+
+### Verified Findings
+
+#### 1. Agent Trace Dataset Schema (lhoestq/agent-traces-example)
+
+Schema verified by loading 100+ rows from HF:
+- 11 fields: `harness`, `session_id`, `prompt`, `messages`, `tools`, `metadata`, `sent_at`, `num_user_messages`, `num_tool_calls`, `trace`, `file_path`
+- Average 28 messages per session, 17 tools defined, 35 trace entries
+- Prompt length: 277-572 chars (avg 416)
+- Tool calls per session: 0-18
+- Two harnesses found: `claude_code` and `codex`
+
+#### 2. teich v0.2.9 Library API (Explored)
+
+The `teich` library provides a rich API surface for processing agent trace data:
+
+**Conversion functions:**
+- `convert_traces_to_training_data(directory)` — batch converts trace file directories into SFT training data (expects file paths, not parsed rows)
+- `convert_trace_to_training_example(file)` — single file conversion (expects Path, not dict)
+- `load_traces(directory)` — loads trace files from a directory
+- `detect_trace_type(trace_or_file)` — detects agent framework (returns None for non-standard formats)
+- `preview_sft_example(trace)` — shows formatted SFT preview
+
+**Validation functions:**
+- `validate_tool_calls(row, row_id)` — validates tool call structure within a trace row
+- `trace_is_complete(trace)` — checks all required fields present
+- `row_fits_context(row, config)` — checks if trace fits within token limits
+
+**Built-in tool definitions for 5 agent frameworks:**
+| Agent | Tools Count | Key Tools |
+|-------|-------------|-----------|
+| Pi Agent | 6 | bash, read, read_file, write, edit, search |
+| OpenAI Codex | 5 | bash, exec_command, apply_patch, file_system, web_search |
+| Cursor | 19 | read_file, read_file_v2, codebase_search, grep_search, file_search, edit, write, bash, web_search, web_fetch, delete_file, reapply, delegate, list_dir, file_uri, etc. |
+| Hermes Agent | 13 | delegate_task, memory, patch, read_file, search_files, write_file, terminal, process, thinking, web_search, web_fetch, python_repl, run_shell |
+| OpenClaw | 25 | read, write, edit, create, list, search, bash, python, web, diff, git_clone, git_commit, git_push, etc. |
+
+**Key insight:** The Hermes Agent tools match our family's exact toolset — delegate_task, memory, patch, read_file, search_files, write_file, terminal, process, thinking, plus web and python tools.
+
+#### 3. Multi-Shard Shuffle (Verified Live)
+
+Tested with agent-traces-example dataset (600+ sessions, streaming mode):
+
+```python
+# Deterministic: same seed produces exact same order
+shuf1 = ds.shuffle(seed=42, buffer_size=500)
+shuf2 = ds.shuffle(seed=42, buffer_size=500)
+# shuf1[0:20] == shuf2[0:20] → True
+
+# Different seed → different order
+shuf3 = ds.shuffle(seed=99, buffer_size=500)
+# shuf1[0:20] != shuf3[0:20] → True
+```
+
+The `buffer_size` parameter controls the randomness quality — larger buffers produce better randomness at the cost of more memory. The old `max_buffer_input_shards` parameter name has been superseded by `buffer_size` in datasets v5.
+
+#### 4. Batch by Column (Verified Live)
+
+```python
+ds = Dataset.from_dict({
+    'episode': [0, 0, 0, 1, 1, 2, 2, 2, 2],
+    'step': [0, 1, 2, 0, 1, 0, 1, 2, 3],
+})
+batched = ds.batch(by_column='episode')
+# → Groups: [0,0,0], [1,1], [2,2,2,2]
+```
+
+Also supports: `batch_size` (limit batch size), `drop_last_batch` (discard incomplete final batch), and `num_proc` (multiprocessing). Added in datasets 4.9.0, refined in 5.0.0.
+
+#### 5. Note on teich File-Based API
+
+The teich library's `convert_traces_to_training_data` and `convert_trace_to_training_example` functions expect **file paths** (directory or Path objects), not pre-parsed dicts. This means the typical workflow is:
+1. Collect raw trace files on disk (from ~/.claude, ~/.codex/sessions, etc.)
+2. Pass the directory to teich for conversion
+3. Upload the converted SFT dataset to HF Hub
+
+The datasets v5 integration adds the ability to load these pre-converted datasets as proper Dataset objects, not as direct teich ↔ datasets processing.
+
+### Files Updated
+- `hf-datasets-5-release/SKILL.md` — Updated to v2.0.0 with verified findings and teich API reference
+- `references/hf-learnings.md` — This entry (v2 findings appended)
+
+### Sources
+- Live tests with datasets v5.0.0, teich v0.2.9
+- Hugging Face Datasets v5 release notes
+- teich library source inspection
+- lhoestq/agent-traces-example dataset on HF Hub

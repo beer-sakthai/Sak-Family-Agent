@@ -12,7 +12,6 @@ description: >-
   deployment patterns.
 category: hf-transformers
 version: 2.0.0
-description: "Sakthai Hf Transformers Inkling"
 created: 2026-07-25
 tags:
   - transformers
@@ -30,7 +29,6 @@ tags:
   - relative-position
   - sconv
   - evaluation
-
 ---
 
 # Inkling (Transformers 5.14.0+) — Comprehensive Deep-Dive

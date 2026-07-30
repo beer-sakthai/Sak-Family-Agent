@@ -1,5 +1,5 @@
 ---
-name: SakThai-mergekit-hf-merging
+name: mergekit-hf-merging
 author: SakThai
 license: MIT
 description: "MergeKit — complete model merging toolkit for combining LLMs on the Hugging Face Hub. Expanded deep-dive: all 17+ merge methods, MoE conversion (mergekit-moe), evolutionary search (mergekit-evolve), multi-stage merging (mergekit-multi), raw PyTorch merging (mergekit-pytorch), LoRA extraction (mergekit-extract-lora), tokenizer transplantation (mergekit-tokensurgeon), fine-grained parameter control (tensor name filters, gradient interpolation), tokenizer configuration (modern vs legacy), zero-cost CPU-only operation."
