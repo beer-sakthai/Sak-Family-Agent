@@ -1,4 +1,5 @@
 ---
+name: SakThai-hf-spaces-hardware-tiers
 author: SakThai
 license: MIT
 model: null

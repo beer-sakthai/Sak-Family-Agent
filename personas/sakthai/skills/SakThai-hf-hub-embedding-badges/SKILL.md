@@ -1,4 +1,5 @@
 ---
+name: SakThai-hf-hub-embedding-badges
 author: SakThai
 license: MIT
 category: mlops

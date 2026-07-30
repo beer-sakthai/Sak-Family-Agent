@@ -1,4 +1,5 @@
 ---
+name: SakThai-hf-inference-client-embeddings-patterns
 author: SakThai
 license: MIT
 category: mlops

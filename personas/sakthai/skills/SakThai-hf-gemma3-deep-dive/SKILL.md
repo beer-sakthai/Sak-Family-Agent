@@ -1,4 +1,5 @@
 ---
+name: SakThai-hf-gemma3-deep-dive
 author: SakThai
 license: MIT
 skill_type: reference

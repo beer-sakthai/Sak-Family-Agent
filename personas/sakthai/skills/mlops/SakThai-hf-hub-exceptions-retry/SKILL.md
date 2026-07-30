@@ -1,4 +1,5 @@
 ---
+name: SakThai-hf-hub-exceptions-retry
 author: SakThai
 license: MIT
 category: mlops

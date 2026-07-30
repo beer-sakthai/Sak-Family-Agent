@@ -1,4 +1,5 @@
 ---
+name: SakThai-hf-hub-search-discovery-api
 author: SakThai
 license: MIT
 category: mlops

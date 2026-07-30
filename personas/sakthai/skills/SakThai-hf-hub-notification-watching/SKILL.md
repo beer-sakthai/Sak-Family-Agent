@@ -1,4 +1,5 @@
 ---
+name: SakThai-hf-hub-notification-watching
 author: SakThai
 license: MIT
 category: mlops
