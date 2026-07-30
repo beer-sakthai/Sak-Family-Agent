@@ -13,9 +13,13 @@ low-maintenance. Keep the House of Sak identity, drop the marketing bloat.
 
 1. **No hardcoded download numbers anywhere.** Use ONE dynamic badge at the top:
    ```html
-   <img src="https://img.shields.io/endpoint?url=https://huggingface.co/api/models/Nanthasit/REPO&label=downloads&color=blue&cacheSeconds=3600" alt="Downloads"/>
+   <img src="https://img.shields.io/badge/dynamic/json?url=https%3A//huggingface.co/api/models/Nanthasit/REPO&query=%24.downloads&label=downloads&color=blue&cacheSeconds=3600" alt="Downloads"/>
    ```
-   (Datasets: `.../api/datasets/Nanthasit/REPO`.) Family tables carry **size + role**, never
+   Use `badge/dynamic/json` with `query=$.downloads`, **not** `endpoint`. The HF API returns
+   repo metadata, not shields' `{schemaVersion,label,message}` contract, so an `endpoint`
+   badge renders the literal text `invalid properties: label, message`. The `url=` value must
+   stay percent-encoded (`https%3A//…`) or shields drops the query string.
+   (Datasets: swap `/api/models/` for `/api/datasets/`.) Family tables carry **size + role**, never
    counts. Hardcoded numbers go stale the moment you push — never emit them, and never emit a
    `badge/downloads-625-blue`-style static badge.
 2. **One family table per card**, not three. Use the canonical table below verbatim.
