@@ -32,7 +32,7 @@ import json
 import struct
 import sys
 from pathlib import Path
-from urllib.parse import urlparse
+from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _common import (  # noqa: E402
@@ -42,6 +42,29 @@ from _common import (  # noqa: E402
 
 # Binary frame types from ComfyUI WebSocket protocol
 BINARY_PREVIEW_IMAGE = 1
+_SENSITIVE_QUERY_KEYS = {
+    "apikey",
+    "api_key",
+    "authorization",
+    "password",
+    "passwd",
+    "private_key",
+    "secret",
+    "token",
+}
+
+
+def _redact_url_for_log(url: str) -> str:
+    parsed = urlparse(url)
+    if not parsed.query:
+        return url
+    redacted_pairs = []
+    for key, value in parse_qsl(parsed.query, keep_blank_values=True):
+        if key.lower() in _SENSITIVE_QUERY_KEYS:
+            redacted_pairs.append((key, "***REDACTED***"))
+        else:
+            redacted_pairs.append((key, value))
+    return urlunparse(parsed._replace(query=urlencode(redacted_pairs, doseq=True)))
 BINARY_TEXT = 3
 BINARY_PREVIEW_IMAGE_WITH_METADATA = 4
 
@@ -151,7 +174,7 @@ def main(argv: list[str] | None = None) -> int:
         preview_dir.mkdir(parents=True, exist_ok=True)
         log(f"Saving previews to {preview_dir}")
 
-    log(f"Connecting to {ws_url} (client_id={client_id})")
+    log(f"Connecting to {_redact_url_for_log(ws_url)} (client_id={client_id})")
     if args.prompt_id:
         log(f"Filtering messages to prompt_id={args.prompt_id}")
 
