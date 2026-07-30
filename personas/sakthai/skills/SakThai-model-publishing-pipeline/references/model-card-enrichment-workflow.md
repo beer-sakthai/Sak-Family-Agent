@@ -57,6 +57,11 @@ low-maintenance. Keep the House of Sak identity, drop the marketing bloat.
 9. `## Links` — inline, one line
 10. `## License`
 
+**Datasets have their own SOP** — see [`dataset-card-standard.md`](dataset-card-standard.md),
+which layers Hugging Face's official dataset-card spec (required YAML, closed enums, the
+`configs`/`dataset_info` no-touch rule) on top of these lean rules. Follow it, not this file,
+for anything under `huggingface.co/datasets/Nanthasit/`.
+
 Datasets follow the same spine: identity → What it is → Quick start (load snippet) →
 structure/stats → trained-models → License. Right-size the card to the content (a 10-example
 dataset does not need a 260-line card).
