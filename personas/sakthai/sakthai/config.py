@@ -43,6 +43,12 @@ SKILLS_DIR = PERSONAS_DIR / "sakthai" / "skills"
 LIBRARY_DIR = PERSONAS_DIR / "shared" / "skills"
 SHARED_SKILLS_DIR = PERSONAS_DIR / "shared" / "skills"
 
+# Curated skill catalog at the repo root (pre-dates the SakThai-/Sak- naming
+# convention — its skills keep their original lowercase `sakthai-` names).
+# Kept as a distinct discovery root rather than folded into LIBRARY_DIR, which
+# other code already treats as a synonym for SHARED_SKILLS_DIR.
+CURATED_LIBRARY_DIR = REPO_ROOT / "library"
+
 # The five Sak Family personas `sakthai chat --persona` can address.
 PERSONA_NAMES: tuple[str, ...] = ("sakking", "sakthai", "saksee", "saksit", "sakjules")
 
