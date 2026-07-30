@@ -695,16 +695,17 @@ git push -u origin feat/your-feature
 
 | Model | Type | Score | Size | Downloads | Status |
 |-------|------|:-----:|:----:|:---------:|:------:|
-| **1.5B-merged** | Tool-calling GGUF | ⭐⭐⭐⭐⭐ | 934 MB | **1,197** | 🟢 Active |
-| **Coder 1.5B** | Code GGUF | ⭐⭐⭐⭐⭐ | 1.1 GB | **34** | 🟢 Active |
-| **0.5B-merged** | Lightweight | ⭐ | 380 MB | **994** | 🟢 Active |
-| **7B-merged** | Full-size | — | 15 GB | **562** | 🟡 Experimental |
-| **7B-128K** | Extended context | — | — | **351** | 🟡 Experimental |
-| **Vision 7B** | Multimodal | — | 3.9 GB | **45** | 🟡 Experimental |
-| **TTS Model** | Speech synthesis | — | 141 MB | **33** | 🟡 Experimental |
-| **Multilingual** | 50+ languages | — | 449 MB | **104** | 🟢 Active |
-| **1.5B-Tools** (LoRA) | PEFT adapter | — | — | **143** | 🟢 Active |
-| **7B-Tools** (LoRA) | PEFT adapter | — | — | **185** | 🟢 Active |
+| **1.5B-merged** | Tool-calling GGUF | ⭐⭐⭐⭐⭐ | 934 MB | **1,269** | 🟢 Active |
+| **0.5B-merged** | Lightweight | ⭐ | 380 MB | **1,030** | 🟢 Active |
+| **7B-merged** | Full-size | — | 15 GB | **585** | 🟢 Active |
+| **7B-128K** | Extended context | — | — | **382** | 🟡 Experimental |
+| **Coder 1.5B** | Code GGUF | ⭐⭐⭐⭐⭐ | 1.1 GB | **70** | 🟢 Active |
+| **TTS Model** | Speech synthesis | — | 141 MB | **69** | 🟡 Experimental |
+| **Vision 7B** | Multimodal | — | 3.9 GB | **104** | 🟢 Active |
+| **Multilingual Embedding** | 50+ languages | — | 449 MB | **188** | 🟢 Active |
+| **7B-Tools** (LoRA) | PEFT adapter | — | — | **219** | 🟢 Active |
+| **1.5B-Tools** (LoRA) | PEFT adapter | — | — | **163** | 🟢 Active |
+| **0.5B-Tools** (LoRA) | PEFT adapter | — | — | **7** | 🟢 Active |
 
 #### 📊 Training Dataset
 

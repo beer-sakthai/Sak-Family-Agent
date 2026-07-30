@@ -39,10 +39,10 @@ Each agent has its own personality, skill set, and charge cycle — but they sha
 
 | Category | Count | Details |
 |----------|:-----:|---------|
-| **Models** | 12 | Text generation (0.5B–7B), vision, coding, sentence & multilingual embeddings, TTS |
-| **Datasets** | 4 | Tool-calling training data, combined datasets, notebooks, food-penguin |
-| **Spaces** | 2 | TTS showcase and model leaderboard |
-| **GGUF (local)** | 5 | 0.5B, 0.5B-F16, 1.5B, 1.5B-F16, Coder |
+| **Models** | 11 | Text generation (0.5B–7B), vision, coding, multilingual embeddings, TTS |
+| **Datasets** | 8 | Tool-calling, combined, notebooks, food-penguin, irrelevance, benchmarks |
+| **Spaces** | 3 | TTS showcase, model leaderboard, vision demo |
+| **GGUF (local)** | 5 | 0.5B, 1.5B, Coder, TTS, Vision |
 | **Shared Soul** | 1 | The SakThai Agent personality lived by every agent |
 
 Every component in this family shares one identity and one mission: to be a companion that remembers, grows, and writes its own soul over time.

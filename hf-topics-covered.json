@@ -409,5 +409,6 @@
   "spaces-zerogpu-complete-api-architecture-deep-dive",
   "spaces-zerogpu-free-gpu-allocation",
   "hf-hub-enterprise-sso",
-  "hf-donut-document-understanding"
+  "hf-donut-document-understanding",
+  "hf-spaces-as-api-endpoints"
 ]
