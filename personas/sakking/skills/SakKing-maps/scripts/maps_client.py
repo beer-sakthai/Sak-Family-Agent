@@ -149,6 +149,18 @@ SENSITIVE_OUTPUT_KEYS = {
     "latitude",
     "lon",
     "longitude",
+    "house_number",
+    "road",
+    "neighbourhood",
+    "suburb",
+    "city",
+    "town",
+    "village",
+    "county",
+    "state",
+    "postcode",
+    "country",
+    "country_code",
 }
 
 # ---------------------------------------------------------------------------
