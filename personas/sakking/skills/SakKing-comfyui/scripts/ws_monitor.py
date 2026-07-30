@@ -141,8 +141,10 @@ def main(argv: list[str] | None = None) -> int:
     netloc = parsed.netloc
     base_path = parsed.path.rstrip("/")
     ws_url = f"{scheme}://{netloc}{base_path}/ws?clientId={client_id}"
+    logged_ws_url = ws_url
     if cloud and api_key:
         ws_url += f"&token={api_key}"
+        logged_ws_url += "&token=***REDACTED***"
 
     color_on = not args.no_color and sys.stdout.isatty()
 
@@ -151,7 +153,7 @@ def main(argv: list[str] | None = None) -> int:
         preview_dir.mkdir(parents=True, exist_ok=True)
         log(f"Saving previews to {preview_dir}")
 
-    log(f"Connecting to {ws_url} (client_id={client_id})")
+    log(f"Connecting to {logged_ws_url} (client_id={client_id})")
     if args.prompt_id:
         log(f"Filtering messages to prompt_id={args.prompt_id}")
 
