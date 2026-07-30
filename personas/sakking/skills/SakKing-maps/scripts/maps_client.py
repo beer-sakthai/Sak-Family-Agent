@@ -148,7 +148,22 @@ SENSITIVE_OUTPUT_KEYS = {
     "lat",
     "latitude",
     "lon",
+    "lng",
     "longitude",
+    "postcode",
+    "postal_code",
+    "zip",
+    "house_number",
+    "road",
+    "neighbourhood",
+    "suburb",
+    "city",
+    "town",
+    "village",
+    "county",
+    "state",
+    "country",
+    "country_code",
 }
 
 # ---------------------------------------------------------------------------
@@ -156,14 +171,15 @@ SENSITIVE_OUTPUT_KEYS = {
 # ---------------------------------------------------------------------------
 
 def _redact_sensitive_data(value):
-    """Return a copy with precise location and address fields removed."""
+    """Return a copy with sensitive location/address fields removed."""
     if isinstance(value, dict):
-        return {
-            key: "[REDACTED]"
-            if isinstance(key, str) and key.lower() in SENSITIVE_OUTPUT_KEYS
-            else _redact_sensitive_data(item)
-            for key, item in value.items()
-        }
+        redacted = {}
+        for key, item in value.items():
+            if isinstance(key, str) and key.lower() in SENSITIVE_OUTPUT_KEYS:
+                redacted[key] = "[REDACTED]"
+            else:
+                redacted[key] = _redact_sensitive_data(item)
+        return redacted
     if isinstance(value, list):
         return [_redact_sensitive_data(item) for item in value]
     return value
