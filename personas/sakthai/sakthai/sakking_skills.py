@@ -25,7 +25,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-import yaml  # type: ignore[import-untyped]
+import yaml
 
 from .config import SKILLS_DIR, sakking_skills_dir
 from .skills import PERSONA_SKILL_PREFIXES, target_skill_name
