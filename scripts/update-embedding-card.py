@@ -56,7 +56,7 @@ model-index:
 <h1 align="center">SakThai Multilingual Embedding 🌐</h1>
 <p align="center"><em>384-dim cross-lingual sentence embeddings · 50+ languages · CPU-friendly</em></p>
 <p align="center">
-  <img src="https://img.shields.io/endpoint?url=https://huggingface.co/api/models/Nanthasit/sakthai-embedding-multilingual&label=downloads&color=blue&cacheSeconds=3600" alt="Downloads"/>
+  <img src="https://img.shields.io/badge/dynamic/json?url=https%3A//huggingface.co/api/models/Nanthasit/sakthai-embedding-multilingual&query=%24.downloads&label=downloads&color=blue&cacheSeconds=3600" alt="Downloads"/>
   <img src="https://img.shields.io/badge/dim-384-blueviolet" alt="Dim"/>
   <img src="https://img.shields.io/badge/License-MIT-green" alt="MIT"/>
   <a href="https://huggingface.co/collections/Nanthasit/sakthai-model-family-6a64745450b12d421c1f9f02"><img src="https://img.shields.io/badge/🏠-SakThai%20Family-6644cc" alt="Collection"/></a>

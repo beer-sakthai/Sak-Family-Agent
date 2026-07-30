@@ -9,12 +9,11 @@ description: >
   (statistics, size, info, parquet), and practical patterns for server-side
   dataset filtering without downloading the full dataset.
 version: 1.0.0
-description: "Sakthai Hf Datasets Server Filter Endpoint"
 metadata:
   hermes:
     tags: [huggingface, datasets, server, filter, duckdb, sql, query, parquet]
     category: mlops
-
+category: mlops
 ---
 
 # HF Datasets Server `/filter` Endpoint: DuckDB SQL Filtering Reference

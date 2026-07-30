@@ -5,6 +5,7 @@ license: MIT
 description: Complete reference for Gradio 6 Server mode (gr.Server) — FastAPI-based API server with queue, SSE streaming, concurrency control, and MCP capabilities without a UI.
 version: 1.0.0
 created: 2026-07-25
+category: mlops
 tags:
   - gradio
   - server

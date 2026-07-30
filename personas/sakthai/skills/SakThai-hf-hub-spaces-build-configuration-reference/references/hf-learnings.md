@@ -1,10 +1,12 @@
-# HF Hub Spaces Build Configuration — Complete Reference
+# HF Hub Spaces Build Configuration — Complete Reference v2
 
-> Researched: 2026-07-25 | Source: huggingface.co/docs/hub/en/spaces-config-reference
+> Researched: 2026-07-26 | Sources: huggingface.co/docs/hub/en/spaces-config-reference, huggingface.co/docs/hub/en/spaces-gpus, huggingface.co/docs/hub/en/spaces-oauth
 
 ## Overview
 
-Hugging Face Spaces are configured through a **YAML frontmatter block** at the top of the `README.md` file in the root of the Space repository. This YAML block defines the SDK, runtime, hardware, OAuth, and many other properties.
+Hugging Face Spaces are configured through a **YAML frontmatter block** at the top of the `README.md` file in the root of the Space repository. This YAML block defines the SDK, runtime, hardware, OAuth, dependencies, preloading, and many other properties.
+
+---
 
 ## Complete Parameter Reference
 
@@ -18,124 +20,361 @@ Hugging Face Spaces are configured through a **YAML frontmatter block** at the t
 | `colorTo` | string | End color for thumbnail gradient. Same options as `colorFrom`. |
 | `thumbnail` | string | URL for a custom thumbnail image used in social sharing previews. |
 | `short_description` | string | Brief description shown on the Space's thumbnail card. |
-| `pinned` | boolean | When `true`, the Space stays pinned to the top of your profile page. Useful for highlighting your best Space among many. |
+| `pinned` | boolean | When `true`, the Space stays pinned to the top of your profile page. |
 
 ### SDK & Runtime
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `sdk` | string | **Required.** The framework type. Must be one of: `gradio`, `docker`, `static`. Determines how the Space is built and served. |
-| `python_version` | string | Python version. Any valid `3.x` or `3.x.x` format. **Default: `3.10`**. |
-| `sdk_version` | string | Version of the SDK (Gradio) to use. All Gradio versions are supported. Not used for `docker` or `static`. |
-| `app_file` | string | Path to the main application file, relative to repo root. For Gradio: Python file with Gradio code. For static: the HTML entry point. |
-| `app_port` | int | Port for the application (Docker SDK only). **Default: `7860`**. |
-| `app_build_command` | string | Build command for static Spaces (e.g., `npm run build`). Runs in a Job; output stored in `refs/convert/build`. Used with `app_file` pointing to the built artifact. |
-| `base_path` | string | Initial URL path for non-static Spaces. Must start with `/`. For static Spaces, use `app_file` instead. |
-| `fullWidth` | boolean | Whether the Space renders in full-width vs. fixed-width ("container" CSS) inside the iframe. **Default: `true`**. |
-| `header` | string | Header style: `mini` (full-screen with mini floating header) or `default`. |
-| `startup_duration_timeout` | string | Custom startup timeout before the Space is flagged unhealthy. Accepts durations like `1h`, `30m`. **Default: `30m`**. |
+| `sdk` | string | **Required.** Must be `gradio`, `docker`, or `static`. |
+| `python_version` | string | Python version `3.x` or `3.x.x`. **Default: `3.10`**. |
+| `sdk_version` | string | Gradio version to use. All versions supported. |
+| `app_file` | string | Path to main app file, relative to repo root. |
+| `app_port` | int | Port for Docker SDK. **Default: `7860`**. |
+| `app_build_command` | string | Build command for static Spaces (e.g., `npm run build`). Runs in a Job; output stored in `refs/convert/build`. |
+| `base_path` | string | Initial URL for non-static Spaces. Must start with `/`. |
+| `fullWidth` | boolean | Full-width vs fixed-width inside iframe. **Default: `true`**. |
+| `header` | string | `mini` or `default`. `mini` gives full-screen with floating header. |
+| `startup_duration_timeout` | string | Custom startup timeout. Accepts `1h`, `30m`. **Default: `30m`**. |
 
-### Hardware
+### Hardware Specs & Pricing
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `suggested_hardware` | string | **Suggested** hardware for users who duplicate this Space. Does NOT auto-assign hardware to the current Space. Use for template Spaces. |
+| `suggested_hardware` | string | **Suggested** hardware for duplicators. Does NOT auto-assign to current Space. |
 
-**Valid hardware flavors:**
+#### CPU
 
-| Category | Flavors |
-|----------|---------|
-| **CPU** | `cpu-basic`, `cpu-upgrade` |
-| **NVIDIA T4** | `t4-small`, `t4-medium` |
-| **NVIDIA L4** | `l4x1`, `l4x4` |
-| **NVIDIA L40S** | `l40sx1`, `l40sx4`, `l40sx8` |
-| **NVIDIA A10G** | `a10g-small`, `a10g-large`, `a10g-largex2`, `a10g-largex4` |
-| **NVIDIA A100** | `a100-large`, `a100x4`, `a100x8` |
+| Flavor | vCPU | Memory | Disk | Cost |
+|--------|------|--------|------|------|
+| `cpu-basic` | 2 vCPU | 16 GB | 50 GB | **Free** (paid plan to create) |
+| `cpu-upgrade` | 8 vCPU | 32 GB | 50 GB | $0.03/hr |
+
+#### NVIDIA GPU
+
+| Flavor | vCPU | Memory | GPU | Disk | Cost |
+|--------|------|--------|-----|------|------|
+| `t4-small` | 4 | 15 GB | 16 GB T4 | 50 GB | $0.40/hr |
+| `t4-medium` | 8 | 30 GB | 16 GB T4 | 100 GB | $0.60/hr |
+| `l4x1` | 8 | 30 GB | 24 GB L4 | 400 GB | $0.80/hr |
+| `l4x4` | 48 | 186 GB | 96 GB 4×L4 | 3200 GB | $3.80/hr |
+| `l40sx1` | 8 | 62 GB | 48 GB L40S | 380 GB | $1.80/hr |
+| `l40sx4` | 48 | 382 GB | 192 GB 4×L40S | 3200 GB | $8.30/hr |
+| `l40sx8` | 192 | 1534 GB | 384 GB 8×L40S | 6500 GB | $23.50/hr |
+| `a10g-small` | 4 | 15 GB | 24 GB A10G | 110 GB | $1.00/hr |
+| `a10g-large` | 12 | 46 GB | 24 GB A10G | 200 GB | $1.50/hr |
+| `a10g-largex2` | 24 | 92 GB | 48 GB 2×A10G | 1000 GB | $3.00/hr |
+| `a10g-largex4` | 48 | 184 GB | 96 GB 4×A10G | 2000 GB | $5.00/hr |
+| `a100-large` | 12 | 142 GB | 80 GB A100 | 1000 GB | $2.50/hr |
+| `a100x4` | 48 | 568 GB | 320 GB 4×A100 | 4000 GB | $10.00/hr |
+| `a100x8` | 96 | 1136 GB | 640 GB 8×A100 | 8000 GB | $20.00/hr |
+
+> H100 **removed December 2025** — no longer available.
 
 ### Storage
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `suggested_storage` | string | **Deprecated.** Persistent storage is no longer available. Previously accepted `small`, `medium`, `large`. Now ignored. |
+| `suggested_storage` | string | **Deprecated.** Persistent storage removed. Previously `small`, `medium`, `large`. Now **ignored**. |
 
 ### Dependencies & Tags
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `models` | List[string] | HF model IDs used (e.g., `openai-community/gpt2`). Auto-detected from code if omitted. |
-| `datasets` | List[string] | HF dataset IDs used (e.g., `mozilla-foundation/common_voice_13_0`). Auto-detected from code if omitted. |
-| `tags` | List[string] | Terms describing the Space's task or scope. Appears in search filters. |
+| `models` | List[string] | HF model IDs used. **Auto-detected from code if omitted.** |
+| `datasets` | List[string] | HF dataset IDs used. **Auto-detected from code if omitted.** |
+| `tags` | List[string] | Terms describing Space task/scope. Shows in search filters. |
 
 ### Embedding & Security
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `disable_embedding` | boolean | When `true`, prevents the Space iframe from being embedded in external websites. **Default: `false`** (embeddable). |
-| `custom_headers` | Dict[string, string] | Custom HTTP headers added to all responses. Currently only `cross-origin-embedder-policy` (COEP), `cross-origin-opener-policy` (COOP), and `cross-origin-resource-policy` (CORP) are allowed. All keys and values must be **lowercase**. Example enables cross-origin isolation for `SharedArrayBuffer`. |
+| `disable_embedding` | boolean | Prevent iframe embedding. **Default: `false`** (embeddable). |
+| `custom_headers` | Dict[string, string] | Custom HTTP headers. **Only COEP, COOP, CORP** allowed. All lowercase. See cross-origin isolation section. |
 
 ### OAuth / Sign-In with HF
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `hf_oauth` | boolean | Whether a connected OAuth app is associated with this Space. |
-| `hf_oauth_scopes` | List[string] | Authorized OAuth scopes. `openid` and `profile` are authorized by default. |
-| `hf_oauth_expiration_minutes` | int | OAuth token duration in minutes. **Default: `480`** (8h). **Max: `43200`** (30 days). |
-| `hf_oauth_authorized_org` | string or List[string] | Restrict OAuth access to members of specific organizations by name. |
+| `hf_oauth` | boolean | Enable sign-in-with-HF OAuth app. |
+| `hf_oauth_scopes` | List[string] | OAuth scopes. `openid` + `profile` always included by default. |
+| `hf_oauth_expiration_minutes` | int | Token duration. **Default: `480`** (8h). **Max: `43200`** (30d). |
+| `hf_oauth_authorized_org` | string or List[string] | Restrict OAuth to specific org members. |
+
+#### Complete OAuth Scopes
+
+| Scope | Description |
+|-------|-------------|
+| `openid` | Always. ID token + access token. |
+| `profile` | Always. Username, avatar, profile. |
+| `email` | User's email address. |
+| `read-billing` | Payment method status. |
+| `read-repos` | Read personal repos. |
+| `gated-repos` | Read public gated repos (not private). |
+| `contribute-repos` | Create repos + access created ones. |
+| `write-repos` | Write/read personal repos. |
+| `manage-repos` | Full access including create/delete. |
+| `read-collections` | Read personal collections. |
+| `write-collections` | Write/read + create/delete collections. |
+| `inference-api` | Inference on behalf of user. |
+| `jobs` | Run HF Jobs. |
+| `webhooks` | Manage webhooks. |
+| `write-discussions` | Discussions, PRs, comments, reactions. Need `read-repos` for private repo PRs. |
+
+#### OAuth Env Vars (injected at runtime)
+
+When `hf_oauth: true`:
+- `OAUTH_CLIENT_ID` — public client ID
+- `OAUTH_CLIENT_SECRET` — keep confidential
+- `OAUTH_SCOPES` — space-separated
+- `OPENID_PROVIDER_URL` — metadata at `{url}/.well-known/openid-configuration`
+
+Redirect URIs can target the Space. `SPACE_HOST` env var available.
 
 ### Performance: Preloading
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `preload_from_hub` | List[string] | List of HF Hub repos/files to preload at build time. Optimizes startup by downloading files during build instead of at runtime. |
+| `preload_from_hub` | List[string] | Repos/files to preload at **build time**. Reduces startup latency. |
 
-**Format:** `"repo_name"` (all files), `"repo_name file1,file2"` (specific files), or `"repo_name file1,file2 commit_sha256"` (specific revision).
+**Format variants:**
+- `"repo_name"` — entire repo
+- `"repo_name file1,file2"` — specific files
+- `"repo_name file1,file2 commit_sha256"` — pinned revision
 
-Files are saved in the default `huggingface_hub` disk cache at `~/.cache/huggingface/hub`. Does NOT follow `HF_HOME` overrides. Private repos are **not** supported yet.
+**Caveats:**
+- Files saved to `~/.cache/huggingface/hub` (does NOT follow `HF_HOME`)
+- Private repos **not supported**
+- Preloaded in default cache path only
+
+---
+
+## SDK-Specific Configuration
+
+### Gradio SDK
+
+| Aspect | Detail |
+|--------|--------|
+| `sdk: gradio` | Default. Most common. |
+| `sdk_version` | Pin Gradio version. |
+| `app_file` | Python entry point with `demo.launch()`. |
+| GPU frameworks | Add `--extra-index-url https://download.pytorch.org/whl/cu113` to `requirements.txt`. |
+| Gradio OAuth | `gr.LoginButton` + `gr.OAuthView` or `gr.LoginWhen` pattern. |
+
+**Example Gradio with OAuth:**
+```yaml
+title: My OAuth App
+emoji: 🔐
+sdk: gradio
+sdk_version: 5.0.0
+app_file: app.py
+hf_oauth: true
+hf_oauth_scopes:
+  - read-repos
+  - inference-api
+```
+
+### Docker SDK
+
+| Aspect | Detail |
+|--------|--------|
+| `sdk: docker` | Full container control. Needs `Dockerfile`. |
+| `app_port` | Default 7860. Space expects app on this port. |
+| Customization | Any base image, language, dependencies. |
+| GPU | Requires paid plan. Manual CUDA install. |
 
 **Example:**
 ```yaml
-preload_from_hub:
-  - warp-ai/wuerstchen-prior text_encoder/model.safetensors,prior/diffusion_pytorch_model.safetensors
-  - coqui/XTTS-v1
-  - openai-community/gpt2 config.json 11c5a3d5811f50298f278a704980280950aedb10
+title: Docker Inference
+emoji: 🐳
+sdk: docker
+app_port: 8080
 ```
 
-## SDK-Specific Notes
+### Static SDK
 
-| SDK | Key Constraints |
-|-----|-----------------|
-| **Gradio** | Requires Python. `sdk_version` to pin Gradio version. `app_file` points to Python entry point. Default framework for Spaces. |
-| **Docker** | Uses `app_port` (default 7860). Full control over environment. Supports custom Dockerfile. Requires paid plan for GPU. |
-| **Static** | Free for everyone. `app_build_command` for pre-build. `app_file` points to HTML entry. Zero compute cost. |
+| Aspect | Detail |
+|--------|--------|
+| `sdk: static` | **Free.** Serves HTML/CSS/JS directly. |
+| `app_build_command` | e.g., `npm run build`. Runs during build. |
+| `app_file` | Points to built HTML (e.g., `dist/index.html`). |
+| Client OAuth | Via `@huggingface/hub` JS SDK. |
 
-## Zero-Cost Patterns
+**Example:**
+```yaml
+title: Static Demo
+emoji: 📄
+sdk: static
+app_file: dist/index.html
+app_build_command: npm run build
+```
 
-- **Static Spaces** are completely free — use for documentation sites, landing pages, dashboards with static data.
-- **Gradio Spaces on ZeroGPU** — free personal accounts get up to 2 Gradio Spaces on ZeroGPU hardware. Good for demos and light inference.
-- **Use `preload_from_hub`** to avoid runtime download costs — files are loaded during the free build phase.
-- **`disable_embedding: false`** (default) allows embedding your Space anywhere for free distribution.
-- **Hardware auto-sleep** — Spaces that go unused will pause and free compute. No cost for idle time.
+---
 
-## Common Patterns
+## Practical Complete Examples
 
-1. **Template Spaces for duplication**: Use `suggested_hardware` + `suggested_storage` so duplicators get the right defaults.
-2. **Cross-origin isolation for ML demos**: Set `custom_headers` to enable `SharedArrayBuffer` for multi-threaded WASM inference.
-3. **Branded Spaces**: Combine `title`, `emoji`, `colorFrom`/`colorTo`, and `thumbnail` for a polished appearance.
-4. **Fast-starting Spaces**: Use `preload_from_hub` to download models during build. Large models that would take 2+ minutes at runtime load in seconds at startup.
-5. **Organization-only OAuth**: Restrict login via `hf_oauth_authorized_org` for internal tools.
+### 1. Minimal Gradio Demo
+```yaml
+title: My Demo
+emoji: 🚀
+colorFrom: green
+colorTo: blue
+sdk: gradio
+sdk_version: 5.0.0
+app_file: app.py
+pinned: true
+```
 
-## Limitations & Constraints
+### 2. Template for Duplication
+```yaml
+title: Template LLM Chat
+emoji: 🤖
+sdk: gradio
+sdk_version: 5.0.0
+suggested_hardware: t4-medium
+models: [meta-llama/Llama-3.2-3B-Instruct]
+tags: [llm, chat, template]
+preload_from_hub:
+  - meta-llama/Llama-3.2-3B-Instruct
+```
 
-- `suggested_hardware` and `suggested_storage` are **hints for duplicators** — they don't auto-assign hardware to the current Space.
-- `preload_from_hub` does NOT follow `HF_HOME` or custom cache paths — always writes to `~/.cache/huggingface/hub`.
-- `custom_headers` supports exactly 3 header keys: COEP, COOP, CORP — no other custom headers are allowed.
-- Private repo preloading is not yet supported.
-- `suggested_storage` is deprecated and ignored since persistent storage was removed.
+### 3. Organization-Only Internal Tool
+```yaml
+title: Internal Dashboard
+emoji: 🏢
+sdk: gradio
+app_file: dashboard.py
+hf_oauth: true
+hf_oauth_scopes: [read-repos]
+hf_oauth_expiration_minutes: 1440
+hf_oauth_authorized_org: my-org-name
+disable_embedding: true
+```
+
+### 4. Cross-Origin Isolated WASM Space
+```yaml
+title: WASM Inference
+emoji: ⚡
+sdk: static
+app_file: index.html
+app_build_command: npm run build
+custom_headers:
+  cross-origin-embedder-policy: require-corp
+  cross-origin-opener-policy: same-origin
+  cross-origin-resource-policy: cross-origin
+header: mini
+```
+
+---
+
+## Cross-Origin Isolation with Custom Headers
+
+Enables `SharedArrayBuffer` for multi-threaded WASM inference (llama.cpp WASM, WebLLM, Whisper WASM).
+
+**Allowed headers** (only 3, all lowercase):
+- `cross-origin-embedder-policy`: `unsafe-none` | `require-corp`
+- `cross-origin-opener-policy`: `unsafe-none` | `same-origin-allow-popups` | `same-origin`
+- `cross-origin-resource-policy`: `same-site` | `same-origin` | `cross-origin`
+
+**Minimal isolation:**
+```yaml
+custom_headers:
+  cross-origin-embedder-policy: require-corp
+  cross-origin-opener-policy: same-origin
+  cross-origin-resource-policy: cross-origin
+```
+
+---
+
+## OAuth Integration Patterns
+
+### Gradio Built-In
+```python
+import gradio as gr
+with gr.Blocks() as demo:
+    gr.LoginButton()
+    gr.LogoutButton()
+    gr.OAuthView(gr.Textbox(), user_info="username")
+demo.launch()
+```
+
+### Manual Flow
+1. Redirect: `https://huggingface.co/oauth/authorize?redirect_uri=...&client_id=...&state=...`
+2. Handle callback, verify `state`, exchange `code` for tokens via POST to `https://huggingface.co/oauth/token`
+3. Access token → scoped API. ID token → user profile.
+
+### Static Space (JS)
+```javascript
+import { oauthLoginUrl, oauthHandleRedirectIfPresent } from "@huggingface/hub";
+const oauthResult = await oauthHandleRedirectIfPresent();
+if (!oauthResult) window.location.href = await oauthLoginUrl();
+// oauthResult.accessToken, oauthResult.userInfo
+```
+
+---
+
+## Zero-Cost Analysis
+
+| Pattern | Cost | Notes |
+|---------|------|-------|
+| Static Space | **Free** | No compute, no GPU, for everyone |
+| Gradio CPU Basic | **Free** compute (paid plan to create) |
+| Gradio ZeroGPU | **Free** | Up to 2 Spaces, personal accounts |
+| Gradio paid GPU | $0.03–$23.50/hr | CPU upgrade to 8×A100 |
+| `preload_from_hub` | **Free** | Build-phase download |
+| OAuth | **Free** | Built-in |
+| `custom_headers` | **Free** | Config only |
+| Auto-sleep | **Free** | Idle → pause, no cost |
+
+---
+
+## Best Practices
+
+1. **Pin `sdk_version`** — prevents Gradio release breakage.
+2. **Use `preload_from_hub`** — cuts startup from minutes to seconds.
+3. **Set `suggested_hardware` on templates** — duplicators get right defaults.
+4. **Isolate only when needed** — `require-corp` blocks third-party resources.
+5. **Restrict OAuth by org** — `hf_oauth_authorized_org` for internal tools.
+6. **Write `short_description`** — improves discoverability.
+7. **Auto-sleep is free** — no cost during idle.
+8. **Static Spaces are forever free** — docs, portfolios, demos.
+
+---
+
+## Limitations
+
+| Constraint | Detail |
+|------------|--------|
+| `suggested_hardware/storage` | **Hints only** — no auto-assignment |
+| `preload_from_hub` cache | Always `~/.cache/huggingface/hub` — ignores `HF_HOME` |
+| `custom_headers` | Only COEP, COOP, CORP — no arbitrary headers |
+| Private repo preloading | **Not supported** |
+| `suggested_storage` | Deprecated and **ignored** |
+| Creating Spaces | Non-static need paid plan to **create** |
+| OAuth redirect | Use `target=_blank` to avoid iframe cookie issues |
+
+---
+
+## Helper Environment Variables
+
+| Variable | Description |
+|----------|-------------|
+| `SPACE_ID` | `org/space-name` |
+| `SPACE_HOST` | `org-space-name.hf.space` |
+| `SPACE_TITLE` | Title from YAML |
+| `OAUTH_CLIENT_ID` | OAuth client ID |
+| `OAUTH_CLIENT_SECRET` | OAuth client secret |
+| `OAUTH_SCOPES` | Space-separated scopes |
+| `OPENID_PROVIDER_URL` | OpenID provider |
+
+---
 
 ## Related Documentation
 
 - [Spaces Overview](https://huggingface.co/docs/hub/en/spaces-overview)
-- [Handling Spaces Dependencies](https://huggingface.co/docs/hub/en/spaces-dependencies)
+- [Spaces Dependencies](https://huggingface.co/docs/hub/en/spaces-dependencies)
 - [Spaces ZeroGPU](https://huggingface.co/docs/hub/en/spaces-zerogpu)
-- [Spasign-In with HF button](https://huggingface.co/docs/hub/en/spaces-oauth)
-- [Run Spaces with Docker](https://huggingface.co/docs/hub/en/spaces-docker)
+- [Sign-In with HF](https://huggingface.co/docs/hub/en/spaces-oauth)
+- [Spaces Docker](https://huggingface.co/docs/hub/en/spaces-docker)
+- [Spaces GPU](https://huggingface.co/docs/hub/en/spaces-gpus)
+- [HF OAuth](https://huggingface.co/docs/hub/en/oauth)

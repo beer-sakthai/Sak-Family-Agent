@@ -1,9 +1,6 @@
 ---
 name: SakThai-hf-hub-spaces-python-sdk
-author: SakThai
-license: MIT
-description: "A skill for Hf Hub Spaces Python Sdk."
-version: 0.1.0
+description: # Hugging Face Spaces Python SDK
 ---
 
 # Hugging Face Spaces Python SDK

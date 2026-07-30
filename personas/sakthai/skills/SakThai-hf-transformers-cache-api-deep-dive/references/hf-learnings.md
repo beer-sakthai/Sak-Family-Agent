@@ -61,3 +61,48 @@ Understanding the cache API is essential for optimizing LLM inference:
 
 ### Skill Created
 `hf-transformers-cache-api-deep-dive/` — SKILL.md (author: SakThai, license: MIT) + references/hf-learnings.md covering the complete cache class hierarchy, user-facing API, layer-level architecture, performance considerations, and practical recipes.
+
+---
+
+## 2026-07-25 (v2): hf-transformers-cache-api-deep-dive — Transformers v5.14.0 Cache Updates (Topic #392, Deeper)
+
+### Summary
+Deeper research into the Transformers cache system using the official v5.14.0 documentation, which now has dedicated pages for cache strategies (`kv_cache.md`) and caching explanation (`cache_explanation.md`). This update adds iterative generation patterns, prefix caching, CPU tensor bookkeeping for compiled inference, OOM-resilient generation, manual generation loops with proper attention mask handling, and updated quantized cache backend recommendations.
+
+### Key New Findings
+
+| Area | Finding |
+|------|---------|
+| **Iterative generation** | Cache can persist across chatbot turns. Initialize `DynamicCache(config=model.config)` once, reuse in `generate()` for each user message. Warning: special reasoning tokens (`<think>`) may be lost during re-encoding. |
+| **Prefix caching** | Prefill a `StaticCache` with a common prefix prompt, then `deepcopy` + reuse for multiple queries. Useful for "system prompt + user query" patterns. Requires running a no-grad forward pass to populate the cache. |
+| **CPU tensor bookkeeping** | On Neuron/TPU backends, leaving inputs on CPU avoids compiler retracing. `generate()` moves only forward-required tensors to model device, output follows input device. |
+| **OOM resilience** | Pattern: catch `torch.OutOfMemoryError`, `empty_cache()`, retry with `cache_implementation="offloaded"`. |
+| **HQQ quantization** | HQQ backend now supports int2, int4, AND int8. Recommended `axis-key` / `axis-value` = 1 for HQQ, 0 for Quanto. |
+| **Manual generation loop** | Official example showing proper attention mask concatenation when using DynamicCache in a custom loop without `generate()`. |
+| **StaticCache trade-off** | Fixed-size cache wastes tokens in attention computation for short sequences, but enables torch.compile. Best for consistent-length batched generation. |
+| **Cache storage implementation** | Caches store per-layer key/value tensors of shape `[batch_size, num_heads, seq_len, head_dim]`. Layer types (`DynamicLayer`, `StaticLayer`, `StaticSlidingWindowLayer`) change only how seq_len is handled. |
+| **Comparison table** | Official doc now has clear table: DynamicCache (sliding✅, offload✅, compile❌, medium memory), StaticCache (✅✅✅, high), QuantizedCache (❌❌❌, low). |
+
+### New Recipes Added to SKILL.md
+1. Iterative generation with cache — chatbot loop
+2. Prefix caching — prefill + reuse StaticCache
+3. CPU tensor bookkeeping — Neuron/TPU optimization
+4. OOM-resilient generation — automatic offload fallback
+5. Manual generation loop — proper attention mask handling
+6. Quantized cache backend recommendations — HQQ vs Quanto axis settings
+
+### Updated SKILL.md
+- Added YAML frontmatter with `author: SakThai` and `license: MIT`
+- Version bumped to 2.0.0
+- Added tags for discoverability
+- New sections: Iterative Generation, Prefix Caching, CPU Bookkeeping, OOM Resilience, Manual Loop, Quantized Backend Recommendations, Updated Comparison Table
+- Added Recipe 5 (prefix caching) and Recipe 6 (OOM resilience)
+- Added v5.14.0 source references
+
+### Sources
+- https://huggingface.co/docs/transformers/en/kv_cache — Cache strategies (v5.14.0)
+- https://huggingface.co/docs/transformers/en/cache_explanation — Caching explanation (v5.14.0)
+- https://huggingface.co/docs/transformers/en/generation_strategies — Custom generation methods
+
+### Tags
+`kv-cache` `inference` `optimization` `transformers` `torch-compile` `quantization` `memory` `prefix-caching` `iterative-generation`
