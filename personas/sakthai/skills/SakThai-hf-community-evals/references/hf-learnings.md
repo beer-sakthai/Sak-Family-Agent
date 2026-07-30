@@ -313,6 +313,62 @@ api.upload_file(
                     └──────────────────────┘
 ```
 
+### Practical Tips (from SakThai v7 eval uploads, 2026-07-29)
+
+#### Multiple results per file
+
+The YAML spec uses a **list** format (`- dataset:` repeated items), so multiple results can go in one file. This is cleaner than one file per result:
+
+```yaml
+# ✅ GOOD — one file, four results
+- dataset:
+    id: llamastack/bfcl_v3
+    task_id: simple
+  value: 0.80
+  source:
+    url: https://github.com/beer-sakthai/Sak-Family-Agent
+    name: SakThai Internal Benchmark
+    user: Nanthasit
+  notes: "4/5 simple tool calls"
+
+- dataset:
+    id: llamastack/bfcl_v3
+    task_id: multiple
+  value: 1.0
+  source:
+    url: https://...
+    name: SakThai Internal Benchmark
+    user: Nanthasit
+  notes: "5/5 multiple calls"
+```
+
+❌ Don't put each result in its own file — it wastes commits and clutters the `.eval_results/` directory.
+
+#### Always add `source.user` for attribution
+
+The `source.user` field makes the result badge show with your username. Without it, the source block shows an unnamed source. All SakThai models were fixed on 2026-07-29 to include `user: Nanthasit`.
+
+#### Registered benchmarks vs any dataset
+
+The `dataset.id` should point to a dataset with the **Benchmark** tag for results to appear on benchmark leaderboards. For non-Benchmark datasets, results still appear on the model page but won't feed into aggregated leaderboards. BFCL (`llamastack/bfcl_v3`) is not a registered benchmark as of 2026-07-29, but results with this dataset ID still show on model pages.
+
+#### Clean up old individual files when consolidating
+
+If you previously uploaded individual result files (e.g. `bfcl-simple.yaml`, `bfcl-multiple.yaml`) and later consolidate into a single file (e.g. `bfcl.yaml`), delete the old files to avoid duplicate display:
+
+```python
+from huggingface_hub import HfApi
+api = HfApi(token=HF_TOKEN)
+for f in ['bfcl-simple.yaml', 'bfcl-multiple.yaml']:
+    api.delete_file(
+        path_in_repo=f'.eval_results/{f}',
+        repo_id='Nanthasit/my-model',
+        repo_type='model'
+    )
+```
+
+Use `HfApi.delete_file()` (not the REST API, which rejects DELETE). The old files still appear on the model's file tree and in API responses if not cleaned.
+
 ### References
 - https://huggingface.co/blog/eee-community-evals (June 30, 2026)
 - https://huggingface.co/blog/community-evals (Feb 2026)
@@ -324,3 +380,45 @@ api.upload_file(
 - https://evalevalai.com/
 - https://evalcards.evalevalai.com/help/get-verified
 - https://huggingface.co/datasets?benchmark=benchmark:official&sort=trending
+
+---
+
+## 2026-07-29: Transformers v5.14.0 Ecosystem Update
+
+### Summary
+Transformers v5.14.0 (Jul 15) and v5.14.1 (Jul 16) released with major new architectures and performance improvements. Key findings for SakThai ecosystem tracking.
+
+### Key Findings
+
+#### 1. Inkling — Thinking Machines Lab (975B total / 41B active MoE)
+- General-purpose multimodal model: text + image + audio → text
+- MoE architecture: 975B total params, only 41B active per forward pass
+- Designed for agentic/tool-use systems, coding, RAG, and conversational AI
+- Open weights release for research and fine-tuning
+- Context: This is a frontier-scale model on the Hub — relevant for ecosystem awareness but too large (975B) for our zero-cost infra
+
+#### 2. MTP (Multi-Token Prediction) for Assisted Decoding
+- Docs added for assisted decoding using Multi-Token Prediction
+- Speculative decoding technique: predicts multiple future tokens in one forward pass
+- Can significantly speed up text generation throughput
+
+#### 3. TIPSv2 — Vision-Language Contrastive Encoder
+- New model family: Text-Image Pre-training with Spatial awareness
+- Contrastive vision-language encoder (enhanced CLIP-style)
+- Includes TIPSv2 DPT variant for depth estimation
+- Source: Bingyi Cao et al. "TIPSv2: Advancing Vision-Language Pretraining with Enhanced Patch-Text Alignment"
+
+#### 4. Kernel & Performance Improvements
+- SDPA prefill now uses FlashAttention kernel with StaticCache → **up to 260% faster** for large input sizes
+- DeepGEMM Triton fallback made more robust when CUDA_HOME is unset
+- Compressed tensors in FP8 format support added
+
+#### 5. Breaking Changes
+- GPTNeoX: `embed_out` remapped to `lm_head` (weight naming change)
+- GPTBigCode: `_supports_attention_backend = True` enabled for vLLM compatibility
+
+### Action Items for SakThai Ecosystem
+- No immediate infra changes needed (our models are 0.5B–7B, Inkling is 975B)
+- Good to track MTP as future speculative decoding option for our GGUF inference
+- TIPSv2 is relevant reference for our vision-7b model's model card context
+- The SDPA+StaticCache performance gain (260%) is worth noting in our inference documentation

@@ -2,14 +2,11 @@
 name: SakThai-hf-hub-git-over-ssh-and-commit-signing
 author: SakThai
 license: MIT
-description: "A skill for Hf Hub Git Over Ssh And Commit Signing."
-version: 0.1.0
+description: Complete reference for authenticating Git operations on the Hugging Face Hub via SSH and cryptographically signing commits with GPG
+category: mlops
 ---
 
 # HF Hub: Git over SSH & Commit Signing
-
-**author:** SakThai
-**license:** MIT
 
 ## Summary
 Complete reference for authenticating Git operations on the Hugging Face Hub via SSH, and cryptographically signing commits with GPG to prove authorship. Covers key generation, key upload, git configuration, testing, and troubleshooting.

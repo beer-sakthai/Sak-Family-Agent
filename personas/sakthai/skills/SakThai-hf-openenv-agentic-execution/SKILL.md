@@ -10,8 +10,8 @@ description: >-
   Rubric reward system, deployment to Docker and HF Spaces, RL training
   integration with TRL/Unsloth, and the full environment lifecycle.
 version: 1.0.0
-description: "Sakthai Hf Openenv Agentic Execution"
 created: 2026-07-25
+category: mlops
 tags:
   - openenv
   - agentic
@@ -21,7 +21,6 @@ tags:
   - training
   - gymnasium
   - containers
-
 ---
 
 # Hugging Face OpenEnv — Agentic Execution Environments (Deep Dive)

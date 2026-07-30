@@ -9,6 +9,7 @@ metadata:
   hermes:
     tags: [huggingface, hf, hub, egress, bandwidth, usage, metrics, billing, cdn]
     category: mlops
+category: mlops
 ---
 
 # HF Hub Egress Metrics: Bandwidth Usage Monitoring

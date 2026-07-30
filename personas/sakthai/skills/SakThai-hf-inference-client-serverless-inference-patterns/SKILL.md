@@ -9,6 +9,7 @@ metadata:
   hermes:
     tags: [huggingface, inference, serverless, providers, openai-compatible, responses-api, structured-outputs, function-calling, streaming, pricing]
     category: mlops
+category: mlops
 ---
 
 # HF Inference Providers — Serverless Inference Patterns

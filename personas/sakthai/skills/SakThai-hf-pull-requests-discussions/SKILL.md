@@ -8,12 +8,10 @@ description: >
   commenting, editing, hiding, status changes, merging, renaming, and the git
   ref model underpinning PRs. Includes the Python HfApi SDK and REST API.
 version: 1.0.0
-description: "Sakthai Hf Pull Requests Discussions"
 metadata:
   hermes:
     tags: [huggingface, hub, pull-requests, discussions, api, collaboration]
     category: productivity
-
 ---
 
 # HF Hub Pull Requests & Discussions API

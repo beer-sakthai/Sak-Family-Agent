@@ -36,7 +36,7 @@ import torch
 from diffusers import FluxPipeline
 
 pipe = FluxPipeline.from_pretrained(
-    "black-forest-labs/FLUX.1-dev", torch_dtype=torch.bfloat16
+    "black-forest-labs/FLUX.1-dev", dtype=torch.bfloat16
 ).to("cuda")
 
 prompt = "A cat holding a sign that says hello world"
@@ -56,7 +56,7 @@ image.save("flux-dev.png")
 
 ```python
 pipe = FluxPipeline.from_pretrained(
-    "black-forest-labs/FLUX.1-schnell", torch_dtype=torch.bfloat16
+    "black-forest-labs/FLUX.1-schnell", dtype=torch.bfloat16
 ).to("cuda")
 
 image = pipe(
@@ -79,7 +79,7 @@ from diffusers import FluxFillPipeline
 from diffusers.utils import load_image
 
 pipe = FluxFillPipeline.from_pretrained(
-    "black-forest-labs/FLUX.1-dev", torch_dtype=torch.bfloat16
+    "black-forest-labs/FLUX.1-dev", dtype=torch.bfloat16
 ).to("cuda")
 
 image = load_image("https://huggingface.co/datasets/huggingface/documentation-images/resolve/main/diffusers/inpaint-input.png")
@@ -109,7 +109,7 @@ from diffusers.utils import load_image
 from diffusers.pipelines.flux.pipeline_flux_controlnet import DepthPreprocessor
 
 pipe = FluxControlPipeline.from_pretrained(
-    "black-forest-labs/FLUX.1-dev", torch_dtype=torch.bfloat16
+    "black-forest-labs/FLUX.1-dev", dtype=torch.bfloat16
 ).to("cuda")
 
 # Load a Control LoRA (e.g., depth LoRA plus hyper-SD LoRA for speed)
@@ -149,7 +149,7 @@ from diffusers import FluxPipeline
 from diffusers.utils import load_image
 
 pipe = FluxPipeline.from_pretrained(
-    "black-forest-labs/FLUX.1-dev", torch_dtype=torch.bfloat16
+    "black-forest-labs/FLUX.1-dev", dtype=torch.bfloat16
 ).to("cuda")
 
 image = load_image("...").resize((1024, 1024))
@@ -209,7 +209,7 @@ For Turing/Volta GPUs (FP16 accelerates these):
 
 ```python
 pipe = FluxPipeline.from_pretrained(
-    "black-forest-labs/FLUX.1-schnell", torch_dtype=torch.bfloat16
+    "black-forest-labs/FLUX.1-schnell", dtype=torch.bfloat16
 )
 pipe.enable_sequential_cpu_offload()
 pipe.vae.enable_slicing()
@@ -232,14 +232,14 @@ text_encoder_2_8bit = T5EncoderModel.from_pretrained(
 quant_config = DiffusersBitsAndBytesConfig(load_in_8bit=True)
 transformer_8bit = FluxTransformer2DModel.from_pretrained(
     "black-forest-labs/FLUX.1-dev", subfolder="transformer",
-    quantization_config=quant_config, torch_dtype=torch.float16,
+    quantization_config=quant_config, dtype=torch.float16,
 )
 
 pipeline = FluxPipeline.from_pretrained(
     "black-forest-labs/FLUX.1-dev",
     text_encoder_2=text_encoder_2_8bit,
     transformer=transformer_8bit,
-    torch_dtype=torch.float16, device_map="balanced",
+    dtype=torch.float16, device_map="balanced",
 )
 ```
 
@@ -257,7 +257,7 @@ dtype = torch.bfloat16
 # Load FP8 quantized transformer from single file
 transformer = FluxTransformer2DModel.from_single_file(
     "https://huggingface.co/Kijai/flux-fp8/blob/main/flux1-dev-fp8.safetensors",
-    torch_dtype=dtype,
+    dtype=dtype,
 )
 quantize(transformer, weights=qfloat8)
 freeze(transformer)
@@ -270,7 +270,7 @@ quantize(text_encoder_2, weights=qfloat8)
 freeze(text_encoder_2)
 
 pipe = FluxPipeline.from_pretrained(
-    "black-forest-labs/FLUX.1-dev", transformer=None, text_encoder_2=None, torch_dtype=dtype,
+    "black-forest-labs/FLUX.1-dev", transformer=None, text_encoder_2=None, dtype=dtype,
 )
 pipe.transformer = transformer
 pipe.text_encoder_2 = text_encoder_2

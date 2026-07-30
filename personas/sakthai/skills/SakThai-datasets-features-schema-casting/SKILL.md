@@ -7,12 +7,11 @@ description: >
   type mapping, schema casting, nested features, ClassLabel, Sequence, ArrayXD,
   Audio, Image features, and efficient dataset transformation.
 version: 1.0.0
-description: "Sakthai Datasets Features Schema Casting"
 metadata:
   hermes:
     tags: [huggingface, datasets, features, schema, casting, pyarrow, data-processing]
     category: mlops
-
+category: mlops
 ---
 
 # HF Datasets Features & Schema Casting — Deep Dive
