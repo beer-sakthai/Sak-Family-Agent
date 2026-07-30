@@ -30,7 +30,7 @@ jobs:
 
       - name: Install sakthai package
         run: |
-          pip install -e personas/sakthai
+          pip install -e .
 
       - name: Run verification script
         run: |
