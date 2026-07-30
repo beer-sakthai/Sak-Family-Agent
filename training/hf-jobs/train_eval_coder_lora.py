@@ -123,7 +123,9 @@ def _prepare_splits(raw: DatasetDict, tokenizer: Any) -> tuple[Dataset, Dataset]
         )
         return {"text": text, "valid": True}
 
-    rendered = source.map(render, remove_columns=source.column_names).filter(lambda row: row["valid"])
+    rendered = source.map(render, remove_columns=source.column_names).filter(
+        lambda row: row["valid"]
+    )
     rendered = rendered.remove_columns("valid")
     if len(rendered) < 10:
         raise ValueError(f"Dataset must contain at least 10 usable rows; found {len(rendered)}")
@@ -157,7 +159,9 @@ def _run_code_probes(model: Any, tokenizer: Any) -> list[dict[str, Any]]:
                 pad_token_id=tokenizer.pad_token_id,
             )
         completion = tokenizer.decode(output[0][inputs.shape[-1] :], skip_special_tokens=True)
-        results.append({"prompt": prompt, "completion": completion, "compiles": _python_compiles(completion)})
+        results.append(
+            {"prompt": prompt, "completion": completion, "compiles": _python_compiles(completion)}
+        )
     return results
 
 

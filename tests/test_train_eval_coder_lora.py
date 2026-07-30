@@ -8,7 +8,9 @@ SCRIPT = Path("training/hf-jobs/train_eval_coder_lora.py")
 
 def _helper(name: str):
     tree = ast.parse(SCRIPT.read_text(encoding="utf-8"))
-    node = next(item for item in tree.body if isinstance(item, ast.FunctionDef) and item.name == name)
+    node = next(
+        item for item in tree.body if isinstance(item, ast.FunctionDef) and item.name == name
+    )
     module = ast.Module(body=[node], type_ignores=[])
     namespace = {"ast": ast, "re": __import__("re")}
     exec(compile(module, str(SCRIPT), "exec"), namespace)  # noqa: S102
