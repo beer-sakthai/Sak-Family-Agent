@@ -18,6 +18,7 @@ Commands:
 import argparse
 import json
 import math
+import re
 import sys
 import time
 import urllib.error
@@ -178,7 +179,20 @@ def _redact_sensitive_data(value):
         }
     if isinstance(value, list):
         return [_redact_sensitive_data(item) for item in value]
+    if isinstance(value, str):
+        # Strip common API-key / token / secret patterns from free-form text
+        # so error messages (which carry exc.reason, URLs) don't leak secrets.
+        return _REDACT_SENSITIVE_TEXT_RE.sub(
+            _REDACT_SENSITIVE_REPLACE, value
+        )
     return value
+
+
+_REDACT_SENSITIVE_TEXT_RE = re.compile(
+    r"(?i)\b(api[_-]?key|authorization|password|passwd|secret|token|bearer)"
+    r"\s*[:=]\s*(['\"]?)\S+?\2"
+)
+_REDACT_SENSITIVE_REPLACE = lambda m: f"{m.group(1)}:[REDACTED]"  # noqa: E731
 
 
 def print_json(data):

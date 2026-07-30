@@ -894,4 +894,7 @@ def emit_json(obj: Any, *, indent: int = 2) -> None:
 
 def log(msg: str) -> None:
     """stderr log with consistent prefix (so JSON stdout stays clean)."""
-    print(f"[comfyui-skill] {_redact_sensitive_text(msg)}", file=sys.stderr)
+    # _redact_sensitive_text strips credential patterns before anything reaches
+    # the sink, so log messages never contain api_key=*, password=*, tokens, etc.
+    safe = _redact_sensitive_text(msg)
+    print(f"[comfyui-skill] {safe}", file=sys.stderr)
