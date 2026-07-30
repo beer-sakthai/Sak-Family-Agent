@@ -44,9 +44,7 @@ def test_maps_output_redacts_precise_location(capsys) -> None:
         SKILLS_ROOT / "SakKing-maps" / "scripts" / "maps_client.py",
     )
 
-    maps.print_json(
-        {"name": "Family cafe", "lat": "13.7563", "lon": "100.5018", "address": "home"}
-    )
+    maps.print_json({"name": "Family cafe", "lat": "13.7563", "lon": "100.5018", "address": "home"})
 
     output = json.loads(capsys.readouterr().out)
     assert output == {
