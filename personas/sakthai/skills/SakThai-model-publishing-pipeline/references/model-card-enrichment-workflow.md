@@ -34,7 +34,14 @@ low-maintenance. Keep the House of Sak identity, drop the marketing bloat.
    Garden", "Hidden Gems", "zero-download alert", or multi-bullet "Support the Project"
    sections. One short support line at most.
 6. **Canonical facts** (never contradict):
-   - Ecosystem size: **12 models · 5 datasets · 3 Spaces**.
+   - Ecosystem size: **12 models in the family · 8 datasets · 3 Spaces**.
+     Verified against the Hub API on 2026-07-30: there are **15 public model repos**
+     (16 counting the `Nanthasit/Nanthasit` profile repo), **8 public datasets**, and
+     **3 Spaces**. "12 models" is the *curated family* — the 15 minus the
+     `0.5b-exp-lora-masked-v4` tombstone, the stray `combined-v6` model repo, and the
+     private/superseded `sakthai-embedding`. Say "12 models in the family", never a bare
+     "12 models", or it contradicts the profile page a visitor can count for themselves.
+     The old "5 datasets" was simply wrong — do not reintroduce it.
    - Collection URL (full, hashed): `https://huggingface.co/collections/Nanthasit/sakthai-model-family-6a64745450b12d421c1f9f02`
    - `food-penguin-v1` = **restaurant-analytics tool-calling** dataset (7 functions), NOT image classification.
    - There is **no** `sakthai-context-paper` repo — never add a "Paper" link to it.
@@ -89,7 +96,7 @@ counts in the page.
 | [embedding-multilingual](https://huggingface.co/Nanthasit/sakthai-embedding-multilingual) | 80 MB | Cross-lingual embeddings |
 | [tts-model](https://huggingface.co/Nanthasit/sakthai-tts-model) | 141 MB | Text-to-speech, 15 langs |
 
-**12 models · 5 datasets · 3 Spaces** — [full collection →](https://huggingface.co/collections/Nanthasit/sakthai-model-family-6a64745450b12d421c1f9f02)
+**12 models in the family · 8 datasets · 3 Spaces** — [full collection →](https://huggingface.co/collections/Nanthasit/sakthai-model-family-6a64745450b12d421c1f9f02)
 ```
 
 ## Gathering facts (mechanics unchanged)
