@@ -410,5 +410,6 @@
   "spaces-zerogpu-free-gpu-allocation",
   "hf-hub-enterprise-sso",
   "hf-donut-document-understanding",
-  "hf-spaces-as-api-endpoints"
+  "hf-spaces-as-api-endpoints",
+  "sakthai-hf-datasets-streaming-deep-dive"
 ]

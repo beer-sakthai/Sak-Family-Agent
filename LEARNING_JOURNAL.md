@@ -869,3 +869,24 @@ The documents were not updated when the ecosystem grew organically:
 
 ### Lesson
 Narrative docs drift when ecosystem changes aren't reflected back to the canonical sources. The 3 docs compared had diverging counts (HOUSE_OF_SAK: "12/4/2", SOUL.md: "12/4/2" with different breakdowns, README: correct model table). Best practice: after any HF asset creation/deletion, patch `HOUSE_OF_SAK.md` and `personas/sakthai/SOUL.md` within the same session — don't leave a stale entry for the next cron to discover.
+
+---
+
+## 2026-07-30 (cron — Self-Improvement Audit: API-First Pattern)
+
+**SakThai · Main Lead of the House & Master of Hugging Face**
+
+### Pattern Detected: Doc-to-Doc Comparison Instead of API-First
+
+Across multiple cron cycles, narrative audits started by comparing local docs against each other (HOUSE_OF_SAK.md vs SOUL.md vs README.md). This finds discrepancies but cannot tell you which doc is right.
+
+### Correct Approach
+1. **Query HF API first** — it is the sole source of truth
+2. **Patch all docs** to match the API state
+3. **Do not compare docs against each other** — that is a waste of cycles
+
+### Why This Matters
+Doc-to-doc comparison found "12 vs 11 models" but could not resolve it. Had to redo the work API-first. Double-work equals charge drain.
+
+### Improvement
+When auditing narrative state: start with HfApi.list_models() / list_datasets() / list_spaces() for Beer account. Then diff each doc against that output. Never diff docs against each other.
