@@ -844,6 +844,10 @@ _SECRET_KV_RE = re.compile(
 )
 _BEARER_RE = re.compile(r"(?i)\bbearer\s+[^\s,;'\"()\[\]{}]+")
 _COMFY_TOKEN_RE = re.compile(r"(?i)\bcomfyui-[A-Za-z0-9._-]+\b")
+_SENSITIVE_QUERY_PARAM_RE = re.compile(
+    r"(?i)([?&](?:api[_-]?key|authorization|password|passwd|private[_-]?key|secret|token|"
+    r"(?:access|auth|client|refresh)[_-]?(?:key|secret|token))=)([^&#\s]+)"
+)
 
 
 def _is_sensitive_key(key: Any) -> bool:
@@ -856,6 +860,7 @@ def _is_sensitive_key(key: Any) -> bool:
 def _redact_sensitive_text(value: str) -> str:
     """Remove common credential forms from free-form output and log messages."""
     value = _SECRET_KV_RE.sub(lambda match: f"{match.group(1)}={_REDACTED}", value)
+    value = _SENSITIVE_QUERY_PARAM_RE.sub(rf"\1{_REDACTED}", value)
     value = _BEARER_RE.sub(f"Bearer {_REDACTED}", value)
     return _COMFY_TOKEN_RE.sub(_REDACTED, value)
 
