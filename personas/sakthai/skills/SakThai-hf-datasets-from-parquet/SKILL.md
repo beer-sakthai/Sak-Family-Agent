@@ -1,5 +1,6 @@
 ---
 name: SakThai-hf-datasets-from-parquet
+version: 1.0.0
 author: SakThai
 license: MIT
 title: Hugging Face Datasets from_parquet — Source Code Deep Dive

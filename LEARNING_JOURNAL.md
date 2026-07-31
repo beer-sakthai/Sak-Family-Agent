@@ -1087,6 +1087,7 @@ Ecosystem is **growing steadily** with all key metrics trending up. Models gaine
 - New orphans (4): irrelevance-supplement (0), combined-v7 (0), bench-v1 (0), bench-v2 (0)
 - All 4 new datasets have YAML-only cards — no README, no badges, no cross-links
 
+<<<<<<< Updated upstream
 **Spaces — 3 (all static HTML, 0 likes)**
 - sakthai-tts, sakthai-leaderboard, sakthai-vision-demo
 - No inference widgets, no try-before-download path
@@ -1147,3 +1148,274 @@ The sakthai profile cron file is completely empty — 0 bytes, created Jul 23. T
 - Downloads grow at ~120/day regardless of card changes — Card enrichment alone doesn't move the needle.
 - CI fixes are working — But need GH_TOKEN to verify from cron.
 >>>>>>> fix-441-v2
+=======
+1. ⭐ Star all own repos on GitHub (basic credibility)
+2. 🔗 Cross-link HF models ↔ datasets in model cards (boosts discovery)
+3. 🚀 Deploy 1+ HF Space (even minimal Gradio demo in ZeroGPU)
+4. 📝 Publish 1 Kaggle notebook (food-penguin eval) to establish presence
+5. ♥ Drive HF likes via share links in READMEs (embed badge/inference widget)
+6. 📊 Add GitHub topics/tags to repos for categorization
+
+## 2026-07-30 — Cron #010: Stale Model Count Fix
+
+### What was done
+Fixed stale model counts across the ecosystem after the Plus series release:
+
+1. **Collection description** — updated "14 models" → "17 models" (was stale since Plus models released without updating the collection's front-door text)
+2. **sakthai-context-7b-merged** README footer — 14→17 models, 8→10 datasets
+3. **sakthai-vision-7b** README footer — 14→17 models, 8→10 datasets
+4. **sakthai-embedding-multilingual** README footer — 12→17 models, 8→10 datasets
+
+### Verification
+- Collection PATCH returned 200, GET confirms "17 models" ✅
+- All 3 card READMEs fetched post-upload confirm "17 models" ✅
+- All 3 card footers now also list "10 datasets" (was 8) ✅
+
+### Cross-coupling lesson reinforced
+A single model release (3 Plus models) made **4 assets stale simultaneously**: the collection description + 3 flagship model card footers. The "coupled assets" table in cron-tool-workarounds is confirmed accurate — a collection edit MUST be followed by sibling card verification.
+
+---
+
+## 2026-07-30 — HF Ecosystem Verification
+
+### State
+- **17 real models** (5,875 total dl) — stable, no change since Jul 26
+- **10 datasets** (894 total dl) — stable
+- **3 Spaces** (static) — unchanged
+- **CI** — all 5 workflow runs green ✅
+- **Crons** — 17/17 enabled, all running normally
+- **SOUL.md** — both copies verified consistent (17 models, 10 datasets) ✅
+- **Collection** — 30 items (17 models, 10 datasets, 3 spaces), description correct ✅
+- **Skills repo** — synced (1 file pushed)
+
+### Stale-spotting
+- 5 models still at 0 dl: both v2s, all 3 Plus series — cold start persisting
+- 2 phantom models (combined-v8, cycle-bench) inflate HF Hub page count past the real 17
+- 1 like across the whole ecosystem (vision-7b) — no social engagement growth
+
+### Actions taken
+1. Pushed skills repo sync (hf-topics-covered.json)
+2. Verified SOUL.md counts against live API — consistent
+
+### Next actions for future cycles
+- No active fires. Break cold start on v2/Plus models by enriching model cards
+- Consider pruning or relocating phantom dataset-as-model repos
+
+
+## 2026-07-30 — Ecosystem Snapshot (15:04 UTC)
+
+**Models**: 17 real (excl. 2 phantoms) | 5,875 dl | 1 like | 3 new plus placeholders (no weights yet)
+**Datasets**: 10 | 894 dl | unchanged
+**Spaces**: 3 static | unchanged
+**CI**: All green
+**Collection**: 29 items (16 models + 10 datasets + 3 Spaces), description accurate
+**SOUL.md**: Both copies agree on 17 models
+**Lessons**: Three new plus repos are empty shells awaiting weight uploads — card enrichment would be premature and is deferred until weights land.
+
+## 2026-07-30 — Cron: Phantom Asset Fix — combined-v9 removed from 1.5B v2 card
+
+### What was done
+- Verified `combined-v9` is a phantom dataset (404 on models + datasets APIs)
+- Fixed `sakthai-context-1.5b-merged-v2` README: removed 4 combined-v9 references (YAML frontmatter, comparison table, training data section, links section)
+- Updated model count: 16 → 17 (the three plus models were missing from the count)
+- Scanned all 15 other model cards — none had combined-v9 references
+- Verified fix via live API: commit `64cbc49e`, 0/0 remaining v9 refs
+
+### Why this matters
+Phantom dataset references create broken links on model cards and inflate claimed training data totals. The v9 dataset never existed — v8 was the last release. The card claimed 3,659 training examples but the real total across v7+v8 is 2,541.
+
+### Lesson
+When a model references a dataset that doesn't exist on the Hub, it's a data-integrity issue — not just a cosmetic link. The phantom can propagate across reports, SOUL.md counts, and collection descriptions if not caught early.
+
+## 2026-07-30 — Health Check: sakthai-plus-1.5b
+
+**Model**: Nanthasit/sakthai-plus-1.5b (Qwen2.5-1.5B-Instruct)
+**SHA**: 0b23b6 → 6c659f4 (updated at 20:48Z, ~12 min after previous check)
+**Downloads**: 0 (unchanged)
+**Likes**: 0 (unchanged)
+**Health Score**: 0.82 (unchanged)
+**Age**: 7.9 hours
+**Storage**: 2.88 GB single BF16 shard on Xet
+**Architecture**: 28 full-attention layers, 12 heads / 2 KV heads, 32K context
+
+**Deltas from previous check**:
+- SHA changed (weights/metadata updated)
+- Total siblings: 15 → 9 (eval file cleanup — expected as infra settles)
+- Downloads/likes: flat at 0
+- Last modified: 20:36 → 20:48Z (updated)
+
+**Alerts**:
+- ⚠️ Zero downloads at 7.9h — standard cold-start, no escalation yet
+- ℹ️ Model index present with Selection Accuracy: pending
+- ℹ️ Single shard, no sharding needed for 1.5B param model
+
+**Actions**: Report uploaded to .eval_results/health-check-plus-1.5b.yaml. Verify again at 24h mark.
+## 2026-07-31 — Ecosystem Fix: SimpleToolCalling archived honestly (observation debt closed)
+
+**Gap found:** Nanthasit/SimpleToolCalling card (1,650 B) claimed OpenAI chat JSONL
+data fields, but the repo hosts **0 data files** (usedStorage=0; siblings = LICENSE +
+README.md only). Flagged across 5+ prior cycles (journal lines 109/249/273/451/687 +
+05:47 tracker) with downloads climbing 43→52→58 — users got nothing. Classic
+observation-without-action debt.
+
+**Fix applied:** Rewrote README.md (2,228 B) as an ARCHIVED card — prominent
+deprecation banner, explicit "no data files hosted" notice, `deprecated` added to
+YAML tags (auto-synced into cardData), redirect table to live successors
+(combined-v6/v7/v10), kept version history + House of Sak links. Pushed via git.
+
+**Proof:** commit `3034848` on
+https://huggingface.co/datasets/Nanthasit/SimpleToolCalling — verified live: raw
+README 200 (2,210 B), cardData tags now include 'deprecated', successor links
+present.
+
+**Also noted (not fixed this cycle):**
+- Model count drifted: 20 real models live (SOUL.md says 17) — all have pipeline tags, no phantoms.
+- `sakthai-coder-browser` is a REAL naming collision (6.1 GB model + 348 KB dataset) — do not delete; consider renaming one.
+- combined-v10: dataset_info schema mismatch (README claims role/content only; JSONL has tool_calls) — next-cycle candidate.
+- Skills repo had 89 uncommitted files — synced.
+
+## 2026-07-31 — Cron: Ecosystem Gap Fix — model-index for 7b-merged
+
+### Gap
+`Nanthasit/sakthai-context-7b-merged` (744 dl, flagship) had verified eval data in `.eval_results/` (workbench 8/8 checks passed on Tesla T4, 2026-07-07; Selection Accuracy 57.0) but **no `model-index`** in the card frontmatter. The benchmark widget on the model card never rendered. Sibling `sakthai-context-7b-tools` already carried the same 57.0 Selection Accuracy in its model-index — the merged card was the odd one out despite being the highest-download 7B.
+
+Delta check: 20 models live (all with pipeline tags, 0 phantoms), 13 datasets, 4 Spaces; models dl_total 5,875. CI: Sak-Family-Agent "Continuous Security Scan" failing on PR #445 merge (2 runs) — pre-existing, flagged, not this cycle's scope.
+
+### Fix applied
+Promoted eval results into the card frontmatter via `HfApi.upload_file`:
+- `model-index` entry 1: Tool Calling / SakThai Bench v2, Selection Accuracy 57.0, `verified: false` (internal, honest flag — matches 7b-tools convention)
+- `model-index` entry 2: Functional Workbench, checks_passed 8/8, `verified: true` (the genuinely verified metric)
+
+### Proof
+- Commit: https://huggingface.co/Nanthasit/sakthai-context-7b-merged/commit/8f9bc3f
+- Verified: raw README contains model-index; API cardData now returns model-index array with both entries; lastModified 2026-07-31T06:17:42Z
+
+### Lesson / next
+The card had a `verified-8/8-workbench` badge in its header but no machine-readable model-index — a badge without structured data is marketing, not metadata. Next gap candidates: (a) `sakthai-coder-browser` card references phantom dataset `Nanthasit/combined-v8` (real repo is `sakthai-combined-v8`) — 4-part phantom-ref fix; (b) `sakthai-context-1.5b-tools-v2` has eval file but no model-index (no verified metrics yet — wait for BFCL run); (c) `sakthai-combined-v10` dataset_info schema mismatch (README role/content only vs JSONL tool_calls).
+## 2026-07-31 — Gap-Fix Cron: sakthai-coder-browser flagged BROKEN on card
+
+**Gap found:** `sakthai-coder-browser` (new 0-dl browser-agent model, 6.2 GB merged weights) presented as a working agent while the repo's own `.eval_results/benchmark-20260731_052122.yaml` (2026-07-31 05:50 UTC) carried verdict **MODEL_BROKEN_BIAS_CORRUPTION**: faulty LoRA merge left all 84 attention bias tensors non-zero (Qwen2 initializes them to ZERO; layer-0 k_proj absmean 27.7 / max 354). Multi-trial probes (seeds 7/42/1337, temp ≤0.7) produced only whitespace loops — 0 tool calls, 0 valid JSON; GGUF tensor layout identical to working sakthai-plus-1.5b GGUF proved fault is in weights, not conversion. README was stale — blamed "prompt-format mismatch or GGUF conversion" and implied the Transformers path might be fine.
+
+**Fix applied (zero-cost, verification-first):** Updated the model card via HfApi.upload_file — commit `28603fd391864e20b249bf18fc29e9a1f3751ed2`:
+1. `> [!CAUTION]` BROKEN — DO NOT DEPLOY banner under the badge block (time-boxed "as of 2026-07-31", links the eval YAML, cross-links GGUF + LoRA siblings)
+2. Rewrote the "Likely causes to investigate" paragraph into a **MODEL_BROKEN verdict** section with the weight-inspection evidence (84/84 bias tensors absmean>0.01, layer-0 k_proj numbers, whitespace-loop behavior, no-NaN isolation of corruption to attention biases) + recommended re-merge fix
+3. Updated the Limitations bullet from "Benchmark status open" to "BROKEN weights — do not deploy until re-merged and re-verified"
+
+**Proof:** re-fetched raw README (14,983 chars): banner present, verdict present, old "Likely causes" gone, frontmatter intact (license apache-2.0, pipeline_tag text-generation, base_model Qwen2.5-Coder-1.5B-Instruct, YAML parses clean).
+
+**Lesson:** When a benchmark YAML is upgraded with weight-inspection evidence (verdict change), re-check the model card's Evaluation section — the card may still quote the earlier "unexplained 0 tokens" hypothesis. A stale "likely causes: prompt mismatch" misleads downloads of known-broken weights.
+
+**Next gaps queued:** (1) flag `sakthai-coder-browser-gguf` (converted from same corrupted weights) + verify `sakthai-coder-browser-lora` merge path; (2) cold-start READMEs for `sakthai-combined-v10`, `hermes-tool-use-rl-env`, `sakthai-openenv-training` (all 0 dl); (3) resolve model/dataset name collision `sakthai-coder-browser` (double-type in collection).
+## 2026-07-31 — Gap-Fix Cron: sakthai-coder-browser-gguf card still presented BROKEN weights as working
+
+**Gap found:** Following yesterday's `sakthai-coder-browser` BROKEN banner fix, its **GGUF sibling** `sakthai-coder-browser-gguf` (7.11 GB F16, converted from the SAME corrupted merge) carried **zero** broken-status awareness: it still promised "Navigate web pages... locally, privately", shipped an inference widget, and its Benchmarks section blamed the 0-token Q4_K_M probe on "suspected prompt-format mismatch" — a hypothesis the parent repo's weight inspection (2026-07-31 05:50 UTC) had already disproven (all 84 attention bias tensors non-zero; tensor layout identical to working sakthai-plus-1.5b GGUF). Worst case: a user following the parent's "Prefer CPU inference? Use the GGUF build" link would download known-degenerate weights with no warning.
+
+**Fix applied (zero-cost, verification-first):** Rewrote the GGUF card via HfApi.upload_file — commit `5ebc193f72576d83dbade54c40cc8c93222883dd`:
+1. `> [!CAUTION]` **BROKEN — DO NOT DEPLOY (as of 2026-07-31)** banner under the badge block with full weight-inspection evidence + links to parent eval YAML + LoRA adapter
+2. Intro blockquote now carries "Status: BROKEN — see banner above"; Quick Start prefixed with a re-run-only-after-re-merge warning
+3. Benchmarks section: "This model's own eval" row flipped ⏳ Open → ❌ **Resolved — MODEL_BROKEN**; Q4_K_M probe row corrected from "suspected prompt-format mismatch" → "confirmed weight corruption, NOT prompt mismatch"
+4. Closing line: "should track that model's quality" → "not usable until parent re-merged and GGUF re-converted"; Limitations gains a BROKEN-weights bullet; "Report your deployment story" → "Report issues / watch for the re-merge"
+
+**Proof:** re-fetched raw README (16,409 B, matches local): banner line 55, old "suspected prompt-format mismatch" count = 0, MODEL_BROKEN verdict present, YAML frontmatter intact (license apache-2.0, pipeline_tag text-generation, base_model Qwen2.5-Coder-1.5B-Instruct).
+
+**Lesson:** A sibling card enriched BEFORE a verdict upgrade stays stale even when the parent is fixed — every sibling must be re-audited after a verdict change, not just the repo that produced the verdict. Gap-Fix + Health-Check skills: add "after verdict change, sweep siblings" to the cascade scan.
+
+**Next gaps queued:** (1) cold-start READMEs for `sakthai-combined-v10`, `sakthai-combined-v11` (NEW this cycle — 14th dataset), `hermes-tool-use-rl-env`, `sakthai-openenv-training` (all 0 dl); (2) verify `sakthai-coder-browser-lora` merge path is clean (adapter, not weights — likely fine, confirm); (3) model/dataset name collision `sakthai-coder-browser` double-type in collection (both repos real — recommend rename, don't delete).
+## 2026-07-31 — Cron: Ecosystem Gap Fix — sakthai-openenv-training card frontmatter
+
+**Gap found:** `Nanthasit/sakthai-openenv-training` (OpenEnv + TRL GRPO training workspace) had a real 2.5KB README + Apache-2.0 LICENSE but **zero YAML frontmatter** — no `pretty_name`, no `tags`, no license metadata in cardData. Search-invisible to HF filters despite live-verified content (Tier B server/client ran end-to-end against openenv==0.4.1; TRL 1.9.2 environment_factory contract confirmed).
+
+**Fix applied:** Prepended honest YAML card frontmatter (license: apache-2.0, language: [en], pretty_name, 7 tags: reinforcement-learning/trl/grpo/openenv/tool-use/environment/sakthai-family, size_categories n<1K). Body untouched. Uploaded via HfApi.upload_file.
+
+**Proof:** https://huggingface.co/datasets/Nanthasit/sakthai-openenv-training/commit/82bda613cf1c81e92811ddb920640e6acf5a0079 — live API cardData now: license=apache-2.0, pretty_name="SakThai OpenEnv + TRL GRPO Training", tags=[7], language=[en]. Now discoverable via tag/license filters.
+
+**Lesson:** Code-style repos uploaded as datasets are the most common frontmatter orphans — they have READMEs with badges but no `---` block, so HF never indexes them. The badge says Apache-2.0 but search can't see it. Prepend frontmatter on any dataset whose cardData keys == [] even when desc is present.
+
+**Next gap candidates:** `sakthai-pipeline` (bare stub, 1 sibling, 0 bytes — placeholder, skip until data arrives); `sakthai-combined-v10/v11` at 0 dl (cold start — launch traction cycles); all 15 datasets lack `license` EXCEPT none had it before this fix — cross-check remaining 14 for card frontmatter completeness.
+
+---
+
+## 2026-07-31 — HF Benchmark Run 13: sakthai-coder-browser-lora VINDICATED (LoRA OK, merge broken)
+
+**Finding:** Run 12 declared merged `sakthai-coder-browser` MODEL_BROKEN_BIAS_CORRUPTION. Run 13 applied the UNMERGED LoRA via llama.cpp native `--lora` on the pristine Qwen2.5-Coder-1.5B-Instruct base GGUF (no HF safetensors merge). Result: **3/3 seeds correct multi-step tool calls** (browser_navigate → browser_click → browser_extract, right URL/selector). Verdict: **LORA_OK_MERGE_BROKEN** — the training weights are sound; the earlier merge step corrupted attention biases (absmean 0.01→27.7).
+
+**Method (zero-cost, zero-download):**
+1. `convert_lora_to_gguf.py --base <cfg-dir> --outtype f16` turns the 73.9MB adapter into a 36.9MB LoRA GGUF (392 tensors).
+2. `llama-cli -m base-q4_k_m.gguf --lora adapter.gguf` applies it at load — no 3GB merged safetensors needed.
+3. Reuse local pristine base GGUF (`/opt/data/models/sakthai-coder/qwen2.5-coder-1.5b-instruct-q4_k_m.gguf` — verified via gguf metadata general.name).
+
+**Prompt dialect finding:** coder-browser-lora emits OpenAI-style bare JSON tool calls (`{"name":..., "arguments": "{...}"}` — string-encoded args, no `<tool_call>` XML). Parser must try json.loads on whole lines/blocks, not just XML-tagged blocks.
+
+**Ops lesson (OOM):** Box has 7.8G RAM, ~2G available with 6 gateway agents + 2 claude processes. llama.cpp --lora load is borderline: runner must NOT hold transformers/torch (580MB). Fix: tokenize via short-lived subprocess; wait for MemAvailable>=2.3G before each trial; retry on rc in (-9, 137) (subprocess reports SIGKILL as -9, NOT 137). Also reduce -n 150→100.
+
+Report: https://huggingface.co/Nanthasit/sakthai-coder-browser-lora/blob/main/.eval_results/benchmark-20260731_071156.yaml
+## 2026-07-31 — Cron: Ecosystem Gap Fix — coder-browser-lora card unpromoted 3/3 benchmark
+
+**Gap found:** `Nanthasit/sakthai-coder-browser-lora` card was **factually stale**: its Evaluation section said *"Benchmarks are pending — honestly… no model-index entry (results will be added once the merged model is benchmarked)"* — but a full llama.cpp benchmark ALREADY existed at `.eval_results/benchmark-20260731_071156.yaml` (2026-07-31 07:11Z) proving the **adapter works 3/3 seeds** (valid tool calls, valid JSON, correct answers; verdict `LORA_OK_MERGE_BROKEN`). Worse, the card instructed users to *"use the merged model"* — the very build the base card banners as BROKEN (bias corruption, whitespace loops). The working artifact's verified results were invisible to model-index rendering/search, and the card actively steered users to broken weights.
+
+**Fix applied (4 edits to README.md, uploaded via HfApi.upload_file):**
+1. Added `model-index` YAML frontmatter: 5 metrics (tool-call-success 3/3, valid-json 3/3, correct-answer 3/3, browser-tools=3, merge-status=0/1).
+2. Replaced "use the merged model" instruction with BROKEN warning + pristine-base guidance (verified 3/3).
+3. Rewrote Evaluation & Status: verified 3/3 results + `LORA_OK_MERGE_BROKEN` verdict, removed "pending" claim.
+4. Fixed GGUF path (do NOT use broken pre-built gguf) + Limitations bullet (merge broken, benchmark was llama.cpp q4_k_m base + f16 LoRA).
+
+**Proof:** https://huggingface.co/Nanthasit/sakthai-coder-browser-lora/commit/caad716c39c4569a41fb372f0bf6f05ebcc646bf — re-read verification: README 10,719 B, `model-index:` present, BROKEN warning present, "Benchmarks are pending" count = 0; live API cardData now includes model-index entry with 5 metrics.
+
+**Lesson:** A benchmark file existing in `.eval_results/` ≠ the card reflecting it. When a sibling card (gguf/base) gets a BROKEN banner, scan the WHOLE family for cards that still cite the broken build as the recommended path — the LoRA card was the last one and it was the most misleading because its own proof-of-working sat unpromoted.
+
+**Next gap candidates:** `sakthai-combined-v10/v11` at 0 dl (cold start); all datasets still missing `license` in frontmatter (only openenv-training fixed so far); `sakthai-pipeline` bare stub; `sakthai-context-1.5b-tools-v2` (0 dl, has journal_v2_card.md draft — check whether README needs model-index once benchmark exists).
+
+---
+## 2026-07-31 — Cron #0XX: Collection phantom cleanup
+
+### What was done
+Identified and fixed a stale-count gap in the **SakThai Model Family collection**:
+- Collection description claimed "20 models" but only 19 real models exist in the Nanthasit account
+- Two phantom model repos (`eval_results`, `sakthai-pipeline`) with `pipeline_tag: None` and `usedStorage: 0` inflated the count
+- Both also appeared as datasets in the same collection (double-type duplicates at the same name)
+- `sakthai-coder-browser` double-type entry was confirmed as a legitimate naming collision (both model and dataset are real) — left untouched
+
+### Fix applied
+1. Removed `eval_results` (model phantom) from collection via `DELETE /api/collections/{slug}/items/{_id}`
+2. Removed `sakthai-pipeline` (model phantom) from collection via same pattern
+3. Updated collection description from "20 models" → "19 models, 15 datasets, 4 Spaces" via `PATCH`
+
+### Verification
+- `GET /api/collections/{slug}` returns 40 items (21 model, 15 dataset, 4 space)
+- No phantom model IDs remain in collection items
+- Description reads "House of Sak: 19 models, 15 datasets, 4 Spaces"
+
+### Next gap suggested
+Check **Spaces runtime health** — all 4 Spaces are on `cpu-basic` (functional but minimal) and `sakthai-leaderboard` has stayed at `trendingScore: 0` despite being the only Space with a like. Consider enriching the leaderboard Space README with cross-links to all sibling models to drive traffic.
+
+## 2026-07-31 — HF Eco Audit: Stale collection description fixed
+
+**Applied gap:** Collection description said "21 models" but live count was 19 (pipeline_tag filter), inflated by 2 phantom repos (`eval_results`, `sakthai-bench-v3`) that lack a pipeline_tag and aren't real models.
+
+**Fix:** Used `hf collections update <slug> --description "..."` to change "21 models" → "19 models".
+
+**Proof:** https://huggingface.co/collections/Nanthasit/sakthai-model-family-6a64745450b12d421c1f9f02
+
+**Next gap recommended:** Write proper READMEs for the 4 remnant datasets (sakthai-openenv-training, combined-v10, combined-v11, hermes-tool-use-rl-env) — they have non-empty READMEs but sit at 0 dl with no usage examples or badges. Also: `sakthai-plus-1.5b-coder` is a skeleton (all files 0 bytes, usedStorage=0) — needs weight uploads and cold-start card enrichment.
+
+**Traits observed:** siblings API endpoint reports `"size": null` inconsistently (git LFS). Tree endpoint is more reliable for real file sizes. The PATCH/PUT/POST methods for collection API don't work via REST — must use `hf collections update` CLI.
+## 2026-07-31 — Cron #n+1: Space card metadata gap fix
+
+### Gap found
+`sakthai-jobs-dispatcher` Space had no `short_description` or `suggested_hardware` in YAML frontmatter — invisible to HF Space search result filters (which match on `short_description`). All 4 Spaces in the family have titles and emoji, but only "web-agent" and "leaderboard" had `short_description`.
+
+### Fix applied
+1. Added `short_description` (55 chars: "Submit and monitor HF compute Jobs from a Gradio web UI" — exact 60-char limit enforced by HF)
+2. Added `suggested_hardware: t4-small` (Space now shows recommended GPU tier)
+
+**Proof:** https://huggingface.co/spaces/Nanthasit/sakthai-jobs-dispatcher/commit/de4243accd112f4eba7f8bfd9a51c913b7daf171
+
+### Secondary fixes caught during audit
+- Collection description said "21 models" — corrected to "19 models" (private `sakthai-embedding` doesn't render on public collection page). Removed phantom `sakthai-bench-v3` (model type) from collection.
+
+### Next gap recommended
+Cross-check the OTHER 2 Spaces (sakthai-tts, sakthai-leaderboard) for missing `short_description` — leaderboard had `title` set but no `short_description`.
+
+### Lesson
+The 60-char limit on Space `short_description` is enforced at YAML validation time, not at API schema time. `write_file` based on API data ("no short_description") was a false positive — the `/api/spaces` endpoint does not include `short_description` in its cardData even when present in the YAML. Always verify via the README raw endpoint, not the REST API cardData.
+>>>>>>> Stashed changes

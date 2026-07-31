@@ -1,5 +1,6 @@
 ---
 name: SakThai-hf-datasets-v5-sql-duckdb-integration
+version: 1.0.0
 description: # HF Datasets v5 SQL + DuckDB Integration
 ---
 
