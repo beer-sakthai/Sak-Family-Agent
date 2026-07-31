@@ -1,5 +1,6 @@
 ---
 name: SakThai-hf-hub-publisher-analytics
+version: 1.0.0
 author: SakThai
 license: MIT
 title: HF Hub Publisher Analytics

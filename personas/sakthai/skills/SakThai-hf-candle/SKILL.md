@@ -1,5 +1,6 @@
 ---
 name: SakThai-hf-candle
+version: 1.0.0
 author: SakThai
 license: MIT
 description: Complete reference for Candle — Hugging Face's minimalist ML framework for Rust, focused on serverless inference, CPU/GPU inference, and lightweight deployments

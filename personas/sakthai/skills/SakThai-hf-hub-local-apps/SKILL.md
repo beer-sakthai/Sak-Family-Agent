@@ -1,5 +1,6 @@
 ---
 name: SakThai-hf-hub-local-apps
+version: 1.0.0
 author: SakThai
 license: MIT
 title: Hugging Face Hub — Use AI Models Locally with Local Apps

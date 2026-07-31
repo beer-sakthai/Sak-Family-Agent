@@ -1,5 +1,6 @@
 ---
 name: SakThai-hf-community-evals
+version: 1.0.0
 author: SakThai
 license: MIT
 title: Hugging Face Community Evals + EEE Integration

@@ -1,5 +1,6 @@
 ---
 name: SakThai-hf-spaces-dependencies-and-sdks
+version: 1.0.0
 author: SakThai
 license: MIT
 title: Hugging Face Spaces — Dependencies, SDKs, & Configuration Complete Guide

@@ -1,5 +1,6 @@
 ---
 name: SakThai-hf-hub-docker-registry
+version: 1.0.0
 description: # hf-hub-docker-registry — Hugging Face Hub Docker Registry
 ---
 

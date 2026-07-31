@@ -1,5 +1,6 @@
 ---
 name: SakThai-hf-inference-providers-responses-api-deep-dive
+version: 1.0.0
 author: SakThai
 license: MIT
 category: mlops

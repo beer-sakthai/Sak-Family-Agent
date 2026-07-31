@@ -1,5 +1,6 @@
 ---
 name: SakThai-hf-hub-api-error-handling
+version: 1.0.0
 author: SakThai
 license: MIT
 title: Hugging Face Hub API Error Handling — Complete Reference
