@@ -67,8 +67,9 @@ never duplicate content across files.
 | Product & Monetization | [`product/PLAN.md`](./product/PLAN.md) | 🟡 Active — Phase 6 done, extending |
 | Security Fixes (2026-07 Audit) | [`security/SECURITY_FIXES_PLAN.md`](./security/SECURITY_FIXES_PLAN.md) | 🔴 HIGH — Credential rotation + Web API auth |
 | SakJules — skills organisation | [`personas/sakjules/PLAN.md`](./personas/sakjules/PLAN.md) | ✅ Complete — archived |
-| SakTan — daily story & diary | [`personas/saktan/PLAN.md`](./personas/saktan/PLAN.md) | 🟢 Active — daily rhythm |
+| SakTan — daily story & diary | `personas/saktan/PLAN.md` | ⚪ Archived — persona deleted per Beer directive |
 | Agent Self-Evolution (×6 agents) | `personas/*/agent-self-evolution/PLAN.md` | 🟡 Active — personalised per agent |
+| **Repo Hygiene Round 2** | [`SCRATCH_ORGANISATION_PLAN.md`](./SCRATCH_ORGANISATION_PLAN.md) | 🟡 Active — root cleanup |
 
 ## 🔧 Runtime Notes
 
@@ -89,3 +90,40 @@ workspace runtime config under `infra/`.
 2. **Surgical edits.** Change only what the task needs; preserve surrounding style.
 3. **No duplication.** One source of truth per topic — link, don't copy.
 4. **Protect Beer first.** No-cost, low-risk solutions always preferred.
+
+---
+
+## 🧹 SCRATCH_ORGANISATION_PLAN.MD
+
+**Owner:** SakKing (spotter) → SakJules (executor)
+**Status:** Planning
+**Priority:** Medium
+
+### Problem
+Root directory of `Sak-Family-Agent/` has accumulated scratch files that belong in subdirectories:
+
+**5 Python scripts at root** (should be in `scripts/`):
+- `_check_models.py` — HF model checker
+- `_check_spaces.py` — HF spaces checker
+- `_parse_datasets.py` — dataset parser
+- `_parse_models.py` — model parser
+- `_parse_spaces.py` — spaces parser
+
+**5 JSON data files at root** (should be in `data/`):
+- `ci_runs.json` (76 KB) — GitHub Actions run data
+- `hf-topics-covered.json` (17 KB) — HF topic coverage data
+- `hf_dataset.json` (0 bytes) — empty placeholder
+- `hf_ds_size.json` (0 bytes) — empty placeholder
+- `hf_embed_check.json` (0 bytes) — empty placeholder
+
+### Steps for SakJules
+1. Move 5 Python scripts to `scripts/`
+2. Move 2 non-empty JSON files to `data/`
+3. Remove 3 empty placeholder JSON files
+4. Update any references in scripts that import these files
+
+### Verification
+1. `ls *.py *.json` at root → nothing
+2. `ls scripts/_*.py` → 5 files
+3. `ls data/*.json` → 2 files (non-empty)
+4. Empty placeholders removed
