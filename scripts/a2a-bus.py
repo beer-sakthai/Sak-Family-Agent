@@ -104,6 +104,75 @@ class A2AHandler(BaseHTTPRequestHandler):
             else:
                 self.send_json({'status': 'ok', 'task': task})
 
+        elif self.path == '/task/claim':
+            task_id = str(body.get('task_id', '')).strip()
+            shard_id = body.get('shard_id', '')
+            agent = body.get('agent', 'unknown')
+            tasks = load_tasks()
+            task = next((t for t in tasks if t['task_id'] == task_id), None)
+            if not task:
+                self.send_json({'status': 'error', 'message': f'task {task_id} not found'})
+                return
+            # Find the shard and try to claim it
+            shard = None
+            shard_idx = -1
+            for i, s in enumerate(task.get('shards', [])):
+                # Handle both list and dict shard formats
+                sid = s.get('shard_id', s.get('id', i)) if isinstance(s, dict) else i
+                if str(sid) == str(shard_id) or sid == shard_id:
+                    shard = s
+                    shard_idx = i
+                    break
+            if shard is None and isinstance(shard_id, int):
+                # Try numeric index
+                if 0 <= shard_id < len(task.get('shards', [])):
+                    shard = task['shards'][shard_id]
+                    shard_idx = shard_id
+
+            if shard is None:
+                self.send_json({'status': 'error', 'message': f'shard {shard_id} not found in task {task_id}'})
+                return
+
+            if shard.get('status') == 'claimed':
+                self.send_json({'status': 'error', 'message': 'shard already claimed by another agent'})
+                return
+
+            # Claim the shard
+            shard['status'] = 'claimed'
+            shard['claimed_by'] = agent
+            shard['claimed_at'] = time.time()
+            # Normalize shard to dict if it was a plain task string
+            if not isinstance(shard, dict):
+                shard = {'input': shard, 'status': 'claimed', 'claimed_by': agent, 'claimed_at': time.time()}
+                task['shards'][shard_idx] = shard
+            save_tasks(tasks)
+            self.send_json({'status': 'ok', 'task_id': task_id, 'shard_id': shard_id, 'input': shard})
+
+        elif self.path == '/task/complete':
+            task_id = str(body.get('task_id', '')).strip()
+            shard_id = body.get('shard_id', '')
+            agent = body.get('from', 'unknown')
+            result = body.get('result', '')
+            tasks = load_tasks()
+            task = next((t for t in tasks if t['task_id'] == task_id), None)
+            if not task:
+                self.send_json({'status': 'error', 'message': f'task {task_id} not found'})
+                return
+            # Find and update the shard
+            for i, s in enumerate(task.get('shards', [])):
+                sid = s.get('shard_id', s.get('id', i)) if isinstance(s, dict) else i
+                if str(sid) == str(shard_id) or sid == shard_id:
+                    s['status'] = 'completed'
+                    s['result'] = result
+                    s['completed_at'] = time.time()
+                    break
+            # Check if all shards are done
+            all_done = all(s.get('status') == 'completed' for s in task.get('shards', []))
+            task['status'] = 'completed' if all_done else 'in_progress'
+            task['updated'] = time.time()
+            save_tasks(tasks)
+            self.send_json({'status': 'ok', 'task_id': task_id, 'shard_id': shard_id, 'all_done': all_done})
+
         else:
             self.send_json({'status': 'error', 'message': 'unknown endpoint'})
     
