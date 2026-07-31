@@ -45,7 +45,7 @@ def _make_read_input() -> Callable[[], str | None]:
 @click.option(
     "--provider",
     "-p",
-    type=click.Choice(["anthropic", "google", "openai", "ollama", "gateway"]),
+    type=click.Choice(["anthropic", "google", "openai", "ollama", "gateway", "huggingface"]),
     default=DEFAULT_CHAT_PROVIDER,
     show_default=True,
     help="LLM provider backend.",

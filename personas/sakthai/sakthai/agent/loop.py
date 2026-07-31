@@ -363,7 +363,7 @@ def _agent_turn(
             client, model, system, tools, messages, iteration, on_token=on_token
         )
         usage_tracker.record(**response.usage)
-    elif provider in ("openai", "gateway"):
+    elif provider in ("openai", "gateway", "huggingface"):
         response = _call_openai_compat(
             client, model, system, tools, messages, iteration, on_token=on_token
         )
