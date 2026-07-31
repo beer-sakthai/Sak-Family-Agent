@@ -1,10 +1,11 @@
-# This workflow runs the devsecops skill on a schedule to proactively
-# find, triage, and automatically patch vulnerabilities.
+# This workflow runs the agent with security-focused skills on a schedule to
+# proactively find, triage, and propose fixes for vulnerabilities.
 #
-# NOTE: this file lives at the repository root, NOT under .github/workflows/,
-# so GitHub Actions does not currently execute it. If it is meant to run, move
-# it into .github/workflows/. It is left in place (dormant) here and only
-# hardened; its trigger/location was not changed. See docs/security-hardening.md.
+# This file is ACTIVE: it lives under .github/workflows/ and runs nightly.
+# A stale duplicate previously sat at the repository root and was documented
+# in docs/security-hardening.md as proof this workflow was dormant — that
+# doc entry was wrong (this copy has been live since the workflow file first
+# landed here) and has been corrected; the root-level duplicate was removed.
 name: Continuous Security Scan
 
 on:
@@ -17,12 +18,19 @@ permissions:
   contents: write # To create branches and commits for patches
   pull-requests: write # To create pull requests with fixes
 
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
 jobs:
   devsecops-scan:
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -49,10 +57,33 @@ jobs:
           git config --global user.email "sakking-agent[bot]@users.noreply.github.com"
 
       - name: Run DevSecOps Skill
-        # This command invokes the agent and tells it to use the devsecops skill.
-        # The skill will scan for issues and trigger the automated patching pipeline,
-        # which may create a pull request with a proposed fix.
-        run: uv run sakthai run "Use the devsecops skill to perform a full security audit of the codebase." --with-skills devsecops --provider anthropic
+        # This command invokes the agent and tells it to use security skills to
+        # scan for issues and trigger the automated patching pipeline, which
+        # may create a pull request with a proposed fix.
+        #
+        # --with-skills matches by exact skill name (sakthai/skills.py
+        # resolve_skill_names) against SakThai's own skills dir + the shared
+        # skills dir + library/ (see default_skill_roots() in skills.py) —
+        # NOT other personas' skill directories. This repo has no skill
+        # literally named "devsecops" anywhere in those roots (the only
+        # devsecops-named skills live under personas/sakking/skills/ and
+        # personas/sakjules/skills/, which sakthai run never searches), so the
+        # old value silently failed to resolve. `sakthai run` only warns and
+        # skips unresolved --with-skills names on a live run (--dry-run is the
+        # one that fails hard), so this step was exiting 0 every night while
+        # running the agent with no security-skill guidance injected at all.
+        # Using two skills that DO resolve from the searched roots and match
+        # this task: SakThai-coding-security (this repo's own bandit/sandbox
+        # posture) and sakthai-security-hardening (general hardening
+        # checklist). --max-seconds bounds a single nightly run so a
+        # stuck/looping agent can't burn the full job timeout (or unbounded
+        # API spend).
+        run: |
+          uv run sakthai run "Perform a full security audit of the codebase — run static analysis, triage findings, and propose fixes." \
+            --with-skills SakThai-coding-security \
+            --with-skills sakthai-security-hardening \
+            --provider anthropic \
+            --max-seconds 1800
         env:
           # API keys are needed for the LLM to generate patches.
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
