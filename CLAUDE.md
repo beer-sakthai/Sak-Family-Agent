@@ -74,7 +74,7 @@ root with `SAKTHAI_HOME`):
 
 1. **CLI** — `sakthai <cmd>` (entry point `sakthai.cli:main`). Commands:
    - Memory: `learn`, `recall`, `memory show|stats|search|export|import|backup|consolidate|consolidate-sessions|deduplicate`
-   - Agent: `run "<task>"` — key flags: `--provider`/`-p` (anthropic/google/openai/ollama/gateway),
+   - Agent: `run "<task>"` — key flags: `--provider`/`-p` (anthropic/google/openai/ollama/gateway/huggingface),
      `--model`, `--max-tokens`, `--max-iterations`, `--max-seconds`, `--with-skills <name>`
      (repeatable), `--no-mcp`, `--dry-run` (validate config, no API call), `--stream`, `--fast`
      (skip the 6-stage cycle), `--stateless` (don't load/append memory), `--caveman
@@ -158,8 +158,9 @@ CLI/MCP → agent loop → tool registry → MemoryStore → SQLite. See
   - `base.py` — shared types (`Block`, `Response`), retry logic via `tenacity`
   - `anthropic_provider.py` — Claude via `anthropic` SDK
   - `gemini_provider.py` — Gemini via `google-genai`
-  - `openai_provider.py` — OpenAI-compatible APIs, Ollama, and the `gateway`
-    provider (OpenRouter/LiteLLM/Vercel/Cloudflare AI gateways) via `httpx`
+  - `openai_provider.py` — OpenAI-compatible APIs, Ollama, the `gateway`
+    provider (OpenRouter/LiteLLM/Vercel/Cloudflare AI gateways), and the
+    `huggingface` provider (HF Inference Providers router, via `HF_TOKEN`) — all via `httpx`
   - `__init__.py` — provider detection and client factory
 
 ### MCP subsystem (`mcp/`)
@@ -326,6 +327,8 @@ reach out to a real endpoint. Use `tmp_path` fixtures for file I/O.
 | `OLLAMA_HOST` | Ollama server address (default: `http://127.0.0.1:11434`) |
 | `SAKTHAI_GATEWAY_URL` | Base URL of an OpenAI-compatible AI gateway (OpenRouter/LiteLLM/Vercel/Cloudflare) — enables the `gateway` provider |
 | `SAKTHAI_GATEWAY_API_KEY` | Bearer token for the AI gateway (defaults to `nokey`) |
+| `HF_TOKEN` | Hugging Face access token — used by `sakthai hf` and the `huggingface` provider |
+| `SAKTHAI_HF_API_BASE` | Hugging Face Inference Providers router base URL (default: `https://router.huggingface.co/v1`) |
 | `SAKTHAI_HOME` | Override the `~/.sakthai` root (memory db, sessions, extensions) |
 | `SAKTHAI_READ_ALLOW` | Colon-separated extra paths the `read_file` tool may read |
 | `SAKTHAI_SHELL_ALLOW` | Any non-empty value enables the `run_command` tool |

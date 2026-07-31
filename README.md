@@ -55,7 +55,7 @@ personas/sakthai/sakthai/
 │   ├── loop.py         # Main agent orchestration (tool use, retries)
 │   ├── tools.py        # BUILTIN_TOOLS registry (10 tools)
 │   ├── guardrails.py   # Shell command denylist + path validation
-│   ├── providers/      # Claude / Gemini / OpenAI / Ollama / Gateway
+│   ├── providers/      # Claude / Gemini / OpenAI / Ollama / Gateway / Hugging Face
 │   └── registry.py     # Tool discovery & dispatch
 ├── memory/             # Persistent fact/observation store
 │   ├── store.py        # SQLite (only SQLite access point)
@@ -80,7 +80,7 @@ personas/sakthai/sakthai/
 ```
 
 **Key Features:**
-- ✅ **Provider-agnostic** — Claude, Gemini, OpenAI, Ollama, or any OpenAI-compatible gateway
+- ✅ **Provider-agnostic** — Claude, Gemini, OpenAI, Ollama, Hugging Face, or any OpenAI-compatible gateway
 - ✅ **Persistent memory** — SQLite with WAL, additive migrations, snapshot export/import
 - ✅ **Tool sandbox** — Opt-in shell, allowlisted file reads, SSRF protection
 - ✅ **MCP support** — Both as server (stdio) and client (spawn external servers)
@@ -110,6 +110,7 @@ personas/sakthai/sakthai/
 | **OpenAI** | GPT-4 / GPT-4o / GPT-3.5 | ✅ Supported | Via `OPENAI_API_KEY` + `OPENAI_BASE_URL` |
 | **Ollama** | Local models (llama2, mistral, etc.) | ✅ Supported | Via `OLLAMA_HOST` (default: `127.0.0.1:11434`) |
 | **Gateway** | OpenRouter / LiteLLM / Vercel / Cloudflare | ✅ Supported | Via `SAKTHAI_GATEWAY_URL` + `SAKTHAI_GATEWAY_API_KEY` |
+| **Hugging Face** | Any model hosted via HF Inference Providers | ✅ Supported | Via `HF_TOKEN` (router: `SAKTHAI_HF_API_BASE`, default `router.huggingface.co/v1`) |
 
 ### 🛡️ Security Hardening System (2026-07 Production Deployment)
 
@@ -447,7 +448,7 @@ Sak-Family-Agent/
 │  │  ├─ loop.py                    # run_agent() main orchestration
 │  │  ├─ tools.py                   # BUILTIN_TOOLS (10 tools)
 │  │  ├─ guardrails.py              # Command denylist + path validation
-│  │  ├─ providers/                 # Claude/Gemini/OpenAI/Ollama/Gateway
+│  │  ├─ providers/                 # Claude/Gemini/OpenAI/Ollama/Gateway/Hugging Face
 │  │  ├─ registry.py                # Tool discovery
 │  │  └─ usage.py                   # Token tracking
 │  │
@@ -630,6 +631,8 @@ sakthai status
 | `OPENAI_API_KEY` | OpenAI/Gateway key | `sk-...` |
 | `OPENAI_BASE_URL` | Custom endpoint | `https://api.openai.com/v1` |
 | `OLLAMA_HOST` | Local Ollama server | `http://127.0.0.1:11434` |
+| `HF_TOKEN` | Hugging Face access token (Hub ops + `huggingface` provider) | `hf_...` |
+| `SAKTHAI_HF_API_BASE` | Hugging Face Inference Providers router | `https://router.huggingface.co/v1` |
 | `SAKTHAI_HOME` | Override `~/.sakthai` | `/var/sakthai` |
 | `SAKTHAI_SHELL_ALLOW` | Enable shell (allowlist) | `bash:python:git:curl` |
 | `SAKTHAI_READ_ALLOW` | Extra read paths | `/data:/logs` |
@@ -700,6 +703,16 @@ git push -u origin feat/your-feature
 
 👉 **[Model Collection](https://huggingface.co/collections/Nanthasit/sakthai-model-family-6a64745450b12d421c1f9f02)** | **[Leaderboard](https://huggingface.co/spaces/Nanthasit/sakthai-leaderboard)** | **[Dataset](https://huggingface.co/datasets/Nanthasit/sakthai-combined-v6)**
 
+```bash
+# Hub operations: model info & snapshot download into ~/.sakthai/hf
+sakthai hf info meta-llama/Llama-3.1-8B-Instruct
+sakthai hf download meta-llama/Llama-3.1-8B-Instruct
+
+# Run the agent against any Hugging Face Inference Providers–hosted model
+export HF_TOKEN=hf_...
+sakthai run -p huggingface --model meta-llama/Llama-3.1-8B-Instruct "Summarize this repo"
+```
+
 #### 🏆 Top Performers
 
 | Model | Type | Score | Size | Downloads | Status |
@@ -738,6 +751,7 @@ git push -u origin feat/your-feature
 | **GGUF Quantization** | 4-bit/8-bit for edge deployment | ✅ Supported |
 | **OpenAI API** | Drop-in compatible inference | ✅ Tested |
 | **Custom Gateway** | OpenRouter / LiteLLM / Vercel support | ✅ Supported |
+| **HF Inference Providers** | `sakthai run -p huggingface` — any router-hosted model, via `HF_TOKEN` | ✅ Supported |
 | **Model Evaluation** | `lm-eval-harness` benchmarking (weekly + on-demand CI) | ✅ Active |
 | **Fine-tuning** | PEFT LoRA adapters for domain tasks | ✅ Available |
 

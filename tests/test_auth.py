@@ -320,6 +320,41 @@ def test_gateway_credential_source_none(monkeypatch: pytest.MonkeyPatch) -> None
     assert auth.gateway_credential_source() is None
 
 
+# -- resolve_huggingface_credentials / huggingface_credential_source -------
+
+
+def test_resolve_huggingface_with_token(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("HF_TOKEN", "hf_test_token")
+    monkeypatch.delenv("SAKTHAI_HF_API_BASE", raising=False)
+    base, key = auth.resolve_huggingface_credentials()
+    assert base == "https://router.huggingface.co/v1"
+    assert key == "hf_test_token"
+
+
+def test_resolve_huggingface_honours_custom_api_base(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("HF_TOKEN", "hf_test_token")
+    monkeypatch.setenv("SAKTHAI_HF_API_BASE", "https://my-hf-router.example/v1/")
+    base, key = auth.resolve_huggingface_credentials()
+    assert base == "https://my-hf-router.example/v1"  # trailing slash stripped
+    assert key == "hf_test_token"
+
+
+def test_resolve_huggingface_raises_without_token(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("HF_TOKEN", raising=False)
+    with pytest.raises(auth.AuthError, match="HF_TOKEN"):
+        auth.resolve_huggingface_credentials()
+
+
+def test_huggingface_credential_source_token(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("HF_TOKEN", "hf_test_token")
+    assert auth.huggingface_credential_source() == "hf_token"
+
+
+def test_huggingface_credential_source_none(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("HF_TOKEN", raising=False)
+    assert auth.huggingface_credential_source() is None
+
+
 # -- resolve_ollama_credentials ------------------------------------------
 
 
@@ -414,8 +449,10 @@ def test_get_credential_source_dispatches_per_provider(
     monkeypatch.setenv("OPENAI_API_KEY", "k")
     monkeypatch.setenv("OPENAI_BASE_URL", "http://127.0.0.1:1/v1")
     monkeypatch.setenv("SAKTHAI_GATEWAY_URL", "http://gw.example/v1")
+    monkeypatch.setenv("HF_TOKEN", "hf_test_token")
     assert auth.get_credential_source("anthropic") == "api_key"
     assert auth.get_credential_source("google") == "api_key"
     assert auth.get_credential_source("openai") is not None
     assert auth.get_credential_source("gateway") is not None
+    assert auth.get_credential_source("huggingface") == "hf_token"
     assert auth.get_credential_source("unknown-provider") is None
