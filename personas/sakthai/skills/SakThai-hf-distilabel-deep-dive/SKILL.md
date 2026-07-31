@@ -1,5 +1,6 @@
 ---
 name: SakThai-hf-distilabel-deep-dive
+version: 1.0.0
 description: # Skill: hf-distilabel-deep-dive
 ---
 

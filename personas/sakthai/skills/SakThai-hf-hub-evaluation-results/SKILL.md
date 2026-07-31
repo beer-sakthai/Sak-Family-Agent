@@ -2,6 +2,7 @@
 author: SakThai
 license: MIT
 name: SakThai-hf-hub-evaluation-results
+version: 1.0.0
 description: Hugging Face Hub Evaluation Results — decentralized benchmark tracking via .eval_results/ YAML files, benchmark dataset registration with eval.yaml, community-contributed PR-based scores, and verified evaluation tokens.
 model: deepseek-v4-flash
 provider: opencode-go
@@ -35,6 +36,7 @@ To register a dataset as a benchmark:
 
 ```yaml
 name: "Humanity's Last Exam"
+version: 1.0.0
 description: "A multi-modal benchmark at the frontier of human knowledge..."
 evaluation_framework: "inspect-ai"   # enumerable, maintained by HF
 tasks:

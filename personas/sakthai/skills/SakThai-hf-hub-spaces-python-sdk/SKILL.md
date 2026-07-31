@@ -1,5 +1,6 @@
 ---
 name: SakThai-hf-hub-spaces-python-sdk
+version: 1.0.0
 description: # Hugging Face Spaces Python SDK
 ---
 

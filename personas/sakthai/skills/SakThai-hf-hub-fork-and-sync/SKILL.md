@@ -1,5 +1,6 @@
 ---
 name: SakThai-hf-hub-fork-and-sync
+version: 1.0.0
 author: SakThai
 license: MIT
 category: mlops
