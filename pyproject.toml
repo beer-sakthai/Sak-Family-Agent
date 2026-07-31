@@ -185,6 +185,28 @@ dev = [
     "pytest-asyncio>=1.4.0",
     "pytest-cov>=7.1.0",
 ]
+# lm-evaluation-harness for the run-evals.yml workflow. Kept as its own group
+# (not a [project.optional-dependencies] extra) so `uv sync --all-extras` in
+# ci.yml/pylint.yml never pulls in torch/transformers — only run-evals.yml
+# opts in explicitly via `uv sync --group evals`.
+evals = [
+    "lm-eval[hf]>=0.4.5,<0.5",
+    # Declared explicitly (lm-eval[hf] only pulls torch in transitively) so the
+    # tool.uv.sources override below actually applies: uv only rewrites the
+    # index for packages the project depends on directly, not transitive deps.
+    "torch>=2.0",
+]
+
+[tool.uv.sources]
+# CPU-only torch wheel: GitHub-hosted runners have no GPU, and the default
+# PyPI torch wheel pulls in multi-GB CUDA dependencies that are both wasted
+# and slow to download.
+torch = { index = "pytorch-cpu" }
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
 
 [tool.ruff.lint.extend-per-file-ignores]
 "personas/*/agent-self-evolution/*" = ["E402", "F401", "B904", "SIM102", "F841"]
