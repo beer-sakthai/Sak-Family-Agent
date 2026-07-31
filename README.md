@@ -242,6 +242,14 @@ Every Push/PR Runs:
 - 📊 Coverage: 97.05% (2502 additions tested)
 - 🔒 0 security issues found
 
+The list above is only what runs on every push/PR. A handful of other
+workflows run on their own schedule or by manual trigger instead:
+`run-evals.yml` (weekly `lm-eval-harness` benchmark of
+`sakthai-context-0.5b-tools` against the tasks in `evaluation_tasks/`,
+plus regression detection against the last baseline), `dependency-audit.yml`
+(weekly `pip-audit`), `continuous-security.yml` (daily), `verify-assets.yml`
+(daily HF asset check), and `stale.yml` (daily issue/PR triage).
+
 ### 🔒 Security Architecture (Multi-Layer Defense)
 
 **Layer 1: Input Validation**
@@ -505,7 +513,8 @@ Sak-Family-Agent/
 │  ├─ pylint.yml                    # pylint strict
 │  ├─ sonarcloud.yml                # Code quality
 │  ├─ ossar.yml                     # MSDO security scan
-│  └─ ... (10+ more)
+│  ├─ run-evals.yml                 # lm-eval-harness benchmarks (manual + weekly)
+│  └─ ... (8+ more)
 │
 ├─ 📚 docs/                         # Documentation
 │  ├─ architecture.md               # System design & SQLite schema
@@ -729,7 +738,7 @@ git push -u origin feat/your-feature
 | **GGUF Quantization** | 4-bit/8-bit for edge deployment | ✅ Supported |
 | **OpenAI API** | Drop-in compatible inference | ✅ Tested |
 | **Custom Gateway** | OpenRouter / LiteLLM / Vercel support | ✅ Supported |
-| **Model Evaluation** | `lm-eval-harness` benchmarking | ✅ In-use |
+| **Model Evaluation** | `lm-eval-harness` benchmarking (weekly + on-demand CI) | ✅ Active |
 | **Fine-tuning** | PEFT LoRA adapters for domain tasks | ✅ Available |
 
 ## 📈 Verified Benchmarks
@@ -810,7 +819,7 @@ The Sak Family operates on **zero-trust, evidence-first** principles enforced ac
 | **Dependency Audit** | Weekly | pip-audit on lock changes |
 | **Security Audit** | ✅ Passed | 2026-07-26 (all 10 fixes applied) |
 | **Regression Tests** | 30+ | Every vulnerability locked in |
-| **CI/CD** | All green | 12 workflows, zero failures |
+| **CI/CD** | All green | 14 workflows |
 | **Code Review** | Enforced | Branch protection + approval |
 
 ### 📋 Verified Facts (2026-07-26 Audit)
