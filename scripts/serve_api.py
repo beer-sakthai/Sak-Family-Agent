@@ -11,7 +11,6 @@ Run:
 
 from __future__ import annotations
 
-import ipaddress
 import json
 import logging
 import os
@@ -23,18 +22,6 @@ from urllib.parse import unquote, urlparse
 WEB_DIR = (Path(__file__).resolve().parent.parent / "dashboard" / "dist").resolve()
 _HOST = "127.0.0.1"
 _PORT = 3002
-_LOOPBACK_NAMES = frozenset({"localhost"})
-
-
-def _is_loopback_host(host: str) -> bool:
-    """True if ``host`` is loopback-only (safe to bind without authentication)."""
-    if host in _LOOPBACK_NAMES:
-        return True
-    try:
-        return ipaddress.ip_address(host).is_loopback
-    except ValueError:
-        # A non-literal hostname (other than localhost) may resolve anywhere.
-        return False
 
 
 def _dashboard_data(days: int = 30) -> dict[str, Any]:
@@ -154,16 +141,6 @@ class _Handler(SimpleHTTPRequestHandler):
 
 
 def serve(host: str = _HOST, port: int = _PORT) -> HTTPServer:
-    # The API endpoints have no authentication and expose personal memory
-    # (recent facts, observations). Refuse a non-loopback bind unless the
-    # operator explicitly acknowledges the exposure, so a stray 0.0.0.0 does not
-    # silently publish memory to the network.
-    if not _is_loopback_host(host) and not os.environ.get("SAKTHAI_WEB_ALLOW_PUBLIC"):
-        raise PermissionError(
-            f"Refusing to bind the unauthenticated API to non-loopback host {host!r}. "
-            "It serves personal memory with no auth. Set SAKTHAI_WEB_ALLOW_PUBLIC=1 to "
-            "override once you have placed authentication in front of it."
-        )
     os.chdir(str(WEB_DIR))
     srv = HTTPServer((host, port), _Handler)
     logging.getLogger(__name__).info("SakThai API on http://%s:%d  static=%s", host, port, WEB_DIR)
