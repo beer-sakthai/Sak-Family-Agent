@@ -42,7 +42,12 @@ def test_is_safe_url_direct_public_ip():
 
 def test_is_safe_url_invalid_schemes():
     # Invalid protocols must be blocked immediately
-    for url in ["file:///etc/passwd", "gopher://localhost", "ftp://1.1.1.1", "data:text/plain,hello"]:
+    for url in [
+        "file:///etc/passwd",
+        "gopher://localhost",
+        "ftp://1.1.1.1",
+        "data:text/plain,hello",
+    ]:
         is_safe, _, _, _ = is_safe_url(url)
         assert is_safe is False
 
