@@ -309,6 +309,59 @@ class TestServeFunction:
             serve(host="0.0.0.0", port=9999)  # noqa: S104 — explicit opt-in
             mock_http.assert_called_once_with(("0.0.0.0", 9999), _Handler)  # noqa: S104
 
+    def test_serve_refuses_empty_host(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.delenv("SAKTHAI_WEB_ALLOW_PUBLIC", raising=False)
+        with (
+            patch("sakthai.web.server.HTTPServer") as mock_http,
+            pytest.raises(PermissionError, match="non-loopback"),
+        ):
+            serve(host="", port=9999)
+        mock_http.assert_not_called()
+
+    def test_standalone_server_refuses_non_loopback_without_ack(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        import sys
+        REPO_ROOT = Path(__file__).resolve().parents[1]
+        if str(REPO_ROOT) not in sys.path:
+            sys.path.insert(0, str(REPO_ROOT))
+        monkeypatch.delenv("SAKTHAI_WEB_ALLOW_PUBLIC", raising=False)
+        import scripts.serve_api as standalone_mod
+        with (
+            patch("scripts.serve_api.os.chdir"),
+            patch("scripts.serve_api.HTTPServer") as mock_http,
+            pytest.raises(PermissionError, match="non-loopback"),
+        ):
+            standalone_mod.serve(host="0.0.0.0", port=9999)
+        mock_http.assert_not_called()
+
+    def test_standalone_server_allows_non_loopback_when_acknowledged(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        import sys
+        REPO_ROOT = Path(__file__).resolve().parents[1]
+        if str(REPO_ROOT) not in sys.path:
+            sys.path.insert(0, str(REPO_ROOT))
+        monkeypatch.setenv("SAKTHAI_WEB_ALLOW_PUBLIC", "1")
+        import scripts.serve_api as standalone_mod
+        with (
+            patch("scripts.serve_api.os.chdir"),
+            patch("scripts.serve_api.HTTPServer") as mock_http,
+        ):
+            standalone_mod.serve(host="0.0.0.0", port=9999)
+            mock_http.assert_called_once_with(("0.0.0.0", 9999), standalone_mod._Handler)
+
+    def test_standalone_server_refuses_empty_host(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        import sys
+        REPO_ROOT = Path(__file__).resolve().parents[1]
+        if str(REPO_ROOT) not in sys.path:
+            sys.path.insert(0, str(REPO_ROOT))
+        monkeypatch.delenv("SAKTHAI_WEB_ALLOW_PUBLIC", raising=False)
+        import scripts.serve_api as standalone_mod
+        with (
+            patch("scripts.serve_api.os.chdir"),
+            patch("scripts.serve_api.HTTPServer") as mock_http,
+            pytest.raises(PermissionError, match="non-loopback"),
+        ):
+            standalone_mod.serve(host="", port=9999)
+        mock_http.assert_not_called()
+
 
 class TestMainBlock:
     def test_main_block_starts_server_and_exits_on_interrupt(self) -> None:
