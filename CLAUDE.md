@@ -21,7 +21,8 @@ v2 is local-first — the CLI, the agent loop, and the MCP stdio server.
 The repository is the shared source workspace for the Sak family with these key conventions:
 
 - **Canonical package:** `personas/shared/sakthai/` (single copy, symlinked from all personas)
-- **Personas:** six agents (`SakThai`, `SakKing`, `SakSee`, `SakSit`, `SakTan`, `SakJules`); **SakThai is lead**
+- **Personas:** five agents on disk (`SakThai`, `SakKing`, `SakSee`, `SakSit`, `SakJules`; also `config.PERSONA_NAMES`); **SakThai is lead**. `SakTan` was retired and its
+  persona directory removed from the repo — don't recreate `personas/saktan/`.
   - Each has `/skills/` with `Sak<Name>-*` prefixed skills (no duplicates, flattened structure)
   - Each has `/config/` with persona-specific config (config.yaml, mcp.json, gateway_voice_mode.json)
   - Each symlinks to `../shared/sakthai` and `../shared/agent-self-evolution`
@@ -63,7 +64,8 @@ would conflict. **No smoke-test job is wired into any GitHub workflow**,
 despite `.claude/skills/run-sakthai-agent-v2/driver.py` existing in the repo
 — treat that as available tooling, not an enforced CI gate. Run the lint→pytest
 sequence locally before pushing; green CI is the bar for `main`. Coverage
-floor is **97%** (`fail_under = 97`) over the whole `sakthai/` package.
+floor is **96%** (`fail_under = 96`, branch coverage included) over the whole
+`sakthai/` package.
 
 ---
 
@@ -208,11 +210,18 @@ There is no `dashboard.py` here — see the dashboard note below.
 - **`cycle/`** — six-stage Dream → Hope → Care → Joy → Trust → Growth state
   machine. `stages.py` defines the `Stage` enum; `state.py` persists the current
   stage as a single fact in the store (kind=`cycle`, key=`current_stage`).
-- **`skills.py` + `skills/` + `library/`** — parse/catalog/validate `SKILL.md`
-  files (YAML frontmatter: name, category, description, version, platforms, tags,
-  related_skills). `library/` has 31 curated skills across 11 categories;
-  `skills/` has 70 user/extension skills. Skills are injected into the agent
-  system prompt via `render_skills_prompt_block()`.
+- **`skills.py` + `library/` + `personas/*/skills/`** — parse/catalog/validate
+  `SKILL.md` files (YAML frontmatter: name, category, description, version,
+  platforms, tags, related_skills). Default discovery roots
+  (`default_skill_roots()` in `skills.py`) are: `personas/sakthai/skills/`
+  (`SKILLS_DIR`, this persona's own overlay), `personas/shared/skills/`
+  (`SHARED_SKILLS_DIR`/`LIBRARY_DIR`, 3 skills byte-identical across all
+  personas), root `library/` (`CURATED_LIBRARY_DIR`, 31 curated skills across
+  11 categories, pre-dates the `Sak-`/`SakThai-` naming convention), and
+  `~/.sakthai/extensions`. The root-level `skills/` directory is **not** one
+  of these roots — it's orphaned content, not part of live skill discovery.
+  Skills are injected into the agent system prompt via
+  `render_skills_prompt_block()`.
 - **Dashboard — backend only.** The CLI's `dashboard` command and the
   frontend (both the old in-package bundle and the repo-root Vite project)
   are gone, but `personas/sakthai/sakthai/dashboard/data.py` was re-added:
@@ -242,7 +251,7 @@ There is no `dashboard.py` here — see the dashboard note below.
 
 ## Tests
 
-Tests live in `tests/` (70 files, ~17,900 lines). All tests are hermetic — no
+Tests live in `tests/` (90 files, ~21,500 lines). All tests are hermetic — no
 network, no GCP credentials. Integration tests that may hit real endpoints
 (Ollama, Anthropic) are marked `@pytest.mark.integration` and self-skip when
 credentials/endpoints are absent; CI excludes them with `-m "not integration"`.

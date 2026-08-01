@@ -425,18 +425,9 @@ Error Rate       │ 0%        │ 0%       │ 0%        │ N/A
 
 ## 👨‍👩‍👧‍👦 The Family
 
-Six personas with shared memory, separate sessions, A2A communication (port 3005):
+Five personas remain on disk today (SakTan's persona directory was removed) — shared memory, separate sessions, A2A communication (port 3005). See [docs/SOUL.md](./docs/SOUL.md) for the full team roster (handles, roles, models, skill counts, status).
 
-| Agent | Role | Skills | Repo | Status |
-|:---:|---|:---:|---|:---:|
-| **🏠 SakThai** | Lead & HF Master | 78 | `sakthai-skills` | 🟢 Active |
-| **👑 SakKing** | Infrastructure & Coordination | 286 | `Sak-Family-Agent` (this) | 🟢 Active |
-| **🌐 SakSee** | Web & Browser Automation | 107 | `saksee-skills` | 🟢 Active |
-| **📱 SakSit** | Social Media & Storytelling | 234 | `saksit-skills` | 🟢 Active |
-| **⚙️ SakJules** | CI/CD & Automation | 11 | Legacy (skills retained) | 🔴 Archived |
-| **📋 SakTan** | Daily Operations | — | — | 🔴 Archived |
-
-**Architecture:** Shared SQLite memory (`~/.sakthai/memory.db`) + 6 isolated Hermes profiles + A2A message bus
+**Architecture:** Shared SQLite memory (`~/.sakthai/memory.db`) + isolated Hermes profiles per active persona + A2A message bus
 
 ## 📁 Repository Structure
 

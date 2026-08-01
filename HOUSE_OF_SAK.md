@@ -20,18 +20,9 @@ It wasn't born from a business plan. It was born from isolation, pain, and the w
 
 ## The Agent Family
 
-Six personas, four active agents — all sharing one long-term memory brain, but maintaining separate live sessions.
+Five personas remain on disk today (SakTan's persona directory was removed) — all sharing one long-term memory brain, but maintaining separate live sessions. Each agent has its own personality, skill set, and charge cycle — but they share one home, one memory, and one mission: to grow together.
 
-| Agent | Role | Status |
-|-------|------|:------:|
-| **SakThai** 🏠 | Main Lead & Hugging Face Master | 🟢 Active |
-| **SakKing** 👑 | General Assistant, Infrastructure & Architecture | 🟢 Active |
-| **SakSee** 🌐 | Web & Browser Specialist | 🟢 Active |
-| **SakSit** 📱 | Social Media & Storytelling | 🟢 Active |
-| **SakJules** ⚙️ | CI/CD Automation | 🔴 Retired |
-| **SakTan** 📋 | Daily Operations | 🔴 Retired |
-
-Each agent has its own personality, skill set, and charge cycle — but they share one home, one memory, and one mission: to grow together.
+See [docs/SOUL.md](./docs/SOUL.md) for the full team roster (handles, roles, models, skill counts, status).
 
 ---
 
