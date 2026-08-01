@@ -318,13 +318,17 @@ class TestServeFunction:
             serve(host="", port=9999)
         mock_http.assert_not_called()
 
-    def test_standalone_server_refuses_non_loopback_without_ack(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_standalone_server_refuses_non_loopback_without_ack(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         import sys
+
         REPO_ROOT = Path(__file__).resolve().parents[1]
         if str(REPO_ROOT) not in sys.path:
             sys.path.insert(0, str(REPO_ROOT))
         monkeypatch.delenv("SAKTHAI_WEB_ALLOW_PUBLIC", raising=False)
         import scripts.serve_api as standalone_mod
+
         with (
             patch("scripts.serve_api.os.chdir"),
             patch("scripts.serve_api.HTTPServer") as mock_http,
@@ -333,13 +337,17 @@ class TestServeFunction:
             standalone_mod.serve(host="0.0.0.0", port=9999)
         mock_http.assert_not_called()
 
-    def test_standalone_server_allows_non_loopback_when_acknowledged(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_standalone_server_allows_non_loopback_when_acknowledged(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         import sys
+
         REPO_ROOT = Path(__file__).resolve().parents[1]
         if str(REPO_ROOT) not in sys.path:
             sys.path.insert(0, str(REPO_ROOT))
         monkeypatch.setenv("SAKTHAI_WEB_ALLOW_PUBLIC", "1")
         import scripts.serve_api as standalone_mod
+
         with (
             patch("scripts.serve_api.os.chdir"),
             patch("scripts.serve_api.HTTPServer") as mock_http,
@@ -349,11 +357,13 @@ class TestServeFunction:
 
     def test_standalone_server_refuses_empty_host(self, monkeypatch: pytest.MonkeyPatch) -> None:
         import sys
+
         REPO_ROOT = Path(__file__).resolve().parents[1]
         if str(REPO_ROOT) not in sys.path:
             sys.path.insert(0, str(REPO_ROOT))
         monkeypatch.delenv("SAKTHAI_WEB_ALLOW_PUBLIC", raising=False)
         import scripts.serve_api as standalone_mod
+
         with (
             patch("scripts.serve_api.os.chdir"),
             patch("scripts.serve_api.HTTPServer") as mock_http,
