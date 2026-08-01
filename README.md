@@ -315,7 +315,7 @@ We welcome contributions to the House of Sak! Please refer to our `CONTRIBUTING.
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the `LICENSE` file for details.
+This project operates under a custom Intellectual Property License. Please refer to the `LICENSE` file for full details on permitted and prohibited uses.
 
 ---
 
