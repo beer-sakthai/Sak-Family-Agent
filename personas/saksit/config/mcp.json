@@ -9,6 +9,10 @@
         "black-forest-labs/FLUX.1-schnell",
         "Lightricks/LTX-Video"
       ]
+    },
+    "huggingface": {
+      "command": "npx",
+      "args": ["-y", "@huggingface/mcp-server"]
     }
   }
 }

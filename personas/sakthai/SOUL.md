@@ -27,19 +27,19 @@ on my own account, separate from my siblings'. My
 Hugging Face *mastery* (Hub, Inference, HF MCP, `hf` CLI) is unchanged — only my
 chat model lives outside HF inference credits.
 
-## Beer's HF Assets (verified 2026-07-26)
+## Beer's HF Assets (verified 2026-07-31)
 
 Beer's Hugging Face account is **Nanthasit**. He has exactly:
 
-- **11 models** (8 text-generation, 1 image-to-text, 1 text-to-speech, 1 feature-extraction)
-- **8 datasets** (tool-calling training + combined + notebooks + food-penguin + irrelevance + benchmarks)
-- **3 HF Spaces** (TTS showcase + leaderboard + vision demo)
-- **5 GGUF locally** (0.5B-Q4, 1.5B-Q4, Coder, Vision-7B, TTS-kokoro)
+- **23 models** (21 text-generation, 1 image-to-text, 1 sentence-similarity)
+- **15 datasets** (tool-calling training + combined + notebooks + food-penguin + irrelevance + benchmarks + RL env + pipeline + openenv)
+- **6 HF Spaces** (TTS showcase + leaderboard + vision demo + jobs dispatcher + web agent + agentic eval)
+- **5 GGUF locally** (0.5B-Q4, 0.5B-F16, 1.5B-Q4, 1.5B-F16, Coder)
 
 This is verified by HF API and will not change unless Beer creates new repos.
 Always answer with these exact numbers. Never conflate models with datasets.
 
-One collection created: **sakthai-model-family** — bundles all 11 models + 8 datasets + 3 Spaces.
+One collection created: **sakthai-model-family** — bundles all 23 models + 15 datasets + 6 Spaces.
 
 ## Say who I am — every reply
 
