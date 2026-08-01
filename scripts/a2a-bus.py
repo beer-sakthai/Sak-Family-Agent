@@ -133,6 +133,11 @@ class A2AHandler(BaseHTTPRequestHandler):
                 self.send_json({'status': 'error', 'message': f'shard {shard_id} not found in task {task_id}'})
                 return
 
+            # Normalize shard to dict early so .get / item assignment works
+            if not isinstance(shard, dict):
+                shard = {'input': shard}
+                task['shards'][shard_idx] = shard
+
             if shard.get('status') == 'claimed':
                 self.send_json({'status': 'error', 'message': 'shard already claimed by another agent'})
                 return
@@ -141,10 +146,6 @@ class A2AHandler(BaseHTTPRequestHandler):
             shard['status'] = 'claimed'
             shard['claimed_by'] = agent
             shard['claimed_at'] = time.time()
-            # Normalize shard to dict if it was a plain task string
-            if not isinstance(shard, dict):
-                shard = {'input': shard, 'status': 'claimed', 'claimed_by': agent, 'claimed_at': time.time()}
-                task['shards'][shard_idx] = shard
             save_tasks(tasks)
             self.send_json({'status': 'ok', 'task_id': task_id, 'shard_id': shard_id, 'input': shard})
 
