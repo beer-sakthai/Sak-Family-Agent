@@ -8,8 +8,8 @@ metadata:
   hermes:
     tags: [Image, Generation, Persistence, Reuse, Download]
 related_skills:
-  - api-troubleshoot-solutions
-  - saksit-free-image-generation
+  - SakSit-api-troubleshoot-solutions
+  - SakSit-free-image-generation
 ---
 
 # SakSit Image Generate & Persist

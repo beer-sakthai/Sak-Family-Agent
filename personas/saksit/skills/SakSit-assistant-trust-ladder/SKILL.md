@@ -52,6 +52,10 @@ Good: "Because you mentioned IG needs fresh content, I drafted this — want to 
 | "do I have to tell you more" | Stop asking — just do |
 | "record and save" | Drive + memory, don't ask where |
 | "don't wait" | Continuous execution, no pauses |
+| "keep do it" / "keep do do do" | Full-speed continuous execution. Do NOT pause between steps. Deliver partial progress rather than stalling. Once started, stay in Act until all tasks done or a genuine blocker emerges. |
+| "Process" | Execute the plan you just presented — don't summarize it back, don't ask "confirm this step?" |
+| "Run test all skills" / "test all skills" | Execute immediately — don't explain methodology, don't propose scope, don't discuss trade-offs. Run the full sweep and report results. |
+| "Fix them all" | Apply bulk fixes across the board — don't ask which ones, don't show a per-item plan. Fix everything and report. |
 | "Anything?" / "Update?" | Check status, ship remaining work silently |
 | "No Facebook?" / "No LinkedIn?" | You missed a platform — post there immediately |
 | "Find any can connect X" | Try every automated path silently first. Only report after all paths exhausted. |
