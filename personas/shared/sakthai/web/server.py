@@ -23,11 +23,13 @@ logger = logging.getLogger(__name__)
 
 _DEFAULT_HOST = "127.0.0.1"
 _DEFAULT_PORT = 3001
-_LOOPBACK_NAMES = frozenset({"localhost", ""})
+_LOOPBACK_NAMES = frozenset({"localhost"})
 
 
 def _is_loopback_host(host: str) -> bool:
     """True if ``host`` is loopback-only (safe to bind without authentication)."""
+    if not host:
+        return False
     if host in _LOOPBACK_NAMES:
         return True
     try:
