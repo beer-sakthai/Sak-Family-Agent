@@ -127,7 +127,7 @@ def _run_in_sandbox(
 @click.option(
     "--provider",
     "-p",
-    type=click.Choice(["anthropic", "google", "openai", "ollama", "gateway"]),
+    type=click.Choice(["anthropic", "google", "openai", "ollama", "gateway", "huggingface"]),
     help="LLM provider backend.",
 )
 @click.option("-v", "--verbose", is_flag=True, help="Stream tool calls as they happen.")
