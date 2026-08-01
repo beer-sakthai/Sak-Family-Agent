@@ -11,7 +11,7 @@ import unittest
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-PERSONAS = ["sakthai", "sakjules", "sakking", "saksee", "saksit"]
+PERSONAS = ["sakthai", "sakjules", "sakking", "saksee", "saksit", "saktan"]
 GUARDRAILS_REL = Path("sakthai") / "agent" / "guardrails.py"
 
 
