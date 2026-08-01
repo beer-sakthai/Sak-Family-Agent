@@ -69,7 +69,7 @@ never duplicate content across files.
 | SakJules — skills organisation | [`personas/sakjules/PLAN.md`](./personas/sakjules/PLAN.md) | ✅ Complete — archived |
 | SakTan — daily story & diary | `personas/saktan/PLAN.md` | ⚪ Archived — persona deleted per Beer directive |
 | Agent Self-Evolution (×6 agents) | `personas/*/agent-self-evolution/PLAN.md` | 🟡 Active — personalised per agent |
-| **Repo Hygiene Round 2** | [`SCRATCH_ORGANISATION_PLAN.md`](./SCRATCH_ORGANISATION_PLAN.md) | 🟡 Active — root cleanup |
+| **Repo Hygiene Round 2** | [SCRATCH_ORGANISATION_PLAN](#scratch-organisation-plan) | 🟡 Active — root cleanup |
 
 ## 🔧 Runtime Notes
 
