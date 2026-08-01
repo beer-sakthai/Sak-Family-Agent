@@ -13,8 +13,6 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from scripts.telegram_send import send_via_mcp
-
 
 def test_telegram_token_leak_in_error() -> None:
     """Verify that an invalid TELEGRAM_BOT_TOKEN is not leaked in the error message."""
@@ -37,6 +35,7 @@ def test_telegram_token_leak_in_error() -> None:
 
 def test_telegram_send_mcp_robustness() -> None:
     """Verify that send_via_mcp gracefully handles different malformed/unexpected inputs from the subprocess."""
+    from scripts.telegram_send import send_via_mcp
 
     # 1. Test invalid JSON output (should ignore it and not crash)
     with patch("subprocess.run") as mock_run:
