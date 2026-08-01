@@ -160,15 +160,24 @@ class A2AHandler(BaseHTTPRequestHandler):
                 self.send_json({'status': 'error', 'message': f'task {task_id} not found'})
                 return
             # Find and update the shard
+            found = False
             for i, s in enumerate(task.get('shards', [])):
                 sid = s.get('shard_id', s.get('id', i)) if isinstance(s, dict) else i
                 if str(sid) == str(shard_id) or sid == shard_id:
+                    if not isinstance(s, dict):
+                        s = {'input': s}
+                        task['shards'][i] = s
                     s['status'] = 'completed'
                     s['result'] = result
                     s['completed_at'] = time.time()
+                    s['completed_by'] = agent
+                    found = True
                     break
+            if not found:
+                self.send_json({'status': 'error', 'message': f'shard {shard_id} not found in task {task_id}'})
+                return
             # Check if all shards are done
-            all_done = all(s.get('status') == 'completed' for s in task.get('shards', []))
+            all_done = all((isinstance(s, dict) and s.get('status') == 'completed') for s in task.get('shards', []))
             task['status'] = 'completed' if all_done else 'in_progress'
             task['updated'] = time.time()
             save_tasks(tasks)
