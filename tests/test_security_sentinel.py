@@ -74,7 +74,9 @@ def test_telegram_send_mcp_robustness() -> None:
         with patch("subprocess.run") as mock_run:
             mock_run.return_value = MagicMock(returncode=0, stdout=bad_stdout)
             res = send_via_mcp("test message")
-            assert res == 1  # Should not crash, but should return failure status (1) since no reply was successfully extracted
+            assert (
+                res == 1
+            )  # Should not crash, but should return failure status (1) since no reply was successfully extracted
 
 
 if __name__ == "__main__":
