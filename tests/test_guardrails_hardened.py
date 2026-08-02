@@ -1,6 +1,7 @@
 """Tests for the hardened guardrails integration."""
 
 from pathlib import Path
+from typing import Any
 
 from sakthai.agent.guardrails import GuardrailAction
 from sakthai.agent.guardrails_hardened import (
@@ -53,6 +54,106 @@ class TestConfigIntegrityCheck:
         """Test that config integrity check doesn't crash."""
         result = check_config_integrity()
         assert result.action in (GuardrailAction.ALLOW, GuardrailAction.DENY)
+
+    def test_config_integrity_uninitialized(self) -> None:
+        """Test config integrity when _config_integrity is None."""
+        from unittest.mock import patch
+
+        with patch("sakthai.agent.guardrails_hardened._config_integrity", None):
+            result = check_config_integrity()
+            assert result.action == GuardrailAction.ALLOW
+
+    def test_config_integrity_passes_when_clean(self) -> None:
+        """Test config integrity when verify and check_permissions return no events."""
+        from unittest.mock import MagicMock, patch
+
+        mock_integrity = MagicMock()
+        mock_integrity.verify.return_value = []
+        mock_integrity.check_permissions.return_value = []
+
+        with patch("sakthai.agent.guardrails_hardened._config_integrity", mock_integrity):
+            result = check_config_integrity()
+            assert result.action == GuardrailAction.ALLOW
+            mock_integrity.verify.assert_called_once()
+            mock_integrity.check_permissions.assert_called_once()
+
+    def test_config_integrity_denies_on_tampering(self, caplog: Any) -> None:
+        """Test config integrity when tampering events are detected."""
+        from unittest.mock import MagicMock, patch
+
+        from sakthai.agent.security_hardening import SecurityEvent
+
+        # Create a mock security event
+        mock_event = SecurityEvent(
+            event_type="config_tampering",
+            severity="high",
+            message="Mock configuration file tampering",
+            timestamp=123456789.0,
+            details={"file": "mcp.json"},
+        )
+
+        mock_integrity = MagicMock()
+        mock_integrity.verify.return_value = [mock_event]
+        mock_integrity.check_permissions.return_value = []
+
+        with (
+            patch("sakthai.agent.guardrails_hardened._config_integrity", mock_integrity),
+            patch("sakthai.agent.guardrails_hardened.get_audit_logger") as mock_get_audit_logger,
+            caplog.at_level("WARNING"),
+        ):
+            mock_audit_logger = MagicMock()
+            mock_get_audit_logger.return_value = mock_audit_logger
+
+            result = check_config_integrity()
+            assert result.action == GuardrailAction.DENY
+            assert result.reason == "Configuration file tampering detected"
+
+            # Verify warning was logged
+            assert any(
+                "Mock configuration file tampering" in record.message for record in caplog.records
+            )
+
+            # Verify event was logged to audit log
+            mock_audit_logger.log_event.assert_called_once_with(mock_event)
+
+    def test_config_integrity_denies_on_bad_permissions(self, caplog: Any) -> None:
+        """Test config integrity when bad permission events are detected."""
+        from unittest.mock import MagicMock, patch
+
+        from sakthai.agent.security_hardening import SecurityEvent
+
+        # Create a mock security event for permissions
+        mock_event = SecurityEvent(
+            event_type="config_permission",
+            severity="high",
+            message="Mock bad permissions on config file",
+            timestamp=123456789.0,
+            details={"file": "mcp.json", "mode": "0666"},
+        )
+
+        mock_integrity = MagicMock()
+        mock_integrity.verify.return_value = []
+        mock_integrity.check_permissions.return_value = [mock_event]
+
+        with (
+            patch("sakthai.agent.guardrails_hardened._config_integrity", mock_integrity),
+            patch("sakthai.agent.guardrails_hardened.get_audit_logger") as mock_get_audit_logger,
+            caplog.at_level("WARNING"),
+        ):
+            mock_audit_logger = MagicMock()
+            mock_get_audit_logger.return_value = mock_audit_logger
+
+            result = check_config_integrity()
+            assert result.action == GuardrailAction.DENY
+            assert result.reason == "Configuration file tampering detected"
+
+            # Verify warning was logged
+            assert any(
+                "Mock bad permissions on config file" in record.message for record in caplog.records
+            )
+
+            # Verify event was logged to audit log
+            mock_audit_logger.log_event.assert_called_once_with(mock_event)
 
 
 class TestEnhancedPathSafety:
