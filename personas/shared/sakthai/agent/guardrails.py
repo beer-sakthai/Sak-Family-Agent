@@ -817,7 +817,20 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
                     or _is_binary(part, "nsenter")
                     and flag_name in ("-t", "--target", "-S", "--setuid", "-G", "--setgid")
                     or _is_binary(part, "unshare")
-                    and flag_name in ("-S", "--setuid", "-G", "--setgid", "--map-user", "--map-group", "--map-users", "--map-groups", "--root", "--wd", "--mount-proc")
+                    and flag_name
+                    in (
+                        "-S",
+                        "--setuid",
+                        "-G",
+                        "--setgid",
+                        "--map-user",
+                        "--map-group",
+                        "--map-users",
+                        "--map-groups",
+                        "--root",
+                        "--wd",
+                        "--mount-proc",
+                    )
                     or _is_binary(part, "pkexec")
                     and flag_name in ("--user", "-u")
                     or _is_binary(part, ("sudo", "doas"))
@@ -848,7 +861,8 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
                     or _is_binary(part, "pipx")
                     and flag_name in ("--spec", "--index-url", "--pip-args", "--python")
                     or _is_binary(part, "bun")
-                    and flag_name in ("--cwd", "--env-file", "-c", "--config", "-e", "--entry-point")
+                    and flag_name
+                    in ("--cwd", "--env-file", "-c", "--config", "-e", "--entry-point")
                     or _is_binary(part, "bunx")
                     and flag_name in ("-p", "--package", "--cwd", "--env-file")
                     or _is_binary(part, "npx")
@@ -866,15 +880,22 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
                     and flag in ("-C", "--directory")
                 ):
                     if flag_val is not None:
-                        if _is_binary(part, "unshare") and flag_name in ("--root", "--wd", "--mount-proc"):
-                            if _is_sensitive_path(flag_val, allow_local=True):
-                                binary_name = os.path.basename(part)
-                                return GuardrailResult(
-                                    GuardrailAction.DENY,
-                                    reason=f"potentially dangerous '{binary_name} {flag_name}' on {flag_val!r} blocked.",
-                                )
+                        if (
+                            _is_binary(part, "unshare")
+                            and flag_name in ("--root", "--wd", "--mount-proc")
+                            and _is_sensitive_path(flag_val, allow_local=True)
+                        ):
+                            binary_name = os.path.basename(part)
+                            return GuardrailResult(
+                                GuardrailAction.DENY,
+                                reason=f"potentially dangerous '{binary_name} {flag_name}' on {flag_val!r} blocked.",
+                            )
                     else:
-                        if _is_binary(part, "unshare") and flag_name in ("--root", "--wd", "--mount-proc") and start_idx < len(parts):
+                        if (
+                            _is_binary(part, "unshare")
+                            and flag_name in ("--root", "--wd", "--mount-proc")
+                            and start_idx < len(parts)
+                        ):
                             arg_val = parts[start_idx]
                             if _is_sensitive_path(arg_val, allow_local=True):
                                 binary_name = os.path.basename(part)

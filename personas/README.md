@@ -4,7 +4,7 @@ Six core agent personas — **sakthai**, **sakking**, **saksee**, **saksit**,
 **saktan**, and **sakjules** — each formerly had its own `*-skills`
 repository. 
 
-Today, they collectively host **845 specialized skills** in their overlays
+Today, they collectively host **952 specialized skills** in their overlays
 (counted as skill directories and files on disk — see the per-persona counts in the
 layout below), plus 3 shared skills. Most of that content
 lives directly within each persona's own `skills/` folder (its overlay); a
@@ -24,7 +24,8 @@ personas/
 │   ├── SOUL.md         # Identity, charge system, principles
 │   ├── config/         # persona config (config.yaml, gateway_voice_mode.json, …)
 │   └── skills/         # Contains the 307 skills mapped to SakThai
-├── sakking/            # Contains the 116 skills mapped to SakKing
+├── sakking/            # Contains the 119 skills mapped to SakKing
+├── saktan/             # Contains the 104 skills mapped to SakTan
 ├── saksit/             # Contains the 49 skills mapped to SakSit
 ├── sakjules/           # Contains the 186 skills mapped to SakJules
 └── saksee/             # Contains the 187 skills mapped to SakSee
