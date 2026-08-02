@@ -104,3 +104,57 @@ def test_cli_dry_run_honors_explicit_repo(tmp_path, monkeypatch):
     assert result.exit_code == 0, result.output
     assert "DRY RUN" in result.output
     assert "Cannot find hermes-agent repo" not in result.output
+
+
+# ── get_hermes_agent_path branches ──────────────────────────────────────────
+
+
+def test_get_hermes_agent_path_raises_file_not_found(tmp_path, monkeypatch):
+    """get_hermes_agent_path() must raise FileNotFoundError when no repo exists."""
+    from evolution.core.config import get_hermes_agent_path
+    import pytest
+
+    monkeypatch.delenv("HERMES_AGENT_REPO", raising=False)
+    monkeypatch.setenv("HOME", str(tmp_path / "empty"))
+
+    with pytest.raises(FileNotFoundError) as exc_info:
+        get_hermes_agent_path()
+
+    assert "Cannot find hermes-agent repo" in str(exc_info.value)
+
+
+def test_get_hermes_agent_path_finds_home_path(tmp_path, monkeypatch):
+    """get_hermes_agent_path() must return home_path when it exists and env_path is absent."""
+    from evolution.core.config import get_hermes_agent_path
+
+    monkeypatch.delenv("HERMES_AGENT_REPO", raising=False)
+    monkeypatch.setenv("HOME", str(tmp_path))
+
+    home_path = tmp_path / ".hermes" / "hermes-agent"
+    home_path.mkdir(parents=True, exist_ok=True)
+
+    assert get_hermes_agent_path() == home_path
+
+
+def test_get_hermes_agent_path_finds_sibling_path(tmp_path, monkeypatch):
+    """get_hermes_agent_path() must return sibling_path when it exists and home_path and env_path are absent."""
+    from evolution.core.config import get_hermes_agent_path, _discover_hermes_agent_path
+    from pathlib import Path
+
+    monkeypatch.delenv("HERMES_AGENT_REPO", raising=False)
+    monkeypatch.setenv("HOME", str(tmp_path / "empty"))
+
+    # Determine sibling path computed in config
+    import evolution.core.config as config_mod
+    sibling_path_target = Path(config_mod.__file__).parent.parent.parent / "hermes-agent"
+
+    orig_exists = Path.exists
+
+    def mock_exists(self):
+        if self == sibling_path_target:
+            return True
+        return orig_exists(self)
+
+    monkeypatch.setattr(Path, "exists", mock_exists)
+
+    assert get_hermes_agent_path() == sibling_path_target
