@@ -6,6 +6,7 @@ skills/.usage.json.lock
 __pycache__/
 .hypothesis/
 *.pyc
+*.egg-info/
 .venv/
 # Ignore the legacy per-persona duplicate sakthai package copies, but keep the
 # consolidated shared canonical (personas/shared/sakthai/) tracked — the five

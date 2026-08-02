@@ -110,7 +110,7 @@ After ALL cards are uploaded, run a final audit to confirm every repo meets stan
 ```python
 # Count PASS/FAIL
 for repo_id in all_repos:
-    score = sum([has_badges, has_hos, has_architecture, has_training, 
+    score = sum([has_badges, has_hos, has_architecture, has_training,
                  has_eval, has_code, has_links, has_limits, has_citation])
     if score < 6: print(f'FAIL: {repo_id}')
 ```
