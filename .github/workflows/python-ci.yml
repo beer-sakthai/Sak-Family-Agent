@@ -1,0 +1,379 @@
+name: Python CI Detailed Diagnostics
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      debug:
+        description: "Enable extra debug output"
+        required: false
+        default: "true"
+        type: choice
+        options:
+          - "true"
+          - "false"
+
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+
+concurrency:
+  group: python-ci-diagnostics-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  UV_SYSTEM_PYTHON: "1"
+  UV_NO_PROGRESS: "1"
+  PYTHONUNBUFFERED: "1"
+  PYTHONDONTWRITEBYTECODE: "1"
+  FORCE_COLOR: "1"
+
+jobs:
+  detect:
+    name: Detect repository structure
+    runs-on: ubuntu-latest
+    outputs:
+      has_pyproject: ${{ steps.detect.outputs.has_pyproject }}
+      has_uv_lock: ${{ steps.detect.outputs.has_uv_lock }}
+      has_requirements: ${{ steps.detect.outputs.has_requirements }}
+      has_tests: ${{ steps.detect.outputs.has_tests }}
+      test_path: ${{ steps.detect.outputs.test_path }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Detect files, folders, and Python layout
+        id: detect
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          echo "## Repository detection" >> "$GITHUB_STEP_SUMMARY"
+
+          if [ -f pyproject.toml ]; then
+            echo "has_pyproject=true" >> "$GITHUB_OUTPUT"
+            echo "- pyproject.toml: found" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "has_pyproject=false" >> "$GITHUB_OUTPUT"
+            echo "- pyproject.toml: missing" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          if [ -f uv.lock ]; then
+            echo "has_uv_lock=true" >> "$GITHUB_OUTPUT"
+            echo "- uv.lock: found" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "has_uv_lock=false" >> "$GITHUB_OUTPUT"
+            echo "- uv.lock: missing" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          if [ -f requirements.txt ]; then
+            echo "has_requirements=true" >> "$GITHUB_OUTPUT"
+            echo "- requirements.txt: found" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "has_requirements=false" >> "$GITHUB_OUTPUT"
+            echo "- requirements.txt: missing" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          if [ -d tests ]; then
+            echo "has_tests=true" >> "$GITHUB_OUTPUT"
+            echo "test_path=tests" >> "$GITHUB_OUTPUT"
+            echo "- tests folder: found" >> "$GITHUB_STEP_SUMMARY"
+          elif find . -maxdepth 3 -type f \( -name 'test_*.py' -o -name '*_test.py' \) | grep -q .; then
+            echo "has_tests=true" >> "$GITHUB_OUTPUT"
+            echo "test_path=." >> "$GITHUB_OUTPUT"
+            echo "- tests folder: not found, but test files exist elsewhere" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "has_tests=false" >> "$GITHUB_OUTPUT"
+            echo "test_path=tests" >> "$GITHUB_OUTPUT"
+            echo "- tests: not detected" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "### Top-level files" >> "$GITHUB_STEP_SUMMARY"
+          echo '```text' >> "$GITHUB_STEP_SUMMARY"
+          ls -la >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+          echo "### Python files detected, first 200" >> "$GITHUB_STEP_SUMMARY"
+          echo '```text' >> "$GITHUB_STEP_SUMMARY"
+          find . \
+            -path './.git' -prune -o \
+            -path './.venv' -prune -o \
+            -path './node_modules' -prune -o \
+            -name '*.py' -print | head -200 >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+  install:
+    name: Install dependencies and verify tooling
+    runs-on: ubuntu-latest
+    needs: detect
+    if: needs.detect.outputs.has_pyproject == 'true' || needs.detect.outputs.has_requirements == 'true'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -f pyproject.toml ] && [ -f uv.lock ]; then
+            echo "Installing with uv sync --locked --all-extras --dev"
+            uv sync --locked --all-extras --dev
+          elif [ -f pyproject.toml ]; then
+            echo "Installing with uv sync --all-extras --dev"
+            uv sync --all-extras --dev
+          elif [ -f requirements.txt ]; then
+            echo "Installing from requirements.txt"
+            python -m pip install --upgrade pip
+            python -m pip install -r requirements.txt
+            python -m pip install pytest pytest-cov ruff mypy bandit
+          else
+            echo "No supported dependency file found."
+            exit 1
+          fi
+
+      - name: Show versions
+        shell: bash
+        run: |
+          set -euo pipefail
+          python --version
+          uv --version
+          uv run python --version || python --version
+          uv run pytest --version || pytest --version
+          uv run ruff --version || ruff --version
+          uv run mypy --version || mypy --version
+          uv run bandit --version || bandit --version
+
+  lint:
+    name: Ruff lint and formatting
+    runs-on: ubuntu-latest
+    needs: install
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync --locked --all-extras --dev
+
+      - name: Ruff lint with GitHub annotations
+        run: uv run ruff check . --output-format=github
+
+      - name: Ruff format check
+        run: uv run ruff format --check .
+
+  typecheck:
+    name: MyPy type checks
+    runs-on: ubuntu-latest
+    needs: install
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync --locked --all-extras --dev
+
+      - name: MyPy type check with detailed output
+        run: uv run mypy . --show-error-codes --pretty --no-error-summary
+
+  security:
+    name: Bandit security scan
+    runs-on: ubuntu-latest
+    needs: install
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync --locked --all-extras --dev
+
+      - name: Run Bandit text report
+        run: uv run bandit -r . -x ./.venv,./tests -ll
+
+      - name: Run Bandit SARIF report
+        if: always()
+        run: uv run bandit -r . -x ./.venv,./tests -f sarif -o bandit.sarif || true
+
+      - name: Upload Bandit SARIF to GitHub Security
+        if: always() && hashFiles('bandit.sarif') != ''
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: bandit.sarif
+
+      - name: Upload Bandit artifact
+        if: always() && hashFiles('bandit.sarif') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: bandit-sarif
+          path: bandit.sarif
+
+  tests:
+    name: Pytest on Python ${{ matrix.python-version }}
+    runs-on: ubuntu-latest
+    needs:
+      - detect
+      - install
+    if: needs.detect.outputs.has_tests == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version:
+          - "3.11"
+          - "3.12"
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync --locked --all-extras --dev
+
+      - name: Run pytest with detailed failure output
+        run: |
+          uv run pytest ${{ needs.detect.outputs.test_path }} \
+            -ra \
+            -vv \
+            --tb=short \
+            --strict-markers \
+            --strict-config \
+            --cov=. \
+            --cov-report=term-missing \
+            --cov-report=xml \
+            --junitxml=pytest-results-${{ matrix.python-version }}.xml
+
+      - name: Upload pytest and coverage artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-python-${{ matrix.python-version }}
+          path: |
+            pytest-results-${{ matrix.python-version }}.xml
+            coverage.xml
+          if-no-files-found: ignore
+
+  no-tests-found:
+    name: No tests detected
+    runs-on: ubuntu-latest
+    needs: detect
+    if: needs.detect.outputs.has_tests != 'true'
+    steps:
+      - name: Explain missing tests
+        run: |
+          echo "No pytest tests were detected."
+          echo "Expected either ./tests or files matching test_*.py / *_test.py."
+          echo "If your tests are somewhere else, edit the tests job path."
+          exit 1
+
+  ci-summary:
+    name: Final CI summary
+    runs-on: ubuntu-latest
+    needs:
+      - detect
+      - install
+      - lint
+      - typecheck
+      - security
+      - tests
+      - no-tests-found
+    if: always()
+    steps:
+      - name: Write detailed summary
+        shell: bash
+        run: |
+          echo "## Python CI Detailed Diagnostics" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Stage | Result |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|---|---|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Detect layout | ${{ needs.detect.result }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Install dependencies | ${{ needs.install.result }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Ruff lint and format | ${{ needs.lint.result }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| MyPy type checks | ${{ needs.typecheck.result }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Bandit security scan | ${{ needs.security.result }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Pytest | ${{ needs.tests.result }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| No tests detector | ${{ needs.no-tests-found.result }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "### How to read failures" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Install failure usually means dependency, lockfile, or pyproject issue." >> "$GITHUB_STEP_SUMMARY"
+          echo "- Ruff failure means lint or formatting issue. Run: uv run ruff check . --fix && uv run ruff format ." >> "$GITHUB_STEP_SUMMARY"
+          echo "- MyPy failure means type hints or missing stubs need fixing." >> "$GITHUB_STEP_SUMMARY"
+          echo "- Pytest failure means the application or tests failed. Check the failing test name and traceback." >> "$GITHUB_STEP_SUMMARY"
+          echo "- Bandit failure means a security finding needs review." >> "$GITHUB_STEP_SUMMARY"
+
+          failed=0
+          for result in \
+            "${{ needs.detect.result }}" \
+            "${{ needs.install.result }}" \
+            "${{ needs.lint.result }}" \
+            "${{ needs.typecheck.result }}" \
+            "${{ needs.security.result }}"; do
+            if [ "$result" != "success" ]; then
+              failed=1
+            fi
+          done
+
+          if [ "${{ needs.tests.result }}" != "success" ] && [ "${{ needs.tests.result }}" != "skipped" ]; then
+            failed=1
+          fi
+
+          if [ "${{ needs.no-tests-found.result }}" == "failure" ]; then
+            failed=1
+          fi
+
+          if [ "$failed" -ne 0 ]; then
+            echo "One or more CI stages failed. Open the failed job for exact file, line, and command details."
+            exit 1
+          fi
