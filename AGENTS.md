@@ -6,7 +6,7 @@ This is a monorepo. The installable core package (`sakthai`) lives at `personas/
 ## Build, Test, and Development Commands
 - `uv sync --all-extras`: install the full local Python environment.
 - `make test`: run the pytest suite in `tests/`.
-- `make lint`: run Ruff checks across the repository.
+- `make lint`: run Ruff checks across the repository. **Note:** 55 pre-existing errors exist in unrelated files — use `uv run ruff check <file>` to verify only your changes cleanly.
 - `uv run mypy personas/sakthai/sakthai`: run strict type checking on the core package.
 - `uv run bandit -c pyproject.toml -r personas/sakthai/sakthai`: run the security scan.
 - `make mutation`: run local mutation testing for the core seams.

@@ -19,8 +19,8 @@ metadata:
     - cross-platform
     related_skills:
 
-    - SakSit-Sak-instagram-content-kit
-    - SakSit-saksit-social-media-posting-workflows
+    - SakSit-sak-instagram-content-kit
+    - SakSit-social-media-posting-workflows
 category: social-media
 ---
 

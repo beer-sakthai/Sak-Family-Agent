@@ -34,6 +34,7 @@ PERSONA_SKILL_PREFIXES: dict[str, str] = {
     "saksee": "SakSee-",
     "saksit": "SakSit-",
     "sakjules": "SakJules-",
+    "saktan": "SakTan-",
 }
 
 #: Legacy prefix that predates the convention; stripped when retargeting a name.
@@ -148,15 +149,21 @@ def collect_skills(*roots: Path) -> list[SkillInfo]:
     """Recursively find every SKILL.md under each root, with categories filled in."""
     found_list: list[SkillInfo] = []
     seen: set[Path] = set()
+    seen_names: dict[str, Path] = {}
     for root in roots:
         if not root.is_dir():
             continue
         for skill_md in sorted(root.rglob("SKILL.md")):
             if skill_md in seen:
                 continue
+            if any(part.startswith(".") for part in skill_md.relative_to(root).parts[:-1]):
+                continue
             seen.add(skill_md)
             with contextlib.suppress(SkillParseError):
                 skill = parse_skill(skill_md)
+                if skill.name in seen_names and seen_names[skill.name] != skill_md:
+                    continue
+                seen_names[skill.name] = skill_md
                 category = _category_for(skill, skill_md, root)
                 found_list.append(replace(skill, category=category))
     return sorted(found_list, key=lambda s: (s.name.lower(), str(s.path)))
