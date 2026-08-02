@@ -175,7 +175,7 @@ class TestToolSelectionMetric:
         prediction = dspy.Prediction(predicted_tool="", predicted_args={"query": "test"})
         assert tool_selection_metric(example, prediction) == 0.0
 
-        # With None / missing predicted_tool attributes
+        # With predicted_tool=None (treated as missing by tool_selection_metric)
         prediction = dspy.Prediction(predicted_tool=None)
         assert tool_selection_metric(example, prediction) == 0.0
 
