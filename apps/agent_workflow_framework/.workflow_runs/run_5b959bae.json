@@ -1,0 +1,29 @@
+{
+  "run_id": "run_5b959bae",
+  "workflow_name": "short_circuit",
+  "status": "COMPLETED",
+  "start_time": "2026-08-02T13:52:55.510203",
+  "end_time": "2026-08-02T13:52:55.526875",
+  "step_results": {
+    "s1": {
+      "step_id": "s1",
+      "status": "COMPLETED",
+      "output": {},
+      "error": null,
+      "attempts": 1,
+      "start_time": "2026-08-02T13:52:55.526732",
+      "end_time": "2026-08-02T13:52:55.526762"
+    },
+    "s2": {
+      "step_id": "s2",
+      "status": "COMPLETED",
+      "output": {
+        "v": 1
+      },
+      "error": null,
+      "attempts": 1,
+      "start_time": "2026-08-02T13:52:55.526831",
+      "end_time": "2026-08-02T13:52:55.526853"
+    }
+  }
+}

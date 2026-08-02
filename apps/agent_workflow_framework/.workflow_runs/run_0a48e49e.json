@@ -1,0 +1,27 @@
+{
+  "run_id": "run_0a48e49e",
+  "workflow_name": "short_circuit",
+  "status": "FAILED",
+  "start_time": "2026-08-02T13:55:34.150632",
+  "end_time": "2026-08-02T13:55:34.167825",
+  "step_results": {
+    "s1": {
+      "step_id": "s1",
+      "status": "FAILED",
+      "output": {},
+      "error": "Terminal failure",
+      "attempts": 1,
+      "start_time": "2026-08-02T13:55:34.167656",
+      "end_time": "2026-08-02T13:55:34.167749"
+    },
+    "s2": {
+      "step_id": "s2",
+      "status": "SKIPPED",
+      "output": {},
+      "error": "Skipped due to upstream step failure.",
+      "attempts": 0,
+      "start_time": "2026-08-02T13:55:34.167813",
+      "end_time": "2026-08-02T13:55:34.167818"
+    }
+  }
+}

@@ -1,0 +1,45 @@
+{
+  "run_id": "run_71b04234",
+  "workflow_name": "linear_workflow",
+  "status": "COMPLETED",
+  "start_time": "2026-08-02T13:53:48.531958",
+  "end_time": "2026-08-02T13:53:48.543350",
+  "step_results": {
+    "step_1": {
+      "step_id": "step_1",
+      "status": "COMPLETED",
+      "output": {
+        "message": "hello_from_step_1",
+        "initial_value": 10
+      },
+      "error": null,
+      "attempts": 1,
+      "start_time": "2026-08-02T13:53:48.541967",
+      "end_time": "2026-08-02T13:53:48.542054"
+    },
+    "step_2": {
+      "step_id": "step_2",
+      "status": "COMPLETED",
+      "output": {
+        "transformed_msg": "hello_from_step_1_processed",
+        "calculated_val": 20
+      },
+      "error": null,
+      "attempts": 1,
+      "start_time": "2026-08-02T13:53:48.542366",
+      "end_time": "2026-08-02T13:53:48.542469"
+    },
+    "step_3": {
+      "step_id": "step_3",
+      "status": "COMPLETED",
+      "output": {
+        "final_msg": "hello_from_step_1_processed",
+        "final_result": 20
+      },
+      "error": null,
+      "attempts": 1,
+      "start_time": "2026-08-02T13:53:48.542903",
+      "end_time": "2026-08-02T13:53:48.543097"
+    }
+  }
+}
