@@ -633,7 +633,7 @@ def test_import_snapshot_rollback_on_exception(store: MemoryStore) -> None:
 
 def test_deduplicate_facts_security_sql_injection_payload(store: MemoryStore) -> None:
     # Attempt SQL injection through a key or value
-    # Even if they have injection strings, our secure parameterization makes injection impossible
+    # Even if they have injection strings, our secure json_each parameterization makes injection impossible
     store.add_fact("malicious_val_1", kind="pref", key="injection' OR 1=1; --")
     store.add_fact("malicious_val_2", kind="pref", key="injection' OR 1=1; --")
 
