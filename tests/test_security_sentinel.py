@@ -11,6 +11,7 @@ from sakthai.memory.store import MemoryStore
 # Ensure scripts folder can be imported
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
+
 def _ensure_repo_root_on_syspath() -> None:
     if str(REPO_ROOT) not in sys.path:
         sys.path.insert(0, str(REPO_ROOT))
@@ -39,6 +40,7 @@ def test_telegram_send_mcp_robustness() -> None:
     """Verify that send_via_mcp gracefully handles different malformed/unexpected inputs from the subprocess."""
     _ensure_repo_root_on_syspath()
     from scripts.telegram_send import send_via_mcp
+
     # 1. Test invalid JSON output (should ignore it and not crash)
     with patch("subprocess.run") as mock_run:
         mock_run.return_value = MagicMock(

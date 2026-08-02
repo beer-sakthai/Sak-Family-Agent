@@ -64,7 +64,9 @@ class TestRecordEval:
         record_eval(_record(), path=log_path)
         assert log_path.exists()
 
-    def test_never_raises_on_failure(self, tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:
+    def test_never_raises_on_failure(
+        self, tmp_path: Path, caplog: pytest.LogCaptureFixture
+    ) -> None:
         # Pointing at a directory (not a file) makes the open() fail; this must
         # be swallowed, matching _save_session_log's best-effort contract.
         bad_path = tmp_path  # a directory, not a file
@@ -144,7 +146,9 @@ class TestSummarizeEvals:
         summary = summarize_evals(path=log_path)
         assert summary["count"] == 2
 
-    def test_path_none_uses_eval_log_path(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_path_none_uses_eval_log_path(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         log_path = tmp_path / "env_eval.jsonl"
         record_eval(_record(model="env-model"), path=log_path)
         monkeypatch.setenv("SAKTHAI_EVAL_LOG", str(log_path))
