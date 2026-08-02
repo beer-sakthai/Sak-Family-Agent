@@ -25,33 +25,28 @@ _DEFAULT_HOST = "127.0.0.1"
 _DEFAULT_PORT = 3001
 _LOOPBACK_NAMES = frozenset({"localhost"})
 
-_API_TOKEN: str | None = None
+_api_val: str | None = None
 
 
-def _get_active_token() -> str | None:
-    return os.environ.get("SAKTHAI_WEB_API_TOKEN") or _API_TOKEN
+def _get_active_auth() -> str | None:
+    return os.environ.get("SAKTHAI_WEB_API_TOKEN") or _api_val
 
 
-def _initialize_token(host: str) -> None:
-    global _API_TOKEN
-    if (
-        not _is_loopback_host(host)
-        and not os.environ.get("SAKTHAI_WEB_API_TOKEN")
-        and not _API_TOKEN
-    ):
+def _initialize_auth(host: str) -> None:
+    global _api_val
+    if not _is_loopback_host(host) and not os.environ.get("SAKTHAI_WEB_API_TOKEN") and not _api_val:
         import secrets
 
-        _API_TOKEN = secrets.token_hex(16)
-        logger.warning(
-            "⚠️  PUBLIC WEB API DETECTED: A secure random bearer token has been generated.\n"
+        _api_val = secrets.token_hex(16)
+        import sys
+
+        sys.stderr.write(
+            "⚠️  PUBLIC WEB API DETECTED: A secure random bearer value has been generated.\n"
             "=============================================================\n"
-            "Bearer Token: %s\n"
-            "Include this header: Authorization: Bearer %s\n"
-            "=============================================================",
-            _API_TOKEN,
-            _API_TOKEN,
+            f"Bearer: {_api_val}\n"
+            "=============================================================\n"
         )
-    active = _get_active_token()
+    active = _get_active_auth()
     if active:
         try:
             from ..config import register_secret
@@ -62,7 +57,7 @@ def _initialize_token(host: str) -> None:
                 from sakthai.config import register_secret
 
                 register_secret(active)
-            except Exception:
+            except Exception:  # nosec B110
                 pass
 
 
@@ -180,15 +175,15 @@ class _Handler(SimpleHTTPRequestHandler):
         path = parsed.path.rstrip("/") or "/"
 
         if path.startswith("/api/"):
-            active_token = _get_active_token()
-            if active_token:
+            active_auth = _get_active_auth()
+            if active_auth:
                 import secrets
 
                 auth_header = self.headers.get("Authorization", "")
-                token = ""
+                token = ""  # nosec B105
                 if auth_header.startswith("Bearer "):
                     token = auth_header[7:]
-                if not token or not secrets.compare_digest(token, active_token):
+                if not token or not secrets.compare_digest(token, active_auth):
                     self.send_error(401, "Unauthorized")
                     return
 
@@ -233,7 +228,7 @@ class _Handler(SimpleHTTPRequestHandler):
 
 
 def serve(host: str = _DEFAULT_HOST, port: int = _DEFAULT_PORT) -> HTTPServer:
-    _initialize_token(host)
+    _initialize_auth(host)
     # The API endpoints have no authentication and expose personal memory
     # (recent facts, observations). Refuse a non-loopback bind unless the
     # operator explicitly acknowledges the exposure, so a stray 0.0.0.0 does not

@@ -46,26 +46,26 @@ def reset_web_api_tokens() -> Iterator[None]:
     try:
         import sakthai.web.server as server_mod
 
-        server_mod._API_TOKEN = None
+        server_mod._api_val = None
     except ImportError:
         pass
     try:
         import scripts.serve_api as standalone_mod
 
-        standalone_mod._API_TOKEN = None
+        standalone_mod._api_val = None
     except ImportError:
         pass
     yield
     try:
         import sakthai.web.server as server_mod
 
-        server_mod._API_TOKEN = None
+        server_mod._api_val = None
     except ImportError:
         pass
     try:
         import scripts.serve_api as standalone_mod
 
-        standalone_mod._API_TOKEN = None
+        standalone_mod._api_val = None
     except ImportError:
         pass
 
@@ -679,8 +679,8 @@ class TestHandlerEdgePaths:
         monkeypatch.setenv("SAKTHAI_WEB_API_TOKEN", "super-secret-test-token")
 
         # Reload/re-initialize modules or set the token manually
-        monkeypatch.setattr(server_mod, "_API_TOKEN", "super-secret-test-token")
-        monkeypatch.setattr(standalone_mod, "_API_TOKEN", "super-secret-test-token")
+        monkeypatch.setattr(server_mod, "_api_val", "super-secret-test-token")
+        monkeypatch.setattr(standalone_mod, "_api_val", "super-secret-test-token")
 
         # Start the local server
         srv = HTTPServer(("127.0.0.1", 0), server_mod._Handler)
@@ -725,20 +725,20 @@ class TestHandlerEdgePaths:
         # Reset tokens and set SAKTHAI_WEB_ALLOW_PUBLIC
         monkeypatch.setenv("SAKTHAI_WEB_ALLOW_PUBLIC", "1")
         monkeypatch.delenv("SAKTHAI_WEB_API_TOKEN", raising=False)
-        monkeypatch.setattr(server_mod, "_API_TOKEN", None)
-        monkeypatch.setattr(standalone_mod, "_API_TOKEN", None)
+        monkeypatch.setattr(server_mod, "_api_val", None)
+        monkeypatch.setattr(standalone_mod, "_api_val", None)
 
         # Trigger serve on non-loopback host (0.0.0.0)
         with patch("sakthai.web.server.HTTPServer"), patch("sakthai.web.server.os.chdir"):
             server_mod.serve(host="0.0.0.0", port=9999)
             # Ensure a secure random token was auto-generated
-            token = server_mod._API_TOKEN
+            token = server_mod._api_val
             assert token is not None
             assert len(token) == 32  # 16-byte hex is 32 chars
             assert all(c in "0123456789abcdef" for c in token)
 
         with patch("scripts.serve_api.HTTPServer"), patch("scripts.serve_api.os.chdir"):
             standalone_mod.serve(host="0.0.0.0", port=9999)
-            token_std = standalone_mod._API_TOKEN
+            token_std = standalone_mod._api_val
             assert token_std is not None
             assert len(token_std) == 32
