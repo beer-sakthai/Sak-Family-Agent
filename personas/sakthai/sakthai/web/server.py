@@ -63,7 +63,7 @@ def _get_or_create_bearer_token() -> str:
 
 
 _DEFAULT_PORT = 3001
-_LOOPBACK_NAMES = frozenset({"localhost", ""})
+_LOOPBACK_NAMES = frozenset({"localhost"})
 
 
 def _is_loopback_host(host: str) -> bool:
