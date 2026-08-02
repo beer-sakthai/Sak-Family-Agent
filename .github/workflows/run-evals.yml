@@ -34,7 +34,10 @@ jobs:
           python-version: '3.11'
 
       - name: Install uv
-        run: pipx install uv
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          enable-cache: true
+          cache-dependency-glob: uv.lock
 
       - name: Install dependencies
         # The evals group (lm-eval + CPU-only torch/transformers) is kept out of
@@ -212,8 +215,11 @@ jobs:
       - name: Download baseline results artifact
         uses: dawidd6/action-download-artifact@b6e2e70617bc3265edd6dab6c906732b2f1ae151 # v21
         with:
-          # Download from the last successful workflow run on the main branch
-          workflow: ${{ github.workflow_id }}
+          # Download from the last successful workflow run on the main branch.
+          # The workflow filename is the correct input for dawidd6/action-download-artifact;
+          # `github.workflow_id` is not a real context variable (it silently
+          # evaluated to empty and skipped baseline fetching entirely).
+          workflow: run-evals.yml
           branch: main
           name: baseline-results-main
           path: baseline

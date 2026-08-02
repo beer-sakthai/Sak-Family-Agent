@@ -40,9 +40,14 @@ permissions:
   contents: read
   pull-requests: read # allows SonarCloud to decorate PRs with analysis results
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   Analysis:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     if: >-
       github.event_name == 'push' ||
       github.event_name == 'workflow_dispatch' ||
@@ -52,10 +57,18 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          # SonarCloud's blame/coverage decoration needs full history.
+          fetch-depth: 0
 
-      - name: Analyze with SonarCloud
+      - name: Analyze with SonarQube (replaces deprecated SonarSource/sonarcloud-github-action)
+        # SonarCloud → SonarQube Cloud rename: `sonarcloud-github-action` is
+        # deprecated in favor of `sonarqube-scan-action`, which is the
+        # supported entrypoint for both Cloud (`sonar.host.url` unset) and
+        # self-hosted SonarQube. Tag-pinned; Dependabot (github-actions
+        # ecosystem, already configured) will PR SHA bumps.
         if: env.SONAR_TOKEN != ''
-        uses: SonarSource/sonarcloud-github-action@ffc3010689be73b8e5ae0c57ce35968afd7909e8 # v5.0.0
+        uses: SonarSource/sonarqube-scan-action@v5
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         with:
