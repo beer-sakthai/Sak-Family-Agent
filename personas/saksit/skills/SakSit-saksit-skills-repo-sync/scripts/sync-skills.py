@@ -6,7 +6,7 @@ Usage: python3 sync-skills.py
 Extracts GitHub PAT from /opt/data/.git-credentials (first line).
 Does content comparison via base64 — only pushes changed files.
 """
-import json, base64, os, sys, urllib.request, urllib.error
+import json, base64, os, sys, urllib.request, urllib.error, urllib.parse
 from datetime import date
 
 REPO = "beer-sakthai/saksit-skills"
@@ -19,7 +19,8 @@ def get_token():
     with open("/opt/data/.git-credentials") as f:
         for line in f:
             line = line.strip()
-            if "github.com" in line:
+            parsed = urllib.parse.urlparse(line)
+            if parsed.hostname == "github.com":
                 if "x-access-token:" in line:
                     token = line.split("x-access-token:")[1]
                 elif "@github.com" in line:
