@@ -23,6 +23,7 @@ Requires-Dist: hypothesis>=6.163.0; extra == "dev"
 Requires-Dist: ruff>=0.16.0; extra == "dev"
 Requires-Dist: mypy>=2.3.0; extra == "dev"
 Requires-Dist: bandit[toml]>=1.9.4; extra == "dev"
+Requires-Dist: types-PyYAML>=6.0.12; extra == "dev"
 Provides-Extra: mutation
 Requires-Dist: mutmut>=3.2; extra == "mutation"
 Provides-Extra: all

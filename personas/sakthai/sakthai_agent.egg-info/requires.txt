@@ -19,6 +19,7 @@ hypothesis>=6.163.0
 ruff>=0.16.0
 mypy>=2.3.0
 bandit[toml]>=1.9.4
+types-PyYAML>=6.0.12
 
 [mutation]
 mutmut>=3.2
