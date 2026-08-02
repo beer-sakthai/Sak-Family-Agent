@@ -3,7 +3,7 @@ from unittest.mock import MagicMock, patch
 import dspy
 import pytest
 from evolution.core.config import EvolutionConfig
-from evolution.core.fitness import FitnessScore, LLMJudge, _parse_score, skill_fitness_metric
+from evolution.core.fitness import FitnessScore, LLMJudge, _parse_score, skill_fitness_metric, tool_selection_metric
 
 
 class TestSkillFitnessMetric:
@@ -45,6 +45,39 @@ class TestSkillFitnessMetric:
     def test_clamping(self):
         example = dspy.Example(expected_behavior="test")
         prediction = dspy.Prediction(output="test")
+        assert skill_fitness_metric(example, prediction) == 1.0
+
+    def test_trace_integration(self):
+        # Passing trace argument should not affect the functionality and run without errors
+        example = dspy.Example(expected_behavior="hello")
+        prediction = dspy.Prediction(output="hello")
+        assert skill_fitness_metric(example, prediction, trace="some_trace_data") == 1.0
+
+    def test_missing_or_none_fields(self):
+        # Missing fields in Example and Prediction objects
+        example = dspy.Example()  # no expected_behavior field
+        prediction = dspy.Prediction()  # no output field
+        assert skill_fitness_metric(example, prediction) == 0.0
+
+        # None values explicitly passed
+        example = dspy.Example(expected_behavior=None)
+        prediction = dspy.Prediction(output=None)
+        assert skill_fitness_metric(example, prediction) == 0.0
+
+    def test_case_insensitivity(self):
+        example = dspy.Example(expected_behavior="HELLO WORLD")
+        prediction = dspy.Prediction(output="hello world")
+        assert skill_fitness_metric(example, prediction) == 1.0
+
+    def test_punctuation_and_whitespace(self):
+        # Even with punctuation, words split by whitespace might be compared as-is (strict set comparison)
+        example = dspy.Example(expected_behavior="hello, world!")
+        prediction = dspy.Prediction(output="hello, world!")
+        assert skill_fitness_metric(example, prediction) == 1.0
+
+        # Multi-line/complex strings
+        example = dspy.Example(expected_behavior="first line\nsecond line")
+        prediction = dspy.Prediction(output="first line\nsecond line")
         assert skill_fitness_metric(example, prediction) == 1.0
 
 
@@ -167,3 +200,130 @@ class TestLLMJudge:
                 max_size=100,
             )
             assert score.length_penalty == 0.0
+
+
+class TestToolSelectionMetric:
+    def test_empty_predicted_tool(self):
+        example = dspy.Example(expected_tool="my_tool")
+        prediction = dspy.Prediction(predicted_tool="", predicted_args={})
+        # If predicted_tool is empty/falsy, it should return 0.0
+        assert tool_selection_metric(example, prediction) == 0.0
+
+        prediction = dspy.Prediction(predicted_tool=None, predicted_args={})
+        assert tool_selection_metric(example, prediction) == 0.0
+
+    def test_tool_name_match_only_no_args(self):
+        # 1. Match tool name perfectly with no args
+        example = dspy.Example(expected_tool="calculate_sum")
+        prediction = dspy.Prediction(predicted_tool="calculate_sum")
+        # tool match score = 1.0 (weight 0.6)
+        # expected_args is empty, parsed_args is empty -> args match score = 1.0 (weight 0.4)
+        # score = 0.6 * 1.0 + 0.4 * 1.0 = 1.0
+        assert tool_selection_metric(example, prediction) == 1.0
+
+        # With quotes and whitespace around predicted tool name
+        prediction = dspy.Prediction(predicted_tool="  'calculate_sum'  ")
+        assert tool_selection_metric(example, prediction) == 1.0
+
+        # Case-insensitive
+        prediction = dspy.Prediction(predicted_tool="Calculate_Sum")
+        assert tool_selection_metric(example, prediction) == 1.0
+
+    def test_tool_name_mismatch_no_args(self):
+        example = dspy.Example(expected_tool="calculate_sum")
+        prediction = dspy.Prediction(predicted_tool="calculate_diff")
+        # tool match score = 0.0, args match score = 1.0
+        # score = 0.6 * 0.0 + 0.4 * 1.0 = 0.4
+        assert tool_selection_metric(example, prediction) == 0.4
+
+    def test_args_as_dict(self):
+        example = dspy.Example(
+            expected_tool="my_tool",
+            expected_args={"a": 1, "b": "hello"}
+        )
+        prediction = dspy.Prediction(
+            predicted_tool="my_tool",
+            predicted_args={"a": 1, "b": "hello"}
+        )
+        assert tool_selection_metric(example, prediction) == 1.0
+
+    def test_args_as_json_string(self):
+        example = dspy.Example(
+            expected_tool="my_tool",
+            expected_args={"a": 1, "b": "hello"}
+        )
+        prediction = dspy.Prediction(
+            predicted_tool="my_tool",
+            predicted_args='{"a": 1, "b": "hello"}'
+        )
+        assert tool_selection_metric(example, prediction) == 1.0
+
+    def test_args_as_markdown_json(self):
+        example = dspy.Example(
+            expected_tool="my_tool",
+            expected_args={"a": 1, "b": "hello"}
+        )
+        prediction = dspy.Prediction(
+            predicted_tool="my_tool",
+            predicted_args='```json\n{"a": 1, "b": "hello"}\n```'
+        )
+        assert tool_selection_metric(example, prediction) == 1.0
+
+    def test_args_invalid_json(self):
+        example = dspy.Example(
+            expected_tool="my_tool",
+            expected_args={"a": 1, "b": "hello"}
+        )
+        prediction = dspy.Prediction(
+            predicted_tool="my_tool",
+            predicted_args='{"a": 1, "b": '  # invalid JSON
+        )
+        # parsed_args will remain empty {}
+        # tool match score = 1.0 (weight 0.6), args match score = 0.0 (weight 0.4)
+        # score = 0.6 * 1.0 + 0.0 = 0.6
+        assert tool_selection_metric(example, prediction) == 0.6
+
+    def test_expected_args_empty_parsed_args_non_empty(self):
+        example = dspy.Example(
+            expected_tool="my_tool"
+            # expected_args is absent/empty
+        )
+        prediction = dspy.Prediction(
+            predicted_tool="my_tool",
+            predicted_args={"a": 1}
+        )
+        # parsed_args has {"a": 1}. expected_args is empty.
+        # Inside code:
+        # if expected_args: ...
+        # else:
+        #     if not parsed_args: args_match_score = 1.0
+        # Since parsed_args is NOT empty, args_match_score = 0.0
+        # score = 0.6 * 1.0 + 0.4 * 0.0 = 0.6
+        assert tool_selection_metric(example, prediction) == 0.6
+
+    def test_partial_args_match(self):
+        example = dspy.Example(
+            expected_tool="my_tool",
+            expected_args={"a": 1, "b": "hello", "c": "world"}
+        )
+        # 2 of 3 match (a and b)
+        prediction = dspy.Prediction(
+            predicted_tool="my_tool",
+            predicted_args={"a": 1, "b": "hello", "c": "different"}
+        )
+        # tool match score = 1.0 (0.6)
+        # args match score = 2/3 (0.4) = 0.2667
+        # score = 0.6 + 0.4 * (2/3) = 0.6 + 0.2667 = 0.8667
+        assert tool_selection_metric(example, prediction) == pytest.approx(0.8666666)
+
+    def test_no_args_match(self):
+        example = dspy.Example(
+            expected_tool="my_tool",
+            expected_args={"a": 1}
+        )
+        prediction = dspy.Prediction(
+            predicted_tool="my_tool",
+            predicted_args={"a": 2}
+        )
+        # score = 0.6
+        assert tool_selection_metric(example, prediction) == 0.6
