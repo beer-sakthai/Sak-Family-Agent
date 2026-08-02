@@ -1,0 +1,20 @@
+{
+  "run_id": "run_29c40f85",
+  "workflow_name": "cli_test_wf",
+  "status": "COMPLETED",
+  "start_time": "2026-08-02T13:53:48.232697",
+  "end_time": "2026-08-02T13:53:48.242777",
+  "step_results": {
+    "step_1": {
+      "step_id": "step_1",
+      "status": "COMPLETED",
+      "output": {
+        "msg": "hi"
+      },
+      "error": null,
+      "attempts": 1,
+      "start_time": "2026-08-02T13:53:48.242541",
+      "end_time": "2026-08-02T13:53:48.242624"
+    }
+  }
+}
