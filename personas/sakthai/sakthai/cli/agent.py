@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import contextlib
+import os
 import sys
 from collections.abc import Callable, Iterator
 from typing import Any
@@ -25,19 +26,50 @@ from ..skills import resolve_skill_names
 
 
 @contextlib.contextmanager
-def _tool_context(*, no_mcp: bool, verbose: bool) -> Iterator[tuple[Tool, ...]]:
+def _temp_env(key: str, value: str) -> Iterator[None]:
+    """Temporarily set an environment variable, restoring its prior value on exit."""
+    previous = os.environ.get(key)
+    os.environ[key] = value
+    try:
+        yield
+    finally:
+        if previous is None:
+            os.environ.pop(key, None)
+        else:
+            os.environ[key] = previous
+
+
+@contextlib.contextmanager
+def _tool_context(
+    *, no_mcp: bool, verbose: bool, persona: str | None = None
+) -> Iterator[tuple[Tool, ...]]:
     """Yield the tools for a run: built-ins plus any configured MCP servers.
 
     With no servers configured (or ``--no-mcp``) this is just the built-ins and
     spawns nothing. External servers come from ``~/.sakthai/mcp.json`` and
     installed extensions; one that fails to start is skipped, not fatal.
+    ``persona``, when given and ``SAKTHAI_MCP_CONFIG`` isn't already set in the
+    environment, temporarily points that env var at the persona's own
+    ``mcp.json`` (if it exists) for the duration of this run — reuses the
+    existing ``SAKTHAI_MCP_CONFIG``/``mcp_config_override()`` precedence chain
+    in ``mcp/servers.py`` unchanged; an explicitly-set ``SAKTHAI_MCP_CONFIG``
+    always wins.
     """
     if no_mcp:
         yield BUILTIN_TOOLS
         return
     from ..mcp.manager import connect_servers
 
-    with connect_servers() as mcp_tools:
+    mcp_path = config.persona_mcp_config_path(persona) if persona else None
+    override = (
+        mcp_path
+        if mcp_path is not None and mcp_path.is_file() and not os.environ.get("SAKTHAI_MCP_CONFIG")
+        else None
+    )
+    with contextlib.ExitStack() as stack:
+        if override is not None:
+            stack.enter_context(_temp_env("SAKTHAI_MCP_CONFIG", str(override)))
+        mcp_tools = stack.enter_context(connect_servers())
         if mcp_tools and verbose:
             click.echo(f"[mcp] loaded {len(mcp_tools)} external tool(s)", err=True)
         yield (*BUILTIN_TOOLS, *mcp_tools)
@@ -217,6 +249,15 @@ def run(
             "--persona is not supported with --sandbox yet "
             "(the sandbox only bind-mounts the default, unscoped memory.db)."
         )
+    if persona:
+        # Explicit --model/--provider always win; a persona's own config.yaml
+        # (model.provider/model.default) only fills in when the caller left
+        # them at their CLI defaults.
+        default_provider, default_model = config.persona_model_defaults(persona)
+        if provider is None and default_provider:
+            provider = default_provider
+        if model == DEFAULT_MODEL and default_model:
+            model = default_model
     if sandbox:
         _run_in_sandbox(
             task=task,
@@ -236,10 +277,10 @@ def run(
         )
 
     if dry_run:
-        with _tool_context(no_mcp=no_mcp, verbose=verbose) as tools:
+        with _tool_context(no_mcp=no_mcp, verbose=verbose, persona=persona) as tools:
             report = preflight(model=model, provider=provider, tools=tools)
         _print_preflight(report)
-        resolved, missing = resolve_skill_names(list(with_skills))
+        resolved, missing = resolve_skill_names(list(with_skills), persona=persona)
         if resolved:
             click.echo(f"[dry-run] skills:      {len(resolved)} resolved ({', '.join(resolved)})")
         if not report["runnable"]:
@@ -250,7 +291,7 @@ def run(
             raise click.ClickException(f"Unresolved --with-skills name(s): {', '.join(missing)}")
         return
     if with_skills:
-        _, missing = resolve_skill_names(list(with_skills))
+        _, missing = resolve_skill_names(list(with_skills), persona=persona)
         if missing:
             click.echo(
                 f"warning: skill(s) not found and will be skipped: {', '.join(missing)}",
@@ -269,7 +310,7 @@ def run(
     persona_store = MemoryStore(config.persona_memory_db_path(persona)) if persona else None
     system_prompt_prefix = load_persona_soul(persona) if persona else ""
     try:
-        with _tool_context(no_mcp=no_mcp, verbose=verbose) as tools:
+        with _tool_context(no_mcp=no_mcp, verbose=verbose, persona=persona) as tools:
             result = run_agent(
                 task,
                 model=model,
@@ -286,6 +327,7 @@ def run(
                 caveman=caveman,
                 store=persona_store,
                 system_prompt_prefix=system_prompt_prefix,
+                persona=persona,
             )
     except AgentError as exc:
         raise click.ClickException(str(exc)) from exc

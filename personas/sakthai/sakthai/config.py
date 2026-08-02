@@ -58,6 +58,51 @@ def persona_soul_path(persona: str) -> Path:
     return PERSONAS_DIR / persona / "SOUL.md"
 
 
+def persona_skills_dir(persona: str) -> Path:
+    """Path to PERSONA's own skill overlay: ``personas/<persona>/skills``."""
+    if persona not in PERSONA_NAMES:
+        raise ValueError(f"Unknown persona {persona!r}; expected one of {PERSONA_NAMES}")
+    return PERSONAS_DIR / persona / "skills"
+
+
+def persona_mcp_config_path(persona: str) -> Path:
+    """Path to PERSONA's own MCP manifest: ``personas/<persona>/config/mcp.json``."""
+    if persona not in PERSONA_NAMES:
+        raise ValueError(f"Unknown persona {persona!r}; expected one of {PERSONA_NAMES}")
+    return PERSONAS_DIR / persona / "config" / "mcp.json"
+
+
+def persona_model_defaults(persona: str) -> tuple[str | None, str | None]:
+    """PERSONA's preferred ``(provider, model)`` from its own ``config/config.yaml``.
+
+    Reads only the top-level ``model.provider`` / ``model.default`` keys — the
+    two that are consistently present and meaningful across every persona's
+    config.yaml today. Missing file, unreadable YAML, or missing keys all
+    return ``(None, None)`` rather than raising, so callers can simply fall
+    back to their own defaults.
+    """
+    if persona not in PERSONA_NAMES:
+        raise ValueError(f"Unknown persona {persona!r}; expected one of {PERSONA_NAMES}")
+    path = PERSONAS_DIR / persona / "config" / "config.yaml"
+    if not path.is_file():
+        return None, None
+    import yaml
+
+    try:
+        data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    except yaml.YAMLError:
+        return None, None
+    model = data.get("model") if isinstance(data, dict) else None
+    if not isinstance(model, dict):
+        return None, None
+    provider = model.get("provider")
+    default_model = model.get("default")
+    return (
+        provider if isinstance(provider, str) else None,
+        default_model if isinstance(default_model, str) else None,
+    )
+
+
 # Environment variables, grouped by how the readiness check treats them.
 REQUIRED_ENV_VARS: dict[str, str] = {
     "ANTHROPIC_API_KEY": "Claude API key for `sakthai run` (or sign in with `claude login`)",
@@ -85,6 +130,7 @@ OPTIONAL_ENV_VARS: dict[str, str] = {
     "SAKTHAI_HOME": "Override the data directory (default: ~/.sakthai)",
     "SAKTHAI_READ_ALLOW": "Extra paths the read_file tool may read (os.pathsep-separated)",
     "SAKTHAI_MCP_CONFIG": "Path to a per-persona mcp.json whose servers override the defaults",
+    "SAKTHAI_PERSONA": "Which Sak Family persona a Telegram/systemd launch is running as",
     "SAKTHAI_MCP_TIMEOUT": "Seconds to wait for an external MCP server reply (default: 30)",
     "TELEGRAM_ALLOWED_USER_IDS": "Comma- or space-separated Telegram user IDs allowed to use the bot",
     "TELEGRAM_BOT_TOKEN": "Telegram bot token used by the Telegram gateway",
@@ -260,6 +306,21 @@ def sakthai_with_skills() -> list[str]:
     """Return comma-separated skills injected into Telegram/systemd launches."""
     raw = os.environ.get("SAKTHAI_WITH_SKILLS", "")
     return [item.strip() for item in raw.replace(",", " ").split() if item.strip()]
+
+
+def sakthai_persona() -> str | None:
+    """Return the persona a Telegram/systemd launch is running as, if set.
+
+    Set per-deployment via ``SAKTHAI_PERSONA`` (see
+    ``infra/vm-agents/env-templates/*.env.example`` and
+    ``infra/vm-agents/sakthai-agent-run.sh``) — lets a single-token,
+    single-process gateway (e.g. the Telegram bot) resolve that persona's own
+    skill overlay via ``persona_skills_dir()`` instead of always falling back
+    to ``SKILLS_DIR``.
+    """
+    value = os.environ.get("SAKTHAI_PERSONA")
+    value = value.strip() if value else None
+    return value if value in PERSONA_NAMES else None
 
 
 def telegram_bot_token() -> str | None:
