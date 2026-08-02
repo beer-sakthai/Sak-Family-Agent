@@ -8,9 +8,3 @@
 - Secure all exposed HTTP endpoints with Bearer Token Authentication.
 - Call database writes prior to registering secrets for redaction.
 - Delete or replace existing key facts rather than appending duplicates with identical timestamps.
-# Sentinel Security Findings Journal
-
-## 2026-08-01 - Hostname Wildcard Loopback Bypass and Unauthenticated Standalone Server Binding
-**Vulnerability:** The unauthenticated API in `server.py` could be bound to any interface (publicly exposing sensitive personal memory/data) via an empty string host (`""`) bypass because `""` was incorrectly included in `_LOOPBACK_NAMES`. In addition, the standalone `scripts/serve_api.py` server lacked hostname validation entirely, permitting arbitrary non-loopback bindings.
-**Learning:** In Python's `socket` library, passing an empty string `""` as the hostname binds the listener to `INADDR_ANY` (all interfaces, equivalent to `0.0.0.0`), allowing any client on the network to access it. If an application incorrectly classifies empty string hosts as local/loopback-only, attackers can bypass security checks meant to protect unauthenticated endpoints. Standalone scripts that mirror core API behavior are easily overlooked during security hardening and must be explicitly audited and validated.
-**Prevention:** Always exclude the empty host string `""` from loopback hostname allowlists. Ensure that any standalone scripts or testing servers are subjected to the same rigorous hostname validation and network exposure policies as the primary application. Always write regression tests verifying empty string host blocks and non-loopback restrictions.

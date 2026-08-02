@@ -1,6 +1,8 @@
 # Initial SakSit Skills Sync — July 5, 2026
 
-> **Note (2026-08-01):** a real GitHub PAT was found embedded in this file during a later migration and has been redacted below. Treat it as potentially already exposed and rotate it if it is still live.
+> **Note (2026-08-01):** a real GitHub PAT was found embedded in this file
+> during a later migration and has been redacted below. Treat it as
+> potentially already exposed and rotate it if it is still live.
 
 This records the first-ever sync of SakSit skills into the Sak-Family-Agent monorepo.
 
@@ -9,7 +11,7 @@ This records the first-ever sync of SakSit skills into the Sak-Family-Agent mono
 - Beer confirmed `beer-sakthai` is his only GitHub account
 - The repo `beer-sakthai/Sak-Family-Agent` was already live with SakThai (60+ playwright/coding skills) and SakJules skills in `skills/`
 - SakSit skills were entirely local at `/opt/data/profiles/saksit/skills/` — none on GitHub
-- Token: `[REDACTED]` (classic PAT, repo scope)
+- Token: `[REDACTED — classic PAT, repo scope]`
 - Git identity: `Nanthasit Burankum <beer.sakthai@gmail.com>`
 
 ## Commands used

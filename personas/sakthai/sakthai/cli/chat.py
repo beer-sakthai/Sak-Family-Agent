@@ -82,9 +82,7 @@ def chat(
     """
     soul_text = load_persona_soul(persona)
     console = Console()
-    # Each persona gets its own memory shard (~/.sakthai/<persona>/memory.db),
-    # matching the SAKTHAI_HOME-per-persona convention used in production.
-    store = MemoryStore(config.persona_memory_db_path(persona))
+    store = MemoryStore()
     try:
         with _tool_context(no_mcp=no_mcp, verbose=False) as tools:
             run_chat(

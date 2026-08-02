@@ -171,9 +171,9 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
         if _is_binary(part, destructive_binaries):
             # Inspect tokens following the binary until a separator is hit.
             for subpart in parts[i + 1 :]:
-                if subpart in {";", "&&", "||", "|"}:
+                if subpart in (";", "&&", "||", "|"):
                     break
-                if _is_sensitive_path(subpart) or (context_sensitive and subpart in {"{}", "+"}):
+                if _is_sensitive_path(subpart) or (context_sensitive and subpart in ("{}", "+")):
                     binary_name = os.path.basename(part)
                     return GuardrailResult(
                         GuardrailAction.DENY,
@@ -184,11 +184,11 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
     for i, part in enumerate(parts):
         if _is_binary(part, "dd"):
             for subpart in parts[i + 1 :]:
-                if subpart in {";", "&&", "||", "|"}:
+                if subpart in (";", "&&", "||", "|"):
                     break
                 if subpart.startswith("of=") or subpart.startswith("if="):
                     val = subpart[3:]
-                    if _is_sensitive_path(val) or (context_sensitive and val in {"{}", "+"}):
+                    if _is_sensitive_path(val) or (context_sensitive and val in ("{}", "+")):
                         binary_name = os.path.basename(part)
                         op = "destructive" if subpart.startswith("of=") else "potentially dangerous"
                         return GuardrailResult(
@@ -210,7 +210,7 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
                 target = parts[i + 1]
 
             if target and (
-                _is_sensitive_path(target) or (context_sensitive and target in {"{}", "+"})
+                _is_sensitive_path(target) or (context_sensitive and target in ("{}", "+"))
             ):
                 return GuardrailResult(
                     GuardrailAction.DENY,
@@ -231,7 +231,7 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
                 # should be skipped, not cause the whole check to stop.
                 if part.startswith("-"):
                     continue
-                if _is_sensitive_path(part) or (context_sensitive and part in {"{}", "+"}):
+                if _is_sensitive_path(part) or (context_sensitive and part in ("{}", "+")):
                     return GuardrailResult(
                         GuardrailAction.DENY,
                         reason=f"destructive 'find -delete' on {part!r} blocked.",
@@ -245,7 +245,7 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
             if res.action == GuardrailAction.DENY:
                 return res
         # find ... -exec/ok command ...
-        if part in {"-exec", "-execdir", "-ok", "-okdir"} and any(
+        if part in ("-exec", "-execdir", "-ok", "-okdir") and any(
             _is_binary(p, "find") for p in parts[:i]
         ):
             # We don't filter out {} and + here anymore because we want the
@@ -253,7 +253,7 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
             # We still stop at the terminator.
             exec_args: list[str] = []
             for subpart in parts[i + 1 :]:
-                if subpart in {"\\;", ";", "+"}:
+                if subpart in ("\\;", ";", "+"):
                     if subpart == "+":
                         exec_args.append(subpart)
                     break

@@ -1,30 +1,22 @@
 # Self-evolution for the six Sak Family agents
 
-`evolve_agent.sh` wires this framework to all six Sak Family agents, so each
-can evolve its own skills and keep the result inside its standalone repo
-export before it is published.
+`evolve_agent.sh` wires this framework to the six Sak Family agents that run on
+the local Hermes gateway, so each can evolve its own skills and keep the result
+inside its standalone repo export before it is published.
 
-| agent      | skill source (composed automatically)        | standalone repo export        |
-|------------|-----------------------------------------------|--------------------------------|
-| `sakthai`  | `personas/sakthai` (+ `personas/shared`)       | `build/agent-repos/sakthai`   |
-| `sakking`  | `personas/sakking` (+ `personas/shared`)       | `build/agent-repos/sakking`   |
-| `saksee`   | `personas/saksee` (+ `personas/shared`)        | `build/agent-repos/saksee`    |
-| `saksit`   | `personas/saksit` (+ `personas/shared`)        | `build/agent-repos/saksit`    |
-| `saktan`   | `personas/saktan` (+ `personas/shared`)        | `build/agent-repos/saktan`    |
-| `sakjules` | `personas/sakjules` (+ `personas/shared`)      | `build/agent-repos/sakjules`  |
+| agent      | profile dir (`HERMES_AGENT_REPO`)        | standalone repo export                    |
+|------------|------------------------------------------|-------------------------------------------|
+| `sakking`  | `~/.hermes`                              | `build/agent-repos/sakking`               |
+| `sakthai`  | `~/.hermes/profiles/sakthai`             | `build/agent-repos/sakthai`               |
+| `saksee`   | `~/.hermes/profiles/saksee`              | `build/agent-repos/saksee`                |
+| `saksit`   | `~/.hermes/profiles/saksit`              | `build/agent-repos/saksit`                |
+| `saktan`   | `~/.hermes/profiles/saktan`              | `build/agent-repos/saktan`                |
+| `sakjules` | `~/.hermes/profiles/sakjules`            | `build/agent-repos/sakjules`              |
 
-> `evolve_agent.sh` materializes each agent's skill source itself, on every
-> run, via `scripts/compose_persona.py <agent> --out $SAKTHAI_EVOLUTION_CACHE/<agent>/skills`
-> (defaults to `~/.cache/sakthai-evolution/profiles/<agent>`) — the same
-> shared+overlay composition every persona's runtime tree uses. This needs no
-> installed Hermes CLI and no pre-existing `~/.hermes/profiles/*` — evolution
-> only ever reads a `skills/` directory of `SKILL.md` files.
->
-> **Not yet implemented:** a genuine `hermes`-CLI-managed profile per agent
-> (`hermes profile create`, `infra/hermes-agents/`) is a separate, deferred
-> initiative. "Hermes" here names the evolution framework this package is
-> based on, not a currently-running gateway — the live deployment is
-> Hermes-free (see `infra/vm-agents/README.md`).
+> The lead, **SakKing**, lives on the reserved default profile (`~/.hermes`).
+> "Hermes" is only the framework. Source of truth for repo export is the
+> `Sak-Family-Agent` workspace and its `personas/` plus `infra/hermes-agents/`
+> profile trees.
 
 ## Six-stage workflow
 
@@ -52,11 +44,6 @@ export OPENAI_API_KEY=sk-...          # GEPA default models are openai/*
 
 # Just (re)sync an agent's current skills as the baseline on main:
 ./evolve_agent.sh saksee --bootstrap
-
-# The three most recently added agents work the same way:
-./evolve_agent.sh sakking  --skill <name> --dry-run
-./evolve_agent.sh saktan   --skill SakTan-daily-briefing --dry-run
-./evolve_agent.sh sakjules --skill SakJules-devsecops --dry-run
 ```
 
 ## Flags added by the wrapper

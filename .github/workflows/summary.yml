@@ -4,17 +4,9 @@ on:
   issues:
     types: [opened]
 
-permissions:
-  contents: read
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.event.issue.number }}
-  cancel-in-progress: false
-
 jobs:
   summary:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
     permissions:
       issues: write
       models: read

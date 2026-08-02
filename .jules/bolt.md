@@ -1,5 +1,0 @@
-# Bolt's Journal
-
-## 2026-07-27 - [Literal str.replace vs Regex for Exact Secret Redaction]
-**Learning:** In Python, when redacting a list of exact secrets from large text payloads (e.g., file contents or database dumps), compiling the secrets into a single regex pattern (like `re.compile("val1|val2|val3")`) and doing a single `sub()` call can be significantly slower than doing a simple loop of literal `str.replace()` calls. This happens because `str.replace()` is implemented in pure C and executes fast linear-scan replacement, avoiding the regex engine's matching/backtracking overhead on massive strings. However, querying `os.environ` repeatedly on every invocation is a costly overhead that can be completely eliminated by keeping a tracked cache of those specific keys.
-**Action:** Always prefer literal substring checks (`if val in text: text = text.replace(val, "[REDACTED]")`) in a loop over exact values rather than combining them into a massive regex for multi-line strings, and cache environment/registered values to avoid redundant OS-level dict queries.
