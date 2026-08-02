@@ -48,7 +48,7 @@ def _get_or_create_bearer_token() -> str:
                 token,
                 kind="web_auth",
                 key="bearer_token",
-                tags=["system", "no-export"]
+                tags=["system", "no-export"],
             )
             return token
     except Exception:
