@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 import json
+import logging
 from pathlib import Path
+
+import pytest
 
 from sakthai.agent.eval import EvalRecord, record_eval, summarize_evals, task_preview
 
@@ -61,11 +64,13 @@ class TestRecordEval:
         record_eval(_record(), path=log_path)
         assert log_path.exists()
 
-    def test_never_raises_on_failure(self, tmp_path: Path) -> None:
+    def test_never_raises_on_failure(self, tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:
         # Pointing at a directory (not a file) makes the open() fail; this must
         # be swallowed, matching _save_session_log's best-effort contract.
         bad_path = tmp_path  # a directory, not a file
-        record_eval(_record(), path=bad_path)
+        with caplog.at_level(logging.WARNING):
+            record_eval(_record(), path=bad_path)
+        assert any("Failed to record eval" in msg for msg in caplog.messages)
 
 
 class TestSummarizeEvals:
@@ -128,3 +133,54 @@ class TestSummarizeEvals:
 
         summary = summarize_evals(path=log_path)
         assert summary["count"] == 1
+
+    def test_tolerates_blank_lines(self, tmp_path: Path) -> None:
+        log_path = tmp_path / "blank_lines.jsonl"
+        record_eval(_record(), path=log_path)
+        with log_path.open("a", encoding="utf-8") as f:
+            f.write("\n\n\n")  # blank lines
+        record_eval(_record(), path=log_path)
+
+        summary = summarize_evals(path=log_path)
+        assert summary["count"] == 2
+
+    def test_path_none_uses_eval_log_path(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        log_path = tmp_path / "env_eval.jsonl"
+        record_eval(_record(model="env-model"), path=log_path)
+        monkeypatch.setenv("SAKTHAI_EVAL_LOG", str(log_path))
+
+        summary = summarize_evals(path=None)
+        assert summary["count"] == 1
+        assert "env-model" in summary["per_model"]
+
+    def test_partial_records_graceful_defaults(self, tmp_path: Path) -> None:
+        log_path = tmp_path / "partial_eval.jsonl"
+        # Record 1: empty dict
+        log_path.write_text(json.dumps({}) + "\n", encoding="utf-8")
+        # Record 2: some fields present, some missing/null
+        record_2 = {
+            "model": "partial-model",
+            "had_error": True,
+        }
+        with log_path.open("a", encoding="utf-8") as f:
+            f.write(json.dumps(record_2) + "\n")
+
+        summary = summarize_evals(path=log_path)
+        assert summary["count"] == 2
+        assert summary["error_rate"] == 0.5
+        assert summary["total_input_tokens"] == 0
+        assert summary["total_output_tokens"] == 0
+        assert summary["avg_latency_s"] == 0.0
+
+        per_model = summary["per_model"]
+        assert "unknown" in per_model
+        assert per_model["unknown"]["count"] == 1
+        assert per_model["unknown"]["input_tokens"] == 0
+        assert per_model["unknown"]["output_tokens"] == 0
+        assert per_model["unknown"]["avg_latency_s"] == 0.0
+
+        assert "partial-model" in per_model
+        assert per_model["partial-model"]["count"] == 1
+        assert per_model["partial-model"]["input_tokens"] == 0
+        assert per_model["partial-model"]["output_tokens"] == 0
+        assert per_model["partial-model"]["avg_latency_s"] == 0.0
