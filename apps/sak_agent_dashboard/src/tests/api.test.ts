@@ -259,7 +259,7 @@ describe("API Routes Suite (Tier 1 & Tier 2)", () => {
         const data = await res.json();
         expect(data.success).toBe(true);
       } else {
-        const sanitizeQuery = (input: string) => input.replace(/<[^>]*>/g, "");
+        const sanitizeQuery = (input: string) => input.replace(/[<>]/g, "");
         const clean = sanitizeQuery("<script>alert(1)</script>");
         expect(clean).not.toContain("<script>");
       }
