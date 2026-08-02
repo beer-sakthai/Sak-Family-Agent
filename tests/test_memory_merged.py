@@ -10,6 +10,15 @@ from sakthai.memory.merged import FamilyMemoryView, ShardedFact
 from sakthai.memory.store import MemoryStore
 
 
+@pytest.fixture(autouse=True)
+def _isolated_home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Prevent persona_memory_db_path() — which reads Path.home() directly,
+    independent of SAKTHAI_HOME, by design — from resolving to the real
+    machine's home directory for any persona a test's shard_paths doesn't
+    explicitly cover."""
+    monkeypatch.setattr(Path, "home", lambda: tmp_path / "unused-home")
+
+
 @pytest.fixture
 def shard_paths(tmp_path: Path) -> dict[str, Path]:
     return {
