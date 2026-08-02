@@ -552,7 +552,7 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
                 # For exfiltration binaries, we allow targeting the current directory.
                 allow_local = is_exfil
                 if _is_sensitive_path(subpart, allow_local=allow_local) or (
-                    context_sensitive and subpart in ("{}", "+")
+                    context_sensitive and subpart in {"{}", "+"}
                 ):
                     return GuardrailResult(
                         GuardrailAction.DENY,
@@ -582,7 +582,7 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
                     # if= targets are potentially dangerous; allow local path.
                     allow_local = subpart.startswith("if=")
                     if _is_sensitive_path(val, allow_local=allow_local) or (
-                        context_sensitive and val in ("{}", "+")
+                        context_sensitive and val in {"{}", "+"}
                     ):
                         binary_name = os.path.basename(part)
                         op = "destructive" if subpart.startswith("of=") else "potentially dangerous"
@@ -605,7 +605,7 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
                 target = parts[i + 1]
 
             if target and (
-                _is_sensitive_path(target) or (context_sensitive and target in ("{}", "+"))
+                _is_sensitive_path(target) or (context_sensitive and target in {"{}", "+"})
             ):
                 return GuardrailResult(
                     GuardrailAction.DENY,
@@ -626,7 +626,7 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
             if part in ("-fprint", "-fprint0", "-fls", "-fprintf") and i + 1 < len(after_find):
                 target = after_find[i + 1]
                 if _is_sensitive_path(target, allow_local=False) or (
-                    context_sensitive and target in ("{}", "+")
+                    context_sensitive and target in {"{}", "+"}
                 ):
                     return GuardrailResult(
                         GuardrailAction.DENY,
@@ -639,7 +639,7 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
                 if part.startswith("-"):
                     continue
                 if _is_sensitive_path(part, allow_local=False) or (
-                    context_sensitive and part in ("{}", "+")
+                    context_sensitive and part in {"{}", "+"}
                 ):
                     return GuardrailResult(
                         GuardrailAction.DENY,
@@ -757,7 +757,7 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
             ):
                 run_idx = -1
                 for idx in range(i + 1, len(parts)):
-                    if parts[idx] in ("run", "eval", "exec", "node"):
+                    if parts[idx] in {"run", "eval", "exec", "node"}:
                         run_idx = idx
                         break
                 if run_idx == -1:
@@ -880,7 +880,7 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
             if res.action == GuardrailAction.DENY:
                 return res
         # find ... -exec/ok command ...
-        if part in ("-exec", "-execdir", "-ok", "-okdir") and any(
+        if part in {"-exec", "-execdir", "-ok", "-okdir"} and any(
             _is_binary(p, "find") for p in parts[:i]
         ):
             # We don't filter out {} and + here anymore because we want the
@@ -888,7 +888,7 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
             # We still stop at the terminator.
             exec_args: list[str] = []
             for subpart in parts[i + 1 :]:
-                if subpart in ("\\;", ";", "+"):
+                if subpart in {"\\;", ";", "+"}:
                     if subpart == "+":
                         exec_args.append(subpart)
                     break
