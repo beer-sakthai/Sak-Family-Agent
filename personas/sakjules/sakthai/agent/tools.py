@@ -9,6 +9,7 @@ in one place.
 from __future__ import annotations
 
 import json
+import logging
 import os
 import re
 import shlex
@@ -25,6 +26,8 @@ from ..config import sakthai_home
 from ..lead.capture import capture_lead as capture_lead_fact
 from ..learn.ingest import ingest_document as ingest_document_facts
 from ..memory.store import MemoryStore
+
+logger = logging.getLogger(__name__)
 
 MAX_FILE_READ_CHARS = 20_000  # read_file output cap
 MAX_CMD_OUTPUT_CHARS = 20_000  # run_command output cap
@@ -82,6 +85,51 @@ def _learn(args: dict[str, Any], store: MemoryStore) -> str:
     return f"Stored fact id={fact_id} (kind={kind}, key={key or '-'})."
 
 
+# Secret-bearing filenames blocked regardless of allowed roots. ``cwd`` is an
+# auto-trusted read root, so without this an agent could read ``./.env`` or
+# ``./id_rsa`` and exfiltrate it. This is defense-in-depth alongside the
+# guardrail layer: it holds even for direct handler callers or a custom policy.
+_SENSITIVE_READ_BASENAMES: frozenset[str] = frozenset(
+    {
+        ".env",
+        "credentials.json",
+        ".netrc",
+        "id_rsa",
+        "id_dsa",
+        "id_ecdsa",
+        "id_ed25519",
+        ".git-credentials",
+        ".pypirc",
+        ".npmrc",
+    }
+)
+_SENSITIVE_READ_SUFFIXES: tuple[str, ...] = (".pem", ".key", ".pfx", ".p12")
+# Path fragments (relative to a root) that indicate a secret store.
+_SENSITIVE_READ_FRAGMENTS: tuple[tuple[str, ...], ...] = (
+    (".aws", "credentials"),
+    (".ssh",),
+    (".git", "config"),
+)
+
+
+def _is_sensitive_read_target(resolved: Path) -> bool:
+    """Return True if ``resolved`` names a +well-known secret file."""
+    name = resolved.name
+    lower = name.lower()
+    if lower in _SENSITIVE_READ_BASENAMES or lower.startswith(".env."):
+        return True
+    if lower.endswith(_SENSITIVE_READ_SUFFIXES):
+        return True
+    parts = tuple(p.lower() for p in resolved.parts)
+    for fragment in _SENSITIVE_READ_FRAGMENTS:
+        n = len(fragment)
+        if n <= len(parts) and any(
+            parts[i : i + n] == fragment for i in range(len(parts) - n + 1)
+        ):
+            return True
+    return False
+
+
 def _resolve_and_validate_path(path_str: str) -> Path:
     """Resolve a path and ensure it is a file within the allowed roots."""
     candidate = Path(path_str).expanduser()
@@ -94,6 +142,11 @@ def _resolve_and_validate_path(path_str: str) -> Path:
 
     if not resolved.is_file():
         raise FileNotFoundError(f"{resolved} is not a regular file.")
+
+    if _is_sensitive_read_target(resolved):
+        raise PermissionError(
+            f"{resolved} is a sensitive credential file and cannot be read by this tool."
+        )
 
     if not _path_under_any_root(resolved, _allowed_read_roots()):
         raise PermissionError(
@@ -213,18 +266,59 @@ def _read_file(args: dict[str, Any], store: MemoryStore) -> str:
     return text
 
 
+# Values of SAKTHAI_SHELL_ALLOW that keep the legacy "gate only" behavior: once
+# shell execution is enabled, any binary may run. Any other value is treated as
+# an os.pathsep-separated allow-list of permitted program names, so an operator
+# can enable, say, only ``git`` and ``ls`` without opening the whole PATH.
+_SHELL_ALLOW_ANY: frozenset[str] = frozenset({"1", "true", "yes", "on", "all", "*"})
+
+
+def _shell_allowlist() -> tuple[bool, frozenset[str]]:
+    """Parse ``SAKTHAI_SHELL_ALLOW`` into (enabled, allowed_program_names).
+
+    An empty allow-list set with ``enabled`` True means "any program"
+    (backwards-compatible with ``SAKTHAI_SHELL_ALLOW=1``).
+    """
+    raw = os.environ.get("SAKTHAI_SHELL_ALLOW", "").strip()
+    if not raw:
+        return (False, frozenset())
+    tokens = [t.strip() for t in raw.split(os.pathsep) if t.strip()]
+    if any(t.lower() in _SHELL_ALLOW_ANY for t in tokens):
+        return (True, frozenset())
+    return (True, frozenset(tokens))
+
+
+def _program_name(argv0: str) -> str:
+    """Basename of a program path, without a Windows ``.exe`` suffix."""
+    name = Path(argv0).name
+    if name.lower().endswith(".exe"):
+        name = name[:-4]
+    return name
+
+
 def _run_command(args: dict[str, Any], store: MemoryStore) -> str:
     """Run a command (no shell) and return its output and exit code.
 
     Disabled unless ``SAKTHAI_SHELL_ALLOW`` is set, so a stray tool call cannot
-    execute arbitrary code on a machine where the user has not opted in.
+    execute arbitrary code on a machine where the user has not opted in. When
+    ``SAKTHAI_SHELL_ALLOW`` names specific programs (an os.pathsep list rather
+    than a truthy flag), only those programs may run.
     """
     command = args.get("command")
     if not isinstance(command, str) or not command.strip():
         raise ValueError("`command` is required and must be a non-empty string.")
-    if not os.environ.get("SAKTHAI_SHELL_ALLOW"):
+    enabled, allowed = _shell_allowlist()
+    if not enabled:
         raise PermissionError(
             "Shell execution is disabled. Set SAKTHAI_SHELL_ALLOW=1 to enable `run_command`."
+        )
+    argv = shlex.split(command, posix=sys.platform != "win32")
+    if not argv:
+        raise ValueError("`command` is required and must be a non-empty string.")
+    if allowed and _program_name(argv[0]) not in allowed:
+        raise PermissionError(
+            f"Program {_program_name(argv[0])!r} is not in the SAKTHAI_SHELL_ALLOW "
+            "allow-list. Add it to SAKTHAI_SHELL_ALLOW (os.pathsep-separated) to permit it."
         )
     try:
         timeout = float(args.get("timeout") or _CMD_TIMEOUT_DEFAULT)
@@ -232,8 +326,8 @@ def _run_command(args: dict[str, Any], store: MemoryStore) -> str:
         timeout = _CMD_TIMEOUT_DEFAULT
     timeout = max(1.0, min(timeout, _CMD_TIMEOUT_MAX))
     try:
-        proc = subprocess.run(  # nosec B603 — shell=False, opt-in gated above
-            shlex.split(command, posix=sys.platform != "win32"),
+        proc = subprocess.run(  # nosec B603 — shell=False, opt-in gated + allow-list above
+            argv,
             shell=False,
             capture_output=True,
             text=True,
@@ -549,6 +643,32 @@ BUILTIN_TOOLS: tuple[Tool, ...] = (
         handler=_run_agent_loop,
     ),
 )
+
+
+def _load_tool_overrides() -> None:
+    """Load tool description overrides from a local config JSON if it exists."""
+    from ..config import tool_descriptions_path
+
+    path = tool_descriptions_path()
+    if not path.is_file():
+        return
+    try:
+        with open(path, encoding="utf-8") as f:
+            overrides = json.load(f)
+        for tool in BUILTIN_TOOLS:
+            if tool.name in overrides:
+                tool_override = overrides[tool.name]
+                if "description" in tool_override:
+                    object.__setattr__(tool, "description", tool_override["description"])
+                if "input_schema" in tool_override:
+                    object.__setattr__(tool, "input_schema", tool_override["input_schema"])
+    except Exception as exc:  # noqa: BLE001
+        # A broken overrides file must not stop the agent from starting, but
+        # it must not be indistinguishable from no overrides file either.
+        logger.warning("Failed to load tool overrides from %s: %s", path, exc)
+
+
+_load_tool_overrides()
 
 
 def tool_by_name(name: str) -> Tool | None:

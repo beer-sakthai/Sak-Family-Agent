@@ -173,6 +173,32 @@ def test_read_file_blocks_dot_ssh_directory(
         tool_by_name("read_file").handler({"path": ".ssh/authorized_keys"}, store)
 
 
+@pytest.mark.parametrize(
+    "name",
+    [".ENV", ".Env.production", "ID_RSA", "Credentials.json", ".Netrc"],
+)
+def test_read_file_blocks_sensitive_names_case_insensitive(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, store, name: str
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    secret = tmp_path / name
+    secret.write_text("TOKEN=abc", encoding="utf-8")
+    with pytest.raises(PermissionError):
+        tool_by_name("read_file").handler({"path": name}, store)
+
+
+def test_read_file_blocks_dot_ssh_directory_case_insensitive(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, store
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    ssh_dir = tmp_path / ".SSH"
+    ssh_dir.mkdir()
+    key = ssh_dir / "authorized_keys"
+    key.write_text("ssh-rsa ...", encoding="utf-8")
+    with pytest.raises(PermissionError):
+        tool_by_name("read_file").handler({"path": ".SSH/authorized_keys"}, store)
+
+
 def test_ingest_document_blocks_outside_roots(tmp_path: Path, store) -> None:
     secret = tmp_path / "secret.md"
     secret.write_text("- top secret", encoding="utf-8")
