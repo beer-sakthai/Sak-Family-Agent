@@ -178,6 +178,9 @@ def load_and_validate_args(args: argparse.Namespace) -> tuple[dict, dict] | None
         emit_json({"error": f"Invalid JSON parameter: {e}"})
         return None
 
+    if not isinstance(base_args, dict):
+        emit_json({"error": "--args must be a JSON object {param: value}"})
+        return None
     if sweep:
         if not isinstance(sweep, dict):
             emit_json({"error": "--sweep must be a JSON object {param: [values]}"})
