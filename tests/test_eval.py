@@ -5,6 +5,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
 from sakthai.agent.eval import EvalRecord, record_eval, summarize_evals, task_preview
 
 
@@ -41,6 +43,18 @@ class TestTaskPreview:
 
 
 class TestRecordEval:
+    def test_record_eval_default_path(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        log_path = tmp_path / "default_eval.jsonl"
+        monkeypatch.setenv("SAKTHAI_EVAL_LOG", str(log_path))
+        record_eval(_record())
+        assert log_path.exists()
+        lines = [ln for ln in log_path.read_text(encoding="utf-8").splitlines() if ln.strip()]
+        assert len(lines) == 1
+        parsed = json.loads(lines[0])
+        assert parsed["model"] == "claude-opus-4-8"
+
     def test_appends_jsonl_line(self, tmp_path: Path) -> None:
         log_path = tmp_path / "eval.jsonl"
         record_eval(_record(), path=log_path)
@@ -66,6 +80,15 @@ class TestRecordEval:
         # be swallowed, matching _save_session_log's best-effort contract.
         bad_path = tmp_path  # a directory, not a file
         record_eval(_record(), path=bad_path)
+
+    def test_record_eval_warning_on_failure(
+        self, tmp_path: Path, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        bad_path = tmp_path
+        with caplog.at_level("WARNING"):
+            record_eval(_record(), path=bad_path)
+        assert len(caplog.records) >= 1
+        assert any("Failed to record eval" in r.message for r in caplog.records)
 
 
 class TestSummarizeEvals:
@@ -128,3 +151,28 @@ class TestSummarizeEvals:
 
         summary = summarize_evals(path=log_path)
         assert summary["count"] == 1
+
+    def test_tolerates_partial_or_missing_keys(self, tmp_path: Path) -> None:
+        log_path = tmp_path / "eval.jsonl"
+        with log_path.open("w", encoding="utf-8") as f:
+            f.write(json.dumps({"model": "partial-model"}) + "\n")
+            f.write(json.dumps({"model": "partial-model", "latency_s": 2.5}) + "\n")
+
+        summary = summarize_evals(path=log_path)
+        assert summary["count"] == 2
+        assert summary["error_rate"] == 0.0
+        assert summary["avg_latency_s"] == 1.25
+        assert summary["total_input_tokens"] == 0
+        assert summary["total_output_tokens"] == 0
+        assert summary["per_model"]["partial-model"]["count"] == 2
+        assert summary["per_model"]["partial-model"]["avg_latency_s"] == 1.25
+
+    def test_graceful_skipping_of_empty_lines(self, tmp_path: Path) -> None:
+        log_path = tmp_path / "eval.jsonl"
+        record_eval(_record(model="model-1"), path=log_path)
+        with log_path.open("a", encoding="utf-8") as f:
+            f.write("\n   \n\n")
+        record_eval(_record(model="model-2"), path=log_path)
+
+        summary = summarize_evals(path=log_path)
+        assert summary["count"] == 2
