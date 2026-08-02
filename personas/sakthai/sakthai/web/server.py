@@ -66,35 +66,6 @@ _DEFAULT_PORT = 3001
 _LOOPBACK_NAMES = frozenset({"localhost"})
 
 
-def _get_or_create_bearer_token() -> str:
-    """Retrieve or create a bearer token for API authentication.
-
-    Checks environment variable SAKTHAI_WEB_TOKEN first, then checks
-    memory database facts table where kind='web_auth' and key='bearer_token'.
-    Falls back to a secure 32-char hex string.
-    """
-    token = os.environ.get("SAKTHAI_WEB_TOKEN")
-    if token:
-        return token
-    try:
-        from ..memory.store import MemoryStore
-        with MemoryStore() as store:
-            fact = store.get_fact_by_key("web_auth", "bearer_token")
-            if fact:
-                return fact.value
-            token = secrets.token_hex(16)
-            store.add_fact(
-                token,
-                kind="web_auth",
-                key="bearer_token",
-                tags=["system", "no-export"],
-            )
-            return token
-    except Exception:
-        # Fallback if DB is not accessible / or during module load
-        return secrets.token_hex(16)
-
-
 def _is_loopback_host(host: str) -> bool:
     """True if ``host`` is loopback-only (safe to bind without authentication)."""
     if host in _LOOPBACK_NAMES:
@@ -207,18 +178,6 @@ class _Handler(SimpleHTTPRequestHandler):
         path = parsed.path.rstrip("/") or "/"
 
         if path.startswith("/api/"):
-<<<<<<< HEAD
-            expected_token = getattr(self.server, "bearer_token", None)
-            if expected_token:
-                auth = self.headers.get("Authorization", "")
-                if not auth.startswith("Bearer "):
-                    self._send_json(401, {"error": "Unauthorized", "message": "Bearer token required"})
-                    return
-                token = auth[7:]
-                if not secrets.compare_digest(token, expected_token):
-                    self._send_json(403, {"error": "Forbidden", "message": "Invalid bearer token"})
-                    return
-=======
             auth_header = self.headers.get("Authorization", "")
             if not auth_header:
                 self._send_json(
@@ -239,7 +198,6 @@ class _Handler(SimpleHTTPRequestHandler):
             if not secrets.compare_digest(token, expected_token):
                 self._send_json(403, {"error": "Forbidden", "message": "Invalid Bearer token"})
                 return
->>>>>>> origin/main
 
         if path == "/api/stages":
             try:
@@ -282,14 +240,13 @@ class _Handler(SimpleHTTPRequestHandler):
 
 
 def serve(host: str = _DEFAULT_HOST, port: int = _DEFAULT_PORT) -> HTTPServer:
-    # The API endpoints have no authentication and expose personal memory
-    # (recent facts, observations). Refuse a non-loopback bind unless the
-    # operator explicitly acknowledges the exposure, so a stray 0.0.0.0 does not
-    # silently publish memory to the network.
+    # API endpoints require a Bearer token, but the loopback default is
+    # defense-in-depth: personal memory should not be reachable off-host by
+    # default. Require an explicit opt-in for any non-loopback bind.
     if not _is_loopback_host(host) and not os.environ.get("SAKTHAI_WEB_ALLOW_PUBLIC"):
         raise PermissionError(
-            f"Refusing to bind the unauthenticated API to non-loopback host {host!r}. "
-            "It serves personal memory with no auth. Set SAKTHAI_WEB_ALLOW_PUBLIC=1 to "
+            f"Refusing to bind the API to non-loopback host {host!r}. "
+            "It serves personal memory; set SAKTHAI_WEB_ALLOW_PUBLIC=1 to "
             "override once you have placed authentication in front of it."
         )
     _get_or_create_bearer_token()  # Warm cache & register secret
@@ -298,7 +255,6 @@ def serve(host: str = _DEFAULT_HOST, port: int = _DEFAULT_PORT) -> HTTPServer:
     if _STATIC_ROOT.is_dir():
         os.chdir(str(_STATIC_ROOT))
     server = HTTPServer((host, port), _Handler)
-    server.bearer_token = _get_or_create_bearer_token()
     logger.info("SakThai API listening on http://%s:%d (static=%s)", host, port, _STATIC_ROOT)
     return server
 
