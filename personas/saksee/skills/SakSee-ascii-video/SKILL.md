@@ -1,7 +1,6 @@
 ---
 name: SakSee-ascii-video
 description: "ASCII video: convert video/audio to colored ASCII MP4/GIF."
-platforms: [linux, macos, windows]
 ---
 
 # ASCII Video Production Pipeline

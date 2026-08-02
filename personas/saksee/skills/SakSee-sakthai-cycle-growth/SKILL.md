@@ -1,9 +1,6 @@
 ---
 name: SakSee-sakthai-cycle-growth
-version: 1.0.0
 description: "Saksee Sakthai Cycle Growth"
-category: sakthai-cycle-growth
-
 ---
 # SakThai Cycle — Growth
 

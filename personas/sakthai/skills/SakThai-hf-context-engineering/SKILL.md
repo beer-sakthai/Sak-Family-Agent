@@ -1,10 +1,6 @@
 ---
 name: SakThai-hf-context-engineering
-author: SakThai
-license: MIT
 description: "Context engineering for code agents — skills, MCP, hooks."
-version: 1.0.0
-tags: [ContextEngineering, Agents, MCP, Plugins, Subagents, Hooks]
 ---
 
 # Context Engineering for Code Agents

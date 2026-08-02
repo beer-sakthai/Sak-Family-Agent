@@ -1,5 +1,5 @@
 ---
-name: SakThai-github-repo-management
+name: Sak-github-repo-management
 author: SakThai
 license: MIT
 description: "Clone/create/fork repos; manage remotes, releases."

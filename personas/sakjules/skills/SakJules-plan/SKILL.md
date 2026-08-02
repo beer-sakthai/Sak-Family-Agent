@@ -1,19 +1,33 @@
 ---
 name: SakJules-plan
 description: "Plan mode: write an actionable markdown plan to .hermes/plans/, no execution. Bite-sized tasks, exact paths, complete code."
-version: 2.0.0
-author: Hermes Agent (writing-craft adapted from obra/superpowers)
-license: MIT
-platforms: [linux, macos, windows]
-metadata:
-  hermes:
-    tags: [planning, plan-mode, implementation, workflow, design, documentation]
-    related_skills: [subagent-driven-development, SakJules-test-driven-development, SakJules-requesting-code-review]
 ---
-
 # Plan Mode
 
 Use this skill when the user wants a plan instead of execution.
+
+## When to Use
+
+Use this skill when you need to:
+- Design an implementation plan for a multi-step feature before writing code
+- Break down complex requirements into manageable, bite-sized tasks
+- Document the approach, architecture, and file structure before delegating to subagents
+- Align with the user on the approach before committing to implementation
+- Create a detailed spec that can be handed off to another developer or agent
+
+**Don't use for:**
+- Simple one-file changes (just implement directly)
+- Bug fixes that need immediate investigation (use `systematic-debugging`)
+- Code review tasks (use `github-code-review`)
+- Exploratory research or prototyping (use `spike`)
+
+## Prerequisites
+
+- **Clear requirements:** You need a well-defined goal or feature request from the user
+- **Codebase access:** Read access to the relevant repository to inspect existing code, structure, and patterns
+- **Domain awareness:** Understanding of the technology stack and project conventions
+- **Write access to `.hermes/plans/`:** The plan output directory must exist or be creatable in the workspace
+- **No execution needed:** This skill is for planning only — mutating tools (terminal, write_file to non-plan files) should not be used
 
 ## Core behavior
 
@@ -241,7 +255,7 @@ Check:
 - [ ] Code examples are complete (copy-pasteable)
 - [ ] Commands are exact with expected output
 - [ ] No missing context
-- [ ] DRY, YAGNI, TDD principles applied
+- [ ] DRY, YAGNI, TDD, VAC principles applied
 
 ## Principles
 
@@ -280,6 +294,17 @@ Every task that produces code should include the full TDD cycle:
 4. Run to verify pass
 
 See `test-driven-development` skill for details.
+
+### VAC (Verify After Chaining)
+
+Every step that produces output for the next step must verify that output before the next step starts. This is the single most cost-effective debugging practice: a 2-second read-back after a mutating tool call (write_file, patch, terminal that writes a file) prevents a cascade of rework if that output is wrong. Never chain Step N+1 on unverified state from Step N.
+
+**For multi-platform content workflows:**
+- After posting to a platform → verify the API response status and post URL before cross-posting elsewhere
+- After writing a file → read it back before the terminal command that consumes it
+- After patching a file → re-read the surrounding context before the next dependent edit
+
+A failure caught at the producing step is trivial. One caught three steps downstream requires rebuilding the entire chain.
 
 ### Frequent Commits
 
@@ -331,8 +356,36 @@ Exact file paths
 Complete code (copy-pasteable)
 Exact commands with expected output
 Verification steps
-DRY, YAGNI, TDD
+DRY, YAGNI, TDD, VAC
 Frequent commits
 ```
 
 **A good plan makes implementation obvious.**
+
+---
+
+## Pitfalls
+
+- **Over-planning:** Writing excessively detailed plans for trivial changes wastes time. If the change is one file and one concept, implement directly.
+- **Under-specifying:** Vague tasks like "Add authentication" leave too much to the implementer's judgment. Every task must have exact file paths, complete code, and expected outcomes.
+- **Missing context:** The implementer may not know the codebase. Always include architecture decisions, relevant file locations, and conventions they need to follow.
+- **Skipping TDD in plan tasks:** Every code-producing task should include the RED-GREEN-REFACTOR cycle. Plans that skip testing produce untestable, fragile code.
+- **Ignoring edge cases:** Plans that only cover the happy path leave regressions waiting to happen. Include error handling, boundary conditions, and failure scenarios.
+- **Too-large tasks:** Tasks larger than 5 minutes of work lead to sprawling implementations and half-finished states. If a task feels too big, split it.
+- **Stale plans:** The codebase may change between planning and execution. Re-verify assumptions before starting implementation.
+- **No verification step:** A plan without a verification section means you can't tell if the task was done correctly. Every task should state how to verify it.
+
+## Verification
+
+Before marking a plan as complete:
+
+- [ ] Each task is bite-sized (2-5 minutes of focused work)
+- [ ] File paths are exact (not "the model file" but `src/models/user.py`)
+- [ ] Code examples are complete (copy-pasteable, not pseudocode)
+- [ ] Commands are exact with expected output stated
+- [ ] Every code-producing task includes the full TDD cycle (RED → GREEN → REFACTOR)
+- [ ] Edge cases and error handling are addressed
+- [ ] Verification steps exist for each task
+- [ ] The plan could be handed to another developer with no additional context needed
+- [ ] DRY, YAGNI, and TDD principles are applied throughout
+- [ ] Tasks are in logical order (setup first, core functionality, edge cases, cleanup)

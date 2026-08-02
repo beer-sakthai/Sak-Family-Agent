@@ -1,16 +1,7 @@
 ---
 name: SakJules-node-inspect-debugger
 description: "Debug Node.js via --inspect + Chrome DevTools Protocol CLI."
-version: 1.0.0
-author: Hermes Agent
-license: MIT
-platforms: [linux, macos, windows]
-metadata:
-  hermes:
-    tags: [debugging, nodejs, node-inspect, cdp, breakpoints, ui-tui]
-    related_skills: [systematic-debugging, SakJules-python-debugpy, debugging-hermes-tui-commands]
 ---
-
 # Node.js Inspect Debugger
 
 ## Overview

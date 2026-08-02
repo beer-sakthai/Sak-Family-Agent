@@ -1,7 +1,6 @@
 ---
 name: SakSee-youtube-content
 description: "YouTube transcripts to summaries, threads, blogs."
-platforms: [linux, macos, windows]
 ---
 
 # YouTube Content Tool

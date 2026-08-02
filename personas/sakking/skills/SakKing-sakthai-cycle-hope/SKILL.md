@@ -1,19 +1,6 @@
 ---
 name: SakKing-sakthai-cycle-hope
-category: cycle
-description: Turn the Dream vision into a concrete, defensible plan (PTCF).
-version: 1.0.0
-platforms:
-  - linux
-  - macos
-  - windows
-metadata:
-  sakthai:
-    tags:
-      - cycle
-      - hope
-    related_skills:
-      - SakKing-cycle-care
+description: "Turn the Dream vision into a concrete, defensible plan (PTCF)."
 ---
 
 # sakthai-cycle-hope

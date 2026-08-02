@@ -1,9 +1,6 @@
 ---
 name: SakThai-hf-hub-model-dependents
-author: SakThai
-license: MIT
 description: "A skill for Hf Hub Model Dependents."
-version: 0.1.0
 ---
 
 # HF Hub Model Dependents API

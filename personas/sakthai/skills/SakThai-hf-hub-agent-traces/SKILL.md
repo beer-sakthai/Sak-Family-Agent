@@ -1,10 +1,6 @@
 ---
 name: SakThai-hf-hub-agent-traces
-author: SakThai
-license: MIT
-description: Deep knowledge of the Hugging Face Agent Traces ecosystem — uploading, viewing, and standardizing agent sessions using the Session Trace Simple Format (STS-Format).
-version: 1.0.0
-category: mlops
+description: "Deep knowledge of the Hugging Face Agent Traces ecosystem — uploading, viewing, and standardizing agent sessions using the Session Trace Simple Format (STS-Format)."
 ---
 
 # HF Hub Agent Traces

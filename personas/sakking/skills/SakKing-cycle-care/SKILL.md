@@ -1,25 +1,12 @@
 ---
 name: SakKing-cycle-care
-category: cycle
-description: Audit correctness, safety, and performance before shipping.
-version: 1.0.0
-platforms:
-  - linux
-  - macos
-  - windows
-metadata:
-  sakthai:
-    tags:
-      - cycle
-      - care
-    related_skills:
-      - SakKing-cycle-joy
+description: "Audit correctness, safety, and performance before shipping."
 ---
 
-# sakthai-cycle-care
+# Sak-cycle-care
 
-Stage 3 of 6 in the Sak Family cycle — **Care**. See [Care.md](../../docs/cycle/Care.md)
-for the full guidance and [SOUL.md](../../docs/SOUL.md) for the charge model.
+Stage 3 of 6 in the Sak Family cycle — **Care**. See [Care.md](../../../../docs/cycle/Care.md)
+for the full guidance and [SOUL.md](../../../../docs/SOUL.md) for the charge model.
 
 ## What to do
 

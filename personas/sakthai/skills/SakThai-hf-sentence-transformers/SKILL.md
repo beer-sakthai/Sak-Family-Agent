@@ -1,10 +1,6 @@
 ---
 name: SakThai-hf-sentence-transformers
-author: SakThai
-license: MIT
 description: "Hugging Face sentence-transformers library — embedding models, semantic search, sentence similarity, Cross-Encoders / rerankers, Sparse Encoders, MTEB leaderboard, and training custom embedding models. Covers library v5.x+, Python 3.10+."
-version: 1.0.0
-tags: [sentence-transformers, embeddings, semantic-search, huggingface]
 ---
 
 # HF Sentence Transformers — Embeddings, Retrieval & Reranking

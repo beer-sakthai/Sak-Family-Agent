@@ -1,16 +1,7 @@
 ---
 name: SakSee-github-repo-management
 description: "Clone/create/fork repos; manage remotes, releases."
-version: 1.1.0
-author: Hermes Agent
-license: MIT
-platforms: [linux, macos, windows]
-metadata:
-  hermes:
-    tags: [GitHub, Repositories, Git, Releases, Secrets, Configuration]
-    related_skills: [github-auth, github-pr-workflow, github-issues]
 ---
-
 # GitHub Repository Management
 
 Create, clone, fork, configure, and manage GitHub repositories. Each section shows `gh` first, then the `git` + `curl` fallback.
@@ -500,14 +491,6 @@ for g in json.load(sys.stdin):
     files = ', '.join(g['files'].keys())
     print(f\"  {g['id']}  {g['description'] or '(no desc)':40}  {files}\")"
 ```
-
-## Composio GitHub Tools (Alternative)
-
-If you have an active Composio GitHub connection (check with `COMPOSIO_SEARCH_TOOLS`), you can perform repo operations through Composio MCP tools instead of `gh` CLI or raw `curl`. The key tool for multi-file commits is `GITHUB_COMMIT_MULTIPLE_FILES`.
-
-See `references/composio-github-repo-workflow.md` for the complete workflow: checking repo existence → creating a repo → preparing files (including binary via base64) → atomic multi-file commit → verification.
-
-**Key difference from the `gh`/`curl` approach below**: Composio tools are called via `COMPOSIO_MULTI_EXECUTE_TOOL` (batch) rather than terminal commands. The remote workbench (`COMPOSIO_REMOTE_WORKBENCH`) cannot access the local filesystem — prepare file content on the local machine and pass it inline.
 
 ## Quick Reference Table
 

@@ -1,9 +1,6 @@
 ---
 name: SakThai-hf-datasets-faiss
-author: SakThai
-license: MIT
 description: "A skill for Hf Datasets Faiss."
-version: 0.1.0
 ---
 
 # SKILL.md — hf-datasets-faiss

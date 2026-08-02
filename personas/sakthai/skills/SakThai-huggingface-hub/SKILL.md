@@ -1,11 +1,6 @@
 ---
 name: SakThai-huggingface-hub
-author: SakThai
-license: MIT
 description: "HuggingFace hf CLI: search/download/upload models, datasets."
-version: 1.0.0
-tags: [huggingface, hf, models, datasets, hub, mlops]
-platforms: [linux, macos, windows]
 ---
 # Hugging Face CLI (`hf`) Reference Guide
 

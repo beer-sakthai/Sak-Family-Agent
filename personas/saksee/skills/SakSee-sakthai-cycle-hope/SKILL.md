@@ -1,9 +1,6 @@
 ---
 name: SakSee-sakthai-cycle-hope
-version: 1.0.0
 description: "Saksee Sakthai Cycle Hope"
-category: sakthai-cycle-hope
-
 ---
 # SakThai Cycle — Hope
 
