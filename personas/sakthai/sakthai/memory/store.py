@@ -601,9 +601,6 @@ class MemoryStore:
                 self._conn.execute(
                     "DELETE FROM facts WHERE id IN (SELECT value FROM json_each(?))",
                     (json.dumps(ids),),
-                self._conn.executemany(
-                    "DELETE FROM facts WHERE id = ?",
-                    [(f.id,) for f in deleted],
                 )
             self._conn.commit()
             return deleted if detailed else len(deleted)
@@ -633,9 +630,6 @@ class MemoryStore:
                 self._conn.execute(
                     "DELETE FROM observations WHERE id IN (SELECT value FROM json_each(?))",
                     (json.dumps(ids),),
-                self._conn.executemany(
-                    "DELETE FROM observations WHERE id = ?",
-                    [(o.id,) for o in deleted],
                 )
             self._conn.commit()
             return deleted if detailed else len(deleted)
