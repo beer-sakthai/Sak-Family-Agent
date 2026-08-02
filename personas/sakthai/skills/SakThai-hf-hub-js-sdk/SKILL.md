@@ -11,6 +11,7 @@ metadata:
   hermes:
     tags: [huggingface, javascript, typescript, sdk, inference, hub]
     category: software-development
+category: mlops
 ---
 
 # huggingface.js — Official Hugging Face TypeScript/JS SDK

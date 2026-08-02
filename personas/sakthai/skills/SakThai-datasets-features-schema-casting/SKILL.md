@@ -11,6 +11,7 @@ metadata:
   hermes:
     tags: [huggingface, datasets, features, schema, casting, pyarrow, data-processing]
     category: mlops
+category: mlops
 ---
 
 # HF Datasets Features & Schema Casting — Deep Dive

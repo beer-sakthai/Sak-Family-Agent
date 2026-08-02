@@ -13,6 +13,7 @@ metadata:
   hermes:
     tags: [huggingface, hub, doi, datacite, datasets, models, citation, academic, identifiers, metadata]
     category: mlops
+category: mlops
 ---
 
 # HF Hub DOI Deep Dive — DataCite Integration & Metadata Schema

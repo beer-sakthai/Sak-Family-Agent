@@ -1,5 +1,6 @@
 ---
 name: SakThai-hf-hub-spaces-custom-domains-replicas-streaming
+version: 1.0.0
 author: SakThai
 license: MIT
 title: Hugging Face Spaces — Custom Domains, Replicas, & Streaming Logs/Metrics
@@ -8,7 +9,7 @@ tags: [spaces, custom-domain, dns, cname, replicas, scaling, streaming, logs, me
 related_skills:
   - hf-spaces-lifecycle-sleep-pause-billing-duration
   - hf-spaces-configuration-reference
-  - hf-spaces-dependencies-and-sdks
+  - SakThai-hf-spaces-dependencies-and-sdks
   - hf-spaces-secrets-management
 description: >-
   Complete reference on Hugging Face Spaces custom domain setup (DNS CNAME

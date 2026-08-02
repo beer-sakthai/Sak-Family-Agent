@@ -1,5 +1,7 @@
 ---
 name: SakKing-van-westendorp-price-research
+version: 1.0.0
+description: "Sakking Van Westendorp Price Research"
 description: >
   Design, run, and interpret a Van Westendorp Price Sensitivity Meter (PSM)
   to identify an acceptable price range and optimal price point before launching
@@ -12,6 +14,7 @@ tags:
   - market-research
   - monetization
   - pricing-research
+
 ---
 
 # Van Westendorp Price Sensitivity Meter — Operational Skill

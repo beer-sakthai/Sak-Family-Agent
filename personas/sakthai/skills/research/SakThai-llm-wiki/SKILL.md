@@ -1,17 +1,17 @@
 ---
 name: SakThai-llm-wiki
+author: SakThai
+license: MIT
 description: "Karpathy's LLM Wiki: build/query interlinked markdown KB."
 version: 2.1.0
-author: Hermes Agent
-license: MIT
 platforms: [linux, macos, windows]
 metadata:
   hermes:
     tags: [wiki, knowledge-base, research, notes, markdown, rag-alternative]
     category: research
-    related_skills: [SakThai-obsidian, SakThai-arxiv]
+    related_skills: [obsidian, SakThai-arxiv]
+category: research
 ---
-
 # Karpathy's LLM Wiki
 
 Build and maintain a persistent, compounding knowledge base as interlinked markdown files.

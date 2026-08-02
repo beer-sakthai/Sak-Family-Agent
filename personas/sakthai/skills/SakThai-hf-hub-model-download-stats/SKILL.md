@@ -12,6 +12,7 @@ metadata:
   hermes:
     tags: [huggingface, hf, hub, models, downloads, stats, analytics, publisher-analytics, elasticsearch]
     category: mlops
+category: mlops
 ---
 
 # HF Hub Model Download Stats: Counting Methodology & Analytics

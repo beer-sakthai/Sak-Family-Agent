@@ -10,11 +10,12 @@ description: >-
   cloud VMs spun up in seconds, built on top of HF Jobs.
 version: 1.0.0
 created: 2026-07-25
+category: mlops
 tags:
   - sandbox
   - jobs
   - python-sdk
-  - huggingface-hub
+  - SakThai-huggingface-hub
   - cloud-compute
   - isolation
   - cli

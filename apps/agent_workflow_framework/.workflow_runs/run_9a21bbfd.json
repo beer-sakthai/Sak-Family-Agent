@@ -1,0 +1,18 @@
+{
+  "run_id": "run_9a21bbfd",
+  "workflow_name": "retry_exhaust",
+  "status": "COMPLETED",
+  "start_time": "2026-08-02T13:52:55.691128",
+  "end_time": "2026-08-02T13:52:55.699460",
+  "step_results": {
+    "failing": {
+      "step_id": "failing",
+      "status": "COMPLETED",
+      "output": {},
+      "error": null,
+      "attempts": 1,
+      "start_time": "2026-08-02T13:52:55.699390",
+      "end_time": "2026-08-02T13:52:55.699417"
+    }
+  }
+}

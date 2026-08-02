@@ -1,7 +1,9 @@
 ---
 name: SakKing-services-unit-economics
+version: 1.0.0
 title: Services & Agency Unit Economics
 description: Analyze profitability for labor-driven businesses (agencies, consultancies, law, accounting, MSPs, studios) using utilization, realization, billable-rate multipliers, and a contribution-margin ladder. Use when pricing projects, sizing team capacity, diagnosing why revenue grows but margin shrinks, or benchmarking against professional-services peers.
+
 ---
 
 # Services & Agency Unit Economics

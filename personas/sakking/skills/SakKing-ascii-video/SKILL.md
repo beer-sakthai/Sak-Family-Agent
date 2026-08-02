@@ -1,7 +1,9 @@
 ---
 name: SakKing-ascii-video
+version: 1.0.0
 description: "ASCII video: convert video/audio to colored ASCII MP4/GIF."
 platforms: [linux, macos, windows]
+
 ---
 
 # ASCII Video Production Pipeline

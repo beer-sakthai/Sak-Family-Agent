@@ -1,5 +1,6 @@
 ---
 name: SakKing-revops-sales-velocity-and-pipeline-coverage
+version: 1.0.0
 title: Sales Velocity & Pipeline Coverage
 triggers:
   - Revenue forecasting and predictability gaps
@@ -10,6 +11,7 @@ triggers:
 description: Measure and improve revenue predictability using sales velocity and pipeline coverage ratio. Use when forecasting revenue, diagnosing pipeline shortfalls, setting SDR/AE activity targets, or when leadership needs a defensible read on whether to accelerate hiring.
 tags: [revops, sales, forecasting, pipeline]
 related_skills: [b2b-pipeline-math-mql-to-close, gtm-channel-mix-economics]
+
 ---
 
 # Sales Velocity & Pipeline Coverage

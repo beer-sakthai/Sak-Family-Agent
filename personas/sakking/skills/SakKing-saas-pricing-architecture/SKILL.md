@@ -1,5 +1,7 @@
 ---
 name: SakKing-saas-pricing-architecture
+version: 1.0.0
+description: "Sakking Saas Pricing Architecture"
 description: >
   Design, audit, and optimize SaaS pricing tiers using value metrics, psychological
   biases (anchoring, decoy effect, charm pricing), and a structured Good/Better/Best
@@ -12,6 +14,7 @@ tags:
   - monetization
   - unit-economics
   - psychology
+
 ---
 
 # SaaS Pricing Architecture & Psychological Levers

@@ -5,6 +5,7 @@ license: MIT
 description: Comprehensive reference for Gradio 6 native plot components — gr.LinePlot, gr.ScatterPlot, gr.BarPlot, and gr.Plot with declarative DataFrame-backed charting.
 version: 1.0.0
 created: 2026-07-25
+category: mlops
 tags:
   - gradio
   - plots

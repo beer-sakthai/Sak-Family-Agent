@@ -1,5 +1,7 @@
 ---
 name: SakKing-family-organisation
+version: 1.0.0
+description: "Sakking Family Organisation"
 description: >-
   SakKing's leadership workflow for auditing, organising, and keeping the Sak
   Family repo fleet clean. When SakKing spots disorganisation — duplicate repos,
@@ -16,6 +18,7 @@ triggers:
   - duplicate repositories
   - persona needs setup
   - scattered files
+
 ---
 
 # SakKing Family Organisation Workflow

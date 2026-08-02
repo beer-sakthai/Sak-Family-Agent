@@ -14,6 +14,7 @@ metadata:
   hermes:
     tags: [huggingface, datasets, iterable-dataset, batch, streaming, arrow, robotics]
     category: mlops
+category: mlops
 ---
 
 # HF Datasets 5: IterableDataset.batch(by_column=...)

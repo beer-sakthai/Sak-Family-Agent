@@ -1,9 +1,11 @@
 ---
 name: SakKing-saas-churn-root-cause-diagnosis
+version: 1.0.0
 title: SaaS Churn Root Cause Diagnosis
 description: Systematically investigate WHY customers churn in a specific cohort or segment, moving from symptoms to actionable root-cause mechanisms. Use when cohort analysis has identified a churn pattern but you cannot name the underlying cause to fix it, when exit-survey data contradicts revenue impact, when leadership asks "why are we really losing customers?", or when you need to design targeted save-offers and product fixes.
 tags: [churn, retention, root-cause-analysis, saas, diagnostics]
 related_skills: [cohort-analysis-operational-framework, saas-retention-metrics, customer-health-score-operational-framework]
+
 ---
 
 # SaaS Churn Root Cause Diagnosis

@@ -11,6 +11,7 @@ description: >-
   datasets locally.
 version: 1.0.0
 created: 2026-07-25
+category: mlops
 tags:
   - datasets-server
   - api

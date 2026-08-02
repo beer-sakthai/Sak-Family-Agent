@@ -1,5 +1,6 @@
 ---
 name: SakKing-saas-deal-desk-discount-governance
+version: 1.0.0
 category: business
 description: Build and operate a deal-desk function that protects SaaS margin through tiered approval matrices, documented floor prices, multi-year discounting rules, evergreen vs one-time discount policy, and a 5-KPI scoreboard.
 triggers:
@@ -9,6 +10,7 @@ triggers:
   - When renewals are being discounted without unit-economic justification
   - When Finance/CFO questions memo-quality of bookings
   - When a quarterly deal-desk charter or approval matrix needs to be authored or refreshed
+
 ---
 
 # SaaS Deal Desk & Discount Governance

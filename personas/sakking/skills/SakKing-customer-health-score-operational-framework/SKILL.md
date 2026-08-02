@@ -1,5 +1,6 @@
 ---
 name: SakKing-customer-health-score-operational-framework
+version: 1.0.0
 title: Customer Health Score Operational Framework
 description: Build, validate, and operationalize a customer health score that predicts churn and expansion. Covers signal selection, weighted scoring, threshold playbooks, and CSM action triggers.
 tags:
@@ -8,6 +9,7 @@ tags:
   - retention
   - metrics
   - csm
+
 ---
 
 # Customer Health Score Operational Framework

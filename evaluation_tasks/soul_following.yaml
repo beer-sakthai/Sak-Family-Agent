@@ -1,5 +1,8 @@
 task: soul_following
-dataset_path: soul_following_dataset.jsonl
+dataset_path: json
+dataset_kwargs:
+  data_files: evaluation_tasks/soul_following_dataset.jsonl
+test_split: train
 output_type: generate_until
 
 doc_to_text: |
@@ -20,8 +23,10 @@ generation_kwargs:
     - "\n\n"
   temperature: 0.1
 
+process_results: !function evaluation_tasks.utils.process_results_soul_following
+
 metric_list:
-  - metric: !function evaluation_tasks.utils.check_intro_line
+  - metric: score
     aggregation: mean
     higher_is_better: true
 

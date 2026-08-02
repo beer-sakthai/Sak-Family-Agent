@@ -1,6 +1,7 @@
 ---
 title: Economic Moat Diagnosis and Strengthening
 name: SakKing-economic-moat-diagnosis-and-strengthening
+version: 1.0.0
 description: Diagnose whether a business has a durable competitive advantage (economic moat), identify which structural source drives it, and decide how to reinforce it or close gaps. Use when evaluating a market opportunity, pricing power, M&A targets, go-to-market defensibility, product expansion risk, or when building a 3-year strategy that must outlast competitors.
 triggers:
   - pricing pressure is eroding margins faster than expected
@@ -9,6 +10,7 @@ triggers:
   - evaluating an acquisition or partnership target
   - board or investor asks about competitive durability
   - GTM motion is being copied faster than anticipated
+
 ---
 
 # Economic Moat Diagnosis and Strengthening

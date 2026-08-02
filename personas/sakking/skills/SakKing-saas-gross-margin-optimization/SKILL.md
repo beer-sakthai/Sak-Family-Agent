@@ -1,11 +1,14 @@
 ---
 name: SakKing-saas-gross-margin-optimization
+version: 1.0.0
+description: "Sakking Saas Gross Margin Optimization"
 description: >
   Audit, classify, and optimize SaaS gross margin by correctly identifying COGS
   components, fixing misclassification, and applying levers to hit the 75%
   investor benchmark. Use when gross margin looks low, investors question unit
   economics, preparing for fundraising, building board KPI decks, or when the
   finance team cannot agree on what belongs in COGS vs OpEx.
+
 ---
 
 # SaaS Gross Margin Optimization

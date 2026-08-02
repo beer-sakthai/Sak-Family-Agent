@@ -12,6 +12,7 @@ from typing import Any
 import yaml
 
 from .config import (
+    CURATED_LIBRARY_DIR,
     LIBRARY_DIR,
     SHARED_SKILLS_DIR,
     SKILLS_DIR,
@@ -207,9 +208,15 @@ def find_skill(name: str, *roots: Path) -> SkillInfo | None:
 
 
 def default_skill_roots() -> tuple[Path, ...]:
-    """Roots searched for injectable skills: bundled + shared + library + installed extensions."""
+    """Roots searched for injectable skills: bundled + shared + library + curated + extensions."""
     gemini_ext = gemini_extensions_dir()
-    roots = [SKILLS_DIR, SHARED_SKILLS_DIR, LIBRARY_DIR, sakthai_home() / "extensions"]
+    roots = [
+        SKILLS_DIR,
+        SHARED_SKILLS_DIR,
+        LIBRARY_DIR,
+        CURATED_LIBRARY_DIR,
+        sakthai_home() / "extensions",
+    ]
     if gemini_ext.is_dir():
         roots.append(gemini_ext)
     return tuple(roots)

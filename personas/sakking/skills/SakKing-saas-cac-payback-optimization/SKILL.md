@@ -1,5 +1,7 @@
 ---
 name: SakKing-saas-cac-payback-optimization
+version: 1.0.0
+description: "Sakking Saas Cac Payback Optimization"
 title: SaaS CAC Payback Period — Diagnosis and Reduction Playbook
 description: |
   Build, interpret, and compress the CAC Payback Period — the single fastest
@@ -37,6 +39,7 @@ outputs:
   - Root-cause diagnostic: where cash is being trapped in the funnel
   - Ordered action list to compress payback with expected month impact per lever
   - Payback trajectory forecast: "at this spend rate, when do we hit 12 months?"
+
 ---
 
 # SaaS CAC Payback Period — Diagnosis and Reduction Playbook

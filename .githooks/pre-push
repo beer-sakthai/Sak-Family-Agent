@@ -1,0 +1,36 @@
+#!/bin/bash
+# pre-push — Hermes Zero-Exposure gate
+# Blocks git push to origin/main unless explicitly approved.
+# This enforces the SOUL.md policy: "pushing to GitHub remote requires
+# explicit user approval."
+#
+# Install: place in .git/hooks/pre-push and chmod +x
+# Skip with: git push --no-verify origin main
+
+ZERO_EXPOSURE_MSG="
+🔥 ZERO-EXPOSURE POLICY ACTIVE 🔥
+
+You are pushing to a remote repository. Beer's security policy requires
+explicit user approval before any remote push.
+
+To proceed: git push --no-verify origin main
+To cancel:  Ctrl+C now
+
+If you are an automated agent (cron/CI), this push is blocked.
+Only push with Beer's direct instruction.
+"
+
+# Allow --no-verify pushes (user has explicitly opted in)
+if [[ "$HUSKY_SKIP" == "1" ]] || [[ "$HERMES_PUSH_ALLOW" == "1" ]]; then
+  exit 0
+fi
+
+# Block non-interactive pushes (cron/CI/background agents)
+if [[ ! -t 0 ]] && [[ -z "$APPROVED_PUSH" ]]; then
+  echo "$ZERO_EXPOSURE_MSG" >&2
+  echo "ERROR: Non-interactive push blocked by Zero-Exposure policy." >&2
+  exit 1
+fi
+
+# Interactive check: warn but allow (user is at keyboard)
+echo "⚠️  Pushing to remote. Beer must approve this." >&2

@@ -17,6 +17,7 @@ from sakthai.agent.loop import (
     _parse_slash_command,
     _save_session_log,
     _strip_code_fence,
+    _wrap_untrusted_output,
     run_agent,
 )
 from sakthai.agent.registry import builtin_registry
@@ -892,6 +893,17 @@ def test_preflight_gateway_provider(monkeypatch: pytest.MonkeyPatch) -> None:
     report = loop_mod.preflight(provider="gateway")
     assert report["provider"] == "gateway"
     assert report["credential_source"] == "gateway_url"
+    assert report["runnable"] is True
+
+
+def test_preflight_huggingface_provider(monkeypatch: pytest.MonkeyPatch) -> None:
+    import sakthai.agent.loop as loop_mod
+
+    monkeypatch.setattr("sakthai.agent.loop.get_credential_source", lambda _p: "hf_token")
+    monkeypatch.setattr(loop_mod, "_build_client", lambda *a, **kw: None)
+    report = loop_mod.preflight(provider="huggingface")
+    assert report["provider"] == "huggingface"
+    assert report["credential_source"] == "hf_token"
     assert report["runnable"] is True
 
 
@@ -1992,6 +2004,35 @@ def test_run_agent_renames_ollama_provider_to_openai(
     assert called.get("openai") is True
 
 
+def test_run_agent_huggingface_provider_dispatches_to_openai_compat(
+    store: MemoryStore, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """provider='huggingface' calls the OpenAI-compatible request path."""
+    from sakthai.agent.providers.base import Response as _ProvResponse
+
+    called: dict[str, bool] = {}
+
+    import sakthai.agent.loop as loop_mod
+
+    def _fake_openai_compat(
+        client: object, model: str, *args: object, **kwargs: object
+    ) -> _ProvResponse:
+        if client is not None:
+            called["huggingface"] = True
+        return _ProvResponse("end_turn", [_Block(type="text", text="ok")])
+
+    monkeypatch.setattr(loop_mod, "_build_client", lambda provider, client: client)
+    monkeypatch.setattr(loop_mod, "_call_openai_compat", _fake_openai_compat)
+    run_agent(
+        "hi",
+        client=FakeClient([]),
+        store=store,
+        provider="huggingface",
+        model="meta-llama/Llama-3.1-8B-Instruct",
+    )
+    assert called.get("huggingface") is True
+
+
 def test_run_agent_openai_defaults_model_to_gpt4o(
     store: MemoryStore, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -2141,3 +2182,61 @@ def test_tool_call_event_includes_output_preview(store: MemoryStore) -> None:
     assert len(tool_events) == 1
     assert tool_events[0]["output_preview"]
     assert len(tool_events[0]["output_preview"]) <= 80
+
+
+class TestUntrustedDataWrapping:
+    """Tests for prompt injection prevention via untrusted data delimiters."""
+
+    def test_wrap_untrusted_output_marks_read_file(self) -> None:
+        """read_file output is wrapped with untrusted delimiters."""
+        content = "some file content"
+        wrapped = _wrap_untrusted_output("read_file", content)
+        assert wrapped.startswith("⚠️ BEGIN UNTRUSTED DATA")
+        assert wrapped.endswith("⚠️ END UNTRUSTED DATA")
+        assert content in wrapped
+
+    def test_wrap_untrusted_output_marks_recall(self) -> None:
+        """recall output is wrapped with untrusted delimiters."""
+        content = "remembered fact"
+        wrapped = _wrap_untrusted_output("recall", content)
+        assert wrapped.startswith("⚠️ BEGIN UNTRUSTED DATA")
+        assert "remembered fact" in wrapped
+
+    def test_wrap_untrusted_output_marks_search(self) -> None:
+        """search output is wrapped with untrusted delimiters."""
+        content = "search results"
+        wrapped = _wrap_untrusted_output("search", content)
+        assert wrapped.startswith("⚠️ BEGIN UNTRUSTED DATA")
+        assert "search results" in wrapped
+
+    def test_wrap_untrusted_output_marks_ingest_document(self) -> None:
+        """ingest_document output is wrapped with untrusted delimiters."""
+        content = "ingested data"
+        wrapped = _wrap_untrusted_output("ingest_document", content)
+        assert wrapped.startswith("⚠️ BEGIN UNTRUSTED DATA")
+        assert "ingested data" in wrapped
+
+    def test_wrap_untrusted_output_does_not_mark_trusted_tools(self) -> None:
+        """Trusted tools like learn are not wrapped."""
+        content = "learning output"
+        wrapped = _wrap_untrusted_output("learn", content)
+        assert wrapped == content
+        assert "UNTRUSTED" not in wrapped
+
+    def test_wrap_untrusted_output_ignores_empty_content(self) -> None:
+        """Empty strings are not wrapped."""
+        wrapped = _wrap_untrusted_output("read_file", "")
+        assert wrapped == ""
+
+    def test_memory_block_includes_untrusted_delimiters(self, sakthai_home) -> None:
+        """Memory injection includes untrusted data delimiters."""
+        from pathlib import Path
+
+        db_path = Path(sakthai_home) / "memory.db"
+        with MemoryStore(db_path) as store:
+            store.add_fact("test fact from untrusted source")
+            block = store.render_prompt_block()
+
+        assert "⚠️ BEGIN UNTRUSTED DATA" in block
+        assert "⚠️ END UNTRUSTED DATA" in block
+        assert "test fact from untrusted source" in block

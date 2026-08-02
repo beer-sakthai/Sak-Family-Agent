@@ -1,7 +1,9 @@
 ---
 name: SakKing-ccc-operational-levers
+version: 1.0.0
 description: Improve working capital by diagnosing and fixing the three drivers of the Cash Conversion Cycle — DIO, DSO, and DPO. Use when the business needs to free cash, reduce external financing needs, or tighten operational efficiency.
 tags: working-capital, cash-conversion-cycle, DIO, DSO, DPO, liquidity, operations
+
 ---
 
 # CCC Operational Levers: Working Capital Optimization

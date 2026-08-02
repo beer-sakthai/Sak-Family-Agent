@@ -1,5 +1,7 @@
 ---
 name: SakKing-saas-sales-comp-plan-design
+version: 1.0.0
+description: "Sakking Saas Sales Comp Plan Design"
 title: SaaS Sales Compensation Plan Design
 description: >
   Design, audit, or optimize sales compensation plans for SaaS roles (SDR, AE, AM, CSM).
@@ -24,6 +26,7 @@ tags:
   - GTM
   - SaaS
   - operations
+
 ---
 
 # SaaS Sales Compensation Plan Design

@@ -13,6 +13,7 @@ metadata:
   hermes:
     tags: [huggingface, datasets, server, filter, duckdb, sql, query, parquet]
     category: mlops
+category: mlops
 ---
 
 # HF Datasets Server `/filter` Endpoint: DuckDB SQL Filtering Reference

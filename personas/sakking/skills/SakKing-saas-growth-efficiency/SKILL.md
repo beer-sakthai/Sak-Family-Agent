@@ -1,5 +1,7 @@
 ---
 name: SakKing-saas-growth-efficiency
+version: 1.0.0
+description: "Sakking Saas Growth Efficiency"
 title: SaaS Growth Efficiency Metrics — Burn Multiple, Magic Number, Rule of 40
 description: |
   Diagnose capital efficiency and sales productivity using Burn Multiple, Magic Number, Efficiency Score, 
@@ -29,6 +31,7 @@ outputs:
   - ROSE (Revenue Operating Spend Efficiency)
   - Efficiency verdict (efficient, balanced, or burn-heavy)
   - Action list: trim, reinvest, or restructure
+
 ---
 
 # SaaS Growth Efficiency Metrics

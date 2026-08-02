@@ -8,6 +8,7 @@ type: skill
 metadata:
   hermes:
     tags: [huggingface, hf, hub, billing, subscription, plans, pro, team, enterprise, pricing, storage, inference]
+category: mlops
 ---
 
 # HF Hub Billing and Subscription Plans

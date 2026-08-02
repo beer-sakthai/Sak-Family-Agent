@@ -1,5 +1,7 @@
 ---
 name: SakKing-saas-onboarding-time-to-value-optimization
+version: 1.0.0
+description: "Sakking Saas Onboarding Time To Value Optimization"
 title: SaaS Onboarding Time-to-Value Optimization
 description: >
   Engineer onboarding flows that compress signup-to-first-value time (TTV),
@@ -8,6 +10,7 @@ description: >
   front-loaded churn is high, or you need to operationalize onboarding metrics
   with the same rigor as pricing or funnel conversion.
 tags: [saas, onboarding, ttv, activation, retention, plg, gtm, funnel-optimization]
+
 ---
 
 # SaaS Onboarding Time-to-Value Optimization

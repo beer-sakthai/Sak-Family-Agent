@@ -1,6 +1,8 @@
 ---
 name: SakKing-saas-pricing-governance-and-exception-management
+version: 1.0.0
 description: Design, implement, and operate a pricing governance system that protects margin while keeping sales velocity healthy. Covers maturity tiers, discount approval matrices, price exception policies, CPQ/CRM instrumentation, and operational guardrails. Use when discounting is creeping up, deal desk is a bottleneck, leadership wants visibility into "approved" vs "rogue" pricing, or when scaling from founder-led sales to a structured GTM org.
+
 ---
 
 # SaaS Pricing Governance & Exception Management

@@ -1,5 +1,7 @@
 ---
 name: SakKing-plg-funnel-economics
+version: 1.0.0
+description: "Sakking Plg Funnel Economics"
 title: PLG Funnel Economics — Free-to-Paid Conversion, Activation, and Virality
 description: |
   Diagnose and optimize product-led growth funnels: free-tier sizing, activation events,
@@ -33,6 +35,7 @@ outputs:
   - Decision on freemium vs reverse trial vs opt-in free
   - Hybrid handover threshold (when to layer sales-assist)
   - K-factor target and virality lever map
+
 ---
 
 # PLG Funnel Economics

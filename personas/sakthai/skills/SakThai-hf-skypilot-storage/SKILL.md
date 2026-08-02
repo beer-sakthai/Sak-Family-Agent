@@ -11,6 +11,7 @@ metadata:
   hermes:
     tags: [huggingface, skypilot, storage, cloud, multi-cloud]
     category: mlops
+category: mlops
 ---
 
 # Hugging Face SkyPilot Storage Integration

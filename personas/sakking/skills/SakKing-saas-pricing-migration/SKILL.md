@@ -1,6 +1,8 @@
 ---
 name: SakKing-saas-pricing-migration
+version: 1.0.0
 description: Execute a staged pricing migration for existing SaaS customers when restructuring plans, tiers, or billing models. Covers pre-migration segmentation, grandfathering strategy, communication cadence, cohort sequencing, churn modeling, and post-rollout monitoring. Use when redesigning SaaS pricing, consolidating tiers, shifting from per-seat to usage-based, or when leadership decides to end grandfathering.
+
 ---
 
 # SaaS Pricing Migration Playbook

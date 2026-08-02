@@ -1,7 +1,7 @@
 ---
 name: SakKing-sakthai
 description: "Drive sakthai-agent-v2 — the `sakthai` CLI with persistent SQLite memory, an agent loop, and an MCP stdio server."
-version: "2.0.0"
+version: "2.0.1"
 author: Beer (beer-sakthai) + Hermes Agent
 license: MIT
 platforms: [linux, macos]
@@ -23,7 +23,7 @@ that all share one store at `~/.sakthai/memory.db` (override the root with
    (Claude / Gemini / OpenAI-compatible / Ollama).
 3. **MCP stdio server** — `sakthai mcp`, the same tools over JSON-RPC stdio.
 
-Repo on this machine: `/home/sakthai/sakthai-agent-v2`.
+Repo on this machine: `/opt/data/Sak-Family-Agent`.
 
 ## When to use this skill
 
@@ -36,9 +36,9 @@ Repo on this machine: `/home/sakthai/sakthai-agent-v2`.
 Python ≥ 3.11. The `sakthai` binary lands on PATH after an editable install:
 
 ```bash
-cd /home/sakthai/sakthai-agent-v2
-python3 -m venv .venv && source .venv/bin/activate
-pip install -e ".[dev]"     # or: uv sync --all-extras
+cd /opt/data/Sak-Family-Agent
+uv sync --all-extras
+source .venv/bin/activate
 sakthai --version
 ```
 
@@ -88,7 +88,7 @@ A throwaway-home driver checks the CLI, the zero-cost agent preflight, the
 dashboard export, and a live MCP roundtrip — no API key or network:
 
 ```bash
-cd /home/sakthai/sakthai-agent-v2 && source .venv/bin/activate
+cd /opt/data/Sak-Family-Agent && source .venv/bin/activate
 python .claude/skills/run-sakthai-agent-v2/driver.py   # 11 [PASS] lines → "OK: all checks passed"
 pytest -q -m "not integration"                          # hermetic test suite
 ```

@@ -1,6 +1,7 @@
 ---
 name: SakKing-b2b-saas-linkedin-newsletter-2026
 version: 1.0.0
+description: "Sakking B2B Saas Linkedin Newsletter 2026"
 category: social-media
 description: >
   Complete playbook for B2B SaaS companies to build, grow, and monetize a LinkedIn
@@ -9,6 +10,7 @@ description: >
 author: SakSit (beer-sakthai)
 created: 2026-07-02
 updated: 2026-07-02
+
 ---
 
 # B2B SaaS LinkedIn Newsletter Growth Strategy 2026

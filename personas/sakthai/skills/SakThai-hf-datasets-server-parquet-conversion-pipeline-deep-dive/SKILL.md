@@ -15,6 +15,7 @@ metadata:
   hermes:
     tags: [huggingface, datasets, server, parquet, conversion, pipeline, streaming, rust, pyarrow]
     category: mlops
+category: mlops
 ---
 
 # HF Datasets Server Parquet Conversion Pipeline — Complete Architecture

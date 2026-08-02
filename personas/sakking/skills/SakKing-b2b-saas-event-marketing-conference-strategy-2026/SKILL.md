@@ -7,7 +7,9 @@ description: >-
 category: growth-acquisition
 created: 2026-07-02
 version: 1.0.0
+description: "Sakking B2B Saas Event Marketing Conference Strategy 2026"
 author: SakSit
+
 ---
 
 # B2B SaaS Event Marketing & Conference Strategy 2026

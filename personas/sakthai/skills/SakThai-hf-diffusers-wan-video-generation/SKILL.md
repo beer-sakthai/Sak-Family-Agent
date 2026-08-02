@@ -4,6 +4,7 @@ author: SakThai
 license: MIT
 description: Comprehensive knowledge of the Wan2.1/Wan2.2 video generation model family and its integration into Hugging Face Diffusers — covering all pipelines, architecture, scheduler options, memory optimization, LoRA support, and usage patterns.
 version: 1.0.0
+category: mlops
 tags: [huggingface, diffusers, video-generation, wan, diffusion]
 ---
 

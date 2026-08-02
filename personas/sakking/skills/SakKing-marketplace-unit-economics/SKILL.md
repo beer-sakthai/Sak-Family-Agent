@@ -1,5 +1,7 @@
 ---
 name: SakKing-marketplace-unit-economics
+version: 1.0.0
+description: "Sakking Marketplace Unit Economics"
 title: Marketplace Unit Economics — Two-Sided Value & Liquidity Model
 description: |
   Analyze marketplace and platform businesses using GMV, take rate, liquidity, and
@@ -31,6 +33,7 @@ outputs:
   - Two-sided CAC and LTV by cohort
   - Liquidity health score and constraining-side diagnosis
   - Action list: raise take rate, fix liquidity, or shift acquisition spend
+
 ---
 
 # Marketplace Unit Economics — Two-Sided Value & Liquidity Model

@@ -1,3 +1,4 @@
+LICENSE
 README.md
 pyproject.toml
 personas/sakthai/sakthai/__init__.py
@@ -15,9 +16,11 @@ personas/sakthai/sakthai/agent/context_filter.py
 personas/sakthai/sakthai/agent/context_manager.py
 personas/sakthai/sakthai/agent/eval.py
 personas/sakthai/sakthai/agent/guardrails.py
+personas/sakthai/sakthai/agent/guardrails_hardened.py
 personas/sakthai/sakthai/agent/loop.py
 personas/sakthai/sakthai/agent/prompt_builder.py
 personas/sakthai/sakthai/agent/registry.py
+personas/sakthai/sakthai/agent/security_hardening.py
 personas/sakthai/sakthai/agent/tools.py
 personas/sakthai/sakthai/agent/usage.py
 personas/sakthai/sakthai/agent/providers/__init__.py
@@ -58,6 +61,8 @@ personas/sakthai/sakthai/memory/backup.py
 personas/sakthai/sakthai/memory/provider.py
 personas/sakthai/sakthai/memory/store.py
 personas/sakthai/sakthai/memory/sync.py
+personas/sakthai/sakthai/scripts/__init__.py
+personas/sakthai/sakthai/scripts/verify_hf_upload.py
 personas/sakthai/sakthai/telegram/__init__.py
 personas/sakthai/sakthai/telegram/__main__.py
 personas/sakthai/sakthai/telegram/bot.py
@@ -130,8 +135,10 @@ tests/test_providers_detect.py
 tests/test_providers_gemini.py
 tests/test_providers_openai.py
 tests/test_registry.py
+tests/test_sakking_skill_security.py
 tests/test_sakking_skills.py
 tests/test_sandbox.py
+tests/test_security_hardening.py
 tests/test_security_sentinel.py
 tests/test_sentinel_development_tools.py
 tests/test_sentinel_gap_repro.py
@@ -152,5 +159,6 @@ tests/test_telegram_main.py
 tests/test_telegram_workflow_executor.py
 tests/test_tools.py
 tests/test_tools_overrides.py
+tests/test_train_eval_coder_lora.py
 tests/test_usage.py
 tests/test_web_server.py

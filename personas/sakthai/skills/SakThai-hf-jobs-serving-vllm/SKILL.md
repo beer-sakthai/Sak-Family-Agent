@@ -8,6 +8,7 @@ version: 1.0.0
 created: 2026-07-25
 updated: 2026-07-25
 topic: hf-jobs-serving-vllm
+category: mlops
 ---
 
 # Run a vLLM Server on HF Jobs — One-Command Serving Patterns

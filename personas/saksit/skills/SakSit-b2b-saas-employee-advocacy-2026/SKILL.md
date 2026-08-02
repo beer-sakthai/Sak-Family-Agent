@@ -1,5 +1,7 @@
 ---
 name: SakSit-b2b-saas-employee-advocacy-2026
+version: 1.0.0
+description: "Saksit B2B Saas Employee Advocacy 2026"
 description: >-
   A complete playbook for B2B SaaS companies to launch, scale, and measure an
   employee advocacy program that turns employees into brand amplifiers, generates
@@ -13,6 +15,7 @@ tags:
   - linkedin-amplification
   - b2b-saas
   - 2026
+
 ---
 
 # B2B SaaS Employee Advocacy & Employee-Generated Content Strategy 2026

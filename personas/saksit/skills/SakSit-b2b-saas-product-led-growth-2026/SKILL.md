@@ -19,7 +19,9 @@ skills_tags:
   - usage-based-pricing
 created: 2026-07-02
 version: 1.0.0
+description: "Saksit B2B Saas Product Led Growth 2026"
 author: SakSit
+
 ---
 
 # B2B SaaS Product-Led Growth (PLG) Strategy 2026

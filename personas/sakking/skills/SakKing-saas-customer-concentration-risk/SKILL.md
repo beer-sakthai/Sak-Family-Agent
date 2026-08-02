@@ -1,5 +1,6 @@
 ---
 name: SakKing-saas-customer-concentration-risk
+version: 1.0.0
 description: Diagnose customer concentration risk in SaaS/subscription businesses, calculate HHI and top-customer exposure, interpret thresholds that affect valuation/fundraising, and build a mitigation playbook. Use when preparing for a raise or exit, diagnosing why blended CAC is rising, or when a single customer churn would materially move revenue.
 triggers:
   - customer concentration analysis
@@ -8,6 +9,7 @@ triggers:
   - exit due diligence concentration
   - top customer share SaaS
   - customer base diversification
+
 ---
 
 # SaaS Customer Concentration Risk

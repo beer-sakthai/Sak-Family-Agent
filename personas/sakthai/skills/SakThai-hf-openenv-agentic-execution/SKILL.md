@@ -11,6 +11,7 @@ description: >-
   integration with TRL/Unsloth, and the full environment lifecycle.
 version: 1.0.0
 created: 2026-07-25
+category: mlops
 tags:
   - openenv
   - agentic

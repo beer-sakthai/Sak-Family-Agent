@@ -5,6 +5,7 @@ license: MIT
 description: Comprehensive deep-dive into Hugging Face Inference Router — OpenAI-compatible proxy endpoint with provider selection, auto-failover, Responses API, structured outputs, function calling, and MCP integration.
 version: 1.0.0
 created: 2026-07-25
+category: mlops
 tags:
   - inference
   - router

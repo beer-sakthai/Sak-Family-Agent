@@ -1,5 +1,7 @@
 ---
 name: SakKing-b2b-deal-packaging-and-pro-pricing
+version: 1.0.0
+description: "Sakking B2B Deal Packaging And Pro Pricing"
 title: B2B Deal Packaging and Pro Pricing
 description: >
   Structure, price, and negotiate B2B SaaS packages so enterprise deals stay
@@ -13,6 +15,7 @@ triggers:
   - defending price in a sales negotiation
   - adding expansion/renewal ramps
   - evaluating discount requests
+
 ---
 
 # B2B Deal Packaging and Pro Pricing

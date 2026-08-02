@@ -1,7 +1,9 @@
 ---
 name: SakKing-saas-expansion-revenue-decomposition
+version: 1.0.0
 title: SaaS Expansion Revenue Decomposition & Diagnostic
 description: Diagnose what is *actually* driving NRR and GRR by breaking expansion revenue into seat growth, tier upgrades, usage overages, price increases, and new-product cross-sell. Use this when expansion looks healthy but growth is still inefficient, when you need to design product/pricing roadmaps, or when board/investors ask "where is NRR coming from?"
+
 ---
 
 ## Trigger

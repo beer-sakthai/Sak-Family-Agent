@@ -5,6 +5,7 @@ license: MIT
 description: Deep reference on how HuggingFace Datasets manages memory through Apache Arrow — InMemoryTable vs MemoryMappedTable, ConcatenationTable, replay-based lazy transforms, Arrow memory pools, and streaming memory patterns.
 version: 1.0.0
 created: 2026-07-25
+category: mlops
 tags:
   - datasets
   - arrow
