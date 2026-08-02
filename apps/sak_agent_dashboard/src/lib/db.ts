@@ -145,7 +145,7 @@ export async function getMemoryData(demo?: boolean, query?: string): Promise<Mem
 
   if (query && query.trim().length > 0) {
     // Sanitize search query input
-    const cleanQuery = query.replace(/<[^>]*>/g, "").trim().toLowerCase();
+    const cleanQuery = query.replace(/[<>]/g, "").trim().toLowerCase();
     if (cleanQuery.length > 0) {
       memory = {
         facts: memory.facts.filter((f) => {
