@@ -118,6 +118,28 @@ class TestShellCommandHardening:
         result = check_shell_command_hardened("echo hello \\\nrm -rf /")
         assert result.action == GuardrailAction.DENY
 
+    def test_check_shell_command_hardened_malformed_heredoc(self) -> None:
+        """Test that malformed heredoc commands with parsing errors are denied."""
+        result = check_shell_command_hardened("bash -c <<EOF\\nrm -rf '/\\nEOF")
+        assert result.action == GuardrailAction.DENY
+        assert "Malformed heredoc or line continuation detected" in result.reason
+
+    def test_check_shell_command_hardened_malformed_continuation(self) -> None:
+        """Test that malformed line continuation commands with parsing errors are denied."""
+        result = check_shell_command_hardened("echo hello \\\nrm -rf '/")
+        assert result.action == GuardrailAction.DENY
+        assert "Malformed line continuation detected" in result.reason
+
+    def test_check_shell_command_hardened_safe_heredoc(self) -> None:
+        """Test that safe heredoc commands are allowed."""
+        result = check_shell_command_hardened("cat <<EOF\\nhello world\\nEOF")
+        assert result.action == GuardrailAction.ALLOW
+
+    def test_check_shell_command_hardened_safe_continuation(self) -> None:
+        """Test that safe line continuation commands are allowed."""
+        result = check_shell_command_hardened("echo hello \\\nworld")
+        assert result.action == GuardrailAction.ALLOW
+
 
 class TestMCPServerSafety:
     """Test MCP server safety checking."""
