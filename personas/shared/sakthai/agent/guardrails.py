@@ -732,6 +732,8 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
             "stdbuf",
             "chroot",
             "nsenter",
+            "unshare",
+            "pkexec",
             "uv",
             "pipx",
             "bun",
@@ -784,26 +786,36 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
                 if flag == "--":
                     start_idx += 1
                     break
+
+                flag_name = flag
+                flag_val = None
+                if "=" in flag:
+                    flag_name, flag_val = flag.split("=", 1)
+
                 start_idx += 1
                 # Skip the next token if this flag takes an argument.
                 # This is a heuristic for common wrappers.
                 if (
                     _is_binary(part, "timeout")
-                    and flag in ("-s", "--signal", "-k", "--kill-after")
+                    and flag_name in ("-s", "--signal", "-k", "--kill-after")
                     or _is_binary(part, "nice")
-                    and flag in ("-n", "--adjustment")
+                    and flag_name in ("-n", "--adjustment")
                     or _is_binary(part, "ionice")
-                    and flag in ("-c", "-n", "-p")
+                    and flag_name in ("-c", "-n", "-p")
                     or _is_binary(part, "chrt")
-                    and flag in ("-p")
+                    and flag_name in ("-p")
                     or _is_binary(part, "taskset")
-                    and flag in ("-p", "-c")
+                    and flag_name in ("-p", "-c")
                     or _is_binary(part, "stdbuf")
-                    and flag in ("-i", "-o", "-e")
+                    and flag_name in ("-i", "-o", "-e")
                     or _is_binary(part, "nsenter")
-                    and flag in ("-t", "--target", "-S", "--setuid", "-G", "--setgid")
+                    and flag_name in ("-t", "--target", "-S", "--setuid", "-G", "--setgid")
+                    or _is_binary(part, "unshare")
+                    and flag_name in ("-S", "--setuid", "-G", "--setgid", "--map-user", "--map-group", "--map-users", "--map-groups", "--root", "--wd", "--mount-proc")
+                    or _is_binary(part, "pkexec")
+                    and flag_name in ("--user", "-u")
                     or _is_binary(part, ("sudo", "doas"))
-                    and flag
+                    and flag_name
                     in (
                         "-u",
                         "-g",
@@ -813,7 +825,7 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
                         "-T",
                     )
                     or _is_binary(part, "uv")
-                    and flag
+                    and flag_name
                     in (
                         "--with",
                         "-p",
@@ -828,15 +840,15 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
                         "--settings",
                     )
                     or _is_binary(part, "pipx")
-                    and flag in ("--spec", "--index-url", "--pip-args", "--python")
+                    and flag_name in ("--spec", "--index-url", "--pip-args", "--python")
                     or _is_binary(part, "bun")
-                    and flag in ("--cwd", "--env-file", "-c", "--config", "-e", "--entry-point")
+                    and flag_name in ("--cwd", "--env-file", "-c", "--config", "-e", "--entry-point")
                     or _is_binary(part, "bunx")
-                    and flag in ("-p", "--package", "--cwd", "--env-file")
+                    and flag_name in ("-p", "--package", "--cwd", "--env-file")
                     or _is_binary(part, "npx")
-                    and flag in ("-p", "--package")
+                    and flag_name in ("-p", "--package")
                     or _is_binary(part, "deno")
-                    and flag
+                    and flag_name
                     in ("-c", "--config", "-p", "--port", "--import-map", "--lock", "--ext")
                     or _is_binary(part, "conda")
                     and flag in ("-n", "--name", "-p", "--prefix", "--cwd")
@@ -847,7 +859,24 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
                     or _is_binary(part, "poetry")
                     and flag in ("-C", "--directory")
                 ):
-                    start_idx += 1
+                    if flag_val is not None:
+                        if _is_binary(part, "unshare") and flag_name in ("--root", "--wd", "--mount-proc"):
+                            if _is_sensitive_path(flag_val, allow_local=True):
+                                binary_name = os.path.basename(part)
+                                return GuardrailResult(
+                                    GuardrailAction.DENY,
+                                    reason=f"potentially dangerous '{binary_name} {flag_name}' on {flag_val!r} blocked.",
+                                )
+                    else:
+                        if _is_binary(part, "unshare") and flag_name in ("--root", "--wd", "--mount-proc") and start_idx < len(parts):
+                            arg_val = parts[start_idx]
+                            if _is_sensitive_path(arg_val, allow_local=True):
+                                binary_name = os.path.basename(part)
+                                return GuardrailResult(
+                                    GuardrailAction.DENY,
+                                    reason=f"potentially dangerous '{binary_name} {flag_name}' on {arg_val!r} blocked.",
+                                )
+                        start_idx += 1
 
             # env might have arguments like VAR=VAL before the command.
             if _is_binary(part, "env"):
