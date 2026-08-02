@@ -6,8 +6,8 @@ skills/.usage.json.lock
 __pycache__/
 .hypothesis/
 *.pyc
+*.egg-info/
 .venv/
-personas/saktan/
 # Ignore the legacy per-persona duplicate sakthai package copies, but keep the
 # consolidated shared canonical (personas/shared/sakthai/) tracked — the five
 # personas symlink to it, so it must exist in a fresh checkout (mirrors how

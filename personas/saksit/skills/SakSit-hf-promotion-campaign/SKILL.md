@@ -12,6 +12,9 @@ metadata:
       - promotion
       - models
       - open-source
+tags:
+- HuggingFace
+- Promotion
 ---
 
 # SakSit HF Promotion Campaign
