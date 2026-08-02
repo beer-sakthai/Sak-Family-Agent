@@ -657,21 +657,53 @@ class MemoryStore:
         Aggregation happens in SQL to avoid fetching and parsing thousands of
         rows in Python. Capped by ``limit`` to match legacy behavior.
         """
-        if table not in ("facts", "observations"):
+        if table == "facts":
+            query = """
+                WITH subset AS (
+                    SELECT created_at FROM facts LIMIT ?
+                )
+                SELECT
+                    COUNT(*) as total,
+                    SUM(CASE WHEN created_at >= ? THEN 1 ELSE 0 END) as this_week,
+                    SUM(CASE WHEN created_at <= ? THEN 1 ELSE 0 END) as before_start
+                FROM subset
+            """
+            bin_query = """
+                WITH subset AS (
+                    SELECT created_at FROM facts LIMIT ?
+                )
+                SELECT
+                    CAST((created_at - ? - 1) / 86400 AS INTEGER) as bin,
+                    COUNT(*) as n
+                FROM subset
+                WHERE created_at > ? AND created_at <= ?
+                GROUP BY bin
+            """
+        elif table == "observations":
+            query = """
+                WITH subset AS (
+                    SELECT created_at FROM observations LIMIT ?
+                )
+                SELECT
+                    COUNT(*) as total,
+                    SUM(CASE WHEN created_at >= ? THEN 1 ELSE 0 END) as this_week,
+                    SUM(CASE WHEN created_at <= ? THEN 1 ELSE 0 END) as before_start
+                FROM subset
+            """
+            bin_query = """
+                WITH subset AS (
+                    SELECT created_at FROM observations LIMIT ?
+                )
+                SELECT
+                    CAST((created_at - ? - 1) / 86400 AS INTEGER) as bin,
+                    COUNT(*) as n
+                FROM subset
+                WHERE created_at > ? AND created_at <= ?
+                GROUP BY bin
+            """
+        else:
             raise ValueError(f"Invalid table: {table}")
 
-        # We use a CTE to apply the limit once, then aggregate over that subset.
-        # ``table`` is allowlist-validated above, so the interpolation is safe.
-        query = f"""
-            WITH subset AS (
-                SELECT created_at FROM {table} LIMIT ?
-            )
-            SELECT
-                COUNT(*) as total,
-                SUM(CASE WHEN created_at >= ? THEN 1 ELSE 0 END) as this_week,
-                SUM(CASE WHEN created_at <= ? THEN 1 ELSE 0 END) as before_start
-            FROM subset
-        """  # nosec B608
         row = self._conn.execute(query, (limit, week_ago_ts, start_ts)).fetchone()
         res: dict[str, Any] = {
             "total": row["total"] or 0,
@@ -683,17 +715,6 @@ class MemoryStore:
         # Growth bins: one per day for 30 days.
         days = 30
         bins = [0] * days
-        bin_query = f"""
-            WITH subset AS (
-                SELECT created_at FROM {table} LIMIT ?
-            )
-            SELECT
-                CAST((created_at - ? - 1) / 86400 AS INTEGER) as bin,
-                COUNT(*) as n
-            FROM subset
-            WHERE created_at > ? AND created_at <= ?
-            GROUP BY bin
-        """  # nosec B608
         rows = self._conn.execute(
             bin_query, (limit, start_ts, start_ts, start_ts + days * 86400)
         ).fetchall()
