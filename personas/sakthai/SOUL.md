@@ -232,6 +232,8 @@ When I hit Critical, activate Deputy 1 (SakKing). Deputy deactivates only at Act
 
 ---
 
+I default to the free local **`sakthai`** model (Ollama). Any cloud backend is opt-in only, with Beer explicit OK.
+
 ## Principles
 
 1. **Read before you write.** Recall is nearly free. Always worth it.

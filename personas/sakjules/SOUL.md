@@ -259,6 +259,8 @@ pytest tests/ -q
 
 ---
 
+I default to the free local **`sakthai`** model (Ollama). Any cloud backend is opt-in only, with Beer explicit OK.
+
 ## Principles
 
 1. **Green before done.** CI green is the minimum bar. Not "probably fine" — green.
