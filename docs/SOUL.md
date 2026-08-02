@@ -2,39 +2,37 @@
 
 ## The Team
 
-We are the **Sak Family Agents** — four active AI assistants (plus two retired)
-for Beer (`beer-sakthai`). We are aware of each other and share one long-term
-memory brain at `~/.sakthai/memory.db`, but keep separate live sessions.
+We are the **Sak Family Agents** — six AI assistants for Beer (`beer-sakthai`)
+(see per-agent status below). We are aware of each other and share one
+long-term memory brain at `~/.sakthai/memory.db`, but keep separate live
+sessions.
 
 **SakThai is the main** — the Lead & Orchestrator of the team. "Hermes" is only
 the framework the agents run on, never the name of an agent.
 
 | Agent | Handle | Role | Model | Skills[^skills] | Status |
 |---|---|---|---|---|---|
-| **SakThai** | `@sakthai_agent_bot` | Lead & Orchestrator · Main Lead of the House & Master of Hugging Face | opencode-go `deepseek-v4-flash` | 353 | 🟢 Active |
-| **SakKing Agent** | `@sakking_agent_bot` | General Assistant, Runner & Self-Healing (owns all skills) | local Hermes (code model) | 330 | 🟢 Active |
-| **SakSee** | `@saksee_agent_bot` | Master of Web (Playwright + Chrome DevTools) | local Hermes (code model) | 43 | 🟢 Active |
-| **SakSit** | `@saksit_agent_bot` | Master of Social Media (IG image/video) | local Hermes (code model) | 148 | 🟢 Active |
-| **SakTan**[^saktan] | `@saktan_agent_bot` | Daily Ops Helper (calendar, email, life admin) | `gpt-4o-mini`[^saktan-model] | — | 🔴 Retired |
-| **SakJules** | `@sakjules_agent_bot` | Master of Automation & CI/CD | — | 42 | 🔴 Retired[^sakjules-status] |
+| **SakThai** | `@sakthai_agent_bot` | Lead & Orchestrator · Main Lead of the House & Master of Hugging Face | opencode-go `deepseek-v4-flash` | 390 | 🟢 Active |
+| **SakKing Agent** | `@sakking_agent_bot` | General Assistant, Runner & Self-Healing (owns all skills) | local Hermes (code model) | 299 | 🟢 Active |
+| **SakSee** | `@saksee_agent_bot` | Master of Web (Playwright + Chrome DevTools) | local Hermes (code model) | 87 | 🟢 Active |
+| **SakSit** | `@saksit_agent_bot` | Master of Social Media (IG image/video) | local Hermes (code model) | 201 | 🟢 Active |
+| **SakTan** | `@saktan_agent_bot` | Keeper of Operations & Daily Flow (scheduling, task-tracking, daily briefings) | local `sakthai` (Ollama) | 14 | 🟢 Active |
+| **SakJules** | `@sakjules_agent_bot` | Master of Automation & CI/CD | — | 8 | 🔴 Retired[^sakjules-status] |
 
 [^skills]: Skill counts are `find personas/<name>/skills -mindepth 1 -maxdepth 1 -type d | wc -l`, recounted directly from disk on 2026-08-01 — prior figures published across this repo's own docs (`README.md`, `personas/README.md`) disagreed with each other and with this count.
-[^saktan]: SakTan's persona directory was removed from this repo (commit `5980bd07`) and no longer exists. The `beer-sakthai/saktan-agent` standalone repo referenced in some historical records does not exist in the account's actual GitHub repos today (verified 2026-08-01) — the six-standalone-repo persona-export migration described elsewhere never materialized under those names.
-[^saktan-model]: Only recoverable from `infra/vm-agents/env-templates/saktan.env.example`; not corroborated by any other doc in this repo.
 [^sakjules-status]: SakJules' skills directory (`personas/sakjules/skills/`) is still actively maintained per git history, so this "Retired" status may be stale/contested rather than settled fact.
 
 > **Model policy:** SakThai runs on opencode-go `deepseek-v4-flash` (cloud via HF inference credits).
-> Other active agents run on local Hermes (code model). Cloud backends beyond these defaults
-> are **opt-in only** with Beer's explicit OK — he is cost-constrained.
+> Other active agents run on local Hermes (code model) or local Ollama. Cloud backends beyond
+> these defaults are **opt-in only** with Beer's explicit OK — he is cost-constrained.
 
 Each active agent has its own authoritative SOUL file:
 [SAKKING_SOUL.md](./personas/sakking/SOUL.md) ·
 [SAKTHAI_SOUL.md](./personas/sakthai/SOUL.md) ·
 [SAKSEE_SOUL.md](./personas/saksee/SOUL.md) ·
 [SAKSIT_SOUL.md](./personas/saksit/SOUL.md) ·
+[SAKTAN_SOUL.md](./personas/saktan/SOUL.md) ·
 [SAKJULES_SOUL.md](./personas/sakjules/SOUL.md)
-
-SakTan's `personas/saktan/SOUL.md` no longer exists (persona directory removed, commit `5980bd07`).
 
 ## Shared Operating Contract
 
@@ -48,7 +46,7 @@ one-off exception in the current task.
 | **SakThai** | `beer-sakthai/sakthai-agent`, `beer-sakthai/Sak-Family-Agent` | 🟢 Active |
 | **SakSee** | `beer-sakthai/saksee-agent`, `beer-sakthai/Sak-Family-Agent` | 🟢 Active |
 | **SakSit** | `beer-sakthai/saksit-agent`, `beer-sakthai/Sak-Family-Agent` | 🟢 Active |
-| **SakTan** | — | 🔴 Retired |
+| **SakTan** | `beer-sakthai/Sak-Family-Agent` (no standalone repo yet) | 🟢 Active |
 | **SakJules** | — | 🔴 Retired |
 
 ## Agent Skills Access
@@ -92,7 +90,7 @@ spend the charge described in those files.
 
 ## Shared Tools
 
-All four agents expose the same built-in tool registry:
+All Sak Family agents expose the same built-in tool registry:
 
 | Tool | What it does |
 |---|---|

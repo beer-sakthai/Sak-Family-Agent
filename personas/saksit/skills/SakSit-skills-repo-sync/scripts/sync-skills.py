@@ -8,6 +8,7 @@ Does content comparison via base64 — only pushes changed files.
 """
 import json, base64, os, sys, urllib.request, urllib.error
 from datetime import date
+from urllib.parse import urlparse
 
 REPO = "beer-sakthai/saksit-skills"
 API_BASE = f"https://api.github.com/repos/{REPO}"
@@ -16,17 +17,23 @@ LJ_PATH = os.path.expanduser("/opt/data/profiles/saksit/LEARNING_JOURNAL.md")
 
 
 def get_token():
-    with open("/opt/data/.git-credentials") as f:
-        for line in f:
-            line = line.strip()
-            if "github.com" in line:
-                if "x-access-token:" in line:
-                    token = line.split("x-access-token:")[1]
-                elif "@github.com" in line:
-                    token = line.split("@github.com")[0].split(":", 2)[-1]
-                else:
+    try:
+        with open("/opt/data/.git-credentials") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
                     continue
-                return token.replace("@github.com", "").strip()
+                parsed = urlparse(line)
+                if parsed.hostname == "github.com":
+                    if "x-access-token:" in line:
+                        token = line.split("x-access-token:")[1]
+                    elif "@github.com" in line:
+                        token = line.split("@github.com")[0].split(":", 2)[-1]
+                    else:
+                        continue
+                    return token.replace("@github.com", "").strip()
+    except Exception:
+        pass
     return None
 
 
