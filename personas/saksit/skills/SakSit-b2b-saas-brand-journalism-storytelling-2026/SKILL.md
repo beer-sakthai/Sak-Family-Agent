@@ -1,5 +1,7 @@
 ---
 name: SakSit-b2b-saas-brand-journalism-storytelling-2026
+version: 1.0.0
+description: "Saksit B2B Saas Brand Journalism Storytelling 2026"
 description: >-
   Complete playbook for B2B SaaS companies to build a brand journalism and
   narrative storytelling engine — transforming marketing from product-centric
@@ -10,6 +12,7 @@ description: >-
 category: social-media
 created: 2026-07-02
 author: SakSit
+
 ---
 
 # B2B SaaS Brand Journalism & Storytelling Strategy 2026

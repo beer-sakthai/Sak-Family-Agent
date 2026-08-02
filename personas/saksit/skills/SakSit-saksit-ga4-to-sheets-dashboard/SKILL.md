@@ -1,7 +1,11 @@
 ---
 name: SakSit-saksit-ga4-to-sheets-dashboard
 title: GA4 Analytics → Google Sheets Dashboard
-description: Pull Google Analytics 4 metrics into Google Sheets for live business reporting. One-shot or cron-ready.
+description: Pull GA4 data into Google Sheets for reporting.
+category: productivity
+tags:
+- GA4
+- Analytics
 ---
 
 # GA4 → Sheets Analytics Pipeline

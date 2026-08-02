@@ -14,7 +14,9 @@ skills_tags:
   - revenue-optimization
 created: 2026-07-02
 version: 1.0.0
+description: "Saksit B2B Saas Pricing Packaging 2026"
 author: SakSit
+
 ---
 
 # B2B SaaS Pricing & Packaging Strategy 2026

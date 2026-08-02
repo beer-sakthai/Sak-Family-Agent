@@ -1,4 +1,0 @@
-# file: C:\Users\beern\OneDrive\Documents\GitHub\Sak-Family-Agent\sakthai\extensions\__init__.py
-# hypothesis_version: 6.155.7
-
-['ExtensionError', 'ExtensionInfo', 'InstallResult', 'extensions_dir', 'install_extension', 'list_extensions', 'remove']

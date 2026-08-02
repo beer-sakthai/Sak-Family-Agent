@@ -1,6 +1,8 @@
 ---
 name: SakThai-coding-testing
 category: coding
+author: SakThai
+license: MIT
 description: Write hermetic pytest tests for sakthai-agent-v2 — no network, no GCP, injected stores/clients. Use when adding tests, building fixtures, mocking the agent loop or MCP, or gating integration tests.
 version: 1.0.0
 platforms:

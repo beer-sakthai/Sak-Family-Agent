@@ -7,6 +7,7 @@ description: >-
   churn and increase retention in 2026. Covers health scoring, onboarding
   optimization, intervention tiers, expansion revenue, and win-back automation.
 version: 1.0.0
+description: "Saksit B2B Saas Retention Churn 2026"
 created: 2026-07-02
 author: SakSit (beer-sakthai)
 tags:
@@ -19,6 +20,7 @@ tags:
   - expansion
   - nrr
   - 2026
+
 ---
 
 # B2B SaaS Customer Retention & Churn Reduction Strategy 2026

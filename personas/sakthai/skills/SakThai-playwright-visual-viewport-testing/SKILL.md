@@ -1,6 +1,8 @@
 ---
 name: SakThai-playwright-visual-viewport-testing
 category: playwright-growth
+author: SakThai
+license: MIT
 description: Validates and correlates physical, layout, and visual viewport metrics
   in real mobile/desktop contexts.
 version: 1.0.0

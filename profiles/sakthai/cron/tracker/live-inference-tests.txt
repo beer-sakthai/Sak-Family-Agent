@@ -1,0 +1,4 @@
+# Rotating serverless inference smoke tests
+# Format: YYYY-MM-DDTHH:MM | minute | index | model | pipeline_tag | task | status | latency_s | output_excerpt_or_error
+
+2026-07-31T00:17Z | 17 | 17 | Nanthasit/sakthai-coder-browser | text-generation | text_generation | ERROR | - | BadRequestError: Model not supported by provider hf-inference

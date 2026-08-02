@@ -16,72 +16,19 @@ ADK / Vertex AI cloud agent is **not** part of v2: there is **no `app/` cloud
 bundle, no `sync-app-package.sh` sync step, and no `sakthai/cloud/` module** here.
 v2 is local-first — the CLI, the agent loop, and the MCP stdio server.
 
-## Monorepo layout
+## Monorepo Structure
 
-This repository is the shared source workspace for the Sak family. The SakThai
-agent's installable core package (`sakthai`) lives at
-`personas/sakthai/sakthai/` — **not** at the repo root (the identically-named
-copies under the other five personas are data snapshots for standalone
-export, not build targets). `library/` still lives at the repo root; there is
-no root-level `skills/` — persona skill trees live under
-`personas/<name>/skills/` (see `personas/README.md`). Everything below this
-section's file-structure diagram gives paths relative to `personas/sakthai/`
-unless noted otherwise. The repo also carries the persona overlays and can
-export standalone repository snapshots with `scripts/export_agent_repo.py` or
-`make export-agent-repos`.
+The repository is the shared source workspace for the Sak family with these key conventions:
 
-- `personas/sakthai/agent-self-evolution/` — DSPy/GEPA self-evolution tool.
-  Standalone Python package, **not** a uv workspace member (disjoint/heavy
-  deps; its `darwinian` extra is unpublished). Build it on its own; the root
-  `uv.lock` stays SakThai-only. Each persona carries its own copy;
-  `personas/sakthai/agent-self-evolution` is canonical.
-- `personas/` — the six Sak Family personas. `scripts/compose_persona.py`
-  rebuilds a persona's tree as `personas/shared/skills/` + a per-persona
-  overlay (overlay wins). `personas/shared/skills/` only holds files that are
-  byte-identical across **all six** personas (currently 3 skills:
-  `Sak-auto-cycle-loop`, `Sak-dogfood`, `Sak-yuanbao`) — `compose()` applies it to every persona
-  unconditionally, so anything less than 6-way-identical stays in each
-  persona's own overlay rather than being deduped (this includes most of
-  `sakking`'s `SakXxx-`-prefixed rollup, which intentionally aggregates the
-  other five personas' skills rather than being a peer overlay). See
-  `personas/README.md`. Skill naming (shared = `Sak-`, per-persona =
-  `Sak<Name>-`, enforced by `sakthai skills validate --naming`) was brought
-  into line via `scripts/rename_skills.py --apply` on 2026-07-07 across all
-  layers; 31 pre-existing collisions remain unrenamed on purpose (a
-  differently-prefixed skill with different content already occupied the
-  target name in each case — mostly a duplicate unprefixed `comfyui` sitting
-  next to an already-correct `Sak<Name>-comfyui`, plus ~27 in `sakking`'s own
-  rollup). Resolving those needs a human call on which content wins per case,
-  not an automated rename — run `sakthai skills validate --naming` to see the
-  current list.
-- `scripts/export_agent_repo.py` (`make export-agent-repos`) references
-  `infra/hermes-agents/` (profiles + systemd units), but only `infra/vm-agents/`
-  exists in this repo — a differently-shaped tree (env-templates + one
-  templated systemd unit, no per-persona `SOUL.md`/`config.yaml`). That part of
-  standalone persona export currently silently no-ops rather than erroring.
-  Unclear whether `infra/hermes-agents/` is meant to be synced in from an
-  external live host at export time, or is a leftover from an incomplete
-  rename to `infra/vm-agents/` — don't guess at a fix without checking with
-  the user first.
-- `infra/vm-agents/` — VM deployment assets for the Telegram bots (env
-  templates, systemd units; config only).
-- `infra/pw-poc/` — Playwright accessibility probe (standalone npm project).
-- `services/` — service pitches/specs not yet part of the package (e.g.
-  `hugging-face-dataset-publishing/`).
-- `training/` — Hugging Face Jobs fine-tune + model-serving scripts.
-- `.jules/` — config for the Jules automation/CI helper.
-
-### Sak Family Agents
-
-**The repository also carries the **Sak Family Agents** — six personas with **SakThai**
-as the **main** (Lead & Orchestrator) and **SakKing**, **SakSee**, **SakSit**,
-**SakTan**, and **SakJules** as the family it coordinates. The authoritative
-per-agent identities are `docs/SOUL.md` + `personas/<name>/SOUL.md`.
-Keep the SakThai-as-lead framing consistent if you touch any of them.
-
-CI (`ci.yml`, `pylint.yml`) scopes ruff/mypy/bandit/pytest/pylint to the
-`sakthai` core only; the colocated trees are not held to this repository's bars.
-**gitleaks still scans the whole tree (`.gitleaks.toml` allowlists persona docs).
+- **Canonical package:** `personas/shared/sakthai/` (single copy, symlinked from all personas)
+- **Personas:** five agents on disk (`SakThai`, `SakKing`, `SakSee`, `SakSit`, `SakJules`; also `config.PERSONA_NAMES`); **SakThai is lead**. `SakTan` was retired and its
+  persona directory removed from the repo — don't recreate `personas/saktan/`.
+  - Each has `/skills/` with `Sak<Name>-*` prefixed skills (no duplicates, flattened structure)
+  - Each has `/config/` with persona-specific config (config.yaml, mcp.json, gateway_voice_mode.json)
+  - Each symlinks to `../shared/sakthai` and `../shared/agent-self-evolution`
+- **Shared resources:** `personas/shared/` contains sakthai (Python package), agent-self-evolution (template), skills (Sak-* shared skills), model_roster
+- **Skill naming:** `Sak-` prefix for shared skills, `Sak<Name>-` for per-persona skills (enforced by `sakthai skills validate --naming`)
+- **CI scope:** ruff/mypy/bandit/pytest/pylint scopes to `sakthai` core only; gitleaks scans everything (`.gitleaks.toml` allowlists persona docs)
 
 Everything below this point describes the SakThai agent package itself.
 
@@ -117,7 +64,8 @@ would conflict. **No smoke-test job is wired into any GitHub workflow**,
 despite `.claude/skills/run-sakthai-agent-v2/driver.py` existing in the repo
 — treat that as available tooling, not an enforced CI gate. Run the lint→pytest
 sequence locally before pushing; green CI is the bar for `main`. Coverage
-floor is **97%** (`fail_under = 97`) over the whole `sakthai/` package.
+floor is **96%** (`fail_under = 96`, branch coverage included) over the whole
+`sakthai/` package.
 
 ---
 
@@ -128,7 +76,7 @@ root with `SAKTHAI_HOME`):
 
 1. **CLI** — `sakthai <cmd>` (entry point `sakthai.cli:main`). Commands:
    - Memory: `learn`, `recall`, `memory show|stats|search|export|import|backup|consolidate|consolidate-sessions|deduplicate`
-   - Agent: `run "<task>"` — key flags: `--provider`/`-p` (anthropic/google/openai/ollama/gateway),
+   - Agent: `run "<task>"` — key flags: `--provider`/`-p` (anthropic/google/openai/ollama/gateway/huggingface),
      `--model`, `--max-tokens`, `--max-iterations`, `--max-seconds`, `--with-skills <name>`
      (repeatable), `--no-mcp`, `--dry-run` (validate config, no API call), `--stream`, `--fast`
      (skip the 6-stage cycle), `--stateless` (don't load/append memory), `--caveman
@@ -212,8 +160,9 @@ CLI/MCP → agent loop → tool registry → MemoryStore → SQLite. See
   - `base.py` — shared types (`Block`, `Response`), retry logic via `tenacity`
   - `anthropic_provider.py` — Claude via `anthropic` SDK
   - `gemini_provider.py` — Gemini via `google-genai`
-  - `openai_provider.py` — OpenAI-compatible APIs, Ollama, and the `gateway`
-    provider (OpenRouter/LiteLLM/Vercel/Cloudflare AI gateways) via `httpx`
+  - `openai_provider.py` — OpenAI-compatible APIs, Ollama, the `gateway`
+    provider (OpenRouter/LiteLLM/Vercel/Cloudflare AI gateways), and the
+    `huggingface` provider (HF Inference Providers router, via `HF_TOKEN`) — all via `httpx`
   - `__init__.py` — provider detection and client factory
 
 ### MCP subsystem (`mcp/`)
@@ -261,11 +210,18 @@ There is no `dashboard.py` here — see the dashboard note below.
 - **`cycle/`** — six-stage Dream → Hope → Care → Joy → Trust → Growth state
   machine. `stages.py` defines the `Stage` enum; `state.py` persists the current
   stage as a single fact in the store (kind=`cycle`, key=`current_stage`).
-- **`skills.py` + `skills/` + `library/`** — parse/catalog/validate `SKILL.md`
-  files (YAML frontmatter: name, category, description, version, platforms, tags,
-  related_skills). `library/` has 31 curated skills across 11 categories;
-  `skills/` has 70 user/extension skills. Skills are injected into the agent
-  system prompt via `render_skills_prompt_block()`.
+- **`skills.py` + `library/` + `personas/*/skills/`** — parse/catalog/validate
+  `SKILL.md` files (YAML frontmatter: name, category, description, version,
+  platforms, tags, related_skills). Default discovery roots
+  (`default_skill_roots()` in `skills.py`) are: `personas/sakthai/skills/`
+  (`SKILLS_DIR`, this persona's own overlay), `personas/shared/skills/`
+  (`SHARED_SKILLS_DIR`/`LIBRARY_DIR`, 3 skills byte-identical across all
+  personas), root `library/` (`CURATED_LIBRARY_DIR`, 31 curated skills across
+  11 categories, pre-dates the `Sak-`/`SakThai-` naming convention), and
+  `~/.sakthai/extensions`. The root-level `skills/` directory is **not** one
+  of these roots — it's orphaned content, not part of live skill discovery.
+  Skills are injected into the agent system prompt via
+  `render_skills_prompt_block()`.
 - **Dashboard — backend only.** The CLI's `dashboard` command and the
   frontend (both the old in-package bundle and the repo-root Vite project)
   are gone, but `personas/sakthai/sakthai/dashboard/data.py` was re-added:
@@ -290,54 +246,12 @@ There is no `dashboard.py` here — see the dashboard note below.
   path — aligned with this repo's config-centralization convention. Covered
   by `tests/test_telegram_bot.py` and `tests/test_telegram_workflow_executor.py`.
 
----
-
-## File structure
-
-```text
-Sak-Family-Agent/
-├── personas/sakthai/sakthai/ # Main package (the installable "sakthai" package)
-│   ├── config.py             # Paths & env-var names (single source of truth)
-│   ├── auth.py               # Credential resolution
-│   ├── skills.py             # Skill discovery, parsing, injection
-│   ├── hf.py                 # Hugging Face Hub operations
-│   ├── sakking_skills.py     # Mirror SakKing-learned skills into skills/
-│   ├── agent/
-│   │   ├── loop.py           # run_agent() orchestration
-│   │   ├── tools.py          # BUILTIN_TOOLS registry
-│   │   ├── registry.py       # ToolRegistry class
-│   │   ├── usage.py          # Token tracking
-│   │   └── providers/        # Claude / Gemini / OpenAI / Ollama backends
-│   ├── memory/
-│   │   ├── store.py          # MemoryStore (only SQLite access)
-│   │   ├── provider.py       # System-prompt adapter
-│   │   ├── backup.py         # Timestamped db copy
-│   │   └── sync.py           # Git/HTTP multi-agent sync
-│   ├── mcp/
-│   │   ├── server.py         # Inbound JSON-RPC stdio server
-│   │   ├── client.py         # Outbound stdio client
-│   │   ├── manager.py        # connect_servers() context manager
-│   │   └── servers.py        # MCPServerSpec + spec discovery
-│   ├── cli/                  # Click commands (agent, memory, system, ...)
-│   ├── cycle/                # Dream→Hope→Care→Joy→Trust→Growth state machine
-│   ├── learn/                # capture.py one-shot fact entry
-│   ├── extensions/           # install.py (git-based bundle installer)
-│   ├── dashboard/            # data.py KPI collection (no CLI/frontend); see dashboard note
-│   └── web/                  # HTTP server stub
-├── tests/                    # hermetic test suite, no network
-├── library/                  # 31 curated skills in 11 categories
-├── docs/                     # Architecture & design docs
-├── scripts/                  # Dev utilities (not linted/type-checked)
-├── data/                     # Sample memory exports (JSONL/CSV)
-├── pyproject.toml            # Build config, deps, tool settings
-└── uv.lock                   # Locked deps (used by CI)
-```
 
 ---
 
 ## Tests
 
-Tests live in `tests/` (70 files, ~17,900 lines). All tests are hermetic — no
+Tests live in `tests/` (90 files, ~21,500 lines). All tests are hermetic — no
 network, no GCP credentials. Integration tests that may hit real endpoints
 (Ollama, Anthropic) are marked `@pytest.mark.integration` and self-skip when
 credentials/endpoints are absent; CI excludes them with `-m "not integration"`.
@@ -422,6 +336,8 @@ reach out to a real endpoint. Use `tmp_path` fixtures for file I/O.
 | `OLLAMA_HOST` | Ollama server address (default: `http://127.0.0.1:11434`) |
 | `SAKTHAI_GATEWAY_URL` | Base URL of an OpenAI-compatible AI gateway (OpenRouter/LiteLLM/Vercel/Cloudflare) — enables the `gateway` provider |
 | `SAKTHAI_GATEWAY_API_KEY` | Bearer token for the AI gateway (defaults to `nokey`) |
+| `HF_TOKEN` | Hugging Face access token — used by `sakthai hf` and the `huggingface` provider |
+| `SAKTHAI_HF_API_BASE` | Hugging Face Inference Providers router base URL (default: `https://router.huggingface.co/v1`) |
 | `SAKTHAI_HOME` | Override the `~/.sakthai` root (memory db, sessions, extensions) |
 | `SAKTHAI_READ_ALLOW` | Colon-separated extra paths the `read_file` tool may read |
 | `SAKTHAI_SHELL_ALLOW` | Any non-empty value enables the `run_command` tool |

@@ -1,5 +1,7 @@
 ---
 name: SakSit-b2b-saas-marketing-attribution-2026
+version: 1.0.0
+description: "Saksit B2B Saas Marketing Attribution 2026"
 category: social-media
 domain: B2B SaaS Marketing
 agent: saksit
@@ -15,6 +17,7 @@ description: >
   implementing the triangulation stack (MTA + MMM + Incrementality),
   setting up cookieless tracking infrastructure, and measuring multi-touch
   revenue impact across 6–18 month sales cycles.
+
 ---
 
 # B2B SaaS Marketing Attribution Models (2026)

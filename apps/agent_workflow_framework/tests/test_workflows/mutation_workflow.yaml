@@ -1,0 +1,44 @@
+name: mutation_workflow
+description: Multi-step data mutation and transformation pipeline workflow
+steps:
+  - id: step_init_data
+    action: echo
+    params:
+      user:
+        name: "alice"
+        role: "admin"
+        score: 50
+      tags:
+        - "alpha"
+        - "beta"
+    depends_on: []
+    retry: 0
+
+  - id: step_mutate_user
+    action: transform
+    params:
+      user_obj: "${steps.step_init_data.output.user}"
+      score_boost: 50
+      new_role: "super_admin"
+    depends_on:
+      - step_init_data
+    retry: 0
+
+  - id: step_mutate_tags
+    action: transform
+    params:
+      tags_list: "${steps.step_init_data.output.tags}"
+      add_tag: "gamma"
+    depends_on:
+      - step_init_data
+    retry: 0
+
+  - id: step_aggregate_mutation
+    action: transform
+    params:
+      user_result: "${steps.step_mutate_user.output.updated_user}"
+      tag_result: "${steps.step_mutate_tags.output.updated_tags}"
+    depends_on:
+      - step_mutate_user
+      - step_mutate_tags
+    retry: 0

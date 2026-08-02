@@ -626,7 +626,7 @@ BUILTIN_TOOLS: tuple[Tool, ...] = (
                 },
                 "provider": {
                     "type": "string",
-                    "description": "Optional LLM provider backend (anthropic, google, openai, ollama).",
+                    "description": "Optional LLM provider backend (anthropic, google, openai, ollama, gateway, huggingface).",
                 },
                 "max_iterations": {
                     "type": "integer",

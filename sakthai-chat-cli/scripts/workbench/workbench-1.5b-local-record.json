@@ -1,0 +1,91 @@
+{
+  "type": "workbench_local",
+  "model": "Nanthasit/sakthai-context-1.5b-merged",
+  "load_time_seconds": 10.6,
+  "device": "cpu",
+  "timestamp": "2026-07-05T17:12:45Z",
+  "results": [
+    {
+      "name": "basic_greeting",
+      "passed": true,
+      "response_preview": "Hello! How can I assist you today?",
+      "response_length": 34,
+      "latency_seconds": 13.03,
+      "prompt_tokens": 31,
+      "completion_tokens": 11,
+      "checks": [
+        "non_empty",
+        "substantial"
+      ]
+    },
+    {
+      "name": "tool_call",
+      "passed": true,
+      "response_preview": "Here's a list of recent AI-related news articles:\n\n1. \"AI-powered chatbots can now learn from human emotions\" - The Verge (2023)\n2. \"Google launches new AI tool to help developers build better apps\" - TechCrunch (2023)\n3. \"IBM Watson Health releases new cancer treatment recommendations\" - Forbes (20",
+      "response_length": 889,
+      "latency_seconds": 114.92,
+      "prompt_tokens": 37,
+      "completion_tokens": 237,
+      "checks": [
+        "non_empty",
+        "substantial"
+      ]
+    },
+    {
+      "name": "name_recall",
+      "passed": true,
+      "response_preview": "Your name is Beer.",
+      "response_length": 18,
+      "latency_seconds": 10.26,
+      "prompt_tokens": 45,
+      "completion_tokens": 7,
+      "checks": [
+        "non_empty",
+        "substantial",
+        "name_recall"
+      ]
+    },
+    {
+      "name": "factual_qa",
+      "passed": true,
+      "response_preview": "The capital of Japan is Tokyo.",
+      "response_length": 30,
+      "latency_seconds": 9.63,
+      "prompt_tokens": 28,
+      "completion_tokens": 9,
+      "checks": [
+        "non_empty",
+        "substantial",
+        "correct"
+      ]
+    },
+    {
+      "name": "json_output",
+      "passed": true,
+      "response_preview": "{\"frameworks\": [\"TensorFlow\", \"PyTorch\", \"Scikit-learn\"]}",
+      "response_length": 57,
+      "latency_seconds": 17.56,
+      "prompt_tokens": 41,
+      "completion_tokens": 20,
+      "checks": [
+        "non_empty",
+        "substantial",
+        "valid_json"
+      ]
+    },
+    {
+      "name": "instruction_following",
+      "passed": true,
+      "response_preview": "A transformer is an electrical device that transfers energy between two or more circuits through electromagnetic induction, without the use of moving parts. It consists of at least two coils of wire wound around a common iron core. When current flows through one coil (primary), it creates a magnetic",
+      "response_length": 708,
+      "latency_seconds": 60.26,
+      "prompt_tokens": 29,
+      "completion_tokens": 129,
+      "checks": [
+        "non_empty",
+        "substantial"
+      ]
+    }
+  ],
+  "summary": "6/6 passed"
+}

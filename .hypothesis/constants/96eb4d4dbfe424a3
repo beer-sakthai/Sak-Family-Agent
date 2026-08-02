@@ -1,4 +1,0 @@
-# file: C:\Users\beern\OneDrive\Documents\GitHub\Sak-Family-Agent\sakthai\cli\system.py
-# hypothesis_version: 6.155.7
-
-['\n  1. .env file', '\n  Credentials', '\n  Memory database', '\n  Paths', '.env', '.env file missing', '.env.example', 'ANTHROPIC_API_KEY', 'VIRTUAL_ENV', '[!]', '[+]', '[i]', '[x]', 'anthropic_ok', 'anthropic_source', 'api_key', 'auth', 'auth_token', 'claude_cli', 'cyan', 'db_exists', 'db_writable', 'dir_exists', 'env', 'error', 'gemini_cli_oauth', 'green', 'memory', 'paths', 'ready', 'red', 'required', 'set', 'skills', 'utf-8', 'yellow']

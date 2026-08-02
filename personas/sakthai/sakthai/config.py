@@ -38,13 +38,19 @@ def _find_repo_root(start: Path) -> Path:
 
 
 REPO_ROOT = _find_repo_root(Path(__file__).resolve().parent.parent)
-SKILLS_DIR = REPO_ROOT / "skills"
-LIBRARY_DIR = REPO_ROOT / "library"
 PERSONAS_DIR = REPO_ROOT / "personas"
+SKILLS_DIR = PERSONAS_DIR / "sakthai" / "skills"
+LIBRARY_DIR = PERSONAS_DIR / "shared" / "skills"
 SHARED_SKILLS_DIR = PERSONAS_DIR / "shared" / "skills"
 
-# The six Sak Family personas `sakthai chat --persona` can address.
-PERSONA_NAMES: tuple[str, ...] = ("sakking", "sakthai", "saksee", "saksit", "saktan", "sakjules")
+# Curated skill catalog at the repo root (pre-dates the SakThai-/Sak- naming
+# convention — its skills keep their original lowercase `sakthai-` names).
+# Kept as a distinct discovery root rather than folded into LIBRARY_DIR, which
+# other code already treats as a synonym for SHARED_SKILLS_DIR.
+CURATED_LIBRARY_DIR = REPO_ROOT / "library"
+
+# The five Sak Family personas `sakthai chat --persona` can address.
+PERSONA_NAMES: tuple[str, ...] = ("sakking", "sakthai", "saksee", "saksit", "sakjules")
 
 
 def persona_soul_path(persona: str) -> Path:
@@ -74,6 +80,8 @@ OPTIONAL_ENV_VARS: dict[str, str] = {
     "OLLAMA_HOST": "Ollama host URL (default: http://127.0.0.1:11434)",
     "SAKTHAI_GATEWAY_URL": "Base URL of an OpenAI-compatible AI gateway (OpenRouter, LiteLLM, Vercel, Cloudflare)",
     "SAKTHAI_GATEWAY_API_KEY": "API key/token for the AI gateway (default: nokey)",  # nosec B105 — description text
+    "HF_TOKEN": "Hugging Face access token — used by `sakthai hf` and the `huggingface` provider",  # nosec B105
+    "SAKTHAI_HF_API_BASE": "Hugging Face Inference Providers router base URL (default: https://router.huggingface.co/v1)",
     "SAKTHAI_HOME": "Override the data directory (default: ~/.sakthai)",
     "SAKTHAI_READ_ALLOW": "Extra paths the read_file tool may read (os.pathsep-separated)",
     "SAKTHAI_MCP_CONFIG": "Path to a per-persona mcp.json whose servers override the defaults",
@@ -183,6 +191,16 @@ def openai_api_base() -> str | None:
 def gateway_base_url() -> str | None:
     """Return the AI-gateway base URL, honoring SAKTHAI_GATEWAY_URL."""
     return os.environ.get("SAKTHAI_GATEWAY_URL")
+
+
+def huggingface_api_base() -> str:
+    """Return the Hugging Face Inference Providers router base URL.
+
+    Honors ``SAKTHAI_HF_API_BASE`` for a self-hosted or region-pinned router;
+    defaults to the public router (``https://router.huggingface.co/v1``), which
+    is OpenAI-compatible and fronts every model with a hosted Inference Provider.
+    """
+    return os.environ.get("SAKTHAI_HF_API_BASE", "https://router.huggingface.co/v1").rstrip("/")
 
 
 def sakthai_default_provider() -> str | None:
@@ -327,6 +345,7 @@ def _auth_report() -> dict[str, Any]:
         anthropic_credential_source,
         gateway_credential_source,
         gemini_credential_source,
+        huggingface_credential_source,
         load_gemini_cli_token,
         openai_credential_source,
     )
@@ -335,6 +354,7 @@ def _auth_report() -> dict[str, Any]:
     openai_source = openai_credential_source()
     gemini_source = gemini_credential_source()
     gateway_source = gateway_credential_source()
+    huggingface_source = huggingface_credential_source()
     return {
         "anthropic_source": anthropic_source,
         "anthropic_ok": anthropic_source is not None,
@@ -343,6 +363,8 @@ def _auth_report() -> dict[str, Any]:
         "openai_ok": openai_source is not None,
         "gateway_source": gateway_source,
         "gateway_ok": gateway_source is not None,
+        "huggingface_source": huggingface_source,
+        "huggingface_ok": huggingface_source is not None,
         "gemini_source": gemini_source,
         "gemini_ok": gemini_source is not None,
     }

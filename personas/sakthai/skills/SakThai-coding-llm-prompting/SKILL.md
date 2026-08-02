@@ -1,6 +1,8 @@
 ---
 name: SakThai-coding-llm-prompting
 category: coding
+author: SakThai
+license: MIT
 description: Prompt and structure responses in sakthai-agent-v2's provider-agnostic agent loop — system-prompt assembly, the tool-result feedback cycle, chain-of-thought, and tool-shaped structured outputs. Use when editing the loop, tuning the system prompt, or designing tool/output schemas.
 version: 1.0.0
 platforms:

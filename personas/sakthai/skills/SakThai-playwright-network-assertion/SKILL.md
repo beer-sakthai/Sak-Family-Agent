@@ -1,6 +1,8 @@
 ---
 name: SakThai-playwright-network-assertion
 category: playwright-growth
+author: SakThai
+license: MIT
 description: Add deterministic network-level assertions to automation flows without
   relying solely on page content checks
 version: 1.0.0

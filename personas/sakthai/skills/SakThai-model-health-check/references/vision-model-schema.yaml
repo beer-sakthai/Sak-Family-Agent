@@ -1,0 +1,97 @@
+# Vision / Multimodal Model Health Check Schema
+# Generated 2026-07-30 from Nanthasit/sakthai-vision-7b eval
+# Load with: skill_view(name='sakthai-model-health-check', file_path='references/vision-model-schema.yaml')
+# See SKILL.md section "Multimodal / Vision Model Health Check"
+
+model:
+  id: Nanthasit/sakthai-vision-7b
+  private: false
+  gated: false
+  pipeline_tag: image-to-text
+  library_name: transformers
+  base_model: liuhaotian/LLaVA-1.5-7b
+  architecture: llama (via GGUF)
+  format: GGUF Q4_K_M
+  inference_runtime: llama.cpp (--mmproj flag)
+  sibling_count: 6
+
+metrics:
+  downloads: 186
+  likes: 1
+  download_velocity_per_day: 33.2
+  last_modified: "2026-07-30T20:51:52Z"
+  created_at: "2026-07-25T06:53:59Z"
+  days_since_creation: 5.6
+  # GGUF quantized model file
+  model_file_name: llava-1.5-7b-hf-q4_k_m.gguf
+  model_file_size_bytes: 4081370080
+  model_file_size_human: "3.80 GB"
+  # Vision projector file — REQUIRED for inference
+  mmproj_file_name: mmproj-model-f16.gguf
+  mmproj_file_size_bytes: 624434336
+  mmproj_file_size_human: "595.5 MB"
+  total_storage_bytes: 4705804416
+  total_storage_human: "4.38 GB"
+  model_type: llava-gguf-multimodal
+
+multimodal:
+  supported: true
+  vision_encoder: "CLIP (ViT-L/14, 336×336 via LLaVA projector)"
+  llm_backend: "Vicuna-7B-v1.5 (via llama.cpp GGUF)"
+  projector: "2-layer MLP (CLIP embedding -> LLM token space)"
+  image_input: true
+  supported_tasks:
+    - image-captioning
+    - visual-question-answering
+    - multi-turn-visual-dialogue
+  inference_method: "llama.cpp with --mmproj flag"
+
+cards:
+  model_card_present: true
+  model_card_has_yaml: true
+  model_index_present: false  # Benchmarks typically removed for vision GGUF models
+  eval_results_present: true
+  eval_results_path: .eval_results/health-check-vision-7b.yaml
+
+inference:
+  gated: false
+  disabled: false
+  text_generation_inference_compatible: false
+  inference_ready: true
+  notes: "GGUF format — use llama.cpp, not serverless inference"
+
+benchmarks:
+  source: cardData
+  present: false
+  note: "Vision GGUF models typically don't publish model-index. Benchmarks may be removed intentionally."
+  recommended_eval: Nanthasit/sakthai-bench-v2
+
+space:
+  referenced: Nanthasit/sakthai-vision-demo
+  status: "HTTP 404 — verify with auth token before reporting"
+
+alerts:
+  - type: info
+    message: "Downloads stable — sustained velocity indicates steady interest"
+  - type: warning
+    message: "Referenced demo Space returns HTTP 404 — broken interactive demo limits discovery"
+
+assessments:
+  visibility: public, not gated
+  popularity: "Vision models have lower baseline download velocity than text models — niche audience"
+  benchmark_coverage: "None — no model-index published"
+  concerns:
+    - "Referenced demo Space 404"
+    - "No benchmark data"
+    - "Zero download growth over short check intervals"
+
+health_breakdown:
+  availability: 1.0
+  metadata_completeness: 0.9
+  popularity: 0.19
+  documentation: 0.9
+  eval_results: 0.5
+  inference_ready: 1.0
+
+# Typical health score for well-maintained but low-traffic vision GGUF: 0.85
+health_score: 0.85

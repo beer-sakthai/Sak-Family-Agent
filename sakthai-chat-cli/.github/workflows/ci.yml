@@ -1,0 +1,57 @@
+# This workflow runs the full quality suite on every push and pull request
+# to the main branch. It is the source of truth for the project's quality bar.
+name: CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      # Run the test suite against all supported Python versions.
+      matrix:
+        python-version: ["3.11", "3.12"]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install uv
+        run: pipx install uv
+
+      - name: Install dependencies
+        # Install all optional dependencies to ensure linting/testing tools are present.
+        run: uv sync --all-extras
+
+      - name: Run linters
+        run: |
+          uv run ruff check sakthai tests
+          uv run ruff format --check sakthai tests
+
+      - name: Run static analysis
+        run: |
+          uv run mypy sakthai
+          uv run bandit -c pyproject.toml -r sakthai
+
+      - name: Run tests with coverage
+        run: uv run pytest --cov=sakthai --cov-report=xml tests/
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v7
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          # The coverage floor (fail_under = 85) is enforced by pytest itself;
+          # a failed upload (e.g. no CODECOV_TOKEN secret) must not fail CI.
+          fail_ci_if_error: false

@@ -1,6 +1,8 @@
 ---
 name: SakThai-vllm
 category: mlops
+author: SakThai
+license: MIT
 description: 'vLLM: high-throughput LLM serving, OpenAI API, quantization.'
 version: 1.0.0
 platforms:
