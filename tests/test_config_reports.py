@@ -282,8 +282,7 @@ def test_persona_names_lists_all_six() -> None:
         "saksee",
         "saksit",
         "sakjules",
-        "saktan",
-    ), f"Expected 6 personas, got {len(config.PERSONA_NAMES)}: {config.PERSONA_NAMES}"
+    ), f"Expected 5 personas, got {len(config.PERSONA_NAMES)}: {config.PERSONA_NAMES}"
 
 
 def test_telegram_allowed_user_ids_skips_invalid_chunks(
