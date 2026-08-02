@@ -5,6 +5,7 @@ Tests all attack vectors and defenses identified in the security audit.
 
 import os
 from pathlib import Path
+
 import pytest
 
 from sakthai.agent.security_hardening import (
