@@ -20,12 +20,23 @@ v2 is local-first — the CLI, the agent loop, and the MCP stdio server.
 
 The repository is the shared source workspace for the Sak family with these key conventions:
 
-- **Canonical package:** `personas/shared/sakthai/` (single copy, symlinked from all personas)
-- **Personas:** five agents on disk (`SakThai`, `SakKing`, `SakSee`, `SakSit`, `SakJules`; also `config.PERSONA_NAMES`); **SakThai is lead**. `SakTan` was retired and its
-  persona directory removed from the repo — don't recreate `personas/saktan/`.
-  - Each has `/skills/` with `Sak<Name>-*` prefixed skills (no duplicates, flattened structure)
+- **Canonical package:** `personas/shared/sakthai/` is symlinked from five personas (SakKing,
+  SakSee, SakSit, SakTan, SakJules). **SakThai's own copy, `personas/sakthai/sakthai/`, is not a
+  symlink** — it's the package that's actually installed and run (`pyproject.toml`'s
+  `where = ["personas/sakthai"]`), and it has genuinely diverged from `personas/shared/sakthai/`
+  across several files (`config.py`, `agent/loop.py`, `agent/tools.py`, `auth.py`, `cli/agent.py`,
+  `cli/chat.py`, `skills.py`, `agent/providers/__init__.py`, plus two SakThai-only files). Treat
+  `personas/sakthai/sakthai/` as the real source of truth for anything you're actually running;
+  reconciling the two copies is a known, tracked gap, not yet done.
+- **Personas:** six agents on disk (`SakThai`, `SakKing`, `SakSee`, `SakSit`, `SakJules`, `SakTan`; also `config.PERSONA_NAMES`); **SakThai is lead**.
+  - Each has `/skills/` with `Sak<Name>-*` prefixed skills, one directory per skill directly
+    under `skills/` (no category subdirectories, no duplicate-named skill folders).
+    `sakthai/skills/.archive/` is an intentional exception — retired skills kept for history,
+    excluded from discovery. A skill directory may itself contain a documented "umbrella"
+    sub-skill (see `SakThai-environment-automation`'s `cron-watchdog-self-heal`) accessed via
+    direct file reads rather than the normal skill index.
   - Each has `/config/` with persona-specific config (config.yaml, mcp.json, gateway_voice_mode.json)
-  - Each symlinks to `../shared/sakthai` and `../shared/agent-self-evolution`
+  - Each symlinks to `../shared/sakthai` and `../shared/agent-self-evolution` — except SakThai (see above)
 - **Shared resources:** `personas/shared/` contains sakthai (Python package), agent-self-evolution (template), skills (Sak-* shared skills), model_roster
 - **Skill naming:** `Sak-` prefix for shared skills, `Sak<Name>-` for per-persona skills (enforced by `sakthai skills validate --naming`)
 - **CI scope:** ruff/mypy/bandit/pytest/pylint scopes to `sakthai` core only; gitleaks scans everything (`.gitleaks.toml` allowlists persona docs)
@@ -81,7 +92,12 @@ root with `SAKTHAI_HOME`):
      (repeatable), `--no-mcp`, `--dry-run` (validate config, no API call), `--stream`, `--fast`
      (skip the 6-stage cycle), `--stateless` (don't load/append memory), `--caveman
      lite|full|ultra|wenyan-*` (token-compression skill), `--sandbox` (run inside the
-     `Dockerfile.sandbox` container; only `memory.db` is bind-mounted), `-v/--verbose`
+     `Dockerfile.sandbox` container; only `memory.db` is bind-mounted; not combinable with
+     `--persona`), `--persona <name>` (use that persona's memory shard, inject its SOUL.md
+     as a system-prompt prefix, resolve `--with-skills`/caveman/slash-commands against that
+     persona's own skill overlay instead of SakThai's, auto-load its own `config/mcp.json`
+     when `SAKTHAI_MCP_CONFIG` isn't already set, and default `--model`/`--provider` from its
+     own `config/config.yaml` when those flags are left at their CLI defaults), `-v/--verbose`
    - Server: `mcp` (start MCP stdio server)
    - Cycle: `cycle status|next|set|list`
    - Skills: `skills list|show|validate|create|sync-sakking`
@@ -237,13 +253,19 @@ There is no `dashboard.py` here — see the dashboard note below.
   endpoints, falling back to 403/404 for static requests if it's missing.
 - **`learn/capture.py`** — `learn()` one-shot fact capture used by `sakthai learn`.
 - **`telegram/`** — a standalone `python-telegram-bot` polling bot (`bot.py`,
-  `config.py`, `workflow_executor.py`) that shells out to
-  `python -m sakthai run ... --with-skills <name> --fast --stateless` per
-  `/workflow <name>` command. `telegram/config.py` re-exports
-  `ALLOWED_USER_IDS`/`TELEGRAM_BOT_TOKEN` from the central `config.py`
-  (`telegram_allowed_user_ids()`/`telegram_bot_token()`), and
-  `workflow_executor.py` uses `config.SKILLS_DIR` rather than a hardcoded
-  path — aligned with this repo's config-centralization convention. Covered
+  `config.py`, `workflow_executor.py`). `bot.py`'s `/workflow <name>` handler
+  runs `run_agent()` **in-process** via `asyncio.to_thread` — it does not shell
+  out. `workflow_executor.py`'s `run_workflow()`/`_workflow_command()` (which
+  *do* shell out to `python -m sakthai run ... --with-skills <name> --fast
+  --stateless`) are unit-tested but currently unused by `bot.py` (only
+  `get_available_workflows()` is called from there). `telegram/config.py`
+  re-exports `ALLOWED_USER_IDS`/`TELEGRAM_BOT_TOKEN` from the central
+  `config.py` (`telegram_allowed_user_ids()`/`telegram_bot_token()`).
+  `workflow_executor.py`'s skill discovery is persona-aware: it uses
+  `config.persona_skills_dir(config.sakthai_persona())` when the
+  `SAKTHAI_PERSONA` env var is set (see
+  `infra/vm-agents/env-templates/*.env.example`), falling back to
+  `config.SKILLS_DIR` (SakThai's own overlay) otherwise. Covered
   by `tests/test_telegram_bot.py` and `tests/test_telegram_workflow_executor.py`.
 
 

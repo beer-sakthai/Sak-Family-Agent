@@ -84,7 +84,7 @@ def chat(
     console = Console()
     store = MemoryStore()
     try:
-        with _tool_context(no_mcp=no_mcp, verbose=False) as tools:
+        with _tool_context(no_mcp=no_mcp, verbose=False, persona=persona) as tools:
             run_chat(
                 persona=persona,
                 soul_text=soul_text,

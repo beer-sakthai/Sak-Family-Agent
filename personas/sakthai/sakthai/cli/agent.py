@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 import contextlib
+import os
 import sys
 from collections.abc import Callable, Iterator
 from typing import Any
 
 import click
 
+from .. import config
+from ..agent.chat import load_persona_soul
 from ..agent.loop import (
     DEFAULT_MAX_ITERATIONS,
     DEFAULT_MAX_TOKENS,
@@ -18,23 +21,55 @@ from ..agent.loop import (
     run_agent,
 )
 from ..agent.tools import BUILTIN_TOOLS, Tool
+from ..memory.store import MemoryStore
 from ..skills import resolve_skill_names
 
 
 @contextlib.contextmanager
-def _tool_context(*, no_mcp: bool, verbose: bool) -> Iterator[tuple[Tool, ...]]:
+def _temp_env(key: str, value: str) -> Iterator[None]:
+    """Temporarily set an environment variable, restoring its prior value on exit."""
+    previous = os.environ.get(key)
+    os.environ[key] = value
+    try:
+        yield
+    finally:
+        if previous is None:
+            os.environ.pop(key, None)
+        else:
+            os.environ[key] = previous
+
+
+@contextlib.contextmanager
+def _tool_context(
+    *, no_mcp: bool, verbose: bool, persona: str | None = None
+) -> Iterator[tuple[Tool, ...]]:
     """Yield the tools for a run: built-ins plus any configured MCP servers.
 
     With no servers configured (or ``--no-mcp``) this is just the built-ins and
     spawns nothing. External servers come from ``~/.sakthai/mcp.json`` and
     installed extensions; one that fails to start is skipped, not fatal.
+    ``persona``, when given and ``SAKTHAI_MCP_CONFIG`` isn't already set in the
+    environment, temporarily points that env var at the persona's own
+    ``mcp.json`` (if it exists) for the duration of this run — reuses the
+    existing ``SAKTHAI_MCP_CONFIG``/``mcp_config_override()`` precedence chain
+    in ``mcp/servers.py`` unchanged; an explicitly-set ``SAKTHAI_MCP_CONFIG``
+    always wins.
     """
     if no_mcp:
         yield BUILTIN_TOOLS
         return
     from ..mcp.manager import connect_servers
 
-    with connect_servers() as mcp_tools:
+    mcp_path = config.persona_mcp_config_path(persona) if persona else None
+    override = (
+        mcp_path
+        if mcp_path is not None and mcp_path.is_file() and not os.environ.get("SAKTHAI_MCP_CONFIG")
+        else None
+    )
+    with contextlib.ExitStack() as stack:
+        if override is not None:
+            stack.enter_context(_temp_env("SAKTHAI_MCP_CONFIG", str(override)))
+        mcp_tools = stack.enter_context(connect_servers())
         if mcp_tools and verbose:
             click.echo(f"[mcp] loaded {len(mcp_tools)} external tool(s)", err=True)
         yield (*BUILTIN_TOOLS, *mcp_tools)
@@ -172,6 +207,17 @@ def _run_in_sandbox(
     is_flag=True,
     help="Run inside an isolated Docker container. Enables run_command safely — only memory.db is shared with the host.",
 )
+@click.option(
+    "--persona",
+    type=click.Choice(config.PERSONA_NAMES),
+    default=None,
+    help=(
+        "Run as a specific Sak Family persona: uses that persona's own memory "
+        "shard (~/.sakthai/<persona>/memory.db) and SOUL.md identity, matching "
+        "how each persona already runs in production. Omit to use the default, "
+        "unscoped memory.db (unchanged pre-existing behavior)."
+    ),
+)
 def run(
     task: str,
     model: str,
@@ -188,6 +234,7 @@ def run(
     stateless: bool,
     caveman: str | None,
     sandbox: bool,
+    persona: str | None,
 ) -> None:
     """Run TASK through the standalone SakThai agent.
 
@@ -197,6 +244,20 @@ def run(
     configured correctly (provider, credentials, model, tools) without spending
     any tokens.
     """
+    if persona and sandbox:
+        raise click.UsageError(
+            "--persona is not supported with --sandbox yet "
+            "(the sandbox only bind-mounts the default, unscoped memory.db)."
+        )
+    if persona:
+        # Explicit --model/--provider always win; a persona's own config.yaml
+        # (model.provider/model.default) only fills in when the caller left
+        # them at their CLI defaults.
+        default_provider, default_model = config.persona_model_defaults(persona)
+        if provider is None and default_provider:
+            provider = default_provider
+        if model == DEFAULT_MODEL and default_model:
+            model = default_model
     if sandbox:
         _run_in_sandbox(
             task=task,
@@ -216,10 +277,10 @@ def run(
         )
 
     if dry_run:
-        with _tool_context(no_mcp=no_mcp, verbose=verbose) as tools:
+        with _tool_context(no_mcp=no_mcp, verbose=verbose, persona=persona) as tools:
             report = preflight(model=model, provider=provider, tools=tools)
         _print_preflight(report)
-        resolved, missing = resolve_skill_names(list(with_skills))
+        resolved, missing = resolve_skill_names(list(with_skills), persona=persona)
         if resolved:
             click.echo(f"[dry-run] skills:      {len(resolved)} resolved ({', '.join(resolved)})")
         if not report["runnable"]:
@@ -230,7 +291,7 @@ def run(
             raise click.ClickException(f"Unresolved --with-skills name(s): {', '.join(missing)}")
         return
     if with_skills:
-        _, missing = resolve_skill_names(list(with_skills))
+        _, missing = resolve_skill_names(list(with_skills), persona=persona)
         if missing:
             click.echo(
                 f"warning: skill(s) not found and will be skipped: {', '.join(missing)}",
@@ -243,8 +304,13 @@ def run(
         streamed = True
         click.echo(text, nl=False)
 
+    # A --persona run gets its own memory shard and SOUL.md identity; without
+    # --persona, behavior is unchanged from before this flag existed (no store
+    # passed, run_agent() opens/closes its own default MemoryStore()).
+    persona_store = MemoryStore(config.persona_memory_db_path(persona)) if persona else None
+    system_prompt_prefix = load_persona_soul(persona) if persona else ""
     try:
-        with _tool_context(no_mcp=no_mcp, verbose=verbose) as tools:
+        with _tool_context(no_mcp=no_mcp, verbose=verbose, persona=persona) as tools:
             result = run_agent(
                 task,
                 model=model,
@@ -259,12 +325,18 @@ def run(
                 fast=fast,
                 stateless=stateless,
                 caveman=caveman,
+                store=persona_store,
+                system_prompt_prefix=system_prompt_prefix,
+                persona=persona,
             )
     except AgentError as exc:
         raise click.ClickException(str(exc)) from exc
     except KeyboardInterrupt:
         click.echo("\nInterrupted.", err=True)
         sys.exit(130)
+    finally:
+        if persona_store is not None:
+            persona_store.close()
     if streamed:
         click.echo("")  # terminate the streamed line
     else:
