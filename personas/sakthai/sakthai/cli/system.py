@@ -293,18 +293,11 @@ def web_regen_token() -> None:
                 value=new_token,
                 kind="web_auth",
                 key="bearer_token",
-                tags=["system", "no-export"]
+                tags=["system", "no-export"],
             )
-        # Update server cache
-        try:
-            import sys
-            for mod_name in list(sys.modules.keys()):
-                if mod_name.endswith(".web.server") or mod_name.endswith(".server"):
-                    mod = sys.modules[mod_name]
-                    if hasattr(mod, "_BEARER_TOKEN"):
-                        mod._BEARER_TOKEN = new_token
-        except Exception:
-            pass
+
+        # Update in-process cache so subsequent requests validate against the new token.
+        server._BEARER_TOKEN = new_token
         register_secret(new_token)
         click.echo(click.style("\n── Web API Token Regenerated ──", bold=True))
         click.echo(f"  {_ok()} New bearer token: {click.style(new_token, fg='green', bold=True)}")
