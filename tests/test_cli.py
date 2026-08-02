@@ -1340,7 +1340,9 @@ def test_memory_family_merges_across_persona_shards(runner: CliRunner) -> None:
     assert "sakking family fact" in result.output
 
 
-def test_memory_family_empty_when_no_shards_exist(runner: CliRunner, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_memory_family_empty_when_no_shards_exist(
+    runner: CliRunner, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     monkeypatch.setenv("HERMES_HOME", str(tmp_path / ".sakthai"))
     result = runner.invoke(main, ["memory", "family"])
     assert result.exit_code == 0
