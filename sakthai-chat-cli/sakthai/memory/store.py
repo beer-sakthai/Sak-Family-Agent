@@ -621,9 +621,6 @@ class MemoryStore:
                 ).fetchall()
                 deleted = [_fact_from_row(r) for r in keyed + keyless]
                 if deleted and not dry_run:
-                    self._conn.executemany(
-                        "DELETE FROM facts WHERE id = ?",
-                        [(f.id,) for f in deleted],
                     ids = [f.id for f in deleted]
                     self._conn.execute(
                         "DELETE FROM facts WHERE id IN (SELECT value FROM json_each(?))",
@@ -654,9 +651,6 @@ class MemoryStore:
                 ).fetchall()
                 deleted = [Observation(**dict(r)) for r in rows]
                 if deleted and not dry_run:
-                    self._conn.executemany(
-                        "DELETE FROM observations WHERE id = ?",
-                        [(o.id,) for o in deleted],
                     ids = [o.id for o in deleted]
                     self._conn.execute(
                         "DELETE FROM observations WHERE id IN (SELECT value FROM json_each(?))",
