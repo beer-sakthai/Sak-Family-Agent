@@ -7,7 +7,10 @@ permissions:
   contents: read
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  # pull_request_target: github.ref resolves to the base branch (e.g. refs/heads/main),
+  # so every PR would share one group. Key on the PR number instead so a re-run
+  # cancels only stale runs for the same PR — not other PRs' labeler jobs.
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
   cancel-in-progress: true
 
 jobs:

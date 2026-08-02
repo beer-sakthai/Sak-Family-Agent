@@ -65,10 +65,11 @@ jobs:
         # SonarCloud → SonarQube Cloud rename: `sonarcloud-github-action` is
         # deprecated in favor of `sonarqube-scan-action`, which is the
         # supported entrypoint for both Cloud (`sonar.host.url` unset) and
-        # self-hosted SonarQube. Tag-pinned; Dependabot (github-actions
-        # ecosystem, already configured) will PR SHA bumps.
+        # self-hosted SonarQube. Pinned to v8.2.1 (fixed release for
+        # GHSA-5xq9-5g24-4g6f — argument injection on Windows runners
+        # affects >= 4.0.0, < 6.0.0; @v5 was still vulnerable).
         if: env.SONAR_TOKEN != ''
-        uses: SonarSource/sonarqube-scan-action@v5
+        uses: SonarSource/sonarqube-scan-action@22918119ff8e1ca75a623e15c8296b6ea4fbe28f # v8.2.1
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         with:
