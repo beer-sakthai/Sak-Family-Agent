@@ -23,37 +23,47 @@ from urllib.parse import unquote, urlparse
 logger = logging.getLogger(__name__)
 
 _DEFAULT_HOST = "127.0.0.1"
-_DEFAULT_PORT = 3001
-_LOOPBACK_NAMES = frozenset({"localhost", ""})
+_BEARER_TOKEN: str | None = None
 
 
 def _get_or_create_bearer_token() -> str:
-    """Retrieve or create a bearer token for API authentication.
+    """Retrieve or create an opaque 32-character hex bearer token in MemoryStore."""
+    global _BEARER_TOKEN
+    if _BEARER_TOKEN is not None:
+        return _BEARER_TOKEN
 
-    Checks environment variable SAKTHAI_WEB_TOKEN first, then checks
-    memory database facts table where kind='web_auth' and key='bearer_token'.
-    Falls back to a secure 32-char hex string.
-    """
-    token = os.environ.get("SAKTHAI_WEB_TOKEN")
-    if token:
-        return token
     try:
+        from ..config import register_secret
         from ..memory.store import MemoryStore
+
         with MemoryStore() as store:
-            fact = store.get_fact_by_key("web_auth", "bearer_token")
+            fact = store.get_fact_by_key(kind="web_auth", key="bearer_token")
             if fact:
-                return fact.value
+                _BEARER_TOKEN = fact.value
+                register_secret(_BEARER_TOKEN)
+                return _BEARER_TOKEN
+
+            # Generate new token
             token = secrets.token_hex(16)
+            store.delete_facts_by_key(kind="web_auth", key="bearer_token")
             store.add_fact(
-                token,
+                value=token,
                 kind="web_auth",
                 key="bearer_token",
-                tags=["system", "no-export"]
+                tags=["system", "no-export"],
             )
+            register_secret(token)
+            _BEARER_TOKEN = token
             return token
-    except Exception:
-        # Fallback if DB is not accessible / or during module load
-        return secrets.token_hex(16)
+    except Exception as exc:
+        logger.warning("Failed to get or create bearer token from MemoryStore: %s", exc)
+        if _BEARER_TOKEN is None:
+            _BEARER_TOKEN = secrets.token_hex(16)
+        return _BEARER_TOKEN
+
+
+_DEFAULT_PORT = 3001
+_LOOPBACK_NAMES = frozenset({"localhost"})
 
 
 def _is_loopback_host(host: str) -> bool:
@@ -168,16 +178,26 @@ class _Handler(SimpleHTTPRequestHandler):
         path = parsed.path.rstrip("/") or "/"
 
         if path.startswith("/api/"):
-            expected_token = getattr(self.server, "bearer_token", None)
-            if expected_token:
-                auth = self.headers.get("Authorization", "")
-                if not auth.startswith("Bearer "):
-                    self._send_json(401, {"error": "Unauthorized", "message": "Bearer token required"})
-                    return
-                token = auth[7:]
-                if token != expected_token:
-                    self._send_json(403, {"error": "Forbidden", "message": "Invalid bearer token"})
-                    return
+            auth_header = self.headers.get("Authorization", "")
+            if not auth_header:
+                self._send_json(
+                    401, {"error": "Unauthorized", "message": "Missing Authorization header"}
+                )
+                return
+            if not auth_header.startswith("Bearer "):
+                self._send_json(
+                    401,
+                    {
+                        "error": "Unauthorized",
+                        "message": "Authorization header must be in 'Bearer <token>' format",
+                    },
+                )
+                return
+            token = auth_header[7:]
+            expected_token = _get_or_create_bearer_token()
+            if not secrets.compare_digest(token, expected_token):
+                self._send_json(403, {"error": "Forbidden", "message": "Invalid Bearer token"})
+                return
 
         if path == "/api/stages":
             try:
@@ -220,22 +240,21 @@ class _Handler(SimpleHTTPRequestHandler):
 
 
 def serve(host: str = _DEFAULT_HOST, port: int = _DEFAULT_PORT) -> HTTPServer:
-    # The API endpoints have no authentication and expose personal memory
-    # (recent facts, observations). Refuse a non-loopback bind unless the
-    # operator explicitly acknowledges the exposure, so a stray 0.0.0.0 does not
-    # silently publish memory to the network.
+    # API endpoints require a Bearer token, but the loopback default is
+    # defense-in-depth: personal memory should not be reachable off-host by
+    # default. Require an explicit opt-in for any non-loopback bind.
     if not _is_loopback_host(host) and not os.environ.get("SAKTHAI_WEB_ALLOW_PUBLIC"):
         raise PermissionError(
-            f"Refusing to bind the unauthenticated API to non-loopback host {host!r}. "
-            "It serves personal memory with no auth. Set SAKTHAI_WEB_ALLOW_PUBLIC=1 to "
+            f"Refusing to bind the API to non-loopback host {host!r}. "
+            "It serves personal memory; set SAKTHAI_WEB_ALLOW_PUBLIC=1 to "
             "override once you have placed authentication in front of it."
         )
+    _get_or_create_bearer_token()  # Warm cache & register secret
     # The built dashboard (dashboard/dist) is optional: without it the API
     # endpoints still serve, and static requests fall through to 403/404.
     if _STATIC_ROOT.is_dir():
         os.chdir(str(_STATIC_ROOT))
     server = HTTPServer((host, port), _Handler)
-    server.bearer_token = _get_or_create_bearer_token()
     logger.info("SakThai API listening on http://%s:%d (static=%s)", host, port, _STATIC_ROOT)
     return server
 
