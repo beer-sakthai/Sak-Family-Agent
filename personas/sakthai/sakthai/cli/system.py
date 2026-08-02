@@ -279,7 +279,7 @@ def web_setup() -> None:
                 token,
                 kind="web_auth",
                 key="bearer_token",
-                tags=["system", "no-export"]
+                tags=["system", "no-export"],
             )
             click.echo(f"{_ok()} Web API token generated and saved: {token}")
     except Exception as e:
