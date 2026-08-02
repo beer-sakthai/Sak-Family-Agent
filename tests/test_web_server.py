@@ -13,6 +13,7 @@ import runpy
 import threading
 import urllib.error
 import urllib.request
+from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock, patch
@@ -38,6 +39,35 @@ except ImportError:
 # ---------------------------------------------------------------------------
 # Test server fixture
 # ---------------------------------------------------------------------------
+
+
+@pytest.fixture(autouse=True)
+def reset_web_api_tokens() -> Iterator[None]:
+    try:
+        import sakthai.web.server as server_mod
+
+        server_mod._api_val = None
+    except ImportError:
+        pass
+    try:
+        import scripts.serve_api as standalone_mod
+
+        standalone_mod._api_val = None
+    except ImportError:
+        pass
+    yield
+    try:
+        import sakthai.web.server as server_mod
+
+        server_mod._api_val = None
+    except ImportError:
+        pass
+    try:
+        import scripts.serve_api as standalone_mod
+
+        standalone_mod._api_val = None
+    except ImportError:
+        pass
 
 
 @pytest.fixture(scope="module")
@@ -631,3 +661,84 @@ class TestHandlerEdgePaths:
             assert "generated_at" in api_body
         finally:
             srv.shutdown()
+
+    def test_api_auth_with_configured_token(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        import sys
+        from pathlib import Path
+
+        REPO_ROOT = Path(__file__).resolve().parents[1]
+        if str(REPO_ROOT) not in sys.path:
+            sys.path.insert(0, str(REPO_ROOT))
+
+        import sakthai.web.server as server_mod
+        import scripts.serve_api as standalone_mod
+
+        # Configure environment token
+        monkeypatch.setenv("SAKTHAI_WEB_API_TOKEN", "super-secret-test-token")
+
+        # Reload/re-initialize modules or set the token manually
+        monkeypatch.setattr(server_mod, "_api_val", "super-secret-test-token")
+        monkeypatch.setattr(standalone_mod, "_api_val", "super-secret-test-token")
+
+        # Start the local server
+        srv = HTTPServer(("127.0.0.1", 0), server_mod._Handler)
+        _, port = srv.server_address
+        t = threading.Thread(target=srv.serve_forever, kwargs={"poll_interval": 0.01}, daemon=True)
+        t.start()
+        try:
+            # 1. Request with NO token (should fail with 401)
+            api_url = f"http://127.0.0.1:{port}/api/ecosystem"
+            try:
+                with urllib.request.urlopen(api_url, timeout=30) as resp:
+                    status = resp.status
+            except urllib.error.HTTPError as exc:
+                status = exc.code
+            assert status == 401
+
+            # 2. Request with WRONG token (should fail with 401)
+            req_wrong = urllib.request.Request(api_url)
+            req_wrong.add_header("Authorization", "Bearer wrong-token")
+            try:
+                with urllib.request.urlopen(req_wrong, timeout=30) as resp:
+                    status = resp.status
+            except urllib.error.HTTPError as exc:
+                status = exc.code
+            assert status == 401
+
+            # 3. Request with CORRECT token (should succeed with 200)
+            req_correct = urllib.request.Request(api_url)
+            req_correct.add_header("Authorization", "Bearer super-secret-test-token")
+            with urllib.request.urlopen(req_correct, timeout=30) as resp:
+                status = resp.status
+                body = json.loads(resp.read().decode("utf-8"))
+            assert status == 200
+            assert "generated_at" in body
+        finally:
+            srv.shutdown()
+
+    def test_api_auth_auto_generation_for_public(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        import sakthai.web.server as server_mod
+        import scripts.serve_api as standalone_mod
+
+        # Reset tokens and set SAKTHAI_WEB_ALLOW_PUBLIC
+        monkeypatch.setenv("SAKTHAI_WEB_ALLOW_PUBLIC", "1")
+        monkeypatch.delenv("SAKTHAI_WEB_API_TOKEN", raising=False)
+        monkeypatch.setattr(server_mod, "_api_val", None)
+        monkeypatch.setattr(standalone_mod, "_api_val", None)
+
+        # Trigger serve on non-loopback host (0.0.0.0)
+        with patch("sakthai.web.server.HTTPServer"), patch("sakthai.web.server.os.chdir"):
+            server_mod.serve(host="0.0.0.0", port=9999)
+            # Ensure a secure random token was auto-generated
+            token = server_mod._api_val
+            assert token is not None
+            assert len(token) == 32  # 16-byte hex is 32 chars
+            assert all(c in "0123456789abcdef" for c in token)
+
+        with patch("scripts.serve_api.HTTPServer"), patch("scripts.serve_api.os.chdir"):
+            standalone_mod.serve(host="0.0.0.0", port=9999)
+            token_std = standalone_mod._api_val
+            assert token_std is not None
+            assert len(token_std) == 32
