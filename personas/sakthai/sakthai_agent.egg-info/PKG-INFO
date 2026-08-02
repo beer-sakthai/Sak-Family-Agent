@@ -151,7 +151,7 @@ Beyond the core SakThai Agent, the House of Sak includes specialized agents and 
 
 ### 🤵 ServiceQuoteBot
 
-**ServiceQuoteBot** is a dedicated persona for business quoting and lead capture, designed to streamline customer-facing workflows. It operates in conjunction with SakThai for reasoning and decision support, and SakTan for operational execution. ServiceQuoteBot focuses on understanding customer needs, mapping requests to pricing facts, explaining quotes clearly, and capturing lead details for follow-up. It adheres to principles of pricing from facts, protecting lead information, escalating ambiguity, and maintaining a human-like, trustworthy tone.
+**ServiceQuoteBot** is a dedicated persona for business quoting and lead capture, designed to streamline customer-facing workflows. It operates in conjunction with SakThai for reasoning and decision support, and existing automation/workflow tooling for operational execution. ServiceQuoteBot focuses on understanding customer needs, mapping requests to pricing facts, explaining quotes clearly, and capturing lead details for follow-up. It adheres to principles of pricing from facts, protecting lead information, escalating ambiguity, and maintaining a human-like, trustworthy tone.
 
 ### 📈 Portfolio Optimization Scripts
 
