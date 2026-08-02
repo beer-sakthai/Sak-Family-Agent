@@ -251,3 +251,59 @@ def tools() -> None:
     for tool in BUILTIN_TOOLS:
         click.echo(f"  {_ok()} {tool.name:<22} {tool.description[:66]}")
     click.echo()
+
+
+@click.group()
+def web() -> None:
+    """Web server and API commands."""
+
+
+@web.command("setup")
+def web_setup() -> None:
+    """Initialize and show web API authentication token."""
+    import secrets
+    token = os.environ.get("SAKTHAI_WEB_TOKEN")
+    if token:
+        click.echo(f"{_ok()} Web API token (from env): {token}")
+        return
+
+    from ..memory.store import MemoryStore
+    try:
+        with MemoryStore() as store:
+            fact = store.get_fact_by_key("web_auth", "bearer_token")
+            if fact:
+                click.echo(f"{_ok()} Web API token: {fact.value}")
+                return
+            token = secrets.token_hex(16)
+            store.add_fact(
+                token,
+                kind="web_auth",
+                key="bearer_token",
+                tags=["system", "no-export"]
+            )
+            click.echo(f"{_ok()} Web API token generated and saved: {token}")
+    except Exception as e:
+        click.echo(f"{_err()} Failed to access Memory DB: {e}")
+
+
+@web.command("regen-token")
+@click.confirmation_option(
+    prompt="Are you sure? All existing clients will stop working."
+)
+def regen_token() -> None:
+    """Regenerate the web API bearer token."""
+    import secrets
+    from ..memory.store import MemoryStore
+    try:
+        with MemoryStore() as store:
+            store.delete_facts_by_key("web_auth", "bearer_token")
+            token = secrets.token_hex(16)
+            store.add_fact(
+                token,
+                kind="web_auth",
+                key="bearer_token",
+                tags=["system", "no-export"]
+            )
+            click.echo(f"{_ok()} Web API token regenerated and saved: {token}")
+    except Exception as e:
+        click.echo(f"{_err()} Failed to access Memory DB: {e}")
