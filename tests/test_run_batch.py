@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-import sys
-import json
 import argparse
+import json
+import sys
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -17,7 +17,7 @@ BATCH_DIR = REPO_ROOT / "personas" / "sakthai" / "skills" / "SakThai-comfyui" / 
 if str(BATCH_DIR) not in sys.path:
     sys.path.insert(0, str(BATCH_DIR))
 
-import run_batch
+import run_batch  # noqa: E402
 
 
 @pytest.fixture
@@ -90,7 +90,9 @@ def test_load_and_validate_args_non_dict_sweep(mock_emit_json) -> None:
     )
     result = run_batch.load_and_validate_args(args)
     assert result is None
-    mock_emit_json.assert_called_once_with({"error": "--sweep must be a JSON object {param: [values]}"})
+    mock_emit_json.assert_called_once_with(
+        {"error": "--sweep must be a JSON object {param: [values]}"}
+    )
 
 
 def test_load_and_validate_args_empty_values_sweep(mock_emit_json) -> None:
@@ -102,7 +104,9 @@ def test_load_and_validate_args_empty_values_sweep(mock_emit_json) -> None:
     )
     result = run_batch.load_and_validate_args(args)
     assert result is None
-    mock_emit_json.assert_called_once_with({"error": "--sweep parameters have empty value lists: ['seed']"})
+    mock_emit_json.assert_called_once_with(
+        {"error": "--sweep parameters have empty value lists: ['seed']"}
+    )
 
 
 def test_load_and_validate_args_sweep_warning_ignored(mock_log) -> None:
@@ -114,13 +118,17 @@ def test_load_and_validate_args_sweep_warning_ignored(mock_log) -> None:
     )
     result = run_batch.load_and_validate_args(args)
     assert result == ({}, {"seed": [1, 2]})
-    mock_log.assert_called_once_with("--sweep set; ignoring --count / --randomize-seed (sweep defines the runs)")
+    mock_log.assert_called_once_with(
+        "--sweep set; ignoring --count / --randomize-seed (sweep defines the runs)"
+    )
 
 
 def test_load_workflow_not_found(mock_emit_json) -> None:
     result = run_batch.load_workflow("non_existent_file_999.json")
     assert result is None
-    mock_emit_json.assert_called_once_with({"error": "Workflow not found: non_existent_file_999.json"})
+    mock_emit_json.assert_called_once_with(
+        {"error": "Workflow not found: non_existent_file_999.json"}
+    )
 
 
 def test_load_workflow_invalid_json(tmp_path: Path, mock_emit_json) -> None:
@@ -152,8 +160,15 @@ def test_run_batch_execution_sequential(mock_execute_one, mock_log) -> None:
     ]
 
     results, failures = run_batch.run_batch_execution(
-        runner, workflow, schema, runs,
-        base_dir=base_dir, timeout=10, parallel=1, ws=False, continue_on_error=True
+        runner,
+        workflow,
+        schema,
+        runs,
+        base_dir=base_dir,
+        timeout=10,
+        parallel=1,
+        ws=False,
+        continue_on_error=True,
     )
 
     assert len(results) == 2
@@ -177,8 +192,15 @@ def test_run_batch_execution_parallel(mock_execute_one, mock_log) -> None:
     ]
 
     results, failures = run_batch.run_batch_execution(
-        runner, workflow, schema, runs,
-        base_dir=base_dir, timeout=10, parallel=2, ws=False, continue_on_error=True
+        runner,
+        workflow,
+        schema,
+        runs,
+        base_dir=base_dir,
+        timeout=10,
+        parallel=2,
+        ws=False,
+        continue_on_error=True,
     )
 
     assert len(results) == 2
