@@ -9,7 +9,7 @@ platforms: [linux]
 metadata:
   hermes:
     tags: [tts, elevenlabs, audio, voice, composio, content-production]
-    related_skills: [saksit-milestone-content, saksit-social-media-posting-workflows]
+    related_skills: [SakSit-milestone-content, SakSit-social-media-posting-workflows]
 ---
 
 # SakSit TTS Audio Production
