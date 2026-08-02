@@ -9,9 +9,21 @@ from typing import cast
 
 import click
 
+from .. import config
 from ..learn.capture import learn as learn_fact
 from ..memory.backup import backup_memory
+from ..memory.merged import FamilyMemoryView
 from ..memory.store import Fact, MemoryStore, Observation, snapshot_to_csv, snapshot_to_jsonl
+
+_PERSONA_OPTION_HELP = (
+    "Scope this command to a specific persona's memory shard "
+    "(~/.sakthai/<persona>/memory.db). Omit to use the default, unscoped memory.db."
+)
+
+
+def _open_store(persona: str | None) -> MemoryStore:
+    """Open PERSONA's memory shard, or the default unscoped store if None."""
+    return MemoryStore(config.persona_memory_db_path(persona)) if persona else MemoryStore()
 
 
 def _fact_line(f: Fact) -> str:
@@ -40,12 +52,16 @@ def _obs_line(o: Observation) -> str:
     type=click.Path(exists=True, dir_okay=False, path_type=Path),
     help="Read facts from a text/markdown file (one per line/bullet).",
 )
+@click.option(
+    "--persona", type=click.Choice(config.PERSONA_NAMES), default=None, help=_PERSONA_OPTION_HELP
+)
 def learn(
     value: str | None,
     kind: str,
     key: str | None,
     tags: tuple[str, ...],
     file: Path | None,
+    persona: str | None,
 ) -> None:
     """Add a fact (or a file of facts) to persistent memory."""
     if bool(value) == bool(file):
@@ -53,12 +69,16 @@ def learn(
     tag_list = list(tags) or None
 
     if file is None:
-        fact_id = learn_fact(cast(str, value), kind=kind, key=key, tags=tag_list)
+        if persona:
+            with _open_store(persona) as store:
+                fact_id = store.add_fact(cast(str, value), kind=kind, key=key, tags=tag_list)
+        else:
+            fact_id = learn_fact(cast(str, value), kind=kind, key=key, tags=tag_list)
         click.echo(f"learned (id={fact_id})")
         return
 
     learned: list[int] = []
-    with MemoryStore() as store:
+    with _open_store(persona) as store:
         for raw in file.read_text(encoding="utf-8").splitlines():
             line = raw.strip()
             if not line or line.startswith("#"):
@@ -83,11 +103,14 @@ def learn(
 @click.argument("query", required=False)
 @click.option("--tag", "tag", default=None, help="Recall facts carrying this exact tag.")
 @click.option("--limit", default=20, show_default=True, help="Max results to display.")
-def recall(query: str | None, tag: str | None, limit: int) -> None:
+@click.option(
+    "--persona", type=click.Choice(config.PERSONA_NAMES), default=None, help=_PERSONA_OPTION_HELP
+)
+def recall(query: str | None, tag: str | None, limit: int, persona: str | None) -> None:
     """Recall facts (and observations) matching QUERY, or filter by --tag."""
     if bool(query) == bool(tag):
         raise click.UsageError("Provide exactly one of QUERY or --tag.")
-    with MemoryStore() as store:
+    with _open_store(persona) as store:
         if tag:
             facts = store.search_by_tag(tag, limit=limit)
             obs: list[Observation] = []
@@ -107,15 +130,21 @@ def recall(query: str | None, tag: str | None, limit: int) -> None:
 
 
 @click.group()
-def memory() -> None:
+@click.option(
+    "--persona", type=click.Choice(config.PERSONA_NAMES), default=None, help=_PERSONA_OPTION_HELP
+)
+@click.pass_context
+def memory(ctx: click.Context, persona: str | None) -> None:
     """Inspect and manage persistent memory."""
+    ctx.obj = persona
 
 
 @memory.command("show")
 @click.option("--limit", default=50, show_default=True)
-def memory_show(limit: int) -> None:
+@click.pass_context
+def memory_show(ctx: click.Context, limit: int) -> None:
     """List recent facts and top observations."""
-    with MemoryStore() as store:
+    with _open_store(ctx.obj) as store:
         facts = store.list_facts(limit=limit)
         obs = store.top_observations(limit=limit)
     if not facts and not obs:
@@ -133,9 +162,10 @@ def memory_show(limit: int) -> None:
 
 @memory.command("stats")
 @click.option("--json", "as_json", is_flag=True, help="Emit the raw stats as JSON.")
-def memory_stats(as_json: bool) -> None:
+@click.pass_context
+def memory_stats(ctx: click.Context, as_json: bool) -> None:
     """Show aggregate counts and distributions over memory."""
-    with MemoryStore() as store:
+    with _open_store(ctx.obj) as store:
         data = store.stats()
     if as_json:
         click.echo(json.dumps(data, indent=2, ensure_ascii=False))
@@ -164,9 +194,10 @@ def memory_stats(as_json: bool) -> None:
 @memory.command("search")
 @click.argument("query")
 @click.option("--limit", default=50, show_default=True, help="Max results per section.")
-def memory_search(query: str, limit: int) -> None:
+@click.pass_context
+def memory_search(ctx: click.Context, query: str, limit: int) -> None:
     """Search facts and observations for QUERY."""
-    with MemoryStore() as store:
+    with _open_store(ctx.obj) as store:
         facts, obs = store.search_memory(query, limit=limit)
     if not facts and not obs:
         click.echo(f"no matches found for '{query}'")
@@ -183,36 +214,40 @@ def memory_search(query: str, limit: int) -> None:
 
 @memory.command("forget")
 @click.argument("fact_id", type=int)
-def memory_forget(fact_id: int) -> None:
+@click.pass_context
+def memory_forget(ctx: click.Context, fact_id: int) -> None:
     """Delete a fact by id."""
-    with MemoryStore() as store:
+    with _open_store(ctx.obj) as store:
         ok = store.forget_fact(fact_id)
     click.echo("forgotten" if ok else f"no fact with id {fact_id}")
 
 
 @memory.command("forget-obs")
 @click.argument("obs_id", type=int)
-def memory_forget_obs(obs_id: int) -> None:
+@click.pass_context
+def memory_forget_obs(ctx: click.Context, obs_id: int) -> None:
     """Delete an observation by id."""
-    with MemoryStore() as store:
+    with _open_store(ctx.obj) as store:
         ok = store.forget_observation(obs_id)
     click.echo("forgotten" if ok else f"no observation with id {obs_id}")
 
 
 @memory.command("backup")
-def memory_backup() -> None:
+@click.pass_context
+def memory_backup(ctx: click.Context) -> None:
     """Write a timestamped backup of the memory database."""
     try:
-        dest = backup_memory()
+        dest = backup_memory(db_path=config.persona_memory_db_path(ctx.obj) if ctx.obj else None)
     except FileNotFoundError as exc:
         raise click.ClickException(str(exc)) from exc
     click.echo(f"backup created: {dest}")
 
 
 @memory.command("healthcheck")
-def memory_healthcheck() -> None:
+@click.pass_context
+def memory_healthcheck(ctx: click.Context) -> None:
     """Run a SQLite integrity check."""
-    with MemoryStore() as store:
+    with _open_store(ctx.obj) as store:
         click.echo(f"integrity check: {store.healthcheck()}")
 
 
@@ -227,11 +262,12 @@ def memory_healthcheck() -> None:
     show_default=True,
     help="json restores via `memory import`; csv/jsonl are flat exports.",
 )
-def memory_export(path: Path, force: bool, fmt: str) -> None:
+@click.pass_context
+def memory_export(ctx: click.Context, path: Path, force: bool, fmt: str) -> None:
     """Write a snapshot of facts + observations to PATH."""
     if path.exists() and not force:
         raise click.ClickException(f"{path} already exists. Pass --force to overwrite.")
-    with MemoryStore() as store:
+    with _open_store(ctx.obj) as store:
         snapshot = store.export_to_dict()
     if fmt == "csv":
         payload = snapshot_to_csv(snapshot)
@@ -251,7 +287,8 @@ def memory_export(path: Path, force: bool, fmt: str) -> None:
 @click.argument("path", type=click.Path(exists=True, dir_okay=False, path_type=Path))
 @click.option("--replace", is_flag=True, help="Wipe memory first (preserves snapshot IDs).")
 @click.option("--yes", is_flag=True, help="Skip the --replace confirmation prompt.")
-def memory_import(path: Path, replace: bool, yes: bool) -> None:
+@click.pass_context
+def memory_import(ctx: click.Context, path: Path, replace: bool, yes: bool) -> None:
     """Restore facts + observations from a JSON snapshot at PATH."""
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
@@ -264,7 +301,7 @@ def memory_import(path: Path, replace: bool, yes: bool) -> None:
         )
     mode = "replace" if replace else "merge"
     try:
-        with MemoryStore() as store:
+        with _open_store(ctx.obj) as store:
             n_facts, n_obs = store.import_from_dict(data, mode=mode)
     except ValueError as exc:
         raise click.ClickException(f"invalid snapshot: {exc}") from exc
@@ -275,9 +312,10 @@ def memory_import(path: Path, replace: bool, yes: bool) -> None:
 @click.option(
     "--age", default=86400, show_default=True, type=int, help="Fold facts older than AGE seconds."
 )
-def memory_consolidate(age: int) -> None:
+@click.pass_context
+def memory_consolidate(ctx: click.Context, age: int) -> None:
     """Fold older facts into a single observation."""
-    with MemoryStore() as store:
+    with _open_store(ctx.obj) as store:
         n = store.consolidate_facts(age_seconds=age)
     click.echo(
         f"consolidated {n} older fact(s) into a new observation"
@@ -303,7 +341,8 @@ _CONSOLIDATE_PROMPT = (
 @memory.command("consolidate-sessions")
 @click.option("--limit", default=10, show_default=True, type=int, help="Max sessions to process.")
 @click.option("--model", default=None, help="Model override for the extraction LLM.")
-def memory_consolidate_sessions(limit: int, model: str | None) -> None:
+@click.pass_context
+def memory_consolidate_sessions(ctx: click.Context, limit: int, model: str | None) -> None:
     """Mine local session logs for durable facts and learn them.
 
     Reads agent session logs from ``sessions_dir()``, asks an LLM to extract
@@ -336,7 +375,7 @@ def memory_consolidate_sessions(limit: int, model: str | None) -> None:
     extraction_model = model or DEFAULT_MODEL
     learned = 0
 
-    with MemoryStore() as store:
+    with _open_store(ctx.obj) as store:
         for f in pending:
             try:
                 data = json.loads(f.read_text(encoding="utf-8"))
@@ -383,11 +422,12 @@ def memory_consolidate_sessions(limit: int, model: str | None) -> None:
 @memory.command("deduplicate")
 @click.option("--dry-run", "-n", is_flag=True, help="Report duplicates without deleting.")
 @click.option("--verbose", "-v", is_flag=True, help="Print every pruned row.")
-def memory_deduplicate(dry_run: bool, verbose: bool) -> None:
+@click.pass_context
+def memory_deduplicate(ctx: click.Context, dry_run: bool, verbose: bool) -> None:
     """Find and remove duplicate facts and observations."""
     from ..memory.store import Fact, Observation
 
-    with MemoryStore() as store:
+    with _open_store(ctx.obj) as store:
         facts = cast(list[Fact], store.deduplicate_facts(detailed=True, dry_run=dry_run))
         obs = cast(
             list[Observation], store.deduplicate_observations(detailed=True, dry_run=dry_run)
@@ -410,6 +450,56 @@ def memory_deduplicate(dry_run: bool, verbose: bool) -> None:
         click.echo("No duplicate observations found.")
 
 
+@memory.command("family")
+@click.option("--limit", default=50, show_default=True, help="Max facts/observations to display.")
+@click.option(
+    "--personas",
+    "personas",
+    default=None,
+    help="Comma-separated personas to include (default: all six).",
+)
+@click.option("--json", "as_json", is_flag=True, help="Emit the merged view as JSON.")
+def memory_family(limit: int, personas: str | None, as_json: bool) -> None:
+    """Show the merged, deduplicated view across every persona's memory shard.
+
+    Read-only: opens each persona's own shard (skipping any that don't exist
+    yet) plus the legacy unscoped memory.db for backward compatibility, and
+    merges facts/observations across all of them, tagging each with its
+    origin persona. To write, use `sakthai learn --persona <name>` against a
+    specific persona's own shard instead.
+    """
+    persona_list = [p.strip() for p in personas.split(",") if p.strip()] if personas else None
+    with FamilyMemoryView(personas=persona_list) as view:
+        facts = view.list_facts(limit=limit)
+        obs = view.top_observations(limit=limit)
+
+    if as_json:
+        click.echo(
+            json.dumps(
+                {
+                    "facts": [{"persona": sf.persona, **vars(sf.fact)} for sf in facts],
+                    "observations": [{"persona": so.persona, **vars(so.observation)} for so in obs],
+                },
+                indent=2,
+                ensure_ascii=False,
+                default=str,
+            )
+        )
+        return
+
+    if not facts and not obs:
+        click.echo("(no persona has any memory yet)")
+        return
+    if facts:
+        click.echo(f"# Facts ({len(facts)})")
+        for sf in facts:
+            click.echo(f"  [{sf.persona}] {_fact_line(sf.fact).strip()}")
+    if obs:
+        click.echo(f"# Observations ({len(obs)})")
+        for so in obs:
+            click.echo(f"  [{so.persona}] {_obs_line(so.observation).strip()}")
+
+
 @memory.command("sync")
 @click.option("--remote", default=None, help="Git remote URL to push the snapshot to.")
 @click.option("--http-url", default=None, help="HTTP URL to POST the snapshot to (fallback mode).")
@@ -419,10 +509,20 @@ def memory_deduplicate(dry_run: bool, verbose: bool) -> None:
     is_flag=True,
     help="Regenerate supermemory canonicals (near-dedup) before syncing.",
 )
+@click.pass_context
 def memory_sync(
-    remote: str | None, http_url: str | None, http_key: str | None, supermemory: bool
+    ctx: click.Context,
+    remote: str | None,
+    http_url: str | None,
+    http_key: str | None,
+    supermemory: bool,
 ) -> None:
     """Synchronize memory to a remote Git repository or HTTP endpoint."""
+    if ctx.obj:
+        raise click.UsageError(
+            "--persona is not supported with `memory sync` yet "
+            "(git/HTTP sync always targets the unscoped memory.db)."
+        )
     from ..memory.sync import sync_memory_to_git, sync_memory_via_http
 
     try:
@@ -449,8 +549,14 @@ def memory_sync(
 
 @memory.command("pull")
 @click.option("--remote", default=None, help="Git remote URL to fetch the snapshot from.")
-def memory_pull(remote: str | None) -> None:
+@click.pass_context
+def memory_pull(ctx: click.Context, remote: str | None) -> None:
     """Fetch a Git remote and merge its facts/observations into local memory."""
+    if ctx.obj:
+        raise click.UsageError(
+            "--persona is not supported with `memory pull` yet "
+            "(git sync always targets the unscoped memory.db)."
+        )
     from ..memory.sync import pull_memory_from_git
 
     try:

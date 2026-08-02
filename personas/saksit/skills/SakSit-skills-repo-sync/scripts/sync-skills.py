@@ -7,6 +7,13 @@ Extracts GitHub PAT from /opt/data/.git-credentials (first line).
 Does content comparison via base64 — only pushes changed files.
 """
 import json, base64, os, sys, urllib.request, urllib.error
+
+import base64
+import json
+import os
+import sys
+import urllib.error
+import urllib.request
 from datetime import date
 from urllib.parse import urlparse
 
@@ -34,6 +41,17 @@ def get_token():
                     return token.replace("@github.com", "").strip()
     except Exception:
         pass
+                if parsed.hostname != "github.com":
+                    continue
+                if "x-access-token:" in line:
+                    token = line.split("x-access-token:")[1]
+                elif "@github.com" in line:
+                    token = line.split("@github.com")[0].split(":", 2)[-1]
+                else:
+                    continue
+                return token.replace("@github.com", "").strip()
+    except OSError as e:
+        print(f"Warning: unable to read /opt/data/.git-credentials: {e}", file=sys.stderr)
     return None
 
 
@@ -43,6 +61,12 @@ def gh_api(token, method, path, data=None):
     req = urllib.request.Request(url, data=body, method=method,
                                  headers={"Authorization": f"Bearer {token}",
                                           "Accept": "application/vnd.github.v3+json"})
+    req = urllib.request.Request(
+        url,
+        data=body,
+        method=method,
+        headers={"Authorization": f"Bearer {token}", "Accept": "application/vnd.github.v3+json"},
+    )
     if body:
         req.add_header("Content-Type", "application/json")
     try:
@@ -59,6 +83,7 @@ def gh_api(token, method, path, data=None):
 def collect_files():
     files = []
     for root, dirs, filenames in os.walk(SKILLS_BASE):
+    for root, _dirs, filenames in os.walk(SKILLS_BASE):
         if "SKILL.md" in filenames:
             local = os.path.join(root, "SKILL.md")
             remote = local.replace(f"{SKILLS_BASE}/", "")
@@ -117,6 +142,7 @@ def main():
 
         put = {"message": f"SakSit: sync {name} — {date.today()}",
                "content": b64}
+        put = {"message": f"SakSit: sync {name} — {date.today()}", "content": b64}
         if sha:
             put["sha"] = sha
 
@@ -126,11 +152,13 @@ def main():
             pushed += 1
         else:
             print(f"  ❌ {remote}: {st} — {res.get('message','')}")
+            print(f"  ❌ {remote}: {st} — {res.get('message', '')}")
             failed.append(remote)
 
     st, tree = gh_api(token, "GET", "git/trees/main?recursive=1")
     if st == 200:
         print(f"\nRepo: {len(tree.get('tree',[]))} entries on main")
+        print(f"\nRepo: {len(tree.get('tree', []))} entries on main")
     print(f"\nPushed: {pushed} | Skipped: {skipped} | Failed: {len(failed)}")
     return pushed, skipped, failed
 

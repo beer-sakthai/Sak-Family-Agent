@@ -89,6 +89,20 @@ The composed tree is byte-for-byte identical to the persona's
 pre-consolidation `skills/` directory. `compose_persona.py --check EXPECTED`
 verifies a composed tree against a snapshot.
 
+## Memory
+
+Each persona gets its own memory shard, `~/.sakthai/<persona>/memory.db`,
+separate from the legacy unscoped `~/.sakthai/memory.db`. On the VM deployment
+this falls out of `infra/vm-agents/sakthai-agent-run.sh` setting
+`SAKTHAI_HOME=$HOME/.sakthai/$AGENT` per persona process; for local dev, pass
+`--persona <name>` to `learn`/`recall`/`run`/`chat`/`memory <subcommand>`
+instead of exporting `SAKTHAI_HOME` yourself. `sakthai memory family` opens a
+read-only, deduplicated view across every persona's shard at once (`--personas
+a,b,c` to scope it) — useful for seeing what the family collectively knows
+without picking one persona's point of view. Full details, including why
+`memory sync`/`memory pull`/`run --sandbox` don't accept `--persona`, are in
+`CLAUDE.md`'s "Per-persona memory sharding" section.
+
 ## How to add or change a skill
 
 Place or edit the skill directly under the respective `personas/<name>/skills/` folder so it is picked up by that specific agent at runtime.

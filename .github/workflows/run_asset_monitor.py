@@ -1,13 +1,118 @@
+import ipaddress
 import os
+import socket
 import subprocess
 import sys
+from urllib.parse import urlparse
+
+
+def is_safe_url(url: str) -> tuple[bool, str | None, int | None, str | None]:
+    """
+    Validates a URL against SSRF vulnerabilities.
+    Returns (is_safe, hostname, port, resolved_ip).
+    """
+    try:
+        parsed = urlparse(url)
+        scheme = parsed.scheme.lower()
+        if scheme not in ("http", "https"):
+            print(f"Rejected URL scheme: {scheme}", file=sys.stderr)
+            return False, None, None, None
+
+        hostname = parsed.hostname
+        if not hostname:
+            print("Rejected URL: empty or missing hostname", file=sys.stderr)
+            return False, None, None, None
+
+        port = parsed.port
+        if not port:
+            port = 443 if scheme == "https" else 80
+
+        # Try to parse hostname as IP address directly first
+        try:
+            ip = ipaddress.ip_address(hostname)
+            if (
+                ip.is_private
+                or ip.is_loopback
+                or ip.is_link_local
+                or ip.is_unspecified
+                or ip.is_reserved
+                or ip.is_multicast
+            ):
+                print(f"Rejected IP address (private/loopback/reserved): {ip}", file=sys.stderr)
+                return False, None, None, None
+            return True, hostname, port, str(ip)
+        except ValueError:
+            # Not a direct IP address, let's resolve the hostname
+            pass
+
+        try:
+            addr_info = socket.getaddrinfo(hostname, port, proto=socket.IPPROTO_TCP)
+        except socket.gaierror as e:
+            print(f"Failed to resolve hostname '{hostname}': {e}", file=sys.stderr)
+            return False, None, None, None
+
+        resolved_ips = []
+        for res in addr_info:
+            ip_str = res[4][0]
+            try:
+                ip = ipaddress.ip_address(ip_str)
+                if (
+                    ip.is_private
+                    or ip.is_loopback
+                    or ip.is_link_local
+                    or ip.is_unspecified
+                    or ip.is_reserved
+                    or ip.is_multicast
+                ):
+                    print(
+                        f"Rejected resolved IP address (private/loopback/reserved) for {hostname}: {ip}",
+                        file=sys.stderr,
+                    )
+                    return False, None, None, None
+                resolved_ips.append(str(ip))
+            except ValueError:
+                print(f"Failed to parse IP address: {ip_str}", file=sys.stderr)
+                return False, None, None, None
+
+        if not resolved_ips:
+            print(f"No valid IP addresses resolved for hostname '{hostname}'", file=sys.stderr)
+            return False, None, None, None
+
+        return True, hostname, port, resolved_ips[0]
+
+    except Exception as e:
+        print(f"Error during URL safety validation: {e}", file=sys.stderr)
+        return False, None, None, None
 
 
 def verify_url(url: str, label: str) -> bool:
-    """Return True if `url` responds with HTTP 200, False otherwise."""
+    """Return True if `url` is safe and responds with HTTP 200, False otherwise."""
+    is_safe, hostname, port, resolved_ip = is_safe_url(url)
+    if not is_safe or not hostname or not port or not resolved_ip:
+        print(f"Blocked unsafe URL or validation failed for {label} ({url})", file=sys.stderr)
+        return False
+
     try:
+        host_for_resolve = f"[{hostname}]" if ":" in hostname else hostname
+        addr_for_resolve = f"[{resolved_ip}]" if ":" in resolved_ip else resolved_ip
+        resolve_arg = f"{host_for_resolve}:{port}:{addr_for_resolve}"
+
+        # Pinned DNS resolution to avoid DNS rebinding via curl's --resolve parameter.
+        # Restrict protocols to only http/https using --proto.
         result = subprocess.run(
-            ["curl", "-s", "-o", "/dev/null", "-w", "%{http_code}", url],
+            [
+                "curl",
+                "-s",
+                "-o",
+                "/dev/null",
+                "-w",
+                "%{http_code}",
+                "--proto",
+                "-all,http,https",
+                "--resolve",
+                resolve_arg,
+                url,
+            ],
             capture_output=True,
             text=True,
             check=True,
@@ -20,7 +125,6 @@ def verify_url(url: str, label: str) -> bool:
 
 
 # We will simulate the telegram tool here for local execution and clarity.
-# We will simulate it here for local execution and clarity.
 def send_telegram_message(chat_id: str, message: str):
     """
     Simulates calling an external 'telegram' tool to send a message.
@@ -31,8 +135,6 @@ def send_telegram_message(chat_id: str, message: str):
     print(f"TO: {chat_id}")
     print(f"MESSAGE: {message}")
     print("-------------------------------")
-    # In a real environment, you might use:
-    # subprocess.run(['telegram', 'send', '--chat_id', chat_id, '--text', message], check=True)
 
 
 def main():
