@@ -1,3 +1,11 @@
+<<<<<<< HEAD
+# Sentinel's Journal
+
+## 2026-07-26 - [CRITICAL] Web API Exposing Personal Memory Under Public Binding
+**Vulnerability:** SAKTHAI_WEB_ALLOW_PUBLIC=1 permitted binding the unauthenticated Web API server to non-loopback network interfaces, exposing personal memory, recent facts, and observations to the network with zero authentication.
+**Learning:** Defaulting to local loopback binds prevents accidental exposure, but lacks defense-in-depth once public binding is enabled. Standardizing token authentication on the HTTP request handler level protects the API under any binding configuration.
+**Prevention:** Always implement Bearer Token authentication on standard library HTTP request handlers, and store security tokens inside the MemoryStore facts table under `kind='web_auth'` and `key='bearer_token'` for secure rotation and retrieval.
+=======
 ## 2025-07-26 - Empty Host Loopback Binding Bypass
 **Vulnerability:** Python's socket and HTTP/HTTPS servers treat an empty string `""` as `INADDR_ANY` (binding to all interfaces, equivalent to `0.0.0.0`). Classifying `""` as loopback-only allows unauthenticated servers to be exposed publicly to the network.
 **Learning:** Checking host values against `_LOOPBACK_NAMES = frozenset({"localhost", ""})` created a security loophole where passing `""` allowed the unauthenticated server to bypass the loopback restriction check and listen publicly on all interfaces.
@@ -23,3 +31,4 @@
 **Vulnerability:** The asset verification script `verify_hf_upload.py` executed `curl` with arbitrary user-supplied command-line URL parameters without schema restrictions, hostname validation, or option validation. This could lead to: (1) option smuggling / parameter injection into curl subprocesses, (2) Server-Side Request Forgery (SSRF) targeting loopback or private network infrastructure, and (3) DNS rebinding to bypass IP blocklists.
 **Learning:** Utilities running within automated CI/CD pipelines (such as GitHub Actions) often bypass standard input sanitization layers, making them prime targets for credential extraction, SSRF, or local resource exposure. Subprocesses running command-line requests must treat all external parameters defensively, resolving and validating hostnames to ensure requests do not access non-public, local, or multicast IP addresses.
 **Prevention:** Always restrict schemes strictly to `http` or `https` and block leading hyphens (`-`) to neutralize option smuggling. Perform DNS resolution via `socket.getaddrinfo` and parse results via `ipaddress.ip_address` to reject multicast and non-global IPs before making requests. Securely pin host resolution using curl's `--resolve` parameter to prevent DNS rebinding attacks between DNS lookup and curl execution.
+>>>>>>> origin/main

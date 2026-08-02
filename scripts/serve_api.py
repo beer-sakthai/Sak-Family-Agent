@@ -15,6 +15,7 @@ import ipaddress
 import json
 import logging
 import os
+import secrets
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 from pathlib import Path
 from typing import Any
@@ -81,6 +82,41 @@ def _get_or_create_bearer_token() -> str:
             import secrets
             _BEARER_TOKEN = secrets.token_hex(16)
         return _BEARER_TOKEN
+
+
+def _get_or_create_bearer_token() -> str:
+    """Retrieve or create a bearer token for API authentication.
+
+    Checks environment variable SAKTHAI_WEB_TOKEN first, then checks
+    memory database facts table where kind='web_auth' and key='bearer_token'.
+    Falls back to a secure 32-char hex string.
+    """
+    token = os.environ.get("SAKTHAI_WEB_TOKEN")
+    if token:
+        return token
+    try:
+        import sys
+        REPO_ROOT = (Path(__file__).resolve().parent.parent).resolve()
+        if str(REPO_ROOT / "personas" / "sakthai") not in sys.path:
+            sys.path.insert(0, str(REPO_ROOT / "personas" / "sakthai"))
+        if str(REPO_ROOT) not in sys.path:
+            sys.path.insert(0, str(REPO_ROOT))
+        from sakthai.memory.store import MemoryStore
+        with MemoryStore() as store:
+            fact = store.get_fact_by_key("web_auth", "bearer_token")
+            if fact:
+                return fact.value
+            token = secrets.token_hex(16)
+            store.add_fact(
+                token,
+                kind="web_auth",
+                key="bearer_token",
+                tags=["system", "no-export"]
+            )
+            return token
+    except Exception:
+        # Fallback if DB is not accessible / or during module load
+        return secrets.token_hex(16)
 
 
 def _dashboard_data(days: int = 30) -> dict[str, Any]:
@@ -165,6 +201,18 @@ class _Handler(SimpleHTTPRequestHandler):
         path = parsed.path.rstrip("/") or "/"
 
         if path.startswith("/api/"):
+<<<<<<< HEAD
+            expected_token = getattr(self.server, "bearer_token", None)
+            if expected_token:
+                auth = self.headers.get("Authorization", "")
+                if not auth.startswith("Bearer "):
+                    self._json(401, {"error": "Unauthorized", "message": "Bearer token required"})
+                    return
+                token = auth[7:]
+                if token != expected_token:
+                    self._json(403, {"error": "Forbidden", "message": "Invalid bearer token"})
+                    return
+=======
             auth_header = self.headers.get("Authorization", "")
             if not auth_header:
                 self._json(401, {"error": "Unauthorized", "message": "Missing Authorization header"})
@@ -178,6 +226,7 @@ class _Handler(SimpleHTTPRequestHandler):
             if not secrets.compare_digest(token, expected_token):
                 self._json(403, {"error": "Forbidden", "message": "Invalid Bearer token"})
                 return
+>>>>>>> origin/main
 
         if path == "/api/stages":
             try:
@@ -232,6 +281,7 @@ def serve(host: str = _HOST, port: int = _PORT) -> HTTPServer:
     _get_or_create_bearer_token()  # Warm cache & register secret
     os.chdir(str(WEB_DIR))
     srv = HTTPServer((host, port), _Handler)
+    srv.bearer_token = _get_or_create_bearer_token()
     logging.getLogger(__name__).info("SakThai API on http://%s:%d  static=%s", host, port, WEB_DIR)
     return srv
 
