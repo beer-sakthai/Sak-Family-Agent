@@ -117,10 +117,10 @@ Root directory of `Sak-Family-Agent/` has accumulated scratch files that belong 
 - `hf_embed_check.json` (0 bytes) — empty placeholder
 
 ### Steps for SakJules
-1. Move 5 Python scripts to `scripts/`
-2. Move 2 non-empty JSON files to `data/`
-3. Remove 3 empty placeholder JSON files
-4. Update any references in scripts that import these files
+1. [x] Move 5 Python scripts to `scripts/` — 2026-08-02
+2. [x] Move 2 non-empty JSON files to `data/` — 2026-08-02
+3. [x] Remove 3 empty placeholder JSON files — 2026-08-02
+4. [x] Update any references in scripts that import these files — 2026-08-02
 
 ### Verification
 1. `ls *.py *.json` at root → nothing
