@@ -12,7 +12,7 @@ For every persona it verifies, offline and with zero token spend:
   4. the zero-cost agent preflight resolves (`run --dry-run --no-mcp`);
   5. shared memory round-trips (`learn` -> `recall`);
   6. its Hermes profile scaffold exists (infra/hermes-agents/default/ for
-     SakKing's reserved default profile, infra/hermes-agents/profiles/<name>/
+     SakThai's reserved default profile, infra/hermes-agents/profiles/<name>/
      for the other five) with a SOUL.md and config.yaml.
 It also reports naming-convention drift per overlay (a warning — the bulk rename
 is deferred to scripts/rename_skills.py).
@@ -85,10 +85,11 @@ def persona_mcp_config_path(persona: str) -> Path:
 def hermes_profile_dir(persona: str) -> Path:
     """Return the repo-tracked Hermes profile scaffold dir for PERSONA.
 
-    SakKing uses the reserved default profile (infra/hermes-agents/default/);
-    the other five each have their own infra/hermes-agents/profiles/<name>/.
+    SakThai (lead, per CLAUDE.md) uses the reserved default profile
+    (infra/hermes-agents/default/); the other five each have their own
+    infra/hermes-agents/profiles/<name>/.
     """
-    if persona == "sakking":
+    if persona == "sakthai":
         return HERMES_AGENTS_DIR / "default"
     return HERMES_AGENTS_DIR / "profiles" / persona
 

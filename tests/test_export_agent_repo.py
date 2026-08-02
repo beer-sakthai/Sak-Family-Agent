@@ -81,17 +81,22 @@ def source_tree(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     )
     (root / "infra" / "hermes-agents" / "profiles" / "sakking").mkdir(parents=True)
     (root / "infra" / "hermes-agents" / "profiles" / "sakking" / "SOUL.md").write_text(
-        "Other profile", encoding="utf-8"
+        "SakKing profile soul", encoding="utf-8"
+    )
+    (root / "infra" / "hermes-agents" / "profiles" / "sakking" / "config.yaml").write_text(
+        "model:\n  provider: huggingface\n", encoding="utf-8"
     )
     (root / "infra" / "hermes-agents" / "default").mkdir(parents=True)
     (root / "infra" / "hermes-agents" / "default" / "SOUL.md").write_text(
-        "SakKing default profile soul", encoding="utf-8"
+        "SakThai default profile soul", encoding="utf-8"
     )
     (root / "infra" / "hermes-agents" / "default" / "config.yaml").write_text(
         "model:\n  provider: huggingface\n", encoding="utf-8"
     )
     (root / "personas" / "sakking").mkdir(parents=True)
     (root / "personas" / "sakking" / "SOUL.md").write_text("SakKing soul", encoding="utf-8")
+    (root / "personas" / "sakthai").mkdir(parents=True)
+    (root / "personas" / "sakthai" / "SOUL.md").write_text("SakThai soul", encoding="utf-8")
     (root / "infra" / "hermes-agents" / "systemd").mkdir(parents=True)
     (root / "infra" / "hermes-agents" / "systemd" / "hermes-gateway-sakjules.service").write_text(
         "sakjules service", encoding="utf-8"
@@ -206,13 +211,33 @@ def test_export_creates_sakking_specific_repo(
     out = tmp_path / "out"
 
     assert (out / "SOUL.md").read_text(encoding="utf-8") == "SakKing soul"
-    assert (out / "infra" / "hermes-agents" / "default" / "SOUL.md").is_file()
-    assert (out / "infra" / "hermes-agents" / "default" / "config.yaml").is_file()
-    # SakKing's own export keeps its default/ profile but still isn't itself
-    # listed under profiles/ (it never was in this fixture).
+    assert (out / "infra" / "hermes-agents" / "profiles" / "sakking" / "SOUL.md").is_file()
+    assert (out / "infra" / "hermes-agents" / "profiles" / "sakking" / "config.yaml").is_file()
+    # SakKing is a regular profile now (SakThai holds the reserved default/
+    # profile, per CLAUDE.md's "SakThai is lead") — its export must not carry
+    # default/ or any other persona's profile.
+    assert not (out / "infra" / "hermes-agents" / "default").exists()
     assert not (out / "infra" / "hermes-agents" / "profiles" / "sakjules").exists()
     assert not (out / "infra" / "hermes-agents" / "profiles" / "saktan").exists()
     assert "exported sakking ->" in capsys.readouterr().out
+
+
+def test_export_creates_sakthai_specific_repo(
+    source_tree: Path, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    exit_code = export_agent_repo.main(["sakthai", "--out", str(tmp_path / "out")])
+    assert exit_code == 0
+    out = tmp_path / "out"
+
+    assert (out / "SOUL.md").read_text(encoding="utf-8") == "SakThai soul"
+    # SakThai (lead, per CLAUDE.md) uses the reserved default/ profile, not a
+    # named profiles/sakthai/ directory.
+    assert (out / "infra" / "hermes-agents" / "default" / "SOUL.md").is_file()
+    assert (out / "infra" / "hermes-agents" / "default" / "config.yaml").is_file()
+    assert not (out / "infra" / "hermes-agents" / "profiles" / "sakking").exists()
+    assert not (out / "infra" / "hermes-agents" / "profiles" / "sakjules").exists()
+    assert not (out / "infra" / "hermes-agents" / "profiles" / "saktan").exists()
+    assert "exported sakthai ->" in capsys.readouterr().out
 
 
 def test_export_creates_saktan_specific_repo(

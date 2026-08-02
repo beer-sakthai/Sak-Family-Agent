@@ -1,1 +1,0 @@
-../../../../personas/sakthai/SOUL.md
