@@ -93,11 +93,17 @@ def verify_url(url: str, label: str) -> bool:
         return False
 
     try:
+<<<<<<< HEAD
         # Format resolved IP correctly for IPv6 if needed
         if ":" in resolved_ip:
             resolve_arg = f"{hostname}:{port}:[{resolved_ip}]"
         else:
             resolve_arg = f"{hostname}:{port}:{resolved_ip}"
+=======
+        host_for_resolve = f"[{hostname}]" if ":" in hostname else hostname
+        addr_for_resolve = f"[{resolved_ip}]" if ":" in resolved_ip else resolved_ip
+        resolve_arg = f"{host_for_resolve}:{port}:{addr_for_resolve}"
+>>>>>>> origin/main
 
         # Pinned DNS resolution to avoid DNS rebinding via curl's --resolve parameter.
         # Restrict protocols to only http/https using --proto.

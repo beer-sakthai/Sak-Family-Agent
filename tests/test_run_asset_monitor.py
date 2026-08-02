@@ -8,11 +8,19 @@ from unittest.mock import MagicMock, patch
 REPO_ROOT = Path(__file__).parent.parent
 workflow_path = REPO_ROOT / ".github" / "workflows" / "run_asset_monitor.py"
 
+<<<<<<< HEAD
 spec = importlib.util.spec_from_file_location("run_asset_monitor", str(workflow_path))
 run_asset_monitor = importlib.util.module_from_spec(spec)
 sys.modules["run_asset_monitor"] = run_asset_monitor
 spec.loader.exec_module(run_asset_monitor)
 
+=======
+spec = importlib.util.spec_from_file_location("run_asset_monitor", workflow_path)
+assert spec is not None and spec.loader is not None
+run_asset_monitor = importlib.util.module_from_spec(spec)
+sys.modules[spec.name] = run_asset_monitor
+spec.loader.exec_module(run_asset_monitor)
+>>>>>>> origin/main
 is_safe_url = run_asset_monitor.is_safe_url
 verify_url = run_asset_monitor.verify_url
 

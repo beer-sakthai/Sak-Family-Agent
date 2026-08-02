@@ -18,10 +18,10 @@ metadata:
     - huggingface
     - achievements
     related_skills:
-    - Sak-instagram-content-kit
-    - linkedin-content-publishing
-    - saksit-social-media-posting-workflows
-    - huggingface-hub
+    - SakSit-sak-instagram-content-kit
+    - SakSit-linkedin-content-publishing
+    - SakSit-social-media-posting-workflows
+    - SakSit-huggingface-hub
 ---
 
 # SakSit Milestone Content
