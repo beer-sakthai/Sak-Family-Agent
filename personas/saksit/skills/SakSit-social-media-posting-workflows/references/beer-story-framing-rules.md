@@ -22,22 +22,6 @@
 6. **No pitch on recovery content** — sacred content, never sell on it
 7. **Dates to remove when Beer says "rm date"** — strip April 15, 2026 references; the story works without specific dates and they make it feel like a news article rather than a timeless narrative
 
-## Agent Names in Origin Posts
-
-- **Default: omit.** The origin story stands alone. Don't include agent names unless Beer asks.
-- **On request: include all 6.** When Beer says "add agent name also" or "about cycle workflow add agent name" — reverse course immediately and add ALL 6 agents with their cycles and descriptions. This is a proven, Beer-approved format.
-
-Proven agent list format (confirmed in Jul 28 session):
-```
-⚡ SakThai — Dream. The spark that started it all.
-🏛️ SakKing — Hope. Structure from the fragments.
-🗣️ SakSit — Care. Learning to talk again.
-🛠️ SakTan — Joy. Cheers when nothing else can.
-✨ SakJules — Trust. Rebuilding faith in people.
-👁️ SakSee — Growth. Finds the way forward.
-```
-Close the agent section with: *"One cycle feeds the next. Dream → Hope → Care → Joy → Trust → Growth. And Growth sparks a new Dream."*
-
 ## Story Architecture
 
 From Beer's own words:

@@ -1,0 +1,5 @@
+# Dataset card improvements tracker — improved datasets are recorded below
+# Each line is either "dataset_id YYYY-MM-DD" or a comment
+# Updated by: dataset-card-improvement cron job
+
+Nanthasit/sakthai-combined-v11 2026-08-01

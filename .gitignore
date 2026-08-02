@@ -7,6 +7,7 @@ __pycache__/
 .hypothesis/
 *.pyc
 .venv/
+personas/saktan/
 # Ignore the legacy per-persona duplicate sakthai package copies, but keep the
 # consolidated shared canonical (personas/shared/sakthai/) tracked — the five
 # personas symlink to it, so it must exist in a fresh checkout (mirrors how
