@@ -23,10 +23,6 @@ LJ_PATH = os.path.expanduser("/opt/data/profiles/saksit/LEARNING_JOURNAL.md")
 
 
 def get_token():
-    with open("/opt/data/.git-credentials") as f:
-        for line in f:
-            line = line.strip()
-            try:
     try:
         with open("/opt/data/.git-credentials") as f:
             for line in f:
@@ -34,24 +30,17 @@ def get_token():
                 if not line:
                     continue
                 parsed = urlparse(line)
-                if parsed.hostname == "github.com":
-                    if "x-access-token:" in line:
-                        token = line.split("x-access-token:")[1]
-                    elif "@github.com" in line:
-                        token = line.split("@github.com")[0].split(":", 2)[-1]
-                    else:
-                        continue
-                    return token.replace("@github.com", "").strip()
-            except Exception:
-                pass
-    except Exception:
-        pass
-                    token = parsed.password or parsed.username
-                    if token:
-                        return token.strip()
+                if parsed.hostname != "github.com":
+                    continue
+                if "x-access-token:" in line:
+                    token = line.split("x-access-token:")[1]
+                elif "@github.com" in line:
+                    token = line.split("@github.com")[0].split(":", 2)[-1]
+                else:
+                    continue
+                return token.replace("@github.com", "").strip()
     except OSError as e:
         print(f"Warning: unable to read /opt/data/.git-credentials: {e}", file=sys.stderr)
-        return None
     return None
 
 
