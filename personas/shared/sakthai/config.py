@@ -43,6 +43,7 @@ SKILLS_DIR = PERSONAS_DIR / "sakthai" / "skills"
 LIBRARY_DIR = PERSONAS_DIR / "shared" / "skills"
 SHARED_SKILLS_DIR = PERSONAS_DIR / "shared" / "skills"
 
+# The five Sak Family personas `sakthai chat --persona` can address.
 # The six Sak Family personas `sakthai chat --persona` can address.
 PERSONA_NAMES: tuple[str, ...] = ("sakking", "sakthai", "saksee", "saksit", "sakjules", "saktan")
 
