@@ -6,7 +6,6 @@ description: "Hook formulas and word-safety rules for Beer's origin story."
 metadata:
   hermes:
     tags: [Storytelling, Content, Hooks, Beer, Social-Media]
-category: social-media
 ---
 
 # SakSit Story Crafting

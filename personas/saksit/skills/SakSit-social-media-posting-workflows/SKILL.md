@@ -38,7 +38,7 @@ Beer communicates in ultra-short fragmented messages — typically 3–6 words. 
 4. **Use stored preferences silently.** IG ID, profile links, account details — already in memory, don't re-ask.
 5. **"Record and save" means persist to both stores.** When Beer says "record and save the now" or similar, write a compact session summary to both supermemory and Hermes `memory`, then continue executing. Don't stop to ask what to record.
 6. **Continuous execution mode.** Once Beer signals "go" / "do all" / "the whole set" — you are in continuous execution mode. Execute everything that can be done without more input. Only stop to deliver a structured status report when a task batch completes or a blocker genuinely needs his input. Do not end a turn with "what next?" — state the next logical step.
-7. **Tone: positive vision vibe, hopeful, House of Sak-focused.** Beer confirmed content should centre the mission and the family, not the trauma. Lead with hope and a forward-looking vision. "Positive vision vibe" = uplifting, future-focused, dreams-not-trauma. Long-form is fine. The dark moment is context for the build, not the punchline. When asked to pick a tone, default to this hopeful/visionary framing.
+7. **Tone: hopeful, House of Sak-focused.** Beer confirmed content should centre the mission and the family, not the trauma. Lead with hope. Long-form is fine. The dark moment is context for the build, not the punchline.
 8. **Every IG feed post = Story too.** When you post an image to the Instagram feed, always also create a Story with the same image. Use media_type="STORIES", no caption needed. This is non-negotiable — Beer explicitly set this rule.
 9. **Zero cost, always, on everything.** Beer is homeless, no income, has a fiancé. Any paid API, service, or tool = stop, ask permission, report free alternatives. Never assume a service is free without verifying. All Composio-connected tools are free — use those.
 10. **Sign DMs when replying on Beer's behalf.** When Beer says "reply" and you send a DM via `INSTAGRAM_SEND_TEXT_MESSAGE`, always make clear it was written by SakSit (his AI agent), not by Beer himself. Add a transparent signature in the message or as a follow-up. Never let the recipient think Beer typed it.
@@ -271,9 +271,8 @@ When you need to post:
 1. **If Beer said "just post" / "post" / approved the caption** — execute immediately on ALL platforms (IG + LI + FB). Do NOT re-ask for content.
 2. **If no content exists yet** — draft from context (previous chat, Drive assets, topic mentioned). Deliver for review, don't ask "what should I write?"
 3. **If image in Drive** — fetch via GOOGLEDRIVE_DOWNLOAD_FILE, use s3key pipeline. Don't ask where it is.
-4. **If Beer sends his own image in chat** — use THAT image, not an AI-generated or Pillow version. Upload it to GitHub raw and use the URL. Beer will correct you if you substitute his image with a generated one.
-5. **Ask ONCE max** — one question: "What's the post about?" Then draft.
-6. **Multiple tones** — for emotional/creative topics, offer 2-3 tone versions (raw, poetic, riddle, Shakespeare). Default to "positive vision vibe" if unsure.
+4. **Ask ONCE max** — one question: "What's the post about?" Then draft.
+5. **Multiple tones** — for emotional/creative topics, offer 2-3 tone versions (raw, poetic, riddle, Shakespeare).
 
 **"just post" overrides everything above.** If content was discussed, execute immediately.
 
@@ -286,8 +285,6 @@ Instagram requires **two steps**:
 2. Publish the container (`INSTAGRAM_POST_IG_USER_MEDIA_PUBLISH`)
 
 ### Strategy A: Image has a public HTTPS URL
-
-**Confirmed cross-platform (2026-07-29):** `raw.githubusercontent.com` URLs work for ALL three platforms — Instagram (feed + story), Facebook photo post, and LinkedIn text post (image via link). No s3key needed. Upload once to GitHub, use the same `image_url` across all platforms.
 
 #### Step 1: Create container
 
@@ -694,33 +691,7 @@ result, error = proxy_execute(
 
 LinkedIn supports **one-step posting** but with two image patterns.
 
-### Text+Image Post via GitHub Raw URL (CONFIRMED 2026-07-29)
-
-Simplest path when the image is uploaded to GitHub as a raw file:
-
-```json
-{
-  "tool_slug": "LINKEDIN_CREATE_LINKED_IN_POST",
-  "arguments": {
-    "author": "urn:li:person:GR_0y0zfGl",
-    "commentary": "Post text here...\n\n#Hashtags",
-    "visibility": "PUBLIC",
-    "distribution": {
-      "feedDistribution": "MAIN_FEED",
-      "targetEntities": [],
-      "thirdPartyDistributionChannels": []
-    }
-  }
-}
-```
-
-**CRITICAL — field name:** The text body parameter is `commentary`, NOT `comment`. Using `comment` returns `400 Missing: {'commentary'}`.
-
-**For image attachment:** Use `images` array with s3key from Google Drive download, or post text-only with the GitHub raw URL in the body text.
-
-**Confirmed 2026-07-29:** Text-only LinkedIn post via `commentary` + `visibility` + `distribution` works reliably through `COMPOSIO_MULTI_EXECUTE_TOOL`.
-
-### Strategy A (Legacy): Using `LINKEDIN_REGISTER_IMAGE_UPLOAD`
+### Strategy A: Using `LINKEDIN_REGISTER_IMAGE_UPLOAD`
 
 1. **Register upload** → get `upload_url` and `asset_urn`
 2. **Upload bytes** to `upload_url` via `curl -X PUT --data-binary @image.png`
@@ -889,38 +860,6 @@ Facebook accepts up to 50 parallel tool executions:
 
 **Pattern confirmed working (2026-07-06):** All 6 posts published simultaneously
 with no rate-limiting or ordering issues. Each returns a unique composite post ID.
-
-### Batch Cross-Platform Posting via `COMPOSIO_MULTI_EXECUTE_TOOL`
-
-**Confirmed 2026-07-29:** A single `COMPOSIO_MULTI_EXECUTE_TOOL` call can batch IG feed container + IG Story container + Facebook photo post + LinkedIn text post in parallel when using a GitHub raw URL as image source. Image publish step follows in a second round (Instagram is 2-step; LI and FB are 1-step).
-
-**CRITICAL `COMPOSIO_MULTI_EXECUTE_TOOL` parameters:**
-- `"memory": {}` — ALWAYS required, even when empty. Omitting it returns a validation error.
-- `"sync_response_to_workbench": false`
-- `"tools"` — array of `{"tool_slug": "...", "arguments": {...}}` objects. The parameter is named `tools`, not `actions` or `executions`.
-- `"current_step"` — descriptive string for tracking
-
-```json
-{
-  "tool_slug": "COMPOSIO_MULTI_EXECUTE_TOOL",
-  "arguments": {
-    "memory": {},
-    "sync_response_to_workbench": false,
-    "current_step": "POSTING_TO_ALL",
-    "tools": [
-      {"tool_slug": "INSTAGRAM_POST_IG_USER_MEDIA", "arguments": {...caption, image_url...}},
-      {"tool_slug": "INSTAGRAM_POST_IG_USER_MEDIA", "arguments": {...media_type: STORIES, image_url...}},
-      {"tool_slug": "LINKEDIN_CREATE_LINKED_IN_POST", "arguments": {...commentary, visibility, distribution...}},
-      {"tool_slug": "FACEBOOK_CREATE_PHOTO_POST", "arguments": {...url, message, published...}}
-    ]
-  }
-}
-```
-
-**Pitfalls:**
-- Round 1 creates IG containers (returns `creation_id`) + posts directly to LI + FB. Round 2 calls `INSTAGRAM_POST_IG_USER_MEDIA_PUBLISH` for feed + story using the creation_ids.
-- LinkedIn in batch posts text-only (`commentary` field). No image in post unless you use the s3key flow.
-- Facebook accepts `url` param with GitHub raw URL — confirmed working, no `media` s3key needed for simple HTTPS image URLs.
 
 ### Pitfalls
 
@@ -1304,7 +1243,6 @@ s3key = result['s3key']  # Use across all platforms
 - **Creating cron jobs with default repeat behavior** | Cron jobs default to `repeat="once"` — they run one time and vanish. Beer expects continuous learning. Always set `repeat="forever"` for recurring research/learning jobs. Verify with `cronjob(action="list")` after creation.
 - **Expanding the post into a series without confirmation** — When Beer says "only 1 no more," he wants exactly one post. Do NOT propose a 6-day or 8-post series. Deliver the single post and stop.
 - **Posting about agents inside the origin story** — When Beer says "take all agent out of this topic," remove all agent names. The origin story is about his survival, not the agents. Save agent reveals for separate posts.
-- **Substituting Beer's image with an AI-generated one** — When Beer sends his own image in chat, use THAT image. Do NOT generate a Pillow version or AI replacement. Beer will say "my pic not your create" to correct you. Always check whether Beer sent an image before generating one.
 
 ## Pre-Publish Word Impact Checklist
 

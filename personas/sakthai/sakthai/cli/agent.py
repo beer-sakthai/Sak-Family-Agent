@@ -9,8 +9,6 @@ from typing import Any
 
 import click
 
-from .. import config
-from ..agent.chat import load_persona_soul
 from ..agent.loop import (
     DEFAULT_MAX_ITERATIONS,
     DEFAULT_MAX_TOKENS,
@@ -20,7 +18,6 @@ from ..agent.loop import (
     run_agent,
 )
 from ..agent.tools import BUILTIN_TOOLS, Tool
-from ..memory.store import MemoryStore
 from ..skills import resolve_skill_names
 
 
@@ -175,17 +172,6 @@ def _run_in_sandbox(
     is_flag=True,
     help="Run inside an isolated Docker container. Enables run_command safely — only memory.db is shared with the host.",
 )
-@click.option(
-    "--persona",
-    type=click.Choice(config.PERSONA_NAMES),
-    default=None,
-    help=(
-        "Run as a specific Sak Family persona: uses that persona's own memory "
-        "shard (~/.sakthai/<persona>/memory.db) and SOUL.md identity, matching "
-        "how each persona already runs in production. Omit to use the default, "
-        "unscoped memory.db (unchanged pre-existing behavior)."
-    ),
-)
 def run(
     task: str,
     model: str,
@@ -202,7 +188,6 @@ def run(
     stateless: bool,
     caveman: str | None,
     sandbox: bool,
-    persona: str | None,
 ) -> None:
     """Run TASK through the standalone SakThai agent.
 
@@ -212,11 +197,6 @@ def run(
     configured correctly (provider, credentials, model, tools) without spending
     any tokens.
     """
-    if persona and sandbox:
-        raise click.UsageError(
-            "--persona is not supported with --sandbox yet "
-            "(the sandbox only bind-mounts the default, unscoped memory.db)."
-        )
     if sandbox:
         _run_in_sandbox(
             task=task,
@@ -263,11 +243,6 @@ def run(
         streamed = True
         click.echo(text, nl=False)
 
-    # A --persona run gets its own memory shard and SOUL.md identity; without
-    # --persona, behavior is unchanged from before this flag existed (no store
-    # passed, run_agent() opens/closes its own default MemoryStore()).
-    persona_store = MemoryStore(config.persona_memory_db_path(persona)) if persona else None
-    system_prompt_prefix = load_persona_soul(persona) if persona else ""
     try:
         with _tool_context(no_mcp=no_mcp, verbose=verbose) as tools:
             result = run_agent(
@@ -284,17 +259,12 @@ def run(
                 fast=fast,
                 stateless=stateless,
                 caveman=caveman,
-                store=persona_store,
-                system_prompt_prefix=system_prompt_prefix,
             )
     except AgentError as exc:
         raise click.ClickException(str(exc)) from exc
     except KeyboardInterrupt:
         click.echo("\nInterrupted.", err=True)
         sys.exit(130)
-    finally:
-        if persona_store is not None:
-            persona_store.close()
     if streamed:
         click.echo("")  # terminate the streamed line
     else:

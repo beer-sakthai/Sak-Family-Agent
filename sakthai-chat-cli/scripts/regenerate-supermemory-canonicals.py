@@ -61,33 +61,6 @@ def _obs_text(o: Observation) -> str:
 # ---------------------------------------------------------------------------
 
 
-def _get_similarity_candidates(clean_texts: list[str], shingle_size: int = 2) -> set[tuple[int, int]]:
-    """Generate candidate index-pairs of text similarity by sharing shingles.
-
-    At threshold=0.85, near-duplicates almost certainly share a shingle (e.g. 2-gram).
-    """
-    index = defaultdict(list)
-    for i, text in enumerate(clean_texts):
-        if len(text) < shingle_size:
-            index[text].append(i)
-        else:
-            shingles = {text[j : j + shingle_size] for j in range(len(text) - shingle_size + 1)}
-            for s in shingles:
-                index[s].append(i)
-
-    candidates: set[tuple[int, int]] = set()
-    for members in index.values():
-        if len(members) < 2:
-            continue
-        for idx, i in enumerate(members):
-            for j in members[idx + 1 :]:
-                if i < j:
-                    candidates.add((i, j))
-                else:
-                    candidates.add((j, i))
-    return candidates
-
-
 def _find_groups(items, text_fn, threshold: float) -> list[list[int]]:
     """Return index-groups of near-duplicates using Union-Find.
 
@@ -112,8 +85,29 @@ def _find_groups(items, text_fn, threshold: float) -> list[list[int]]:
     raw_texts = [text_fn(item) for item in items]
     clean_texts = [t.lower().strip() for t in raw_texts]
 
+    # Inverted index of shingles to find candidates.
+    # At threshold=0.85, near-duplicates almost certainly share a 2-gram.
+    shingle_size = 2
+    index = defaultdict(list)
+    for i, text in enumerate(clean_texts):
+        if len(text) < shingle_size:
+            index[text].append(i)
+        else:
+            shingles = {text[j : j + shingle_size] for j in range(len(text) - shingle_size + 1)}
+            for s in shingles:
+                index[s].append(i)
+
     # Identify candidate pairs from shared shingles.
-    candidates = _get_similarity_candidates(clean_texts, shingle_size=2)
+    candidates: set[tuple[int, int]] = set()
+    for members in index.values():
+        if len(members) < 2:
+            continue
+        for idx, i in enumerate(members):
+            for j in members[idx + 1 :]:
+                if i < j:
+                    candidates.add((i, j))
+                else:
+                    candidates.add((j, i))
 
     # Perform expensive similarity check only on candidates.
     for i, j in candidates:
