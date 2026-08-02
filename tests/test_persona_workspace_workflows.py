@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import pathlib
-import pytest
+
 import yaml
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
@@ -39,10 +39,10 @@ def test_saksee_saksit_sakjules_workspace_manifests():
 def test_all_six_workspaces_match_schema():
     schema_path = PERSONAS_DIR / "shared" / "config" / "workflow_schema.yaml"
     assert schema_path.exists(), f"Missing {schema_path}"
-    
+
     schema = yaml.safe_load(schema_path.read_text(encoding="utf-8"))
     required_keys = schema["required_keys"]
-    
+
     for agent in ["sakthai", "sakking", "saktan", "saksee", "saksit", "sakjules"]:
         config_path = PERSONAS_DIR / agent / "config" / "workspace.yaml"
         assert config_path.exists(), f"Missing config for {agent}"

@@ -66,37 +66,6 @@ _DEFAULT_PORT = 3001
 _LOOPBACK_NAMES = frozenset({"localhost", ""})
 
 
-<<<<<<< HEAD:personas/sakjules/sakthai/web/server.py
-def _get_or_create_bearer_token() -> str:
-    """Retrieve or create a bearer token for API authentication.
-
-    Checks environment variable SAKTHAI_WEB_TOKEN first, then checks
-    memory database facts table where kind='web_auth' and key='bearer_token'.
-    Falls back to a secure 32-char hex string.
-    """
-    token = os.environ.get("SAKTHAI_WEB_TOKEN")
-    if token:
-        return token
-    try:
-        from ..memory.store import MemoryStore
-        with MemoryStore() as store:
-            fact = store.get_fact_by_key("web_auth", "bearer_token")
-            if fact:
-                return fact.value
-            token = secrets.token_hex(16)
-            store.add_fact(
-                token,
-                kind="web_auth",
-                key="bearer_token",
-                tags=["system", "no-export"]
-            )
-            return token
-    except Exception:
-        # Fallback if DB is not accessible / or during module load
-        return secrets.token_hex(16)
-
-
-=======
 >>>>>>> origin/main:personas/shared/sakthai/web/server.py
 def _is_loopback_host(host: str) -> bool:
     """True if ``host`` is loopback-only (safe to bind without authentication)."""
@@ -242,7 +211,6 @@ class _Handler(SimpleHTTPRequestHandler):
             if not secrets.compare_digest(token, expected_token):
                 self._send_json(403, {"error": "Forbidden", "message": "Invalid Bearer token"})
                 return
->>>>>>> origin/main:personas/shared/sakthai/web/server.py
 
         if path == "/api/stages":
             try:
@@ -295,10 +263,7 @@ def serve(host: str = _DEFAULT_HOST, port: int = _DEFAULT_PORT) -> HTTPServer:
             "It serves personal memory with no auth. Set SAKTHAI_WEB_ALLOW_PUBLIC=1 to "
             "override once you have placed authentication in front of it."
         )
-<<<<<<< HEAD:personas/sakjules/sakthai/web/server.py
-=======
     _get_or_create_bearer_token()  # Warm cache & register secret
->>>>>>> origin/main:personas/shared/sakthai/web/server.py
     # The built dashboard (dashboard/dist) is optional: without it the API
     # endpoints still serve, and static requests fall through to 403/404.
     if _STATIC_ROOT.is_dir():
