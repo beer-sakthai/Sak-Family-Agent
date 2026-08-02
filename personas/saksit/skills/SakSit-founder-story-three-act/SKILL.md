@@ -2,7 +2,7 @@
 name: SakSit-founder-story-three-act
 version: 1.0.0
 author: Hermes Agent / SakSit
-description: "Tool-based workflow for structuring founder origin stories with the three-act architecture (Before State → Turning Point → New Reality), including platform-specific compression rules (LinkedIn/X/Reels), the 60/30/10 content ratio, origin archetypes, and vulnerability boundaries. Complements SakSit-saksit-story-crafting (Beer's voice/hooks) with a reusable narrative structure."
+description: "Tool-based workflow for structuring founder origin stories with the three-act architecture (Before State → Turning Point → New Reality), including platform-specific compression rules (LinkedIn/X/Reels), the 60/30/10 content ratio, origin archetypes, and vulnerability boundaries. Complements SakSit-story-crafting (Beer's voice/hooks) with a reusable narrative structure."
 license: MIT
 platforms:
 - linux
@@ -12,10 +12,10 @@ metadata:
   hermes:
     tags: [Storytelling, Founder-Story, Narrative-Architecture, Content-Framework, Social-Media, Three-Act]
     related_skills:
-    - SakSit-saksit-story-crafting
+    - SakSit-story-crafting
     - SakSit-beer-content-voice
-    - SakSit-saksit-2026-algorithm-strategy
-    - SakSit-saksit-milestone-content
+    - SakSit-2026-algorithm-strategy
+    - SakSit-milestone-content
 category: social-media
 ---
 
