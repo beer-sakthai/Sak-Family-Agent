@@ -17,8 +17,8 @@ from click.testing import CliRunner
 from sakthai.cli.system import web as web_cli
 from sakthai.memory.store import MemoryStore
 from sakthai.web.server import (
-    _Handler,
     _get_or_create_bearer_token,
+    _Handler,
 )
 
 
