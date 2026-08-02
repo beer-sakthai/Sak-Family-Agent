@@ -9,6 +9,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from sakthai.learn.ingest import (
     _facts_from_csv,
     _facts_from_markdown_or_text,
@@ -127,3 +129,16 @@ def test_ingest_document_accepts_str_path(store: MemoryStore, tmp_path: Path) ->
 
     assert len(ids) == 1
     assert [f.value for f in store.list_facts()] == ["only line"]
+
+
+def test_ingest_document_raises_file_not_found_for_missing_path(store: MemoryStore) -> None:
+    with pytest.raises(FileNotFoundError):
+        ingest_document("nonexistent_file_xyz_123.md", store=store)
+
+
+def test_ingest_document_raises_os_error_for_directory_path(
+    store: MemoryStore, tmp_path: Path
+) -> None:
+    # A directory path is invalid for reading text, so it should raise IsADirectoryError or OSError
+    with pytest.raises(OSError):
+        ingest_document(tmp_path, store=store)
