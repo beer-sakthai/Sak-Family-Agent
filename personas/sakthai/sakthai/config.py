@@ -49,8 +49,8 @@ SHARED_SKILLS_DIR = PERSONAS_DIR / "shared" / "skills"
 # other code already treats as a synonym for SHARED_SKILLS_DIR.
 CURATED_LIBRARY_DIR = REPO_ROOT / "library"
 
-# The six Sak Family personas `sakthai chat --persona` can address.
-PERSONA_NAMES: tuple[str, ...] = ("sakking", "sakthai", "saksee", "saksit", "sakjules", "saktan")
+# The five Sak Family personas `sakthai chat --persona` can address.
+PERSONA_NAMES: tuple[str, ...] = ("sakking", "sakthai", "saksee", "saksit", "sakjules")
 
 
 def persona_soul_path(persona: str) -> Path:
