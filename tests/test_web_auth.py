@@ -3,29 +3,22 @@
 from __future__ import annotations
 
 import json
-import os
 import threading
 import urllib.error
 import urllib.request
+from http.server import HTTPServer
 from pathlib import Path
 from typing import Any
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 from click.testing import CliRunner
 
 from sakthai.cli import main
-from sakthai.memory.store import MemoryStore
 from sakthai.web.server import (
     _Handler,
     _get_or_create_bearer_token,
 )
-
-try:
-    from http.server import HTTPServer
-except ImportError:
-    HTTPServer = None
-
 
 @pytest.fixture
 def clean_home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
