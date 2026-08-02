@@ -171,7 +171,7 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
         if _is_binary(part, destructive_binaries):
             # Inspect tokens following the binary until a separator is hit.
             for subpart in parts[i + 1 :]:
-                if subpart in (";", "&&", "||", "|"):
+                if subpart in {";", "&&", "||", "|"}:
                     break
                 if _is_sensitive_path(subpart) or (context_sensitive and subpart in ("{}", "+")):
                     binary_name = os.path.basename(part)
@@ -184,7 +184,7 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
     for i, part in enumerate(parts):
         if _is_binary(part, "dd"):
             for subpart in parts[i + 1 :]:
-                if subpart in (";", "&&", "||", "|"):
+                if subpart in {";", "&&", "||", "|"}:
                     break
                 if subpart.startswith("of=") or subpart.startswith("if="):
                     val = subpart[3:]
