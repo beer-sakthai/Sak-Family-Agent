@@ -161,4 +161,5 @@ tests/test_tools.py
 tests/test_tools_overrides.py
 tests/test_train_eval_coder_lora.py
 tests/test_usage.py
+tests/test_verify_hf_upload.py
 tests/test_web_server.py
