@@ -28,8 +28,9 @@ def get_token():
                     token = parsed.password or parsed.username
                     if token:
                         return token.strip()
-    except Exception:
-        pass
+    except OSError as e:
+        print(f"Warning: unable to read /opt/data/.git-credentials: {e}", file=sys.stderr)
+        return None
     return None
 
 
