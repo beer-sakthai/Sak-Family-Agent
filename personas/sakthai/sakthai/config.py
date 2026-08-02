@@ -49,8 +49,8 @@ SHARED_SKILLS_DIR = PERSONAS_DIR / "shared" / "skills"
 # other code already treats as a synonym for SHARED_SKILLS_DIR.
 CURATED_LIBRARY_DIR = REPO_ROOT / "library"
 
-# The six Sak Family personas `sakthai chat --persona` can address.
-PERSONA_NAMES: tuple[str, ...] = ("sakking", "sakthai", "saksee", "saksit", "sakjules", "saktan")
+# The five Sak Family personas `sakthai chat --persona` can address.
+PERSONA_NAMES: tuple[str, ...] = ("sakking", "sakthai", "saksee", "saksit", "sakjules")
 
 
 def persona_soul_path(persona: str) -> Path:
@@ -138,23 +138,6 @@ def sakking_skills_dir() -> Path:
 def memory_db_path() -> Path:
     """Path to the shared SQLite memory database."""
     return sakthai_home() / "memory.db"
-
-
-def persona_memory_db_path(persona: str) -> Path:
-    """Path to PERSONA's own memory shard, by convention: ``~/.sakthai/<persona>/memory.db``.
-
-    Independent of the current process's ``SAKTHAI_HOME`` override, so callers
-    (e.g. the family/merged view) can address every persona's shard at once
-    regardless of which persona the current process happens to be running as.
-    This mirrors the convention already used in production by
-    ``infra/vm-agents/sakthai-agent-run.sh``, which sets
-    ``SAKTHAI_HOME="$HOME/.sakthai/$AGENT"`` per deployed persona — this
-    function computes the same path directly rather than requiring that env
-    var to be set.
-    """
-    if persona not in PERSONA_NAMES:
-        raise ValueError(f"Unknown persona {persona!r}; expected one of {PERSONA_NAMES}")
-    return Path.home() / ".sakthai" / persona / "memory.db"
 
 
 def sessions_dir() -> Path:
@@ -416,11 +399,6 @@ def check_env() -> dict[str, Any]:
 # Extra values to be redacted (e.g. tokens loaded from disk), populated via register_secret.
 _EXTRA_SECRETS: set[str] = set()
 
-# Global cache for exact secrets to avoid rebuilding/sorting and env queries on every call
-_cached_exact_secrets_list: list[str] = []
-_cached_env_values: dict[str, str | None] = {}
-_secrets_dirty: bool = True
-
 
 def register_secret(secret: str) -> None:
     """Register a value to be masked by redact_secrets.
@@ -428,19 +406,19 @@ def register_secret(secret: str) -> None:
     Used by the auth layer to register tokens loaded from disk so they are
     redacted even if they aren't in the environment.
     """
-    global _secrets_dirty
     if isinstance(secret, str) and len(secret) > 5:
         _EXTRA_SECRETS.add(secret)
-        _secrets_dirty = True
 
 
-def _get_exact_secrets() -> list[str]:
-    """Retrieve the sorted list of exact secrets from cache or environment.
+def redact_secrets(text: str) -> str:
+    """Redact sensitive environment variable values and registered secrets from text."""
+    if not isinstance(text, str) or not text:
+        return text
 
-    Only rebuilds the list if _secrets_dirty is True or any of the tracked
-    environment variables have changed since the last check.
-    """
-    global _secrets_dirty, _cached_exact_secrets_list, _cached_env_values
+    # First, redact PEM private key blocks.
+    text = _PRIVATE_KEY_RE.sub("[REDACTED PRIVATE KEY]", text)
+
+    # Second, redact based on known exact values (highest precision).
     secret_keys = [
         "ANTHROPIC_API_KEY",
         "ANTHROPIC_AUTH_TOKEN",
@@ -457,44 +435,19 @@ def _get_exact_secrets() -> list[str]:
         "GITHUB_PAT",
     ]
 
-    env_changed = False
+    secrets: set[str] = set(_EXTRA_SECRETS)
     for key in secret_keys:
-        val = os.environ.get(key)
-        if _cached_env_values.get(key) != val:
-            _cached_env_values[key] = val
-            env_changed = True
+        if val := os.environ.get(key):
+            secrets.add(val)
 
-    if _secrets_dirty or env_changed:
-        secrets = set(_EXTRA_SECRETS)
-        for val in _cached_env_values.values():
-            if val:
-                secrets.add(val)
+    if secrets:
         # Sort by length descending to ensure longer secrets (e.g. session tokens)
         # are redacted before their potential substrings (e.g. parts of keys).
-        _cached_exact_secrets_list = sorted(
-            [s for s in secrets if len(s) > 5], key=len, reverse=True
-        )
-        _secrets_dirty = False
+        for val in sorted(secrets, key=len, reverse=True):
+            if len(val) > 5:
+                text = text.replace(val, "[REDACTED]")
 
-    return _cached_exact_secrets_list
-
-
-def redact_secrets(text: str) -> str:
-    """Redact sensitive environment variable values and registered secrets from text."""
-    if not isinstance(text, str) or not text:
-        return text
-
-    # First, redact PEM private key blocks. Skip if target header is not present.
-    if "-----BEGIN" in text:
-        text = _PRIVATE_KEY_RE.sub("[REDACTED PRIVATE KEY]", text)
-
-    # Second, redact based on known exact values (highest precision).
-    secrets = _get_exact_secrets()
-    for val in secrets:
-        if val in text:
-            text = text.replace(val, "[REDACTED]")
-
-    # Third, redact based on common patterns (defense-in-depth).
+    # Second, redact based on common patterns (defense-in-depth).
     text = _SECRET_RE.sub("[REDACTED]", text)
 
     return text

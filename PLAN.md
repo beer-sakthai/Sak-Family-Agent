@@ -59,7 +59,6 @@ never duplicate content across files.
 | **Relative system-root blocking (re-land of PR #380)** — `_is_sensitive_path` now treats relative paths whose first component names a critical root (`etc/passwd`, `var/log/…`) as sensitive, with a single-component `tmp` exception; `.config`/`.npm` added to `_SENSITIVE_DIRS`, `credentials` to `_SENSITIVE_BASENAMES`; landed as a delta on top of the stronger #381 hardening instead of merging the conflicting/regressive #380 branch; synced across all six personas; regression tests in `tests/test_guardrails_relative_roots.py` | ✅ Done (2026-07-14) |
 | **Branch consolidation — all 8 open PRs merged to main** — dependabot #386 (mypy 2.3.0) + #387 (actions group); Sentinel #384 (shell-config basenames + critical roots in `_SENSITIVE_NAME_RE`), #385 (ssh/ssh-add/ssh-keygen/ssh-copy-id in scan lists + `tests/test_sentinel_ssh_tools.py`), #388 (`cp` check widened from kubectl-only to docker/podman/kubectl), #389 (docker/podman/kubectl/chroot/nsenter added to destructive + exfiltration scan lists), #391 (`,` added as `_is_sensitive_path` delimiter + `tests/test_guardrails_sentinel_bypasses.py` case), #392 (protections already subsumed by the consolidated version; merged for history, journal entry kept). Conflicting hunks resolved by keeping the stronger consolidated implementation (chroot NEWROOT check, conservative nsenter flag list, no internal-command censoring); guardrails synced across all six personas; closed branches #378/#380 skipped as previously superseded by #381/#382 | ✅ Done (2026-07-16) |
 | **Security Audit & High-Priority Fixes Plan** — comprehensive audit completed (audit report: 120+ pages, A+ grade); two high-priority fixes identified: (1) Rotate Stripe + Twilio credentials in git history (5 min, Beer), (2) Add web API bearer token auth (4-6 hrs, Claude Code); full plan at `security/SECURITY_FIXES_PLAN.md` with phases, tests, rollout, and rollback | [/] In progress — awaiting Beer approval on credential rotation |
-| **Code health refactoring** — Refactor long function main in run_batch.py to improve readability and maintainability | ✅ Done (2026-08-02) |
 
 ## 📋 Sub-Plans
 
@@ -97,33 +96,31 @@ workspace runtime config under `infra/`.
 ## 🧹 SCRATCH_ORGANISATION_PLAN.MD
 
 **Owner:** SakKing (spotter) → SakJules (executor)
-**Status:** ✅ Complete — 2026-08-02
+**Status:** Planning
 **Priority:** Medium
 
-### Problem (historical — resolved)
-Root directory of `Sak-Family-Agent/` had accumulated scratch files that
-belonged in subdirectories. All items below have been relocated or removed
-per the checklist; kept here as an audit trail.
+### Problem
+Root directory of `Sak-Family-Agent/` has accumulated scratch files that belong in subdirectories:
 
-**5 Python scripts at root** (moved to `scripts/`):
+**5 Python scripts at root** (should be in `scripts/`):
 - `_check_models.py` — HF model checker
 - `_check_spaces.py` — HF spaces checker
 - `_parse_datasets.py` — dataset parser
 - `_parse_models.py` — model parser
 - `_parse_spaces.py` — spaces parser
 
-**5 JSON data files at root** (2 moved to `data/`, 3 removed):
-- `ci_runs.json` (76 KB) — GitHub Actions run data → `data/ci_runs.json`
-- `hf-topics-covered.json` (17 KB) — HF topic coverage data → `data/hf-topics-covered.json`
-- `hf_dataset.json` (0 bytes) — empty placeholder, removed
-- `hf_ds_size.json` (0 bytes) — empty placeholder, removed
-- `hf_embed_check.json` (0 bytes) — empty placeholder, removed
+**5 JSON data files at root** (should be in `data/`):
+- `ci_runs.json` (76 KB) — GitHub Actions run data
+- `hf-topics-covered.json` (17 KB) — HF topic coverage data
+- `hf_dataset.json` (0 bytes) — empty placeholder
+- `hf_ds_size.json` (0 bytes) — empty placeholder
+- `hf_embed_check.json` (0 bytes) — empty placeholder
 
 ### Steps for SakJules
-1. [x] Move 5 Python scripts to `scripts/` — 2026-08-02
-2. [x] Move 2 non-empty JSON files to `data/` — 2026-08-02
-3. [x] Remove 3 empty placeholder JSON files — 2026-08-02
-4. [x] Update any references in scripts that import these files — 2026-08-02
+1. Move 5 Python scripts to `scripts/`
+2. Move 2 non-empty JSON files to `data/`
+3. Remove 3 empty placeholder JSON files
+4. Update any references in scripts that import these files
 
 ### Verification
 1. `ls *.py *.json` at root → nothing

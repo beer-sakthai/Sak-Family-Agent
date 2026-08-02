@@ -1,1 +1,0 @@
-../../../../personas/saksit/SOUL.md

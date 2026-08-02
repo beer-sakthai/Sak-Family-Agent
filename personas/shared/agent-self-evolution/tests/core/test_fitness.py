@@ -3,7 +3,7 @@ from unittest.mock import MagicMock, patch
 import dspy
 import pytest
 from evolution.core.config import EvolutionConfig
-from evolution.core.fitness import FitnessScore, LLMJudge, _parse_score, skill_fitness_metric, tool_selection_metric
+from evolution.core.fitness import FitnessScore, LLMJudge, _parse_score, skill_fitness_metric
 
 
 class TestSkillFitnessMetric:
@@ -167,66 +167,3 @@ class TestLLMJudge:
                 max_size=100,
             )
             assert score.length_penalty == 0.0
-
-
-class TestToolSelectionMetric:
-    def test_no_predicted_tool(self):
-        example = dspy.Example(expected_tool="search_google", expected_args={"query": "test"})
-        prediction = dspy.Prediction(predicted_tool="", predicted_args={"query": "test"})
-        assert tool_selection_metric(example, prediction) == 0.0
-
-        # With None / missing predicted_tool attributes
-        prediction = dspy.Prediction(predicted_tool=None)
-        assert tool_selection_metric(example, prediction) == 0.0
-
-    def test_tool_match_args_empty_and_match(self):
-        example = dspy.Example(expected_tool="get_weather", expected_args={})
-        prediction = dspy.Prediction(predicted_tool="get_weather", predicted_args={})
-        # tool match: 1.0 (0.6), args match: 1.0 (0.4) => 1.0
-        assert tool_selection_metric(example, prediction) == 1.0
-
-    def test_tool_match_args_empty_expected_but_non_empty_predicted(self):
-        example = dspy.Example(expected_tool="get_weather", expected_args={})
-        prediction = dspy.Prediction(predicted_tool="get_weather", predicted_args={"location": "Bangkok"})
-        # tool match: 1.0 (0.6), args match: 0.0 (0.4) => 0.6
-        assert tool_selection_metric(example, prediction) == pytest.approx(0.6)
-
-    def test_tool_mismatch_args_match(self):
-        example = dspy.Example(expected_tool="get_weather", expected_args={"location": "Bangkok"})
-        prediction = dspy.Prediction(predicted_tool="get_forecast", predicted_args={"location": "Bangkok"})
-        # tool match: 0.0 (0.6), args match: 1.0 (0.4) => 0.4
-        assert tool_selection_metric(example, prediction) == pytest.approx(0.4)
-
-    def test_tool_match_args_partial_match(self):
-        example = dspy.Example(expected_tool="get_weather", expected_args={"location": "Bangkok", "units": "metric"})
-        prediction = dspy.Prediction(predicted_tool="get_weather", predicted_args={"location": "Bangkok", "units": "imperial"})
-        # tool match: 1.0 (0.6), args match: 0.5 (0.4) => 0.6 + 0.2 = 0.8
-        assert tool_selection_metric(example, prediction) == pytest.approx(0.8)
-
-    def test_tool_match_args_json_string(self):
-        example = dspy.Example(expected_tool="get_weather", expected_args={"location": "Bangkok"})
-        prediction = dspy.Prediction(predicted_tool="get_weather", predicted_args='{"location": "Bangkok"}')
-        assert tool_selection_metric(example, prediction) == 1.0
-
-    def test_tool_match_args_markdown_json(self):
-        example = dspy.Example(expected_tool="get_weather", expected_args={"location": "Bangkok"})
-        prediction = dspy.Prediction(predicted_tool="get_weather", predicted_args='```json\n{"location": "Bangkok"}\n```')
-        assert tool_selection_metric(example, prediction) == 1.0
-
-    def test_tool_match_args_invalid_json_string(self):
-        example = dspy.Example(expected_tool="get_weather", expected_args={"location": "Bangkok"})
-        prediction = dspy.Prediction(predicted_tool="get_weather", predicted_args='{"location": "Bangkok"')  # missing closing brace
-        # tool match: 1.0 (0.6), args match: 0.0 (0.4) => 0.6
-        assert tool_selection_metric(example, prediction) == pytest.approx(0.6)
-
-    def test_case_insensitive_and_quoting_normalization(self):
-        example = dspy.Example(expected_tool="  GetWeather  ", expected_args={"location": "  Bangkok  "})
-        prediction = dspy.Prediction(predicted_tool="'getweather'", predicted_args={"location": "bangkok"})
-        # Should clean quotes, strip and lowercase tool name and argument values
-        assert tool_selection_metric(example, prediction) == 1.0
-
-    def test_non_string_arg_types(self):
-        # Numeric values and booleans should match after casting to string
-        example = dspy.Example(expected_tool="set_config", expected_args={"retries": 3, "active": True})
-        prediction = dspy.Prediction(predicted_tool="set_config", predicted_args={"retries": "3", "active": "true"})
-        assert tool_selection_metric(example, prediction) == 1.0

@@ -1,4 +1,0 @@
-model:
-  provider: ollama
-  default: sakthai
-providers: {}

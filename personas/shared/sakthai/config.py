@@ -44,8 +44,7 @@ LIBRARY_DIR = PERSONAS_DIR / "shared" / "skills"
 SHARED_SKILLS_DIR = PERSONAS_DIR / "shared" / "skills"
 
 # The five Sak Family personas `sakthai chat --persona` can address.
-# The six Sak Family personas `sakthai chat --persona` can address.
-PERSONA_NAMES: tuple[str, ...] = ("sakking", "sakthai", "saksee", "saksit", "sakjules", "saktan")
+PERSONA_NAMES: tuple[str, ...] = ("sakking", "sakthai", "saksee", "saksit", "sakjules")
 
 
 def persona_soul_path(persona: str) -> Path:
@@ -131,23 +130,6 @@ def sakking_skills_dir() -> Path:
 def memory_db_path() -> Path:
     """Path to the shared SQLite memory database."""
     return sakthai_home() / "memory.db"
-
-
-def persona_memory_db_path(persona: str) -> Path:
-    """Path to PERSONA's own memory shard, by convention: ``~/.sakthai/<persona>/memory.db``.
-
-    Independent of the current process's ``SAKTHAI_HOME`` override, so callers
-    (e.g. the family/merged view) can address every persona's shard at once
-    regardless of which persona the current process happens to be running as.
-    This mirrors the convention already used in production by
-    ``infra/vm-agents/sakthai-agent-run.sh``, which sets
-    ``SAKTHAI_HOME="$HOME/.sakthai/$AGENT"`` per deployed persona — this
-    function computes the same path directly rather than requiring that env
-    var to be set.
-    """
-    if persona not in PERSONA_NAMES:
-        raise ValueError(f"Unknown persona {persona!r}; expected one of {PERSONA_NAMES}")
-    return Path.home() / ".sakthai" / persona / "memory.db"
 
 
 def sessions_dir() -> Path:

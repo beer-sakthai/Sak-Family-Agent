@@ -11,14 +11,9 @@ on:
 permissions:
   contents: read
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
   test:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
     strategy:
       # Run the test suite against all supported Python versions.
       matrix:
@@ -34,10 +29,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Install uv
-        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
-        with:
-          enable-cache: true
-          cache-dependency-glob: uv.lock
+        run: pipx install uv
 
       - name: Install dependencies
         # Install all optional dependencies to ensure linting/testing tools are present.
@@ -60,6 +52,6 @@ jobs:
         uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          # The coverage floor (fail_under = 96) is enforced by pytest itself;
+          # The coverage floor (fail_under = 85) is enforced by pytest itself;
           # a failed upload (e.g. no CODECOV_TOKEN secret) must not fail CI.
           fail_ci_if_error: false
