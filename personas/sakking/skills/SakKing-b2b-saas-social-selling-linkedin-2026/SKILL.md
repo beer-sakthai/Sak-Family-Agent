@@ -7,7 +7,6 @@ description: >
   prospecting, SSI improvement, content cadence, and warm outreach sequences
   that convert.
 version: "1.0.0"
-description: "Sakking B2B Saas Social Selling Linkedin 2026"
 category: social-media
 created: 2026-07-02
 author: SakSit Agent
@@ -16,7 +15,6 @@ prerequisites:
   - A personal LinkedIn profile with 500+ 1st-degree connections
   - LinkedIn Sales Navigator (optional but recommended)
   - 20-30 minutes per day minimum time commitment
-
 ---
 
 # B2B SaaS LinkedIn Social Selling Strategy 2026

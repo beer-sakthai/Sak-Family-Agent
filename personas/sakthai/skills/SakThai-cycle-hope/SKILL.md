@@ -1,8 +1,6 @@
 ---
 name: SakThai-cycle-hope
 category: cycle
-author: SakThai
-license: MIT
 description: Turn the Dream vision into a concrete, defensible plan (PTCF).
 version: 1.0.0
 platforms:

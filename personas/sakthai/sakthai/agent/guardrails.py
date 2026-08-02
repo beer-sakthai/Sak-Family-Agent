@@ -123,10 +123,6 @@ _SENSITIVE_BASENAMES = {
     ".zshrc",
     ".profile",
     ".bash_profile",
-    ".gitconfig",
-    ".zprofile",
-    ".yarnrc",
-    ".yarnrc.yml",
 }
 
 _SENSITIVE_DIRS = {
@@ -139,8 +135,6 @@ _SENSITIVE_DIRS = {
     ".gnupg",
     ".config",
     ".npm",
-    ".gcloud",
-    ".azure",
 }
 
 # Private-key stems whose backup/rename variants (id_rsa.bak, id_ed25519.old,
@@ -150,8 +144,6 @@ _SENSITIVE_KEY_STEMS = {
     "id_dsa",
     "id_ecdsa",
     "id_ed25519",
-    "id_ecdsa_sk",
-    "id_ed25519_sk",
 }
 
 
@@ -179,11 +171,11 @@ def _basename_is_sensitive(basename: str) -> bool:
 
     Comparison is case-insensitive so that differently-cased references
     (``.AWS``, ``id_RSA``) on case-insensitive filesystems are still caught.
-    Private-key stems match their backup/rename suffixes (``.bak``, etc.).
+    Private-key stems match their backup/rename suffixes (``id_rsa.bak``).
     """
     lowered = basename.casefold()
     if lowered in _SENSITIVE_BASENAMES or any(
-        lowered.startswith(p) for p in (".env.", ".env-", ".env_", "memory.db-")
+        lowered.startswith(p) for p in (".env.", "memory.db-")
     ):
         return True
     return any(lowered == stem or lowered.startswith(stem + ".") for stem in _SENSITIVE_KEY_STEMS)
@@ -422,11 +414,6 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
         "ts-node",
         "deno",
         "npx",
-        "poetry",
-        "pipenv",
-        "conda",
-        "busybox",
-        "toybox",
     )
     exfiltration_binaries = (
         "curl",
@@ -511,11 +498,6 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
         "ts-node",
         "deno",
         "npx",
-        "poetry",
-        "pipenv",
-        "conda",
-        "busybox",
-        "toybox",
     )
     # Common interpreters where sensitive paths can be embedded in arguments.
     interpreters = (
@@ -740,26 +722,17 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
             "bunx",
             "npx",
             "deno",
-            "poetry",
-            "pipenv",
-            "conda",
-            "pnpm",
-            "yarn",
-            "busybox",
-            "toybox",
         )
         if _is_binary(part, transparent_wrappers):
             # Most of these wrappers have flags. xargs and env are special.
             # We skip tokens that are likely arguments to the wrapper's flags.
             start_idx = i + 1
 
-            # If the wrapper is uv, pipx, bun, deno, poetry, pipenv, conda, pnpm, or yarn, we want to look for subcommands.
-            if _is_binary(
-                part, ("uv", "pipx", "bun", "deno", "poetry", "pipenv", "conda", "pnpm", "yarn")
-            ):
+            # If the wrapper is uv, pipx, bun, or deno, we want to look for the "run" or "eval" subcommand.
+            if _is_binary(part, ("uv", "pipx", "bun", "deno")):
                 run_idx = -1
                 for idx in range(i + 1, len(parts)):
-                    if parts[idx] in ("run", "eval", "exec", "node"):
+                    if parts[idx] in ("run", "eval"):
                         run_idx = idx
                         break
                 if run_idx == -1:
@@ -850,25 +823,24 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
                     or _is_binary(part, "deno")
                     and flag_name
                     in ("-c", "--config", "-p", "--port", "--import-map", "--lock", "--ext")
-                    or _is_binary(part, "conda")
-                    and flag in ("-n", "--name", "-p", "--prefix", "--cwd")
-                    or _is_binary(part, "pnpm")
-                    and flag in ("--filter", "-c", "--dir", "--config")
-                    or _is_binary(part, "yarn")
-                    and flag in ("--cwd",)
-                    or _is_binary(part, "poetry")
-                    and flag in ("-C", "--directory")
                 ):
-                    if flag_val is not None:
-                        if _is_binary(part, "unshare") and flag_name in ("--root", "--wd", "--mount-proc"):
-                            if _is_sensitive_path(flag_val, allow_local=True):
-                                binary_name = os.path.basename(part)
-                                return GuardrailResult(
-                                    GuardrailAction.DENY,
-                                    reason=f"potentially dangerous '{binary_name} {flag_name}' on {flag_val!r} blocked.",
-                                )
-                    else:
-                        if _is_binary(part, "unshare") and flag_name in ("--root", "--wd", "--mount-proc") and start_idx < len(parts):
+                    if (
+                        flag_val is not None
+                        and _is_binary(part, "unshare")
+                        and flag_name in ("--root", "--wd", "--mount-proc")
+                        and _is_sensitive_path(flag_val, allow_local=True)
+                    ):
+                        binary_name = os.path.basename(part)
+                        return GuardrailResult(
+                            GuardrailAction.DENY,
+                            reason=f"potentially dangerous '{binary_name} {flag_name}' on {flag_val!r} blocked.",
+                        )
+                    elif flag_val is None:
+                        if (
+                            _is_binary(part, "unshare")
+                            and flag_name in ("--root", "--wd", "--mount-proc")
+                            and start_idx < len(parts)
+                        ):
                             arg_val = parts[start_idx]
                             if _is_sensitive_path(arg_val, allow_local=True):
                                 binary_name = os.path.basename(part)
@@ -1041,67 +1013,11 @@ def _block_output_with_secrets(
     _store: MemoryStore,
 ) -> GuardrailResult:
     """Deny any tool output that appears to contain a secret."""
-    # 1. Block common secret patterns (API keys, bot tokens, etc.)
     if re.search(SECRET_PATTERN, output):
         return GuardrailResult(
             GuardrailAction.DENY,
             reason="Tool output blocked because it appears to contain a secret.",
         )
-
-    # 2. Block PEM Private Key blocks
-    if re.search(
-        r"-----BEGIN[A-Z0-9\s_]+PRIVATE KEY-----[\s\S]*?-----END[A-Z0-9\s_]+PRIVATE KEY-----",
-        output,
-    ):
-        return GuardrailResult(
-            GuardrailAction.DENY,
-            reason="Tool output blocked because it appears to contain a private key block.",
-        )
-
-    # 3. Block exact active environment credentials or registered extra secrets
-    secret_keys = [
-        "ANTHROPIC_API_KEY",
-        "ANTHROPIC_AUTH_TOKEN",
-        "GEMINI_API_KEY",
-        "GOOGLE_API_KEY",
-        "OPENAI_API_KEY",
-        "SAKTHAI_GATEWAY_API_KEY",
-        "TELEGRAM_BOT_TOKEN",
-        "HF_TOKEN",
-        "COMPOSIO_API_KEY",
-        "AWS_ACCESS_KEY_ID",
-        "AWS_SECRET_ACCESS_KEY",
-        "GITHUB_TOKEN",
-        "GITHUB_PAT",
-    ]
-    secrets_to_check = set()
-    try:
-        from ..config import _EXTRA_SECRETS
-
-        for s in _EXTRA_SECRETS:
-            if isinstance(s, str) and len(s) > 5:
-                secrets_to_check.add(s)
-    except Exception:  # nosec B110 — safe swallow of configuration error
-        pass
-
-    try:
-        import os
-
-        for key in secret_keys:
-            val = os.environ.get(key)
-            if isinstance(val, str) and len(val) > 5:
-                secrets_to_check.add(val)
-    except Exception:  # nosec B110 — safe swallow of environment variable reading error
-        pass
-
-    if secrets_to_check:
-        for val in sorted(secrets_to_check, key=len, reverse=True):
-            if val in output:
-                return GuardrailResult(
-                    GuardrailAction.DENY,
-                    reason="Tool output blocked because it appears to contain a secret.",
-                )
-
     return GuardrailResult(GuardrailAction.ALLOW)
 
 

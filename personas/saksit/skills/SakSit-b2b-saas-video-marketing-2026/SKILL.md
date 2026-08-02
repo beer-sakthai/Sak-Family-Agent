@@ -1,6 +1,5 @@
 ---
 name: SakSit-b2b-saas-video-marketing-2026
-version: 1.0.0
 description: A practical playbook for B2B SaaS companies to build, execute, and measure a video marketing strategy across LinkedIn, YouTube, and short-form platforms in 2026.
 domain: social-media
 category: video-marketing
@@ -17,7 +16,6 @@ tags:
   - short-form-video
   - content-repurposing
   - 2026
-
 ---
 
 # B2B SaaS Video Marketing Strategy 2026

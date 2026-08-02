@@ -1,8 +1,6 @@
 ---
 name: SakThai-coding-uv
 category: coding
-author: SakThai
-license: MIT
 description: Manage sakthai-agent-v2's dependencies and environment with uv — the Rust-based installer/resolver this repo standardizes on. Use when adding/upgrading deps, syncing the venv, locking, or running the CI sequence locally.
 version: 1.0.0
 platforms:

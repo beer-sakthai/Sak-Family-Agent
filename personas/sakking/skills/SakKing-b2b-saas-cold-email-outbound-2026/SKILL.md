@@ -1,14 +1,11 @@
 ---
 name: SakKing-b2b-saas-cold-email-outbound-2026
-version: 1.0.0
-description: "Sakking B2B Saas Cold Email Outbound 2026"
 description: >-
   Complete playbook for B2B SaaS companies to design, execute, and optimize
   cold email outbound campaigns. Covers deliverability infrastructure, sequence
   design, AI-powered personalisation, list sourcing, and performance benchmarks
   for 2026.
 category: social-media
-
 ---
 
 # B2B SaaS Cold Email Outbound Strategy 2026

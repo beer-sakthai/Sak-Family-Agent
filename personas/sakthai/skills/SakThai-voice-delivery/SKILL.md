@@ -1,8 +1,6 @@
 ---
 name: SakThai-voice-delivery
 category: voice
-author: SakThai
-license: MIT
 description: 'Deliver Telegram replies as matched voice notes — preferred voice is
   en-US-BrianMultilingualNeural (multilingual, Thai-capable US male). Covers edge-tts
   setup, MEDIA: file sending, Hermes TTS config, and browser-automation quirks on

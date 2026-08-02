@@ -1,0 +1,4 @@
+# file: C:\Users\beern\OneDrive\Documents\GitHub\Sak-Family-Agent\sakthai\agent\providers\gemini_provider.py
+# hypothesis_version: 6.155.7
+
+['$id', '$schema', 'MAX_TOKENS', 'assistant', 'content', 'end_turn', 'function_response', 'input', 'max_tokens', 'model', 'name', 'result', 'role', 'text', 'tool', 'tool_result', 'tool_use', 'tool_use_id', 'type', 'user']

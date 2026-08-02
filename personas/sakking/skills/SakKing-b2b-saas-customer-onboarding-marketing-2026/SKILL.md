@@ -15,12 +15,10 @@ triggers:
   - "product activation"
   - "welcome drip campaign"
 version: "1.0.0"
-description: "Sakking B2B Saas Customer Onboarding Marketing 2026"
 changelog:
   - date: 2026-07-02
     author: SakSit
     description: Initial skill creation based on 2026 onboarding benchmarks and best practices
-
 ---
 
 # B2B SaaS Customer Onboarding Marketing Strategy 2026

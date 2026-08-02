@@ -1,3 +1,0 @@
-{"input": "A user's email is alex@example.com.", "key_to_check": "email", "pattern_description": "email address", "value_pattern": "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$", "answer_json": "{\"email\": \"alex@example.com\"}"}
-{"input": "A user's phone number is 555-123-4567.", "key_to_check": "phone", "pattern_description": "phone number in the form XXX-XXX-XXXX", "value_pattern": "^\\d{3}-\\d{3}-\\d{4}$", "answer_json": "{\"phone\": \"555-123-4567\"}"}
-{"input": "A product's SKU is SKU-00042.", "key_to_check": "sku", "pattern_description": "SKU code starting with SKU-", "value_pattern": "^SKU-\\d+$", "answer_json": "{\"sku\": \"SKU-00042\"}"}

@@ -1003,30 +1003,6 @@ def test_run_dry_run_reports_and_exits_zero(
     assert "runnable:    yes" in result.output
 
 
-def test_run_dry_run_accepts_huggingface_provider(
-    runner: CliRunner, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    import sakthai.agent.loop as loop_mod
-
-    monkeypatch.setattr(loop_mod, "get_credential_source", lambda _p: "hf_token")
-    result = runner.invoke(
-        main,
-        [
-            "run",
-            "hi",
-            "--dry-run",
-            "--no-mcp",
-            "-p",
-            "huggingface",
-            "--model",
-            "meta-llama/Llama-3.1-8B-Instruct",
-        ],
-    )
-    assert result.exit_code == 0, result.output
-    assert "huggingface" in result.output
-    assert "runnable:    yes" in result.output
-
-
 def test_run_dry_run_fails_on_unresolved_skill(
     runner: CliRunner, monkeypatch: pytest.MonkeyPatch, sakthai_home: Path
 ) -> None:

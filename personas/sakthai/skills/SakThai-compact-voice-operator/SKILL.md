@@ -1,8 +1,6 @@
 ---
 name: SakThai-compact-voice-operator
 category: autonomous-ai-agents
-author: SakThai
-license: MIT
 description: Class-level skill for a Telegram-bound, voice-primary operator. Encode
   user persona, reasoning framework, reply style, TTS delivery, memory protocol, and
   tool-economy policy. Use when configuring an assistant for short text + voice note

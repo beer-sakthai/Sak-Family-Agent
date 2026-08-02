@@ -1,16 +1,16 @@
 ---
 name: SakThai-github-auth
-author: SakThai
-license: MIT
 description: "GitHub auth setup: HTTPS tokens, SSH keys, gh CLI login."
 version: 1.1.0
+author: Hermes Agent
+license: MIT
 platforms: [linux, macos, windows]
 metadata:
   hermes:
     tags: [GitHub, Authentication, Git, gh-cli, SSH, Setup]
     related_skills: [SakThai-github-pr-workflow, SakThai-github-code-review, SakThai-github-issues, SakThai-github-repo-management]
-category: github
 ---
+
 # GitHub Authentication Setup
 
 This skill sets up authentication so the agent can work with GitHub repositories, PRs, issues, and CI. It covers two paths:

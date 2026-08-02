@@ -6,7 +6,6 @@ description: >
   on LinkedIn in the 360Brew algorithm era. Covers founder-led content, Depth Score
   optimization, document carousel strategy, and measurable pipeline impact.
 version: "1.0.0"
-description: "Saksit B2B Saas Linkedin Thought Leadership 2026"
 category: social-media
 created: 2026-07-02
 author: SakSit Agent
@@ -15,7 +14,6 @@ prerequisites:
   - A personal LinkedIn profile (founder/executive) with 500+ connections
   - LinkedIn Creator Mode enabled
   - 30 minutes/day minimum content commitment
-
 ---
 
 # B2B SaaS LinkedIn Organic Thought Leadership Strategy 2026

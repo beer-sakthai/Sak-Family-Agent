@@ -1,13 +1,10 @@
 ---
 name: SakKing-b2b-saas-website-personalization-demand-gen-2026
-version: 1.0.0
-description: "Sakking B2B Saas Website Personalization Demand Gen 2026"
 description: |
   A practical playbook for B2B SaaS companies to implement AI-driven website personalization
   for demand generation — covering intent-based content adaptation, visitor deanonymization,
   ABX orchestration, tool selection, and measurement in 2026.
 category: B2B SaaS Marketing
-
 ---
 
 # B2B SaaS site Personalization for Demand Generation 2026

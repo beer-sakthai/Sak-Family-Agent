@@ -824,16 +824,23 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
                     and flag_name
                     in ("-c", "--config", "-p", "--port", "--import-map", "--lock", "--ext")
                 ):
-                    if flag_val is not None:
-                        if _is_binary(part, "unshare") and flag_name in ("--root", "--wd", "--mount-proc"):
-                            if _is_sensitive_path(flag_val, allow_local=True):
-                                binary_name = os.path.basename(part)
-                                return GuardrailResult(
-                                    GuardrailAction.DENY,
-                                    reason=f"potentially dangerous '{binary_name} {flag_name}' on {flag_val!r} blocked.",
-                                )
-                    else:
-                        if _is_binary(part, "unshare") and flag_name in ("--root", "--wd", "--mount-proc") and start_idx < len(parts):
+                    if (
+                        flag_val is not None
+                        and _is_binary(part, "unshare")
+                        and flag_name in ("--root", "--wd", "--mount-proc")
+                        and _is_sensitive_path(flag_val, allow_local=True)
+                    ):
+                        binary_name = os.path.basename(part)
+                        return GuardrailResult(
+                            GuardrailAction.DENY,
+                            reason=f"potentially dangerous '{binary_name} {flag_name}' on {flag_val!r} blocked.",
+                        )
+                    elif flag_val is None:
+                        if (
+                            _is_binary(part, "unshare")
+                            and flag_name in ("--root", "--wd", "--mount-proc")
+                            and start_idx < len(parts)
+                        ):
                             arg_val = parts[start_idx]
                             if _is_sensitive_path(arg_val, allow_local=True):
                                 binary_name = os.path.basename(part)

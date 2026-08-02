@@ -1,11 +1,7 @@
 ---
 name: SakSit-saksit-fastapi-business-patterns
 title: FastAPI Business Backend Patterns
-description: FastAPI and SQLite backends for business tools.
-category: productivity
-tags:
-- FastAPI
-- API
+description: Lightweight FastAPI + SQLite + uv backend patterns for internal business tools — lead trackers, webhook receivers, data APIs, admin dashboards. Beer's go-to Python backend stack.
 ---
 
 # FastAPI Business Backend Patterns

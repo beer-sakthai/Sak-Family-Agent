@@ -1,9 +1,7 @@
 ---
 name: SakKing-saksit-docker-compose-business-deploy
-version: 1.0.0
 title: Docker Compose for Business Services
 description: Practical Docker Compose patterns for containerizing Python/FastAPI backend services with databases, networking, and secrets management. Mirrors Beer's WorkFlow-SakThai deployment style.
-
 ---
 
 # Docker Compose Business Deployment

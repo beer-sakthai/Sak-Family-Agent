@@ -14,9 +14,7 @@ skills_tags:
   - organic-growth
 created: 2026-07-02
 version: 1.0.0
-description: "Sakking B2B Saas Reddit Marketing 2026"
 author: SakSit
-
 ---
 
 # B2B SaaS Reddit Marketing Strategy 2026

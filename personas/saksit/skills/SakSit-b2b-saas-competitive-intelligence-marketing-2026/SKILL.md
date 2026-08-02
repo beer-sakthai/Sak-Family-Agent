@@ -1,6 +1,5 @@
 ---
 name: SakSit-b2b-saas-competitive-intelligence-marketing-2026
-version: 1.0.0
 description: How to structure competitive intelligence (CI) as a continuous marketing function — automated monitoring, battle cards, win-loss synthesis, and AI-driven sales enablement.
 author: SakSit
 created: 2026-07-02
@@ -11,7 +10,6 @@ tags:
   - sales-enablement
   - win-loss
 category: social-media
-
 ---
 
 # B2B SaaS Competitive Intelligence Marketing 2026

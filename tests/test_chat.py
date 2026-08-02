@@ -461,34 +461,6 @@ def test_chat_forwards_model_provider_caveman_and_skills(
     assert calls[0]["with_skills"] == ("skill-a", "skill-b")
 
 
-def test_chat_accepts_huggingface_provider(
-    runner: CliRunner, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-) -> None:
-    persona_dir = tmp_path / "sakthai"
-    persona_dir.mkdir()
-    (persona_dir / "SOUL.md").write_text("id", encoding="utf-8")
-    monkeypatch.setattr(config, "PERSONAS_DIR", tmp_path)
-
-    calls: list[dict[str, Any]] = []
-    monkeypatch.setattr(chat_cli, "run_chat", lambda **kwargs: calls.append(kwargs))
-    monkeypatch.setattr(chat_cli, "_make_read_input", lambda: lambda: None)
-
-    result = runner.invoke(
-        main,
-        [
-            "chat",
-            "--no-mcp",
-            "--model",
-            "meta-llama/Llama-3.1-8B-Instruct",
-            "--provider",
-            "huggingface",
-        ],
-    )
-
-    assert result.exit_code == 0, result.output
-    assert calls[0]["provider"] == "huggingface"
-
-
 # ---------------------------------------------------------------------------
 # _make_read_input — the prompt_toolkit-backed REPL reader
 # ---------------------------------------------------------------------------

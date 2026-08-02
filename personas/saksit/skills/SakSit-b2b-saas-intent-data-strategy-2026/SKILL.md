@@ -8,10 +8,8 @@ description: >
   pipeline conversion.
 category: marketing
 version: 1.0.0
-description: "Saksit B2B Saas Intent Data Strategy 2026"
 created: 2026-07-02
 author: SakSit Agent
-
 ---
 
 # B2B SaaS Buyer Intent Data Strategy 2026

@@ -13,9 +13,7 @@ skills_tags:
   - social-media-strategy
 created: 2026-07-02
 version: 1.0.0
-description: "Saksit B2B Saas Tiktok Organic 2026"
 author: SakSit
-
 ---
 # B2B SaaS TikTok Organic Growth Strategy 2026
 

@@ -13,7 +13,6 @@ metadata:
     tags: [computer-use, desktop, automation, gui, cross-platform]
     category: desktop
     related_skills: [browser]
-
 ---
 
 # Computer Use (universal, any-model, cross-platform)

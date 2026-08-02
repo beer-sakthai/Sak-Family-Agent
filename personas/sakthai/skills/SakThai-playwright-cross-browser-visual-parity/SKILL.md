@@ -1,8 +1,6 @@
 ---
 name: SakThai-playwright-cross-browser-visual-parity
 category: playwright-growth
-author: SakThai
-license: MIT
 description: Use Playwright to capture and compare visual output across Chromium,
   Firefox, and WebKit for the same page/state. Detect rendering differences, font
   fallbacks, layout shifts, and viewport quirks by generating baseline and diff screenshots

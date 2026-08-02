@@ -26,6 +26,7 @@ PERSONA_LABELS: dict[str, str] = {
     "sakthai": "SakThai",
     "saksee": "SakSee",
     "saksit": "SakSit",
+    "saktan": "SakTan",
     "sakjules": "SakJules",
 }
 
@@ -34,6 +35,7 @@ PERSONA_COLORS: dict[str, str] = {
     "sakthai": "cyan",
     "saksee": "green",
     "saksit": "yellow",
+    "saktan": "blue",
     "sakjules": "bright_red",
 }
 

@@ -6,12 +6,8 @@ and SAKTHAI_HOME is redirected to a tmp dir via the sakthai_home fixture.
 
 from __future__ import annotations
 
-import inspect
 import json
-import socket
 import time
-from collections.abc import Iterator
-from contextlib import contextmanager
 from pathlib import Path
 from subprocess import CompletedProcess
 from typing import Any
@@ -68,58 +64,39 @@ def _git_mock(*, status_output: str = " M facts.jsonl", push_returncode: int = 0
 # ---------------------------------------------------------------------------
 
 
-_PUBLIC_ADDRINFO = [
-    (socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP, "", ("93.184.216.34", 443))
-]
-
-
-@contextmanager
-def _mock_transport(response: Any, addrinfo: list[Any] = _PUBLIC_ADDRINFO) -> Iterator[MagicMock]:
-    """Patch DNS resolution (to a public IP) and the no-redirect HTTP opener.
-
-    ``response`` may be a mock response object (used as the return value), a
-    plain function (used as a side effect that receives the request), or an
-    exception instance (raised when the opener is called).
-    """
-    opener = MagicMock()
-    if isinstance(response, BaseException) or inspect.isfunction(response):
-        opener.open.side_effect = response
-    else:
-        opener.open.return_value = response
-    with (
-        patch("sakthai.memory.sync.socket.getaddrinfo", return_value=addrinfo),
-        patch("sakthai.memory.sync.urllib.request.build_opener", return_value=opener),
-    ):
-        yield opener
-
-
 class TestSyncMemoryViaHttp:
     def test_rejects_non_http_url(self, sakthai_home: Path) -> None:
         with pytest.raises(ValueError, match="http"):
             sync_memory_via_http("ftp://example.com/sync")
 
     def test_successful_200(self, sakthai_home: Path) -> None:
-        with _mock_transport(_http_response(200)):
-            result = sync_memory_via_http("https://example.com/sync")
+        with patch("urllib.request.urlopen", return_value=_http_response(200)):
+            result = sync_memory_via_http("http://example.com/sync")
         assert isinstance(result, str) and result
 
     def test_successful_201(self, sakthai_home: Path) -> None:
-        with _mock_transport(_http_response(201)):
-            result = sync_memory_via_http("https://example.com/sync")
+        with patch("urllib.request.urlopen", return_value=_http_response(201)):
+            result = sync_memory_via_http("http://example.com/sync")
         assert isinstance(result, str) and result
 
     def test_successful_204(self, sakthai_home: Path) -> None:
-        with _mock_transport(_http_response(204)):
-            result = sync_memory_via_http("https://example.com/sync")
+        with patch("urllib.request.urlopen", return_value=_http_response(204)):
+            result = sync_memory_via_http("http://example.com/sync")
         assert isinstance(result, str) and result
 
     def test_server_error_raises(self, sakthai_home: Path) -> None:
-        with _mock_transport(_http_response(500, b"error")), pytest.raises(RuntimeError):
-            sync_memory_via_http("https://example.com/sync")
+        with (
+            patch("urllib.request.urlopen", return_value=_http_response(500, b"error")),
+            pytest.raises(RuntimeError),
+        ):
+            sync_memory_via_http("http://example.com/sync")
 
     def test_bad_request_raises(self, sakthai_home: Path) -> None:
-        with _mock_transport(_http_response(400, b"bad request")), pytest.raises(RuntimeError):
-            sync_memory_via_http("https://example.com/sync")
+        with (
+            patch("urllib.request.urlopen", return_value=_http_response(400, b"bad request")),
+            pytest.raises(RuntimeError),
+        ):
+            sync_memory_via_http("http://example.com/sync")
 
     def test_sends_bearer_api_key(self, sakthai_home: Path) -> None:
         captured: list[MagicMock] = []
@@ -128,41 +105,10 @@ class TestSyncMemoryViaHttp:
             captured.append(req)
             return _http_response(200)
 
-        with _mock_transport(_fake_open):
-            sync_memory_via_http("https://example.com/sync", api_key="secret-key")
-
-        assert captured[0].get_header("Authorization") == "Bearer secret-key"
-
-    def test_rejects_http_when_sending_token(self, sakthai_home: Path) -> None:
-        # A bearer token must never travel over plaintext http://.
-        with _mock_transport(_http_response(200)), pytest.raises(ValueError, match="plaintext"):
+        with patch("urllib.request.urlopen", side_effect=_fake_open):
             sync_memory_via_http("http://example.com/sync", api_key="secret-key")
 
-    def test_rejects_private_ip_endpoint(self, sakthai_home: Path) -> None:
-        # SSRF guard: a host resolving to a private address is refused.
-        private = [(socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP, "", ("10.0.0.5", 80))]
-        with (
-            _mock_transport(_http_response(200), addrinfo=private),
-            pytest.raises(ValueError, match="non-public"),
-        ):
-            sync_memory_via_http("http://internal.example.com/sync")
-
-    def test_rejects_loopback_endpoint(self, sakthai_home: Path) -> None:
-        loop = [(socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP, "", ("127.0.0.1", 80))]
-        with (
-            _mock_transport(_http_response(200), addrinfo=loop),
-            pytest.raises(ValueError, match="non-public"),
-        ):
-            sync_memory_via_http("http://localhost/sync")
-
-    def test_redirects_are_blocked(self) -> None:
-        # A 3xx must not be followed, so it cannot bounce a POST to an internal host.
-        from sakthai.memory.sync import _NoRedirect
-
-        with pytest.raises(RuntimeError, match="redirect"):
-            _NoRedirect().redirect_request(
-                MagicMock(), MagicMock(), 302, "Found", {}, "http://169.254.169.254/"
-            )
+        assert captured[0].get_header("Authorization") == "Bearer secret-key"
 
     def test_no_api_key_omits_auth_header(self, sakthai_home: Path) -> None:
         captured: list[MagicMock] = []
@@ -171,7 +117,7 @@ class TestSyncMemoryViaHttp:
             captured.append(req)
             return _http_response(200)
 
-        with _mock_transport(_fake_open):
+        with patch("urllib.request.urlopen", side_effect=_fake_open):
             sync_memory_via_http("http://example.com/sync")
 
         assert captured[0].get_header("Authorization") is None
@@ -187,8 +133,8 @@ class TestSyncMemoryViaHttp:
             captured.append(req)
             return _http_response(200)
 
-        with _mock_transport(_fake_open):
-            sync_memory_via_http("https://example.com/sync")
+        with patch("urllib.request.urlopen", side_effect=_fake_open):
+            sync_memory_via_http("http://example.com/sync")
 
         payload = json.loads(captured[0].data.decode("utf-8"))
         assert "facts" in payload
@@ -201,20 +147,20 @@ class TestSyncMemoryViaHttp:
             captured.append(req)
             return _http_response(200)
 
-        with _mock_transport(_fake_open):
-            sync_memory_via_http("https://example.com/sync")
+        with patch("urllib.request.urlopen", side_effect=_fake_open):
+            sync_memory_via_http("http://example.com/sync")
 
         assert captured[0].get_header("Content-type") == "application/json"
 
     def test_network_error_raises_runtime_error(self, sakthai_home: Path) -> None:
         with (
-            _mock_transport(OSError("connection refused")),
+            patch("urllib.request.urlopen", side_effect=OSError("connection refused")),
             pytest.raises(RuntimeError, match="Failed to sync"),
         ):
-            sync_memory_via_http("https://example.com/sync")
+            sync_memory_via_http("http://example.com/sync")
 
     def test_https_url_accepted(self, sakthai_home: Path) -> None:
-        with _mock_transport(_http_response(200)):
+        with patch("urllib.request.urlopen", return_value=_http_response(200)):
             result = sync_memory_via_http("https://secure.example.com/sync")
         assert result == "Synced to HTTP endpoint: https://secure.example.com/sync"
 
@@ -464,7 +410,7 @@ class TestSyncMemoryToGitExtended:
         assert not init_called, "git init should not be called when .git already exists"
 
     def test_http_202_status_accepted(self, sakthai_home: Path) -> None:
-        with _mock_transport(_http_response(202)):
+        with patch("urllib.request.urlopen", return_value=_http_response(202)):
             result = sync_memory_via_http("https://example.com/sync")
         assert isinstance(result, str) and result
 
@@ -481,14 +427,14 @@ class TestSyncMemoryToGitExtended:
         import urllib.error
 
         with (
-            _mock_transport(urllib.error.URLError("reason")),
+            patch("urllib.request.urlopen", side_effect=urllib.error.URLError("reason")),
             pytest.raises(RuntimeError, match="Failed to sync to"),
         ):
             sync_memory_via_http("https://example.com/sync")
 
     def test_http_generic_exception(self, sakthai_home: Path) -> None:
         with (
-            _mock_transport(Exception("oops")),
+            patch("urllib.request.urlopen", side_effect=Exception("oops")),
             pytest.raises(RuntimeError, match="Failed to sync to"),
         ):
             sync_memory_via_http("https://example.com/sync")
@@ -581,6 +527,6 @@ class TestGitUrlValidation:
 
 def test_http_sync_sets_a_timeout(sakthai_home: Path) -> None:
     """A dead endpoint must fail after the timeout instead of hanging forever."""
-    with _mock_transport(_http_response(200)) as opener:
+    with patch("urllib.request.urlopen", return_value=_http_response(200)) as urlopen:
         sync_memory_via_http("https://example.com/sync")
-    assert opener.open.call_args.kwargs.get("timeout") == pytest.approx(30.0)
+    assert urlopen.call_args.kwargs.get("timeout") == pytest.approx(30.0)

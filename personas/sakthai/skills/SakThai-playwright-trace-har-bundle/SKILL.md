@@ -1,8 +1,6 @@
 ---
 name: SakThai-playwright-trace-har-bundle
 category: dogfood
-author: SakThai
-license: MIT
 description: Package Playwright traces and HAR recordings into verifiable QA bundles
   for cron/CI runs, with CLI inspection commands and headless-safe artifact delivery.
 version: 1.0.0

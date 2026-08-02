@@ -1,9 +1,6 @@
 ---
 name: SakKing-sakthai-cycle-dream
-version: 1.0.0
-description: "Sakking Sakthai Cycle Dream"
 category: sakthai-cycle-dream
-
 ---
 # SakThai Cycle — Dream
 

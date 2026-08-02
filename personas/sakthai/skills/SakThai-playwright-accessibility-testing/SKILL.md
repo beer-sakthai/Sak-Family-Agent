@@ -1,8 +1,6 @@
 ---
 name: SakThai-playwright-accessibility-testing
 category: dogfood
-author: SakThai
-license: MIT
 description: Use Playwright’s built-in hooks for axe accessibility scanning, geolocation
   permissions, device emulation, responsive viewport checks, and permission gating
   to catch regressions early in headless browser flows.

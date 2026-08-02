@@ -15,9 +15,7 @@ skills_tags:
   - audio-marketing
 created: 2026-07-02
 version: 1.0.0
-description: "Saksit B2B Saas Podcast Marketing 2026"
 author: SakSit
-
 ---
 
 # B2B SaaS Podcast Marketing Strategy 2026

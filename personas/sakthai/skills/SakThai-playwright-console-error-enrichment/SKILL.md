@@ -1,8 +1,6 @@
 ---
 name: SakThai-playwright-console-error-enrichment
 category: playwright-growth
-author: SakThai
-license: MIT
 description: Enrich Playwright run errors and test failures with browser console messages,
   network failures, and runtime exceptions. Use when debugging flaky failures or hardening
   E2E suites.

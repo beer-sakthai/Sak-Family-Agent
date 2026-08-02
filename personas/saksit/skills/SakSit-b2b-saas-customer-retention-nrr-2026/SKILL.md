@@ -1,7 +1,6 @@
 ---
 name: SakSit-b2b-saas-customer-retention-nrr-2026
 version: 1.0.0
-description: "Saksit B2B Saas Customer Retention Nrr 2026"
 description: >-
   A complete operational playbook for B2B SaaS companies to reduce churn,
   improve Net Revenue Retention (NRR), and drive expansion revenue from
@@ -16,7 +15,6 @@ tags:
   - expansion-revenue
   - customer-success
   - 2026
-
 ---
 
 # B2B SaaS Customer Retention & NRR Strategy 2026

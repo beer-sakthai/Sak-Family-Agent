@@ -1,7 +1,5 @@
 ---
 name: SakKing-b2b-saas-content-distribution-2026
-version: 1.0.0
-description: "Sakking B2B Saas Content Distribution 2026"
 category: social-media
 domain: B2B SaaS Marketing
 agent: saksit
@@ -19,7 +17,6 @@ description: >
   to a systematic multi-channel, multi-format distribution
   engine that optimizes for AI search visibility, platform-native
   formats, and pipeline-attributed results.
-
 ---
 
 # B2B SaaS Content Distribution & Amplification (2026)

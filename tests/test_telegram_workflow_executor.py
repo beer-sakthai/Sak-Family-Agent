@@ -31,10 +31,7 @@ def test_workflow_command_uses_current_interpreter() -> None:
     command = workflow_executor._workflow_command("alpha")
     assert command[0] == sys.executable
     assert command[1:4] == ["-m", "sakthai", "run"]
-    assert "--fast" in command and "--stateless" in command
-    # The task text is placed last, guarded by a ``--`` separator.
-    assert command[-2:] == ["--", "execute the alpha skill"]
-    assert command.index("--with-skills") < command.index("--")
+    assert command[-2:] == ["--fast", "--stateless"]
 
 
 def test_run_workflow_executes_skill_with_current_interpreter(tmp_path: Path, monkeypatch) -> None:

@@ -1,8 +1,6 @@
 ---
 name: SakThai-playwright-session-persistence
 category: dogfood
-author: SakThai
-license: MIT
 description: Reuse authenticated Playwright browser sessions across cron/CI runs using
   storage state, context cookies, and controlled session handoffs.
 version: 1.0.0

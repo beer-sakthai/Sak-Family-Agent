@@ -1,8 +1,6 @@
 ---
 name: SakThai-personal
 category: sakthai
-author: SakThai
-license: MIT
 description: Recall the user's persistent SakThai memory (facts, observed preferences, ongoing projects) before acting, and honor it silently in the response.
 version: 1.0.0
 platforms:

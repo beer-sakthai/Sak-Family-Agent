@@ -1,7 +1,5 @@
 ---
 name: SakKing-b2b-saas-paid-search-google-ads-strategy-2026
-version: 1.0.0
-description: "Sakking B2B Saas Paid Search Google Ads Strategy 2026"
 title: "B2B SaaS Google Ads Paid Search Strategy 2026"
 description: >
   A complete operational playbook for B2B SaaS companies to design, launch, and
@@ -10,7 +8,6 @@ description: >
 category: social-media
 type: skill
 image_gen: false
-
 ---
 
 # B2B SaaS Google Ads Paid Search Strategy 2026

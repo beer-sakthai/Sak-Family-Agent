@@ -20,26 +20,31 @@ These run automatically and are the controls actually enforced on this repositor
 
 Beyond the enforced gates above, the project's longer-term security concept is an "intelligent digital immune system" — a proactive, self-healing approach to vulnerability management, designed to find and fix issues automatically and continuously.
 
-This system is orchestrated by a nightly workflow (`.github/workflows/continuous-security.yml`) that runs the agent with security-focused skills (`SakThai-coding-security`, `sakthai-security-hardening`). **Note:** an earlier version of this doc claimed that workflow lived only at the repository root, outside `.github/workflows/`, and was therefore dormant. That was inaccurate — an identical copy has been present under `.github/workflows/` (and therefore live, spending `ANTHROPIC_API_KEY`/`GH_PAT_FOR_ACTIONS` nightly) since it was first added; the misleading root-level duplicate has been removed. It also referenced a skill name (`devsecops`) that never resolved against this repo's skill roots, so it ran nightly without any security-skill guidance loaded until that was fixed — see the workflow file's own comments for the full story.
+This system is designed to be orchestrated by a nightly workflow that executes the agent's own `devsecops` skill. **Note:** that workflow currently lives at the repository root (`continuous-security.yml`), *outside* `.github/workflows/`, so it is **dormant** — GitHub never schedules it. Activating it is a deliberate decision (it spends LLM API credits nightly and requires the `ANTHROPIC_API_KEY` and `GH_PAT_FOR_ACTIONS` secrets); move it into `.github/workflows/` to turn it on.
 
 ### The Automated Security Workflow
 
-The workflow currently covers the first of three intended stages:
+The workflow consists of three main stages:
 
-1. **Proactive Scanning** (implemented):
-    - The agent runs a suite of static analysis tools, including `ruff` for code quality and `bandit` for security vulnerabilities, across the codebase.
+1. **Proactive Scanning**:
+    - The `devsecops` skill runs a suite of static analysis tools, including `ruff` for code quality and `bandit` for security vulnerabilities, across the entire codebase.
     - This process identifies potential bugs, security hotspots, and style issues.
     - A dedicated `gitleaks` workflow (`.github/workflows/secret-scan.yml`) runs on pushes to `main` and every pull request to detect and prevent hardcoded secrets from being committed to the repository.
 
-2. **Automated Triage and Patching** (aspirational — not yet implemented):
-    - The intent is for the agent to trigger an `automated-vulnerability-patching` skill for each actionable finding, following a 5-step isolate/reproduce/generate-fix/test-fix/surface-for-review pipeline.
-    - No skill by that name currently exists in this repository (there is no `automated-vulnerability-patching` skill under any persona or the shared library), so this stage does not run yet. Until it's authored, the nightly scan surfaces findings in the run log rather than opening patch PRs automatically.
+2. **Automated Triage and Patching**:
+    - For each actionable vulnerability found, the agent triggers the `automated-vulnerability-patching` skill.
+    - This skill follows a rigorous 5-step pipeline inspired by Google's automated patching systems:
+        1. **Isolate**: The bug report from the scanner is captured.
+        2. **Reproduce**: A new, failing test case is automatically generated to reliably reproduce the bug.
+        3. **Generate Fix**: An LLM is prompted with the code, the error, and the failing test to generate a patch.
+        4. **Test Fix**: The patch is applied, and the entire test suite is run to verify the fix and check for regressions.
+        5. **Surface for Review**: If all tests pass, the agent automatically creates a new branch and opens a pull request with the proposed fix, including all context for human review.
 
 3. **Human-in-the-Loop**:
     - **No code is ever merged automatically.**
-    - Any AI-generated patch would be presented as a pull request, where a human developer performs the final review and approval. This ensures that all changes are vetted and meet project standards.
+    - Every AI-generated patch is presented as a pull request, where a human developer performs the final review and approval. This ensures that all changes are vetted and meet project standards.
 
-The long-term goal remains a closed-loop system where the agent continuously monitors its own codebase, heals vulnerabilities, and adapts its defenses over time — stage 1 runs today, stages 2–3 are the roadmap.
+This closed-loop system allows the agent to continuously monitor its own codebase, heal vulnerabilities, and adapt its defenses over time, significantly reducing the window of opportunity for exploits.
 
 ## Reporting a Vulnerability
 

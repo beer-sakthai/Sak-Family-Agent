@@ -1,16 +1,16 @@
 ---
 name: SakThai-github-repo-management
-author: SakThai
-license: MIT
 description: "Clone/create/fork repos; manage remotes, releases."
 version: 1.1.0
+author: Hermes Agent
+license: MIT
 platforms: [linux, macos, windows]
 metadata:
   hermes:
     tags: [GitHub, Repositories, Git, Releases, Secrets, Configuration]
     related_skills: [SakThai-github-auth, SakThai-github-pr-workflow, SakThai-github-issues]
-category: github
 ---
+
 # GitHub Repository Management
 
 Create, clone, fork, configure, and manage GitHub repositories. Each section shows `gh` first, then the `git` + `curl` fallback.

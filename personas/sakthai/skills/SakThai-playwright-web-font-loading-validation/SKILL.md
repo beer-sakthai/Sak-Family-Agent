@@ -1,8 +1,6 @@
 ---
 name: SakThai-playwright-web-font-loading-validation
 category: playwright-growth
-author: SakThai
-license: MIT
 description: Use Playwright to detect and gate on web font loading behavior - font-display
   strategies, @font-face ready events, FOUT/FOIT, and font-load timing regressions.
 version: 1.0.0

@@ -1,7 +1,6 @@
 ---
 name: SakKing-b2b-saas-reddit-marketing-strategy-2026
 version: 1.0.0
-description: "Sakking B2B Saas Reddit Marketing Strategy 2026"
 category: social-media
 description: |-
   A complete playbook for B2B SaaS companies to build, execute, and scale
@@ -19,7 +18,6 @@ tags:
   - social-media
   - AI-citation
   - demand-generation
-
 ---
 
 # B2B SaaS Reddit Marketing Strategy 2026

@@ -1,8 +1,6 @@
 ---
 name: SakKing-house-of-sak-qa-shield
-version: 1.0.0
 description: "Full Trust Check / QA Shield audit framework for House of Sak. Run parallel checks on any website: tech stack, performance, security headers, SEO, accessibility, social presence, and content quality. Produces a structured report template."
-
 ---
 
 # House of Sak — QA Shield / Trust Check Framework

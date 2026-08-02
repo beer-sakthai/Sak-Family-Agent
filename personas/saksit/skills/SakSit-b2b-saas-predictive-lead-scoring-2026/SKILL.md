@@ -1,14 +1,11 @@
 ---
 name: SakSit-b2b-saas-predictive-lead-scoring-2026
-version: 1.0.0
-description: "Saksit B2B Saas Predictive Lead Scoring 2026"
 title: "B2B SaaS Predictive Lead Scoring 2026"
 description: >
   How to design, implement, and continuously tune ML-driven lead scoring
   using hybrid rule+ML models, intent data, and sales feedback loops for
   B2B SaaS in 2026.
 category: marketing
-
 ---
 
 # B2B SaaS Predictive Lead Scoring 2026

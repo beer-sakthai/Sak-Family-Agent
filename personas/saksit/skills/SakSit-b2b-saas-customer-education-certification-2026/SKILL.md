@@ -13,9 +13,7 @@ skills_tags:
   - product-adoption
 created: 2026-07-02
 version: 1.0.0
-description: "Saksit B2B Saas Customer Education Certification 2026"
 author: SakSit
-
 ---
 
 # B2B SaaS Customer Education & Certification Programs 2026
