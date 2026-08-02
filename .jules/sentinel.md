@@ -1,5 +1,10 @@
 # Sentinel Security Journal
 
+## 2026-08-05 - [Hardening Guardrails against Namespace and Privilege Escalation Bypasses via unshare and pkexec]
+**Vulnerability:** Shell command guardrails could be bypassed by utilizing unmonitored virtualization/namespace tool `unshare` or privilege escalation wrapper `pkexec`. These tools allowed executing arbitrary commands under unshared namespaces or elevated privileges, and bypassed path-based checks when sensitive paths were supplied as flags (e.g., `unshare --root=/etc`).
+**Learning:** Security administrative tools and kernel namespace wrappers are dangerous dual-use utilities. When scanning CLI parameters for wrappers, we must support both separate option arguments and attached option values (using `=`) to prevent escape sequences from hiding in flag values, while recursively checking wrapped command structures.
+**Prevention:** Register `unshare` and `pkexec` in `transparent_wrappers`. Implement robust option-skipping and decompose flag-value pairs (splitting by `=`) in the wrapper scanner, enabling deep path validation on directory-targeting flags (`--root`, `--wd`, `--mount-proc`) while allowing safe commands. Synchronize changes across all persona copies.
+
 ## 2026-08-04 - [Hardening Guardrails against Unmonitored npx and Deno Execution Bypasses]
 **Vulnerability:** Shell command guardrails could be bypassed by utilizing unmonitored modern package runners (`npx`) or JavaScript/TypeScript engines (`deno`) to execute arbitrary destructive commands or run inline script files that targeted host-sensitive paths.
 **Learning:** Standard security scanners focusing solely on shell runtimes like python/node fail to recognize modern alternative engines like Deno and package execution wrappers like npx, leaving robust escape hatches for bypasses.
