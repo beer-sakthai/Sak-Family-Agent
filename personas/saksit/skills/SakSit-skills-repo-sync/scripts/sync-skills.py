@@ -27,6 +27,12 @@ def get_token():
         for line in f:
             line = line.strip()
             try:
+    try:
+        with open("/opt/data/.git-credentials") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
                 parsed = urlparse(line)
                 if parsed.hostname == "github.com":
                     if "x-access-token:" in line:
@@ -38,6 +44,8 @@ def get_token():
                     return token.replace("@github.com", "").strip()
             except Exception:
                 pass
+    except Exception:
+        pass
     return None
 
 
