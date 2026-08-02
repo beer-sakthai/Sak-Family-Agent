@@ -15,7 +15,9 @@ skills_tags:
   - deal-post-mortem
 created: 2026-07-02
 version: 1.0.0
+description: "Saksit B2B Saas Win Loss Analysis 2026"
 author: SakSit
+
 ---
 
 # B2B SaaS Win/Loss Analysis Program 2026

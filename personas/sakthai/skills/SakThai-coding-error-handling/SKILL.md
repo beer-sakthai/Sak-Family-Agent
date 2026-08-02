@@ -1,6 +1,8 @@
 ---
 name: SakThai-coding-error-handling
 category: coding
+author: SakThai
+license: MIT
 description: Handle failures the v2 way — surface tool errors to the model instead of raising, fail soft on external MCP servers, fail fast on bad input, and chain exceptions for context. Use when writing tool handlers, the agent loop, MCP wiring, or input validation.
 version: 1.0.0
 platforms:

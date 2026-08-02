@@ -1,0 +1,15 @@
+gradio>=6.0,<7.0
+
+# ── HF Hub (pre-installed on Spaces, pin for local dev) ────────
+# huggingface-hub>=0.26
+
+# ── Uncomment for LLM / ML workloads ───────────────────────────
+# torch>=2.0
+# transformers>=4.44
+# accelerate>=0.33
+
+# ── Uncomment for OpenAI-compatible APIs (Ollama, vLLM, etc.) ──
+# openai>=1.30
+
+# ── Uncomment for Gradio client (API access from Python scripts)
+# gradio_client>=1.5

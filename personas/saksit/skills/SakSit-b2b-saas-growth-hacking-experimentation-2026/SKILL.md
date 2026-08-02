@@ -6,6 +6,7 @@ description: >-
   loop mechanics, and building a culture of experimentation across marketing,
   product, and sales.
 version: "1.0"
+description: "Saksit B2B Saas Growth Hacking Experimentation 2026"
 category: social-media
 date: 2026-07-02
 author: SakSit Agent (beer-sakthai)
@@ -16,6 +17,7 @@ tags:
   - a-b-testing
   - viral-loops
   - sprint-cadence
+
 ---
 
 # B2B SaaS Growth Experimentation Playbook 2026

@@ -15,8 +15,6 @@ jobs:
       matrix:
         model:
           - 'Nanthasit/sakthai-context-0.5b-tools'
-          - 'google/gemma-2b'
-          - 'mistralai/Mistral-7B-v0.1'
         task:
           - 'soul_following'
           - 'json_validity'
@@ -26,18 +24,12 @@ jobs:
           - 'yaml_validity'
       fail-fast: false # Allow all jobs to run even if some fail
     runs-on: ubuntu-latest
-    outputs:
-      model_name: ${{ matrix.model }}
-      task_name: ${{ matrix.task }}
-      sanitized_model_name: ${{ steps.run_eval.outputs.sanitized_model_name }}
-      sanitized_task_name: ${{ steps.run_eval.outputs.sanitized_task_name }}
-      score: ${{ steps.run_eval.outputs.score }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
@@ -45,7 +37,10 @@ jobs:
         run: pipx install uv
 
       - name: Install dependencies
-        run: uv sync --all-extras
+        # The evals group (lm-eval + CPU-only torch/transformers) is kept out of
+        # --all-extras on purpose (see pyproject.toml) so ci.yml/pylint.yml never
+        # pull it in; only this workflow opts in.
+        run: uv sync --group evals
 
       - name: Run lm-evaluation-harness
         id: run_eval
@@ -59,82 +54,163 @@ jobs:
           SANITIZED_MODEL_NAME=$(echo "${{ matrix.model }}" | tr '/' '_-')
           SANITIZED_TASK_NAME=$(echo "${{ matrix.task }}" | tr '/' '_-')
           export RESULTS_FILE="$RESULTS_DIR/results-$SANITIZED_MODEL_NAME-$SANITIZED_TASK_NAME.json"
-          mkdir -p $RESULTS_DIR
+          mkdir -p "$RESULTS_DIR"
 
-          uv run lm_eval \
+          # `uv run lm_eval` (the console-script entry point) does not add the
+          # repo root to sys.path, so `evaluation_tasks.utils` (loaded by the
+          # task YAMLs via !function) fails to import. `python -m lm_eval` does
+          # add the cwd, so invoke it that way instead.
+          #
+          # trust_remote_code is disabled below: it would execute arbitrary
+          # Python shipped by the model repo inside CI (which holds HF_TOKEN).
+          # The evaluated model uses a standard architecture and does not need it.
+          uv run python -m lm_eval \
             --model hf \
-            --model_args pretrained=${{ matrix.model }},trust_remote_code=True \
+            --model_args pretrained=${{ matrix.model }},trust_remote_code=False \
             --tasks ${{ matrix.task }} \
-            --task_path evaluation_tasks \
-            --output_path $RESULTS_FILE \
-            --batch_size auto \
+            --include_path evaluation_tasks \
+            --output_path "$RESULTS_FILE" \
+            --batch_size 1 \
             --log_samples
 
-          # Extract score and set as output
-          # Note: This jq query dynamically gets the metric name from the first result.
-          METRIC_KEY=$(jq -r '.results["${{ matrix.task }}"] | keys[0]' $RESULTS_FILE)
-          SCORE=$(jq '.results["${{ matrix.task }}"][$METRIC_KEY]' $RESULTS_FILE)
-          echo "score=$SCORE" >> $GITHUB_OUTPUT
-          echo "sanitized_model_name=$SANITIZED_MODEL_NAME" >> $GITHUB_OUTPUT
-          echo "sanitized_task_name=$SANITIZED_TASK_NAME" >> $GITHUB_OUTPUT
+          # lm_eval appends "_<timestamp>.json" to the given filename's stem
+          # instead of writing to it directly (see EvaluationTracker in
+          # lm_eval/loggers/evaluation_tracker.py) — move the real output back
+          # to our predictable name so downstream jobs can rely on it.
+          ACTUAL_FILE=$(ls "${RESULTS_FILE%.json}"_*.json)
+          mv "$ACTUAL_FILE" "$RESULTS_FILE"
+
+          # Sidecar with the raw (unsanitized) model/task names, so the
+          # aggregate-results job can recover them without parsing filenames
+          # or lm_eval's internal JSON schema.
+          cat > "$RESULTS_DIR/meta-$SANITIZED_MODEL_NAME-$SANITIZED_TASK_NAME.json" <<META
+          {"model": "${{ matrix.model }}", "task": "${{ matrix.task }}"}
+          META
+
+          echo "sanitized_model_name=$SANITIZED_MODEL_NAME" >> "$GITHUB_OUTPUT"
+          echo "sanitized_task_name=$SANITIZED_TASK_NAME" >> "$GITHUB_OUTPUT"
 
       - name: Upload evaluation results
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v4
         with:
           name: evaluation-results-${{ steps.run_eval.outputs.sanitized_model_name }}-${{ steps.run_eval.outputs.sanitized_task_name }}
           path: eval-results/
 
-  post-summary:
+  # Job-level `outputs:` on a matrixed job only ever captures one arbitrary
+  # matrix leg's values, not all of them — it cannot be used to collect
+  # per-cell results (the workflow previously tried this and it was broken).
+  # Aggregate by downloading every per-cell artifact instead.
+  aggregate-results:
     runs-on: ubuntu-latest
     needs: [run-evaluations]
     if: always() # Run even if some evals fail
     steps:
-      - name: Build consolidated results and Slack Payload
-        id: build_payload
-        # This step now also creates a single results.json for the baseline
+      - name: Download all evaluation result artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: evaluation-results-*
+          path: eval-results
+          merge-multiple: true
+        continue-on-error: true
+
+      - name: Build consolidated current-results.json
+        id: build
         run: |
-          # The 'needs' context contains outputs from all matrix jobs
-          JSON_RESULTS='${{ toJSON(needs.run-evaluations.outputs) }}'
-          
-          # Use jq to format the results into a markdown table for Slack
-          MARKDOWN_TABLE=$(echo "$JSON_RESULTS" | jq -r 'map(select(.score != null)) | "| Model | Task | Score |\n|---|---|---|\n" + (map("| `\(.model_name)` | `\(.task_name)` | `\(.score)` |") | join("\n"))')
+          RESULTS='[]'
+          shopt -s nullglob
+          for f in eval-results/results-*.json; do
+            suffix="${f#eval-results/results-}"
+            meta="eval-results/meta-$suffix"
+            if [ ! -f "$meta" ]; then
+              echo "No metadata sidecar for $f, skipping."
+              continue
+            fi
+            MODEL=$(jq -r '.model' "$meta")
+            TASK=$(jq -r '.task' "$meta")
+            SCORE=$(jq -r --arg t "$TASK" '.results[$t]["score,none"]' "$f")
+            RESULTS=$(echo "$RESULTS" | jq --arg model "$MODEL" --arg task "$TASK" --argjson score "$SCORE" \
+              '. + [{model: $model, task: $task, score: $score}]')
+          done
+          echo "$RESULTS" > current-results.json
+          cat current-results.json
 
-          # Create a consolidated results.json file for the baseline artifact
-          echo "$JSON_RESULTS" | jq 'map(select(.score != null)) | map({model: .model_name, task: .task_name, score: .score})' > results.json
+      - name: Upload consolidated results
+        uses: actions/upload-artifact@v4
+        with:
+          name: current-results
+          path: current-results.json
 
-          # Escape characters for JSON and create the payload
-          ESCAPED_TABLE=$(echo "$MARKDOWN_TABLE" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g' -e 's/`/\\`/g' | tr -d '\n')
-          PAYLOAD="{\"text\": \"✅ Weekly `lm-evaluation-harness` run completed.\", \"blocks\": [{\"type\": \"header\", \"text\": {\"type\": \"plain_text\", \"text\": \"✅ Model Evaluation Comparison\"}}, {\"type\": \"section\", \"text\": {\"type\": \"mrkdwn\", \"text\": \"$ESCAPED_TABLE\"}}]}"
-          echo "payload=$PAYLOAD" >> $GITHUB_OUTPUT
+  post-summary:
+    runs-on: ubuntu-latest
+    needs: [aggregate-results]
+    if: always() # Run even if some evals fail
+    env:
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+    steps:
+      - name: Download consolidated results
+        uses: actions/download-artifact@v4
+        with:
+          name: current-results
+        continue-on-error: true
+
+      - name: Build Slack payload
+        id: build_payload
+        run: |
+          if [ ! -f current-results.json ]; then
+            echo "No consolidated results found; nothing to summarize."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          MARKDOWN_TABLE=$(jq -r '
+            if length == 0 then "_No results._"
+            else "| Model | Task | Score |\n|---|---|---|\n" +
+              (map("| `\(.model)` | `\(.task)` | `\(.score)` |") | join("\n"))
+            end' current-results.json)
+
+          # jq handles all JSON escaping of the table text (newlines, quotes,
+          # backticks) — no manual sed-based escaping needed.
+          PAYLOAD=$(jq -nc --arg table "$MARKDOWN_TABLE" '{
+            text: "Weekly lm-evaluation-harness run completed.",
+            blocks: [
+              {type: "header", text: {type: "plain_text", text: "Model Evaluation Comparison"}},
+              {type: "section", text: {type: "mrkdwn", text: $table}}
+            ]
+          }')
+          echo "payload=$PAYLOAD" >> "$GITHUB_OUTPUT"
+          echo "skip=false" >> "$GITHUB_OUTPUT"
 
       - name: Post comparison to Slack
-        if: success() # Only post if the summary build succeeds
-        uses: slackapi/slack-github-action@v3.0.5
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        # Skip cleanly (rather than fail) when the webhook secret isn't configured.
+        if: steps.build_payload.outputs.skip == 'false' && env.SLACK_WEBHOOK_URL != ''
+        uses: slackapi/slack-github-action@dcb1066f776dd043e64d0e8ba94ca15cc7e1875d # v4.0.0
         with:
           payload: ${{ steps.build_payload.outputs.payload }}
 
       - name: Upload baseline results artifact (on main branch)
-        if: github.ref == 'refs/heads/main' && success()
-        uses: actions/upload-artifact@v7
+        if: github.ref == 'refs/heads/main' && steps.build_payload.outputs.skip == 'false'
+        uses: actions/upload-artifact@v4
         with:
           name: baseline-results-main
-          path: results.json
+          path: current-results.json
           retention-days: 90
 
   check-regressions:
     runs-on: ubuntu-latest
-    needs: [run-evaluations]
+    needs: [aggregate-results]
     if: always() # Run even if some evals fail
     permissions:
       issues: write # Permission to create issues
       actions: read # Permission to download artifacts from other runs
-    strategy:
-      matrix: ${{ needs.run-evaluations.outputs }}
     steps:
+      - name: Download consolidated current results
+        uses: actions/download-artifact@v4
+        with:
+          name: current-results
+        continue-on-error: true
+
       - name: Download baseline results artifact
-        uses: dawidd6/action-download-artifact@v21
+        uses: dawidd6/action-download-artifact@b6e2e70617bc3265edd6dab6c906732b2f1ae151 # v21
         with:
           # Download from the last successful workflow run on the main branch
           workflow: ${{ github.workflow_id }}
@@ -144,49 +220,74 @@ jobs:
         # Continue even if the artifact is not found (e.g., first run)
         continue-on-error: true
 
-      - name: Check for score regression and create issue
+      - name: Check for score regressions
         id: check
         run: |
-          BASELINE_FILE="baseline/results.json"
+          if [ ! -f current-results.json ]; then
+            echo "No current results. Skipping regression check."
+            echo "has_regressions=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          BASELINE_FILE="baseline/current-results.json"
           if [ ! -f "$BASELINE_FILE" ]; then
             echo "No baseline results found. Skipping regression check."
+            echo "has_regressions=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
-          # Find the baseline score for the current model and task
-          BASELINE_SCORE=$(jq -r --arg MODEL "${{ matrix.model_name }}" --arg TASK "${{ matrix.task_name }}" '.[] | select(.model == $MODEL and .task == $TASK) | .score' $BASELINE_FILE)
-          CURRENT_SCORE=${{ matrix.score }}
+          REGRESSIONS='[]'
+          COUNT=$(jq 'length' current-results.json)
+          for i in $(seq 0 $((COUNT - 1))); do
+            MODEL=$(jq -r ".[$i].model" current-results.json)
+            TASK=$(jq -r ".[$i].task" current-results.json)
+            CURRENT_SCORE=$(jq -r ".[$i].score" current-results.json)
+            BASELINE_SCORE=$(jq -r --arg m "$MODEL" --arg t "$TASK" \
+              '.[] | select(.model == $m and .task == $t) | .score' "$BASELINE_FILE")
 
-          if [ -z "$BASELINE_SCORE" ]; then
-            echo "No baseline score found for this model/task. Skipping."
-            exit 0
-          fi
+            if [ -z "$BASELINE_SCORE" ]; then
+              continue # No baseline score found for this model/task.
+            fi
 
-          # Use awk for floating point comparison
-          IS_REGRESSION=$(awk -v current="$CURRENT_SCORE" -v baseline="$BASELINE_SCORE" 'BEGIN { print (current < baseline) }')
+            # Use awk for floating point comparison
+            IS_REGRESSION=$(awk -v c="$CURRENT_SCORE" -v b="$BASELINE_SCORE" 'BEGIN { print (c < b) ? 1 : 0 }')
+            if [ "$IS_REGRESSION" -eq 1 ]; then
+              echo "Regression detected: $MODEL/$TASK: $CURRENT_SCORE < $BASELINE_SCORE"
+              REGRESSIONS=$(echo "$REGRESSIONS" | jq \
+                --arg model "$MODEL" --arg task "$TASK" --argjson current "$CURRENT_SCORE" --argjson baseline "$BASELINE_SCORE" \
+                '. + [{model: $model, task: $task, current: $current, baseline: $baseline}]')
+            fi
+          done
 
-          if [ "$IS_REGRESSION" -eq 1 ]; then
-            echo "Regression detected: $CURRENT_SCORE < $BASELINE_SCORE"
-            echo "BASELINE_SCORE=$BASELINE_SCORE" >> $GITHUB_OUTPUT
-            echo "regression=true" >> $GITHUB_OUTPUT
+          echo "$REGRESSIONS" > regressions.json
+          if [ "$(echo "$REGRESSIONS" | jq 'length')" -gt 0 ]; then
+            echo "has_regressions=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_regressions=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Create issue on regression
-        if: steps.check.outputs.regression == 'true'
-        uses: actions/create-issue@v2
+        if: steps.check.outputs.has_regressions == 'true'
+        uses: actions/github-script@v7
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          title: "📉 Performance Regression Detected: ${{ matrix.model_name }}"
-          body: |
-            ### 📉 Model Performance Alert
-
-            The model **${{ matrix.model_name }}** has scored below the threshold on an evaluation task.
-
-            - **Task:** `${{ matrix.task_name }}`
-            - **Current Score:** `${{ matrix.score }}`
-            - **Baseline Score:** `${{ steps.check.outputs.BASELINE_SCORE }}`
-
-            Please investigate this performance regression.
-          labels: |
-            bug
-            performance-regression
+          script: |
+            const fs = require('fs');
+            const regressions = JSON.parse(fs.readFileSync('regressions.json', 'utf8'));
+            const lines = regressions.map(
+              (r) => `- **${r.model}** / \`${r.task}\`: ${r.current} < baseline ${r.baseline}`
+            );
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `Performance regression detected in ${regressions.length} eval task(s)`,
+              body: [
+                '### Model Performance Alert',
+                '',
+                'The following evaluation task(s) scored below the last recorded baseline:',
+                '',
+                ...lines,
+                '',
+                'Please investigate this performance regression.',
+              ].join('\n'),
+              labels: ['bug', 'performance-regression'],
+            });

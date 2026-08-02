@@ -1,6 +1,8 @@
 ---
 name: SakThai-playwright-shadow-dom
 category: dogfood
+author: SakThai
+license: MIT
 description: Use Playwright locators with `:scope`, `locator('css=...)` targeting
   `shadowRoot`, and `evaluate()` to interact with, assert on, and extract state fromShadow
   DOM, closed Shadow DOM workarounds, and shadow-piercing strategies for LWC/SLDS/Custom

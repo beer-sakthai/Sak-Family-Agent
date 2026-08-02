@@ -1,6 +1,8 @@
 ---
 name: SakThai-playwright-clipboard-security-validation
 category: playwright-growth
+author: SakThai
+license: MIT
 description: Validate clipboard access, sensitive-text protection, and copy/paste
   behavior in web apps with Playwright. Use this skill to probe clipboard-read permissions,
   detect unexpected clipboard writes via the Async Clipboard API or copy-paste interactions,

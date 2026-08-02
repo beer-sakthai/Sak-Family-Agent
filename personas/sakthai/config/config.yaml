@@ -521,13 +521,18 @@ security:
   tirith_enabled: true
   tirith_path: tirith
   tirith_timeout: 5
-  tirith_fail_open: true
+  # Fail closed: if the Tirith policy engine errors or is missing, block the
+  # action rather than allowing it. A security guard that fails open silently
+  # disables itself the moment it breaks.
+  tirith_fail_open: false
   website_blocklist:
     enabled: false
     domains: []
     shared_files: []
   acked_advisories: []
-  allow_lazy_installs: true
+  # Do not install packages on the fly at runtime (arbitrary-code / supply-chain
+  # vector). Provision dependencies ahead of time instead.
+  allow_lazy_installs: false
 cron:
   wrap_response: true
   max_parallel_jobs: null

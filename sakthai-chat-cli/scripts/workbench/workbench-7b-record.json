@@ -1,0 +1,119 @@
+{
+  "type": "workbench_hf_jobs",
+  "model": "Nanthasit/sakthai-context-7b-merged",
+  "load_time_seconds": 137.3,
+  "device": "cuda:0",
+  "gpu": "Tesla T4",
+  "vram_used_gb": 5.56,
+  "timestamp": "2026-07-07T14:44:33Z",
+  "results": [
+    {
+      "name": "basic_greeting",
+      "passed": true,
+      "response_preview": "Hello!",
+      "response_length": 6,
+      "latency_seconds": 1.08,
+      "prompt_tokens": 31,
+      "completion_tokens": 3,
+      "checks": [
+        "non_empty"
+      ]
+    },
+    {
+      "name": "tool_call_intent",
+      "passed": true,
+      "response_preview": "Searching for the latest AI news...",
+      "response_length": 35,
+      "latency_seconds": 0.93,
+      "prompt_tokens": 37,
+      "completion_tokens": 8,
+      "checks": [
+        "non_empty",
+        "substantial"
+      ]
+    },
+    {
+      "name": "name_recall",
+      "passed": true,
+      "response_preview": "Your name is Beer.",
+      "response_length": 18,
+      "latency_seconds": 0.78,
+      "prompt_tokens": 45,
+      "completion_tokens": 6,
+      "checks": [
+        "non_empty",
+        "substantial",
+        "name_recall"
+      ]
+    },
+    {
+      "name": "factual_qa",
+      "passed": true,
+      "response_preview": "Tokyo.",
+      "response_length": 6,
+      "latency_seconds": 0.63,
+      "prompt_tokens": 28,
+      "completion_tokens": 4,
+      "checks": [
+        "non_empty",
+        "correct"
+      ]
+    },
+    {
+      "name": "json_output",
+      "passed": true,
+      "response_preview": "{\"frameworks\": [\"TensorFlow\", \"PyTorch\", \"Keras\"]}",
+      "response_length": 50,
+      "latency_seconds": 1.62,
+      "prompt_tokens": 41,
+      "completion_tokens": 18,
+      "checks": [
+        "non_empty",
+        "substantial",
+        "valid_json"
+      ]
+    },
+    {
+      "name": "instruction_following",
+      "passed": true,
+      "response_preview": "A transformer is an electrical device that transfers electrical energy between two or more circuits through inductively coupled conductors\u2014called windings\u2014without any physical connection between the c",
+      "response_length": 208,
+      "latency_seconds": 2.94,
+      "prompt_tokens": 29,
+      "completion_tokens": 36,
+      "checks": [
+        "non_empty",
+        "substantial"
+      ]
+    },
+    {
+      "name": "multi_step_reasoning",
+      "passed": true,
+      "response_preview": "Let's break this down step by step:\n\n1. You start with 3 apples.\n2. You give away 1 apple: 3 - 1 = 2 apples remaining.\n3. You buy 5 more apples: 2 + 5 = 7 apples.\n\nSo, you end up with 7 apples.",
+      "response_length": 193,
+      "latency_seconds": 5.21,
+      "prompt_tokens": 50,
+      "completion_tokens": 68,
+      "checks": [
+        "non_empty",
+        "substantial",
+        "correct_answer"
+      ]
+    },
+    {
+      "name": "context_window",
+      "passed": true,
+      "response_preview": "The paper \"Attention Is All You Need\" was published in 2017. It introduced the transformer architecture which has since become a fundamental building block for many state-of-the-art natural language p",
+      "response_length": 246,
+      "latency_seconds": 4.45,
+      "prompt_tokens": 65,
+      "completion_tokens": 54,
+      "checks": [
+        "non_empty",
+        "substantial",
+        "correct_answer"
+      ]
+    }
+  ],
+  "summary": "8/8 passed"
+}

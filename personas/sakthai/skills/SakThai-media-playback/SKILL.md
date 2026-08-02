@@ -1,6 +1,8 @@
 ---
 name: SakThai-media-playback
 category: media
+author: SakThai
+license: MIT
 description: Find and deliver playable media links for requested tracks, playlists,
   or sleep/relaxation content across desktop and mobile.
 version: 1.0.0

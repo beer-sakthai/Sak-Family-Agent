@@ -1,6 +1,8 @@
 ---
 name: SakThai-playwright-ime-composition-validation
 category: playwright-growth
+author: SakThai
+license: MIT
 description: Validate CJK and complex-text input behaviors in web apps using Playwright
   by simulating IME composition events, detecting compositionend/blur race conditions,
   and ensuring composed text is submitted before input loss. Use when your app has

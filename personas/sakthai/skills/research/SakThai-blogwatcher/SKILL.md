@@ -1,9 +1,9 @@
 ---
 name: SakThai-blogwatcher
+author: SakThai
+license: MIT
 description: "Monitor blogs and RSS/Atom feeds via blogwatcher-cli tool."
 version: 2.0.0
-author: JulienTant (fork of Hyaxia/blogwatcher)
-license: MIT
 platforms: [linux, macos, windows]
 metadata:
   hermes:
@@ -11,8 +11,8 @@ metadata:
     homepage: https://github.com/JulienTant/blogwatcher-cli
 prerequisites:
   commands: [blogwatcher-cli]
+category: research
 ---
-
 # Blogwatcher
 
 Track blog and RSS/Atom feed updates with the `blogwatcher-cli` tool. Supports automatic feed discovery, HTML scraping fallback, OPML import, and read/unread article management.

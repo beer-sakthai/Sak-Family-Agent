@@ -29,7 +29,7 @@ def rows_to_df(d):
 def write_sheet(sheet_id, sheet_name, headers, rows):
     """Write column headers + data rows to a Google Sheet tab."""
     values = [headers] + rows
-    
+
     result, error = run_composio_tool("GOOGLESHEETS_UPDATE_CELLS", {
         "spreadsheetId": sheet_id,
         "range": f"'{sheet_name}'!A1",

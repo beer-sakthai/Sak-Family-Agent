@@ -1,6 +1,8 @@
 ---
 name: SakThai-playwright-network-request-rewrite-testing
 category: playwright-growth
+author: SakThai
+license: MIT
 description: 'Plan and validate request rewrite/mocking pipelines in Playwright: assert
   that outgoing requests were rewritten as intended using request pattern, post-distribution
   body, or route interception. Good for backend-for-frontend rewrites, API migration

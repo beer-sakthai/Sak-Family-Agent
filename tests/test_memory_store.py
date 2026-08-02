@@ -158,6 +158,21 @@ def test_snapshot_to_jsonl_and_csv(store: MemoryStore) -> None:
     assert "a,b" in csv_text  # tags flattened
 
 
+def test_snapshot_to_csv_neutralizes_formula_injection(store: MemoryStore) -> None:
+    # Values are attacker-influenceable; a leading =/+/-/@ must be neutralized
+    # so a spreadsheet does not execute the cell as a formula (CSV/DDE injection).
+    store.add_fact('=cmd|"/c calc"!A1', kind="note", key="danger")
+    store.add_observation("@SUM(1+1)")
+    csv_text = snapshot_to_csv(store.export_to_dict())
+
+    assert "'=cmd" in csv_text  # fact value quoted
+    assert "'@SUM(1+1)" in csv_text  # observation summary quoted
+    # The raw formula must not appear unescaped at the start of a cell.
+    for line in csv_text.splitlines():
+        for cell in line.split(","):
+            assert not cell.startswith(("=", "+", "@")), cell
+
+
 def test_dataclasses_positional_construction() -> None:
     fact = Fact(1, "note", None, "v", None, 0, 0)
     assert fact.tags == []

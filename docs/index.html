@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SakSee Dashboard</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0d1117; color: #c9d1d9; display: flex; height: 100vh; }
+  .sidebar { width: 260px; background: #161b22; padding: 20px; border-right: 1px solid #30363d; display: flex; flex-direction: column; }
+  .sidebar h1 { font-size: 18px; color: #58a6ff; margin-bottom: 20px; }
+  .sidebar .status { padding: 10px; border-radius: 6px; margin-bottom: 8px; font-size: 13px; }
+  .status.online { background: #1b3a2b; color: #3fb950; border: 1px solid #2ea043; }
+  .status.offline { background: #3a1b1b; color: #f85149; border: 1px solid #da3633; }
+  .nav-item { padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 14px; margin-bottom: 2px; }
+  .nav-item:hover { background: #21262d; }
+  .nav-item.active { background: #1f6feb22; color: #58a6ff; }
+  .main { flex: 1; display: flex; flex-direction: column; }
+  .header { padding: 16px 24px; border-bottom: 1px solid #30363d; display: flex; justify-content: space-between; align-items: center; }
+  .header h2 { font-size: 16px; }
+  .content { flex: 1; padding: 24px; overflow-y: auto; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .card { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 16px; }
+  .card h3 { font-size: 14px; color: #8b949e; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .metric { display: flex; justify-content: space-between; padding: 6px 0; font-size: 13px; border-bottom: 1px solid #21262d; }
+  .metric:last-child { border-bottom: none; }
+  .metric .label { color: #8b949e; }
+  .metric .value { font-weight: 600; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+  .badge.green { background: #1b3a2b; color: #3fb950; }
+  .badge.red { background: #3a1b1b; color: #f85149; }
+  .badge.yellow { background: #3a321b; color: #d29922; }
+  .chat-box { background: #0d1117; border: 1px solid #30363d; border-radius: 6px; padding: 12px; height: 200px; overflow-y: auto; font-size: 13px; margin-bottom: 8px; }
+  .chat-box .msg { margin-bottom: 8px; }
+  .chat-box .user { color: #58a6ff; }
+  .chat-box .ai { color: #7ee787; }
+  .chat-input { display: flex; gap: 8px; }
+  .chat-input input { flex: 1; background: #0d1117; border: 1px solid #30363d; border-radius: 6px; padding: 8px 12px; color: #c9d1d9; font-size: 13px; }
+  .chat-input button { background: #238636; color: #fff; border: none; border-radius: 6px; padding: 8px 16px; cursor: pointer; font-size: 13px; }
+  .chat-input button:hover { background: #2ea043; }
+  .full-width { grid-column: 1 / -1; }
+  #modelOutput { white-space: pre-wrap; font-family: 'Courier New', monospace; font-size: 12px; max-height: 400px; overflow-y: auto; }
+</style>
+</head>
+<body>
+<div class="sidebar">
+  <h1>🔍 SakSee Dashboard</h1>
+  <div class="status online" id="gwStatus">● Gateway: Checking...</div>
+  <div class="status online" id="tgStatus">● Telegram: Checking...</div>
+  <div style="flex:1"></div>
+  <div class="nav-item active">📊 Overview</div>
+  <div class="nav-item">🤖 Model Test</div>
+  <div class="nav-item">🔍 RAG Search</div>
+  <div class="nav-item">🔧 Debug</div>
+  <div class="nav-item">📋 Logs</div>
+  <div style="margin-top:16px;font-size:11px;color:#484f58">SakSee v1.0 · 0.5B Q4_K_M</div>
+</div>
+<div class="main">
+  <div class="header">
+    <h2>📊 Overview</h2>
+    <span id="updateTime" style="font-size:12px;color:#8b949e"></span>
+  </div>
+  <div class="content">
+    <div class="card">
+      <h3>System</h3>
+      <div class="metric"><span class="label">Gateway</span><span class="value" id="gw">-</span></div>
+      <div class="metric"><span class="label">Telegram</span><span class="value" id="tg">-</span></div>
+      <div class="metric"><span class="label">Memory</span><span class="value" id="mem">-</span></div>
+      <div class="metric"><span class="label">Skills</span><span class="value" id="skills">-</span></div>
+    </div>
+    <div class="card">
+      <h3>Model (0.5B)</h3>
+      <div class="metric"><span class="label">Status</span><span class="value" id="modelStatus">-</span></div>
+      <div class="metric"><span class="label">Size</span><span class="value">380 MB</span></div>
+      <div class="metric"><span class="label">Speed</span><span class="value" id="modelSpeed">-</span></div>
+    </div>
+    <div class="card full-width">
+      <h3>Quick Test — Chat with 0.5B</h3>
+      <div class="chat-box" id="chatBox"></div>
+      <div class="chat-input">
+        <input type="text" id="chatInput" placeholder="Ask the model something..." onkeydown="if(event.key==='Enter') sendChat()">
+        <button onclick="sendChat()">Send</button>
+        <button onclick="document.getElementById('chatBox').innerHTML=''" style="background:#21262d;color:#8b949e">Clear</button>
+      </div>
+    </div>
+    <div class="card full-width">
+      <h3>Debug Output</h3>
+      <div id="modelOutput">Ready.</div>
+    </div>
+  </div>
+</div>
+<script>
+const RAG_API = 'http://localhost:3003';
+
+// Check RAG server status
+async function checkRAG() {
+  try {
+    const r = await fetch(RAG_API);
+    const d = await r.json();
+    $('ragStatus').textContent = d.chunks + ' chunks';
+    $('ragStatus').className = 'badge green';
+  } catch(e) {
+    $('ragStatus').textContent = 'offline';
+    $('ragStatus').className = 'badge red';
+  }
+}
+
+async function searchRAG() {
+  const q = $('ragQuery').value.trim();
+  if (!q) return;
+  const results = $('ragResults');
+  results.innerHTML = 'Searching...';
+  try {
+    const r = await fetch(RAG_API + '/search?q=' + encodeURIComponent(q));
+    const d = await r.json();
+    if (!d.results || d.results.length === 0) {
+      results.innerHTML = '<div style=\"color:#8b949e;padding:8px\">No results found</div>';
+      return;
+    }
+    results.innerHTML = d.results.map(r => 
+      '<div style=\"padding:8px;margin-bottom:8px;background:#0d1117;border-radius:6px;font-size:13px\">' +
+      '<div style=\"color:' + (r.score > 0.5 ? '#3fb950' : '#d29922') + ';font-size:11px;margin-bottom:4px\">' +
+      r.score + ' · ' + r.agent + ' · ' + r.source.split('/').slice(-2).join('/') + '</div>' +
+      '<div>' + r.text + '</div></div>'
+    ).join('');
+  } catch(e) {
+    results.innerHTML = '<div style=\"color:#f85149\">Error: ' + e.message + '</div>';
+  }
+}
+
+function $(id) { return document.getElementById(id); }
+
+async function checkStatus() {
+  try {
+    const r = await fetch('/api/saksee/status');
+    const d = await r.json();
+    $('gw').textContent = d.gateway || 'unknown';
+    $('tg').textContent = d.telegram || 'unknown';
+    $('gw').className = 'value ' + (d.gateway === 'running' ? 'badge green' : 'badge red');
+    $('tg').className = 'value ' + (d.telegram === 'connected' ? 'badge green' : 'badge red');
+    $('gwStatus').className = 'status ' + (d.gateway === 'running' ? 'online' : 'offline');
+    $('gwStatus').textContent = '● Gateway: ' + (d.gateway || 'unknown');
+    $('tgStatus').className = 'status ' + (d.telegram === 'connected' ? 'online' : 'offline');
+    $('tgStatus').textContent = '● Telegram: ' + (d.telegram || 'unknown');
+  } catch(e) {
+    $('gw').textContent = 'offline';
+    $('tg').textContent = 'offline';
+    $('gwStatus').className = 'status offline';
+    $('gwStatus').textContent = '● Gateway: offline';
+  }
+  $('updateTime').textContent = new Date().toLocaleTimeString();
+}
+
+checkStatus();
+setInterval(checkStatus, 10000);
+checkRAG();
+setInterval(checkRAG, 30000);
+
+async function sendChat() {
+  const input = $('chatInput');
+  const msg = input.value.trim();
+  if (!msg) return;
+  input.value = '';
+  const box = $('chatBox');
+  box.innerHTML += '<div class="msg user">👤 ' + escapeHtml(msg) + '</div>';
+  box.scrollTop = box.scrollHeight;
+  $('modelOutput').textContent = 'Running inference...';
+  
+  try {
+    const resp = await fetch('/api/model/chat', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ prompt: msg })
+    });
+    const data = await resp.json();
+    box.innerHTML += '<div class="msg ai">🤖 ' + escapeHtml(data.response || 'no response') + '</div>';
+    $('modelOutput').textContent = data.debug || data.response;
+    $('modelSpeed').textContent = data.speed ? data.speed + ' tok/s' : '-';
+  } catch(e) {
+    box.innerHTML += '<div class="msg ai" style="color:#f85149">⚠️ Error: ' + e.message + '</div>';
+    $('modelOutput').textContent = 'Error: ' + e.message;
+  }
+  box.scrollTop = box.scrollHeight;
+}
+
+function escapeHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+</script>
+</body>
+</html>

@@ -1,0 +1,18 @@
+{
+  "run_id": "run_4657e8e8",
+  "workflow_name": "retry_exhaust",
+  "status": "FAILED",
+  "start_time": "2026-08-02T13:55:34.448062",
+  "end_time": "2026-08-02T13:55:34.495421",
+  "step_results": {
+    "failing": {
+      "step_id": "failing",
+      "status": "FAILED",
+      "output": {},
+      "error": "Terminal failure",
+      "attempts": 4,
+      "start_time": "2026-08-02T13:55:34.464161",
+      "end_time": "2026-08-02T13:55:34.495358"
+    }
+  }
+}

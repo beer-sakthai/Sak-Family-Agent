@@ -10,9 +10,11 @@ Defaults to `http://localhost:3001/` with `web/` as static root.
 
 from __future__ import annotations
 
+import ipaddress
 import json
 import logging
 import os
+import secrets
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 from pathlib import Path
 from typing import Any
@@ -21,7 +23,58 @@ from urllib.parse import unquote, urlparse
 logger = logging.getLogger(__name__)
 
 _DEFAULT_HOST = "127.0.0.1"
+_BEARER_TOKEN: str | None = None
+
+
+def _get_or_create_bearer_token() -> str:
+    """Retrieve or create an opaque 32-character hex bearer token in MemoryStore."""
+    global _BEARER_TOKEN
+    if _BEARER_TOKEN is not None:
+        return _BEARER_TOKEN
+
+    try:
+        from ..config import register_secret
+        from ..memory.store import MemoryStore
+
+        with MemoryStore() as store:
+            fact = store.get_fact_by_key(kind="web_auth", key="bearer_token")
+            if fact:
+                _BEARER_TOKEN = fact.value
+                register_secret(_BEARER_TOKEN)
+                return _BEARER_TOKEN
+
+            # Generate new token
+            token = secrets.token_hex(16)
+            store.delete_facts_by_key(kind="web_auth", key="bearer_token")
+            store.add_fact(
+                value=token,
+                kind="web_auth",
+                key="bearer_token",
+                tags=["system", "no-export"],
+            )
+            register_secret(token)
+            _BEARER_TOKEN = token
+            return token
+    except Exception as exc:
+        logger.warning("Failed to get or create bearer token from MemoryStore: %s", exc)
+        if _BEARER_TOKEN is None:
+            _BEARER_TOKEN = secrets.token_hex(16)
+        return _BEARER_TOKEN
+
+
 _DEFAULT_PORT = 3001
+_LOOPBACK_NAMES = frozenset({"localhost"})
+
+
+def _is_loopback_host(host: str) -> bool:
+    """True if ``host`` is loopback-only (safe to bind without authentication)."""
+    if host in _LOOPBACK_NAMES:
+        return True
+    try:
+        return ipaddress.ip_address(host).is_loopback
+    except ValueError:
+        # A non-literal hostname (other than localhost) may resolve anywhere.
+        return False
 
 
 def _find_static_root(start: Path | None = None) -> Path:
@@ -87,6 +140,11 @@ def _ecosystem_status() -> dict[str, Any]:
 
 
 class _Handler(SimpleHTTPRequestHandler):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        # Secure fallback: explicitly bind the static files directory to _STATIC_ROOT
+        # to prevent fallback file serving from the process's working directory.
+        super().__init__(*args, directory=str(_STATIC_ROOT), **kwargs)
+
     def address_string(self) -> str:
         return self.client_address[0]
 
@@ -119,6 +177,28 @@ class _Handler(SimpleHTTPRequestHandler):
         parsed = urlparse(self.path)
         path = parsed.path.rstrip("/") or "/"
 
+        if path.startswith("/api/"):
+            auth_header = self.headers.get("Authorization", "")
+            if not auth_header:
+                self._send_json(
+                    401, {"error": "Unauthorized", "message": "Missing Authorization header"}
+                )
+                return
+            if not auth_header.startswith("Bearer "):
+                self._send_json(
+                    401,
+                    {
+                        "error": "Unauthorized",
+                        "message": "Authorization header must be in 'Bearer <token>' format",
+                    },
+                )
+                return
+            token = auth_header[7:]
+            expected_token = _get_or_create_bearer_token()
+            if not secrets.compare_digest(token, expected_token):
+                self._send_json(403, {"error": "Forbidden", "message": "Invalid Bearer token"})
+                return
+
         if path == "/api/stages":
             try:
                 qs = dict(item.split("=") for item in parsed.query.split("&") if "=" in item)
@@ -137,10 +217,9 @@ class _Handler(SimpleHTTPRequestHandler):
             return
 
         # Fallback: static files from the dashboard dist root. The stdlib
-        # handler serves relative to the current working directory (which
-        # `serve()` points at `_STATIC_ROOT`), so canonicalise the request the
-        # same way and confirm it stays within the static root before
-        # delegating.
+        # handler serves relative to the configured directory (explicitly set
+        # to _STATIC_ROOT above), so canonicalise the request the same way and
+        # confirm it stays within the static root before delegating.
         try:
             root = os.path.realpath(str(_STATIC_ROOT))
             requested = unquote(parsed.path).lstrip("/\\")
@@ -151,10 +230,27 @@ class _Handler(SimpleHTTPRequestHandler):
         except Exception:
             self.send_error(403, "Forbidden")
             return
+
+        # Explicitly verify the static files directory exists before serving.
+        if not _STATIC_ROOT.is_dir():
+            self.send_error(404, "File not found")
+            return
+
         return super().do_GET()
 
 
 def serve(host: str = _DEFAULT_HOST, port: int = _DEFAULT_PORT) -> HTTPServer:
+    # The API endpoints have no authentication and expose personal memory
+    # (recent facts, observations). Refuse a non-loopback bind unless the
+    # operator explicitly acknowledges the exposure, so a stray 0.0.0.0 does not
+    # silently publish memory to the network.
+    if not _is_loopback_host(host) and not os.environ.get("SAKTHAI_WEB_ALLOW_PUBLIC"):
+        raise PermissionError(
+            f"Refusing to bind the unauthenticated API to non-loopback host {host!r}. "
+            "It serves personal memory with no auth. Set SAKTHAI_WEB_ALLOW_PUBLIC=1 to "
+            "override once you have placed authentication in front of it."
+        )
+    _get_or_create_bearer_token()  # Warm cache & register secret
     # The built dashboard (dashboard/dist) is optional: without it the API
     # endpoints still serve, and static requests fall through to 403/404.
     if _STATIC_ROOT.is_dir():

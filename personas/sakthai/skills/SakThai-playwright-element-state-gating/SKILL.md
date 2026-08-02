@@ -1,6 +1,8 @@
 ---
 name: SakThai-playwright-element-state-gating
 category: playwright-growth
+author: SakThai
+license: MIT
 description: Robust Playwright interaction patterns that gate automated actions on
   validated element states to eliminate flaky tests before they happen.
 version: 1.0.0

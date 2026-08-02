@@ -59,6 +59,21 @@ def test_shared_auto_cycle_loop_skill_resolves(sakthai_home: Path) -> None:
     assert find_skill("Sak-auto-cycle-loop", *default_skill_roots()) is not None
 
 
+def test_default_skill_roots_includes_curated_library(sakthai_home: Path) -> None:
+    from sakthai.config import CURATED_LIBRARY_DIR
+
+    assert CURATED_LIBRARY_DIR in default_skill_roots()
+
+
+def test_curated_library_skill_resolves(sakthai_home: Path) -> None:
+    # Regression guard: the repo-root library/ catalog (31 skills, 11
+    # categories, legacy `sakthai-` names) must be reachable at runtime —
+    # it used to be defined but never wired into any discovery root.
+    from sakthai.skills import find_skill
+
+    assert find_skill("sakthai-security-red-teaming", *default_skill_roots()) is not None
+
+
 def test_resolve_skill_names_partitions_hits_and_misses(tmp_path: Path) -> None:
     from sakthai.skills import resolve_skill_names
 

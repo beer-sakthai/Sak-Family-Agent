@@ -1,4 +1,0 @@
-# file: C:\Users\beern\OneDrive\Documents\GitHub\Sak-Family-Agent\sakthai\cli\skills.py
-# hypothesis_version: 6.155.7
-
-['(no skills found)', '(none)', ', ', '-', '--category', '--description', '--dry-run', '--naming', '--persona', '--sakking-home', '--source', 'A new SakThai skill.', 'Filter by category.', 'SKILL.md', 'Skill category.', 'Skill description.', '_', 'all', 'category', 'count', 'create', 'cyan', 'description', 'general', 'green', 'library', 'list', 'name', 'sakking_root', 'shared', 'show', 'skills', 'sync-sakking', 'synced', 'utf-8', 'validate', 'would sync', 'yellow', '…']

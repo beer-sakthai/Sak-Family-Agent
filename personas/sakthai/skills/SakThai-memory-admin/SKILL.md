@@ -1,6 +1,8 @@
 ---
 name: SakThai-memory-admin
 category: sakthai
+author: SakThai
+license: MIT
 description: Proactively manage, synchronize, and back up the persistent memory SQLite database.
 version: 1.0.0
 platforms:

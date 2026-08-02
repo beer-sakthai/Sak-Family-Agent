@@ -1,6 +1,8 @@
 ---
 name: SakThai-coding-mcp-tools
 category: coding
+author: SakThai
+license: MIT
 description: Add and wire tools in sakthai-agent-v2 — one definition surfaced through both the agent loop and the MCP stdio server, plus outbound MCP server discovery. Use when adding a built-in tool, editing the registry, or integrating an external MCP server.
 version: 1.0.0
 platforms:
