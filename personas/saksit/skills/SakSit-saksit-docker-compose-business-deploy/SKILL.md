@@ -1,11 +1,7 @@
 ---
 name: SakSit-saksit-docker-compose-business-deploy
 title: Docker Compose for Business Services
-description: Containerize Python/FastAPI with Docker Compose.
-category: productivity
-tags:
-- Docker
-- DevOps
+description: Practical Docker Compose patterns for containerizing Python/FastAPI backend services with databases, networking, and secrets management. Mirrors Beer's WorkFlow-SakThai deployment style.
 ---
 
 # Docker Compose Business Deployment

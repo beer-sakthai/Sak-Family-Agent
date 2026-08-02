@@ -16,9 +16,7 @@ skills_tags:
   - testimonial-collection
 created: 2026-07-02
 version: 1.0.0
-description: "Sakking B2B Saas Ugc Strategy 2026"
 author: SakSit
-
 ---
 
 # B2B SaaS User-Generated Content (UGC) Strategy 2026

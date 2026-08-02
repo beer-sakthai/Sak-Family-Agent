@@ -1,6 +1,5 @@
 ---
 name: SakKing-b2b-saas-customer-advocacy-referral-2026
-version: 1.0.0
 description: A complete playbook for B2B SaaS companies to design, launch, and scale customer advocacy and referral programs — turning happy customers into a predictable, double-sided pipeline engine for 2026.
 domain: social-media
 category: growth-strategy
@@ -18,7 +17,6 @@ tags:
   - pipeline-generation
   - cac-reduction
   - 2026
-
 ---
 
 # B2B SaaS Customer Advocacy & Referral Program Strategy 2026

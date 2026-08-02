@@ -14,9 +14,7 @@ skills_tags:
   - customer-evidence
 created: 2026-07-02
 version: 1.0.0
-description: "Sakking B2B Saas Case Study Evidence 2026"
 author: SakSit
-
 ---
 
 # B2B SaaS Case Study & Customer Evidence Strategy 2026

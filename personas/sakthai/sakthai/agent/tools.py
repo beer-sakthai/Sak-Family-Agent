@@ -123,9 +123,7 @@ def _is_sensitive_read_target(resolved: Path) -> bool:
     parts = tuple(p.lower() for p in resolved.parts)
     for fragment in _SENSITIVE_READ_FRAGMENTS:
         n = len(fragment)
-        if n <= len(parts) and any(
-            parts[i : i + n] == fragment for i in range(len(parts) - n + 1)
-        ):
+        if n <= len(parts) and any(parts[i : i + n] == fragment for i in range(len(parts) - n + 1)):
             return True
     return False
 
@@ -626,7 +624,7 @@ BUILTIN_TOOLS: tuple[Tool, ...] = (
                 },
                 "provider": {
                     "type": "string",
-                    "description": "Optional LLM provider backend (anthropic, google, openai, ollama, gateway, huggingface).",
+                    "description": "Optional LLM provider backend (anthropic, google, openai, ollama).",
                 },
                 "max_iterations": {
                     "type": "integer",

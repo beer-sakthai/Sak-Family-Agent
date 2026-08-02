@@ -15,9 +15,7 @@ skills_tags:
   - 2026
 created: 2026-07-02
 version: 1.0.0
-description: "Sakking B2B Saas Dark Social 2026"
 author: SakSit
-
 ---
 
 # B2B SaaS Dark Social & Private Sharing Strategy 2026

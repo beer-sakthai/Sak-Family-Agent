@@ -25,6 +25,7 @@ PERSONAS: dict[str, str] = {
     "sakking": "SakKing",
     "saksee": "SakSee",
     "saksit": "SakSit",
+    "saktan": "SakTan",
     "sakjules": "SakJules",
 }
 
@@ -57,10 +58,10 @@ def test_soul_follows_local_model_policy(slug: str) -> None:
         )
 
 
-def test_financial_analysis_has_no_owner() -> None:
-    """No active persona claims financial analysis (SakTan was deleted)."""
+def test_financial_analysis_has_one_owner() -> None:
+    """Exactly one persona (SakTan, the SakFin role) owns financial analysis."""
     owners = [slug for slug in PERSONAS if "Master of Financial Analysis" in soul_text(slug)]
-    assert owners == [], f"finance role still claimed by: {owners}"
+    assert owners == ["saktan"], f"finance role claimed by: {owners}"
 
 
 @pytest.mark.parametrize("slug", sorted(PERSONAS))
@@ -93,7 +94,7 @@ def test_personas_readme_skill_counts_match_disk() -> None:
     }
     assert set(listed) == set(PERSONAS.values()), f"README lists counts for {sorted(listed)}"
     actual = {
-        name: len(list((PERSONAS_DIR / slug / "skills").iterdir()))
+        name: len(list((PERSONAS_DIR / slug / "skills").rglob("SKILL.md")))
         for slug, name in PERSONAS.items()
     }
     assert listed == actual, f"README counts {listed} != on-disk counts {actual}"

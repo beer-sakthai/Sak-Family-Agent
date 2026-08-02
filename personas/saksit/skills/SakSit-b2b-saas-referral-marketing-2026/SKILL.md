@@ -1,14 +1,11 @@
 ---
 name: SakSit-b2b-saas-referral-marketing-2026
-version: 1.0.0
-description: "Saksit B2B Saas Referral Marketing 2026"
 description: >-
   Complete playbook for B2B SaaS companies to design, launch, and optimise
   customer referral programs that drive predictable, low-CAC acquisition.
   Covers incentive structures, technical implementation, prompt placement,
   CRM integration, and performance benchmarks for 2026.
 category: social-media
-
 ---
 
 # B2B SaaS Referral Marketing Programs 2026

@@ -1,7 +1,5 @@
 ---
 name: SakKing-b2b-saas-thought-leadership-2026
-version: 1.0.0
-description: "Sakking B2B Saas Thought Leadership 2026"
 title: "B2B SaaS Thought Leadership Content Strategy 2026"
 emoji: "🧠"
 category: social-media
@@ -16,7 +14,6 @@ tags:
   - executive-branding
   - ai-citations
   - answer-engine-optimization
-
 ---
 
 # B2B SaaS Thought Leadership Content Strategy 2026

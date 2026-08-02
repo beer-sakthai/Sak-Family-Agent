@@ -1,8 +1,6 @@
 ---
 name: SakThai-coding-type-safety
 category: coding
-author: SakThai
-license: MIT
 description: Write strict-clean Python that passes sakthai-agent-v2's `mypy --strict` gate over `sakthai/`. Use when annotating signatures, modeling optionals, using generics/protocols, or narrowing types.
 version: 1.0.0
 platforms:

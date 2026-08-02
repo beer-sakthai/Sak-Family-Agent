@@ -7,7 +7,6 @@ description: >-
   developers through docs-led growth, API marketing, community-driven acquisition, and
   developer relations (DevRel) in 2026.
 version: 1.0.0
-description: "Saksit B2B Saas Developer Marketing Api Strategy 2026"
 created: 2026-07-02
 author: SakSit Agent
 tags:
@@ -18,7 +17,6 @@ tags:
   - b2d-marketing
   - docs-as-marketing
   - devtools
-
 ---
 
 # B2B SaaS Developer Marketing & API Strategy 2026

@@ -3,9 +3,6 @@ name: Verify Public Hugging Face Assets
 
 permissions:
   contents: read
-  # issues: write is only exercised by the failure-flagging step below (gated
-  # to the unattended nightly schedule run); everything else only needs read.
-  issues: write
 
 on:
   # Allows you to run this workflow manually from the Actions tab
@@ -19,68 +16,26 @@ on:
   # push:
   #   branches: [ main ]
 
-concurrency:
-  group: ${{ github.workflow }}
-  cancel-in-progress: true
-
 jobs:
   verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          persist-credentials: false
+        uses: actions/checkout@v7
 
-      - name: Install uv
-        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+      - name: Set up Python
+        uses: actions/setup-python@v7
         with:
           python-version: '3.11'
 
-      - name: Cache uv
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/uv
-          key: ${{ runner.os }}-uv-verify-assets-${{ hashFiles('**/uv.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-uv-verify-assets-
-
-      - name: Install sakthai package
-        # Locked, reproducible install (matches the rest of the repo's uv-based
-        # workflows) rather than an unpinned `pip install -e .`. No extras
-        # needed: the verification script only touches the stdlib.
-        run: uv sync --no-dev
-
       - name: Run verification script
         run: |
-          uv run python3 -m sakthai.scripts.verify_hf_upload \
-            https://huggingface.co/datasets/Nanthasit/sakthai-combined-v6 \
-            https://huggingface.co/Nanthasit/sakthai-context-1.5b-tools \
-            https://huggingface.co/Nanthasit/sakthai-context-0.5b-merged
+          python3 personas/sakthai/skills/mlops/mlops-hf-train-manual-upload/scripts/verify_hf_upload.py \
+            https://huggingface.co/datasets/Nanthasit/hf-training-composio-tools-50 \
+            https://huggingface.co/models/Nanthasit/sakthai-context-0.5b-tools
         # The script will exit with a non-zero status code if any URL fails,
         # which will automatically fail this step and the entire workflow.
 
       - name: All assets verified
         if: success()
-        run: echo "All public assets are available and accessible."
-
-      - name: Flag failure for visibility
-        # Scheduled runs fail silently unless someone checks the Actions tab;
-        # open (or reuse) a tracking issue so a broken public asset gets seen.
-        # Only runs on the unattended nightly trigger, not on manual dispatch.
-        if: failure() && github.event_name == 'schedule'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          existing="$(gh issue list --repo "$GITHUB_REPOSITORY" \
-            --search 'in:title "Public Hugging Face asset verification failed"' \
-            --state open --json number --jq '.[0].number')"
-          if [ -n "$existing" ]; then
-            gh issue comment "$existing" --repo "$GITHUB_REPOSITORY" \
-              --body "Still failing as of $(date -u +%F). Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          else
-            gh issue create --repo "$GITHUB_REPOSITORY" \
-              --title "Public Hugging Face asset verification failed" \
-              --body "The scheduled verify-assets workflow failed on $(date -u +%F). One or more public HF datasets/models are unreachable. Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          fi
+        run: echo "✅ All public assets are available and accessible."

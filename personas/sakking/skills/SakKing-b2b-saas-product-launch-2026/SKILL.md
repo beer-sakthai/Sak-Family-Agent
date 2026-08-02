@@ -1,7 +1,6 @@
 ---
 name: SakKing-b2b-saas-product-launch-2026
 version: 1.0.0
-description: "Sakking B2B Saas Product Launch 2026"
 category: go-to-market
 description: >-
   A complete 6-to-12-week playbook for launching B2B SaaS products in 2026.
@@ -18,7 +17,6 @@ tags:
   - B2B-SaaS
   - sales-enablement
   - launch-tiers
-
 ---
 
 # B2B SaaS Product Launch Strategy 2026

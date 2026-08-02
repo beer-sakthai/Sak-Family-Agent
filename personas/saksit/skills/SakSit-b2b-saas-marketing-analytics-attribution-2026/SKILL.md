@@ -1,6 +1,5 @@
 ---
 name: SakSit-b2b-saas-marketing-analytics-attribution-2026
-version: 1.0.0
 category: social-media/research/skill
 web_resources:
   - https://www.averi.ai/guides/how-to-use-marketing-analytics-for-b2b-saas
@@ -13,7 +12,6 @@ web_resources:
   - https://pulserevops.com/tech-stacks/tk0002
   - https://empirium.io/blog/b2b-saas-tech-stack
 description: A practical guide to building an integrated B2B SaaS marketing analytics stack, defining key KPIs, setting up multi-touch attribution, and operating a revenue data warehouse. Designed for marketing LeaNs, RevOps, and Growth marketers in 2026.
-
 ---
 
 # B2B Marketing Analytics & Attribution Strategy (2026)

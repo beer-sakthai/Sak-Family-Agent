@@ -1,8 +1,6 @@
 ---
 name: SakThai-playwright-security-header-validation
 category: playwright-growth
-author: SakThai
-license: MIT
 description: Use Playwright to verify that a page sends the security response headers
   you require (CSP, X-Frame-Options, Permissions-Policy, HSTS, Referrer-Policy, X-Content-Type-Options,
   COOP/COEP). Capture headers, evaluate policies, and fail the run when a required

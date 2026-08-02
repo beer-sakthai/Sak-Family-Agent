@@ -1,8 +1,6 @@
 ---
 name: SakThai-playwright-permission-and-sensor-enforcement
 category: playwright-growth
-author: SakThai
-license: MIT
 description: Enforce browser permission boundaries and sensor/device API availability
   during automated tests
 version: 1.0.0

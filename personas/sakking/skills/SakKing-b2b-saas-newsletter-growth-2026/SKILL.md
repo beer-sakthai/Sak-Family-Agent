@@ -14,9 +14,7 @@ skills_tags:
   - owned-audience
 created: 2026-07-02
 version: 1.0.0
-description: "Sakking B2B Saas Newsletter Growth 2026"
 author: SakSit
-
 ---
 # B2B SaaS Newsletter Growth Strategy 2026
 

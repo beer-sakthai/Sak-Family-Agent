@@ -1,8 +1,6 @@
 ---
 name: SakThai-understand-caveman
 category: sakthai
-author: SakThai
-license: MIT
 description: Understand and work with the Caveman extension — token compression that cuts ~75% output while keeping full technical accuracy. Use when toggling caveman modes, understanding intensity levels, using companion skills, or optimizing token spend.
 version: 1.0.0
 platforms:

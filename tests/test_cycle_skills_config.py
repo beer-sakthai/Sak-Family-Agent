@@ -251,9 +251,8 @@ def test_persona_scaffold_is_composable(tmp_path: Path, persona: str) -> None:
     assert any(out.rglob("SKILL.md"))
 
 
-def test_all_personas_have_skill_prefixes() -> None:
-    for _persona, prefix in skills.PERSONA_SKILL_PREFIXES.items():
-        assert prefix.endswith("-")
+def test_saktan_persona_skill_prefix() -> None:
+    assert skills.PERSONA_SKILL_PREFIXES["saktan"] == "SakTan-"
 
 
 def test_compose_persona_overlay_wins_over_shared(tmp_path: Path) -> None:

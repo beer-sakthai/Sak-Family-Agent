@@ -1,6 +1,5 @@
 ---
 name: SakSit-b2b-saas-plg-gtm-2026
-version: 1.0.0
 category: marketing
 description: Complete playbook for B2B SaaS Product-Led Growth (PLG) Go-to-Market strategy in 2026. Covers the hybrid PLG+SLG model, activation milestones, PQL scoring, trial architecture, conversion benchmarks, and product-led sales motion for enterprise expansion.
 tags:
@@ -12,7 +11,6 @@ tags:
   - pql
   - activation
   - 2026
-
 ---
 
 # B2B SaaS PLG GTM Strategy 2026: Hybrid Product-Led Growth Playbook

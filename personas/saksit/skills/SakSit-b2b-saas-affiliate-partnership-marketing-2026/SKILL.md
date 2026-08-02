@@ -1,6 +1,5 @@
 ---
 name: SakSit-b2b-saas-affiliate-partnership-marketing-2026
-version: 1.0.0
 description: Complete playbook for B2B SaaS companies to build, launch, and scale affiliate and channel partnership programs that drive predictable pipeline and revenue growth in 2026.
 category: social-media
 saksit_research: true
@@ -11,7 +10,6 @@ tags:
   - channel-sales
   - revenue-growth
   - 2026
-
 ---
 
 # B2B SaaS Affiliate and Partnership Marketing 2026

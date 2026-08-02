@@ -1,8 +1,6 @@
 ---
 name: SakThai-playwright-route-replay
 category: dogfood
-author: SakThai
-license: MIT
 description: Use Playwright route interception and HAR replay to run headless browser
   automations offline against recorded network responses, enabling deterministic replay,
   flaky-dependency isolation, and zero-network CI runs.

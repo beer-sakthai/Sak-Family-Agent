@@ -1,8 +1,6 @@
 ---
 name: SakThai-segment-anything
 category: ml
-author: SakThai
-license: MIT
 description: 'SAM: zero-shot image segmentation via points, boxes, masks.'
 version: 1.0.0
 platforms:

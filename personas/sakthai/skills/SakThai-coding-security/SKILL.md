@@ -1,8 +1,6 @@
 ---
 name: SakThai-coding-security
 category: coding
-author: SakThai
-license: MIT
 description: Keep sakthai-agent-v2 secure — pass the bandit gate, honor the read_file allowlist and opt-in run_command sandbox, and threat-model new tool surfaces. Use when adding tools that touch the filesystem/shell/network, widening the sandbox, or resolving a bandit finding.
 version: 1.0.0
 platforms:

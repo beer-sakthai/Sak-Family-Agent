@@ -1,8 +1,5 @@
 task: json_key_check
-dataset_path: json
-dataset_kwargs:
-  data_files: evaluation_tasks/json_key_check_dataset.jsonl
-test_split: train
+dataset_path: json_key_check_dataset.jsonl
 output_type: generate_until
 
 doc_to_text: |
@@ -20,10 +17,8 @@ generation_kwargs:
     - "}\r\n"
   temperature: 0.1
 
-process_results: !function evaluation_tasks.utils.process_results_json_key_check
-
 metric_list:
-  - metric: score
+  - metric: !function evaluation_tasks.utils.check_json_key
     aggregation: mean
     higher_is_better: true
 

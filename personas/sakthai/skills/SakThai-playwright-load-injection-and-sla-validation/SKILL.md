@@ -1,8 +1,6 @@
 ---
 name: SakThai-playwright-load-injection-and-sla-validation
 category: playwright-growth
-author: SakThai
-license: MIT
 description: Automate synthetic load testing and SLA validation in CI or cron workflows
   by using Playwright to drive many parallel browser workers, collect timing telemetry,
   and assert hard latency/error-rate thr…

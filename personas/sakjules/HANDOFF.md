@@ -57,6 +57,8 @@ As **Master of Automation & CI/CD**, you own the entire automation pipeline for 
 ### 2.4 Monitoring & Self-Healing
 
 - `sakking-family-health-watchdog` — cron job checking every 30m (temp until you take over)
+- `.jules/sentinel.md` — your sentinel config (review & activate)
+- `.jules/bolt.md` — your bolt/emergency protocol
 
 **→ Your job:** Take over monitoring from me. You're the automation master.
 
@@ -88,6 +90,8 @@ As **Master of Automation & CI/CD**, you own the entire automation pipeline for 
 
 ```
 personas/sakjules/          → Your SOUL.md, config, skills
+.Jules/                     → Your Jules config (palette, readme)
+.jules/                     → Your sentinel & bolt protocols
 infra/vm-agents/            → Deployment scripts & systemd units
 .github/workflows/          → All CI/CD pipelines
 training/hf-jobs/           → Training automation

@@ -9,7 +9,6 @@ description: >-
   layer, closed-loop workflows, executive reporting, and feedback-to-roadmap
   integration.
 version: 1.0.0
-description: "Sakking B2B Saas Voc Feedback Loop 2026"
 created: 2026-07-02
 author: SakSit (beer-sakthai)
 tags:
@@ -24,7 +23,6 @@ tags:
   - customer-experience
   - closed-loop
   - 2026
-
 ---
 
 # B2B SaaS Voice of Customer (VoC) Program & Feedback Loop Strategy 2026

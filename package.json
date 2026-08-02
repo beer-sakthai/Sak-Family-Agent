@@ -1,0 +1,24 @@
+{
+  "name": "sak-family-agent",
+  "version": "1.0.0",
+  "description": "[![CI](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/ci.yml/badge.svg)](https://github.com/beer-sakthai/Sak-Family-Agent/actions/workflows/ci.yml) ![Version](https://img.shields.io/badge/version-2.0.0-blue) ![Python](https://img.shields.io/badge/python-3.11%2B-blue) ![Coverage](https://img.shields.io/badge/coverage-85%25%2B-brightgreen) ![License](https://img.shields.io/badge/license-All%20Rights%20Reserved-lightgrey)",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs",
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/beer-sakthai/Sak-Family-Agent.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/beer-sakthai/Sak-Family-Agent/issues"
+  },
+  "homepage": "https://github.com/beer-sakthai/Sak-Family-Agent#readme"
+}

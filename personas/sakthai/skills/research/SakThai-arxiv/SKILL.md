@@ -1,42 +1,19 @@
 ---
 name: SakThai-arxiv
-author: SakThai
-license: MIT
 description: "Search arXiv papers by keyword, author, category, or ID."
 version: 1.0.0
+author: Hermes Agent
+license: MIT
 platforms: [linux, macos, windows]
 metadata:
   hermes:
     tags: [Research, Arxiv, Papers, Academic, Science, API]
-    related_skills: [ocr-and-documents]
-category: research
+    related_skills: [SakThai-ocr-and-documents]
 ---
+
 # arXiv Research
 
 Search and retrieve academic papers from arXiv via their free REST API. No API key, no dependencies — just curl.
-
-## When to Use
-
-Use this skill when you need to:
-- Search for academic papers on a specific topic across computer science, physics, mathematics, and related fields
-- Retrieve paper metadata (title, authors, abstract, categories) for literature reviews
-- Generate BibTeX citations for papers you want to reference
-- Find the latest research in a specific category (e.g., cs.AI, cs.CL, cs.LG)
-- Look up a specific paper by its arXiv ID
-- Explore citation networks and related work via the Semantic Scholar integration
-
-**Don't use for:**
-- Peer-reviewed publication search (use PubMed, IEEE Xplore, or Google Scholar for established venues)
-- Full-text semantic search of paper bodies (the arXiv API only searches metadata — title, abstract, authors)
-- Real-time monitoring of new papers (prefer the HF Daily Papers or blogwatcher skill)
-
-## Prerequisites
-
-- **No API key required** — the arXiv API is free and open to all
-- `curl` — pre-installed on most systems, used for all API calls
-- `python3` — for XML/JSON parsing (uses stdlib only, no extra packages)
-- `web_extract` tool — for reading abstract pages and full PDFs (available in Hermes)
-- Internet access — all operations contact external APIs
 
 ## Quick Reference
 
@@ -299,32 +276,7 @@ curl -s "https://api.semanticscholar.org/graph/v1/author/search?query=Yann+LeCun
 
 ## Withdrawn Papers
 
-|Papers can be withdrawn after submission. When this happens:
-|- The `<summary>` field contains a withdrawal notice (look for "withdrawn" or "retracted")
-|- Metadata fields may be incomplete
-|- Always check the summary before treating a result as a valid paper
-
-## Pitfalls
-
-- **Rate limits:** arXiv enforces ~1 request per 3 seconds. Batch your queries and add delays between rapid requests. Exceeding rate limits causes HTTP 503 errors.
-- **XML parsing complexity:** arXiv returns Atom XML, not JSON. The included Python parsing snippets require `xml.etree.ElementTree` — malformed XML from certain edge cases can crash the parser. Always validate the XML before parsing.
-- **ID format changes:** Old arXiv IDs (e.g., `hep-th/0601001`) differ from new IDs (e.g., `2402.03300`). The parse scripts handle both, but manual URL construction with old-style IDs can fail.
-- **Withdrawn papers:** Withdrawn or retracted papers still appear in search results. Always check the `<summary>` field for a withdrawal notice before citing.
-- **Version drift:** Paper content can change between versions. Always cite the specific version you read (e.g., `1706.03762v2`) to prevent citation drift.
-- **Semantic Scholar coverage gaps:** Not all arXiv papers have entries in Semantic Scholar. Missing papers return 404s from citation/recommendation endpoints.
-- **Search relevance:** arXiv's search is metadata-based (title, abstract, authors). It can miss conceptually related papers using different terminology. Combine multiple queries for thorough coverage.
-- **HTML pages not available:** Not all papers have an HTML version at `arxiv.org/html/{id}`. Fall back to the PDF when the HTML page 404s.
-
-## Verification
-
-After following this skill, verify your results:
-
-- [ ] Search returns the expected number of results (check `<opensearch:totalResults>` value)
-- [ ] Parsed output shows correct titles, authors, and publication dates
-- [ ] Paper URLs resolve: `https://arxiv.org/abs/{id}` loads the abstract page
-- [ ] PDF URLs accessible: `https://arxiv.org/pdf/{id}` downloads the full paper
-- [ ] BibTeX entries are valid (try pasting into a `.bib` file or check with a validator)
-- [ ] Semantic Scholar API returns expected data for your paper IDs
-- [ ] Rate limits respected — waited 3+ seconds between arXiv API calls
-- [ ] No withdrawal or retraction notice in the abstract summary
-- [ ] Correct version cited (version suffix included when referencing a specific version)
+Papers can be withdrawn after submission. When this happens:
+- The `<summary>` field contains a withdrawal notice (look for "withdrawn" or "retracted")
+- Metadata fields may be incomplete
+- Always check the summary before treating a result as a valid paper

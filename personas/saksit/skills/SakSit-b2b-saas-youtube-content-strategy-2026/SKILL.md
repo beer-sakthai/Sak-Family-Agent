@@ -8,7 +8,6 @@ description: >-
 category: social-media
 created: 2026-07-02
 version: 1.0.0
-description: "Saksit B2B Saas Youtube Content Strategy 2026"
 author: SakSit
 skills_tags:
   - youtube-marketing
@@ -16,7 +15,6 @@ skills_tags:
   - video-seo
   - content-strategy
   - pipeline-generation
-
 ---
 
 # B2B SaaS YouTube Content Strategy 2026

@@ -1,0 +1,4 @@
+# file: C:\Users\beern\OneDrive\Documents\GitHub\Sak-Family-Agent\sakthai\cli\dashboard.py
+# hypothesis_version: 6.155.7
+
+[1.0, 1024, 3000, 65535, '\nstopped.', '--export', '--host', '--open/--no-open', '--port', '-H', '-p', '127.0.0.1', 'DENY', 'Referrer-Policy', 'X-Frame-Options', 'dashboard', 'data.json', 'dist', 'export_path', 'nosniff', 'open_browser']
