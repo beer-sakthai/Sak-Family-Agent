@@ -21,8 +21,7 @@ v2 is local-first — the CLI, the agent loop, and the MCP stdio server.
 The repository is the shared source workspace for the Sak family with these key conventions:
 
 - **Canonical package:** `personas/shared/sakthai/` (single copy, symlinked from all personas)
-- **Personas:** five agents on disk (`SakThai`, `SakKing`, `SakSee`, `SakSit`, `SakJules`; also `config.PERSONA_NAMES`); **SakThai is lead**. `SakTan` was retired and its
-  persona directory removed from the repo — don't recreate `personas/saktan/`.
+- **Personas:** six agents on disk (`SakThai`, `SakKing`, `SakSee`, `SakSit`, `SakJules`, `SakTan`; also `config.PERSONA_NAMES`); **SakThai is lead**.
   - Each has `/skills/` with `Sak<Name>-*` prefixed skills (no duplicates, flattened structure)
   - Each has `/config/` with persona-specific config (config.yaml, mcp.json, gateway_voice_mode.json)
   - Each symlinks to `../shared/sakthai` and `../shared/agent-self-evolution`
