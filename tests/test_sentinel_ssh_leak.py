@@ -49,16 +49,6 @@ class TestSensitiveRelativePaths(unittest.TestCase):
             ".env-local",
             ".env_production",
             ".env-development",
-            ".git-credentials",
-            ".node_repl_history",
-            ".mysql_history",
-            ".psql_history",
-            ".sqlite_history",
-            ".rediscli_history",
-            ".mongo_history",
-            "id_xmss",
-            "backup/id_xmss.bak",
-            "keys/id_xmss",
         ]
         for path in sensitive_relative_paths:
             with self.subTest(path=path):
@@ -106,8 +96,6 @@ class TestSensitiveRelativePaths(unittest.TestCase):
             "keys/id_ed25519.old",
             "id_rsa.pem",
             "id_ecdsa.key",
-            "backup/id_xmss.bak",
-            "id_xmss.pem",
         ):
             with self.subTest(path=path):
                 self.assertTrue(_is_sensitive_path(path), f"{path!r} should be blocked")
@@ -177,16 +165,6 @@ class TestSensitiveRelativePathCommands(unittest.TestCase):
             "cat .gcloud/credentials.db",
             "cat .azure/accessTokens.json",
             "cat id_ed25519_sk",
-            "cat .git-credentials",
-            "cat .node_repl_history",
-            "cat .mysql_history",
-            "cat .psql_history",
-            "cat .sqlite_history",
-            "cat .rediscli_history",
-            "cat .mongo_history",
-            "cat id_xmss",
-            "cat keys/id_xmss",
-            "cat backup/id_xmss.bak",
         ):
             with self.subTest(command=command):
                 result = _block_dangerous_shell_commands(

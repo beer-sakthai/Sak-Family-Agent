@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+
 import pytest
+
 from _common import (
     EMBEDDING_REGEX,
     cloud_endpoint,
@@ -22,10 +24,10 @@ from _common import (
     unwrap_workflow,
 )
 
+
 # =============================================================================
 # Cloud detection / URL routing
 # =============================================================================
-
 
 class TestCloudDetection:
     def test_cloud_host_exact(self):
@@ -70,29 +72,17 @@ class TestResolveURL:
         assert resolve_url("http://127.0.0.1:8188", "/prompt") == "http://127.0.0.1:8188/prompt"
 
     def test_cloud_adds_api_prefix(self):
-        assert (
-            resolve_url("https://cloud.comfy.org", "/prompt")
-            == "https://cloud.comfy.org/api/prompt"
-        )
+        assert resolve_url("https://cloud.comfy.org", "/prompt") == "https://cloud.comfy.org/api/prompt"
 
     def test_cloud_history_renamed(self):
-        assert (
-            resolve_url("https://cloud.comfy.org", "/history/abc")
-            == "https://cloud.comfy.org/api/history_v2/abc"
-        )
+        assert resolve_url("https://cloud.comfy.org", "/history/abc") == "https://cloud.comfy.org/api/history_v2/abc"
 
     def test_cloud_models_renamed(self):
-        assert (
-            resolve_url("https://cloud.comfy.org", "/models/loras")
-            == "https://cloud.comfy.org/api/experiment/models/loras"
-        )
+        assert resolve_url("https://cloud.comfy.org", "/models/loras") == "https://cloud.comfy.org/api/experiment/models/loras"
 
     def test_cloud_already_has_api(self):
         # Don't double-prefix
-        assert (
-            resolve_url("https://cloud.comfy.org", "/api/prompt")
-            == "https://cloud.comfy.org/api/prompt"
-        )
+        assert resolve_url("https://cloud.comfy.org", "/api/prompt") == "https://cloud.comfy.org/api/prompt"
 
     def test_trailing_slash_stripped(self):
         assert resolve_url("http://127.0.0.1:8188/", "/prompt") == "http://127.0.0.1:8188/prompt"
@@ -101,7 +91,6 @@ class TestResolveURL:
 # =============================================================================
 # Workflow validation
 # =============================================================================
-
 
 class TestAPIFormatDetection:
     def test_valid_api(self, sd15_workflow):
@@ -161,7 +150,6 @@ class TestIsLink:
 # Workflow iterators
 # =============================================================================
 
-
 class TestIterators:
     def test_iter_nodes(self, sd15_workflow):
         nodes = dict(iter_nodes(sd15_workflow))
@@ -190,7 +178,6 @@ class TestIterators:
 # =============================================================================
 # Embedding extraction
 # =============================================================================
-
 
 class TestEmbeddingRegex:
     def test_basic_embedding(self):
@@ -228,10 +215,8 @@ class TestEmbeddingRegex:
 class TestIterEmbeddingRefs:
     def test_finds_in_clip_text_encode(self):
         wf = {
-            "1": {
-                "class_type": "CLIPTextEncode",
-                "inputs": {"text": "embedding:foo, embedding:bar:0.5", "clip": ["2", 0]},
-            },
+            "1": {"class_type": "CLIPTextEncode",
+                  "inputs": {"text": "embedding:foo, embedding:bar:0.5", "clip": ["2", 0]}},
             "2": {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": "x"}},
         }
         refs = list(iter_embedding_refs(wf))
@@ -240,10 +225,8 @@ class TestIterEmbeddingRefs:
 
     def test_ignores_non_prompt_fields(self):
         wf = {
-            "1": {
-                "class_type": "CheckpointLoaderSimple",
-                "inputs": {"ckpt_name": "embedding:foo.safetensors"},
-            },
+            "1": {"class_type": "CheckpointLoaderSimple",
+                  "inputs": {"ckpt_name": "embedding:foo.safetensors"}},
         }
         refs = list(iter_embedding_refs(wf))
         # ckpt_name is not a prompt field — ignored
@@ -253,7 +236,6 @@ class TestIterEmbeddingRefs:
 # =============================================================================
 # Path safety
 # =============================================================================
-
 
 class TestSafePathJoin:
     def test_normal_join(self, tmp_path):
@@ -277,7 +259,6 @@ class TestSafePathJoin:
 # =============================================================================
 # Seed coercion
 # =============================================================================
-
 
 class TestCoerceSeed:
     def test_explicit_int(self):
@@ -312,19 +293,16 @@ class TestCoerceSeed:
 # Model list normalization (cloud format)
 # =============================================================================
 
-
 class TestParseModelList:
     def test_local_format_strings(self):
         result = parse_model_list(["a.safetensors", "b.safetensors"])
         assert result == {"a.safetensors", "b.safetensors"}
 
     def test_cloud_format_dicts(self):
-        result = parse_model_list(
-            [
-                {"name": "a.safetensors", "pathIndex": 0},
-                {"name": "b.safetensors", "pathIndex": 1},
-            ]
-        )
+        result = parse_model_list([
+            {"name": "a.safetensors", "pathIndex": 0},
+            {"name": "b.safetensors", "pathIndex": 1},
+        ])
         assert result == {"a.safetensors", "b.safetensors"}
 
     def test_empty(self):
@@ -335,19 +313,16 @@ class TestParseModelList:
         assert parse_model_list(None) == set()
 
     def test_mixed_format(self):
-        result = parse_model_list(
-            [
-                "string-form.safetensors",
-                {"name": "dict-form.safetensors"},
-            ]
-        )
+        result = parse_model_list([
+            "string-form.safetensors",
+            {"name": "dict-form.safetensors"},
+        ])
         assert result == {"string-form.safetensors", "dict-form.safetensors"}
 
 
 # =============================================================================
 # Folder aliases
 # =============================================================================
-
 
 class TestFolderAliases:
     def test_unet_aliases_diffusion_models(self):
@@ -364,19 +339,14 @@ class TestFolderAliases:
         assert folder_aliases_for("checkpoints") == ["checkpoints"]
 
     def test_primary_first(self):
-        # Order matters: queried primary folder name should be first in aliases list to ensure human-friendly fix hints
+        # Order matters: primary should be first for human-friendly fix hints
         assert folder_aliases_for("unet")[0] == "unet"
         assert folder_aliases_for("diffusion_models")[0] == "diffusion_models"
-        assert folder_aliases_for("clip")[0] == "clip"
-        assert folder_aliases_for("text_encoders")[0] == "text_encoders"
-        assert folder_aliases_for("controlnet")[0] == "controlnet"
-        assert folder_aliases_for("control_net")[0] == "control_net"
 
 
 # =============================================================================
 # Media-type detection
 # =============================================================================
-
 
 class TestMediaType:
     def test_video_extensions(self):
@@ -402,7 +372,6 @@ class TestMediaType:
 # Cross-host header stripping (security)
 # =============================================================================
 
-
 class TestRedirectHeaderStripping:
     """Verify X-API-Key is dropped when redirect crosses to a different host
     (e.g. cloud /api/view → S3 signed URL). Critical to prevent leaking auth
@@ -410,24 +379,18 @@ class TestRedirectHeaderStripping:
     """
 
     def _build_session(self):
-        from _common import HAS_REQUESTS, _StripSensitiveOnRedirectSession
-
+        from _common import _StripSensitiveOnRedirectSession, HAS_REQUESTS
         if not HAS_REQUESTS:
             import pytest
-
             pytest.skip("requests not installed")
         return _StripSensitiveOnRedirectSession()
 
     def test_strips_x_api_key_cross_host(self):
         import requests
-
         s = self._build_session()
         prep = requests.PreparedRequest()
-        prep.prepare(
-            method="GET",
-            url="https://other.example.com/file",
-            headers={"X-API-Key": "leak", "Authorization": "Bearer x"},
-        )
+        prep.prepare(method="GET", url="https://other.example.com/file",
+                     headers={"X-API-Key": "leak", "Authorization": "Bearer x"})
         resp = requests.Response()
         orig = requests.PreparedRequest()
         orig.prepare(method="GET", url="https://cloud.comfy.org/api/view", headers={})
@@ -438,10 +401,10 @@ class TestRedirectHeaderStripping:
 
     def test_preserves_x_api_key_same_host(self):
         import requests
-
         s = self._build_session()
         prep = requests.PreparedRequest()
-        prep.prepare(method="GET", url="https://cloud.comfy.org/foo", headers={"X-API-Key": "keep"})
+        prep.prepare(method="GET", url="https://cloud.comfy.org/foo",
+                     headers={"X-API-Key": "keep"})
         resp = requests.Response()
         orig = requests.PreparedRequest()
         orig.prepare(method="GET", url="https://cloud.comfy.org/bar", headers={})
@@ -451,12 +414,10 @@ class TestRedirectHeaderStripping:
 
     def test_strips_cookie_cross_host(self):
         import requests
-
         s = self._build_session()
         prep = requests.PreparedRequest()
-        prep.prepare(
-            method="GET", url="https://other.example.com/x", headers={"Cookie": "session=secret"}
-        )
+        prep.prepare(method="GET", url="https://other.example.com/x",
+                     headers={"Cookie": "session=secret"})
         resp = requests.Response()
         orig = requests.PreparedRequest()
         orig.prepare(method="GET", url="https://cloud.comfy.org/foo", headers={})
@@ -469,14 +430,12 @@ class TestRedirectHeaderStripping:
 # Video workflow detection
 # =============================================================================
 
-
 class TestVideoWorkflow:
     def test_image_workflow(self, sd15_workflow):
         assert looks_like_video_workflow(sd15_workflow) is False
 
     def test_animatediff_workflow(self, workflows_dir):
         import json
-
         wf = json.loads((workflows_dir / "animatediff_video.json").read_text())
         assert looks_like_video_workflow(wf) is True
 

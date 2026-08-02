@@ -6,7 +6,16 @@ from pathlib import Path
 from typing import Any
 
 # Add the script folder to sys.path so we can import ws_monitor
-SCRIPT_DIR = Path(__file__).resolve().parents[1] / "sakthai-chat-cli" / "personas" / "sakthai" / "skills" / "creative" / "comfyui" / "scripts"
+SCRIPT_DIR = (
+    Path(__file__).resolve().parents[1]
+    / "sakthai-chat-cli"
+    / "personas"
+    / "sakthai"
+    / "skills"
+    / "creative"
+    / "comfyui"
+    / "scripts"
+)
 sys.path.insert(0, str(SCRIPT_DIR))
 
 import ws_monitor  # noqa: E402
@@ -24,15 +33,23 @@ def test_parse_args_defaults() -> None:
 
 
 def test_parse_args_custom() -> None:
-    args = ws_monitor.parse_args([
-        "--host", "example.com",
-        "--api-key", "test-key",
-        "--client-id", "my-client",
-        "--prompt-id", "my-prompt",
-        "--previews", "/tmp/previews",
-        "--no-color",
-        "--timeout", "120.0"
-    ])
+    args = ws_monitor.parse_args(
+        [
+            "--host",
+            "example.com",
+            "--api-key",
+            "test-key",
+            "--client-id",
+            "my-client",
+            "--prompt-id",
+            "my-prompt",
+            "--previews",
+            "/tmp/previews",
+            "--no-color",
+            "--timeout",
+            "120.0",
+        ]
+    )
     assert args.host == "example.com"
     assert args.api_key == "test-key"
     assert args.client_id == "my-client"
@@ -49,7 +66,7 @@ def test_get_ws_connection_details() -> None:
         client_id="fixed-client-id",
         previews=None,
         no_color=False,
-        timeout=600.0
+        timeout=600.0,
     )
     ws_url, display_url, client_id = ws_monitor.get_ws_connection_details(args)
     assert "ws://localhost:8188/ws?clientId=fixed-client-id" in ws_url
@@ -66,6 +83,7 @@ def test_handle_binary_frame_none(tmp_path: Path) -> None:
 def test_handle_binary_frame_preview(tmp_path: Path) -> None:
     # 8 bytes header (type=1, img_type=2) + image bytes
     import struct
+
     header = struct.pack(">II", 1, 2)
     img_data = b"fake-png-bytes"
     msg = header + img_data

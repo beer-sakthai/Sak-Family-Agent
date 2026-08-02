@@ -358,150 +358,6 @@ def _agent_turn(
 # -- main loop -----------------------------------------------------------
 
 
-def _init_agent_config(
-    task: str,
-    model: str,
-    provider: str | None,
-    client: Any | None,
-) -> tuple[str, str, str, Any, str]:
-    """Validate task string, resolve slash command, detect provider/model and build client."""
-    if not task.strip():
-        raise AgentError("Task must be a non-empty string.")
-
-    parsed = _parse_slash_command(task)
-    command_system = ""
-    if parsed:
-        command_system, task = parsed
-
-    provider = provider or _detect_provider(client, model)
-    if provider == "ollama":
-        provider = "openai"
-
-    if provider == "openai" and model == DEFAULT_MODEL:
-        if os.environ.get("OLLAMA_HOST"):
-            model = "qwen2.5-coder:7b"
-        else:
-            model = "gpt-4o"
-    elif provider == "google" and model == DEFAULT_MODEL:
-        model = "gemini-2.5-flash"
-
-    client = _build_client(provider, client)
-    return task, provider, model, client, command_system
-
-
-def _record_agent_eval(
-    task: str,
-    model: str,
-    provider: str,
-    iteration: int,
-    stop_reason: str,
-    had_error: bool,
-    start_time: float,
-    tool_calls: list[dict[str, Any]],
-    usage_tracker: UsageTracker,
-) -> None:
-    """Record evaluation results for the agent run."""
-    usage = usage_tracker.to_dict()
-    record_eval(
-        EvalRecord(
-            timestamp=int(time.time()),
-            task_preview=task_preview(task),
-            model=model,
-            provider=provider,
-            iterations=iteration,
-            stop_reason=stop_reason,
-            latency_s=time.monotonic() - start_time,
-            input_tokens=usage["input_tokens"],
-            output_tokens=usage["output_tokens"],
-            tool_call_count=len(tool_calls),
-            had_error=had_error,
-        )
-    )
-
-
-def _handle_turn_response(
-    response: Any,
-    task: str,
-    model: str,
-    provider: str,
-    messages: list[dict[str, Any]],
-    registry: ToolRegistry,
-    store: MemoryStore,
-    notify: Callable[[str, dict[str, Any]], None],
-    tool_calls: list[dict[str, Any]],
-    policy: GuardrailPolicy,
-    usage_tracker: UsageTracker,
-    iteration: int,
-    start_time: float,
-) -> tuple[bool, AgentResult | None]:
-    """Process the response from a single agent turn and check for terminal conditions."""
-    stop_reason = getattr(response, "stop_reason", "") or ""
-    notify("iteration", {"n": iteration, "stop_reason": stop_reason})
-
-    if stop_reason in _TERMINAL_STOPS:
-        final_text = _extract_text(response.content)
-        missed_tool = _detect_untriggered_tool_call(final_text, registry)
-        if missed_tool is not None:
-            logger.warning(
-                "Model ended the turn (stop_reason=%s) with text that looks "
-                "like an un-dispatched %r tool call; not executing it.",
-                stop_reason,
-                missed_tool,
-            )
-            notify("tool_call_in_text", {"name": missed_tool, "stop_reason": stop_reason})
-        result = AgentResult(
-            text=final_text,
-            iterations=iteration,
-            stop_reason=stop_reason,
-            tool_calls=tool_calls,
-            usage=usage_tracker.to_dict(),
-            messages=[*messages, {"role": "assistant", "content": response.content}],
-        )
-        _save_session_log(task, model, messages, result)
-        _record_agent_eval(
-            task,
-            model,
-            provider,
-            iteration,
-            stop_reason,
-            had_error=False,
-            start_time=start_time,
-            tool_calls=tool_calls,
-            usage_tracker=usage_tracker,
-        )
-        return True, result
-
-    if stop_reason == "pause_turn":
-        messages.append({"role": "assistant", "content": response.content})
-        return False, None
-
-    if stop_reason != "tool_use":
-        result = AgentResult(
-            text=_extract_text(response.content) or f"(unexpected stop_reason={stop_reason!r})",
-            iterations=iteration,
-            stop_reason=stop_reason,
-            tool_calls=tool_calls,
-            usage=usage_tracker.to_dict(),
-            messages=[*messages, {"role": "assistant", "content": response.content}],
-        )
-        _save_session_log(task, model, messages, result)
-        _record_agent_eval(
-            task,
-            model,
-            provider,
-            iteration,
-            stop_reason,
-            had_error=False,
-            start_time=start_time,
-            tool_calls=tool_calls,
-            usage_tracker=usage_tracker,
-        )
-        return True, result
-
-    _dispatch_tool_calls(response, messages, registry, store, notify, tool_calls, policy)
-    return False, None
-
-
 def run_agent(
     task: str,
     *,
@@ -533,12 +389,29 @@ def run_agent(
     conversation with a prior turn's messages (e.g. from a previous
     ``AgentResult.messages``) so multi-turn callers don't lose context.
     """
+    if not task.strip():
+        raise AgentError("Task must be a non-empty string.")
     if max_seconds is not None and max_seconds <= 0:
         raise AgentError("max_seconds must be positive when set.")
 
-    task, provider, model, client, command_system = _init_agent_config(
-        task, model, provider, client
-    )
+    parsed = _parse_slash_command(task)
+    command_system = ""
+    if parsed:
+        command_system, task = parsed
+
+    provider = provider or _detect_provider(client, model)
+    if provider == "ollama":
+        provider = "openai"
+
+    if provider == "openai" and model == DEFAULT_MODEL:
+        if os.environ.get("OLLAMA_HOST"):
+            model = "qwen2.5-coder:7b"
+        else:
+            model = "gpt-4o"
+    elif provider == "google" and model == DEFAULT_MODEL:
+        model = "gemini-2.5-flash"
+
+    client = _build_client(provider, client)
 
     own_store = store is None
     store = store or MemoryStore()
@@ -553,6 +426,24 @@ def run_agent(
 
     usage_tracker = UsageTracker()
     start_time = time.monotonic()
+
+    def _record_run_eval(iteration: int, stop_reason: str, had_error: bool) -> None:
+        usage = usage_tracker.to_dict()
+        record_eval(
+            EvalRecord(
+                timestamp=int(time.time()),
+                task_preview=task_preview(task),
+                model=model,
+                provider=provider,
+                iterations=iteration,
+                stop_reason=stop_reason,
+                latency_s=time.monotonic() - start_time,
+                input_tokens=usage["input_tokens"],
+                output_tokens=usage["output_tokens"],
+                tool_call_count=len(tool_calls),
+                had_error=had_error,
+            )
+        )
 
     # Mark the loop active only once setup has succeeded, and inside the try whose
     # finally restores it. Setting it earlier leaked "1" into the process
@@ -590,36 +481,53 @@ def run_agent(
                 usage_tracker,
             )
 
-            should_stop, result = _handle_turn_response(
-                response=response,
-                task=task,
-                model=model,
-                provider=provider,
-                messages=messages,
-                registry=registry,
-                store=store,
-                notify=notify,
-                tool_calls=tool_calls,
-                policy=policy,
-                usage_tracker=usage_tracker,
-                iteration=iteration,
-                start_time=start_time,
-            )
-            if should_stop:
-                assert result is not None
+            stop_reason = getattr(response, "stop_reason", "") or ""
+            notify("iteration", {"n": iteration, "stop_reason": stop_reason})
+
+            if stop_reason in _TERMINAL_STOPS:
+                final_text = _extract_text(response.content)
+                missed_tool = _detect_untriggered_tool_call(final_text, registry)
+                if missed_tool is not None:
+                    logger.warning(
+                        "Model ended the turn (stop_reason=%s) with text that looks "
+                        "like an un-dispatched %r tool call; not executing it.",
+                        stop_reason,
+                        missed_tool,
+                    )
+                    notify("tool_call_in_text", {"name": missed_tool, "stop_reason": stop_reason})
+                result = AgentResult(
+                    text=final_text,
+                    iterations=iteration,
+                    stop_reason=stop_reason,
+                    tool_calls=tool_calls,
+                    usage=usage_tracker.to_dict(),
+                    messages=[*messages, {"role": "assistant", "content": response.content}],
+                )
+                _save_session_log(task, model, messages, result)
+                _record_run_eval(iteration, stop_reason, had_error=False)
                 return result
 
-        _record_agent_eval(
-            task=task,
-            model=model,
-            provider=provider,
-            iteration=max_iterations,
-            stop_reason="max_iterations",
-            had_error=True,
-            start_time=start_time,
-            tool_calls=tool_calls,
-            usage_tracker=usage_tracker,
-        )
+            if stop_reason == "pause_turn":
+                messages.append({"role": "assistant", "content": response.content})
+                continue
+
+            if stop_reason != "tool_use":
+                result = AgentResult(
+                    text=_extract_text(response.content)
+                    or f"(unexpected stop_reason={stop_reason!r})",
+                    iterations=iteration,
+                    stop_reason=stop_reason,
+                    tool_calls=tool_calls,
+                    usage=usage_tracker.to_dict(),
+                    messages=[*messages, {"role": "assistant", "content": response.content}],
+                )
+                _save_session_log(task, model, messages, result)
+                _record_run_eval(iteration, stop_reason, had_error=False)
+                return result
+
+            _dispatch_tool_calls(response, messages, registry, store, notify, tool_calls, policy)
+
+        _record_run_eval(max_iterations, "max_iterations", had_error=True)
         raise AgentError(
             f"Agent hit the iteration cap (max_iterations={max_iterations}) "
             "without producing a final response."
