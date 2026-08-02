@@ -175,7 +175,7 @@ class _Handler(SimpleHTTPRequestHandler):
                     self._send_json(401, {"error": "Unauthorized", "message": "Bearer token required"})
                     return
                 token = auth[7:]
-                if token != expected_token:
+                if not secrets.compare_digest(token, expected_token):
                     self._send_json(403, {"error": "Forbidden", "message": "Invalid bearer token"})
                     return
 
