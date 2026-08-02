@@ -8,6 +8,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SKILLS_ROOT = REPO_ROOT / "personas" / "sakking" / "skills"
+SHARED_SKILLS_ROOT = REPO_ROOT / "personas" / "shared" / "skills"
 P5_SCRIPT_URL = "https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.11.3/p5.min.js"
 P5_SCRIPT_INTEGRITY = (
     "sha512-I0Pwwz3PPNQkWes+rcSoQqikKFfRmTfGQrcNzZbm8ALaUyJuFdyRinl805shE8xT6iEWsWgv"
@@ -55,7 +56,7 @@ def test_comfyui_output_redacts_credentials(capsys) -> None:
 
 def test_maps_output_redacts_precise_location(capsys) -> None:
     maps = runpy.run_path(
-        str(SKILLS_ROOT / "SakKing-maps" / "scripts" / "maps_client.py"),
+        str(SHARED_SKILLS_ROOT / "Sak-maps" / "scripts" / "maps_client.py"),
         run_name="sakking_maps_client",
     )
 
