@@ -2,6 +2,8 @@ import json
 import re
 from functools import wraps
 
+import yaml
+
 
 def get_intro_line(persona_text):
     """
@@ -14,16 +16,17 @@ def get_intro_line(persona_text):
     return None
 
 
-def check_intro_line(predictions, references, docs):
+def process_results_soul_following(doc, results):
     """
-    Metric that checks if the prediction starts with the correct intro line
-    extracted from the persona in the corresponding doc.
+    process_results hook (doc, results) -> {metric_name: score}: checks if the
+    prediction starts with the correct intro line extracted from the doc's persona.
     """
-    intro_line = get_intro_line(docs[0]["persona"])
+    prediction = results[0]
+    intro_line = get_intro_line(doc["persona"])
     if not intro_line:
-        return 0.0  # Cannot score if the persona doesn't specify an intro line.
+        return {"score": 0.0}  # Cannot score if the persona doesn't specify an intro line.
 
-    return 1.0 if predictions[0].strip().startswith(intro_line) else 0.0
+    return {"score": 1.0 if prediction.strip().startswith(intro_line) else 0.0}
 
 
 def _parse_prediction_as_json(prediction_string):
@@ -37,57 +40,55 @@ def _parse_prediction_as_json(prediction_string):
         return None
 
 
-def make_json_metric(validator_fn):
+def _parse_prediction_as_yaml(prediction_string):
     """
-    A higher-order function that creates a metric for evaluating JSON output.
-    It handles the boilerplate of parsing the prediction string and allows
-    a simple validator function to define the actual check.
+    Helper to safely parse a string into a YAML object.
+    Returns the parsed data or None if parsing fails.
+    """
+    try:
+        return yaml.safe_load(prediction_string.strip())
+    except (yaml.YAMLError, AttributeError):
+        return None
 
-    :param validator_fn: A function that takes (parsed_json, doc) and returns a float score.
-    :return: A complete metric function compatible with lm-evaluation-harness.
+
+def _make_process_results(parse_fn, validator_fn):
+    """
+    A higher-order function that builds an lm-evaluation-harness
+    `process_results(doc, results)` hook. It handles the boilerplate of
+    parsing the model's raw completion and allows a simple validator function
+    to define the actual check against the source doc.
+
+    :param parse_fn: Parses the raw prediction string, returning None on failure.
+    :param validator_fn: A function that takes (parsed_data, doc) and returns a float score.
+    :return: A `process_results(doc, results)` callable returning {"score": float}.
     """
 
     @wraps(validator_fn)
-    def metric_fn(predictions, references, docs):
-        prediction_str = predictions[0]
-        doc = docs[0]
-
-        data = _parse_prediction_as_json(prediction_str)
+    def process_results(doc, results):
+        data = parse_fn(results[0])
         if data is None:
-            return 0.0  # Fail if the prediction is not valid JSON.
+            return {"score": 0.0}  # Fail if the prediction doesn't parse.
 
-        return validator_fn(data, doc)
+        return {"score": validator_fn(data, doc)}
 
-    return metric_fn
+    return process_results
 
 
-@make_json_metric
-def check_json_validity(data, doc):
-    """Metric: Checks if the prediction is a valid JSON object."""
+def _check_json_validity(data, doc):
+    """Validator: the prediction is a valid JSON object."""
     return 1.0  # If we got here, _parse_prediction_as_json succeeded.
 
 
-@make_yaml_metric
-def check_yaml_key(data, doc):
-    """Metric: Checks if the YAML contains a specific key from the doc."""
+def _check_json_key(data, doc):
+    """Validator: the JSON contains a specific required key from the doc."""
     key_to_check = doc.get("key_to_check")
     if not key_to_check or not isinstance(data, dict):
         return 0.0
     return 1.0 if key_to_check in data else 0.0
 
 
-@make_json_metric
-def check_json_key(data, doc):
-    """Metric: Checks if the JSON contains a specific key from the doc."""
-    key_to_check = doc.get("key_to_check")
-    if not key_to_check or not isinstance(data, dict):
-        return 0.0
-    return 1.0 if key_to_check in data else 0.0
-
-
-@make_json_metric
-def check_json_key_value_pattern(data, doc):
-    """Metric: Checks if a value for a specific key matches a regex pattern from the doc."""
+def _check_json_key_value_pattern(data, doc):
+    """Validator: a value for a specific key matches a regex pattern from the doc."""
     key_to_check = doc.get("key_to_check")
     value_pattern = doc.get("value_pattern")
     if (
@@ -102,9 +103,8 @@ def check_json_key_value_pattern(data, doc):
     return 1.0 if re.match(value_pattern, str(value)) else 0.0
 
 
-@make_json_metric
-def check_json_numerical_range(data, doc):
-    """Metric: Checks if a JSON value for a specific key is within a numerical range."""
+def _check_json_numerical_range(data, doc):
+    """Validator: a JSON value for a specific key is within a numerical range."""
     key_to_check = doc.get("key_to_check")
     min_value = doc.get("min_value")
     max_value = doc.get("max_value")
@@ -123,3 +123,28 @@ def check_json_numerical_range(data, doc):
         return 0.0  # Value is not a number.
 
     return 1.0 if min_value <= value <= max_value else 0.0
+
+
+def _check_yaml_validity(data, doc):
+    """Validator: the prediction is a valid YAML document."""
+    return 1.0  # If we got here, _parse_prediction_as_yaml succeeded.
+
+
+def _check_yaml_key(data, doc):
+    """Validator: the YAML contains a specific required key from the doc."""
+    key_to_check = doc.get("key_to_check")
+    if not key_to_check or not isinstance(data, dict):
+        return 0.0
+    return 1.0 if key_to_check in data else 0.0
+
+
+process_results_json_validity = _make_process_results(_parse_prediction_as_json, _check_json_validity)
+process_results_json_key_check = _make_process_results(_parse_prediction_as_json, _check_json_key)
+process_results_json_key_value_pattern_check = _make_process_results(
+    _parse_prediction_as_json, _check_json_key_value_pattern
+)
+process_results_json_numerical_range_check = _make_process_results(
+    _parse_prediction_as_json, _check_json_numerical_range
+)
+process_results_yaml_validity = _make_process_results(_parse_prediction_as_yaml, _check_yaml_validity)
+process_results_yaml_key_check = _make_process_results(_parse_prediction_as_yaml, _check_yaml_key)

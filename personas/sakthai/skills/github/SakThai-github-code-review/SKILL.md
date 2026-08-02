@@ -1,19 +1,35 @@
 ---
 name: SakThai-github-code-review
+author: SakThai
+license: MIT
 description: "Review PRs: diffs, inline comments via gh or REST."
 version: 1.1.0
-author: Hermes Agent
-license: MIT
 platforms: [linux, macos, windows]
 metadata:
   hermes:
     tags: [GitHub, Code-Review, Pull-Requests, Git, Quality]
     related_skills: [SakThai-github-auth, SakThai-github-pr-workflow]
+category: github
 ---
-
 # GitHub Code Review
 
 Perform code reviews on local changes before pushing, or review open PRs on GitHub. Most of this skill uses plain `git` — the `gh`/`curl` split only matters for PR-level interactions.
+
+## When to Use
+
+Use this skill when you need to:
+- Review local uncommitted changes before pushing to a remote branch
+- Perform a structured code review on an open GitHub pull request
+- Leave inline comments on specific lines of a PR diff
+- Submit a formal PR review (Approve, Request Changes, or Comment)
+- Check for common issues (security flaws, debug leftovers, merge conflicts) before merging
+- Audit a large PR systematically with a checklist-based approach
+
+**Don't use for:**
+- Non-GitHub repositories (GitLab, Bitbucket — the API calls and URL structures differ)
+- Simple typo fixes or one-line formatting changes (just fix and commit directly)
+- Reviewing dependency-only or lockfile-only diffs (use dedicated diff inspection tools)
+- Code style enforcement (use a linter like ruff, eslint, or clippy instead)
 
 ## Prerequisites
 
@@ -479,3 +495,40 @@ git branch -D pr-$PR_NUMBER
 - **Approve** — no critical or warning-level issues, only minor suggestions or all clear
 - **Request Changes** — any critical or warning-level issue that should be fixed before merge
 - **Comment** — observations and suggestions, but nothing blocking (use when you're unsure or the PR is a draft)
+
+---
+
+## Pitfalls
+
+- **Token exposure:** The curl examples use `***` as a placeholder. Never hardcode tokens in scripts — use environment variables (`$GITHUB_TOKEN`) or `gh auth` for secure authentication.
+- **Diff complexity:** Large diffs (>500 lines) are hard to review as one blob. Break into file-by-file reviews using `git diff main...HEAD -- path/to/file.py`.
+- **Commit SHA mismatch:** Inline comments require the correct head commit SHA. If the PR receives new commits after you fetch the SHA, your comments may be attached to the wrong line or rejected entirely.
+- **Review vs Comment confusion:** A formal review (`gh pr review --approve`) is different from a general comment (`gh pr comment`). Reviews can block merging; comments cannot.
+- **Line number reference errors:** The `line` field in review comments refers to the line number in the new (or old) version of the file. For deleted lines, use `"side": "LEFT"`. Wrong side/line values produce malformed comments.
+- **Permission denied:** You need write access to the repository to submit reviews on a PR. Read-only access allows viewing but not commenting.
+- **Branch cleanup:** Forgetting to delete local review branches (`pr-123`) creates clutter over time. Clean up with `git branch -D pr-123` after each review.
+- **Review fatigue:** Checking every line of a 2000-line PR is error-prone and misses issues. Use `--stat` and `--name-only` first to scope the review, then prioritize high-risk files (security, auth, data handling, input validation).
+- **Fetched PR branch goes stale:** After fetching a PR branch, the PR author may push new commits. Re-fetch (`git fetch origin pull/N/head:pr-N`) to get the latest diff before leaving comments.
+- **Missing context:** Diffs show what changed, not the surrounding code. Always `read_file` on the full file to understand the context around each change.
+
+## Verification
+
+Before marking a code review as complete:
+
+### Local Changes Review
+- [ ] `git diff main...HEAD --stat` reviewed to understand scope
+- [ ] Full diff inspected for correctness and logic errors
+- [ ] Security scan performed (secrets, SQL injection, XSS, path traversal)
+- [ ] Debug artifacts checked (`print()`, `console.log`, TODO, FIXME, `debugger`)
+- [ ] Merge conflict markers (`<<<<<<<`, `>>>>>>`, `=======`) absent
+- [ ] Findings presented in structured format (Critical / Warnings / Suggestions / Looks Good)
+
+### PR Review
+- [ ] PR title, description, and scope fully understood
+- [ ] All changed files reviewed (not just a subset)
+- [ ] Inline comments reference the correct lines and head commit SHA
+- [ ] Formal review submitted with appropriate event (Approve / Request Changes / Comment)
+- [ ] Summary comment posted with an overall verdict
+- [ ] Local PR branch cleaned up (`git branch -D pr-N`)
+- [ ] All CI checks passing (if the PR has checks configured)
+- [ ] No critical or security issues remain unresolved

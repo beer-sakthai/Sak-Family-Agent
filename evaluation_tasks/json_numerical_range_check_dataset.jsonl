@@ -1,0 +1,3 @@
+{"input": "A product priced at 42 dollars.", "key_to_check": "price", "min_value": 0, "max_value": 100, "answer_json": "{\"price\": 42}"}
+{"input": "A user aged 30 years old.", "key_to_check": "age", "min_value": 0, "max_value": 120, "answer_json": "{\"age\": 30}"}
+{"input": "A rating of 4 out of 5 stars.", "key_to_check": "rating", "min_value": 1, "max_value": 5, "answer_json": "{\"rating\": 4}"}

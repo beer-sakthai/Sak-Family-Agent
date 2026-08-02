@@ -1,6 +1,8 @@
 ---
 name: SakThai-cycle-care
 category: cycle
+author: SakThai
+license: MIT
 description: Audit correctness, safety, and performance before shipping.
 version: 1.0.0
 platforms:

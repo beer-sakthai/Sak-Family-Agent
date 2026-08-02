@@ -1,6 +1,9 @@
 ---
 name: SakSee-sakthai-cycle-trust
+version: 1.0.0
+description: "Saksee Sakthai Cycle Trust"
 category: sakthai-cycle-trust
+
 ---
 # SakThai Cycle — Trust
 

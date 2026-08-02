@@ -26,7 +26,7 @@ def _make_read_input() -> Callable[[], str | None]:
 
     def _read() -> str | None:
         try:
-            return session.prompt("> ")
+            return str(session.prompt("> "))
         except EOFError:
             return None
 
@@ -45,7 +45,7 @@ def _make_read_input() -> Callable[[], str | None]:
 @click.option(
     "--provider",
     "-p",
-    type=click.Choice(["anthropic", "google", "openai", "ollama", "gateway"]),
+    type=click.Choice(["anthropic", "google", "openai", "ollama", "gateway", "huggingface"]),
     default=DEFAULT_CHAT_PROVIDER,
     show_default=True,
     help="LLM provider backend.",

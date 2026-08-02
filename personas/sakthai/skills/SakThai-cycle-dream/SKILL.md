@@ -1,6 +1,8 @@
 ---
 name: SakThai-cycle-dream
 category: cycle
+author: SakThai
+license: MIT
 description: Define the vision and recall prior context before building.
 version: 1.0.0
 platforms:

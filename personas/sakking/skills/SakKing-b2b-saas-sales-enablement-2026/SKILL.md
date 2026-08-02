@@ -1,5 +1,7 @@
 ---
 name: SakKing-b2b-saas-sales-enablement-2026
+version: 1.0.0
+description: "Sakking B2B Saas Sales Enablement 2026"
 description: >
   A complete playbook for B2B SaaS companies to build, deploy, and measure
   a sales enablement content strategy that bridges marketing output to rep
@@ -7,6 +9,7 @@ description: >
   and revenue-linked KPIs for 2026.
 category: social-media
 subcategory: sales-enablement
+
 ---
 
 # B2B SaaS Sales Enablement Content Strategy 2026

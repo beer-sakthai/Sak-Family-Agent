@@ -1,6 +1,8 @@
 ---
 name: SakThai-cronjob-auth
 category: hermes
+author: SakThai
+license: MIT
 description: Handle authentication, authorization, and credential safety for Hermes
   cron jobs
 version: 1.0.0

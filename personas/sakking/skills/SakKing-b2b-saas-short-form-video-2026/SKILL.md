@@ -1,11 +1,14 @@
 ---
 name: SakKing-b2b-saas-short-form-video-2026
+version: 1.0.0
+description: "Sakking B2B Saas Short Form Video 2026"
 description: >-
   A complete playbook for B2B SaaS companies to build, distribute, and measure
   short-form video content across LinkedIn, YouTube Shorts, Instagram Reels,
   and TikTok in 2026.
 category: social-media
 domain: b2b-saas
+
 ---
 
 # B2B SaaS Short-Form Video Marketing Strategy 2026

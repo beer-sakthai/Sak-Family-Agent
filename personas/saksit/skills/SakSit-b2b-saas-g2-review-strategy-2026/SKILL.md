@@ -14,7 +14,9 @@ skills_tags:
   - review-management
 created: 2026-07-02
 version: 1.0.0
+description: "Saksit B2B Saas G2 Review Strategy 2026"
 author: SakSit
+
 ---
 
 # B2B SaaS G2 and Peer Review Strategy 2026

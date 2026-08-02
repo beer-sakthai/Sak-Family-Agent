@@ -1,6 +1,8 @@
 ---
 name: SakThai-cycle-growth
 category: cycle
+author: SakThai
+license: MIT
 description: Fold the cycle's lessons back into memory and skills.
 version: 1.0.0
 platforms:

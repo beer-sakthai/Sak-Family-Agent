@@ -14,7 +14,9 @@ skills_tags:
   - lead-scoring
 created: 2026-07-02
 version: 1.0.0
+description: "Saksit B2B Saas Ai Personalization 2026"
 author: SakSit
+
 ---
 
 # B2B SaaS AI Personalization Strategy 2026

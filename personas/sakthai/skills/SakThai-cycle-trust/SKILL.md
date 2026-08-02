@@ -1,6 +1,8 @@
 ---
 name: SakThai-cycle-trust
 category: cycle
+author: SakThai
+license: MIT
 description: Verify the shipped work is safe to rely on.
 version: 1.0.0
 platforms:

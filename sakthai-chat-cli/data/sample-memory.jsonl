@@ -1,0 +1,5 @@
+{"type": "fact", "id": 1, "kind": "pref", "key": "language", "value": "Python", "source_session": null, "created_at": 1718000000, "updated_at": 1718000000, "tags": ["coding"]}
+{"type": "fact", "id": 2, "kind": "pref", "key": "editor", "value": "Neovim", "source_session": null, "created_at": 1718001000, "updated_at": 1718001000, "tags": ["coding"]}
+{"type": "fact", "id": 3, "kind": "profile", "key": "timezone", "value": "Asia/Bangkok (GMT+7)", "source_session": null, "created_at": 1718002000, "updated_at": 1718002000, "tags": []}
+{"type": "observation", "id": 1, "summary": "Prefers concise, actionable replies", "evidence_session_id": null, "weight": 0.9, "confidence": 0.6, "created_at": 1718003000}
+{"type": "observation", "id": 2, "summary": "Most active in the evening", "evidence_session_id": null, "weight": 0.75, "confidence": 0.5, "created_at": 1718004000}

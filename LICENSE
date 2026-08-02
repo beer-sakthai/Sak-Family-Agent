@@ -1,0 +1,53 @@
+# House of Sak — Intellectual Property License
+
+**Copyright © 2026 Beer (beer-sakthai). All Rights Reserved.**
+
+## 1. Grant of Rights
+
+This license governs the use of all code, models, datasets, documentation, and associated files in this repository (collectively, the "Work").
+
+### 1.1 Permitted Uses (without explicit permission)
+
+- **Viewing and Reading**: You may view, read, and study the Work for personal, non-commercial purposes.
+- **Reference**: You may reference the Work in academic or research contexts with proper attribution.
+
+### 1.2 Prohibited Uses (without explicit written permission from the owner)
+
+- **Commercial Use**: You may not use the Work for any commercial purpose.
+- **Reproduction and Distribution**: You may not copy, reproduce, distribute, publish, or transmit the Work, in whole or in part.
+- **Modification and Derivative Works**: You may not modify, adapt, translate, or create derivative works based on the Work.
+- **Machine Learning Training**: You may not use the Work to train machine learning models, AI systems, or any artificial intelligence without explicit permission.
+- **Deployment**: You may not deploy, host, or serve the Work or any derivative thereof.
+- **Sublicensing**: You may not sublicense, rent, lease, or lend the Work.
+
+## 2. Enforcement and Reporting
+
+Unauthorized use of this Work constitutes intellectual property theft and may result in legal action, including but not limited to:
+
+- DMCA takedown notices against hosting providers
+- Cease and desist orders
+- Civil litigation for damages and injunctive relief
+- Criminal prosecution where applicable
+
+### To report unauthorized use:
+
+**Email**: beer-sakthai@users.noreply.github.com
+
+Please include:
+- The URL or location of the suspected infringement
+- A description of what is being used without authorization
+- Your contact information (optional)
+
+Reports will be investigated within 48 hours.
+
+## 3. No Warranty
+
+THE WORK IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY.
+
+## 4. Governing Law
+
+This license shall be governed by and construed in accordance with the laws of Ireland.
+
+---
+
+**By accessing or using this repository, you agree to the terms of this license.**

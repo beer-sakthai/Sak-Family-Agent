@@ -17,7 +17,9 @@ skills_tags:
   - content-strategy
 created: 2026-07-02
 version: 1.0.0
+description: "Sakking B2B Saas Twitter X Marketing 2026"
 author: SakSit
+
 ---
 
 # B2B SaaS X/Twitter Marketing Strategy 2026

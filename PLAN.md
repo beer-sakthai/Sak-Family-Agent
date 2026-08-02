@@ -58,15 +58,18 @@ never duplicate content across files.
 | **Sentinel relative-path hardening (PR #378/#381)** — `_is_sensitive_path` blocks relative paths to sensitive data (`.ssh/`, `.aws/`, shell histories, key basenames) via `_SENSITIVE_BASENAMES`/`_SENSITIVE_DIRS`/`_SENSITIVE_KEY_STEMS`, case-insensitively and across separator values, backup-suffixed keys, globs, and interpreter one-liners; superset of the concurrently-merged #379; synced across all six personas; prevention: `tests/test_persona_guardrails_parity.py` fails CI on persona guardrail drift + regression tests in `tests/test_sentinel_ssh_leak.py` | ✅ Done (2026-07-14) |
 | **Relative system-root blocking (re-land of PR #380)** — `_is_sensitive_path` now treats relative paths whose first component names a critical root (`etc/passwd`, `var/log/…`) as sensitive, with a single-component `tmp` exception; `.config`/`.npm` added to `_SENSITIVE_DIRS`, `credentials` to `_SENSITIVE_BASENAMES`; landed as a delta on top of the stronger #381 hardening instead of merging the conflicting/regressive #380 branch; synced across all six personas; regression tests in `tests/test_guardrails_relative_roots.py` | ✅ Done (2026-07-14) |
 | **Branch consolidation — all 8 open PRs merged to main** — dependabot #386 (mypy 2.3.0) + #387 (actions group); Sentinel #384 (shell-config basenames + critical roots in `_SENSITIVE_NAME_RE`), #385 (ssh/ssh-add/ssh-keygen/ssh-copy-id in scan lists + `tests/test_sentinel_ssh_tools.py`), #388 (`cp` check widened from kubectl-only to docker/podman/kubectl), #389 (docker/podman/kubectl/chroot/nsenter added to destructive + exfiltration scan lists), #391 (`,` added as `_is_sensitive_path` delimiter + `tests/test_guardrails_sentinel_bypasses.py` case), #392 (protections already subsumed by the consolidated version; merged for history, journal entry kept). Conflicting hunks resolved by keeping the stronger consolidated implementation (chroot NEWROOT check, conservative nsenter flag list, no internal-command censoring); guardrails synced across all six personas; closed branches #378/#380 skipped as previously superseded by #381/#382 | ✅ Done (2026-07-16) |
+| **Security Audit & High-Priority Fixes Plan** — comprehensive audit completed (audit report: 120+ pages, A+ grade); two high-priority fixes identified: (1) Rotate Stripe + Twilio credentials in git history (5 min, Beer), (2) Add web API bearer token auth (4-6 hrs, Claude Code); full plan at `security/SECURITY_FIXES_PLAN.md` with phases, tests, rollout, and rollback | [/] In progress — awaiting Beer approval on credential rotation |
 
 ## 📋 Sub-Plans
 
 | Plan | Location | Status |
 |---|---|---|
 | Product & Monetization | [`product/PLAN.md`](./product/PLAN.md) | 🟡 Active — Phase 6 done, extending |
+| Security Fixes (2026-07 Audit) | [`security/SECURITY_FIXES_PLAN.md`](./security/SECURITY_FIXES_PLAN.md) | 🔴 HIGH — Credential rotation + Web API auth |
 | SakJules — skills organisation | [`personas/sakjules/PLAN.md`](./personas/sakjules/PLAN.md) | ✅ Complete — archived |
-| SakTan — daily story & diary | [`personas/saktan/PLAN.md`](./personas/saktan/PLAN.md) | 🟢 Active — daily rhythm |
+| SakTan — daily story & diary | `personas/saktan/PLAN.md` | ⚪ Archived — persona deleted per Beer directive |
 | Agent Self-Evolution (×6 agents) | `personas/*/agent-self-evolution/PLAN.md` | 🟡 Active — personalised per agent |
+| **Repo Hygiene Round 2** | [SCRATCH_ORGANISATION_PLAN](#scratch-organisation-plan) | 🟡 Active — root cleanup |
 
 ## 🔧 Runtime Notes
 
@@ -87,3 +90,40 @@ workspace runtime config under `infra/`.
 2. **Surgical edits.** Change only what the task needs; preserve surrounding style.
 3. **No duplication.** One source of truth per topic — link, don't copy.
 4. **Protect Beer first.** No-cost, low-risk solutions always preferred.
+
+---
+
+## 🧹 SCRATCH_ORGANISATION_PLAN.MD
+
+**Owner:** SakKing (spotter) → SakJules (executor)
+**Status:** Planning
+**Priority:** Medium
+
+### Problem
+Root directory of `Sak-Family-Agent/` has accumulated scratch files that belong in subdirectories:
+
+**5 Python scripts at root** (should be in `scripts/`):
+- `_check_models.py` — HF model checker
+- `_check_spaces.py` — HF spaces checker
+- `_parse_datasets.py` — dataset parser
+- `_parse_models.py` — model parser
+- `_parse_spaces.py` — spaces parser
+
+**5 JSON data files at root** (should be in `data/`):
+- `ci_runs.json` (76 KB) — GitHub Actions run data
+- `hf-topics-covered.json` (17 KB) — HF topic coverage data
+- `hf_dataset.json` (0 bytes) — empty placeholder
+- `hf_ds_size.json` (0 bytes) — empty placeholder
+- `hf_embed_check.json` (0 bytes) — empty placeholder
+
+### Steps for SakJules
+1. Move 5 Python scripts to `scripts/`
+2. Move 2 non-empty JSON files to `data/`
+3. Remove 3 empty placeholder JSON files
+4. Update any references in scripts that import these files
+
+### Verification
+1. `ls *.py *.json` at root → nothing
+2. `ls scripts/_*.py` → 5 files
+3. `ls data/*.json` → 2 files (non-empty)
+4. Empty placeholders removed

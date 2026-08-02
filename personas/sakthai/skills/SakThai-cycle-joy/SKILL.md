@@ -1,6 +1,8 @@
 ---
 name: SakThai-cycle-joy
 category: cycle
+author: SakThai
+license: MIT
 description: Package and ship through CI without breaking the loop.
 version: 1.0.0
 platforms:

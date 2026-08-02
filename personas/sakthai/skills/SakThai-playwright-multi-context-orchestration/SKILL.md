@@ -1,6 +1,8 @@
 ---
 name: SakThai-playwright-multi-context-orchestration
 category: playwright-growth
+author: SakThai
+license: MIT
 description: Advanced Playwright skill for orchestrating multiple browser contexts
   within a single test. Use this when you need to verify cross-user interactions,
   multi-tenant isolation, real-time collaboration, or any scenario requiring two or

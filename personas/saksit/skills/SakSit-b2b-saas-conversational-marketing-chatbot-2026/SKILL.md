@@ -1,5 +1,6 @@
 ---
 name: SakSit-b2b-saas-conversational-marketing-chatbot-2026
+version: 1.0.0
 description: A complete playbook for B2B SaaS companies to build, deploy, and optimize an AI-driven conversational marketing and chatbot funnel — turning website visitors into qualified pipeline through LLM-powered conversations, live chat, and chatbot automation in 2026.
 domain: social-media
 category: growth-strategy
@@ -17,6 +18,7 @@ tags:
   - live-chat
   - conversational-funnel
   - 2026
+
 ---
 
 # B2B SaaS Conversational Marketing & Chatbot Strategy 2026

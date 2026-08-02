@@ -1,6 +1,8 @@
 ---
 name: SakThai-playwright-network-reliability
 category: dogfood
+author: SakThai
+license: MIT
 description: Use Playwright’s request interception, network idle, response timing,
   and selective mock/abort patterns to harden browser workflows against flaky third-party
   dependencies.

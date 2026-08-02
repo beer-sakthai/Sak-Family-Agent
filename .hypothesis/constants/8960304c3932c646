@@ -1,4 +1,0 @@
-# file: C:\Users\beern\OneDrive\Documents\GitHub\Sak-Family-Agent\sakthai\agent\providers\openai_provider.py
-# hypothesis_version: 6.155.7
-
-['/chat/completions', 'POST', '[DONE]', 'arguments', 'assistant', 'chat', 'choices', 'completions', 'content', 'data:', 'delta', 'description', 'end_turn', 'finish_reason', 'function', 'id', 'include_usage', 'index', 'input', 'length', 'max_tokens', 'message', 'messages', 'model', 'name', 'parameters', 'post', 'role', 'stream', 'stream_options', 'system', 'text', 'tool', 'tool_call_id', 'tool_calls', 'tool_result', 'tool_use', 'tool_use_id', 'tools', 'type', 'usage', 'user', '{}']
