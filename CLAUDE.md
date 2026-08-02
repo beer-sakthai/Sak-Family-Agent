@@ -22,7 +22,12 @@ The repository is the shared source workspace for the Sak family with these key 
 
 - **Canonical package:** `personas/shared/sakthai/` (single copy, symlinked from all personas)
 - **Personas:** six agents on disk (`SakThai`, `SakKing`, `SakSee`, `SakSit`, `SakJules`, `SakTan`; also `config.PERSONA_NAMES`); **SakThai is lead**.
-  - Each has `/skills/` with `Sak<Name>-*` prefixed skills (no duplicates, flattened structure)
+  - Each has `/skills/` with `Sak<Name>-*` prefixed skills, one directory per skill directly
+    under `skills/` (no category subdirectories, no duplicate-named skill folders).
+    `sakthai/skills/.archive/` is an intentional exception — retired skills kept for history,
+    excluded from discovery. A skill directory may itself contain a documented "umbrella"
+    sub-skill (see `SakThai-environment-automation`'s `cron-watchdog-self-heal`) accessed via
+    direct file reads rather than the normal skill index.
   - Each has `/config/` with persona-specific config (config.yaml, mcp.json, gateway_voice_mode.json)
   - Each symlinks to `../shared/sakthai` and `../shared/agent-self-evolution`
 - **Shared resources:** `personas/shared/` contains sakthai (Python package), agent-self-evolution (template), skills (Sak-* shared skills), model_roster
