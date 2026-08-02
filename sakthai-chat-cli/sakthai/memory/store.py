@@ -622,10 +622,9 @@ class MemoryStore:
                 deleted = [_fact_from_row(r) for r in keyed + keyless]
                 if deleted and not dry_run:
                     ids = [f.id for f in deleted]
-                    placeholders = ",".join("?" for _ in ids)
                     self._conn.execute(
-                        f"DELETE FROM facts WHERE id IN ({placeholders})",  # nosec B608 — placeholders are '?'
-                        ids,
+                        "DELETE FROM facts WHERE id IN (SELECT value FROM json_each(?))",
+                        (json.dumps(ids),),
                     )
                 self._conn.commit()
                 return deleted if detailed else len(deleted)
@@ -653,10 +652,9 @@ class MemoryStore:
                 deleted = [Observation(**dict(r)) for r in rows]
                 if deleted and not dry_run:
                     ids = [o.id for o in deleted]
-                    placeholders = ",".join("?" for _ in ids)
                     self._conn.execute(
-                        f"DELETE FROM observations WHERE id IN ({placeholders})",  # nosec B608
-                        ids,
+                        "DELETE FROM observations WHERE id IN (SELECT value FROM json_each(?))",
+                        (json.dumps(ids),),
                     )
                 self._conn.commit()
                 return deleted if detailed else len(deleted)
