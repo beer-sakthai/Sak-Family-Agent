@@ -37,7 +37,7 @@ def temp_db(tmp_path: Path) -> Path:
 
 
 def test_token_creation_and_persistence(temp_db: Path) -> None:
-    """Verify that a bearer token is created in the DB and persists on sub-sequent calls."""
+    """Verify that a bearer token is created in the DB and persists on subsequent calls."""
     with patch("sakthai.memory.store.memory_db_path", return_value=temp_db), \
          patch("sakthai.config.memory_db_path", return_value=temp_db):
         import sakthai.web.server as srv
