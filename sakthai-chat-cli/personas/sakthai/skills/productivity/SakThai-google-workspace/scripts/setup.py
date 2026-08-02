@@ -185,6 +185,37 @@ def check_auth_live():
         return False
 
 
+def _print_auth_status(payload: dict, quiet: bool, action: str) -> None:
+    """Print the authentication status and any missing required scopes."""
+    missing_scopes = _missing_scopes_from_payload(payload)
+    if missing_scopes:
+        print(f"AUTHENTICATED (partial): Token {action} but missing {len(missing_scopes)} scopes:")
+        for s in missing_scopes:
+            print(f"  - {s}")
+    if not quiet:
+        print(f"AUTHENTICATED: Token {action} at {TOKEN_PATH}")
+
+
+def _handle_refresh_error(e: Exception) -> bool:
+    """Handle and print errors during OAuth token refresh, and return False."""
+    err_str = str(e).lower()
+    if "disabled_client" in err_str or "invalid_client" in err_str:
+        print(f"OAUTH_CLIENT_DISABLED: {e}")
+        print("  The OAuth client or Google account has been disabled.")
+        print("  Steps to resolve:")
+        print("    1. Check your Google Cloud Console — verify the OAuth client is not disabled")
+        print("    2. Check if your Google account itself has been disabled at myaccount.google.com")
+        print("    3. If the account is disabled, you can appeal at accounts.google.com/signin/recovery")
+        print("    4. Do NOT retry API calls with a disabled account — this may worsen the situation")
+        print("    5. If the OAuth client is disabled, create a new one in Google Cloud Console")
+    elif "token_revoked" in err_str or "invalid_grant" in err_str:
+        print(f"TOKEN_REVOKED: {e}")
+        print("  Re-run setup to re-authenticate.")
+    else:
+        print(f"REFRESH_FAILED: {e}")
+    return False
+
+
 def check_auth(quiet: bool = False):
     """Check if stored credentials are valid. Prints status, exits 0 or 1."""
     if not TOKEN_PATH.exists():
@@ -207,13 +238,7 @@ def check_auth(quiet: bool = False):
 
     payload = _load_token_payload(TOKEN_PATH)
     if creds.valid:
-        missing_scopes = _missing_scopes_from_payload(payload)
-        if missing_scopes:
-            print(f"AUTHENTICATED (partial): Token valid but missing {len(missing_scopes)} scopes:")
-            for s in missing_scopes:
-                print(f"  - {s}")
-        if not quiet:
-            print(f"AUTHENTICATED: Token valid at {TOKEN_PATH}")
+        _print_auth_status(payload, quiet, "valid")
         return True
 
     if creds.expired and creds.refresh_token:
@@ -225,31 +250,10 @@ def check_auth(quiet: bool = False):
                     indent=2,
                 )
             )
-            missing_scopes = _missing_scopes_from_payload(_load_token_payload(TOKEN_PATH))
-            if missing_scopes:
-                print(f"AUTHENTICATED (partial): Token refreshed but missing {len(missing_scopes)} scopes:")
-                for s in missing_scopes:
-                    print(f"  - {s}")
-            if not quiet:
-                print(f"AUTHENTICATED: Token refreshed at {TOKEN_PATH}")
+            _print_auth_status(_load_token_payload(TOKEN_PATH), quiet, "refreshed")
             return True
         except Exception as e:
-            err_str = str(e).lower()
-            if "disabled_client" in err_str or "invalid_client" in err_str:
-                print(f"OAUTH_CLIENT_DISABLED: {e}")
-                print("  The OAuth client or Google account has been disabled.")
-                print("  Steps to resolve:")
-                print("    1. Check your Google Cloud Console — verify the OAuth client is not disabled")
-                print("    2. Check if your Google account itself has been disabled at myaccount.google.com")
-                print("    3. If the account is disabled, you can appeal at accounts.google.com/signin/recovery")
-                print("    4. Do NOT retry API calls with a disabled account — this may worsen the situation")
-                print("    5. If the OAuth client is disabled, create a new one in Google Cloud Console")
-            elif "token_revoked" in err_str or "invalid_grant" in err_str:
-                print(f"TOKEN_REVOKED: {e}")
-                print("  Re-run setup to re-authenticate.")
-            else:
-                print(f"REFRESH_FAILED: {e}")
-            return False
+            return _handle_refresh_error(e)
 
     print("TOKEN_INVALID: Re-run setup.")
     return False
