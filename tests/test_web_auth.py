@@ -160,7 +160,6 @@ def test_cli_web_regen_token(temp_db: Path) -> None:
 
         # Regenerate token (answering Yes to prompt)
         result = runner.invoke(web_cli, ["regen-token"], input="y\n")
-        print("RESULT OUTPUT IS:", result.output)
         assert result.exit_code == 0
         assert "Regenerated" in result.output
 
