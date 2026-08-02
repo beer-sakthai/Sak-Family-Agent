@@ -281,3 +281,37 @@ def test_find_tool_name_by_id_multiple_messages() -> None:
         },
     ]
     assert find_tool_name_by_id(messages, "t2") == "recall"
+
+
+# New test cases added by Jules for block_field and find_tool_name_by_id coverage
+
+
+def test_block_field_with_none() -> None:
+    assert block_field(None, "field_name", "default") == "default"
+
+
+def test_block_field_with_block_instance() -> None:
+    b = Block("text", text="hello")
+    assert block_field(b, "text") == "hello"
+
+
+def test_block_field_with_block_instance_missing_attr() -> None:
+    b = Block("text")
+    assert block_field(b, "missing_attr", "default_val") == "default_val"
+
+
+def test_find_tool_name_by_id_with_non_tool_use_blocks() -> None:
+    messages = [
+        {
+            "role": "assistant",
+            "content": [
+                {"type": "text", "text": "hello"},
+                {"type": "tool_use", "id": "t2", "name": "learn", "input": {}},
+            ],
+        }
+    ]
+    assert find_tool_name_by_id(messages, "t2") == "learn"
+
+
+def test_block_field_with_dict() -> None:
+    assert block_field({"key": "val"}, "key") == "val"
