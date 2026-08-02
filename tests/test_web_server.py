@@ -25,6 +25,7 @@ from sakthai.web.server import (
     _STATIC_ROOT,
     _dashboard_data,
     _ecosystem_status,
+    _get_or_create_bearer_token,
     _Handler,
     serve,
 )
@@ -54,7 +55,11 @@ def api_base() -> str:
 def _get(url: str, timeout: int = 30) -> tuple[int, dict[str, Any]]:
     """GET url, returning (status_code, parsed_body). 4xx raises are caught."""
     try:
-        with urllib.request.urlopen(url, timeout=timeout) as resp:
+        req = urllib.request.Request(url)
+        if "/api/" in url:
+            token = _get_or_create_bearer_token()
+            req.add_header("Authorization", f"Bearer {token}")
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
             return resp.status, json.loads(resp.read().decode("utf-8"))
     except urllib.error.HTTPError as exc:
         return exc.code, {}
@@ -212,7 +217,10 @@ class TestApiEcosystemEndpoint:
         assert "huggingface" in body
 
     def test_content_type_is_json(self, api_base: str) -> None:
-        with urllib.request.urlopen(f"{api_base}/api/ecosystem", timeout=30) as resp:
+        token = _get_or_create_bearer_token()
+        req = urllib.request.Request(f"{api_base}/api/ecosystem")
+        req.add_header("Authorization", f"Bearer {token}")
+        with urllib.request.urlopen(req, timeout=30) as resp:
             ct = resp.headers.get("Content-Type", "")
         assert "application/json" in ct
 
@@ -240,13 +248,19 @@ class TestApiEdgeCases:
         assert code == 403
 
     def test_content_length_header_present_in_stages(self, api_base: str) -> None:
-        with urllib.request.urlopen(f"{api_base}/api/stages", timeout=30) as resp:
+        token = _get_or_create_bearer_token()
+        req = urllib.request.Request(f"{api_base}/api/stages")
+        req.add_header("Authorization", f"Bearer {token}")
+        with urllib.request.urlopen(req, timeout=30) as resp:
             content_length = resp.headers.get("Content-Length")
         assert content_length is not None
         assert int(content_length) > 0
 
     def test_content_length_header_present_in_ecosystem(self, api_base: str) -> None:
-        with urllib.request.urlopen(f"{api_base}/api/ecosystem", timeout=30) as resp:
+        token = _get_or_create_bearer_token()
+        req = urllib.request.Request(f"{api_base}/api/ecosystem")
+        req.add_header("Authorization", f"Bearer {token}")
+        with urllib.request.urlopen(req, timeout=30) as resp:
             content_length = resp.headers.get("Content-Length")
         assert content_length is not None
         assert int(content_length) > 0
@@ -561,7 +575,10 @@ class TestHandlerEdgePaths:
 
             # Verify that API endpoints still work properly
             api_url = f"http://127.0.0.1:{port}/api/ecosystem"
-            with urllib.request.urlopen(api_url, timeout=30) as resp:
+            token = standalone_mod._get_or_create_bearer_token()
+            req = urllib.request.Request(api_url)
+            req.add_header("Authorization", f"Bearer {token}")
+            with urllib.request.urlopen(req, timeout=30) as resp:
                 api_status = resp.status
                 api_body = json.loads(resp.read().decode("utf-8"))
             assert api_status == 200

@@ -26,7 +26,7 @@ from .memory import learn, recall
 from .memory import memory as memory_cmd
 from .sessions import sessions as sessions_cmd
 from .skills import skills as skills_cmd
-from .system import doctor, setup, status, tools
+from .system import doctor, setup, status, tools, web
 
 # Group commands are imported under ``*_cmd`` aliases on purpose: binding the
 # group object under its own name here would shadow the same-named submodule as
@@ -52,6 +52,7 @@ main.add_command(doctor)
 main.add_command(setup)
 main.add_command(status)
 main.add_command(tools)
+main.add_command(web)
 
 # Agent
 main.add_command(run)
