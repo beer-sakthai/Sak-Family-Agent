@@ -546,7 +546,7 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
             is_interpreter = _is_binary(part, interpreters)
             # Inspect tokens following the binary until a separator is hit.
             for subpart in parts[i + 1 :]:
-                if subpart in (";", "&&", "||", "|"):
+                if subpart in {";", "&&", "||", "|"}:
                     break
                 # For destructive binaries, we don't allow targeting the current directory.
                 # For exfiltration binaries, we allow targeting the current directory.
@@ -574,7 +574,7 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
     for i, part in enumerate(parts):
         if _is_binary(part, "dd"):
             for subpart in parts[i + 1 :]:
-                if subpart in (";", "&&", "||", "|"):
+                if subpart in {";", "&&", "||", "|"}:
                     break
                 if subpart.startswith("of=") or subpart.startswith("if="):
                     val = subpart[3:]
@@ -649,7 +649,7 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
         # 5c. Block unauthorized discovery of sensitive system roots.
         # find [path...] [expression]
         for part in after_find:
-            if part in (";", "&&", "||", "|"):
+            if part in {";", "&&", "||", "|"}:
                 break
             if part.startswith("-"):
                 continue
@@ -664,7 +664,7 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
         if _is_binary(part, ("docker", "podman", "kubectl")):
             binary_name = os.path.basename(part)
             for j, subpart in enumerate(parts[i + 1 :], i + 1):
-                if subpart in (";", "&&", "||", "|"):
+                if subpart in {";", "&&", "||", "|"}:
                     break
                 # Check for volume mounts in docker/podman: -v /etc:/mnt or --mount type=bind,source=/etc,...
                 if subpart == "-v" or subpart == "--volume":
@@ -706,7 +706,7 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
                 # (docker cp, podman cp, kubectl cp).
                 if subpart == "cp":
                     for k in range(j + 1, len(parts)):
-                        if parts[k] in (";", "&&", "||", "|"):
+                        if parts[k] in {";", "&&", "||", "|"}:
                             break
                         if _is_sensitive_path(parts[k]):
                             return GuardrailResult(
