@@ -10,8 +10,10 @@ from sakthai.memory.store import MemoryStore
 
 # Ensure scripts folder can be imported
 REPO_ROOT = Path(__file__).resolve().parent.parent
-if str(REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(REPO_ROOT))
+
+def _ensure_repo_root_on_syspath() -> None:
+    if str(REPO_ROOT) not in sys.path:
+        sys.path.insert(0, str(REPO_ROOT))
 
 
 def test_telegram_token_leak_in_error() -> None:
