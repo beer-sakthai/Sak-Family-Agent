@@ -92,9 +92,18 @@ def send_via_mcp(message: str) -> int:
         line = line.strip()
         if not line:
             continue
-        msg = json.loads(line)
-        if msg.get("id") == 2:
-            reply = msg.get("result", {}).get("content", [{}])[0].get("text", "")
+        try:
+            msg = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(msg, dict) and msg.get("id") == 2:
+            result = msg.get("result")
+            if isinstance(result, dict):
+                content = result.get("content")
+                if isinstance(content, list) and len(content) > 0:
+                    first_content = content[0]
+                    if isinstance(first_content, dict):
+                        reply = str(first_content.get("text", ""))
     print(reply or "(no reply from send_telegram_message)")
     return 0 if reply.startswith("Telegram message sent") else 1
 
