@@ -96,31 +96,33 @@ workspace runtime config under `infra/`.
 ## 🧹 SCRATCH_ORGANISATION_PLAN.MD
 
 **Owner:** SakKing (spotter) → SakJules (executor)
-**Status:** Planning
+**Status:** ✅ Complete — 2026-08-02
 **Priority:** Medium
 
-### Problem
-Root directory of `Sak-Family-Agent/` has accumulated scratch files that belong in subdirectories:
+### Problem (historical — resolved)
+Root directory of `Sak-Family-Agent/` had accumulated scratch files that
+belonged in subdirectories. All items below have been relocated or removed
+per the checklist; kept here as an audit trail.
 
-**5 Python scripts at root** (should be in `scripts/`):
+**5 Python scripts at root** (moved to `scripts/`):
 - `_check_models.py` — HF model checker
 - `_check_spaces.py` — HF spaces checker
 - `_parse_datasets.py` — dataset parser
 - `_parse_models.py` — model parser
 - `_parse_spaces.py` — spaces parser
 
-**5 JSON data files at root** (should be in `data/`):
-- `ci_runs.json` (76 KB) — GitHub Actions run data
-- `hf-topics-covered.json` (17 KB) — HF topic coverage data
-- `hf_dataset.json` (0 bytes) — empty placeholder
-- `hf_ds_size.json` (0 bytes) — empty placeholder
-- `hf_embed_check.json` (0 bytes) — empty placeholder
+**5 JSON data files at root** (2 moved to `data/`, 3 removed):
+- `ci_runs.json` (76 KB) — GitHub Actions run data → `data/ci_runs.json`
+- `hf-topics-covered.json` (17 KB) — HF topic coverage data → `data/hf-topics-covered.json`
+- `hf_dataset.json` (0 bytes) — empty placeholder, removed
+- `hf_ds_size.json` (0 bytes) — empty placeholder, removed
+- `hf_embed_check.json` (0 bytes) — empty placeholder, removed
 
 ### Steps for SakJules
-1. Move 5 Python scripts to `scripts/`
-2. Move 2 non-empty JSON files to `data/`
-3. Remove 3 empty placeholder JSON files
-4. Update any references in scripts that import these files
+1. [x] Move 5 Python scripts to `scripts/` — 2026-08-02
+2. [x] Move 2 non-empty JSON files to `data/` — 2026-08-02
+3. [x] Remove 3 empty placeholder JSON files — 2026-08-02
+4. [x] Update any references in scripts that import these files — 2026-08-02
 
 ### Verification
 1. `ls *.py *.json` at root → nothing
