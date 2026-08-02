@@ -1,0 +1,23 @@
+"""Validation tests for the 6 Sak Family Agent persona workspace manifests and workflow schemas."""
+
+from __future__ import annotations
+
+import pathlib
+import pytest
+import yaml
+
+REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
+PERSONAS_DIR = REPO_ROOT / "personas"
+
+
+def test_sakthai_sakking_saktan_workspace_manifests():
+    for agent, expected_role in [
+        ("sakthai", "Main Lead & HF Master"),
+        ("sakking", "General Assistant & Runner"),
+        ("saktan", "Daily Ops & Rhythm"),
+    ]:
+        manifest_path = PERSONAS_DIR / agent / "config" / "workspace.yaml"
+        assert manifest_path.exists(), f"Missing {manifest_path}"
+        data = yaml.safe_load(manifest_path.read_text(encoding="utf-8"))
+        assert data["agent_name"].lower() == agent
+        assert expected_role in data["role"]
