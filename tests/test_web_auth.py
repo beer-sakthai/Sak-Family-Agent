@@ -29,7 +29,11 @@ def clean_home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     return home
 
 
-def _get(url: str, headers: dict[str, str] | None = None, timeout: int = 5) -> tuple[int, dict[str, Any]]:
+def _get(
+    url: str,
+    headers: dict[str, str] | None = None,
+    timeout: int = 5,
+) -> tuple[int, dict[str, Any]]:
     """GET url with optional headers, returning (status_code, parsed_body)."""
     req = urllib.request.Request(url, headers=headers or {})
     try:
