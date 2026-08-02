@@ -10,7 +10,10 @@ For every persona it verifies, offline and with zero token spend:
   2. its model is configured (personas/<name>/config/config.yaml);
   3. its MCP servers load from personas/<name>/config/mcp.json;
   4. the zero-cost agent preflight resolves (`run --dry-run --no-mcp`);
-  5. shared memory round-trips (`learn` -> `recall`).
+  5. shared memory round-trips (`learn` -> `recall`);
+  6. its Hermes profile scaffold exists (infra/hermes-agents/default/ for
+     SakKing's reserved default profile, infra/hermes-agents/profiles/<name>/
+     for the other five) with a SOUL.md and config.yaml.
 It also reports naming-convention drift per overlay (a warning — the bulk rename
 is deferred to scripts/rename_skills.py).
 
@@ -47,7 +50,7 @@ from sakthai.skills import (  # noqa: E402  (path bootstrap above)
 
 PERSONAS = ("sakking", "sakthai", "saksee", "saksit", "saktan", "sakjules")
 PERSONAS_DIR = REPO_ROOT / "personas"
-HERMES_PROFILES_DIR = REPO_ROOT / "infra" / "hermes-agents" / "profiles"
+HERMES_AGENTS_DIR = REPO_ROOT / "infra" / "hermes-agents"
 BIN = os.environ.get("SAKTHAI_BIN", "sakthai")
 
 failures: list[str] = []
@@ -77,6 +80,17 @@ def persona_model_config_path(persona: str) -> Path:
 def persona_mcp_config_path(persona: str) -> Path:
     """Return the MCP manifest path for one persona."""
     return PERSONAS_DIR / persona / "config" / "mcp.json"
+
+
+def hermes_profile_dir(persona: str) -> Path:
+    """Return the repo-tracked Hermes profile scaffold dir for PERSONA.
+
+    SakKing uses the reserved default profile (infra/hermes-agents/default/);
+    the other five each have their own infra/hermes-agents/profiles/<name>/.
+    """
+    if persona == "sakking":
+        return HERMES_AGENTS_DIR / "default"
+    return HERMES_AGENTS_DIR / "profiles" / persona
 
 
 def run(args: list[str], env: dict[str, str], stdin: str | None = None) -> tuple[int, str]:
@@ -119,9 +133,16 @@ def diagnose_persona(persona: str) -> None:
         # 1. skills compose
         out_dir = home / "skills"
         proc = subprocess.run(
-            [sys.executable, str(REPO_ROOT / "scripts" / "compose_persona.py"), persona,
-             "--out", str(out_dir)],
-            capture_output=True, text=True, timeout=120,
+            [
+                sys.executable,
+                str(REPO_ROOT / "scripts" / "compose_persona.py"),
+                persona,
+                "--out",
+                str(out_dir),
+            ],
+            capture_output=True,
+            text=True,
+            timeout=120,
         )
         n_files = sum(1 for _ in out_dir.rglob("SKILL.md")) if out_dir.is_dir() else 0
         check("skills compose", proc.returncode == 0 and n_files > 0, f"{n_files} skills")
@@ -148,6 +169,16 @@ def diagnose_persona(persona: str) -> None:
         rc2, out = run(["recall", "was here"], env)
         check("memory learn -> recall", rc == 0 and rc2 == 0 and "was here" in out)
 
+        # 6. hermes profile scaffold
+        profile_dir = hermes_profile_dir(persona)
+        has_soul = (profile_dir / "SOUL.md").is_file()
+        has_config = (profile_dir / "config.yaml").is_file()
+        check(
+            "hermes profile scaffold",
+            has_soul and has_config,
+            str(profile_dir) if has_soul and has_config else f"missing under {profile_dir}",
+        )
+
         # naming drift (warning only — bulk rename deferred)
         overlay = PERSONAS_DIR / persona / "skills"
         prefix = PERSONA_SKILL_PREFIXES.get(persona)
@@ -164,6 +195,7 @@ def diagnose_persona(persona: str) -> None:
                 check("naming convention", True)
     finally:
         import shutil
+
         shutil.rmtree(home, ignore_errors=True)
 
 
@@ -186,13 +218,20 @@ def diagnose_improve() -> None:
             subprocess.run(
                 [sys.executable, "-c", "import evolution"],
                 cwd=str(REPO_ROOT / "personas" / "sakthai" / "agent-self-evolution"),
-                capture_output=True, text=True, timeout=60, check=True,
+                capture_output=True,
+                text=True,
+                timeout=60,
+                check=True,
             )
             info("self-evolution (DSPy/GEPA)", "importable")
         except Exception:
-            info("self-evolution (DSPy/GEPA)", "package present, deps not installed (pip install -e personas/sakthai/agent-self-evolution)")
+            info(
+                "self-evolution (DSPy/GEPA)",
+                "package present, deps not installed (pip install -e personas/sakthai/agent-self-evolution)",
+            )
     finally:
         import shutil
+
         shutil.rmtree(home, ignore_errors=True)
 
 
