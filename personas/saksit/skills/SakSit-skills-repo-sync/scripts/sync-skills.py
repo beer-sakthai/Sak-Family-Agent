@@ -6,7 +6,13 @@ Usage: python3 sync-skills.py
 Extracts GitHub PAT from /opt/data/.git-credentials (first line).
 Does content comparison via base64 — only pushes changed files.
 """
-import json, base64, os, sys, urllib.request, urllib.error
+
+import base64
+import json
+import os
+import sys
+import urllib.error
+import urllib.request
 from datetime import date
 from urllib.parse import urlparse
 
@@ -17,6 +23,10 @@ LJ_PATH = os.path.expanduser("/opt/data/profiles/saksit/LEARNING_JOURNAL.md")
 
 
 def get_token():
+    with open("/opt/data/.git-credentials") as f:
+        for line in f:
+            line = line.strip()
+            try:
     try:
         with open("/opt/data/.git-credentials") as f:
             for line in f:
@@ -25,6 +35,17 @@ def get_token():
                     continue
                 parsed = urlparse(line)
                 if parsed.hostname == "github.com":
+                    if "x-access-token:" in line:
+                        token = line.split("x-access-token:")[1]
+                    elif "@github.com" in line:
+                        token = line.split("@github.com")[0].split(":", 2)[-1]
+                    else:
+                        continue
+                    return token.replace("@github.com", "").strip()
+            except Exception:
+                pass
+    except Exception:
+        pass
                     token = parsed.password or parsed.username
                     if token:
                         return token.strip()
@@ -37,9 +58,12 @@ def get_token():
 def gh_api(token, method, path, data=None):
     url = f"{API_BASE}/{path.lstrip('/')}"
     body = json.dumps(data).encode() if data else None
-    req = urllib.request.Request(url, data=body, method=method,
-                                 headers={"Authorization": f"Bearer {token}",
-                                          "Accept": "application/vnd.github.v3+json"})
+    req = urllib.request.Request(
+        url,
+        data=body,
+        method=method,
+        headers={"Authorization": f"Bearer {token}", "Accept": "application/vnd.github.v3+json"},
+    )
     if body:
         req.add_header("Content-Type", "application/json")
     try:
@@ -55,7 +79,7 @@ def gh_api(token, method, path, data=None):
 
 def collect_files():
     files = []
-    for root, dirs, filenames in os.walk(SKILLS_BASE):
+    for root, _dirs, filenames in os.walk(SKILLS_BASE):
         if "SKILL.md" in filenames:
             local = os.path.join(root, "SKILL.md")
             remote = local.replace(f"{SKILLS_BASE}/", "")
@@ -112,8 +136,7 @@ def main():
         elif remote == "cron-configs.json":
             name = "cron-configs"
 
-        put = {"message": f"SakSit: sync {name} — {date.today()}",
-               "content": b64}
+        put = {"message": f"SakSit: sync {name} — {date.today()}", "content": b64}
         if sha:
             put["sha"] = sha
 
@@ -122,12 +145,12 @@ def main():
             print(f"  ✅ {remote}")
             pushed += 1
         else:
-            print(f"  ❌ {remote}: {st} — {res.get('message','')}")
+            print(f"  ❌ {remote}: {st} — {res.get('message', '')}")
             failed.append(remote)
 
     st, tree = gh_api(token, "GET", "git/trees/main?recursive=1")
     if st == 200:
-        print(f"\nRepo: {len(tree.get('tree',[]))} entries on main")
+        print(f"\nRepo: {len(tree.get('tree', []))} entries on main")
     print(f"\nPushed: {pushed} | Skipped: {skipped} | Failed: {len(failed)}")
     return pushed, skipped, failed
 
