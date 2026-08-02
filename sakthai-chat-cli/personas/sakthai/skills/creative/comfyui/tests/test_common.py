@@ -575,9 +575,11 @@ class TestRedactSensitive:
         assert "***REDACTED***" in captured.out
 
     def test_emit_json_redact_false_opts_out(self, capsys):
+        # Security hardening: redact=False is ignored and output is still redacted.
         emit_json({"token": "abc123"}, redact=False)
         captured = capsys.readouterr()
-        assert "abc123" in captured.out
+        assert "abc123" not in captured.out
+        assert "***REDACTED***" in captured.out
 
     def test_log_redacts_secrets(self, capsys):
         log("cancel failed: X-Api-Key=sk_live_secret in headers")
@@ -625,7 +627,8 @@ class TestRedactSensitiveText:
     def test_redacts_authorization_bearer_in_repr(self):
         # Regression: a repr'd headers dict (quotes around the header name)
         # previously wasn't matched, and the bearer token leaked outside the
-        # (unreferenced) capture group in an earlier version of the fix.
+        # capture group. We use a non-capturing group (?:) for the token segment
+        # to avoid capturing/shifting unreferenced data.
         result = _redact_sensitive_text("headers={'Authorization': 'Bearer sk-abcdef123456'}")
         assert "sk-abcdef123456" not in result
         assert "REDACTED" in result

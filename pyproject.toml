@@ -30,6 +30,7 @@ dev = [
     "ruff>=0.16.0",
     "mypy>=2.3.0",
     "bandit[toml]>=1.9.4",
+    "types-PyYAML>=6.0.12",
 ]
 
 # Mutation testing is a local quality gate, not a CI gate (a full run is far too

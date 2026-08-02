@@ -1,0 +1,5 @@
+# SakTan's sakthai-agent config (personas/saktan/config/config.yaml) uses the
+# `ollama` provider, which isn't one of Hermes's documented first-class
+# providers (see personas/shared/skills/Sak-hermes-agent/SKILL.md's provider
+# table) — left on Hermes's built-in defaults rather than guessing an
+# unsupported/incorrect setting here.

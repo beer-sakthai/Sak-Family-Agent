@@ -34,13 +34,21 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _common import (  # noqa: E402
-    DEFAULT_LOCAL_HOST, ENV_API_KEY, coerce_seed, emit_json, log,
-    looks_like_video_workflow, resolve_api_key, unwrap_workflow,
-)
-from run_workflow import (  # noqa: E402
-    ComfyRunner, download_outputs, inject_params,
+    DEFAULT_LOCAL_HOST,
+    ENV_API_KEY,
+    coerce_seed,
+    emit_json,
+    log,
+    looks_like_video_workflow,
+    resolve_api_key,
+    unwrap_workflow,
 )
 from extract_schema import extract_schema  # noqa: E402
+from run_workflow import (  # noqa: E402
+    ComfyRunner,
+    download_outputs,
+    inject_params,
+)
 
 
 def expand_sweep(sweep: dict, base_args: dict, count: int, randomize_seed: bool) -> list[dict]:
@@ -52,7 +60,7 @@ def expand_sweep(sweep: dict, base_args: dict, count: int, randomize_seed: bool)
         runs = []
         for combo in itertools.product(*values):
             ar = dict(base_args)
-            for k, v in zip(keys, combo):
+            for k, v in zip(keys, combo, strict=True):
                 ar[k] = v
             runs.append(ar)
         return runs
@@ -67,20 +75,34 @@ def expand_sweep(sweep: dict, base_args: dict, count: int, randomize_seed: bool)
 
 
 def execute_one(
-    runner: ComfyRunner, workflow: dict, schema: dict, args: dict,
-    *, output_dir: Path, timeout: int, ws: bool,
+    runner: ComfyRunner,
+    workflow: dict,
+    schema: dict,
+    args: dict,
+    *,
+    output_dir: Path,
+    timeout: int,
+    ws: bool,
 ) -> dict:
     wf, warnings = inject_params(workflow, schema, args)
     sub = runner.submit(wf)
     if "_http_error" in sub:
-        return {"status": "error", "error": "submission HTTP error",
-                "details": sub.get("body"), "args": args}
+        return {
+            "status": "error",
+            "error": "submission HTTP error",
+            "details": sub.get("body"),
+            "args": args,
+        }
     pid = sub.get("prompt_id")
     if not pid:
         return {"status": "error", "error": "no prompt_id", "response": sub, "args": args}
     if sub.get("node_errors"):
-        return {"status": "error", "error": "validation failed",
-                "node_errors": sub["node_errors"], "args": args}
+        return {
+            "status": "error",
+            "error": "validation failed",
+            "node_errors": sub["node_errors"],
+            "args": args,
+        }
 
     if ws:
         result = runner.monitor_ws(pid, timeout=timeout)
@@ -106,61 +128,169 @@ def execute_one(
     }
 
 
-def main(argv: list[str] | None = None) -> int:
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
+    """Parse command-line arguments."""
     p = argparse.ArgumentParser(
         description="Submit a workflow many times with varying parameters.",
     )
     p.add_argument("--workflow", required=True)
     p.add_argument("--args", default="{}", help="Base parameters JSON")
-    p.add_argument("--count", type=int, default=0,
-                   help="Number of runs (use with --randomize-seed)")
-    p.add_argument("--sweep", default="",
-                   help='JSON dict of param→list of values. Cartesian product. '
-                        'e.g. \'{"seed":[1,2,3],"cfg":[5,8]}\'')
-    p.add_argument("--randomize-seed", action="store_true",
-                   help="In --count mode, vary seed per run")
+    p.add_argument(
+        "--count", type=int, default=0, help="Number of runs (use with --randomize-seed)"
+    )
+    p.add_argument(
+        "--sweep",
+        default="",
+        help="JSON dict of param→list of values. Cartesian product. "
+        'e.g. \x27{"seed":[1,2,3],"cfg":[5,8]}\x27',
+    )
+    p.add_argument(
+        "--randomize-seed", action="store_true", help="In --count mode, vary seed per run"
+    )
     p.add_argument("--host", default=DEFAULT_LOCAL_HOST)
     p.add_argument("--api-key", help=f"or set ${ENV_API_KEY}")
     p.add_argument("--partner-key")
-    p.add_argument("--parallel", type=int, default=1,
-                   help="Concurrent submissions (cloud: up to your tier limit). "
-                        "Default 1 (sequential)")
+    p.add_argument(
+        "--parallel",
+        type=int,
+        default=1,
+        help="Concurrent submissions (cloud: up to your tier limit). Default 1 (sequential)",
+    )
     p.add_argument("--output-dir", default="./outputs/batch")
     p.add_argument("--timeout", type=int, default=0)
     p.add_argument("--ws", action="store_true")
-    p.add_argument("--continue-on-error", action="store_true",
-                   help="Don't stop the batch when a run fails")
-    args = p.parse_args(argv)
+    p.add_argument(
+        "--continue-on-error", action="store_true", help="Don't stop the batch when a run fails"
+    )
+    return p.parse_args(argv)
 
+
+def load_and_validate_args(args: argparse.Namespace) -> tuple[dict, dict] | None:
+    """Parse and validate args and sweep, returning (base_args, sweep) or None on failure."""
     if args.count <= 0 and not args.sweep:
         emit_json({"error": "Specify --count N or --sweep '{...}'"})
-        return 1
+        return None
 
-    base_args = json.loads(args.args) if args.args.strip() else {}
-    sweep = json.loads(args.sweep) if args.sweep.strip() else {}
+    try:
+        base_args = json.loads(args.args) if args.args.strip() else {}
+        sweep = json.loads(args.sweep) if args.sweep.strip() else {}
+    except (ValueError, json.JSONDecodeError) as e:
+        emit_json({"error": f"Invalid JSON parameter: {e}"})
+        return None
 
-    # Validate sweep shape
+    if not isinstance(base_args, dict):
+        emit_json({"error": "--args must be a JSON object {param: value}"})
+        return None
     if sweep:
         if not isinstance(sweep, dict):
             emit_json({"error": "--sweep must be a JSON object {param: [values]}"})
-            return 1
+            return None
         empty = [k for k, v in sweep.items() if isinstance(v, list) and len(v) == 0]
         if empty:
             emit_json({"error": f"--sweep parameters have empty value lists: {empty}"})
-            return 1
-        # If user passed BOTH --sweep and --count/--randomize-seed, --sweep wins
+            return None
         if args.count or args.randomize_seed:
             log("--sweep set; ignoring --count / --randomize-seed (sweep defines the runs)")
 
-    wf_path = Path(args.workflow).expanduser()
+    return base_args, sweep
+
+
+def load_workflow(workflow_path_str: str) -> dict | None:
+    """Load and unwrap the workflow JSON from the given path. Returns None on failure."""
+    wf_path = Path(workflow_path_str).expanduser()
     if not wf_path.exists():
-        emit_json({"error": f"Workflow not found: {args.workflow}"})
-        return 1
+        emit_json({"error": f"Workflow not found: {workflow_path_str}"})
+        return None
     try:
         with wf_path.open() as f:
-            workflow = unwrap_workflow(json.load(f))
-    except (ValueError, json.JSONDecodeError) as e:
+            return unwrap_workflow(json.load(f))
+    except (ValueError, json.JSONDecodeError, OSError) as e:
         emit_json({"error": str(e)})
+        return None
+
+
+def run_batch_execution(
+    runner: ComfyRunner,
+    workflow: dict,
+    schema: dict,
+    runs: list[dict],
+    *,
+    base_dir: Path,
+    timeout: int,
+    parallel: int,
+    ws: bool,
+    continue_on_error: bool,
+) -> tuple[list[dict], int]:
+    """Execute the batch of runs either in parallel or sequentially.
+
+    Returns a tuple of (results, failure_count).
+    """
+    results: list[dict] = []
+    failures = 0
+
+    if parallel > 1:
+        with ThreadPoolExecutor(max_workers=parallel) as ex:
+            future_to_idx = {}
+            for i, ar in enumerate(runs):
+                run_dir = base_dir / f"run_{i:04d}"
+                fut = ex.submit(
+                    execute_one,
+                    runner,
+                    workflow,
+                    schema,
+                    ar,
+                    output_dir=run_dir,
+                    timeout=timeout,
+                    ws=ws,
+                )
+                future_to_idx[fut] = i
+            for fut in as_completed(future_to_idx):
+                i = future_to_idx[fut]
+                try:
+                    r = fut.result()
+                except Exception as e:
+                    r = {"status": "error", "error": str(e), "args": runs[i]}
+                r["index"] = i
+                results.append(r)
+                if r["status"] != "success":
+                    failures += 1
+                    log(f"  run {i} → {r['status']}: {r.get('error', '?')}")
+                    if not continue_on_error:
+                        log("  --continue-on-error not set; aborting batch")
+                        break
+                else:
+                    log(f"  run {i} → success: {len(r.get('outputs', []))} files")
+    else:
+        for i, ar in enumerate(runs):
+            run_dir = base_dir / f"run_{i:04d}"
+            r = execute_one(
+                runner, workflow, schema, ar, output_dir=run_dir, timeout=timeout, ws=ws
+            )
+            r["index"] = i
+            results.append(r)
+            if r["status"] != "success":
+                failures += 1
+                log(f"  run {i} → {r['status']}: {r.get('error', '?')}")
+                if not continue_on_error:
+                    log("  --continue-on-error not set; aborting batch")
+                    break
+            else:
+                log(f"  run {i} → success: {len(r.get('outputs', []))} files")
+
+    results.sort(key=lambda x: x.get("index", 0))
+    return results, failures
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = parse_args(argv)
+
+    parsed_params = load_and_validate_args(args)
+    if parsed_params is None:
+        return 1
+    base_args, sweep = parsed_params
+
+    workflow = load_workflow(args.workflow)
+    if workflow is None:
         return 1
 
     schema = extract_schema(workflow)
@@ -182,62 +312,26 @@ def main(argv: list[str] | None = None) -> int:
     base_dir = Path(args.output_dir).expanduser()
     base_dir.mkdir(parents=True, exist_ok=True)
 
-    results: list[dict] = []
-    failures = 0
+    results, failures = run_batch_execution(
+        runner,
+        workflow,
+        schema,
+        runs,
+        base_dir=base_dir,
+        timeout=timeout,
+        parallel=args.parallel,
+        ws=args.ws,
+        continue_on_error=args.continue_on_error,
+    )
 
-    if args.parallel > 1:
-        with ThreadPoolExecutor(max_workers=args.parallel) as ex:
-            future_to_idx = {}
-            for i, ar in enumerate(runs):
-                run_dir = base_dir / f"run_{i:04d}"
-                fut = ex.submit(
-                    execute_one, runner, workflow, schema, ar,
-                    output_dir=run_dir, timeout=timeout, ws=args.ws,
-                )
-                future_to_idx[fut] = i
-            for fut in as_completed(future_to_idx):
-                i = future_to_idx[fut]
-                try:
-                    r = fut.result()
-                except Exception as e:
-                    r = {"status": "error", "error": str(e), "args": runs[i]}
-                r["index"] = i
-                results.append(r)
-                if r["status"] != "success":
-                    failures += 1
-                    log(f"  run {i} → {r['status']}: {r.get('error','?')}")
-                    if not args.continue_on_error:
-                        log("  --continue-on-error not set; aborting batch")
-                        break
-                else:
-                    log(f"  run {i} → success: {len(r.get('outputs', []))} files")
-    else:
-        for i, ar in enumerate(runs):
-            run_dir = base_dir / f"run_{i:04d}"
-            r = execute_one(runner, workflow, schema, ar,
-                           output_dir=run_dir, timeout=timeout, ws=args.ws)
-            r["index"] = i
-            results.append(r)
-            if r["status"] != "success":
-                failures += 1
-                log(f"  run {i} → {r['status']}: {r.get('error','?')}")
-                if not args.continue_on_error:
-                    log("  --continue-on-error not set; aborting batch")
-                    break
-            else:
-                log(f"  run {i} → success: {len(r.get('outputs', []))} files")
-
-    results.sort(key=lambda x: x.get("index", 0))
-    emit_json({
-        "status": "success" if failures == 0 else "partial",
-        "total": len(runs),
-        "completed": sum(1 for r in results if r["status"] == "success"),
-        "failed": failures,
-        "output_dir": str(base_dir),
-        "results": results,
-    })
+    emit_json(
+        {
+            "status": "success" if failures == 0 else "partial",
+            "total": len(runs),
+            "completed": sum(1 for r in results if r["status"] == "success"),
+            "failed": failures,
+            "output_dir": str(base_dir),
+            "results": results,
+        }
+    )
     return 0 if failures == 0 else 1
-
-
-if __name__ == "__main__":
-    sys.exit(main())

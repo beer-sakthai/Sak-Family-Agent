@@ -520,55 +520,61 @@ if HAS_REQUESTS:
                 pass
 
 
-def _http_once(
+def _http_once_requests(
     *, method: str, url: str, headers: dict[str, str],
     json_body: Any, data: bytes | None, files: dict | None, form: dict | None,
     timeout: float, follow_redirects: bool,
     stream: bool, sink: Path | None,
 ) -> HTTPResponse:
-    """One HTTP attempt. No retry."""
-    if HAS_REQUESTS:
-        kwargs: dict[str, Any] = {
-            "method": method, "url": url, "headers": headers,
-            "timeout": timeout, "allow_redirects": follow_redirects,
-        }
-        if json_body is not None:
-            kwargs["json"] = json_body
-        elif data is not None:
-            kwargs["data"] = data
-        elif files is not None or form is not None:
-            kwargs["files"] = files
-            kwargs["data"] = form
-        if stream:
-            kwargs["stream"] = True
+    """One HTTP attempt using the requests library."""
+    kwargs: dict[str, Any] = {
+        "method": method, "url": url, "headers": headers,
+        "timeout": timeout, "allow_redirects": follow_redirects,
+    }
+    if json_body is not None:
+        kwargs["json"] = json_body
+    elif data is not None:
+        kwargs["data"] = data
+    elif files is not None or form is not None:
+        kwargs["files"] = files
+        kwargs["data"] = form
+    if stream:
+        kwargs["stream"] = True
 
-        # Use the subclass that strips sensitive headers cross-host
-        with _StripSensitiveOnRedirectSession() as s:
-            try:
-                r = s.request(**kwargs)
-                if stream and sink is not None:
-                    sink.parent.mkdir(parents=True, exist_ok=True)
-                    with sink.open("wb") as f:
-                        for chunk in r.iter_content(DOWNLOAD_CHUNK_SIZE):
-                            if chunk:
-                                f.write(chunk)
-                    body = b""  # already drained
-                else:
-                    body = r.content
-                return HTTPResponse(
-                    status=r.status_code,
-                    headers={k: v for k, v in r.headers.items()},
-                    body=body,
-                    url=r.url,
-                )
-            except requests.exceptions.RequestException as e:
-                # Convert to TimeoutError / ConnectionError so the retry loop
-                # picks them up uniformly with the stdlib path.
-                if isinstance(e, requests.exceptions.Timeout):
-                    raise TimeoutError(str(e)) from e
-                raise ConnectionError(str(e)) from e
+    # Use the subclass that strips sensitive headers cross-host
+    with _StripSensitiveOnRedirectSession() as s:
+        try:
+            r = s.request(**kwargs)
+            if stream and sink is not None:
+                sink.parent.mkdir(parents=True, exist_ok=True)
+                with sink.open("wb") as f:
+                    for chunk in r.iter_content(DOWNLOAD_CHUNK_SIZE):
+                        if chunk:
+                            f.write(chunk)
+                body = b""  # already drained
+            else:
+                body = r.content
+            return HTTPResponse(
+                status=r.status_code,
+                headers={k: v for k, v in r.headers.items()},
+                body=body,
+                url=r.url,
+            )
+        except requests.exceptions.RequestException as e:
+            # Convert to TimeoutError / ConnectionError so the retry loop
+            # picks them up uniformly with the stdlib path.
+            if isinstance(e, requests.exceptions.Timeout):
+                raise TimeoutError(str(e)) from e
+            raise ConnectionError(str(e)) from e
 
-    # ---------- stdlib fallback ----------
+
+def _http_once_stdlib(
+    *, method: str, url: str, headers: dict[str, str],
+    json_body: Any, data: bytes | None,
+    timeout: float, follow_redirects: bool,
+    stream: bool, sink: Path | None,
+) -> HTTPResponse:
+    """One HTTP attempt using the standard urllib library."""
     if json_body is not None:
         body_bytes = json.dumps(json_body).encode("utf-8")
         headers.setdefault("Content-Type", "application/json")
@@ -592,7 +598,7 @@ def _http_once(
                 # Build a new request with cleaned headers
                 clean_headers = {
                     k: v for k, v in req2.header_items()
-                    if k.lower() not in {"x-api-key", "authorization", "cookie"}
+                    if k.lower() not in _SENSITIVE_HEADERS
                 }
                 new_req = urllib.request.Request(newurl, headers=clean_headers, method="GET")
                 return new_req
@@ -626,6 +632,28 @@ def _http_once(
         return HTTPResponse(status=final_status, headers=final_headers, body=b"", url=final_url)
 
     return HTTPResponse(status=final_status, headers=final_headers, body=resp.read(), url=final_url)
+
+
+def _http_once(
+    *, method: str, url: str, headers: dict[str, str],
+    json_body: Any, data: bytes | None, files: dict | None, form: dict | None,
+    timeout: float, follow_redirects: bool,
+    stream: bool, sink: Path | None,
+) -> HTTPResponse:
+    """One HTTP attempt. No retry."""
+    if HAS_REQUESTS:
+        return _http_once_requests(
+            method=method, url=url, headers=headers,
+            json_body=json_body, data=data, files=files, form=form,
+            timeout=timeout, follow_redirects=follow_redirects,
+            stream=stream, sink=sink,
+        )
+    return _http_once_stdlib(
+        method=method, url=url, headers=headers,
+        json_body=json_body, data=data,
+        timeout=timeout, follow_redirects=follow_redirects,
+        stream=stream, sink=sink,
+    )
 
 
 def http_get(url: str, **kwargs: Any) -> HTTPResponse:
