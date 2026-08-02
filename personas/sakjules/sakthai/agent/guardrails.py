@@ -127,6 +127,11 @@ _SENSITIVE_BASENAMES = {
     ".zprofile",
     ".yarnrc",
     ".yarnrc.yml",
+    ".git-credentials",
+    ".node_repl_history",
+    ".mysql_history",
+    ".psql_history",
+    ".sqlite_history",
 }
 
 _SENSITIVE_DIRS = {
@@ -152,6 +157,7 @@ _SENSITIVE_KEY_STEMS = {
     "id_ed25519",
     "id_ecdsa_sk",
     "id_ed25519_sk",
+    "id_xmss",
 }
 
 
