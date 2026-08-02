@@ -8,7 +8,8 @@ platforms: [linux, macos, windows]
 metadata:
   hermes:
     tags: [code-review, security, verification, quality, pre-commit, auto-fix]
-    related_skills: [subagent-driven-development, plan, test-driven-development, github-code-review]
+    related_skills: [subagent-driven-development, SakThai-plan, SakThai-test-driven-development, SakThai-github-code-review]
+category: software-development
 ---
 # Pre-Commit Code Verification
 

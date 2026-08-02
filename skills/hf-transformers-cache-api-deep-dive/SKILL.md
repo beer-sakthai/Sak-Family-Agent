@@ -247,7 +247,7 @@ for _ in range(50):
     next_token = outputs.logits[:, -1, :].argmax(dim=-1, keepdim=True)
     inputs = {"input_ids": next_token, "attention_mask": torch.ones_like(next_token)}
     past_key_values = outputs.past_key_values
-    
+
     if next_token.item() == tokenizer.eos_token_id:
         break
 ```

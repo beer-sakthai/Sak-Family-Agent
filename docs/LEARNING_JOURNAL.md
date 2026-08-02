@@ -401,3 +401,41 @@ Fixed **docs/SOUL.md** (shared operating contract) and **personas/sakthai/SOUL.m
 - personas/sakking/SOUL.md: still references Ollama and SakJules/SakTan as active (low priority — sibling SOULs)
 - docs/SOUL.md: still links to SAKTAN_SOUL.md and SAKJULES_SOUL.md which may not exist (harmless — 404 page documents history)
 
+---
+
+## 2026-07-30 (cron — Narrative Consistency Review)
+
+### Task
+Review House of Sak narrative across README, model cards, and docs for consistency. Fix one narrative gap.
+
+### Findings
+The README Top Performers model table (lines 696-708) had **stale download numbers** — every single metric was behind the live API, some significantly so (Vision 7B: 45→104, Coder: 34→70, TTS: 33→69, Multilingual Embedding: 104→188). The table was also **missing a model**: `sakthai-context-0.5b-tools` (LoRA, 7 downloads) was not listed.
+
+### Improvement Made
+Updated the **README Top Performers table** with live download data from HF API and added the missing 0.5B-Tools model:
+
+| Change | Old | New |
+|--------|:---:|:---:|
+| Rows | 10 | 11 |
+| 1.5B-merged dl | 1,197 | 1,269 |
+| 0.5B-merged dl | 994 | 1,030 |
+| 7B-merged dl | 562 | 585 |
+| 7B-128K dl | 351 | 382 |
+| Coder 1.5B dl | 34 | 70 |
+| TTS Model dl | 33 | 69 |
+| Vision 7B dl | 45 | 104 |
+| Multilingual Embedding dl | 104 | 188 |
+| 7B-Tools dl | 185 | 219 |
+| 1.5B-Tools dl | 143 | 163 |
+| **0.5B-Tools (new)** | — | **7** |
+| Name clarity | "Multilingual" | "Multilingual Embedding" |
+
+Also re-ordered table from descending downloads to a logical grouping: largest models first, then by type.
+
+### Verification
+Confirmed all downloads match live HF API queried at runtime. The README now tells an accurate story about the ecosystem's traction.
+
+### Remaining Inconsistencies (still open)
+- SakKing SOUL.md: still references Ollama and marks SakJules/SakTan as active
+- docs/SOUL.md: links to SAKTAN_SOUL.md and SAKJULES_SOUL.md
+

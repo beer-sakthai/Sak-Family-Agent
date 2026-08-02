@@ -255,11 +255,17 @@ def tools() -> None:
 
 @click.group()
 def web() -> None:
+<<<<<<< HEAD
     """Web server and API commands."""
+=======
+    """Web server commands."""
+    pass
+>>>>>>> origin/main
 
 
 @web.command("setup")
 def web_setup() -> None:
+<<<<<<< HEAD
     """Initialize and show web API authentication token."""
     import secrets
     token = os.environ.get("SAKTHAI_WEB_TOKEN")
@@ -284,10 +290,29 @@ def web_setup() -> None:
             click.echo(f"{_ok()} Web API token generated and saved: {token}")
     except Exception as e:
         click.echo(f"{_err()} Failed to access Memory DB: {e}")
+=======
+    """Initialize web API authentication and display the token."""
+    from ..web.server import _get_or_create_bearer_token
+
+    token = _get_or_create_bearer_token()
+    click.echo(click.style("\n── SakThai Web API Setup ──", bold=True))
+    click.echo(f"  {_ok()} Web API bearer token is configured.")
+    click.echo(f"  Token: {click.style(token, fg='green', bold=True)}")
+    click.echo("  Use it in your request headers as:")
+    click.echo(click.style(f"    Authorization: Bearer {token}", fg="cyan"))
+    click.echo(
+        click.style(
+            "\n  Keep this token secret. You can regenerate it anytime using `sakthai web regen-token`.",
+            fg="yellow",
+        )
+    )
+    click.echo()
+>>>>>>> origin/main
 
 
 @web.command("regen-token")
 @click.confirmation_option(
+<<<<<<< HEAD
     prompt="Are you sure? All existing clients will stop working."
 )
 def regen_token() -> None:
@@ -307,3 +332,39 @@ def regen_token() -> None:
             click.echo(f"{_ok()} Web API token regenerated and saved: {token}")
     except Exception as e:
         click.echo(f"{_err()} Failed to access Memory DB: {e}")
+=======
+    prompt="Are you sure you want to regenerate the Web API bearer token? All existing clients will stop working."
+)
+def web_regen_token() -> None:
+    """Regenerate the Web API bearer token."""
+    import secrets
+
+    from ..config import register_secret
+    from ..memory.store import MemoryStore
+
+    new_token = secrets.token_hex(16)
+    try:
+        with MemoryStore() as store:
+            store.delete_facts_by_key(kind="web_auth", key="bearer_token")
+            store.add_fact(
+                value=new_token, kind="web_auth", key="bearer_token", tags=["system", "no-export"]
+            )
+        # Update server cache
+        try:
+            import sys
+
+            for mod_name in list(sys.modules.keys()):
+                if mod_name.endswith(".web.server") or mod_name.endswith(".server"):
+                    mod = sys.modules[mod_name]
+                    if hasattr(mod, "_BEARER_TOKEN"):
+                        mod._BEARER_TOKEN = new_token
+        except Exception:
+            pass
+        register_secret(new_token)
+        click.echo(click.style("\n── Web API Token Regenerated ──", bold=True))
+        click.echo(f"  {_ok()} New bearer token: {click.style(new_token, fg='green', bold=True)}")
+        click.echo("  Update your clients with this new token.")
+        click.echo()
+    except Exception as exc:
+        raise click.ClickException(f"Failed to regenerate token: {exc}") from exc
+>>>>>>> origin/main

@@ -7,7 +7,7 @@ description: Hugging Face's FineWeb, FineWeb-Edu, and FineWeb-2 datasets — web
 model: deepseek-v4-flash
 provider: opencode-go
 type: reference
-
+category: mlops
 ---
 
 # FineWeb Dataset Processing Pipeline

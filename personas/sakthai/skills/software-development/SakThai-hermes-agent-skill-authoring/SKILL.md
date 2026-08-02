@@ -8,7 +8,8 @@ platforms: [linux, macos, windows]
 metadata:
   hermes:
     tags: [skills, authoring, hermes-agent, conventions, skill-md]
-    related_skills: [plan, requesting-code-review]
+    related_skills: [SakThai-plan, SakThai-requesting-code-review]
+category: autonomous-ai-agents
 ---
 # Authoring Hermes-Agent Skills (in-repo)
 

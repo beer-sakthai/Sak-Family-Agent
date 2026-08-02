@@ -1,0 +1,51 @@
+{
+  "test_run": "workbench-2026-07-05T17:03:53Z",
+  "model": "Nanthasit/sakthai-context-1.5b-merged",
+  "model_id": "Nanthasit/sakthai-context-1.5b-merged",
+  "pipeline_tag": null,
+  "downloads": 0,
+  "timestamp": "2026-07-05T17:03:53Z",
+  "results": [
+    {
+      "name": "tool_call_basic",
+      "passed": false,
+      "error": "(Request ID: Root=1-6a4a8e78-1793d7f44451a3a432cdf597;6558d6d2-bda3-4e40-918d-289a3e2e9d2a)\n\nBad request:\n{'message': \"The requested model 'Nanthasit/sakthai-context-1.5b-merged' is not a chat model.\", 'type': 'invalid_request_error', 'param': 'model', 'code': 'model_not_supported'}"
+    },
+    {
+      "name": "instruction_following",
+      "passed": false,
+      "error": "(Request ID: Root=1-6a4a8e78-4de825541beab70b601b744c;9df92bbd-fe23-435c-a322-705327e32a5b)\n\nBad request:\n{'message': \"The requested model 'Nanthasit/sakthai-context-1.5b-merged' is not a chat model.\", 'type': 'invalid_request_error', 'param': 'model', 'code': 'model_not_supported'}"
+    },
+    {
+      "name": "multi_turn_recall",
+      "passed": false,
+      "error": "(Request ID: Root=1-6a4a8e79-2ab4467c5252831415380b36;54b8cf58-f20b-4937-b1e7-6170b989783c)\n\nBad request:\n{'message': \"The requested model 'Nanthasit/sakthai-context-1.5b-merged' is not a chat model.\", 'type': 'invalid_request_error', 'param': 'model', 'code': 'model_not_supported'}"
+    },
+    {
+      "name": "json_output",
+      "passed": false,
+      "error": "(Request ID: Root=1-6a4a8e79-7113f3ee1c66b6e075ef2c8a;c86c6008-584b-4b2c-b0c4-2620424e809d)\n\nBad request:\n{'message': \"The requested model 'Nanthasit/sakthai-context-1.5b-merged' is not a chat model.\", 'type': 'invalid_request_error', 'param': 'model', 'code': 'model_not_supported'}"
+    },
+    {
+      "name": "tool_definition",
+      "passed": false,
+      "error": "(Request ID: Root=1-6a4a8e79-48eed88c5c332e25007d14be;2d04de65-1b9e-441d-8ddb-eca2bd8594e6)\n\nBad request:\n{'message': \"The requested model 'Nanthasit/sakthai-context-1.5b-merged' is not a chat model.\", 'type': 'invalid_request_error', 'param': 'model', 'code': 'model_not_supported'}"
+    },
+    {
+      "name": "context_window",
+      "passed": false,
+      "error": "(Request ID: Root=1-6a4a8e79-1fd7ff5228fad4d72e3a68cd;b25ae44f-fa52-49ac-8e3d-2cdc3f975126)\n\nBad request:\n{'message': \"The requested model 'Nanthasit/sakthai-context-1.5b-merged' is not a chat model.\", 'type': 'invalid_request_error', 'param': 'model', 'code': 'model_not_supported'}"
+    },
+    {
+      "name": "general_knowledge",
+      "passed": false,
+      "error": "(Request ID: Root=1-6a4a8e79-5c4534a75734f3611b0388e2;51609806-02b6-4961-8dbd-25255f1bec80)\n\nBad request:\n{'message': \"The requested model 'Nanthasit/sakthai-context-1.5b-merged' is not a chat model.\", 'type': 'invalid_request_error', 'param': 'model', 'code': 'model_not_supported'}"
+    }
+  ],
+  "summary": {
+    "total": 7,
+    "passed": 0,
+    "failed": 7,
+    "all_passed": false
+  }
+}

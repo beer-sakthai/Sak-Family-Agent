@@ -24,7 +24,7 @@ head -1 <<< "$output" | grep -qiE "^(<tool|<function|tool_call:|{\\\"name)"
 ## Real test methodology (proven this session)
 
 1. Use `transformers` pipeline with the model's actual chat template (not llama.cpp CLI)
-2. Define tools as OpenAI `{"type":"function","function":{"name":"...","parameters":{...}}}` 
+2. Define tools as OpenAI `{"type":"function","function":{"name":"...","parameters":{...}}}`
 3. Apply tokenizer's `apply_chat_template(messages, tools=tools, tokenize=False)`
 4. Generate with `model.generate()`
 5. Check output for `<functioncall>` or `tool_calls` JSON

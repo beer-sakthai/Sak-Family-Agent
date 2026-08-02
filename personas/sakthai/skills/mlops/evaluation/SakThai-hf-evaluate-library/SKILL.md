@@ -9,6 +9,7 @@ platforms: [linux, macos]
 metadata:
   hermes:
     tags: [Hugging Face, Evaluate, Metrics, Evaluation, Benchmarking, Accuracy, F1, BLEU, ROUGE, Perplexity, Model Quality, NLP, CV, Reinforcement Learning]
+category: mlops
 ---
 
 # 🤗 Evaluate Library — Metrics, Evaluators & Suites

@@ -1,7 +1,6 @@
 ---
 name: SakThai-hf-hub-api-error-handling
 version: 1.0.0
-description: "Sakthai Hf Hub Api Error Handling"
 author: SakThai
 license: MIT
 title: Hugging Face Hub API Error Handling — Complete Reference
@@ -19,5 +18,4 @@ description: >-
   exception hierarchy in huggingface_hub, rate limit headers (IETF draft),
   X-HF-Warning header deprecation warnings, retry strategies, offline mode,
   and programmatic error pattern analysis.
-
 ---

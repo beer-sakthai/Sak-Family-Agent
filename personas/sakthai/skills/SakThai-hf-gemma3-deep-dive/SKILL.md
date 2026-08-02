@@ -5,10 +5,9 @@ license: MIT
 skill_type: reference
 domain: models
 version: 1.0.0
-description: "Sakthai Hf Gemma3 Deep Dive"
 created: 2026-07-25
 updated: 2026-07-25
-
+category: mlops
 ---
 
 # Gemma 3 on Hugging Face — Architecture & Inference Deep Dive

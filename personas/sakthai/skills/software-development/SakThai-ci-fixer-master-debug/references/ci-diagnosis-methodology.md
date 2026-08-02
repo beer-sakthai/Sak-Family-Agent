@@ -4,7 +4,7 @@ Session: 2026-07-25 — Lessons learned from debugging CI status.
 
 ## The Mistake
 
-When Beer asked "It's green?" the commit status showed "pending". 
+When Beer asked "It's green?" the commit status showed "pending".
 Assumed it was "just a delay" without reading the actual checks.
 
 ## The Fix — Use check-runs API, not commit status

@@ -896,6 +896,17 @@ def test_preflight_gateway_provider(monkeypatch: pytest.MonkeyPatch) -> None:
     assert report["runnable"] is True
 
 
+def test_preflight_huggingface_provider(monkeypatch: pytest.MonkeyPatch) -> None:
+    import sakthai.agent.loop as loop_mod
+
+    monkeypatch.setattr("sakthai.agent.loop.get_credential_source", lambda _p: "hf_token")
+    monkeypatch.setattr(loop_mod, "_build_client", lambda *a, **kw: None)
+    report = loop_mod.preflight(provider="huggingface")
+    assert report["provider"] == "huggingface"
+    assert report["credential_source"] == "hf_token"
+    assert report["runnable"] is True
+
+
 # -- 7.1 streaming callback interface -----------------------------------
 
 
@@ -1991,6 +2002,35 @@ def test_run_agent_renames_ollama_provider_to_openai(
     monkeypatch.setattr(loop_mod, "_call_openai_compat", _fake_openai_compat)
     run_agent("hi", client=FakeClient([]), store=store, provider="ollama")
     assert called.get("openai") is True
+
+
+def test_run_agent_huggingface_provider_dispatches_to_openai_compat(
+    store: MemoryStore, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """provider='huggingface' calls the OpenAI-compatible request path."""
+    from sakthai.agent.providers.base import Response as _ProvResponse
+
+    called: dict[str, bool] = {}
+
+    import sakthai.agent.loop as loop_mod
+
+    def _fake_openai_compat(
+        client: object, model: str, *args: object, **kwargs: object
+    ) -> _ProvResponse:
+        if client is not None:
+            called["huggingface"] = True
+        return _ProvResponse("end_turn", [_Block(type="text", text="ok")])
+
+    monkeypatch.setattr(loop_mod, "_build_client", lambda provider, client: client)
+    monkeypatch.setattr(loop_mod, "_call_openai_compat", _fake_openai_compat)
+    run_agent(
+        "hi",
+        client=FakeClient([]),
+        store=store,
+        provider="huggingface",
+        model="meta-llama/Llama-3.1-8B-Instruct",
+    )
+    assert called.get("huggingface") is True
 
 
 def test_run_agent_openai_defaults_model_to_gpt4o(

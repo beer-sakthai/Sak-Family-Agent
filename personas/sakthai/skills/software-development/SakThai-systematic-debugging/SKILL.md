@@ -8,7 +8,8 @@ platforms: [linux, macos, windows]
 metadata:
   hermes:
     tags: [debugging, troubleshooting, problem-solving, root-cause, investigation]
-    related_skills: [test-driven-development, plan, subagent-driven-development]
+    related_skills: [SakThai-test-driven-development, SakThai-plan, subagent-driven-development]
+category: software-development
 ---
 # Systematic Debugging
 

@@ -39,7 +39,7 @@ No failing workflows in last 10 runs.
 | Job | Schedule | Last run | Status |
 |---|---|---|---|
 | HF Quick Check | every 2m | 10:22:50 | ✅ |
-| HF Auto Improve | every 5m | 10:23:04 | ✅ |  
+| HF Auto Improve | every 5m | 10:23:04 | ✅ |
 | HF Report & Plan | every 10m | 09:50:01 | ✅ |
 | CI Health Check | every 30m | 10:23:16 | ✅ |
 | HF Deep Learn | every 60m | 09:42:24 | ✅ |

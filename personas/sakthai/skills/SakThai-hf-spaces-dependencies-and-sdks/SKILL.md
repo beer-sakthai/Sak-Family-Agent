@@ -1,7 +1,6 @@
 ---
 name: SakThai-hf-spaces-dependencies-and-sdks
 version: 1.0.0
-description: "Sakthai Hf Spaces Dependencies And Sdks"
 author: SakThai
 license: MIT
 title: Hugging Face Spaces — Dependencies, SDKs, & Configuration Complete Guide
@@ -19,5 +18,4 @@ description: >-
   system packages (apt), hardware tiers including ZeroGPU, build
   configuration, secrets & environment variables, storage, and
   optimization strategies for zero-cost deployments.
-
 ---

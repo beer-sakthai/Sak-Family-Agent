@@ -5,6 +5,7 @@ license: MIT
 description: "Hugging Face Hub Webhooks — create, manage, and debug webhooks programmatically via the SDK, CLI, and UI. Covers event types, payload structure, watched items, secrets, rate limiting, and Job integration."
 version: 1.0.0
 platforms: [linux, macos]
+category: mlops
 tags: [huggingface, hub, webhooks, automation, ci-cd, events]
 ---
 

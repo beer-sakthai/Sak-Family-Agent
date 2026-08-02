@@ -35,8 +35,8 @@ The most distinctive field is `layer_types` — an explicit array of length `num
 "layer_types": ["linear_attention", "linear_attention", "linear_attention", "full_attention", ...]
 ```
 
-**Pattern:** 3× linear_attention followed by 1× full_attention, repeated 8 times = 32 layers total.  
-**`full_attention_interval`:** Alternative shorthand that also encodes the 4 (every 4th layer is full attention).  
+**Pattern:** 3× linear_attention followed by 1× full_attention, repeated 8 times = 32 layers total.
+**`full_attention_interval`:** Alternative shorthand that also encodes the 4 (every 4th layer is full attention).
 **`mlp_only_layers`:** Empty array `[]` — no pure-MLP layers in this config.
 
 ### Linear Attention (SSM-style) Parameters

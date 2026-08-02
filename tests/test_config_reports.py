@@ -60,6 +60,18 @@ def test_ollama_host_honours_env_and_strips_trailing_slash(
     assert config.ollama_host() == "http://my-ollama:1234"
 
 
+def test_huggingface_api_base_default(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("SAKTHAI_HF_API_BASE", raising=False)
+    assert config.huggingface_api_base() == "https://router.huggingface.co/v1"
+
+
+def test_huggingface_api_base_honours_env_and_strips_trailing_slash(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("SAKTHAI_HF_API_BASE", "https://my-router.example/v1/")
+    assert config.huggingface_api_base() == "https://my-router.example/v1"
+
+
 def test_memory_report_counts(sakthai_home: Path) -> None:
     with MemoryStore() as store:
         store.add_fact("one")
@@ -181,6 +193,9 @@ def test_auth_report_sources(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) ->
     # 3. Gateway
     monkeypatch.setenv("SAKTHAI_GATEWAY_URL", "http://gw")
 
+    # 3b. Hugging Face
+    monkeypatch.setenv("HF_TOKEN", "hf_test_token")
+
     # 4. Gemini CLI (mocking the file)
     gemini_home = tmp_path / "gemini"
     gemini_home.mkdir()
@@ -200,6 +215,8 @@ def test_auth_report_sources(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) ->
     assert report["openai_ok"] is True
     assert report["gateway_source"] == "gateway_url"
     assert report["gateway_ok"] is True
+    assert report["huggingface_source"] == "hf_token"
+    assert report["huggingface_ok"] is True
     assert report["gemini_cli_oauth"] is True
 
 

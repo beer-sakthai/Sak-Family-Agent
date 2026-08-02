@@ -8,12 +8,11 @@ description: >-
   diffusers edge case, GGUF handling, Publisher Analytics CSV export, and
   granular access logs for Enterprise Plus.
 version: 1.0.0
-description: "Sakthai Hf Hub Model Download Stats"
 metadata:
   hermes:
     tags: [huggingface, hf, hub, models, downloads, stats, analytics, publisher-analytics, elasticsearch]
     category: mlops
-
+category: mlops
 ---
 
 # HF Hub Model Download Stats: Counting Methodology & Analytics

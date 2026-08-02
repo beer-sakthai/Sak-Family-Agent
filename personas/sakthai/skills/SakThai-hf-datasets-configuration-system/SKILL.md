@@ -4,8 +4,8 @@ version: 1.0.0
 description: Hugging Face Datasets configuration system — BuilderConfig, BUILDER_CONFIGS, config IDs, dataset_infos.json, YAML metadata configs, packaged module configs, and config resolution at load time.
 author: SakThai
 license: MIT
+category: mlops
 tags: [datasets, config, builder, metadata, dataset-infos, yaml-configs, caching]
-
 ---
 
 # HF Datasets Configuration System

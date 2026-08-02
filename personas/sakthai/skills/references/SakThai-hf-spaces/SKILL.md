@@ -14,6 +14,7 @@ provides:
   - references/aoti-zerogpu-pattern.md (AOTI compilation + dynamic GPU duration for ZeroGPU Spaces — detected 2026-07-23)
   - references/anycoder-case-study.md (Docker Space with multi-model orchestration + HF OAuth deployment — detected 2026-07-24)
   - references/fastapi-voice-proxy-case-study.md (FastAPI proxy-gateway + WebSocket real-time audio + usage metering — detected 2026-07-23)
+category: mlops
 ---
 
 # HF Spaces — Trend Monitoring
@@ -288,7 +289,7 @@ Session-specific reports from Mode A accumulate in `references/session-reports.m
   **Resolution behavior:** `skill_manage` always resolves to the **directory-based umbrella** — the flat file is inaccessible via `skill_manage` (delete/write_file/patch all reach the umbrella SKILL.md). `skill_view` needs the full relative path:
   - Load umbrella methodology: `skill_view(name='references/hf-spaces/SKILL.md')`
   - Load session reports archive: `skill_view(name='references/hf-spaces.md')`
-  
+
   **Fixing this (2026-07-24):** The flat file `references/hf-spaces.md` (name: `hf-spaces-report`) was absorbed into this umbrella skill as `references/session-reports.md` (Rounds 1–5 archived there). The flat file still exists on disk and causes the collision — remove it from the filesystem via `rm ~/profiles/sakthai/skills/references/hf-spaces.md` then run `hermes skills refresh`. Until then, `skill_view(name='references/hf-spaces/SKILL.md')` loads the umbrella, `skill_view(name='references/hf-spaces.md')` loads the stale flat file. New deep-dive reports should be appended directly to `references/session-reports.md` here in the umbrella.
 - **Large app.py files** — see the Gradio section above for chunked reading strategy. Hunyuan3D-2's `gradio_app.py` was 9000+ lines, requiring 3+ fetches to read completely.
 

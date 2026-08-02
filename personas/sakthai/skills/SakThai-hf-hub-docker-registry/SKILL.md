@@ -1,9 +1,7 @@
 ---
 name: SakThai-hf-hub-docker-registry
-author: SakThai
-license: MIT
-description: "A skill for Hf Hub Docker Registry."
-version: 0.1.0
+version: 1.0.0
+description: # hf-hub-docker-registry — Hugging Face Hub Docker Registry
 ---
 
 # hf-hub-docker-registry — Hugging Face Hub Docker Registry

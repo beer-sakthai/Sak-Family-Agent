@@ -11,6 +11,7 @@ Run:
 
 from __future__ import annotations
 
+import ipaddress
 import json
 import logging
 import os
@@ -23,6 +24,64 @@ from urllib.parse import unquote, urlparse
 WEB_DIR = (Path(__file__).resolve().parent.parent / "dashboard" / "dist").resolve()
 _HOST = "127.0.0.1"
 _PORT = 3002
+_LOOPBACK_NAMES = frozenset({"localhost"})
+
+
+def _is_loopback_host(host: str) -> bool:
+    """True if ``host`` is loopback-only (safe to bind without authentication)."""
+    if host in _LOOPBACK_NAMES:
+        return True
+    try:
+        return ipaddress.ip_address(host).is_loopback
+    except ValueError:
+        # A non-literal hostname (other than localhost) may resolve anywhere.
+        return False
+_BEARER_TOKEN: str | None = None
+
+
+def _get_or_create_bearer_token() -> str:
+    """Retrieve or create an opaque 32-character hex bearer token in MemoryStore."""
+    global _BEARER_TOKEN
+    if _BEARER_TOKEN is not None:
+        return _BEARER_TOKEN
+
+    try:
+        import sys
+        from pathlib import Path
+        REPO_ROOT = (Path(__file__).resolve().parent.parent).resolve()
+        if str(REPO_ROOT / "personas" / "sakthai") not in sys.path:
+            sys.path.insert(0, str(REPO_ROOT / "personas" / "sakthai"))
+        if str(REPO_ROOT) not in sys.path:
+            sys.path.insert(0, str(REPO_ROOT))
+
+        from sakthai.config import register_secret
+        from sakthai.memory.store import MemoryStore
+
+        with MemoryStore() as store:
+            fact = store.get_fact_by_key(kind="web_auth", key="bearer_token")
+            if fact:
+                _BEARER_TOKEN = fact.value
+                register_secret(_BEARER_TOKEN)
+                return _BEARER_TOKEN
+
+            import secrets
+            token = secrets.token_hex(16)
+            store.delete_facts_by_key(kind="web_auth", key="bearer_token")
+            store.add_fact(
+                value=token,
+                kind="web_auth",
+                key="bearer_token",
+                tags=["system", "no-export"],
+            )
+            register_secret(token)
+            _BEARER_TOKEN = token
+            return token
+    except Exception as exc:
+        logging.getLogger(__name__).warning("Failed to get or create bearer token from MemoryStore: %s", exc)
+        if _BEARER_TOKEN is None:
+            import secrets
+            _BEARER_TOKEN = secrets.token_hex(16)
+        return _BEARER_TOKEN
 
 
 def _get_or_create_bearer_token() -> str:
@@ -63,17 +122,24 @@ def _get_or_create_bearer_token() -> str:
 def _dashboard_data(days: int = 30) -> dict[str, Any]:
     try:
         import sys
+
         REPO_ROOT = (Path(__file__).resolve().parent.parent).resolve()
         sys.path.insert(0, str(REPO_ROOT / "personas" / "sakthai"))
         sys.path.insert(0, str(REPO_ROOT))
         from sakthai.dashboard.data import collect_dashboard_data
+
         return collect_dashboard_data(days=days)
     except Exception as exc:  # noqa: BLE001
         logging.getLogger(__name__).warning("dashboard data failed: %s", exc)
         return {
             "generated_at": "demo",
             "source": "demo",
-            "kpis": {"total_facts": 0, "total_facts_delta": 0, "total_observations": 0, "total_observations_delta": 0},
+            "kpis": {
+                "total_facts": 0,
+                "total_facts_delta": 0,
+                "total_observations": 0,
+                "total_observations_delta": 0,
+            },
             "growth": {"labels": [], "facts": [], "observations": []},
             "recent_facts": [],
             "top_observations": [],
@@ -135,6 +201,7 @@ class _Handler(SimpleHTTPRequestHandler):
         path = parsed.path.rstrip("/") or "/"
 
         if path.startswith("/api/"):
+<<<<<<< HEAD
             expected_token = getattr(self.server, "bearer_token", None)
             if expected_token:
                 auth = self.headers.get("Authorization", "")
@@ -145,6 +212,21 @@ class _Handler(SimpleHTTPRequestHandler):
                 if token != expected_token:
                     self._json(403, {"error": "Forbidden", "message": "Invalid bearer token"})
                     return
+=======
+            auth_header = self.headers.get("Authorization", "")
+            if not auth_header:
+                self._json(401, {"error": "Unauthorized", "message": "Missing Authorization header"})
+                return
+            if not auth_header.startswith("Bearer "):
+                self._json(401, {"error": "Unauthorized", "message": "Authorization header must be in 'Bearer <token>' format"})
+                return
+            token = auth_header[7:]
+            expected_token = _get_or_create_bearer_token()
+            import secrets
+            if not secrets.compare_digest(token, expected_token):
+                self._json(403, {"error": "Forbidden", "message": "Invalid Bearer token"})
+                return
+>>>>>>> origin/main
 
         if path == "/api/stages":
             try:
@@ -189,6 +271,14 @@ class _Handler(SimpleHTTPRequestHandler):
 
 
 def serve(host: str = _HOST, port: int = _PORT) -> HTTPServer:
+    # Refuse a non-loopback bind unless SAKTHAI_WEB_ALLOW_PUBLIC is set
+    if not _is_loopback_host(host) and not os.environ.get("SAKTHAI_WEB_ALLOW_PUBLIC"):
+        raise PermissionError(
+            f"Refusing to bind the unauthenticated API to non-loopback host {host!r}. "
+            "It serves personal memory with no auth. Set SAKTHAI_WEB_ALLOW_PUBLIC=1 to "
+            "override once you have placed authentication in front of it."
+        )
+    _get_or_create_bearer_token()  # Warm cache & register secret
     os.chdir(str(WEB_DIR))
     srv = HTTPServer((host, port), _Handler)
     srv.bearer_token = _get_or_create_bearer_token()

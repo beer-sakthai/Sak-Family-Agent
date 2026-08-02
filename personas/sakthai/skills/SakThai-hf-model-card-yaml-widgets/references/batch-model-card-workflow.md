@@ -109,19 +109,24 @@ Structure each model card with:
    ---
    ```
 
-2. **Header** — badges, title, profile links
-3. **Model Description** — what it does, intended use
-4. **Quick Start** — load + generate Python code
-5. **Architecture table** — params, hidden size, layers, heads, context, vocab
-6. **Training Details table** — base model, dataset, LoRA config
-7. **Evaluation** — pass rates, benchmark scores
-8. **Variants table** — links to sibling models with download counts
-9. **Links** — paper, GitHub, profile
+2. **Header** — dynamic download badge, title, one-line tagline, collection link
+3. **What it is** — 2–3 sentences: base, method, what it does
+4. **Quick Start** — load + generate Python code (one block)
+5. **Training table** — base model, dataset, LoRA config + one-line architecture
+6. **Evaluation** — honest pass rates, internal-vs-verified labeled
+7. **SakThai model family** — the canonical table, **size + role, no download counts**
+8. **Links** — GitHub, profile, collection (no "paper" link — that repo does not exist)
 
-**Badge pattern for download stats**:
+> Follow the lean card standard: `SakThai-model-publishing-pipeline/references/model-card-enrichment-workflow.md`.
+> No hardcoded download counts, no repeated family tables, no "Rising Stars"/funnel sections,
+> story on the profile card only.
+
+**Download badge — use the dynamic JSON badge, never a hardcoded number**:
 ```html
-<img src="https://img.shields.io/badge/downloads-625-blue" alt="625 downloads"/>
+<img src="https://img.shields.io/badge/dynamic/json?url=https%3A//huggingface.co/api/models/Nanthasit/REPO&query=%24.downloads&label=downloads&color=blue&cacheSeconds=3600" alt="Downloads"/>
 ```
+Not `shields.io/endpoint` — the HF API does not implement shields' endpoint schema, so that
+form renders `invalid properties: label, message`. Keep `url=` percent-encoded.
 
 ### Step 4: Upload via HfApi.upload_file
 

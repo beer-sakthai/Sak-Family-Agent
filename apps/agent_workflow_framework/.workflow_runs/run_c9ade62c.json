@@ -1,0 +1,36 @@
+{
+  "run_id": "run_c9ade62c",
+  "workflow_name": "multi_short_circuit",
+  "status": "FAILED",
+  "start_time": "2026-08-01T17:33:52Z",
+  "end_time": "2026-08-01T17:33:52Z",
+  "step_results": {
+    "s1": {
+      "step_id": "s1",
+      "status": "FAILED",
+      "output": {},
+      "error": "Terminal failure",
+      "attempts": 1,
+      "start_time": "2026-08-01T17:33:52Z",
+      "end_time": "2026-08-01T17:33:52Z"
+    },
+    "s2": {
+      "step_id": "s2",
+      "status": "SKIPPED",
+      "output": {},
+      "error": "Skipped due to upstream failure",
+      "attempts": 0,
+      "start_time": null,
+      "end_time": null
+    },
+    "s3": {
+      "step_id": "s3",
+      "status": "SKIPPED",
+      "output": {},
+      "error": "Skipped due to upstream failure",
+      "attempts": 0,
+      "start_time": null,
+      "end_time": null
+    }
+  }
+}

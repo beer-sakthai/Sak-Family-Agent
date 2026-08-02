@@ -7,7 +7,7 @@ description: Hugging Face Hub Evaluation Results — decentralized benchmark tra
 model: deepseek-v4-flash
 provider: opencode-go
 type: reference
-
+category: mlops
 ---
 
 # Hub Evaluation Results
@@ -36,6 +36,7 @@ To register a dataset as a benchmark:
 
 ```yaml
 name: "Humanity's Last Exam"
+version: 1.0.0
 description: "A multi-modal benchmark at the frontier of human knowledge..."
 evaluation_framework: "inspect-ai"   # enumerable, maintained by HF
 tasks:
@@ -147,5 +148,42 @@ A `verifyToken` proves the evaluation was run in a reproducible, auditable envir
 Results appear automatically on:
 - The model page (with links to benchmark leaderboard)
 - The benchmark dataset's leaderboard (aggregated from all models)
+
+## Growth Cycle Integration
+
+Evaluation results serve as the **permanent ledger of every Trust stage** in the Growth Cycle.
+
+### How to Wire Eval → Cycle
+
+Every `.eval_results/*.yaml` file should carry cycle metadata:
+
+```yaml
+- dataset:
+    id: llamastack/bfcl_v3
+    task_id: simple
+  value: 0.80
+  date: "2026-07-25"
+  source:
+    url: https://github.com/beer-sakthai/Sak-Family-Agent
+    name: SakThai Growth Cycle — Trust Stage
+    user: Nanthasit
+    org: Nanthasit
+  notes: "Cycle: 2026-07-25 Trust Stage — 4/5 simple tool calls"
+```
+
+### Key Fields
+
+| Field | Purpose | Example |
+|-------|---------|---------|
+| `source.name` | Identifies workflow stage | `"SakThai Growth Cycle — Trust Stage"` |
+| `source.user` | Author attribution | `Nanthasit` |
+| `source.org` | Org attribution | `Nanthasit` |
+| `notes` | Cycle context | `"Cycle: 2026-07-29 Trust Stage"` |
+
+### Workflow
+
+Dream → Hope → Care → Joy → **Trust** → Growth → `.eval_results/*.yaml`
+
+Each improvement cycle: build → verify → record eval → capture lessons. The eval YAML files are the permanent record that a cycle completed its Trust stage.
 
 Tracking ID: `hf-hub-evaluation-results`

@@ -5,10 +5,9 @@ license: MIT
 skill_type: reference
 domain: datasets
 version: 1.0.0
-description: "Sakthai Hf Datasets Text Processing Pipeline"
 created: 2026-07-25
 updated: 2026-07-25
-
+category: mlops
 ---
 
 # HF Datasets Text Processing and Deduplication Pipeline

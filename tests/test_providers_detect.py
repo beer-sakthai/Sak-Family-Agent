@@ -40,6 +40,7 @@ def _client_with_module(module: str) -> object:
         (None, "claude-3", {"GEMINI_API_KEY": "test"}, {}, "google"),
         (None, "claude-3", {}, {"openai": True}, "openai"),
         (None, "claude-3", {}, {"gateway": True}, "gateway"),
+        (None, "claude-3", {}, {"huggingface": True}, "huggingface"),
         (None, "claude-3", {}, {}, "anthropic"),  # Default fallback
     ],
 )
@@ -47,7 +48,13 @@ def test_detect_provider_scenarios(client, model, env, creds, expected, monkeypa
     """Test provider detection logic across various signals."""
     # Start from a clean slate: host-machine env (e.g. OLLAMA_HOST or a real
     # Gemini key) must not leak into the scenario being asserted.
-    for var in ("OLLAMA_HOST", "SAKTHAI_GATEWAY_URL", "GEMINI_API_KEY", "GOOGLE_API_KEY"):
+    for var in (
+        "OLLAMA_HOST",
+        "SAKTHAI_GATEWAY_URL",
+        "GEMINI_API_KEY",
+        "GOOGLE_API_KEY",
+        "HF_TOKEN",
+    ):
         monkeypatch.delenv(var, raising=False)
     for k, v in env.items():
         monkeypatch.setenv(k, v)
@@ -60,6 +67,10 @@ def test_detect_provider_scenarios(client, model, env, creds, expected, monkeypa
         patch(
             "sakthai.agent.providers.gateway_credential_source",
             return_value="dummy" if creds.get("gateway") else None,
+        ),
+        patch(
+            "sakthai.agent.providers.huggingface_credential_source",
+            return_value="dummy" if creds.get("huggingface") else None,
         ),
         patch(
             "sakthai.agent.providers.local_credential_source",
@@ -128,6 +139,14 @@ def test_detect_gateway_model_prefix(model: str) -> None:
     assert detect_provider(None, model) == "gateway"
 
 
+@pytest.mark.parametrize(
+    "model",
+    ["hf/meta-llama/Llama-3.1-8B-Instruct", "huggingface/mistralai/Mistral-7B-Instruct-v0.3"],
+)
+def test_detect_huggingface_model_prefix(model: str) -> None:
+    assert detect_provider(None, model) == "huggingface"
+
+
 # -- detect_provider — env-var fallbacks (no client, no model hint) --------
 
 
@@ -135,12 +154,13 @@ def test_detect_gateway_model_prefix(model: str) -> None:
 def _clear_host_credential_env(monkeypatch: pytest.MonkeyPatch) -> None:
     """Clear host-machine credential env that would shadow the fallback chain.
 
-    Detection prefers gateway/Ollama over the providers these tests assert,
-    so a developer machine with OLLAMA_HOST or SAKTHAI_GATEWAY_URL set would
-    otherwise leak into the tests.
+    Detection prefers gateway/Hugging Face/Ollama over the providers these tests
+    assert, so a developer machine with OLLAMA_HOST, SAKTHAI_GATEWAY_URL, or
+    HF_TOKEN set would otherwise leak into the tests.
     """
     monkeypatch.delenv("OLLAMA_HOST", raising=False)
     monkeypatch.delenv("SAKTHAI_GATEWAY_URL", raising=False)
+    monkeypatch.delenv("HF_TOKEN", raising=False)
 
 
 def test_detect_fallback_anthropic_key(
@@ -192,6 +212,20 @@ def test_detect_fallback_gateway_credential(
         patch("sakthai.agent.providers.gateway_credential_source", return_value="gateway_url"),
     ):
         assert detect_provider(None, "unknown-model") == "gateway"
+
+
+def test_detect_fallback_huggingface_credential(
+    monkeypatch: pytest.MonkeyPatch, _clear_host_credential_env: None
+) -> None:
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
+    with (
+        patch("sakthai.agent.providers.anthropic_credential_source", return_value=None),
+        patch("sakthai.agent.providers.openai_credential_source", return_value=None),
+        patch("sakthai.agent.providers.gateway_credential_source", return_value=None),
+        patch("sakthai.agent.providers.huggingface_credential_source", return_value="hf_token"),
+    ):
+        assert detect_provider(None, "unknown-model") == "huggingface"
 
 
 def test_detect_fallback_default_is_anthropic(
@@ -272,6 +306,29 @@ def test_build_client_gateway_auth_error_raises_agent_error() -> None:
         pytest.raises(AgentError, match="no gateway configured"),
     ):
         build_client("gateway", None)
+
+
+def test_build_client_huggingface_returns_httpx_client() -> None:
+    with patch(
+        "sakthai.auth.resolve_huggingface_credentials",
+        return_value=("https://router.huggingface.co/v1", "hf_test_token"),
+    ):
+        result = build_client("huggingface", None)
+    assert isinstance(result, httpx.Client)
+    assert result.headers["Authorization"] == "Bearer hf_test_token"
+
+
+def test_build_client_huggingface_auth_error_raises_agent_error() -> None:
+    from sakthai.auth import AuthError
+
+    with (
+        patch(
+            "sakthai.auth.resolve_huggingface_credentials",
+            side_effect=AuthError("no huggingface credentials"),
+        ),
+        pytest.raises(AgentError, match="no huggingface credentials"),
+    ):
+        build_client("huggingface", None)
 
 
 def test_build_client_google_missing_key_raises_agent_error(

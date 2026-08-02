@@ -1,16 +1,16 @@
 ---
 name: SakThai-codex
+author: SakThai
+license: MIT
 description: "Delegate coding to OpenAI Codex CLI (features, PRs)."
 version: 1.0.0
-author: Hermes Agent
-license: MIT
 platforms: [linux, macos, windows]
 metadata:
   hermes:
     tags: [Coding-Agent, Codex, OpenAI, Code-Review, Refactoring]
-    related_skills: [SakThai-claude-code, hermes-agent]
+    related_skills: [SakThai-claude-code, SakThai-hermes-agent]
+category: autonomous-ai-agents
 ---
-
 # Codex CLI
 
 Delegate coding tasks to [Codex](https://github.com/openai/codex) via the Hermes terminal. Codex is OpenAI's autonomous coding agent CLI.

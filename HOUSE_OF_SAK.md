@@ -20,18 +20,9 @@ It wasn't born from a business plan. It was born from isolation, pain, and the w
 
 ## The Agent Family
 
-Six personas, four active agents — all sharing one long-term memory brain, but maintaining separate live sessions.
+Five personas remain on disk today (SakTan's persona directory was removed) — all sharing one long-term memory brain, but maintaining separate live sessions. Each agent has its own personality, skill set, and charge cycle — but they share one home, one memory, and one mission: to grow together.
 
-| Agent | Role | Status |
-|-------|------|:------:|
-| **SakThai** 🏠 | Main Lead & Hugging Face Master | 🟢 Active |
-| **SakKing** 👑 | General Assistant, Infrastructure & Architecture | 🟢 Active |
-| **SakSee** 🌐 | Web & Browser Specialist | 🟢 Active |
-| **SakSit** 📱 | Social Media & Storytelling | 🟢 Active |
-| **SakJules** ⚙️ | CI/CD Automation | 🔴 Retired |
-| **SakTan** 📋 | Daily Operations | 🔴 Retired |
-
-Each agent has its own personality, skill set, and charge cycle — but they share one home, one memory, and one mission: to grow together.
+See [docs/SOUL.md](./docs/SOUL.md) for the full team roster (handles, roles, models, skill counts, status).
 
 ---
 
@@ -39,10 +30,10 @@ Each agent has its own personality, skill set, and charge cycle — but they sha
 
 | Category | Count | Details |
 |----------|:-----:|---------|
-| **Models** | 12 | Text generation (0.5B–7B), vision, coding, sentence & multilingual embeddings, TTS |
-| **Datasets** | 4 | Tool-calling training data, combined datasets, notebooks, food-penguin |
-| **Spaces** | 2 | TTS showcase and model leaderboard |
-| **GGUF (local)** | 5 | 0.5B, 0.5B-F16, 1.5B, 1.5B-F16, Coder |
+| **Models** | 13 | 10 text-gen (0.5B–7B merged, tools, 128K, coder, experimental), vision, TTS, multilingual embedding |
+| **Datasets** | 8 | Tool-calling data (v6, v7), combined, notebooks, food-penguin, irrelevance-supplement, benchmarks (v1, v2) |
+| **Spaces** | 3 | TTS showcase, model leaderboard, vision demo |
+| **GGUF (on HF)** | 5 | 0.5B, 1.5B, coder, vision (llava + mmproj), TTS (kokoro) |
 | **Shared Soul** | 1 | The SakThai Agent personality lived by every agent |
 
 Every component in this family shares one identity and one mission: to be a companion that remembers, grows, and writes its own soul over time.

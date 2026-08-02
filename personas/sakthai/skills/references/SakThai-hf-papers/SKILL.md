@@ -7,6 +7,7 @@ description: Daily snapshot of featured papers on Hugging Face
 version: 1.0.0
 updated: 2026-07-23T15:10 UTC
 source: https://huggingface.co/papers
+category: mlops
 tags: [papers, research, daily-snapshot, 23-jul-2026]
 ---
 
@@ -81,8 +82,8 @@ Each tick of the scheduled paper-deep-dive job follows a fixed sequence:
    "
    ```
 
-   The API returns structured JSON with `id`, `title`, and `upvotes` — no regex, no HTML entity decoding, no SSR-structure fragility.  
-   **Fallback:** If the API errors or returns empty, scrape the HTML page via `references/scraping-fallback.md` (extract IDs → resolve via arXiv → check tracker).  
+   The API returns structured JSON with `id`, `title`, and `upvotes` — no regex, no HTML entity decoding, no SSR-structure fragility.
+   **Fallback:** If the API errors or returns empty, scrape the HTML page via `references/scraping-fallback.md` (extract IDs → resolve via arXiv → check tracker).
    ⚠ **Security scan (pipe):** Never pipe curl output to python3 (`curl | python3` is blocked). Save to a temp file first, or use the PYEOF heredoc pattern.
    ⚠ **Security scan (inline python3 -c):** The `python3 -c "..."` inline pattern can trigger false-positive alerts (e.g. `pattern_key: "SQL TRUNCATE"`) when the code contains JSON dict operations or SQL-like keywords. The terminal returns `status: "pending_approval"` and blocks execution silently. The workaround is to write the script to a temp file first and then run it:
    ```bash
