@@ -34,3 +34,18 @@ def test_saksee_saksit_sakjules_workspace_manifests():
         data = yaml.safe_load(manifest_path.read_text(encoding="utf-8"))
         assert data["agent_name"].lower() == agent
         assert expected_role in data["role"]
+
+
+def test_all_six_workspaces_match_schema():
+    schema_path = PERSONAS_DIR / "shared" / "config" / "workflow_schema.yaml"
+    assert schema_path.exists(), f"Missing {schema_path}"
+    
+    schema = yaml.safe_load(schema_path.read_text(encoding="utf-8"))
+    required_keys = schema["required_keys"]
+    
+    for agent in ["sakthai", "sakking", "saktan", "saksee", "saksit", "sakjules"]:
+        config_path = PERSONAS_DIR / agent / "config" / "workspace.yaml"
+        assert config_path.exists(), f"Missing config for {agent}"
+        config = yaml.safe_load(config_path.read_text(encoding="utf-8"))
+        for k in required_keys:
+            assert k in config, f"Missing key {k} in {agent}/config/workspace.yaml"
