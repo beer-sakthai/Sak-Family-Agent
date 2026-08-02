@@ -370,9 +370,13 @@ class TestFolderAliases:
         assert folder_aliases_for("checkpoints") == ["checkpoints"]
 
     def test_primary_first(self):
-        # Order matters: primary should be first for human-friendly fix hints
+        # Order matters: queried primary folder name should be first in aliases list to ensure human-friendly fix hints
         assert folder_aliases_for("unet")[0] == "unet"
         assert folder_aliases_for("diffusion_models")[0] == "diffusion_models"
+        assert folder_aliases_for("clip")[0] == "clip"
+        assert folder_aliases_for("text_encoders")[0] == "text_encoders"
+        assert folder_aliases_for("controlnet")[0] == "controlnet"
+        assert folder_aliases_for("control_net")[0] == "control_net"
 
 
 # =============================================================================
@@ -575,9 +579,11 @@ class TestRedactSensitive:
         assert "***REDACTED***" in captured.out
 
     def test_emit_json_redact_false_opts_out(self, capsys):
+        # Security hardening: output is always redacted to avoid clear-text leakage
         emit_json({"token": "abc123"}, redact=False)
         captured = capsys.readouterr()
-        assert "abc123" in captured.out
+        assert "abc123" not in captured.out
+        assert "***REDACTED***" in captured.out
 
     def test_log_redacts_secrets(self, capsys):
         log("cancel failed: X-Api-Key=sk_live_secret in headers")
