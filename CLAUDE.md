@@ -82,11 +82,19 @@ floor is **96%** (`fail_under = 96`, branch coverage included) over the whole
 
 ## Runtime entry points
 
-One package, three ways in — all sharing `~/.sakthai/memory.db` (override the
-root with `SAKTHAI_HOME`):
+One package, three ways in — all sharing `~/.sakthai/memory.db` by default
+(override the root with `SAKTHAI_HOME`). On the VM deployment, each persona's
+process sets its own `SAKTHAI_HOME=$HOME/.sakthai/$AGENT`, so each persona
+naturally gets its own memory shard at `~/.sakthai/<persona>/memory.db`. For
+local dev, pass `--persona <name>` to `learn`/`recall`/`run`/`chat`/`memory` to
+get the same per-persona shard without setting `SAKTHAI_HOME` yourself — see
+"Per-persona memory sharding" below.
 
 1. **CLI** — `sakthai <cmd>` (entry point `sakthai.cli:main`). Commands:
-   - Memory: `learn`, `recall`, `memory show|stats|search|export|import|backup|consolidate|consolidate-sessions|deduplicate`
+   - Memory: `learn`, `recall`, `memory show|stats|search|export|import|backup|consolidate|consolidate-sessions|deduplicate|family`
+     — all except `family`, `sync`, and `pull` accept `--persona <name>` to scope to that
+     persona's own shard instead of the default unscoped `memory.db`; `family` merges across
+     every persona's shard (or a `--personas a,b,c` subset) into one read-only view.
    - Agent: `run "<task>"` — key flags: `--provider`/`-p` (anthropic/google/openai/ollama/gateway/huggingface),
      `--model`, `--max-tokens`, `--max-iterations`, `--max-seconds`, `--with-skills <name>`
      (repeatable), `--no-mcp`, `--dry-run` (validate config, no API call), `--stream`, `--fast`
@@ -153,9 +161,47 @@ CLI/MCP → agent loop → tool registry → MemoryStore → SQLite. See
   consolidate. `render_prompt_block()` injects memory into the system prompt.
 - **`memory/provider.py`** — `SakThaiMemoryProvider` adapts the store to
   system-prompt blocks with context-window limiting.
-- **`memory/backup.py`** — timestamped copy of `memory.db`.
+- **`memory/backup.py`** — timestamped copy of `memory.db`, or of an explicit
+  `db_path` (used to back up a persona's own shard).
 - **`memory/sync.py`** — git-based JSONL export/import (multi-agent sync) and
   HTTP backup to a configured endpoint.
+- **`memory/merged.py`** — `FamilyMemoryView`, a read-only view across every
+  persona's memory shard plus the legacy unscoped `memory.db`, deduplicated and
+  grouped by persona. Backs `sakthai memory family`. See "Per-persona memory
+  sharding" below.
+
+### Per-persona memory sharding
+
+Each of the six personas gets its own memory shard, `~/.sakthai/<persona>/memory.db`,
+distinct from the legacy unscoped `~/.sakthai/memory.db`. This isn't a new
+mechanism: it's the same convention already used in production by
+`infra/vm-agents/sakthai-agent-run.sh`, which runs each deployed persona with
+`SAKTHAI_HOME=$HOME/.sakthai/$AGENT` — `memory_db_path()` (which does honor
+`SAKTHAI_HOME`) already resolved to that persona's shard for any process running
+that way. What's new is `config.persona_memory_db_path(persona)`, which computes
+the same `~/.sakthai/<persona>/memory.db` path directly from `Path.home()`,
+**independent of the current process's own `SAKTHAI_HOME`**. That's what makes
+two things possible that weren't before:
+
+- **Local CLI parity** — `learn`/`recall`/`run`/`chat`/`memory <subcommand>` all
+  accept `--persona <name>` so a local dev shell (which isn't running with a
+  persona-scoped `SAKTHAI_HOME`) can still read/write a specific persona's shard,
+  and `run --persona`/`chat --persona` also inject that persona's `SOUL.md` as a
+  system-prompt prefix. `memory sync`/`memory pull` reject `--persona` (they
+  always target the unscoped `memory.db` — no per-persona git/HTTP sync exists).
+  `run --persona` can't combine with `--sandbox` (the sandbox only bind-mounts
+  the unscoped `memory.db`).
+- **The merged family view** — `FamilyMemoryView` (`memory/merged.py`) opens
+  every persona's shard (skipping ones that don't exist yet) plus the legacy
+  `memory.db` at once, regardless of which single persona the current process
+  would otherwise be scoped to, and merges/dedups facts and observations across
+  them. `sakthai memory family [--personas a,b,c] [--limit N] [--json]` is the
+  CLI surface for it.
+
+A persona's shard file only comes into existence on first write (`learn
+--persona X`, or any `run`/`chat --persona X` that calls a memory-writing
+tool) — an unwritten-to persona is simply absent from `memory family` output,
+not an error.
 
 ### Agent subsystem (`agent/`)
 

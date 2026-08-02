@@ -172,6 +172,42 @@ def test_collect_skills_recursive(tmp_path: Path) -> None:
     assert s_map["sakthai-coding-test"].category == "coding"
 
 
+def test_collect_skills_skips_dotdirs(tmp_path: Path) -> None:
+    root = tmp_path / "root"
+    root.mkdir()
+
+    (root / ".archive" / "skill-archived").mkdir(parents=True)
+    (root / ".archive" / "skill-archived" / "SKILL.md").write_text(
+        "---\nname: skill-archived\n---\nbody", encoding="utf-8"
+    )
+    (root / "skill-live").mkdir()
+    (root / "skill-live" / "SKILL.md").write_text(
+        "---\nname: skill-live\n---\nbody", encoding="utf-8"
+    )
+
+    skills = collect_skills(root)
+    names = {s.name for s in skills}
+    assert names == {"skill-live"}
+
+
+def test_collect_skills_dedupes_by_name_across_paths(tmp_path: Path) -> None:
+    root = tmp_path / "root"
+    root.mkdir()
+
+    (root / "skill-flat").mkdir()
+    (root / "skill-flat" / "SKILL.md").write_text(
+        "---\nname: skill-flat\n---\nflat body", encoding="utf-8"
+    )
+    (root / "nested" / "skill-flat").mkdir(parents=True)
+    (root / "nested" / "skill-flat" / "SKILL.md").write_text(
+        "---\nname: skill-flat\n---\nnested body", encoding="utf-8"
+    )
+
+    skills = collect_skills(root)
+    matches = [s for s in skills if s.name == "skill-flat"]
+    assert len(matches) == 1
+
+
 def test_find_skill(tmp_path: Path) -> None:
     (tmp_path / "s1").mkdir()
     (tmp_path / "s1" / "SKILL.md").write_text("---\nname: found-me\n---\nbody", encoding="utf-8")

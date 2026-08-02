@@ -275,6 +275,29 @@ def test_persona_soul_path() -> None:
     assert config.persona_soul_path("sakking") == config.PERSONAS_DIR / "sakking" / "SOUL.md"
 
 
+def test_persona_memory_db_path_ignores_sakthai_home_override(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The per-persona shard path is independent of the current SAKTHAI_HOME."""
+    monkeypatch.setenv("SAKTHAI_HOME", "/somewhere/unrelated")
+    assert config.persona_memory_db_path("sakking") == (
+        Path.home() / ".sakthai" / "sakking" / "memory.db"
+    )
+
+
+def test_persona_memory_db_path_matches_vm_deployment_convention() -> None:
+    """Mirrors infra/vm-agents/sakthai-agent-run.sh's SAKTHAI_HOME=$HOME/.sakthai/$AGENT."""
+    for persona in config.PERSONA_NAMES:
+        assert config.persona_memory_db_path(persona) == (
+            Path.home() / ".sakthai" / persona / "memory.db"
+        )
+
+
+def test_persona_memory_db_path_rejects_unknown_persona() -> None:
+    with pytest.raises(ValueError, match="Unknown persona"):
+        config.persona_memory_db_path("not-a-real-persona")
+
+
 def test_persona_names_lists_all_six() -> None:
     assert config.PERSONA_NAMES == (
         "sakking",
@@ -282,7 +305,8 @@ def test_persona_names_lists_all_six() -> None:
         "saksee",
         "saksit",
         "sakjules",
-    ), f"Expected 5 personas, got {len(config.PERSONA_NAMES)}: {config.PERSONA_NAMES}"
+        "saktan",
+    ), f"Expected 6 personas, got {len(config.PERSONA_NAMES)}: {config.PERSONA_NAMES}"
 
 
 def test_telegram_allowed_user_ids_skips_invalid_chunks(

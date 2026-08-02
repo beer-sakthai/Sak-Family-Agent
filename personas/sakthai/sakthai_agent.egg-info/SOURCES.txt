@@ -58,6 +58,7 @@ personas/sakthai/sakthai/mcp/server.py
 personas/sakthai/sakthai/mcp/servers.py
 personas/sakthai/sakthai/memory/__init__.py
 personas/sakthai/sakthai/memory/backup.py
+personas/sakthai/sakthai/memory/merged.py
 personas/sakthai/sakthai/memory/provider.py
 personas/sakthai/sakthai/memory/store.py
 personas/sakthai/sakthai/memory/sync.py
@@ -121,6 +122,7 @@ tests/test_mcp_server.py
 tests/test_mcp_servers.py
 tests/test_memory_aux.py
 tests/test_memory_concurrent.py
+tests/test_memory_merged.py
 tests/test_memory_secrets_redaction.py
 tests/test_memory_store.py
 tests/test_memory_sync.py
@@ -161,4 +163,6 @@ tests/test_tools.py
 tests/test_tools_overrides.py
 tests/test_train_eval_coder_lora.py
 tests/test_usage.py
+tests/test_verify_hf_upload.py
+tests/test_web_auth.py
 tests/test_web_server.py
