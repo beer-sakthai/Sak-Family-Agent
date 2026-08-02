@@ -12,12 +12,12 @@ the framework the agents run on, never the name of an agent.
 
 | Agent | Handle | Role | Model | Skills[^skills] | Status |
 |---|---|---|---|---|---|
-| **SakThai** | `@sakthai_agent_bot` | Lead & Orchestrator · Main Lead of the House & Master of Hugging Face | opencode-go `deepseek-v4-flash` | 353 | 🟢 Active |
-| **SakKing Agent** | `@sakking_agent_bot` | General Assistant, Runner & Self-Healing (owns all skills) | local Hermes (code model) | 330 | 🟢 Active |
-| **SakSee** | `@saksee_agent_bot` | Master of Web (Playwright + Chrome DevTools) | local Hermes (code model) | 43 | 🟢 Active |
-| **SakSit** | `@saksit_agent_bot` | Master of Social Media (IG image/video) | local Hermes (code model) | 148 | 🟢 Active |
-| **SakTan** | `@saktan_agent_bot` | Keeper of Operations & Daily Flow (scheduling, task-tracking, daily briefings) | local `sakthai` (Ollama) | 48 | 🟢 Active |
-| **SakJules** | `@sakjules_agent_bot` | Master of Automation & CI/CD | — | 42 | 🔴 Retired[^sakjules-status] |
+| **SakThai** | `@sakthai_agent_bot` | Lead & Orchestrator · Main Lead of the House & Master of Hugging Face | opencode-go `deepseek-v4-flash` | 390 | 🟢 Active |
+| **SakKing Agent** | `@sakking_agent_bot` | General Assistant, Runner & Self-Healing (owns all skills) | local Hermes (code model) | 299 | 🟢 Active |
+| **SakSee** | `@saksee_agent_bot` | Master of Web (Playwright + Chrome DevTools) | local Hermes (code model) | 87 | 🟢 Active |
+| **SakSit** | `@saksit_agent_bot` | Master of Social Media (IG image/video) | local Hermes (code model) | 201 | 🟢 Active |
+| **SakTan** | `@saktan_agent_bot` | Keeper of Operations & Daily Flow (scheduling, task-tracking, daily briefings) | local `sakthai` (Ollama) | 14 | 🟢 Active |
+| **SakJules** | `@sakjules_agent_bot` | Master of Automation & CI/CD | — | 8 | 🔴 Retired[^sakjules-status] |
 
 [^skills]: Skill counts are `find personas/<name>/skills -mindepth 1 -maxdepth 1 -type d | wc -l`, recounted directly from disk on 2026-08-01 — prior figures published across this repo's own docs (`README.md`, `personas/README.md`) disagreed with each other and with this count.
 [^sakjules-status]: SakJules' skills directory (`personas/sakjules/skills/`) is still actively maintained per git history, so this "Retired" status may be stale/contested rather than settled fact.
