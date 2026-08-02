@@ -21,3 +21,16 @@ def test_sakthai_sakking_saktan_workspace_manifests():
         data = yaml.safe_load(manifest_path.read_text(encoding="utf-8"))
         assert data["agent_name"].lower() == agent
         assert expected_role in data["role"]
+
+
+def test_saksee_saksit_sakjules_workspace_manifests():
+    for agent, expected_role in [
+        ("saksee", "Web / Browser Specialist"),
+        ("saksit", "Social / Content Specialist"),
+        ("sakjules", "Master of GitHub, CI/CD & Automation"),
+    ]:
+        manifest_path = PERSONAS_DIR / agent / "config" / "workspace.yaml"
+        assert manifest_path.exists(), f"Missing {manifest_path}"
+        data = yaml.safe_load(manifest_path.read_text(encoding="utf-8"))
+        assert data["agent_name"].lower() == agent
+        assert expected_role in data["role"]
