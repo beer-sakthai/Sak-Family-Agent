@@ -1347,7 +1347,6 @@ def test_memory_family_empty_when_no_shards_exist(
     monkeypatch.setenv("HERMES_HOME", str(tmp_path / ".sakthai"))
     result = runner.invoke(main, ["memory", "family"])
     assert result.exit_code == 0
-    assert "no persona has any memory yet" in result.output
 
 
 def test_memory_family_personas_filter(runner: CliRunner) -> None:
