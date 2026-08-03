@@ -18,7 +18,7 @@
 
 ## 🛠️ Active Connected MCP Servers & Skill Tools
 
-- **`julesServer`**: `jules-new`, `jules-list`, `jules-pull`, `jules-teleport`
+- **`julesServer` & REST Hook**: `jules-new`, `jules-list`, `jules-pull`, `jules-teleport` + REST Webhook Server listening on `http://localhost:8787`
 - **`colab-mcp`**: Google Colab local MCP server (`uvx git+https://github.com/googlecolab/colab-mcp`)
 - **`supermemory`**: Local semantic memory endpoint (`http://localhost:6767`)
 - **Skills Directory**: 100+ skills pre-loaded in `~/.hermes/profiles/sakjules/skills/` (including `playwright-cli`, `chrome-devtools-mcp`, `stitch`, `gemini-cli-jules`).
