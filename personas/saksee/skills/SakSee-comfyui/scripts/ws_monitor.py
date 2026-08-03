@@ -32,7 +32,7 @@ import json
 import struct
 import sys
 from pathlib import Path
-from urllib.parse import urlparse
+from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _common import (  # noqa: E402
@@ -42,6 +42,18 @@ from _common import (  # noqa: E402
 
 # Binary frame types from ComfyUI WebSocket protocol
 BINARY_PREVIEW_IMAGE = 1
+
+
+def _redact_ws_url(url: str) -> str:
+    """Redact sensitive query params before logging."""
+    parsed = urlparse(url)
+    if not parsed.query:
+        return url
+    sensitive = {"token", "api_key", "apikey", "password", "secret"}
+    redacted_q = []
+    for k, v in parse_qsl(parsed.query, keep_blank_values=True):
+        redacted_q.append((k, "***" if k.lower() in sensitive else v))
+    return urlunparse(parsed._replace(query=urlencode(redacted_q)))
 BINARY_TEXT = 3
 BINARY_PREVIEW_IMAGE_WITH_METADATA = 4
 
@@ -151,7 +163,7 @@ def main(argv: list[str] | None = None) -> int:
         preview_dir.mkdir(parents=True, exist_ok=True)
         log(f"Saving previews to {preview_dir}")
 
-    log(f"Connecting to {ws_url} (client_id={client_id})")
+    log(f"Connecting to {_redact_ws_url(ws_url)} (client_id={client_id})")
     if args.prompt_id:
         log(f"Filtering messages to prompt_id={args.prompt_id}")
 
