@@ -24,7 +24,7 @@
 
 | Slot | Model ID / Identifier | Type | Role |
 |:---|:---|:---|:---|
-| **Primary Engine** | `huggingface/deepseek-ai/DeepSeek-V4-Flash` | Open-Weights Reasoner | Complex coding, Pytest repair, PR synthesis |
+| **Primary Engine** | `opencode-go/DeepSeek-V4-Flash` | OpenCode Go Reasoner | Complex coding, Pytest repair, PR synthesis |
 | **Small / Fast Model** | `Nanthasit/sakthai-context-1.5b-tools-v2` | Custom 1.5B | Ultra-fast triage, task classification & routing |
 | **Tools Model** | `Nanthasit/sakthai-context-7b-tools` | Custom 7B | JSON schema tool calling & function execution |
 | **Embedding Engine** | `Nanthasit/sakthai-embedding-multilingual` | Sentence-Transformers | Cross-lingual vector memory & RAG retrieval |
@@ -33,7 +33,10 @@
 
 ## 🛠️ 3. MCP Server & Remote Tool Loadout
 
-- **📡 Remote Jules CLI & Server (`julesServer`)**:
+- **📡 Remote Jules CLI & REST API Server (`julesServer` & REST Hook)**:
+  - Webhook Endpoint: `http://localhost:8787/api/jules/webhook` (Auto-pull on COMPLETED)
+  - REST Dispatch: `POST http://localhost:8787/api/jules/dispatch`
+  - REST Status: `GET http://localhost:8787/api/jules/status`
   - `/jules-new` — Dispatch new remote coding session
   - `/jules-list` — List remote Jules sessions
   - `/jules-pull` — Pull and apply patch from Jules session
