@@ -327,7 +327,7 @@ cowork-memory-mcp:
 |------|------------|------------|
 | Dev tunnel down / machine off → Cowork calls fail | Medium | Accepted trade-off (decision #2); revisit hosting if this becomes frequent |
 | Self-hosted OAuth server is genuinely security-critical code (signing key handling, code/token exchange correctness) | Medium impact if wrong | Needs real code review before use, not just "it's small so it's fine" — this is the one piece of this design where a bug has outsized consequence |
-| `google/embeddinggemma-300m`'s Gemma license has usage terms beyond plain MIT/Apache | Low | Personal, non-redistributed use is very likely fine; worth a one-time read of the license text before relying on it long-term |
+| `google/embeddinggemma-300m`'s Gemma license has usage terms beyond plain MIT/Apache | Low, confirmed | Read the terms directly: personal use via a hosted API, with no redistribution of the model/derivatives, is compatible with the base license (§3.2/3.3, [ai.google.dev/gemma/terms](https://ai.google.dev/gemma/terms)) — the only remaining item is a quick skim of the linked Gemma Prohibited Use Policy, which is standard AUP-style content (harmful-use restrictions) not expected to affect a personal memory-search tool |
 | HF Inference Providers rate limits or latency on `search` | Low | Personal-scale call volume; fallback path already covers outages, not just to avoid failure but also implicitly covers slowness if paired with a timeout |
 | M365 manifest v1.28's strict `additionalProperties: false` schema causes packaging trial-and-error | Medium | Known from research (a stray field like `packageName` hard-fails the upload) — expect a few iterations, not a one-shot package |
 
