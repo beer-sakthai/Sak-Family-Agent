@@ -38,6 +38,8 @@
   - Chromium Version: `v1.62.1` (`~/.cache/ms-playwright/chromium-1155`)
 - **🚀 Desktop Executable**:
   - Perplexity Comet: `/mnt/c/Program Files/Perplexity/Comet/Application/comet.exe` (`COMET_EXE_PATH` in `.env`)
+- **⚡ Composio MCP (`composio`)**:
+  - `npx -y composio-core@latest mcp start` (Integrates 250+ SaaS tools: GitHub, Slack, Gmail, Jira)
 - **🎮 CUA Driver Daemon (`cua-driver`)**:
   - Path: `/home/beern/.cua-driver/packages/releases/0.16.0-x86_64-unknown-linux-gnu/cua-driver`
   - Capabilities: `browser_click`, `browser_type`, `browser_scroll`, pixel-coordinate targeting

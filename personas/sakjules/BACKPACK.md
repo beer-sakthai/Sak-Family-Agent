@@ -43,6 +43,8 @@
   - Local ONNX Embedding Model: `Xenova/bge-base-en-v1.5`
 - **📊 Google Colab MCP (`colab-mcp`)**:
   - `uvx git+https://github.com/googlecolab/colab-mcp`
+- **⚡ Composio MCP (`composio`)**:
+  - `npx -y composio-core@latest mcp start` (Integrates 250+ SaaS tools: GitHub, Slack, Gmail, Jira)
 - **🎮 CUA Driver Daemon (`cua-driver`)**:
   - `/home/beern/.cua-driver/packages/releases/0.16.0-x86_64-unknown-linux-gnu/cua-driver`
 - **🌐 Chrome DevTools MCP**:
