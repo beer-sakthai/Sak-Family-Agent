@@ -47,6 +47,20 @@ cd services/teams-copilot-mcp
 uv sync
 ```
 
+## Tests
+
+```bash
+uv sync --extra dev
+uv run pytest tests/ -v
+```
+
+26 unit tests across `test_catalog.py`, `test_graph_client.py`,
+`test_server.py`. No real Graph/MSAL network calls — `msal.
+ConfidentialClientApplication` and `httpx.Client.request` are mocked at the
+boundary. Note: constructing a real `ConfidentialClientApplication` performs
+OIDC tenant discovery over the network even before any token call, so tests
+mock the whole class, not just `acquire_token_for_client`.
+
 ## Run standalone (for testing)
 
 ```bash

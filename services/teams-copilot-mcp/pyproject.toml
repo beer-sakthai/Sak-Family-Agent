@@ -10,6 +10,11 @@ dependencies = [
     "httpx>=0.27.0",
 ]
 
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+]
+
 [project.scripts]
 teams-copilot-mcp = "teams_copilot_mcp.server:main"
 
@@ -19,3 +24,7 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/teams_copilot_mcp"]
+
+[tool.pytest.ini_options]
+addopts = "-q"
+testpaths = ["tests"]

@@ -1,0 +1,146 @@
+from unittest.mock import MagicMock, patch
+
+import httpx
+import pytest
+
+from teams_copilot_mcp.graph_client import GraphAuthError, GraphClient
+
+
+def _valid_credentials(monkeypatch):
+    monkeypatch.setenv("MSGRAPH_TENANT_ID", "tenant-123")
+    monkeypatch.setenv("MSGRAPH_CLIENT_ID", "client-123")
+    monkeypatch.setenv("MSGRAPH_CLIENT_SECRET", "secret-123")
+
+
+def test_request_raises_when_all_credentials_missing(monkeypatch):
+    monkeypatch.delenv("MSGRAPH_TENANT_ID", raising=False)
+    monkeypatch.delenv("MSGRAPH_CLIENT_ID", raising=False)
+    monkeypatch.delenv("MSGRAPH_CLIENT_SECRET", raising=False)
+    client = GraphClient()
+
+    with pytest.raises(GraphAuthError) as exc_info:
+        client.request("GET", "/me")
+
+    message = str(exc_info.value)
+    assert "MSGRAPH_TENANT_ID" in message
+    assert "MSGRAPH_CLIENT_ID" in message
+    assert "MSGRAPH_CLIENT_SECRET" in message
+
+
+def test_request_names_only_the_missing_vars(monkeypatch):
+    monkeypatch.setenv("MSGRAPH_TENANT_ID", "tenant-123")
+    monkeypatch.delenv("MSGRAPH_CLIENT_ID", raising=False)
+    monkeypatch.delenv("MSGRAPH_CLIENT_SECRET", raising=False)
+    client = GraphClient()
+
+    with pytest.raises(GraphAuthError) as exc_info:
+        client.request("GET", "/me")
+
+    message = str(exc_info.value)
+    assert "MSGRAPH_TENANT_ID" not in message
+    assert "MSGRAPH_CLIENT_ID" in message
+    assert "MSGRAPH_CLIENT_SECRET" in message
+
+
+def test_request_sends_bearer_token_from_acquired_access_token(monkeypatch):
+    _valid_credentials(monkeypatch)
+    client = GraphClient()
+
+    fake_response = httpx.Response(200, json={"value": "ok"}, request=httpx.Request("GET", "https://x"))
+    fake_app = MagicMock()
+    fake_app.acquire_token_for_client.return_value = {
+        "access_token": "the-real-token",
+        "expires_in": 3600,
+    }
+
+    with patch(
+        "teams_copilot_mcp.graph_client.msal.ConfidentialClientApplication",
+        return_value=fake_app,
+    ), patch.object(httpx.Client, "request", return_value=fake_response) as mock_request:
+        result = client.request("GET", "/me")
+
+    sent_headers = mock_request.call_args.kwargs["headers"]
+    assert sent_headers["Authorization"] == "Bearer the-real-token"
+
+
+def test_token_is_cached_across_requests(monkeypatch):
+    _valid_credentials(monkeypatch)
+    client = GraphClient()
+
+    fake_response = httpx.Response(200, json={}, request=httpx.Request("GET", "https://x"))
+    fake_app = MagicMock()
+    fake_app.acquire_token_for_client.return_value = {
+        "access_token": "cached-token",
+        "expires_in": 3600,
+    }
+
+    with patch(
+        "teams_copilot_mcp.graph_client.msal.ConfidentialClientApplication",
+        return_value=fake_app,
+    ), patch.object(httpx.Client, "request", return_value=fake_response):
+        client.request("GET", "/me")
+        client.request("GET", "/me")
+
+    assert fake_app.acquire_token_for_client.call_count == 1
+
+
+def test_raises_graph_auth_error_when_token_acquisition_fails(monkeypatch):
+    _valid_credentials(monkeypatch)
+    client = GraphClient()
+
+    fake_app = MagicMock()
+    fake_app.acquire_token_for_client.return_value = {
+        "error": "invalid_client",
+        "error_description": "bad secret",
+    }
+
+    with patch(
+        "teams_copilot_mcp.graph_client.msal.ConfidentialClientApplication",
+        return_value=fake_app,
+    ):
+        with pytest.raises(GraphAuthError) as exc_info:
+            client.request("GET", "/me")
+
+    message = str(exc_info.value)
+    assert "invalid_client" in message
+    assert "bad secret" in message
+
+
+def test_204_response_returns_empty_dict(monkeypatch):
+    _valid_credentials(monkeypatch)
+    client = GraphClient()
+
+    fake_response = httpx.Response(204, request=httpx.Request("DELETE", "https://x"))
+    fake_app = MagicMock()
+    fake_app.acquire_token_for_client.return_value = {
+        "access_token": "t",
+        "expires_in": 3600,
+    }
+
+    with patch(
+        "teams_copilot_mcp.graph_client.msal.ConfidentialClientApplication",
+        return_value=fake_app,
+    ), patch.object(httpx.Client, "request", return_value=fake_response):
+        result = client.request("DELETE", "/me/something")
+
+    assert result == {}
+
+
+def test_non_2xx_response_raises(monkeypatch):
+    _valid_credentials(monkeypatch)
+    client = GraphClient()
+
+    fake_request = httpx.Request("GET", "https://graph.microsoft.com/v1.0/me")
+    fake_response = httpx.Response(403, json={"error": "Forbidden"}, request=fake_request)
+    fake_app = MagicMock()
+    fake_app.acquire_token_for_client.return_value = {
+        "access_token": "t",
+        "expires_in": 3600,
+    }
+
+    with patch(
+        "teams_copilot_mcp.graph_client.msal.ConfidentialClientApplication",
+        return_value=fake_app,
+    ), patch.object(httpx.Client, "request", return_value=fake_response):
+        with pytest.raises(httpx.HTTPStatusError):
+            client.request("GET", "/me")
