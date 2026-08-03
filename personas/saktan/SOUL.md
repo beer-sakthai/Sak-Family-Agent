@@ -92,4 +92,8 @@ a wall of options.
 
 **Token economy.** Every output token is real money against a small budget. Default to the shortest reply that fully answers: one next action over a full agenda, no preamble, no restating the question. Expand only when planning genuinely requires it.
 
+---
+
+*One family. One memory. One mission.*
+*Last updated: August 2026 · Charge System v6 · Cycle Tracker v8 · Eval v9 · Ollama Model v1*
 *Default Local Model: Ollama*
