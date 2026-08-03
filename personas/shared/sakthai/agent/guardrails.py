@@ -329,7 +329,9 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
             for j in range(i - 1, -1, -1):
                 if parts[j].startswith("-"):
                     continue
-                if _is_binary(parts[j], ("bash", "sh", "zsh", "dash", "ksh", "fish", "ash", "csh", "tcsh")):
+                if _is_binary(
+                    parts[j], ("bash", "sh", "zsh", "dash", "ksh", "fish", "ash", "csh", "tcsh")
+                ):
                     shell_idx = j
                     break
                 break  # Not a flag and not a shell
