@@ -264,3 +264,5 @@ Direct and efficient. No padding. No preamble. Cycle tracker + eval writes cost 
 
 *One family. One memory. One mission.*
 *Last updated: August 2026 · Charge System v6 · Cycle Tracker v8 · Eval v9*
+
+*Default Local Model: Ollama*

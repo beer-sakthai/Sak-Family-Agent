@@ -255,12 +255,42 @@ def tools() -> None:
 
 @click.group()
 def web() -> None:
+<<<<<<< HEAD:personas/sakking/sakthai/cli/system.py
+    """Web server and API commands."""
+=======
     """Web server commands."""
     pass
+>>>>>>> origin/main:personas/shared/sakthai/cli/system.py
 
 
 @web.command("setup")
 def web_setup() -> None:
+<<<<<<< HEAD:personas/sakking/sakthai/cli/system.py
+    """Initialize and show web API authentication token."""
+    import secrets
+    token = os.environ.get("SAKTHAI_WEB_TOKEN")
+    if token:
+        click.echo(f"{_ok()} Web API token (from env): {token}")
+        return
+
+    from ..memory.store import MemoryStore
+    try:
+        with MemoryStore() as store:
+            fact = store.get_fact_by_key("web_auth", "bearer_token")
+            if fact:
+                click.echo(f"{_ok()} Web API token: {fact.value}")
+                return
+            token = secrets.token_hex(16)
+            store.add_fact(
+                token,
+                kind="web_auth",
+                key="bearer_token",
+                tags=["system", "no-export"]
+            )
+            click.echo(f"{_ok()} Web API token generated and saved: {token}")
+    except Exception as e:
+        click.echo(f"{_err()} Failed to access Memory DB: {e}")
+=======
     """Initialize web API authentication and display the token."""
     from ..web.server import _get_or_create_bearer_token
 
@@ -277,10 +307,32 @@ def web_setup() -> None:
         )
     )
     click.echo()
+>>>>>>> origin/main:personas/shared/sakthai/cli/system.py
 
 
 @web.command("regen-token")
 @click.confirmation_option(
+<<<<<<< HEAD:personas/sakking/sakthai/cli/system.py
+    prompt="Are you sure? All existing clients will stop working."
+)
+def regen_token() -> None:
+    """Regenerate the web API bearer token."""
+    import secrets
+    from ..memory.store import MemoryStore
+    try:
+        with MemoryStore() as store:
+            store.delete_facts_by_key("web_auth", "bearer_token")
+            token = secrets.token_hex(16)
+            store.add_fact(
+                token,
+                kind="web_auth",
+                key="bearer_token",
+                tags=["system", "no-export"]
+            )
+            click.echo(f"{_ok()} Web API token regenerated and saved: {token}")
+    except Exception as e:
+        click.echo(f"{_err()} Failed to access Memory DB: {e}")
+=======
     prompt="Are you sure you want to regenerate the Web API bearer token? All existing clients will stop working."
 )
 def web_regen_token() -> None:
@@ -315,3 +367,4 @@ def web_regen_token() -> None:
         click.echo()
     except Exception as exc:
         raise click.ClickException(f"Failed to regenerate token: {exc}") from exc
+>>>>>>> origin/main:personas/shared/sakthai/cli/system.py
