@@ -24,7 +24,7 @@
 
 | Slot | Model ID / Identifier | Type | Role |
 |:---|:---|:---|:---|
-| **Primary Engine** | `huggingface/deepseek-ai/DeepSeek-V4-Flash` | Open-Weights Reasoner | Complex coding, Pytest repair, PR synthesis |
+| **Primary Engine** | `opencode-go/DeepSeek-V4-Flash` | OpenCode Go Reasoner | Complex coding, Pytest repair, PR synthesis |
 | **Small / Fast Model** | `Nanthasit/sakthai-context-1.5b-tools-v2` | Custom 1.5B | Ultra-fast triage, task classification & routing |
 | **Tools Model** | `Nanthasit/sakthai-context-7b-tools` | Custom 7B | JSON schema tool calling & function execution |
 | **Embedding Engine** | `Nanthasit/sakthai-embedding-multilingual` | Sentence-Transformers | Cross-lingual vector memory & RAG retrieval |
