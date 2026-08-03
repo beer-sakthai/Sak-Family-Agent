@@ -63,10 +63,9 @@ def _get_or_create_bearer_token() -> str:
 
 
 _DEFAULT_PORT = 3001
-_LOOPBACK_NAMES = frozenset({"localhost", ""})
+_LOOPBACK_NAMES = frozenset({"localhost"})
 
 
->>>>>>> origin/main:personas/shared/sakthai/web/server.py
 def _is_loopback_host(host: str) -> bool:
     """True if ``host`` is loopback-only (safe to bind without authentication)."""
     if host in _LOOPBACK_NAMES:
@@ -179,18 +178,6 @@ class _Handler(SimpleHTTPRequestHandler):
         path = parsed.path.rstrip("/") or "/"
 
         if path.startswith("/api/"):
-<<<<<<< HEAD:personas/sakjules/sakthai/web/server.py
-            expected_token = getattr(self.server, "bearer_token", None)
-            if expected_token:
-                auth = self.headers.get("Authorization", "")
-                if not auth.startswith("Bearer "):
-                    self._send_json(401, {"error": "Unauthorized", "message": "Bearer token required"})
-                    return
-                token = auth[7:]
-                if token != expected_token:
-                    self._send_json(403, {"error": "Forbidden", "message": "Invalid bearer token"})
-                    return
-=======
             auth_header = self.headers.get("Authorization", "")
             if not auth_header:
                 self._send_json(
@@ -253,14 +240,13 @@ class _Handler(SimpleHTTPRequestHandler):
 
 
 def serve(host: str = _DEFAULT_HOST, port: int = _DEFAULT_PORT) -> HTTPServer:
-    # The API endpoints have no authentication and expose personal memory
-    # (recent facts, observations). Refuse a non-loopback bind unless the
-    # operator explicitly acknowledges the exposure, so a stray 0.0.0.0 does not
-    # silently publish memory to the network.
+    # API endpoints require a Bearer token, but the loopback default is
+    # defense-in-depth: personal memory should not be reachable off-host by
+    # default. Require an explicit opt-in for any non-loopback bind.
     if not _is_loopback_host(host) and not os.environ.get("SAKTHAI_WEB_ALLOW_PUBLIC"):
         raise PermissionError(
-            f"Refusing to bind the unauthenticated API to non-loopback host {host!r}. "
-            "It serves personal memory with no auth. Set SAKTHAI_WEB_ALLOW_PUBLIC=1 to "
+            f"Refusing to bind the API to non-loopback host {host!r}. "
+            "It serves personal memory; set SAKTHAI_WEB_ALLOW_PUBLIC=1 to "
             "override once you have placed authentication in front of it."
         )
     _get_or_create_bearer_token()  # Warm cache & register secret
@@ -269,7 +255,6 @@ def serve(host: str = _DEFAULT_HOST, port: int = _DEFAULT_PORT) -> HTTPServer:
     if _STATIC_ROOT.is_dir():
         os.chdir(str(_STATIC_ROOT))
     server = HTTPServer((host, port), _Handler)
-    server.bearer_token = _get_or_create_bearer_token()
     logger.info("SakThai API listening on http://%s:%d (static=%s)", host, port, _STATIC_ROOT)
     return server
 
