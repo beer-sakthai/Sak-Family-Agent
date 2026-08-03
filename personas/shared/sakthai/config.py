@@ -136,16 +136,18 @@ def memory_db_path() -> Path:
 def persona_memory_db_path(persona: str) -> Path:
     """Path to PERSONA's own memory shard, by convention: ``~/.sakthai/<persona>/memory.db``.
 
-    When ``SAKTHAI_HOME`` is set (e.g. in tests) the path resolves under that
-    override so tests get proper isolation.  When unset, falls back to
-    ``Path.home() / \".sakthai\"``, matching the production convention used by
-    ``infra/vm-agents/sakthai-agent-run.sh`` where ``SAKTHAI_HOME`` is set
-    to ``$HOME/.sakthai/$AGENT`` per deployed persona.
+    Independent of the current process's ``SAKTHAI_HOME`` override, so callers
+    (e.g. the family/merged view) can address every persona's shard at once
+    regardless of which persona the current process happens to be running as.
+    This mirrors the convention already used in production by
+    ``infra/vm-agents/sakthai-agent-run.sh``, which sets
+    ``SAKTHAI_HOME="$HOME/.sakthai/$AGENT"`` per deployed persona — this
+    function computes the same path directly rather than requiring that env
+    var to be set.
     """
     if persona not in PERSONA_NAMES:
         raise ValueError(f"Unknown persona {persona!r}; expected one of {PERSONA_NAMES}")
-    base = Path(os.environ.get("SAKTHAI_HOME", Path.home() / ".sakthai"))
-    return base / persona / "memory.db"
+    return Path.home() / ".sakthai" / persona / "memory.db"
 
 
 def sessions_dir() -> Path:
