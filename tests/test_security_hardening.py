@@ -570,3 +570,26 @@ class TestAdditionalCoverage:
         assert log_file.exists()
         content = log_file.read_text()
         assert "test" in content.lower()
+
+    def test_config_file_integrity_honors_sakthai_home(self, monkeypatch, tmp_path: Path) -> None:
+        """Test that ConfigFileIntegrity default config paths honor SAKTHAI_HOME."""
+        custom_home = tmp_path / "custom_sakthai_home"
+        monkeypatch.setenv("SAKTHAI_HOME", str(custom_home))
+
+        monitor = ConfigFileIntegrity()
+
+        expected_mcp = custom_home / "mcp.json"
+        expected_env = custom_home / ".env"
+
+        assert expected_mcp in monitor.config_files
+        assert expected_env in monitor.config_files
+
+    def test_audit_logger_honors_sakthai_home(self, monkeypatch, tmp_path: Path) -> None:
+        """Test that AuditLogger default log path honors SAKTHAI_HOME."""
+        custom_home = tmp_path / "custom_sakthai_home"
+        monkeypatch.setenv("SAKTHAI_HOME", str(custom_home))
+
+        logger = AuditLogger()
+
+        expected_log = custom_home / "audit.log"
+        assert logger.log_file == expected_log
