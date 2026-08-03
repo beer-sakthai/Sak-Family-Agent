@@ -1,13 +1,26 @@
-# 🎒 BACKPACK.md — SakJules Equipment & Starter Inventory
+# 🎒 BACKPACK.md — SakJules Complete Installation & Equipment Inventory
 
 > **Agent**: SakJules 🔧 (Master of DevSecOps, GitHub Actions & Asynchronous Automation)  
 > **Repository**: `Sak-Family-Agent`  
-> **Profile Path**: `~/.hermes/profiles/sakjules/`  
+> **Hermes Profile**: `~/.hermes/profiles/sakjules/`  
 > **Cost Policy**: **$0.00 USD Financial Spend** (100% Local & Free Tier Execution)
 
 ---
 
-## 🤖 1. Active Model Loadout ([`opencode.json`](file:///home/beern/opencode.json))
+## 🖥️ 1. Core Platform & CLI Installations
+
+| Component | Executable Path / Command | Version / Mode | Status |
+|:---|:---|:---|:---:|
+| **Google Antigravity IDE** | AGY Canvas & IDE Extension | Antigravity 2.0 | ✅ Active |
+| **AGY CLI** | `/home/beern/.local/bin/agy` | v2.0 Stdio & MCP | ✅ Active |
+| **Google ADK CLI** | `/home/beern/.local/bin/agents-cli` | v1.2.1 (Google Agent Dev Kit) | ✅ Active |
+| **Hermes Agent CLI** | `/home/beern/.local/bin/hermes` | Multi-profile TUI (`--profile sakjules`) | ✅ Active |
+| **Supermemory Server Daemon** | `/home/beern/.supermemory/bin/supermemory-server` | v0.0.6 Daemon (`http://localhost:6767`) | ✅ Active (PID 23310) |
+| **OpenCode CLI** | `opencode` | Configured via `opencode.json` | ✅ Active |
+
+---
+
+## 🤖 2. Active Model Loadout ([`opencode.json`](file:///home/beern/opencode.json))
 
 | Slot | Model ID / Identifier | Type | Role |
 |:---|:---|:---|:---|
@@ -18,7 +31,7 @@
 
 ---
 
-## 🛠️ 2. MCP Server & Remote Tool Loadout
+## 🛠️ 3. MCP Server & Remote Tool Loadout
 
 - **📡 Remote Jules CLI & Server (`julesServer`)**:
   - `/jules-new` — Dispatch new remote coding session
@@ -37,7 +50,7 @@
 
 ---
 
-## 🔑 3. Credential & Environment Inventory (`~/.env`)
+## 🔑 4. Credential & Environment Inventory (`~/.env`)
 
 - **`JULES_API_KEY`**: Authenticated for remote Jules tasks
 - **`OPENCODE_GO_API_KEY`**: Authenticated for OpenCode Go platform
@@ -47,22 +60,14 @@
 
 ---
 
-## 🧰 4. Frameworks & CLI Executables
-
-- **Google ADK CLI**: `agents-cli` v1.2.1 (`/home/beern/.local/bin/agents-cli`)
-- **AGY CLI**: `agy` (`/home/beern/.local/bin/agy`)
-- **Hermes Agent**: `hermes` CLI (`/home/beern/.local/bin/hermes`)
-- **Python Sandbox**: Pytest v9.1.1, Python 3.12 ML stack (`~/.venv`)
-
----
-
 ## 📜 5. Permanent Configuration Files
 
 - [`personas/sakjules/SOUL.md`](file:///home/beern/Sak-Family-Agent/personas/sakjules/SOUL.md) — Persona identity & directives
 - [`personas/sakjules/PLAN.md`](file:///home/beern/Sak-Family-Agent/personas/sakjules/PLAN.md) — Mega Model Training Plan & 6-stage cycle
 - [`personas/sakjules/MEMORY.md`](file:///home/beern/Sak-Family-Agent/personas/sakjules/MEMORY.md) — Fact store & execution logs
-- [`personas/sakjules/BACKPACK.md`](file:///home/beern/Sak-Family-Agent/personas/sakjules/BACKPACK.md) — This equipment inventory
+- [`personas/sakjules/BACKPACK.md`](file:///home/beern/Sak-Family-Agent/personas/sakjules/BACKPACK.md) — Complete installation & equipment inventory
+- [`/.agents-cli-spec.md`](file:///home/beern/.agents-cli-spec.md) — Google ADK $0.00 zero-cost specification
 
 ---
 
-*SakJules Starter Inventory · House of Sak*
+*SakJules Complete Installation Inventory · House of Sak*
