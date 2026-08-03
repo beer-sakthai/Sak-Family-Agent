@@ -132,6 +132,10 @@ _SENSITIVE_BASENAMES = {
     ".mysql_history",
     ".psql_history",
     ".sqlite_history",
+    ".rediscli_history",
+    ".mongo_history",
+    ".pgpass",
+    ".my.cnf",
 }
 
 _SENSITIVE_DIRS = {
