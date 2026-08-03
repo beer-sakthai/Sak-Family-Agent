@@ -33,7 +33,10 @@
 
 ## 🛠️ 3. MCP Server & Remote Tool Loadout
 
-- **📡 Remote Jules CLI & Server (`julesServer`)**:
+- **📡 Remote Jules CLI & REST API Server (`julesServer` & REST Hook)**:
+  - Webhook Endpoint: `http://localhost:8787/api/jules/webhook` (Auto-pull on COMPLETED)
+  - REST Dispatch: `POST http://localhost:8787/api/jules/dispatch`
+  - REST Status: `GET http://localhost:8787/api/jules/status`
   - `/jules-new` — Dispatch new remote coding session
   - `/jules-list` — List remote Jules sessions
   - `/jules-pull` — Pull and apply patch from Jules session
