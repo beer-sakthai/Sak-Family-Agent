@@ -105,10 +105,11 @@ personas/sakthai/sakthai/
 
 | Provider | Models | Status | Notes |
 |----------|--------|--------|-------|
+| **Nanthasit (Custom)** | `sakthai-context-7b-tools` / `sakthai-context-1.5b-tools-v2` / `sakthai-embedding-multilingual` | ✅ Active | 100% Owned open-weights custom models |
 | **Anthropic** | Claude 3.5 Sonnet / Opus / Haiku | ✅ Active | Primary; cached prompts |
-| **Google** | Gemini 2.5 Flash / Pro | ✅ Active | Fallback; OAuth token |
+| **Google** | Gemini 2.5 Flash / 3.5 Flash | ✅ Active | Fallback; OAuth token & Vision Computer Use |
 | **OpenAI** | GPT-4 / GPT-4o / GPT-3.5 | ✅ Supported | Via `OPENAI_API_KEY` + `OPENAI_BASE_URL` |
-| **Ollama** | Local models (llama2, mistral, etc.) | ✅ Supported | Via `OLLAMA_HOST` (default: `127.0.0.1:11434`) |
+| **Ollama** | Local models (`hf.co/Nanthasit/sakthai-coder-browser-gguf` 7.1GB, `qwen2.5:0.5b`) | ✅ Active | Via `OLLAMA_HOST` (default: `127.0.0.1:11434`) |
 | **Gateway** | OpenRouter / LiteLLM / Vercel / Cloudflare | ✅ Supported | Via `SAKTHAI_GATEWAY_URL` + `SAKTHAI_GATEWAY_API_KEY` |
 | **Hugging Face** | Any model hosted via HF Inference Providers | ✅ Supported | Via `HF_TOKEN` (router: `SAKTHAI_HF_API_BASE`, default `router.huggingface.co/v1`) |
 
