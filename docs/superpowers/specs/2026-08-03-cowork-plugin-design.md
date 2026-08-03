@@ -212,6 +212,11 @@ a valid token" in exactly one place.
   claims or raise a typed auth error the calling service turns into a 401.
 - Contains no token *issuance* logic — that stays solely in `cowork-oauth`,
   so there is exactly one place capable of minting a valid token.
+- Naming note: the JWT `aud` claim uses short-form values (`"memory"`,
+  `"teams"`) while the manifest's `agentConnectors[].id` uses full-form
+  (`"cowork-memory"`, `"cowork-teams"`). These are deliberately two
+  separate identifier namespaces — JWT claims vs. app-manifest IDs — and
+  never need to match syntactically; this is not a typo.
 
 ### M365 packaging
 
