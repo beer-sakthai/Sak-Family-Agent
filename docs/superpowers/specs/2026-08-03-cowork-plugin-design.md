@@ -335,21 +335,36 @@ cowork-memory-mcp:
 
 ## Open questions
 
-1. **How does one shared `cowork-oauth` server interact with two separate
-   per-connector OAuth client registrations?** The Teams developer portal
-   flow described in Microsoft's docs registers a "Base URL" per
-   connector, but the authorization/token/refresh endpoint URLs are
-   entered as absolute URLs and can be identical across both
-   registrations. This should work (two client registrations, one shared
-   authorization server) but hasn't been verified hands-on against the
-   actual portal UI — flag during implementation, not assumed correct
-   here.
-2. **Does `atk install --scope Personal` work cleanly with no M365 admin
-   center / tenant concept**, given Beer's account is a personal
-   subscription, not an org tenant? The documented flow reads
-   enterprise-first; personal-account sideloading should work per the
-   "Test" step in Microsoft's own plugin-development doc, but this is
-   also unverified hands-on.
+1. **~~How does one shared `cowork-oauth` server interact with two separate
+   per-connector OAuth client registrations?~~ Largely resolved.** The
+   standard Agents Toolkit MCP-plugin walkthrough adds connectors one at a
+   time ("Add an Action" → "Start with an MCP Server"), and prompts for
+   OAuth client ID/secret/scopes separately *per action added* — "Agents
+   Toolkit updates the plugin manifest for you" each time
+   ([Build a plugin for a declarative agent from an MCP server](https://learn.microsoft.com/en-us/microsoft-365/copilot/extensibility/build-mcp-plugins),
+   Step 1 & Step 2). Nothing in this flow prevents entering the *same*
+   client ID/secret/authorization/token/refresh URLs both times — so the
+   design's assumption holds: one shared `cowork-oauth` server, two
+   separate auth-config records (one per connector) that happen to point
+   at identical provider details. Expect to run the OAuth-client-entry
+   step twice during setup, once per connector, not once total — a UX
+   detail for the plan, not a design blocker.
+2. **`atk install --scope Personal` on a personal (non-tenant) account —
+   still unresolved, and there's now a specific reason for concern.** The
+   same walkthrough's sideload step requires confirming that **"Custom App
+   Upload Enabled"** and **"Copilot Access Enabled"** show under the
+   Microsoft 365 account in Agents Toolkit's Accounts pane — and if they
+   don't, the doc says "check with your organization admin"
+   ([same source](https://learn.microsoft.com/en-us/microsoft-365/copilot/extensibility/build-mcp-plugins),
+   Step 3). That phrasing assumes an organization exists. A second
+   targeted search turned up no documentation stating whether these
+   toggles are default-on for a personal MSA account, or whether personal
+   accounts can see/set them at all absent an org admin. This needs
+   hands-on verification early in implementation — right after `atk auth
+   login`, before building anything else — since if personal accounts
+   can't clear this gate, the whole "dev tunnel + personal sideload"
+   hosting decision (#2 in Decisions) needs revisiting before, not after,
+   the OAuth server gets built.
 
 ---
 
