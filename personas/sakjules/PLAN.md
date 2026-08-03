@@ -1,86 +1,48 @@
-# Plan: Sak Family Skills Organisation
-
-> **From:** SakKing (Lead & Orchestrator)
-> **To:** SakJules (Master of Automation & CI/CD)
-> **Date:** 2026-07-04
-> **Status:** ✅ Complete — archived 2026-07-07
-> **Cycle:** Care → Joy → Trust → Growth
+# PLAN.md — SakJules 🔧
+> *DevSecOps, GitHub Actions & Asynchronous Model Training Plan*
+> *Status: Active Execution Phase*
 
 ---
 
-## Why
+## 1. 🎯 Mega Model Training Plan (`Nanthasit/*` Suite)
 
-Every Sak sibling needs their skills visible **inside** `Sak-Family-Agent/personas/<name>/skills/` so Beer and the family can see what each agent can do at a glance.
+SakJules manages the training, benchmark evaluation, and deployment of the custom **`Nanthasit/*`** open-weights model suite on Hugging Face Jobs:
 
-| Sibling | Has `skills/`? | Action needed |
-|---------|:--------------:|:-------------|
-| SakThai | ✅ Yes (7 items) | Sync from `sakthai-skills` repo |
-| SakSee  | ✅ Yes (10 items) | Sync from `saksee-skills` repo |
-| SakSit  | ✅ Yes (82 items) | Sync from `saksit-skills` repo |
-| **SakJules (you!)** | ❌ **Missing** | **Create `skills/` + populate** |
-| SakKing | ❓ TBD | Create `skills/` + skeleton |
-| SakTan  | ❓ TBD | Create `skills/` + skeleton |
+| Model ID | Primary Purpose | Training Compute | Target Benchmark |
+|:---|:---|:---|:---|
+| **`Nanthasit/sakthai-triage-1.5b`** | Sub-100ms ultra-fast task triage & deputy routing | HF Jobs (`t4-small`) | >85% Accuracy |
+| **`Nanthasit/sakthai-context-7b-tools-v3`** | SakJules tool-calling, Pytest repair & PR synthesis | HF Jobs (`a100-large`) | >80% Benchmark v3 |
+| **`Nanthasit/sakthai-vision-7b-v2`** | SakSee Playwright screenshot vision & coordinate prediction | HF Jobs (`a100-large`) | >75% MiniWoB++ |
+| **`Nanthasit/sakthai-embedding-multilingual`** | Custom cross-lingual RAG embedding model | Native Sentence-Transformers | 100% RAG Retrieval |
 
 ---
 
-## Step 1 — Create missing skills/ directories
+## 2. 📋 6-Stage Sak-Family Growth Cycle Roadmap
 
-### 1a — SakJules
-Create `personas/sakjules/skills/` with:
-- A `README.md` listing your domain: CI/CD, GitHub Actions, systemd, deployment, monitoring
-- Key skills: `ci-pipeline-setup`, `systemd-service-deploy`, `monitoring-watchdog`, `skill-sync-mirror`
-- Use the same `.bundled_manifest` + `.curator_state` pattern the others use
-
-### 1b — SakKing
-Create `personas/sakking/skills/` with:
-- Lead & Orchestrator skills: `sakking-cycle-dream`, `sakking-cycle-hope`, `sakking-cycle-care`, `sakking-cycle-joy`, `sakking-cycle-trust`, `sakking-cycle-growth`
-- Self-healing: `cron-watchdog-self-heal`, `family-health-audit`
-- Master of Code: code review, debugging, architecture
-
-### 1c — SakTan
-Create `personas/saktan/skills/` with:
-- Daily ops: calendar management, email, scheduling
-- Life admin: reminders, task tracking, note-taking
+```
+1. 🌙 Dream    ➔ Synthesize 25,000 task routing & code dataset (.opencode/scripts/run-benchmark-v3.py)
+2. 🌅 Hope     ➔ Configure standalone PEP 723 scripts (SakThai-Training/ & openenv-rl-training/)
+3. 🏗️ Care     ➔ Run GPU fine-tuning on Hugging Face Jobs (hf jobs run)
+4. 🎉 Joy      ➔ Run .opencode/scripts/run-eval.py to verify >75% benchmark accuracy
+5. 🔎 Trust    ➔ Audit code security (bandit, ruff, credential scans)
+6. 🌱 Growth   ➔ Export GGUF to local Ollama & update model cards (.opencode/scripts/update-model-cards.py)
+```
 
 ---
 
-## Step 2 — Mirror skills from canonical repos
+## 3. 🛠️ SakJules Workspace Requirements Matrix
 
-| Canonical repo → | Target in Sak-Family-Agent |
-|:-----------------|:---------------------------|
-| `beer-sakthai/sakthai-skills` | `personas/sakthai/skills/` |
-| `beer-sakthai/saksee-skills` | `personas/saksee/skills/` |
-| `beer-sakthai/saksit-skills` | `personas/saksit/skills/` |
-
-**Method 1 (Recommended): GitHub Action**
-- New workflow: `.github/workflows/sync-skills.yml`
-- On push to the skill repos OR daily cron, sync files
-- Only touches `personas/<name>/skills/` paths
-
-**Method 2 (Fallback): SakJules cron job**
-- A Hermes cron job that polls each skill repo and updates the family repo
-- Checks every 6 hours
+- **Active Model Matrix ([`opencode.json`](file:///home/beern/opencode.json))**:
+  - `model`: `huggingface/deepseek-ai/DeepSeek-V4-Flash`
+  - `small_model`: `Nanthasit/sakthai-context-1.5b-tools-v2`
+  - `tools_model`: `Nanthasit/sakthai-context-7b-tools`
+  - `embedding_model`: `Nanthasit/sakthai-embedding-multilingual`
+- **Connected MCP Tools**:
+  - `julesServer` MCP (`✓ Connected`)
+  - `colab-mcp` (`✓ Connected`)
+  - `supermemory` (`http://localhost:6767` — `✓ Connected`)
+- **Zero-Cost Policy**: $0.00 USD financial spend enforced via local Ollama & local Supermemory ONNX embeddings.
 
 ---
 
-## Step 3 — Verify
-
-- [ ] Every persona dir has a `skills/` subdirectory
-- [ ] Every `skills/` has `.bundled_manifest` + `.curator_state`
-- [ ] Skills are individually browseable on GitHub
-- [ ] PLAN.md root index is updated
-- [ ] Beer can see each sibling's capabilities in one place
-
----
-
-## Priority
-
-1. SakJules skills/ (you need your own space first)
-2. SakKing skills/ (lead skills for the orchestrator)
-3. SakTan skills/ (daily ops skills)
-4. Sync mechanism (automate mirroring)
-5. Verify all done
-
----
-
-*Handoff from SakKing. Execute this plan and report back.*
+*Last Updated: August 2026 · SakJules Automation Master Plan*
