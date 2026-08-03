@@ -24,7 +24,7 @@ import uuid
 from dataclasses import asdict, dataclass, is_dataclass
 from pathlib import Path
 from typing import Any, Iterator
-from urllib.parse import urlparse
+from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 
 # Optional: prefer `requests` if installed (better redirects, streaming, header handling)
 try:
@@ -964,8 +964,37 @@ def _redact_secret_kv(m: "re.Match[str]") -> str:
     return f"{name}{sep}{bearer or ''}{open_q}{_REDACTED}{close_q}"
 
 
+def _redact_sensitive_url_query_params(text: str) -> str:
+    def _rewrite_match(m: "re.Match[str]") -> str:
+        candidate = m.group(0)
+        try:
+            parsed = urlparse(candidate)
+        except Exception:
+            return candidate
+        if not parsed.scheme or not parsed.netloc or not parsed.query:
+            return candidate
+        pairs = parse_qsl(parsed.query, keep_blank_values=True)
+        if not pairs:
+            return candidate
+        changed = False
+        safe_pairs: list[tuple[str, str]] = []
+        for k, v in pairs:
+            if _is_sensitive_key(k):
+                safe_pairs.append((k, _REDACTED))
+                changed = True
+            else:
+                safe_pairs.append((k, v))
+        if not changed:
+            return candidate
+        new_query = urlencode(safe_pairs, doseq=True)
+        return urlunparse(parsed._replace(query=new_query))
+
+    return re.sub(r"https?://[^\s\"'<>]+", _rewrite_match, text)
+
+
 def _redact_sensitive_text(text: str) -> str:
-    redacted = _SECRET_KV_RE.sub(_redact_secret_kv, text)
+    redacted = _redact_sensitive_url_query_params(text)
+    redacted = _SECRET_KV_RE.sub(_redact_secret_kv, redacted)
     redacted = _COMFY_TOKEN_RE.sub(_REDACTED, redacted)
     # Authorization/bearer first (more specific — captures the bearer prefix
     # correctly), then the generic key=value scan.
