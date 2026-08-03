@@ -199,6 +199,16 @@ class TestGuardrailsBypass(unittest.TestCase):
             'ash -c "cat /etc/passwd"',
             'csh -c "cat /etc/passwd"',
             'tcsh -c "cat /etc/passwd"',
+        ]
+        for cmd in bypass_cmds:
+            args = {"command": cmd}
+            result = _block_dangerous_shell_commands(self.tool, args, self.store)
+            self.assertEqual(
+                result.action,
+                GuardrailAction.DENY,
+                f"Alternative shell bypass '{cmd}' should be blocked",
+            )
+
     def test_awk_and_sed_positional_sensitive_path_bypasses(self):
         # Test that awk and sed command arguments containing critical roots
         # embedded in scripts (like within brackets, parentheses, or quotes) are blocked.
