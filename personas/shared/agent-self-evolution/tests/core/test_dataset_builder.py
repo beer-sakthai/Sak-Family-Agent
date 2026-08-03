@@ -2,8 +2,9 @@ import json
 from unittest.mock import MagicMock, patch
 
 import pytest
+
 from evolution.core.config import EvolutionConfig
-from evolution.core.dataset_builder import EvalDataset, EvalExample, LayoutDatasetBuilder
+from evolution.core.dataset_builder import EvalDataset, EvalExample, LayoutDatasetBuilder, SyntheticDatasetBuilder
 
 
 class TestEvalExample:
@@ -108,3 +109,25 @@ def test_layout_dataset_builder(mock_cot, mock_lm):
     assert example.source == "synthetic_layout"
 
     mock_generator_instance.assert_called_once()
+
+
+def test_synthetic_dataset_builder_parse_cases():
+    # 1. Valid JSON array
+    valid_json = '[{"key": "value"}]'
+    res = SyntheticDatasetBuilder._parse_cases(valid_json)
+    assert res == [{"key": "value"}]
+
+    # 2. JSON array wrapped in prose
+    prose_json = 'Some text before\n[\n  {"key": "value2"}\n]\nSome text after'
+    res = SyntheticDatasetBuilder._parse_cases(prose_json)
+    assert res == [{"key": "value2"}]
+
+    # 3. Truncated array salvaged correctly
+    truncated_json = '[\n  {"key": "value3"},\n  {"key": "truncated"'
+    res = SyntheticDatasetBuilder._parse_cases(truncated_json)
+    assert res == [{"key": "value3"}]
+
+    # 4. Completely invalid JSON raises ValueError
+    invalid_json = 'completely invalid string without brackets'
+    with pytest.raises(ValueError, match="Could not parse test cases from LLM output"):
+        SyntheticDatasetBuilder._parse_cases(invalid_json)
