@@ -38,6 +38,8 @@
   - Chromium Version: `v1.62.1` (`~/.cache/ms-playwright/chromium-1155`)
 - **🚀 Desktop Executable**:
   - Perplexity Comet: `/mnt/c/Program Files/Perplexity/Comet/Application/comet.exe` (`COMET_EXE_PATH` in `.env`)
+- **📡 Automated Web Monitor Hook (`saksee-auto-monitor.sh`)**:
+  - Script: `.opencode/scripts/saksee-auto-monitor.sh` (Monitors Beer's 6 HF Spaces, records `monitoring-result` to `~/.sakthai/memory.db`)
 - **⚡ Composio MCP (`composio`)**:
   - `npx -y composio-core@latest mcp start` (Integrates 250+ SaaS tools: GitHub, Slack, Gmail, Jira)
 - **🎮 CUA Driver Daemon (`cua-driver`)**:
