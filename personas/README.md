@@ -20,15 +20,15 @@ workflows, **servicequotebot**, lives under `services/servicequotebot/`.
 
 ```text
 personas/
-├── sakthai/            # Main Lead — HF master, ML, code, research (301 skills)
+├── sakthai/            # Main Lead — HF master, ML, code, research (306 skills)
 │   ├── SOUL.md         # Identity, charge system, principles
 │   ├── config/         # persona config (config.yaml, gateway_voice_mode.json, …)
-│   └── skills/         # Contains the 301 skills mapped to SakThai
-├── sakking/            # Contains the 115 skills mapped to SakKing
-├── saktan/             # Contains the 104 skills mapped to SakTan
-├── saksit/             # Contains the 45 skills mapped to SakSit
-├── sakjules/           # Contains the 187 skills mapped to SakJules
-└── saksee/             # Contains the 183 skills mapped to SakSee
+│   └── skills/         # Contains the 306 skills mapped to SakThai
+├── sakking/            # Contains the 110 skills mapped to SakKing
+├── saktan/             # Contains the 13 skills mapped to SakTan
+├── saksit/             # Contains the 47 skills mapped to SakSit
+├── sakjules/           # Contains the 180 skills mapped to SakJules
+└── saksee/             # Contains the 187 skills mapped to SakSee
 ```
 
 ## Composition rule

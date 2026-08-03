@@ -209,6 +209,23 @@ class TestGuardrailsBypass(unittest.TestCase):
                 f"Alternative shell bypass '{cmd}' should be blocked",
             )
 
+        # Test that safe commands are allowed on alternative shells
+        safe_cmds = [
+            "ksh -c 'echo hello'",
+            "fish -c 'echo hello'",
+            "ash -c 'echo hello'",
+            "csh -c 'echo hello'",
+            "tcsh -c 'echo hello'",
+        ]
+        for cmd in safe_cmds:
+            args = {"command": cmd}
+            result = _block_dangerous_shell_commands(self.tool, args, self.store)
+            self.assertEqual(
+                result.action,
+                GuardrailAction.ALLOW,
+                f"Alternative shell safe command '{cmd}' should be allowed",
+            )
+
     def test_awk_and_sed_positional_sensitive_path_bypasses(self):
         # Test that awk and sed command arguments containing critical roots
         # embedded in scripts (like within brackets, parentheses, or quotes) are blocked.
@@ -225,24 +242,6 @@ class TestGuardrailsBypass(unittest.TestCase):
             self.assertEqual(
                 result.action,
                 GuardrailAction.DENY,
-                f"Alternative shell bypass '{cmd}' should be blocked",
-            )
-
-        # Test that safe commands are allowed on alternative shells
-        safe_cmds = [
-            "ksh -c 'echo hello'",
-            "fish -c 'echo hello'",
-            "ash -c 'echo hello'",
-            "csh -c 'echo hello'",
-            "tcsh -c 'echo hello'",
-        ]
-        for cmd in safe_cmds:
-            args = {"command": cmd}
-            result = _block_dangerous_shell_commands(self.tool, args, self.store)
-            self.assertEqual(
-                result.action,
-                GuardrailAction.ALLOW,
-                f"Alternative shell safe command '{cmd}' should be allowed",
                 f"Interpreter bypass '{cmd}' should be blocked",
             )
 

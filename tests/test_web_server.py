@@ -656,8 +656,8 @@ class TestHandlerEdgePaths:
 
 def test_all_persona_servers_hardened_against_loopback_bypass() -> None:
     """Ensure that all persona web servers are hardened against empty string loopback bypass."""
-    from pathlib import Path
     import py_compile
+    from pathlib import Path
 
     repo_root = Path(__file__).resolve().parents[1]
     personas_dir = repo_root / "personas"
@@ -686,9 +686,14 @@ def test_all_persona_servers_hardened_against_loopback_bypass() -> None:
         assert ">>>>>>>" not in content, f"Merge conflict marker found in {server_path}"
 
         # Ensure empty string is excluded from _LOOPBACK_NAMES
-        assert '_LOOPBACK_NAMES = frozenset({"localhost"})' in content or "_LOOPBACK_NAMES = frozenset({'localhost'})" in content, (
+        assert (
+            '_LOOPBACK_NAMES = frozenset({"localhost"})' in content
+            or "_LOOPBACK_NAMES = frozenset({'localhost'})" in content
+        ), (
             f"Vulnerability check failed: empty string is not excluded from _LOOPBACK_NAMES in {server_path}"
         )
 
         # Ensure compare_digest is used for bearer token verification (timing-attack defense)
-        assert "compare_digest" in content, f"Timing attack vulnerability: compare_digest not found in {server_path}"
+        assert "compare_digest" in content, (
+            f"Timing attack vulnerability: compare_digest not found in {server_path}"
+        )
