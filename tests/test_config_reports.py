@@ -280,6 +280,10 @@ def test_persona_memory_db_path_respects_sakthai_home_override(
 ) -> None:
     """The per-persona shard path respects SAKTHAI_HOME override."""
     monkeypatch.setenv("SAKTHAI_HOME", "/somewhere/unrelated")
+    import os
+    env_val = os.environ.get("SAKTHAI_HOME")
+    real_path = config.persona_memory_db_path("sakking")
+    raise ValueError(f"SAKTHAI_HOME={env_val!r}, persona_memory_db_path={real_path!r}")
     assert config.persona_memory_db_path("sakking") == (
         Path("/somewhere/unrelated") / "sakking" / "memory.db"
     )
