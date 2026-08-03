@@ -101,6 +101,10 @@ _SENSITIVE_READ_BASENAMES: frozenset[str] = frozenset(
         ".git-credentials",
         ".pypirc",
         ".npmrc",
+        ".rediscli_history",
+        ".mongo_history",
+        ".pgpass",
+        ".my.cnf",
     }
 )
 _SENSITIVE_READ_SUFFIXES: tuple[str, ...] = (".pem", ".key", ".pfx", ".p12")

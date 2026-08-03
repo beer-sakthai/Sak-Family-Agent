@@ -424,6 +424,11 @@
 
 **Prevention:** Implement recursive scanners (like `_contains_sensitive_path`) that inspect all iterable containers and dictionaries (both keys and values) to ensure no sensitive path lies embedded in any part of the tool payload.
 
+## 2026-08-06 - Hardening against Database and Shell History Exposure
+**Vulnerability:** Interactive shell and database history files (`.rediscli_history`, `.mongo_history`), database client password files (`.pgpass`), and database configurations (`.my.cnf`) were not blocked by guardrails. These contain highly sensitive database credentials, connection strings, or query histories which could be read or exfiltrated by an LLM agent.
+**Learning:** Hardening filesystem checks for generic credential paths must explicitly cover database and interactive client artifacts, as these files are frequently created in the user's home/current directory in developer environments and often store credentials in plain text.
+**Prevention:** Exhaustively register `.rediscli_history`, `.mongo_history`, `.pgpass`, and `.my.cnf` in `_SENSITIVE_BASENAMES` (for shell command guardrails) and `_SENSITIVE_READ_BASENAMES` (for direct file tool handlers) across all packages, verified by regression test coverage.
+
 ## 2026-08-02 - [Hardening Parameter Guardrails against Quoted and Serialized JSON Bypasses]
 
 **Vulnerability:** Filesystem-access and argument-based guardrails (like `_block_sensitive_path_args`) could be bypassed if a sensitive path was wrapped in quotes (e.g., `"/etc/shadow"`) inside malformed JSON-like strings, or if sensitive paths were nested inside serialized JSON string arguments that the tool-checking system treated as a single flat string.
