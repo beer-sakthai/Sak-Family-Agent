@@ -1,5 +1,10 @@
 # Sentinel Security Journal
 
+## 2026-08-06 - CLI Guardrail Bypasses via Unmonitored Alternative Shells
+**Vulnerability:** Shell-command guardrails failed to detect command injection or exfiltration commands wrapped inside alternative shells (such as `ksh`, `fish`, `ash`, `csh`, and `tcsh`) because these shells were not registered under monitored shell lists or interpreter lists.
+**Learning:** Hardening command execution filters against common shells like `bash`, `sh`, or `zsh` is insufficient when alternative shells exist on the underlying system. Any execution wrapper capable of launching nested command scripts must be registered as an interpreter and exfiltration binary to ensure nested segments are recursively analyzed.
+**Prevention:** Maintain exhaustive sets of all standard and alternative Unix shells in command scanners. Monitor them across exfiltration, interpreter, and nested command recursion loops to recursively parse trailing script arguments.
+
 ## 2025-07-26 - Empty Host Loopback Binding Bypass
 **Vulnerability:** Python's socket and HTTP/HTTPS servers treat an empty string `""` as `INADDR_ANY` (binding to all interfaces, equivalent to `0.0.0.0`). Classifying `""` as loopback-only allows unauthenticated servers to be exposed publicly to the network.
 **Learning:** Checking host values against `_LOOPBACK_NAMES = frozenset({"localhost", ""})` created a security loophole where passing `""` allowed the unauthenticated server to bypass the loopback restriction check and listen publicly on all interfaces.
