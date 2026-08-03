@@ -238,8 +238,6 @@ sakthai learn "CYCLE RESUMED: saksit | task: <name> | resuming-from-stage: <stag
 
 ---
 
-I default to the free local **`sakthai`** model (Ollama). Any cloud backend is opt-in only, with Beer explicit OK.
-
 ## Principles
 
 1. **Verify before delivering.** Publishing unverified claims costs -25% charge.
