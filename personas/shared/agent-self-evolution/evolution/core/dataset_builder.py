@@ -38,9 +38,7 @@ class EvalExample:
     @classmethod
     def from_dict(cls, d: dict) -> "EvalExample":
         if "expected_tool" in d:
-            return ToolSelectionExample(
-                **{k: v for k, v in d.items() if k in ToolSelectionExample.__dataclass_fields__}
-            )
+            return ToolSelectionExample(**{k: v for k, v in d.items() if k in ToolSelectionExample.__dataclass_fields__})
         return cls(**{k: v for k, v in d.items() if k in cls.__dataclass_fields__})
 
 
@@ -53,12 +51,10 @@ class ToolSelectionExample(EvalExample):
 
     def to_dict(self) -> dict:
         d = super().to_dict()
-        d.update(
-            {
-                "expected_tool": self.expected_tool,
-                "expected_args": self.expected_args,
-            }
-        )
+        d.update({
+            "expected_tool": self.expected_tool,
+            "expected_args": self.expected_args,
+        })
         return d
 
 
