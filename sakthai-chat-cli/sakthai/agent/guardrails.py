@@ -119,17 +119,10 @@ def _is_sensitive_path(path: str) -> bool:
     return False
 
 
-def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False) -> GuardrailResult:
-    """Recursively check tokens for destructive commands.
-
-    If ``context_sensitive`` is True, discovery placeholders like '{}' and '+'
-    are treated as sensitive paths (used by find -exec to target the discovered
-    files).
-    """
-    if not parts:
-        return GuardrailResult(GuardrailAction.ALLOW)
-
-    # 1. Handle nested commands in wrappers (recursion)
+def _check_nested_command_wrappers(
+    parts: list[str], context_sensitive: bool
+) -> GuardrailResult | None:
+    """Handle nested commands in wrappers (recursion)."""
     for i, part in enumerate(parts):
         # bash -c "..." or sh -c "..."
         if (
@@ -145,8 +138,13 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
                     return res
             except ValueError:
                 pass
+    return None
 
-    # 2. Prevent destructive or dangerous commands on sensitive paths.
+
+def _check_destructive_binaries(
+    parts: list[str], context_sensitive: bool
+) -> GuardrailResult | None:
+    """Prevent destructive or dangerous commands on sensitive paths."""
     destructive_binaries = (
         "rm",
         "chmod",
@@ -179,8 +177,11 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
                         GuardrailAction.DENY,
                         reason=f"Potentially destructive '{binary_name}' command on {subpart!r} blocked.",
                     )
+    return None
 
-    # 3. Specialized protection for dd (input/output file).
+
+def _check_dd_command(parts: list[str], context_sensitive: bool) -> GuardrailResult | None:
+    """Specialized protection for dd (input/output file)."""
     for i, part in enumerate(parts):
         if _is_binary(part, "dd"):
             for subpart in parts[i + 1 :]:
@@ -195,8 +196,11 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
                             GuardrailAction.DENY,
                             reason=f"{op} {binary_name!r} on {val!r} blocked.",
                         )
+    return None
 
-    # 4. Prevent shell redirections targeting sensitive paths.
+
+def _check_shell_redirections(parts: list[str], context_sensitive: bool) -> GuardrailResult | None:
+    """Prevent shell redirections targeting sensitive paths."""
     for i, part in enumerate(parts):
         # We look for redirection operators (>, >>, 1>, 2>, &>, >&, >|, <, etc.)
         # Pattern: optional digit or '&', then '&>>', '>>', '>&', '>|', '>', or '<'
@@ -216,8 +220,11 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
                     GuardrailAction.DENY,
                     reason=f"destructive redirection to {target!r} blocked.",
                 )
+    return None
 
-    # 5. Prevent 'find -delete' on sensitive paths.
+
+def _check_find_delete(parts: list[str], context_sensitive: bool) -> GuardrailResult | None:
+    """Prevent 'find -delete' on sensitive paths."""
     find_idx = -1
     for i, part in enumerate(parts):
         if _is_binary(part, "find"):
@@ -236,8 +243,11 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
                         GuardrailAction.DENY,
                         reason=f"destructive 'find -delete' on {part!r} blocked.",
                     )
+    return None
 
-    # 6. Handle wrappers that don't use -c (sudo, doas, xargs, find -exec)
+
+def _check_other_wrappers(parts: list[str], context_sensitive: bool) -> GuardrailResult | None:
+    """Handle wrappers that don't use -c (sudo, doas, xargs, find -exec)."""
     for i, part in enumerate(parts):
         # sudo command ... or doas command ... or xargs command ...
         if _is_binary(part, ("sudo", "doas", "xargs")):
@@ -276,6 +286,48 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
                         reason=f"destructive 'find {binary_name}' on sensitive path blocked.",
                     )
                 return res
+    return None
+
+
+def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False) -> GuardrailResult:
+    """Recursively check tokens for destructive commands.
+
+    If ``context_sensitive`` is True, discovery placeholders like '{}' and '+'
+    are treated as sensitive paths (used by find -exec to target the discovered
+    files).
+    """
+    if not parts:
+        return GuardrailResult(GuardrailAction.ALLOW)
+
+    # 1. Handle nested commands in wrappers (recursion)
+    res = _check_nested_command_wrappers(parts, context_sensitive)
+    if res and res.action == GuardrailAction.DENY:
+        return res
+
+    # 2. Prevent destructive or dangerous commands on sensitive paths.
+    res = _check_destructive_binaries(parts, context_sensitive)
+    if res and res.action == GuardrailAction.DENY:
+        return res
+
+    # 3. Specialized protection for dd (input/output file).
+    res = _check_dd_command(parts, context_sensitive)
+    if res and res.action == GuardrailAction.DENY:
+        return res
+
+    # 4. Prevent shell redirections targeting sensitive paths.
+    res = _check_shell_redirections(parts, context_sensitive)
+    if res and res.action == GuardrailAction.DENY:
+        return res
+
+    # 5. Prevent 'find -delete' on sensitive paths.
+    res = _check_find_delete(parts, context_sensitive)
+    if res and res.action == GuardrailAction.DENY:
+        return res
+
+    # 6. Handle wrappers that don't use -c (sudo, doas, xargs, find -exec)
+    res = _check_other_wrappers(parts, context_sensitive)
+    if res and res.action == GuardrailAction.DENY:
+        return res
 
     return GuardrailResult(GuardrailAction.ALLOW)
 
