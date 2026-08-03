@@ -652,3 +652,43 @@ class TestHandlerEdgePaths:
         ):
             standalone_mod.serve(host="0.0.0.0", port=9999)  # noqa: S104 — explicit opt-in
             mock_http.assert_called_once_with(("0.0.0.0", 9999), standalone_mod._Handler)  # noqa: S104
+
+
+def test_all_persona_servers_hardened_against_loopback_bypass() -> None:
+    """Ensure that all persona web servers are hardened against empty string loopback bypass."""
+    from pathlib import Path
+    import py_compile
+
+    repo_root = Path(__file__).resolve().parents[1]
+    personas_dir = repo_root / "personas"
+
+    # All persona names including shared
+    personas = ["sakthai", "sakjules", "sakking", "saksee", "saksit", "saktan", "shared"]
+
+    for persona in personas:
+        server_path = personas_dir / persona / "sakthai" / "web" / "server.py"
+        # If the file does not exist (e.g., saktan or sakjules is a symlink, check it too)
+        if not server_path.is_file():
+            # If it's a symlink or missing, continue as it's covered when we check the symlink target (shared)
+            continue
+
+        # Compile the file to ensure no syntax errors
+        try:
+            py_compile.compile(str(server_path), doraise=True)
+        except Exception as exc:
+            pytest.fail(f"Persona {persona} server file {server_path} failed to compile: {exc}")
+
+        content = server_path.read_text(encoding="utf-8")
+
+        # Ensure no merge conflict markers
+        assert "<<<<<<<" not in content, f"Merge conflict marker found in {server_path}"
+        assert "=======" not in content, f"Merge conflict marker found in {server_path}"
+        assert ">>>>>>>" not in content, f"Merge conflict marker found in {server_path}"
+
+        # Ensure empty string is excluded from _LOOPBACK_NAMES
+        assert '_LOOPBACK_NAMES = frozenset({"localhost"})' in content or "_LOOPBACK_NAMES = frozenset({'localhost'})" in content, (
+            f"Vulnerability check failed: empty string is not excluded from _LOOPBACK_NAMES in {server_path}"
+        )
+
+        # Ensure compare_digest is used for bearer token verification (timing-attack defense)
+        assert "compare_digest" in content, f"Timing attack vulnerability: compare_digest not found in {server_path}"
