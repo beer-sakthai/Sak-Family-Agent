@@ -31,20 +31,12 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _common import (  # noqa: E402
-    DEFAULT_LOCAL_HOST,
-    ENV_API_KEY,
-    emit_json,
-    folder_aliases_for,
-    http_get,
-    is_cloud_host,
-    iter_embedding_refs,
-    iter_model_deps,
-    iter_nodes,
-    parse_model_list,
-    resolve_api_key,
-    resolve_url,
-    unwrap_workflow,
+    DEFAULT_LOCAL_HOST, ENV_API_KEY,
+    emit_json, folder_aliases_for, http_get, is_cloud_host,
+    iter_embedding_refs, iter_model_deps, iter_nodes, parse_model_list,
+    resolve_api_key, resolve_url, unwrap_workflow,
 )
+
 
 # Known node → custom-node-package map. When a workflow needs a node we don't
 # recognize, suggesting the right `comfy node install ...` makes the difference
@@ -153,11 +145,7 @@ def fetch_object_info(url: str, headers: dict) -> tuple[set[str] | None, dict | 
 
 
 def _fetch_one_folder(
-    base: str,
-    folder: str,
-    headers: dict,
-    *,
-    is_cloud: bool,
+    base: str, folder: str, headers: dict, *, is_cloud: bool,
 ) -> tuple[set[str] | None, dict | None]:
     """Single-folder fetch, no aliasing. Returns (installed_set, error_info)."""
     url = resolve_url(base, f"/models/{folder}", is_cloud=is_cloud)
@@ -189,11 +177,7 @@ def _fetch_one_folder(
 
 
 def fetch_models_for_folder(
-    base: str,
-    folder: str,
-    headers: dict,
-    *,
-    is_cloud: bool,
+    base: str, folder: str, headers: dict, *, is_cloud: bool,
 ) -> tuple[set[str] | None, dict | None]:
     """Fetch installed models for a folder, trying aliases.
 
@@ -220,9 +204,7 @@ def fetch_models_for_folder(
     return combined, None
 
 
-def fetch_embeddings(
-    base: str, headers: dict, *, is_cloud: bool
-) -> tuple[set[str] | None, dict | None]:
+def fetch_embeddings(base: str, headers: dict, *, is_cloud: bool) -> tuple[set[str] | None, dict | None]:
     """Local ComfyUI exposes /embeddings; cloud uses /experiment/models/embeddings."""
     if is_cloud:
         return fetch_models_for_folder(base, "embeddings", headers, is_cloud=True)
@@ -282,17 +264,17 @@ def suggest_git_url(node_class: str) -> str | None:
     return NODE_TO_GIT_URL.get(node_class)
 
 
-def _check_required_nodes(
-    workflow: dict,
-    base: str,
-    headers: dict[str, str],
-    is_cloud: bool,
-) -> tuple[set[str], set[str] | None, list[dict], bool, dict | None]:
-    """Helper to check required nodes in the workflow.
+def check_deps(
+    workflow: dict, host: str, *, api_key: str | None = None,
+) -> dict:
+    headers: dict[str, str] = {}
+    if api_key:
+        headers["X-API-Key"] = api_key
 
-    Returns:
-        (required_nodes, installed_nodes, missing_nodes, node_check_skipped, obj_err)
-    """
+    is_cloud = is_cloud_host(host)
+    base = host.rstrip("/")
+
+    # ---- 1. Required nodes ----
     required_nodes: set[str] = set()
     for _, node in iter_nodes(workflow):
         required_nodes.add(node["class_type"])
@@ -325,32 +307,16 @@ def _check_required_nodes(
                     )
                 missing_nodes.append(entry)
 
-    return required_nodes, installed_nodes, missing_nodes, node_check_skipped, obj_err
-
-
-def _check_required_models(
-    workflow: dict,
-    base: str,
-    headers: dict[str, str],
-    is_cloud: bool,
-    folder_errors: dict[str, dict],
-) -> list[dict]:
-    """Helper to check required models in the workflow.
-
-    Returns:
-        missing_models list, and mutates folder_errors in place.
-    """
+    # ---- 2. Required models ----
     model_cache: dict[str, tuple[set[str] | None, dict | None]] = {}
     missing_models: list[dict] = []
+    folder_errors: dict[str, dict] = {}
 
     for dep in iter_model_deps(workflow):
         folder = dep["folder"]
         if folder not in model_cache:
             model_cache[folder] = fetch_models_for_folder(
-                base,
-                folder,
-                headers,
-                is_cloud=is_cloud,
+                base, folder, headers, is_cloud=is_cloud,
             )
         installed, err = model_cache[folder]
         if installed is None:
@@ -366,21 +332,7 @@ def _check_required_models(
             )
             missing_models.append(entry)
 
-    return missing_models
-
-
-def _check_embedding_refs(
-    workflow: dict,
-    base: str,
-    headers: dict[str, str],
-    is_cloud: bool,
-    folder_errors: dict[str, dict],
-) -> list[dict]:
-    """Helper to check required embedding refs in the workflow.
-
-    Returns:
-        missing_embeddings list, and mutates folder_errors in place.
-    """
+    # ---- 3. Embedding refs in prompts ----
     emb_installed, emb_err = fetch_embeddings(base, headers, is_cloud=is_cloud)
     missing_embeddings: list[dict] = []
     seen_emb: set[tuple[str, str]] = set()
@@ -393,49 +345,19 @@ def _check_embedding_refs(
             # folder_errors block
             continue
         if not model_present(emb_name, emb_installed):
-            missing_embeddings.append(
-                {
-                    "node_id": nid,
-                    "embedding_name": emb_name,
-                    "folder": "embeddings",
-                    "fix_hint": (
-                        f"Download {emb_name}.pt or .safetensors and place in "
-                        f"models/embeddings/, or `comfy model download --url <URL> "
-                        f"--relative-path models/embeddings`"
-                    ),
-                }
-            )
+            missing_embeddings.append({
+                "node_id": nid,
+                "embedding_name": emb_name,
+                "folder": "embeddings",
+                "fix_hint": (
+                    f"Download {emb_name}.pt or .safetensors and place in "
+                    f"models/embeddings/, or `comfy model download --url <URL> "
+                    f"--relative-path models/embeddings`"
+                ),
+            })
 
     if emb_err and emb_installed is None:
         folder_errors.setdefault("embeddings", emb_err)
-
-    return missing_embeddings
-
-
-def check_deps(
-    workflow: dict,
-    host: str,
-    *,
-    api_key: str | None = None,
-) -> dict:
-    headers: dict[str, str] = {}
-    if api_key:
-        headers["X-API-Key"] = api_key
-
-    is_cloud = is_cloud_host(host)
-    base = host.rstrip("/")
-
-    # ---- 1. Required nodes ----
-    required_nodes, installed_nodes, missing_nodes, node_check_skipped, obj_err = (
-        _check_required_nodes(workflow, base, headers, is_cloud)
-    )
-
-    # ---- 2. Required models ----
-    folder_errors: dict[str, dict] = {}
-    missing_models = _check_required_models(workflow, base, headers, is_cloud, folder_errors)
-
-    # ---- 3. Embedding refs in prompts ----
-    missing_embeddings = _check_embedding_refs(workflow, base, headers, is_cloud, folder_errors)
 
     is_ready = (
         not node_check_skipped
@@ -462,25 +384,19 @@ def check_deps(
 
 
 def main(argv: list[str] | None = None) -> int:
-    p = argparse.ArgumentParser(
-        description="Check ComfyUI workflow dependencies against a running server"
-    )
+    p = argparse.ArgumentParser(description="Check ComfyUI workflow dependencies against a running server")
     p.add_argument("workflow", help="Path to workflow API JSON file")
     p.add_argument("--host", default=DEFAULT_LOCAL_HOST, help="ComfyUI server URL")
     p.add_argument("--port", type=int, help="Server port (overrides --host port)")
     p.add_argument("--api-key", help=f"API key for cloud (or set ${ENV_API_KEY} env var)")
-    p.add_argument(
-        "--strict",
-        action="store_true",
-        help="Exit non-zero if node check is skipped (e.g. on cloud free tier)",
-    )
+    p.add_argument("--strict", action="store_true",
+                   help="Exit non-zero if node check is skipped (e.g. on cloud free tier)")
     args = p.parse_args(argv)
 
     host = args.host
     if args.port is not None:
         # Strip any port from host and append --port
         from urllib.parse import urlparse, urlunparse
-
         parsed = urlparse(host if "://" in host else f"http://{host}")
         new_netloc = f"{parsed.hostname}:{args.port}"
         host = urlunparse(parsed._replace(netloc=new_netloc))
