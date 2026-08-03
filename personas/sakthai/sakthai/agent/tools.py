@@ -116,16 +116,14 @@ def _is_sensitive_read_target(resolved: Path) -> bool:
     """Return True if ``resolved`` names a well-known secret file."""
     name = resolved.name
     lower = name.lower()
-    if name in _SENSITIVE_READ_BASENAMES or lower.startswith(".env."):
+    if lower in _SENSITIVE_READ_BASENAMES or lower.startswith(".env."):
         return True
     if lower.endswith(_SENSITIVE_READ_SUFFIXES):
         return True
-    parts = resolved.parts
+    parts = tuple(p.lower() for p in resolved.parts)
     for fragment in _SENSITIVE_READ_FRAGMENTS:
         n = len(fragment)
-        if n <= len(parts) and any(
-            tuple(parts[i : i + n]) == fragment for i in range(len(parts) - n + 1)
-        ):
+        if n <= len(parts) and any(parts[i : i + n] == fragment for i in range(len(parts) - n + 1)):
             return True
     return False
 
