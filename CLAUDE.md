@@ -421,6 +421,11 @@ reach out to a real endpoint. Use `tmp_path` fixtures for file I/O.
 
 ---
 
+## Local skills for this repo
+
+- `run-sakthai-agent-v2` — use when asked to build, run, drive, or smoke-test the SakThai CLI/agent loop/MCP server/web API in this monorepo.
+- `Sak-family-auto-cycle` — use when asked to run the six-persona (SakKing/SakThai/SakSee/SakSit/SakTan/SakJules) auto-cycle or dispatch them as a team.
+
 ## Skills format
 
 A skill is a directory containing a `SKILL.md` with a YAML frontmatter block:
