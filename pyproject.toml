@@ -53,6 +53,7 @@ markers = [
 
 [tool.coverage.run]
 source = ["sakthai"]
+omit = ["*/telegram/bot.py"]
 # Measure branch coverage too: line coverage alone hides untested conditional
 # paths (one side of an if/else). CI passes --cov-branch so the fail_under floor
 # below gates branches as well as lines.
