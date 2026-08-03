@@ -117,7 +117,18 @@ personas/sakthai/sakthai/
 
 ## 🤖 Agent Family & Applications
 
-Beyond the core SakThai Agent, the House of Sak includes specialized agents and applications designed for specific tasks:
+The **House of Sak** consists of **6 specialized agent personas** carrying **843 total specialized skills** in their monorepo overlays:
+
+| Agent Persona | Primary Specialty | Skills Count | Config/State |
+|---|---|---|---|
+| 👑 **SakThai** (`sakthai`) | Main Lead — ML, Code, Research, HF Master | 301 skills | `~/.sakthai` |
+| 🛡️ **SakKing** (`sakking`) | Strategy, Architecture & Model Governance | 115 skills | `~/.sakking` |
+| 👁️ **SakSee** (`saksee`) | Web Scraping, Playwright & Visual Computer Use | 183 skills | `~/.saksee` |
+| ⚖️ **SakSit** (`saksit`) | Quality Assurance, Security Auditing & Social Content | 45 skills | `~/.saksit` |
+| 🧠 **SakTan** (`saktan`) | Memory, Supermemory & Context Management | 104 skills | `~/.saktan` |
+| 🔧 **SakJules** (`sakjules`) | DevSecOps, GitHub Actions & Async Automation | 187 skills | `~/.sakjules` |
+
+---
 
 ### 🤵 ServiceQuoteBot
 
