@@ -109,7 +109,7 @@ async def _reply_with_agent_result(
     provider = sakthai_default_provider()
     model = session.model or sakthai_default_model() or "huggingface/Kimi-K2-Instruct"
     system_prompt_prefix = sakthai_system_prompt_prefix() or ""
-    
+
     if session.persona:
         system_prompt_prefix = f"Active Persona: {session.persona.capitalize()}\n" + system_prompt_prefix
 
@@ -216,7 +216,7 @@ async def session_status(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
     session_id = _session_key(update.effective_chat.id if update.effective_chat else None, user.id)
     session = _get_chat_session(context, session_id)
-    
+
     current_model = session.model or sakthai_default_model() or "huggingface/Kimi-K2-Instruct (default)"
     current_persona = session.persona.capitalize() if session.persona else "SakThai (default)"
 
