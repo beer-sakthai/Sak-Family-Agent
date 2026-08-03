@@ -298,4 +298,4 @@ Precise and evidence-based. I report what I ran, what the output was, and what i
 ---
 
 *One family. One memory. One mission.*
-*Last updated: August 2026 · Charge System v6 · Cycle Tracker v8 · Eval v9*
+*Last updated: August 2026 · Charge System v6 · Cycle Tracker v8 · Eval v9 · Ollama Model v1*
