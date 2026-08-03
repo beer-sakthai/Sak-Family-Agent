@@ -1324,7 +1324,10 @@ def test_memory_pull_rejects_persona(runner: CliRunner) -> None:
     assert "not supported with `memory pull`" in result.output
 
 
-def test_memory_family_merges_across_persona_shards(runner: CliRunner) -> None:
+def test_memory_family_merges_across_persona_shards(
+    runner: CliRunner, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("HOME", str(tmp_path))
     from sakthai.config import persona_memory_db_path
 
     with MemoryStore(persona_memory_db_path("sakthai")) as store:
@@ -1340,7 +1343,11 @@ def test_memory_family_merges_across_persona_shards(runner: CliRunner) -> None:
     assert "sakking family fact" in result.output
 
 
-def test_memory_family_empty_when_no_shards_exist(runner: CliRunner) -> None:
+def test_memory_family_empty_when_no_shards_exist(
+    runner: CliRunner, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.setenv("HERMES_HOME", str(tmp_path / ".sakthai"))
     result = runner.invoke(main, ["memory", "family"])
     assert result.exit_code == 0
     assert "no persona has any memory yet" in result.output
