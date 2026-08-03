@@ -294,17 +294,15 @@ class MemoryStore:
                         )
                         current = 1
 
-                migrated = []
                 for version in sorted(migrations):
                     if version > current:
                         logger.info("Migrating memory schema to v%d", version)
                         migrations[version]()
-                        migrated.append((version, _now()))
-                if migrated:
-                    self._conn.executemany(
-                        "INSERT OR IGNORE INTO schema_version (version, migrated_at) VALUES (?, ?)",
-                        migrated,
-                    )
+                        self._conn.execute(
+                            "INSERT OR IGNORE INTO schema_version (version, migrated_at) "
+                            "VALUES (?, ?)",
+                            (version, _now()),
+                        )
                 self._conn.commit()
             except Exception:
                 with contextlib.suppress(sqlite3.OperationalError):

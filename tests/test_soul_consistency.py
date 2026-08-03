@@ -49,8 +49,9 @@ def test_soul_names_all_five_siblings(slug: str) -> None:
 
 @pytest.mark.parametrize("slug", sorted(PERSONAS))
 def test_soul_follows_local_model_policy(slug: str) -> None:
-    """All agents must reference their local-model preference (model config, not SOUL.md)."""
+    """All agents default to the free local Ollama model (PR #344 policy)."""
     text = soul_text(slug)
+    assert "Ollama" in text, f"{slug}/SOUL.md does not mention Ollama"
     for stale_model in ("llama3", "`qwen`"):
         assert stale_model not in text.lower(), (
             f"{slug}/SOUL.md names {stale_model!r} — pre-PR-#344 model drift"

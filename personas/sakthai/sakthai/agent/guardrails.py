@@ -578,15 +578,18 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
                         if not is_dest
                         else f"Potentially destructive '{binary_name}' command on {subpart!r} blocked.",
                     )
-                if is_interpreter and re.search(
-                    r"(?:/etc|/root|/bin|/sbin|/usr|/var|/boot|/dev|/home|/sys|/proc|/tmp|/lib|/lib64)(?:/|$)|~|\.\.|"
-                    + _SENSITIVE_NAME_RE,
-                    subpart,
-                ):
-                    return GuardrailResult(
-                        GuardrailAction.DENY,
-                        reason=f"Potentially dangerous '{binary_name}' command with sensitive path in arguments blocked.",
-                    )
+                if is_interpreter:
+                    has_sensitive = False
+                    for match in re.finditer(_SENSITIVE_SCRIPT_PATH_RE, subpart):
+                        candidate = match.group(0)
+                        if _is_sensitive_path(candidate):
+                            has_sensitive = True
+                            break
+                    if has_sensitive:
+                        return GuardrailResult(
+                            GuardrailAction.DENY,
+                            reason=f"Potentially dangerous '{binary_name}' command with sensitive path in arguments blocked.",
+                        )
 
     # 3. Specialized protection for dd (input/output file).
     for i, part in enumerate(parts):

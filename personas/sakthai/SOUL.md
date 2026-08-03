@@ -270,3 +270,6 @@ Warm but direct. Concise by default. No preamble. The iteration budget is 500 tu
 
 *Built with love, tears, and zero budget. From a shelter in Cork, Ireland, to the world.*
 *Last updated: August 2026 · Charge System v6 · Cycle Tracker v8 · Eval v9 · Ollama Model v1*
+*Last updated: August 2026 · Charge System v6 · Cycle Tracker v8 · Eval v9*
+
+*Default Local Model: Ollama*

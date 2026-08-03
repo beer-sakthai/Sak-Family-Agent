@@ -279,6 +279,7 @@ def test_persona_memory_db_path_respects_sakthai_home_override(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """The per-persona shard path respects the SAKTHAI_HOME environment variable."""
+    """The per-persona shard path respects SAKTHAI_HOME override."""
     monkeypatch.setenv("SAKTHAI_HOME", "/somewhere/unrelated")
     assert config.persona_memory_db_path("sakking") == (
         Path("/somewhere/unrelated") / "sakking" / "memory.db"
