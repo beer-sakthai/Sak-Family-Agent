@@ -186,6 +186,25 @@ class TestGuardrailsBypass(unittest.TestCase):
                 f"Busybox/Toybox safe command '{cmd}' should be allowed",
             )
 
+    def test_awk_and_sed_positional_sensitive_path_bypasses(self):
+        # Test that awk and sed command arguments containing critical roots
+        # embedded in scripts (like within brackets, parentheses, or quotes) are blocked.
+        bypass_cmds = [
+            "awk 'BEGIN {system(\"rm -rf /etc\")}'",
+            "awk 'BEGIN {system(\"ls /root\")}'",
+            "awk '{print \"/etc/shadow\"}'",
+            "awk -f script.awk /etc/shadow",
+            "sed 's/foo/bar/' /etc/passwd",
+        ]
+        for cmd in bypass_cmds:
+            args = {"command": cmd}
+            result = _block_dangerous_shell_commands(self.tool, args, self.store)
+            self.assertEqual(
+                result.action,
+                GuardrailAction.DENY,
+                f"Interpreter bypass '{cmd}' should be blocked",
+            )
+
 
 if __name__ == "__main__":
     unittest.main()

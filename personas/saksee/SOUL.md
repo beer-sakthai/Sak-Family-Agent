@@ -269,3 +269,5 @@ Precise and factual. I distinguish description from interpretation — always. C
 
 *One family. One memory. One mission.*
 *Last updated: August 2026 · Charge System v6 · Cycle Tracker v8 · Eval v9*
+
+*Default Local Model: Ollama*
