@@ -63,10 +63,9 @@ def _get_or_create_bearer_token() -> str:
 
 
 _DEFAULT_PORT = 3001
-_LOOPBACK_NAMES = frozenset({"localhost", ""})
+_LOOPBACK_NAMES = frozenset({"localhost"})
 
 
->>>>>>> origin/main:personas/shared/sakthai/web/server.py
 def _is_loopback_host(host: str) -> bool:
     """True if ``host`` is loopback-only (safe to bind without authentication)."""
     if host in _LOOPBACK_NAMES:
@@ -179,18 +178,6 @@ class _Handler(SimpleHTTPRequestHandler):
         path = parsed.path.rstrip("/") or "/"
 
         if path.startswith("/api/"):
-<<<<<<< HEAD:personas/sakjules/sakthai/web/server.py
-            expected_token = getattr(self.server, "bearer_token", None)
-            if expected_token:
-                auth = self.headers.get("Authorization", "")
-                if not auth.startswith("Bearer "):
-                    self._send_json(401, {"error": "Unauthorized", "message": "Bearer token required"})
-                    return
-                token = auth[7:]
-                if token != expected_token:
-                    self._send_json(403, {"error": "Forbidden", "message": "Invalid bearer token"})
-                    return
-=======
             auth_header = self.headers.get("Authorization", "")
             if not auth_header:
                 self._send_json(
