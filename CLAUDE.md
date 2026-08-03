@@ -297,6 +297,12 @@ There is no `dashboard.py` here — see the dashboard note below.
 - **`web/server.py`** — HTTP API server; optionally serves a pre-built static
   bundle from `_STATIC_ROOT` (see the dashboard note above) alongside its API
   endpoints, falling back to 403/404 for static requests if it's missing.
+  Refuses non-loopback binds unless `SAKTHAI_WEB_ALLOW_PUBLIC` is set.
+  `/api/*` requests require `Authorization: Bearer <token>`
+  (`_get_or_create_bearer_token()`, stored as a `web_auth` fact in
+  `memory.db`); static paths are **not yet gated** by the same check — see
+  `docs/superpowers/specs/2026-08-03-sakthai-web-auth-design.md` for the
+  in-progress design closing that gap.
 - **`learn/capture.py`** — `learn()` one-shot fact capture used by `sakthai learn`.
 - **`telegram/`** — a standalone `python-telegram-bot` polling bot (`bot.py`,
   `config.py`, `workflow_executor.py`). `bot.py`'s `/workflow <name>` handler
@@ -319,7 +325,7 @@ There is no `dashboard.py` here — see the dashboard note below.
 
 ## Tests
 
-Tests live in `tests/` (90 files, ~21,500 lines). All tests are hermetic — no
+Tests live in `tests/` (93 files, ~22,550 lines). All tests are hermetic — no
 network, no GCP credentials. Integration tests that may hit real endpoints
 (Ollama, Anthropic) are marked `@pytest.mark.integration` and self-skip when
 credentials/endpoints are absent; CI excludes them with `-m "not integration"`.
@@ -410,6 +416,7 @@ reach out to a real endpoint. Use `tmp_path` fixtures for file I/O.
 | `SAKTHAI_READ_ALLOW` | Colon-separated extra paths the `read_file` tool may read |
 | `SAKTHAI_SHELL_ALLOW` | Any non-empty value enables the `run_command` tool |
 | `SAKTHAI_MCP_TIMEOUT` | Seconds to wait for an external MCP server reply (default: 30) |
+| `SAKTHAI_WEB_ALLOW_PUBLIC` | Opt-in to non-loopback binds for the web server (default: refused — loopback-only) |
 | `TELEGRAM_BOT_TOKEN` / `TELEGRAM_CHAT_ID` | Needed for the `send_telegram_message` tool |
 
 ---
