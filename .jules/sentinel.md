@@ -1,10 +1,5 @@
 # Sentinel Security Journal
 
-## 2026-08-03 - Case-Sensitivity Bypasses in File Read Blocker
-**Vulnerability:** The defense-in-depth file read blocker `_is_sensitive_read_target` in `tools.py` performed case-sensitive path searches and membership checks. This allowed attackers or models to read sensitive files (such as `.ENV`, `.SSH/id_rsa`, or `ID_RSA`) using alternative casing on case-insensitive filesystems or by bypassing exact string matches.
-**Learning:** Security blocklists for direct file reads must always be case-insensitive, particularly when mapping directory components or looking up basenames. Relying on the original input path's casing introduces trivial bypass vectors.
-**Prevention:** Always convert file basenames to lowercase before checking against sensitive basename lists, and transform all elements of resolved path parts to lowercase before evaluating path fragment matches.
-
 ## 2025-07-26 - Empty Host Loopback Binding Bypass
 **Vulnerability:** Python's socket and HTTP/HTTPS servers treat an empty string `""` as `INADDR_ANY` (binding to all interfaces, equivalent to `0.0.0.0`). Classifying `""` as loopback-only allows unauthenticated servers to be exposed publicly to the network.
 **Learning:** Checking host values against `_LOOPBACK_NAMES = frozenset({"localhost", ""})` created a security loophole where passing `""` allowed the unauthenticated server to bypass the loopback restriction check and listen publicly on all interfaces.

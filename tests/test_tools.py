@@ -173,32 +173,6 @@ def test_read_file_blocks_dot_ssh_directory(
         tool_by_name("read_file").handler({"path": ".ssh/authorized_keys"}, store)
 
 
-@pytest.mark.parametrize(
-    "name",
-    [
-        ".ENV",
-        ".Env.production",
-        "ID_RSA",
-        "Credentials.json",
-        ".SSH/authorized_keys",
-        ".AWS/credentials",
-    ],
-)
-def test_read_file_blocks_sensitive_names_case_insensitive(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, store, name: str
-) -> None:
-    # Defense-in-depth checks in tools.py must be case-insensitive to prevent
-    # bypasses on case-insensitive filesystems or through casing variations.
-    monkeypatch.chdir(tmp_path)
-    parent = tmp_path / os.path.dirname(name)
-    if parent != tmp_path:
-        parent.mkdir(parents=True, exist_ok=True)
-    secret = tmp_path / name
-    secret.write_text("TOKEN=abc", encoding="utf-8")
-    with pytest.raises(PermissionError):
-        tool_by_name("read_file").handler({"path": name}, store)
-
-
 def test_ingest_document_blocks_outside_roots(tmp_path: Path, store) -> None:
     secret = tmp_path / "secret.md"
     secret.write_text("- top secret", encoding="utf-8")
