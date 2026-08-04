@@ -439,6 +439,19 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
         "conda",
         "busybox",
         "toybox",
+        "psql",
+        "mysql",
+        "mariadb",
+        "mongo",
+        "mongosh",
+        "redis-cli",
+        "vim",
+        "vi",
+        "nano",
+        "emacs",
+        "ed",
+        "composer",
+        "cargo",
     )
     exfiltration_binaries = (
         "curl",
@@ -533,6 +546,19 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
         "conda",
         "busybox",
         "toybox",
+        "psql",
+        "mysql",
+        "mariadb",
+        "mongo",
+        "mongosh",
+        "redis-cli",
+        "vim",
+        "vi",
+        "nano",
+        "emacs",
+        "ed",
+        "composer",
+        "cargo",
     )
     # Common interpreters where sensitive paths can be embedded in arguments.
     interpreters = (
@@ -558,6 +584,17 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
         "tsx",
         "ts-node",
         "deno",
+        "psql",
+        "mysql",
+        "mariadb",
+        "mongo",
+        "mongosh",
+        "redis-cli",
+        "vim",
+        "vi",
+        "emacs",
+        "composer",
+        "cargo",
     )
 
     for i, part in enumerate(parts):
@@ -770,6 +807,9 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
             "conda",
             "pnpm",
             "yarn",
+            "npm",
+            "cargo",
+            "composer",
             "busybox",
             "toybox",
         )
@@ -778,9 +818,23 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
             # We skip tokens that are likely arguments to the wrapper's flags.
             start_idx = i + 1
 
-            # If the wrapper is uv, pipx, bun, deno, poetry, pipenv, conda, pnpm, or yarn, we want to look for subcommands.
+            # If the wrapper is uv, pipx, bun, deno, poetry, pipenv, conda, pnpm, yarn, npm, cargo, or composer, we want to look for subcommands.
             if _is_binary(
-                part, ("uv", "pipx", "bun", "deno", "poetry", "pipenv", "conda", "pnpm", "yarn")
+                part,
+                (
+                    "uv",
+                    "pipx",
+                    "bun",
+                    "deno",
+                    "poetry",
+                    "pipenv",
+                    "conda",
+                    "pnpm",
+                    "yarn",
+                    "npm",
+                    "cargo",
+                    "composer",
+                ),
             ):
                 run_idx = -1
                 for idx in range(i + 1, len(parts)):
@@ -897,6 +951,12 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
                     and flag in ("--cwd",)
                     or _is_binary(part, "poetry")
                     and flag in ("-C", "--directory")
+                    or _is_binary(part, "npm")
+                    and flag in ("--prefix", "--dir")
+                    or _is_binary(part, "cargo")
+                    and flag in ("--manifest-path", "--target-dir")
+                    or _is_binary(part, "composer")
+                    and flag in ("--working-dir", "-d")
                 ):
                     if flag_val is not None:
                         if (
