@@ -1,5 +1,10 @@
 # Sentinel Security Journal
 
+## 2026-08-04 - Tracking and Redacting Stripe and Twilio Credentials Symmetrically
+**Vulnerability:** Missing integration and redaction for Stripe and Twilio environment variables and consumer key format. Without explicit tracking and regex coverage, Stripe and Twilio secrets could leak in logs, database tables, and model interactions.
+**Learning:** Hardening of secret redaction mechanisms must explicitly map out domain-specific API tokens (such as Stripe consumer keys with the `ck_` prefix and Twilio API/auth variables) across all package layouts and persona-specific configurations to maintain comprehensive coverage.
+**Prevention:** Regularly audit and expand both `SECRET_PATTERN` (e.g., adding `ck_` patterns) and global configuration `secret_keys` to cover all active environment configurations, and symmetrically synchronize these updates across all physical persona directories and standalone CLIs.
+
 ## 2025-07-26 - Empty Host Loopback Binding Bypass
 **Vulnerability:** Python's socket and HTTP/HTTPS servers treat an empty string `""` as `INADDR_ANY` (binding to all interfaces, equivalent to `0.0.0.0`). Classifying `""` as loopback-only allows unauthenticated servers to be exposed publicly to the network.
 **Learning:** Checking host values against `_LOOPBACK_NAMES = frozenset({"localhost", ""})` created a security loophole where passing `""` allowed the unauthenticated server to bypass the loopback restriction check and listen publicly on all interfaces.
