@@ -158,3 +158,34 @@ def test_redact_pem_private_keys(store: MemoryStore) -> None:
     fact = store.list_facts()[0]
     assert private_key_block not in fact.value
     assert "[REDACTED PRIVATE KEY]" in fact.value
+
+
+def test_redact_stripe_and_twilio_secrets(
+    store: MemoryStore, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Test Stripe Consumer Key matching SECRET_PATTERN
+    stripe_prefix = "ck_"
+    stripe_suffix = "test_1234567890123456789012345"
+    stripe_ck = f"{stripe_prefix}{stripe_suffix}"
+
+    store.add_fact(value=f"Stripe key: {stripe_ck}")
+    fact = store.list_facts()[0]
+    assert stripe_ck not in fact.value
+    assert "[REDACTED]" in fact.value
+
+    # Test exact environment variables for Stripe and Twilio are registered and redacted
+    stripe_sec_val = "stripe_secret_val_xyz_987654321"
+    twilio_tok_val = "twilio_auth_token_val_abc_123456"
+
+    monkeypatch.setenv("STRIPE_SECRET_KEY", stripe_sec_val)
+    monkeypatch.setenv("TWILIO_AUTH_TOKEN", twilio_tok_val)
+
+    from sakthai.config import redact_secrets
+
+    # Use redact_secrets to verify exact matching
+    assert redact_secrets(stripe_sec_val) == "[REDACTED]"
+    assert redact_secrets(twilio_tok_val) == "[REDACTED]"
+    assert (
+        redact_secrets(f"Credentials {stripe_sec_val} and {twilio_tok_val}")
+        == "Credentials [REDACTED] and [REDACTED]"
+    )

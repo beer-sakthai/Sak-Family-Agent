@@ -1119,6 +1119,11 @@ def _block_output_with_secrets(
         "AWS_SECRET_ACCESS_KEY",
         "GITHUB_TOKEN",
         "GITHUB_PAT",
+        "STRIPE_API_KEY",
+        "STRIPE_SECRET_KEY",
+        "STRIPE_PUBLISHABLE_KEY",
+        "TWILIO_AUTH_TOKEN",
+        "TWILIO_API_KEY",
     ]
     secrets_to_check = set()
     try:
