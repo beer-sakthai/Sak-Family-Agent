@@ -451,3 +451,8 @@
 **Learning:** Standard security checks focusing on traditional shells (`bash`, `sh`, `python`, `node`) fail to capture modern developer runtimes and databases that have equal potential for destructive operations or raw file exfiltration.
 
 **Prevention:** Maintain exhaustive sets of monitored command-line runners, package managers, and database clients. Ensure they are systematically registered in the command scanner's exfiltration and interpreter blocks to enable recursive script and argument path validation.
+
+## 2026-08-08 - Hardening Guardrails against Database Clients, Editors, and Package Manager Bypasses
+**Vulnerability:** Shell execution guardrails could be bypassed by using standard system database clients (`psql`, `mysql`, `mariadb`, `mongo`, `mongosh`, `redis-cli`), text editors (`vim`, `vi`, `nano`, `emacs`, `ed`), and alternative package managers (`npm`, `cargo`, `composer`) to read/write/overwrite sensitive host files or run unmonitored inline command scripts.
+**Learning:** Hardening command-line validation requires expanding the list of monitored binaries beyond standard shells and common runners to encompass any pre-installed system administration, database client, or editing tools that support inline script execution or direct file interactions. Furthermore, package managers must be registered as transparent wrappers to recursively resolve nested command structures and option values (e.g. `--prefix`, `--manifest-path`, `--working-dir`).
+**Prevention:** Ensure that all database utilities, interactive text editors, and package managers are registered in exfiltration, destructive, and interpreter collections in `guardrails.py`, and implement robust option-skipping parser logic for their respective configuration flags.
