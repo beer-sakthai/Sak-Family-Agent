@@ -1,5 +1,10 @@
 # Sentinel Security Journal
 
+## 2026-08-09 - Vulnerable Cryptography Package Dependency
+**Vulnerability:** The pinned dependency `cryptography` was pinned to version `49.0.0` in `uv.lock`, which contained a known vulnerability (CVE-PYSEC-2026-3552) allowing potential cryptographic bypasses or security issues.
+**Learning:** Pinned locked dependencies can silently age and acquire published CVEs over time. Standard linting and code-checks won't flag these, which is why a weekly automated `dependency-audit` workflow in CI is essential to bridge the gap and enforce version upgrades.
+**Prevention:** Integrate and regularly run automated dependency audits (e.g., `uvx pip-audit` or `pip-audit`) against locked requirements files in CI, and upgrade pinned dependencies via package manager lock updates (`uv lock --upgrade-package <pkg>`) immediately when security advisories are released.
+
 ## 2025-07-26 - Empty Host Loopback Binding Bypass
 **Vulnerability:** Python's socket and HTTP/HTTPS servers treat an empty string `""` as `INADDR_ANY` (binding to all interfaces, equivalent to `0.0.0.0`). Classifying `""` as loopback-only allows unauthenticated servers to be exposed publicly to the network.
 **Learning:** Checking host values against `_LOOPBACK_NAMES = frozenset({"localhost", ""})` created a security loophole where passing `""` allowed the unauthenticated server to bypass the loopback restriction check and listen publicly on all interfaces.
