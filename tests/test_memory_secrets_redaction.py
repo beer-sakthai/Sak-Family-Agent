@@ -161,9 +161,10 @@ def test_redact_pem_private_keys(store: MemoryStore) -> None:
 
 
 def test_redact_stripe_and_twilio_secrets() -> None:
-    from sakthai.config import redact_secrets
     import os
     from unittest.mock import patch
+
+    from sakthai.config import redact_secrets
 
     # Stripe consumer key (ck_ prefix)
     stripe_ck = "ck_" + "123456789012345678901234567890"
@@ -171,9 +172,12 @@ def test_redact_stripe_and_twilio_secrets() -> None:
     assert redact_secrets(f"stripe key: {stripe_ck}") == "stripe key: [REDACTED]"
 
     # Tracked env secrets
-    with patch.dict(os.environ, {
-        "STRIPE_SECRET_KEY": "stripe_secret_" + "val_123",
-        "TWILIO_AUTH_TOKEN": "twilio_token_" + "val_123",
-    }):
+    with patch.dict(
+        os.environ,
+        {
+            "STRIPE_SECRET_KEY": "stripe_secret_" + "val_123",
+            "TWILIO_AUTH_TOKEN": "twilio_token_" + "val_123",
+        },
+    ):
         assert redact_secrets("stripe_secret_val_123") == "[REDACTED]"
         assert redact_secrets("twilio_token_val_123") == "[REDACTED]"
