@@ -1,5 +1,10 @@
 # Sentinel Security Journal
 
+## 2026-08-10 - SSRF and Token Exfiltration via HTTP Client Base URL Override
+**Vulnerability:** Under `httpx`, passing an absolute URL to a client configured with `base_url` overrides the base URL. If the client automatically appends authorization headers (like MS Graph Bearer tokens), calling raw/arbitrary endpoints with an untrusted absolute URL leaks the token to third-party domains.
+**Learning:** Never assume an HTTP client with a hardcoded `base_url` restricts requests strictly to that domain. Absolute URLs passed to request methods bypass the base prefix, creating Server-Side Request Forgery (SSRF) and credential exfiltration vectors.
+**Prevention:** Explicitly validate all absolute and protocol-relative URLs at the request entry boundary, ensuring they strictly use HTTPS and match the allowed target domains, while rejecting obfuscations like backslashes in absolute URLs.
+
 ## 2026-08-04 - Tracking and Redacting Stripe and Twilio Credentials Symmetrically
 **Vulnerability:** Missing integration and redaction for Stripe and Twilio environment variables and consumer key format. Without explicit tracking and regex coverage, Stripe and Twilio secrets could leak in logs, database tables, and model interactions.
 **Learning:** Hardening of secret redaction mechanisms must explicitly map out domain-specific API tokens (such as Stripe consumer keys with the `ck_` prefix and Twilio API/auth variables) across all package layouts and persona-specific configurations to maintain comprehensive coverage.
