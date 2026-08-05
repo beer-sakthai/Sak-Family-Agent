@@ -12,8 +12,15 @@ from pathlib import Path
 import yaml
 
 CONFIG_KEYS = {
-    "base_model", "output_repo", "lora_r", "lora_alpha", "seq_len",
-    "epochs", "lr", "data_path", "merge",
+    "base_model",
+    "output_repo",
+    "lora_r",
+    "lora_alpha",
+    "seq_len",
+    "epochs",
+    "lr",
+    "data_path",
+    "merge",
 }
 REQUIRED_KEYS = CONFIG_KEYS
 
@@ -50,9 +57,9 @@ def dry_run(cfg: dict) -> str:
 
 def train(cfg: dict) -> None:
     try:
-        import trl  # noqa: F401
-        import transformers  # noqa: F401
         import peft  # noqa: F401
+        import transformers  # noqa: F401
+        import trl  # noqa: F401
     except ImportError as exc:
         raise RuntimeError("trl/transformers not installed; install the training extra") from exc
     raise NotImplementedError("run-time training dispatch: see the retrain round runbook")

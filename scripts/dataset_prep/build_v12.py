@@ -5,8 +5,8 @@ from __future__ import annotations
 import argparse
 import json
 from collections import Counter
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Iterable
 
 SIMPLE_TEMPLATE = (
     'User asks "{topic}". Respond with a single tool call like '
@@ -49,7 +49,9 @@ def synthesize_simple(topic: str) -> dict:
             {"role": "user", "content": f"What is the {topic}?"},
             {"role": "assistant", "content": SIMPLE_TEMPLATE.format(topic=topic)},
         ],
-        "tools": [{"name": name, "description": f"returns the {topic}", "parameters": {"type": "object"}}],
+        "tools": [
+            {"name": name, "description": f"returns the {topic}", "parameters": {"type": "object"}}
+        ],
         "_category": "simple",
     }
 
@@ -58,8 +60,14 @@ def synthesize_parallel(subjects: list[str], tools: list[dict]) -> dict:
     names = ", ".join(t["name"] for t in tools)
     return {
         "messages": [
-            {"role": "user", "content": PARALLEL_TEMPLATE.format(subjects=", ".join(subjects), names=names)},
-            {"role": "assistant", "content": "<tool_call> parallel calls to " + names + " </tool_call>"},
+            {
+                "role": "user",
+                "content": PARALLEL_TEMPLATE.format(subjects=", ".join(subjects), names=names),
+            },
+            {
+                "role": "assistant",
+                "content": "<tool_call> parallel calls to " + names + " </tool_call>",
+            },
         ],
         "tools": tools,
         "_category": "parallel",
@@ -80,7 +88,11 @@ def synthesize_held_out(tools: list[dict]) -> dict:
 
 def validate_balance(rows: list[dict], min_counts: dict[str, int]) -> None:
     counts = category_report(rows)
-    under = [f"{cat}={counts.get(cat, 0)}<{min_counts[cat]}" for cat in min_counts if counts.get(cat, 0) < min_counts[cat]]
+    under = [
+        f"{cat}={counts.get(cat, 0)}<{min_counts[cat]}"
+        for cat in min_counts
+        if counts.get(cat, 0) < min_counts[cat]
+    ]
     if under:
         raise ValueError("category balance below minimums: " + ", ".join(under))
 
@@ -103,7 +115,11 @@ def build_v12(sources: list[Path], out: Path, report: Path, min_counts: dict[str
             )
         )
     for i in range(min_counts.get("held_out", 0) - counts.get("held_out", 0)):
-        rows.append(synthesize_held_out([{"name": f"get_x_{i}", "description": "x", "parameters": {"type": "object"}}]))
+        rows.append(
+            synthesize_held_out(
+                [{"name": f"get_x_{i}", "description": "x", "parameters": {"type": "object"}}]
+            )
+        )
     validate_balance(rows, min_counts)
     out.write_text("\n".join(json.dumps(r) for r in strip_tags(rows)) + "\n")
     report.write_text(json.dumps(category_report(rows), indent=2))
@@ -114,7 +130,9 @@ def main() -> None:
     parser.add_argument("--sources", nargs="+", type=Path, required=True)
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--report", type=Path, required=True)
-    parser.add_argument("--min-counts", type=json.loads, default='{"simple": 600, "parallel": 400, "held_out": 200}')
+    parser.add_argument(
+        "--min-counts", type=json.loads, default='{"simple": 600, "parallel": 400, "held_out": 200}'
+    )
     args = parser.parse_args()
     build_v12(args.sources, args.out, args.report, args.min_counts)
 

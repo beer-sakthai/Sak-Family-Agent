@@ -21,7 +21,9 @@ from scripts.dataset_prep.build_v12 import (  # noqa: E402
 def _row(category="source"):
     return {
         "messages": [{"role": "user", "content": "hi"}, {"role": "assistant", "content": "hello"}],
-        "tools": [{"name": "get_time", "description": "returns time", "parameters": {"type": "object"}}],
+        "tools": [
+            {"name": "get_time", "description": "returns time", "parameters": {"type": "object"}}
+        ],
         "_category": category,
     }
 
