@@ -37,9 +37,9 @@ _CMD_TIMEOUT_DEFAULT = 30.0
 _CMD_TIMEOUT_MAX = 120.0
 
 _GRAPH_API_BASE = "https://graph.microsoft.com/v1.0"
-_GRAPH_TOKEN_URL_TMPL = "https://login.microsoftonline.com/{tenant}/oauth2/v2.0/token"
+_GRAPH_TOKEN_URL_TMPL = "https://login.microsoftonline.com/{tenant}/oauth2/v2.0/token"  # nosec B105 - URL template, not a password
 _GRAPH_SCOPES = "Mail.Send Mail.Read Calendars.ReadWrite offline_access"
-_GRAPH_TOKEN_CACHE_NAME = "graph_token.json"
+_GRAPH_TOKEN_CACHE_NAME = "graph_token.json"  # nosec B105 - filename, not a password
 
 
 @dataclass(frozen=True)
