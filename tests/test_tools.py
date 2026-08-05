@@ -627,7 +627,7 @@ def _graph_urlopen_stub(token_body: bytes, api_body: bytes):
     """Return a urlopen stand-in: token-endpoint calls get token_body, others api_body."""
 
     def _stub(request, timeout=None):
-        if "login.microsoftonline.com" in request.full_url:
+        if "/oauth2/v2.0/token" in request.full_url:
             return _FakeResponse(token_body)
         return _FakeResponse(api_body)
 
@@ -721,7 +721,7 @@ def test_graph_http_error_reports_api_message(
     exc.read = lambda: json.dumps({"error": {"message": "Insufficient privileges"}}).encode()  # type: ignore[method-assign]
 
     def _stub(request, timeout=None):
-        if "login.microsoftonline.com" in request.full_url:
+        if "/oauth2/v2.0/token" in request.full_url:
             return _FakeResponse(b'{"access_token": "fake-access"}')
         raise exc
 
@@ -740,7 +740,7 @@ def test_graph_url_error_reports_network_error(
     monkeypatch.setenv("MS_GRAPH_REFRESH_TOKEN", "seed-refresh-token")
 
     def _stub(request, timeout=None):
-        if "login.microsoftonline.com" in request.full_url:
+        if "/oauth2/v2.0/token" in request.full_url:
             return _FakeResponse(b'{"access_token": "fake-access"}')
         raise urllib.error.URLError("no route to host")
 
