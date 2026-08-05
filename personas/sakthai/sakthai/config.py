@@ -15,6 +15,7 @@ from typing import Any
 # A regex for common API key prefixes (sk-, rk-, pk-, ck-, ghp-, hf-, github_pat-), Google keys (AIza),
 # Telegram bot tokens (123456789:ABC...), and AWS Access Key IDs (AKIA/ASIA).
 # Handles both underscore (sk_) and hyphen (sk-) used by Anthropic, OpenAI, and HF.
+# Updated to catch Stripe consumer keys (ck_ prefix).
 SECRET_PATTERN = r"\b(?:(?:sk|rk|pk|ck|ghp|hf|github_pat)[-_][a-zA-Z0-9\-_]{20,}|AIza[0-9A-Za-z\-_]{34,}|[0-9]{8,12}:[a-zA-Z0-9_-]{35,}|(?:AKIA|ASIA)[A-Z0-9]{16})\b"  # nosec B105
 _SECRET_RE = re.compile(SECRET_PATTERN)
 
