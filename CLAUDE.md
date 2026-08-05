@@ -205,12 +205,17 @@ not an error.
 
 ### Agent subsystem (`agent/`)
 
-- **`agent/tools.py`** — defines `BUILTIN_TOOLS` (10 tools, one schema + handler
+- **`agent/tools.py`** — defines `BUILTIN_TOOLS` (14 tools, one schema + handler
   each): `learn`, `ingest_document`, `capture_lead`, `recall`, `search`, `forget`,
-  `read_file`, `run_command`, `send_telegram_message`, `run_agent_loop`. Add a
-  tool here and it appears in both the agent loop and the MCP server
-  automatically. Note: `run_agent_loop` is filtered out of the in-loop tool set
-  (it's MCP-only) to avoid recursion.
+  `read_file`, `run_command`, `send_telegram_message`, `send_outlook_mail`,
+  `read_outlook_mail`, `list_calendar_events`, `create_calendar_event`,
+  `run_agent_loop`. Add a tool here and it appears in both the agent loop and
+  the MCP server automatically. Note: `run_agent_loop` is filtered out of the
+  in-loop tool set (it's MCP-only) to avoid recursion. The four Graph tools
+  share `_graph_access_token()` / `_graph_request()` / `_graph_safe()` helpers:
+  a refresh token (env `MS_GRAPH_REFRESH_TOKEN` or cached at
+  `~/.sakthai/graph_token.json`, seeded via `scripts/graph_device_login.py`) is
+  exchanged for a short-lived access token on every call.
 - **`agent/registry.py`** — `ToolRegistry` keys tools by name; `with_tools()`
   merges sets (later tool wins on name clash, so plugins can shadow built-ins).
 - **`agent/loop.py`** — `run_agent()` is the main orchestration loop. Injects
@@ -297,6 +302,12 @@ There is no `dashboard.py` here — see the dashboard note below.
 - **`web/server.py`** — HTTP API server; optionally serves a pre-built static
   bundle from `_STATIC_ROOT` (see the dashboard note above) alongside its API
   endpoints, falling back to 403/404 for static requests if it's missing.
+  Refuses non-loopback binds unless `SAKTHAI_WEB_ALLOW_PUBLIC` is set.
+  `/api/*` requests require `Authorization: Bearer <token>`
+  (`_get_or_create_bearer_token()`, stored as a `web_auth` fact in
+  `memory.db`); static paths are **not yet gated** by the same check — see
+  `docs/superpowers/specs/2026-08-03-sakthai-web-auth-design.md` for the
+  in-progress design closing that gap.
 - **`learn/capture.py`** — `learn()` one-shot fact capture used by `sakthai learn`.
 - **`telegram/`** — a standalone `python-telegram-bot` polling bot (`bot.py`,
   `config.py`, `workflow_executor.py`). `bot.py`'s `/workflow <name>` handler
@@ -319,7 +330,7 @@ There is no `dashboard.py` here — see the dashboard note below.
 
 ## Tests
 
-Tests live in `tests/` (90 files, ~21,500 lines). All tests are hermetic — no
+Tests live in `tests/` (93 files, ~22,550 lines). All tests are hermetic — no
 network, no GCP credentials. Integration tests that may hit real endpoints
 (Ollama, Anthropic) are marked `@pytest.mark.integration` and self-skip when
 credentials/endpoints are absent; CI excludes them with `-m "not integration"`.
@@ -410,9 +421,15 @@ reach out to a real endpoint. Use `tmp_path` fixtures for file I/O.
 | `SAKTHAI_READ_ALLOW` | Colon-separated extra paths the `read_file` tool may read |
 | `SAKTHAI_SHELL_ALLOW` | Any non-empty value enables the `run_command` tool |
 | `SAKTHAI_MCP_TIMEOUT` | Seconds to wait for an external MCP server reply (default: 30) |
+| `SAKTHAI_WEB_ALLOW_PUBLIC` | Opt-in to non-loopback binds for the web server (default: refused — loopback-only) |
 | `TELEGRAM_BOT_TOKEN` / `TELEGRAM_CHAT_ID` | Needed for the `send_telegram_message` tool |
 
 ---
+
+## Local skills for this repo
+
+- `run-sakthai-agent-v2` — use when asked to build, run, drive, or smoke-test the SakThai CLI/agent loop/MCP server/web API in this monorepo.
+- `Sak-family-auto-cycle` — use when asked to run the six-persona (SakKing/SakThai/SakSee/SakSit/SakTan/SakJules) auto-cycle or dispatch them as a team.
 
 ## Skills format
 
