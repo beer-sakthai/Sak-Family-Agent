@@ -158,6 +158,17 @@ def test_read_file_blocks_outside_roots(tmp_path: Path, store) -> None:
         ".mongo_history",
         ".pgpass",
         ".my.cnf",
+        "id_xmss",
+        "id_ecdsa_sk",
+        "id_ed25519_sk",
+        ".bash_history",
+        ".zsh_history",
+        ".gitconfig",
+        "authorized_keys",
+        "known_hosts",
+        "memory.db",
+        ".sqlite_history",
+        ".psql_history",
     ],
 )
 def test_read_file_blocks_sensitive_names_even_in_cwd(
