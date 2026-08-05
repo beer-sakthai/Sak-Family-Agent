@@ -35,3 +35,7 @@ apps/*/.next
 # Isolated workspaces for subagent-driven-development / plan execution
 .worktrees/
 .superpowers/
+
+# Local secrets — never commit real credentials
+.env
+.env.local
