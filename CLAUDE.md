@@ -205,12 +205,17 @@ not an error.
 
 ### Agent subsystem (`agent/`)
 
-- **`agent/tools.py`** — defines `BUILTIN_TOOLS` (10 tools, one schema + handler
+- **`agent/tools.py`** — defines `BUILTIN_TOOLS` (14 tools, one schema + handler
   each): `learn`, `ingest_document`, `capture_lead`, `recall`, `search`, `forget`,
-  `read_file`, `run_command`, `send_telegram_message`, `run_agent_loop`. Add a
-  tool here and it appears in both the agent loop and the MCP server
-  automatically. Note: `run_agent_loop` is filtered out of the in-loop tool set
-  (it's MCP-only) to avoid recursion.
+  `read_file`, `run_command`, `send_telegram_message`, `send_outlook_mail`,
+  `read_outlook_mail`, `list_calendar_events`, `create_calendar_event`,
+  `run_agent_loop`. Add a tool here and it appears in both the agent loop and
+  the MCP server automatically. Note: `run_agent_loop` is filtered out of the
+  in-loop tool set (it's MCP-only) to avoid recursion. The four Graph tools
+  share `_graph_access_token()` / `_graph_request()` / `_graph_safe()` helpers:
+  a refresh token (env `MS_GRAPH_REFRESH_TOKEN` or cached at
+  `~/.sakthai/graph_token.json`, seeded via `scripts/graph_device_login.py`) is
+  exchanged for a short-lived access token on every call.
 - **`agent/registry.py`** — `ToolRegistry` keys tools by name; `with_tools()`
   merges sets (later tool wins on name clash, so plugins can shadow built-ins).
 - **`agent/loop.py`** — `run_agent()` is the main orchestration loop. Injects

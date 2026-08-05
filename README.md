@@ -87,7 +87,7 @@ personas/sakthai/sakthai/
 - ✅ **6-stage cycle** — Dream → Hope → Care → Joy → Trust → Growth state machine
 - ✅ **Skill system** — 31 curated + 70+ user/extension skills, YAML frontmatter parsed
 
-### 📦 Built-in Tools (10)
+### 📦 Built-in Tools (14)
 
 | Tool | Purpose | Safety Gate |
 |------|---------|-------------|
@@ -99,6 +99,10 @@ personas/sakthai/sakthai/
 | `ingest_document` | Parse CSV/Markdown/text into facts | None (parse-only) |
 | `capture_lead` | Quick fact capture (Telegram) | User ID allowlist |
 | `send_telegram_message` | Send Telegram messages | Bot token required, 10s timeout |
+| `send_outlook_mail` | Send email via Microsoft Graph | Requires `MS_GRAPH_CLIENT_ID` + refresh token |
+| `read_outlook_mail` | List recent Outlook inbox messages | Requires `MS_GRAPH_CLIENT_ID` + refresh token |
+| `list_calendar_events` | List upcoming Outlook calendar events | Requires `MS_GRAPH_CLIENT_ID` + refresh token |
+| `create_calendar_event` | Create an Outlook calendar event | Requires `MS_GRAPH_CLIENT_ID` + refresh token |
 | `run_agent_loop` | Spawn nested agent (MCP only) | Recursion guard via `SAKTHAI_AGENT_ACTIVE` |
 
 ### 🔄 Provider Support
