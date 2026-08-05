@@ -3007,7 +3007,7 @@ dev = [
     { name = "pytest-cov", specifier = ">=7.1.0" },
 ]
 evals = [
-    { name = "lm-eval", extras = ["hf"], specifier = ">=0.4.5,<0.5" },
+    { name = "lm-eval", extras = ["hf"], specifier = ">=0.4.12,<0.5" },
     { name = "torch", specifier = ">=2.0", index = "https://download.pytorch.org/whl/cpu" },
 ]
 

@@ -16,12 +16,19 @@ from __future__ import annotations
 
 import argparse
 import sys
+import json
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _common import (  # noqa: E402
-    DEFAULT_LOCAL_HOST, ENV_API_KEY, emit_json, http_get, is_cloud_host,
-    resolve_api_key, resolve_url,
+    DEFAULT_LOCAL_HOST,
+    ENV_API_KEY,
+    emit_json,
+    http_get,
+    is_cloud_host,
+    log,
+    resolve_api_key,
+    resolve_url,
 )
 
 
@@ -33,14 +40,15 @@ def fetch_history_entry(host: str, headers: dict, prompt_id: str, *, is_cloud: b
         if r.status == 200:
             try:
                 return {"ok": True, "entry": r.json(), "source": "/api/jobs"}
-            except Exception:
-                pass
+            except (json.JSONDecodeError, ValueError) as e:
+                log(f"Failed to parse /jobs JSON: {e}")
         # Fallback to history_v2
         url = resolve_url(host, f"/history/{prompt_id}", is_cloud=True)
         r = http_get(url, headers=headers, retries=2, timeout=30)
         try:
             data = r.json()
-        except Exception:
+        except (json.JSONDecodeError, ValueError) as e:
+            log(f"Failed to parse /history_v2 JSON: {e}")
             data = None
         if r.status == 200 and data:
             return {"ok": True, "entry": data, "source": "/api/history_v2"}
@@ -52,7 +60,8 @@ def fetch_history_entry(host: str, headers: dict, prompt_id: str, *, is_cloud: b
         return {"ok": False, "http_status": r.status, "body": r.text()[:500]}
     try:
         data = r.json()
-    except Exception:
+    except (json.JSONDecodeError, ValueError) as e:
+        log(f"Failed to parse /history JSON: {e}")
         return {"ok": False, "reason": "non-JSON response"}
     if not isinstance(data, dict) or prompt_id not in data:
         return {"ok": False, "reason": "prompt_id not found in history",
@@ -65,7 +74,8 @@ def fetch_queue(host: str, headers: dict) -> dict:
     r = http_get(url, headers=headers, retries=2, timeout=15)
     try:
         data = r.json()
-    except Exception:
+    except (json.JSONDecodeError, ValueError) as e:
+        log(f"Failed to parse /queue JSON: {e}")
         data = {"raw": r.text()[:500]}
     return {"http_status": r.status, "data": data}
 
@@ -130,7 +140,10 @@ def main(argv: list[str] | None = None) -> int:
     is_cloud = is_cloud_host(args.host)
 
     if args.tail_queue:
-        emit_json(fetch_queue(args.host, headers))
+        queue = fetch_queue(args.host, headers)
+        # Emit only the server's queue payload — request auth headers (which
+        # carry the API key) are never part of the output.
+        emit_json({"http_status": queue.get("http_status"), "data": queue.get("data")})
         return 0
 
     if not args.prompt_id:
@@ -143,7 +156,8 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     if args.raw:
-        emit_json(res)
+        # --raw means "show the true, unmodified server payload" — skip redaction.
+        emit_json(res, redact=False)
         return 0
 
     diag = extract_diagnostics(res["entry"])

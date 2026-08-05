@@ -1,5 +1,9 @@
 # Sentinel Security Journal
 
+## 2026-08-04 - Tracking and Redacting Stripe and Twilio Credentials Symmetrically
+**Vulnerability:** Missing integration and redaction for Stripe and Twilio environment variables and consumer key format. Without explicit tracking and regex coverage, Stripe and Twilio secrets could leak in logs, database tables, and model interactions.
+**Learning:** Hardening of secret redaction mechanisms must explicitly map out domain-specific API tokens (such as Stripe consumer keys with the `ck_` prefix and Twilio API/auth variables) across all package layouts and persona-specific configurations to maintain comprehensive coverage.
+**Prevention:** Regularly audit and expand both `SECRET_PATTERN` (e.g., adding `ck_` patterns) and global configuration `secret_keys` to cover all active environment configurations, and symmetrically synchronize these updates across all physical persona directories and standalone CLIs.
 ## 2026-08-09 - Vulnerable Cryptography Package Dependency
 **Vulnerability:** The pinned dependency `cryptography` was pinned to version `49.0.0` in `uv.lock`, which contained a known vulnerability (CVE-PYSEC-2026-3552) allowing potential cryptographic bypasses or security issues.
 **Learning:** Pinned locked dependencies can silently age and acquire published CVEs over time. Standard linting and code-checks won't flag these, which is why a weekly automated `dependency-audit` workflow in CI is essential to bridge the gap and enforce version upgrades.
