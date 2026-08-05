@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import os
 import time
+import urllib.parse
 
 import httpx
 import msal
@@ -88,6 +89,24 @@ class GraphClient:
         it's already a full URL (Graph pagination @odata.nextLink values are
         full URLs — pass those straight through).
         """
+        # SSRF and Token Exfiltration protection:
+        # Prevent protocol-relative URLs (e.g., //attacker.com)
+        if path.startswith(("/", "\\")):
+            if path.startswith(("//", "\\\\", "/\\", "\\/")):
+                raise ValueError("Invalid path format: protocol-relative paths are blocked")
+
+        # If it looks like an absolute URL, strictly validate that it is HTTPS and targets graph.microsoft.com
+        if path.lower().startswith("http"):
+            if "\\" in path:
+                raise ValueError("Backslashes are not allowed in absolute URLs")
+            parsed = urllib.parse.urlparse(path)
+            scheme = parsed.scheme.lower()
+            if scheme != "https":
+                raise ValueError("Only HTTPS is supported for absolute URLs")
+            host = parsed.hostname
+            if not host or host.casefold() != "graph.microsoft.com":
+                raise ValueError("Absolute URLs must target graph.microsoft.com")
+
         token = self._get_token()
         headers = {"Authorization": f"Bearer {token}"}
         url = path if path.startswith("http") else path
