@@ -60,6 +60,9 @@ def parse_tool_calls(text: str) -> list[dict]:
 def score_sample(predicted: str, expected: list[dict]) -> tuple[bool, bool]:
     got = parse_tool_calls(predicted)
     got_names = {c["name"] for c in got}
+    if expected and isinstance(expected[0], str):
+        selection = got_names == set(expected)
+        return selection, selection  # no argument specs in this dataset
     expected_names = {e["name"] for e in expected}
     selection = got_names == expected_names
     if not selection:

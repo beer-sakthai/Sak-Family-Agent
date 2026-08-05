@@ -29,6 +29,12 @@ def test_score_sample_selection_requires_exact_names():
     assert score_sample('{"name": "b", "arguments": {}}', expected) == (False, False)
 
 
+def test_score_sample_accepts_string_tool_names():
+    expected = ["get_weather"]
+    assert score_sample('{"name": "get_weather", "arguments": {}}', expected) == (True, True)
+    assert score_sample('{"name": "get_other", "arguments": {}}', expected) == (False, False)
+
+
 def test_score_sample_arguments_must_match():
     expected = [{"name": "a", "arguments": {"city": "BKK"}}]
     assert score_sample('{"name": "a", "arguments": {"city": "BKK"}}', expected) == (True, True)
