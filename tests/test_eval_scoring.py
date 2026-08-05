@@ -47,6 +47,13 @@ def test_aggregate_counts_and_weights():
     assert agg["overall"]["strict"] == round((1 + 1) / 3 * 100, 2)
 
 
+def test_aggregate_counts_irrelevance_category():
+    rows = [{"category": "irrelevance", "selection": True, "arguments": True}]
+    agg = aggregate(rows)
+    assert agg["categories"]["irrelevance"]["count"] == 1
+    assert agg["unknown_count"] == 0
+
+
 def test_render_yaml_matches_eval_results_schema():
     agg = aggregate([{"category": "simple", "selection": True, "arguments": True}])
     text = render_yaml(

@@ -17,6 +17,7 @@ KNOWN_CATEGORIES = {
     "irrelevance_tools",
     "irrelevance_no_tools",
     "multi_turn",
+    "irrelevance",
 }
 
 
