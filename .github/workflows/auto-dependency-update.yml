@@ -20,7 +20,7 @@ jobs:
     timeout-minutes: 20
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@v4
         with:
           # All writes go through the explicit GH_PAT_FOR_ACTIONS token passed
           # to create-pull-request below; don't also persist a credential
