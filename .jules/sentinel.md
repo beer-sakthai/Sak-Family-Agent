@@ -1,5 +1,10 @@
 # Sentinel Security Journal
 
+## 2026-08-11 - [Harden Guardrails Against Makefile-Based Command Execution Bypass]
+**Vulnerability:** Shell execution guardrails could be bypassed by executing commands through `make` recipes. Since writing to a Makefile in the current directory is permitted, an LLM agent or attacker could craft a custom Makefile containing destructive or exfiltrative shell commands (e.g. `rm -rf /etc` or `cat /etc/shadow`) and run `make` directly, bypassing standard command token blocklists.
+**Learning:** Build tools (like `make`) are dual-use binaries capable of parsing arbitrary script-like configuration files and running wrapped shell commands. Standard command scanning must not only block direct execution but also intercept, parse, and validate the nested commands of files loaded by such utilities.
+**Prevention:** Register `make` in destructive, exfiltration, and interpreter blocklists. Recursively parse any loaded Makefile (handling custom directory flags like `-C` and filename flags like `-f`), scanning all file content for sensitive path references, and recursively validating each tab-prefixed recipe command line with core token-based guardrails.
+
 ## 2026-08-10 - SSRF and Token Exfiltration via HTTP Client Base URL Override
 **Vulnerability:** Under `httpx`, passing an absolute URL to a client configured with `base_url` overrides the base URL. If the client automatically appends authorization headers (like MS Graph Bearer tokens), calling raw/arbitrary endpoints with an untrusted absolute URL leaks the token to third-party domains.
 **Learning:** Never assume an HTTP client with a hardcoded `base_url` restricts requests strictly to that domain. Absolute URLs passed to request methods bypass the base prefix, creating Server-Side Request Forgery (SSRF) and credential exfiltration vectors.
