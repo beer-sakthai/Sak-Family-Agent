@@ -169,7 +169,50 @@ class WorkflowExecutor:
             if not url:
                 raise ValueError(f"Step '{step_id}' action '{action}' missing 'url' parameter.")
 
-            req = urllib.request.Request(str(url), headers=params.get("headers", {}))
+            # SSRF and Option Smuggling Protection
+            url_str = str(url).strip()
+            if url_str.startswith("-"):
+                raise ValueError("Security validation failed: Option smuggling is blocked.")
+
+            import ipaddress
+            import socket
+            import urllib.parse
+
+            try:
+                parsed = urllib.parse.urlparse(url_str)
+                scheme = parsed.scheme.lower()
+                if scheme not in ("http", "https"):
+                    raise ValueError(f"URL scheme '{scheme}' is not allowed (only http/https).")
+
+                host = parsed.hostname
+                if not host:
+                    raise ValueError("URL has no hostname.")
+
+                port = parsed.port
+                if not port:
+                    port = 443 if scheme == "https" else 80
+
+                # Resolve hostname and check all returned IPs
+                addrinfos = socket.getaddrinfo(host, port, proto=socket.IPPROTO_TCP)
+                for _family, _type, _proto, _canon, sockaddr in addrinfos:
+                    ip_str = sockaddr[0]
+                    try:
+                        ip = ipaddress.ip_address(ip_str)
+                    except ValueError:
+                        continue
+
+                    # Block non-global or multicast IPs
+                    if not ip.is_global or ip.is_multicast:
+                        raise ValueError(
+                            f"Refusing to request non-public address {ip_str} "
+                            f"(resolved from {host!r}); private/loopback/link-local/unspecified/multicast/reserved addresses are blocked."
+                        )
+            except ValueError as exc:
+                raise ValueError(f"Security validation failed: {exc}") from exc
+            except Exception as exc:
+                raise RuntimeError(f"Failed to resolve or validate URL: {exc}") from exc
+
+            req = urllib.request.Request(url_str, headers=params.get("headers", {}))
             
             loop = asyncio.get_event_loop()
             def _fetch():

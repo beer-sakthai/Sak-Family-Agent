@@ -3,10 +3,11 @@
 import asyncio
 import tempfile
 import unittest
+import unittest.mock
 from pathlib import Path
 
 from agent_workflow.executor import WorkflowExecutor
-from agent_workflow.models import WorkflowDefinition, StepDefinition, RunStatus, StepStatus
+from agent_workflow.models import RunStatus, StepDefinition, StepStatus, WorkflowDefinition
 
 
 class TestWorkflowExecutor(unittest.TestCase):
@@ -83,6 +84,94 @@ class TestWorkflowExecutor(unittest.TestCase):
         self.assertEqual(history.step_results["fail_step"].status, StepStatus.FAILED)
         self.assertEqual(history.step_results["fail_step"].attempts, 2)
         self.assertEqual(history.step_results["blocked_step"].status, StepStatus.SKIPPED)
+
+    @unittest.mock.patch("socket.getaddrinfo")
+    def test_fetch_action_blocks_option_smuggling(self, mock_getaddrinfo):
+        """Test option smuggling URLs are blocked."""
+        wf = WorkflowDefinition(
+            name="test_ssrf_option",
+            steps=[
+                StepDefinition(id="fetch_step", action="fetch", params={"url": "-v"}),
+            ],
+        )
+        history = asyncio.run(self.executor.execute_workflow(wf))
+        self.assertEqual(history.status, RunStatus.FAILED)
+        self.assertIn("Option smuggling is blocked", history.step_results["fetch_step"].error)
+
+    @unittest.mock.patch("socket.getaddrinfo")
+    def test_fetch_action_blocks_unsupported_scheme(self, mock_getaddrinfo):
+        """Test unsupported schemes are blocked."""
+        wf = WorkflowDefinition(
+            name="test_ssrf_scheme",
+            steps=[
+                StepDefinition(id="fetch_step", action="fetch", params={"url": "gopher://example.com"}),
+            ],
+        )
+        history = asyncio.run(self.executor.execute_workflow(wf))
+        self.assertEqual(history.status, RunStatus.FAILED)
+        self.assertIn("only http/https", history.step_results["fetch_step"].error)
+
+    @unittest.mock.patch("socket.getaddrinfo")
+    def test_fetch_action_blocks_private_ip(self, mock_getaddrinfo):
+        """Test private and loopback IPs are blocked."""
+        import socket
+        for blocked_ip in ["127.0.0.1", "10.0.0.1", "192.168.1.1", "169.254.169.254"]:
+            mock_getaddrinfo.return_value = [
+                (socket.AF_INET, socket.SOCK_STREAM, 6, "", (blocked_ip, 80))
+            ]
+            wf = WorkflowDefinition(
+                name="test_ssrf_private",
+                steps=[
+                    StepDefinition(id="fetch_step", action="fetch", params={"url": "http://example.com/foo"}),
+                ],
+            )
+            history = asyncio.run(self.executor.execute_workflow(wf))
+            self.assertEqual(history.status, RunStatus.FAILED, f"Failed for IP: {blocked_ip}")
+            self.assertIn("private/loopback/link-local", history.step_results["fetch_step"].error)
+
+    @unittest.mock.patch("socket.getaddrinfo")
+    def test_fetch_action_blocks_multicast_ip(self, mock_getaddrinfo):
+        """Test multicast and non-global IPs are blocked."""
+        import socket
+        mock_getaddrinfo.return_value = [
+            (socket.AF_INET, socket.SOCK_STREAM, 6, "", ("224.0.0.1", 80))
+        ]
+        wf = WorkflowDefinition(
+            name="test_ssrf_multicast",
+            steps=[
+                StepDefinition(id="fetch_step", action="fetch", params={"url": "http://example.com/foo"}),
+            ],
+        )
+        history = asyncio.run(self.executor.execute_workflow(wf))
+        self.assertEqual(history.status, RunStatus.FAILED)
+        self.assertIn("private/loopback/link-local", history.step_results["fetch_step"].error)
+
+    @unittest.mock.patch("socket.getaddrinfo")
+    @unittest.mock.patch("urllib.request.urlopen")
+    def test_fetch_action_success_with_public_ip(self, mock_urlopen, mock_getaddrinfo):
+        """Test successful fetch with a safe, public IP."""
+        import socket
+        mock_getaddrinfo.return_value = [
+            (socket.AF_INET, socket.SOCK_STREAM, 6, "", ("93.184.216.34", 80))
+        ]
+
+        # Mock response object
+        mock_response = unittest.mock.MagicMock()
+        mock_response.read.return_value = b'{"status": "ok", "message": "hello"}'
+        mock_response.status = 200
+        mock_urlopen.return_value.__enter__.return_value = mock_response
+
+        wf = WorkflowDefinition(
+            name="test_ssrf_success",
+            steps=[
+                StepDefinition(id="fetch_step", action="fetch", params={"url": "http://example.com/api"}),
+            ],
+        )
+        history = asyncio.run(self.executor.execute_workflow(wf))
+        self.assertEqual(history.status, RunStatus.COMPLETED)
+        output = history.step_results["fetch_step"].output
+        self.assertEqual(output.get("status"), 200)
+        self.assertEqual(output.get("json"), {"status": "ok", "message": "hello"})
 
 
 if __name__ == "__main__":

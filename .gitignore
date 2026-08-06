@@ -39,3 +39,6 @@ apps/*/.next
 # Local secrets — never commit real credentials
 .env
 .env.local
+
+# Workflow runs history artifacts
+.workflow_runs/
