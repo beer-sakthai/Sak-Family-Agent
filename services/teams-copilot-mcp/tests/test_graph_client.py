@@ -196,3 +196,36 @@ def test_request_blocks_obfuscated_backslash_absolute_url(monkeypatch):
 
     with pytest.raises(ValueError, match="Backslashes are not allowed"):
         client.request("GET", "https:\\\\graph.microsoft.com\\leak")
+
+
+def test_request_blocks_relative_path_traversal(monkeypatch):
+    _valid_credentials(monkeypatch)
+    client = GraphClient()
+
+    with pytest.raises(ValueError, match="Path traversal segments are blocked"):
+        client.request("GET", "../me")
+
+    with pytest.raises(ValueError, match="Path traversal segments are blocked"):
+        client.request("GET", "me/../joinedTeams")
+
+
+def test_request_blocks_url_encoded_path_traversal(monkeypatch):
+    _valid_credentials(monkeypatch)
+    client = GraphClient()
+
+    with pytest.raises(ValueError, match="Path traversal segments are blocked"):
+        client.request("GET", "..%2fme")
+
+    with pytest.raises(ValueError, match="Path traversal segments are blocked"):
+        client.request("GET", "..%2Fme")
+
+    with pytest.raises(ValueError, match="Path traversal segments are blocked"):
+        client.request("GET", "me%2f..%2fjoinedTeams")
+
+
+def test_request_blocks_absolute_url_path_traversal(monkeypatch):
+    _valid_credentials(monkeypatch)
+    client = GraphClient()
+
+    with pytest.raises(ValueError, match="Path traversal segments are blocked"):
+        client.request("GET", "https://graph.microsoft.com/v1.0/me/../../etc")

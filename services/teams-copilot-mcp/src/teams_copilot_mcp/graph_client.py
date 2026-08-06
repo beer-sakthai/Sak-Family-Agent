@@ -107,6 +107,13 @@ class GraphClient:
             if not host or host.casefold() != "graph.microsoft.com":
                 raise ValueError("Absolute URLs must target graph.microsoft.com")
 
+        # Relative path traversal protection:
+        for p in (path, urllib.parse.unquote(path)):
+            normalized = p.replace("\\", "/")
+            segments = normalized.split("/")
+            if ".." in segments:
+                raise ValueError("Path traversal segments are blocked")
+
         token = self._get_token()
         headers = {"Authorization": f"Bearer {token}"}
         url = path if path.startswith("http") else path
