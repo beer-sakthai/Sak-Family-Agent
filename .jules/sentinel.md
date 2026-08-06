@@ -1,5 +1,10 @@
 # Sentinel Security Journal
 
+## 2026-08-11 - Relative Path Traversal Protection for MS Graph API Client
+**Vulnerability:** Path-based arguments supplied to a MS Graph client (configured with an HTTPS base URL) were processed without verifying that path traversal sequences (`..`) were absent. Since raw/arbitrary endpoints are called via `.request()`, an attacker could supply raw or URL-encoded `..` segments to traverse back and target unauthorized or sensitive API endpoints.
+**Learning:** Even when restricting base URLs to a trusted host, relative path traversal sequences can escape the prefix or navigate back to other paths on the host. Sanitizing both raw and percent-decoded versions of the path parameters is essential to neutralize traversal.
+**Prevention:** Explicitly reject path strings that, when normalized (converting backslashes) or URL-decoded, contain a double-dot (`..`) directory segment, raising a `ValueError`.
+
 ## 2026-08-10 - SSRF and Token Exfiltration via HTTP Client Base URL Override
 **Vulnerability:** Under `httpx`, passing an absolute URL to a client configured with `base_url` overrides the base URL. If the client automatically appends authorization headers (like MS Graph Bearer tokens), calling raw/arbitrary endpoints with an untrusted absolute URL leaks the token to third-party domains.
 **Learning:** Never assume an HTTP client with a hardcoded `base_url` restricts requests strictly to that domain. Absolute URLs passed to request methods bypass the base prefix, creating Server-Side Request Forgery (SSRF) and credential exfiltration vectors.
