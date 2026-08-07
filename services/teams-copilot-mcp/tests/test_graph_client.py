@@ -196,3 +196,42 @@ def test_request_blocks_obfuscated_backslash_absolute_url(monkeypatch):
 
     with pytest.raises(ValueError, match="Backslashes are not allowed"):
         client.request("GET", "https:\\\\graph.microsoft.com\\leak")
+
+
+def test_request_blocks_path_traversal_relative_url(monkeypatch):
+    _valid_credentials(monkeypatch)
+    client = GraphClient()
+
+    with pytest.raises(ValueError, match="Path traversal sequences are not allowed"):
+        client.request("GET", "../beta/me")
+
+    with pytest.raises(ValueError, match="Path traversal sequences are not allowed"):
+        client.request("GET", "/../beta/me")
+
+    with pytest.raises(ValueError, match="Path traversal sequences are not allowed"):
+        client.request("GET", "me/../users")
+
+
+def test_request_blocks_path_traversal_backslash(monkeypatch):
+    _valid_credentials(monkeypatch)
+    client = GraphClient()
+
+    with pytest.raises(ValueError, match="Path traversal sequences are not allowed"):
+        client.request("GET", "..\\beta\\me")
+
+    with pytest.raises(ValueError, match="Path traversal sequences are not allowed"):
+        client.request("GET", "me\\..\\users")
+
+
+def test_request_blocks_path_traversal_url_encoded(monkeypatch):
+    _valid_credentials(monkeypatch)
+    client = GraphClient()
+
+    with pytest.raises(ValueError, match="Path traversal sequences are not allowed"):
+        client.request("GET", "%2e%2e/beta/me")
+
+    with pytest.raises(ValueError, match="Path traversal sequences are not allowed"):
+        client.request("GET", "%2e%2e%2fbeta/me")
+
+    with pytest.raises(ValueError, match="Path traversal sequences are not allowed"):
+        client.request("GET", "me%2f%2e%2e%2fusers")
