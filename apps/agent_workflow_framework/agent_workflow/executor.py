@@ -169,7 +169,49 @@ class WorkflowExecutor:
             if not url:
                 raise ValueError(f"Step '{step_id}' action '{action}' missing 'url' parameter.")
 
-            req = urllib.request.Request(str(url), headers=params.get("headers", {}))
+            # SSRF Protection & URL Validation
+            url_str = str(url).strip()
+            if url_str.startswith("-"):
+                raise ValueError(f"Option smuggling detected in URL: {url_str}")
+
+            try:
+                parsed = urllib.parse.urlparse(url_str)
+            except Exception as e:
+                raise ValueError(f"Invalid URL: {url_str}. Error: {e}")
+
+            scheme = (parsed.scheme or "").lower()
+            if scheme not in ("http", "https"):
+                raise ValueError(f"Forbidden URL scheme '{scheme}'. Only HTTP and HTTPS are allowed.")
+
+            host = parsed.hostname
+            if not host:
+                raise ValueError(f"URL missing hostname: {url_str}")
+
+            port = parsed.port
+            if not port:
+                port = 443 if scheme == "https" else 80
+
+            try:
+                import socket
+                import ipaddress
+                addrinfos = socket.getaddrinfo(host, port, proto=socket.IPPROTO_TCP)
+                for _family, _type, _proto, _canon, sockaddr in addrinfos:
+                    ip_str = sockaddr[0]
+                    try:
+                        ip = ipaddress.ip_address(ip_str)
+                    except ValueError:
+                        continue
+
+                    if not ip.is_global or ip.is_multicast:
+                        raise ValueError(
+                            f"SSRF Protection Blocked: Host '{host}' resolved to non-public/private IP: {ip_str}"
+                        )
+            except ValueError:
+                raise
+            except Exception as e:
+                raise RuntimeError(f"DNS Resolution failed for host '{host}': {e}")
+
+            req = urllib.request.Request(url_str, headers=params.get("headers", {}))
             
             loop = asyncio.get_event_loop()
             def _fetch():
