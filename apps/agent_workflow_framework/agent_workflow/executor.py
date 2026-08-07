@@ -42,6 +42,73 @@ class WorkflowExecutor:
         self.store = RunHistoryStore(storage_dir)
         self.max_workers = max_workers
 
+    def _validate_filepath(self, filepath: Any, action: str, step_id: str) -> Path:
+        """Validate and resolve filepath to prevent path traversal and access to sensitive/system files."""
+        if not filepath:
+            raise ValueError(f"Step '{step_id}' action '{action}' missing path parameter.")
+
+        path_str = str(filepath).strip()
+
+        # 1. Prevent option smuggling (starts with hyphen)
+        if path_str.startswith("-"):
+            raise ValueError(f"Option smuggling detected in path: {path_str}")
+
+        # 2. Prevent path traversal or home-relative paths
+        if ".." in path_str or path_str.startswith("~"):
+            raise PermissionError(f"Path traversal or home-relative paths are blocked: {path_str}")
+
+        # Resolve path
+        target = Path(path_str).resolve()
+
+        # 3. Block access to critical system roots
+        critical_roots = {
+            "/etc", "/bin", "/sbin", "/usr", "/var", "/root", "/boot", "/dev",
+            "/home", "/sys", "/proc", "/lib", "/lib64"
+        }
+
+        # Check if resolved path starts with any critical root or is a critical root itself
+        target_str = str(target)
+        for root in critical_roots:
+            if target_str == root or target_str.startswith(root + "/"):
+                raise PermissionError(f"Access to critical system directory is blocked: {target_str}")
+
+        # Specialized check for /tmp (allow under /tmp, but block direct /tmp root access or system subdirectories if any)
+        if target_str == "/tmp":
+            raise PermissionError("Access to critical system directory /tmp is blocked")
+
+        # 4. Block case-insensitive sensitive basenames and directories
+        sensitive_basenames = {
+            ".env", "memory.db", ".bash_history", ".zsh_history", ".python_history", ".history",
+            ".netrc", ".npmrc", ".pypirc", "id_rsa", "id_dsa", "id_ecdsa", "id_ed25519",
+            "known_hosts", "authorized_keys", "credentials", "shadow", "passwd", "sudoers",
+            "gshadow", "group", ".bashrc", ".zshrc", ".profile", ".bash_profile", ".gitconfig",
+            ".zprofile", ".yarnrc", ".yarnrc.yml", ".git-credentials", ".node_repl_history",
+            ".mysql_history", ".psql_history", ".sqlite_history", ".rediscli_history",
+            ".mongo_history", ".pgpass", ".my.cnf"
+        }
+
+        sensitive_dirs = {
+            ".ssh", ".aws", ".git", ".jules", ".docker", ".kube", ".gnupg", ".config", ".npm",
+            ".gcloud", ".azure"
+        }
+
+        # Check all parts of the resolved path case-insensitively
+        parts = [p.lower() for p in target.parts]
+        for part in parts:
+            if part in sensitive_dirs:
+                raise PermissionError(f"Access to sensitive directory {part!r} is blocked: {target_str}")
+            if part in sensitive_basenames:
+                raise PermissionError(f"Access to sensitive file {part!r} is blocked: {target_str}")
+            # Also handle key backup suffix patterns (like id_rsa.bak, memory.db-wal etc)
+            if any(part.startswith(p) for p in (".env.", ".env-", ".env_", "memory.db-")):
+                raise PermissionError(f"Access to sensitive file {part!r} is blocked: {target_str}")
+            # Also private key stems
+            private_key_stems = {"id_rsa", "id_dsa", "id_ecdsa", "id_ed25519", "id_ecdsa_sk", "id_ed25519_sk", "id_xmss"}
+            if any(part == stem or part.startswith(stem + ".") for stem in private_key_stems):
+                raise PermissionError(f"Access to sensitive file {part!r} is blocked: {target_str}")
+
+        return target
+
     async def _execute_action(self, action: str, params: Dict[str, Any], step_id: str) -> Dict[str, Any]:
         """Dispatch step action to built-in action handlers."""
         act = (action or "").lower().strip()
@@ -229,10 +296,8 @@ class WorkflowExecutor:
         elif act in ("file_write", "write_file"):
             filepath = params.get("path") or params.get("filepath")
             content = params.get("content", "")
-            if not filepath:
-                raise ValueError(f"Step '{step_id}' action '{action}' missing 'path' parameter.")
+            target = self._validate_filepath(filepath, action, step_id)
 
-            target = Path(filepath)
             target.parent.mkdir(parents=True, exist_ok=True)
             if isinstance(content, (dict, list)):
                 content_str = json.dumps(content, indent=2)
@@ -243,10 +308,8 @@ class WorkflowExecutor:
 
         elif act in ("file_read", "read_file"):
             filepath = params.get("path") or params.get("filepath")
-            if not filepath:
-                raise ValueError(f"Step '{step_id}' action '{action}' missing 'path' parameter.")
+            target = self._validate_filepath(filepath, action, step_id)
 
-            target = Path(filepath)
             if not target.exists():
                 raise FileNotFoundError(f"File not found: '{filepath}'")
             content = target.read_text(encoding="utf-8")

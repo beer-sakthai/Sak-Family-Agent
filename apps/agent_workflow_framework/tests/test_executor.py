@@ -84,6 +84,53 @@ class TestWorkflowExecutor(unittest.TestCase):
         self.assertEqual(history.step_results["fail_step"].attempts, 2)
         self.assertEqual(history.step_results["blocked_step"].status, StepStatus.SKIPPED)
 
+    def test_file_path_validation_protection(self):
+        """Verify that the executor rejects dangerous, private, system, and sensitive file paths to prevent traversal and leakage."""
+        dangerous_paths = [
+            "../../etc/passwd",
+            "/etc",
+            "/etc/shadow",
+            "~/.ssh/id_rsa",
+            ".env",
+            "memory.db",
+            "test_dir/.git/config",
+            "/bin/sh",
+            "/usr/bin/python",
+            "id_rsa.bak",
+            "memory.db-wal",
+            ".git",
+            ".SSH",
+            "/tmp",
+            "-v",
+        ]
+        for path in dangerous_paths:
+            with self.subTest(path=path):
+                # Test write protection
+                wf_write = WorkflowDefinition(
+                    name="filepath_test_write",
+                    steps=[
+                        StepDefinition(id="write_step", action="file_write", params={"path": path, "content": "malicious content"}),
+                    ],
+                )
+                history_write = asyncio.run(self.executor.execute_workflow(wf_write))
+                self.assertEqual(history_write.status, RunStatus.FAILED)
+                step_res_write = history_write.step_results["write_step"]
+                self.assertEqual(step_res_write.status, StepStatus.FAILED)
+                self.assertIsNotNone(step_res_write.error)
+
+                # Test read protection
+                wf_read = WorkflowDefinition(
+                    name="filepath_test_read",
+                    steps=[
+                        StepDefinition(id="read_step", action="file_read", params={"path": path}),
+                    ],
+                )
+                history_read = asyncio.run(self.executor.execute_workflow(wf_read))
+                self.assertEqual(history_read.status, RunStatus.FAILED)
+                step_res_read = history_read.step_results["read_step"]
+                self.assertEqual(step_res_read.status, StepStatus.FAILED)
+                self.assertIsNotNone(step_res_read.error)
+
     def test_ssrf_protection(self):
         """Verify that the executor rejects dangerous, private, loopback, and malformed URLs to prevent SSRF and option smuggling."""
         dangerous_urls = [
