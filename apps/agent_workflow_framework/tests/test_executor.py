@@ -6,7 +6,7 @@ import unittest
 from pathlib import Path
 
 from agent_workflow.executor import WorkflowExecutor
-from agent_workflow.models import WorkflowDefinition, StepDefinition, RunStatus, StepStatus
+from agent_workflow.models import RunStatus, StepDefinition, StepStatus, WorkflowDefinition
 
 
 class TestWorkflowExecutor(unittest.TestCase):
@@ -83,6 +83,58 @@ class TestWorkflowExecutor(unittest.TestCase):
         self.assertEqual(history.step_results["fail_step"].status, StepStatus.FAILED)
         self.assertEqual(history.step_results["fail_step"].attempts, 2)
         self.assertEqual(history.step_results["blocked_step"].status, StepStatus.SKIPPED)
+
+    def test_file_path_validation_protection(self):
+        """Verify that directory traversal, sensitive directories, and sensitive files are blocked by the path validator."""
+        dangerous_paths = [
+            "../../etc/passwd",
+            "index.html/../../etc/shadow",
+            "~/.ssh/id_rsa",
+            "/etc/passwd",
+            "/usr/bin/python3",
+            "/var/log/syslog",
+            "src/.git/config",
+            "config/.ssh/authorized_keys",
+            "subfolder/.env",
+            "memory.db",
+            "subfolder/id_rsa.bak",
+            "subfolder/.ENV.production",
+        ]
+        for path in dangerous_paths:
+            with self.subTest(path=path):
+                # Test write block
+                wf_write = WorkflowDefinition(
+                    name="write_protect_test",
+                    steps=[
+                        StepDefinition(id="write_step", action="file_write", params={"path": path, "content": "test"}),
+                    ],
+                )
+                history_write = asyncio.run(self.executor.execute_workflow(wf_write))
+                self.assertEqual(history_write.status, RunStatus.FAILED)
+                step_res_write = history_write.step_results["write_step"]
+                self.assertEqual(step_res_write.status, StepStatus.FAILED)
+                self.assertIsNotNone(step_res_write.error)
+                self.assertTrue(
+                    any(x in step_res_write.error for x in ["PermissionError", "blocked", "traversal"]),
+                    f"Unexpected write error for path '{path}': {step_res_write.error}"
+                )
+
+                # Test read block
+                wf_read = WorkflowDefinition(
+                    name="read_protect_test",
+                    steps=[
+                        StepDefinition(id="read_step", action="file_read", params={"path": path}),
+                    ],
+                )
+                history_read = asyncio.run(self.executor.execute_workflow(wf_read))
+                self.assertEqual(history_read.status, RunStatus.FAILED)
+                step_res_read = history_read.step_results["read_step"]
+                self.assertEqual(step_res_read.status, StepStatus.FAILED)
+                self.assertIsNotNone(step_res_read.error)
+                self.assertTrue(
+                    any(x in step_res_read.error for x in ["PermissionError", "blocked", "traversal"]),
+                    f"Unexpected read error for path '{path}': {step_res_read.error}"
+                )
 
     def test_ssrf_protection(self):
         """Verify that the executor rejects dangerous, private, loopback, and malformed URLs to prevent SSRF and option smuggling."""

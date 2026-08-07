@@ -5,28 +5,27 @@ state interpolation, step retries, downstream failure short-circuiting, and acti
 """
 
 import asyncio
-import copy
 import json
 import os
 import sys
-import time
 import urllib.request
 import uuid
+from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, Any, List, Optional, Callable, Set
+from typing import Any
 
-from agent_workflow.dag import validate_workflow_dag, build_topological_batches
+from agent_workflow.dag import build_topological_batches, validate_workflow_dag
 from agent_workflow.models import (
-    WorkflowDefinition,
+    RunHistory,
+    RunStatus,
     StepDefinition,
     StepResult,
     StepStatus,
-    RunHistory,
-    RunStatus,
+    WorkflowDefinition,
 )
 from agent_workflow.persistence import RunHistoryStore
-from agent_workflow.state import StateContext, StateInterpolationError
+from agent_workflow.state import StateContext
 
 
 class ExecutionError(Exception):
@@ -34,15 +33,76 @@ class ExecutionError(Exception):
     pass
 
 
+def _validate_filepath(filepath: Any) -> None:
+    """Validate a filepath to prevent directory traversal and access to sensitive/system directories."""
+    if not filepath:
+        raise ValueError("File path cannot be empty")
+
+    path_str = str(filepath).strip()
+
+    # Check for traversal or home directory expansion
+    if ".." in path_str or path_str.startswith("~"):
+        raise PermissionError(f"Path traversal or home expansion detected: {path_str}")
+
+    # Resolve absolute path
+    try:
+        resolved_path = Path(path_str).resolve()
+    except Exception as e:
+        raise ValueError(f"Invalid path representation: {path_str}. Error: {e}") from e
+
+    # Check parts of the resolved path
+    parts = resolved_path.parts
+    # Normalize parts to lowercase for case-insensitive checks
+    parts_lower = [p.casefold() for p in parts]
+
+    # Critical system roots (starting from root '/')
+    critical_roots = {
+        "etc", "bin", "sbin", "usr", "var", "root", "boot", "dev", "home", "sys", "proc", "lib", "lib64"
+    }
+    # Sensitive directories
+    sensitive_dirs = {
+        ".ssh", ".aws", ".git", ".jules", ".docker", ".kube", ".gnupg", ".config", ".npm", ".gcloud", ".azure"
+    }
+    # Sensitive file basenames
+    sensitive_basenames = {
+        ".env", "memory.db", ".bash_history", ".zsh_history", ".python_history", ".history",
+        "id_rsa", "id_dsa", "id_ecdsa", "id_ed25519", "known_hosts", "authorized_keys", "credentials"
+    }
+    sensitive_key_stems = {
+        "id_rsa", "id_dsa", "id_ecdsa", "id_ed25519", "id_ecdsa_sk", "id_ed25519_sk", "id_xmss"
+    }
+
+    # If resolved path is absolute, check its second element (the system root dir, e.g. /etc -> 'etc')
+    if resolved_path.is_absolute() and len(parts) > 1:
+        first_dir = parts[1].casefold()
+        if first_dir in critical_roots:
+            raise PermissionError(f"Access to system critical directory '{parts[1]}' is blocked")
+
+    # Check for any sensitive directories in the path
+    for d in parts_lower:
+        if d in sensitive_dirs:
+            raise PermissionError(f"Access to sensitive directory '{d}' is blocked")
+
+    # Check basename case-insensitively
+    basename = resolved_path.name.casefold()
+    is_sensitive_file = (
+        basename in sensitive_basenames or
+        any(basename.startswith(p) for p in (".env.", ".env-", ".env_", "memory.db-")) or
+        any(basename == stem or basename.startswith(stem + ".") for stem in sensitive_key_stems)
+    )
+    if is_sensitive_file:
+        raise PermissionError(f"Access to sensitive file '{resolved_path.name}' is blocked")
+
+
 class WorkflowExecutor:
     """Asynchronous workflow execution engine."""
 
-    def __init__(self, storage_dir: Optional[Path] = None, max_workers: int = 4):
+    def __init__(self, storage_dir: Path | None = None, max_workers: int = 4):
         """Initialize WorkflowExecutor with optional custom history store directory."""
         self.store = RunHistoryStore(storage_dir)
         self.max_workers = max_workers
 
-    async def _execute_action(self, action: str, params: Dict[str, Any], step_id: str) -> Dict[str, Any]:
+    async def _execute_action(self, action: str, params: dict[str, Any], step_id: str) -> dict[str, Any]:
         """Dispatch step action to built-in action handlers."""
         act = (action or "").lower().strip()
 
@@ -53,7 +113,7 @@ class WorkflowExecutor:
             cmd = params.get("cmd") or params.get("command") or params.get("script") or ""
             if not cmd:
                 raise ValueError(f"Step '{step_id}' action '{action}' missing 'cmd' or 'command' parameter.")
-            
+
             proc = await asyncio.create_subprocess_shell(
                 str(cmd),
                 stdout=asyncio.subprocess.PIPE,
@@ -141,7 +201,7 @@ class WorkflowExecutor:
             # Safe execution context
             eval_globals = {"__builtins__": __builtins__, "json": json, "os": os, "sys": sys}
             eval_locals = dict(params)
-            
+
             try:
                 # Try evaluating as expression first
                 res = eval(code, eval_globals, eval_locals)
@@ -192,8 +252,8 @@ class WorkflowExecutor:
                 port = 443 if scheme == "https" else 80
 
             try:
-                import socket
                 import ipaddress
+                import socket
                 addrinfos = socket.getaddrinfo(host, port, proto=socket.IPPROTO_TCP)
                 for _family, _type, _proto, _canon, sockaddr in addrinfos:
                     ip_str = sockaddr[0]
@@ -212,7 +272,7 @@ class WorkflowExecutor:
                 raise RuntimeError(f"DNS Resolution failed for host '{host}': {e}")
 
             req = urllib.request.Request(url_str, headers=params.get("headers", {}))
-            
+
             loop = asyncio.get_event_loop()
             def _fetch():
                 with urllib.request.urlopen(req, timeout=params.get("timeout", 10)) as resp:
@@ -232,6 +292,7 @@ class WorkflowExecutor:
             if not filepath:
                 raise ValueError(f"Step '{step_id}' action '{action}' missing 'path' parameter.")
 
+            _validate_filepath(filepath)
             target = Path(filepath)
             target.parent.mkdir(parents=True, exist_ok=True)
             if isinstance(content, (dict, list)):
@@ -246,6 +307,7 @@ class WorkflowExecutor:
             if not filepath:
                 raise ValueError(f"Step '{step_id}' action '{action}' missing 'path' parameter.")
 
+            _validate_filepath(filepath)
             target = Path(filepath)
             if not target.exists():
                 raise FileNotFoundError(f"File not found: '{filepath}'")
@@ -263,8 +325,8 @@ class WorkflowExecutor:
     async def execute_workflow(
         self,
         workflow: WorkflowDefinition,
-        run_id: Optional[str] = None,
-        status_callback: Optional[Callable[[str, StepResult], None]] = None,
+        run_id: str | None = None,
+        status_callback: Callable[[str, StepResult], None] | None = None,
     ) -> RunHistory:
         """Execute a WorkflowDefinition asynchronously."""
         # 1. Pre-flight DAG validation
@@ -286,8 +348,8 @@ class WorkflowExecutor:
         self.store.save_run_history(history)
 
         state_ctx = StateContext()
-        failed_step_ids: Set[str] = set()
-        skipped_step_ids: Set[str] = set()
+        failed_step_ids: set[str] = set()
+        skipped_step_ids: set[str] = set()
 
         # Build topological execution batches
         batches = build_topological_batches(workflow)
@@ -295,7 +357,7 @@ class WorkflowExecutor:
 
         for batch in batches:
             # Filter out skipped steps whose upstream dependencies failed
-            runnable_steps: List[StepDefinition] = []
+            runnable_steps: list[StepDefinition] = []
             for step in batch:
                 # Check if any dependency failed or was skipped
                 has_failed_dep = any(dep in failed_step_ids or dep in skipped_step_ids for dep in step.depends_on)
@@ -305,7 +367,7 @@ class WorkflowExecutor:
                         step_id=step.id,
                         status=StepStatus.SKIPPED,
                         output={},
-                        error=f"Skipped due to upstream step failure.",
+                        error="Skipped due to upstream step failure.",
                         attempts=0,
                         start_time=datetime.now().isoformat(),
                         end_time=datetime.now().isoformat(),
@@ -323,14 +385,14 @@ class WorkflowExecutor:
             async def _run_single_step(step: StepDefinition) -> StepResult:
                 step_start = datetime.now().isoformat()
                 max_attempts = max(1, (step.retry or 0) + 1)
-                last_error: Optional[str] = None
+                last_error: str | None = None
 
                 for attempt in range(1, max_attempts + 1):
                     try:
                         # Interpolate step parameters using current state context
                         interpolated_params = state_ctx.interpolate(step.params)
                         out = await self._execute_action(step.action, interpolated_params, step.id)
-                        
+
                         step_res = StepResult(
                             step_id=step.id,
                             status=StepStatus.COMPLETED,
@@ -359,7 +421,7 @@ class WorkflowExecutor:
                 )
 
             # Execute batch tasks concurrently
-            batch_results: List[StepResult] = await asyncio.gather(
+            batch_results: list[StepResult] = await asyncio.gather(
                 *[_run_single_step(step) for step in runnable_steps]
             )
 
