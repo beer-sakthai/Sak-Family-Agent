@@ -308,7 +308,12 @@ def _is_sensitive_path(path: str, allow_local: bool = False) -> bool:
     return False
 
 
-def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False) -> GuardrailResult:
+def _check_destructive_tokens(
+    parts: list[str],
+    context_sensitive: bool = False,
+    checked_makefiles: set[str] | None = None,
+    current_make_dir: str = ".",
+) -> GuardrailResult:
     """Recursively check tokens for destructive commands.
 
     If ``context_sensitive`` is True, discovery placeholders like '{}' and '+'
@@ -322,7 +327,7 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
     for i, part in enumerate(parts):
         # 1d. make command scanning Makefile recipes
         if _is_binary(part, "make"):
-            make_dir = "."
+            make_dir = current_make_dir
             makefile_path = None
 
             idx = i + 1
@@ -360,12 +365,20 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
                     makefile_path = os.path.join(make_dir, makefile_path)
 
             if makefile_path:
+                if checked_makefiles is None:
+                    checked_makefiles = set()
+
+                abs_makefile_path = os.path.abspath(makefile_path)
+                if abs_makefile_path in checked_makefiles:
+                    continue
+
                 if _is_sensitive_path(makefile_path):
                     return GuardrailResult(
                         GuardrailAction.DENY,
                         reason=f"Potentially dangerous 'make' command on sensitive file {makefile_path!r} blocked.",
                     )
                 if os.path.isfile(makefile_path):
+                    new_checked = checked_makefiles | {abs_makefile_path}
                     try:
                         with open(makefile_path, encoding="utf-8", errors="ignore") as f:
                             content = f.read()
@@ -386,7 +399,12 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
                                 if recipe:
                                     try:
                                         recipe_parts = shlex.split(recipe)
-                                        res = _check_destructive_tokens(recipe_parts)
+                                        res = _check_destructive_tokens(
+                                            recipe_parts,
+                                            context_sensitive=context_sensitive,
+                                            checked_makefiles=new_checked,
+                                            current_make_dir=make_dir,
+                                        )
                                         if res.action == GuardrailAction.DENY:
                                             return GuardrailResult(
                                                 GuardrailAction.DENY,
@@ -397,7 +415,7 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
                                             GuardrailAction.DENY,
                                             reason="Malformed shell command in makefile recipe.",
                                         )
-                    except Exception:
+                    except Exception:  # nosec B110 — safe swallow of makefile parsing/reading errors
                         pass
 
         # 1a. bash -c "..." or sh -c "..." (including combined flags like -xc)
@@ -423,7 +441,12 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
             if shell_idx != -1:
                 try:
                     nested = shlex.split(parts[i + 1])
-                    res = _check_destructive_tokens(nested, context_sensitive=context_sensitive)
+                    res = _check_destructive_tokens(
+                        nested,
+                        context_sensitive=context_sensitive,
+                        checked_makefiles=checked_makefiles,
+                        current_make_dir=current_make_dir,
+                    )
                     if res.action == GuardrailAction.DENY:
                         return res
                 except ValueError:
@@ -436,7 +459,12 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
             if len(rest) == 1 and " " in rest[0]:
                 with contextlib.suppress(ValueError):
                     rest = shlex.split(rest[0])
-            res = _check_destructive_tokens(rest, context_sensitive=context_sensitive)
+            res = _check_destructive_tokens(
+                rest,
+                context_sensitive=context_sensitive,
+                checked_makefiles=checked_makefiles,
+                current_make_dir=current_make_dir,
+            )
             if res.action == GuardrailAction.DENY:
                 return res
 
@@ -1094,7 +1122,12 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
                     )
                 start_idx += 1
 
-            res = _check_destructive_tokens(parts[start_idx:], context_sensitive=context_sensitive)
+            res = _check_destructive_tokens(
+                parts[start_idx:],
+                context_sensitive=context_sensitive,
+                checked_makefiles=checked_makefiles,
+                current_make_dir=current_make_dir,
+            )
             if res.action == GuardrailAction.DENY:
                 return res
         # find ... -exec/ok command ...
@@ -1123,7 +1156,12 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
                     targets_sensitive = True
                     break
 
-            res = _check_destructive_tokens(exec_args, context_sensitive=targets_sensitive)
+            res = _check_destructive_tokens(
+                exec_args,
+                context_sensitive=targets_sensitive,
+                checked_makefiles=checked_makefiles,
+                current_make_dir=current_make_dir,
+            )
             if res.action == GuardrailAction.DENY:
                 if targets_sensitive:
                     # Specific reason for find-exec when target is sensitive.

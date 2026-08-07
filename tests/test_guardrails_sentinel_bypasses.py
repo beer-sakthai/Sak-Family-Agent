@@ -301,6 +301,19 @@ class TestGuardrailsBypass(unittest.TestCase):
             self.assertEqual(
                 result.action, GuardrailAction.ALLOW, "make loading safe makefile should be allowed"
             )
+
+            # 5. Recursive/cycle makefile should not trigger infinite recursion
+            makefile_content_recursive = "all:\n\tmake all\n"
+            with open(os.path.join(tmp_dir, "Makefile"), "w") as f:
+                f.write(makefile_content_recursive)
+
+            args = {"command": f"make -C {tmp_dir}"}
+            result = _block_dangerous_shell_commands(self.tool, args, self.store)
+            self.assertEqual(
+                result.action,
+                GuardrailAction.ALLOW,
+                "recursive make loading itself should not infinite loop and should be allowed",
+            )
         finally:
             shutil.rmtree(tmp_dir, ignore_errors=True)
 
