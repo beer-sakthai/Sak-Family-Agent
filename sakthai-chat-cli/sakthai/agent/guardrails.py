@@ -1184,6 +1184,9 @@ def _block_output_with_secrets(
         "STRIPE_PUBLISHABLE_KEY",
         "TWILIO_AUTH_TOKEN",
         "TWILIO_API_KEY",
+        "MS_GRAPH_CLIENT_SECRET",
+        "MS_GRAPH_REFRESH_TOKEN",
+        "MSGRAPH_CLIENT_SECRET",
     ]
     secrets_to_check = set()
     try:
