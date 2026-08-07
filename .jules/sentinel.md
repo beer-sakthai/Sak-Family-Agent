@@ -1,5 +1,10 @@
 # Sentinel Security Journal
 
+## 2026-08-11 - Relative Path Traversal in Microsoft Graph Client
+**Vulnerability:** In `GraphClient.request` (part of the `teams-copilot-mcp` service), a lack of explicit relative path traversal checks could allow an LLM or an attacker supplying path templates/queries to use `..` or `.` directory traversal segments, accessing sensitive arbitrary files or endpoints on Microsoft Graph.
+**Learning:** Any custom HTTP or MCP request routing layers that wrap standard HTTP requests must explicitly validate request path segments against directory traversal. Obfuscated vectors such as URL-encoded variants or backslashes can easily evade standard string prefix matches if they are not systematically normalized and split before check.
+**Prevention:** Always decompose, normalize (replace backslashes with forward slashes), and URL-decode paths. Reject any path containing ".." or "." as split segments. Write comprehensive unit tests verifying raw, encoded, and backslash-obfuscated traversal vectors.
+
 ## 2026-08-10 - SSRF and Token Exfiltration via HTTP Client Base URL Override
 **Vulnerability:** Under `httpx`, passing an absolute URL to a client configured with `base_url` overrides the base URL. If the client automatically appends authorization headers (like MS Graph Bearer tokens), calling raw/arbitrary endpoints with an untrusted absolute URL leaks the token to third-party domains.
 **Learning:** Never assume an HTTP client with a hardcoded `base_url` restricts requests strictly to that domain. Absolute URLs passed to request methods bypass the base prefix, creating Server-Side Request Forgery (SSRF) and credential exfiltration vectors.

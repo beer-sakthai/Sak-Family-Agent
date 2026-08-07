@@ -89,6 +89,16 @@ class GraphClient:
         it's already a full URL (Graph pagination @odata.nextLink values are
         full URLs — pass those straight through).
         """
+        # Relative path traversal protection:
+        # Decompose and parse both raw and URL-decoded path versions (with backslashes normalized)
+        # to ensure no relative directory traversal segments exist.
+        normalized_raw = path.replace("\\", "/")
+        normalized_decoded = urllib.parse.unquote(path).replace("\\", "/")
+        for p in (normalized_raw, normalized_decoded):
+            segments = p.split("/")
+            if ".." in segments or "." in segments:
+                raise ValueError("Invalid path format: relative path traversal segments are blocked")
+
         # SSRF and Token Exfiltration protection:
         # Prevent protocol-relative URLs (e.g., //attacker.com)
         if path.startswith(("/", "\\")):

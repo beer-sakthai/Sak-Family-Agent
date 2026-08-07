@@ -196,3 +196,25 @@ def test_request_blocks_obfuscated_backslash_absolute_url(monkeypatch):
 
     with pytest.raises(ValueError, match="Backslashes are not allowed"):
         client.request("GET", "https:\\\\graph.microsoft.com\\leak")
+
+
+def test_request_blocks_path_traversal_segments(monkeypatch):
+    _valid_credentials(monkeypatch)
+    client = GraphClient()
+
+    bad_paths = [
+        "/me/../joinedTeams",
+        "../../etc/passwd",
+        "/me/./joinedTeams",
+        "/me/..\\joinedTeams",
+        "/me/..%2fjoinedTeams",
+        "/me/%2e%2e/joinedTeams",
+        "/me/%2e/joinedTeams",
+        "/me/%2e%2e%2fjoinedTeams",
+        "me/..",
+        "me/.",
+    ]
+
+    for path in bad_paths:
+        with pytest.raises(ValueError, match="relative path traversal segments are blocked"):
+            client.request("GET", path)
