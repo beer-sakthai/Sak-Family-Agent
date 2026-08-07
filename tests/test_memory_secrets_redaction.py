@@ -186,6 +186,7 @@ def test_redact_stripe_and_twilio_secrets() -> None:
 def test_redact_microsoft_graph_secrets() -> None:
     import os
     from unittest.mock import patch
+
     from sakthai.config import redact_secrets
 
     with patch.dict(
