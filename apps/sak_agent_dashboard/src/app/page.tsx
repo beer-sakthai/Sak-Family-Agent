@@ -171,6 +171,15 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
   const [selectedSessionDetail, setSelectedSessionDetail] = useState<SessionTranscript | null>(null);
 
+  const isMountedRef = React.useRef(true);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
   const fetchAllData = useCallback(async (demoMode: boolean) => {
     setIsLoading(true);
     try {
@@ -195,6 +204,8 @@ export default function Home() {
         safeFetch(`${origin}/api/sessions${demoParam}`),
       ]);
 
+      if (!isMountedRef.current) return;
+
       if (agentsRes?.success && Array.isArray(agentsRes.agents)) {
         setAgents(agentsRes.agents);
       }
@@ -212,7 +223,9 @@ export default function Home() {
     } catch (error) {
       console.error("Failed to load dashboard telemetry:", error);
     } finally {
-      setIsLoading(false);
+      if (isMountedRef.current) {
+        setIsLoading(false);
+      }
     }
   }, []);
 
@@ -232,6 +245,7 @@ export default function Home() {
         ? window.location.origin
         : "http://localhost:3000";
       const res = await fetch(`${origin}/api/sessions?id=${sessionId}${demoParam}`).then((r) => (r.ok ? r.json() : null)).catch(() => null);
+      if (!isMountedRef.current) return;
       if (res?.success && res?.detail) {
         setSelectedSessionDetail(res.detail);
       }
