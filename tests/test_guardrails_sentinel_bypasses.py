@@ -254,10 +254,7 @@ class TestGuardrailsBypass(unittest.TestCase):
         tmp_dir = tempfile.mkdtemp(dir=".")
         try:
             # 1. Makefile in tmp_dir containing a destructive command recipe
-            makefile_content_destructive = (
-                "all:\n"
-                "\t@rm -rf /etc\n"
-            )
+            makefile_content_destructive = "all:\n\t@rm -rf /etc\n"
             with open(os.path.join(tmp_dir, "Makefile"), "w") as f:
                 f.write(makefile_content_destructive)
 
@@ -268,14 +265,11 @@ class TestGuardrailsBypass(unittest.TestCase):
             self.assertEqual(
                 result.action,
                 GuardrailAction.DENY,
-                "make loading makefile with destructive command recipe should be blocked"
+                "make loading makefile with destructive command recipe should be blocked",
             )
 
             # 2. Makefile containing a sensitive path
-            makefile_content_sensitive_path = (
-                "all:\n"
-                "\techo 'hello' > /etc/shadow\n"
-            )
+            makefile_content_sensitive_path = "all:\n\techo 'hello' > /etc/shadow\n"
             with open(os.path.join(tmp_dir, "Makefile"), "w") as f:
                 f.write(makefile_content_sensitive_path)
 
@@ -284,7 +278,7 @@ class TestGuardrailsBypass(unittest.TestCase):
             self.assertEqual(
                 result.action,
                 GuardrailAction.DENY,
-                "make loading makefile containing sensitive path in recipe should be blocked"
+                "make loading makefile containing sensitive path in recipe should be blocked",
             )
 
             # 3. Direct sensitive file specified with -f
@@ -294,23 +288,18 @@ class TestGuardrailsBypass(unittest.TestCase):
             self.assertEqual(
                 result.action,
                 GuardrailAction.DENY,
-                "make specifying sensitive makefile should be blocked"
+                "make specifying sensitive makefile should be blocked",
             )
 
             # 4. Safe makefile in tmp_dir should be allowed
-            makefile_content_safe = (
-                "all:\n"
-                "\t@echo 'Hello from safe Makefile'\n"
-            )
+            makefile_content_safe = "all:\n\t@echo 'Hello from safe Makefile'\n"
             with open(os.path.join(tmp_dir, "Makefile"), "w") as f:
                 f.write(makefile_content_safe)
 
             args = {"command": f"make -C {tmp_dir}"}
             result = _block_dangerous_shell_commands(self.tool, args, self.store)
             self.assertEqual(
-                result.action,
-                GuardrailAction.ALLOW,
-                "make loading safe makefile should be allowed"
+                result.action, GuardrailAction.ALLOW, "make loading safe makefile should be allowed"
             )
         finally:
             shutil.rmtree(tmp_dir, ignore_errors=True)
