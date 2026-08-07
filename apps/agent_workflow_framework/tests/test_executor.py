@@ -119,6 +119,49 @@ class TestWorkflowExecutor(unittest.TestCase):
                     f"Unexpected error message for URL '{url}': {step_res.error}"
                 )
 
+    def test_file_path_validation_protection(self):
+        """Verify that the executor blocks dangerous, critical, and sensitive file paths to prevent path traversal and access to system configuration."""
+        dangerous_paths = [
+            "/etc/passwd",
+            "/var/log/syslog",
+            "../secret.txt",
+            "../../etc/shadow",
+            "/.env",
+            "some_dir/.git/config",
+            ".ssh/id_rsa",
+            "memory.db",
+            "subpath/.env.production",
+        ]
+        for path in dangerous_paths:
+            with self.subTest(path=path):
+                # Test write block
+                wf_write = WorkflowDefinition(
+                    name="path_write_test",
+                    steps=[
+                        StepDefinition(id="write_step", action="file_write", params={"path": path, "content": "blocked content"}),
+                    ],
+                )
+                history_write = asyncio.run(self.executor.execute_workflow(wf_write))
+                self.assertEqual(history_write.status, RunStatus.FAILED)
+                step_res_write = history_write.step_results["write_step"]
+                self.assertEqual(step_res_write.status, StepStatus.FAILED)
+                self.assertIsNotNone(step_res_write.error)
+                self.assertIn("blocked", step_res_write.error.lower())
+
+                # Test read block
+                wf_read = WorkflowDefinition(
+                    name="path_read_test",
+                    steps=[
+                        StepDefinition(id="read_step", action="file_read", params={"path": path}),
+                    ],
+                )
+                history_read = asyncio.run(self.executor.execute_workflow(wf_read))
+                self.assertEqual(history_read.status, RunStatus.FAILED)
+                step_res_read = history_read.step_results["read_step"]
+                self.assertEqual(step_res_read.status, StepStatus.FAILED)
+                self.assertIsNotNone(step_res_read.error)
+                self.assertIn("blocked", step_res_read.error.lower())
+
 
 if __name__ == "__main__":
     unittest.main()

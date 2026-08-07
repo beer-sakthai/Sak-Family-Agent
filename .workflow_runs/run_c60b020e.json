@@ -1,0 +1,31 @@
+{
+  "run_id": "run_c60b020e",
+  "workflow_name": "pw_retry_state",
+  "status": "COMPLETED",
+  "start_time": "2026-08-07T16:06:02.626811",
+  "end_time": "2026-08-07T16:06:02.638788",
+  "step_results": {
+    "retry_step": {
+      "step_id": "retry_step",
+      "status": "COMPLETED",
+      "output": {
+        "result": "val_100"
+      },
+      "error": null,
+      "attempts": 2,
+      "start_time": "2026-08-07T16:06:02.628317",
+      "end_time": "2026-08-07T16:06:02.638622"
+    },
+    "downstream": {
+      "step_id": "downstream",
+      "status": "COMPLETED",
+      "output": {
+        "recv": "val_100"
+      },
+      "error": null,
+      "attempts": 1,
+      "start_time": "2026-08-07T16:06:02.638728",
+      "end_time": "2026-08-07T16:06:02.638755"
+    }
+  }
+}

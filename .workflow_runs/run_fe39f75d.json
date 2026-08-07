@@ -1,0 +1,18 @@
+{
+  "run_id": "run_fe39f75d",
+  "workflow_name": "fail_retry",
+  "status": "FAILED",
+  "start_time": "2026-08-07T16:11:58.297711",
+  "end_time": "2026-08-07T16:11:58.320055",
+  "step_results": {
+    "always_fails": {
+      "step_id": "always_fails",
+      "status": "FAILED",
+      "output": {},
+      "error": "Terminal failure",
+      "attempts": 3,
+      "start_time": "2026-08-07T16:11:58.299353",
+      "end_time": "2026-08-07T16:11:58.320001"
+    }
+  }
+}

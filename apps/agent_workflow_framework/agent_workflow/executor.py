@@ -29,6 +29,46 @@ from agent_workflow.persistence import RunHistoryStore
 from agent_workflow.state import StateContext, StateInterpolationError
 
 
+def _validate_filepath(filepath: str) -> Path:
+    """Validate filepath to prevent path traversal and access to sensitive system paths."""
+    if ".." in filepath or filepath.startswith("~"):
+        raise ValueError("Directory traversal or home-relative paths are blocked.")
+
+    target = Path(filepath).resolve()
+    if target == Path("/"):
+        raise ValueError("Access to root directory is blocked.")
+
+    path_str = str(target)
+    critical_roots = {
+        "/etc", "/bin", "/sbin", "/usr", "/var", "/root", "/boot",
+        "/dev", "/sys", "/proc", "/lib", "/lib64"
+    }
+    for root in critical_roots:
+        if path_str == root or path_str.startswith(root + "/"):
+            raise ValueError(f"Access to critical system path '{root}' is blocked.")
+
+    sensitive_basenames = {
+        ".env", "memory.db", ".bash_history", ".zsh_history", "id_rsa",
+        "id_dsa", "id_ecdsa", "id_ed25519", "known_hosts", "authorized_keys",
+        "credentials", "shadow", "passwd", "sudoers", "gshadow", "group"
+    }
+    target_name_lower = target.name.lower()
+    if target_name_lower in sensitive_basenames or any(
+        target_name_lower.startswith(prefix) for prefix in (".env.", ".env-", ".env_")
+    ):
+        raise ValueError(f"Access to sensitive file '{target.name}' is blocked.")
+
+    sensitive_dirs = {
+        ".ssh", ".aws", ".git", ".jules", ".docker", ".kube", ".gnupg", ".config", ".npm"
+    }
+    path_parts_lower = {p.lower() for p in target.parts}
+    intersect = path_parts_lower.intersection(sensitive_dirs)
+    if intersect:
+        raise ValueError(f"Access to sensitive directory '{list(intersect)[0]}' is blocked.")
+
+    return target
+
+
 class ExecutionError(Exception):
     """Base exception for workflow execution failures."""
     pass
@@ -232,7 +272,7 @@ class WorkflowExecutor:
             if not filepath:
                 raise ValueError(f"Step '{step_id}' action '{action}' missing 'path' parameter.")
 
-            target = Path(filepath)
+            target = _validate_filepath(str(filepath))
             target.parent.mkdir(parents=True, exist_ok=True)
             if isinstance(content, (dict, list)):
                 content_str = json.dumps(content, indent=2)
@@ -246,7 +286,7 @@ class WorkflowExecutor:
             if not filepath:
                 raise ValueError(f"Step '{step_id}' action '{action}' missing 'path' parameter.")
 
-            target = Path(filepath)
+            target = _validate_filepath(str(filepath))
             if not target.exists():
                 raise FileNotFoundError(f"File not found: '{filepath}'")
             content = target.read_text(encoding="utf-8")
