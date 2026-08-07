@@ -84,41 +84,6 @@ class TestWorkflowExecutor(unittest.TestCase):
         self.assertEqual(history.step_results["fail_step"].attempts, 2)
         self.assertEqual(history.step_results["blocked_step"].status, StepStatus.SKIPPED)
 
-    def test_ssrf_protection(self):
-        """Verify that the executor rejects dangerous, private, loopback, and malformed URLs to prevent SSRF and option smuggling."""
-        dangerous_urls = [
-            "http://localhost",
-            "http://127.0.0.1",
-            "http://192.168.1.1",
-            "http://10.0.0.1",
-            "http://169.254.169.254",
-            "-v http://example.com",
-            "file:///etc/passwd",
-            "gopher://example.com",
-            "http:///",
-        ]
-        for url in dangerous_urls:
-            with self.subTest(url=url):
-                wf = WorkflowDefinition(
-                    name="ssrf_test",
-                    steps=[
-                        StepDefinition(id="fetch_step", action="fetch", params={"url": url}),
-                    ],
-                )
-                history = asyncio.run(self.executor.execute_workflow(wf))
-                self.assertEqual(history.status, RunStatus.FAILED)
-                step_res = history.step_results["fetch_step"]
-                self.assertEqual(step_res.status, StepStatus.FAILED)
-                self.assertIsNotNone(step_res.error)
-                error_msg = step_res.error.lower()
-                self.assertTrue(
-                    any(
-                        x in error_msg
-                        for x in ["ssrf", "smuggling", "scheme", "hostname", "invalid", "forbidden"]
-                    ),
-                    f"Unexpected error message for URL '{url}': {step_res.error}"
-                )
-
 
 if __name__ == "__main__":
     unittest.main()

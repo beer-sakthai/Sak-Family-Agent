@@ -367,7 +367,7 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
                     )
                 if os.path.isfile(makefile_path):
                     try:
-                        with open(makefile_path, "r", encoding="utf-8", errors="ignore") as f:
+                        with open(makefile_path, encoding="utf-8", errors="ignore") as f:
                             content = f.read()
 
                         for match in re.finditer(_SENSITIVE_SCRIPT_PATH_RE, content):
