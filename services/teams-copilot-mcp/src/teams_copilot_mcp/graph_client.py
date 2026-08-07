@@ -95,11 +95,12 @@ class GraphClient:
             if path.startswith(("//", "\\\\", "/\\", "\\/")):
                 raise ValueError("Invalid path format: protocol-relative paths are blocked")
 
-        # If it looks like an absolute URL, strictly validate that it is HTTPS and targets graph.microsoft.com
-        if path.lower().startswith("http"):
+        # If it has a scheme or a network location, treat as absolute/protocol-relative,
+        # and strictly validate that it is HTTPS and targets graph.microsoft.com
+        parsed = urllib.parse.urlparse(path)
+        if parsed.scheme or parsed.netloc:
             if "\\" in path:
                 raise ValueError("Backslashes are not allowed in absolute URLs")
-            parsed = urllib.parse.urlparse(path)
             scheme = parsed.scheme.lower()
             if scheme != "https":
                 raise ValueError("Only HTTPS is supported for absolute URLs")

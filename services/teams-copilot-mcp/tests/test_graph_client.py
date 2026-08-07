@@ -235,3 +235,17 @@ def test_request_blocks_path_traversal_url_encoded(monkeypatch):
 
     with pytest.raises(ValueError, match="Path traversal sequences are not allowed"):
         client.request("GET", "me%2f%2e%2e%2fusers")
+
+
+def test_request_blocks_custom_schemes_absolute_urls(monkeypatch):
+    _valid_credentials(monkeypatch)
+    client = GraphClient()
+
+    with pytest.raises(ValueError, match="Only HTTPS is supported"):
+        client.request("GET", "ftp://attacker.com/leak")
+
+    with pytest.raises(ValueError, match="Only HTTPS is supported"):
+        client.request("GET", "ws://attacker.com/leak")
+
+    with pytest.raises(ValueError, match="Only HTTPS is supported"):
+        client.request("GET", "gopher://attacker.com/leak")
