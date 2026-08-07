@@ -29,6 +29,73 @@ from agent_workflow.persistence import RunHistoryStore
 from agent_workflow.state import StateContext, StateInterpolationError
 
 
+def _validate_filepath(filepath: Any) -> Path:
+    """Validate a filepath against traversal and sensitive system/app resources."""
+    if not filepath:
+        raise ValueError("Filepath is empty or missing.")
+
+    path_str = str(filepath).strip()
+
+    # 1. Prevent path traversal segments and leading tilde
+    if ".." in path_str.replace("\\", "/").split("/"):
+        raise ValueError("Directory traversal sequence ('..') is not allowed.")
+    if path_str.startswith("~"):
+        raise ValueError("Home-relative paths starting with '~' are not allowed.")
+
+    try:
+        # Resolve to an absolute path
+        target = Path(path_str).resolve()
+    except Exception as e:
+        raise ValueError(f"Invalid path representation: {e}")
+
+    # Helper to check if a component is sensitive
+    def is_sensitive_basename(name: str) -> bool:
+        lowered = name.casefold()
+        sensitive_basenames = {
+            ".env", "memory.db", "id_rsa", "id_dsa", "id_ecdsa", "id_ed25519",
+            "known_hosts", "authorized_keys", "credentials", "shadow", "passwd",
+            "sudoers", "gshadow", "group", "id_xmss", "id_ecdsa_sk", "id_ed25519_sk"
+        }
+        if lowered in sensitive_basenames:
+            return True
+        # Check environment prefix variants like .env.production
+        if any(lowered.startswith(p) for p in (".env.", ".env-", ".env_", "memory.db-")):
+            return True
+        # Check private key backup/rename stems
+        stems = {"id_rsa", "id_dsa", "id_ecdsa", "id_ed25519", "id_ecdsa_sk", "id_ed25519_sk", "id_xmss"}
+        if any(lowered == s or lowered.startswith(s + ".") for s in stems):
+            return True
+        return False
+
+    sensitive_dirs = {
+        ".ssh", ".aws", ".git", ".jules", ".docker", ".kube", ".gnupg", ".config", ".npm"
+    }
+
+    critical_roots = {
+        "/etc", "/bin", "/sbin", "/usr", "/var", "/root", "/boot", "/dev",
+        "/sys", "/proc", "/lib", "/lib64"
+    }
+
+    # Check absolute resolved path string
+    resolved_str = str(target)
+
+    # 2. Block critical system roots
+    for root in critical_roots:
+        if resolved_str == root or resolved_str.startswith(root + "/"):
+            raise ValueError(f"Access to critical system root '{root}' is blocked.")
+
+    # 3. Check individual components of the path
+    parts = target.parts
+    for part in parts:
+        part_fold = part.casefold()
+        if part_fold in sensitive_dirs:
+            raise ValueError(f"Access to sensitive directory '{part}' is blocked.")
+        if is_sensitive_basename(part):
+            raise ValueError(f"Access to sensitive file '{part}' is blocked.")
+
+    return target
+
+
 class ExecutionError(Exception):
     """Base exception for workflow execution failures."""
     pass
@@ -232,7 +299,7 @@ class WorkflowExecutor:
             if not filepath:
                 raise ValueError(f"Step '{step_id}' action '{action}' missing 'path' parameter.")
 
-            target = Path(filepath)
+            target = _validate_filepath(filepath)
             target.parent.mkdir(parents=True, exist_ok=True)
             if isinstance(content, (dict, list)):
                 content_str = json.dumps(content, indent=2)
@@ -246,7 +313,7 @@ class WorkflowExecutor:
             if not filepath:
                 raise ValueError(f"Step '{step_id}' action '{action}' missing 'path' parameter.")
 
-            target = Path(filepath)
+            target = _validate_filepath(filepath)
             if not target.exists():
                 raise FileNotFoundError(f"File not found: '{filepath}'")
             content = target.read_text(encoding="utf-8")

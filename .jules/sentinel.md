@@ -1,5 +1,10 @@
 # Sentinel Security Journal
 
+## 2026-08-12 - Path Traversal and Sensitive Asset Exfiltration in Agent Workflow Framework Executor
+**Vulnerability:** The Agent Workflow Framework's built-in file tools (`file_read`, `read_file`, `file_write`, `write_file`) lacked target path validation, allowing arbitrary relative or absolute path traversal (e.g., `../../etc/passwd`, `/etc/passwd`, `.env`, `memory.db`, SSH keys) to read and write arbitrary files on the host system.
+**Learning:** File utility action handlers in workflow automation DAG engines are highly privileged entry points. Even if shell commands are restricted, unvalidated file operations provide simple vectors for Local File Inclusion (LFI), arbitrary data overwrite, and sensitive credential leakage.
+**Prevention:** Always encapsulate path resolution within a centralized validator (`_validate_filepath`) that rejects directory traversals, blocks critical system roots, and strictly filters out well-known sensitive basenames and credentials before any disk read or write is executed.
+
 ## 2026-08-10 - SSRF and Token Exfiltration via HTTP Client Base URL Override
 **Vulnerability:** Under `httpx`, passing an absolute URL to a client configured with `base_url` overrides the base URL. If the client automatically appends authorization headers (like MS Graph Bearer tokens), calling raw/arbitrary endpoints with an untrusted absolute URL leaks the token to third-party domains.
 **Learning:** Never assume an HTTP client with a hardcoded `base_url` restricts requests strictly to that domain. Absolute URLs passed to request methods bypass the base prefix, creating Server-Side Request Forgery (SSRF) and credential exfiltration vectors.

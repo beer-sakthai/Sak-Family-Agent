@@ -119,6 +119,64 @@ class TestWorkflowExecutor(unittest.TestCase):
                     f"Unexpected error message for URL '{url}': {step_res.error}"
                 )
 
+    def test_file_path_validation_protection(self):
+        """Verify that the executor rejects dangerous, traversal, system-root, and sensitive file paths to prevent unauthorized reads and writes."""
+        malicious_paths = [
+            "../../etc/passwd",
+            "../secret.txt",
+            "~/credentials",
+            "/etc/passwd",
+            "/bin/sh",
+            "/var/log/syslog",
+            "some_dir/.git/config",
+            "some_dir/.ssh/id_rsa",
+            "some_dir/.env",
+            "some_dir/memory.db",
+            "some_dir/id_rsa",
+            "some_dir/.env.production",
+        ]
+        for path in malicious_paths:
+            with self.subTest(path=path):
+                # Test write protection
+                wf_write = WorkflowDefinition(
+                    name="path_protect_write",
+                    steps=[
+                        StepDefinition(id="write_step", action="file_write", params={"path": path, "content": "evil content"}),
+                    ],
+                )
+                history_write = asyncio.run(self.executor.execute_workflow(wf_write))
+                self.assertEqual(history_write.status, RunStatus.FAILED)
+                step_res_write = history_write.step_results["write_step"]
+                self.assertEqual(step_res_write.status, StepStatus.FAILED)
+                self.assertIsNotNone(step_res_write.error)
+                self.assertTrue(
+                    any(
+                        x in step_res_write.error.lower()
+                        for x in ["blocked", "traversal", "not allowed"]
+                    ),
+                    f"Unexpected error message for path '{path}': {step_res_write.error}"
+                )
+
+                # Test read protection
+                wf_read = WorkflowDefinition(
+                    name="path_protect_read",
+                    steps=[
+                        StepDefinition(id="read_step", action="file_read", params={"path": path}),
+                    ],
+                )
+                history_read = asyncio.run(self.executor.execute_workflow(wf_read))
+                self.assertEqual(history_read.status, RunStatus.FAILED)
+                step_res_read = history_read.step_results["read_step"]
+                self.assertEqual(step_res_read.status, StepStatus.FAILED)
+                self.assertIsNotNone(step_res_read.error)
+                self.assertTrue(
+                    any(
+                        x in step_res_read.error.lower()
+                        for x in ["blocked", "traversal", "not allowed"]
+                    ),
+                    f"Unexpected error message for path '{path}': {step_res_read.error}"
+                )
+
 
 if __name__ == "__main__":
     unittest.main()
