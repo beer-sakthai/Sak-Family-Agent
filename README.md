@@ -27,8 +27,8 @@ This repository is the living workspace of the Sak Family — autonomous AI agen
 ```
 
 ### 🎯 Quick Metrics
-- **Test Suite:** 1,600+ tests | **Pass Rate:** 100% ✅
-- **Code Coverage:** 98.01% (floor: 97%) | **Lines:** 5,200+
+- **Test Suite:** 1,950 tests | **Pass Rate:** 100% ✅
+- **Code Coverage:** 96.67% (floor: 96%) | **Lines:** 5,200+
 - **Security Vulnerabilities:** 0 | **Findings:** 0 (Bandit/Ruff)
 - **Type Safety:** `mypy --strict` | **Linting:** All checks pass
 - **Last Security Audit:** 2026-07-26 | **Status:** ✅ All fixes applied
@@ -80,7 +80,7 @@ The heart of the family — a **provider-agnostic, tool-using AI agent** with pe
 personas/sakthai/sakthai/
 ├── agent/              # Orchestration & provider abstraction
 │   ├── loop.py         # Main agent orchestration (tool use, retries)
-│   ├── tools.py        # BUILTIN_TOOLS registry (10 tools)
+│   ├── tools.py        # BUILTIN_TOOLS registry (14 tools)
 │   ├── guardrails.py   # Shell command denylist + path validation
 │   ├── providers/      # Claude / Gemini / OpenAI / Ollama / Gateway / Hugging Face
 │   └── registry.py     # Tool discovery & dispatch
@@ -99,7 +99,7 @@ personas/sakthai/sakthai/
 │   ├── memory.py       # learn, recall, memory group
 │   ├── system.py       # doctor, setup, status
 │   ├── skills.py       # skills group
-│   └── ...             # 8 more CLI groups
+│   └── ...             # 5 more CLI groups
 ├── skills.py           # YAML frontmatter parsing & injection
 ├── auth.py             # Credential resolution (Anthropic/Google/OpenAI)
 ├── config.py           # Single source of truth for paths & env vars
@@ -226,7 +226,7 @@ Under `training/sakthai-7b-lora`, there are ongoing efforts to train `Qwen2.5-7B
 │  Implementation Status:                                          │
 │  • 8 Defense Modules        → 550+ production-ready lines       │
 │  • 71 Security Tests        → 100% passing                      │
-│  • Test Coverage            → 97.05% (requirement: 97%)         │
+│  • Test Coverage            → 96.67% (requirement: 96%)         │
 │  • CI/CD Status             → All checks green ✅               │
 │  • Performance Overhead     → 10-25ms per tool call             │
 │  • Memory Footprint         → <5MB additional                   │
@@ -267,12 +267,12 @@ Security Hardening Tests:        71 tests ✅
 ├─ guardrails_hardened.py:       30 tests (73% module coverage)
 └─ All passing                   100% success rate
 
-Overall Coverage:                97.05% (requirement: 97%)
+Overall Coverage:                96.67% (requirement: 96%)
 ├─ personas/sakthai/sakthai/    5611 lines analyzed
-├─ Test count:                  1,773 tests
+├─ Test count:                  1,950 tests
 ├─ Skipped:                     7 tests (integration/network)
 ├─ Pass rate:                   100%
-└─ Floor enforcement:           97% (CI/CD blocks merges below)
+└─ Floor enforcement:           96% (CI/CD blocks merges below)
 ```
 
 **Security Levels (Configurable):**
@@ -301,9 +301,9 @@ Every Push/PR Runs:
 ├─ 🛡️ Security Scan (Bandit)       → 0 high/medium/low findings ✅ Pass
 ├─ 🧪 Build (3.11)                 → Python 3.11 compatibility  ✅ Pass
 ├─ 🧪 Build (3.12)                 → Python 3.12 compatibility  ✅ Pass
-├─ 🧪 Test (3.11)                  → 1,773 tests, 100% pass     ✅ Pass
-├─ 🧪 Test (3.12)                  → 1,773 tests, 100% pass     ✅ Pass
-├─ 📊 Coverage Check                → 97.05% (floor: 97%)        ✅ Pass
+├─ 🧪 Test (3.11)                  → 1,950 tests, 100% pass     ✅ Pass
+├─ 🧪 Test (3.12)                  → 1,950 tests, 100% pass     ✅ Pass
+├─ 📊 Coverage Check                → 96.67% (floor: 96%)        ✅ Pass
 ├─ 🔐 Dependency Audit (pip-audit)  → 0 known CVEs              ✅ Pass
 ├─ 🏗️ CodeQL (Security Analysis)    → GitHub default setup      ✅ Pass
 ├─ 🤖 OSSAR Scan                    → Cross-repo scanning        ✅ Pass
