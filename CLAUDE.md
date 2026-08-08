@@ -36,9 +36,13 @@ apps/              agent_workflow_framework, sak_agent_dashboard
 training/          LoRA/model runs, HF jobs, serving configs
 evaluation_tasks/  lm-evaluation-harness task YAML + datasets (run-evals.yml)
 sakthai-chat-cli/  folded-in copy of the standalone chat-CLI repo (see below)
-product/ security/ profiles/ data/ assets/ bin/ dataset-cards/ migrated-repos-archive/
-skills/            orphaned content — NOT a skill-discovery root
+product/ security/ profiles/ data/ bin/ dataset-cards/
 ```
+
+`assets/` still exists on disk (two large branding PNGs) but is untracked — see
+[`docs/repo-audit-2026-08-08.md`](docs/repo-audit-2026-08-08.md). The orphaned
+root `skills/` directory and `migrated-repos-archive/` were removed in that same
+cleanup; git history still has them.
 
 ### The persona package copies (read this before editing `sakthai/`)
 
