@@ -250,8 +250,13 @@ class TestGuardrailsBypass(unittest.TestCase):
         import shutil
         import tempfile
 
-        # Create a temporary directory in the current directory (non-sensitive path)
+        # Create a temporary directory in the current directory (non-sensitive path).
+        # Python 3.12 changed mkdtemp() to always return an absolute path, and an
+        # absolute path under a critical root (/home, /tmp, ...) is sensitive by
+        # policy — so drive the assertions from an explicitly relative path to keep
+        # this test about makefile scanning rather than about absolute-path policy.
         tmp_dir = tempfile.mkdtemp(dir=".")
+        rel_dir = os.path.join(".", os.path.relpath(tmp_dir))
         try:
             # 1. Makefile in tmp_dir containing a destructive command recipe
             makefile_content_destructive = "all:\n\t@rm -rf /etc\n"
@@ -260,7 +265,7 @@ class TestGuardrailsBypass(unittest.TestCase):
 
             # Execution without specifying the file directly should find the Makefile in -C dir
             # and deny the execution because of the destructive rm recipe
-            args = {"command": f"make -C {tmp_dir}"}
+            args = {"command": f"make -C {rel_dir}"}
             result = _block_dangerous_shell_commands(self.tool, args, self.store)
             self.assertEqual(
                 result.action,
@@ -273,7 +278,7 @@ class TestGuardrailsBypass(unittest.TestCase):
             with open(os.path.join(tmp_dir, "Makefile"), "w") as f:
                 f.write(makefile_content_sensitive_path)
 
-            args = {"command": f"make -C {tmp_dir}"}
+            args = {"command": f"make -C {rel_dir}"}
             result = _block_dangerous_shell_commands(self.tool, args, self.store)
             self.assertEqual(
                 result.action,
@@ -296,7 +301,7 @@ class TestGuardrailsBypass(unittest.TestCase):
             with open(os.path.join(tmp_dir, "Makefile"), "w") as f:
                 f.write(makefile_content_safe)
 
-            args = {"command": f"make -C {tmp_dir}"}
+            args = {"command": f"make -C {rel_dir}"}
             result = _block_dangerous_shell_commands(self.tool, args, self.store)
             self.assertEqual(
                 result.action, GuardrailAction.ALLOW, "make loading safe makefile should be allowed"
@@ -307,12 +312,22 @@ class TestGuardrailsBypass(unittest.TestCase):
             with open(os.path.join(tmp_dir, "Makefile"), "w") as f:
                 f.write(makefile_content_recursive)
 
-            args = {"command": f"make -C {tmp_dir}"}
+            args = {"command": f"make -C {rel_dir}"}
             result = _block_dangerous_shell_commands(self.tool, args, self.store)
             self.assertEqual(
                 result.action,
                 GuardrailAction.ALLOW,
                 "recursive make loading itself should not infinite loop and should be allowed",
+            )
+
+            # 6. An absolute -C directory under a critical root is blocked outright,
+            # before any makefile in it is read.
+            args = {"command": "make -C /home/someone/project"}
+            result = _block_dangerous_shell_commands(self.tool, args, self.store)
+            self.assertEqual(
+                result.action,
+                GuardrailAction.DENY,
+                "make targeting a directory under a critical root should be blocked",
             )
         finally:
             shutil.rmtree(tmp_dir, ignore_errors=True)
