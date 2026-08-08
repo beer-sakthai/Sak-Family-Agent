@@ -320,14 +320,64 @@ class TestGuardrailsBypass(unittest.TestCase):
                 "recursive make loading itself should not infinite loop and should be allowed",
             )
 
-            # 6. An absolute -C directory under a critical root is blocked outright,
-            # before any makefile in it is read.
+            # 6. An absolute -C directory outside cwd, under a critical root, is
+            # blocked outright — before any makefile in it is read.
             args = {"command": "make -C /home/someone/project"}
             result = _block_dangerous_shell_commands(self.tool, args, self.store)
             self.assertEqual(
                 result.action,
                 GuardrailAction.DENY,
                 "make targeting a directory under a critical root should be blocked",
+            )
+
+            # 7. An *absolute* -C directory that resolves inside cwd is ordinary
+            # project work and must be allowed, even though the checkout itself
+            # usually sits under a critical root such as /home.
+            makefile_content_safe = "all:\n\t@echo 'Hello from safe Makefile'\n"
+            with open(os.path.join(tmp_dir, "Makefile"), "w") as f:
+                f.write(makefile_content_safe)
+
+            args = {"command": f"make -C {os.path.abspath(tmp_dir)}"}
+            result = _block_dangerous_shell_commands(self.tool, args, self.store)
+            self.assertEqual(
+                result.action,
+                GuardrailAction.ALLOW,
+                "make -C with an absolute path inside cwd should be allowed",
+            )
+
+            # 8. Locality does not excuse a sensitive name: a makefile under a
+            # credential directory inside cwd is still blocked.
+            sensitive_dir = os.path.join(tmp_dir, ".ssh")
+            os.makedirs(sensitive_dir, exist_ok=True)
+            with open(os.path.join(sensitive_dir, "Makefile"), "w") as f:
+                f.write(makefile_content_safe)
+
+            args = {"command": f"make -C {os.path.abspath(sensitive_dir)}"}
+            result = _block_dangerous_shell_commands(self.tool, args, self.store)
+            self.assertEqual(
+                result.action,
+                GuardrailAction.DENY,
+                "make -C into a credential directory inside cwd should still be blocked",
+            )
+
+            # 9. Traversal out of cwd is not rescued by the locality check.
+            args = {"command": f"make -C {rel_dir}/../../etc"}
+            result = _block_dangerous_shell_commands(self.tool, args, self.store)
+            self.assertEqual(
+                result.action,
+                GuardrailAction.DENY,
+                "make -C with traversal segments should be blocked",
+            )
+
+            # 10. `make` no longer sits in the generic destructive/interpreter
+            # binary lists, so pin the dedicated scanner's coverage of an
+            # explicitly sensitive makefile passed by an absolute -f path.
+            args = {"command": "make -f /root/.ssh/id_rsa"}
+            result = _block_dangerous_shell_commands(self.tool, args, self.store)
+            self.assertEqual(
+                result.action,
+                GuardrailAction.DENY,
+                "make -f pointing at a credential file should be blocked",
             )
         finally:
             shutil.rmtree(tmp_dir, ignore_errors=True)
