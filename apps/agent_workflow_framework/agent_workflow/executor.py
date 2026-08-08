@@ -10,6 +10,7 @@ import json
 import os
 import sys
 import time
+import urllib.parse
 import urllib.request
 import uuid
 from datetime import datetime
@@ -41,8 +42,15 @@ def _validate_filepath(filepath: Any) -> Path:
 
     path_str = str(filepath).strip()
 
-    # Block path traversal segments like '..' or leading '~'
-    if ".." in path_str.split(os.sep) or ".." in path_str.split("/") or path_str.startswith("~"):
+    # Block path traversal segments like '..' or leading '~'. Backslashes are
+    # normalized first so Windows-style separators can't smuggle a '..' segment
+    # past a POSIX-only split.
+    normalized_str = path_str.replace("\\", "/")
+    if (
+        ".." in path_str.split(os.sep)
+        or ".." in normalized_str.split("/")
+        or path_str.startswith("~")
+    ):
         raise PermissionError(f"Directory path traversal or user home shortcut is prohibited: '{path_str}'")
 
     # Resolve target absolute to Path
@@ -53,7 +61,9 @@ def _validate_filepath(filepath: Any) -> Path:
 
     # Critical system roots (e.g., /etc, /bin, /var, /boot, /dev, /lib, /lib64, /proc, /sys, /sbin, /usr)
     parts = [p.lower() for p in target.parts]
-    system_roots = {"etc", "bin", "var", "boot", "dev", "lib", "lib64", "proc", "sys", "sbin", "usr", "root"}
+    system_roots = {
+        "etc", "bin", "var", "boot", "dev", "lib", "lib64", "proc", "sys", "sbin", "usr", "root", "opt",
+    }
 
     if target.is_absolute():
         root_part = target.anchor
@@ -64,7 +74,10 @@ def _validate_filepath(filepath: Any) -> Path:
                 raise PermissionError(f"Access to critical system directory is prohibited: '{path_str}'")
 
     # Blocks access to sensitive directories (e.g., .git, .ssh, .aws)
-    sensitive_dirs = {".git", ".ssh", ".aws", ".jules", ".config", ".npm"}
+    sensitive_dirs = {
+        ".git", ".ssh", ".aws", ".jules", ".config", ".npm",
+        ".docker", ".kube", ".gnupg", ".gcloud", ".azure",
+    }
     if any(part in sensitive_dirs for part in parts):
         raise PermissionError(f"Access to sensitive directory is prohibited: '{path_str}'")
 
@@ -80,7 +93,21 @@ def _validate_filepath(filepath: Any) -> Path:
     }
     sensitive_suffixes = (".pem", ".key", ".pfx", ".p12")
 
-    if filename in sensitive_basenames or filename.startswith(".env.") or filename.endswith(sensitive_suffixes):
+    # Prefix variants: .env.production / .env-prod / .env_local, and the SQLite
+    # sidecars memory.db-wal / memory.db-shm / memory.db-journal.
+    sensitive_prefixes = (".env.", ".env-", ".env_", "memory.db-")
+
+    # Renamed or backed-up private keys (id_rsa.bak, id_ed25519.pub, ...).
+    sensitive_key_stems = (
+        "id_rsa", "id_dsa", "id_ecdsa", "id_ed25519", "id_ecdsa_sk", "id_ed25519_sk", "id_xmss",
+    )
+
+    if (
+        filename in sensitive_basenames
+        or filename.startswith(sensitive_prefixes)
+        or filename.endswith(sensitive_suffixes)
+        or any(filename.startswith(stem + ".") for stem in sensitive_key_stems)
+    ):
         raise PermissionError(f"Access to sensitive file is prohibited: '{path_str}'")
 
     return target

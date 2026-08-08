@@ -61,8 +61,17 @@ class TestWorkflowExecutor(unittest.TestCase):
         wf = WorkflowDefinition(
             name="test_file_io",
             steps=[
-                StepDefinition(id="write_step", action="file_write", params={"path": str(target_file), "content": "sample content"}),
-                StepDefinition(id="read_step", action="file_read", params={"path": "${steps.write_step.output.path}"}, depends_on=["write_step"]),
+                StepDefinition(
+                    id="write_step",
+                    action="file_write",
+                    params={"path": str(target_file), "content": "sample content"},
+                ),
+                StepDefinition(
+                    id="read_step",
+                    action="file_read",
+                    params={"path": "${steps.write_step.output.path}"},
+                    depends_on=["write_step"],
+                ),
             ],
         )
         history = asyncio.run(self.executor.execute_workflow(wf))
@@ -74,8 +83,15 @@ class TestWorkflowExecutor(unittest.TestCase):
         wf = WorkflowDefinition(
             name="test_retry_fail",
             steps=[
-                StepDefinition(id="fail_step", action="shell", params={"cmd": "exit 1", "check": True}, retry=1),
-                StepDefinition(id="blocked_step", action="echo", params={"msg": "should not run"}, depends_on=["fail_step"]),
+                StepDefinition(
+                    id="fail_step", action="shell", params={"cmd": "exit 1", "check": True}, retry=1
+                ),
+                StepDefinition(
+                    id="blocked_step",
+                    action="echo",
+                    params={"msg": "should not run"},
+                    depends_on=["fail_step"],
+                ),
             ],
         )
         history = asyncio.run(self.executor.execute_workflow(wf))
@@ -116,7 +132,7 @@ class TestWorkflowExecutor(unittest.TestCase):
                         x in error_msg
                         for x in ["ssrf", "smuggling", "scheme", "hostname", "invalid", "forbidden"]
                     ),
-                    f"Unexpected error message for URL '{url}': {step_res.error}"
+                    f"Unexpected error message for URL '{url}': {step_res.error}",
                 )
 
     def test_file_path_validation_protection(self):
@@ -140,6 +156,29 @@ class TestWorkflowExecutor(unittest.TestCase):
             "Credentials.json",
             "subdir/.git/config",
             "subdir/.ssh/authorized_keys",
+            # Windows-style separators must not smuggle a traversal segment past
+            # the POSIX-only split.
+            "..\\..\\etc\\passwd",
+            "subdir\\..\\..\\.env",
+            # Additional critical system root.
+            "/opt/app/config.yaml",
+            # Additional credential directories.
+            "subdir/.docker/config.json",
+            "subdir/.kube/config",
+            "subdir/.gnupg/secring.gpg",
+            "subdir/.gcloud/credentials.db",
+            "subdir/.azure/accessTokens.json",
+            # Dotenv prefix variants beyond ".env.".
+            ".env-production",
+            ".env_local",
+            # SQLite sidecars of the agent memory database.
+            "memory.db-wal",
+            "memory.db-shm",
+            "memory.db-journal",
+            # Renamed / backed-up private keys.
+            "id_rsa.bak",
+            "id_ed25519.pub",
+            "ID_ECDSA.old",
         ]
         for path in malicious_paths:
             for action in ("file_read", "file_write"):
@@ -147,7 +186,11 @@ class TestWorkflowExecutor(unittest.TestCase):
                     wf = WorkflowDefinition(
                         name="path_validation_test",
                         steps=[
-                            StepDefinition(id="file_step", action=action, params={"path": path, "content": "dummy"}),
+                            StepDefinition(
+                                id="file_step",
+                                action=action,
+                                params={"path": path, "content": "dummy"},
+                            ),
                         ],
                     )
                     history = asyncio.run(self.executor.execute_workflow(wf))
@@ -160,8 +203,31 @@ class TestWorkflowExecutor(unittest.TestCase):
                             x in step_res.error.lower()
                             for x in ["traversal", "prohibited", "system", "sensitive", "invalid"]
                         ),
-                        f"Unexpected error for path '{path}' and action '{action}': {step_res.error}"
+                        f"Unexpected error for path '{path}' and action '{action}': {step_res.error}",
                     )
+
+    def test_file_path_validation_allows_ordinary_paths(self):
+        """Verify the hardened validator still permits ordinary workspace paths."""
+        target = Path(self.temp_dir.name) / "reports" / "summary.json"
+        wf = WorkflowDefinition(
+            name="path_allow_test",
+            steps=[
+                StepDefinition(
+                    id="write_step",
+                    action="file_write",
+                    params={"path": str(target), "content": {"ok": True}},
+                ),
+                StepDefinition(
+                    id="read_step",
+                    action="file_read",
+                    params={"path": str(target)},
+                    depends_on=["write_step"],
+                ),
+            ],
+        )
+        history = asyncio.run(self.executor.execute_workflow(wf))
+        self.assertEqual(history.status, RunStatus.COMPLETED)
+        self.assertEqual(history.step_results["read_step"].status, StepStatus.COMPLETED)
 
 
 if __name__ == "__main__":
