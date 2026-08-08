@@ -4,8 +4,12 @@ Audit of `beer-sakthai/Sak-Family-Agent` at commit `cc6a2572`.
 
 > **Status: executed 2026-08-08.** [§6](#6-execution-commands) has been applied to
 > the repository; [§7](#7-verification-results) records the result. The commands
-> are kept below as the record of what was run. Rollback point: the
-> `pre-cleanup-2026-08-08` tag.
+> are kept below as the record of what was run.
+>
+> **Rollback point: commit `6f470820`** — the last commit before the cleanup,
+> which added this document and nothing else. `git revert` the cleanup commit, or
+> `git reset --hard 6f470820`. The `pre-cleanup-2026-08-08` tag points at the same
+> commit.
 
 **Scale:** 6,172 tracked files, 65.9 MB tracked, 94 MB `.git`, 75 MB working tree.
 
