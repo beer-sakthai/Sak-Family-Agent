@@ -1,0 +1,40 @@
+{
+  "run_id": "run_e812263b",
+  "workflow_name": "partial_branch",
+  "status": "FAILED",
+  "start_time": "2026-08-08T04:15:58.136925",
+  "end_time": "2026-08-08T04:15:58.138728",
+  "step_results": {
+    "root": {
+      "step_id": "root",
+      "status": "COMPLETED",
+      "output": {
+        "a": 1
+      },
+      "error": null,
+      "attempts": 1,
+      "start_time": "2026-08-08T04:15:58.138554",
+      "end_time": "2026-08-08T04:15:58.138580"
+    },
+    "b_ok": {
+      "step_id": "b_ok",
+      "status": "COMPLETED",
+      "output": {
+        "v": 2
+      },
+      "error": null,
+      "attempts": 1,
+      "start_time": "2026-08-08T04:15:58.138656",
+      "end_time": "2026-08-08T04:15:58.138671"
+    },
+    "b_fail": {
+      "step_id": "b_fail",
+      "status": "FAILED",
+      "output": {},
+      "error": "Terminal failure",
+      "attempts": 1,
+      "start_time": "2026-08-08T04:15:58.138689",
+      "end_time": "2026-08-08T04:15:58.138702"
+    }
+  }
+}

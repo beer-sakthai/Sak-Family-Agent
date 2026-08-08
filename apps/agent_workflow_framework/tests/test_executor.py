@@ -6,7 +6,7 @@ import unittest
 from pathlib import Path
 
 from agent_workflow.executor import WorkflowExecutor
-from agent_workflow.models import WorkflowDefinition, StepDefinition, RunStatus, StepStatus
+from agent_workflow.models import RunStatus, StepDefinition, StepStatus, WorkflowDefinition
 
 
 class TestWorkflowExecutor(unittest.TestCase):
@@ -118,6 +118,50 @@ class TestWorkflowExecutor(unittest.TestCase):
                     ),
                     f"Unexpected error message for URL '{url}': {step_res.error}"
                 )
+
+    def test_file_path_validation_protection(self):
+        """Verify that the file actions reject path traversal, system roots, and sensitive files/directories."""
+        malicious_paths = [
+            "../../etc/passwd",
+            "../.env",
+            "~/.ssh/id_rsa",
+            "/etc/passwd",
+            "/bin/sh",
+            "etc/passwd",
+            "etc/shadow",
+            ".env",
+            ".ENV",
+            ".env.production",
+            ".Env.production",
+            "memory.db",
+            "id_rsa",
+            "ID_RSA",
+            "credentials.json",
+            "Credentials.json",
+            "subdir/.git/config",
+            "subdir/.ssh/authorized_keys",
+        ]
+        for path in malicious_paths:
+            for action in ("file_read", "file_write"):
+                with self.subTest(path=path, action=action):
+                    wf = WorkflowDefinition(
+                        name="path_validation_test",
+                        steps=[
+                            StepDefinition(id="file_step", action=action, params={"path": path, "content": "dummy"}),
+                        ],
+                    )
+                    history = asyncio.run(self.executor.execute_workflow(wf))
+                    self.assertEqual(history.status, RunStatus.FAILED)
+                    step_res = history.step_results["file_step"]
+                    self.assertEqual(step_res.status, StepStatus.FAILED)
+                    self.assertIsNotNone(step_res.error)
+                    self.assertTrue(
+                        any(
+                            x in step_res.error.lower()
+                            for x in ["traversal", "prohibited", "system", "sensitive", "invalid"]
+                        ),
+                        f"Unexpected error for path '{path}' and action '{action}': {step_res.error}"
+                    )
 
 
 if __name__ == "__main__":

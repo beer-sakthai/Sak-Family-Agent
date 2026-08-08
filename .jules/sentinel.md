@@ -1,5 +1,10 @@
 # Sentinel Security Journal
 
+## 2026-08-15 - Unvalidated File IO in Agent Workflow Framework Executor
+**Vulnerability:** The Agent Workflow Framework executor's file actions (`file_read`, `file_write`) were entirely unvalidated, allowing complete local path traversal and arbitrary reading or writing of sensitive files (like `.env`, SSH keys, or system-critical `/etc/passwd`) without restriction.
+**Learning:** Adding complex system tools or workflow executors that support filesystem interactions creates a high-risk security gap if not accompanied by a centralized path-validation layer that strictly validates target paths before any filesystem IO is attempted.
+**Prevention:** Implement a centralized helper function `_validate_filepath` to resolve paths, check for path-traversal segments, block access to critical system directories, and reject attempts to access sensitive files/directories (credential basenames, `.git`, `.ssh`, etc.).
+
 ## 2026-08-10 - SSRF and Token Exfiltration via HTTP Client Base URL Override
 **Vulnerability:** Under `httpx`, passing an absolute URL to a client configured with `base_url` overrides the base URL. If the client automatically appends authorization headers (like MS Graph Bearer tokens), calling raw/arbitrary endpoints with an untrusted absolute URL leaks the token to third-party domains.
 **Learning:** Never assume an HTTP client with a hardcoded `base_url` restricts requests strictly to that domain. Absolute URLs passed to request methods bypass the base prefix, creating Server-Side Request Forgery (SSRF) and credential exfiltration vectors.
