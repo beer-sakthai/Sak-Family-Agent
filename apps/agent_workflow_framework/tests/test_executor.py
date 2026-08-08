@@ -119,6 +119,61 @@ class TestWorkflowExecutor(unittest.TestCase):
                     f"Unexpected error message for URL '{url}': {step_res.error}"
                 )
 
+    def test_file_path_validation_protection(self):
+        """Verify that file reads and writes are blocked for sensitive paths and traversals."""
+        sensitive_paths = [
+            "../../etc/passwd",
+            "../secret.txt",
+            "~/id_rsa",
+            "/etc/passwd",
+            "/bin/sh",
+            "foo/bar/.git/config",
+            "some/path/.ssh/id_rsa",
+            "credentials",
+            ".env",
+            ".env.production",
+            "memory.db",
+            "id_rsa",
+            "private.key",
+            "cert.pem",
+        ]
+
+        for p in sensitive_paths:
+            with self.subTest(path=p):
+                # 1. Test write block
+                wf_write = WorkflowDefinition(
+                    name="write_test",
+                    steps=[
+                        StepDefinition(id="write_step", action="file_write", params={"path": p, "content": "test"}),
+                    ],
+                )
+                history_write = asyncio.run(self.executor.execute_workflow(wf_write))
+                self.assertEqual(history_write.status, RunStatus.FAILED)
+                step_res_w = history_write.step_results["write_step"]
+                self.assertEqual(step_res_w.status, StepStatus.FAILED)
+                self.assertIsNotNone(step_res_w.error)
+                self.assertTrue(
+                    any(x in step_res_w.error.lower() for x in ["traversal", "blocked", "sensitive", "leading"]),
+                    f"Expected block message for path '{p}', got: {step_res_w.error}"
+                )
+
+                # 2. Test read block
+                wf_read = WorkflowDefinition(
+                    name="read_test",
+                    steps=[
+                        StepDefinition(id="read_step", action="file_read", params={"path": p}),
+                    ],
+                )
+                history_read = asyncio.run(self.executor.execute_workflow(wf_read))
+                self.assertEqual(history_read.status, RunStatus.FAILED)
+                step_res_r = history_read.step_results["read_step"]
+                self.assertEqual(step_res_r.status, StepStatus.FAILED)
+                self.assertIsNotNone(step_res_r.error)
+                self.assertTrue(
+                    any(x in step_res_r.error.lower() for x in ["traversal", "blocked", "sensitive", "leading"]),
+                    f"Expected block message for path '{p}', got: {step_res_r.error}"
+                )
+
 
 if __name__ == "__main__":
     unittest.main()

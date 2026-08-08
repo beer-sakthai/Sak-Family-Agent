@@ -1,0 +1,54 @@
+{
+  "run_id": "run_e1db977f",
+  "workflow_name": "pw_par_retry",
+  "status": "COMPLETED",
+  "start_time": "2026-08-08T01:08:23.304274",
+  "end_time": "2026-08-08T01:08:23.316842",
+  "step_results": {
+    "root": {
+      "step_id": "root",
+      "status": "COMPLETED",
+      "output": {
+        "seed": 10
+      },
+      "error": null,
+      "attempts": 1,
+      "start_time": "2026-08-08T01:08:23.306229",
+      "end_time": "2026-08-08T01:08:23.306258"
+    },
+    "b_ok": {
+      "step_id": "b_ok",
+      "status": "COMPLETED",
+      "output": {
+        "v": 1
+      },
+      "error": null,
+      "attempts": 1,
+      "start_time": "2026-08-08T01:08:23.306356",
+      "end_time": "2026-08-08T01:08:23.306372"
+    },
+    "b_retry": {
+      "step_id": "b_retry",
+      "status": "COMPLETED",
+      "output": {
+        "result": 2
+      },
+      "error": null,
+      "attempts": 2,
+      "start_time": "2026-08-08T01:08:23.306390",
+      "end_time": "2026-08-08T01:08:23.316657"
+    },
+    "join": {
+      "step_id": "join",
+      "status": "COMPLETED",
+      "output": {
+        "combined_val": 3,
+        "result": 3
+      },
+      "error": null,
+      "attempts": 1,
+      "start_time": "2026-08-08T01:08:23.316763",
+      "end_time": "2026-08-08T01:08:23.316805"
+    }
+  }
+}

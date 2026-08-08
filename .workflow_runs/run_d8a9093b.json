@@ -1,0 +1,49 @@
+{
+  "run_id": "run_d8a9093b",
+  "workflow_name": "retry_workflow",
+  "status": "FAILED",
+  "start_time": "2026-08-08T01:08:22.842404",
+  "end_time": "2026-08-08T01:08:23.046359",
+  "step_results": {
+    "step_transient": {
+      "step_id": "step_transient",
+      "status": "COMPLETED",
+      "output": {
+        "result": "recovered_on_retry"
+      },
+      "error": null,
+      "attempts": 2,
+      "start_time": "2026-08-08T01:08:22.844763",
+      "end_time": "2026-08-08T01:08:22.945278"
+    },
+    "step_post_transient": {
+      "step_id": "step_post_transient",
+      "status": "COMPLETED",
+      "output": {
+        "data": "recovered_on_retry"
+      },
+      "error": null,
+      "attempts": 1,
+      "start_time": "2026-08-08T01:08:22.945499",
+      "end_time": "2026-08-08T01:08:22.945589"
+    },
+    "step_terminal_fail": {
+      "step_id": "step_terminal_fail",
+      "status": "FAILED",
+      "output": {},
+      "error": "unrecoverable_error",
+      "attempts": 2,
+      "start_time": "2026-08-08T01:08:22.945693",
+      "end_time": "2026-08-08T01:08:23.046216"
+    },
+    "step_downstream_blocked": {
+      "step_id": "step_downstream_blocked",
+      "status": "SKIPPED",
+      "output": {},
+      "error": "Skipped due to upstream step failure.",
+      "attempts": 0,
+      "start_time": "2026-08-08T01:08:23.046340",
+      "end_time": "2026-08-08T01:08:23.046343"
+    }
+  }
+}

@@ -34,6 +34,55 @@ class ExecutionError(Exception):
     pass
 
 
+def _validate_filepath(filepath: Any) -> Path:
+    """Validate filepath against path traversal, critical system roots, sensitive directories, and credential files."""
+    fp_str = str(filepath).strip()
+    if not fp_str:
+        raise ValueError("Filepath cannot be empty.")
+
+    # Block path traversal segments like ".." and leading "~"
+    normalized_path_str = fp_str.replace("\\", "/")
+    if ".." in normalized_path_str.split("/"):
+        raise ValueError(f"Path traversal segments are not allowed: {filepath}")
+    if fp_str.startswith("~"):
+        raise ValueError(f"Leading '~' is not allowed: {filepath}")
+
+    # Resolve target to an absolute Path relative to current working directory
+    target = Path(fp_str).absolute()
+
+    # Check for critical system roots (e.g., /etc, /bin, /usr, /var, /opt, /sbin, /lib, /boot, /sys, /proc, /dev)
+    critical_roots = {
+        "etc", "bin", "usr", "var", "opt", "sbin", "lib", "boot", "sys", "proc", "dev", "root"
+    }
+
+    # Check if target begins with any of the critical roots
+    parts = [p.lower() for p in target.parts]
+    if len(parts) > 1 and parts[0] == "/" and parts[1] in critical_roots:
+        raise PermissionError(f"Access to critical system directory is blocked: {filepath}")
+
+    # Sensitive directories (e.g., .git, .ssh, .aws, .config, .npm)
+    sensitive_dirs = {".git", ".ssh", ".aws", ".config", ".npm"}
+    for part in parts:
+        if part in sensitive_dirs:
+            raise PermissionError(f"Access to sensitive directory is blocked: {filepath}")
+
+    # Sensitive file basenames
+    sensitive_basenames = {
+        ".env", "memory.db", "id_rsa", "id_dsa", "id_ecdsa", "id_ed25519", "known_hosts", "authorized_keys",
+        "credentials", "credentials.json", "shadow", "passwd", "sudoers"
+    }
+
+    name_lower = target.name.lower()
+    if name_lower in sensitive_basenames or name_lower.startswith(".env."):
+        raise PermissionError(f"Access to sensitive file is blocked: {filepath}")
+
+    # Also block sensitive suffixes like .pem, .key
+    if name_lower.endswith((".pem", ".key", ".pfx", ".p12")):
+        raise PermissionError(f"Access to sensitive file suffix is blocked: {filepath}")
+
+    return target
+
+
 class WorkflowExecutor:
     """Asynchronous workflow execution engine."""
 
@@ -232,7 +281,7 @@ class WorkflowExecutor:
             if not filepath:
                 raise ValueError(f"Step '{step_id}' action '{action}' missing 'path' parameter.")
 
-            target = Path(filepath)
+            target = _validate_filepath(filepath)
             target.parent.mkdir(parents=True, exist_ok=True)
             if isinstance(content, (dict, list)):
                 content_str = json.dumps(content, indent=2)
@@ -246,7 +295,7 @@ class WorkflowExecutor:
             if not filepath:
                 raise ValueError(f"Step '{step_id}' action '{action}' missing 'path' parameter.")
 
-            target = Path(filepath)
+            target = _validate_filepath(filepath)
             if not target.exists():
                 raise FileNotFoundError(f"File not found: '{filepath}'")
             content = target.read_text(encoding="utf-8")
