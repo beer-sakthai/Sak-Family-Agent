@@ -245,6 +245,78 @@ class TestGuardrailsBypass(unittest.TestCase):
                 f"Interpreter bypass '{cmd}' should be blocked",
             )
 
+    def test_make_command_guardrails(self):
+        import os
+        import shutil
+        import tempfile
+
+        # Create a temporary directory in the current directory (non-sensitive path)
+        tmp_dir = tempfile.mkdtemp(dir=".")
+        try:
+            # 1. Makefile in tmp_dir containing a destructive command recipe
+            makefile_content_destructive = "all:\n\t@rm -rf /etc\n"
+            with open(os.path.join(tmp_dir, "Makefile"), "w") as f:
+                f.write(makefile_content_destructive)
+
+            # Execution without specifying the file directly should find the Makefile in -C dir
+            # and deny the execution because of the destructive rm recipe
+            args = {"command": f"make -C {tmp_dir}"}
+            result = _block_dangerous_shell_commands(self.tool, args, self.store)
+            self.assertEqual(
+                result.action,
+                GuardrailAction.DENY,
+                "make loading makefile with destructive command recipe should be blocked",
+            )
+
+            # 2. Makefile containing a sensitive path
+            makefile_content_sensitive_path = "all:\n\techo 'hello' > /etc/shadow\n"
+            with open(os.path.join(tmp_dir, "Makefile"), "w") as f:
+                f.write(makefile_content_sensitive_path)
+
+            args = {"command": f"make -C {tmp_dir}"}
+            result = _block_dangerous_shell_commands(self.tool, args, self.store)
+            self.assertEqual(
+                result.action,
+                GuardrailAction.DENY,
+                "make loading makefile containing sensitive path in recipe should be blocked",
+            )
+
+            # 3. Direct sensitive file specified with -f
+            # (e.g. make -f /etc/shadow)
+            args = {"command": "make -f /etc/shadow"}
+            result = _block_dangerous_shell_commands(self.tool, args, self.store)
+            self.assertEqual(
+                result.action,
+                GuardrailAction.DENY,
+                "make specifying sensitive makefile should be blocked",
+            )
+
+            # 4. Safe makefile in tmp_dir should be allowed
+            makefile_content_safe = "all:\n\t@echo 'Hello from safe Makefile'\n"
+            with open(os.path.join(tmp_dir, "Makefile"), "w") as f:
+                f.write(makefile_content_safe)
+
+            args = {"command": f"make -C {tmp_dir}"}
+            result = _block_dangerous_shell_commands(self.tool, args, self.store)
+            self.assertEqual(
+                result.action, GuardrailAction.ALLOW, "make loading safe makefile should be allowed"
+            )
+
+            # 5. Recursive/cycle makefile should not trigger infinite recursion
+            makefile_content_recursive = "all:\n\tmake all\n"
+            with open(os.path.join(tmp_dir, "Makefile"), "w") as f:
+                f.write(makefile_content_recursive)
+
+            args = {"command": f"make -C {tmp_dir}"}
+            result = _block_dangerous_shell_commands(self.tool, args, self.store)
+            self.assertEqual(
+                result.action,
+                GuardrailAction.ALLOW,
+                "recursive make loading itself should not infinite loop and should be allowed",
+            )
+        finally:
+            shutil.rmtree(tmp_dir, ignore_errors=True)
+
 
 if __name__ == "__main__":
     unittest.main()
