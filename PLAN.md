@@ -103,7 +103,9 @@ workspace runtime config under `infra/`.
 ## 🧹 SCRATCH_ORGANISATION_PLAN.MD
 
 **Owner:** SakKing (spotter) → SakJules (executor)
-**Status:** Planning
+**Status:** [x] 2026-08-08 — executed. Superseded in scope by
+[`docs/repo-audit-2026-08-08.md`](./docs/repo-audit-2026-08-08.md), which covered
+these root files plus generated-state bloat and the `.gitignore` shadowing bug.
 **Priority:** Medium
 
 ### Problem
@@ -130,7 +132,9 @@ Root directory of `Sak-Family-Agent/` has accumulated scratch files that belong 
 4. Update any references in scripts that import these files
 
 ### Verification
-1. `ls *.py *.json` at root → nothing
-2. `ls scripts/_*.py` → 5 files
-3. `ls data/*.json` → 2 files (non-empty)
-4. Empty placeholders removed
+1. `ls *.py *.json` at root → nothing ✅
+2. `ls scripts/hf/_*.py` → 5 files ✅ (landed in `scripts/hf/`, not `scripts/`)
+3. `ls data/*.json` → `hf-topics-covered.json` ✅ (`ci_runs.json` was deleted, not
+   moved: it is a regenerable API-response cache the consuming skill reads from
+   `/opt/data/`, never the repo copy)
+4. Empty placeholders removed ✅
