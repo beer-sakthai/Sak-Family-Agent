@@ -1,9 +1,9 @@
 {
-  "run_id": "test_cli_inspect_run",
+  "run_id": "run_88087104",
   "workflow_name": "cli_test_wf",
   "status": "COMPLETED",
-  "start_time": "2026-08-08T16:30:50.659269",
-  "end_time": "2026-08-08T16:30:50.662128",
+  "start_time": "2026-08-08T16:30:50.714230",
+  "end_time": "2026-08-08T16:30:50.716528",
   "step_results": {
     "step_1": {
       "step_id": "step_1",
@@ -13,8 +13,8 @@
       },
       "error": null,
       "attempts": 1,
-      "start_time": "2026-08-08T16:30:50.661984",
-      "end_time": "2026-08-08T16:30:50.662030"
+      "start_time": "2026-08-08T16:30:50.716399",
+      "end_time": "2026-08-08T16:30:50.716441"
     }
   }
 }
