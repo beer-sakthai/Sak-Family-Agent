@@ -1,9 +1,9 @@
 {
-  "run_id": "cli_inspect_test_run",
+  "run_id": "run_7425c520",
   "workflow_name": "linear_workflow",
   "status": "COMPLETED",
-  "start_time": "2026-08-08T04:20:26.006739",
-  "end_time": "2026-08-08T04:20:26.008960",
+  "start_time": "2026-08-08T04:15:58.587107",
+  "end_time": "2026-08-08T04:15:58.589421",
   "step_results": {
     "step_1": {
       "step_id": "step_1",
@@ -14,8 +14,8 @@
       },
       "error": null,
       "attempts": 1,
-      "start_time": "2026-08-08T04:20:26.008629",
-      "end_time": "2026-08-08T04:20:26.008668"
+      "start_time": "2026-08-08T04:15:58.589088",
+      "end_time": "2026-08-08T04:15:58.589129"
     },
     "step_2": {
       "step_id": "step_2",
@@ -26,8 +26,8 @@
       },
       "error": null,
       "attempts": 1,
-      "start_time": "2026-08-08T04:20:26.008746",
-      "end_time": "2026-08-08T04:20:26.008828"
+      "start_time": "2026-08-08T04:15:58.589209",
+      "end_time": "2026-08-08T04:15:58.589296"
     },
     "step_3": {
       "step_id": "step_3",
@@ -38,8 +38,8 @@
       },
       "error": null,
       "attempts": 1,
-      "start_time": "2026-08-08T04:20:26.008899",
-      "end_time": "2026-08-08T04:20:26.008927"
+      "start_time": "2026-08-08T04:15:58.589363",
+      "end_time": "2026-08-08T04:15:58.589390"
     }
   }
 }

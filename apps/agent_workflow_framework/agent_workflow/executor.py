@@ -34,6 +34,58 @@ class ExecutionError(Exception):
     pass
 
 
+def _validate_filepath(filepath: Any) -> Path:
+    """Validate a filepath to prevent path traversal and access to sensitive/system directories/files."""
+    if not filepath:
+        raise ValueError("File path cannot be empty.")
+
+    path_str = str(filepath).strip()
+
+    # Block path traversal segments like '..' or leading '~'
+    if ".." in path_str.split(os.sep) or ".." in path_str.split("/") or path_str.startswith("~"):
+        raise PermissionError(f"Directory path traversal or user home shortcut is prohibited: '{path_str}'")
+
+    # Resolve target absolute to Path
+    try:
+        target = Path(path_str).resolve()
+    except Exception as exc:
+        raise ValueError(f"Invalid file path '{path_str}': {exc}")
+
+    # Critical system roots (e.g., /etc, /bin, /var, /boot, /dev, /lib, /lib64, /proc, /sys, /sbin, /usr)
+    parts = [p.lower() for p in target.parts]
+    system_roots = {"etc", "bin", "var", "boot", "dev", "lib", "lib64", "proc", "sys", "sbin", "usr", "root"}
+
+    if target.is_absolute():
+        root_part = target.anchor
+        non_root_parts = [p for p in target.parts if p != root_part]
+        if non_root_parts:
+            first_dir = non_root_parts[0].lower()
+            if first_dir in system_roots:
+                raise PermissionError(f"Access to critical system directory is prohibited: '{path_str}'")
+
+    # Blocks access to sensitive directories (e.g., .git, .ssh, .aws)
+    sensitive_dirs = {".git", ".ssh", ".aws", ".jules", ".config", ".npm"}
+    if any(part in sensitive_dirs for part in parts):
+        raise PermissionError(f"Access to sensitive directory is prohibited: '{path_str}'")
+
+    # Blocks access to credential/sensitive file basenames (e.g., .env, memory.db, id_rsa)
+    filename = target.name.lower()
+    sensitive_basenames = {
+        ".env", "memory.db", "id_rsa", "id_dsa", "id_ecdsa", "id_ed25519", "id_ecdsa_sk", "id_ed25519_sk", "id_xmss",
+        "known_hosts", "authorized_keys", "credentials", "credentials.json", "shadow", "passwd", "sudoers",
+        ".bash_history", ".zsh_history", ".python_history", ".history", ".netrc", ".npmrc", ".pypirc",
+        "gshadow", "group", ".bashrc", ".zshrc", ".profile", ".bash_profile", ".gitconfig", ".zprofile",
+        ".yarnrc", ".yarnrc.yml", ".git-credentials", ".node_repl_history", ".mysql_history", ".psql_history",
+        ".sqlite_history", ".rediscli_history", ".mongo_history", ".pgpass", ".my.cnf"
+    }
+    sensitive_suffixes = (".pem", ".key", ".pfx", ".p12")
+
+    if filename in sensitive_basenames or filename.startswith(".env.") or filename.endswith(sensitive_suffixes):
+        raise PermissionError(f"Access to sensitive file is prohibited: '{path_str}'")
+
+    return target
+
+
 class WorkflowExecutor:
     """Asynchronous workflow execution engine."""
 
@@ -232,7 +284,7 @@ class WorkflowExecutor:
             if not filepath:
                 raise ValueError(f"Step '{step_id}' action '{action}' missing 'path' parameter.")
 
-            target = Path(filepath)
+            target = _validate_filepath(filepath)
             target.parent.mkdir(parents=True, exist_ok=True)
             if isinstance(content, (dict, list)):
                 content_str = json.dumps(content, indent=2)
@@ -246,7 +298,7 @@ class WorkflowExecutor:
             if not filepath:
                 raise ValueError(f"Step '{step_id}' action '{action}' missing 'path' parameter.")
 
-            target = Path(filepath)
+            target = _validate_filepath(filepath)
             if not target.exists():
                 raise FileNotFoundError(f"File not found: '{filepath}'")
             content = target.read_text(encoding="utf-8")
