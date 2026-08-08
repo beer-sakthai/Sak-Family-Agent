@@ -1,5 +1,10 @@
 # Sentinel Security Journal
 
+## 2026-08-16 - Double and Multi-layered URL-Encoded Path Traversal Bypass in Teams Copilot MCP Client
+**Vulnerability:** The Microsoft Graph Client (`GraphClient.request`) implemented a single-layer `urllib.parse.unquote` validation to detect path traversal attempts (relative references containing `..`). By double-encoding or multi-layer-encoding the traversal sequences (e.g. `%252e%252e` which decodes to `%2e%2e` and then to `..`), an attacker could bypass the `unquote` sanitization while still having the sequence parsed as path traversal by Microsoft Graph or subsequent handlers.
+**Learning:** Single-pass URL-unquoting is insufficient to protect sensitive HTTP client requests when input parameters are under remote model or user influence. Multi-layered encoding can easily conceal traversal sequences from naive checks.
+**Prevention:** Always recursively decode/unquote URL-encoded path arguments up to a reasonable depth limit (e.g., 5 passes or until the string stabilizes) before splitting and checking for path traversal segments.
+
 ## 2026-08-15 - Unvalidated File IO in Agent Workflow Framework Executor
 **Vulnerability:** The Agent Workflow Framework executor's file actions (`file_read`, `file_write`) were entirely unvalidated, allowing complete local path traversal and arbitrary reading or writing of sensitive files (like `.env`, SSH keys, or system-critical `/etc/passwd`) without restriction.
 **Learning:** Adding complex system tools or workflow executors that support filesystem interactions creates a high-risk security gap if not accompanied by a centralized path-validation layer that strictly validates target paths before any filesystem IO is attempted.
