@@ -520,6 +520,9 @@ def _get_exact_secrets() -> list[str]:
         "STRIPE_PUBLISHABLE_KEY",
         "TWILIO_AUTH_TOKEN",
         "TWILIO_API_KEY",
+        "MS_GRAPH_CLIENT_SECRET",
+        "MS_GRAPH_REFRESH_TOKEN",
+        "MSGRAPH_CLIENT_SECRET",
     ]
 
     env_changed = False

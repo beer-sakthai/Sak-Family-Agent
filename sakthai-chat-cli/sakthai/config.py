@@ -416,6 +416,9 @@ def redact_secrets(text: str) -> str:
         "STRIPE_PUBLISHABLE_KEY",
         "TWILIO_AUTH_TOKEN",
         "TWILIO_API_KEY",
+        "MS_GRAPH_CLIENT_SECRET",
+        "MS_GRAPH_REFRESH_TOKEN",
+        "MSGRAPH_CLIENT_SECRET",
     ]
 
     secrets: set[str] = set(_EXTRA_SECRETS)
