@@ -181,3 +181,22 @@ def test_redact_stripe_and_twilio_secrets() -> None:
     ):
         assert redact_secrets("stripe_secret_val_123") == "[REDACTED]"
         assert redact_secrets("twilio_token_val_123") == "[REDACTED]"
+
+
+def test_redact_microsoft_graph_secrets() -> None:
+    import os
+    from unittest.mock import patch
+
+    from sakthai.config import redact_secrets
+
+    with patch.dict(
+        os.environ,
+        {
+            "MS_GRAPH_CLIENT_SECRET": "msgraph_client_secret_xyz123",
+            "MS_GRAPH_REFRESH_TOKEN": "msgraph_refresh_token_abc789",
+            "MSGRAPH_CLIENT_SECRET": "mcp_msgraph_client_secret_def456",
+        },
+    ):
+        assert redact_secrets("msgraph_client_secret_xyz123") == "[REDACTED]"
+        assert redact_secrets("msgraph_refresh_token_abc789") == "[REDACTED]"
+        assert redact_secrets("mcp_msgraph_client_secret_def456") == "[REDACTED]"

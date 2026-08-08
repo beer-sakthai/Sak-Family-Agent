@@ -486,6 +486,11 @@
 **Learning:** Never assume base-url prefixes are structurally guaranteed boundaries. RFC relative-path merging naturally resolves dot-dot segments upward. To strictly enforce subpath confinement, paths must be explicitly segmented and scanned for any relative traversal segments before execution.
 **Prevention:** Segment the URL path part (both raw and URL-decoded, normalizing backslashes) and validate that no exact segment equals `..` or contains path-traversal sequences, rejecting requests that attempt to traverse outside the base path.
 
+## 2026-08-13 - Tracking and Redacting MS Graph/Teams Credentials Symmetrically
+**Vulnerability:** Lack of automatic configuration tracking and redaction for MS Graph and Microsoft Teams credentials. Without explicitly listing Azure and Office 365 environment variables like `MS_GRAPH_CLIENT_SECRET`, `MS_GRAPH_REFRESH_TOKEN`, and `MSGRAPH_CLIENT_SECRET`, active Graph/Teams credentials could be accidentally printed or leaked via console outputs, logs, or API endpoints.
+**Learning:** Security defense-in-depth tracking must comprehensively map out all credentials used by integrated external third-party services (such as MS Graph mail and calendar integrations) across all config environments and command-line execution guardrails.
+**Prevention:** Add all critical external API and refresh tokens/secrets to `secret_keys` lists in both `config.py` and `guardrails.py`, and symmetrically synchronize changes across all physical packages in the repository.
+
 ## 2026-08-12 - Scheme-independent Absolute and Protocol-relative URL Detection to Prevent SSRF Bypass
 **Vulnerability:** Naive absolute URL detection that only checks if a string begins with `http` is vulnerable to Server-Side Request Forgery (SSRF) and credential exfiltration. An attacker can supply URLs with alternative or custom schemes (like `ftp://`, `ws://`, `gopher://`) or protocol-relative references (like `//attacker.com`) that bypass prefix matching but are still resolved as absolute by underlying HTTP clients.
 **Learning:** Any URI containing either a parsed `scheme` or a `netloc` (network location) is structurally absolute or protocol-relative. Security wrappers must use standard URL parsers to inspect both fields to intercept absolute targets, regardless of the scheme used.
