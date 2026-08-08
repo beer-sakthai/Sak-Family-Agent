@@ -1,0 +1,55 @@
+{
+  "run_id": "run_4f494405",
+  "workflow_name": "parallel_workflow",
+  "status": "COMPLETED",
+  "start_time": "2026-08-08T04:15:58.597342",
+  "end_time": "2026-08-08T04:15:58.599881",
+  "step_results": {
+    "step_root": {
+      "step_id": "step_root",
+      "status": "COMPLETED",
+      "output": {
+        "seed": 100,
+        "status": "initialized"
+      },
+      "error": null,
+      "attempts": 1,
+      "start_time": "2026-08-08T04:15:58.599541",
+      "end_time": "2026-08-08T04:15:58.599591"
+    },
+    "step_branch_a": {
+      "step_id": "step_branch_a",
+      "status": "COMPLETED",
+      "output": {
+        "result": 200
+      },
+      "error": null,
+      "attempts": 1,
+      "start_time": "2026-08-08T04:15:58.599685",
+      "end_time": "2026-08-08T04:15:58.599718"
+    },
+    "step_branch_b": {
+      "step_id": "step_branch_b",
+      "status": "COMPLETED",
+      "output": {
+        "result": 150
+      },
+      "error": null,
+      "attempts": 1,
+      "start_time": "2026-08-08T04:15:58.599737",
+      "end_time": "2026-08-08T04:15:58.599758"
+    },
+    "step_join": {
+      "step_id": "step_join",
+      "status": "COMPLETED",
+      "output": {
+        "combined_val": 350,
+        "result": 350
+      },
+      "error": null,
+      "attempts": 1,
+      "start_time": "2026-08-08T04:15:58.599818",
+      "end_time": "2026-08-08T04:15:58.599850"
+    }
+  }
+}

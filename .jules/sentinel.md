@@ -1,5 +1,15 @@
 # Sentinel Security Journal
 
+## 2026-08-15 - Unvalidated File IO in Agent Workflow Framework Executor
+**Vulnerability:** The Agent Workflow Framework executor's file actions (`file_read`, `file_write`) were entirely unvalidated, allowing complete local path traversal and arbitrary reading or writing of sensitive files (like `.env`, SSH keys, or system-critical `/etc/passwd`) without restriction.
+**Learning:** Adding complex system tools or workflow executors that support filesystem interactions creates a high-risk security gap if not accompanied by a centralized path-validation layer that strictly validates target paths before any filesystem IO is attempted.
+**Prevention:** Implement a centralized helper function `_validate_filepath` to resolve paths, check for path-traversal segments, block access to critical system directories, and reject attempts to access sensitive files/directories (credential basenames, `.git`, `.ssh`, etc.).
+
+## 2026-08-10 - SSRF and Token Exfiltration via HTTP Client Base URL Override
+**Vulnerability:** Under `httpx`, passing an absolute URL to a client configured with `base_url` overrides the base URL. If the client automatically appends authorization headers (like MS Graph Bearer tokens), calling raw/arbitrary endpoints with an untrusted absolute URL leaks the token to third-party domains.
+**Learning:** Never assume an HTTP client with a hardcoded `base_url` restricts requests strictly to that domain. Absolute URLs passed to request methods bypass the base prefix, creating Server-Side Request Forgery (SSRF) and credential exfiltration vectors.
+**Prevention:** Explicitly validate all absolute and protocol-relative URLs at the request entry boundary, ensuring they strictly use HTTPS and match the allowed target domains, while rejecting obfuscations like backslashes in absolute URLs.
+
 ## 2026-08-04 - Tracking and Redacting Stripe and Twilio Credentials Symmetrically
 **Vulnerability:** Missing integration and redaction for Stripe and Twilio environment variables and consumer key format. Without explicit tracking and regex coverage, Stripe and Twilio secrets could leak in logs, database tables, and model interactions.
 **Learning:** Hardening of secret redaction mechanisms must explicitly map out domain-specific API tokens (such as Stripe consumer keys with the `ck_` prefix and Twilio API/auth variables) across all package layouts and persona-specific configurations to maintain comprehensive coverage.
@@ -470,3 +480,18 @@
 **Vulnerability:** A symmetry gap existed where advanced shell/execution guardrails protected highly sensitive credentials (like post-quantum SSH XMSS keys, shell histories, git configurations, and database credentials) from shell exfiltration, but the file-reading tool's defense-in-depth blocker (`_SENSITIVE_READ_BASENAMES`) did not contain these keys. This left them vulnerable to raw reads if directories were allowlisted.
 **Learning:** Security controls must be symmetrically enforced across different execution layers (such as shell execution guardrails vs direct tool file-read handlers). A vulnerability in one layer can easily bypass protections in another if their definitions of "sensitive assets" diverge.
 **Prevention:** Always maintain unified or perfectly synchronized lists of sensitive basenames, private key stems, and credential files across all guardrail layers and file-reading tools. Write automated checks or comprehensive regression tests that cover identical files across both toolsets to prevent drift.
+
+## 2026-08-11 - Relative Path Traversal and API Version/Namespace Escape
+**Vulnerability:** A base-url configured HTTP client (e.g. MS Graph v1.0) can be coerced into accessing different API namespaces or versions (e.g. /beta/) if path arguments contain relative directory traversal segments like `..` or `/../`. Since absolute hostname controls only trigger on strings starting with `http`, relative traversal escapes bypass host checks while breaking out of the designated base-url subpath.
+**Learning:** Never assume base-url prefixes are structurally guaranteed boundaries. RFC relative-path merging naturally resolves dot-dot segments upward. To strictly enforce subpath confinement, paths must be explicitly segmented and scanned for any relative traversal segments before execution.
+**Prevention:** Segment the URL path part (both raw and URL-decoded, normalizing backslashes) and validate that no exact segment equals `..` or contains path-traversal sequences, rejecting requests that attempt to traverse outside the base path.
+
+## 2026-08-13 - Tracking and Redacting MS Graph/Teams Credentials Symmetrically
+**Vulnerability:** Lack of automatic configuration tracking and redaction for MS Graph and Microsoft Teams credentials. Without explicitly listing Azure and Office 365 environment variables like `MS_GRAPH_CLIENT_SECRET`, `MS_GRAPH_REFRESH_TOKEN`, and `MSGRAPH_CLIENT_SECRET`, active Graph/Teams credentials could be accidentally printed or leaked via console outputs, logs, or API endpoints.
+**Learning:** Security defense-in-depth tracking must comprehensively map out all credentials used by integrated external third-party services (such as MS Graph mail and calendar integrations) across all config environments and command-line execution guardrails.
+**Prevention:** Add all critical external API and refresh tokens/secrets to `secret_keys` lists in both `config.py` and `guardrails.py`, and symmetrically synchronize changes across all physical packages in the repository.
+
+## 2026-08-12 - Scheme-independent Absolute and Protocol-relative URL Detection to Prevent SSRF Bypass
+**Vulnerability:** Naive absolute URL detection that only checks if a string begins with `http` is vulnerable to Server-Side Request Forgery (SSRF) and credential exfiltration. An attacker can supply URLs with alternative or custom schemes (like `ftp://`, `ws://`, `gopher://`) or protocol-relative references (like `//attacker.com`) that bypass prefix matching but are still resolved as absolute by underlying HTTP clients.
+**Learning:** Any URI containing either a parsed `scheme` or a `netloc` (network location) is structurally absolute or protocol-relative. Security wrappers must use standard URL parsers to inspect both fields to intercept absolute targets, regardless of the scheme used.
+**Prevention:** Rather than string prefix matching, parse the URL using `urllib.parse.urlparse` and verify if `parsed.scheme` or `parsed.netloc` is populated. If so, enforce strict HTTPS schemes and whitelist host domains (e.g., `graph.microsoft.com`).

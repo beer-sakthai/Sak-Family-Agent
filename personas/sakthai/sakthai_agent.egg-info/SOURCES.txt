@@ -92,8 +92,11 @@ tests/test_context_manager.py
 tests/test_cycle_skills_config.py
 tests/test_cycle_state.py
 tests/test_dashboard_data.py
+tests/test_dataset_prep.py
 tests/test_entrypoint.py
 tests/test_eval.py
+tests/test_eval_compare.py
+tests/test_eval_scoring.py
 tests/test_export_agent_repo.py
 tests/test_extensions.py
 tests/test_giturl.py
@@ -162,6 +165,7 @@ tests/test_telegram_main.py
 tests/test_telegram_workflow_executor.py
 tests/test_tools.py
 tests/test_tools_overrides.py
+tests/test_train_configs.py
 tests/test_train_eval_coder_lora.py
 tests/test_usage.py
 tests/test_verify_hf_upload.py

@@ -308,7 +308,39 @@ def _is_sensitive_path(path: str, allow_local: bool = False) -> bool:
     return False
 
 
-def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False) -> GuardrailResult:
+def _is_local_make_dir(path: str) -> bool:
+    """True if ``path`` is an ordinary directory under the current working directory.
+
+    ``_is_sensitive_path``'s final check blocks any absolute path nested under a
+    broad critical root (``/home``, ``/var``, ...), which also matches every
+    normal project checkout on a typical Linux box — including the cwd itself,
+    since ``tempfile.mkdtemp(dir=".")`` returns an absolute path as of Python
+    3.12. This narrower check exists only to rescue that case for the ``make -C``
+    guardrail: a path resolving inside cwd is treated as local *unless* it (or
+    one of its components) is itself a name ``_is_sensitive_path`` would flag
+    regardless of location (``.ssh``, ``id_rsa``, etc.) or contains traversal.
+    """
+    if ".." in path:
+        return False
+    normalized = os.path.normpath(path)
+    basename = os.path.basename(normalized)
+    if _basename_is_sensitive(basename):
+        return False
+    lowered_parts = {p.casefold() for p in normalized.split(os.sep)}
+    if any(d in lowered_parts for d in _SENSITIVE_DIRS):
+        return False
+
+    abs_path = os.path.abspath(path)
+    cwd = os.getcwd()
+    return abs_path == cwd or abs_path.startswith(cwd + os.sep)
+
+
+def _check_destructive_tokens(
+    parts: list[str],
+    context_sensitive: bool = False,
+    checked_makefiles: set[str] | None = None,
+    current_make_dir: str = ".",
+) -> GuardrailResult:
     """Recursively check tokens for destructive commands.
 
     If ``context_sensitive`` is True, discovery placeholders like '{}' and '+'
@@ -320,6 +352,99 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
 
     # 1. Handle nested commands in wrappers (recursion)
     for i, part in enumerate(parts):
+        # 1d. make command scanning Makefile recipes
+        if _is_binary(part, "make"):
+            make_dir = current_make_dir
+            makefile_path = None
+
+            idx = i + 1
+            while idx < len(parts):
+                arg = parts[idx]
+                if arg in ("-C", "--directory") and idx + 1 < len(parts):
+                    make_dir = parts[idx + 1]
+                    idx += 2
+                elif arg.startswith("-C"):
+                    make_dir = arg[2:]
+                    idx += 1
+                elif arg in ("-f", "--file", "--makefile") and idx + 1 < len(parts):
+                    makefile_path = parts[idx + 1]
+                    idx += 2
+                elif arg.startswith("-f"):
+                    makefile_path = arg[2:]
+                    idx += 1
+                else:
+                    idx += 1
+
+            if _is_sensitive_path(make_dir, allow_local=True) and not _is_local_make_dir(make_dir):
+                return GuardrailResult(
+                    GuardrailAction.DENY,
+                    reason=f"Potentially dangerous 'make' command in sensitive directory {make_dir!r} blocked.",
+                )
+
+            if not makefile_path:
+                for name in ("GNUmakefile", "makefile", "Makefile"):
+                    candidate = os.path.join(make_dir, name)
+                    if os.path.isfile(candidate):
+                        makefile_path = candidate
+                        break
+            else:
+                if not os.path.isabs(makefile_path):
+                    makefile_path = os.path.join(make_dir, makefile_path)
+
+            if makefile_path:
+                if checked_makefiles is None:
+                    checked_makefiles = set()
+
+                abs_makefile_path = os.path.abspath(makefile_path)
+                if abs_makefile_path in checked_makefiles:
+                    continue
+
+                if _is_sensitive_path(makefile_path) and not _is_local_make_dir(makefile_path):
+                    return GuardrailResult(
+                        GuardrailAction.DENY,
+                        reason=f"Potentially dangerous 'make' command on sensitive file {makefile_path!r} blocked.",
+                    )
+                if os.path.isfile(makefile_path):
+                    new_checked = checked_makefiles | {abs_makefile_path}
+                    try:
+                        with open(makefile_path, encoding="utf-8", errors="ignore") as f:
+                            content = f.read()
+
+                        for match in re.finditer(_SENSITIVE_SCRIPT_PATH_RE, content):
+                            candidate = match.group(0)
+                            if _is_sensitive_path(candidate):
+                                return GuardrailResult(
+                                    GuardrailAction.DENY,
+                                    reason=f"Potentially dangerous 'make' command loading makefile with sensitive path {candidate!r} blocked.",
+                                )
+
+                        for line in content.splitlines():
+                            if line.startswith("\t"):
+                                recipe = line.lstrip("\t").strip()
+                                while recipe and recipe[0] in ("@", "-", "+"):
+                                    recipe = recipe[1:].strip()
+                                if recipe:
+                                    try:
+                                        recipe_parts = shlex.split(recipe)
+                                        res = _check_destructive_tokens(
+                                            recipe_parts,
+                                            context_sensitive=context_sensitive,
+                                            checked_makefiles=new_checked,
+                                            current_make_dir=make_dir,
+                                        )
+                                        if res.action == GuardrailAction.DENY:
+                                            return GuardrailResult(
+                                                GuardrailAction.DENY,
+                                                reason=f"Potentially destructive command in makefile recipe blocked: {res.reason}",
+                                            )
+                                    except ValueError:
+                                        return GuardrailResult(
+                                            GuardrailAction.DENY,
+                                            reason="Malformed shell command in makefile recipe.",
+                                        )
+                    except Exception:  # nosec B110 — safe swallow of makefile parsing/reading errors
+                        pass
+
         # 1a. bash -c "..." or sh -c "..." (including combined flags like -xc)
         # Search backwards for the shell binary to handle intermediate flags (e.g. bash -v -c).
         if (
@@ -343,7 +468,12 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
             if shell_idx != -1:
                 try:
                     nested = shlex.split(parts[i + 1])
-                    res = _check_destructive_tokens(nested, context_sensitive=context_sensitive)
+                    res = _check_destructive_tokens(
+                        nested,
+                        context_sensitive=context_sensitive,
+                        checked_makefiles=checked_makefiles,
+                        current_make_dir=current_make_dir,
+                    )
                     if res.action == GuardrailAction.DENY:
                         return res
                 except ValueError:
@@ -356,7 +486,12 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
             if len(rest) == 1 and " " in rest[0]:
                 with contextlib.suppress(ValueError):
                     rest = shlex.split(rest[0])
-            res = _check_destructive_tokens(rest, context_sensitive=context_sensitive)
+            res = _check_destructive_tokens(
+                rest,
+                context_sensitive=context_sensitive,
+                checked_makefiles=checked_makefiles,
+                current_make_dir=current_make_dir,
+            )
             if res.action == GuardrailAction.DENY:
                 return res
 
@@ -1011,7 +1146,12 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
                     )
                 start_idx += 1
 
-            res = _check_destructive_tokens(parts[start_idx:], context_sensitive=context_sensitive)
+            res = _check_destructive_tokens(
+                parts[start_idx:],
+                context_sensitive=context_sensitive,
+                checked_makefiles=checked_makefiles,
+                current_make_dir=current_make_dir,
+            )
             if res.action == GuardrailAction.DENY:
                 return res
         # find ... -exec/ok command ...
@@ -1040,7 +1180,12 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
                     targets_sensitive = True
                     break
 
-            res = _check_destructive_tokens(exec_args, context_sensitive=targets_sensitive)
+            res = _check_destructive_tokens(
+                exec_args,
+                context_sensitive=targets_sensitive,
+                checked_makefiles=checked_makefiles,
+                current_make_dir=current_make_dir,
+            )
             if res.action == GuardrailAction.DENY:
                 if targets_sensitive:
                     # Specific reason for find-exec when target is sensitive.
@@ -1184,6 +1329,9 @@ def _block_output_with_secrets(
         "STRIPE_PUBLISHABLE_KEY",
         "TWILIO_AUTH_TOKEN",
         "TWILIO_API_KEY",
+        "MS_GRAPH_CLIENT_SECRET",
+        "MS_GRAPH_REFRESH_TOKEN",
+        "MSGRAPH_CLIENT_SECRET",
     ]
     secrets_to_check = set()
     try:

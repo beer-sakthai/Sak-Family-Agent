@@ -144,3 +144,108 @@ def test_non_2xx_response_raises(monkeypatch):
     ), patch.object(httpx.Client, "request", return_value=fake_response):
         with pytest.raises(httpx.HTTPStatusError):
             client.request("GET", "/me")
+
+
+def test_request_allows_valid_graph_absolute_url(monkeypatch):
+    _valid_credentials(monkeypatch)
+    client = GraphClient()
+
+    fake_response = httpx.Response(200, json={"value": "ok"}, request=httpx.Request("GET", "https://x"))
+    fake_app = MagicMock()
+    fake_app.acquire_token_for_client.return_value = {
+        "access_token": "token",
+        "expires_in": 3600,
+    }
+
+    with patch(
+        "teams_copilot_mcp.graph_client.msal.ConfidentialClientApplication",
+        return_value=fake_app,
+    ), patch.object(httpx.Client, "request", return_value=fake_response) as mock_request:
+        client.request("GET", "https://graph.microsoft.com/v1.0/me")
+
+    assert mock_request.call_args.args[1] == "https://graph.microsoft.com/v1.0/me"
+
+
+def test_request_blocks_external_absolute_url(monkeypatch):
+    _valid_credentials(monkeypatch)
+    client = GraphClient()
+
+    with pytest.raises(ValueError, match="Absolute URLs must target graph.microsoft.com"):
+        client.request("GET", "https://attacker.com/leak")
+
+
+def test_request_blocks_insecure_graph_absolute_url(monkeypatch):
+    _valid_credentials(monkeypatch)
+    client = GraphClient()
+
+    with pytest.raises(ValueError, match="Only HTTPS is supported"):
+        client.request("GET", "http://graph.microsoft.com/v1.0/me")
+
+
+def test_request_blocks_protocol_relative_url(monkeypatch):
+    _valid_credentials(monkeypatch)
+    client = GraphClient()
+
+    with pytest.raises(ValueError, match="protocol-relative paths are blocked"):
+        client.request("GET", "//attacker.com/leak")
+
+
+def test_request_blocks_obfuscated_backslash_absolute_url(monkeypatch):
+    _valid_credentials(monkeypatch)
+    client = GraphClient()
+
+    with pytest.raises(ValueError, match="Backslashes are not allowed"):
+        client.request("GET", "https:\\\\graph.microsoft.com\\leak")
+
+
+def test_request_blocks_path_traversal_relative_url(monkeypatch):
+    _valid_credentials(monkeypatch)
+    client = GraphClient()
+
+    with pytest.raises(ValueError, match="Path traversal sequences are not allowed"):
+        client.request("GET", "../beta/me")
+
+    with pytest.raises(ValueError, match="Path traversal sequences are not allowed"):
+        client.request("GET", "/../beta/me")
+
+    with pytest.raises(ValueError, match="Path traversal sequences are not allowed"):
+        client.request("GET", "me/../users")
+
+
+def test_request_blocks_path_traversal_backslash(monkeypatch):
+    _valid_credentials(monkeypatch)
+    client = GraphClient()
+
+    with pytest.raises(ValueError, match="Path traversal sequences are not allowed"):
+        client.request("GET", "..\\beta\\me")
+
+    with pytest.raises(ValueError, match="Path traversal sequences are not allowed"):
+        client.request("GET", "me\\..\\users")
+
+
+def test_request_blocks_path_traversal_url_encoded(monkeypatch):
+    _valid_credentials(monkeypatch)
+    client = GraphClient()
+
+    with pytest.raises(ValueError, match="Path traversal sequences are not allowed"):
+        client.request("GET", "%2e%2e/beta/me")
+
+    with pytest.raises(ValueError, match="Path traversal sequences are not allowed"):
+        client.request("GET", "%2e%2e%2fbeta/me")
+
+    with pytest.raises(ValueError, match="Path traversal sequences are not allowed"):
+        client.request("GET", "me%2f%2e%2e%2fusers")
+
+
+def test_request_blocks_custom_schemes_absolute_urls(monkeypatch):
+    _valid_credentials(monkeypatch)
+    client = GraphClient()
+
+    with pytest.raises(ValueError, match="Only HTTPS is supported"):
+        client.request("GET", "ftp://attacker.com/leak")
+
+    with pytest.raises(ValueError, match="Only HTTPS is supported"):
+        client.request("GET", "ws://attacker.com/leak")
+
+    with pytest.raises(ValueError, match="Only HTTPS is supported"):
+        client.request("GET", "gopher://attacker.com/leak")
