@@ -1,9 +1,6 @@
 ---
 name: SakThai-hf-hub-exceptions-retry
-version: 1.0.0
-description: HuggingFace Hub exception handling and retry strategies
-author: SakThai
-license: MIT
+description: "HuggingFace Hub exception handling and retry strategies"
 ---
 
 # HuggingFace Hub Exceptions & Retry Mechanisms

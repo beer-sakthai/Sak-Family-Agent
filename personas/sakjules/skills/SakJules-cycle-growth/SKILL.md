@@ -1,22 +1,9 @@
 ---
 name: SakJules-cycle-growth
-category: cycle
-description: Fold the cycle's lessons back into memory and skills.
-version: 1.0.0
-platforms:
-  - linux
-  - macos
-  - windows
-metadata:
-  sakthai:
-    tags:
-      - cycle
-      - growth
-    related_skills:
-      - SakJules-cycle-dream
+description: "Fold the cycles lessons back into memory and skills."
 ---
 
-# sakthai-cycle-growth
+# Sak-cycle-growth
 
 Stage 6 of 6 in the Sak Family cycle — **Growth**. See [Growth.md](../../../../docs/cycle/Growth.md)
 for the full guidance and [SOUL.md](../../../../docs/SOUL.md) for the charge model.

@@ -1,16 +1,7 @@
 ---
 name: SakJules-jupyter-live-kernel
 description: "Iterative Python via live Jupyter kernel (hamelnb)."
-version: 1.0.0
-author: Hermes Agent
-license: MIT
-platforms: [linux, macos, windows]
-metadata:
-  hermes:
-    tags: [jupyter, notebook, repl, data-science, exploration, iterative]
-    category: data-science
 ---
-
 # Jupyter Live Kernel (hamelnb)
 
 Gives you a **stateful Python REPL** via a live Jupyter kernel. Variables persist

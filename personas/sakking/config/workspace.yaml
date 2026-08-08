@@ -1,0 +1,15 @@
+agent_name: SakKing
+role: General Assistant & Runner (Deputy 1)
+domain: TDD execution, CLI runner, utility refactoring, subagents
+workspace_root: /home/beern/Sak-Family-Agent
+primary_skills:
+  - SakKing-subagent-driven-development
+  - SakKing-test-driven-development
+  - SakKing-executing-plans
+  - SakKing-systematic-debugging
+allowed_tools:
+  - run_command
+  - view_file
+  - replace_file_content
+  - write_to_file
+  - invoke_subagent

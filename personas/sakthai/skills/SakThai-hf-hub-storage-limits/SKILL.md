@@ -1,12 +1,6 @@
 ---
 name: SakThai-hf-hub-storage-limits
-version: 1.0.0
-author: SakThai
-license: MIT
-description: >-
-  Master Hugging Face Hub storage ecosystem — Git-based repo limits,
-  Storage Buckets (S3-compatible mutable object storage), quota
-  management, Xet dedup backend, and zero-cost patterns.
+description: ">-   Master Hugging Face Hub storage ecosystem — Git-based repo limits,   Storage Buckets (S3-compatible mutable object storage), quota   management, Xet dedup backend, and zero-cost patterns."
 ---
 
 # Hugging Face Hub Storage Limits, Plans & Storage Buckets

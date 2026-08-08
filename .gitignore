@@ -31,3 +31,11 @@ personas/sakthai/agent-self-evolution/output/
 .coverage
 apps/*/node_modules
 apps/*/.next
+
+# Isolated workspaces for subagent-driven-development / plan execution
+.worktrees/
+.superpowers/
+
+# Local secrets — never commit real credentials
+.env
+.env.local

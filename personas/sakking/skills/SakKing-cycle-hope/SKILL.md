@@ -1,25 +1,12 @@
 ---
 name: SakKing-cycle-hope
-category: cycle
-description: Turn the Dream vision into a concrete, defensible plan (PTCF).
-version: 1.0.0
-platforms:
-  - linux
-  - macos
-  - windows
-metadata:
-  sakthai:
-    tags:
-      - cycle
-      - hope
-    related_skills:
-      - SakKing-cycle-care
+description: "Turn the Dream vision into a concrete, defensible plan (PTCF)."
 ---
 
-# sakthai-cycle-hope
+# Sak-cycle-hope
 
-Stage 2 of 6 in the Sak Family cycle — **Hope**. See [Hope.md](../../docs/cycle/Hope.md)
-for the full guidance and [SOUL.md](../../docs/SOUL.md) for the charge model.
+Stage 2 of 6 in the Sak Family cycle — **Hope**. See [Hope.md](../../../../docs/cycle/Hope.md)
+for the full guidance and [SOUL.md](../../../../docs/SOUL.md) for the charge model.
 
 ## What to do
 

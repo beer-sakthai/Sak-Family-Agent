@@ -255,7 +255,7 @@ def tools() -> None:
 
 @click.group()
 def web() -> None:
-    """Web server and API commands."""
+    """Web server commands."""
 
 
 @web.command("setup")
@@ -288,7 +288,6 @@ def web_regen_token() -> None:
 
     from ..config import register_secret
     from ..memory.store import MemoryStore
-    from ..web import server as web_server
 
     new_token = secrets.token_hex(16)
     try:
@@ -297,7 +296,19 @@ def web_regen_token() -> None:
             store.add_fact(
                 value=new_token, kind="web_auth", key="bearer_token", tags=["system", "no-export"]
             )
-        web_server._BEARER_TOKEN = new_token
+        # Best-effort update of any in-process server cache. Any failure here
+        # only means the running server keeps the old token in memory until
+        # restart; the DB write above is the source of truth.
+        try:
+            import sys
+
+            for mod_name in list(sys.modules.keys()):
+                if mod_name.endswith(".web.server") or mod_name.endswith(".server"):
+                    mod = sys.modules[mod_name]
+                    if hasattr(mod, "_BEARER_TOKEN"):
+                        setattr(mod, "_BEARER_TOKEN", new_token)  # noqa: B010
+        except Exception as cache_exc:  # noqa: BLE001
+            click.echo(f"{_warn()} Could not refresh in-process token cache: {cache_exc}", err=True)
         register_secret(new_token)
         click.echo(click.style("\n── Web API Token Regenerated ──", bold=True))
         click.echo(f"  {_ok()} New bearer token: {click.style(new_token, fg='green', bold=True)}")

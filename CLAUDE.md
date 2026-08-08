@@ -20,12 +20,23 @@ v2 is local-first — the CLI, the agent loop, and the MCP stdio server.
 
 The repository is the shared source workspace for the Sak family with these key conventions:
 
-- **Canonical package:** `personas/shared/sakthai/` (single copy, symlinked from all personas)
-- **Personas:** five agents on disk (`SakThai`, `SakKing`, `SakSee`, `SakSit`, `SakJules`; also `config.PERSONA_NAMES`); **SakThai is lead**. `SakTan` was retired and its
-  persona directory removed from the repo — don't recreate `personas/saktan/`.
-  - Each has `/skills/` with `Sak<Name>-*` prefixed skills (no duplicates, flattened structure)
+- **Canonical package:** `personas/shared/sakthai/` is symlinked from five personas (SakKing,
+  SakSee, SakSit, SakTan, SakJules). **SakThai's own copy, `personas/sakthai/sakthai/`, is not a
+  symlink** — it's the package that's actually installed and run (`pyproject.toml`'s
+  `where = ["personas/sakthai"]`), and it has genuinely diverged from `personas/shared/sakthai/`
+  across several files (`config.py`, `agent/loop.py`, `agent/tools.py`, `auth.py`, `cli/agent.py`,
+  `cli/chat.py`, `skills.py`, `agent/providers/__init__.py`, plus two SakThai-only files). Treat
+  `personas/sakthai/sakthai/` as the real source of truth for anything you're actually running;
+  reconciling the two copies is a known, tracked gap, not yet done.
+- **Personas:** six agents on disk (`SakThai`, `SakKing`, `SakSee`, `SakSit`, `SakJules`, `SakTan`; also `config.PERSONA_NAMES`); **SakThai is lead**.
+  - Each has `/skills/` with `Sak<Name>-*` prefixed skills, one directory per skill directly
+    under `skills/` (no category subdirectories, no duplicate-named skill folders).
+    `sakthai/skills/.archive/` is an intentional exception — retired skills kept for history,
+    excluded from discovery. A skill directory may itself contain a documented "umbrella"
+    sub-skill (see `SakThai-environment-automation`'s `cron-watchdog-self-heal`) accessed via
+    direct file reads rather than the normal skill index.
   - Each has `/config/` with persona-specific config (config.yaml, mcp.json, gateway_voice_mode.json)
-  - Each symlinks to `../shared/sakthai` and `../shared/agent-self-evolution`
+  - Each symlinks to `../shared/sakthai` and `../shared/agent-self-evolution` — except SakThai (see above)
 - **Shared resources:** `personas/shared/` contains sakthai (Python package), agent-self-evolution (template), skills (Sak-* shared skills), model_roster
 - **Skill naming:** `Sak-` prefix for shared skills, `Sak<Name>-` for per-persona skills (enforced by `sakthai skills validate --naming`)
 - **CI scope:** ruff/mypy/bandit/pytest/pylint scopes to `sakthai` core only; gitleaks scans everything (`.gitleaks.toml` allowlists persona docs)
@@ -71,17 +82,30 @@ floor is **96%** (`fail_under = 96`, branch coverage included) over the whole
 
 ## Runtime entry points
 
-One package, three ways in — all sharing `~/.sakthai/memory.db` (override the
-root with `SAKTHAI_HOME`):
+One package, three ways in — all sharing `~/.sakthai/memory.db` by default
+(override the root with `SAKTHAI_HOME`). On the VM deployment, each persona's
+process sets its own `SAKTHAI_HOME=$HOME/.sakthai/$AGENT`, so each persona
+naturally gets its own memory shard at `~/.sakthai/<persona>/memory.db`. For
+local dev, pass `--persona <name>` to `learn`/`recall`/`run`/`chat`/`memory` to
+get the same per-persona shard without setting `SAKTHAI_HOME` yourself — see
+"Per-persona memory sharding" below.
 
 1. **CLI** — `sakthai <cmd>` (entry point `sakthai.cli:main`). Commands:
-   - Memory: `learn`, `recall`, `memory show|stats|search|export|import|backup|consolidate|consolidate-sessions|deduplicate`
+   - Memory: `learn`, `recall`, `memory show|stats|search|export|import|backup|consolidate|consolidate-sessions|deduplicate|family`
+     — all except `family`, `sync`, and `pull` accept `--persona <name>` to scope to that
+     persona's own shard instead of the default unscoped `memory.db`; `family` merges across
+     every persona's shard (or a `--personas a,b,c` subset) into one read-only view.
    - Agent: `run "<task>"` — key flags: `--provider`/`-p` (anthropic/google/openai/ollama/gateway/huggingface),
      `--model`, `--max-tokens`, `--max-iterations`, `--max-seconds`, `--with-skills <name>`
      (repeatable), `--no-mcp`, `--dry-run` (validate config, no API call), `--stream`, `--fast`
      (skip the 6-stage cycle), `--stateless` (don't load/append memory), `--caveman
      lite|full|ultra|wenyan-*` (token-compression skill), `--sandbox` (run inside the
-     `Dockerfile.sandbox` container; only `memory.db` is bind-mounted), `-v/--verbose`
+     `Dockerfile.sandbox` container; only `memory.db` is bind-mounted; not combinable with
+     `--persona`), `--persona <name>` (use that persona's memory shard, inject its SOUL.md
+     as a system-prompt prefix, resolve `--with-skills`/caveman/slash-commands against that
+     persona's own skill overlay instead of SakThai's, auto-load its own `config/mcp.json`
+     when `SAKTHAI_MCP_CONFIG` isn't already set, and default `--model`/`--provider` from its
+     own `config/config.yaml` when those flags are left at their CLI defaults), `-v/--verbose`
    - Server: `mcp` (start MCP stdio server)
    - Cycle: `cycle status|next|set|list`
    - Skills: `skills list|show|validate|create|sync-sakking`
@@ -137,18 +161,61 @@ CLI/MCP → agent loop → tool registry → MemoryStore → SQLite. See
   consolidate. `render_prompt_block()` injects memory into the system prompt.
 - **`memory/provider.py`** — `SakThaiMemoryProvider` adapts the store to
   system-prompt blocks with context-window limiting.
-- **`memory/backup.py`** — timestamped copy of `memory.db`.
+- **`memory/backup.py`** — timestamped copy of `memory.db`, or of an explicit
+  `db_path` (used to back up a persona's own shard).
 - **`memory/sync.py`** — git-based JSONL export/import (multi-agent sync) and
   HTTP backup to a configured endpoint.
+- **`memory/merged.py`** — `FamilyMemoryView`, a read-only view across every
+  persona's memory shard plus the legacy unscoped `memory.db`, deduplicated and
+  grouped by persona. Backs `sakthai memory family`. See "Per-persona memory
+  sharding" below.
+
+### Per-persona memory sharding
+
+Each of the six personas gets its own memory shard, `~/.sakthai/<persona>/memory.db`,
+distinct from the legacy unscoped `~/.sakthai/memory.db`. This isn't a new
+mechanism: it's the same convention already used in production by
+`infra/vm-agents/sakthai-agent-run.sh`, which runs each deployed persona with
+`SAKTHAI_HOME=$HOME/.sakthai/$AGENT` — `memory_db_path()` (which does honor
+`SAKTHAI_HOME`) already resolved to that persona's shard for any process running
+that way. What's new is `config.persona_memory_db_path(persona)`, which computes
+the same `~/.sakthai/<persona>/memory.db` path directly from `Path.home()`,
+**independent of the current process's own `SAKTHAI_HOME`**. That's what makes
+two things possible that weren't before:
+
+- **Local CLI parity** — `learn`/`recall`/`run`/`chat`/`memory <subcommand>` all
+  accept `--persona <name>` so a local dev shell (which isn't running with a
+  persona-scoped `SAKTHAI_HOME`) can still read/write a specific persona's shard,
+  and `run --persona`/`chat --persona` also inject that persona's `SOUL.md` as a
+  system-prompt prefix. `memory sync`/`memory pull` reject `--persona` (they
+  always target the unscoped `memory.db` — no per-persona git/HTTP sync exists).
+  `run --persona` can't combine with `--sandbox` (the sandbox only bind-mounts
+  the unscoped `memory.db`).
+- **The merged family view** — `FamilyMemoryView` (`memory/merged.py`) opens
+  every persona's shard (skipping ones that don't exist yet) plus the legacy
+  `memory.db` at once, regardless of which single persona the current process
+  would otherwise be scoped to, and merges/dedups facts and observations across
+  them. `sakthai memory family [--personas a,b,c] [--limit N] [--json]` is the
+  CLI surface for it.
+
+A persona's shard file only comes into existence on first write (`learn
+--persona X`, or any `run`/`chat --persona X` that calls a memory-writing
+tool) — an unwritten-to persona is simply absent from `memory family` output,
+not an error.
 
 ### Agent subsystem (`agent/`)
 
-- **`agent/tools.py`** — defines `BUILTIN_TOOLS` (10 tools, one schema + handler
+- **`agent/tools.py`** — defines `BUILTIN_TOOLS` (14 tools, one schema + handler
   each): `learn`, `ingest_document`, `capture_lead`, `recall`, `search`, `forget`,
-  `read_file`, `run_command`, `send_telegram_message`, `run_agent_loop`. Add a
-  tool here and it appears in both the agent loop and the MCP server
-  automatically. Note: `run_agent_loop` is filtered out of the in-loop tool set
-  (it's MCP-only) to avoid recursion.
+  `read_file`, `run_command`, `send_telegram_message`, `send_outlook_mail`,
+  `read_outlook_mail`, `list_calendar_events`, `create_calendar_event`,
+  `run_agent_loop`. Add a tool here and it appears in both the agent loop and
+  the MCP server automatically. Note: `run_agent_loop` is filtered out of the
+  in-loop tool set (it's MCP-only) to avoid recursion. The four Graph tools
+  share `_graph_access_token()` / `_graph_request()` / `_graph_safe()` helpers:
+  a refresh token (env `MS_GRAPH_REFRESH_TOKEN` or cached at
+  `~/.sakthai/graph_token.json`, seeded via `scripts/graph_device_login.py`) is
+  exchanged for a short-lived access token on every call.
 - **`agent/registry.py`** — `ToolRegistry` keys tools by name; `with_tools()`
   merges sets (later tool wins on name clash, so plugins can shadow built-ins).
 - **`agent/loop.py`** — `run_agent()` is the main orchestration loop. Injects
@@ -235,15 +302,27 @@ There is no `dashboard.py` here — see the dashboard note below.
 - **`web/server.py`** — HTTP API server; optionally serves a pre-built static
   bundle from `_STATIC_ROOT` (see the dashboard note above) alongside its API
   endpoints, falling back to 403/404 for static requests if it's missing.
+  Refuses non-loopback binds unless `SAKTHAI_WEB_ALLOW_PUBLIC` is set.
+  `/api/*` requests require `Authorization: Bearer <token>`
+  (`_get_or_create_bearer_token()`, stored as a `web_auth` fact in
+  `memory.db`); static paths are **not yet gated** by the same check — see
+  `docs/superpowers/specs/2026-08-03-sakthai-web-auth-design.md` for the
+  in-progress design closing that gap.
 - **`learn/capture.py`** — `learn()` one-shot fact capture used by `sakthai learn`.
 - **`telegram/`** — a standalone `python-telegram-bot` polling bot (`bot.py`,
-  `config.py`, `workflow_executor.py`) that shells out to
-  `python -m sakthai run ... --with-skills <name> --fast --stateless` per
-  `/workflow <name>` command. `telegram/config.py` re-exports
-  `ALLOWED_USER_IDS`/`TELEGRAM_BOT_TOKEN` from the central `config.py`
-  (`telegram_allowed_user_ids()`/`telegram_bot_token()`), and
-  `workflow_executor.py` uses `config.SKILLS_DIR` rather than a hardcoded
-  path — aligned with this repo's config-centralization convention. Covered
+  `config.py`, `workflow_executor.py`). `bot.py`'s `/workflow <name>` handler
+  runs `run_agent()` **in-process** via `asyncio.to_thread` — it does not shell
+  out. `workflow_executor.py`'s `run_workflow()`/`_workflow_command()` (which
+  *do* shell out to `python -m sakthai run ... --with-skills <name> --fast
+  --stateless`) are unit-tested but currently unused by `bot.py` (only
+  `get_available_workflows()` is called from there). `telegram/config.py`
+  re-exports `ALLOWED_USER_IDS`/`TELEGRAM_BOT_TOKEN` from the central
+  `config.py` (`telegram_allowed_user_ids()`/`telegram_bot_token()`).
+  `workflow_executor.py`'s skill discovery is persona-aware: it uses
+  `config.persona_skills_dir(config.sakthai_persona())` when the
+  `SAKTHAI_PERSONA` env var is set (see
+  `infra/vm-agents/env-templates/*.env.example`), falling back to
+  `config.SKILLS_DIR` (SakThai's own overlay) otherwise. Covered
   by `tests/test_telegram_bot.py` and `tests/test_telegram_workflow_executor.py`.
 
 
@@ -251,7 +330,7 @@ There is no `dashboard.py` here — see the dashboard note below.
 
 ## Tests
 
-Tests live in `tests/` (90 files, ~21,500 lines). All tests are hermetic — no
+Tests live in `tests/` (93 files, ~22,550 lines). All tests are hermetic — no
 network, no GCP credentials. Integration tests that may hit real endpoints
 (Ollama, Anthropic) are marked `@pytest.mark.integration` and self-skip when
 credentials/endpoints are absent; CI excludes them with `-m "not integration"`.
@@ -342,9 +421,15 @@ reach out to a real endpoint. Use `tmp_path` fixtures for file I/O.
 | `SAKTHAI_READ_ALLOW` | Colon-separated extra paths the `read_file` tool may read |
 | `SAKTHAI_SHELL_ALLOW` | Any non-empty value enables the `run_command` tool |
 | `SAKTHAI_MCP_TIMEOUT` | Seconds to wait for an external MCP server reply (default: 30) |
+| `SAKTHAI_WEB_ALLOW_PUBLIC` | Opt-in to non-loopback binds for the web server (default: refused — loopback-only) |
 | `TELEGRAM_BOT_TOKEN` / `TELEGRAM_CHAT_ID` | Needed for the `send_telegram_message` tool |
 
 ---
+
+## Local skills for this repo
+
+- `run-sakthai-agent-v2` — use when asked to build, run, drive, or smoke-test the SakThai CLI/agent loop/MCP server/web API in this monorepo.
+- `Sak-family-auto-cycle` — use when asked to run the six-persona (SakKing/SakThai/SakSee/SakSit/SakTan/SakJules) auto-cycle or dispatch them as a team.
 
 ## Skills format
 

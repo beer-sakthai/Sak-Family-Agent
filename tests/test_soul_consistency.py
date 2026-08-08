@@ -23,6 +23,7 @@ PERSONAS_DIR = REPO_ROOT / "personas"
 PERSONAS: dict[str, str] = {
     "sakthai": "SakThai",
     "sakking": "SakKing",
+    "saktan": "SakTan",
     "saksee": "SakSee",
     "saksit": "SakSit",
     "sakjules": "SakJules",

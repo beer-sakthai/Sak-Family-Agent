@@ -127,6 +127,15 @@ _SENSITIVE_BASENAMES = {
     ".zprofile",
     ".yarnrc",
     ".yarnrc.yml",
+    ".git-credentials",
+    ".node_repl_history",
+    ".mysql_history",
+    ".psql_history",
+    ".sqlite_history",
+    ".rediscli_history",
+    ".mongo_history",
+    ".pgpass",
+    ".my.cnf",
 }
 
 _SENSITIVE_DIRS = {
@@ -152,6 +161,7 @@ _SENSITIVE_KEY_STEMS = {
     "id_ed25519",
     "id_ecdsa_sk",
     "id_ed25519_sk",
+    "id_xmss",
 }
 
 
@@ -323,7 +333,9 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
             for j in range(i - 1, -1, -1):
                 if parts[j].startswith("-"):
                     continue
-                if _is_binary(parts[j], ("bash", "sh", "zsh", "dash")):
+                if _is_binary(
+                    parts[j], ("bash", "sh", "zsh", "dash", "ksh", "fish", "ash", "csh", "tcsh")
+                ):
                     shell_idx = j
                     break
                 break  # Not a flag and not a shell
@@ -427,6 +439,19 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
         "conda",
         "busybox",
         "toybox",
+        "psql",
+        "mysql",
+        "mariadb",
+        "mongo",
+        "mongosh",
+        "redis-cli",
+        "vim",
+        "vi",
+        "nano",
+        "emacs",
+        "ed",
+        "composer",
+        "cargo",
     )
     exfiltration_binaries = (
         "curl",
@@ -470,6 +495,11 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
         "sh",
         "zsh",
         "dash",
+        "ksh",
+        "fish",
+        "ash",
+        "csh",
+        "tcsh",
         "ls",
         "uniq",
         "cut",
@@ -516,6 +546,19 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
         "conda",
         "busybox",
         "toybox",
+        "psql",
+        "mysql",
+        "mariadb",
+        "mongo",
+        "mongosh",
+        "redis-cli",
+        "vim",
+        "vi",
+        "nano",
+        "emacs",
+        "ed",
+        "composer",
+        "cargo",
     )
     # Common interpreters where sensitive paths can be embedded in arguments.
     interpreters = (
@@ -531,11 +574,27 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
         "sh",
         "zsh",
         "dash",
+        "ksh",
+        "fish",
+        "ash",
+        "csh",
+        "tcsh",
         "sqlite",
         "git",
         "tsx",
         "ts-node",
         "deno",
+        "psql",
+        "mysql",
+        "mariadb",
+        "mongo",
+        "mongosh",
+        "redis-cli",
+        "vim",
+        "vi",
+        "emacs",
+        "composer",
+        "cargo",
     )
 
     for i, part in enumerate(parts):
@@ -560,15 +619,18 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
                         if not is_dest
                         else f"Potentially destructive '{binary_name}' command on {subpart!r} blocked.",
                     )
-                if is_interpreter and re.search(
-                    r"(?:/etc|/root|/bin|/sbin|/usr|/var|/boot|/dev|/home|/sys|/proc|/tmp|/lib|/lib64)(?:/|$)|~|\.\.|"
-                    + _SENSITIVE_NAME_RE,
-                    subpart,
-                ):
-                    return GuardrailResult(
-                        GuardrailAction.DENY,
-                        reason=f"Potentially dangerous '{binary_name}' command with sensitive path in arguments blocked.",
-                    )
+                if is_interpreter:
+                    has_sensitive = False
+                    for match in re.finditer(_SENSITIVE_SCRIPT_PATH_RE, subpart):
+                        candidate = match.group(0)
+                        if _is_sensitive_path(candidate):
+                            has_sensitive = True
+                            break
+                    if has_sensitive:
+                        return GuardrailResult(
+                            GuardrailAction.DENY,
+                            reason=f"Potentially dangerous '{binary_name}' command with sensitive path in arguments blocked.",
+                        )
 
     # 3. Specialized protection for dd (input/output file).
     for i, part in enumerate(parts):
@@ -732,6 +794,8 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
             "stdbuf",
             "chroot",
             "nsenter",
+            "unshare",
+            "pkexec",
             "uv",
             "pipx",
             "bun",
@@ -743,6 +807,9 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
             "conda",
             "pnpm",
             "yarn",
+            "npm",
+            "cargo",
+            "composer",
             "busybox",
             "toybox",
         )
@@ -751,9 +818,23 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
             # We skip tokens that are likely arguments to the wrapper's flags.
             start_idx = i + 1
 
-            # If the wrapper is uv, pipx, bun, deno, poetry, pipenv, conda, pnpm, or yarn, we want to look for subcommands.
+            # If the wrapper is uv, pipx, bun, deno, poetry, pipenv, conda, pnpm, yarn, npm, cargo, or composer, we want to look for subcommands.
             if _is_binary(
-                part, ("uv", "pipx", "bun", "deno", "poetry", "pipenv", "conda", "pnpm", "yarn")
+                part,
+                (
+                    "uv",
+                    "pipx",
+                    "bun",
+                    "deno",
+                    "poetry",
+                    "pipenv",
+                    "conda",
+                    "pnpm",
+                    "yarn",
+                    "npm",
+                    "cargo",
+                    "composer",
+                ),
             ):
                 run_idx = -1
                 for idx in range(i + 1, len(parts)):
@@ -784,26 +865,49 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
                 if flag == "--":
                     start_idx += 1
                     break
+
+                flag_name = flag
+                flag_val = None
+                if "=" in flag:
+                    flag_name, flag_val = flag.split("=", 1)
+
                 start_idx += 1
                 # Skip the next token if this flag takes an argument.
                 # This is a heuristic for common wrappers.
                 if (
                     _is_binary(part, "timeout")
-                    and flag in ("-s", "--signal", "-k", "--kill-after")
+                    and flag_name in ("-s", "--signal", "-k", "--kill-after")
                     or _is_binary(part, "nice")
-                    and flag in ("-n", "--adjustment")
+                    and flag_name in ("-n", "--adjustment")
                     or _is_binary(part, "ionice")
-                    and flag in ("-c", "-n", "-p")
+                    and flag_name in ("-c", "-n", "-p")
                     or _is_binary(part, "chrt")
-                    and flag in ("-p")
+                    and flag_name in ("-p")
                     or _is_binary(part, "taskset")
-                    and flag in ("-p", "-c")
+                    and flag_name in ("-p", "-c")
                     or _is_binary(part, "stdbuf")
-                    and flag in ("-i", "-o", "-e")
+                    and flag_name in ("-i", "-o", "-e")
                     or _is_binary(part, "nsenter")
-                    and flag in ("-t", "--target", "-S", "--setuid", "-G", "--setgid")
+                    and flag_name in ("-t", "--target", "-S", "--setuid", "-G", "--setgid")
+                    or _is_binary(part, "unshare")
+                    and flag_name
+                    in (
+                        "-S",
+                        "--setuid",
+                        "-G",
+                        "--setgid",
+                        "--map-user",
+                        "--map-group",
+                        "--map-users",
+                        "--map-groups",
+                        "--root",
+                        "--wd",
+                        "--mount-proc",
+                    )
+                    or _is_binary(part, "pkexec")
+                    and flag_name in ("--user", "-u")
                     or _is_binary(part, ("sudo", "doas"))
-                    and flag
+                    and flag_name
                     in (
                         "-u",
                         "-g",
@@ -813,7 +917,7 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
                         "-T",
                     )
                     or _is_binary(part, "uv")
-                    and flag
+                    and flag_name
                     in (
                         "--with",
                         "-p",
@@ -828,15 +932,16 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
                         "--settings",
                     )
                     or _is_binary(part, "pipx")
-                    and flag in ("--spec", "--index-url", "--pip-args", "--python")
+                    and flag_name in ("--spec", "--index-url", "--pip-args", "--python")
                     or _is_binary(part, "bun")
-                    and flag in ("--cwd", "--env-file", "-c", "--config", "-e", "--entry-point")
+                    and flag_name
+                    in ("--cwd", "--env-file", "-c", "--config", "-e", "--entry-point")
                     or _is_binary(part, "bunx")
-                    and flag in ("-p", "--package", "--cwd", "--env-file")
+                    and flag_name in ("-p", "--package", "--cwd", "--env-file")
                     or _is_binary(part, "npx")
-                    and flag in ("-p", "--package")
+                    and flag_name in ("-p", "--package")
                     or _is_binary(part, "deno")
-                    and flag
+                    and flag_name
                     in ("-c", "--config", "-p", "--port", "--import-map", "--lock", "--ext")
                     or _is_binary(part, "conda")
                     and flag in ("-n", "--name", "-p", "--prefix", "--cwd")
@@ -846,8 +951,38 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
                     and flag in ("--cwd",)
                     or _is_binary(part, "poetry")
                     and flag in ("-C", "--directory")
+                    or _is_binary(part, "npm")
+                    and flag in ("--prefix", "--dir")
+                    or _is_binary(part, "cargo")
+                    and flag in ("--manifest-path", "--target-dir")
+                    or _is_binary(part, "composer")
+                    and flag in ("--working-dir", "-d")
                 ):
-                    start_idx += 1
+                    if flag_val is not None:
+                        if (
+                            _is_binary(part, "unshare")
+                            and flag_name in ("--root", "--wd", "--mount-proc")
+                            and _is_sensitive_path(flag_val, allow_local=True)
+                        ):
+                            binary_name = os.path.basename(part)
+                            return GuardrailResult(
+                                GuardrailAction.DENY,
+                                reason=f"potentially dangerous '{binary_name} {flag_name}' on {flag_val!r} blocked.",
+                            )
+                    else:
+                        if (
+                            _is_binary(part, "unshare")
+                            and flag_name in ("--root", "--wd", "--mount-proc")
+                            and start_idx < len(parts)
+                        ):
+                            arg_val = parts[start_idx]
+                            if _is_sensitive_path(arg_val, allow_local=True):
+                                binary_name = os.path.basename(part)
+                                return GuardrailResult(
+                                    GuardrailAction.DENY,
+                                    reason=f"potentially dangerous '{binary_name} {flag_name}' on {arg_val!r} blocked.",
+                                )
+                        start_idx += 1
 
             # env might have arguments like VAR=VAL before the command.
             if _is_binary(part, "env"):
@@ -1044,6 +1179,11 @@ def _block_output_with_secrets(
         "AWS_SECRET_ACCESS_KEY",
         "GITHUB_TOKEN",
         "GITHUB_PAT",
+        "STRIPE_API_KEY",
+        "STRIPE_SECRET_KEY",
+        "STRIPE_PUBLISHABLE_KEY",
+        "TWILIO_AUTH_TOKEN",
+        "TWILIO_API_KEY",
     ]
     secrets_to_check = set()
     try:

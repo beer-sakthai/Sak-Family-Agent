@@ -27,6 +27,7 @@ export SAKTHAI_WITH_SKILLS=
 export SAKTHAI_FAST=1
 export SAKTHAI_HOME="$HOME/.sakthai/$AGENT"
 export SAKTHAI_SYSTEM_PROMPT_FILE="$REPO/personas/$AGENT/SOUL.md"
+export SAKTHAI_PERSONA="$AGENT"
 
 case "$AGENT" in
 sakking) export SAKTHAI_MODEL=model-router ;;

@@ -1,32 +1,6 @@
 ---
 name: SakJules-instagram-content-kit
-category: social-media
-description: 'End-to-end Instagram content production for SakSit: Reels (9:16), carousels, single-image posts, captions, hashtags, CTAs, and generation via FLUX.1-schnell and LTX-Video on Hugging Face Spaces.'
-version: 1.0.0
-author: Hermes Agent / SakSit
-license: MIT
-platforms:
-- linux
-- macos
-- windows
-metadata:
-  sakthai:
-    tags:
-    - social-media
-    - instagram
-    - content-creation
-    - reels
-    - carousels
-    - flux
-    - ltx-video
-    - huggingface-spaces
-    - caption
-    - hashtag
-    related_skills:
-    - sakthai-instagram-qa
-    - huggingface-hub
-    - baoyu-infographic
-    - gif-search
+description: "End-to-end Instagram content production for SakSit: Reels (9:16), carousels, single-image posts, captions, hashtags, CTAs, and generation via FLUX.1-schnell and LTX-Video on Hugging Face Spaces."
 ---
 
 # SakSit Instagram Content Kit
@@ -208,7 +182,7 @@ Return content in this structure:
 ## SakSit Instagram Content Kit — <Topic>
 
 **Format:** Reel / Carousel / Single-image
-**Dimensions:** 1080×...
+**Dimensions:** 1080×...  
 **Seed:** ...
 
 ### Assets

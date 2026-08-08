@@ -142,13 +142,49 @@ OSRM_PROFILES = {
     "cycling": "bike",
 }
 
+SENSITIVE_OUTPUT_KEYS = {
+    "address",
+    "display_name",
+    "lat",
+    "latitude",
+    "lon",
+    "longitude",
+    "house_number",
+    "road",
+    "neighbourhood",
+    "suburb",
+    "city",
+    "town",
+    "village",
+    "county",
+    "state",
+    "postcode",
+    "country",
+    "country_code",
+}
+
 # ---------------------------------------------------------------------------
 # Output helpers
 # ---------------------------------------------------------------------------
 
+def _redact_sensitive_data(value):
+    """Return a copy with precise location and address fields removed."""
+    if isinstance(value, dict):
+        return {
+            key: "[REDACTED]"
+            if isinstance(key, str) and key.lower() in SENSITIVE_OUTPUT_KEYS
+            else _redact_sensitive_data(item)
+            for key, item in value.items()
+        }
+    if isinstance(value, list):
+        return [_redact_sensitive_data(item) for item in value]
+    return value
+
+
 def print_json(data):
-    """Print data as pretty-printed JSON to stdout."""
-    print(json.dumps(data, indent=2, ensure_ascii=False))
+    """Print privacy-redacted data as pretty-printed JSON to stdout."""
+    safe_data = _redact_sensitive_data(data)
+    print(json.dumps(safe_data, indent=2, ensure_ascii=False))
 
 
 def error_exit(message, code=1):

@@ -1,10 +1,6 @@
 ---
 name: SakThai-hf-agents-course
-author: SakThai
-license: MIT
 description: "Build AI agents with smolagents, LlamaIndex, LangGraph."
-version: 1.0.0
-tags: [Agents, AI, smolagents, LlamaIndex, LangGraph, HuggingFace]
 ---
 # AI Agents Course Reference
 

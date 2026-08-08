@@ -1,10 +1,6 @@
 ---
 name: SakThai-hf-ml-games
-author: SakThai
-license: MIT
 description: "Integrate AI into games — NPCs, tools, Unity, Cubzh."
-version: 1.0.0
-tags: [GameDev, AI, NPC, Unity, HuggingFace]
 ---
 # Machine Learning for Games
 

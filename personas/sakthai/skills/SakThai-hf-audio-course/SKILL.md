@@ -1,10 +1,6 @@
 ---
 name: SakThai-hf-audio-course
-author: SakThai
-license: MIT
 description: "Process audio with transformers — ASR, TTS, classification, music gen, audio processing, fine-tuning."
-version: 1.0.0
-tags: [Audio, ASR, TTS, Whisper, HuggingFace, Speech, MusicGen, AudioClassification, Transformers]
 ---
 
 # Audio Transformers with Hugging Face

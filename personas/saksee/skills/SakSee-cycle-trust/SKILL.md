@@ -1,22 +1,9 @@
 ---
 name: SakSee-cycle-trust
-category: cycle
-description: Verify the shipped work is safe to rely on.
-version: 1.0.0
-platforms:
-  - linux
-  - macos
-  - windows
-metadata:
-  sakthai:
-    tags:
-      - cycle
-      - trust
-    related_skills:
-      - SakSee-cycle-growth
+description: "Verify the shipped work is safe to rely on."
 ---
 
-# sakthai-cycle-trust
+# Sak-cycle-trust
 
 Stage 5 of 6 in the Sak Family cycle — **Trust**. See [Trust.md](../../../../docs/cycle/Trust.md)
 for the full guidance and [SOUL.md](../../../../docs/SOUL.md) for the charge model.

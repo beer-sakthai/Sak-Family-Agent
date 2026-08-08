@@ -86,7 +86,7 @@ class AgentResult:
 # -- prompt + tool execution --------------------------------------------
 
 
-def _parse_slash_command(task: str) -> tuple[str, str] | None:
+def _parse_slash_command(task: str, persona: str | None = None) -> tuple[str, str] | None:
     """If task starts with /plugin:command, resolve it and return (injected_system_prompt, active_task)."""
     import re
 
@@ -100,7 +100,7 @@ def _parse_slash_command(task: str) -> tuple[str, str] | None:
     arguments = match.group(3) or ""
 
     cmd_file = None
-    for root in default_skill_roots():
+    for root in default_skill_roots(persona):
         p = root / plugin_name / "commands" / f"{command_name}.md"
         if p.is_file():
             cmd_file = p
@@ -143,16 +143,26 @@ def _parse_slash_command(task: str) -> tuple[str, str] | None:
         return None
 
 
-def _build_skills_block(skills: Sequence[str], command_system: str, caveman: str | None) -> str:
+def _build_skills_block(
+    skills: Sequence[str],
+    command_system: str,
+    caveman: str | None,
+    persona: str | None = None,
+) -> str:
     """Construct the full skills block for the system prompt."""
     parts = []
     if skills:
-        parts.append(render_skills_prompt_block(skills))
+        # Only override roots when a persona is given, so the no-persona path
+        # keeps resolving through render_skills_prompt_block's own internal
+        # default_skill_roots() call unchanged (same object callers already
+        # patch in tests).
+        roots = default_skill_roots(persona) if persona else None
+        parts.append(render_skills_prompt_block(skills, roots=roots))
     if command_system:
         parts.append(command_system)
 
     if caveman:
-        caveman_skill = find_skill("caveman", *default_skill_roots())
+        caveman_skill = find_skill("caveman", *default_skill_roots(persona))
         if caveman_skill:
             caveman_instructions = (
                 f"{caveman_skill.body}\n\nACTIVE CAVEMAN LEVEL: {caveman}\n"
@@ -173,6 +183,7 @@ def _build_system(
     stateless: bool,
     caveman: str | None,
     system_prompt_prefix: str = "",
+    persona: str | None = None,
 ) -> str:
     """Assemble the complete system prompt from all its parts."""
     parts = []
@@ -185,7 +196,7 @@ def _build_system(
         )
     if not stateless and (memory_block := store.render_prompt_block()):
         parts.append(memory_block)
-    skills_block = _build_skills_block(skills, command_system, caveman)
+    skills_block = _build_skills_block(skills, command_system, caveman, persona)
     if skills_block:
         parts.append(skills_block)
     return "\n\n".join(p for p in parts if p)
@@ -401,6 +412,7 @@ def run_agent(
     history: Sequence[dict[str, Any]] | None = None,
     guardrail_policy: GuardrailPolicy | None = None,
     context_filter: ContextFilter | None = None,
+    persona: str | None = None,
 ) -> AgentResult:
     """Run one task to completion against Claude, Gemini, or an OpenAI endpoint.
 
@@ -408,7 +420,9 @@ def run_agent(
     ``max_iterations``. ``skills`` names skills whose instructions are injected
     into the system prompt. ``on_token`` (when set) receives assistant text
     deltas as they stream from providers that support it.
-    ``client`` and ``store`` are injectable for testing. ``history`` seeds the
+    ``client`` and ``store`` are injectable for testing. ``persona``, when
+    given, resolves ``skills``/caveman/slash-command lookups against that
+    persona's own skill overlay instead of SakThai's. ``history`` seeds the
     conversation with a prior turn's messages (e.g. from a previous
     ``AgentResult.messages``) so multi-turn callers don't lose context.
     ``context_filter`` (defaults to :data:`DEFAULT_CONTEXT_FILTER`) is applied
@@ -421,7 +435,7 @@ def run_agent(
     if max_seconds is not None and max_seconds <= 0:
         raise AgentError("max_seconds must be positive when set.")
 
-    parsed = _parse_slash_command(task)
+    parsed = _parse_slash_command(task, persona)
     command_system = ""
     if parsed:
         command_system, task = parsed
@@ -494,6 +508,7 @@ def run_agent(
                 stateless=stateless,
                 caveman=caveman,
                 system_prompt_prefix=system_prompt_prefix,
+                persona=persona,
             )
             response = _agent_turn(
                 provider,

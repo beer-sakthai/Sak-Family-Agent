@@ -1,22 +1,9 @@
 ---
 name: SakSee-cycle-dream
-category: cycle
-description: Define the vision and recall prior context before building.
-version: 1.0.0
-platforms:
-  - linux
-  - macos
-  - windows
-metadata:
-  sakthai:
-    tags:
-      - cycle
-      - dream
-    related_skills:
-      - SakSee-cycle-hope
+description: "Define the vision and recall prior context before building."
 ---
 
-# sakthai-cycle-dream
+# Sak-cycle-dream
 
 Stage 1 of 6 in the Sak Family cycle — **Dream**. See [Dream.md](../../../../docs/cycle/Dream.md)
 for the full guidance and [SOUL.md](../../../../docs/SOUL.md) for the charge model.

@@ -1212,3 +1212,392 @@ def test_windows_streams_reconfigured_to_utf8(monkeypatch: pytest.MonkeyPatch) -
         # Rebuild the module under the real platform so later imports see
         # the normal state.
         importlib.reload(cli_mod)
+
+
+# -- persona-aware memory sharding ----------------------------------------
+
+
+def test_learn_persona_writes_to_persona_shard(runner: CliRunner) -> None:
+    from sakthai.config import persona_memory_db_path
+
+    result = runner.invoke(main, ["learn", "sakking likes yaml", "--persona", "sakking"])
+    assert result.exit_code == 0
+
+    with MemoryStore(persona_memory_db_path("sakking")) as store:
+        assert any(f.value == "sakking likes yaml" for f in store.list_facts())
+    # It must NOT have landed in the default unscoped store.
+    with MemoryStore() as store:
+        assert not any(f.value == "sakking likes yaml" for f in store.list_facts())
+
+
+def test_learn_without_persona_uses_default_store(runner: CliRunner) -> None:
+    result = runner.invoke(main, ["learn", "unscoped fact"])
+    assert result.exit_code == 0
+    with MemoryStore() as store:
+        assert any(f.value == "unscoped fact" for f in store.list_facts())
+
+
+def test_learn_from_file_persona_writes_to_persona_shard(runner: CliRunner, tmp_path: Path) -> None:
+    from sakthai.config import persona_memory_db_path
+
+    src = tmp_path / "facts.md"
+    src.write_text("- shard fact one\n- shard fact two\n", encoding="utf-8")
+    result = runner.invoke(main, ["learn", "--file", str(src), "--persona", "saksee"])
+    assert result.exit_code == 0
+    with MemoryStore(persona_memory_db_path("saksee")) as store:
+        values = {f.value for f in store.list_facts()}
+    assert {"shard fact one", "shard fact two"} <= values
+
+
+def test_recall_persona_reads_from_persona_shard(runner: CliRunner) -> None:
+    from sakthai.config import persona_memory_db_path
+
+    with MemoryStore(persona_memory_db_path("saksit")) as store:
+        store.add_fact("saksit-only fact", kind="note")
+    result = runner.invoke(main, ["recall", "saksit-only", "--persona", "saksit"])
+    assert result.exit_code == 0
+    assert "saksit-only fact" in result.output
+
+    # The same query against the default store finds nothing — shards are
+    # genuinely isolated, not silently sharing state.
+    miss = runner.invoke(main, ["recall", "saksit-only"])
+    assert miss.exit_code == 0
+    assert "no matches found" in miss.output
+
+
+def test_memory_group_persona_scopes_show(runner: CliRunner) -> None:
+    from sakthai.config import persona_memory_db_path
+
+    with MemoryStore(persona_memory_db_path("sakjules")) as store:
+        store.add_fact("sakjules shard fact", kind="note")
+    scoped = runner.invoke(main, ["memory", "--persona", "sakjules", "show"])
+    assert scoped.exit_code == 0
+    assert "sakjules shard fact" in scoped.output
+
+    unscoped = runner.invoke(main, ["memory", "show"])
+    assert unscoped.exit_code == 0
+    assert "sakjules shard fact" not in unscoped.output
+
+
+def test_memory_group_persona_scopes_stats_db_path(runner: CliRunner) -> None:
+    from sakthai.config import persona_memory_db_path
+
+    result = runner.invoke(main, ["memory", "--persona", "saktan", "stats", "--json"])
+    assert result.exit_code == 0
+    data = json.loads(result.output)
+    assert data["db_path"] == str(persona_memory_db_path("saktan"))
+
+
+def test_memory_group_persona_scopes_forget(runner: CliRunner) -> None:
+    from sakthai.config import persona_memory_db_path
+
+    with MemoryStore(persona_memory_db_path("sakking")) as store:
+        fact_id = store.add_fact("to be forgotten", kind="note")
+    result = runner.invoke(main, ["memory", "--persona", "sakking", "forget", str(fact_id)])
+    assert result.exit_code == 0
+    assert "forgotten" in result.output
+    with MemoryStore(persona_memory_db_path("sakking")) as store:
+        assert all(f.id != fact_id for f in store.list_facts())
+
+
+def test_memory_group_persona_scopes_backup(runner: CliRunner) -> None:
+    from sakthai.config import persona_memory_db_path
+
+    with MemoryStore(persona_memory_db_path("saksee")) as store:
+        store.add_fact("back this shard up", kind="note")
+    result = runner.invoke(main, ["memory", "--persona", "saksee", "backup"])
+    assert result.exit_code == 0
+    assert "backup created:" in result.output
+    backups = list(persona_memory_db_path("saksee").parent.glob("memory_*.db.bak"))
+    assert backups
+
+
+def test_memory_sync_rejects_persona(runner: CliRunner) -> None:
+    result = runner.invoke(main, ["memory", "--persona", "sakking", "sync"])
+    assert result.exit_code != 0
+    assert "not supported with `memory sync`" in result.output
+
+
+def test_memory_pull_rejects_persona(runner: CliRunner) -> None:
+    result = runner.invoke(main, ["memory", "--persona", "sakking", "pull"])
+    assert result.exit_code != 0
+    assert "not supported with `memory pull`" in result.output
+
+
+def test_memory_family_merges_across_persona_shards(
+    runner: CliRunner, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("HOME", str(tmp_path))
+    from sakthai.config import persona_memory_db_path
+
+    with MemoryStore(persona_memory_db_path("sakthai")) as store:
+        store.add_fact("sakthai family fact", kind="note")
+    with MemoryStore(persona_memory_db_path("sakking")) as store:
+        store.add_fact("sakking family fact", kind="note")
+
+    result = runner.invoke(main, ["memory", "family"])
+    assert result.exit_code == 0
+    assert "[sakthai]" in result.output
+    assert "sakthai family fact" in result.output
+    assert "[sakking]" in result.output
+    assert "sakking family fact" in result.output
+
+
+def test_memory_family_empty_when_no_shards_exist(
+    runner: CliRunner, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.setenv("HERMES_HOME", str(tmp_path / ".sakthai"))
+    result = runner.invoke(main, ["memory", "family"])
+    assert result.exit_code == 0
+    assert "no persona has any memory yet" in result.output
+
+
+def test_memory_family_personas_filter(runner: CliRunner) -> None:
+    from sakthai.config import persona_memory_db_path
+
+    with MemoryStore(persona_memory_db_path("sakthai")) as store:
+        store.add_fact("only sakthai", kind="note")
+    with MemoryStore(persona_memory_db_path("sakking")) as store:
+        store.add_fact("only sakking", kind="note")
+
+    result = runner.invoke(main, ["memory", "family", "--personas", "sakthai"])
+    assert result.exit_code == 0
+    assert "only sakthai" in result.output
+    assert "only sakking" not in result.output
+
+
+def test_memory_family_json(runner: CliRunner) -> None:
+    from sakthai.config import persona_memory_db_path
+
+    with MemoryStore(persona_memory_db_path("sakthai")) as store:
+        store.add_fact("json family fact", kind="note")
+
+    result = runner.invoke(main, ["memory", "family", "--json"])
+    assert result.exit_code == 0
+    data = json.loads(result.output)
+    assert any(
+        f["value"] == "json family fact" and f["persona"] == "sakthai" for f in data["facts"]
+    )
+
+
+def test_run_persona_uses_persona_store_and_soul(
+    runner: CliRunner, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from sakthai.config import persona_memory_db_path
+
+    captured: dict[str, object] = {}
+
+    def fake_run_agent(task: str, **kwargs: object) -> object:
+        captured["store"] = kwargs.get("store")
+        captured["system_prompt_prefix"] = kwargs.get("system_prompt_prefix")
+        return types.SimpleNamespace(text="ok")
+
+    monkeypatch.setattr(agent_mod, "run_agent", fake_run_agent)
+    result = runner.invoke(main, ["run", "hi", "--persona", "sakking"])
+    assert result.exit_code == 0
+
+    store = captured["store"]
+    assert isinstance(store, MemoryStore)
+    assert store.db_path == persona_memory_db_path("sakking")
+    assert captured["system_prompt_prefix"]  # SakKing's SOUL.md text, non-empty
+
+
+def test_run_without_persona_passes_no_store_override(
+    runner: CliRunner, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Behavior unchanged from before --persona existed: no store, empty prefix."""
+    captured: dict[str, object] = {}
+
+    def fake_run_agent(task: str, **kwargs: object) -> object:
+        captured["store"] = kwargs.get("store")
+        captured["system_prompt_prefix"] = kwargs.get("system_prompt_prefix")
+        return types.SimpleNamespace(text="ok")
+
+    monkeypatch.setattr(agent_mod, "run_agent", fake_run_agent)
+    result = runner.invoke(main, ["run", "hi"])
+    assert result.exit_code == 0
+    assert captured["store"] is None
+    assert captured["system_prompt_prefix"] == ""
+
+
+def test_run_rejects_persona_with_sandbox(runner: CliRunner) -> None:
+    result = runner.invoke(main, ["run", "hi", "--persona", "sakking", "--sandbox"])
+    assert result.exit_code != 0
+    assert "not supported with --sandbox" in result.output
+
+
+def test_chat_uses_persona_specific_memory_shard(
+    runner: CliRunner, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """chat --persona X must open X's own memory shard, not the unscoped default."""
+    import sakthai.cli.chat as chat_cli
+    from sakthai.config import persona_memory_db_path
+
+    captured: dict[str, object] = {}
+
+    def fake_run_chat(**kwargs: object) -> None:
+        captured["store"] = kwargs.get("store")
+
+    monkeypatch.setattr(chat_cli, "run_chat", fake_run_chat)
+    result = runner.invoke(main, ["chat", "--persona", "sakking", "--no-mcp"])
+    assert result.exit_code == 0
+    store = captured["store"]
+    assert isinstance(store, MemoryStore)
+    assert store.db_path == persona_memory_db_path("sakking")
+
+
+def test_run_persona_threads_persona_into_run_agent(
+    runner: CliRunner, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    captured: dict[str, object] = {}
+
+    def fake_run_agent(task: str, **kwargs: object) -> object:
+        captured["persona"] = kwargs.get("persona")
+        return types.SimpleNamespace(text="ok")
+
+    monkeypatch.setattr(agent_mod, "run_agent", fake_run_agent)
+    result = runner.invoke(main, ["run", "hi", "--persona", "sakking", "--no-mcp"])
+    assert result.exit_code == 0
+    assert captured["persona"] == "sakking"
+
+
+def test_run_persona_resolves_persona_only_skill(
+    runner: CliRunner, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """--persona resolves --with-skills against that persona's own overlay."""
+    monkeypatch.setattr(agent_mod.config, "PERSONAS_DIR", tmp_path)
+    skill_dir = tmp_path / "saksee" / "skills" / "SakSee-only-skill"
+    skill_dir.mkdir(parents=True)
+    (skill_dir / "SKILL.md").write_text(
+        "---\nname: SakSee-only-skill\ndescription: d\nversion: 1.0.0\n---\n\nBODY\n",
+        encoding="utf-8",
+    )
+    import sakthai.agent.loop as loop_mod
+
+    monkeypatch.setattr(loop_mod, "get_credential_source", lambda _p: "api_key")
+    result = runner.invoke(
+        main,
+        [
+            "run",
+            "hi",
+            "--dry-run",
+            "--no-mcp",
+            "-p",
+            "anthropic",
+            "--persona",
+            "saksee",
+            "--with-skills",
+            "SakSee-only-skill",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    assert "SakSee-only-skill" in result.output
+
+
+def test_run_persona_defaults_model_and_provider_from_config(
+    runner: CliRunner, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Explicit --model/--provider are left at their CLI defaults, so the
+    persona's own config.yaml (model.provider/model.default) fills them in."""
+    monkeypatch.setattr(
+        agent_mod.config, "persona_model_defaults", lambda persona: ("huggingface", "some-model")
+    )
+    captured: dict[str, object] = {}
+
+    def fake_run_agent(task: str, **kwargs: object) -> object:
+        captured["model"] = kwargs.get("model")
+        captured["provider"] = kwargs.get("provider")
+        return types.SimpleNamespace(text="ok")
+
+    monkeypatch.setattr(agent_mod, "run_agent", fake_run_agent)
+    result = runner.invoke(main, ["run", "hi", "--persona", "sakking", "--no-mcp"])
+    assert result.exit_code == 0, result.output
+    assert captured["model"] == "some-model"
+    assert captured["provider"] == "huggingface"
+
+
+def test_run_persona_explicit_model_and_provider_win(
+    runner: CliRunner, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """An explicitly-passed --model/--provider is never overridden by persona config."""
+    monkeypatch.setattr(
+        agent_mod.config,
+        "persona_model_defaults",
+        lambda persona: ("huggingface", "should-not-be-used"),
+    )
+    captured: dict[str, object] = {}
+
+    def fake_run_agent(task: str, **kwargs: object) -> object:
+        captured["model"] = kwargs.get("model")
+        captured["provider"] = kwargs.get("provider")
+        return types.SimpleNamespace(text="ok")
+
+    monkeypatch.setattr(agent_mod, "run_agent", fake_run_agent)
+    result = runner.invoke(
+        main,
+        [
+            "run",
+            "hi",
+            "--persona",
+            "sakking",
+            "--no-mcp",
+            "--model",
+            "explicit-model",
+            "-p",
+            "anthropic",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    assert captured["model"] == "explicit-model"
+    assert captured["provider"] == "anthropic"
+
+
+def test_run_persona_autoloads_own_mcp_config(
+    runner: CliRunner, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """--persona auto-loads that persona's own config/mcp.json when
+    SAKTHAI_MCP_CONFIG isn't already set — reusing the existing
+    SAKTHAI_MCP_CONFIG/mcp_config_override() precedence chain."""
+    server_home = tmp_path / "srv"
+    persona_cfg_dir = tmp_path / "personas" / "saksee" / "config"
+    persona_cfg_dir.mkdir(parents=True)
+    (persona_cfg_dir / "mcp.json").write_text(
+        json.dumps(
+            {
+                "mcpServers": {
+                    "sk": {
+                        "command": sys.executable,
+                        "args": ["-m", "sakthai.mcp"],
+                        "env": {"SAKTHAI_HOME": str(server_home)},
+                    }
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(agent_mod.config, "PERSONAS_DIR", tmp_path / "personas")
+    captured = _capture_tools(monkeypatch)
+    result = runner.invoke(main, ["run", "hi", "--persona", "saksee"])
+    assert result.exit_code == 0, result.output
+    names = {t.name for t in captured["tools"]}  # type: ignore[union-attr]
+    assert any(n.startswith("sk__") for n in names)
+
+
+def test_run_explicit_mcp_config_env_wins_over_persona(
+    runner: CliRunner, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """An already-set SAKTHAI_MCP_CONFIG is never overridden by --persona."""
+    persona_cfg_dir = tmp_path / "personas" / "saksee" / "config"
+    persona_cfg_dir.mkdir(parents=True)
+    (persona_cfg_dir / "mcp.json").write_text(
+        json.dumps({"mcpServers": {"sk": {"command": "sakthai-no-such-binary"}}}),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(agent_mod.config, "PERSONAS_DIR", tmp_path / "personas")
+    monkeypatch.setenv("SAKTHAI_MCP_CONFIG", str(tmp_path / "does-not-exist.json"))
+    captured = _capture_tools(monkeypatch)
+    result = runner.invoke(main, ["run", "hi", "--persona", "saksee"])
+    assert result.exit_code == 0, result.output
+    names = {t.name for t in captured["tools"]}  # type: ignore[union-attr]
+    assert not any(n.startswith("sk__") for n in names)

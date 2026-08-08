@@ -1,9 +1,6 @@
 ---
 name: SakSee-sakthai-cycle-care
-version: 1.0.0
 description: "Saksee Sakthai Cycle Care"
-category: sakthai-cycle-care
-
 ---
 # SakThai Cycle — Care
 

@@ -1,9 +1,6 @@
 ---
 name: SakSee-sakthai-cycle-joy
-version: 1.0.0
 description: "Saksee Sakthai Cycle Joy"
-category: sakthai-cycle-joy
-
 ---
 # SakThai Cycle — Joy
 

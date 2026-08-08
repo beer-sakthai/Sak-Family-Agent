@@ -1,9 +1,6 @@
 ---
 name: SakSee-sakthai-dashboard
-version: 0.1.0
-description: Set up and run the SakThai Agent dashboard.
-category: software-development
-tags: [dashboard, flask, sakthai]
+description: "Set up and run the SakThai Agent dashboard."
 ---
 
 # SakThai Dashboard

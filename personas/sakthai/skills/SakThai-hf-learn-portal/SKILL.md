@@ -1,10 +1,6 @@
 ---
 name: SakThai-hf-learn-portal
-author: SakThai
-license: MIT
 description: "Navigate and recommend Hugging Face Learn courses."
-version: 1.0.0
-tags: [HuggingFace, Courses, Learning, Education, LLM, Agents, NLP]
 ---
 # Hugging Face Learn Portal Guide
 

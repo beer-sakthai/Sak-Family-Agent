@@ -88,6 +88,27 @@ def test_parse_skill_invalid_yaml(tmp_path: Path) -> None:
         parse_skill(skill_md)
 
 
+def test_parse_skill_yaml_error_mocked(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    import yaml
+
+    from sakthai.skills import _load_skill_file
+
+    skill_md = tmp_path / "SKILL.md"
+    skill_md.write_text("---\nname: mock-test\n---\nbody", encoding="utf-8")
+
+    _load_skill_file.cache_clear()
+
+    def mock_safe_load(*args, **kwargs):
+        raise yaml.YAMLError("Mocked YAML load error")
+
+    monkeypatch.setattr(yaml, "safe_load", mock_safe_load)
+
+    with pytest.raises(SkillParseError, match="invalid YAML — Mocked YAML load error"):
+        parse_skill(skill_md)
+
+    _load_skill_file.cache_clear()
+
+
 def test_parse_skill_not_a_dict(tmp_path: Path) -> None:
     skill_md = tmp_path / "SKILL.md"
     skill_md.write_text("---\n- just a list\n---\nbody", encoding="utf-8")
@@ -170,6 +191,42 @@ def test_collect_skills_recursive(tmp_path: Path) -> None:
     assert s_map["skill-a"].category == "cat1"
     assert s_map["skill-b"].category == "cat2"
     assert s_map["sakthai-coding-test"].category == "coding"
+
+
+def test_collect_skills_skips_dotdirs(tmp_path: Path) -> None:
+    root = tmp_path / "root"
+    root.mkdir()
+
+    (root / ".archive" / "skill-archived").mkdir(parents=True)
+    (root / ".archive" / "skill-archived" / "SKILL.md").write_text(
+        "---\nname: skill-archived\n---\nbody", encoding="utf-8"
+    )
+    (root / "skill-live").mkdir()
+    (root / "skill-live" / "SKILL.md").write_text(
+        "---\nname: skill-live\n---\nbody", encoding="utf-8"
+    )
+
+    skills = collect_skills(root)
+    names = {s.name for s in skills}
+    assert names == {"skill-live"}
+
+
+def test_collect_skills_dedupes_by_name_across_paths(tmp_path: Path) -> None:
+    root = tmp_path / "root"
+    root.mkdir()
+
+    (root / "skill-flat").mkdir()
+    (root / "skill-flat" / "SKILL.md").write_text(
+        "---\nname: skill-flat\n---\nflat body", encoding="utf-8"
+    )
+    (root / "nested" / "skill-flat").mkdir(parents=True)
+    (root / "nested" / "skill-flat" / "SKILL.md").write_text(
+        "---\nname: skill-flat\n---\nnested body", encoding="utf-8"
+    )
+
+    skills = collect_skills(root)
+    matches = [s for s in skills if s.name == "skill-flat"]
+    assert len(matches) == 1
 
 
 def test_find_skill(tmp_path: Path) -> None:

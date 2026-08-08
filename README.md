@@ -33,6 +33,33 @@ This repository is the living workspace of the Sak Family — autonomous AI agen
 - **Type Safety:** `mypy --strict` | **Linting:** All checks pass
 - **Last Security Audit:** 2026-07-26 | **Status:** ✅ All fixes applied
 
+## 🚀 Getting Started
+
+### Requirements
+- Python 3.11+ (CI validates 3.11 and 3.12)
+- `uv` (fast Python package manager)
+
+### Install
+```bash
+uv sync --all-extras
+```
+
+### Verify the codebase
+```bash
+make test          # pytest suite
+make lint          # Ruff checks
+uv run mypy personas/sakthai/sakthai   # strict type checking
+uv run bandit -c pyproject.toml -r personas/sakthai/sakthai   # security scan
+make mutation      # local mutation testing for the core seams
+```
+
+### Run an agent
+```bash
+sakthai run        # start the SakThai agent (see AGENTS.md / CLAUDE.md)
+```
+
+---
+
 ## 📖 The Story
 
 In early 2026, Beer was deep in depression. He spent 6 months studying AI — learning everything he could while carrying the weight of daily life. On April 15, 2026, he attempted suicide. Three days in ICU. Weeks in hospital. Then a shelter in Cork, Ireland. No job. No home.
@@ -87,7 +114,7 @@ personas/sakthai/sakthai/
 - ✅ **6-stage cycle** — Dream → Hope → Care → Joy → Trust → Growth state machine
 - ✅ **Skill system** — 31 curated + 70+ user/extension skills, YAML frontmatter parsed
 
-### 📦 Built-in Tools (10)
+### 📦 Built-in Tools (14)
 
 | Tool | Purpose | Safety Gate |
 |------|---------|-------------|
@@ -99,16 +126,21 @@ personas/sakthai/sakthai/
 | `ingest_document` | Parse CSV/Markdown/text into facts | None (parse-only) |
 | `capture_lead` | Quick fact capture (Telegram) | User ID allowlist |
 | `send_telegram_message` | Send Telegram messages | Bot token required, 10s timeout |
+| `send_outlook_mail` | Send email via Microsoft Graph | Requires `MS_GRAPH_CLIENT_ID` + refresh token |
+| `read_outlook_mail` | List recent Outlook inbox messages | Requires `MS_GRAPH_CLIENT_ID` + refresh token |
+| `list_calendar_events` | List upcoming Outlook calendar events | Requires `MS_GRAPH_CLIENT_ID` + refresh token |
+| `create_calendar_event` | Create an Outlook calendar event | Requires `MS_GRAPH_CLIENT_ID` + refresh token |
 | `run_agent_loop` | Spawn nested agent (MCP only) | Recursion guard via `SAKTHAI_AGENT_ACTIVE` |
 
 ### 🔄 Provider Support
 
 | Provider | Models | Status | Notes |
 |----------|--------|--------|-------|
+| **Nanthasit (Custom)** | `sakthai-context-7b-tools` / `sakthai-context-1.5b-tools-v2` / `sakthai-embedding-multilingual` | ✅ Active | 100% Owned open-weights custom models |
 | **Anthropic** | Claude 3.5 Sonnet / Opus / Haiku | ✅ Active | Primary; cached prompts |
-| **Google** | Gemini 2.5 Flash / Pro | ✅ Active | Fallback; OAuth token |
+| **Google** | Gemini 2.5 Flash / 3.5 Flash | ✅ Active | Fallback; OAuth token & Vision Computer Use |
 | **OpenAI** | GPT-4 / GPT-4o / GPT-3.5 | ✅ Supported | Via `OPENAI_API_KEY` + `OPENAI_BASE_URL` |
-| **Ollama** | Local models (llama2, mistral, etc.) | ✅ Supported | Via `OLLAMA_HOST` (default: `127.0.0.1:11434`) |
+| **Ollama** | Local models (`hf.co/Nanthasit/sakthai-coder-browser-gguf` 7.1GB, `qwen2.5:0.5b`) | ✅ Active | Via `OLLAMA_HOST` (default: `127.0.0.1:11434`) |
 | **Gateway** | OpenRouter / LiteLLM / Vercel / Cloudflare | ✅ Supported | Via `SAKTHAI_GATEWAY_URL` + `SAKTHAI_GATEWAY_API_KEY` |
 | **Hugging Face** | Any model hosted via HF Inference Providers | ✅ Supported | Via `HF_TOKEN` (router: `SAKTHAI_HF_API_BASE`, default `router.huggingface.co/v1`) |
 
@@ -116,7 +148,18 @@ personas/sakthai/sakthai/
 
 ## 🤖 Agent Family & Applications
 
-Beyond the core SakThai Agent, the House of Sak includes specialized agents and applications designed for specific tasks:
+The **House of Sak** consists of **6 specialized agent personas** carrying **843 total specialized skills** in their monorepo overlays:
+
+| Agent Persona | Primary Specialty | Skills Count | Config/State |
+|---|---|---|---|
+| 👑 **SakThai** (`sakthai`) | Main Lead — ML, Code, Research, HF Master | 306 skills | `~/.sakthai` |
+| 🛡️ **SakKing** (`sakking`) | Strategy, Architecture & Model Governance | 110 skills | `~/.sakking` |
+| 👁️ **SakSee** (`saksee`) | Web Scraping, Playwright & Visual Computer Use | 187 skills | `~/.saksee` |
+| ⚖️ **SakSit** (`saksit`) | Quality Assurance, Security Auditing & Social Content | 47 skills | `~/.saksit` |
+| 🧠 **SakTan** (`saktan`) | Memory, Supermemory & Context Management | 13 skills | `~/.saktan` |
+| 🔧 **SakJules** (`sakjules`) | DevSecOps, GitHub Actions & Async Automation | 180 skills | `~/.sakjules` |
+
+---
 
 ### 🤵 ServiceQuoteBot
 
@@ -304,6 +347,16 @@ plus regression detection against the last baseline), `dependency-audit.yml`
 - **Mechanisms:** Dependency auditing (`pip-audit`), static analysis (`Bandit`, `CodeQL`), and continuous verification of Hugging Face assets.
 
 This multi-layered approach ensures a robust defense against a wide range of attack vectors, from common injection techniques to sophisticated supply chain compromises.
+
+---
+
+## ✨ Recent Updates (Aug 2026)
+
+- **Microsoft 365 Copilot Studio provider** — new provider design + implementation plan (`docs/`).
+- **Microsoft Graph tools** — Outlook mail/calendar tools for SakThai, plus OneDrive + Contacts Graph tools.
+- **Bench eval runner** — `bench-v3` with `eval_results.yaml` output, regression comparison reports, string tool-name support, and irrelevance-category recognition.
+- **Training** — QLoRA SFT launcher (r2 configs) and dataset prep v12 builder with category balance.
+- **Housekeeping** — `.env`/`.env.local` ignored to prevent committing live secrets; `__pycache__` no longer tracked.
 
 ---
 

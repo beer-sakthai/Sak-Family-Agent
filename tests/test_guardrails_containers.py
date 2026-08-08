@@ -40,6 +40,12 @@ def run_command_tool():
         "sudo nsenter -t 1 -u cat /root/.ssh/id_rsa",
         "docker run -v=/etc:/etc alpine",
         "podman run --volume=/var:/var alpine",
+        "unshare --root /etc /bin/sh",
+        "unshare --root=/etc /bin/sh",
+        "unshare --wd /root /bin/sh",
+        "unshare --mount-proc /etc /bin/sh",
+        "unshare -r cat /etc/shadow",
+        "pkexec --user root cat /etc/shadow",
     ],
 )
 def test_container_guardrails(command, run_command_tool, store, monkeypatch):
@@ -58,6 +64,8 @@ def test_safe_container_commands(run_command_tool, store, monkeypatch):
         "docker run -v ./local:/data alpine",
         "nsenter --help",
         "chroot . ls",
+        "unshare -r ls",
+        "pkexec --user root ls",
     ]
     for command in safe_commands:
         result = DEFAULT_POLICY.check_pre_execution(run_command_tool, {"command": command}, store)

@@ -290,7 +290,7 @@ def test_skills_are_injected_into_system_prompt(
     )
     import sakthai.skills as skills_mod
 
-    monkeypatch.setattr(skills_mod, "default_skill_roots", lambda: (tmp_path,))
+    monkeypatch.setattr(skills_mod, "default_skill_roots", lambda persona=None: (tmp_path,))
 
     captured: dict[str, str] = {}
 
@@ -1857,7 +1857,7 @@ def test_parse_slash_command_finds_command_file(
     cmd_dir = tmp_path / "my-plugin" / "commands"
     cmd_dir.mkdir(parents=True)
     (cmd_dir / "my-cmd.md").write_text("Do something with $ARGUMENTS", encoding="utf-8")
-    monkeypatch.setattr(loop_mod, "default_skill_roots", lambda: [tmp_path])
+    monkeypatch.setattr(loop_mod, "default_skill_roots", lambda persona=None: [tmp_path])
 
     result = _parse_slash_command("/my-plugin:my-cmd some args")
     assert result is not None
@@ -1877,7 +1877,7 @@ def test_parse_slash_command_strips_yaml_frontmatter(
     (cmd_dir / "my-cmd.md").write_text(
         "---\ntitle: cmd\n---\nThe actual body content", encoding="utf-8"
     )
-    monkeypatch.setattr(loop_mod, "default_skill_roots", lambda: [tmp_path])
+    monkeypatch.setattr(loop_mod, "default_skill_roots", lambda persona=None: [tmp_path])
 
     result = _parse_slash_command("/my-plugin:my-cmd")
     assert result is not None
@@ -1891,7 +1891,7 @@ def test_parse_slash_command_returns_none_for_missing_file(
 ) -> None:
     import sakthai.agent.loop as loop_mod
 
-    monkeypatch.setattr(loop_mod, "default_skill_roots", lambda: [tmp_path])
+    monkeypatch.setattr(loop_mod, "default_skill_roots", lambda persona=None: [tmp_path])
     result = _parse_slash_command("/no-plugin:no-cmd")
     assert result is None
 
@@ -1905,7 +1905,7 @@ def test_parse_slash_command_finds_commands_dir_variant(
     cmd_dir = tmp_path / "commands"
     cmd_dir.mkdir(parents=True)
     (cmd_dir / "my-cmd.md").write_text("Do $ARGUMENTS", encoding="utf-8")
-    monkeypatch.setattr(loop_mod, "default_skill_roots", lambda: [tmp_path])
+    monkeypatch.setattr(loop_mod, "default_skill_roots", lambda persona=None: [tmp_path])
 
     result = _parse_slash_command("/any-plugin:my-cmd extra-args")
     assert result is not None
@@ -1924,7 +1924,7 @@ def test_parse_slash_command_found_in_extension_plugin_subdir(
     cmd_dir = child / "my-plugin" / "commands"
     cmd_dir.mkdir(parents=True)
     (cmd_dir / "my-cmd.md").write_text("Extension plugin-subdir body", encoding="utf-8")
-    monkeypatch.setattr(loop_mod, "default_skill_roots", lambda: [tmp_path])
+    monkeypatch.setattr(loop_mod, "default_skill_roots", lambda persona=None: [tmp_path])
 
     result = _parse_slash_command("/my-plugin:my-cmd")
     assert result is not None
@@ -1942,7 +1942,7 @@ def test_parse_slash_command_found_in_extension_commands_subdir(
     cmd_dir = child / "commands"
     cmd_dir.mkdir(parents=True)
     (cmd_dir / "my-cmd.md").write_text("Extension commands-subdir body", encoding="utf-8")
-    monkeypatch.setattr(loop_mod, "default_skill_roots", lambda: [tmp_path])
+    monkeypatch.setattr(loop_mod, "default_skill_roots", lambda persona=None: [tmp_path])
 
     result = _parse_slash_command("/any-plugin:my-cmd")
     assert result is not None
@@ -1959,7 +1959,7 @@ def test_parse_slash_command_returns_none_on_read_error(
     cmd_dir.mkdir(parents=True)
     cmd_file = cmd_dir / "mycmd.md"
     cmd_file.write_text("Body", encoding="utf-8")
-    monkeypatch.setattr(loop_mod, "default_skill_roots", lambda: [tmp_path])
+    monkeypatch.setattr(loop_mod, "default_skill_roots", lambda persona=None: [tmp_path])
 
     with patch("pathlib.Path.read_text", side_effect=OSError("permission denied")):
         result = _parse_slash_command("/myplugin:mycmd")
@@ -2098,13 +2098,13 @@ def test_run_agent_skills_and_command_system_are_merged(
         "---\nname: demo-skill\ndescription: d\n---\n\nSKILL BODY HERE.\n",
         encoding="utf-8",
     )
-    monkeypatch.setattr(skills_mod, "default_skill_roots", lambda: (tmp_path,))
+    monkeypatch.setattr(skills_mod, "default_skill_roots", lambda persona=None: (tmp_path,))
 
     # Slash-command file
     cmd_dir = tmp_path / "myplugin" / "commands"
     cmd_dir.mkdir(parents=True)
     (cmd_dir / "mycmd.md").write_text("COMMAND BODY HERE.", encoding="utf-8")
-    monkeypatch.setattr(loop_mod, "default_skill_roots", lambda: [tmp_path])
+    monkeypatch.setattr(loop_mod, "default_skill_roots", lambda persona=None: [tmp_path])
 
     captured: dict[str, str] = {}
 

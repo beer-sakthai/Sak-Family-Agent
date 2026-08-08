@@ -1,10 +1,6 @@
 ---
 name: SakThai-hf-hub-collections
-author: SakThai
-license: MIT
-description: Hugging Face Hub Collections API — create, manage, and curate themed collections of models, datasets, Spaces, papers, and other items programmatically via the huggingface_hub library
-category: mlops
-version: 1.0.0
+description: "Hugging Face Hub Collections API — create, manage, and curate themed collections of models, datasets, Spaces, papers, and other items programmatically via the huggingface_hub library"
 ---# HF Hub Collections API
 
 Trigger when: user asks about curating HF resources into lists, creating collections, managing collection items, or organizing models/datasets/Spaces/papers by theme.

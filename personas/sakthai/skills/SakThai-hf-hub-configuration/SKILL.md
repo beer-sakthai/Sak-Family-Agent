@@ -1,10 +1,6 @@
 ---
 name: SakThai-hf-hub-configuration
-author: SakThai
-license: MIT
-description: Complete reference for huggingface_hub library configuration — all environment variables, cache paths, token management, and customization options
-category: mlops
-version: 1.0.0
+description: "Complete reference for huggingface_hub library configuration — all environment variables, cache paths, token management, and customization options"
 ---
 # HF Hub Configuration
 

@@ -1,27 +1,12 @@
 ---
 name: SakThai-cycle-joy
-category: cycle
-author: SakThai
-license: MIT
-description: Package and ship through CI without breaking the loop.
-version: 1.0.0
-platforms:
-  - linux
-  - macos
-  - windows
-metadata:
-  sakthai:
-    tags:
-      - cycle
-      - joy
-    related_skills:
-      - SakThai-cycle-trust
+description: "Package and ship through CI without breaking the loop."
 ---
 
-# sakthai-cycle-joy
+# Sak-cycle-joy
 
-Stage 4 of 6 in the Sak Family cycle — **Joy**. See [Joy.md](../../docs/cycle/Joy.md)
-for the full guidance and [SOUL.md](../../docs/SOUL.md) for the charge model.
+Stage 4 of 6 in the Sak Family cycle — **Joy**. See [Joy.md](../../../../docs/cycle/Joy.md)
+for the full guidance and [SOUL.md](../../../../docs/SOUL.md) for the charge model.
 
 ## What to do
 

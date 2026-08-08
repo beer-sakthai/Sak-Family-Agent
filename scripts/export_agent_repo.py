@@ -431,14 +431,20 @@ python scripts/export_agent_repo.py {persona} --out /tmp/{persona}-repo
 
 def _prune_hermes_profiles(out: Path, persona: str) -> None:
     profiles = out / "infra" / "hermes-agents" / "profiles"
-    if not profiles.is_dir():
-        return
-    for entry in profiles.iterdir():
-        if entry.name != persona:
-            if entry.is_dir():
-                shutil.rmtree(entry)
-            else:
-                entry.unlink()
+    if profiles.is_dir():
+        for entry in profiles.iterdir():
+            if entry.name != persona:
+                if entry.is_dir():
+                    shutil.rmtree(entry)
+                else:
+                    entry.unlink()
+
+    # SakThai's reserved default profile lives at infra/hermes-agents/default/,
+    # not under profiles/ (SakThai is lead, per CLAUDE.md) — keep it only for
+    # SakThai's own export.
+    default = out / "infra" / "hermes-agents" / "default"
+    if default.is_dir() and persona != "sakthai":
+        shutil.rmtree(default)
 
 
 def _prune_hermes_systemd_services(out: Path, persona: str) -> None:

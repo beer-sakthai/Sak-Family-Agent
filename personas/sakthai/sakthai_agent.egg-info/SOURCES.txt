@@ -58,6 +58,7 @@ personas/sakthai/sakthai/mcp/server.py
 personas/sakthai/sakthai/mcp/servers.py
 personas/sakthai/sakthai/memory/__init__.py
 personas/sakthai/sakthai/memory/backup.py
+personas/sakthai/sakthai/memory/merged.py
 personas/sakthai/sakthai/memory/provider.py
 personas/sakthai/sakthai/memory/store.py
 personas/sakthai/sakthai/memory/sync.py
@@ -91,8 +92,11 @@ tests/test_context_manager.py
 tests/test_cycle_skills_config.py
 tests/test_cycle_state.py
 tests/test_dashboard_data.py
+tests/test_dataset_prep.py
 tests/test_entrypoint.py
 tests/test_eval.py
+tests/test_eval_compare.py
+tests/test_eval_scoring.py
 tests/test_export_agent_repo.py
 tests/test_extensions.py
 tests/test_giturl.py
@@ -121,10 +125,12 @@ tests/test_mcp_server.py
 tests/test_mcp_servers.py
 tests/test_memory_aux.py
 tests/test_memory_concurrent.py
+tests/test_memory_merged.py
 tests/test_memory_secrets_redaction.py
 tests/test_memory_store.py
 tests/test_memory_sync.py
 tests/test_persona_guardrails_parity.py
+tests/test_persona_workspace_workflows.py
 tests/test_prompt_builder.py
 tests/test_provider_contracts.py
 tests/test_provider_resilience.py
@@ -159,6 +165,9 @@ tests/test_telegram_main.py
 tests/test_telegram_workflow_executor.py
 tests/test_tools.py
 tests/test_tools_overrides.py
+tests/test_train_configs.py
 tests/test_train_eval_coder_lora.py
 tests/test_usage.py
+tests/test_verify_hf_upload.py
+tests/test_web_auth.py
 tests/test_web_server.py

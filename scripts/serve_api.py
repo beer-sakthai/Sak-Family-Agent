@@ -36,52 +36,47 @@ def _is_loopback_host(host: str) -> bool:
     except ValueError:
         # A non-literal hostname (other than localhost) may resolve anywhere.
         return False
+
+
 _BEARER_TOKEN: str | None = None
 
 
-def _add_repo_to_path() -> None:
-    import sys
-
-    repo_root = Path(__file__).resolve().parent.parent
-    for candidate in (repo_root / "personas" / "sakthai", repo_root):
-        if str(candidate) not in sys.path:
-            sys.path.insert(0, str(candidate))
-
-
 def _get_or_create_bearer_token() -> str:
-    """Retrieve or create the Web API bearer token.
-
-    Checks the ``SAKTHAI_WEB_TOKEN`` environment variable first, then the
-    memory store (kind='web_auth', key='bearer_token'), generating and
-    persisting a new 32-hex-char token if neither exists. Cached in
-    ``_BEARER_TOKEN`` for the life of the process.
-    """
+    """Retrieve or create an opaque 32-character hex bearer token in MemoryStore."""
     global _BEARER_TOKEN
     if _BEARER_TOKEN is not None:
         return _BEARER_TOKEN
 
-    env_token = os.environ.get("SAKTHAI_WEB_TOKEN")
-    if env_token:
-        _BEARER_TOKEN = env_token
-        return _BEARER_TOKEN
-
     try:
-        _add_repo_to_path()
+        import sys
+        from pathlib import Path
+
+        REPO_ROOT = (Path(__file__).resolve().parent.parent).resolve()
+        if str(REPO_ROOT / "personas" / "sakthai") not in sys.path:
+            sys.path.insert(0, str(REPO_ROOT / "personas" / "sakthai"))
+        if str(REPO_ROOT) not in sys.path:
+            sys.path.insert(0, str(REPO_ROOT))
+
         from sakthai.config import register_secret
         from sakthai.memory.store import MemoryStore
 
         with MemoryStore() as store:
             fact = store.get_fact_by_key(kind="web_auth", key="bearer_token")
             if fact:
-                token = fact.value
-            else:
-                token = secrets.token_hex(16)
-                store.add_fact(
-                    value=token,
-                    kind="web_auth",
-                    key="bearer_token",
-                    tags=["system", "no-export"],
-                )
+                _BEARER_TOKEN = fact.value
+                register_secret(_BEARER_TOKEN)
+                return _BEARER_TOKEN
+
+            import secrets
+
+            token = secrets.token_hex(16)
+            store.delete_facts_by_key(kind="web_auth", key="bearer_token")
+            store.add_fact(
+                value=token,
+                kind="web_auth",
+                key="bearer_token",
+                tags=["system", "no-export"],
+            )
             register_secret(token)
             _BEARER_TOKEN = token
             return token
@@ -89,7 +84,10 @@ def _get_or_create_bearer_token() -> str:
         logging.getLogger(__name__).warning(
             "Failed to get or create bearer token from MemoryStore: %s", exc
         )
-        _BEARER_TOKEN = secrets.token_hex(16)
+        if _BEARER_TOKEN is None:
+            import secrets
+
+            _BEARER_TOKEN = secrets.token_hex(16)
         return _BEARER_TOKEN
 
 
@@ -143,6 +141,64 @@ class _Handler(SimpleHTTPRequestHandler):
     def log_message(self, format: str, *args: Any) -> None:  # noqa: A003
         logging.getLogger(__name__).info(format, *args)
 
+    def _has_auth_attempt(self) -> bool:
+        """True if the request contains any authentication credentials."""
+        if self.headers.get("Authorization"):
+            return True
+        parsed = urlparse(self.path)
+        query = parsed.query
+        if query:
+            for item in query.split("&"):
+                if "=" in item:
+                    k, _ = item.split("=", 1)
+                    if k in ("token", "bearer_token"):
+                        return True
+        cookie_header = self.headers.get("Cookie", "")
+        if cookie_header:
+            for item in cookie_header.split(";"):
+                if "=" in item:
+                    k, _ = item.strip().split("=", 1)
+                    if k in ("token", "bearer_token"):
+                        return True
+        return False
+
+    def _is_authenticated(self) -> bool:
+        expected_token = _get_or_create_bearer_token()
+        if not expected_token:
+            return False
+
+        # 1. Check Authorization header
+        auth_header = self.headers.get("Authorization", "")
+        if auth_header and auth_header.startswith("Bearer "):
+            token = auth_header[7:]
+            if secrets.compare_digest(token, expected_token):
+                return True
+
+        # 2. Check query parameter 'token' or 'bearer_token'
+        parsed = urlparse(self.path)
+        query = parsed.query
+        if query:
+            for item in query.split("&"):
+                if "=" in item:
+                    k, v = item.split("=", 1)
+                    if k in ("token", "bearer_token"):
+                        val = unquote(v)
+                        if secrets.compare_digest(val, expected_token):
+                            return True
+
+        # 3. Check Cookie header
+        cookie_header = self.headers.get("Cookie", "")
+        if cookie_header:
+            for item in cookie_header.split(";"):
+                if "=" in item:
+                    k, v = item.strip().split("=", 1)
+                    if k in ("token", "bearer_token"):
+                        val = unquote(v)
+                        if secrets.compare_digest(val, expected_token):
+                            return True
+
+        return False
+
     def end_headers(self) -> None:
         self.send_header("X-Frame-Options", "DENY")
         self.send_header("X-Content-Type-Options", "nosniff")
@@ -151,6 +207,21 @@ class _Handler(SimpleHTTPRequestHandler):
             "Content-Security-Policy",
             "default-src 'self'; img-src 'self' data:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';",
         )
+        # If authenticated via query param, set cookie so subsequent static asset requests load seamlessly
+        parsed = urlparse(self.path)
+        query = parsed.query
+        if query:
+            expected_token = _get_or_create_bearer_token()
+            for item in query.split("&"):
+                if "=" in item:
+                    k, v = item.split("=", 1)
+                    if k in ("token", "bearer_token"):
+                        val = unquote(v)
+                        if secrets.compare_digest(val, expected_token):
+                            self.send_header(
+                                "Set-Cookie", f"token={val}; Path=/; HttpOnly; SameSite=Strict"
+                            )
+                            break
         super().end_headers()
 
     def _json(self, code: int, payload: dict[str, Any]) -> None:
@@ -174,24 +245,40 @@ class _Handler(SimpleHTTPRequestHandler):
         parsed = urlparse(self.path)
         path = parsed.path.rstrip("/") or "/"
 
+        if path == "/health":
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.send_header("Content-Length", "16")
+            self.end_headers()
+            self.wfile.write(b'{"status": "ok"}')
+            return
+
         if path.startswith("/api/"):
-            auth_header = self.headers.get("Authorization", "")
-            if not auth_header:
-                self._json(401, {"error": "Unauthorized", "message": "Missing Authorization header"})
+            if not self._is_authenticated():
+                auth_header = self.headers.get("Authorization", "")
+                if auth_header and not auth_header.startswith("Bearer "):
+                    self._json(
+                        401,
+                        {
+                            "error": "Unauthorized",
+                            "message": "Authorization header must be in 'Bearer <token>' format",
+                        },
+                    )
+                    return
+
+                if not self._has_auth_attempt():
+                    self._json(
+                        401, {"error": "Unauthorized", "message": "Missing Authorization header"}
+                    )
+                else:
+                    self._json(403, {"error": "Forbidden", "message": "Invalid Bearer token"})
                 return
-            if not auth_header.startswith("Bearer "):
-                self._json(
-                    401,
-                    {
-                        "error": "Unauthorized",
-                        "message": "Authorization header must be in 'Bearer <token>' format",
-                    },
-                )
-                return
-            token = auth_header[7:]
-            expected_token = _get_or_create_bearer_token()
-            if not secrets.compare_digest(token, expected_token):
-                self._json(403, {"error": "Forbidden", "message": "Invalid Bearer token"})
+        else:
+            if not self._is_authenticated():
+                self.send_response(401)
+                self.send_header("Content-Type", "text/plain; charset=utf-8")
+                self.end_headers()
+                self.wfile.write(b"Unauthorized: Missing or invalid bearer token")
                 return
 
         if path == "/api/stages":
@@ -237,12 +324,14 @@ class _Handler(SimpleHTTPRequestHandler):
 
 
 def serve(host: str = _HOST, port: int = _PORT) -> HTTPServer:
-    # Refuse a non-loopback bind unless SAKTHAI_WEB_ALLOW_PUBLIC is set
+    # API endpoints require a Bearer token, but the loopback default is
+    # defense-in-depth: personal memory should not be reachable off-host by
+    # default. Require an explicit opt-in for any non-loopback bind.
     if not _is_loopback_host(host) and not os.environ.get("SAKTHAI_WEB_ALLOW_PUBLIC"):
         raise PermissionError(
-            f"Refusing to bind the API to non-loopback host {host!r} without an explicit "
-            "opt-in. It serves personal memory behind a single bearer token. Set "
-            "SAKTHAI_WEB_ALLOW_PUBLIC=1 to override once you understand the exposure."
+            f"Refusing to bind the API to non-loopback host {host!r}. "
+            "It serves personal memory; set SAKTHAI_WEB_ALLOW_PUBLIC=1 to "
+            "override once you have placed authentication in front of it."
         )
     _get_or_create_bearer_token()  # Warm cache & register secret
     os.chdir(str(WEB_DIR))

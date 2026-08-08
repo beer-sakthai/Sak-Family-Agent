@@ -49,6 +49,16 @@ class TestSensitiveRelativePaths(unittest.TestCase):
             ".env-local",
             ".env_production",
             ".env-development",
+            ".git-credentials",
+            ".node_repl_history",
+            ".mysql_history",
+            ".psql_history",
+            ".sqlite_history",
+            "id_xmss",
+            ".rediscli_history",
+            ".mongo_history",
+            ".pgpass",
+            ".my.cnf",
         ]
         for path in sensitive_relative_paths:
             with self.subTest(path=path):
@@ -165,6 +175,16 @@ class TestSensitiveRelativePathCommands(unittest.TestCase):
             "cat .gcloud/credentials.db",
             "cat .azure/accessTokens.json",
             "cat id_ed25519_sk",
+            "cat .git-credentials",
+            "cat .node_repl_history",
+            "cat .mysql_history",
+            "cat .psql_history",
+            "cat .sqlite_history",
+            "cat id_xmss",
+            "cat .rediscli_history",
+            "cat .mongo_history",
+            "cat .pgpass",
+            "cat .my.cnf",
         ):
             with self.subTest(command=command):
                 result = _block_dangerous_shell_commands(

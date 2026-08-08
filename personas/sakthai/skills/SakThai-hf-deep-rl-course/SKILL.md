@@ -1,10 +1,6 @@
 ---
 name: SakThai-hf-deep-rl-course
-author: SakThai
-license: MIT
 description: "Train RL agents with Stable Baselines3 and Hugging Face."
-version: 1.0.0
-tags: [ReinforcementLearning, RL, DeepRL, StableBaselines, HuggingFace]
 ---
 # Deep Reinforcement Learning with Hugging Face
 

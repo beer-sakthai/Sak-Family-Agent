@@ -1,11 +1,6 @@
 ---
 name: SakSee-gemini-computer-use
 description: "Build UI automation agents with Gemini Computer Use."
-version: 0.1.0
-author: Hermes
-metadata:
-  hermes:
-    tags: [Gemini, Computer Use, Agents, Playwright, API]
 ---
 
 # Gemini Computer Use

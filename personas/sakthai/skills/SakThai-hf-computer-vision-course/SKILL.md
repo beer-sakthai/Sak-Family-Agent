@@ -1,10 +1,6 @@
 ---
 name: SakThai-hf-computer-vision-course
-author: SakThai
-license: MIT
 description: "Computer vision with HF — classification, detection, more."
-version: 1.0.0
-tags: [ComputerVision, ImageClassification, ObjectDetection, HuggingFace, ViT]
 ---
 # Computer Vision with Hugging Face
 
