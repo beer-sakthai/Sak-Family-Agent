@@ -114,6 +114,7 @@ _SENSITIVE_BASENAMES = {
     "known_hosts",
     "authorized_keys",
     "credentials",
+    "credentials.json",
     "shadow",
     "passwd",
     "sudoers",
