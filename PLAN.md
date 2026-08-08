@@ -103,7 +103,9 @@ workspace runtime config under `infra/`.
 ## 🧹 SCRATCH_ORGANISATION_PLAN.MD
 
 **Owner:** SakKing (spotter) → SakJules (executor)
-**Status:** Planning
+**Status:** [/] In progress — superseded in scope by the full audit in
+[`docs/repo-audit-2026-08-08.md`](./docs/repo-audit-2026-08-08.md), which covers
+these root files plus generated-state bloat and the `.gitignore` shadowing bug.
 **Priority:** Medium
 
 ### Problem
