@@ -308,6 +308,33 @@ def _is_sensitive_path(path: str, allow_local: bool = False) -> bool:
     return False
 
 
+def _is_local_make_dir(path: str) -> bool:
+    """True if ``path`` is an ordinary directory under the current working directory.
+
+    ``_is_sensitive_path``'s final check blocks any absolute path nested under a
+    broad critical root (``/home``, ``/var``, ...), which also matches every
+    normal project checkout on a typical Linux box — including the cwd itself,
+    since ``tempfile.mkdtemp(dir=".")`` returns an absolute path as of Python
+    3.12. This narrower check exists only to rescue that case for the ``make -C``
+    guardrail: a path resolving inside cwd is treated as local *unless* it (or
+    one of its components) is itself a name ``_is_sensitive_path`` would flag
+    regardless of location (``.ssh``, ``id_rsa``, etc.) or contains traversal.
+    """
+    if ".." in path:
+        return False
+    normalized = os.path.normpath(path)
+    basename = os.path.basename(normalized)
+    if _basename_is_sensitive(basename):
+        return False
+    lowered_parts = {p.casefold() for p in normalized.split(os.sep)}
+    if any(d in lowered_parts for d in _SENSITIVE_DIRS):
+        return False
+
+    abs_path = os.path.abspath(path)
+    cwd = os.getcwd()
+    return abs_path == cwd or abs_path.startswith(cwd + os.sep)
+
+
 def _check_destructive_tokens(
     parts: list[str],
     context_sensitive: bool = False,
@@ -348,7 +375,7 @@ def _check_destructive_tokens(
                 else:
                     idx += 1
 
-            if _is_sensitive_path(make_dir, allow_local=True):
+            if _is_sensitive_path(make_dir, allow_local=True) and not _is_local_make_dir(make_dir):
                 return GuardrailResult(
                     GuardrailAction.DENY,
                     reason=f"Potentially dangerous 'make' command in sensitive directory {make_dir!r} blocked.",
@@ -372,7 +399,7 @@ def _check_destructive_tokens(
                 if abs_makefile_path in checked_makefiles:
                     continue
 
-                if _is_sensitive_path(makefile_path):
+                if _is_sensitive_path(makefile_path) and not _is_local_make_dir(makefile_path):
                     return GuardrailResult(
                         GuardrailAction.DENY,
                         reason=f"Potentially dangerous 'make' command on sensitive file {makefile_path!r} blocked.",
@@ -560,7 +587,6 @@ def _check_destructive_tokens(
         "ed",
         "composer",
         "cargo",
-        "make",
     )
     exfiltration_binaries = (
         "curl",
@@ -668,7 +694,6 @@ def _check_destructive_tokens(
         "ed",
         "composer",
         "cargo",
-        "make",
     )
     # Common interpreters where sensitive paths can be embedded in arguments.
     interpreters = (
@@ -705,7 +730,6 @@ def _check_destructive_tokens(
         "emacs",
         "composer",
         "cargo",
-        "make",
     )
 
     for i, part in enumerate(parts):
