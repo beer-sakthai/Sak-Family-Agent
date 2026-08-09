@@ -229,6 +229,58 @@ class TestWorkflowExecutor(unittest.TestCase):
         self.assertEqual(history.status, RunStatus.COMPLETED)
         self.assertEqual(history.step_results["read_step"].status, StepStatus.COMPLETED)
 
+    def test_python_action_sandbox_hardening(self):
+        """Verify that python action blocks dangerous builtins and modules (RCE/sandbox escape)."""
+        # 1. Test standard safe expressions/code work
+        wf_safe = WorkflowDefinition(
+            name="safe_python",
+            steps=[
+                StepDefinition(id="s1", action="python", params={"expr": "1 + 1"}),
+                StepDefinition(id="s2", action="python", params={"code": "res = sum([1, 2, 3])\nresult = res"}),
+            ],
+        )
+        history_safe = asyncio.run(self.executor.execute_workflow(wf_safe))
+        self.assertEqual(history_safe.status, RunStatus.COMPLETED)
+        self.assertEqual(history_safe.step_results["s1"].output.get("result"), 2)
+        self.assertEqual(history_safe.step_results["s2"].output.get("result"), 6)
+
+        # 2. Test blocked imports/modules (os, sys)
+        dangerous_codes = [
+            "import os",
+            "import sys",
+            "os.system('id')",
+            "sys.exit(0)",
+            "open('test.txt', 'w')",
+            "__import__('os')",
+            "eval('1+1')",
+            "exec('a = 1')",
+            "compile('1+1', '', 'eval')",
+        ]
+
+        for code in dangerous_codes:
+            with self.subTest(code=code):
+                # Try as expression
+                wf_expr = WorkflowDefinition(
+                    name="dangerous_python_expr",
+                    steps=[
+                        StepDefinition(id="s1", action="python", params={"expr": code}),
+                    ],
+                )
+                history_expr = asyncio.run(self.executor.execute_workflow(wf_expr))
+                self.assertEqual(history_expr.status, RunStatus.FAILED)
+                self.assertIsNotNone(history_expr.step_results["s1"].error)
+
+                # Try as code block
+                wf_code = WorkflowDefinition(
+                    name="dangerous_python_code",
+                    steps=[
+                        StepDefinition(id="s1", action="python", params={"code": code}),
+                    ],
+                )
+                history_code = asyncio.run(self.executor.execute_workflow(wf_code))
+                self.assertEqual(history_code.status, RunStatus.FAILED)
+                self.assertIsNotNone(history_code.step_results["s1"].error)
+
 
 if __name__ == "__main__":
     unittest.main()

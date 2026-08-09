@@ -1,5 +1,10 @@
 # Sentinel Security Journal
 
+## 2026-08-17 - Safe sandboxing of Python Action Handler in Workflow Executor
+**Vulnerability:** The Python evaluation action handler in the Agent Workflow Framework's executor permitted direct access to dangerous built-ins (such as `open`, `__import__`, `eval`, `exec`, `compile`) and the standard `os` and `sys` modules, which allowed untrusted workflows to perform Remote Code Execution (RCE) and local path traversals.
+**Learning:** Defaulting python evaluations (using `eval` or `exec`) with `__builtins__` exposed allows arbitrary module importing and arbitrary filesystem operations. Sandboxing requires an explicit filter on the builtins namespace and removing direct reference imports from execution globals.
+**Prevention:** Filter out highly critical/dangerous built-ins from the runtime globals namespace, and completely remove references to sensitive libraries (e.g. `os`, `sys`) before executing untrusted python expressions or statement blocks.
+
 ## 2026-08-16 - Double/Multi-Layered URL Encoded relative path traversal in GraphClient
 **Vulnerability:** The GraphClient request path validation only unquoted the path once, allowing attackers or LLMs to bypass the path traversal check (`..`) by using double or multi-layered URL encoding (such as `%252e%252e%252f`).
 **Learning:** Downstream servers or HTTP clients may resolve paths by iteratively decoding them. Validating path containment with a single-level unquoting pass is insecure against multi-layered encoding bypasses.
