@@ -217,8 +217,13 @@ class WorkflowExecutor:
             if not code:
                 return dict(params)
 
-            # Safe execution context
-            eval_globals = {"__builtins__": __builtins__, "json": json, "os": os, "sys": sys}
+            # Safe execution context: remove direct access to os and sys, and filter dangerous builtins
+            import builtins
+            safe_builtins = {
+                k: v for k, v in builtins.__dict__.items()
+                if k not in {"open", "__import__", "eval", "exec", "compile", "input", "globals", "locals"}
+            }
+            eval_globals = {"__builtins__": safe_builtins, "json": json}
             eval_locals = dict(params)
             
             try:

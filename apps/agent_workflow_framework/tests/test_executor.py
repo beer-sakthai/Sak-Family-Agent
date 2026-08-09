@@ -229,6 +229,61 @@ class TestWorkflowExecutor(unittest.TestCase):
         self.assertEqual(history.status, RunStatus.COMPLETED)
         self.assertEqual(history.step_results["read_step"].status, StepStatus.COMPLETED)
 
+    def test_python_evaluation_hardening(self):
+        """Verify that the Python evaluation action rejects access to os, sys, and dangerous builtins."""
+        restricted_payloads = [
+            # Direct os/sys access
+            {"expr": "os.system('echo malicious')"},
+            {"expr": "sys.exit(0)"},
+            # Builtins access
+            {"expr": "open('/etc/passwd', 'r')"},
+            {"expr": "__import__('os')"},
+            {"expr": "eval('1 + 1')"},
+            {"expr": "exec('import os')"},
+            {"expr": "compile('1 + 1', '<string>', 'eval')"},
+            {"expr": "input('prompt')"},
+            {"expr": "globals()"},
+            {"expr": "locals()"},
+            # Even within blocks
+            {"code": "import os; os.system('echo malicious')"},
+        ]
+
+        for payload in restricted_payloads:
+            with self.subTest(payload=payload):
+                wf = WorkflowDefinition(
+                    name="python_hardening_test",
+                    steps=[
+                        StepDefinition(
+                            id="py_step",
+                            action="python",
+                            params=payload,
+                        ),
+                    ],
+                )
+                history = asyncio.run(self.executor.execute_workflow(wf))
+                self.assertEqual(history.status, RunStatus.FAILED)
+                step_res = history.step_results["py_step"]
+                self.assertEqual(step_res.status, StepStatus.FAILED)
+                self.assertIsNotNone(step_res.error)
+                self.assertTrue(
+                    any(
+                        x in step_res.error.lower()
+                        for x in [
+                            "not defined",
+                            "has no attribute",
+                            "not found",
+                            "invalid syntax",
+                            "restricted",
+                            "blocked",
+                            "is prohibited",
+                        ]
+                    )
+                    or "NameError" in step_res.error
+                    or "AttributeError" in step_res.error
+                    or "ImportError" in step_res.error,
+                    f"Unexpected error for payload '{payload}': {step_res.error}",
+                )
+
 
 if __name__ == "__main__":
     unittest.main()
