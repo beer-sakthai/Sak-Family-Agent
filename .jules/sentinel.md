@@ -1,5 +1,10 @@
 # Sentinel Security Journal
 
+## 2026-08-16 - Double/Multi-Layered URL Encoded relative path traversal in GraphClient
+**Vulnerability:** The GraphClient request path validation only unquoted the path once, allowing attackers or LLMs to bypass the path traversal check (`..`) by using double or multi-layered URL encoding (such as `%252e%252e%252f`).
+**Learning:** Downstream servers or HTTP clients may resolve paths by iteratively decoding them. Validating path containment with a single-level unquoting pass is insecure against multi-layered encoding bypasses.
+**Prevention:** Always recursively unquote/URL-decode user-supplied paths (e.g., up to 5 levels with early exit if no changes occur) before checking for relative traversal segments (`..`) or sensitive keywords.
+
 ## 2026-08-15 - Unvalidated File IO in Agent Workflow Framework Executor
 **Vulnerability:** The Agent Workflow Framework executor's file actions (`file_read`, `file_write`) were entirely unvalidated, allowing complete local path traversal and arbitrary reading or writing of sensitive files (like `.env`, SSH keys, or system-critical `/etc/passwd`) without restriction.
 **Learning:** Adding complex system tools or workflow executors that support filesystem interactions creates a high-risk security gap if not accompanied by a centralized path-validation layer that strictly validates target paths before any filesystem IO is attempted.
@@ -495,3 +500,8 @@
 **Vulnerability:** Naive absolute URL detection that only checks if a string begins with `http` is vulnerable to Server-Side Request Forgery (SSRF) and credential exfiltration. An attacker can supply URLs with alternative or custom schemes (like `ftp://`, `ws://`, `gopher://`) or protocol-relative references (like `//attacker.com`) that bypass prefix matching but are still resolved as absolute by underlying HTTP clients.
 **Learning:** Any URI containing either a parsed `scheme` or a `netloc` (network location) is structurally absolute or protocol-relative. Security wrappers must use standard URL parsers to inspect both fields to intercept absolute targets, regardless of the scheme used.
 **Prevention:** Rather than string prefix matching, parse the URL using `urllib.parse.urlparse` and verify if `parsed.scheme` or `parsed.netloc` is populated. If so, enforce strict HTTPS schemes and whitelist host domains (e.g., `graph.microsoft.com`).
+
+## 2026-08-16 - Symmetrical Integration of credentials.json Across Tools and Guardrails
+**Vulnerability:** A symmetry gap existed where `credentials.json` (a common filename for service accounts and GCP API keys) was protected by the direct file-reading tool's defense-in-depth blocker (`_SENSITIVE_READ_BASENAMES` in `tools.py`), but was completely missing from `_SENSITIVE_BASENAMES` in `guardrails.py`. This permitted exfiltrating `credentials.json` via general shell commands (e.g. `cat credentials.json`, `curl -F data=@credentials.json`).
+**Learning:** File security protections must be symmetric across both direct reading tools and command execution guardrails. Discrepancies between the two allow attackers to bypass direct-read blocks by routing file access through shell commands or vice versa.
+**Prevention:** Symmetrically align sensitive file basenames across all tool types and guardrail specifications, verifying the protections through regression tests targeting both direct-read blocklists and command execution constraints.
