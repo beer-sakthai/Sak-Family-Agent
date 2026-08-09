@@ -229,6 +229,52 @@ class TestWorkflowExecutor(unittest.TestCase):
         self.assertEqual(history.status, RunStatus.COMPLETED)
         self.assertEqual(history.step_results["read_step"].status, StepStatus.COMPLETED)
 
+    def test_python_action_sandbox_restrictions(self):
+        """Verify that the python evaluation action restricts access to dangerous modules and builtins."""
+        # Attempting to use open() should raise NameError ("name 'open' is not defined")
+        wf_open = WorkflowDefinition(
+            name="test_python_open",
+            steps=[
+                StepDefinition(id="s1", action="python", params={"expr": "open('test.txt', 'r')"}),
+            ],
+        )
+        history = asyncio.run(self.executor.execute_workflow(wf_open))
+        self.assertEqual(history.status, RunStatus.FAILED)
+        self.assertIn("not defined", history.step_results["s1"].error.lower())
+
+        # Attempting to use __import__ should raise NameError ("name '__import__' is not defined")
+        wf_import = WorkflowDefinition(
+            name="test_python_import",
+            steps=[
+                StepDefinition(id="s1", action="python", params={"expr": "__import__('os')"}),
+            ],
+        )
+        history = asyncio.run(self.executor.execute_workflow(wf_import))
+        self.assertEqual(history.status, RunStatus.FAILED)
+        self.assertIn("not defined", history.step_results["s1"].error.lower())
+
+        # Attempting to use os should raise NameError ("name 'os' is not defined")
+        wf_os = WorkflowDefinition(
+            name="test_python_os",
+            steps=[
+                StepDefinition(id="s1", action="python", params={"expr": "os.system('echo')"}),
+            ],
+        )
+        history = asyncio.run(self.executor.execute_workflow(wf_os))
+        self.assertEqual(history.status, RunStatus.FAILED)
+        self.assertIn("not defined", history.step_results["s1"].error.lower())
+
+        # Attempting to use sys should raise NameError ("name 'sys' is not defined")
+        wf_sys = WorkflowDefinition(
+            name="test_python_sys",
+            steps=[
+                StepDefinition(id="s1", action="python", params={"expr": "sys.exit(0)"}),
+            ],
+        )
+        history = asyncio.run(self.executor.execute_workflow(wf_sys))
+        self.assertEqual(history.status, RunStatus.FAILED)
+        self.assertIn("not defined", history.step_results["s1"].error.lower())
+
 
 if __name__ == "__main__":
     unittest.main()
