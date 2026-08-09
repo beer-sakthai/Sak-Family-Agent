@@ -1,5 +1,10 @@
 # Sentinel Security Journal
 
+## 2026-08-16 - Double/Multi-Layered URL Encoded relative path traversal in GraphClient
+**Vulnerability:** The GraphClient request path validation only unquoted the path once, allowing attackers or LLMs to bypass the path traversal check (`..`) by using double or multi-layered URL encoding (such as `%252e%252e%252f`).
+**Learning:** Downstream servers or HTTP clients may resolve paths by iteratively decoding them. Validating path containment with a single-level unquoting pass is insecure against multi-layered encoding bypasses.
+**Prevention:** Always recursively unquote/URL-decode user-supplied paths (e.g., up to 5 levels with early exit if no changes occur) before checking for relative traversal segments (`..`) or sensitive keywords.
+
 ## 2026-08-15 - Unvalidated File IO in Agent Workflow Framework Executor
 **Vulnerability:** The Agent Workflow Framework executor's file actions (`file_read`, `file_write`) were entirely unvalidated, allowing complete local path traversal and arbitrary reading or writing of sensitive files (like `.env`, SSH keys, or system-critical `/etc/passwd`) without restriction.
 **Learning:** Adding complex system tools or workflow executors that support filesystem interactions creates a high-risk security gap if not accompanied by a centralized path-validation layer that strictly validates target paths before any filesystem IO is attempted.
