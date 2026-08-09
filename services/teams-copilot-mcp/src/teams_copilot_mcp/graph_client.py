@@ -110,8 +110,18 @@ class GraphClient:
 
         # Path traversal protection:
         # Validate that no relative path traversal segments ("..") are present in either raw or URL-decoded path components.
+        # We recursively unquote the path up to a depth of 5 times to prevent multi-layered or double URL-encoded traversal bypasses.
         parsed_url = urllib.parse.urlsplit(path)
-        for path_val in (parsed_url.path, urllib.parse.unquote(parsed_url.path)):
+        path_variants = [parsed_url.path]
+        curr = parsed_url.path
+        for _ in range(5):
+            next_curr = urllib.parse.unquote(curr)
+            if next_curr == curr:
+                break
+            path_variants.append(next_curr)
+            curr = next_curr
+
+        for path_val in path_variants:
             # Normalize backslashes to slashes to handle Windows-style path delimiters
             normalized = path_val.replace("\\", "/")
             if ".." in normalized.split("/"):

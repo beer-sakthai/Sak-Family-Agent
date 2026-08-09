@@ -237,6 +237,23 @@ def test_request_blocks_path_traversal_url_encoded(monkeypatch):
         client.request("GET", "me%2f%2e%2e%2fusers")
 
 
+def test_request_blocks_double_and_multi_encoded_path_traversal(monkeypatch):
+    _valid_credentials(monkeypatch)
+    client = GraphClient()
+
+    # Double encoded ".." -> %252e%252e
+    with pytest.raises(ValueError, match="Path traversal sequences are not allowed"):
+        client.request("GET", "%252e%252e/beta/me")
+
+    # Triple encoded ".." -> %25252e%25252e
+    with pytest.raises(ValueError, match="Path traversal sequences are not allowed"):
+        client.request("GET", "%25252e%25252e/beta/me")
+
+    # Double encoded "/" -> %252f
+    with pytest.raises(ValueError, match="Path traversal sequences are not allowed"):
+        client.request("GET", "me%252f%252e%252e%252fusers")
+
+
 def test_request_blocks_custom_schemes_absolute_urls(monkeypatch):
     _valid_credentials(monkeypatch)
     client = GraphClient()
