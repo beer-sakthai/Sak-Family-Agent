@@ -46,17 +46,22 @@ def test_request_sends_bearer_token_from_acquired_access_token(monkeypatch):
     _valid_credentials(monkeypatch)
     client = GraphClient()
 
-    fake_response = httpx.Response(200, json={"value": "ok"}, request=httpx.Request("GET", "https://x"))
+    fake_response = httpx.Response(
+        200, json={"value": "ok"}, request=httpx.Request("GET", "https://x")
+    )
     fake_app = MagicMock()
     fake_app.acquire_token_for_client.return_value = {
         "access_token": "the-real-token",
         "expires_in": 3600,
     }
 
-    with patch(
-        "teams_copilot_mcp.graph_client.msal.ConfidentialClientApplication",
-        return_value=fake_app,
-    ), patch.object(httpx.Client, "request", return_value=fake_response) as mock_request:
+    with (
+        patch(
+            "teams_copilot_mcp.graph_client.msal.ConfidentialClientApplication",
+            return_value=fake_app,
+        ),
+        patch.object(httpx.Client, "request", return_value=fake_response) as mock_request,
+    ):
         result = client.request("GET", "/me")
 
     sent_headers = mock_request.call_args.kwargs["headers"]
@@ -74,10 +79,13 @@ def test_token_is_cached_across_requests(monkeypatch):
         "expires_in": 3600,
     }
 
-    with patch(
-        "teams_copilot_mcp.graph_client.msal.ConfidentialClientApplication",
-        return_value=fake_app,
-    ), patch.object(httpx.Client, "request", return_value=fake_response):
+    with (
+        patch(
+            "teams_copilot_mcp.graph_client.msal.ConfidentialClientApplication",
+            return_value=fake_app,
+        ),
+        patch.object(httpx.Client, "request", return_value=fake_response),
+    ):
         client.request("GET", "/me")
         client.request("GET", "/me")
 
@@ -117,10 +125,13 @@ def test_204_response_returns_empty_dict(monkeypatch):
         "expires_in": 3600,
     }
 
-    with patch(
-        "teams_copilot_mcp.graph_client.msal.ConfidentialClientApplication",
-        return_value=fake_app,
-    ), patch.object(httpx.Client, "request", return_value=fake_response):
+    with (
+        patch(
+            "teams_copilot_mcp.graph_client.msal.ConfidentialClientApplication",
+            return_value=fake_app,
+        ),
+        patch.object(httpx.Client, "request", return_value=fake_response),
+    ):
         result = client.request("DELETE", "/me/something")
 
     assert result == {}
@@ -138,10 +149,13 @@ def test_non_2xx_response_raises(monkeypatch):
         "expires_in": 3600,
     }
 
-    with patch(
-        "teams_copilot_mcp.graph_client.msal.ConfidentialClientApplication",
-        return_value=fake_app,
-    ), patch.object(httpx.Client, "request", return_value=fake_response):
+    with (
+        patch(
+            "teams_copilot_mcp.graph_client.msal.ConfidentialClientApplication",
+            return_value=fake_app,
+        ),
+        patch.object(httpx.Client, "request", return_value=fake_response),
+    ):
         with pytest.raises(httpx.HTTPStatusError):
             client.request("GET", "/me")
 
@@ -150,17 +164,22 @@ def test_request_allows_valid_graph_absolute_url(monkeypatch):
     _valid_credentials(monkeypatch)
     client = GraphClient()
 
-    fake_response = httpx.Response(200, json={"value": "ok"}, request=httpx.Request("GET", "https://x"))
+    fake_response = httpx.Response(
+        200, json={"value": "ok"}, request=httpx.Request("GET", "https://x")
+    )
     fake_app = MagicMock()
     fake_app.acquire_token_for_client.return_value = {
         "access_token": "token",
         "expires_in": 3600,
     }
 
-    with patch(
-        "teams_copilot_mcp.graph_client.msal.ConfidentialClientApplication",
-        return_value=fake_app,
-    ), patch.object(httpx.Client, "request", return_value=fake_response) as mock_request:
+    with (
+        patch(
+            "teams_copilot_mcp.graph_client.msal.ConfidentialClientApplication",
+            return_value=fake_app,
+        ),
+        patch.object(httpx.Client, "request", return_value=fake_response) as mock_request,
+    ):
         client.request("GET", "https://graph.microsoft.com/v1.0/me")
 
     assert mock_request.call_args.args[1] == "https://graph.microsoft.com/v1.0/me"
@@ -244,6 +263,10 @@ def test_request_blocks_double_and_multi_encoded_path_traversal(monkeypatch):
     # Double encoded ".." -> %252e%252e
     with pytest.raises(ValueError, match="Path traversal sequences are not allowed"):
         client.request("GET", "%252e%252e/beta/me")
+
+    # Double encoded ".." and "/" together
+    with pytest.raises(ValueError, match="Path traversal sequences are not allowed"):
+        client.request("GET", "%252e%252e%252fbeta/me")
 
     # Triple encoded ".." -> %25252e%25252e
     with pytest.raises(ValueError, match="Path traversal sequences are not allowed"):
