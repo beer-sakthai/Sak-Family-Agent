@@ -229,6 +229,66 @@ class TestWorkflowExecutor(unittest.TestCase):
         self.assertEqual(history.status, RunStatus.COMPLETED)
         self.assertEqual(history.step_results["read_step"].status, StepStatus.COMPLETED)
 
+    def test_python_eval_blocks_os_and_sys(self):
+        """Verify that direct references to os and sys modules are blocked in python evaluation."""
+        for expr in ["os.system('id')", "sys.modules", "import os", "import sys"]:
+            with self.subTest(expr=expr):
+                wf = WorkflowDefinition(
+                    name="python_os_sys_block",
+                    steps=[
+                        StepDefinition(id="python_step", action="python", params={"expr": expr}),
+                    ],
+                )
+                history = asyncio.run(self.executor.execute_workflow(wf))
+                self.assertEqual(history.status, RunStatus.FAILED)
+                step_res = history.step_results["python_step"]
+                self.assertEqual(step_res.status, StepStatus.FAILED)
+                self.assertIsNotNone(step_res.error)
+
+    def test_python_eval_blocks_dangerous_builtins(self):
+        """Verify that dangerous builtins like open, __import__, eval, exec, compile are blocked."""
+        for expr in [
+            "open('/etc/passwd').read()",
+            "__import__('os').system('id')",
+            "eval('1+1')",
+            "exec('import os')",
+            "compile('1+1', '', 'eval')",
+        ]:
+            with self.subTest(expr=expr):
+                wf = WorkflowDefinition(
+                    name="python_builtin_block",
+                    steps=[
+                        StepDefinition(id="python_step", action="python", params={"expr": expr}),
+                    ],
+                )
+                history = asyncio.run(self.executor.execute_workflow(wf))
+                self.assertEqual(history.status, RunStatus.FAILED)
+                step_res = history.step_results["python_step"]
+                self.assertEqual(step_res.status, StepStatus.FAILED)
+                self.assertIsNotNone(step_res.error)
+
+    def test_python_eval_allows_json_and_safe_builtins(self):
+        """Verify that safe modules like json and standard builtins like int/str work properly."""
+        wf = WorkflowDefinition(
+            name="python_safe_ok",
+            steps=[
+                StepDefinition(
+                    id="step_json",
+                    action="python",
+                    params={"expr": "json.loads('{\"ok\": true}')"},
+                ),
+                StepDefinition(
+                    id="step_builtins",
+                    action="python",
+                    params={"expr": "int('42') + len([1, 2, 3])"},
+                ),
+            ],
+        )
+        history = asyncio.run(self.executor.execute_workflow(wf))
+        self.assertEqual(history.status, RunStatus.COMPLETED)
+        self.assertEqual(history.step_results["step_json"].output.get("result"), {"ok": True})
+        self.assertEqual(history.step_results["step_builtins"].output.get("result"), 45)
+
 
 if __name__ == "__main__":
     unittest.main()
