@@ -109,9 +109,18 @@ class GraphClient:
                 raise ValueError("Absolute URLs must target graph.microsoft.com")
 
         # Path traversal protection:
-        # Validate that no relative path traversal segments ("..") are present in either raw or URL-decoded path components.
+        # Validate that no relative path traversal segments ("..") are present in either raw or recursively URL-decoded path components up to 5 levels deep.
         parsed_url = urllib.parse.urlsplit(path)
-        for path_val in (parsed_url.path, urllib.parse.unquote(parsed_url.path)):
+        path_variants = [parsed_url.path]
+        current = parsed_url.path
+        for _ in range(5):
+            unquoted = urllib.parse.unquote(current)
+            if unquoted == current:
+                break
+            path_variants.append(unquoted)
+            current = unquoted
+
+        for path_val in path_variants:
             # Normalize backslashes to slashes to handle Windows-style path delimiters
             normalized = path_val.replace("\\", "/")
             if ".." in normalized.split("/"):
