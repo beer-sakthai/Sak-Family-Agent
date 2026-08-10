@@ -1,5 +1,10 @@
 # Sentinel Security Journal
 
+## 2026-08-17 - Remote Code Execution in Workflow Framework Python Evaluation Action
+**Vulnerability:** The Python evaluation action handler in the Agent Workflow Framework's executor permitted direct, unrestricted execution of user-controlled Python code with full access to the `os` and `sys` modules as well as dangerous builtins like `open`, `__import__`, `eval`, `exec`, and `compile`. This allowed complete Remote Code Execution (RCE) and system compromise.
+**Learning:** Evaluators or interpreters that run dynamically-defined or LLM-influenced code must not inherit the parent process's global environment or default `__builtins__`. They must be explicitly sandboxed at the language level by minimizing accessible modules and filtering builtins.
+**Prevention:** Construct a clean, isolated execution environment. Remove system/os modules entirely, and filter `__builtins__` to exclude file access, code compilation, and namespace modification builtins. Always write negative tests attempting sandbox breakout payloads to verify defense-in-depth bounds.
+
 ## 2026-08-16 - Double/Multi-Layered URL Encoded relative path traversal in GraphClient
 **Vulnerability:** The GraphClient request path validation only unquoted the path once, allowing attackers or LLMs to bypass the path traversal check (`..`) by using double or multi-layered URL encoding (such as `%252e%252e%252f`).
 **Learning:** Downstream servers or HTTP clients may resolve paths by iteratively decoding them. Validating path containment with a single-level unquoting pass is insecure against multi-layered encoding bypasses.

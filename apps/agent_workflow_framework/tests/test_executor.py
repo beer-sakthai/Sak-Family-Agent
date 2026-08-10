@@ -229,6 +229,41 @@ class TestWorkflowExecutor(unittest.TestCase):
         self.assertEqual(history.status, RunStatus.COMPLETED)
         self.assertEqual(history.step_results["read_step"].status, StepStatus.COMPLETED)
 
+    def test_python_action_sandbox_escape_denied(self):
+        """Verify that the python evaluation action blocks os, sys, and dangerous builtins to prevent sandbox escape/RCE."""
+        escape_payloads = [
+            "os.system('id')",
+            "sys.exit(1)",
+            "open('/etc/passwd', 'r')",
+            "__import__('os').system('id')",
+            "getattr(json, 'loads')",
+            "eval('1+1')",
+            "exec('x = 5')",
+            "compile('1+1', '', 'eval')",
+            "globals()",
+            "locals()",
+        ]
+        for payload in escape_payloads:
+            with self.subTest(payload=payload):
+                wf = WorkflowDefinition(
+                    name="python_escape_test",
+                    steps=[
+                        StepDefinition(id="py_step", action="python", params={"expr": payload}),
+                    ],
+                )
+                history = asyncio.run(self.executor.execute_workflow(wf))
+                self.assertEqual(history.status, RunStatus.FAILED)
+                step_res = history.step_results["py_step"]
+                self.assertEqual(step_res.status, StepStatus.FAILED)
+                self.assertIsNotNone(step_res.error)
+                self.assertTrue(
+                    any(
+                        x in step_res.error.lower()
+                        for x in ["not defined", "is not defined", "has no attribute", "nameerror"]
+                    ),
+                    f"Unexpected error message for payload '{payload}': {step_res.error}",
+                )
+
 
 if __name__ == "__main__":
     unittest.main()
