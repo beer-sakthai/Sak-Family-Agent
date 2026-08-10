@@ -36,6 +36,10 @@ personas/sakthai/agent-self-evolution/output/
 apps/*/node_modules
 apps/*/.next
 
+# `make mutation` copies the package into mutants/ to mutate it in isolation.
+mutants/
+.mutmut-cache
+
 # Isolated workspaces for subagent-driven-development / plan execution
 .worktrees/
 .superpowers/

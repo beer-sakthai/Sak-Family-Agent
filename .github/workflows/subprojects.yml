@@ -1,0 +1,77 @@
+# Runs the test suites that live outside the main `tests/` tree.
+#
+# `pyproject.toml` sets `testpaths = ["tests"]` and ci.yml points pytest at
+# `tests/`, so the suites committed under `apps/` and `services/` were executed
+# by no workflow at all. Tests that never run are worse than no tests: they
+# still read as coverage to anyone browsing the repo, while silently rotting.
+#
+# Each job is path-filtered so it only runs when its own subproject changes.
+# These are separate builds with disjoint dependency sets (see the monorepo note
+# in pyproject.toml) — neither is a uv workspace member, so each is installed on
+# its own rather than through the root lockfile.
+name: Subproject tests
+
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - "apps/agent_workflow_framework/**"
+      - "services/teams-copilot-mcp/**"
+      - ".github/workflows/subprojects.yml"
+  pull_request:
+    branches: [ "main" ]
+    paths:
+      - "apps/agent_workflow_framework/**"
+      - "services/teams-copilot-mcp/**"
+      - ".github/workflows/subprojects.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  agent-workflow-framework:
+    name: agent_workflow_framework
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/agent_workflow_framework
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.11"
+
+      - name: Install uv
+        run: pipx install uv
+
+      # The subproject has no pyproject.toml — `agent_workflow/` is a plain
+      # package directory imported from the repo. Run it in place with its one
+      # runtime dependency supplied by `uv run --with`.
+      - name: Run tests
+        run: uv run --with pyyaml python -m pytest tests/ -q
+
+  teams-copilot-mcp:
+    name: teams-copilot-mcp
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/teams-copilot-mcp
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.11"
+
+      - name: Install uv
+        run: pipx install uv
+
+      # This subproject has its own pyproject.toml and uv.lock (fastmcp / msal /
+      # httpx), deliberately kept out of the root lock.
+      - name: Run tests
+        run: uv run --project . --extra dev python -m pytest tests/ -q
