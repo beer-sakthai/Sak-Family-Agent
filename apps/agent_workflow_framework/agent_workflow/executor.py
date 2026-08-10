@@ -177,6 +177,45 @@ def _validate_filepath(filepath: Any) -> Path:
     return target
 
 
+def _validate_shell_command(cmd_str: str) -> None:
+    """Validate a shell command to prevent access to sensitive/system paths."""
+    import shlex
+    import re
+    try:
+        parts = shlex.split(cmd_str)
+    except ValueError as exc:
+        raise ValueError(f"Malformed shell command: {exc}") from exc
+
+    def _check_token(token: str) -> None:
+        token = token.strip()
+        if not token:
+            return
+
+        # Replace backslashes with forward slashes for cross-platform consistency
+        normalized = token.replace("\\", "/")
+
+        # Split on any character that is not a valid path character (A-Z, a-z, 0-9, dot, underscore, slash, tilde, hyphen)
+        # to extract potential paths embedded in options, lists, scripts, or arguments.
+        sub_tokens = re.split(r"[^a-zA-Z0-9\._/~-]", normalized)
+        for sub in sub_tokens:
+            sub = sub.strip()
+            if not sub:
+                continue
+            # Strip curl-style upload prefix if present
+            if sub.startswith("@") and len(sub) > 1:
+                sub = sub[1:]
+
+            try:
+                _validate_filepath(sub)
+            except PermissionError as exc:
+                raise PermissionError(f"Prohibited sensitive path in shell command: {exc}") from exc
+            except Exception:
+                pass
+
+    for part in parts:
+        _check_token(part)
+
+
 class WorkflowExecutor:
     """Asynchronous workflow execution engine."""
 
@@ -197,6 +236,8 @@ class WorkflowExecutor:
             if not cmd:
                 raise ValueError(f"Step '{step_id}' action '{action}' missing 'cmd' or 'command' parameter.")
             
+            _validate_shell_command(str(cmd))
+
             proc = await asyncio.create_subprocess_shell(
                 str(cmd),
                 stdout=asyncio.subprocess.PIPE,
