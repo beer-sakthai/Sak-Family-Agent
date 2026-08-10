@@ -218,7 +218,26 @@ class WorkflowExecutor:
                 return dict(params)
 
             # Safe execution context
-            eval_globals = {"__builtins__": __builtins__, "json": json, "os": os, "sys": sys}
+            import builtins
+            safe_builtins = {}
+            # Exclude dangerous builtins such as open, __import__, eval, exec, compile, globals, locals, etc.
+            for name in dir(builtins):
+                if name in (
+                    "open", "eval", "exec", "compile", "__import__",
+                    "globals", "locals", "getattr", "setattr", "delattr",
+                    "hasattr", "input", "help", "breakpoint", "dir",
+                    "super", "object", "type", "property", "classmethod",
+                    "staticmethod"
+                ):
+                    continue
+                if name.startswith("__") and name.endswith("__"):
+                    continue
+                safe_builtins[name] = getattr(builtins, name)
+
+            eval_globals = {
+                "__builtins__": safe_builtins,
+                "json": json,
+            }
             eval_locals = dict(params)
             
             try:

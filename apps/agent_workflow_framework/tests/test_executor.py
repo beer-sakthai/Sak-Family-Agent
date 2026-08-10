@@ -55,6 +55,60 @@ class TestWorkflowExecutor(unittest.TestCase):
         self.assertEqual(history.status, RunStatus.COMPLETED)
         self.assertEqual(history.step_results["s1"].output.get("result"), 50)
 
+    def test_python_action_hardening_and_adversarial_bypasses(self):
+        """Verify that the python executor blocks dangerous modules, imports, and builtins."""
+        malicious_exprs = [
+            # Direct imports
+            "import os",
+            "import sys",
+            "__import__('os')",
+            # Direct access to sys/os
+            "os.system('id')",
+            "sys.exit()",
+            # Dangerous builtins
+            "open('test_file.txt', 'r')",
+            "eval('1+1')",
+            "exec('1+1')",
+            "compile('1+1', '<string>', 'exec')",
+            "getattr(json, 'loads')",
+            # Access traversal bypasses
+            "object.__subclasses__()",
+        ]
+        for expr in malicious_exprs:
+            with self.subTest(expr=expr):
+                wf = WorkflowDefinition(
+                    name="python_security_test",
+                    steps=[
+                        StepDefinition(id="s1", action="python", params={"expr": expr}),
+                    ],
+                )
+                history = asyncio.run(self.executor.execute_workflow(wf))
+                self.assertEqual(history.status, RunStatus.FAILED)
+                step_res = history.step_results["s1"]
+                self.assertEqual(step_res.status, StepStatus.FAILED)
+                self.assertIsNotNone(step_res.error)
+
+    def test_python_action_safe_operations_allowed(self):
+        """Verify that safe python operations (math, list/dict comprehensions, permitted libraries) succeed."""
+        wf = WorkflowDefinition(
+            name="python_safe_test",
+            steps=[
+                StepDefinition(
+                    id="s1",
+                    action="python",
+                    params={
+                        "expr": "json.dumps({'key': len([1, 2, 3])})",
+                    },
+                ),
+            ],
+        )
+        history = asyncio.run(self.executor.execute_workflow(wf))
+        self.assertEqual(history.status, RunStatus.COMPLETED)
+        self.assertEqual(
+            history.step_results["s1"].output.get("result"),
+            '{"key": 3}'
+        )
+
     def test_file_write_and_read(self):
         """Test file_write and file_read pipeline."""
         target_file = Path(self.temp_dir.name) / "test_output.txt"

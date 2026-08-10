@@ -1,5 +1,10 @@
 # Sentinel Security Journal
 
+## 2026-08-17 - RCE Hardening in Python Evaluation action handler
+**Vulnerability:** The Python evaluation action handler (`python`, `python_eval`, `eval`) in the Agent Workflow Framework's executor previously permitted direct access to the `os` and `sys` modules inside `eval_globals` and exposed the full standard python `__builtins__` list, allowing remote code execution (RCE) and sandbox escapes via standard python libraries or file reading utilities.
+**Learning:** Evaluators and script engines inside workflow tools are prime vectors for RCE if not restricted. Removing module imports is not enough; dangerous builtins (like `open`, `__import__`, `eval`, `exec`, `compile`, etc.) must be entirely scrubbed or filtered out from the global namespace to block execution escalation.
+**Prevention:** Construct a safe subset of allowed builtins (omitting `open`, `__import__`, etc.) and set it as `__builtins__` inside `eval_globals` while ensuring `os`, `sys`, or other dangerous native libraries are not present in the globals dictionary.
+
 ## 2026-08-16 - Double/Multi-Layered URL Encoded relative path traversal in GraphClient
 **Vulnerability:** The GraphClient request path validation only unquoted the path once, allowing attackers or LLMs to bypass the path traversal check (`..`) by using double or multi-layered URL encoding (such as `%252e%252e%252f`).
 **Learning:** Downstream servers or HTTP clients may resolve paths by iteratively decoding them. Validating path containment with a single-level unquoting pass is insecure against multi-layered encoding bypasses.
