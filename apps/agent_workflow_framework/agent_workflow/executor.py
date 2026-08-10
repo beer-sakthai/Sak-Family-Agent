@@ -35,6 +35,70 @@ class ExecutionError(Exception):
     pass
 
 
+def _validate_url(url_str: str) -> None:
+    """SSRF Protection & URL Validation.
+
+    Raises ValueError or RuntimeError if the URL is invalid, uses a forbidden
+    scheme, or resolves to a private/non-global/multicast IP address.
+    """
+    url_str = str(url_str).strip()
+    if url_str.startswith("-"):
+        raise ValueError(f"Option smuggling detected in URL: {url_str}")
+
+    try:
+        parsed = urllib.parse.urlparse(url_str)
+    except Exception as e:
+        raise ValueError(f"Invalid URL: {url_str}. Error: {e}")
+
+    scheme = (parsed.scheme or "").lower()
+    if scheme not in ("http", "https"):
+        raise ValueError(f"Forbidden URL scheme '{scheme}'. Only HTTP and HTTPS are allowed.")
+
+    host = parsed.hostname
+    if not host:
+        raise ValueError(f"URL missing hostname: {url_str}")
+
+    port = parsed.port
+    if not port:
+        port = 443 if scheme == "https" else 80
+
+    try:
+        import socket
+        import ipaddress
+        addrinfos = socket.getaddrinfo(host, port, proto=socket.IPPROTO_TCP)
+        for _family, _type, _proto, _canon, sockaddr in addrinfos:
+            ip_str = sockaddr[0]
+            try:
+                ip = ipaddress.ip_address(ip_str)
+            except ValueError:
+                continue
+
+            if not ip.is_global or ip.is_multicast:
+                raise ValueError(
+                    f"SSRF Protection Blocked: Host '{host}' resolved to non-public/private IP: {ip_str}"
+                )
+    except ValueError:
+        raise
+    except Exception as e:
+        raise RuntimeError(f"DNS Resolution failed for host '{host}': {e}")
+
+
+class SafeRedirectHandler(urllib.request.HTTPRedirectHandler):
+    """A custom redirect handler that validates target URLs against SSRF before following them."""
+
+    def redirect_request(
+        self,
+        req: urllib.request.Request,
+        fp: Any,
+        code: int,
+        msg: str,
+        headers: Any,
+        newurl: str,
+    ) -> Optional[urllib.request.Request]:
+        _validate_url(newurl)
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+
 def _validate_filepath(filepath: Any) -> Path:
     """Validate a filepath to prevent path traversal and access to sensitive/system directories/files."""
     if not filepath:
@@ -218,15 +282,43 @@ class WorkflowExecutor:
                 return dict(params)
 
             # Secure execution context: remove direct access to dangerous os/sys modules
-            # and restrict __builtins__ to prevent arbitrary file reading, execution, or package imports.
+            # and restrict __builtins__ to prevent arbitrary file reading, execution, or
+            # package imports.
+            #
+            # This blocklist is the union of five competing Sentinel hardening proposals
+            # (PRs #573/#574/#575/#577/#578). None was a superset of the others — each
+            # dropped names the others kept — so they are folded together here rather
+            # than merged one-by-one, which would have regressed whichever protection
+            # landed last:
+            #   * file / exec / import primitives .... open, __import__, eval, exec, compile
+            #   * interpreter control ................ exit, quit, input, help, breakpoint
+            #   * namespace introspection ............ globals, locals, vars, dir
+            #   * attribute traversal, which reaches the classic
+            #     `().__class__.__bases__[0].__subclasses__()` escape chain even with
+            #     the names above removed ............ getattr, setattr, delattr, hasattr
+            #   * type-graph entry points, the other route to that same chain
+            #     ..................................... type, object, super, property,
+            #                                           classmethod, staticmethod
             dangerous_builtins = {
-                "open", "__import__", "eval", "exec", "compile", "exit", "quit",
-                "input", "help", "globals", "locals", "vars", "breakpoint"
+                "open", "__import__", "eval", "exec", "compile",
+                "exit", "quit", "input", "help", "breakpoint",
+                "globals", "locals", "vars", "dir",
+                "getattr", "setattr", "delattr", "hasattr",
+                "type", "object", "super", "property", "classmethod", "staticmethod",
             }
             if isinstance(__builtins__, dict):
-                safe_builtins = {k: v for k, v in __builtins__.items() if k not in dangerous_builtins}
+                builtins_items = list(__builtins__.items())
             else:
-                safe_builtins = {k: getattr(__builtins__, k) for k in dir(__builtins__) if k not in dangerous_builtins}
+                builtins_items = [(k, getattr(__builtins__, k)) for k in dir(__builtins__)]
+
+            # Dunder builtins (``__build_class__``, ``__loader__``, ``__spec__``, …) are
+            # dropped wholesale: they re-expose the import machinery and the class
+            # creation hook that the blocklist above exists to close off.
+            safe_builtins = {
+                k: v
+                for k, v in builtins_items
+                if k not in dangerous_builtins and not (k.startswith("__") and k.endswith("__"))
+            }
 
             eval_globals = {"__builtins__": safe_builtins, "json": json}
             eval_locals = dict(params)
@@ -258,53 +350,15 @@ class WorkflowExecutor:
             if not url:
                 raise ValueError(f"Step '{step_id}' action '{action}' missing 'url' parameter.")
 
-            # SSRF Protection & URL Validation
             url_str = str(url).strip()
-            if url_str.startswith("-"):
-                raise ValueError(f"Option smuggling detected in URL: {url_str}")
-
-            try:
-                parsed = urllib.parse.urlparse(url_str)
-            except Exception as e:
-                raise ValueError(f"Invalid URL: {url_str}. Error: {e}")
-
-            scheme = (parsed.scheme or "").lower()
-            if scheme not in ("http", "https"):
-                raise ValueError(f"Forbidden URL scheme '{scheme}'. Only HTTP and HTTPS are allowed.")
-
-            host = parsed.hostname
-            if not host:
-                raise ValueError(f"URL missing hostname: {url_str}")
-
-            port = parsed.port
-            if not port:
-                port = 443 if scheme == "https" else 80
-
-            try:
-                import socket
-                import ipaddress
-                addrinfos = socket.getaddrinfo(host, port, proto=socket.IPPROTO_TCP)
-                for _family, _type, _proto, _canon, sockaddr in addrinfos:
-                    ip_str = sockaddr[0]
-                    try:
-                        ip = ipaddress.ip_address(ip_str)
-                    except ValueError:
-                        continue
-
-                    if not ip.is_global or ip.is_multicast:
-                        raise ValueError(
-                            f"SSRF Protection Blocked: Host '{host}' resolved to non-public/private IP: {ip_str}"
-                        )
-            except ValueError:
-                raise
-            except Exception as e:
-                raise RuntimeError(f"DNS Resolution failed for host '{host}': {e}")
+            _validate_url(url_str)
 
             req = urllib.request.Request(url_str, headers=params.get("headers", {}))
+            opener = urllib.request.build_opener(SafeRedirectHandler)
             
             loop = asyncio.get_event_loop()
             def _fetch():
-                with urllib.request.urlopen(req, timeout=params.get("timeout", 10)) as resp:
+                with opener.open(req, timeout=params.get("timeout", 10)) as resp:
                     body = resp.read().decode("utf-8", errors="replace")
                     status_code = resp.status
                     try:
