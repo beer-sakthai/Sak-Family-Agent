@@ -1,5 +1,10 @@
 # Sentinel Security Journal
 
+## 2026-08-18 - SSRF Redirect Bypass in Agent Workflow Framework Fetch Action
+**Vulnerability:** The Agent Workflow Framework executor's fetch action validated the destination IP address of only the initial target URL, but then used standard `urllib.request.urlopen` to request it. Since `urllib` natively follows redirects by default, an attacker or a compromised server could return a redirect pointing to local/loopback or private address ranges (e.g., `http://127.0.0.1` or the cloud metadata service), completely bypassing the initial SSRF check.
+**Learning:** Checking the IP address of only the initial request URL is insufficient for protecting HTTP clients against SSRF when automatic redirects are enabled. Downstream redirect chains must be actively intercepted and validated at every hop before they are requested.
+**Prevention:** Subclass `urllib.request.HTTPRedirectHandler` and override `redirect_request(self, req, fp, code, msg, headers, newurl)` to call the centralized validation helper on `newurl` before returning. Instantiate the customized opener using `urllib.request.build_opener` specifically for any outgoing HTTP request action.
+
 ## 2026-08-16 - Double/Multi-Layered URL Encoded relative path traversal in GraphClient
 **Vulnerability:** The GraphClient request path validation only unquoted the path once, allowing attackers or LLMs to bypass the path traversal check (`..`) by using double or multi-layered URL encoding (such as `%252e%252e%252f`).
 **Learning:** Downstream servers or HTTP clients may resolve paths by iteratively decoding them. Validating path containment with a single-level unquoting pass is insecure against multi-layered encoding bypasses.
