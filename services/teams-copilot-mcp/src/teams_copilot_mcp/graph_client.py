@@ -76,6 +76,16 @@ class GraphClient:
         self._token_expires_at = time.monotonic() + int(result.get("expires_in", 3600)) - 60
         return self._token
 
+    def _redact(self, text: str) -> str:
+        """Redact sensitive credentials (client secret, access token) from any string."""
+        if not isinstance(text, str):
+            return text
+        if self._client_secret and self._client_secret in text:
+            text = text.replace(self._client_secret, "[REDACTED]")
+        if self._token and self._token in text:
+            text = text.replace(self._token, "[REDACTED]")
+        return text
+
     def request(
         self,
         method: str,
@@ -89,60 +99,67 @@ class GraphClient:
         it's already a full URL (Graph pagination @odata.nextLink values are
         full URLs — pass those straight through).
         """
-        # SSRF and Token Exfiltration protection:
-        # Prevent protocol-relative URLs (e.g., //attacker.com)
-        if path.startswith(("/", "\\")):
-            if path.startswith(("//", "\\\\", "/\\", "\\/")):
-                raise ValueError("Invalid path format: protocol-relative paths are blocked")
+        try:
+            # SSRF and Token Exfiltration protection:
+            # Prevent protocol-relative URLs (e.g., //attacker.com)
+            if path.startswith(("/", "\\")):
+                if path.startswith(("//", "\\\\", "/\\", "\\/")):
+                    raise ValueError("Invalid path format: protocol-relative paths are blocked")
 
-        # If it has a scheme or a network location, treat as absolute/protocol-relative,
-        # and strictly validate that it is HTTPS and targets graph.microsoft.com
-        parsed = urllib.parse.urlparse(path)
-        if parsed.scheme or parsed.netloc:
-            if "\\" in path:
-                raise ValueError("Backslashes are not allowed in absolute URLs")
-            scheme = parsed.scheme.lower()
-            if scheme != "https":
-                raise ValueError("Only HTTPS is supported for absolute URLs")
-            host = parsed.hostname
-            if not host or host.casefold() != "graph.microsoft.com":
-                raise ValueError("Absolute URLs must target graph.microsoft.com")
+            # If it has a scheme or a network location, treat as absolute/protocol-relative,
+            # and strictly validate that it is HTTPS and targets graph.microsoft.com
+            parsed = urllib.parse.urlparse(path)
+            if parsed.scheme or parsed.netloc:
+                if "\\" in path:
+                    raise ValueError("Backslashes are not allowed in absolute URLs")
+                scheme = parsed.scheme.lower()
+                if scheme != "https":
+                    raise ValueError("Only HTTPS is supported for absolute URLs")
+                if parsed.username or parsed.password:
+                    raise ValueError("Userinfo (username/password) is not allowed in absolute URLs")
+                host = parsed.hostname
+                if not host or host.casefold() != "graph.microsoft.com":
+                    raise ValueError("Absolute URLs must target graph.microsoft.com")
 
-        # Path traversal protection:
-        # Validate that no relative path traversal segments ("..") are present in either raw or recursively URL-decoded path components up to 5 levels deep.
-        parsed_url = urllib.parse.urlsplit(path)
-        path_variants = [parsed_url.path]
-        current = parsed_url.path
-        for _ in range(5):
-            unquoted = urllib.parse.unquote(current)
-            if unquoted == current:
-                break
-            path_variants.append(unquoted)
-            current = unquoted
+            # Path traversal protection:
+            # Validate that no relative path traversal segments ("..") are present in either raw or recursively URL-decoded path components up to 5 levels deep.
+            parsed_url = urllib.parse.urlsplit(path)
+            path_variants = [parsed_url.path]
+            current = parsed_url.path
+            for _ in range(5):
+                unquoted = urllib.parse.unquote(current)
+                if unquoted == current:
+                    break
+                path_variants.append(unquoted)
+                current = unquoted
 
-        for path_val in path_variants:
-            # Normalize backslashes to slashes to handle Windows-style path delimiters
-            normalized = path_val.replace("\\", "/")
-            if ".." in normalized.split("/"):
-                raise ValueError("Path traversal sequences are not allowed")
+            for path_val in path_variants:
+                # Normalize backslashes to slashes to handle Windows-style path delimiters
+                normalized = path_val.replace("\\", "/")
+                if ".." in normalized.split("/"):
+                    raise ValueError("Path traversal sequences are not allowed")
 
-        token = self._get_token()
-        headers = {"Authorization": f"Bearer {token}"}
-        url = path if path.startswith("http") else path
+            token = self._get_token()
+            headers = {"Authorization": f"Bearer {token}"}
+            url = path if path.startswith("http") else path
 
-        response = self._http.request(
-            method,
-            url,
-            params=params,
-            json=json_body,
-            headers=headers,
-        )
-        if response.status_code == 204:
-            return {}
-        response.raise_for_status()
-        if not response.content:
-            return {}
-        return response.json()
+            response = self._http.request(
+                method,
+                url,
+                params=params,
+                json=json_body,
+                headers=headers,
+            )
+            if response.status_code == 204:
+                return {}
+            response.raise_for_status()
+            if not response.content:
+                return {}
+            return response.json()
+        except Exception as exc:
+            # Redact client secret and active bearer token from any exception strings
+            exc.args = (self._redact(str(exc)),)
+            raise
 
 
 _client: GraphClient | None = None

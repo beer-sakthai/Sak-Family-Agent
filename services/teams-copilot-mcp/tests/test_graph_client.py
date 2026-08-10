@@ -303,3 +303,28 @@ def test_request_blocks_path_traversal_double_url_encoded(monkeypatch):
 
     with pytest.raises(ValueError, match="Path traversal sequences are not allowed"):
         client.request("GET", "me%252f%252e%252e%252fusers")
+
+
+def test_request_blocks_userinfo_in_absolute_urls(monkeypatch):
+    _valid_credentials(monkeypatch)
+    client = GraphClient()
+
+    with pytest.raises(ValueError, match="Userinfo \\(username/password\\) is not allowed"):
+        client.request("GET", "https://user:pass@graph.microsoft.com/v1.0/me")
+
+
+def test_request_redacts_client_secret_and_token_from_exceptions(monkeypatch):
+    _valid_credentials(monkeypatch)
+    client = GraphClient()
+
+    # Mock _get_token to raise a ValueError containing the secret and token
+    client._token = "cached-token"
+    with patch.object(client, "_get_token", side_effect=ValueError("Failed with secret-123 and cached-token")):
+        with pytest.raises(ValueError) as exc_info:
+            client.request("GET", "/me")
+
+    # The exception string must NOT contain 'secret-123' or 'cached-token', but MUST contain '[REDACTED]'
+    err_msg = str(exc_info.value)
+    assert "secret-123" not in err_msg
+    assert "cached-token" not in err_msg
+    assert "[REDACTED]" in err_msg
