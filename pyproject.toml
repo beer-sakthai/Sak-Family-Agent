@@ -136,7 +136,37 @@ also_copy = [
 # setup / web-server / read_file path handling, not the mutated core logic, so the
 # survivor list is unaffected in practice). A renamed/removed node id here degrades
 # to a harmless pytest warning rather than an error.
+#
+# The ``--ignore`` entries below solve a second, separate problem that made
+# ``make mutation`` fail outright before it ran a single mutant. mutmut copies
+# ``tests/`` into ``mutants/`` as well, so a test module that resolves repo
+# paths from its own ``__file__`` (``REPO_ROOT = Path(__file__).parents[1]``)
+# points at ``mutants/`` — where ``scripts/``, ``personas/`` and ``infra/`` do
+# not exist, since ``also_copy`` deliberately brings in only the package. Those
+# modules then raise ``FileNotFoundError`` at *import* time, which ``--deselect``
+# cannot suppress (deselection happens after collection), so the stats phase
+# aborted with "failed to collect stats" and the whole run died.
+#
+# These are repo-structure invariant tests (persona/skill layout, SOUL
+# consistency, script behavior). They exercise none of the mutated modules, so
+# ignoring them leaves the survivor list unchanged — the same rationale as the
+# deselects above.
 pytest_add_cli_args_test_selection = [
+    # Import-time failures: these load a module from `scripts/` (by path or by
+    # `from scripts.… import …`), which is not copied into mutants/.
+    "--ignore=tests/test_compose_persona.py",
+    "--ignore=tests/test_dataset_prep.py",
+    "--ignore=tests/test_eval_compare.py",
+    "--ignore=tests/test_eval_scoring.py",
+    "--ignore=tests/test_export_agent_repo.py",
+    "--ignore=tests/test_setup_servicequotebot.py",
+    "--ignore=tests/test_setup_vm_telegram_agents.py",
+    "--ignore=tests/test_train_configs.py",
+    # Runtime failures: these read `personas/` layout inside the test body.
+    "--ignore=tests/test_persona_guardrails_parity.py",
+    "--ignore=tests/test_persona_workspace_workflows.py",
+    "--ignore=tests/test_soul_consistency.py",
+    "--ignore=tests/test_cycle_skills_config.py",
     "--deselect=tests/test_cli.py::test_serve_dashboard_starts_and_stops_on_interrupt",
     "--deselect=tests/test_cli.py::test_dashboard_security_handler_sets_headers",
     "--deselect=tests/test_cli_system.py::TestSetupCommand::test_env_file_found_when_present",

@@ -64,11 +64,15 @@ Those three partial directories contain only a handful of files —
 `agent/guardrails.py` and `web/server.py` for all three, plus
 `cli/__init__.py` and `cli/system.py` for SakSee and SakSit. They exist because
 security syncs committed files *into* what used to be a symlink path. The
-guardrails copies are kept byte-identical to the canonical one (enforced by
-`tests/test_persona_guardrails_parity.py`); the SakSee/SakSit `cli/` files are
-**stale snapshots** that still register a `dashboard` command the real CLI no
-longer has. Don't treat them as live code, and don't "fix" them by deleting the
-shadowing files without checking the parity test first.
+`agent/guardrails.py` **and `web/server.py`** copies are kept byte-identical to
+the canonical ones, enforced by `tests/test_persona_guardrails_parity.py` across
+all six personas (the list is derived from `config.PERSONA_NAMES`, so a new
+persona is guarded automatically). That test also pins the *inventory* of
+shadowed files: adding a new shadowing copy fails CI until it is either declared
+security-synced or explicitly allowlisted as stale. The SakSee/SakSit `cli/`
+files are those **stale snapshots** — they still register a `dashboard` command
+the real CLI no longer has. Don't treat them as live code, and don't "fix" them
+by deleting the shadowing files without checking the parity test first.
 
 `personas/sakthai/sakthai/` has also genuinely diverged from
 `personas/shared/sakthai/`: `config.py`, `auth.py`, `skills.py`,
@@ -519,11 +523,28 @@ There is no `dashboard.py` here — see the dashboard note below.
 
 ## Tests
 
-Tests live in `tests/` (95 test files, 1,978 tests, ~23,700 lines) and are the only suite —
-there is no per-persona test tree. All tests are hermetic: no network, no GCP
-credentials. Integration tests that may hit real endpoints (Ollama, Anthropic)
-are marked `@pytest.mark.integration` and self-skip when credentials/endpoints
-are absent; CI excludes them with `-m "not integration"`.
+Tests live in `tests/` (95 test files, ~23,700 lines) and are the suite for the
+`sakthai` package — there is no per-persona test tree. All tests are hermetic:
+no network, no GCP credentials. Integration tests that may hit real endpoints
+(Ollama, Anthropic) are marked `@pytest.mark.integration` and self-skip when
+credentials/endpoints are absent; `ci.yml` also excludes them by marker with
+`-m "not integration"`, so a test that forgets its `skipif` guard still cannot
+make CI network-dependent.
+
+Two suites live **outside** `tests/` and are not covered by `testpaths`:
+`apps/agent_workflow_framework/tests/` (127 tests, no `pyproject.toml` — run
+in-place with `uv run --with pyyaml python -m pytest tests/`) and
+`services/teams-copilot-mcp/tests/` (37 tests, its own `pyproject.toml`/`uv.lock`
+— `uv run --project . --extra dev python -m pytest tests/`). Both are run by
+`.github/workflows/subprojects.yml`, path-filtered to their own directories.
+
+**Assert on the rule, not just the outcome.** Several guardrail rules overlap,
+so a test that asserts only `action == DENY` can pass because a *different*,
+broader rule fired — which is exactly how the container-escape battery in
+`tests/test_guardrails_containers.py` stayed green while the container-specific
+logic it was named after (`guardrails.py` rule 6) never executed once. New
+guardrail tests must pin `result.reason` so the intended defense is what gets
+verified.
 
 Key test areas:
 
