@@ -43,6 +43,7 @@ def test_build_vm_bundle_writes_common_and_agent_env_files(tmp_path: Path) -> No
     assert bundle.service_file.exists()
 
     import sys
+
     if sys.platform != "win32":
         assert (bundle.config_dir.stat().st_mode & 0o777) == 0o700
         assert (bundle.common_env_file.stat().st_mode & 0o777) == 0o600
