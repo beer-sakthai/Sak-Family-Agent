@@ -159,12 +159,7 @@ class TestWorkflowExecutor(unittest.TestCase):
             with self.subTest(url=url):
                 with self.assertRaises((ValueError, RuntimeError)):
                     handler.redirect_request(
-                        req,
-                        fp=None,
-                        code=302,
-                        msg="Found",
-                        headers=MagicMock(),
-                        newurl=url
+                        req, fp=None, code=302, msg="Found", headers=MagicMock(), newurl=url
                     )
 
         # Test safe redirect that should be allowed
@@ -175,7 +170,7 @@ class TestWorkflowExecutor(unittest.TestCase):
                 code=302,
                 msg="Found",
                 headers=MagicMock(),
-                newurl="https://example.org/home"
+                newurl="https://example.org/home",
             )
             self.assertIsNotNone(res)
         except Exception as e:
@@ -322,6 +317,109 @@ class TestWorkflowExecutor(unittest.TestCase):
         history = asyncio.run(self.executor.execute_workflow(wf_sys))
         self.assertEqual(history.status, RunStatus.FAILED)
         self.assertIn("not defined", history.step_results["s1"].error.lower())
+
+    def test_python_action_blocks_every_proposed_escape(self):
+        """Union of the escape payloads from PRs #573/#574/#575/#577/#578.
+
+        Five Sentinel PRs proposed competing blocklists for the python action and
+        each shipped its own subset of these payloads. No blocklist was a superset
+        of the others, so the implementations were folded into one union rather
+        than merged in sequence. This test is the matching union: it fails if any
+        single proposal's protection is ever dropped from that consolidated set.
+
+        The escape chains matter as much as the obvious primitives. Removing
+        `open`/`__import__`/`eval` alone is not enough — `getattr`, `type`,
+        `object` and `super` each still reach
+        `().__class__.__bases__[0].__subclasses__()`, from which `subprocess` is
+        reachable, so the blocklist has to close those too.
+        """
+        escape_payloads = [
+            # file / exec / import primitives
+            "open('/etc/passwd', 'r')",
+            "__import__('os').system('id')",
+            "eval('1+1')",
+            "exec('x = 5')",
+            "compile('1+1', '<string>', 'eval')",
+            # os / sys must not be in scope at all
+            "os.system('id')",
+            "sys.exit(1)",
+            # interpreter control
+            "exit()",
+            "quit()",
+            "input('prompt')",
+            "help()",
+            "breakpoint()",
+            # namespace introspection
+            "globals()",
+            "locals()",
+            "vars()",
+            "dir()",
+            # attribute traversal -> __subclasses__ escape chain
+            "getattr(json, 'loads')",
+            "hasattr(json, 'loads')",
+            "setattr(json, 'x', 1)",
+            "delattr(json, 'loads')",
+            # type-graph entry points -> the same chain
+            "object.__subclasses__()",
+            "type(1)",
+            "super",
+            "property",
+            "classmethod",
+            "staticmethod",
+        ]
+        for payload in escape_payloads:
+            with self.subTest(payload=payload):
+                wf = WorkflowDefinition(
+                    name="python_escape_union",
+                    steps=[
+                        StepDefinition(id="s1", action="python", params={"expr": payload}),
+                    ],
+                )
+                history = asyncio.run(self.executor.execute_workflow(wf))
+                self.assertEqual(
+                    history.status,
+                    RunStatus.FAILED,
+                    f"payload {payload!r} was not blocked by the python sandbox",
+                )
+                step_res = history.step_results["s1"]
+                self.assertEqual(step_res.status, StepStatus.FAILED)
+                self.assertIsNotNone(step_res.error)
+
+    def test_python_action_still_evaluates_ordinary_expressions(self):
+        """The hardened blocklist must not break legitimate workflow expressions.
+
+        Guards the other direction of the union above: a blocklist wide enough to
+        stop `type` and `object` is also wide enough to break real workflows, so
+        the arithmetic/string/collection builtins workflows actually use are
+        pinned here.
+        """
+        cases = [
+            ("1 + 1", 2),
+            ("sum([1, 2, 3])", 6),
+            ("len('abcd')", 4),
+            ("sorted([3, 1, 2])", [1, 2, 3]),
+            ("max(4, 7)", 7),
+            ("str(12) + 'x'", "12x"),
+            ("int('42')", 42),
+            ("list(range(3))", [0, 1, 2]),
+            ("json.dumps({'a': 1})", '{"a": 1}'),
+        ]
+        for expr, expected in cases:
+            with self.subTest(expr=expr):
+                wf = WorkflowDefinition(
+                    name="python_ok",
+                    steps=[
+                        StepDefinition(id="s1", action="python", params={"expr": expr}),
+                    ],
+                )
+                history = asyncio.run(self.executor.execute_workflow(wf))
+                self.assertEqual(
+                    history.status,
+                    RunStatus.COMPLETED,
+                    f"{expr!r} should still evaluate; "
+                    f"error was {history.step_results['s1'].error!r}",
+                )
+                self.assertEqual(history.step_results["s1"].output["result"], expected)
 
 
 if __name__ == "__main__":

@@ -282,15 +282,43 @@ class WorkflowExecutor:
                 return dict(params)
 
             # Secure execution context: remove direct access to dangerous os/sys modules
-            # and restrict __builtins__ to prevent arbitrary file reading, execution, or package imports.
+            # and restrict __builtins__ to prevent arbitrary file reading, execution, or
+            # package imports.
+            #
+            # This blocklist is the union of five competing Sentinel hardening proposals
+            # (PRs #573/#574/#575/#577/#578). None was a superset of the others — each
+            # dropped names the others kept — so they are folded together here rather
+            # than merged one-by-one, which would have regressed whichever protection
+            # landed last:
+            #   * file / exec / import primitives .... open, __import__, eval, exec, compile
+            #   * interpreter control ................ exit, quit, input, help, breakpoint
+            #   * namespace introspection ............ globals, locals, vars, dir
+            #   * attribute traversal, which reaches the classic
+            #     `().__class__.__bases__[0].__subclasses__()` escape chain even with
+            #     the names above removed ............ getattr, setattr, delattr, hasattr
+            #   * type-graph entry points, the other route to that same chain
+            #     ..................................... type, object, super, property,
+            #                                           classmethod, staticmethod
             dangerous_builtins = {
-                "open", "__import__", "eval", "exec", "compile", "exit", "quit",
-                "input", "help", "globals", "locals", "vars", "breakpoint"
+                "open", "__import__", "eval", "exec", "compile",
+                "exit", "quit", "input", "help", "breakpoint",
+                "globals", "locals", "vars", "dir",
+                "getattr", "setattr", "delattr", "hasattr",
+                "type", "object", "super", "property", "classmethod", "staticmethod",
             }
             if isinstance(__builtins__, dict):
-                safe_builtins = {k: v for k, v in __builtins__.items() if k not in dangerous_builtins}
+                builtins_items = list(__builtins__.items())
             else:
-                safe_builtins = {k: getattr(__builtins__, k) for k in dir(__builtins__) if k not in dangerous_builtins}
+                builtins_items = [(k, getattr(__builtins__, k)) for k in dir(__builtins__)]
+
+            # Dunder builtins (``__build_class__``, ``__loader__``, ``__spec__``, …) are
+            # dropped wholesale: they re-expose the import machinery and the class
+            # creation hook that the blocklist above exists to close off.
+            safe_builtins = {
+                k: v
+                for k, v in builtins_items
+                if k not in dangerous_builtins and not (k.startswith("__") and k.endswith("__"))
+            }
 
             eval_globals = {"__builtins__": safe_builtins, "json": json}
             eval_locals = dict(params)
