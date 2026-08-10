@@ -135,6 +135,54 @@ class TestWorkflowExecutor(unittest.TestCase):
                     f"Unexpected error message for URL '{url}': {step_res.error}",
                 )
 
+    def test_ssrf_redirect_protection(self):
+        """Verify that the redirect handler intercepts and blocks redirects to loopback or private IPs."""
+        from agent_workflow.executor import SafeRedirectHandler
+        import urllib.request
+        from unittest.mock import MagicMock
+
+        handler = SafeRedirectHandler()
+        req = urllib.request.Request("https://example.com/start")
+
+        # Test redirects that should be blocked
+        unsafe_redirects = [
+            "http://localhost",
+            "http://127.0.0.1",
+            "http://192.168.1.1",
+            "http://10.0.0.1",
+            "http://169.254.169.254",
+            "file:///etc/passwd",
+            "gopher://example.com",
+        ]
+
+        for url in unsafe_redirects:
+            with self.subTest(url=url):
+                with self.assertRaises((ValueError, RuntimeError)):
+                    handler.redirect_request(
+                        req,
+                        fp=None,
+                        code=302,
+                        msg="Found",
+                        headers=MagicMock(),
+                        newurl=url
+                    )
+
+        # Test safe redirect that should be allowed
+        try:
+            res = handler.redirect_request(
+                req,
+                fp=None,
+                code=302,
+                msg="Found",
+                headers=MagicMock(),
+                newurl="https://example.org/home"
+            )
+            self.assertIsNotNone(res)
+        except Exception as e:
+            # Safe requests should not fail due to validation/SSRF blocks.
+            # (If DNS or network is offline, it might raise, but not a ValueError)
+            self.assertNotIsInstance(e, ValueError)
+
     def test_file_path_validation_protection(self):
         """Verify that the file actions reject path traversal, system roots, and sensitive files/directories."""
         malicious_paths = [
