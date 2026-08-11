@@ -117,36 +117,18 @@ def _validate_filepath(filepath: Any) -> Path:
     ):
         raise PermissionError(f"Directory path traversal or user home shortcut is prohibited: '{path_str}'")
 
-    # Resolve target absolute to Path
-    try:
-        target = Path(path_str).resolve()
-    except Exception as exc:
-        raise ValueError(f"Invalid file path '{path_str}': {exc}")
-
     # Critical system roots (e.g., /etc, /bin, /var, /boot, /dev, /lib, /lib64, /proc, /sys, /sbin, /usr)
-    parts = [p.lower() for p in target.parts]
     system_roots = {
         "etc", "bin", "var", "boot", "dev", "lib", "lib64", "proc", "sys", "sbin", "usr", "root", "opt",
     }
-
-    if target.is_absolute():
-        root_part = target.anchor
-        non_root_parts = [p for p in target.parts if p != root_part]
-        if non_root_parts:
-            first_dir = non_root_parts[0].lower()
-            if first_dir in system_roots:
-                raise PermissionError(f"Access to critical system directory is prohibited: '{path_str}'")
 
     # Blocks access to sensitive directories (e.g., .git, .ssh, .aws)
     sensitive_dirs = {
         ".git", ".ssh", ".aws", ".jules", ".config", ".npm",
         ".docker", ".kube", ".gnupg", ".gcloud", ".azure",
     }
-    if any(part in sensitive_dirs for part in parts):
-        raise PermissionError(f"Access to sensitive directory is prohibited: '{path_str}'")
 
     # Blocks access to credential/sensitive file basenames (e.g., .env, memory.db, id_rsa)
-    filename = target.name.lower()
     sensitive_basenames = {
         ".env", "memory.db", "id_rsa", "id_dsa", "id_ecdsa", "id_ed25519", "id_ecdsa_sk", "id_ed25519_sk", "id_xmss",
         "known_hosts", "authorized_keys", "credentials", "credentials.json", "shadow", "passwd", "sudoers",
@@ -165,6 +147,78 @@ def _validate_filepath(filepath: Any) -> Path:
     sensitive_key_stems = (
         "id_rsa", "id_dsa", "id_ecdsa", "id_ed25519", "id_ecdsa_sk", "id_ed25519_sk", "id_xmss",
     )
+
+    # Check for wildcards (globbing)
+    if any(c in path_str for c in "*?[]"):
+        import fnmatch
+        import re
+
+        # Split normalized path to check each component
+        parts = [p.lower() for p in Path(path_str).parts]
+
+        # 1. Check if any wildcard component could expand to a sensitive directory or file
+        for part in parts:
+            if any(c in part for c in "*?[]"):
+                # Check match against sensitive directories
+                if any(fnmatch.fnmatch(s_dir, part) for s_dir in sensitive_dirs):
+                    raise PermissionError(f"Access to sensitive directory via wildcards is prohibited: '{path_str}'")
+
+                # Check match against sensitive basenames, prefixes, suffixes, key stems
+                test_targets = set(sensitive_basenames)
+                for prefix in sensitive_prefixes:
+                    test_targets.add(f"{prefix}test")
+                for suffix in sensitive_suffixes:
+                    test_targets.add(f"test{suffix}")
+                for stem in sensitive_key_stems:
+                    test_targets.add(f"{stem}.test")
+
+                if any(fnmatch.fnmatch(target, part) for target in test_targets):
+                    raise PermissionError(f"Access to sensitive file via wildcards is prohibited: '{path_str}'")
+
+        # 2. Strip trailing wildcards to check the base path prefix
+        base_path = re.split(r"[*?\[\]]", path_str, maxsplit=1)[0]
+        if base_path:
+            # If base_path has traversal, block
+            if ".." in base_path.split(os.sep) or ".." in base_path.replace("\\", "/").split("/"):
+                raise PermissionError(f"Directory path traversal is prohibited: '{path_str}'")
+
+            # If the base_path resolves or starts with a system root
+            if base_path.startswith("/") or base_path.startswith("\\"):
+                normalized_base = base_path.replace("\\", "/").lower()
+                if normalized_base == "/":
+                    raise PermissionError(f"Access to root directory via wildcards is prohibited: '{path_str}'")
+                for root in system_roots:
+                    if f"/{root}".startswith(normalized_base) or normalized_base.startswith(f"/{root}/"):
+                        raise PermissionError(f"Access to critical system directory via wildcards is prohibited: '{path_str}'")
+            else:
+                # Relative path: check if first component is a system root or matches system root prefix
+                base_parts = [p.lower() for p in Path(base_path.replace("\\", "/")).parts if p]
+                if base_parts:
+                    first = base_parts[0]
+                    for root in system_roots:
+                        if root.startswith(first) or first.startswith(root):
+                            raise PermissionError(f"Access to critical system directory via wildcards is prohibited: '{path_str}'")
+
+    # Resolve target absolute to Path
+    try:
+        target = Path(path_str).resolve()
+    except Exception as exc:
+        raise ValueError(f"Invalid file path '{path_str}': {exc}")
+
+    parts = [p.lower() for p in target.parts]
+
+    if target.is_absolute():
+        root_part = target.anchor
+        non_root_parts = [p for p in target.parts if p != root_part]
+        if non_root_parts:
+            first_dir = non_root_parts[0].lower()
+            if first_dir in system_roots:
+                raise PermissionError(f"Access to critical system directory is prohibited: '{path_str}'")
+
+    if any(part in sensitive_dirs for part in parts):
+        raise PermissionError(f"Access to sensitive directory is prohibited: '{path_str}'")
+
+    filename = target.name.lower()
 
     if (
         filename in sensitive_basenames
@@ -194,9 +248,9 @@ def _validate_shell_command(cmd_str: str) -> None:
         # Replace backslashes with forward slashes for cross-platform consistency
         normalized = token.replace("\\", "/")
 
-        # Split on any character that is not a valid path character (A-Z, a-z, 0-9, dot, underscore, slash, tilde, hyphen)
+        # Split on any character that is not a valid path character (A-Z, a-z, 0-9, dot, underscore, slash, tilde, hyphen, wildcards)
         # to extract potential paths embedded in options, lists, scripts, or arguments.
-        sub_tokens = re.split(r"[^a-zA-Z0-9\._/~-]", normalized)
+        sub_tokens = re.split(r"[^a-zA-Z0-9\._/~\-\*\?\[\]]", normalized)
         for sub in sub_tokens:
             sub = sub.strip()
             if not sub:
