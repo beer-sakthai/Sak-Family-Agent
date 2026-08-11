@@ -228,8 +228,12 @@ class _Handler(SimpleHTTPRequestHandler):
                     if k in ("token", "bearer_token"):
                         val = unquote(v)
                         if secrets.compare_digest(val, expected_token):
+                            # Use the server-known token, not the attacker-influenced
+                            # query value, so the cookie is never built from tainted
+                            # input (CodeQL py/http-response-splitting, py/cookie-injection).
                             self.send_header(
-                                "Set-Cookie", f"token={val}; Path=/; HttpOnly; SameSite=Strict"
+                                "Set-Cookie",
+                                f"token={expected_token}; Path=/; HttpOnly; SameSite=Strict",
                             )
                             break
         super().end_headers()
