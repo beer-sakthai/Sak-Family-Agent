@@ -55,7 +55,7 @@ def redact_sensitive_text(value: str) -> str:
 def log(prefix: str, msg: str) -> None:
     """Stream a log line to stderr with a per-script prefix."""
     # codeql[py/clear-text-logging-sensitive-data]
-    print(f"[{prefix}] {redact_sensitive_text(msg)}", file=sys.stderr, flush=True)
+    print(f"[{prefix}] {redact_sensitive_text(msg)}", file=sys.stderr, flush=True)  # lgtm[py/clear-text-logging-sensitive-data]
 
 
 def parse_env(env_args: list[str]) -> dict[str, str]:

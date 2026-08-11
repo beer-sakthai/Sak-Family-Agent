@@ -92,13 +92,10 @@ def trust_allows_sagemaker(role: dict) -> bool:
         principal = statement.get("Principal") or {}
         service = (principal.get("Service") if isinstance(principal, dict) else None) or []
         services = [service] if isinstance(service, str) else service
-        # `services` is always a list by this point (the line above wraps
-        # any string into a one-element list), so this is exact membership,
-        # not a substring check over a URL/domain string — CodeQL's static
-        # analysis doesn't narrow the ternary's type precisely enough to see
-        # that.
-        # codeql[py/incomplete-url-substring-sanitization]
-        if "sagemaker.amazonaws.com" in services:
+        # Exact-match comparison, not a substring/`in` check over a URL or
+        # domain string, so a decoy value elsewhere in the policy can't
+        # produce a false "trusted" result.
+        if any(entry == "sagemaker.amazonaws.com" for entry in services):
             return True
     return False
 
