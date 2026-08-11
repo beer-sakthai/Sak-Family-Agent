@@ -54,6 +54,96 @@ def test_token_creation_and_persistence(temp_db: Path) -> None:
             assert "no-export" in fact.tags
 
 
+def test_token_is_read_back_from_the_store_on_a_cold_start(temp_db: Path) -> None:
+    """The second call in the test above never touches SQLite.
+
+    ``_get_or_create_bearer_token`` returns the module-level ``_BEARER_TOKEN``
+    cache before opening the store, so calling it twice in one process only
+    exercises the *creation* path — the read-back branch stayed in the
+    coverage miss list. That branch is what runs on every restart, and
+    persisting the token across restarts is the whole point of storing it as a
+    fact, so clear the cache to force a genuine cold start.
+    """
+    with (
+        patch("sakthai.memory.store.memory_db_path", return_value=temp_db),
+        patch("sakthai.config.memory_db_path", return_value=temp_db),
+    ):
+        import sakthai.web.server as srv
+
+        srv._BEARER_TOKEN = None
+        created = _get_or_create_bearer_token()
+
+        # Simulate a process restart: same DB, empty cache.
+        srv._BEARER_TOKEN = None
+        recovered = _get_or_create_bearer_token()
+
+        assert recovered == created, "token was regenerated instead of read back from the store"
+
+        # And exactly one token fact exists — a cold start must not append a
+        # second row alongside the one it just read.
+        with MemoryStore(temp_db) as store:
+            facts = store.list_facts(limit=100)
+        token_facts = [f for f in facts if f.kind == "web_auth" and f.key == "bearer_token"]
+        assert [f.value for f in token_facts] == [created]
+
+
+def test_token_generation_falls_back_when_the_store_is_unreachable(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A broken store must not leave the server with an empty token — that
+    would make ``_is_authenticated`` reject every request rather than fail
+    safe on a usable one."""
+    import sakthai.web.server as srv
+
+    monkeypatch.setattr(srv, "_BEARER_TOKEN", None)
+
+    def _boom(*_args: object, **_kwargs: object) -> None:
+        raise OSError("database is locked")
+
+    monkeypatch.setattr("sakthai.memory.store.MemoryStore.__init__", _boom)
+
+    token = _get_or_create_bearer_token()
+    assert len(token) == 32
+
+    monkeypatch.setattr(srv, "_BEARER_TOKEN", None)
+
+
+def test_empty_expected_token_denies_authentication(monkeypatch: pytest.MonkeyPatch) -> None:
+    """If token resolution ever yields an empty string, every request must be
+    rejected — never treated as "no auth configured, let it through"."""
+    import sakthai.web.server as srv
+
+    monkeypatch.setattr(srv, "_get_or_create_bearer_token", lambda: "")
+
+    handler = _Handler.__new__(_Handler)
+    handler.headers = {}
+    handler.path = "/api/stages"
+
+    assert handler._is_authenticated() is False
+
+
+@pytest.mark.parametrize(
+    ("host", "expected"),
+    [
+        ("localhost", True),
+        ("127.0.0.1", True),
+        ("127.0.0.53", True),
+        ("::1", True),
+        ("0.0.0.0", False),
+        ("192.168.1.10", False),
+        ("example.com", False),
+        ("", False),
+    ],
+)
+def test_loopback_host_detection(host: str, expected: bool) -> None:
+    """Drives the non-loopback bind refusal. ``localhost`` is matched by name
+    and the rest by address; anything that does not parse as an IP is treated
+    as public, since a hostname may resolve anywhere."""
+    from sakthai.web.server import _is_loopback_host
+
+    assert _is_loopback_host(host) is expected
+
+
 # ---------------------------------------------------------------------------
 # HTTP Authentication Tests
 # ---------------------------------------------------------------------------

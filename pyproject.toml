@@ -53,7 +53,12 @@ markers = [
 
 [tool.coverage.run]
 source = ["sakthai"]
-omit = ["*/telegram/bot.py"]
+# `telegram/bot.py` used to be omitted here. Omitting it did not make it
+# tested — it made it *invisible*: the module sat at 38% while the reported
+# total stayed above the floor, and the uncovered half included
+# `_reply_with_agent_result`, the single function every handler funnels
+# through and where the authorization check lives. It is measured now.
+omit = []
 # Measure branch coverage too: line coverage alone hides untested conditional
 # paths (one side of an if/else). CI passes --cov-branch so the fail_under floor
 # below gates branches as well as lines.
