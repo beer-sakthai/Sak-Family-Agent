@@ -149,6 +149,14 @@ SENSITIVE_OUTPUT_KEYS = {
     "latitude",
     "lon",
     "longitude",
+    "center_lat",
+    "center_lon",
+    "min_lat",
+    "max_lat",
+    "min_lon",
+    "max_lon",
+    "maps_url",
+    "directions_url",
     "house_number",
     "road",
     "neighbourhood",
@@ -184,6 +192,10 @@ def _redact_sensitive_data(value):
 def print_json(data):
     """Print privacy-redacted data as pretty-printed JSON to stdout."""
     safe_data = _redact_sensitive_data(data)
+    # safe_data has already had every key in SENSITIVE_OUTPUT_KEYS replaced with
+    # "[REDACTED]" above; CodeQL can't model that custom recursive sanitizer, so
+    # it still flags this print as a clear-text log of the pre-redaction input.
+    # codeql[py/clear-text-logging-sensitive-data]
     print(json.dumps(safe_data, indent=2, ensure_ascii=False))
 
 

@@ -22,11 +22,13 @@ import shutil
 import subprocess
 import sys
 
+from _common import redact_sensitive_text
+
 RESOURCE_DIM = "sagemaker:variant:DesiredInstanceCount"
 
 
 def log(msg: str) -> None:
-    print(f"[teardown] {msg}", file=sys.stderr, flush=True)
+    print(f"[teardown] {redact_sensitive_text(msg)}", file=sys.stderr, flush=True)  # codeql[py/clear-text-logging-sensitive-data]
 
 
 def aws_bin() -> str:
