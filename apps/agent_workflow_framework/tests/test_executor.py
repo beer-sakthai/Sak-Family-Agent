@@ -135,6 +135,51 @@ class TestWorkflowExecutor(unittest.TestCase):
                     f"Unexpected error message for URL '{url}': {step_res.error}",
                 )
 
+    def test_http_headers_validation_protection(self):
+        """Verify that the executor validates header arguments against injection, smuggling, and type issues."""
+        invalid_headers_cases = [
+            # Non-dict headers
+            "not-a-dict",
+            ["list", "of", "headers"],
+            # Non-string key or value
+            {123: "value"},
+            {"Key": 123},
+            {"Key": True},
+            # CRLF in key
+            {"Bad\rKey": "Value"},
+            {"Bad\nKey": "Value"},
+            {"Bad\r\nKey": "Value"},
+            # CRLF in value
+            {"Key": "Value\rInjection"},
+            {"Key": "Value\nInjection"},
+            {"Key": "Value\r\nInjection"},
+        ]
+
+        for headers in invalid_headers_cases:
+            with self.subTest(headers=headers):
+                wf = WorkflowDefinition(
+                    name="headers_validation_test",
+                    steps=[
+                        StepDefinition(
+                            id="fetch_step",
+                            action="fetch",
+                            params={"url": "https://example.com", "headers": headers},
+                        ),
+                    ],
+                )
+                history = asyncio.run(self.executor.execute_workflow(wf))
+                self.assertEqual(history.status, RunStatus.FAILED)
+                step_res = history.step_results["fetch_step"]
+                self.assertEqual(step_res.status, StepStatus.FAILED)
+                self.assertIsNotNone(step_res.error)
+                self.assertTrue(
+                    any(
+                        x in step_res.error.lower()
+                        for x in ["headers", "key", "value", "crlf", "dictionary", "string"]
+                    ),
+                    f"Unexpected error for headers '{headers}': {step_res.error}",
+                )
+
     def test_ssrf_redirect_protection(self):
         """Verify that the redirect handler intercepts and blocks redirects to loopback or private IPs."""
         from agent_workflow.executor import SafeRedirectHandler
