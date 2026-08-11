@@ -365,3 +365,21 @@ def test_request_validates_http_methods(monkeypatch):
             patch.object(httpx.Client, "request", return_value=fake_response),
         ):
             client.request(method, "/me")
+
+
+def test_request_blocks_non_string_paths(monkeypatch):
+    _valid_credentials(monkeypatch)
+    client = GraphClient()
+
+    with pytest.raises(ValueError, match="Path must be a string"):
+        client.request("GET", 123)  # type: ignore
+
+
+def test_request_blocks_control_characters_in_paths(monkeypatch):
+    _valid_credentials(monkeypatch)
+    client = GraphClient()
+
+    for bad_char in ["\n", "\r", "\t", "\x00", "\x1f", "\x7f"]:
+        path = f"/me{bad_char}/messages"
+        with pytest.raises(ValueError, match="Control characters are not allowed in paths"):
+            client.request("GET", path)

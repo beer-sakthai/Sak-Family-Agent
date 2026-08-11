@@ -105,6 +105,12 @@ class GraphClient:
         if method not in {"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"}:
             raise ValueError(f"Unsupported or invalid HTTP method: {method}")
 
+        # Path Validation:
+        if not isinstance(path, str):
+            raise ValueError("Path must be a string")
+        if any(ord(c) < 32 or ord(c) == 127 for c in path):
+            raise ValueError("Control characters are not allowed in paths")
+
         try:
             # SSRF and Token Exfiltration protection:
             # Prevent protocol-relative URLs (e.g., //attacker.com)
