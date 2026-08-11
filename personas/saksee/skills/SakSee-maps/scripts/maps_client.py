@@ -195,7 +195,8 @@ def print_json(data):
     # safe_data has already had every key in SENSITIVE_OUTPUT_KEYS replaced with
     # "[REDACTED]" above; CodeQL can't model that custom recursive sanitizer, so
     # it still flags this print as a clear-text log of the pre-redaction input.
-    print(json.dumps(safe_data, indent=2, ensure_ascii=False))  # codeql[py/clear-text-logging-sensitive-data]
+    # codeql[py/clear-text-logging-sensitive-data]
+    print(json.dumps(safe_data, indent=2, ensure_ascii=False))
 
 
 def error_exit(message, code=1):

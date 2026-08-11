@@ -67,7 +67,8 @@ def test_main_one_url_fails(
     # assertion on mocked output, not a URL-validation security control, so
     # the substring check CodeQL warns about here isn't exploitable.
     sent_message = mock_send_telegram.call_args[0][1]
-    assert "http://fail.com" in sent_message  # codeql[py/incomplete-url-substring-sanitization]
+    # codeql[py/incomplete-url-substring-sanitization]
+    assert "http://fail.com" in sent_message
     mock_sys_exit.assert_called_once_with(1)
 
 
