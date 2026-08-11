@@ -99,6 +99,12 @@ class GraphClient:
         it's already a full URL (Graph pagination @odata.nextLink values are
         full URLs — pass those straight through).
         """
+        # HTTP Method Validation:
+        if not isinstance(method, str):
+            raise ValueError("HTTP method must be a string")
+        if method not in {"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"}:
+            raise ValueError(f"Unsupported or invalid HTTP method: {method}")
+
         try:
             # SSRF and Token Exfiltration protection:
             # Prevent protocol-relative URLs (e.g., //attacker.com)

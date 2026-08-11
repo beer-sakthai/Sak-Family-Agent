@@ -328,3 +328,40 @@ def test_request_redacts_client_secret_and_token_from_exceptions(monkeypatch):
     assert "secret-123" not in err_msg
     assert "cached-token" not in err_msg
     assert "[REDACTED]" in err_msg
+
+
+def test_request_validates_http_methods(monkeypatch):
+    _valid_credentials(monkeypatch)
+    client = GraphClient()
+
+    # Invalid non-string HTTP method
+    with pytest.raises(ValueError, match="HTTP method must be a string"):
+        client.request(123, "/me")  # type: ignore
+
+    # Unsupported HTTP method
+    with pytest.raises(ValueError, match="Unsupported or invalid HTTP method: INVALID"):
+        client.request("INVALID", "/me")
+
+    # Case-sensitive check: lowercase methods are invalid
+    with pytest.raises(ValueError, match="Unsupported or invalid HTTP method: get"):
+        client.request("get", "/me")
+
+    # Supported valid HTTP methods should not raise a ValueError about the method
+    fake_response = httpx.Response(
+        200, json={"value": "ok"}, request=httpx.Request("GET", "https://x")
+    )
+    fake_app = MagicMock()
+    fake_app.acquire_token_for_client.return_value = {
+        "access_token": "token",
+        "expires_in": 3600,
+    }
+
+    for method in ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"]:
+        with (
+            patch(
+                "teams_copilot_mcp.graph_client.msal.ConfidentialClientApplication",
+                return_value=fake_app,
+            ),
+            patch.object(httpx.Client, "request", return_value=fake_response),
+        ):
+            client.request(method, "/me")
