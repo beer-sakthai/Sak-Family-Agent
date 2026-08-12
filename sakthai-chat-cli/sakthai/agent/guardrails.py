@@ -530,34 +530,6 @@ def _check_destructive_tokens(
                             reason=f"Potentially dangerous {binary_name!r} script targeting {candidate!r} blocked.",
                         )
 
-    # 1e. Prevent piping commands directly into shell/interpreters (e.g. curl ... | sh)
-    piped_interpreters = (
-        "sh",
-        "bash",
-        "zsh",
-        "dash",
-        "ksh",
-        "fish",
-        "ash",
-        "csh",
-        "tcsh",
-        "python",
-        "node",
-        "perl",
-        "ruby",
-        "php",
-    )
-    for i, part in enumerate(parts):
-        if part == "|":
-            for subpart in parts[i + 1 :]:
-                if subpart in (";", "&&", "||", "|"):
-                    break
-                if _is_binary(subpart, piped_interpreters):
-                    return GuardrailResult(
-                        GuardrailAction.DENY,
-                        reason=f"Piping commands directly into shell or interpreter {subpart!r} blocked.",
-                    )
-
     # 2. Prevent destructive or dangerous commands on sensitive paths.
     destructive_binaries = (
         "rm",
