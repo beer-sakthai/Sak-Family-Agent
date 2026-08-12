@@ -141,6 +141,8 @@ def main(argv: list[str] | None = None) -> int:
     netloc = parsed.netloc
     base_path = parsed.path.rstrip("/")
     ws_url = f"{scheme}://{netloc}{base_path}/ws?clientId={client_id}"
+    # Keep a token-free copy for logging so the API key never reaches stderr.
+    display_url = ws_url
     if cloud and api_key:
         ws_url += f"&token={api_key}"
 
@@ -151,7 +153,7 @@ def main(argv: list[str] | None = None) -> int:
         preview_dir.mkdir(parents=True, exist_ok=True)
         log(f"Saving previews to {preview_dir}")
 
-    log(f"Connecting to {ws_url} (client_id={client_id})")
+    log(f"Connecting to {display_url} (client_id={client_id})")
     if args.prompt_id:
         log(f"Filtering messages to prompt_id={args.prompt_id}")
 

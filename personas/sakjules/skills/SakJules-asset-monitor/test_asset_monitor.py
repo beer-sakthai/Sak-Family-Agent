@@ -63,12 +63,15 @@ def test_main_one_url_fails(
     # Assert
     assert mock_verify_url.call_count == 2
     mock_send_telegram.assert_called_once()
-    # Check that the message contains the failed URL. This is a test
-    # assertion on mocked output, not a URL-validation security control, so
-    # the substring check CodeQL warns about here isn't exploitable.
+    # Check the message lists exactly the failed URL. Assert on the parsed
+    # bullet list rather than `"http://fail.com" in sent_message`: substring
+    # containment would also pass for "http://fail.com.example.invalid", which
+    # is the weak-check pattern py/incomplete-url-substring-sanitization flags.
     sent_message = mock_send_telegram.call_args[0][1]
-    # codeql[py/incomplete-url-substring-sanitization]
-    assert "http://fail.com" in sent_message
+    listed_urls = [
+        line.removeprefix("- ") for line in sent_message.splitlines() if line.startswith("- ")
+    ]
+    assert listed_urls == ["http://fail.com"]
     mock_sys_exit.assert_called_once_with(1)
 
 
