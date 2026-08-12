@@ -195,6 +195,28 @@ def test_read_file_blocks_dot_ssh_directory(
         tool_by_name("read_file").handler({"path": ".ssh/authorized_keys"}, store)
 
 
+def test_read_file_blocks_casing_bypass_sensitive_targets(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, store
+) -> None:
+    monkeypatch.chdir(tmp_path)
+
+    # 1. Test casing variants of basenames (e.g. .ENV, Credentials.json)
+    for basename in [".ENV", "Credentials.json"]:
+        f = tmp_path / basename
+        f.write_text("secret_content", encoding="utf-8")
+        with pytest.raises(PermissionError, match="sensitive credential file"):
+            tool_by_name("read_file").handler({"path": basename}, store)
+
+    # 2. Test casing variants of directories (e.g. .SSH/authorized_keys, .Aws/credentials, .Git/config)
+    for folder, file in [(".SSH", "authorized_keys"), (".Aws", "credentials"), (".Git", "config")]:
+        d = tmp_path / folder
+        d.mkdir(exist_ok=True)
+        f = d / file
+        f.write_text("secret_content", encoding="utf-8")
+        with pytest.raises(PermissionError, match="sensitive credential file"):
+            tool_by_name("read_file").handler({"path": f"{folder}/{file}"}, store)
+
+
 def test_ingest_document_blocks_outside_roots(tmp_path: Path, store) -> None:
     secret = tmp_path / "secret.md"
     secret.write_text("- top secret", encoding="utf-8")
