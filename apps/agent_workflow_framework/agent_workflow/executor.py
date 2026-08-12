@@ -462,6 +462,13 @@ class WorkflowExecutor:
             _validate_url(url_str)
 
             headers = params.get("headers", {})
+            if not isinstance(headers, dict):
+                raise ValueError("Headers must be a dictionary.")
+            for k, v in headers.items():
+                if not isinstance(k, str) or not isinstance(v, str):
+                    raise ValueError("Header keys and values must be strings.")
+                if any(c in k for c in "\r\n") or any(c in v for c in "\r\n"):
+                    raise ValueError("CRLF / control characters are not allowed in HTTP headers.")
             _validate_headers(headers)
 
             req = urllib.request.Request(url_str, headers=headers)
