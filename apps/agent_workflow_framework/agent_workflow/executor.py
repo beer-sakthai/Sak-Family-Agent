@@ -83,6 +83,19 @@ def _validate_url(url_str: str) -> None:
         raise RuntimeError(f"DNS Resolution failed for host '{host}': {e}")
 
 
+def _validate_headers(headers: Any) -> None:
+    """Validate headers parameter to prevent HTTP header injection, smuggling, or response splitting."""
+    if headers is None:
+        return
+    if not isinstance(headers, dict):
+        raise ValueError("Headers must be a dictionary.")
+    for k, v in headers.items():
+        if not isinstance(k, str) or not isinstance(v, str):
+            raise ValueError("Header keys and values must be strings.")
+        if "\r" in k or "\n" in k or "\r" in v or "\n" in v:
+            raise ValueError("Header keys and values must not contain CRLF characters.")
+
+
 class SafeRedirectHandler(urllib.request.HTTPRedirectHandler):
     """A custom redirect handler that validates target URLs against SSRF before following them."""
 
@@ -456,6 +469,7 @@ class WorkflowExecutor:
                     raise ValueError("Header keys and values must be strings.")
                 if any(c in k for c in "\r\n") or any(c in v for c in "\r\n"):
                     raise ValueError("CRLF / control characters are not allowed in HTTP headers.")
+            _validate_headers(headers)
 
             req = urllib.request.Request(url_str, headers=headers)
             opener = urllib.request.build_opener(SafeRedirectHandler)
