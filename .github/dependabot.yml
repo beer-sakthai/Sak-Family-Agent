@@ -46,3 +46,48 @@ updates:
     groups:
       docker:
         patterns: ["*"]
+
+  - package-ecosystem: npm
+    directory: /apps/sak_agent_dashboard
+    schedule:
+      interval: daily
+
+  - package-ecosystem: pip
+    directory: /personas/sakking/skills/SakKing-agent-platform-skill-registry/scripts
+    schedule:
+      interval: daily
+
+  - package-ecosystem: pip
+    directory: /personas/sakking/skills/SakKing-agent-platform-tuning/references
+    schedule:
+      interval: daily
+
+  - package-ecosystem: npm
+    directory: /personas/saksee/skills/SakSee-stitch::react-components
+    schedule:
+      interval: daily
+
+  - package-ecosystem: npm
+    directory: /personas/saksee/skills/SakSee-stitch::react-native
+    schedule:
+      interval: daily
+
+  - package-ecosystem: pip
+    directory: /personas/sakthai/sakthai/telegram
+    schedule:
+      interval: daily
+
+  - package-ecosystem: pip
+    directory: /personas/sakthai/skills/SakThai-hf-cloud-python-env-setup
+    schedule:
+      interval: daily
+
+  - package-ecosystem: pip
+    directory: /personas/shared/sakthai/telegram
+    schedule:
+      interval: daily
+
+  - package-ecosystem: pip
+    directory: /sakthai-chat-cli/sakthai/telegram
+    schedule:
+      interval: daily
