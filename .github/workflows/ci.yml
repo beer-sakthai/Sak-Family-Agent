@@ -57,7 +57,7 @@ jobs:
         # self-skip when credentials are absent, but relying on that alone means
         # one integration test missing its `skipif` guard turns CI into a
         # network-dependent job. Exclude them by marker, explicitly.
-        run: uv run pytest -m "not integration" --cov=sakthai --cov-report=xml tests/
+        run: uv run pytest -m "not integration" --cov=sakthai --cov-branch --cov-report=xml tests/
 
       - name: Upload coverage to Codecov
         uses: step-security/codecov-action@87e66f47a0f8ab4cae465a323eb9ec63d8b6b875 # v6.0.1
