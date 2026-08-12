@@ -94,6 +94,39 @@ both broken (a bad merge left duplicate `pull_request` keys) and redundant with
 CodeQL, bandit, ruff and SonarCloud. Deleting the analyses is the supported
 remedy.
 
+### The advanced/default setup collision
+
+Partway through this sweep, `5648d3ab` ("[StepSecurity] Apply security best
+practices", PR #603) added `.github/workflows/codeql.yml` — the stock GitHub
+CodeQL starter template, matrix `["javascript", "python", "typescript"]`.
+
+Default setup is enabled on this repository, and the two cannot coexist: every
+job from that workflow uploaded its SARIF and then failed with
+
+```
+Code Scanning could not process the submitted SARIF file:
+CodeQL analyses from advanced configurations cannot be processed when the
+default setup is enabled
+```
+
+This broke `Analyze (javascript)`, `Analyze (python)` and
+`Analyze (typescript)` on `main` and on every open PR, while the default-setup
+jobs (`Analyze (javascript-typescript)`, `Analyze (python)`,
+`Analyze (actions)`) passed alongside them. The workflow has been removed here,
+restoring the state CLAUDE.md already documents:
+
+> CodeQL runs via GitHub's *default setup* (repo settings), so there is
+> deliberately no `codeql.yml` — adding one would conflict.
+
+Nothing is lost by removing it. Default setup analyses `python`,
+`javascript-typescript` and `actions`; `javascript-typescript` is exactly
+`javascript` + `typescript`, so the template's matrix was a strict *subset* of
+what already runs — it did not even cover `actions`.
+
+The rest of #603 (the `harden-runner` steps across all workflows,
+`dependency-review.yml`, `.pre-commit-config.yaml`, the expanded
+`dependabot.yml`) is kept as-is.
+
 ### Scorecard — Branch-Protection
 
 The one live finding, note-level, scoring 3:
