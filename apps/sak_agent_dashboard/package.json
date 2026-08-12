@@ -12,11 +12,14 @@
   "dependencies": {
     "@google/stitch-sdk": "^0.3.5",
     "better-sqlite3": "^13.0.2",
-    "lucide-react": "^1.30.0",
+    "lucide-react": "^1.31.0",
     "next": "^16.3.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "recharts": "^2.13.0"
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "recharts": "^3.10.1"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^7.0.0",
