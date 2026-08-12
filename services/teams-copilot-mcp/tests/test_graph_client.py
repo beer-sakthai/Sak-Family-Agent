@@ -2,7 +2,6 @@ from unittest.mock import MagicMock, patch
 
 import httpx
 import pytest
-
 from teams_copilot_mcp.graph_client import GraphAuthError, GraphClient
 
 
@@ -105,9 +104,8 @@ def test_raises_graph_auth_error_when_token_acquisition_fails(monkeypatch):
     with patch(
         "teams_copilot_mcp.graph_client.msal.ConfidentialClientApplication",
         return_value=fake_app,
-    ):
-        with pytest.raises(GraphAuthError) as exc_info:
-            client.request("GET", "/me")
+    ), pytest.raises(GraphAuthError) as exc_info:
+        client.request("GET", "/me")
 
     message = str(exc_info.value)
     assert "invalid_client" in message
@@ -383,3 +381,76 @@ def test_request_blocks_control_characters_in_paths(monkeypatch):
         path = f"/me{bad_char}/messages"
         with pytest.raises(ValueError, match="Control characters are not allowed in paths"):
             client.request("GET", path)
+
+
+def test_request_validates_query_params_type(monkeypatch):
+    _valid_credentials(monkeypatch)
+    client = GraphClient()
+
+    with pytest.raises(ValueError, match="Query parameters must be a dictionary"):
+        client.request("GET", "/me", params="not-a-dict")  # type: ignore
+
+
+def test_request_validates_query_params_keys_type(monkeypatch):
+    _valid_credentials(monkeypatch)
+    client = GraphClient()
+
+    with pytest.raises(ValueError, match="Query parameter keys must be strings"):
+        client.request("GET", "/me", params={123: "value"})  # type: ignore
+
+
+def test_request_blocks_control_characters_in_query_param_keys(monkeypatch):
+    _valid_credentials(monkeypatch)
+    client = GraphClient()
+
+    for bad_char in ["\n", "\r", "\t", "\x00", "\x1f", "\x7f"]:
+        params = {f"key{bad_char}": "value"}
+        with pytest.raises(ValueError, match="Control characters are not allowed in query parameter keys"):
+            client.request("GET", "/me", params=params)
+
+
+def test_request_blocks_control_characters_in_query_param_values(monkeypatch):
+    _valid_credentials(monkeypatch)
+    client = GraphClient()
+
+    for bad_char in ["\n", "\r", "\t", "\x00", "\x1f", "\x7f"]:
+        params = {"key": f"value{bad_char}"}
+        with pytest.raises(ValueError, match="Control characters are not allowed in query parameter values"):
+            client.request("GET", "/me", params=params)
+
+
+def test_request_blocks_control_characters_in_query_param_list_values(monkeypatch):
+    _valid_credentials(monkeypatch)
+    client = GraphClient()
+
+    for bad_char in ["\n", "\r", "\t", "\x00", "\x1f", "\x7f"]:
+        params = {"key": ["good", f"bad{bad_char}"]}
+        with pytest.raises(ValueError, match="Control characters are not allowed in query parameter values"):
+            client.request("GET", "/me", params=params)
+
+
+def test_request_allows_valid_query_params(monkeypatch):
+    _valid_credentials(monkeypatch)
+    client = GraphClient()
+
+    fake_response = httpx.Response(
+        200, json={"value": "ok"}, request=httpx.Request("GET", "https://x")
+    )
+    fake_app = MagicMock()
+    fake_app.acquire_token_for_client.return_value = {
+        "access_token": "token",
+        "expires_in": 3600,
+    }
+
+    params = {"$top": 10, "$orderby": "start/dateTime", "filter": ["name eq 'test'", "active"]}
+    with (
+        patch(
+            "teams_copilot_mcp.graph_client.msal.ConfidentialClientApplication",
+            return_value=fake_app,
+        ),
+        patch.object(httpx.Client, "request", return_value=fake_response) as mock_request,
+    ):
+        result = client.request("GET", "/me", params=params)
+
+    assert result == {"value": "ok"}
+    mock_request.assert_called_once()
