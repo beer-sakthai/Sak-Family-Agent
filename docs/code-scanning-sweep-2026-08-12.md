@@ -150,22 +150,34 @@ each of which merges its own PRs.
 
 Both remaining items need repository-owner access, not a pull request.
 
-**1. Clear the orphaned Codacy alerts.** With a PAT carrying the "Code scanning
-alerts" permission:
+**1. Clear the orphaned Codacy alerts.** No personal access token is needed:
+the permission involved is one the repository's own `GITHUB_TOKEN` can be
+granted per job, so the cleanup runs as a workflow.
+
+From the Actions tab, run **Code scanning cleanup**
+(`.github/workflows/code-scanning-cleanup.yml`):
+
+1. Run it with no inputs. It reports every open alert and analysis grouped by
+   the tool that produced it. The orphans identify themselves — their
+   `latest analysis` date is stuck in July, next to today's date on the tools
+   that still run.
+2. Re-run with `tool` set to one of those names, leaving `apply` unchecked, to
+   see exactly which analyses would go.
+3. Re-run with `apply` ticked to delete them. Repeat per tool name.
+
+Deleting an analysis also deletes the alerts derived from it and cannot be
+undone — which is what is wanted here, since no producer remains to re-report
+them.
+
+The same script runs locally if preferred, with a PAT carrying the
+"Code scanning alerts" permission:
 
 ```bash
 export GITHUB_TOKEN=<pat with code-scanning write>
-
 python scripts/code_scanning_analyses.py list
-# → open alerts and analyses grouped by tool; note the exact Codacy tool names
-
 python scripts/code_scanning_analyses.py delete --tool <name>          # dry run
 python scripts/code_scanning_analyses.py delete --tool <name> --apply  # delete
 ```
-
-Repeat per tool name. Deleting an analysis also deletes the alerts derived from
-it and cannot be undone — which is what is wanted here, since no producer
-remains to re-report them.
 
 **2. Branch-Protection** — a settings change on `main`, weighed against the
 agent workflows above.
