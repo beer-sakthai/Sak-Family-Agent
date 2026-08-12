@@ -219,6 +219,46 @@ them is a real supply-chain improvement and a real risk of silently breaking a
 running deployment, and it is a scope decision for the repository owner rather
 than a cleanup to be done in passing.
 
+##### `pylint.yml` — four of the 35 closed
+
+The reasoning above is about *deployed* scripts CI never runs. It does not
+cover `.github/workflows/pylint.yml`, which is the opposite case: CI is the
+only thing that runs it, so pinning it can be verified before it merges and
+cannot break a deployment. Its four alerts were all `pipCommand`, one per
+install line:
+
+```yaml
+python -m pip install --upgrade pip
+pip install pylint
+pip install -e ".[dev]" || pip install -e "."
+```
+
+Nothing there says *which* pylint, so the job's own quality gate moved with
+whatever PyPI served that morning — a `--fail-under` threshold measured
+against an unpinned linter. The workflow now installs through
+`astral-sh/setup-uv` (pinned by commit SHA, as every other action in this
+repository already is) and `uv sync --locked --all-extras --group lint`, which
+resolves every wheel to the sha256 recorded in the committed `uv.lock`.
+`--locked` is the part that keeps it closed: a plain `uv sync` would re-resolve
+when `pyproject.toml` drifts, quietly restoring the unpinned install, and
+`--frozen` would use a stale lock silently instead of failing on it.
+
+pylint moves from an ad-hoc `pip install` to a `lint` dependency group in
+`pyproject.toml`, locked at **3.3.9**. It is its own group rather than an
+addition to `dev` so `ci.yml`'s `uv sync --all-extras` does not install a
+linter it never invokes — the same separation the `evals` group already has.
+
+Verified at the locked version before merging: 8.08/10 against the
+`--fail-under=7.0` pass and 9.41/10 against the `--fail-under=9.0` pass, both
+unchanged from what the unpinned install produced.
+
+That leaves **31** `PinnedDependenciesID` alerts, all in the deployed-script
+set above, still an open scope decision. `agent-self-evolution.yml` is the one
+remaining workflow in the list (one `pipCommand`); it installs a *different*
+project — `personas/sakthai/agent-self-evolution`, deliberately not a uv
+workspace member (see `pyproject.toml`) — so it has no lock in this resolution
+to pin against and was left alone rather than half-converted.
+
 #### `VulnerabilitiesID`
 
 "1 existing vulnerabilities detected" — the `sqlitedict <= 2.1.0` advisory
@@ -277,11 +317,13 @@ actually configured. `main` does in fact require `test (3.11)` and
 
 ## Remediation
 
-**Decide on the 35 `PinnedDependenciesID` alerts.** They are the only class a
-diff can close, and closing them touches deployed scripts that CI never
+**Decide on the remaining 31 `PinnedDependenciesID` alerts.** They are the only
+class a diff can close, and closing them touches deployed scripts that CI never
 exercises. Either hash-pin them — accepting the maintenance and the breakage
 risk — or dismiss them as accepted risk from the Security tab. Doing neither
-leaves the dashboard permanently at 35.
+leaves the dashboard permanently at 31. (The four in `.github/workflows/pylint.yml`
+are already fixed; see above. They were separable precisely because CI is the
+only consumer of that file.)
 
 **Everything else is a settings or process decision**, not a pull request:
 branch protection and review policy, an OpenSSF badge, a fuzzing harness, repo
