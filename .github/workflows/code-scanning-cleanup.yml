@@ -1,0 +1,87 @@
+# Retire code-scanning alerts left behind by a scanner that no longer runs.
+#
+# An alert is only ever closed by a newer analysis from the same tool that no
+# longer reports it. When a scanning workflow is deleted, its alerts lose their
+# producer and stay open on the Security tab forever — no commit, no PR and no
+# other scanner can clear them. Deleting the orphaned analyses is the supported
+# remedy. See docs/code-scanning-sweep-2026-08-12.md.
+#
+# This exists as a workflow because the permission required
+# ("Code scanning alerts" / security_events) is one the repository's own
+# GITHUB_TOKEN can be granted per job, so no personal access token is needed —
+# run it from the Actions tab rather than minting a PAT.
+#
+# Manual only, and read-only unless asked otherwise: with no inputs it just
+# reports what is on the dashboard. Deleting requires naming a tool *and*
+# ticking `apply`.
+name: Code scanning cleanup
+
+on:
+  workflow_dispatch:
+    inputs:
+      tool:
+        description: "Tool whose analyses to delete, exactly as the report spells it. Leave blank to only list."
+        required: false
+        type: string
+      apply:
+        description: "Actually delete. Leave unchecked for a dry run."
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  cleanup:
+    name: Code scanning cleanup
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # Reading alerts needs this, and deleting analyses needs it at write.
+      security-events: write
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@b09bb98e06d4d774595224525879c09bc6e98c40 # v2.20.1
+        with:
+          egress-policy: audit
+
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.11"
+
+      # Every input reaches the shell through the environment, never through
+      # ${{ }} interpolation inside a run block — an input expanded into the
+      # script text is a command-injection sink (actions/code-injection).
+      - name: Report what is on the dashboard
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: python scripts/code_scanning_analyses.py list --analyses
+
+      - name: Delete the named tool's analyses
+        if: ${{ inputs.tool != '' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          TOOL: ${{ inputs.tool }}
+          APPLY: ${{ inputs.apply }}
+        run: |
+          if [ "$APPLY" = "true" ]; then
+            python scripts/code_scanning_analyses.py delete --tool "$TOOL" --apply
+          else
+            python scripts/code_scanning_analyses.py delete --tool "$TOOL"
+          fi
+
+      - name: Report what remains
+        if: ${{ inputs.tool != '' && inputs.apply }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: python scripts/code_scanning_analyses.py list
