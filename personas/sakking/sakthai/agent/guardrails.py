@@ -1197,6 +1197,21 @@ def _check_destructive_tokens(
                     )
                 return res
 
+    # 8. Prevent pipeline-to-interpreter command execution bypasses (e.g. curl ... | sh)
+    for i, part in enumerate(parts):
+        if part == "|":
+            for subpart in parts[i + 1 :]:
+                if subpart in (";", "&&", "||", "|"):
+                    break
+                if _is_binary(subpart, ("sh", "bash", "python", "node", "perl", "ruby", "php")):
+                    return GuardrailResult(
+                        GuardrailAction.DENY,
+                        reason=(
+                            f"Pipeline to interpreter {subpart!r} blocked "
+                            "to prevent command injection bypass."
+                        ),
+                    )
+
     return GuardrailResult(GuardrailAction.ALLOW)
 
 
