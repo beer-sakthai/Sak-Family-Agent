@@ -1,5 +1,10 @@
 # Sentinel Security Journal
 
+## 2026-08-27 - Case-Sensitivity Bypass in Direct File Read Blockers
+**Vulnerability:** The defense-in-depth file-read blocker `_is_sensitive_read_target` in `tools.py` compared raw file names and directory components directly to lowercase blocklists (`_SENSITIVE_READ_BASENAMES` and `_SENSITIVE_READ_FRAGMENTS`). This allowed casing-based bypasses (such as reading `.ENV`, `Credentials.json`, or `.SSH/authorized_keys`) on case-insensitive filesystems, rendering the protection ineffective against non-lowercase inputs.
+**Learning:** Checking path-based constraints against static string lists or directory fragments must always normalize the requested paths case-insensitively. Simple casing discrepancies can trivially bypass security boundaries.
+**Prevention:** Convert all target filenames and path directory fragments to lowercase (`lower()`) prior to matching against case-normalized blocklists.
+
 ## 2026-08-22 - Unprotected Shell/Command Actions in Agent Workflow Framework
 **Vulnerability:** The Agent Workflow Framework executor's shell/command actions had zero validation checks on their command inputs. This allowed any step to run arbitrary commands targeting system-critical or sensitive repository directories/files (e.g., `/etc/passwd`, `.env`, private keys), completely bypassing the directory containment and path-traversal checks enforced elsewhere in the filesystem and network tools.
 **Learning:** Hardening individual filesystem and network APIs is insufficient if general shell-execution or subcommand execution nodes operate in the same context without a command sanitization or validation filter.
