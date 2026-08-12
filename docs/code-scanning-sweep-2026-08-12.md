@@ -1,0 +1,248 @@
+# Code-scanning sweep — 2026-08-12
+
+A full pass over everything that feeds
+[the code-scanning dashboard](https://github.com/beer-sakthai/Sak-Family-Agent/security/code-scanning),
+run against `main` at `b4cc123`.
+
+**Result: 41 open alerts, every one of them from Scorecard, and 35 of those are
+a single rule — `PinnedDependenciesID`.** Every code-analysis tool
+(CodeQL, ESLint, Bandit, BinSkim, mobsfscan) reports zero.
+
+```
+tool       open alerts  analyses  latest analysis
+Bandit     0            412       2026-07-06T05:01:03Z
+BinSkim    0            412       2026-07-06T05:01:03Z
+CodeQL     0            6352      2026-08-12T11:45:33Z
+ESLint     0            1755      2026-08-12T12:24:52Z
+Scorecard  41           60        2026-08-12T12:24:49Z
+mobsfscan  0            14        2026-08-12T04:14:21Z
+```
+
+### Correction
+
+An earlier revision of this document claimed the dashboard held "~15k orphaned
+Codacy alerts" that no code change could clear. **That was wrong**, and it is
+recorded here rather than quietly deleted because the reasoning failed in an
+instructive way.
+
+The claim was inferred, never measured. `7224074c` ("remove broken Codacy
+workflow") says in its message that the workflow *had* uploaded ~15k
+style-level findings, and a run log confirmed one such upload really did
+succeed on `main` in July. From those two true facts the conclusion "therefore
+~15k Codacy alerts are still open" was assembled and written up as if observed
+— while the dashboard itself sat behind a 403 the whole time. Codacy does not
+appear on the dashboard at all; whatever it uploaded is long gone.
+
+The lesson is narrow and worth keeping: a chain of correct evidence is not a
+measurement, and "I could not read the source of truth" is a reason to label a
+conclusion provisional, not a licence to state it flatly.
+
+## Reading the dashboard
+
+Listing alerts needs the "Code scanning alerts" repository permission
+(`security_events` on a classic PAT). Neither an agent session's token nor a
+plain checkout carries it — `GET /code-scanning/alerts`,
+`/code-scanning/analyses` and `/code-scanning/default-setup` all return
+`403 Resource not accessible by integration`.
+
+The permission *is* one a workflow can grant its own `GITHUB_TOKEN` per job,
+the same way `ossar.yml` and `scorecard.yml` already upload SARIF. That is what
+`.github/workflows/code-scanning-cleanup.yml` is for, and running it is the
+only way anyone without a PAT gets to see this list:
+
+```
+Actions → Code scanning cleanup → Run workflow      # no inputs = read-only report
+```
+
+Two sweeps (PR #599 and this one) reconstructed the alert set from run logs and
+local re-analysis instead, and this one drew the wrong conclusion doing it.
+Read the dashboard first.
+
+## What actually uploads to the dashboard
+
+Only two workflows call `github/codeql-action/upload-sarif`
+(`ossar.yml`, `scorecard.yml`); CodeQL itself runs through default setup, which
+is configured in repository settings and has no workflow file.
+
+| Tool | Source | Open alerts | Notes |
+|---|---|---|---|
+| **CodeQL** | default setup — `python`, `javascript-typescript`, `actions` | **0** | also reproduced locally, below |
+| **ESLint** | `ossar.yml` → `microsoft/security-devops-action` | **0** | job 94034310166: `Active results: 0` |
+| **Scorecard** | `scorecard.yml` | **41** | the entire dashboard; broken down below |
+| **Bandit**, **BinSkim** | `ossar.yml`, before it was narrowed to `tools: eslint` | **0** | last analysis 2026-07-06; dormant but clean |
+| **mobsfscan** | `mobsf.yml`, added and removed 2026-08-12 | **0** | 14 analyses, no open alerts |
+| **gitleaks** | `secret-scan.yml` | — | uploads an artifact only, never to the dashboard |
+
+### CodeQL — reproduced at 0
+
+Default setup pins CodeQL CLI **2.26.2** with query packs `python-queries`
+1.8.7, `javascript-queries` 2.4.2 and `actions-queries` 0.6.32, running each
+language's default `code-scanning` suite (45 queries for Python). Matching that
+exactly matters: the `security-extended` suite would report findings the
+dashboard does not have.
+
+```bash
+BUNDLE=https://github.com/github/codeql-action/releases/download/codeql-bundle-v2.26.2/codeql-bundle-linux64.tar.gz
+curl -sSL "$BUNDLE" | tar xz            # unpacks ./codeql
+
+for lang in python javascript-typescript actions; do
+  ./codeql/codeql database create "db-$lang" --language="$lang" --source-root=. --overwrite
+done
+
+./codeql/codeql database analyze db-python               python-code-scanning.qls     --format=sarif-latest --output=python.sarif
+./codeql/codeql database analyze db-javascript-typescript javascript-code-scanning.qls --format=sarif-latest --output=javascript.sarif
+./codeql/codeql database analyze db-actions              actions-code-scanning.qls    --format=sarif-latest --output=actions.sarif
+
+jq '.runs[0].results | length' python.sarif javascript.sarif actions.sarif   # → 0 0 0
+```
+
+Coverage matched the hosted run file for file — 755 of 756 Python files, 45 of
+54 JavaScript/TypeScript files, 17 of 17 Actions files — so this is the same
+analysis the dashboard sees, not a narrower one.
+
+The four `py/clear-text-logging-sensitive-data` families and the
+`actions/missing-workflow-permissions` finding that PR #599 fixed are all
+confirmed still closed, and all 17 workflows carry a top-level `permissions`
+block.
+
+### Scorecard — all 41 open alerts
+
+Every open alert is Scorecard's, on `refs/heads/main`:
+
+| Rule | Count | Severity | Closable by a diff? |
+|---|---|---|---|
+| `PinnedDependenciesID` | **35** | medium | yes, but see below |
+| `BranchProtectionID` | 1 | high | no — repository settings |
+| `CodeReviewID` | 1 | high | no — "Found 0/2 approved changesets" |
+| `MaintainedID` | 1 | high | no — repo is under 90 days old |
+| `VulnerabilitiesID` | 1 | high | no — "1 existing vulnerabilities detected" (see below) |
+| `FuzzingID` | 1 | medium | no — no fuzzing harness |
+| `CIIBestPracticesID` | 1 | low | no — no OpenSSF badge |
+
+Six of the seven rules are repository-health checks that no code change can
+close. The dashboard is therefore, in substance, **one finding repeated 35
+times**.
+
+#### The 35 `PinnedDependenciesID` alerts
+
+All are "not pinned by hash" against an install command, spread over 20 files:
+
+| Kind | Where |
+|---|---|
+| `pipCommand` (×N) | `Dockerfile.sandbox`, `infra/sakthai-training-space/Dockerfile` (×3), `.github/workflows/pylint.yml` (×4), `.github/workflows/agent-self-evolution.yml`, `scripts/bootstrap.sh`, `*/agent-self-evolution/evolve_agent.sh` (×3), `*/comfyui/scripts/comfyui_setup.sh` (×2 each) |
+| `downloadThenRun` | `infra/vm-agents/sakthai-agent-run.sh` (×2), `*/SakX-github-auth/scripts/gh-env.sh` (×5), `*/comfyui_setup.sh` (×2 each) |
+| `npmCommand` | `scripts/setup-extensions.sh`, `sakthai-chat-cli/scripts/setup-extensions.sh` |
+
+The persona copies inflate the count: one `comfyui_setup.sh` fix clears 4 alerts
+×3 copies, one `gh-env.sh` fix clears 5.
+
+PR #599 met this class and deliberately left it open, with reasoning that still
+holds:
+
+> Closing these means `--require-hashes` across transitively-resolved installs
+> and vendoring remote installer scripts — substantially more churn and
+> breakage risk than the finding warrants.
+
+The files involved are deployed and not exercised by CI: the VM agent launcher,
+the training-space Dockerfile, and persona skill setup scripts. Hash-pinning
+them is a real supply-chain improvement and a real risk of silently breaking a
+running deployment, and it is a scope decision for the repository owner rather
+than a cleanup to be done in passing.
+
+#### `VulnerabilitiesID`
+
+"1 existing vulnerabilities detected" — the `sqlitedict <= 2.1.0` advisory
+(`PYSEC-2026-1939`), transitive via `lm-eval` in the `evals` dependency group.
+No fixed version is published upstream, so there is nothing to bump; `pip-audit`
+over the runtime lock reports clean. Also documented in PR #599.
+
+### The advanced/default setup collision
+
+Partway through this sweep, `5648d3ab` ("[StepSecurity] Apply security best
+practices", PR #603) added `.github/workflows/codeql.yml` — the stock GitHub
+CodeQL starter template, matrix `["javascript", "python", "typescript"]`.
+
+Default setup is enabled on this repository, and the two cannot coexist: every
+job from that workflow uploaded its SARIF and then failed with
+
+```
+Code Scanning could not process the submitted SARIF file:
+CodeQL analyses from advanced configurations cannot be processed when the
+default setup is enabled
+```
+
+This broke `Analyze (javascript)`, `Analyze (python)` and
+`Analyze (typescript)` on `main` and on every open PR, while the default-setup
+jobs (`Analyze (javascript-typescript)`, `Analyze (python)`,
+`Analyze (actions)`) passed alongside them. The workflow has been removed here,
+restoring the state CLAUDE.md already documents:
+
+> CodeQL runs via GitHub's *default setup* (repo settings), so there is
+> deliberately no `codeql.yml` — adding one would conflict.
+
+Nothing is lost by removing it. Default setup analyses `python`,
+`javascript-typescript` and `actions`; `javascript-typescript` is exactly
+`javascript` + `typescript`, so the template's matrix was a strict *subset* of
+what already runs — it did not even cover `actions`.
+
+The rest of #603 (the `harden-runner` steps across all workflows,
+`dependency-review.yml`, `.pre-commit-config.yaml`, the expanded
+`dependabot.yml`) is kept as-is.
+
+#### `BranchProtectionID`
+
+Scoring 3: admin enforcement off, no required approvers, no CODEOWNERS review,
+PRs not required. All repository settings.
+
+Turning these on is a real trade-off, not an oversight: requiring approvers on
+`main` blocks the agent-driven workflows this repository runs on (`SakJules`,
+`claude/*` branches, the nightly `continuous-security.yml` patch pipeline),
+each of which merges its own PRs. `CodeReviewID` ("0/2 approved changesets") is
+the same trade-off seen from the other side.
+
+Note also that `scorecard.yml` leaves `repo_token` commented out, so Scorecard
+reads only what the public API exposes and may be under-reporting what is
+actually configured. `main` does in fact require `test (3.11)` and
+`test (3.12)` in strict mode.
+
+## Remediation
+
+**Decide on the 35 `PinnedDependenciesID` alerts.** They are the only class a
+diff can close, and closing them touches deployed scripts that CI never
+exercises. Either hash-pin them — accepting the maintenance and the breakage
+risk — or dismiss them as accepted risk from the Security tab. Doing neither
+leaves the dashboard permanently at 35.
+
+**Everything else is a settings or process decision**, not a pull request:
+branch protection and review policy, an OpenSSF badge, a fuzzing harness, repo
+age. `VulnerabilitiesID` clears itself when `sqlitedict` publishes a fix.
+
+To re-read the dashboard at any time, run **Code scanning cleanup** from the
+Actions tab with no inputs. The same script works locally with a PAT carrying
+the "Code scanning alerts" permission:
+
+```bash
+export GITHUB_TOKEN=<pat>
+python scripts/code_scanning_analyses.py list --alerts
+```
+
+Its `delete` subcommand exists for a different problem — retiring a tool that
+no longer runs, whose alerts nothing will ever close. Nothing on this dashboard
+currently needs it: every tool listed either still runs or already reports zero.
+
+## Also worth knowing
+
+- The **`github-advanced-security` check ("Code scanning AI findings")** fails
+  on this repository's PRs at the `Processing Request` step. It is a
+  GitHub-side `dynamic/agents/github-advanced-security` workflow, not something
+  in this repository; PR #602 merged with it red. Treat it as non-blocking.
+- **`mobsf.yml`** was added and removed the same day. It *did* run — 14
+  analyses, all reporting zero — contrary to an earlier claim here that it never
+  registered a workflow run.
+- **`Bandit` and `BinSkim`** still hold 412 analyses each from when `ossar.yml`
+  ran the full MSDO tool set, before it was narrowed to `tools: eslint`. Both
+  report zero open alerts, so they are dormant rather than orphaned and need no
+  action.
+- **Dependabot alerts** live on a different tab. The `sqlitedict` advisory shows
+  up on *both*: as a Dependabot alert and, counted once, inside Scorecard's
+  `VulnerabilitiesID`.
