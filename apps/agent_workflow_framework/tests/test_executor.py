@@ -509,6 +509,83 @@ class TestWorkflowExecutor(unittest.TestCase):
                         )
                     )
 
+    def test_fetch_headers_validation(self):
+        """Verify that fetch action validates headers and rejects unsafe header payloads."""
+        # 1. Reject headers that are not a dictionary
+        wf_invalid_dict = WorkflowDefinition(
+            name="test_headers_not_dict",
+            steps=[
+                StepDefinition(
+                    id="fetch_step",
+                    action="fetch",
+                    params={"url": "https://example.com", "headers": "not-a-dict"},
+                ),
+            ],
+        )
+        history = asyncio.run(self.executor.execute_workflow(wf_invalid_dict))
+        self.assertEqual(history.status, RunStatus.FAILED)
+        self.assertIn("headers parameter must be a dictionary", history.step_results["fetch_step"].error.lower())
+
+        # 2. Reject non-string header keys
+        wf_invalid_key = WorkflowDefinition(
+            name="test_headers_invalid_key",
+            steps=[
+                StepDefinition(
+                    id="fetch_step",
+                    action="fetch",
+                    params={"url": "https://example.com", "headers": {123: "value"}},
+                ),
+            ],
+        )
+        history = asyncio.run(self.executor.execute_workflow(wf_invalid_key))
+        self.assertEqual(history.status, RunStatus.FAILED)
+        self.assertIn("header keys and values must be strings", history.step_results["fetch_step"].error.lower())
+
+        # 3. Reject non-string header values
+        wf_invalid_value = WorkflowDefinition(
+            name="test_headers_invalid_value",
+            steps=[
+                StepDefinition(
+                    id="fetch_step",
+                    action="fetch",
+                    params={"url": "https://example.com", "headers": {"Key": 123}},
+                ),
+            ],
+        )
+        history = asyncio.run(self.executor.execute_workflow(wf_invalid_value))
+        self.assertEqual(history.status, RunStatus.FAILED)
+        self.assertIn("header keys and values must be strings", history.step_results["fetch_step"].error.lower())
+
+        # 4. Reject CRLF in header key
+        wf_crlf_key = WorkflowDefinition(
+            name="test_headers_crlf_key",
+            steps=[
+                StepDefinition(
+                    id="fetch_step",
+                    action="fetch",
+                    params={"url": "https://example.com", "headers": {"X-Injected\r\n": "value"}},
+                ),
+            ],
+        )
+        history = asyncio.run(self.executor.execute_workflow(wf_crlf_key))
+        self.assertEqual(history.status, RunStatus.FAILED)
+        self.assertIn("crlf characters are not allowed in headers", history.step_results["fetch_step"].error.lower())
+
+        # 5. Reject CRLF in header value
+        wf_crlf_value = WorkflowDefinition(
+            name="test_headers_crlf_value",
+            steps=[
+                StepDefinition(
+                    id="fetch_step",
+                    action="fetch",
+                    params={"url": "https://example.com", "headers": {"X-Header": "value\nInjected: True"}},
+                ),
+            ],
+        )
+        history = asyncio.run(self.executor.execute_workflow(wf_crlf_value))
+        self.assertEqual(history.status, RunStatus.FAILED)
+        self.assertIn("crlf characters are not allowed in headers", history.step_results["fetch_step"].error.lower())
+
 
 if __name__ == "__main__":
     unittest.main()

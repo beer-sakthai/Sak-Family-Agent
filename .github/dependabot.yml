@@ -33,3 +33,16 @@ updates:
     groups:
       actions:
         patterns: ["*"]
+
+  # Container base images. Both Dockerfiles pin their base by digest, which
+  # only stays safe if something bumps the digest as upstream patches land.
+  - package-ecosystem: "docker"
+    directories:
+      - "/"
+      - "/infra/sakthai-training-space"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    groups:
+      docker:
+        patterns: ["*"]

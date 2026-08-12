@@ -6,9 +6,11 @@ on:
     # Runs at 08:00 UTC every Monday
     - cron: '0 8 * * 1'
 
+# Least privilege at the top level; the single job below widens only what it
+# needs. Keeping `contents: write` here would hand every step in every future
+# job a repo-write token by default.
 permissions:
-  contents: write
-  pull-requests: write
+  contents: read
 
 concurrency:
   group: ${{ github.workflow }}
@@ -18,9 +20,12 @@ jobs:
   auto-update:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    permissions:
+      contents: write # To push the dependency-upgrade branch
+      pull-requests: write # To open the upgrade PR
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           # All writes go through the explicit GH_PAT_FOR_ACTIONS token passed
           # to create-pull-request below; don't also persist a credential
@@ -33,7 +38,7 @@ jobs:
           python-version: '3.12'
 
       - name: Cache uv
-        uses: actions/cache@v6
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/uv
           key: ${{ runner.os }}-uv-${{ hashFiles('**/uv.lock') }}

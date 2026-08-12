@@ -540,3 +540,8 @@
 **Vulnerability:** The GraphClient allowed paths containing carriage returns, newlines, null bytes, or other ASCII control characters. When interpolated from tool parameters and sent via httpx to Microsoft Graph, these unsanitized characters could enable HTTP request smuggling, response splitting, header injection, or log injection.
 **Learning:** Relying on high-level HTTP client libraries (like httpx) to sanitize or block all control characters in URL paths is insufficient. Critical request-routing parameters should be validated at the library boundary before requesting.
 **Prevention:** Strictly validate that paths are strings and contain no ASCII control characters (specifically `ord(c) < 32` or `ord(c) == 127`) before allowing the request to proceed.
+
+## 2026-08-25 - Unvalidated Headers and CRLF Injection in Agent Workflow Framework HTTP Actions
+**Vulnerability:** The Agent Workflow Framework executor's `http_get` / `fetch` / `http_request` actions allowed passing arbitrary unsanitized header keys or values. Without validation, an attacker or a compromised workflow step could inject CRLF (`\r` or `\n`) characters into the headers, leading to HTTP header injection, response splitting, or HTTP request smuggling.
+**Learning:** When workflow tools or task runners dynamically construct external HTTP requests using user-supplied inputs as headers, raw parameter parsing must include strict schema and character validation on the headers boundary.
+**Prevention:** Validate that the `headers` parameter is a dictionary with string-only keys and values, and reject any containing CRLF (`\r` or `\n`) characters to prevent injection/smuggling bypasses.

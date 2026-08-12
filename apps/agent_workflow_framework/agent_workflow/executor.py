@@ -448,7 +448,16 @@ class WorkflowExecutor:
             url_str = str(url).strip()
             _validate_url(url_str)
 
-            req = urllib.request.Request(url_str, headers=params.get("headers", {}))
+            headers = params.get("headers") or {}
+            if not isinstance(headers, dict):
+                raise ValueError("Headers parameter must be a dictionary.")
+            for k, v in headers.items():
+                if not isinstance(k, str) or not isinstance(v, str):
+                    raise ValueError("Header keys and values must be strings.")
+                if "\r" in k or "\n" in k or "\r" in v or "\n" in v:
+                    raise ValueError("CRLF characters are not allowed in headers.")
+
+            req = urllib.request.Request(url_str, headers=headers)
             opener = urllib.request.build_opener(SafeRedirectHandler)
             
             loop = asyncio.get_event_loop()
