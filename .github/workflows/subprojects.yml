@@ -37,7 +37,7 @@ jobs:
         working-directory: apps/agent_workflow_framework
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@v7.0.1
 
       - name: Set up Python
         uses: actions/setup-python@v7
@@ -61,7 +61,7 @@ jobs:
         working-directory: services/teams-copilot-mcp
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@v7.0.1
 
       - name: Set up Python
         uses: actions/setup-python@v7
