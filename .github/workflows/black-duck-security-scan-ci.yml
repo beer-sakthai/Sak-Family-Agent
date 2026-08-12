@@ -18,6 +18,12 @@ on:
   schedule:
     - cron: '21 12 * * 2'
 
+# Scorecard's Token-Permissions check requires a top-level default; the job
+# below widens it for itself. Without this, the workflow's own jobs would
+# inherit whatever the repository default happens to be.
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -34,7 +40,8 @@ jobs:
           egress-policy: audit
 
       - name: Checkout source
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
       - name: Black Duck SCA scan
         uses: blackduck-inc/black-duck-security-scan@805cbd09e806b01907bbea0f990723c2bb85abe9
         with:

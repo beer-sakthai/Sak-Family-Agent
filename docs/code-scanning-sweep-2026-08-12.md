@@ -18,6 +18,70 @@ Scorecard  41           60        2026-08-12T12:24:49Z
 mobsfscan  0            14        2026-08-12T04:14:21Z
 ```
 
+## Re-read at `bc2ace3` — 47 open
+
+Later the same day, `main` took PR #620 (`b950cb9`, "Add Black Duck security
+scan CI workflow"). The dashboard was re-read afterwards by dispatching **Code
+scanning cleanup** from the Actions tab — run
+[31613921849](https://github.com/beer-sakthai/Sak-Family-Agent/actions/runs/31613921849),
+the first read in this document taken *from the dashboard itself* rather than
+reconstructed from run logs.
+
+```
+tool       open alerts  analyses  latest analysis
+Bandit     0            412       2026-07-06T05:01:03Z
+BinSkim    0            412       2026-07-06T05:01:03Z
+CodeQL     0            6364      2026-08-12T15:32:01Z
+ESLint     0            1768      2026-08-12T15:28:31Z
+Scorecard  47           78        2026-08-12T15:28:37Z
+mobsfscan  0            14        2026-08-12T04:14:21Z
+```
+
+Still every open alert is Scorecard's, and every code-analysis tool still
+reports zero. The 41 → 47 move is six alerts:
+
+| Rule | Alert | Where | Diff-closable? |
+|---|---|---|---|
+| `PinnedDependenciesID` | #15489 | `black-duck-security-scan-ci.yml:32` — `actions/checkout@v4`, "GitHub-owned GitHubAction not pinned by hash" | **yes — fixed** |
+| `TokenPermissionsID` | #15488 | `black-duck-security-scan-ci.yml:1` — "no topLevel permission defined" | **yes — fixed** |
+| `TokenPermissionsID` | #15486 | `black-duck-security-scan-ci.yml:27` — jobLevel `security-events: write` | no — needed to upload SARIF |
+| `TokenPermissionsID` | #15487 | `code-scanning-cleanup.yml:42` — jobLevel `security-events: write` | no — that permission *is* the workflow |
+| `TokenPermissionsID` | #15485 | `auto-dependency-update.yml:24` — jobLevel `contents: write` | no |
+| `TokenPermissionsID` | #15381 | `continuous-security.yml:32` — jobLevel `contents: write` | no |
+
+The four un-closable `TokenPermissionsID` alerts are the *result* of the
+earlier fix, not a regression against it: PR #599 closed four of these by
+demoting top-level `contents: write` to job-scoped write, and Scorecard flags
+the job-scoped grant too. A workflow that pushes commits needs `contents:
+write` somewhere, and one that uploads SARIF needs `security-events: write`;
+the only remaining lever is which scope holds it, and job scope is already the
+tighter of the two. They are accepted risk.
+
+Both closable alerts were regressions in the Black Duck workflow, which was
+added from GitHub's stock starter template and so did not carry any of this
+repository's workflow conventions. Fixed on
+`claude/code-scanning-security-57ez7c`: top-level `permissions: contents: read`
+added, `actions/checkout` pinned to the same
+`3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1` every other workflow uses,
+and the `step-security/harden-runner` audit step added to match the other 19
+workflows (convention, not an alert). The Black Duck action itself was already
+pinned to a commit SHA, so it was never flagged.
+
+`PinnedDependenciesID` is therefore back to 35 — the same `pipCommand` /
+`npmCommand` / `downloadThenRun` set analysed below, unchanged and still the
+one open scope decision.
+
+**Separately, the Black Duck workflow fails on every run** (runs
+[31612179954](https://github.com/beer-sakthai/Sak-Family-Agent/actions/runs/31612179954)
+and
+[31612447945](https://github.com/beer-sakthai/Sak-Family-Agent/actions/runs/31612447945)):
+it reads `vars.BLACKDUCKSCA_URL` / `vars.COVERITY_URL` / `vars.POLARIS_SERVER_URL`
+/ `vars.SRM_URL` and four matching secrets, none of which are configured on this
+repository. It runs on every push and PR to `main`, so it is red on every PR
+until either those credentials are added or the workflow is removed. That is a
+CI question, not a code-scanning one, and it is the repository owner's call —
+nothing here changes it.
+
 ### Correction
 
 An earlier revision of this document claimed the dashboard held "~15k orphaned
@@ -57,6 +121,12 @@ Actions → Code scanning cleanup → Run workflow      # no inputs = read-only 
 Two sweeps (PR #599 and this one) reconstructed the alert set from run logs and
 local re-analysis instead, and this one drew the wrong conclusion doing it.
 Read the dashboard first.
+
+An agent session *can* dispatch this workflow (`POST
+/actions/workflows/code-scanning-cleanup.yml/dispatches`) even though it cannot
+call `/code-scanning/alerts` directly, and then read the numbers out of the job
+log. That is how the `bc2ace3` re-read above was taken, and it is the route to
+prefer over reconstruction.
 
 ## What actually uploads to the dashboard
 
