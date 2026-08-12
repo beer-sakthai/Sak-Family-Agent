@@ -17,6 +17,7 @@ from types import ModuleType
 from typing import Any
 
 import pytest
+import yaml
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPT_PATH = REPO_ROOT / "scripts" / "code_scanning_analyses.py"
@@ -286,6 +287,29 @@ def test_main_reports_api_errors_without_a_traceback(
     monkeypatch.setattr(mod, "fetch_open_alerts", boom)
     assert mod.main(["list"]) == 1
     assert "Resource not accessible" in capsys.readouterr().err
+
+
+def test_cleanup_workflow_never_interpolates_inputs_into_a_run_block() -> None:
+    """`inputs.*` must reach the shell via env, not via ${{ }} inside `run:`.
+
+    An input expanded into the script text of a `run:` step is a command
+    injection sink — CodeQL's `actions/code-injection` rule. The workflow passes
+    `tool` and `apply` through `env:` and dereferences them as shell variables,
+    which is what keeps that query at zero.
+    """
+    workflow = REPO_ROOT / ".github" / "workflows" / "code-scanning-cleanup.yml"
+    steps = yaml.safe_load(workflow.read_text())["jobs"]["cleanup"]["steps"]
+
+    run_blocks = [step["run"] for step in steps if "run" in step]
+    assert run_blocks, "expected the cleanup workflow to have run steps"
+    for block in run_blocks:
+        assert "${{" not in block, f"input interpolated into a run block: {block!r}"
+
+    # And the values really are wired through, so the guard above is meaningful
+    # rather than passing because nothing is passed at all.
+    env_values = {v for step in steps for v in (step.get("env") or {}).values()}
+    assert "${{ inputs.tool }}" in env_values
+    assert "${{ inputs.apply }}" in env_values
 
 
 def test_repo_defaults_to_this_repository(mod: ModuleType, monkeypatch: pytest.MonkeyPatch) -> None:
