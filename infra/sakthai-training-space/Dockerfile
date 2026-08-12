@@ -14,7 +14,7 @@
 # checkov:skip=CKV_DOCKER_3: HF Spaces/Jobs manage the runtime user; training needs root for CUDA tooling
 # Pinned by digest so a republished tag cannot change the training image.
 # Dependabot's docker ecosystem (.github/dependabot.yml) bumps this weekly.
-FROM nvidia/cuda:12.4.1-cudnn-devel-ubuntu22.04@sha256:622e78a1d02c0f90ed900e3985d6c975d8e2dc9ee5e61643aed587dcf9129f42
+FROM nvidia/cuda:13.3.1-cudnn-devel-ubuntu22.04@sha256:98988ce70187f791feaebd496de6a97eeafcfac866eabbc95ce6a855cc9f7c63
 
 # Build-time args / env
 ENV DEBIAN_FRONTEND=noninteractive
