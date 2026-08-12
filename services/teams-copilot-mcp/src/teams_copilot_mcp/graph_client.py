@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import os
 import time
+from typing import Any
 import urllib.parse
 
 import httpx
@@ -110,6 +111,26 @@ class GraphClient:
             raise ValueError("Path must be a string")
         if any(ord(c) < 32 or ord(c) == 127 for c in path):
             raise ValueError("Control characters are not allowed in paths")
+
+        # Query Parameters Validation:
+        if params is not None:
+            if not isinstance(params, dict):
+                raise ValueError("Query parameters must be a dictionary")
+            for k, v in params.items():
+                if not isinstance(k, str):
+                    raise ValueError("Query parameter keys must be strings")
+                if any(ord(c) < 32 or ord(c) == 127 for c in k):
+                    raise ValueError("Control characters are not allowed in query parameter keys")
+
+                def _check_val(val: Any) -> None:
+                    if isinstance(val, str):
+                        if any(ord(c) < 32 or ord(c) == 127 for c in val):
+                            raise ValueError("Control characters are not allowed in query parameter values")
+                    elif isinstance(val, (list, tuple)):
+                        for item in val:
+                            _check_val(item)
+
+                _check_val(v)
 
         try:
             # SSRF and Token Exfiltration protection:
