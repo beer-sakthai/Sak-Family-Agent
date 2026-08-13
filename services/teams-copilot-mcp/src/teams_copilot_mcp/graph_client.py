@@ -85,6 +85,11 @@ class GraphClient:
             text = text.replace(self._client_secret, "[REDACTED]")
         if self._token and self._token in text:
             text = text.replace(self._token, "[REDACTED]")
+        # Defense-in-depth: also redact other Microsoft Graph secrets from the env
+        for env_var in ("MS_GRAPH_REFRESH_TOKEN", "MS_GRAPH_CLIENT_SECRET"):
+            val = os.environ.get(env_var)
+            if val and val in text:
+                text = text.replace(val, "[REDACTED]")
         return text
 
     def request(
@@ -126,9 +131,15 @@ class GraphClient:
                     if isinstance(val, str):
                         if any(ord(c) < 32 or ord(c) == 127 for c in val):
                             raise ValueError("Control characters are not allowed in query parameter values")
-                    elif isinstance(val, (list, tuple)):
+                    elif isinstance(val, (list, tuple, set)):
                         for item in val:
                             _check_val(item)
+                    elif isinstance(val, dict):
+                        for r_k, r_v in val.items():
+                            if isinstance(r_k, str):
+                                if any(ord(c) < 32 or ord(c) == 127 for c in r_k):
+                                    raise ValueError("Control characters are not allowed in query parameter keys")
+                            _check_val(r_v)
 
                 _check_val(v)
 
