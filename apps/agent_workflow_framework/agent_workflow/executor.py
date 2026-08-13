@@ -4,6 +4,7 @@ Provides WorkflowExecutor to run DAG workflow definitions with parallel task sch
 state interpolation, step retries, downstream failure short-circuiting, and action handlers.
 """
 
+import ast
 import asyncio
 import copy
 import json
@@ -414,6 +415,22 @@ class WorkflowExecutor:
             code = params.get("code") or params.get("expr") or params.get("expression") or ""
             if not code:
                 return dict(params)
+
+            # AST-based validation to block any dunder attribute or name accesses
+            try:
+                tree = ast.parse(code)
+                for node in ast.walk(tree):
+                    if isinstance(node, ast.Attribute):
+                        if node.attr.startswith("__") and node.attr.endswith("__"):
+                            raise PermissionError(f"Access to dunder attribute '{node.attr}' is prohibited.")
+                    elif isinstance(node, ast.Name):
+                        if node.id.startswith("__") and node.id.endswith("__"):
+                            raise PermissionError(f"Access to dunder name '{node.id}' is prohibited.")
+            except (SyntaxError, TypeError, ValueError) as exc:
+                if isinstance(exc, PermissionError):
+                    raise
+                # Syntax errors will be caught later when executing
+                pass
 
             # Secure execution context: remove direct access to dangerous os/sys modules
             # and restrict __builtins__ to prevent arbitrary file reading, execution, or
