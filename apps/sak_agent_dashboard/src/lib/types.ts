@@ -466,3 +466,91 @@ export interface AntigravityApiResponse {
   error?: string;
 }
 
+export type GenkitPrimitiveKind =
+  | "core"
+  | "decorator"
+  | "generation"
+  | "session"
+  | "model";
+
+export interface GenkitPrimitive {
+  id: string;
+  name: string;
+  kind: GenkitPrimitiveKind;
+  summary: string;
+  snippet: string;
+  language: "python";
+}
+
+export interface GenkitProvider {
+  id: string;
+  name: string;
+  packageName: string;
+  description: string;
+  supported: boolean;
+}
+
+export interface GenkitData {
+  overview: {
+    title: string;
+    description: string;
+    repoUrl: string;
+    pypiUrl: string;
+    packageName: string;
+    license: string;
+    author: string;
+    pythonMin: string;
+  };
+  install: string;
+  quickstart: string;
+  primitives: GenkitPrimitive[];
+  providers: GenkitProvider[];
+  distinctiveFeatures: string[];
+}
+
+export interface GenkitApiResponse {
+  success: boolean;
+  genkit: GenkitData;
+  error?: string;
+}
+
+export interface ConductorHost {
+  id: string;
+  name: string;
+  installCommand: string;
+  note: string;
+  primary?: boolean;
+}
+
+export interface ConductorCommand {
+  slash: string;
+  purpose: string;
+  category: "setup" | "track" | "implement" | "status" | "revert" | "review";
+}
+
+export interface ConductorArtifact {
+  path: string;
+  purpose: string;
+  scope: "project" | "track";
+}
+
+export interface ConductorData {
+  overview: {
+    title: string;
+    description: string;
+    repoUrl: string;
+    methodology: string;
+  };
+  hosts: ConductorHost[];
+  commands: ConductorCommand[];
+  artifacts: ConductorArtifact[];
+  workflow: string[];
+  liveDevCommand: string;
+}
+
+export interface ConductorApiResponse {
+  success: boolean;
+  conductor: ConductorData;
+  error?: string;
+}
+
