@@ -246,7 +246,26 @@ def _validate_shell_command(cmd_str: str) -> None:
                 first_word = segment.split()[0] if segment.split() else ""
                 first_word = first_word.strip(" \t\n\r\"'()$&;")
                 basename = os.path.basename(first_word)
-                interpreters = ("sh", "bash", "python", "node", "perl", "ruby", "php", "deno", "bun")
+                interpreters = (
+                    "sh",
+                    "bash",
+                    "zsh",
+                    "dash",
+                    "ksh",
+                    "fish",
+                    "ash",
+                    "csh",
+                    "tcsh",
+                    "python",
+                    "node",
+                    "perl",
+                    "ruby",
+                    "php",
+                    "deno",
+                    "bun",
+                    "tsx",
+                    "ts-node",
+                )
                 for interp in interpreters:
                     pattern = rf"^{re.escape(interp)}(?:[0-9]+(?:\.[0-9]+)*)?$"
                     if re.match(pattern, basename):
