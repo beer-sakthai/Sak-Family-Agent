@@ -616,6 +616,11 @@ reach out to a real endpoint. Use `tmp_path` fixtures for file I/O.
   `import sakthai` only works because of the editable install. Any script under
   `scripts/` that must run outside the installed env has to
   `sys.path.insert(0, str(REPO_ROOT / "personas" / "sakthai"))` first.
+- **PRs into `main` need a non-author approval before merging.** Agent-opened
+  PRs are reviewed by the repository owner; green CI is not a substitute, and a
+  bot that auto-approves is explicitly out of bounds. Policy in
+  `docs/CONTRIBUTING.md`, rationale and the Scorecard mechanism behind it in
+  `docs/code-scanning-sweep-2026-08-12.md`.
 
 ---
 
