@@ -101,6 +101,113 @@ The lesson is narrow and worth keeping: a chain of correct evidence is not a
 measurement, and "I could not read the source of truth" is a reason to label a
 conclusion provisional, not a licence to state it flatly.
 
+## Re-read at `fa6bfc9` — 37 open
+
+Read from the dashboard the same way, dispatching **Code scanning cleanup**
+with no inputs — run
+[31660389121](https://github.com/beer-sakthai/Sak-Family-Agent/actions/runs/31660389121),
+`main` at `fa6bfc9`, 2026-08-13.
+
+```
+tool       open alerts  analyses  latest analysis
+Bandit     0            412       2026-07-06T05:01:03Z
+BinSkim    0            412       2026-07-06T05:01:03Z
+CodeQL     0            6535      2026-08-13T02:12:57Z
+ESLint     0            1838      2026-08-13T02:11:46Z
+Scorecard  37           138       2026-08-13T02:11:59Z
+mobsfscan  0            14        2026-08-12T04:14:21Z
+```
+
+47 → 37. The four `TokenPermissionsID` alerts and `PinnedDependenciesID` #15489
+are gone (the Black Duck fixes above landed), `pylint.yml`'s four closed with
+the `uv.lock` pin, and `VulnerabilitiesID` no longer appears. What remains is
+31 `PinnedDependenciesID` — the deployed-script set, still the one open scope
+decision — plus the six repository-health checks, of which `CodeReviewID` is
+the subject of the next section.
+
+## `CodeReviewID` #15460 — what it measures, and the decision
+
+```
+#15460  CodeReviewID  sev=high  ref=refs/heads/main
+    score is 0: Found 0/2 approved changesets -- score normalized to 0
+```
+
+The earlier table above marks this "no — repository settings", which is true
+about a *diff* and was the wrong place to stop: it is closable by a process
+change, and this section records the mechanism and the choice made.
+
+### The mechanism, read from the source
+
+Scorecard's Code-Review check reduces to one predicate per changeset, in
+[`probes/codeApproved`](https://github.com/ossf/scorecard/blob/main/probes/codeApproved/impl.go):
+
+```go
+for _, review := range c.Reviews {
+	if review.State == "APPROVED" && review.Author.Login != c.Author.Login {
+		return true, nil
+	}
+}
+return false, nil
+```
+
+So a changeset counts only when it carried a GitHub review in state
+`APPROVED` **left by a login other than the author's**. Things that do not
+count, and are worth naming because each looks like review from the inside:
+
+- a review left as *Comment* or *Request changes* — only `APPROVED` is read;
+- green CI, however many required checks;
+- the merge itself, whoever performed it;
+- a `# codeql[...]`-style annotation, a commit trailer, or any file in the tree.
+
+Non-GitHub review platforms (Prow, Gerrit, Phabricator, Piper) are accepted
+wholesale by that same probe, detected from commit-message trailers. Emitting
+those trailers here would score without reviewing anything; it is forgery of a
+review record and is not on the table.
+
+Two further behaviours explain the shape of the message. Changesets that are
+*both* bot-authored and approved are skipped entirely (`approvedChangeset &&
+data.Author.IsBot` → `continue`), so approving Dependabot PRs cannot inflate
+the ratio. And the score is proportional — `CreateProportionalScoreResult` over
+approved/total — so it moves gradually as reviewed changesets enter the window,
+never in one jump on one PR.
+
+### The decision
+
+**Adopted: every PR into `main` gets an approving review from a non-author, and
+for agent-opened PRs that reviewer is the repository owner.** Written up in
+[`CONTRIBUTING.md`](CONTRIBUTING.md#review-policy-for-main) and summarised for
+agents in [`AGENTS.md`](../AGENTS.md).
+
+The trade-off recorded under `BranchProtectionID` below — that requiring
+approvers "blocks the agent-driven workflows this repository runs on" — turned
+out to be narrower than it reads. Those workflows open PRs authored by
+`claude/*`, Sentinel or Dependabot; the owner already merges them by hand.
+Approving before merging is one extra click on a PR that was going to be looked
+at anyway, and it is precisely the case where a second pair of eyes is worth
+the most. What the policy genuinely cannot cover is a PR the owner authors
+personally — GitHub forbids self-approval — so those either wait for a second
+reviewer or merge unreviewed as a deliberate exception.
+
+Rejected on the way there: a workflow having `github-actions[bot]` approve
+every PR. It would satisfy this check and any future branch-protection rule
+while deleting the meaning of both, and it would leave the repository worse off
+than the open alert does.
+
+### What to expect on the dashboard
+
+Not an immediate close. The score is the approved fraction of a window of
+recent changesets, so it climbs as reviewed merges push unreviewed ones out and
+reaches its ceiling only once the window is entirely reviewed merges. Until
+then #15460 stays open at a rising score. Nothing in a diff — including this
+one — moves it; the next read after a run of approved merges is the measurement
+that counts.
+
+The matching repository settings, for whenever branch protection is revisited:
+*Require a pull request before merging* → *Require approvals: 1*. That is
+`BranchProtectionID` (#15379) territory and remains a separate, owner-only
+decision — the review habit is what this section commits to, and it does not
+depend on the setting being on.
+
 ## Reading the dashboard
 
 Listing alerts needs the "Code scanning alerts" repository permission
@@ -183,7 +290,7 @@ Every open alert is Scorecard's, on `refs/heads/main`:
 |---|---|---|---|
 | `PinnedDependenciesID` | **35** | medium | yes, but see below |
 | `BranchProtectionID` | 1 | high | no — repository settings |
-| `CodeReviewID` | 1 | high | no — "Found 0/2 approved changesets" |
+| `CodeReviewID` | 1 | high | not by a diff — but by a process change; revisited above |
 | `MaintainedID` | 1 | high | no — repo is under 90 days old |
 | `VulnerabilitiesID` | 1 | high | no — "1 existing vulnerabilities detected" (see below) |
 | `FuzzingID` | 1 | medium | no — no fuzzing harness |
@@ -310,6 +417,12 @@ Turning these on is a real trade-off, not an oversight: requiring approvers on
 each of which merges its own PRs. `CodeReviewID` ("0/2 approved changesets") is
 the same trade-off seen from the other side.
 
+> Revisited 2026-08-13 — see `CodeReviewID` #15460 above. The half of that
+> trade-off about *reviews* was overstated: the agent workflows open PRs the
+> owner merges by hand, so approving before merging costs a click and blocks
+> nothing. A review policy is now adopted. The half about *required approvers
+> as a branch-protection setting* stands unchanged and is still open.
+
 Note also that `scorecard.yml` leaves `repo_token` commented out, so Scorecard
 reads only what the public API exposes and may be under-reporting what is
 actually configured. `main` does in fact require `test (3.11)` and
@@ -326,8 +439,11 @@ are already fixed; see above. They were separable precisely because CI is the
 only consumer of that file.)
 
 **Everything else is a settings or process decision**, not a pull request:
-branch protection and review policy, an OpenSSF badge, a fuzzing harness, repo
-age. `VulnerabilitiesID` clears itself when `sqlitedict` publishes a fix.
+branch protection, an OpenSSF badge, a fuzzing harness, repo age.
+`VulnerabilitiesID` clears itself when `sqlitedict` publishes a fix. **Review
+policy is decided** as of 2026-08-13 — non-author approval on every PR into
+`main`, see `CodeReviewID` #15460 above — and is the one of these that needs
+doing rather than deciding.
 
 To re-read the dashboard at any time, run **Code scanning cleanup** from the
 Actions tab with no inputs. The same script works locally with a PAT carrying

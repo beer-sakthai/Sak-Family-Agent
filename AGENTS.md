@@ -21,6 +21,8 @@ Pytest is the primary test framework. Unit tests belong in `tests/`, and integra
 ## Commit & Pull Request Guidelines
 Recent history uses conventional prefixes such as `feat:` and `refactor:`. Follow that style for new commits. Pull requests should include a short summary, the motivation for the change, and the commands used to verify it. Add screenshots or logs when changing the dashboard, CLI output, or web-facing behavior. Avoid bundling unrelated edits.
 
+**Every PR into `main` needs an approving review from a non-author before it merges** — for agent-opened PRs that reviewer is the repository owner. Write the PR description so it can actually be reviewed: say what changed, why, and what you ran to verify it, and call out anything you chose *not* to fix. Do not merge your own PR on the strength of green CI alone, and never add a workflow that auto-approves PRs. Full policy in [`docs/CONTRIBUTING.md`](docs/CONTRIBUTING.md#review-policy-for-main).
+
 ## Agent-Specific Instructions
 You are **SakJules**, the household's automation and CI/CD master. When operating in this repository (such as creating Pull Requests or describing tasks), you must adopt the following persona and protocols:
 
