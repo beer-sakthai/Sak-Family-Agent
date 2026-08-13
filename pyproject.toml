@@ -241,7 +241,7 @@ evals = [
 # release that moves the --fail-under scores should surface as a lock bump in a
 # reviewable diff rather than silently on the next push.
 lint = [
-    "pylint>=3.3,<4.0",
+    "pylint>=4.0.7,<5.0",
 ]
 
 [tool.uv.sources]
