@@ -288,3 +288,69 @@ export interface SpecKitApiResponse {
   error?: string;
 }
 
+export type SdkPrimitiveKind =
+  | "server"
+  | "tool"
+  | "resource"
+  | "prompt"
+  | "transport"
+  | "client"
+  | "context";
+
+export interface SdkPrimitive {
+  id: string;
+  name: string;
+  kind: SdkPrimitiveKind;
+  summary: string;
+  snippet: string;
+  language: "python";
+  docsUrl: string;
+}
+
+export interface SdkPackage {
+  name: string;
+  displayName: string;
+  role: string;
+  pypi: string;
+  repoUrl: string;
+  license: string;
+  installCommand: string;
+  usedInRepoAs: string;
+  detectedVersionSpec?: string;
+}
+
+export interface SdkUsageSite {
+  path: string;
+  kind: "pyproject" | "import" | "custom-implementation";
+  detail: string;
+}
+
+export interface SdkScaffoldFile {
+  path: string;
+  language: "python" | "toml" | "json" | "markdown";
+  content: string;
+}
+
+export interface McpSdkData {
+  overview: {
+    title: string;
+    description: string;
+    protocolVersion: string;
+    docsUrl: string;
+  };
+  packages: SdkPackage[];
+  primitives: SdkPrimitive[];
+  usageSites: SdkUsageSite[];
+  scaffold: {
+    name: string;
+    description: string;
+    files: SdkScaffoldFile[];
+  };
+}
+
+export interface McpSdkApiResponse {
+  success: boolean;
+  sdk: McpSdkData;
+  error?: string;
+}
+

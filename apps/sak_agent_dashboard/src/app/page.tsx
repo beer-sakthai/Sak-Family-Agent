@@ -14,6 +14,7 @@ import {
   Sparkles,
   Plug,
   Layers,
+  Boxes,
 } from "lucide-react";
 import DemoModeToggle from "@/components/DemoModeToggle";
 import AgentOverview from "@/components/AgentOverview";
@@ -24,6 +25,7 @@ import AuditLogs from "@/components/AuditLogs";
 import StitchStudio from "@/components/StitchStudio";
 import McpServers from "@/components/McpServers";
 import SpecKitPanel from "@/components/SpecKitPanel";
+import McpSdkPanel from "@/components/McpSdkPanel";
 import {
   AgentPersona,
   MetricsData,
@@ -33,6 +35,7 @@ import {
   SessionTranscript,
   McpServerSpec,
   SpecKitData,
+  McpSdkData,
 } from "@/lib/types";
 
 const defaultPersonas: AgentPersona[] = [
@@ -166,7 +169,14 @@ const defaultSessions: SessionMeta[] = [
 export default function Home() {
   const [isDemo, setIsDemo] = useState(false);
   const [activeTab, setActiveTab] = useState<
-    "overview" | "analytics" | "sessions" | "memory" | "mcp" | "speckit" | "stitch"
+    | "overview"
+    | "analytics"
+    | "sessions"
+    | "memory"
+    | "mcp"
+    | "mcpsdk"
+    | "speckit"
+    | "stitch"
   >("overview");
 
   const [agents, setAgents] = useState<AgentPersona[]>(defaultPersonas);
@@ -177,6 +187,7 @@ export default function Home() {
   const [totalSessions, setTotalSessions] = useState<number>(761);
   const [mcpServers, setMcpServers] = useState<McpServerSpec[]>([]);
   const [speckit, setSpeckit] = useState<SpecKitData | null>(null);
+  const [mcpSdk, setMcpSdk] = useState<McpSdkData | null>(null);
 
   const [isLoading, setIsLoading] = useState(false);
   const [selectedSessionDetail, setSelectedSessionDetail] = useState<SessionTranscript | null>(null);
@@ -207,13 +218,14 @@ export default function Home() {
         }
       };
 
-      const [agentsRes, metricsRes, memoryRes, sessionsRes, mcpRes, speckitRes] = await Promise.all([
+      const [agentsRes, metricsRes, memoryRes, sessionsRes, mcpRes, speckitRes, mcpSdkRes] = await Promise.all([
         safeFetch(`${origin}/api/agents${demoParam}`),
         safeFetch(`${origin}/api/metrics${demoParam}`),
         safeFetch(`${origin}/api/memory${demoParam}`),
         safeFetch(`${origin}/api/sessions${demoParam}`),
         safeFetch(`${origin}/api/mcp-servers`),
         safeFetch(`${origin}/api/speckit`),
+        safeFetch(`${origin}/api/mcp-sdk`),
       ]);
 
       if (!isMountedRef.current) return;
@@ -237,6 +249,9 @@ export default function Home() {
       }
       if (speckitRes?.success && speckitRes.speckit) {
         setSpeckit(speckitRes.speckit);
+      }
+      if (mcpSdkRes?.success && mcpSdkRes.sdk) {
+        setMcpSdk(mcpSdkRes.sdk);
       }
     } catch (error) {
       console.error("Failed to load dashboard telemetry:", error);
@@ -416,6 +431,23 @@ export default function Home() {
         </button>
 
         <button
+          onClick={() => setActiveTab("mcpsdk")}
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold transition-all ${
+            activeTab === "mcpsdk"
+              ? "bg-gradient-to-r from-cyan-500/20 to-sky-500/20 text-cyan-300 border border-cyan-500/40 shadow-lg shadow-cyan-950/50"
+              : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
+          }`}
+        >
+          <Boxes className="h-4 w-4 text-sky-400" />
+          MCP SDK
+          {mcpSdk && (
+            <span className="text-[10px] font-mono ml-1 px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700/70">
+              {mcpSdk.packages.length}p · {mcpSdk.primitives.length}pr
+            </span>
+          )}
+        </button>
+
+        <button
           onClick={() => setActiveTab("speckit")}
           className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold transition-all ${
             activeTab === "speckit"
@@ -475,6 +507,8 @@ export default function Home() {
         )}
 
         {activeTab === "mcp" && <McpServers servers={mcpServers} />}
+
+        {activeTab === "mcpsdk" && <McpSdkPanel data={mcpSdk} />}
 
         {activeTab === "speckit" && <SpecKitPanel data={speckit} />}
 
