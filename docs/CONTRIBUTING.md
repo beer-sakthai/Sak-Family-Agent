@@ -103,6 +103,39 @@ intent, but never copy its code or layout into this repo — re-derive everythin
 - Update relevant docs (`README.md`, `docs/`, `CLAUDE.md`) when behavior or
   conventions change.
 
+## Review policy for `main`
+
+**Every pull request into `main` gets an approving review from someone other
+than its author before it merges.** Most PRs here are opened by an agent —
+`claude/*` branches, Sentinel security fixes, Dependabot bumps — and the
+repository owner is the reviewer for those: read the diff, then leave a GitHub
+**Approve** review before merging, rather than merging straight from the
+mergeable state.
+
+This is one extra click and it is not bookkeeping. It is the only thing that
+distinguishes "an agent changed `main`" from "a change to `main` was seen by a
+second party", and an agent-opened PR is exactly the case where that
+distinction matters most.
+
+Two consequences worth knowing:
+
+- **Self-authored PRs cannot satisfy it.** GitHub does not let you approve your
+  own pull request. A change you author yourself either waits for a second
+  reviewer or merges unreviewed — and merges unreviewed should be the rare,
+  deliberate case, not the default.
+- **It is measured.** OpenSSF Scorecard's Code-Review check counts, over a
+  window of recent changesets on the default branch, how many carried a review
+  with state `APPROVED` from a login other than the author's. Nothing else
+  counts: not a comment, not a passing CI run, not the merge itself. The score
+  moves only as reviewed changesets enter that window, so it responds to the
+  habit, not to any one PR. See
+  [`code-scanning-sweep-2026-08-12.md`](code-scanning-sweep-2026-08-12.md) for
+  the full mechanism and the standing alert this policy answers.
+
+Do **not** automate the approval. A workflow that has a bot approve every PR
+would satisfy both the branch-protection setting and the Scorecard check while
+removing the only thing either one is for.
+
 ## Reporting security issues
 
 Please do **not** open public issues for security vulnerabilities. Follow the

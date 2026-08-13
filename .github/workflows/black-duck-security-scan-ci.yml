@@ -34,21 +34,23 @@ jobs:
       actions: read
 
     steps:
-      - name: Harden the runner (Audit all outbound calls)
+      - name: Harden the runner
         uses: step-security/harden-runner@b09bb98e06d4d774595224525879c09bc6e98c40 # v2.20.1
         with:
-          egress-policy: audit
+          use-policy-store: true
+          api-key: ${{ secrets.STEP_SECURITY_API_KEY }}
 
       - name: Checkout source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Black Duck SCA scan
+        uses: blackduck-inc/black-duck-security-scan@152247222aa9cd38124acd5c0cf60f4db71adc3f
         if: >-
           vars.BLACKDUCKSCA_URL != '' ||
           vars.COVERITY_URL != '' ||
           vars.POLARIS_SERVER_URL != '' ||
           vars.SRM_URL != ''
-        uses: blackduck-inc/black-duck-security-scan@805cbd09e806b01907bbea0f990723c2bb85abe9
+        uses: blackduck-inc/black-duck-security-scan@152247222aa9cd38124acd5c0cf60f4db71adc3f
         with:
           ### ---------- BLACKDUCK SCA SCANNING: REQUIRED FIELDS ----------
           blackducksca_url: ${{ vars.BLACKDUCKSCA_URL }}

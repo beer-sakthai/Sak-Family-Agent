@@ -235,6 +235,45 @@ def _validate_shell_command(cmd_str: str) -> None:
     """Validate a shell command to prevent access to sensitive/system paths."""
     import shlex
     import re
+
+    # Prevent pipeline-to-interpreter command execution bypasses (e.g. curl ... | sh)
+    cmd_str_stripped = str(cmd_str).strip()
+    if "|" in cmd_str_stripped:
+        segments = cmd_str_stripped.split("|")
+        for segment in segments[1:]:
+            segment = segment.strip(" \t\n\r\"'()$&;")
+            if segment:
+                first_word = segment.split()[0] if segment.split() else ""
+                first_word = first_word.strip(" \t\n\r\"'()$&;")
+                basename = os.path.basename(first_word)
+                interpreters = (
+                    "sh",
+                    "bash",
+                    "zsh",
+                    "dash",
+                    "ksh",
+                    "fish",
+                    "ash",
+                    "csh",
+                    "tcsh",
+                    "python",
+                    "node",
+                    "perl",
+                    "ruby",
+                    "php",
+                    "deno",
+                    "bun",
+                    "tsx",
+                    "ts-node",
+                )
+                for interp in interpreters:
+                    pattern = rf"^{re.escape(interp)}(?:[0-9]+(?:\.[0-9]+)*)?$"
+                    if re.match(pattern, basename):
+                        raise PermissionError(
+                            f"Pipeline to interpreter {first_word!r} is prohibited "
+                            "to prevent command execution bypass."
+                        )
+
     try:
         parts = shlex.split(cmd_str)
     except ValueError as exc:

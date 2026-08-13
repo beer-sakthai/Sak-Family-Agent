@@ -101,6 +101,139 @@ The lesson is narrow and worth keeping: a chain of correct evidence is not a
 measurement, and "I could not read the source of truth" is a reason to label a
 conclusion provisional, not a licence to state it flatly.
 
+## Re-read at `fa6bfc9` — 37 open
+
+Read from the dashboard the same way, dispatching **Code scanning cleanup**
+with no inputs — run
+[31660389121](https://github.com/beer-sakthai/Sak-Family-Agent/actions/runs/31660389121),
+`main` at `fa6bfc9`, 2026-08-13.
+## Re-read at `fa6bfc9` (2026-08-13) — 37 open
+
+Read the same way, from the dashboard itself: **Code scanning cleanup** with no
+inputs, run
+[31660389121](https://github.com/beer-sakthai/Sak-Family-Agent/actions/runs/31660389121).
+
+```
+tool       open alerts  analyses  latest analysis
+Bandit     0            412       2026-07-06T05:01:03Z
+BinSkim    0            412       2026-07-06T05:01:03Z
+CodeQL     0            6535      2026-08-13T02:12:57Z
+ESLint     0            1838      2026-08-13T02:11:46Z
+Scorecard  37           138       2026-08-13T02:11:59Z
+mobsfscan  0            14        2026-08-12T04:14:21Z
+```
+
+47 → 37. The four `TokenPermissionsID` alerts and `PinnedDependenciesID` #15489
+are gone (the Black Duck fixes above landed), `pylint.yml`'s four closed with
+the `uv.lock` pin, and `VulnerabilitiesID` no longer appears. What remains is
+31 `PinnedDependenciesID` — the deployed-script set, still the one open scope
+decision — plus the six repository-health checks, of which `CodeReviewID` is
+the subject of the next section.
+
+## `CodeReviewID` #15460 — what it measures, and the decision
+
+```
+#15460  CodeReviewID  sev=high  ref=refs/heads/main
+    score is 0: Found 0/2 approved changesets -- score normalized to 0
+```
+
+The earlier table above marks this "no — repository settings", which is true
+about a *diff* and was the wrong place to stop: it is closable by a process
+change, and this section records the mechanism and the choice made.
+
+### The mechanism, read from the source
+
+Scorecard's Code-Review check reduces to one predicate per changeset, in
+[`probes/codeApproved`](https://github.com/ossf/scorecard/blob/main/probes/codeApproved/impl.go):
+
+```go
+for _, review := range c.Reviews {
+	if review.State == "APPROVED" && review.Author.Login != c.Author.Login {
+		return true, nil
+	}
+}
+return false, nil
+```
+
+So a changeset counts only when it carried a GitHub review in state
+`APPROVED` **left by a login other than the author's**. Things that do not
+count, and are worth naming because each looks like review from the inside:
+
+- a review left as *Comment* or *Request changes* — only `APPROVED` is read;
+- green CI, however many required checks;
+- the merge itself, whoever performed it;
+- a `# codeql[...]`-style annotation, a commit trailer, or any file in the tree.
+
+Non-GitHub review platforms (Prow, Gerrit, Phabricator, Piper) are accepted
+wholesale by that same probe, detected from commit-message trailers. Emitting
+those trailers here would score without reviewing anything; it is forgery of a
+review record and is not on the table.
+
+Two further behaviours explain the shape of the message. Changesets that are
+*both* bot-authored and approved are skipped entirely (`approvedChangeset &&
+data.Author.IsBot` → `continue`), so approving Dependabot PRs cannot inflate
+the ratio. And the score is proportional — `CreateProportionalScoreResult` over
+approved/total — so it moves gradually as reviewed changesets enter the window,
+never in one jump on one PR.
+
+### The decision
+
+**Adopted: every PR into `main` gets an approving review from a non-author, and
+for agent-opened PRs that reviewer is the repository owner.** Written up in
+[`CONTRIBUTING.md`](CONTRIBUTING.md#review-policy-for-main) and summarised for
+agents in [`AGENTS.md`](../AGENTS.md).
+
+The trade-off recorded under `BranchProtectionID` below — that requiring
+approvers "blocks the agent-driven workflows this repository runs on" — turned
+out to be narrower than it reads. Those workflows open PRs authored by
+`claude/*`, Sentinel or Dependabot; the owner already merges them by hand.
+Approving before merging is one extra click on a PR that was going to be looked
+at anyway, and it is precisely the case where a second pair of eyes is worth
+the most. What the policy genuinely cannot cover is a PR the owner authors
+personally — GitHub forbids self-approval — so those either wait for a second
+reviewer or merge unreviewed as a deliberate exception.
+
+Rejected on the way there: a workflow having `github-actions[bot]` approve
+every PR. It would satisfy this check and any future branch-protection rule
+while deleting the meaning of both, and it would leave the repository worse off
+than the open alert does.
+
+### What to expect on the dashboard
+
+Not an immediate close. The score is the approved fraction of a window of
+recent changesets, so it climbs as reviewed merges push unreviewed ones out and
+reaches its ceiling only once the window is entirely reviewed merges. Until
+then #15460 stays open at a rising score. Nothing in a diff — including this
+one — moves it; the next read after a run of approved merges is the measurement
+that counts.
+
+The matching repository settings, for whenever branch protection is revisited:
+*Require a pull request before merging* → *Require approvals: 1*. That is
+`BranchProtectionID` (#15379) territory and remains a separate, owner-only
+decision — the review habit is what this section commits to, and it does not
+depend on the setting being on.
+47 → 37. Two changes since `bc2ace3`, both settling predictions this document
+made rather than introducing anything new:
+
+- **`PinnedDependenciesID` is 31**, exactly the number the `pylint.yml` fix
+  projected — those four are confirmed closed against the live dashboard, not
+  just against local reasoning.
+- **`TokenPermissionsID` is 0.** The four alerts recorded above as accepted
+  risk (#15381/#15485/#15486/#15487, job-scoped `contents`/`security-events:
+  write`) are gone from the dashboard. Scorecard re-scored the check once the
+  two *top-level* findings were fixed; the job-scoped grants themselves are
+  unchanged and still needed. Nothing was dismissed by hand.
+
+The remaining 37 are 31 `PinnedDependenciesID` plus the six repository-health
+checks (`BranchProtectionID`, `CodeReviewID`, `MaintainedID`,
+`VulnerabilitiesID`, `FuzzingID`, `CIIBestPracticesID`) — one alert each, none
+closable by a diff. Alert numbers moved (`BranchProtectionID` is #15379 now,
+`CIIBestPracticesID` #15462, and so on): Scorecard mints new alert IDs per
+analysis, so cite them with the read they came from.
+
+Two of the 31 are closed by the `setup-extensions.sh` work below, taking
+`PinnedDependenciesID` to **29**.
+
 ## Reading the dashboard
 
 Listing alerts needs the "Code scanning alerts" repository permission
@@ -183,8 +316,10 @@ Every open alert is Scorecard's, on `refs/heads/main`:
 |---|---|---|---|
 | `PinnedDependenciesID` | **35** | medium | yes, but see below |
 | `BranchProtectionID` | 1 | high | no — repository settings |
-| `CodeReviewID` | 1 | high | no — "Found 0/2 approved changesets" |
+| `CodeReviewID` | 1 | high | not by a diff — but by a process change; revisited above |
 | `MaintainedID` | 1 | high | no — repo is under 90 days old |
+| `CodeReviewID` | 1 | high | no — "Found 0/2 approved changesets" |
+| `MaintainedID` | 1 | high | no — repo is under 90 days old, auto-closes after 2026-09-13 (see below) |
 | `VulnerabilitiesID` | 1 | high | no — "1 existing vulnerabilities detected" (see below) |
 | `FuzzingID` | 1 | medium | no — no fuzzing harness |
 | `CIIBestPracticesID` | 1 | low | no — no OpenSSF badge |
@@ -219,12 +354,106 @@ them is a real supply-chain improvement and a real risk of silently breaking a
 running deployment, and it is a scope decision for the repository owner rather
 than a cleanup to be done in passing.
 
+##### `pylint.yml` — four of the 35 closed
+
+The reasoning above is about *deployed* scripts CI never runs. It does not
+cover `.github/workflows/pylint.yml`, which is the opposite case: CI is the
+only thing that runs it, so pinning it can be verified before it merges and
+cannot break a deployment. Its four alerts were all `pipCommand`, one per
+install line:
+
+```yaml
+python -m pip install --upgrade pip
+pip install pylint
+pip install -e ".[dev]" || pip install -e "."
+```
+
+Nothing there says *which* pylint, so the job's own quality gate moved with
+whatever PyPI served that morning — a `--fail-under` threshold measured
+against an unpinned linter. The workflow now installs through
+`astral-sh/setup-uv` (pinned by commit SHA, as every other action in this
+repository already is) and `uv sync --locked --all-extras --group lint`, which
+resolves every wheel to the sha256 recorded in the committed `uv.lock`.
+`--locked` is the part that keeps it closed: a plain `uv sync` would re-resolve
+when `pyproject.toml` drifts, quietly restoring the unpinned install, and
+`--frozen` would use a stale lock silently instead of failing on it.
+
+pylint moves from an ad-hoc `pip install` to a `lint` dependency group in
+`pyproject.toml`, locked at **3.3.9**. It is its own group rather than an
+addition to `dev` so `ci.yml`'s `uv sync --all-extras` does not install a
+linter it never invokes — the same separation the `evals` group already has.
+
+Verified at the locked version before merging: 8.08/10 against the
+`--fail-under=7.0` pass and 9.41/10 against the `--fail-under=9.0` pass, both
+unchanged from what the unpinned install produced.
+
+That leaves **31** `PinnedDependenciesID` alerts, all in the deployed-script
+set above, still an open scope decision. `agent-self-evolution.yml` is the one
+remaining workflow in the list (one `pipCommand`); it installs a *different*
+project — `personas/sakthai/agent-self-evolution`, deliberately not a uv
+workspace member (see `pyproject.toml`) — so it has no lock in this resolution
+to pin against and was left alone rather than half-converted.
+
+##### `setup-extensions.sh` — the two `npmCommand` alerts closed
+
+Same separation as `pylint.yml`, for a different reason. The deployed-script
+argument above is about *installs whose inputs this repository does not own*:
+hash-pinning them means `--require-hashes` over a transitively-resolved tree,
+or vendoring someone else's installer. `scripts/setup-extensions.sh` (#15454)
+and its `sakthai-chat-cli` copy (#15452) are neither. They ran
+
+```bash
+(cd "$dir" && npm install --silent && npm run build)
+```
+
+over a directory that already carries a `package.json` — and, if its author
+committed one, a `package-lock.json` with a sha512 for every resolved tarball.
+The pinning material was there and the script was not using it. `npm install`
+re-resolves against the registry at build time, so a Node MCP server cloned by
+`sakthai extensions install <git-url>` built against whatever a matching semver
+range served that morning. `npm ci` installs the locked tree and verifies those
+hashes, and is what Scorecard accepts (`isNpmUnpinnedDownload` returns early on
+`ci`; `install`/`i`/`install-test`/`update` all fall through to unpinned).
+
+`npm ci` *requires* a lockfile, which is the one real behavior change: an
+extension shipping none is now reported and skipped rather than installed
+unpinned, with the directory printed so its owner can build it by hand. That is
+deliberate — the alternative is a fallback branch containing a literal
+`npm install`, which both reopens the alert and quietly does the unpinned thing
+the alert is about. A lockfile-less extension cannot be installed with
+integrity verification at all; the honest response is to say so rather than
+pretend.
+
+Verified against a fixture extensions tree (`SAKTHAI_HOME` pointed at a temp
+dir): lockfile present → `npm ci` + `npm run build`, at both the `*/` and
+`*/*/` glob depths; `npm-shrinkwrap.json` accepted as well as
+`package-lock.json`; neither present → skipped, counted, exit 0; missing and
+empty `extensions/` directories unchanged.
+
+That leaves **29**.
+
 #### `VulnerabilitiesID`
 
 "1 existing vulnerabilities detected" — the `sqlitedict <= 2.1.0` advisory
 (`PYSEC-2026-1939`), transitive via `lm-eval` in the `evals` dependency group.
 No fixed version is published upstream, so there is nothing to bump; `pip-audit`
 over the runtime lock reports clean. Also documented in PR #599.
+
+#### `MaintainedID` — alert #15461
+
+"score is 0: project was created within the last 90 days. Please review its
+contents carefully." Repository was created **2026-06-15**; the alert was
+raised on the 2026-08-13 Scorecard scan (repo age 59 days). Scorecard's
+[Maintained check](https://github.com/ossf/scorecard/blob/main/docs/checks.md#maintained)
+awards a flat **0** to any repository under 90 days old regardless of commit
+activity — no diff can raise that score. The check will re-evaluate on the
+next scheduled scan after **2026-09-13** (the next Thursday cron after the
+90-day mark is 2026-09-17), at which point it starts counting commits/issues
+per week: this repository averages many commits per day, so the score will
+jump to the maximum on that first post-threshold scan and the alert will
+close itself. No action required beyond letting it age out; dismissing it in
+the Security tab as "won't fix / accepted risk" is a valid alternative if the
+open finding is noise in the interim.
 
 ### The advanced/default setup collision
 
@@ -270,6 +499,12 @@ Turning these on is a real trade-off, not an oversight: requiring approvers on
 each of which merges its own PRs. `CodeReviewID` ("0/2 approved changesets") is
 the same trade-off seen from the other side.
 
+> Revisited 2026-08-13 — see `CodeReviewID` #15460 above. The half of that
+> trade-off about *reviews* was overstated: the agent workflows open PRs the
+> owner merges by hand, so approving before merging costs a click and blocks
+> nothing. A review policy is now adopted. The half about *required approvers
+> as a branch-protection setting* stands unchanged and is still open.
+
 Note also that `scorecard.yml` leaves `repo_token` commented out, so Scorecard
 reads only what the public API exposes and may be under-reporting what is
 actually configured. `main` does in fact require `test (3.11)` and
@@ -277,15 +512,22 @@ actually configured. `main` does in fact require `test (3.11)` and
 
 ## Remediation
 
-**Decide on the 35 `PinnedDependenciesID` alerts.** They are the only class a
-diff can close, and closing them touches deployed scripts that CI never
+**Decide on the remaining 29 `PinnedDependenciesID` alerts.** They are the only
+class a diff can close, and closing them touches deployed scripts that CI never
 exercises. Either hash-pin them — accepting the maintenance and the breakage
 risk — or dismiss them as accepted risk from the Security tab. Doing neither
-leaves the dashboard permanently at 35.
+leaves the dashboard permanently at 29. (The four in `.github/workflows/pylint.yml`
+and the two in `scripts/setup-extensions.sh` + its `sakthai-chat-cli` copy are
+already fixed; see above. Each was separable for its own reason — CI is the only
+consumer of the workflow, and the extension installs had a committed lockfile
+they simply were not using.)
 
 **Everything else is a settings or process decision**, not a pull request:
-branch protection and review policy, an OpenSSF badge, a fuzzing harness, repo
-age. `VulnerabilitiesID` clears itself when `sqlitedict` publishes a fix.
+branch protection, an OpenSSF badge, a fuzzing harness, repo age.
+`VulnerabilitiesID` clears itself when `sqlitedict` publishes a fix. **Review
+policy is decided** as of 2026-08-13 — non-author approval on every PR into
+`main`, see `CodeReviewID` #15460 above — and is the one of these that needs
+doing rather than deciding.
 
 To re-read the dashboard at any time, run **Code scanning cleanup** from the
 Actions tab with no inputs. The same script works locally with a PAT carrying

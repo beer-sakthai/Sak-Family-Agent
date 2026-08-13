@@ -1203,7 +1203,29 @@ def _check_destructive_tokens(
             for subpart in parts[i + 1 :]:
                 if subpart in (";", "&&", "||", "|"):
                     break
-                if _is_binary(subpart, ("sh", "bash", "python", "node", "perl", "ruby", "php")):
+                if _is_binary(
+                    subpart,
+                    (
+                        "sh",
+                        "bash",
+                        "zsh",
+                        "dash",
+                        "ksh",
+                        "fish",
+                        "ash",
+                        "csh",
+                        "tcsh",
+                        "python",
+                        "node",
+                        "perl",
+                        "ruby",
+                        "php",
+                        "deno",
+                        "bun",
+                        "tsx",
+                        "ts-node",
+                    ),
+                ):
                     return GuardrailResult(
                         GuardrailAction.DENY,
                         reason=(
