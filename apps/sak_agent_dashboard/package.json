@@ -2,6 +2,10 @@
   "name": "sak-agent-dashboard",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "pnpm@8.0.0",
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -11,15 +15,14 @@
   },
   "dependencies": {
     "@google/stitch-sdk": "^0.3.5",
-    "better-sqlite3": "^13.0.2",
     "lucide-react": "^1.31.0",
     "next": "^16.3.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
-    "recharts": "^2.13.0"
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
     "recharts": "^3.10.1"
+  },
+  "optionalDependencies": {
+    "better-sqlite3": "^13.0.2"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^7.0.0",
@@ -27,14 +30,14 @@
     "@types/better-sqlite3": "^9.6.0",
     "@types/node": "^26.2.0",
     "@types/react": "^19.2.18",
-    "@types/react-dom": "^18.3.1",
+    "@types/react-dom": "^19.2.18",
     "@vitejs/plugin-react": "^4.3.3",
     "autoprefixer": "^10.4.20",
     "eslint": "^10.8.1",
     "eslint-config-next": "^16.3.0",
     "jsdom": "^25.0.1",
     "postcss": "^8.5.25",
-    "tailwindcss": "^4.3.3",
+    "tailwindcss": "^3.4.0",
     "typescript": "^5.6.3",
     "vitest": "^4.1.10"
   },
@@ -42,12 +45,5 @@
     "postcss": "^8.5.25",
     "sharp": "^0.35.3",
     "nanoid": "^3.3.17"
-  },
-  "pnpm": {
-    "overrides": {
-      "postcss": "^8.5.25",
-      "sharp": "^0.35.3",
-      "nanoid": "^3.3.17"
-    }
   }
 }
