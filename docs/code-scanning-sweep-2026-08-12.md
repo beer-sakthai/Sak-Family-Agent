@@ -107,6 +107,11 @@ Read from the dashboard the same way, dispatching **Code scanning cleanup**
 with no inputs — run
 [31660389121](https://github.com/beer-sakthai/Sak-Family-Agent/actions/runs/31660389121),
 `main` at `fa6bfc9`, 2026-08-13.
+## Re-read at `fa6bfc9` (2026-08-13) — 37 open
+
+Read the same way, from the dashboard itself: **Code scanning cleanup** with no
+inputs, run
+[31660389121](https://github.com/beer-sakthai/Sak-Family-Agent/actions/runs/31660389121).
 
 ```
 tool       open alerts  analyses  latest analysis
@@ -207,6 +212,27 @@ The matching repository settings, for whenever branch protection is revisited:
 `BranchProtectionID` (#15379) territory and remains a separate, owner-only
 decision — the review habit is what this section commits to, and it does not
 depend on the setting being on.
+47 → 37. Two changes since `bc2ace3`, both settling predictions this document
+made rather than introducing anything new:
+
+- **`PinnedDependenciesID` is 31**, exactly the number the `pylint.yml` fix
+  projected — those four are confirmed closed against the live dashboard, not
+  just against local reasoning.
+- **`TokenPermissionsID` is 0.** The four alerts recorded above as accepted
+  risk (#15381/#15485/#15486/#15487, job-scoped `contents`/`security-events:
+  write`) are gone from the dashboard. Scorecard re-scored the check once the
+  two *top-level* findings were fixed; the job-scoped grants themselves are
+  unchanged and still needed. Nothing was dismissed by hand.
+
+The remaining 37 are 31 `PinnedDependenciesID` plus the six repository-health
+checks (`BranchProtectionID`, `CodeReviewID`, `MaintainedID`,
+`VulnerabilitiesID`, `FuzzingID`, `CIIBestPracticesID`) — one alert each, none
+closable by a diff. Alert numbers moved (`BranchProtectionID` is #15379 now,
+`CIIBestPracticesID` #15462, and so on): Scorecard mints new alert IDs per
+analysis, so cite them with the read they came from.
+
+Two of the 31 are closed by the `setup-extensions.sh` work below, taking
+`PinnedDependenciesID` to **29**.
 
 ## Reading the dashboard
 
@@ -292,6 +318,8 @@ Every open alert is Scorecard's, on `refs/heads/main`:
 | `BranchProtectionID` | 1 | high | no — repository settings |
 | `CodeReviewID` | 1 | high | not by a diff — but by a process change; revisited above |
 | `MaintainedID` | 1 | high | no — repo is under 90 days old |
+| `CodeReviewID` | 1 | high | no — "Found 0/2 approved changesets" |
+| `MaintainedID` | 1 | high | no — repo is under 90 days old, auto-closes after 2026-09-13 (see below) |
 | `VulnerabilitiesID` | 1 | high | no — "1 existing vulnerabilities detected" (see below) |
 | `FuzzingID` | 1 | medium | no — no fuzzing harness |
 | `CIIBestPracticesID` | 1 | low | no — no OpenSSF badge |
@@ -366,12 +394,66 @@ project — `personas/sakthai/agent-self-evolution`, deliberately not a uv
 workspace member (see `pyproject.toml`) — so it has no lock in this resolution
 to pin against and was left alone rather than half-converted.
 
+##### `setup-extensions.sh` — the two `npmCommand` alerts closed
+
+Same separation as `pylint.yml`, for a different reason. The deployed-script
+argument above is about *installs whose inputs this repository does not own*:
+hash-pinning them means `--require-hashes` over a transitively-resolved tree,
+or vendoring someone else's installer. `scripts/setup-extensions.sh` (#15454)
+and its `sakthai-chat-cli` copy (#15452) are neither. They ran
+
+```bash
+(cd "$dir" && npm install --silent && npm run build)
+```
+
+over a directory that already carries a `package.json` — and, if its author
+committed one, a `package-lock.json` with a sha512 for every resolved tarball.
+The pinning material was there and the script was not using it. `npm install`
+re-resolves against the registry at build time, so a Node MCP server cloned by
+`sakthai extensions install <git-url>` built against whatever a matching semver
+range served that morning. `npm ci` installs the locked tree and verifies those
+hashes, and is what Scorecard accepts (`isNpmUnpinnedDownload` returns early on
+`ci`; `install`/`i`/`install-test`/`update` all fall through to unpinned).
+
+`npm ci` *requires* a lockfile, which is the one real behavior change: an
+extension shipping none is now reported and skipped rather than installed
+unpinned, with the directory printed so its owner can build it by hand. That is
+deliberate — the alternative is a fallback branch containing a literal
+`npm install`, which both reopens the alert and quietly does the unpinned thing
+the alert is about. A lockfile-less extension cannot be installed with
+integrity verification at all; the honest response is to say so rather than
+pretend.
+
+Verified against a fixture extensions tree (`SAKTHAI_HOME` pointed at a temp
+dir): lockfile present → `npm ci` + `npm run build`, at both the `*/` and
+`*/*/` glob depths; `npm-shrinkwrap.json` accepted as well as
+`package-lock.json`; neither present → skipped, counted, exit 0; missing and
+empty `extensions/` directories unchanged.
+
+That leaves **29**.
+
 #### `VulnerabilitiesID`
 
 "1 existing vulnerabilities detected" — the `sqlitedict <= 2.1.0` advisory
 (`PYSEC-2026-1939`), transitive via `lm-eval` in the `evals` dependency group.
 No fixed version is published upstream, so there is nothing to bump; `pip-audit`
 over the runtime lock reports clean. Also documented in PR #599.
+
+#### `MaintainedID` — alert #15461
+
+"score is 0: project was created within the last 90 days. Please review its
+contents carefully." Repository was created **2026-06-15**; the alert was
+raised on the 2026-08-13 Scorecard scan (repo age 59 days). Scorecard's
+[Maintained check](https://github.com/ossf/scorecard/blob/main/docs/checks.md#maintained)
+awards a flat **0** to any repository under 90 days old regardless of commit
+activity — no diff can raise that score. The check will re-evaluate on the
+next scheduled scan after **2026-09-13** (the next Thursday cron after the
+90-day mark is 2026-09-17), at which point it starts counting commits/issues
+per week: this repository averages many commits per day, so the score will
+jump to the maximum on that first post-threshold scan and the alert will
+close itself. No action required beyond letting it age out; dismissing it in
+the Security tab as "won't fix / accepted risk" is a valid alternative if the
+open finding is noise in the interim.
 
 ### The advanced/default setup collision
 
@@ -430,13 +512,15 @@ actually configured. `main` does in fact require `test (3.11)` and
 
 ## Remediation
 
-**Decide on the remaining 31 `PinnedDependenciesID` alerts.** They are the only
+**Decide on the remaining 29 `PinnedDependenciesID` alerts.** They are the only
 class a diff can close, and closing them touches deployed scripts that CI never
 exercises. Either hash-pin them — accepting the maintenance and the breakage
 risk — or dismiss them as accepted risk from the Security tab. Doing neither
-leaves the dashboard permanently at 31. (The four in `.github/workflows/pylint.yml`
-are already fixed; see above. They were separable precisely because CI is the
-only consumer of that file.)
+leaves the dashboard permanently at 29. (The four in `.github/workflows/pylint.yml`
+and the two in `scripts/setup-extensions.sh` + its `sakthai-chat-cli` copy are
+already fixed; see above. Each was separable for its own reason — CI is the only
+consumer of the workflow, and the extension installs had a committed lockfile
+they simply were not using.)
 
 **Everything else is a settings or process decision**, not a pull request:
 branch protection, an OpenSSF badge, a fuzzing harness, repo age.
