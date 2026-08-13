@@ -202,3 +202,89 @@ export interface McpServersApiResponse {
   error?: string;
 }
 
+export interface SpecKitInitOptions {
+  ai: string;
+  featureNumbering: string;
+  here: boolean;
+  integration: string;
+  script: string;
+  speckitVersion: string;
+}
+
+export interface SpecKitIntegrationState {
+  version: string;
+  integrationStateSchema: number;
+  installedIntegrations: string[];
+  defaultIntegration: string;
+  currentIntegration: string;
+  integrationSettings: Record<string, Record<string, string>>;
+}
+
+export interface SpecKitTemplate {
+  name: string;
+  path: string;
+  bytes: number;
+  lines: number;
+  preview: string;
+}
+
+export type SpecKitWorkflowStepKind = "command" | "gate" | "other";
+
+export interface SpecKitWorkflowStep {
+  id: string;
+  kind: SpecKitWorkflowStepKind;
+  command?: string;
+  message?: string;
+  options?: string[];
+  onReject?: string;
+  integration?: string;
+}
+
+export interface SpecKitWorkflow {
+  id: string;
+  name: string;
+  version: string;
+  description: string;
+  installedAt?: string;
+  updatedAt?: string;
+  author?: string;
+  requiresSpeckitVersion?: string;
+  inputs: Array<{ name: string; type: string; required: boolean; default?: string; prompt?: string; enum?: string[] }>;
+  steps: SpecKitWorkflowStep[];
+  rawYaml: string;
+}
+
+export interface SpecKitIntegrationManifest {
+  integration: string;
+  version: string;
+  installedAt: string;
+  fileCount: number;
+  files: string[];
+}
+
+export interface SpecKitConstitution {
+  path: string;
+  isTemplate: boolean;
+  lines: number;
+  bytes: number;
+  preview: string;
+}
+
+export interface SpecKitData {
+  present: boolean;
+  rootPath: string;
+  initOptions?: SpecKitInitOptions;
+  integrationState?: SpecKitIntegrationState;
+  workflows: SpecKitWorkflow[];
+  integrations: SpecKitIntegrationManifest[];
+  templates: SpecKitTemplate[];
+  constitution?: SpecKitConstitution;
+  scripts: string[];
+}
+
+export interface SpecKitApiResponse {
+  success: boolean;
+  speckit: SpecKitData;
+  error?: string;
+}
+

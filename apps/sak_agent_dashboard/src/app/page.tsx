@@ -13,6 +13,7 @@ import {
   Shield,
   Sparkles,
   Plug,
+  Layers,
 } from "lucide-react";
 import DemoModeToggle from "@/components/DemoModeToggle";
 import AgentOverview from "@/components/AgentOverview";
@@ -22,6 +23,7 @@ import MemoryExplorer from "@/components/MemoryExplorer";
 import AuditLogs from "@/components/AuditLogs";
 import StitchStudio from "@/components/StitchStudio";
 import McpServers from "@/components/McpServers";
+import SpecKitPanel from "@/components/SpecKitPanel";
 import {
   AgentPersona,
   MetricsData,
@@ -30,6 +32,7 @@ import {
   SessionMeta,
   SessionTranscript,
   McpServerSpec,
+  SpecKitData,
 } from "@/lib/types";
 
 const defaultPersonas: AgentPersona[] = [
@@ -163,7 +166,7 @@ const defaultSessions: SessionMeta[] = [
 export default function Home() {
   const [isDemo, setIsDemo] = useState(false);
   const [activeTab, setActiveTab] = useState<
-    "overview" | "analytics" | "sessions" | "memory" | "mcp" | "stitch"
+    "overview" | "analytics" | "sessions" | "memory" | "mcp" | "speckit" | "stitch"
   >("overview");
 
   const [agents, setAgents] = useState<AgentPersona[]>(defaultPersonas);
@@ -173,6 +176,7 @@ export default function Home() {
   const [sessions, setSessions] = useState<SessionMeta[]>(defaultSessions);
   const [totalSessions, setTotalSessions] = useState<number>(761);
   const [mcpServers, setMcpServers] = useState<McpServerSpec[]>([]);
+  const [speckit, setSpeckit] = useState<SpecKitData | null>(null);
 
   const [isLoading, setIsLoading] = useState(false);
   const [selectedSessionDetail, setSelectedSessionDetail] = useState<SessionTranscript | null>(null);
@@ -203,12 +207,13 @@ export default function Home() {
         }
       };
 
-      const [agentsRes, metricsRes, memoryRes, sessionsRes, mcpRes] = await Promise.all([
+      const [agentsRes, metricsRes, memoryRes, sessionsRes, mcpRes, speckitRes] = await Promise.all([
         safeFetch(`${origin}/api/agents${demoParam}`),
         safeFetch(`${origin}/api/metrics${demoParam}`),
         safeFetch(`${origin}/api/memory${demoParam}`),
         safeFetch(`${origin}/api/sessions${demoParam}`),
         safeFetch(`${origin}/api/mcp-servers`),
+        safeFetch(`${origin}/api/speckit`),
       ]);
 
       if (!isMountedRef.current) return;
@@ -229,6 +234,9 @@ export default function Home() {
       }
       if (mcpRes?.success && Array.isArray(mcpRes.servers)) {
         setMcpServers(mcpRes.servers);
+      }
+      if (speckitRes?.success && speckitRes.speckit) {
+        setSpeckit(speckitRes.speckit);
       }
     } catch (error) {
       console.error("Failed to load dashboard telemetry:", error);
@@ -408,6 +416,23 @@ export default function Home() {
         </button>
 
         <button
+          onClick={() => setActiveTab("speckit")}
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold transition-all ${
+            activeTab === "speckit"
+              ? "bg-gradient-to-r from-cyan-500/20 to-amber-500/20 text-cyan-300 border border-cyan-500/40 shadow-lg shadow-cyan-950/50"
+              : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
+          }`}
+        >
+          <Layers className="h-4 w-4 text-amber-400" />
+          SpecKit
+          {speckit?.present && (
+            <span className="text-[10px] font-mono ml-1 px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700/70">
+              {speckit.workflows.length}w · {speckit.templates.length}t
+            </span>
+          )}
+        </button>
+
+        <button
           onClick={() => setActiveTab("stitch")}
           className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold transition-all ${
             activeTab === "stitch"
@@ -450,6 +475,8 @@ export default function Home() {
         )}
 
         {activeTab === "mcp" && <McpServers servers={mcpServers} />}
+
+        {activeTab === "speckit" && <SpecKitPanel data={speckit} />}
 
         {activeTab === "stitch" && <StitchStudio />}
       </div>
