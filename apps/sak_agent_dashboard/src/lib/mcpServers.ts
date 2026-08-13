@@ -402,7 +402,124 @@ export function getMcpServers(): McpServerSpec[] {
     ],
   };
 
-  return [teamsCopilot];
+  const composio: McpServerSpec = {
+    id: "composio",
+    name: "composio",
+    displayName: "Composio (1000+ SaaS apps)",
+    description:
+      "Hosted MCP server exposing Composio's catalog of 1000+ business-app integrations (Gmail, Slack, GitHub, Notion, Linear, Jira, HubSpot, …). Agents call seven meta-tools that discover, connect, and dispatch against the underlying tool set; OAuth and remote execution live on Composio's side, not on this host.",
+    category: "SaaS toolkits (hosted)",
+    transport: "http",
+    language: "Remote HTTP endpoint (no local runtime)",
+    repoPath: "https://github.com/ComposioHQ/composio-mcp-plugin",
+    command: "n/a (URL-served)",
+    args: [],
+    entrypoint: "https://connect.composio.dev/mcp",
+    status: "healthy",
+    statusReason:
+      "Hosted MCP endpoint — no local credentials or subprocess. Per-app OAuth is negotiated on demand via COMPOSIO_MANAGE_CONNECTIONS at tool-call time.",
+    envVars: [],
+    tools: [
+      {
+        name: "COMPOSIO_SEARCH_TOOLS",
+        signature: "COMPOSIO_SEARCH_TOOLS(query)",
+        description:
+          "Semantic search over the Composio tool catalog. Returns the most relevant tool ids for a natural-language task; feed those into COMPOSIO_MULTI_EXECUTE_TOOL.",
+      },
+      {
+        name: "COMPOSIO_MANAGE_CONNECTIONS",
+        signature: "COMPOSIO_MANAGE_CONNECTIONS(app, action)",
+        description:
+          "Initiate or refresh an OAuth connection for a specific app (e.g. Slack, Gmail). Returns an authorization URL the user visits once per app.",
+      },
+      {
+        name: "COMPOSIO_WAIT_FOR_CONNECTIONS",
+        signature: "COMPOSIO_WAIT_FOR_CONNECTIONS(request_ids)",
+        description:
+          "Block until pending OAuth connection requests either complete or time out — pair with COMPOSIO_MANAGE_CONNECTIONS at the start of any flow that needs a new app.",
+      },
+      {
+        name: "COMPOSIO_MULTI_EXECUTE_TOOL",
+        signature: "COMPOSIO_MULTI_EXECUTE_TOOL(calls[])",
+        description:
+          "Batch-execute one or more Composio tools by id. Each call carries its own tool_id + arguments; results come back in one payload for reduced round trips.",
+      },
+      {
+        name: "COMPOSIO_REMOTE_WORKBENCH",
+        signature: "COMPOSIO_REMOTE_WORKBENCH(operation, …)",
+        description:
+          "Persistent remote scratch space for multi-step work — read/write files, keep session state across tool calls without shipping bytes over the wire each turn.",
+      },
+      {
+        name: "COMPOSIO_REMOTE_BASH_TOOL",
+        signature: "COMPOSIO_REMOTE_BASH_TOOL(command)",
+        description:
+          "Execute a shell command inside Composio's remote sandbox. Runs off-host — never touches the local system running the agent.",
+      },
+    ],
+    actions: [],
+    registrationTargets: [
+      {
+        label: "Cursor / Claude Desktop (mcpServers)",
+        path: "~/.cursor/mcp.json  or  claude_desktop_config.json",
+        format: "mcpServers{}",
+        snippet: JSON.stringify(
+          {
+            mcpServers: {
+              composio: {
+                url: "https://connect.composio.dev/mcp",
+              },
+            },
+          },
+          null,
+          2
+        ),
+      },
+      {
+        label: "SakThai global outbound MCP",
+        path: "~/.sakthai/mcp.json",
+        format: "servers[]",
+        snippet: JSON.stringify(
+          {
+            servers: [
+              {
+                name: "composio",
+                url: "https://connect.composio.dev/mcp",
+                transport: "http",
+              },
+            ],
+          },
+          null,
+          2
+        ),
+      },
+      {
+        label: "Per-persona (Claude-style mcpServers)",
+        path: "personas/<persona>/config/mcp.json",
+        format: "mcpServers{}",
+        snippet: JSON.stringify(
+          {
+            mcpServers: {
+              composio: {
+                url: "https://connect.composio.dev/mcp",
+              },
+            },
+          },
+          null,
+          2
+        ),
+      },
+    ],
+    docsUrl: "https://github.com/ComposioHQ/composio-mcp-plugin",
+    knownLimitations: [
+      "URL-served (hosted) — outbound network access to connect.composio.dev is required at every tool call; there is no offline / air-gapped mode.",
+      "Per-app OAuth flows require an interactive browser step the first time each app is connected; agents block on COMPOSIO_WAIT_FOR_CONNECTIONS until the user completes the redirect.",
+      "Tool discovery is dynamic — the concrete tool ids returned by COMPOSIO_SEARCH_TOOLS change as Composio's catalog evolves; do not hardcode ids in prompts.",
+      "COMPOSIO_REMOTE_BASH_TOOL runs off-host in Composio's sandbox — output is real, but nothing it writes lands on the local filesystem.",
+    ],
+  };
+
+  return [teamsCopilot, composio];
 }
 
 export function summarizeActions(server: McpServerSpec): {

@@ -40,7 +40,7 @@ describe("MCP Servers Feature Suite", () => {
       const data = await res.json();
       expect(data.success).toBe(true);
       expect(Array.isArray(data.servers)).toBe(true);
-      expect(data.servers.length).toBeGreaterThan(0);
+      expect(data.servers.length).toBeGreaterThanOrEqual(2);
       const teams = data.servers.find((s: any) => s.id === "teams-copilot-mcp");
       expect(teams).toBeDefined();
       expect(teams.transport).toBe("stdio");
@@ -52,37 +52,84 @@ describe("MCP Servers Feature Suite", () => {
       );
     });
 
-    it("reports unconfigured status when no MSGRAPH_* env vars are set", async () => {
-      const servers = getMcpServers();
-      expect(servers[0].status).toBe("unconfigured");
-      expect(servers[0].statusReason).toMatch(/No Microsoft Graph credentials/i);
+    it("returns the Composio hosted server with HTTP transport, no local env, and its 6 meta-tools", async () => {
+      const res = await mcpServersGet();
+      const data = await res.json();
+      const composio = data.servers.find((s: any) => s.id === "composio");
+      expect(composio).toBeDefined();
+      expect(composio.transport).toBe("http");
+      expect(composio.actions).toEqual([]);
+      expect(composio.envVars).toEqual([]);
+      expect(composio.status).toBe("healthy");
+      const toolNames = composio.tools.map((t: any) => t.name);
+      expect(toolNames).toEqual(
+        expect.arrayContaining([
+          "COMPOSIO_SEARCH_TOOLS",
+          "COMPOSIO_MANAGE_CONNECTIONS",
+          "COMPOSIO_WAIT_FOR_CONNECTIONS",
+          "COMPOSIO_MULTI_EXECUTE_TOOL",
+          "COMPOSIO_REMOTE_WORKBENCH",
+          "COMPOSIO_REMOTE_BASH_TOOL",
+        ])
+      );
+      expect(composio.entrypoint).toBe("https://connect.composio.dev/mcp");
+      expect(
+        composio.registrationTargets.some(
+          (t: any) => t.label.startsWith("Cursor")
+        )
+      ).toBe(true);
     });
 
-    it("reports healthy status when all three credentials are set", async () => {
+    it("reports unconfigured status for teams-copilot when no MSGRAPH_* env vars are set", async () => {
+      const servers = getMcpServers();
+      const teams = servers.find((s) => s.id === "teams-copilot-mcp")!;
+      expect(teams.status).toBe("unconfigured");
+      expect(teams.statusReason).toMatch(/No Microsoft Graph credentials/i);
+    });
+
+    it("reports healthy status for teams-copilot when all three credentials are set", async () => {
       process.env.MSGRAPH_TENANT_ID = "tenant-xyz";
       process.env.MSGRAPH_CLIENT_ID = "client-abc";
       process.env.MSGRAPH_CLIENT_SECRET = "secret-123";
       const servers = getMcpServers();
-      expect(servers[0].status).toBe("healthy");
+      const teams = servers.find((s) => s.id === "teams-copilot-mcp")!;
+      expect(teams.status).toBe("healthy");
     });
 
-    it("reports degraded status when only some credentials are set", async () => {
+    it("reports degraded status for teams-copilot when only some credentials are set", async () => {
       process.env.MSGRAPH_TENANT_ID = "tenant-xyz";
       process.env.MSGRAPH_CLIENT_ID = "client-abc";
       // secret missing on purpose
       const servers = getMcpServers();
-      expect(servers[0].status).toBe("degraded");
-      expect(servers[0].statusReason).toMatch(/MSGRAPH_CLIENT_SECRET/);
+      const teams = servers.find((s) => s.id === "teams-copilot-mcp")!;
+      expect(teams.status).toBe("degraded");
+      expect(teams.statusReason).toMatch(/MSGRAPH_CLIENT_SECRET/);
+    });
+
+    it("keeps Composio healthy regardless of MSGRAPH_* env state", async () => {
+      const servers = getMcpServers();
+      const composio = servers.find((s) => s.id === "composio")!;
+      expect(composio.status).toBe("healthy");
     });
 
     it("summarizeActions returns totals, per-category counts, and flags", async () => {
-      const [server] = getMcpServers();
-      const summary = summarizeActions(server);
-      expect(summary.total).toBe(server.actions.length);
+      const servers = getMcpServers();
+      const teams = servers.find((s) => s.id === "teams-copilot-mcp")!;
+      const summary = summarizeActions(teams);
+      expect(summary.total).toBe(teams.actions.length);
       expect(summary.delegatedOnly).toBeGreaterThan(0);
       expect(summary.byCategory.teams).toBeGreaterThan(0);
       expect(summary.byCategory.copilot).toBeGreaterThan(0);
       expect(summary.verify).toBeGreaterThan(0);
+    });
+
+    it("summarizeActions handles servers with no catalog (Composio)", async () => {
+      const servers = getMcpServers();
+      const composio = servers.find((s) => s.id === "composio")!;
+      const summary = summarizeActions(composio);
+      expect(summary.total).toBe(0);
+      expect(summary.delegatedOnly).toBe(0);
+      expect(summary.verify).toBe(0);
     });
   });
 
@@ -101,8 +148,18 @@ describe("MCP Servers Feature Suite", () => {
       expect(screen.getByText("copilot_retrieval_query")).toBeInTheDocument();
       expect(screen.getByText("MSGRAPH_TENANT_ID")).toBeInTheDocument();
       expect(
-        screen.getByText(/SakThai global outbound MCP/i)
-      ).toBeInTheDocument();
+        screen.getAllByText(/SakThai global outbound MCP/i).length
+      ).toBeGreaterThan(0);
+    });
+
+    it("renders the Composio card with meta-tools and skips the Graph action catalog", () => {
+      const servers = getMcpServers();
+      render(<McpServers servers={servers} />);
+      expect(screen.getByText(/Composio \(1000\+ SaaS apps\)/i)).toBeInTheDocument();
+      expect(screen.getByText("COMPOSIO_SEARCH_TOOLS")).toBeInTheDocument();
+      expect(screen.getByText("COMPOSIO_MULTI_EXECUTE_TOOL")).toBeInTheDocument();
+      // The tab header should count both servers
+      expect(screen.getByText(/MCP Servers \(2\)/i)).toBeInTheDocument();
     });
 
     it("filters the action catalog by search query", () => {
