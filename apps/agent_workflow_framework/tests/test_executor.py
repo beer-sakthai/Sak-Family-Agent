@@ -285,7 +285,7 @@ class TestWorkflowExecutor(unittest.TestCase):
         self.assertEqual(history.status, RunStatus.FAILED)
         self.assertIn("not defined", history.step_results["s1"].error.lower())
 
-        # Attempting to use __import__ should raise NameError ("name '__import__' is not defined")
+        # Attempting to use __import__ should raise NameError ("name '__import__' is not defined") or PermissionError due to AST dunder checks
         wf_import = WorkflowDefinition(
             name="test_python_import",
             steps=[
@@ -294,7 +294,8 @@ class TestWorkflowExecutor(unittest.TestCase):
         )
         history = asyncio.run(self.executor.execute_workflow(wf_import))
         self.assertEqual(history.status, RunStatus.FAILED)
-        self.assertIn("not defined", history.step_results["s1"].error.lower())
+        error_msg = history.step_results["s1"].error.lower()
+        self.assertTrue("not defined" in error_msg or "prohibited" in error_msg)
 
         # Attempting to use os should raise NameError ("name 'os' is not defined")
         wf_os = WorkflowDefinition(
@@ -621,6 +622,33 @@ class TestWorkflowExecutor(unittest.TestCase):
                 self.assertEqual(step_res.status, StepStatus.FAILED)
                 self.assertIsNotNone(step_res.error)
                 self.assertIn("pipeline to interpreter", step_res.error.lower())
+
+    def test_python_action_blocks_dunder_attributes_via_ast(self):
+        """Verify that any access to dunder attributes or names via python evaluation is caught by AST validation and raises PermissionError."""
+        dunder_payloads = [
+            "().__class__",
+            "[].__class__",
+            "{}.__class__",
+            "().__class__.__bases__[0].__subclasses__()",
+            "json.__dict__",
+            "__globals__",
+            "__init__",
+        ]
+        for payload in dunder_payloads:
+            with self.subTest(payload=payload):
+                wf = WorkflowDefinition(
+                    name="python_dunder_ast_test",
+                    steps=[
+                        StepDefinition(id="s1", action="python", params={"expr": payload}),
+                    ],
+                )
+                history = asyncio.run(self.executor.execute_workflow(wf))
+                self.assertEqual(history.status, RunStatus.FAILED)
+                step_res = history.step_results["s1"]
+                self.assertEqual(step_res.status, StepStatus.FAILED)
+                self.assertIsNotNone(step_res.error)
+                self.assertIn("prohibited", step_res.error.lower())
+                self.assertIn("dunder", step_res.error.lower())
 
 
 if __name__ == "__main__":
