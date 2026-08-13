@@ -15,6 +15,7 @@ import {
   Plug,
   Layers,
   Boxes,
+  MessagesSquare,
 } from "lucide-react";
 import DemoModeToggle from "@/components/DemoModeToggle";
 import AgentOverview from "@/components/AgentOverview";
@@ -26,6 +27,7 @@ import StitchStudio from "@/components/StitchStudio";
 import McpServers from "@/components/McpServers";
 import SpecKitPanel from "@/components/SpecKitPanel";
 import McpSdkPanel from "@/components/McpSdkPanel";
+import ChatKitPanel from "@/components/ChatKitPanel";
 import {
   AgentPersona,
   MetricsData,
@@ -36,6 +38,7 @@ import {
   McpServerSpec,
   SpecKitData,
   McpSdkData,
+  ChatKitData,
 } from "@/lib/types";
 
 const defaultPersonas: AgentPersona[] = [
@@ -176,6 +179,7 @@ export default function Home() {
     | "mcp"
     | "mcpsdk"
     | "speckit"
+    | "chatkit"
     | "stitch"
   >("overview");
 
@@ -188,6 +192,7 @@ export default function Home() {
   const [mcpServers, setMcpServers] = useState<McpServerSpec[]>([]);
   const [speckit, setSpeckit] = useState<SpecKitData | null>(null);
   const [mcpSdk, setMcpSdk] = useState<McpSdkData | null>(null);
+  const [chatkit, setChatkit] = useState<ChatKitData | null>(null);
 
   const [isLoading, setIsLoading] = useState(false);
   const [selectedSessionDetail, setSelectedSessionDetail] = useState<SessionTranscript | null>(null);
@@ -218,7 +223,7 @@ export default function Home() {
         }
       };
 
-      const [agentsRes, metricsRes, memoryRes, sessionsRes, mcpRes, speckitRes, mcpSdkRes] = await Promise.all([
+      const [agentsRes, metricsRes, memoryRes, sessionsRes, mcpRes, speckitRes, mcpSdkRes, chatkitRes] = await Promise.all([
         safeFetch(`${origin}/api/agents${demoParam}`),
         safeFetch(`${origin}/api/metrics${demoParam}`),
         safeFetch(`${origin}/api/memory${demoParam}`),
@@ -226,6 +231,7 @@ export default function Home() {
         safeFetch(`${origin}/api/mcp-servers`),
         safeFetch(`${origin}/api/speckit`),
         safeFetch(`${origin}/api/mcp-sdk`),
+        safeFetch(`${origin}/api/chatkit`),
       ]);
 
       if (!isMountedRef.current) return;
@@ -252,6 +258,9 @@ export default function Home() {
       }
       if (mcpSdkRes?.success && mcpSdkRes.sdk) {
         setMcpSdk(mcpSdkRes.sdk);
+      }
+      if (chatkitRes?.success && chatkitRes.chatkit) {
+        setChatkit(chatkitRes.chatkit);
       }
     } catch (error) {
       console.error("Failed to load dashboard telemetry:", error);
@@ -465,6 +474,23 @@ export default function Home() {
         </button>
 
         <button
+          onClick={() => setActiveTab("chatkit")}
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold transition-all ${
+            activeTab === "chatkit"
+              ? "bg-gradient-to-r from-cyan-500/20 to-fuchsia-500/20 text-cyan-300 border border-cyan-500/40 shadow-lg shadow-cyan-950/50"
+              : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
+          }`}
+        >
+          <MessagesSquare className="h-4 w-4 text-fuchsia-400" />
+          ChatKit
+          {chatkit && (
+            <span className="text-[10px] font-mono ml-1 px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700/70">
+              {chatkit.samples.length} samples
+            </span>
+          )}
+        </button>
+
+        <button
           onClick={() => setActiveTab("stitch")}
           className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold transition-all ${
             activeTab === "stitch"
@@ -511,6 +537,8 @@ export default function Home() {
         {activeTab === "mcpsdk" && <McpSdkPanel data={mcpSdk} />}
 
         {activeTab === "speckit" && <SpecKitPanel data={speckit} />}
+
+        {activeTab === "chatkit" && <ChatKitPanel data={chatkit} />}
 
         {activeTab === "stitch" && <StitchStudio />}
       </div>

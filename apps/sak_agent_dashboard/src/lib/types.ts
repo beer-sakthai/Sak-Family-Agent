@@ -354,3 +354,54 @@ export interface McpSdkApiResponse {
   error?: string;
 }
 
+export type ChatKitCapability =
+  | "server-tools"
+  | "client-state"
+  | "widgets"
+  | "widget-actions"
+  | "attachments"
+  | "speech-input"
+  | "entity-tagging"
+  | "dynamic-thread-titles"
+  | "image-generation"
+  | "route-visualization";
+
+export interface ChatKitSample {
+  id: string;
+  name: string;
+  displayName: string;
+  description: string;
+  domain: string;
+  port: number;
+  runCommandFromRoot: string;
+  runCommandStandalone: string;
+  frontend: string;
+  backend: string;
+  capabilities: ChatKitCapability[];
+  highlights: string[];
+}
+
+export interface ChatKitPrerequisite {
+  label: string;
+  detail: string;
+  envVar?: string;
+  installCommand?: string;
+}
+
+export interface ChatKitData {
+  overview: {
+    title: string;
+    description: string;
+    repoUrl: string;
+  };
+  prerequisites: ChatKitPrerequisite[];
+  samples: ChatKitSample[];
+  capabilityLabels: Record<ChatKitCapability, string>;
+}
+
+export interface ChatKitApiResponse {
+  success: boolean;
+  chatkit: ChatKitData;
+  error?: string;
+}
+
