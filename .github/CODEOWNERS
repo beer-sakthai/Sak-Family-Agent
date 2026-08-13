@@ -1,0 +1,63 @@
+# Code owners for Sak-Family-Agent.
+#
+# GitHub uses this file to auto-request review when a PR touches a matching
+# path. It is the mechanism behind the review policy in docs/CONTRIBUTING.md:
+# every PR into `main` gets an approving review from someone other than its
+# author. Most PRs here are opened by an agent (`claude/*` branches, Sentinel
+# security fixes, Dependabot bumps) and the repository owner reviews those.
+#
+# Two things worth knowing about how this behaves:
+#
+# - GitHub never requests review from a PR's own author. When the owner authors
+#   a PR, these rules produce no reviewer, and the change either waits for a
+#   second reviewer or merges unreviewed. That is the documented, deliberate
+#   gap — not a misconfiguration to work around.
+# - Last matching rule wins. The catch-all is first; more specific paths below
+#   override it. Today every rule resolves to the same owner, so the sections
+#   exist to mark intent and to stay correct if reviewers are ever split.
+#
+# Do not add a bot that auto-approves. It would satisfy both branch protection
+# and the OpenSSF Scorecard Code-Review check while removing the only thing
+# either one is for.
+
+# Catch-all.
+*                                       @beer-sakthai
+
+# --- Security-critical: the most attacked surface in the repo ---------------
+# guardrails.py is copied per persona and pinned byte-identical by
+# tests/test_persona_guardrails_parity.py. A change here must be synced to
+# every persona copy or CI fails.
+/personas/sakthai/sakthai/agent/guardrails.py            @beer-sakthai
+/personas/sakthai/sakthai/agent/guardrails_hardened.py   @beer-sakthai
+/personas/sakthai/sakthai/agent/security_hardening.py    @beer-sakthai
+/personas/*/sakthai/agent/guardrails.py                  @beer-sakthai
+/personas/shared/sakthai/agent/guardrails.py             @beer-sakthai
+
+# Credential resolution, secret redaction, git-URL validation, and the
+# sandbox boundary.
+/personas/sakthai/sakthai/auth.py       @beer-sakthai
+/personas/sakthai/sakthai/config.py     @beer-sakthai
+/personas/sakthai/sakthai/giturl.py     @beer-sakthai
+/personas/sakthai/sakthai/sandbox.py    @beer-sakthai
+/personas/sakthai/sakthai/web/server.py @beer-sakthai
+
+# --- Supply chain and CI ----------------------------------------------------
+# Workflows run with repository credentials, so a change here is a privilege
+# change. Automated remediation bots have twice reintroduced a codeql.yml that
+# collides with CodeQL default setup — see docs/code-scanning-sweep-2026-08-12.md.
+/.github/                               @beer-sakthai
+/.github/workflows/                     @beer-sakthai
+/.github/dependabot.yml                 @beer-sakthai
+/.gitleaks.toml                         @beer-sakthai
+/.pre-commit-config.yaml                @beer-sakthai
+/pyproject.toml                         @beer-sakthai
+/uv.lock                                @beer-sakthai
+/Dockerfile.sandbox                     @beer-sakthai
+
+# --- Policy and identity docs -----------------------------------------------
+/SECURITY.md                            @beer-sakthai
+/docs/SECURITY.md                       @beer-sakthai
+/docs/CONTRIBUTING.md                   @beer-sakthai
+/CLAUDE.md                              @beer-sakthai
+/AGENTS.md                              @beer-sakthai
+/PLAN.md                                @beer-sakthai
