@@ -298,6 +298,7 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- initial + demo-toggle data fetch is the expected use of an effect
     fetchAllData(isDemo);
   }, [isDemo, fetchAllData]);
 
