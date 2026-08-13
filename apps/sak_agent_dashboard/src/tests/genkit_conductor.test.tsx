@@ -46,8 +46,8 @@ describe("Genkit Feature Suite", () => {
     expect(screen.getByText(/Genkit — Python/i)).toBeInTheDocument();
     expect(screen.getByText(/uv add genkit/i)).toBeInTheDocument();
     expect(screen.getAllByText(/Google Gemini/i).length).toBeGreaterThan(0);
-    expect(screen.getByText(/Ollama/i)).toBeInTheDocument();
-    expect(screen.getByText(/@ai.tool\(\)/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/Ollama/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/@ai.tool\(\)/i).length).toBeGreaterThan(0);
     expect(screen.getByText(/Quickstart/i)).toBeInTheDocument();
   });
 

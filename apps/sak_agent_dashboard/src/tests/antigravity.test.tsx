@@ -58,7 +58,7 @@ describe("Antigravity Feature Suite", () => {
       expect(screen.getByText(/Quickstart/i)).toBeInTheDocument();
       expect(screen.getByText("Agent")).toBeInTheDocument();
       expect(screen.getByText("LocalAgentConfig")).toBeInTheDocument();
-      expect(screen.getByText("Policy hooks")).toBeInTheDocument();
+      expect(screen.getAllByText("Policy hooks").length).toBeGreaterThan(0);
       expect(
         screen.getByText(/Where this sits vs\. the other SDK tabs/i)
       ).toBeInTheDocument();

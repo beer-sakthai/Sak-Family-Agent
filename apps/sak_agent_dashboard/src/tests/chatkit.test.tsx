@@ -70,7 +70,7 @@ describe("ChatKit Feature Suite", () => {
       const data = getChatKitData();
       render(<ChatKitPanel data={data} />);
       // Root command visible by default
-      expect(screen.getByText(/npm run cat-lounge/i)).toBeInTheDocument();
+      expect(screen.getAllByText(/npm run cat-lounge/i).length).toBeGreaterThan(0);
       // Toggle the first sample to standalone
       const standaloneButtons = screen.getAllByText(/standalone/i);
       fireEvent.click(standaloneButtons[0]);

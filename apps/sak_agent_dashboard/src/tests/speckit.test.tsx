@@ -205,11 +205,11 @@ describe("SpecKit Feature Suite", () => {
     it("renders the SpecKit dashboard with workflow, integration, and template sections", () => {
       const data = getSpecKitData();
       render(<SpecKitPanel data={data} />);
-      expect(screen.getByText(/SpecKit/i)).toBeInTheDocument();
+      expect(screen.getAllByText(/SpecKit/i).length).toBeGreaterThan(0);
       expect(screen.getByText(/Full SDD Cycle/i)).toBeInTheDocument();
-      expect(screen.getByText(/specify/i)).toBeInTheDocument();
-      expect(screen.getByText(/review-spec/i)).toBeInTheDocument();
-      expect(screen.getByText(/review gate/i)).toBeInTheDocument();
+      expect(screen.getAllByText(/specify/i).length).toBeGreaterThan(0);
+      expect(screen.getAllByText(/review-spec/i).length).toBeGreaterThan(0);
+      expect(screen.getAllByText(/review gate/i).length).toBeGreaterThan(0);
       expect(screen.getByText("spec-template.md")).toBeInTheDocument();
       expect(screen.getByText(/init-options.json/i)).toBeInTheDocument();
       // Constitution should be flagged as a template

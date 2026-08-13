@@ -5,7 +5,7 @@ import {
   Check,
   Copy,
   ExternalLink,
-  Github,
+  GitBranch,
   Globe,
   Key,
   MessagesSquare,
@@ -232,7 +232,7 @@ export function ChatKitPanel({ data }: ChatKitPanelProps) {
             rel="noreferrer noopener"
             className="mt-1.5 inline-flex items-center gap-1.5 text-[11px] font-mono text-cyan-300 hover:text-cyan-200"
           >
-            <Github className="h-3.5 w-3.5" />
+            <GitBranch className="h-3.5 w-3.5" />
             openai/openai-chatkit-advanced-samples
             <ExternalLink className="h-3 w-3" />
           </a>
