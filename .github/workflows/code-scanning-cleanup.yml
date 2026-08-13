@@ -66,15 +66,18 @@ jobs:
           GITHUB_REPOSITORY: ${{ github.repository }}
         run: python scripts/code_scanning_analyses.py list --alerts
 
-      # An alert that stops appearing under `open` has either been fixed or
-      # dismissed as accepted risk, and the open listing cannot tell those
-      # apart. The 2026-08-13 read lost 29 PinnedDependenciesID alerts with no
-      # matching diff, which is exactly the case this step exists to resolve.
-      - name: Report what was dismissed rather than fixed
+      # An alert that stops appearing under `open` has either been fixed by a
+      # diff, dropped by a re-scoring scan, or dismissed as accepted risk, and
+      # the open listing cannot tell those apart. `closed` covers dismissed and
+      # fixed together and prints each alert's real state, which is what
+      # separates them. The 2026-08-13 read lost 29 PinnedDependenciesID alerts
+      # with no matching diff; a `dismissed`-only read showed zero Scorecard
+      # alerts, which is what widened this step to `closed`.
+      - name: Report what closed, and whether it was fixed or dismissed
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
-        run: python scripts/code_scanning_analyses.py list --alerts --state dismissed
+        run: python scripts/code_scanning_analyses.py list --alerts --state closed
 
       - name: Delete the named tool's analyses
         if: ${{ inputs.tool != '' }}
