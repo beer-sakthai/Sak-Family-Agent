@@ -13,6 +13,11 @@ import {
   Shield,
   Sparkles,
   Plug,
+  Layers,
+  Boxes,
+  MessagesSquare,
+  Bot,
+  Music2,
 } from "lucide-react";
 import DemoModeToggle from "@/components/DemoModeToggle";
 import AgentOverview from "@/components/AgentOverview";
@@ -22,6 +27,12 @@ import MemoryExplorer from "@/components/MemoryExplorer";
 import AuditLogs from "@/components/AuditLogs";
 import StitchStudio from "@/components/StitchStudio";
 import McpServers from "@/components/McpServers";
+import SpecKitPanel from "@/components/SpecKitPanel";
+import McpSdkPanel from "@/components/McpSdkPanel";
+import ChatKitPanel from "@/components/ChatKitPanel";
+import AntigravityPanel from "@/components/AntigravityPanel";
+import GenkitPanel from "@/components/GenkitPanel";
+import ConductorPanel from "@/components/ConductorPanel";
 import {
   AgentPersona,
   MetricsData,
@@ -30,6 +41,12 @@ import {
   SessionMeta,
   SessionTranscript,
   McpServerSpec,
+  SpecKitData,
+  McpSdkData,
+  ChatKitData,
+  AntigravityData,
+  GenkitData,
+  ConductorData,
 } from "@/lib/types";
 
 const defaultPersonas: AgentPersona[] = [
@@ -163,7 +180,18 @@ const defaultSessions: SessionMeta[] = [
 export default function Home() {
   const [isDemo, setIsDemo] = useState(false);
   const [activeTab, setActiveTab] = useState<
-    "overview" | "analytics" | "sessions" | "memory" | "mcp" | "stitch"
+    | "overview"
+    | "analytics"
+    | "sessions"
+    | "memory"
+    | "mcp"
+    | "mcpsdk"
+    | "speckit"
+    | "chatkit"
+    | "antigravity"
+    | "genkit"
+    | "conductor"
+    | "stitch"
   >("overview");
 
   const [agents, setAgents] = useState<AgentPersona[]>(defaultPersonas);
@@ -173,6 +201,12 @@ export default function Home() {
   const [sessions, setSessions] = useState<SessionMeta[]>(defaultSessions);
   const [totalSessions, setTotalSessions] = useState<number>(761);
   const [mcpServers, setMcpServers] = useState<McpServerSpec[]>([]);
+  const [speckit, setSpeckit] = useState<SpecKitData | null>(null);
+  const [mcpSdk, setMcpSdk] = useState<McpSdkData | null>(null);
+  const [chatkit, setChatkit] = useState<ChatKitData | null>(null);
+  const [antigravity, setAntigravity] = useState<AntigravityData | null>(null);
+  const [genkit, setGenkit] = useState<GenkitData | null>(null);
+  const [conductor, setConductor] = useState<ConductorData | null>(null);
 
   const [isLoading, setIsLoading] = useState(false);
   const [selectedSessionDetail, setSelectedSessionDetail] = useState<SessionTranscript | null>(null);
@@ -203,12 +237,18 @@ export default function Home() {
         }
       };
 
-      const [agentsRes, metricsRes, memoryRes, sessionsRes, mcpRes] = await Promise.all([
+      const [agentsRes, metricsRes, memoryRes, sessionsRes, mcpRes, speckitRes, mcpSdkRes, chatkitRes, antigravityRes, genkitRes, conductorRes] = await Promise.all([
         safeFetch(`${origin}/api/agents${demoParam}`),
         safeFetch(`${origin}/api/metrics${demoParam}`),
         safeFetch(`${origin}/api/memory${demoParam}`),
         safeFetch(`${origin}/api/sessions${demoParam}`),
         safeFetch(`${origin}/api/mcp-servers`),
+        safeFetch(`${origin}/api/speckit`),
+        safeFetch(`${origin}/api/mcp-sdk`),
+        safeFetch(`${origin}/api/chatkit`),
+        safeFetch(`${origin}/api/antigravity`),
+        safeFetch(`${origin}/api/genkit`),
+        safeFetch(`${origin}/api/conductor`),
       ]);
 
       if (!isMountedRef.current) return;
@@ -230,6 +270,24 @@ export default function Home() {
       if (mcpRes?.success && Array.isArray(mcpRes.servers)) {
         setMcpServers(mcpRes.servers);
       }
+      if (speckitRes?.success && speckitRes.speckit) {
+        setSpeckit(speckitRes.speckit);
+      }
+      if (mcpSdkRes?.success && mcpSdkRes.sdk) {
+        setMcpSdk(mcpSdkRes.sdk);
+      }
+      if (chatkitRes?.success && chatkitRes.chatkit) {
+        setChatkit(chatkitRes.chatkit);
+      }
+      if (antigravityRes?.success && antigravityRes.antigravity) {
+        setAntigravity(antigravityRes.antigravity);
+      }
+      if (genkitRes?.success && genkitRes.genkit) {
+        setGenkit(genkitRes.genkit);
+      }
+      if (conductorRes?.success && conductorRes.conductor) {
+        setConductor(conductorRes.conductor);
+      }
     } catch (error) {
       console.error("Failed to load dashboard telemetry:", error);
     } finally {
@@ -240,6 +298,7 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- initial + demo-toggle data fetch is the expected use of an effect
     fetchAllData(isDemo);
   }, [isDemo, fetchAllData]);
 
@@ -408,6 +467,108 @@ export default function Home() {
         </button>
 
         <button
+          onClick={() => setActiveTab("mcpsdk")}
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold transition-all ${
+            activeTab === "mcpsdk"
+              ? "bg-gradient-to-r from-cyan-500/20 to-sky-500/20 text-cyan-300 border border-cyan-500/40 shadow-lg shadow-cyan-950/50"
+              : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
+          }`}
+        >
+          <Boxes className="h-4 w-4 text-sky-400" />
+          MCP SDK
+          {mcpSdk && (
+            <span className="text-[10px] font-mono ml-1 px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700/70">
+              {mcpSdk.packages.length}p · {mcpSdk.primitives.length}pr
+            </span>
+          )}
+        </button>
+
+        <button
+          onClick={() => setActiveTab("speckit")}
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold transition-all ${
+            activeTab === "speckit"
+              ? "bg-gradient-to-r from-cyan-500/20 to-amber-500/20 text-cyan-300 border border-cyan-500/40 shadow-lg shadow-cyan-950/50"
+              : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
+          }`}
+        >
+          <Layers className="h-4 w-4 text-amber-400" />
+          SpecKit
+          {speckit?.present && (
+            <span className="text-[10px] font-mono ml-1 px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700/70">
+              {speckit.workflows.length}w · {speckit.templates.length}t
+            </span>
+          )}
+        </button>
+
+        <button
+          onClick={() => setActiveTab("chatkit")}
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold transition-all ${
+            activeTab === "chatkit"
+              ? "bg-gradient-to-r from-cyan-500/20 to-fuchsia-500/20 text-cyan-300 border border-cyan-500/40 shadow-lg shadow-cyan-950/50"
+              : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
+          }`}
+        >
+          <MessagesSquare className="h-4 w-4 text-fuchsia-400" />
+          ChatKit
+          {chatkit && (
+            <span className="text-[10px] font-mono ml-1 px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700/70">
+              {chatkit.samples.length} samples
+            </span>
+          )}
+        </button>
+
+        <button
+          onClick={() => setActiveTab("antigravity")}
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold transition-all ${
+            activeTab === "antigravity"
+              ? "bg-gradient-to-r from-cyan-500/20 to-blue-500/20 text-cyan-300 border border-cyan-500/40 shadow-lg shadow-cyan-950/50"
+              : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
+          }`}
+        >
+          <Bot className="h-4 w-4 text-cyan-400" />
+          Antigravity
+          {antigravity && (
+            <span className="text-[10px] font-mono ml-1 px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700/70">
+              {antigravity.primitives.length}p
+            </span>
+          )}
+        </button>
+
+        <button
+          onClick={() => setActiveTab("genkit")}
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold transition-all ${
+            activeTab === "genkit"
+              ? "bg-gradient-to-r from-cyan-500/20 to-emerald-500/20 text-cyan-300 border border-cyan-500/40 shadow-lg shadow-cyan-950/50"
+              : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
+          }`}
+        >
+          <Sparkles className="h-4 w-4 text-emerald-400" />
+          Genkit
+          {genkit && (
+            <span className="text-[10px] font-mono ml-1 px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700/70">
+              {genkit.providers.length}p
+            </span>
+          )}
+        </button>
+
+        <button
+          onClick={() => setActiveTab("conductor")}
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold transition-all ${
+            activeTab === "conductor"
+              ? "bg-gradient-to-r from-cyan-500/20 to-purple-500/20 text-cyan-300 border border-cyan-500/40 shadow-lg shadow-cyan-950/50"
+              : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
+          }`}
+        >
+          <Music2 className="h-4 w-4 text-purple-400" />
+          Conductor
+          {conductor && (
+            <span className="text-[10px] font-mono ml-1 px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700/70">
+              {conductor.commands.length}c
+            </span>
+          )}
+        </button>
+
+        <button
           onClick={() => setActiveTab("stitch")}
           className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold transition-all ${
             activeTab === "stitch"
@@ -450,6 +611,18 @@ export default function Home() {
         )}
 
         {activeTab === "mcp" && <McpServers servers={mcpServers} />}
+
+        {activeTab === "mcpsdk" && <McpSdkPanel data={mcpSdk} />}
+
+        {activeTab === "speckit" && <SpecKitPanel data={speckit} />}
+
+        {activeTab === "chatkit" && <ChatKitPanel data={chatkit} />}
+
+        {activeTab === "antigravity" && <AntigravityPanel data={antigravity} />}
+
+        {activeTab === "genkit" && <GenkitPanel data={genkit} />}
+
+        {activeTab === "conductor" && <ConductorPanel data={conductor} />}
 
         {activeTab === "stitch" && <StitchStudio />}
       </div>
