@@ -101,6 +101,133 @@ The lesson is narrow and worth keeping: a chain of correct evidence is not a
 measurement, and "I could not read the source of truth" is a reason to label a
 conclusion provisional, not a licence to state it flatly.
 
+## Re-read at `c0cc7e0` (2026-08-13, 21:35Z) — 6 open
+
+Read the same way — **Code scanning cleanup**, no inputs, run
+[31746348341](https://github.com/beer-sakthai/Sak-Family-Agent/actions/runs/31746348341).
+This is the current state; everything below it is history.
+
+```
+tool       open alerts  analyses  latest analysis
+Bandit     0            412       2026-07-06T05:01:03Z
+BinSkim    0            412       2026-07-06T05:01:03Z
+CodeQL     0            6821      2026-08-13T21:35:28Z
+ESLint     0            1946      2026-08-13T21:34:05Z
+Scorecard  6            351       2026-08-13T21:11:13Z
+mobsfscan  0            14        2026-08-12T04:14:21Z
+```
+
+37 → 6. **Every `PinnedDependenciesID` alert is gone, and no diff closed
+them.** `Dockerfile.sandbox` still runs `pip install --no-cache-dir -e "."`,
+`scripts/bootstrap.sh` still runs an unpinned `uv pip install -e ".[dev]"`, and
+the `gh-env.sh` / `comfyui_setup.sh` / `evolve_agent.sh` copies are untouched —
+so the deployed-script class this document spent three sweeps deferring left
+the dashboard some other way. The overwhelmingly likely reading is that they
+were dismissed as accepted risk from the Security tab, which is exactly the
+option the Remediation section offered.
+
+"Overwhelmingly likely" is not a measurement, and this document has already
+been wrong once by reasoning past that gap (see the Correction above). The
+listing script only ever queried `state=open`, so a dismissed alert and one a
+fix closed look identical to it. It now takes `--state`
+(`open`/`closed`/`dismissed`/`fixed`/`all`) and prints each alert's state with
+its dismissal reason, and the cleanup workflow reports the dismissed set on
+every run. **The next dispatch settles it**; until that read lands, treat the
+disappearance as unexplained rather than as a fix.
+
+What remains is the six repository-health checks, one alert each:
+
+| Alert | Rule | Sev | Closable by a diff? |
+|---|---|---|---|
+| #15379 | `BranchProtectionID` | high | no — repository settings |
+| #15460 | `CodeReviewID` | high | no — process; 0/7 approved changesets |
+| #15461 | `MaintainedID` | high | no — repo age, auto-closes after 2026-09-13 |
+| #15464 | `VulnerabilitiesID` | high | no — no upstream fix exists |
+| #15463 | `FuzzingID` | medium | **yes — see below** |
+| #15462 | `CIIBestPracticesID` | low | no — badge is `InProgress` on bestpractices.dev |
+
+`CodeReviewID` has moved from "0/2" to "0/7 approved changesets": the window
+has grown and none of it is reviewed yet, which is what the policy adopted on
+2026-08-13 is for. `CIIBestPracticesID` now reads "score is 2: badge detected:
+InProgress" rather than reporting no badge at all — a badge project exists and
+is partly filled in; finishing it happens on bestpractices.dev, not in a PR.
+
+### `VulnerabilitiesID` #15464 — re-checked against OSV
+
+Still `sqlitedict` (`PYSEC-2026-1939` / `GHSA-g4r7-86gm-pgqc`), transitive via
+`lm-eval` in the `evals` group. Re-queried directly rather than taken from the
+earlier note: PyPI's latest release **is** 2.1.0, and the advisory's affected
+range ends in `last_affected: 2.1.0` with **no `fixed` event** — there is no
+version to bump to. The only lever is dropping `lm-eval`, which would delete
+the weekly `run-evals.yml` capability to close one alert on an optional
+dependency group. Not taken; it clears itself if upstream ever publishes a fix.
+
+### `FuzzingID` #15463 — closed by this change
+
+The previous sweeps filed this alongside branch protection and repo age as
+"repository-health, no diff can close it", and `PLAN.md` says the same. **That
+was wrong.** Scorecard's Fuzzing check is file-based, and for Python it is one
+pattern, read from
+[`checks/raw/fuzzing.go`](https://github.com/ossf/scorecard/blob/main/checks/raw/fuzzing.go):
+
+```go
+clients.Python: {
+    filePatterns: []string{"*.py"},
+    funcPattern:  `import atheris`,
+    Name:         fuzzers.PythonAtheris,
+},
+```
+
+Any `*.py` file containing the literal text `import atheris` satisfies it.
+Worth noting what does *not*: the `hypothesis` property-based suite this
+repository already has in `tests/test_store_properties.py` counts for nothing
+here — Scorecard has property-based detectors for Haskell, Erlang, Elixir,
+Gleam, JavaScript and TypeScript, but Python's only entry is Atheris.
+
+That makes the check trivially game-able by a file that imports Atheris and
+fuzzes nothing, which is not what was done. `fuzz/` holds three harnesses over
+the boundaries that actually take attacker-shaped input, each asserting a
+security invariant rather than merely "did not crash":
+
+| Harness | Target | Invariant |
+|---|---|---|
+| `fuzz_giturl.py` | `validate_git_url` | an accepted URL cannot smuggle a git option, cannot select a remote-helper transport, and carries an allowed scheme |
+| `fuzz_guardrails.py` | `GuardrailPolicy.check_pre_execution` | never raises; always returns a `GuardrailResult` with an in-enum action, a dict `modified_args`, and a non-empty reason on `DENY` |
+| `fuzz_mcp_server.py` | `mcp.server.handle_request` | never raises; returns `None` or a JSON-RPC 2.0 response carrying exactly one of `result`/`error`, and that response is JSON-serialisable |
+
+Three details are load-bearing:
+
+- **`atheris.instrument_all()` in `main()`.** Without it libFuzzer reports "no
+  interesting inputs were found", the corpus never grows past one entry, and
+  the campaign degrades into a random input generator. The first run of these
+  harnesses did exactly that — 200k runs at `corp: 1/1b` — which looks like a
+  clean campaign and measures nothing.
+- **A seed corpus in `fuzz/corpus/<harness>/`.** The MCP handler dispatches on
+  literal method strings, so an unseeded campaign has to rediscover
+  `tools/call` by mutation: 90 seconds reached **85 edges** unseeded and
+  **965** seeded (features 117 → 3831, corpus 9 → 285). `tests/test_fuzz_harnesses.py`
+  parametrises over the same directory, so pytest and libFuzzer share one set
+  of interesting inputs instead of two that drift.
+- **Only store-backed tools are exposed to the MCP harness.** `tools/call`
+  really invokes the handler, so handing the fuzzer all of `BUILTIN_TOOLS`
+  would let it reach `run_command`, `read_file` and the Telegram/Graph network
+  tools with fuzzer-controlled arguments. It gets `learn`/`recall`/`search`/
+  `forget`, and a test pins that set.
+
+Atheris is a `fuzz` dependency group, not part of `dev`: it needs a matching
+clang toolchain, so putting it in the default install would break
+`uv sync --all-extras` on machines without one. CI therefore never installs it,
+which is why each harness keeps its invariant in a plain `exercise(bytes)`
+function importing nothing from Atheris — `tests/test_fuzz_harnesses.py` calls
+those directly, so the harnesses cannot rot between campaigns. Two of those
+tests deliberately break the code under test and assert the invariant *fails*,
+because a harness that passes unconditionally is worse than none.
+
+Campaigns run before commit, all clean: giturl 12.8M runs (cov 18), guardrails
+53.9k runs (cov 1032, ft 5076), MCP 150k runs seeded (cov 965, ft 3831).
+
+The alert closes on the next Scorecard scan after this merges, not on merge.
+
 ## Re-read at `fa6bfc9` — 37 open
 
 Read from the dashboard the same way, dispatching **Code scanning cleanup**
@@ -512,6 +639,13 @@ actually configured. `main` does in fact require `test (3.11)` and
 
 ## Remediation
 
+> Superseded 2026-08-13 by the `c0cc7e0` read above — `PinnedDependenciesID` is
+> **0** on the dashboard, and the paragraph below describes the decision as it
+> stood while those 29 were still open. Kept because the reasoning is what a
+> future unpinned-install alert should be weighed against, and because the
+> alerts left without a diff: if they were dismissed rather than fixed, the
+> files are still unpinned and the decision below is still the live one.
+
 **Decide on the remaining 29 `PinnedDependenciesID` alerts.** They are the only
 class a diff can close, and closing them touches deployed scripts that CI never
 exercises. Either hash-pin them — accepting the maintenance and the breakage
@@ -536,7 +670,14 @@ the "Code scanning alerts" permission:
 ```bash
 export GITHUB_TOKEN=<pat>
 python scripts/code_scanning_analyses.py list --alerts
+
+# Why an alert left the open list — dismissed as accepted risk, or fixed?
+python scripts/code_scanning_analyses.py list --alerts --state dismissed
 ```
+
+`--state` exists because the `open` listing cannot answer that question, and
+the 2026-08-13 read needed it: 29 alerts disappeared with no matching diff. The
+workflow now prints the dismissed set on every run alongside the open one.
 
 Its `delete` subcommand exists for a different problem — retiring a tool that
 no longer runs, whose alerts nothing will ever close. Nothing on this dashboard

@@ -66,6 +66,16 @@ jobs:
           GITHUB_REPOSITORY: ${{ github.repository }}
         run: python scripts/code_scanning_analyses.py list --alerts
 
+      # An alert that stops appearing under `open` has either been fixed or
+      # dismissed as accepted risk, and the open listing cannot tell those
+      # apart. The 2026-08-13 read lost 29 PinnedDependenciesID alerts with no
+      # matching diff, which is exactly the case this step exists to resolve.
+      - name: Report what was dismissed rather than fixed
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: python scripts/code_scanning_analyses.py list --alerts --state dismissed
+
       - name: Delete the named tool's analyses
         if: ${{ inputs.tool != '' }}
         env:
