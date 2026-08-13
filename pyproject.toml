@@ -232,6 +232,17 @@ evals = [
     # index for packages the project depends on directly, not transitive deps.
     "torch>=2.0",
 ]
+# pylint for the pylint.yml workflow. Declared here rather than installed ad hoc
+# so the whole pylint toolchain resolves through uv.lock, which carries a hash
+# for every wheel — that is what closes Scorecard's PinnedDependenciesID
+# (`pipCommand`) alerts against that workflow. Its own group, not `dev`, so
+# ci.yml's `uv sync --all-extras` does not install a linter it never runs.
+# Version-floored, not pinned: the lock holds the exact version, and a pylint
+# release that moves the --fail-under scores should surface as a lock bump in a
+# reviewable diff rather than silently on the next push.
+lint = [
+    "pylint>=3.3,<4.0",
+]
 
 [tool.uv.sources]
 # CPU-only torch wheel: GitHub-hosted runners have no GPU, and the default
