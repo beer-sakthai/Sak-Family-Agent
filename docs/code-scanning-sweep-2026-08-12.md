@@ -222,7 +222,7 @@ Every open alert is Scorecard's, on `refs/heads/main`:
 | `PinnedDependenciesID` | **35** | medium | yes, but see below |
 | `BranchProtectionID` | 1 | high | no — repository settings |
 | `CodeReviewID` | 1 | high | no — "Found 0/2 approved changesets" |
-| `MaintainedID` | 1 | high | no — repo is under 90 days old |
+| `MaintainedID` | 1 | high | no — repo is under 90 days old, auto-closes after 2026-09-13 (see below) |
 | `VulnerabilitiesID` | 1 | high | no — "1 existing vulnerabilities detected" (see below) |
 | `FuzzingID` | 1 | medium | no — no fuzzing harness |
 | `CIIBestPracticesID` | 1 | low | no — no OpenSSF badge |
@@ -341,6 +341,22 @@ That leaves **29**.
 (`PYSEC-2026-1939`), transitive via `lm-eval` in the `evals` dependency group.
 No fixed version is published upstream, so there is nothing to bump; `pip-audit`
 over the runtime lock reports clean. Also documented in PR #599.
+
+#### `MaintainedID` — alert #15461
+
+"score is 0: project was created within the last 90 days. Please review its
+contents carefully." Repository was created **2026-06-15**; the alert was
+raised on the 2026-08-13 Scorecard scan (repo age 59 days). Scorecard's
+[Maintained check](https://github.com/ossf/scorecard/blob/main/docs/checks.md#maintained)
+awards a flat **0** to any repository under 90 days old regardless of commit
+activity — no diff can raise that score. The check will re-evaluate on the
+next scheduled scan after **2026-09-13** (the next Thursday cron after the
+90-day mark is 2026-09-17), at which point it starts counting commits/issues
+per week: this repository averages many commits per day, so the score will
+jump to the maximum on that first post-threshold scan and the alert will
+close itself. No action required beyond letting it age out; dismissing it in
+the Security tab as "won't fix / accepted risk" is a valid alternative if the
+open finding is noise in the interim.
 
 ### The advanced/default setup collision
 
