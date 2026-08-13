@@ -16,6 +16,7 @@ import {
   Layers,
   Boxes,
   MessagesSquare,
+  Bot,
 } from "lucide-react";
 import DemoModeToggle from "@/components/DemoModeToggle";
 import AgentOverview from "@/components/AgentOverview";
@@ -28,6 +29,7 @@ import McpServers from "@/components/McpServers";
 import SpecKitPanel from "@/components/SpecKitPanel";
 import McpSdkPanel from "@/components/McpSdkPanel";
 import ChatKitPanel from "@/components/ChatKitPanel";
+import AntigravityPanel from "@/components/AntigravityPanel";
 import {
   AgentPersona,
   MetricsData,
@@ -39,6 +41,7 @@ import {
   SpecKitData,
   McpSdkData,
   ChatKitData,
+  AntigravityData,
 } from "@/lib/types";
 
 const defaultPersonas: AgentPersona[] = [
@@ -180,6 +183,7 @@ export default function Home() {
     | "mcpsdk"
     | "speckit"
     | "chatkit"
+    | "antigravity"
     | "stitch"
   >("overview");
 
@@ -193,6 +197,7 @@ export default function Home() {
   const [speckit, setSpeckit] = useState<SpecKitData | null>(null);
   const [mcpSdk, setMcpSdk] = useState<McpSdkData | null>(null);
   const [chatkit, setChatkit] = useState<ChatKitData | null>(null);
+  const [antigravity, setAntigravity] = useState<AntigravityData | null>(null);
 
   const [isLoading, setIsLoading] = useState(false);
   const [selectedSessionDetail, setSelectedSessionDetail] = useState<SessionTranscript | null>(null);
@@ -223,7 +228,7 @@ export default function Home() {
         }
       };
 
-      const [agentsRes, metricsRes, memoryRes, sessionsRes, mcpRes, speckitRes, mcpSdkRes, chatkitRes] = await Promise.all([
+      const [agentsRes, metricsRes, memoryRes, sessionsRes, mcpRes, speckitRes, mcpSdkRes, chatkitRes, antigravityRes] = await Promise.all([
         safeFetch(`${origin}/api/agents${demoParam}`),
         safeFetch(`${origin}/api/metrics${demoParam}`),
         safeFetch(`${origin}/api/memory${demoParam}`),
@@ -232,6 +237,7 @@ export default function Home() {
         safeFetch(`${origin}/api/speckit`),
         safeFetch(`${origin}/api/mcp-sdk`),
         safeFetch(`${origin}/api/chatkit`),
+        safeFetch(`${origin}/api/antigravity`),
       ]);
 
       if (!isMountedRef.current) return;
@@ -261,6 +267,9 @@ export default function Home() {
       }
       if (chatkitRes?.success && chatkitRes.chatkit) {
         setChatkit(chatkitRes.chatkit);
+      }
+      if (antigravityRes?.success && antigravityRes.antigravity) {
+        setAntigravity(antigravityRes.antigravity);
       }
     } catch (error) {
       console.error("Failed to load dashboard telemetry:", error);
@@ -491,6 +500,23 @@ export default function Home() {
         </button>
 
         <button
+          onClick={() => setActiveTab("antigravity")}
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold transition-all ${
+            activeTab === "antigravity"
+              ? "bg-gradient-to-r from-cyan-500/20 to-blue-500/20 text-cyan-300 border border-cyan-500/40 shadow-lg shadow-cyan-950/50"
+              : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
+          }`}
+        >
+          <Bot className="h-4 w-4 text-cyan-400" />
+          Antigravity
+          {antigravity && (
+            <span className="text-[10px] font-mono ml-1 px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700/70">
+              {antigravity.primitives.length}p
+            </span>
+          )}
+        </button>
+
+        <button
           onClick={() => setActiveTab("stitch")}
           className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold transition-all ${
             activeTab === "stitch"
@@ -539,6 +565,8 @@ export default function Home() {
         {activeTab === "speckit" && <SpecKitPanel data={speckit} />}
 
         {activeTab === "chatkit" && <ChatKitPanel data={chatkit} />}
+
+        {activeTab === "antigravity" && <AntigravityPanel data={antigravity} />}
 
         {activeTab === "stitch" && <StitchStudio />}
       </div>

@@ -405,3 +405,64 @@ export interface ChatKitApiResponse {
   error?: string;
 }
 
+export type AntigravityPrimitiveKind =
+  | "agent"
+  | "config"
+  | "conversation"
+  | "response"
+  | "loop"
+  | "tool"
+  | "hook"
+  | "mcp";
+
+export interface AntigravityPrimitive {
+  id: string;
+  name: string;
+  kind: AntigravityPrimitiveKind;
+  summary: string;
+  snippet: string;
+  language: "python";
+  docsAnchor?: string;
+}
+
+export interface AntigravityFeature {
+  id: string;
+  title: string;
+  description: string;
+  category: "multimodal" | "tools" | "mcp" | "policy" | "background" | "streaming";
+}
+
+export interface AntigravityComparisonRow {
+  dimension: string;
+  antigravity: string;
+  chatkit: string;
+  mcpSdk: string;
+}
+
+export interface AntigravityData {
+  overview: {
+    title: string;
+    description: string;
+    repoUrl: string;
+    docsUrl: string;
+    license: string;
+    author: string;
+    pypiUrl: string;
+    packageName: string;
+  };
+  install: {
+    pypi: string;
+    warning: string;
+  };
+  quickstart: string;
+  primitives: AntigravityPrimitive[];
+  features: AntigravityFeature[];
+  comparison: AntigravityComparisonRow[];
+}
+
+export interface AntigravityApiResponse {
+  success: boolean;
+  antigravity: AntigravityData;
+  error?: string;
+}
+
