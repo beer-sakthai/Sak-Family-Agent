@@ -171,6 +171,9 @@ function ServerCard({ server }: { server: McpServerSpec }) {
   const verifyCount = server.actions.filter((a) => a.stability === "verify").length;
   const delegatedCount = server.actions.filter((a) => a.requiresDelegatedAuth).length;
   const activeTarget = server.registrationTargets[selectedTarget] ?? server.registrationTargets[0];
+  const hasActions = server.actions.length > 0;
+  const hasEnvVars = server.envVars.length > 0;
+  const disabledToolCount = server.tools.filter((t) => t.disabled).length;
 
   return (
     <div className="glass-panel rounded-2xl bg-slate-900/80 border border-slate-800/80 backdrop-blur-xl shadow-xl overflow-hidden">
@@ -239,77 +242,128 @@ function ServerCard({ server }: { server: McpServerSpec }) {
 
       {/* Stat tiles */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 p-5 bg-slate-950/40 border-b border-slate-800/70">
-        <div className="p-3 rounded-xl bg-slate-900/80 border border-slate-800/80">
-          <div className="text-[10px] font-mono uppercase tracking-wider text-slate-400">
-            Actions
-          </div>
-          <div className="text-2xl font-extrabold text-white font-display">
-            {server.actions.length}
-          </div>
-          <div className="text-[10px] font-mono text-slate-500">catalog entries</div>
-        </div>
-        <div className="p-3 rounded-xl bg-slate-900/80 border border-slate-800/80">
-          <div className="text-[10px] font-mono uppercase tracking-wider text-slate-400">
-            Stable
-          </div>
-          <div className="text-2xl font-extrabold text-emerald-300 font-display">
-            {stableCount}
-          </div>
-          <div className="text-[10px] font-mono text-slate-500">production-ready</div>
-        </div>
-        <div className="p-3 rounded-xl bg-slate-900/80 border border-slate-800/80">
-          <div className="text-[10px] font-mono uppercase tracking-wider text-slate-400">
-            Verify
-          </div>
-          <div className="text-2xl font-extrabold text-rose-300 font-display">
-            {verifyCount}
-          </div>
-          <div className="text-[10px] font-mono text-slate-500">re-check upstream</div>
-        </div>
-        <div className="p-3 rounded-xl bg-slate-900/80 border border-slate-800/80">
-          <div className="text-[10px] font-mono uppercase tracking-wider text-slate-400">
-            Delegated-only
-          </div>
-          <div className="text-2xl font-extrabold text-amber-300 font-display">
-            {delegatedCount}
-          </div>
-          <div className="text-[10px] font-mono text-slate-500">
-            unsupported in app-only auth
-          </div>
-        </div>
+        {hasActions ? (
+          <>
+            <div className="p-3 rounded-xl bg-slate-900/80 border border-slate-800/80">
+              <div className="text-[10px] font-mono uppercase tracking-wider text-slate-400">
+                Actions
+              </div>
+              <div className="text-2xl font-extrabold text-white font-display">
+                {server.actions.length}
+              </div>
+              <div className="text-[10px] font-mono text-slate-500">catalog entries</div>
+            </div>
+            <div className="p-3 rounded-xl bg-slate-900/80 border border-slate-800/80">
+              <div className="text-[10px] font-mono uppercase tracking-wider text-slate-400">
+                Stable
+              </div>
+              <div className="text-2xl font-extrabold text-emerald-300 font-display">
+                {stableCount}
+              </div>
+              <div className="text-[10px] font-mono text-slate-500">production-ready</div>
+            </div>
+            <div className="p-3 rounded-xl bg-slate-900/80 border border-slate-800/80">
+              <div className="text-[10px] font-mono uppercase tracking-wider text-slate-400">
+                Verify
+              </div>
+              <div className="text-2xl font-extrabold text-rose-300 font-display">
+                {verifyCount}
+              </div>
+              <div className="text-[10px] font-mono text-slate-500">re-check upstream</div>
+            </div>
+            <div className="p-3 rounded-xl bg-slate-900/80 border border-slate-800/80">
+              <div className="text-[10px] font-mono uppercase tracking-wider text-slate-400">
+                Delegated-only
+              </div>
+              <div className="text-2xl font-extrabold text-amber-300 font-display">
+                {delegatedCount}
+              </div>
+              <div className="text-[10px] font-mono text-slate-500">
+                unsupported in app-only auth
+              </div>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="p-3 rounded-xl bg-slate-900/80 border border-slate-800/80">
+              <div className="text-[10px] font-mono uppercase tracking-wider text-slate-400">
+                MCP tools
+              </div>
+              <div className="text-2xl font-extrabold text-white font-display">
+                {server.tools.length}
+              </div>
+              <div className="text-[10px] font-mono text-slate-500">exposed to agents</div>
+            </div>
+            <div className="p-3 rounded-xl bg-slate-900/80 border border-slate-800/80">
+              <div className="text-[10px] font-mono uppercase tracking-wider text-slate-400">
+                Transport
+              </div>
+              <div className="text-2xl font-extrabold text-cyan-300 font-display uppercase">
+                {server.transport}
+              </div>
+              <div className="text-[10px] font-mono text-slate-500">wire protocol</div>
+            </div>
+            <div className="p-3 rounded-xl bg-slate-900/80 border border-slate-800/80">
+              <div className="text-[10px] font-mono uppercase tracking-wider text-slate-400">
+                Local env
+              </div>
+              <div className="text-2xl font-extrabold text-emerald-300 font-display">
+                {hasEnvVars ? server.envVars.length : "0"}
+              </div>
+              <div className="text-[10px] font-mono text-slate-500">
+                {hasEnvVars ? "vars required" : "hosted service"}
+              </div>
+            </div>
+            <div className="p-3 rounded-xl bg-slate-900/80 border border-slate-800/80">
+              <div className="text-[10px] font-mono uppercase tracking-wider text-slate-400">
+                Disabled tools
+              </div>
+              <div className="text-2xl font-extrabold text-rose-300 font-display">
+                {disabledToolCount}
+              </div>
+              <div className="text-[10px] font-mono text-slate-500">not currently usable</div>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Env & Tools */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-0 divide-y lg:divide-y-0 lg:divide-x divide-slate-800/70">
+      <div
+        className={`grid grid-cols-1 ${
+          hasEnvVars ? "lg:grid-cols-2 divide-y lg:divide-y-0 lg:divide-x" : ""
+        } gap-0 divide-slate-800/70`}
+      >
         {/* Env vars */}
-        <div className="p-5">
-          <h4 className="text-xs font-mono uppercase tracking-wider text-slate-400 flex items-center gap-2 mb-3">
-            <KeyRound className="h-3.5 w-3.5 text-amber-400" />
-            Required environment
-          </h4>
-          <ul className="space-y-2">
-            {server.envVars.map((env) => (
-              <li
-                key={env.key}
-                className="p-3 rounded-lg bg-slate-950/60 border border-slate-800/80"
-              >
-                <div className="flex items-center justify-between mb-1">
-                  <code className="text-[12px] font-mono text-cyan-300">{env.key}</code>
-                  {env.required ? (
-                    <span className="text-[10px] font-mono uppercase px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/40">
-                      required
-                    </span>
-                  ) : (
-                    <span className="text-[10px] font-mono uppercase px-1.5 py-0.5 rounded bg-slate-700/40 text-slate-300 border border-slate-600/40">
-                      optional
-                    </span>
-                  )}
-                </div>
-                <p className="text-[11px] text-slate-400 leading-relaxed">{env.purpose}</p>
-              </li>
-            ))}
-          </ul>
-        </div>
+        {hasEnvVars && (
+          <div className="p-5">
+            <h4 className="text-xs font-mono uppercase tracking-wider text-slate-400 flex items-center gap-2 mb-3">
+              <KeyRound className="h-3.5 w-3.5 text-amber-400" />
+              Required environment
+            </h4>
+            <ul className="space-y-2">
+              {server.envVars.map((env) => (
+                <li
+                  key={env.key}
+                  className="p-3 rounded-lg bg-slate-950/60 border border-slate-800/80"
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <code className="text-[12px] font-mono text-cyan-300">{env.key}</code>
+                    {env.required ? (
+                      <span className="text-[10px] font-mono uppercase px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/40">
+                        required
+                      </span>
+                    ) : (
+                      <span className="text-[10px] font-mono uppercase px-1.5 py-0.5 rounded bg-slate-700/40 text-slate-300 border border-slate-600/40">
+                        optional
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[11px] text-slate-400 leading-relaxed">{env.purpose}</p>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         {/* Dedicated tool shortcuts */}
         <div className="p-5">
@@ -356,6 +410,7 @@ function ServerCard({ server }: { server: McpServerSpec }) {
       </div>
 
       {/* Action catalog */}
+      {hasActions && (
       <div className="p-5 border-t border-slate-800/70">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-4">
           <div>
@@ -499,6 +554,7 @@ function ServerCard({ server }: { server: McpServerSpec }) {
           Showing {filtered.length} of {server.actions.length} actions.
         </div>
       </div>
+      )}
 
       {/* Registration snippets */}
       <div className="p-5 border-t border-slate-800/70">
