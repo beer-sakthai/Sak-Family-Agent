@@ -130,3 +130,75 @@ export interface StitchScreenPreset {
   theme: "dark-glassmorphism" | "midnight-emerald" | "cyber-cyan";
 }
 
+export type McpActionStability = "stable" | "beta" | "verify";
+export type McpActionCategory =
+  | "teams"
+  | "chats"
+  | "meetings"
+  | "calendar"
+  | "users"
+  | "copilot"
+  | "other";
+
+export interface McpAction {
+  id: string;
+  method: string;
+  pathTemplate: string;
+  description: string;
+  params: string[];
+  stability: McpActionStability;
+  requiresDelegatedAuth: boolean;
+  category: McpActionCategory;
+}
+
+export interface McpToolShortcut {
+  name: string;
+  signature: string;
+  description: string;
+  disabled?: boolean;
+  disabledReason?: string;
+}
+
+export interface McpEnvVar {
+  key: string;
+  purpose: string;
+  required: boolean;
+}
+
+export interface McpRegistrationTarget {
+  label: string;
+  path: string;
+  format: string;
+  snippet: string;
+}
+
+export type McpServerStatus = "healthy" | "degraded" | "unconfigured" | "unknown";
+
+export interface McpServerSpec {
+  id: string;
+  name: string;
+  displayName: string;
+  description: string;
+  category: string;
+  transport: "stdio" | "http" | "sse";
+  language: string;
+  repoPath: string;
+  command: string;
+  args: string[];
+  entrypoint: string;
+  status: McpServerStatus;
+  statusReason: string;
+  envVars: McpEnvVar[];
+  tools: McpToolShortcut[];
+  actions: McpAction[];
+  registrationTargets: McpRegistrationTarget[];
+  docsUrl?: string;
+  knownLimitations: string[];
+}
+
+export interface McpServersApiResponse {
+  success: boolean;
+  servers: McpServerSpec[];
+  error?: string;
+}
+

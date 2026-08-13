@@ -12,6 +12,7 @@ import {
   MessageSquare,
   Shield,
   Sparkles,
+  Plug,
 } from "lucide-react";
 import DemoModeToggle from "@/components/DemoModeToggle";
 import AgentOverview from "@/components/AgentOverview";
@@ -20,6 +21,7 @@ import SessionExplorer from "@/components/SessionExplorer";
 import MemoryExplorer from "@/components/MemoryExplorer";
 import AuditLogs from "@/components/AuditLogs";
 import StitchStudio from "@/components/StitchStudio";
+import McpServers from "@/components/McpServers";
 import {
   AgentPersona,
   MetricsData,
@@ -27,6 +29,7 @@ import {
   AuditLog,
   SessionMeta,
   SessionTranscript,
+  McpServerSpec,
 } from "@/lib/types";
 
 const defaultPersonas: AgentPersona[] = [
@@ -159,7 +162,9 @@ const defaultSessions: SessionMeta[] = [
 
 export default function Home() {
   const [isDemo, setIsDemo] = useState(false);
-  const [activeTab, setActiveTab] = useState<"overview" | "analytics" | "sessions" | "memory" | "stitch">("overview");
+  const [activeTab, setActiveTab] = useState<
+    "overview" | "analytics" | "sessions" | "memory" | "mcp" | "stitch"
+  >("overview");
 
   const [agents, setAgents] = useState<AgentPersona[]>(defaultPersonas);
   const [metrics, setMetrics] = useState<MetricsData>(defaultMetrics);
@@ -167,6 +172,7 @@ export default function Home() {
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>(defaultAuditLogs);
   const [sessions, setSessions] = useState<SessionMeta[]>(defaultSessions);
   const [totalSessions, setTotalSessions] = useState<number>(761);
+  const [mcpServers, setMcpServers] = useState<McpServerSpec[]>([]);
 
   const [isLoading, setIsLoading] = useState(false);
   const [selectedSessionDetail, setSelectedSessionDetail] = useState<SessionTranscript | null>(null);
@@ -197,11 +203,12 @@ export default function Home() {
         }
       };
 
-      const [agentsRes, metricsRes, memoryRes, sessionsRes] = await Promise.all([
+      const [agentsRes, metricsRes, memoryRes, sessionsRes, mcpRes] = await Promise.all([
         safeFetch(`${origin}/api/agents${demoParam}`),
         safeFetch(`${origin}/api/metrics${demoParam}`),
         safeFetch(`${origin}/api/memory${demoParam}`),
         safeFetch(`${origin}/api/sessions${demoParam}`),
+        safeFetch(`${origin}/api/mcp-servers`),
       ]);
 
       if (!isMountedRef.current) return;
@@ -219,6 +226,9 @@ export default function Home() {
       if (sessionsRes?.success) {
         if (Array.isArray(sessionsRes.sessions)) setSessions(sessionsRes.sessions);
         if (typeof sessionsRes.total === "number") setTotalSessions(sessionsRes.total);
+      }
+      if (mcpRes?.success && Array.isArray(mcpRes.servers)) {
+        setMcpServers(mcpRes.servers);
       }
     } catch (error) {
       console.error("Failed to load dashboard telemetry:", error);
@@ -386,6 +396,18 @@ export default function Home() {
         </button>
 
         <button
+          onClick={() => setActiveTab("mcp")}
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold transition-all ${
+            activeTab === "mcp"
+              ? "bg-gradient-to-r from-cyan-500/20 to-emerald-500/20 text-cyan-300 border border-cyan-500/40 shadow-lg shadow-cyan-950/50"
+              : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
+          }`}
+        >
+          <Plug className="h-4 w-4 text-emerald-400" />
+          MCP Servers ({mcpServers.length})
+        </button>
+
+        <button
           onClick={() => setActiveTab("stitch")}
           className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold transition-all ${
             activeTab === "stitch"
@@ -426,6 +448,8 @@ export default function Home() {
             <AuditLogs logs={auditLogs} />
           </div>
         )}
+
+        {activeTab === "mcp" && <McpServers servers={mcpServers} />}
 
         {activeTab === "stitch" && <StitchStudio />}
       </div>
