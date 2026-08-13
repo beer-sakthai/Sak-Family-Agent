@@ -122,18 +122,57 @@ them.** `Dockerfile.sandbox` still runs `pip install --no-cache-dir -e "."`,
 `scripts/bootstrap.sh` still runs an unpinned `uv pip install -e ".[dev]"`, and
 the `gh-env.sh` / `comfyui_setup.sh` / `evolve_agent.sh` copies are untouched —
 so the deployed-script class this document spent three sweeps deferring left
-the dashboard some other way. The overwhelmingly likely reading is that they
-were dismissed as accepted risk from the Security tab, which is exactly the
-option the Remediation section offered.
+the dashboard some other way.
 
-"Overwhelmingly likely" is not a measurement, and this document has already
-been wrong once by reasoning past that gap (see the Correction above). The
-listing script only ever queried `state=open`, so a dismissed alert and one a
-fix closed look identical to it. It now takes `--state`
-(`open`/`closed`/`dismissed`/`fixed`/`all`) and prints each alert's state with
-its dismissal reason, and the cleanup workflow reports the dismissed set on
-every run. **The next dispatch settles it**; until that read lands, treat the
-disappearance as unexplained rather than as a fix.
+### What actually happened to them — measured, not inferred
+
+The first draft of this section said they had "overwhelmingly likely" been
+dismissed as accepted risk from the Security tab, that being the option the
+Remediation section offered. **That was wrong**, and it is recorded here rather
+than quietly corrected because it is the same mistake as the Correction above,
+made again in the same document: a plausible chain of reasoning written up
+before the source of truth was read.
+
+The listing script only ever queried `state=open`, so a dismissed alert and one
+a fix closed looked identical to it. It now takes `--state`
+(`open`/`closed`/`dismissed`/`fixed`/`all`) and prints each alert's real state
+with its dismissal reason, and the cleanup workflow reports the closed set on
+every run. Two reads settled it (runs
+[31749296602](https://github.com/beer-sakthai/Sak-Family-Agent/actions/runs/31749296602)
+and
+[31749507755](https://github.com/beer-sakthai/Sak-Family-Agent/actions/runs/31749507755)):
+
+```
+Dismissed alerts: 12 — all CodeQL, 0 Scorecard
+Closed alerts:   166 — Scorecard 91, CodeQL 73, ESLint 2
+
+Scorecard closed, by rule:
+  76  PinnedDependenciesID  sev=medium  state=fixed
+  14  TokenPermissionsID    sev=high    state=fixed
+   1  SASTID                sev=medium  state=fixed
+```
+
+**Not one Scorecard alert was ever dismissed.** All 76
+`PinnedDependenciesID` alerts sit in state `fixed` — GitHub's word for "a
+newer analysis from the same tool stopped reporting it". Six of those really
+were fixed by a diff (`pylint.yml`'s four, `setup-extensions.sh` and its
+twin). The rest were closed with their inputs unchanged: the unpinned `pip`,
+`npm` and `curl | bash` lines are all still in the tree, verified file by file.
+
+So this is neither a fix nor an accepted risk. It is Scorecard no longer
+emitting a finding it used to emit, against a repository that did not change —
+the same re-scoring behaviour this document already recorded when four
+`TokenPermissionsID` alerts vanished after the two *top-level* ones were fixed
+(and 14 now sit closed under that rule). **The practical consequence is that
+they can come back.** Nothing about the supply-chain exposure improved; only
+the reporting did. The scope decision in the Remediation section is therefore
+still live and still unmade, and a future scan reopening 29 alerts is the
+expected case, not a surprise.
+
+The narrower lesson, which is worth more than the alert count: "the dashboard
+no longer shows it" and "it is fixed" are different claims, and the tool that
+could not tell them apart was the reason for guessing. That is now a one-line
+read.
 
 What remains is the six repository-health checks, one alert each:
 
@@ -639,12 +678,11 @@ actually configured. `main` does in fact require `test (3.11)` and
 
 ## Remediation
 
-> Superseded 2026-08-13 by the `c0cc7e0` read above — `PinnedDependenciesID` is
-> **0** on the dashboard, and the paragraph below describes the decision as it
-> stood while those 29 were still open. Kept because the reasoning is what a
-> future unpinned-install alert should be weighed against, and because the
-> alerts left without a diff: if they were dismissed rather than fixed, the
-> files are still unpinned and the decision below is still the live one.
+> Still live as of 2026-08-13, despite `PinnedDependenciesID` reading **0** on
+> the dashboard. Those alerts closed as `fixed` without a diff and with the
+> files unchanged (measured above), so nothing below has actually been decided
+> or done — a future Scorecard scan can reopen all 29. Read the paragraph as
+> current, not historical.
 
 **Decide on the remaining 29 `PinnedDependenciesID` alerts.** They are the only
 class a diff can close, and closing them touches deployed scripts that CI never
@@ -671,13 +709,17 @@ the "Code scanning alerts" permission:
 export GITHUB_TOKEN=<pat>
 python scripts/code_scanning_analyses.py list --alerts
 
-# Why an alert left the open list — dismissed as accepted risk, or fixed?
-python scripts/code_scanning_analyses.py list --alerts --state dismissed
+# Why an alert left the open list — fixed, re-scored away, or dismissed?
+python scripts/code_scanning_analyses.py list --alerts --state closed
 ```
 
 `--state` exists because the `open` listing cannot answer that question, and
-the 2026-08-13 read needed it: 29 alerts disappeared with no matching diff. The
-workflow now prints the dismissed set on every run alongside the open one.
+the 2026-08-13 read needed it: 29 alerts disappeared with no matching diff, and
+the first guess at why was wrong. `closed` is the useful one — it covers
+`dismissed` and `fixed` together and prints each alert's real state, so an
+accepted risk, a diff-driven fix and a scanner that simply stopped reporting
+are three distinguishable outcomes rather than one absence. The workflow prints
+that set on every run alongside the open one.
 
 Its `delete` subcommand exists for a different problem — retiring a tool that
 no longer runs, whose alerts nothing will ever close. Nothing on this dashboard
