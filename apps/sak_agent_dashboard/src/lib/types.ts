@@ -280,6 +280,7 @@ export interface SpecKitData {
   templates: SpecKitTemplate[];
   constitution?: SpecKitConstitution;
   scripts: string[];
+  upstream: SpecKitUpstream;
 }
 
 export interface SpecKitApiResponse {
@@ -551,6 +552,184 @@ export interface ConductorData {
 export interface ConductorApiResponse {
   success: boolean;
   conductor: ConductorData;
+  error?: string;
+}
+
+// ---------------- OpenTelemetry (Observability) ----------------
+
+export type OtelSignal = "traces" | "metrics" | "logs";
+
+export interface OtelSignalCard {
+  id: OtelSignal;
+  title: string;
+  summary: string;
+  keyPrimitives: string[];
+  docsUrl: string;
+}
+
+export interface OtelExporter {
+  id: string;
+  name: string;
+  transport: string;
+  usage: string;
+}
+
+export interface OtelSemConv {
+  attribute: string;
+  purpose: string;
+}
+
+export interface OtelData {
+  overview: {
+    title: string;
+    description: string;
+    repoUrl: string;
+    siteUrl: string;
+    license: string;
+  };
+  install: string;
+  signals: OtelSignalCard[];
+  exporters: OtelExporter[];
+  llmSemconv: OtelSemConv[];
+  sakthaiIntegration: string;
+}
+
+export interface OtelApiResponse {
+  success: boolean;
+  otel: OtelData;
+  error?: string;
+}
+
+// ---------------- Google ADK ----------------
+
+export type AdkPrimitiveKind =
+  | "core"
+  | "llm-agent"
+  | "workflow-agent"
+  | "runner"
+  | "tool"
+  | "mcp"
+  | "cli";
+
+export interface AdkPrimitive {
+  id: string;
+  name: string;
+  kind: AdkPrimitiveKind;
+  summary: string;
+  snippet: string;
+}
+
+export interface AdkData {
+  overview: {
+    title: string;
+    description: string;
+    repoUrl: string;
+    pypiUrl: string;
+    packageName: string;
+    license: string;
+    pythonMin: string;
+  };
+  install: string;
+  quickstart: string;
+  primitives: AdkPrimitive[];
+  cliCommands: Array<{ command: string; purpose: string }>;
+  comparisonNote: string;
+}
+
+export interface AdkApiResponse {
+  success: boolean;
+  adk: AdkData;
+  error?: string;
+}
+
+// ---------------- GCP Learning (training-data-analyst) ----------------
+
+export type GcpLearningTag =
+  | "agents"
+  | "ml"
+  | "data"
+  | "notebooks"
+  | "labs"
+  | "docs";
+
+export interface GcpLearningResource {
+  id: string;
+  path: string;
+  title: string;
+  description: string;
+  tags: GcpLearningTag[];
+  url: string;
+}
+
+export interface GcpLearningData {
+  overview: {
+    title: string;
+    description: string;
+    repoUrl: string;
+    stars: string;
+    license: string;
+  };
+  resources: GcpLearningResource[];
+  tagLabels: Record<GcpLearningTag, string>;
+}
+
+export interface GcpLearningApiResponse {
+  success: boolean;
+  learning: GcpLearningData;
+  error?: string;
+}
+
+// ---------------- SpecKit upstream (enhancement) ----------------
+
+export interface SpecKitUpstreamCommand {
+  slash: string;
+  purpose: string;
+  optional?: boolean;
+}
+
+export interface SpecKitUpstream {
+  repoUrl: string;
+  license: string;
+  installCommand: string;
+  minPython: string;
+  requiredTools: string[];
+  supportedIntegrations: string[];
+  commands: SpecKitUpstreamCommand[];
+  layoutNote: string;
+}
+
+// ---------------- M365 Copilot Agents ----------------
+
+export interface M365CopilotPrimitive {
+  id: string;
+  name: string;
+  summary: string;
+  snippet: string;
+}
+
+export interface M365CopilotData {
+  overview: {
+    title: string;
+    description: string;
+    repoUrl: string;
+    pypiUrl: string;
+    packageName: string;
+    authModel: string;
+  };
+  install: string;
+  quickstart: string;
+  primitives: M365CopilotPrimitive[];
+  authSteps: string[];
+  contrastWithTeamsMcp: Array<{
+    dimension: string;
+    m365Sdk: string;
+    teamsCopilotMcp: string;
+  }>;
+}
+
+export interface M365CopilotApiResponse {
+  success: boolean;
+  m365: M365CopilotData;
   error?: string;
 }
 

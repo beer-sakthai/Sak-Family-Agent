@@ -18,6 +18,10 @@ import {
   MessagesSquare,
   Bot,
   Music2,
+  Telescope,
+  Users,
+  GraduationCap,
+  Fingerprint,
 } from "lucide-react";
 import DemoModeToggle from "@/components/DemoModeToggle";
 import AgentOverview from "@/components/AgentOverview";
@@ -33,6 +37,10 @@ import ChatKitPanel from "@/components/ChatKitPanel";
 import AntigravityPanel from "@/components/AntigravityPanel";
 import GenkitPanel from "@/components/GenkitPanel";
 import ConductorPanel from "@/components/ConductorPanel";
+import OtelPanel from "@/components/OtelPanel";
+import GoogleAdkPanel from "@/components/GoogleAdkPanel";
+import GcpLearningPanel from "@/components/GcpLearningPanel";
+import M365CopilotPanel from "@/components/M365CopilotPanel";
 import {
   AgentPersona,
   MetricsData,
@@ -47,6 +55,10 @@ import {
   AntigravityData,
   GenkitData,
   ConductorData,
+  OtelData,
+  AdkData,
+  GcpLearningData,
+  M365CopilotData,
 } from "@/lib/types";
 
 const defaultPersonas: AgentPersona[] = [
@@ -191,6 +203,10 @@ export default function Home() {
     | "antigravity"
     | "genkit"
     | "conductor"
+    | "otel"
+    | "adk"
+    | "learning"
+    | "m365"
     | "stitch"
   >("overview");
 
@@ -207,6 +223,10 @@ export default function Home() {
   const [antigravity, setAntigravity] = useState<AntigravityData | null>(null);
   const [genkit, setGenkit] = useState<GenkitData | null>(null);
   const [conductor, setConductor] = useState<ConductorData | null>(null);
+  const [otel, setOtel] = useState<OtelData | null>(null);
+  const [adk, setAdk] = useState<AdkData | null>(null);
+  const [learning, setLearning] = useState<GcpLearningData | null>(null);
+  const [m365, setM365] = useState<M365CopilotData | null>(null);
 
   const [isLoading, setIsLoading] = useState(false);
   const [selectedSessionDetail, setSelectedSessionDetail] = useState<SessionTranscript | null>(null);
@@ -237,7 +257,7 @@ export default function Home() {
         }
       };
 
-      const [agentsRes, metricsRes, memoryRes, sessionsRes, mcpRes, speckitRes, mcpSdkRes, chatkitRes, antigravityRes, genkitRes, conductorRes] = await Promise.all([
+      const [agentsRes, metricsRes, memoryRes, sessionsRes, mcpRes, speckitRes, mcpSdkRes, chatkitRes, antigravityRes, genkitRes, conductorRes, otelRes, adkRes, learningRes, m365Res] = await Promise.all([
         safeFetch(`${origin}/api/agents${demoParam}`),
         safeFetch(`${origin}/api/metrics${demoParam}`),
         safeFetch(`${origin}/api/memory${demoParam}`),
@@ -249,6 +269,10 @@ export default function Home() {
         safeFetch(`${origin}/api/antigravity`),
         safeFetch(`${origin}/api/genkit`),
         safeFetch(`${origin}/api/conductor`),
+        safeFetch(`${origin}/api/otel`),
+        safeFetch(`${origin}/api/google-adk`),
+        safeFetch(`${origin}/api/gcp-learning`),
+        safeFetch(`${origin}/api/m365-copilot`),
       ]);
 
       if (!isMountedRef.current) return;
@@ -287,6 +311,18 @@ export default function Home() {
       }
       if (conductorRes?.success && conductorRes.conductor) {
         setConductor(conductorRes.conductor);
+      }
+      if (otelRes?.success && otelRes.otel) {
+        setOtel(otelRes.otel);
+      }
+      if (adkRes?.success && adkRes.adk) {
+        setAdk(adkRes.adk);
+      }
+      if (learningRes?.success && learningRes.learning) {
+        setLearning(learningRes.learning);
+      }
+      if (m365Res?.success && m365Res.m365) {
+        setM365(m365Res.m365);
       }
     } catch (error) {
       console.error("Failed to load dashboard telemetry:", error);
@@ -568,6 +604,64 @@ export default function Home() {
         </button>
 
         <button
+          onClick={() => setActiveTab("adk")}
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold transition-all ${
+            activeTab === "adk"
+              ? "bg-gradient-to-r from-cyan-500/20 to-blue-500/20 text-cyan-300 border border-cyan-500/40 shadow-lg shadow-cyan-950/50"
+              : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
+          }`}
+        >
+          <Users className="h-4 w-4 text-cyan-400" />
+          Google ADK
+          {adk && (
+            <span className="text-[10px] font-mono ml-1 px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700/70">
+              {adk.primitives.length}p
+            </span>
+          )}
+        </button>
+
+        <button
+          onClick={() => setActiveTab("m365")}
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold transition-all ${
+            activeTab === "m365"
+              ? "bg-gradient-to-r from-cyan-500/20 to-sky-500/20 text-cyan-300 border border-cyan-500/40 shadow-lg shadow-cyan-950/50"
+              : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
+          }`}
+        >
+          <Fingerprint className="h-4 w-4 text-sky-400" />
+          M365 Copilot
+        </button>
+
+        <button
+          onClick={() => setActiveTab("otel")}
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold transition-all ${
+            activeTab === "otel"
+              ? "bg-gradient-to-r from-cyan-500/20 to-emerald-500/20 text-cyan-300 border border-cyan-500/40 shadow-lg shadow-cyan-950/50"
+              : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
+          }`}
+        >
+          <Telescope className="h-4 w-4 text-emerald-400" />
+          Observability
+        </button>
+
+        <button
+          onClick={() => setActiveTab("learning")}
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold transition-all ${
+            activeTab === "learning"
+              ? "bg-gradient-to-r from-cyan-500/20 to-amber-500/20 text-cyan-300 border border-cyan-500/40 shadow-lg shadow-cyan-950/50"
+              : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
+          }`}
+        >
+          <GraduationCap className="h-4 w-4 text-amber-400" />
+          Learning
+          {learning && (
+            <span className="text-[10px] font-mono ml-1 px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700/70">
+              {learning.resources.length}
+            </span>
+          )}
+        </button>
+
+        <button
           onClick={() => setActiveTab("stitch")}
           className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold transition-all ${
             activeTab === "stitch"
@@ -622,6 +716,14 @@ export default function Home() {
         {activeTab === "genkit" && <GenkitPanel data={genkit} />}
 
         {activeTab === "conductor" && <ConductorPanel data={conductor} />}
+
+        {activeTab === "adk" && <GoogleAdkPanel data={adk} />}
+
+        {activeTab === "m365" && <M365CopilotPanel data={m365} />}
+
+        {activeTab === "otel" && <OtelPanel data={otel} />}
+
+        {activeTab === "learning" && <GcpLearningPanel data={learning} />}
 
         {activeTab === "stitch" && <StitchStudio />}
       </div>

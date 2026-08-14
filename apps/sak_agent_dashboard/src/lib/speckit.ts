@@ -7,9 +7,60 @@ import {
   SpecKitIntegrationManifest,
   SpecKitIntegrationState,
   SpecKitTemplate,
+  SpecKitUpstream,
   SpecKitWorkflow,
   SpecKitWorkflowStep,
 } from "./types";
+
+const UPSTREAM: SpecKitUpstream = {
+  repoUrl: "https://github.com/github/spec-kit",
+  license: "MIT",
+  installCommand: "uv tool install specify-cli",
+  minPython: "3.11+",
+  requiredTools: ["Python 3.11+", "Git", "uv"],
+  supportedIntegrations: [
+    "GitHub Copilot",
+    "Claude Code",
+    "Gemini CLI",
+    "Cursor",
+    "opencode",
+    "alquimia",
+    "and 25+ more",
+  ],
+  commands: [
+    { slash: "/speckit.constitution", purpose: "Establish project principles." },
+    { slash: "/speckit.specify", purpose: "Define feature/bug requirements." },
+    {
+      slash: "/speckit.clarify",
+      purpose: "Ask the user targeted clarifying questions on a draft spec.",
+      optional: true,
+    },
+    { slash: "/speckit.plan", purpose: "Draft the technical implementation strategy." },
+    { slash: "/speckit.tasks", purpose: "Break the plan into an ordered task list." },
+    {
+      slash: "/speckit.taskstoissues",
+      purpose: "Push the task list into GitHub Issues.",
+      optional: true,
+    },
+    {
+      slash: "/speckit.analyze",
+      purpose: "Analyze the codebase against the spec + plan.",
+      optional: true,
+    },
+    {
+      slash: "/speckit.checklist",
+      purpose: "Generate a per-task acceptance checklist.",
+      optional: true,
+    },
+    { slash: "/speckit.implement", purpose: "Execute the task list end-to-end." },
+    {
+      slash: "/speckit.converge",
+      purpose: "Assess the codebase against spec + plan + tasks; report drift.",
+    },
+  ],
+  layoutNote:
+    "The .specify/ directory in this repo mirrors the upstream template pipeline: templates/ (core built-ins), workflows/ (composed cycles like Full SDD Cycle), integrations/ (per-agent adapters), memory/ (constitution). Overrides resolve at runtime as: overrides → presets → extensions → core.",
+};
 
 const DEFAULT_SPECKIT_DIR = path.resolve(process.cwd(), "..", "..", ".specify");
 
@@ -410,6 +461,7 @@ export function getSpecKitData(): SpecKitData {
       integrations: [],
       templates: [],
       scripts: [],
+      upstream: UPSTREAM,
     };
   }
   return {
@@ -422,6 +474,7 @@ export function getSpecKitData(): SpecKitData {
     templates: parseTemplates(rootDir),
     constitution: parseConstitution(rootDir),
     scripts: parseScripts(rootDir),
+    upstream: UPSTREAM,
   };
 }
 
