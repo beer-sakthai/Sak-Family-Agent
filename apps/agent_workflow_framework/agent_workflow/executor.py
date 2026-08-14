@@ -46,6 +46,9 @@ def _validate_url(url_str: str) -> None:
     if url_str.startswith("-"):
         raise ValueError(f"Option smuggling detected in URL: {url_str}")
 
+    if any(ord(c) < 32 or ord(c) == 127 for c in url_str):
+        raise ValueError("Control characters are not allowed in URLs")
+
     try:
         parsed = urllib.parse.urlparse(url_str)
     except Exception as e:
@@ -244,9 +247,21 @@ def _validate_shell_command(cmd_str: str) -> None:
         for segment in segments[1:]:
             segment = segment.strip(" \t\n\r\"'()$&;")
             if segment:
-                first_word = segment.split()[0] if segment.split() else ""
-                first_word = first_word.strip(" \t\n\r\"'()$&;")
-                basename = os.path.basename(first_word)
+                try:
+                    words = shlex.split(segment)
+                except Exception:
+                    words = segment.split()
+
+                # Robust helper to find the actual executable command by unwrapping environment variables,
+                # flags, and common transparent wrappers (including shell/system/package wrappers).
+                wrappers = {
+                    "env", "sudo", "doas", "xargs", "timeout", "nohup", "setsid", "nice",
+                    "ionice", "chrt", "taskset", "stdbuf", "chroot", "nsenter", "unshare",
+                    "pkexec", "uv", "pipx", "bun", "bunx", "npx", "deno", "poetry",
+                    "pipenv", "conda", "pnpm", "yarn", "npm", "cargo", "composer",
+                    "busybox", "toybox",
+                }
+
                 interpreters = (
                     "sh",
                     "bash",
@@ -267,13 +282,68 @@ def _validate_shell_command(cmd_str: str) -> None:
                     "tsx",
                     "ts-node",
                 )
-                for interp in interpreters:
-                    pattern = rf"^{re.escape(interp)}(?:[0-9]+(?:\.[0-9]+)*)?$"
-                    if re.match(pattern, basename):
-                        raise PermissionError(
-                            f"Pipeline to interpreter {first_word!r} is prohibited "
-                            "to prevent command execution bypass."
-                        )
+
+                cmd_word = ""
+                i = 0
+                while i < len(words):
+                    token = words[i].strip(" \t\n\r\"'()$&;")
+                    if not token:
+                        i += 1
+                        continue
+
+                    # Skip env vars
+                    if "=" in token and not token.startswith("-"):
+                        i += 1
+                        continue
+
+                    # Skip flags and their arguments
+                    if token.startswith("-"):
+                        if token in ("-s", "--signal", "-k", "--kill-after", "-n", "--adjustment", "-c", "-p"):
+                            i += 2
+                        else:
+                            i += 1
+                        continue
+
+                    basename = os.path.basename(token)
+
+                    # 1. If it is an interpreter, select it immediately (takes precedence over wrappers)
+                    is_interp = False
+                    for interp in interpreters:
+                        pattern = rf"^{re.escape(interp)}(?:[0-9]+(?:\.[0-9]+)*)?$"
+                        if re.match(pattern, basename):
+                            is_interp = True
+                            break
+                    if is_interp:
+                        cmd_word = token
+                        break
+
+                    # 2. Skip wrappers
+                    if basename in wrappers:
+                        i += 1
+                        # Special wrapper argument handling:
+                        # timeout takes a duration argument right after options
+                        if basename == "timeout":
+                            while i < len(words) and words[i].startswith("-"):
+                                if words[i] in ("-s", "--signal", "-k", "--kill-after"):
+                                    i += 2
+                                else:
+                                    i += 1
+                            if i < len(words):
+                                i += 1
+                        continue
+
+                    cmd_word = token
+                    break
+
+                if cmd_word:
+                    basename = os.path.basename(cmd_word)
+                    for interp in interpreters:
+                        pattern = rf"^{re.escape(interp)}(?:[0-9]+(?:\.[0-9]+)*)?$"
+                        if re.match(pattern, basename):
+                            raise PermissionError(
+                                f"Pipeline to interpreter {cmd_word!r} is prohibited "
+                                "to prevent command execution bypass."
+                            )
 
     try:
         parts = shlex.split(cmd_str)

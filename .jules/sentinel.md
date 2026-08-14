@@ -1,5 +1,10 @@
 # Sentinel Security Journal
 
+## 2026-08-30 - Pipeline-to-Interpreter Bypass via Wrappers and Environment Variables
+**Vulnerability:** The Agent Workflow Framework executor's shell/command validation split pipelines by `|` and checked only the first word of the next segment. This was easily bypassed by wrapping the target interpreter in transparent wrappers (such as `env`, `sudo`, `timeout`, `pkexec`, `nohup`) or prepending environment variables (e.g., `env FOO=BAR python`), allowing command injection/execution of standard shell runtimes.
+**Learning:** Checking only the first word of a pipeline segment is insufficient to detect wrapped execution contexts. Wrappers and env vars act as "prefixes" that shift the actual executable token further down the line.
+**Prevention:** Implement an unwrapping scanner that processes segment tokens, recursively skipping flags, environment variable assignments, and known system/wrapper binaries to extract and validate the actual underlying command.
+
 ## 2026-08-27 - Case-Sensitivity Bypass in Direct File Read Blockers
 **Vulnerability:** The defense-in-depth file-read blocker `_is_sensitive_read_target` in `tools.py` compared raw file names and directory components directly to lowercase blocklists (`_SENSITIVE_READ_BASENAMES` and `_SENSITIVE_READ_FRAGMENTS`). This allowed casing-based bypasses (such as reading `.ENV`, `Credentials.json`, or `.SSH/authorized_keys`) on case-insensitive filesystems, rendering the protection ineffective against non-lowercase inputs.
 **Learning:** Checking path-based constraints against static string lists or directory fragments must always normalize the requested paths case-insensitively. Simple casing discrepancies can trivially bypass security boundaries.

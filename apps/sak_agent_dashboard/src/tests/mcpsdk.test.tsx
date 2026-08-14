@@ -67,8 +67,8 @@ describe("MCP SDK Feature Suite", () => {
       const data = getMcpSdkData();
       render(<McpSdkPanel data={data} />);
       expect(
-        screen.getByText(/Model Context Protocol/i)
-      ).toBeInTheDocument();
+        screen.getAllByText(/Model Context Protocol/i).length
+      ).toBeGreaterThan(0);
       // Package names (as <code> elements) — allow multiple matches
       expect(screen.getAllByText("mcp").length).toBeGreaterThan(0);
       expect(screen.getAllByText("fastmcp").length).toBeGreaterThan(0);

@@ -26,7 +26,7 @@ dev = [
     "pytest>=9.1.1",
     "pytest-asyncio>=0.23",
     "pytest-cov>=5.0",
-    "hypothesis>=6.165.2",
+    "hypothesis>=6.165.3",
     "ruff>=0.16.2",
     "mypy>=2.3.0",
     "bandit[toml]>=1.9.4",
@@ -242,6 +242,15 @@ evals = [
 # reviewable diff rather than silently on the next push.
 lint = [
     "pylint>=4.0.7,<5.0",
+]
+# Atheris for the harnesses in fuzz/. Its own group, and deliberately not in
+# `dev`: it builds against a matching clang/libFuzzer toolchain, so putting it
+# in the default install would make `uv sync --all-extras` fail on any machine
+# without one. Nothing in CI needs it — tests/test_fuzz_harnesses.py exercises
+# every harness invariant through a plain `exercise(bytes)` entry point that
+# imports nothing from Atheris. Install it only to run a real campaign.
+fuzz = [
+    "atheris>=3.0.0",
 ]
 
 [tool.uv.sources]

@@ -22,6 +22,8 @@ const personaGlows: Record<string, string> = {
   SakSee: "border-amber-500/30 hover:border-amber-500/60 shadow-amber-950/40",
   SakSit: "border-emerald-500/30 hover:border-emerald-500/60 shadow-emerald-950/40",
   SakJules: "border-rose-500/30 hover:border-rose-500/60 shadow-rose-950/40",
+  SakTan: "border-indigo-500/30 hover:border-indigo-500/60 shadow-indigo-950/40",
+  Unattributed: "border-slate-600/40 hover:border-slate-500/60 shadow-slate-950/40",
 };
 
 export function AgentCard({ agent }: AgentCardProps) {
@@ -29,8 +31,12 @@ export function AgentCard({ agent }: AgentCardProps) {
   const glowClass = personaGlows[agent.name] || "border-slate-800 hover:border-slate-700";
   const icon = personaIcons[agent.name] || <Cpu className="h-5 w-5 text-cyan-400" />;
 
-  // Default benchmark score if not explicitly set
-  const score = agent.benchmarkScore ?? 92.5;
+  // No benchmark is reported on live data — eval.jsonl carries none. Render the
+  // absence rather than substituting a number, which is what the previous
+  // `?? 92.5` fallback did: every persona showed a plausible-looking 92.5%
+  // score that had never been measured.
+  const score = agent.benchmarkScore;
+  const hasScore = typeof score === "number" && Number.isFinite(score);
 
   return (
     <div
@@ -108,19 +114,29 @@ export function AgentCard({ agent }: AgentCardProps) {
         </div>
       </div>
 
-      {/* Benchmark Score Progress Bar */}
+      {/* Benchmark Score Progress Bar — only when a score was actually recorded */}
       <div className="space-y-1.5">
         <div className="flex items-center justify-between text-xs font-mono">
           <span className="text-slate-400 text-[11px] flex items-center gap-1">
             <Award className="h-3 w-3 text-amber-400" /> Benchmark Score
           </span>
-          <span className="font-bold text-emerald-400">{score.toFixed(1)}%</span>
+          {hasScore ? (
+            <span className="font-bold text-emerald-400">{score!.toFixed(1)}%</span>
+          ) : (
+            <span className="text-slate-500" title="No benchmark recorded for this persona">
+              not measured
+            </span>
+          )}
         </div>
         <div className="h-2 w-full bg-slate-800/90 rounded-full overflow-hidden p-0.5 border border-slate-700/50">
-          <div
-            className="h-full bg-gradient-to-r from-cyan-500 via-teal-400 to-emerald-400 rounded-full transition-all duration-500 shadow-[0_0_10px_rgba(6,182,212,0.5)]"
-            style={{ width: `${Math.min(100, Math.max(0, score))}%` }}
-          />
+          {hasScore ? (
+            <div
+              className="h-full bg-gradient-to-r from-cyan-500 via-teal-400 to-emerald-400 rounded-full transition-all duration-500 shadow-[0_0_10px_rgba(6,182,212,0.5)]"
+              style={{ width: `${Math.min(100, Math.max(0, score!))}%` }}
+            />
+          ) : (
+            <div className="h-full w-full rounded-full bg-[repeating-linear-gradient(45deg,rgba(100,116,139,0.25)_0_6px,transparent_6px_12px)]" />
+          )}
         </div>
       </div>
 

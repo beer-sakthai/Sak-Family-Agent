@@ -454,3 +454,59 @@ def test_request_allows_valid_query_params(monkeypatch):
 
     assert result == {"value": "ok"}
     mock_request.assert_called_once()
+
+
+def test_request_blocks_control_characters_in_query_param_dict_keys(monkeypatch):
+    _valid_credentials(monkeypatch)
+    client = GraphClient()
+
+    for bad_char in ["\n", "\r", "\t", "\x00", "\x1f", "\x7f"]:
+        params = {"key": {f"inner{bad_char}": "value"}}
+        with pytest.raises(ValueError, match="Control characters are not allowed in query parameter keys"):
+            client.request("GET", "/me", params=params)
+
+
+def test_request_blocks_control_characters_in_query_param_dict_values(monkeypatch):
+    _valid_credentials(monkeypatch)
+    client = GraphClient()
+
+    for bad_char in ["\n", "\r", "\t", "\x00", "\x1f", "\x7f"]:
+        params = {"key": {"inner": f"value{bad_char}"}}
+        with pytest.raises(ValueError, match="Control characters are not allowed in query parameter values"):
+            client.request("GET", "/me", params=params)
+
+
+def test_request_blocks_control_characters_in_query_param_nested_dict_and_sets(monkeypatch):
+    _valid_credentials(monkeypatch)
+    client = GraphClient()
+
+    # Nested set containing a control character in its element
+    for bad_char in ["\n", "\r", "\t", "\x00", "\x1f", "\x7f"]:
+        params = {"key": {f"good", f"bad{bad_char}"}}
+        with pytest.raises(ValueError, match="Control characters are not allowed in query parameter values"):
+            client.request("GET", "/me", params=params)
+
+
+def test_request_redacts_other_ms_graph_secrets_from_exceptions(monkeypatch):
+    _valid_credentials(monkeypatch)
+    # Inject extra secret env vars
+    monkeypatch.setenv("MS_GRAPH_CLIENT_SECRET", "super-secret-1")
+    monkeypatch.setenv("MS_GRAPH_REFRESH_TOKEN", "refresh-secret-2")
+
+    client = GraphClient()
+    client._token = "cached-token"
+
+    # Mock _get_token to raise a ValueError containing our extra environment secrets
+    with patch.object(
+        client,
+        "_get_token",
+        side_effect=ValueError("Failed with super-secret-1 and refresh-secret-2 and secret-123"),
+    ):
+        with pytest.raises(ValueError) as exc_info:
+            client.request("GET", "/me")
+
+    err_msg = str(exc_info.value)
+    assert "super-secret-1" not in err_msg
+    assert "refresh-secret-2" not in err_msg
+    assert "secret-123" not in err_msg
+    assert "[REDACTED]" in err_msg

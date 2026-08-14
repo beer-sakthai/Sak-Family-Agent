@@ -144,8 +144,8 @@ describe("MCP Servers Feature Suite", () => {
       const servers = getMcpServers();
       render(<McpServers servers={servers} />);
       expect(screen.getByText(/Teams \+ M365 Copilot/i)).toBeInTheDocument();
-      expect(screen.getByText("send_channel_message")).toBeInTheDocument();
-      expect(screen.getByText("copilot_retrieval_query")).toBeInTheDocument();
+      expect(screen.getAllByText("send_channel_message").length).toBeGreaterThan(0);
+      expect(screen.getAllByText("copilot_retrieval_query").length).toBeGreaterThan(0);
       expect(screen.getByText("MSGRAPH_TENANT_ID")).toBeInTheDocument();
       expect(
         screen.getAllByText(/SakThai global outbound MCP/i).length
@@ -165,21 +165,27 @@ describe("MCP Servers Feature Suite", () => {
     it("filters the action catalog by search query", () => {
       const servers = getMcpServers();
       render(<McpServers servers={servers} />);
+      // list_channels appears in both the tools list and the action catalog before filtering
+      const beforeCount = screen.getAllByText("list_channels").length;
+      expect(beforeCount).toBeGreaterThanOrEqual(2);
       const input = screen.getByPlaceholderText(/Search actions/i);
       fireEvent.change(input, { target: { value: "calendar" } });
-      // list_calendar_events should still be visible; list_channels should not
-      expect(screen.getByText("list_calendar_events")).toBeInTheDocument();
-      expect(screen.queryByText("list_channels")).toBeNull();
+      // list_calendar_events should still be visible in the filtered catalog
+      expect(screen.getAllByText("list_calendar_events").length).toBeGreaterThan(0);
+      // list_channels should be removed from the catalog (tools list copy remains)
+      expect(screen.getAllByText("list_channels").length).toBeLessThan(beforeCount);
     });
 
     it("Delegated-only toggle narrows the catalog to delegated-auth actions", () => {
       const servers = getMcpServers();
       render(<McpServers servers={servers} />);
+      const beforeCount = screen.getAllByText("list_channels").length;
       const toggle = screen.getByRole("button", { name: /Delegated-only/i });
       fireEvent.click(toggle);
       // copilot_retrieval_query is the only delegated-auth action today
-      expect(screen.getByText("copilot_retrieval_query")).toBeInTheDocument();
-      expect(screen.queryByText("list_channels")).toBeNull();
+      expect(screen.getAllByText("copilot_retrieval_query").length).toBeGreaterThan(0);
+      // list_channels is app-only and should drop out of the catalog after toggle
+      expect(screen.getAllByText("list_channels").length).toBeLessThan(beforeCount);
     });
   });
 });

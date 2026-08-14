@@ -8,7 +8,7 @@ import {
   Copy,
   ExternalLink,
   FileCode,
-  Github,
+  GitBranch,
   Layers,
   MessagesSquare,
   Package,
@@ -165,7 +165,7 @@ export function AntigravityPanel({ data }: AntigravityPanelProps) {
               rel="noreferrer noopener"
               className="inline-flex items-center gap-1.5 text-[11px] font-mono text-cyan-300 hover:text-cyan-200"
             >
-              <Github className="h-3.5 w-3.5" />
+              <GitBranch className="h-3.5 w-3.5" />
               google-antigravity/antigravity-sdk-python
               <ExternalLink className="h-3 w-3" />
             </a>

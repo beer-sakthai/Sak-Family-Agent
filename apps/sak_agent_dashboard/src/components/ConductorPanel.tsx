@@ -8,7 +8,7 @@ import {
   Copy,
   ExternalLink,
   FileCode,
-  Github,
+  GitBranch,
   Music2,
   Play,
   Rocket,
@@ -110,7 +110,7 @@ export function ConductorPanel({ data }: ConductorPanelProps) {
             rel="noreferrer noopener"
             className="mt-1.5 inline-flex items-center gap-1.5 text-[11px] font-mono text-cyan-300 hover:text-cyan-200"
           >
-            <Github className="h-3.5 w-3.5" />
+            <GitBranch className="h-3.5 w-3.5" />
             gemini-cli-extensions/conductor
             <ExternalLink className="h-3 w-3" />
           </a>
@@ -277,7 +277,7 @@ export function ConductorPanel({ data }: ConductorPanelProps) {
           into this repo (<code className="text-cyan-300">.specify/</code>) and
           runs specify → plan → tasks → implement as a general-purpose SDD
           cycle. Conductor is an agent plugin — installed into the
-          <em> agent's</em> plugin dir, not the project — that turns any active
+          <em> agent&apos;s</em> plugin dir, not the project — that turns any active
           agent (Antigravity or Claude Code) into a project manager that
           enforces the same SDD discipline. Use Conductor when you want the
           agent itself to own the loop; use SpecKit when the workflow lives in
