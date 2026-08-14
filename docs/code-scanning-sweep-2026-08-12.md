@@ -201,6 +201,18 @@ version to bump to. The only lever is dropping `lm-eval`, which would delete
 the weekly `run-evals.yml` capability to close one alert on an optional
 dependency group. Not taken; it clears itself if upstream ever publishes a fix.
 
+> **Decided 2026-08-14 — accepted risk, written up in
+> [`SECURITY.md`](SECURITY.md#accepted-dependency-risk-sqlitedict-pysec-2026-1939).**
+> Re-verified against PyPI and OSV: `sqlitedict` 2.1.0 is the newest release,
+> its last upload was 2022-12-03 (unmaintained), the advisory has no `fixed`
+> event, and every `lm-eval` release including `0.5.0.dev1` still requires it.
+> pip-audit over runtime + extras reports **zero**; the finding appears only
+> once the `evals` group is included. The reachable path is `lm-eval`'s own
+> local result cache in a CI job — no attacker-controlled input — so the alert
+> is accepted rather than closed, with the reasoning and the re-evaluation
+> triggers recorded in SECURITY.md. Dismiss #15464 in the Security tab as
+> "won't fix" to take it off the dashboard; nothing in a diff will.
+
 ### `FuzzingID` #15463 — closed by this change
 
 The previous sweeps filed this alongside branch protection and repo age as
@@ -668,6 +680,37 @@ merging.** The check is cheap — `.github/workflows/codeql.yml` must not exist 
 long as default setup is on. Disabling default setup in repository settings and
 keeping an advanced workflow is the only other coherent option, and it would
 lose the `actions` language coverage that default setup provides today.
+
+#### The same hazard again, 2026-08-14 — `python-package-conda.yml`
+
+A third stock starter template arrived the same way, in another "[StepSecurity]
+Apply security best practices" commit: `.github/workflows/python-package-conda.yml`,
+unmodified apart from the bot's own action pinning. It failed **every run,
+including on `main`** — 6 of 6 — at
+
+```
+EnvironmentFileNotFound: '.../environment.yml' file not found
+```
+
+because the template's `conda env update --file environment.yml` refers to a
+file this repository has never had. It was removed.
+
+Nothing was lost, and the template was actively wrong for this repository on
+four counts beyond the missing file:
+
+- it pins **Python 3.10**, below the `requires-python = ">=3.11"` this project
+  declares, so it tested a version the package does not support;
+- it lints with **flake8**, while the repo's gate is ruff;
+- it runs bare `pytest` under conda, duplicating `ci.yml`'s uv-based run on
+  3.11 **and** 3.12 — badly, and without the coverage floor;
+- it triggers on `on: [push]`, i.e. every branch, not just `main`/PRs.
+
+There is no conda usage anywhere in this repository. Read together with the two
+`codeql.yml` incidents above, the pattern is now three-for-three: **a stock
+GitHub Actions starter template added by an automated remediation bot has never
+once worked here.** Treat any new `.github/workflows/*` file arriving in a
+StepSecurity-style PR as guilty until a green run proves otherwise, and check it
+against the repo's actual toolchain (uv, ruff, 3.11+) before merging.
 
 #### `BranchProtectionID`
 
