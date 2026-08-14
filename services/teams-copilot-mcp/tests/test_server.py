@@ -14,6 +14,14 @@ def test_resolve_path_raises_on_missing_param():
         server._resolve_path("/teams/{team_id}/channels/{channel_id}", {"team_id": "T1"})
 
 
+def test_resolve_path_raises_on_control_characters():
+    with pytest.raises(ValueError, match="Control characters are not allowed"):
+        server._resolve_path("/teams/{team_id}/channels/{channel_id}", {"team_id": "T1\n", "channel_id": "C1"})
+
+    with pytest.raises(ValueError, match="Control characters are not allowed"):
+        server._resolve_path("/teams/{team_id}/channels/{channel_id}", {"team_id": "T1", "channel_id": "C1\r\n"})
+
+
 def test_execute_action_raises_on_unknown_id():
     with pytest.raises(ValueError, match="does_not_exist"):
         server.execute_action(action_id="does_not_exist")
