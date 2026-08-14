@@ -16,12 +16,14 @@ on:
     branches: [ "main" ]
     paths:
       - "apps/agent_workflow_framework/**"
+      - "apps/sak_agent_dashboard/**"
       - "services/teams-copilot-mcp/**"
       - ".github/workflows/subprojects.yml"
   pull_request:
     branches: [ "main" ]
     paths:
       - "apps/agent_workflow_framework/**"
+      - "apps/sak_agent_dashboard/**"
       - "services/teams-copilot-mcp/**"
       - ".github/workflows/subprojects.yml"
 
@@ -87,3 +89,54 @@ jobs:
       # httpx), deliberately kept out of the root lock.
       - name: Run tests
         run: uv run --project . --extra dev python -m pytest tests/ -q
+
+  sak-agent-dashboard:
+    name: sak_agent_dashboard
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/sak_agent_dashboard
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@b09bb98e06d4d774595224525879c09bc6e98c40 # v2.20.1
+        with:
+          use-policy-store: true
+          api-key: ${{ secrets.STEP_SECURITY_API_KEY }}
+
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # The only Node subproject in the repo. pnpm is pinned to the version in
+      # package.json's `packageManager` field so CI resolves the same tree the
+      # committed pnpm-lock.yaml was generated with.
+      - name: Install pnpm
+        uses: pnpm/action-setup@008330803749db0355799c700092d9a85fd074e9 # v6.0.9
+        with:
+          version: 9.15.9
+
+      - name: Set up Node
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version: "20"
+          cache: pnpm
+          cache-dependency-path: apps/sak_agent_dashboard/pnpm-lock.yaml
+
+      # `--frozen-lockfile` is pnpm's `npm ci`: it installs the locked tree and
+      # fails rather than re-resolving, which is what keeps this off the
+      # unpinned-dependency findings. Do not add `--no-optional` — better-sqlite3
+      # is an optionalDependency precisely so a runner without a native build
+      # still passes, and the lockfile expects it to be considered.
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Type-check
+        run: pnpm typecheck
+
+      - name: Run tests
+        run: pnpm test
+
+      - name: Build
+        run: pnpm build
