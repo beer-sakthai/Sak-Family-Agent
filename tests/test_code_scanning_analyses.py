@@ -133,9 +133,7 @@ def test_paginate_surfaces_other_errors(mod: ModuleType, monkeypatch: pytest.Mon
 def test_list_reports_a_tool_with_alerts_but_no_live_analysis(
     mod: ModuleType, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    monkeypatch.setattr(
-        mod, "fetch_open_alerts", lambda *a: [_alert(1, "Codacy"), _alert(2, "Codacy")]
-    )
+    monkeypatch.setattr(mod, "fetch_alerts", lambda *a: [_alert(1, "Codacy"), _alert(2, "Codacy")])
     monkeypatch.setattr(mod, "fetch_analyses", lambda *a, **k: [_analysis(10, "Codacy")])
 
     args = mod.build_parser().parse_args(["list"])
@@ -150,7 +148,7 @@ def test_list_reports_a_tool_with_alerts_but_no_live_analysis(
 def test_list_can_dump_individual_analyses(
     mod: ModuleType, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    monkeypatch.setattr(mod, "fetch_open_alerts", lambda *a: [])
+    monkeypatch.setattr(mod, "fetch_alerts", lambda *a: [])
     monkeypatch.setattr(
         mod, "fetch_analyses", lambda *a, **k: [_analysis(10, "Codacy", results=15000)]
     )
@@ -163,12 +161,73 @@ def test_list_can_dump_individual_analyses(
 def test_list_says_so_when_nothing_is_reported(
     mod: ModuleType, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    monkeypatch.setattr(mod, "fetch_open_alerts", lambda *a: [])
+    monkeypatch.setattr(mod, "fetch_alerts", lambda *a: [])
     monkeypatch.setattr(mod, "fetch_analyses", lambda *a, **k: [])
 
     args = mod.build_parser().parse_args(["list"])
     assert args.func(args, "token") == 0
     assert "Nothing reported." in capsys.readouterr().out
+
+
+# --------------------------------------------------------------------------
+# alert state
+# --------------------------------------------------------------------------
+
+
+def test_fetch_alerts_filters_by_state(mod: ModuleType, monkeypatch: pytest.MonkeyPatch) -> None:
+    seen: list[dict] = []
+
+    def fake_paginate(path: str, token: str, params: dict) -> list[dict]:
+        seen.append(params)
+        return []
+
+    monkeypatch.setattr(mod, "_paginate", fake_paginate)
+    mod.fetch_alerts("o/r", "t", "dismissed")
+    assert seen == [{"state": "dismissed"}]
+
+
+def test_fetch_alerts_sends_no_filter_for_all(
+    mod: ModuleType, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """`all` must omit the parameter, not pass ``state=all``.
+
+    The API has no ``all`` state; it returns every state when the parameter is
+    absent. Sending ``state=all`` would be rejected rather than widened.
+    """
+    seen: list[dict] = []
+    monkeypatch.setattr(mod, "_paginate", lambda p, t, params: seen.append(params) or [])
+    mod.fetch_alerts("o/r", "t", "all")
+    assert seen == [{}]
+
+
+def test_list_prints_the_dismissal_reason(
+    mod: ModuleType, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """A dismissed alert must be distinguishable from one a fix closed.
+
+    Both simply stop appearing under `open`, which is how 29
+    PinnedDependenciesID alerts left the dashboard with no matching diff.
+    """
+    dismissed = {
+        "number": 15454,
+        "tool": {"name": "Scorecard"},
+        "state": "dismissed",
+        "dismissed_reason": "won't fix",
+        "rule": {"id": "PinnedDependenciesID", "severity": "medium"},
+        "most_recent_instance": {"ref": "refs/heads/main", "location": {}},
+    }
+    monkeypatch.setattr(mod, "fetch_alerts", lambda *a: [dismissed])
+    monkeypatch.setattr(mod, "fetch_analyses", lambda *a, **k: [])
+
+    args = mod.build_parser().parse_args(["list", "--alerts", "--state", "dismissed"])
+    assert args.func(args, "token") == 0
+    out = capsys.readouterr().out
+    assert "Dismissed code-scanning alerts" in out
+    assert "state=dismissed (won't fix)" in out
+
+
+def test_alert_state_omits_the_reason_when_there_is_none(mod: ModuleType) -> None:
+    assert mod._alert_state({"state": "open"}) == "open"
 
 
 # --------------------------------------------------------------------------
@@ -284,7 +343,7 @@ def test_main_reports_api_errors_without_a_traceback(
     def boom(*a: Any, **k: Any) -> list[Any]:
         raise mod.ApiError("403 from /x: Resource not accessible by integration")
 
-    monkeypatch.setattr(mod, "fetch_open_alerts", boom)
+    monkeypatch.setattr(mod, "fetch_alerts", boom)
     assert mod.main(["list"]) == 1
     assert "Resource not accessible" in capsys.readouterr().err
 
