@@ -1063,3 +1063,42 @@ def test_load_tool_overrides(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) ->
         learn_tool.input_schema["properties"]["value"]["description"]
         == "Overridden param description."
     )
+
+
+def test_send_telegram_message_redacts_secrets_in_errors(store: MemoryStore, monkeypatch) -> None:
+    fake_token = "123456789:ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghi"
+    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", fake_token)
+    monkeypatch.setenv("TELEGRAM_CHAT_ID", "987654321")
+
+    # 1. HTTPError with secret in exception description
+    def mock_urlopen_httperror(*args, **kwargs):
+        raise urllib.error.HTTPError(
+            url=f"https://api.telegram.org/bot{fake_token}/sendMessage",
+            code=400,
+            msg=f"Bad Request for {fake_token}",
+            hdrs={},
+            fp=None,
+        )
+
+    monkeypatch.setattr("urllib.request.urlopen", mock_urlopen_httperror)
+    out = tool_by_name("send_telegram_message").handler({"message": "test"}, store)
+    assert fake_token not in out
+    assert "[REDACTED]" in out
+
+    # 2. URLError with secret in reason
+    def mock_urlopen_urlerror(*args, **kwargs):
+        raise urllib.error.URLError(reason=f"Connection refused with key {fake_token}")
+
+    monkeypatch.setattr("urllib.request.urlopen", mock_urlopen_urlerror)
+    out = tool_by_name("send_telegram_message").handler({"message": "test"}, store)
+    assert fake_token not in out
+    assert "[REDACTED]" in out
+
+    # 3. Generic Exception with secret
+    def mock_urlopen_generic(*args, **kwargs):
+        raise RuntimeError(f"Unexpected token leak {fake_token}")
+
+    monkeypatch.setattr("urllib.request.urlopen", mock_urlopen_generic)
+    out = tool_by_name("send_telegram_message").handler({"message": "test"}, store)
+    assert fake_token not in out
+    assert "[REDACTED]" in out
