@@ -18,6 +18,10 @@ mcp = FastMCP("teams-copilot-mcp")
 
 
 def _resolve_path(template: str, path_params: dict[str, Any]) -> str:
+    for k, v in path_params.items():
+        v_str = str(v)
+        if any(ord(c) < 32 or ord(c) == 127 for c in v_str):
+            raise ValueError(f"Control characters are not allowed in path parameter '{k}'")
     try:
         return template.format(**path_params)
     except KeyError as exc:
