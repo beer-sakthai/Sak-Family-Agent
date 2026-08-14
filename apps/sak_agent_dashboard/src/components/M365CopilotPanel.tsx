@@ -2,6 +2,8 @@
 
 import React, { useState } from "react";
 import {
+  AlertTriangle,
+  Ban,
   Check,
   Copy,
   ExternalLink,
@@ -10,10 +12,12 @@ import {
   KeyRound,
   Package,
   Rocket,
+  Route,
   ShieldCheck,
   Split,
   Wrench,
 } from "lucide-react";
+import { M365_ACCOUNT_BLOCKER } from "@/lib/m365Copilot";
 import { M365CopilotData, M365CopilotPrimitive } from "@/lib/types";
 
 interface M365CopilotPanelProps {
@@ -127,6 +131,46 @@ export function M365CopilotPanel({ data }: M365CopilotPanelProps) {
             </a>
           </div>
         </div>
+      </div>
+
+      {/* Account-type blocker — surfaced high, before the install steps */}
+      <div className="glass-panel rounded-2xl border-2 border-amber-500/50 bg-amber-500/[0.06] backdrop-blur-xl p-5">
+        <h4 className="text-base font-bold font-display text-white tracking-tight flex items-center gap-2 mb-2">
+          <AlertTriangle className="h-5 w-5 text-amber-400" />
+          {M365_ACCOUNT_BLOCKER.headline}
+        </h4>
+        <p className="text-[11.5px] text-slate-200 leading-relaxed max-w-3xl">
+          {M365_ACCOUNT_BLOCKER.body}
+        </p>
+
+        <div className="mt-4">
+          <h5 className="text-[10px] font-mono uppercase tracking-wider text-rose-300 flex items-center gap-1.5 mb-2">
+            <Ban className="h-3 w-3" />
+            Also ruled out
+          </h5>
+          <ul className="space-y-1.5 text-[11px] text-slate-300 leading-relaxed">
+            {M365_ACCOUNT_BLOCKER.ruledOutAlternatives.map((a, idx) => (
+              <li key={idx} className="flex items-start gap-2">
+                <span className="text-rose-400 mt-0.5">✕</span>
+                <span>{a}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <div className="mt-4 p-3 rounded-lg border border-emerald-500/30 bg-emerald-500/[0.05]">
+          <h5 className="text-[10px] font-mono uppercase tracking-wider text-emerald-300 flex items-center gap-1.5 mb-1.5">
+            <Route className="h-3 w-3" />
+            The path that does work
+          </h5>
+          <p className="text-[11px] text-slate-200 leading-relaxed">
+            {M365_ACCOUNT_BLOCKER.viablePath}
+          </p>
+        </div>
+
+        <p className="text-[10.5px] font-mono text-slate-500 mt-3">
+          source: <code className="text-cyan-300">{M365_ACCOUNT_BLOCKER.specPath}</code>
+        </p>
       </div>
 
       {/* Install */}

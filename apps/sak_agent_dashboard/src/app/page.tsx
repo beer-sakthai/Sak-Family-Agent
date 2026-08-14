@@ -22,6 +22,7 @@ import {
   Users,
   GraduationCap,
   Fingerprint,
+  ScrollText,
 } from "lucide-react";
 import DemoModeToggle from "@/components/DemoModeToggle";
 import AgentOverview from "@/components/AgentOverview";
@@ -42,6 +43,8 @@ import GoogleAdkPanel from "@/components/GoogleAdkPanel";
 import GcpLearningPanel from "@/components/GcpLearningPanel";
 import M365CopilotPanel from "@/components/M365CopilotPanel";
 import AgentGatewayPanel from "@/components/AgentGatewayPanel";
+import AutoCyclePanel from "@/components/AutoCyclePanel";
+import DesignSpecsPanel from "@/components/DesignSpecsPanel";
 import {
   AgentPersona,
   MetricsData,
@@ -61,6 +64,8 @@ import {
   GcpLearningData,
   M365CopilotData,
   GatewayData,
+  AutoCycleData,
+  DesignSpecsData,
 } from "@/lib/types";
 
 const defaultPersonas: AgentPersona[] = [
@@ -210,6 +215,8 @@ export default function Home() {
     | "learning"
     | "m365"
     | "gateway"
+    | "autocycle"
+    | "specs"
     | "stitch"
   >("overview");
 
@@ -231,6 +238,8 @@ export default function Home() {
   const [learning, setLearning] = useState<GcpLearningData | null>(null);
   const [m365, setM365] = useState<M365CopilotData | null>(null);
   const [gateway, setGateway] = useState<GatewayData | null>(null);
+  const [autocycle, setAutocycle] = useState<AutoCycleData | null>(null);
+  const [designSpecs, setDesignSpecs] = useState<DesignSpecsData | null>(null);
 
   const [isLoading, setIsLoading] = useState(false);
   const [selectedSessionDetail, setSelectedSessionDetail] = useState<SessionTranscript | null>(null);
@@ -261,7 +270,7 @@ export default function Home() {
         }
       };
 
-      const [agentsRes, metricsRes, memoryRes, sessionsRes, mcpRes, speckitRes, mcpSdkRes, chatkitRes, antigravityRes, genkitRes, conductorRes, otelRes, adkRes, learningRes, m365Res, gatewayRes] = await Promise.all([
+      const [agentsRes, metricsRes, memoryRes, sessionsRes, mcpRes, speckitRes, mcpSdkRes, chatkitRes, antigravityRes, genkitRes, conductorRes, otelRes, adkRes, learningRes, m365Res, gatewayRes, autoCycleRes, specsRes] = await Promise.all([
         safeFetch(`${origin}/api/agents${demoParam}`),
         safeFetch(`${origin}/api/metrics${demoParam}`),
         safeFetch(`${origin}/api/memory${demoParam}`),
@@ -278,6 +287,8 @@ export default function Home() {
         safeFetch(`${origin}/api/gcp-learning`),
         safeFetch(`${origin}/api/m365-copilot`),
         safeFetch(`${origin}/api/agent-gateway`),
+        safeFetch(`${origin}/api/auto-cycle`),
+        safeFetch(`${origin}/api/design-specs`),
       ]);
 
       if (!isMountedRef.current) return;
@@ -331,6 +342,12 @@ export default function Home() {
       }
       if (gatewayRes?.success && gatewayRes.gateway) {
         setGateway(gatewayRes.gateway);
+      }
+      if (autoCycleRes?.success && autoCycleRes.autocycle) {
+        setAutocycle(autoCycleRes.autocycle);
+      }
+      if (specsRes?.success && specsRes.specs) {
+        setDesignSpecs(specsRes.specs);
       }
     } catch (error) {
       console.error("Failed to load dashboard telemetry:", error);
@@ -641,6 +658,40 @@ export default function Home() {
         </button>
 
         <button
+          onClick={() => setActiveTab("autocycle")}
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold transition-all ${
+            activeTab === "autocycle"
+              ? "bg-gradient-to-r from-cyan-500/20 to-purple-500/20 text-cyan-300 border border-cyan-500/40 shadow-lg shadow-cyan-950/50"
+              : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
+          }`}
+        >
+          <RefreshCw className="h-4 w-4 text-purple-400" />
+          Auto-Cycle
+          {autocycle && (
+            <span className="text-[10px] font-mono ml-1 px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700/70">
+              {autocycle.personas.length}x{autocycle.roundCap}
+            </span>
+          )}
+        </button>
+
+        <button
+          onClick={() => setActiveTab("specs")}
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold transition-all ${
+            activeTab === "specs"
+              ? "bg-gradient-to-r from-cyan-500/20 to-blue-500/20 text-cyan-300 border border-cyan-500/40 shadow-lg shadow-cyan-950/50"
+              : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
+          }`}
+        >
+          <ScrollText className="h-4 w-4 text-cyan-400" />
+          Design Specs
+          {designSpecs?.present && (
+            <span className="text-[10px] font-mono ml-1 px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700/70">
+              {designSpecs.specs.length}
+            </span>
+          )}
+        </button>
+
+        <button
           onClick={() => setActiveTab("gateway")}
           className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold transition-all ${
             activeTab === "gateway"
@@ -745,6 +796,10 @@ export default function Home() {
         {activeTab === "adk" && <GoogleAdkPanel data={adk} />}
 
         {activeTab === "m365" && <M365CopilotPanel data={m365} />}
+
+        {activeTab === "autocycle" && <AutoCyclePanel data={autocycle} />}
+
+        {activeTab === "specs" && <DesignSpecsPanel data={designSpecs} />}
 
         {activeTab === "gateway" && <AgentGatewayPanel data={gateway} />}
 

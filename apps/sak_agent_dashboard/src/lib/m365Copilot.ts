@@ -85,7 +85,7 @@ const CONTRAST = [
   {
     dimension: "Copilot Retrieval",
     m365Sdk:
-      "Supported — this is exactly what the SDK is designed for; delegated auth is what the endpoint requires.",
+      "Supported on a work/school tenant — delegated auth is what the endpoint requires. NOT usable on a personal Microsoft account under any auth mode (see the account-type blocker below).",
     teamsCopilotMcp:
       "Not usable — the endpoint doesn't accept application permissions, so the tool raises NotImplementedError.",
   },
@@ -104,6 +104,26 @@ const CONTRAST = [
       "Background/batch agents that operate tenant-wide (channel post automation, calendar reads for many users).",
   },
 ];
+
+/**
+ * Findings from this repo's own research, recorded in
+ * docs/superpowers/specs/2026-08-03-cowork-plugin-design.md. The Retrieval API
+ * is not merely delegated-auth-only — it is unavailable to personal Microsoft
+ * accounts under BOTH auth modes, which makes it a structural dead end rather
+ * than an auth-configuration problem.
+ */
+export const M365_ACCOUNT_BLOCKER = {
+  headline: "Account type gates this before auth mode does",
+  body:
+    "The Graph Copilot Retrieval API does not support personal Microsoft accounts under any auth mode — delegated or application. A work/school Entra ID tenant with Copilot licensing is required regardless of how you authenticate. Switching from app-only to delegated auth does not unlock it on a personal M365 subscription; the account type is the binding constraint.",
+  specPath: "docs/superpowers/specs/2026-08-03-cowork-plugin-design.md",
+  ruledOutAlternatives: [
+    "Browser automation of the Copilot web UI (Playwright / computer-use) — Microsoft's Copilot Terms of Use explicitly prohibit bots and scrapers, reinforced by the Services Agreement's anti-scraping clauses, with Cloudflare bot protection and prior enforcement precedent (EdgeGPT) as evidence this is not merely theoretical.",
+    "Office Agent Frontier (Word/Excel/PowerPoint Agents) — real and free on M365 Premium, but chat/UI-only with no programmatic API.",
+  ],
+  viablePath:
+    "Copilot Cowork is the one surface with a documented developer extensibility path: plugins packaged as Agent Skills + remote MCP connectors, distributed as a standard M365 app package and installable for personal use via `atk install --scope Personal` — no Partner Center submission. This inverts the direction: instead of pulling data out of Copilot, Cowork calls into MCP servers you host.",
+} as const;
 
 export function getM365CopilotData(): M365CopilotData {
   return {

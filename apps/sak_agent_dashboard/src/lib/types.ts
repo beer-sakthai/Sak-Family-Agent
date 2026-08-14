@@ -743,6 +743,91 @@ export interface GatewayApiResponse {
   error?: string;
 }
 
+// ---------------- Sak Family Auto-Cycle ----------------
+
+export interface CycleStage {
+  stage: string;
+  number: number;
+  goal: string;
+  commands: string[];
+  guidance: string;
+}
+
+export interface CyclePersonaDispatch {
+  persona: string;
+  liveHome: string;
+  lead?: boolean;
+}
+
+export interface AutoCycleSkill {
+  name: string;
+  path: string;
+  layer: "shared" | "claude-code";
+  purpose: string;
+}
+
+export interface AutoCycleData {
+  overview: {
+    title: string;
+    description: string;
+    specPath: string;
+    planPath: string;
+    skillPath: string;
+  };
+  stages: CycleStage[];
+  personas: CyclePersonaDispatch[];
+  skills: AutoCycleSkill[];
+  roundCap: number;
+  safetyRule: {
+    headline: string;
+    body: string;
+    testCommand: string;
+    liveAuthorizationPhrases: string[];
+    nonAuthorizationPhrases: string[];
+    baselineEvidence: string;
+  };
+  dispatchNote: string;
+  errorHandling: string;
+  resolvedGap: string;
+  cliCommands: Array<{ command: string; purpose: string }>;
+}
+
+export interface AutoCycleApiResponse {
+  success: boolean;
+  autocycle: AutoCycleData;
+  error?: string;
+}
+
+// ---------------- Design specs index ----------------
+
+export type SpecStatus = "approved" | "draft" | "implemented" | "unknown";
+
+export interface DesignSpec {
+  id: string;
+  file: string;
+  title: string;
+  date: string;
+  status: SpecStatus;
+  statusRaw: string;
+  summary: string;
+  planFile?: string;
+  relatedTab?: string;
+  bytes: number;
+}
+
+export interface DesignSpecsData {
+  present: boolean;
+  specsDir: string;
+  plansDir: string;
+  specs: DesignSpec[];
+}
+
+export interface DesignSpecsApiResponse {
+  success: boolean;
+  specs: DesignSpecsData;
+  error?: string;
+}
+
 // ---------------- GCP Learning (training-data-analyst) ----------------
 
 export type GcpLearningTag =
