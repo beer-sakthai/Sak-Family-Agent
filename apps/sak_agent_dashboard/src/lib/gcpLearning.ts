@@ -79,6 +79,26 @@ const RESOURCES: GcpLearningResource[] = [
     tags: ["docs"],
     url: `${BASE}/doc`,
   },
+  {
+    id: "ai-platform-qwik-start",
+    path: "self-paced-labs/ai-platform-qwikstart/ai_platform_qwik_start.ipynb",
+    title: "AI Platform Qwik Start (notebook)",
+    description:
+      "End-to-end census-income lab: build a TF 2.x Keras trainer, validate locally with `gcloud ai-platform local train`, submit a cloud job, deploy a model version, and request an online prediction. Useful as a shape reference for the train → deploy → predict arc — but note it targets the legacy AI Platform (`gcloud ai-platform`), which Vertex AI supersedes; treat the gcloud invocations as historical.",
+    tags: ["ml", "notebooks", "labs"],
+    url: `${BASE}/self-paced-labs`,
+  },
+];
+
+/**
+ * Directories in the upstream repo that predate Vertex AI and still reference
+ * retired surfaces. Surfaced in the UI so a reader doesn't copy a stale
+ * invocation into new work.
+ */
+export const GCP_LEARNING_STALENESS_NOTES: string[] = [
+  "`gcloud ai-platform` (Cloud AI Platform) is the pre-Vertex surface. Anything using `ai-platform jobs submit training`, `ai-platform models create`, or `ai-platform predict` has a Vertex AI equivalent — read those labs for the workflow shape, not the exact commands.",
+  "Datalab notebooks use a notebook environment Google has retired in favour of Vertex AI Workbench / Colab Enterprise.",
+  "CPB100 predates the Gemini era entirely — good for BigQuery + Dataflow fundamentals, not for anything model-related.",
 ];
 
 const TAG_LABELS: Record<GcpLearningTag, string> = {

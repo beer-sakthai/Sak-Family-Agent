@@ -2,6 +2,7 @@
 
 import React, { useMemo, useState } from "react";
 import {
+  AlertTriangle,
   ExternalLink,
   Filter,
   GraduationCap,
@@ -9,6 +10,7 @@ import {
   Folder,
   BookOpen,
 } from "lucide-react";
+import { GCP_LEARNING_STALENESS_NOTES } from "@/lib/gcpLearning";
 import {
   GcpLearningData,
   GcpLearningResource,
@@ -159,6 +161,27 @@ export function GcpLearningPanel({ data }: GcpLearningPanelProps) {
         {filtered.map((r) => (
           <ResourceCard key={r.id} resource={r} labels={data.tagLabels} />
         ))}
+      </div>
+
+      {/* Staleness warning */}
+      <div className="glass-panel rounded-2xl border border-amber-500/30 bg-amber-500/[0.04] backdrop-blur-xl p-5">
+        <h4 className="text-sm font-bold font-display text-white tracking-tight flex items-center gap-2 mb-2">
+          <AlertTriangle className="h-4 w-4 text-amber-400" />
+          Read for shape, not for commands
+        </h4>
+        <p className="text-[11px] text-slate-400 mb-3 leading-relaxed max-w-3xl">
+          Large parts of this repo predate Vertex AI. The workflows still teach
+          the right arc; the exact CLI invocations often target retired
+          surfaces.
+        </p>
+        <ul className="space-y-1.5 text-[11px] text-slate-300 leading-relaxed">
+          {GCP_LEARNING_STALENESS_NOTES.map((n, idx) => (
+            <li key={idx} className="flex items-start gap-2">
+              <span className="text-amber-400 mt-0.5">•</span>
+              <span>{n}</span>
+            </li>
+          ))}
+        </ul>
       </div>
 
       {/* Note */}

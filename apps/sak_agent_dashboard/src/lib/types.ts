@@ -619,11 +619,39 @@ export interface AdkPrimitive {
   snippet: string;
 }
 
+export interface AdkAppField {
+  field: string;
+  type: string;
+  defaultValue: string;
+  description: string;
+}
+
+export interface AdkPlugin {
+  name: string;
+  importPath: string;
+  purpose: string;
+}
+
+export interface AdkCrossCuttingConfig {
+  id: string;
+  name: string;
+  importPath: string;
+  purpose: string;
+  experimental: boolean;
+}
+
+export interface AdkA2aService {
+  name: string;
+  role: string;
+  kind: "orchestrator" | "worker" | "app";
+}
+
 export interface AdkData {
   overview: {
     title: string;
     description: string;
     repoUrl: string;
+    docsUrl: string;
     pypiUrl: string;
     packageName: string;
     license: string;
@@ -634,11 +662,84 @@ export interface AdkData {
   primitives: AdkPrimitive[];
   cliCommands: Array<{ command: string; purpose: string }>;
   comparisonNote: string;
+  app: {
+    intro: string;
+    snippet: string;
+    runnerSnippet: string;
+    fields: AdkAppField[];
+    plugins: AdkPlugin[];
+    configs: AdkCrossCuttingConfig[];
+    configSnippet: string;
+    legacyNote: string;
+    legacySnippet: string;
+    legacyDifferences: string[];
+    nameRules: string;
+    limitations: string[];
+  };
+  a2a: {
+    intro: string;
+    services: AdkA2aService[];
+    agentCardPath: string;
+    snippet: string;
+    envVars: Array<{ key: string; value: string }>;
+    sharedFiles: Array<{ file: string; purpose: string }>;
+  };
 }
 
 export interface AdkApiResponse {
   success: boolean;
   adk: AdkData;
+  error?: string;
+}
+
+// ---------------- Agent Gateway (governance) ----------------
+
+export interface GatewayControl {
+  id: string;
+  name: string;
+  kind: "authz" | "content" | "discovery" | "identity" | "observability";
+  summary: string;
+  enforcedAt: string;
+}
+
+export interface GatewayMode {
+  mode: string;
+  cloudRunIngress: string;
+  registryUrls: string;
+  extraRequirements: string;
+  secure: boolean;
+}
+
+export interface GatewayMcpService {
+  name: string;
+  purpose: string;
+}
+
+export interface GatewayStep {
+  order: number;
+  title: string;
+  command: string;
+}
+
+export interface GatewayData {
+  overview: {
+    title: string;
+    description: string;
+    repoUrl: string;
+    codelabUrl: string;
+    license: string;
+  };
+  controls: GatewayControl[];
+  modes: GatewayMode[];
+  mcpServices: GatewayMcpService[];
+  prerequisites: string[];
+  steps: GatewayStep[];
+  sakthaiRelevance: string;
+}
+
+export interface GatewayApiResponse {
+  success: boolean;
+  gateway: GatewayData;
   error?: string;
 }
 

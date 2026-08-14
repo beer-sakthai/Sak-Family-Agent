@@ -41,6 +41,7 @@ import OtelPanel from "@/components/OtelPanel";
 import GoogleAdkPanel from "@/components/GoogleAdkPanel";
 import GcpLearningPanel from "@/components/GcpLearningPanel";
 import M365CopilotPanel from "@/components/M365CopilotPanel";
+import AgentGatewayPanel from "@/components/AgentGatewayPanel";
 import {
   AgentPersona,
   MetricsData,
@@ -59,6 +60,7 @@ import {
   AdkData,
   GcpLearningData,
   M365CopilotData,
+  GatewayData,
 } from "@/lib/types";
 
 const defaultPersonas: AgentPersona[] = [
@@ -207,6 +209,7 @@ export default function Home() {
     | "adk"
     | "learning"
     | "m365"
+    | "gateway"
     | "stitch"
   >("overview");
 
@@ -227,6 +230,7 @@ export default function Home() {
   const [adk, setAdk] = useState<AdkData | null>(null);
   const [learning, setLearning] = useState<GcpLearningData | null>(null);
   const [m365, setM365] = useState<M365CopilotData | null>(null);
+  const [gateway, setGateway] = useState<GatewayData | null>(null);
 
   const [isLoading, setIsLoading] = useState(false);
   const [selectedSessionDetail, setSelectedSessionDetail] = useState<SessionTranscript | null>(null);
@@ -257,7 +261,7 @@ export default function Home() {
         }
       };
 
-      const [agentsRes, metricsRes, memoryRes, sessionsRes, mcpRes, speckitRes, mcpSdkRes, chatkitRes, antigravityRes, genkitRes, conductorRes, otelRes, adkRes, learningRes, m365Res] = await Promise.all([
+      const [agentsRes, metricsRes, memoryRes, sessionsRes, mcpRes, speckitRes, mcpSdkRes, chatkitRes, antigravityRes, genkitRes, conductorRes, otelRes, adkRes, learningRes, m365Res, gatewayRes] = await Promise.all([
         safeFetch(`${origin}/api/agents${demoParam}`),
         safeFetch(`${origin}/api/metrics${demoParam}`),
         safeFetch(`${origin}/api/memory${demoParam}`),
@@ -273,6 +277,7 @@ export default function Home() {
         safeFetch(`${origin}/api/google-adk`),
         safeFetch(`${origin}/api/gcp-learning`),
         safeFetch(`${origin}/api/m365-copilot`),
+        safeFetch(`${origin}/api/agent-gateway`),
       ]);
 
       if (!isMountedRef.current) return;
@@ -323,6 +328,9 @@ export default function Home() {
       }
       if (m365Res?.success && m365Res.m365) {
         setM365(m365Res.m365);
+      }
+      if (gatewayRes?.success && gatewayRes.gateway) {
+        setGateway(gatewayRes.gateway);
       }
     } catch (error) {
       console.error("Failed to load dashboard telemetry:", error);
@@ -633,6 +641,23 @@ export default function Home() {
         </button>
 
         <button
+          onClick={() => setActiveTab("gateway")}
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold transition-all ${
+            activeTab === "gateway"
+              ? "bg-gradient-to-r from-cyan-500/20 to-rose-500/20 text-cyan-300 border border-cyan-500/40 shadow-lg shadow-cyan-950/50"
+              : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
+          }`}
+        >
+          <ShieldCheck className="h-4 w-4 text-rose-400" />
+          Agent Gateway
+          {gateway && (
+            <span className="text-[10px] font-mono ml-1 px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700/70">
+              {gateway.controls.length}
+            </span>
+          )}
+        </button>
+
+        <button
           onClick={() => setActiveTab("otel")}
           className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold transition-all ${
             activeTab === "otel"
@@ -720,6 +745,8 @@ export default function Home() {
         {activeTab === "adk" && <GoogleAdkPanel data={adk} />}
 
         {activeTab === "m365" && <M365CopilotPanel data={m365} />}
+
+        {activeTab === "gateway" && <AgentGatewayPanel data={gateway} />}
 
         {activeTab === "otel" && <OtelPanel data={otel} />}
 
