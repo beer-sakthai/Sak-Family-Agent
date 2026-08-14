@@ -325,6 +325,7 @@ export interface SpecKitData {
   templates: SpecKitTemplate[];
   constitution?: SpecKitConstitution;
   scripts: string[];
+  upstream: SpecKitUpstream;
 }
 
 export interface SpecKitApiResponse {
@@ -596,6 +597,370 @@ export interface ConductorData {
 export interface ConductorApiResponse {
   success: boolean;
   conductor: ConductorData;
+  error?: string;
+}
+
+// ---------------- OpenTelemetry (Observability) ----------------
+
+export type OtelSignal = "traces" | "metrics" | "logs";
+
+export interface OtelSignalCard {
+  id: OtelSignal;
+  title: string;
+  summary: string;
+  keyPrimitives: string[];
+  docsUrl: string;
+}
+
+export interface OtelExporter {
+  id: string;
+  name: string;
+  transport: string;
+  usage: string;
+}
+
+export interface OtelSemConv {
+  attribute: string;
+  purpose: string;
+}
+
+export interface OtelData {
+  overview: {
+    title: string;
+    description: string;
+    repoUrl: string;
+    siteUrl: string;
+    license: string;
+  };
+  install: string;
+  signals: OtelSignalCard[];
+  exporters: OtelExporter[];
+  llmSemconv: OtelSemConv[];
+  sakthaiIntegration: string;
+}
+
+export interface OtelApiResponse {
+  success: boolean;
+  otel: OtelData;
+  error?: string;
+}
+
+// ---------------- Google ADK ----------------
+
+export type AdkPrimitiveKind =
+  | "core"
+  | "llm-agent"
+  | "workflow-agent"
+  | "runner"
+  | "tool"
+  | "mcp"
+  | "cli";
+
+export interface AdkPrimitive {
+  id: string;
+  name: string;
+  kind: AdkPrimitiveKind;
+  summary: string;
+  snippet: string;
+}
+
+export interface AdkAppField {
+  field: string;
+  type: string;
+  defaultValue: string;
+  description: string;
+}
+
+export interface AdkPlugin {
+  name: string;
+  importPath: string;
+  purpose: string;
+}
+
+export interface AdkCrossCuttingConfig {
+  id: string;
+  name: string;
+  importPath: string;
+  purpose: string;
+  experimental: boolean;
+}
+
+export interface AdkA2aService {
+  name: string;
+  role: string;
+  kind: "orchestrator" | "worker" | "app";
+}
+
+export interface AdkData {
+  overview: {
+    title: string;
+    description: string;
+    repoUrl: string;
+    docsUrl: string;
+    pypiUrl: string;
+    packageName: string;
+    license: string;
+    pythonMin: string;
+  };
+  install: string;
+  quickstart: string;
+  primitives: AdkPrimitive[];
+  cliCommands: Array<{ command: string; purpose: string }>;
+  comparisonNote: string;
+  app: {
+    intro: string;
+    snippet: string;
+    runnerSnippet: string;
+    fields: AdkAppField[];
+    plugins: AdkPlugin[];
+    configs: AdkCrossCuttingConfig[];
+    configSnippet: string;
+    legacyNote: string;
+    legacySnippet: string;
+    legacyDifferences: string[];
+    nameRules: string;
+    limitations: string[];
+  };
+  a2a: {
+    intro: string;
+    services: AdkA2aService[];
+    agentCardPath: string;
+    snippet: string;
+    envVars: Array<{ key: string; value: string }>;
+    sharedFiles: Array<{ file: string; purpose: string }>;
+  };
+}
+
+export interface AdkApiResponse {
+  success: boolean;
+  adk: AdkData;
+  error?: string;
+}
+
+// ---------------- Agent Gateway (governance) ----------------
+
+export interface GatewayControl {
+  id: string;
+  name: string;
+  kind: "authz" | "content" | "discovery" | "identity" | "observability";
+  summary: string;
+  enforcedAt: string;
+}
+
+export interface GatewayMode {
+  mode: string;
+  cloudRunIngress: string;
+  registryUrls: string;
+  extraRequirements: string;
+  secure: boolean;
+}
+
+export interface GatewayMcpService {
+  name: string;
+  purpose: string;
+}
+
+export interface GatewayStep {
+  order: number;
+  title: string;
+  command: string;
+}
+
+export interface GatewayData {
+  overview: {
+    title: string;
+    description: string;
+    repoUrl: string;
+    codelabUrl: string;
+    license: string;
+  };
+  controls: GatewayControl[];
+  modes: GatewayMode[];
+  mcpServices: GatewayMcpService[];
+  prerequisites: string[];
+  steps: GatewayStep[];
+  sakthaiRelevance: string;
+}
+
+export interface GatewayApiResponse {
+  success: boolean;
+  gateway: GatewayData;
+  error?: string;
+}
+
+// ---------------- Sak Family Auto-Cycle ----------------
+
+export interface CycleStage {
+  stage: string;
+  number: number;
+  goal: string;
+  commands: string[];
+  guidance: string;
+}
+
+export interface CyclePersonaDispatch {
+  persona: string;
+  liveHome: string;
+  lead?: boolean;
+}
+
+export interface AutoCycleSkill {
+  name: string;
+  path: string;
+  layer: "shared" | "claude-code";
+  purpose: string;
+}
+
+export interface AutoCycleData {
+  overview: {
+    title: string;
+    description: string;
+    specPath: string;
+    planPath: string;
+    skillPath: string;
+  };
+  stages: CycleStage[];
+  personas: CyclePersonaDispatch[];
+  skills: AutoCycleSkill[];
+  roundCap: number;
+  safetyRule: {
+    headline: string;
+    body: string;
+    testCommand: string;
+    liveAuthorizationPhrases: string[];
+    nonAuthorizationPhrases: string[];
+    baselineEvidence: string;
+  };
+  dispatchNote: string;
+  errorHandling: string;
+  resolvedGap: string;
+  cliCommands: Array<{ command: string; purpose: string }>;
+}
+
+export interface AutoCycleApiResponse {
+  success: boolean;
+  autocycle: AutoCycleData;
+  error?: string;
+}
+
+// ---------------- Design specs index ----------------
+
+export type SpecStatus = "approved" | "draft" | "implemented" | "unknown";
+
+export interface DesignSpec {
+  id: string;
+  file: string;
+  title: string;
+  date: string;
+  status: SpecStatus;
+  statusRaw: string;
+  summary: string;
+  planFile?: string;
+  relatedTab?: string;
+  bytes: number;
+}
+
+export interface DesignSpecsData {
+  present: boolean;
+  specsDir: string;
+  plansDir: string;
+  specs: DesignSpec[];
+}
+
+export interface DesignSpecsApiResponse {
+  success: boolean;
+  specs: DesignSpecsData;
+  error?: string;
+}
+
+// ---------------- GCP Learning (training-data-analyst) ----------------
+
+export type GcpLearningTag =
+  | "agents"
+  | "ml"
+  | "data"
+  | "notebooks"
+  | "labs"
+  | "docs";
+
+export interface GcpLearningResource {
+  id: string;
+  path: string;
+  title: string;
+  description: string;
+  tags: GcpLearningTag[];
+  url: string;
+}
+
+export interface GcpLearningData {
+  overview: {
+    title: string;
+    description: string;
+    repoUrl: string;
+    stars: string;
+    license: string;
+  };
+  resources: GcpLearningResource[];
+  tagLabels: Record<GcpLearningTag, string>;
+}
+
+export interface GcpLearningApiResponse {
+  success: boolean;
+  learning: GcpLearningData;
+  error?: string;
+}
+
+// ---------------- SpecKit upstream (enhancement) ----------------
+
+export interface SpecKitUpstreamCommand {
+  slash: string;
+  purpose: string;
+  optional?: boolean;
+}
+
+export interface SpecKitUpstream {
+  repoUrl: string;
+  license: string;
+  installCommand: string;
+  minPython: string;
+  requiredTools: string[];
+  supportedIntegrations: string[];
+  commands: SpecKitUpstreamCommand[];
+  layoutNote: string;
+}
+
+// ---------------- M365 Copilot Agents ----------------
+
+export interface M365CopilotPrimitive {
+  id: string;
+  name: string;
+  summary: string;
+  snippet: string;
+}
+
+export interface M365CopilotData {
+  overview: {
+    title: string;
+    description: string;
+    repoUrl: string;
+    pypiUrl: string;
+    packageName: string;
+    authModel: string;
+  };
+  install: string;
+  quickstart: string;
+  primitives: M365CopilotPrimitive[];
+  authSteps: string[];
+  contrastWithTeamsMcp: Array<{
+    dimension: string;
+    m365Sdk: string;
+    teamsCopilotMcp: string;
+  }>;
+}
+
+export interface M365CopilotApiResponse {
+  success: boolean;
+  m365: M365CopilotData;
   error?: string;
 }
 

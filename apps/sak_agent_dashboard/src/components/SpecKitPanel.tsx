@@ -3,11 +3,16 @@
 import React, { useState } from "react";
 import {
   BookOpen,
+  Check,
   ClipboardList,
+  Copy,
+  ExternalLink,
   FileCode,
   FlaskConical,
+  Github,
   GitBranch,
   Layers,
+  Package,
   Puzzle,
   Route,
   ScrollText,
@@ -20,6 +25,7 @@ import {
 import {
   SpecKitData,
   SpecKitTemplate,
+  SpecKitUpstream,
   SpecKitWorkflowStep,
 } from "@/lib/types";
 
@@ -33,6 +39,150 @@ const STEP_ICONS: Record<string, React.ReactNode> = {
   tasks: <ClipboardList className="h-4 w-4 text-emerald-300" />,
   implement: <FileCode className="h-4 w-4 text-amber-300" />,
 };
+
+function SpecKitCopyButton({ payload }: { payload: string }) {
+  const [copied, setCopied] = useState(false);
+  const handleCopy = async () => {
+    try {
+      if (typeof navigator !== "undefined" && navigator.clipboard) {
+        await navigator.clipboard.writeText(payload);
+      }
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1500);
+    } catch {
+      setCopied(false);
+    }
+  };
+  return (
+    <button
+      onClick={handleCopy}
+      className="inline-flex items-center gap-1.5 text-[11px] font-mono px-2.5 py-1 rounded-md bg-slate-800/80 border border-slate-700/60 text-slate-300 hover:text-white hover:border-cyan-500/40 transition-colors"
+    >
+      {copied ? (
+        <>
+          <Check className="h-3.5 w-3.5 text-emerald-400" /> Copied
+        </>
+      ) : (
+        <>
+          <Copy className="h-3.5 w-3.5 text-cyan-400" /> Copy
+        </>
+      )}
+    </button>
+  );
+}
+
+function UpstreamCard({ upstream }: { upstream: SpecKitUpstream }) {
+  return (
+    <div className="glass-panel rounded-2xl bg-slate-900/80 border border-slate-800/80 backdrop-blur-xl overflow-hidden">
+      <div className="p-5 border-b border-slate-800/70 flex flex-col md:flex-row md:items-start md:justify-between gap-3">
+        <div>
+          <h4 className="text-sm font-bold font-display text-white tracking-tight flex items-center gap-2">
+            <Github className="h-4 w-4 text-cyan-400" />
+            Upstream — github/spec-kit
+            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-800/60">
+              {upstream.license}
+            </span>
+            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700/70">
+              Python {upstream.minPython}
+            </span>
+          </h4>
+          <p className="text-[11px] text-slate-400 mt-1 max-w-3xl leading-relaxed">
+            The tool this .specify/ install comes from. Templates and workflows
+            below are populated from local disk; the roster here is what the
+            upstream ships to any project — including commands you can opt into
+            beyond what's currently wired.
+          </p>
+          <a
+            href={upstream.repoUrl}
+            target="_blank"
+            rel="noreferrer noopener"
+            className="mt-1.5 inline-flex items-center gap-1.5 text-[11px] font-mono text-cyan-300 hover:text-cyan-200"
+          >
+            <ExternalLink className="h-3 w-3" />
+            {upstream.repoUrl.replace("https://", "")}
+          </a>
+        </div>
+      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 divide-y lg:divide-y-0 lg:divide-x divide-slate-800/70">
+        <div className="p-5">
+          <h5 className="text-[10px] font-mono uppercase tracking-wider text-slate-400 flex items-center gap-1.5 mb-2">
+            <Package className="h-3 w-3 text-emerald-400" />
+            Install
+          </h5>
+          <div className="rounded-lg border border-slate-800/80 bg-slate-950/80 overflow-hidden">
+            <div className="flex items-center justify-between px-3 py-1.5 border-b border-slate-800/80 bg-slate-900/70">
+              <span className="text-[10px] font-mono text-slate-400 uppercase">
+                shell
+              </span>
+              <SpecKitCopyButton payload={upstream.installCommand} />
+            </div>
+            <pre className="p-3 text-[11px] font-mono text-cyan-300 overflow-x-auto">
+              {upstream.installCommand}
+            </pre>
+          </div>
+          <div className="mt-3">
+            <h5 className="text-[10px] font-mono uppercase tracking-wider text-slate-400 mb-1.5">
+              Required tools
+            </h5>
+            <div className="flex flex-wrap gap-1.5">
+              {upstream.requiredTools.map((t) => (
+                <span
+                  key={t}
+                  className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700/60"
+                >
+                  {t}
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+        <div className="p-5 lg:col-span-2">
+          <h5 className="text-[10px] font-mono uppercase tracking-wider text-slate-400 mb-2">
+            Upstream slash commands
+          </h5>
+          <ul className="space-y-1.5 font-mono text-[11px]">
+            {upstream.commands.map((c) => (
+              <li
+                key={c.slash}
+                className="flex items-start gap-2.5 p-2 rounded-lg bg-slate-950/60 border border-slate-800/80"
+              >
+                <code className="text-cyan-300 whitespace-nowrap">{c.slash}</code>
+                <span className="text-slate-300 flex-1 leading-relaxed">
+                  {c.purpose}
+                </span>
+                {c.optional && (
+                  <span className="text-[10px] font-mono uppercase px-1.5 py-0.5 rounded bg-slate-700/40 text-slate-300 border border-slate-600/40">
+                    optional
+                  </span>
+                )}
+              </li>
+            ))}
+          </ul>
+          <div className="mt-3">
+            <h5 className="text-[10px] font-mono uppercase tracking-wider text-slate-400 mb-1.5">
+              Supported integrations
+            </h5>
+            <div className="flex flex-wrap gap-1.5">
+              {upstream.supportedIntegrations.map((i) => (
+                <span
+                  key={i}
+                  className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-300 border border-emerald-500/40"
+                >
+                  {i}
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+      <div className="px-5 pb-5 pt-2 border-t border-slate-800/70 bg-slate-950/40">
+        <p className="text-[11px] text-slate-400 leading-relaxed">
+          {upstream.layoutNote}
+        </p>
+      </div>
+    </div>
+  );
+}
 
 function StepIcon({ step }: { step: SpecKitWorkflowStep }) {
   if (step.kind === "gate") {
@@ -120,6 +270,7 @@ export function SpecKitPanel({ data }: SpecKitPanelProps) {
           </p>
         </div>
         <EmptyState rootPath={data?.rootPath ?? ""} />
+        {data?.upstream && <UpstreamCard upstream={data.upstream} />}
       </div>
     );
   }
@@ -170,6 +321,9 @@ export function SpecKitPanel({ data }: SpecKitPanelProps) {
           </p>
         </div>
       </div>
+
+      {/* Upstream */}
+      <UpstreamCard upstream={data.upstream} />
 
       {/* Stat tiles */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
