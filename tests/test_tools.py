@@ -774,7 +774,9 @@ def test_graph_safe_redacts_secrets_in_errors(
     assert "[REDACTED]" in out
 
     # 2. HTTPError with secret
-    exc = urllib.error.HTTPError("https://graph.microsoft.com", 400, f"Error with {secret}", None, None)
+    exc = urllib.error.HTTPError(
+        "https://graph.microsoft.com", 400, f"Error with {secret}", None, None
+    )
     exc.read = lambda: json.dumps({"error": {"message": f"Denied with {secret}"}}).encode()  # type: ignore[method-assign]
 
     def _stub_http(request, timeout=None):
