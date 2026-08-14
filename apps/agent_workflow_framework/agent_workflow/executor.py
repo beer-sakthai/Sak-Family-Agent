@@ -235,120 +235,136 @@ def _validate_filepath(filepath: Any) -> Path:
     return target
 
 
+def _extract_shell_subcommands(cmd_str: str) -> List[str]:
+    """Extract individual subcommands from a shell command string by splitting on
+    command separators (;, &&, ||, \\n, \\r) and extracting command substitutions
+    ($(...) and `...`).
+    """
+    subcommands: List[str] = []
+
+    def _parse(text: str) -> None:
+        text = text.strip()
+        if not text:
+            return
+
+        current_cmd = []
+        i = 0
+        n = len(text)
+        in_single_quote = False
+        in_double_quote = False
+        escaped = False
+
+        while i < n:
+            char = text[i]
+
+            if escaped:
+                current_cmd.append(char)
+                escaped = False
+                i += 1
+                continue
+
+            if char == "\\" and not in_single_quote:
+                escaped = True
+                current_cmd.append(char)
+                i += 1
+                continue
+
+            if char == "'" and not in_double_quote:
+                in_single_quote = not in_single_quote
+                current_cmd.append(char)
+                i += 1
+                continue
+
+            if char == '"' and not in_single_quote:
+                in_double_quote = not in_double_quote
+                current_cmd.append(char)
+                i += 1
+                continue
+
+            if not in_single_quote:
+                # Check for command substitution $(...)
+                if text[i:i+2] == "$(":
+                    depth = 1
+                    j = i + 2
+                    sub_escaped = False
+                    sub_sq = False
+                    sub_dq = False
+                    while j < n and depth > 0:
+                        c = text[j]
+                        if sub_escaped:
+                            sub_escaped = False
+                        elif c == "\\" and not sub_sq:
+                            sub_escaped = True
+                        elif c == "'" and not sub_dq:
+                            sub_sq = not sub_sq
+                        elif c == '"' and not sub_sq:
+                            sub_dq = not sub_sq
+                        elif not sub_sq and not sub_dq:
+                            if c == "(":
+                                depth += 1
+                            elif c == ")":
+                                depth -= 1
+                        if depth > 0:
+                            j += 1
+                    inner = text[i+2:j]
+                    if inner.strip():
+                        _parse(inner)
+                    current_cmd.append(text[i:j+1])
+                    i = j + 1
+                    continue
+
+                # Check for backtick command substitution `...`
+                if char == "`":
+                    j = i + 1
+                    sub_escaped = False
+                    while j < n:
+                        c = text[j]
+                        if sub_escaped:
+                            sub_escaped = False
+                        elif c == "\\":
+                            sub_escaped = True
+                        elif c == "`":
+                            break
+                        j += 1
+                    inner = text[i+1:j]
+                    if inner.strip():
+                        _parse(inner)
+                    current_cmd.append(text[i:j+1])
+                    i = j + 1
+                    continue
+
+            if not in_single_quote and not in_double_quote:
+                # Check for separators: &&, ||, ;, \n, \r
+                if text[i:i+2] in ("&&", "||"):
+                    cmd = "".join(current_cmd).strip()
+                    if cmd:
+                        subcommands.append(cmd)
+                    current_cmd = []
+                    i += 2
+                    continue
+                elif char in (";", "\n", "\r"):
+                    cmd = "".join(current_cmd).strip()
+                    if cmd:
+                        subcommands.append(cmd)
+                    current_cmd = []
+                    i += 1
+                    continue
+
+            current_cmd.append(char)
+            i += 1
+
+        cmd = "".join(current_cmd).strip()
+        if cmd:
+            subcommands.append(cmd)
+
+    _parse(cmd_str)
+    return subcommands or [cmd_str]
+
+
 def _validate_shell_command(cmd_str: str) -> None:
     """Validate a shell command to prevent access to sensitive/system paths."""
     import shlex
     import re
-
-    # Prevent pipeline-to-interpreter command execution bypasses (e.g. curl ... | sh)
-    cmd_str_stripped = str(cmd_str).strip()
-    if "|" in cmd_str_stripped:
-        segments = cmd_str_stripped.split("|")
-        for segment in segments[1:]:
-            segment = segment.strip(" \t\n\r\"'()$&;")
-            if segment:
-                try:
-                    words = shlex.split(segment)
-                except Exception:
-                    words = segment.split()
-
-                # Robust helper to find the actual executable command by unwrapping environment variables,
-                # flags, and common transparent wrappers (including shell/system/package wrappers).
-                wrappers = {
-                    "env", "sudo", "doas", "xargs", "timeout", "nohup", "setsid", "nice",
-                    "ionice", "chrt", "taskset", "stdbuf", "chroot", "nsenter", "unshare",
-                    "pkexec", "uv", "pipx", "bun", "bunx", "npx", "deno", "poetry",
-                    "pipenv", "conda", "pnpm", "yarn", "npm", "cargo", "composer",
-                    "busybox", "toybox",
-                }
-
-                interpreters = (
-                    "sh",
-                    "bash",
-                    "zsh",
-                    "dash",
-                    "ksh",
-                    "fish",
-                    "ash",
-                    "csh",
-                    "tcsh",
-                    "python",
-                    "node",
-                    "perl",
-                    "ruby",
-                    "php",
-                    "deno",
-                    "bun",
-                    "tsx",
-                    "ts-node",
-                )
-
-                cmd_word = ""
-                i = 0
-                while i < len(words):
-                    token = words[i].strip(" \t\n\r\"'()$&;")
-                    if not token:
-                        i += 1
-                        continue
-
-                    # Skip env vars
-                    if "=" in token and not token.startswith("-"):
-                        i += 1
-                        continue
-
-                    # Skip flags and their arguments
-                    if token.startswith("-"):
-                        if token in ("-s", "--signal", "-k", "--kill-after", "-n", "--adjustment", "-c", "-p"):
-                            i += 2
-                        else:
-                            i += 1
-                        continue
-
-                    basename = os.path.basename(token)
-
-                    # 1. If it is an interpreter, select it immediately (takes precedence over wrappers)
-                    is_interp = False
-                    for interp in interpreters:
-                        pattern = rf"^{re.escape(interp)}(?:[0-9]+(?:\.[0-9]+)*)?$"
-                        if re.match(pattern, basename):
-                            is_interp = True
-                            break
-                    if is_interp:
-                        cmd_word = token
-                        break
-
-                    # 2. Skip wrappers
-                    if basename in wrappers:
-                        i += 1
-                        # Special wrapper argument handling:
-                        # timeout takes a duration argument right after options
-                        if basename == "timeout":
-                            while i < len(words) and words[i].startswith("-"):
-                                if words[i] in ("-s", "--signal", "-k", "--kill-after"):
-                                    i += 2
-                                else:
-                                    i += 1
-                            if i < len(words):
-                                i += 1
-                        continue
-
-                    cmd_word = token
-                    break
-
-                if cmd_word:
-                    basename = os.path.basename(cmd_word)
-                    for interp in interpreters:
-                        pattern = rf"^{re.escape(interp)}(?:[0-9]+(?:\.[0-9]+)*)?$"
-                        if re.match(pattern, basename):
-                            raise PermissionError(
-                                f"Pipeline to interpreter {cmd_word!r} is prohibited "
-                                "to prevent command execution bypass."
-                            )
-
-    try:
-        parts = shlex.split(cmd_str)
-    except ValueError as exc:
-        raise ValueError(f"Malformed shell command: {exc}") from exc
 
     def _check_token(token: str) -> None:
         token = token.strip()
@@ -376,8 +392,125 @@ def _validate_shell_command(cmd_str: str) -> None:
             except Exception:
                 pass
 
-    for part in parts:
-        _check_token(part)
+    subcommands = _extract_shell_subcommands(str(cmd_str))
+
+    for subcmd in subcommands:
+        cmd_str_stripped = subcmd.strip()
+        if not cmd_str_stripped:
+            continue
+
+        # 1. Prevent pipeline-to-interpreter command execution bypasses (e.g. curl ... | sh)
+        if "|" in cmd_str_stripped:
+            segments = cmd_str_stripped.split("|")
+            for segment in segments[1:]:
+                segment = segment.strip(" \t\n\r\"'()$&;")
+                if segment:
+                    try:
+                        words = shlex.split(segment)
+                    except Exception:
+                        words = segment.split()
+
+                    # Robust helper to find the actual executable command by unwrapping environment variables,
+                    # flags, and common transparent wrappers (including shell/system/package wrappers).
+                    wrappers = {
+                        "env", "sudo", "doas", "xargs", "timeout", "nohup", "setsid", "nice",
+                        "ionice", "chrt", "taskset", "stdbuf", "chroot", "nsenter", "unshare",
+                        "pkexec", "uv", "pipx", "bun", "bunx", "npx", "deno", "poetry",
+                        "pipenv", "conda", "pnpm", "yarn", "npm", "cargo", "composer",
+                        "busybox", "toybox",
+                    }
+
+                    interpreters = (
+                        "sh",
+                        "bash",
+                        "zsh",
+                        "dash",
+                        "ksh",
+                        "fish",
+                        "ash",
+                        "csh",
+                        "tcsh",
+                        "python",
+                        "node",
+                        "perl",
+                        "ruby",
+                        "php",
+                        "deno",
+                        "bun",
+                        "tsx",
+                        "ts-node",
+                    )
+
+                    cmd_word = ""
+                    i = 0
+                    while i < len(words):
+                        token = words[i].strip(" \t\n\r\"'()$&;")
+                        if not token:
+                            i += 1
+                            continue
+
+                        # Skip env vars
+                        if "=" in token and not token.startswith("-"):
+                            i += 1
+                            continue
+
+                        # Skip flags and their arguments
+                        if token.startswith("-"):
+                            if token in ("-s", "--signal", "-k", "--kill-after", "-n", "--adjustment", "-c", "-p"):
+                                i += 2
+                            else:
+                                i += 1
+                            continue
+
+                        basename = os.path.basename(token)
+
+                        # 1. If it is an interpreter, select it immediately (takes precedence over wrappers)
+                        is_interp = False
+                        for interp in interpreters:
+                            pattern = rf"^{re.escape(interp)}(?:[0-9]+(?:\.[0-9]+)*)?$"
+                            if re.match(pattern, basename):
+                                is_interp = True
+                                break
+                        if is_interp:
+                            cmd_word = token
+                            break
+
+                        # 2. Skip wrappers
+                        if basename in wrappers:
+                            i += 1
+                            # Special wrapper argument handling:
+                            # timeout takes a duration argument right after options
+                            if basename == "timeout":
+                                while i < len(words) and words[i].startswith("-"):
+                                    if words[i] in ("-s", "--signal", "-k", "--kill-after"):
+                                        i += 2
+                                    else:
+                                        i += 1
+                                if i < len(words):
+                                    i += 1
+                            continue
+
+                        cmd_word = token
+                        break
+
+                    if cmd_word:
+                        basename = os.path.basename(cmd_word)
+                        for interp in interpreters:
+                            pattern = rf"^{re.escape(interp)}(?:[0-9]+(?:\.[0-9]+)*)?$"
+                            if re.match(pattern, basename):
+                                raise PermissionError(
+                                    f"Pipeline to interpreter {cmd_word!r} is prohibited "
+                                    "to prevent command execution bypass."
+                                )
+
+        # 2. Validate paths for each subcommand
+        try:
+            parts = shlex.split(cmd_str_stripped)
+        except ValueError as exc:
+            parts = cmd_str_stripped.split()
+
+        for part in parts:
+            _check_token(part)
 
 
 class WorkflowExecutor:

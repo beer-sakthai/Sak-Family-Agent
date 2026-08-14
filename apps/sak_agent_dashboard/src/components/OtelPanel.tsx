@@ -218,9 +218,9 @@ export function OtelPanel({ data }: OtelPanelProps) {
         </h4>
         <p className="text-[11px] text-slate-400 mb-3 leading-relaxed max-w-3xl">
           The attributes below are the shared names every OTel-instrumented LLM
-          library is converging on. Emitting these from sakthai's agent loop
+          Emitting these from sakthai&apos;s agent loop
           would let a single backend (Jaeger, Grafana, GCP Trace) render every
-          persona's runs uniformly.
+          persona&apos;s runs uniformly.
         </p>
         <div className="glass-panel rounded-2xl bg-slate-900/80 border border-slate-800/80 overflow-hidden">
           <table className="w-full text-left font-mono text-xs">

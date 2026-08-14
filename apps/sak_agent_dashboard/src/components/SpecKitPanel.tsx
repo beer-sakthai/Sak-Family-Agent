@@ -90,7 +90,7 @@ function UpstreamCard({ upstream }: { upstream: SpecKitUpstream }) {
             The tool this .specify/ install comes from. Templates and workflows
             below are populated from local disk; the roster here is what the
             upstream ships to any project — including commands you can opt into
-            beyond what's currently wired.
+            beyond what&apos;s currently wired.
           </p>
           <a
             href={upstream.repoUrl}
