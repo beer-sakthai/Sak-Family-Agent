@@ -162,7 +162,7 @@ Other `make` targets: `compose-personas` (rebuild full skill trees into
 
 ### CI
 
-Fifteen workflows live in `.github/workflows/`. The ones that gate a change:
+Twenty workflows live in `.github/workflows/`. The ones that gate a change:
 
 | Workflow | Trigger | What it does |
 |---|---|---|
@@ -170,20 +170,35 @@ Fifteen workflows live in `.github/workflows/`. The ones that gate a change:
 | `pylint.yml` | every push | pylint over `personas/sakthai/sakthai` + `tests` |
 | `secret-scan.yml` | push to `main`, all PRs | gitleaks (config `.gitleaks.toml`, which allowlists persona docs) |
 | `dependency-audit.yml` | PRs touching `pyproject.toml`/`uv.lock`, weekly | pip-audit over `uv.lock` |
+| `dependency-review.yml` | all PRs | GitHub dependency-review on the PR's diff |
 | `ossar.yml` | push/PR to `main`, weekly | open-source static analysis |
 | `sonarcloud.yml` | push to `main` | SonarCloud analysis |
+| `subprojects.yml` | push/PR touching `apps/agent_workflow_framework/**` or `services/teams-copilot-mcp/**` | the two out-of-tree pytest suites |
 | `agent-self-evolution.yml` | push/PR touching `personas/sakthai/agent-self-evolution/**` | that subproject's own suite |
 | `labeler.yml` | `pull_request_target` | PR labelling |
+| `scorecard.yml` | push to `main`, weekly | OpenSSF Scorecard → SARIF to code scanning |
 
 Scheduled / manual only, so they never block a PR: `continuous-security.yml`
 (nightly), `verify-assets.yml` (daily HF asset check), `run-evals.yml` (weekly
 lm-eval, installs the `evals` dependency group), `auto-dependency-update.yml`
-(weekly), `stale.yml` (daily), `summary.yml` (on new issues), `manual.yml`.
+(weekly), `stale.yml` (daily), `summary.yml` (on new issues), `OSPS.yml` (weekly
+security-baseline assessment), `code-scanning-cleanup.yml` (manual, retires
+orphaned code-scanning alerts), `manual.yml`.
 
 CodeQL runs via GitHub's *default setup* (repo settings), so there is
-deliberately no `codeql.yml` — adding one would conflict. **No smoke-test job is
+deliberately no `codeql.yml` — adding one would conflict. Automated remediation
+bots have now added it **twice**; both times every job failed with `CodeQL
+analyses from advanced configurations cannot be processed when the default setup
+is enabled`. If a StepSecurity-style PR reintroduces the file, drop it before
+merging — see `docs/code-scanning-sweep-2026-08-12.md`. **No smoke-test job is
 wired into any workflow**, despite `.claude/skills/run-sakthai-agent-v2/driver.py`
 existing — treat that as available tooling, not an enforced gate.
+
+Workflow files are expected to be real, loadable workflows: a `.yml`/`.yaml`
+extension (GitHub silently ignores anything else, including a name like
+`foo. yml` with a space), a top-level `on:` and `jobs:`, no duplicate keys, and
+a top-level `permissions:` block. A batch of pasted starter templates that met
+none of this was removed on 2026-08-13.
 
 Coverage floor is **96%** (`fail_under = 96`, branch coverage on) over the
 `sakthai` package, with `telegram/bot.py` omitted from measurement; the suite

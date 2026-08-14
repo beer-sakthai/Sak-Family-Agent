@@ -654,6 +654,21 @@ The rest of #603 (the `harden-runner` steps across all workflows,
 `dependency-review.yml`, `.pre-commit-config.yaml`, the expanded
 `dependabot.yml`) is kept as-is.
 
+**Recurrence, 2026-08-13.** A later "[StepSecurity] Apply security best
+practices" commit re-added `.github/workflows/codeql.yml`, this time with the
+matrix `["actions", "javascript-typescript", "python"]`. The collision is
+identical — the workflow accumulated **69 runs, essentially all failing** with
+the same `cannot be processed when the default setup is enabled` error, three
+failed jobs per push to `main` and per PR. It has been removed again.
+
+This is the second time an automated remediation bot has reintroduced the file,
+so treat it as a standing hazard rather than a one-off: **if a future
+StepSecurity/remediation PR adds `codeql.yml`, drop that file from the PR before
+merging.** The check is cheap — `.github/workflows/codeql.yml` must not exist as
+long as default setup is on. Disabling default setup in repository settings and
+keeping an advanced workflow is the only other coherent option, and it would
+lose the `actions` language coverage that default setup provides today.
+
 #### `BranchProtectionID`
 
 Scoring 3: admin enforcement off, no required approvers, no CODEOWNERS review,

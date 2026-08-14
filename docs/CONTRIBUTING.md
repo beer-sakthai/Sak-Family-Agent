@@ -47,25 +47,32 @@ CI runs a fixed sequence on every pull request, and **green CI is the bar for
 `main`.** Run the same checks locally before pushing:
 
 ```bash
-ruff check sakthai tests          # lint
-ruff format --check sakthai tests # format check (drop --check to apply)
-mypy sakthai                      # strict type-check
-bandit -c pyproject.toml -r sakthai  # security scan
-python -m pytest tests/ -q        # full unit suite
+uv sync --all-extras                                         # see note below
+uv run ruff check personas/sakthai/sakthai tests             # lint
+uv run ruff format --check personas/sakthai/sakthai tests    # format (drop --check to apply)
+uv run mypy personas/sakthai/sakthai                         # strict type-check
+uv run bandit -c pyproject.toml -r personas/sakthai/sakthai  # security scan
+uv run pytest -m "not integration" -q                        # unit suite, as CI runs it
 ```
 
 To run a single test file:
 
 ```bash
-python -m pytest tests/test_memory_store.py -q
+uv run pytest tests/test_memory_store.py -q
 ```
 
 Notes:
 
-- **`mypy` is `strict`** over `sakthai/` (the Streamlit `dashboard/app.py` is the
-  one loosened module). Keep new code strict-clean.
+- **The package lives at `personas/sakthai/sakthai/`.** There is no root-level
+  `sakthai/` directory; `import sakthai` resolves there through the editable
+  install.
+- **`uv sync --all-extras`, not plain `uv sync`.** `hypothesis` lives in the
+  `dev` extra, and `tests/test_store_properties.py` fails collection without
+  it — which aborts the whole run.
+- **`mypy` is `strict`** over the package, with one exemption:
+  `sakthai.telegram.*`. Keep all other new code strict-clean.
 - **`ruff` excludes `library/` and `scripts/`,** and `mypy` only covers
-  `sakthai/`. Don't "fix" lint or types in those trees.
+  `personas/sakthai/sakthai`. Don't "fix" lint or types in those trees.
 - **Tests must stay hermetic** — no network calls and no GCP credentials. Inject
   clients and stores rather than reaching out.
 - A **secret scan** (gitleaks) runs first in CI. Never commit secrets; `.env` is
