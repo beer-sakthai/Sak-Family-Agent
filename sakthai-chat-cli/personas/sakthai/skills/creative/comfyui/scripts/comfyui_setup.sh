@@ -170,10 +170,10 @@ elif command -v pipx >/dev/null 2>&1; then
 else
     log "Neither pipx nor uvx found. Falling back to pip install --user…"
     log "  (Recommend installing pipx: https://pipx.pypa.io)"
-    if ! pip install --user comfy-cli==1.16.0 >>"$LOG_FILE" 2>&1; then
+    if ! pip install --user --require-hashes -r "$SCRIPT_DIR/comfy-cli-requirements.lock" >>"$LOG_FILE" 2>&1; then
         # macOS: PEP 668 externally-managed-environment may block --user
         log "pip install --user failed. Retrying with --break-system-packages…"
-        pip install --user --break-system-packages comfy-cli==1.16.0 >>"$LOG_FILE" 2>&1 || {
+        pip install --user --break-system-packages --require-hashes -r "$SCRIPT_DIR/comfy-cli-requirements.lock" >>"$LOG_FILE" 2>&1 || {
             err "Could not install comfy-cli. Install pipx or uv first."
             exit 1
         }
