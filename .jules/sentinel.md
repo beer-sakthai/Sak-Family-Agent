@@ -561,6 +561,11 @@
 **Learning:** Command execution filters that only analyze individual binary names and direct filesystem paths miss dynamic pipeline injection vectors where untrusted code is fetched and executed directly in an interpreter's memory space.
 **Prevention:** Scan parsed execution tokens for the pipe operator (`|`), and check subsequent tokens until a logical command separator is hit. If any subsequent token matches an interpreter or shell runtime (e.g. `sh`, `bash`, `python`, `node`, `perl`, `ruby`, `php`), block the command immediately.
 
+## 2026-08-31 - Command Chaining and Substitution Bypasses in Shell Action Validation
+**Vulnerability:** Shell command validation in the Workflow Executor (`_validate_shell_command`) evaluated commands as single unchained strings. Attackers could bypass pipeline-to-interpreter and sensitive path restrictions by chaining commands (`&&`, `;`, `||`, `\n`) or using command substitutions (`$(...)`, `` `...` ``), such as `echo ok; curl ... | sh` or `echo $(cat /etc/passwd)`.
+**Learning:** Validating shell commands without extracting subcommands and command substitutions allows malicious sub-expressions to bypass security checks when hidden behind command separators or substitution syntax.
+**Prevention:** Implement recursive subcommand parsing (`_extract_shell_subcommands`) that handles quotes, escapes, separators, and command substitutions, ensuring every extracted subcommand is independently validated against pipeline and sensitive path rules.
+
 ## 2026-08-28 - Gaps in Covered Interpreters under Pipeline-to-Interpreter Guardrails
 **Vulnerability:** The pipeline-to-interpreter blocklists in both `guardrails.py` (Rule 8) and `executor.py` (`_validate_shell_command`) initially only targeted a narrow subset of interpreters/shells (`sh`, `bash`, `python`, `node`, `perl`, `ruby`, `php`, and partially `deno`/`bun`). This left critical gaps, allowing potential command execution bypasses (e.g. `curl ... | zsh` or `curl ... | fish` or `curl ... | bun`) to bypass pipeline-to-interpreter protections.
 **Learning:** Hardened filters targeting pipeline bypasses are only as secure as the exhaustive list of supported shells and language engines. Leaving common runtimes like `zsh`, `fish`, `dash`, `deno`, or `tsx` off the list creates immediate and trivial bypass vectors.
