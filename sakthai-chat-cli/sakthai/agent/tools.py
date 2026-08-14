@@ -21,7 +21,7 @@ from pathlib import Path
 from typing import Any
 from urllib.error import HTTPError, URLError
 
-from ..config import sakthai_home
+from ..config import redact_secrets, sakthai_home
 from ..lead.capture import capture_lead as capture_lead_fact
 from ..learn.ingest import ingest_document as ingest_document_facts
 from ..memory.store import MemoryStore
@@ -400,17 +400,17 @@ def _send_telegram_message(args: dict[str, Any], store: MemoryStore) -> str:
             body = json.loads(response.read().decode("utf-8"))
         if body.get("ok"):
             return "Telegram message sent successfully."
-        return f"Telegram send failed: {body.get('description', 'Unknown error')}"
+        return redact_secrets(f"Telegram send failed: {body.get('description', 'Unknown error')}")
     except HTTPError as exc:
         try:
             err = json.loads(exc.read().decode("utf-8"))
-            return f"Telegram API Error: {err.get('description', exc.reason)}"
+            return redact_secrets(f"Telegram API Error: {err.get('description', exc.reason)}")
         except Exception:
-            return f"Telegram API HTTP Error {exc.code}: {exc.reason}"
+            return redact_secrets(f"Telegram API HTTP Error {exc.code}: {exc.reason}")
     except URLError as exc:
-        return f"Network Error: Could not connect to Telegram API: {exc.reason}"
+        return redact_secrets(f"Network Error: Could not connect to Telegram API: {exc.reason}")
     except Exception as exc:  # noqa: BLE001
-        return f"Unexpected Error sending Telegram message: {exc}"
+        return redact_secrets(f"Unexpected Error sending Telegram message: {exc}")
 
 
 def _run_agent_loop(args: dict[str, Any], store: MemoryStore) -> str:
