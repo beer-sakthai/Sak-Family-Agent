@@ -106,13 +106,16 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      # The only Node subproject in the repo. pnpm is pinned to the version in
-      # package.json's `packageManager` field so CI resolves the same tree the
-      # committed pnpm-lock.yaml was generated with.
+      # The only Node subproject in the repo. The pnpm version is pinned by
+      # package.json's `packageManager` field (pnpm@9.15.9), which this action
+      # reads on its own — so CI resolves the same tree the committed
+      # pnpm-lock.yaml was generated with.
+      #
+      # Deliberately no `version:` input: supplying one *as well as*
+      # `packageManager` makes action-setup fail with "Multiple versions of pnpm
+      # specified", which is how this job failed on its first run.
       - name: Install pnpm
         uses: pnpm/action-setup@008330803749db0355799c700092d9a85fd074e9 # v6.0.9
-        with:
-          version: 9.15.9
 
       - name: Set up Node
         uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
