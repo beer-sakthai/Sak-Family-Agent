@@ -194,7 +194,7 @@ export function GcpLearningPanel({ data }: GcpLearningPanelProps) {
           training-data-analyst is ~8k commits deep with per-course sub-trees
           that Google updates independently. Copying notebooks into this repo
           would rot fast and confuse ownership. This tab is a curated jumping-off
-          list — filtered by what&apos;s relevant to the personas — and links out to
+          list — filtered by what's relevant to the personas — and links out to
           the live directories so you always see current material.
         </p>
       </div>

@@ -150,14 +150,14 @@ export function DesignSpecsPanel({ data }: DesignSpecsPanelProps) {
           </span>
         </h3>
         <p className="text-xs text-slate-400 mt-1 max-w-3xl leading-relaxed">
-          The repo&apos;s own design record, read live from{" "}
+          The repo's own design record, read live from{" "}
           <code className="text-cyan-300">{data.specsDir}</code>. Each spec is a
           brainstormed decision log — status, scope, non-goals, and the
           reasoning behind the choices — paired with an implementation plan in{" "}
           <code className="text-cyan-300">{data.plansDir}</code> where one
-          exists. Status is parsed from each file&apos;s own{" "}
+          exists. Status is parsed from each file's own{" "}
           <code className="text-cyan-300">**Status:**</code> line, so this view
-          can&apos;t drift from the documents.
+          can't drift from the documents.
         </p>
       </div>
 
