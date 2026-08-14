@@ -755,6 +755,67 @@ def test_graph_http_error_reports_api_message(
     assert "Insufficient privileges" in out
 
 
+def test_graph_safe_redacts_secrets_in_errors(
+    monkeypatch: pytest.MonkeyPatch, sakthai_home: Path, store
+) -> None:
+    secret = "super-secret-token-12345"
+    monkeypatch.setenv("MS_GRAPH_CLIENT_ID", "client-id")
+    monkeypatch.setenv("MS_GRAPH_REFRESH_TOKEN", secret)
+
+    # 1. RuntimeError with secret
+    def _stub_runtime(request, timeout=None):
+        raise RuntimeError(f"Failed with secret {secret}")
+
+    monkeypatch.setattr(urllib.request, "urlopen", _stub_runtime)
+    out = tool_by_name("send_outlook_mail").handler(
+        {"to": "a@b.com", "subject": "hi", "body": "hello"}, store
+    )
+    assert secret not in out
+    assert "[REDACTED]" in out
+
+    # 2. HTTPError with secret
+    exc = urllib.error.HTTPError("https://graph.microsoft.com", 400, f"Error with {secret}", None, None)
+    exc.read = lambda: json.dumps({"error": {"message": f"Denied with {secret}"}}).encode()  # type: ignore[method-assign]
+
+    def _stub_http(request, timeout=None):
+        if "/oauth2/v2.0/token" in request.full_url:
+            return _FakeResponse(b'{"access_token": "fake-access"}')
+        raise exc
+
+    monkeypatch.setattr(urllib.request, "urlopen", _stub_http)
+    out = tool_by_name("send_outlook_mail").handler(
+        {"to": "a@b.com", "subject": "hi", "body": "hello"}, store
+    )
+    assert secret not in out
+    assert "[REDACTED]" in out
+
+    # 3. URLError with secret
+    def _stub_url(request, timeout=None):
+        if "/oauth2/v2.0/token" in request.full_url:
+            return _FakeResponse(b'{"access_token": "fake-access"}')
+        raise urllib.error.URLError(f"no route with {secret}")
+
+    monkeypatch.setattr(urllib.request, "urlopen", _stub_url)
+    out = tool_by_name("send_outlook_mail").handler(
+        {"to": "a@b.com", "subject": "hi", "body": "hello"}, store
+    )
+    assert secret not in out
+    assert "[REDACTED]" in out
+
+    # 4. Unexpected Exception with secret
+    def _stub_generic(request, timeout=None):
+        if "/oauth2/v2.0/token" in request.full_url:
+            return _FakeResponse(b'{"access_token": "fake-access"}')
+        raise ValueError(f"unexpected issue {secret}")
+
+    monkeypatch.setattr(urllib.request, "urlopen", _stub_generic)
+    out = tool_by_name("send_outlook_mail").handler(
+        {"to": "a@b.com", "subject": "hi", "body": "hello"}, store
+    )
+    assert secret not in out
+    assert "[REDACTED]" in out
+
+
 def test_graph_url_error_reports_network_error(
     monkeypatch: pytest.MonkeyPatch, sakthai_home: Path, store
 ) -> None:
