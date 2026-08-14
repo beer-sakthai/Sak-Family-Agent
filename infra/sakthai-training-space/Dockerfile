@@ -58,32 +58,46 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # -----------------------------------------------------------------------------
 # 2. Core ML stack (pinned for CUDA 12.4)
 # -----------------------------------------------------------------------------
-# hadolint ignore=DL3013
-RUN pip install \
-    torch==2.5.1 torchvision==0.20.1 torchaudio==2.5.1 --index-url https://download.pytorch.org/whl/cu124 \
-    transformers==4.47.1 \
-    datasets==3.2.0 \
-    accelerate==1.2.1 \
-    peft==0.14.0 \
-    bitsandbytes==0.45.0 \
-    evaluate==0.4.3 \
-    wandb==0.19.1 \
-    tensorboard==2.19.0 \
-    scipy==1.15.1 \
-    scikit-learn==1.6.1 \
-    ninja==1.11.1.3
+# Hash-locked: `torch==2.5.1` alone (the previous pin here) doesn't satisfy
+# pip's --require-hashes, and this line was also silently broken before the
+# lock — a bare `--index-url` mid-command replaces the index for the *whole*
+# pip invocation, and transformers/datasets/etc. were never actually
+# resolvable against download.pytorch.org (confirmed: 403 on that index).
+# `--extra-index-url` + `--index-strategy unsafe-best-match` is the standard
+# way to combine PyTorch's index with PyPI; "unsafe" here just means "don't
+# apply the dependency-confusion heuristic", which doesn't matter once every
+# package is hash-verified anyway. Regenerate with:
+#   python3 scripts/gen_hash_lock.py infra/sakthai-training-space/ml-stack-requirements.in \
+#     infra/sakthai-training-space/ml-stack-requirements.lock \
+#     --platform x86_64-unknown-linux-gnu --python-version 3.11 \
+#     --extra-index-url https://download.pytorch.org/whl/cu124 --index-strategy unsafe-best-match
+COPY ml-stack-requirements.lock /tmp/ml-stack-requirements.lock
+RUN pip install --require-hashes -r /tmp/ml-stack-requirements.lock \
+    --extra-index-url https://download.pytorch.org/whl/cu124 \
+    --index-strategy unsafe-best-match
 
 # -----------------------------------------------------------------------------
 # 3. DeepSpeed + TRL (install together to avoid ABI/version drift)
 # -----------------------------------------------------------------------------
 # trl[deepspeed] pulls the deepspeed extra; we also pin deepspeed explicitly.
 # Kept as a separate layer from the core stack so ML-stack rebuilds cache.
-# hadolint ignore=DL3013,DL3059
-RUN pip install \
-    deepspeed==0.15.4 \
-    "trl[deepspeed]==0.15.2" \
-    sentencepiece==0.2.0 \
-    protobuf==4.25.6
+# Hash-locked and constrained against section 2's resolved versions
+# (infra/sakthai-training-space/ml-stack.constraints, derived from
+# ml-stack-requirements.lock) — trl/deepspeed's own transitive resolution is
+# otherwise unconstrained and silently pulled torch==2.13.0, transformers
+# 5.15.0, and 7 other packages newer than what section 2 just installed, when
+# this was checked. Needs the same PyTorch index as section 2 for the same
+# reason. Regenerate with:
+#   python3 scripts/gen_hash_lock.py infra/sakthai-training-space/deepspeed-trl-requirements.in \
+#     infra/sakthai-training-space/deepspeed-trl-requirements.lock \
+#     --platform x86_64-unknown-linux-gnu --python-version 3.11 \
+#     --extra-index-url https://download.pytorch.org/whl/cu124 --index-strategy unsafe-best-match \
+#     --constraint infra/sakthai-training-space/ml-stack.constraints
+# hadolint ignore=DL3059
+COPY deepspeed-trl-requirements.lock /tmp/deepspeed-trl-requirements.lock
+RUN pip install --require-hashes -r /tmp/deepspeed-trl-requirements.lock \
+    --extra-index-url https://download.pytorch.org/whl/cu124 \
+    --index-strategy unsafe-best-match
 
 # Optional: vLLM for fast generation in online RL (GRPO/RLOO). Version pinned
 # to TRL-supported range. Disable if not needed to save build time/image size.
