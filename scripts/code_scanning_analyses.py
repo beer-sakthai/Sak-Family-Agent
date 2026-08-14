@@ -36,6 +36,9 @@ which is how this runs without a PAT.
     # Everything a given tool ever uploaded, oldest first
     python scripts/code_scanning_analyses.py list --tool Scorecard --analyses
 
+    # Why an alert left the open list: dismissed as accepted risk, or fixed?
+    python scripts/code_scanning_analyses.py list --alerts --state dismissed
+
     # Dry run: show exactly which analyses would be deleted
     python scripts/code_scanning_analyses.py delete --tool SomeDeadTool
 
@@ -137,8 +140,17 @@ def _tool_name(entry: dict[str, Any]) -> str:
     return str(tool.get("name") or "(unknown)")
 
 
-def fetch_open_alerts(repo: str, token: str) -> list[dict[str, Any]]:
-    return _paginate(f"/repos/{repo}/code-scanning/alerts", token, {"state": "open"})
+def fetch_alerts(repo: str, token: str, state: str = "open") -> list[dict[str, Any]]:
+    """Alerts in one state, or every state when ``state`` is ``all``.
+
+    The API filters by a single state, and omitting the parameter returns every
+    state rather than just the open ones. ``all`` therefore means "send no
+    filter" — which is the whole point of this flag: an alert that stops
+    appearing under ``open`` has either been fixed or dismissed, and only a
+    read that includes the other states can tell those apart.
+    """
+    params = {} if state == "all" else {"state": state}
+    return _paginate(f"/repos/{repo}/code-scanning/alerts", token, params)
 
 
 def fetch_analyses(repo: str, token: str, tool: str | None = None) -> list[dict[str, Any]]:
@@ -167,14 +179,29 @@ def _print_table(rows: list[tuple[str, ...]], headers: tuple[str, ...]) -> None:
         print("  ".join(cell.ljust(widths[i]) for i, cell in enumerate(row)))
 
 
+def _alert_state(alert: dict[str, Any]) -> str:
+    """An alert's state, with the dismissal reason folded in when there is one.
+
+    A dismissed alert leaves the ``open`` listing looking exactly like a fixed
+    one, so the reason is the part worth printing.
+    """
+    state = str(alert.get("state") or "?")
+    reason = alert.get("dismissed_reason")
+    if reason:
+        return f"{state} ({reason})"
+    return state
+
+
 def cmd_list(args: argparse.Namespace, token: str) -> int:
-    alerts = fetch_open_alerts(args.repo, token)
+    state = getattr(args, "state", "open")
+    alerts = fetch_alerts(args.repo, token, state)
     analyses = fetch_analyses(args.repo, token, args.tool)
 
     by_tool_alerts = group_by_tool(alerts)
     by_tool_analyses = group_by_tool(analyses)
 
-    print(f"Open code-scanning alerts on {args.repo}: {len(alerts)}")
+    label = "Open" if state == "open" else state.capitalize()
+    print(f"{label} code-scanning alerts on {args.repo}: {len(alerts)}")
     print()
 
     rows: list[tuple[str, ...]] = []
@@ -190,14 +217,15 @@ def cmd_list(args: argparse.Namespace, token: str) -> int:
             )
         )
     if rows:
-        _print_table(rows, ("tool", "open alerts", "analyses", "latest analysis"))
+        count_header = "open alerts" if state == "open" else f"{state} alerts"
+        _print_table(rows, ("tool", count_header, "analyses", "latest analysis"))
     else:
         print("Nothing reported.")
 
     if args.alerts:
         print()
         for tool in sorted(by_tool_alerts):
-            print(f"--- {tool}: open alerts ---")
+            print(f"--- {tool}: {state} alerts ---")
             for a in sorted(
                 by_tool_alerts[tool], key=lambda x: str((x.get("rule") or {}).get("id", ""))
             ):
@@ -207,6 +235,7 @@ def cmd_list(args: argparse.Namespace, token: str) -> int:
                 sev = rule.get("security_severity_level") or rule.get("severity")
                 print(
                     f"  #{a.get('number')}  {rule.get('id')}  sev={sev}  "
+                    f"state={_alert_state(a)}  "
                     f"ref={inst.get('ref')}  "
                     f"{loc.get('path') or '-'}:{loc.get('start_line') or '-'}"
                 )
@@ -296,8 +325,17 @@ def build_parser() -> argparse.ArgumentParser:
     )
     sub = parser.add_subparsers(dest="command", required=True)
 
-    p_list = sub.add_parser("list", help="show open alerts and analyses grouped by tool")
+    p_list = sub.add_parser("list", help="show alerts and analyses grouped by tool")
     p_list.add_argument("--tool", help="restrict the analyses column to one tool")
+    p_list.add_argument(
+        "--state",
+        choices=("open", "closed", "dismissed", "fixed", "all"),
+        default="open",
+        help=(
+            "which alert state to list (default: open). Use `dismissed` or `all` "
+            "to tell an alert that was accepted as risk apart from one a fix closed"
+        ),
+    )
     p_list.add_argument(
         "--alerts",
         action="store_true",
