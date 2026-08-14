@@ -1,137 +1,118 @@
-# Microsoft 365 Copilot APIs V1 Python Client Library
+# Sak Agent Dashboard
 
-Integrate the Microsoft 365 Copilot APIs into your Python application!
+An observability dashboard for the Sak Family agent runtime. It reads the artifacts the
+`sakthai` CLI and agent loop write under `~/.sakthai/` and renders them as live panels:
+agent status, run analytics, session transcripts, memory, security audit logs, traces,
+evals, the MCP server inventory, and the spec-kit feature tree.
 
-## Installation
+Read-only by design — the dashboard never writes to the agent's state.
 
-To install the client libraries via PyPi:
+## Quick start
 
-```py
-pip install microsoft-agents-m365copilot
+```bash
+pnpm install          # pnpm 9.15.9, node >= 18
+pnpm dev              # http://localhost:3000
 ```
 
-## Create a Copilot APIs client and make an API call
+Other scripts:
 
-The following code example shows how to create an instance of a Microsoft 365 Copilot APIs client with an authentication provider in the supported languages. The authentication provider handles acquiring access tokens for the application. Many different authentication providers are available for each language and platform. The different authentication providers support different client scenarios. For details about which provider and options are appropriate for your scenario, see [Choose an Authentication Provider](https://learn.microsoft.com/graph/sdks/choose-authentication-providers). 
+```bash
+pnpm lint             # eslint over src/
+pnpm typecheck        # tsc --noEmit
+pnpm test             # vitest run
+pnpm build            # production build
+```
 
-The example also shows how to make a call to the Microsoft 365 Copilot Retrieval API. To call this API, you first need to create a request object and then run the POST method on the request.
+CI runs all four in `.github/workflows/subprojects.yml` (job `sak-agent-dashboard`).
 
-The client ID is the app registration ID that is generated when you [register your app in the Azure portal](https://learn.microsoft.com/graph/auth-register-app-v2).
+## Where the data comes from
 
-1. Create a `.env` file with the following values:
+Everything real is read server-side from the agent's home directory. Nothing is fetched from
+a network service unless you configure the Python web API bridge below.
 
-    ```
-    TENANT_ID = "YOUR_TENANT_ID"
-    CLIENT_ID = "YOUR_CLIENT_ID"
-    ```
+| Source file | Read by | Powers |
+|---|---|---|
+| `~/.sakthai/eval.jsonl` | `src/lib/sakthai.ts` | Agent overview, analytics, eval panel |
+| `~/.sakthai/audit.log` | `src/lib/sakthai.ts` | Security audit log viewer |
+| `~/.sakthai/sessions/*.json` | `src/lib/sakthai.ts` | Session explorer + transcript modal |
+| `~/.sakthai/memory.db` and `~/.sakthai/<persona>/memory.db` | `src/lib/db.ts` | Memory explorer (facts + observations) |
+| `~/.sakthai/traces.jsonl` | `src/lib/traces.ts` | Trace waterfall viewer |
+| `<repo>/.specify/` and `<repo>/specs/` | `src/lib/speckit.ts` | Spec-kit panel |
 
-    >**Note:**
-    >
-    > Your tenant must have a Microsoft 365 Copilot license.
+Per-persona memory shards matter: deployed personas run with
+`SAKTHAI_HOME=$HOME/.sakthai/$AGENT`, so each writes to `~/.sakthai/<persona>/memory.db`
+rather than the legacy unscoped `memory.db`. The dashboard reads both and attributes each
+fact to its persona, mirroring `sakthai memory family`.
 
-2. Create a `main.py` file with the following snippet:
+The remaining panels (MCP servers, MCP SDK, ChatKit, Antigravity, Genkit, Conductor, Stitch)
+are curated reference catalogs held in `src/lib/`, not live integrations.
 
-    ```python
-    import asyncio
-    import os
-    from datetime import datetime
+## Data source badges
 
-    from azure.identity import DeviceCodeCredential
-    from dotenv import load_dotenv
-    from kiota_abstractions.api_error import APIError
+Each panel reports whether its numbers are `live`, `demo`, or `unavailable`. This is
+load-bearing: the dashboard ships with demo data so it renders on a fresh checkout, and
+without the badge a machine with no `~/.sakthai/` looks identical to a busy one. If a panel
+says `unavailable`, the source file is missing — not empty.
 
-    from microsoft_agents_m365copilot import AgentsM365CopilotServiceClient
-    from microsoft_agents_m365copilot.generated.copilot.retrieval.retrieval_post_request_body import (
-        RetrievalPostRequestBody,
-    )
-    from microsoft_agents_m365copilot.generated.models.retrieval_data_source import RetrievalDataSource
+The Demo toggle in the header forces every panel to demo data.
 
-    load_dotenv()
+## Configuration
 
-    TENANT_ID = os.getenv("TENANT_ID")
-    CLIENT_ID = os.getenv("CLIENT_ID")
+Copy `.env.example` to `.env.local` and edit as needed. Every variable is optional; the
+defaults work for a local `sakthai` install.
 
-    # Define a proper callback function that accepts all three parameters
-    def auth_callback(verification_uri: str, user_code: str, expires_on: datetime):
-        print(f"\nTo sign in, use a web browser to open the page {verification_uri}")
-        print(f"Enter the code {user_code} to authenticate.")
-        print(f"The code will expire at {expires_on}")
+| Variable | Default | Purpose |
+|---|---|---|
+| `SAKTHAI_DIR` | `~/.sakthai` | Agent home to read artifacts from |
+| `SPECKIT_DIR` | `<repo>/.specify` | spec-kit installation to introspect |
+| `SAKTHAI_WEB_URL` | _(unset)_ | Base URL of `sakthai web` for the `/api/stages` + `/api/ecosystem` bridge |
+| `SAKTHAI_WEB_TOKEN` | _(unset)_ | Bearer token for that API (`sakthai web setup` prints it) |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | _(unset)_ | Send dashboard server spans to a collector; falls back to a local file exporter |
+| `OTEL_SERVICE_NAME` | `sak-agent-dashboard` | Service name on emitted spans |
 
-    # Create device code credential with correct callback
-    credentials = DeviceCodeCredential(
-        client_id=CLIENT_ID,
-        tenant_id=TENANT_ID,
-        prompt_callback=auth_callback
-    )
+`SAKTHAI_WEB_TOKEN` is read server-side only and never reaches the browser — the
+`/api/stages` and `/api/ecosystem` routes proxy it.
 
-    # Use the Graph API V1 endpoint explicitly
-    scopes = ['https://graph.microsoft.com/.default']
-    client = AgentsM365CopilotBetaServiceClient(credentials=credentials, scopes=scopes)
+## Layout
 
-    # Make sure the base URL is set to V1
-    client.request_adapter.base_url = "https://graph.microsoft.com/v1.0"
+```
+src/
+├── app/
+│   ├── layout.tsx            root layout, fonts, header
+│   ├── page.tsx              tab shell
+│   ├── globals.css
+│   └── api/<name>/route.ts   one GET route per panel, all returning { success, ... }
+├── components/               one panel component per tab
+├── lib/                      data access — parsers, catalogs, types
+├── instrumentation.ts        OpenTelemetry NodeSDK registration
+└── tests/                    vitest + jsdom + React Testing Library
+```
 
-    async def retrieve():
-        try:
-            # Print the URL being used
-            print(f"Using API base URL: {client.request_adapter.base_url}\n")
-            
-            # Create the retrieval request body
-            retrieval_body = RetrievalPostRequestBody()
-            retrieval_body.data_source = RetrievalDataSource.SharePoint
-            retrieval_body.query_string = "What is the latest in my organization?"
-            
-            # Try more parameters that might be required
-            # retrieval_body.maximum_number_of_results = 10
-            
-            # Make the API call
-            print("Making retrieval API request...")
-            retrieval = await client.copilot.retrieval.post(retrieval_body)
-            
-            # Process the results
-            if retrieval and hasattr(retrieval, "retrieval_hits"):
-                print(f"Received {len(retrieval.retrieval_hits)} hits")
-                for r in retrieval.retrieval_hits:
-                    print(f"Web URL: {r.web_url}\n")
-                    for extract in r.extracts:
-                        print(f"Text:\n{extract.text}\n")
-            else:
-                print(f"Retrieval response structure: {dir(retrieval)}")
-        except APIError as e:
-            print(f"Error: {e.error.code}: {e.error.message}")
-            if hasattr(e, 'error') and hasattr(e.error, 'inner_error'):
-                print(f"Inner error details: {e.error.inner_error}")
-            raise e
+`src/lib/types.ts` is the shared contract between the parsers, the API routes, and the
+components. Add a type there rather than inlining shapes.
 
+## Adding a panel
 
-    # Run the async function
-    asyncio.run(retrieve())
-    ```
+1. Add the data function in `src/lib/<name>.ts`, returning `undefined` on any read failure.
+2. Add its types plus a `<Name>ApiResponse` to `src/lib/types.ts`.
+3. Add `src/app/api/<name>/route.ts` following the existing `{ success, ... }` + generic-500
+   convention (real errors go to `console.error`, never to the client).
+4. Add `src/components/<Name>Panel.tsx`.
+5. Register the tab in the `TABS` config in `src/app/page.tsx`.
+6. Add `src/tests/<name>.test.tsx`.
 
-3. If successful, you should get a list of `retrievalHits` collection.
+## Telemetry
 
-## Issues
+Server spans follow the OpenTelemetry [GenAI semantic
+conventions](https://github.com/open-telemetry/semantic-conventions-genai): `invoke_agent`,
+`execute_tool`, and `generate_content` spans carrying `gen_ai.*` attributes. The agent-side
+spans come from the Python package's `sakthai.telemetry` module, written to
+`~/.sakthai/traces.jsonl` when `SAKTHAI_OTEL_ENABLED` is set; the Traces tab renders them as
+a waterfall.
 
-To view or log issues, see [issues](https://github.com/microsoft/Agents-M365Copilot/issues).
+## Related
 
-## Contributing
-
-This project welcomes contributions and suggestions.  Most contributions require you to agree to a
-Contributor License Agreement (CLA) declaring that you have the right to, and actually do, grant us
-the rights to use your contribution. For details, visit https://cla.opensource.microsoft.com.
-
-When you submit a pull request, a CLA bot will automatically determine whether you need to provide
-a CLA and decorate the PR appropriately (e.g., status check, comment). Simply follow the instructions
-provided by the bot. You will only need to do this once across all repos using our CLA.
-
-This project has adopted the [Microsoft Open Source Code of Conduct](https://opensource.microsoft.com/codeofconduct/).
-For more information see the [Code of Conduct FAQ](https://opensource.microsoft.com/codeofconduct/faq/) or
-contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additional questions or comments.
-
-## Trademarks
-
-This project may contain trademarks or logos for projects, products, or services. Authorized use of Microsoft 
-trademarks or logos is subject to and must follow 
-[Microsoft's Trademark & Brand Guidelines](https://www.microsoft.com/en-us/legal/intellectualproperty/trademarks/usage/general).
-Use of Microsoft trademarks or logos in modified versions of this project must not cause confusion or imply Microsoft sponsorship.
-Any use of third-party trademarks or logos are subject to those third-party's policies.
+- `personas/sakthai/sakthai/dashboard/data.py` — the Python KPI collector behind `sakthai web`
+- `personas/sakthai/sakthai/web/server.py` — the Python HTTP API this dashboard can bridge to
+- `apps/agent_workflow_framework/` — sibling app, same doc conventions
+- `PLAN.md` — this app's phased plan and checklist

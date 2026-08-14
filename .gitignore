@@ -35,6 +35,9 @@ personas/sakthai/agent-self-evolution/output/
 .coverage
 apps/*/node_modules
 apps/*/.next
+# `tsc --noEmit` still writes an incremental build cache next to tsconfig.json.
+apps/*/tsconfig.tsbuildinfo
+apps/*/.env.local
 
 # `make mutation` copies the package into mutants/ to mutate it in isolation.
 mutants/

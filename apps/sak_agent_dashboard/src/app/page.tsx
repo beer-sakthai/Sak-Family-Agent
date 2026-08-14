@@ -47,135 +47,32 @@ import {
   AntigravityData,
   GenkitData,
   ConductorData,
+  DataSource,
 } from "@/lib/types";
+import {
+  getDemoAgents,
+  getDemoAuditLogs,
+  getDemoMemoryData,
+  getDemoMetrics,
+  getDemoSessions,
+  DEMO_TOTAL_RUNS,
+} from "@/lib/demoData";
+import DataSourceBadge from "@/components/DataSourceBadge";
 
-const defaultPersonas: AgentPersona[] = [
-  {
-    name: "SakThai",
-    role: "Primary Orchestrator & Fine-Tuned Agent",
-    status: "Active",
-    model: "sakthai-v2-qlora",
-    latencyMs: 320,
-    runs: 300,
-    skills: ["routing", "planning", "tool-call"],
-    badge: "1P Tuned",
-    benchmarkScore: 96.5,
-  },
-  {
-    name: "SakKing",
-    role: "High-Capacity Reasoning Specialist",
-    status: "Ready",
-    model: "sakking-v1-reasoning",
-    latencyMs: 540,
-    runs: 150,
-    skills: ["math", "logic-proof", "tree-search"],
-    badge: "Reasoning",
-    benchmarkScore: 94.2,
-  },
-  {
-    name: "SakSee",
-    role: "Multimodal & Vision Specialist",
-    status: "Ready",
-    model: "saksee-v1-vision",
-    latencyMs: 410,
-    runs: 120,
-    skills: ["ocr", "diagram-parsing", "image-eval"],
-    badge: "Multimodal",
-    benchmarkScore: 91.8,
-  },
-  {
-    name: "SakSit",
-    role: "Code Review & Security Auditor",
-    status: "Ready",
-    model: "saksit-v1-auditor",
-    latencyMs: 290,
-    runs: 91,
-    skills: ["static-analysis", "vulnerability-scan", "policy-check"],
-    badge: "Security",
-    benchmarkScore: 98.0,
-  },
-  {
-    name: "SakJules",
-    role: "Background Task & Async Execution Specialist",
-    status: "Ready",
-    model: "sakjules-v1-async",
-    latencyMs: 380,
-    runs: 100,
-    skills: ["cron-scheduler", "bg-worker", "liveness"],
-    badge: "Async",
-    benchmarkScore: 93.5,
-  },
-];
-
-const defaultMetrics: MetricsData = {
-  totalRuns: 761,
-  avgLatencyMs: 388,
-  successRate: 0.985,
-  tokenStats: {
-    totalTokens: 1450000,
-    promptTokens: 950000,
-    completionTokens: 500000,
-  },
-  stopReasons: {
-    end_turn: 740,
-    max_tokens: 21,
-  },
-  trends: [
-    { date: "2026-07-29", runs: 110, latencyMs: 395 },
-    { date: "2026-07-30", runs: 145, latencyMs: 382 },
-    { date: "2026-07-31", runs: 180, latencyMs: 390 },
-    { date: "2026-08-01", runs: 210, latencyMs: 375 },
-    { date: "2026-08-02", runs: 116, latencyMs: 388 },
-  ],
-};
-
-const defaultMemory: MemoryData = {
-  facts: [
-    { id: 1, entity: "SakThai", fact: "Primary model initialized", persona: "SakThai", createdAt: "2026-08-02" },
-    { id: 2, entity: "SakKing", fact: "GRPO mathematical solver loaded", persona: "SakKing", createdAt: "2026-08-02" },
-  ],
-  observations: [
-    { id: 1, category: "eval", observation: "Benchmark 95% passed", timestamp: "2026-08-02" },
-  ],
-};
-
-const defaultAuditLogs: AuditLog[] = [
-  {
-    id: 1,
-    timestamp: "2026-08-02T12:00:00Z",
-    persona: "SakSit",
-    severity: "critical",
-    event: "Unauthorized access blocked",
-    details: "Blocked non-whitelisted egress attempt",
-  },
-  {
-    id: 2,
-    timestamp: "2026-08-02T12:05:00Z",
-    persona: "SakThai",
-    severity: "info",
-    event: "Session initialized",
-    details: "Runtime state synchronized cleanly",
-  },
-];
-
-const defaultSessions: SessionMeta[] = [
-  {
-    sessionId: "sess-1",
-    persona: "SakThai",
-    timestamp: "2026-08-02T12:00:00Z",
-    messageCount: 5,
-    tokenUsage: 1200,
-    status: "completed",
-  },
-  {
-    sessionId: "sess-2",
-    persona: "SakKing",
-    timestamp: "2026-08-02T12:10:00Z",
-    messageCount: 12,
-    tokenUsage: 3400,
-    status: "completed",
-  },
-];
+/**
+ * Initial state before the first fetch resolves.
+ *
+ * These come from `lib/demoData.ts` — the same generators the API routes use —
+ * rather than a second set of literals maintained here. The two copies had
+ * already drifted (benchmark 96.5 vs 0.96, model `sakthai-v2-qlora` vs the
+ * configured model, a five-persona roster that omitted SakTan), which meant the
+ * numbers on screen changed the moment the first fetch landed.
+ */
+const defaultPersonas: AgentPersona[] = getDemoAgents();
+const defaultMetrics: MetricsData = getDemoMetrics();
+const defaultMemory: MemoryData = getDemoMemoryData();
+const defaultAuditLogs: AuditLog[] = getDemoAuditLogs();
+const defaultSessions: SessionMeta[] = getDemoSessions().slice(0, 20);
 
 export default function Home() {
   const [isDemo, setIsDemo] = useState(false);
@@ -199,7 +96,18 @@ export default function Home() {
   const [memory, setMemory] = useState<MemoryData>(defaultMemory);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>(defaultAuditLogs);
   const [sessions, setSessions] = useState<SessionMeta[]>(defaultSessions);
-  const [totalSessions, setTotalSessions] = useState<number>(761);
+  const [totalSessions, setTotalSessions] = useState<number>(DEMO_TOTAL_RUNS);
+  // Per-panel provenance, so the UI can say whether what is on screen was
+  // measured. Without it a machine with no ~/.sakthai renders a fully populated
+  // dashboard indistinguishable from a busy one.
+  const [dataSources, setDataSources] = useState<{
+    agents?: DataSource;
+    metrics?: DataSource;
+    memory?: DataSource;
+    audit?: DataSource;
+    sessions?: DataSource;
+  }>({});
+  const [unattributedRuns, setUnattributedRuns] = useState<number>(0);
   const [mcpServers, setMcpServers] = useState<McpServerSpec[]>([]);
   const [speckit, setSpeckit] = useState<SpecKitData | null>(null);
   const [mcpSdk, setMcpSdk] = useState<McpSdkData | null>(null);
@@ -255,6 +163,7 @@ export default function Home() {
 
       if (agentsRes?.success && Array.isArray(agentsRes.agents)) {
         setAgents(agentsRes.agents);
+        setUnattributedRuns(Number(agentsRes.unattributedRuns) || 0);
       }
       if (metricsRes?.success && metricsRes.metrics) {
         setMetrics(metricsRes.metrics);
@@ -267,6 +176,13 @@ export default function Home() {
         if (Array.isArray(sessionsRes.sessions)) setSessions(sessionsRes.sessions);
         if (typeof sessionsRes.total === "number") setTotalSessions(sessionsRes.total);
       }
+      setDataSources({
+        agents: agentsRes?.dataSource,
+        metrics: metricsRes?.dataSource,
+        memory: memoryRes?.dataSource,
+        audit: memoryRes?.auditDataSource,
+        sessions: sessionsRes?.dataSource,
+      });
       if (mcpRes?.success && Array.isArray(mcpRes.servers)) {
         setMcpServers(mcpRes.servers);
       }
@@ -365,7 +281,7 @@ export default function Home() {
             <Activity className="h-4 w-4 text-cyan-400" />
           </div>
           <div className="text-3xl font-extrabold text-white font-display">
-            {metrics?.totalRuns ?? totalSessions ?? 761}
+            {metrics?.totalRuns ?? totalSessions ?? 0}
           </div>
           <p className="text-xs text-slate-400 mt-1">Recorded in runtime</p>
         </div>
@@ -585,28 +501,51 @@ export default function Home() {
       <div className="space-y-8">
         {activeTab === "overview" && (
           <div className="space-y-8">
+            <div className="flex flex-wrap items-center gap-2">
+              <DataSourceBadge source={dataSources.agents} label="eval.jsonl" />
+              {unattributedRuns > 0 && (
+                <span
+                  className="inline-flex items-center rounded-full border border-slate-700/60 bg-slate-900/70 px-2 py-0.5 font-mono text-[10px] uppercase tracking-wide text-slate-400"
+                  title="Runs whose eval entry carried no persona field. They are counted separately rather than assigned to a persona."
+                >
+                  {unattributedRuns} unattributed
+                </span>
+              )}
+            </div>
             <AgentOverview agents={agents} />
             <AnalyticsCharts metrics={metrics} agents={agents} />
           </div>
         )}
 
         {activeTab === "analytics" && (
-          <AnalyticsCharts metrics={metrics} agents={agents} />
+          <div className="space-y-4">
+            <DataSourceBadge source={dataSources.metrics} label="eval.jsonl" />
+            <AnalyticsCharts metrics={metrics} agents={agents} />
+          </div>
         )}
 
         {activeTab === "sessions" && (
-          <SessionExplorer
-            sessions={sessions}
-            total={totalSessions}
-            onSessionSelect={handleFetchSessionDetail}
-            selectedSessionDetail={selectedSessionDetail}
-          />
+          <div className="space-y-4">
+            <DataSourceBadge source={dataSources.sessions} label="sessions/" />
+            <SessionExplorer
+              sessions={sessions}
+              total={totalSessions}
+              onSessionSelect={handleFetchSessionDetail}
+              selectedSessionDetail={selectedSessionDetail}
+            />
+          </div>
         )}
 
         {activeTab === "memory" && (
           <div className="space-y-8">
-            <MemoryExplorer memory={memory} />
-            <AuditLogs logs={auditLogs} />
+            <div className="space-y-4">
+              <DataSourceBadge source={dataSources.memory} label="memory.db" />
+              <MemoryExplorer memory={memory} />
+            </div>
+            <div className="space-y-4">
+              <DataSourceBadge source={dataSources.audit} label="audit.log" />
+              <AuditLogs logs={auditLogs} />
+            </div>
           </div>
         )}
 
