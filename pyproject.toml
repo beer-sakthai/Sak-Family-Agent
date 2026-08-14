@@ -243,6 +243,15 @@ evals = [
 lint = [
     "pylint>=4.0.7,<5.0",
 ]
+# Atheris for the harnesses in fuzz/. Its own group, and deliberately not in
+# `dev`: it builds against a matching clang/libFuzzer toolchain, so putting it
+# in the default install would make `uv sync --all-extras` fail on any machine
+# without one. Nothing in CI needs it — tests/test_fuzz_harnesses.py exercises
+# every harness invariant through a plain `exercise(bytes)` entry point that
+# imports nothing from Atheris. Install it only to run a real campaign.
+fuzz = [
+    "atheris>=3.0.0",
+]
 
 [tool.uv.sources]
 # CPU-only torch wheel: GitHub-hosted runners have no GPU, and the default
