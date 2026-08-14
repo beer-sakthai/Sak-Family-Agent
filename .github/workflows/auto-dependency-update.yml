@@ -20,9 +20,11 @@ jobs:
   auto-update:
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    permissions:
-      contents: write # To push the dependency-upgrade branch
-      pull-requests: write # To open the upgrade PR
+    # No job-level widening: every write (branch push, PR open) goes through
+    # the explicit GH_PAT_FOR_ACTIONS passed to step-security/create-pull-request
+    # below, not the ambient GITHUB_TOKEN — checkout also sets
+    # persist-credentials: false, so this job only ever needs the top-level
+    # contents: read.
     steps:
       - name: Harden the runner
         uses: step-security/harden-runner@b09bb98e06d4d774595224525879c09bc6e98c40 # v2.20.1

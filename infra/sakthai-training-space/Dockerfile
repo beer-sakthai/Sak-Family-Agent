@@ -28,24 +28,29 @@ ENV HUGGINGFACE_HUB_CACHE=/tmp/.huggingface/hub
 # -----------------------------------------------------------------------------
 # 1. System dependencies + Python 3.11
 # -----------------------------------------------------------------------------
-# hadolint ignore=DL3008,DL3013
+# Pinned to the exact jammy/jammy-updates/jammy-security versions available
+# when this was written. Unlike the pip pins below, Ubuntu's mirrors drop
+# superseded package versions, so this pin can go stale on a future rebuild —
+# apt-get fails loudly ("Version 'X' for 'Y' was not found") rather than
+# silently, so bump the pin at that point rather than removing it.
+# hadolint ignore=DL3013
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    ca-certificates \
-    curl \
-    git \
-    git-lfs \
-    libaio-dev \
-    libgomp1 \
-    ninja-build \
-    openssh-client \
-    python3.11 \
-    python3.11-dev \
-    python3.11-venv \
-    python3-pip \
-    tmux \
-    vim \
-    wget \
+    build-essential=12.9ubuntu3 \
+    ca-certificates=20260601~22.04.1 \
+    curl=7.81.0-1ubuntu1.25 \
+    git=1:2.34.1-1ubuntu1.17 \
+    git-lfs=3.0.2-1ubuntu0.3 \
+    libaio-dev=0.3.112-13build1 \
+    libgomp1=12.3.0-1ubuntu1~22.04.3 \
+    ninja-build=1.10.1-1 \
+    openssh-client=1:8.9p1-3ubuntu0.16 \
+    python3.11=3.11.0~rc1-1~22.04.1 \
+    python3.11-dev=3.11.0~rc1-1~22.04.1 \
+    python3.11-venv=3.11.0~rc1-1~22.04.1 \
+    python3-pip=22.0.2+dfsg-1ubuntu0.7 \
+    tmux=3.2a-4ubuntu0.2 \
+    vim=2:8.2.3995-1ubuntu2.34 \
+    wget=1.21.2-2ubuntu1.4 \
     && rm -rf /var/lib/apt/lists/* \
     && ln -sf /usr/bin/python3.11 /usr/bin/python \
     && python -m pip install --upgrade pip setuptools wheel
@@ -63,10 +68,10 @@ RUN pip install \
     bitsandbytes==0.45.0 \
     evaluate==0.4.3 \
     wandb==0.19.1 \
-    tensorboard \
-    scipy \
-    scikit-learn \
-    ninja
+    tensorboard==2.19.0 \
+    scipy==1.15.1 \
+    scikit-learn==1.6.1 \
+    ninja==1.11.1.3
 
 # -----------------------------------------------------------------------------
 # 3. DeepSpeed + TRL (install together to avoid ABI/version drift)
@@ -76,9 +81,9 @@ RUN pip install \
 # hadolint ignore=DL3013,DL3059
 RUN pip install \
     deepspeed==0.15.4 \
-    "trl[deepspeed]>=0.15.0,<0.16.0" \
-    sentencepiece \
-    protobuf
+    "trl[deepspeed]==0.15.2" \
+    sentencepiece==0.2.0 \
+    protobuf==4.25.6
 
 # Optional: vLLM for fast generation in online RL (GRPO/RLOO). Version pinned
 # to TRL-supported range. Disable if not needed to save build time/image size.
