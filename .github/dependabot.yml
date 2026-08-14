@@ -1,93 +1,37 @@
-# Dependabot keeps dependencies and pinned action versions current.
-# Three ecosystems live in this repo: Python (uv), the Playwright probe's npm
-# packages, and the GitHub Actions used by the workflows.
 version: 2
 updates:
-  # Python dependencies — pyproject.toml + uv.lock at the repo root.
-  - package-ecosystem: "uv"
-    directory: "/"
+  - package-ecosystem: "pip"
+    directory: "/" 
     schedule:
-      interval: "daily"
-    open-pull-requests-limit: 5
-    groups:
-      python-minor-patch:
-        update-types: ["minor", "patch"]
+      interval: "weekly"
+      day: "monday"
+      time: "02:00"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "dependabot"
+    target-branch: "main"
 
-  # Playwright accessibility probe — the only npm project with real
-  # dependencies (the old /dashboard tree no longer exists).
   - package-ecosystem: "npm"
-    directory: "/infra/pw-poc"
+    directory: "/" 
     schedule:
-      interval: "daily"
-    open-pull-requests-limit: 5
-    groups:
-      npm-minor-patch:
-        update-types: ["minor", "patch"]
+      interval: "weekly"
+      day: "monday"
+      time: "03:00"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "dependabot"
+    target-branch: "main"
 
-  # Pinned action versions in .github/workflows/.
   - package-ecosystem: "github-actions"
-    directory: "/"
+    directory: "/" 
     schedule:
-      interval: "daily"
-    open-pull-requests-limit: 5
-    groups:
-      actions:
-        patterns: ["*"]
-
-  # Container base images. Both Dockerfiles pin their base by digest, which
-  # only stays safe if something bumps the digest as upstream patches land.
-  - package-ecosystem: "docker"
-    directories:
-      - "/"
-      - "/infra/sakthai-training-space"
-    schedule:
-      interval: "daily"
-    open-pull-requests-limit: 5
-    groups:
-      docker:
-        patterns: ["*"]
-
-  - package-ecosystem: npm
-    directory: /apps/sak_agent_dashboard
-    schedule:
-      interval: daily
-
-  - package-ecosystem: pip
-    directory: /personas/sakking/skills/SakKing-agent-platform-skill-registry/scripts
-    schedule:
-      interval: daily
-
-  - package-ecosystem: pip
-    directory: /personas/sakking/skills/SakKing-agent-platform-tuning/references
-    schedule:
-      interval: daily
-
-  - package-ecosystem: npm
-    directory: /personas/saksee/skills/SakSee-stitch::react-components
-    schedule:
-      interval: daily
-
-  - package-ecosystem: npm
-    directory: /personas/saksee/skills/SakSee-stitch::react-native
-    schedule:
-      interval: daily
-
-  - package-ecosystem: pip
-    directory: /personas/sakthai/sakthai/telegram
-    schedule:
-      interval: daily
-
-  - package-ecosystem: pip
-    directory: /personas/sakthai/skills/SakThai-hf-cloud-python-env-setup
-    schedule:
-      interval: daily
-
-  - package-ecosystem: pip
-    directory: /personas/shared/sakthai/telegram
-    schedule:
-      interval: daily
-
-  - package-ecosystem: pip
-    directory: /sakthai-chat-cli/sakthai/telegram
-    schedule:
-      interval: daily
+      interval: "weekly"
+      day: "monday"
+      time: "04:00"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "dependabot"
+    target-branch: "main"
