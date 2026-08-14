@@ -28,6 +28,16 @@ jobs:
   devsecops-scan:
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    env:
+      # The agent step cannot work without Anthropic credentials, and this
+      # repository does not currently configure them — every nightly run failed
+      # at "No Anthropic credentials found", so the workflow was permanently
+      # red and told nobody anything. Resolve the presence check once here
+      # (`secrets` is available in a job-level `env:` but not in a step-level
+      # `if:`) and let the step skip cleanly instead of failing. Add the
+      # ANTHROPIC_API_KEY secret and the scan starts running with no further
+      # change to this file.
+      HAS_ANTHROPIC_KEY: ${{ secrets.ANTHROPIC_API_KEY != '' }}
     permissions:
       contents: write # To create branches and commits for patches
       pull-requests: write # To create pull requests with fixes
@@ -83,15 +93,27 @@ jobs:
         # skips unresolved --with-skills names on a live run (--dry-run is the
         # one that fails hard), so this step was exiting 0 every night while
         # running the agent with no security-skill guidance injected at all.
-        # Using two skills that DO resolve from the searched roots and match
-        # this task: SakThai-coding-security (this repo's own bandit/sandbox
-        # posture) and sakthai-security-hardening (general hardening
-        # checklist). --max-seconds bounds a single nightly run so a
-        # stuck/looping agent can't burn the full job timeout (or unbounded
-        # API spend).
+        # Both skills below are verified to resolve from those roots via
+        # `skills.collect_skills(*default_skill_roots())`:
+        # sakthai-security-red-teaming ("audit system inputs, API sandboxes and
+        # file capabilities to identify security vulnerabilities") and
+        # sakthai-security-hardening (general hardening checklist), both from
+        # library/security/.
+        #
+        # The previous value, SakThai-coding-security, does NOT exist in any
+        # searched root — the comment here used to assert it did. That is the
+        # same silent failure this comment was written to describe: a live run
+        # only warns and skips an unresolved name, so the agent ran with half
+        # the intended guidance and still exited 0. Verify with
+        # `sakthai run --dry-run --with-skills <name>`, which fails hard on an
+        # unresolved name, before changing either value.
+        #
+        # --max-seconds bounds a single nightly run so a stuck/looping agent
+        # can't burn the full job timeout (or unbounded API spend).
+        if: env.HAS_ANTHROPIC_KEY == 'true'
         run: |
           uv run sakthai run "Perform a full security audit of the codebase — run static analysis, triage findings, and propose fixes." \
-            --with-skills SakThai-coding-security \
+            --with-skills sakthai-security-red-teaming \
             --with-skills sakthai-security-hardening \
             --provider anthropic \
             --max-seconds 1800
@@ -106,3 +128,8 @@ jobs:
           # rather than "1" (which would allow ANY binary). Colon-separated
           # program allow-list, honored by sakthai's run_command tool.
           SAKTHAI_SHELL_ALLOW: "ruff:bandit:mypy:pytest:uv:git:python:python3"
+
+      - name: Explain why the scan was skipped
+        if: env.HAS_ANTHROPIC_KEY != 'true'
+        run: |
+          echo "::notice title=DevSecOps scan skipped::ANTHROPIC_API_KEY is not configured on this repository, so the nightly agent scan cannot run. Add the secret to enable it; no other change to continuous-security.yml is needed."
