@@ -125,6 +125,11 @@ def run_evaluation():
     
     return results
 
+def _to_html(text: str) -> str:
+    """Render one model output as an HTML fragment for the viewer."""
+    return text.replace("\\n", "<br>").replace("\n", "<br>").replace("```", "")
+
+
 def generate_html_viewer(results, output_path):
     metrics = results["metrics"]
     cases = results["cases"]
@@ -132,6 +137,19 @@ def generate_html_viewer(results, output_path):
     case_cards = ""
     for c in cases:
         savings = round((1.0 - len(c["new_output"]) / len(c["old_output"])) * 100, 1)
+        # Rendered outside the f-string on purpose: a backslash escape inside an
+        # f-string *expression* is a syntax error before Python 3.12 (PEP 701
+        # lifted that), and this project supports 3.11. Inlining these
+        # .replace() calls made the whole module unparseable on the minimum
+        # supported interpreter.
+        #
+        # Both newline forms are handled deliberately. The inlined version only
+        # replaced the two-character sequence backslash-n, which never matches
+        # the real newlines TEST_CASES actually contains — so line breaks were
+        # silently dropped in the rendered HTML. Escaped newlines are still
+        # translated too, for cases loaded from JSON where they survive as text.
+        old_html = _to_html(c["old_output"])
+        new_html = _to_html(c["new_output"])
         case_cards += f"""
         <div class="case-card" data-category="{c["category"]}">
             <div class="case-header">
@@ -144,12 +162,12 @@ def generate_html_viewer(results, output_path):
             <div class="comparator">
                 <div class="panel old-panel">
                     <div class="panel-header">Old Skill Output <span class="score-badge bad">{int(c["old_score"]*100)}%</span></div>
-                    <div class="panel-content">{c["old_output"].replace('\\n', '<br>').replace('```', '')}</div>
+                    <div class="panel-content">{old_html}</div>
                     <div class="char-count">Length: {len(c["old_output"])} chars</div>
                 </div>
                 <div class="panel new-panel">
                     <div class="panel-header">New Skill Output <span class="score-badge good">{int(c["new_score"]*100)}%</span></div>
-                    <div class="panel-content">{c["new_output"].replace('\\n', '<br>').replace('```', '')}</div>
+                    <div class="panel-content">{new_html}</div>
                     <div class="char-count">Length: {len(c["new_output"])} chars <span class="savings-tag">({savings}% fewer)</span></div>
                 </div>
             </div>

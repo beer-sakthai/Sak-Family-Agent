@@ -1041,6 +1041,31 @@ def test_run_dry_run_fails_on_unresolved_skill(
     assert "no-such-skill" in result.output
 
 
+def test_run_dry_run_reports_unresolved_skill_without_credentials(
+    runner: CliRunner, monkeypatch: pytest.MonkeyPatch, sakthai_home: Path
+) -> None:
+    """A bad --with-skills name must be reported even with no credentials.
+
+    Validating skill names is a normal reason to run --dry-run somewhere that
+    deliberately has no credentials, such as CI. The credentials check used to
+    run first and short-circuit, so the unresolved name was never printed —
+    which is how `continuous-security.yml` went on passing
+    `--with-skills SakThai-coding-security`, a skill that does not exist, for
+    as long as it did. The sibling test above stubs credentials as present, so
+    it cannot catch this.
+    """
+    import sakthai.agent.loop as loop_mod
+
+    monkeypatch.setattr(loop_mod, "get_credential_source", lambda _p: None)
+    result = runner.invoke(
+        main,
+        ["run", "hi", "--dry-run", "--no-mcp", "-p", "anthropic", "--with-skills", "no-such-skill"],
+    )
+    assert result.exit_code != 0
+    assert "no-such-skill" in result.output, result.output
+    assert "Unresolved --with-skills" in result.output, result.output
+
+
 def test_run_dry_run_reports_resolved_skills(
     runner: CliRunner, monkeypatch: pytest.MonkeyPatch, sakthai_home: Path
 ) -> None:

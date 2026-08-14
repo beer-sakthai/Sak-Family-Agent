@@ -201,6 +201,18 @@ version to bump to. The only lever is dropping `lm-eval`, which would delete
 the weekly `run-evals.yml` capability to close one alert on an optional
 dependency group. Not taken; it clears itself if upstream ever publishes a fix.
 
+> **Decided 2026-08-14 — accepted risk, written up in
+> [`SECURITY.md`](SECURITY.md#accepted-dependency-risk-sqlitedict-pysec-2026-1939).**
+> Re-verified against PyPI and OSV: `sqlitedict` 2.1.0 is the newest release,
+> its last upload was 2022-12-03 (unmaintained), the advisory has no `fixed`
+> event, and every `lm-eval` release including `0.5.0.dev1` still requires it.
+> pip-audit over runtime + extras reports **zero**; the finding appears only
+> once the `evals` group is included. The reachable path is `lm-eval`'s own
+> local result cache in a CI job — no attacker-controlled input — so the alert
+> is accepted rather than closed, with the reasoning and the re-evaluation
+> triggers recorded in SECURITY.md. Dismiss #15464 in the Security tab as
+> "won't fix" to take it off the dashboard; nothing in a diff will.
+
 ### `FuzzingID` #15463 — closed by this change
 
 The previous sweeps filed this alongside branch protection and repo age as
