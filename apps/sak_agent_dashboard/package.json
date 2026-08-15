@@ -4,7 +4,7 @@
   "private": true,
   "packageManager": "pnpm@9.15.9",
   "engines": {
-    "node": ">=18"
+    "node": ">=22.22.2"
   },
   "scripts": {
     "dev": "next dev",
@@ -26,6 +26,7 @@
     "better-sqlite3": "^13.0.2"
   },
   "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.3",
     "@testing-library/jest-dom": "^7.0.0",
     "@testing-library/react": "^16.0.1",
     "@types/better-sqlite3": "^9.6.0",

@@ -173,7 +173,7 @@ Twenty workflows live in `.github/workflows/`. The ones that gate a change:
 | `dependency-review.yml` | all PRs | GitHub dependency-review on the PR's diff |
 | `ossar.yml` | push/PR to `main`, weekly | open-source static analysis |
 | `sonarcloud.yml` | push to `main` | SonarCloud analysis |
-| `subprojects.yml` | push/PR touching `apps/agent_workflow_framework/**` or `services/teams-copilot-mcp/**` | the two out-of-tree pytest suites |
+| `subprojects.yml` | push/PR touching `apps/agent_workflow_framework/**`, `apps/sak_agent_dashboard/**`, or `services/teams-copilot-mcp/**` | the two out-of-tree pytest suites + the dashboard's lint/typecheck/test/build chain |
 | `agent-self-evolution.yml` | push/PR touching `personas/sakthai/agent-self-evolution/**` | that subproject's own suite |
 | `labeler.yml` | `pull_request_target` | PR labelling |
 | `scorecard.yml` | push to `main`, weekly | OpenSSF Scorecard → SARIF to code scanning |
@@ -546,12 +546,32 @@ credentials/endpoints are absent; `ci.yml` also excludes them by marker with
 `-m "not integration"`, so a test that forgets its `skipif` guard still cannot
 make CI network-dependent.
 
-Two suites live **outside** `tests/` and are not covered by `testpaths`:
+Three suites live **outside** `tests/` and are not covered by `testpaths`:
 `apps/agent_workflow_framework/tests/` (127 tests, no `pyproject.toml` — run
-in-place with `uv run --with pyyaml python -m pytest tests/`) and
+in-place with `uv run --with pyyaml python -m pytest tests/`),
 `services/teams-copilot-mcp/tests/` (37 tests, its own `pyproject.toml`/`uv.lock`
-— `uv run --project . --extra dev python -m pytest tests/`). Both are run by
+— `uv run --project . --extra dev python -m pytest tests/`), and
+`apps/sak_agent_dashboard/` (the repo's only Node subproject — 172 vitest tests,
+run with `pnpm test`; see the dashboard gates below). All three are run by
 `.github/workflows/subprojects.yml`, path-filtered to their own directories.
+
+**The dashboard's CI job runs more than tests, and lint gates the rest.** The
+`sak_agent_dashboard` job runs `pnpm lint` → `pnpm typecheck` → `pnpm test` →
+`pnpm build` in that order, each `needs`-free but sequential, so a lint error
+silently skips the three steps behind it (they report as skipped, not failed —
+read the *first* red step, not the last). `pnpm lint` is stock
+`eslint-config-next` v16, which enables the **React Compiler** rules
+(`react-hooks/immutability`, `react-hooks/set-state-in-effect`, …). These are
+stricter than the classic `exhaustive-deps` set and catch things a passing
+vitest run will not: a `useCallback` that references itself, or an effect body
+that calls `setState` synchronously. Run the full sequence locally before
+pushing any change under `apps/sak_agent_dashboard/`:
+
+```bash
+cd apps/sak_agent_dashboard
+pnpm install --frozen-lockfile
+pnpm lint && pnpm typecheck && pnpm test && pnpm build
+```
 
 **Assert on the rule, not just the outcome.** Several guardrail rules overlap,
 so a test that asserts only `action == DENY` can pass because a *different*,
