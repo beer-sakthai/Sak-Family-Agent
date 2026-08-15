@@ -15,21 +15,27 @@ interface UseAgentStreamOptions {
 export function useAgentStream(options: UseAgentStreamOptions = {}) {
   const { persona, severity, autoConnect = true, maxEvents = 100 } = options;
 
-  const [status, setStatus] = useState<StreamStatus>("disconnected");
+  const [status, setStatus] = useState<StreamStatus>(
+    autoConnect ? "connecting" : "disconnected",
+  );
   const [events, setEvents] = useState<TelemetryEvent[]>([]);
   const [latestEvent, setLatestEvent] = useState<TelemetryEvent | null>(null);
   const [lastHeartbeat, setLastHeartbeat] = useState<Date | null>(null);
   const eventSourceRef = useRef<EventSource | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  // Holds the latest `openStream` so the reconnect timer can re-enter it without
+  // `openStream` closing over itself (and going stale when persona/severity change).
+  const openStreamRef = useRef<() => void>(() => {});
 
-  const connect = useCallback(() => {
+  // Opens the stream without touching state synchronously, so the mount effect
+  // below can call it directly. Status transitions are driven by the EventSource
+  // callbacks (`onopen` / `onerror`) instead.
+  const openStream = useCallback(() => {
     if (typeof window === "undefined" || typeof EventSource === "undefined") return;
 
     if (eventSourceRef.current) {
       eventSourceRef.current.close();
     }
-
-    setStatus("connecting");
 
     const params = new URLSearchParams();
     if (persona) params.set("persona", persona);
@@ -88,10 +94,20 @@ export function useAgentStream(options: UseAgentStreamOptions = {}) {
       // Auto reconnect after 5s
       if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
       reconnectTimeoutRef.current = setTimeout(() => {
-        connect();
+        setStatus("connecting");
+        openStreamRef.current();
       }, 5000);
     };
   }, [persona, severity, maxEvents]);
+
+  useEffect(() => {
+    openStreamRef.current = openStream;
+  }, [openStream]);
+
+  const connect = useCallback(() => {
+    setStatus("connecting");
+    openStream();
+  }, [openStream]);
 
   const disconnect = useCallback(() => {
     if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
@@ -109,12 +125,12 @@ export function useAgentStream(options: UseAgentStreamOptions = {}) {
 
   useEffect(() => {
     if (autoConnect) {
-      connect();
+      openStream();
     }
     return () => {
       disconnect();
     };
-  }, [autoConnect, connect, disconnect]);
+  }, [autoConnect, openStream, disconnect]);
 
   return {
     status,
