@@ -58,6 +58,9 @@ def _validate_url(url_str: str) -> None:
     if scheme not in ("http", "https"):
         raise ValueError(f"Forbidden URL scheme '{scheme}'. Only HTTP and HTTPS are allowed.")
 
+    if parsed.username or parsed.password or "@" in (parsed.netloc or ""):
+        raise ValueError("Userinfo (username/password) credentials in URLs are prohibited")
+
     host = parsed.hostname
     if not host:
         raise ValueError(f"URL missing hostname: {url_str}")

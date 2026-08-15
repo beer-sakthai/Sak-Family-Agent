@@ -21,6 +21,7 @@ import {
   Terminal,
   Workflow,
 } from "lucide-react";
+import { GithubIcon as Github } from "./GithubIcon";
 import {
   SpecKitData,
   SpecKitTemplate,

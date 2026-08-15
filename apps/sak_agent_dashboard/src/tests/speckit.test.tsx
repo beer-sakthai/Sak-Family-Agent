@@ -226,6 +226,16 @@ describe("SpecKit Feature Suite", () => {
             integrations: [],
             templates: [],
             scripts: [],
+            upstream: {
+              repoUrl: "https://github.com/github/spec-kit",
+              license: "MIT",
+              installCommand: "uv tool install specify-cli",
+              minPython: "3.11+",
+              requiredTools: [],
+              supportedIntegrations: [],
+              commands: [],
+              layoutNote: "",
+            },
             upstream: getSpecKitData().upstream,
           }}
         />

@@ -10,6 +10,7 @@ import {
   BookOpen,
   GitBranch,
 } from "lucide-react";
+import { GithubIcon as Github } from "./GithubIcon";
 import { GCP_LEARNING_STALENESS_NOTES } from "@/lib/gcpLearning";
 import {
   GcpLearningData,

@@ -17,6 +17,7 @@ import {
   Split,
   Wrench,
 } from "lucide-react";
+import { GithubIcon as Github } from "./GithubIcon";
 import { M365_ACCOUNT_BLOCKER } from "@/lib/m365Copilot";
 import { M365CopilotData, M365CopilotPrimitive } from "@/lib/types";
 
