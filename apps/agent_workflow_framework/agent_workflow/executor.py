@@ -11,6 +11,7 @@ import json
 import os
 import sys
 import time
+import types
 import urllib.parse
 import urllib.request
 import uuid
@@ -34,6 +35,55 @@ from agent_workflow.state import StateContext, StateInterpolationError
 class ExecutionError(Exception):
     """Base exception for workflow execution failures."""
     pass
+
+
+class _SafeJSON:
+    """Serialisation-only stand-in for the ``json`` module in the python sandbox.
+
+    The sandbox used to place the real ``json`` module into its globals as a
+    convenience. That single object defeated the entire builtins blocklist: a
+    module's own imports are plain, non-dunder attributes, so the AST dunder
+    rule never sees them and attribute traversal walks straight out of the
+    sandbox. Every one of these reached full RCE without naming a dunder or a
+    blocked builtin::
+
+        json.codecs.builtins.open('/etc/passwd').read()
+        json.codecs.sys.modules['os'].popen('id').read()
+        json.decoder.re.enum.bltns.open(...)      # independent route to builtins
+        json.decoder.re.enum.sys.modules[...]     # independent route to sys
+
+    Patching names off the module is whack-a-mole (there are at least four
+    disjoint routes to ``builtins``/``sys`` through ``codecs``, ``re`` and
+    ``enum``). The fix is to not expose a module at all: this facade carries
+    only the two serialisation functions workflows actually use. Their
+    ``__globals__`` would lead back to the module namespace, but that is a
+    dunder and so is already blocked by the AST validator.
+
+    ``dump``/``load`` are deliberately absent: they take file objects, which a
+    sandbox with no ``open`` cannot produce.
+    """
+
+    __slots__ = ()
+
+    dumps = staticmethod(json.dumps)
+    loads = staticmethod(json.loads)
+
+
+def _assert_no_modules(namespace: Dict[str, Any], where: str) -> None:
+    """Fail closed if a module object ever reaches the python sandbox.
+
+    Defence in depth for the escape described on :class:`_SafeJSON`. Any module
+    in the sandbox namespace is an escape route, because module attributes are
+    non-dunder and therefore invisible to the AST validator. This makes that
+    class of mistake fail loudly at execution time rather than silently
+    reopening the sandbox.
+    """
+    for name, value in namespace.items():
+        if isinstance(value, types.ModuleType):
+            raise PermissionError(
+                f"Module '{value.__name__}' exposed as '{name}' in {where} is "
+                "not permitted in the python sandbox."
+            )
 
 
 def _validate_url(url_str: str) -> None:
@@ -737,9 +787,19 @@ class WorkflowExecutor:
                 if k not in dangerous_builtins and not (k.startswith("__") and k.endswith("__"))
             }
 
-            eval_globals = {"__builtins__": safe_builtins, "json": json}
+            # ``json`` here is the serialisation-only facade, never the module —
+            # see :class:`_SafeJSON` for the sandbox escape that exposing the
+            # real module opened up.
+            eval_globals = {"__builtins__": safe_builtins, "json": _SafeJSON()}
             eval_locals = dict(params)
-            
+
+            # Params are interpolated workflow data and should never carry a
+            # module, but a module arriving here would be an escape route, so
+            # check rather than assume.
+            _assert_no_modules(eval_globals, "sandbox globals")
+            _assert_no_modules(eval_locals, "step params")
+
+
             try:
                 # Try evaluating as expression first
                 res = eval(code, eval_globals, eval_locals)
