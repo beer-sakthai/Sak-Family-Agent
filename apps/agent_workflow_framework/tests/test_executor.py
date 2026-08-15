@@ -115,6 +115,10 @@ class TestWorkflowExecutor(unittest.TestCase):
             "http://example.com/path\r\nInjected-Header: value",
             "http://example.com/path\twith-tab",
             "http://example.com/path\0with-null",
+            "http://user:pass@example.com",
+            "http://user@example.com",
+            "http://example.com@127.0.0.1",
+            "http://admin:secret@10.0.0.1",
         ]
         for url in dangerous_urls:
             with self.subTest(url=url):
@@ -133,7 +137,7 @@ class TestWorkflowExecutor(unittest.TestCase):
                 self.assertTrue(
                     any(
                         x in error_msg
-                        for x in ["ssrf", "smuggling", "scheme", "hostname", "invalid", "forbidden", "control"]
+                        for x in ["ssrf", "smuggling", "scheme", "hostname", "invalid", "forbidden", "control", "userinfo", "credentials"]
                     ),
                     f"Unexpected error message for URL '{url}': {step_res.error}",
                 )
@@ -156,6 +160,8 @@ class TestWorkflowExecutor(unittest.TestCase):
             "http://169.254.169.254",
             "file:///etc/passwd",
             "gopher://example.com",
+            "http://user:pass@example.com",
+            "http://user@example.com",
         ]
 
         for url in unsafe_redirects:
