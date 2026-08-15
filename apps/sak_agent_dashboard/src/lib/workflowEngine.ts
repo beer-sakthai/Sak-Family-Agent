@@ -1,5 +1,6 @@
 import { WorkflowTopology, WorkflowExecutionResult, WorkflowStage } from "./types";
 import { telemetryBus } from "./telemetryBus";
+import { randomBytes } from "crypto";
 
 export const WORKFLOW_TOPOLOGIES: WorkflowTopology[] = [
   {
@@ -142,7 +143,7 @@ export function getWorkflowById(id: string): WorkflowTopology | undefined {
  */
 export async function executeWorkflow(workflowId: string): Promise<WorkflowExecutionResult> {
   const topology = getWorkflowById(workflowId) || WORKFLOW_TOPOLOGIES[0];
-  const executionId = `exec_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+  const executionId = `exec_${Date.now()}_${randomBytes(4).toString("hex")}`;
   const startTime = new Date().toISOString();
 
   // Clone stages
