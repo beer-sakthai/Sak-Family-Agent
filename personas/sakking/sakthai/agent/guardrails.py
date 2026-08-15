@@ -1370,6 +1370,11 @@ def _block_output_with_secrets(
         "MS_GRAPH_CLIENT_SECRET",
         "MS_GRAPH_REFRESH_TOKEN",
         "MSGRAPH_CLIENT_SECRET",
+        "SLACK_BOT_TOKEN",
+        "SLACK_USER_TOKEN",
+        "SLACK_APP_TOKEN",
+        "SLACK_SIGNING_SECRET",
+        "SLACK_WEBHOOK_URL",
     ]
     secrets_to_check = set()
     try:
