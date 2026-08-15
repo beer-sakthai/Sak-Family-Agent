@@ -7,7 +7,6 @@ import {
   Copy,
   Cpu,
   ExternalLink,
-  Github,
   Layers,
   Package,
   Rocket,
@@ -17,6 +16,7 @@ import {
   Workflow,
   Wrench,
 } from "lucide-react";
+import { GithubIcon as Github } from "./GithubIcon";
 import { AdkData, AdkPrimitive, AdkPrimitiveKind } from "@/lib/types";
 
 interface GoogleAdkPanelProps {

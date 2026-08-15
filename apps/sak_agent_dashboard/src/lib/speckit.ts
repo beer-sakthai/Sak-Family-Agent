@@ -450,6 +450,8 @@ function parseScripts(rootDir: string): string[] {
   }
 }
 
+export { UPSTREAM };
+
 export function getSpecKitData(): SpecKitData {
   const rootDir = resolveSpecKitDir();
   const present = fs.existsSync(rootDir);

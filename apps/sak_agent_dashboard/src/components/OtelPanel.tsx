@@ -8,13 +8,13 @@ import {
   Copy,
   ExternalLink,
   FileText,
-  Github,
   Package,
   Radio,
   ScrollText,
   Send,
   Telescope,
 } from "lucide-react";
+import { GithubIcon as Github } from "./GithubIcon";
 import { OtelData, OtelSignal } from "@/lib/types";
 
 interface OtelPanelProps {
