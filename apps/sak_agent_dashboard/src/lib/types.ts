@@ -964,3 +964,266 @@ export interface M365CopilotApiResponse {
   error?: string;
 }
 
+// ---------------- Real-Time Telemetry & SSE Streaming ----------------
+
+export type TelemetryEventType =
+  | "connected"
+  | "agent_start"
+  | "token_delta"
+  | "tool_call"
+  | "tool_result"
+  | "guardrail_check"
+  | "memory_mutation"
+  | "agent_complete"
+  | "agent_error"
+  | "heartbeat";
+
+export interface TelemetryEvent {
+  id: string;
+  type: TelemetryEventType;
+  timestamp: string;
+  persona: string;
+  sessionId?: string;
+  data: {
+    message?: string;
+    tokensGenerated?: number;
+    latencyMs?: number;
+    toolName?: string;
+    toolArgs?: Record<string, unknown>;
+    toolOutput?: unknown;
+    guardrailAction?: "ALLOW" | "DENY" | "MODIFY";
+    guardrailRule?: string;
+    memoryKey?: string;
+    memoryVal?: string;
+    error?: string;
+  };
+}
+
+export interface StreamEventPayload {
+  event: TelemetryEventType;
+  payload: TelemetryEvent;
+}
+
+// ---------------- Multi-Provider Ecosystem & Workflow Framework ----------------
+
+export type ProviderType =
+  | "claude"
+  | "codex"
+  | "opencode"
+  | "ollama"
+  | "huggingface"
+  | "gemini_agy"
+  | "m365_azure";
+
+export interface ModelSpec {
+  id: string;
+  name: string;
+  contextWindow: number;
+  inputCostPer1M: number;
+  outputCostPer1M: number;
+  isLocal: boolean;
+  capabilities: ("text" | "vision" | "code" | "tool_calling" | "reasoning")[];
+}
+
+export interface ProviderSpec {
+  id: ProviderType;
+  name: string;
+  description: string;
+  vendor: string;
+  badge: string;
+  health: "healthy" | "degraded" | "offline";
+  latencyMs: number;
+  supportedModels: ModelSpec[];
+  defaultModel: string;
+  isLocal: boolean;
+  assignedPersonas: string[];
+}
+
+export interface WorkflowStage {
+  id: string;
+  name: string;
+  personaSlug: string;
+  personaName: string;
+  provider: ProviderType;
+  model: string;
+  action: string;
+  status: "pending" | "running" | "completed" | "failed" | "skipped";
+  durationMs?: number;
+  tokensUsed?: number;
+  outputSummary?: string;
+}
+
+export interface WorkflowTopology {
+  id: string;
+  name: string;
+  description: string;
+  category: "autonomous" | "security" | "publishing" | "maintenance";
+  stages: WorkflowStage[];
+}
+
+export interface WorkflowExecutionResult {
+  executionId: string;
+  workflowId: string;
+  status: "running" | "completed" | "failed";
+  startTime: string;
+  endTime?: string;
+  stages: WorkflowStage[];
+  totalTokens: number;
+  totalLatencyMs: number;
+}
+
+// ---------------- 6-Part Cycle Intelligence & Operations Suite ----------------
+
+// Part 1: Dream · Hub Ecosystem
+export interface ModelCardMeta {
+  pipelineTag?: string;
+  license: string;
+  downloads: number;
+  likes: number;
+  tags: string[];
+  hasGGUF: boolean;
+  quantizations: string[];
+}
+
+export interface HubAsset {
+  id: string;
+  name: string;
+  type: "model" | "dataset" | "space";
+  repoId: string;
+  author: string;
+  url: string;
+  meta: ModelCardMeta;
+  status: "active" | "building" | "archived";
+}
+
+export interface HubEcosystemData {
+  totalModels: number;
+  totalDatasets: number;
+  totalSpaces: number;
+  assets: HubAsset[];
+  syncedAt: string;
+}
+
+// Part 2: Hope · Skills & Tool Calling
+export interface ToolGuardrailSpec {
+  name: string;
+  category: "shell" | "filesystem" | "network" | "credentials" | "ast";
+  level: "allow" | "prompt" | "deny";
+  ruleDescription: string;
+  blockedPatterns?: string[];
+}
+
+export interface SkillSpec {
+  slug: string;
+  name: string;
+  description: string;
+  category: "system" | "automation" | "research" | "creative" | "testing";
+  authorPersona: string;
+  commandSnippet: string;
+  requiredTools: string[];
+  guardrailCount: number;
+}
+
+export interface ASTAuditResult {
+  allowedCount: number;
+  blockedCount: number;
+  activeRules: ToolGuardrailSpec[];
+}
+
+export interface SkillsCatalogData {
+  skills: SkillSpec[];
+  guardrails: ToolGuardrailSpec[];
+  totalSkills: number;
+  totalTools: number;
+}
+
+// Part 4: Joy · Benchmark Arena
+export type BenchmarkCategory = "MMLU" | "HumanEval" | "GSM8k" | "ToolAccuracy" | "SafetyRefusal";
+
+export interface BenchmarkEvalItem {
+  id: string;
+  category: BenchmarkCategory;
+  name: string;
+  description: string;
+  sampleCount: number;
+  averageLatencyMs: number;
+}
+
+export interface PersonaBenchmarkScore {
+  personaSlug: string;
+  personaName: string;
+  model: string;
+  provider: ProviderType;
+  overallScore: number;
+  categoryScores: Record<BenchmarkCategory, number>;
+  tokensPerSec: number;
+  costPer1kRuns: number;
+}
+
+export interface BenchmarkArenaData {
+  leaderboard: PersonaBenchmarkScore[];
+  evalCategories: BenchmarkEvalItem[];
+  testedAt: string;
+}
+
+// Part 5: Trust · Memory Vector RAG & Telegram
+export interface KnowledgeNode {
+  id: string;
+  label: string;
+  type: "persona" | "fact" | "task" | "session" | "rule";
+  val: number;
+  color?: string;
+}
+
+export interface KnowledgeEdge {
+  source: string;
+  target: string;
+  relation: string;
+}
+
+export interface KnowledgeGraphData {
+  nodes: KnowledgeNode[];
+  edges: KnowledgeEdge[];
+  totalFacts: number;
+  dbPath: string;
+}
+
+export interface TelegramBridgeData {
+  botUsername: string;
+  status: "online" | "polling" | "idle";
+  activeSessions: number;
+  registeredCommands: string[];
+  voiceTranscriberEnabled: boolean;
+  allowedUserCount: number;
+}
+
+// Part 6: Growth · Self-Evolution Loop
+export interface PromptEvolutionItem {
+  id: string;
+  personaSlug: string;
+  timestamp: string;
+  originalSnippet: string;
+  evolvedSnippet: string;
+  rationale: string;
+  performanceDelta: string;
+}
+
+export interface LearningJournalEntry {
+  id: string;
+  timestamp: string;
+  persona: string;
+  triggerEvent: string;
+  lessonLearned: string;
+  remediationApplied: boolean;
+}
+
+export interface SelfEvolutionData {
+  round: number;
+  evolutions: PromptEvolutionItem[];
+  journalEntries: LearningJournalEntry[];
+  mutationCoveragePct: number;
+  lastWrapTimestamp: string;
+}
+
+
+

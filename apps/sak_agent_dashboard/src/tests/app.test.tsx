@@ -25,20 +25,20 @@ describe("Home Page & Root Layout Shell (Tier 1 & Tier 2)", () => {
 
     for (const persona of PERSONAS) {
       expect(
-        screen.getByText(persona.name),
+        screen.getAllByText(persona.name).length,
         `persona ${persona.name} not rendered`
-      ).toBeInTheDocument();
+      ).toBeGreaterThan(0);
       expect(
-        screen.getByText(persona.role),
+        screen.getAllByText(persona.role).length,
         `role for ${persona.name} not rendered`
-      ).toBeInTheDocument();
+      ).toBeGreaterThan(0);
     }
   });
 
   it("renders SakTan, which the dashboard previously omitted", () => {
     render(<Home />);
-    expect(screen.getByText("SakTan")).toBeInTheDocument();
-    expect(screen.getByText("Daily Ops · Deputy 2")).toBeInTheDocument();
+    expect(screen.getAllByText("SakTan").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Daily Ops · Deputy 2").length).toBeGreaterThan(0);
   });
 
   it("renders overview stat counters from the shared demo totals", () => {

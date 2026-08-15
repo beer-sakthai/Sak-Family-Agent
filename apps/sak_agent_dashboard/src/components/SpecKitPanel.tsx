@@ -9,7 +9,6 @@ import {
   ExternalLink,
   FileCode,
   FlaskConical,
-  Github,
   GitBranch,
   Layers,
   Package,
@@ -77,7 +76,7 @@ function UpstreamCard({ upstream }: { upstream: SpecKitUpstream }) {
       <div className="p-5 border-b border-slate-800/70 flex flex-col md:flex-row md:items-start md:justify-between gap-3">
         <div>
           <h4 className="text-sm font-bold font-display text-white tracking-tight flex items-center gap-2">
-            <Github className="h-4 w-4 text-cyan-400" />
+            <GitBranch className="h-4 w-4 text-cyan-400" />
             Upstream — github/spec-kit
             <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-800/60">
               {upstream.license}
