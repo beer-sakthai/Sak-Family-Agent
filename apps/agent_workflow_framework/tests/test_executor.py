@@ -827,6 +827,65 @@ class TestWorkflowExecutor(unittest.TestCase):
             )
         self.assertIn("not permitted in the python sandbox", str(ctx.exception))
 
+    def test_python_sandbox_blocks_format_string_dunder_traversal(self):
+        """str.format walks attributes the AST validator cannot see.
+
+        The dunder rule inspects Name and Attribute nodes, but a format
+        string's field path lives inside an ast.Constant, so
+        ``"{x.__class__.__bases__}".format(x=())`` reached ``object`` without
+        emitting a single dunder node. The field-name grammar cannot call, so
+        this is attribute reading rather than RCE -- but it defeated the
+        guarantee the dunder rule exists to give.
+        """
+        format_payloads = [
+            '"{x.__class__.__bases__}".format(x=())',
+            '"{x.__class__.__bases__[0].__subclasses__}".format(x=())',
+            '"{x.__class__}".format_map({"x": ()})',
+            # split-name variant: a content scan of the format string would
+            # miss this one, which is why the method itself is denied
+            '("{x." + "__cl" + "ass__" + "}").format(x=())',
+        ]
+        for payload in format_payloads:
+            with self.subTest(payload=payload):
+                wf = WorkflowDefinition(
+                    name="python_format_escape",
+                    steps=[
+                        StepDefinition(id="s1", action="python", params={"expr": payload}),
+                    ],
+                )
+                history = asyncio.run(self.executor.execute_workflow(wf))
+                self.assertEqual(
+                    history.status,
+                    RunStatus.FAILED,
+                    f"payload {payload!r} escaped the python sandbox",
+                )
+                step_res = history.step_results["s1"]
+                self.assertIsNotNone(step_res.error)
+                self.assertIn("prohibited", step_res.error.lower())
+                self.assertIn("format", step_res.error.lower())
+
+    def test_python_sandbox_still_formats_with_fstrings(self):
+        """f-strings stay available as the formatting route.
+
+        Their expressions parse into real AST nodes, so the dunder rule
+        already covers them -- pinned in both directions here.
+        """
+        wf = WorkflowDefinition(
+            name="python_fstring_ok",
+            steps=[StepDefinition(id="s1", action="python", params={"expr": 'f"val={1 + 1}"'})],
+        )
+        history = asyncio.run(self.executor.execute_workflow(wf))
+        self.assertEqual(history.status, RunStatus.COMPLETED)
+        self.assertEqual(history.step_results["s1"].output["result"], "val=2")
+
+        wf_bad = WorkflowDefinition(
+            name="python_fstring_dunder",
+            steps=[StepDefinition(id="s1", action="python", params={"expr": 'f"{().__class__}"'})],
+        )
+        history_bad = asyncio.run(self.executor.execute_workflow(wf_bad))
+        self.assertEqual(history_bad.status, RunStatus.FAILED)
+        self.assertIn("dunder", history_bad.step_results["s1"].error.lower())
+
     def test_python_sandbox_rejects_modules_nested_in_params(self):
         """A module hidden inside a container param must also fail closed.
 

@@ -37,6 +37,12 @@ class ExecutionError(Exception):
     pass
 
 
+# str.format and str.format_map resolve attribute paths written inside the
+# format string, which the AST validator cannot see. See the check in the
+# python action for the escape this closes.
+_FORMAT_METHODS = frozenset({"format", "format_map"})
+
+
 class _SafeJSON:
     """Serialisation-only stand-in for the ``json`` module in the python sandbox.
 
@@ -762,6 +768,30 @@ class WorkflowExecutor:
                     if isinstance(node, ast.Attribute):
                         if node.attr.startswith("__") and node.attr.endswith("__"):
                             raise PermissionError(f"Access to dunder attribute '{node.attr}' is prohibited.")
+                        # str.format/format_map walk attributes named inside the
+                        # *format string*, where the dunder lives in an
+                        # ast.Constant this validator never inspects:
+                        #   "{x.__class__.__bases__}".format(x=())  ->  (object,)
+                        # That defeats the dunder rule without ever emitting a
+                        # dunder Name or Attribute node. The field-name grammar
+                        # cannot call, so this is attribute *reading* rather than
+                        # RCE, but it is still a hole in the guarantee the rule
+                        # is supposed to give. The method name itself is visible
+                        # here, so deny it. f-strings are unaffected: their
+                        # expressions parse into real nodes and are already
+                        # covered (verified: f"{().__class__}" is blocked).
+                        #
+                        # This denies the method outright, so ordinary
+                        # "{}".format(x) is collateral. That is deliberate:
+                        # inspecting the format string's *content* instead is
+                        # defeated by splitting the name ("__cl" + "ass__"),
+                        # and a sandbox has to fail closed. f-strings remain
+                        # available for formatting.
+                        if node.attr in _FORMAT_METHODS:
+                            raise PermissionError(
+                                f"Access to '{node.attr}' is prohibited: its format string "
+                                "can traverse dunder attributes the AST validator cannot see."
+                            )
                     elif isinstance(node, ast.Name):
                         if node.id.startswith("__") and node.id.endswith("__"):
                             raise PermissionError(f"Access to dunder name '{node.id}' is prohibited.")
