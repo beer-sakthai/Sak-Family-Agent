@@ -37,6 +37,12 @@ class ExecutionError(Exception):
     pass
 
 
+# str.format and str.format_map resolve attribute paths written inside the
+# format string, which the AST validator cannot see. See the check in the
+# python action for the escape this closes.
+_FORMAT_METHODS = frozenset({"format", "format_map"})
+
+
 class _SafeJSON:
     """Serialisation-only stand-in for the ``json`` module in the python sandbox.
 
@@ -77,13 +83,36 @@ def _assert_no_modules(namespace: Dict[str, Any], where: str) -> None:
     non-dunder and therefore invisible to the AST validator. This makes that
     class of mistake fail loudly at execution time rather than silently
     reopening the sandbox.
+
+    Containers are searched too, not just top-level values: the AST validator
+    only inspects attribute and *name* nodes, so a module nested one subscript
+    deep (``params['a']['inner'].system(...)``) would be reached without the
+    expression ever naming a dunder. No action currently returns a container
+    holding a module, so this is not a live hole — but a top-level-only check
+    would not be the guarantee this function's name implies.
     """
-    for name, value in namespace.items():
+
+    def _walk(value: Any, path: str, seen: Set[int]) -> None:
         if isinstance(value, types.ModuleType):
             raise PermissionError(
-                f"Module '{value.__name__}' exposed as '{name}' in {where} is "
+                f"Module '{value.__name__}' exposed as '{path}' in {where} is "
                 "not permitted in the python sandbox."
             )
+        # Cycle guard: workflow params are plain data, but they are not
+        # guaranteed acyclic, and this must not be the thing that hangs a run.
+        if id(value) in seen:
+            return
+        if isinstance(value, dict):
+            seen.add(id(value))
+            for key, item in value.items():
+                _walk(item, f"{path}[{key!r}]", seen)
+        elif isinstance(value, (list, tuple, set, frozenset)):
+            seen.add(id(value))
+            for index, item in enumerate(value):
+                _walk(item, f"{path}[{index}]", seen)
+
+    for name, value in namespace.items():
+        _walk(value, name, set())
 
 
 def _validate_url(url_str: str) -> None:
@@ -739,6 +768,30 @@ class WorkflowExecutor:
                     if isinstance(node, ast.Attribute):
                         if node.attr.startswith("__") and node.attr.endswith("__"):
                             raise PermissionError(f"Access to dunder attribute '{node.attr}' is prohibited.")
+                        # str.format/format_map walk attributes named inside the
+                        # *format string*, where the dunder lives in an
+                        # ast.Constant this validator never inspects:
+                        #   "{x.__class__.__bases__}".format(x=())  ->  (object,)
+                        # That defeats the dunder rule without ever emitting a
+                        # dunder Name or Attribute node. The field-name grammar
+                        # cannot call, so this is attribute *reading* rather than
+                        # RCE, but it is still a hole in the guarantee the rule
+                        # is supposed to give. The method name itself is visible
+                        # here, so deny it. f-strings are unaffected: their
+                        # expressions parse into real nodes and are already
+                        # covered (verified: f"{().__class__}" is blocked).
+                        #
+                        # This denies the method outright, so ordinary
+                        # "{}".format(x) is collateral. That is deliberate:
+                        # inspecting the format string's *content* instead is
+                        # defeated by splitting the name ("__cl" + "ass__"),
+                        # and a sandbox has to fail closed. f-strings remain
+                        # available for formatting.
+                        if node.attr in _FORMAT_METHODS:
+                            raise PermissionError(
+                                f"Access to '{node.attr}' is prohibited: its format string "
+                                "can traverse dunder attributes the AST validator cannot see."
+                            )
                     elif isinstance(node, ast.Name):
                         if node.id.startswith("__") and node.id.endswith("__"):
                             raise PermissionError(f"Access to dunder name '{node.id}' is prohibited.")
