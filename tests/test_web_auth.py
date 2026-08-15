@@ -6,6 +6,8 @@ import json
 import threading
 import urllib.error
 import urllib.request
+from collections.abc import Iterator
+from contextlib import contextmanager
 from http.server import HTTPServer
 from pathlib import Path
 from typing import Any
@@ -149,23 +151,59 @@ def test_loopback_host_detection(host: str, expected: bool) -> None:
 # ---------------------------------------------------------------------------
 
 
-@pytest.fixture(scope="module")
-def authed_server_base() -> tuple[str, str]:
-    """Start an authenticated HTTPServer and return (base_url, token)."""
-    # Force generate a custom token for testing
-    import sakthai.web.server as srv
+@contextmanager
+def _background_server() -> Iterator[HTTPServer]:
+    """Serve ``_Handler`` on an ephemeral loopback port for the duration of the block.
 
-    srv._BEARER_TOKEN = "test_bearer_token_12345678"
-
+    ``shutdown()`` alone only stops the ``serve_forever`` loop — it leaves the
+    listening socket open, so the FD survives until the garbage collector
+    finalizes it. That finalization raises ``ResourceWarning`` from whatever
+    test happens to be running at the time rather than from the fixture that
+    leaked it, so the teardown must close the socket explicitly.
+    """
     server = HTTPServer(("127.0.0.1", 0), _Handler)
-    _, port = server.server_address
     thread = threading.Thread(
         target=server.serve_forever, kwargs={"poll_interval": 0.01}, daemon=True
     )
     thread.start()
+    try:
+        yield server
+    finally:
+        server.shutdown()
+        thread.join(timeout=5)
+        server.server_close()
 
-    yield f"http://127.0.0.1:{port}", "test_bearer_token_12345678"
-    server.shutdown()
+
+@pytest.fixture(scope="module")
+def authed_server_base() -> Iterator[tuple[str, str]]:
+    """Start an authenticated HTTPServer and return (base_url, token)."""
+    # Force generate a custom token for testing
+    import sakthai.web.server as srv
+
+    # Restored on teardown: `_BEARER_TOKEN` is process-global, so leaving the
+    # test value behind makes any later test that reads it order-dependent.
+    previous_token = srv._BEARER_TOKEN
+    srv._BEARER_TOKEN = "test_bearer_token_12345678"
+
+    try:
+        with _background_server() as server:
+            _, port = server.server_address
+            yield f"http://127.0.0.1:{port}", "test_bearer_token_12345678"
+    finally:
+        srv._BEARER_TOKEN = previous_token
+
+
+def test_background_server_teardown_closes_the_listening_socket() -> None:
+    """Pin the teardown contract, not just "the block exited".
+
+    A teardown that calls only ``shutdown()`` still passes every request-level
+    assertion in this module — the leak surfaces later, as a ResourceWarning
+    charged to an unrelated test — so assert the FD itself is released.
+    """
+    with _background_server() as server:
+        assert server.socket.fileno() != -1
+
+    assert server.socket.fileno() == -1, "listening socket outlived the server context"
 
 
 def _get_with_headers(
