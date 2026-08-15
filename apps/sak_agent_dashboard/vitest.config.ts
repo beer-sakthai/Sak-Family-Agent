@@ -7,6 +7,8 @@ export default defineConfig({
   test: {
     environment: "jsdom",
     globals: true,
+    testTimeout: 30000,
+    hookTimeout: 30000,
     setupFiles: "./vitest.setup.ts",
     alias: {
       "@": path.resolve(__dirname, "./src"),

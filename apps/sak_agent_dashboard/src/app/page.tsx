@@ -23,6 +23,12 @@ import {
   GraduationCap,
   Fingerprint,
   ScrollText,
+  Workflow,
+  Globe,
+  Wrench,
+  Trophy,
+  Network,
+  Send,
 } from "lucide-react";
 import DemoModeToggle from "@/components/DemoModeToggle";
 import AgentOverview from "@/components/AgentOverview";
@@ -45,6 +51,14 @@ import M365CopilotPanel from "@/components/M365CopilotPanel";
 import AgentGatewayPanel from "@/components/AgentGatewayPanel";
 import AutoCyclePanel from "@/components/AutoCyclePanel";
 import DesignSpecsPanel from "@/components/DesignSpecsPanel";
+import { LiveTelemetryFeed } from "@/components/LiveTelemetryFeed";
+import { WorkflowFrameworkPanel } from "@/components/WorkflowFrameworkPanel";
+import { ProviderMatrixPanel } from "@/components/ProviderMatrixPanel";
+import { HubEcosystemPanel } from "@/components/HubEcosystemPanel";
+import { SkillsToolsPanel } from "@/components/SkillsToolsPanel";
+import { BenchmarkArena } from "@/components/BenchmarkArena";
+import { MemoryRagTelegramPanel } from "@/components/MemoryRagTelegramPanel";
+import { SelfEvolutionPanel } from "@/components/SelfEvolutionPanel";
 import {
   AgentPersona,
   MetricsData,
@@ -115,6 +129,13 @@ export default function Home() {
     | "autocycle"
     | "specs"
     | "stitch"
+    | "workflows"
+    | "providers"
+    | "hub"
+    | "skills"
+    | "benchmarks"
+    | "rag_telegram"
+    | "evolution"
   >("overview");
 
   const [agents, setAgents] = useState<AgentPersona[]>(defaultPersonas);
@@ -393,6 +414,99 @@ export default function Home() {
         >
           <Cpu className="h-4 w-4 text-cyan-400" />
           Agent Overview ({agents.length})
+        </button>
+
+        <button
+          onClick={() => setActiveTab("workflows")}
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold transition-all ${
+            activeTab === "workflows"
+              ? "bg-gradient-to-r from-cyan-500/20 to-blue-500/20 text-cyan-300 border border-cyan-500/40 shadow-lg shadow-cyan-950/50"
+              : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
+          }`}
+        >
+          <Workflow className="h-4 w-4 text-cyan-400" />
+          Workflows
+          <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-cyan-950 text-cyan-400 border border-cyan-800/50">
+            6 Agents
+          </span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab("providers")}
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold transition-all ${
+            activeTab === "providers"
+              ? "bg-gradient-to-r from-cyan-500/20 to-blue-500/20 text-cyan-300 border border-cyan-500/40 shadow-lg shadow-cyan-950/50"
+              : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
+          }`}
+        >
+          <Cpu className="h-4 w-4 text-emerald-400" />
+          Providers
+          <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-800/50">
+            7 Matrix
+          </span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab("hub")}
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold transition-all ${
+            activeTab === "hub"
+              ? "bg-gradient-to-r from-amber-500/20 to-orange-500/20 text-amber-300 border border-amber-500/40 shadow-lg shadow-amber-950/50"
+              : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
+          }`}
+        >
+          <Globe className="h-4 w-4 text-amber-400" />
+          Hub
+          <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-800/50">
+            19m·16d
+          </span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab("skills")}
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold transition-all ${
+            activeTab === "skills"
+              ? "bg-gradient-to-r from-blue-500/20 to-indigo-500/20 text-blue-300 border border-blue-500/40 shadow-lg shadow-blue-950/50"
+              : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
+          }`}
+        >
+          <Wrench className="h-4 w-4 text-blue-400" />
+          Skills & AST Gates
+        </button>
+
+        <button
+          onClick={() => setActiveTab("benchmarks")}
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold transition-all ${
+            activeTab === "benchmarks"
+              ? "bg-gradient-to-r from-emerald-500/20 to-teal-500/20 text-emerald-300 border border-emerald-500/40 shadow-lg shadow-emerald-950/50"
+              : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
+          }`}
+        >
+          <Trophy className="h-4 w-4 text-emerald-400" />
+          Benchmark Arena
+        </button>
+
+        <button
+          onClick={() => setActiveTab("rag_telegram")}
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold transition-all ${
+            activeTab === "rag_telegram"
+              ? "bg-gradient-to-r from-purple-500/20 to-fuchsia-500/20 text-purple-300 border border-purple-500/40 shadow-lg shadow-purple-950/50"
+              : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
+          }`}
+        >
+          <Network className="h-4 w-4 text-purple-400" />
+          RAG & Telegram
+        </button>
+
+        <button
+          onClick={() => setActiveTab("evolution")}
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold transition-all ${
+            activeTab === "evolution"
+              ? "bg-gradient-to-r from-rose-500/20 to-pink-500/20 text-rose-300 border border-rose-500/40 shadow-lg shadow-rose-950/50"
+              : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
+          }`}
+        >
+          <RefreshCw className="h-4 w-4 text-rose-400" />
+          Self-Evolution
         </button>
 
         <button
@@ -683,9 +797,24 @@ export default function Home() {
               )}
             </div>
             <AgentOverview agents={agents} />
+            <LiveTelemetryFeed />
             <AnalyticsCharts metrics={metrics} agents={agents} />
           </div>
         )}
+
+        {activeTab === "workflows" && <WorkflowFrameworkPanel />}
+
+        {activeTab === "providers" && <ProviderMatrixPanel />}
+
+        {activeTab === "hub" && <HubEcosystemPanel />}
+
+        {activeTab === "skills" && <SkillsToolsPanel />}
+
+        {activeTab === "benchmarks" && <BenchmarkArena />}
+
+        {activeTab === "rag_telegram" && <MemoryRagTelegramPanel />}
+
+        {activeTab === "evolution" && <SelfEvolutionPanel />}
 
         {activeTab === "analytics" && (
           <div className="space-y-4">
