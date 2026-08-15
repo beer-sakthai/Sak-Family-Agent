@@ -6,9 +6,9 @@ import {
   ExternalLink,
   Filter,
   GraduationCap,
-  Github,
   Folder,
   BookOpen,
+  GitBranch,
 } from "lucide-react";
 import { GCP_LEARNING_STALENESS_NOTES } from "@/lib/gcpLearning";
 import {
@@ -129,7 +129,7 @@ export function GcpLearningPanel({ data }: GcpLearningPanelProps) {
             rel="noreferrer noopener"
             className="mt-1.5 inline-flex items-center gap-1.5 text-[11px] font-mono text-cyan-300 hover:text-cyan-200"
           >
-            <Github className="h-3.5 w-3.5" />
+            <GitBranch className="h-3.5 w-3.5" />
             GoogleCloudPlatform/training-data-analyst
             <ExternalLink className="h-3 w-3" />
           </a>

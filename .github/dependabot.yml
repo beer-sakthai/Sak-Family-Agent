@@ -9,7 +9,6 @@ updates:
     open-pull-requests-limit: 10
     labels:
       - "dependencies"
-      - "dependabot"
     target-branch: "main"
 
   - package-ecosystem: "npm"
@@ -21,7 +20,6 @@ updates:
     open-pull-requests-limit: 10
     labels:
       - "dependencies"
-      - "dependabot"
     target-branch: "main"
 
   - package-ecosystem: "github-actions"
@@ -33,5 +31,4 @@ updates:
     open-pull-requests-limit: 10
     labels:
       - "dependencies"
-      - "dependabot"
     target-branch: "main"

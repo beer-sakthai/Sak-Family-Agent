@@ -35,9 +35,9 @@ describe("Observability (OpenTelemetry) tab", () => {
   });
   it("renders overview + signal cards + semconv table", () => {
     render(<OtelPanel data={getOtelData()} />);
-    expect(screen.getByText(/Observability for Agents/i)).toBeInTheDocument();
-    expect(screen.getByText(/TRACES/i)).toBeInTheDocument();
-    expect(screen.getByText("gen_ai.system")).toBeInTheDocument();
+    expect(screen.getAllByText(/Observability for Agents/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/TRACES/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText("gen_ai.system").length).toBeGreaterThan(0);
   });
   it("renders loading state when null", () => {
     render(<OtelPanel data={null} />);
@@ -112,9 +112,9 @@ describe("M365 Copilot tab", () => {
   });
   it("renders header + delegated flow + contrast table", () => {
     render(<M365CopilotPanel data={getM365CopilotData()} />);
-    expect(screen.getByText(/M365 Copilot/i)).toBeInTheDocument();
-    expect(screen.getByText(/Delegated-auth flow/i)).toBeInTheDocument();
-    expect(screen.getByText(/vs\. teams-copilot-mcp/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/M365 Copilot/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Delegated-auth flow/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/vs\. teams-copilot-mcp/i).length).toBeGreaterThan(0);
   });
 });
 

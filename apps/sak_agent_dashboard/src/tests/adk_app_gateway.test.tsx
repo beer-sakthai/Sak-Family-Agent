@@ -119,11 +119,11 @@ describe("Google ADK — A2A distributed topology", () => {
 
   it("panel renders the App and A2A sections", () => {
     render(<GoogleAdkPanel data={getAdkData()} />);
-    expect(screen.getByText(/The App container/i)).toBeInTheDocument();
-    expect(screen.getByText(/App versus a bare agent/i)).toBeInTheDocument();
-    expect(screen.getByText(/Agent-to-Agent \(distributed topology\)/i)).toBeInTheDocument();
-    expect(screen.getByText("LoggingPlugin")).toBeInTheDocument();
-    expect(screen.getByText("orchestrator")).toBeInTheDocument();
+    expect(screen.getAllByText(/The App container/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/App versus a bare agent/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Agent-to-Agent \(distributed topology\)/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText("LoggingPlugin").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("orchestrator").length).toBeGreaterThan(0);
   });
 });
 

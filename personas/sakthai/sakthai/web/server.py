@@ -14,6 +14,7 @@ import ipaddress
 import json
 import logging
 import os
+import re
 import secrets
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 from pathlib import Path
@@ -137,6 +138,48 @@ def _ecosystem_status() -> dict[str, Any]:
     except Exception as exc:  # noqa: BLE001
         logger.warning("Failed to generate ecosystem timestamp: %s", exc)
     return status
+
+
+def _find_repo_root(start: Path | None = None) -> Path:
+    curr = (start or Path(__file__)).resolve().parent
+    for parent in [curr] + list(curr.parents):
+        candidate = parent / "docs"
+        if candidate.is_dir() and (parent / "pyproject.toml").is_file():
+            return parent.resolve()
+    return (Path(__file__).resolve().parents[4]).resolve()
+
+
+def _list_doc_slugs() -> list[str]:
+    repo_root = _find_repo_root()
+    docs_dir = (repo_root / "docs").resolve()
+    if not docs_dir.is_dir():
+        return []
+    return sorted(p.stem for p in docs_dir.glob("*.md") if p.is_file())
+
+
+def _get_doc_data(slug: str) -> dict[str, Any] | None:
+    if not slug or not re.match(r"^[a-zA-Z0-9_\-]+$", slug):
+        return None
+    repo_root = _find_repo_root()
+    docs_dir = (repo_root / "docs").resolve()
+    target_file = (docs_dir / f"{slug}.md").resolve()
+    if not str(target_file).startswith(str(docs_dir) + os.sep) or not target_file.is_file():
+        return None
+    try:
+        content = target_file.read_text(encoding="utf-8")
+        first_line = next(
+            (line.strip() for line in content.splitlines() if line.startswith("# ")), slug
+        )
+        title = first_line.lstrip("# ").strip()
+        return {
+            "slug": slug,
+            "title": title,
+            "content": content,
+            "relativePath": f"docs/{slug}.md",
+        }
+    except Exception as exc:
+        logger.warning("Failed to read doc %s: %s", slug, exc)
+        return None
 
 
 class _Handler(SimpleHTTPRequestHandler):
@@ -301,6 +344,19 @@ class _Handler(SimpleHTTPRequestHandler):
 
         if path == "/api/ecosystem":
             self._send_json(200, _ecosystem_status())
+            return
+
+        if path in ("/api/docs", "/api/docs/"):
+            self._send_json(200, {"success": True, "docs": _list_doc_slugs()})
+            return
+
+        if path.startswith("/api/docs/"):
+            slug = path[len("/api/docs/") :].strip("/")
+            doc = _get_doc_data(slug)
+            if doc is None:
+                self._send_json(404, {"success": False, "error": f"Doc '{slug}' not found"})
+            else:
+                self._send_json(200, {"success": True, "doc": doc})
             return
 
         if path.startswith("/api/"):

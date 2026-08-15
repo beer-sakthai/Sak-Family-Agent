@@ -1,0 +1,151 @@
+import { BenchmarkArenaData, BenchmarkEvalItem, PersonaBenchmarkScore } from "./types";
+
+export const BENCHMARK_CATEGORIES: BenchmarkEvalItem[] = [
+  {
+    id: "mmlu",
+    category: "MMLU",
+    name: "Massive Multitask Language Understanding (MMLU)",
+    description: "Evaluates factual knowledge across 57 academic subjects (Computer Science, Math, Law, Physics).",
+    sampleCount: 14042,
+    averageLatencyMs: 240,
+  },
+  {
+    id: "humaneval",
+    category: "HumanEval",
+    name: "HumanEval Coding Synthesis (0-Shot Pass@1)",
+    description: "Evaluates functional Python and TypeScript code generation passing all unit test assertions.",
+    sampleCount: 164,
+    averageLatencyMs: 420,
+  },
+  {
+    id: "gsm8k",
+    category: "GSM8k",
+    name: "GSM8k Grade School Math Reasoning",
+    description: "Multi-step arithmetic and multi-turn logical reasoning problem-solving.",
+    sampleCount: 1319,
+    averageLatencyMs: 310,
+  },
+  {
+    id: "tool_acc",
+    category: "ToolAccuracy",
+    name: "Agent Tool-Calling Precision & AST Schema Parity",
+    description: "Measures exact argument matching and refusal of invalid tool calls without hallucinated params.",
+    sampleCount: 850,
+    averageLatencyMs: 190,
+  },
+  {
+    id: "safety",
+    category: "SafetyRefusal",
+    name: "Sentinel Safety & Jailbreak Attack Refusal",
+    description: "Tests strict adherence to safety policies under direct prompt injections and secret extraction attacks.",
+    sampleCount: 500,
+    averageLatencyMs: 140,
+  },
+];
+
+export const PERSONA_BENCHMARK_SCORES: PersonaBenchmarkScore[] = [
+  {
+    personaSlug: "sakthai",
+    personaName: "SakThai (Lead Orchestrator)",
+    model: "gemini-2.5-flash",
+    provider: "gemini_agy",
+    overallScore: 92.4,
+    categoryScores: {
+      MMLU: 91.8,
+      HumanEval: 89.2,
+      GSM8k: 93.5,
+      ToolAccuracy: 96.0,
+      SafetyRefusal: 91.5,
+    },
+    tokensPerSec: 145,
+    costPer1kRuns: 0.12,
+  },
+  {
+    personaSlug: "sakking",
+    personaName: "SakKing (Security Deputy 1)",
+    model: "Qwen/Qwen2.5-Coder-32B-Instruct",
+    provider: "opencode",
+    overallScore: 90.8,
+    categoryScores: {
+      MMLU: 88.5,
+      HumanEval: 94.1,
+      GSM8k: 89.0,
+      ToolAccuracy: 93.4,
+      SafetyRefusal: 98.2,
+    },
+    tokensPerSec: 110,
+    costPer1kRuns: 0.85,
+  },
+  {
+    personaSlug: "saksee",
+    personaName: "SakSee (Web & Vision Deputy 3)",
+    model: "gemini-2.5-flash-lite",
+    provider: "huggingface",
+    overallScore: 88.1,
+    categoryScores: {
+      MMLU: 86.4,
+      HumanEval: 84.0,
+      GSM8k: 87.2,
+      ToolAccuracy: 94.8,
+      SafetyRefusal: 88.0,
+    },
+    tokensPerSec: 180,
+    costPer1kRuns: 0.08,
+  },
+  {
+    personaSlug: "saksit",
+    personaName: "SakSit (Content Specialist)",
+    model: "DeepSeek-Coder-V2-Lite",
+    provider: "opencode",
+    overallScore: 89.5,
+    categoryScores: {
+      MMLU: 89.0,
+      HumanEval: 91.5,
+      GSM8k: 88.4,
+      ToolAccuracy: 90.1,
+      SafetyRefusal: 88.5,
+    },
+    tokensPerSec: 130,
+    costPer1kRuns: 0.25,
+  },
+  {
+    personaSlug: "sakjules",
+    personaName: "SakJules (CI/CD Master)",
+    model: "claude-3-5-sonnet-20241022",
+    provider: "claude",
+    overallScore: 95.8,
+    categoryScores: {
+      MMLU: 94.6,
+      HumanEval: 96.8,
+      GSM8k: 95.0,
+      ToolAccuracy: 98.4,
+      SafetyRefusal: 94.2,
+    },
+    tokensPerSec: 85,
+    costPer1kRuns: 3.40,
+  },
+  {
+    personaSlug: "saktan",
+    personaName: "SakTan (Daily Ops Deputy 2)",
+    model: "sakthai (Local GGUF)",
+    provider: "ollama",
+    overallScore: 84.2,
+    categoryScores: {
+      MMLU: 82.0,
+      HumanEval: 81.5,
+      GSM8k: 83.0,
+      ToolAccuracy: 88.5,
+      SafetyRefusal: 86.0,
+    },
+    tokensPerSec: 65,
+    costPer1kRuns: 0.0,
+  },
+];
+
+export function getBenchmarkArenaData(): BenchmarkArenaData {
+  return {
+    leaderboard: PERSONA_BENCHMARK_SCORES,
+    evalCategories: BENCHMARK_CATEGORIES,
+    testedAt: new Date().toISOString(),
+  };
+}
