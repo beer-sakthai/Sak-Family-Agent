@@ -77,13 +77,36 @@ def _assert_no_modules(namespace: Dict[str, Any], where: str) -> None:
     non-dunder and therefore invisible to the AST validator. This makes that
     class of mistake fail loudly at execution time rather than silently
     reopening the sandbox.
+
+    Containers are searched too, not just top-level values: the AST validator
+    only inspects attribute and *name* nodes, so a module nested one subscript
+    deep (``params['a']['inner'].system(...)``) would be reached without the
+    expression ever naming a dunder. No action currently returns a container
+    holding a module, so this is not a live hole — but a top-level-only check
+    would not be the guarantee this function's name implies.
     """
-    for name, value in namespace.items():
+
+    def _walk(value: Any, path: str, seen: Set[int]) -> None:
         if isinstance(value, types.ModuleType):
             raise PermissionError(
-                f"Module '{value.__name__}' exposed as '{name}' in {where} is "
+                f"Module '{value.__name__}' exposed as '{path}' in {where} is "
                 "not permitted in the python sandbox."
             )
+        # Cycle guard: workflow params are plain data, but they are not
+        # guaranteed acyclic, and this must not be the thing that hangs a run.
+        if id(value) in seen:
+            return
+        if isinstance(value, dict):
+            seen.add(id(value))
+            for key, item in value.items():
+                _walk(item, f"{path}[{key!r}]", seen)
+        elif isinstance(value, (list, tuple, set, frozenset)):
+            seen.add(id(value))
+            for index, item in enumerate(value):
+                _walk(item, f"{path}[{index}]", seen)
+
+    for name, value in namespace.items():
+        _walk(value, name, set())
 
 
 def _validate_url(url_str: str) -> None:

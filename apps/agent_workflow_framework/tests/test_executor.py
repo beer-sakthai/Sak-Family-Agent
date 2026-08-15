@@ -827,6 +827,35 @@ class TestWorkflowExecutor(unittest.TestCase):
             )
         self.assertIn("not permitted in the python sandbox", str(ctx.exception))
 
+    def test_python_sandbox_rejects_modules_nested_in_params(self):
+        """A module hidden inside a container param must also fail closed.
+
+        The AST validator inspects attribute and name nodes, so a module one
+        subscript deep (``a['inner'].system(...)``) is reachable without the
+        expression ever naming a dunder. A top-level-only guard would miss it.
+        """
+        nested_cases = [
+            ({"a": {"inner": os}}, "a['inner']"),
+            ({"a": [1, [os]]}, "a[1][0]"),
+            ({"a": (os,)}, "a[0]"),
+        ]
+        for params, expected_path in nested_cases:
+            with self.subTest(params=expected_path):
+                call_params = dict(params)
+                call_params["code"] = "1 + 1"
+                with self.assertRaises(PermissionError) as ctx:
+                    asyncio.run(self.executor._execute_action("python", call_params, "s1"))
+                self.assertIn(expected_path, str(ctx.exception))
+
+    def test_python_sandbox_module_guard_tolerates_cyclic_params(self):
+        """The recursive guard must not hang on a self-referential param."""
+        cyclic = {}
+        cyclic["self"] = cyclic
+        result = asyncio.run(
+            self.executor._execute_action("python", {"code": "1 + 1", "a": cyclic}, "s1")
+        )
+        self.assertEqual(result["result"], 2)
+
     def test_python_sandbox_still_serialises_json(self):
         """The facade must keep the serialisation workflows actually use."""
         cases = [
