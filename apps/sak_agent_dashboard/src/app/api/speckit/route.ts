@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getSpecKitData } from "@/lib/speckit";
+import { getSpecKitData, UPSTREAM } from "@/lib/speckit";
 
 export async function GET() {
   try {
@@ -17,6 +17,7 @@ export async function GET() {
           integrations: [],
           templates: [],
           scripts: [],
+          upstream: UPSTREAM,
         },
         error: "An unexpected error occurred while loading SpecKit data.",
       },

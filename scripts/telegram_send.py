@@ -51,14 +51,22 @@ def load_env_file(path: Path) -> None:
 def discover_chat_id(token: str) -> str | None:
     """Return the most recent private chat id that has messaged the bot."""
     if not re.match(r"^[0-9]+:[a-zA-Z0-9_-]+$", token):
-        print(f"  invalid TELEGRAM_BOT_TOKEN format: {token}", file=sys.stderr)
+        print("  invalid TELEGRAM_BOT_TOKEN format: [REDACTED]", file=sys.stderr)
         return None
     url = f"https://api.telegram.org/bot{token}/getUpdates"
     try:
         with urllib.request.urlopen(url, timeout=10) as resp:  # nosec B310
             data = json.loads(resp.read().decode("utf-8"))
     except Exception as exc:  # noqa: BLE001
-        print(f"  getUpdates failed: {exc}", file=sys.stderr)
+        try:
+            from sakthai.config import redact_secrets, register_secret
+
+            register_secret(token)
+            err_str = redact_secrets(str(exc))
+        except Exception:
+            err_str = str(exc)
+        err_str = err_str.replace(token, "[REDACTED]")
+        print(f"  getUpdates failed: {err_str}", file=sys.stderr)
         return None
     chat_id: str | None = None
     for update in data.get("result", []):
