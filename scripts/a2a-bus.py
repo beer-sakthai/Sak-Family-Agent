@@ -194,12 +194,25 @@ class A2AHandler(BaseHTTPRequestHandler):
         self.wfile.write(json.dumps(d).encode())
 
 
+_LOOPBACK_NAMES = frozenset({'localhost'})
+
+
 def _is_loopback_host(host):
-    """True if ``host`` is loopback-only (safe to bind without authentication)."""
+    """True if ``host`` is loopback-only (safe to bind without authentication).
+
+    Fails closed, matching sakthai/web/server.py. In particular the empty
+    string must NOT count as loopback: socket.bind(('', port)) is INADDR_ANY,
+    i.e. every interface, so treating it as safe would let an unset/blank
+    SAKTHAI_A2A_HOST silently reopen the public bind this guard exists to
+    prevent. Anything that is not localhost or a loopback literal may resolve
+    anywhere and is rejected.
+    """
+    if host in _LOOPBACK_NAMES:
+        return True
     try:
         return ipaddress.ip_address(host).is_loopback
     except ValueError:
-        return host in ('localhost', '')
+        return False
 
 
 if __name__ == '__main__':
@@ -212,8 +225,11 @@ if __name__ == '__main__':
     # matching sakthai/web/server.py's SAKTHAI_WEB_ALLOW_PUBLIC convention. The
     # only in-repo consumer (scripts/family-status.sh) already talks to
     # localhost, and the personas all run on the same host under systemd.
-    host = os.environ.get('SAKTHAI_A2A_HOST', '127.0.0.1')
-    port = int(os.environ.get('SAKTHAI_A2A_PORT', '3005'))
+    # A blank value is treated as unset and falls back to the safe default,
+    # rather than reaching the bind as '' (which is INADDR_ANY, every
+    # interface) or crashing int('').
+    host = os.environ.get('SAKTHAI_A2A_HOST', '').strip() or '127.0.0.1'
+    port = int(os.environ.get('SAKTHAI_A2A_PORT', '').strip() or '3005')
     if not _is_loopback_host(host) and not os.environ.get('SAKTHAI_A2A_ALLOW_PUBLIC'):
         raise SystemExit(
             f"Refusing to bind the A2A bus to non-loopback host {host!r}. "
