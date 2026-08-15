@@ -74,7 +74,7 @@ function resolveSpecKitDir(): string {
   ];
   for (const c of candidates) {
     try {
-      if (fs.existsSync(c) && fs.statSync(c).isDirectory()) return c;
+      if (fs.existsSync(/* turbopackIgnore: true */ c) && fs.statSync(/* turbopackIgnore: true */ c).isDirectory()) return c;
     } catch {
       // ignore
     }
@@ -454,7 +454,7 @@ export { UPSTREAM };
 
 export function getSpecKitData(): SpecKitData {
   const rootDir = resolveSpecKitDir();
-  const present = fs.existsSync(rootDir);
+  const present = fs.existsSync(/* turbopackIgnore: true */ rootDir);
   if (!present) {
     return {
       present: false,

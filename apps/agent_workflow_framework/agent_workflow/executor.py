@@ -285,8 +285,8 @@ def _extract_shell_subcommands(cmd_str: str) -> List[str]:
                 continue
 
             if not in_single_quote:
-                # Check for command substitution $(...)
-                if text[i:i+2] == "$(":
+                # Check for command substitution $(...) and process substitution <(...) or >(...)
+                if text[i:i+2] in ("$(", "<(", ">("):
                     depth = 1
                     j = i + 2
                     sub_escaped = False
@@ -506,7 +506,67 @@ def _validate_shell_command(cmd_str: str) -> None:
                                     "to prevent command execution bypass."
                                 )
 
-        # 2. Validate paths for each subcommand
+        # 2. Check for process substitution constructs <(...) and >(...) in the subcommand string
+        interpreters = (
+            "sh",
+            "bash",
+            "zsh",
+            "dash",
+            "ksh",
+            "fish",
+            "ash",
+            "csh",
+            "tcsh",
+            "python",
+            "node",
+            "perl",
+            "ruby",
+            "php",
+            "deno",
+            "bun",
+            "tsx",
+            "ts-node",
+        )
+
+        # Check if the outer command itself is an interpreter taking a process substitution parameter (e.g. bash <(...))
+        # or if any inner process substitution runs an interpreter (e.g. tee >(bash))
+        try:
+            parts = shlex.split(cmd_str_stripped)
+        except Exception:
+            parts = cmd_str_stripped.split()
+
+        if parts:
+            outer_cmd = os.path.basename(parts[0].strip(" \t\n\r\"'()$&;"))
+            is_outer_interp = any(
+                re.match(rf"^{re.escape(interp)}(?:[0-9]+(?:\.[0-9]+)*)?$", outer_cmd)
+                for interp in interpreters
+            )
+            has_proc_sub = any(p.startswith(("<(", ">(")) or re.search(r"[<>]\([^)]+\)", p) for p in parts[1:])
+            if is_outer_interp and has_proc_sub:
+                raise PermissionError(
+                    f"Interpreter {parts[0]!r} with process substitution is prohibited "
+                    "to prevent command execution bypass."
+                )
+
+        proc_matches = re.findall(r"[<>]\(([^)]+)\)", cmd_str_stripped)
+        for proc_inner in proc_matches:
+            proc_inner_clean = proc_inner.strip()
+            try:
+                proc_words = shlex.split(proc_inner_clean)
+            except Exception:
+                proc_words = proc_inner_clean.split()
+
+            if proc_words:
+                first_word = os.path.basename(proc_words[0].strip(" \t\n\r\"'()$&;"))
+                for interp in interpreters:
+                    pattern = rf"^{re.escape(interp)}(?:[0-9]+(?:\.[0-9]+)*)?$"
+                    if re.match(pattern, first_word):
+                        raise PermissionError(
+                            f"Process substitution to interpreter {proc_words[0]!r} is prohibited "
+                            "to prevent command execution bypass."
+                        )
+
+        # 3. Validate paths for each subcommand
         try:
             parts = shlex.split(cmd_str_stripped)
         except ValueError as exc:

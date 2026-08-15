@@ -46,6 +46,7 @@ mutants/
 # Isolated workspaces for subagent-driven-development / plan execution
 .worktrees/
 .superpowers/
+.claude/worktrees/
 
 # Local secrets — never commit real credentials
 .env

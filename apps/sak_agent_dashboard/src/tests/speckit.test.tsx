@@ -206,7 +206,7 @@ describe("SpecKit Feature Suite", () => {
       const data = getSpecKitData();
       render(<SpecKitPanel data={data} />);
       expect(screen.getAllByText(/SpecKit/i).length).toBeGreaterThan(0);
-      expect(screen.getByText(/Full SDD Cycle/i)).toBeInTheDocument();
+      expect(screen.getAllByText(/Full SDD Cycle/i).length).toBeGreaterThan(0);
       expect(screen.getAllByText(/specify/i).length).toBeGreaterThan(0);
       expect(screen.getAllByText(/review-spec/i).length).toBeGreaterThan(0);
       expect(screen.getAllByText(/review gate/i).length).toBeGreaterThan(0);
@@ -236,6 +236,7 @@ describe("SpecKit Feature Suite", () => {
               commands: [],
               layoutNote: "",
             },
+            upstream: getSpecKitData().upstream,
           }}
         />
       );

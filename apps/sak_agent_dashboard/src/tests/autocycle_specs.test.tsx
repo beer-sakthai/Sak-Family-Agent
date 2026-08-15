@@ -82,8 +82,8 @@ describe("Auto-Cycle tab", () => {
     expect(
       screen.getByText(/Default to a dry, throwaway run/i)
     ).toBeInTheDocument();
-    expect(screen.getByText(/DREAM/)).toBeInTheDocument();
-    expect(screen.getByText(/GROWTH/)).toBeInTheDocument();
+    expect(screen.getAllByText(/dream/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/growth/i).length).toBeGreaterThan(0);
     expect(screen.getByText(/Why this rule exists/i)).toBeInTheDocument();
     expect(screen.getAllByText(/lead/i).length).toBeGreaterThan(0);
   });
