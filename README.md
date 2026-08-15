@@ -179,10 +179,12 @@ Adding a `Tool(...)` to `BUILTIN_TOOLS` surfaces it in **both** `sakthai run` an
 | Provider | Status | How it's selected |
 |----------|--------|-------------------|
 | **Anthropic** | ✅ Default | `ANTHROPIC_API_KEY` → `ANTHROPIC_AUTH_TOKEN` → Claude CLI OAuth. Default model: `claude-opus-4-8` |
-| **Google** | ✅ Active | `GEMINI_API_KEY` / `GOOGLE_API_KEY`, or Gemini CLI OAuth token |
-| **Hugging Face** | ✅ Active | `HF_TOKEN` via the Inference Providers router (`SAKTHAI_HF_API_BASE`) — the configured default for most personas |
-| **Ollama** | ✅ Active | `OLLAMA_HOST` (default `http://127.0.0.1:11434` — IPv4 on purpose) |
-| **OpenAI-compatible** | ✅ Supported | `OPENAI_API_KEY` + `OPENAI_API_BASE` / `OPENAI_BASE_URL` |
+| **Google / Antigravity AGY** | ✅ Active | `GEMINI_API_KEY` / `GOOGLE_API_KEY`, or Gemini CLI / AGY OAuth token (`gemini-2.5-flash`, `gemini-2.5-pro`) |
+| **Hugging Face** | ✅ Active | `HF_TOKEN` via Inference Providers router (`SAKTHAI_HF_API_BASE`) — default for most personas |
+| **Ollama (Local Offline)** | ✅ Active | `OLLAMA_HOST` (default `http://127.0.0.1:11434` — IPv4, zero-cost **$0.00** offline local inference) |
+| **OpenAI / Codex** | ✅ Supported | `OPENAI_API_KEY` + `OPENAI_API_BASE` / `OPENAI_BASE_URL` (`gpt-4o`, `o3-mini`, `codex`) |
+| **OpenCode Foundation** | ✅ Supported | `OPENCODE_API_KEY` (`Qwen-2.5-Coder-32B`, `DeepSeek-Coder-V2`) |
+| **Microsoft 365 & Azure AI** | ✅ Supported | `AZURE_OPENAI_API_KEY` + MS Graph Token (`microsoft-agents-m365copilot`, `azure/gpt-4o`) |
 | **Gateway** | ✅ Supported | `SAKTHAI_GATEWAY_URL` + `SAKTHAI_GATEWAY_API_KEY` (OpenRouter / LiteLLM / Vercel / Cloudflare) |
 | **Nanthasit (custom)** | ✅ Active | Open-weights models trained in-house: `sakthai-context-7b-tools`, `sakthai-context-1.5b-tools-v2`, `sakthai-embedding-multilingual` |
 
@@ -239,6 +241,16 @@ Separately, the in-package `web/server.py` exposes an authenticated JSON API
 `dashboard/data.py`. It refuses non-loopback binds unless
 `SAKTHAI_WEB_ALLOW_PUBLIC` is set, and runs API-only — there is no bundled
 frontend build.
+
+### 🖥️ Next.js 16 Web Dashboard & Cycle Operations Suite (`apps/sak_agent_dashboard`)
+
+A fullstack observability and agent operations suite built with **Next.js 16 (Turbopack)**, React 19, TypeScript, and TailwindCSS:
+
+- **6-Part Autonomous Cycle Engine**: Visual panels for **Dream** (HF Ecosystem: 19 models / 16 datasets / 7 spaces), **Hope** (AST Guardrail Sandbox), **Care** (MCP Connector & M365 Copilot SDK), **Joy** (Benchmark Arena & Leaderboard), **Trust** (Memory Vector RAG & SQLite Graph), and **Growth** (Prompt Refinement & Self-Evolution Loop).
+- **Real-Time Telemetry Streaming**: Live Server-Sent Events (SSE) stream (`/api/telemetry/stream`) delivering per-persona execution events, tool latency metrics, and memory mutations.
+- **Enterprise Integrations**: Microsoft 365 Copilot SDK & Azure AI bridge for SharePoint, Outlook, Teams, and calendar automation with symmetric credential redaction.
+- **Local Hermetic Mode**: Reads directly from server-side `~/.sakthai/` runtime artifacts (`eval.jsonl`, `audit.log`, `traces.jsonl`, persona SQLite shards) without external network dependencies.
+- **Verification Commands**: `pnpm install && pnpm dev` (dev server on `localhost:3000`), `pnpm typecheck`, `pnpm test` (Vitest), `pnpm build`.
 
 ### 🧠 SakThai 7B LoRA Training
 
@@ -385,6 +397,10 @@ Report vulnerabilities per [`SECURITY.md`](SECURITY.md).
 
 ## ✨ Recent Updates (Aug 2026)
 
+- **6-Part Cycle Intelligence & Operations Suite** — Fullstack dashboard implementation in Next.js 16 + Turbopack (`apps/sak_agent_dashboard`) covering the complete canonical cycle: **Dream** (HF Ecosystem: 19 models / 16 datasets / 7 spaces) ➔ **Hope** (Visual AST Guardrail Sandbox) ➔ **Care** (MCP & M365 Copilot SDK) ➔ **Joy** (Benchmark Arena & Leaderboards) ➔ **Trust** (Memory Vector RAG & SQLite Shards) ➔ **Growth** (Prompt Refinement & Self-Evolution Loop).
+- **7-Provider Multi-Model Matrix & Offline Fallback** — Unified orchestration across Anthropic Claude, OpenAI/Codex, OpenCode Foundation, Ollama Local Offline ($0.00 zero-cost inference), Hugging Face Hub, Google Gemini / Antigravity AGY, and Microsoft 365 Copilot / Azure AI.
+- **Real-Time SSE Telemetry & Streaming Engine** — Live Server-Sent Events bus delivering per-persona execution spans, tool latency metrics, and real-time audit event streams.
+- **Enterprise Microsoft 365 Copilot & Azure SDK** — Full Graph API integration (SharePoint, Outlook, Teams, Calendar) with strict secret redaction and SSRF defense.
 - **Guardrail hardening** — closed Makefile-based command-execution bypasses (while still permitting ordinary local project directories), folded executor path-validation deltas into `_validate_filepath`, and fixed path traversal / sensitive-file access in the agent workflow executor.
 - **SSRF & credential defense** — hardened `GraphClient` against SSRF, custom-scheme and protocol-relative URL abuse, and bearer-token leaks; symmetric secret redaction for MS Graph, Stripe, and Twilio credentials.
 - **Context management** — `TurnSummarizationFilter` wired into `run_agent` to keep long sessions inside the context budget.
@@ -402,6 +418,7 @@ See [`CHANGELOG.md`](CHANGELOG.md) for the full history.
 |------|---------|
 | [`CLAUDE.md`](CLAUDE.md) · [`AGENTS.md`](AGENTS.md) | Agent-facing guide to this repo |
 | [`PLAN.md`](PLAN.md) | Master plan index — read before starting work |
+| [`SAK_AGENT_MASTER_REPORT_AND_PLAN.md`](SAK_AGENT_MASTER_REPORT_AND_PLAN.md) | Master Architecture Report & 6-Part Cycle Operations Plan |
 | [`docs/architecture.md`](docs/architecture.md) | Full layer diagram and SQLite schema |
 | [`docs/capabilities.md`](docs/capabilities.md) | Feature list |
 | [`docs/runtimes.md`](docs/runtimes.md) | CLI / agent loop / MCP server |
