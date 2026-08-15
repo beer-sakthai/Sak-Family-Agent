@@ -513,18 +513,18 @@ def _graph_safe(action_desc: str, fn: Callable[[], str]) -> str:
     try:
         return fn()
     except RuntimeError as exc:
-        return f"Error: {exc}"
+        return redact_secrets(f"Error: {exc}")
     except HTTPError as exc:
         try:
             err = json.loads(exc.read().decode("utf-8"))
             message = err.get("error", {}).get("message", exc.reason)
         except Exception:
             message = exc.reason
-        return f"Microsoft Graph API Error ({exc.code}): {message}"
+        return redact_secrets(f"Microsoft Graph API Error ({exc.code}): {message}")
     except URLError as exc:
-        return f"Network Error: Could not connect to Microsoft Graph: {exc.reason}"
+        return redact_secrets(f"Network Error: Could not connect to Microsoft Graph: {exc.reason}")
     except Exception as exc:  # noqa: BLE001
-        return f"Unexpected Error {action_desc}: {exc}"
+        return redact_secrets(f"Unexpected Error {action_desc}: {exc}")
 
 
 def _send_outlook_mail(args: dict[str, Any], store: MemoryStore) -> str:
