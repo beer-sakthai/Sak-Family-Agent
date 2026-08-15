@@ -1,11 +1,13 @@
 """Unit tests for agent_workflow.executor module and action handlers."""
 
 import asyncio
+import os
 import tempfile
+import types
 import unittest
 from pathlib import Path
 
-from agent_workflow.executor import WorkflowExecutor
+from agent_workflow.executor import WorkflowExecutor, _SafeJSON
 from agent_workflow.models import RunStatus, StepDefinition, StepStatus, WorkflowDefinition
 
 
@@ -137,7 +139,17 @@ class TestWorkflowExecutor(unittest.TestCase):
                 self.assertTrue(
                     any(
                         x in error_msg
-                        for x in ["ssrf", "smuggling", "scheme", "hostname", "invalid", "forbidden", "control", "userinfo", "credentials"]
+                        for x in [
+                            "ssrf",
+                            "smuggling",
+                            "scheme",
+                            "hostname",
+                            "invalid",
+                            "forbidden",
+                            "control",
+                            "userinfo",
+                            "credentials",
+                        ]
                     ),
                     f"Unexpected error message for URL '{url}': {step_res.error}",
                 )
@@ -534,7 +546,10 @@ class TestWorkflowExecutor(unittest.TestCase):
         )
         history = asyncio.run(self.executor.execute_workflow(wf_invalid_dict))
         self.assertEqual(history.status, RunStatus.FAILED)
-        self.assertIn("headers parameter must be a dictionary", history.step_results["fetch_step"].error.lower())
+        self.assertIn(
+            "headers parameter must be a dictionary",
+            history.step_results["fetch_step"].error.lower(),
+        )
 
         # 2. Reject non-string header keys
         wf_invalid_key = WorkflowDefinition(
@@ -549,7 +564,10 @@ class TestWorkflowExecutor(unittest.TestCase):
         )
         history = asyncio.run(self.executor.execute_workflow(wf_invalid_key))
         self.assertEqual(history.status, RunStatus.FAILED)
-        self.assertIn("header keys and values must be strings", history.step_results["fetch_step"].error.lower())
+        self.assertIn(
+            "header keys and values must be strings",
+            history.step_results["fetch_step"].error.lower(),
+        )
 
         # 3. Reject non-string header values
         wf_invalid_value = WorkflowDefinition(
@@ -564,7 +582,10 @@ class TestWorkflowExecutor(unittest.TestCase):
         )
         history = asyncio.run(self.executor.execute_workflow(wf_invalid_value))
         self.assertEqual(history.status, RunStatus.FAILED)
-        self.assertIn("header keys and values must be strings", history.step_results["fetch_step"].error.lower())
+        self.assertIn(
+            "header keys and values must be strings",
+            history.step_results["fetch_step"].error.lower(),
+        )
 
         # 4. Reject CRLF in header key
         wf_crlf_key = WorkflowDefinition(
@@ -579,7 +600,10 @@ class TestWorkflowExecutor(unittest.TestCase):
         )
         history = asyncio.run(self.executor.execute_workflow(wf_crlf_key))
         self.assertEqual(history.status, RunStatus.FAILED)
-        self.assertIn("crlf characters are not allowed in headers", history.step_results["fetch_step"].error.lower())
+        self.assertIn(
+            "crlf characters are not allowed in headers",
+            history.step_results["fetch_step"].error.lower(),
+        )
 
         # 5. Reject CRLF in header value
         wf_crlf_value = WorkflowDefinition(
@@ -588,13 +612,19 @@ class TestWorkflowExecutor(unittest.TestCase):
                 StepDefinition(
                     id="fetch_step",
                     action="fetch",
-                    params={"url": "https://example.com", "headers": {"X-Header": "value\nInjected: True"}},
+                    params={
+                        "url": "https://example.com",
+                        "headers": {"X-Header": "value\nInjected: True"},
+                    },
                 ),
             ],
         )
         history = asyncio.run(self.executor.execute_workflow(wf_crlf_value))
         self.assertEqual(history.status, RunStatus.FAILED)
-        self.assertIn("crlf characters are not allowed in headers", history.step_results["fetch_step"].error.lower())
+        self.assertIn(
+            "crlf characters are not allowed in headers",
+            history.step_results["fetch_step"].error.lower(),
+        )
 
     def test_shell_action_command_chaining_and_substitution_protection(self):
         """Verify that shell actions reject command chaining and substitution bypasses."""
@@ -630,7 +660,11 @@ class TestWorkflowExecutor(unittest.TestCase):
                 self.assertTrue(
                     any(
                         x in step_res.error.lower()
-                        for x in ["pipeline to interpreter", "process substitution", "prohibited sensitive path"]
+                        for x in [
+                            "pipeline to interpreter",
+                            "process substitution",
+                            "prohibited sensitive path",
+                        ]
                     ),
                     f"Unexpected error message for command '{cmd}': {step_res.error}",
                 )
@@ -704,6 +738,117 @@ class TestWorkflowExecutor(unittest.TestCase):
                 self.assertIsNotNone(step_res.error)
                 self.assertIn("prohibited", step_res.error.lower())
                 self.assertIn("dunder", step_res.error.lower())
+
+    def test_python_sandbox_exposes_no_module_objects(self):
+        """The sandbox must not hand out a module the AST validator cannot see.
+
+        The builtins blocklist and the dunder rule were both sound; the escape
+        was the convenience ``json`` module placed into the sandbox globals. A
+        module's own imports are ordinary, non-dunder attributes, so attribute
+        traversal walked straight out of the sandbox to ``builtins`` and
+        ``sys`` without naming anything either defence inspects.
+
+        These payloads all reached arbitrary file access or command execution
+        before the fix. They are pinned individually because they take four
+        *disjoint* routes out (via ``codecs`` and via ``re``/``enum``), so a
+        fix that only blocked one name would still leave the sandbox open.
+        """
+        module_escape_payloads = [
+            # route 1: json -> codecs -> builtins / sys
+            "json.codecs.builtins.open('/etc/passwd').read()",
+            "json.codecs.sys.modules['os'].popen('id').read()",
+            # route 2: json -> decoder -> re -> enum -> builtins / sys
+            "json.decoder.re.enum.bltns.open('/etc/passwd').read()",
+            "json.decoder.re.enum.sys.modules['os'].popen('id').read()",
+            # the module objects themselves must simply not be reachable
+            "json.codecs",
+            "json.decoder",
+            "json.encoder",
+            "json.scanner",
+        ]
+        for payload in module_escape_payloads:
+            with self.subTest(payload=payload):
+                wf = WorkflowDefinition(
+                    name="python_module_escape",
+                    steps=[
+                        StepDefinition(id="s1", action="python", params={"expr": payload}),
+                    ],
+                )
+                history = asyncio.run(self.executor.execute_workflow(wf))
+                self.assertEqual(
+                    history.status,
+                    RunStatus.FAILED,
+                    f"payload {payload!r} escaped the python sandbox",
+                )
+                step_res = history.step_results["s1"]
+                self.assertEqual(step_res.status, StepStatus.FAILED)
+                self.assertIsNotNone(step_res.error)
+                # Pin the defence that fires: the facade has no such attribute,
+                # rather than some unrelated rule happening to deny it.
+                self.assertIn("_SafeJSON", step_res.error)
+
+    def test_python_sandbox_namespace_is_module_free(self):
+        """Nothing reachable from the sandbox globals may be a module.
+
+        Walks the real facade the way sandboxed code can — non-dunder
+        attributes only, which is exactly what the AST validator permits — and
+        asserts the transitive closure contains no module. This is the
+        invariant; the payload test above is one instance of it.
+        """
+        safe_json = _SafeJSON()
+        seen: set = set()
+        frontier = [("json", safe_json)]
+        offenders = []
+        for _ in range(5):
+            nxt = []
+            for path, obj in frontier:
+                if id(obj) in seen:
+                    continue
+                seen.add(id(obj))
+                for attr in dir(obj):
+                    if attr.startswith("__") and attr.endswith("__"):
+                        continue
+                    try:
+                        child = getattr(obj, attr)
+                    except Exception:
+                        continue
+                    child_path = f"{path}.{attr}"
+                    if isinstance(child, types.ModuleType):
+                        offenders.append(f"{child_path} -> {child.__name__}")
+                    nxt.append((child_path, child))
+            frontier = nxt
+        self.assertEqual(offenders, [], f"module objects reachable from sandbox: {offenders}")
+
+    def test_python_sandbox_rejects_module_valued_params(self):
+        """A module arriving via step params must fail closed, not execute."""
+        with self.assertRaises(PermissionError) as ctx:
+            asyncio.run(
+                self.executor._execute_action("python", {"code": "1 + 1", "smuggled": os}, "s1")
+            )
+        self.assertIn("not permitted in the python sandbox", str(ctx.exception))
+
+    def test_python_sandbox_still_serialises_json(self):
+        """The facade must keep the serialisation workflows actually use."""
+        cases = [
+            ("json.dumps({'a': 1})", '{"a": 1}'),
+            ("json.loads('{\"b\": 2}')", {"b": 2}),
+        ]
+        for expr, expected in cases:
+            with self.subTest(expr=expr):
+                wf = WorkflowDefinition(
+                    name="python_json_ok",
+                    steps=[
+                        StepDefinition(id="s1", action="python", params={"expr": expr}),
+                    ],
+                )
+                history = asyncio.run(self.executor.execute_workflow(wf))
+                self.assertEqual(
+                    history.status,
+                    RunStatus.COMPLETED,
+                    f"{expr!r} should still evaluate; "
+                    f"error was {history.step_results['s1'].error!r}",
+                )
+                self.assertEqual(history.step_results["s1"].output["result"], expected)
 
 
 if __name__ == "__main__":
