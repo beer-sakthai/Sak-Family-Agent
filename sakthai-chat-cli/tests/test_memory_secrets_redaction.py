@@ -186,7 +186,4 @@ def test_redact_slack_secrets() -> None:
         },
     ):
         assert redact_secrets("slack_signing_secret_val123") == "[REDACTED]"
-        assert (
-            redact_secrets("https://hooks.slack.com/services/T000/B000/XXXX")
-            == "[REDACTED]"
-        )
+        assert redact_secrets("https://hooks.slack.com/services/T000/B000/XXXX") == "[REDACTED]"
