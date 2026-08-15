@@ -236,7 +236,6 @@ describe("SpecKit Feature Suite", () => {
               commands: [],
               layoutNote: "",
             },
-            upstream: getSpecKitData().upstream,
           }}
         />
       );
