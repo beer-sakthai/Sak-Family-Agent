@@ -114,11 +114,14 @@ def _collect(store: MemoryStore, days: int) -> dict[str, Any]:
     facts_delta = sum(1 for f in all_facts if f.created_at >= seven_days_ago_ts)
     obs_delta = sum(1 for o in all_obs if o.created_at >= seven_days_ago_ts)
 
-    # Filtering recent general facts (exclude lead and revenue kinds to avoid noise)
+    # Filtering recent general facts (exclude leads, revenue, web auth, system, and tagged sensitive facts)
     recent_general = [
         {"id": f.id, "kind": f.kind, "value": f.value, "key": f.key}
         for f in all_facts
-        if f.kind not in ("lead", "revenue")
+        if f.kind not in ("lead", "revenue", "web_auth", "system")
+        and not f.kind.startswith(("web_", "system"))
+        and "no-export" not in f.tags
+        and "system" not in f.tags
     ][:10]
 
     top_obs = [
