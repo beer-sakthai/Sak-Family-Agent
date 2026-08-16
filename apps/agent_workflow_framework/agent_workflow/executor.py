@@ -499,7 +499,7 @@ def _validate_shell_command(cmd_str: str) -> None:
                         "ionice", "chrt", "taskset", "stdbuf", "chroot", "nsenter", "unshare",
                         "pkexec", "uv", "pipx", "bun", "bunx", "npx", "deno", "poetry",
                         "pipenv", "conda", "pnpm", "yarn", "npm", "cargo", "composer",
-                        "busybox", "toybox",
+                        "busybox", "toybox", "builtin", "command",
                     }
 
                     interpreters = (
@@ -521,6 +521,10 @@ def _validate_shell_command(cmd_str: str) -> None:
                         "bun",
                         "tsx",
                         "ts-node",
+                        "eval",
+                        "exec",
+                        "source",
+                        ".",
                     )
 
                     cmd_word = ""

