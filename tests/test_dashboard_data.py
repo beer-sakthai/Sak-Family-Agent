@@ -73,7 +73,9 @@ def test_recent_facts_exclude_lead_and_revenue_kinds(store: MemoryStore) -> None
 
 def test_recent_facts_exclude_sensitive_and_auth_facts(store: MemoryStore) -> None:
     store.add_fact("general note", kind="note")
-    store.add_fact("secret token", kind="web_auth", key="bearer_token", tags=["system", "no-export"])
+    store.add_fact(
+        "secret token", kind="web_auth", key="bearer_token", tags=["system", "no-export"]
+    )
     store.add_fact("system state", kind="system_info", key="status")
     store.add_fact("tagged secret", kind="custom", tags=["no-export"])
     store.add_fact("tagged system", kind="custom", tags=["system"])
