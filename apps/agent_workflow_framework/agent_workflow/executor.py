@@ -365,9 +365,12 @@ def _extract_shell_subcommands(cmd_str: str) -> List[str]:
 
             if not in_single_quote:
                 # Check for command substitution $(...) and process substitution <(...) or >(...)
-                if text[i:i+2] in ("$(", "<(", ">("):
+                import re
+                ps_match = re.match(r"^(\$\(|[<>]\s*\()", text[i:])
+                if ps_match:
+                    prefix_len = ps_match.end()
                     depth = 1
-                    j = i + 2
+                    j = i + prefix_len
                     sub_escaped = False
                     sub_sq = False
                     sub_dq = False
@@ -388,7 +391,7 @@ def _extract_shell_subcommands(cmd_str: str) -> List[str]:
                                 depth -= 1
                         if depth > 0:
                             j += 1
-                    inner = text[i+2:j]
+                    inner = text[i+prefix_len:j]
                     if inner.strip():
                         _parse(inner)
                     current_cmd.append(text[i:j+1])
@@ -624,14 +627,16 @@ def _validate_shell_command(cmd_str: str) -> None:
                 re.match(rf"^{re.escape(interp)}(?:[0-9]+(?:\.[0-9]+)*)?$", outer_cmd)
                 for interp in interpreters
             )
-            has_proc_sub = any(p.startswith(("<(", ">(")) or re.search(r"[<>]\([^)]+\)", p) for p in parts[1:])
+            has_proc_sub = any(
+                p.startswith(("<(", ">(")) or re.search(r"[<>]\s*\([^)]+\)", p) for p in parts[1:]
+            ) or bool(re.search(r"[<>]\s*\(", cmd_str_stripped))
             if is_outer_interp and has_proc_sub:
                 raise PermissionError(
                     f"Interpreter {parts[0]!r} with process substitution is prohibited "
                     "to prevent command execution bypass."
                 )
 
-        proc_matches = re.findall(r"[<>]\(([^)]+)\)", cmd_str_stripped)
+        proc_matches = re.findall(r"[<>]\s*\(([^)]+)\)", cmd_str_stripped)
         for proc_inner in proc_matches:
             proc_inner_clean = proc_inner.strip()
             try:

