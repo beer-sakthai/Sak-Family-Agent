@@ -26,7 +26,7 @@ personas, deployment config, training assets, or docs.
 
 ```
 personas/          the six agents + the shared package (see below)
-tests/             the one pytest suite (imports `sakthai`, ~95 test files)
+tests/             the one pytest suite (imports `sakthai`, 113 test files)
 library/           31 curated skills across 11 categories (a live skill root)
 docs/              architecture, security, plans/specs under docs/superpowers/
 scripts/           dev + maintenance scripts (compose_persona, export_agent_repo, …)
@@ -81,6 +81,18 @@ by deleting the shadowing files without checking the parity test first.
 `telegram/bot.py` all differ, and `agent/security_hardening.py` +
 `agent/guardrails_hardened.py` exist only in the SakThai copy. Reconciling the
 two is a known, tracked gap — not yet done.
+
+That gap is now **inventoried**, by `tests/test_shared_package_divergence.py`.
+The shared copy is what SakJules and SakTan execute, but it sits outside
+`[tool.coverage.run] source` (which resolves to the *installed* package), so no
+test imports it and its coverage is not low — it is absent. The new test does
+not reconcile the two trees; it pins the difference so it cannot grow unnoticed:
+every diverged file must be declared in `KNOWN_DIVERGENCES` with a reason, and
+every SakThai-only module in `CANONICAL_ONLY`. **If you edit anything under
+`personas/shared/sakthai/` or add a module to the canonical package, this test
+fails until you either sync the file or declare it.** Entries are also checked
+for staleness — syncing a declared-diverged file fails CI until its register
+entry is removed, which is what makes the debt shrink rather than calcify.
 
 ### Personas
 
@@ -202,8 +214,11 @@ a top-level `permissions:` block. A batch of pasted starter templates that met
 none of this was removed on 2026-08-13.
 
 Coverage floor is **96%** (`fail_under = 96`, branch coverage on) over the
-`sakthai` package, with `telegram/bot.py` omitted from measurement; the suite
-currently sits at **96.56%**. Run the lint→pytest sequence locally before
+`sakthai` package. Nothing is omitted from measurement any more — `omit = []`;
+`telegram/bot.py` used to be excluded, which did not make it tested, only
+invisible (it sat at 38% while the reported total stayed above the floor). It is
+measured now and covered at 98%. The suite currently sits at **97.92%**. Run the
+lint→pytest sequence locally before
 pushing; green CI is the bar for `main`.
 
 ---
@@ -563,7 +578,7 @@ There is no `dashboard.py` here — see the dashboard note below.
 
 ## Tests
 
-Tests live in `tests/` (95 test files, ~23,700 lines) and are the suite for the
+Tests live in `tests/` (113 test files, ~29,500 lines) and are the suite for the
 `sakthai` package — there is no per-persona test tree. All tests are hermetic:
 no network, no GCP credentials. Integration tests that may hit real endpoints
 (Ollama, Anthropic) are marked `@pytest.mark.integration` and self-skip when
@@ -606,6 +621,28 @@ logic it was named after (`guardrails.py` rule 6) never executed once. New
 guardrail tests must pin `result.reason` so the intended defense is what gets
 verified.
 
+That anti-pattern is not hypothetical and was **not** confined to the container
+battery — a 2026-08-16 sweep found four more live instances in
+`tests/test_guardrails_hardened.py` alone, all since fixed: two path tests
+(`test_glob_pattern_denied`, `test_case_sensitivity_trick_denied`) whose inputs
+were caught by the earlier sensitive-path branch so the rules they were named
+for never ran; one that asserted `action in (ALLOW, DENY)`, which no behavior
+can fail; and one that pinned the environment *before* setting
+`SAKTHAI_SHELL_ALLOW`, so it denied at env-tampering two checks earlier than the
+branch it claimed to cover. When writing a test for a specific rule, confirm the
+rule actually fires — run it and read `result.reason` — rather than trusting a
+green `DENY`.
+
+Two guardrail branches are **structurally unreachable**, both shadowed by an
+earlier, broader check, and both pinned by characterization tests rather than
+deleted: `guardrails.py` rule 6 (container mounts/`cp`, shadowed by rule 2's
+destructive-binary scan) and `check_enhanced_path_safety`'s case-trick branch
+(shadowed by `_is_sensitive_path`, which already matches case-insensitively).
+Rule 6 is extracted as `_check_container_tokens` and tested directly in
+`tests/test_guardrails_container_rule.py`, so the backstop is verified before it
+could ever become load-bearing. If you change rule 2's binary list or the rule
+ordering, expect those characterization tests to fail — that is them working.
+
 Key test areas:
 
 - **Memory** — `test_memory_store.py`, `test_memory_sync.py`, `test_memory_aux.py`,
@@ -617,7 +654,8 @@ Key test areas:
   `test_chat.py`, `test_eval*.py`, `test_context_filter.py`,
   `test_context_manager.py`, `test_prompt_builder.py`, `test_providers*.py`,
   `test_provider_contracts.py`, `test_provider_resilience.py`
-- **Security** — `test_guardrails*.py` (10 files), `test_sentinel_*.py` (6 files),
+- **Security** — `test_guardrails*.py` (12 files, incl.
+  `test_guardrails_container_rule.py`), `test_sentinel_*.py` (6 files),
   `test_security_hardening.py`, `test_security_sentinel.py`,
   `test_persona_guardrails_parity.py`, `test_sakking_skill_security.py`,
   `test_giturl.py`, `test_web_auth.py`
@@ -633,6 +671,7 @@ Key test areas:
   `test_selfheal_publish.py`, `test_selfheal_completion.py`,
   `test_selfheal_pipeline.py`
 - **Repo/persona invariants** — `test_soul_consistency.py`,
+  `test_shared_package_divergence.py`,
   `test_compose_persona.py`, `test_export_agent_repo.py`,
   `test_persona_workspace_workflows.py`, `test_train_configs.py`
 - `conftest.py` — shared fixtures: in-memory `MemoryStore`, temp dirs,
