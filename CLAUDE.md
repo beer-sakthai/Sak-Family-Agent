@@ -177,6 +177,7 @@ Twenty workflows live in `.github/workflows/`. The ones that gate a change:
 | `agent-self-evolution.yml` | push/PR touching `personas/sakthai/agent-self-evolution/**` | that subproject's own suite |
 | `labeler.yml` | `pull_request_target` | PR labelling |
 | `scorecard.yml` | push to `main`, weekly | OpenSSF Scorecard → SARIF to code scanning |
+| `self-healing-ci.yml` | `workflow_run` completion of `CI` on `main` (failure only), or manual | runs `sakthai heal run` over the failed job's log and opens a `selfheal/` fix PR when the patch is safe and locally verified. Gates nothing — it only ever adds a PR |
 
 Scheduled / manual only, so they never block a PR: `continuous-security.yml`
 (nightly), `verify-assets.yml` (daily HF asset check), `run-evals.yml` (weekly
@@ -242,6 +243,11 @@ get the same per-persona shard without setting `SAKTHAI_HOME` yourself — see
    - Extensions: `extensions install|list|remove`
    - Sessions: `sessions list|show|clean`
    - Eval: `eval summary [--limit N] [--json]`
+   - Heal: `heal inspect|run` — the self-healing CI agent. `inspect` parses a
+     failed job's log and prints the failures (no model call, no writes); `run`
+     walks the full diagnose → gate → patch → verify → publish pipeline. Its
+     exit code reports whether the *pipeline* ran, not whether a fix was found —
+     read the status from `--json`. See "Self-healing CI" below.
    - Hugging Face: `hf info|download <repo_id>`
    - System: `doctor`, `setup`, `status`, `tools`
    - There is **no `dashboard` command** — the CLI wiring was removed (a stale
@@ -475,6 +481,7 @@ resolving to the *module* rather than the command object:
 - `cycle.py` — `cycle` group
 - `extensions.py` — `extensions` group
 - `eval.py` — `eval` group
+- `heal.py` — `heal` group
 - `sessions.py` — `sessions` group
 - `hf.py` — `hf` group
 
@@ -514,6 +521,24 @@ There is no `dashboard.py` here — see the dashboard note below.
   `memory.db`, managed with `sakthai web setup` / `web regen-token`). Static
   serving additionally canonicalises the request path against `_STATIC_ROOT`
   before delegating.
+- **`selfheal/`** — the self-healing CI agent behind `sakthai heal` and
+  `.github/workflows/self-healing-ci.yml`. `pipeline.heal()` is the whole flow in
+  one injectable function: `ingest.py` parses a failed job's log into
+  `FailureSignal`s (pytest/ruff/mypy/bandit), `inspector.py` resolves the
+  implicated files against the checkout and reads bounded, containment-checked
+  windows, `diagnose.py` asks a model for **JSON only** (root cause, confidence,
+  exact-string edits — never commands), `safety.py` gates those edits
+  deterministically, `patch.py` applies them all-or-nothing with a byte-exact
+  rollback, `verify.py` re-runs the failing test then the whole suite,
+  `publish.py` pushes a `selfheal/` branch and opens the PR, and
+  `walkthrough.py` renders the report. **The safety gate has the final word: a
+  violation is a hard stop that no confidence score overrides**, and its
+  protected-path list includes `.github/`, dependency pins, the security
+  subsystem, and the `selfheal` package itself — the agent cannot edit its own
+  gate, its own workflow, or its own tests. Rationale and the full status table
+  are in [`docs/self-healing-ci.md`](docs/self-healing-ci.md). Note this module
+  exists only in the SakThai copy of the package, not in
+  `personas/shared/sakthai/` — the same known divergence described above.
 - **`extensions/install.py`** — clones skill/MCP bundles from git into
   `~/.sakthai/extensions` (URLs validated via `giturl.py`, removal containment-
   checked); `list`/`remove` manage installed bundles.
@@ -600,7 +625,13 @@ Key test areas:
   `test_mcp_client_resilience.py`, `test_mcp_manager.py`, `test_mcp_servers.py`,
   `test_mcp_main.py`
 - **CLI** — `test_cli.py`, `test_cli_system.py`, `test_cli_eval.py`,
-  `test_cli_consolidate_sessions.py`, `test_sessions_cli.py`, `test_entrypoint.py`
+  `test_cli_heal.py`, `test_cli_consolidate_sessions.py`, `test_sessions_cli.py`,
+  `test_entrypoint.py`
+- **Self-healing CI** — `test_selfheal_ingest.py`, `test_selfheal_inspector.py`,
+  `test_selfheal_safety.py`, `test_selfheal_patch.py`, `test_selfheal_verify.py`,
+  `test_selfheal_diagnose.py`, `test_selfheal_walkthrough.py`,
+  `test_selfheal_publish.py`, `test_selfheal_completion.py`,
+  `test_selfheal_pipeline.py`
 - **Repo/persona invariants** — `test_soul_consistency.py`,
   `test_compose_persona.py`, `test_export_agent_repo.py`,
   `test_persona_workspace_workflows.py`, `test_train_configs.py`
@@ -781,6 +812,7 @@ A skill directory may also carry `commands/<name>.md` files, which become
 | `docs/integrations.md` | Composio and cross-agent communication recipes |
 | `docs/skill-naming.md` | The `Sak-` / `Sak<Name>-` naming convention |
 | `docs/agent-diagnosis.md` | Standalone run checklist and runtime notes |
+| `docs/self-healing-ci.md` | The `sakthai heal` pipeline, its safety model, and the workflow that drives it |
 | `docs/SOUL.md` · `docs/USER.md` · `docs/OPERATING_CONTRACT.md` | Team identity · Beer's profile · agent operating rules |
 | `docs/SECURITY.md` · `docs/security-hardening.md` · `docs/SECURITY_HARDENING_IMPLEMENTATION.md` | Security policy/architecture · audit findings and the prevention pattern + regression test for each · implementation notes |
 | `docs/security_audit_2026-07-11.md` · `docs/security_audit_2026-07-12.md` | Point-in-time audit reports |
