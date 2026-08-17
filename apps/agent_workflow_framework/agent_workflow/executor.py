@@ -729,7 +729,7 @@ def _validate_shell_command(cmd_str: str) -> None:
             ) or bool(re.search(r"[<>]\s*\(", cmd_str_stripped))
             if is_outer_interp and has_proc_sub:
                 raise PermissionError(
-                    f"Interpreter {effective_outer!r} with process substitution is prohibited "
+                    f"Interpreter {cmd_word!r} with process substitution is prohibited "
                     "to prevent command execution bypass."
                 )
 
