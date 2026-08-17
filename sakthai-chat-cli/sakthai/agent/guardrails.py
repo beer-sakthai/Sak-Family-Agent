@@ -370,6 +370,7 @@ def _check_container_tokens(parts: list[str]) -> GuardrailResult:
         binary_name = os.path.basename(part)
         for j, subpart in enumerate(parts[i + 1 :], i + 1):
             if subpart in (";", "&&", "||", "|", "|&"):
+            if subpart in (";", "&&", "||", "|"):
                 break
             # Volume mounts: -v /etc:/mnt, -v=/etc:/mnt, --mount type=bind,source=/etc,...
             if subpart == "-v" or subpart == "--volume":
@@ -412,6 +413,7 @@ def _check_container_tokens(parts: list[str]) -> GuardrailResult:
             if subpart == "cp":
                 for k in range(j + 1, len(parts)):
                     if parts[k] in (";", "&&", "||", "|", "|&"):
+                    if parts[k] in (";", "&&", "||", "|"):
                         break
                     if _is_sensitive_path(parts[k]):
                         return GuardrailResult(
@@ -1233,7 +1235,71 @@ def _check_destructive_tokens(
                     )
                 return res
 
-    # 8. Prevent pipeline-to-interpreter command execution bypasses (e.g. curl ... | sh)
+    # 8. Prevent process substitution command execution bypasses (<(...) and >(...))
+    interpreters_tuple = (
+        "sh",
+        "bash",
+        "zsh",
+        "dash",
+        "ksh",
+        "fish",
+        "ash",
+        "csh",
+        "tcsh",
+        "python",
+        "node",
+        "perl",
+        "ruby",
+        "php",
+        "deno",
+        "bun",
+        "tsx",
+        "ts-node",
+    )
+
+    full_cmd_str = " ".join(parts)
+    has_proc_sub = any(
+        p.startswith(("<(", ">(")) or re.search(r"[<>]\s*\([^)]+\)", p) for p in parts
+    ) or bool(re.search(r"[<>]\s*\(", full_cmd_str))
+
+    if has_proc_sub:
+        first_binary = parts[0] if parts else ""
+        if _is_binary(first_binary, interpreters_tuple):
+            return GuardrailResult(
+                GuardrailAction.DENY,
+                reason=(
+                    f"Interpreter {first_binary!r} with process substitution is prohibited "
+                    "to prevent command execution bypass."
+                ),
+            )
+
+        proc_matches = re.findall(r"[<>]\s*\(([^)]+)\)", full_cmd_str)
+        for proc_inner in proc_matches:
+            proc_inner_clean = proc_inner.strip()
+            try:
+                proc_words = shlex.split(proc_inner_clean)
+            except Exception:
+                proc_words = proc_inner_clean.split()
+
+            if proc_words and _is_binary(proc_words[0], interpreters_tuple):
+                return GuardrailResult(
+                    GuardrailAction.DENY,
+                    reason=(
+                        f"Process substitution executing interpreter {proc_words[0]!r} is prohibited "
+                        "to prevent command execution bypass."
+                    ),
+                )
+
+            res = _check_destructive_tokens(
+                proc_words,
+                context_sensitive=context_sensitive,
+                checked_makefiles=checked_makefiles,
+                current_make_dir=current_make_dir,
+            )
+            if res.action == GuardrailAction.DENY:
+                return res
+
+    # 9. Prevent pipeline-to-interpreter command execution bypasses (e.g. curl ... | sh)
     for i, part in enumerate(parts):
         if part in ("|", "|&"):
             for subpart in parts[i + 1 :]:
