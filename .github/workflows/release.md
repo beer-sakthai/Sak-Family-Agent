@@ -24,15 +24,13 @@ permissions:
   pull-requests: read
   issues: read
   actions: read
+  copilot-requests: write
 
 sandbox:
   agent:
     sudo: false
 
-# This repo's account is on Copilot Free, which cannot select a model and does not
-# include the agent entitlement, so the copilot engine 400s on every run. Uses the
-# Gemini engine (GEMINI_API_KEY) instead.
-engine: gemini
+engine: copilot
 timeout-minutes: 25
 
 network:
