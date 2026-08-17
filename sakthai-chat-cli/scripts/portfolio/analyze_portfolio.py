@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import sys
 import os
 
-def analyze_portfolio(files: list[str], tickers: list[str], weights: list[float], output_plot: str):
+def analyze_portfolio(files: list[str], tickers: list[str], weights: list[float], output_plot: str, output_csv: str | None = None):
     """
     Analyzes the performance of a portfolio constructed from multiple stock CSVs.
 
@@ -113,6 +113,10 @@ if __name__ == "__main__":
     if output_dir:
         os.makedirs(output_dir, exist_ok=True)
     if args.output_csv:
-        os.makedirs(os.path.dirname(args.output_csv), exist_ok=True)
+        # Guarded the same way as output_plot above: dirname("portfolio.csv")
+        # is "", and makedirs("") raises FileNotFoundError.
+        csv_dir = os.path.dirname(args.output_csv)
+        if csv_dir:
+            os.makedirs(csv_dir, exist_ok=True)
 
     analyze_portfolio(args.files, args.tickers, args.weights, args.output_plot, args.output_csv)
