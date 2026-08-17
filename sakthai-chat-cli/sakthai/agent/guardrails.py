@@ -369,6 +369,7 @@ def _check_container_tokens(parts: list[str]) -> GuardrailResult:
             continue
         binary_name = os.path.basename(part)
         for j, subpart in enumerate(parts[i + 1 :], i + 1):
+            if subpart in (";", "&&", "||", "|", "|&"):
             if subpart in (";", "&&", "||", "|"):
                 break
             # Volume mounts: -v /etc:/mnt, -v=/etc:/mnt, --mount type=bind,source=/etc,...
@@ -411,6 +412,7 @@ def _check_container_tokens(parts: list[str]) -> GuardrailResult:
             # (docker cp, podman cp, kubectl cp).
             if subpart == "cp":
                 for k in range(j + 1, len(parts)):
+                    if parts[k] in (";", "&&", "||", "|", "|&"):
                     if parts[k] in (";", "&&", "||", "|"):
                         break
                     if _is_sensitive_path(parts[k]):
@@ -827,7 +829,7 @@ def _check_destructive_tokens(
             is_interpreter = _is_binary(part, interpreters)
             # Inspect tokens following the binary until a separator is hit.
             for subpart in parts[i + 1 :]:
-                if subpart in (";", "&&", "||", "|"):
+                if subpart in (";", "&&", "||", "|", "|&"):
                     break
                 # For destructive binaries, we don't allow targeting the current directory.
                 # For exfiltration binaries, we allow targeting the current directory.
@@ -933,7 +935,7 @@ def _check_destructive_tokens(
         # 5c. Block unauthorized discovery of sensitive system roots.
         # find [path...] [expression]
         for part in after_find:
-            if part in (";", "&&", "||", "|"):
+            if part in (";", "&&", "||", "|", "|&"):
                 break
             if part.startswith("-"):
                 continue
@@ -1299,9 +1301,9 @@ def _check_destructive_tokens(
 
     # 9. Prevent pipeline-to-interpreter command execution bypasses (e.g. curl ... | sh)
     for i, part in enumerate(parts):
-        if part == "|":
+        if part in ("|", "|&"):
             for subpart in parts[i + 1 :]:
-                if subpart in (";", "&&", "||", "|"):
+                if subpart in (";", "&&", "||", "|", "|&"):
                     break
                 if _is_binary(
                     subpart,
