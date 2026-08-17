@@ -111,6 +111,17 @@ class TestPersonaSecurityFileParity(unittest.TestCase):
                     f"personas/shared/sakthai/{rel} has drifted from the canonical copy.",
                 )
 
+    def test_sakthai_chat_cli_guardrails_matches(self):
+        """``sakthai-chat-cli/sakthai/agent/guardrails.py`` must match canonical guardrails.py."""
+        cli_guardrails = REPO_ROOT / "sakthai-chat-cli" / "sakthai" / "agent" / "guardrails.py"
+        canonical_guardrails = CANONICAL_PKG / "agent" / "guardrails.py"
+        self.assertTrue(cli_guardrails.is_file(), f"missing {cli_guardrails}")
+        self.assertEqual(
+            cli_guardrails.read_bytes(),
+            canonical_guardrails.read_bytes(),
+            "sakthai-chat-cli/sakthai/agent/guardrails.py has drifted from the canonical copy.",
+        )
+
 
 class TestShadowInventory(unittest.TestCase):
     """Pin which files the partial persona directories shadow.

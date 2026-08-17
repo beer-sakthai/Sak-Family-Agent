@@ -370,7 +370,6 @@ def _check_container_tokens(parts: list[str]) -> GuardrailResult:
         binary_name = os.path.basename(part)
         for j, subpart in enumerate(parts[i + 1 :], i + 1):
             if subpart in (";", "&&", "||", "|", "|&"):
-            if subpart in (";", "&&", "||", "|"):
                 break
             # Volume mounts: -v /etc:/mnt, -v=/etc:/mnt, --mount type=bind,source=/etc,...
             if subpart == "-v" or subpart == "--volume":
@@ -413,7 +412,6 @@ def _check_container_tokens(parts: list[str]) -> GuardrailResult:
             if subpart == "cp":
                 for k in range(j + 1, len(parts)):
                     if parts[k] in (";", "&&", "||", "|", "|&"):
-                    if parts[k] in (";", "&&", "||", "|"):
                         break
                     if _is_sensitive_path(parts[k]):
                         return GuardrailResult(
@@ -946,59 +944,9 @@ def _check_destructive_tokens(
                 )
 
     # 6. Specialized protection for container tools (docker, podman, kubectl).
-    for i, part in enumerate(parts):
-        if _is_binary(part, ("docker", "podman", "kubectl")):
-            binary_name = os.path.basename(part)
-            for j, subpart in enumerate(parts[i + 1 :], i + 1):
-                if subpart in (";", "&&", "||", "|"):
-                    break
-                # Check for volume mounts in docker/podman: -v /etc:/mnt or --mount type=bind,source=/etc,...
-                if subpart == "-v" or subpart == "--volume":
-                    if j + 1 < len(parts):
-                        val = parts[j + 1]
-                        if _is_sensitive_path(val):
-                            return GuardrailResult(
-                                GuardrailAction.DENY,
-                                reason=f"potentially dangerous {binary_name!r} volume mount targeting {val!r} blocked.",
-                            )
-                elif subpart.startswith("-v=") or subpart.startswith("--volume="):
-                    val = subpart.split("=", 1)[1]
-                    if _is_sensitive_path(val):
-                        return GuardrailResult(
-                            GuardrailAction.DENY,
-                            reason=f"potentially dangerous {binary_name!r} volume mount targeting {val!r} blocked.",
-                        )
-                elif subpart.startswith("--mount"):
-                    val = subpart
-                    if "=" not in val and j + 1 < len(parts):
-                        val = parts[j + 1]
-                    # --mount type=bind,source=/etc,target=/mnt
-                    if "source=" in val:
-                        source_val = val.split("source=", 1)[1].split(",", 1)[0]
-                        if _is_sensitive_path(source_val):
-                            return GuardrailResult(
-                                GuardrailAction.DENY,
-                                reason=f"potentially dangerous {binary_name!r} mount source {source_val!r} blocked.",
-                            )
-                    elif "src=" in val:
-                        source_val = val.split("src=", 1)[1].split(",", 1)[0]
-                        if _is_sensitive_path(source_val):
-                            return GuardrailResult(
-                                GuardrailAction.DENY,
-                                reason=f"potentially dangerous {binary_name!r} mount source {source_val!r} blocked.",
-                            )
-
-                # cp copies files between host and container/pod
-                # (docker cp, podman cp, kubectl cp).
-                if subpart == "cp":
-                    for k in range(j + 1, len(parts)):
-                        if parts[k] in (";", "&&", "||", "|"):
-                            break
-                        if _is_sensitive_path(parts[k]):
-                            return GuardrailResult(
-                                GuardrailAction.DENY,
-                                reason=f"potentially dangerous '{binary_name} cp' on {parts[k]!r} blocked.",
-                            )
+    container_result = _check_container_tokens(parts)
+    if container_result.action == GuardrailAction.DENY:
+        return container_result
 
     # 7. Handle wrappers that don't use -c (sudo, doas, xargs, env, find -exec, timeout, etc.)
     for i, part in enumerate(parts):
