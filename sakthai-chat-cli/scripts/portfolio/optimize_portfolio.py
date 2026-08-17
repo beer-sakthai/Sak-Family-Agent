@@ -6,7 +6,9 @@ from scipy.optimize import minimize
 import yfinance as yf
 import sys
 import os
-from sakthai.finance import get_risk_free_rate
+# Local helper: `sakthai.finance` never existed, so this import used to
+# fail outright. sys.path[0] is this script's directory when run directly.
+from _finance import get_risk_free_rate
 
 def optimize_portfolio(files: list[str], tickers: list[str], output_plot: str | None, risk_free_rate: float | None = None):
     """
@@ -86,7 +88,7 @@ def optimize_portfolio(files: list[str], tickers: list[str], output_plot: str | 
         if output_plot:
             plt.style.use('seaborn-v0_8-pastel')
             fig, ax = plt.subplots(figsize=(8, 8))
-            
+
             # Filter out very small weights for cleaner plotting
             plot_weights = [w if w > 0.005 else 0 for w in optimal_weights]
             plot_labels = [tickers[i] if plot_weights[i] > 0 else '' for i in range(len(tickers))]
@@ -94,7 +96,7 @@ def optimize_portfolio(files: list[str], tickers: list[str], output_plot: str | 
             ax.pie(plot_weights, labels=plot_labels, autopct='%1.1f%%', startangle=90)
             ax.axis('equal')
             ax.set_title('Optimal Portfolio Allocation')
-            
+
             plt.savefig(output_plot)
             print(f"Optimal allocation plot saved to: {output_plot}")
 

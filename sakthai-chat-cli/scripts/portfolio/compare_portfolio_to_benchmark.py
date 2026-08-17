@@ -5,7 +5,9 @@ import matplotlib.pyplot as plt
 import yfinance as yf
 import sys
 import os
-from sakthai.finance import get_risk_free_rate
+# Local helper: `sakthai.finance` never existed, so this import used to
+# fail outright. sys.path[0] is this script's directory when run directly.
+from _finance import get_risk_free_rate
 
 def compare_portfolio_to_benchmark(portfolio_csv: str, benchmark_ticker: str, output_plot: str, risk_free_rate: float | None = None):
     """
@@ -115,7 +117,7 @@ def compare_portfolio_to_benchmark(portfolio_csv: str, benchmark_ticker: str, ou
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Compare a portfolio's performance against a benchmark.")
     parser.add_argument("portfolio_csv", type=str, help="Path to the CSV file containing portfolio historical value.")
-    parser.add_argument("--benchmark", type=str, default="SPY", help="Ticker symbol for the benchmark (e.g., 'SPY'). Default is 'SPY'.")    
+    parser.add_argument("--benchmark", type=str, default="SPY", help="Ticker symbol for the benchmark (e.g., 'SPY'). Default is 'SPY'.")
     parser.add_argument("--output-plot", type=str, required=True, help="Path to save the output plot image (e.g., 'portfolio_vs_benchmark.png').")
 
     args = parser.parse_args()
