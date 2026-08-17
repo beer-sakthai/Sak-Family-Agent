@@ -21,6 +21,7 @@ from sakthai.memory.store import MemoryStore
 from sakthai.web.server import (
     _get_or_create_bearer_token,
     _Handler,
+    _redact_query_token,
 )
 
 
@@ -502,3 +503,36 @@ def test_cli_web_regen_token(temp_db: Path) -> None:
             fact = store.get_fact_by_key(kind="web_auth", key="bearer_token")
             assert fact is not None
             assert fact.value == token2
+
+
+@pytest.mark.parametrize(
+    ("raw", "expected"),
+    [
+        ("GET /api/stages?token=deadbeef HTTP/1.1", "GET /api/stages?token=[REDACTED] HTTP/1.1"),
+        (
+            "GET /?bearer_token=abc123&days=7 HTTP/1.1",
+            "GET /?bearer_token=[REDACTED]&days=7 HTTP/1.1",
+        ),
+        ("GET /?TOKEN=Secret9 HTTP/1.1", "GET /?TOKEN=[REDACTED] HTTP/1.1"),
+        # No token: left untouched.
+        ("GET /health HTTP/1.1", "GET /health HTTP/1.1"),
+    ],
+)
+def test_redact_query_token_masks_credentials(raw: str, expected: str) -> None:
+    """The bearer token in a request line is masked by parameter name."""
+    assert _redact_query_token(raw) == expected
+
+
+def test_log_message_never_emits_the_token() -> None:
+    """The real _Handler.log_message must strip ?token=<secret> before logging."""
+    # Build a bare handler instance without running BaseHTTPRequestHandler's
+    # socket-bound __init__ — log_message needs no request state.
+    handler = _Handler.__new__(_Handler)
+    secret = "s3cr3t-bearer-value"
+    with patch("sakthai.web.server.logger") as mock_logger:
+        handler.log_message('"%s" %s %s', f"GET /api/stages?token={secret} HTTP/1.1", "200", "512")
+    assert mock_logger.info.called, "log_message should have logged a line"
+    # The token must appear in none of the arguments handed to the logger.
+    logged = " ".join(str(a) for call in mock_logger.info.call_args_list for a in call.args)
+    assert secret not in logged
+    assert "token=[REDACTED]" in logged

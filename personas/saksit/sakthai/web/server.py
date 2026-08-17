@@ -66,6 +66,18 @@ def _get_or_create_bearer_token() -> str:
 _DEFAULT_PORT = 3001
 _LOOPBACK_NAMES = frozenset({"localhost"})
 
+# The bearer token may be supplied as a ``?token=``/``?bearer_token=`` query
+# value (a convenience for loading static assets), which means it appears in the
+# request line. That line reaches the access log, so the live credential would
+# otherwise be written to logs in cleartext. Mask the value — by parameter name,
+# so a *wrong* token guessed by an attacker is masked too — before logging.
+_QUERY_TOKEN_RE = re.compile(r"((?:token|bearer_token)=)[^&\s\"']+", re.IGNORECASE)
+
+
+def _redact_query_token(text: str) -> str:
+    """Replace any ``token=``/``bearer_token=`` query value with a placeholder."""
+    return _QUERY_TOKEN_RE.sub(r"\1[REDACTED]", text)
+
 
 def _is_loopback_host(host: str) -> bool:
     """True if ``host`` is loopback-only (safe to bind without authentication)."""
@@ -192,7 +204,13 @@ class _Handler(SimpleHTTPRequestHandler):
         return self.client_address[0]
 
     def log_message(self, format: str, *args: Any) -> None:  # noqa: A003
-        logger.info(format, *args)
+        # Expand the record ourselves so we can strip any bearer token from the
+        # request line before it is written — never hand a token to the logger.
+        try:
+            message = format % args if args else format
+        except (TypeError, ValueError):  # pragma: no cover - defensive
+            message = format
+        logger.info("%s", _redact_query_token(message))
 
     def _has_auth_attempt(self) -> bool:
         """True if the request contains any authentication credentials."""
