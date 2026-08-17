@@ -623,7 +623,54 @@ def _validate_shell_command(cmd_str: str) -> None:
             parts = cmd_str_stripped.split()
 
         if parts:
-            outer_cmd = os.path.basename(parts[0].strip(" \t\n\r\"'()$&;"))
+            wrappers = {
+                "env", "sudo", "doas", "xargs", "timeout", "nohup", "setsid", "nice",
+                "ionice", "chrt", "taskset", "stdbuf", "chroot", "nsenter", "unshare",
+                "pkexec", "uv", "pipx", "bun", "bunx", "npx", "deno", "poetry",
+                "pipenv", "conda", "pnpm", "yarn", "npm", "cargo", "composer",
+                "busybox", "toybox", "builtin", "command", "eval", "exec", "source", ".",
+            }
+            cmd_word = ""
+            i = 0
+            while i < len(parts):
+                token = parts[i].strip(" \t\n\r\"'()$&;")
+                if not token:
+                    i += 1
+                    continue
+                if "=" in token and not token.startswith("-"):
+                    i += 1
+                    continue
+                if token.startswith("-"):
+                    if token in ("-s", "--signal", "-k", "--kill-after", "-n", "--adjustment", "-c", "-p"):
+                        i += 2
+                    else:
+                        i += 1
+                    continue
+                basename = os.path.basename(token)
+                is_interp = False
+                for interp in interpreters:
+                    pattern = rf"^{re.escape(interp)}(?:[0-9]+(?:\.[0-9]+)*)?$"
+                    if re.match(pattern, basename):
+                        is_interp = True
+                        break
+                if is_interp:
+                    cmd_word = token
+                    break
+                if basename in wrappers:
+                    i += 1
+                    if basename == "timeout":
+                        while i < len(parts) and parts[i].startswith("-"):
+                            if parts[i] in ("-s", "--signal", "-k", "--kill-after"):
+                                i += 2
+                            else:
+                                i += 1
+                        if i < len(parts):
+                            i += 1
+                    continue
+                cmd_word = token
+                break
+
+            outer_cmd = os.path.basename(cmd_word.strip(" \t\n\r\"'()$&;")) if cmd_word else ""
             is_outer_interp = any(
                 re.match(rf"^{re.escape(interp)}(?:[0-9]+(?:\.[0-9]+)*)?$", outer_cmd)
                 for interp in interpreters
