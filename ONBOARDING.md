@@ -20,6 +20,8 @@ Top Skills & Commands:
 
 Top MCP Servers:
   huggingface           █████████████████░░░  3x/month
+  playwright            █████████░░░░░░░░░░░  2x/month
+  chrome-devtools       ███░░░░░░░░░░░░░░░░░  1x/month
   playwright            ██████████░░░░░░░░░░  2x/month
   chrome-devtools       ██████████░░░░░░░░░░  2x/month
   hf-media              █████░░░░░░░░░░░░░░░  1x/month
@@ -30,6 +32,9 @@ Top MCP Servers:
 - [ ] Sak-Family-Agent — github.com/beer-sakthai/sak-family-agent
 
 ### MCP Servers to Activate
+- [ ] huggingface — @huggingface/mcp-server (Hugging Face Hub & Spaces integration)
+- [ ] playwright — @playwright/mcp@latest (Browser automation and testing)
+- [ ] chrome-devtools — chrome-devtools-mcp@latest (Browser debugging & devtools inspection)
 - [ ] huggingface — `@huggingface/mcp-server` (Hugging Face Hub tools)
 - [ ] playwright — `@playwright/mcp` (Browser automation)
 - [ ] chrome-devtools — `chrome-devtools-mcp` (Chrome DevTools interaction)
