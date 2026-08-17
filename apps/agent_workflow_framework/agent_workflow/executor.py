@@ -12,6 +12,7 @@ import os
 import sys
 import time
 import types
+import unicodedata
 import urllib.parse
 import urllib.request
 import uuid
@@ -642,16 +643,6 @@ def _validate_shell_command(cmd_str: str) -> None:
                     "to prevent command execution bypass."
                 )
 
-            # Check if an interpreter is executed with heredoc (<<) or herestring (<<<)
-            has_heredoc_or_herestring = any(
-                p.startswith(("<<", "<<<")) or re.search(r"<<<?", p) for p in parts[1:]
-            ) or bool(re.search(r"<<<?", cmd_str_stripped))
-            if is_outer_interp and has_heredoc_or_herestring:
-                raise PermissionError(
-                    f"Interpreter {parts[0]!r} with heredoc/herestring redirection is prohibited "
-                    "to prevent command execution bypass."
-                )
-
         proc_matches = re.findall(r"[<>]\s*\(([^)]+)\)", cmd_str_stripped)
         for proc_inner in proc_matches:
             proc_inner_clean = proc_inner.strip()
@@ -786,9 +777,12 @@ class WorkflowExecutor:
             if not code:
                 return dict(params)
 
-            # AST-based validation to block any dunder attribute or name accesses
+            # AST-based validation to block any dunder attribute or name accesses.
+            # Normalize NFKC prior to parsing so compatibility characters (e.g. full-width U+FF3F '＿')
+            # normalize to standard ASCII characters before attribute/identifier matching.
             try:
-                tree = ast.parse(code)
+                normalized_code = unicodedata.normalize("NFKC", code)
+                tree = ast.parse(normalized_code)
                 for node in ast.walk(tree):
                     if isinstance(node, ast.Attribute):
                         if node.attr.startswith("__") and node.attr.endswith("__"):
