@@ -17,7 +17,9 @@ Top Skills & Commands:
   /run-skill-generator  ███░░░░░░░░░░░░░░░░░  1x/month
 
 Top MCP Servers:
-  TODO — no MCP server usage recorded in the last 30 days
+  huggingface           █████████████████░░░  3x/month
+  playwright            █████████░░░░░░░░░░░  2x/month
+  chrome-devtools       ███░░░░░░░░░░░░░░░░░  1x/month
 
 ## Your Setup Checklist
 
@@ -25,7 +27,9 @@ Top MCP Servers:
 - [ ] Sak-Family-Agent — github.com/beer-sakthai/sak-family-agent
 
 ### MCP Servers to Activate
-- TODO — no MCP servers detected in usage history yet
+- [ ] huggingface — @huggingface/mcp-server (Hugging Face Hub & Spaces integration)
+- [ ] playwright — @playwright/mcp@latest (Browser automation and testing)
+- [ ] chrome-devtools — chrome-devtools-mcp@latest (Browser debugging & devtools inspection)
 
 ### Skills to Know About
 - /init — (re)generates or refreshes the repo's CLAUDE.md guidance from the current codebase state
