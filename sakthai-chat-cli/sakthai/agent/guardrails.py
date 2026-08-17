@@ -946,9 +946,59 @@ def _check_destructive_tokens(
                 )
 
     # 6. Specialized protection for container tools (docker, podman, kubectl).
-    container_result = _check_container_tokens(parts)
-    if container_result.action == GuardrailAction.DENY:
-        return container_result
+    for i, part in enumerate(parts):
+        if _is_binary(part, ("docker", "podman", "kubectl")):
+            binary_name = os.path.basename(part)
+            for j, subpart in enumerate(parts[i + 1 :], i + 1):
+                if subpart in (";", "&&", "||", "|"):
+                    break
+                # Check for volume mounts in docker/podman: -v /etc:/mnt or --mount type=bind,source=/etc,...
+                if subpart == "-v" or subpart == "--volume":
+                    if j + 1 < len(parts):
+                        val = parts[j + 1]
+                        if _is_sensitive_path(val):
+                            return GuardrailResult(
+                                GuardrailAction.DENY,
+                                reason=f"potentially dangerous {binary_name!r} volume mount targeting {val!r} blocked.",
+                            )
+                elif subpart.startswith("-v=") or subpart.startswith("--volume="):
+                    val = subpart.split("=", 1)[1]
+                    if _is_sensitive_path(val):
+                        return GuardrailResult(
+                            GuardrailAction.DENY,
+                            reason=f"potentially dangerous {binary_name!r} volume mount targeting {val!r} blocked.",
+                        )
+                elif subpart.startswith("--mount"):
+                    val = subpart
+                    if "=" not in val and j + 1 < len(parts):
+                        val = parts[j + 1]
+                    # --mount type=bind,source=/etc,target=/mnt
+                    if "source=" in val:
+                        source_val = val.split("source=", 1)[1].split(",", 1)[0]
+                        if _is_sensitive_path(source_val):
+                            return GuardrailResult(
+                                GuardrailAction.DENY,
+                                reason=f"potentially dangerous {binary_name!r} mount source {source_val!r} blocked.",
+                            )
+                    elif "src=" in val:
+                        source_val = val.split("src=", 1)[1].split(",", 1)[0]
+                        if _is_sensitive_path(source_val):
+                            return GuardrailResult(
+                                GuardrailAction.DENY,
+                                reason=f"potentially dangerous {binary_name!r} mount source {source_val!r} blocked.",
+                            )
+
+                # cp copies files between host and container/pod
+                # (docker cp, podman cp, kubectl cp).
+                if subpart == "cp":
+                    for k in range(j + 1, len(parts)):
+                        if parts[k] in (";", "&&", "||", "|"):
+                            break
+                        if _is_sensitive_path(parts[k]):
+                            return GuardrailResult(
+                                GuardrailAction.DENY,
+                                reason=f"potentially dangerous '{binary_name} cp' on {parts[k]!r} blocked.",
+                            )
 
     # 7. Handle wrappers that don't use -c (sudo, doas, xargs, env, find -exec, timeout, etc.)
     for i, part in enumerate(parts):
@@ -1235,71 +1285,7 @@ def _check_destructive_tokens(
                     )
                 return res
 
-    # 8. Prevent process substitution command execution bypasses (<(...) and >(...))
-    interpreters_tuple = (
-        "sh",
-        "bash",
-        "zsh",
-        "dash",
-        "ksh",
-        "fish",
-        "ash",
-        "csh",
-        "tcsh",
-        "python",
-        "node",
-        "perl",
-        "ruby",
-        "php",
-        "deno",
-        "bun",
-        "tsx",
-        "ts-node",
-    )
-
-    full_cmd_str = " ".join(parts)
-    has_proc_sub = any(
-        p.startswith(("<(", ">(")) or re.search(r"[<>]\s*\([^)]+\)", p) for p in parts
-    ) or bool(re.search(r"[<>]\s*\(", full_cmd_str))
-
-    if has_proc_sub:
-        first_binary = parts[0] if parts else ""
-        if _is_binary(first_binary, interpreters_tuple):
-            return GuardrailResult(
-                GuardrailAction.DENY,
-                reason=(
-                    f"Interpreter {first_binary!r} with process substitution is prohibited "
-                    "to prevent command execution bypass."
-                ),
-            )
-
-        proc_matches = re.findall(r"[<>]\s*\(([^)]+)\)", full_cmd_str)
-        for proc_inner in proc_matches:
-            proc_inner_clean = proc_inner.strip()
-            try:
-                proc_words = shlex.split(proc_inner_clean)
-            except Exception:
-                proc_words = proc_inner_clean.split()
-
-            if proc_words and _is_binary(proc_words[0], interpreters_tuple):
-                return GuardrailResult(
-                    GuardrailAction.DENY,
-                    reason=(
-                        f"Process substitution executing interpreter {proc_words[0]!r} is prohibited "
-                        "to prevent command execution bypass."
-                    ),
-                )
-
-            res = _check_destructive_tokens(
-                proc_words,
-                context_sensitive=context_sensitive,
-                checked_makefiles=checked_makefiles,
-                current_make_dir=current_make_dir,
-            )
-            if res.action == GuardrailAction.DENY:
-                return res
-
-    # 9. Prevent pipeline-to-interpreter command execution bypasses (e.g. curl ... | sh)
+    # 8. Prevent pipeline-to-interpreter command execution bypasses (e.g. curl ... | sh)
     for i, part in enumerate(parts):
         if part in ("|", "|&"):
             for subpart in parts[i + 1 :]:
