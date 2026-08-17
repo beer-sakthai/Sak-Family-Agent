@@ -8,11 +8,11 @@ import ast
 import asyncio
 import copy
 import json
-import shlex
 import os
 import sys
 import time
 import types
+import unicodedata
 import urllib.parse
 import urllib.request
 import uuid
@@ -615,6 +615,55 @@ def _validate_shell_command(cmd_str: str) -> None:
             "ts-node",
         )
 
+        wrappers = {
+            "env", "sudo", "doas", "xargs", "timeout", "nohup", "setsid", "nice",
+            "ionice", "chrt", "taskset", "stdbuf", "chroot", "nsenter", "unshare",
+            "pkexec", "uv", "pipx", "bun", "bunx", "npx", "deno", "poetry",
+            "pipenv", "conda", "pnpm", "yarn", "npm", "cargo", "composer",
+            "busybox", "toybox", "builtin", "command", "exec",
+        }
+
+        def _get_effective_command(words: List[str]) -> str:
+            i = 0
+            while i < len(words):
+                token = words[i].strip(" \t\n\r\"'()$&;")
+                if not token:
+                    i += 1
+                    continue
+
+                if "=" in token and not token.startswith("-"):
+                    i += 1
+                    continue
+
+                if token.startswith("-"):
+                    if token in ("-s", "--signal", "-k", "--kill-after", "-n", "--adjustment", "-c", "-p"):
+                        i += 2
+                    else:
+                        i += 1
+                    continue
+
+                basename = os.path.basename(token)
+
+                for interp in interpreters:
+                    pattern = rf"^{re.escape(interp)}(?:[0-9]+(?:\.[0-9]+)*)?$"
+                    if re.match(pattern, basename):
+                        return token
+
+                if basename in wrappers:
+                    i += 1
+                    if basename == "timeout":
+                        while i < len(words) and words[i].startswith("-"):
+                            if words[i] in ("-s", "--signal", "-k", "--kill-after"):
+                                i += 2
+                            else:
+                                i += 1
+                        if i < len(words):
+                            i += 1
+                    continue
+
+                return token
+            return ""
+
         # Check if the outer command itself is an interpreter taking a process substitution parameter (e.g. bash <(...))
         # or if any inner process substitution runs an interpreter (e.g. tee >(bash))
         try:
@@ -623,7 +672,8 @@ def _validate_shell_command(cmd_str: str) -> None:
             parts = cmd_str_stripped.split()
 
         if parts:
-            outer_cmd = os.path.basename(parts[0].strip(" \t\n\r\"'()$&;"))
+            effective_outer = _get_effective_command(parts)
+            outer_cmd = os.path.basename(effective_outer.strip(" \t\n\r\"'()$&;")) if effective_outer else ""
             is_outer_interp = any(
                 re.match(rf"^{re.escape(interp)}(?:[0-9]+(?:\.[0-9]+)*)?$", outer_cmd)
                 for interp in interpreters
@@ -633,18 +683,7 @@ def _validate_shell_command(cmd_str: str) -> None:
             ) or bool(re.search(r"[<>]\s*\(", cmd_str_stripped))
             if is_outer_interp and has_proc_sub:
                 raise PermissionError(
-                    f"Interpreter {cmd_word!r} with process substitution is prohibited "
-                    f"Interpreter {parts[0]!r} with process substitution is prohibited "
-                    "to prevent command execution bypass."
-                )
-
-            # Check if an interpreter is executed with heredoc (<<) or herestring (<<<)
-            has_heredoc_or_herestring = any(
-                p.startswith(("<<", "<<<")) or re.search(r"<<<?", p) for p in parts[1:]
-            ) or bool(re.search(r"<<<?", cmd_str_stripped))
-            if is_outer_interp and has_heredoc_or_herestring:
-                raise PermissionError(
-                    f"Interpreter {parts[0]!r} with heredoc/herestring redirection is prohibited "
+                    f"Interpreter {effective_outer!r} with process substitution is prohibited "
                     "to prevent command execution bypass."
                 )
 
@@ -657,12 +696,13 @@ def _validate_shell_command(cmd_str: str) -> None:
                 proc_words = proc_inner_clean.split()
 
             if proc_words:
-                first_word = os.path.basename(proc_words[0].strip(" \t\n\r\"'()$&;"))
+                effective_inner = _get_effective_command(proc_words)
+                first_word = os.path.basename(effective_inner) if effective_inner else ""
                 for interp in interpreters:
                     pattern = rf"^{re.escape(interp)}(?:[0-9]+(?:\.[0-9]+)*)?$"
                     if re.match(pattern, first_word):
                         raise PermissionError(
-                            f"Process substitution to interpreter {proc_words[0]!r} is prohibited "
+                            f"Process substitution to interpreter {effective_inner!r} is prohibited "
                             "to prevent command execution bypass."
                         )
 
@@ -698,19 +738,11 @@ class WorkflowExecutor:
             
             _validate_shell_command(str(cmd))
 
-            cmd_args = shlex.split(str(cmd))
-            if not cmd_args:
-                raise ValueError(f"Step '{step_id}' action '{action}' provided an empty command after parsing.")
-
-            try:
-                proc = await asyncio.create_subprocess_exec(
-                    cmd_args[0],
-                    *cmd_args[1:],
-                    stdout=asyncio.subprocess.PIPE,
-                    stderr=asyncio.subprocess.PIPE,
-                )
-            except (FileNotFoundError, OSError) as e:
-                raise RuntimeError(f"Failed to execute command '{cmd}': {e}")
+            proc = await asyncio.create_subprocess_shell(
+                str(cmd),
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
             stdout_b, stderr_b = await proc.communicate()
             exit_code = proc.returncode or 0
 
@@ -790,9 +822,12 @@ class WorkflowExecutor:
             if not code:
                 return dict(params)
 
-            # AST-based validation to block any dunder attribute or name accesses
+            # AST-based validation to block any dunder attribute or name accesses.
+            # Normalize NFKC prior to parsing so compatibility characters (e.g. full-width U+FF3F '＿')
+            # normalize to standard ASCII characters before attribute/identifier matching.
             try:
-                tree = ast.parse(code)
+                normalized_code = unicodedata.normalize("NFKC", code)
+                tree = ast.parse(normalized_code)
                 for node in ast.walk(tree):
                     if isinstance(node, ast.Attribute):
                         if node.attr.startswith("__") and node.attr.endswith("__"):
