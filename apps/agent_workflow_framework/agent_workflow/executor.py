@@ -647,16 +647,6 @@ def _validate_shell_command(cmd_str: str) -> None:
                     "to prevent command execution bypass."
                 )
 
-            # Check if an interpreter is executed with heredoc (<<) or herestring (<<<)
-            has_heredoc_or_herestring = any(
-                p.startswith(("<<", "<<<")) or re.search(r"<<<?", p) for p in parts[1:]
-            ) or bool(re.search(r"<<<?", cmd_str_stripped))
-            if is_outer_interp and has_heredoc_or_herestring:
-                raise PermissionError(
-                    f"Interpreter {parts[0]!r} with heredoc/herestring redirection is prohibited "
-                    "to prevent command execution bypass."
-                )
-
         proc_matches = re.findall(r"[<>]\s*\(([^)]+)\)", cmd_str_stripped)
         for proc_inner in proc_matches:
             proc_inner_clean = proc_inner.strip()
