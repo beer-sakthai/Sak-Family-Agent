@@ -757,6 +757,29 @@ class TestWorkflowExecutor(unittest.TestCase):
                 self.assertIn("prohibited", step_res.error.lower())
                 self.assertIn("dunder", step_res.error.lower())
 
+    def test_python_action_blocks_unicode_normalized_dunders(self):
+        """Verify that full-width or unicode compatibility characters normalizing to dunders are caught and blocked."""
+        unicode_payloads = [
+            "x.＿_class＿_",
+            "x.＿_dict＿_",
+            "＿_globals＿_",
+        ]
+        for payload in unicode_payloads:
+            with self.subTest(payload=payload):
+                wf = WorkflowDefinition(
+                    name="python_unicode_dunder_test",
+                    steps=[
+                        StepDefinition(id="s1", action="python", params={"expr": payload}),
+                    ],
+                )
+                history = asyncio.run(self.executor.execute_workflow(wf))
+                self.assertEqual(history.status, RunStatus.FAILED)
+                step_res = history.step_results["s1"]
+                self.assertEqual(step_res.status, StepStatus.FAILED)
+                self.assertIsNotNone(step_res.error)
+                self.assertIn("prohibited", step_res.error.lower())
+                self.assertIn("dunder", step_res.error.lower())
+
     def test_python_sandbox_exposes_no_module_objects(self):
         """The sandbox must not hand out a module the AST validator cannot see.
 
