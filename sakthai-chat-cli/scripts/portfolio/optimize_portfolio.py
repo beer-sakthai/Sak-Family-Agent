@@ -6,7 +6,9 @@ from scipy.optimize import minimize
 import yfinance as yf
 import sys
 import os
-from sakthai.finance import get_risk_free_rate
+# Local helper: `sakthai.finance` never existed, so this import used to
+# fail outright. sys.path[0] is this script's directory when run directly.
+from _finance import get_risk_free_rate
 
 def optimize_portfolio(files: list[str], tickers: list[str], output_plot: str | None, risk_free_rate: float | None = None):
     """

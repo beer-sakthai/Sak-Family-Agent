@@ -5,7 +5,9 @@ import matplotlib.pyplot as plt
 import yfinance as yf
 import sys
 import os
-from sakthai.finance import get_risk_free_rate
+# Local helper: `sakthai.finance` never existed, so this import used to
+# fail outright. sys.path[0] is this script's directory when run directly.
+from _finance import get_risk_free_rate
 
 def compare_portfolio_to_benchmark(portfolio_csv: str, benchmark_ticker: str, output_plot: str, risk_free_rate: float | None = None):
     """
