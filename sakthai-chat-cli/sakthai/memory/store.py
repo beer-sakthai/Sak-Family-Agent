@@ -231,7 +231,7 @@ class MemoryStore:
             self.db_path, timeout=DB_CONNECT_TIMEOUT, check_same_thread=False
         )
         self._conn.row_factory = sqlite3.Row
-        self._conn.execute(f"PRAGMA busy_timeout={DB_BUSY_TIMEOUT_MS}")
+        self._conn.execute(f"PRAGMA busy_timeout={int(DB_BUSY_TIMEOUT_MS)}")
         # WAL is recorded in the file header and inherited by later opens. The
         # one-time flip briefly needs an exclusive lock that busy_timeout may not
         # cover, so a racing failure is tolerated — the default journal is safe.
@@ -306,8 +306,7 @@ class MemoryStore:
                         migrated_versions.append((version, _now()))
                 if migrated_versions:
                     self._conn.executemany(
-                        "INSERT OR IGNORE INTO schema_version (version, migrated_at) "
-                        "VALUES (?, ?)",
+                        "INSERT OR IGNORE INTO schema_version (version, migrated_at) VALUES (?, ?)",
                         migrated_versions,
                     )
                 self._conn.commit()
