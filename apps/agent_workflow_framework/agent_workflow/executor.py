@@ -209,6 +209,12 @@ def _validate_filepath(filepath: Any) -> Path:
         "etc", "bin", "var", "boot", "dev", "lib", "lib64", "proc", "sys", "sbin", "usr", "root", "opt",
     }
 
+    # Check if a relative path's first component is a system root (e.g., etc/hosts, var/log/syslog)
+    if not normalized_str.startswith("/") and not normalized_str.startswith("\\"):
+        rel_parts = [p.lower() for p in Path(normalized_str).parts if p and p != "."]
+        if rel_parts and rel_parts[0] in system_roots:
+            raise PermissionError(f"Access to critical system directory is prohibited: '{path_str}'")
+
     # Blocks access to sensitive directories (e.g., .git, .ssh, .aws)
     sensitive_dirs = {
         ".git", ".ssh", ".aws", ".jules", ".config", ".npm",
