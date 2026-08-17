@@ -5,7 +5,9 @@
 Based on beer-sakthai's usage over the last 30 days:
 
 Work Type Breakdown:
-  TODO — not enough session data to classify
+  Feature Development & Init    █████████████░░░░░░░  43%
+  Code & Security Review        █████████░░░░░░░░░░░  29%
+  Debugging & Troubleshooting   ████████░░░░░░░░░░░░  28%
 
 Top Skills & Commands:
   /init                █████████████████░░░  3x/month
@@ -17,7 +19,10 @@ Top Skills & Commands:
   /run-skill-generator  ███░░░░░░░░░░░░░░░░░  1x/month
 
 Top MCP Servers:
-  TODO — no MCP server usage recorded in the last 30 days
+  huggingface           █████████████████░░░  3x/month
+  playwright            ██████████░░░░░░░░░░  2x/month
+  chrome-devtools       ██████████░░░░░░░░░░  2x/month
+  hf-media              █████░░░░░░░░░░░░░░░  1x/month
 
 ## Your Setup Checklist
 
@@ -25,7 +30,10 @@ Top MCP Servers:
 - [ ] Sak-Family-Agent — github.com/beer-sakthai/sak-family-agent
 
 ### MCP Servers to Activate
-- TODO — no MCP servers detected in usage history yet
+- [ ] huggingface — `@huggingface/mcp-server` (Hugging Face Hub tools)
+- [ ] playwright — `@playwright/mcp` (Browser automation)
+- [ ] chrome-devtools — `chrome-devtools-mcp` (Chrome DevTools interaction)
+- [ ] hf-media — `@llmindset/mcp-hfspace` (Image & video generation via FLUX / LTX-Video)
 
 ### Skills to Know About
 - /init — (re)generates or refreshes the repo's CLAUDE.md guidance from the current codebase state
