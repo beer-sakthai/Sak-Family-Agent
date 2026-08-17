@@ -1,5 +1,10 @@
 # Sentinel Security Journal
 
+## 2026-09-06 - Un-synchronized CLI Guardrail Copy Syntax Errors and Security Drift
+**Vulnerability:** `sakthai-chat-cli/sakthai/agent/guardrails.py` had un-synchronized syntax changes leaving duplicate, dangling `if` statements in `_check_container_tokens` that caused an `IndentationError` when parsed. In addition, `sakthai-chat-cli`'s guardrails were not included in `tests/test_persona_guardrails_parity.py`, allowing guardrail logic and syntax errors to silently drift outside the persona parity sweeps.
+**Learning:** Monorepos containing separate package trees or standalone CLI distributions (such as `sakthai-chat-cli`) that duplicate security guardrails must be included in automated byte-parity tests alongside persona packages. Otherwise, security fixes and refactoring can cause syntax errors or security policy gaps in unmonitored copies.
+**Prevention:** Include all package-level copies of `guardrails.py` (including `sakthai-chat-cli/sakthai/agent/guardrails.py`) in `tests/test_persona_guardrails_parity.py` to enforce byte-identical security guardrails across the entire repository.
+
 ## 2026-08-31 - Secret Leakage in Script Stderr Outputs on Request Errors
 **Vulnerability:** `discover_chat_id` in `scripts/telegram_send.py` printed invalid token strings and raw `urlopen` exception objects directly to `sys.stderr`. When connection failures or HTTP errors occurred, `URLError` exception representations contained full request URLs including the `TELEGRAM_BOT_TOKEN`, leaking credentials in log outputs.
 **Learning:** Utility scripts that perform HTTP requests targeting authenticated endpoints with tokens in URL paths must sanitize and redact secrets in exception handling and input validation branches before printing to standard error.
