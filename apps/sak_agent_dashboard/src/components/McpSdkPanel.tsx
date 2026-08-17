@@ -134,9 +134,18 @@ function ScaffoldFileTile({ file }: { file: SdkScaffoldFile }) {
       : <BookOpen className="h-3.5 w-3.5 text-purple-300" />;
   return (
     <div className="rounded-xl border border-slate-800/80 bg-slate-950/60 overflow-hidden">
-      <button
+      <div
         onClick={() => setOpen((v) => !v)}
-        className="w-full flex items-center justify-between px-4 py-3 hover:bg-slate-900/50 transition-colors text-left"
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            setOpen((v) => !v);
+          }
+        }}
+        role="button"
+        tabIndex={0}
+        aria-expanded={open}
+        className="w-full flex items-center justify-between px-4 py-3 hover:bg-slate-900/50 transition-colors text-left cursor-pointer select-none"
       >
         <div className="flex items-center gap-2.5 min-w-0">
           {icon}
@@ -149,11 +158,19 @@ function ScaffoldFileTile({ file }: { file: SdkScaffoldFile }) {
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
           <CopyButton payload={file.content} />
-          <span className="text-slate-500">{open ? "▾" : "▸"}</span>
+          <span
+            className="text-slate-500 cursor-pointer p-1"
+            onClick={(e) => {
+              e.stopPropagation();
+              setOpen((v) => !v);
+            }}
+          >
+            {open ? "▾" : "▸"}
+          </span>
         </div>
-      </button>
+      </div>
       {open && (
         <pre className="p-4 text-[11px] font-mono text-slate-200 bg-slate-950/80 border-t border-slate-800/80 overflow-x-auto leading-relaxed whitespace-pre">
           {file.content}
