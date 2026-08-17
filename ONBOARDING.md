@@ -20,6 +20,9 @@ Top MCP Servers:
   huggingface           █████████████████░░░  3x/month
   playwright            █████████░░░░░░░░░░░  2x/month
   chrome-devtools       ███░░░░░░░░░░░░░░░░░  1x/month
+  playwright            ██████████░░░░░░░░░░  2x/month
+  chrome-devtools       ██████████░░░░░░░░░░  2x/month
+  hf-media              █████░░░░░░░░░░░░░░░  1x/month
 
 ## Your Setup Checklist
 
@@ -30,6 +33,10 @@ Top MCP Servers:
 - [ ] huggingface — @huggingface/mcp-server (Hugging Face Hub & Spaces integration)
 - [ ] playwright — @playwright/mcp@latest (Browser automation and testing)
 - [ ] chrome-devtools — chrome-devtools-mcp@latest (Browser debugging & devtools inspection)
+- [ ] huggingface — `@huggingface/mcp-server` (Hugging Face Hub tools)
+- [ ] playwright — `@playwright/mcp` (Browser automation)
+- [ ] chrome-devtools — `chrome-devtools-mcp` (Chrome DevTools interaction)
+- [ ] hf-media — `@llmindset/mcp-hfspace` (Image & video generation via FLUX / LTX-Video)
 
 ### Skills to Know About
 - /init — (re)generates or refreshes the repo's CLAUDE.md guidance from the current codebase state

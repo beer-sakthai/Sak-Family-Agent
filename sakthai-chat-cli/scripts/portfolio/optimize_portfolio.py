@@ -1,24 +1,16 @@
 import argparse
-import os
-import sys
-
-import matplotlib.pyplot as plt
-import numpy as np
 import pandas as pd
-
-# Local helper: `sakthai.finance` never existed, so this import used to
-# fail outright. sys.path[0] is this script's directory when run directly.
-from _finance import get_risk_free_rate
+import numpy as np
+import matplotlib.pyplot as plt
 from scipy.optimize import minimize
+import yfinance as yf
+import sys
+import os
+from sakthai.finance import get_risk_free_rate
 
-
-def optimize_portfolio(
-    files: list[str],
-    tickers: list[str],
-    output_plot: str | None,
-    risk_free_rate: float | None = None,
-):
-    """Finds the optimal portfolio weights to maximize the Sharpe Ratio.
+def optimize_portfolio(files: list[str], tickers: list[str], output_plot: str | None, risk_free_rate: float | None = None):
+    """
+    Finds the optimal portfolio weights to maximize the Sharpe Ratio.
 
     Args:
         files: A list of paths to the stock CSV data.
@@ -33,8 +25,8 @@ def optimize_portfolio(
         # --- 1. Load and Combine Data ---
         portfolio_df = pd.DataFrame()
         for i, file in enumerate(files):
-            df = pd.read_csv(file, index_col="Date", parse_dates=True)
-            portfolio_df[tickers[i]] = df["Close"]
+            df = pd.read_csv(file, index_col='Date', parse_dates=True)
+            portfolio_df[tickers[i]] = df['Close']
 
         # --- 2. Prepare Data for Optimization ---
         daily_returns = portfolio_df.pct_change().dropna()
@@ -59,25 +51,23 @@ def optimize_portfolio(
             return -(p_returns - risk_free_rate) / p_std
 
         # --- 4. Run the Optimization ---
-        constraints = {"type": "eq", "fun": lambda x: np.sum(x) - 1}
+        constraints = ({'type': 'eq', 'fun': lambda x: np.sum(x) - 1})
         bounds = tuple((0, 1) for _ in range(num_assets))
-        initial_guess = num_assets * [1.0 / num_assets]
+        initial_guess = num_assets * [1. / num_assets]
 
         opt_result = minimize(
             neg_sharpe_ratio,
             initial_guess,
             args=(mean_returns, cov_matrix, risk_free_rate),
-            method="SLSQP",
+            method='SLSQP',
             bounds=bounds,
-            constraints=constraints,
+            constraints=constraints
         )
 
         optimal_weights = opt_result.x
 
         # --- 5. Calculate and Report Results ---
-        opt_return, opt_volatility = portfolio_performance(
-            optimal_weights, mean_returns, cov_matrix
-        )
+        opt_return, opt_volatility = portfolio_performance(optimal_weights, mean_returns, cov_matrix)
         opt_sharpe = (opt_return - risk_free_rate) / opt_volatility if opt_volatility > 0 else 0
 
         print("\n--- Optimal Portfolio Allocation (Max Sharpe Ratio) ---")
@@ -94,21 +84,16 @@ def optimize_portfolio(
 
         # --- 6. Generate and Save Plot ---
         if output_plot:
-            plt.style.use("seaborn-v0_8-pastel")
+            plt.style.use('seaborn-v0_8-pastel')
             fig, ax = plt.subplots(figsize=(8, 8))
 
             # Filter out very small weights for cleaner plotting
             plot_weights = [w if w > 0.005 else 0 for w in optimal_weights]
-            plot_labels = [tickers[i] if plot_weights[i] > 0 else "" for i in range(len(tickers))]
+            plot_labels = [tickers[i] if plot_weights[i] > 0 else '' for i in range(len(tickers))]
 
-            ax.pie(
-                plot_weights,
-                labels=plot_labels,
-                autopct="%1.1f%%",
-                startangle=90,
-            )
-            ax.axis("equal")
-            ax.set_title("Optimal Portfolio Allocation")
+            ax.pie(plot_weights, labels=plot_labels, autopct='%1.1f%%', startangle=90)
+            ax.axis('equal')
+            ax.set_title('Optimal Portfolio Allocation')
 
             plt.savefig(output_plot)
             print(f"Optimal allocation plot saved to: {output_plot}")
@@ -120,30 +105,11 @@ def optimize_portfolio(
         print(f"An error occurred during optimization: {e}", file=sys.stderr)
         sys.exit(1)
 
-
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description="Find the optimal portfolio weights to maximize the Sharpe Ratio."
-    )
-    parser.add_argument(
-        "--files",
-        type=str,
-        nargs="+",
-        required=True,
-        help="Paths to the stock CSV files.",
-    )
-    parser.add_argument(
-        "--tickers",
-        type=str,
-        nargs="+",
-        required=True,
-        help="Ticker symbols for each stock.",
-    )
-    parser.add_argument(
-        "--output-plot",
-        type=str,
-        help="Optional path to save the output allocation pie chart (e.g., 'allocation.png').",
-    )
+    parser = argparse.ArgumentParser(description="Find the optimal portfolio weights to maximize the Sharpe Ratio.")
+    parser.add_argument("--files", type=str, nargs='+', required=True, help="Paths to the stock CSV files.")
+    parser.add_argument("--tickers", type=str, nargs='+', required=True, help="Ticker symbols for each stock.")
+    parser.add_argument("--output-plot", type=str, help="Optional path to save the output allocation pie chart (e.g., 'allocation.png').")
 
     args = parser.parse_args()
 
