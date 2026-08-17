@@ -654,6 +654,15 @@ class TestWorkflowExecutor(unittest.TestCase):
             "echo payload | tee > (bash)",
             "python < (echo 'import os')",
             "diff < (cat /etc/passwd) < (cat /etc/shadow)",
+            # Heredoc and herestring redirections targeting shell/interpreters
+            "sh <<'EOF'\necho evil\nEOF",
+            "bash <<EOF\necho evil\nEOF",
+            "python3 <<'EOF'\nimport os\nEOF",
+            "node <<'EOF'\nconsole.log(1)\nEOF",
+            "sh <<<'echo evil'",
+            "bash <<<'echo evil'",
+            "python3 <<<'import os'",
+            "node <<<'console.log(1)'",
         ]
         for cmd in malicious_chained_commands:
             with self.subTest(cmd=cmd):
@@ -674,6 +683,7 @@ class TestWorkflowExecutor(unittest.TestCase):
                         for x in [
                             "pipeline to interpreter",
                             "process substitution",
+                            "heredoc/herestring redirection",
                             "prohibited sensitive path",
                         ]
                     ),
