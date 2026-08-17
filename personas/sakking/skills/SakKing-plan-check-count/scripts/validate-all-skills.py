@@ -24,19 +24,19 @@ for path in all_files:
     rel = path.replace(SKILLS_DIR, "").lstrip("/")
     content = open(path).read()
     lines = content.split("\n")
-    
+
     if len(content) < 50:
         errors.append(f"EMPTY  {rel} ({len(content)} chars)")
         continue
-    
+
     has_fm = content.startswith("---")
     fm_end = content.find("---", 3)
-    
+
     if not has_fm:
         errors.append(f"NO_FM  {rel}")
     elif fm_end <= 3:
         errors.append(f"BAD_FM {rel}")
-    
+
     for pat in stale_pats:
         if re.search(pat, content, re.IGNORECASE):
             txt = content[content.upper().find(pat.upper()):content.upper().find(pat.upper())+40]
@@ -47,7 +47,7 @@ for path in all_files:
                     continue  # false alarm
             warnings.append(f"STALE  {rel} ({pat.upper()} found)")
             break
-    
+
     ok_count += 1
 
 print(f"\nOK: {ok_count}  ERRORS: {len(errors)}  WARNINGS: {len(warnings)}")

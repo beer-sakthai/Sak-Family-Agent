@@ -115,7 +115,7 @@ def compare_portfolio_to_benchmark(portfolio_csv: str, benchmark_ticker: str, ou
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Compare a portfolio's performance against a benchmark.")
     parser.add_argument("portfolio_csv", type=str, help="Path to the CSV file containing portfolio historical value.")
-    parser.add_argument("--benchmark", type=str, default="SPY", help="Ticker symbol for the benchmark (e.g., 'SPY'). Default is 'SPY'.")    
+    parser.add_argument("--benchmark", type=str, default="SPY", help="Ticker symbol for the benchmark (e.g., 'SPY'). Default is 'SPY'.")
     parser.add_argument("--output-plot", type=str, required=True, help="Path to save the output plot image (e.g., 'portfolio_vs_benchmark.png').")
 
     args = parser.parse_args()

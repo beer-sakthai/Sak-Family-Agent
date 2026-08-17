@@ -86,7 +86,7 @@ def optimize_portfolio(files: list[str], tickers: list[str], output_plot: str | 
         if output_plot:
             plt.style.use('seaborn-v0_8-pastel')
             fig, ax = plt.subplots(figsize=(8, 8))
-            
+
             # Filter out very small weights for cleaner plotting
             plot_weights = [w if w > 0.005 else 0 for w in optimal_weights]
             plot_labels = [tickers[i] if plot_weights[i] > 0 else '' for i in range(len(tickers))]
@@ -94,7 +94,7 @@ def optimize_portfolio(files: list[str], tickers: list[str], output_plot: str | 
             ax.pie(plot_weights, labels=plot_labels, autopct='%1.1f%%', startangle=90)
             ax.axis('equal')
             ax.set_title('Optimal Portfolio Allocation')
-            
+
             plt.savefig(output_plot)
             print(f"Optimal allocation plot saved to: {output_plot}")
 
