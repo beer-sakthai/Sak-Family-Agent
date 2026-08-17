@@ -153,6 +153,7 @@ def run_chat(
                 store=store,
                 on_event=tool_renderer,
                 on_token=token_renderer,
+                persona=persona,
             )
         except AgentError as exc:
             render_error(console, exc)

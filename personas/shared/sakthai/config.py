@@ -44,7 +44,12 @@ SKILLS_DIR = PERSONAS_DIR / "sakthai" / "skills"
 LIBRARY_DIR = PERSONAS_DIR / "shared" / "skills"
 SHARED_SKILLS_DIR = PERSONAS_DIR / "shared" / "skills"
 
-# The five Sak Family personas `sakthai chat --persona` can address.
+# Curated skill catalog at the repo root (pre-dates the SakThai-/Sak- naming
+# convention — its skills keep their original lowercase `sakthai-` names).
+# Kept as a distinct discovery root rather than folded into LIBRARY_DIR, which
+# other code already treats as a synonym for SHARED_SKILLS_DIR.
+CURATED_LIBRARY_DIR = REPO_ROOT / "library"
+
 # The six Sak Family personas `sakthai chat --persona` can address.
 PERSONA_NAMES: tuple[str, ...] = ("sakking", "sakthai", "saksee", "saksit", "sakjules", "saktan")
 
@@ -52,6 +57,51 @@ PERSONA_NAMES: tuple[str, ...] = ("sakking", "sakthai", "saksee", "saksit", "sak
 def persona_soul_path(persona: str) -> Path:
     """Path to a persona's SOUL.md identity file."""
     return PERSONAS_DIR / persona / "SOUL.md"
+
+
+def persona_skills_dir(persona: str) -> Path:
+    """Path to PERSONA's own skill overlay: ``personas/<persona>/skills``."""
+    if persona not in PERSONA_NAMES:
+        raise ValueError(f"Unknown persona {persona!r}; expected one of {PERSONA_NAMES}")
+    return PERSONAS_DIR / persona / "skills"
+
+
+def persona_mcp_config_path(persona: str) -> Path:
+    """Path to PERSONA's own MCP manifest: ``personas/<persona>/config/mcp.json``."""
+    if persona not in PERSONA_NAMES:
+        raise ValueError(f"Unknown persona {persona!r}; expected one of {PERSONA_NAMES}")
+    return PERSONAS_DIR / persona / "config" / "mcp.json"
+
+
+def persona_model_defaults(persona: str) -> tuple[str | None, str | None]:
+    """PERSONA's preferred ``(provider, model)`` from its own ``config/config.yaml``.
+
+    Reads only the top-level ``model.provider`` / ``model.default`` keys — the
+    two that are consistently present and meaningful across every persona's
+    config.yaml today. Missing file, unreadable YAML, or missing keys all
+    return ``(None, None)`` rather than raising, so callers can simply fall
+    back to their own defaults.
+    """
+    if persona not in PERSONA_NAMES:
+        raise ValueError(f"Unknown persona {persona!r}; expected one of {PERSONA_NAMES}")
+    path = PERSONAS_DIR / persona / "config" / "config.yaml"
+    if not path.is_file():
+        return None, None
+    import yaml
+
+    try:
+        data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    except yaml.YAMLError:
+        return None, None
+    model = data.get("model") if isinstance(data, dict) else None
+    if not isinstance(model, dict):
+        return None, None
+    provider = model.get("provider")
+    default_model = model.get("default")
+    return (
+        provider if isinstance(provider, str) else None,
+        default_model if isinstance(default_model, str) else None,
+    )
 
 
 # Environment variables, grouped by how the readiness check treats them.
@@ -76,9 +126,12 @@ OPTIONAL_ENV_VARS: dict[str, str] = {
     "OLLAMA_HOST": "Ollama host URL (default: http://127.0.0.1:11434)",
     "SAKTHAI_GATEWAY_URL": "Base URL of an OpenAI-compatible AI gateway (OpenRouter, LiteLLM, Vercel, Cloudflare)",
     "SAKTHAI_GATEWAY_API_KEY": "API key/token for the AI gateway (default: nokey)",  # nosec B105 — description text
+    "HF_TOKEN": "Hugging Face access token — used by `sakthai hf` and the `huggingface` provider",  # nosec B105
+    "SAKTHAI_HF_API_BASE": "Hugging Face Inference Providers router base URL (default: https://router.huggingface.co/v1)",
     "SAKTHAI_HOME": "Override the data directory (default: ~/.sakthai)",
     "SAKTHAI_READ_ALLOW": "Extra paths the read_file tool may read (os.pathsep-separated)",
     "SAKTHAI_MCP_CONFIG": "Path to a per-persona mcp.json whose servers override the defaults",
+    "SAKTHAI_PERSONA": "Which Sak Family persona a Telegram/systemd launch is running as",
     "SAKTHAI_MCP_TIMEOUT": "Seconds to wait for an external MCP server reply (default: 30)",
     "TELEGRAM_ALLOWED_USER_IDS": "Comma- or space-separated Telegram user IDs allowed to use the bot",
     "TELEGRAM_BOT_TOKEN": "Telegram bot token used by the Telegram gateway",
@@ -202,6 +255,16 @@ def gateway_base_url() -> str | None:
     return os.environ.get("SAKTHAI_GATEWAY_URL")
 
 
+def huggingface_api_base() -> str:
+    """Return the Hugging Face Inference Providers router base URL.
+
+    Honors ``SAKTHAI_HF_API_BASE`` for a self-hosted or region-pinned router;
+    defaults to the public router (``https://router.huggingface.co/v1``), which
+    is OpenAI-compatible and fronts every model with a hosted Inference Provider.
+    """
+    return os.environ.get("SAKTHAI_HF_API_BASE", "https://router.huggingface.co/v1").rstrip("/")
+
+
 def sakthai_default_provider() -> str | None:
     """Return the default provider override for Telegram/systemd launches."""
     value = os.environ.get("SAKTHAI_PROVIDER", "").strip()
@@ -242,6 +305,21 @@ def sakthai_with_skills() -> list[str]:
     """Return comma-separated skills injected into Telegram/systemd launches."""
     raw = os.environ.get("SAKTHAI_WITH_SKILLS", "")
     return [item.strip() for item in raw.replace(",", " ").split() if item.strip()]
+
+
+def sakthai_persona() -> str | None:
+    """Return the persona a Telegram/systemd launch is running as, if set.
+
+    Set per-deployment via ``SAKTHAI_PERSONA`` (see
+    ``infra/vm-agents/env-templates/*.env.example`` and
+    ``infra/vm-agents/sakthai-agent-run.sh``) — lets a single-token,
+    single-process gateway (e.g. the Telegram bot) resolve that persona's own
+    skill overlay via ``persona_skills_dir()`` instead of always falling back
+    to ``SKILLS_DIR``.
+    """
+    value = os.environ.get("SAKTHAI_PERSONA")
+    value = value.strip() if value else None
+    return value if value in PERSONA_NAMES else None
 
 
 def telegram_bot_token() -> str | None:
@@ -344,6 +422,7 @@ def _auth_report() -> dict[str, Any]:
         anthropic_credential_source,
         gateway_credential_source,
         gemini_credential_source,
+        huggingface_credential_source,
         load_gemini_cli_token,
         openai_credential_source,
     )
@@ -352,6 +431,7 @@ def _auth_report() -> dict[str, Any]:
     openai_source = openai_credential_source()
     gemini_source = gemini_credential_source()
     gateway_source = gateway_credential_source()
+    huggingface_source = huggingface_credential_source()
     return {
         "anthropic_source": anthropic_source,
         "anthropic_ok": anthropic_source is not None,
@@ -360,6 +440,8 @@ def _auth_report() -> dict[str, Any]:
         "openai_ok": openai_source is not None,
         "gateway_source": gateway_source,
         "gateway_ok": gateway_source is not None,
+        "huggingface_source": huggingface_source,
+        "huggingface_ok": huggingface_source is not None,
         "gemini_source": gemini_source,
         "gemini_ok": gemini_source is not None,
     }

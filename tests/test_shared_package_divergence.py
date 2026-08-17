@@ -58,53 +58,13 @@ SYMLINKED_PERSONAS = ("sakjules", "saktan")
 # the file) is always the preferred direction; `test_declared_divergences_still_
 # differ` fails if an entry is stale, which is what forces the register to
 # shrink as the reconciliation lands.
-KNOWN_DIVERGENCES: dict[str, str] = {
-    "agent/loop.py": (
-        "Canonical copy carries slash-command resolution, the context filter "
-        "seam and persona SOUL injection the shared copy predates."
-    ),
-    "agent/tools.py": (
-        "Canonical copy has the Microsoft Graph mail/calendar tools and the "
-        "run_agent_loop recursion guard."
-    ),
-    "agent/chat.py": "Canonical copy's REPL takes injected Console/read_input seams.",
-    "agent/providers/__init__.py": (
-        "Canonical copy adds the `huggingface` and `gateway` provider detection."
-    ),
-    "auth.py": "Canonical copy adds resolve_openai_credentials and the HF token chain.",
-    "config.py": (
-        "Canonical copy owns persona_memory_db_path, the secret-redaction "
-        "helpers and the eval-log path."
-    ),
-    "skills.py": "Canonical copy's default_skill_roots is persona-aware.",
-    "cli/__init__.py": "Canonical copy wires the heal/hf/sessions groups.",
-    "cli/agent.py": "Canonical copy adds --persona, --sandbox, --caveman and --stream.",
-    "cli/chat.py": "Canonical copy adds --persona and the model/provider defaults.",
-    "telegram/bot.py": (
-        "Canonical copy runs run_agent in-process via asyncio.to_thread rather than shelling out."
-    ),
-}
+# All files between personas/shared/sakthai and personas/sakthai/sakthai are now 100%
+# synchronized in byte-parity. This register enforces zero ongoing drift.
+KNOWN_DIVERGENCES: dict[str, str] = {}
 
-# Modules that exist only in the canonical package. Listed so that adding a new
-# subsystem forces a deliberate answer to "do the symlinked personas get this?"
-# rather than defaulting to no.
-CANONICAL_ONLY: dict[str, str] = {
-    "agent/guardrails_hardened.py": "Hardened policy layer, SakThai-only.",
-    "agent/security_hardening.py": "Defense-in-depth primitives, SakThai-only.",
-    "cli/heal.py": "Self-healing CI CLI surface, SakThai-only.",
-    "selfheal/__init__.py": "Self-healing CI agent, SakThai-only.",
-    "selfheal/completion.py": "Self-healing CI agent, SakThai-only.",
-    "selfheal/diagnose.py": "Self-healing CI agent, SakThai-only.",
-    "selfheal/ingest.py": "Self-healing CI agent, SakThai-only.",
-    "selfheal/inspector.py": "Self-healing CI agent, SakThai-only.",
-    "selfheal/models.py": "Self-healing CI agent, SakThai-only.",
-    "selfheal/patch.py": "Self-healing CI agent, SakThai-only.",
-    "selfheal/pipeline.py": "Self-healing CI agent, SakThai-only.",
-    "selfheal/publish.py": "Self-healing CI agent, SakThai-only.",
-    "selfheal/safety.py": "Self-healing CI agent, SakThai-only.",
-    "selfheal/verify.py": "Self-healing CI agent, SakThai-only.",
-    "selfheal/walkthrough.py": "Self-healing CI agent, SakThai-only.",
-}
+# All canonical subsystems (including hardened guardrails, defense-in-depth, and selfheal)
+# are now synchronized to the shared copy so symlinked personas have full feature parity.
+CANONICAL_ONLY: dict[str, str] = {}
 
 _SYNC_HINT = (
     "personas/shared/sakthai is what {personas} execute at runtime (their "

@@ -12,10 +12,12 @@ from typing import Any
 import yaml
 
 from .config import (
+    CURATED_LIBRARY_DIR,
     LIBRARY_DIR,
     SHARED_SKILLS_DIR,
     SKILLS_DIR,
     gemini_extensions_dir,
+    persona_skills_dir,
     sakthai_home,
 )
 
@@ -213,20 +215,33 @@ def find_skill(name: str, *roots: Path) -> SkillInfo | None:
     return None
 
 
-def default_skill_roots() -> tuple[Path, ...]:
-    """Roots searched for injectable skills: bundled + shared + library + installed extensions."""
+def default_skill_roots(persona: str | None = None) -> tuple[Path, ...]:
+    """Roots searched for injectable skills: bundled + shared + library + curated + extensions.
+
+    ``persona``, when given, substitutes that persona's own skill overlay
+    (``personas/<persona>/skills``) for the bundled root instead of always
+    using SakThai's — otherwise identical to omitting it.
+    """
     gemini_ext = gemini_extensions_dir()
-    roots = [SKILLS_DIR, SHARED_SKILLS_DIR, LIBRARY_DIR, sakthai_home() / "extensions"]
+    roots = [
+        persona_skills_dir(persona) if persona else SKILLS_DIR,
+        SHARED_SKILLS_DIR,
+        LIBRARY_DIR,
+        CURATED_LIBRARY_DIR,
+        sakthai_home() / "extensions",
+    ]
     if gemini_ext.is_dir():
         roots.append(gemini_ext)
     return tuple(roots)
 
 
 def resolve_skill_names(
-    names: Sequence[str], roots: Sequence[Path] | None = None
+    names: Sequence[str],
+    roots: Sequence[Path] | None = None,
+    persona: str | None = None,
 ) -> tuple[list[str], list[str]]:
     """Partition skill names into ``(resolved, missing)`` across the given roots."""
-    search = tuple(roots) if roots is not None else default_skill_roots()
+    search = tuple(roots) if roots is not None else default_skill_roots(persona)
     known = {skill.name for skill in collect_skills(*search)}
     resolved = [name for name in names if name in known]
     missing = [name for name in names if name not in known]
