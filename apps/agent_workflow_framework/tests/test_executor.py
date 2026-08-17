@@ -950,6 +950,22 @@ class TestWorkflowExecutor(unittest.TestCase):
                 )
                 self.assertEqual(history.step_results["s1"].output["result"], expected)
 
+    def test_relative_system_root_path_validation(self):
+        """Relative references to system roots (e.g., etc/hosts, var/log/syslog) must be prohibited."""
+        from agent_workflow.executor import _validate_filepath
+        prohibited_paths = [
+            "etc/passwd",
+            "etc/hosts",
+            "var/log/syslog",
+            "usr/bin/bash",
+            "bin/sh",
+            "root/.bashrc",
+        ]
+        for rel_path in prohibited_paths:
+            with self.subTest(rel_path=rel_path):
+                with self.assertRaises(PermissionError):
+                    _validate_filepath(rel_path)
+
 
 if __name__ == "__main__":
     unittest.main()
