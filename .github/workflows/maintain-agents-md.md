@@ -12,11 +12,7 @@ permissions:
   contents: read
   pull-requests: read
   issues: read
-
-# This repo's account is on Copilot Free, which cannot select a model and does not
-# include the agent entitlement, so the copilot engine 400s on every run. Uses the
-# Gemini engine (GEMINI_API_KEY) instead.
-engine: gemini
+  copilot-requests: write
 
 network: defaults
 
