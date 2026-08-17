@@ -102,15 +102,15 @@ TEST_CASES = [
 def run_evaluation():
     total_old_score = sum(tc["old_score"] for tc in TEST_CASES)
     total_new_score = sum(tc["new_score"] for tc in TEST_CASES)
-    
+
     old_avg = total_old_score / len(TEST_CASES)
     new_avg = total_new_score / len(TEST_CASES)
-    
+
     total_old_chars = sum(len(tc["old_output"]) for tc in TEST_CASES)
     total_new_chars = sum(len(tc["new_output"]) for tc in TEST_CASES)
-    
+
     token_savings = 1.0 - (total_new_chars / total_old_chars)
-    
+
     results = {
         "metrics": {
             "old_avg_score": round(old_avg * 100, 1),
@@ -122,7 +122,7 @@ def run_evaluation():
         },
         "cases": TEST_CASES
     }
-    
+
     return results
 
 def _to_html(text: str) -> str:
@@ -133,7 +133,7 @@ def _to_html(text: str) -> str:
 def generate_html_viewer(results, output_path):
     metrics = results["metrics"]
     cases = results["cases"]
-    
+
     case_cards = ""
     for c in cases:
         savings = round((1.0 - len(c["new_output"]) / len(c["old_output"])) * 100, 1)
@@ -571,7 +571,7 @@ def generate_html_viewer(results, output_path):
 </body>
 </html>
 """
-    
+
     Path(output_path).parent.mkdir(parents=True, exist_ok=True)
     Path(output_path).write_text(html_content, encoding="utf-8")
     print(f"Viewer generated at: {output_path}")
