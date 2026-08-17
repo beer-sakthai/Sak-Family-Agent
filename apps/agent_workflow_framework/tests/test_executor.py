@@ -961,5 +961,21 @@ class TestWorkflowExecutor(unittest.TestCase):
                 self.assertEqual(history.step_results["s1"].output["result"], expected)
 
 
+
+    def test_create_subprocess_exec_prevents_shell_injection(self):
+        """Verify that shell action uses create_subprocess_exec and treats shell metacharacters as arguments."""
+        wf = WorkflowDefinition(
+            name="test_exec_no_shell_injection",
+            steps=[
+                StepDefinition(id="s1", action="shell", params={"cmd": "echo 'hello; echo injected'"}),
+            ],
+        )
+        history = asyncio.run(self.executor.execute_workflow(wf))
+        self.assertEqual(history.status, RunStatus.COMPLETED)
+        out = history.step_results["s1"].output["stdout"]
+        self.assertIn("hello; echo injected", out)
+        self.assertNotIn("injected\n", out)
+
+
 if __name__ == "__main__":
     unittest.main()
