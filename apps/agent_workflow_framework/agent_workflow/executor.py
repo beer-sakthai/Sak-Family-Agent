@@ -12,6 +12,7 @@ import os
 import sys
 import time
 import types
+import unicodedata
 import urllib.parse
 import urllib.request
 import uuid
@@ -770,9 +771,12 @@ class WorkflowExecutor:
             if not code:
                 return dict(params)
 
-            # AST-based validation to block any dunder attribute or name accesses
+            # AST-based validation to block any dunder attribute or name accesses.
+            # Normalize NFKC prior to parsing so compatibility characters (e.g. full-width U+FF3F '＿')
+            # normalize to standard ASCII characters before attribute/identifier matching.
             try:
-                tree = ast.parse(code)
+                normalized_code = unicodedata.normalize("NFKC", code)
+                tree = ast.parse(normalized_code)
                 for node in ast.walk(tree):
                     if isinstance(node, ast.Attribute):
                         if node.attr.startswith("__") and node.attr.endswith("__"):
