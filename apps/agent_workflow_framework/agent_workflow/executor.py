@@ -12,6 +12,7 @@ import os
 import sys
 import time
 import types
+import unicodedata
 import urllib.parse
 import urllib.request
 import uuid
@@ -208,16 +209,11 @@ def _validate_filepath(filepath: Any) -> Path:
         "etc", "bin", "var", "boot", "dev", "lib", "lib64", "proc", "sys", "sbin", "usr", "root", "opt",
     }
 
-    # Block relative paths targeting critical system roots (e.g. 'etc/passwd').
-    # A relative reference whose first component names a critical system root is
-    # treated like the absolute path it resolves to when cwd is '/'.
-    # Exception: a bare single-component 'tmp' is a common safe local name.
-    if not path_str.startswith("/") and not path_str.startswith("\\"):
-        rel_parts = [p.lower() for p in Path(normalized_str).parts if p]
-        if rel_parts:
-            first = rel_parts[0]
-            if first in system_roots and not (first == "tmp" and len(rel_parts) == 1):
-                raise PermissionError(f"Access to critical system directory is prohibited: '{path_str}'")
+    # Check if a relative path's first component is a system root (e.g., etc/hosts, var/log/syslog)
+    if not normalized_str.startswith("/") and not normalized_str.startswith("\\"):
+        rel_parts = [p.lower() for p in Path(normalized_str).parts if p and p != "."]
+        if rel_parts and rel_parts[0] in system_roots:
+            raise PermissionError(f"Access to critical system directory is prohibited: '{path_str}'")
 
     # Blocks access to sensitive directories (e.g., .git, .ssh, .aws)
     sensitive_dirs = {
@@ -625,6 +621,55 @@ def _validate_shell_command(cmd_str: str) -> None:
             "ts-node",
         )
 
+        wrappers = {
+            "env", "sudo", "doas", "xargs", "timeout", "nohup", "setsid", "nice",
+            "ionice", "chrt", "taskset", "stdbuf", "chroot", "nsenter", "unshare",
+            "pkexec", "uv", "pipx", "bun", "bunx", "npx", "deno", "poetry",
+            "pipenv", "conda", "pnpm", "yarn", "npm", "cargo", "composer",
+            "busybox", "toybox", "builtin", "command", "exec",
+        }
+
+        def _get_effective_command(words: List[str]) -> str:
+            i = 0
+            while i < len(words):
+                token = words[i].strip(" \t\n\r\"'()$&;")
+                if not token:
+                    i += 1
+                    continue
+
+                if "=" in token and not token.startswith("-"):
+                    i += 1
+                    continue
+
+                if token.startswith("-"):
+                    if token in ("-s", "--signal", "-k", "--kill-after", "-n", "--adjustment", "-c", "-p"):
+                        i += 2
+                    else:
+                        i += 1
+                    continue
+
+                basename = os.path.basename(token)
+
+                for interp in interpreters:
+                    pattern = rf"^{re.escape(interp)}(?:[0-9]+(?:\.[0-9]+)*)?$"
+                    if re.match(pattern, basename):
+                        return token
+
+                if basename in wrappers:
+                    i += 1
+                    if basename == "timeout":
+                        while i < len(words) and words[i].startswith("-"):
+                            if words[i] in ("-s", "--signal", "-k", "--kill-after"):
+                                i += 2
+                            else:
+                                i += 1
+                        if i < len(words):
+                            i += 1
+                    continue
+
+                return token
+            return ""
+
         # Check if the outer command itself is an interpreter taking a process substitution parameter (e.g. bash <(...))
         # or if any inner process substitution runs an interpreter (e.g. tee >(bash))
         try:
@@ -633,7 +678,54 @@ def _validate_shell_command(cmd_str: str) -> None:
             parts = cmd_str_stripped.split()
 
         if parts:
-            outer_cmd = os.path.basename(parts[0].strip(" \t\n\r\"'()$&;"))
+            wrappers = {
+                "env", "sudo", "doas", "xargs", "timeout", "nohup", "setsid", "nice",
+                "ionice", "chrt", "taskset", "stdbuf", "chroot", "nsenter", "unshare",
+                "pkexec", "uv", "pipx", "bun", "bunx", "npx", "deno", "poetry",
+                "pipenv", "conda", "pnpm", "yarn", "npm", "cargo", "composer",
+                "busybox", "toybox", "builtin", "command", "eval", "exec", "source", ".",
+            }
+            cmd_word = ""
+            i = 0
+            while i < len(parts):
+                token = parts[i].strip(" \t\n\r\"'()$&;")
+                if not token:
+                    i += 1
+                    continue
+                if "=" in token and not token.startswith("-"):
+                    i += 1
+                    continue
+                if token.startswith("-"):
+                    if token in ("-s", "--signal", "-k", "--kill-after", "-n", "--adjustment", "-c", "-p"):
+                        i += 2
+                    else:
+                        i += 1
+                    continue
+                basename = os.path.basename(token)
+                is_interp = False
+                for interp in interpreters:
+                    pattern = rf"^{re.escape(interp)}(?:[0-9]+(?:\.[0-9]+)*)?$"
+                    if re.match(pattern, basename):
+                        is_interp = True
+                        break
+                if is_interp:
+                    cmd_word = token
+                    break
+                if basename in wrappers:
+                    i += 1
+                    if basename == "timeout":
+                        while i < len(parts) and parts[i].startswith("-"):
+                            if parts[i] in ("-s", "--signal", "-k", "--kill-after"):
+                                i += 2
+                            else:
+                                i += 1
+                        if i < len(parts):
+                            i += 1
+                    continue
+                cmd_word = token
+                break
+
+            outer_cmd = os.path.basename(cmd_word.strip(" \t\n\r\"'()$&;")) if cmd_word else ""
             is_outer_interp = any(
                 re.match(rf"^{re.escape(interp)}(?:[0-9]+(?:\.[0-9]+)*)?$", outer_cmd)
                 for interp in interpreters
@@ -643,7 +735,7 @@ def _validate_shell_command(cmd_str: str) -> None:
             ) or bool(re.search(r"[<>]\s*\(", cmd_str_stripped))
             if is_outer_interp and has_proc_sub:
                 raise PermissionError(
-                    f"Interpreter {parts[0]!r} with process substitution is prohibited "
+                    f"Interpreter {effective_outer!r} with process substitution is prohibited "
                     "to prevent command execution bypass."
                 )
 
@@ -656,12 +748,13 @@ def _validate_shell_command(cmd_str: str) -> None:
                 proc_words = proc_inner_clean.split()
 
             if proc_words:
-                first_word = os.path.basename(proc_words[0].strip(" \t\n\r\"'()$&;"))
+                effective_inner = _get_effective_command(proc_words)
+                first_word = os.path.basename(effective_inner) if effective_inner else ""
                 for interp in interpreters:
                     pattern = rf"^{re.escape(interp)}(?:[0-9]+(?:\.[0-9]+)*)?$"
                     if re.match(pattern, first_word):
                         raise PermissionError(
-                            f"Process substitution to interpreter {proc_words[0]!r} is prohibited "
+                            f"Process substitution to interpreter {effective_inner!r} is prohibited "
                             "to prevent command execution bypass."
                         )
 
@@ -781,9 +874,12 @@ class WorkflowExecutor:
             if not code:
                 return dict(params)
 
-            # AST-based validation to block any dunder attribute or name accesses
+            # AST-based validation to block any dunder attribute or name accesses.
+            # Normalize NFKC prior to parsing so compatibility characters (e.g. full-width U+FF3F '＿')
+            # normalize to standard ASCII characters before attribute/identifier matching.
             try:
-                tree = ast.parse(code)
+                normalized_code = unicodedata.normalize("NFKC", code)
+                tree = ast.parse(normalized_code)
                 for node in ast.walk(tree):
                     if isinstance(node, ast.Attribute):
                         if node.attr.startswith("__") and node.attr.endswith("__"):
