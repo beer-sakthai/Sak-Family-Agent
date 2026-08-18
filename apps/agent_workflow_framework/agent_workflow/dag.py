@@ -1,25 +1,25 @@
 """DAG dependency resolution, topological batching, and cycle/syntax validation."""
 
 import graphlib
+from typing import List, Dict, Set
+from agent_workflow.models import WorkflowDefinition, StepDefinition
 
-from agent_workflow.models import StepDefinition, WorkflowDefinition
 
-
-def validate_workflow_dag(workflow: WorkflowDefinition) -> list[str]:
+def validate_workflow_dag(workflow: WorkflowDefinition) -> List[str]:
     """Validates workflow step dependencies.
 
     Returns:
         List[str]: A list of validation error messages. An empty list indicates a valid DAG.
     """
-    errors: list[str] = []
+    errors: List[str] = []
 
     if not workflow.steps:
         errors.append("Workflow must contain at least one step.")
         return errors
 
-    seen_ids: set[str] = set()
-    duplicate_ids: set[str] = set()
-    step_map: dict[str, StepDefinition] = {}
+    seen_ids: Set[str] = set()
+    duplicate_ids: Set[str] = set()
+    step_map: Dict[str, StepDefinition] = {}
 
     # Check 1: Empty/Invalid IDs and Duplicate IDs
     for step in workflow.steps:
@@ -46,7 +46,7 @@ def validate_workflow_dag(workflow: WorkflowDefinition) -> list[str]:
                 errors.append(f"Step '{step.id}' depends on non-existent step '{dep}'")
 
     # Check 3: Cyclic Dependency Detection via TopologicalSorter
-    graph: dict[str, set[str]] = {}
+    graph: Dict[str, Set[str]] = {}
     for step_id, step in step_map.items():
         # Include only valid, known step dependencies in graph to isolate structural cycles
         valid_deps = {dep for dep in step.depends_on if dep in seen_ids and dep != step_id}
@@ -61,7 +61,7 @@ def validate_workflow_dag(workflow: WorkflowDefinition) -> list[str]:
     return errors
 
 
-def build_topological_batches(workflow: WorkflowDefinition) -> list[list[StepDefinition]]:
+def build_topological_batches(workflow: WorkflowDefinition) -> List[List[StepDefinition]]:
     """Groups workflow steps into parallel execution batches in topological order.
 
     Steps within the same batch have all dependencies satisfied by prior batches and
@@ -80,13 +80,13 @@ def build_topological_batches(workflow: WorkflowDefinition) -> list[list[StepDef
     if errors:
         raise ValueError(f"Invalid workflow DAG: {'; '.join(errors)}")
 
-    step_map: dict[str, StepDefinition] = {step.id: step for step in workflow.steps}
-    graph: dict[str, set[str]] = {step.id: set(step.depends_on) for step in workflow.steps}
+    step_map: Dict[str, StepDefinition] = {step.id: step for step in workflow.steps}
+    graph: Dict[str, Set[str]] = {step.id: set(step.depends_on) for step in workflow.steps}
 
     ts = graphlib.TopologicalSorter(graph)
     ts.prepare()
 
-    batches: list[list[StepDefinition]] = []
+    batches: List[List[StepDefinition]] = []
     # Map step ID to original list index to enforce intra-batch deterministic ordering
     step_order_index = {step.id: idx for idx, step in enumerate(workflow.steps)}
 

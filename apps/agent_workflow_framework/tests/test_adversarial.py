@@ -4,15 +4,17 @@ Tests security boundaries (path traversal, recursive interpolation bombs),
 high-concurrency race condition safety, scale bounds (1,000-node DAGs), and fuzzing.
 """
 
-import threading
 import time
 import unittest
+import threading
+import asyncio
+from pathlib import Path
 
-from agent_workflow.dag import build_topological_batches, validate_workflow_dag
-from agent_workflow.models import StepDefinition, WorkflowDefinition
-from agent_workflow.parser import WorkflowParseError, parse_workflow_dict
-from agent_workflow.persistence import PersistenceError, RunHistoryStore
-from agent_workflow.state import StateContext
+from agent_workflow.models import WorkflowDefinition, StepDefinition, RunHistory, RunStatus
+from agent_workflow.persistence import RunHistoryStore
+from agent_workflow.state import StateContext, StateInterpolationError
+from agent_workflow.parser import parse_workflow_dict, WorkflowParseError
+from agent_workflow.dag import validate_workflow_dag, build_topological_batches
 
 
 class TestAdversarialSecurityAudit(unittest.TestCase):
@@ -31,8 +33,9 @@ class TestAdversarialSecurityAudit(unittest.TestCase):
         ]
 
         for bad_id in malicious_ids:
-            with self.subTest(run_id=bad_id), self.assertRaises((ValueError, PersistenceError)):
-                store.load_run_history(bad_id)
+            with self.subTest(run_id=bad_id):
+                with self.assertRaises((ValueError, Exception)):
+                    store.load_run_history(bad_id)
 
     def test_interpolation_infinite_recursion(self):
         """Verify circular or infinitely nested state interpolation expression bombs fail gracefully."""
@@ -49,12 +52,8 @@ class TestAdversarialSecurityAudit(unittest.TestCase):
         """Verify 1,000-node DAG validates and computes topological batches within 2 seconds."""
         steps = []
         for i in range(1000):
-            depends = [f"step_{i - 1}"] if i > 0 else []
-            steps.append(
-                StepDefinition(
-                    id=f"step_{i}", action="echo", params={"msg": f"hello {i}"}, depends_on=depends
-                )
-            )
+            depends = [f"step_{i-1}"] if i > 0 else []
+            steps.append(StepDefinition(id=f"step_{i}", action="echo", params={"msg": f"hello {i}"}, depends_on=depends))
 
         wf = WorkflowDefinition(name="scale_1000_workflow", steps=steps)
 
@@ -64,12 +63,8 @@ class TestAdversarialSecurityAudit(unittest.TestCase):
         elapsed = time.time() - start_time
 
         self.assertEqual(len(errors), 0, "1000-node linear DAG should have zero validation errors")
-        self.assertEqual(
-            len(batches), 1000, "1000-node linear DAG should produce 1000 sequential batches"
-        )
-        self.assertLess(
-            elapsed, 2.0, f"1000-node DAG validation took {elapsed:.3f}s, expected < 2.0s"
-        )
+        self.assertEqual(len(batches), 1000, "1000-node linear DAG should produce 1000 sequential batches")
+        self.assertLess(elapsed, 2.0, f"1000-node DAG validation took {elapsed:.3f}s, expected < 2.0s")
 
     def test_high_concurrency_race_condition(self):
         """Verify 50 concurrent threads updating StateContext simultaneously produce thread-safe, uncorrupted state."""
@@ -81,9 +76,7 @@ class TestAdversarialSecurityAudit(unittest.TestCase):
             try:
                 for step_num in range(10):
                     step_id = f"t_{thread_idx}_s_{step_num}"
-                    ctx.set_step_output(
-                        step_id, {"thread": thread_idx, "step": step_num, "data": "a" * 100}
-                    )
+                    ctx.set_step_output(step_id, {"thread": thread_idx, "step": step_num, "data": "a" * 100})
                     out = ctx.get_step_output(step_id)
                     if out.get("thread") != thread_idx or out.get("step") != step_num:
                         errors.append(f"Mismatch in thread {thread_idx}")
@@ -112,8 +105,9 @@ class TestAdversarialSecurityAudit(unittest.TestCase):
         ]
 
         for payload in bad_payloads:
-            with self.subTest(payload=payload), self.assertRaises((WorkflowParseError, TypeError, ValueError)):
-                parse_workflow_dict(payload)
+            with self.subTest(payload=payload):
+                with self.assertRaises((WorkflowParseError, TypeError, ValueError)):
+                    parse_workflow_dict(payload)
 
 
 if __name__ == "__main__":

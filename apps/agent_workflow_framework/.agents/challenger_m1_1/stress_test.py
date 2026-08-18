@@ -5,16 +5,17 @@ import tempfile
 import time
 import unittest
 from pathlib import Path
+from typing import List, Dict, Set
 
-from agent_workflow.dag import build_topological_batches, validate_workflow_dag
-from agent_workflow.models import StepDefinition, WorkflowDefinition
+from agent_workflow.models import WorkflowDefinition, StepDefinition, StepStatus, RunStatus
 from agent_workflow.parser import (
-    WorkflowParseError,
     parse_workflow_dict,
-    parse_workflow_file,
-    parse_workflow_json,
     parse_workflow_yaml,
+    parse_workflow_json,
+    parse_workflow_file,
+    WorkflowParseError,
 )
+from agent_workflow.dag import validate_workflow_dag, build_topological_batches
 
 
 class TestM1StressAndEdgeCases(unittest.TestCase):
@@ -29,7 +30,7 @@ class TestM1StressAndEdgeCases(unittest.TestCase):
         n = 500
         steps = []
         for i in range(n):
-            deps = [f"step_{i - 1}"] if i > 0 else []
+            deps = [f"step_{i-1}"] if i > 0 else []
             steps.append(StepDefinition(id=f"step_{i}", action="echo", depends_on=deps))
 
         wf = WorkflowDefinition(name="large_linear", steps=steps)
@@ -48,14 +49,14 @@ class TestM1StressAndEdgeCases(unittest.TestCase):
             self.assertEqual(len(batch), 1)
             self.assertEqual(batch[0].id, f"step_{i}")
 
-        print(f"[PASS] Large linear DAG ({n} steps): validate={t1 - t0:.4f}s, batch={t3 - t2:.4f}s")
+        print(f"[PASS] Large linear DAG ({n} steps): validate={t1-t0:.4f}s, batch={t3-t2:.4f}s")
 
     def test_1000_node_linear_dag(self):
         """Test 1000-node linear DAG resolution performance."""
         n = 1000
         steps = []
         for i in range(n):
-            deps = [f"s_{i - 1}"] if i > 0 else []
+            deps = [f"s_{i-1}"] if i > 0 else []
             steps.append(StepDefinition(id=f"s_{i}", action="echo", depends_on=deps))
 
         wf = WorkflowDefinition(name="linear_1000", steps=steps)
@@ -67,7 +68,7 @@ class TestM1StressAndEdgeCases(unittest.TestCase):
 
         self.assertEqual(errors, [])
         self.assertEqual(len(batches), n)
-        print(f"[PASS] 1000-node linear DAG: validate={t1 - t0:.4f}s, batch={t2 - t1:.4f}s")
+        print(f"[PASS] 1000-node linear DAG: validate={t1-t0:.4f}s, batch={t2-t1:.4f}s")
 
     def test_large_wide_parallel_dag(self):
         """Test wide parallel DAG: 1 root -> 500 parallel nodes -> 1 leaf."""
@@ -96,9 +97,7 @@ class TestM1StressAndEdgeCases(unittest.TestCase):
         self.assertEqual(len(batches[2]), 1)
         self.assertEqual(batches[2][0].id, "leaf")
 
-        print(
-            f"[PASS] Wide parallel DAG (1+{num_parallel}+1 steps): validate={t1 - t0:.4f}s, batch={t3 - t2:.4f}s"
-        )
+        print(f"[PASS] Wide parallel DAG (1+{num_parallel}+1 steps): validate={t1-t0:.4f}s, batch={t3-t2:.4f}s")
 
     def test_large_dense_dag(self):
         """Test dense DAG where node i depends on all previous nodes j < i (150 nodes, ~11,000 edges)."""
@@ -120,9 +119,7 @@ class TestM1StressAndEdgeCases(unittest.TestCase):
         t3 = time.perf_counter()
 
         self.assertEqual(len(batches), n)
-        print(
-            f"[PASS] Dense DAG ({n} nodes, ~{n * (n - 1) // 2} edges): validate={t1 - t0:.4f}s, batch={t3 - t2:.4f}s"
-        )
+        print(f"[PASS] Dense DAG ({n} nodes, ~{n*(n-1)//2} edges): validate={t1-t0:.4f}s, batch={t3-t2:.4f}s")
 
     def test_disconnected_subgraphs(self):
         """Test DAG with 50 independent subgraphs of 5 steps each (250 total steps)."""
@@ -131,9 +128,7 @@ class TestM1StressAndEdgeCases(unittest.TestCase):
             steps.append(StepDefinition(id=f"g{g}_s0", action="echo"))
             steps.append(StepDefinition(id=f"g{g}_s1", action="echo", depends_on=[f"g{g}_s0"]))
             steps.append(StepDefinition(id=f"g{g}_s2", action="echo", depends_on=[f"g{g}_s0"]))
-            steps.append(
-                StepDefinition(id=f"g{g}_s3", action="echo", depends_on=[f"g{g}_s1", f"g{g}_s2"])
-            )
+            steps.append(StepDefinition(id=f"g{g}_s3", action="echo", depends_on=[f"g{g}_s1", f"g{g}_s2"]))
             steps.append(StepDefinition(id=f"g{g}_s4", action="echo", depends_on=[f"g{g}_s3"]))
 
         wf = WorkflowDefinition(name="disconnected_subgraphs", steps=steps)
@@ -141,14 +136,12 @@ class TestM1StressAndEdgeCases(unittest.TestCase):
         self.assertEqual(errors, [])
 
         batches = build_topological_batches(wf)
-        self.assertEqual(
-            len(batches), 4
-        )  # Layer 0: all s0; Layer 1: all s1, s2; Layer 2: all s3; Layer 3: all s4
+        self.assertEqual(len(batches), 4)  # Layer 0: all s0; Layer 1: all s1, s2; Layer 2: all s3; Layer 3: all s4
         self.assertEqual(len(batches[0]), 50)
         self.assertEqual(len(batches[1]), 100)
         self.assertEqual(len(batches[2]), 50)
         self.assertEqual(len(batches[3]), 50)
-        print("[PASS] Disconnected subgraphs (50 components x 5 steps = 250 steps): 4 batches")
+        print(f"[PASS] Disconnected subgraphs (50 components x 5 steps = 250 steps): 4 batches")
 
     # -------------------------------------------------------------------------
     # 2. Cycle Detection Accuracy (False Positives & Negatives)
@@ -162,9 +155,7 @@ class TestM1StressAndEdgeCases(unittest.TestCase):
         ]
         wf = WorkflowDefinition(name="cycle_2", steps=steps)
         errors = validate_workflow_dag(wf)
-        self.assertTrue(
-            any("Cyclic dependency" in e for e in errors), f"Expected cycle error, got: {errors}"
-        )
+        self.assertTrue(any("Cyclic dependency" in e for e in errors), f"Expected cycle error, got: {errors}")
         with self.assertRaises(ValueError):
             build_topological_batches(wf)
 
@@ -178,9 +169,7 @@ class TestM1StressAndEdgeCases(unittest.TestCase):
 
         wf = WorkflowDefinition(name="deep_cycle", steps=steps)
         errors = validate_workflow_dag(wf)
-        self.assertTrue(
-            any("Cyclic dependency" in e for e in errors), f"Expected cycle error, got: {errors}"
-        )
+        self.assertTrue(any("Cyclic dependency" in e for e in errors), f"Expected cycle error, got: {errors}")
 
     def test_disconnected_subgraph_with_cycle(self):
         """Verify cycle detection when a cyclic component exists alongside a valid component."""
@@ -194,9 +183,7 @@ class TestM1StressAndEdgeCases(unittest.TestCase):
         ]
         wf = WorkflowDefinition(name="disconnected_cycle", steps=steps)
         errors = validate_workflow_dag(wf)
-        self.assertTrue(
-            any("Cyclic dependency" in e for e in errors), f"Expected cycle error, got: {errors}"
-        )
+        self.assertTrue(any("Cyclic dependency" in e for e in errors), f"Expected cycle error, got: {errors}")
 
     def test_valid_complex_diamond_and_bypass_no_false_positives(self):
         """Verify complex DAG with bypass connections (A->B, A->C, B->C, B->D, C->D) has NO cycle false positives."""
@@ -322,9 +309,7 @@ steps:
 
         # Unknown top-level key
         with self.assertRaises(WorkflowParseError) as ctx:
-            parse_workflow_dict(
-                {"name": "test", "steps": [{"id": "s1", "action": "act"}], "invalid_field": 123}
-            )
+            parse_workflow_dict({"name": "test", "steps": [{"id": "s1", "action": "act"}], "invalid_field": 123})
         self.assertIn("Unknown top-level attribute", str(ctx.exception))
 
         # Missing name
@@ -339,9 +324,7 @@ steps:
 
         # Unknown step key
         with self.assertRaises(WorkflowParseError) as ctx:
-            parse_workflow_dict(
-                {"name": "test", "steps": [{"id": "s1", "action": "act", "extra": "bad"}]}
-            )
+            parse_workflow_dict({"name": "test", "steps": [{"id": "s1", "action": "act", "extra": "bad"}]})
         self.assertIn("unknown attribute", str(ctx.exception))
 
         # Non-string step ID (e.g. integer 123)
@@ -351,26 +334,21 @@ steps:
 
         # Invalid retry (bool or string or negative)
         with self.assertRaises(WorkflowParseError):
-            parse_workflow_dict(
-                {"name": "test", "steps": [{"id": "s1", "action": "act", "retry": True}]}
-            )
+            parse_workflow_dict({"name": "test", "steps": [{"id": "s1", "action": "act", "retry": True}]})
         with self.assertRaises(WorkflowParseError):
-            parse_workflow_dict(
-                {"name": "test", "steps": [{"id": "s1", "action": "act", "retry": -1}]}
-            )
+            parse_workflow_dict({"name": "test", "steps": [{"id": "s1", "action": "act", "retry": -1}]})
         with self.assertRaises(WorkflowParseError):
-            parse_workflow_dict(
-                {"name": "test", "steps": [{"id": "s1", "action": "act", "retry_delay": -0.5}]}
-            )
+            parse_workflow_dict({"name": "test", "steps": [{"id": "s1", "action": "act", "retry_delay": -0.5}]})
 
         # Duplicate step ID in parser
         with self.assertRaises(WorkflowParseError) as ctx:
-            parse_workflow_dict(
-                {
-                    "name": "test",
-                    "steps": [{"id": "s1", "action": "act"}, {"id": "s1", "action": "act2"}],
-                }
-            )
+            parse_workflow_dict({
+                "name": "test",
+                "steps": [
+                    {"id": "s1", "action": "act"},
+                    {"id": "s1", "action": "act2"}
+                ]
+            })
         self.assertIn("Duplicate step ID", str(ctx.exception))
 
     def test_parse_malformed_syntax(self):
@@ -402,9 +380,7 @@ steps:
 
             # Valid temp json file
             json_path = Path(tmpdir) / "test.json"
-            json_path.write_text(
-                json.dumps({"name": "json_wf", "steps": [{"id": "s1", "action": "echo"}]})
-            )
+            json_path.write_text(json.dumps({"name": "json_wf", "steps": [{"id": "s1", "action": "echo"}]}))
             wf_json = parse_workflow_file(json_path)
             self.assertEqual(wf_json.name, "json_wf")
 

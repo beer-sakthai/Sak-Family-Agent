@@ -6,34 +6,36 @@ state interpolation, step retries, downstream failure short-circuiting, and acti
 
 import ast
 import asyncio
+import copy
 import json
 import os
+import shlex
+import sys
+import time
 import types
 import unicodedata
 import urllib.parse
 import urllib.request
 import uuid
-from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import Dict, Any, List, Optional, Callable, Set
 
-from agent_workflow.dag import build_topological_batches, validate_workflow_dag
+from agent_workflow.dag import validate_workflow_dag, build_topological_batches
 from agent_workflow.models import (
-    RunHistory,
-    RunStatus,
+    WorkflowDefinition,
     StepDefinition,
     StepResult,
     StepStatus,
-    WorkflowDefinition,
+    RunHistory,
+    RunStatus,
 )
 from agent_workflow.persistence import RunHistoryStore
-from agent_workflow.state import StateContext
+from agent_workflow.state import StateContext, StateInterpolationError
 
 
 class ExecutionError(Exception):
     """Base exception for workflow execution failures."""
-
     pass
 
 
@@ -75,7 +77,7 @@ class _SafeJSON:
     loads = staticmethod(json.loads)
 
 
-def _assert_no_modules(namespace: dict[str, Any], where: str) -> None:
+def _assert_no_modules(namespace: Dict[str, Any], where: str) -> None:
     """Fail closed if a module object ever reaches the python sandbox.
 
     Defence in depth for the escape described on :class:`_SafeJSON`. Any module
@@ -92,7 +94,7 @@ def _assert_no_modules(namespace: dict[str, Any], where: str) -> None:
     would not be the guarantee this function's name implies.
     """
 
-    def _walk(value: Any, path: str, seen: set[int]) -> None:
+    def _walk(value: Any, path: str, seen: Set[int]) -> None:
         if isinstance(value, types.ModuleType):
             raise PermissionError(
                 f"Module '{value.__name__}' exposed as '{path}' in {where} is "
@@ -131,7 +133,7 @@ def _validate_url(url_str: str) -> None:
     try:
         parsed = urllib.parse.urlparse(url_str)
     except Exception as e:
-        raise ValueError(f"Invalid URL: {url_str}. Error: {e}") from e
+        raise ValueError(f"Invalid URL: {url_str}. Error: {e}")
 
     scheme = (parsed.scheme or "").lower()
     if scheme not in ("http", "https"):
@@ -149,9 +151,8 @@ def _validate_url(url_str: str) -> None:
         port = 443 if scheme == "https" else 80
 
     try:
-        import ipaddress
         import socket
-
+        import ipaddress
         addrinfos = socket.getaddrinfo(host, port, proto=socket.IPPROTO_TCP)
         for _family, _type, _proto, _canon, sockaddr in addrinfos:
             ip_str = sockaddr[0]
@@ -167,7 +168,7 @@ def _validate_url(url_str: str) -> None:
     except ValueError:
         raise
     except Exception as e:
-        raise RuntimeError(f"DNS Resolution failed for host '{host}': {e}") from e
+        raise RuntimeError(f"DNS Resolution failed for host '{host}': {e}")
 
 
 class SafeRedirectHandler(urllib.request.HTTPRedirectHandler):
@@ -181,7 +182,7 @@ class SafeRedirectHandler(urllib.request.HTTPRedirectHandler):
         msg: str,
         headers: Any,
         newurl: str,
-    ) -> urllib.request.Request | None:
+    ) -> Optional[urllib.request.Request]:
         _validate_url(newurl)
         return super().redirect_request(req, fp, code, msg, headers, newurl)
 
@@ -202,86 +203,27 @@ def _validate_filepath(filepath: Any) -> Path:
         or ".." in normalized_str.split("/")
         or path_str.startswith("~")
     ):
-        raise PermissionError(
-            f"Directory path traversal or user home shortcut is prohibited: '{path_str}'"
-        )
+        raise PermissionError(f"Directory path traversal or user home shortcut is prohibited: '{path_str}'")
 
     # Critical system roots (e.g., /etc, /bin, /var, /boot, /dev, /lib, /lib64, /proc, /sys, /sbin, /usr)
     system_roots = {
-        "etc",
-        "bin",
-        "var",
-        "boot",
-        "dev",
-        "lib",
-        "lib64",
-        "proc",
-        "sys",
-        "sbin",
-        "usr",
-        "root",
-        "opt",
+        "etc", "bin", "var", "boot", "dev", "lib", "lib64", "proc", "sys", "sbin", "usr", "root", "opt",
     }
 
     # Blocks access to sensitive directories (e.g., .git, .ssh, .aws)
     sensitive_dirs = {
-        ".git",
-        ".ssh",
-        ".aws",
-        ".jules",
-        ".config",
-        ".npm",
-        ".docker",
-        ".kube",
-        ".gnupg",
-        ".gcloud",
-        ".azure",
+        ".git", ".ssh", ".aws", ".jules", ".config", ".npm",
+        ".docker", ".kube", ".gnupg", ".gcloud", ".azure",
     }
 
     # Blocks access to credential/sensitive file basenames (e.g., .env, memory.db, id_rsa)
     sensitive_basenames = {
-        ".env",
-        "memory.db",
-        "id_rsa",
-        "id_dsa",
-        "id_ecdsa",
-        "id_ed25519",
-        "id_ecdsa_sk",
-        "id_ed25519_sk",
-        "id_xmss",
-        "known_hosts",
-        "authorized_keys",
-        "credentials",
-        "credentials.json",
-        "shadow",
-        "passwd",
-        "sudoers",
-        ".bash_history",
-        ".zsh_history",
-        ".python_history",
-        ".history",
-        ".netrc",
-        ".npmrc",
-        ".pypirc",
-        "gshadow",
-        "group",
-        ".bashrc",
-        ".zshrc",
-        ".profile",
-        ".bash_profile",
-        ".gitconfig",
-        ".zprofile",
-        ".yarnrc",
-        ".yarnrc.yml",
-        ".git-credentials",
-        ".node_repl_history",
-        ".mysql_history",
-        ".psql_history",
-        ".sqlite_history",
-        ".rediscli_history",
-        ".mongo_history",
-        ".pgpass",
-        ".my.cnf",
+        ".env", "memory.db", "id_rsa", "id_dsa", "id_ecdsa", "id_ed25519", "id_ecdsa_sk", "id_ed25519_sk", "id_xmss",
+        "known_hosts", "authorized_keys", "credentials", "credentials.json", "shadow", "passwd", "sudoers",
+        ".bash_history", ".zsh_history", ".python_history", ".history", ".netrc", ".npmrc", ".pypirc",
+        "gshadow", "group", ".bashrc", ".zshrc", ".profile", ".bash_profile", ".gitconfig", ".zprofile",
+        ".yarnrc", ".yarnrc.yml", ".git-credentials", ".node_repl_history", ".mysql_history", ".psql_history",
+        ".sqlite_history", ".rediscli_history", ".mongo_history", ".pgpass", ".my.cnf"
     }
     sensitive_suffixes = (".pem", ".key", ".pfx", ".p12")
 
@@ -291,13 +233,7 @@ def _validate_filepath(filepath: Any) -> Path:
 
     # Renamed or backed-up private keys (id_rsa.bak, id_ed25519.pub, ...).
     sensitive_key_stems = (
-        "id_rsa",
-        "id_dsa",
-        "id_ecdsa",
-        "id_ed25519",
-        "id_ecdsa_sk",
-        "id_ed25519_sk",
-        "id_xmss",
+        "id_rsa", "id_dsa", "id_ecdsa", "id_ed25519", "id_ecdsa_sk", "id_ed25519_sk", "id_xmss",
     )
 
     # Check for wildcards (globbing)
@@ -313,9 +249,7 @@ def _validate_filepath(filepath: Any) -> Path:
             if any(c in part for c in "*?[]"):
                 # Check match against sensitive directories
                 if any(fnmatch.fnmatch(s_dir, part) for s_dir in sensitive_dirs):
-                    raise PermissionError(
-                        f"Access to sensitive directory via wildcards is prohibited: '{path_str}'"
-                    )
+                    raise PermissionError(f"Access to sensitive directory via wildcards is prohibited: '{path_str}'")
 
                 # Check match against sensitive basenames, prefixes, suffixes, key stems
                 test_targets = set(sensitive_basenames)
@@ -327,9 +261,7 @@ def _validate_filepath(filepath: Any) -> Path:
                     test_targets.add(f"{stem}.test")
 
                 if any(fnmatch.fnmatch(target, part) for target in test_targets):
-                    raise PermissionError(
-                        f"Access to sensitive file via wildcards is prohibited: '{path_str}'"
-                    )
+                    raise PermissionError(f"Access to sensitive file via wildcards is prohibited: '{path_str}'")
 
         # 2. Strip trailing wildcards to check the base path prefix
         base_path = re.split(r"[*?\[\]]", path_str, maxsplit=1)[0]
@@ -342,16 +274,10 @@ def _validate_filepath(filepath: Any) -> Path:
             if base_path.startswith("/") or base_path.startswith("\\"):
                 normalized_base = base_path.replace("\\", "/").lower()
                 if normalized_base == "/":
-                    raise PermissionError(
-                        f"Access to root directory via wildcards is prohibited: '{path_str}'"
-                    )
+                    raise PermissionError(f"Access to root directory via wildcards is prohibited: '{path_str}'")
                 for root in system_roots:
-                    if f"/{root}".startswith(normalized_base) or normalized_base.startswith(
-                        f"/{root}/"
-                    ):
-                        raise PermissionError(
-                            f"Access to critical system directory via wildcards is prohibited: '{path_str}'"
-                        )
+                    if f"/{root}".startswith(normalized_base) or normalized_base.startswith(f"/{root}/"):
+                        raise PermissionError(f"Access to critical system directory via wildcards is prohibited: '{path_str}'")
             else:
                 # Relative path: check if first component is a system root or matches system root prefix
                 base_parts = [p.lower() for p in Path(base_path.replace("\\", "/")).parts if p]
@@ -359,15 +285,13 @@ def _validate_filepath(filepath: Any) -> Path:
                     first = base_parts[0]
                     for root in system_roots:
                         if root.startswith(first) or first.startswith(root):
-                            raise PermissionError(
-                                f"Access to critical system directory via wildcards is prohibited: '{path_str}'"
-                            )
+                            raise PermissionError(f"Access to critical system directory via wildcards is prohibited: '{path_str}'")
 
     # Resolve target absolute to Path
     try:
         target = Path(path_str).resolve()
     except Exception as exc:
-        raise ValueError(f"Invalid file path '{path_str}': {exc}") from exc
+        raise ValueError(f"Invalid file path '{path_str}': {exc}")
 
     parts = [p.lower() for p in target.parts]
 
@@ -377,9 +301,7 @@ def _validate_filepath(filepath: Any) -> Path:
         if non_root_parts:
             first_dir = non_root_parts[0].lower()
             if first_dir in system_roots:
-                raise PermissionError(
-                    f"Access to critical system directory is prohibited: '{path_str}'"
-                )
+                raise PermissionError(f"Access to critical system directory is prohibited: '{path_str}'")
 
     if any(part in sensitive_dirs for part in parts):
         raise PermissionError(f"Access to sensitive directory is prohibited: '{path_str}'")
@@ -397,12 +319,12 @@ def _validate_filepath(filepath: Any) -> Path:
     return target
 
 
-def _extract_shell_subcommands(cmd_str: str) -> list[str]:
+def _extract_shell_subcommands(cmd_str: str) -> List[str]:
     """Extract individual subcommands from a shell command string by splitting on
     command separators (;, &&, ||, \\n, \\r) and extracting command substitutions
     ($(...) and `...`).
     """
-    subcommands: list[str] = []
+    subcommands: List[str] = []
 
     def _parse(text: str) -> None:
         text = text.strip()
@@ -446,7 +368,6 @@ def _extract_shell_subcommands(cmd_str: str) -> list[str]:
             if not in_single_quote:
                 # Check for command substitution $(...) and process substitution <(...) or >(...)
                 import re
-
                 ps_match = re.match(r"^(\$\(|[<>]\s*\()", text[i:])
                 if ps_match:
                     prefix_len = ps_match.end()
@@ -472,10 +393,10 @@ def _extract_shell_subcommands(cmd_str: str) -> list[str]:
                                 depth -= 1
                         if depth > 0:
                             j += 1
-                    inner = text[i + prefix_len : j]
+                    inner = text[i+prefix_len:j]
                     if inner.strip():
                         _parse(inner)
-                    current_cmd.append(text[i : j + 1])
+                    current_cmd.append(text[i:j+1])
                     i = j + 1
                     continue
 
@@ -492,16 +413,16 @@ def _extract_shell_subcommands(cmd_str: str) -> list[str]:
                         elif c == "`":
                             break
                         j += 1
-                    inner = text[i + 1 : j]
+                    inner = text[i+1:j]
                     if inner.strip():
                         _parse(inner)
-                    current_cmd.append(text[i : j + 1])
+                    current_cmd.append(text[i:j+1])
                     i = j + 1
                     continue
 
             if not in_single_quote and not in_double_quote:
                 # Check for separators: &&, ||, ;, \n, \r
-                if text[i : i + 2] in ("&&", "||"):
+                if text[i:i+2] in ("&&", "||"):
                     cmd = "".join(current_cmd).strip()
                     if cmd:
                         subcommands.append(cmd)
@@ -529,8 +450,8 @@ def _extract_shell_subcommands(cmd_str: str) -> list[str]:
 
 def _validate_shell_command(cmd_str: str) -> None:
     """Validate a shell command to prevent access to sensitive/system paths."""
-    import re
     import shlex
+    import re
 
     def _check_token(token: str) -> None:
         token = token.strip()
@@ -579,40 +500,11 @@ def _validate_shell_command(cmd_str: str) -> None:
                     # Robust helper to find the actual executable command by unwrapping environment variables,
                     # flags, and common transparent wrappers (including shell/system/package wrappers).
                     wrappers = {
-                        "env",
-                        "sudo",
-                        "doas",
-                        "xargs",
-                        "timeout",
-                        "nohup",
-                        "setsid",
-                        "nice",
-                        "ionice",
-                        "chrt",
-                        "taskset",
-                        "stdbuf",
-                        "chroot",
-                        "nsenter",
-                        "unshare",
-                        "pkexec",
-                        "uv",
-                        "pipx",
-                        "bun",
-                        "bunx",
-                        "npx",
-                        "deno",
-                        "poetry",
-                        "pipenv",
-                        "conda",
-                        "pnpm",
-                        "yarn",
-                        "npm",
-                        "cargo",
-                        "composer",
-                        "busybox",
-                        "toybox",
-                        "builtin",
-                        "command",
+                        "env", "sudo", "doas", "xargs", "timeout", "nohup", "setsid", "nice",
+                        "ionice", "chrt", "taskset", "stdbuf", "chroot", "nsenter", "unshare",
+                        "pkexec", "uv", "pipx", "bun", "bunx", "npx", "deno", "poetry",
+                        "pipenv", "conda", "pnpm", "yarn", "npm", "cargo", "composer",
+                        "busybox", "toybox", "builtin", "command",
                     }
 
                     interpreters = (
@@ -655,16 +547,7 @@ def _validate_shell_command(cmd_str: str) -> None:
 
                         # Skip flags and their arguments
                         if token.startswith("-"):
-                            if token in (
-                                "-s",
-                                "--signal",
-                                "-k",
-                                "--kill-after",
-                                "-n",
-                                "--adjustment",
-                                "-c",
-                                "-p",
-                            ):
+                            if token in ("-s", "--signal", "-k", "--kill-after", "-n", "--adjustment", "-c", "-p"):
                                 i += 2
                             else:
                                 i += 1
@@ -734,48 +617,14 @@ def _validate_shell_command(cmd_str: str) -> None:
         )
 
         wrappers = {
-            "env",
-            "sudo",
-            "doas",
-            "xargs",
-            "timeout",
-            "nohup",
-            "setsid",
-            "nice",
-            "ionice",
-            "chrt",
-            "taskset",
-            "stdbuf",
-            "chroot",
-            "nsenter",
-            "unshare",
-            "pkexec",
-            "uv",
-            "pipx",
-            "bun",
-            "bunx",
-            "npx",
-            "deno",
-            "poetry",
-            "pipenv",
-            "conda",
-            "pnpm",
-            "yarn",
-            "npm",
-            "cargo",
-            "composer",
-            "busybox",
-            "toybox",
-            "builtin",
-            "command",
-            "exec",
+            "env", "sudo", "doas", "xargs", "timeout", "nohup", "setsid", "nice",
+            "ionice", "chrt", "taskset", "stdbuf", "chroot", "nsenter", "unshare",
+            "pkexec", "uv", "pipx", "bun", "bunx", "npx", "deno", "poetry",
+            "pipenv", "conda", "pnpm", "yarn", "npm", "cargo", "composer",
+            "busybox", "toybox", "builtin", "command", "exec",
         }
 
-        def _get_effective_command(
-            words: list[str],
-            interp_list: set[str] = interpreters,
-            wrap_list: set[str] = wrappers,
-        ) -> str:
+        def _get_effective_command(words: List[str]) -> str:
             i = 0
             while i < len(words):
                 token = words[i].strip(" \t\n\r\"'()$&;")
@@ -788,16 +637,7 @@ def _validate_shell_command(cmd_str: str) -> None:
                     continue
 
                 if token.startswith("-"):
-                    if token in (
-                        "-s",
-                        "--signal",
-                        "-k",
-                        "--kill-after",
-                        "-n",
-                        "--adjustment",
-                        "-c",
-                        "-p",
-                    ):
+                    if token in ("-s", "--signal", "-k", "--kill-after", "-n", "--adjustment", "-c", "-p"):
                         i += 2
                     else:
                         i += 1
@@ -805,12 +645,12 @@ def _validate_shell_command(cmd_str: str) -> None:
 
                 basename = os.path.basename(token)
 
-                for interp in interp_list:
+                for interp in interpreters:
                     pattern = rf"^{re.escape(interp)}(?:[0-9]+(?:\.[0-9]+)*)?$"
                     if re.match(pattern, basename):
                         return token
 
-                if basename in wrap_list:
+                if basename in wrappers:
                     i += 1
                     if basename == "timeout":
                         while i < len(words) and words[i].startswith("-"):
@@ -834,11 +674,7 @@ def _validate_shell_command(cmd_str: str) -> None:
 
         if parts:
             effective_outer = _get_effective_command(parts)
-            outer_cmd = (
-                os.path.basename(effective_outer.strip(" \t\n\r\"'()$&;"))
-                if effective_outer
-                else ""
-            )
+            outer_cmd = os.path.basename(effective_outer.strip(" \t\n\r\"'()$&;")) if effective_outer else ""
             is_outer_interp = any(
                 re.match(rf"^{re.escape(interp)}(?:[0-9]+(?:\.[0-9]+)*)?$", outer_cmd)
                 for interp in interpreters
@@ -852,14 +688,15 @@ def _validate_shell_command(cmd_str: str) -> None:
                     "to prevent command execution bypass."
                 )
 
-            has_heredoc_or_herestring = any(re.search(r"<<<?", p) for p in parts) or bool(
-                re.search(r"<<<?", cmd_str_stripped)
-            )
+            has_heredoc_or_herestring = any(
+                re.search(r"<<<?", p) for p in parts
+            ) or bool(re.search(r"<<<?", cmd_str_stripped))
             if is_outer_interp and has_heredoc_or_herestring:
                 raise PermissionError(
                     f"Interpreter {effective_outer!r} with heredoc/herestring redirection is prohibited "
                     "to prevent command execution bypass."
                 )
+
         proc_matches = re.findall(r"[<>]\s*\(([^)]+)\)", cmd_str_stripped)
         for proc_inner in proc_matches:
             proc_inner_clean = proc_inner.strip()
@@ -882,7 +719,7 @@ def _validate_shell_command(cmd_str: str) -> None:
         # 3. Validate paths for each subcommand
         try:
             parts = shlex.split(cmd_str_stripped)
-        except ValueError:
+        except ValueError as exc:
             parts = cmd_str_stripped.split()
 
         for part in parts:
@@ -892,14 +729,12 @@ def _validate_shell_command(cmd_str: str) -> None:
 class WorkflowExecutor:
     """Asynchronous workflow execution engine."""
 
-    def __init__(self, storage_dir: Path | None = None, max_workers: int = 4):
+    def __init__(self, storage_dir: Optional[Path] = None, max_workers: int = 4):
         """Initialize WorkflowExecutor with optional custom history store directory."""
         self.store = RunHistoryStore(storage_dir)
         self.max_workers = max_workers
 
-    async def _execute_action(
-        self, action: str, params: dict[str, Any], step_id: str
-    ) -> dict[str, Any]:
+    async def _execute_action(self, action: str, params: Dict[str, Any], step_id: str) -> Dict[str, Any]:
         """Dispatch step action to built-in action handlers."""
         act = (action or "").lower().strip()
 
@@ -909,24 +744,38 @@ class WorkflowExecutor:
         elif act in ("shell", "command", "bash", "sh"):
             cmd = params.get("cmd") or params.get("command") or params.get("script") or ""
             if not cmd:
-                raise ValueError(
-                    f"Step '{step_id}' action '{action}' missing 'cmd' or 'command' parameter."
-                )
+                raise ValueError(f"Step '{step_id}' action '{action}' missing 'cmd' or 'command' parameter.")
 
             _validate_shell_command(str(cmd))
 
-            proc = await asyncio.create_subprocess_shell(
-                str(cmd),
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-            )
+            cmd_str = str(cmd)
+            proc = None
+            has_shell_operators = any(op in cmd_str for op in ("<", ">", "|", "&", ";", "\n", "\r"))
+            if not has_shell_operators:
+                try:
+                    cmd_args = shlex.split(cmd_str)
+                    if cmd_args:
+                        proc = await asyncio.create_subprocess_exec(
+                            *cmd_args,
+                            stdout=asyncio.subprocess.PIPE,
+                            stderr=asyncio.subprocess.PIPE,
+                        )
+                except (ValueError, FileNotFoundError, PermissionError):
+                    proc = None
+
+            if proc is None:
+                proc = await asyncio.create_subprocess_exec(
+                    "sh",
+                    "-c",
+                    cmd_str,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE,
+                )
             stdout_b, stderr_b = await proc.communicate()
             exit_code = proc.returncode or 0
 
             if exit_code != 0 and params.get("check", False):
-                raise RuntimeError(
-                    f"Command '{cmd}' failed with exit code {exit_code}: {stderr_b.decode().strip()}"
-                )
+                raise RuntimeError(f"Command '{cmd}' failed with exit code {exit_code}: {stderr_b.decode().strip()}")
 
             return {
                 "stdout": stdout_b.decode(errors="replace").strip(),
@@ -970,7 +819,11 @@ class WorkflowExecutor:
                 u = params.get("user_result")
                 t = params.get("tag_result")
                 return {
-                    "summary": {"user": u, "tags": t, "count": len(t) if isinstance(t, list) else 0}
+                    "summary": {
+                        "user": u,
+                        "tags": t,
+                        "count": len(t) if isinstance(t, list) else 0
+                    }
                 }
             return dict(params)
 
@@ -1009,7 +862,10 @@ class WorkflowExecutor:
             normalized_code = unicodedata.normalize("NFKC", code)
             try:
                 tree = ast.parse(normalized_code)
-                for node in ast.walk(tree):
+            except (SyntaxError, TypeError, ValueError) as exc:
+                raise SyntaxError(f"Invalid syntax in Python code block: {exc}") from exc
+
+            for node in ast.walk(tree):
                     if isinstance(node, ast.Attribute):
                         if node.attr.startswith("__") and node.attr.endswith("__"):
                             raise PermissionError(f"Access to dunder attribute '{node.attr}' is prohibited.")
@@ -1040,11 +896,7 @@ class WorkflowExecutor:
                     elif isinstance(node, ast.Name):
                         if node.id.startswith("__") and node.id.endswith("__"):
                             raise PermissionError(f"Access to dunder name '{node.id}' is prohibited.")
-            except (SyntaxError, TypeError, ValueError) as exc:
-                if isinstance(exc, PermissionError):
-                    raise
-                # Syntax errors will be caught later when executing
-                pass
+
 
             # Secure execution context: remove direct access to dangerous os/sys modules
             # and restrict __builtins__ to prevent arbitrary file reading, execution, or
@@ -1065,30 +917,11 @@ class WorkflowExecutor:
             #     ..................................... type, object, super, property,
             #                                           classmethod, staticmethod
             dangerous_builtins = {
-                "open",
-                "__import__",
-                "eval",
-                "exec",
-                "compile",
-                "exit",
-                "quit",
-                "input",
-                "help",
-                "breakpoint",
-                "globals",
-                "locals",
-                "vars",
-                "dir",
-                "getattr",
-                "setattr",
-                "delattr",
-                "hasattr",
-                "type",
-                "object",
-                "super",
-                "property",
-                "classmethod",
-                "staticmethod",
+                "open", "__import__", "eval", "exec", "compile",
+                "exit", "quit", "input", "help", "breakpoint",
+                "globals", "locals", "vars", "dir",
+                "getattr", "setattr", "delattr", "hasattr",
+                "type", "object", "super", "property", "classmethod", "staticmethod",
             }
             if isinstance(__builtins__, dict):
                 builtins_items = list(__builtins__.items())
@@ -1116,26 +949,27 @@ class WorkflowExecutor:
             _assert_no_modules(eval_globals, "sandbox globals")
             _assert_no_modules(eval_locals, "step params")
 
-            try:
-                # Try evaluating as expression first. Execute the SAME
-                # normalized source the AST validator inspected above — never
-                # the raw ``code`` — so validation and execution cannot diverge.
-                res = eval(normalized_code, eval_globals, eval_locals)  # nosec B307
-                return {"result": res, "output": res}
-            except SyntaxError:
-                # Execute as statement block with strict AST statement node validation.
-                allowed_stmts = (ast.Assign, ast.AugAssign, ast.AnnAssign, ast.Expr, ast.Pass)
-                stmt_tree = ast.parse(normalized_code, mode="exec")
-                for node in ast.walk(stmt_tree):
-                    if isinstance(node, ast.stmt) and not isinstance(node, allowed_stmts):
-                        raise PermissionError(
-                            f"Statement type '{type(node).__name__}' is prohibited in python sandbox."
-                        )
 
-                compiled = compile(stmt_tree, filename="<sandbox>", mode="exec")
-                exec(compiled, eval_globals, eval_locals)  # nosec B102
-                # Execute as statement block
-                exec(normalized_code, eval_globals, eval_locals)  # nosec B102
+            # Deterministically determine whether code is a single expression or a statement block
+            is_expression = len(tree.body) == 1 and isinstance(tree.body[0], ast.Expr)
+
+            if is_expression:
+                expr_ast = ast.Expression(body=tree.body[0].value)
+                ast.fix_missing_locations(expr_ast)
+                compiled_code = compile(expr_ast, filename="<python_sandbox>", mode="eval")
+                res = eval(compiled_code, eval_globals, eval_locals)  # nosec B307
+                return {"result": res, "output": res}
+            else:
+                allowed_stmt_nodes = (ast.Assign, ast.AugAssign, ast.AnnAssign, ast.Expr, ast.Pass)
+                for stmt in tree.body:
+                    if not isinstance(stmt, allowed_stmt_nodes):
+                        stmt_type = type(stmt).__name__
+                        raise PermissionError(
+                            f"Statement type '{stmt_type}' is prohibited in python sandbox statement blocks."
+                        )
+                ast.fix_missing_locations(tree)
+                compiled_code = compile(tree, filename="<python_sandbox>", mode="exec")
+                exec(compiled_code, eval_globals, eval_locals)  # nosec B102
                 out_locals = {k: v for k, v in eval_locals.items() if k not in params and not k.startswith("_")}
                 return out_locals if out_locals else {"status": "success"}
 
@@ -1172,7 +1006,6 @@ class WorkflowExecutor:
             opener = urllib.request.build_opener(SafeRedirectHandler)
 
             loop = asyncio.get_event_loop()
-
             def _fetch():
                 with opener.open(req, timeout=params.get("timeout", 10)) as resp:
                     body = resp.read().decode("utf-8", errors="replace")
@@ -1222,8 +1055,8 @@ class WorkflowExecutor:
     async def execute_workflow(
         self,
         workflow: WorkflowDefinition,
-        run_id: str | None = None,
-        status_callback: Callable[[str, StepResult], None] | None = None,
+        run_id: Optional[str] = None,
+        status_callback: Optional[Callable[[str, StepResult], None]] = None,
     ) -> RunHistory:
         """Execute a WorkflowDefinition asynchronously."""
         # 1. Pre-flight DAG validation
@@ -1245,27 +1078,26 @@ class WorkflowExecutor:
         self.store.save_run_history(history)
 
         state_ctx = StateContext()
-        failed_step_ids: set[str] = set()
-        skipped_step_ids: set[str] = set()
+        failed_step_ids: Set[str] = set()
+        skipped_step_ids: Set[str] = set()
 
         # Build topological execution batches
         batches = build_topological_batches(workflow)
+        step_dict = {s.id: s for s in workflow.steps}
 
         for batch in batches:
             # Filter out skipped steps whose upstream dependencies failed
-            runnable_steps: list[StepDefinition] = []
+            runnable_steps: List[StepDefinition] = []
             for step in batch:
                 # Check if any dependency failed or was skipped
-                has_failed_dep = any(
-                    dep in failed_step_ids or dep in skipped_step_ids for dep in step.depends_on
-                )
+                has_failed_dep = any(dep in failed_step_ids or dep in skipped_step_ids for dep in step.depends_on)
                 if has_failed_dep:
                     skipped_step_ids.add(step.id)
                     res = StepResult(
                         step_id=step.id,
                         status=StepStatus.SKIPPED,
                         output={},
-                        error="Skipped due to upstream step failure.",
+                        error=f"Skipped due to upstream step failure.",
                         attempts=0,
                         start_time=datetime.now().isoformat(),
                         end_time=datetime.now().isoformat(),
@@ -1283,7 +1115,7 @@ class WorkflowExecutor:
             async def _run_single_step(step: StepDefinition) -> StepResult:
                 step_start = datetime.now().isoformat()
                 max_attempts = max(1, (step.retry or 0) + 1)
-                last_error: str | None = None
+                last_error: Optional[str] = None
 
                 for attempt in range(1, max_attempts + 1):
                     try:
@@ -1319,7 +1151,7 @@ class WorkflowExecutor:
                 )
 
             # Execute batch tasks concurrently
-            batch_results: list[StepResult] = await asyncio.gather(
+            batch_results: List[StepResult] = await asyncio.gather(
                 *[_run_single_step(step) for step in runnable_steps]
             )
 

@@ -2,13 +2,10 @@ import argparse
 import os
 import sys
 from concurrent.futures import ThreadPoolExecutor
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-
-def _read_close_series(file: str) -> pd.Series:
-    df = pd.read_csv(file, index_col='Date', parse_dates=True)
-    return df['Close']
 
 
 def analyze_portfolio(
@@ -49,10 +46,6 @@ def analyze_portfolio(
             results = list(executor.map(_read_stock_csv, zip(files, tickers, strict=False)))
 
         portfolio_df = pd.DataFrame({ticker: series for ticker, series in results})
-        with ThreadPoolExecutor() as executor:
-            series_list = list(executor.map(_read_close_series, files))
-
-        portfolio_df = pd.DataFrame({ticker: series for ticker, series in zip(tickers, series_list)})
 
         # --- 3. Calculate Portfolio Performance ---
         # Normalize prices to see growth from day 1

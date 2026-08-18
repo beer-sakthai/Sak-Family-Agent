@@ -15,11 +15,6 @@ def analyze_portfolio(
     output_plot: str,
     output_csv: str | None = None,
 ):
-def _read_close_series(file: str) -> pd.Series:
-    df = pd.read_csv(file, index_col='Date', parse_dates=True)
-    return df['Close']
-
-def analyze_portfolio(files: list[str], tickers: list[str], weights: list[float], output_plot: str, output_csv: str | None = None):
     """
     Analyzes the performance of a portfolio constructed from multiple stock CSVs.
 
@@ -51,10 +46,6 @@ def analyze_portfolio(files: list[str], tickers: list[str], weights: list[float]
             results = list(executor.map(_read_stock_csv, zip(files, tickers, strict=False)))
 
         portfolio_df = pd.DataFrame({ticker: series for ticker, series in results})
-        with ThreadPoolExecutor() as executor:
-            series_list = list(executor.map(_read_close_series, files))
-
-        portfolio_df = pd.DataFrame({ticker: series for ticker, series in zip(tickers, series_list)})
 
         # --- 3. Calculate Portfolio Performance ---
         # Normalize prices to see growth from day 1

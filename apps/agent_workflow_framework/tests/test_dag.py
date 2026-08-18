@@ -5,22 +5,22 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from agent_workflow.dag import build_topological_batches, validate_workflow_dag
 from agent_workflow.models import (
-    RunHistory,
+    StepStatus,
     RunStatus,
     StepDefinition,
-    StepResult,
-    StepStatus,
     WorkflowDefinition,
+    StepResult,
+    RunHistory,
 )
 from agent_workflow.parser import (
     WorkflowParseError,
     parse_workflow_dict,
-    parse_workflow_file,
-    parse_workflow_json,
     parse_workflow_yaml,
+    parse_workflow_json,
+    parse_workflow_file,
 )
+from agent_workflow.dag import validate_workflow_dag, build_topological_batches
 
 
 class TestModels(unittest.TestCase):
@@ -134,9 +134,12 @@ steps:
         self.assertEqual(wf.steps[1].retry, 3)
 
     def test_parse_valid_json(self):
-        json_str = json.dumps(
-            {"name": "json_wf", "steps": [{"id": "s1", "action": "echo", "params": {"x": 1}}]}
-        )
+        json_str = json.dumps({
+            "name": "json_wf",
+            "steps": [
+                {"id": "s1", "action": "echo", "params": {"x": 1}}
+            ]
+        })
         wf = parse_workflow_json(json_str)
         self.assertEqual(wf.name, "json_wf")
         self.assertEqual(len(wf.steps), 1)
@@ -164,18 +167,17 @@ steps:
 
         # Unknown attribute
         with self.assertRaises(WorkflowParseError):
-            parse_workflow_dict(
-                {"name": "test", "steps": [{"id": "s1", "action": "echo"}], "extra": 123}
-            )
+            parse_workflow_dict({"name": "test", "steps": [{"id": "s1", "action": "echo"}], "extra": 123})
 
         # Duplicate step ID
         with self.assertRaises(WorkflowParseError):
-            parse_workflow_dict(
-                {
-                    "name": "test",
-                    "steps": [{"id": "s1", "action": "echo"}, {"id": "s1", "action": "echo"}],
-                }
-            )
+            parse_workflow_dict({
+                "name": "test",
+                "steps": [
+                    {"id": "s1", "action": "echo"},
+                    {"id": "s1", "action": "echo"}
+                ]
+            })
 
         # Non-existent file
         with self.assertRaises(WorkflowParseError):
