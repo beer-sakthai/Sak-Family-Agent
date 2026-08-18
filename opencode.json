@@ -1,0 +1,91 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "instructions": [
+    "AGENTS.md",
+    "CLAUDE.md",
+    "docs/OPERATING_CONTRACT.md"
+  ],
+  "permission": {
+    "edit": "allow",
+    "bash": "ask",
+    "webfetch": "allow"
+  },
+  "provider": {
+    "huggingface": {
+      "options": {
+        "baseURL": "https://router.huggingface.co/v1"
+      }
+    },
+    "ollama": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "Ollama (local)",
+      "options": {
+        "baseURL": "http://127.0.0.1:11434/v1"
+      },
+      "models": {
+        "sakthai": {
+          "name": "sakthai (local Ollama)"
+        }
+      }
+    }
+  },
+  "mcp": {
+    "sakthai": {
+      "type": "local",
+      "command": ["uv", "run", "--project", ".", "sakthai", "mcp"],
+      "enabled": true
+    },
+    "huggingface": {
+      "type": "local",
+      "command": ["npx", "-y", "@huggingface/mcp-server"],
+      "enabled": false
+    }
+  },
+  "agent": {
+    "sakthai": {
+      "description": "Main Lead of the House and Master of Hugging Face. Route architecture, memory-subsystem, and cross-persona decisions here.",
+      "mode": "all",
+      "model": "huggingface/gemini-3.1-flash-lite",
+      "prompt": "{file:./personas/sakthai/SOUL.md}"
+    },
+    "sakking": {
+      "description": "General assistant and runner (Deputy 1). Broad implementation work and coding tasks.",
+      "mode": "all",
+      "model": "huggingface/Qwen/Qwen3-Coder-30B-A3B-Instruct",
+      "prompt": "{file:./personas/sakking/SOUL.md}"
+    },
+    "saksee": {
+      "description": "Web and browser specialist (Deputy 3). Front-end, dashboard, and browser-driven work.",
+      "mode": "all",
+      "model": "huggingface/gemini-3.1-flash-lite",
+      "prompt": "{file:./personas/saksee/SOUL.md}"
+    },
+    "saksit": {
+      "description": "Social and content specialist. Docs, copy, and outward-facing content.",
+      "mode": "all",
+      "model": "huggingface/DeepSeek-V4-Flash",
+      "prompt": "{file:./personas/saksit/SOUL.md}"
+    },
+    "sakjules": {
+      "description": "Master of GitHub, CI/CD and automation. Workflows, pipelines, and release plumbing.",
+      "mode": "all",
+      "model": "huggingface/gemini-2.5-flash-lite",
+      "prompt": "{file:./personas/sakjules/SOUL.md}"
+    },
+    "saktan": {
+      "description": "Keeper of operations and daily flow. Runs fully local against Ollama, no API key required.",
+      "mode": "all",
+      "model": "ollama/sakthai",
+      "prompt": "{file:./personas/saktan/SOUL.md}"
+    },
+    "guardrail-review": {
+      "description": "Read-only reviewer for changes under agent/guardrails*.py and agent/security_hardening.py. Checks that every persona copy stays byte-identical and that new tests pin result.reason, not just the DENY.",
+      "mode": "subagent",
+      "prompt": "{file:./personas/sakthai/SOUL.md}",
+      "permission": {
+        "edit": "deny",
+        "bash": "ask"
+      }
+    }
+  }
+}

@@ -33,6 +33,7 @@ never duplicate content across files.
 
 | Area | Status |
 |---|---|
+| **Gemini CLI + OpenCode full setup** — first-class config for both external coding agents alongside Claude Code: `GEMINI.md` + `.gemini/settings.json`, `opencode.json` with all six personas as agents, the `sakthai mcp` server wired into both, `docs/multi-agent-cli-setup.md`, and `tests/test_agent_cli_configs.py` pinning the invariants (21 tests green) | [x] 2026-08-18 |
 | Repository hygiene — persona SOULs | ✅ All 6 personas done (2026-07-02) |
 | Business strategy — market analysis | ✅ Done (2026-07-02) |
 | MVP definition | ✅ Done (2026-07-02) — ServiceQuoteBot |
