@@ -162,6 +162,7 @@ def _is_sensitive_read_target(resolved: Path) -> bool:
 def _resolve_and_validate_path(path_str: str) -> Path:
     """Resolve a path and ensure it is a file within the allowed roots."""
     if re.search(r"[\x00-\x1f\x7f]", path_str):
+    if any(ord(c) < 32 or ord(c) == 127 for c in path_str):
         raise ValueError("Control characters are not allowed in file paths")
     candidate = Path(path_str).expanduser()
     try:

@@ -196,6 +196,7 @@ def _validate_filepath(filepath: Any) -> Path:
 
     import re
     if re.search(r"[\x00-\x1f\x7f]", path_str):
+    if any(ord(c) < 32 or ord(c) == 127 for c in path_str):
         raise ValueError("Control characters are not allowed in file paths")
 
     # Block path traversal segments like '..' or leading '~'. Backslashes are
@@ -473,8 +474,8 @@ def _validate_shell_command(cmd_str: str) -> None:
             if not sub:
                 continue
             # Strip curl-style upload prefix if present
-            if sub.startswith("@") and len(sub) > 1:
-                sub = sub[1:]
+            if sub.startswith("@"):
+                sub = sub.lstrip("@")
 
             try:
                 _validate_filepath(sub)
