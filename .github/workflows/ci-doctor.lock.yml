@@ -65,7 +65,6 @@ on:
       - CI
       - Continuous Security
       - Pylint
-      - CodeQL
 
 permissions: {}
 
