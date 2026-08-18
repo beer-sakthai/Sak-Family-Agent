@@ -64,6 +64,12 @@ describe("resolvePersonaSlug", () => {
     expect(resolvePersonaSlug({ persona: "saktan_agent_bot" })).toBe("saktan");
   });
 
+  it("prioritizes longer matching persona slugs over shorter ones by specificity", () => {
+    // Verifies longest-first BY_SPECIFICITY order when partial labels match multiple slugs
+    expect(resolvePersonaSlug({ persona: "saktan_sakthai_runner" })).toBe("sakthai");
+    expect(resolvePersonaSlug({ persona: "sakjules_saksee" })).toBe("sakjules");
+  });
+
   it("falls back to the agent field", () => {
     expect(resolvePersonaSlug({ agent: "sakking" })).toBe("sakking");
   });
