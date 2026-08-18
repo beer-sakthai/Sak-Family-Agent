@@ -2,13 +2,28 @@
 """Test the 1.5B merged model on HF Inference API and record results."""
 import os, json, time, sys
 
-TOKEN_PATH = "/opt/data/profiles/sakthai/home/.cache/huggingface/token"
-with open(TOKEN_PATH) as f:
-    hf_token = f.read().strip()
+def _get_hf_token() -> str | None:
+    token = os.environ.get("HF_TOKEN") or os.environ.get("HUGGING_FACE_HUB_TOKEN")
+    if token and token.strip():
+        return token.strip()
+    token_path = os.environ.get("HF_TOKEN_PATH") or os.path.expanduser("~/.cache/huggingface/token")
+    if os.path.exists(token_path):
+        try:
+            with open(token_path) as f:
+                content = f.read().strip()
+                if content:
+                    return content
+        except OSError:
+            pass
+    return None
 
-os.environ["HF_TOKEN"] = hf_token
+hf_token = _get_hf_token()
+if hf_token:
+    os.environ["HF_TOKEN"] = hf_token
+
 from huggingface_hub import InferenceClient, login, HfApi
-login(token=hf_token)
+if hf_token:
+    login(token=hf_token)
 
 MODEL = "Nanthasit/sakthai-context-1.5b-merged"
 

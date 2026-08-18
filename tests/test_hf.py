@@ -142,3 +142,61 @@ def test_hf_download_blocks_path_traversal(tmp_path: Path, monkeypatch: pytest.M
     # Another one trying to target the root
     with pytest.raises(ValueError, match="path traversal detected"):
         hf_download("/etc/passwd")
+
+
+def _load_workbench_get_hf_token(filepath: str) -> Any:
+    import ast
+    with open(filepath) as f:
+        tree = ast.parse(f.read())
+    import_nodes = [n for n in tree.body if isinstance(n, ast.Import)]
+    func_node = [n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name == "_get_hf_token"][0]
+    module_node = ast.Module(body=import_nodes + [func_node], type_ignores=[])
+    code = compile(module_node, filename=filepath, mode="exec")
+    ns: dict[str, Any] = {}
+    exec(code, ns)
+    return ns["_get_hf_token"]
+
+
+@pytest.mark.parametrize(
+    "script_path",
+    [
+        "scripts/workbench/workbench-1.5b-api.py",
+        "sakthai-chat-cli/scripts/workbench/workbench-1.5b-api.py",
+    ],
+)
+def test_workbench_get_hf_token_resolution(
+    script_path: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    get_token = _load_workbench_get_hf_token(script_path)
+
+    # 1. HF_TOKEN env var
+    monkeypatch.setenv("HF_TOKEN", "token_from_hf_token_env")
+    monkeypatch.delenv("HUGGING_FACE_HUB_TOKEN", raising=False)
+    monkeypatch.delenv("HF_TOKEN_PATH", raising=False)
+    assert get_token() == "token_from_hf_token_env"
+
+    # 2. HUGGING_FACE_HUB_TOKEN env var
+    monkeypatch.delenv("HF_TOKEN", raising=False)
+    monkeypatch.setenv("HUGGING_FACE_HUB_TOKEN", "token_from_hf_hub_token_env")
+    assert get_token() == "token_from_hf_hub_token_env"
+
+    # 3. HF_TOKEN_PATH env var
+    monkeypatch.delenv("HUGGING_FACE_HUB_TOKEN", raising=False)
+    custom_token_file = tmp_path / "custom_token"
+    custom_token_file.write_text("token_from_custom_path")
+    monkeypatch.setenv("HF_TOKEN_PATH", str(custom_token_file))
+    assert get_token() == "token_from_custom_path"
+
+    # 4. ~/.cache/huggingface/token default path
+    monkeypatch.delenv("HF_TOKEN_PATH", raising=False)
+    fake_home = tmp_path / "home"
+    hf_cache_dir = fake_home / ".cache" / "huggingface"
+    hf_cache_dir.mkdir(parents=True)
+    default_token_file = hf_cache_dir / "token"
+    default_token_file.write_text("token_from_default_home_path")
+    monkeypatch.setenv("HOME", str(fake_home))
+    assert get_token() == "token_from_default_home_path"
+
+    # 5. No token anywhere
+    default_token_file.unlink()
+    assert get_token() is None
