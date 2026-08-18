@@ -222,7 +222,7 @@ def _is_sensitive_path(path: str, allow_local: bool = False) -> bool:
 
     # Strip curl-style file upload prefix if present at start.
     if path.startswith("@") and len(path) > 1:
-        path = path.lstrip("@")
+        path = path[1:]
 
     # Check for path traversal or home-relative paths.
     if ".." in path or path.startswith("~"):
@@ -422,128 +422,118 @@ def _check_container_tokens(parts: list[str]) -> GuardrailResult:
     return GuardrailResult(GuardrailAction.ALLOW)
 
 
-def _check_make_tokens(
+def _check_destructive_tokens(
     parts: list[str],
-    i: int,
-    context_sensitive: bool,
-    checked_makefiles: set[str] | None,
-    current_make_dir: str,
-) -> GuardrailResult | None:
-    """Check 'make' commands by inspecting directory, file arguments, and recipes."""
-    part = parts[i]
-    if not _is_binary(part, "make"):
-        return None
+    context_sensitive: bool = False,
+    checked_makefiles: set[str] | None = None,
+    current_make_dir: str = ".",
+) -> GuardrailResult:
+    """Recursively check tokens for destructive commands.
 
-    make_dir = current_make_dir
-    makefile_path = None
+    If ``context_sensitive`` is True, discovery placeholders like '{}' and '+'
+    are treated as sensitive paths (used by find -exec to target the discovered
+    files).
+    """
+    if not parts:
+        return GuardrailResult(GuardrailAction.ALLOW)
 
-    idx = i + 1
-    while idx < len(parts):
-        arg = parts[idx]
-        if arg in ("-C", "--directory") and idx + 1 < len(parts):
-            make_dir = parts[idx + 1]
-            idx += 2
-        elif arg.startswith("-C"):
-            make_dir = arg[2:]
-            idx += 1
-        elif arg in ("-f", "--file", "--makefile") and idx + 1 < len(parts):
-            makefile_path = parts[idx + 1]
-            idx += 2
-        elif arg.startswith("-f"):
-            makefile_path = arg[2:]
-            idx += 1
-        else:
-            idx += 1
-
-    if _is_sensitive_path(make_dir, allow_local=True) and not _is_local_make_dir(make_dir):
-        return GuardrailResult(
-            GuardrailAction.DENY,
-            reason=f"Potentially dangerous 'make' command in sensitive directory {make_dir!r} blocked.",
-        )
-
-    if not makefile_path:
-        for name in ("GNUmakefile", "makefile", "Makefile"):
-            candidate = os.path.join(make_dir, name)
-            if os.path.isfile(candidate):
-                makefile_path = candidate
-                break
-    else:
-        if not os.path.isabs(makefile_path):
-            makefile_path = os.path.join(make_dir, makefile_path)
-
-    if makefile_path:
-        if checked_makefiles is None:
-            checked_makefiles = set()
-
-        abs_makefile_path = os.path.abspath(makefile_path)
-        if abs_makefile_path in checked_makefiles:
-            return None
-
-        if _is_sensitive_path(makefile_path) and not _is_local_make_dir(makefile_path):
-            return GuardrailResult(
-                GuardrailAction.DENY,
-                reason=f"Potentially dangerous 'make' command on sensitive file {makefile_path!r} blocked.",
-            )
-        if os.path.isfile(makefile_path):
-            new_checked = checked_makefiles | {abs_makefile_path}
-            try:
-                with open(makefile_path, encoding="utf-8", errors="ignore") as f:
-                    content = f.read()
-
-                for match in re.finditer(_SENSITIVE_SCRIPT_PATH_RE, content):
-                    candidate = match.group(0)
-                    if _is_sensitive_path(candidate):
-                        return GuardrailResult(
-                            GuardrailAction.DENY,
-                            reason=f"Potentially dangerous 'make' command loading makefile with sensitive path {candidate!r} blocked.",
-                        )
-
-                for line in content.splitlines():
-                    if line.startswith("\t"):
-                        recipe = line.lstrip("\t").strip()
-                        while recipe and recipe[0] in ("@", "-", "+"):
-                            recipe = recipe[1:].strip()
-                        if recipe:
-                            try:
-                                recipe_parts = shlex.split(recipe)
-                                res = _check_destructive_tokens(
-                                    recipe_parts,
-                                    context_sensitive=context_sensitive,
-                                    checked_makefiles=new_checked,
-                                    current_make_dir=make_dir,
-                                )
-                                if res.action == GuardrailAction.DENY:
-                                    return GuardrailResult(
-                                        GuardrailAction.DENY,
-                                        reason=f"Potentially destructive command in makefile recipe blocked: {res.reason}",
-                                    )
-                            except ValueError:
-                                return GuardrailResult(
-                                    GuardrailAction.DENY,
-                                    reason="Malformed shell command in makefile recipe.",
-                                )
-            except Exception:  # nosec B110 — safe swallow of makefile parsing/reading errors
-                pass
-
-    return None
-
-
-def _check_nested_command_tokens(
-    parts: list[str],
-    context_sensitive: bool,
-    checked_makefiles: set[str] | None,
-    current_make_dir: str,
-) -> GuardrailResult | None:
-    """Check nested commands in makefiles, shell flags (-c), eval/exec, and interpreter flags (-c/-e)."""
+    # 1. Handle nested commands in wrappers (recursion)
     for i, part in enumerate(parts):
         # 1d. make command scanning Makefile recipes
-        make_res = _check_make_tokens(
-            parts, i, context_sensitive, checked_makefiles, current_make_dir
-        )
-        if make_res and make_res.action == GuardrailAction.DENY:
-            return make_res
+        if _is_binary(part, "make"):
+            make_dir = current_make_dir
+            makefile_path = None
+
+            idx = i + 1
+            while idx < len(parts):
+                arg = parts[idx]
+                if arg in ("-C", "--directory") and idx + 1 < len(parts):
+                    make_dir = parts[idx + 1]
+                    idx += 2
+                elif arg.startswith("-C"):
+                    make_dir = arg[2:]
+                    idx += 1
+                elif arg in ("-f", "--file", "--makefile") and idx + 1 < len(parts):
+                    makefile_path = parts[idx + 1]
+                    idx += 2
+                elif arg.startswith("-f"):
+                    makefile_path = arg[2:]
+                    idx += 1
+                else:
+                    idx += 1
+
+            if _is_sensitive_path(make_dir, allow_local=True) and not _is_local_make_dir(make_dir):
+                return GuardrailResult(
+                    GuardrailAction.DENY,
+                    reason=f"Potentially dangerous 'make' command in sensitive directory {make_dir!r} blocked.",
+                )
+
+            if not makefile_path:
+                for name in ("GNUmakefile", "makefile", "Makefile"):
+                    candidate = os.path.join(make_dir, name)
+                    if os.path.isfile(candidate):
+                        makefile_path = candidate
+                        break
+            else:
+                if not os.path.isabs(makefile_path):
+                    makefile_path = os.path.join(make_dir, makefile_path)
+
+            if makefile_path:
+                if checked_makefiles is None:
+                    checked_makefiles = set()
+
+                abs_makefile_path = os.path.abspath(makefile_path)
+                if abs_makefile_path in checked_makefiles:
+                    continue
+
+                if _is_sensitive_path(makefile_path) and not _is_local_make_dir(makefile_path):
+                    return GuardrailResult(
+                        GuardrailAction.DENY,
+                        reason=f"Potentially dangerous 'make' command on sensitive file {makefile_path!r} blocked.",
+                    )
+                if os.path.isfile(makefile_path):
+                    new_checked = checked_makefiles | {abs_makefile_path}
+                    try:
+                        with open(makefile_path, encoding="utf-8", errors="ignore") as f:
+                            content = f.read()
+
+                        for match in re.finditer(_SENSITIVE_SCRIPT_PATH_RE, content):
+                            candidate = match.group(0)
+                            if _is_sensitive_path(candidate):
+                                return GuardrailResult(
+                                    GuardrailAction.DENY,
+                                    reason=f"Potentially dangerous 'make' command loading makefile with sensitive path {candidate!r} blocked.",
+                                )
+
+                        for line in content.splitlines():
+                            if line.startswith("\t"):
+                                recipe = line.lstrip("\t").strip()
+                                while recipe and recipe[0] in ("@", "-", "+"):
+                                    recipe = recipe[1:].strip()
+                                if recipe:
+                                    try:
+                                        recipe_parts = shlex.split(recipe)
+                                        res = _check_destructive_tokens(
+                                            recipe_parts,
+                                            context_sensitive=context_sensitive,
+                                            checked_makefiles=new_checked,
+                                            current_make_dir=make_dir,
+                                        )
+                                        if res.action == GuardrailAction.DENY:
+                                            return GuardrailResult(
+                                                GuardrailAction.DENY,
+                                                reason=f"Potentially destructive command in makefile recipe blocked: {res.reason}",
+                                            )
+                                    except ValueError:
+                                        return GuardrailResult(
+                                            GuardrailAction.DENY,
+                                            reason="Malformed shell command in makefile recipe.",
+                                        )
+                    except Exception:  # nosec B110 — safe swallow of makefile parsing/reading errors
+                        pass
 
         # 1a. bash -c "..." or sh -c "..." (including combined flags like -xc)
+        # Search backwards for the shell binary to handle intermediate flags (e.g. bash -v -c).
         if (
             part.startswith("-")
             and not part.startswith("--")
@@ -579,6 +569,7 @@ def _check_nested_command_tokens(
         # 1b. eval "..." or exec "..."
         if _is_binary(part, ("eval", "exec")):
             rest = parts[i + 1 :]
+            # If the next token looks like a quoted command string, split it.
             if len(rest) == 1 and " " in rest[0]:
                 with contextlib.suppress(ValueError):
                     rest = shlex.split(rest[0])
@@ -591,7 +582,9 @@ def _check_nested_command_tokens(
             if res.action == GuardrailAction.DENY:
                 return res
 
-        # 1c. interpreter -c "script" or interpreter -e "script"
+        # 1c. interpreter -c "script" or interpreter -e "script" (including combined flags like -ic or -pe)
+        # python -c "..." or node -e "..."
+        # Search backwards for the interpreter binary to handle intermediate flags (e.g. python -v -c).
         if (
             part.startswith("-")
             and not part.startswith("--")
@@ -611,6 +604,9 @@ def _check_nested_command_tokens(
 
             if interp_idx != -1:
                 script = parts[i + 1]
+                # Scan script for absolute or home-relative paths (including traversal)
+                # or any known sensitive file/directory referenced relatively
+                # (.env, .git, .ssh, .aws, id_rsa, memory.db, ...).
                 for match in re.finditer(_SENSITIVE_SCRIPT_PATH_RE, script):
                     candidate = match.group(0)
                     if _is_sensitive_path(candidate):
@@ -620,14 +616,7 @@ def _check_nested_command_tokens(
                             reason=f"Potentially dangerous {binary_name!r} script targeting {candidate!r} blocked.",
                         )
 
-    return None
-
-
-def _check_destructive_and_exfil_binaries(
-    parts: list[str],
-    context_sensitive: bool,
-) -> GuardrailResult | None:
-    """Prevent destructive or exfiltration commands from targeting sensitive paths."""
+    # 2. Prevent destructive or dangerous commands on sensitive paths.
     destructive_binaries = (
         "rm",
         "rmdir",
@@ -793,6 +782,7 @@ def _check_destructive_and_exfil_binaries(
         "composer",
         "cargo",
     )
+    # Common interpreters where sensitive paths can be embedded in arguments.
     interpreters = (
         "python",
         "node",
@@ -835,9 +825,12 @@ def _check_destructive_and_exfil_binaries(
         if is_dest or is_exfil:
             binary_name = os.path.basename(part)
             is_interpreter = _is_binary(part, interpreters)
+            # Inspect tokens following the binary until a separator is hit.
             for subpart in parts[i + 1 :]:
                 if subpart in (";", "&&", "||", "|", "|&"):
                     break
+                # For destructive binaries, we don't allow targeting the current directory.
+                # For exfiltration binaries, we allow targeting the current directory.
                 allow_local = is_exfil
                 if _is_sensitive_path(subpart, allow_local=allow_local) or (
                     context_sensitive and subpart in ("{}", "+")
@@ -860,14 +853,8 @@ def _check_destructive_and_exfil_binaries(
                             GuardrailAction.DENY,
                             reason=f"Potentially dangerous '{binary_name}' command with sensitive path in arguments blocked.",
                         )
-    return None
 
-
-def _check_dd_tokens(
-    parts: list[str],
-    context_sensitive: bool,
-) -> GuardrailResult | None:
-    """Specialized protection for dd (input/output file)."""
+    # 3. Specialized protection for dd (input/output file).
     for i, part in enumerate(parts):
         if _is_binary(part, "dd"):
             for subpart in parts[i + 1 :]:
@@ -875,6 +862,8 @@ def _check_dd_tokens(
                     break
                 if subpart.startswith("of=") or subpart.startswith("if="):
                     val = subpart[3:]
+                    # of= targets are destructive; don't allow local path.
+                    # if= targets are potentially dangerous; allow local path.
                     allow_local = subpart.startswith("if=")
                     if _is_sensitive_path(val, allow_local=allow_local) or (
                         context_sensitive and val in ("{}", "+")
@@ -885,17 +874,16 @@ def _check_dd_tokens(
                             GuardrailAction.DENY,
                             reason=f"{op} {binary_name!r} on {val!r} blocked.",
                         )
-    return None
 
-
-def _check_redirection_tokens(
-    parts: list[str],
-    context_sensitive: bool,
-) -> GuardrailResult | None:
-    """Prevent shell redirections targeting sensitive paths."""
+    # 4. Prevent shell redirections targeting sensitive paths.
     for i, part in enumerate(parts):
+        # We look for redirection operators (>, >>, 1>, 2>, &>, >&, >|, <, etc.)
+        # Pattern: optional digit or '&', then '&>>', '>>', '>&', '>|', '<>', '<&', '>', or '<'
+        # Note: longer operators must come before shorter ones to match correctly.
         r_match = re.search(r"(?:[0-9]|&)?(?:&>>|>>|>&|>\||<>|<&|>|<)", part)
         if r_match:
+            # If the operator is at the end of the token or attached to its front,
+            # we need to find the target path.
             target = part[r_match.end() :]
             if not target and i + 1 < len(parts):
                 target = parts[i + 1]
@@ -907,14 +895,8 @@ def _check_redirection_tokens(
                     GuardrailAction.DENY,
                     reason=f"destructive redirection to {target!r} blocked.",
                 )
-    return None
 
-
-def _check_find_tokens(
-    parts: list[str],
-    context_sensitive: bool,
-) -> GuardrailResult | None:
-    """Specialized protection for find (discovery, -delete, -fprint)."""
+    # 5. Specialized protection for find (discovery, -delete, -fprint).
     find_idx = -1
     for i, part in enumerate(parts):
         if _is_binary(part, "find"):
@@ -949,6 +931,7 @@ def _check_find_tokens(
                     )
 
         # 5c. Block unauthorized discovery of sensitive system roots.
+        # find [path...] [expression]
         for part in after_find:
             if part in (";", "&&", "||", "|", "|&"):
                 break
@@ -959,23 +942,15 @@ def _check_find_tokens(
                     GuardrailAction.DENY,
                     reason=f"Potentially dangerous 'find' command on {part!r} blocked.",
                 )
-    return None
 
+    # 6. Specialized protection for container tools (docker, podman, kubectl).
+    container_result = _check_container_tokens(parts)
+    if container_result.action == GuardrailAction.DENY:
+        return container_result
 
-def _check_transparent_wrappers_and_find_exec(
-    parts: list[str],
-    context_sensitive: bool,
-    checked_makefiles: set[str] | None,
-    current_make_dir: str,
-) -> GuardrailResult | None:
-    """Handle transparent wrappers (sudo, doas, xargs, env, find -exec, timeout, etc.)."""
-    find_idx = -1
+    # 7. Handle wrappers that don't use -c (sudo, doas, xargs, env, find -exec, timeout, etc.)
     for i, part in enumerate(parts):
-        if _is_binary(part, "find"):
-            find_idx = i
-            break
-
-    for i, part in enumerate(parts):
+        # sudo command ... or doas command ... or xargs command ... or env [VAR=VAL] command ...
         transparent_wrappers = (
             "sudo",
             "doas",
@@ -1011,8 +986,11 @@ def _check_transparent_wrappers_and_find_exec(
             "toybox",
         )
         if _is_binary(part, transparent_wrappers):
+            # Most of these wrappers have flags. xargs and env are special.
+            # We skip tokens that are likely arguments to the wrapper's flags.
             start_idx = i + 1
 
+            # If the wrapper is uv, pipx, bun, deno, poetry, pipenv, conda, pnpm, yarn, npm, cargo, or composer, we want to look for subcommands.
             if _is_binary(
                 part,
                 (
@@ -1037,6 +1015,7 @@ def _check_transparent_wrappers_and_find_exec(
                         break
                 if run_idx == -1:
                     continue
+                # If bun eval or deno eval is found, recursively scan the script argument for sensitive paths
                 if (
                     parts[run_idx] == "eval"
                     and run_idx + 1 < len(parts)
@@ -1065,6 +1044,8 @@ def _check_transparent_wrappers_and_find_exec(
                     flag_name, flag_val = flag.split("=", 1)
 
                 start_idx += 1
+                # Skip the next token if this flag takes an argument.
+                # This is a heuristic for common wrappers.
                 if (
                     _is_binary(part, "timeout")
                     and flag_name in ("-s", "--signal", "-k", "--kill-after")
@@ -1175,10 +1156,12 @@ def _check_transparent_wrappers_and_find_exec(
                                 )
                         start_idx += 1
 
+            # env might have arguments like VAR=VAL before the command.
             if _is_binary(part, "env"):
                 while start_idx < len(parts) and "=" in parts[start_idx]:
                     start_idx += 1
 
+            # timeout has a duration argument that is NOT a flag.
             if (
                 _is_binary(part, "timeout")
                 and start_idx < len(parts)
@@ -1186,11 +1169,13 @@ def _check_transparent_wrappers_and_find_exec(
             ):
                 start_idx += 1
 
+            # chroot has the NEWROOT argument that is NOT a flag.
             if (
                 _is_binary(part, "chroot")
                 and start_idx < len(parts)
                 and not parts[start_idx].startswith("-")
             ):
+                # The NEWROOT itself might be sensitive (e.g. chroot /etc).
                 if _is_sensitive_path(parts[start_idx], allow_local=True):
                     return GuardrailResult(
                         GuardrailAction.DENY,
@@ -1206,11 +1191,13 @@ def _check_transparent_wrappers_and_find_exec(
             )
             if res.action == GuardrailAction.DENY:
                 return res
-
         # find ... -exec/ok command ...
         if part in ("-exec", "-execdir", "-ok", "-okdir") and any(
             _is_binary(p, "find") for p in parts[:i]
         ):
+            # We don't filter out {} and + here anymore because we want the
+            # recursive scanner to see them if they are being used destructively.
+            # We still stop at the terminator.
             exec_args: list[str] = []
             for subpart in parts[i + 1 :]:
                 if subpart in ("\\;", ";", "+"):
@@ -1219,14 +1206,16 @@ def _check_transparent_wrappers_and_find_exec(
                     break
                 exec_args.append(subpart)
 
+            # Heuristic: if find's target is sensitive, set context_sensitive.
             targets_sensitive = False
-            if find_idx != -1:
-                for p in parts[find_idx + 1 : i]:
-                    if p.startswith("-"):
-                        continue
-                    if _is_sensitive_path(p, allow_local=True):
-                        targets_sensitive = True
-                        break
+            # Search for find targets (tokens starting find's search) between find and -exec.
+            for p in parts[find_idx + 1 : i]:
+                if p.startswith("-"):
+                    continue
+                # For find's targets, we allow local path unless it's destructive.
+                if _is_sensitive_path(p, allow_local=True):
+                    targets_sensitive = True
+                    break
 
             res = _check_destructive_tokens(
                 exec_args,
@@ -1236,6 +1225,7 @@ def _check_transparent_wrappers_and_find_exec(
             )
             if res.action == GuardrailAction.DENY:
                 if targets_sensitive:
+                    # Specific reason for find-exec when target is sensitive.
                     binary_name = os.path.basename(part)
                     return GuardrailResult(
                         GuardrailAction.DENY,
@@ -1243,11 +1233,7 @@ def _check_transparent_wrappers_and_find_exec(
                     )
                 return res
 
-    return None
-
-
-def _check_pipeline_to_interpreter(parts: list[str]) -> GuardrailResult | None:
-    """Prevent pipeline-to-interpreter command execution bypasses (e.g. curl ... | sh)."""
+    # 8. Prevent pipeline-to-interpreter command execution bypasses (e.g. curl ... | sh)
     for i, part in enumerate(parts):
         if part in ("|", "|&"):
             for subpart in parts[i + 1 :]:
@@ -1286,67 +1272,6 @@ def _check_pipeline_to_interpreter(parts: list[str]) -> GuardrailResult | None:
                             "to prevent command injection bypass."
                         ),
                     )
-    return None
-
-
-def _check_destructive_tokens(
-    parts: list[str],
-    context_sensitive: bool = False,
-    checked_makefiles: set[str] | None = None,
-    current_make_dir: str = ".",
-) -> GuardrailResult:
-    """Recursively check tokens for destructive commands.
-
-    If ``context_sensitive`` is True, discovery placeholders like '{}' and '+'
-    are treated as sensitive paths (used by find -exec to target the discovered
-    files).
-    """
-    if not parts:
-        return GuardrailResult(GuardrailAction.ALLOW)
-
-    # 1. Handle nested commands in wrappers (make, shell flags, eval/exec, interpreters)
-    res = _check_nested_command_tokens(
-        parts, context_sensitive, checked_makefiles, current_make_dir
-    )
-    if res and res.action == GuardrailAction.DENY:
-        return res
-
-    # 2. Prevent destructive or dangerous commands on sensitive paths.
-    res = _check_destructive_and_exfil_binaries(parts, context_sensitive)
-    if res and res.action == GuardrailAction.DENY:
-        return res
-
-    # 3. Specialized protection for dd (input/output file).
-    res = _check_dd_tokens(parts, context_sensitive)
-    if res and res.action == GuardrailAction.DENY:
-        return res
-
-    # 4. Prevent shell redirections targeting sensitive paths.
-    res = _check_redirection_tokens(parts, context_sensitive)
-    if res and res.action == GuardrailAction.DENY:
-        return res
-
-    # 5. Specialized protection for find (discovery, -delete, -fprint).
-    res = _check_find_tokens(parts, context_sensitive)
-    if res and res.action == GuardrailAction.DENY:
-        return res
-
-    # 6. Specialized protection for container tools (docker, podman, kubectl).
-    container_result = _check_container_tokens(parts)
-    if container_result.action == GuardrailAction.DENY:
-        return container_result
-
-    # 7. Handle wrappers that don't use -c (sudo, doas, xargs, env, find -exec, timeout, etc.)
-    res = _check_transparent_wrappers_and_find_exec(
-        parts, context_sensitive, checked_makefiles, current_make_dir
-    )
-    if res and res.action == GuardrailAction.DENY:
-        return res
-
-    # 8. Prevent pipeline-to-interpreter command execution bypasses (e.g. curl ... | sh)
-    res = _check_pipeline_to_interpreter(parts)
-    if res and res.action == GuardrailAction.DENY:
-        return res
 
     return GuardrailResult(GuardrailAction.ALLOW)
 
