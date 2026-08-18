@@ -69,7 +69,6 @@ class SelfHealingDashboardEngine {
       const pending = this.incidents.filter((i) => i.persona.toLowerCase() === p.toLowerCase() && i.status === "pending");
       const hasCorrupt = pending.some((i) => i.severity === "state_corrupt" || i.severity === "fatal");
 
-      
       let status: "healthy" | "degraded" | "quarantined" = "healthy";
       let circuit: "CLOSED" | "OPEN" | "HALF-OPEN" = "CLOSED";
 
