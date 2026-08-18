@@ -200,8 +200,8 @@ def _get_next_slide_id(unpacked_dir: Path) -> int:
     pres_path = unpacked_dir / "ppt" / "presentation.xml"
     pres_content = pres_path.read_text(encoding="utf-8")
     slide_ids = [int(m) for m in re.findall(r'<p:sldId[^>]*id="(\d+)"', pres_content)]
-    return max(slide_ids) + 1 if slide_ids else 256
 
+    candidate = (trusted_base / raw_path).resolve()
 
 def parse_source(source: str) -> tuple[str, str | None]:
     layout_name = _validate_source_filename(source, "layout")
