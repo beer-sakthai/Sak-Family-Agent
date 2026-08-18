@@ -9,7 +9,6 @@ import asyncio
 import copy
 import json
 import os
-import shlex
 import sys
 import time
 import types
@@ -748,29 +747,11 @@ class WorkflowExecutor:
             
             _validate_shell_command(str(cmd))
 
-            cmd_str = str(cmd)
-            proc = None
-            has_shell_operators = any(op in cmd_str for op in ("<", ">", "|", "&", ";", "\n", "\r"))
-            if not has_shell_operators:
-                try:
-                    cmd_args = shlex.split(cmd_str)
-                    if cmd_args:
-                        proc = await asyncio.create_subprocess_exec(
-                            *cmd_args,
-                            stdout=asyncio.subprocess.PIPE,
-                            stderr=asyncio.subprocess.PIPE,
-                        )
-                except (ValueError, FileNotFoundError, PermissionError):
-                    proc = None
-
-            if proc is None:
-                proc = await asyncio.create_subprocess_exec(
-                    "sh",
-                    "-c",
-                    cmd_str,
-                    stdout=asyncio.subprocess.PIPE,
-                    stderr=asyncio.subprocess.PIPE,
-                )
+            proc = await asyncio.create_subprocess_shell(
+                str(cmd),
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
             stdout_b, stderr_b = await proc.communicate()
             exit_code = proc.returncode or 0
 
