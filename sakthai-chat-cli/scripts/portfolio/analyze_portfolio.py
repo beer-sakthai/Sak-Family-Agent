@@ -1,11 +1,20 @@
 import argparse
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-import sys
 import os
+import sys
+from concurrent.futures import ThreadPoolExecutor
 
-def analyze_portfolio(files: list[str], tickers: list[str], weights: list[float], output_plot: str):
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+
+
+def analyze_portfolio(
+    files: list[str],
+    tickers: list[str],
+    weights: list[float],
+    output_plot: str,
+    output_csv: str | None = None,
+):
     """
     Analyzes the performance of a portfolio constructed from multiple stock CSVs.
 
@@ -28,11 +37,15 @@ def analyze_portfolio(files: list[str], tickers: list[str], weights: list[float]
 
     try:
         # --- 2. Load and Combine Data ---
-        portfolio_df = pd.DataFrame()
-        for i, file in enumerate(files):
-            df = pd.read_csv(file, index_col='Date', parse_dates=True)
-            # Use a unique column name for each stock's close price
-            portfolio_df[tickers[i]] = df['Close']
+        def _read_stock_csv(item: tuple[str, str]) -> tuple[str, pd.Series]:
+            file_path, ticker = item
+            df = pd.read_csv(file_path, index_col='Date', parse_dates=True)
+            return ticker, df['Close']
+
+        with ThreadPoolExecutor() as executor:
+            results = list(executor.map(_read_stock_csv, zip(files, tickers, strict=False)))
+
+        portfolio_df = pd.DataFrame({ticker: series for ticker, series in results})
 
         # --- 3. Calculate Portfolio Performance ---
         # Normalize prices to see growth from day 1
@@ -83,7 +96,7 @@ def analyze_portfolio(files: list[str], tickers: list[str], weights: list[float]
         print("\n--- Portfolio Performance Analysis Report ---")
         print(f"Period: {portfolio_df.index.min().date()} to {portfolio_df.index.max().date()}")
         print("\nPortfolio Composition:")
-        for ticker, weight in zip(tickers, weights):
+        for ticker, weight in zip(tickers, weights, strict=False):
             print(f"- {ticker}: {weight:.2%}")
         print("-" * 45)
         print("Key Performance Metrics:")
@@ -113,6 +126,8 @@ if __name__ == "__main__":
     if output_dir:
         os.makedirs(output_dir, exist_ok=True)
     if args.output_csv:
-        os.makedirs(os.path.dirname(args.output_csv), exist_ok=True)
+        csv_dir = os.path.dirname(args.output_csv)
+        if csv_dir:
+            os.makedirs(csv_dir, exist_ok=True)
 
     analyze_portfolio(args.files, args.tickers, args.weights, args.output_plot, args.output_csv)

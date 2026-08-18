@@ -24,8 +24,8 @@ class MemorySnapshotManager:
         """Capture the current state of facts and observations in MemoryStore."""
         checkpoint_id = f"ckpt_{uuid.uuid4().hex[:10]}"
         try:
-            facts = [dict(f.__dict__) for f in store.list_facts(limit=1000)]
-            observations = [dict(o.__dict__) for o in store.top_observations(limit=1000)]
+            facts = [dict(f.__dict__) for f in store.list_facts(limit=100000)]
+            observations = [dict(o.__dict__) for o in store.top_observations(limit=100000)]
             self._snapshots[checkpoint_id] = {
                 "label": label,
                 "created_at": time.time(),
