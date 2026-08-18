@@ -444,11 +444,11 @@ export default function AutoCyclePanel({ data }: AutoCyclePanelProps) {
                 safety rule (default)
               </span>
               <h4 className="text-sm font-bold font-display text-white tracking-tight">
-                {data.safetyRule.title}
+                {data.safetyRule.headline}
               </h4>
             </div>
             <p className="text-xs text-slate-300 mt-1 leading-relaxed">
-              {data.safetyRule.rule}
+              {data.safetyRule.body}
             </p>
           </div>
         </div>
@@ -459,9 +459,14 @@ export default function AutoCyclePanel({ data }: AutoCyclePanelProps) {
               <Check className="h-3.5 w-3.5 text-emerald-400" />
               Required for Live Modification
             </h5>
-            <p className="text-[11px] font-mono text-emerald-200/90 leading-relaxed">
-              {data.safetyRule.authorizationRequired}
-            </p>
+            <ul className="space-y-1 text-[11px] font-mono text-emerald-200/90 leading-relaxed">
+              {data.safetyRule.liveAuthorizationPhrases.map((p) => (
+                <li key={p} className="flex items-start gap-2">
+                  <span className="text-emerald-400 mt-0.5">✓</span>
+                  <span>{p}</span>
+                </li>
+              ))}
+            </ul>
           </div>
 
           <div className="rounded-xl border border-rose-500/30 bg-rose-500/[0.04] p-4">
