@@ -53,8 +53,12 @@ export function computeDatasetHeuristicScore(
 }
 
 export function getStagingDirectory(): string {
-  const home = process.env.HOME || os.homedir();
-  return path.join(home, '.sakthai', 'learning', 'dataset-staging');
+  const baseHome = path.resolve(os.homedir());
+  const stagingDir = path.resolve(baseHome, '.sakthai', 'learning', 'dataset-staging');
+  if (!stagingDir.startsWith(baseHome)) {
+    throw new Error('Invalid staging directory path');
+  }
+  return stagingDir;
 }
 
 export function stageDatasetEntry(entry: Omit<DatasetStagingEntry, 'id' | 'timestamp' | 'scrubbedPII'>): DatasetStagingEntry {
@@ -88,7 +92,11 @@ export function stageDatasetEntry(entry: Omit<DatasetStagingEntry, 'id' | 'times
     scrubbedPII: true,
   };
 
-  const stagingFile = path.join(stagingDir, 'staging.jsonl');
+  const stagingFile = path.resolve(stagingDir, 'staging.jsonl');
+  if (!stagingFile.startsWith(stagingDir)) {
+    throw new Error('Path traversal detected');
+  }
+
   try {
     fs.appendFileSync(stagingFile, JSON.stringify(fullEntry) + '\n', 'utf-8');
   } catch {
@@ -99,8 +107,9 @@ export function stageDatasetEntry(entry: Omit<DatasetStagingEntry, 'id' | 'times
 }
 
 export function readStagedEntries(limit = 50): DatasetStagingEntry[] {
-  const stagingFile = path.join(getStagingDirectory(), 'staging.jsonl');
-  if (!fs.existsSync(stagingFile)) {
+  const stagingDir = getStagingDirectory();
+  const stagingFile = path.resolve(stagingDir, 'staging.jsonl');
+  if (!stagingFile.startsWith(stagingDir) || !fs.existsSync(stagingFile)) {
     return [];
   }
 
