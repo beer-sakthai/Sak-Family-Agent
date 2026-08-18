@@ -485,9 +485,9 @@ def _validate_shell_command(cmd_str: str) -> None:
         if not cmd_str_stripped:
             continue
 
-        # 1. Prevent pipeline-to-interpreter command execution bypasses (e.g. curl ... | sh)
+        # 1. Prevent pipeline-to-interpreter command execution bypasses (e.g. curl ... | sh or curl ... |& bash)
         if "|" in cmd_str_stripped:
-            segments = cmd_str_stripped.split("|")
+            segments = re.split(r"\|&?", cmd_str_stripped)
             for segment in segments[1:]:
                 segment = segment.strip(" \t\n\r\"'()$&;")
                 if segment:
