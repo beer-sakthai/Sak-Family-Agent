@@ -48,7 +48,29 @@ export function BillingManagementPanel() {
   };
 
   useEffect(() => {
-    fetchBillingData();
+    let isMounted = true;
+
+    async function loadInitialBillingData() {
+      try {
+        const res = await fetch("/api/billing");
+        const json = await res.json();
+        if (json.success && json.data && isMounted) {
+          setQuota(json.data.quota);
+          setKeys(json.data.keys);
+          setUsage(json.data.usage);
+          setInvoices(json.data.invoices);
+        }
+      } catch (err) {
+        console.error("Failed to load billing metrics", err);
+      }
+    };
+    load();
+    }
+
+    loadInitialBillingData();
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const handleCreateKey = async (e: React.FormEvent) => {
