@@ -4,16 +4,15 @@ from __future__ import annotations
 
 import enum
 from dataclasses import dataclass, field
-from typing import Any, Optional
 
 
-class AssetType(str, enum.Enum):
+class AssetType(enum.StrEnum):
     MODEL = "model"
     DATASET = "dataset"
     SPACE = "space"
 
 
-class SpaceState(str, enum.Enum):
+class SpaceState(enum.StrEnum):
     RUNNING = "RUNNING"
     PAUSED = "PAUSED"
     STOPPED = "STOPPED"
@@ -33,12 +32,12 @@ class HubAssetSpec:
     downloads: int = 0
     likes: int = 0
     license: str = "apache-2.0"
-    pipeline_tag: Optional[str] = None
+    pipeline_tag: str | None = None
     tags: list[str] = field(default_factory=list)
     has_gguf: bool = False
     quantizations: list[str] = field(default_factory=list)
     status: str = "active"
-    space_state: Optional[SpaceState] = None
+    space_state: SpaceState | None = None
 
 
 @dataclass
@@ -46,7 +45,7 @@ class CardValidationIssue:
     rule: str
     message: str
     severity: str  # "error", "warning"
-    line: Optional[int] = None
+    line: int | None = None
 
 
 @dataclass

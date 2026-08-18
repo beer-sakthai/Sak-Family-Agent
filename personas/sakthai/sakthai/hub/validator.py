@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import re
-from typing import Optional
 
 from .models import CardValidationIssue, CardValidationReport
 
@@ -51,7 +50,9 @@ class ModelCardValidator:
             score -= 30
 
         # Rule 4: Correct food-penguin description
-        if "food-penguin" in content and re.search(r"food\s+image\s+classification", content, re.IGNORECASE):
+        if "food-penguin" in content and re.search(
+            r"food\s+image\s+classification", content, re.IGNORECASE
+        ):
             issues.append(
                 CardValidationIssue(
                     rule="canonical_dataset_facts",
