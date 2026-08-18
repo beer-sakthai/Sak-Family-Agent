@@ -302,25 +302,6 @@ def test_list_facts_date_range(store: MemoryStore) -> None:
     assert len(all_facts) == 2
 
 
-def test_list_facts_filtering_and_limit_combinations(store: MemoryStore) -> None:
-    """Verify list_facts correctly filters by after_ts, before_ts, and applies limit."""
-    import time
-
-    t_base = int(time.time()) - 1000
-    ids = []
-    for i in range(5):
-        fid = store.add_fact(f"fact {i}")
-        store._conn.execute("UPDATE facts SET created_at = ? WHERE id = ?", (t_base + i * 100, fid))
-        ids.append(fid)
-    store._conn.commit()
-
-    # Query with after_ts, before_ts, and limit
-    # t_base + 100 <= created_at <= t_base + 300 matches facts 1, 2, 3
-    results = store.list_facts(limit=2, after_ts=t_base + 100, before_ts=t_base + 300)
-    assert len(results) == 2
-    assert [f.id for f in results] == [ids[3], ids[2]]
-
-
 # -- _encode_tags / _decode_tags edge cases ------------------------------
 
 

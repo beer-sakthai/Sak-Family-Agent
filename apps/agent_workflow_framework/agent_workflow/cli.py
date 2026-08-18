@@ -16,11 +16,13 @@ import argparse
 import asyncio
 import json
 import sys
+from pathlib import Path
+from typing import List, Optional
 
 from agent_workflow.dag import validate_workflow_dag
 from agent_workflow.executor import WorkflowExecutor
-from agent_workflow.models import RunStatus
-from agent_workflow.parser import WorkflowParseError, parse_workflow_file
+from agent_workflow.models import RunStatus, StepStatus
+from agent_workflow.parser import parse_workflow_file, WorkflowParseError
 from agent_workflow.persistence import RunHistoryStore, RunNotFoundError
 
 
@@ -33,9 +35,7 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers = parser.add_subparsers(dest="subcommand", help="Available subcommands")
 
     # 1. validate
-    val_p = subparsers.add_parser(
-        "validate", help="Pre-flight validation of workflow definition files."
-    )
+    val_p = subparsers.add_parser("validate", help="Pre-flight validation of workflow definition files.")
     val_p.add_argument("file", help="Path to YAML or JSON workflow definition file.")
 
     # 2. run
@@ -72,7 +72,7 @@ def cmd_validate(filepath: str) -> int:
         return 2
 
 
-def cmd_run(filepath: str, run_id: str | None = None) -> int:
+def cmd_run(filepath: str, run_id: Optional[str] = None) -> int:
     """Execute 'run' subcommand."""
     # Pre-flight parse check
     try:
@@ -90,14 +90,10 @@ def cmd_run(filepath: str, run_id: str | None = None) -> int:
     executor = WorkflowExecutor()
 
     def status_cb(r_id: str, step_res):
-        print(
-            f"  Step '{step_res.step_id}': {step_res.status.value} (attempts: {step_res.attempts})"
-        )
+        print(f"  Step '{step_res.step_id}': {step_res.status.value} (attempts: {step_res.attempts})")
 
     try:
-        history = asyncio.run(
-            executor.execute_workflow(wf, run_id=run_id, status_callback=status_cb)
-        )
+        history = asyncio.run(executor.execute_workflow(wf, run_id=run_id, status_callback=status_cb))
         if history.status == RunStatus.COMPLETED:
             print(f"Workflow '{wf.name}' executed successfully (Run ID: {history.run_id}).")
             return 0
@@ -109,7 +105,7 @@ def cmd_run(filepath: str, run_id: str | None = None) -> int:
         return 1
 
 
-def cmd_inspect(run_id: str, step_id: str | None = None) -> int:
+def cmd_inspect(run_id: str, step_id: Optional[str] = None) -> int:
     """Execute 'inspect' subcommand."""
     store = RunHistoryStore()
     try:
@@ -154,7 +150,7 @@ def cmd_list() -> int:
         return 1
 
 
-def cli_main(args: list[str] | None = None) -> int:
+def cli_main(args: Optional[List[str]] = None) -> int:
     """Main CLI entry point function."""
     parser = build_parser()
     parsed = parser.parse_args(args)
@@ -176,7 +172,7 @@ def cli_main(args: list[str] | None = None) -> int:
         return 0
 
 
-def main(args: list[str] | None = None) -> int:
+def main(args: Optional[List[str]] = None) -> int:
     """Executable console script entry point."""
     return cli_main(args)
 

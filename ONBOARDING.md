@@ -1,45 +1,40 @@
-# Welcome to Sak Family
+# Welcome to [Team Name]
 
 ## How We Use Claude
 
-Based on usage over the last 30 days (4 sessions):
+Based on beer-sakthai's usage over the last 30 days:
 
 Work Type Breakdown:
-  Build Feature    ███████████████░░░░░  75%
-  Improve Quality  █████░░░░░░░░░░░░░░░  25%
+  TODO — not enough session data to classify
 
 Top Skills & Commands:
-  /reload-plugins                              ████████████████████  6x/month
-  /reload-skills                               █████████████░░░░░░░  4x/month
-  /plugin                                      █████████████░░░░░░░  4x/month
-  /superpowers:using-superpowers               █████████████░░░░░░░  4x/month
-  /skills                                      ███████░░░░░░░░░░░░░  2x/month
-  /mcp                                         ███████░░░░░░░░░░░░░  2x/month
-  /claude-code-setup:claude-automation-recommender  ███████░░░░░░░░░░░░░  2x/month
-  /plugin-dev:agent-development                ███████░░░░░░░░░░░░░  2x/month
-  /agents                                      ███████░░░░░░░░░░░░░  2x/month
-  /commit-commands:commit-push-pr              ███░░░░░░░░░░░░░░░░░  1x/month
-  /superpowers:using-git-worktrees             ███░░░░░░░░░░░░░░░░░  1x/month
+  /init                █████████████████░░░  3x/month
+  /debug                ███░░░░░░░░░░░░░░░░░  1x/month
+  /code-review          ███░░░░░░░░░░░░░░░░░  1x/month
+  /security-review      ███░░░░░░░░░░░░░░░░░  1x/month
+  /agents               ███░░░░░░░░░░░░░░░░░  1x/month
+  /reload-skills        ███░░░░░░░░░░░░░░░░░  1x/month
+  /run-skill-generator  ███░░░░░░░░░░░░░░░░░  1x/month
 
 Top MCP Servers:
-  (no MCP call counts captured in this 30-day scan — see "MCP Servers to Activate" below for the server the team uses)
+  TODO — no MCP server usage recorded in the last 30 days
 
 ## Your Setup Checklist
 
 ### Codebases
-- [ ] Sak-Family-Agent — https://github.com/beer-sakthai/Sak-Family-Agent.git
+- [ ] Sak-Family-Agent — github.com/beer-sakthai/sak-family-agent
 
 ### MCP Servers to Activate
-- [ ] StepSecurity — supply-chain & CI/CD security posture, detections, and Harden-Runner baseline for the org's GitHub Actions (29+ workflows, CodeQL/OSSAR/Scorecard). Added via `claude mcp add --transport http stepsecurity <tenant-url>`; access comes from the team's StepSecurity tenant auth.
+- TODO — no MCP servers detected in usage history yet
 
 ### Skills to Know About
-- /claude-code-setup:claude-automation-recommender — scans the codebase and recommends tailored hooks, subagents, skills, plugins, and MCP servers. Run it once per repo to bootstrap automations.
-- /plugin-dev:agent-development — create or update subagents. The team ships agents in `.claude-plugins/sak-security/agents/` (security-reviewer, test-writer, workflow-reviewer).
-- /superpowers:using-superpowers — the skill-discovery rules; load it early so Claude checks for applicable skills before acting.
-- /commit-commands:commit-push-pr — the team's commit → push → open-PR flow (follows the SakJules PR protocol from AGENTS.md).
-- /superpowers:using-git-worktrees — isolated worktree workflow for parallel branches.
-- /reload-plugins & /reload-skills — re-read plugins/skills after editing them. Run these after any change to `.claude-plugins/` or skills.
-- /plugin, /skills, /mcp, /agents — manage installed plugins, skills, MCP servers, and subagents.
+- /init — (re)generates or refreshes the repo's CLAUDE.md guidance from the current codebase state
+- /debug — investigates and helps fix a bug
+- /code-review — reviews the current diff for correctness bugs and cleanup opportunities
+- /security-review — runs a security review of pending changes on the current branch
+- /agents — points you to creating/editing subagents under .claude/agents/
+- /reload-skills — reloads the skill catalog
+- /run-skill-generator — scaffolds a new skill
 
 ## Team Tips
 

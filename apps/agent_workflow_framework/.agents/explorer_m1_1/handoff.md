@@ -10,7 +10,6 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Dict, Any, List, Optional
 
-
 class StepStatus(str, Enum):
     PENDING = "PENDING"
     RUNNING = "RUNNING"
@@ -18,13 +17,11 @@ class StepStatus(str, Enum):
     FAILED = "FAILED"
     SKIPPED = "SKIPPED"
 
-
 class RunStatus(str, Enum):
     PENDING = "PENDING"
     RUNNING = "RUNNING"
     COMPLETED = "COMPLETED"
     FAILED = "FAILED"
-
 
 @dataclass
 class StepDefinition:
@@ -35,13 +32,11 @@ class StepDefinition:
     retry: int = 0
     retry_delay: float = 0.0
 
-
 @dataclass
 class WorkflowDefinition:
     name: str
     description: Optional[str] = None
     steps: List[StepDefinition] = field(default_factory=list)
-
 
 @dataclass
 class StepResult:
@@ -52,7 +47,6 @@ class StepResult:
     attempts: int = 1
     start_time: Optional[str] = None
     end_time: Optional[str] = None
-
 
 @dataclass
 class RunHistory:

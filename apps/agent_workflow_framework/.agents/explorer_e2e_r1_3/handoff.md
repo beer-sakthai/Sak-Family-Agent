@@ -163,7 +163,6 @@ from pathlib import Path
 # Ensure package root is in sys.path
 sys.path.insert(0, str(Path(__file__).parent))
 
-
 def run_scenarios() -> bool:
     """Executes the 4 E2E Real-World Application Scenarios."""
     print("==================================================")
@@ -201,22 +200,17 @@ def run_scenarios() -> bool:
             if scenario_file == "retry_workflow.yaml":
                 # Expecting FAILED status due to terminal retry exhaustion branch
                 if history.status.value != "FAILED":
-                    print(
-                        f"[FAIL] {scenario_file} expected FAILED status, got {history.status.value}"
-                    )
+                    print(f"[FAIL] {scenario_file} expected FAILED status, got {history.status.value}")
                     scenarios_passed = False
             else:
                 if history.status.value != "COMPLETED":
-                    print(
-                        f"[FAIL] {scenario_file} expected COMPLETED status, got {history.status.value}"
-                    )
+                    print(f"[FAIL] {scenario_file} expected COMPLETED status, got {history.status.value}")
                     scenarios_passed = False
         except Exception as e:
             print(f"[ERROR] Exception running {scenario_file}: {e}")
             scenarios_passed = False
 
     return scenarios_passed
-
 
 def run_unittest_suite() -> bool:
     """Runs unittest test discovery across tests/ directory."""
@@ -230,7 +224,6 @@ def run_unittest_suite() -> bool:
     result = runner.run(suite)
     return result.wasSuccessful()
 
-
 def main():
     scenarios_ok = run_scenarios()
     tests_ok = run_unittest_suite()
@@ -241,7 +234,6 @@ def main():
     else:
         print("\n[FAILURE] Master Verification Failed (Exit Code 1)")
         sys.exit(1)
-
 
 if __name__ == "__main__":
     main()
