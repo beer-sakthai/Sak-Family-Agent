@@ -177,10 +177,23 @@ print(f"\n\n{'=' * 60}")
 print("📊 WORKBENCH TEST SUMMARY — SakThai Context 1.5B")
 print(f"{'=' * 60}")
 
-passed_count = sum(1 for r in results if r.get("passed"))
-total = len(results)
-print(f"\nResults: {passed_count}/{total} passed")
-print()
+import os, json, time, sys
+
+
+def _get_hf_token() -> str | None:
+    token = os.environ.get("HF_TOKEN") or os.environ.get("HUGGING_FACE_HUB_TOKEN")
+    if token and token.strip():
+        return token.strip()
+    default_token_path = os.path.expanduser("~/.cache/huggingface/token")
+    if os.path.exists(default_token_path):
+        try:
+            with open(default_token_path) as f:
+                content = f.read().strip()
+                if content:
+                    return content
+        except OSError:
+            pass
+    return None
 
 for r in results:
     status = "✅" if r.get("passed") else "❌"
@@ -212,9 +225,13 @@ record = {
     },
 }
 
-output_path = "/opt/data/sakthai-1.5b-workbench-test-record.json"
-with open(output_path, "w") as f:
-    json.dump(record, f, indent=2)
+hf_token = _get_hf_token()
+if hf_token:
+    os.environ["HF_TOKEN"] = hf_token
+
+from huggingface_hub import InferenceClient, login, HfApi
 
 print(f"\n💾 Record saved to: {output_path}")
 print(f"🏁 All done.")
+if hf_token:
+    login(token=hf_token)

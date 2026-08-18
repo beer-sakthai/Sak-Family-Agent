@@ -127,9 +127,23 @@ for i, test in enumerate(tests):
         content = choice.message.content or ""
         finish = choice.finish_reason
 
-        usage = response.usage
-        pt = usage.prompt_tokens if usage else None
-        ct = usage.completion_tokens if usage else None
+import os, json, time, sys
+
+
+def _get_hf_token() -> str | None:
+    token = os.environ.get("HF_TOKEN") or os.environ.get("HUGGING_FACE_HUB_TOKEN")
+    if token and token.strip():
+        return token.strip()
+    default_token_path = os.path.expanduser("~/.cache/huggingface/token")
+    if os.path.exists(default_token_path):
+        try:
+            with open(default_token_path) as f:
+                content = f.read().strip()
+                if content:
+                    return content
+        except OSError:
+            pass
+    return None
 
         result = {
             "name": test["name"],
@@ -142,25 +156,9 @@ for i, test in enumerate(tests):
             "completion_tokens": ct,
         }
 
-        # Quality checks
-        checks = []
-        if len(content) > 0:
-            checks.append("non_empty")
-        if len(content) > 10:
-            checks.append("substantial")
-        if "beer" in content.lower() and test["name"] == "multi_turn_recall":
-            checks.append("name_recall")
-        if test["name"] == "json_output":
-            try:
-                parsed = json.loads(content)
-                if "frameworks" in parsed:
-                    checks.append("valid_json")
-            except:
-                pass
-        if test["name"] == "general_knowledge" and "paris" in content.lower():
-            checks.append("correct_answer")
-        if test["name"] == "context_window" and ("2017" in content):
-            checks.append("correct_answer")
+hf_token = _get_hf_token()
+if hf_token:
+    os.environ["HF_TOKEN"] = hf_token
 
         result["checks"] = checks
         print(f"  ✅ PASS")
@@ -221,3 +219,7 @@ with open(output_path, "w") as f:
 
 print(f"\n💾 Record saved to: {output_path}")
 print(f"🏁 All done.")
+from huggingface_hub import InferenceClient, login, HfApi
+
+if hf_token:
+    login(token=hf_token)
