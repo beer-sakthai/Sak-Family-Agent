@@ -7,7 +7,6 @@ import secrets
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import StrEnum
-from typing import overload
 
 
 class TenantTier(StrEnum):
@@ -37,66 +36,21 @@ TIER_PRICING: dict[TenantTier, tuple[float, float]] = {
 }
 
 
-def hash_api_key(val: str) -> str:
+def hash_api_key(raw_key: str) -> str:
     """Hash an API key with SHA-256 for secure storage."""
-    return hashlib.sha256(val.encode("utf-8")).hexdigest()
-_API_KEY_PBKDF2_ITERATIONS = 310_000
-_API_KEY_SALT_BYTES = 16
-
-
-@overload
-def hash_api_key(raw_key: str, stored_hash: None = None) -> str: ...
-
-
-@overload
-def hash_api_key(raw_key: str, stored_hash: str) -> bool: ...
-
-
-def hash_api_key(raw_key: str, stored_hash: str | None = None) -> str | bool:
-    """Hash or verify an API key using PBKDF2-HMAC-SHA256.
-
-    - If `stored_hash` is None, returns a new encoded hash for storage.
-    - If `stored_hash` is provided, returns True/False for verification.
-
-    The two overloads above carry no runtime effect; they exist so callers get
-    the branch's actual type instead of the union. Without them every caller of
-    the hashing branch sees `str | bool` — which is what broke `mypy --strict`
-    on `main` at `generate_api_key` below, whose contract is `tuple[str, str]`.
-    """
-    if stored_hash is None:
-        salt = secrets.token_bytes(_API_KEY_SALT_BYTES)
-        dk = hashlib.pbkdf2_hmac(
-            "sha256",
-            raw_key.encode("utf-8"),
-            salt,
-            _API_KEY_PBKDF2_ITERATIONS,
-        )
-        return f"pbkdf2_sha256${_API_KEY_PBKDF2_ITERATIONS}${salt.hex()}${dk.hex()}"
-
-    try:
-        algorithm, iterations_s, salt_hex, expected_hex = stored_hash.split("$", 3)
-        if algorithm != "pbkdf2_sha256":
-            return False
-        iterations = int(iterations_s)
-        salt = bytes.fromhex(salt_hex)
-        expected = bytes.fromhex(expected_hex)
-    except (ValueError, TypeError):
-        return False
-
-    actual = hashlib.pbkdf2_hmac("sha256", raw_key.encode("utf-8"), salt, iterations)
-    return hmac.compare_digest(actual, expected)
+    return hashlib.sha256(raw_key.encode("utf-8")).hexdigest()
 
 
 def generate_api_key(prefix: str = "sak_live_") -> tuple[str, str]:
-    """Generate a raw API key and its PBKDF2-HMAC-SHA256 storage hash.
+    """Generate a raw API key and its SHA-256 hash digest.
 
     Returns:
         tuple[str, str]: (raw_secret_key, hashed_storage_key)
     """
     token = secrets.token_urlsafe(32)
-    raw_val = f"{prefix}{token}"
-    hashed_val = hash_api_key(raw_val)
-    return raw_val, hashed_val
+    raw_key = f"{prefix}{token}"
+    hashed_key = hash_api_key(raw_key)
+    return raw_key, hashed_key
 
 
 @dataclass
