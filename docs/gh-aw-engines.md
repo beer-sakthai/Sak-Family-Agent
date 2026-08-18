@@ -1,11 +1,11 @@
 # gh-aw engines: Gemini and OpenCode
 
-This repository runs seven [GitHub Agentic Workflows](https://github.github.com/gh-aw/)
+This repository runs eight [GitHub Agentic Workflows](https://github.github.com/gh-aw/)
 (gh-aw). Each is authored as Markdown in `.github/workflows/` and compiled to a sibling
 `.lock.yml` — the `.lock.yml` is what GitHub Actions actually executes, so **a change to a
 `.md` source that is not recompiled changes nothing**.
 
-As of 2026-08-18 they no longer run on Copilot. Six run on Google **Gemini**, one runs on
+As of 2026-08-18 they no longer run on Copilot. Seven run on Google **Gemini**, one runs on
 **OpenCode** driving a Gemini model.
 
 ## Engine assignment
@@ -16,6 +16,7 @@ As of 2026-08-18 they no longer run on Copilot. Six run on Google **Gemini**, on
 | `maintain-agents-md.md` | `gemini` | engine default | weekly (Monday) + dispatch |
 | `maintain-docs.md` | `gemini` | engine default | weekdays + dispatch |
 | `release.md` | `gemini` | engine default | dispatch (admin/maintainer) |
+| `security-audit.md` | `gemini` | engine default | weekly (Thursday) + dispatch |
 | `shared-package-drift.md` | `gemini` | engine default | weekly (Tuesday) + dispatch |
 | `skills-hygiene.md` | `gemini` | engine default | weekly (Wednesday) + dispatch |
 | `opencode-smoke.md` | `opencode` (vendored) | `copilot/gemini-3.1-flash` | weekly (Monday) + dispatch |
@@ -26,11 +27,18 @@ Compiled with gh-aw **v0.87.0**; the Gemini CLI pins to `0.55.1` and OpenCode to
 
 | Name | Kind | Needed by | Notes |
 |---|---|---|---|
-| `GEMINI_API_KEY` | secret | all six Gemini workflows | Already used by `.github/workflows/self-healing-ci.yml`. gh-aw wires it automatically for `engine: gemini` — no `engine.env` block required. Each lock file validates its presence before invoking the CLI. |
+| `GEMINI_API_KEY` | secret | all seven Gemini workflows | Already used by `.github/workflows/self-healing-ci.yml`. gh-aw wires it automatically for `engine: gemini` — no `engine.env` block required. Each lock file validates its presence before invoking the CLI. |
 | `GITHUB_TOKEN` | built-in | all | Ambient Actions token. |
 | `GH_AW_GITHUB_TOKEN`, `GH_AW_GITHUB_MCP_SERVER_TOKEN` | secret (optional) | all | Optional overrides; every reference falls back to `GITHUB_TOKEN`. |
 | `COPILOT_GITHUB_TOKEN` | built-in | all | Still present in the compiled manifest. It backs gh-aw's own threat-detection pass and the AWF API proxy, not the agent engine. The OpenCode workflow additionally routes its Gemini model through that proxy — see below. |
 | `GH_AW_DEFAULT_MODEL_*`, `GH_AW_MODEL_AGENT_*`, `GH_AW_DEFAULT_MAX_*` | repo variable (optional) | all | gh-aw's standard per-engine model and budget overrides. |
+
+`security-audit.md` was added on 2026-08-18 and introduces **no new secret**: its compiled
+manifest carries exactly the same set as `skills-hygiene.md`
+(`COPILOT_GITHUB_TOKEN`, `GEMINI_API_KEY`, `GH_AW_GITHUB_MCP_SERVER_TOKEN`,
+`GH_AW_GITHUB_TOKEN`, `GITHUB_TOKEN`) and the same action set. The compiler's safe-update
+gate still asked for `--approve`, because the *file* is new rather than the secret — that
+is the gate working as intended, and the review it asks for is the one recorded here.
 
 Gemini also supports keyless Google Workload Identity Federation instead of
 `GEMINI_API_KEY`. This repository uses the API key; switching to WIF would mean adding the
@@ -206,15 +214,40 @@ written. The compiled workflows are still fully SHA-pinned — that is what
 `tests/test_workflow_hygiene.py` checks, and it passes. The file will reappear on its own if
 a future compile resolves a tag against the GitHub API.
 
+### Recompiling touches every source, not just the one you edited
+
+`gh-aw compile` regenerates all eight lock files, so read the whole diff rather than the
+file you meant to change. The 2026-08-18 recompile emitted one unexpected hunk, identical
+in `maintain-agents-md.lock.yml`, `maintain-docs.lock.yml` and `release.lock.yml`:
+
+```diff
+-permissions:
+-  contents: read
++permissions: {}
+```
+
+That is the compiler recomputing the minimal top-level scope — a narrowing, and the same
+output v0.87.0 produces from the current sources every time. It was committed rather than
+reverted: leaving lock files that a clean recompile would change is exactly the
+source-and-lock-disagree hazard this document exists to prevent. `permissions: {}` still
+satisfies `tests/test_workflow_hygiene.py`, which requires the key to be present, not
+non-empty — each generated job grants what it needs.
+
 ## Verifying a change
 
 ```sh
 uv run pytest tests/test_workflow_hygiene.py -q
+grep -h "GH_AW_VERSION:" .github/workflows/*.lock.yml | sort -u   # expect: v0.87.0
+git diff --stat .github/workflows/                                # expect: only what you meant
 ```
 
 That suite is the gate: every file in `.github/workflows/` must be a loadable workflow or a
 `.md` with a compiled `.lock.yml` beside it, every workflow needs a top-level `permissions:`
-block, and every `uses:` must be a 40-character SHA. Files under
+block, and every `uses:` must be a 40-character SHA. Two further rules —
+top-level `concurrency:` on pull-request workflows, and `timeout-minutes` on every job —
+apply to the hand-written workflows only; the `.lock.yml` files are exempt because gh-aw
+sets `timeout-minutes` on only one of each workflow's generated jobs, and holding generated
+output to a rule its generator does not follow would fail on every recompile. Files under
 `.github/workflows/shared/` are not scanned — the check does not recurse into
 subdirectories, which is why the vendored engine definition can live there without needing
 a `.lock.yml` of its own.
