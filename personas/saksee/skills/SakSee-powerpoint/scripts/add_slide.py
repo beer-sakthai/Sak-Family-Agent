@@ -102,7 +102,16 @@ def create_slide_from_layout(unpacked_dir: Path, layout_file: str) -> None:
 
     next_slide_id = _get_next_slide_id(unpacked_dir)
 
-    print(f"Created {dest} from {layout_file}")
+    trusted_root = Path.cwd().resolve()
+    resolved_unpacked_dir = unpacked_dir.resolve()
+    if not resolved_unpacked_dir.is_relative_to(trusted_root):
+        print(
+            f"Error: path {resolved_unpacked_dir} is outside allowed base directory {trusted_root}",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+    slides_dir = (resolved_unpacked_dir / "ppt" / "slides").resolve()
     print(f'Add to presentation.xml <p:sldIdLst>: <p:sldId id="{next_slide_id}" r:id="{rid}"/>')
 
 
