@@ -14,6 +14,7 @@ Project documentation for SakThai.
 - [replication.md](./replication.md) — multi-agent memory sync options.
 - [workspace.md](./workspace.md) — dev environment setup.
 - [og_parity_audit.md](./og_parity_audit.md) — comparison with the original SakThai.
+- [distributed-memory-caching-guide.md](./distributed-memory-caching-guide.md) — Three-Tier Distributed Caching Layer (L1 LRU, L2 Redis/Valkey, L3 SQLite WAL with Async Write Coalescer).
 - [sakthai-live-connect-plan.md](./sakthai-live-connect-plan.md) — Phase 5–8 Live Connect & Robust Agent Runtime execution plan.
 
 
