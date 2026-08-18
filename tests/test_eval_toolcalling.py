@@ -70,7 +70,9 @@ def _setup_mock_modules(monkeypatch: pytest.MonkeyPatch, cuda_available: bool = 
     }
 
 
-def test_eval_toolcalling_main_cpu(capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch) -> None:
+def test_eval_toolcalling_main_cpu(
+    capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
     """Test main execution path when CUDA is not available (CPU path)."""
     deps = _setup_mock_modules(monkeypatch, cuda_available=False)
 
@@ -80,11 +82,16 @@ def test_eval_toolcalling_main_cpu(capsys: pytest.CaptureFixture[str], monkeypat
     eval_toolcalling.main()
 
     captured = capsys.readouterr().out
-    assert "Loading base Qwen/Qwen2.5-1.5B-Instruct + adapter Nanthasit/sakthai-toolcalling-1.5b-lora" in captured
+    assert (
+        "Loading base Qwen/Qwen2.5-1.5B-Instruct + adapter Nanthasit/sakthai-toolcalling-1.5b-lora"
+        in captured
+    )
     assert "USER: Remember that I prefer dark mode in all my apps." in captured
     assert "MODEL: <tool_call>...</tool_call>" in captured
 
-    deps["auto_tokenizer"].from_pretrained.assert_called_once_with("Nanthasit/sakthai-toolcalling-1.5b-lora")
+    deps["auto_tokenizer"].from_pretrained.assert_called_once_with(
+        "Nanthasit/sakthai-toolcalling-1.5b-lora"
+    )
     deps["auto_model"].from_pretrained.assert_called_once()
     assert deps["auto_model"].from_pretrained.call_args.kwargs["torch_dtype"] == "float32"
     assert deps["auto_model"].from_pretrained.call_args.kwargs["device_map"] is None
@@ -95,7 +102,9 @@ def test_eval_toolcalling_main_cpu(capsys: pytest.CaptureFixture[str], monkeypat
     deps["peft_model"].eval.assert_called_once()
 
 
-def test_eval_toolcalling_main_gpu(capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch) -> None:
+def test_eval_toolcalling_main_gpu(
+    capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
     """Test main execution path when CUDA is available (GPU path)."""
     deps = _setup_mock_modules(monkeypatch, cuda_available=True)
 
@@ -134,4 +143,6 @@ def test_eval_toolcalling_custom_env_vars(
     assert "Loading base custom/base-model + adapter custom/adapter-repo" in captured
 
     deps["auto_tokenizer"].from_pretrained.assert_called_once_with("custom/adapter-repo")
-    deps["peft_model_cls"].from_pretrained.assert_called_once_with(deps["base_model"], "custom/adapter-repo")
+    deps["peft_model_cls"].from_pretrained.assert_called_once_with(
+        deps["base_model"], "custom/adapter-repo"
+    )
