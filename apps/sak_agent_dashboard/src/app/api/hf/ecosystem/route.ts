@@ -17,11 +17,26 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { action, repoId, content } = body;
+    const { action, repoId, content, factoryRebuild } = body;
 
     if (action === "validate_card" && repoId && content) {
       const result = hfEcosystemEngine.validateCard(repoId, content);
       return NextResponse.json({ success: true, result });
+    }
+
+    if (action === "diagnose_space" && repoId) {
+      const diag = hfEcosystemEngine.diagnoseSpace(repoId);
+      return NextResponse.json({ success: true, diagnostic: diag });
+    }
+
+    if (action === "remediate_space" && repoId) {
+      const outcome = hfEcosystemEngine.remediateSpace(repoId, !!factoryRebuild);
+      return NextResponse.json({ success: true, outcome });
+    }
+
+    if (action === "preview_all_cards") {
+      const previews = hfEcosystemEngine.previewAllCards();
+      return NextResponse.json({ success: true, previews });
     }
 
     return NextResponse.json(
