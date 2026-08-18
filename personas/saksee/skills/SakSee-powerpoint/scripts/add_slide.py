@@ -130,8 +130,10 @@ def duplicate_slide(unpacked_dir: Path, source: str) -> None:
 
     if not (dest_slide.is_relative_to(slides_dir)
             and source_rels.is_relative_to(rels_dir)
-            and dest_rels.is_relative_to(rels_dir)):
-        print("Error: computed path escapes expected PPTX directories", file=sys.stderr)
+            and dest_rels.is_relative_to(rels_dir)
+            and source_rels.exists()
+            and source_rels.is_file()):
+        print("Error: computed path escapes expected PPTX directories or source rels is invalid", file=sys.stderr)
         sys.exit(1)
 
     shutil.copy2(source_slide, dest_slide)
