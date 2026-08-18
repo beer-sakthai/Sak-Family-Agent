@@ -1,7 +1,6 @@
 """Unit tests for tool selection optimization components (module, metric, overrides)."""
 
 from dataclasses import dataclass
-from pathlib import Path
 
 import dspy
 from evolution.core.config import EvolutionConfig
