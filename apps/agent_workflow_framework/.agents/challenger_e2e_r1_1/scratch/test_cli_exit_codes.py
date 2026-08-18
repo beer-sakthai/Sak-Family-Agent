@@ -1,7 +1,7 @@
+import unittest
 import os
 import sys
 import tempfile
-import unittest
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent.parent
@@ -11,7 +11,6 @@ try:
     from agent_workflow.cli import main as cli_main
 except ModuleNotFoundError:
     from tests.engine_fallback import cli_main
-
 
 class TestCLIExitCodesStress(unittest.TestCase):
     """Empirical challenge of CLI exit codes (0, 1, 2)"""
@@ -29,10 +28,8 @@ class TestCLIExitCodesStress(unittest.TestCase):
 
     def test_exit_code_0_inspect_success(self):
         # Run linear workflow first to ensure run_id exists
+        from tests.engine_fallback import parse_workflow_file, WorkflowExecutor
         import asyncio
-
-        from tests.engine_fallback import WorkflowExecutor, parse_workflow_file
-
         wf = parse_workflow_file(str(self.fixtures_dir / "linear_workflow.yaml"))
         executor = WorkflowExecutor()
         history = asyncio.run(executor.execute_workflow(wf, run_id="stress_inspect_0"))
@@ -65,9 +62,7 @@ class TestCLIExitCodesStress(unittest.TestCase):
 
     def test_exit_code_2_validate_cyclic(self):
         with tempfile.NamedTemporaryFile("w", suffix=".yaml", delete=False) as f:
-            f.write(
-                "name: cyc\nsteps:\n  - id: a\n    depends_on: [b]\n  - id: b\n    depends_on: [a]\n"
-            )
+            f.write("name: cyc\nsteps:\n  - id: a\n    depends_on: [b]\n  - id: b\n    depends_on: [a]\n")
             path = f.name
         try:
             code = cli_main(["validate", path])
@@ -105,9 +100,7 @@ class TestCLIExitCodesStress(unittest.TestCase):
 
     def test_exit_code_2_run_validation_failure(self):
         with tempfile.NamedTemporaryFile("w", suffix=".yaml", delete=False) as f:
-            f.write(
-                "name: cyc_run\nsteps:\n  - id: a\n    depends_on: [b]\n  - id: b\n    depends_on: [a]\n"
-            )
+            f.write("name: cyc_run\nsteps:\n  - id: a\n    depends_on: [b]\n  - id: b\n    depends_on: [a]\n")
             path = f.name
         try:
             code = cli_main(["run", path])
