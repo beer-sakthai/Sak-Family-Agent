@@ -224,13 +224,9 @@ if __name__ == "__main__":
         print("To see available layouts: ls <unpacked_dir>/ppt/slideLayouts/", file=sys.stderr)
         sys.exit(1)
 
-    unpacked_dir = _resolve_user_dir(sys.argv[1], Path.cwd())
-    source = sys.argv[2]
-
     safe_root = Path.cwd().resolve()
-    if not unpacked_dir.is_relative_to(safe_root):
-        print(f"Error: {unpacked_dir} is outside allowed root {safe_root}", file=sys.stderr)
-        sys.exit(1)
+    unpacked_dir = _resolve_user_dir(sys.argv[1], safe_root)
+    source = sys.argv[2]
 
     if not unpacked_dir.exists() or not unpacked_dir.is_dir():
         print(f"Error: {unpacked_dir} not found or not a directory", file=sys.stderr)
