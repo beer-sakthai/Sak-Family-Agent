@@ -119,6 +119,14 @@ def duplicate_slide(unpacked_dir: Path, source: str) -> None:
     slides_dir = (unpacked_dir / "ppt" / "slides").resolve()
     rels_dir = (slides_dir / "_rels").resolve()
 
+    if not slides_dir.exists() or not slides_dir.is_dir():
+        print(f"Error: {slides_dir} not found or not a directory", file=sys.stderr)
+        sys.exit(1)
+
+    if not rels_dir.exists() or not rels_dir.is_dir():
+        print(f"Error: {rels_dir} not found or not a directory", file=sys.stderr)
+        sys.exit(1)
+
     source_name = _validate_source_filename(source, "slide")
     if source_name is None:
         print(f"Error: invalid source slide name '{source}'", file=sys.stderr)
@@ -134,8 +142,8 @@ def duplicate_slide(unpacked_dir: Path, source: str) -> None:
     dest = f"slide{next_num}.xml"
     dest_slide = (slides_dir / dest).resolve()
 
-    source_rels = (rels_dir / f"{source_name}.rels").resolve()
-    dest_rels = (rels_dir / f"{dest}.rels").resolve()
+    source_rels = _resolve_user_dir(str(rels_dir / f"{source_name}.rels"), rels_dir)
+    dest_rels = _resolve_user_dir(str(rels_dir / f"{dest}.rels"), rels_dir)
 
     if not (dest_slide.is_relative_to(slides_dir)
             and source_rels.is_relative_to(rels_dir)
