@@ -1260,6 +1260,9 @@ def _check_destructive_tokens(
                         "bun",
                         "tsx",
                         "ts-node",
+                        "eval",
+                        "exec",
+                        "source",
                     ),
                 ):
                     return GuardrailResult(

