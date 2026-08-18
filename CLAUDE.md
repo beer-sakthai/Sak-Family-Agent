@@ -174,7 +174,7 @@ Other `make` targets: `compose-personas` (rebuild full skill trees into
 
 ### CI
 
-Twenty workflows live in `.github/workflows/`. The ones that gate a change:
+Twenty-seven workflows live in `.github/workflows/`. The ones that gate a change:
 
 | Workflow | Trigger | What it does |
 |---|---|---|
@@ -190,6 +190,7 @@ Twenty workflows live in `.github/workflows/`. The ones that gate a change:
 | `labeler.yml` | `pull_request_target` | PR labelling |
 | `scorecard.yml` | push to `main`, weekly | OpenSSF Scorecard → SARIF to code scanning |
 | `self-healing-ci.yml` | `workflow_run` completion of `CI` on `main` (failure only), or manual | runs `sakthai heal run` over the failed job's log and opens a `selfheal/` fix PR when the patch is safe and locally verified. Gates nothing — it only ever adds a PR |
+| `auto-merge.yml` | `pull_request_target` labeled/unlabeled/ready_for_review | turns GitHub's **native** auto-merge on for a PR carrying the `automerge` label (squash), off when the label is removed. Gates nothing and waives nothing — GitHub still holds the merge until branch protection is satisfied, including the non-author approval. Uses no checkout, so the `pull_request_target` token never meets PR code |
 
 Scheduled / manual only, so they never block a PR: `continuous-security.yml`
 (nightly), `verify-assets.yml` (daily HF asset check), `run-evals.yml` (weekly
