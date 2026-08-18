@@ -300,7 +300,9 @@ def test_discover_deduplicates_same_target_slug(tmp_path: Path) -> None:
     assert target_slugs.count("SakKing-foo") == 1
 
 
-def test_discover_excludes_both_lowercase_and_convention_cased_internal_prefixes(tmp_path: Path) -> None:
+def test_discover_excludes_both_lowercase_and_convention_cased_internal_prefixes(
+    tmp_path: Path,
+) -> None:
     root = _sakking_root(tmp_path)
     slugs = {s.target_slug for s in discover_learned_skills(root)}
     assert "SakKing-sakking-operations" not in slugs
