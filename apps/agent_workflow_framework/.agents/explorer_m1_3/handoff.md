@@ -18,6 +18,7 @@
          Empty list indicates valid DAG."""
          ...
 
+
      def build_topological_batches(workflow: WorkflowDefinition) -> List[List[StepDefinition]]:
          """Returns steps grouped into parallel execution batches in topological order."""
          ...

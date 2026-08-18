@@ -156,9 +156,10 @@ class TestWorkflowExecutor(unittest.TestCase):
 
     def test_ssrf_redirect_protection(self):
         """Verify that the redirect handler intercepts and blocks redirects to loopback or private IPs."""
-        from agent_workflow.executor import SafeRedirectHandler
         import urllib.request
         from unittest.mock import MagicMock
+
+        from agent_workflow.executor import SafeRedirectHandler
 
         handler = SafeRedirectHandler()
         req = urllib.request.Request("https://example.com/start")
@@ -177,11 +178,10 @@ class TestWorkflowExecutor(unittest.TestCase):
         ]
 
         for url in unsafe_redirects:
-            with self.subTest(url=url):
-                with self.assertRaises((ValueError, RuntimeError)):
-                    handler.redirect_request(
-                        req, fp=None, code=302, msg="Found", headers=MagicMock(), newurl=url
-                    )
+            with self.subTest(url=url), self.assertRaises((ValueError, RuntimeError)):
+                handler.redirect_request(
+                    req, fp=None, code=302, msg="Found", headers=MagicMock(), newurl=url
+                )
 
         # Test safe redirect that should be allowed
         try:
@@ -688,6 +688,47 @@ class TestWorkflowExecutor(unittest.TestCase):
                     ),
                     f"Unexpected error message for command '{cmd}': {step_res.error}",
                 )
+
+    def test_shell_action_heredoc_to_interpreter_protection(self):
+        """Verify that shell actions reject heredoc and herestring redirection to interpreters."""
+        malicious_heredoc_commands = [
+            "sh <<'EOF'\necho hello\nEOF",
+            "bash <<EOF\necho evil\nEOF",
+            "python3 <<'EOF'\nimport os\nEOF",
+            "node <<'EOF'\nconsole.log('hi')\nEOF",
+            "sh <<<'echo hello'",
+            "bash <<<'echo evil'",
+            "python <<<'import os'",
+            "env bash <<'EOF'\necho hi\nEOF",
+            "sudo python3 <<'EOF'\nimport os\nEOF",
+        ]
+        for cmd in malicious_heredoc_commands:
+            with self.subTest(cmd=cmd):
+                wf = WorkflowDefinition(
+                    name="shell_heredoc_security_test",
+                    steps=[
+                        StepDefinition(id="s1", action="shell", params={"cmd": cmd}),
+                    ],
+                )
+                history = asyncio.run(self.executor.execute_workflow(wf))
+                self.assertEqual(history.status, RunStatus.FAILED)
+                step_res = history.step_results["s1"]
+                self.assertEqual(step_res.status, StepStatus.FAILED)
+                self.assertIsNotNone(step_res.error)
+                self.assertIn("heredoc/herestring redirection", step_res.error.lower())
+
+        # Verify non-interpreter heredoc commands remain allowed unless targeting sensitive paths
+        wf_cat = WorkflowDefinition(
+            name="shell_heredoc_safe_test",
+            steps=[
+                StepDefinition(
+                    id="s1", action="shell", params={"cmd": "cat <<'EOF'\nhello world\nEOF"}
+                ),
+            ],
+        )
+        history_cat = asyncio.run(self.executor.execute_workflow(wf_cat))
+        self.assertEqual(history_cat.status, RunStatus.COMPLETED)
+        self.assertEqual(history_cat.step_results["s1"].output.get("stdout"), "hello world")
 
     def test_shell_action_pipeline_to_interpreter_protection(self):
         """Verify that shell actions reject pipeline-to-interpreter commands."""

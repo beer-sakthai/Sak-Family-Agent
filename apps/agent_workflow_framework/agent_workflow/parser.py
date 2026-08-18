@@ -4,16 +4,18 @@ Provides functionality for parsing YAML and JSON workflow definition files
 or dictionary structures into validated WorkflowDefinition dataclasses.
 """
 
-from pathlib import Path
-from typing import Dict, Any, Union, List, Optional
 import json
+from pathlib import Path
+from typing import Any
+
 import yaml
 
-from agent_workflow.models import WorkflowDefinition, StepDefinition
+from agent_workflow.models import StepDefinition, WorkflowDefinition
 
 
 class WorkflowParseError(ValueError, FileNotFoundError):
     """Raised when workflow definition parsing or schema validation fails."""
+
     pass
 
 
@@ -66,7 +68,7 @@ def parse_workflow_dict(data: Any) -> WorkflowDefinition:
     if not isinstance(raw_steps, list):
         raise WorkflowParseError("Workflow 'steps' must be a list.")
 
-    parsed_steps: List[StepDefinition] = []
+    parsed_steps: list[StepDefinition] = []
     seen_step_ids = set()
 
     for idx, raw_step in enumerate(raw_steps):
@@ -116,12 +118,20 @@ def parse_workflow_dict(data: Any) -> WorkflowDefinition:
         # Validate 'retry'
         retry = raw_step.get("retry", 0)
         if isinstance(retry, bool) or not isinstance(retry, int) or retry < 0:
-            raise WorkflowParseError(f"Step '{step_id}' 'retry' count must be a non-negative integer.")
+            raise WorkflowParseError(
+                f"Step '{step_id}' 'retry' count must be a non-negative integer."
+            )
 
         # Validate 'retry_delay'
         retry_delay = raw_step.get("retry_delay", 0.0)
-        if isinstance(retry_delay, bool) or not isinstance(retry_delay, (int, float)) or retry_delay < 0:
-            raise WorkflowParseError(f"Step '{step_id}' 'retry_delay' must be a non-negative number.")
+        if (
+            isinstance(retry_delay, bool)
+            or not isinstance(retry_delay, (int, float))
+            or retry_delay < 0
+        ):
+            raise WorkflowParseError(
+                f"Step '{step_id}' 'retry_delay' must be a non-negative number."
+            )
 
         parsed_step = StepDefinition(
             id=step_id,
@@ -155,7 +165,9 @@ def parse_workflow_yaml(yaml_content: str) -> WorkflowDefinition:
         WorkflowParseError: If YAML syntax is invalid or schema validation fails.
     """
     if not isinstance(yaml_content, str):
-        raise WorkflowParseError(f"Expected YAML content as string, got '{type(yaml_content).__name__}'.")
+        raise WorkflowParseError(
+            f"Expected YAML content as string, got '{type(yaml_content).__name__}'."
+        )
 
     try:
         data = yaml.safe_load(yaml_content)
@@ -178,7 +190,9 @@ def parse_workflow_json(json_content: str) -> WorkflowDefinition:
         WorkflowParseError: If JSON syntax is invalid or schema validation fails.
     """
     if not isinstance(json_content, str):
-        raise WorkflowParseError(f"Expected JSON content as string, got '{type(json_content).__name__}'.")
+        raise WorkflowParseError(
+            f"Expected JSON content as string, got '{type(json_content).__name__}'."
+        )
 
     try:
         data = json.loads(json_content)
@@ -188,7 +202,7 @@ def parse_workflow_json(json_content: str) -> WorkflowDefinition:
     return parse_workflow_dict(data)
 
 
-def parse_workflow_file(file_path: Union[str, Path]) -> WorkflowDefinition:
+def parse_workflow_file(file_path: str | Path) -> WorkflowDefinition:
     """Parse a workflow definition file (YAML or JSON) into a WorkflowDefinition.
 
     Args:
