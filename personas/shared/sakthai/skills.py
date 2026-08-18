@@ -140,9 +140,10 @@ def _category_for(skill: SkillInfo, skill_md: Path, root: Path) -> str:
         rel = Path(skill.name)
     if len(rel.parts) >= 2:
         return rel.parts[0]
-    slug = strip_known_prefix(skill.name)
-    if "-" in slug:
-        return slug.split("-", 1)[0]
+    if skill.name.startswith("sakthai-"):
+        suffix = skill.name.removeprefix("sakthai-")
+        if "-" in suffix:
+            return suffix.split("-", 1)[0]
     return _UNCATEGORIZED
 
 

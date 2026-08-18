@@ -265,19 +265,6 @@ because a bot commit reverted a merged critical security fix — 446 deletions
 under a message about something else — and nothing failed. If you are adding a
 workflow, run it: `uv run pytest tests/test_workflow_hygiene.py -q`.
 
-**Recompiling a gh-aw workflow is not optional, and two flags are not optional
-either.** The `.md` source is inert; GitHub runs the `.lock.yml`. The compiler is
-a plain Go binary — `gh`/`gh aw` are not needed, and `go install` does not work
-(gh-aw's `go.mod` has `replace` directives, so clone and `go build ./cmd/gh-aw`).
-Always compile with `--action-mode action --action-tag <40-char-sha>`: without the
-first, the compiler auto-detects a *dev* build and emits `uses: ./actions/setup`,
-a local path this repository does not have — the workflows compile clean and fail
-on every run; without a full SHA in the second, `test_workflow_hygiene.py` rejects
-the unpinned `uses:`. The current pin is gh-aw-actions `v0.87.0`
-(`b77e0d501fd2d2243d1f72722617e80d513f674e`). The compiler also gates newly
-introduced secrets behind `--approve`; read what it lists before passing it.
-Full command and rationale in [`docs/gh-aw-engines.md`](docs/gh-aw-engines.md).
-
 Coverage floor is **96%** (`fail_under = 96`, branch coverage on) over the
 `sakthai` package. Nothing is omitted from measurement any more — `omit = []`;
 `telegram/bot.py` used to be excluded, which did not make it tested, only
@@ -920,8 +907,6 @@ A skill directory may also carry `commands/<name>.md` files, which become
 | `docs/skill-naming.md` | The `Sak-` / `Sak<Name>-` naming convention |
 | `docs/agent-diagnosis.md` | Standalone run checklist and runtime notes |
 | `docs/self-healing-ci.md` | The `sakthai heal` pipeline, its safety model, and the workflow that drives it |
-| `docs/multi-agent-cli-setup.md` | Driving this repo with Gemini CLI (`GEMINI.md`, `.gemini/settings.json`) and OpenCode (`opencode.json`) |
-| `docs/gh-aw-engines.md` | The gh-aw engine split (Gemini + vendored OpenCode), required secrets, and how to recompile the `.lock.yml` files |
 | `docs/SOUL.md` · `docs/USER.md` · `docs/OPERATING_CONTRACT.md` | Team identity · Beer's profile · agent operating rules |
 | `docs/SECURITY.md` · `docs/security-hardening.md` · `docs/SECURITY_HARDENING_IMPLEMENTATION.md` | Security policy/architecture · audit findings and the prevention pattern + regression test for each · implementation notes |
 | `docs/security_audit_2026-07-11.md` · `docs/security_audit_2026-07-12.md` | Point-in-time audit reports |
