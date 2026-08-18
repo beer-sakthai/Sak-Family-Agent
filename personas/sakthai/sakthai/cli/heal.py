@@ -1,11 +1,11 @@
-"""sakthai heal — the self-healing CI agent, driven from a failed job's log.
+"""``sakthai heal`` — the self-healing CI agent, driven from a failed job's log.
 
-heal inspect is the hermetic half: it parses a log and prints what it found,
-with no model call and no writes. heal run walks the full pipeline.
+``heal inspect`` is the hermetic half: it parses a log and prints what it found,
+with no model call and no writes. ``heal run`` walks the full pipeline.
 
 The exit code reports whether the *pipeline* ran, not whether a fix was found:
 an honest "this failure is not safely fixable" is a successful run. Callers that
-need to branch on the result should read --json (or the report file), where
+need to branch on the result should read ``--json`` (or the report file), where
 the terminal status is explicit. Only an internal error — an unreadable log, a
 bad repository root, an unbuildable provider client — exits non-zero.
 """
@@ -15,7 +15,6 @@ from __future__ import annotations
 import dataclasses
 import json
 import sys
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -32,33 +31,33 @@ from ..selfheal.publish import DEFAULT_BRANCH_PREFIX
 from ..selfheal.walkthrough import DEFAULT_WALKTHROUGH_MODEL
 
 
-@dataclass(frozen=True)
-class HealRunArgs:
-    """Arguments passed to the sakthai heal run command."""
+@dataclasses.dataclass(frozen=True)
+class HealRunOptions:
+    """Encapsulates options passed to ``sakthai heal run``."""
 
     log_source: str
-    repo_root: str
-    model: str
-    provider: str | None
-    walkthrough_model: str
-    min_confidence: float
-    base: str
-    branch_prefix: str
-    run_id: str
-    run_url: str
-    dry_run: bool
-    no_publish: bool
-    no_pr: bool
-    report_path: str | None
-    as_json: bool
+    repo_root: str = "."
+    model: str = DEFAULT_MODEL
+    provider: str | None = None
+    walkthrough_model: str = DEFAULT_WALKTHROUGH_MODEL
+    min_confidence: float = DEFAULT_MIN_CONFIDENCE
+    base: str = "main"
+    branch_prefix: str = DEFAULT_BRANCH_PREFIX
+    run_id: str = ""
+    run_url: str = ""
+    dry_run: bool = False
+    no_publish: bool = False
+    no_pr: bool = False
+    report_path: str | None = None
+    as_json: bool = False
 
     @classmethod
-    def from_dict(cls, kwargs: dict[str, Any]) -> HealRunArgs:
+    def from_kwargs(cls, kwargs: dict[str, Any]) -> HealRunOptions:
         return cls(**kwargs)
 
 
 def _read_log(source: str) -> str:
-    """Read the job log from a file, or from stdin when source is -."""
+    """Read the job log from a file, or from stdin when ``source`` is ``-``."""
     if source == "-":
         return sys.stdin.read()
     path = Path(source)
@@ -158,37 +157,37 @@ def heal_inspect(log_source: str, as_json: bool) -> None:
 @click.option("--json", "as_json", is_flag=True, help="Emit the outcome as JSON.")
 def heal_run(**kwargs: Any) -> None:
     """Diagnose a failed CI run, apply a verified fix, and open a pull request."""
-    args = HealRunArgs.from_dict(kwargs)
-    log_text = _read_log(args.log_source)
+    opts = HealRunOptions.from_kwargs(kwargs)
+    log_text = _read_log(opts.log_source)
 
     try:
-        completion = build_completion(provider=args.provider, model=args.model)
+        completion = build_completion(provider=opts.provider, model=opts.model)
         # The walkthrough is best-effort; a provider that cannot be built for it
         # must not stop a fix that is otherwise ready to publish.
         try:
-            narrator = build_completion(model=args.walkthrough_model)
+            narrator = build_completion(model=opts.walkthrough_model)
         except Exception:  # noqa: BLE001 — narration is optional by design
             narrator = None
     except Exception as exc:  # noqa: BLE001 — surface a provider failure as a CLI error
         raise click.ClickException(f"cannot build the diagnosis model client: {exc}") from exc
 
     config = HealConfig(
-        repo_root=Path(args.repo_root),
-        min_confidence=args.min_confidence,
-        branch_prefix=args.branch_prefix,
-        base_branch=args.base,
-        run_id=args.run_id,
-        run_url=args.run_url,
-        dry_run=args.dry_run,
-        publish_fix=not (args.no_publish or args.dry_run),
-        open_pr=not args.no_pr,
+        repo_root=Path(opts.repo_root),
+        min_confidence=opts.min_confidence,
+        branch_prefix=opts.branch_prefix,
+        base_branch=opts.base,
+        run_id=opts.run_id,
+        run_url=opts.run_url,
+        dry_run=opts.dry_run,
+        publish_fix=not (opts.no_publish or opts.dry_run),
+        open_pr=not opts.no_pr,
     )
     outcome = run_heal(log_text, config, completion=completion, narrator=narrator)
 
-    if args.report_path:
-        Path(args.report_path).write_text(outcome.report, encoding="utf-8")
+    if opts.report_path:
+        Path(opts.report_path).write_text(outcome.report, encoding="utf-8")
 
-    if args.as_json:
+    if opts.as_json:
         click.echo(json.dumps(_outcome_json(outcome), indent=2))
         return
 
