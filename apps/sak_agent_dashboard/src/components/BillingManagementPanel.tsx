@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   CreditCard,
   Key,
@@ -32,7 +32,7 @@ export function BillingManagementPanel() {
   const [generatedKey, setGeneratedKey] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
-  const fetchBillingData = async () => {
+  const fetchBillingData = useCallback(async () => {
     try {
       const res = await fetch("/api/billing");
       const json = await res.json();
@@ -45,10 +45,28 @@ export function BillingManagementPanel() {
     } catch (err) {
       console.error("Failed to load billing metrics", err);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    fetchBillingData();
+    let isMounted = true;
+    async function loadInitialData() {
+      try {
+        const res = await fetch("/api/billing");
+        const json = await res.json();
+        if (isMounted && json.success && json.data) {
+          setQuota(json.data.quota);
+          setKeys(json.data.keys);
+          setUsage(json.data.usage);
+          setInvoices(json.data.invoices);
+        }
+      } catch (err) {
+        console.error("Failed to load billing metrics", err);
+      }
+    }
+    void loadInitialData();
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const handleCreateKey = async (e: React.FormEvent) => {
