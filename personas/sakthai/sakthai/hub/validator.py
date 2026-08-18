@@ -62,11 +62,11 @@ class ModelCardValidator:
             score -= 20
 
         # Rule 5: YAML frontmatter presence
-        if not content.startswith("---"):
+        if not content.startswith("---") or "\n---\n" not in content[3:]:
             issues.append(
                 CardValidationIssue(
                     rule="yaml_frontmatter",
-                    message="Missing YAML frontmatter header delimiters (---).",
+                    message="Missing or malformed YAML frontmatter delimiters (must start and close with ---).",
                     severity="error",
                 )
             )

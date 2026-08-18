@@ -41,7 +41,8 @@ class HubEcosystemScanner:
         return None
 
     def _fetch_json(self, endpoint: str) -> list[dict[str, Any]]:
-        url = f"{HF_API_BASE}/{endpoint}?author={self.author}&limit=50"
+        safe_author = urllib.parse.quote(self.author)
+        url = f"{HF_API_BASE}/{endpoint}?author={safe_author}&limit=50"
         headers = {"User-Agent": "SakThai-Hub-Scanner/1.0"}
         token = self._get_token()
         if token:

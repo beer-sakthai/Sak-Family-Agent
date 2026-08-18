@@ -90,11 +90,30 @@ class AsyncWriteCoalescer:
             if self.on_batch_complete:
                 self.on_batch_complete(len(batch))
         except Exception as err:
-            logger.error("Failed to commit coalesced batch of %d writes: %s", len(batch), err)
+            logger.warning("Coalesced batch write failed (%s); attempting individual write commits...", err)
             try:
                 conn.rollback()
             except Exception:
                 pass
+            committed_count = 0
+            for sql, params in batch:
+                try:
+                    conn.execute("BEGIN IMMEDIATE")
+                    conn.execute(sql, params)
+                    conn.commit()
+                    committed_count += 1
+                except Exception as item_err:
+                    logger.error("Individual write failed for query %s: %s", sql, item_err)
+                    try:
+                        conn.rollback()
+                    except Exception:
+                        pass
+            with self._lock:
+                self._total_writes += committed_count
+                if committed_count > 0:
+                    self._total_batches += 1
+            if self.on_batch_complete and committed_count > 0:
+                self.on_batch_complete(committed_count)
 
     def flush(self, timeout_sec: float = 5.0) -> None:
         """Block until all queued writes have been processed."""
