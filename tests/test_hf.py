@@ -175,7 +175,6 @@ def test_workbench_get_hf_token_resolution(
     # 1. HF_TOKEN env var
     monkeypatch.setenv("HF_TOKEN", "token_from_hf_token_env")
     monkeypatch.delenv("HUGGING_FACE_HUB_TOKEN", raising=False)
-    monkeypatch.delenv("HF_TOKEN_PATH", raising=False)
     assert get_token() == "token_from_hf_token_env"
 
     # 2. HUGGING_FACE_HUB_TOKEN env var
@@ -183,15 +182,8 @@ def test_workbench_get_hf_token_resolution(
     monkeypatch.setenv("HUGGING_FACE_HUB_TOKEN", "token_from_hf_hub_token_env")
     assert get_token() == "token_from_hf_hub_token_env"
 
-    # 3. HF_TOKEN_PATH env var
+    # 3. ~/.cache/huggingface/token default path
     monkeypatch.delenv("HUGGING_FACE_HUB_TOKEN", raising=False)
-    custom_token_file = tmp_path / "custom_token"
-    custom_token_file.write_text("token_from_custom_path")
-    monkeypatch.setenv("HF_TOKEN_PATH", str(custom_token_file))
-    assert get_token() == "token_from_custom_path"
-
-    # 4. ~/.cache/huggingface/token default path
-    monkeypatch.delenv("HF_TOKEN_PATH", raising=False)
     fake_home = tmp_path / "home"
     hf_cache_dir = fake_home / ".cache" / "huggingface"
     hf_cache_dir.mkdir(parents=True)
@@ -200,6 +192,6 @@ def test_workbench_get_hf_token_resolution(
     monkeypatch.setenv("HOME", str(fake_home))
     assert get_token() == "token_from_default_home_path"
 
-    # 5. No token anywhere
+    # 4. No token anywhere
     default_token_file.unlink()
     assert get_token() is None
