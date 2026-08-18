@@ -14,18 +14,19 @@ from agent_workflow.models import (
     StepStatus,
 )
 from agent_workflow.persistence import (
-    ExecutionStore,
     HistoryStore,
-    RunCorruptedError,
     RunHistoryStore,
+    ExecutionStore,
     RunNotFoundError,
-    delete_run_history,
-    get_run_history,
-    get_step_output,
-    get_step_result,
-    list_runs,
-    load_run_history,
+    RunCorruptedError,
+    PersistenceError,
     save_run_history,
+    get_run_history,
+    load_run_history,
+    list_runs,
+    delete_run_history,
+    get_step_result,
+    get_step_output,
 )
 
 
@@ -135,18 +136,8 @@ class TestHistoryStore(unittest.TestCase):
 
     def test_list_runs(self):
         self.assertEqual(self.store.list_runs(), [])
-        h1 = RunHistory(
-            run_id="run1",
-            workflow_name="w1",
-            status=RunStatus.COMPLETED,
-            start_time="2026-08-01T12:00:00Z",
-        )
-        h2 = RunHistory(
-            run_id="run2",
-            workflow_name="w2",
-            status=RunStatus.FAILED,
-            start_time="2026-08-01T12:00:05Z",
-        )
+        h1 = RunHistory(run_id="run1", workflow_name="w1", status=RunStatus.COMPLETED, start_time="2026-08-01T12:00:00Z")
+        h2 = RunHistory(run_id="run2", workflow_name="w2", status=RunStatus.FAILED, start_time="2026-08-01T12:00:05Z")
         self.store.save_run_history(h1)
         self.store.save_run_history(h2)
 
@@ -157,12 +148,7 @@ class TestHistoryStore(unittest.TestCase):
         self.assertEqual(runs[1].run_id, "run1")
 
     def test_delete_run_history(self):
-        history = RunHistory(
-            run_id="run_del",
-            workflow_name="wf",
-            status=RunStatus.COMPLETED,
-            start_time="2026-08-01T12:00:00Z",
-        )
+        history = RunHistory(run_id="run_del", workflow_name="wf", status=RunStatus.COMPLETED, start_time="2026-08-01T12:00:00Z")
         self.store.save_run_history(history)
         self.assertTrue(self.store.delete_run_history("run_del"))
         self.assertFalse(self.store.delete_run_history("run_del"))
@@ -172,13 +158,7 @@ class TestHistoryStore(unittest.TestCase):
 
     def test_get_step_result_and_output(self):
         res1 = StepResult(step_id="s1", status=StepStatus.COMPLETED, output={"val": 42})
-        history = RunHistory(
-            run_id="run_query",
-            workflow_name="wf",
-            status=RunStatus.COMPLETED,
-            start_time="2026-08-01T12:00:00Z",
-            step_results={"s1": res1},
-        )
+        history = RunHistory(run_id="run_query", workflow_name="wf", status=RunStatus.COMPLETED, start_time="2026-08-01T12:00:00Z", step_results={"s1": res1})
         self.store.save_run_history(history)
 
         step_res = self.store.get_step_result("run_query", "s1")
@@ -243,12 +223,7 @@ class TestHistoryStore(unittest.TestCase):
         self.assertIs(ExecutionStore, RunHistoryStore)
 
     def test_module_convenience_functions(self):
-        history = RunHistory(
-            run_id="run_conv",
-            workflow_name="wf",
-            status=RunStatus.COMPLETED,
-            start_time="2026-08-01T12:00:00Z",
-        )
+        history = RunHistory(run_id="run_conv", workflow_name="wf", status=RunStatus.COMPLETED, start_time="2026-08-01T12:00:00Z")
         res = StepResult(step_id="s1", status=StepStatus.COMPLETED, output={"conv": True})
         history.add_step_result(res)
 

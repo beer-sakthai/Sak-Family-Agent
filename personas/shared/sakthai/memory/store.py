@@ -370,20 +370,23 @@ class MemoryStore:
         Optional ``after_ts`` / ``before_ts`` are inclusive Unix timestamps
         that filter on ``created_at``.
         """
-        clauses: list[str] = []
-        params: list[int] = []
-        if after_ts is not None:
-            clauses.append("created_at >= ?")
-            params.append(after_ts)
-        if before_ts is not None:
-            clauses.append("created_at <= ?")
-            params.append(before_ts)
-        where = ("WHERE " + " AND ".join(clauses)) if clauses else ""
-        params.append(limit)
-        rows = self._conn.execute(
-            f"SELECT * FROM facts {where} ORDER BY updated_at DESC LIMIT ?",  # nosec B608
-            params,
-        ).fetchall()
+        if after_ts is not None and before_ts is not None:
+            sql = (
+                "SELECT * FROM facts WHERE created_at >= ? AND created_at <= ? "
+                "ORDER BY updated_at DESC LIMIT ?"
+            )
+            params = [after_ts, before_ts, limit]
+        elif after_ts is not None:
+            sql = "SELECT * FROM facts WHERE created_at >= ? ORDER BY updated_at DESC LIMIT ?"
+            params = [after_ts, limit]
+        elif before_ts is not None:
+            sql = "SELECT * FROM facts WHERE created_at <= ? ORDER BY updated_at DESC LIMIT ?"
+            params = [before_ts, limit]
+        else:
+            sql = "SELECT * FROM facts ORDER BY updated_at DESC LIMIT ?"
+            params = [limit]
+
+        rows = self._conn.execute(sql, params).fetchall()
         return [_fact_from_row(r) for r in rows]
 
     def get_fact_by_key(self, kind: str, key: str) -> Fact | None:
@@ -719,8 +722,26 @@ class MemoryStore:
     def stats(self) -> dict[str, Any]:
         """Aggregate counts and distributions. Safe on an empty DB."""
         c = self._conn
-        n_facts = c.execute("SELECT COUNT(*) FROM facts").fetchone()[0]
-        n_obs = c.execute("SELECT COUNT(*) FROM observations").fetchone()[0]
+        (
+            n_facts,
+            n_obs,
+            f_min,
+            f_max,
+            o_min,
+            o_max,
+            avg_w,
+            avg_c,
+        ) = c.execute(
+            "SELECT "
+            "(SELECT COUNT(*) FROM facts), "
+            "(SELECT COUNT(*) FROM observations), "
+            "(SELECT MIN(created_at) FROM facts), "
+            "(SELECT MAX(created_at) FROM facts), "
+            "(SELECT MIN(created_at) FROM observations), "
+            "(SELECT MAX(created_at) FROM observations), "
+            "(SELECT AVG(weight) FROM observations), "
+            "(SELECT AVG(confidence) FROM observations)"
+        ).fetchone()
         by_kind = {
             r["kind"]: r["n"]
             for r in c.execute(
@@ -737,11 +758,6 @@ class MemoryStore:
                 "GROUP BY tag"
             ).fetchall()
         }
-        f_min, f_max = c.execute("SELECT MIN(created_at), MAX(created_at) FROM facts").fetchone()
-        o_min, o_max, avg_w, avg_c = c.execute(
-            "SELECT MIN(created_at), MAX(created_at), AVG(weight), AVG(confidence) "
-            "FROM observations"
-        ).fetchone()
         return {
             "db_path": str(self.db_path),
             "facts": {

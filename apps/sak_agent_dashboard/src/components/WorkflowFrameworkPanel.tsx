@@ -31,7 +31,6 @@ export function WorkflowFrameworkPanel() {
     tokens: number;
     durationMs: number;
     executionId: string;
-    topologicalOrder?: string[];
   } | null>(null);
 
   const dagValidation = validateWorkflowDAG(selectedWorkflow);
@@ -43,7 +42,6 @@ export function WorkflowFrameworkPanel() {
     setSelectedWorkflow(wf);
     setActiveStages(wf.stages);
     setLastExecutionStats(null);
-    setExpandedStepId(null);
   };
 
   const handleRunWorkflow = async () => {
@@ -61,7 +59,6 @@ export function WorkflowFrameworkPanel() {
           tokens: data.result.totalTokens,
           durationMs: data.result.totalLatencyMs,
           executionId: data.result.executionId,
-          topologicalOrder: data.result.dagTopologicalOrder,
         });
       }
     } catch (err) {
@@ -80,7 +77,7 @@ export function WorkflowFrameworkPanel() {
             <Workflow className="h-5 w-5 text-cyan-400" />
             6-Agent Collaborative Workflow Framework
             <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyan-950 text-cyan-300 border border-cyan-800/60 font-semibold">
-              DAG Engine v2.0
+              Orchestrator v2.0
             </span>
           </h3>
           <p className="text-xs text-slate-400 mt-1 max-w-3xl leading-relaxed">
@@ -93,7 +90,7 @@ export function WorkflowFrameworkPanel() {
 
         <button
           onClick={handleRunWorkflow}
-          disabled={isRunning || !dagValidation.isValid}
+          disabled={isRunning}
           className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-xs bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white shadow-lg shadow-cyan-950/50 transition-all disabled:opacity-50"
         >
           <Play
@@ -170,15 +167,10 @@ export function WorkflowFrameworkPanel() {
 
       {/* Visual Pipeline DAG Stages */}
       <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <h4 className="text-sm font-bold text-slate-300 font-mono flex items-center gap-2">
-            <Layers className="h-4 w-4 text-cyan-400" />
-            Pipeline DAG Stages & Cross-Agent Handoffs ({activeStages.length} Stages)
-          </h4>
-          <span className="text-[11px] font-mono text-slate-400">
-            Click step card to inspect state inputs & outputs
-          </span>
-        </div>
+        <h4 className="text-sm font-bold text-slate-300 font-mono flex items-center gap-2">
+          <Layers className="h-4 w-4 text-cyan-400" />
+          Pipeline Stages & Cross-Agent Handoffs ({activeStages.length} Stages)
+        </h4>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {activeStages.map((stage, idx) => (
