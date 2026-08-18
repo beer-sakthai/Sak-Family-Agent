@@ -30,14 +30,14 @@ import yaml
 from .config import SKILLS_DIR, sakking_skills_dir
 from .skills import PERSONA_SKILL_PREFIXES, target_skill_name
 
+#: Slugs starting with these prefixes are SakKing-internal plumbing, not portable
+#: capabilities — excluded from the sync by default.
+DEFAULT_EXCLUDE_PREFIXES: tuple[str, ...] = ("sakking-",)
+
 _BUNDLED_MANIFEST = ".bundled_manifest"
 #: Learned skills are *authored by SakKing*, so they carry the SakKing persona
 #: prefix per the naming convention (see :mod:`sakthai.skills`).
 _PREFIX = PERSONA_SKILL_PREFIXES["sakking"]
-
-#: Slugs starting with these prefixes are SakKing-internal plumbing, not portable
-#: capabilities — excluded from the sync by default.
-DEFAULT_EXCLUDE_PREFIXES: tuple[str, ...] = (_PREFIX.lower(), _PREFIX)
 _DEFAULT_VERSION = "1.0.0"
 _DEFAULT_PLATFORMS: tuple[str, ...] = ("linux", "macos")
 _MAX_DESC = 200
