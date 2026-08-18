@@ -54,11 +54,6 @@ export function BillingManagementPanel() {
         const res = await fetch("/api/billing");
         const json = await res.json();
         if (json.success && json.data && isMounted) {
-    async function loadInitialData() {
-      try {
-        const res = await fetch("/api/billing");
-        const json = await res.json();
-        if (isMounted && json.success && json.data) {
           setQuota(json.data.quota);
           setKeys(json.data.keys);
           setUsage(json.data.usage);
@@ -69,7 +64,6 @@ export function BillingManagementPanel() {
       }
     }
     init();
-    void loadInitialData();
     return () => {
       isMounted = false;
     };
