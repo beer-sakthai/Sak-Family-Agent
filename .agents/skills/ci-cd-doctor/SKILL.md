@@ -14,6 +14,32 @@ A systematic diagnosis and remediation guide for GitHub Actions CI/CD failures, 
 - CodeQL security analysis raises alert annotations (e.g. `Uncontrolled data used in path expression`).
 - Monorepo subproject tests or Python `pytest` / `ruff` checks fail in CI.
 
+## Configuration
+
+This skill reads per-project settings from `.claude/ci-cd-doctor.local.md` (YAML
+frontmatter, gitignored — not committed). **Before triaging, read that file. If
+the file is absent, use the defaults shown below. If `enabled` is `false`, skip
+this skill entirely (quick-exit) and do not triage.**
+
+```yaml
+---
+enabled: true                                  # master toggle; false = skip this skill entirely
+auto_push: false                              # false (default) = commit locally, do NOT push or open a PR
+verification_suites: ["dashboard", "python"]   # which verification blocks to run
+---
+```
+
+| Field | Default | Meaning |
+|---|---|---|
+| `enabled` | `true` | When `false`, skip this skill's guidance entirely (quick-exit). |
+| `auto_push` | `false` | Controls Step 5. `false` (default): commit the fix locally and report it for owner review — do **not** push or open a PR (this repo requires a non-author approval to merge; an agent auto-pushing is out of bounds). `true`: rebase, push, and confirm `gh pr checks` is green. |
+| `verification_suites` | `["dashboard", "python"]` | Selects which blocks to run in the Verification Commands section. Set `["python"]` for a Python-only project, `["dashboard"]` for dashboard-only. |
+
+**Parsing (`jq` is not installed in this repo):** extract a field from the
+frontmatter with `grep`/`sed`, e.g.
+`grep '^auto_push:' .claude/ci-cd-doctor.local.md | sed 's/auto_push: *//'`.
+Treat a missing file or any parse error as "use defaults."
+
 ## Core Operational Workflow
 
 ```mermaid
@@ -21,10 +47,14 @@ flowchart TD
     A["1. Inspect Failing Runs (gh pr checks / gh run view)"] --> B["2. Isolate Root Cause Locally (Reproduce command)"]
     B --> C["3. Implement Targeted Fix (Minimal surgical edit)"]
     C --> D["4. Local Quality Verification (Typecheck + Test + Lint)"]
-    D --> E["5. Rebase, Commit & Push (gh pr checks confirm green)"]
+    D --> E["5. Commit locally, rebase & push only if auto_push=true (gh pr checks green)"]
 ```
 
 ---
+
+> **Step 5 respects `auto_push`** (see Configuration): when `auto_push` is `false`
+> (the default), commit the fix locally and report it for owner review — do **not**
+> push or open a PR. When `true`, rebase, push, and confirm `gh pr checks <id>` is green.
 
 ## 🛠️ Common CI Failure Categories & Fixes
 
@@ -86,7 +116,7 @@ flowchart TD
 
 ## 🧪 Verification Commands
 
-Before pushing any CI fix, execute the full local validation pipeline:
+Before pushing any CI fix, execute the full local validation pipeline — run only the blocks whose names appear in `verification_suites` (see Configuration; default is both). `dashboard` runs the `# Web Dashboard` block; `python` runs the `# Python Core` block:
 ```bash
 # Web Dashboard
 cd apps/sak_agent_dashboard
