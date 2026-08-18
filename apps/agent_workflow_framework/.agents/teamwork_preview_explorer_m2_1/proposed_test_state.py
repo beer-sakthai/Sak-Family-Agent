@@ -2,6 +2,7 @@
 
 import concurrent.futures
 import unittest
+
 from agent_workflow.models import StepResult, StepStatus
 from agent_workflow.state import StateContext, StateInterpolationError
 
@@ -42,15 +43,18 @@ class TestStateContextInterpolationTypes(unittest.TestCase):
 
     def setUp(self):
         self.ctx = StateContext()
-        self.ctx.set_step_output("step_init", {
-            "str_val": "hello_world",
-            "int_val": 100,
-            "float_val": 3.14159,
-            "bool_val": True,
-            "null_val": None,
-            "dict_val": {"user": "alice", "role": "admin"},
-            "list_val": ["alpha", "beta", "gamma"],
-        })
+        self.ctx.set_step_output(
+            "step_init",
+            {
+                "str_val": "hello_world",
+                "int_val": 100,
+                "float_val": 3.14159,
+                "bool_val": True,
+                "null_val": None,
+                "dict_val": {"user": "alice", "role": "admin"},
+                "list_val": ["alpha", "beta", "gamma"],
+            },
+        )
 
     def test_full_value_type_preservation(self):
         self.assertEqual(self.ctx.interpolate("${steps.step_init.output.str_val}"), "hello_world")
@@ -61,9 +65,14 @@ class TestStateContextInterpolationTypes(unittest.TestCase):
         self.assertEqual(self.ctx.interpolate("${steps.step_init.output.bool_val}"), True)
         self.assertIsInstance(self.ctx.interpolate("${steps.step_init.output.bool_val}"), bool)
         self.assertIsNone(self.ctx.interpolate("${steps.step_init.output.null_val}"))
-        self.assertEqual(self.ctx.interpolate("${steps.step_init.output.dict_val}"), {"user": "alice", "role": "admin"})
+        self.assertEqual(
+            self.ctx.interpolate("${steps.step_init.output.dict_val}"),
+            {"user": "alice", "role": "admin"},
+        )
         self.assertIsInstance(self.ctx.interpolate("${steps.step_init.output.dict_val}"), dict)
-        self.assertEqual(self.ctx.interpolate("${steps.step_init.output.list_val}"), ["alpha", "beta", "gamma"])
+        self.assertEqual(
+            self.ctx.interpolate("${steps.step_init.output.list_val}"), ["alpha", "beta", "gamma"]
+        )
         self.assertIsInstance(self.ctx.interpolate("${steps.step_init.output.list_val}"), list)
 
     def test_full_step_output_interpolation(self):
@@ -78,27 +87,36 @@ class TestStateContextNestedPath(unittest.TestCase):
 
     def setUp(self):
         self.ctx = StateContext()
-        self.ctx.set_step_output("step_nested", {
-            "user": {
-                "profile": {
-                    "name": "Bob",
-                    "scores": [95, 88, 100],
-                }
+        self.ctx.set_step_output(
+            "step_nested",
+            {
+                "user": {
+                    "profile": {
+                        "name": "Bob",
+                        "scores": [95, 88, 100],
+                    }
+                },
+                "tags": ["red", "green", "blue"],
+                "direct.key": "direct_value",
             },
-            "tags": ["red", "green", "blue"],
-            "direct.key": "direct_value",
-        })
+        )
 
     def test_nested_dict_navigation(self):
-        self.assertEqual(self.ctx.interpolate("${steps.step_nested.output.user.profile.name}"), "Bob")
+        self.assertEqual(
+            self.ctx.interpolate("${steps.step_nested.output.user.profile.name}"), "Bob"
+        )
 
     def test_list_index_navigation(self):
         self.assertEqual(self.ctx.interpolate("${steps.step_nested.output.tags.0}"), "red")
         self.assertEqual(self.ctx.interpolate("${steps.step_nested.output.tags.2}"), "blue")
-        self.assertEqual(self.ctx.interpolate("${steps.step_nested.output.user.profile.scores.1}"), 88)
+        self.assertEqual(
+            self.ctx.interpolate("${steps.step_nested.output.user.profile.scores.1}"), 88
+        )
 
     def test_direct_dot_key(self):
-        self.assertEqual(self.ctx.interpolate("${steps.step_nested.output.direct.key}"), "direct_value")
+        self.assertEqual(
+            self.ctx.interpolate("${steps.step_nested.output.direct.key}"), "direct_value"
+        )
 
 
 class TestStateContextEmbeddedString(unittest.TestCase):
@@ -114,7 +132,9 @@ class TestStateContextEmbeddedString(unittest.TestCase):
         self.assertEqual(res, "User name is Alice")
 
     def test_multiple_embedded_tokens(self):
-        res = self.ctx.interpolate("User ${steps.s1.output.name} (${steps.s2.output.role}) scored ${steps.s1.output.score}")
+        res = self.ctx.interpolate(
+            "User ${steps.s1.output.name} (${steps.s2.output.role}) scored ${steps.s1.output.score}"
+        )
         self.assertEqual(res, "User Alice (admin) scored 99")
 
     def test_embedded_container_token(self):
@@ -140,14 +160,17 @@ class TestStateContextRecursive(unittest.TestCase):
             "literal_int": 500,
         }
         res = self.ctx.interpolate(params)
-        self.assertEqual(res, {
-            "param_a": 10,
-            "nested_dict": {
-                "msg": "Greeting: hello",
-                "count": 10,
+        self.assertEqual(
+            res,
+            {
+                "param_a": 10,
+                "nested_dict": {
+                    "msg": "Greeting: hello",
+                    "count": 10,
+                },
+                "literal_int": 500,
             },
-            "literal_int": 500,
-        })
+        )
 
     def test_list_recursive_interpolation(self):
         params = [
@@ -156,11 +179,14 @@ class TestStateContextRecursive(unittest.TestCase):
             {"inner": "${steps.s1.output.v1}"},
         ]
         res = self.ctx.interpolate(params)
-        self.assertEqual(res, [
-            10,
-            "Value is hello",
-            {"inner": 10},
-        ])
+        self.assertEqual(
+            res,
+            [
+                10,
+                "Value is hello",
+                {"inner": 10},
+            ],
+        )
 
 
 class TestStateContextErrors(unittest.TestCase):
