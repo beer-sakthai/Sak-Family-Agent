@@ -2,13 +2,11 @@
 """Test the 1.5B merged model on HF Inference API and record results."""
 import os, json, time, sys
 
-TOKEN_PATH = "/opt/data/profiles/sakthai/home/.cache/huggingface/token"
-with open(TOKEN_PATH) as f:
-    hf_token = f.read().strip()
+hf_token = os.environ.get("HF_TOKEN", "")
 
-os.environ["HF_TOKEN"] = hf_token
 from huggingface_hub import InferenceClient, login, HfApi
-login(token=hf_token)
+if hf_token:
+    login(token=hf_token)
 
 MODEL = "Nanthasit/sakthai-context-1.5b-merged"
 
