@@ -151,7 +151,7 @@ class DistributedMemoryCache:
             return self._client
 
         try:
-            import redis  # type: ignore
+            import redis
 
             self._client = redis.from_url(
                 self.redis_url,
