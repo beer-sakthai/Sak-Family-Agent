@@ -129,7 +129,6 @@ class TestSummarizeEvals:
         summary = summarize_evals(path=log_path)
         assert summary["count"] == 1
 
-
     def test_handles_unreadable_file_oserror(self, tmp_path: Path, monkeypatch) -> None:
         log_path = tmp_path / "eval.jsonl"
         log_path.write_text('{"model": "gpt-4"}\n', encoding="utf-8")
@@ -155,7 +154,7 @@ class TestSummarizeEvals:
         log_path = tmp_path / "eval.jsonl"
         with log_path.open("w", encoding="utf-8") as f:
             f.write('{"latency_s": "not-a-number", "input_tokens": "invalid", "model": null}\n')
-            f.write('{}\n')
+            f.write("{}\n")
 
         summary = summarize_evals(path=log_path)
         assert summary["count"] == 2
