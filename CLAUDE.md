@@ -174,11 +174,8 @@ Other `make` targets: `compose-personas` (rebuild full skill trees into
 
 ### CI
 
-Twenty-nine workflows live in `.github/workflows/`, plus **seven** gh-aw Markdown
-sources compiled to `.lock.yml` beside them. None of the seven runs on Copilot
-any more: six run on `engine: gemini` and one on a vendored OpenCode engine
-driving a Gemini model — see [`docs/gh-aw-engines.md`](docs/gh-aw-engines.md)
-and the gh-aw note below. The ones that gate a change:
+Twenty-nine workflows live in `.github/workflows/`, plus four gh-aw Markdown
+sources compiled to `.lock.yml` beside them. The ones that gate a change:
 
 | Workflow | Trigger | What it does |
 |---|---|---|
@@ -204,12 +201,7 @@ Scheduled / manual only, so they never block a PR: `continuous-security.yml`
 lm-eval, installs the `evals` dependency group), `auto-dependency-update.yml`
 (weekly), `stale.yml` (daily), `summary.yml` (on new issues), `OSPS.yml` (weekly
 security-baseline assessment), `code-scanning-cleanup.yml` (manual, retires
-orphaned code-scanning alerts), `manual.yml`, and the three agentic workflows
-added in the Gemini/OpenCode switchover — `shared-package-drift.md` (weekly,
-audits the `personas/shared/sakthai/` divergence register), `skills-hygiene.md`
-(weekly, runs `sakthai skills validate --naming`), and `opencode-smoke.md`
-(weekly, proves the vendored OpenCode engine still runs). All three report by
-opening an issue and none can open a pull request.
+orphaned code-scanning alerts), `manual.yml`.
 
 CodeQL used to run via GitHub's *default setup*, and the rule was "never add
 `codeql.yml`" — an advanced analysis cannot upload while default setup is
@@ -241,19 +233,6 @@ pinning on every `uses:`, the `self-healing-ci.yml` fork guard, `codeql.yml`'s
 because a bot commit reverted a merged critical security fix — 446 deletions
 under a message about something else — and nothing failed. If you are adding a
 workflow, run it: `uv run pytest tests/test_workflow_hygiene.py -q`.
-
-**Recompiling a gh-aw workflow is not optional, and two flags are not optional
-either.** The `.md` source is inert; GitHub runs the `.lock.yml`. The compiler is
-a plain Go binary — `gh`/`gh aw` are not needed, and `go install` does not work
-(gh-aw's `go.mod` has `replace` directives, so clone and `go build ./cmd/gh-aw`).
-Always compile with `--action-mode action --action-tag <40-char-sha>`: without the
-first, the compiler auto-detects a *dev* build and emits `uses: ./actions/setup`,
-a local path this repository does not have — the workflows compile clean and fail
-on every run; without a full SHA in the second, `test_workflow_hygiene.py` rejects
-the unpinned `uses:`. The current pin is gh-aw-actions `v0.87.0`
-(`b77e0d501fd2d2243d1f72722617e80d513f674e`). The compiler also gates newly
-introduced secrets behind `--approve`; read what it lists before passing it.
-Full command and rationale in [`docs/gh-aw-engines.md`](docs/gh-aw-engines.md).
 
 Coverage floor is **96%** (`fail_under = 96`, branch coverage on) over the
 `sakthai` package. Nothing is omitted from measurement any more — `omit = []`;
