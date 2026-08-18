@@ -31,19 +31,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Install uv
-        # Cached explicitly, and keyed only on the two files this job reads.
-        # The action's default glob would also key on `sakthai-chat-cli/uv.lock`
-        # and the persona skill requirement files, none of which this audit
-        # exports. The cache is worth having even though `uv export` resolves
-        # nothing: `uvx pip-audit` downloads pip-audit and its dependency
-        # closure into `~/.cache/uv` on every run otherwise.
         uses: step-security/setup-uv@edab89485182ad96613ff847804c272ab5d1e03f # v10.0.0
-        with:
-          enable-cache: true
-          cache-dependency-glob: |
-            pyproject.toml
-            uv.lock
-          cache-suffix: pip-audit
 
       - name: Export locked requirements
         # --no-emit-project: audit third-party deps only, not the local package.

@@ -37,8 +37,10 @@ TIER_PRICING: dict[TenantTier, tuple[float, float]] = {
 
 
 def hash_api_key(raw_key: str) -> str:
-    """Hash an API key with SHA-256 for secure storage."""
-    return hashlib.sha256(raw_key.encode("utf-8")).hexdigest()
+    """Hash an API key with PBKDF2-HMAC-SHA256 for secure storage."""
+    return hashlib.pbkdf2_hmac(
+        "sha256", raw_key.encode("utf-8"), b"sak_api_key_v1_salt", 1000
+    ).hex()
 
 
 def generate_api_key(prefix: str = "sak_live_") -> tuple[str, str]:

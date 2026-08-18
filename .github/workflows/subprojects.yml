@@ -52,18 +52,8 @@ jobs:
         with:
           python-version: "3.11"
 
-      # This subproject declares no dependency file at all, so there is nothing
-      # for the action's default `cache-dependency-glob` to key on that has any
-      # bearing on it — keying on the root lock would tie this job's cache to a
-      # tree it never installs. Key it on this workflow file instead: the `--with
-      # pyyaml` below *is* the dependency declaration, and it lives here, so the
-      # cache is invalidated exactly when the dependency set changes.
       - name: Install uv
-        uses: step-security/setup-uv@edab89485182ad96613ff847804c272ab5d1e03f # v10.0.0
-        with:
-          enable-cache: true
-          cache-dependency-glob: .github/workflows/subprojects.yml
-          cache-suffix: agent-workflow-framework
+        run: pipx install uv
 
       # The subproject has no pyproject.toml — `agent_workflow/` is a plain
       # package directory imported from the repo. Run it in place with its one
@@ -92,17 +82,8 @@ jobs:
         with:
           python-version: "3.11"
 
-      # Keyed on this subproject's own lock, not the root one. `uses:` steps
-      # ignore `defaults.run.working-directory`, so the glob is written relative
-      # to the repository root.
       - name: Install uv
-        uses: step-security/setup-uv@edab89485182ad96613ff847804c272ab5d1e03f # v10.0.0
-        with:
-          enable-cache: true
-          cache-dependency-glob: |
-            services/teams-copilot-mcp/pyproject.toml
-            services/teams-copilot-mcp/uv.lock
-          cache-suffix: teams-copilot-mcp
+        run: pipx install uv
 
       # This subproject has its own pyproject.toml and uv.lock (fastmcp / msal /
       # httpx), deliberately kept out of the root lock.
@@ -164,31 +145,6 @@ jobs:
       # still passes, and the lockfile expects it to be considered.
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-
-      # The pnpm *store* is already cached by `setup-node` above; this caches
-      # the other half — Next.js's own build cache, which is what lets `next
-      # build` reuse compiled modules instead of recompiling the app from
-      # scratch on every run. It is the last and longest step of this job.
-      #
-      # Two-part key: the lockfile pins the toolchain, the source hash pins the
-      # input. An exact hit skips recompilation entirely; a source-only change
-      # falls back through `restore-keys` to the previous build's cache, which
-      # is where the incremental win comes from. `.next/cache` only — not
-      # `.next/`, which holds the build *output* and must be produced fresh.
-      - name: Cache the Next.js build
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: apps/sak_agent_dashboard/.next/cache
-          # `src/**` rather than a brace-expanded extension list:
-          # `hashFiles` runs on @actions/glob, which supports `*`, `**`, `?`,
-          # `[]` and `!` but not `{a,b}`. A brace pattern there does not error —
-          # it just matches nothing, and every run would compute the same
-          # constant hash for a source tree that had changed.
-          key: >-
-            ${{ runner.os }}-nextjs-${{ hashFiles('apps/sak_agent_dashboard/pnpm-lock.yaml') }}-${{
-            hashFiles('apps/sak_agent_dashboard/src/**') }}
-          restore-keys: |
-            ${{ runner.os }}-nextjs-${{ hashFiles('apps/sak_agent_dashboard/pnpm-lock.yaml') }}-
 
       - name: Lint
         run: pnpm lint

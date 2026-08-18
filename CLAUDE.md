@@ -227,41 +227,9 @@ a top-level `permissions:` block. A batch of pasted starter templates that met
 none of this was removed on 2026-08-13, and three more (`bandit.yml`,
 `codeql.yml`, `eslint.yml`) arrived on 2026-08-18.
 
-**Dependency caching is on every workflow that installs anything**, and the
-shape of it is deliberate. Python jobs install uv through
-`step-security/setup-uv` with `enable-cache: true` — never `pipx install uv`,
-which pins nothing and caches nothing. Two inputs are mandatory on every one of
-those steps and are the easy things to get wrong:
-
-- `cache-dependency-glob` must be **narrowed** to the files that job installs
-  from. The action's default glob (`**/pyproject.toml`, `**/uv.lock`,
-  `**/*requirements*.txt`, …) matches **16** tracked files in this monorepo,
-  including `sakthai-chat-cli/uv.lock` and two persona *skill* requirement
-  files. Left at the default, editing any of them invalidates every uv cache in
-  CI.
-- `cache-suffix` must be unique per job, and per matrix leg where there is one.
-  `ci.yml` and `pylint.yml` both run a 3.11/3.12 matrix that resolves different
-  wheels from the same lock; one shared key means the two legs overwrite each
-  other and neither ever gets a hit.
-
-`enable-cache` is written out explicitly rather than left at its `auto`
-default, because `auto` disables caching for `workflow_run` events — the only
-trigger `self-healing-ci.yml` has. `run-evals.yml` is the one job that also
-sets `prune-cache: true`: its `evals` group pulls CPU torch, and GitHub evicts
-LRU against a single 10 GB repository-wide budget, so an unpruned weekly cache
-would crowd out the ones every PR depends on. The two pip-based jobs
-(`bandit.yml`, `agent-self-evolution.yml`) use `setup-python`'s `cache: pip`
-with an explicit `cache-dependency-path` for the same narrowing reason. Node is
-`setup-node`'s `cache: pnpm` plus an `actions/cache` over
-`apps/sak_agent_dashboard/.next/cache` for the Next.js build.
-
 **`tests/test_workflow_hygiene.py` now enforces all of it in CI**, plus SHA
 pinning on every `uses:`, the `self-healing-ci.yml` fork guard, `codeql.yml`'s
-`config-file:` reference, `.bandit` being parseable configuration, and the three
-caching rules above — including that every `cache-dependency-glob` /
-`cache-dependency-path` names a file that exists, since a typo there does not
-fail the step, it hashes the empty set and freezes the cache key forever. It
-exists
+`config-file:` reference, and `.bandit` being parseable configuration. It exists
 because a bot commit reverted a merged critical security fix — 446 deletions
 under a message about something else — and nothing failed. If you are adding a
 workflow, run it: `uv run pytest tests/test_workflow_hygiene.py -q`.

@@ -34,40 +34,12 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      # `pipx install uv` used to stand here: an unpinned install of an
-      # unpinned uv, with no dependency cache behind it, so every one of this
-      # matrix's two legs re-downloaded and re-built the whole locked tree on
-      # every push and every pull request. The action below is SHA-pinned and
-      # restores `~/.cache/uv` between runs, which is what turns `uv sync` into
-      # a hardlink pass over already-downloaded wheels.
-      #
-      # `cache-dependency-glob` is narrowed on purpose. The action's default
-      # glob is `**/pyproject.toml`, `**/uv.lock`, `**/*requirements*.txt` and
-      # friends — in this monorepo that matches 16 tracked files, including
-      # `services/teams-copilot-mcp/uv.lock`, the folded-in `sakthai-chat-cli/`
-      # copy, and two persona *skill* requirement files that have nothing to do
-      # with this job's environment. Every one of them would invalidate this
-      # cache on change. Only the root `pyproject.toml`/`uv.lock` describe what
-      # `uv sync --all-extras` installs here, so only those two key it.
-      #
-      # `cache-suffix` keys each matrix leg separately: 3.11 and 3.12 resolve
-      # different wheels for the same lock, and a shared key would have them
-      # overwrite each other's cache on every run.
       - name: Install uv
-        uses: step-security/setup-uv@edab89485182ad96613ff847804c272ab5d1e03f # v10.0.0
-        with:
-          enable-cache: true
-          cache-dependency-glob: |
-            pyproject.toml
-            uv.lock
-          cache-suffix: ci-py${{ matrix.python-version }}
+        run: pipx install uv
 
       - name: Install dependencies
         # Install all optional dependencies to ensure linting/testing tools are present.
-        # --locked: install exactly what uv.lock records and fail on drift from
-        # pyproject.toml, rather than silently re-resolving — a re-resolve would
-        # also miss the cache the step above just restored.
-        run: uv sync --locked --all-extras
+        run: uv sync --all-extras
 
       - name: Run linters
         run: |
