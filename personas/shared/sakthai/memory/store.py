@@ -722,26 +722,8 @@ class MemoryStore:
     def stats(self) -> dict[str, Any]:
         """Aggregate counts and distributions. Safe on an empty DB."""
         c = self._conn
-        (
-            n_facts,
-            n_obs,
-            f_min,
-            f_max,
-            o_min,
-            o_max,
-            avg_w,
-            avg_c,
-        ) = c.execute(
-            "SELECT "
-            "(SELECT COUNT(*) FROM facts), "
-            "(SELECT COUNT(*) FROM observations), "
-            "(SELECT MIN(created_at) FROM facts), "
-            "(SELECT MAX(created_at) FROM facts), "
-            "(SELECT MIN(created_at) FROM observations), "
-            "(SELECT MAX(created_at) FROM observations), "
-            "(SELECT AVG(weight) FROM observations), "
-            "(SELECT AVG(confidence) FROM observations)"
-        ).fetchone()
+        n_facts = c.execute("SELECT COUNT(*) FROM facts").fetchone()[0]
+        n_obs = c.execute("SELECT COUNT(*) FROM observations").fetchone()[0]
         by_kind = {
             r["kind"]: r["n"]
             for r in c.execute(
@@ -758,6 +740,11 @@ class MemoryStore:
                 "GROUP BY tag"
             ).fetchall()
         }
+        f_min, f_max = c.execute("SELECT MIN(created_at), MAX(created_at) FROM facts").fetchone()
+        o_min, o_max, avg_w, avg_c = c.execute(
+            "SELECT MIN(created_at), MAX(created_at), AVG(weight), AVG(confidence) "
+            "FROM observations"
+        ).fetchone()
         return {
             "db_path": str(self.db_path),
             "facts": {

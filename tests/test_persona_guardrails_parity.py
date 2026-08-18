@@ -123,6 +123,71 @@ class TestPersonaSecurityFileParity(unittest.TestCase):
         )
 
 
+class TestSecurityPropertiesArePresent(unittest.TestCase):
+    """Assert security properties *exist*, not merely that copies agree.
+
+    Parity is necessary but not sufficient. On 2026-08-18 a commit reverted the
+    ``do_HEAD`` authentication gate in **all five** persona copies of
+    ``web/server.py`` at once, and deleted the regression tests in
+    ``tests/test_web_auth.py`` in the same diff. Every parity assertion above
+    still passed, because the copies remained byte-identical to each other --
+    uniformly reverted. Nothing in the suite noticed.
+
+    These checks close that blind spot: they pin the presence of the property
+    itself, in a file that four successive reverts have left alone. They are
+    deliberately coarse (a substring, not a behavioural test) so they stay cheap
+    and stable; the behavioural coverage lives in ``tests/test_web_auth.py``.
+    """
+
+    def _server_copies(self):
+        """Yield (label, path) for every persona copy of web/server.py."""
+        rel = Path("web") / "server.py"
+        yield "canonical", CANONICAL_PKG / rel
+        yield "shared", PERSONAS_DIR / "shared" / "sakthai" / rel
+        for persona in PERSONA_NAMES:
+            candidate = PERSONAS_DIR / persona / "sakthai" / rel
+            if candidate.is_file():
+                yield persona, candidate
+
+    def test_head_requests_are_gated_in_every_web_server_copy(self):
+        """``SimpleHTTPRequestHandler`` supplies its own ``do_HEAD``.
+
+        Inheriting it unchanged serves HEAD straight out of ``send_head()``,
+        skipping the bearer-token check and the static-root containment check
+        that ``do_GET`` performs. An explicit ``do_HEAD`` must therefore exist
+        in every copy.
+        """
+        for label, path in self._server_copies():
+            with self.subTest(copy=label):
+                source = path.read_text(encoding="utf-8")
+                self.assertIn(
+                    "def do_HEAD",
+                    source,
+                    f"{path} has no explicit do_HEAD, so it inherits "
+                    "SimpleHTTPRequestHandler's, which bypasses authentication.",
+                )
+
+    def test_serve_api_script_gates_head_and_redacts_the_token(self):
+        """``scripts/serve_api.py`` is a second, standalone copy of the server.
+
+        It is outside the package (ruff and mypy skip ``scripts/``), so nothing
+        else in the suite covers it, yet it serves the same API on port 3002.
+        """
+        source = (REPO_ROOT / "scripts" / "serve_api.py").read_text(encoding="utf-8")
+        self.assertIn(
+            "def do_HEAD",
+            source,
+            "scripts/serve_api.py inherits SimpleHTTPRequestHandler.do_HEAD, "
+            "which bypasses its bearer-token check.",
+        )
+        self.assertIn(
+            "_redact_query_token",
+            source,
+            "scripts/serve_api.py logs the request line, which carries any "
+            "?token= credential; it must redact it before logging.",
+        )
+
+
 class TestShadowInventory(unittest.TestCase):
     """Pin which files the partial persona directories shadow.
 

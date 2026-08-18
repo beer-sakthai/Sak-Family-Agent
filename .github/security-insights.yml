@@ -1,0 +1,39 @@
+header:
+  schema-version: 1.0.0
+  expiration-date: '2026-12-31T00:00:00Z'
+  last-updated-date: '2025-05-15T00:00:00Z'
+  last-reviewed-date: '2025-05-15T00:00:00Z'
+project:
+  name: OpenSSF Scorecard
+  description: Security health metrics for Open Source
+  administrators:
+    - name: Stephen Augustus
+      affiliation: Bloomberg
+      primary: true
+    - name: Raghav Kaul
+      affiliation: Google
+    - name: Spencer Schrock
+      affiliation: Google
+  repositories:
+    - name: Scorecard
+      url: https://github.com/ossf/scorecard
+      comment: |
+        ossf/scorecard is the core repo for the Scorecard project.
+    - name: Scorecard Action
+      url: https://github.com/ossf/scorecard-action
+      comment: |
+        ossf/scorecard-action is the GitHub Action for running Scorecard in CI.
+    - name: Scorecard Monitor
+      url: https://github.com/ossf/scorecard-monitor
+      comment: |
+        ossf/scorecard-monitor monitors Scorecard metrics across repositories.
+    - name: Scorecard Webapp
+      url: https://github.com/ossf/scorecard-webapp
+      comment: |
+        ossf/scorecard-webapp provides the web frontend for Scorecard data.
+    - name: Scorecard Visualizer
+      url: https://github.com/ossf/scorecard-visualizer
+      comment: |
+        ossf/scorecard-visualizer provides visualization components for Scorecard findings.
+  steward:
+      uri: https://openssf.org

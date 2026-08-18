@@ -65,7 +65,7 @@ export async function POST(req: NextRequest) {
         for (const subtask of plan.subtasks) {
           const personaName = subtask.persona.charAt(0).toUpperCase() + subtask.persona.slice(1);
           const thought = `[${personaName}] Analyzing subtask: "${subtask.goal}". Checking system invariants and formulating response.`;
-          
+
           sendEvent({
             type: 'persona_thought',
             persona: subtask.persona,

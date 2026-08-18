@@ -49,13 +49,13 @@ class TestStateContext(unittest.TestCase):
         })
         self.assertEqual(self.ctx.interpolate("${steps.step_1.output.int_val}"), 42)
         self.assertIsInstance(self.ctx.interpolate("${steps.step_1.output.int_val}"), int)
-        
+
         self.assertEqual(self.ctx.interpolate("${steps.step_1.output.float_val}"), 3.14)
         self.assertIsInstance(self.ctx.interpolate("${steps.step_1.output.float_val}"), float)
-        
+
         self.assertEqual(self.ctx.interpolate("${steps.step_1.output.bool_val}"), True)
         self.assertIsInstance(self.ctx.interpolate("${steps.step_1.output.bool_val}"), bool)
-        
+
         self.assertEqual(self.ctx.interpolate("${steps.step_1.output.list_val}"), [1, 2, 3])
         self.assertEqual(self.ctx.interpolate("${steps.step_1.output.dict_val}"), {"a": 1})
         self.assertIsNone(self.ctx.interpolate("${steps.step_1.output.none_val}"))
