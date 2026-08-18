@@ -9,6 +9,8 @@ export default defineConfig({
     globals: true,
     testTimeout: 60000,
     hookTimeout: 60000,
+    fileParallelism: false,
+    maxWorkers: 1,
     setupFiles: "./vitest.setup.ts",
     alias: {
       "@": path.resolve(__dirname, "./src"),
