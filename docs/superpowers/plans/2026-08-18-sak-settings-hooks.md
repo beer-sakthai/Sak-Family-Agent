@@ -21,6 +21,7 @@
 - **Non-canonical (byte-synced) copies** that MAY drift: `personas/{sakjules,sakking,saksee,saksit,saktan}/sakthai/agent/guardrails.py` and `personas/{sakjules,sakking,saksee,saksit,saktan}/sakthai/web/server.py`. (Each is a real 1515-line / 433-line file on disk.)
 - The parity invariant is enforced by `tests/test_persona_guardrails_parity.py`; run it with `uv run pytest tests/test_persona_guardrails_parity.py -q`.
 - Python lint/format uses `uv run ruff …` (never bare `ruff`). `ruff` excludes `library/` and `scripts/` via `pyproject.toml`, so scoping the hook to `personas/sakthai/sakthai/*.py` and `tests/*.py` is correct and matches the existing format hook.
+- **Amendment (2026-08-18, plan-mandated-finding ruling):** the `ruff check --fix` hook command uses `--quiet` (`uv run ruff check --fix --quiet "$file_path" 2>/dev/null || true`). Without `--quiet`, `ruff check` prints `All checks passed!` to stdout on every clean file, and PostToolUse hook stdout is surfaced into the transcript — asymmetric noise vs. the silent `ruff format` hook. Verified: `--quiet` yields empty stdout + exit 0 on a clean file (parity with `format`). The Task 1 review raised this as Important/`plan-mandated`; the spec's silent-auto-fix intent supports the amendment over the plan's earlier literal `2>/dev/null`-only command.
 - Conventional commit prefixes are used in this repo (`feat:`, `chore:`, `refactor:`, …).
 
 ## How these hooks work (read first if you're new to Claude Code hooks)
@@ -78,7 +79,7 @@ The `matcher` field is a regex-ish tool-name pattern (`"Write|Edit"` matches eit
 The new hook command (the second entry). It is identical to the format hook except it runs `ruff check --fix` instead of `ruff format`:
 
 ```
-file_path=$(if command -v jq >/dev/null 2>&1; then jq -r '.tool_input.file_path // empty' 2>/dev/null; else python3 -c "import json,sys;d=json.load(sys.stdin);print((d.get('tool_input') or {}).get('file_path') or '')" 2>/dev/null; fi); case "$file_path" in personas/sakthai/sakthai/*.py|*/personas/sakthai/sakthai/*.py|tests/*.py|*/tests/*.py) cd "${CLAUDE_PROJECT_DIR:-$PWD}" && uv run ruff check --fix "$file_path" 2>/dev/null || true ;; esac
+file_path=$(if command -v jq >/dev/null 2>&1; then jq -r '.tool_input.file_path // empty' 2>/dev/null; else python3 -c "import json,sys;d=json.load(sys.stdin);print((d.get('tool_input') or {}).get('file_path') or '')" 2>/dev/null; fi); case "$file_path" in personas/sakthai/sakthai/*.py|*/personas/sakthai/sakthai/*.py|tests/*.py|*/tests/*.py) cd "${CLAUDE_PROJECT_DIR:-$PWD}" && uv run ruff check --fix --quiet "$file_path" 2>/dev/null || true ;; esac
 ```
 
 - [ ] **Step 1: Pipe-test the new command standalone (prove it works before wiring it in)**
@@ -87,7 +88,7 @@ Run from the `Sak-Family-Agent` repo root. This synthesizes the stdin JSON the h
 
 ```bash
 cd /home/beern/Sak-Family-Agent
-echo '{"tool_name":"Edit","tool_input":{"file_path":"tests/test_cli.py"}}' | bash -c 'file_path=$(if command -v jq >/dev/null 2>&1; then jq -r ".tool_input.file_path // empty" 2>/dev/null; else python3 -c "import json,sys;d=json.load(sys.stdin);print((d.get(\"tool_input\") or {}).get(\"file_path\") or \"\")" 2>/dev/null; fi); case "$file_path" in personas/sakthai/sakthai/*.py|*/personas/sakthai/sakthai/*.py|tests/*.py|*/tests/*.py) cd "${CLAUDE_PROJECT_DIR:-$PWD}" && uv run ruff check --fix "$file_path" 2>/dev/null || true ;; esac'
+echo '{"tool_name":"Edit","tool_input":{"file_path":"tests/test_cli.py"}}' | bash -c 'file_path=$(if command -v jq >/dev/null 2>&1; then jq -r ".tool_input.file_path // empty" 2>/dev/null; else python3 -c "import json,sys;d=json.load(sys.stdin);print((d.get(\"tool_input\") or {}).get(\"file_path\") or \"\")" 2>/dev/null; fi); case "$file_path" in personas/sakthai/sakthai/*.py|*/personas/sakthai/sakthai/*.py|tests/*.py|*/tests/*.py) cd "${CLAUDE_PROJECT_DIR:-$PWD}" && uv run ruff check --fix --quiet "$file_path" 2>/dev/null || true ;; esac'
 ```
 
 Expected: exit 0, no stdout. `ruff check --fix` on an already-clean file is a no-op. (If `tests/test_cli.py` has autofixable issues, they will be fixed in place — that is the hook working correctly; let it run.) Confirm there is no error about a missing `jq` (the fallback handles it).
@@ -109,7 +110,7 @@ Modify `Sak-Family-Agent/.claude/settings.json` so the `PostToolUse[0].hooks` ar
           },
           {
             "type": "command",
-            "command": "file_path=$(if command -v jq >/dev/null 2>&1; then jq -r '.tool_input.file_path // empty' 2>/dev/null; else python3 -c \"import json,sys;d=json.load(sys.stdin);print((d.get('tool_input') or {}).get('file_path') or '')\" 2>/dev/null; fi); case \"$file_path\" in personas/sakthai/sakthai/*.py|*/personas/sakthai/sakthai/*.py|tests/*.py|*/tests/*.py) cd \"${CLAUDE_PROJECT_DIR:-$PWD}\" && uv run ruff check --fix \"$file_path\" 2>/dev/null || true ;; esac"
+            "command": "file_path=$(if command -v jq >/dev/null 2>&1; then jq -r '.tool_input.file_path // empty' 2>/dev/null; else python3 -c \"import json,sys;d=json.load(sys.stdin);print((d.get('tool_input') or {}).get('file_path') or '')\" 2>/dev/null; fi); case \"$file_path\" in personas/sakthai/sakthai/*.py|*/personas/sakthai/sakthai/*.py|tests/*.py|*/tests/*.py) cd \"${CLAUDE_PROJECT_DIR:-$PWD}\" && uv run ruff check --fix --quiet \"$file_path\" 2>/dev/null || true ;; esac"
           }
         ]
       }
@@ -231,7 +232,7 @@ Add a `PreToolUse` key alongside the existing `PostToolUse` key. The full file a
           },
           {
             "type": "command",
-            "command": "file_path=$(if command -v jq >/dev/null 2>&1; then jq -r '.tool_input.file_path // empty' 2>/dev/null; else python3 -c \"import json,sys;d=json.load(sys.stdin);print((d.get('tool_input') or {}).get('file_path') or '')\" 2>/dev/null; fi); case \"$file_path\" in personas/sakthai/sakthai/*.py|*/personas/sakthai/sakthai/*.py|tests/*.py|*/tests/*.py) cd \"${CLAUDE_PROJECT_DIR:-$PWD}\" && uv run ruff check --fix \"$file_path\" 2>/dev/null || true ;; esac"
+            "command": "file_path=$(if command -v jq >/dev/null 2>&1; then jq -r '.tool_input.file_path // empty' 2>/dev/null; else python3 -c \"import json,sys;d=json.load(sys.stdin);print((d.get('tool_input') or {}).get('file_path') or '')\" 2>/dev/null; fi); case \"$file_path\" in personas/sakthai/sakthai/*.py|*/personas/sakthai/sakthai/*.py|tests/*.py|*/tests/*.py) cd \"${CLAUDE_PROJECT_DIR:-$PWD}\" && uv run ruff check --fix --quiet \"$file_path\" 2>/dev/null || true ;; esac"
           }
         ]
       }
