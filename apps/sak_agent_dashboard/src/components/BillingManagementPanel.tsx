@@ -64,9 +64,6 @@ export function BillingManagementPanel() {
       }
     };
     load();
-    }
-
-    loadInitialBillingData();
     return () => {
       isMounted = false;
     };
