@@ -1087,5 +1087,24 @@ class TestWorkflowExecutor(unittest.TestCase):
                 self.assertEqual(history.step_results["s1"].output["result"], expected)
 
 
+
+    def test_shell_action_uses_subprocess_exec(self):
+        """Verify that shell actions use create_subprocess_exec and never create_subprocess_shell."""
+        from unittest.mock import patch
+
+        wf = WorkflowDefinition(
+            name="test_exec_not_shell",
+            steps=[
+                StepDefinition(id="s1", action="shell", params={"cmd": "echo 'exec_check'"}),
+            ],
+        )
+
+        with patch("asyncio.create_subprocess_shell") as mock_shell:
+            history = asyncio.run(self.executor.execute_workflow(wf))
+            self.assertEqual(history.status, RunStatus.COMPLETED)
+            self.assertEqual(history.step_results["s1"].output.get("stdout"), "exec_check")
+            mock_shell.assert_not_called()
+
+
 if __name__ == "__main__":
     unittest.main()
