@@ -129,6 +129,132 @@ export const WORKFLOW_TOPOLOGIES: WorkflowTopology[] = [
   },
 ];
 
+export interface DAGValidationResult {
+  isValid: boolean;
+  errors: string[];
+}
+
+/**
+ * Validates DAG invariants: unique IDs, valid dependency references, and absence of cycles.
+ */
+export function validateWorkflowDAG(workflow: WorkflowTopology): DAGValidationResult {
+  const errors: string[] = [];
+  const stageIds = new Set<string>();
+
+  for (const stage of workflow.stages) {
+    if (stageIds.has(stage.id)) {
+      errors.push(`Duplicate stage ID: '${stage.id}'`);
+    }
+    stageIds.add(stage.id);
+  }
+
+  for (const stage of workflow.stages) {
+    if (stage.dependsOn) {
+      for (const dep of stage.dependsOn) {
+        if (!stageIds.has(dep)) {
+          errors.push(`Stage '${stage.id}' depends on non-existent stage '${dep}'`);
+        }
+        if (dep === stage.id) {
+          errors.push(`Stage '${stage.id}' cannot depend on itself`);
+        }
+      }
+    }
+  }
+
+  // Detect cycles using Kahn's algorithm
+  const inDegree: Record<string, number> = {};
+  const graph: Record<string, string[]> = {};
+
+  for (const stage of workflow.stages) {
+    inDegree[stage.id] = (stage.dependsOn || []).length;
+    graph[stage.id] = [];
+  }
+
+  for (const stage of workflow.stages) {
+    for (const dep of stage.dependsOn || []) {
+      if (graph[dep]) {
+        graph[dep].push(stage.id);
+      }
+    }
+  }
+
+  const queue: string[] = [];
+  for (const [id, deg] of Object.entries(inDegree)) {
+    if (deg === 0) {
+      queue.push(id);
+    }
+  }
+
+  let visited = 0;
+  while (queue.length > 0) {
+    const curr = queue.shift()!;
+    visited++;
+    for (const neighbor of graph[curr] || []) {
+      inDegree[neighbor]--;
+      if (inDegree[neighbor] === 0) {
+        queue.push(neighbor);
+      }
+    }
+  }
+
+  if (visited < workflow.stages.length && errors.length === 0) {
+    errors.push("Circular dependency detected in workflow DAG");
+  }
+
+  return {
+    isValid: errors.length === 0,
+    errors,
+  };
+}
+
+/**
+ * Group workflow stages into parallel topological batches.
+ */
+export function buildTopologicalBatches(workflow: WorkflowTopology): WorkflowStage[][] {
+  const batches: WorkflowStage[][] = [];
+  const inDegree: Record<string, number> = {};
+  const graph: Record<string, string[]> = {};
+  const stageMap = new Map<string, WorkflowStage>();
+
+  for (const stage of workflow.stages) {
+    stageMap.set(stage.id, stage);
+    inDegree[stage.id] = (stage.dependsOn || []).length;
+    graph[stage.id] = [];
+  }
+
+  for (const stage of workflow.stages) {
+    for (const dep of stage.dependsOn || []) {
+      if (graph[dep]) {
+        graph[dep].push(stage.id);
+      }
+    }
+  }
+
+  let currentBatch: string[] = [];
+  for (const [id, deg] of Object.entries(inDegree)) {
+    if (deg === 0) {
+      currentBatch.push(id);
+    }
+  }
+
+  while (currentBatch.length > 0) {
+    batches.push(currentBatch.map((id) => stageMap.get(id)!));
+    const nextBatch: string[] = [];
+
+    for (const curr of currentBatch) {
+      for (const neighbor of graph[curr] || []) {
+        inDegree[neighbor]--;
+        if (inDegree[neighbor] === 0) {
+          nextBatch.push(neighbor);
+        }
+      }
+    }
+    currentBatch = nextBatch;
+  }
+
+  return batches;
+}
+
 export function getWorkflows(): WorkflowTopology[] {
   return WORKFLOW_TOPOLOGIES;
 }
