@@ -45,23 +45,29 @@ export const FinetuningPanel: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const fetchFinetuneData = useCallback(async () => {
-    try {
-      const res = await fetch('/api/learning/finetune');
-      if (res.ok) {
-        const data = await res.json();
-        if (data.datasetCard) setDatasetCard(data.datasetCard);
-        if (data.jobs) setJobs(data.jobs);
-        if (typeof data.stagedCount === 'number') setStagedCount(data.stagedCount);
-      }
-    } catch {
-      // Fallback already populated
-    }
-  }, []);
-
   useEffect(() => {
-    fetchFinetuneData();
-  }, [fetchFinetuneData]);
+    let isMounted = true;
+
+    async function loadInitialData() {
+      try {
+        const res = await fetch('/api/learning/finetune');
+        if (res.ok && isMounted) {
+          const data = await res.json();
+          if (data.datasetCard) setDatasetCard(data.datasetCard);
+          if (data.jobs) setJobs(data.jobs);
+          if (typeof data.stagedCount === 'number') setStagedCount(data.stagedCount);
+        }
+      } catch {
+        // Fallback already populated
+      }
+    }
+
+    loadInitialData();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const handleStartTraining = async (config: {
     modelName: LoraTargetModel;

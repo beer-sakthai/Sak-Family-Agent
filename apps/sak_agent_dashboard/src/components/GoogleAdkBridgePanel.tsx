@@ -25,24 +25,30 @@ export const GoogleAdkBridgePanel: React.FC = () => {
   const [registryStatus, setRegistryStatus] = useState<AgentRegistryStatus>(getAgentRegistryStatus());
   const [isEvaluating, setIsEvaluating] = useState(false);
 
-  const fetchBridgeData = useCallback(async () => {
-    try {
-      const res = await fetch('/api/adk/bridge');
-      if (res.ok) {
-        const data = await res.json();
-        if (data.agents) setAgents(data.agents);
-        if (data.manifest) setManifest(data.manifest);
-        if (data.evalResult) setEvalResult(data.evalResult);
-        if (data.registryStatus) setRegistryStatus(data.registryStatus);
-      }
-    } catch {
-      // Fallback already populated
-    }
-  }, []);
-
   useEffect(() => {
-    fetchBridgeData();
-  }, [fetchBridgeData]);
+    let isMounted = true;
+
+    async function loadInitialBridgeData() {
+      try {
+        const res = await fetch('/api/adk/bridge');
+        if (res.ok && isMounted) {
+          const data = await res.json();
+          if (data.agents) setAgents(data.agents);
+          if (data.manifest) setManifest(data.manifest);
+          if (data.evalResult) setEvalResult(data.evalResult);
+          if (data.registryStatus) setRegistryStatus(data.registryStatus);
+        }
+      } catch {
+        // Fallback already populated
+      }
+    }
+
+    loadInitialBridgeData();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const handleGenerateManifest = async (target: DeploymentTarget, serviceName: string, region: string): Promise<CloudDeploymentManifest> => {
     try {

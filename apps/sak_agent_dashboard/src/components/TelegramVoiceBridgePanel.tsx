@@ -22,31 +22,39 @@ export const TelegramVoiceBridgePanel: React.FC = () => {
   const [incidents, setIncidents] = useState<MobileIncidentAlert[]>(getIncidentAlerts());
   const [webhookStatus, setWebhookStatus] = useState<TelegramWebhookStatus>(getTelegramWebhookStatus());
 
-  const fetchHubData = useCallback(async () => {
-    try {
-      const [resInc, resHook] = await Promise.all([
-        fetch('/api/telegram/incidents'),
-        fetch('/api/telegram/webhook'),
-      ]);
-
-      if (resInc.ok) {
-        const data = await resInc.json();
-        if (data.incidents) setIncidents(data.incidents);
-        if (data.voices) setVoices(data.voices);
-      }
-
-      if (resHook.ok) {
-        const hookData = await resHook.json();
-        setWebhookStatus(hookData);
-      }
-    } catch {
-      // Fallback already loaded
-    }
-  }, []);
-
   useEffect(() => {
-    fetchHubData();
-  }, [fetchHubData]);
+    let isMounted = true;
+
+    async function loadInitialHubData() {
+      try {
+        const [resInc, resHook] = await Promise.all([
+          fetch('/api/telegram/incidents'),
+          fetch('/api/telegram/webhook'),
+        ]);
+
+        if (!isMounted) return;
+
+        if (resInc.ok) {
+          const data = await resInc.json();
+          if (data.incidents) setIncidents(data.incidents);
+          if (data.voices) setVoices(data.voices);
+        }
+
+        if (resHook.ok) {
+          const hookData = await resHook.json();
+          setWebhookStatus(hookData);
+        }
+      } catch {
+        // Fallback already loaded
+      }
+    }
+
+    loadInitialHubData();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const handleSynthesize = async (personaSlug: string, text: string) => {
     try {
