@@ -47,6 +47,7 @@ from sakthai.skills import (  # noqa: E402  (path bootstrap above)
 
 PERSONAS = ("sakking", "sakthai", "saksee", "saksit", "saktan", "sakjules")
 PERSONAS_DIR = REPO_ROOT / "personas"
+HERMES_PROFILES_DIR = REPO_ROOT / "infra" / "hermes-agents" / "profiles"
 BIN = os.environ.get("SAKTHAI_BIN", "sakthai")
 
 failures: list[str] = []

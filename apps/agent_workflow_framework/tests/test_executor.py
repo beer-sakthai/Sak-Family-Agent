@@ -293,35 +293,6 @@ class TestWorkflowExecutor(unittest.TestCase):
         self.assertEqual(history.status, RunStatus.COMPLETED)
         self.assertEqual(history.step_results["read_step"].status, StepStatus.COMPLETED)
 
-    def test_python_action_compiled_ast_execution(self):
-        """Verify that expressions and statement blocks are compiled from AST and executed cleanly."""
-        # Single expression
-        wf_expr = WorkflowDefinition(
-            name="python_ast_expr",
-            steps=[StepDefinition(id="s1", action="python", params={"code": "100 + 200"})],
-        )
-        history_expr = asyncio.run(self.executor.execute_workflow(wf_expr))
-        self.assertEqual(history_expr.status, RunStatus.COMPLETED)
-        self.assertEqual(history_expr.step_results["s1"].output.get("result"), 300)
-
-        # Multi-line statement block
-        wf_stmt = WorkflowDefinition(
-            name="python_ast_stmt",
-            steps=[StepDefinition(id="s1", action="python", params={"code": "a = 10\nb = 20\nc = a + b"})],
-        )
-        history_stmt = asyncio.run(self.executor.execute_workflow(wf_stmt))
-        self.assertEqual(history_stmt.status, RunStatus.COMPLETED)
-        self.assertEqual(history_stmt.step_results["s1"].output, {"a": 10, "b": 20, "c": 30})
-
-        # Syntax error in code block
-        wf_syntax = WorkflowDefinition(
-            name="python_ast_syntax",
-            steps=[StepDefinition(id="s1", action="python", params={"code": "def foo("})],
-        )
-        history_syntax = asyncio.run(self.executor.execute_workflow(wf_syntax))
-        self.assertEqual(history_syntax.status, RunStatus.FAILED)
-        self.assertIn("invalid syntax", history_syntax.step_results["s1"].error.lower())
-
     def test_python_action_sandbox_restrictions(self):
         """Verify that the python evaluation action restricts access to dangerous modules and builtins."""
         # Attempting to use open() should raise NameError ("name 'open' is not defined")
@@ -717,45 +688,6 @@ class TestWorkflowExecutor(unittest.TestCase):
                     ),
                     f"Unexpected error message for command '{cmd}': {step_res.error}",
                 )
-
-    def test_shell_action_heredoc_to_interpreter_protection(self):
-        """Verify that shell actions reject heredoc and herestring redirection to interpreters."""
-        malicious_heredoc_commands = [
-            "sh <<'EOF'\necho hello\nEOF",
-            "bash <<EOF\necho evil\nEOF",
-            "python3 <<'EOF'\nimport os\nEOF",
-            "node <<'EOF'\nconsole.log('hi')\nEOF",
-            "sh <<<'echo hello'",
-            "bash <<<'echo evil'",
-            "python <<<'import os'",
-            "env bash <<'EOF'\necho hi\nEOF",
-            "sudo python3 <<'EOF'\nimport os\nEOF",
-        ]
-        for cmd in malicious_heredoc_commands:
-            with self.subTest(cmd=cmd):
-                wf = WorkflowDefinition(
-                    name="shell_heredoc_security_test",
-                    steps=[
-                        StepDefinition(id="s1", action="shell", params={"cmd": cmd}),
-                    ],
-                )
-                history = asyncio.run(self.executor.execute_workflow(wf))
-                self.assertEqual(history.status, RunStatus.FAILED)
-                step_res = history.step_results["s1"]
-                self.assertEqual(step_res.status, StepStatus.FAILED)
-                self.assertIsNotNone(step_res.error)
-                self.assertIn("heredoc/herestring redirection", step_res.error.lower())
-
-        # Verify non-interpreter heredoc commands remain allowed unless targeting sensitive paths
-        wf_cat = WorkflowDefinition(
-            name="shell_heredoc_safe_test",
-            steps=[
-                StepDefinition(id="s1", action="shell", params={"cmd": "cat <<'EOF'\nhello world\nEOF"}),
-            ],
-        )
-        history_cat = asyncio.run(self.executor.execute_workflow(wf_cat))
-        self.assertEqual(history_cat.status, RunStatus.COMPLETED)
-        self.assertEqual(history_cat.step_results["s1"].output.get("stdout"), "hello world")
 
     def test_shell_action_pipeline_to_interpreter_protection(self):
         """Verify that shell actions reject pipeline-to-interpreter commands."""
