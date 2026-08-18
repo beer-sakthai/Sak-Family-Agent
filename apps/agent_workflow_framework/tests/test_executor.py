@@ -511,6 +511,14 @@ class TestWorkflowExecutor(unittest.TestCase):
             "cat *.pem",
             "cat memory.db*",
             "cat /*",
+            "cp .env.prod* /tmp/env",
+            "cp .env-prod* /tmp/env",
+            "cp .env_local* /tmp/env",
+            "cat *.db-wal",
+            "cat *.db-shm",
+            "cat *.db-journal",
+            "cat *.production",
+            "cat *_local",
         ]
         for cmd in malicious_wildcard_commands:
             with self.subTest(cmd=cmd):
@@ -534,6 +542,14 @@ class TestWorkflowExecutor(unittest.TestCase):
             ".env*",
             "id_rsa*",
             "memory.db*",
+            "*.production",
+            "*-prod",
+            "*_local",
+            "*.db-wal",
+            "*.db-shm",
+            "*.db-journal",
+            "memory.db-w*",
+            ".env.prod*",
         ]
         for path in malicious_wildcard_paths:
             for action in ("file_read", "file_write"):
