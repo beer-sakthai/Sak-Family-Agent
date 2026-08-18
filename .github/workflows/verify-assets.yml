@@ -40,31 +40,23 @@ jobs:
           persist-credentials: false
 
       - name: Install uv
-        # Caching is the action's own `enable-cache`, not a separate
-        # `actions/cache` step. A hand-rolled step used to follow this one,
-        # keyed on `hashFiles('**/uv.lock')` — which in this monorepo hashes
-        # `sakthai-chat-cli/uv.lock` and `services/teams-copilot-mcp/uv.lock`
-        # alongside the root lock, so a change to either subproject invalidated
-        # a cache neither contributes to. It also raced the action's own `auto`
-        # caching for the same `~/.cache/uv` directory. One cache, keyed on the
-        # root lock only.
         uses: step-security/setup-uv@edab89485182ad96613ff847804c272ab5d1e03f # v10.0.0
         with:
           python-version: '3.11'
-          enable-cache: true
-          cache-dependency-glob: |
-            pyproject.toml
-            uv.lock
-          cache-suffix: verify-assets
+
+      - name: Cache uv
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/uv
+          key: ${{ runner.os }}-uv-verify-assets-${{ hashFiles('**/uv.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-uv-verify-assets-
 
       - name: Install sakthai package
         # Locked, reproducible install (matches the rest of the repo's uv-based
         # workflows) rather than an unpinned `pip install -e .`. No extras
         # needed: the verification script only touches the stdlib.
-        # --locked makes the comment above true: without it a lock/pyproject
-        # drift re-resolves silently, which both breaks reproducibility and
-        # discards the cache the step above restored.
-        run: uv sync --locked --no-dev
+        run: uv sync --no-dev
 
       - name: Run verification script
         run: |

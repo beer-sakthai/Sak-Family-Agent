@@ -45,25 +45,9 @@ jobs:
     # job installs the same bytes on every run and there is no unpinned install
     # command left to flag.
     - name: Install uv
-      # `enable-cache` defaults to `auto`, which already caches on a
-      # GitHub-hosted runner — but it caches under the action's *default*
-      # `cache-dependency-glob`, and that glob (`**/pyproject.toml`,
-      # `**/uv.lock`, `**/*requirements*.txt`, …) matches 16 tracked files in
-      # this monorepo, two of them persona skill requirement files. Editing any
-      # of them threw away a cache they have no bearing on. Narrow it to the two
-      # files that actually describe this job's environment, and make the
-      # caching explicit rather than implied by a default.
-      #
-      # `cache-suffix` separates the 3.11 and 3.12 legs: same lock, different
-      # resolved wheels, so one shared key would have them clobber each other.
       uses: step-security/setup-uv@edab89485182ad96613ff847804c272ab5d1e03f # v10.0.0
       with:
         python-version: ${{ matrix.python-version }}
-        enable-cache: true
-        cache-dependency-glob: |
-          pyproject.toml
-          uv.lock
-        cache-suffix: pylint-py${{ matrix.python-version }}
 
     - name: Install dependencies
       # --locked: install exactly what uv.lock says, and fail if the lock has

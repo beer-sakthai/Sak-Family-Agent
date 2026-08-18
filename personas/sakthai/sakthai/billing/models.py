@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import hmac
 import secrets
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
@@ -37,9 +38,6 @@ TIER_PRICING: dict[TenantTier, tuple[float, float]] = {
 }
 
 
-def hash_api_key(raw_key: str) -> str:
-    """Hash an API key with SHA-256 for secure storage."""
-    return hashlib.sha256(raw_key.encode("utf-8")).hexdigest()
 _API_KEY_PBKDF2_ITERATIONS = 310_000
 _API_KEY_SALT_BYTES = 16
 
