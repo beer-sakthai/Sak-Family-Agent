@@ -1,5 +1,25 @@
 #!/usr/bin/env python3
 """Test the 1.5B merged model on HF Inference API and record results."""
+import json
+import os
+import time
+
+TOKEN_PATH = "/opt/data/profiles/sakthai/home/.cache/huggingface/token"
+with open(TOKEN_PATH) as f:
+    hf_token = f.read().strip()
+
+os.environ["HF_TOKEN"] = hf_token
+from huggingface_hub import InferenceClient, login, HfApi
+login(token=hf_token)
+
+MODEL = "Nanthasit/sakthai-context-1.5b-merged"
+
+# 1) Verify model exists
+api = HfApi()
+info = api.model_info(MODEL)
+print(f"✅ Model: {MODEL}")
+print(f"   Pipeline: {info.pipeline_tag} | Downloads: {info.downloads} | Likes: {info.likes}")
+print()
 
 import os, json, time, sys
 

@@ -1233,5 +1233,244 @@ export interface SelfEvolutionData {
   lastWrapTimestamp: string;
 }
 
+// -------------------------------------------------------------
+// Sak-Agent Collaborative Chat Arena & Studio Types
+// -------------------------------------------------------------
+
+export type PersonaPresetId = 'cloud_powerhouse' | 'local_offline' | 'fast_efficient' | 'custom';
+
+export interface PersonaPreset {
+  id: PersonaPresetId;
+  name: string;
+  description: string;
+  icon: string;
+  personaMappings: Record<string, { provider: string; model: string }>;
+}
+
+export interface SupervisorSubTask {
+  id: string;
+  persona: string;
+  goal: string;
+  status: 'pending' | 'in_progress' | 'completed' | 'failed';
+  assignedAt: number;
+  resultSummary?: string;
+}
+
+export interface SupervisorPlan {
+  sessionId: string;
+  taskGoal: string;
+  supervisor: string;
+  subtasks: SupervisorSubTask[];
+  consensusApproach: string;
+  createdAt: number;
+}
+
+export interface ToolApprovalRequest {
+  callId: string;
+  persona: string;
+  tool: string;
+  args: Record<string, unknown>;
+  reason: string;
+  destructive: boolean;
+  astScore: number;
+  status: 'pending' | 'approved' | 'rejected';
+}
+
+export interface ASTValidationResult {
+  isSafe: boolean;
+  score: number; // 0 - 100
+  violations: string[];
+  requiresApproval: boolean;
+  severity: 'safe' | 'warning' | 'dangerous';
+}
+
+export interface DatasetStagingEntry {
+  id: string;
+  timestamp: string;
+  sessionId: string;
+  instruction: string;
+  personasInvolved: string[];
+  reasoningTraces: Array<{ persona: string; thought: string; toolsUsed: string[] }>;
+  finalOutput: string;
+  stagedBy: 'auto_heuristic' | 'user_star';
+  heuristicScore: number;
+  scrubbedPII: boolean;
+}
+
+export type SSEChatEvent =
+  | { type: 'session_start'; sessionId: string; personas: string[]; preset: PersonaPresetId; timestamp: number }
+  | { type: 'supervisor_plan'; plan: SupervisorPlan }
+  | { type: 'persona_thought'; persona: string; chunk: string; taskId?: string }
+  | { type: 'tool_call'; persona: string; tool: string; args: Record<string, unknown>; callId: string }
+  | { type: 'tool_approval_required'; approval: ToolApprovalRequest }
+  | { type: 'tool_output'; callId: string; output: string; exitCode: number; astSafe: boolean }
+  | { type: 'synthesis_chunk'; chunk: string }
+  | { type: 'staged_dataset_entry'; entry: DatasetStagingEntry }
+  | { type: 'session_complete'; totalTokens: number; durationMs: number };
+
+// -------------------------------------------------------------
+// Sak-Agent LoRA Fine-Tuning & Dataset Curation Types
+// -------------------------------------------------------------
+
+export type LoraTargetModel = 'sakthai-1.5b' | 'sakthai-7b' | 'qwen-2.5-coder-7b';
+
+export interface LoraTrainingConfig {
+  jobId: string;
+  modelName: LoraTargetModel;
+  datasetPath: string;
+  r: number;
+  loraAlpha: number;
+  loraDropout: number;
+  learningRate: number;
+  numEpochs: number;
+  batchSize: number;
+  targetModules: string[];
+  outputDir: string;
+}
+
+export interface TrainingLossPoint {
+  epoch: number;
+  step: number;
+  loss: number;
+  evalLoss?: number;
+}
+
+export interface LoraJobStatus {
+  jobId: string;
+  modelName: LoraTargetModel;
+  status: 'pending' | 'running' | 'completed' | 'failed';
+  currentEpoch: number;
+  totalEpochs: number;
+  currentStep: number;
+  totalSteps: number;
+  lossHistory: TrainingLossPoint[];
+  currentLoss: number;
+  checkpointPath?: string;
+  startedAt: number;
+  completedAt?: number;
+  errorMessage?: string;
+}
+
+export interface DatasetCardSpec {
+  id: string;
+  name: string;
+  format: 'chatml' | 'alpaca' | 'sharegpt';
+  totalSamples: number;
+  avgTokenLength: number;
+  personasCovered: string[];
+  hfRepoId: string;
+  samples: Array<{ instruction: string; response: string; persona: string }>;
+}
+
+// -------------------------------------------------------------
+// Google ADK & Cloud Run / GKE Deployment Bridge Types
+// -------------------------------------------------------------
+
+export type AdkPrimitiveType = 'LlmAgent' | 'SequentialAgent' | 'ParallelAgent' | 'Tool' | 'Runner';
+
+export interface AdkAgentSpec {
+  personaSlug: string;
+  name: string;
+  role: string;
+  primitive: AdkPrimitiveType;
+  model: string;
+  description: string;
+  tools: string[];
+  generatedPythonCode: string;
+}
+
+export type DeploymentTarget = 'cloud_run' | 'gke';
+
+export interface CloudDeploymentManifest {
+  target: DeploymentTarget;
+  serviceName: string;
+  region: string;
+  cpu: string;
+  memory: string;
+  minInstances: number;
+  maxInstances: number;
+  serviceAccount: string;
+  dockerfile: string;
+  manifestYaml: string;
+}
+
+export interface QualityFlywheelEvalMetric {
+  category: string;
+  score: number;
+  benchmarkTarget: number;
+  status: 'pass' | 'warning' | 'fail';
+}
+
+export interface QualityFlywheelEvalResult {
+  evalId: string;
+  timestamp: string;
+  datasetSize: number;
+  overallAccuracy: number;
+  toolCallingPrecision: number;
+  avgLatencyMs: number;
+  safetyCompliance: number;
+  metrics: QualityFlywheelEvalMetric[];
+}
+
+export interface AgentRegistryStatus {
+  fleetCount: number;
+  publishedToEnterprise: boolean;
+  activeInstances: number;
+  registryEndpoint: string;
+  lastSync: string;
+}
+
+// -------------------------------------------------------------
+// Telegram Voice Bridge & Mobile Incident Alerting Hub Types
+// -------------------------------------------------------------
+
+export type IncidentSeverity = 'P0_CRITICAL' | 'P1_HIGH' | 'P2_MEDIUM' | 'P3_LOW';
+
+export interface MobileIncidentAlert {
+  alertId: string;
+  severity: IncidentSeverity;
+  source: string;
+  title: string;
+  details: string;
+  suggestedAction: string;
+  status: 'active' | 'acknowledged' | 'resolved';
+  requiresApproval: boolean;
+  createdAt: string;
+}
+
+export interface PersonaVoiceProfile {
+  personaSlug: string;
+  name: string;
+  voiceId: string;
+  pitch: number;
+  speed: number;
+  toneDescription: string;
+  samplePhrase: string;
+}
+
+export interface TelegramVoiceMessage {
+  messageId: number;
+  chatId: number;
+  username: string;
+  durationSeconds: number;
+  transcription: string;
+  targetPersona: string;
+  responseAudioUrl?: string;
+  responseText?: string;
+  timestamp: number;
+}
+
+export interface TelegramWebhookStatus {
+  connected: boolean;
+  botUsername: string;
+  webhookUrl: string;
+  pendingUpdates: number;
+  lastUpdateTimestamp: string;
+}
+
+
+
+
+
 
 
