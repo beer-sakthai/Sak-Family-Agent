@@ -222,7 +222,7 @@ def _is_sensitive_path(path: str, allow_local: bool = False) -> bool:
 
     # Strip curl-style file upload prefix if present at start.
     if path.startswith("@") and len(path) > 1:
-        path = path.lstrip("@")
+        path = path[1:]
 
     # Check for path traversal or home-relative paths.
     if ".." in path or path.startswith("~"):
