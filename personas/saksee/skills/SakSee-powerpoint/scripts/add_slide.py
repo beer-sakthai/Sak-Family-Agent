@@ -137,6 +137,11 @@ def duplicate_slide(unpacked_dir: Path, source: str) -> None:
     if not (source_slide.is_relative_to(slides_dir) and source_slide.exists()):
         print(f"Error: {source_slide} not found or invalid", file=sys.stderr)
         sys.exit(1)
+    _assert_path_parent_within_base(source_slide, slides_dir, "source slide")
+    _assert_path_parent_within_base(dest_slide, slides_dir, "destination slide")
+    _assert_path_parent_within_base(source_rels, rels_dir, "source rels")
+    _assert_path_parent_within_base(dest_rels, rels_dir, "destination rels")
+
 
     next_num = get_next_slide_number(slides_dir)
     dest = f"slide{next_num}.xml"
@@ -167,6 +172,18 @@ def duplicate_slide(unpacked_dir: Path, source: str) -> None:
         dest_rels.write_text(rels_content, encoding="utf-8")
 
     _add_to_content_types(unpacked_dir, dest)
+
+def _assert_path_parent_within_base(path: Path, base_dir: Path, label: str) -> None:
+    resolved_base = base_dir.resolve()
+    resolved_parent = path.parent.resolve()
+
+    if not resolved_parent.is_relative_to(resolved_base):
+        print(
+            f"Error: {label} path {path} resolves outside allowed directory {resolved_base}",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
 
     rid = _add_to_presentation_rels(unpacked_dir, dest)
 
