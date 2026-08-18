@@ -41,14 +41,33 @@ def resolve_bin() -> str:
             return raw
         raise ValueError("SAKTHAI_BIN must be 'sakthai' or an absolute executable path.")
 
-    # For path-based overrides, require an absolute executable file.
+    # For path-based overrides, require a canonical absolute executable file
+    # rooted in trusted system binary locations.
     if not candidate.is_absolute():
         raise ValueError("SAKTHAI_BIN path must be absolute.")
-    if not candidate.is_file():
+
+    try:
+        resolved = candidate.expanduser().resolve(strict=True)
+    except (OSError, RuntimeError) as exc:
+        raise ValueError("SAKTHAI_BIN path must point to an existing file.") from exc
+
+    trusted_roots = (
+        Path("/usr/bin"),
+        Path("/usr/local/bin"),
+        Path("/bin"),
+        Path("/opt/homebrew/bin"),
+    )
+    if not any(
+        root == resolved or root in resolved.parents
+        for root in trusted_roots
+    ):
+        raise ValueError("SAKTHAI_BIN path is outside trusted binary directories.")
+
+    if not resolved.is_file():
         raise ValueError("SAKTHAI_BIN path must point to an existing file.")
-    if not os.access(candidate, os.X_OK):
+    if not os.access(resolved, os.X_OK):
         raise ValueError("SAKTHAI_BIN path is not executable.")
-    return str(candidate)
+    return str(resolved)
 
 
 BIN = resolve_bin()
