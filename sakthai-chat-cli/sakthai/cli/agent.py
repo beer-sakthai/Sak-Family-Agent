@@ -21,27 +21,6 @@ from ..agent.loop import (
 from ..agent.tools import BUILTIN_TOOLS, Tool
 
 
-@dataclass
-class RunConfig:
-    """Configuration options for a SakThai agent run."""
-
-    task: str
-    model: str
-    max_tokens: int
-    max_iterations: int
-    max_seconds: float | None
-    provider: str | None
-    verbose: bool
-    no_mcp: bool
-    with_skills: tuple[str, ...]
-    dry_run: bool
-    stream: bool
-    fast: bool
-    stateless: bool
-    caveman: str | None
-    sandbox: bool
-
-
 @contextlib.contextmanager
 def _tool_context(*, no_mcp: bool, verbose: bool) -> Iterator[tuple[Tool, ...]]:
     """Yield the tools for a run: built-ins plus any configured MCP servers.
@@ -109,7 +88,6 @@ class RunOptions:
 
 
 def _run_in_sandbox(task: str, opts: RunOptions) -> None:
-def _run_in_sandbox(cfg: RunConfig) -> None:
     from ..sandbox import SandboxError, run_in_sandbox
 
     try:
@@ -129,73 +107,10 @@ def _run_in_sandbox(cfg: RunConfig) -> None:
             caveman=opts.caveman,
             dry_run=opts.dry_run,
             stream=opts.stream,
-            cfg.task,
-            model=cfg.model,
-            max_tokens=cfg.max_tokens,
-            max_iterations=cfg.max_iterations,
-            max_seconds=cfg.max_seconds,
-            provider=cfg.provider,
-            verbose=cfg.verbose,
-            no_mcp=cfg.no_mcp,
-            with_skills=cfg.with_skills,
-            fast=cfg.fast,
-            stateless=cfg.stateless,
-            caveman=cfg.caveman,
-            dry_run=cfg.dry_run,
-            stream=cfg.stream,
         )
     except SandboxError as e:
         raise click.ClickException(str(e)) from e
     sys.exit(code)
-
-
-def _execute_run(cfg: RunConfig) -> None:
-    """Internal execution logic for running the agent loop."""
-    if cfg.sandbox:
-        _run_in_sandbox(cfg)
-
-    if cfg.dry_run:
-        with _tool_context(no_mcp=cfg.no_mcp, verbose=cfg.verbose) as tools:
-            report = preflight(model=cfg.model, provider=cfg.provider, tools=tools)
-        _print_preflight(report)
-        if not report["runnable"]:
-            raise click.ClickException(
-                f"Not runnable: no credentials found for provider {report['provider']!r}."
-            )
-        return
-    streamed = False
-
-    def _on_token(text: str) -> None:
-        nonlocal streamed
-        streamed = True
-        click.echo(text, nl=False)
-
-    try:
-        with _tool_context(no_mcp=cfg.no_mcp, verbose=cfg.verbose) as tools:
-            result = run_agent(
-                cfg.task,
-                model=cfg.model,
-                max_tokens=cfg.max_tokens,
-                max_iterations=cfg.max_iterations,
-                max_seconds=cfg.max_seconds,
-                on_event=_event_emitter(cfg.verbose),
-                on_token=_on_token if cfg.stream else None,
-                provider=cfg.provider,
-                tools=tools,
-                skills=list(cfg.with_skills),
-                fast=cfg.fast,
-                stateless=cfg.stateless,
-                caveman=cfg.caveman,
-            )
-    except AgentError as exc:
-        raise click.ClickException(str(exc)) from exc
-    except KeyboardInterrupt:
-        click.echo("\nInterrupted.", err=True)
-        sys.exit(130)
-    if streamed:
-        click.echo("")  # terminate the streamed line
-    else:
-        click.echo(result.text)
 
 
 @click.command()
@@ -264,7 +179,6 @@ def _execute_run(cfg: RunConfig) -> None:
     help="Run inside an isolated Docker container. Enables run_command safely — only memory.db is shared with the host.",
 )
 def run(task: str, **kwargs: Any) -> None:
-def run(**kwargs: Any) -> None:
     """Run TASK through the standalone SakThai agent.
 
     External MCP servers configured in ~/.sakthai/mcp.json (or installed
@@ -319,8 +233,6 @@ def run(**kwargs: Any) -> None:
         click.echo("")  # terminate the streamed line
     else:
         click.echo(result.text)
-    cfg = RunConfig(**kwargs)
-    _execute_run(cfg)
 
 
 @click.command()

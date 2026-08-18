@@ -149,7 +149,6 @@ def _run_in_sandbox(task: str, opts: RunOptions) -> None:
     sys.exit(code)
 
 
-
 @click.command()
 @click.argument("task")
 @click.option("--model", default=DEFAULT_MODEL, show_default=True, help="Model identifier.")
@@ -291,7 +290,9 @@ def run(task: str, **kwargs: Any) -> None:
     # A --persona run gets its own memory shard and SOUL.md identity; without
     # --persona, behavior is unchanged from before this flag existed (no store
     # passed, run_agent() opens/closes its own default MemoryStore()).
-    persona_store = MemoryStore(config.persona_memory_db_path(opts.persona)) if opts.persona else None
+    persona_store = (
+        MemoryStore(config.persona_memory_db_path(opts.persona)) if opts.persona else None
+    )
     system_prompt_prefix = load_persona_soul(opts.persona) if opts.persona else ""
     try:
         with _tool_context(no_mcp=opts.no_mcp, verbose=opts.verbose, persona=opts.persona) as tools:
