@@ -11,27 +11,35 @@ from sakthai.agent.gateway_router import (
 
 
 def test_classify_intent_automation_ci() -> None:
-    intent = classify_intent("Can you fix the failing GitHub Actions CI workflow in our release pipeline?")
+    intent = classify_intent(
+        "Can you fix the failing GitHub Actions CI workflow in our release pipeline?"
+    )
     assert intent.primary_intent == IntentCategory.AUTOMATION_CI
     assert intent.confidence >= 0.8
     assert any("ci" in kw or "workflow" in kw for kw in intent.detected_keywords)
 
 
 def test_classify_intent_research() -> None:
-    intent = classify_intent("Please research recent arXiv papers on multimodal tool calling benchmarks.")
+    intent = classify_intent(
+        "Please research recent arXiv papers on multimodal tool calling benchmarks."
+    )
     assert intent.primary_intent == IntentCategory.RESEARCH
     assert intent.confidence >= 0.8
     assert "arxiv" in intent.detected_keywords or "research" in intent.detected_keywords
 
 
 def test_classify_intent_presentation() -> None:
-    intent = classify_intent("Create a PowerPoint presentation deck with visual slides for our pitch.")
+    intent = classify_intent(
+        "Create a PowerPoint presentation deck with visual slides for our pitch."
+    )
     assert intent.primary_intent == IntentCategory.PRESENTATION
     assert intent.confidence >= 0.8
 
 
 def test_classify_intent_copywriting() -> None:
-    intent = classify_intent("Draft a marketing blog post and social media headline for our launch.")
+    intent = classify_intent(
+        "Draft a marketing blog post and social media headline for our launch."
+    )
     assert intent.primary_intent == IntentCategory.COPYWRITING
     assert intent.confidence >= 0.8
 
@@ -43,7 +51,9 @@ def test_classify_intent_operations() -> None:
 
 
 def test_classify_intent_coding() -> None:
-    intent = classify_intent("Refactor this Python function to optimize the regex algorithm and pass mypy.")
+    intent = classify_intent(
+        "Refactor this Python function to optimize the regex algorithm and pass mypy."
+    )
     assert intent.primary_intent == IntentCategory.CODING
     assert intent.confidence >= 0.8
 
@@ -65,7 +75,9 @@ def test_route_to_persona_standard() -> None:
 def test_route_to_persona_fallback_on_critical_charge() -> None:
     # Depleted charge on sakjules -> fallback to sakthai
     charge_state = {"sakjules": 10, "sakthai": 95}
-    route = route_to_persona("Deploy this new release workflow to GitHub Actions", charge_state=charge_state)
+    route = route_to_persona(
+        "Deploy this new release workflow to GitHub Actions", charge_state=charge_state
+    )
     assert route.selected_persona == "sakthai"
     assert route.role_declaration == PERSONA_ROLES["sakthai"]
     assert "critical" in route.routing_reason.lower()

@@ -111,10 +111,12 @@ def test_gateway_api_handler_chat_and_sessions() -> None:
     assert "Missing or empty" in body
 
     # Successful chat request
-    status, headers, body = api.handle_chat_request({
-        "session_id": "web_user_1",
-        "message": "Fix the failing CI docker build pipeline",
-    })
+    status, headers, body = api.handle_chat_request(
+        {
+            "session_id": "web_user_1",
+            "message": "Fix the failing CI docker build pipeline",
+        }
+    )
     assert status == 200
     data = json.loads(body)
     assert data["success"] is True

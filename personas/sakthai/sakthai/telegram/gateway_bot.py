@@ -106,7 +106,11 @@ class TelegramGatewayDispatcher:
 
         session.handoff(target, reason="Explicit /persona command")
         role = PERSONA_ROLES[target]
-        return f"Switched active persona to @{target}.\n\n{role}", target, {"active_persona": target}
+        return (
+            f"Switched active persona to @{target}.\n\n{role}",
+            target,
+            {"active_persona": target},
+        )
 
     def _handle_status(self, session: GatewaySession) -> tuple[str, str, Mapping[str, Any]]:
         lines = ["**Sak-Family Persona Charge Status**\n"]

@@ -26,9 +26,7 @@ class HandoffRecord:
     from_persona: str
     to_persona: str
     reason: str
-    timestamp: str = field(
-        default_factory=lambda: datetime.datetime.now(datetime.UTC).isoformat()
-    )
+    timestamp: str = field(default_factory=lambda: datetime.datetime.now(datetime.UTC).isoformat())
 
 
 @dataclass(frozen=True)
@@ -39,9 +37,7 @@ class GatewayMessage:
     content: str
     persona: str | None = None
     role_declaration: str | None = None
-    timestamp: str = field(
-        default_factory=lambda: datetime.datetime.now(datetime.UTC).isoformat()
-    )
+    timestamp: str = field(default_factory=lambda: datetime.datetime.now(datetime.UTC).isoformat())
     metadata: Mapping[str, str] = field(default_factory=dict)
 
 

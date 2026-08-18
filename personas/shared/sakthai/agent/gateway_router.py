@@ -62,31 +62,126 @@ PERSONA_ROLES: Mapping[str, str] = {
 # Persona specialization keywords
 _KEYWORD_PATTERNS: Mapping[IntentCategory, tuple[tuple[str, ...], float]] = {
     IntentCategory.AUTOMATION_CI: (
-        ("ci", "cd", "github actions", "workflow", "docker", "pipeline", "deploy", "lint", "ruff", "bandit", "pr", "pull request", "build", "release", "scorecard", "subagent", "test failure", "fix ci"),
+        (
+            "ci",
+            "cd",
+            "github actions",
+            "workflow",
+            "docker",
+            "pipeline",
+            "deploy",
+            "lint",
+            "ruff",
+            "bandit",
+            "pr",
+            "pull request",
+            "build",
+            "release",
+            "scorecard",
+            "subagent",
+            "test failure",
+            "fix ci",
+        ),
         1.0,
     ),
     IntentCategory.RESEARCH: (
-        ("research", "paper", "arxiv", "find", "search", "investigate", "compare models", "benchmark data", "dataset analysis", "literature", "scholar"),
+        (
+            "research",
+            "paper",
+            "arxiv",
+            "find",
+            "search",
+            "investigate",
+            "compare models",
+            "benchmark data",
+            "dataset analysis",
+            "literature",
+            "scholar",
+        ),
         0.95,
     ),
     IntentCategory.PRESENTATION: (
-        ("slide", "slides", "powerpoint", "pptx", "marp", "presentation", "deck", "pitch", "visual diagram", "chart"),
+        (
+            "slide",
+            "slides",
+            "powerpoint",
+            "pptx",
+            "marp",
+            "presentation",
+            "deck",
+            "pitch",
+            "visual diagram",
+            "chart",
+        ),
         0.95,
     ),
     IntentCategory.ARCHITECTURE: (
-        ("architecture", "system design", "spec", "vision", "strategy", "roadmap", "plan", "high level", "comfyui", "framework design"),
+        (
+            "architecture",
+            "system design",
+            "spec",
+            "vision",
+            "strategy",
+            "roadmap",
+            "plan",
+            "high level",
+            "comfyui",
+            "framework design",
+        ),
         0.9,
     ),
     IntentCategory.COPYWRITING: (
-        ("copy", "copywriting", "headline", "marketing", "blog", "story", "article", "tweet", "post", "social media", "newsletter", "tone"),
+        (
+            "copy",
+            "copywriting",
+            "headline",
+            "marketing",
+            "blog",
+            "story",
+            "article",
+            "tweet",
+            "post",
+            "social media",
+            "newsletter",
+            "tone",
+        ),
         0.9,
     ),
     IntentCategory.OPERATIONS: (
-        ("schedule", "reminder", "today", "log", "diary", "quote", "price", "invoice", "triage", "daily task", "todo", "calendar"),
+        (
+            "schedule",
+            "reminder",
+            "today",
+            "log",
+            "diary",
+            "quote",
+            "price",
+            "invoice",
+            "triage",
+            "daily task",
+            "todo",
+            "calendar",
+        ),
         0.85,
     ),
     IntentCategory.CODING: (
-        ("code", "function", "class", "bug", "refactor", "typecheck", "mypy", "pytest", "python", "typescript", "react", "api", "endpoint", "regex", "algorithm"),
+        (
+            "code",
+            "function",
+            "class",
+            "bug",
+            "refactor",
+            "typecheck",
+            "mypy",
+            "pytest",
+            "python",
+            "typescript",
+            "react",
+            "api",
+            "endpoint",
+            "regex",
+            "algorithm",
+        ),
         0.85,
     ),
 }
@@ -184,7 +279,9 @@ def route_to_persona(
         reason = f"Explicit user selection of @{preferred_persona}"
     else:
         target = _INTENT_TO_PERSONA.get(intent.primary_intent, "sakthai")
-        reason = f"Matched intent '{intent.primary_intent.value}' (confidence {intent.confidence:.2f})"
+        reason = (
+            f"Matched intent '{intent.primary_intent.value}' (confidence {intent.confidence:.2f})"
+        )
 
     # Check charge threshold (Critical state < 20% triggers fallback)
     target_charge = effective_charge.get(target, 100)
