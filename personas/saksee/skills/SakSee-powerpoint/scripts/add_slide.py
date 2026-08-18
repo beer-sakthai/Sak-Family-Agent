@@ -30,6 +30,19 @@ def get_next_slide_number(slides_dir: Path) -> int:
     return max(existing) + 1 if existing else 1
 
 
+def _validate_source_filename(source: str, kind: str) -> str | None:
+    source_name = Path(source).name
+    if source_name != source:
+        return None
+
+    if kind == "slide" and re.fullmatch(r"slide\d+\.xml", source_name):
+        return source_name
+    if kind == "layout" and re.fullmatch(r"slideLayout\d+\.xml", source_name):
+        return source_name
+
+    return None
+
+
 def create_slide_from_layout(unpacked_dir: Path, layout_file: str) -> None:
     slides_dir = (unpacked_dir / "ppt" / "slides").resolve()
     rels_dir = (slides_dir / "_rels").resolve()
@@ -92,7 +105,11 @@ def duplicate_slide(unpacked_dir: Path, source: str) -> None:
     slides_dir = (unpacked_dir / "ppt" / "slides").resolve()
     rels_dir = (slides_dir / "_rels").resolve()
 
-    source_name = Path(source).name
+    source_name = _validate_source_filename(source, "slide")
+    if source_name is None:
+        print(f"Error: invalid source slide name '{source}'", file=sys.stderr)
+        sys.exit(1)
+
     source_slide = (slides_dir / source_name).resolve()
 
     if not (source_slide.is_relative_to(slides_dir) and source_slide.exists()):
@@ -165,10 +182,15 @@ def _get_next_slide_id(unpacked_dir: Path) -> int:
 
 
 def parse_source(source: str) -> tuple[str, str | None]:
-    if source.startswith("slideLayout") and source.endswith(".xml"):
-        return ("layout", source)
+    layout_name = _validate_source_filename(source, "layout")
+    if layout_name is not None:
+        return ("layout", layout_name)
 
-    return ("slide", None)
+    slide_name = _validate_source_filename(source, "slide")
+    if slide_name is not None:
+        return ("slide", slide_name)
+
+    return ("invalid", None)
 
 
 def _resolve_user_dir(raw_path: str, base_dir: Path) -> Path:
@@ -219,6 +241,10 @@ if __name__ == "__main__":
         sys.exit(1)
 
     source_type, layout_file = parse_source(source)
+
+    if source_type == "invalid":
+        print("Error: source must be 'slideN.xml' or 'slideLayoutN.xml'", file=sys.stderr)
+        sys.exit(1)
 
     if source_type == "layout" and layout_file is not None:
         create_slide_from_layout(unpacked_dir, layout_file)
