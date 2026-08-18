@@ -7,13 +7,14 @@ using atomic ``BEGIN IMMEDIATE`` blocks.
 
 from __future__ import annotations
 
+import contextlib
 import logging
 import queue
 import sqlite3
 import threading
 import time
 from collections.abc import Callable
-from typing import Any, Optional
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +27,7 @@ class AsyncWriteCoalescer:
         db_path: str,
         batch_interval_ms: int = 50,
         max_batch_size: int = 100,
-        on_batch_complete: Optional[Callable[[int], None]] = None,
+        on_batch_complete: Callable[[int], None] | None = None,
     ):
         self.db_path = db_path
         self.batch_interval_sec = max(0.005, batch_interval_ms / 1000.0)
@@ -71,10 +72,8 @@ class AsyncWriteCoalescer:
             if batch:
                 self._commit_batch(conn, batch)
 
-        try:
+        with contextlib.suppress(Exception):
             conn.close()
-        except Exception:
-            pass
 
     def _commit_batch(
         self, conn: sqlite3.Connection, batch: list[tuple[str, tuple[Any, ...]]]
@@ -90,11 +89,11 @@ class AsyncWriteCoalescer:
             if self.on_batch_complete:
                 self.on_batch_complete(len(batch))
         except Exception as err:
-            logger.warning("Coalesced batch write failed (%s); attempting individual write commits...", err)
-            try:
+            logger.warning(
+                "Coalesced batch write failed (%s); attempting individual write commits...", err
+            )
+            with contextlib.suppress(Exception):
                 conn.rollback()
-            except Exception:
-                pass
             committed_count = 0
             for sql, params in batch:
                 try:
@@ -104,10 +103,8 @@ class AsyncWriteCoalescer:
                     committed_count += 1
                 except Exception as item_err:
                     logger.error("Individual write failed for query %s: %s", sql, item_err)
-                    try:
+                    with contextlib.suppress(Exception):
                         conn.rollback()
-                    except Exception:
-                        pass
             with self._lock:
                 self._total_writes += committed_count
                 if committed_count > 0:

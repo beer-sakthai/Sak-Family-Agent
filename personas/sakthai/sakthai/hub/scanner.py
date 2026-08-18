@@ -2,13 +2,15 @@
 
 from __future__ import annotations
 
+import contextlib
 import json
 import logging
 import os
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
-from typing import Any, Optional
+from typing import Any
 
 from .models import AssetType, EcosystemHealthReport, HubAssetSpec, SpaceState
 
@@ -24,20 +26,17 @@ class HubEcosystemScanner:
     def __init__(self, author: str = DEFAULT_AUTHOR, cache_ttl: float = 60.0):
         self.author = author
         self.cache_ttl = cache_ttl
-        self._cached_report: Optional[EcosystemHealthReport] = None
+        self._cached_report: EcosystemHealthReport | None = None
         self._last_scan_time: float = 0.0
 
-    def _get_token(self) -> Optional[str]:
+    def _get_token(self) -> str | None:
         token = os.environ.get("HF_TOKEN")
         if token:
             return token.strip()
         token_file = os.path.expanduser("~/.cache/huggingface/token")
         if os.path.exists(token_file):
-            try:
-                with open(token_file, "r") as f:
-                    return f.read().strip()
-            except Exception:
-                pass
+            with contextlib.suppress(OSError), open(token_file) as f:
+                return f.read().strip()
         return None
 
     def _fetch_json(self, endpoint: str) -> list[dict[str, Any]]:
@@ -48,9 +47,14 @@ class HubEcosystemScanner:
         if token:
             headers["Authorization"] = f"Bearer {token}"
 
+        # Pin the scheme: urlopen honours file:// and other handlers, so refuse
+        # anything the constant base URL would not have produced (bandit B310).
+        if urllib.parse.urlparse(url).scheme != "https":
+            raise ValueError(f"refusing non-https Hub URL: {url!r}")
+
         req = urllib.request.Request(url, headers=headers)
         try:
-            with urllib.request.urlopen(req, timeout=10) as resp:
+            with urllib.request.urlopen(req, timeout=10) as resp:  # nosec B310
                 data = json.loads(resp.read().decode("utf-8"))
                 return data if isinstance(data, list) else [data]
         except Exception as err:
