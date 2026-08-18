@@ -93,9 +93,8 @@ export const CommandPaletteModal: React.FC<CommandPaletteModalProps> = ({
 
   useEffect(() => {
     if (isOpen) {
-      setTimeout(() => inputRef.current?.focus(), 50);
-    } else {
-      setQuery('');
+      const timer = setTimeout(() => inputRef.current?.focus(), 50);
+      return () => clearTimeout(timer);
     }
   }, [isOpen]);
 
@@ -103,6 +102,7 @@ export const CommandPaletteModal: React.FC<CommandPaletteModalProps> = ({
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && isOpen) {
+        setQuery('');
         onClose();
       }
     };
@@ -120,6 +120,7 @@ export const CommandPaletteModal: React.FC<CommandPaletteModalProps> = ({
   );
 
   const handleSelect = (tabId: string) => {
+    setQuery('');
     onNavigate(tabId);
     onClose();
   };

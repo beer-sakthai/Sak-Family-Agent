@@ -28,46 +28,47 @@ export const EvalQualityFlywheelPanel: React.FC = () => {
   const [isRunning, setIsRunning] = useState<boolean>(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
-  const loadData = useCallback(async () => {
-    try {
-      const res = await fetch('/api/eval');
-      if (res.ok) {
-        const json = await res.json();
-        if (json.data) {
-          if (json.data.datasets) setDatasets(json.data.datasets);
-          if (json.data.failures) setFailures(json.data.failures);
-          if (json.data.testCases) setTestCases(json.data.testCases);
-          if (json.data.recentRuns) setRecentRuns(json.data.recentRuns);
-          if (json.data.summaries && json.data.summaries.length > 0) {
-            setSummaries(json.data.summaries);
+  useEffect(() => {
+    let isSubscribed = true;
+    const initData = async () => {
+      try {
+        const res = await fetch('/api/eval');
+        if (res.ok) {
+          const json = await res.json();
+          if (isSubscribed && json.data) {
+            if (json.data.datasets) setDatasets(json.data.datasets);
+            if (json.data.failures) setFailures(json.data.failures);
+            if (json.data.testCases) setTestCases(json.data.testCases);
+            if (json.data.recentRuns) setRecentRuns(json.data.recentRuns);
+            if (json.data.summaries && json.data.summaries.length > 0) {
+              setSummaries(json.data.summaries);
+            }
           }
         }
+      } catch {
+        // Use pre-seeded memory data
       }
-    } catch {
-      // Use pre-seeded memory data
-    }
+
+      if (isSubscribed && recentRuns.length === 0) {
+        const results = await EvalEngine.runBatchEvaluation(GOLDEN_TEST_CASES.slice(0, 6), {
+          personaSlugs: ['all'],
+          judgeModel: 'gemini-1.5-pro',
+          concurrency: 2,
+          enableCoT: true,
+          enableOrderShuffling: true,
+          passThreshold: 75,
+        });
+        if (isSubscribed) {
+          setRecentRuns(results);
+          setSummaries(EvalEngine.calculatePersonaBenchmarkSummaries(results));
+        }
+      }
+    };
+    void initData();
+    return () => {
+      isSubscribed = false;
+    };
   }, []);
-
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
-
-  // Initial synthetic run if runs are empty so radar chart shows baseline
-  useEffect(() => {
-    if (recentRuns.length === 0) {
-      EvalEngine.runBatchEvaluation(GOLDEN_TEST_CASES.slice(0, 6), {
-        personaSlugs: ['all'],
-        judgeModel: 'gemini-1.5-pro',
-        concurrency: 2,
-        enableCoT: true,
-        enableOrderShuffling: true,
-        passThreshold: 75,
-      }).then((results) => {
-        setRecentRuns(results);
-        setSummaries(EvalEngine.calculatePersonaBenchmarkSummaries(results));
-      });
-    }
-  }, [recentRuns.length]);
 
   const handleTriggerRun = async (selectedIds: string[]) => {
     setIsRunning(true);

@@ -38,24 +38,27 @@ export const SemanticCachePanel: React.FC = () => {
   const [isLookingUp, setIsLookingUp] = useState<boolean>(false);
   const [filterQuery, setFilterQuery] = useState<string>('');
 
-  const loadData = useCallback(async () => {
-    try {
-      const res = await fetch('/api/cache');
-      if (res.ok) {
-        const json = await res.json();
-        if (json.data) {
-          if (json.data.analytics) setAnalytics(json.data.analytics);
-          if (json.data.entries) setEntries(json.data.entries);
-        }
-      }
-    } catch {
-      // In-memory fallback
-    }
-  }, []);
-
   useEffect(() => {
-    loadData();
-  }, [loadData]);
+    let isSubscribed = true;
+    const fetchCacheData = async () => {
+      try {
+        const res = await fetch('/api/cache');
+        if (res.ok) {
+          const json = await res.json();
+          if (isSubscribed && json.data) {
+            if (json.data.analytics) setAnalytics(json.data.analytics);
+            if (json.data.entries) setEntries(json.data.entries);
+          }
+        }
+      } catch {
+        // In-memory fallback
+      }
+    };
+    void fetchCacheData();
+    return () => {
+      isSubscribed = false;
+    };
+  }, []);
 
   const handleTestLookup = async () => {
     setIsLookingUp(true);

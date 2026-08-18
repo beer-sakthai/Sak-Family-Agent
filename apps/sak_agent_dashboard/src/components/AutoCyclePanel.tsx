@@ -90,23 +90,26 @@ export default function AutoCyclePanel({ data }: AutoCyclePanelProps) {
 
   const activeState = personaStates[selectedPersona] || CycleEngine.getPersonaState(selectedPersona);
 
-  const loadData = useCallback(async () => {
-    try {
-      const res = await fetch("/api/auto-cycle");
-      if (res.ok) {
-        const json = await res.json();
-        if (json.cycleStates) {
-          setPersonaStates(json.cycleStates);
-        }
-      }
-    } catch {
-      // In-memory fallback
-    }
-  }, []);
-
   useEffect(() => {
-    loadData();
-  }, [loadData]);
+    let isSubscribed = true;
+    const fetchCycles = async () => {
+      try {
+        const res = await fetch("/api/auto-cycle");
+        if (res.ok) {
+          const json = await res.json();
+          if (isSubscribed && json.cycleStates) {
+            setPersonaStates(json.cycleStates);
+          }
+        }
+      } catch {
+        // In-memory fallback
+      }
+    };
+    void fetchCycles();
+    return () => {
+      isSubscribed = false;
+    };
+  }, []);
 
   const handleStepStage = async () => {
     setIsExecuting(true);

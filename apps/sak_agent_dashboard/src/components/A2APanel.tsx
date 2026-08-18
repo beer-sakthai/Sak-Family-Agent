@@ -19,25 +19,28 @@ export const A2APanel: React.FC = () => {
   const [health, setHealth] = useState<A2AHealthStatus>(ServiceRegistry.getFleetHealth());
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
-  const loadData = useCallback(async () => {
-    try {
-      const res = await fetch('/api/a2a/registry');
-      if (res.ok) {
-        const json = await res.json();
-        if (json.data) {
-          if (json.data.fleet) setFleet(json.data.fleet);
-          if (json.data.health) setHealth(json.data.health);
-          if (json.data.delegations) setDelegations(json.data.delegations);
-        }
-      }
-    } catch {
-      // Fallback in-memory
-    }
-  }, []);
-
   useEffect(() => {
-    loadData();
-  }, [loadData]);
+    let isSubscribed = true;
+    const fetchFleet = async () => {
+      try {
+        const res = await fetch('/api/a2a/registry');
+        if (res.ok) {
+          const json = await res.json();
+          if (isSubscribed && json.data) {
+            if (json.data.fleet) setFleet(json.data.fleet);
+            if (json.data.health) setHealth(json.data.health);
+            if (json.data.delegations) setDelegations(json.data.delegations);
+          }
+        }
+      } catch {
+        // Fallback in-memory
+      }
+    };
+    void fetchFleet();
+    return () => {
+      isSubscribed = false;
+    };
+  }, []);
 
   const handleDelegateRpc = async (
     from: string,

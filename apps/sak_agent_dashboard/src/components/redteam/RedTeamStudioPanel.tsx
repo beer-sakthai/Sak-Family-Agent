@@ -58,25 +58,28 @@ export const RedTeamStudioPanel: React.FC = () => {
     },
   };
 
-  const loadData = useCallback(async () => {
-    try {
-      const res = await fetch('/api/redteam');
-      if (res.ok) {
-        const json = await res.json();
-        if (json.data) {
-          if (json.data.sweeps) setSweeps(json.data.sweeps);
-          if (json.data.payloads) setPayloads(json.data.payloads);
-          if (json.data.verdicts) setVerdicts(json.data.verdicts);
-        }
-      }
-    } catch {
-      // In-memory fallback
-    }
-  }, []);
-
   useEffect(() => {
-    loadData();
-  }, [loadData]);
+    let isSubscribed = true;
+    const fetchRedTeamData = async () => {
+      try {
+        const res = await fetch('/api/redteam');
+        if (res.ok) {
+          const json = await res.json();
+          if (isSubscribed && json.data) {
+            if (json.data.sweeps) setSweeps(json.data.sweeps);
+            if (json.data.payloads) setPayloads(json.data.payloads);
+            if (json.data.verdicts) setVerdicts(json.data.verdicts);
+          }
+        }
+      } catch {
+        // In-memory fallback
+      }
+    };
+    void fetchRedTeamData();
+    return () => {
+      isSubscribed = false;
+    };
+  }, []);
 
   const handleRunFuzzSweep = async () => {
     setIsFuzzing(true);

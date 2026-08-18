@@ -50,29 +50,32 @@ export const MutationStudioPanel: React.FC = () => {
     timestamp: new Date().toISOString(),
   };
 
-  const loadData = useCallback(async () => {
-    try {
-      const res = await fetch('/api/mutation');
-      if (res.ok) {
-        const json = await res.json();
-        if (json.data) {
-          if (json.data.sweeps) setSweeps(json.data.sweeps);
-          if (json.data.mutants) {
-            setMutants(json.data.mutants);
-            if (!selectedMutant && json.data.mutants.length > 0) {
-              setSelectedMutant(json.data.mutants[0]);
+  useEffect(() => {
+    let isSubscribed = true;
+    const fetchMutations = async () => {
+      try {
+        const res = await fetch('/api/mutation');
+        if (res.ok) {
+          const json = await res.json();
+          if (isSubscribed && json.data) {
+            if (json.data.sweeps) setSweeps(json.data.sweeps);
+            if (json.data.mutants) {
+              setMutants(json.data.mutants);
+              if (json.data.mutants.length > 0) {
+                setSelectedMutant((prev) => prev ?? json.data.mutants[0]);
+              }
             }
           }
         }
+      } catch {
+        // In-memory fallback
       }
-    } catch {
-      // In-memory fallback
-    }
-  }, [selectedMutant]);
-
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
+    };
+    void fetchMutations();
+    return () => {
+      isSubscribed = false;
+    };
+  }, []);
 
   const handleRunSweep = async () => {
     setIsRunningSweep(true);
