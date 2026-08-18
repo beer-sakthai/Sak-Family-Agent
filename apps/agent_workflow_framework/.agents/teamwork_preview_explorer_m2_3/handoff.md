@@ -135,17 +135,14 @@ class TestStateContext(unittest.TestCase):
         self.assertEqual(self.ctx.get_step_output("unknown_step"), {})
 
     def test_interpolate_exact_scalar_types(self):
-        self.ctx.set_step_output(
-            "step_1",
-            {
-                "int_val": 42,
-                "float_val": 3.14,
-                "bool_val": True,
-                "list_val": [1, 2, 3],
-                "dict_val": {"a": 1},
-                "none_val": None,
-            },
-        )
+        self.ctx.set_step_output("step_1", {
+            "int_val": 42,
+            "float_val": 3.14,
+            "bool_val": True,
+            "list_val": [1, 2, 3],
+            "dict_val": {"a": 1},
+            "none_val": None,
+        })
         self.assertEqual(self.ctx.interpolate("${steps.step_1.output.int_val}"), 42)
         self.assertIsInstance(self.ctx.interpolate("${steps.step_1.output.int_val}"), int)
         self.assertEqual(self.ctx.interpolate("${steps.step_1.output.float_val}"), 3.14)
@@ -158,9 +155,7 @@ class TestStateContext(unittest.TestCase):
 
     def test_interpolate_string_literal_embedding(self):
         self.ctx.set_step_output("step_1", {"name": "Alice", "count": 5})
-        res = self.ctx.interpolate(
-            "User ${steps.step_1.output.name} has ${steps.step_1.output.count} items."
-        )
+        res = self.ctx.interpolate("User ${steps.step_1.output.name} has ${steps.step_1.output.count} items.")
         self.assertEqual(res, "User Alice has 5 items.")
 
     def test_interpolate_multiple_expressions(self):
@@ -187,7 +182,13 @@ class TestStateContext(unittest.TestCase):
         self.assertEqual(self.ctx.interpolate(template), ["apple", "banana", "cherry"])
 
     def test_interpolate_nested_key_path(self):
-        self.ctx.set_step_output("s1", {"user": {"profile": {"role": "admin"}}})
+        self.ctx.set_step_output("s1", {
+            "user": {
+                "profile": {
+                    "role": "admin"
+                }
+            }
+        })
         res = self.ctx.interpolate("${steps.s1.output.user.profile.role}")
         self.assertEqual(res, "admin")
 
@@ -325,18 +326,8 @@ class TestHistoryStore(unittest.TestCase):
     def test_list_runs(self):
         if hasattr(self.store, "list_runs"):
             self.assertEqual(self.store.list_runs(), [])
-            h1 = RunHistory(
-                run_id="run1",
-                workflow_name="w1",
-                status=RunStatus.COMPLETED,
-                start_time="2026-08-01T12:00:00Z",
-            )
-            h2 = RunHistory(
-                run_id="run2",
-                workflow_name="w2",
-                status=RunStatus.FAILED,
-                start_time="2026-08-01T12:00:01Z",
-            )
+            h1 = RunHistory(run_id="run1", workflow_name="w1", status=RunStatus.COMPLETED, start_time="2026-08-01T12:00:00Z")
+            h2 = RunHistory(run_id="run2", workflow_name="w2", status=RunStatus.FAILED, start_time="2026-08-01T12:00:01Z")
             self.store.save_run_history(h1)
             self.store.save_run_history(h2)
 

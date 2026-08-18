@@ -156,10 +156,9 @@ class TestWorkflowExecutor(unittest.TestCase):
 
     def test_ssrf_redirect_protection(self):
         """Verify that the redirect handler intercepts and blocks redirects to loopback or private IPs."""
+        from agent_workflow.executor import SafeRedirectHandler
         import urllib.request
         from unittest.mock import MagicMock
-
-        from agent_workflow.executor import SafeRedirectHandler
 
         handler = SafeRedirectHandler()
         req = urllib.request.Request("https://example.com/start")
@@ -178,10 +177,11 @@ class TestWorkflowExecutor(unittest.TestCase):
         ]
 
         for url in unsafe_redirects:
-            with self.subTest(url=url), self.assertRaises((ValueError, RuntimeError)):
-                handler.redirect_request(
-                    req, fp=None, code=302, msg="Found", headers=MagicMock(), newurl=url
-                )
+            with self.subTest(url=url):
+                with self.assertRaises((ValueError, RuntimeError)):
+                    handler.redirect_request(
+                        req, fp=None, code=302, msg="Found", headers=MagicMock(), newurl=url
+                    )
 
         # Test safe redirect that should be allowed
         try:
@@ -270,6 +270,34 @@ class TestWorkflowExecutor(unittest.TestCase):
                         f"Unexpected error for path '{path}' and action '{action}': {step_res.error}",
                     )
 
+    def test_file_path_control_character_validation_protection(self):
+        """Verify that file actions reject paths containing ASCII control characters."""
+        control_paths = [
+            "subdir/path\rwith\rreturn",
+            "subdir/path\nwith\nnewline",
+            "subdir/path\twith\ttab",
+            "subdir/path\0with\0null",
+        ]
+        for path in control_paths:
+            for action in ("file_read", "file_write"):
+                with self.subTest(path=path, action=action):
+                    wf = WorkflowDefinition(
+                        name="path_control_char_test",
+                        steps=[
+                            StepDefinition(
+                                id="file_step",
+                                action=action,
+                                params={"path": path, "content": "dummy"},
+                            ),
+                        ],
+                    )
+                    history = asyncio.run(self.executor.execute_workflow(wf))
+                    self.assertEqual(history.status, RunStatus.FAILED)
+                    step_res = history.step_results["file_step"]
+                    self.assertEqual(step_res.status, StepStatus.FAILED)
+                    self.assertIsNotNone(step_res.error)
+                    self.assertIn("control characters are not allowed in file paths", step_res.error.lower())
+
     def test_file_path_validation_allows_ordinary_paths(self):
         """Verify the hardened validator still permits ordinary workspace paths."""
         target = Path(self.temp_dir.name) / "reports" / "summary.json"
@@ -292,6 +320,35 @@ class TestWorkflowExecutor(unittest.TestCase):
         history = asyncio.run(self.executor.execute_workflow(wf))
         self.assertEqual(history.status, RunStatus.COMPLETED)
         self.assertEqual(history.step_results["read_step"].status, StepStatus.COMPLETED)
+
+    def test_python_action_compiled_ast_execution(self):
+        """Verify that expressions and statement blocks are compiled from AST and executed cleanly."""
+        # Single expression
+        wf_expr = WorkflowDefinition(
+            name="python_ast_expr",
+            steps=[StepDefinition(id="s1", action="python", params={"code": "100 + 200"})],
+        )
+        history_expr = asyncio.run(self.executor.execute_workflow(wf_expr))
+        self.assertEqual(history_expr.status, RunStatus.COMPLETED)
+        self.assertEqual(history_expr.step_results["s1"].output.get("result"), 300)
+
+        # Multi-line statement block
+        wf_stmt = WorkflowDefinition(
+            name="python_ast_stmt",
+            steps=[StepDefinition(id="s1", action="python", params={"code": "a = 10\nb = 20\nc = a + b"})],
+        )
+        history_stmt = asyncio.run(self.executor.execute_workflow(wf_stmt))
+        self.assertEqual(history_stmt.status, RunStatus.COMPLETED)
+        self.assertEqual(history_stmt.step_results["s1"].output, {"a": 10, "b": 20, "c": 30})
+
+        # Syntax error in code block
+        wf_syntax = WorkflowDefinition(
+            name="python_ast_syntax",
+            steps=[StepDefinition(id="s1", action="python", params={"code": "def foo("})],
+        )
+        history_syntax = asyncio.run(self.executor.execute_workflow(wf_syntax))
+        self.assertEqual(history_syntax.status, RunStatus.FAILED)
+        self.assertIn("invalid syntax", history_syntax.step_results["s1"].error.lower())
 
     def test_python_action_sandbox_restrictions(self):
         """Verify that the python evaluation action restricts access to dangerous modules and builtins."""
@@ -721,9 +778,7 @@ class TestWorkflowExecutor(unittest.TestCase):
         wf_cat = WorkflowDefinition(
             name="shell_heredoc_safe_test",
             steps=[
-                StepDefinition(
-                    id="s1", action="shell", params={"cmd": "cat <<'EOF'\nhello world\nEOF"}
-                ),
+                StepDefinition(id="s1", action="shell", params={"cmd": "cat <<'EOF'\nhello world\nEOF"}),
             ],
         )
         history_cat = asyncio.run(self.executor.execute_workflow(wf_cat))
@@ -1060,48 +1115,63 @@ class TestWorkflowExecutor(unittest.TestCase):
                 self.assertEqual(history.step_results["s1"].output["result"], expected)
 
 
-    def test_python_action_statement_execution_allowed(self):
-        """Verify that basic assignment statement blocks execute properly."""
-        code_str = "a = 10\nb = 20\nresult = a + b"
+
+    def test_shell_action_uses_subprocess_exec(self):
+        """Verify that shell actions use create_subprocess_exec and never create_subprocess_shell."""
+        from unittest.mock import patch
+
+        wf = WorkflowDefinition(
+            name="test_exec_not_shell",
+            steps=[
+                StepDefinition(id="s1", action="shell", params={"cmd": "echo 'exec_check'"}),
+            ],
+        )
+
+        with patch("asyncio.create_subprocess_shell") as mock_shell:
+            history = asyncio.run(self.executor.execute_workflow(wf))
+            self.assertEqual(history.status, RunStatus.COMPLETED)
+            self.assertEqual(history.step_results["s1"].output.get("stdout"), "exec_check")
+            mock_shell.assert_not_called()
+    def test_python_sandbox_statement_block_allowed_statements(self):
+        """Verify that allowed statement constructs execute properly in Python sandbox statement blocks."""
         wf = WorkflowDefinition(
             name="python_stmt_allowed",
             steps=[
                 StepDefinition(
                     id="s1",
                     action="python",
-                    params={"code": code_str},
-                ),
+                    params={
+                        "code": "a = 10\nb = 5\nc: int = 15\npass\na + b + c"
+                    },
+                )
             ],
         )
         history = asyncio.run(self.executor.execute_workflow(wf))
         self.assertEqual(history.status, RunStatus.COMPLETED)
-        self.assertEqual(history.step_results["s1"].output.get("result"), 30)
         self.assertEqual(history.step_results["s1"].output.get("a"), 10)
-        self.assertEqual(history.status.get("b") if isinstance(history.status, dict) else history.step_results["s1"].output.get("b"), 20)
+        self.assertEqual(history.step_results["s1"].output.get("b"), 5)
+        self.assertEqual(history.step_results["s1"].output.get("c"), 15)
 
-    def test_python_action_statement_execution_prohibited(self):
-        """Verify that statement blocks containing disallowed statement AST nodes are blocked."""
-        try_stmt = "try:\n    pass\nexcept Exception:\n    pass"
-        prohibited_statements = [
-            "import os",
-            "from os import path",
-            "def f(): pass",
-            "class A: pass",
-            "for i in range(2): pass",
-            "while True: pass",
-            try_stmt,
-            "del a",
-            "raise RuntimeError('error')",
-            "assert True",
-            "with open('test.txt') as f: pass",
+    def test_python_sandbox_statement_block_prohibited_statements(self):
+        """Verify that prohibited statement constructs in Python sandbox statement blocks raise PermissionError."""
+        prohibited_blocks = [
+            "import os\nx = 1",
+            "from sys import exit\nx = 1",
+            "def foo(): pass\nfoo()",
+            "async def foo(): pass\nfoo()",
+            "class Foo: pass\nx = 1",
+            "for i in range(10): pass",
+            "while True: break",
+            "if True: pass",
+            "with open('/etc/passwd') as f: pass",
+            "try:\n    x = 1\nexcept Exception:\n    pass",
+            "x = 1\ndel x",
         ]
-        for stmt in prohibited_statements:
-            with self.subTest(stmt=stmt):
+        for code in prohibited_blocks:
+            with self.subTest(code=code):
                 wf = WorkflowDefinition(
                     name="python_stmt_prohibited",
-                    steps=[
-                        StepDefinition(id="s1", action="python", params={"code": stmt}),
-                    ],
+                    steps=[StepDefinition(id="s1", action="python", params={"code": code})],
                 )
                 history = asyncio.run(self.executor.execute_workflow(wf))
                 self.assertEqual(history.status, RunStatus.FAILED)
@@ -1109,6 +1179,7 @@ class TestWorkflowExecutor(unittest.TestCase):
                 self.assertEqual(step_res.status, StepStatus.FAILED)
                 self.assertIsNotNone(step_res.error)
                 self.assertIn("prohibited", step_res.error.lower())
+
 
 if __name__ == "__main__":
     unittest.main()
