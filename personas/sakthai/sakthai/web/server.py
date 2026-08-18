@@ -309,7 +309,22 @@ class _Handler(SimpleHTTPRequestHandler):
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
-        self.wfile.write(body)
+        if self.command != "HEAD":
+            self.wfile.write(body)
+
+    def do_HEAD(self) -> None:  # noqa: N802
+        """Serve HEAD through the exact same gate as GET.
+
+        ``SimpleHTTPRequestHandler`` supplies its own ``do_HEAD``. Inheriting it
+        unchanged left HEAD served straight out of ``send_head()``, skipping both
+        the bearer-token check and the static-root containment check that
+        ``do_GET`` performs -- an unauthenticated HEAD disclosed the existence,
+        size and mtime of any file under the static root, and followed symlinks
+        out of it that an *authenticated* GET rejects with 403. Delegating keeps
+        the two verbs on one code path so they cannot drift apart again; the body
+        writes are suppressed by the ``self.command`` guards.
+        """
+        self.do_GET()
 
     def do_GET(self) -> None:  # noqa: N802
         parsed = urlparse(self.path)
@@ -320,7 +335,8 @@ class _Handler(SimpleHTTPRequestHandler):
             self.send_header("Content-Type", "application/json; charset=utf-8")
             self.send_header("Content-Length", "16")
             self.end_headers()
-            self.wfile.write(b'{"status": "ok"}')
+            if self.command != "HEAD":
+                self.wfile.write(b'{"status": "ok"}')
             return
 
         if path.startswith("/api/"):
@@ -348,7 +364,8 @@ class _Handler(SimpleHTTPRequestHandler):
                 self.send_response(401)
                 self.send_header("Content-Type", "text/plain; charset=utf-8")
                 self.end_headers()
-                self.wfile.write(b"Unauthorized: Missing or invalid bearer token")
+                if self.command != "HEAD":
+                    self.wfile.write(b"Unauthorized: Missing or invalid bearer token")
                 return
 
         if path == "/api/stages":
@@ -401,6 +418,8 @@ class _Handler(SimpleHTTPRequestHandler):
             self.send_error(404, "File not found")
             return
 
+        if self.command == "HEAD":
+            return super().do_HEAD()
         return super().do_GET()
 
 
