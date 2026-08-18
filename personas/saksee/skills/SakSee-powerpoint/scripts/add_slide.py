@@ -44,9 +44,14 @@ def _validate_source_filename(source: str, kind: str) -> str | None:
 
 
 def create_slide_from_layout(unpacked_dir: Path, layout_file: str) -> None:
-    slides_dir = (unpacked_dir / "ppt" / "slides").resolve()
+    ppt_root = (unpacked_dir / "ppt").resolve()
+    slides_dir = (ppt_root / "slides").resolve()
     rels_dir = (slides_dir / "_rels").resolve()
-    layouts_dir = (unpacked_dir / "ppt" / "slideLayouts").resolve()
+    layouts_dir = (ppt_root / "slideLayouts").resolve()
+
+    if not layouts_dir.is_relative_to(ppt_root):
+        print(f"Error: {layouts_dir} is outside allowed ppt root {ppt_root}", file=sys.stderr)
+        sys.exit(1)
 
     layout_name = Path(layout_file).name
     layout_path = (layouts_dir / layout_name).resolve()
