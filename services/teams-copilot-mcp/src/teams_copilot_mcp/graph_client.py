@@ -5,6 +5,8 @@ var convention already established by the `hermes teams-pipeline` skill, so
 the same Azure AD app registration can back both.
 """
 
+from __future__ import annotations
+
 import os
 import time
 from typing import Any
