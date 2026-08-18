@@ -1,7 +1,8 @@
 import argparse
-import yfinance as yf
-import pandas as pd
 import sys
+
+import yfinance as yf
+
 
 def fetch_stock_data(ticker: str, period: str, output_path: str | None):
     """
