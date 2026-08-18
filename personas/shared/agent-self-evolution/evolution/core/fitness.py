@@ -177,6 +177,7 @@ def tool_selection_metric(example: dspy.Example, prediction: dspy.Prediction, tr
         tool_match_score = 1.0
 
     # 2. Score arguments match (0.4 weight)
+    import contextlib
     import json
 
     parsed_args = {}
@@ -189,10 +190,8 @@ def tool_selection_metric(example: dspy.Example, prediction: dspy.Prediction, tr
             lines = json_clean.split("\n")
             if len(lines) > 2:
                 json_clean = "\n".join(lines[1:-1]).strip()
-        try:
+        with contextlib.suppress(Exception):
             parsed_args = json.loads(json_clean)
-        except Exception:
-            pass
 
     args_match_score = 0.0
     if expected_args:
