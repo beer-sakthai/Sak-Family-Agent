@@ -14,7 +14,7 @@ import os
 import threading
 import time
 from collections import OrderedDict
-from typing import Any, Callable, Optional
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +34,7 @@ class MemoryLRUCache:
         self._misses = 0
         self._evictions = 0
 
-    def get(self, key: str) -> Optional[Any]:
+    def get(self, key: str) -> Any | None:
         with self._lock:
             if key not in self._cache:
                 self._misses += 1
@@ -48,7 +48,7 @@ class MemoryLRUCache:
             self._hits += 1
             return value
 
-    def set(self, key: str, value: Any, ttl: Optional[float] = None) -> None:
+    def set(self, key: str, value: Any, ttl: float | None = None) -> None:
         duration = ttl if ttl is not None and ttl > 0 else self._default_ttl
         expires_at = time.time() + duration
         with self._lock:
@@ -132,17 +132,17 @@ class DistributedMemoryCache:
 
     def __init__(
         self,
-        redis_url: Optional[str] = None,
-        local_l1: Optional[MemoryLRUCache] = None,
+        redis_url: str | None = None,
+        local_l1: MemoryLRUCache | None = None,
     ):
         self.redis_url = redis_url or os.getenv("VALKEY_URL") or os.getenv("REDIS_URL")
         self.l1 = local_l1 or MemoryLRUCache(capacity=2000, ttl_seconds=60.0)
         self.circuit_breaker = CircuitBreaker()
         self._client: Any = None
         self._initialized = False
-        self._subscriber_thread: Optional[threading.Thread] = None
+        self._subscriber_thread: threading.Thread | None = None
 
-    def _get_client(self) -> Optional[Any]:
+    def _get_client(self) -> Any | None:
         if not self.redis_url:
             return None
         if not self.circuit_breaker.allow_request():
@@ -168,7 +168,7 @@ class DistributedMemoryCache:
             self._client = None
             return None
 
-    def get(self, key: str) -> Optional[Any]:
+    def get(self, key: str) -> Any | None:
         # 1. Check L1 in-process cache
         val = self.l1.get(key)
         if val is not None:
