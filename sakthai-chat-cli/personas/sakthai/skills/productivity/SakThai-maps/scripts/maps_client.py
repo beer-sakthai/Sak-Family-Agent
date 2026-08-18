@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 import sys
 from typing import Any
 
 import requests
+
+logger = logging.getLogger(__name__)
 
 # Fields that should never be returned in the LLM output for privacy.
 SENSITIVE_OUTPUT_KEYS = {
