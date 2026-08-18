@@ -156,7 +156,7 @@ python3 scripts/run_workflow.py \
   --output-dir ./outputs
 
 # Cloud (export API key once; uses correct /api routing automatically)
-export COMFY_CLOUD_API_KEY="<your_api_key_here>"
+export COMFY_CLOUD_API_KEY="comfyui-..."
 python3 scripts/run_workflow.py \
   --workflow workflow_api.json \
   --args '{"prompt": "..."}' \
@@ -324,7 +324,7 @@ For users without a capable GPU or who want zero setup. Hosted on RTX 6000 Pro.
 2. Generate an API key at https://platform.comfy.org/login
 3. Set the key:
    ```bash
-   export COMFY_CLOUD_API_KEY="<your_api_key_here>"
+   export COMFY_CLOUD_API_KEY="comfyui-xxxxxxxxxxxx"
    ```
 4. Run workflows:
    ```bash

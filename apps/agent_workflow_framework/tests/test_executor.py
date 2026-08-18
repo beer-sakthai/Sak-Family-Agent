@@ -1087,5 +1087,71 @@ class TestWorkflowExecutor(unittest.TestCase):
                 self.assertEqual(history.step_results["s1"].output["result"], expected)
 
 
+
+    def test_shell_action_uses_subprocess_exec(self):
+        """Verify that shell actions use create_subprocess_exec and never create_subprocess_shell."""
+        from unittest.mock import patch
+
+        wf = WorkflowDefinition(
+            name="test_exec_not_shell",
+            steps=[
+                StepDefinition(id="s1", action="shell", params={"cmd": "echo 'exec_check'"}),
+            ],
+        )
+
+        with patch("asyncio.create_subprocess_shell") as mock_shell:
+            history = asyncio.run(self.executor.execute_workflow(wf))
+            self.assertEqual(history.status, RunStatus.COMPLETED)
+            self.assertEqual(history.step_results["s1"].output.get("stdout"), "exec_check")
+            mock_shell.assert_not_called()
+    def test_python_sandbox_statement_block_allowed_statements(self):
+        """Verify that allowed statement constructs execute properly in Python sandbox statement blocks."""
+        wf = WorkflowDefinition(
+            name="python_stmt_allowed",
+            steps=[
+                StepDefinition(
+                    id="s1",
+                    action="python",
+                    params={
+                        "code": "a = 10\nb = 5\nc: int = 15\npass\na + b + c"
+                    },
+                )
+            ],
+        )
+        history = asyncio.run(self.executor.execute_workflow(wf))
+        self.assertEqual(history.status, RunStatus.COMPLETED)
+        self.assertEqual(history.step_results["s1"].output.get("a"), 10)
+        self.assertEqual(history.step_results["s1"].output.get("b"), 5)
+        self.assertEqual(history.step_results["s1"].output.get("c"), 15)
+
+    def test_python_sandbox_statement_block_prohibited_statements(self):
+        """Verify that prohibited statement constructs in Python sandbox statement blocks raise PermissionError."""
+        prohibited_blocks = [
+            "import os\nx = 1",
+            "from sys import exit\nx = 1",
+            "def foo(): pass\nfoo()",
+            "async def foo(): pass\nfoo()",
+            "class Foo: pass\nx = 1",
+            "for i in range(10): pass",
+            "while True: break",
+            "if True: pass",
+            "with open('/etc/passwd') as f: pass",
+            "try:\n    x = 1\nexcept Exception:\n    pass",
+            "x = 1\ndel x",
+        ]
+        for code in prohibited_blocks:
+            with self.subTest(code=code):
+                wf = WorkflowDefinition(
+                    name="python_stmt_prohibited",
+                    steps=[StepDefinition(id="s1", action="python", params={"code": code})],
+                )
+                history = asyncio.run(self.executor.execute_workflow(wf))
+                self.assertEqual(history.status, RunStatus.FAILED)
+                step_res = history.step_results["s1"]
+                self.assertEqual(step_res.status, StepStatus.FAILED)
+                self.assertIsNotNone(step_res.error)
+                self.assertIn("prohibited", step_res.error.lower())
+
+
 if __name__ == "__main__":
     unittest.main()

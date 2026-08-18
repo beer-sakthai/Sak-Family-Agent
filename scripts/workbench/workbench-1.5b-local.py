@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Workbench test — load merged 1.5B model, run 6 test prompts, record results."""
-import json, time, os, sys
+import json, time, sys
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
 

@@ -9,6 +9,7 @@ import asyncio
 import copy
 import json
 import os
+import shlex
 import sys
 import time
 import types
@@ -747,11 +748,29 @@ class WorkflowExecutor:
 
             _validate_shell_command(str(cmd))
 
-            proc = await asyncio.create_subprocess_shell(
-                str(cmd),
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-            )
+            cmd_str = str(cmd)
+            proc = None
+            has_shell_operators = any(op in cmd_str for op in ("<", ">", "|", "&", ";", "\n", "\r"))
+            if not has_shell_operators:
+                try:
+                    cmd_args = shlex.split(cmd_str)
+                    if cmd_args:
+                        proc = await asyncio.create_subprocess_exec(
+                            *cmd_args,
+                            stdout=asyncio.subprocess.PIPE,
+                            stderr=asyncio.subprocess.PIPE,
+                        )
+                except (ValueError, FileNotFoundError, PermissionError):
+                    proc = None
+
+            if proc is None:
+                proc = await asyncio.create_subprocess_exec(
+                    "sh",
+                    "-c",
+                    cmd_str,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE,
+                )
             stdout_b, stderr_b = await proc.communicate()
             exit_code = proc.returncode or 0
 
@@ -941,6 +960,13 @@ class WorkflowExecutor:
                 res = eval(compiled_code, eval_globals, eval_locals)  # nosec B307
                 return {"result": res, "output": res}
             else:
+                allowed_stmt_nodes = (ast.Assign, ast.AugAssign, ast.AnnAssign, ast.Expr, ast.Pass)
+                for stmt in tree.body:
+                    if not isinstance(stmt, allowed_stmt_nodes):
+                        stmt_type = type(stmt).__name__
+                        raise PermissionError(
+                            f"Statement type '{stmt_type}' is prohibited in python sandbox statement blocks."
+                        )
                 ast.fix_missing_locations(tree)
                 compiled_code = compile(tree, filename="<python_sandbox>", mode="exec")
                 exec(compiled_code, eval_globals, eval_locals)  # nosec B102
