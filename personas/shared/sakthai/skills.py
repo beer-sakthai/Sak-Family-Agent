@@ -72,7 +72,8 @@ def _load_skill_file(path: Path) -> tuple[dict[str, Any], str]:
     if len(parts) < 3:
         raise SkillParseError(f"{path}: no YAML frontmatter found")
     try:
-        front = yaml.safe_load(parts[1])
+        loader = getattr(yaml, "CSafeLoader", yaml.SafeLoader)
+        front = yaml.load(parts[1], Loader=loader)  # nosec B506 - safe: Loader is constrained to CSafeLoader/SafeLoader
     except yaml.YAMLError as exc:
         raise SkillParseError(f"{path}: invalid YAML — {exc}") from exc
     if not isinstance(front, dict):
@@ -139,10 +140,9 @@ def _category_for(skill: SkillInfo, skill_md: Path, root: Path) -> str:
         rel = Path(skill.name)
     if len(rel.parts) >= 2:
         return rel.parts[0]
-    if skill.name.startswith("sakthai-"):
-        suffix = skill.name.removeprefix("sakthai-")
-        if "-" in suffix:
-            return suffix.split("-", 1)[0]
+    slug = strip_known_prefix(skill.name)
+    if "-" in slug:
+        return slug.split("-", 1)[0]
     return _UNCATEGORIZED
 
 

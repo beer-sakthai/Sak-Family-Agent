@@ -101,7 +101,7 @@ def test_parse_skill_yaml_error_mocked(tmp_path: Path, monkeypatch: pytest.Monke
     def mock_safe_load(*args, **kwargs):
         raise yaml.YAMLError("Mocked YAML load error")
 
-    monkeypatch.setattr(yaml, "safe_load", mock_safe_load)
+    monkeypatch.setattr(yaml, "load", mock_safe_load)
 
     with pytest.raises(SkillParseError, match="invalid YAML — Mocked YAML load error"):
         parse_skill(skill_md)
@@ -312,3 +312,49 @@ def test_naming_violations_skips_unparseable_skill(tmp_path: Path) -> None:
     )
     assert "broken" not in violations
     assert "bad-prefix" in violations
+
+
+
+def test_category_for_various_prefixes(tmp_path: Path) -> None:
+    from sakthai.skills import SkillInfo, _category_for
+
+    # Persona prefixes
+    s_sakthai = SkillInfo(
+        name="SakThai-productivity-powerpoint",
+        path=tmp_path / "SakThai-productivity-powerpoint" / "SKILL.md",
+    )
+    assert _category_for(s_sakthai, s_sakthai.path, tmp_path) == "productivity"
+
+    s_sakking = SkillInfo(
+        name="SakKing-mlops-hf-mergekit",
+        path=tmp_path / "SakKing-mlops-hf-mergekit" / "SKILL.md",
+    )
+    assert _category_for(s_sakking, s_sakking.path, tmp_path) == "mlops"
+
+    # Shared prefix
+    s_shared = SkillInfo(
+        name="Sak-devops-docker",
+        path=tmp_path / "Sak-devops-docker" / "SKILL.md",
+    )
+    assert _category_for(s_shared, s_shared.path, tmp_path) == "devops"
+
+    # Legacy prefix
+    s_legacy = SkillInfo(
+        name="sakthai-productivity-powerpoint",
+        path=tmp_path / "sakthai-productivity-powerpoint" / "SKILL.md",
+    )
+    assert _category_for(s_legacy, s_legacy.path, tmp_path) == "productivity"
+
+    # Plain slug
+    s_plain = SkillInfo(
+        name="productivity-powerpoint",
+        path=tmp_path / "productivity-powerpoint" / "SKILL.md",
+    )
+    assert _category_for(s_plain, s_plain.path, tmp_path) == "productivity"
+
+    # No category sub-segment
+    s_single = SkillInfo(
+        name="SakThai-standalone",
+        path=tmp_path / "SakThai-standalone" / "SKILL.md",
+    )
+    assert _category_for(s_single, s_single.path, tmp_path) == "general"

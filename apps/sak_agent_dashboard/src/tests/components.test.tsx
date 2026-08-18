@@ -10,6 +10,7 @@ import { MemoryExplorer } from "../components/MemoryExplorer";
 import { AuditLogs } from "../components/AuditLogs";
 import { DemoModeToggle } from "../components/DemoModeToggle";
 import { StitchStudio } from "../components/StitchStudio";
+import { LiveTelemetryFeed } from "../components/LiveTelemetryFeed";
 
 describe("UI Components Test Suite (Tier 1 & Tier 2)", () => {
 
@@ -122,6 +123,14 @@ describe("UI Components Test Suite (Tier 1 & Tier 2)", () => {
       const codeTab = screen.getByRole("button", { name: /tsx code/i });
       fireEvent.click(codeTab);
       expect(screen.getByText(/SakThaiAgentCard/i)).toBeInTheDocument();
+    });
+  });
+  describe("LiveTelemetryFeed Component Accessibility", () => {
+    it("renders control buttons and select input with appropriate ARIA labels", () => {
+      render(<LiveTelemetryFeed />);
+      expect(screen.getByRole("button", { name: "Clear Stream" })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Pause stream" })).toBeInTheDocument();
+      expect(screen.getByRole("combobox", { name: "Filter by Persona" })).toBeInTheDocument();
     });
   });
 });

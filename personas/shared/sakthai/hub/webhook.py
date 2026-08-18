@@ -5,7 +5,8 @@ from __future__ import annotations
 import hashlib
 import hmac
 import logging
-from typing import Any, Callable, Optional
+from collections.abc import Callable
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -13,7 +14,7 @@ logger = logging.getLogger(__name__)
 class HubWebhookDispatcher:
     """Validates and processes incoming Hugging Face webhook events."""
 
-    def __init__(self, secret: Optional[str] = None) -> None:
+    def __init__(self, secret: str | None = None) -> None:
         self.secret = secret
         self._handlers: dict[str, list[Callable[[dict[str, Any]], None]]] = {}
 

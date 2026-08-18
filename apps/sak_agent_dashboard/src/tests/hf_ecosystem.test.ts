@@ -40,4 +40,15 @@ Specialized fine-tuned model.
     expect(res.valid).toBe(true);
     expect(res.score).toBeGreaterThanOrEqual(80);
   });
+
+  it("retrieves live Space telemetry and evaluates health alerts", () => {
+    const telemetries = hfEcosystemEngine.getSpacesTelemetry();
+    expect(telemetries.length).toBe(4);
+    expect(telemetries[0].repoId).toBe("Nanthasit/sakthai-tts");
+    expect(telemetries[0].cpuUsagePct).toBeGreaterThan(0);
+
+    const alerts = hfEcosystemEngine.getSpaceAlerts();
+    expect(alerts.length).toBeGreaterThanOrEqual(1);
+    expect(alerts[0].alertType).toBe("HIGH_CPU");
+  });
 });
