@@ -12,6 +12,7 @@ Usage:
         --url https://house-of-sak.vercel.app/ --local index.html
 """
 import argparse, sys, requests
+from urllib.parse import urlparse
 
 
 def fail(msg: str) -> None:
@@ -24,6 +25,20 @@ def is_valid_html(text: str) -> bool:
     return stripped.startswith("<!doctype html>") or stripped.startswith("<html")
 
 
+def validate_deploy_url(url: str) -> str:
+    parsed = urlparse(url)
+    if parsed.scheme.lower() != "https":
+        fail("url must use https")
+    if parsed.username or parsed.password:
+        fail("url must not include username/password")
+    host = (parsed.hostname or "").lower()
+    if not host:
+        fail("url must include a host")
+    if host != "vercel.app" and not host.endswith(".vercel.app"):
+        fail("url host must be vercel.app or a .vercel.app subdomain")
+    return url
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Verify static site deploy")
     parser.add_argument("--owner", required=True)
@@ -31,6 +46,7 @@ def main() -> None:
     parser.add_argument("--url", required=True)
     parser.add_argument("--local", required=True)
     args = parser.parse_args()
+    deploy_url = validate_deploy_url(args.url)
 
     raw_url = f"https://raw.githubusercontent.com/{args.owner}/{args.repo}/main/index.html"
 
@@ -52,7 +68,7 @@ def main() -> None:
         fail("GitHub raw index.html does not look like valid HTML")
 
     # 3. Vercel live response
-    r2 = requests.get(args.url, timeout=30)
+    r2 = requests.get(deploy_url, timeout=30)
     if r2.status_code != 200:
         fail(f"Vercel returned {r2.status_code}")
     ct = r2.headers.get("content-type", "")
