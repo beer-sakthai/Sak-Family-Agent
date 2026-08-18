@@ -941,6 +941,8 @@ class WorkflowExecutor:
 
                 compiled = compile(stmt_tree, filename="<sandbox>", mode="exec")
                 exec(compiled, eval_globals, eval_locals)  # nosec B102
+                # Execute as statement block
+                exec(normalized_code, eval_globals, eval_locals)  # nosec B102
                 out_locals = {k: v for k, v in eval_locals.items() if k not in params and not k.startswith("_")}
                 return out_locals if out_locals else {"status": "success"}
 
