@@ -81,6 +81,28 @@ def _run_in_sandbox(
     dry_run: bool,
     stream: bool,
 ) -> None:
+@dataclass
+class RunOptions:
+    """Configuration options for the agent run command."""
+
+    model: str = DEFAULT_MODEL
+    max_tokens: int = DEFAULT_MAX_TOKENS
+    max_iterations: int = DEFAULT_MAX_ITERATIONS
+    max_seconds: float | None = None
+    provider: str | None = None
+    verbose: bool = False
+    no_mcp: bool = False
+    with_skills: tuple[str, ...] = ()
+    dry_run: bool = False
+    stream: bool = False
+    fast: bool = False
+    stateless: bool = False
+    caveman: str | None = None
+    sandbox: bool = False
+    persona: str | None = None
+
+
+def _run_in_sandbox(task: str, opts: RunOptions) -> None:
     from ..sandbox import SandboxError, run_in_sandbox
 
     try:
@@ -100,6 +122,19 @@ def _run_in_sandbox(
             caveman=caveman,
             dry_run=dry_run,
             stream=stream,
+            model=opts.model,
+            max_tokens=opts.max_tokens,
+            max_iterations=opts.max_iterations,
+            max_seconds=opts.max_seconds,
+            provider=opts.provider,
+            verbose=opts.verbose,
+            no_mcp=opts.no_mcp,
+            with_skills=opts.with_skills,
+            fast=opts.fast,
+            stateless=opts.stateless,
+            caveman=opts.caveman,
+            dry_run=opts.dry_run,
+            stream=opts.stream,
         )
     except SandboxError as e:
         raise click.ClickException(str(e)) from e
@@ -188,6 +223,7 @@ def run(
     caveman: str | None,
     sandbox: bool,
 ) -> None:
+def run(task: str, **kwargs: Any) -> None:
     """Run TASK through the standalone SakThai agent.
 
     External MCP servers configured in ~/.sakthai/mcp.json (or installed
@@ -217,6 +253,13 @@ def run(
     if dry_run:
         with _tool_context(no_mcp=no_mcp, verbose=verbose) as tools:
             report = preflight(model=model, provider=provider, tools=tools)
+    opts = RunOptions(**kwargs)
+    if opts.sandbox:
+        _run_in_sandbox(task, opts)
+
+    if opts.dry_run:
+        with _tool_context(no_mcp=opts.no_mcp, verbose=opts.verbose) as tools:
+            report = preflight(model=opts.model, provider=opts.provider, tools=tools)
         _print_preflight(report)
         if not report["runnable"]:
             raise click.ClickException(
@@ -246,6 +289,21 @@ def run(
                 fast=fast,
                 stateless=stateless,
                 caveman=caveman,
+        with _tool_context(no_mcp=opts.no_mcp, verbose=opts.verbose) as tools:
+            result = run_agent(
+                task,
+                model=opts.model,
+                max_tokens=opts.max_tokens,
+                max_iterations=opts.max_iterations,
+                max_seconds=opts.max_seconds,
+                on_event=_event_emitter(opts.verbose),
+                on_token=_on_token if opts.stream else None,
+                provider=opts.provider,
+                tools=tools,
+                skills=list(opts.with_skills),
+                fast=opts.fast,
+                stateless=opts.stateless,
+                caveman=opts.caveman,
             )
     except AgentError as exc:
         raise click.ClickException(str(exc)) from exc
