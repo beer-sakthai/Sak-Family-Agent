@@ -31,31 +31,6 @@ from ..selfheal.publish import DEFAULT_BRANCH_PREFIX
 from ..selfheal.walkthrough import DEFAULT_WALKTHROUGH_MODEL
 
 
-@dataclasses.dataclass(frozen=True)
-class HealRunOptions:
-    """Encapsulates options passed to ``sakthai heal run``."""
-
-    log_source: str
-    repo_root: str = "."
-    model: str = DEFAULT_MODEL
-    provider: str | None = None
-    walkthrough_model: str = DEFAULT_WALKTHROUGH_MODEL
-    min_confidence: float = DEFAULT_MIN_CONFIDENCE
-    base: str = "main"
-    branch_prefix: str = DEFAULT_BRANCH_PREFIX
-    run_id: str = ""
-    run_url: str = ""
-    dry_run: bool = False
-    no_publish: bool = False
-    no_pr: bool = False
-    report_path: str | None = None
-    as_json: bool = False
-
-    @classmethod
-    def from_kwargs(cls, kwargs: dict[str, Any]) -> HealRunOptions:
-        return cls(**kwargs)
-
-
 def _read_log(source: str) -> str:
     """Read the job log from a file, or from stdin when ``source`` is ``-``."""
     if source == "-":
@@ -155,39 +130,54 @@ def heal_inspect(log_source: str, as_json: bool) -> None:
     help="Write the markdown report here.",
 )
 @click.option("--json", "as_json", is_flag=True, help="Emit the outcome as JSON.")
-def heal_run(**kwargs: Any) -> None:
+def heal_run(
+    log_source: str,
+    repo_root: str,
+    model: str,
+    provider: str | None,
+    walkthrough_model: str,
+    min_confidence: float,
+    base: str,
+    branch_prefix: str,
+    run_id: str,
+    run_url: str,
+    dry_run: bool,
+    no_publish: bool,
+    no_pr: bool,
+    report_path: str | None,
+    as_json: bool,
+) -> None:
     """Diagnose a failed CI run, apply a verified fix, and open a pull request."""
-    opts = HealRunOptions.from_kwargs(kwargs)
-    log_text = _read_log(opts.log_source)
+    log_text = _read_log(log_source)
 
     try:
-        completion = build_completion(provider=opts.provider, model=opts.model)
+        completion = build_completion(provider=provider, model=model)
         # The walkthrough is best-effort; a provider that cannot be built for it
         # must not stop a fix that is otherwise ready to publish.
         try:
-            narrator = build_completion(model=opts.walkthrough_model)
+            narrator = build_completion(model=walkthrough_model)
         except Exception:  # noqa: BLE001 — narration is optional by design
             narrator = None
     except Exception as exc:  # noqa: BLE001 — surface a provider failure as a CLI error
         raise click.ClickException(f"cannot build the diagnosis model client: {exc}") from exc
 
     config = HealConfig(
-        repo_root=Path(opts.repo_root),
-        min_confidence=opts.min_confidence,
-        branch_prefix=opts.branch_prefix,
-        base_branch=opts.base,
-        run_id=opts.run_id,
-        run_url=opts.run_url,
-        dry_run=opts.dry_run,
-        publish_fix=not (opts.no_publish or opts.dry_run),
-        open_pr=not opts.no_pr,
+        repo_root=Path(repo_root),
+        min_confidence=min_confidence,
+        branch_prefix=branch_prefix,
+        base_branch=base,
+        run_id=run_id,
+        run_url=run_url,
+        dry_run=dry_run,
+        publish_fix=not (no_publish or dry_run),
+        open_pr=not no_pr,
     )
     outcome = run_heal(log_text, config, completion=completion, narrator=narrator)
 
-    if opts.report_path:
-        Path(opts.report_path).write_text(outcome.report, encoding="utf-8")
+    if report_path:
+        Path(report_path).write_text(outcome.report, encoding="utf-8")
 
-    if opts.as_json:
+    if as_json:
         click.echo(json.dumps(_outcome_json(outcome), indent=2))
         return
 

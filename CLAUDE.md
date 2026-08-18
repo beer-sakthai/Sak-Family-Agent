@@ -876,8 +876,6 @@ A skill directory may also carry `commands/<name>.md` files, which become
 | `docs/skill-naming.md` | The `Sak-` / `Sak<Name>-` naming convention |
 | `docs/agent-diagnosis.md` | Standalone run checklist and runtime notes |
 | `docs/self-healing-ci.md` | The `sakthai heal` pipeline, its safety model, and the workflow that drives it |
-| `docs/multi-agent-cli-setup.md` | Driving this repo with Gemini CLI (`GEMINI.md`, `.gemini/settings.json`) and OpenCode (`opencode.json`) |
-| `docs/gh-aw-engines.md` | The gh-aw engine split (Gemini + vendored OpenCode), required secrets, and how to recompile the `.lock.yml` files |
 | `docs/SOUL.md` · `docs/USER.md` · `docs/OPERATING_CONTRACT.md` | Team identity · Beer's profile · agent operating rules |
 | `docs/SECURITY.md` · `docs/security-hardening.md` · `docs/SECURITY_HARDENING_IMPLEMENTATION.md` | Security policy/architecture · audit findings and the prevention pattern + regression test for each · implementation notes |
 | `docs/security_audit_2026-07-11.md` · `docs/security_audit_2026-07-12.md` | Point-in-time audit reports |
