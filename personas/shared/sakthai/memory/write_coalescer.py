@@ -94,9 +94,11 @@ class AsyncWriteCoalescer:
                 conn.rollback()
             logger.warning("Coalesced batch write failed (%s); attempting individual write commits...", err)
             try:
+            logger.warning(
+                "Coalesced batch write failed (%s); attempting individual write commits...", err
+            )
+            with contextlib.suppress(Exception):
                 conn.rollback()
-            except Exception:
-                pass
             committed_count = 0
             for sql, params in batch:
                 try:
@@ -106,10 +108,8 @@ class AsyncWriteCoalescer:
                     committed_count += 1
                 except Exception as item_err:
                     logger.error("Individual write failed for query %s: %s", sql, item_err)
-                    try:
+                    with contextlib.suppress(Exception):
                         conn.rollback()
-                    except Exception:
-                        pass
             with self._lock:
                 self._total_writes += committed_count
                 if committed_count > 0:
