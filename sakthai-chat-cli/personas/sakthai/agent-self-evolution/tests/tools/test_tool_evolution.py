@@ -1,6 +1,5 @@
 """Unit tests for tool selection optimization components (module, metric, overrides)."""
 
-import json
 from dataclasses import dataclass
 from pathlib import Path
 
