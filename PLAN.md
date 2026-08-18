@@ -95,6 +95,7 @@ never duplicate content across files.
 | **CLI Guardrails syntax fix & Dashboard DOM hydration fix** — (1) fixed un-indented duplicate `if` statement in `sakthai-chat-cli/sakthai/agent/guardrails.py` that broke AST parsing and failed `test_repo_parses.py`, synchronizing canonical container guardrails; (2) eliminated nested `<button>` inside `<button>` in dashboard `McpSdkPanel.tsx` `ScaffoldFileTile` preventing React hydration warnings. All 3,487 pytest tests and 172 dashboard tests passing with 0 warnings | [x] 2026-08-17 |
 | **Full personas/shared package reconciliation (0% divergence)** — synchronized all 11 drifted files and 15 canonical-only modules into `personas/shared/sakthai/`, achieving 100% byte-parity across canonical and shared trees; updated `tests/test_shared_package_divergence.py` to assert zero drift; strict mypy clean over 82 files and 3,487 pytest tests passing | [x] 2026-08-18 |
 | **Live Interactive Agent Dispatch & SSE Task Runner** — implemented interactive agent dispatch console in dashboard `AgentCard` with prompt presets, receipt state, and `POST /api/dispatch` API streaming live lifecycle events (`agent_dispatch`, `agent_step`) to `telemetryBus`; added 6 vitest unit tests in `agent_dispatch.test.tsx`; 178/178 dashboard tests passing, `tsc --noEmit` clean, and Next.js 16 production build compiled cleanly across all 63 routes | [x] 2026-08-18 |
+| **Multi-Agent Telegram & Live Chat Routing Gateway** — engineered high-performance heuristic intent classification (`classify_intent`) and dynamic routing (`route_to_persona`) across all 6 personas (SakThai, SakKing, SakSee, SakSit, SakJules, SakTan); built stateful multi-turn `GatewaySession` with sliding window memory and automated handoffs; implemented Telegram bot dispatcher (`TelegramGatewayDispatcher`) and REST API `/api/gateway/chat`; built Next.js `GatewayRouterPanel` with live intent simulation; 29 backend tests & 3 vitest tests passing with 0% shared package divergence and clean 66-route build | [x] 2026-08-18 |
 
 ## 📋 Sub-Plans
 
@@ -107,6 +108,7 @@ never duplicate content across files.
 | Agent Self-Evolution (×6 agents) | `personas/*/agent-self-evolution/PLAN.md` | 🟡 Active — personalised per agent |
 | **Repo Hygiene Round 2** | [SCRATCH_ORGANISATION_PLAN](#scratch-organisation-plan) | 🟡 Active — root cleanup |
 | **HF Ecosystem Improvement (19 models · 16 datasets · 7 Spaces)** | [`docs/hf-cards-improvement-plan.md`](./docs/hf-cards-improvement-plan.md) | 🟡 Active — Phase 1 (broken repos) next |
+| **Multi-Agent Telegram & Live Chat Routing Gateway** | [`docs/multi-agent-gateway-plan.md`](./docs/multi-agent-gateway-plan.md) | ✅ Complete — 2026-08-18 (Subagent-Driven Execution) |
 
 ## 🔧 Runtime Notes
 
