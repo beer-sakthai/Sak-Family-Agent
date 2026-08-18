@@ -369,6 +369,19 @@ and `agent-self-evolution.yml` (on `personas/sakthai/agent-self-evolution/**`).
 Green CI is the bar for `main`. Run the lint → mypy → bandit → pytest sequence
 locally before pushing.
 
+### Merging
+
+| Workflow | Trigger | What it does |
+|---|---|---|
+| `auto-merge.yml` | PR labeled / unlabeled / ready for review | Turns GitHub's **native** auto-merge (squash) on for a PR carrying the `automerge` label, off when it is removed |
+
+Auto-merge waits on branch protection, so a labelled PR still lands only once
+the required checks are green **and** it carries an approving review from
+someone other than its author. The label decides *when* the merge happens, not
+*whether* the bar was met — nothing here approves a PR. Full policy and the
+repository-settings prerequisites are in
+[`docs/CONTRIBUTING.md`](docs/CONTRIBUTING.md#automatic-merge).
+
 ### 🔒 Security Architecture (Multi-Layer Defense)
 
 **Layer 1: Input Validation & Sanitization**
