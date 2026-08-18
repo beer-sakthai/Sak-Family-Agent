@@ -158,36 +158,6 @@ was ever pushed, it is compromised.
 - **Regression tests:** `tests/test_web_server.py::test_serve_refuses_non_loopback_without_ack`,
   `::test_serve_allows_non_loopback_when_acknowledged`.
 
-### 10. `HEAD` bypassed the web API's bearer-token gate
-- **Where:** `personas/sakthai/sakthai/web/server.py` and the standalone
-  `scripts/serve_api.py` — both `_Handler` classes.
-- **Risk:** each class overrode only `do_GET`, but inherited
-  `SimpleHTTPRequestHandler.do_HEAD`, which serves straight out of
-  `send_head()`. Every gate lived in `do_GET`, so an **unauthenticated** `HEAD`
-  skipped both the bearer-token check and the static-root containment check:
-  it disclosed the existence, size and mtime of any file under the static root
-  (`GET` on the same path answers 401), and it followed symlinks out of that
-  root that an *authenticated* `GET` rejects with 403. `scripts/serve_api.py`
-  additionally logged the request line — including any `?token=` credential —
-  to the access log in cleartext, a redaction `web/server.py` already had.
-- **Fix:** `do_HEAD` now delegates to `do_GET`, so both verbs traverse one
-  gate and cannot drift apart; body writes are suppressed by `self.command`
-  guards, which keeps correct HTTP semantics (headers and `Content-Length`
-  identical to `GET`, empty body). `scripts/serve_api.py` also gained
-  `_redact_query_token`, masking the credential *by parameter name* so a wrong
-  token guessed by an attacker is masked too.
-- **Prevention pattern:** authenticate per *request*, not per handler method.
-  When subclassing a framework handler, enumerate the verbs the base class
-  already implements — an un-overridden one is an open door — and route them
-  through a single shared gate rather than re-checking in each.
-- **Regression tests:** `tests/test_web_auth.py::test_head_on_static_path_is_unauthorized_without_a_token`,
-  `::test_head_on_api_path_is_unauthorized_without_a_token`,
-  `::test_head_matches_get_status_across_paths_and_credentials` (pins the
-  GET/HEAD invariant itself, so re-divergence fails regardless of routing),
-  `::test_head_sends_no_body_but_keeps_content_length`,
-  `::test_unauthenticated_head_discloses_no_file_metadata`,
-  `::test_head_cannot_follow_a_symlink_out_of_the_static_root`.
-
 ---
 
 ## CI / supply-chain hardening
