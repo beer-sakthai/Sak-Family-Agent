@@ -1,8 +1,0 @@
-{
-  "name": "sak-security",
-  "description": "Security review agents for the Sak-Family-Agent workspace — adversarial review of auth, secrets, network egress, prompt-injection and tool-guardrail surfaces in Python and TypeScript code.",
-  "author": {
-    "name": "Beer",
-    "email": "beer@sakthai.local"
-  }
-}

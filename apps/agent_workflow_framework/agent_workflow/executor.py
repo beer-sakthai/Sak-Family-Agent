@@ -9,6 +9,7 @@ import asyncio
 import copy
 import json
 import os
+import shlex
 import sys
 import time
 import types
@@ -192,6 +193,9 @@ def _validate_filepath(filepath: Any) -> Path:
         raise ValueError("File path cannot be empty.")
 
     path_str = str(filepath).strip()
+
+    if any(ord(c) < 32 or ord(c) == 127 for c in path_str):
+        raise ValueError("Control characters are not allowed in file paths")
 
     # Block path traversal segments like '..' or leading '~'. Backslashes are
     # normalized first so Windows-style separators can't smuggle a '..' segment
@@ -744,14 +748,32 @@ class WorkflowExecutor:
             cmd = params.get("cmd") or params.get("command") or params.get("script") or ""
             if not cmd:
                 raise ValueError(f"Step '{step_id}' action '{action}' missing 'cmd' or 'command' parameter.")
-            
+
             _validate_shell_command(str(cmd))
 
-            proc = await asyncio.create_subprocess_shell(
-                str(cmd),
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-            )
+            cmd_str = str(cmd)
+            proc = None
+            has_shell_operators = any(op in cmd_str for op in ("<", ">", "|", "&", ";", "\n", "\r"))
+            if not has_shell_operators:
+                try:
+                    cmd_args = shlex.split(cmd_str)
+                    if cmd_args:
+                        proc = await asyncio.create_subprocess_exec(
+                            *cmd_args,
+                            stdout=asyncio.subprocess.PIPE,
+                            stderr=asyncio.subprocess.PIPE,
+                        )
+                except (ValueError, FileNotFoundError, PermissionError):
+                    proc = None
+
+            if proc is None:
+                proc = await asyncio.create_subprocess_exec(
+                    "sh",
+                    "-c",
+                    cmd_str,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE,
+                )
             stdout_b, stderr_b = await proc.communicate()
             exit_code = proc.returncode or 0
 
@@ -941,6 +963,13 @@ class WorkflowExecutor:
                 res = eval(compiled_code, eval_globals, eval_locals)  # nosec B307
                 return {"result": res, "output": res}
             else:
+                allowed_stmt_nodes = (ast.Assign, ast.AugAssign, ast.AnnAssign, ast.Expr, ast.Pass)
+                for stmt in tree.body:
+                    if not isinstance(stmt, allowed_stmt_nodes):
+                        stmt_type = type(stmt).__name__
+                        raise PermissionError(
+                            f"Statement type '{stmt_type}' is prohibited in python sandbox statement blocks."
+                        )
                 ast.fix_missing_locations(tree)
                 compiled_code = compile(tree, filename="<python_sandbox>", mode="exec")
                 exec(compiled_code, eval_globals, eval_locals)  # nosec B102
@@ -978,7 +1007,7 @@ class WorkflowExecutor:
 
             req = urllib.request.Request(url_str, headers=headers)
             opener = urllib.request.build_opener(SafeRedirectHandler)
-            
+
             loop = asyncio.get_event_loop()
             def _fetch():
                 with opener.open(req, timeout=params.get("timeout", 10)) as resp:
@@ -1096,7 +1125,7 @@ class WorkflowExecutor:
                         # Interpolate step parameters using current state context
                         interpolated_params = state_ctx.interpolate(step.params)
                         out = await self._execute_action(step.action, interpolated_params, step.id)
-                        
+
                         step_res = StepResult(
                             step_id=step.id,
                             status=StepStatus.COMPLETED,
