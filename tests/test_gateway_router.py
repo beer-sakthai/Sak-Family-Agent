@@ -150,3 +150,55 @@ def test_all_persona_roles_have_declarations() -> None:
     for persona in ("sakthai", "sakking", "saksee", "saksit", "sakjules", "saktan"):
         assert persona in PERSONA_ROLES
         assert PERSONA_ROLES[persona].startswith(f"**{persona.capitalize()[:3]}")
+
+
+def test_classify_intent_architecture() -> None:
+    intent = classify_intent(
+        "Design the high level architecture and roadmap for our system design spec."
+    )
+    assert intent.primary_intent == IntentCategory.ARCHITECTURE
+    assert intent.confidence >= 0.8
+    assert "architecture" in intent.detected_keywords or "roadmap" in intent.detected_keywords
+
+
+def test_classify_intent_unmatched_fallback_to_core_reasoning() -> None:
+    intent = classify_intent("xyz 123 unrecognised input")
+    assert intent.primary_intent == IntentCategory.CORE_REASONING
+    assert intent.confidence == 0.5
+    assert intent.detected_keywords == ()
+
+
+def test_classify_intent_all_persona_tags() -> None:
+    tags = [
+        "@sakthai",
+        "@sakking",
+        "@saksee",
+        "@saksit",
+        "@sakjules",
+        "@saktan",
+    ]
+    for tag in tags:
+        intent = classify_intent(f"Please help me {tag}")
+        assert intent.confidence == 1.0
+        assert intent.detected_keywords == (tag,)
+
+
+def test_route_to_persona_fallback_chain_all_depleted() -> None:
+    # All personas depleted -> keeps primary target or last checked
+    charge_state = {
+        "sakjules": 5,
+        "sakthai": 5,
+        "sakking": 5,
+        "saksee": 5,
+        "saksit": 5,
+        "saktan": 5,
+    }
+    route = route_to_persona("Fix CI build", charge_state=charge_state)
+    assert route.selected_persona == "sakjules"
+    assert route.charge_level == 5
+
+
+def test_route_to_persona_invalid_preferred_persona() -> None:
+    route = route_to_persona("Fix CI build", preferred_persona="invalid_persona_name")
+    assert route.selected_persona == "sakjules"
+    assert "Matched intent 'automation_ci'" in route.routing_reason

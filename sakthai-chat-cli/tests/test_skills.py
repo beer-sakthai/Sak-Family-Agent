@@ -314,7 +314,6 @@ def test_naming_violations_skips_unparseable_skill(tmp_path: Path) -> None:
     assert "bad-prefix" in violations
 
 
-
 def test_category_for_various_prefixes(tmp_path: Path) -> None:
     from sakthai.skills import SkillInfo, _category_for
 

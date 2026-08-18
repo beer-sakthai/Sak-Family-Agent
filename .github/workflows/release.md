@@ -24,12 +24,13 @@ permissions:
   pull-requests: read
   issues: read
   actions: read
+  copilot-requests: write
 
 sandbox:
   agent:
     sudo: false
 
-engine: gemini
+engine: copilot
 timeout-minutes: 25
 
 network:
