@@ -250,5 +250,8 @@ if __name__ == "__main__":
 
     if source_type == "layout" and layout_file is not None:
         create_slide_from_layout(unpacked_dir, layout_file)
+    elif source_type == "slide" and layout_file is not None:
+        duplicate_slide(unpacked_dir, layout_file)
     else:
-        duplicate_slide(unpacked_dir, source)
+        print("Error: source must be 'slideN.xml' or 'slideLayoutN.xml'", file=sys.stderr)
+        sys.exit(1)
