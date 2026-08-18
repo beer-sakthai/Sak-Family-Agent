@@ -194,9 +194,6 @@ def _validate_filepath(filepath: Any) -> Path:
 
     path_str = str(filepath).strip()
 
-    if any(ord(c) < 32 or ord(c) == 127 for c in path_str):
-        raise ValueError("Control characters are not allowed in file paths")
-
     # Block path traversal segments like '..' or leading '~'. Backslashes are
     # normalized first so Windows-style separators can't smuggle a '..' segment
     # past a POSIX-only split.
@@ -258,10 +255,20 @@ def _validate_filepath(filepath: Any) -> Path:
                 test_targets = set(sensitive_basenames)
                 for prefix in sensitive_prefixes:
                     test_targets.add(f"{prefix}test")
+                    test_targets.add(f"{prefix}production")
+                    test_targets.add(f"{prefix}prod")
+                    test_targets.add(f"{prefix}local")
+                    test_targets.add(f"{prefix}wal")
+                    test_targets.add(f"{prefix}shm")
+                    test_targets.add(f"{prefix}journal")
                 for suffix in sensitive_suffixes:
                     test_targets.add(f"test{suffix}")
+                    test_targets.add(f"secret{suffix}")
                 for stem in sensitive_key_stems:
                     test_targets.add(f"{stem}.test")
+                    test_targets.add(f"{stem}.bak")
+                    test_targets.add(f"{stem}.old")
+                    test_targets.add(f"{stem}.pub")
 
                 if any(fnmatch.fnmatch(target, part) for target in test_targets):
                     raise PermissionError(f"Access to sensitive file via wildcards is prohibited: '{path_str}'")

@@ -63,6 +63,8 @@ export function BillingManagementPanel() {
       } catch (err) {
         console.error("Failed to load billing metrics", err);
       }
+    };
+    load();
     }
 
     loadInitialBillingData();

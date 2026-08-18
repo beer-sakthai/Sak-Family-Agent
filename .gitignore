@@ -47,8 +47,6 @@ mutants/
 .worktrees/
 .superpowers/
 .claude/worktrees/
-.claude/*.local.md
-.claude/*.local.json
 
 # Local secrets — never commit real credentials
 .env
