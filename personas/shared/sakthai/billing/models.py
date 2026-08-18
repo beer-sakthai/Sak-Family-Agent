@@ -4,11 +4,11 @@ from __future__ import annotations
 
 import hashlib
 import hmac
-import os
 import secrets
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import StrEnum
+from typing import overload
 
 
 class TenantTier(StrEnum):
@@ -38,30 +38,55 @@ TIER_PRICING: dict[TenantTier, tuple[float, float]] = {
 }
 
 
-API_KEY_HASH_SECRET_ENV = "SAKTHAI_API_KEY_HASH_SECRET"
+_API_KEY_PBKDF2_ITERATIONS = 310_000
+_API_KEY_SALT_BYTES = 16
 
 
-def _get_api_key_hash_secret() -> bytes:
-    """Load and validate API key hashing secret used for deterministic keyed hashing."""
-    secret = os.getenv(API_KEY_HASH_SECRET_ENV)
-    if not secret:
-        raise RuntimeError(
-            f"Missing required environment variable: {API_KEY_HASH_SECRET_ENV}"
+@overload
+def hash_api_key(raw_key: str, stored_hash: None = None) -> str: ...
+
+
+@overload
+def hash_api_key(raw_key: str, stored_hash: str) -> bool: ...
+
+
+def hash_api_key(raw_key: str, stored_hash: str | None = None) -> str | bool:
+    """Hash or verify an API key using PBKDF2-HMAC-SHA256.
+
+    - If `stored_hash` is None, returns a new encoded hash for storage.
+    - If `stored_hash` is provided, returns True/False for verification.
+
+    The two overloads above carry no runtime effect; they exist so callers get
+    the branch's actual type instead of the union. Without them every caller of
+    the hashing branch sees `str | bool` — which is what broke `mypy --strict`
+    on `main` at `generate_api_key` below, whose contract is `tuple[str, str]`.
+    """
+    if stored_hash is None:
+        salt = secrets.token_bytes(_API_KEY_SALT_BYTES)
+        dk = hashlib.pbkdf2_hmac(
+            "sha256",
+            raw_key.encode("utf-8"),
+            salt,
+            _API_KEY_PBKDF2_ITERATIONS,
         )
-    return secret.encode("utf-8")
+        return f"pbkdf2_sha256${_API_KEY_PBKDF2_ITERATIONS}${salt.hex()}${dk.hex()}"
 
+    try:
+        algorithm, iterations_s, salt_hex, expected_hex = stored_hash.split("$", 3)
+        if algorithm != "pbkdf2_sha256":
+            return False
+        iterations = int(iterations_s)
+        salt = bytes.fromhex(salt_hex)
+        expected = bytes.fromhex(expected_hex)
+    except (ValueError, TypeError):
+        return False
 
-def hash_api_key(raw_key: str) -> str:
-    """Hash an API key with HMAC-SHA-256 for secure storage and lookup."""
-    return hmac.new(
-        _get_api_key_hash_secret(),
-        raw_key.encode("utf-8"),
-        hashlib.sha256,
-    ).hexdigest()
+    actual = hashlib.pbkdf2_hmac("sha256", raw_key.encode("utf-8"), salt, iterations)
+    return hmac.compare_digest(actual, expected)
 
 
 def generate_api_key(prefix: str = "sak_live_") -> tuple[str, str]:
-    """Generate a raw API key and its SHA-256 hash digest.
+    """Generate a raw API key and its PBKDF2-HMAC-SHA256 storage hash.
 
     Returns:
         tuple[str, str]: (raw_secret_key, hashed_storage_key)
