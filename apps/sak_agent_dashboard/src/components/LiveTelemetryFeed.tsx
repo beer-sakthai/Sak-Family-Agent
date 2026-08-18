@@ -20,6 +20,7 @@ import { TelemetryEvent, TelemetryEventType } from "@/lib/types";
 const eventBadgeStyles: Record<TelemetryEventType, { bg: string; text: string; icon: React.ReactNode }> = {
   connected: { bg: "bg-emerald-500/10 border-emerald-500/30", text: "text-emerald-400", icon: <Radio className="h-3.5 w-3.5" /> },
   agent_start: { bg: "bg-cyan-500/10 border-cyan-500/30", text: "text-cyan-400", icon: <Zap className="h-3.5 w-3.5" /> },
+  agent_message: { bg: "bg-cyan-500/10 border-cyan-500/30", text: "text-cyan-400", icon: <Zap className="h-3.5 w-3.5" /> },
   agent_dispatch: { bg: "bg-teal-500/10 border-teal-500/30", text: "text-teal-400", icon: <Zap className="h-3.5 w-3.5" /> },
   agent_step: { bg: "bg-sky-500/10 border-sky-500/30", text: "text-sky-400", icon: <Activity className="h-3.5 w-3.5" /> },
   token_delta: { bg: "bg-indigo-500/10 border-indigo-500/30", text: "text-indigo-400", icon: <Sparkles className="h-3.5 w-3.5" /> },
