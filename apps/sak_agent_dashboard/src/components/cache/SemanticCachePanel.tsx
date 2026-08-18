@@ -38,9 +38,24 @@ export const SemanticCachePanel: React.FC = () => {
   const [isLookingUp, setIsLookingUp] = useState<boolean>(false);
   const [filterQuery, setFilterQuery] = useState<string>('');
 
+  const fetchCacheData = useCallback(async () => {
+    try {
+      const res = await fetch('/api/cache');
+      if (res.ok) {
+        const json = await res.json();
+        if (json.data) {
+          if (json.data.analytics) setAnalytics(json.data.analytics);
+          if (json.data.entries) setEntries(json.data.entries);
+        }
+      }
+    } catch {
+      // In-memory fallback
+    }
+  }, []);
+
   useEffect(() => {
     let isSubscribed = true;
-    const fetchCacheData = async () => {
+    const init = async () => {
       try {
         const res = await fetch('/api/cache');
         if (res.ok) {
@@ -54,7 +69,7 @@ export const SemanticCachePanel: React.FC = () => {
         // In-memory fallback
       }
     };
-    void fetchCacheData();
+    void init();
     return () => {
       isSubscribed = false;
     };
@@ -78,7 +93,7 @@ export const SemanticCachePanel: React.FC = () => {
         const data = await res.json();
         if (data.result) {
           setLookupResult(data.result);
-          loadData();
+          void fetchCacheData();
         }
       } else {
         const localRes = SemanticCacheEngine.lookup({
@@ -364,7 +379,7 @@ export const SemanticCachePanel: React.FC = () => {
               className="bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1 text-xs text-slate-200 placeholder-slate-500 focus:outline-none"
             />
             <button
-              onClick={loadData}
+              onClick={() => void fetchCacheData()}
               className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded border border-slate-700"
               title="Refresh Cache"
             >
