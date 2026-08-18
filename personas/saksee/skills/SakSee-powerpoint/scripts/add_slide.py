@@ -257,7 +257,7 @@ if __name__ == "__main__":
         print("To see available layouts: ls <unpacked_dir>/ppt/slideLayouts/", file=sys.stderr)
         sys.exit(1)
 
-    safe_root = Path.cwd().resolve()
+    safe_root = (Path.cwd() / "personas" / "saksee" / "skills" / "SakSee-powerpoint").resolve()
     unpacked_dir = _resolve_user_dir(sys.argv[1], safe_root)
     source = sys.argv[2]
 
