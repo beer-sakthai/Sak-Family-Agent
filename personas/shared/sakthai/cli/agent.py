@@ -6,6 +6,7 @@ import contextlib
 import os
 import sys
 from collections.abc import Callable, Iterator
+from dataclasses import dataclass
 from typing import Any
 
 import click
@@ -23,6 +24,28 @@ from ..agent.loop import (
 from ..agent.tools import BUILTIN_TOOLS, Tool
 from ..memory.store import MemoryStore
 from ..skills import resolve_skill_names
+
+
+@dataclass
+class RunConfig:
+    """Configuration options for a SakThai agent run."""
+
+    task: str
+    model: str
+    max_tokens: int
+    max_iterations: int
+    max_seconds: float | None
+    provider: str | None
+    verbose: bool
+    no_mcp: bool
+    with_skills: tuple[str, ...]
+    dry_run: bool
+    stream: bool
+    fast: bool
+    stateless: bool
+    caveman: str | None
+    sandbox: bool
+    persona: str | None
 
 
 @contextlib.contextmanager
@@ -101,45 +124,113 @@ def _event_emitter(verbose: bool) -> Callable[[str, dict[str, Any]], None]:
     return emit
 
 
-def _run_in_sandbox(
-    task: str,
-    model: str,
-    max_tokens: int,
-    max_iterations: int,
-    max_seconds: float | None,
-    provider: str | None,
-    verbose: bool,
-    no_mcp: bool,
-    with_skills: tuple[str, ...],
-    fast: bool,
-    stateless: bool,
-    caveman: str | None,
-    dry_run: bool,
-    stream: bool,
-) -> None:
+def _run_in_sandbox(cfg: RunConfig) -> None:
     from ..sandbox import SandboxError, run_in_sandbox
 
     try:
         click.echo("Building sandbox image (cached after first run)…", err=True)
         code = run_in_sandbox(
-            task,
-            model=model,
-            max_tokens=max_tokens,
-            max_iterations=max_iterations,
-            max_seconds=max_seconds,
-            provider=provider,
-            verbose=verbose,
-            no_mcp=no_mcp,
-            with_skills=with_skills,
-            fast=fast,
-            stateless=stateless,
-            caveman=caveman,
-            dry_run=dry_run,
-            stream=stream,
+            cfg.task,
+            model=cfg.model,
+            max_tokens=cfg.max_tokens,
+            max_iterations=cfg.max_iterations,
+            max_seconds=cfg.max_seconds,
+            provider=cfg.provider,
+            verbose=cfg.verbose,
+            no_mcp=cfg.no_mcp,
+            with_skills=cfg.with_skills,
+            fast=cfg.fast,
+            stateless=cfg.stateless,
+            caveman=cfg.caveman,
+            dry_run=cfg.dry_run,
+            stream=cfg.stream,
         )
     except SandboxError as e:
         raise click.ClickException(str(e)) from e
     sys.exit(code)
+
+
+def _execute_run(cfg: RunConfig) -> None:
+    """Internal execution logic for running the agent loop."""
+    if cfg.persona and cfg.sandbox:
+        raise click.UsageError(
+            "--persona is not supported with --sandbox yet "
+            "(the sandbox only bind-mounts the default, unscoped memory.db)."
+        )
+    if cfg.persona:
+        # Explicit --model/--provider always win; a persona's own config.yaml
+        # (model.provider/model.default) only fills in when the caller left
+        # them at their CLI defaults.
+        default_provider, default_model = config.persona_model_defaults(cfg.persona)
+        if cfg.provider is None and default_provider:
+            cfg.provider = default_provider
+        if cfg.model == DEFAULT_MODEL and default_model:
+            cfg.model = default_model
+    if cfg.sandbox:
+        _run_in_sandbox(cfg)
+
+    if cfg.dry_run:
+        with _tool_context(no_mcp=cfg.no_mcp, verbose=cfg.verbose, persona=cfg.persona) as tools:
+            report = preflight(model=cfg.model, provider=cfg.provider, tools=tools)
+        _print_preflight(report)
+        resolved, missing = resolve_skill_names(list(cfg.with_skills), persona=cfg.persona)
+        if resolved:
+            click.echo(f"[dry-run] skills:      {len(resolved)} resolved ({', '.join(resolved)})")
+        if missing:
+            raise click.ClickException(f"Unresolved --with-skills name(s): {', '.join(missing)}")
+        if not report["runnable"]:
+            raise click.ClickException(
+                f"Not runnable: no credentials found for provider {report['provider']!r}."
+            )
+        return
+    if cfg.with_skills:
+        _, missing = resolve_skill_names(list(cfg.with_skills), persona=cfg.persona)
+        if missing:
+            click.echo(
+                f"warning: skill(s) not found and will be skipped: {', '.join(missing)}",
+                err=True,
+            )
+    streamed = False
+
+    def _on_token(text: str) -> None:
+        nonlocal streamed
+        streamed = True
+        click.echo(text, nl=False)
+
+    persona_store = MemoryStore(config.persona_memory_db_path(cfg.persona)) if cfg.persona else None
+    system_prompt_prefix = load_persona_soul(cfg.persona) if cfg.persona else ""
+    try:
+        with _tool_context(no_mcp=cfg.no_mcp, verbose=cfg.verbose, persona=cfg.persona) as tools:
+            result = run_agent(
+                cfg.task,
+                model=cfg.model,
+                max_tokens=cfg.max_tokens,
+                max_iterations=cfg.max_iterations,
+                max_seconds=cfg.max_seconds,
+                on_event=_event_emitter(cfg.verbose),
+                on_token=_on_token if cfg.stream else None,
+                provider=cfg.provider,
+                tools=tools,
+                skills=list(cfg.with_skills),
+                fast=cfg.fast,
+                stateless=cfg.stateless,
+                caveman=cfg.caveman,
+                store=persona_store,
+                system_prompt_prefix=system_prompt_prefix,
+                persona=cfg.persona,
+            )
+    except AgentError as exc:
+        raise click.ClickException(str(exc)) from exc
+    except KeyboardInterrupt:
+        click.echo("\nInterrupted.", err=True)
+        sys.exit(130)
+    finally:
+        if persona_store is not None:
+            persona_store.close()
+    if streamed:
+        click.echo("")  # terminate the streamed line
+    else:
+        click.echo(result.text)
 
 
 @click.command()
@@ -218,24 +309,7 @@ def _run_in_sandbox(
         "unscoped memory.db (unchanged pre-existing behavior)."
     ),
 )
-def run(
-    task: str,
-    model: str,
-    max_tokens: int,
-    max_iterations: int,
-    max_seconds: float | None,
-    provider: str | None,
-    verbose: bool,
-    no_mcp: bool,
-    with_skills: tuple[str, ...],
-    dry_run: bool,
-    stream: bool,
-    fast: bool,
-    stateless: bool,
-    caveman: str | None,
-    sandbox: bool,
-    persona: str | None,
-) -> None:
+def run(**kwargs: Any) -> None:
     """Run TASK through the standalone SakThai agent.
 
     External MCP servers configured in ~/.sakthai/mcp.json (or installed
@@ -244,110 +318,8 @@ def run(
     configured correctly (provider, credentials, model, tools) without spending
     any tokens.
     """
-    if persona and sandbox:
-        raise click.UsageError(
-            "--persona is not supported with --sandbox yet "
-            "(the sandbox only bind-mounts the default, unscoped memory.db)."
-        )
-    if persona:
-        # Explicit --model/--provider always win; a persona's own config.yaml
-        # (model.provider/model.default) only fills in when the caller left
-        # them at their CLI defaults.
-        default_provider, default_model = config.persona_model_defaults(persona)
-        if provider is None and default_provider:
-            provider = default_provider
-        if model == DEFAULT_MODEL and default_model:
-            model = default_model
-    if sandbox:
-        _run_in_sandbox(
-            task=task,
-            model=model,
-            max_tokens=max_tokens,
-            max_iterations=max_iterations,
-            max_seconds=max_seconds,
-            provider=provider,
-            verbose=verbose,
-            no_mcp=no_mcp,
-            with_skills=with_skills,
-            fast=fast,
-            stateless=stateless,
-            caveman=caveman,
-            dry_run=dry_run,
-            stream=stream,
-        )
-
-    if dry_run:
-        with _tool_context(no_mcp=no_mcp, verbose=verbose, persona=persona) as tools:
-            report = preflight(model=model, provider=provider, tools=tools)
-        _print_preflight(report)
-        resolved, missing = resolve_skill_names(list(with_skills), persona=persona)
-        if resolved:
-            click.echo(f"[dry-run] skills:      {len(resolved)} resolved ({', '.join(resolved)})")
-        # Reported before the credentials check on purpose. An unresolved skill
-        # name is a static error in the command itself, knowable without any
-        # credentials — and validating skill names is a common reason to run
-        # --dry-run somewhere that deliberately has none, such as CI. With the
-        # order reversed, the credentials failure short-circuited first and the
-        # unresolved name was never printed, which is how
-        # continuous-security.yml kept passing a skill that does not exist.
-        if missing:
-            raise click.ClickException(f"Unresolved --with-skills name(s): {', '.join(missing)}")
-        if not report["runnable"]:
-            raise click.ClickException(
-                f"Not runnable: no credentials found for provider {report['provider']!r}."
-            )
-        return
-    if with_skills:
-        _, missing = resolve_skill_names(list(with_skills), persona=persona)
-        if missing:
-            click.echo(
-                f"warning: skill(s) not found and will be skipped: {', '.join(missing)}",
-                err=True,
-            )
-    streamed = False
-
-    def _on_token(text: str) -> None:
-        nonlocal streamed
-        streamed = True
-        click.echo(text, nl=False)
-
-    # A --persona run gets its own memory shard and SOUL.md identity; without
-    # --persona, behavior is unchanged from before this flag existed (no store
-    # passed, run_agent() opens/closes its own default MemoryStore()).
-    persona_store = MemoryStore(config.persona_memory_db_path(persona)) if persona else None
-    system_prompt_prefix = load_persona_soul(persona) if persona else ""
-    try:
-        with _tool_context(no_mcp=no_mcp, verbose=verbose, persona=persona) as tools:
-            result = run_agent(
-                task,
-                model=model,
-                max_tokens=max_tokens,
-                max_iterations=max_iterations,
-                max_seconds=max_seconds,
-                on_event=_event_emitter(verbose),
-                on_token=_on_token if stream else None,
-                provider=provider,
-                tools=tools,
-                skills=list(with_skills),
-                fast=fast,
-                stateless=stateless,
-                caveman=caveman,
-                store=persona_store,
-                system_prompt_prefix=system_prompt_prefix,
-                persona=persona,
-            )
-    except AgentError as exc:
-        raise click.ClickException(str(exc)) from exc
-    except KeyboardInterrupt:
-        click.echo("\nInterrupted.", err=True)
-        sys.exit(130)
-    finally:
-        if persona_store is not None:
-            persona_store.close()
-    if streamed:
-        click.echo("")  # terminate the streamed line
-    else:
-        click.echo(result.text)
+    cfg = RunConfig(**kwargs)
+    _execute_run(cfg)
 
 
 @click.command()

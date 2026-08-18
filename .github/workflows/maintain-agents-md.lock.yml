@@ -65,7 +65,8 @@ on:
         required: false
         type: string
 
-permissions: {}
+permissions:
+  contents: read
 
 concurrency:
   group: "gh-aw-${{ github.workflow }}"

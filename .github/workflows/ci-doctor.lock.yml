@@ -68,7 +68,8 @@ on:
       - Continuous Security
       - Pylint
 
-permissions: {}
+permissions:
+  contents: read
 
 concurrency:
   group: "gh-aw-${{ github.workflow }}"

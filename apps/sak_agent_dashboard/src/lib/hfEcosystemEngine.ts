@@ -24,6 +24,28 @@ export interface SpaceDiagnostic {
   errorMessage?: string;
 }
 
+export interface SpaceTelemetryItem {
+  repoId: string;
+  runtimeStage: string;
+  hardwareTier: string;
+  cpuUsagePct: number;
+  memoryUsageMb: number;
+  memoryTotalMb: number;
+  httpLatencyMs: number;
+  errorRatePct: number;
+  uptimeSec: number;
+  timestamp: string;
+}
+
+export interface SpaceAlertItem {
+  alertId: string;
+  repoId: string;
+  severity: "CRITICAL" | "WARNING" | "INFO";
+  alertType: string;
+  message: string;
+  timestamp: string;
+}
+
 export class HFEcosystemEngine {
   private assets: HubAsset[] = SAK_HUB_ASSETS;
 
@@ -149,6 +171,72 @@ ${asset.meta.tags.map((t) => `  - ${t}`).join("\n")}
           valid: val.valid,
         };
       });
+  }
+
+  getSpacesTelemetry(): SpaceTelemetryItem[] {
+    return [
+      {
+        repoId: "Nanthasit/sakthai-tts",
+        runtimeStage: "RUNNING",
+        hardwareTier: "t4-small",
+        cpuUsagePct: 22.4,
+        memoryUsageMb: 3120.0,
+        memoryTotalMb: 8192.0,
+        httpLatencyMs: 185.0,
+        errorRatePct: 0.0,
+        uptimeSec: 86400,
+        timestamp: new Date().toISOString(),
+      },
+      {
+        repoId: "Nanthasit/sakthai-vision",
+        runtimeStage: "RUNNING",
+        hardwareTier: "a10g-small",
+        cpuUsagePct: 45.8,
+        memoryUsageMb: 6200.0,
+        memoryTotalMb: 16384.0,
+        httpLatencyMs: 420.0,
+        errorRatePct: 0.0,
+        uptimeSec: 142000,
+        timestamp: new Date().toISOString(),
+      },
+      {
+        repoId: "Nanthasit/sakthai-rag-demo",
+        runtimeStage: "RUNNING",
+        hardwareTier: "cpu-basic",
+        cpuUsagePct: 12.1,
+        memoryUsageMb: 1850.0,
+        memoryTotalMb: 8192.0,
+        httpLatencyMs: 95.0,
+        errorRatePct: 0.0,
+        uptimeSec: 250000,
+        timestamp: new Date().toISOString(),
+      },
+      {
+        repoId: "Nanthasit/sakthai-training-space",
+        runtimeStage: "BUILDING",
+        hardwareTier: "a100-large",
+        cpuUsagePct: 88.2,
+        memoryUsageMb: 14500.0,
+        memoryTotalMb: 24576.0,
+        httpLatencyMs: 0.0,
+        errorRatePct: 0.0,
+        uptimeSec: 1800,
+        timestamp: new Date().toISOString(),
+      },
+    ];
+  }
+
+  getSpaceAlerts(): SpaceAlertItem[] {
+    return [
+      {
+        alertId: "alt_trn_cpu",
+        repoId: "Nanthasit/sakthai-training-space",
+        severity: "WARNING",
+        alertType: "HIGH_CPU",
+        message: "High CPU utilization: 88.2% exceeds 85% build threshold",
+        timestamp: new Date().toISOString(),
+      },
+    ];
   }
 }
 

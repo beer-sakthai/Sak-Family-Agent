@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   ShieldAlert,
   RotateCcw,
@@ -19,7 +19,7 @@ export function SelfHealingConsole() {
   const [loading, setLoading] = useState(false);
   const [replayingId, setReplayingId] = useState<string | null>(null);
 
-  const fetchStatus = async () => {
+  const fetchStatus = useCallback(async () => {
     try {
       const res = await fetch("/api/recovery");
       const json = await res.json();
@@ -30,13 +30,20 @@ export function SelfHealingConsole() {
     } catch (err) {
       console.error("Failed to fetch recovery status", err);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    fetchStatus();
-    const interval = setInterval(fetchStatus, 10_000);
+    // The poll is declared inside the effect so the state updates happen in an
+    // async continuation rather than synchronously in the effect body, which is
+    // what `react-hooks/set-state-in-effect` (React Compiler) requires.
+    async function pollStatus() {
+      await fetchStatus();
+    }
+
+    pollStatus();
+    const interval = setInterval(pollStatus, 10_000);
     return () => clearInterval(interval);
-  }, []);
+  }, [fetchStatus]);
 
   const handleReplay = async (id: string) => {
     setReplayingId(id);
