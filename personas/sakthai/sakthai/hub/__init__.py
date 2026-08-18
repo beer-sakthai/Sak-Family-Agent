@@ -1,11 +1,4 @@
-"""Hugging Face Hub Ecosystem Automation & Quality Package.
-
-Provides asset scanning, live Space runtime health checks, model card
-validation, and canonical documentation synchronization across all 19 models,
-16 datasets, and 7 Spaces.
-"""
-
-from __future__ import annotations
+"""Hugging Face Hub ecosystem automation, health probing, and card synchronization."""
 
 from .models import (
     AssetType,
@@ -15,9 +8,11 @@ from .models import (
     HubAssetSpec,
     SpaceState,
 )
+from .remediator import SpaceRemediator
 from .scanner import HubEcosystemScanner
 from .sync import HubCardSynchronizer
 from .validator import ModelCardValidator
+from .webhook import HubWebhookDispatcher
 
 __all__ = [
     "AssetType",
@@ -27,6 +22,8 @@ __all__ = [
     "HubAssetSpec",
     "HubCardSynchronizer",
     "HubEcosystemScanner",
+    "HubWebhookDispatcher",
     "ModelCardValidator",
+    "SpaceRemediator",
     "SpaceState",
 ]
