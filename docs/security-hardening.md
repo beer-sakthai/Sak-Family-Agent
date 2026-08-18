@@ -188,6 +188,31 @@ was ever pushed, it is compromised.
   `::test_unauthenticated_head_discloses_no_file_metadata`,
   `::test_head_cannot_follow_a_symlink_out_of_the_static_root`.
 
+### 10a. The `HEAD` fix was reverted, and every parity check stayed green
+
+- **What happened:** commit `20e7cf0` ("fix: use static parameterized queries in
+  `list_facts`", 16 files, 8,509 insertions / 471 deletions) reverted finding 10
+  in **all five** persona copies of `web/server.py` *and* `scripts/serve_api.py`,
+  deleted the 145 lines of HEAD regression tests from `tests/test_web_auth.py`,
+  and removed the finding-10 section from this document. The authentication
+  bypass was live on `main` again.
+- **Why nothing caught it:** `tests/test_persona_guardrails_parity.py` asserts
+  the copies are byte-identical *to each other*. They were — uniformly reverted.
+  Re-running only the pre-existing parity classes against the reverted tree
+  gives **6 passed**. The tests that would have caught it lived in
+  `tests/test_web_auth.py`, which the same commit deleted.
+- **Prevention pattern:** parity is necessary, not sufficient. For a property
+  that must hold everywhere, assert the **property's presence**, not only that
+  the copies agree — and put that assertion somewhere other than the file the
+  feature's own tests live in, because a revert takes the feature and its tests
+  together. Consistency checks cannot see a uniform regression.
+- **Regression tests:** `tests/test_persona_guardrails_parity.py::TestSecurityPropertiesArePresent`
+  — `::test_head_requests_are_gated_in_every_web_server_copy` (all seven copies)
+  and `::test_serve_api_script_gates_head_and_redacts_the_token` (the standalone
+  script, which ruff and mypy skip and nothing else covers). Verified by
+  restoring the reverted files and watching both fail while the parity classes
+  still passed.
+
 ---
 
 ## CI / supply-chain hardening
