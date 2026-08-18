@@ -293,6 +293,35 @@ class TestWorkflowExecutor(unittest.TestCase):
         self.assertEqual(history.status, RunStatus.COMPLETED)
         self.assertEqual(history.step_results["read_step"].status, StepStatus.COMPLETED)
 
+    def test_python_action_compiled_ast_execution(self):
+        """Verify that expressions and statement blocks are compiled from AST and executed cleanly."""
+        # Single expression
+        wf_expr = WorkflowDefinition(
+            name="python_ast_expr",
+            steps=[StepDefinition(id="s1", action="python", params={"code": "100 + 200"})],
+        )
+        history_expr = asyncio.run(self.executor.execute_workflow(wf_expr))
+        self.assertEqual(history_expr.status, RunStatus.COMPLETED)
+        self.assertEqual(history_expr.step_results["s1"].output.get("result"), 300)
+
+        # Multi-line statement block
+        wf_stmt = WorkflowDefinition(
+            name="python_ast_stmt",
+            steps=[StepDefinition(id="s1", action="python", params={"code": "a = 10\nb = 20\nc = a + b"})],
+        )
+        history_stmt = asyncio.run(self.executor.execute_workflow(wf_stmt))
+        self.assertEqual(history_stmt.status, RunStatus.COMPLETED)
+        self.assertEqual(history_stmt.step_results["s1"].output, {"a": 10, "b": 20, "c": 30})
+
+        # Syntax error in code block
+        wf_syntax = WorkflowDefinition(
+            name="python_ast_syntax",
+            steps=[StepDefinition(id="s1", action="python", params={"code": "def foo("})],
+        )
+        history_syntax = asyncio.run(self.executor.execute_workflow(wf_syntax))
+        self.assertEqual(history_syntax.status, RunStatus.FAILED)
+        self.assertIn("invalid syntax", history_syntax.step_results["s1"].error.lower())
+
     def test_python_action_sandbox_restrictions(self):
         """Verify that the python evaluation action restricts access to dangerous modules and builtins."""
         # Attempting to use open() should raise NameError ("name 'open' is not defined")
