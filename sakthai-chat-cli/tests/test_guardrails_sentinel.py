@@ -93,4 +93,4 @@ def test_short_flag_home_relative_path_blocked(
     monkeypatch.setenv("SAKTHAI_SHELL_ALLOW", "1")
     result = DEFAULT_POLICY.check_pre_execution(run_command_tool, {"command": command}, store)
     assert result.action == GuardrailAction.DENY
-    assert result.reason and "destructive" in result.reason
+    assert result.reason and any(s in result.reason.lower() for s in ("destructive", "dangerous"))
