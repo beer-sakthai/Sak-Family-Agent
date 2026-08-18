@@ -16,6 +16,12 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  # See the note in ci.yml: cancel superseded pull-request runs, never a run on
+  # `main`.
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 # Standalone package (not a uv workspace member — see CLAUDE.md), so it gets its
 # own install + pytest run rather than joining ci.yml, which is scoped to the
 # sakthai core only. Each persona carries a copy; personas/sakthai's is the
@@ -23,6 +29,7 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     defaults:
       run:
         working-directory: personas/sakthai/agent-self-evolution
