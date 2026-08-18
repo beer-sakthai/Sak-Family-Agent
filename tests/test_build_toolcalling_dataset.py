@@ -3,9 +3,6 @@
 import importlib.util
 import json
 from pathlib import Path
-from typing import Any
-
-import pytest
 
 # Load module dynamically because directory name 'hf-jobs' contains a hyphen
 MODULE_PATH = Path(__file__).resolve().parents[1] / "training" / "hf-jobs" / "build_toolcalling_dataset.py"
@@ -18,7 +15,9 @@ spec.loader.exec_module(build_module)
 def test_generate_tool_rows_helper() -> None:
     templates = ["Do {item}", "Please {item}"]
     items = ["task_a", "task_b"]
-    arg_builder = lambda item: {"item_name": item}
+
+    def arg_builder(item: str) -> dict[str, str]:
+        return {"item_name": item}
 
     rows = list(build_module.generate_tool_rows("dummy_tool", templates, items, arg_builder, sample_size=1))
 
