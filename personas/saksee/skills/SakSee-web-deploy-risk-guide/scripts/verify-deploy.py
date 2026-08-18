@@ -12,6 +12,8 @@ Usage:
         --url https://house-of-sak.vercel.app/ --local index.html
 """
 import argparse, sys, requests
+import socket
+import ipaddress
 from urllib.parse import urlparse
 
 
@@ -23,6 +25,33 @@ def fail(msg: str) -> None:
 def is_valid_html(text: str) -> bool:
     stripped = text.lstrip().lower()
     return stripped.startswith("<!doctype html>") or stripped.startswith("<html")
+
+
+def ensure_public_host_resolution(host: str) -> None:
+    try:
+        addrinfos = socket.getaddrinfo(host, 443, type=socket.SOCK_STREAM)
+    except socket.gaierror:
+        fail(f"unable to resolve host: {host}")
+
+    if not addrinfos:
+        fail(f"unable to resolve host: {host}")
+
+    for family, _, _, _, sockaddr in addrinfos:
+        ip_str = sockaddr[0]
+        try:
+            ip_obj = ipaddress.ip_address(ip_str)
+        except ValueError:
+            fail(f"resolved invalid IP for host {host}: {ip_str}")
+
+        if (
+            ip_obj.is_private
+            or ip_obj.is_loopback
+            or ip_obj.is_link_local
+            or ip_obj.is_multicast
+            or ip_obj.is_reserved
+            or ip_obj.is_unspecified
+        ):
+            fail(f"url host resolves to non-public IP: {ip_str}")
 
 
 def validate_deploy_url(url: str) -> str:
@@ -43,6 +72,8 @@ def validate_deploy_url(url: str) -> str:
         fail("url must include a host")
     if host != "vercel.app" and not host.endswith(".vercel.app"):
         fail("url host must be vercel.app or a .vercel.app subdomain")
+
+    ensure_public_host_resolution(host)
 
     # Return canonical URL so requests do not use the original raw user string.
     return f"https://{host}/"
