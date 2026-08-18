@@ -65,11 +65,21 @@ export interface ObservationRecord {
   timestamp?: string;
 }
 
+export interface MemoryCacheMetrics {
+  hitRate: number;
+  l1Hits: number;
+  misses: number;
+  totalRequests: number;
+  cachedShardsCount: number;
+  latencyAvgMs: number;
+}
+
 export interface MemoryData {
   facts: FactRecord[];
   observations: ObservationRecord[];
   /** Per-shard read outcome, so the UI can show which personas' memory was reachable. */
   shards?: MemoryShardStatus[];
+  cacheMetrics?: MemoryCacheMetrics;
 }
 
 /**
@@ -969,6 +979,7 @@ export interface M365CopilotApiResponse {
 export type TelemetryEventType =
   | "connected"
   | "agent_start"
+  | "agent_message"
   | "agent_dispatch"
   | "agent_step"
   | "token_delta"
@@ -1059,6 +1070,11 @@ export interface WorkflowStage {
   durationMs?: number;
   tokensUsed?: number;
   outputSummary?: string;
+  dependsOn?: string[];
+  params?: Record<string, any>;
+  output?: Record<string, any>;
+  condition?: string;
+  retryCount?: number;
 }
 
 export interface WorkflowTopology {
