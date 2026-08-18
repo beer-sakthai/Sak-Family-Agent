@@ -185,6 +185,11 @@ if __name__ == "__main__":
     unpacked_dir = Path(sys.argv[1]).resolve()
     source = sys.argv[2]
 
+    safe_root = Path.cwd().resolve()
+    if not unpacked_dir.is_relative_to(safe_root):
+        print(f"Error: {unpacked_dir} is outside allowed root {safe_root}", file=sys.stderr)
+        sys.exit(1)
+
     if not unpacked_dir.exists() or not unpacked_dir.is_dir():
         print(f"Error: {unpacked_dir} not found or not a directory", file=sys.stderr)
         sys.exit(1)
