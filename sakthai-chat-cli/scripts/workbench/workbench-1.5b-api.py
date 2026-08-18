@@ -2,6 +2,9 @@
 """Test the 1.5B merged model on HF Inference API and record results."""
 
 import os, json, time, sys
+import json
+import os
+import time
 
 hf_token = os.environ.get("HF_TOKEN", "")
 
