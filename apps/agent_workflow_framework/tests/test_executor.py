@@ -718,6 +718,45 @@ class TestWorkflowExecutor(unittest.TestCase):
                     f"Unexpected error message for command '{cmd}': {step_res.error}",
                 )
 
+    def test_shell_action_heredoc_to_interpreter_protection(self):
+        """Verify that shell actions reject heredoc and herestring redirection to interpreters."""
+        malicious_heredoc_commands = [
+            "sh <<'EOF'\necho hello\nEOF",
+            "bash <<EOF\necho evil\nEOF",
+            "python3 <<'EOF'\nimport os\nEOF",
+            "node <<'EOF'\nconsole.log('hi')\nEOF",
+            "sh <<<'echo hello'",
+            "bash <<<'echo evil'",
+            "python <<<'import os'",
+            "env bash <<'EOF'\necho hi\nEOF",
+            "sudo python3 <<'EOF'\nimport os\nEOF",
+        ]
+        for cmd in malicious_heredoc_commands:
+            with self.subTest(cmd=cmd):
+                wf = WorkflowDefinition(
+                    name="shell_heredoc_security_test",
+                    steps=[
+                        StepDefinition(id="s1", action="shell", params={"cmd": cmd}),
+                    ],
+                )
+                history = asyncio.run(self.executor.execute_workflow(wf))
+                self.assertEqual(history.status, RunStatus.FAILED)
+                step_res = history.step_results["s1"]
+                self.assertEqual(step_res.status, StepStatus.FAILED)
+                self.assertIsNotNone(step_res.error)
+                self.assertIn("heredoc/herestring redirection", step_res.error.lower())
+
+        # Verify non-interpreter heredoc commands remain allowed unless targeting sensitive paths
+        wf_cat = WorkflowDefinition(
+            name="shell_heredoc_safe_test",
+            steps=[
+                StepDefinition(id="s1", action="shell", params={"cmd": "cat <<'EOF'\nhello world\nEOF"}),
+            ],
+        )
+        history_cat = asyncio.run(self.executor.execute_workflow(wf_cat))
+        self.assertEqual(history_cat.status, RunStatus.COMPLETED)
+        self.assertEqual(history_cat.step_results["s1"].output.get("stdout"), "hello world")
+
     def test_shell_action_pipeline_to_interpreter_protection(self):
         """Verify that shell actions reject pipeline-to-interpreter commands."""
         malicious_pipeline_commands = [
