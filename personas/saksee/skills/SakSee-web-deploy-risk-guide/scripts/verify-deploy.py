@@ -31,12 +31,21 @@ def validate_deploy_url(url: str) -> str:
         fail("url must use https")
     if parsed.username or parsed.password:
         fail("url must not include username/password")
+    if parsed.port is not None:
+        fail("url must not include an explicit port")
+    if parsed.path not in ("", "/"):
+        fail("url path must be empty or '/'")
+    if parsed.query or parsed.fragment:
+        fail("url must not include query string or fragment")
+
     host = (parsed.hostname or "").lower()
     if not host:
         fail("url must include a host")
     if host != "vercel.app" and not host.endswith(".vercel.app"):
         fail("url host must be vercel.app or a .vercel.app subdomain")
-    return url
+
+    # Return canonical URL so requests do not use the original raw user string.
+    return f"https://{host}/"
 
 
 def main() -> None:
