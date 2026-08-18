@@ -222,7 +222,7 @@ def _is_sensitive_path(path: str, allow_local: bool = False) -> bool:
 
     # Strip curl-style file upload prefix if present at start.
     if path.startswith("@") and len(path) > 1:
-        path = path.lstrip("@")
+        path = path[1:]
 
     # Check for path traversal or home-relative paths.
     if ".." in path or path.startswith("~"):
@@ -290,8 +290,11 @@ def _is_sensitive_path(path: str, allow_local: bool = False) -> bool:
             # If base_path is a prefix of any critical root (e.g. /et matching /etc),
             # it is also potentially sensitive if it is not just "/".
             if base_path != "/":
+                check_path = os.path.normpath(
+                    base_path if base_path.startswith("/") else "/" + base_path
+                )
                 for root in _CRITICAL_ROOTS:
-                    if root.startswith(base_path):
+                    if root.startswith(check_path):
                         return True
         elif not allow_local:
             # If the path starts with a wildcard and local paths are not allowed,
