@@ -48,11 +48,20 @@ uv run pytest -m "not integration" -q
       a matching rule.
 - [ ] **Schema migration** — additive only (`ALTER TABLE` under
       `BEGIN IMMEDIATE`). No dropped columns or tables.
-- [ ] **Workflows** — each file is a real, loadable workflow: `.yml`/`.yaml`
-      extension (GitHub silently ignores anything else, including `foo. yml`
-      with a space), top-level `on:`, `jobs:` and `permissions:`, no duplicate
-      keys, actions pinned by SHA. Do **not** add `.github/workflows/codeql.yml`
-      — it collides with CodeQL default setup and every job fails.
+- [ ] **Workflows** — `uv run pytest tests/test_workflow_hygiene.py -q` passes.
+      Each file is a real, loadable workflow: `.yml`/`.yaml` extension (GitHub
+      silently ignores anything else, including `foo. yml` with a space),
+      top-level `on:`, `jobs:` and `permissions:`, no duplicate keys, actions
+      pinned by SHA. A workflow a pull request can trigger declares
+      `concurrency:`, and every job declares `timeout-minutes` — `.lock.yml`
+      files are compiler output and exempt from both. Do **not** delete
+      `.github/workflows/codeql.yml` or re-enable CodeQL *default setup*: the
+      advanced workflow is the live producer, the two cannot coexist, and only
+      advanced setup can be given `.github/codeql/codeql-config.yml` by path.
+- [ ] **gh-aw agentic workflows** — a `.md` source edit ships nothing until it
+      is recompiled; the `.lock.yml` beside it is what GitHub runs. Recompile
+      per [`docs/gh-aw-engines.md`](../docs/gh-aw-engines.md) and read the whole
+      diff, since `compile` regenerates every source.
 
 ## Review
 
