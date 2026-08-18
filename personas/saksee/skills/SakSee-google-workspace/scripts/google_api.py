@@ -82,7 +82,14 @@ def _stored_token_scopes() -> list[str]:
 def _gws_binary() -> str | None:
     override = os.getenv("HERMES_GWS_BIN")
     if override:
-        return override
+        candidate = Path(override).expanduser().resolve()
+        allowed_names = {"gws", "gws.exe"}
+        if (
+            candidate.name in allowed_names
+            and candidate.is_file()
+            and os.access(candidate, os.X_OK)
+        ):
+            return str(candidate)
     return shutil.which("gws")
 
 
