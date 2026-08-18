@@ -59,8 +59,8 @@ export class HFEcosystemEngine {
     const issues: Array<{ rule: string; message: string; severity: "error" | "warning" }> = [];
     let score = 100;
 
-    // Rule 1: No hardcoded downloads
-    if (/\b(\d+[\d,]*\+?\s*downloads?)\b/i.test(content)) {
+    // Rule 1: No hardcoded downloads (ReDoS safe non-overlapping numeric tokens)
+    if (/\b\d{1,12}(?:,\d{3})*\+?\s+downloads?\b/i.test(content)) {
       issues.push({
         rule: "no_hardcoded_downloads",
         message: "Found hardcoded download count in Markdown text. Use dynamic shields.io badge.",
@@ -69,8 +69,8 @@ export class HFEcosystemEngine {
       score -= 15;
     }
 
-    // Rule 2: Single family table
-    const matches = content.match(/\|.*context-1\.5b-merged.*\|/g);
+    // Rule 2: Single family table (ReDoS safe character class without newline/pipe backtracking)
+    const matches = content.match(/\|[^|\r\n]*context-1\.5b-merged[^|\r\n]*\|/g);
     if (matches && matches.length > 1) {
       issues.push({
         rule: "single_family_table",
