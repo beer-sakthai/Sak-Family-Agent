@@ -182,11 +182,21 @@ if __name__ == "__main__":
         print("To see available layouts: ls <unpacked_dir>/ppt/slideLayouts/", file=sys.stderr)
         sys.exit(1)
 
-    unpacked_dir = Path(sys.argv[1])
+    unpacked_dir = Path(sys.argv[1]).resolve()
     source = sys.argv[2]
 
-    if not unpacked_dir.exists():
-        print(f"Error: {unpacked_dir} not found", file=sys.stderr)
+    if not unpacked_dir.exists() or not unpacked_dir.is_dir():
+        print(f"Error: {unpacked_dir} not found or not a directory", file=sys.stderr)
+        sys.exit(1)
+
+    required_paths = [
+        unpacked_dir / "ppt" / "slides",
+        unpacked_dir / "ppt" / "slideLayouts",
+        unpacked_dir / "ppt" / "_rels" / "presentation.xml.rels",
+        unpacked_dir / "ppt" / "presentation.xml",
+    ]
+    if not all(p.exists() for p in required_paths):
+        print(f"Error: {unpacked_dir} is not a valid unpacked PPTX directory", file=sys.stderr)
         sys.exit(1)
 
     source_type, layout_file = parse_source(source)
