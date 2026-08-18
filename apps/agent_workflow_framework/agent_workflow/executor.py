@@ -194,9 +194,6 @@ def _validate_filepath(filepath: Any) -> Path:
 
     path_str = str(filepath).strip()
 
-    if any(ord(c) < 32 or ord(c) == 127 for c in path_str):
-        raise ValueError("Control characters are not allowed in file paths")
-
     # Block path traversal segments like '..' or leading '~'. Backslashes are
     # normalized first so Windows-style separators can't smuggle a '..' segment
     # past a POSIX-only split.
