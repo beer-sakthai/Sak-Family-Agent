@@ -22,7 +22,9 @@ import {
 } from "lucide-react";
 import {
   CardValidationResult,
+  SpaceAlertItem,
   SpaceDiagnostic,
+  SpaceTelemetryItem,
   hfEcosystemEngine,
 } from "@/lib/hfEcosystemEngine";
 
@@ -38,6 +40,12 @@ export function HubEcosystemPanel() {
     Array<{ repoId: string; type: string; score: number; valid: boolean }> | null
   >(null);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [telemetries] = useState<SpaceTelemetryItem[]>(
+    hfEcosystemEngine.getSpacesTelemetry()
+  );
+  const [alerts] = useState<SpaceAlertItem[]>(
+    hfEcosystemEngine.getSpaceAlerts()
+  );
 
   const filteredAssets = data.assets.filter((a) => {
     const matchesType = filterType === "all" ? true : a.type === filterType;
@@ -150,6 +158,86 @@ Fine-tuned specialized intelligence for multi-persona execution workflows.
             <div className="text-lg font-bold text-purple-400">{data.totalSpaces}</div>
             <div className="text-[10px] text-zinc-400 font-medium uppercase tracking-wider">Spaces</div>
           </div>
+        </div>
+      </div>
+
+      {/* Phase 2: Live Space Monitoring & Telemetry */}
+      <div className="bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-5 space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Activity className="w-5 h-5 text-purple-400" />
+            <h3 className="text-sm font-bold text-zinc-200">Space Telemetry & Health Monitor</h3>
+          </div>
+          <span className="text-[10px] font-mono text-zinc-400 bg-zinc-950 px-2.5 py-1 rounded-full border border-zinc-800">
+            Realtime Pulses: 4 Spaces
+          </span>
+        </div>
+
+        {/* Active Alerts */}
+        {alerts.length > 0 && (
+          <div className="space-y-2">
+            {alerts.map((al) => (
+              <div
+                key={al.alertId}
+                className="p-3 bg-amber-950/30 border border-amber-800/60 rounded-xl flex items-center justify-between text-xs"
+              >
+                <div className="flex items-center gap-2 text-amber-300">
+                  <AlertTriangle className="w-4 h-4 shrink-0 text-amber-400" />
+                  <span className="font-semibold">[{al.alertType}]</span>
+                  <span>{al.message}</span>
+                </div>
+                <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-amber-900/50 text-amber-300 border border-amber-700">
+                  {al.severity}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Telemetry Metric Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+          {telemetries.map((t) => (
+            <div
+              key={t.repoId}
+              className="bg-zinc-950/70 border border-zinc-800/80 rounded-xl p-3.5 space-y-2"
+            >
+              <div className="flex justify-between items-start">
+                <div className="font-medium text-xs text-zinc-200 truncate" title={t.repoId}>
+                  {t.repoId.split("/")[1] || t.repoId}
+                </div>
+                <span
+                  className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded ${
+                    t.runtimeStage === "RUNNING"
+                      ? "bg-emerald-950 text-emerald-400 border border-emerald-800"
+                      : "bg-amber-950 text-amber-400 border border-amber-800"
+                  }`}
+                >
+                  {t.runtimeStage}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 text-[11px] pt-1 border-t border-zinc-800/50">
+                <div>
+                  <span className="text-zinc-500 block text-[10px]">CPU</span>
+                  <span className="text-zinc-300 font-mono">{t.cpuUsagePct}%</span>
+                </div>
+                <div>
+                  <span className="text-zinc-500 block text-[10px]">Memory</span>
+                  <span className="text-zinc-300 font-mono">
+                    {Math.round(t.memoryUsageMb)} MB
+                  </span>
+                </div>
+                <div>
+                  <span className="text-zinc-500 block text-[10px]">Latency</span>
+                  <span className="text-zinc-300 font-mono">{t.httpLatencyMs} ms</span>
+                </div>
+                <div>
+                  <span className="text-zinc-500 block text-[10px]">Hardware</span>
+                  <span className="text-purple-400 font-mono text-[10px]">{t.hardwareTier}</span>
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 
