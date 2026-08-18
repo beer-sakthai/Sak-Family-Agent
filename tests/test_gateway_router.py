@@ -2,12 +2,67 @@
 
 from __future__ import annotations
 
+import pytest
+from dataclasses import FrozenInstanceError
+
 from sakthai.agent.gateway_router import (
     PERSONA_ROLES,
     IntentCategory,
+    IntentClassification,
     classify_intent,
     route_to_persona,
 )
+
+
+def test_intent_classification_default_values() -> None:
+    intent = IntentClassification(
+        primary_intent=IntentCategory.CODING,
+        confidence=0.9,
+    )
+    assert intent.primary_intent == IntentCategory.CODING
+    assert intent.confidence == 0.9
+    assert intent.detected_keywords == ()
+    assert intent.tool_hints == ()
+
+
+def test_intent_classification_custom_tuples() -> None:
+    intent = IntentClassification(
+        primary_intent=IntentCategory.RESEARCH,
+        confidence=0.95,
+        detected_keywords=("arxiv", "paper"),
+        tool_hints=("web_search",),
+    )
+    assert intent.detected_keywords == ("arxiv", "paper")
+    assert intent.tool_hints == ("web_search",)
+
+
+def test_intent_classification_immutability() -> None:
+    intent = IntentClassification(
+        primary_intent=IntentCategory.GENERAL_CHAT,
+        confidence=0.5,
+    )
+    with pytest.raises(FrozenInstanceError):
+        intent.confidence = 0.8  # type: ignore[misc]
+
+
+def test_intent_classification_equality() -> None:
+    intent1 = IntentClassification(
+        primary_intent=IntentCategory.AUTOMATION_CI,
+        confidence=1.0,
+        detected_keywords=("ci", "workflow"),
+    )
+    intent2 = IntentClassification(
+        primary_intent=IntentCategory.AUTOMATION_CI,
+        confidence=1.0,
+        detected_keywords=("ci", "workflow"),
+    )
+    intent3 = IntentClassification(
+        primary_intent=IntentCategory.AUTOMATION_CI,
+        confidence=0.8,
+        detected_keywords=("ci", "workflow"),
+    )
+    assert intent1 == intent2
+    assert intent1 != intent3
 
 
 def test_classify_intent_automation_ci() -> None:
