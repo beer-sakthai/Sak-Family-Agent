@@ -941,13 +941,6 @@ class WorkflowExecutor:
                 res = eval(compiled_code, eval_globals, eval_locals)  # nosec B307
                 return {"result": res, "output": res}
             else:
-                allowed_stmt_nodes = (ast.Assign, ast.AugAssign, ast.AnnAssign, ast.Expr, ast.Pass)
-                for stmt in tree.body:
-                    if not isinstance(stmt, allowed_stmt_nodes):
-                        stmt_type = type(stmt).__name__
-                        raise PermissionError(
-                            f"Statement type '{stmt_type}' is prohibited in python sandbox statement blocks."
-                        )
                 ast.fix_missing_locations(tree)
                 compiled_code = compile(tree, filename="<python_sandbox>", mode="exec")
                 exec(compiled_code, eval_globals, eval_locals)  # nosec B102
