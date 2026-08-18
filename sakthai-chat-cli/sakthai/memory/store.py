@@ -403,6 +403,21 @@ class MemoryStore:
 
         with self._lock:
             rows = self._conn.execute(query, params).fetchall()
+        clauses: list[str] = []
+        params: list[int] = []
+        if after_ts is not None:
+            clauses.append("created_at >= ?")
+            params.append(after_ts)
+        if before_ts is not None:
+            clauses.append("created_at <= ?")
+            params.append(before_ts)
+        where = ("WHERE " + " AND ".join(clauses)) if clauses else ""
+        params.append(limit)
+        with self._lock:
+            rows = self._conn.execute(
+                f"SELECT * FROM facts {where} ORDER BY updated_at DESC LIMIT ?",  # nosec B608
+                params,
+            ).fetchall()
         return [_fact_from_row(r) for r in rows]
 
     def get_fact_by_key(self, kind: str, key: str) -> Fact | None:
