@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { randomBytes } from 'crypto';
 import {
   generateSupervisorPlan,
   PERSONA_PRESETS,
@@ -30,7 +31,7 @@ export async function POST(req: NextRequest) {
       ? body.personas
       : ['sakthai', 'sakking', 'sakjules'];
     const preset = (body.preset as PersonaPresetId) || 'cloud_powerhouse';
-    const sessionId = `chat_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+    const sessionId = `chat_${Date.now()}_${randomBytes(3).toString('hex')}`;
 
     const plan = generateSupervisorPlan(prompt, activePersonas, sessionId);
     const reasoningTraces: Array<{ persona: string; thought: string; toolsUsed: string[] }> = [];
