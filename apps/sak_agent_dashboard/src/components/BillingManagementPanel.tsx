@@ -49,12 +49,11 @@ export function BillingManagementPanel() {
 
   useEffect(() => {
     let isMounted = true;
-    const load = async () => {
-    async function loadInitialData() {
+    async function init() {
       try {
         const res = await fetch("/api/billing");
         const json = await res.json();
-        if (isMounted && json.success && json.data) {
+        if (json.success && json.data && isMounted) {
           setQuota(json.data.quota);
           setKeys(json.data.keys);
           setUsage(json.data.usage);
@@ -66,7 +65,7 @@ export function BillingManagementPanel() {
     };
     load();
     }
-    void loadInitialData();
+    init();
     return () => {
       isMounted = false;
     };
