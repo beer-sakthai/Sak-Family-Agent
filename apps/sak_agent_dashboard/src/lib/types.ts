@@ -969,6 +969,7 @@ export interface M365CopilotApiResponse {
 export type TelemetryEventType =
   | "connected"
   | "agent_start"
+  | "agent_message"
   | "agent_dispatch"
   | "agent_step"
   | "token_delta"
@@ -988,6 +989,7 @@ export interface TelemetryEvent {
   sessionId?: string;
   data: {
     message?: string;
+    stageId?: string;
     tokensGenerated?: number;
     latencyMs?: number;
     toolName?: string;
@@ -1056,9 +1058,24 @@ export interface WorkflowStage {
   model: string;
   action: string;
   status: "pending" | "running" | "completed" | "failed" | "skipped";
+  dependsOn?: string[];
+  retry?: number;
+  retryDelay?: number;
+  params?: Record<string, any>;
+  output?: Record<string, any>;
+  error?: string;
+  attempts?: number;
   durationMs?: number;
   tokensUsed?: number;
   outputSummary?: string;
+  startTime?: string;
+  endTime?: string;
+}
+
+export interface DAGValidationResult {
+  isValid: boolean;
+  errors: string[];
+  topologicalOrder?: string[];
 }
 
 export interface WorkflowTopology {
@@ -1067,6 +1084,19 @@ export interface WorkflowTopology {
   description: string;
   category: "autonomous" | "security" | "publishing" | "maintenance";
   stages: WorkflowStage[];
+  validation?: DAGValidationResult;
+}
+
+export interface WorkflowRunHistory {
+  runId: string;
+  workflowId: string;
+  workflowName: string;
+  status: "pending" | "running" | "completed" | "failed";
+  startTime: string;
+  endTime?: string;
+  stages: WorkflowStage[];
+  totalTokens: number;
+  totalLatencyMs: number;
 }
 
 export interface WorkflowExecutionResult {
@@ -1078,6 +1108,8 @@ export interface WorkflowExecutionResult {
   stages: WorkflowStage[];
   totalTokens: number;
   totalLatencyMs: number;
+  dagTopologicalOrder?: string[];
+  history?: WorkflowRunHistory;
 }
 
 // ---------------- 6-Part Cycle Intelligence & Operations Suite ----------------
