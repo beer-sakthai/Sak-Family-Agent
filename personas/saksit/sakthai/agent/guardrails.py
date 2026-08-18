@@ -222,7 +222,7 @@ def _is_sensitive_path(path: str, allow_local: bool = False) -> bool:
 
     # Strip curl-style file upload prefix if present at start.
     if path.startswith("@") and len(path) > 1:
-        path = path[1:]
+        path = path.lstrip("@")
 
     # Check for path traversal or home-relative paths.
     if ".." in path or path.startswith("~"):
@@ -1293,9 +1293,7 @@ def _check_destructive_tokens(
     if res.action == GuardrailAction.DENY:
         return res
 
-    res = _check_nested_script_tokens(
-        parts, context_sensitive, checked_makefiles, current_make_dir
-    )
+    res = _check_nested_script_tokens(parts, context_sensitive, checked_makefiles, current_make_dir)
     if res.action == GuardrailAction.DENY:
         return res
 
@@ -1324,7 +1322,6 @@ def _check_destructive_tokens(
         return res
 
     return _check_pipeline_tokens(parts)
-
 
 
 def _block_dangerous_shell_commands(
