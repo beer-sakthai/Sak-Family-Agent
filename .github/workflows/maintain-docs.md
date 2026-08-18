@@ -18,7 +18,7 @@ network: defaults
 
 steps:
   - name: Collect recent commits and changed files
-    uses: actions/github-script@v9.0.0
+    uses: actions/github-script@v9
     with:
       script: |
         const fs = require('fs');
