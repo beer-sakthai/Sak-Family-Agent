@@ -226,7 +226,11 @@ Twenty workflows live in `.github/workflows/`. The ones that gate a change:
 | `agent-self-evolution.yml` | push/PR touching `personas/sakthai/agent-self-evolution/**` | that subproject's own suite |
 | `labeler.yml` | `pull_request_target` | PR labelling |
 | `scorecard.yml` | push to `main`, weekly | OpenSSF Scorecard → SARIF to code scanning |
+| `codeql.yml` | push/PR to `main`, weekly | CodeQL **advanced** setup over `actions`, `javascript-typescript`, `python`; scope from `.github/codeql/codeql-config.yml` via `config-file:` |
+| `bandit.yml` | push/PR to `main`, weekly | bandit with `-c pyproject.toml` over first-party Python → SARIF to code scanning. Publishes, does not gate — `ci.yml` is the gate |
+| `eslint.yml` | push/PR touching `apps/sak_agent_dashboard/**`, weekly | `eslint src` with the app's own flat config → SARIF (`category: eslint-dashboard`). Publishes, does not gate — `subprojects.yml` is the gate |
 | `self-healing-ci.yml` | `workflow_run` completion of `CI` on `main` (failure only), or manual | runs `sakthai heal run` over the failed job's log and opens a `selfheal/` fix PR when the patch is safe and locally verified. Gates nothing — it only ever adds a PR |
+| `auto-merge.yml` | `pull_request_target` labeled/unlabeled/ready_for_review | turns GitHub's **native** auto-merge on for a PR carrying the `automerge` label (squash), off when the label is removed. Gates nothing and waives nothing — GitHub still holds the merge until branch protection is satisfied, including the non-author approval. Uses no checkout, so the `pull_request_target` token never meets PR code |
 
 Scheduled / manual only, so they never block a PR: `continuous-security.yml`
 (nightly), `verify-assets.yml` (daily HF asset check, driven by the in-package
@@ -275,7 +279,15 @@ Workflow files are expected to be real, loadable workflows: a `.yml`/`.yaml`
 extension (GitHub silently ignores anything else, including a name like
 `foo. yml` with a space), a top-level `on:` and `jobs:`, no duplicate keys, and
 a top-level `permissions:` block. A batch of pasted starter templates that met
-none of this was removed on 2026-08-13.
+none of this was removed on 2026-08-13, and three more (`bandit.yml`,
+`codeql.yml`, `eslint.yml`) arrived on 2026-08-18.
+
+**`tests/test_workflow_hygiene.py` now enforces all of it in CI**, plus SHA
+pinning on every `uses:`, the `self-healing-ci.yml` fork guard, `codeql.yml`'s
+`config-file:` reference, and `.bandit` being parseable configuration. It exists
+because a bot commit reverted a merged critical security fix — 446 deletions
+under a message about something else — and nothing failed. If you are adding a
+workflow, run it: `uv run pytest tests/test_workflow_hygiene.py -q`.
 
 Coverage floor is **96%** (`fail_under = 96`, branch coverage on) over the
 `sakthai` package. Nothing is omitted from measurement any more — `omit = []`;
