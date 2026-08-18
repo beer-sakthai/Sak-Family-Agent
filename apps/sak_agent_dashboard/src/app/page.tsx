@@ -49,6 +49,7 @@ import GoogleAdkPanel from "@/components/GoogleAdkPanel";
 import GcpLearningPanel from "@/components/GcpLearningPanel";
 import M365CopilotPanel from "@/components/M365CopilotPanel";
 import AgentGatewayPanel from "@/components/AgentGatewayPanel";
+import GatewayRouterPanel from "@/components/GatewayRouterPanel";
 import AutoCyclePanel from "@/components/AutoCyclePanel";
 import DesignSpecsPanel from "@/components/DesignSpecsPanel";
 import { LiveTelemetryFeed } from "@/components/LiveTelemetryFeed";
@@ -870,7 +871,12 @@ export default function Home() {
 
         {activeTab === "specs" && <DesignSpecsPanel data={designSpecs} />}
 
-        {activeTab === "gateway" && <AgentGatewayPanel data={gateway} />}
+        {activeTab === "gateway" && (
+          <div className="space-y-8">
+            <GatewayRouterPanel />
+            <AgentGatewayPanel data={gateway} />
+          </div>
+        )}
 
         {activeTab === "otel" && <OtelPanel data={otel} />}
 
