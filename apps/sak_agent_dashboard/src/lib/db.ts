@@ -49,6 +49,8 @@ function toIso(raw: unknown): string {
   return new Date().toISOString();
 }
 
+import { serverMemoryCache } from "./memoryCache";
+
 /**
  * Read one shard. Returns its rows plus a status describing what happened, so a
  * shard that exists but cannot be opened is reported rather than silently
@@ -58,6 +60,16 @@ function readShard(
   persona: string,
   file: string
 ): { facts: FactRecord[]; observations: ObservationRecord[]; status: MemoryShardStatus } {
+  const cached = serverMemoryCache.getShard(persona);
+  if (cached) {
+    return {
+      facts: cached.facts,
+      observations: cached.observations,
+      status: cached.status,
+    };
+  }
+
+  const start = Date.now();
   const base: MemoryShardStatus = {
     persona,
     path: file,
@@ -67,7 +79,9 @@ function readShard(
   };
 
   if (!fs.existsSync(file)) {
-    return { facts: [], observations: [], status: base };
+    const result = { facts: [], observations: [], status: base };
+    serverMemoryCache.setShard(persona, result);
+    return result;
   }
   base.exists = true;
 
@@ -113,10 +127,15 @@ function readShard(
 
     base.factCount = facts.length;
     base.observationCount = observations.length;
-    return { facts, observations, status: base };
+    serverMemoryCache.recordLatency(Date.now() - start);
+    const result = { facts, observations, status: base };
+    serverMemoryCache.setShard(persona, result);
+    return result;
   } catch (err) {
     base.error = err instanceof Error ? err.message : String(err);
-    return { facts: [], observations: [], status: base };
+    const result = { facts: [], observations: [], status: base };
+    serverMemoryCache.setShard(persona, result);
+    return result;
   }
 }
 
@@ -176,9 +195,19 @@ export async function getMemoryData(
       if (dedupedFacts.length === 0 && dedupedObs.length === 0) {
         // Shards exist but hold nothing readable. That is a live, empty read —
         // not a reason to show fabricated rows.
-        memory = { facts: [], observations: [], shards: statuses };
+        memory = {
+          facts: [],
+          observations: [],
+          shards: statuses,
+          cacheMetrics: serverMemoryCache.getMetrics(),
+        };
       } else {
-        memory = { facts: dedupedFacts, observations: dedupedObs, shards: statuses };
+        memory = {
+          facts: dedupedFacts,
+          observations: dedupedObs,
+          shards: statuses,
+          cacheMetrics: serverMemoryCache.getMetrics(),
+        };
       }
       dataSource = "live";
     }
