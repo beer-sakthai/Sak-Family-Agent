@@ -6,6 +6,10 @@ from concurrent.futures import ThreadPoolExecutor
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import sys
+import os
 
 
 def analyze_portfolio(
@@ -15,6 +19,7 @@ def analyze_portfolio(
     output_plot: str,
     output_csv: str | None = None,
 ):
+def analyze_portfolio(files: list[str], tickers: list[str], weights: list[float], output_plot: str):
     """
     Analyzes the performance of a portfolio constructed from multiple stock CSVs.
 
@@ -46,6 +51,11 @@ def analyze_portfolio(
             results = list(executor.map(_read_stock_csv, zip(files, tickers, strict=False)))
 
         portfolio_df = pd.DataFrame({ticker: series for ticker, series in results})
+        portfolio_df = pd.DataFrame()
+        for i, file in enumerate(files):
+            df = pd.read_csv(file, index_col='Date', parse_dates=True)
+            # Use a unique column name for each stock's close price
+            portfolio_df[tickers[i]] = df['Close']
 
         # --- 3. Calculate Portfolio Performance ---
         # Normalize prices to see growth from day 1
@@ -126,8 +136,6 @@ if __name__ == "__main__":
     if output_dir:
         os.makedirs(output_dir, exist_ok=True)
     if args.output_csv:
-        csv_dir = os.path.dirname(args.output_csv)
-        if csv_dir:
-            os.makedirs(csv_dir, exist_ok=True)
+        os.makedirs(os.path.dirname(args.output_csv), exist_ok=True)
 
     analyze_portfolio(args.files, args.tickers, args.weights, args.output_plot, args.output_csv)
