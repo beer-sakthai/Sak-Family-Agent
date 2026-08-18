@@ -194,6 +194,10 @@ def _validate_filepath(filepath: Any) -> Path:
 
     path_str = str(filepath).strip()
 
+    import re
+    if re.search(r"[\x00-\x1f\x7f]", path_str):
+        raise ValueError("Control characters are not allowed in file paths")
+
     # Block path traversal segments like '..' or leading '~'. Backslashes are
     # normalized first so Windows-style separators can't smuggle a '..' segment
     # past a POSIX-only split.
