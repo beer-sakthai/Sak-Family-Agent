@@ -384,22 +384,6 @@ class MemoryStore:
             params = (limit,)
 
         rows = self._conn.execute(query, params).fetchall()
-            sql = (
-                "SELECT * FROM facts WHERE created_at >= ? AND created_at <= ? "
-                "ORDER BY updated_at DESC LIMIT ?"
-            )
-            params = [after_ts, before_ts, limit]
-        elif after_ts is not None:
-            sql = "SELECT * FROM facts WHERE created_at >= ? ORDER BY updated_at DESC LIMIT ?"
-            params = [after_ts, limit]
-        elif before_ts is not None:
-            sql = "SELECT * FROM facts WHERE created_at <= ? ORDER BY updated_at DESC LIMIT ?"
-            params = [before_ts, limit]
-        else:
-            sql = "SELECT * FROM facts ORDER BY updated_at DESC LIMIT ?"
-            params = [limit]
-
-        rows = self._conn.execute(sql, params).fetchall()
         return [_fact_from_row(r) for r in rows]
 
     def get_fact_by_key(self, kind: str, key: str) -> Fact | None:
