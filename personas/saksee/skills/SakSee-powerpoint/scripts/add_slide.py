@@ -216,14 +216,23 @@ def parse_source(source: str) -> tuple[str, str | None]:
 
 
 def _resolve_user_dir(raw_path: str, base_dir: Path) -> Path:
-    candidate = Path(raw_path).resolve()
-    trusted_base = base_dir.resolve()
+    try:
+        candidate = Path(raw_path).expanduser().resolve(strict=True)
+    except FileNotFoundError:
+        print(f"Error: {raw_path} not found", file=sys.stderr)
+        sys.exit(1)
+
+    trusted_base = base_dir.expanduser().resolve()
 
     if not candidate.is_relative_to(trusted_base):
         print(
             f"Error: path {candidate} is outside allowed base directory {trusted_base}",
             file=sys.stderr,
         )
+        sys.exit(1)
+
+    if not candidate.is_dir():
+        print(f"Error: {candidate} is not a directory", file=sys.stderr)
         sys.exit(1)
 
     return candidate
