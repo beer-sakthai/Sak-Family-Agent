@@ -492,3 +492,138 @@ tests, and for the same reason.
   Defaulting to audit mode` — around 20 workflows request egress blocking and
   get monitoring instead. Nothing fails; the control is simply not on. Adding
   the secret is an owner action.
+
+---
+
+# Round three — the first read after round two, and the alert the fix itself raised
+
+Round two ends with its work merged but not yet measured against the live
+dashboard. This section is that measurement, plus the one thing it turned up.
+
+## The read
+
+**Code scanning cleanup**, no inputs, run
+[32140579403](https://github.com/beer-sakthai/Sak-Family-Agent/actions/runs/32140579403),
+`main` at `4d6cd12`.
+
+```
+Open code-scanning alerts on beer-sakthai/Sak-Family-Agent: 100
+
+tool         open alerts  analyses  latest analysis
+-----------  -----------  --------  --------------------
+Bandit       69           830       2026-08-18T13:01:52Z
+BinSkim      0            412       2026-07-06T05:01:03Z
+CodeQL       2            8823      2026-08-18T13:02:54Z
+ESLint       1            2746      2026-08-18T13:02:35Z
+Scorecard    5            1229      2026-08-18T12:58:33Z
+github-repo  23           1         2026-08-17T09:47:23Z
+mobsfscan    0            14        2026-08-12T04:14:21Z
+```
+
+**5,832 → 100.** Against round one's predictions in "Where this leaves the
+dashboard" above:
+
+| Tool | Round one | Predicted | Actual | |
+|---|---:|---:|---:|---|
+| Bandit | 5,000 | 63 | **69** | held, ±6 |
+| CodeQL | 788 | 788 unless a property is set | **2** | round two made it live a different way |
+| Scorecard | 21 | 18 | **5** | better than predicted |
+| ESLint | 0 | 0 | **1** | a new finding in the dashboard app |
+| github-repo | 23 | 23 | **23** | held |
+| **Total** | **5,832** | **~892** | **100** | |
+
+### Bandit — the category question is settled
+
+**4,970 Bandit alerts are closed, every one in state `fixed`.** That answers the
+question round one flagged as unverifiable before merge: the rewritten
+workflow's SARIF landed in the same code-scanning category as the old uploads,
+so the new analysis superseded them rather than orphaning them. **The
+analysis-delete fallback described in round one must not be run** — there is
+nothing orphaned to delete, and running it would discard the good analyses too.
+
+The signal was in fact available before the merge, in PR #822's own
+code-scanning check: it named exactly one configuration present on `main` but
+missing from the PR — `ossar.yml:OSSAR-Scan` — and *not* Bandit. A category
+mismatch would have listed the Bandit configuration there as well. Worth
+remembering as the cheap pre-merge check next time this question comes up.
+
+69 rather than the predicted 63 because the tree moved: round one measured at
+`1bfd085`, `main` is fifteen commits further on, and the six extra are 4 new
+`B310` and 2 new `B110` in code merged in between. Round two's parity invariant
+still holds at this commit — a bare `bandit -r .` reading `.bandit` and the
+scoped workflow command both report **69**.
+
+### CodeQL — round two's prediction was conservative
+
+Round two predicted its `codeql.yml` + `config-file:` wiring "should drop ~545
+of the 788". It dropped **786**. The two that remain are `js/polynomial-redos`
+in `apps/sak_agent_dashboard/src/lib/hfEcosystemEngine.ts`; the single ESLint
+alert is `react-hooks/set-state-in-effect` in `SelfHealingConsole.tsx`. Both are
+in the dashboard app and both are new since the round-one read, which is the
+system working: the scope config stopped burying first-party findings under
+vendored ones, and the two that surface now are real code in an app this
+repository owns.
+
+The ~243 first-party CodeQL alerts round two left as "not done" are therefore
+not merely visible — they are almost entirely gone as well. What closed them
+beyond the scope config is not measured here and is not claimed.
+
+### Scorecard — 5, and the critical one is displayed, not live
+
+`DangerousWorkflowID` #15541 is still open, now citing
+`self-healing-ci.yml:83` rather than `:65` — the line moved because the fix
+added a comment block above it. This is exactly what round one predicted:
+Scorecard's check is syntactic and does not evaluate the guarding `if:`. The
+fork-PR path it describes is closed. The other four are the standing
+repository-health set (`BranchProtectionID`, `CodeReviewID`,
+`CIIBestPracticesID`) plus the new alert below.
+
+## `PinnedDependenciesID` #21445 — raised by the fix, closed by this change
+
+`.github/workflows/bandit.yml:70` — *"pipCommand not pinned by hash"*. The
+install step round one introduced was:
+
+```yaml
+run: python -m pip install --disable-pip-version-check "bandit[sarif,toml]==1.9.4"
+```
+
+Version-pinned but not hash-pinned. That is a finding this repository had
+already closed everywhere else — the `comfy-cli` lock, the two ML-stack locks
+in `infra/sakthai-training-space/` — so the fix is to follow the existing
+pattern rather than invent one:
+
+- `.github/bandit-requirements.in` — the one line, `bandit[sarif,toml]==1.9.4`
+- `.github/bandit-requirements.lock` — 13 packages, generated by
+  `scripts/gen_hash_lock.py` with the command recorded in its own header
+- the step becomes `pip install --require-hashes -r .github/bandit-requirements.lock`
+
+Verified rather than assumed, in that order:
+
+1. Two package digests re-verified against PyPI's published JSON —
+   `bandit==1.9.4` (both sdist and wheel) and `attrs==26.1.0` — as the lock
+   header instructs.
+2. The whole step run in a clean throwaway venv: the hash-checked install
+   succeeds, `bandit --version` reports 1.9.4.
+3. The scan then run with the workflow's exact arguments: valid SARIF, tool name
+   `Bandit`, **69 results — the same 69 the live dashboard reports.** The local
+   scan and GitHub's now agree exactly.
+4. `tests/test_workflow_hygiene.py` (round two's 125 cases) still passes.
+
+A version pin alone also still trusts whatever the index serves under that
+version, so this is worth more than the alert it closes.
+
+## A note on this document
+
+Round two's opening lesson — that `1bfd085`'s `PLAN.md` line survived while its
+code did not, so "the plan says it is done" is not evidence — nearly repeated
+itself here in a different form. This section was first drafted by rewriting
+everything from "Where this leaves the dashboard" onward, from a copy of the
+file held in memory from round one. That copy predated round two entirely, and
+the rewrite deleted 222 lines of it before the mistake was caught against
+`git diff`. It was reverted and re-done as an append.
+
+The narrow lesson, which pairs with round two's: **re-read the file before
+editing it, not the copy you remember writing.** A stale in-memory copy of a
+document is the same failure mode as a stale plan entry — something that
+describes the repository accurately at some past moment and is trusted as if it
+described it now.
