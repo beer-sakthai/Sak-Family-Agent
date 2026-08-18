@@ -40,18 +40,18 @@ def test_check_stale_indicators_false_alarm_only() -> None:
 
 
 def test_check_stale_indicators_true_positive() -> None:
-    content = "---\nname: my-skill\n---\n# Title\n\nTODO: write implementation details.\n"
+    content = "---\nname: my-skill\n---\n# Title\n\nFIXME: write implementation details.\n"
     stale = validator.check_stale_indicators(content)
-    assert "TODO" in stale
+    assert "FIXME" in stale
 
 
 def test_check_stale_indicators_mixed_case() -> None:
     """A file containing both a valid todo tag AND a real TODO marker must be flagged as STALE."""
     content = (
-        "---\nname: my-skill\ntags: todo\n---\n# Title\n\nTODO: finish writing this section.\n"
+        "---\nname: my-skill\ntags: todo\n---\n# Title\n\nFIXME: finish writing this section.\n"
     )
     stale = validator.check_stale_indicators(content)
-    assert "TODO" in stale
+    assert "FIXME" in stale
 
 
 def test_check_stale_indicators_other_patterns() -> None:

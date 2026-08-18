@@ -104,7 +104,7 @@ def _process_stream_chunk(
         for tc in delta.get("tool_calls") or []:
             index = tc.get("index", 0)
             slot = tool_calls.setdefault(
-                index, {"id": "", "function": {"name": "", "arguments": ""}}
+                index, {"id": "", "function": {"name": "", "arguments": []}}
             )
             if tc.get("id"):
                 slot["id"] = tc["id"]
@@ -113,7 +113,11 @@ def _process_stream_chunk(
             if fn.get("name"):
                 slot["function"]["name"] = fn["name"]
             if fn.get("arguments"):
-                slot["function"]["arguments"] += fn["arguments"]
+                args_slot = slot["function"]["arguments"]
+                if isinstance(args_slot, list):
+                    args_slot.append(fn["arguments"])
+                else:
+                    slot["function"]["arguments"] = [args_slot, fn["arguments"]]
 
         if choice.get("finish_reason"):
             finish_reason = choice["finish_reason"]
@@ -157,7 +161,21 @@ def _stream_chat(
 
     message: dict[str, Any] = {"content": "".join(content_parts) or None}
     if tool_calls:
-        message["tool_calls"] = [tool_calls[i] for i in sorted(tool_calls)]
+        formatted_tool_calls = []
+        for i in sorted(tool_calls):
+            tc = tool_calls[i]
+            args_val = tc["function"]["arguments"]
+            args_str = "".join(args_val) if isinstance(args_val, list) else args_val
+            formatted_tool_calls.append(
+                {
+                    "id": tc["id"],
+                    "function": {
+                        "name": tc["function"]["name"],
+                        "arguments": args_str,
+                    },
+                }
+            )
+        message["tool_calls"] = formatted_tool_calls
     return {"choices": [{"message": message, "finish_reason": finish_reason}], "usage": usage}
 
 
