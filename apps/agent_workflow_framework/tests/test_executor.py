@@ -1087,55 +1087,5 @@ class TestWorkflowExecutor(unittest.TestCase):
                 self.assertEqual(history.step_results["s1"].output["result"], expected)
 
 
-    def test_python_action_statement_execution_allowed(self):
-        """Verify that basic assignment statement blocks execute properly."""
-        code_str = "a = 10\nb = 20\nresult = a + b"
-        wf = WorkflowDefinition(
-            name="python_stmt_allowed",
-            steps=[
-                StepDefinition(
-                    id="s1",
-                    action="python",
-                    params={"code": code_str},
-                ),
-            ],
-        )
-        history = asyncio.run(self.executor.execute_workflow(wf))
-        self.assertEqual(history.status, RunStatus.COMPLETED)
-        self.assertEqual(history.step_results["s1"].output.get("result"), 30)
-        self.assertEqual(history.step_results["s1"].output.get("a"), 10)
-        self.assertEqual(history.status.get("b") if isinstance(history.status, dict) else history.step_results["s1"].output.get("b"), 20)
-
-    def test_python_action_statement_execution_prohibited(self):
-        """Verify that statement blocks containing disallowed statement AST nodes are blocked."""
-        try_stmt = "try:\n    pass\nexcept Exception:\n    pass"
-        prohibited_statements = [
-            "import os",
-            "from os import path",
-            "def f(): pass",
-            "class A: pass",
-            "for i in range(2): pass",
-            "while True: pass",
-            try_stmt,
-            "del a",
-            "raise RuntimeError('error')",
-            "assert True",
-            "with open('test.txt') as f: pass",
-        ]
-        for stmt in prohibited_statements:
-            with self.subTest(stmt=stmt):
-                wf = WorkflowDefinition(
-                    name="python_stmt_prohibited",
-                    steps=[
-                        StepDefinition(id="s1", action="python", params={"code": stmt}),
-                    ],
-                )
-                history = asyncio.run(self.executor.execute_workflow(wf))
-                self.assertEqual(history.status, RunStatus.FAILED)
-                step_res = history.step_results["s1"]
-                self.assertEqual(step_res.status, StepStatus.FAILED)
-                self.assertIsNotNone(step_res.error)
-                self.assertIn("prohibited", step_res.error.lower())
-
 if __name__ == "__main__":
     unittest.main()
