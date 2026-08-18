@@ -146,10 +146,13 @@ def test_hf_download_blocks_path_traversal(tmp_path: Path, monkeypatch: pytest.M
 
 def _load_workbench_get_hf_token(filepath: str) -> Any:
     import ast
+
     with open(filepath) as f:
         tree = ast.parse(f.read())
     import_nodes = [n for n in tree.body if isinstance(n, ast.Import)]
-    func_node = [n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name == "_get_hf_token"][0]
+    func_node = [
+        n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name == "_get_hf_token"
+    ][0]
     module_node = ast.Module(body=import_nodes + [func_node], type_ignores=[])
     code = compile(module_node, filename=filepath, mode="exec")
     ns: dict[str, Any] = {}
