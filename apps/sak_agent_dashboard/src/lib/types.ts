@@ -65,11 +65,21 @@ export interface ObservationRecord {
   timestamp?: string;
 }
 
+export interface MemoryCacheMetrics {
+  hitRate: number;
+  l1Hits: number;
+  misses: number;
+  totalRequests: number;
+  cachedShardsCount: number;
+  latencyAvgMs: number;
+}
+
 export interface MemoryData {
   facts: FactRecord[];
   observations: ObservationRecord[];
   /** Per-shard read outcome, so the UI can show which personas' memory was reachable. */
   shards?: MemoryShardStatus[];
+  cacheMetrics?: MemoryCacheMetrics;
 }
 
 /**
