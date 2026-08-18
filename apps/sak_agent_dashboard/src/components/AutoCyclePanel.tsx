@@ -79,6 +79,42 @@ function CopyButton({ payload }: { payload: string }) {
   );
 }
 
+function StageCard({ stage }: { stage: CycleStage }) {
+  return (
+    <div
+      className={`p-4 rounded-2xl bg-slate-900/80 border backdrop-blur-xl ${
+        STAGE_ACCENT[stage.stage] ?? "border-slate-800/80"
+      }`}
+    >
+      <div className="flex items-center gap-2 mb-1">
+        <span className="text-[11px] font-mono text-slate-500">
+          {String(stage.number).padStart(2, "0")}
+        </span>
+        {STAGE_ICON[stage.stage]}
+        <h5 className="text-sm font-bold font-display text-white tracking-tight uppercase">
+          {stage.stage}
+        </h5>
+      </div>
+      <p className="text-[11.5px] text-slate-200 font-medium leading-relaxed">
+        {stage.goal}
+      </p>
+      <p className="text-[11px] text-slate-400 leading-relaxed mt-1">
+        {stage.guidance}
+      </p>
+      <div className="mt-2 flex flex-wrap gap-1.5">
+        {stage.commands.map((c) => (
+          <code
+            key={c}
+            className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-800/80 text-cyan-300 border border-slate-700/60"
+          >
+            sakthai {c}
+          </code>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function AutoCyclePanel({ data }: AutoCyclePanelProps) {
   const [selectedPersona, setSelectedPersona] = useState<string>("SakThai");
   const [personaStates, setPersonaStates] = useState<Record<string, PersonaCycleState>>(
@@ -110,6 +146,15 @@ export default function AutoCyclePanel({ data }: AutoCyclePanelProps) {
       isSubscribed = false;
     };
   }, []);
+
+  if (!data) {
+    return (
+      <div className="glass-panel rounded-2xl bg-slate-900/80 border border-slate-800/80 p-8 text-center">
+        <RefreshCw className="h-6 w-6 text-cyan-400 animate-spin mx-auto mb-2" />
+        <p className="text-sm text-slate-300">Loading auto-cycle definition...</p>
+      </div>
+    );
+  }
 
   const handleStepStage = async () => {
     setIsExecuting(true);
@@ -387,6 +432,217 @@ export default function AutoCyclePanel({ data }: AutoCyclePanelProps) {
             ))}
           </div>
         </div>
+      </div>
+
+      {/* Safety Rule */}
+      <div className="glass-panel rounded-2xl bg-slate-900/80 border border-rose-500/40 backdrop-blur-xl overflow-hidden">
+        <div className="p-5 border-b border-slate-800/80 flex items-start gap-3">
+          <AlertTriangle className="h-5 w-5 text-rose-400 flex-shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/40 font-bold">
+                safety rule (default)
+              </span>
+              <h4 className="text-sm font-bold font-display text-white tracking-tight">
+                {data.safetyRule.title}
+              </h4>
+            </div>
+            <p className="text-xs text-slate-300 mt-1 leading-relaxed">
+              {data.safetyRule.rule}
+            </p>
+          </div>
+        </div>
+
+        <div className="p-5 grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/[0.04] p-4">
+            <h5 className="text-xs font-bold font-display text-emerald-300 uppercase tracking-wide mb-2 flex items-center gap-1.5">
+              <Check className="h-3.5 w-3.5 text-emerald-400" />
+              Required for Live Modification
+            </h5>
+            <p className="text-[11px] font-mono text-emerald-200/90 leading-relaxed">
+              {data.safetyRule.authorizationRequired}
+            </p>
+          </div>
+
+          <div className="rounded-xl border border-rose-500/30 bg-rose-500/[0.04] p-4">
+            <h5 className="text-xs font-bold font-display text-rose-300 uppercase tracking-wide mb-2 flex items-center gap-1.5">
+              <AlertTriangle className="h-3.5 w-3.5 text-rose-400" />
+              Does NOT count, however urgent
+            </h5>
+            <ul className="space-y-1 text-[11px] font-mono text-slate-300">
+              {data.safetyRule.nonAuthorizationPhrases.map((p) => (
+                <li key={p} className="flex items-start gap-2">
+                  <span className="text-rose-400 mt-0.5">✕</span>
+                  <span>{p}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+
+        <div className="px-5 pb-4">
+          <div className="rounded-lg border border-slate-800/80 bg-slate-950/80 overflow-hidden">
+            <div className="flex items-center justify-between px-3 py-1.5 border-b border-slate-800/80 bg-slate-900/70">
+              <span className="text-[10px] font-mono text-emerald-300 uppercase flex items-center gap-1.5">
+                <FlaskConical className="h-3 w-3" />
+                safe default (test mode)
+              </span>
+              <CopyButton payload={data.safetyRule.testCommand} />
+            </div>
+            <pre className="p-3 text-[11px] font-mono text-cyan-300 overflow-x-auto leading-relaxed">
+              {data.safetyRule.testCommand}
+            </pre>
+          </div>
+        </div>
+
+        <div className="px-5 pb-5">
+          <p className="text-[11px] text-slate-400 leading-relaxed border-l-2 border-rose-500/40 pl-3">
+            <span className="text-rose-300 font-bold">Why this rule exists: </span>
+            {data.safetyRule.baselineEvidence}
+          </p>
+        </div>
+      </div>
+
+      {/* Stages */}
+      <div>
+        <h4 className="text-sm font-bold font-display text-white tracking-tight flex items-center gap-2 mb-3">
+          <RefreshCw className="h-4 w-4 text-cyan-400" />
+          The six stages
+        </h4>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+          {data.stages.map((s) => (
+            <StageCard key={s.stage} stage={s} />
+          ))}
+        </div>
+        <p className="text-[11px] text-slate-500 mt-2 font-mono">
+          Growth wraps back to Dream — that wrap is what the loop skill automates,
+          up to {data.roundCap} rounds per invocation.
+        </p>
+      </div>
+
+      {/* Personas */}
+      <div>
+        <h4 className="text-sm font-bold font-display text-white tracking-tight flex items-center gap-2 mb-2">
+          <Users className="h-4 w-4 text-emerald-400" />
+          Per-persona dispatch
+        </h4>
+        <p className="text-[11px] text-slate-400 mb-3 max-w-3xl leading-relaxed">
+          The homes below are <span className="text-rose-300 font-bold">live paths</span> —
+          used only after explicit live authorization. A test dispatch uses a
+          fresh <code className="text-cyan-300">mktemp -d</code> per persona instead.
+        </p>
+        <div className="glass-panel rounded-2xl bg-slate-900/80 border border-slate-800/80 overflow-hidden">
+          <table className="w-full text-left font-mono text-xs">
+            <thead className="bg-slate-950/80 text-slate-400 border-b border-slate-800/80 uppercase text-[10px] tracking-wider">
+              <tr>
+                <th className="px-4 py-2.5">Persona</th>
+                <th className="px-4 py-2.5">Live SAKTHAI_HOME</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-800/60 text-slate-300">
+              {data.personas.map((p) => (
+                <tr key={p.persona} className="hover:bg-slate-800/40 transition-colors">
+                  <td className="px-4 py-3 font-bold text-white">
+                    <span className="inline-flex items-center gap-1.5">
+                      {p.lead && <Crown className="h-3 w-3 text-amber-400" />}
+                      {p.persona}
+                      {p.lead && (
+                        <span className="text-[10px] font-mono uppercase px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                          lead
+                        </span>
+                      )}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-rose-300">{p.liveHome}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Skills */}
+      <div>
+        <h4 className="text-sm font-bold font-display text-white tracking-tight flex items-center gap-2 mb-3">
+          <Layers className="h-4 w-4 text-purple-400" />
+          The two composing skills
+        </h4>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+          {data.skills.map((s) => (
+            <div
+              key={s.name}
+              className={`p-4 rounded-2xl bg-slate-900/80 border backdrop-blur-xl ${
+                s.layer === "claude-code"
+                  ? "border-cyan-500/40"
+                  : "border-emerald-500/40"
+              }`}
+            >
+              <div className="flex items-center justify-between mb-1">
+                <code className="text-[12.5px] font-mono text-white font-bold">
+                  {s.name}
+                </code>
+                <span
+                  className={`text-[10px] font-mono uppercase px-1.5 py-0.5 rounded-full border ${
+                    s.layer === "claude-code"
+                      ? "bg-cyan-500/10 text-cyan-300 border-cyan-500/40"
+                      : "bg-emerald-500/10 text-emerald-300 border-emerald-500/40"
+                  }`}
+                >
+                  {s.layer}
+                </span>
+              </div>
+              <div className="text-[10px] font-mono text-slate-500 mb-2 break-all">
+                {s.path}
+              </div>
+              <p className="text-[11px] text-slate-300 leading-relaxed">{s.purpose}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Dispatch + errors + resolved gap */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="glass-panel rounded-2xl bg-slate-900/80 border border-slate-800/80 backdrop-blur-xl p-5">
+          <h5 className="text-[11px] font-bold font-display text-white uppercase tracking-wide mb-2">
+            One message, six subagents
+          </h5>
+          <p className="text-[11px] text-slate-300 leading-relaxed">
+            {data.dispatchNote}
+          </p>
+        </div>
+        <div className="glass-panel rounded-2xl bg-slate-900/80 border border-slate-800/80 backdrop-blur-xl p-5">
+          <h5 className="text-[11px] font-bold font-display text-white uppercase tracking-wide mb-2">
+            Error handling
+          </h5>
+          <p className="text-[11px] text-slate-300 leading-relaxed">
+            {data.errorHandling}
+          </p>
+        </div>
+        <div className="glass-panel rounded-2xl border border-emerald-500/30 bg-emerald-500/[0.04] backdrop-blur-xl p-5">
+          <h5 className="text-[11px] font-bold font-display text-white uppercase tracking-wide mb-2 flex items-center gap-1.5">
+            <Check className="h-3 w-3 text-emerald-400" />
+            Resolved gap
+          </h5>
+          <p className="text-[11px] text-slate-300 leading-relaxed">
+            {data.resolvedGap}
+          </p>
+        </div>
+      </div>
+
+      {/* CLI */}
+      <div className="glass-panel rounded-2xl bg-slate-900/80 border border-slate-800/80 backdrop-blur-xl p-5">
+        <h4 className="text-sm font-bold font-display text-white tracking-tight flex items-center gap-2 mb-3">
+          <Terminal className="h-4 w-4 text-emerald-400" />
+          Driving the cycle by hand
+        </h4>
+        <ul className="space-y-1.5 font-mono text-[11px]">
+          {data.cliCommands.map((c) => (
+            <li key={c.command} className="flex items-start gap-3">
+              <code className="text-cyan-300 whitespace-nowrap">{c.command}</code>
+              <span className="text-slate-400">— {c.purpose}</span>
+            </li>
+          ))}
+        </ul>
       </div>
     </div>
   );
