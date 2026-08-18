@@ -106,7 +106,7 @@ def create_slide_from_layout(unpacked_dir: Path, layout_file: str) -> None:
     resolved_unpacked_dir = unpacked_dir.resolve()
     if not resolved_unpacked_dir.is_relative_to(trusted_root):
         print(
-            f"Error: path {resolved_unpacked_dir} is outside allowed base directory {trusted_root}",
+            "Error: provided path is outside the allowed base directory",
             file=sys.stderr,
         )
         sys.exit(1)
