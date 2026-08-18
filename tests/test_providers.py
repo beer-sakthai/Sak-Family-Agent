@@ -313,6 +313,36 @@ class TestCallAnthropic:
         assert result is final_msg
         assert tokens == ["stre", "amed"]
 
+    def test_streaming_passes_correct_params(self) -> None:
+        from sakthai.agent.providers.anthropic_provider import call_anthropic
+
+        final_msg = self._make_raw_response()
+        stream = MagicMock()
+        stream.__enter__ = MagicMock(return_value=stream)
+        stream.__exit__ = MagicMock(return_value=False)
+        stream.text_stream = iter([])
+        stream.get_final_message.return_value = final_msg
+
+        client = MagicMock()
+        client.messages.stream.return_value = stream
+
+        call_anthropic(
+            client,
+            "claude-sonnet",
+            4096,
+            "sys prompt",
+            [{"name": "test_tool"}],
+            [{"role": "user", "content": "hello"}],
+            on_token=lambda t: None,
+        )
+
+        kwargs = client.messages.stream.call_args.kwargs
+        assert kwargs["model"] == "claude-sonnet"
+        assert kwargs["max_tokens"] == 4096
+        assert kwargs["system"] == "sys prompt"
+        assert kwargs["tools"] == [{"name": "test_tool"}]
+        assert kwargs["messages"] == [{"role": "user", "content": "hello"}]
+
     def test_streaming_skips_empty_token(self) -> None:
         from sakthai.agent.providers.anthropic_provider import call_anthropic
 
@@ -320,7 +350,7 @@ class TestCallAnthropic:
         stream = MagicMock()
         stream.__enter__ = MagicMock(return_value=stream)
         stream.__exit__ = MagicMock(return_value=False)
-        stream.text_stream = iter(["", "hello", ""])
+        stream.text_stream = iter(["", None, "hello", ""])
         stream.get_final_message.return_value = final_msg
 
         client = MagicMock()
@@ -329,6 +359,77 @@ class TestCallAnthropic:
         tokens: list[str] = []
         call_anthropic(client, "claude-3", 1024, "sys", [], [], on_token=tokens.append)
         assert tokens == ["hello"]
+
+    def test_non_streaming_retries_on_transient_error_and_succeeds(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        import sakthai.agent.providers.base as base_mod
+        from sakthai.agent.providers.anthropic_provider import call_anthropic
+
+        monkeypatch.setattr(base_mod, "RETRY_WAIT_MULTIPLIER", 0.0)
+
+        raw = self._make_raw_response(text="recovered")
+        client = MagicMock()
+        conn_err = anthropic.APIConnectionError(request=MagicMock())
+        client.messages.create.side_effect = [conn_err, raw]
+
+        result = call_anthropic(client, "claude-3", 1024, "sys", [], [])
+        assert result is raw
+        assert client.messages.create.call_count == 2
+
+    def test_streaming_retries_on_transient_error_and_succeeds(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        import sakthai.agent.providers.base as base_mod
+        from sakthai.agent.providers.anthropic_provider import call_anthropic
+
+        monkeypatch.setattr(base_mod, "RETRY_WAIT_MULTIPLIER", 0.0)
+
+        final_msg = self._make_raw_response(text="recovered stream")
+        stream = MagicMock()
+        stream.__enter__ = MagicMock(return_value=stream)
+        stream.__exit__ = MagicMock(return_value=False)
+        stream.text_stream = iter(["streamed text"])
+        stream.get_final_message.return_value = final_msg
+
+        client = MagicMock()
+        conn_err = anthropic.APIConnectionError(request=MagicMock())
+        client.messages.stream.side_effect = [conn_err, stream]
+
+        tokens: list[str] = []
+        result = call_anthropic(client, "claude-3", 1024, "sys", [], [], on_token=tokens.append)
+        assert result is final_msg
+        assert tokens == ["streamed text"]
+        assert client.messages.stream.call_count == 2
+
+    @pytest.mark.parametrize(
+        "exception_factory",
+        [
+            lambda: anthropic.APIConnectionError(request=MagicMock()),
+            lambda: anthropic.RateLimitError(
+                "rate limit", response=MagicMock(status_code=429), body={}
+            ),
+            lambda: anthropic.InternalServerError(
+                "server error", response=MagicMock(status_code=500), body={}
+            ),
+            lambda: anthropic.BadRequestError(
+                "bad request", response=MagicMock(status_code=400), body={}
+            ),
+        ],
+    )
+    def test_anthropic_api_error_subclasses_raise_agent_error(
+        self, exception_factory: Any, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        import sakthai.agent.providers.base as base_mod
+        from sakthai.agent.providers.anthropic_provider import call_anthropic
+
+        monkeypatch.setattr(base_mod, "RETRY_ATTEMPTS", 1)
+
+        client = MagicMock()
+        client.messages.create.side_effect = exception_factory()
+
+        with pytest.raises(AgentError, match="Anthropic API call failed"):
+            call_anthropic(client, "claude-3", 1024, "sys", [], [])
 
     def test_api_error_raises_agent_error(self) -> None:
         from sakthai.agent.providers.anthropic_provider import call_anthropic
