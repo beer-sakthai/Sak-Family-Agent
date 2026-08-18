@@ -41,6 +41,15 @@ whitespace/quotes (the example frontmatter above carries inline comments), e.g.
 `grep '^auto_push:' .claude/ci-cd-doctor.local.md | sed 's/^[^:]*: *//; s/#.*//; s/[[:space:]]*$//; s/^"//; s/"$//'`
 → `false`. Treat a missing file or any parse error as "use defaults."
 
+For the array field `verification_suites`, the same recipe yields the literal
+`["dashboard","python"]`; test membership without jq by piping the extracted
+value through grep — e.g. `echo "$val" | grep -q '"dashboard"'`.
+
+**Caveat:** this recipe assumes values contain no `#` and use double quotes
+only (`s/#.*//` would truncate a value containing `#`; single quotes are not
+stripped). The documented settings (`true`/`false`/the array) satisfy this; do
+not extend it to free-text values without a real parser.
+
 ## Core Operational Workflow
 
 ```mermaid
@@ -62,17 +71,16 @@ flowchart TD
 ### 1. ESLint React 19 Hook Violations
 - **Symptom:** `error: Calling setState synchronously within an effect can trigger cascading renders (react-hooks/set-state-in-effect)`
 - **Root Cause:** Calling `setState` or calling a synchronous fetch wrapper directly inside the body of `useEffect`.
-- **Fix:** Refactor `useEffect` to use an asynchronous inner function with an `isMounted` guard:
+- **Fix:** Refactor `useEffect` to use an asynchronous inner function with an `isMounted` guard, **re-checked after every `await`** — a guard read before an await is stale by the time the await resolves (the component may have unmounted meanwhile), which is the exact gap that lets `setState` fire post-unmount:
   ```tsx
   useEffect(() => {
     let isMounted = true;
     async function loadData() {
       try {
         const res = await fetch('/api/endpoint');
-        if (res.ok && isMounted) {
-          const data = await res.json();
-          setState(data);
-        }
+        if (!res.ok) return;
+        const data = await res.json();   // await: isMounted may flip to false here
+        if (isMounted) setState(data);   // re-check AFTER the await, not before
       } catch {
         // Fallback handling
       }
