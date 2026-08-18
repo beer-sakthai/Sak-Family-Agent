@@ -36,6 +36,7 @@ jobs:
   cleanup:
     name: Code scanning cleanup
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     permissions:
       contents: read
       # Reading alerts needs this, and deleting analyses needs it at write.
