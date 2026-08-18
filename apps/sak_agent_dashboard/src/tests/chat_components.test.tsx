@@ -8,13 +8,16 @@ import { SynthesisCard } from '../components/chat/SynthesisCard';
 import { ChatStudioPanel } from '../components/ChatStudioPanel';
 
 describe('AgentThoughtBlock Component', () => {
-  it('renders persona name and collapsible reasoning text', () => {
+  it('renders persona name and collapsible reasoning text with proper ARIA accessibility', () => {
     render(<AgentThoughtBlock persona="sakking" thought="Analyzing AST security invariants..." />);
     expect(screen.getByText(/Sakking's Reasoning Process/i)).toBeDefined();
     expect(screen.getByText(/Analyzing AST security invariants/i)).toBeDefined();
 
-    const button = screen.getByRole('button');
+    const button = screen.getByRole('button', { name: "Toggle Sakking's reasoning process" });
+    expect(button.getAttribute('aria-expanded')).toBe('true');
+
     fireEvent.click(button);
+    expect(button.getAttribute('aria-expanded')).toBe('false');
     expect(screen.queryByText(/Analyzing AST security invariants/i)).toBeNull();
   });
 });

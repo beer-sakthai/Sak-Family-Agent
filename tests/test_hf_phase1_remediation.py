@@ -16,13 +16,15 @@ class TestSpaceRemediator(unittest.TestCase):
     @patch("sakthai.hub.remediator.urllib.request.urlopen")
     def test_diagnose_running_space(self, mock_urlopen):
         mock_resp = MagicMock()
-        mock_resp.read.return_value = json.dumps({
-            "runtime": {
-                "stage": "RUNNING",
-                "hardware": {"current": "cpu-basic"},
-                "gcTimeout": 1800,
+        mock_resp.read.return_value = json.dumps(
+            {
+                "runtime": {
+                    "stage": "RUNNING",
+                    "hardware": {"current": "cpu-basic"},
+                    "gcTimeout": 1800,
+                }
             }
-        }).encode("utf-8")
+        ).encode("utf-8")
         mock_urlopen.return_value.__enter__.return_value = mock_resp
 
         diag = self.remediator.diagnose_space("Nanthasit/sakthai-chat")
@@ -32,13 +34,15 @@ class TestSpaceRemediator(unittest.TestCase):
     @patch("sakthai.hub.remediator.urllib.request.urlopen")
     def test_diagnose_sleeping_space(self, mock_urlopen):
         mock_resp = MagicMock()
-        mock_resp.read.return_value = json.dumps({
-            "runtime": {
-                "stage": "SLEEPING",
-                "hardware": {"current": "cpu-basic"},
-                "errorMessage": "Paused due to inactivity",
+        mock_resp.read.return_value = json.dumps(
+            {
+                "runtime": {
+                    "stage": "SLEEPING",
+                    "hardware": {"current": "cpu-basic"},
+                    "errorMessage": "Paused due to inactivity",
+                }
             }
-        }).encode("utf-8")
+        ).encode("utf-8")
         mock_urlopen.return_value.__enter__.return_value = mock_resp
 
         diag = self.remediator.diagnose_space("Nanthasit/sakthai-tts")
@@ -71,7 +75,9 @@ class TestHubWebhookDispatcher(unittest.TestCase):
             received.append(data)
 
         self.dispatcher.register_handler("repo.update", sample_callback)
-        result = self.dispatcher.dispatch("repo.update", {"action": "push", "ref": "refs/heads/main"})
+        result = self.dispatcher.dispatch(
+            "repo.update", {"action": "push", "ref": "refs/heads/main"}
+        )
         self.assertTrue(result["success"])
         self.assertEqual(result["handlers_executed"], 1)
         self.assertEqual(len(received), 1)

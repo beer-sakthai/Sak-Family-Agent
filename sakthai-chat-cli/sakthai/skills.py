@@ -11,7 +11,15 @@ from typing import Any
 
 import yaml
 
-from .config import LIBRARY_DIR, SKILLS_DIR, gemini_extensions_dir, sakthai_home
+from .config import (
+    CURATED_LIBRARY_DIR,
+    LIBRARY_DIR,
+    SHARED_SKILLS_DIR,
+    SKILLS_DIR,
+    gemini_extensions_dir,
+    persona_skills_dir,
+    sakthai_home,
+)
 
 _UNCATEGORIZED = "general"
 
@@ -27,8 +35,8 @@ PERSONA_SKILL_PREFIXES: dict[str, str] = {
     "sakthai": "SakThai-",
     "saksee": "SakSee-",
     "saksit": "SakSit-",
-    "saktan": "SakTan-",
     "sakjules": "SakJules-",
+    "saktan": "SakTan-",
 }
 
 #: Legacy prefix that predates the convention; stripped when retargeting a name.
@@ -64,7 +72,8 @@ def _load_skill_file(path: Path) -> tuple[dict[str, Any], str]:
     if len(parts) < 3:
         raise SkillParseError(f"{path}: no YAML frontmatter found")
     try:
-        front = yaml.safe_load(parts[1])
+        loader = getattr(yaml, "CSafeLoader", yaml.SafeLoader)
+        front = yaml.load(parts[1], Loader=loader)
     except yaml.YAMLError as exc:
         raise SkillParseError(f"{path}: invalid YAML — {exc}") from exc
     if not isinstance(front, dict):
@@ -143,15 +152,21 @@ def collect_skills(*roots: Path) -> list[SkillInfo]:
     """Recursively find every SKILL.md under each root, with categories filled in."""
     found_list: list[SkillInfo] = []
     seen: set[Path] = set()
+    seen_names: dict[str, Path] = {}
     for root in roots:
         if not root.is_dir():
             continue
         for skill_md in sorted(root.rglob("SKILL.md")):
             if skill_md in seen:
                 continue
+            if any(part.startswith(".") for part in skill_md.relative_to(root).parts[:-1]):
+                continue
             seen.add(skill_md)
             with contextlib.suppress(SkillParseError):
                 skill = parse_skill(skill_md)
+                if skill.name in seen_names and seen_names[skill.name] != skill_md:
+                    continue
+                seen_names[skill.name] = skill_md
                 category = _category_for(skill, skill_md, root)
                 found_list.append(replace(skill, category=category))
     return sorted(found_list, key=lambda s: (s.name.lower(), str(s.path)))
@@ -201,13 +216,37 @@ def find_skill(name: str, *roots: Path) -> SkillInfo | None:
     return None
 
 
-def default_skill_roots() -> tuple[Path, ...]:
-    """Roots searched for injectable skills: bundled + library + installed extensions."""
+def default_skill_roots(persona: str | None = None) -> tuple[Path, ...]:
+    """Roots searched for injectable skills: bundled + shared + library + curated + extensions.
+
+    ``persona``, when given, substitutes that persona's own skill overlay
+    (``personas/<persona>/skills``) for the bundled root instead of always
+    using SakThai's — otherwise identical to omitting it.
+    """
     gemini_ext = gemini_extensions_dir()
-    roots = [SKILLS_DIR, LIBRARY_DIR, sakthai_home() / "extensions"]
+    roots = [
+        persona_skills_dir(persona) if persona else SKILLS_DIR,
+        SHARED_SKILLS_DIR,
+        LIBRARY_DIR,
+        CURATED_LIBRARY_DIR,
+        sakthai_home() / "extensions",
+    ]
     if gemini_ext.is_dir():
         roots.append(gemini_ext)
     return tuple(roots)
+
+
+def resolve_skill_names(
+    names: Sequence[str],
+    roots: Sequence[Path] | None = None,
+    persona: str | None = None,
+) -> tuple[list[str], list[str]]:
+    """Partition skill names into ``(resolved, missing)`` across the given roots."""
+    search = tuple(roots) if roots is not None else default_skill_roots(persona)
+    known = {skill.name for skill in collect_skills(*search)}
+    resolved = [name for name in names if name in known]
+    missing = [name for name in names if name not in known]
+    return resolved, missing
 
 
 def render_skills_prompt_block(names: Sequence[str], roots: Sequence[Path] | None = None) -> str:
