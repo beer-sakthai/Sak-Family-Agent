@@ -9,11 +9,9 @@ and runs python -m unittest discover -s tests.
 Exits code 0 when all tests pass, exit code 1 if any fail.
 """
 
-import sys
 import os
 import subprocess
-import json
-import unittest
+import sys
 from pathlib import Path
 
 BASE_DIR = Path(__file__).parent.resolve()
@@ -22,25 +20,32 @@ FIXTURES_DIR = BASE_DIR / "tests" / "test_workflows"
 # Import guard
 try:
     from agent_workflow.cli import main as cli_main
-    from agent_workflow.parser import parse_workflow_file
     from agent_workflow.executor import WorkflowExecutor
-    from agent_workflow.persistence import HistoryStore
     from agent_workflow.models import RunStatus, StepStatus
+    from agent_workflow.parser import parse_workflow_file
 except ModuleNotFoundError:
     sys.path.insert(0, str(BASE_DIR))
     from tests.engine_fallback import (
-        cli_main, parse_workflow_file, WorkflowExecutor, HistoryStore, RunStatus, StepStatus
+        RunStatus,
+        StepStatus,
+        WorkflowExecutor,
+        cli_main,
+        parse_workflow_file,
     )
 
 
 def print_header(title: str) -> None:
-    print(f"\n========================================\n{title}\n========================================")
+    print(
+        f"\n========================================\n{title}\n========================================"
+    )
 
 
 def run_cli_cmd(args: list) -> int:
     """Executes CLI command via python -m subprocess if module exists, else directly calls cli_main."""
     cmd = [sys.executable, "-m", "agent_workflow.cli"] + args
-    res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, cwd=BASE_DIR)
+    res = subprocess.run(
+        cmd, capture_output=True, text=True, cwd=BASE_DIR
+    )
     if "No module named agent_workflow" not in res.stderr:
         return res.returncode
     return cli_main(args)
@@ -77,6 +82,7 @@ def verify_scenario_1() -> bool:
     wf = parse_workflow_file(str(yaml_path))
     executor = WorkflowExecutor()
     import asyncio
+
     history = asyncio.run(executor.execute_workflow(wf))
     if history.status != RunStatus.COMPLETED:
         print(f"[FAIL] Scenario 1 status was {history.status}, expected COMPLETED.")
@@ -109,6 +115,7 @@ def verify_scenario_2() -> bool:
     wf = parse_workflow_file(str(yaml_path))
     executor = WorkflowExecutor()
     import asyncio
+
     history = asyncio.run(executor.execute_workflow(wf))
     if history.status != RunStatus.COMPLETED:
         print(f"[FAIL] Scenario 2 status was {history.status}, expected COMPLETED.")
@@ -141,21 +148,30 @@ def verify_scenario_3() -> bool:
     wf = parse_workflow_file(str(yaml_path))
     executor = WorkflowExecutor()
     import asyncio
+
     history = asyncio.run(executor.execute_workflow(wf))
     if history.status != RunStatus.FAILED:
         print(f"[FAIL] Scenario 3 history status was {history.status}, expected FAILED.")
         return False
     if history.step_results["step_transient"].status != StepStatus.COMPLETED:
-        print(f"[FAIL] step_transient status was {history.step_results['step_transient'].status}, expected COMPLETED.")
+        print(
+            f"[FAIL] step_transient status was {history.step_results['step_transient'].status}, expected COMPLETED."
+        )
         return False
     if history.step_results["step_transient"].attempts != 2:
-        print(f"[FAIL] step_transient attempts was {history.step_results['step_transient'].attempts}, expected 2.")
+        print(
+            f"[FAIL] step_transient attempts was {history.step_results['step_transient'].attempts}, expected 2."
+        )
         return False
     if history.step_results["step_terminal_fail"].status != StepStatus.FAILED:
-        print(f"[FAIL] step_terminal_fail status was {history.step_results['step_terminal_fail'].status}, expected FAILED.")
+        print(
+            f"[FAIL] step_terminal_fail status was {history.step_results['step_terminal_fail'].status}, expected FAILED."
+        )
         return False
     if history.step_results["step_downstream_blocked"].status != StepStatus.SKIPPED:
-        print(f"[FAIL] step_downstream_blocked status was {history.step_results['step_downstream_blocked'].status}, expected SKIPPED.")
+        print(
+            f"[FAIL] step_downstream_blocked status was {history.step_results['step_downstream_blocked'].status}, expected SKIPPED."
+        )
         return False
 
     print("[PASS] Scenario 3 retry recovery and downstream short-circuit verified.")
@@ -181,12 +197,17 @@ def verify_scenario_4() -> bool:
     wf = parse_workflow_file(str(yaml_path))
     executor = WorkflowExecutor()
     import asyncio
+
     history = asyncio.run(executor.execute_workflow(wf))
     if history.status != RunStatus.COMPLETED:
         print(f"[FAIL] Scenario 4 status was {history.status}, expected COMPLETED.")
         return False
     summary = history.step_results["step_aggregate_mutation"].output.get("summary", {})
-    if summary.get("user", {}).get("role") != "super_admin" or summary.get("tags") != ["alpha", "beta", "gamma"]:
+    if summary.get("user", {}).get("role") != "super_admin" or summary.get("tags") != [
+        "alpha",
+        "beta",
+        "gamma",
+    ]:
         print(f"[FAIL] Scenario 4 summary output mismatch: {summary}")
         return False
 
@@ -197,8 +218,11 @@ def verify_scenario_4() -> bool:
 def verify_cyclic_validation() -> bool:
     print_header("CLI Validation Test: Cyclic Graph Exit Code 2")
     import tempfile
+
     with tempfile.NamedTemporaryFile("w", suffix=".yaml", delete=False) as f:
-        f.write("name: cyclic_wf\nsteps:\n  - id: step_a\n    depends_on: [step_b]\n  - id: step_b\n    depends_on: [step_a]\n")
+        f.write(
+            "name: cyclic_wf\nsteps:\n  - id: step_a\n    depends_on: [step_b]\n  - id: step_b\n    depends_on: [step_a]\n"
+        )
         cyclic_file = f.name
     try:
         code = run_cli_cmd(["validate", cyclic_file])

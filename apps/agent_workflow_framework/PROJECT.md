@@ -82,6 +82,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Dict, Any, List, Optional
 
+
 class StepStatus(str, Enum):
     PENDING = "PENDING"
     RUNNING = "RUNNING"
@@ -89,11 +90,13 @@ class StepStatus(str, Enum):
     FAILED = "FAILED"
     SKIPPED = "SKIPPED"
 
+
 class RunStatus(str, Enum):
     PENDING = "PENDING"
     RUNNING = "RUNNING"
     COMPLETED = "COMPLETED"
     FAILED = "FAILED"
+
 
 @dataclass
 class StepDefinition:
@@ -104,11 +107,13 @@ class StepDefinition:
     retry: int = 0
     retry_delay: float = 0.0
 
+
 @dataclass
 class WorkflowDefinition:
     name: str
     description: Optional[str] = None
     steps: List[StepDefinition] = field(default_factory=list)
+
 
 @dataclass
 class StepResult:
@@ -119,6 +124,7 @@ class StepResult:
     attempts: int = 1
     start_time: Optional[str] = None
     end_time: Optional[str] = None
+
 
 @dataclass
 class RunHistory:
@@ -137,6 +143,7 @@ def validate_workflow_dag(workflow: WorkflowDefinition) -> List[str]:
     Empty list indicates valid DAG."""
     ...
 
+
 def build_topological_batches(workflow: WorkflowDefinition) -> List[List[StepDefinition]]:
     """Returns steps grouped into parallel execution batches in topological order."""
     ...
@@ -148,12 +155,17 @@ class StateContext:
     def set_step_output(self, step_id: str, output: Dict[str, Any]) -> None: ...
     def get_step_output(self, step_id: str) -> Dict[str, Any]: ...
     def interpolate(self, template: Any) -> Any: ...
+
     """Interpolates strings like '${steps.step_id.output.key}' using recorded step outputs."""
 ```
 
 ### `agent_workflow.executor`
 ```python
 class WorkflowExecutor:
-    async def execute_workflow(self, workflow: WorkflowDefinition, run_id: Optional[str] = None, status_callback: Optional[Any] = None) -> RunHistory:
-        ...
+    async def execute_workflow(
+        self,
+        workflow: WorkflowDefinition,
+        run_id: Optional[str] = None,
+        status_callback: Optional[Any] = None,
+    ) -> RunHistory: ...
 ```

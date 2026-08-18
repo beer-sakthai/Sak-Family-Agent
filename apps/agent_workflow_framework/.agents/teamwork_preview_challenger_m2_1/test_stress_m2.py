@@ -4,13 +4,9 @@ Executes adversarial stress testing on StateContext, state interpolation,
 and RunHistoryStore persistence.
 """
 
-import copy
-import json
 import os
-import shutil
 import sys
 import tempfile
-import threading
 import unittest
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
@@ -20,17 +16,15 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from agent_workflow.state import StateContext, StateInterpolationError
 from agent_workflow.persistence import (
-    RunHistoryStore,
-    RunHistory,
-    StepResult,
-    RunStatus,
-    StepStatus,
-    RunNotFoundError,
     RunCorruptedError,
-    PersistenceError,
+    RunHistory,
+    RunHistoryStore,
+    RunStatus,
+    StepResult,
+    StepStatus,
 )
+from agent_workflow.state import StateContext, StateInterpolationError
 
 
 class TestStateInterpolationStress(unittest.TestCase):
@@ -49,11 +43,10 @@ class TestStateInterpolationStress(unittest.TestCase):
             try:
                 for i in range(iterations_per_thread):
                     step_id = f"step_{thread_id}_{i % 10}"
-                    self.ctx.set_step_output(step_id, {
-                        "counter": i,
-                        "thread": thread_id,
-                        "data": {"nested": [i, i * 2, i * 3]}
-                    })
+                    self.ctx.set_step_output(
+                        step_id,
+                        {"counter": i, "thread": thread_id, "data": {"nested": [i, i * 2, i * 3]}},
+                    )
 
                     # Read back direct output
                     out = self.ctx.get_step_output(step_id)
@@ -68,7 +61,9 @@ class TestStateInterpolationStress(unittest.TestCase):
                     assert elem == i * 2
 
                     # Embedded string interpolation
-                    msg = self.ctx.interpolate(f"Thread {thread_id} run ${{steps.{step_id}.output.counter}}")
+                    msg = self.ctx.interpolate(
+                        f"Thread {thread_id} run ${{steps.{step_id}.output.counter}}"
+                    )
                     assert msg == f"Thread {thread_id} run {i}"
 
             except Exception as e:
@@ -83,9 +78,23 @@ class TestStateInterpolationStress(unittest.TestCase):
 
     def test_deeply_nested_structures_and_array_navigation(self):
         """Test deep nesting (15 levels) and complex array navigation paths."""
-        nested_data = {"a": {"b": {"c": {"d": {"e": {"f": {"g": {"h": {"i": {"j": {"k": {"l": {"m": {"n": {"o": 42}}}}}}}}}}}}}}}
+        nested_data = {
+            "a": {
+                "b": {
+                    "c": {
+                        "d": {
+                            "e": {
+                                "f": {
+                                    "g": {"h": {"i": {"j": {"k": {"l": {"m": {"n": {"o": 42}}}}}}}}
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
         self.ctx.set_step_output("deep_step", nested_data)
-        
+
         res = self.ctx.interpolate("${steps.deep_step.output.a.b.c.d.e.f.g.h.i.j.k.l.m.n.o}")
         self.assertEqual(res, 42)
 
@@ -93,15 +102,25 @@ class TestStateInterpolationStress(unittest.TestCase):
         complex_tree = {
             "users": [
                 {"id": 101, "roles": ["admin", "editor"]},
-                {"id": 102, "roles": ["viewer"], "metadata": {"active": True, "scores": [98.5, 100.0]}}
+                {
+                    "id": 102,
+                    "roles": ["viewer"],
+                    "metadata": {"active": True, "scores": [98.5, 100.0]},
+                },
             ]
         }
         self.ctx.set_step_output("tree_step", complex_tree)
 
         self.assertEqual(self.ctx.interpolate("${steps.tree_step.output.users.0.id}"), 101)
-        self.assertEqual(self.ctx.interpolate("${steps.tree_step.output.users.0.roles.1}"), "editor")
-        self.assertEqual(self.ctx.interpolate("${steps.tree_step.output.users.1.metadata.active}"), True)
-        self.assertEqual(self.ctx.interpolate("${steps.tree_step.output.users.1.metadata.scores.1}"), 100.0)
+        self.assertEqual(
+            self.ctx.interpolate("${steps.tree_step.output.users.0.roles.1}"), "editor"
+        )
+        self.assertEqual(
+            self.ctx.interpolate("${steps.tree_step.output.users.1.metadata.active}"), True
+        )
+        self.assertEqual(
+            self.ctx.interpolate("${steps.tree_step.output.users.1.metadata.scores.1}"), 100.0
+        )
 
     def test_array_index_edge_cases(self):
         """Test array index navigation out-of-bounds, negative index, and non-integer keys on lists."""
@@ -151,10 +170,10 @@ class TestStateInterpolationStress(unittest.TestCase):
         self.assertEqual(embedded_list, 'List: [1, 2, "3"]')
 
         embedded_bool = self.ctx.interpolate("Status: ${steps.types_step.output.boolean}")
-        self.assertEqual(embedded_bool, 'Status: False')
+        self.assertEqual(embedded_bool, "Status: False")
 
         embedded_none = self.ctx.interpolate("Null: ${steps.types_step.output.null_val}")
-        self.assertEqual(embedded_none, 'Null: None')
+        self.assertEqual(embedded_none, "Null: None")
 
     def test_malformed_and_invalid_template_strings(self):
         """Test detection of malformed ${steps...} expressions."""
@@ -170,9 +189,8 @@ class TestStateInterpolationStress(unittest.TestCase):
         ]
 
         for expr in malformed_examples:
-            with self.subTest(expr=expr):
-                with self.assertRaises(StateInterpolationError):
-                    self.ctx.interpolate(expr)
+            with self.subTest(expr=expr), self.assertRaises(StateInterpolationError):
+                self.ctx.interpolate(expr)
 
     def test_missing_steps_and_keys(self):
         """Test exception throwing and inheritance for missing step IDs and keys."""
@@ -278,15 +296,16 @@ class TestPersistenceStoreStress(unittest.TestCase):
         ]
 
         for bad_id in invalid_ids:
-            with self.subTest(bad_id=bad_id):
-                with self.assertRaises(ValueError):
-                    self.store.get_run_path(bad_id)
+            with self.subTest(bad_id=bad_id), self.assertRaises(ValueError):
+                self.store.get_run_path(bad_id)
 
     def test_corrupted_json_recovery(self):
         """Test handling of truncated or invalid JSON history files."""
         corrupt_id = "corrupt_run"
         target_path = self.store.get_run_path(corrupt_id)
-        target_path.write_text('{"run_id": "corrupt_run", "status": "COMPLETED", "step_results": ', encoding="utf-8")
+        target_path.write_text(
+            '{"run_id": "corrupt_run", "status": "COMPLETED", "step_results": ', encoding="utf-8"
+        )
 
         with self.assertRaises(RunCorruptedError):
             self.store.load_run_history(corrupt_id)
@@ -294,7 +313,7 @@ class TestPersistenceStoreStress(unittest.TestCase):
         # Test JSON containing non-object root (e.g., JSON list)
         list_root_id = "list_root_run"
         target_path_list = self.store.get_run_path(list_root_id)
-        target_path_list.write_text('[1, 2, 3]', encoding="utf-8")
+        target_path_list.write_text("[1, 2, 3]", encoding="utf-8")
 
         with self.assertRaises(RunCorruptedError):
             self.store.load_run_history(list_root_id)

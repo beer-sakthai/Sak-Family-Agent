@@ -284,6 +284,7 @@ from agent_workflow.executor import WorkflowExecutor
 from agent_workflow.persistence import HistoryStore
 from agent_workflow.cli import main as cli_main
 
+
 class TestTier1FeatureCoverage(unittest.TestCase):
     """Tier 1: Feature Coverage (≥5 tests per feature area across 7 areas = 35 tests)"""
 
@@ -339,6 +340,7 @@ class TestTier1FeatureCoverage(unittest.TestCase):
 
 class TestTier2BoundaryAndCornerCases(unittest.TestCase):
     """Tier 2: Boundary & Corner Cases (≥5 boundary tests)"""
+
     def test_boundary_empty_workflow_steps(self): ...
     def test_boundary_circular_dependency_indirect(self): ...
     def test_boundary_invalid_state_key_interpolation(self): ...
@@ -350,6 +352,7 @@ class TestTier2BoundaryAndCornerCases(unittest.TestCase):
 
 class TestTier3PairwiseCombinations(unittest.TestCase):
     """Tier 3: Pairwise Combinations (Integration tests across feature pairs)"""
+
     def test_pairwise_parallel_and_retries(self): ...
     def test_pairwise_parallel_and_state_passing(self): ...
     def test_pairwise_state_passing_and_short_circuiting(self): ...
@@ -358,6 +361,7 @@ class TestTier3PairwiseCombinations(unittest.TestCase):
 
 class TestTier4RealWorldWorkloads(unittest.TestCase):
     """Tier 4: Real-World Workload Scenarios (Scenarios 1-4)"""
+
     def test_scenario_1_linear_workflow(self):
         """Executes linear_workflow.yaml and asserts sequential timestamps & state interpolation."""
         ...
@@ -405,92 +409,113 @@ from pathlib import Path
 BASE_DIR = Path(__file__).parent.resolve()
 FIXTURES_DIR = BASE_DIR / "tests" / "test_workflows"
 
+
 def run_cmd(cmd_list):
     """Executes a command and returns (returncode, stdout, stderr)."""
     res = subprocess.run(
-        cmd_list,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True,
-        cwd=BASE_DIR
+        cmd_list, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, cwd=BASE_DIR
     )
     return res.returncode, res.stdout, res.stderr
 
+
 def print_header(title):
-    print(f"\n========================================\n{title}\n========================================")
+    print(
+        f"\n========================================\n{title}\n========================================"
+    )
+
 
 def verify_scenario_1():
     print_header("Scenario 1: Linear Workflow & Sequential State Passing")
     yaml_path = FIXTURES_DIR / "linear_workflow.yaml"
-    
+
     # 1. Validate
-    code, stdout, stderr = run_cmd([sys.executable, "-m", "agent_workflow.cli", "validate", str(yaml_path)])
+    code, stdout, stderr = run_cmd(
+        [sys.executable, "-m", "agent_workflow.cli", "validate", str(yaml_path)]
+    )
     if code != 0:
         print(f"[FAIL] Scenario 1 validation failed: {stderr}")
         return False
     print("[PASS] Scenario 1 validation succeeded.")
 
     # 2. Run
-    code, stdout, stderr = run_cmd([sys.executable, "-m", "agent_workflow.cli", "run", str(yaml_path)])
+    code, stdout, stderr = run_cmd(
+        [sys.executable, "-m", "agent_workflow.cli", "run", str(yaml_path)]
+    )
     if code != 0:
         print(f"[FAIL] Scenario 1 execution failed with code {code}: {stderr}")
         return False
     print("[PASS] Scenario 1 execution succeeded.")
     return True
 
+
 def verify_scenario_2():
     print_header("Scenario 2: Parallel Fan-Out/Fan-In Execution DAG")
     yaml_path = FIXTURES_DIR / "parallel_workflow.yaml"
-    
+
     # 1. Validate
-    code, stdout, stderr = run_cmd([sys.executable, "-m", "agent_workflow.cli", "validate", str(yaml_path)])
+    code, stdout, stderr = run_cmd(
+        [sys.executable, "-m", "agent_workflow.cli", "validate", str(yaml_path)]
+    )
     if code != 0:
         print(f"[FAIL] Scenario 2 validation failed: {stderr}")
         return False
 
     # 2. Run
-    code, stdout, stderr = run_cmd([sys.executable, "-m", "agent_workflow.cli", "run", str(yaml_path)])
+    code, stdout, stderr = run_cmd(
+        [sys.executable, "-m", "agent_workflow.cli", "run", str(yaml_path)]
+    )
     if code != 0:
         print(f"[FAIL] Scenario 2 execution failed with code {code}: {stderr}")
         return False
     print("[PASS] Scenario 2 execution succeeded.")
     return True
 
+
 def verify_scenario_3():
     print_header("Scenario 3: Transient Retry Recovery & Terminal Short-Circuit")
     yaml_path = FIXTURES_DIR / "retry_workflow.yaml"
-    
+
     # 1. Validate
-    code, stdout, stderr = run_cmd([sys.executable, "-m", "agent_workflow.cli", "validate", str(yaml_path)])
+    code, stdout, stderr = run_cmd(
+        [sys.executable, "-m", "agent_workflow.cli", "validate", str(yaml_path)]
+    )
     if code != 0:
         print(f"[FAIL] Scenario 3 validation failed: {stderr}")
         return False
 
     # 2. Run (Expect exit code 1 due to terminal failure step)
-    code, stdout, stderr = run_cmd([sys.executable, "-m", "agent_workflow.cli", "run", str(yaml_path)])
+    code, stdout, stderr = run_cmd(
+        [sys.executable, "-m", "agent_workflow.cli", "run", str(yaml_path)]
+    )
     if code != 1:
         print(f"[FAIL] Scenario 3 expected exit code 1, got {code}")
         return False
     print("[PASS] Scenario 3 execution correctly failed downstream with exit code 1 as expected.")
     return True
 
+
 def verify_scenario_4():
     print_header("Scenario 4: Multi-Step Data Mutation & Transformation Pipeline")
     yaml_path = FIXTURES_DIR / "mutation_workflow.yaml"
-    
+
     # 1. Validate
-    code, stdout, stderr = run_cmd([sys.executable, "-m", "agent_workflow.cli", "validate", str(yaml_path)])
+    code, stdout, stderr = run_cmd(
+        [sys.executable, "-m", "agent_workflow.cli", "validate", str(yaml_path)]
+    )
     if code != 0:
         print(f"[FAIL] Scenario 4 validation failed: {stderr}")
         return False
 
     # 2. Run
-    code, stdout, stderr = run_cmd([sys.executable, "-m", "agent_workflow.cli", "run", str(yaml_path)])
+    code, stdout, stderr = run_cmd(
+        [sys.executable, "-m", "agent_workflow.cli", "run", str(yaml_path)]
+    )
     if code != 0:
         print(f"[FAIL] Scenario 4 execution failed with code {code}: {stderr}")
         return False
     print("[PASS] Scenario 4 execution succeeded.")
     return True
+
 
 def main():
     print("Starting Automated Master Verification Harness...")
@@ -500,7 +525,7 @@ def main():
         verify_scenario_3(),
         verify_scenario_4(),
     ]
-    
+
     if all(results):
         print("\n========================================")
         print("ALL VERIFICATION SCENARIOS PASSED SUCCESSFULLY!")
@@ -511,6 +536,7 @@ def main():
         print("VERIFICATION FAILED: ONE OR MORE SCENARIOS FAILED.")
         print("========================================")
         sys.exit(1)
+
 
 if __name__ == "__main__":
     main()

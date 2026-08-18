@@ -83,16 +83,19 @@ from agent_workflow.models import RunHistory, StepResult, RunStatus, StepStatus
 
 class PersistenceError(Exception):
     """Base exception for persistence operations."""
+
     pass
 
 
 class RunNotFoundError(PersistenceError):
     """Raised when a specified run_id is not found in the storage directory."""
+
     pass
 
 
 class RunCorruptedError(PersistenceError):
     """Raised when a run history JSON file is malformed or corrupted."""
+
     pass
 
 
@@ -134,19 +137,21 @@ class RunHistoryStore:
         try:
             self.storage_dir.mkdir(parents=True, exist_ok=True)
         except Exception as e:
-            raise PersistenceError(f"Failed to create storage directory '{self.storage_dir}': {e}") from e
+            raise PersistenceError(
+                f"Failed to create storage directory '{self.storage_dir}': {e}"
+            ) from e
 
     def _sanitize_run_id(self, run_id: str) -> str:
         """Sanitize run_id to prevent path traversal attacks."""
         if not run_id or not isinstance(run_id, str):
             raise ValueError("run_id must be a non-empty string.")
-        
+
         clean_id = run_id[:-5] if run_id.endswith(".json") else run_id
         clean_id = Path(clean_id).name
-        
+
         if not re.match(r"^[a-zA-Z0-9_.-]+$", clean_id):
             raise ValueError(f"Invalid characters in run_id: '{run_id}'")
-        
+
         return clean_id
 
     def get_run_path(self, run_id: str) -> Path:
@@ -158,7 +163,7 @@ class RunHistoryStore:
         """Save RunHistory object to structured JSON file atomically and thread-safely."""
         if not isinstance(history, RunHistory):
             raise TypeError(f"Expected RunHistory instance, got {type(history).__name__}")
-        
+
         if not history.run_id:
             raise ValueError("RunHistory must have a valid run_id.")
 
@@ -209,10 +214,14 @@ class RunHistoryStore:
                 content = target_path.read_text(encoding="utf-8")
                 data = json.loads(content)
                 if not isinstance(data, dict):
-                    raise RunCorruptedError(f"Run history JSON root must be an object, got {type(data).__name__}")
+                    raise RunCorruptedError(
+                        f"Run history JSON root must be an object, got {type(data).__name__}"
+                    )
                 return RunHistory.from_dict(data)
             except (json.JSONDecodeError, KeyError, TypeError, ValueError) as e:
-                raise RunCorruptedError(f"Failed to parse run history file '{target_path}': {e}") from e
+                raise RunCorruptedError(
+                    f"Failed to parse run history file '{target_path}': {e}"
+                ) from e
 
     def list_runs(self) -> List[RunHistory]:
         """List all stored run histories, ordered by start_time descending (newest first)."""
@@ -226,7 +235,7 @@ class RunHistoryStore:
                         runs.append(run)
                     except PersistenceError:
                         continue
-            
+
             runs.sort(key=lambda r: r.start_time or "", reverse=True)
             return runs
 
@@ -290,13 +299,17 @@ def delete_run_history(run_id: str, storage_dir: Optional[Union[str, Path]] = No
     return store.delete_run_history(run_id)
 
 
-def get_step_result(run_id: str, step_id: str, storage_dir: Optional[Union[str, Path]] = None) -> StepResult:
+def get_step_result(
+    run_id: str, step_id: str, storage_dir: Optional[Union[str, Path]] = None
+) -> StepResult:
     """Convenience function to get a StepResult for a step in a run."""
     store = RunHistoryStore(storage_dir)
     return store.get_step_result(run_id, step_id)
 
 
-def get_step_output(run_id: str, step_id: str, storage_dir: Optional[Union[str, Path]] = None) -> Dict[str, Any]:
+def get_step_output(
+    run_id: str, step_id: str, storage_dir: Optional[Union[str, Path]] = None
+) -> Dict[str, Any]:
     """Convenience function to get output dictionary for a step in a run."""
     store = RunHistoryStore(storage_dir)
     return store.get_step_output(run_id, step_id)
