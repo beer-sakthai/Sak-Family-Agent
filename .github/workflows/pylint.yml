@@ -1,13 +1,29 @@
 name: Pylint
 
-on: [push]
+# Scoped to `main` and the pull requests targeting it, matching ci.yml. This
+# used to be a bare `on: [push]`, which re-ran the two-version matrix on every
+# push to every branch — including the ones that already had a pull request
+# open, so each commit paid for this job twice on top of the ruff/format gate
+# ci.yml runs against the same commit.
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
 
 permissions:
   contents: read
 
+concurrency:
+  # See the note in ci.yml: cancel superseded pull-request runs, never a run on
+  # `main`.
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     strategy:
       matrix:
         python-version: ["3.11", "3.12"]
