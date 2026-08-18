@@ -1,26 +1,29 @@
 # CodeQL scope for this repository.
 #
-# READ THIS FIRST — this file does nothing on its own.
+# HOW THIS FILE REACHES CodeQL
 #
-# CodeQL runs here through GitHub's *default setup* (repository settings), which
-# is why there is deliberately no `.github/workflows/codeql.yml`; adding one
-# fails every job with "CodeQL analyses from advanced configurations cannot be
-# processed when the default setup is enabled", and automated remediation bots
-# have now reintroduced that file twice. See
-# docs/code-scanning-sweep-2026-08-12.md.
+# `.github/workflows/codeql.yml` passes it to `github/codeql-action/init` as
+# `config-file:`. That is the only wiring; there is nothing to configure in the
+# repository settings.
 #
-# Default setup does not read a config file by path. It reads one only when the
-# repository has the custom repository property `codeql-config-file` set to that
-# path, at which point the file below is *merged into* the configuration default
-# setup generates. Until an administrator sets that property, this file is inert
-# and CodeQL keeps analysing everything.
+# The history matters, because this file spent its first day doing nothing.
+# CodeQL used to run here through GitHub's *default setup* (a repository
+# setting), and default setup does not read a config file by path — it reads one
+# only when an administrator sets the custom repository property
+# `codeql-config-file`. This file was written for that world and was inert.
 #
-#   Settings -> Custom properties -> codeql-config-file
-#     value: .github/codeql/codeql-config.yml
+# Default setup is now off and an advanced workflow analyses `actions`,
+# `javascript-typescript` and `python` on every push and PR to `main`
+# (measured: three green `Analyze` jobs on `main` at 3671a71, and no
+# default-setup run in the last 100 workflow runs — an advanced analysis cannot
+# upload at all while default setup is enabled, so a green upload is the proof).
+# `config-file:` is read directly by an advanced setup, so the scope below is
+# live.
 #
 # Why scope at all, measured rather than assumed: the 2026-08-18 read of the
-# dashboard found 788 open CodeQL alerts (up from 0 on 2026-08-13). 545 of them
-# are in trees this repository does not own the code of — vendored skill scripts,
+# dashboard found 788 open CodeQL alerts (up from 0 on 2026-08-13 — the jump is
+# the switch to advanced setup, which analyses the whole tree). 545 of them are
+# in trees this repository does not own the code of — vendored skill scripts,
 # the folded-in copy of a separate repository, and the test suite. The remaining
 # ~243 are in first-party code and are a real backlog to review. Excluding the
 # first group is what makes the second group visible; it does not close a single
