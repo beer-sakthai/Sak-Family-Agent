@@ -38,6 +38,7 @@ export function useAgentStream(options: UseAgentStreamOptions = {}) {
   const [latestEvent, setLatestEvent] = useState<TelemetryEvent | null>(null);
   const [lastHeartbeat, setLastHeartbeat] = useState<Date | null>(null);
 
+  
   const eventSourceRef = useRef<EventSource | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const reconnectAttemptsRef = useRef<number>(0);

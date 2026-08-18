@@ -4,9 +4,10 @@ from __future__ import annotations
 
 import json
 import logging
+import sqlite3
 import time
 import uuid
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Optional
 
 if TYPE_CHECKING:
     from ..memory.store import MemoryStore

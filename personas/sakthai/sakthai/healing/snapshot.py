@@ -7,6 +7,10 @@ import logging
 import time
 import uuid
 from typing import TYPE_CHECKING, Any
+import sqlite3
+import time
+import uuid
+from typing import TYPE_CHECKING, Any, Optional
 
 if TYPE_CHECKING:
     from ..memory.store import MemoryStore

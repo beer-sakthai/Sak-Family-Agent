@@ -33,6 +33,7 @@ flowchart TD
     L1 -->|"L1 Cache Miss"| L2
     L2 -->|"L2 Cache Miss"| L3
 
+    
     A1 & A2 & A3 & A4 & A5 & A6 -->|"Write / Mutation"| COAL
     COAL -->|"Atomic Batch Commit"| L3
     COAL -->|"Invalidate Event"| L2

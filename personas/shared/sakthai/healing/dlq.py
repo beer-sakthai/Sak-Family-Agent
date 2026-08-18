@@ -10,6 +10,13 @@ import uuid
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+import os
+import sqlite3
+import time
+import uuid
+from dataclasses import asdict, dataclass
+from pathlib import Path
+from typing import Any, Optional
 
 from ..config import memory_db_path, redact_secrets
 
@@ -43,6 +50,7 @@ class DeadLetterQueue:
     """Thread-safe SQLite persistent Dead-Letter Queue with jittered exponential backoff."""
 
     def __init__(self, db_path: Path | str | None = None):
+    def __init__(self, db_path: Optional[Path | str] = None):
         self.db_path = Path(db_path) if db_path else _recovery_db_path()
         self._init_db()
 
@@ -80,6 +88,9 @@ class DeadLetterQueue:
                 "CREATE INDEX IF NOT EXISTS idx_dlq_status ON dead_letter_items(status, next_retry_at)"
             )
             conn.execute("CREATE INDEX IF NOT EXISTS idx_dlq_persona ON dead_letter_items(persona)")
+            conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_dlq_persona ON dead_letter_items(persona)"
+            )
 
     def enqueue(
         self,
@@ -152,6 +163,7 @@ class DeadLetterQueue:
             return [self._row_to_item(r) for r in rows]
 
     def get_item(self, item_id: str) -> DeadLetterItem | None:
+    def get_item(self, item_id: str) -> Optional[DeadLetterItem]:
         with self._get_conn() as conn:
             row = conn.execute(
                 "SELECT * FROM dead_letter_items WHERE item_id = ?", (item_id,)
@@ -192,7 +204,9 @@ class DeadLetterQueue:
 
     def mark_purged(self, item_id: str) -> bool:
         with self._get_conn() as conn:
-            cur = conn.execute("DELETE FROM dead_letter_items WHERE item_id = ?", (item_id,))
+            cur = conn.execute(
+                "DELETE FROM dead_letter_items WHERE item_id = ?", (item_id,)
+            )
             return cur.rowcount > 0
 
     def stats(self) -> dict[str, Any]:

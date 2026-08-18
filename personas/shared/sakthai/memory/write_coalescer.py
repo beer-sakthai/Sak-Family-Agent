@@ -14,7 +14,7 @@ import sqlite3
 import threading
 import time
 from collections.abc import Callable
-from typing import Any
+from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +28,7 @@ class AsyncWriteCoalescer:
         batch_interval_ms: int = 50,
         max_batch_size: int = 100,
         on_batch_complete: Callable[[int], None] | None = None,
+        on_batch_complete: Optional[Callable[[int], None]] = None,
     ):
         self.db_path = db_path
         self.batch_interval_sec = max(0.005, batch_interval_ms / 1000.0)
@@ -74,6 +75,10 @@ class AsyncWriteCoalescer:
 
         with contextlib.suppress(Exception):
             conn.close()
+        try:
+            conn.close()
+        except Exception:
+            pass
 
     def _commit_batch(
         self, conn: sqlite3.Connection, batch: list[tuple[str, tuple[Any, ...]]]
@@ -92,6 +97,10 @@ class AsyncWriteCoalescer:
             logger.error("Failed to commit coalesced batch of %d writes: %s", len(batch), err)
             with contextlib.suppress(Exception):
                 conn.rollback()
+            try:
+                conn.rollback()
+            except Exception:
+                pass
 
     def flush(self, timeout_sec: float = 5.0) -> None:
         """Block until all queued writes have been processed."""

@@ -7,7 +7,7 @@ import logging
 import traceback
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Optional
 
 from ..memory.cache import CircuitBreaker
 from .dlq import DeadLetterItem, DeadLetterQueue
@@ -23,6 +23,10 @@ class ErrorSeverity(enum.StrEnum):
     TRANSIENT = "transient"  # 429, timeouts, connection resets
     STATE_CORRUPT = "state_corrupt"  # partial transaction fail, db lock
     FATAL = "fatal"  # auth fail, invalid schema, unrecoverable
+class ErrorSeverity(str, enum.Enum):
+    TRANSIENT = "transient"        # 429, timeouts, connection resets
+    STATE_CORRUPT = "state_corrupt"  # partial transaction fail, db lock
+    FATAL = "fatal"                # auth fail, invalid schema, unrecoverable
 
 
 @dataclass
@@ -31,6 +35,7 @@ class RecoveryResult:
     remediated: bool
     severity: ErrorSeverity
     dlq_id: str | None = None
+    dlq_id: Optional[str] = None
     rolled_back: bool = False
     error_message: str = ""
 
@@ -42,6 +47,8 @@ class SelfHealingSupervisor:
         self,
         dlq: DeadLetterQueue | None = None,
         snapshot_mgr: MemorySnapshotManager | None = None,
+        dlq: Optional[DeadLetterQueue] = None,
+        snapshot_mgr: Optional[MemorySnapshotManager] = None,
     ):
         self.dlq = dlq or DeadLetterQueue()
         self.snapshot_mgr = snapshot_mgr or MemorySnapshotManager()
@@ -52,23 +59,18 @@ class SelfHealingSupervisor:
             self._circuit_breakers[persona] = CircuitBreaker(
                 failure_threshold=3, recovery_time_sec=30.0
             )
+            self._circuit_breakers[persona] = CircuitBreaker(failure_threshold=3, recovery_time_sec=30.0)
         return self._circuit_breakers[persona]
 
     def classify_error(self, error: Exception | str) -> ErrorSeverity:
         err_str = str(error).lower()
 
         # Transient / Rate Limit patterns
-        if any(
-            w in err_str
-            for w in ["429", "rate limit", "timeout", "connection reset", "econnrefused"]
-        ):
+        if any(w in err_str for w in ["429", "rate limit", "timeout", "connection reset", "econnrefused"]):
             return ErrorSeverity.TRANSIENT
 
         # State corruption patterns
-        if any(
-            w in err_str
-            for w in ["database is locked", "sqlite_busy", "integrity", "savepoint", "rollback"]
-        ):
+        if any(w in err_str for w in ["database is locked", "sqlite_busy", "integrity", "savepoint", "rollback"]):
             return ErrorSeverity.STATE_CORRUPT
 
         return ErrorSeverity.FATAL
@@ -79,8 +81,8 @@ class SelfHealingSupervisor:
         action: str,
         payload: dict[str, Any],
         error: Exception,
-        store: MemoryStore | None = None,
-        checkpoint_id: str | None = None,
+Try        store: Optional[MemoryStore] = None,
+        checkpoint_id: Optional[str] = None,
     ) -> RecoveryResult:
         """Handle execution exception with automated remediation strategy."""
         severity = self.classify_error(error)
@@ -97,6 +99,7 @@ class SelfHealingSupervisor:
             and store
             and severity in (ErrorSeverity.STATE_CORRUPT, ErrorSeverity.FATAL)
         ):
+        if checkpoint_id and store and severity in (ErrorSeverity.STATE_CORRUPT, ErrorSeverity.FATAL):
             rolled_back = self.snapshot_mgr.rollback(store, checkpoint_id)
             if rolled_back:
                 action_taken = "memory_rollback"
@@ -131,7 +134,9 @@ class SelfHealingSupervisor:
             error_message=str(error),
         )
 
-    def replay_dlq_item(self, item_id: str, executor_fn: Callable[[DeadLetterItem], Any]) -> bool:
+    def replay_dlq_item(
+        self, item_id: str, executor_fn: Callable[[DeadLetterItem], Any]
+    ) -> bool:
         """Execute replay callback for a DLQ task."""
         item = self.dlq.get_item(item_id)
         if not item or item.status != "pending":
