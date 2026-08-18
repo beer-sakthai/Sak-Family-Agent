@@ -39,14 +39,32 @@ jobs:
         with:
           python-version: '3.11'
 
+      # The heaviest install in the repository — the `evals` group pulls
+      # CPU-only torch and transformers — repeated across six matrix cells, so
+      # this is where a cache saves the most wall-clock time.
+      #
+      # `prune-cache: true` is set here and nowhere else. It runs `uv cache
+      # prune --ci` before saving, dropping the unzipped source-dist builds and
+      # keeping the wheels, which is the difference between a cache measured in
+      # gigabytes and one measured in hundreds of megabytes. That matters
+      # because GitHub evicts least-recently-used entries against a single 10 GB
+      # repository-wide budget: an unpruned torch cache written weekly would
+      # crowd out the caches every pull request depends on.
       - name: Install uv
-        run: pipx install uv
+        uses: step-security/setup-uv@edab89485182ad96613ff847804c272ab5d1e03f # v10.0.0
+        with:
+          enable-cache: true
+          prune-cache: true
+          cache-dependency-glob: |
+            pyproject.toml
+            uv.lock
+          cache-suffix: evals
 
       - name: Install dependencies
         # The evals group (lm-eval + CPU-only torch/transformers) is kept out of
         # --all-extras on purpose (see pyproject.toml) so ci.yml/pylint.yml never
         # pull it in; only this workflow opts in.
-        run: uv sync --group evals
+        run: uv sync --locked --group evals
 
       - name: Run lm-evaluation-harness
         id: run_eval

@@ -237,3 +237,117 @@ def test_bandit_ini_exclusions_are_anchored() -> None:
         "Every .bandit exclusion must start with './' so it can only match at "
         f"the repository root. Unanchored: {unanchored}"
     )
+
+
+# The action every uv-installing workflow is expected to go through. Pinned by
+# SHA like every other `uses:` here; `test_actions_are_pinned_to_a_commit_sha`
+# is what enforces the pin, this constant only identifies the action.
+_SETUP_UV = "step-security/setup-uv@"
+
+
+def _steps(data: dict) -> list[tuple[str, dict]]:
+    """Every ``(job name, step)`` pair in a workflow, in declaration order."""
+    steps: list[tuple[str, dict]] = []
+    for job_name, job in data.get("jobs", {}).items():
+        if not isinstance(job, dict):
+            continue
+        for step in job.get("steps", []) or []:
+            if isinstance(step, dict):
+                steps.append((job_name, step))
+    return steps
+
+
+@pytest.mark.parametrize("path", _authored_workflows(), ids=lambda p: p.name)
+def test_uv_is_installed_through_the_cacheable_action(path: Path) -> None:
+    """``pipx install uv`` installs an unpinned uv and caches nothing.
+
+    Five jobs used to open with it — ci.yml (twice, once per matrix leg),
+    run-evals.yml, self-healing-ci.yml and both Python jobs in subprojects.yml.
+    Each one re-resolved and re-downloaded its whole dependency tree on every
+    single run, because a bare `pipx install uv` leaves `~/.cache/uv` empty at
+    the start of the job and unsaved at the end of it. It is also an unpinned
+    install of the tool that performs every other install, which is the shape
+    Scorecard's ``PinnedDependenciesID`` flags.
+
+    The action does both jobs: a SHA-pinned uv, and the cache around it.
+    """
+    offenders = [
+        f"{job}: {step.get('name', step.get('run', ''))!r}"
+        for job, step in _steps(_load(path))
+        if "pipx install uv" in str(step.get("run", ""))
+    ]
+    assert not offenders, (
+        f"{path.name}: install uv with `{_SETUP_UV}<sha>` instead of `pipx "
+        "install uv`, so the job is both pinned and cached. Offending "
+        f"step(s): {offenders}"
+    )
+
+
+@pytest.mark.parametrize("path", _authored_workflows(), ids=lambda p: p.name)
+def test_setup_uv_steps_declare_an_explicit_narrowed_cache(path: Path) -> None:
+    """``enable-cache``'s default is ``auto``, and ``auto`` is not enough here.
+
+    Two distinct failures hide behind leaving these inputs off:
+
+    * ``auto`` disables caching entirely for ``workflow_run`` events — the only
+      trigger ``self-healing-ci.yml`` has, so that job silently got no cache at
+      all while looking identically configured to the ones that did.
+    * The action's default ``cache-dependency-glob`` is ``**/pyproject.toml``,
+      ``**/uv.lock``, ``**/*requirements*.txt`` and friends. In this monorepo
+      that matches sixteen tracked files, including
+      ``services/teams-copilot-mcp/uv.lock``, the folded-in ``sakthai-chat-cli/``
+      copy of a separate repository, and two persona *skill* requirement files.
+      Editing any one of them invalidated every uv cache in CI, none of which
+      install from it.
+
+    ``cache-suffix`` is required for the same class of reason: without it the
+    two Python versions in ci.yml's and pylint.yml's matrices share one key and
+    overwrite each other's cache on every run, so neither leg ever gets a hit.
+    """
+    missing: list[str] = []
+    for job, step in _steps(_load(path)):
+        if _SETUP_UV not in str(step.get("uses", "")):
+            continue
+        inputs = step.get("with") or {}
+        for required in ("enable-cache", "cache-dependency-glob", "cache-suffix"):
+            if not str(inputs.get(required, "")).strip():
+                missing.append(f"{job}: setup-uv is missing `{required}`")
+        # `enable-cache: true` is unquoted YAML, so PyYAML hands back the
+        # bool `True` rather than the string the workflow author wrote.
+        enabled = str(inputs.get("enable-cache", "")).strip().lower()
+        if enabled not in {"", "true"}:
+            missing.append(f"{job}: setup-uv sets `enable-cache: {inputs['enable-cache']}`")
+    assert not missing, (
+        f"{path.name}: every setup-uv step must set `enable-cache: true`, a "
+        "`cache-dependency-glob` narrowed to the files that job actually "
+        "installs from, and a `cache-suffix` unique to the job (and to the "
+        f"matrix leg, where there is one). {missing}"
+    )
+
+
+@pytest.mark.parametrize("path", _authored_workflows(), ids=lambda p: p.name)
+def test_cache_dependency_globs_name_files_that_exist(path: Path) -> None:
+    """A glob that matches nothing caches under a constant key, forever.
+
+    ``cache-dependency-glob`` and ``cache-dependency-path`` are both hashed, not
+    resolved: a path with a typo in it does not fail the step, it just hashes
+    the empty set. Every run then computes the same key, the cache never
+    invalidates, and a dependency bump is served a stale tree — the quietest
+    possible way for caching to go wrong. These entries are plain relative
+    paths in this repository, so they can simply be checked to exist.
+    """
+    dangling: list[str] = []
+    for job, step in _steps(_load(path)):
+        raw = (step.get("with") or {}).get("cache-dependency-glob") or (step.get("with") or {}).get(
+            "cache-dependency-path"
+        )
+        for entry in str(raw or "").splitlines():
+            entry = entry.strip()
+            if not entry or "*" in entry:
+                continue  # a real glob; existence is not decidable this cheaply
+            if not (REPO_ROOT / entry).exists():
+                dangling.append(f"{job}: {entry}")
+    assert not dangling, (
+        f"{path.name}: cache dependency path(s) do not exist, so they hash to "
+        f"the empty set and the cache key never changes: {dangling}"
+    )

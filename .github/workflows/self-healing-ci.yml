@@ -91,11 +91,22 @@ jobs:
         with:
           python-version: "3.12"
 
+      # `enable-cache: true`, not the action's `auto` default: `auto` turns
+      # caching *off* for `workflow_run` events, which is the only trigger this
+      # workflow has. Left at the default, this job is the one uv job in the
+      # repository that never gets a cache. Cache scope on `workflow_run` is the
+      # default branch, so the entries this job saves are the ones it restores.
       - name: Install uv
-        run: pipx install uv
+        uses: step-security/setup-uv@edab89485182ad96613ff847804c272ab5d1e03f # v10.0.0
+        with:
+          enable-cache: true
+          cache-dependency-glob: |
+            pyproject.toml
+            uv.lock
+          cache-suffix: selfheal
 
       - name: Install dependencies
-        run: uv sync --all-extras
+        run: uv sync --locked --all-extras
 
       - name: Check for a diagnosis credential
         id: creds
