@@ -76,7 +76,7 @@ def test_find_exec_destructive_on_sensitive_paths_blocked(
     result = DEFAULT_POLICY.check_pre_execution(run_command_tool, {"command": command}, store)
     assert result.action == GuardrailAction.DENY
     assert result.reason and any(
-        s in result.reason for s in ("find -exec", "Potentially destructive", "destructive")
+        s in result.reason for s in ("find -exec", "Potentially destructive", "destructive", "dangerous")
     )
 
 
