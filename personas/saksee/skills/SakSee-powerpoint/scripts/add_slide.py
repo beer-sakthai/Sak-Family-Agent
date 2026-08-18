@@ -241,8 +241,15 @@ def parse_source(source: str) -> tuple[str, str | None]:
 
 
 def _resolve_user_dir(raw_path: str, base_dir: Path) -> Path:
+    normalized_input = raw_path.strip()
+    if not normalized_input:
+        print("Error: unpacked_dir path must not be empty", file=sys.stderr)
+        sys.exit(1)
+
+    user_path = Path(normalized_input).expanduser()
+
     try:
-        candidate = Path(raw_path).expanduser().resolve(strict=True)
+        candidate = user_path.resolve(strict=True)
     except FileNotFoundError:
         print(f"Error: {raw_path} not found", file=sys.stderr)
         sys.exit(1)
