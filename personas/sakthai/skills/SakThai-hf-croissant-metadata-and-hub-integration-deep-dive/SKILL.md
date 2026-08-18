@@ -1,6 +1,8 @@
 ---
 name: SakThai-hf-croissant-metadata-and-hub-integration-deep-dive
-description: "Deep dive into MLCommons Croissant metadata format and its integration with Hugging Face Hub — the Croissant API endpoint, JSON-LD structure, auto-generation for datasets, and the mlcroissant Python library."
+description: "Deep dive into MLCommons Croissant metadata format and its integration with Hugging\
+  \ Face Hub \u2014 the Croissant API endpoint, JSON-LD structure, auto-generation\
+  \ for datasets, and the mlcroissant Python library."
 ---
 
 # MLCommons Croissant Metadata on Hugging Face Hub

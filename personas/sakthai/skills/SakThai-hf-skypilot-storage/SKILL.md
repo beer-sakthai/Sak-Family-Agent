@@ -1,6 +1,8 @@
 ---
 name: SakThai-hf-skypilot-storage
-description: ">   Knowledge of running AI workloads on any cloud while storing data on   Hugging Face Hub with zero-egress storage, using SkyPilot for multi-cloud   compute orchestration and HF Storage Buckets / Xet for data storage."
+description: '>   Knowledge of running AI workloads on any cloud while storing data on   Hugging
+  Face Hub with zero-egress storage, using SkyPilot for multi-cloud   compute orchestration
+  and HF Storage Buckets / Xet for data storage.'
 ---
 
 # Hugging Face SkyPilot Storage Integration

@@ -1,14 +1,10 @@
 ---
 name: SakThai-hf-datasets-uploading
-author: SakThai
-category: mlops
-description: >-
-  Complete end-to-end reference for uploading datasets to the Hugging Face Hub.
-  Covers web UI, Git CLI, huggingface_hub Python SDK, hf CLI, dataset cards,
-  metadata configuration, Data Studio preview, large-scale dataset uploads,
-  Xet-accelerated uploads, and best practices for zero-cost dataset publishing.
-version: 1.0.0
-tags: [huggingface, hub, datasets, uploading, dataset-card, python-sdk, git, CLI, Xet]
+description: Complete end-to-end reference for uploading datasets to the Hugging Face Hub. Covers
+  web UI, Git CLI, huggingface_hub Python SDK, hf CLI, dataset cards, metadata configuration,
+  Data Studio preview, large-scale dataset uploads, Xet-accelerated uploads, and best
+  practices for zero-cost dataset publishing.
+...
 ---
 
 # HF Hub — Uploading Datasets (End-to-End Workflow)

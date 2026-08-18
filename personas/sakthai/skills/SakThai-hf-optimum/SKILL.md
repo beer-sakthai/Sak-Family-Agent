@@ -1,6 +1,9 @@
 ---
 name: SakThai-hf-optimum
-description: "Deep-dive guide for Hugging Face Optimum — the hardware optimization library for accelerating inference and training on targeted hardware (Intel OpenVINO, ONNX Runtime, NVIDIA TensorRT-LLM, AWS Trainium/Inferentia, Google TPU, Intel Gaudi, AMD, Furio"
+description: "Deep-dive guide for Hugging Face Optimum \u2014 the hardware optimization library\
+  \ for accelerating inference and training on targeted hardware (Intel OpenVINO,\
+  \ ONNX Runtime, NVIDIA TensorRT-LLM, AWS Trainium/Inferentia, Google TPU, Intel\
+  \ Gaudi, AMD, Furio"
 ---
 
 # 🤗 Optimum — Hardware Optimization Library

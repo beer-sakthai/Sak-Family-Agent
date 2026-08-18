@@ -1,6 +1,9 @@
 ---
 name: SakThai-hf-controlnets-diffusers
-description: ">-   Complete reference on ControlNets in Hugging Face Diffusers — architecture,   model classes, inference pipelines (text-to-image, image-to-image, inpainting,   multi-control, guess mode), training, Control-LoRA, and all backbone variants   (SD1.5"
+description: ">-   Complete reference on ControlNets in Hugging Face Diffusers \u2014 architecture,\
+  \   model classes, inference pipelines (text-to-image, image-to-image, inpainting,\
+  \   multi-control, guess mode), training, Control-LoRA, and all backbone variants\
+  \   (SD1.5"
 ---
 
 # ControlNets in Hugging Face Diffusers — Complete Reference

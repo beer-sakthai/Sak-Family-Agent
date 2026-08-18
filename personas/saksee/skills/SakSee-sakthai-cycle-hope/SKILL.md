@@ -1,7 +1,9 @@
 ---
 name: SakSee-sakthai-cycle-hope
-description: "Saksee Sakthai Cycle Hope"
+description: Saksee Sakthai Cycle Hope
+...
 ---
+
 # SakThai Cycle — Hope
 
 Turn the Dream vision into a plan.

@@ -1,6 +1,8 @@
 ---
 name: SakSee-SakThai-playwright-accessibility-testing
-description: "Use Playwright’s built-in hooks for axe accessibility scanning, geolocation   permissions, device emulation, responsive viewport checks, and permission gating   to catch regressions early in headless browser flows."
+description: "Use Playwright\u2019s built-in hooks for axe accessibility scanning, geolocation\
+  \   permissions, device emulation, responsive viewport checks, and permission gating\
+  \   to catch regressions early in headless browser flows."
 ---
 
 # Playwright Accessibility Testing for Browser Automation

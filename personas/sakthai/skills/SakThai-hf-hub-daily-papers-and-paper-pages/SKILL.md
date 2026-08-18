@@ -1,20 +1,19 @@
 ---
 name: SakThai-hf-hub-daily-papers-and-paper-pages
-version: 1.0.0
-author: SakThai
-license: MIT
-title: Hugging Face Hub — Daily Papers & Paper Pages Complete Reference
-category: mlops
-tags: [daily-papers, paper-pages, arxiv, papers-api, discussions, discoverability, research]
-related_skills:
-  - hf-hub-search-discovery-api
-  - hf-hub-tag-system-complete-reference
-  - hf-hub-user-and-org-profile-api
-description: >-
-  Complete deep-dive reference on Hugging Face's Daily Papers and Paper Pages
-  ecosystem. Covers the daily papers API, paper pages API (REST endpoints),
-  linking papers to models/datasets/Spaces via arxiv tags, the paper discussion
-  system, paper authorship claiming, paper indexing, the markdown content
-  delivery system, and programmatic discovery patterns for zero-cost research
-  workflows.
+description: Complete deep-dive reference on Hugging Face's Daily Papers and Paper Pages ecosystem.
+  Covers the daily papers API, paper pages API (REST endpoints), linking papers to
+  models/datasets/Spaces via arxiv tags, the paper discussion system, paper authorship
+  claiming, paper indexing, the markdown content delivery system, and programmatic
+  discovery patterns for zero-cost research workflows.
+...
 ---
+
+# SakThai-hf-hub-daily-papers-and-paper-pages
+
+## Overview
+This skill provides automated runbooks, tools, and operational workflows for `SakThai-hf-hub-daily-papers-and-paper-pages` within the Sak-Family agent ecosystem.
+
+## Execution Workflow
+1. Initialize project and environmental context.
+2. Execute procedures according to task specifications.
+3. Validate outputs with automated quality gates.

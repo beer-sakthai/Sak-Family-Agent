@@ -1,6 +1,7 @@
 ---
 name: SakSit-plan-check-count
-description: "Plan first, verify before reporting, count before stating."
+description: Plan first, verify before reporting, count before stating.
+...
 ---
 
 # Plan · Check · Count

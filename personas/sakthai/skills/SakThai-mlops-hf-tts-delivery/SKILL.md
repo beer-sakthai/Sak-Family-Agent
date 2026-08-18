@@ -1,10 +1,7 @@
 ---
 name: SakThai-mlops-hf-tts-delivery
-title: Reliable TTS Delivery on Hugging Face Systems
-author: SakThai
-license: MIT
-version: 1.0
-description: How to deliver voice replies to Beer when TTS providers fail due to billing or environment restrictions — with fallbacks, verification, and silent resilience.
+description: "How to deliver voice replies to Beer when TTS providers fail due to billing or environment\
+  \ restrictions \u2014 with fallbacks, verification, and silent resilience."
 ---
 
 # HF TTS Delivery — Reliable Voice Output for Silent Automation
