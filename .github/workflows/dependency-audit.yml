@@ -17,9 +17,16 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  # See the note in ci.yml. The weekly schedule run has no branch of its own to
+  # collide with, so in practice this only ever cancels superseded PR runs.
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   pip-audit:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Harden the runner
         uses: step-security/harden-runner@05e31511f85b41b11d1cf0ef85d0992719546e2c # v2.21.0
