@@ -174,32 +174,18 @@ Other `make` targets: `compose-personas` (rebuild full skill trees into
 
 ### CI
 
-Twenty hand-written workflows live in `.github/workflows/`, plus **eight** gh-aw
-Markdown sources compiled to `.lock.yml` beside them. None of the eight runs on
-Copilot any more: seven run on `engine: gemini` and one on a vendored OpenCode
-engine driving a Gemini model — see
-[`docs/gh-aw-engines.md`](docs/gh-aw-engines.md) and the gh-aw note below.
-
-Every hand-written workflow that a pull request can trigger declares a top-level
-`concurrency:` block, and every job in every hand-written workflow declares
-`timeout-minutes`. Both are enforced by `tests/test_workflow_hygiene.py`; the
-convention for `cancel-in-progress` is
-`${{ github.event_name == 'pull_request' }}` — cancel a superseded PR run, never
-a run on `main`, because a cancelled analysis uploads no SARIF and an alert is
-only ever closed by a newer analysis from the same tool. The `.lock.yml` files
-are exempt from both rules: they are compiler output and gh-aw sets
-`timeout-minutes` on only one of each workflow's generated jobs.
-
-The ones that gate a change:
+Twenty-nine workflows live in `.github/workflows/`, plus four gh-aw Markdown
+sources compiled to `.lock.yml` beside them. The ones that gate a change:
 
 | Workflow | Trigger | What it does |
 |---|---|---|
 | `ci.yml` | push/PR to `main` | ruff check + format → mypy + bandit → pytest with coverage, on Python **3.11 and 3.12** |
-| `pylint.yml` | push/PR to `main` | pylint over `personas/sakthai/sakthai` + `tests` |
+| `pylint.yml` | every push | pylint over `personas/sakthai/sakthai` + `tests` |
 | `secret-scan.yml` | push to `main`, all PRs | gitleaks (config `.gitleaks.toml`, which allowlists persona docs) |
 | `dependency-audit.yml` | PRs touching `pyproject.toml`/`uv.lock`, weekly | pip-audit over `uv.lock` |
 | `dependency-review.yml` | all PRs | GitHub dependency-review on the PR's diff |
-| `sonarcloud.yml` | push/PR to `main`, manual | SonarCloud analysis (skipped on a fork's PR, which has no `SONAR_TOKEN`) |
+| `ossar.yml` | push/PR to `main`, weekly | open-source static analysis |
+| `sonarcloud.yml` | push to `main` | SonarCloud analysis |
 | `subprojects.yml` | push/PR touching `apps/agent_workflow_framework/**`, `apps/sak_agent_dashboard/**`, or `services/teams-copilot-mcp/**` | the two out-of-tree pytest suites + the dashboard's lint/typecheck/test/build chain |
 | `agent-self-evolution.yml` | push/PR touching `personas/sakthai/agent-self-evolution/**` | that subproject's own suite |
 | `labeler.yml` | `pull_request_target` | PR labelling |
@@ -210,29 +196,12 @@ The ones that gate a change:
 | `self-healing-ci.yml` | `workflow_run` completion of `CI` on `main` (failure only), or manual | runs `sakthai heal run` over the failed job's log and opens a `selfheal/` fix PR when the patch is safe and locally verified. Gates nothing — it only ever adds a PR |
 | `auto-merge.yml` | `pull_request_target` labeled/unlabeled/ready_for_review | turns GitHub's **native** auto-merge on for a PR carrying the `automerge` label (squash), off when the label is removed. Gates nothing and waives nothing — GitHub still holds the merge until branch protection is satisfied, including the non-author approval. Uses no checkout, so the `pull_request_target` token never meets PR code |
 
-Scheduled / manual only, so they never block a PR: `verify-assets.yml` (daily HF
-asset check), `run-evals.yml` (weekly lm-eval, installs the `evals` dependency
-group), `summary.yml` (on new issues), `OSPS.yml` (weekly security-baseline
-assessment), `code-scanning-cleanup.yml` (manual, retires orphaned code-scanning
-alerts), and four agentic audit workflows — `security-audit.md` (weekly Thursday,
-triages bandit + pip-audit + the guardrail suite), `shared-package-drift.md`
-(weekly, audits the `personas/shared/sakthai/` divergence register),
-`skills-hygiene.md` (weekly, runs `sakthai skills validate --naming`), and
-`opencode-smoke.md` (weekly, proves the vendored OpenCode engine still runs). All
-four report by opening an issue and none can open a pull request.
-
-**Five workflows were removed on 2026-08-18** after their run history was read
-rather than their files: `auto-dependency-update.yml` (22 runs, 22 failures — it
-died at *Create Pull Request* with `Input 'token' not supplied`, because no
-`GH_PAT_FOR_ACTIONS` secret exists here, and Dependabot already covers pip / npm /
-Docker / Actions), `continuous-security.yml` (nightly, but every run skipped its
-agent step because there is no `ANTHROPIC_API_KEY` — `security-audit.md` replaces
-it on the Gemini engine the rest of the agentic workflows already use),
-`ossar.yml` (MSDO with `tools: eslint` at a repository root that has no
-`package.json`, duplicating what `eslint.yml` does properly), `stale.yml` (still
-carrying the starter template's literal `'Stale issue message'` placeholder), and
-`manual.yml` (a greeting echo). Before adding a workflow back, check the Actions
-tab for what it actually did.
+Scheduled / manual only, so they never block a PR: `continuous-security.yml`
+(nightly), `verify-assets.yml` (daily HF asset check), `run-evals.yml` (weekly
+lm-eval, installs the `evals` dependency group), `auto-dependency-update.yml`
+(weekly), `stale.yml` (daily), `summary.yml` (on new issues), `OSPS.yml` (weekly
+security-baseline assessment), `code-scanning-cleanup.yml` (manual, retires
+orphaned code-scanning alerts), `manual.yml`.
 
 CodeQL used to run via GitHub's *default setup*, and the rule was "never add
 `codeql.yml`" — an advanced analysis cannot upload while default setup is
@@ -258,41 +227,9 @@ a top-level `permissions:` block. A batch of pasted starter templates that met
 none of this was removed on 2026-08-13, and three more (`bandit.yml`,
 `codeql.yml`, `eslint.yml`) arrived on 2026-08-18.
 
-**Dependency caching is on every workflow that installs anything**, and the
-shape of it is deliberate. Python jobs install uv through
-`step-security/setup-uv` with `enable-cache: true` — never `pipx install uv`,
-which pins nothing and caches nothing. Two inputs are mandatory on every one of
-those steps and are the easy things to get wrong:
-
-- `cache-dependency-glob` must be **narrowed** to the files that job installs
-  from. The action's default glob (`**/pyproject.toml`, `**/uv.lock`,
-  `**/*requirements*.txt`, …) matches **16** tracked files in this monorepo,
-  including `sakthai-chat-cli/uv.lock` and two persona *skill* requirement
-  files. Left at the default, editing any of them invalidates every uv cache in
-  CI.
-- `cache-suffix` must be unique per job, and per matrix leg where there is one.
-  `ci.yml` and `pylint.yml` both run a 3.11/3.12 matrix that resolves different
-  wheels from the same lock; one shared key means the two legs overwrite each
-  other and neither ever gets a hit.
-
-`enable-cache` is written out explicitly rather than left at its `auto`
-default, because `auto` disables caching for `workflow_run` events — the only
-trigger `self-healing-ci.yml` has. `run-evals.yml` is the one job that also
-sets `prune-cache: true`: its `evals` group pulls CPU torch, and GitHub evicts
-LRU against a single 10 GB repository-wide budget, so an unpruned weekly cache
-would crowd out the ones every PR depends on. The two pip-based jobs
-(`bandit.yml`, `agent-self-evolution.yml`) use `setup-python`'s `cache: pip`
-with an explicit `cache-dependency-path` for the same narrowing reason. Node is
-`setup-node`'s `cache: pnpm` plus an `actions/cache` over
-`apps/sak_agent_dashboard/.next/cache` for the Next.js build.
-
 **`tests/test_workflow_hygiene.py` now enforces all of it in CI**, plus SHA
 pinning on every `uses:`, the `self-healing-ci.yml` fork guard, `codeql.yml`'s
-`config-file:` reference, `.bandit` being parseable configuration, and the three
-caching rules above — including that every `cache-dependency-glob` /
-`cache-dependency-path` names a file that exists, since a typo there does not
-fail the step, it hashes the empty set and freezes the cache key forever. It
-exists
+`config-file:` reference, and `.bandit` being parseable configuration. It exists
 because a bot commit reverted a merged critical security fix — 446 deletions
 under a message about something else — and nothing failed. If you are adding a
 workflow, run it: `uv run pytest tests/test_workflow_hygiene.py -q`.

@@ -214,17 +214,17 @@ class TokenMeter:
 
     def authenticate_key(self, raw_key: str) -> APIKeyRecord | None:
         """Authenticate a raw API key and verify active state."""
-        candidate = raw_key.strip()
+        hashed = hash_api_key(raw_key.strip())
         with self._lock, self._get_connection() as conn:
-            rows = conn.execute(
+            row = conn.execute(
                 """
                 SELECT key_id, tenant_id, hashed_key, name, prefix, tier, is_active, created_at, last_used_at, rate_limit_rpm
                 FROM billing_api_keys
-                WHERE is_active = 1;
-                """
-            ).fetchall()
+                WHERE hashed_key = ? AND is_active = 1;
+                """,
+                (hashed,),
+            ).fetchone()
 
-            row = next((r for r in rows if hash_api_key(candidate, r["hashed_key"]) is True), None)
             if not row:
                 return None
 

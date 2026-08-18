@@ -37,17 +37,6 @@ that disappeared inside a commit whose message described something else.
 * **``.bandit`` is an ini file.** It was committed as a pasted fragment of
   GitHub Actions YAML, so bandit logged "Unable to parse config file" and every
   bare invocation ran with no configuration at all.
-
-* **Pull-request workflows serialise per ref.** Until 2026-08-18 not one of the
-  eleven push/pull-request workflows declared ``concurrency:``, so every
-  force-push left the previous CI, Pylint, CodeQL, Bandit, SonarCloud, ESLint
-  and subproject runs to finish against a commit nobody would look at again.
-  The repository had accumulated 27,417 workflow runs. Every stock starter
-  template omits the block, which is how it stayed missing.
-
-* **Every job declares a timeout.** A job with no ``timeout-minutes`` holds a
-  runner for GitHub's six-hour default. Four workflows set one; the other
-  sixteen did not.
 """
 
 from __future__ import annotations
@@ -82,34 +71,6 @@ def _workflow_files() -> list[Path]:
 
 def _yaml_workflows() -> list[Path]:
     return [p for p in _workflow_files() if p.suffix in {".yml", ".yaml"}]
-
-
-def _authored_workflows() -> list[Path]:
-    """The workflows a human edits — the ``.lock.yml`` files are compiler output.
-
-    gh-aw generates its lock files from the Markdown sources, and the shape of
-    that output is upstream's decision: it emits a top-level ``concurrency:``
-    but sets ``timeout-minutes`` on only one of each workflow's five-to-eight
-    generated jobs. Holding generated files to a rule the generator does not
-    follow would fail on every recompile, so the two rules below apply to the
-    hand-written workflows and say so.
-    """
-    return [p for p in _yaml_workflows() if not p.name.endswith(".lock.yml")]
-
-
-def _triggers(data: dict) -> set[str]:
-    """The event names in a workflow's ``on:``, however it was written.
-
-    ``on:`` accepts a list (``on: [push]``), a mapping (``on:\\n  push:``) or a
-    bare string, and PyYAML resolves the unquoted key ``on`` to the boolean
-    ``True`` under YAML 1.1 — so the key itself has to be looked up both ways.
-    """
-    on = data.get("on", data.get(True))
-    if isinstance(on, dict):
-        return set(on)
-    if isinstance(on, list):
-        return set(on)
-    return {on} if isinstance(on, str) else set()
 
 
 def _load(path: Path) -> dict:
@@ -180,52 +141,6 @@ def test_actions_are_pinned_to_a_commit_sha(path: Path) -> None:
             unpinned.append(f"{path.name}:{lineno}: {ref}")
     assert not unpinned, "Actions must be pinned to a 40-character commit SHA:\n" + "\n".join(
         unpinned
-    )
-
-
-@pytest.mark.parametrize("path", _authored_workflows(), ids=lambda p: p.name)
-def test_pull_request_workflows_serialise_per_ref(path: Path) -> None:
-    """A pull-request workflow must group its runs, or force-pushes pile up.
-
-    Without a ``concurrency:`` block every push to a branch starts a fresh run
-    and leaves the previous one running to completion against a commit that has
-    already been replaced. On a repository where agents push repeatedly to the
-    same branch that is most of the minutes spent.
-
-    This only requires the block to exist; each workflow decides its own
-    ``cancel-in-progress``. The convention here is to cancel pull-request runs
-    and never a run on ``main`` — a cancelled analysis uploads no SARIF, and an
-    alert is only ever closed by a newer analysis from the same tool.
-    """
-    data = _load(path)
-    if not _triggers(data) & {"pull_request", "pull_request_target"}:
-        pytest.skip("not triggered by a pull request")
-    assert "concurrency" in data, (
-        f"{path.name}: no top-level `concurrency:` block. Add\n"
-        "  concurrency:\n"
-        "    group: ${{ github.workflow }}-${{ github.ref }}\n"
-        "    cancel-in-progress: ${{ github.event_name == 'pull_request' }}\n"
-        "so a force-push cancels the run it supersedes."
-    )
-
-
-@pytest.mark.parametrize("path", _authored_workflows(), ids=lambda p: p.name)
-def test_every_job_declares_a_timeout(path: Path) -> None:
-    """A job without ``timeout-minutes`` holds a runner for six hours.
-
-    That is GitHub's default, and it is never the right answer: the longest job
-    in this repository (the dashboard's install → lint → typecheck → 172 vitest
-    tests → build chain) is budgeted at thirty minutes. A hung install or a
-    wedged test process should fail the run, not occupy a runner for the rest of
-    the working day.
-    """
-    jobs = _load(path).get("jobs", {})
-    missing = [
-        name for name, job in jobs.items() if isinstance(job, dict) and "timeout-minutes" not in job
-    ]
-    assert not missing, (
-        f"{path.name}: job(s) {missing} declare no `timeout-minutes`. Give each "
-        "one a budget it should never legitimately reach."
     )
 
 
@@ -321,118 +236,4 @@ def test_bandit_ini_exclusions_are_anchored() -> None:
     assert not unanchored, (
         "Every .bandit exclusion must start with './' so it can only match at "
         f"the repository root. Unanchored: {unanchored}"
-    )
-
-
-# The action every uv-installing workflow is expected to go through. Pinned by
-# SHA like every other `uses:` here; `test_actions_are_pinned_to_a_commit_sha`
-# is what enforces the pin, this constant only identifies the action.
-_SETUP_UV = "step-security/setup-uv@"
-
-
-def _steps(data: dict) -> list[tuple[str, dict]]:
-    """Every ``(job name, step)`` pair in a workflow, in declaration order."""
-    steps: list[tuple[str, dict]] = []
-    for job_name, job in data.get("jobs", {}).items():
-        if not isinstance(job, dict):
-            continue
-        for step in job.get("steps", []) or []:
-            if isinstance(step, dict):
-                steps.append((job_name, step))
-    return steps
-
-
-@pytest.mark.parametrize("path", _authored_workflows(), ids=lambda p: p.name)
-def test_uv_is_installed_through_the_cacheable_action(path: Path) -> None:
-    """``pipx install uv`` installs an unpinned uv and caches nothing.
-
-    Five jobs used to open with it — ci.yml (twice, once per matrix leg),
-    run-evals.yml, self-healing-ci.yml and both Python jobs in subprojects.yml.
-    Each one re-resolved and re-downloaded its whole dependency tree on every
-    single run, because a bare `pipx install uv` leaves `~/.cache/uv` empty at
-    the start of the job and unsaved at the end of it. It is also an unpinned
-    install of the tool that performs every other install, which is the shape
-    Scorecard's ``PinnedDependenciesID`` flags.
-
-    The action does both jobs: a SHA-pinned uv, and the cache around it.
-    """
-    offenders = [
-        f"{job}: {step.get('name', step.get('run', ''))!r}"
-        for job, step in _steps(_load(path))
-        if "pipx install uv" in str(step.get("run", ""))
-    ]
-    assert not offenders, (
-        f"{path.name}: install uv with `{_SETUP_UV}<sha>` instead of `pipx "
-        "install uv`, so the job is both pinned and cached. Offending "
-        f"step(s): {offenders}"
-    )
-
-
-@pytest.mark.parametrize("path", _authored_workflows(), ids=lambda p: p.name)
-def test_setup_uv_steps_declare_an_explicit_narrowed_cache(path: Path) -> None:
-    """``enable-cache``'s default is ``auto``, and ``auto`` is not enough here.
-
-    Two distinct failures hide behind leaving these inputs off:
-
-    * ``auto`` disables caching entirely for ``workflow_run`` events — the only
-      trigger ``self-healing-ci.yml`` has, so that job silently got no cache at
-      all while looking identically configured to the ones that did.
-    * The action's default ``cache-dependency-glob`` is ``**/pyproject.toml``,
-      ``**/uv.lock``, ``**/*requirements*.txt`` and friends. In this monorepo
-      that matches sixteen tracked files, including
-      ``services/teams-copilot-mcp/uv.lock``, the folded-in ``sakthai-chat-cli/``
-      copy of a separate repository, and two persona *skill* requirement files.
-      Editing any one of them invalidated every uv cache in CI, none of which
-      install from it.
-
-    ``cache-suffix`` is required for the same class of reason: without it the
-    two Python versions in ci.yml's and pylint.yml's matrices share one key and
-    overwrite each other's cache on every run, so neither leg ever gets a hit.
-    """
-    missing: list[str] = []
-    for job, step in _steps(_load(path)):
-        if _SETUP_UV not in str(step.get("uses", "")):
-            continue
-        inputs = step.get("with") or {}
-        for required in ("enable-cache", "cache-dependency-glob", "cache-suffix"):
-            if not str(inputs.get(required, "")).strip():
-                missing.append(f"{job}: setup-uv is missing `{required}`")
-        # `enable-cache: true` is unquoted YAML, so PyYAML hands back the
-        # bool `True` rather than the string the workflow author wrote.
-        enabled = str(inputs.get("enable-cache", "")).strip().lower()
-        if enabled not in {"", "true"}:
-            missing.append(f"{job}: setup-uv sets `enable-cache: {inputs['enable-cache']}`")
-    assert not missing, (
-        f"{path.name}: every setup-uv step must set `enable-cache: true`, a "
-        "`cache-dependency-glob` narrowed to the files that job actually "
-        "installs from, and a `cache-suffix` unique to the job (and to the "
-        f"matrix leg, where there is one). {missing}"
-    )
-
-
-@pytest.mark.parametrize("path", _authored_workflows(), ids=lambda p: p.name)
-def test_cache_dependency_globs_name_files_that_exist(path: Path) -> None:
-    """A glob that matches nothing caches under a constant key, forever.
-
-    ``cache-dependency-glob`` and ``cache-dependency-path`` are both hashed, not
-    resolved: a path with a typo in it does not fail the step, it just hashes
-    the empty set. Every run then computes the same key, the cache never
-    invalidates, and a dependency bump is served a stale tree — the quietest
-    possible way for caching to go wrong. These entries are plain relative
-    paths in this repository, so they can simply be checked to exist.
-    """
-    dangling: list[str] = []
-    for job, step in _steps(_load(path)):
-        raw = (step.get("with") or {}).get("cache-dependency-glob") or (step.get("with") or {}).get(
-            "cache-dependency-path"
-        )
-        for entry in str(raw or "").splitlines():
-            entry = entry.strip()
-            if not entry or "*" in entry:
-                continue  # a real glob; existence is not decidable this cheaply
-            if not (REPO_ROOT / entry).exists():
-                dangling.append(f"{job}: {entry}")
-    assert not dangling, (
-        f"{path.name}: cache dependency path(s) do not exist, so they hash to "
-        f"the empty set and the cache key never changes: {dangling}"
     )

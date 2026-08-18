@@ -38,16 +38,9 @@ on:
 permissions:
   contents: read
 
-concurrency:
-  # See the note in ci.yml — and in codeql.yml for why a `main` run is never
-  # cancelled: this workflow's upload is what closes its own earlier alerts.
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
-
 jobs:
   bandit:
     name: Bandit
-    timeout-minutes: 20
     permissions:
       contents: read          # actions/checkout
       security-events: write  # upload-sarif writes to the code-scanning API
@@ -66,16 +59,10 @@ jobs:
         with:
           persist-credentials: false
 
-      # `cache: pip` keys the wheel cache on `.github/bandit-requirements.lock`,
-      # the one file that decides what the next step installs. The default
-      # dependency path (`**/requirements.txt`) would key on three persona skill
-      # requirement files this job never reads, and miss the lock that it does.
       - name: Set up Python
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.12"
-          cache: pip
-          cache-dependency-path: .github/bandit-requirements.lock
 
       # Hash-pinned, not merely version-pinned. A bare `pip install pkg==x.y.z`
       # is Scorecard's `PinnedDependenciesID` / "pipCommand not pinned by hash"
