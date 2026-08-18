@@ -31,19 +31,20 @@ def get_next_slide_number(slides_dir: Path) -> int:
 
 
 def create_slide_from_layout(unpacked_dir: Path, layout_file: str) -> None:
-    slides_dir = unpacked_dir / "ppt" / "slides"
-    rels_dir = slides_dir / "_rels"
-    layouts_dir = unpacked_dir / "ppt" / "slideLayouts"
+    slides_dir = (unpacked_dir / "ppt" / "slides").resolve()
+    rels_dir = (slides_dir / "_rels").resolve()
+    layouts_dir = (unpacked_dir / "ppt" / "slideLayouts").resolve()
 
-    layout_path = layouts_dir / layout_file
-    if not layout_path.exists():
-        print(f"Error: {layout_path} not found", file=sys.stderr)
+    layout_name = Path(layout_file).name
+    layout_path = (layouts_dir / layout_name).resolve()
+    if not (layout_path.is_relative_to(layouts_dir) and layout_path.exists()):
+        print(f"Error: {layout_path} not found or invalid", file=sys.stderr)
         sys.exit(1)
 
     next_num = get_next_slide_number(slides_dir)
     dest = f"slide{next_num}.xml"
-    dest_slide = slides_dir / dest
-    dest_rels = rels_dir / f"{dest}.rels"
+    dest_slide = (slides_dir / dest).resolve()
+    dest_rels = (rels_dir / f"{dest}.rels").resolve()
 
     slide_xml = '''<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <p:sld xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
@@ -88,21 +89,22 @@ def create_slide_from_layout(unpacked_dir: Path, layout_file: str) -> None:
 
 
 def duplicate_slide(unpacked_dir: Path, source: str) -> None:
-    slides_dir = unpacked_dir / "ppt" / "slides"
-    rels_dir = slides_dir / "_rels"
+    slides_dir = (unpacked_dir / "ppt" / "slides").resolve()
+    rels_dir = (slides_dir / "_rels").resolve()
 
-    source_slide = slides_dir / source
+    source_name = Path(source).name
+    source_slide = (slides_dir / source_name).resolve()
 
-    if not source_slide.exists():
-        print(f"Error: {source_slide} not found", file=sys.stderr)
+    if not (source_slide.is_relative_to(slides_dir) and source_slide.exists()):
+        print(f"Error: {source_slide} not found or invalid", file=sys.stderr)
         sys.exit(1)
 
     next_num = get_next_slide_number(slides_dir)
     dest = f"slide{next_num}.xml"
-    dest_slide = slides_dir / dest
+    dest_slide = (slides_dir / dest).resolve()
 
-    source_rels = rels_dir / f"{source}.rels"
-    dest_rels = rels_dir / f"{dest}.rels"
+    source_rels = (rels_dir / f"{source_name}.rels").resolve()
+    dest_rels = (rels_dir / f"{dest}.rels").resolve()
 
     shutil.copy2(source_slide, dest_slide)
 
