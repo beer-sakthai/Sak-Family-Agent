@@ -93,7 +93,7 @@ export type PersonaSlug = string;
 
 const BY_SLUG = new Map(PERSONAS.map((p) => [p.slug, p]));
 
-/** Slugs longest-first, so no shorter slug matching a leading substring of another wins early. */
+/** Slugs longest-first, so no slug that is a prefix of another wins early. */
 const BY_SPECIFICITY = [...PERSONAS].sort((a, b) => b.slug.length - a.slug.length);
 
 export function personaBySlug(slug: string): PersonaDescriptor | undefined {
