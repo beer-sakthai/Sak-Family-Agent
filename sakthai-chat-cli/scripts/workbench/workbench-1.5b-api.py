@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Test the 1.5B merged model on HF Inference API and record results."""
-import os, json, time, sys
+import json
+import os
+import time
 
 TOKEN_PATH = "/opt/data/profiles/sakthai/home/.cache/huggingface/token"
 with open(TOKEN_PATH) as f:
@@ -92,7 +94,7 @@ for i, test in enumerate(tests):
     print(f"TEST {i+1}: {test['name']}")
     print(f"  Description: {test['description']}")
     print(f"  Last prompt: {test['messages'][-1]['content'][:80]}")
-    
+
     try:
         start = time.time()
         response = client.chat_completion(
@@ -101,15 +103,15 @@ for i, test in enumerate(tests):
             temperature=0.1,
         )
         elapsed = time.time() - start
-        
+
         choice = response.choices[0]
         content = choice.message.content or ""
         finish = choice.finish_reason
-        
+
         usage = response.usage
         pt = usage.prompt_tokens if usage else None
         ct = usage.completion_tokens if usage else None
-        
+
         result = {
             "name": test["name"],
             "passed": True,
@@ -120,7 +122,7 @@ for i, test in enumerate(tests):
             "prompt_tokens": pt,
             "completion_tokens": ct
         }
-        
+
         # Quality checks
         checks = []
         if len(content) > 0:
@@ -140,13 +142,13 @@ for i, test in enumerate(tests):
             checks.append("correct_answer")
         if test["name"] == "context_window" and ("2017" in content):
             checks.append("correct_answer")
-        
+
         result["checks"] = checks
         print(f"  ✅ PASS")
         print(f"  Response: {content[:200]}")
         print(f"  Checks: {checks}")
         print(f"  ⏱ {elapsed:.2f}s | 📝 {pt}→{ct} | 🔚 {finish}")
-        
+
     except Exception as e:
         all_passed = False
         result = {
@@ -155,7 +157,7 @@ for i, test in enumerate(tests):
             "error": str(e)
         }
         print(f"  ❌ FAIL: {e}")
-    
+
     results.append(result)
 
 # ---- Summary ----

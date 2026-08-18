@@ -28,6 +28,7 @@ import time
 import urllib.request
 from pathlib import Path
 
+
 def resolve_bin() -> str:
     raw = os.environ.get("SAKTHAI_BIN")
     if not raw:
