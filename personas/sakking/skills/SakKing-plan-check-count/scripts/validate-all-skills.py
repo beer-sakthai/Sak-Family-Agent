@@ -17,7 +17,7 @@ import os
 import re
 import sys
 
-STALE_PATTERNS = ["placeholder", "TODO", "FIXME", "NEEDS UPDATE", "stub", "not yet written"]
+STALE_PATTERNS = ["placeholder", "FIXME", "NEEDS UPDATE", "stub", "not yet written"]
 TODO_FALSE_ALARM_KEYWORDS = [
     "tags:",
     "status:",

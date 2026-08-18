@@ -8,8 +8,6 @@ before relying on them in production. Anything not listed here is still
 reachable via `execute_action` with a raw Graph path.
 """
 
-from __future__ import annotations
-
 from dataclasses import dataclass
 
 

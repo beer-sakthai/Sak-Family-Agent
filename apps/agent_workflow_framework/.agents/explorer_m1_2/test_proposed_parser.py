@@ -1,27 +1,28 @@
 """Unit tests for proposed_parser.py."""
 
-import tempfile
 import unittest
 from pathlib import Path
-
+import tempfile
 try:
     from .proposed_parser import (
-        WorkflowParseError,
         parse_workflow_dict,
-        parse_workflow_file,
-        parse_workflow_json,
         parse_workflow_yaml,
+        parse_workflow_json,
+        parse_workflow_file,
+        WorkflowParseError,
     )
 except ImportError:
     from proposed_parser import (
-        WorkflowParseError,
-        parse_workflow_file,
-        parse_workflow_json,
+        parse_workflow_dict,
         parse_workflow_yaml,
+        parse_workflow_json,
+        parse_workflow_file,
+        WorkflowParseError,
     )
 
 
 class TestWorkflowParser(unittest.TestCase):
+
     def test_valid_yaml_parsing(self):
         yaml_str = """
 name: "Test Workflow"

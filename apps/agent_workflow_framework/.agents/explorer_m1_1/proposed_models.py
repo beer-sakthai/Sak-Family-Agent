@@ -7,12 +7,11 @@ step definitions, workflow definitions, step results, and run history.
 import datetime
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any
+from typing import Dict, Any, List, Optional
 
 
 class StepStatus(str, Enum):
     """Execution status of an individual workflow step."""
-
     PENDING = "PENDING"
     RUNNING = "RUNNING"
     COMPLETED = "COMPLETED"
@@ -30,7 +29,6 @@ class StepStatus(str, Enum):
 
 class RunStatus(str, Enum):
     """Overall status of a workflow run."""
-
     PENDING = "PENDING"
     RUNNING = "RUNNING"
     COMPLETED = "COMPLETED"
@@ -44,17 +42,16 @@ class RunStatus(str, Enum):
 @dataclass
 class StepDefinition:
     """Definition of a single workflow step."""
-
     id: str
     action: str  # e.g., "echo", "python", "shell"
-    params: dict[str, Any] = field(default_factory=dict)
-    depends_on: list[str] = field(default_factory=list)
+    params: Dict[str, Any] = field(default_factory=dict)
+    depends_on: List[str] = field(default_factory=list)
     retry: int = 0
     retry_delay: float = 0.0
 
-    def validate_schema(self) -> list[str]:
+    def validate_schema(self) -> List[str]:
         """Validate step definition fields. Returns list of error messages."""
-        errors: list[str] = []
+        errors: List[str] = []
         if not self.id or not isinstance(self.id, str):
             errors.append("Step ID must be a non-empty string.")
         if not self.action or not isinstance(self.action, str):
@@ -69,7 +66,7 @@ class StepDefinition:
             errors.append(f"Step '{self.id}' retry_delay must be a non-negative number.")
         return errors
 
-    def to_dict(self) -> dict[str, Any]:
+    def to_dict(self) -> Dict[str, Any]:
         """Convert step definition to a dictionary."""
         return {
             "id": self.id,
@@ -81,7 +78,7 @@ class StepDefinition:
         }
 
     @classmethod
-    def from_dict(cls, d: dict[str, Any]) -> "StepDefinition":
+    def from_dict(cls, d: Dict[str, Any]) -> "StepDefinition":
         """Construct StepDefinition from dictionary."""
         return cls(
             id=d["id"],
@@ -96,12 +93,11 @@ class StepDefinition:
 @dataclass
 class WorkflowDefinition:
     """Definition of a multi-step workflow."""
-
     name: str
-    description: str | None = None
-    steps: list[StepDefinition] = field(default_factory=list)
+    description: Optional[str] = None
+    steps: List[StepDefinition] = field(default_factory=list)
 
-    def get_step(self, step_id: str) -> StepDefinition | None:
+    def get_step(self, step_id: str) -> Optional[StepDefinition]:
         """Look up a step by its ID."""
         for step in self.steps:
             if step.id == step_id:
@@ -109,13 +105,13 @@ class WorkflowDefinition:
         return None
 
     @property
-    def step_ids(self) -> list[str]:
+    def step_ids(self) -> List[str]:
         """Return list of all step IDs in the workflow."""
         return [step.id for step in self.steps]
 
-    def validate_schema(self) -> list[str]:
+    def validate_schema(self) -> List[str]:
         """Validate workflow definition basic schema. Returns list of error messages."""
-        errors: list[str] = []
+        errors: List[str] = []
         if not self.name or not isinstance(self.name, str):
             errors.append("Workflow name must be a non-empty string.")
         if not isinstance(self.steps, list) or len(self.steps) == 0:
@@ -134,7 +130,7 @@ class WorkflowDefinition:
 
         return errors
 
-    def to_dict(self) -> dict[str, Any]:
+    def to_dict(self) -> Dict[str, Any]:
         """Convert workflow definition to a dictionary."""
         return {
             "name": self.name,
@@ -143,10 +139,13 @@ class WorkflowDefinition:
         }
 
     @classmethod
-    def from_dict(cls, d: dict[str, Any]) -> "WorkflowDefinition":
+    def from_dict(cls, d: Dict[str, Any]) -> "WorkflowDefinition":
         """Construct WorkflowDefinition from dictionary."""
         raw_steps = d.get("steps", [])
-        steps = [StepDefinition.from_dict(s) if isinstance(s, dict) else s for s in raw_steps]
+        steps = [
+            StepDefinition.from_dict(s) if isinstance(s, dict) else s
+            for s in raw_steps
+        ]
         return cls(
             name=d["name"],
             description=d.get("description"),
@@ -157,17 +156,16 @@ class WorkflowDefinition:
 @dataclass
 class StepResult:
     """Execution result of an individual step."""
-
     step_id: str
     status: StepStatus
-    output: dict[str, Any] = field(default_factory=dict)
-    error: str | None = None
+    output: Dict[str, Any] = field(default_factory=dict)
+    error: Optional[str] = None
     attempts: int = 1
-    start_time: str | None = None
-    end_time: str | None = None
+    start_time: Optional[str] = None
+    end_time: Optional[str] = None
 
     @property
-    def duration_seconds(self) -> float | None:
+    def duration_seconds(self) -> Optional[float]:
         """Calculate step execution duration in seconds if start and end timestamps exist."""
         if not self.start_time or not self.end_time:
             return None
@@ -178,13 +176,11 @@ class StepResult:
         except (ValueError, TypeError):
             return None
 
-    def to_dict(self) -> dict[str, Any]:
+    def to_dict(self) -> Dict[str, Any]:
         """Convert StepResult to dictionary suitable for JSON serialization."""
         return {
             "step_id": self.step_id,
-            "status": self.status.value
-            if isinstance(self.status, StepStatus)
-            else str(self.status),
+            "status": self.status.value if isinstance(self.status, StepStatus) else str(self.status),
             "output": self.output,
             "error": self.error,
             "attempts": self.attempts,
@@ -193,7 +189,7 @@ class StepResult:
         }
 
     @classmethod
-    def from_dict(cls, d: dict[str, Any]) -> "StepResult":
+    def from_dict(cls, d: Dict[str, Any]) -> "StepResult":
         """Construct StepResult from dictionary."""
         status_val = d["status"]
         status = StepStatus(status_val) if isinstance(status_val, str) else status_val
@@ -211,24 +207,23 @@ class StepResult:
 @dataclass
 class RunHistory:
     """Complete history of a workflow execution run."""
-
     run_id: str
     workflow_name: str
     status: RunStatus
     start_time: str
-    end_time: str | None = None
-    step_results: dict[str, StepResult] = field(default_factory=dict)
+    end_time: Optional[str] = None
+    step_results: Dict[str, StepResult] = field(default_factory=dict)
 
     def add_step_result(self, result: StepResult) -> None:
         """Record or update a step result."""
         self.step_results[result.step_id] = result
 
-    def get_step_result(self, step_id: str) -> StepResult | None:
+    def get_step_result(self, step_id: str) -> Optional[StepResult]:
         """Retrieve step result by step ID."""
         return self.step_results.get(step_id)
 
     @property
-    def duration_seconds(self) -> float | None:
+    def duration_seconds(self) -> Optional[float]:
         """Calculate total workflow run duration in seconds if start and end timestamps exist."""
         if not self.start_time or not self.end_time:
             return None
@@ -239,7 +234,7 @@ class RunHistory:
         except (ValueError, TypeError):
             return None
 
-    def to_dict(self) -> dict[str, Any]:
+    def to_dict(self) -> Dict[str, Any]:
         """Convert RunHistory to dictionary suitable for JSON serialization."""
         return {
             "run_id": self.run_id,
@@ -248,18 +243,20 @@ class RunHistory:
             "start_time": self.start_time,
             "end_time": self.end_time,
             "step_results": {
-                k: v.to_dict() if hasattr(v, "to_dict") else v for k, v in self.step_results.items()
+                k: v.to_dict() if hasattr(v, "to_dict") else v
+                for k, v in self.step_results.items()
             },
         }
 
     @classmethod
-    def from_dict(cls, d: dict[str, Any]) -> "RunHistory":
+    def from_dict(cls, d: Dict[str, Any]) -> "RunHistory":
         """Construct RunHistory from dictionary."""
         status_val = d["status"]
         status = RunStatus(status_val) if isinstance(status_val, str) else status_val
         raw_results = d.get("step_results", {})
         step_results = {
-            k: StepResult.from_dict(v) if isinstance(v, dict) else v for k, v in raw_results.items()
+            k: StepResult.from_dict(v) if isinstance(v, dict) else v
+            for k, v in raw_results.items()
         }
         return cls(
             run_id=d["run_id"],
