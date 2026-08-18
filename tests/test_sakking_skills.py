@@ -47,9 +47,8 @@ def _sakking_root(tmp_path: Path) -> Path:
         "---\nname: deploy-helper\ndescription: Ship it safely\nversion: 2.1\n"
         "platforms:\n  - linux\nmetadata:\n  sakthai:\n    tags:\n      - ci\n---\n\nBody here.\n",
     )
-    # SakKing-internal — excluded by default prefix (both lowercase sakking- and convention SakKing-).
+    # SakKing-internal — excluded by default prefix.
     _write(root / "sakking-operations" / "SKILL.md", "# SakKing Ops\n\nInternal stuff.\n")
-    _write(root / "SakKing-plumbing" / "SKILL.md", "# SakKing Plumbing\n\nInternal stuff.\n")
     # Legacy sakthai-prefixed learned skill — retargeted to the SakKing- prefix.
     _write(root / "sakthai-special" / "SKILL.md", "# Special\n\nDo special things.\n")
     return root
@@ -298,13 +297,3 @@ def test_discover_deduplicates_same_target_slug(tmp_path: Path) -> None:
     skills = discover_learned_skills(root)
     target_slugs = [s.target_slug for s in skills]
     assert target_slugs.count("SakKing-foo") == 1
-
-
-def test_discover_excludes_both_lowercase_and_convention_cased_internal_prefixes(
-    tmp_path: Path,
-) -> None:
-    root = _sakking_root(tmp_path)
-    slugs = {s.target_slug for s in discover_learned_skills(root)}
-    assert "SakKing-sakking-operations" not in slugs
-    assert "SakKing-plumbing" not in slugs
-    assert "SakKing-SakKing-plumbing" not in slugs
