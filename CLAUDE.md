@@ -27,6 +27,7 @@ personas, deployment config, training assets, or docs.
 ```
 personas/          the six agents + the shared package (see below)
 tests/             the one pytest suite (imports `sakthai`, 119 test files, 3,668 tests)
+tests/             the one pytest suite (imports `sakthai`, 113 test files)
 library/           31 curated skills across 11 categories (a live skill root)
 docs/              architecture, security, plans/specs under docs/superpowers/
 scripts/           dev + maintenance scripts (compose_persona, export_agent_repo, …)
@@ -210,6 +211,7 @@ Other `make` targets: `compose-personas` (rebuild full skill trees into
 beside them. Edit the `.md`, never the `.lock.yml` — the latter is ~100KB of
 generated YAML and a hand-edit is overwritten on the next compile. The ones that
 gate a change:
+Twenty workflows live in `.github/workflows/`. The ones that gate a change:
 
 | Workflow | Trigger | What it does |
 |---|---|---|
@@ -224,11 +226,7 @@ gate a change:
 | `agent-self-evolution.yml` | push/PR touching `personas/sakthai/agent-self-evolution/**` | that subproject's own suite |
 | `labeler.yml` | `pull_request_target` | PR labelling |
 | `scorecard.yml` | push to `main`, weekly | OpenSSF Scorecard → SARIF to code scanning |
-| `codeql.yml` | push/PR to `main`, weekly | CodeQL **advanced** setup over `actions`, `javascript-typescript`, `python`; scope from `.github/codeql/codeql-config.yml` via `config-file:` |
-| `bandit.yml` | push/PR to `main`, weekly | bandit with `-c pyproject.toml` over first-party Python → SARIF to code scanning. Publishes, does not gate — `ci.yml` is the gate |
-| `eslint.yml` | push/PR touching `apps/sak_agent_dashboard/**`, weekly | `eslint src` with the app's own flat config → SARIF (`category: eslint-dashboard`). Publishes, does not gate — `subprojects.yml` is the gate |
 | `self-healing-ci.yml` | `workflow_run` completion of `CI` on `main` (failure only), or manual | runs `sakthai heal run` over the failed job's log and opens a `selfheal/` fix PR when the patch is safe and locally verified. Gates nothing — it only ever adds a PR |
-| `auto-merge.yml` | `pull_request_target` labeled/unlabeled/ready_for_review | turns GitHub's **native** auto-merge on for a PR carrying the `automerge` label (squash), off when the label is removed. Gates nothing and waives nothing — GitHub still holds the merge until branch protection is satisfied, including the non-author approval. Uses no checkout, so the `pull_request_target` token never meets PR code |
 
 Scheduled / manual only, so they never block a PR: `continuous-security.yml`
 (nightly), `verify-assets.yml` (daily HF asset check, driven by the in-package
@@ -264,20 +262,20 @@ reason and now applies, excluding the vendored trees that produced 545 of the
 **No smoke-test job is wired into any workflow**, despite
 `.claude/skills/run-sakthai-agent-v2/driver.py` existing — treat that as
 available tooling, not an enforced gate.
+CodeQL runs via GitHub's *default setup* (repo settings), so there is
+deliberately no `codeql.yml` — adding one would conflict. Automated remediation
+bots have now added it **twice**; both times every job failed with `CodeQL
+analyses from advanced configurations cannot be processed when the default setup
+is enabled`. If a StepSecurity-style PR reintroduces the file, drop it before
+merging — see `docs/code-scanning-sweep-2026-08-12.md`. **No smoke-test job is
+wired into any workflow**, despite `.claude/skills/run-sakthai-agent-v2/driver.py`
+existing — treat that as available tooling, not an enforced gate.
 
 Workflow files are expected to be real, loadable workflows: a `.yml`/`.yaml`
 extension (GitHub silently ignores anything else, including a name like
 `foo. yml` with a space), a top-level `on:` and `jobs:`, no duplicate keys, and
 a top-level `permissions:` block. A batch of pasted starter templates that met
-none of this was removed on 2026-08-13, and three more (`bandit.yml`,
-`codeql.yml`, `eslint.yml`) arrived on 2026-08-18.
-
-**`tests/test_workflow_hygiene.py` now enforces all of it in CI**, plus SHA
-pinning on every `uses:`, the `self-healing-ci.yml` fork guard, `codeql.yml`'s
-`config-file:` reference, and `.bandit` being parseable configuration. It exists
-because a bot commit reverted a merged critical security fix — 446 deletions
-under a message about something else — and nothing failed. If you are adding a
-workflow, run it: `uv run pytest tests/test_workflow_hygiene.py -q`.
+none of this was removed on 2026-08-13.
 
 Coverage floor is **96%** (`fail_under = 96`, branch coverage on) over the
 `sakthai` package. Nothing is omitted from measurement any more — `omit = []`;
@@ -706,6 +704,13 @@ pattern rather than adding a `scripts/` import path. And `tests/eval/` is not
 pytest at all: it is `eval_config.yaml` plus a dataset for an LLM-judge eval
 (persona consistency, safety, hallucination, tool-use quality) driven from
 outside the suite.
+Tests live in `tests/` (113 test files, ~29,500 lines) and are the suite for the
+`sakthai` package — there is no per-persona test tree. All tests are hermetic:
+no network, no GCP credentials. Integration tests that may hit real endpoints
+(Ollama, Anthropic) are marked `@pytest.mark.integration` and self-skip when
+credentials/endpoints are absent; `ci.yml` also excludes them by marker with
+`-m "not integration"`, so a test that forgets its `skipif` guard still cannot
+make CI network-dependent.
 
 Three suites live **outside** `tests/` and are not covered by `testpaths`:
 `apps/agent_workflow_framework/tests/` (7 files, ~150 tests, no `pyproject.toml`

@@ -56,32 +56,6 @@ def _parse_team_roster(soul_path: Path | None = None) -> list[dict[str, str]]:
         return []
 
 
-def _parse_fact_json_batch(facts: list[Any]) -> list[Any]:
-    """Batch-parse a list of facts whose .value contains a JSON string.
-
-    Uses a single json.loads call over a constructed JSON array string for speed,
-    falling back to element-by-element parsing if array decoding fails.
-    """
-    if not facts:
-        return []
-
-    try:
-        raw_array = "[" + ",".join(f.value for f in facts) + "]"
-        parsed = json.loads(raw_array)
-        if isinstance(parsed, list) and len(parsed) == len(facts):
-            return parsed
-    except (TypeError, ValueError):
-        pass
-
-    results = []
-    for f in facts:
-        try:
-            results.append(json.loads(f.value))
-        except (TypeError, ValueError):
-            results.append(None)
-    return results
-
-
 def collect_dashboard_data(days: int = 30, store: MemoryStore | None = None) -> dict[str, Any]:
     """Collect KPI and timeline metrics for both SakKing OS and ServiceQuoteBot.
 
@@ -165,13 +139,13 @@ def _collect(store: MemoryStore, days: int) -> dict[str, Any]:
 
     # Parse lead facts
     leads_list = []
-    parsed_leads = _parse_fact_json_batch(lead_facts)
-    for lf, payload in zip(lead_facts, parsed_leads, strict=False):
-        if not isinstance(payload, dict):
-            if payload is None:
-                payload = {"query": lf.value}
-            else:
+    for lf in lead_facts:
+        try:
+            payload = json.loads(lf.value)
+            if not isinstance(payload, dict):
                 payload = {"query": str(payload)}
+        except (TypeError, ValueError):
+            payload = {"query": lf.value}
         payload["id"] = lf.id
         payload["date"] = datetime.fromtimestamp(lf.created_at, UTC).strftime("%Y-%m-%d")
         leads_list.append(payload)
@@ -181,9 +155,10 @@ def _collect(store: MemoryStore, days: int) -> dict[str, Any]:
     total_revenue = 0.0
     mrr = 0.0
 
-    parsed_revenue = _parse_fact_json_batch(revenue_facts)
-    for rf, payload in zip(revenue_facts, parsed_revenue, strict=False):
-        if not isinstance(payload, dict):
+    for rf in revenue_facts:
+        try:
+            payload = json.loads(rf.value)
+        except (TypeError, ValueError):
             # Fallback if key/value are not JSON
             payload = {
                 "client": rf.key or "Unknown",
