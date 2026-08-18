@@ -1,0 +1,70 @@
+# CodeQL scope for this repository.
+#
+# HOW THIS FILE REACHES CodeQL
+#
+# `.github/workflows/codeql.yml` passes it to `github/codeql-action/init` as
+# `config-file:`. That is the only wiring; there is nothing to configure in the
+# repository settings.
+#
+# The history matters, because this file spent its first day doing nothing.
+# CodeQL used to run here through GitHub's *default setup* (a repository
+# setting), and default setup does not read a config file by path — it reads one
+# only when an administrator sets the custom repository property
+# `codeql-config-file`. This file was written for that world and was inert.
+#
+# Default setup is now off and an advanced workflow analyses `actions`,
+# `javascript-typescript` and `python` on every push and PR to `main`
+# (measured: three green `Analyze` jobs on `main` at 3671a71, and no
+# default-setup run in the last 100 workflow runs — an advanced analysis cannot
+# upload at all while default setup is enabled, so a green upload is the proof).
+# `config-file:` is read directly by an advanced setup, so the scope below is
+# live.
+#
+# Why scope at all, measured rather than assumed: the 2026-08-18 read of the
+# dashboard found 788 open CodeQL alerts (up from 0 on 2026-08-13 — the jump is
+# the switch to advanced setup, which analyses the whole tree). 545 of them are
+# in trees this repository does not own the code of — vendored skill scripts,
+# the folded-in copy of a separate repository, and the test suite. The remaining
+# ~243 are in first-party code and are a real backlog to review. Excluding the
+# first group is what makes the second group visible; it does not close a single
+# finding in code this repository ships.
+#
+# `paths-ignore` is honoured for interpreted languages (Python, JavaScript),
+# which is all this repository analyses.
+name: "Sak-Family-Agent CodeQL scope"
+
+paths-ignore:
+  # Vendored skill content. One directory per skill under each persona's
+  # `skills/` overlay — reference scripts shipped with a skill, not code this
+  # repository authors or patches. ~235 alerts, the same handful of upstream
+  # scripts re-reported once per persona that carries a copy.
+  - personas/sakthai/skills
+  - personas/sakking/skills
+  - personas/saksee/skills
+  - personas/saksit/skills
+  - personas/sakjules/skills
+  - personas/saktan/skills
+  - personas/shared/skills
+
+  # Curated third-party skill library (31 skills across 11 categories),
+  # pre-dating the Sak- naming convention. Already excluded from ruff.
+  - library
+
+  # A self-contained folded-in copy of the standalone sakthai-chat-cli repo
+  # (migrated 2026-08-01). It has its own lineage and its own CLAUDE.md, and it
+  # is deliberately not merged with the canonical package — so every alert here
+  # is a second copy of one already reported against `personas/sakthai/sakthai`
+  # or `tests/`. ~236 alerts.
+  - sakthai-chat-cli
+
+  # The test suite. Its "path injection" is `tmp_path` fixtures and its
+  # "command line injection" is the subprocess calls the tests exist to drive;
+  # a finding here is not a vulnerability in anything that ships. ~74 alerts.
+  - tests
+  - "**/tests"
+
+  # Build output and dependency trees.
+  - "**/node_modules"
+  - "**/dist"
+  - "**/build"
+  - "**/.venv"
