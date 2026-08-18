@@ -29,6 +29,9 @@ import {
   Trophy,
   Network,
   Send,
+  Swords,
+  BrainCircuit,
+  Radio,
 } from "lucide-react";
 import DemoModeToggle from "@/components/DemoModeToggle";
 import AgentOverview from "@/components/AgentOverview";
@@ -49,8 +52,13 @@ import GoogleAdkPanel from "@/components/GoogleAdkPanel";
 import GcpLearningPanel from "@/components/GcpLearningPanel";
 import M365CopilotPanel from "@/components/M365CopilotPanel";
 import AgentGatewayPanel from "@/components/AgentGatewayPanel";
+import GatewayRouterPanel from "@/components/GatewayRouterPanel";
 import AutoCyclePanel from "@/components/AutoCyclePanel";
 import DesignSpecsPanel from "@/components/DesignSpecsPanel";
+import { ChatStudioPanel } from "@/components/ChatStudioPanel";
+import { FinetuningPanel } from "@/components/FinetuningPanel";
+import { GoogleAdkBridgePanel } from "@/components/GoogleAdkBridgePanel";
+import { TelegramVoiceBridgePanel } from "@/components/TelegramVoiceBridgePanel";
 import { LiveTelemetryFeed } from "@/components/LiveTelemetryFeed";
 import { WorkflowFrameworkPanel } from "@/components/WorkflowFrameworkPanel";
 import { ProviderMatrixPanel } from "@/components/ProviderMatrixPanel";
@@ -111,6 +119,10 @@ export default function Home() {
   const [isDemo, setIsDemo] = useState(false);
   const [activeTab, setActiveTab] = useState<
     | "overview"
+    | "arena"
+    | "finetune"
+    | "adk_bridge"
+    | "telegram_hub"
     | "analytics"
     | "sessions"
     | "memory"
@@ -414,6 +426,66 @@ export default function Home() {
         >
           <Cpu className="h-4 w-4 text-cyan-400" />
           Agent Overview ({agents.length})
+        </button>
+
+        <button
+          onClick={() => setActiveTab("arena")}
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold transition-all ${
+            activeTab === "arena"
+              ? "bg-gradient-to-r from-blue-600/30 via-indigo-600/30 to-purple-600/30 text-blue-300 border border-blue-500/50 shadow-lg shadow-blue-950/50 ring-1 ring-blue-500/30"
+              : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
+          }`}
+        >
+          <Swords className="h-4 w-4 text-blue-400" />
+          Chat Arena
+          <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-blue-950 text-blue-300 border border-blue-800/50">
+            Supervisor
+          </span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab("finetune")}
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold transition-all ${
+            activeTab === "finetune"
+              ? "bg-gradient-to-r from-purple-600/30 via-indigo-600/30 to-violet-600/30 text-purple-300 border border-purple-500/50 shadow-lg shadow-purple-950/50 ring-1 ring-purple-500/30"
+              : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
+          }`}
+        >
+          <BrainCircuit className="h-4 w-4 text-purple-400" />
+          LoRA Studio
+          <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-purple-950 text-purple-300 border border-purple-800/50">
+            PEFT
+          </span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab("adk_bridge")}
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold transition-all ${
+            activeTab === "adk_bridge"
+              ? "bg-gradient-to-r from-emerald-600/30 via-teal-600/30 to-blue-600/30 text-emerald-300 border border-emerald-500/50 shadow-lg shadow-emerald-950/50 ring-1 ring-emerald-500/30"
+              : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
+          }`}
+        >
+          <Send className="h-4 w-4 text-emerald-400" />
+          ADK Bridge
+          <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800/50">
+            Cloud Run
+          </span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab("telegram_hub")}
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold transition-all ${
+            activeTab === "telegram_hub"
+              ? "bg-gradient-to-r from-teal-600/30 via-cyan-600/30 to-blue-600/30 text-teal-300 border border-teal-500/50 shadow-lg shadow-teal-950/50 ring-1 ring-teal-500/30"
+              : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
+          }`}
+        >
+          <Radio className="h-4 w-4 text-teal-400" />
+          Telegram Hub
+          <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-teal-950 text-teal-300 border border-teal-800/50">
+            Voice &amp; Alert
+          </span>
         </button>
 
         <button
@@ -802,6 +874,14 @@ export default function Home() {
           </div>
         )}
 
+        {activeTab === "arena" && <ChatStudioPanel />}
+
+        {activeTab === "finetune" && <FinetuningPanel />}
+
+        {activeTab === "adk_bridge" && <GoogleAdkBridgePanel />}
+
+        {activeTab === "telegram_hub" && <TelegramVoiceBridgePanel />}
+
         {activeTab === "workflows" && <WorkflowFrameworkPanel />}
 
         {activeTab === "providers" && <ProviderMatrixPanel />}
@@ -870,7 +950,12 @@ export default function Home() {
 
         {activeTab === "specs" && <DesignSpecsPanel data={designSpecs} />}
 
-        {activeTab === "gateway" && <AgentGatewayPanel data={gateway} />}
+        {activeTab === "gateway" && (
+          <div className="space-y-8">
+            <GatewayRouterPanel />
+            <AgentGatewayPanel data={gateway} />
+          </div>
+        )}
 
         {activeTab === "otel" && <OtelPanel data={otel} />}
 

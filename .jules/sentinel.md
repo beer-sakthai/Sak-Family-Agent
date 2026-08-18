@@ -1,5 +1,15 @@
 # Sentinel Security Journal
 
+## 2026-09-08 - ASCII Control Character Path Injection in File Path Validators
+**Vulnerability:** File path validation helpers (`_validate_filepath` in `executor.py` and `_resolve_and_validate_path` in `tools.py`) checked for path traversal (`..`), system roots, and sensitive files, but omitted checks for ASCII control characters (`ord(c) < 32` or `127`, e.g. `\n`, `\r`, `\t`, `\x00`). Paths containing control characters could cause log injection, terminal escape sequence injection, or unexpected filesystem manipulation.
+**Learning:** URL parameters, HTTP headers, and API endpoint paths enforce control character validation, but file path resolution routines can be overlooked. File path parameters must also be validated at the entry boundary before attempting path splitting or resolution.
+**Prevention:** Enforce `if any(ord(c) < 32 or ord(c) == 127 for c in path_str): raise ValueError("Control characters are not allowed in file paths")` at the start of all file path validation functions.
+
+## 2026-09-07 - Command Execution Bypass via Heredoc and Herestring Interpreter Redirection
+**Vulnerability:** Shell command validation in the Workflow Executor (`_validate_shell_command`) extracted subcommands and checked process substitution and pipeline operators, but allowed shell and language interpreters (`sh`, `bash`, `python3`, `node`) to execute inline code via heredoc (`<<`) or herestring (`<<<`) redirections (e.g., `python3 <<'EOF' ... EOF` or `sh <<<'echo hello'`).
+**Learning:** Checking for pipeline execution and process substitution is insufficient if input redirections (`<<` and `<<<`) are permitted when invoking interpreter runtimes. Heredocs and herestrings provide direct code execution channels into interpreters without creating piped processes or substitution blocks.
+**Prevention:** Detect heredoc (`<<`) and herestring (`<<<`) redirection operators when inspecting subcommands. If the outer command is an interpreter or shell runtime, raise a `PermissionError` to block execution bypasses.
+
 ## 2026-09-06 - Un-synchronized CLI Guardrail Copy Syntax Errors and Security Drift
 **Vulnerability:** `sakthai-chat-cli/sakthai/agent/guardrails.py` had un-synchronized syntax changes leaving duplicate, dangling `if` statements in `_check_container_tokens` that caused an `IndentationError` when parsed. In addition, `sakthai-chat-cli`'s guardrails were not included in `tests/test_persona_guardrails_parity.py`, allowing guardrail logic and syntax errors to silently drift outside the persona parity sweeps.
 **Learning:** Monorepos containing separate package trees or standalone CLI distributions (such as `sakthai-chat-cli`) that duplicate security guardrails must be included in automated byte-parity tests alongside persona packages. Otherwise, security fixes and refactoring can cause syntax errors or security policy gaps in unmonitored copies.

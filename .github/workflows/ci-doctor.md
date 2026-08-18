@@ -6,7 +6,7 @@ description: |
 
 on:
   workflow_run:
-    workflows: ["CI", "Continuous Security", "Pylint", "CodeQL"]
+    workflows: ["CI", "Continuous Security", "Pylint"]
     types:
       - completed
     branches:
