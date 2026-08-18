@@ -36,9 +36,10 @@ verification_suites: ["dashboard", "python"]   # which verification blocks to ru
 | `verification_suites` | `["dashboard", "python"]` | Selects which blocks to run in the Verification Commands section. Set `["python"]` for a Python-only project, `["dashboard"]` for dashboard-only. |
 
 **Parsing (`jq` is not installed in this repo):** extract a field from the
-frontmatter with `grep`/`sed`, e.g.
-`grep '^auto_push:' .claude/ci-cd-doctor.local.md | sed 's/auto_push: *//'`.
-Treat a missing file or any parse error as "use defaults."
+frontmatter with `grep`/`sed`, stripping any inline `# comment` and surrounding
+whitespace/quotes (the example frontmatter above carries inline comments), e.g.
+`grep '^auto_push:' .claude/ci-cd-doctor.local.md | sed 's/^[^:]*: *//; s/#.*//; s/[[:space:]]*$//; s/^"//; s/"$//'`
+→ `false`. Treat a missing file or any parse error as "use defaults."
 
 ## Core Operational Workflow
 
@@ -84,11 +85,14 @@ flowchart TD
 ### 2. CodeQL Path Traversal / Uncontrolled Input
 - **Symptom:** `CodeQL / Uncontrolled data used in path expression (CWE-22 / CWE-73)`
 - **Root Cause:** Using `process.env.HOME` or request parameters directly in `path.join()`.
-- **Fix:** Anchor paths strictly with `path.resolve` and verify prefix containment:
+- **Fix:** Anchor paths strictly with `path.resolve` and verify prefix containment
+  with a **path-boundary** check. A bare `startsWith` is a substring test, not a
+  path check — it is fooled by a sibling directory like `/home/user-evil` when
+  `baseHome` is `/home/user`, so it must not be used on attacker-controlled input:
   ```ts
   const baseHome = path.resolve(os.homedir());
   const targetDir = path.resolve(baseHome, '.app', 'data');
-  if (!targetDir.startsWith(baseHome)) {
+  if (targetDir !== baseHome && !targetDir.startsWith(baseHome + path.sep)) {
     throw new Error('Path traversal detected');
   }
   ```
@@ -116,17 +120,21 @@ flowchart TD
 
 ## 🧪 Verification Commands
 
-Before pushing any CI fix, execute the full local validation pipeline — run only the blocks whose names appear in `verification_suites` (see Configuration; default is both). `dashboard` runs the `# Web Dashboard` block; `python` runs the `# Python Core` block:
+Before pushing any CI fix, execute the full local validation pipeline — run only the blocks whose names appear in `verification_suites` (see Configuration; default is both). `dashboard` runs the `# Web Dashboard` block; `python` runs the `# Python Core` block. These mirror `.github/workflows/ci.yml` and `subprojects.yml` so a local "green" tracks CI — running a subset can produce a false green:
 ```bash
-# Web Dashboard
+# Web Dashboard  (mirrors subprojects.yml: lint → typecheck → test → build)
 cd apps/sak_agent_dashboard
-pnpm run lint
-pnpm tsc --noEmit
+pnpm install --frozen-lockfile   # once, on a fresh checkout
+pnpm lint
+pnpm typecheck
 pnpm test
-pnpm run build
+pnpm build
 
-# Python Core
+# Python Core  (mirrors ci.yml: ruff → mypy/bandit → pytest)
 cd ../..
-uv run ruff check .
-uv run pytest tests/
+uv run ruff check personas/sakthai/sakthai tests
+uv run ruff format --check personas/sakthai/sakthai tests
+uv run mypy personas/sakthai/sakthai
+uv run bandit -c pyproject.toml -r personas/sakthai/sakthai
+uv run pytest tests/ -m "not integration" -q
 ```
