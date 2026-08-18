@@ -26,11 +26,13 @@ export async function GET(request: Request) {
       success: true,
       sessions: result.sessions,
       total: result.total,
+      dataSource: result.dataSource,
       ...(result.detail ? { detail: result.detail } : {}),
     });
   } catch (error: any) {
+    console.error("Secure Log [GET /api/sessions]: Failed to fetch sessions data:", error);
     return NextResponse.json(
-      { success: false, error: error?.message || "Failed to fetch sessions data" },
+      { success: false, error: "An unexpected error occurred while fetching sessions data." },
       { status: 500 }
     );
   }

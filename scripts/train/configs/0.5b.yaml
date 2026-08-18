@@ -1,0 +1,9 @@
+base_model: Qwen/Qwen2.5-0.5B-Instruct
+output_repo: Nanthasit/sakthai-context-0.5b-tools-r2
+lora_r: 16
+lora_alpha: 32
+seq_len: 2048
+epochs: 3
+lr: 0.0002
+data_path: data/v12.jsonl
+merge: true

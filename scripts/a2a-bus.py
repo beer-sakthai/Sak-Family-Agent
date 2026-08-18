@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Family A2A Bus — agents send/receive messages"""
+import ipaddress
 import json, os, time
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from threading import Lock
@@ -189,11 +190,51 @@ class A2AHandler(BaseHTTPRequestHandler):
     def send_json(self, d):
         self.send_response(200)
         self.send_header('Content-type', 'application/json')
-        self.send_header('Access-Control-Allow-Origin', '*')
         self.end_headers()
         self.wfile.write(json.dumps(d).encode())
 
+
+_LOOPBACK_NAMES = frozenset({'localhost'})
+
+
+def _is_loopback_host(host):
+    """True if ``host`` is loopback-only (safe to bind without authentication).
+
+    Fails closed, matching sakthai/web/server.py. In particular the empty
+    string must NOT count as loopback: socket.bind(('', port)) is INADDR_ANY,
+    i.e. every interface, so treating it as safe would let an unset/blank
+    SAKTHAI_A2A_HOST silently reopen the public bind this guard exists to
+    prevent. Anything that is not localhost or a loopback literal may resolve
+    anywhere and is rejected.
+    """
+    if host in _LOOPBACK_NAMES:
+        return True
+    try:
+        return ipaddress.ip_address(host).is_loopback
+    except ValueError:
+        return False
+
+
 if __name__ == '__main__':
-    port = 3005
-    print(f'Family A2A Bus on port {port}')
-    HTTPServer(('0.0.0.0', port), A2AHandler).serve_forever()
+    # This bus is unauthenticated: anyone who can reach it may read every
+    # agent's messages via /inbox and queue work the fleet will pick up via
+    # /task/create. Binding it to 0.0.0.0 therefore exposed an unauthenticated
+    # task-injection channel into the agent fleet to the whole network.
+    #
+    # Default to loopback and require an explicit opt-in for anything wider,
+    # matching sakthai/web/server.py's SAKTHAI_WEB_ALLOW_PUBLIC convention. The
+    # only in-repo consumer (scripts/family-status.sh) already talks to
+    # localhost, and the personas all run on the same host under systemd.
+    # A blank value is treated as unset and falls back to the safe default,
+    # rather than reaching the bind as '' (which is INADDR_ANY, every
+    # interface) or crashing int('').
+    host = os.environ.get('SAKTHAI_A2A_HOST', '').strip() or '127.0.0.1'
+    port = int(os.environ.get('SAKTHAI_A2A_PORT', '').strip() or '3005')
+    if not _is_loopback_host(host) and not os.environ.get('SAKTHAI_A2A_ALLOW_PUBLIC'):
+        raise SystemExit(
+            f"Refusing to bind the A2A bus to non-loopback host {host!r}. "
+            "It is unauthenticated and accepts fleet tasks; set "
+            "SAKTHAI_A2A_ALLOW_PUBLIC=1 to override deliberately."
+        )
+    print(f'Family A2A Bus on {host}:{port}')
+    HTTPServer((host, port), A2AHandler).serve_forever()

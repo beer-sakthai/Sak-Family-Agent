@@ -140,13 +140,13 @@ class RunHistoryStore:
         """Sanitize run_id to prevent path traversal attacks."""
         if not run_id or not isinstance(run_id, str):
             raise ValueError("run_id must be a non-empty string.")
-        
+
         clean_id = run_id[:-5] if run_id.endswith(".json") else run_id
         clean_id = Path(clean_id).name
-        
+
         if not re.match(r"^[a-zA-Z0-9_.-]+$", clean_id):
             raise ValueError(f"Invalid characters in run_id: '{run_id}'")
-        
+
         return clean_id
 
     def get_run_path(self, run_id: str) -> Path:
@@ -158,7 +158,7 @@ class RunHistoryStore:
         """Save RunHistory object to structured JSON file atomically and thread-safely."""
         if not isinstance(history, RunHistory):
             raise TypeError(f"Expected RunHistory instance, got {type(history).__name__}")
-        
+
         if not history.run_id:
             raise ValueError("RunHistory must have a valid run_id.")
 
@@ -226,7 +226,7 @@ class RunHistoryStore:
                         runs.append(run)
                     except PersistenceError:
                         continue
-            
+
             runs.sort(key=lambda r: r.start_time or "", reverse=True)
             return runs
 

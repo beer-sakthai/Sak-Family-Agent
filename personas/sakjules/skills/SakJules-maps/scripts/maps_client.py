@@ -142,6 +142,8 @@ OSRM_PROFILES = {
     "cycling": "bike",
 }
 
+REDACTED = "[REDACTED]"
+
 SENSITIVE_OUTPUT_KEYS = {
     "address",
     "display_name",
@@ -149,6 +151,14 @@ SENSITIVE_OUTPUT_KEYS = {
     "latitude",
     "lon",
     "longitude",
+    "center_lat",
+    "center_lon",
+    "min_lat",
+    "max_lat",
+    "min_lon",
+    "max_lon",
+    "maps_url",
+    "directions_url",
     "house_number",
     "road",
     "neighbourhood",
@@ -171,7 +181,7 @@ def _redact_sensitive_data(value):
     """Return a copy with precise location and address fields removed."""
     if isinstance(value, dict):
         return {
-            key: "[REDACTED]"
+            key: REDACTED
             if isinstance(key, str) and key.lower() in SENSITIVE_OUTPUT_KEYS
             else _redact_sensitive_data(item)
             for key, item in value.items()
@@ -184,6 +194,10 @@ def _redact_sensitive_data(value):
 def print_json(data):
     """Print privacy-redacted data as pretty-printed JSON to stdout."""
     safe_data = _redact_sensitive_data(data)
+    # safe_data has already had every key in SENSITIVE_OUTPUT_KEYS replaced with
+    # "[REDACTED]" above; CodeQL can't model that custom recursive sanitizer, so
+    # it still flags this print as a clear-text log of the pre-redaction input.
+    # codeql[py/clear-text-logging-sensitive-data]
     print(json.dumps(safe_data, indent=2, ensure_ascii=False))
 
 
@@ -599,26 +613,17 @@ def cmd_reverse(args):
     if "error" in data:
         error_exit(f"Reverse geocode failed: {data['error']}")
 
-    address = data.get("address", {})
-
+    # "display_name" and "address" are both in SENSITIVE_OUTPUT_KEYS, so
+    # print_json() replaces each of them (address wholesale, nested fields and
+    # all) with REDACTED before anything reaches stdout. Emit the placeholder
+    # directly instead of unpacking the reverse-geocode response into a dict
+    # that is discarded a moment later: the printed output is identical, and
+    # the caller's precise street address never reaches an output sink at all.
     print_json({
         "lat":          lat,
         "lon":          lon,
-        "display_name": data.get("display_name", ""),
-        "address": {
-            "house_number":  address.get("house_number", ""),
-            "road":          address.get("road", ""),
-            "neighbourhood": address.get("neighbourhood", ""),
-            "suburb":        address.get("suburb", ""),
-            "city":          (address.get("city")
-                              or address.get("town")
-                              or address.get("village", "")),
-            "county":        address.get("county", ""),
-            "state":         address.get("state", ""),
-            "postcode":      address.get("postcode", ""),
-            "country":       address.get("country", ""),
-            "country_code":  address.get("country_code", ""),
-        },
+        "display_name": REDACTED,
+        "address":      REDACTED,
         "osm_type":    data.get("osm_type", ""),
         "osm_id":      data.get("osm_id", ""),
         "data_source": DATA_SOURCE,

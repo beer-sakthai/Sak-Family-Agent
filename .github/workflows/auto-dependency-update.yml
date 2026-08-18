@@ -6,9 +6,11 @@ on:
     # Runs at 08:00 UTC every Monday
     - cron: '0 8 * * 1'
 
+# Least privilege at the top level; the single job below widens only what it
+# needs. Keeping `contents: write` here would hand every step in every future
+# job a repo-write token by default.
 permissions:
-  contents: write
-  pull-requests: write
+  contents: read
 
 concurrency:
   group: ${{ github.workflow }}
@@ -18,9 +20,20 @@ jobs:
   auto-update:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    # No job-level widening: every write (branch push, PR open) goes through
+    # the explicit GH_PAT_FOR_ACTIONS passed to step-security/create-pull-request
+    # below, not the ambient GITHUB_TOKEN — checkout also sets
+    # persist-credentials: false, so this job only ever needs the top-level
+    # contents: read.
     steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@05e31511f85b41b11d1cf0ef85d0992719546e2c # v2.21.0
+        with:
+          use-policy-store: true
+          api-key: ${{ secrets.STEP_SECURITY_API_KEY }}
+
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           # All writes go through the explicit GH_PAT_FOR_ACTIONS token passed
           # to create-pull-request below; don't also persist a credential
@@ -28,12 +41,12 @@ jobs:
           persist-credentials: false
 
       - name: Install uv
-        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        uses: step-security/setup-uv@edab89485182ad96613ff847804c272ab5d1e03f # v10.0.0
         with:
           python-version: '3.12'
 
       - name: Cache uv
-        uses: actions/cache@v4
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/uv
           key: ${{ runner.os }}-uv-${{ hashFiles('**/uv.lock') }}
@@ -86,7 +99,7 @@ jobs:
 
       - name: Create Pull Request
         if: steps.upgrade.outputs.changed == 'true'
-        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8
+        uses: step-security/create-pull-request@50c103da2b9ca12cd5bc013fc6931051a5aa872b # v8.1.1
         with:
           # A PAT is required to trigger the CI workflow.
           # The GITHUB_TOKEN will not trigger other workflows.

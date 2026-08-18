@@ -23,7 +23,7 @@ class TestAdversarialSecurityAudit(unittest.TestCase):
     def test_path_traversal_attack_vector(self):
         """Verify path traversal payloads in run_id are rejected."""
         store = RunHistoryStore()
-        
+
         malicious_ids = [
             "../../etc/passwd",
             "../run_id",
@@ -31,7 +31,7 @@ class TestAdversarialSecurityAudit(unittest.TestCase):
             "/absolute/path/id",
             "run_id\0nullbyte",
         ]
-        
+
         for bad_id in malicious_ids:
             with self.subTest(run_id=bad_id):
                 with self.assertRaises((ValueError, Exception)):
@@ -54,14 +54,14 @@ class TestAdversarialSecurityAudit(unittest.TestCase):
         for i in range(1000):
             depends = [f"step_{i-1}"] if i > 0 else []
             steps.append(StepDefinition(id=f"step_{i}", action="echo", params={"msg": f"hello {i}"}, depends_on=depends))
-        
+
         wf = WorkflowDefinition(name="scale_1000_workflow", steps=steps)
-        
+
         start_time = time.time()
         errors = validate_workflow_dag(wf)
         batches = build_topological_batches(wf)
         elapsed = time.time() - start_time
-        
+
         self.assertEqual(len(errors), 0, "1000-node linear DAG should have zero validation errors")
         self.assertEqual(len(batches), 1000, "1000-node linear DAG should produce 1000 sequential batches")
         self.assertLess(elapsed, 2.0, f"1000-node DAG validation took {elapsed:.3f}s, expected < 2.0s")

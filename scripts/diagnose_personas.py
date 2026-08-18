@@ -85,10 +85,11 @@ def persona_mcp_config_path(persona: str) -> Path:
 def hermes_profile_dir(persona: str) -> Path:
     """Return the repo-tracked Hermes profile scaffold dir for PERSONA.
 
-    SakKing uses the reserved default profile (infra/hermes-agents/default/);
-    the other five each have their own infra/hermes-agents/profiles/<name>/.
+    SakThai (lead, per CLAUDE.md) uses the reserved default profile
+    (infra/hermes-agents/default/); the other five each have their own
+    infra/hermes-agents/profiles/<name>/.
     """
-    if persona == "sakking":
+    if persona == "sakthai":
         return HERMES_AGENTS_DIR / "default"
     return HERMES_AGENTS_DIR / "profiles" / persona
 

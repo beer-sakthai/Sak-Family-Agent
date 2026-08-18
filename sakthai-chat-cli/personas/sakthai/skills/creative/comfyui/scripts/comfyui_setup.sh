@@ -170,10 +170,10 @@ elif command -v pipx >/dev/null 2>&1; then
 else
     log "Neither pipx nor uvx found. Falling back to pip install --user…"
     log "  (Recommend installing pipx: https://pipx.pypa.io)"
-    if ! pip install --user comfy-cli >>"$LOG_FILE" 2>&1; then
+    if ! pip install --user --require-hashes -r "$SCRIPT_DIR/comfy-cli-requirements.lock" >>"$LOG_FILE" 2>&1; then
         # macOS: PEP 668 externally-managed-environment may block --user
         log "pip install --user failed. Retrying with --break-system-packages…"
-        pip install --user --break-system-packages comfy-cli >>"$LOG_FILE" 2>&1 || {
+        pip install --user --break-system-packages --require-hashes -r "$SCRIPT_DIR/comfy-cli-requirements.lock" >>"$LOG_FILE" 2>&1 || {
             err "Could not install comfy-cli. Install pipx or uv first."
             exit 1
         }
@@ -235,7 +235,8 @@ fi
 if curl -fsS "http://127.0.0.1:$PORT/system_stats" >/dev/null 2>&1; then
     log "Server already running on port $PORT — skipping launch."
     log "Stop with \`$COMFY_BIN stop\` if you want a fresh start."
-    curl -fsS "http://127.0.0.1:$PORT/system_stats" | python3 -m json.tool 2>/dev/null || true
+    _stats_resp="$(curl -fsS "http://127.0.0.1:$PORT/system_stats" 2>/dev/null)"
+    printf '%s\n' "$_stats_resp" | python3 -m json.tool 2>/dev/null || true
     log "Done."
     exit 0
 fi
@@ -257,7 +258,8 @@ ELAPSED=0
 while [ $ELAPSED -lt $MAX_WAIT ]; do
     if curl -fsS "http://127.0.0.1:$PORT/system_stats" >/dev/null 2>&1; then
         log "Server is running!"
-        curl -fsS "http://127.0.0.1:$PORT/system_stats" | python3 -m json.tool 2>/dev/null || true
+        _stats_resp="$(curl -fsS "http://127.0.0.1:$PORT/system_stats" 2>/dev/null)"
+        printf '%s\n' "$_stats_resp" | python3 -m json.tool 2>/dev/null || true
         break
     fi
     sleep 2

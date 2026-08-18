@@ -57,16 +57,42 @@ def record_eval(record: EvalRecord, path: Path | None = None) -> None:
         logger.warning("Failed to record eval: %s", exc)
 
 
+def _safe_float(val: Any, default: float = 0.0) -> float:
+    if val is None:
+        return default
+    try:
+        return float(val)
+    except (ValueError, TypeError):
+        return default
+
+
+def _safe_int(val: Any, default: int = 0) -> int:
+    if val is None:
+        return default
+    try:
+        return int(val)
+    except (ValueError, TypeError):
+        return default
+
+
 def _read_records(path: Path | None = None) -> list[dict[str, Any]]:
     target = path or eval_log_path()
     if not target.exists():
         return []
+    try:
+        content = target.read_text(encoding="utf-8")
+    except OSError as exc:
+        logger.warning("Failed to read eval log %s: %s", target, exc)
+        return []
+
     records = []
-    for raw_line in target.read_text(encoding="utf-8").splitlines():
+    for raw_line in content.splitlines():
         if not raw_line.strip():
             continue
         try:
-            records.append(json.loads(raw_line))
+            item = json.loads(raw_line)
+            if isinstance(item, dict):
+                records.append(item)
         except json.JSONDecodeError:
             continue
     return records
@@ -74,26 +100,28 @@ def _read_records(path: Path | None = None) -> list[dict[str, Any]]:
 
 def summarize_evals(path: Path | None = None, limit: int = 50) -> dict[str, Any]:
     """Aggregate the most recent ``limit`` eval records: latency, tokens, errors, per-model."""
+    if limit <= 0:
+        return {"count": 0}
     records = _read_records(path)[-limit:]
     if not records:
         return {"count": 0}
 
     total = len(records)
     errors = sum(1 for r in records if r.get("had_error"))
-    total_latency = sum(float(r.get("latency_s", 0.0)) for r in records)
-    total_input = sum(int(r.get("input_tokens", 0)) for r in records)
-    total_output = sum(int(r.get("output_tokens", 0)) for r in records)
+    total_latency = sum(_safe_float(r.get("latency_s")) for r in records)
+    total_input = sum(_safe_int(r.get("input_tokens")) for r in records)
+    total_output = sum(_safe_int(r.get("output_tokens")) for r in records)
 
     per_model: dict[str, dict[str, Any]] = {}
     for r in records:
-        model = str(r.get("model", "unknown"))
+        model = str(r.get("model") or "unknown")
         bucket = per_model.setdefault(
             model, {"count": 0, "_latency_total": 0.0, "input_tokens": 0, "output_tokens": 0}
         )
         bucket["count"] += 1
-        bucket["_latency_total"] += float(r.get("latency_s", 0.0))
-        bucket["input_tokens"] += int(r.get("input_tokens", 0))
-        bucket["output_tokens"] += int(r.get("output_tokens", 0))
+        bucket["_latency_total"] += _safe_float(r.get("latency_s"))
+        bucket["input_tokens"] += _safe_int(r.get("input_tokens"))
+        bucket["output_tokens"] += _safe_int(r.get("output_tokens"))
     for bucket in per_model.values():
         bucket["avg_latency_s"] = bucket["_latency_total"] / bucket["count"]
         del bucket["_latency_total"]

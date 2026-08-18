@@ -111,9 +111,13 @@ _SENSITIVE_BASENAMES = {
     "id_dsa",
     "id_ecdsa",
     "id_ed25519",
+    "id_ecdsa_sk",
+    "id_ed25519_sk",
+    "id_xmss",
     "known_hosts",
     "authorized_keys",
     "credentials",
+    "credentials.json",
     "shadow",
     "passwd",
     "sudoers",
@@ -132,6 +136,10 @@ _SENSITIVE_BASENAMES = {
     ".mysql_history",
     ".psql_history",
     ".sqlite_history",
+    ".rediscli_history",
+    ".mongo_history",
+    ".pgpass",
+    ".my.cnf",
 }
 
 _SENSITIVE_DIRS = {
@@ -282,8 +290,11 @@ def _is_sensitive_path(path: str, allow_local: bool = False) -> bool:
             # If base_path is a prefix of any critical root (e.g. /et matching /etc),
             # it is also potentially sensitive if it is not just "/".
             if base_path != "/":
+                check_path = os.path.normpath(
+                    base_path if base_path.startswith("/") else "/" + base_path
+                )
                 for root in _CRITICAL_ROOTS:
-                    if root.startswith(base_path):
+                    if root.startswith(check_path):
                         return True
         elif not allow_local:
             # If the path starts with a wildcard and local paths are not allowed,
@@ -304,7 +315,122 @@ def _is_sensitive_path(path: str, allow_local: bool = False) -> bool:
     return False
 
 
-def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False) -> GuardrailResult:
+def _is_local_make_dir(path: str) -> bool:
+    """True if ``path`` is an ordinary directory under the current working directory.
+
+    ``_is_sensitive_path``'s final check blocks any absolute path nested under a
+    broad critical root (``/home``, ``/var``, ...), which also matches every
+    normal project checkout on a typical Linux box — including the cwd itself,
+    since ``tempfile.mkdtemp(dir=".")`` returns an absolute path as of Python
+    3.12. This narrower check exists only to rescue that case for the ``make -C``
+    guardrail: a path resolving inside cwd is treated as local *unless* it (or
+    one of its components) is itself a name ``_is_sensitive_path`` would flag
+    regardless of location (``.ssh``, ``id_rsa``, etc.) or contains traversal.
+    """
+    if ".." in path:
+        return False
+    normalized = os.path.normpath(path)
+    basename = os.path.basename(normalized)
+    if _basename_is_sensitive(basename):
+        return False
+    lowered_parts = {p.casefold() for p in normalized.split(os.sep)}
+    if any(d in lowered_parts for d in _SENSITIVE_DIRS):
+        return False
+
+    abs_path = os.path.abspath(path)
+    cwd = os.getcwd()
+    return abs_path == cwd or abs_path.startswith(cwd + os.sep)
+
+
+def _check_container_tokens(parts: list[str]) -> GuardrailResult:
+    """Block container tools from bind-mounting or copying sensitive host paths.
+
+    Covers ``docker``/``podman``/``kubectl``: ``-v``/``--volume`` (separate and
+    ``=``-joined), ``--mount`` with ``source=``/``src=``, and ``cp`` in either
+    direction. These are host-escape vectors — a container that bind-mounts
+    ``/etc`` or copies ``/root/.ssh/id_rsa`` out has defeated the path
+    restrictions applied to ``read_file``.
+
+    **This runs as rule 6, after rule 2's generic destructive-binary scan, and
+    rule 2 currently reaches every input this function would catch** — docker,
+    podman and kubectl are all in rule 2's binary list, and it denies on any
+    sensitive path appearing anywhere in their arguments. So in production this
+    is a backstop that never fires; ``tests/test_guardrails_containers.py``
+    pins that shadowing explicitly.
+
+    It is nonetheless extracted into a named function rather than left inline,
+    and tested directly in ``tests/test_guardrails_container_rule.py``. Inline,
+    it was ~45 lines of *unverified* security logic: no test could reach it, so
+    a bug here would surface only on the day docker/podman/kubectl left rule 2's
+    list — the moment this becomes load-bearing. Extracted, the backstop is
+    verified before it is ever needed.
+
+    Returns DENY with the specific mount/copy attribution, else ALLOW.
+    """
+    for i, part in enumerate(parts):
+        if not _is_binary(part, ("docker", "podman", "kubectl")):
+            continue
+        binary_name = os.path.basename(part)
+        for j, subpart in enumerate(parts[i + 1 :], i + 1):
+            if subpart in (";", "&&", "||", "|", "|&"):
+                break
+            # Volume mounts: -v /etc:/mnt, -v=/etc:/mnt, --mount type=bind,source=/etc,...
+            if subpart == "-v" or subpart == "--volume":
+                if j + 1 < len(parts):
+                    val = parts[j + 1]
+                    if _is_sensitive_path(val):
+                        return GuardrailResult(
+                            GuardrailAction.DENY,
+                            reason=f"potentially dangerous {binary_name!r} volume mount targeting {val!r} blocked.",
+                        )
+            elif subpart.startswith("-v=") or subpart.startswith("--volume="):
+                val = subpart.split("=", 1)[1]
+                if _is_sensitive_path(val):
+                    return GuardrailResult(
+                        GuardrailAction.DENY,
+                        reason=f"potentially dangerous {binary_name!r} volume mount targeting {val!r} blocked.",
+                    )
+            elif subpart.startswith("--mount"):
+                val = subpart
+                if "=" not in val and j + 1 < len(parts):
+                    val = parts[j + 1]
+                # --mount type=bind,source=/etc,target=/mnt
+                if "source=" in val:
+                    source_val = val.split("source=", 1)[1].split(",", 1)[0]
+                    if _is_sensitive_path(source_val):
+                        return GuardrailResult(
+                            GuardrailAction.DENY,
+                            reason=f"potentially dangerous {binary_name!r} mount source {source_val!r} blocked.",
+                        )
+                elif "src=" in val:
+                    source_val = val.split("src=", 1)[1].split(",", 1)[0]
+                    if _is_sensitive_path(source_val):
+                        return GuardrailResult(
+                            GuardrailAction.DENY,
+                            reason=f"potentially dangerous {binary_name!r} mount source {source_val!r} blocked.",
+                        )
+
+            # cp copies files between host and container/pod
+            # (docker cp, podman cp, kubectl cp).
+            if subpart == "cp":
+                for k in range(j + 1, len(parts)):
+                    if parts[k] in (";", "&&", "||", "|", "|&"):
+                        break
+                    if _is_sensitive_path(parts[k]):
+                        return GuardrailResult(
+                            GuardrailAction.DENY,
+                            reason=f"potentially dangerous '{binary_name} cp' on {parts[k]!r} blocked.",
+                        )
+
+    return GuardrailResult(GuardrailAction.ALLOW)
+
+
+def _check_destructive_tokens(
+    parts: list[str],
+    context_sensitive: bool = False,
+    checked_makefiles: set[str] | None = None,
+    current_make_dir: str = ".",
+) -> GuardrailResult:
     """Recursively check tokens for destructive commands.
 
     If ``context_sensitive`` is True, discovery placeholders like '{}' and '+'
@@ -316,6 +442,99 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
 
     # 1. Handle nested commands in wrappers (recursion)
     for i, part in enumerate(parts):
+        # 1d. make command scanning Makefile recipes
+        if _is_binary(part, "make"):
+            make_dir = current_make_dir
+            makefile_path = None
+
+            idx = i + 1
+            while idx < len(parts):
+                arg = parts[idx]
+                if arg in ("-C", "--directory") and idx + 1 < len(parts):
+                    make_dir = parts[idx + 1]
+                    idx += 2
+                elif arg.startswith("-C"):
+                    make_dir = arg[2:]
+                    idx += 1
+                elif arg in ("-f", "--file", "--makefile") and idx + 1 < len(parts):
+                    makefile_path = parts[idx + 1]
+                    idx += 2
+                elif arg.startswith("-f"):
+                    makefile_path = arg[2:]
+                    idx += 1
+                else:
+                    idx += 1
+
+            if _is_sensitive_path(make_dir, allow_local=True) and not _is_local_make_dir(make_dir):
+                return GuardrailResult(
+                    GuardrailAction.DENY,
+                    reason=f"Potentially dangerous 'make' command in sensitive directory {make_dir!r} blocked.",
+                )
+
+            if not makefile_path:
+                for name in ("GNUmakefile", "makefile", "Makefile"):
+                    candidate = os.path.join(make_dir, name)
+                    if os.path.isfile(candidate):
+                        makefile_path = candidate
+                        break
+            else:
+                if not os.path.isabs(makefile_path):
+                    makefile_path = os.path.join(make_dir, makefile_path)
+
+            if makefile_path:
+                if checked_makefiles is None:
+                    checked_makefiles = set()
+
+                abs_makefile_path = os.path.abspath(makefile_path)
+                if abs_makefile_path in checked_makefiles:
+                    continue
+
+                if _is_sensitive_path(makefile_path) and not _is_local_make_dir(makefile_path):
+                    return GuardrailResult(
+                        GuardrailAction.DENY,
+                        reason=f"Potentially dangerous 'make' command on sensitive file {makefile_path!r} blocked.",
+                    )
+                if os.path.isfile(makefile_path):
+                    new_checked = checked_makefiles | {abs_makefile_path}
+                    try:
+                        with open(makefile_path, encoding="utf-8", errors="ignore") as f:
+                            content = f.read()
+
+                        for match in re.finditer(_SENSITIVE_SCRIPT_PATH_RE, content):
+                            candidate = match.group(0)
+                            if _is_sensitive_path(candidate):
+                                return GuardrailResult(
+                                    GuardrailAction.DENY,
+                                    reason=f"Potentially dangerous 'make' command loading makefile with sensitive path {candidate!r} blocked.",
+                                )
+
+                        for line in content.splitlines():
+                            if line.startswith("\t"):
+                                recipe = line.lstrip("\t").strip()
+                                while recipe and recipe[0] in ("@", "-", "+"):
+                                    recipe = recipe[1:].strip()
+                                if recipe:
+                                    try:
+                                        recipe_parts = shlex.split(recipe)
+                                        res = _check_destructive_tokens(
+                                            recipe_parts,
+                                            context_sensitive=context_sensitive,
+                                            checked_makefiles=new_checked,
+                                            current_make_dir=make_dir,
+                                        )
+                                        if res.action == GuardrailAction.DENY:
+                                            return GuardrailResult(
+                                                GuardrailAction.DENY,
+                                                reason=f"Potentially destructive command in makefile recipe blocked: {res.reason}",
+                                            )
+                                    except ValueError:
+                                        return GuardrailResult(
+                                            GuardrailAction.DENY,
+                                            reason="Malformed shell command in makefile recipe.",
+                                        )
+                    except Exception:  # nosec B110 — safe swallow of makefile parsing/reading errors
+                        pass
+
         # 1a. bash -c "..." or sh -c "..." (including combined flags like -xc)
         # Search backwards for the shell binary to handle intermediate flags (e.g. bash -v -c).
         if (
@@ -329,7 +548,9 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
             for j in range(i - 1, -1, -1):
                 if parts[j].startswith("-"):
                     continue
-                if _is_binary(parts[j], ("bash", "sh", "zsh", "dash")):
+                if _is_binary(
+                    parts[j], ("bash", "sh", "zsh", "dash", "ksh", "fish", "ash", "csh", "tcsh")
+                ):
                     shell_idx = j
                     break
                 break  # Not a flag and not a shell
@@ -337,7 +558,12 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
             if shell_idx != -1:
                 try:
                     nested = shlex.split(parts[i + 1])
-                    res = _check_destructive_tokens(nested, context_sensitive=context_sensitive)
+                    res = _check_destructive_tokens(
+                        nested,
+                        context_sensitive=context_sensitive,
+                        checked_makefiles=checked_makefiles,
+                        current_make_dir=current_make_dir,
+                    )
                     if res.action == GuardrailAction.DENY:
                         return res
                 except ValueError:
@@ -350,7 +576,12 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
             if len(rest) == 1 and " " in rest[0]:
                 with contextlib.suppress(ValueError):
                     rest = shlex.split(rest[0])
-            res = _check_destructive_tokens(rest, context_sensitive=context_sensitive)
+            res = _check_destructive_tokens(
+                rest,
+                context_sensitive=context_sensitive,
+                checked_makefiles=checked_makefiles,
+                current_make_dir=current_make_dir,
+            )
             if res.action == GuardrailAction.DENY:
                 return res
 
@@ -433,6 +664,19 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
         "conda",
         "busybox",
         "toybox",
+        "psql",
+        "mysql",
+        "mariadb",
+        "mongo",
+        "mongosh",
+        "redis-cli",
+        "vim",
+        "vi",
+        "nano",
+        "emacs",
+        "ed",
+        "composer",
+        "cargo",
     )
     exfiltration_binaries = (
         "curl",
@@ -476,6 +720,11 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
         "sh",
         "zsh",
         "dash",
+        "ksh",
+        "fish",
+        "ash",
+        "csh",
+        "tcsh",
         "ls",
         "uniq",
         "cut",
@@ -522,6 +771,19 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
         "conda",
         "busybox",
         "toybox",
+        "psql",
+        "mysql",
+        "mariadb",
+        "mongo",
+        "mongosh",
+        "redis-cli",
+        "vim",
+        "vi",
+        "nano",
+        "emacs",
+        "ed",
+        "composer",
+        "cargo",
     )
     # Common interpreters where sensitive paths can be embedded in arguments.
     interpreters = (
@@ -537,11 +799,27 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
         "sh",
         "zsh",
         "dash",
+        "ksh",
+        "fish",
+        "ash",
+        "csh",
+        "tcsh",
         "sqlite",
         "git",
         "tsx",
         "ts-node",
         "deno",
+        "psql",
+        "mysql",
+        "mariadb",
+        "mongo",
+        "mongosh",
+        "redis-cli",
+        "vim",
+        "vi",
+        "emacs",
+        "composer",
+        "cargo",
     )
 
     for i, part in enumerate(parts):
@@ -552,7 +830,7 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
             is_interpreter = _is_binary(part, interpreters)
             # Inspect tokens following the binary until a separator is hit.
             for subpart in parts[i + 1 :]:
-                if subpart in (";", "&&", "||", "|"):
+                if subpart in (";", "&&", "||", "|", "|&"):
                     break
                 # For destructive binaries, we don't allow targeting the current directory.
                 # For exfiltration binaries, we allow targeting the current directory.
@@ -566,15 +844,18 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
                         if not is_dest
                         else f"Potentially destructive '{binary_name}' command on {subpart!r} blocked.",
                     )
-                if is_interpreter and re.search(
-                    r"(?:/etc|/root|/bin|/sbin|/usr|/var|/boot|/dev|/home|/sys|/proc|/tmp|/lib|/lib64)(?:/|$)|~|\.\.|"
-                    + _SENSITIVE_NAME_RE,
-                    subpart,
-                ):
-                    return GuardrailResult(
-                        GuardrailAction.DENY,
-                        reason=f"Potentially dangerous '{binary_name}' command with sensitive path in arguments blocked.",
-                    )
+                if is_interpreter:
+                    has_sensitive = False
+                    for match in re.finditer(_SENSITIVE_SCRIPT_PATH_RE, subpart):
+                        candidate = match.group(0)
+                        if _is_sensitive_path(candidate):
+                            has_sensitive = True
+                            break
+                    if has_sensitive:
+                        return GuardrailResult(
+                            GuardrailAction.DENY,
+                            reason=f"Potentially dangerous '{binary_name}' command with sensitive path in arguments blocked.",
+                        )
 
     # 3. Specialized protection for dd (input/output file).
     for i, part in enumerate(parts):
@@ -655,7 +936,7 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
         # 5c. Block unauthorized discovery of sensitive system roots.
         # find [path...] [expression]
         for part in after_find:
-            if part in (";", "&&", "||", "|"):
+            if part in (";", "&&", "||", "|", "|&"):
                 break
             if part.startswith("-"):
                 continue
@@ -666,59 +947,9 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
                 )
 
     # 6. Specialized protection for container tools (docker, podman, kubectl).
-    for i, part in enumerate(parts):
-        if _is_binary(part, ("docker", "podman", "kubectl")):
-            binary_name = os.path.basename(part)
-            for j, subpart in enumerate(parts[i + 1 :], i + 1):
-                if subpart in (";", "&&", "||", "|"):
-                    break
-                # Check for volume mounts in docker/podman: -v /etc:/mnt or --mount type=bind,source=/etc,...
-                if subpart == "-v" or subpart == "--volume":
-                    if j + 1 < len(parts):
-                        val = parts[j + 1]
-                        if _is_sensitive_path(val):
-                            return GuardrailResult(
-                                GuardrailAction.DENY,
-                                reason=f"potentially dangerous {binary_name!r} volume mount targeting {val!r} blocked.",
-                            )
-                elif subpart.startswith("-v=") or subpart.startswith("--volume="):
-                    val = subpart.split("=", 1)[1]
-                    if _is_sensitive_path(val):
-                        return GuardrailResult(
-                            GuardrailAction.DENY,
-                            reason=f"potentially dangerous {binary_name!r} volume mount targeting {val!r} blocked.",
-                        )
-                elif subpart.startswith("--mount"):
-                    val = subpart
-                    if "=" not in val and j + 1 < len(parts):
-                        val = parts[j + 1]
-                    # --mount type=bind,source=/etc,target=/mnt
-                    if "source=" in val:
-                        source_val = val.split("source=", 1)[1].split(",", 1)[0]
-                        if _is_sensitive_path(source_val):
-                            return GuardrailResult(
-                                GuardrailAction.DENY,
-                                reason=f"potentially dangerous {binary_name!r} mount source {source_val!r} blocked.",
-                            )
-                    elif "src=" in val:
-                        source_val = val.split("src=", 1)[1].split(",", 1)[0]
-                        if _is_sensitive_path(source_val):
-                            return GuardrailResult(
-                                GuardrailAction.DENY,
-                                reason=f"potentially dangerous {binary_name!r} mount source {source_val!r} blocked.",
-                            )
-
-                # cp copies files between host and container/pod
-                # (docker cp, podman cp, kubectl cp).
-                if subpart == "cp":
-                    for k in range(j + 1, len(parts)):
-                        if parts[k] in (";", "&&", "||", "|"):
-                            break
-                        if _is_sensitive_path(parts[k]):
-                            return GuardrailResult(
-                                GuardrailAction.DENY,
-                                reason=f"potentially dangerous '{binary_name} cp' on {parts[k]!r} blocked.",
-                            )
+    container_result = _check_container_tokens(parts)
+    if container_result.action == GuardrailAction.DENY:
+        return container_result
 
     # 7. Handle wrappers that don't use -c (sudo, doas, xargs, env, find -exec, timeout, etc.)
     for i, part in enumerate(parts):
@@ -751,6 +982,9 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
             "conda",
             "pnpm",
             "yarn",
+            "npm",
+            "cargo",
+            "composer",
             "busybox",
             "toybox",
         )
@@ -759,9 +993,23 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
             # We skip tokens that are likely arguments to the wrapper's flags.
             start_idx = i + 1
 
-            # If the wrapper is uv, pipx, bun, deno, poetry, pipenv, conda, pnpm, or yarn, we want to look for subcommands.
+            # If the wrapper is uv, pipx, bun, deno, poetry, pipenv, conda, pnpm, yarn, npm, cargo, or composer, we want to look for subcommands.
             if _is_binary(
-                part, ("uv", "pipx", "bun", "deno", "poetry", "pipenv", "conda", "pnpm", "yarn")
+                part,
+                (
+                    "uv",
+                    "pipx",
+                    "bun",
+                    "deno",
+                    "poetry",
+                    "pipenv",
+                    "conda",
+                    "pnpm",
+                    "yarn",
+                    "npm",
+                    "cargo",
+                    "composer",
+                ),
             ):
                 run_idx = -1
                 for idx in range(i + 1, len(parts)):
@@ -878,6 +1126,12 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
                     and flag in ("--cwd",)
                     or _is_binary(part, "poetry")
                     and flag in ("-C", "--directory")
+                    or _is_binary(part, "npm")
+                    and flag in ("--prefix", "--dir")
+                    or _is_binary(part, "cargo")
+                    and flag in ("--manifest-path", "--target-dir")
+                    or _is_binary(part, "composer")
+                    and flag in ("--working-dir", "-d")
                 ):
                     if flag_val is not None:
                         if (
@@ -932,7 +1186,12 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
                     )
                 start_idx += 1
 
-            res = _check_destructive_tokens(parts[start_idx:], context_sensitive=context_sensitive)
+            res = _check_destructive_tokens(
+                parts[start_idx:],
+                context_sensitive=context_sensitive,
+                checked_makefiles=checked_makefiles,
+                current_make_dir=current_make_dir,
+            )
             if res.action == GuardrailAction.DENY:
                 return res
         # find ... -exec/ok command ...
@@ -961,7 +1220,12 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
                     targets_sensitive = True
                     break
 
-            res = _check_destructive_tokens(exec_args, context_sensitive=targets_sensitive)
+            res = _check_destructive_tokens(
+                exec_args,
+                context_sensitive=targets_sensitive,
+                checked_makefiles=checked_makefiles,
+                current_make_dir=current_make_dir,
+            )
             if res.action == GuardrailAction.DENY:
                 if targets_sensitive:
                     # Specific reason for find-exec when target is sensitive.
@@ -971,6 +1235,46 @@ def _check_destructive_tokens(parts: list[str], context_sensitive: bool = False)
                         reason=f"destructive 'find {binary_name}' on sensitive path blocked.",
                     )
                 return res
+
+    # 8. Prevent pipeline-to-interpreter command execution bypasses (e.g. curl ... | sh)
+    for i, part in enumerate(parts):
+        if part in ("|", "|&"):
+            for subpart in parts[i + 1 :]:
+                if subpart in (";", "&&", "||", "|", "|&"):
+                    break
+                if _is_binary(
+                    subpart,
+                    (
+                        "sh",
+                        "bash",
+                        "zsh",
+                        "dash",
+                        "ksh",
+                        "fish",
+                        "ash",
+                        "csh",
+                        "tcsh",
+                        "python",
+                        "node",
+                        "perl",
+                        "ruby",
+                        "php",
+                        "deno",
+                        "bun",
+                        "tsx",
+                        "ts-node",
+                        "eval",
+                        "exec",
+                        "source",
+                    ),
+                ):
+                    return GuardrailResult(
+                        GuardrailAction.DENY,
+                        reason=(
+                            f"Pipeline to interpreter {subpart!r} blocked "
+                            "to prevent command injection bypass."
+                        ),
+                    )
 
     return GuardrailResult(GuardrailAction.ALLOW)
 
@@ -1100,6 +1404,19 @@ def _block_output_with_secrets(
         "AWS_SECRET_ACCESS_KEY",
         "GITHUB_TOKEN",
         "GITHUB_PAT",
+        "STRIPE_API_KEY",
+        "STRIPE_SECRET_KEY",
+        "STRIPE_PUBLISHABLE_KEY",
+        "TWILIO_AUTH_TOKEN",
+        "TWILIO_API_KEY",
+        "MS_GRAPH_CLIENT_SECRET",
+        "MS_GRAPH_REFRESH_TOKEN",
+        "MSGRAPH_CLIENT_SECRET",
+        "SLACK_BOT_TOKEN",
+        "SLACK_USER_TOKEN",
+        "SLACK_APP_TOKEN",
+        "SLACK_SIGNING_SECRET",
+        "SLACK_WEBHOOK_URL",
     ]
     secrets_to_check = set()
     try:

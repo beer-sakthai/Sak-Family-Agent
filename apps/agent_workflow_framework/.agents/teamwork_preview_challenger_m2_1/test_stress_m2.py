@@ -85,7 +85,7 @@ class TestStateInterpolationStress(unittest.TestCase):
         """Test deep nesting (15 levels) and complex array navigation paths."""
         nested_data = {"a": {"b": {"c": {"d": {"e": {"f": {"g": {"h": {"i": {"j": {"k": {"l": {"m": {"n": {"o": 42}}}}}}}}}}}}}}}
         self.ctx.set_step_output("deep_step", nested_data)
-        
+
         res = self.ctx.interpolate("${steps.deep_step.output.a.b.c.d.e.f.g.h.i.j.k.l.m.n.o}")
         self.assertEqual(res, 42)
 

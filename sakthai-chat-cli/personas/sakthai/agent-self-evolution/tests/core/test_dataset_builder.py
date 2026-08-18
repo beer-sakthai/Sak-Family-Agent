@@ -1,8 +1,6 @@
 import json
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 from evolution.core.config import EvolutionConfig
 from evolution.core.dataset_builder import EvalDataset, EvalExample, LayoutDatasetBuilder
 

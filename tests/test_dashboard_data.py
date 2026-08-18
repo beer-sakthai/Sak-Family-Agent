@@ -71,6 +71,20 @@ def test_recent_facts_exclude_lead_and_revenue_kinds(store: MemoryStore) -> None
     assert kinds == {"note"}
 
 
+def test_recent_facts_exclude_sensitive_and_auth_facts(store: MemoryStore) -> None:
+    store.add_fact("general note", kind="note")
+    store.add_fact(
+        "secret token", kind="web_auth", key="bearer_token", tags=["system", "no-export"]
+    )
+    store.add_fact("system state", kind="system_info", key="status")
+    store.add_fact("tagged secret", kind="custom", tags=["no-export"])
+    store.add_fact("tagged system", kind="custom", tags=["system"])
+
+    data = collect_dashboard_data(store=store)
+    recent_values = [f["value"] for f in data["recent_facts"]]
+    assert recent_values == ["general note"]
+
+
 def test_uninjected_store_opens_default_db(sakthai_home: Path) -> None:
     data = collect_dashboard_data()
     assert data["source"] == "database"

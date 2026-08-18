@@ -26,6 +26,7 @@ from ..config import redact_secrets, sessions_dir
 from ..memory.store import MemoryStore
 from ..skills import default_skill_roots, find_skill, render_skills_prompt_block
 from . import providers
+from .context_filter import DEFAULT_CONTEXT_FILTER, ContextFilter
 from .eval import EvalRecord, record_eval, task_preview
 from .guardrails import DEFAULT_POLICY, GuardrailAction, GuardrailPolicy
 from .providers import base as _providers_base
@@ -410,6 +411,7 @@ def run_agent(
     system_prompt_prefix: str = "",
     history: Sequence[dict[str, Any]] | None = None,
     guardrail_policy: GuardrailPolicy | None = None,
+    context_filter: ContextFilter | None = None,
     persona: str | None = None,
 ) -> AgentResult:
     """Run one task to completion against Claude, Gemini, or an OpenAI endpoint.
@@ -423,6 +425,10 @@ def run_agent(
     persona's own skill overlay instead of SakThai's. ``history`` seeds the
     conversation with a prior turn's messages (e.g. from a previous
     ``AgentResult.messages``) so multi-turn callers don't lose context.
+    ``context_filter`` (defaults to :data:`DEFAULT_CONTEXT_FILTER`) is applied
+    to ``history`` before the new task is appended, keeping long-running chat
+    sessions (e.g. ``sakthai chat``, which feeds ``result.messages`` back in
+    as ``history`` each turn) from growing the prompt unboundedly.
     """
     if not task.strip():
         raise AgentError("Task must be a non-empty string.")
@@ -456,6 +462,7 @@ def run_agent(
     tool_calls: list[dict[str, Any]] = []
     policy = guardrail_policy or DEFAULT_POLICY
     messages: list[dict[str, Any]] = list(history) if history else []
+    messages = (context_filter or DEFAULT_CONTEXT_FILTER).filter(messages)
     messages.append({"role": "user", "content": task})
     deadline = time.monotonic() + max_seconds if max_seconds is not None else None
 

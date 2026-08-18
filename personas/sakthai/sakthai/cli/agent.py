@@ -283,12 +283,19 @@ def run(
         resolved, missing = resolve_skill_names(list(with_skills), persona=persona)
         if resolved:
             click.echo(f"[dry-run] skills:      {len(resolved)} resolved ({', '.join(resolved)})")
+        # Reported before the credentials check on purpose. An unresolved skill
+        # name is a static error in the command itself, knowable without any
+        # credentials — and validating skill names is a common reason to run
+        # --dry-run somewhere that deliberately has none, such as CI. With the
+        # order reversed, the credentials failure short-circuited first and the
+        # unresolved name was never printed, which is how
+        # continuous-security.yml kept passing a skill that does not exist.
+        if missing:
+            raise click.ClickException(f"Unresolved --with-skills name(s): {', '.join(missing)}")
         if not report["runnable"]:
             raise click.ClickException(
                 f"Not runnable: no credentials found for provider {report['provider']!r}."
             )
-        if missing:
-            raise click.ClickException(f"Unresolved --with-skills name(s): {', '.join(missing)}")
         return
     if with_skills:
         _, missing = resolve_skill_names(list(with_skills), persona=persona)
