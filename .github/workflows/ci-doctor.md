@@ -19,8 +19,7 @@ permissions:
   pull-requests: read
   issues: read
   actions: read
-
-engine: gemini
+  copilot-requests: write
 
 network: defaults
 

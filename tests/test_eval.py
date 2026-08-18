@@ -32,6 +32,21 @@ class TestTaskPreview:
 
     def test_collapses_whitespace(self) -> None:
         assert task_preview("hello   \n\n  world") == "hello world"
+        assert task_preview("\ttask\npreview  test\t") == "task preview test"
+
+    def test_empty_and_whitespace_only(self) -> None:
+        assert task_preview("") == ""
+        assert task_preview("   \n\t  ") == ""
+
+    def test_exact_limit_length_not_truncated(self) -> None:
+        exact_task = "a" * 10
+        assert task_preview(exact_task, limit=10) == "a" * 10
+
+    def test_one_over_limit_length_truncated(self) -> None:
+        over_task = "a" * 11
+        preview = task_preview(over_task, limit=10)
+        assert len(preview) == 10
+        assert preview == "a" * 9 + "…"
 
     def test_truncates_long_task(self) -> None:
         long_task = "x" * 200
