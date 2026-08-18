@@ -171,6 +171,20 @@ def parse_source(source: str) -> tuple[str, str | None]:
     return ("slide", None)
 
 
+def _resolve_user_dir(raw_path: str, base_dir: Path) -> Path:
+    candidate = Path(raw_path).resolve()
+    trusted_base = base_dir.resolve()
+
+    if not candidate.is_relative_to(trusted_base):
+        print(
+            f"Error: path {candidate} is outside allowed base directory {trusted_base}",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+    return candidate
+
+
 if __name__ == "__main__":
     if len(sys.argv) != 3:
         print("Usage: python add_slide.py <unpacked_dir> <source>", file=sys.stderr)
@@ -182,7 +196,7 @@ if __name__ == "__main__":
         print("To see available layouts: ls <unpacked_dir>/ppt/slideLayouts/", file=sys.stderr)
         sys.exit(1)
 
-    unpacked_dir = Path(sys.argv[1]).resolve()
+    unpacked_dir = _resolve_user_dir(sys.argv[1], Path.cwd())
     source = sys.argv[2]
 
     safe_root = Path.cwd().resolve()
