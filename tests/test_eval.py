@@ -128,3 +128,46 @@ class TestSummarizeEvals:
 
         summary = summarize_evals(path=log_path)
         assert summary["count"] == 1
+
+
+    def test_handles_unreadable_file_oserror(self, tmp_path: Path, monkeypatch) -> None:
+        log_path = tmp_path / "eval.jsonl"
+        log_path.write_text('{"model": "gpt-4"}\n', encoding="utf-8")
+
+        def mock_read_text(*args, **kwargs):
+            raise OSError("Permission denied")
+
+        monkeypatch.setattr(Path, "read_text", mock_read_text)
+        summary = summarize_evals(path=log_path)
+        assert summary == {"count": 0}
+
+    def test_ignores_non_dict_json_lines(self, tmp_path: Path) -> None:
+        log_path = tmp_path / "eval.jsonl"
+        record_eval(_record(model="valid-model"), path=log_path)
+        with log_path.open("a", encoding="utf-8") as f:
+            f.write('"just a string"\n12345\n[1, 2, 3]\ntrue\nnull\n')
+
+        summary = summarize_evals(path=log_path)
+        assert summary["count"] == 1
+        assert list(summary["per_model"].keys()) == ["valid-model"]
+
+    def test_handles_records_with_missing_or_invalid_field_types(self, tmp_path: Path) -> None:
+        log_path = tmp_path / "eval.jsonl"
+        with log_path.open("w", encoding="utf-8") as f:
+            f.write('{"latency_s": "not-a-number", "input_tokens": "invalid", "model": null}\n')
+            f.write('{}\n')
+
+        summary = summarize_evals(path=log_path)
+        assert summary["count"] == 2
+        assert summary["avg_latency_s"] == 0.0
+        assert summary["total_input_tokens"] == 0
+        assert summary["total_output_tokens"] == 0
+        assert "unknown" in summary["per_model"]
+        assert summary["per_model"]["unknown"]["count"] == 2
+
+    def test_zero_or_negative_limit_returns_zero_count(self, tmp_path: Path) -> None:
+        log_path = tmp_path / "eval.jsonl"
+        record_eval(_record(), path=log_path)
+
+        assert summarize_evals(path=log_path, limit=0) == {"count": 0}
+        assert summarize_evals(path=log_path, limit=-5) == {"count": 0}
