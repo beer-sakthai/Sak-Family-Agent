@@ -9,7 +9,7 @@ CI/CD failure triage skill for the Sak-Family-Agent workspace.
 ## Install (local, from this repo)
 
 ```bash
-claude plugin add ./path/to/Sak-Family-Agent/.claude-plugins/ci-cd-doctor
+claude plugin add ./.claude-plugins/ci-cd-doctor   # run from the repo root
 ```
 
 Then enable it:
