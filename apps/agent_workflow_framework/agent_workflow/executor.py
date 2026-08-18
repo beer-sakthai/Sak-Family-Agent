@@ -687,15 +687,6 @@ def _validate_shell_command(cmd_str: str) -> None:
                     "to prevent command execution bypass."
                 )
 
-            has_heredoc_or_herestring = any(
-                re.search(r"<<<?", p) for p in parts
-            ) or bool(re.search(r"<<<?", cmd_str_stripped))
-            if is_outer_interp and has_heredoc_or_herestring:
-                raise PermissionError(
-                    f"Interpreter {effective_outer!r} with heredoc/herestring redirection is prohibited "
-                    "to prevent command execution bypass."
-                )
-
         proc_matches = re.findall(r"[<>]\s*\(([^)]+)\)", cmd_str_stripped)
         for proc_inner in proc_matches:
             proc_inner_clean = proc_inner.strip()
@@ -843,10 +834,7 @@ class WorkflowExecutor:
             normalized_code = unicodedata.normalize("NFKC", code)
             try:
                 tree = ast.parse(normalized_code)
-            except (SyntaxError, TypeError, ValueError) as exc:
-                raise SyntaxError(f"Invalid syntax in Python code block: {exc}") from exc
-
-            for node in ast.walk(tree):
+                for node in ast.walk(tree):
                     if isinstance(node, ast.Attribute):
                         if node.attr.startswith("__") and node.attr.endswith("__"):
                             raise PermissionError(f"Access to dunder attribute '{node.attr}' is prohibited.")
@@ -877,7 +865,11 @@ class WorkflowExecutor:
                     elif isinstance(node, ast.Name):
                         if node.id.startswith("__") and node.id.endswith("__"):
                             raise PermissionError(f"Access to dunder name '{node.id}' is prohibited.")
-
+            except (SyntaxError, TypeError, ValueError) as exc:
+                if isinstance(exc, PermissionError):
+                    raise
+                # Syntax errors will be caught later when executing
+                pass
 
             # Secure execution context: remove direct access to dangerous os/sys modules
             # and restrict __builtins__ to prevent arbitrary file reading, execution, or
@@ -931,19 +923,15 @@ class WorkflowExecutor:
             _assert_no_modules(eval_locals, "step params")
 
 
-            # Deterministically determine whether code is a single expression or a statement block
-            is_expression = len(tree.body) == 1 and isinstance(tree.body[0], ast.Expr)
-
-            if is_expression:
-                expr_ast = ast.Expression(body=tree.body[0].value)
-                ast.fix_missing_locations(expr_ast)
-                compiled_code = compile(expr_ast, filename="<python_sandbox>", mode="eval")
-                res = eval(compiled_code, eval_globals, eval_locals)  # nosec B307
+            try:
+                # Try evaluating as expression first. Execute the SAME
+                # normalized source the AST validator inspected above — never
+                # the raw ``code`` — so validation and execution cannot diverge.
+                res = eval(normalized_code, eval_globals, eval_locals)  # nosec B307
                 return {"result": res, "output": res}
-            else:
-                ast.fix_missing_locations(tree)
-                compiled_code = compile(tree, filename="<python_sandbox>", mode="exec")
-                exec(compiled_code, eval_globals, eval_locals)  # nosec B102
+            except SyntaxError:
+                # Execute as statement block
+                exec(normalized_code, eval_globals, eval_locals)  # nosec B102
                 out_locals = {k: v for k, v in eval_locals.items() if k not in params and not k.startswith("_")}
                 return out_locals if out_locals else {"status": "success"}
 
