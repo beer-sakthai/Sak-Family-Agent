@@ -12,7 +12,7 @@ permissions:
 jobs:
   osps-assessment:
     runs-on: ubuntu-latest
-    
+
     # Restrict permissions at the job level
     permissions:
       contents: read

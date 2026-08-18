@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import hashlib
-import hmac
 import secrets
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
@@ -37,38 +36,11 @@ TIER_PRICING: dict[TenantTier, tuple[float, float]] = {
 }
 
 
-_API_KEY_PBKDF2_ITERATIONS = 310_000
-_API_KEY_SALT_BYTES = 16
-
-
-def hash_api_key(raw_key: str, stored_hash: str | None = None) -> str | bool:
-    """Hash or verify an API key using PBKDF2-HMAC-SHA256.
-
-    - If `stored_hash` is None, returns a new encoded hash for storage.
-    - If `stored_hash` is provided, returns True/False for verification.
-    """
-    if stored_hash is None:
-        salt = secrets.token_bytes(_API_KEY_SALT_BYTES)
-        dk = hashlib.pbkdf2_hmac(
-            "sha256",
-            raw_key.encode("utf-8"),
-            salt,
-            _API_KEY_PBKDF2_ITERATIONS,
-        )
-        return f"pbkdf2_sha256${_API_KEY_PBKDF2_ITERATIONS}${salt.hex()}${dk.hex()}"
-
-    try:
-        algorithm, iterations_s, salt_hex, expected_hex = stored_hash.split("$", 3)
-        if algorithm != "pbkdf2_sha256":
-            return False
-        iterations = int(iterations_s)
-        salt = bytes.fromhex(salt_hex)
-        expected = bytes.fromhex(expected_hex)
-    except (ValueError, TypeError):
-        return False
-
-    actual = hashlib.pbkdf2_hmac("sha256", raw_key.encode("utf-8"), salt, iterations)
-    return hmac.compare_digest(actual, expected)
+def hash_api_key(raw_key: str) -> str:
+    """Hash an API key with PBKDF2-HMAC-SHA256 for secure storage."""
+    return hashlib.pbkdf2_hmac(
+        "sha256", raw_key.encode("utf-8"), b"sak_api_key_v1_salt", 1000
+    ).hex()
 
 
 def generate_api_key(prefix: str = "sak_live_") -> tuple[str, str]:
