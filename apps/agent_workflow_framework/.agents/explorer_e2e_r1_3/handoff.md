@@ -163,12 +163,13 @@ from pathlib import Path
 # Ensure package root is in sys.path
 sys.path.insert(0, str(Path(__file__).parent))
 
+
 def run_scenarios() -> bool:
     """Executes the 4 E2E Real-World Application Scenarios."""
     print("==================================================")
     print(" Running E2E Scenario Workflows (Scenarios 1 - 4) ")
     print("==================================================")
-    
+
     # Imports inside function to verify clean package import
     from agent_workflow.parser import parse_workflow_yaml
     from agent_workflow.executor import WorkflowExecutor
@@ -176,21 +177,21 @@ def run_scenarios() -> bool:
 
     executor = WorkflowExecutor()
     fixtures_dir = Path(__file__).parent / "tests" / "test_workflows"
-    
+
     scenarios = [
         "linear_workflow.yaml",
         "parallel_workflow.yaml",
         "retry_workflow.yaml",
         "mutation_workflow.yaml",
     ]
-    
+
     scenarios_passed = True
     for scenario_file in scenarios:
         path = fixtures_dir / scenario_file
         if not path.exists():
             print(f"[FAIL] Missing scenario fixture: {path}")
             return False
-        
+
         print(f"Executing {scenario_file}...")
         try:
             workflow = parse_workflow_yaml(str(path))
@@ -200,40 +201,47 @@ def run_scenarios() -> bool:
             if scenario_file == "retry_workflow.yaml":
                 # Expecting FAILED status due to terminal retry exhaustion branch
                 if history.status.value != "FAILED":
-                    print(f"[FAIL] {scenario_file} expected FAILED status, got {history.status.value}")
+                    print(
+                        f"[FAIL] {scenario_file} expected FAILED status, got {history.status.value}"
+                    )
                     scenarios_passed = False
             else:
                 if history.status.value != "COMPLETED":
-                    print(f"[FAIL] {scenario_file} expected COMPLETED status, got {history.status.value}")
+                    print(
+                        f"[FAIL] {scenario_file} expected COMPLETED status, got {history.status.value}"
+                    )
                     scenarios_passed = False
         except Exception as e:
             print(f"[ERROR] Exception running {scenario_file}: {e}")
             scenarios_passed = False
-            
+
     return scenarios_passed
+
 
 def run_unittest_suite() -> bool:
     """Runs unittest test discovery across tests/ directory."""
     print("\n==================================================")
     print(" Running Unittest Discovery Suite (tests/)        ")
     print("==================================================")
-    
+
     loader = unittest.TestLoader()
     suite = loader.discover(start_dir="tests", pattern="test_*.py")
     runner = unittest.TextTestRunner(verbosity=2)
     result = runner.run(suite)
     return result.wasSuccessful()
 
+
 def main():
     scenarios_ok = run_scenarios()
     tests_ok = run_unittest_suite()
-    
+
     if scenarios_ok and tests_ok:
         print("\n[SUCCESS] Master Verification Passed (Exit Code 0)")
         sys.exit(0)
     else:
         print("\n[FAILURE] Master Verification Failed (Exit Code 1)")
         sys.exit(1)
+
 
 if __name__ == "__main__":
     main()

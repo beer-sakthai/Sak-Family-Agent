@@ -1,31 +1,48 @@
-import os
-import sys
-import unittest
-import tempfile
-import json
 import asyncio
+import json
+import os
+import tempfile
+import unittest
 from pathlib import Path
+
+import yaml
 
 # Standard import guard: attempt import from agent_workflow, fallback to tests.engine_fallback if not present
 try:
-    from agent_workflow.models import (
-        StepStatus, RunStatus, StepDefinition, WorkflowDefinition, StepResult, RunHistory
-    )
-    from agent_workflow.parser import parse_workflow_file, parse_workflow_dict
-    from agent_workflow.dag import validate_workflow_dag, build_topological_batches
-    from agent_workflow.state import StateContext
-    from agent_workflow.executor import WorkflowExecutor
-    from agent_workflow.persistence import HistoryStore
     from agent_workflow.cli import main as cli_main
+    from agent_workflow.dag import build_topological_batches, validate_workflow_dag
+    from agent_workflow.executor import WorkflowExecutor
+    from agent_workflow.models import (
+        RunHistory,
+        RunStatus,
+        StepDefinition,
+        StepResult,
+        StepStatus,
+        WorkflowDefinition,
+    )
+    from agent_workflow.parser import (
+        WorkflowParseError,
+        parse_workflow_dict,
+        parse_workflow_file,
+    )
+    from agent_workflow.persistence import HistoryStore
+    from agent_workflow.state import StateContext
 except ModuleNotFoundError:
     from tests.engine_fallback import (
-        StepStatus, RunStatus, StepDefinition, WorkflowDefinition, StepResult, RunHistory,
-        parse_workflow_file, parse_workflow_dict,
-        validate_workflow_dag, build_topological_batches,
-        StateContext,
-        WorkflowExecutor,
         HistoryStore,
-        cli_main
+        RunHistory,
+        RunStatus,
+        StateContext,
+        StepDefinition,
+        StepResult,
+        StepStatus,
+        WorkflowDefinition,
+        WorkflowExecutor,
+        build_topological_batches,
+        cli_main,
+        parse_workflow_dict,
+        parse_workflow_file,
+        validate_workflow_dag,
     )
 
 FIXTURES_DIR = Path(__file__).parent / "test_workflows"
@@ -45,9 +62,7 @@ class TestTier1FeatureCoverage(unittest.TestCase):
     def test_parse_json_workflow(self):
         data = {
             "name": "json_workflow",
-            "steps": [
-                {"id": "s1", "action": "echo", "params": {"msg": "hi"}}
-            ]
+            "steps": [{"id": "s1", "action": "echo", "params": {"msg": "hi"}}],
         }
         with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as f:
             json.dump(data, f)
@@ -69,7 +84,7 @@ class TestTier1FeatureCoverage(unittest.TestCase):
             f.write("name: test\nsteps:\n  - id: s1\n   bad_indent: [")
             f_path = f.name
         try:
-            with self.assertRaises(Exception):
+            with self.assertRaises((WorkflowParseError, ValueError, yaml.YAMLError)):
                 parse_workflow_file(f_path)
         finally:
             os.unlink(f_path)
@@ -91,7 +106,7 @@ class TestTier1FeatureCoverage(unittest.TestCase):
                 StepDefinition(id="a"),
                 StepDefinition(id="b", depends_on=["a"]),
                 StepDefinition(id="c", depends_on=["b"]),
-            ]
+            ],
         )
         batches = build_topological_batches(wf)
         self.assertEqual(len(batches), 3)
@@ -107,7 +122,7 @@ class TestTier1FeatureCoverage(unittest.TestCase):
                 StepDefinition(id="b1", depends_on=["root"]),
                 StepDefinition(id="b2", depends_on=["root"]),
                 StepDefinition(id="join", depends_on=["b1", "b2"]),
-            ]
+            ],
         )
         batches = build_topological_batches(wf)
         self.assertEqual(len(batches), 3)
@@ -122,7 +137,7 @@ class TestTier1FeatureCoverage(unittest.TestCase):
             steps=[
                 StepDefinition(id="a", depends_on=["b"]),
                 StepDefinition(id="b", depends_on=["a"]),
-            ]
+            ],
         )
         errs = validate_workflow_dag(wf)
         self.assertTrue(len(errs) > 0)
@@ -133,7 +148,7 @@ class TestTier1FeatureCoverage(unittest.TestCase):
             name="self_loop_wf",
             steps=[
                 StepDefinition(id="a", depends_on=["a"]),
-            ]
+            ],
         )
         errs = validate_workflow_dag(wf)
         self.assertTrue(len(errs) > 0)
@@ -143,7 +158,7 @@ class TestTier1FeatureCoverage(unittest.TestCase):
             name="undef_dep",
             steps=[
                 StepDefinition(id="a", depends_on=["nonexistent"]),
-            ]
+            ],
         )
         errs = validate_workflow_dag(wf)
         self.assertTrue(len(errs) > 0)
@@ -204,8 +219,10 @@ class TestTier1FeatureCoverage(unittest.TestCase):
                 start_time="2026-08-01T00:00:00Z",
                 end_time="2026-08-01T00:00:01Z",
                 step_results={
-                    "step_1": StepResult(step_id="step_1", status=StepStatus.COMPLETED, output={"val": 10})
-                }
+                    "step_1": StepResult(
+                        step_id="step_1", status=StepStatus.COMPLETED, output={"val": 10}
+                    )
+                },
             )
             store.save_run_history(history)
             loaded = store.load_run_history("run_test_02")
@@ -223,8 +240,10 @@ class TestTier1FeatureCoverage(unittest.TestCase):
                 status=RunStatus.FAILED,
                 start_time="2026-08-01T00:00:00Z",
                 step_results={
-                    "s1": StepResult(step_id="s1", status=StepStatus.FAILED, error="Some error", attempts=2)
-                }
+                    "s1": StepResult(
+                        step_id="s1", status=StepStatus.FAILED, error="Some error", attempts=2
+                    )
+                },
             )
             store.save_run_history(history)
             loaded = store.load_run_history("run_test_03")
@@ -266,7 +285,7 @@ class TestTier1FeatureCoverage(unittest.TestCase):
                 StepDefinition(id="root", action="echo", params={"seed": 10}),
                 StepDefinition(id="b1", action="echo", params={"v": 1}, depends_on=["root"]),
                 StepDefinition(id="b2", action="echo", params={"v": 2}, depends_on=["root"]),
-            ]
+            ],
         )
         executor = WorkflowExecutor()
         history = asyncio.run(executor.execute_workflow(wf))
@@ -303,7 +322,7 @@ class TestTier1FeatureCoverage(unittest.TestCase):
                 StepDefinition(id="root", action="echo", params={"a": 1}),
                 StepDefinition(id="b_ok", action="echo", params={"v": 2}, depends_on=["root"]),
                 StepDefinition(id="b_fail", action="fail_always", depends_on=["root"]),
-            ]
+            ],
         )
         executor = WorkflowExecutor()
         history = asyncio.run(executor.execute_workflow(wf))
@@ -321,9 +340,9 @@ class TestTier1FeatureCoverage(unittest.TestCase):
                     action="fail_then_succeed",
                     params={"fail_attempts": 1, "success_output": "ok"},
                     retry=2,
-                    retry_delay=0.01
+                    retry_delay=0.01,
                 )
-            ]
+            ],
         )
         executor = WorkflowExecutor()
         history = asyncio.run(executor.execute_workflow(wf))
@@ -336,7 +355,7 @@ class TestTier1FeatureCoverage(unittest.TestCase):
             name="fail_retry",
             steps=[
                 StepDefinition(id="always_fails", action="fail_always", retry=2, retry_delay=0.01)
-            ]
+            ],
         )
         executor = WorkflowExecutor()
         history = asyncio.run(executor.execute_workflow(wf))
@@ -350,7 +369,7 @@ class TestTier1FeatureCoverage(unittest.TestCase):
             steps=[
                 StepDefinition(id="s1", action="fail_always", retry=0),
                 StepDefinition(id="s2", action="echo", params={"v": 1}, depends_on=["s1"]),
-            ]
+            ],
         )
         executor = WorkflowExecutor()
         history = asyncio.run(executor.execute_workflow(wf))
@@ -365,7 +384,7 @@ class TestTier1FeatureCoverage(unittest.TestCase):
                 StepDefinition(id="s1", action="fail_always", retry=0),
                 StepDefinition(id="s2", action="echo", depends_on=["s1"]),
                 StepDefinition(id="s3", action="echo", depends_on=["s2"]),
-            ]
+            ],
         )
         executor = WorkflowExecutor()
         history = asyncio.run(executor.execute_workflow(wf))
@@ -377,8 +396,14 @@ class TestTier1FeatureCoverage(unittest.TestCase):
         wf = WorkflowDefinition(
             name="delay_retry",
             steps=[
-                StepDefinition(id="flaky", action="fail_then_succeed", params={"fail_attempts": 1}, retry=1, retry_delay=0.05)
-            ]
+                StepDefinition(
+                    id="flaky",
+                    action="fail_then_succeed",
+                    params={"fail_attempts": 1},
+                    retry=1,
+                    retry_delay=0.05,
+                )
+            ],
         )
         executor = WorkflowExecutor()
         history = asyncio.run(executor.execute_workflow(wf))
@@ -393,7 +418,9 @@ class TestTier1FeatureCoverage(unittest.TestCase):
 
     def test_cli_validate_cycle_failure(self):
         with tempfile.NamedTemporaryFile("w", suffix=".yaml", delete=False) as f:
-            f.write("name: cycle\nsteps:\n  - id: a\n    depends_on: [b]\n  - id: b\n    depends_on: [a]\n")
+            f.write(
+                "name: cycle\nsteps:\n  - id: a\n    depends_on: [b]\n  - id: b\n    depends_on: [a]\n"
+            )
             f_path = f.name
         try:
             code = cli_main(["validate", f_path])
@@ -415,7 +442,7 @@ class TestTier1FeatureCoverage(unittest.TestCase):
         yaml_path = str(FIXTURES_DIR / "linear_workflow.yaml")
         wf = parse_workflow_file(yaml_path)
         executor = WorkflowExecutor()
-        history = asyncio.run(executor.execute_workflow(wf, run_id="cli_inspect_test_run"))
+        asyncio.run(executor.execute_workflow(wf, run_id="cli_inspect_test_run"))
         code = cli_main(["inspect", "cli_inspect_test_run"])
         self.assertEqual(code, 0)
 
@@ -436,7 +463,7 @@ class TestTier2BoundaryAndCornerCases(unittest.TestCase):
                 StepDefinition(id="a", depends_on=["c"]),
                 StepDefinition(id="b", depends_on=["a"]),
                 StepDefinition(id="c", depends_on=["b"]),
-            ]
+            ],
         )
         errs = validate_workflow_dag(wf)
         self.assertTrue(len(errs) > 0)
@@ -450,9 +477,7 @@ class TestTier2BoundaryAndCornerCases(unittest.TestCase):
     def test_boundary_retry_exhaustion_max_attempts(self):
         wf = WorkflowDefinition(
             name="retry_exhaust",
-            steps=[
-                StepDefinition(id="failing", action="fail_always", retry=3, retry_delay=0.01)
-            ]
+            steps=[StepDefinition(id="failing", action="fail_always", retry=3, retry_delay=0.01)],
         )
         executor = WorkflowExecutor()
         history = asyncio.run(executor.execute_workflow(wf))
@@ -469,7 +494,7 @@ class TestTier2BoundaryAndCornerCases(unittest.TestCase):
             steps=[
                 StepDefinition(id="step_1"),
                 StepDefinition(id="step_1"),
-            ]
+            ],
         )
         errs = validate_workflow_dag(wf)
         self.assertTrue(len(errs) > 0)
@@ -490,9 +515,25 @@ class TestTier3PairwiseCombinations(unittest.TestCase):
             steps=[
                 StepDefinition(id="root", action="echo", params={"seed": 10}),
                 StepDefinition(id="b_ok", action="echo", params={"v": 1}, depends_on=["root"]),
-                StepDefinition(id="b_retry", action="fail_then_succeed", params={"fail_attempts": 1, "success_output": 2}, depends_on=["root"], retry=2, retry_delay=0.01),
-                StepDefinition(id="join", action="transform", params={"val_a": "${steps.b_ok.output.v}", "val_b": "${steps.b_retry.output.result}", "operation": "sum"}, depends_on=["b_ok", "b_retry"]),
-            ]
+                StepDefinition(
+                    id="b_retry",
+                    action="fail_then_succeed",
+                    params={"fail_attempts": 1, "success_output": 2},
+                    depends_on=["root"],
+                    retry=2,
+                    retry_delay=0.01,
+                ),
+                StepDefinition(
+                    id="join",
+                    action="transform",
+                    params={
+                        "val_a": "${steps.b_ok.output.v}",
+                        "val_b": "${steps.b_retry.output.result}",
+                        "operation": "sum",
+                    },
+                    depends_on=["b_ok", "b_retry"],
+                ),
+            ],
         )
         executor = WorkflowExecutor()
         history = asyncio.run(executor.execute_workflow(wf))
@@ -522,9 +563,20 @@ class TestTier3PairwiseCombinations(unittest.TestCase):
         wf = WorkflowDefinition(
             name="pw_retry_state",
             steps=[
-                StepDefinition(id="retry_step", action="fail_then_succeed", params={"fail_attempts": 1, "success_output": "val_100"}, retry=1, retry_delay=0.01),
-                StepDefinition(id="downstream", action="echo", params={"recv": "${steps.retry_step.output.result}"}, depends_on=["retry_step"]),
-            ]
+                StepDefinition(
+                    id="retry_step",
+                    action="fail_then_succeed",
+                    params={"fail_attempts": 1, "success_output": "val_100"},
+                    retry=1,
+                    retry_delay=0.01,
+                ),
+                StepDefinition(
+                    id="downstream",
+                    action="echo",
+                    params={"recv": "${steps.retry_step.output.result}"},
+                    depends_on=["retry_step"],
+                ),
+            ],
         )
         executor = WorkflowExecutor()
         history = asyncio.run(executor.execute_workflow(wf))

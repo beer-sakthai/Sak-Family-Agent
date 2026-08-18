@@ -2,8 +2,9 @@
 
 import unittest
 from concurrent.futures import ThreadPoolExecutor
-from agent_workflow.state import StateContext, StateInterpolationError
+
 from agent_workflow.models import StepResult, StepStatus
+from agent_workflow.state import StateContext, StateInterpolationError
 
 
 class TestStateContext(unittest.TestCase):
@@ -39,23 +40,26 @@ class TestStateContext(unittest.TestCase):
         self.assertEqual(self.ctx.get_step_output("step_res"), {"score": 95})
 
     def test_interpolate_exact_scalar_types(self):
-        self.ctx.set_step_output("step_1", {
-            "int_val": 42,
-            "float_val": 3.14,
-            "bool_val": True,
-            "list_val": [1, 2, 3],
-            "dict_val": {"a": 1},
-            "none_val": None,
-        })
+        self.ctx.set_step_output(
+            "step_1",
+            {
+                "int_val": 42,
+                "float_val": 3.14,
+                "bool_val": True,
+                "list_val": [1, 2, 3],
+                "dict_val": {"a": 1},
+                "none_val": None,
+            },
+        )
         self.assertEqual(self.ctx.interpolate("${steps.step_1.output.int_val}"), 42)
         self.assertIsInstance(self.ctx.interpolate("${steps.step_1.output.int_val}"), int)
-        
+
         self.assertEqual(self.ctx.interpolate("${steps.step_1.output.float_val}"), 3.14)
         self.assertIsInstance(self.ctx.interpolate("${steps.step_1.output.float_val}"), float)
-        
+
         self.assertEqual(self.ctx.interpolate("${steps.step_1.output.bool_val}"), True)
         self.assertIsInstance(self.ctx.interpolate("${steps.step_1.output.bool_val}"), bool)
-        
+
         self.assertEqual(self.ctx.interpolate("${steps.step_1.output.list_val}"), [1, 2, 3])
         self.assertEqual(self.ctx.interpolate("${steps.step_1.output.dict_val}"), {"a": 1})
         self.assertIsNone(self.ctx.interpolate("${steps.step_1.output.none_val}"))
@@ -67,7 +71,9 @@ class TestStateContext(unittest.TestCase):
 
     def test_interpolate_string_literal_embedding(self):
         self.ctx.set_step_output("step_1", {"name": "Alice", "count": 5})
-        res = self.ctx.interpolate("User ${steps.step_1.output.name} has ${steps.step_1.output.count} items.")
+        res = self.ctx.interpolate(
+            "User ${steps.step_1.output.name} has ${steps.step_1.output.count} items."
+        )
         self.assertEqual(res, "User Alice has 5 items.")
 
     def test_interpolate_multiple_expressions(self):
@@ -96,14 +102,9 @@ class TestStateContext(unittest.TestCase):
         self.assertEqual(self.ctx.interpolate(tuple_template), ("apple", "orange"))
 
     def test_interpolate_nested_key_path(self):
-        self.ctx.set_step_output("s1", {
-            "user": {
-                "profile": {
-                    "role": "admin"
-                }
-            },
-            "tags": ["alpha", "beta", "gamma"]
-        })
+        self.ctx.set_step_output(
+            "s1", {"user": {"profile": {"role": "admin"}}, "tags": ["alpha", "beta", "gamma"]}
+        )
         self.assertEqual(self.ctx.interpolate("${steps.s1.output.user.profile.role}"), "admin")
         self.assertEqual(self.ctx.interpolate("${steps.s1.output.tags.0}"), "alpha")
         self.assertEqual(self.ctx.interpolate("${steps.s1.output.tags.2}"), "gamma")

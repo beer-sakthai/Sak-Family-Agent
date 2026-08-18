@@ -3,22 +3,22 @@ Fallback reference implementation of agent_workflow interfaces for test executio
 when agent_workflow package is not yet populated by parallel implementation tracks.
 """
 
-from dataclasses import dataclass, field
-from enum import Enum
-from typing import Dict, Any, List, Optional, Callable
-import os
-import sys
-import json
-import yaml
 import asyncio
+import graphlib
+import json
+import re
+import sys
 import time
 import uuid
-import graphlib
+from dataclasses import dataclass, field
+from enum import Enum, StrEnum
 from pathlib import Path
-import re
+from typing import Any
+
+import yaml
 
 
-class StepStatus(str, Enum):
+class StepStatus(StrEnum):
     PENDING = "PENDING"
     RUNNING = "RUNNING"
     COMPLETED = "COMPLETED"
@@ -26,7 +26,7 @@ class StepStatus(str, Enum):
     SKIPPED = "SKIPPED"
 
 
-class RunStatus(str, Enum):
+class RunStatus(StrEnum):
     PENDING = "PENDING"
     RUNNING = "RUNNING"
     COMPLETED = "COMPLETED"
@@ -37,8 +37,8 @@ class RunStatus(str, Enum):
 class StepDefinition:
     id: str
     action: str = "echo"
-    params: Dict[str, Any] = field(default_factory=dict)
-    depends_on: List[str] = field(default_factory=list)
+    params: dict[str, Any] = field(default_factory=dict)
+    depends_on: list[str] = field(default_factory=list)
     retry: int = 0
     retry_delay: float = 0.0
 
@@ -46,19 +46,19 @@ class StepDefinition:
 @dataclass
 class WorkflowDefinition:
     name: str
-    description: Optional[str] = None
-    steps: List[StepDefinition] = field(default_factory=list)
+    description: str | None = None
+    steps: list[StepDefinition] = field(default_factory=list)
 
 
 @dataclass
 class StepResult:
     step_id: str
     status: StepStatus
-    output: Dict[str, Any] = field(default_factory=dict)
-    error: Optional[str] = None
+    output: dict[str, Any] = field(default_factory=dict)
+    error: str | None = None
     attempts: int = 1
-    start_time: Optional[str] = None
-    end_time: Optional[str] = None
+    start_time: str | None = None
+    end_time: str | None = None
 
 
 @dataclass
@@ -67,24 +67,26 @@ class RunHistory:
     workflow_name: str
     status: RunStatus
     start_time: str
-    end_time: Optional[str] = None
-    step_results: Dict[str, StepResult] = field(default_factory=dict)
+    end_time: str | None = None
+    step_results: dict[str, StepResult] = field(default_factory=dict)
 
 
 class StateContext:
     def __init__(self):
-        self._outputs: Dict[str, Dict[str, Any]] = {}
+        self._outputs: dict[str, dict[str, Any]] = {}
 
-    def set_step_output(self, step_id: str, output: Dict[str, Any]) -> None:
+    def set_step_output(self, step_id: str, output: dict[str, Any]) -> None:
         self._outputs[step_id] = output
 
-    def get_step_output(self, step_id: str) -> Dict[str, Any]:
+    def get_step_output(self, step_id: str) -> dict[str, Any]:
         return self._outputs.get(step_id, {})
 
     def interpolate(self, template: Any) -> Any:
         if isinstance(template, str):
             # Single expression exact match preserving native type
-            match = re.fullmatch(r"\$\{steps\.([a-zA-Z0-9_-]+)\.output(?:\.([a-zA-Z0-9_.-]+))?\}", template.strip())
+            match = re.fullmatch(
+                r"\$\{steps\.([a-zA-Z0-9_-]+)\.output(?:\.([a-zA-Z0-9_.-]+))?\}", template.strip()
+            )
             if match:
                 step_id, key_path = match.groups()
                 if step_id not in self._outputs:
@@ -100,6 +102,7 @@ class StateContext:
                 return val
 
             pattern = r"\$\{steps\.([a-zA-Z0-9_-]+)\.output(?:\.([a-zA-Z0-9_.-]+))?\}"
+
             def replace_match(m):
                 step_id, key_path = m.groups()
                 if step_id not in self._outputs:
@@ -122,7 +125,7 @@ class StateContext:
         return template
 
 
-def validate_workflow_dag(workflow: WorkflowDefinition) -> List[str]:
+def validate_workflow_dag(workflow: WorkflowDefinition) -> list[str]:
     errors = []
     if not workflow.name:
         errors.append("Workflow name is required.")
@@ -160,7 +163,7 @@ def validate_workflow_dag(workflow: WorkflowDefinition) -> List[str]:
     return errors
 
 
-def build_topological_batches(workflow: WorkflowDefinition) -> List[List[StepDefinition]]:
+def build_topological_batches(workflow: WorkflowDefinition) -> list[list[StepDefinition]]:
     step_map = {s.id: s for s in workflow.steps}
     graph = {s.id: set(s.depends_on) for s in workflow.steps}
     ts = graphlib.TopologicalSorter(graph)
@@ -244,7 +247,7 @@ class HistoryStore:
                     "end_time": res.end_time,
                 }
                 for sid, res in history.step_results.items()
-            }
+            },
         }
         file_path.write_text(json.dumps(data, indent=2), encoding="utf-8")
         return str(file_path)
@@ -278,16 +281,16 @@ class HistoryStore:
 
 
 class WorkflowExecutor:
-    def __init__(self, history_store: Optional[HistoryStore] = None, max_workers: int = 4):
+    def __init__(self, history_store: HistoryStore | None = None, max_workers: int = 4):
         self.history_store = history_store or HistoryStore()
         self.max_workers = max_workers
-        self._transient_attempts: Dict[str, int] = {}
+        self._transient_attempts: dict[str, int] = {}
 
     async def execute_workflow(
         self,
         workflow: WorkflowDefinition,
-        run_id: Optional[str] = None,
-        status_callback: Optional[Any] = None
+        run_id: str | None = None,
+        status_callback: Any | None = None,
     ) -> RunHistory:
         val_errors = validate_workflow_dag(workflow)
         if val_errors:
@@ -308,6 +311,7 @@ class WorkflowExecutor:
         semaphore = asyncio.Semaphore(self.max_workers)
 
         for batch in batches:
+
             async def run_step(step: StepDefinition):
                 async with semaphore:
                     if any(dep in failed_steps for dep in step.depends_on):
@@ -333,7 +337,9 @@ class WorkflowExecutor:
                         step_start = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
                         try:
                             interpolated_params = state_ctx.interpolate(step.params)
-                            output = await self._execute_action(step.id, step.action, interpolated_params)
+                            output = await self._execute_action(
+                                step.id, step.action, interpolated_params
+                            )
                             state_ctx.set_step_output(step.id, output)
                             step_end = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
                             res = StepResult(
@@ -349,9 +355,8 @@ class WorkflowExecutor:
                             return res
                         except Exception as e:
                             last_error = str(e)
-                            if attempts < max_attempts:
-                                if step.retry_delay > 0:
-                                    await asyncio.sleep(step.retry_delay)
+                            if attempts < max_attempts and step.retry_delay > 0:
+                                await asyncio.sleep(step.retry_delay)
 
                     step_end = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
                     failed_steps.add(step.id)
@@ -380,7 +385,9 @@ class WorkflowExecutor:
         self.history_store.save_run_history(history)
         return history
 
-    async def _execute_action(self, step_id: str, action: str, params: Dict[str, Any]) -> Dict[str, Any]:
+    async def _execute_action(
+        self, step_id: str, action: str, params: dict[str, Any]
+    ) -> dict[str, Any]:
         if action == "echo":
             return dict(params)
         elif action == "transform":
@@ -419,11 +426,7 @@ class WorkflowExecutor:
                 u = params.get("user_result")
                 t = params.get("tag_result")
                 return {
-                    "summary": {
-                        "user": u,
-                        "tags": t,
-                        "count": len(t) if isinstance(t, list) else 0
-                    }
+                    "summary": {"user": u, "tags": t, "count": len(t) if isinstance(t, list) else 0}
                 }
             return dict(params)
         elif action == "python":
@@ -455,7 +458,7 @@ class WorkflowExecutor:
             return dict(params)
 
 
-def cli_main(args: Optional[List[str]] = None) -> int:
+def cli_main(args: list[str] | None = None) -> int:
     if args is None:
         args = sys.argv[1:]
 

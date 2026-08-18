@@ -5,10 +5,14 @@ import {
   getWorkflows,
   getWorkflowById,
   executeWorkflow,
+  validateWorkflowDAG,
+  buildTopologicalBatches,
+  interpolateState,
 } from "../lib/workflowEngine";
 import { GET as getProvidersRoute } from "../app/api/providers/route";
 import { GET as getWorkflowRoute, POST as postWorkflowRoute } from "../app/api/workflow/route";
 import { NextRequest } from "next/server";
+import { WorkflowTopology } from "../lib/types";
 
 describe("Multi-Provider AI Matrix & Specifications", () => {
   it("defines all major AI provider ecosystems including Microsoft M365", () => {
@@ -97,6 +101,94 @@ describe("6-Agent Workflow Framework & Orchestration Engine", () => {
       expect(stage.tokensUsed).toBeGreaterThan(0);
       expect(stage.outputSummary).toBeTruthy();
     }
+  });
+
+  it("validates DAG topologies and detects cycles or missing dependencies", () => {
+    const validTopology: WorkflowTopology = {
+      id: "test_valid",
+      name: "Valid Test",
+      description: "DAG without cycles",
+      category: "autonomous",
+      stages: [
+        {
+          id: "step_a",
+          name: "Step A",
+          personaSlug: "sakthai",
+          personaName: "SakThai",
+          provider: "gemini_agy",
+          model: "gemini-2.5-pro",
+          action: "action A",
+          status: "pending",
+          dependsOn: [],
+        },
+        {
+          id: "step_b",
+          name: "Step B",
+          personaSlug: "sakking",
+          personaName: "SakKing",
+          provider: "codex",
+          model: "gpt-4o",
+          action: "action B",
+          status: "pending",
+          dependsOn: ["step_a"],
+        },
+      ],
+    };
+
+    const validRes = validateWorkflowDAG(validTopology);
+    expect(validRes.isValid).toBe(true);
+    expect(validRes.topologicalOrder).toEqual(["step_a", "step_b"]);
+
+    const batches = buildTopologicalBatches(validTopology);
+    expect(batches).toHaveLength(2);
+    expect(batches[0][0].id).toBe("step_a");
+    expect(batches[1][0].id).toBe("step_b");
+
+    // Cyclic Topology
+    const cyclicTopology: WorkflowTopology = {
+      id: "test_cyclic",
+      name: "Cyclic Test",
+      description: "DAG with cycles",
+      category: "autonomous",
+      stages: [
+        {
+          id: "c1",
+          name: "C1",
+          personaSlug: "sakthai",
+          personaName: "SakThai",
+          provider: "gemini_agy",
+          model: "gemini-2.5-pro",
+          action: "action 1",
+          status: "pending",
+          dependsOn: ["c2"],
+        },
+        {
+          id: "c2",
+          name: "C2",
+          personaSlug: "sakking",
+          personaName: "SakKing",
+          provider: "codex",
+          model: "gpt-4o",
+          action: "action 2",
+          status: "pending",
+          dependsOn: ["c1"],
+        },
+      ],
+    };
+
+    const cyclicRes = validateWorkflowDAG(cyclicTopology);
+    expect(cyclicRes.isValid).toBe(false);
+    expect(cyclicRes.errors[0]).toContain("Cyclic dependency detected");
+  });
+
+  it("interpolates state variables accurately", () => {
+    const state = {
+      s1: { plan_id: "plan_999", count: 42 },
+    };
+
+    expect(interpolateState("${steps.s1.output.plan_id}", state)).toBe("plan_999");
+    expect(interpolateState("${steps.s1.output.count}", state)).toBe(42);
+    expect(interpolateState("The plan is ${steps.s1.output.plan_id}", state)).toBe("The plan is plan_999");
   });
 });
 

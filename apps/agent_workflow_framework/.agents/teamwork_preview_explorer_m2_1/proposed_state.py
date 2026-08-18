@@ -9,7 +9,7 @@ import copy
 import json
 import re
 import threading
-from typing import Dict, Any, List, Optional, Union, Tuple
+from typing import Any
 
 try:
     from agent_workflow.models import StepResult
@@ -55,19 +55,17 @@ class StateContext:
     )
 
     # Regex detecting malformed ${steps...} constructs:
-    _MALFORMED_STEPS_EXPR_RE = re.compile(
-        r"\$\{\s*steps(?:\.[^\}\s]*)?\s*\}"
-    )
+    _MALFORMED_STEPS_EXPR_RE = re.compile(r"\$\{\s*steps(?:\.[^\}\s]*)?\s*\}")
 
-    def __init__(self, initial_outputs: Optional[Dict[str, Dict[str, Any]]] = None):
+    def __init__(self, initial_outputs: dict[str, dict[str, Any]] | None = None):
         """Initialize StateContext with optional initial step outputs."""
         self._lock = threading.RLock()
-        self._outputs: Dict[str, Dict[str, Any]] = {}
+        self._outputs: dict[str, dict[str, Any]] = {}
         if initial_outputs:
             for step_id, output in initial_outputs.items():
                 self.set_step_output(step_id, output)
 
-    def set_step_output(self, step_id: str, output: Dict[str, Any]) -> None:
+    def set_step_output(self, step_id: str, output: dict[str, Any]) -> None:
         """Store or update output dictionary for a step thread-safely."""
         if not isinstance(step_id, str) or not step_id.strip():
             raise ValueError("Step ID must be a non-empty string.")
@@ -84,7 +82,7 @@ class StateContext:
             raise TypeError("Expected an object with 'step_id' and 'output' attributes.")
         self.set_step_output(result.step_id, result.output)
 
-    def get_step_output(self, step_id: str) -> Dict[str, Any]:
+    def get_step_output(self, step_id: str) -> dict[str, Any]:
         """Retrieve output dictionary for a step thread-safely. Returns a copy."""
         with self._lock:
             if step_id not in self._outputs:
@@ -101,7 +99,7 @@ class StateContext:
         with self._lock:
             self._outputs.clear()
 
-    def _resolve_path(self, step_id: str, key_path: Optional[str]) -> Any:
+    def _resolve_path(self, step_id: str, key_path: str | None) -> Any:
         """Resolve step_id and optional key_path against internal outputs thread-safely."""
         with self._lock:
             if step_id not in self._outputs:
@@ -124,7 +122,7 @@ class StateContext:
                 if key in current:
                     current = current[key]
                 else:
-                    partial_path = ".".join(keys[:idx + 1])
+                    partial_path = ".".join(keys[: idx + 1])
                     raise StateInterpolationError(
                         f"Key '{key}' (path '{partial_path}') not found in step '{step_id}' output."
                     )

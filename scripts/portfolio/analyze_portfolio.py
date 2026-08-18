@@ -1,9 +1,14 @@
 import argparse
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-import sys
 import os
+import sys
+from concurrent.futures import ThreadPoolExecutor
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+
+def _read_close_series(file: str) -> pd.Series:
+    df = pd.read_csv(file, index_col='Date', parse_dates=True)
+    return df['Close']
 
 def analyze_portfolio(files: list[str], tickers: list[str], weights: list[float], output_plot: str, output_csv: str | None = None):
     """
@@ -28,11 +33,10 @@ def analyze_portfolio(files: list[str], tickers: list[str], weights: list[float]
 
     try:
         # --- 2. Load and Combine Data ---
-        portfolio_df = pd.DataFrame()
-        for i, file in enumerate(files):
-            df = pd.read_csv(file, index_col='Date', parse_dates=True)
-            # Use a unique column name for each stock's close price
-            portfolio_df[tickers[i]] = df['Close']
+        with ThreadPoolExecutor() as executor:
+            series_list = list(executor.map(_read_close_series, files))
+
+        portfolio_df = pd.DataFrame({ticker: series for ticker, series in zip(tickers, series_list)})
 
         # --- 3. Calculate Portfolio Performance ---
         # Normalize prices to see growth from day 1
@@ -113,8 +117,6 @@ if __name__ == "__main__":
     if output_dir:
         os.makedirs(output_dir, exist_ok=True)
     if args.output_csv:
-        # Guarded the same way as output_plot above: dirname("portfolio.csv")
-        # is "", and makedirs("") raises FileNotFoundError.
         csv_dir = os.path.dirname(args.output_csv)
         if csv_dir:
             os.makedirs(csv_dir, exist_ok=True)

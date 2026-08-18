@@ -4,16 +4,13 @@
 Executes comprehensive stress scenarios against agent_workflow.persistence and agent_workflow.state.
 """
 
-import copy
 import json
-import os
 import shutil
 import sys
 import tempfile
 import time
-import unittest
-from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, as_completed
-from datetime import datetime, date
+from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor, as_completed
+from datetime import datetime
 from pathlib import Path
 
 # Ensure project root is in sys.path
@@ -28,12 +25,9 @@ from agent_workflow.models import (
     StepStatus,
 )
 from agent_workflow.persistence import (
-    RunHistoryStore,
-    HistoryStore,
-    ExecutionStore,
-    RunNotFoundError,
     RunCorruptedError,
-    PersistenceError,
+    RunHistoryStore,
+    RunNotFoundError,
 )
 from agent_workflow.state import StateContext, StateInterpolationError
 
@@ -77,11 +71,7 @@ class StressTestHarness:
     def log(self, test_name: str, passed: bool, details: str):
         status = "PASS" if passed else "FAIL"
         print(f"[{status}] {test_name}: {details}")
-        self.results.append({
-            "test": test_name,
-            "passed": passed,
-            "details": details
-        })
+        self.results.append({"test": test_name, "passed": passed, "details": details})
 
     def run_all(self):
         print("==================================================")
@@ -127,21 +117,25 @@ class StressTestHarness:
                         status=RunStatus.RUNNING,
                         start_time=datetime.now().isoformat(),
                         step_results={
-                            "s1": StepResult(step_id="s1", status=StepStatus.RUNNING, output={"thread": thread_idx})
-                        }
+                            "s1": StepResult(
+                                step_id="s1",
+                                status=StepStatus.RUNNING,
+                                output={"thread": thread_idx},
+                            )
+                        },
                     )
                     store.save_run_history(history)
-                    
+
                     # Read back
                     loaded = store.load_run_history(run_id)
                     if loaded.run_id != run_id:
                         errors.append(f"Thread {thread_idx}: run_id mismatch")
-                    
+
                     # Update status
                     history.status = RunStatus.COMPLETED
                     history.step_results["s1"].status = StepStatus.COMPLETED
                     store.save_run_history(history)
-                    
+
                     loaded2 = store.load_run_history(run_id)
                     if loaded2.status != RunStatus.COMPLETED:
                         errors.append(f"Thread {thread_idx}: updated status mismatch")
@@ -168,12 +162,17 @@ class StressTestHarness:
 
         start_t = time.time()
         with ProcessPoolExecutor(max_workers=num_procs) as executor:
-            futures = [executor.submit(worker_process_save, storage_path, i, runs_per_proc) for i in range(num_procs)]
+            futures = [
+                executor.submit(worker_process_save, storage_path, i, runs_per_proc)
+                for i in range(num_procs)
+            ]
             for i, f in enumerate(futures):
                 try:
                     res = f.result()
                     if res != runs_per_proc:
-                        errors.append(f"Process {i} only completed {res}/{runs_per_proc} ops successfully")
+                        errors.append(
+                            f"Process {i} only completed {res}/{runs_per_proc} ops successfully"
+                        )
                 except Exception as e:
                     errors.append(f"Process {i} raised exception: {e}")
         duration = time.time() - start_t
@@ -199,7 +198,7 @@ class StressTestHarness:
             run_id=run_id,
             workflow_name="contended_wf",
             status=RunStatus.RUNNING,
-            start_time="2026-08-01T12:00:00Z"
+            start_time="2026-08-01T12:00:00Z",
         )
         store.save_run_history(history)
 
@@ -209,7 +208,7 @@ class StressTestHarness:
                     res = StepResult(
                         step_id=f"step_{t_idx}_{i}",
                         status=StepStatus.COMPLETED,
-                        output={"val": t_idx * 1000 + i}
+                        output={"val": t_idx * 1000 + i},
                     )
                     # Load, mutate, save
                     h = store.load_run_history(run_id)
@@ -275,7 +274,9 @@ class StressTestHarness:
 
         # Case 4: Missing required fields (e.g. missing 'status')
         missing_field_file = store_dir / "missing_fields.json"
-        missing_field_file.write_text(json.dumps({"run_id": "r1", "workflow_name": "wf1"}), encoding="utf-8")
+        missing_field_file.write_text(
+            json.dumps({"run_id": "r1", "workflow_name": "wf1"}), encoding="utf-8"
+        )
         try:
             store.load_run_history("missing_fields")
             errors.append("Missing fields JSON did not raise RunCorruptedError")
@@ -286,12 +287,17 @@ class StressTestHarness:
 
         # Case 5: Invalid Enum string value
         invalid_enum_file = store_dir / "invalid_enum.json"
-        invalid_enum_file.write_text(json.dumps({
-            "run_id": "invalid_enum",
-            "workflow_name": "wf",
-            "status": "SUPER_DUPER_UNKNOWN",
-            "start_time": "2026-08-01T12:00:00Z"
-        }), encoding="utf-8")
+        invalid_enum_file.write_text(
+            json.dumps(
+                {
+                    "run_id": "invalid_enum",
+                    "workflow_name": "wf",
+                    "status": "SUPER_DUPER_UNKNOWN",
+                    "start_time": "2026-08-01T12:00:00Z",
+                }
+            ),
+            encoding="utf-8",
+        )
         try:
             store.load_run_history("invalid_enum")
             errors.append("Invalid enum JSON did not raise RunCorruptedError")
@@ -310,8 +316,18 @@ class StressTestHarness:
         store = RunHistoryStore(store_dir)
 
         # Save 2 valid runs
-        h1 = RunHistory(run_id="valid_1", workflow_name="wf", status=RunStatus.COMPLETED, start_time="2026-08-01T10:00:00Z")
-        h2 = RunHistory(run_id="valid_2", workflow_name="wf", status=RunStatus.FAILED, start_time="2026-08-01T11:00:00Z")
+        h1 = RunHistory(
+            run_id="valid_1",
+            workflow_name="wf",
+            status=RunStatus.COMPLETED,
+            start_time="2026-08-01T10:00:00Z",
+        )
+        h2 = RunHistory(
+            run_id="valid_2",
+            workflow_name="wf",
+            status=RunStatus.FAILED,
+            start_time="2026-08-01T11:00:00Z",
+        )
         store.save_run_history(h1)
         store.save_run_history(h2)
 
@@ -348,7 +364,7 @@ class StressTestHarness:
                 store.get_run_path(bad_id)
             except ValueError:
                 rejected += 1
-            except Exception as e:
+            except Exception:
                 pass
 
         passed = rejected == len(malicious_ids)
@@ -363,7 +379,12 @@ class StressTestHarness:
         store = RunHistoryStore(deep_dir)
         self.assert_true(deep_dir.exists())
 
-        h = RunHistory(run_id="deep_run", workflow_name="wf", status=RunStatus.COMPLETED, start_time="2026-08-01T12:00:00Z")
+        h = RunHistory(
+            run_id="deep_run",
+            workflow_name="wf",
+            status=RunStatus.COMPLETED,
+            start_time="2026-08-01T12:00:00Z",
+        )
         saved = store.save_run_history(h)
         self.assert_true(saved.exists())
 
@@ -376,7 +397,7 @@ class StressTestHarness:
             pass
 
         passed = len(errors) == 0 and saved.exists()
-        details = f"Deep nested dir auto-creation succeeded and missing run lookup properly raised RunNotFoundError."
+        details = "Deep nested dir auto-creation succeeded and missing run lookup properly raised RunNotFoundError."
         self.log(test_name, passed, details)
 
     def test_large_payload_serialization(self):
@@ -440,11 +461,9 @@ class StressTestHarness:
             start_time="2026-08-01T12:00:00Z",
             step_results={
                 "s1": StepResult(
-                    step_id="s1",
-                    status=StepStatus.RUNNING,
-                    output={"bad": UnserializableObject()}
+                    step_id="s1", status=StepStatus.RUNNING, output={"bad": UnserializableObject()}
                 )
-            }
+            },
         )
 
         raised = False
@@ -485,7 +504,7 @@ class StressTestHarness:
                 "status_enum": StepStatus.FAILED,
             },
             error="Upstream step dependency failed",
-            attempts=0
+            attempts=0,
         )
         history.add_step_result(res)
 
@@ -509,26 +528,29 @@ class StressTestHarness:
         ctx = StateContext()
         errors = []
 
-        ctx.set_step_output("step1", {
-            "scalar_int": 999,
-            "scalar_float": 3.14159,
-            "scalar_bool": False,
-            "scalar_none": None,
-            "nested": {
-                "l1": {
-                    "l2": {
-                        "value": "deep_target"
-                    }
-                }
+        ctx.set_step_output(
+            "step1",
+            {
+                "scalar_int": 999,
+                "scalar_float": 3.14159,
+                "scalar_bool": False,
+                "scalar_none": None,
+                "nested": {"l1": {"l2": {"value": "deep_target"}}},
+                "items": ["zero", "one", {"nested_in_list": "found_me"}],
+                "key.with.dots": 777,
             },
-            "items": ["zero", "one", {"nested_in_list": "found_me"}],
-            "key.with.dots": 777,
-        })
+        )
 
         # Test exact type preservation
-        if ctx.interpolate("${steps.step1.output.scalar_int}") != 999 or type(ctx.interpolate("${steps.step1.output.scalar_int}")) is not int:
+        if (
+            ctx.interpolate("${steps.step1.output.scalar_int}") != 999
+            or type(ctx.interpolate("${steps.step1.output.scalar_int}")) is not int
+        ):
             errors.append("int type not preserved")
-        if ctx.interpolate("${steps.step1.output.scalar_float}") != 3.14159 or type(ctx.interpolate("${steps.step1.output.scalar_float}")) is not float:
+        if (
+            ctx.interpolate("${steps.step1.output.scalar_float}") != 3.14159
+            or type(ctx.interpolate("${steps.step1.output.scalar_float}")) is not float
+        ):
             errors.append("float type not preserved")
         if ctx.interpolate("${steps.step1.output.scalar_bool}") is not False:
             errors.append("bool False not preserved")
