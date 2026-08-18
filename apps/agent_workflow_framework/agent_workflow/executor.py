@@ -473,6 +473,7 @@ def _validate_shell_command(cmd_str: str) -> None:
                 continue
             # Strip curl-style upload prefix if present
             if sub.startswith("@"):
+            if sub.startswith("@") and len(sub) > 1:
                 sub = sub.lstrip("@")
 
             try:
