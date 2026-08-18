@@ -48,18 +48,6 @@ mutants/
 .superpowers/
 .claude/worktrees/
 
-# Gemini CLI — local overrides and per-machine state. `.gemini/settings.json`
-# itself IS committed; it is the shared project config.
-.gemini/*.local.json
-.gemini/tmp/
-.gemini/oauth_creds.json
-.gemini/google_accounts.json
-
-# OpenCode — local overrides and session state. `opencode.json` itself IS
-# committed; it is the shared project config.
-opencode.local.json
-.opencode/
-
 # Local secrets — never commit real credentials
 .env
 .env.local
