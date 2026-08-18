@@ -28,7 +28,30 @@ import time
 import urllib.request
 from pathlib import Path
 
-BIN = os.environ.get("SAKTHAI_BIN", "sakthai")
+def resolve_bin() -> str:
+    raw = os.environ.get("SAKTHAI_BIN")
+    if not raw:
+        return "sakthai"
+
+    candidate = Path(raw)
+
+    # Allow only the known-safe command token when no path is provided.
+    if candidate.name == raw and candidate.parent == Path("."):
+        if raw == "sakthai":
+            return raw
+        raise ValueError("SAKTHAI_BIN must be 'sakthai' or an absolute executable path.")
+
+    # For path-based overrides, require an absolute executable file.
+    if not candidate.is_absolute():
+        raise ValueError("SAKTHAI_BIN path must be absolute.")
+    if not candidate.is_file():
+        raise ValueError("SAKTHAI_BIN path must point to an existing file.")
+    if not os.access(candidate, os.X_OK):
+        raise ValueError("SAKTHAI_BIN path is not executable.")
+    return str(candidate)
+
+
+BIN = resolve_bin()
 failures: list[str] = []
 
 
