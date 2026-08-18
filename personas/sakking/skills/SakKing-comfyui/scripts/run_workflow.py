@@ -26,8 +26,7 @@ Usage:
         --output-dir ./outputs
 
     # Cloud server (API key from env var)
-    export COMFY_CLOUD_API_KEY="<your_api_key_here>"
-    export COMFY_CLOUD_API_KEY="your-api-key-here"
+    export COMFY_CLOUD_API_KEY="comfyui-xxxxxxx"
     python3 run_workflow.py --workflow workflow_api.json \
         --args '{"prompt": "a cat"}' \
         --host https://cloud.comfy.org \
