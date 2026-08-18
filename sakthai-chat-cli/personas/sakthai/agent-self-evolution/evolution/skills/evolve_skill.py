@@ -60,8 +60,34 @@ from evolution.skills.skill_module import (
 console = Console()
 
 
-def _load_target_skill(config: EvolutionConfig, skill_name: str) -> tuple[Path, dict]:
-    """Find and load the target skill artifact."""
+def evolve(
+    skill_name: str,
+    iterations: int = 10,
+    eval_source: str = "synthetic",
+    dataset_path: str | None = None,
+    optimizer_model: str = _DEFAULT_LOCAL_MODEL,
+    eval_model: str = _DEFAULT_LOCAL_MODEL,
+    hermes_repo: str | None = None,
+    run_tests: bool = False,
+    test_layout: bool = False,
+    dry_run: bool = False,
+):
+    """Main evolution function — orchestrates the full optimization loop."""
+
+    config = EvolutionConfig(
+        hermes_agent_path=resolve_hermes_agent_path(hermes_repo),
+        iterations=iterations,
+        optimizer_model=optimizer_model,
+        eval_model=eval_model,
+        judge_model=eval_model,  # Use same model for dataset generation
+        run_pytest=run_tests,
+    )
+
+    # ── 1. Find and load the skill ──────────────────────────────────────
+    console.print(
+        f"\n[bold cyan]🧬 Hermes Agent Self-Evolution[/bold cyan] — Evolving skill: [bold]{skill_name}[/bold]\n"
+    )
+
     skill_path = find_skill(skill_name, config.hermes_agent_path)
     if not skill_path:
         console.print(
@@ -74,24 +100,22 @@ def _load_target_skill(config: EvolutionConfig, skill_name: str) -> tuple[Path, 
     console.print(f"  Name: {skill['name']}")
     console.print(f"  Size: {len(skill['raw']):,} chars")
     console.print(f"  Description: {skill['description'][:80]}...")
-    return skill_path, skill
 
+    if dry_run:
+        console.print("\n[bold green]DRY RUN — setup validated successfully.[/bold green]")
+        console.print(f"  Would generate eval dataset (source: {eval_source})")
+        if test_layout:
+            console.print("  Would use LayoutDatasetBuilder for layout-specific tests.")
+        console.print(f"  Would run GEPA optimization ({iterations} iterations)")
+        console.print("  Would validate constraints and create PR")
+        return
 
-def _build_eval_dataset(
-    config: EvolutionConfig,
-    skill_name: str,
-    skill: dict,
-    skill_path: Path,
-    eval_source: str,
-    dataset_path: str | None,
-    eval_model: str,
-    test_layout: bool,
-) -> tuple[EvalDataset, str]:
-    """Build or load evaluation dataset based on eval_source."""
+    # ── 2. Build or load evaluation dataset ─────────────────────────────
     console.print(f"\n[bold]Building evaluation dataset[/bold] (source: {eval_source})")
 
     if test_layout:
         console.print("  [cyan]Layout testing enabled.[/cyan]")
+        # Find reference guides for the skill
         reference_dir = skill_path.parent / "references"
         reference_guides = []
         if reference_dir.exists():
@@ -105,11 +129,12 @@ def _build_eval_dataset(
             artifact_text=skill["raw"],
             reference_guides=reference_guides,
         )
+        # Save for reuse
         save_path = Path("datasets") / "skills" / f"{skill_name}_layout"
         dataset.save(save_path)
         console.print(f"  Generated {len(dataset.all_examples)} layout-specific examples")
         console.print(f"  Saved to {save_path}/")
-        eval_source = "layout_synthetic"
+        eval_source = "layout_synthetic"  # Override source for clarity
 
     if eval_source == "golden" and dataset_path:
         dataset = GoldenDatasetLoader.load(Path(dataset_path))
@@ -131,6 +156,7 @@ def _build_eval_dataset(
             artifact_text=skill["raw"],
             artifact_type="skill",
         )
+        # Save for reuse
         save_path = Path("datasets") / "skills" / skill_name
         dataset.save(save_path)
         console.print(f"  Generated {len(dataset.all_examples)} synthetic examples")
@@ -145,13 +171,11 @@ def _build_eval_dataset(
     console.print(
         f"  Split: {len(dataset.train)} train / {len(dataset.val)} val / {len(dataset.holdout)} holdout"
     )
-    return dataset, eval_source
 
-
-def _validate_baseline_constraints(validator: ConstraintValidator, skill_body: str) -> bool:
-    """Validate baseline skill constraints."""
+    # ── 3. Validate constraints on baseline ─────────────────────────────
     console.print("\n[bold]Validating baseline constraints[/bold]")
-    baseline_constraints = validator.validate_all(skill_body, "skill")
+    validator = ConstraintValidator(config)
+    baseline_constraints = validator.validate_all(skill["body"], "skill")
     all_pass = True
     for c in baseline_constraints:
         icon = "✓" if c.passed else "✗"
@@ -164,52 +188,53 @@ def _validate_baseline_constraints(validator: ConstraintValidator, skill_body: s
         console.print(
             "[yellow]⚠ Baseline skill has constraint violations — proceeding anyway[/yellow]"
         )
-    return all_pass
 
-
-def _gepa_metric(gold, pred, trace=None, pred_name=None, pred_trace=None):
-    """Metric wrapper for GEPA optimization with feedback."""
-    score = skill_fitness_metric(gold, pred, trace)
-    if score >= 0.6:
-        fb = f"Score {score:.2f}: output covered the expected behavior."
-    else:
-        fb = (
-            f"Score {score:.2f}: output missed key expected points. Make the "
-            "skill's procedure clearer, more actionable, and better aligned "
-            "with what the task asks for."
-        )
-    return dspy.Prediction(score=score, feedback=fb)
-
-
-def _run_gepa_optimization(
-    skill_body: str,
-    dataset: EvalDataset,
-    iterations: int,
-    optimizer_model: str,
-    eval_model: str,
-) -> tuple[dspy.Module, float]:
-    """Configure DSPy and run GEPA or MIPROv2 optimization loop."""
+    # ── 4. Set up DSPy + GEPA optimizer ─────────────────────────────────
     console.print("\n[bold]Configuring optimizer[/bold]")
     console.print(f"  Optimizer: GEPA ({iterations} iterations)")
     console.print(f"  Optimizer model: {optimizer_model}")
     console.print(f"  Eval model: {eval_model}")
 
+    # Configure DSPy
     lm = dspy.LM(eval_model)
     dspy.configure(lm=lm)
 
-    baseline_module = SkillModule(skill_body)
+    # Create the baseline skill module
+    baseline_module = SkillModule(skill["body"])
+
+    # Prepare DSPy examples
     trainset = dataset.to_dspy_examples("train")
     valset = dataset.to_dspy_examples("val")
 
+    # ── 5. Run GEPA optimization ────────────────────────────────────────
     console.print(
         f"\n[bold cyan]Running GEPA optimization ({iterations} iterations)...[/bold cyan]\n"
     )
+
     start_time = time.time()
 
+    # GEPA (DSPy 3.2.x) calls the metric with extra positional args
+    # (pred_name, pred_trace) and uses textual feedback to drive its reflective
+    # mutation. Wrap the scalar fitness so it tolerates those args and returns
+    # feedback the reflection model can act on.
+    def gepa_metric(gold, pred, trace=None, pred_name=None, pred_trace=None):
+        score = skill_fitness_metric(gold, pred, trace)
+        if score >= 0.6:
+            fb = f"Score {score:.2f}: output covered the expected behavior."
+        else:
+            fb = (
+                f"Score {score:.2f}: output missed key expected points. Make the "
+                "skill's procedure clearer, more actionable, and better aligned "
+                "with what the task asks for."
+            )
+        return dspy.Prediction(score=score, feedback=fb)
+
     try:
+        # reflection_lm is required by GEPA; budget the run with max_metric_calls
+        # (DSPy 3.2.x has no `max_steps`). Keep it small — this box is CPU-only.
         reflection_lm = dspy.LM(optimizer_model)
         optimizer = dspy.GEPA(
-            metric=_gepa_metric,
+            metric=gepa_metric,
             reflection_lm=reflection_lm,
             max_metric_calls=max(4, iterations * 2),
             reflection_minibatch_size=2,
@@ -220,6 +245,7 @@ def _run_gepa_optimization(
             valset=valset,
         )
     except Exception as e:
+        # Fall back to MIPROv2 if GEPA isn't available/usable in this DSPy version
         console.print(f"[yellow]GEPA unavailable ({e}); falling back to MIPROv2[/yellow]")
         optimizer = dspy.MIPROv2(
             metric=skill_fitness_metric,
@@ -232,18 +258,18 @@ def _run_gepa_optimization(
 
     elapsed = time.time() - start_time
     console.print(f"\n  Optimization completed in {elapsed:.1f}s")
-    return optimized_module, elapsed
 
+    # ── 6. Extract evolved skill text ───────────────────────────────────
+    # The optimized module's instructions contain the evolved skill text
+    evolved_body = optimized_module.skill_text
+    evolved_full = reassemble_skill(skill["frontmatter"], evolved_body)
 
-def _validate_evolved_skill(
-    validator: ConstraintValidator,
-    evolved_full: str,
-    skill_raw: str,
-    skill_name: str,
-) -> bool:
-    """Validate evolved skill against constraints."""
+    # ── 7. Validate evolved skill ───────────────────────────────────────
     console.print("\n[bold]Validating evolved skill[/bold]")
-    evolved_constraints = validator.validate_all(evolved_full, "skill", baseline_text=skill_raw)
+    # Validate the reassembled skill (with frontmatter) against the full baseline:
+    # the skill_structure check requires frontmatter, so validating the body alone
+    # would always fail.
+    evolved_constraints = validator.validate_all(evolved_full, "skill", baseline_text=skill["raw"])
     all_pass = True
     for c in evolved_constraints:
         icon = "✓" if c.passed else "✗"
@@ -254,27 +280,22 @@ def _validate_evolved_skill(
 
     if not all_pass:
         console.print("[red]✗ Evolved skill FAILED constraints — not deploying[/red]")
+        # Still save for inspection
         output_path = Path("output") / skill_name / "evolved_FAILED.md"
         output_path.parent.mkdir(parents=True, exist_ok=True)
         output_path.write_text(evolved_full)
         console.print(f"  Saved failed variant to {output_path}")
-    return all_pass
+        return
 
-
-def _evaluate_holdout(
-    dataset: EvalDataset,
-    baseline_module: SkillModule,
-    optimized_module: dspy.Module,
-    eval_model: str,
-) -> tuple[float, float, float]:
-    """Evaluate baseline and evolved modules on holdout dataset."""
+    # ── 8. Evaluate on holdout set ──────────────────────────────────────
     console.print(f"\n[bold]Evaluating on holdout set ({len(dataset.holdout)} examples)[/bold]")
+
     holdout_examples = dataset.to_dspy_examples("holdout")
-    lm = dspy.LM(eval_model)
 
     baseline_scores = []
     evolved_scores = []
     for ex in holdout_examples:
+        # Score baseline
         with dspy.context(lm=lm):
             baseline_pred = baseline_module(task_input=ex.task_input)
             baseline_score = skill_fitness_metric(ex, baseline_pred)
@@ -287,25 +308,8 @@ def _evaluate_holdout(
     avg_baseline = sum(baseline_scores) / max(1, len(baseline_scores))
     avg_evolved = sum(evolved_scores) / max(1, len(evolved_scores))
     improvement = avg_evolved - avg_baseline
-    return avg_baseline, avg_evolved, improvement
 
-
-def _report_and_save_results(
-    skill_name: str,
-    skill: dict,
-    evolved_body: str,
-    evolved_full: str,
-    dataset: EvalDataset,
-    iterations: int,
-    optimizer_model: str,
-    eval_model: str,
-    avg_baseline: float,
-    avg_evolved: float,
-    improvement: float,
-    elapsed: float,
-    all_pass: bool,
-) -> None:
-    """Print results table and save evolved skill and metrics to disk."""
+    # ── 9. Report results ───────────────────────────────────────────────
     table = Table(title="Evolution Results")
     table.add_column("Metric", style="bold")
     table.add_column("Baseline", justify="right")
@@ -331,13 +335,18 @@ def _report_and_save_results(
     console.print()
     console.print(table)
 
+    # ── 10. Save output ─────────────────────────────────────────────────
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     output_dir = Path("output") / skill_name / timestamp
     output_dir.mkdir(parents=True, exist_ok=True)
 
+    # Save evolved skill
     (output_dir / "evolved_skill.md").write_text(evolved_full)
+
+    # Save baseline for comparison
     (output_dir / "baseline_skill.md").write_text(skill["raw"])
 
+    # Save metrics
     metrics = {
         "skill_name": skill_name,
         "timestamp": timestamp,
@@ -371,106 +380,6 @@ def _report_and_save_results(
             f"\n[yellow]⚠ Evolution did not improve skill (change: {improvement:+.3f})[/yellow]"
         )
         console.print("  Try: more iterations, better eval dataset, or different optimizer model")
-
-
-def evolve(
-    skill_name: str,
-    iterations: int = 10,
-    eval_source: str = "synthetic",
-    dataset_path: str | None = None,
-    optimizer_model: str = _DEFAULT_LOCAL_MODEL,
-    eval_model: str = _DEFAULT_LOCAL_MODEL,
-    hermes_repo: str | None = None,
-    run_tests: bool = False,
-    test_layout: bool = False,
-    dry_run: bool = False,
-):
-    """Main evolution function — orchestrates the full optimization loop."""
-
-    config = EvolutionConfig(
-        hermes_agent_path=resolve_hermes_agent_path(hermes_repo),
-        iterations=iterations,
-        optimizer_model=optimizer_model,
-        eval_model=eval_model,
-        judge_model=eval_model,  # Use same model for dataset generation
-        run_pytest=run_tests,
-    )
-
-    # ── 1. Find and load the skill ──────────────────────────────────────
-    console.print(
-        f"\n[bold cyan]🧬 Hermes Agent Self-Evolution[/bold cyan] — Evolving skill: [bold]{skill_name}[/bold]\n"
-    )
-
-    skill_path, skill = _load_target_skill(config, skill_name)
-
-    if dry_run:
-        console.print("\n[bold green]DRY RUN — setup validated successfully.[/bold green]")
-        console.print(f"  Would generate eval dataset (source: {eval_source})")
-        if test_layout:
-            console.print("  Would use LayoutDatasetBuilder for layout-specific tests.")
-        console.print(f"  Would run GEPA optimization ({iterations} iterations)")
-        console.print("  Would validate constraints and create PR")
-        return
-
-    # ── 2. Build or load evaluation dataset ─────────────────────────────
-    dataset, eval_source = _build_eval_dataset(
-        config=config,
-        skill_name=skill_name,
-        skill=skill,
-        skill_path=skill_path,
-        eval_source=eval_source,
-        dataset_path=dataset_path,
-        eval_model=eval_model,
-        test_layout=test_layout,
-    )
-
-    # ── 3. Validate constraints on baseline ─────────────────────────────
-    validator = ConstraintValidator(config)
-    _validate_baseline_constraints(validator, skill["body"])
-
-    # ── 4 & 5. Set up and run GEPA optimization ─────────────────────────
-    optimized_module, elapsed = _run_gepa_optimization(
-        skill_body=skill["body"],
-        dataset=dataset,
-        iterations=iterations,
-        optimizer_model=optimizer_model,
-        eval_model=eval_model,
-    )
-
-    # ── 6. Extract evolved skill text ───────────────────────────────────
-    evolved_body = optimized_module.skill_text
-    evolved_full = reassemble_skill(skill["frontmatter"], evolved_body)
-
-    # ── 7. Validate evolved skill ───────────────────────────────────────
-    all_pass = _validate_evolved_skill(validator, evolved_full, skill["raw"], skill_name)
-    if not all_pass:
-        return
-
-    # ── 8. Evaluate on holdout set ──────────────────────────────────────
-    baseline_module = SkillModule(skill["body"])
-    avg_baseline, avg_evolved, improvement = _evaluate_holdout(
-        dataset=dataset,
-        baseline_module=baseline_module,
-        optimized_module=optimized_module,
-        eval_model=eval_model,
-    )
-
-    # ── 9 & 10. Report results and save output ──────────────────────────
-    _report_and_save_results(
-        skill_name=skill_name,
-        skill=skill,
-        evolved_body=evolved_body,
-        evolved_full=evolved_full,
-        dataset=dataset,
-        iterations=iterations,
-        optimizer_model=optimizer_model,
-        eval_model=eval_model,
-        avg_baseline=avg_baseline,
-        avg_evolved=avg_evolved,
-        improvement=improvement,
-        elapsed=elapsed,
-        all_pass=all_pass,
-    )
 
 
 @click.command()

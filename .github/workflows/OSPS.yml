@@ -12,7 +12,8 @@ permissions:
 jobs:
   osps-assessment:
     runs-on: ubuntu-latest
-    
+    timeout-minutes: 20
+
     # Restrict permissions at the job level
     permissions:
       contents: read

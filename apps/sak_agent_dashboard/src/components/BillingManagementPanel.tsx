@@ -32,7 +32,7 @@ export function BillingManagementPanel() {
   const [generatedKey, setGeneratedKey] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
-  const fetchBillingData = async () => {
+  const fetchBillingData = React.useCallback(async () => {
     try {
       const res = await fetch("/api/billing");
       const json = await res.json();
@@ -45,16 +45,15 @@ export function BillingManagementPanel() {
     } catch (err) {
       console.error("Failed to load billing metrics", err);
     }
-  };
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
-
-    async function loadInitialBillingData() {
+    const load = async () => {
       try {
         const res = await fetch("/api/billing");
         const json = await res.json();
-        if (json.success && json.data && isMounted) {
+        if (isMounted && json.success && json.data) {
           setQuota(json.data.quota);
           setKeys(json.data.keys);
           setUsage(json.data.usage);
@@ -65,9 +64,6 @@ export function BillingManagementPanel() {
       }
     };
     load();
-    }
-
-    loadInitialBillingData();
     return () => {
       isMounted = false;
     };

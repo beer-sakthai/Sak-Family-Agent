@@ -6,9 +6,17 @@ on: [pull_request_target]
 permissions:
   contents: read
 
+concurrency:
+  # Keyed on the pull request rather than `github.ref`: `pull_request_target`
+  # runs against the base branch, so every open PR would otherwise share one
+  # `refs/heads/main` group and cancel each other's labelling.
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
 jobs:
   labeler:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: read
       pull-requests: write

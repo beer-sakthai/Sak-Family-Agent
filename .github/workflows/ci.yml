@@ -11,9 +11,19 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  # One run per branch. `cancel-in-progress` is deliberately scoped to pull
+  # requests: a superseded PR run is wasted minutes, but a cancelled run on
+  # `main` leaves a gap in the coverage/code-scanning record, and
+  # self-healing-ci.yml keys off this workflow's conclusion there — a
+  # `cancelled` run is neither a success it can ignore nor a failure it can heal.
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     strategy:
       # Run the test suite against all supported Python versions.
       matrix:

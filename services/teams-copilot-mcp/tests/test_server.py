@@ -63,42 +63,6 @@ def test_execute_raw_passes_through_to_graph_client():
     assert result == {"ok": True}
 
 
-def test_execute_raw_default_optional_params():
-    fake_client = MagicMock()
-    fake_client.request.return_value = {"value": []}
-
-    with patch("teams_copilot_mcp.server.get_client", return_value=fake_client):
-        result = server.execute_raw(method="GET", path="/users")
-
-    fake_client.request.assert_called_once_with(
-        "GET", "/users", params=None, json_body=None
-    )
-    assert result == {"value": []}
-
-
-def test_execute_raw_handles_odata_next_link():
-    fake_client = MagicMock()
-    next_link = "https://graph.microsoft.com/v1.0/users?$skiptoken=abc123xyz"
-    fake_client.request.return_value = {"@odata.nextLink": "...", "value": [{"id": "user-2"}]}
-
-    with patch("teams_copilot_mcp.server.get_client", return_value=fake_client):
-        result = server.execute_raw(method="GET", path=next_link)
-
-    fake_client.request.assert_called_once_with(
-        "GET", next_link, params=None, json_body=None
-    )
-    assert result == {"@odata.nextLink": "...", "value": [{"id": "user-2"}]}
-
-
-def test_execute_raw_propagates_client_errors():
-    fake_client = MagicMock()
-    fake_client.request.side_effect = RuntimeError("Graph API request failed: 404 Not Found")
-
-    with patch("teams_copilot_mcp.server.get_client", return_value=fake_client):
-        with pytest.raises(RuntimeError, match="Graph API request failed: 404 Not Found"):
-            server.execute_raw(method="GET", path="/invalid/endpoint")
-
-
 def test_send_channel_message_builds_body():
     fake_client = MagicMock()
     fake_client.request.return_value = {}

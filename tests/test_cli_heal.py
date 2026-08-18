@@ -307,3 +307,31 @@ def test_an_unavailable_narrator_does_not_stop_the_run(
 
     assert result.exit_code == 0
     assert captured["narrator"] is None
+
+
+def test_heal_run_args_dataclass_instantiation() -> None:
+    from sakthai.cli.heal import HealRunArgs
+
+    args = HealRunArgs.from_dict(
+        {
+            "log_source": "test.log",
+            "repo_root": ".",
+            "model": "test-model",
+            "provider": None,
+            "walkthrough_model": "walk-model",
+            "min_confidence": 0.8,
+            "base": "main",
+            "branch_prefix": "fix/",
+            "run_id": "123",
+            "run_url": "http://example.com",
+            "dry_run": True,
+            "no_publish": False,
+            "no_pr": False,
+            "report_path": None,
+            "as_json": True,
+        }
+    )
+
+    assert args.log_source == "test.log"
+    assert args.dry_run is True
+    assert args.as_json is True
