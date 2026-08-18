@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import http.client
 import json
 import threading
 import urllib.error
+import urllib.parse
 import urllib.request
 from collections.abc import Iterator
 from contextlib import contextmanager
@@ -442,6 +444,149 @@ def test_static_path_unauthorized_with_wrong_cookie(authed_server_base: tuple[st
     status, body = _get_raw(f"{base_url}/index.html", {"Cookie": "token=wrong_token_xyz"})
     assert status == 401
     assert b"Unauthorized" in body
+
+
+# --- HEAD is gated exactly like GET ----------------------------------------
+# ``SimpleHTTPRequestHandler`` ships its own ``do_HEAD``. Inheriting it unchanged
+# served HEAD straight out of ``send_head()``, skipping the bearer-token check
+# *and* the static-root containment check that ``do_GET`` performs: an
+# unauthenticated HEAD disclosed the existence, size and mtime of files under the
+# static root, and followed symlinks out of it that an authenticated GET rejects
+# with 403. These pin the gate on the verb, not just on GET.
+
+
+def _request(
+    method: str, url: str, headers: dict[str, str], timeout: int = 5
+) -> tuple[int, dict[str, str], bytes]:
+    """Issue an arbitrary-method request, returning (status, headers, body)."""
+    parts = urllib.parse.urlsplit(url)
+    conn = http.client.HTTPConnection(parts.hostname or "", parts.port or 80, timeout=timeout)
+    try:
+        target = parts.path + (f"?{parts.query}" if parts.query else "")
+        conn.request(method, target, headers=headers)
+        resp = conn.getresponse()
+        return resp.status, dict(resp.getheaders()), resp.read()
+    finally:
+        conn.close()
+
+
+def test_head_on_static_path_is_unauthorized_without_a_token(
+    authed_server_base: tuple[str, str],
+) -> None:
+    """The core bypass: HEAD must not be served where GET answers 401."""
+    base_url, _ = authed_server_base
+    status, _, _ = _request("HEAD", f"{base_url}/index.html", {})
+    assert status == 401
+
+
+def test_head_on_api_path_is_unauthorized_without_a_token(
+    authed_server_base: tuple[str, str],
+) -> None:
+    """HEAD on an API endpoint is gated identically to GET."""
+    base_url, _ = authed_server_base
+    status, _, _ = _request("HEAD", f"{base_url}/api/stages", {})
+    assert status == 401
+
+
+def test_head_matches_get_status_across_paths_and_credentials(
+    authed_server_base: tuple[str, str],
+) -> None:
+    """Pin the invariant itself: HEAD and GET agree on status for every case.
+
+    Asserting the *agreement* rather than a hardcoded list is what stops the two
+    verbs drifting apart again if routing changes.
+    """
+    base_url, token = authed_server_base
+    good = {"Authorization": f"Bearer {token}"}
+    bad = {"Authorization": "Bearer wrong_token_xyz"}
+    for path, headers in [
+        ("/health", {}),
+        ("/api/stages", good),
+        ("/api/stages", {}),
+        ("/api/stages", bad),
+        ("/api/ecosystem", good),
+        ("/index.html", good),
+        ("/index.html", {}),
+    ]:
+        get_status, _, _ = _request("GET", f"{base_url}{path}", headers)
+        head_status, _, _ = _request("HEAD", f"{base_url}{path}", headers)
+        assert head_status == get_status, f"HEAD/GET disagree on {path} (auth={bool(headers)})"
+
+
+def test_head_sends_no_body_but_keeps_content_length(
+    authed_server_base: tuple[str, str],
+) -> None:
+    """HEAD must advertise the length GET would send while writing no body."""
+    base_url, token = authed_server_base
+    good = {"Authorization": f"Bearer {token}"}
+    get_status, _, get_body = _request("GET", f"{base_url}/api/stages", good)
+    head_status, head_headers, head_body = _request("HEAD", f"{base_url}/api/stages", good)
+    assert (get_status, head_status) == (200, 200)
+    assert head_body == b""
+    assert head_headers["Content-Length"] == str(len(get_body))
+
+
+def test_unauthenticated_head_discloses_no_file_metadata(tmp_path: Path) -> None:
+    """With a real static root present, HEAD leaks neither existence nor size.
+
+    The module-level ``_STATIC_ROOT`` does not exist in this repo, so the leak
+    only shows up once a built dashboard is on disk — which is exactly the
+    deployed configuration.
+    """
+    import sakthai.web.server as srv
+
+    static_root = tmp_path / "dist"
+    static_root.mkdir()
+    (static_root / "asset.js").write_text("console.log('sensitive')")
+
+    previous_root, previous_token = srv._STATIC_ROOT, srv._BEARER_TOKEN
+    srv._STATIC_ROOT = static_root
+    srv._BEARER_TOKEN = "test_bearer_token_12345678"
+    try:
+        with _background_server() as server:
+            base_url = f"http://127.0.0.1:{server.server_address[1]}"
+            present, present_headers, _ = _request("HEAD", f"{base_url}/asset.js", {})
+            missing, _, _ = _request("HEAD", f"{base_url}/nope.js", {})
+
+        assert present == 401
+        # The response must not carry the asset's real size...
+        assert present_headers.get("Content-Length") != str(len("console.log('sensitive')"))
+        # ...nor let a present file be told apart from an absent one.
+        assert present == missing
+    finally:
+        srv._STATIC_ROOT, srv._BEARER_TOKEN = previous_root, previous_token
+
+
+def test_head_cannot_follow_a_symlink_out_of_the_static_root(tmp_path: Path) -> None:
+    """HEAD is subject to the same containment check as GET.
+
+    An authenticated GET answers 403 for a symlink escaping the static root; an
+    unauthenticated HEAD used to answer 200 for the same target.
+    """
+    import sakthai.web.server as srv
+
+    static_root = tmp_path / "dist"
+    static_root.mkdir()
+    outside = tmp_path / "outside.txt"
+    outside.write_text("escaped the static root")
+    (static_root / "link.txt").symlink_to(outside)
+
+    previous_root, previous_token = srv._STATIC_ROOT, srv._BEARER_TOKEN
+    srv._STATIC_ROOT = static_root
+    srv._BEARER_TOKEN = "test_bearer_token_12345678"
+    try:
+        with _background_server() as server:
+            base_url = f"http://127.0.0.1:{server.server_address[1]}"
+            good = {"Authorization": "Bearer test_bearer_token_12345678"}
+            authed_get, _, _ = _request("GET", f"{base_url}/link.txt", good)
+            authed_head, _, _ = _request("HEAD", f"{base_url}/link.txt", good)
+            anon_head, _, _ = _request("HEAD", f"{base_url}/link.txt", {})
+
+        assert authed_get == 403
+        assert authed_head == 403
+        assert anon_head == 401
+    finally:
+        srv._STATIC_ROOT, srv._BEARER_TOKEN = previous_root, previous_token
 
 
 def test_health_endpoint_needs_no_credentials(authed_server_base: tuple[str, str]) -> None:
