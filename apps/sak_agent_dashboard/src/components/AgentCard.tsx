@@ -1,7 +1,22 @@
 "use client";
 
-import React from "react";
-import { Cpu, Zap, Activity, Award, Shield, Eye, Terminal, Clock } from "lucide-react";
+import React, { useState } from "react";
+import {
+  Cpu,
+  Zap,
+  Activity,
+  Award,
+  Shield,
+  Eye,
+  Terminal,
+  Clock,
+  Play,
+  Send,
+  CheckCircle2,
+  AlertCircle,
+  X,
+  Loader2,
+} from "lucide-react";
 import { AgentPersona } from "@/lib/types";
 
 interface AgentCardProps {
@@ -14,6 +29,7 @@ const personaIcons: Record<string, React.ReactNode> = {
   SakSee: <Eye className="h-5 w-5 text-amber-400" />,
   SakSit: <Shield className="h-5 w-5 text-emerald-400" />,
   SakJules: <Activity className="h-5 w-5 text-rose-400" />,
+  SakTan: <Cpu className="h-5 w-5 text-indigo-400" />,
 };
 
 const personaGlows: Record<string, string> = {
@@ -26,17 +42,95 @@ const personaGlows: Record<string, string> = {
   Unattributed: "border-slate-600/40 hover:border-slate-500/60 shadow-slate-950/40",
 };
 
+const DEFAULT_PRESETS: Record<string, string[]> = {
+  SakThai: [
+    "Run cycle health check and tool guardrail audit",
+    "Analyze memory store knowledge graph",
+  ],
+  SakJules: [
+    "Run automated CI/CD gate and test battery",
+    "Verify repo package parity and drift",
+  ],
+  SakKing: [
+    "Generate executive product and monetization brief",
+    "Prioritize active conductor roadmap tracks",
+  ],
+  SakSee: [
+    "Review media assets and aesthetic UI themes",
+    "Audit marketing conversion funnel copy",
+  ],
+  SakSit: [
+    "Ingest technical documentation and index vector RAG",
+    "Evaluate dataset schema and benchmark cards",
+  ],
+  SakTan: [
+    "Record daily session memories and standup digest",
+    "Sync personal voice notes to Telegram bridge",
+  ],
+};
+
 export function AgentCard({ agent }: AgentCardProps) {
+  const [isDispatchOpen, setIsDispatchOpen] = useState(false);
+  const [taskInput, setTaskInput] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [dispatchResult, setDispatchResult] = useState<{
+    success: boolean;
+    dispatchId?: string;
+    message?: string;
+    error?: string;
+  } | null>(null);
+
   const isOnline = agent.status === "Active" || agent.status === "Ready";
   const glowClass = personaGlows[agent.name] || "border-slate-800 hover:border-slate-700";
   const icon = personaIcons[agent.name] || <Cpu className="h-5 w-5 text-cyan-400" />;
 
-  // No benchmark is reported on live data — eval.jsonl carries none. Render the
-  // absence rather than substituting a number, which is what the previous
-  // `?? 92.5` fallback did: every persona showed a plausible-looking 92.5%
-  // score that had never been measured.
   const score = agent.benchmarkScore;
   const hasScore = typeof score === "number" && Number.isFinite(score);
+  const presets = DEFAULT_PRESETS[agent.name] || [
+    "Execute system telemetry scan",
+    "Verify tool permissions",
+  ];
+
+  const handleDispatch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!taskInput.trim() || isSubmitting) return;
+
+    setIsSubmitting(true);
+    setDispatchResult(null);
+
+    try {
+      const res = await fetch("/api/dispatch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          persona: agent.name,
+          task: taskInput.trim(),
+        }),
+      });
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        setDispatchResult({
+          success: true,
+          dispatchId: data.dispatchId,
+          message: data.message || `Dispatched to ${agent.name}`,
+        });
+        setTaskInput("");
+      } else {
+        setDispatchResult({
+          success: false,
+          error: data.error || "Dispatch request failed",
+        });
+      }
+    } catch (err) {
+      setDispatchResult({
+        success: false,
+        error: err instanceof Error ? err.message : "Network error during dispatch",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <div
@@ -114,7 +208,7 @@ export function AgentCard({ agent }: AgentCardProps) {
         </div>
       </div>
 
-      {/* Benchmark Score Progress Bar — only when a score was actually recorded */}
+      {/* Benchmark Score Progress Bar */}
       <div className="space-y-1.5">
         <div className="flex items-center justify-between text-xs font-mono">
           <span className="text-slate-400 text-[11px] flex items-center gap-1">
@@ -153,6 +247,120 @@ export function AgentCard({ agent }: AgentCardProps) {
           ))}
         </div>
       )}
+
+      {/* Interactive Dispatch Trigger & Expandable Console */}
+      <div className="pt-2 border-t border-slate-800/80">
+        {!isDispatchOpen ? (
+          <button
+            type="button"
+            onClick={() => setIsDispatchOpen(true)}
+            className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-gradient-to-r from-cyan-600/20 to-teal-600/20 hover:from-cyan-600/30 hover:to-teal-600/30 border border-cyan-500/30 text-cyan-300 text-xs font-semibold font-mono transition-all duration-200 shadow-sm"
+          >
+            <Play className="h-3.5 w-3.5 fill-cyan-400 text-cyan-400" />
+            Dispatch {agent.name}
+          </button>
+        ) : (
+          <div className="space-y-2.5 p-3 rounded-xl bg-slate-950/90 border border-cyan-500/40 animate-in fade-in slide-in-from-top-1 duration-200">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-mono font-semibold text-cyan-300 flex items-center gap-1.5">
+                <Zap className="h-3.5 w-3.5 text-cyan-400" />
+                Live Task Dispatch
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsDispatchOpen(false);
+                  setDispatchResult(null);
+                }}
+                className="text-slate-400 hover:text-slate-200 p-0.5 rounded"
+                aria-label="Close dispatch console"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+
+            {/* Quick Prompt Presets */}
+            <div className="flex flex-wrap gap-1">
+              {presets.map((preset) => (
+                <button
+                  key={preset}
+                  type="button"
+                  onClick={() => setTaskInput(preset)}
+                  className="text-[10px] font-mono text-left px-2 py-0.5 rounded bg-slate-900 border border-slate-800 text-slate-400 hover:text-cyan-300 hover:border-cyan-800/60 transition-colors"
+                >
+                  {preset}
+                </button>
+              ))}
+            </div>
+
+            {/* Task Form */}
+            <form onSubmit={handleDispatch} className="space-y-2">
+              <textarea
+                value={taskInput}
+                onChange={(e) => setTaskInput(e.target.value)}
+                placeholder={`Instruct ${agent.name}...`}
+                rows={2}
+                disabled={isSubmitting}
+                className="w-full text-xs bg-slate-900 border border-slate-700/80 rounded-lg p-2 text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-cyan-500 font-mono resize-none"
+              />
+
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[10px] font-mono text-slate-500">
+                  Streams to SSE Bus
+                </span>
+                <button
+                  type="submit"
+                  aria-label="Submit task dispatch"
+                  disabled={!taskInput.trim() || isSubmitting}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 disabled:opacity-40 text-white text-xs font-mono font-medium transition-all"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="h-3 w-3 animate-spin" /> Dispatching...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="h-3 w-3" /> Run Task
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+
+            {/* Dispatch Receipt Feedback */}
+            {dispatchResult && (
+              <div
+                className={`p-2 rounded-lg text-[11px] font-mono flex items-start gap-1.5 border ${
+                  dispatchResult.success
+                    ? "bg-emerald-950/40 text-emerald-300 border-emerald-800/50"
+                    : "bg-rose-950/40 text-rose-300 border-rose-800/50"
+                }`}
+              >
+                {dispatchResult.success ? (
+                  <>
+                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400 shrink-0 mt-0.5" />
+                    <div>
+                      <span className="font-bold">{dispatchResult.message}</span>
+                      {dispatchResult.dispatchId && (
+                        <span className="block text-[10px] text-emerald-400/80">
+                          Receipt ID: {dispatchResult.dispatchId}
+                        </span>
+                      )}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <AlertCircle className="h-3.5 w-3.5 text-rose-400 shrink-0 mt-0.5" />
+                    <div>
+                      <span className="font-bold">Error:</span> {dispatchResult.error}
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
