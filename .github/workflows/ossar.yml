@@ -53,6 +53,7 @@ jobs:
       id: msdo
       with:
         tools: eslint
+        config: apps/sak_agent_dashboard/eslint.config.mjs
 
       # Upload results to the Security tab
     - name: Upload results
