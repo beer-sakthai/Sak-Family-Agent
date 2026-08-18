@@ -969,6 +969,8 @@ export interface M365CopilotApiResponse {
 export type TelemetryEventType =
   | "connected"
   | "agent_start"
+  | "agent_dispatch"
+  | "agent_step"
   | "token_delta"
   | "tool_call"
   | "tool_result"
@@ -996,6 +998,12 @@ export interface TelemetryEvent {
     memoryKey?: string;
     memoryVal?: string;
     error?: string;
+    task?: string;
+    step?: string;
+    phase?: string;
+    status?: string;
+    dispatchedAt?: string;
+    parameters?: Record<string, unknown>;
   };
 }
 

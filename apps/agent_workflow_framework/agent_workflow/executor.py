@@ -485,9 +485,9 @@ def _validate_shell_command(cmd_str: str) -> None:
         if not cmd_str_stripped:
             continue
 
-        # 1. Prevent pipeline-to-interpreter command execution bypasses (e.g. curl ... | sh)
+        # 1. Prevent pipeline-to-interpreter command execution bypasses (e.g. curl ... | sh or curl ... |& bash)
         if "|" in cmd_str_stripped:
-            segments = cmd_str_stripped.split("|")
+            segments = re.split(r"\|&?", cmd_str_stripped)
             for segment in segments[1:]:
                 segment = segment.strip(" \t\n\r\"'()$&;")
                 if segment:
@@ -825,8 +825,14 @@ class WorkflowExecutor:
             # AST-based validation to block any dunder attribute or name accesses.
             # Normalize NFKC prior to parsing so compatibility characters (e.g. full-width U+FF3F '＿')
             # normalize to standard ASCII characters before attribute/identifier matching.
+            #
+            # Security: the *same* normalized string is what gets executed below.
+            # Validating one string (normalized) while eval/exec-ing another (the
+            # raw ``code``) is a validate-vs-execute desync — the classic seam a
+            # sandbox escape hides in. Compute it once, here, outside the try so
+            # it is always the value handed to eval/exec.
+            normalized_code = unicodedata.normalize("NFKC", code)
             try:
-                normalized_code = unicodedata.normalize("NFKC", code)
                 tree = ast.parse(normalized_code)
                 for node in ast.walk(tree):
                     if isinstance(node, ast.Attribute):
@@ -918,12 +924,14 @@ class WorkflowExecutor:
 
 
             try:
-                # Try evaluating as expression first
-                res = eval(code, eval_globals, eval_locals)
+                # Try evaluating as expression first. Execute the SAME
+                # normalized source the AST validator inspected above — never
+                # the raw ``code`` — so validation and execution cannot diverge.
+                res = eval(normalized_code, eval_globals, eval_locals)  # nosec B307
                 return {"result": res, "output": res}
             except SyntaxError:
                 # Execute as statement block
-                exec(code, eval_globals, eval_locals)
+                exec(normalized_code, eval_globals, eval_locals)  # nosec B102
                 out_locals = {k: v for k, v in eval_locals.items() if k not in params and not k.startswith("_")}
                 return out_locals if out_locals else {"status": "success"}
 
