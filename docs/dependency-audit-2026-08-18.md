@@ -119,6 +119,31 @@ the advisory to be corrected upstream.
 
 ---
 
+## Postscript: this fix was reverted the same day
+
+PR #860 — two commits, both titled **"🔒 fix(security): replace hardcoded example
+API key strings in SakKing-comfyui"** — reverted every pin above (`torch`,
+`torchvision`, `torchaudio`, `transformers`, `sentencepiece`), both `.lock`
+files and `ml-stack.constraints`, and deleted this document along with
+`docs/ci-regression-2026-08-18.md`. The CRITICAL `torch.load` RCE was back on
+`main`, under a commit message about API-key strings. Nothing failed.
+
+That is the fifth commit in one day whose diff bears no relation to its message.
+
+**New guard:** `tests/test_persona_guardrails_parity.py::TestVulnerableDependencyPinsStayFixed`
+asserts a *minimum safe version* for each of the five packages, read straight
+from the `.in` files. Raising a pin always passes; only dropping below a version
+with a known advisory fails. Verified by replaying the exact revert — all five
+subtests fail on the reverted pins and pass on the fixed ones.
+
+It lives in the parity module rather than beside the training config on purpose:
+that file has survived every revert so far, whereas a feature's own tests tend
+to go out with the feature. It is also, as noted above, the *only* automated
+floor on these files — `dependency-audit.yml` reads the root `uv.lock` and
+cannot audit these at all.
+
+---
+
 ## Preventing recurrence
 
 - `dependency-audit.yml` runs `pip-audit` over the root `uv.lock` only. It did
