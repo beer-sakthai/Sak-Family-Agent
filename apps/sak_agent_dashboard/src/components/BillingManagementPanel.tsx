@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import {
   CreditCard,
   Key,
@@ -32,7 +32,7 @@ export function BillingManagementPanel() {
   const [generatedKey, setGeneratedKey] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
-  const fetchBillingData = useCallback(async () => {
+  const fetchBillingData = React.useCallback(async () => {
     try {
       const res = await fetch("/api/billing");
       const json = await res.json();
@@ -49,7 +49,7 @@ export function BillingManagementPanel() {
 
   useEffect(() => {
     let isMounted = true;
-    async function loadInitialData() {
+    const load = async () => {
       try {
         const res = await fetch("/api/billing");
         const json = await res.json();
@@ -62,8 +62,8 @@ export function BillingManagementPanel() {
       } catch (err) {
         console.error("Failed to load billing metrics", err);
       }
-    }
-    void loadInitialData();
+    };
+    load();
     return () => {
       isMounted = false;
     };
