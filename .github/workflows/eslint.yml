@@ -46,10 +46,17 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  # See the note in ci.yml — and in codeql.yml for why a `main` run is never
+  # cancelled: this workflow's upload is what closes its own earlier alerts.
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   eslint:
     name: Run eslint scanning
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     defaults:
       run:
         working-directory: apps/sak_agent_dashboard
