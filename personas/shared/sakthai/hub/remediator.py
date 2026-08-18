@@ -29,9 +29,8 @@ class SpaceRemediator:
             return token.strip()
         token_file = os.path.expanduser("~/.cache/huggingface/token")
         if os.path.exists(token_file):
-            with contextlib.suppress(Exception):
-                with open(token_file) as f:
-                    return f.read().strip()
+            with contextlib.suppress(Exception), open(token_file) as f:
+                return f.read().strip()
         return None
 
     def diagnose_space(self, repo_id: str) -> dict[str, Any]:
