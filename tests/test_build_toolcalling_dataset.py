@@ -5,7 +5,9 @@ import json
 from pathlib import Path
 
 # Load module dynamically because directory name 'hf-jobs' contains a hyphen
-MODULE_PATH = Path(__file__).resolve().parents[1] / "training" / "hf-jobs" / "build_toolcalling_dataset.py"
+MODULE_PATH = (
+    Path(__file__).resolve().parents[1] / "training" / "hf-jobs" / "build_toolcalling_dataset.py"
+)
 spec = importlib.util.spec_from_file_location("build_toolcalling_dataset", MODULE_PATH)
 assert spec is not None and spec.loader is not None
 build_module = importlib.util.module_from_spec(spec)
@@ -19,7 +21,9 @@ def test_generate_tool_rows_helper() -> None:
     def arg_builder(item: str) -> dict[str, str]:
         return {"item_name": item}
 
-    rows = list(build_module.generate_tool_rows("dummy_tool", templates, items, arg_builder, sample_size=1))
+    rows = list(
+        build_module.generate_tool_rows("dummy_tool", templates, items, arg_builder, sample_size=1)
+    )
 
     assert len(rows) == len(items)
     for user_text, tool_name, args in rows:
