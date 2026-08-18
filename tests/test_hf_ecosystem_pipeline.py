@@ -5,7 +5,6 @@ from unittest.mock import MagicMock, patch
 
 from sakthai.hub.models import (
     AssetType,
-    CardValidationReport,
     EcosystemHealthReport,
     HubAssetSpec,
     SpaceState,
@@ -116,7 +115,9 @@ class TestHubScanner(unittest.TestCase):
     @patch("sakthai.hub.scanner.urllib.request.urlopen")
     def test_scan_ecosystem_mocked(self, mock_urlopen):
         mock_resp = MagicMock()
-        mock_resp.read.return_value = b'[{"id": "Nanthasit/context-1.5b", "downloads": 1200, "likes": 50, "tags": ["gguf"]}]'
+        mock_resp.read.return_value = (
+            b'[{"id": "Nanthasit/context-1.5b", "downloads": 1200, "likes": 50, "tags": ["gguf"]}]'
+        )
         mock_urlopen.return_value.__enter__.return_value = mock_resp
 
         report = self.scanner.scan_ecosystem(force=True)

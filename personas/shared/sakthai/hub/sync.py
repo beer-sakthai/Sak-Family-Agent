@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Optional
 
 from .models import HubAssetSpec
 
@@ -33,7 +32,7 @@ class HubCardSynchronizer:
         tags_yaml = "\n".join(f"  - {t}" for t in asset.tags)
         return f"""---
 license: {asset.license}
-pipeline_tag: {asset.pipeline_tag or 'text-generation'}
+pipeline_tag: {asset.pipeline_tag or "text-generation"}
 tags:
 {tags_yaml}
 ---
