@@ -290,11 +290,8 @@ def _is_sensitive_path(path: str, allow_local: bool = False) -> bool:
             # If base_path is a prefix of any critical root (e.g. /et matching /etc),
             # it is also potentially sensitive if it is not just "/".
             if base_path != "/":
-                check_path = os.path.normpath(
-                    base_path if base_path.startswith("/") else "/" + base_path
-                )
                 for root in _CRITICAL_ROOTS:
-                    if root.startswith(check_path):
+                    if root.startswith(base_path):
                         return True
         elif not allow_local:
             # If the path starts with a wildcard and local paths are not allowed,

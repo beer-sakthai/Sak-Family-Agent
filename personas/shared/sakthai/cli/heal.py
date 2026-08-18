@@ -156,23 +156,7 @@ def heal_inspect(log_source: str, as_json: bool) -> None:
     help="Write the markdown report here.",
 )
 @click.option("--json", "as_json", is_flag=True, help="Emit the outcome as JSON.")
-def heal_run(
-    log_source: str,
-    repo_root: str,
-    model: str,
-    provider: str | None,
-    walkthrough_model: str,
-    min_confidence: float,
-    base: str,
-    branch_prefix: str,
-    run_id: str,
-    run_url: str,
-    dry_run: bool,
-    no_publish: bool,
-    no_pr: bool,
-    report_path: str | None,
-    as_json: bool,
-) -> None:
+def heal_run(**kwargs: Any) -> None:
     """Diagnose a failed CI run, apply a verified fix, and open a pull request."""
     args = HealRunArgs.from_dict(kwargs)
     log_text = _read_log(args.log_source)
@@ -183,14 +167,6 @@ def heal_run(
         # must not stop a fix that is otherwise ready to publish.
         try:
             narrator = build_completion(model=args.walkthrough_model)
-    log_text = _read_log(log_source)
-
-    try:
-        completion = build_completion(provider=provider, model=model)
-        # The walkthrough is best-effort; a provider that cannot be built for it
-        # must not stop a fix that is otherwise ready to publish.
-        try:
-            narrator = build_completion(model=walkthrough_model)
         except Exception:  # noqa: BLE001 — narration is optional by design
             narrator = None
     except Exception as exc:  # noqa: BLE001 — surface a provider failure as a CLI error
@@ -213,22 +189,6 @@ def heal_run(
         Path(args.report_path).write_text(outcome.report, encoding="utf-8")
 
     if args.as_json:
-        repo_root=Path(repo_root),
-        min_confidence=min_confidence,
-        branch_prefix=branch_prefix,
-        base_branch=base,
-        run_id=run_id,
-        run_url=run_url,
-        dry_run=dry_run,
-        publish_fix=not (no_publish or dry_run),
-        open_pr=not no_pr,
-    )
-    outcome = run_heal(log_text, config, completion=completion, narrator=narrator)
-
-    if report_path:
-        Path(report_path).write_text(outcome.report, encoding="utf-8")
-
-    if as_json:
         click.echo(json.dumps(_outcome_json(outcome), indent=2))
         return
 

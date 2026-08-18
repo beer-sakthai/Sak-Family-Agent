@@ -6,7 +6,6 @@ import contextlib
 import os
 import sys
 from collections.abc import Callable, Iterator
-from dataclasses import dataclass
 from typing import Any
 
 import click
@@ -102,47 +101,41 @@ def _event_emitter(verbose: bool) -> Callable[[str, dict[str, Any]], None]:
     return emit
 
 
-@dataclass
-class RunOptions:
-    """Configuration options for the agent run command."""
-
-    model: str = DEFAULT_MODEL
-    max_tokens: int = DEFAULT_MAX_TOKENS
-    max_iterations: int = DEFAULT_MAX_ITERATIONS
-    max_seconds: float | None = None
-    provider: str | None = None
-    verbose: bool = False
-    no_mcp: bool = False
-    with_skills: tuple[str, ...] = ()
-    dry_run: bool = False
-    stream: bool = False
-    fast: bool = False
-    stateless: bool = False
-    caveman: str | None = None
-    sandbox: bool = False
-    persona: str | None = None
-
-
-def _run_in_sandbox(task: str, opts: RunOptions) -> None:
+def _run_in_sandbox(
+    task: str,
+    model: str,
+    max_tokens: int,
+    max_iterations: int,
+    max_seconds: float | None,
+    provider: str | None,
+    verbose: bool,
+    no_mcp: bool,
+    with_skills: tuple[str, ...],
+    fast: bool,
+    stateless: bool,
+    caveman: str | None,
+    dry_run: bool,
+    stream: bool,
+) -> None:
     from ..sandbox import SandboxError, run_in_sandbox
 
     try:
         click.echo("Building sandbox image (cached after first run)…", err=True)
         code = run_in_sandbox(
             task,
-            model=opts.model,
-            max_tokens=opts.max_tokens,
-            max_iterations=opts.max_iterations,
-            max_seconds=opts.max_seconds,
-            provider=opts.provider,
-            verbose=opts.verbose,
-            no_mcp=opts.no_mcp,
-            with_skills=opts.with_skills,
-            fast=opts.fast,
-            stateless=opts.stateless,
-            caveman=opts.caveman,
-            dry_run=opts.dry_run,
-            stream=opts.stream,
+            model=model,
+            max_tokens=max_tokens,
+            max_iterations=max_iterations,
+            max_seconds=max_seconds,
+            provider=provider,
+            verbose=verbose,
+            no_mcp=no_mcp,
+            with_skills=with_skills,
+            fast=fast,
+            stateless=stateless,
+            caveman=caveman,
+            dry_run=dry_run,
+            stream=stream,
         )
     except SandboxError as e:
         raise click.ClickException(str(e)) from e
@@ -225,7 +218,24 @@ def _run_in_sandbox(task: str, opts: RunOptions) -> None:
         "unscoped memory.db (unchanged pre-existing behavior)."
     ),
 )
-def run(task: str, **kwargs: Any) -> None:
+def run(
+    task: str,
+    model: str,
+    max_tokens: int,
+    max_iterations: int,
+    max_seconds: float | None,
+    provider: str | None,
+    verbose: bool,
+    no_mcp: bool,
+    with_skills: tuple[str, ...],
+    dry_run: bool,
+    stream: bool,
+    fast: bool,
+    stateless: bool,
+    caveman: str | None,
+    sandbox: bool,
+    persona: str | None,
+) -> None:
     """Run TASK through the standalone SakThai agent.
 
     External MCP servers configured in ~/.sakthai/mcp.json (or installed
@@ -234,29 +244,43 @@ def run(task: str, **kwargs: Any) -> None:
     configured correctly (provider, credentials, model, tools) without spending
     any tokens.
     """
-    opts = RunOptions(**kwargs)
-    if opts.persona and opts.sandbox:
+    if persona and sandbox:
         raise click.UsageError(
             "--persona is not supported with --sandbox yet "
             "(the sandbox only bind-mounts the default, unscoped memory.db)."
         )
-    if opts.persona:
+    if persona:
         # Explicit --model/--provider always win; a persona's own config.yaml
         # (model.provider/model.default) only fills in when the caller left
         # them at their CLI defaults.
-        default_provider, default_model = config.persona_model_defaults(opts.persona)
-        if opts.provider is None and default_provider:
-            opts.provider = default_provider
-        if opts.model == DEFAULT_MODEL and default_model:
-            opts.model = default_model
-    if opts.sandbox:
-        _run_in_sandbox(task, opts)
+        default_provider, default_model = config.persona_model_defaults(persona)
+        if provider is None and default_provider:
+            provider = default_provider
+        if model == DEFAULT_MODEL and default_model:
+            model = default_model
+    if sandbox:
+        _run_in_sandbox(
+            task=task,
+            model=model,
+            max_tokens=max_tokens,
+            max_iterations=max_iterations,
+            max_seconds=max_seconds,
+            provider=provider,
+            verbose=verbose,
+            no_mcp=no_mcp,
+            with_skills=with_skills,
+            fast=fast,
+            stateless=stateless,
+            caveman=caveman,
+            dry_run=dry_run,
+            stream=stream,
+        )
 
-    if opts.dry_run:
-        with _tool_context(no_mcp=opts.no_mcp, verbose=opts.verbose, persona=opts.persona) as tools:
-            report = preflight(model=opts.model, provider=opts.provider, tools=tools)
+    if dry_run:
+        with _tool_context(no_mcp=no_mcp, verbose=verbose, persona=persona) as tools:
+            report = preflight(model=model, provider=provider, tools=tools)
         _print_preflight(report)
-        resolved, missing = resolve_skill_names(list(opts.with_skills), persona=opts.persona)
+        resolved, missing = resolve_skill_names(list(with_skills), persona=persona)
         if resolved:
             click.echo(f"[dry-run] skills:      {len(resolved)} resolved ({', '.join(resolved)})")
         # Reported before the credentials check on purpose. An unresolved skill
@@ -273,8 +297,8 @@ def run(task: str, **kwargs: Any) -> None:
                 f"Not runnable: no credentials found for provider {report['provider']!r}."
             )
         return
-    if opts.with_skills:
-        _, missing = resolve_skill_names(list(opts.with_skills), persona=opts.persona)
+    if with_skills:
+        _, missing = resolve_skill_names(list(with_skills), persona=persona)
         if missing:
             click.echo(
                 f"warning: skill(s) not found and will be skipped: {', '.join(missing)}",
@@ -290,29 +314,27 @@ def run(task: str, **kwargs: Any) -> None:
     # A --persona run gets its own memory shard and SOUL.md identity; without
     # --persona, behavior is unchanged from before this flag existed (no store
     # passed, run_agent() opens/closes its own default MemoryStore()).
-    persona_store = (
-        MemoryStore(config.persona_memory_db_path(opts.persona)) if opts.persona else None
-    )
-    system_prompt_prefix = load_persona_soul(opts.persona) if opts.persona else ""
+    persona_store = MemoryStore(config.persona_memory_db_path(persona)) if persona else None
+    system_prompt_prefix = load_persona_soul(persona) if persona else ""
     try:
-        with _tool_context(no_mcp=opts.no_mcp, verbose=opts.verbose, persona=opts.persona) as tools:
+        with _tool_context(no_mcp=no_mcp, verbose=verbose, persona=persona) as tools:
             result = run_agent(
                 task,
-                model=opts.model,
-                max_tokens=opts.max_tokens,
-                max_iterations=opts.max_iterations,
-                max_seconds=opts.max_seconds,
-                on_event=_event_emitter(opts.verbose),
-                on_token=_on_token if opts.stream else None,
-                provider=opts.provider,
+                model=model,
+                max_tokens=max_tokens,
+                max_iterations=max_iterations,
+                max_seconds=max_seconds,
+                on_event=_event_emitter(verbose),
+                on_token=_on_token if stream else None,
+                provider=provider,
                 tools=tools,
-                skills=list(opts.with_skills),
-                fast=opts.fast,
-                stateless=opts.stateless,
-                caveman=opts.caveman,
+                skills=list(with_skills),
+                fast=fast,
+                stateless=stateless,
+                caveman=caveman,
                 store=persona_store,
                 system_prompt_prefix=system_prompt_prefix,
-                persona=opts.persona,
+                persona=persona,
             )
     except AgentError as exc:
         raise click.ClickException(str(exc)) from exc
