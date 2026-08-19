@@ -252,21 +252,31 @@ def _resolve_model_name(model: str, provider: str) -> str:
     return model
 
 
-def _execute_tool(tool: Tool, args: dict[str, Any], store: MemoryStore) -> tuple[str, bool]:
+def _execute_tool(
+    tool: Tool, args: dict[str, Any], store: MemoryStore, heal: _HealState | None = None
+) -> tuple[str, bool]:
     """Run a tool, returning (output, is_error). Errors are reported, not raised.
 
     All tool output is passed through ``redact_secrets`` as a global fail-safe.
+    When ``heal`` is set, a tool-handler exception is also routed through the
+    self-healing supervisor (DLQ + circuit breaker) before being surfaced.
     """
     try:
         output = tool.handler(args, store)
         return redact_secrets(output), False
     except Exception as exc:  # noqa: BLE001 — surfaced back to the model
         logger.debug("Tool %r raised %s: %s", tool.name, type(exc).__name__, exc)
+        if heal is not None:
+            _handle_healing_failure(heal, store, action=tool.name, payload=args, error=exc)
         return redact_secrets(f"{type(exc).__name__}: {exc}"), True
 
 
 def _execute_tool_with_guardrails(
-    tool: Tool, args: dict[str, Any], store: MemoryStore, policy: GuardrailPolicy
+    tool: Tool,
+    args: dict[str, Any],
+    store: MemoryStore,
+    policy: GuardrailPolicy,
+    heal: _HealState | None = None,
 ) -> tuple[str, bool]:
     """Check guardrails, then run a tool.
 
@@ -284,7 +294,7 @@ def _execute_tool_with_guardrails(
     # Use the arguments as potentially modified by the guardrail policy.
     final_args = pre_check_result.modified_args or args
 
-    output, is_error = _execute_tool(tool, final_args, store)
+    output, is_error = _execute_tool(tool, final_args, store, heal)
 
     post_check_result = policy.check_post_execution(tool, final_args, output, is_error, store)
     if post_check_result.action == GuardrailAction.DENY:
@@ -331,6 +341,7 @@ def _process_tool_uses(
     notify: Callable[[str, dict[str, Any]], None],
     tool_calls: list[dict[str, Any]],
     policy: GuardrailPolicy,
+    heal: _HealState | None = None,
 ) -> list[dict[str, Any]]:
     results: list[dict[str, Any]] = []
     for use in tool_uses:
@@ -347,7 +358,7 @@ def _process_tool_uses(
             notify("tool_error", {"name": use.name, "reason": "unknown"})
             continue
         args = dict(use.input or {})
-        output, is_error = _execute_tool_with_guardrails(tool, args, store, policy)
+        output, is_error = _execute_tool_with_guardrails(tool, args, store, policy, heal)
         tool_calls.append({"name": use.name, "input": args, "is_error": is_error})
         notify(
             "tool_call",
@@ -379,6 +390,7 @@ def _dispatch_tool_calls(
     notify: Callable[[str, dict[str, Any]], None],
     tool_calls: list[dict[str, Any]],
     policy: GuardrailPolicy,
+    heal: _HealState | None = None,
 ) -> None:
     """Process tool_use blocks, execute tools, and append results to messages."""
     tool_uses = [b for b in response.content if getattr(b, "type", "") == "tool_use"]
@@ -390,7 +402,9 @@ def _dispatch_tool_calls(
         return
 
     messages.append({"role": "assistant", "content": response.content})
-    results = _process_tool_uses(tool_uses, registry, store, notify, tool_calls, policy)
+    results = _process_tool_uses(
+        tool_uses, registry, store, notify, tool_calls, policy, heal
+    )
     messages.append({"role": "user", "content": results})
 
 
@@ -668,7 +682,9 @@ def run_agent(
                 _record_run_eval(iteration, stop_reason, had_error=False)
                 return result
 
-            _dispatch_tool_calls(response, messages, registry, store, notify, tool_calls, policy)
+            _dispatch_tool_calls(
+                response, messages, registry, store, notify, tool_calls, policy, heal
+            )
 
         _record_run_eval(max_iterations, "max_iterations", had_error=True)
         raise AgentError(
