@@ -1,6 +1,7 @@
 ---
 name: SakSee-playwright-security-hardening
-description: "Centralize security and isolation test patterns for Playwright: CSP/cookies/cross-origin behavior and other browser-layer boundaries."
+description: 'Centralize security and isolation test patterns for Playwright: CSP/cookies/cross-origin
+  behavior and other browser-layer boundaries.'
 ---
 
 # Playwright Security Hardening

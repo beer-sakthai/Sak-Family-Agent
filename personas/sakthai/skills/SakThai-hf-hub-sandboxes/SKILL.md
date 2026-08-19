@@ -1,15 +1,9 @@
 ---
 name: SakThai-hf-hub-sandboxes
-author: SakThai
-license: MIT
-title: Hugging Face Hub Sandboxes — Isolated Cloud Machines
-category: mlops
-tags: [sandboxes, jobs, compute, isolation, cloud, remote-execution, huggingface-hub]
-related_skills:
-  - huggingface-hub
-  - hf-hub-configuration
-description: Complete reference on Hugging Face Sandboxes — on-demand isolated cloud machines for running code, AI-generated scripts, batch evaluation, and RL rollouts. Covers dedicated (Sandbox.create) and pooled (SandboxPool) modes, CLI commands, file transfer, proxying, and internals.
-version: 1.0.0
+description: "Complete reference on Hugging Face Sandboxes \u2014 on-demand isolated cloud machines\
+  \ for running code, AI-generated scripts, batch evaluation, and RL rollouts. Covers\
+  \ dedicated (Sandbox.create) and pooled (SandboxPool) modes, CLI commands, file\
+  \ transfer, proxying, and internals."
 ---
 
 # 🤗 Hub Sandboxes — Isolated Cloud Machines

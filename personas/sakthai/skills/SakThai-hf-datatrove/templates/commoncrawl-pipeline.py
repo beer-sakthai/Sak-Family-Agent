@@ -15,7 +15,6 @@ import argparse
 import logging
 
 from datatrove.executor import LocalPipelineExecutor, SlurmPipelineExecutor
-from datatrove.pipeline.dedup import SentenceDedupFilter
 from datatrove.pipeline.dedup.minhash import (
     MinhashConfig,
     MinhashDedupBuckets,

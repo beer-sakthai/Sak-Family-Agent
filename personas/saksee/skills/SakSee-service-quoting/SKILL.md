@@ -1,6 +1,8 @@
 ---
 name: SakSee-service-quoting
-description: "Use when constructing a customer quote from stored pricing facts and when deciding whether to capture a lead instead of answering from memory."
+description: Use when constructing a customer quote from stored pricing facts and when deciding
+  whether to capture a lead instead of answering from memory.
+...
 ---
 
 # Service Quoting

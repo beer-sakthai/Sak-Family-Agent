@@ -1,20 +1,8 @@
 ---
 name: SakThai-instagram-qa
-category: social
-author: SakThai
-license: MIT
-description: Provide a verified, repeatable workflow for checking Instagram content
-  quality before publishing
-version: 1.0.0
-platforms:
-- linux
-- macos
-metadata:
-  sakthai:
-    tags:
-    - hermes
-    related_skills: []
-    source: hermes:instagram-qa
+description: Provide a verified, repeatable workflow for checking Instagram content quality before
+  publishing
+...
 ---
 
 # Instagram Business Content QA

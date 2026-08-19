@@ -1,6 +1,7 @@
 ---
 name: SakJules-SakThai-cronjob-auth
-description: "Handle authentication, authorization, and credential safety for Hermes   cron jobs"
+description: Handle authentication, authorization, and credential safety for Hermes   cron jobs
+...
 ---
 
 # Cronjob Auth

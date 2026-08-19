@@ -1,6 +1,7 @@
 ---
 name: SakThai-hf-reasoning-corpus-4k-5m
-description: "Qyrou/reasoning-corpus-4K-5M-v1 — curated 5M-row / ~9B-token reasoning corpus for SLM SFT & distillation. Source map, schema, streaming recipes, and pitfalls."
+description: "Qyrou/reasoning-corpus-4K-5M-v1 \u2014 curated 5M-row / ~9B-token reasoning corpus\
+  \ for SLM SFT & distillation. Source map, schema, streaming recipes, and pitfalls."
 ---
 
 # Reasoning Corpus 4K-5M (Qyrou)

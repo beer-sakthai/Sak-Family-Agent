@@ -1,6 +1,6 @@
 ---
 name: SakSee-notion
-description: "Notion API + ntn CLI: pages, databases, markdown, Workers."
+description: 'Notion API + ntn CLI: pages, databases, markdown, Workers.'
 ---
 
 # Notion

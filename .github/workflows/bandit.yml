@@ -1,0 +1,117 @@
+# Bandit — the Python security linter — over this repository's own code, with
+# this repository's own configuration.
+#
+# What this workflow is *not*: a scan of everything ending in `.py`. That was
+# the previous shape of this file (`shundor/python-bandit-scan` pointed at `.`
+# with no `ini_path`), and it is worth recording why it was replaced, because
+# the failure mode is quiet and looks like thorough security coverage.
+#
+# A third-party action invoking plain `bandit -r .` never reads `[tool.bandit]`
+# from `pyproject.toml` — bandit only loads that file when it is passed via
+# `-c`. So every `skips` entry this repository has deliberately chosen was
+# ignored, and the scan additionally walked three trees that are not first-party
+# code: `tests/`, the folded-in `sakthai-chat-cli/` copy of a separate repo, and
+# the ~900 skill directories under `personas/*/skills/` (vendored reference
+# scripts). The result was 5,000 SARIF results uploaded to the Security tab —
+# exactly 5,000, because that is GitHub's per-upload cap, so the real number was
+# higher and the overflow was silently discarded. 4,525 of them were B101
+# ("use of assert"), fired on assertions in the test suite. That is not a
+# finding; `pyproject.toml` skips B101 for precisely this reason.
+#
+# The measured effect of the scoping below, run locally against the same tree:
+# 5,000 results become 63, none of them HIGH severity, every one in real
+# first-party code. See docs/code-scanning-sweep-2026-08-18.md.
+#
+# The tool name Bandit writes into its SARIF is unchanged, so a run of this
+# workflow supersedes the old analyses and closes the alerts they left behind —
+# an alert is only ever closed by a newer analysis from the same tool.
+name: Bandit
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+  schedule:
+    - cron: '31 7 * * 3'
+
+permissions:
+  contents: read
+
+concurrency:
+  # See the note in ci.yml — and in codeql.yml for why a `main` run is never
+  # cancelled: this workflow's upload is what closes its own earlier alerts.
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  bandit:
+    name: Bandit
+    timeout-minutes: 20
+    permissions:
+      contents: read          # actions/checkout
+      security-events: write  # upload-sarif writes to the code-scanning API
+      actions: read           # upload-sarif reads the run status on a private repo
+
+    runs-on: ubuntu-latest
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@05e31511f85b41b11d1cf0ef85d0992719546e2c # v2.21.0
+        with:
+          use-policy-store: true
+          api-key: ${{ secrets.STEP_SECURITY_API_KEY }}
+
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      # Hash-pinned, not merely version-pinned. A bare `pip install pkg==x.y.z`
+      # is Scorecard's `PinnedDependenciesID` / "pipCommand not pinned by hash"
+      # (alert #21445, raised against this step in the 2026-08-18 sweep's own
+      # follow-up read), and more to the point a version pin alone still trusts
+      # whatever the index serves under that version.
+      #
+      # `.github/bandit-requirements.lock` is generated, never hand-edited —
+      # regenerate it with the command recorded in its header when the pinned
+      # version bumps. The `sarif` extra is what provides `-f sarif`; plain
+      # bandit fails the run with an unknown-format error without it.
+      - name: Install Bandit
+        run: |
+          python -m pip install --disable-pip-version-check \
+            --require-hashes -r .github/bandit-requirements.lock
+
+      # `-c pyproject.toml` is the whole point: it is what applies this
+      # repository's `skips` (B101 asserts, and the subprocess rules the
+      # guardrail layer exists to police) and its `exclude_dirs`.
+      #
+      # `--exclude` names the trees that are on disk but are not this
+      # repository's code to fix:
+      #   personas/*/skills   vendored skill scripts, one directory per skill
+      #   sakthai-chat-cli    a folded-in copy of a separate repo, own lineage
+      #   library             curated third-party skill content
+      #   tests               already in exclude_dirs; named again so the scope
+      #                       is readable from the workflow alone
+      # Everything else — the package, the shared package copy, scripts/,
+      # services/, infra/, training/, apps/, fuzz/ — is in scope, so new
+      # first-party code is covered without touching this file.
+      #
+      # `--exit-zero` keeps the upload as the deliverable: findings belong on
+      # the Security tab, and `ci.yml` is the job that fails a build on them.
+      - name: Run Bandit
+        run: |
+          bandit -c pyproject.toml -r . \
+            --exclude './.git,./.venv,./build,./dist,./node_modules,./tests,./library,./sakthai-chat-cli,./personas/sakthai/skills,./personas/sakking/skills,./personas/saksee/skills,./personas/saksit/skills,./personas/sakjules/skills,./personas/saktan/skills,./personas/shared/skills' \
+            --format sarif \
+            --output bandit-results.sarif \
+            --exit-zero
+
+      - name: Upload results to the code-scanning dashboard
+        uses: github/codeql-action/upload-sarif@ff2f1c621b7f889edc0d3c761ac2e6a3f8cdb0dd # v4
+        with:
+          sarif_file: bandit-results.sarif

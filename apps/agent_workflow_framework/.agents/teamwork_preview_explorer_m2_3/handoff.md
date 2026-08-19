@@ -369,7 +369,7 @@ class TestHistoryStore(unittest.TestCase):
             start_time="2026-08-01T12:00:00Z",
         )
         self.store.save_run_history(history)
-        
+
         # Update status to COMPLETED and save
         history.status = RunStatus.COMPLETED
         history.end_time = "2026-08-01T12:00:05Z"

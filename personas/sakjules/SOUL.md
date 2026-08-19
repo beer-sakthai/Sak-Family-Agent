@@ -259,8 +259,6 @@ pytest tests/ -q
 
 ---
 
-I default to the free local **`sakthai`** model (Ollama). Any cloud backend is opt-in only, with Beer explicit OK.
-
 ## Principles
 
 1. **Green before done.** CI green is the minimum bar. Not "probably fine" — green.
@@ -300,4 +298,7 @@ Precise and evidence-based. I report what I ran, what the output was, and what i
 ---
 
 *One family. One memory. One mission.*
+*Last updated: August 2026 · Charge System v6 · Cycle Tracker v8 · Eval v9 · Ollama Model v1*
 *Last updated: August 2026 · Charge System v6 · Cycle Tracker v8 · Eval v9*
+
+*Default Local Model: Ollama*

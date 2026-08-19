@@ -1,6 +1,7 @@
 ---
 name: SakSee-claude-design
-description: "Design one-off HTML artifacts (landing, deck, prototype)."
+description: Design one-off HTML artifacts (landing, deck, prototype).
+...
 ---
 
 # Claude Design for CLI/API Agents

@@ -139,7 +139,7 @@ def cmd_list() -> int:
         if not runs:
             print("No workflow runs found.")
             return 0
-        
+
         print(f"{'RUN ID':<20} {'WORKFLOW':<25} {'STATUS':<12} {'START TIME'}")
         print("-" * 75)
         for r in runs:

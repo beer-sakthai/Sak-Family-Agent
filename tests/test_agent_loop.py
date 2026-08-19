@@ -2147,6 +2147,60 @@ def test_history_seeds_prior_messages(store: MemoryStore) -> None:
     assert sent[2] == {"role": "user", "content": "follow up"}
 
 
+def test_history_is_truncated_by_default_context_filter(store: MemoryStore) -> None:
+    # Long-running chat sessions feed AgentResult.messages back in as `history`
+    # each turn; the default context filter should keep old string turns from
+    # growing the prompt unboundedly, while leaving the most recent turn intact.
+    client = _CapturingClient([_Resp("end_turn", [_Block(type="text", text="ok")])])
+    long_content = "a" * 1000
+    prior = [
+        {"role": "user", "content": long_content},
+        {"role": "assistant", "content": long_content},
+        {"role": "user", "content": "recent question"},
+        {"role": "assistant", "content": "recent answer"},
+    ]
+    run_agent(
+        "follow up",
+        client=client,
+        store=store,
+        provider="anthropic",
+        history=prior,
+    )
+    sent = client.received_messages[0]
+    assert len(sent[0]["content"]) < len(long_content)
+    assert sent[0]["content"].endswith("... [summarized]")
+    # Last two prior turns and the new task are untouched.
+    assert sent[2] == prior[2]
+    assert sent[3] == prior[3]
+    assert sent[4] == {"role": "user", "content": "follow up"}
+
+
+def test_history_context_filter_is_overridable(store: MemoryStore) -> None:
+    client = _CapturingClient([_Resp("end_turn", [_Block(type="text", text="ok")])])
+    long_content = "a" * 1000
+    prior = [
+        {"role": "user", "content": long_content},
+        {"role": "assistant", "content": long_content},
+        {"role": "user", "content": "recent question"},
+        {"role": "assistant", "content": "recent answer"},
+    ]
+    identity_filter = MagicMock()
+    identity_filter.filter.side_effect = lambda messages: list(messages)
+
+    run_agent(
+        "follow up",
+        client=client,
+        store=store,
+        provider="anthropic",
+        history=prior,
+        context_filter=identity_filter,
+    )
+
+    identity_filter.filter.assert_called_once_with(prior)
+    sent = client.received_messages[0]
+    assert sent[0]["content"] == long_content
+
+
 def test_agent_result_messages_include_final_assistant_turn(store: MemoryStore) -> None:
     block = _Block(type="text", text="hello")
     client = FakeClient([_Resp("end_turn", [block])])
