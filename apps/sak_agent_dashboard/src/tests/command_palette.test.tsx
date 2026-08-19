@@ -16,13 +16,15 @@ describe('CommandPaletteModal Component', () => {
       />
     );
 
+    expect(screen.getByRole('dialog', { name: /Command Palette/i })).toBeDefined();
+    expect(screen.getByLabelText(/Close command palette/i)).toBeDefined();
     expect(screen.getByPlaceholderText(/Type a command or jump to studio panel/i)).toBeDefined();
     expect(screen.getByText(/Agent War Room & Mesh Visualizer/i)).toBeDefined();
     expect(screen.getByText(/Autonomous Red Team Fuzzer/i)).toBeDefined();
     expect(screen.getByText(/Mutation Testing & Auto-Healer Studio/i)).toBeDefined();
   });
 
-  it('triggers navigation callback on item selection', () => {
+  it('triggers navigation callback on item selection click', () => {
     const handleNavigate = vi.fn();
     const handleClose = vi.fn();
 
@@ -38,6 +40,47 @@ describe('CommandPaletteModal Component', () => {
     fireEvent.click(redTeamOption);
 
     expect(handleNavigate).toHaveBeenCalledWith('red_team');
+    expect(handleClose).toHaveBeenCalled();
+  });
+
+  it('supports keyboard navigation with ArrowDown, ArrowUp, and Enter', () => {
+    const handleNavigate = vi.fn();
+    const handleClose = vi.fn();
+
+    render(
+      <CommandPaletteModal
+        isOpen={true}
+        onClose={handleClose}
+        onNavigate={handleNavigate}
+      />
+    );
+
+    // Initial selected item is the first one (war_room)
+    // Press ArrowDown to select red_team (index 1)
+    fireEvent.keyDown(window, { key: 'ArrowDown' });
+
+    // Press Enter to execute selection
+    fireEvent.keyDown(window, { key: 'Enter' });
+
+    expect(handleNavigate).toHaveBeenCalledWith('red_team');
+    expect(handleClose).toHaveBeenCalled();
+  });
+
+  it('closes when close button is clicked', () => {
+    const handleNavigate = vi.fn();
+    const handleClose = vi.fn();
+
+    render(
+      <CommandPaletteModal
+        isOpen={true}
+        onClose={handleClose}
+        onNavigate={handleNavigate}
+      />
+    );
+
+    const closeButton = screen.getByLabelText(/Close command palette/i);
+    fireEvent.click(closeButton);
+
     expect(handleClose).toHaveBeenCalled();
   });
 });

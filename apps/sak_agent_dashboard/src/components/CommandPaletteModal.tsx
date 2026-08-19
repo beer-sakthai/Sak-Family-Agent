@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Search,
   Command,
@@ -30,6 +30,7 @@ export const CommandPaletteModal: React.FC<CommandPaletteModalProps> = ({
   onNavigate,
 }) => {
   const [query, setQuery] = useState('');
+  const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   const commandItems = [
@@ -91,27 +92,6 @@ export const CommandPaletteModal: React.FC<CommandPaletteModalProps> = ({
     },
   ];
 
-  useEffect(() => {
-    if (isOpen) {
-      const timer = setTimeout(() => inputRef.current?.focus(), 50);
-      return () => clearTimeout(timer);
-    }
-  }, [isOpen]);
-
-  // Global keydown listener for Escape
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isOpen) {
-        setQuery('');
-        onClose();
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose]);
-
-  if (!isOpen) return null;
-
   const filteredItems = commandItems.filter(
     (item) =>
       item.title.toLowerCase().includes(query.toLowerCase()) ||
@@ -119,14 +99,70 @@ export const CommandPaletteModal: React.FC<CommandPaletteModalProps> = ({
       item.category.toLowerCase().includes(query.toLowerCase())
   );
 
-  const handleSelect = (tabId: string) => {
-    setQuery('');
-    onNavigate(tabId);
-    onClose();
+  const handleSelect = useCallback(
+    (tabId: string) => {
+      setQuery('');
+      setSelectedIndex(0);
+      onNavigate(tabId);
+      onClose();
+    },
+    [onNavigate, onClose]
+  );
+
+  const handleQueryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setQuery(e.target.value);
+    setSelectedIndex(0);
   };
 
+  useEffect(() => {
+    if (isOpen) {
+      const timer = setTimeout(() => inputRef.current?.focus(), 50);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen]);
+
+  // Global keydown listener for Escape, ArrowUp, ArrowDown, and Enter
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!isOpen) return;
+
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        setQuery('');
+        setSelectedIndex(0);
+        onClose();
+      } else if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setSelectedIndex((prev) =>
+          filteredItems.length > 0 ? (prev + 1) % filteredItems.length : 0
+        );
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setSelectedIndex((prev) =>
+          filteredItems.length > 0
+            ? (prev - 1 + filteredItems.length) % filteredItems.length
+            : 0
+        );
+      } else if (e.key === 'Enter') {
+        if (filteredItems.length > 0 && selectedIndex < filteredItems.length) {
+          e.preventDefault();
+          handleSelect(filteredItems[selectedIndex].id);
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose, filteredItems, selectedIndex, handleSelect]);
+
+  if (!isOpen) return null;
+
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center pt-24 px-4 bg-black/70 backdrop-blur-sm animate-fade-in">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Command Palette"
+      className="fixed inset-0 z-50 flex items-start justify-center pt-24 px-4 bg-black/70 backdrop-blur-sm animate-fade-in"
+    >
       <div className="w-full max-w-xl bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col">
         {/* Search Header */}
         <div className="flex items-center gap-3 px-4 py-3.5 border-b border-slate-800 bg-slate-950/60">
@@ -135,39 +171,63 @@ export const CommandPaletteModal: React.FC<CommandPaletteModalProps> = ({
             ref={inputRef}
             type="text"
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={handleQueryChange}
             placeholder="Type a command or jump to studio panel (e.g. 'Red Team', 'Mutation', 'Cache')..."
+            aria-label="Search command options"
             className="flex-1 bg-transparent text-sm text-slate-100 placeholder-slate-500 focus:outline-none"
           />
           <button
             onClick={onClose}
-            className="p-1 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-slate-200"
+            aria-label="Close command palette"
+            className="p-1 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-slate-200 transition-colors focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:outline-none"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Results List */}
-        <div className="max-h-80 overflow-y-auto p-2 space-y-1">
+        <div
+          role="listbox"
+          aria-label="Command suggestions"
+          className="max-h-80 overflow-y-auto p-2 space-y-1"
+        >
           {filteredItems.length === 0 ? (
             <div className="p-6 text-center text-xs text-slate-500">
               No matching commands or studio panels found.
             </div>
           ) : (
-            filteredItems.map((item) => {
+            filteredItems.map((item, index) => {
               const Icon = item.icon;
+              const isSelected = index === selectedIndex;
               return (
                 <div
                   key={item.id}
+                  role="option"
+                  aria-selected={isSelected}
                   onClick={() => handleSelect(item.id)}
-                  className="flex items-center justify-between p-3 rounded-xl hover:bg-slate-800/80 cursor-pointer transition-colors group"
+                  onMouseEnter={() => setSelectedIndex(index)}
+                  className={`flex items-center justify-between p-3 rounded-xl cursor-pointer transition-colors group ${
+                    isSelected
+                      ? 'bg-slate-800/90 text-white'
+                      : 'hover:bg-slate-800/80 text-slate-300'
+                  }`}
                 >
                   <div className="flex items-center gap-3 min-w-0">
-                    <div className="p-2 rounded-lg bg-slate-950 border border-slate-800 text-cyan-400 group-hover:border-cyan-500/50 group-hover:text-cyan-300">
+                    <div
+                      className={`p-2 rounded-lg bg-slate-950 border transition-colors ${
+                        isSelected
+                          ? 'border-cyan-500/60 text-cyan-300'
+                          : 'border-slate-800 text-cyan-400 group-hover:border-cyan-500/50 group-hover:text-cyan-300'
+                      }`}
+                    >
                       <Icon className="w-4 h-4" />
                     </div>
                     <div className="min-w-0">
-                      <div className="text-xs font-semibold text-slate-200 group-hover:text-white flex items-center gap-2">
+                      <div
+                        className={`text-xs font-semibold flex items-center gap-2 ${
+                          isSelected ? 'text-white' : 'text-slate-200 group-hover:text-white'
+                        }`}
+                      >
                         {item.title}
                         <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-slate-950 text-slate-400 border border-slate-800">
                           {item.category}
@@ -179,7 +239,13 @@ export const CommandPaletteModal: React.FC<CommandPaletteModalProps> = ({
                     </div>
                   </div>
 
-                  <ArrowRight className="w-4 h-4 text-slate-600 group-hover:text-cyan-400 transform group-hover:translate-x-0.5 transition-all flex-shrink-0" />
+                  <ArrowRight
+                    className={`w-4 h-4 transform transition-all flex-shrink-0 ${
+                      isSelected
+                        ? 'text-cyan-400 translate-x-0.5'
+                        : 'text-slate-600 group-hover:text-cyan-400 group-hover:translate-x-0.5'
+                    }`}
+                  />
                 </div>
               );
             })
@@ -190,7 +256,10 @@ export const CommandPaletteModal: React.FC<CommandPaletteModalProps> = ({
         <div className="px-4 py-2.5 bg-slate-950 border-t border-slate-800 text-[11px] text-slate-500 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <span>
-              Navigation: <kbd className="px-1.5 py-0.5 rounded bg-slate-800 font-mono text-[10px] text-slate-300">Enter</kbd>
+              Navigate: <kbd className="px-1.5 py-0.5 rounded bg-slate-800 font-mono text-[10px] text-slate-300">↑</kbd> <kbd className="px-1.5 py-0.5 rounded bg-slate-800 font-mono text-[10px] text-slate-300">↓</kbd>
+            </span>
+            <span>
+              Select: <kbd className="px-1.5 py-0.5 rounded bg-slate-800 font-mono text-[10px] text-slate-300">Enter</kbd>
             </span>
             <span>
               Close: <kbd className="px-1.5 py-0.5 rounded bg-slate-800 font-mono text-[10px] text-slate-300">Esc</kbd>
