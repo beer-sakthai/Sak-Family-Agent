@@ -1,22 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createApiHandler } from "@/lib/api/handler";
 import { getKnowledgeGraphData, getTelegramBridgeData } from "@/lib/memoryRag";
 
-export async function GET() {
-  try {
-    const graph = getKnowledgeGraphData();
-    const telegram = getTelegramBridgeData();
-    return NextResponse.json({
-      success: true,
-      graph,
-      telegram,
-    });
-  } catch (error) {
-    return NextResponse.json(
-      { success: false, error: (error as Error).message },
-      { status: 500 }
-    );
-  }
-}
+export const GET = createApiHandler("/api/memory/rag", async () => {
+  const graph = getKnowledgeGraphData();
+  const telegram = getTelegramBridgeData();
+  return { graph, telegram };
+});
 
 export async function POST(req: NextRequest) {
   try {

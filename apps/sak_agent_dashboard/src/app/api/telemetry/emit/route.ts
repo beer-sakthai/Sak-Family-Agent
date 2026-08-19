@@ -1,33 +1,22 @@
-import { NextRequest, NextResponse } from "next/server";
+import { createMutationHandler, ApiError } from "@/lib/api/handler";
 import { telemetryBus } from "@/lib/telemetryBus";
 import { TelemetryEventType } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
-export async function POST(req: NextRequest) {
-  try {
-    const body = await req.json();
-    const { type, persona, data, sessionId } = body;
+export const POST = createMutationHandler("/api/telemetry/emit", async (body) => {
+  const { type, persona, data, sessionId } = body as Record<string, unknown>;
 
-    if (!type || !persona) {
-      return NextResponse.json(
-        { success: false, error: "Missing required fields 'type' or 'persona'" },
-        { status: 400 }
-      );
-    }
-
-    const emitted = telemetryBus.emitEvent({
-      type: type as TelemetryEventType,
-      persona: String(persona),
-      sessionId: sessionId ? String(sessionId) : undefined,
-      data: data || {},
-    });
-
-    return NextResponse.json({ success: true, event: emitted });
-  } catch (error) {
-    return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : "Invalid payload" },
-      { status: 400 }
-    );
+  if (!type || !persona) {
+    throw new ApiError(400, "Missing required fields 'type' or 'persona'");
   }
-}
+
+  const emitted = telemetryBus.emitEvent({
+    type: type as TelemetryEventType,
+    persona: String(persona),
+    sessionId: sessionId ? String(sessionId) : undefined,
+    data: (data as Record<string, unknown>) ?? {},
+  });
+
+  return { event: emitted };
+});

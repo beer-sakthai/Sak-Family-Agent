@@ -1,9 +1,9 @@
-import { NextRequest, NextResponse } from "next/server";
-import { A2AConsensusSession, A2AVoteBallot } from "@/lib/a2a/types";
+import { createApiHandler, createMutationHandler } from "@/lib/api/handler";
+import { A2AConsensusSession, A2AVoteBallot, VoteChoice } from "@/lib/a2a/types";
 
 export const dynamic = "force-dynamic";
 
-// In-memory mock sessions for development/testing
+// Module-level session store (same behavior as original)
 const activeSessions: A2AConsensusSession[] = [
   {
     sessionId: "vote_seed_01",
@@ -42,50 +42,52 @@ const activeSessions: A2AConsensusSession[] = [
   },
 ];
 
-export async function GET() {
-  return NextResponse.json({
-    success: true,
-    sessions: activeSessions,
-    timestamp: new Date().toISOString(),
-  });
-}
+export const GET = createApiHandler("/api/a2a/vote", async () => ({
+  sessions: activeSessions,
+  timestamp: new Date().toISOString(),
+}));
 
-export async function POST(req: NextRequest) {
-  try {
-    const body = await req.json();
-    const { sessionId, persona, choice, rationale } = body;
+export const POST = createMutationHandler("/api/a2a/vote", async (body) => {
+  const { sessionId, persona, choice, rationale } = body as Record<string, unknown>;
 
-    if (!sessionId || !persona || !choice) {
-      return NextResponse.json({ error: "Missing required voting fields" }, { status: 400 });
-    }
-
-    const ballot: A2AVoteBallot = {
-      sessionId,
-      persona,
-      choice,
-      weight: 1.0,
-      rationale,
-      timestamp: new Date().toISOString(),
-    };
-
-    let session = activeSessions.find((s) => s.sessionId === sessionId);
-    if (!session) {
-      session = {
-        sessionId,
-        topic: body.topic || "Multi-Agent Consensus Vote",
-        domain: body.domain || "general",
-        quorumThreshold: 0.6,
-        resolved: false,
-        outcome: "PENDING",
-        createdAt: new Date().toISOString(),
-        ballots: [],
-      };
-      activeSessions.push(session);
-    }
-
-    session.ballots.push(ballot);
-    return NextResponse.json({ success: true, session });
-  } catch (err: any) {
-    return NextResponse.json({ error: err?.message || "Internal server error" }, { status: 500 });
+  if (!sessionId || !persona || !choice) {
+    throw new Error("Missing required voting fields");
   }
-}
+
+  const validChoices: VoteChoice[] = ["approve", "reject", "abstain", "veto"];
+  const voteChoice = String(choice).toLowerCase() as VoteChoice;
+  if (!validChoices.includes(voteChoice)) {
+    throw new Error(`Invalid choice: ${choice}`);
+  }
+
+  const ballot: A2AVoteBallot = {
+    sessionId: String(sessionId),
+    persona: String(persona),
+    choice: voteChoice,
+    weight: 1.0,
+    rationale: rationale ? String(rationale) : undefined,
+    timestamp: new Date().toISOString(),
+  };
+
+  let session = activeSessions.find((s) => s.sessionId === sessionId);
+  if (!session) {
+    const validDomains = ["security", "vision", "content", "devops", "governance", "general"] as const;
+    const domainStr = String(body.domain ?? "general");
+    const domain = (validDomains.includes(domainStr as any) ? domainStr : "general") as A2AConsensusSession["domain"];
+
+    session = {
+      sessionId: String(sessionId),
+      topic: String(body.topic ?? "Multi-Agent Consensus Vote"),
+      domain,
+      quorumThreshold: 0.6,
+      resolved: false,
+      outcome: "PENDING",
+      createdAt: new Date().toISOString(),
+      ballots: [],
+    };
+    activeSessions.push(session);
+  }
+
+  session.ballots.push(ballot);
+  return { session };
+});

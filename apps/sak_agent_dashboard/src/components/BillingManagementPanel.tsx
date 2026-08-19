@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   CreditCard,
   Key,
@@ -21,53 +21,32 @@ import {
   TenantTier,
   UsageEventItem,
 } from "@/lib/billingEngine";
+import { usePanelFetch } from "@/lib/hooks/usePanelFetch";
+
+interface BillingApiResponse {
+  success: boolean;
+  data?: {
+    quota: TenantQuotaSummary;
+    keys: APIKeyItem[];
+    usage: UsageEventItem[];
+    invoices: InvoiceItem[];
+  };
+}
 
 export function BillingManagementPanel() {
-  const [quota, setQuota] = useState<TenantQuotaSummary | null>(null);
-  const [keys, setKeys] = useState<APIKeyItem[]>([]);
-  const [usage, setUsage] = useState<UsageEventItem[]>([]);
-  const [invoices, setInvoices] = useState<InvoiceItem[]>([]);
+  const { data: billingData, refresh } = usePanelFetch<BillingApiResponse>("/api/billing");
+
+  const quota = billingData?.data?.quota ?? null;
+  const keys = billingData?.data?.keys ?? [];
+  const usage = billingData?.data?.usage ?? [];
+  const invoices = billingData?.data?.invoices ?? [];
+
   const [loading, setLoading] = useState(false);
   const [newKeyName, setNewKeyName] = useState("");
   const [generatedKey, setGeneratedKey] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
-  const fetchBillingData = React.useCallback(async () => {
-    try {
-      const res = await fetch("/api/billing");
-      const json = await res.json();
-      if (json.success && json.data) {
-        setQuota(json.data.quota);
-        setKeys(json.data.keys);
-        setUsage(json.data.usage);
-        setInvoices(json.data.invoices);
-      }
-    } catch (err) {
-      console.error("Failed to load billing metrics", err);
-    }
-  }, []);
-
-  useEffect(() => {
-    let isMounted = true;
-    const load = async () => {
-      try {
-        const res = await fetch("/api/billing");
-        const json = await res.json();
-        if (isMounted && json.success && json.data) {
-          setQuota(json.data.quota);
-          setKeys(json.data.keys);
-          setUsage(json.data.usage);
-          setInvoices(json.data.invoices);
-        }
-      } catch (err) {
-        console.error("Failed to load billing metrics", err);
-      }
-    };
-    load();
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+  const fetchBillingData = refresh;
 
   const handleCreateKey = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -117,7 +96,7 @@ export function BillingManagementPanel() {
       });
       const json = await res.json();
       if (json.success && json.data) {
-        setQuota(json.data);
+        fetchBillingData();
       }
     } catch (err) {
       console.error("Failed to update tier", err);
