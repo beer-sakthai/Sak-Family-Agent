@@ -17,7 +17,7 @@ describe('CommandPaletteModal Component', () => {
     );
 
     expect(screen.getByRole('dialog', { name: /Command Palette/i })).toBeDefined();
-    expect(screen.getByLabelText(/Close command palette/i)).toBeDefined();
+    expect(screen.getByRole('button', { name: /Close command palette/i })).toBeDefined();
     expect(screen.getByPlaceholderText(/Type a command or jump to studio panel/i)).toBeDefined();
     expect(screen.getByText(/Agent War Room & Mesh Visualizer/i)).toBeDefined();
     expect(screen.getByText(/Autonomous Red Team Fuzzer/i)).toBeDefined();
@@ -43,7 +43,7 @@ describe('CommandPaletteModal Component', () => {
     expect(handleClose).toHaveBeenCalled();
   });
 
-  it('supports keyboard navigation with ArrowDown, ArrowUp, and Enter', () => {
+  it('supports keyboard navigation via ArrowDown, ArrowUp, and Enter', () => {
     const handleNavigate = vi.fn();
     const handleClose = vi.fn();
 
@@ -55,18 +55,20 @@ describe('CommandPaletteModal Component', () => {
       />
     );
 
-    // Initial selected item is the first one (war_room)
-    // Press ArrowDown to select red_team (index 1)
+    const options = screen.getAllByRole('option');
+    expect(options[0].getAttribute('aria-selected')).toBe('true');
+
+    // Press ArrowDown to select second option (red_team)
     fireEvent.keyDown(window, { key: 'ArrowDown' });
+    expect(options[1].getAttribute('aria-selected')).toBe('true');
 
-    // Press Enter to execute selection
+    // Press Enter to navigate to red_team
     fireEvent.keyDown(window, { key: 'Enter' });
-
     expect(handleNavigate).toHaveBeenCalledWith('red_team');
     expect(handleClose).toHaveBeenCalled();
   });
 
-  it('closes when close button is clicked', () => {
+  it('closes when clicking backdrop', () => {
     const handleNavigate = vi.fn();
     const handleClose = vi.fn();
 
@@ -78,8 +80,8 @@ describe('CommandPaletteModal Component', () => {
       />
     );
 
-    const closeButton = screen.getByLabelText(/Close command palette/i);
-    fireEvent.click(closeButton);
+    const dialog = screen.getByRole('dialog', { name: /Command Palette/i });
+    fireEvent.click(dialog);
 
     expect(handleClose).toHaveBeenCalled();
   });

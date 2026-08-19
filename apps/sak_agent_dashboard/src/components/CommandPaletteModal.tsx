@@ -3,17 +3,14 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Search,
-  Command,
   Radio,
   Dna,
   ShieldAlert,
   Zap,
   Target,
   Telescope,
-  Flame,
   Activity,
   Layers,
-  Sparkles,
   ArrowRight,
   X,
 } from 'lucide-react';
@@ -31,7 +28,16 @@ export const CommandPaletteModal: React.FC<CommandPaletteModalProps> = ({
 }) => {
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [prevIsOpen, setPrevIsOpen] = useState(isOpen);
   const inputRef = useRef<HTMLInputElement | null>(null);
+
+  // Sync state when opening the modal without triggering effect setState warnings
+  if (isOpen !== prevIsOpen) {
+    setPrevIsOpen(isOpen);
+    if (isOpen) {
+      setSelectedIndex(0);
+    }
+  }
 
   const commandItems = [
     {
@@ -99,16 +105,6 @@ export const CommandPaletteModal: React.FC<CommandPaletteModalProps> = ({
       item.category.toLowerCase().includes(query.toLowerCase())
   );
 
-  const handleSelect = useCallback(
-    (tabId: string) => {
-      setQuery('');
-      setSelectedIndex(0);
-      onNavigate(tabId);
-      onClose();
-    },
-    [onNavigate, onClose]
-  );
-
   const handleQueryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setQuery(e.target.value);
     setSelectedIndex(0);
@@ -121,15 +117,22 @@ export const CommandPaletteModal: React.FC<CommandPaletteModalProps> = ({
     }
   }, [isOpen]);
 
-  // Global keydown listener for Escape, ArrowUp, ArrowDown, and Enter
+  const handleSelect = useCallback(
+    (tabId: string) => {
+      setQuery('');
+      onNavigate(tabId);
+      onClose();
+    },
+    [onNavigate, onClose]
+  );
+
+  // Keyboard navigation for ArrowUp, ArrowDown, Enter, Escape
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!isOpen) return;
 
       if (e.key === 'Escape') {
-        e.preventDefault();
         setQuery('');
-        setSelectedIndex(0);
         onClose();
       } else if (e.key === 'ArrowDown') {
         e.preventDefault();
@@ -144,15 +147,16 @@ export const CommandPaletteModal: React.FC<CommandPaletteModalProps> = ({
             : 0
         );
       } else if (e.key === 'Enter') {
-        if (filteredItems.length > 0 && selectedIndex < filteredItems.length) {
-          e.preventDefault();
+        e.preventDefault();
+        if (filteredItems[selectedIndex]) {
           handleSelect(filteredItems[selectedIndex].id);
         }
       }
     };
+
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose, filteredItems, selectedIndex, handleSelect]);
+  }, [isOpen, filteredItems, selectedIndex, onClose, handleSelect]);
 
   if (!isOpen) return null;
 
@@ -161,6 +165,12 @@ export const CommandPaletteModal: React.FC<CommandPaletteModalProps> = ({
       role="dialog"
       aria-modal="true"
       aria-label="Command Palette"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          setQuery('');
+          onClose();
+        }
+      }}
       className="fixed inset-0 z-50 flex items-start justify-center pt-24 px-4 bg-black/70 backdrop-blur-sm animate-fade-in"
     >
       <div className="w-full max-w-xl bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col">
@@ -173,13 +183,13 @@ export const CommandPaletteModal: React.FC<CommandPaletteModalProps> = ({
             value={query}
             onChange={handleQueryChange}
             placeholder="Type a command or jump to studio panel (e.g. 'Red Team', 'Mutation', 'Cache')..."
-            aria-label="Search command options"
             className="flex-1 bg-transparent text-sm text-slate-100 placeholder-slate-500 focus:outline-none"
+            aria-label="Search studio panels or commands"
           />
           <button
             onClick={onClose}
             aria-label="Close command palette"
-            className="p-1 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-slate-200 transition-colors focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:outline-none"
+            className="p-1 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
           >
             <X className="w-4 h-4" />
           </button>
@@ -188,7 +198,7 @@ export const CommandPaletteModal: React.FC<CommandPaletteModalProps> = ({
         {/* Results List */}
         <div
           role="listbox"
-          aria-label="Command suggestions"
+          aria-label="Command options"
           className="max-h-80 overflow-y-auto p-2 space-y-1"
         >
           {filteredItems.length === 0 ? (
@@ -208,26 +218,22 @@ export const CommandPaletteModal: React.FC<CommandPaletteModalProps> = ({
                   onMouseEnter={() => setSelectedIndex(index)}
                   className={`flex items-center justify-between p-3 rounded-xl cursor-pointer transition-colors group ${
                     isSelected
-                      ? 'bg-slate-800/90 text-white'
-                      : 'hover:bg-slate-800/80 text-slate-300'
+                      ? 'bg-slate-800/80 ring-1 ring-cyan-500/50'
+                      : 'hover:bg-slate-800/50'
                   }`}
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     <div
                       className={`p-2 rounded-lg bg-slate-950 border transition-colors ${
                         isSelected
-                          ? 'border-cyan-500/60 text-cyan-300'
+                          ? 'border-cyan-500/50 text-cyan-300'
                           : 'border-slate-800 text-cyan-400 group-hover:border-cyan-500/50 group-hover:text-cyan-300'
                       }`}
                     >
                       <Icon className="w-4 h-4" />
                     </div>
                     <div className="min-w-0">
-                      <div
-                        className={`text-xs font-semibold flex items-center gap-2 ${
-                          isSelected ? 'text-white' : 'text-slate-200 group-hover:text-white'
-                        }`}
-                      >
+                      <div className="text-xs font-semibold text-slate-200 group-hover:text-white flex items-center gap-2">
                         {item.title}
                         <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-slate-950 text-slate-400 border border-slate-800">
                           {item.category}
@@ -256,13 +262,25 @@ export const CommandPaletteModal: React.FC<CommandPaletteModalProps> = ({
         <div className="px-4 py-2.5 bg-slate-950 border-t border-slate-800 text-[11px] text-slate-500 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <span>
-              Navigate: <kbd className="px-1.5 py-0.5 rounded bg-slate-800 font-mono text-[10px] text-slate-300">↑</kbd> <kbd className="px-1.5 py-0.5 rounded bg-slate-800 font-mono text-[10px] text-slate-300">↓</kbd>
+              Navigate:{' '}
+              <kbd className="px-1.5 py-0.5 rounded bg-slate-800 font-mono text-[10px] text-slate-300">
+                ↑
+              </kbd>
+              <kbd className="px-1.5 py-0.5 rounded bg-slate-800 font-mono text-[10px] text-slate-300 ml-1">
+                ↓
+              </kbd>
             </span>
             <span>
-              Select: <kbd className="px-1.5 py-0.5 rounded bg-slate-800 font-mono text-[10px] text-slate-300">Enter</kbd>
+              Select:{' '}
+              <kbd className="px-1.5 py-0.5 rounded bg-slate-800 font-mono text-[10px] text-slate-300">
+                Enter
+              </kbd>
             </span>
             <span>
-              Close: <kbd className="px-1.5 py-0.5 rounded bg-slate-800 font-mono text-[10px] text-slate-300">Esc</kbd>
+              Close:{' '}
+              <kbd className="px-1.5 py-0.5 rounded bg-slate-800 font-mono text-[10px] text-slate-300">
+                Esc
+              </kbd>
             </span>
           </div>
           <span className="font-mono text-[10px] text-teal-400 font-semibold">
