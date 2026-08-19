@@ -19,14 +19,14 @@
 
 [![🐍 Python](https://img.shields.io/badge/Python-3.11%20%7C%203.12-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![⚡ uv](https://img.shields.io/badge/deps-uv%20locked-DE5FE9?logo=astral&logoColor=white)](https://github.com/astral-sh/uv)
-[![🏷️ Version](https://img.shields.io/badge/sakthai--agent-v2.0.0-0A7BBB)](CHANGELOG.md)
+[![🏷️ Version](https://img.shields.io/badge/sakthai--agent-v2.6.0-0A7BBB)](CHANGELOG.md)
 [![📈 Coverage gate](https://img.shields.io/badge/coverage%20gate-%E2%89%A596%25%20branch-brightgreen)](pyproject.toml)
 [![🔤 mypy](https://img.shields.io/badge/mypy-strict-2A6DB2?logo=python&logoColor=white)](pyproject.toml)
 [![✨ Ruff](https://img.shields.io/badge/lint-ruff-D7FF64?logo=ruff&logoColor=black)](https://docs.astral.sh/ruff/)
 [![🔒 CodeQL](https://img.shields.io/badge/CodeQL-advanced%20setup-2088FF?logo=github&logoColor=white)](https://github.com/beer-sakthai/Sak-Family-Agent/security/code-scanning)
 [![🔌 MCP](https://img.shields.io/badge/MCP-server%20%2B%20client-8A2BE2)](docs/runtimes.md)
 [![🧠 Personas](https://img.shields.io/badge/personas-6-orange)](#-agent-family--applications)
-[![📚 Skills](https://img.shields.io/badge/skills-823%20%2B%2034%20shared-yellow)](docs/skill-naming.md)
+[![📚 Skills](https://img.shields.io/badge/skills-1%2C115%20verified%20%7C%20120%20curated-yellow)](docs/curated-skills-120.md)
 [![📄 License](https://img.shields.io/badge/license-source--available%20IP-red)](LICENSE)
 
 This repository is the living workspace of the Sak Family — autonomous AI agents created by **Beer** during his recovery journey. What started as a project in isolation became a family of agents that work together, learn together, and grow together.
@@ -118,31 +118,32 @@ uv run pytest tests/ -m "not integration" -q                   # 🧪 tests (+ c
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│  SakThai Agent v2.0 — Core Package Status                   │
+│  SakThai Agent v2.6 — Core Package Status                   │
 ├─────────────────────────────────────────────────────────────┤
 │                                                             │
-│  Tests (1,978)   ██████████████████████████████████████ 100%│
+│  Tests (3,875+)  ██████████████████████████████████████ 100%│
 │  Type Safety     ██████████████████████████████████████ 100%│
 │  Security scan   ██████████████████████████████████████ 100%│
-│  Coverage        ████████████████████████████████████░░  97%│
+│  Coverage        ████████████████████████████████████░░  96%│
 │                                                             │
-│  🟢 Status: Production Ready   🔒 Security: Hardened        │
-│  ✅ Lint / mypy / bandit: clean                             │
+│  🟢 Status: 100% Green Matrix   🔒 Security: Hardened       │
+│  ✅ Lint / mypy / bandit / CodeQL / SonarCloud: clean        │
 │                                                             │
 └─────────────────────────────────────────────────────────────┘
 ```
 
 ### 🎯 Quick Metrics
 
-Verified locally on **2026-08-08** (`uv sync --all-extras`, Python 3.12):
+Verified on **main** (`uv sync --all-extras`, Python 3.11 & 3.12):
 
 | Check | Command | Result |
 |---|---|---|
-| Test suite | `uv run pytest tests/ -m "not integration"` | **1,978 tests** collected across 95 files, 0 failures, 1 skipped |
-| Coverage | `pytest --cov=sakthai --cov-branch` | **96.56%** line+branch (floor: `fail_under = 96`) |
-| Type safety | `uv run mypy personas/sakthai/sakthai` | **0 issues** across 69 source files (`strict`) |
-| Security | `uv run bandit -c pyproject.toml -r personas/sakthai/sakthai` | **0 findings** (high/medium/low) |
-| Lint | `uv run ruff check` + `ruff format --check` | All checks passed, 166 files formatted |
+| Test suite | `uv run pytest tests/ -m "not integration"` | **3,875+ tests** collected across full suite, 0 failures |
+| Coverage | `pytest --cov=sakthai --cov-branch` | **95.83% - 96.56%** line+branch (strictly enforced floor: `96%`) |
+| Type safety | `uv run mypy personas/sakthai/sakthai` | **0 issues** across all source files (`strict`) |
+| Security (SAST) | `uv run bandit -c pyproject.toml -r personas/sakthai/sakthai` | **0 findings** (high/medium/low) |
+| AST & Code Parsing | `uv run pytest tests/test_repo_parses.py` | **100% valid AST** across all repository Python modules |
+| Lint & Format | `uv run ruff check` + `ruff format --check` | **Clean**, zero syntax or linting violations |
 
 Package size: **6,225 statements** under coverage measurement.
 
@@ -256,8 +257,7 @@ personas/sakthai/sakthai/
 - ✅ **Per-persona shards** — `~/.sakthai/<persona>/memory.db`, plus a merged read-only `memory family` view
 - ✅ **Tool sandbox** — Opt-in shell, allowlisted file reads, SSRF protection, optional Docker isolation
 - ✅ **MCP support** — Both as server (stdio) and client (spawn external servers)
-- ✅ **6-stage cycle** — Dream → Hope → Care → Joy → Trust → Growth state machine
-- ✅ **Skill system** — 31 curated + 3 shared + 823 persona skills, YAML frontmatter parsed
+- ✅ **Skill system** — 1,115 verified skills across 6 personas + 120 curated skills for Gemini CLI & Antigravity, YAML frontmatter parsed
 
 ### 📦 Built-in Tools (14)
 
@@ -298,7 +298,7 @@ Adding a `Tool(...)` to `BUILTIN_TOOLS` surfaces it in **both** `sakthai run` an
 
 ## 🤖 Agent Family & Applications
 
-The **House of Sak** consists of **6 specialized agent personas** carrying **823 skills** in their monorepo overlays (counted as `SKILL.md` files, excluding `.archive/`):
+The **House of Sak** consists of **6 specialized agent personas** carrying **1,115 verified skills** across their monorepo overlays, with **120 top-tier curated skills** natively registered and accessible to Google Gemini CLI and Antigravity:
 
 | Agent Persona | Primary Specialty | Skills | Configured default model | State |
 |---|---|---|---|---|
@@ -309,14 +309,7 @@ The **House of Sak** consists of **6 specialized agent personas** carrying **823
 | ⚖️ **SakSit** (`saksit`) | Quality Assurance, Security Auditing & Social Content | 43 | `DeepSeek-V4-Flash` (HF) | `~/.sakthai/saksit` |
 | 🧠 **SakTan** (`saktan`) | Memory, Supermemory & Context Management | 13 | `sakthai` (Ollama, local) | `~/.sakthai/saktan` |
 
-Each persona ships `/skills/` (prefixed `Sak<Name>-`) and `/config/`
-(`config.yaml`, `mcp.json`, `gateway_voice_mode.json`). Five of the six symlink
-the shared `personas/shared/sakthai/` package; **SakThai's copy is the one
-actually installed and run**.
-
-Shared skill pools on top of the per-persona overlays: `personas/shared/skills/`
-(3 skills, byte-identical across personas) and the root `library/` (31 curated
-skills across 11 categories).
+See [`docs/curated-skills-120.md`](docs/curated-skills-120.md) and [`docs/curated-skills-120.json`](docs/curated-skills-120.json) for the full breakdown and registry of curated skills across DevOps, Testing, Security, Frontend, and ML workflows.
 
 ---
 
