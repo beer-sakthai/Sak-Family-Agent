@@ -137,3 +137,32 @@ def test_run_agent_heals_tool_failure(store: MemoryStore, tmp_path) -> None:
     assert len(pending) == 1
     assert pending[0].action == "boom"
     assert sup.get_circuit_breaker("sakthai").failure_count == 1
+
+
+def test_healing_supervisor_failure_is_failsafe(store: MemoryStore, tmp_path, monkeypatch) -> None:
+    """A supervisor that raises must not crash the run or mask the original error."""
+
+    class _BrokenSupervisor(SelfHealingSupervisor):
+        def handle_execution_failure(self, *args, **kwargs):  # type: ignore[override]
+            raise RuntimeError("supervisor itself broke")
+
+    def _raise_429(*args: Any, **kwargs: Any) -> Any:
+        raise Exception("HTTP 429 Too Many Requests")
+
+    monkeypatch.setattr(loop, "_call_anthropic", _raise_429)
+
+    sup = _BrokenSupervisor(
+        dlq=DeadLetterQueue(db_path=tmp_path / "rec.db"),
+        snapshot_mgr=MemorySnapshotManager(backup_dir=tmp_path / "snaps"),
+    )
+    # The original provider error propagates; the supervisor's own error does not.
+    with pytest.raises(Exception) as exc_info:
+        run_agent(
+            "do thing",
+            client=FakeClient(),
+            store=store,
+            provider="anthropic",
+            supervisor=sup,
+        )
+    assert "429" in str(exc_info.value)
+    assert "supervisor itself broke" not in str(exc_info.value)
