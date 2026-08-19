@@ -110,6 +110,7 @@ def test_a2a_models_and_consensus():
 
 # ─── ConsensusEngine tests ────────────────────────────────────────────────────
 
+
 def test_consensus_engine_full_lifecycle():
     from sakthai.a2a.consensus import ConsensusEngine
     from sakthai.a2a.models import VoteChoice
@@ -172,6 +173,7 @@ def test_consensus_engine_domain_weight_fallback():
 
 # ─── A2AMeshBroker missing branches ──────────────────────────────────────────
 
+
 @pytest.mark.asyncio
 async def test_streaming_broker_unsubscribe():
     broker = A2AMeshBroker()
@@ -229,9 +231,11 @@ async def test_sse_generator_stops_on_stop_reason():
 
 # ─── MemorySnapshotManager error branches ────────────────────────────────────
 
+
 def test_snapshot_file_backup_restore_error(tmp_path):
     """Triggers the disk-fallback path with a corrupt file (lines 73-83)."""
     import sqlite3
+
     from sakthai.healing.snapshot import MemorySnapshotManager
 
     backup_dir = tmp_path / "snaps"
@@ -270,6 +274,7 @@ def test_snapshot_memory_store_rollback_error(tmp_path):
 
 
 # ─── SelfHealingSupervisor missing branches ──────────────────────────────────
+
 
 def test_supervisor_rollback_with_store(tmp_path):
     from sakthai.healing.dlq import DeadLetterQueue
