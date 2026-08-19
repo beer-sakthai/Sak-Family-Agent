@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import time
+
 from .models import CircuitState
 
 
@@ -18,18 +19,15 @@ class DynamicCircuitBreaker:
 
     @property
     def state(self) -> CircuitState:
-        if self._state == CircuitState.OPEN:
-            if time.time() - self.last_failure_time >= self.recovery_time_sec:
-                self._state = CircuitState.HALF_OPEN
+        if (
+            self._state == CircuitState.OPEN
+            and time.time() - self.last_failure_time >= self.recovery_time_sec
+        ):
+            self._state = CircuitState.HALF_OPEN
         return self._state
 
     def allow_execution(self) -> bool:
-        current = self.state
-        if current == CircuitState.CLOSED:
-            return True
-        if current == CircuitState.HALF_OPEN:
-            return True
-        return False
+        return self.state in (CircuitState.CLOSED, CircuitState.HALF_OPEN)
 
     def record_success(self) -> None:
         self.failure_count = 0

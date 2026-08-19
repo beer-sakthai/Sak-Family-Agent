@@ -1,6 +1,6 @@
 # tests/test_healing_circuit_breaker.py
 import time
-import pytest
+
 from sakthai.healing.circuit_breaker import DynamicCircuitBreaker
 from sakthai.healing.models import CircuitState
 

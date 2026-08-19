@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass, field
-from datetime import datetime, timezone
 import enum
+from dataclasses import asdict, dataclass, field
+from datetime import UTC, datetime
 from typing import Any
 
 
@@ -27,7 +27,7 @@ class IncidentEnvelope:
     severity: ErrorSeverity
     error_message: str
     stack_trace: str
-    timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    timestamp: datetime = field(default_factory=lambda: datetime.now(UTC))
     context: dict[str, Any] = field(default_factory=dict)
     retry_count: int = 0
     resolved: bool = False
@@ -48,7 +48,7 @@ class DLQItem:
     error_message: str
     retry_count: int = 0
     max_retries: int = 3
-    enqueued_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    enqueued_at: datetime = field(default_factory=lambda: datetime.now(UTC))
     status: str = "PENDING"  # PENDING, RETRYING, RESOLVED, DEAD
 
 

@@ -1,9 +1,8 @@
 # tests/test_healing_models.py
-from datetime import datetime, timezone
-import pytest
+from datetime import UTC, datetime
+
 from sakthai.healing.models import (
     CircuitState,
-    DLQItem,
     ErrorSeverity,
     IncidentEnvelope,
     classify_exception,
@@ -41,7 +40,7 @@ def test_classify_exception_fatal():
 
 
 def test_incident_envelope_serialization():
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     envelope = IncidentEnvelope(
         incident_id="inc-12345",
         persona="saksee",

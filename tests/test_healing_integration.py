@@ -1,6 +1,6 @@
 # tests/test_healing_integration.py
 import sqlite3
-import pytest
+
 from sakthai.healing.models import ErrorSeverity
 from sakthai.healing.supervisor import SelfHealingSupervisor
 

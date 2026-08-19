@@ -2,18 +2,17 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+import contextlib
 import json
 import logging
-from pathlib import Path
-import shutil
 import sqlite3
 import time
-from typing import TYPE_CHECKING, Any, overload
 import uuid
+from pathlib import Path
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from ..memory.store import MemoryStore
+    pass
 
 logger = logging.getLogger(__name__)
 
@@ -159,10 +158,8 @@ class MemorySnapshotManager:
         """Drop checkpoint from memory cache and disk."""
         snapshot = self._snapshots.pop(checkpoint_id, None)
         if snapshot and "file_backup" in snapshot:
-            try:
+            with contextlib.suppress(Exception):
                 Path(snapshot["file_backup"]).unlink(missing_ok=True)
-            except Exception:
-                pass
 
     def list_checkpoints(self) -> list[str]:
         return list(self._snapshots.keys()) + [f.stem for f in self.backup_dir.glob("*.db")]

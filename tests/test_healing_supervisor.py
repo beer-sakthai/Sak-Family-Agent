@@ -1,6 +1,6 @@
 # tests/test_healing_supervisor.py
 import pytest
-from sakthai.healing.circuit_breaker import DynamicCircuitBreaker
+
 from sakthai.healing.dlq import DeadLetterQueue
 from sakthai.healing.models import ErrorSeverity
 from sakthai.healing.snapshot import MemorySnapshotManager
@@ -42,6 +42,7 @@ def test_supervisor_replay_dlq(supervisor):
     assert result.dlq_id is not None
 
     executed = []
+
     def dummy_executor(item):
         executed.append(item.persona)
 

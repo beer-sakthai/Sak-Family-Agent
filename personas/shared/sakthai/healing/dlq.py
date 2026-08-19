@@ -2,15 +2,15 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
 import json
 import logging
-from pathlib import Path
 import sqlite3
 import time
-from typing import Any, overload
 import uuid
 from dataclasses import dataclass
+from datetime import UTC, datetime
+from pathlib import Path
+from typing import Any, overload
 
 from ..config import memory_db_path, redact_secrets
 from .models import DLQItem
@@ -233,7 +233,7 @@ class DeadLetterQueue:
                 )
                 return False
 
-            next_delay = 2 ** new_count
+            next_delay = 2**new_count
             conn.execute(
                 "UPDATE dead_letter_items SET retry_count = ?, status = 'RETRYING', updated_at = ?, next_retry_at = ? WHERE item_id = ?",
                 (new_count, now, now + next_delay, dlq_id),
@@ -272,7 +272,7 @@ class DeadLetterQueue:
             error_message=row["error_message"],
             retry_count=row["retry_count"],
             max_retries=row["max_retries"],
-            enqueued_at=datetime.fromtimestamp(row["created_at"], tz=timezone.utc),
+            enqueued_at=datetime.fromtimestamp(row["created_at"], tz=UTC),
             status=row["status"],
         )
 

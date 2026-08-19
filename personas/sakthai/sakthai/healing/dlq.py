@@ -2,15 +2,15 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
 import json
 import logging
-from pathlib import Path
 import sqlite3
 import time
-from typing import Any, overload
 import uuid
 from dataclasses import dataclass
+from datetime import UTC, datetime
+from pathlib import Path
+from typing import Any, overload
 
 from ..config import memory_db_path, redact_secrets
 from .models import DLQItem
@@ -85,22 +85,22 @@ class DeadLetterQueue:
             conn.execute("CREATE INDEX IF NOT EXISTS idx_dlq_persona ON dead_letter_items(persona)")
 
     @overload
-    def enqueue(self, item: DLQItem) -> str: ...
+    def enqueue(self, persona: DLQItem) -> str: ...
 
     @overload
     def enqueue(
         self,
         persona: str,
-        action: str,
-        payload: dict[str, Any],
-        error: Exception | str,
+        action: str = "execution",
+        payload: dict[str, Any] | None = None,
+        error: Exception | str = "",
         stack_trace: str = "",
         max_retries: int = 3,
     ) -> str: ...
 
     def enqueue(
         self,
-        persona_or_item: DLQItem | str,
+        persona: DLQItem | str,
         action: str = "execution",
         payload: dict[str, Any] | None = None,
         error: Exception | str = "",
@@ -110,10 +110,10 @@ class DeadLetterQueue:
         """Store a failed task envelope with redacted secrets."""
         now = int(time.time())
 
-        if isinstance(persona_or_item, DLQItem):
-            item = persona_or_item
+        if isinstance(persona, DLQItem):
+            item = persona
             item_id = item.dlq_id or f"dlq_{uuid.uuid4().hex[:12]}"
-            persona = item.persona
+            p_name = item.persona
             act = "execution"
             payload_dict = item.payload
             err_msg = redact_secrets(item.error_message)
@@ -123,7 +123,7 @@ class DeadLetterQueue:
             stat = item.status
             next_retry_at = now + 2
         else:
-            persona = persona_or_item
+            p_name = persona
             item_id = f"dlq_{uuid.uuid4().hex[:12]}"
             act = action
             payload_dict = payload or {}
@@ -155,7 +155,7 @@ class DeadLetterQueue:
                 """,
                 (
                     item_id,
-                    persona,
+                    p_name,
                     act,
                     clean_payload,
                     err_type,
@@ -233,7 +233,7 @@ class DeadLetterQueue:
                 )
                 return False
 
-            next_delay = 2 ** new_count
+            next_delay = 2**new_count
             conn.execute(
                 "UPDATE dead_letter_items SET retry_count = ?, status = 'RETRYING', updated_at = ?, next_retry_at = ? WHERE item_id = ?",
                 (new_count, now, now + next_delay, dlq_id),
@@ -272,7 +272,7 @@ class DeadLetterQueue:
             error_message=row["error_message"],
             retry_count=row["retry_count"],
             max_retries=row["max_retries"],
-            enqueued_at=datetime.fromtimestamp(row["created_at"], tz=timezone.utc),
+            enqueued_at=datetime.fromtimestamp(row["created_at"], tz=UTC),
             status=row["status"],
         )
 

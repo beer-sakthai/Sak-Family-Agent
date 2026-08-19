@@ -2,21 +2,20 @@
 
 from __future__ import annotations
 
+import logging
+import traceback
 from collections.abc import Callable
 from dataclasses import dataclass
-import logging
 from pathlib import Path
-import traceback
 from typing import TYPE_CHECKING, Any
-import uuid
 
 from .circuit_breaker import DynamicCircuitBreaker
 from .dlq import DeadLetterItem, DeadLetterQueue
-from .models import DLQItem, ErrorSeverity, IncidentEnvelope, classify_exception
+from .models import DLQItem, ErrorSeverity, classify_exception
 from .snapshot import MemorySnapshotManager
 
 if TYPE_CHECKING:
-    from ..memory.store import MemoryStore
+    pass
 
 logger = logging.getLogger(__name__)
 
@@ -126,10 +125,14 @@ class SelfHealingSupervisor:
             error_message=str(error),
         )
 
-    def replay_dlq_item(self, item_id: str, executor_fn: Callable[[DeadLetterItem | DLQItem], Any]) -> bool:
+    def replay_dlq_item(
+        self, item_id: str, executor_fn: Callable[[DeadLetterItem | DLQItem], Any]
+    ) -> bool:
         """Execute replay callback for a DLQ task."""
         with self.dlq._get_conn() as conn:
-            row = conn.execute("SELECT * FROM dead_letter_items WHERE item_id = ?", (item_id,)).fetchone()
+            row = conn.execute(
+                "SELECT * FROM dead_letter_items WHERE item_id = ?", (item_id,)
+            ).fetchone()
             if not row or row["status"] not in ("pending", "PENDING", "retrying", "RETRYING"):
                 return False
 
