@@ -1,11 +1,26 @@
-# This workflow uses actions that are not certified by GitHub.
-# They are provided by a third-party and are governed by
-# separate terms of service, privacy policy, and support
-# documentation.
-
-# This workflow integrates a collection of open source static analysis tools
-# with GitHub code scanning. For documentation, or to provide feedback, visit
-# https://github.com/github/ossar-action
+# OSSAR — Microsoft's Security Code Analysis CLI, driving a collection of
+# open-source static analysers and publishing the result to code scanning.
+#
+# ABOUT THIS FILE'S HISTORY, because it matters before you edit it.
+#
+# `ossar.yml` was removed on 2026-08-18 by the workflow audit (see the CI
+# section of CLAUDE.md): the version removed ran MSDO with `tools: eslint`
+# against a repository root that has no `package.json` at all — this is a
+# Python monorepo, and the only Node subproject is `apps/sak_agent_dashboard`,
+# which `eslint.yml` already analyses properly with the app's own flat config.
+# It was reintroduced in 52be3a6 as an unmodified GitHub starter template:
+# floating action tags, no `concurrency:`, no `timeout-minutes`, i.e. failing
+# three of the invariants in `tests/test_workflow_hygiene.py` and turning CI
+# red.
+#
+# What follows brings it up to those invariants rather than deleting it a
+# second time, because the intent behind reinstating it is legitimate: OSSAR's
+# non-eslint analysers do see things CodeQL's default suite does not. But the
+# duplication question is still open — if this workflow's alerts turn out to be
+# the same findings `eslint.yml` and `codeql.yml` already publish, delete it,
+# and record why here so it does not come back a third time.
+#
+# It publishes; it does not gate. `ci.yml` is the gate.
 name: OSSAR
 
 on:
@@ -20,37 +35,58 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  # See the note in ci.yml. Never cancel on `main`: a cancelled analysis
+  # uploads no SARIF, and a code-scanning alert is only ever closed by a newer
+  # analysis from the same tool.
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   OSSAR-Scan:
-    # OSSAR runs on windows-latest.
-    # ubuntu-latest and macos-latest support coming soon
     permissions:
       contents: read # for actions/checkout to fetch code
       security-events: write # for github/codeql-action/upload-sarif to upload SARIF results
       actions: read # only required for a private repository by github/codeql-action/upload-sarif to get the Action run status
+    # OSSAR runs on windows-latest only. That is also why this is the most
+    # expensive scheduled workflow in the repository: GitHub bills Windows
+    # minutes at twice the Linux rate, which is part of the duplication
+    # question in the header.
     runs-on: windows-latest
+    # MSDO installs a .NET toolchain and several analysers before it scans
+    # anything. Twenty-five minutes is generous for that on a Windows runner
+    # and still an order of magnitude below the six-hour default a job with no
+    # budget would hold.
+    timeout-minutes: 25
 
     steps:
+    # Every `uses:` below is pinned to a 40-character commit SHA, which
+    # `tests/test_workflow_hygiene.py::test_actions_are_pinned_to_a_commit_sha`
+    # enforces and Scorecard reads as `PinnedDependenciesID`. A tag can be
+    # moved by whoever owns the action; a commit cannot. Note in particular
+    # that `github/ossar-action@v1` was never a release tag — it is a *branch*
+    # of that name, so `@v1` meant "whatever was last pushed to it".
     - name: Checkout repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      with:
+        persist-credentials: false
 
     # Ensure a compatible version of dotnet is installed.
     # The [Microsoft Security Code Analysis CLI](https://aka.ms/mscadocs) is built with dotnet v3.1.201.
     # A version greater than or equal to v3.1.201 of dotnet must be installed on the agent in order to run this action.
     # GitHub hosted runners already have a compatible version of dotnet installed and this step may be skipped.
-    # For self-hosted runners, ensure dotnet version 3.1.201 or later is installed by including this action:
-    # - name: Install .NET
-    #   uses: actions/setup-dotnet@v4
-    #   with:
-    #     dotnet-version: '3.1.x'
-
-      # Run open source static analysis tools
     - name: Run OSSAR
-      uses: github/ossar-action@v1
+      uses: github/ossar-action@786a16a90ba92b4ae6228fe7382fb16ef5c51000 # v1 branch head
       id: ossar
 
-      # Upload results to the Security tab
     - name: Upload OSSAR results
-      uses: github/codeql-action/upload-sarif@v3
+      # Same v4 pin the rest of the repository uses for codeql-action; the
+      # template's `@v3` is two majors behind what codeql.yml and bandit.yml
+      # already run.
+      uses: github/codeql-action/upload-sarif@ff2f1c621b7f889edc0d3c761ac2e6a3f8cdb0dd # v4
       with:
         sarif_file: ${{ steps.ossar.outputs.sarifFile }}
+        # Without an explicit category, an upload from this workflow and an
+        # upload from codeql.yml are indistinguishable to the code-scanning
+        # API, and the later one closes the earlier one's alerts.
+        category: ossar

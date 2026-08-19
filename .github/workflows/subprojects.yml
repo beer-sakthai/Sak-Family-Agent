@@ -54,13 +54,17 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Set up Python
-        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+      # `sync: false`: this subproject has no pyproject.toml of its own — see
+      # the note on the run step — so there is no environment to sync. The
+      # action is still worth using for the pinned uv (this was `pipx install
+      # uv`, i.e. whatever released that morning) and for the warm tool cache
+      # that `uv run --with pyyaml` resolves against.
+      - name: Set up Python and uv
+        uses: ./.github/actions/setup-uv-python
         with:
           python-version: "3.11"
-
-      - name: Install uv
-        run: pipx install uv
+          sync: "false"
+          cache-suffix: "agent-workflow-framework"
 
       # The subproject has no pyproject.toml — `agent_workflow/` is a plain
       # package directory imported from the repo. Run it in place with its one
@@ -85,13 +89,16 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Set up Python
-        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+      # `sync: false`: the run step below drives its own environment with
+      # `uv run --project .`, which resolves this subproject's own lock rather
+      # than the root one. The cache is keyed on `**/uv.lock`, so that lock is
+      # part of the key and its wheels are what gets restored here.
+      - name: Set up Python and uv
+        uses: ./.github/actions/setup-uv-python
         with:
           python-version: "3.11"
-
-      - name: Install uv
-        run: pipx install uv
+          sync: "false"
+          cache-suffix: "teams-copilot-mcp"
 
       # This subproject has its own pyproject.toml and uv.lock (fastmcp / msal /
       # httpx), deliberately kept out of the root lock.
@@ -156,6 +163,27 @@ jobs:
       # still passes, and the lockfile expects it to be considered.
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      # `setup-node`'s `cache: pnpm` above caches the pnpm *store* — the
+      # downloaded packages. It does not cache anything Next.js produces. The
+      # `build` step at the end of this job re-does the full compile from cold
+      # every run; `.next/cache` is where Next keeps its incremental compiler
+      # and minifier output, and restoring it is the difference between a cold
+      # and a warm build.
+      #
+      # Keyed on the lockfile (a dependency change invalidates the compiler
+      # cache) plus the commit SHA, so every run writes a fresh entry rather
+      # than sharing one immutable key that can never be updated. `restore-keys`
+      # is what makes that work: the exact key never hits, the prefix does, and
+      # the run starts from the most recent entry for the same dependency tree.
+      - name: Restore the Next.js build cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: apps/sak_agent_dashboard/.next/cache
+          key: nextjs-${{ runner.os }}-${{ hashFiles('apps/sak_agent_dashboard/pnpm-lock.yaml') }}-${{ github.sha }}
+          restore-keys: |
+            nextjs-${{ runner.os }}-${{ hashFiles('apps/sak_agent_dashboard/pnpm-lock.yaml') }}-
+            nextjs-${{ runner.os }}-
 
       - name: Lint
         run: pnpm lint
