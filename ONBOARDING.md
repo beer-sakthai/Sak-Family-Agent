@@ -139,7 +139,7 @@ Invoke this skill with `sakthai run --with-skills my-first-skill "your task"`.
 
 ## Resources
 
-- Read more: [docs/plugins.md](../../docs/plugins.md)
+- Read more: docs/plugins.md in the House of Sak repo root
 EOF
 
 # Validate it
