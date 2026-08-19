@@ -132,6 +132,10 @@ def test_get_meeting_transcript_calls_graph_client():
     assert result == "WEBVTT\n..."
 
 
+def test_main_runs_mcp_server():
+    with patch.object(server.mcp, "run") as mock_run:
+        server.main()
+        mock_run.assert_called_once()
 def test_convenience_tools_reject_control_characters():
     with pytest.raises(ValueError, match="Control characters are not allowed"):
         server.list_channels(team_id="T1\r\n")
