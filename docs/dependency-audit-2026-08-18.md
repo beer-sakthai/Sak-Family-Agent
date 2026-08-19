@@ -39,7 +39,7 @@ subprojects and a direct OSV batch query for every pinned Python distribution.
 | `uv.lock` (root) | `sqlitedict` only |
 | `apps/sak_agent_dashboard` (pnpm) | clean |
 | `infra/pw-poc` (npm) | clean |
-| `personas/saksee/skills/SakSee-stitch::react-{components,native}` (npm) | clean |
+| `personas/saksee/skills/SakSee-stitch-react-{components,native}` (npm) | clean |
 | `services/teams-copilot-mcp/uv.lock` | clean |
 | `sakthai-chat-cli/uv.lock` | clean |
 | `personas/*/telegram/requirements.txt`, skill `requirements.txt` files | clean |

@@ -22,7 +22,22 @@ concurrency:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    # Opt-in self-hosted execution. Set the repository variable
+    # `CI_RUNNER_LABEL` (Settings -> Secrets and variables -> Actions ->
+    # Variables) to a registered runner label and CI moves onto that hardware;
+    # delete the variable and the next run is back on `ubuntu-latest`. No
+    # workflow edit either way.
+    #
+    # Written as a fallback rather than a hard-coded `[self-hosted]` because
+    # the failure mode of the latter is not a failure: a job targeting a label
+    # with no online runner does not error, it *queues* — silently, for up to
+    # 24 hours, and then expires. One unreachable VM would stall every pull
+    # request in the repository with nothing red to point at.
+    #
+    # See infra/self-hosted-runner/README.md, and read its first section before
+    # setting the variable: a self-hosted runner must not be reachable by pull
+    # requests from forks.
+    runs-on: ${{ vars.CI_RUNNER_LABEL || 'ubuntu-latest' }}
     timeout-minutes: 30
     strategy:
       # Run the test suite against all supported Python versions.
@@ -39,17 +54,23 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+      # One step for interpreter + uv + dependency cache + locked install.
+      # This used to be `setup-python` -> `pipx install uv` -> `uv sync
+      # --all-extras`, which pulled an unpinned uv and re-downloaded the entire
+      # locked closure from PyPI on every run of every matrix leg. See the
+      # action's own comments for what the cache is keyed on and why each leg
+      # gets its own partition.
+      #
+      # `--locked` (not a bare `uv sync`) is the same contract pylint.yml
+      # already holds: install exactly what uv.lock records and fail on drift,
+      # rather than silently re-resolving. `--all-extras` stays — hypothesis
+      # lives in the `dev` extra and tests/test_store_properties.py fails
+      # collection without it, which aborts the whole run.
+      - name: Set up Python ${{ matrix.python-version }} and uv
+        uses: ./.github/actions/setup-uv-python
         with:
           python-version: ${{ matrix.python-version }}
-
-      - name: Install uv
-        run: pipx install uv
-
-      - name: Install dependencies
-        # Install all optional dependencies to ensure linting/testing tools are present.
-        run: uv sync --all-extras
+          sync-args: "--locked --all-extras"
 
       - name: Run linters
         run: |
