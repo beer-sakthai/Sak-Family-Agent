@@ -33,8 +33,13 @@ jobs:
       )
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    # `use_github_token: true` below skips the OIDC exchange, so no `id-token:
+    # write` is needed. It also means these four lines are the real ceiling on
+    # what the agent can do: the CLI runs on GITHUB_TOKEN, which Actions scopes
+    # to exactly this block. The OpenCode App token it would otherwise fetch
+    # carries the *app installation's* permissions and ignores this block
+    # entirely — which is why the default is not what we want here.
     permissions:
-      id-token: write
       contents: read
       pull-requests: read
       issues: read
@@ -52,7 +57,19 @@ jobs:
           # is inherited by the composite's run steps — the same route the Gemini
           # key used before this workflow moved onto Go.
           OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
+          # Read by the CLI because of `use_github_token: true`. Actions does not
+          # export this on its own — only the `github.token` context exists — so
+          # it has to be passed explicitly.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
+          # Authenticate to GitHub with the job's own GITHUB_TOKEN instead of
+          # exchanging an OIDC token for an OpenCode GitHub App installation
+          # token. Two reasons: the app token's permissions come from the app
+          # install rather than this workflow's `permissions:` block, so the
+          # read-only posture above would not actually bind; and the default
+          # path requires github.com/apps/opencode-agent to be installed on the
+          # repository, making the workflow fail closed on a missing install.
+          use_github_token: "true"
           # Go plan provider. $0.22/$0.66 per Mtok, 1M context, tool calling — and
           # the model docs/SOUL.md already names as SakThai's model policy.
           model: opencode-go/deepseek-v4-flash

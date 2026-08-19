@@ -139,12 +139,19 @@ other Go ID works in the same `opencode-go/<model>` form; `mimo-v2.5` is cheaper
 
 Three things about it are worth knowing before you change it:
 
-- **It is read-only.** `permissions: contents: read`, and the job adds only
-  `id-token: write` (for the OIDC exchange) plus `pull-requests: read` /
-  `issues: read`. The agent answers in the workflow run log. It cannot push,
-  comment back, or open a pull request. Widening that turns a comment on a public
-  repo into a path to a write credential — treat it as a security decision, not a
-  convenience one.
+- **It is read-only, and `use_github_token: true` is what makes that true.**
+  By default the action exchanges an OIDC token with `api.opencode.ai` for an
+  **OpenCode GitHub App installation token** — whose permissions come from the
+  app installation and therefore ignore this workflow's `permissions:` block
+  entirely. Setting `use_github_token: true` runs the CLI on the job's own
+  `GITHUB_TOKEN` instead, which Actions scopes to exactly `contents: read` /
+  `pull-requests: read` / `issues: read`. The agent answers in the run log; it
+  cannot push, comment back, or open a pull request. The default also requires
+  <https://github.com/apps/opencode-agent> to be installed on the repository, so
+  this setting removes an install prerequisite as well. `id-token: write` is
+  deliberately absent — nothing performs an OIDC exchange any more. Widening any
+  of this turns a comment on a public repo into a path to a write credential;
+  treat it as a security decision, not a convenience one.
 - **`share: false` is load-bearing.** The action's `share` input *defaults to
   true for public repositories*, which publishes an `opencode.ai` session link for
   every run. The source here is public anyway, but the session also carries the
