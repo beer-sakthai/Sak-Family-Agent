@@ -608,10 +608,18 @@ def run_agent(
                     },
                 )
                 # Transient and the breaker still admits calls: let the model retry.
-                if (
-                    recovery.severity.value == "transient"
-                    and heal.supervisor.get_circuit_breaker(heal.persona).allow_execution()
-                ):
+                # The breaker consultation is a supervisor call — guard it per the
+                # §7 fail-safe invariant so a supervisor fault cannot mask the
+                # original provider error.
+                try:
+                    can_retry = heal.supervisor.get_circuit_breaker(heal.persona).allow_execution()
+                except Exception:  # noqa: BLE001 - healing must not crash the run
+                    logger.error(
+                        "Circuit breaker consultation failed; defaulting to no-retry: %s",
+                        exc,
+                    )
+                    can_retry = False
+                if recovery.severity.value == "transient" and can_retry:
                     messages.append(
                         {
                             "role": "assistant",
