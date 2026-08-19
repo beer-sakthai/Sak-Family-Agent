@@ -23,6 +23,7 @@ from typing import Any
 
 from ..auth import get_credential_source
 from ..config import redact_secrets, sessions_dir
+from ..healing.supervisor import RecoveryResult, SelfHealingSupervisor
 from ..memory.store import MemoryStore
 from ..skills import default_skill_roots, find_skill, render_skills_prompt_block
 from . import providers
@@ -81,6 +82,43 @@ class AgentResult:
         default_factory=lambda: {"input_tokens": 0, "output_tokens": 0, "total_tokens": 0}
     )
     messages: list[dict[str, Any]] = field(default_factory=list)
+
+
+@dataclass
+class _HealState:
+    """Per-run healing context: the supervisor plus the pre-run memory checkpoint."""
+
+    supervisor: SelfHealingSupervisor
+    persona: str
+    checkpoint_id: str | None = None
+
+
+def _handle_healing_failure(
+    heal: _HealState,
+    store: MemoryStore,
+    *,
+    action: str,
+    payload: dict[str, Any],
+    error: Exception,
+) -> RecoveryResult | None:
+    """Route a runtime failure through the supervisor.
+
+    Returns ``None`` if the supervisor itself raised, so the caller can fall back
+    to the pre-healing behavior (re-raise the original error) — fail-safe per the
+    self-healing PRD §7: the recovery subsystem must never hard-crash the runtime.
+    """
+    try:
+        return heal.supervisor.handle_execution_failure(
+            persona=heal.persona,
+            action=action,
+            payload=payload,
+            error=error,
+            store=store,
+            checkpoint_id=heal.checkpoint_id,
+        )
+    except Exception as exc:  # noqa: BLE001 — healing must not crash the run
+        logger.error("Self-healing supervisor raised handling %r: %s", action, exc)
+        return None
 
 
 # -- prompt + tool execution --------------------------------------------
@@ -413,6 +451,7 @@ def run_agent(
     guardrail_policy: GuardrailPolicy | None = None,
     context_filter: ContextFilter | None = None,
     persona: str | None = None,
+    supervisor: SelfHealingSupervisor | None = None,
 ) -> AgentResult:
     """Run one task to completion against Claude, Gemini, or an OpenAI endpoint.
 
@@ -495,6 +534,20 @@ def run_agent(
     old_active = os.environ.get("SAKTHAI_AGENT_ACTIVE")
     os.environ["SAKTHAI_AGENT_ACTIVE"] = "1"
     try:
+        heal: _HealState | None = None
+        if supervisor is not None:
+            persona_key = persona or "sakthai"
+            try:
+                checkpoint_id = supervisor.snapshot_mgr.create_checkpoint(
+                    store, label="run_agent"
+                )
+            except Exception as exc:  # noqa: BLE001 — fail-safe
+                logger.warning("Healing checkpoint failed (continuing without): %s", exc)
+                checkpoint_id = None
+            heal = _HealState(
+                supervisor=supervisor, persona=persona_key, checkpoint_id=checkpoint_id
+            )
+
         for iteration in range(1, max_iterations + 1):
             if deadline is not None and time.monotonic() >= deadline:
                 raise AgentError(f"Agent time budget exhausted (max_seconds={max_seconds}).")
@@ -510,19 +563,66 @@ def run_agent(
                 system_prompt_prefix=system_prompt_prefix,
                 persona=persona,
             )
-            response = _agent_turn(
-                provider,
-                client,
-                model,
-                system,
-                tools,
-                messages,
-                iteration,
-                on_token,
-                max_tokens,
-                tool_schemas,
-                usage_tracker,
-            )
+            try:
+                response = _agent_turn(
+                    provider,
+                    client,
+                    model,
+                    system,
+                    tools,
+                    messages,
+                    iteration,
+                    on_token,
+                    max_tokens,
+                    tool_schemas,
+                    usage_tracker,
+                )
+            except Exception as exc:
+                if heal is None:
+                    raise
+                recovery = _handle_healing_failure(
+                    heal,
+                    store,
+                    action="provider_turn",
+                    payload={"iteration": iteration},
+                    error=exc,
+                )
+                if recovery is None:
+                    raise  # supervisor broke; preserve the original runtime error
+                notify(
+                    "heal",
+                    {
+                        "action": recovery.action_taken,
+                        "severity": recovery.severity.value,
+                        "dlq_id": recovery.dlq_id,
+                    },
+                )
+                # Transient and the breaker still admits calls: let the model retry.
+                if (
+                    recovery.severity.value == "transient"
+                    and heal.supervisor.get_circuit_breaker(heal.persona).allow_execution()
+                ):
+                    messages.append(
+                        {
+                            "role": "assistant",
+                            "content": f"[recovery] provider call failed ({recovery.severity.value}); retrying.",
+                        }
+                    )
+                    continue
+                final_text = (
+                    f"[recovery] agent run aborted after self-healing: {recovery.action_taken}"
+                )
+                result = AgentResult(
+                    text=final_text,
+                    iterations=iteration,
+                    stop_reason="healed",
+                    tool_calls=tool_calls,
+                    usage=usage_tracker.to_dict(),
+                    messages=[*messages],
+                )
+                _save_session_log(task, model, messages, result)
+                _record_run_eval(iteration, "healed", had_error=True)
+                return result
 
             stop_reason = getattr(response, "stop_reason", "") or ""
             notify("iteration", {"n": iteration, "stop_reason": stop_reason})

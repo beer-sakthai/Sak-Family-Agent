@@ -22,8 +22,7 @@
   - Plan: `conductor/tracks/004-autonomous-cicd-doctor/plan.md`
   - Status: Completed & Verified (16/16 tests passed across doctor, parity, and mutation daemon).
 
----
-
-## Queued Tracks
-
-- [ ] **Track 005: Remote MCP Tool Federation & Dynamic Secure Agent Gateway**
+- [x] **Track 005: Remote MCP Tool Federation & Dynamic Secure Agent Gateway** (v2.6.0)
+  - Spec: `docs/prds/0005_prd_remote_mcp_tool_federation.md`
+  - Plan: `conductor/tracks/005-remote-mcp-tool-federation/plan.md`
+  - Status: Completed & Verified (4/4 passed across security validator & gateway).
