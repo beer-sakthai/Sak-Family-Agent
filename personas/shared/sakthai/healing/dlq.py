@@ -240,24 +240,67 @@ class DeadLetterQueue:
             )
             return True
 
-    def resolve(self, dlq_id: str) -> None:
+    def resolve(self, dlq_id: str) -> bool:
         now = int(time.time())
         with self._get_conn() as conn:
-            conn.execute(
+            cur = conn.execute(
                 "UPDATE dead_letter_items SET status = 'RESOLVED', updated_at = ? WHERE item_id = ?",
                 (now, dlq_id),
             )
+            return cur.rowcount > 0
 
-    def mark_replayed(self, item_id: str) -> None:
-        self.resolve(item_id)
-
-    def quarantine(self, item_id: str) -> None:
+    def mark_replayed(self, item_id: str) -> bool:
         now = int(time.time())
         with self._get_conn() as conn:
-            conn.execute(
-                "UPDATE dead_letter_items SET status = 'DEAD', updated_at = ? WHERE item_id = ?",
+            cur = conn.execute(
+                "UPDATE dead_letter_items SET status = 'replayed', updated_at = ? WHERE item_id = ?",
                 (now, item_id),
             )
+            return cur.rowcount > 0
+
+    def record_retry_failure(self, item_id: str, error_message: str = "") -> bool:
+        now = int(time.time())
+        with self._get_conn() as conn:
+            row = conn.execute(
+                "SELECT retry_count, max_retries FROM dead_letter_items WHERE item_id = ?",
+                (item_id,),
+            ).fetchone()
+            if not row:
+                return False
+            new_count = row["retry_count"] + 1
+            if new_count >= row["max_retries"]:
+                status = "quarantined"
+            else:
+                status = "pending"
+
+            clean_err = redact_secrets(error_message) if error_message else None
+            if clean_err:
+                conn.execute(
+                    "UPDATE dead_letter_items SET retry_count = ?, status = ?, error_message = ?, updated_at = ? WHERE item_id = ?",
+                    (new_count, status, clean_err, now, item_id),
+                )
+            else:
+                conn.execute(
+                    "UPDATE dead_letter_items SET retry_count = ?, status = ?, updated_at = ? WHERE item_id = ?",
+                    (new_count, status, now, item_id),
+                )
+            return True
+
+    def quarantine(self, item_id: str) -> bool:
+        now = int(time.time())
+        with self._get_conn() as conn:
+            cur = conn.execute(
+                "UPDATE dead_letter_items SET status = 'quarantined', updated_at = ? WHERE item_id = ?",
+                (now, item_id),
+            )
+            return cur.rowcount > 0
+
+    def get_item(self, item_id: str) -> DeadLetterItem | None:
+        with self._get_conn() as conn:
+            row = conn.execute(
+                "SELECT * FROM dead_letter_items WHERE item_id = ?", (item_id,)
+            ).fetchone()
+            return self._row_to_item(row) if row else None
 
     def _row_to_dlq_item(self, row: sqlite3.Row) -> DLQItem:
         try:
