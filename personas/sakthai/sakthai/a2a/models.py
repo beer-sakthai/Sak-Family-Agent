@@ -62,6 +62,7 @@ class ConsensusSession:
     topic: str
     domain: str
     quorum_threshold: float = 0.6
+    min_ballots: int = 3
     ballots: list[VoteBallot] = field(default_factory=list)
     created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     resolved: bool = False
@@ -69,15 +70,18 @@ class ConsensusSession:
 
     def add_ballot(self, ballot: VoteBallot) -> None:
         self.ballots.append(ballot)
-        self._evaluate()
+        self.evaluate()
 
-    def _evaluate(self) -> None:
-        # Check for SakThai VETO
+    def evaluate(self) -> None:
+        # 1. Check for SakThai VETO immediately
         for b in self.ballots:
-            if b.choice == VoteChoice.VETO and b.persona == "sakthai":
+            if b.choice == VoteChoice.VETO and b.persona.lower() == "sakthai":
                 self.resolved = True
                 self.outcome = "VETOED"
                 return
+
+        if len(self.ballots) < self.min_ballots:
+            return
 
         approve_weight = sum(b.weight for b in self.ballots if b.choice == VoteChoice.APPROVE)
         reject_weight = sum(b.weight for b in self.ballots if b.choice == VoteChoice.REJECT)
@@ -87,10 +91,10 @@ class ConsensusSession:
             return
 
         approval_ratio = approve_weight / total_weight
-        if approval_ratio >= self.quorum_threshold and len(self.ballots) >= 2:
+        if approval_ratio >= self.quorum_threshold:
             self.resolved = True
             self.outcome = "APPROVED"
-        elif reject_weight / total_weight > (1.0 - self.quorum_threshold) and len(self.ballots) >= 3:
+        else:
             self.resolved = True
             self.outcome = "REJECTED"
 
@@ -103,6 +107,7 @@ class ConsensusSession:
             "topic": self.topic,
             "domain": self.domain,
             "quorum_threshold": self.quorum_threshold,
+            "min_ballots": self.min_ballots,
             "resolved": self.resolved,
             "outcome": self.outcome,
             "created_at": self.created_at.isoformat(),
