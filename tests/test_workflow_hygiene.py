@@ -197,6 +197,57 @@ def test_workflow_declares_top_level_permissions(path: Path) -> None:
     )
 
 
+@pytest.mark.parametrize("path", _authored_workflows(), ids=lambda p: p.name)
+def test_every_job_declares_a_timeout(path: Path) -> None:
+    """A job with no ``timeout-minutes`` holds a runner for six hours.
+
+    That is GitHub's default, and it is not a theoretical cost: an agentic job
+    that hangs on a model call burns the whole window before anyone notices,
+    and a queued self-hosted job behind it waits the same six hours. This rule
+    was described in this module's docstring from the day the docstring was
+    written, and in ``CLAUDE.md`` as *enforced by this file* — but no test
+    implemented it, so ``auto-update-prs.yml`` was merged with no timeout at
+    all and nothing went red.
+
+    Scoped to :func:`_authored_workflows` for the reason given there: gh-aw
+    sets ``timeout-minutes`` on only one of each lock file's generated jobs.
+    """
+    jobs = _load(path).get("jobs") or {}
+    missing = [
+        name for name, job in jobs.items() if isinstance(job, dict) and "timeout-minutes" not in job
+    ]
+    assert not missing, (
+        f"{path.name}: job(s) {', '.join(sorted(missing))} declare no "
+        "`timeout-minutes`. Without it the job may hold a runner for GitHub's "
+        "six-hour default."
+    )
+
+
+@pytest.mark.parametrize("path", _authored_workflows(), ids=lambda p: p.name)
+def test_pull_request_workflows_serialise_per_ref(path: Path) -> None:
+    """A workflow a pull request can trigger must declare ``concurrency:``.
+
+    Without it every force-push leaves the previous run to finish against a
+    commit nobody will look at again. The repository had accumulated 27,417
+    workflow runs before the convention was adopted.
+
+    The rule deliberately checks only for the block's presence, not for a
+    particular ``cancel-in-progress`` value. The usual expression is
+    ``${{ github.event_name == 'pull_request' }}`` — cancel a superseded PR
+    run, never one on ``main``, because a cancelled analysis uploads no SARIF
+    and an alert is only ever closed by a newer analysis from the same tool.
+    But ``opencode.yml`` sets it to ``false`` on purpose (two ``/oc`` comments
+    are two different tasks), so pinning the value would be wrong.
+    """
+    triggers = _triggers(_load(path))
+    if not triggers & {"pull_request", "pull_request_target"}:
+        pytest.skip("not triggerable by a pull request")
+    assert "concurrency" in _load(path), (
+        f"{path.name}: triggerable by a pull request but declares no top-level "
+        "`concurrency:` group, so superseded runs are never cancelled."
+    )
+
+
 @pytest.mark.parametrize("path", _yaml_workflows(), ids=lambda p: p.name)
 def test_actions_are_pinned_to_a_commit_sha(path: Path) -> None:
     """Scorecard ``PinnedDependenciesID``: no floating tags or branches."""

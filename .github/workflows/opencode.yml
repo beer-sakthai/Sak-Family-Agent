@@ -32,16 +32,31 @@ jobs:
         github.event.comment.author_association == 'COLLABORATOR'
       )
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # 15 was too tight: run 32296190427 was cancelled at exactly 15:05 with the
+    # agent still working. The dependency install added below costs another
+    # minute or two on a cold cache, so the budget goes up rather than down.
+    # This is Actions minutes, which are free on a public repository — the
+    # OpenCode Go spend is metered in tokens, not wall time, so a longer ceiling
+    # does not cost more per run.
+    timeout-minutes: 20
     # `use_github_token: true` below skips the OIDC exchange, so no `id-token:
-    # write` is needed. It also means these four lines are the real ceiling on
+    # write` is needed. It also means these three lines are the real ceiling on
     # what the agent can do: the CLI runs on GITHUB_TOKEN, which Actions scopes
     # to exactly this block. The OpenCode App token it would otherwise fetch
     # carries the *app installation's* permissions and ignores this block
     # entirely — which is why the default is not what we want here.
+    #
+    # `issues: write` and `pull-requests: write` are what let the agent answer.
+    # The action posts a reaction on the triggering comment and then a reply;
+    # with read-only scopes both calls 403 and the step exits 1 having done
+    # nothing (runs 32294069990 and 32295093264). `issues: write` covers issue
+    # threads and PR *conversation* comments; `pull-requests: write` covers the
+    # `pull_request_review_comment` trigger declared above, which replies on the
+    # review thread through a different endpoint. `contents: read` is the line
+    # that still matters: the agent cannot push, branch, or open a pull request.
     permissions:
       contents: read
-      pull-requests: read
+      pull-requests: write
       issues: write
     steps:
       - name: Harden the runner
@@ -55,6 +70,18 @@ jobs:
         with:
           persist-credentials: false
 
+      # Without this the agent has no tools. `opencode.json` registers the
+      # sakthai MCP server as `uv run --project . sakthai mcp`, but nothing in
+      # this job installed uv or the project's dependencies, so that server
+      # failed to start and the agent silently lost all 14 builtin tools —
+      # leaving it to reason over a checkout it could not read with anything but
+      # its own file tools. Same pinned action, cache and lockfile as `ci.yml`.
+      - name: Set up Python and uv
+        uses: ./.github/actions/setup-uv-python
+        with:
+          python-version: "3.11"
+          cache-suffix: opencode
+
       - name: Run opencode
         uses: anomalyco/opencode/github@14b37df39168eaf6a6faf862ec4a7bbe9c825bbd  # v1.18.18
         env:
@@ -67,6 +94,18 @@ jobs:
           # export this on its own — only the `github.token` context exists — so
           # it has to be passed explicitly.
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # CI-only config overlay. The repo-root `opencode.json` sets
+          # `permission.bash: "ask"` on purpose — an interactive prompt nobody
+          # can answer in a headless run, which is the same as denying shell —
+          # and `tests/test_agent_cli_configs.py::test_opencode_gates_bash`
+          # pins that value, so the fix is not to loosen it. This file overrides
+          # `permission` for CI only: bash allowed, and `edit` denied because
+          # `contents: read` means an edit could never be pushed anyway — better
+          # the agent proposes a patch than silently writes one into a checkout
+          # that is thrown away. It deliberately does *not* restate the persona
+          # `agent:` table; duplicating that is the drift
+          # `test_agent_cli_configs.py` exists to catch.
+          OPENCODE_CONFIG: ${{ github.workspace }}/.github/opencode-ci.json
         with:
           # Authenticate to GitHub with the job's own GITHUB_TOKEN instead of
           # exchanging an OIDC token for an OpenCode GitHub App installation

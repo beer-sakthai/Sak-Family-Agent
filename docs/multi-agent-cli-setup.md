@@ -137,21 +137,46 @@ tool calling, and the model `docs/SOUL.md` already names as SakThai's policy. An
 other Go ID works in the same `opencode-go/<model>` form; `mimo-v2.5` is cheaper,
 `glm-5.3` and `kimi-k3` are stronger and correspondingly more expensive.
 
-Three things about it are worth knowing before you change it:
+Four things about it are worth knowing before you change it:
 
-- **It is read-only, and `use_github_token: true` is what makes that true.**
+- **It answers by commenting, and `contents: read` is the ceiling.**
+  The agent is *not* read-only — an earlier version of this page said it was,
+  and the workflow simply did not work. The action posts a reaction on the
+  triggering comment and then a reply, so it needs `issues: write` and
+  `pull-requests: write`; with read-only scopes both calls return
+  `403 Resource not accessible by integration` and the step exits 1 having done
+  nothing. Those two scopes are the whole write surface: `contents: read` means
+  the agent cannot push, create a branch, or open a pull request.
+
+  `use_github_token: true` is what makes the `permissions:` block bind at all.
   By default the action exchanges an OIDC token with `api.opencode.ai` for an
   **OpenCode GitHub App installation token** — whose permissions come from the
-  app installation and therefore ignore this workflow's `permissions:` block
-  entirely. Setting `use_github_token: true` runs the CLI on the job's own
-  `GITHUB_TOKEN` instead, which Actions scopes to exactly `contents: read` /
-  `pull-requests: read` / `issues: read`. The agent answers in the run log; it
-  cannot push, comment back, or open a pull request. The default also requires
+  app installation and therefore ignore this workflow's block entirely. Setting
+  it runs the CLI on the job's own `GITHUB_TOKEN`, which Actions scopes to
+  exactly what is declared. The default also requires
   <https://github.com/apps/opencode-agent> to be installed on the repository, so
   this setting removes an install prerequisite as well. `id-token: write` is
-  deliberately absent — nothing performs an OIDC exchange any more. Widening any
-  of this turns a comment on a public repo into a path to a write credential;
-  treat it as a security decision, not a convenience one.
+  deliberately absent — nothing performs an OIDC exchange any more. Widening
+  beyond these two turns a comment on a public repo into a path to a write
+  credential; treat it as a security decision, not a convenience one.
+
+- **It has the repo's own tools, which took two changes.** The job runs
+  `./.github/actions/setup-uv-python` before the agent, because `opencode.json`
+  registers the sakthai MCP server as `uv run --project . sakthai mcp` and
+  nothing in CI had installed uv or the project — the server failed to start and
+  the agent silently lost all 14 builtin tools. Shell needed the second change:
+  the root config sets `permission.bash: "ask"`, an approval prompt with nobody
+  to answer it, and `tests/test_agent_cli_configs.py::test_opencode_gates_bash`
+  pins that value deliberately. So CI does not loosen the root config — it
+  points `OPENCODE_CONFIG` at `.github/opencode-ci.json`, which allows `bash`
+  and denies `edit` (an edit could never be pushed under `contents: read`, so a
+  proposed patch in the reply is worth more than a discarded working tree).
+  That file deliberately omits the persona `agent:` table: duplicating it is
+  exactly the drift `tests/test_agent_cli_configs.py` exists to catch.
+
+  Shell plus comment-write means a prompt injection arriving through a comment
+  or a diff has somewhere to go. The trusted-commenter gate is what contains
+  that, which is why it should not be relaxed.
 - **`share: false` is load-bearing.** The action's `share` input *defaults to
   true for public repositories*, which publishes an `opencode.ai` session link for
   every run. The source here is public anyway, but the session also carries the
