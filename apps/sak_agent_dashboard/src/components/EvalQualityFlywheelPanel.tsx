@@ -31,6 +31,7 @@ export const EvalQualityFlywheelPanel: React.FC = () => {
   useEffect(() => {
     let isSubscribed = true;
     const initData = async () => {
+      let runCount = 0;
       try {
         const res = await fetch('/api/eval');
         if (res.ok) {
@@ -39,7 +40,10 @@ export const EvalQualityFlywheelPanel: React.FC = () => {
             if (json.data.datasets) setDatasets(json.data.datasets);
             if (json.data.failures) setFailures(json.data.failures);
             if (json.data.testCases) setTestCases(json.data.testCases);
-            if (json.data.recentRuns) setRecentRuns(json.data.recentRuns);
+            if (json.data.recentRuns) {
+              setRecentRuns(json.data.recentRuns);
+              runCount = json.data.recentRuns.length;
+            }
             if (json.data.summaries && json.data.summaries.length > 0) {
               setSummaries(json.data.summaries);
             }
@@ -49,7 +53,7 @@ export const EvalQualityFlywheelPanel: React.FC = () => {
         // Use pre-seeded memory data
       }
 
-      if (isSubscribed && recentRuns.length === 0) {
+      if (isSubscribed && runCount === 0) {
         const results = await EvalEngine.runBatchEvaluation(GOLDEN_TEST_CASES.slice(0, 6), {
           personaSlugs: ['all'],
           judgeModel: 'gemini-1.5-pro',

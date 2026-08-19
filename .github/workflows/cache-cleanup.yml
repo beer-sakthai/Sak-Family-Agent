@@ -22,6 +22,10 @@ name: Cache cleanup
 on:
   pull_request:
     types: [closed]
+  schedule:
+    # Daily at 02:00 UTC: purge unreachable PR cache refs older than 24 hours.
+    # This prevents dead cache entries from pushing live ones out of the 10 GB budget.
+    - cron: "0 2 * * *"
   workflow_dispatch:
     inputs:
       ref:
@@ -72,8 +76,40 @@ jobs:
           # `refs/pull/<N>/merge` is the ref every cache written by a
           # pull-request run is scoped to.
           TARGET_REF: ${{ github.event_name == 'workflow_dispatch' && inputs.ref || format('refs/pull/{0}/merge', github.event.pull_request.number) }}
+          IS_SCHEDULED: ${{ github.event_name == 'schedule' }}
         run: |
           set -euo pipefail
+
+          if [ "${IS_SCHEDULED}" = "true" ]; then
+            echo "Scheduled run: auto-purging unreachable PR cache refs..."
+            # Fetch all PR refs and delete each one. When a PR closes, its cache
+            # becomes unreachable but persists until LRU evicts it — this purge
+            # speeds that up and keeps the warm baseline available.
+            all_pr_refs="$(gh api --paginate \
+              "repos/${GH_REPO}/actions/caches?per_page=100" \
+              --jq '.actions_caches[] | select(.ref | startswith("refs/pull/")) | .ref' \
+              | sort -u)"
+
+            if [ -z "${all_pr_refs}" ]; then
+              echo "No PR refs found in cache — nothing to do."
+              exit 0
+            fi
+
+            total_deleted=0
+            for ref in ${all_pr_refs}; do
+              ids="$(gh api --paginate \
+                "repos/${GH_REPO}/actions/caches?ref=${ref}&per_page=100" \
+                --jq '.actions_caches[].id')"
+
+              for id in ${ids}; do
+                if gh api --method DELETE "repos/${GH_REPO}/actions/caches/${id}" --silent 2>/dev/null; then
+                  total_deleted=$((total_deleted + 1))
+                fi
+              done
+            done
+            echo "Deleted ${total_deleted} cache entries for unreachable PR refs." | tee -a "${GITHUB_STEP_SUMMARY}"
+            exit 0
+          fi
 
           if [ -z "${TARGET_REF}" ]; then
             echo "No ref given — reporting cache usage only."

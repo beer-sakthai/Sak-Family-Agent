@@ -300,6 +300,25 @@ dependency caches), `cache-cleanup.yml` (on a pull request closing, evicts that
 PR's caches), and `self-hosted-runner-health.yml` (daily, skipped entirely unless
 `CI_RUNNER_LABEL` is set; probes the runner and its toolchain).
 
+`opencode.yml` is also in that group but is worth its own paragraph, because it is
+the one workflow a *comment* can start. A `/oc` or `/opencode` comment on an issue
+or PR-review thread runs an OpenCode agent on the **OpenCode Go** subscription
+(`opencode-go/deepseek-v4-flash`, one `OPENCODE_API_KEY` secret). Three properties
+hold it in place and none should be relaxed casually: it is **read-only** — which
+holds only because of `use_github_token: true`, since the action's default is to
+exchange an OIDC token for an *OpenCode GitHub App* installation token whose
+permissions come from the app install and ignore the workflow's `permissions:`
+block (the agent answers in the run log and cannot push, comment, or open a PR) —
+it only fires for an `OWNER`/`MEMBER`/`COLLABORATOR` commenter, and it
+passes `share: false` because the action defaults `share` to **true for public
+repositories** — which this one is — publishing a session link with the agent's
+reasoning trace on every run. Its `concurrency:` group is per issue/PR thread with
+`cancel-in-progress: false`, which serialises rather than cancels and so also caps
+how fast it can spend a budget shared with interactive use. Setup and rationale in
+[`docs/multi-agent-cli-setup.md`](docs/multi-agent-cli-setup.md). Note this is a
+**separate** OpenCode integration from the vendored gh-aw engine below: they share
+a name and nothing else.
+
 The eight agentic gh-aw workflows also never block a PR, but **they do not all
 merely report** — check the `safe-outputs:` block before assuming one is
 read-only:

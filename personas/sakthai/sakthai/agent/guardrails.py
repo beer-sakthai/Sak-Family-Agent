@@ -680,6 +680,7 @@ _PIPELINE_INTERPRETERS = (
     "eval",
     "exec",
     "source",
+    ".",
 )
 
 
