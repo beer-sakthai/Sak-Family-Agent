@@ -127,6 +127,7 @@ tests/test_memory_secrets_redaction.py
 tests/test_memory_store.py
 tests/test_memory_sync.py
 tests/test_persona_guardrails_parity.py
+tests/test_persona_workspace_workflows.py
 tests/test_prompt_builder.py
 tests/test_provider_contracts.py
 tests/test_provider_resilience.py
