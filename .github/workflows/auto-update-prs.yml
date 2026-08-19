@@ -10,9 +10,20 @@ permissions:
   contents: write
   pull-requests: write
 
+# `cancel-in-progress: false`, not the usual pull-request expression: this
+# workflow walks every open PR in a loop, so cancelling a run mid-loop leaves
+# some branches updated against the new `main` and the rest against the old
+# one. Two pushes to `main` are two complete batches; queue the second.
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
 jobs:
   update-prs:
     runs-on: ubuntu-latest
+    # The loop makes one API call per open PR. Bounded so a hung `gh api` call
+    # cannot hold the runner for GitHub's six-hour default.
+    timeout-minutes: 15
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
