@@ -154,10 +154,19 @@ def test_read_file_blocks_control_characters_in_path(
         "path\rwith\rreturn",
         "path\twith\ttab",
         "path\0with\0null",
+        "path\x7fwith\x7fdel",
     ]
     for p in control_paths:
         with pytest.raises(ValueError, match="Control characters are not allowed"):
             tool_by_name("read_file").handler({"path": p}, store)
+
+
+def test_ingest_document_blocks_control_characters_in_path(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, store
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    with pytest.raises(ValueError, match="Control characters are not allowed"):
+        tool_by_name("ingest_document").handler({"path": "doc\n.md"}, store)
 
 
 @pytest.mark.parametrize(
