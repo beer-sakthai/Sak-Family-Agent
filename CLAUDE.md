@@ -213,33 +213,34 @@ The ones that gate a change:
 | `innersource-advisories.yml` | daily 01:00 UTC, manual | reads the open Dependabot alert list and rewrites one standing issue with it. **Needs `DEPENDABOT_ALERTS_TOKEN`** — `GITHUB_TOKEN` cannot read Dependabot alerts, and `security-events: read` does not grant it (the Actions app lacks the permission entirely). Gates nothing |
 | `self-healing-ci.yml` | `workflow_run` completion of `CI` on `main` (failure only), or manual | runs `sakthai heal run` over the failed job's log and opens a `selfheal/` fix PR when the patch is safe and locally verified. Gates nothing — it only ever adds a PR |
 | `auto-merge.yml` | `pull_request_target` labeled/unlabeled/ready_for_review | turns GitHub's **native** auto-merge on for a PR carrying the `automerge` label (squash), off when the label is removed. Gates nothing and waives nothing — GitHub still holds the merge until branch protection is satisfied, including the non-author approval. Uses no checkout, so the `pull_request_target` token never meets PR code |
-| `ossar.yml` | push/PR to `main`, weekly Monday | open-source static analysis on `windows-latest` → SARIF. **Re-added 2026-08-19 and red ever since — see below before touching it** |
+| `ossar.yml` | push/PR to `main`, weekly Monday | open-source static analysis on `windows-latest` → SARIF. Retired 2026-08-18, re-added 2026-08-19 as the stock starter template and repaired the same day — **read the callout below before editing it** |
 
-**`ossar.yml` is currently broken and is breaking `main` with it.** It was
-retired on 2026-08-18 for the reasons in the removal note below, then re-added
-on 2026-08-19 by commit `52be3a6` as GitHub's stock OSSAR starter template,
-unmodified. `main`'s CI was green through `cd250bd` and went red on that commit.
-Two independent things are wrong with it:
+**`ossar.yml` was re-added on 2026-08-19 and needed two separate repairs.**
+It was retired on 2026-08-18 for the reasons in the removal note below, then
+re-added by commit `52be3a6` as GitHub's stock OSSAR starter template,
+unmodified, which turned `main` red. Both defects are fixed now, but the shape
+of them is worth keeping:
 
-1. **It cannot check out this repository.** It runs `runs-on: windows-latest`,
-   and this repo contains paths that are illegal on NTFS — the `stitch::`
-   skill directories under `personas/sakjules/skills/` and
-   `personas/saksee/skills/`. `actions/checkout` dies before OSSAR ever starts:
-   `error: invalid path 'personas/sakjules/skills/SakJules-stitch::code-to-design/SKILL.md'`,
-   exit 128. No Windows-runner workflow can check this repository out while
-   those directory names exist.
-2. **It violates three of the invariants `tests/test_workflow_hygiene.py`
-   enforces**, so it fails `ci.yml` as well as its own job:
-   `test_actions_are_pinned_to_a_commit_sha` (it uses `actions/checkout@v4`,
-   `github/ossar-action@v1`, `github/codeql-action/upload-sarif@v3` — tags, not
-   SHAs), `test_pull_request_workflows_serialise_per_ref` (no `concurrency:`
-   block), and `test_every_job_declares_a_timeout` (the `OSSAR-Scan` job has no
-   `timeout-minutes`).
+1. **It could not check this repository out.** The stock template runs
+   `runs-on: windows-latest` (`github/ossar-action` supports no other runner),
+   and the repo contained eight skill directories with `::` in their names —
+   `SakJules-stitch::code-to-design` and seven `SakSee-stitch::*`. `::` is not a
+   legal NTFS path character, so `actions/checkout` exited 128 with
+   `invalid path '.../SakJules-stitch::code-to-design/SKILL.md'` before OSSAR
+   started. **Those directories are now `stitch-*` rather than `stitch::*`.**
+   Note the retired version of this workflow ran MSDO on `ubuntu-latest` and so
+   never hit this; the constraint arrived with the Windows-only action.
+2. **It violated three invariants `tests/test_workflow_hygiene.py` enforces**,
+   so it failed `ci.yml` as well as its own job: unpinned action tags, no
+   top-level `concurrency:`, and no `timeout-minutes`. All three are pinned and
+   declared now.
 
-Fixing (2) is mechanical; fixing (1) is not, and pinning the SHAs would leave a
-workflow that still cannot check the repo out. Deciding between re-retiring it
-and renaming the `stitch::` skill directories is a live question — do not
-"fix the lint" on this file and assume it works.
+The trap here is that (2) is mechanical and (1) is not. Pinning the SHAs alone
+would have turned `ci.yml` green while leaving a workflow that still could not
+check the repository out — a quieter failure, not a fixed one. **No
+Windows-runner workflow can check this repository out if a `::` path is
+reintroduced**, so treat that as a constraint on skill directory names rather
+than a one-off cleanup.
 
 Note that the two `*-gate.yml` dashboard workflows are triggered by `personas/**`
 as well as `apps/sak_agent_dashboard/**`, but both run entirely inside
@@ -283,8 +284,8 @@ agent step because there is no `ANTHROPIC_API_KEY` — `security-audit.md` repla
 it on the Gemini engine the rest of the agentic workflows already use),
 `ossar.yml` (MSDO with `tools: eslint` at a repository root that has no
 `package.json`, duplicating what `eslint.yml` does properly — **note it was
-re-added on 2026-08-19 and is currently red; see the callout above**),
-`stale.yml` (still
+re-added on 2026-08-19 as the stock OSSAR template and repaired rather than
+re-retired; see the callout above**), `stale.yml` (still
 carrying the starter template's literal `'Stale issue message'` placeholder), and
 `manual.yml` (a greeting echo). Before adding a workflow back, check the Actions
 tab for what it actually did.

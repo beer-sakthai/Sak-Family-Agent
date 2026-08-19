@@ -191,8 +191,8 @@ updates:
     directories:
       - /apps/sak_agent_dashboard
       - /infra/pw-poc
-      - /personas/saksee/skills/SakSee-stitch::react-components
-      - /personas/saksee/skills/SakSee-stitch::react-native
+      - /personas/saksee/skills/SakSee-stitch-react-components
+      - /personas/saksee/skills/SakSee-stitch-react-native
     schedule:
       interval: "daily"
       time: "07:00"
