@@ -1389,50 +1389,8 @@ def _contains_sensitive_path(val: Any) -> str | None:
     return None
 
 
-def _block_sensitive_path_args(
-    tool: Tool, args: dict[str, Any], _store: MemoryStore
-) -> GuardrailResult:
-    """Deny any tool call that targets a sensitive path via its arguments."""
-    # run_command has its own specialized (and recursive) guardrails.
-    if tool.name == "run_command":
-        return GuardrailResult(GuardrailAction.ALLOW)
-
-    for key, value in args.items():
-        sensitive_path = _contains_sensitive_path(value)
-        if sensitive_path is not None:
-            return GuardrailResult(
-                GuardrailAction.DENY,
-                reason=f"Access to sensitive path {sensitive_path!r} via argument {key!r} is blocked.",
-            )
-    return GuardrailResult(GuardrailAction.ALLOW)
-
-
-def _block_output_with_secrets(
-    _tool: Tool,
-    _args: dict[str, Any],
-    output: str,
-    _is_error: bool,
-    _store: MemoryStore,
-) -> GuardrailResult:
-    """Deny any tool output that appears to contain a secret."""
-    # 1. Block common secret patterns (API keys, bot tokens, etc.)
-    if re.search(SECRET_PATTERN, output):
-        return GuardrailResult(
-            GuardrailAction.DENY,
-            reason="Tool output blocked because it appears to contain a secret.",
-        )
-
-    # 2. Block PEM Private Key blocks
-    if re.search(
-        r"-----BEGIN[A-Z0-9\s_]+PRIVATE KEY-----[\s\S]*?-----END[A-Z0-9\s_]+PRIVATE KEY-----",
-        output,
-    ):
-        return GuardrailResult(
-            GuardrailAction.DENY,
-            reason="Tool output blocked because it appears to contain a private key block.",
-        )
-
-    # 3. Block exact active environment credentials or registered extra secrets
+def _get_active_secrets() -> set[str]:
+    """Gather active environment credential values and registered extra secrets."""
     secret_keys = [
         "ANTHROPIC_API_KEY",
         "ANTHROPIC_AUTH_TOKEN",
@@ -1481,13 +1439,105 @@ def _block_output_with_secrets(
     except Exception:  # nosec B110 — safe swallow of environment variable reading error
         pass
 
-    if secrets_to_check:
-        for val in sorted(secrets_to_check, key=len, reverse=True):
-            if val in output:
-                return GuardrailResult(
-                    GuardrailAction.DENY,
-                    reason="Tool output blocked because it appears to contain a secret.",
-                )
+    return secrets_to_check
+
+
+def _contains_secret_value(val: Any, secrets_to_check: set[str]) -> str | None:
+    """Recursively scan nested data structures for secret strings, keys, or patterns."""
+    if isinstance(val, str):
+        stripped = val.strip()
+        if stripped.startswith(("{", "[")):
+            import contextlib
+            import json
+
+            with contextlib.suppress(Exception):
+                parsed = json.loads(stripped)
+                if isinstance(parsed, (list, tuple, set, dict)):
+                    res_json = _contains_secret_value(parsed, secrets_to_check)
+                    if res_json is not None:
+                        return res_json
+
+        if re.search(
+            r"-----BEGIN[A-Z0-9\s_]+PRIVATE KEY-----[\s\S]*?-----END[A-Z0-9\s_]+PRIVATE KEY-----",
+            val,
+        ):
+            return "private key block"
+        if re.search(SECRET_PATTERN, val):
+            return "secret pattern matched"
+        if secrets_to_check:
+            for secret in sorted(secrets_to_check, key=len, reverse=True):
+                if secret in val:
+                    return "active credential matched"
+    elif isinstance(val, (list, tuple, set)):
+        for item in val:
+            res = _contains_secret_value(item, secrets_to_check)
+            if res is not None:
+                return res
+    elif isinstance(val, dict):
+        for k, v in val.items():
+            res_k = _contains_secret_value(k, secrets_to_check)
+            if res_k is not None:
+                return res_k
+            res_v = _contains_secret_value(v, secrets_to_check)
+            if res_v is not None:
+                return res_v
+    return None
+
+
+def _block_sensitive_path_args(
+    tool: Tool, args: dict[str, Any], _store: MemoryStore
+) -> GuardrailResult:
+    """Deny any tool call that targets a sensitive path via its arguments."""
+    # run_command has its own specialized (and recursive) guardrails.
+    if tool.name == "run_command":
+        return GuardrailResult(GuardrailAction.ALLOW)
+
+    for key, value in args.items():
+        sensitive_path = _contains_sensitive_path(value)
+        if sensitive_path is not None:
+            return GuardrailResult(
+                GuardrailAction.DENY,
+                reason=f"Access to sensitive path {sensitive_path!r} via argument {key!r} is blocked.",
+            )
+    return GuardrailResult(GuardrailAction.ALLOW)
+
+
+def _block_input_with_secrets(
+    _tool: Tool,
+    args: dict[str, Any],
+    _store: MemoryStore,
+) -> GuardrailResult:
+    """Deny any tool call that passes sensitive secrets or tokens via its arguments."""
+    secrets_to_check = _get_active_secrets()
+    for key, value in args.items():
+        secret_match = _contains_secret_value(value, secrets_to_check)
+        if secret_match is not None:
+            return GuardrailResult(
+                GuardrailAction.DENY,
+                reason=f"Tool argument {key!r} blocked because it appears to contain a secret ({secret_match}).",
+            )
+    return GuardrailResult(GuardrailAction.ALLOW)
+
+
+def _block_output_with_secrets(
+    _tool: Tool,
+    _args: dict[str, Any],
+    output: str,
+    _is_error: bool,
+    _store: MemoryStore,
+) -> GuardrailResult:
+    """Deny any tool output that appears to contain a secret."""
+    secrets_to_check = _get_active_secrets()
+    secret_match = _contains_secret_value(output, secrets_to_check)
+    if secret_match is not None:
+        reason = (
+            "Tool output blocked because it appears to contain a private key block."
+            # nosec B105 — a marker returned by _contains_secret_value to pick the
+            # wording of the denial, not a credential.
+            if secret_match == "private key block"  # nosec B105
+            else "Tool output blocked because it appears to contain a secret."
+        )
+        return GuardrailResult(GuardrailAction.DENY, reason=reason)
 
     return GuardrailResult(GuardrailAction.ALLOW)
 
@@ -1497,6 +1547,7 @@ DEFAULT_PRE_RULES: list[PreGuardrailRule] = [
     _block_run_command_if_not_allowed,
     _block_dangerous_shell_commands,
     _block_sensitive_path_args,
+    _block_input_with_secrets,
     _enforce_verbose_listing,
 ]
 

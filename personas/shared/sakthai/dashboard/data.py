@@ -224,6 +224,10 @@ def _collect(store: MemoryStore, days: int) -> dict[str, Any]:
 
     # Lead Conversion Rate logic
     # Match lead contacts to revenue clients
+    # Bolt ⚡ Optimization: Pre-extract and normalize non-empty revenue client names to avoid redundant
+    # dictionary lookups, string stripping, and lowercasing inside the O(N x M) nested lead matching loop.
+    rev_clients = [c for rev in revenue_list if (c := rev.get("client", "").strip().lower())]
+
     converted_leads_count = 0
     for lead in leads_list:
         lead_name = lead.get("name", "").strip().lower()
@@ -231,10 +235,7 @@ def _collect(store: MemoryStore, days: int) -> dict[str, Any]:
         lead_phone = lead.get("phone", "").strip().lower()
 
         matched = False
-        for rev in revenue_list:
-            rev_client = rev.get("client", "").strip().lower()
-            if not rev_client:
-                continue
+        for rev_client in rev_clients:
             # Match on name, or email username, or if name is in client name
             if (lead_name and lead_name in rev_client) or (rev_client in lead_name):
                 matched = True

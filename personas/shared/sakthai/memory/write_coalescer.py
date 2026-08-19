@@ -86,6 +86,7 @@ class AsyncWriteCoalescer:
             with self._lock:
                 self._total_writes += len(batch)
                 self._total_batches += 1
+            logger.info("Committed batch of %d writes", len(batch))
             if self.on_batch_complete:
                 self.on_batch_complete(len(batch))
         except Exception as err:
