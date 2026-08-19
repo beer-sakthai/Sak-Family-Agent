@@ -11,10 +11,12 @@ These run automatically and are the controls actually enforced on this repositor
 | Lint + static analysis | `ci.yml` | `ruff`, strict `mypy`, and `bandit` over the core `sakthai` package on every push/PR to `main` |
 | Secret scanning | `secret-scan.yml` | `gitleaks` over the full git history (config: `.gitleaks.toml`) on pushes to `main` and every pull request |
 | Dependency vulnerability audit | `dependency-audit.yml` | `pip-audit` over the locked dependency set (`uv.lock`) — weekly, on dependency changes, and on demand |
-| Code scanning (SAST) | CodeQL default setup | GitHub CodeQL analysis, managed in repository settings (no workflow file — do not add a conflicting `codeql.yml`) |
+| Code scanning (SAST) | `codeql.yml` | GitHub CodeQL **advanced** setup over `actions`, `javascript-typescript` and `python`, scoped by `.github/codeql/codeql-config.yml` via `config-file:`. Default setup is **off**: the two cannot coexist, so do not re-enable it without deleting the workflow. See `docs/code-scanning-sweep-2026-08-18.md` |
 | Multi-tool SAST | `ossar.yml` | Microsoft Security DevOps (MSDO), results uploaded to the Security tab |
 | Quality/security hotspots | `sonarcloud.yml`, `pylint.yml` | SonarCloud analysis and pylint |
-| Dependency updates | `.github/dependabot.yml` | Weekly update PRs for Python (uv), npm (`infra/pw-poc`), and pinned GitHub Actions versions |
+| Dependency updates | `.github/dependabot.yml` | Daily, grouped update PRs across five ecosystems (`uv`, `pip`, `npm`, `docker`, `github-actions`) covering 22 directories. Shape and rationale in `docs/configuring-multi-ecosystem-updates.md`; `tests/test_dependabot_config.py` fails CI if a manifest goes uncovered |
+| Dependency alerts | Repository settings | Dependabot alerts + security updates, enabled per `docs/dependabot-setup.md` (or `scripts/enable_dependabot.sh`). Not configurable from `dependabot.yml` |
+| Internal advisory report | `innersource-advisories.yml` | Daily read of the open Dependabot alert list into a standing issue, so consumers see exposure without Security-tab access. Policy in `.github/INNERSOURCE.md` |
 
 ## Intelligent Digital Immune System
 
