@@ -9,6 +9,14 @@ on:
 permissions:
   contents: read
 
+# Serialise per issue/PR thread. `cancel-in-progress: false` on purpose: two `/oc`
+# comments are two different tasks, so cancelling the first would discard work the
+# commenter asked for. Queueing them also caps how fast an unattended run can spend
+# the OpenCode Go budget, which is shared with interactive usage.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.issue.number || github.event.pull_request.number }}
+  cancel-in-progress: false
+
 jobs:
   opencode:
     if: |
@@ -39,8 +47,16 @@ jobs:
       - name: Run opencode
         uses: anomalyco/opencode/github@14b37df39168eaf6a6faf862ec4a7bbe9c825bbd  # v1.18.18
         env:
-          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
-          GOOGLE_GENERATIVE_AI_API_KEY: ${{ secrets.GOOGLE_GENERATIVE_AI_API_KEY }}
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          # The OpenCode Go subscription key (https://opencode.ai/auth). The action
+          # forwards only its own declared inputs to the CLI, but step-level `env:`
+          # is inherited by the composite's run steps — the same route the Gemini
+          # key used before this workflow moved onto Go.
+          OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
         with:
-          model: google/gemini-3.6-flash
+          # Go plan provider. $0.22/$0.66 per Mtok, 1M context, tool calling — and
+          # the model docs/SOUL.md already names as SakThai's model policy.
+          model: opencode-go/deepseek-v4-flash
+          # This repository is public, and `share` defaults to true for public
+          # repos — which publishes an opencode.ai session link carrying the
+          # agent's reasoning trace on every run. Opt out explicitly.
+          share: "false"
