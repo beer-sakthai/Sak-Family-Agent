@@ -899,7 +899,7 @@ def test_run_reports_agent_error(runner: CliRunner, monkeypatch: pytest.MonkeyPa
 
 
 def test_mcp_invokes_serve(runner: CliRunner, monkeypatch: pytest.MonkeyPatch) -> None:
-    import sakthai.mcp as mcp_pkg
+    import sakthai.mcp.server as mcp_pkg
 
     called = {"n": 0}
 
