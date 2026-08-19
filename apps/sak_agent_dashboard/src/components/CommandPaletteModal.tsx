@@ -3,14 +3,17 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Search,
+  Command,
   Radio,
   Dna,
   ShieldAlert,
   Zap,
   Target,
   Telescope,
+  Flame,
   Activity,
   Layers,
+  Sparkles,
   ArrowRight,
   X,
 } from 'lucide-react';
@@ -28,17 +31,7 @@ export const CommandPaletteModal: React.FC<CommandPaletteModalProps> = ({
 }) => {
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const [prevIsOpen, setPrevIsOpen] = useState(isOpen);
   const inputRef = useRef<HTMLInputElement | null>(null);
-  const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
-
-  // Reset selectedIndex during render if isOpen changed from false to true
-  if (isOpen !== prevIsOpen) {
-    setPrevIsOpen(isOpen);
-    if (isOpen) {
-      setSelectedIndex(0);
-    }
-  }
 
   const commandItems = [
     {
@@ -160,63 +153,6 @@ export const CommandPaletteModal: React.FC<CommandPaletteModalProps> = ({
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose, filteredItems, selectedIndex, handleSelect]);
-  // Scroll active item into view safely
-  useEffect(() => {
-    if (isOpen && itemRefs.current[selectedIndex]) {
-      const el = itemRefs.current[selectedIndex];
-      if (el && typeof el.scrollIntoView === 'function') {
-        el.scrollIntoView({
-          block: 'nearest',
-          behavior: 'smooth',
-        });
-      }
-    }
-  }, [selectedIndex, isOpen]);
-
-  const handleSelect = useCallback(
-    (tabId: string) => {
-      setQuery('');
-      onNavigate(tabId);
-      onClose();
-    },
-    [onNavigate, onClose]
-  );
-
-  // Keydown listener for Escape, ArrowUp, ArrowDown, Enter
-  const handleKeyDown = useCallback(
-    (e: KeyboardEvent) => {
-      if (!isOpen) return;
-
-      if (e.key === 'Escape') {
-        setQuery('');
-        onClose();
-      } else if (e.key === 'ArrowDown') {
-        e.preventDefault();
-        setSelectedIndex((prev) =>
-          filteredItems.length === 0 ? 0 : (prev + 1) % filteredItems.length
-        );
-      } else if (e.key === 'ArrowUp') {
-        e.preventDefault();
-        setSelectedIndex((prev) =>
-          filteredItems.length === 0
-            ? 0
-            : (prev - 1 + filteredItems.length) % filteredItems.length
-        );
-      } else if (e.key === 'Enter') {
-        e.preventDefault();
-        if (filteredItems[selectedIndex]) {
-          handleSelect(filteredItems[selectedIndex].id);
-        }
-      }
-    },
-    [isOpen, onClose, filteredItems, selectedIndex, handleSelect]
-  );
-
-  useEffect(() => {
-    const listener = (e: KeyboardEvent) => handleKeyDown(e);
-    window.addEventListener('keydown', listener);
-    return () => window.removeEventListener('keydown', listener);
-  }, [handleKeyDown]);
 
   if (!isOpen) return null;
 
@@ -238,14 +174,12 @@ export const CommandPaletteModal: React.FC<CommandPaletteModalProps> = ({
             onChange={handleQueryChange}
             placeholder="Type a command or jump to studio panel (e.g. 'Red Team', 'Mutation', 'Cache')..."
             aria-label="Search command options"
-            aria-label="Search studio commands"
             className="flex-1 bg-transparent text-sm text-slate-100 placeholder-slate-500 focus:outline-none"
           />
           <button
             onClick={onClose}
             aria-label="Close command palette"
             className="p-1 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-slate-200 transition-colors focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:outline-none"
-            className="p-1 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-slate-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
           >
             <X className="w-4 h-4" />
           </button>
@@ -268,9 +202,6 @@ export const CommandPaletteModal: React.FC<CommandPaletteModalProps> = ({
               return (
                 <div
                   key={item.id}
-                  ref={(el) => {
-                    itemRefs.current[index] = el;
-                  }}
                   role="option"
                   aria-selected={isSelected}
                   onClick={() => handleSelect(item.id)}
@@ -279,7 +210,6 @@ export const CommandPaletteModal: React.FC<CommandPaletteModalProps> = ({
                     isSelected
                       ? 'bg-slate-800/90 text-white'
                       : 'hover:bg-slate-800/80 text-slate-300'
-                    isSelected ? 'bg-slate-800/90 text-white' : 'hover:bg-slate-800/50'
                   }`}
                 >
                   <div className="flex items-center gap-3 min-w-0">
@@ -288,10 +218,6 @@ export const CommandPaletteModal: React.FC<CommandPaletteModalProps> = ({
                         isSelected
                           ? 'border-cyan-500/60 text-cyan-300'
                           : 'border-slate-800 text-cyan-400 group-hover:border-cyan-500/50 group-hover:text-cyan-300'
-                      className={`p-2 rounded-lg bg-slate-950 border border-slate-800 transition-colors ${
-                        isSelected
-                          ? 'border-cyan-500 text-cyan-300'
-                          : 'text-cyan-400 group-hover:border-cyan-500/50 group-hover:text-cyan-300'
                       }`}
                     >
                       <Icon className="w-4 h-4" />
@@ -331,7 +257,6 @@ export const CommandPaletteModal: React.FC<CommandPaletteModalProps> = ({
           <div className="flex items-center gap-3">
             <span>
               Navigate: <kbd className="px-1.5 py-0.5 rounded bg-slate-800 font-mono text-[10px] text-slate-300">↑</kbd> <kbd className="px-1.5 py-0.5 rounded bg-slate-800 font-mono text-[10px] text-slate-300">↓</kbd>
-              Navigate: <kbd className="px-1.5 py-0.5 rounded bg-slate-800 font-mono text-[10px] text-slate-300">↑↓</kbd>
             </span>
             <span>
               Select: <kbd className="px-1.5 py-0.5 rounded bg-slate-800 font-mono text-[10px] text-slate-300">Enter</kbd>

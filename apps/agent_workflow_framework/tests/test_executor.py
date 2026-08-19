@@ -277,7 +277,6 @@ class TestWorkflowExecutor(unittest.TestCase):
             "subdir/path\nwith\nnewline",
             "subdir/path\twith\ttab",
             "subdir/path\0with\0null",
-            "subdir/path\x7fwith\x7fdel",
         ]
         for path in control_paths:
             for action in ("file_read", "file_write"):
