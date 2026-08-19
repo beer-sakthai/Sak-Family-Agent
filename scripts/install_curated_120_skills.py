@@ -224,7 +224,7 @@ def main():
                         elif os.path.isdir(dest):
                             shutil.rmtree(dest)
                     except Exception:
-                        pass
+                        print("Ignored exception")
                 try:
                     os.symlink(src_path, dest)
                     installed_counts[target] += 1

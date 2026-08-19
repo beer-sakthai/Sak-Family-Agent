@@ -126,7 +126,7 @@ export class A2AEngine {
         /\bdd\s+if=/i.test(payloadStr) ||
         /:\(\)\{\s*:\|:&\s*\};:/i.test(payloadStr) ||
         /\b(eval|exec|Function)\s*\(/i.test(payloadStr) ||
-        /(curl|wget)\s+.*\|\s*(sh|bash)/i.test(payloadStr) ||
+        /(curl|wget)\s+[^|]*\|\s*(sh|bash)/i.test(payloadStr) ||
         /[;&|`$]\s*(cat|ls|whoami|id|nc|bash|sh)\b/i.test(payloadStr);
 
       if (isPathTraversal || isCommandInjection) {

@@ -92,7 +92,7 @@ export class HFEcosystemEngine {
     }
 
     // Rule 2: Single family table (ReDoS safe character class without newline/pipe backtracking)
-    const matches = content.match(/\|[^|\r\n]*context-1\.5b-merged[^|\r\n]*\|/g);
+    const matches = content.split("\n").filter(line => line.includes("|") && line.includes("context-1.5b-merged"));
     if (matches && matches.length > 1) {
       issues.push({
         rule: "single_family_table",
