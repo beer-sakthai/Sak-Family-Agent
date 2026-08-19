@@ -277,5 +277,18 @@ def test_export_replaces_the_monorepo_dependabot_config(source_tree: Path, tmp_p
 
     config = yaml.safe_load(rendered)
     assert [entry["package-ecosystem"] for entry in config["updates"]] == ["uv", "github-actions"]
+
+    # The invariant that matters, and the one a fixed template cannot hold:
+    # every directory the generated config names must exist in the export. The
+    # renderer scans the produced tree precisely so this stays true for each
+    # persona's differing overlay. (Regression: an earlier version built the
+    # list from `out.rglob("*")`, which never yields the root, so the config
+    # came out with every persona manifest and no root uv entry.)
     for entry in config["updates"]:
-        assert entry["directory"] == "/", "an exported repo is flat; only / resolves"
+        directories = entry.get("directories") or [entry["directory"]]
+        for directory in directories:
+            assert directory.startswith("/"), f"{directory!r} is not repo-absolute"
+            assert (out / directory.lstrip("/")).is_dir(), (
+                f"{entry['package-ecosystem']} entry names {directory!r}, "
+                "which does not exist in the exported repo"
+            )

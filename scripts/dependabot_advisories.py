@@ -62,6 +62,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import sys
 import urllib.error
 import urllib.parse
@@ -74,6 +75,9 @@ DEFAULT_REPO = "beer-sakthai/Sak-Family-Agent"
 PER_PAGE = 100
 # A guard so a paging bug cannot spin forever against the live API.
 MAX_PAGES = 100
+
+# `Link: <url>; rel="next"` — how this endpoint hands over its next cursor.
+_LINK_NEXT = re.compile(r'<([^>]+)>\s*;\s*rel="next"')
 
 # Most severe first — this is the display and the ``--fail-on`` ordering.
 SEVERITIES = ("critical", "high", "medium", "low")
@@ -113,16 +117,24 @@ class ApiError(RuntimeError):
     """An API call failed in a way the caller should see verbatim."""
 
 
-def _request(
-    method: str,
-    path: str,
-    token: str,
-    params: dict[str, Any] | None = None,
-) -> tuple[int, Any]:
-    """Perform one API call. Returns ``(status, parsed_body_or_None)``."""
+def _build_url(path: str, params: dict[str, Any] | None = None) -> str:
     url = f"{API_ROOT}{path}"
     if params:
         url = f"{url}?{urllib.parse.urlencode(params)}"
+    return url
+
+
+def _request(
+    method: str,
+    url: str,
+    token: str,
+) -> tuple[int, Any, dict[str, str]]:
+    """Perform one API call against a full URL.
+
+    Returns ``(status, parsed_body_or_None, headers)``. The headers matter:
+    this endpoint is cursor-paginated, so the ``Link`` header is the only way
+    to reach page two.
+    """
     req = urllib.request.Request(url, method=method)
     req.add_header("Authorization", f"Bearer {token}")
     req.add_header("Accept", "application/vnd.github+json")
@@ -139,14 +151,18 @@ def _request(
     try:
         with urllib.request.urlopen(req, timeout=60) as resp:  # noqa: S310  # nosec B310
             raw = resp.read().decode("utf-8")
-            return resp.status, (json.loads(raw) if raw.strip() else None)
+            return (
+                resp.status,
+                (json.loads(raw) if raw.strip() else None),
+                dict(resp.headers),
+            )
     except urllib.error.HTTPError as exc:
         raw = exc.read().decode("utf-8", "replace")
         try:
             body = json.loads(raw) if raw.strip() else None
         except json.JSONDecodeError:
             body = {"message": raw}
-        return exc.code, body
+        return exc.code, body, dict(exc.headers or {})
 
 
 def _message(body: Any) -> str:
@@ -155,16 +171,43 @@ def _message(body: Any) -> str:
     return str(body)
 
 
-def _paginate(path: str, token: str, params: dict[str, Any]) -> list[Any]:
-    """Collect every page of a list endpoint.
+def next_link(headers: dict[str, str]) -> str | None:
+    """The ``rel="next"`` URL from a ``Link`` header, if there is one.
 
-    A 403 raises rather than returning ``[]``. An empty alert list is a real,
-    meaningful answer ("nothing open"); a permission failure that renders as an
-    empty list is how a security report quietly stops being a security report.
+    Header names are case-insensitive and `urllib` preserves whatever the
+    server sent, so match case-insensitively rather than assuming "Link".
+    """
+    raw = ""
+    for name, value in headers.items():
+        if name.lower() == "link":
+            raw = value
+            break
+    if not raw:
+        return None
+    match = _LINK_NEXT.search(raw)
+    return match.group(1) if match else None
+
+
+def _paginate(path: str, token: str, params: dict[str, Any]) -> list[Any]:
+    """Collect every page of the alerts endpoint, following its Link cursors.
+
+    **This endpoint is cursor-paginated, not page-numbered.** Its documented
+    parameters are `before`/`after` (cursors taken from the `Link` header) and
+    `per_page` — there is no `page`. Passing `page=2` does not advance anything;
+    the API just returns the first page again, so a page-numbered loop silently
+    yields `MAX_PAGES` copies of the first 100 alerts. That stays invisible
+    below 100 alerts (the first short page ends the loop) and corrupts the
+    report above it, which is exactly the size at which the report matters.
+
+    A 401/403 raises rather than returning ``[]``. An empty alert list is a
+    real, meaningful answer ("nothing open"); a permission failure that renders
+    as an empty list is how a security report quietly stops being one.
     """
     out: list[Any] = []
-    for page in range(1, MAX_PAGES + 1):
-        status, body = _request("GET", path, token, {**params, "per_page": PER_PAGE, "page": page})
+    url: str | None = _build_url(path, {**params, "per_page": PER_PAGE})
+    for _ in range(MAX_PAGES):
+        assert url is not None
+        status, body, headers = _request("GET", url, token)
         if status in (401, 403):
             raise ApiError(f"{status} from {path}: {_message(body)}\n\n{ALERTS_PERMISSION_HELP}")
         if status == 404:
@@ -178,9 +221,10 @@ def _paginate(path: str, token: str, params: dict[str, Any]) -> list[Any]:
         if not isinstance(body, list) or not body:
             return out
         out.extend(body)
-        if len(body) < PER_PAGE:
+        url = next_link(headers)
+        if not url:
             return out
-    raise ApiError(f"Refusing to page past {MAX_PAGES} pages of {path}")
+    raise ApiError(f"Refusing to follow past {MAX_PAGES} pages of {path}")
 
 
 def fetch_alerts(repo: str, token: str, state: str = "open") -> list[dict[str, Any]]:
