@@ -1,6 +1,6 @@
 ---
 name: SakSee-yuanbao
-description: "Yuanbao (元宝) groups: @mention users, query info/members."
+description: "Yuanbao (\u5143\u5B9D) groups: @mention users, query info/members."
 ---
 
 # Yuanbao Group Interaction

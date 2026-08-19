@@ -1049,7 +1049,7 @@ def test_run_dry_run_reports_unresolved_skill_without_credentials(
     Validating skill names is a normal reason to run --dry-run somewhere that
     deliberately has no credentials, such as CI. The credentials check used to
     run first and short-circuit, so the unresolved name was never printed —
-    which is how `continuous-security.yml` went on passing
+    which is how the since-retired `continuous-security.yml` went on passing
     `--with-skills SakThai-coding-security`, a skill that does not exist, for
     as long as it did. The sibling test above stubs credentials as present, so
     it cannot catch this.

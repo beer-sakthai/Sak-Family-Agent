@@ -1,269 +1,166 @@
-# Improving code readability and maintainability
+# Configuring multi-ecosystem Dependabot updates
 
-Copilot Chat can suggest ways to make your code easier to understand and maintain.
+> This file previously contained a pasted GitHub Copilot article about code
+> readability, which had nothing to do with its filename. This is the document
+> the name promises.
 
-## In this article
+`.github/dependabot.yml` covers five package ecosystems across 22 directories in
+this monorepo. This explains the shape it has, so the next person to add a
+subproject knows where their entry goes and why the obvious approach is wrong.
 
-Code with poor readability is difficult for other developers to maintain and extend. Copilot Chat can help in a number of ways. For example, by:
+## What is covered
 
-- Suggesting improvements to variable names
-- Avoiding sequential conditional checks
-- Reducing nested logic
-- Splitting large methods into smaller, more readable ones
+| Ecosystem | Directories | Open-PR limit |
+|---|---|---|
+| `uv` | `/`, `/sakthai-chat-cli`, `/services/teams-copilot-mcp` | 5 |
+| `pip` | 12 — the Poetry SDK copy, 3 × `agent-self-evolution`, 6 `requirements.txt` dirs, 2 gradio `templates/` dirs | 5 |
+| `npm` | `/apps/sak_agent_dashboard` (pnpm), `/infra/pw-poc`, 2 × `SakSee-stitch::*` | 4 |
+| `docker` | `/` (`Dockerfile.sandbox`), `/infra/sakthai-training-space` | 2 |
+| `github-actions` | `/` | 3 |
 
-Documenting your code is another way to improve the maintainability of your code. For information about using Copilot Chat to help you add useful comments to your code, see the example prompts in Documenting code.
+Five entries, 19 simultaneous open version-update pull requests at worst.
+The previous config had sixteen entries and allowed **95**.
 
-> Note
->
-> The responses shown in this article are examples. Copilot Chat responses are non-deterministic, so you may get different responses from the ones shown here.
+That number is the real constraint. Every pull request into `main` needs an
+approving review from someone other than its author
+([`CONTRIBUTING.md`](CONTRIBUTING.md)), so an unbounded bump queue does not
+merely make noise — it consumes the only review capacity the repository has.
+`tests/test_dependabot_config.py` fails if the configured total exceeds 20.
 
-## Improving variable names
+## `uv` is not an alias for `pip`
 
-Descriptive variable names and parameter names make it easier to understand their purpose.
+Only three directories have a `uv.lock`. They get `package-ecosystem: uv`, which
+resolves `[dependency-groups]` natively — the exact blind spot that hid
+`sqlitedict` from `pip-audit`, because `uv export --all-extras` does not include
+groups (see [`dependabot-sweep-2026-08-18.md`](dependabot-sweep-2026-08-18.md)).
 
-### Example scenario
+Everything else Python is `pip`, including things that look like they should not
+be:
 
-This JavaScript code logs a message about a person's age to the console. The abstract parameter names make it difficult to understand the purpose of the code.
+- `apps/sak_agent_dashboard/microsoft_agents_m365copilot` is a **Poetry** project
+  (`[tool.poetry.dependencies]`, no lock).
+- The three `agent-self-evolution` copies are PEP 621 with no lock.
 
-```javascript
-function logPersonsAge(a, b, c) {
-  if (c) {
-    console.log(a + " is " + b + " years old.");
-  } else {
-    console.log(a + " does not want to reveal their age.");
-  }
-}
-```
+**Never list a directory under both.** Two ecosystems pointed at one
+`pyproject.toml` open two competing pull requests for every bump. The test
+enforces this, and it enforces that a `uv` directory has *both* `pyproject.toml`
+and `uv.lock` — that pair is what distinguishes a uv project from a lock-less
+one.
 
-### Example prompt
+## Literal paths, never globs
 
-In the editor, select the function you want to change, then ask Copilot Chat:
+`directories:` supports `*` and `**`. This repository must not use them:
 
-Copilot prompt
-Improve the variable names in this function
+- `/personas/*/skills/*` matches **826 directories**.
+- `/personas/*/agent-self-evolution` matches **five symlinks** into
+  `personas/shared/`. Dependabot's file fetchers select Contents-API entries of
+  type `"file"`, so a symlinked directory yields a job that permanently finds no
+  manifest — five dead entries that read as coverage.
 
-### Example response
+Only `personas/sakthai/` and `personas/shared/` hold real
+`agent-self-evolution` directories; the other five personas symlink to shared.
+Same for `personas/{sakjules,saktan}/sakthai`. Check with `ls -la personas/*/`
+before adding anything under `personas/`.
 
-Copilot suggests descriptive variable names.
+## Why `directories:` (plural) at all, then
 
-```javascript
-function logPersonAge(name, age, revealAge) {
-  if (revealAge) {
-    console.log(name + " is " + age + " years old.");
-  } else {
-    console.log(name + " does not want to reveal their age.");
-  }
-}
-```
+Not for brevity — for **atomicity**. A group spanning several directories lands
+as **one** pull request:
 
-## Avoiding sequential conditional checks
+- The three `agent-self-evolution` `pyproject.toml` files are byte-identical and
+  must move together.
+- The two `SakThai-hf-gradio/templates/space-requirements.txt` copies likewise.
 
-if...else chains can be difficult to read, especially when they are long.
+The 2026-08-18 sweep bumped each set by hand in one pass for exactly this
+reason. Three separate pull requests needing three separate approvals was the
+alternative. It also collapses twelve independent 5-PR budgets into one.
 
-### Example scenario
+## `Dockerfile.sandbox` really is discovered
 
-This Python code prints the sound that various animals make, if defined, or "Unknown animal" if the animal type is not recognized. However, the chain of if...else statements makes the code inefficient and cumbersome.
-
-```python
-class Animal:
-    def speak(self):
-        pass
-
-class Dog(Animal):
-    def speak(self):
-        return "Woof!"
-
-class Cat(Animal):
-    def speak(self):
-        return "Meow!"
-
-class Bird(Animal):
-    def speak(self):
-        return "Tweet!"
-
-def animal_sound(animal_type):
-    if animal_type == "dog":
-        return Dog().speak()
-    elif animal_type == "cat":
-        return Cat().speak()
-    elif animal_type == "bird":
-        return Bird().speak()
-    else:
-        return "Unknown animal"
-
-print(animal_sound("dog"))
-print(animal_sound("cat"))
-print(animal_sound("bird"))
-print(animal_sound("fish"))
-```
-
-### Example prompt
-
-Copilot prompt
-Simplify this code. Avoid using if/else chains but retain all function return values.
-
-### Example response
-
-Copilot suggests using a dictionary to map the animal types to their corresponding classes.
-
-```python
-class Animal:
-    def speak(self):
-        pass
-
-class Dog(Animal):
-    def speak(self):
-        return "Woof!"
-
-class Cat(Animal):
-    def speak(self):
-        return "Meow!"
-
-class Bird(Animal):
-    def speak(self):
-        return "Tweet!"
-
-def animal_sound(animal_type):
-    animals = {
-        "dog": Dog,
-        "cat": Cat,
-        "bird": Bird
-    }
-    animal_class = animals.get(animal_type, Animal)
-    return animal_class().speak() if animal_class != Animal else "Unknown animal"
-
-print(animal_sound("dog"))
-print(animal_sound("cat"))
-print(animal_sound("bird"))
-print(animal_sound("fish"))
-```
-
-## Reducing nested logic
-
-Deeply nested structures can make the code hard to follow, making it difficult to modify or extend the logic of the code in future.
-
-### Example scenario
-
-This Ruby code prints information about a user account based on three parameters. The use of nested if...else statements makes the code unnecessarily complex.
+There is no file named `Dockerfile` at the root, yet `docker` at `/` works.
+dependabot-core's docker fetcher uses:
 
 ```ruby
-def determine_access(user_role, has_permission, is_active)
-  if user_role == "admin"
-    if has_permission
-      if is_active
-        "Active admin account with full access."
-      else
-        "Inactive admin account."
-      end
-    else
-      "Admin account lacks necessary permissions."
-    end
-  else
-    "Access denied."
-  end
-end
-
-puts determine_access("admin", true, true)
-puts determine_access("admin", true, false)
-puts determine_access("admin", false, true)
-puts determine_access("user", true, true)
+DOCKER_REGEXP = /dockerfile|containerfile/i
 ```
 
-### Example prompt
+Unanchored and case-insensitive, matched against the bare filename in a flat,
+non-recursive listing of the configured directory. `"Dockerfile.sandbox"`
+contains `"dockerfile"`, so it matches. (dependabot-core#4449 says otherwise; it
+is from 2021 and predates this regex.)
 
-Copilot prompt
-Rewrite this code to avoid the nested if/else statements
+`tests/test_dependabot_config.py` mirrors that regex verbatim, so renaming the
+file to something non-matching fails a test instead of silently ending coverage.
 
-### Example response
+## No `target-branch`
 
-Copilot suggests using guard clauses to handle the conditions early and return the appropriate messages.
+`main` is already the default branch, so `target-branch: main` changes no
+routing. It is not free, though: naming a target branch **scopes the entry to
+version updates only**, so its labels, commit prefix and groups stop applying to
+*security* pull requests — the ones that matter most. All cost, no benefit. The
+test rejects it.
 
-```ruby
-def determine_access(user_role, has_permission, is_active)
-  return "Access denied." unless user_role == "admin"
-  return "Admin account lacks necessary permissions." unless has_permission
-  return "Inactive admin account." unless is_active
+## Alerts ≠ updates
 
-  "Active admin account with full access."
-end
+Dependabot *alerts* come from the dependency graph and scan the whole
+repository. Version-update pull requests only reach directories in this config,
+and **security-update pull requests ignore `open-pull-requests-limit`
+entirely** — they arrive on top of the 19, and cannot be capped from this file.
 
-puts determine_access("admin", true, true)
-puts determine_access("admin", true, false)
-puts determine_access("admin", false, true)
-puts determine_access("user", true, true)
-```
+A manifest that alerts but has no entry looks watched and is not. That is how
+the six gradio advisories ended up being fixed by hand.
 
-## Splitting up large methods
+## Adding a new subproject
 
-It can be difficult to grasp exactly what a method or function does if it is too long, making it difficult to maintain. Methods or functions that perform multiple tasks may not be reusable in other contexts. It may also be difficult to test each task in isolation.
+1. Add the directory to the matching entry's `directories:` list. Use the
+   existing entry for that ecosystem rather than creating a new one — a new
+   entry brings its own PR budget.
+2. Run `uv run pytest tests/test_dependabot_config.py -q`.
 
-### Example scenario
+The test tells you if you forgot: its completeness sweep walks the tree, finds
+every directory holding a manifest, and fails naming any that no entry covers.
 
-This Java method processes a customer order and prints a message. It performs multiple tasks in a single method.
+If an entry would genuinely be wrong, add the path to `UNCOVERED_BY_DESIGN` in
+that test **with a reason about why it would be wrong** — not why it is
+inconvenient. Three families are exempt today:
 
-```java
-public void processOrder(Order order) {
-  if (order == null || order.getItems().isEmpty()) {
-    throw new IllegalArgumentException("Order is invalid.");
-  }
+- **`*-requirements.in` with a hash-pinned `.lock` sibling.** Dependabot
+  regenerates a `.txt` beside the `.in`, never a `.lock`, and `bandit.yml`
+  installs from the `.lock` with `--require-hashes`. A bump to the `.in` alone
+  changes nothing while looking like it did. Regenerate these with
+  `scripts/gen_hash_lock.py` instead.
+- **`*-google-workspace/scripts/setup.py`** — OAuth CLI scripts declaring
+  `REQUIRED_PACKAGES = [...]` with no `setup()` call. Dependabot would accept
+  the directory and extract zero dependencies.
+- **`apps/agent_workflow_framework`** — has a CI job in `subprojects.yml` but no
+  manifest at all. A real bug, not an exemption.
 
-  double totalPrice = 0.0;
-  for (Item item : order.getItems()) {
-    totalPrice += item.getPrice() * item.getQuantity();
-  }
-  order.setTotalPrice(totalPrice);
+## The exported repos get a different config
 
-  if (totalPrice > 0) {
-    order.setStatus("Processed");
-  } else {
-    order.setStatus("Pending");
-  }
+`scripts/export_agent_repo.py` copies `.github/` into each standalone persona
+repo, but it also *flattens* paths (`personas/sakthai/sakthai` → `sakthai`), so
+none of this config's directories would resolve there. The exporter therefore
+excludes `dependabot.yml` from the copy and renders a minimal two-entry config
+(`uv` at `/`, `github-actions` at `/`) instead. Without that, this one correct
+config becomes six broken ones. Covered by
+`tests/test_export_agent_repo.py::test_export_replaces_the_monorepo_dependabot_config`.
 
-  System.out.println("Order for customer " + order.getCustomerName() + " has been processed. Total price: " + totalPrice);
-}
-```
+`sakthai-chat-cli/.github/dependabot.yml` was deleted for the same class of
+reason: `sakthai-chat-cli/` has no nested `.git`, so Dependabot never read it.
 
-### Example prompt
+## The gh-aw lock files
 
-Copilot prompt
-How could the processOrder method be refactored to be more useful and easier to maintain
+Four workflows are gh-aw agentic sources compiled to `*.lock.yml` (`ci-doctor`,
+`maintain-agents-md`, `maintain-docs`, `release`). The `uses:` pins inside those
+lock files are **generated** from the neighbouring `.md`, which pins by tag.
+Dependabot edits the `.lock.yml` and the next `gh aw compile` reverts it.
 
-### Example response
+There is no per-file exclusion for the `github-actions` ecosystem, so this
+cannot be configured away. When one of those shows up in a bump PR, bump the
+`.md` and recompile — do not merge the `.lock.yml` half and assume it sticks.
 
-Copilot suggests breaking this method down into smaller, more focused methods.
+## Related
 
-```java
-public void processOrder(Order order) {
-    validateOrder(order);
-    double totalPrice = calculateTotalPrice(order);
-    updateOrderStatus(order, totalPrice);
-    printOrderSummary(order, totalPrice);
-}
-
-private void validateOrder(Order order) {
-    if (order == null || order.getItems().isEmpty()) {
-        throw new IllegalArgumentException("Order is invalid.");
-    }
-}
-
-private double calculateTotalPrice(Order order) {
-    double totalPrice = 0.0;
-    for (Item item : order.getItems()) {
-        totalPrice += item.getPrice() * item.getQuantity();
-    }
-    order.setTotalPrice(totalPrice);
-    return totalPrice;
-}
-
-private void updateOrderStatus(Order order, double totalPrice) {
-    if (totalPrice > 0) {
-        order.setStatus("Processed");
-    } else {
-        order.setStatus("Pending");
-    }
-}
-
-private void printOrderSummary(Order order, double totalPrice) {
-    System.out.println("Order for customer " + order.getCustomerName() + " has been processed. Total price: " + totalPrice);
-}
-```
+- [`dependabot-setup.md`](dependabot-setup.md) — enabling the repository settings this file cannot
+- [`../.github/INNERSOURCE.md`](../.github/INNERSOURCE.md) — advisory ownership and response times
+- [`dependabot-sweep-2026-08-18.md`](dependabot-sweep-2026-08-18.md) — the sweep that motivated this

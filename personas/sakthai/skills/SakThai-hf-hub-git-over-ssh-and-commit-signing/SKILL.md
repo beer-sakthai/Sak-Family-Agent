@@ -1,6 +1,8 @@
 ---
 name: SakThai-hf-hub-git-over-ssh-and-commit-signing
-description: "Complete reference for authenticating Git operations on the Hugging Face Hub via SSH and cryptographically signing commits with GPG"
+description: Complete reference for authenticating Git operations on the Hugging Face Hub via SSH
+  and cryptographically signing commits with GPG
+...
 ---
 
 # HF Hub: Git over SSH & Commit Signing

@@ -1,17 +1,8 @@
 ---
 name: SakThai-hf-datasets-cache-management-deep-dive
-author: SakThai
-license: MIT
-title: HF Datasets Cache Management
-category: mlops
-tags: [datasets, cache, arrow, memory-mapping, performance, streaming, disk-management]
-related_skills:
-  - hf-datasets-library
-  - hf-hub-cache-deep-dive
-  - hf-datasets-streaming-iterable-dataset
-  - hf-huggingface-hub-download-lifecycle
-description: Deep dive into the Hugging Face Datasets library's Arrow-backed cache architecture — how datasets are cached on disk, memory-mapped for zero-copy access, and how to manage, optimize, and troubleshoot the cache.
-version: 1.0.0
+description: "Deep dive into the Hugging Face Datasets library's Arrow-backed cache architecture\
+  \ \u2014 how datasets are cached on disk, memory-mapped for zero-copy access, and\
+  \ how to manage, optimize, and troubleshoot the cache."
 ---
 
 # HF Datasets Cache Management

@@ -1,6 +1,6 @@
 ---
 name: SakSit-audiocraft-audio-generation
-description: "AudioCraft: MusicGen text-to-music, AudioGen text-to-sound."
+description: 'AudioCraft: MusicGen text-to-music, AudioGen text-to-sound.'
 ---
 
 # AudioCraft: Audio Generation

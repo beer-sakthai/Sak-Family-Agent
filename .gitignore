@@ -33,6 +33,11 @@ personas/sakthai/agent-self-evolution/output/
 # Root-level skills/ dir — conflicts with personas/*/skills/
 /skills/
 .coverage
+# `ci.yml` runs pytest with --cov-report=xml, so anyone running the documented
+# local check sequence produces this next to the repo root. It has been
+# committed by accident twice already (932dfde, 3478f68).
+coverage.xml
+htmlcov/
 apps/*/node_modules
 apps/*/.next
 # `tsc --noEmit` still writes an incremental build cache next to tsconfig.json.

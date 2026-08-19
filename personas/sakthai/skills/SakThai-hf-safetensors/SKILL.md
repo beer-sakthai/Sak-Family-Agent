@@ -1,6 +1,7 @@
 ---
 name: SakThai-hf-safetensors
-description: "A skill for Hf Safetensors."
+description: A skill for Hf Safetensors.
+...
 ---
 
 # SakThai HF Safetensors Skill

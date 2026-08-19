@@ -472,8 +472,8 @@ def _validate_shell_command(cmd_str: str) -> None:
             if not sub:
                 continue
             # Strip curl-style upload prefix if present
-            if sub.startswith("@") and len(sub) > 1:
-                sub = sub[1:]
+            if sub.startswith("@"):
+                sub = sub.lstrip("@")
 
             try:
                 _validate_filepath(sub)

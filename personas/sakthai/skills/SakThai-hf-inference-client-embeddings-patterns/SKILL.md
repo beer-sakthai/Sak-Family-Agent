@@ -1,6 +1,6 @@
 ---
 name: SakThai-hf-inference-client-embeddings-patterns
-description: "name: SakThai-hf-inference-client-embeddings-patterns"
+description: 'name: SakThai-hf-inference-client-embeddings-patterns'
 ---
 
 # HF Inference Client — Embeddings Patterns (Serverless)

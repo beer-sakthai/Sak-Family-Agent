@@ -1,6 +1,8 @@
 ---
 name: SakThai-huggingface-connect
-description: "Use when setting up or connecting to Hugging Face Inference Providers in opencode. Covers token creation, /connect setup, model selection, and config wiring."
+description: Use when setting up or connecting to Hugging Face Inference Providers in opencode.
+  Covers token creation, /connect setup, model selection, and config wiring.
+...
 ---
 
 # Hugging Face Connect

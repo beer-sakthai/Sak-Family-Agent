@@ -30,10 +30,17 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  # See the note in ci.yml: cancel superseded pull-request runs, never a run on
+  # `main`.
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   agent-workflow-framework:
     name: agent_workflow_framework
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     defaults:
       run:
         working-directory: apps/agent_workflow_framework
@@ -64,6 +71,7 @@ jobs:
   teams-copilot-mcp:
     name: teams-copilot-mcp
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     defaults:
       run:
         working-directory: services/teams-copilot-mcp
@@ -93,6 +101,9 @@ jobs:
   sak-agent-dashboard:
     name: sak_agent_dashboard
     runs-on: ubuntu-latest
+    # The longest of the three: pnpm install -> lint -> typecheck -> 172 vitest
+    # tests -> next build.
+    timeout-minutes: 30
     defaults:
       run:
         working-directory: apps/sak_agent_dashboard
@@ -119,7 +130,7 @@ jobs:
       # Deliberately no `version:` input alongside it: supplying both makes
       # action-setup fail with "Multiple versions of pnpm specified".
       - name: Install pnpm
-        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+        uses: step-security/action-setup@7734f5522f614a4cf2820ad19aa26717c7abfd96 # v6.0.9
         with:
           package_json_file: apps/sak_agent_dashboard/package.json
 
