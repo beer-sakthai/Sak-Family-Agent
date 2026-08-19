@@ -61,7 +61,7 @@ def hash_api_key(raw_key: str, stored_hash: str | None = None) -> str | bool:
     if stored_hash is None:
         iterations = 310_000
         secret = _get_api_key_hash_secret()
-        salt = hmac.new(secret, raw_key.encode("utf-8"), hashlib.sha256).digest()[:16]
+        salt = secrets.token_bytes(16)
         digest = hashlib.pbkdf2_hmac(
             "sha256", raw_key.encode("utf-8"), secret + salt, iterations
         )
