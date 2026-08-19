@@ -2,9 +2,11 @@ import os
 import shutil
 import tempfile
 import unittest
+from unittest import mock
 
 from sakthai.agent.guardrails import (
     GuardrailAction,
+    GuardrailPolicy,
     _block_dangerous_shell_commands,
 )
 from sakthai.agent.tools import Tool
@@ -521,6 +523,45 @@ class TestGuardrailsBypass(unittest.TestCase):
         tmp_dir, _ = self._make_dir()
         self._write_makefile(tmp_dir, "all:\n\t@echo 'Hello from safe Makefile'\n")
         self._assert_allowed(f"make -C {os.path.abspath(tmp_dir)}")
+
+
+class TestPreExecutionSecretGuardrails(unittest.TestCase):
+    def setUp(self):
+        self.tool = Tool(
+            name="send_telegram_message",
+            description="Send a message",
+            input_schema={},
+            handler=lambda args, store: "OK",
+        )
+        self.store = MemoryStore(":memory:")
+
+    def tearDown(self):
+        self.store.close()
+
+    def test_block_raw_telegram_bot_token_in_arguments(self):
+        token = "123456789:ABCdefGHIjklMNOpqrsTUVwxyz"
+        with mock.patch.dict(os.environ, {"TELEGRAM_BOT_TOKEN": token}):
+            res = GuardrailPolicy().check_pre_execution(
+                self.tool,
+                {"message": f"Here is my token: {token}"},
+                self.store,
+            )
+            self.assertEqual(res.action, GuardrailAction.DENY)
+            self.assertIn("blocked", res.reason)
+
+    def test_block_private_key_block_in_nested_arguments(self):
+        pem_key = (
+            "-----BEGIN PRIVATE KEY-----\n"
+            "MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQC...\n"
+            "-----END PRIVATE KEY-----"
+        )
+        res = GuardrailPolicy().check_pre_execution(
+            self.tool,
+            {"data": {"nested": {"key": pem_key}}},
+            self.store,
+        )
+        self.assertEqual(res.action, GuardrailAction.DENY)
+        self.assertIn("blocked", res.reason)
 
 
 if __name__ == "__main__":
