@@ -1,0 +1,44 @@
+
+name: Auto Update PR Branches
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update-prs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Update Open PRs
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Fetching open PRs targeting main..."
+          # Get list of open PR numbers targeting main
+          PR_LIST=$(gh pr list --base main --state open --json number --jq '.[].number')
+          
+          if [ -z "$PR_LIST" ]; then
+            echo "No open PRs targeting main."
+            exit 0
+          fi
+          
+          echo "Found PRs: $PR_LIST"
+          
+          for PR in $PR_LIST; do
+            echo "Attempting to update PR #$PR..."
+            # gh pr update-branch returns non-zero if it fails (e.g. conflicts)
+            # We catch it so the whole workflow doesn't fail
+            if gh api -X PUT /repos/${{ github.repository }}/pulls/$PR/update-branch; then
+              echo "✅ Successfully updated PR #$PR"
+            else
+              echo "⚠️ Failed to update PR #$PR (Likely merge conflicts or already up-to-date)"
+            fi
+          done
