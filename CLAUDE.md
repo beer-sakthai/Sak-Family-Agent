@@ -174,6 +174,8 @@ Other `make` targets: `compose-personas` (rebuild full skill trees into
 
 ### CI
 
+Thirty workflows live in `.github/workflows/`, plus four gh-aw Markdown
+sources compiled to `.lock.yml` beside them. The ones that gate a change:
 Twenty hand-written workflows live in `.github/workflows/`, plus **eight** gh-aw
 Markdown sources compiled to `.lock.yml` beside them. None of the eight runs on
 Copilot any more: seven run on `engine: gemini` and one on a vendored OpenCode
@@ -199,6 +201,9 @@ The ones that gate a change:
 | `secret-scan.yml` | push to `main`, all PRs | gitleaks (config `.gitleaks.toml`, which allowlists persona docs) |
 | `dependency-audit.yml` | PRs touching `pyproject.toml`/`uv.lock`, weekly | pip-audit over `uv.lock` |
 | `dependency-review.yml` | all PRs | GitHub dependency-review on the PR's diff |
+| `innersource-advisories.yml` | daily, manual | reads the open Dependabot alert list and rewrites one standing issue with it. **Needs `DEPENDABOT_ALERTS_TOKEN`** — `GITHUB_TOKEN` cannot read Dependabot alerts, and `security-events: read` does not grant it (the Actions app lacks the permission entirely). Gates nothing |
+| `ossar.yml` | push/PR to `main`, weekly | open-source static analysis |
+| `sonarcloud.yml` | push to `main` | SonarCloud analysis |
 | `sonarcloud.yml` | push/PR to `main`, manual | SonarCloud analysis (skipped on a fork's PR, which has no `SONAR_TOKEN`) |
 | `subprojects.yml` | push/PR touching `apps/agent_workflow_framework/**`, `apps/sak_agent_dashboard/**`, or `services/teams-copilot-mcp/**` | the two out-of-tree pytest suites + the dashboard's lint/typecheck/test/build chain |
 | `agent-self-evolution.yml` | push/PR touching `personas/sakthai/agent-self-evolution/**` | that subproject's own suite |
@@ -724,7 +729,11 @@ Key test areas:
   `test_selfheal_pipeline.py`
 - **Repo/CI invariants** — `test_workflow_hygiene.py` (every workflow loadable,
   top-level `permissions:`, SHA-pinned actions, the `self-healing-ci.yml` fork
-  guard, `codeql.yml`'s `config-file:`, `.bandit` parseable)
+  guard, `codeql.yml`'s `config-file:`, `.bandit` parseable),
+  `test_dependabot_config.py` (every `dependabot.yml` directory exists, is not a
+  symlink, and holds a manifest of its declared ecosystem; no globs; no
+  `target-branch`; bounded open-PR budget; and a completeness sweep that fails
+  when a manifest has no entry and is not in `UNCOVERED_BY_DESIGN`)
 - **Repo/persona invariants** — `test_soul_consistency.py`,
   `test_shared_package_divergence.py`,
   `test_compose_persona.py`, `test_export_agent_repo.py`,
@@ -907,6 +916,8 @@ A skill directory may also carry `commands/<name>.md` files, which become
 | `docs/skill-naming.md` | The `Sak-` / `Sak<Name>-` naming convention |
 | `docs/agent-diagnosis.md` | Standalone run checklist and runtime notes |
 | `docs/self-healing-ci.md` | The `sakthai heal` pipeline, its safety model, and the workflow that drives it |
+| `docs/configuring-multi-ecosystem-updates.md` · `docs/dependabot-setup.md` | The five-ecosystem Dependabot config and why it is shaped that way · enabling the repository settings the config cannot |
+| `.github/INNERSOURCE.md` | Advisory ownership, severity SLAs, and how accepted-risk advisories are recorded |
 | `docs/SOUL.md` · `docs/USER.md` · `docs/OPERATING_CONTRACT.md` | Team identity · Beer's profile · agent operating rules |
 | `docs/SECURITY.md` · `docs/security-hardening.md` · `docs/SECURITY_HARDENING_IMPLEMENTATION.md` | Security policy/architecture · audit findings and the prevention pattern + regression test for each · implementation notes |
 | `docs/security_audit_2026-07-11.md` · `docs/security_audit_2026-07-12.md` | Point-in-time audit reports |

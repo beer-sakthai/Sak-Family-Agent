@@ -1,0 +1,126 @@
+# Publish the repository's open Dependabot alerts as an internal advisory.
+#
+# Why this is a workflow and not a doc: docs/dependabot-sweep-2026-08-18.md
+# reconstructed the alert list by reasoning about manifests, accounted for 19 of
+# 35 alerts, and closed by saying the real list "is not readable without a token
+# carrying security_events. Do not assume this note is exhaustive." This job is
+# that read, run daily, so the list stays current without anyone opening the
+# Security tab.
+#
+# Why it needs a PAT: GITHUB_TOKEN CANNOT read Dependabot alerts. Granting the
+# job `security-events: read` does not help — the Actions GitHub App does not
+# carry the "Dependabot alerts" permission, so the endpoint answers 403
+# "Resource not accessible by integration". This is the one place Dependabot
+# alerts differ from code scanning: code-scanning-cleanup.yml genuinely does run
+# on the stock token. Copying that assumption here would produce a job that
+# looks configured and 403s every night, reporting zero alerts forever.
+#
+# The two tokens are deliberately split:
+#   * DEPENDABOT_ALERTS_TOKEN (a PAT) reads the alerts, and nothing else.
+#   * GITHUB_TOKEN writes the issue, scoped to `issues: write` on this job only.
+# If the PAT is missing the run fails loudly rather than publishing an empty
+# report — an advisory that silently reports "all clear" is worse than none.
+name: Innersource advisories
+
+on:
+  schedule:
+    # 01:00 UTC = 08:00 Asia/Bangkok, matching the dependabot.yml windows so the
+    # report is written after the day's update run rather than before it.
+    - cron: "0 1 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# A second run while one is in flight would race on the same issue body.
+concurrency:
+  group: innersource-advisories
+  cancel-in-progress: false
+
+jobs:
+  advisories:
+    name: Publish dependency advisory report
+    runs-on: ubuntu-latest
+    # One API read plus one issue write. If this is still running after five
+    # minutes it is wedged, not busy.
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      # Only to create/update the standing issue. Reading the alerts is the
+      # PAT's job; no GITHUB_TOKEN permission can grant that.
+      issues: write
+    steps:
+      - name: Harden the runner
+        uses: step-security/harden-runner@05e31511f85b41b11d1cf0ef85d0992719546e2c # v2.21.0
+        with:
+          use-policy-store: true
+          api-key: ${{ secrets.STEP_SECURITY_API_KEY }}
+
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.11"
+
+      # Fail here, with the remedy, rather than letting the read 403 into an
+      # empty report that reads as "no vulnerabilities".
+      - name: Check the alerts token is present
+        env:
+          ALERTS_TOKEN: ${{ secrets.DEPENDABOT_ALERTS_TOKEN }}
+        run: |
+          if [ -z "$ALERTS_TOKEN" ]; then
+            echo "::error::DEPENDABOT_ALERTS_TOKEN is not set."
+            echo "GITHUB_TOKEN cannot read Dependabot alerts and security-events: read"
+            echo "does not grant it. Add a PAT with the classic 'security_events' scope"
+            echo "(or the fine-grained 'Dependabot alerts: read' permission) as the"
+            echo "DEPENDABOT_ALERTS_TOKEN secret. See docs/dependabot-setup.md."
+            exit 1
+          fi
+
+      # Every value reaches the shell through env:, never through ${{ }}
+      # interpolation inside a run block — an expression expanded into script
+      # text is a command-injection sink (actions/code-injection).
+      - name: Render the advisory report
+        env:
+          GITHUB_TOKEN: ${{ secrets.DEPENDABOT_ALERTS_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: python scripts/dependabot_advisories.py report --output advisory.md
+
+      - name: Print the report to the run log
+        run: cat advisory.md
+
+      # One standing issue, rewritten in place. A new issue per day would bury
+      # the signal in its own history within a fortnight.
+      - name: Create or update the standing advisory issue
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          ISSUE_TITLE: "Innersource dependency advisory report"
+          ISSUE_LABEL: "security"
+        run: |
+          set -euo pipefail
+
+          # --search with `in:title` still matches loosely, so filter for an
+          # exact title match rather than trusting the first hit.
+          existing="$(
+            gh issue list --state open --limit 100 --json number,title \
+              --jq '.[] | select(.title == env.ISSUE_TITLE) | .number' | head -n1
+          )"
+
+          # The label must exist before --label is accepted; creating it is
+          # idempotent enough with `|| true` and avoids a hard dependency on
+          # repo setup order.
+          gh label create "$ISSUE_LABEL" --color D93F0B --description "Security advisories" \
+            2>/dev/null || true
+
+          if [ -n "$existing" ]; then
+            echo "updating issue #$existing"
+            gh issue edit "$existing" --body-file advisory.md
+          else
+            echo "creating the standing advisory issue"
+            gh issue create --title "$ISSUE_TITLE" --body-file advisory.md --label "$ISSUE_LABEL"
+          fi
