@@ -1,6 +1,6 @@
 # tests/test_a2a_models.py
-from datetime import datetime, timezone
-import pytest
+from datetime import UTC, datetime
+
 from sakthai.a2a.models import (
     ChunkType,
     ConsensusSession,
@@ -25,7 +25,7 @@ def test_vote_choice_values():
 
 
 def test_stream_chunk_serialization():
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     chunk = StreamChunk(
         seq=1,
         persona="saksee",
@@ -44,7 +44,7 @@ def test_stream_chunk_serialization():
 
 
 def test_vote_ballot_serialization():
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     ballot = VoteBallot(
         session_id="session-001",
         persona="sakking",

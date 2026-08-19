@@ -7,9 +7,10 @@
   - Plan: `docs/superpowers/plans/2026-08-19-self-healing-recovery-protocol.md`
   - Status: Completed & Verified (100% test pass across DLQ, circuit breaker, snapshot rollback).
 
-- [ ] **Track 002: Cross-Persona A2A Distributed Streaming & Consensus Mesh**
-  - Spec: `docs/superpowers/specs/2026-08-19-a2a-streaming-consensus-mesh-design.md`
-  - Status: In Brainstorming & Design Phase.
+- [x] **Track 002: Cross-Persona A2A Distributed Streaming & Consensus Mesh** (v2.6.0)
+  - Spec: `docs/prds/0002_prd_a2a_streaming_consensus_mesh.md`
+  - Plan: `docs/prds/tasks_0002_prd_a2a_streaming_consensus_mesh.md`
+  - Status: Completed & Verified (20/20 tests passed across models, broker SSE, consensus).
 
 ---
 

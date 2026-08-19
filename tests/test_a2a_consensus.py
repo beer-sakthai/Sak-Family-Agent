@@ -1,5 +1,4 @@
 # tests/test_a2a_consensus.py
-import pytest
 from sakthai.a2a.consensus import ConsensusEngine
 from sakthai.a2a.models import VoteChoice
 
