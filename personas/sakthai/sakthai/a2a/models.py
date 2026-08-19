@@ -9,7 +9,7 @@ from typing import Any
 
 
 class ChunkType(enum.StrEnum):
-    TOKEN = "token"
+    TOKEN = "token"  # nosec B105
     TOOL_CALL = "tool_call"
     TOOL_RESULT = "tool_result"
     VOTE = "vote"
