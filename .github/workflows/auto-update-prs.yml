@@ -36,7 +36,7 @@ jobs:
             echo "Attempting to update PR #$PR..."
             # gh pr update-branch returns non-zero if it fails (e.g. conflicts)
             # We catch it so the whole workflow doesn't fail
-            if gh pr update-branch "$PR"; then
+            if gh api -X PUT /repos/${{ github.repository }}/pulls/$PR/update-branch; then
               echo "✅ Successfully updated PR #$PR"
             else
               echo "⚠️ Failed to update PR #$PR (Likely merge conflicts or already up-to-date)"
