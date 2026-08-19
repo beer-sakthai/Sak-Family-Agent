@@ -174,12 +174,11 @@ Other `make` targets: `compose-personas` (rebuild full skill trees into
 
 ### CI
 
-Thirty workflows live in `.github/workflows/`, plus four gh-aw Markdown
-sources compiled to `.lock.yml` beside them. The ones that gate a change:
-Twenty hand-written workflows live in `.github/workflows/`, plus **eight** gh-aw
-Markdown sources compiled to `.lock.yml` beside them. None of the eight runs on
-Copilot any more: seven run on `engine: gemini` and one on a vendored OpenCode
-engine driving a Gemini model — see
+Twenty-seven hand-written workflows live in `.github/workflows/`, plus **eight**
+gh-aw Markdown sources compiled to `.lock.yml` beside them — 35 `.yml` files in
+all, plus `shared/opencode.md`, which is an import rather than a workflow of its
+own. None of the eight runs on Copilot any more: seven run on `engine: gemini`
+and one on a vendored OpenCode engine driving a Gemini model — see
 [`docs/gh-aw-engines.md`](docs/gh-aw-engines.md) and the gh-aw note below.
 
 Every hand-written workflow that a pull request can trigger declares a top-level
@@ -192,39 +191,136 @@ only ever closed by a newer analysis from the same tool. The `.lock.yml` files
 are exempt from both rules: they are compiler output and gh-aw sets
 `timeout-minutes` on only one of each workflow's generated jobs.
 
+**Python setup is one composite action, and it caches.** Every workflow that
+needs Python goes through `./.github/actions/setup-uv-python`, which installs a
+SHA-pinned uv, provisions the interpreter, restores uv's dependency cache (keyed
+on `**/uv.lock` + `**/pyproject.toml`, partitioned by `cache-suffix`) and runs
+`uv sync --locked`. Before it, `ci.yml` and `subprojects.yml` ran
+`pipx install uv` — an unpinned install — and no workflow in the repository
+cached a single Python wheel. Pass `sync: "false"` for jobs that only need the
+binary (`uv export`, `uvx <tool>`). `tests/test_workflow_hygiene.py` holds the
+action to the same SHA-pinning rule as the workflows, since extracting it moved
+those `uses:` lines out of the directory that check scans.
+
+**Caches are warmed on `main` and evicted at PR close.** Actions scopes caches so
+a branch reads only its own ref, its base, and the default branch — an entry
+first written by a PR run is invisible to every other branch, which for a
+short-lived agent branch means it never hits. `cache-warm.yml` therefore
+populates the uv, pnpm and `.next/cache` entries on `main` (on lockfile changes,
+weekly Monday, and on demand), and `cache-cleanup.yml` deletes a PR's caches when
+it closes so dead entries do not push the warm baseline out of the repository's
+10 GB budget by LRU. Neither gates anything.
+
+**`ci.yml` can run on a self-hosted runner, opt-in.** Its `runs-on` is
+`${{ vars.CI_RUNNER_LABEL || 'ubuntu-latest' }}` — set that repository variable
+to move CI onto your own hardware, delete it to move back, no workflow edit
+either way. The fallback is load-bearing and pinned by a test: a job dispatched
+to a label with no online runner does not fail, it *queues* for 24 hours and then
+expires, so the repository would stop reporting with nothing red to point at.
+Setup lives in [`infra/self-hosted-runner/`](infra/self-hosted-runner/README.md);
+read its first section before setting the variable, since a self-hosted runner
+must not be reachable by a fork's pull request. Only `ci.yml` is wired this way —
+the security scanners stay on GitHub-hosted runners on purpose.
+
 The ones that gate a change:
 
 | Workflow | Trigger | What it does |
 |---|---|---|
 | `ci.yml` | push/PR to `main` | ruff check + format → mypy + bandit → pytest with coverage, on Python **3.11 and 3.12** |
 | `pylint.yml` | push/PR to `main` | pylint over `personas/sakthai/sakthai` + `tests` |
-| `secret-scan.yml` | push to `main`, all PRs | gitleaks (config `.gitleaks.toml`, which allowlists persona docs) |
-| `dependency-audit.yml` | PRs touching `pyproject.toml`/`uv.lock`, weekly | pip-audit over `uv.lock` |
+| `secret-scan.yml` | push to `main`, all PRs, manual | gitleaks (config `.gitleaks.toml`, which allowlists persona docs) |
+| `dependency-audit.yml` | PRs touching `pyproject.toml`/`uv.lock`, weekly Monday, manual | pip-audit over `uv.lock` |
 | `dependency-review.yml` | all PRs | GitHub dependency-review on the PR's diff |
-| `innersource-advisories.yml` | daily, manual | reads the open Dependabot alert list and rewrites one standing issue with it. **Needs `DEPENDABOT_ALERTS_TOKEN`** — `GITHUB_TOKEN` cannot read Dependabot alerts, and `security-events: read` does not grant it (the Actions app lacks the permission entirely). Gates nothing |
-| `ossar.yml` | push/PR to `main`, weekly | open-source static analysis |
-| `sonarcloud.yml` | push to `main` | SonarCloud analysis |
-| `sonarcloud.yml` | push/PR to `main`, manual | SonarCloud analysis (skipped on a fork's PR, which has no `SONAR_TOKEN`) |
 | `subprojects.yml` | push/PR touching `apps/agent_workflow_framework/**`, `apps/sak_agent_dashboard/**`, or `services/teams-copilot-mcp/**` | the two out-of-tree pytest suites + the dashboard's lint/typecheck/test/build chain |
-| `agent-self-evolution.yml` | push/PR touching `personas/sakthai/agent-self-evolution/**` | that subproject's own suite |
+| `quality-flywheel-gate.yml` | push/PR touching `apps/sak_agent_dashboard/**` or `personas/**`, manual | runs `apps/sak_agent_dashboard/scripts/run_eval_quality_gate.sh` — the eval-engine/API/component vitest files, then `tsc --noEmit`, then `pnpm build`. Runs on pnpm/Node 22, `working-directory: apps/sak_agent_dashboard` |
+| `mutation-self-healing-gate.yml` | push/PR touching `apps/sak_agent_dashboard/**` or `personas/**`, manual | runs `apps/sak_agent_dashboard/scripts/run_mutation_gate.sh` — the five `mutation_*` vitest files, then `tsc --noEmit`, then `pnpm build`. Same runner shape as the flywheel gate |
+| `agent-self-evolution.yml` | push/PR touching `personas/sakthai/agent-self-evolution/**`, manual | that subproject's own suite |
 | `labeler.yml` | `pull_request_target` | PR labelling |
-| `scorecard.yml` | push to `main`, weekly | OpenSSF Scorecard → SARIF to code scanning |
-| `codeql.yml` | push/PR to `main`, weekly | CodeQL **advanced** setup over `actions`, `javascript-typescript`, `python`; scope from `.github/codeql/codeql-config.yml` via `config-file:` |
-| `bandit.yml` | push/PR to `main`, weekly | bandit with `-c pyproject.toml` over first-party Python → SARIF to code scanning. Publishes, does not gate — `ci.yml` is the gate |
-| `eslint.yml` | push/PR touching `apps/sak_agent_dashboard/**`, weekly | `eslint src` with the app's own flat config → SARIF (`category: eslint-dashboard`). Publishes, does not gate — `subprojects.yml` is the gate |
+| `scorecard.yml` | push to `main`, weekly Thursday, `branch_protection_rule` | OpenSSF Scorecard → SARIF to code scanning |
+| `codeql.yml` | push/PR to `main`, weekly Sunday | CodeQL **advanced** setup over `actions`, `javascript-typescript`, `python`; scope from `.github/codeql/codeql-config.yml` via `config-file:`. Query suites are per language (set on `matrix.include`, since a config file's `queries:` applies to every language at once): `actions` runs `security-extended` — the workflow-security rules — and the other two stay on the default suite until the ~243 first-party alerts are triaged. See [`.github/codeql/README.md`](.github/codeql/README.md), and `scripts/codeql_local.sh` to run the same scoped analysis locally |
+| `sonarcloud.yml` | push/PR to `main`, manual | SonarCloud analysis (skipped on a fork's PR, which has no `SONAR_TOKEN`) |
+| `bandit.yml` | push/PR to `main`, weekly Wednesday | bandit with `-c pyproject.toml` over first-party Python → SARIF to code scanning. Publishes, does not gate — `ci.yml` is the gate |
+| `eslint.yml` | push/PR touching `apps/sak_agent_dashboard/**`, weekly Sunday | `eslint src` with the app's own flat config → SARIF (`category: eslint-dashboard`). Publishes, does not gate — `subprojects.yml` is the gate |
+| `innersource-advisories.yml` | daily 01:00 UTC, manual | reads the open Dependabot alert list and rewrites one standing issue with it. **Needs `DEPENDABOT_ALERTS_TOKEN`** — `GITHUB_TOKEN` cannot read Dependabot alerts, and `security-events: read` does not grant it (the Actions app lacks the permission entirely). Gates nothing |
 | `self-healing-ci.yml` | `workflow_run` completion of `CI` on `main` (failure only), or manual | runs `sakthai heal run` over the failed job's log and opens a `selfheal/` fix PR when the patch is safe and locally verified. Gates nothing — it only ever adds a PR |
 | `auto-merge.yml` | `pull_request_target` labeled/unlabeled/ready_for_review | turns GitHub's **native** auto-merge on for a PR carrying the `automerge` label (squash), off when the label is removed. Gates nothing and waives nothing — GitHub still holds the merge until branch protection is satisfied, including the non-author approval. Uses no checkout, so the `pull_request_target` token never meets PR code |
+| `ossar.yml` | push/PR to `main`, weekly Monday | open-source static analysis on `windows-latest` → SARIF. Retired 2026-08-18, re-added 2026-08-19 as the stock starter template and repaired the same day — **read the callout below before editing it** |
 
-Scheduled / manual only, so they never block a PR: `verify-assets.yml` (daily HF
-asset check), `run-evals.yml` (weekly lm-eval, installs the `evals` dependency
-group), `summary.yml` (on new issues), `OSPS.yml` (weekly security-baseline
-assessment), `code-scanning-cleanup.yml` (manual, retires orphaned code-scanning
-alerts), and four agentic audit workflows — `security-audit.md` (weekly Thursday,
-triages bandit + pip-audit + the guardrail suite), `shared-package-drift.md`
-(weekly, audits the `personas/shared/sakthai/` divergence register),
-`skills-hygiene.md` (weekly, runs `sakthai skills validate --naming`), and
-`opencode-smoke.md` (weekly, proves the vendored OpenCode engine still runs). All
-four report by opening an issue and none can open a pull request.
+**`ossar.yml` was re-added on 2026-08-19 and needed two separate repairs.**
+It was retired on 2026-08-18 for the reasons in the removal note below, then
+re-added by commit `52be3a6` as GitHub's stock OSSAR starter template,
+unmodified, which turned `main` red. Both defects are fixed now, but the shape
+of them is worth keeping:
+
+1. **It could not check this repository out.** The stock template runs
+   `runs-on: windows-latest` (`github/ossar-action` supports no other runner),
+   and the repo contained eight skill directories with `::` in their names —
+   `SakJules-stitch::code-to-design` and seven `SakSee-stitch::*`. `::` is not a
+   legal NTFS path character, so `actions/checkout` exited 128 with
+   `invalid path '.../SakJules-stitch::code-to-design/SKILL.md'` before OSSAR
+   started. **Those directories are now `stitch-*` rather than `stitch::*`.**
+   Note the retired version of this workflow ran MSDO on `ubuntu-latest` and so
+   never hit this; the constraint arrived with the Windows-only action.
+2. **It violated three invariants `tests/test_workflow_hygiene.py` enforces**,
+   so it failed `ci.yml` as well as its own job: unpinned action tags, no
+   top-level `concurrency:`, and no `timeout-minutes`. All three are pinned and
+   declared now.
+
+3. **It still could not check out after the rename**, for an unrelated Windows
+   reason: three vendored paths under
+   `apps/sak_agent_dashboard/microsoft_agents_m365copilot/` are 274-278
+   characters, past Windows' 260-character `MAX_PATH`. Git wrote all 6,250
+   files and then exited 1 with no message naming a file. The workflow now runs
+   `git config --global core.longpaths true` before `actions/checkout`.
+
+The trap here is that (2) is mechanical while (1) and (3) are not. Pinning the
+SHAs alone would have turned `ci.yml` green while leaving a workflow that still
+could not check the repository out — a quieter failure, not a fixed one, and
+each layer only became visible once the one above it was cleared.
+
+**Two standing constraints follow from this, and they bind any future
+Windows-runner workflow, not just OSSAR:** a `::` in a path makes checkout fail
+immediately with `invalid path`, and a path over 260 characters makes it fail
+at the end with a bare exit 1. Both are properties of this repository's tree —
+the `stitch-*` skill names and the vendored M365 SDK — rather than of the
+workflow that trips over them.
+
+Note that the two `*-gate.yml` dashboard workflows are triggered by `personas/**`
+as well as `apps/sak_agent_dashboard/**`, but both run entirely inside
+`apps/sak_agent_dashboard` — a persona-only change fires them and they still only
+exercise the dashboard.
+
+Scheduled, manual, or event-driven only, so they never block a PR:
+`verify-assets.yml` (daily HF asset check), `run-evals.yml` (weekly Sunday
+lm-eval, installs the `evals` dependency group), `summary.yml` (on new issues),
+`OSPS.yml` (weekly Monday security-baseline assessment),
+`code-scanning-cleanup.yml` (manual, retires orphaned code-scanning alerts),
+`cache-warm.yml` (weekly Monday and on lockfile changes to `main`, primes the
+dependency caches), `cache-cleanup.yml` (on a pull request closing, evicts that
+PR's caches), and `self-hosted-runner-health.yml` (daily, skipped entirely unless
+`CI_RUNNER_LABEL` is set; probes the runner and its toolchain).
+
+The eight agentic gh-aw workflows also never block a PR, but **they do not all
+merely report** — check the `safe-outputs:` block before assuming one is
+read-only:
+
+| Source | Trigger | Output |
+|---|---|---|
+| `security-audit.md` | weekly Thursday | triages bandit + pip-audit + the guardrail suite; issue only |
+| `shared-package-drift.md` | weekly Tuesday | audits the `personas/shared/sakthai/` divergence register; one issue, `close-older-issues` |
+| `skills-hygiene.md` | weekly Wednesday | runs `sakthai skills validate --naming`; issue only |
+| `opencode-smoke.md` | weekly Monday | proves the vendored OpenCode engine still runs; one issue, `close-older-issues` |
+| `ci-doctor.md` | `workflow_run` completion of **`CI`, `Pylint`, `Subproject tests`** on `main`, failure only | root-causes the failure; opens a `[ci-doctor] ` issue and may `add-comment` |
+| `maintain-docs.md` | daily on weekdays | **opens a draft PR** (`[docs] `, max 1) for docs out of sync with recent commits |
+| `maintain-agents-md.md` | weekly Monday | **opens a draft PR** (`[agents-md] `, max 1) keeping `AGENTS.md` current with merged PRs |
+| `release.md` | `workflow_dispatch` only, `roles: [admin, maintainer]` | builds/tests/publishes a release for a `patch`/`minor`/`major` input; `safe-outputs: update-release` |
+
+So four report by issue only, `ci-doctor.md` reports by issue and comment, two
+open draft pull requests, and `release.md` writes a GitHub release. The
+`ci-doctor.md` `workflows:` list matches on `name:` values exactly — verify a new
+entry against `grep -h '^name:' .github/workflows/*.yml` before adding it, as the
+file's own comment records an entry that matched nothing for as long as it was
+there.
 
 **Five workflows were removed on 2026-08-18** after their run history was read
 rather than their files: `auto-dependency-update.yml` (22 runs, 22 failures — it
@@ -234,7 +330,9 @@ Docker / Actions), `continuous-security.yml` (nightly, but every run skipped its
 agent step because there is no `ANTHROPIC_API_KEY` — `security-audit.md` replaces
 it on the Gemini engine the rest of the agentic workflows already use),
 `ossar.yml` (MSDO with `tools: eslint` at a repository root that has no
-`package.json`, duplicating what `eslint.yml` does properly), `stale.yml` (still
+`package.json`, duplicating what `eslint.yml` does properly — **note it was
+re-added on 2026-08-19 as the stock OSSAR template and repaired rather than
+re-retired; see the callout above**), `stale.yml` (still
 carrying the starter template's literal `'Stale issue message'` placeholder), and
 `manual.yml` (a greeting echo). Before adding a workflow back, check the Actions
 tab for what it actually did.
@@ -475,8 +573,18 @@ not an error.
   `sakthai eval summary`. No cloud dependency.
 - **`agent/usage.py`** — `UsageTracker` / `extract_usage()` for token counting.
 - **`agent/context_filter.py`** — the `ContextFilter` protocol plus
-  `TurnSummarizationFilter` (currently truncates older long turns rather than
-  LLM-summarizing them) and `DEFAULT_CONTEXT_FILTER`, wired into `run_agent`.
+  `TurnSummarizationFilter` and `DEFAULT_CONTEXT_FILTER`, wired into
+  `run_agent`. The filter compacts every turn but the last two, and it takes an
+  optional `summarizer` callable — the injected seam for a smaller, faster
+  model. `DEFAULT_CONTEXT_FILTER` passes none, so the default behaviour is
+  still deterministic truncation; a summarizer that raises, returns a
+  non-string, or fails to shorten the text falls back to that truncation.
+  Compaction covers plain string content, `text` blocks, and `tool_result`
+  blocks — the last of those is where a tool-using run's tokens actually
+  accumulate, since `read_file`/`run_command` output only ever reaches history
+  as a block. Provider `Block` objects on an assistant turn are passed through
+  untouched (rewriting them would mutate objects the caller still holds), and
+  the filter never mutates its input.
 - **`agent/prompt_builder.py`** / **`agent/context_manager.py`** — an extracted
   prompt-assembly seam (`build_system_prompt`, `render_skills_prompt_block`,
   `ContextManager`). Both are tested (`tests/test_prompt_builder.py`,
@@ -956,6 +1064,8 @@ A skill directory may also carry `commands/<name>.md` files, which become
 | `docs/skill-naming.md` | The `Sak-` / `Sak<Name>-` naming convention |
 | `docs/agent-diagnosis.md` | Standalone run checklist and runtime notes |
 | `docs/self-healing-ci.md` | The `sakthai heal` pipeline, its safety model, and the workflow that drives it |
+| `.github/codeql/README.md` | Why CodeQL runs as an advanced setup, how the scope config reaches it, the per-language query suites, and `scripts/codeql_local.sh` |
+| `infra/self-hosted-runner/README.md` | Installing and operating a self-hosted Actions runner, and the `CI_RUNNER_LABEL` opt-in that keeps it reversible |
 | `docs/configuring-multi-ecosystem-updates.md` · `docs/dependabot-setup.md` | The five-ecosystem Dependabot config and why it is shaped that way · enabling the repository settings the config cannot |
 | `.github/INNERSOURCE.md` | Advisory ownership, severity SLAs, and how accepted-risk advisories are recorded |
 | `docs/SOUL.md` · `docs/USER.md` · `docs/OPERATING_CONTRACT.md` | Team identity · Beer's profile · agent operating rules |
