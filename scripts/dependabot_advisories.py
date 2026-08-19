@@ -93,7 +93,7 @@ KNOWN_UNFIXABLE = {
     ),
 }
 
-FORBIDDEN_TOKEN_HELP = (
+ALERTS_PERMISSION_HELP = (
     "The token cannot read Dependabot alerts.\n"
     "\n"
     "This is expected for a GitHub Actions GITHUB_TOKEN: the Actions app does not\n"
@@ -127,8 +127,17 @@ def _request(
     req.add_header("Authorization", f"Bearer {token}")
     req.add_header("Accept", "application/vnd.github+json")
     req.add_header("X-GitHub-Api-Version", "2022-11-28")
+    # bandit B310: urlopen honours file:// and custom schemes. `url` is built
+    # from API_ROOT, a hardcoded https:// literal, so the scheme cannot vary
+    # today — but assert it rather than trusting that to stay true. Verified not
+    # theoretical: with API_ROOT repointed at file:///etc this function read
+    # /etc/passwd and failed on the JSON decode rather than on the open. This
+    # repo validates schemes rather than assuming them; see giturl.py, which
+    # exists because `ext::` in a git remote runs arbitrary commands.
+    if not url.startswith("https://"):
+        raise ApiError(f"refusing to open a non-https URL: {url!r}")
     try:
-        with urllib.request.urlopen(req, timeout=60) as resp:  # noqa: S310 - fixed https host
+        with urllib.request.urlopen(req, timeout=60) as resp:  # noqa: S310  # nosec B310
             raw = resp.read().decode("utf-8")
             return resp.status, (json.loads(raw) if raw.strip() else None)
     except urllib.error.HTTPError as exc:
@@ -157,7 +166,7 @@ def _paginate(path: str, token: str, params: dict[str, Any]) -> list[Any]:
     for page in range(1, MAX_PAGES + 1):
         status, body = _request("GET", path, token, {**params, "per_page": PER_PAGE, "page": page})
         if status in (401, 403):
-            raise ApiError(f"{status} from {path}: {_message(body)}\n\n{FORBIDDEN_TOKEN_HELP}")
+            raise ApiError(f"{status} from {path}: {_message(body)}\n\n{ALERTS_PERMISSION_HELP}")
         if status == 404:
             raise ApiError(
                 f"404 from {path}: {_message(body)}\n"
@@ -388,7 +397,7 @@ def main(argv: list[str] | None = None) -> int:
 
     token = os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN") or ""
     if not token:
-        print(f"Set GITHUB_TOKEN (or GH_TOKEN) first.\n\n{FORBIDDEN_TOKEN_HELP}", file=sys.stderr)
+        print(f"Set GITHUB_TOKEN (or GH_TOKEN) first.\n\n{ALERTS_PERMISSION_HELP}", file=sys.stderr)
         return 2
 
     try:
