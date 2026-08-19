@@ -1,6 +1,6 @@
 ---
 name: SakThai-hf-jobs-api-deep-dive
-description: "name: SakThai-hf-jobs-api-deep-dive"
+description: 'name: SakThai-hf-jobs-api-deep-dive'
 ---
 
 # Hugging Face Jobs API — Python SDK Deep Dive

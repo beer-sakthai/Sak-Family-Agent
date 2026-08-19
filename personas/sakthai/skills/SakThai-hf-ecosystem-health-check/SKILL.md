@@ -1,15 +1,8 @@
 ---
 name: SakThai-hf-ecosystem-health-check
-author: SakThai
-license: MIT
-description: Multi-source health snapshot and gap analysis for a Hugging Face asset portfolio — models, datasets, Spaces, collections, CI, crons, persona documentation consistency, and cross-platform trending visibility (GitHub, HF, Kaggle)
-version: 2.18.0
-tags: [huggingface, monitoring, reporting, audit, health-check, cron, collections, trending, visibility]
-category: mlops
-trigger: >
-  On cron-based ecosystem report generation, before/after asset publishing,
-  on periodic health audits, when verifying portfolio completeness,
-  when running cross-platform trending/visibility analysis (GitHub, HF, Kaggle)
+description: "Multi-source health snapshot and gap analysis for a Hugging Face asset portfolio\
+  \ \u2014 models, datasets, Spaces, collections, CI, crons, persona documentation\
+  \ consistency, and cross-platform trending visibility (GitHub, HF, Kaggle)"
 ---
 
 # HF Ecosystem Health Check

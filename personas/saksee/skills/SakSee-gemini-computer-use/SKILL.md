@@ -1,6 +1,7 @@
 ---
 name: SakSee-gemini-computer-use
-description: "Build UI automation agents with Gemini Computer Use."
+description: Build UI automation agents with Gemini Computer Use.
+...
 ---
 
 # Gemini Computer Use

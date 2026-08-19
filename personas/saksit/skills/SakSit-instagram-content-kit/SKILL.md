@@ -1,6 +1,8 @@
 ---
 name: SakSit-instagram-content-kit
-description: "End-to-end Instagram content production for SakSit: Reels (9:16), carousels, single-image posts, captions, hashtags, CTAs, and generation via FLUX.1-schnell and LTX-Video on Hugging Face Spaces."
+description: 'End-to-end Instagram content production for SakSit: Reels (9:16), carousels, single-image
+  posts, captions, hashtags, CTAs, and generation via FLUX.1-schnell and LTX-Video
+  on Hugging Face Spaces.'
 ---
 
 # SakSit Instagram Content Kit

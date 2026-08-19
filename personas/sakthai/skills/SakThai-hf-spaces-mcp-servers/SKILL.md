@@ -1,6 +1,8 @@
 ---
 name: SakThai-hf-spaces-mcp-servers
-description: "Complete reference for exposing Hugging Face Spaces as MCP (Model Context Protocol) servers — enabling any Gradio Space to be called as a tool from MCP clients like Claude Desktop, Cursor, Cline, VS Code, and other MCP-compatible agents."
+description: "Complete reference for exposing Hugging Face Spaces as MCP (Model Context Protocol)\
+  \ servers \u2014 enabling any Gradio Space to be called as a tool from MCP clients\
+  \ like Claude Desktop, Cursor, Cline, VS Code, and other MCP-compatible agents."
 ---
 
 # HF Spaces as MCP Servers

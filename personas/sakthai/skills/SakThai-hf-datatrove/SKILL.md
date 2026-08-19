@@ -1,10 +1,9 @@
 ---
 name: SakThai-hf-datatrove
-author: SakThai
-license: MIT
-description: Complete reference on Hugging Face DataTrove — the large-scale text data processing library for LLM training data pipelines. Covers pipeline blocks, executors (Local/Slurm/Ray/Jobs), deduplication (minhash/exact-substr/sentence), Synthetic data generation via inference rollouts, HF Storage Buckets integration, and the FineWeb replication pipeline.
-version: 1.0.0
-category: mlops
+description: "Complete reference on Hugging Face DataTrove \u2014 the large-scale text data processing\
+  \ library for LLM training data pipelines. Covers pipeline blocks, executors (Local/Slurm/Ray/Jobs),\
+  \ deduplication (minhash/exact-substr/sentence), Synthetic data generation via inference\
+  \ rollouts, HF Storage Buckets integration, and the FineWeb replication pipeline."
 ---
 
 # HF DataTrove — Large-Scale Data Processing for LLM Training

@@ -1,10 +1,7 @@
 ---
 name: SakThai-hf-hub-discussion-reactions-api-deep-dive
-author: SakThai
-license: MIT
-description: "Complete deep-dive on the Hugging Face Hub Discussion Reactions API — emoji reactions on discussions, PRs, and comments with read/add/remove patterns."
-version: 1.0.0
-tags: [HuggingFace, Hub, Discussions, Reactions, API, Emoji, PRs]
+description: "Complete deep-dive on the Hugging Face Hub Discussion Reactions API \u2014 emoji\
+  \ reactions on discussions, PRs, and comments with read/add/remove patterns."
 ---
 
 # HF Hub Discussion Reactions API — Deep Dive

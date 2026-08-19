@@ -17,12 +17,19 @@ These run automatically and are the controls actually enforced on this repositor
 | Dependency updates | `.github/dependabot.yml` | Daily, grouped update PRs across five ecosystems (`uv`, `pip`, `npm`, `docker`, `github-actions`) covering 22 directories. Shape and rationale in `docs/configuring-multi-ecosystem-updates.md`; `tests/test_dependabot_config.py` fails CI if a manifest goes uncovered |
 | Dependency alerts | Repository settings | Dependabot alerts + security updates, enabled per `docs/dependabot-setup.md` (or `scripts/enable_dependabot.sh`). Not configurable from `dependabot.yml` |
 | Internal advisory report | `innersource-advisories.yml` | Daily read of the open Dependabot alert list into a standing issue, so consumers see exposure without Security-tab access. Policy in `.github/INNERSOURCE.md` |
+| Code scanning (SAST) | `codeql.yml` | GitHub CodeQL **advanced** setup over `actions`, `javascript-typescript` and `python`, scoped by `.github/codeql/codeql-config.yml`. Default setup is off and must stay off — the two cannot coexist |
+| SARIF publishers | `bandit.yml`, `eslint.yml` | Bandit over first-party Python and ESLint over `apps/sak_agent_dashboard`, each uploading to the Security tab under its own category. Neither gates — `ci.yml` and `subprojects.yml` are the gates |
+| Quality/security hotspots | `sonarcloud.yml`, `pylint.yml` | SonarCloud analysis and pylint |
+| Dependency updates | `.github/dependabot.yml` | Update PRs for Python (uv), npm, Docker, and pinned GitHub Actions versions. This is the **only** source of automated dependency bumps; the `auto-dependency-update.yml` workflow that duplicated it was removed on 2026-08-18 after failing all 22 of its runs |
+| Supply-chain posture | `scorecard.yml`, `OSPS.yml` | OpenSSF Scorecard and the Open Source Project Security baseline, both → SARIF / artifacts |
 
 ## Intelligent Digital Immune System
 
 Beyond the enforced gates above, the project's longer-term security concept is an "intelligent digital immune system" — a proactive, self-healing approach to vulnerability management, designed to find and fix issues automatically and continuously.
 
-This system is orchestrated by a nightly workflow (`.github/workflows/continuous-security.yml`) that runs the agent with security-focused skills (`SakThai-coding-security`, `sakthai-security-hardening`). **Note:** an earlier version of this doc claimed that workflow lived only at the repository root, outside `.github/workflows/`, and was therefore dormant. That was inaccurate — an identical copy has been present under `.github/workflows/` (and therefore live, spending `ANTHROPIC_API_KEY`/`GH_PAT_FOR_ACTIONS` nightly) since it was first added; the misleading root-level duplicate has been removed. It also referenced a skill name (`devsecops`) that never resolved against this repo's skill roots, so it ran nightly without any security-skill guidance loaded until that was fixed — see the workflow file's own comments for the full story.
+This system is orchestrated by `.github/workflows/security-audit.md`, a weekly gh-aw agentic workflow running on `engine: gemini`. A pre-agent step runs the repository's own scanners — bandit under `[tool.bandit]`, pip-audit over the exported lock, and the guardrail/sentinel/persona-parity test files — and the agent triages that output against the prevention table in [`docs/security-hardening.md`](docs/security-hardening.md), opening at most one issue and only when something is actionable. It audits and never edits: no writes, no pull requests, and nothing under `.github/` or the guardrail subsystem.
+
+**Why it is not the nightly Anthropic-driven scan this section used to describe.** That workflow (`continuous-security.yml`) was removed on 2026-08-18. It had been running nightly and doing nothing: the repository has no `ANTHROPIC_API_KEY` configured, so its agent step was skipped on every run while the job still reported success — verified in run `32093238703`, where *Run DevSecOps Skill* is `skipped` and *Explain why the scan was skipped* is `success`. Two earlier corrections to this same paragraph — about where the file lived, and about a `--with-skills` name that never resolved — are the reason the replacement runs on the engine this repository's other agentic workflows already have credentials for, and reports through an issue rather than a run log nobody reads.
 
 ### The Automated Security Workflow
 
@@ -33,15 +40,16 @@ The workflow currently covers the first of three intended stages:
     - This process identifies potential bugs, security hotspots, and style issues.
     - A dedicated `gitleaks` workflow (`.github/workflows/secret-scan.yml`) runs on pushes to `main` and every pull request to detect and prevent hardcoded secrets from being committed to the repository.
 
-2. **Automated Triage and Patching** (aspirational — not yet implemented):
-    - The intent is for the agent to trigger an `automated-vulnerability-patching` skill for each actionable finding, following a 5-step isolate/reproduce/generate-fix/test-fix/surface-for-review pipeline.
-    - No skill by that name currently exists in this repository (there is no `automated-vulnerability-patching` skill under any persona or the shared library), so this stage does not run yet. Until it's authored, the nightly scan surfaces findings in the run log rather than opening patch PRs automatically.
+2. **Automated Triage** (implemented for CI failures, not for vulnerabilities):
+    - `security-audit.md` triages scanner output into a single issue, cross-checked against the prevention table in `docs/security-hardening.md` so a known-and-accepted finding is not re-raised as new. It proposes; it does not patch.
+    - The one place automated patching does run is `self-healing-ci.yml` / `sakthai heal`, and only for CI failures — with a deterministic safety gate whose protected-path list covers `.github/`, dependency pins, the security subsystem and the `selfheal` package itself. See [`docs/self-healing-ci.md`](docs/self-healing-ci.md).
+    - An `automated-vulnerability-patching` skill remains unwritten; no skill by that name exists under any persona or the shared library.
 
 3. **Human-in-the-Loop**:
     - **No code is ever merged automatically.**
     - Any AI-generated patch would be presented as a pull request, where a human developer performs the final review and approval. This ensures that all changes are vetted and meet project standards.
 
-The long-term goal remains a closed-loop system where the agent continuously monitors its own codebase, heals vulnerabilities, and adapts its defenses over time — stage 1 runs today, stages 2–3 are the roadmap.
+The long-term goal remains a closed-loop system where the agent continuously monitors its own codebase, heals vulnerabilities, and adapts its defenses over time — stage 1 runs today, stage 2 triages, and automated patching stays scoped to CI failures behind a safety gate.
 
 ## Reporting a Vulnerability
 

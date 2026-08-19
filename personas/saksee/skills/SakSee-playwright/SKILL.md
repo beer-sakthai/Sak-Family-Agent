@@ -1,6 +1,6 @@
 ---
 name: SakSee-playwright
-description: "Playwright browser automation: installation, script execution, common pitfalls."
+description: 'Playwright browser automation: installation, script execution, common pitfalls.'
 ---
 
 # Playwright Automation
@@ -223,4 +223,3 @@ Use the companion template `templates/demo.spec.ts` as a starting point for:
 - `references/install.md` – detailed install commands and verification steps.
 - `references/test-recording.md` – recorded test run notes, artifacts layout, and rerun checklist.
 - `references/system-chrome.md` – notes on `npx playwright install chrome --with-deps` and `channel: 'chrome'` usage on hosts where default Chromium is unsupported.
-

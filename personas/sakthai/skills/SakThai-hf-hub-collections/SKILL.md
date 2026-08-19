@@ -1,4 +1,10 @@
 ---
+name: ⚠️ Irreversible — permanently removes the collection
+description: "Specialized skill providing instructions and execution procedures for \u26A0\uFE0F\
+  \ Irreversible \u2014 permanently removes the collection."
+---
+
+---
 name: SakThai-hf-hub-collections
 description: "Hugging Face Hub Collections API — create, manage, and curate themed collections of models, datasets, Spaces, papers, and other items programmatically via the huggingface_hub library"
 ---# HF Hub Collections API

@@ -1,6 +1,7 @@
 ---
 name: SakKing-ordercli
-description: "Foodora-only CLI for checking past orders and active order status (Deliveroo WIP)."
+description: Foodora-only CLI for checking past orders and active order status (Deliveroo WIP).
+...
 ---
 
 # ordercli
