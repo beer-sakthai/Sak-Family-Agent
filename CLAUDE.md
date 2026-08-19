@@ -174,16 +174,30 @@ Other `make` targets: `compose-personas` (rebuild full skill trees into
 
 ### CI
 
-Twenty-seven hand-written workflows live in `.github/workflows/`, plus **eight**
-gh-aw Markdown sources compiled to `.lock.yml` beside them — 35 `.yml` files in
+Twenty-nine hand-written workflows live in `.github/workflows/`, plus **eight**
+gh-aw Markdown sources compiled to `.lock.yml` beside them — 37 `.yml` files in
 all, plus `shared/opencode.md`, which is an import rather than a workflow of its
-own. None of the eight runs on Copilot any more: seven run on `engine: gemini`
-and one on a vendored OpenCode engine driving a Gemini model — see
+own. Seven of the eight run on `engine: gemini` and one on a vendored OpenCode
+engine driving a Gemini model — see
 [`docs/gh-aw-engines.md`](docs/gh-aw-engines.md) and the gh-aw note below.
+
+That "seven on Gemini" was **aspirational until 2026-08-19**: four of the locks
+(`ci-doctor`, `maintain-agents-md`, `maintain-docs`, `release`) were still
+compiled from gh-aw v0.86.2 against **Copilot**, because their `.md` was
+switched to `engine: gemini` and never recompiled. Actions executes the
+`.lock.yml`, not the `.md`, so all four failed with `400 The requested model is
+not supported` while the source claimed otherwise. **Editing a `.md` without
+recompiling changes nothing** — the recompile procedure is in
+`docs/gh-aw-engines.md`.
 
 Every hand-written workflow that a pull request can trigger declares a top-level
 `concurrency:` block, and every job in every hand-written workflow declares
-`timeout-minutes`. Both are enforced by `tests/test_workflow_hygiene.py`; the
+`timeout-minutes`. Both are enforced by `tests/test_workflow_hygiene.py`
+(`test_pull_request_workflows_serialise_per_ref`,
+`test_every_job_declares_a_timeout`) — though only since 2026-08-19: the rules
+were described in that file's docstring and asserted here for months while
+**no test implemented either one**, and three workflows were violating them
+(`auto-update-prs.yml`, `bandit.yml`, `codeql.yml`). The
 convention for `cancel-in-progress` is
 `${{ github.event_name == 'pull_request' }}` — cancel a superseded PR run, never
 a run on `main`, because a cancelled analysis uploads no SARIF and an alert is
@@ -245,6 +259,7 @@ The ones that gate a change:
 | `self-healing-ci.yml` | `workflow_run` completion of `CI` on `main` (failure only), or manual | runs `sakthai heal run` over the failed job's log and opens a `selfheal/` fix PR when the patch is safe and locally verified. Gates nothing — it only ever adds a PR |
 | `auto-merge.yml` | `pull_request_target` labeled/unlabeled/ready_for_review | turns GitHub's **native** auto-merge on for a PR carrying the `automerge` label (squash), off when the label is removed. Gates nothing and waives nothing — GitHub still holds the merge until branch protection is satisfied, including the non-author approval. Uses no checkout, so the `pull_request_target` token never meets PR code |
 | `ossar.yml` | push/PR to `main`, weekly Monday | open-source static analysis on `windows-latest` → SARIF. Retired 2026-08-18, re-added 2026-08-19 as the stock starter template and repaired the same day — **read the callout below before editing it** |
+| `auto-update-prs.yml` | push to `main` | walks every open PR targeting `main` and calls the update-branch API on each, so a merge does not leave the queue stale. Holds `contents: write` + `pull-requests: write` and pushes to *contributor* branches, which is why its `concurrency:` group uses `cancel-in-progress: false` — a run cancelled mid-loop leaves some branches rebased onto the new `main` and the rest on the old one. Gates nothing; a PR it cannot update (conflicts) is logged and skipped |
 
 **`ossar.yml` was re-added on 2026-08-19 and needed two separate repairs.**
 It was retired on 2026-08-18 for the reasons in the removal note below, then
@@ -303,18 +318,40 @@ PR's caches), and `self-hosted-runner-health.yml` (daily, skipped entirely unles
 `opencode.yml` is also in that group but is worth its own paragraph, because it is
 the one workflow a *comment* can start. A `/oc` or `/opencode` comment on an issue
 or PR-review thread runs an OpenCode agent on the **OpenCode Go** subscription
-(`opencode-go/deepseek-v4-flash`, one `OPENCODE_API_KEY` secret). Three properties
-hold it in place and none should be relaxed casually: it is **read-only** — which
-holds only because of `use_github_token: true`, since the action's default is to
-exchange an OIDC token for an *OpenCode GitHub App* installation token whose
-permissions come from the app install and ignore the workflow's `permissions:`
-block (the agent answers in the run log and cannot push, comment, or open a PR) —
-it only fires for an `OWNER`/`MEMBER`/`COLLABORATOR` commenter, and it
-passes `share: false` because the action defaults `share` to **true for public
-repositories** — which this one is — publishing a session link with the agent's
-reasoning trace on every run. Its `concurrency:` group is per issue/PR thread with
-`cancel-in-progress: false`, which serialises rather than cancels and so also caps
-how fast it can spend a budget shared with interactive use. Setup and rationale in
+(`opencode-go/deepseek-v4-flash`, one `OPENCODE_API_KEY` secret). Properties that
+hold it in place, none to be relaxed casually:
+
+- **It comments back, and `contents: read` is the real ceiling.** It is *not*
+  read-only, despite what this file said until 2026-08-19: the action posts a
+  reaction on the triggering comment and then a reply, so it needs
+  `issues: write` (issue threads and PR conversation comments) and
+  `pull-requests: write` (the `pull_request_review_comment` trigger, a different
+  endpoint). With read-only scopes both calls returned
+  `403 Resource not accessible by integration` and the step exited 1 having done
+  nothing. What it still cannot do is push, branch, or open a pull request.
+  Those scopes bind at all only because of `use_github_token: true`: the
+  action's default is to exchange an OIDC token for an *OpenCode GitHub App*
+  installation token whose permissions come from the app install and ignore this
+  workflow's `permissions:` block entirely.
+- **It has tools, and shell.** The job runs `./.github/actions/setup-uv-python`
+  so `opencode.json`'s `mcp.sakthai` entry can actually start — without it the
+  MCP server failed silently and the agent lost all 14 builtin tools. Shell
+  comes from `.github/opencode-ci.json`, pointed at by `OPENCODE_CONFIG`: the
+  root `opencode.json` sets `permission.bash: "ask"`, which cannot be answered
+  headlessly, and is pinned by `tests/test_agent_cli_configs.py`, so CI
+  overrides it rather than loosening it. That config also sets `edit: deny` —
+  with `contents: read` an edit could never be pushed. Note this widens the
+  blast radius of a prompt injection reaching the agent through a comment or
+  diff: the trusted-commenter gate below is what contains it.
+- **Only trusted commenters, and no session link.** It fires only for an
+  `OWNER`/`MEMBER`/`COLLABORATOR` commenter, and passes `share: false` because
+  the action defaults `share` to **true for public repositories** — which this
+  one is — publishing a session link with the agent's reasoning trace on every
+  run. Its `concurrency:` group is per issue/PR thread with
+  `cancel-in-progress: false`, which serialises rather than cancels and so also
+  caps how fast it can spend a budget shared with interactive use.
+
+Setup and rationale in
 [`docs/multi-agent-cli-setup.md`](docs/multi-agent-cli-setup.md). Note this is a
 **separate** OpenCode integration from the vendored gh-aw engine below: they share
 a name and nothing else.

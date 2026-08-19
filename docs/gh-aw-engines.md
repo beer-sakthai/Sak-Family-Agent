@@ -8,11 +8,20 @@ This repository runs eight [GitHub Agentic Workflows](https://github.github.com/
 As of 2026-08-18 they no longer run on Copilot. Seven run on Google **Gemini**, one runs on
 **OpenCode** driving a Gemini model.
 
+> **That was true of the sources on 2026-08-18 and of the compiled workflows only from
+> 2026-08-19.** Switching a `.md` to `engine: gemini` does nothing on its own. Four of the
+> eight — `ci-doctor`, `maintain-agents-md`, `maintain-docs`, `release` — kept running
+> Copilot from lock files compiled by gh-aw **v0.86.2**, and failed every time with
+> `400 The requested model is not supported` (issues #762, #877). The table below is
+> therefore what the *lock files* now say, verified with the command under
+> [Checking for a stale lock](#checking-for-a-stale-lock). Re-verify it there rather than
+> trusting this page after editing any `.md`.
+
 ## Engine assignment
 
 | Workflow | Engine | Model | Trigger |
 |---|---|---|---|
-| `ci-doctor.md` | `gemini` | engine default | `workflow_run` failure of CI / Continuous Security / Pylint on `main` |
+| `ci-doctor.md` | `gemini` | engine default | `workflow_run` failure of CI / Pylint / Subproject tests on `main` |
 | `maintain-agents-md.md` | `gemini` | engine default | weekly (Monday) + dispatch |
 | `maintain-docs.md` | `gemini` | engine default | weekdays + dispatch |
 | `release.md` | `gemini` | engine default | dispatch (admin/maintainer) |
@@ -22,6 +31,66 @@ As of 2026-08-18 they no longer run on Copilot. Seven run on Google **Gemini**, 
 | `opencode-smoke.md` | `opencode` (vendored) | `copilot/gemini-3.1-flash` | weekly (Monday) + dispatch |
 
 Compiled with gh-aw **v0.87.0**; the Gemini CLI pins to `0.55.1` and OpenCode to `1.2.14`.
+
+## Checking for a stale lock
+
+The `.lock.yml` header carries the engine and compiler that produced it. This is the only
+reliable answer to "what does this workflow actually run":
+
+```bash
+for f in .github/workflows/*.lock.yml; do
+  printf "%-24s " "$(basename "$f" .lock.yml)"
+  head -1 "$f" | python3 -c "import sys,json; d=json.loads(sys.stdin.read().split('gh-aw-metadata: ',1)[1]); print(d.get('compiler_version'), d.get('agent_id'), d.get('engine_versions'))"
+done
+```
+
+A lock whose `agent_id` disagrees with its `.md`'s `engine:` is stale and is running the
+old engine. So is one whose `frontmatter_hash` no longer matches its source — that is the
+signal gh-aw itself uses, and it is what `[aw] … has stale lock file` issues report.
+
+## Recompiling
+
+`gh aw compile` is a `gh` extension, so the normal path is:
+
+```bash
+gh extension install github/gh-aw --pin v0.87.0
+gh aw compile                       # or: gh aw compile ci-doctor maintain-docs
+gh aw compile --validate
+```
+
+**Two flags are load-bearing in this repository** and the defaults are wrong for it:
+
+```bash
+gh aw compile --action-mode action --action-tag b77e0d501fd2d2243d1f72722617e80d513f674e
+```
+
+Without them the compiler emits `github/gh-aw-actions/setup@v0.87.0` — a *tag*, which
+fails `tests/test_workflow_hygiene.py::test_actions_are_pinned_to_a_commit_sha`, since
+that check covers the lock files too. `--action-tag` pins the same SHA the existing locks
+carry. A release binary auto-detects `action` mode; a binary built from source defaults to
+`dev` mode and emits local `./actions/...` paths plus a sparse-checkout of `github/gh-aw`,
+which is wrong for every workflow here.
+
+If `gh` is unavailable (it needs an authenticated API token to install an extension), build
+the compiler from source instead — **both** ldflags matter, or the binary omits
+`compiler_version` from every header it writes:
+
+```bash
+git clone --depth 1 --branch v0.87.0 https://github.com/github/gh-aw /tmp/gh-aw
+cd /tmp/gh-aw && CGO_ENABLED=0 go build \
+  -ldflags "-s -w -X main.version=v0.87.0 -X main.isRelease=true" -o /tmp/gh-aw-bin ./cmd/gh-aw
+```
+
+Verify any such build before trusting its output: recompile a workflow you are *not*
+changing and confirm `git diff` is empty. `shared-package-drift` and `opencode-smoke`
+reproduce byte-for-byte under the flags above, which is what proves the toolchain matches
+the one that produced the existing locks.
+
+The compiler's **safe-update gate** will refuse changes that introduce a restricted secret
+until you pass `--approve` or record a review. That gate is working as intended — the
+migration of the four Copilot locks onto Gemini tripped it for `GEMINI_API_KEY`, and the
+review it demanded is in that commit's message. Do not reach for `--approve` without
+writing the review down somewhere a human will read it.
 
 ## Secrets and variables
 
