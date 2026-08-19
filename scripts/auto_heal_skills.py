@@ -45,7 +45,7 @@ def heal_skill_file(filepath):
                 name = parsed.get("name", "")
                 desc = parsed.get("description", "")
         except Exception:
-            pass
+            print("Ignored exception")
 
     if not name:
         name = folder_name

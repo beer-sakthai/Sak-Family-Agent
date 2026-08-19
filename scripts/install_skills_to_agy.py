@@ -73,7 +73,7 @@ def main():
                     elif os.path.isdir(dest_global):
                         shutil.rmtree(dest_global)
                 except Exception as e:
-                    pass
+                    print("Ignored exception")
 
             try:
                 os.symlink(os.path.abspath(skill_dir), dest_global)
@@ -90,7 +90,7 @@ def main():
                     elif os.path.isdir(dest_workspace):
                         shutil.rmtree(dest_workspace)
                 except Exception as e:
-                    pass
+                    print("Ignored exception")
 
             try:
                 os.symlink(os.path.abspath(skill_dir), dest_workspace)
