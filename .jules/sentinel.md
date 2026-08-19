@@ -1,9 +1,9 @@
+# Sentinel Security Journal
+
 ## 2026-08-19 - Unprotected Secret Leakage in Pre-Execution Tool Call Arguments
 **Vulnerability:** Agent tool guardrails enforced post-execution output secret filtering (_block_output_with_secrets), but lacked a corresponding pre-execution guardrail rule to check incoming tool arguments for active credentials or private keys. An agent or prompt injection could pass raw credentials (e.g. TELEGRAM_BOT_TOKEN, API keys, or RSA private keys) directly as tool call arguments, leaking secrets to external APIs or remote endpoints before post-execution filtering ever ran.
 **Learning:** Post-execution output secret filtering is insufficient if tool invocation parameters themselves can transmit secrets to third parties or shell commands. Tool call arguments must be scanned recursively pre-execution across strings, containers, and embedded JSON objects.
 **Prevention:** Enforce _block_input_with_secrets in DEFAULT_PRE_RULES to recursively inspect all input arguments against active environment credentials, private key blocks, and SECRET_PATTERN regex prior to tool execution.
-
-# Sentinel Security Journal
 
 ## 2026-09-09 - Path Validation Bypass via Multiple Leading '@' Prefixes
 **Vulnerability:** File path validation in `_is_sensitive_path` (`guardrails.py`) and `_validate_shell_command` (`executor.py`) stripped curl-style file upload prefixes (`@`) using single-character slicing `path[1:]` or `sub[1:]`. Inputs with multiple leading `@` characters (e.g. `@@.env`, `@@id_rsa`, `@@/etc/passwd`, `curl -F data=@@.env`) left a remaining `@` character on the path (`@.env`), causing basename and sensitive root checks to fail.
