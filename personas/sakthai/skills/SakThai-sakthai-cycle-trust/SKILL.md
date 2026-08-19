@@ -1,7 +1,9 @@
 ---
 name: SakThai-SakKing-sakthai-cycle-trust
-description: "Sakking Sakthai Cycle Trust"
+description: Sakking Sakthai Cycle Trust
+...
 ---
+
 # SakThai Cycle — Trust
 
 Verify the shipped work is safe to rely on.

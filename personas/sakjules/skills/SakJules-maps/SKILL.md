@@ -1,6 +1,7 @@
 ---
 name: SakJules-maps
-description: "Geocode, POIs, routes, timezones via OpenStreetMap/OSRM."
+description: Geocode, POIs, routes, timezones via OpenStreetMap/OSRM.
+...
 ---
 
 # Maps Skill

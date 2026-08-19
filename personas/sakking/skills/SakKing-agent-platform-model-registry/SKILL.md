@@ -1,6 +1,8 @@
 ---
 name: SakKing-agent-platform-model-registry
-description: ">-   Agent Platform Model Registry Management. Use when you need to upload, list,   describe, update, or delete machine learning models (and their versions)   in the Agent Platform Model Registry. Dont use for model training, model   deployment to en"
+description: '>-   Agent Platform Model Registry Management. Use when you need to upload, list,   describe,
+  update, or delete machine learning models (and their versions)   in the Agent Platform
+  Model Registry. Dont use for model training, model   deployment to en'
 ---
 
 # Agent Platform Model Registry Management

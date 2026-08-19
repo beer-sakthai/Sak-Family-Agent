@@ -1,6 +1,9 @@
 ---
 name: SakKing-gemini-agents-api
-description: "Manages custom Agent resources on Gemini Enterprise Agent Platform. Use when the user wants to programmatically create, configure, list, update, or delete stateful, server-managed Agent resources (including mounting files, skills, and tools) before e"
+description: Manages custom Agent resources on Gemini Enterprise Agent Platform. Use when the user
+  wants to programmatically create, configure, list, update, or delete stateful, server-managed
+  Agent resources (including mounting files, skills, and tools) before e
+...
 ---
 
 # Gemini Enterprise Agent Platform - Managed Agents API Skill
@@ -348,4 +351,3 @@ interaction = client.interactions.create(
 ```
 
 Refer to the **`gemini-interactions-api`** skill guide (`../gemini-interactions-api/SKILL.md`) for full instructions, Python and TS/JS code blocks, and streaming setups to run conversations with your provisioned agents.
-

@@ -1,6 +1,7 @@
 ---
 name: SakSee-arxiv
-description: "Search arXiv papers by keyword, author, category, or ID."
+description: Search arXiv papers by keyword, author, category, or ID.
+...
 ---
 
 # arXiv Research

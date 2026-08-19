@@ -1,6 +1,9 @@
 ---
 name: SakJules-claude-security
-description: "The Claude Security menu — pick a job: scan the codebase (the whole repository or a scoped part of it), scan changes (this branchs or a pull requests diff, or one commit), or suggest patches (findings turned into targeted patch files, each verified b"
+description: "The Claude Security menu \u2014 pick a job: scan the codebase (the whole repository\
+  \ or a scoped part of it), scan changes (this branchs or a pull requests diff, or\
+  \ one commit), or suggest patches (findings turned into targeted patch files, each\
+  \ verified b"
 ---
 
 # Claude Security

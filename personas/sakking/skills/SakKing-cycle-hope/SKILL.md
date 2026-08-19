@@ -1,6 +1,7 @@
 ---
 name: SakKing-cycle-hope
-description: "Turn the Dream vision into a concrete, defensible plan (PTCF)."
+description: Turn the Dream vision into a concrete, defensible plan (PTCF).
+...
 ---
 
 # Sak-cycle-hope

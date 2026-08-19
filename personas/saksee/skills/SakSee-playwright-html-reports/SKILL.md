@@ -1,6 +1,7 @@
 ---
 name: SakSee-SakKing-playwright-html-reports
-description: "Playwright HTML Test Reports: inspect test results via a filterable dashboard with browser, pass/fail/skip, and time-travel step inspection."
+description: 'Playwright HTML Test Reports: inspect test results via a filterable dashboard with
+  browser, pass/fail/skip, and time-travel step inspection.'
 ---
 
 # Playwright HTML Test Reports

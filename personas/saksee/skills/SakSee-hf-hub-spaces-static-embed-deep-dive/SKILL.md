@@ -1,6 +1,8 @@
 ---
 name: SakSee-SakThai-hf-hub-spaces-static-embed-deep-dive
-description: ">-   Complete deep-dive on Hugging Face Hub Static HTML Spaces and embedding   Spaces in external websites. Covers creation, configuration (YAML frontmatter),   build step integration (React, Svelte, Vue), accessing env vars and OAuth from   JavaScri"
+description: '>-   Complete deep-dive on Hugging Face Hub Static HTML Spaces and embedding   Spaces
+  in external websites. Covers creation, configuration (YAML frontmatter),   build
+  step integration (React, Svelte, Vue), accessing env vars and OAuth from   JavaScri'
 ---
 
 # Hugging Face Hub — Static HTML Spaces & Embedding Deep Dive

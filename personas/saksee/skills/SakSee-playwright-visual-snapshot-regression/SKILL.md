@@ -1,6 +1,9 @@
 ---
 name: SakSee-SakKing-playwright-visual-snapshot-regression
-description: "Catch visual regressions in web UIs with Playwright screenshot diffs.   Use when you need pixel-level change detection for components, flows, or responsive   breakpoints without a heavy visual-test framework."
+description: Catch visual regressions in web UIs with Playwright screenshot diffs.   Use when you
+  need pixel-level change detection for components, flows, or responsive   breakpoints
+  without a heavy visual-test framework.
+...
 ---
 
 # Playwright Visual Snapshot Regression
