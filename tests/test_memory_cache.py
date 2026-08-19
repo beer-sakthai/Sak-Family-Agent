@@ -51,6 +51,21 @@ class TestMemoryLRUCache(unittest.TestCase):
         self.assertEqual(stats["misses"], 1)
         self.assertEqual(stats["hit_rate"], 0.5)
 
+    def test_delete_and_clear_and_set_overwrite(self):
+        cache = MemoryLRUCache(capacity=5, ttl_seconds=10.0)
+        cache.set("k", "v1")
+        # Overwrite hits the move_to_end branch in set().
+        cache.set("k", "v2")
+        self.assertEqual(cache.get("k"), "v2")
+        # delete() returns True on hit, False on miss.
+        self.assertTrue(cache.delete("k"))
+        self.assertFalse(cache.delete("k"))
+        # clear() empties the whole cache.
+        cache.set("a", 1)
+        cache.set("b", 2)
+        cache.clear()
+        self.assertEqual(cache.size, 0)
+
 
 class TestCircuitBreakerAndDistributedCache(unittest.TestCase):
     """Test distributed cache fallback and resilience."""
@@ -79,6 +94,27 @@ class TestCircuitBreakerAndDistributedCache(unittest.TestCase):
         res = dist_cache.get("fact:101")
         self.assertIsNotNone(res)
         self.assertEqual(res["entity"], "test")
+
+    def test_distributed_cache_no_url_short_circuits(self):
+        # No redis_url and no env var → _get_client returns None, get returns None,
+        # invalidate clears L1 without ever calling redis.
+        for var in ("VALKEY_URL", "REDIS_URL"):
+            os.environ.pop(var, None)
+        dist_cache = DistributedMemoryCache(redis_url=None)
+        self.assertIsNone(dist_cache.redis_url)
+        dist_cache.set("fact:no-redis", {"x": 1})
+        # L1 still serves the value.
+        self.assertEqual(dist_cache.get("fact:no-redis"), {"x": 1})
+        # invalidate only affects L1 (no client to broadcast to).
+        dist_cache.invalidate("fact:no-redis", broadcast=True)
+        self.assertIsNone(dist_cache.get("fact:no-redis"))
+
+    def test_distributed_cache_open_circuit_blocks_client(self):
+        # A tripped breaker returns None from _get_client even with a URL set.
+        dist_cache = DistributedMemoryCache(redis_url="redis://localhost:9999/0")
+        dist_cache.circuit_breaker.state = "OPEN"
+        dist_cache.circuit_breaker.last_failure_time = time.time()
+        self.assertIsNone(dist_cache._get_client())
 
 
 class TestAsyncWriteCoalescer(unittest.TestCase):
@@ -127,6 +163,37 @@ class TestAsyncWriteCoalescer(unittest.TestCase):
         # 6 personas * 50 writes = 300 total items committed cleanly
         self.assertEqual(count, 300)
         self.assertGreater(coalescer.stats["total_batches"], 0)
+
+    def test_batch_failure_falls_back_to_per_row_commits(self):
+        """Some queries in a batch reference a non-existent table.
+
+        Exercises `_commit_batch`'s exception branch: the batch BEGIN IMMEDIATE
+        rolls back, each row is retried individually, the good rows still land,
+        the bad rows are logged and dropped, and total_writes reflects only the
+        committed ones.
+        """
+        completed: list[int] = []
+        coalescer = AsyncWriteCoalescer(
+            self.db_path,
+            batch_interval_ms=20,
+            max_batch_size=50,
+            on_batch_complete=completed.append,
+        )
+        coalescer.enqueue("INSERT INTO items (worker, val) VALUES (?, ?)", ("mixed", 1))
+        coalescer.enqueue("INSERT INTO no_such_table (x) VALUES (?)", (42,))
+        coalescer.enqueue("INSERT INTO items (worker, val) VALUES (?, ?)", ("mixed", 2))
+        coalescer.flush(timeout_sec=5.0)
+        coalescer.close()
+
+        conn = sqlite3.connect(self.db_path)
+        rows = conn.execute("SELECT val FROM items WHERE worker='mixed' ORDER BY val").fetchall()
+        conn.close()
+        self.assertEqual(rows, [(1,), (2,)])
+        self.assertEqual(coalescer.stats["total_writes"], 2)
+        # The completion callback fires with the committed count when >0.
+        self.assertEqual(completed, [2])
+        # pending_count property returns 0 once drained.
+        self.assertEqual(coalescer.pending_count, 0)
 
 
 if __name__ == "__main__":
