@@ -2,9 +2,13 @@ import json
 from unittest.mock import MagicMock, patch
 
 import pytest
-
 from evolution.core.config import EvolutionConfig
-from evolution.core.dataset_builder import EvalDataset, EvalExample, LayoutDatasetBuilder
+from evolution.core.dataset_builder import (
+    EvalDataset,
+    EvalExample,
+    LayoutDatasetBuilder,
+    ToolSelectionExample,
+)
 
 
 class TestEvalExample:
@@ -64,6 +68,54 @@ class TestEvalDataset:
 
         dataset = EvalDataset(train=[ex_t], val=[ex_v], holdout=[ex_h])
         assert dataset.all_examples == [ex_t, ex_v, ex_h]
+
+    def test_to_dspy_examples(self):
+        # Test converting standard EvalExample
+        ex_standard = EvalExample(
+            task_input="Standard task input",
+            expected_behavior="Expected standard behavior",
+        )
+        # Test converting ToolSelectionExample
+        ex_tool = ToolSelectionExample(
+            task_input="Tool selection task input",
+            expected_behavior="Expected tool behavior",
+            expected_tool="calculator",
+            expected_args={"a": 1, "b": 2},
+        )
+
+        dataset = EvalDataset(
+            train=[ex_standard, ex_tool],
+            val=[ex_standard],
+            holdout=[],
+        )
+
+        # Act & Assert
+        train_examples = dataset.to_dspy_examples("train")
+        assert len(train_examples) == 2
+
+        # First example (standard)
+        ex1 = train_examples[0]
+        assert ex1.task_input == "Standard task input"
+        assert ex1.expected_behavior == "Expected standard behavior"
+        assert not hasattr(ex1, "expected_tool")
+        assert list(ex1.inputs().keys()) == ["task_input"]
+
+        # Second example (tool selection)
+        ex2 = train_examples[1]
+        assert ex2.task_input == "Tool selection task input"
+        assert ex2.expected_tool == "calculator"
+        assert ex2.expected_args == {"a": 1, "b": 2}
+        assert not hasattr(ex2, "expected_behavior")
+        assert list(ex2.inputs().keys()) == ["task_input"]
+
+        # Val example (standard)
+        val_examples = dataset.to_dspy_examples("val")
+        assert len(val_examples) == 1
+        assert val_examples[0].task_input == "Standard task input"
+
+        # Holdout examples (empty)
+        holdout_examples = dataset.to_dspy_examples("holdout")
+        assert len(holdout_examples) == 0
 
 
 @patch("dspy.LM")
