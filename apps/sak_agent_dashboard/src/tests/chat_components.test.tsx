@@ -62,7 +62,7 @@ describe('ToolExecutionCard Component', () => {
 });
 
 describe('PersonaSelector Component', () => {
-  it('renders all 6 personas and allows toggling and preset selection', () => {
+  it('renders all 6 personas and allows toggling and preset selection with proper accessibility', () => {
     const onSelectPreset = vi.fn();
     const onTogglePersona = vi.fn();
 
@@ -82,14 +82,20 @@ describe('PersonaSelector Component', () => {
     expect(screen.getByText('SakSit')).toBeDefined();
     expect(screen.getByText('SakTan')).toBeDefined();
 
-    // Click offline preset
-    const offlineBtn = screen.getByText('100% Offline / Local');
+    // Verify aria-pressed on active vs inactive personas
+    const thaiBtn = screen.getByRole('button', { name: /Toggle SakThai persona/i });
+    expect(thaiBtn.getAttribute('aria-pressed')).toBe('true');
+
+    const seeBtn = screen.getByRole('button', { name: /Toggle SakSee persona/i });
+    expect(seeBtn.getAttribute('aria-pressed')).toBe('false');
+
+    // Click preset button
+    const offlineBtn = screen.getByRole('button', { name: /Select 100% Offline \/ Local preset/i });
     fireEvent.click(offlineBtn);
     expect(onSelectPreset).toHaveBeenCalledWith('local_offline');
 
     // Toggle persona
-    const seeCard = screen.getByText('SakSee');
-    fireEvent.click(seeCard);
+    fireEvent.click(seeBtn);
     expect(onTogglePersona).toHaveBeenCalledWith('saksee');
   });
 });
