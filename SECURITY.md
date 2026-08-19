@@ -16,6 +16,25 @@ These run automatically and are the controls actually enforced on this repositor
 | Quality/security hotspots | `sonarcloud.yml`, `pylint.yml` | SonarCloud analysis and pylint |
 | Dependency updates | `.github/dependabot.yml` | Update PRs for Python (uv), npm, Docker, and pinned GitHub Actions versions. This is the **only** source of automated dependency bumps; the `auto-dependency-update.yml` workflow that duplicated it was removed on 2026-08-18 after failing all 22 of its runs |
 | Supply-chain posture | `scorecard.yml`, `OSPS.yml` | OpenSSF Scorecard and the Open Source Project Security baseline, both → SARIF / artifacts |
+| Workflow Action Pinning | All `.github/workflows/*.yml` | StepSecurity immutable commit SHA pinning with least-privilege permissions and top-level concurrency isolation |
+
+## Runtime Defense & Deterministic Guardrails
+
+In addition to CI/CD gating, the core runtime implements zero-tolerance deterministic security controls:
+
+1. **Path Traversal & Control Character Rejection**:
+   - `_resolve_and_validate_path` evaluates all filesystem queries and tool arguments across CLI commands, MCP tools, and workflow executors.
+   - Any path string containing ASCII control characters (`\x00-\x1f\x7f`) is immediately rejected with a `ValueError`.
+   - Redundant or malformed prefix traversal schemes (e.g. `@@`) are normalized and sanitized before root resolution.
+
+2. **Cryptographic Key Hashing & PBKDF2**:
+   - API keys and tokens are hashed using PBKDF2-HMAC-SHA256 with cryptographically secure random salts.
+   - Plaintext keys are never stored in durable memory (`memory.db`) or logs.
+
+3. **Command Injection & Execution Sandboxing**:
+   - Shell command execution is subject to an AST denylist and strict token parsing (`personas/sakthai/sakthai/agent/guardrails.py`).
+   - Untrusted agent sessions can be executed inside isolated Docker containers (`sandbox.py`) with zero host network access.
+
 
 ## Intelligent Digital Immune System
 
