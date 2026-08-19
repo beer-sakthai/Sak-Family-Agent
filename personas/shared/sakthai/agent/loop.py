@@ -223,7 +223,13 @@ def _execute_tool(tool: Tool, args: dict[str, Any], store: MemoryStore) -> tuple
         output = tool.handler(args, store)
         return redact_secrets(output), False
     except Exception as exc:  # noqa: BLE001 — surfaced back to the model
-        logger.debug("Tool %r raised %s: %s", tool.name, type(exc).__name__, exc)
+        logger.warning(
+            "Tool %r execution failed with %s: %s",
+            tool.name,
+            type(exc).__name__,
+            exc,
+            exc_info=True,
+        )
         return redact_secrets(f"{type(exc).__name__}: {exc}"), True
 
 
