@@ -26,7 +26,7 @@ personas, deployment config, training assets, or docs.
 
 ```
 personas/          the six agents + the shared package (see below)
-tests/             the one pytest suite (imports `sakthai`, 119 test files)
+tests/             the one pytest suite (imports `sakthai`, 134 test files)
 library/           31 curated skills across 11 categories (a live skill root)
 docs/              architecture, security, plans/specs under docs/superpowers/
 scripts/           dev + maintenance scripts (compose_persona, export_agent_repo, …)
@@ -397,6 +397,12 @@ CLI/MCP → agent loop → guardrails → tool registry → MemoryStore → SQLi
 - **`memory/merged.py`** — `FamilyMemoryView`, a read-only view across every
   persona's memory shard plus the legacy unscoped `memory.db`, deduplicated and
   grouped by persona. Backs `sakthai memory family`.
+- **`memory/cache.py`** — in-process caching and provider isolation. `MemoryLRUCache`
+  (TTL+capacity LRU: `get`/`set`/`delete`/`stats`) and `DistributedMemoryCache`
+  (client-backed, for the planned distributed memory mesh) serve read-side caching;
+  `CircuitBreaker` (`failure_threshold` + recovery window; `allow_request`/
+  `record_success`/`record_failure`) is the breaker the `healing/` supervisor
+  attaches per persona to isolate a degraded provider.
 
 ### Per-persona memory sharding
 
@@ -485,6 +491,37 @@ not an error.
     provider (OpenRouter/LiteLLM/Vercel/Cloudflare AI gateways), and the
     `huggingface` provider (HF Inference Providers router, via `HF_TOKEN`) — all via `httpx`
   - `__init__.py` — provider detection and client factory
+
+### Healing subsystem (`healing/`)
+
+Runtime resilience and recovery — **not** the same as `selfheal/`. `selfheal/`
+is the CI agent that reads a *failed GitHub Actions job's log* and opens a fix
+PR; `healing/` intercepts *live* agent-loop exceptions, rolls back memory, and
+isolates providers. Different triggers, different surfaces — don't conflate them.
+
+- **`healing/supervisor.py`** — `SelfHealingSupervisor` is the orchestration point.
+  `classify_error()` maps an exception to `ErrorSeverity` (`TRANSIENT` /
+  `STATE_CORRUPT` / `FATAL`); `handle_execution_failure()` runs the recovery flow
+  (classify → snapshot rollback for state-corrupting failures → DLQ enqueue →
+  circuit-breaker update); `get_circuit_breaker(persona)` returns a per-persona
+  `CircuitBreaker` (from `memory/cache.py`) so one degraded provider is isolated
+  without grounding the others; `replay_dlq_item(item_id, executor_fn)` re-runs a
+  buffered payload; `get_health_status(persona)` reports breaker state and DLQ
+  depth. `RecoveryResult` is the return shape. `ErrorSeverity` and `RecoveryResult`
+  live here on `main` (the feature branch relocates them into `healing/models.py`).
+- **`healing/dlq.py`** — `DeadLetterQueue` / `DeadLetterItem`: a persistent
+  SQLite-backed buffer (`_recovery_db_path()`) for failed task payloads —
+  `enqueue` / `list_pending` / `get_item` / `record_retry_failure` /
+  `mark_replayed` / `mark_purged` / `stats`.
+- **`healing/snapshot.py`** — `MemorySnapshotManager`: point-in-time checkpoint +
+  atomic rollback of a `MemoryStore` (`create_checkpoint(store, label)` →
+  checkpoint id; `rollback(store, checkpoint_id)` → bool; `release_checkpoint`;
+  `active_checkpoints_count`). It takes the `MemoryStore`, not a raw db path —
+  consistent with the memory-store-is-the-seam rule.
+
+The package is mirrored under `personas/shared/sakthai/healing/` and follows the
+same parity rule as `guardrails.py`: keep the two copies in sync or
+`tests/test_shared_package_divergence.py` fails CI.
 
 ### Security subsystem (`agent/guardrails*.py`, `agent/security_hardening.py`)
 
@@ -635,7 +672,7 @@ There is no `dashboard.py` here — see the dashboard note below.
 
 ## Tests
 
-Tests live in `tests/` (119 test files, ~29,500 lines) and are the suite for the
+Tests live in `tests/` (134 test files, ~32,358 lines) and are the suite for the
 `sakthai` package — there is no per-persona test tree. All tests are hermetic:
 no network, no GCP credentials. Integration tests that may hit real endpoints
 (Ollama, Anthropic) are marked `@pytest.mark.integration` and self-skip when
@@ -722,6 +759,9 @@ Key test areas:
 - **CLI** — `test_cli.py`, `test_cli_system.py`, `test_cli_eval.py`,
   `test_cli_heal.py`, `test_cli_consolidate_sessions.py`, `test_sessions_cli.py`,
   `test_entrypoint.py`
+- **Healing** — `test_healing_circuit_breaker.py`, `test_healing_dlq.py`,
+  `test_healing_integration.py`, `test_healing_models.py`,
+  `test_healing_snapshot.py`, `test_healing_supervisor.py`
 - **Self-healing CI** — `test_selfheal_ingest.py`, `test_selfheal_inspector.py`,
   `test_selfheal_safety.py`, `test_selfheal_patch.py`, `test_selfheal_verify.py`,
   `test_selfheal_diagnose.py`, `test_selfheal_walkthrough.py`,

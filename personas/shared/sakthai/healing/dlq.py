@@ -8,10 +8,12 @@ import sqlite3
 import time
 import uuid
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, overload
 
 from ..config import memory_db_path, redact_secrets
+from .models import DLQItem
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +29,7 @@ class DeadLetterItem:
     stack_trace: str
     retry_count: int
     max_retries: int
-    status: str  # "pending", "replayed", "quarantined", "purged"
+    status: str  # "pending", "replayed", "quarantined", "purged", "DEAD", "RESOLVED"
     created_at: int
     updated_at: int
     next_retry_at: int
@@ -44,6 +46,7 @@ class DeadLetterQueue:
 
     def __init__(self, db_path: Path | str | None = None):
         self.db_path = Path(db_path) if db_path else _recovery_db_path()
+        self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self._init_db()
 
     def _get_conn(self) -> sqlite3.Connection:
@@ -81,28 +84,58 @@ class DeadLetterQueue:
             )
             conn.execute("CREATE INDEX IF NOT EXISTS idx_dlq_persona ON dead_letter_items(persona)")
 
+    @overload
+    def enqueue(self, persona: DLQItem) -> str: ...
+
+    @overload
     def enqueue(
         self,
         persona: str,
-        action: str,
-        payload: dict[str, Any],
-        error: Exception | str,
+        action: str = "execution",
+        payload: dict[str, Any] | None = None,
+        error: Exception | str = "",
+        stack_trace: str = "",
+        max_retries: int = 3,
+    ) -> str: ...
+
+    def enqueue(
+        self,
+        persona: DLQItem | str,
+        action: str = "execution",
+        payload: dict[str, Any] | None = None,
+        error: Exception | str = "",
         stack_trace: str = "",
         max_retries: int = 3,
     ) -> str:
         """Store a failed task envelope with redacted secrets."""
-        item_id = f"dlq_{uuid.uuid4().hex[:12]}"
         now = int(time.time())
-        # Initial retry window: 2 seconds backoff
-        next_retry_at = now + 2
 
-        err_type = type(error).__name__ if isinstance(error, Exception) else "TaskError"
-        err_msg = redact_secrets(str(error))
-        clean_stack = redact_secrets(stack_trace)
+        if isinstance(persona, DLQItem):
+            item = persona
+            item_id = item.dlq_id or f"dlq_{uuid.uuid4().hex[:12]}"
+            p_name = item.persona
+            act = "execution"
+            payload_dict = item.payload
+            err_msg = redact_secrets(item.error_message)
+            err_type = "DLQTaskError"
+            clean_stack = ""
+            max_ret = item.max_retries
+            stat = item.status
+            next_retry_at = now + 2
+        else:
+            p_name = persona
+            item_id = f"dlq_{uuid.uuid4().hex[:12]}"
+            act = action
+            payload_dict = payload or {}
+            err_type = type(error).__name__ if isinstance(error, Exception) else "TaskError"
+            err_msg = redact_secrets(str(error))
+            clean_stack = redact_secrets(stack_trace)
+            max_ret = max_retries
+            stat = "pending"
+            next_retry_at = now + 2
 
-        # Redact secrets inside payload dictionary
         try:
-            raw_payload = json.dumps(payload, ensure_ascii=False)
+            raw_payload = json.dumps(payload_dict, ensure_ascii=False)
             clean_payload = redact_secrets(raw_payload)
         except Exception:
             clean_payload = "{}"
@@ -114,17 +147,22 @@ class DeadLetterQueue:
                     item_id, persona, action, payload, error_type,
                     error_message, stack_trace, retry_count, max_retries,
                     status, created_at, updated_at, next_retry_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?, 'pending', ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?)
+                ON CONFLICT(item_id) DO UPDATE SET
+                    payload=excluded.payload,
+                    error_message=excluded.error_message,
+                    updated_at=excluded.updated_at
                 """,
                 (
                     item_id,
-                    persona,
-                    action,
+                    p_name,
+                    act,
                     clean_payload,
                     err_type,
                     err_msg,
                     clean_stack,
-                    max_retries,
+                    max_ret,
+                    stat,
                     now,
                     now,
                     next_retry_at,
@@ -138,48 +176,78 @@ class DeadLetterQueue:
         )
         return item_id
 
+    def peek(self, limit: int = 50) -> list[DLQItem]:
+        """Fetch pending DLQ items as DLQItem instances."""
+        with self._get_conn() as conn:
+            rows = conn.execute(
+                """
+                SELECT * FROM dead_letter_items
+                WHERE status IN ('pending', 'PENDING', 'retrying', 'RETRYING')
+                ORDER BY created_at DESC LIMIT ?
+                """,
+                (limit,),
+            ).fetchall()
+            return [self._row_to_dlq_item(r) for r in rows]
+
     def list_pending(self, limit: int = 50) -> list[DeadLetterItem]:
         """Fetch pending DLQ tasks eligible for retry or inspection."""
         with self._get_conn() as conn:
             rows = conn.execute(
                 """
                 SELECT * FROM dead_letter_items
-                WHERE status = 'pending'
+                WHERE status IN ('pending', 'PENDING')
                 ORDER BY created_at DESC LIMIT ?
                 """,
                 (limit,),
             ).fetchall()
             return [self._row_to_item(r) for r in rows]
 
-    def get_item(self, item_id: str) -> DeadLetterItem | None:
+    def list_dead(self, limit: int = 50) -> list[DLQItem]:
+        """List dead/quarantined items."""
+        with self._get_conn() as conn:
+            rows = conn.execute(
+                """
+                SELECT * FROM dead_letter_items
+                WHERE status IN ('dead', 'DEAD', 'quarantined')
+                ORDER BY created_at DESC LIMIT ?
+                """,
+                (limit,),
+            ).fetchall()
+            return [self._row_to_dlq_item(r) for r in rows]
+
+    def record_retry_attempt(self, dlq_id: str) -> bool:
+        """Increment retry count. If max reached, transition to DEAD."""
+        now = int(time.time())
         with self._get_conn() as conn:
             row = conn.execute(
-                "SELECT * FROM dead_letter_items WHERE item_id = ?", (item_id,)
+                "SELECT retry_count, max_retries FROM dead_letter_items WHERE item_id = ?",
+                (dlq_id,),
             ).fetchone()
-            return self._row_to_item(row) if row else None
+            if not row:
+                return False
+            new_count = row["retry_count"] + 1
+            if new_count >= row["max_retries"]:
+                conn.execute(
+                    "UPDATE dead_letter_items SET retry_count = ?, status = 'DEAD', updated_at = ? WHERE item_id = ?",
+                    (new_count, now, dlq_id),
+                )
+                return False
 
-    def record_retry_failure(self, item_id: str, error_message: str) -> bool:
-        now = int(time.time())
-        item = self.get_item(item_id)
-        if not item:
-            return False
-
-        new_count = item.retry_count + 1
-        new_status = "quarantined" if new_count >= item.max_retries else "pending"
-        # Exponential backoff: 2s, 4s, 8s...
-        backoff_sec = 2**new_count
-        next_retry = now + backoff_sec
-
-        with self._get_conn() as conn:
+            next_delay = 2**new_count
             conn.execute(
-                """
-                UPDATE dead_letter_items
-                SET retry_count = ?, status = ?, updated_at = ?, next_retry_at = ?, error_message = ?
-                WHERE item_id = ?
-                """,
-                (new_count, new_status, now, next_retry, redact_secrets(error_message), item_id),
+                "UPDATE dead_letter_items SET retry_count = ?, status = 'RETRYING', updated_at = ?, next_retry_at = ? WHERE item_id = ?",
+                (new_count, now, now + next_delay, dlq_id),
             )
-        return True
+            return True
+
+    def resolve(self, dlq_id: str) -> bool:
+        now = int(time.time())
+        with self._get_conn() as conn:
+            cur = conn.execute(
+                "UPDATE dead_letter_items SET status = 'RESOLVED', updated_at = ? WHERE item_id = ?",
+                (now, dlq_id),
+            )
+            return cur.rowcount > 0
 
     def mark_replayed(self, item_id: str) -> bool:
         now = int(time.time())
@@ -190,29 +258,66 @@ class DeadLetterQueue:
             )
             return cur.rowcount > 0
 
-    def mark_purged(self, item_id: str) -> bool:
+    def record_retry_failure(self, item_id: str, error_message: str = "") -> bool:
+        now = int(time.time())
         with self._get_conn() as conn:
-            cur = conn.execute("DELETE FROM dead_letter_items WHERE item_id = ?", (item_id,))
+            row = conn.execute(
+                "SELECT retry_count, max_retries FROM dead_letter_items WHERE item_id = ?",
+                (item_id,),
+            ).fetchone()
+            if not row:
+                return False
+            new_count = row["retry_count"] + 1
+            if new_count >= row["max_retries"]:
+                status = "quarantined"
+            else:
+                status = "pending"
+
+            clean_err = redact_secrets(error_message) if error_message else None
+            if clean_err:
+                conn.execute(
+                    "UPDATE dead_letter_items SET retry_count = ?, status = ?, error_message = ?, updated_at = ? WHERE item_id = ?",
+                    (new_count, status, clean_err, now, item_id),
+                )
+            else:
+                conn.execute(
+                    "UPDATE dead_letter_items SET retry_count = ?, status = ?, updated_at = ? WHERE item_id = ?",
+                    (new_count, status, now, item_id),
+                )
+            return True
+
+    def quarantine(self, item_id: str) -> bool:
+        now = int(time.time())
+        with self._get_conn() as conn:
+            cur = conn.execute(
+                "UPDATE dead_letter_items SET status = 'quarantined', updated_at = ? WHERE item_id = ?",
+                (now, item_id),
+            )
             return cur.rowcount > 0
 
-    def stats(self) -> dict[str, Any]:
+    def get_item(self, item_id: str) -> DeadLetterItem | None:
         with self._get_conn() as conn:
-            total = conn.execute("SELECT COUNT(*) FROM dead_letter_items").fetchone()[0]
-            pending = conn.execute(
-                "SELECT COUNT(*) FROM dead_letter_items WHERE status = 'pending'"
-            ).fetchone()[0]
-            quarantined = conn.execute(
-                "SELECT COUNT(*) FROM dead_letter_items WHERE status = 'quarantined'"
-            ).fetchone()[0]
-            replayed = conn.execute(
-                "SELECT COUNT(*) FROM dead_letter_items WHERE status = 'replayed'"
-            ).fetchone()[0]
-            return {
-                "total": total,
-                "pending": pending,
-                "quarantined": quarantined,
-                "replayed": replayed,
-            }
+            row = conn.execute(
+                "SELECT * FROM dead_letter_items WHERE item_id = ?", (item_id,)
+            ).fetchone()
+            return self._row_to_item(row) if row else None
+
+    def _row_to_dlq_item(self, row: sqlite3.Row) -> DLQItem:
+        try:
+            payload = json.loads(row["payload"])
+        except Exception:
+            payload = {}
+        return DLQItem(
+            dlq_id=row["item_id"],
+            incident_id=row["item_id"],
+            persona=row["persona"],
+            payload=payload,
+            error_message=row["error_message"],
+            retry_count=row["retry_count"],
+            max_retries=row["max_retries"],
+            enqueued_at=datetime.fromtimestamp(row["created_at"], tz=UTC),
+            status=row["status"],
+        )
 
     def _row_to_item(self, row: sqlite3.Row) -> DeadLetterItem:
         try:
