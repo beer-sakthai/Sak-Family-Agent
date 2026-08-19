@@ -12,10 +12,14 @@
   - Plan: `docs/prds/tasks_0002_prd_a2a_streaming_consensus_mesh.md`
   - Status: Completed & Verified (20/20 tests passed across models, broker SSE, consensus).
 
+- [x] **Track 003: Hybrid Semantic Memory Vector Mesh (pgvector / DuckDB / BM25)** (v2.6.0)
+  - Spec: `docs/prds/0003_prd_hybrid_memory_vector_mesh.md`
+  - Plan: `conductor/tracks/003-hybrid-memory-vector-mesh/plan.md`
+  - Status: Completed & Verified (15/15 tests passed across vector mesh, BM25, RRF).
+
 ---
 
 ## Queued Tracks
 
-- [ ] **Track 003: Hybrid Semantic Memory Vector Mesh (pgvector / DuckDB / BM25)**
 - [ ] **Track 004: Autonomous CI/CD Self-Healing Doctor & Continuous Mutation Governance Daemon**
 - [ ] **Track 005: Remote MCP Tool Federation & Dynamic Secure Agent Gateway**
