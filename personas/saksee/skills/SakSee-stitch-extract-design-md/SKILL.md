@@ -1,5 +1,5 @@
 ---
-name: SakSee-stitch::extract-design-md
+name: SakSee-stitch-extract-design-md
 description: ">-   Extract a comprehensive design system (DESIGN.md) directly from frontend source\
   \   code \u2014 React, Vue, Svelte, Angular, plain HTML/CSS, or any web framework.\
   \ Analyzes   component files, stylesheets, Tailwind configs, theme definitions,\
