@@ -1,5 +1,15 @@
 # Sentinel Security Journal
 
+## 2026-09-09 - Path Validation Bypass via Multiple Leading '@' Prefixes
+**Vulnerability:** File path validation in `_is_sensitive_path` (`guardrails.py`) and `_validate_shell_command` (`executor.py`) stripped curl-style file upload prefixes (`@`) using single-character slicing `path[1:]` or `sub[1:]`. Inputs with multiple leading `@` characters (e.g. `@@.env`, `@@id_rsa`, `@@/etc/passwd`, `curl -F data=@@.env`) left a remaining `@` character on the path (`@.env`), causing basename and sensitive root checks to fail.
+**Learning:** Prefix-stripping routines in path validators must handle arbitrary repetition of prefix characters. Single-character slicing (`[1:]`) creates a bypass vector when attackers supply duplicated prefix characters to evade substring or basename matches.
+**Prevention:** Use `path.lstrip("@")` instead of single-character slicing (`[1:]`) when stripping prefix characters in path validation functions, and strip prefixes at the entry boundary before component splitting.
+
+## 2026-09-08 - ASCII Control Character Path Injection in File Path Validators
+**Vulnerability:** File path validation helpers (`_validate_filepath` in `executor.py` and `_resolve_and_validate_path` in `tools.py`) checked for path traversal (`..`), system roots, and sensitive files, but omitted checks for ASCII control characters (`ord(c) < 32` or `127`, e.g. `\n`, `\r`, `\t`, `\x00`). Paths containing control characters could cause log injection, terminal escape sequence injection, or unexpected filesystem manipulation.
+**Learning:** URL parameters, HTTP headers, and API endpoint paths enforce control character validation, but file path resolution routines can be overlooked. File path parameters must also be validated at the entry boundary before attempting path splitting or resolution.
+**Prevention:** Enforce `if any(ord(c) < 32 or ord(c) == 127 for c in path_str): raise ValueError("Control characters are not allowed in file paths")` at the start of all file path validation functions.
+
 ## 2026-09-07 - Command Execution Bypass via Heredoc and Herestring Interpreter Redirection
 **Vulnerability:** Shell command validation in the Workflow Executor (`_validate_shell_command`) extracted subcommands and checked process substitution and pipeline operators, but allowed shell and language interpreters (`sh`, `bash`, `python3`, `node`) to execute inline code via heredoc (`<<`) or herestring (`<<<`) redirections (e.g., `python3 <<'EOF' ... EOF` or `sh <<<'echo hello'`).
 **Learning:** Checking for pipeline execution and process substitution is insufficient if input redirections (`<<` and `<<<`) are permitted when invoking interpreter runtimes. Heredocs and herestrings provide direct code execution channels into interpreters without creating piped processes or substitution blocks.

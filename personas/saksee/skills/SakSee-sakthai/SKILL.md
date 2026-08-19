@@ -1,6 +1,7 @@
 ---
 name: SakSee-sakthai
-description: "Drive sakthai-agent-v2 — the `sakthai` CLI with persistent SQLite memory, an agent loop, and an MCP stdio server."
+description: "Drive sakthai-agent-v2 \u2014 the `sakthai` CLI with persistent SQLite memory, an\
+  \ agent loop, and an MCP stdio server."
 ---
 
 # SakThai — Hermes Orchestration Guide

@@ -1,11 +1,7 @@
 ---
 name: SakThai-sakthai-mlops-hf-train-manual-upload
-description: "Train a Hugging Face model under strict constraints: no GPU, no external compute, no API keys — manual upload only."
-author: SakThai
-license: MIT
-version: 1.0.0
-created: 2026-06-21
-updated: 2026-06-21
+description: "Train a Hugging Face model under strict constraints: no GPU, no external compute,\
+  \ no API keys \u2014 manual upload only."
 ---
 
 # Train a Hugging Face Model with Manual Upload (Zero-Exposure Workflow)

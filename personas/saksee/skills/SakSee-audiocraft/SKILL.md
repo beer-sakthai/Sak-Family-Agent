@@ -1,6 +1,6 @@
 ---
 name: SakSee-SakThai-audiocraft
-description: "AudioCraft: MusicGen text-to-music, AudioGen text-to-sound."
+description: 'AudioCraft: MusicGen text-to-music, AudioGen text-to-sound.'
 ---
 
 # AudioCraft: Audio Generation

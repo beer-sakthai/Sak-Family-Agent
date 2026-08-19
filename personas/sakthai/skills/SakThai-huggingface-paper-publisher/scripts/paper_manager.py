@@ -214,18 +214,23 @@ class PaperManager:
         arxiv_url = f"https://arxiv.org/abs/{arxiv_id}"
         hf_paper_url = f"https://huggingface.co/papers/{arxiv_id}"
 
-        # Check if YAML frontmatter exists
-        yaml_pattern = r'^---\s*\n(.*?)\n---\s*\n'
-        match = re.match(yaml_pattern, content, re.DOTALL)
+        # Check if YAML frontmatter exists linearly without ReDoS risk
+        yaml_end: int | None = None
+        if content.startswith("---"):
+            lines = content.split("\n")
+            if lines and lines[0].strip() == "---":
+                for idx in range(1, len(lines)):
+                    if lines[idx].strip() == "---":
+                        yaml_end = sum(len(line) + 1 for line in lines[:idx + 1])
+                        break
 
-        if match:
+        if yaml_end is not None:
             # YAML exists, check if paper already referenced
             if arxiv_id in content:
                 print(f"Paper {arxiv_id} already referenced in README")
                 return content
 
             # Add to existing content (after YAML)
-            yaml_end = match.end()
             before = content[:yaml_end]
             after = content[yaml_end:]
         else:
@@ -296,14 +301,26 @@ class PaperManager:
         abstract_val = abstract if abstract else "Abstract to be written..."
         safe_abstract_body = self._sanitize_text(abstract_val)
 
-        # Split frontmatter from body for context-aware escaping
-        fm_pattern = r'^(---\s*\n)(.*?\n)(---\s*\n)'
-        fm_match = re.match(fm_pattern, template_content, re.DOTALL)
+        # Split frontmatter from body linearly without ReDoS risk
+        fm_open = ""
+        fm_body = ""
+        fm_close = ""
+        body = template_content
+        if template_content.startswith("---"):
+            lines = template_content.split("\n")
+            if lines and lines[0].strip() == "---":
+                closing_idx = None
+                for idx in range(1, len(lines)):
+                    if lines[idx].strip() == "---":
+                        closing_idx = idx
+                        break
+                if closing_idx is not None:
+                    fm_open = lines[0] + "\n"
+                    fm_body = "\n".join(lines[1:closing_idx]) + ("\n" if closing_idx > 1 else "")
+                    fm_close = lines[closing_idx] + "\n"
+                    body = "\n".join(lines[closing_idx + 1:])
 
-        if fm_match:
-            fm_open, fm_body, fm_close = fm_match.group(1), fm_match.group(2), fm_match.group(3)
-            body = template_content[fm_match.end():]
-
+        if fm_open and fm_close:
             # YAML-escape values in frontmatter
             fm_body = fm_body.replace("{{TITLE}}", self._escape_yaml_value(title))
             fm_body = fm_body.replace("{{AUTHORS}}", self._escape_yaml_value(authors_val))
@@ -355,13 +372,13 @@ class PaperManager:
             response = requests.get(api_url, timeout=10)
             response.raise_for_status()
 
-            # Parse XML response (simplified)
+            # Parse XML response
             content = response.text
 
-            # Extract basic info with regex (proper XML parsing would be better)
-            title_match = re.search(r'<title>(.*?)</title>', content, re.DOTALL)
-            authors_matches = re.findall(r'<name>(.*?)</name>', content)
-            summary_match = re.search(r'<summary>(.*?)</summary>', content, re.DOTALL)
+            # Extract basic info with non-backtracking character class regexes
+            title_match = re.search(r'<title>([^<]+)</title>', content)
+            authors_matches = re.findall(r'<name>([^<]+)</name>', content)
+            summary_match = re.search(r'<summary>([^<]+)</summary>', content)
 
             # Sanitize all text extracted from the external API
             raw_title = title_match.group(1).strip() if title_match else None

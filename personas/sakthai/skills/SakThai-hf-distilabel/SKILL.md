@@ -1,6 +1,7 @@
 ---
 name: SakThai-hf-distilabel
-description: "HuggingFace Distilabel for synthetic data generation and labeling"
+description: HuggingFace Distilabel for synthetic data generation and labeling
+...
 ---
 
 # SakThai Distilabel Skill

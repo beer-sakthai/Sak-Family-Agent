@@ -1,11 +1,9 @@
 ---
 name: SakThai-hf-llm-course
-author: SakThai
-license: MIT
-description: "Reference for Hugging Face Transformers and LLM workflows."
-version: 1.0.0
-tags: [LLM, NLP, Transformers, HuggingFace, Course]
+description: Reference for Hugging Face Transformers and LLM workflows.
+...
 ---
+
 # LLM Course — Transformers & NLP Reference
 
 Based on the [HF LLM Course](https://huggingface.co/learn/llm-course). Covers using Transformers, Datasets, Tokenizers, and Accelerate for NLP and LLM tasks.

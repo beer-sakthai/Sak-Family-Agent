@@ -38,9 +38,16 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  # See the note in ci.yml — and in codeql.yml for why a `main` run is never
+  # cancelled: this workflow's upload is what closes its own earlier alerts.
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   bandit:
     name: Bandit
+    timeout-minutes: 20
     permissions:
       contents: read          # actions/checkout
       security-events: write  # upload-sarif writes to the code-scanning API
@@ -64,10 +71,20 @@ jobs:
         with:
           python-version: "3.12"
 
-      # The `sarif` extra is what provides `-f sarif`; plain `bandit` cannot
-      # emit it and fails the run with an unknown-format error.
+      # Hash-pinned, not merely version-pinned. A bare `pip install pkg==x.y.z`
+      # is Scorecard's `PinnedDependenciesID` / "pipCommand not pinned by hash"
+      # (alert #21445, raised against this step in the 2026-08-18 sweep's own
+      # follow-up read), and more to the point a version pin alone still trusts
+      # whatever the index serves under that version.
+      #
+      # `.github/bandit-requirements.lock` is generated, never hand-edited —
+      # regenerate it with the command recorded in its header when the pinned
+      # version bumps. The `sarif` extra is what provides `-f sarif`; plain
+      # bandit fails the run with an unknown-format error without it.
       - name: Install Bandit
-        run: python -m pip install --disable-pip-version-check "bandit[sarif,toml]==1.9.4"
+        run: |
+          python -m pip install --disable-pip-version-check \
+            --require-hashes -r .github/bandit-requirements.lock
 
       # `-c pyproject.toml` is the whole point: it is what applies this
       # repository's `skips` (B101 asserts, and the subprocess rules the

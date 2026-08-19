@@ -1,6 +1,7 @@
 ---
 name: SakKing-cycle-growth
-description: "Fold the cycles lessons back into memory and skills."
+description: Fold the cycles lessons back into memory and skills.
+...
 ---
 
 # Sak-cycle-growth

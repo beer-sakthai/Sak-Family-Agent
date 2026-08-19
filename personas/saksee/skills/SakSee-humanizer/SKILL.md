@@ -1,6 +1,6 @@
 ---
 name: SakSee-humanizer
-description: "Humanize text: strip AI-isms and add real voice."
+description: 'Humanize text: strip AI-isms and add real voice.'
 ---
 
 # Humanizer: Remove AI Writing Patterns

@@ -1,6 +1,7 @@
 ---
 name: SakThai-hf-snapshot-download-and-cache-management
-description: "Hugging Face Hub: snapshot_download, cache locations, revision locking, and disk-space management."
+description: 'Hugging Face Hub: snapshot_download, cache locations, revision locking, and disk-space
+  management.'
 ---
 
 # Hugging Face Hub: snapshot_download and Cache Management

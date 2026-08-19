@@ -1,6 +1,6 @@
 ---
 name: SakSee-heartmula
-description: "HeartMuLa: Suno-like song generation from lyrics + tags."
+description: 'HeartMuLa: Suno-like song generation from lyrics + tags.'
 ---
 
 # HeartMuLa - Open-Source Music Generation

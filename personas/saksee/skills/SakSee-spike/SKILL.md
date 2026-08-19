@@ -1,6 +1,7 @@
 ---
 name: SakSee-spike
-description: "Throwaway experiments to validate an idea before building."
+description: Throwaway experiments to validate an idea before building.
+...
 ---
 
 # Spike

@@ -1,6 +1,9 @@
 ---
 name: SakSee-SakThai-playwright-route-replay
-description: "Use Playwright route interception and HAR replay to run headless browser   automations offline against recorded network responses, enabling deterministic replay,   flaky-dependency isolation, and zero-network CI runs."
+description: Use Playwright route interception and HAR replay to run headless browser   automations
+  offline against recorded network responses, enabling deterministic replay,   flaky-dependency
+  isolation, and zero-network CI runs.
+...
 ---
 
 # Playwright Route Replay for Deterministic Browser Automation

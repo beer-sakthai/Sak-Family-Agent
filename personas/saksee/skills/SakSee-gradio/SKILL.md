@@ -1,6 +1,7 @@
 ---
 name: SakSee-gradio
-description: "Use when the user mentions Gradio, Spaces, demo, UI, web interface, or deploying an interactive demo for any SakThai model (context, vision, TTS). Phase: DEPLOY."
+description: 'Use when the user mentions Gradio, Spaces, demo, UI, web interface, or deploying
+  an interactive demo for any SakThai model (context, vision, TTS). Phase: DEPLOY.'
 ---
 
 # Gradio — SakThai Demo Spaces

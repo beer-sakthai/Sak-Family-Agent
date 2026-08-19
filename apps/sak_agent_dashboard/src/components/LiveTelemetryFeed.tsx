@@ -154,7 +154,8 @@ export function LiveTelemetryFeed() {
           <select
             value={selectedPersona}
             onChange={(e) => setSelectedPersona(e.target.value)}
-            className="bg-slate-800 text-slate-300 text-xs rounded-lg px-3 py-1.5 border border-slate-700 focus:outline-none focus:border-cyan-500"
+            aria-label="Filter by Persona"
+            className="bg-slate-800 text-slate-300 text-xs rounded-lg px-3 py-1.5 border border-slate-700 focus:outline-none focus:border-cyan-500 focus-visible:ring-2 focus-visible:ring-cyan-500"
           >
             <option value="">All Personas</option>
             {ALL_PERSONAS.map((p) => (
@@ -167,7 +168,8 @@ export function LiveTelemetryFeed() {
           {/* Pause / Resume Button */}
           <button
             onClick={togglePause}
-            className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs border border-slate-700 transition-colors"
+            aria-label={isPaused ? "Resume stream" : "Pause stream"}
+            className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs border border-slate-700 transition-colors focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:outline-none"
           >
             {isPaused ? (
               <Play className="h-3.5 w-3.5 text-emerald-400" />
@@ -180,7 +182,8 @@ export function LiveTelemetryFeed() {
           {/* Clear Feed */}
           <button
             onClick={clearEvents}
-            className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-rose-400 border border-slate-700 transition-colors"
+            aria-label="Clear Stream"
+            className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-rose-400 border border-slate-700 transition-colors focus-visible:ring-2 focus-visible:ring-rose-500 focus-visible:outline-none"
             title="Clear Stream"
           >
             <Trash2 className="h-4 w-4" />

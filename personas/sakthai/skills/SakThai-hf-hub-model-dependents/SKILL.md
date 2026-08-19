@@ -1,6 +1,7 @@
 ---
 name: SakThai-hf-hub-model-dependents
-description: "A skill for Hf Hub Model Dependents."
+description: A skill for Hf Hub Model Dependents.
+...
 ---
 
 # HF Hub Model Dependents API

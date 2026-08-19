@@ -1,6 +1,7 @@
 ---
 name: SakSit-youtube-content
-description: "YouTube transcripts to summaries, threads, blogs."
+description: YouTube transcripts to summaries, threads, blogs.
+...
 ---
 
 # YouTube Content Tool

@@ -1,6 +1,10 @@
 ---
 name: SakJules-claude-automation-recommender
-description: "Analyze a codebase and recommend Claude Code automations (hooks, subagents, skills, plugins, MCP servers). Use when user asks for automation recommendations, wants to optimize their Claude Code setup, mentions improving Claude Code workflows, asks ho"
+description: Analyze a codebase and recommend Claude Code automations (hooks, subagents, skills,
+  plugins, MCP servers). Use when user asks for automation recommendations, wants
+  to optimize their Claude Code setup, mentions improving Claude Code workflows, asks
+  ho
+...
 ---
 
 # Claude Automation Recommender

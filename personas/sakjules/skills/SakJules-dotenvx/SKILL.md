@@ -1,6 +1,8 @@
 ---
 name: SakJules-dotenvx
-description: "Use dotenvx to run commands with environment variables, manage multiple .env files, expand variables, and encrypt env files for safe commits and CI/CD."
+description: Use dotenvx to run commands with environment variables, manage multiple .env files,
+  expand variables, and encrypt env files for safe commits and CI/CD.
+...
 ---
 
 # dotenvx

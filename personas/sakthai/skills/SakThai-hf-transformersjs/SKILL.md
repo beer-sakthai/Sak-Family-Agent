@@ -1,13 +1,10 @@
 ---
 name: SakThai-hf-transformersjs
-author: SakThai
-license: MIT
-description: "Comprehensive reference for Hugging Face Transformers.js (v3.x) — running state-of-the-art ML models directly in the browser and Node.js via ONNX Runtime. Covers pipeline API, WebGPU acceleration, quantized models (q4/q8/fp16), supported tasks spanning NLP, CV, audio, and multimodal, custom usage patterns, React/Next.js/Vanilla JS integration, gated model access, and server-side audio processing."
-version: 1.0.0
-metadata:
-  hermes:
-    tags: [huggingface, transformers.js, javascript, web, browser, onnx, webgpu, inference]
-    category: productivity
+description: "Comprehensive reference for Hugging Face Transformers.js (v3.x) \u2014 running state-of-the-art\
+  \ ML models directly in the browser and Node.js via ONNX Runtime. Covers pipeline\
+  \ API, WebGPU acceleration, quantized models (q4/q8/fp16), supported tasks spanning\
+  \ NLP, CV, audio, and multimodal, custom usage patterns, React/Next.js/Vanilla JS\
+  \ integration, gated model access, and server-side audio processing."
 ---
 
 # SakThai-hf-transformersjs

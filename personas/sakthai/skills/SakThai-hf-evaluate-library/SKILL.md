@@ -1,15 +1,8 @@
 ---
 name: SakThai-hf-evaluate-library
-author: SakThai
-license: MIT
-description: "🤗 Evaluate: load, compute, and save ML metrics (accuracy, F1, BLEU, ROUGE, perplexity) and run evaluator pipelines for text classification, QA, summarization. Covers EvaluationSuite, custom metrics, Hub integration, and visualization."
-version: 1.0.0
-dependencies: [evaluate, transformers, datasets, numpy, pandas]
-platforms: [linux, macos]
-metadata:
-  hermes:
-    tags: [Hugging Face, Evaluate, Metrics, Evaluation, Benchmarking, Accuracy, F1, BLEU, ROUGE, Perplexity, Model Quality, NLP, CV, Reinforcement Learning]
-category: mlops
+description: "\U0001F917 Evaluate: load, compute, and save ML metrics (accuracy, F1, BLEU, ROUGE,\
+  \ perplexity) and run evaluator pipelines for text classification, QA, summarization.\
+  \ Covers EvaluationSuite, custom metrics, Hub integration, and visualization."
 ---
 
 # 🤗 Evaluate Library — Metrics, Evaluators & Suites

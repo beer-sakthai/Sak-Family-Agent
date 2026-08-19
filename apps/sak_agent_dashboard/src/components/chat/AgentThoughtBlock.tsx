@@ -31,7 +31,9 @@ export const AgentThoughtBlock: React.FC<AgentThoughtBlockProps> = ({
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="flex w-full items-center justify-between font-semibold focus:outline-none"
+        aria-expanded={isOpen}
+        aria-label={`Toggle ${personaName}'s reasoning process`}
+        className="flex w-full items-center justify-between font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-400 focus-visible:ring-offset-1 focus-visible:ring-offset-slate-950 rounded"
       >
         <span className="flex items-center gap-2">
           <span>🧠</span>
