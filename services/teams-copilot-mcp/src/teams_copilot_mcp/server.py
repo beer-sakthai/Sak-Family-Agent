@@ -107,20 +107,15 @@ def execute_raw(
 @mcp.tool()
 def list_channels(team_id: str) -> dict[str, Any]:
     """List channels in a Team."""
-    path = _resolve_path("/teams/{team_id}/channels", {"team_id": team_id})
-    return get_client().request("GET", path)
+    return get_client().request("GET", f"/teams/{team_id}/channels")
 
 
 @mcp.tool()
 def send_channel_message(team_id: str, channel_id: str, content: str) -> dict[str, Any]:
     """Post a message to a Teams channel. `content` may be plain text or HTML."""
-    path = _resolve_path(
-        "/teams/{team_id}/channels/{channel_id}/messages",
-        {"team_id": team_id, "channel_id": channel_id},
-    )
     return get_client().request(
         "POST",
-        path,
+        f"/teams/{team_id}/channels/{channel_id}/messages",
         json_body={"body": {"content": content}},
     )
 
@@ -128,10 +123,9 @@ def send_channel_message(team_id: str, channel_id: str, content: str) -> dict[st
 @mcp.tool()
 def list_calendar_events(user_id: str, top: int = 25) -> dict[str, Any]:
     """List upcoming calendar events for a user (by id or userPrincipalName)."""
-    path = _resolve_path("/users/{user_id}/calendar/events", {"user_id": user_id})
     return get_client().request(
         "GET",
-        path,
+        f"/users/{user_id}/calendar/events",
         params={"$top": top, "$orderby": "start/dateTime"},
     )
 
@@ -139,11 +133,10 @@ def list_calendar_events(user_id: str, top: int = 25) -> dict[str, Any]:
 @mcp.tool()
 def get_meeting_transcript(user_id: str, meeting_id: str, transcript_id: str) -> dict[str, Any]:
     """Fetch a Teams meeting transcript's content (VTT format)."""
-    path = _resolve_path(
-        "/users/{user_id}/onlineMeetings/{meeting_id}/transcripts/{transcript_id}/content",
-        {"user_id": user_id, "meeting_id": meeting_id, "transcript_id": transcript_id},
+    return get_client().request(
+        "GET",
+        f"/users/{user_id}/onlineMeetings/{meeting_id}/transcripts/{transcript_id}/content",
     )
-    return get_client().request("GET", path)
 
 
 @mcp.tool()
