@@ -374,16 +374,14 @@ export const SemanticCachePanel: React.FC = () => {
             <input
               type="text"
               placeholder="Filter prompt patterns..."
-              aria-label="Filter prompt patterns"
               value={filterQuery}
               onChange={(e) => setFilterQuery(e.target.value)}
-              className="bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+              className="bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1 text-xs text-slate-200 placeholder-slate-500 focus:outline-none"
             />
             <button
               onClick={() => void fetchCacheData()}
-              className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded border border-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+              className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded border border-slate-700"
               title="Refresh Cache"
-              aria-label="Refresh Cache"
             >
               <RefreshCw className="w-3.5 h-3.5" />
             </button>
@@ -416,9 +414,8 @@ export const SemanticCachePanel: React.FC = () => {
                 </span>
                 <button
                   onClick={() => handleInvalidate(entry.id)}
-                  className="p-1.5 text-slate-500 hover:text-rose-400 hover:bg-rose-950/40 rounded transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-500"
+                  className="p-1.5 text-slate-500 hover:text-rose-400 hover:bg-rose-950/40 rounded transition-colors"
                   title="Invalidate Cache Entry"
-                  aria-label={`Invalidate cache entry for ${entry.prompt}`}
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
