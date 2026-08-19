@@ -218,6 +218,16 @@ def _run_in_sandbox(
         "unscoped memory.db (unchanged pre-existing behavior)."
     ),
 )
+@click.option(
+    "--heal",
+    is_flag=True,
+    help=(
+        "Enable the self-healing supervisor: intercept provider/tool failures, "
+        "buffer them to the DLQ (~/.sakthai/recovery.db), isolate degraded "
+        "providers via a per-persona circuit breaker, and roll back memory on "
+        "state-corrupting errors. Also enabled by SAKTHAI_SELF_HEAL=1."
+    ),
+)
 def run(
     task: str,
     model: str,
@@ -235,6 +245,7 @@ def run(
     caveman: str | None,
     sandbox: bool,
     persona: str | None,
+    heal: bool,
 ) -> None:
     """Run TASK through the standalone SakThai agent.
 
