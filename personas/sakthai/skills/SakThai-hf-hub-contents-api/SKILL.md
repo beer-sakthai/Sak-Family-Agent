@@ -1,7 +1,11 @@
 ---
 name: SakThai-hf-hub-contents-api
+version: 1.0.0
 description: HuggingFace Hub Contents API endpoint details and usage patterns
-...
+author: SakThai
+license: MIT
+created: 2026-07-24
+category: mlops/huggingface-hub
 ---
 
 # HF Hub Contents API

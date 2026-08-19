@@ -1,8 +1,7 @@
 ---
 name: SakJules-test-driven-development
-description: 'TDD: enforce RED-GREEN-REFACTOR, tests before code.'
+description: "TDD: enforce RED-GREEN-REFACTOR, tests before code."
 ---
-
 # Test-Driven Development (TDD)
 
 ## Overview

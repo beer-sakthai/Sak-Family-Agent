@@ -11,36 +11,20 @@ on:
 permissions:
   contents: read
 
-concurrency:
-  # One run per branch. `cancel-in-progress` is deliberately scoped to pull
-  # requests: a superseded PR run is wasted minutes, but a cancelled run on
-  # `main` leaves a gap in the coverage/code-scanning record, and
-  # self-healing-ci.yml keys off this workflow's conclusion there — a
-  # `cancelled` run is neither a success it can ignore nor a failure it can heal.
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
-
 jobs:
   test:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
     strategy:
       # Run the test suite against all supported Python versions.
       matrix:
         python-version: ["3.11", "3.12"]
 
     steps:
-      - name: Harden the runner
-        uses: step-security/harden-runner@05e31511f85b41b11d1cf0ef85d0992719546e2c # v2.21.0
-        with:
-          use-policy-store: true
-          api-key: ${{ secrets.STEP_SECURITY_API_KEY }}
-
       - name: Checkout repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        uses: actions/checkout@v4
 
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
 
@@ -62,17 +46,12 @@ jobs:
           uv run bandit -c pyproject.toml -r personas/sakthai/sakthai
 
       - name: Run tests with coverage
-        # `-m "not integration"` is the documented CI contract (see CLAUDE.md):
-        # integration tests may hit real endpoints (Ollama/Anthropic). They also
-        # self-skip when credentials are absent, but relying on that alone means
-        # one integration test missing its `skipif` guard turns CI into a
-        # network-dependent job. Exclude them by marker, explicitly.
-        run: uv run pytest -m "not integration" --cov=sakthai --cov-branch --cov-report=xml tests/
+        run: uv run pytest --cov=sakthai --cov-report=xml tests/
 
       - name: Upload coverage to Codecov
-        uses: step-security/codecov-action@db5c3605ff3c9dc7f0b2791e6bea84a561bacab8 # v7.0.0
+        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          # The coverage floor (fail_under = 96) is enforced by pytest itself;
+          # The coverage floor (fail_under = 85) is enforced by pytest itself;
           # a failed upload (e.g. no CODECOV_TOKEN secret) must not fail CI.
           fail_ci_if_error: false

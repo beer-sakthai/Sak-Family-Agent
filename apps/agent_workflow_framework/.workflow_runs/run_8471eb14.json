@@ -1,0 +1,42 @@
+{
+  "run_id": "run_8471eb14",
+  "workflow_name": "parallel_wf",
+  "status": "COMPLETED",
+  "start_time": "2026-08-02T13:53:05.924691",
+  "end_time": "2026-08-02T13:53:05.932846",
+  "step_results": {
+    "root": {
+      "step_id": "root",
+      "status": "COMPLETED",
+      "output": {
+        "seed": 10
+      },
+      "error": null,
+      "attempts": 1,
+      "start_time": "2026-08-02T13:53:05.932596",
+      "end_time": "2026-08-02T13:53:05.932650"
+    },
+    "b1": {
+      "step_id": "b1",
+      "status": "COMPLETED",
+      "output": {
+        "v": 1
+      },
+      "error": null,
+      "attempts": 1,
+      "start_time": "2026-08-02T13:53:05.932751",
+      "end_time": "2026-08-02T13:53:05.932771"
+    },
+    "b2": {
+      "step_id": "b2",
+      "status": "COMPLETED",
+      "output": {
+        "v": 2
+      },
+      "error": null,
+      "attempts": 1,
+      "start_time": "2026-08-02T13:53:05.932794",
+      "end_time": "2026-08-02T13:53:05.932810"
+    }
+  }
+}

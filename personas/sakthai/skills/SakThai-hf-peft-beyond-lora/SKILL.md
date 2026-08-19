@@ -1,8 +1,10 @@
 ---
 name: SakThai-hf-peft-beyond-lora
-description: "Comprehensive deep-dive into PEFT methods beyond LoRA \u2014 OFT, BOFT, BEFT, Lily,\
-  \ VeRA, GraLoRA, LoRA-FA, rs-LoRA, DoRA, and adapter conversion \u2014 based on\
-  \ HF PEFT Benchmark results and the official \"Beyond LoRA\" blog post"
+version: 1.0.0
+author: SakThai
+license: MIT
+description: Comprehensive deep-dive into PEFT methods beyond LoRA — OFT, BOFT, BEFT, Lily, VeRA, GraLoRA, LoRA-FA, rs-LoRA, DoRA, and adapter conversion — based on HF PEFT Benchmark results and the official "Beyond LoRA" blog post
+category: mlops
 ---
 
 # HF PEFT — Beyond LoRA: Advanced Methods & Benchmarking

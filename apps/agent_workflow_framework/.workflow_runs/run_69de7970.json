@@ -1,0 +1,69 @@
+{
+  "run_id": "run_69de7970",
+  "workflow_name": "mutation_workflow",
+  "status": "FAILED",
+  "start_time": "2026-08-02T13:52:55.890661",
+  "end_time": "2026-08-02T13:52:55.901312",
+  "step_results": {
+    "step_init_data": {
+      "step_id": "step_init_data",
+      "status": "COMPLETED",
+      "output": {
+        "user": {
+          "name": "alice",
+          "role": "admin",
+          "score": 50
+        },
+        "tags": [
+          "alpha",
+          "beta"
+        ]
+      },
+      "error": null,
+      "attempts": 1,
+      "start_time": "2026-08-02T13:52:55.900659",
+      "end_time": "2026-08-02T13:52:55.900766"
+    },
+    "step_mutate_user": {
+      "step_id": "step_mutate_user",
+      "status": "COMPLETED",
+      "output": {
+        "user_obj": {
+          "name": "alice",
+          "role": "admin",
+          "score": 50
+        },
+        "score_boost": 50,
+        "new_role": "super_admin"
+      },
+      "error": null,
+      "attempts": 1,
+      "start_time": "2026-08-02T13:52:55.900941",
+      "end_time": "2026-08-02T13:52:55.901029"
+    },
+    "step_mutate_tags": {
+      "step_id": "step_mutate_tags",
+      "status": "COMPLETED",
+      "output": {
+        "tags_list": [
+          "alpha",
+          "beta"
+        ],
+        "add_tag": "gamma"
+      },
+      "error": null,
+      "attempts": 1,
+      "start_time": "2026-08-02T13:52:55.901069",
+      "end_time": "2026-08-02T13:52:55.901109"
+    },
+    "step_aggregate_mutation": {
+      "step_id": "step_aggregate_mutation",
+      "status": "FAILED",
+      "output": {},
+      "error": "Key 'updated_user' (path 'updated_user') not found in step 'step_mutate_user' output.",
+      "attempts": 1,
+      "start_time": "2026-08-02T13:52:55.901213",
+      "end_time": "2026-08-02T13:52:55.901268"
+    }
+  }
+}

@@ -1,0 +1,55 @@
+{
+  "run_id": "run_db18996c",
+  "workflow_name": "parallel_workflow",
+  "status": "COMPLETED",
+  "start_time": "2026-08-02T13:53:24.533446",
+  "end_time": "2026-08-02T13:53:24.542409",
+  "step_results": {
+    "step_root": {
+      "step_id": "step_root",
+      "status": "COMPLETED",
+      "output": {
+        "seed": 100,
+        "status": "initialized"
+      },
+      "error": null,
+      "attempts": 1,
+      "start_time": "2026-08-02T13:53:24.541546",
+      "end_time": "2026-08-02T13:53:24.541658"
+    },
+    "step_branch_a": {
+      "step_id": "step_branch_a",
+      "status": "COMPLETED",
+      "output": {
+        "result": 200
+      },
+      "error": null,
+      "attempts": 1,
+      "start_time": "2026-08-02T13:53:24.541891",
+      "end_time": "2026-08-02T13:53:24.541960"
+    },
+    "step_branch_b": {
+      "step_id": "step_branch_b",
+      "status": "COMPLETED",
+      "output": {
+        "result": 150
+      },
+      "error": null,
+      "attempts": 1,
+      "start_time": "2026-08-02T13:53:24.542008",
+      "end_time": "2026-08-02T13:53:24.542054"
+    },
+    "step_join": {
+      "step_id": "step_join",
+      "status": "COMPLETED",
+      "output": {
+        "combined_val": 350,
+        "result": 350
+      },
+      "error": null,
+      "attempts": 1,
+      "start_time": "2026-08-02T13:53:24.542203",
+      "end_time": "2026-08-02T13:53:24.542326"
+    }
+  }
+}

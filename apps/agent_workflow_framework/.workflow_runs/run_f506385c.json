@@ -1,0 +1,20 @@
+{
+  "run_id": "run_f506385c",
+  "workflow_name": "delay_retry",
+  "status": "COMPLETED",
+  "start_time": "2026-08-02T13:55:34.289696",
+  "end_time": "2026-08-02T13:55:34.347929",
+  "step_results": {
+    "flaky": {
+      "step_id": "flaky",
+      "status": "COMPLETED",
+      "output": {
+        "result": "recovered"
+      },
+      "error": null,
+      "attempts": 2,
+      "start_time": "2026-08-02T13:55:34.297237",
+      "end_time": "2026-08-02T13:55:34.347815"
+    }
+  }
+}

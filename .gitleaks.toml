@@ -18,6 +18,12 @@ paths = [
   '''^security/.*\.md$''',
   # Backup archives bundled by the HF Learn cron — not real secrets.
   '''\.curator_backups/''',
+  # Archived, retired-repo content preserved for reference during the
+  # 2026-08-01 skills-repo migration — not live secrets. The
+  # generic-api-key rule false-positives on ordinary prose describing
+  # "S3-compatible API" in these files; manually verified clean before
+  # archiving (see the migration commit message).
+  '''^migrated-repos-archive/''',
 ]
 regexes = [
   # Documentation placeholders like `sk-xxxxxxxxxxxxxxxx`.

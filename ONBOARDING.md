@@ -1,4 +1,4 @@
-# Welcome to Sak Family
+# Welcome to [Team Name]
 
 ## How We Use Claude
 

@@ -9,157 +9,251 @@ import {
   SessionTranscript,
   AuditSeverity,
   SessionMessage,
-  DataSource,
 } from "./types";
-import { PERSONAS, UNATTRIBUTED, personaName, resolvePersonaSlug } from "./personas";
 
 const SAKTHAI_DIR = process.env.SAKTHAI_DIR || path.join(os.homedir(), ".sakthai");
 const EVAL_FILE = path.join(SAKTHAI_DIR, "eval.jsonl");
 const AUDIT_FILE = path.join(SAKTHAI_DIR, "audit.log");
 const SESSIONS_DIR = path.join(SAKTHAI_DIR, "sessions");
 
-/**
- * Demo generators live in `lib/demoData.ts` so the client shell can import the
- * same figures without pulling `fs` into the browser bundle. Re-exported here
- * to keep the existing `@/lib/sakthai` import sites working.
- */
-import {
-  getDemoAgents,
-  getDemoMetrics,
-  getDemoAuditLogs,
-  getDemoSessions,
-  DEMO_TOTAL_RUNS,
-} from "./demoData";
+const DEFAULT_PERSONAS: Array<Omit<AgentPersona, "runs" | "latencyMs">> = [
+  {
+    name: "SakThai",
+    role: "Primary Orchestrator",
+    status: "Active",
+    model: "sakthai-v2",
+    skills: ["routing", "planning", "evaluation"],
+    badge: "Primary",
+    benchmarkScore: 0.96,
+  },
+  {
+    name: "SakKing",
+    role: "Reasoning Specialist",
+    status: "Ready",
+    model: "sakking-v1",
+    skills: ["reasoning", "math-proof", "logic"],
+    badge: "Reasoning",
+    benchmarkScore: 0.94,
+  },
+  {
+    name: "SakSee",
+    role: "Multimodal Specialist",
+    status: "Ready",
+    model: "saksee-v1",
+    skills: ["vision", "multimodal", "ocr"],
+    badge: "Vision",
+    benchmarkScore: 0.91,
+  },
+  {
+    name: "SakSit",
+    role: "Security Auditor",
+    status: "Ready",
+    model: "saksit-v1",
+    skills: ["audit", "vulnerability-scan", "sandbox"],
+    badge: "Security",
+    benchmarkScore: 0.98,
+  },
+  {
+    name: "SakJules",
+    role: "Async Specialist",
+    status: "Ready",
+    model: "sakjules-v1",
+    skills: ["async-tasks", "cron-execution", "background"],
+    badge: "Async",
+    benchmarkScore: 0.92,
+  },
+];
 
-export { getDemoAgents, getDemoMetrics, getDemoAuditLogs, getDemoSessions, DEMO_TOTAL_RUNS };
+function getPersonaIndexForRun(entry: any, index: number): number {
+  if (entry.persona) {
+    const pName = String(entry.persona).toLowerCase();
+    if (pName.includes("thai")) return 0;
+    if (pName.includes("king")) return 1;
+    if (pName.includes("see")) return 2;
+    if (pName.includes("sit")) return 3;
+    if (pName.includes("jules")) return 4;
+  }
+  if (entry.model) {
+    const mName = String(entry.model).toLowerCase();
+    if (mName.includes("claude") || mName.includes("sakthai")) return 0;
+    if (mName.includes("gpt") || mName.includes("sakking")) return 1;
+    if (mName.includes("gemini") || mName.includes("saksee")) return 2;
+    if (mName.includes("llama") || mName.includes("saksit")) return 3;
+    if (mName.includes("qwen") || mName.includes("sakjules")) return 4;
+  }
+  return index % 5;
+}
 
-/** The synthetic row shown when runs cannot be attributed to any persona. */
-function unattributedRow(runs: number, latencyMs: number): AgentPersona {
+export function getDemoAgents(): AgentPersona[] {
+  const demoRuns = [300, 150, 120, 91, 100];
+  const demoLatencies = [320, 540, 410, 290, 380];
+  return DEFAULT_PERSONAS.map((p, idx) => ({
+    ...p,
+    runs: demoRuns[idx],
+    latencyMs: demoLatencies[idx],
+  }));
+}
+
+export function getDemoMetrics(): MetricsData {
   return {
-    slug: UNATTRIBUTED,
-    name: "Unattributed",
-    role: "Runs with no persona field",
-    status: "Unknown",
-    model: "\u2014",
-    runs,
-    latencyMs,
-    skills: [],
-    badge: "Unattributed",
-    unattributed: true,
+    totalRuns: 761,
+    avgLatencyMs: 388,
+    successRate: 0.985,
+    tokenStats: {
+      totalTokens: 1450000,
+      promptTokens: 950000,
+      completionTokens: 500000,
+    },
+    stopReasons: {
+      end_turn: 740,
+      max_tokens: 21,
+    },
+    trends: [
+      { date: "2026-07-27", runs: 95, latencyMs: 375 },
+      { date: "2026-07-28", runs: 110, latencyMs: 390 },
+      { date: "2026-07-29", runs: 125, latencyMs: 380 },
+      { date: "2026-07-30", runs: 140, latencyMs: 400 },
+      { date: "2026-07-31", runs: 130, latencyMs: 385 },
+      { date: "2026-08-01", runs: 161, latencyMs: 388 },
+    ],
   };
 }
 
-export interface AgentOverviewResult {
-  agents: AgentPersona[];
-  dataSource: DataSource;
-  /** Runs in eval.jsonl that carried no usable persona field. */
-  unattributedRuns: number;
+export function getDemoAuditLogs(): AuditLog[] {
+  return [
+    {
+      id: 1,
+      timestamp: "2026-08-02T12:00:00Z",
+      persona: "SakSit",
+      severity: "info",
+      event: "Security scan completed",
+      details: "Memory and process execution boundaries verified.",
+    },
+    {
+      id: 2,
+      timestamp: "2026-08-02T11:30:00Z",
+      persona: "SakSit",
+      severity: "warning",
+      event: "Unusual token consumption",
+      details: "Session sess-042 exceeded token budget threshold.",
+    },
+    {
+      id: 3,
+      timestamp: "2026-08-02T10:15:00Z",
+      persona: "SakSit",
+      severity: "critical",
+      event: "Symlink boundary check",
+      details: "Prevented access outside sandbox.",
+    },
+    {
+      id: 4,
+      timestamp: "2026-08-02T09:00:00Z",
+      persona: "SakThai",
+      severity: "info",
+      event: "Session dispatch",
+      details: "Orchestrated task execution across subagents.",
+    },
+  ];
 }
 
-export async function getAgentOverview(demo?: boolean): Promise<AgentOverviewResult> {
-  if (demo) {
-    return { agents: getDemoAgents(), dataSource: "demo", unattributedRuns: 0 };
-  }
+export function getDemoSessions(): SessionMeta[] {
+  const personas = ["SakThai", "SakKing", "SakSee", "SakSit", "SakJules"];
+  const sessions: SessionMeta[] = [];
+  const total = 761;
+  const demoDistribution = [300, 150, 120, 91, 100];
 
-  if (!fs.existsSync(EVAL_FILE)) {
-    // The source simply is not there. Reporting "unavailable" rather than
-    // silently serving demo data is what stops an empty machine from looking
-    // identical to a busy one.
-    return { agents: getDemoAgents(), dataSource: "unavailable", unattributedRuns: 0 };
-  }
-
-  try {
-    const fileContent = fs.readFileSync(EVAL_FILE, "utf8");
-    const lines = fileContent.split("\n").filter((l) => l.trim().length > 0);
-
-    // An existing but empty eval.jsonl is a live read of zero runs, not a
-    // missing source — fall through and report the roster with zero counts.
-
-    const stats = new Map<string, { runs: number; totalLatencyMs: number }>();
-    for (const p of PERSONAS) stats.set(p.slug, { runs: 0, totalLatencyMs: 0 });
-    stats.set(UNATTRIBUTED, { runs: 0, totalLatencyMs: 0 });
-
-    for (const line of lines) {
-      let entry: Record<string, unknown>;
-      try {
-        entry = JSON.parse(line);
-      } catch {
-        continue; // Safe skip on corrupt line.
-      }
-      // No index fallback: an entry we cannot attribute goes to the
-      // unattributed bucket rather than being assigned to a persona at random.
-      const slug = resolvePersonaSlug(entry) ?? UNATTRIBUTED;
-      const bucket = stats.get(slug);
-      if (!bucket) continue;
-      bucket.runs += 1;
-      const rawLatency = Number(entry.latency_s ?? entry.latencyMs ?? 0);
-      bucket.totalLatencyMs += Math.round(
-        Number.isFinite(rawLatency) ? rawLatency * 1000 : 0
-      );
+  let pIdx = 0;
+  let pCount = 0;
+  for (let i = 1; i <= total; i++) {
+    if (pCount >= demoDistribution[pIdx] && pIdx < 4) {
+      pIdx++;
+      pCount = 0;
     }
-
-    const agents: AgentPersona[] = PERSONAS.map((p) => {
-      const s = stats.get(p.slug)!;
-      return {
-        slug: p.slug,
-        name: p.name,
-        role: p.role,
-        // Status reflects observed activity, not a hard-coded literal.
-        status: s.runs > 0 ? "Active" : "Idle",
-        model: p.model,
-        provider: p.provider,
-        skills: [...p.skills],
-        badge: p.badge,
-        runs: s.runs,
-        latencyMs: s.runs > 0 ? Math.round(s.totalLatencyMs / s.runs) : 0,
-        // benchmarkScore is deliberately omitted: eval.jsonl carries no
-        // benchmark, and the previous code spread a hard-coded score into the
-        // live path where it read as measured.
-      };
+    pCount++;
+    const persona = personas[pIdx];
+    const padded = String(i).padStart(3, "0");
+    sessions.push({
+      sessionId: `sess-${padded}`,
+      persona,
+      timestamp: "2026-08-02T10:00:00Z",
+      messageCount: 12,
+      tokenUsage: 4500,
+      status: i % 50 === 0 ? "failed" : "completed",
     });
-
-    const un = stats.get(UNATTRIBUTED)!;
-    if (un.runs > 0) {
-      agents.push(
-        unattributedRow(un.runs, Math.round(un.totalLatencyMs / un.runs))
-      );
-    }
-
-    return { agents, dataSource: "live", unattributedRuns: un.runs };
-  } catch {
-    return { agents: getDemoAgents(), dataSource: "demo", unattributedRuns: 0 };
   }
+  return sessions;
 }
 
-export interface MetricsResult {
-  metrics: MetricsData;
-  dataSource: DataSource;
-}
-
-const EMPTY_METRICS: MetricsData = {
-  totalRuns: 0,
-  avgLatencyMs: 0,
-  successRate: 0,
-  tokenStats: { totalTokens: 0, promptTokens: 0, completionTokens: 0 },
-  stopReasons: {},
-  trends: [],
-};
-
-export async function getMetricsSummary(demo?: boolean): Promise<MetricsResult> {
+export async function getAgentOverview(demo?: boolean): Promise<AgentPersona[]> {
   if (demo) {
-    return { metrics: getDemoMetrics(), dataSource: "demo" };
-  }
-
-  if (!fs.existsSync(EVAL_FILE)) {
-    return { metrics: getDemoMetrics(), dataSource: "unavailable" };
+    return getDemoAgents();
   }
 
   try {
+    if (!fs.existsSync(EVAL_FILE)) {
+      return getDemoAgents();
+    }
+
     const fileContent = fs.readFileSync(EVAL_FILE, "utf8");
     const lines = fileContent.split("\n").filter((l) => l.trim().length > 0);
 
     if (lines.length === 0) {
-      return { metrics: { ...EMPTY_METRICS }, dataSource: "live" };
+      return getDemoAgents();
+    }
+
+    const personaStats = DEFAULT_PERSONAS.map((p) => ({
+      ...p,
+      runs: 0,
+      totalLatencyMs: 0,
+    }));
+
+    lines.forEach((line, index) => {
+      try {
+        const entry = JSON.parse(line);
+        const idx = getPersonaIndexForRun(entry, index);
+        personaStats[idx].runs += 1;
+        const latencyMs = Math.round((entry.latency_s || entry.latencyMs || 0.3) * 1000);
+        personaStats[idx].totalLatencyMs += latencyMs;
+      } catch {
+        // Safe skip on corrupt line
+      }
+    });
+
+    return personaStats.map((p) => {
+      const avgLatencyMs = p.runs > 0 ? Math.round(p.totalLatencyMs / p.runs) : 0;
+      const { totalLatencyMs, ...rest } = p;
+      return {
+        ...rest,
+        latencyMs: avgLatencyMs,
+      };
+    });
+  } catch {
+    return getDemoAgents();
+  }
+}
+
+export async function getMetricsSummary(demo?: boolean): Promise<MetricsData> {
+  if (demo) {
+    return getDemoMetrics();
+  }
+
+  try {
+    if (!fs.existsSync(EVAL_FILE)) {
+      return getDemoMetrics();
+    }
+
+    const fileContent = fs.readFileSync(EVAL_FILE, "utf8");
+    const lines = fileContent.split("\n").filter((l) => l.trim().length > 0);
+
+    if (lines.length === 0) {
+      return {
+        totalRuns: 0,
+        avgLatencyMs: 0,
+        successRate: 0,
+        tokenStats: { totalTokens: 0, promptTokens: 0, completionTokens: 0 },
+        stopReasons: {},
+        trends: [],
+      };
     }
 
     let totalRuns = 0;
@@ -203,7 +297,14 @@ export async function getMetricsSummary(demo?: boolean): Promise<MetricsResult> 
     });
 
     if (totalRuns === 0) {
-      return { metrics: { ...EMPTY_METRICS }, dataSource: "live" };
+      return {
+        totalRuns: 0,
+        avgLatencyMs: 0,
+        successRate: 0,
+        tokenStats: { totalTokens: 0, promptTokens: 0, completionTokens: 0 },
+        stopReasons: {},
+        trends: [],
+      };
     }
 
     const avgLatencyMs = Math.round(totalLatencyMs / totalRuns);
@@ -219,34 +320,26 @@ export async function getMetricsSummary(demo?: boolean): Promise<MetricsResult> 
       }));
 
     return {
-      metrics: {
-        totalRuns,
-        avgLatencyMs,
-        successRate,
-        tokenStats: {
-          totalTokens,
-          promptTokens,
-          completionTokens,
-        },
-        stopReasons,
-        trends,
+      totalRuns,
+      avgLatencyMs,
+      successRate,
+      tokenStats: {
+        totalTokens,
+        promptTokens,
+        completionTokens,
       },
-      dataSource: "live",
+      stopReasons,
+      trends,
     };
   } catch {
-    return { metrics: getDemoMetrics(), dataSource: "demo" };
+    return getDemoMetrics();
   }
-}
-
-export interface AuditLogsResult {
-  logs: AuditLog[];
-  dataSource: DataSource;
 }
 
 export async function getAuditLogs(
   demo?: boolean,
   severityFilter?: string
-): Promise<AuditLogsResult> {
+): Promise<AuditLog[]> {
   const validSeverities: AuditSeverity[] = ["info", "warning", "error", "critical"];
 
   const parseSeverity = (raw: string): AuditSeverity => {
@@ -258,16 +351,10 @@ export async function getAuditLogs(
   };
 
   let logs: AuditLog[] = [];
-  let dataSource: DataSource;
 
-  if (demo) {
+  if (demo || !fs.existsSync(AUDIT_FILE)) {
     logs = getDemoAuditLogs();
-    dataSource = "demo";
-  } else if (!fs.existsSync(AUDIT_FILE)) {
-    logs = getDemoAuditLogs();
-    dataSource = "unavailable";
   } else {
-    dataSource = "live";
     try {
       const fileContent = fs.readFileSync(AUDIT_FILE, "utf8");
       const lines = fileContent.split("\n").filter((l) => l.trim().length > 0);
@@ -308,7 +395,6 @@ export async function getAuditLogs(
       });
     } catch {
       logs = getDemoAuditLogs();
-      dataSource = "demo";
     }
   }
 
@@ -320,7 +406,7 @@ export async function getAuditLogs(
     // Note: If severityFilter is invalid (e.g. "INVALID_SEVERITY_LEVEL"), return all logs unchanged per spec/tests
   }
 
-  return { logs, dataSource };
+  return logs;
 }
 
 export async function getSessionTranscripts(options?: {
@@ -329,25 +415,17 @@ export async function getSessionTranscripts(options?: {
   limit?: number;
   offset?: number;
   id?: string;
-}): Promise<{
-  sessions: SessionMeta[];
-  total: number;
-  detail?: SessionTranscript;
-  dataSource: DataSource;
-}> {
-  const limit = Math.min(100, Math.max(1, Math.floor(options?.limit ?? 20)));
-  const offset = Math.max(0, Math.floor(options?.offset ?? 0));
+}): Promise<{ sessions: SessionMeta[]; total: number; detail?: SessionTranscript }> {
+  let limit = Math.max(1, Math.floor(options?.limit ?? 20));
+  let offset = Math.max(0, Math.floor(options?.offset ?? 0));
   const search = options?.search ? options.search.trim().toLowerCase() : "";
   const targetId = options?.id ? options.id.trim() : null;
 
   let allSessions: SessionTranscript[] = [];
-  let dataSource: DataSource;
 
-  const sessionsDirMissing = !fs.existsSync(SESSIONS_DIR);
-  if (options?.demo || sessionsDirMissing) {
-    dataSource = options?.demo ? "demo" : "unavailable";
+  if (options?.demo || !fs.existsSync(SESSIONS_DIR)) {
     const demoMetas = getDemoSessions();
-    allSessions = demoMetas.map((m: SessionMeta) => ({
+    allSessions = demoMetas.map((m) => ({
       ...m,
       task: `Demo Task for ${m.sessionId}`,
       model: "sakthai-v2",
@@ -358,7 +436,6 @@ export async function getSessionTranscripts(options?: {
       result: { text: "Task completed", iterations: 1, stop_reason: "end_turn" },
     }));
   } else {
-    dataSource = "live";
     try {
       const files = fs.readdirSync(SESSIONS_DIR).filter((f) => f.endsWith(".json"));
       const loaded: SessionTranscript[] = [];
@@ -368,11 +445,9 @@ export async function getSessionTranscripts(options?: {
           const content = fs.readFileSync(path.join(SESSIONS_DIR, file), "utf8");
           const json = JSON.parse(content);
           const sessionId = json.sessionId || file.replace(".json", "");
-          // Same rule as the eval aggregation: only an explicit persona field
-          // attributes a session. A transcript without one is labelled
-          // "Unattributed" rather than assigned to a persona by file order.
-          const slug = resolvePersonaSlug(json);
-          const persona = slug ? personaName(slug) : "Unattributed";
+          const personaIndex = getPersonaIndexForRun(json, idx);
+          const personaNames = ["SakThai", "SakKing", "SakSee", "SakSit", "SakJules"];
+          const persona = json.persona || personaNames[personaIndex];
 
           const inputTok = json.usage?.input_tokens || 0;
           const outputTok = json.usage?.output_tokens || 0;
@@ -409,8 +484,7 @@ export async function getSessionTranscripts(options?: {
       allSessions = loaded;
     } catch {
       const demoMetas = getDemoSessions();
-      allSessions = demoMetas.map((m: SessionMeta) => ({ ...m }));
-      dataSource = "demo";
+      allSessions = demoMetas.map((m) => ({ ...m }));
     }
   }
 
@@ -441,7 +515,6 @@ export async function getSessionTranscripts(options?: {
       sessions: [],
       total,
       detail,
-      dataSource,
     };
   }
 
@@ -458,6 +531,5 @@ export async function getSessionTranscripts(options?: {
     sessions: page,
     total,
     detail,
-    dataSource,
   };
 }

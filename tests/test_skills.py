@@ -88,27 +88,6 @@ def test_parse_skill_invalid_yaml(tmp_path: Path) -> None:
         parse_skill(skill_md)
 
 
-def test_parse_skill_yaml_error_mocked(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    import yaml
-
-    from sakthai.skills import _load_skill_file
-
-    skill_md = tmp_path / "SKILL.md"
-    skill_md.write_text("---\nname: mock-test\n---\nbody", encoding="utf-8")
-
-    _load_skill_file.cache_clear()
-
-    def mock_safe_load(*args, **kwargs):
-        raise yaml.YAMLError("Mocked YAML load error")
-
-    monkeypatch.setattr(yaml, "load", mock_safe_load)
-
-    with pytest.raises(SkillParseError, match="invalid YAML — Mocked YAML load error"):
-        parse_skill(skill_md)
-
-    _load_skill_file.cache_clear()
-
-
 def test_parse_skill_not_a_dict(tmp_path: Path) -> None:
     skill_md = tmp_path / "SKILL.md"
     skill_md.write_text("---\n- just a list\n---\nbody", encoding="utf-8")

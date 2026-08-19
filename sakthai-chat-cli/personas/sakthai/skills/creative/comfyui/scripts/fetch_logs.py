@@ -40,14 +40,17 @@ def fetch_history_entry(host: str, headers: dict, prompt_id: str, *, is_cloud: b
         if r.status == 200:
             try:
                 return {"ok": True, "entry": r.json(), "source": "/api/jobs"}
-            except (json.JSONDecodeError, ValueError) as e:
+            except json.JSONDecodeError:
+                pass
+            except ValueError as e:
                 log(f"Failed to parse /jobs JSON: {e}")
         # Fallback to history_v2
         url = resolve_url(host, f"/history/{prompt_id}", is_cloud=True)
         r = http_get(url, headers=headers, retries=2, timeout=30)
         try:
             data = r.json()
-        except (json.JSONDecodeError, ValueError) as e:
+        except json.JSONDecodeError:
+        except ValueError as e:
             log(f"Failed to parse /history_v2 JSON: {e}")
             data = None
         if r.status == 200 and data:
@@ -60,7 +63,8 @@ def fetch_history_entry(host: str, headers: dict, prompt_id: str, *, is_cloud: b
         return {"ok": False, "http_status": r.status, "body": r.text()[:500]}
     try:
         data = r.json()
-    except (json.JSONDecodeError, ValueError) as e:
+    except json.JSONDecodeError:
+    except ValueError as e:
         log(f"Failed to parse /history JSON: {e}")
         return {"ok": False, "reason": "non-JSON response"}
     if not isinstance(data, dict) or prompt_id not in data:
@@ -74,7 +78,8 @@ def fetch_queue(host: str, headers: dict) -> dict:
     r = http_get(url, headers=headers, retries=2, timeout=15)
     try:
         data = r.json()
-    except (json.JSONDecodeError, ValueError) as e:
+    except json.JSONDecodeError:
+    except ValueError as e:
         log(f"Failed to parse /queue JSON: {e}")
         data = {"raw": r.text()[:500]}
     return {"http_status": r.status, "data": data}

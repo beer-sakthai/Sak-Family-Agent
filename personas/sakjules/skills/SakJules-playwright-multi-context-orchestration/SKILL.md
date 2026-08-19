@@ -1,9 +1,6 @@
 ---
 name: SakJules-SakThai-playwright-multi-context-orchestration
-description: Advanced Playwright skill for orchestrating multiple browser contexts   within a single
-  test. Use this when you need to verify cross-user interactions,   multi-tenant isolation,
-  real-time collaboration, or any scenario requiring two or   more indepen
-...
+description: "Advanced Playwright skill for orchestrating multiple browser contexts   within a single test. Use this when you need to verify cross-user interactions,   multi-tenant isolation, real-time collaboration, or any scenario requiring two or   more indepen"
 ---
 
 ## Prerequisites

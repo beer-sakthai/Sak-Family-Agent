@@ -12,11 +12,10 @@ import sqlite3
 from pathlib import Path
 from typing import Any
 
-# A regex for common API key prefixes (sk-, rk-, pk-, ck-, ghp-, hf-, github_pat-, xoxb-, xoxp-, xapp-, xoxr-), Google keys (AIza),
+# A regex for common API key prefixes (sk-, rk-, pk-, ghp-, hf-, github_pat-), Google keys (AIza),
 # Telegram bot tokens (123456789:ABC...), and AWS Access Key IDs (AKIA/ASIA).
 # Handles both underscore (sk_) and hyphen (sk-) used by Anthropic, OpenAI, and HF.
-# Updated to catch Stripe consumer keys (ck_ prefix) and Slack tokens (xoxb/xoxp/xapp/xoxr).
-SECRET_PATTERN = r"\b(?:(?:sk|rk|pk|ck|ghp|hf|github_pat|xoxb|xoxp|xapp|xoxr)[-_][a-zA-Z0-9\-_]{20,}|AIza[0-9A-Za-z\-_]{34,}|[0-9]{8,12}:[a-zA-Z0-9_-]{35,}|(?:AKIA|ASIA)[A-Z0-9]{16})\b"  # nosec B105
+SECRET_PATTERN = r"\b(?:(?:sk|rk|pk|ghp|hf|github_pat)[-_][a-zA-Z0-9\-_]{20,}|AIza[0-9A-Za-z\-_]{34,}|[0-9]{8,12}:[a-zA-Z0-9_-]{35,}|(?:AKIA|ASIA)[A-Z0-9]{16})\b"  # nosec B105
 _SECRET_RE = re.compile(SECRET_PATTERN)
 
 # Multiline regex pattern to detect PEM private key blocks.
@@ -377,11 +376,6 @@ def check_env() -> dict[str, Any]:
 # Extra values to be redacted (e.g. tokens loaded from disk), populated via register_secret.
 _EXTRA_SECRETS: set[str] = set()
 
-# Global cache for exact secrets to avoid rebuilding/sorting and env queries on every call
-_cached_exact_secrets_list: list[str] = []
-_cached_env_values: dict[str, str | None] = {}
-_secrets_dirty: bool = True
-
 
 def register_secret(secret: str) -> None:
     """Register a value to be masked by redact_secrets.
@@ -389,19 +383,19 @@ def register_secret(secret: str) -> None:
     Used by the auth layer to register tokens loaded from disk so they are
     redacted even if they aren't in the environment.
     """
-    global _secrets_dirty
     if isinstance(secret, str) and len(secret) > 5:
         _EXTRA_SECRETS.add(secret)
-        _secrets_dirty = True
 
 
-def _get_exact_secrets() -> list[str]:
-    """Retrieve the sorted list of exact secrets from cache or environment.
+def redact_secrets(text: str) -> str:
+    """Redact sensitive environment variable values and registered secrets from text."""
+    if not isinstance(text, str) or not text:
+        return text
 
-    Only rebuilds the list if _secrets_dirty is True or any of the tracked
-    environment variables have changed since the last check.
-    """
-    global _secrets_dirty, _cached_exact_secrets_list, _cached_env_values
+    # First, redact PEM private key blocks.
+    text = _PRIVATE_KEY_RE.sub("[REDACTED PRIVATE KEY]", text)
+
+    # Second, redact based on known exact values (highest precision).
     secret_keys = [
         "ANTHROPIC_API_KEY",
         "ANTHROPIC_AUTH_TOKEN",
@@ -416,59 +410,21 @@ def _get_exact_secrets() -> list[str]:
         "AWS_SECRET_ACCESS_KEY",
         "GITHUB_TOKEN",
         "GITHUB_PAT",
-        "STRIPE_API_KEY",
-        "STRIPE_SECRET_KEY",
-        "STRIPE_PUBLISHABLE_KEY",
-        "TWILIO_AUTH_TOKEN",
-        "TWILIO_API_KEY",
-        "MS_GRAPH_CLIENT_SECRET",
-        "MS_GRAPH_REFRESH_TOKEN",
-        "MSGRAPH_CLIENT_SECRET",
-        "SLACK_BOT_TOKEN",
-        "SLACK_USER_TOKEN",
-        "SLACK_APP_TOKEN",
-        "SLACK_SIGNING_SECRET",
-        "SLACK_WEBHOOK_URL",
     ]
 
-    env_changed = False
+    secrets: set[str] = set(_EXTRA_SECRETS)
     for key in secret_keys:
-        val = os.environ.get(key)
-        if _cached_env_values.get(key) != val:
-            _cached_env_values[key] = val
-            env_changed = True
+        if val := os.environ.get(key):
+            secrets.add(val)
 
-    if _secrets_dirty or env_changed:
-        secrets = set(_EXTRA_SECRETS)
-        for val in _cached_env_values.values():
-            if val:
-                secrets.add(val)
+    if secrets:
         # Sort by length descending to ensure longer secrets (e.g. session tokens)
         # are redacted before their potential substrings (e.g. parts of keys).
-        _cached_exact_secrets_list = sorted(
-            [s for s in secrets if len(s) > 5], key=len, reverse=True
-        )
-        _secrets_dirty = False
+        for val in sorted(secrets, key=len, reverse=True):
+            if len(val) > 5:
+                text = text.replace(val, "[REDACTED]")
 
-    return _cached_exact_secrets_list
-
-
-def redact_secrets(text: str) -> str:
-    """Redact sensitive environment variable values and registered secrets from text."""
-    if not isinstance(text, str) or not text:
-        return text
-
-    # First, redact PEM private key blocks. Skip if target header is not present.
-    if "-----BEGIN" in text:
-        text = _PRIVATE_KEY_RE.sub("[REDACTED PRIVATE KEY]", text)
-
-    # Second, redact based on known exact values (highest precision).
-    secrets = _get_exact_secrets()
-    for val in secrets:
-        if val in text:
-            text = text.replace(val, "[REDACTED]")
-
-    # Third, redact based on common patterns (defense-in-depth).
+    # Second, redact based on common patterns (defense-in-depth).
     text = _SECRET_RE.sub("[REDACTED]", text)
 
     return text

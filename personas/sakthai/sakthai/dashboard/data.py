@@ -56,32 +56,6 @@ def _parse_team_roster(soul_path: Path | None = None) -> list[dict[str, str]]:
         return []
 
 
-def _parse_fact_json_batch(facts: list[Any]) -> list[Any]:
-    """Batch-parse a list of facts whose .value contains a JSON string.
-
-    Uses a single json.loads call over a constructed JSON array string for speed,
-    falling back to element-by-element parsing if array decoding fails.
-    """
-    if not facts:
-        return []
-
-    try:
-        raw_array = "[" + ",".join(f.value for f in facts) + "]"
-        parsed = json.loads(raw_array)
-        if isinstance(parsed, list) and len(parsed) == len(facts):
-            return parsed
-    except (TypeError, ValueError):
-        pass
-
-    results = []
-    for f in facts:
-        try:
-            results.append(json.loads(f.value))
-        except (TypeError, ValueError):
-            results.append(None)
-    return results
-
-
 def collect_dashboard_data(days: int = 30, store: MemoryStore | None = None) -> dict[str, Any]:
     """Collect KPI and timeline metrics for both SakKing OS and ServiceQuoteBot.
 
@@ -140,14 +114,11 @@ def _collect(store: MemoryStore, days: int) -> dict[str, Any]:
     facts_delta = sum(1 for f in all_facts if f.created_at >= seven_days_ago_ts)
     obs_delta = sum(1 for o in all_obs if o.created_at >= seven_days_ago_ts)
 
-    # Filtering recent general facts (exclude leads, revenue, web auth, system, and tagged sensitive facts)
+    # Filtering recent general facts (exclude lead and revenue kinds to avoid noise)
     recent_general = [
         {"id": f.id, "kind": f.kind, "value": f.value, "key": f.key}
         for f in all_facts
-        if f.kind not in ("lead", "revenue", "web_auth", "system")
-        and not f.kind.startswith(("web_", "system"))
-        and "no-export" not in f.tags
-        and "system" not in f.tags
+        if f.kind not in ("lead", "revenue")
     ][:10]
 
     top_obs = [
@@ -165,13 +136,13 @@ def _collect(store: MemoryStore, days: int) -> dict[str, Any]:
 
     # Parse lead facts
     leads_list = []
-    parsed_leads = _parse_fact_json_batch(lead_facts)
-    for lf, payload in zip(lead_facts, parsed_leads, strict=False):
-        if not isinstance(payload, dict):
-            if payload is None:
-                payload = {"query": lf.value}
-            else:
+    for lf in lead_facts:
+        try:
+            payload = json.loads(lf.value)
+            if not isinstance(payload, dict):
                 payload = {"query": str(payload)}
+        except (TypeError, ValueError):
+            payload = {"query": lf.value}
         payload["id"] = lf.id
         payload["date"] = datetime.fromtimestamp(lf.created_at, UTC).strftime("%Y-%m-%d")
         leads_list.append(payload)
@@ -181,9 +152,10 @@ def _collect(store: MemoryStore, days: int) -> dict[str, Any]:
     total_revenue = 0.0
     mrr = 0.0
 
-    parsed_revenue = _parse_fact_json_batch(revenue_facts)
-    for rf, payload in zip(revenue_facts, parsed_revenue, strict=False):
-        if not isinstance(payload, dict):
+    for rf in revenue_facts:
+        try:
+            payload = json.loads(rf.value)
+        except (TypeError, ValueError):
             # Fallback if key/value are not JSON
             payload = {
                 "client": rf.key or "Unknown",

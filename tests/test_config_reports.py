@@ -275,14 +275,13 @@ def test_persona_soul_path() -> None:
     assert config.persona_soul_path("sakking") == config.PERSONAS_DIR / "sakking" / "SOUL.md"
 
 
-def test_persona_memory_db_path_respects_sakthai_home_override(
+def test_persona_memory_db_path_ignores_sakthai_home_override(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """The per-persona shard path respects the SAKTHAI_HOME environment variable."""
-    """The per-persona shard path respects SAKTHAI_HOME override."""
+    """The per-persona shard path is independent of the current SAKTHAI_HOME."""
     monkeypatch.setenv("SAKTHAI_HOME", "/somewhere/unrelated")
     assert config.persona_memory_db_path("sakking") == (
-        Path("/somewhere/unrelated") / "sakking" / "memory.db"
+        Path.home() / ".sakthai" / "sakking" / "memory.db"
     )
 
 

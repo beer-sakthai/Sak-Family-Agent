@@ -1,8 +1,6 @@
 ---
 name: SakSee-stitch::react-components
-description: '>-   Converts Stitch designs into modular Vite and React components, or syncs/updates   existing
-  React components to align with the latest Stitch designs, using system-level   networking
-  and AST-based validation. allowed-tools:   - stitch*:*   - Bash'
+description: ">-   Converts Stitch designs into modular Vite and React components, or syncs/updates   existing React components to align with the latest Stitch designs, using system-level   networking and AST-based validation. allowed-tools:   - stitch*:*   - Bash"
 ---
 
 # Stitch to React Components

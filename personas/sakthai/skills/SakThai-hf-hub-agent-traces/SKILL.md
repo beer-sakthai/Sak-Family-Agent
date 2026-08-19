@@ -1,7 +1,6 @@
 ---
 name: SakThai-hf-hub-agent-traces
-description: "Deep knowledge of the Hugging Face Agent Traces ecosystem \u2014 uploading, viewing,\
-  \ and standardizing agent sessions using the Session Trace Simple Format (STS-Format)."
+description: "Deep knowledge of the Hugging Face Agent Traces ecosystem — uploading, viewing, and standardizing agent sessions using the Session Trace Simple Format (STS-Format)."
 ---
 
 # HF Hub Agent Traces

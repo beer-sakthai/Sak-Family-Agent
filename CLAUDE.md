@@ -16,127 +16,30 @@ ADK / Vertex AI cloud agent is **not** part of v2: there is **no `app/` cloud
 bundle, no `sync-app-package.sh` sync step, and no `sakthai/cloud/` module** here.
 v2 is local-first — the CLI, the agent loop, and the MCP stdio server.
 
----
-
 ## Monorepo Structure
 
-This repo is the shared source workspace for the whole Sak family, not just one
-package. Only `personas/sakthai/sakthai/` is a build target; everything else is
-personas, deployment config, training assets, or docs.
+The repository is the shared source workspace for the Sak family with these key conventions:
 
-```
-personas/          the six agents + the shared package (see below)
-tests/             the one pytest suite (imports `sakthai`, 119 test files)
-library/           31 curated skills across 11 categories (a live skill root)
-docs/              architecture, security, plans/specs under docs/superpowers/
-scripts/           dev + maintenance scripts (compose_persona, export_agent_repo, …)
-infra/             hermes-agents profiles, vm-agents systemd/env, pw-poc (npm), servicequotebot
-services/          servicequotebot, inference-endpoint, HF dataset publishing, teams-copilot-mcp
-apps/              agent_workflow_framework, sak_agent_dashboard
-training/          LoRA/model runs, HF jobs, serving configs
-evaluation_tasks/  lm-evaluation-harness task YAML + datasets (run-evals.yml)
-sakthai-chat-cli/  folded-in copy of the standalone chat-CLI repo (see below)
-product/ security/ profiles/ data/ bin/ dataset-cards/
-```
-
-`assets/` still exists on disk (two large branding PNGs) but is untracked — see
-[`docs/repo-audit-2026-08-08.md`](docs/repo-audit-2026-08-08.md). The orphaned
-root `skills/` directory and `migrated-repos-archive/` were removed in that same
-cleanup; git history still has them.
-
-### The persona package copies (read this before editing `sakthai/`)
-
-`personas/sakthai/sakthai/` is **the** package: it is what `pyproject.toml`
-installs (`[tool.setuptools.packages.find] where = ["personas/sakthai"]`), what
-`import sakthai` resolves to, and what mypy/ruff/bandit/pytest run against.
-Treat it as the source of truth for anything you are actually running.
-
-`personas/shared/sakthai/` is the canonical *shared* copy that the other
-personas point at. The wiring is **not uniform**, and the difference matters:
-
-| Persona | How it gets `sakthai/` |
-|---|---|
-| `sakthai` | real directory — **the installed package** |
-| `sakjules`, `saktan` | `sakthai -> ../shared/sakthai` symlink |
-| `sakking`, `saksee`, `saksit` | a **partial real directory** that shadows the shared copy, plus a `sakthai~origin_main -> ../shared/sakthai` symlink alongside it |
-
-Those three partial directories contain only a handful of files —
-`agent/guardrails.py` and `web/server.py` for all three, plus
-`cli/__init__.py` and `cli/system.py` for SakSee and SakSit. They exist because
-security syncs committed files *into* what used to be a symlink path. The
-`agent/guardrails.py` **and `web/server.py`** copies are kept byte-identical to
-the canonical ones, enforced by `tests/test_persona_guardrails_parity.py` across
-all six personas (the list is derived from `config.PERSONA_NAMES`, so a new
-persona is guarded automatically). That test also pins the *inventory* of
-shadowed files: adding a new shadowing copy fails CI until it is either declared
-security-synced or explicitly allowlisted as stale. The SakSee/SakSit `cli/`
-files are those **stale snapshots** — they still register a `dashboard` command
-the real CLI no longer has. Don't treat them as live code, and don't "fix" them
-by deleting the shadowing files without checking the parity test first.
-
-`personas/sakthai/sakthai/` has also genuinely diverged from
-`personas/shared/sakthai/`: `config.py`, `auth.py`, `skills.py`,
-`agent/loop.py`, `agent/tools.py`, `agent/chat.py`,
-`agent/providers/__init__.py`, `cli/agent.py`, `cli/chat.py`,
-`telegram/bot.py` all differ, and `agent/security_hardening.py` +
-`agent/guardrails_hardened.py` exist only in the SakThai copy. Reconciling the
-two is a known, tracked gap — not yet done.
-
-That gap is now **inventoried**, by `tests/test_shared_package_divergence.py`.
-The shared copy is what SakJules and SakTan execute, but it sits outside
-`[tool.coverage.run] source` (which resolves to the *installed* package), so no
-test imports it and its coverage is not low — it is absent. The new test does
-not reconcile the two trees; it pins the difference so it cannot grow unnoticed:
-every diverged file must be declared in `KNOWN_DIVERGENCES` with a reason, and
-every SakThai-only module in `CANONICAL_ONLY`. **If you edit anything under
-`personas/shared/sakthai/` or add a module to the canonical package, this test
-fails until you either sync the file or declare it.** Entries are also checked
-for staleness — syncing a declared-diverged file fails CI until its register
-entry is removed, which is what makes the debt shrink rather than calcify.
-
-### Personas
-
-Six agents on disk (`config.PERSONA_NAMES`: sakking, sakthai, saksee, saksit,
-sakjules, saktan); **SakThai is lead**. Each persona directory has:
-
-- `SOUL.md` — identity, injected as a system-prompt prefix by `run/chat --persona`.
-  Cross-persona consistency is CI-enforced by `tests/test_soul_consistency.py`.
-- `skills/` — that persona's own skill overlay, one directory per skill directly
-  under `skills/` (no category subdirectories, no duplicate-named skill folders).
-  Counts on disk: SakThai 299, SakSee 182, SakJules 180, SakKing 106, SakSit 43,
-  SakTan 13. `personas/sakthai/skills/.archive/` is an intentional exception —
-  retired skills kept for history, excluded from discovery. A skill directory may
-  itself contain a documented "umbrella" sub-skill (see
-  `SakThai-environment-automation`'s `cron-watchdog-self-heal`) reached by direct
-  file reads rather than the skill index.
-- `config/` — `config.yaml` (default model/provider), `mcp.json`,
-  `gateway_voice_mode.json`, and for some personas `workspace.yaml`.
-- `agent-self-evolution` — symlink to `../shared/agent-self-evolution` for every
-  persona except SakThai, whose copy is real and is the one CI builds.
-
-Configured default models (`config/config.yaml`, consumed by
-`config.persona_model_defaults()`): SakThai and SakSee `huggingface` /
-`gemini-3.1-flash-lite`, SakKing `huggingface` /
-`Qwen/Qwen3-Coder-30B-A3B-Instruct`, SakSit `huggingface` / `DeepSeek-V4-Flash`,
-SakJules `huggingface` / `gemini-2.5-flash-lite`, SakTan `ollama` / `sakthai`.
-
-**Shared resources:** `personas/shared/` holds `sakthai/` (the shared package
-copy), `agent-self-evolution/` (template), `skills/` (3 `Sak-*` skills, identical
-across all personas), and `model_roster`.
-
-**Skill naming:** `Sak-` prefix for shared skills, `Sak<Name>-` for per-persona
-skills — enforced by `sakthai skills validate --naming`.
-
-### `sakthai-chat-cli/`
-
-A self-contained folded-in copy of the standalone `sakthai-chat-cli` repo
-(migrated 2026-08-01, see its `MIGRATION_NOTE.md`). It is deliberately **not**
-merged into the canonical package: it has a Textual TUI redesign of `chat` the
-canonical package lacks, while the canonical package has the `huggingface`
-provider, guardrails hardening, and the dashboard subpackage it lacks. It has its
-own `CLAUDE.md` and its own (stale) docs — notably it still describes a
-five-persona roster. Don't sync the two trees casually, and don't treat its docs
-as authoritative for this repo.
+- **Canonical package:** `personas/shared/sakthai/` is symlinked from five personas (SakKing,
+  SakSee, SakSit, SakTan, SakJules). **SakThai's own copy, `personas/sakthai/sakthai/`, is not a
+  symlink** — it's the package that's actually installed and run (`pyproject.toml`'s
+  `where = ["personas/sakthai"]`), and it has genuinely diverged from `personas/shared/sakthai/`
+  across several files (`config.py`, `agent/loop.py`, `agent/tools.py`, `auth.py`, `cli/agent.py`,
+  `cli/chat.py`, `skills.py`, `agent/providers/__init__.py`, plus two SakThai-only files). Treat
+  `personas/sakthai/sakthai/` as the real source of truth for anything you're actually running;
+  reconciling the two copies is a known, tracked gap, not yet done.
+- **Personas:** six agents on disk (`SakThai`, `SakKing`, `SakSee`, `SakSit`, `SakJules`, `SakTan`; also `config.PERSONA_NAMES`); **SakThai is lead**.
+  - Each has `/skills/` with `Sak<Name>-*` prefixed skills, one directory per skill directly
+    under `skills/` (no category subdirectories, no duplicate-named skill folders).
+    `sakthai/skills/.archive/` is an intentional exception — retired skills kept for history,
+    excluded from discovery. A skill directory may itself contain a documented "umbrella"
+    sub-skill (see `SakThai-environment-automation`'s `cron-watchdog-self-heal`) accessed via
+    direct file reads rather than the normal skill index.
+  - Each has `/config/` with persona-specific config (config.yaml, mcp.json, gateway_voice_mode.json)
+  - Each symlinks to `../shared/sakthai` and `../shared/agent-self-evolution` — except SakThai (see above)
+- **Shared resources:** `personas/shared/` contains sakthai (Python package), agent-self-evolution (template), skills (Sak-* shared skills), model_roster
+- **Skill naming:** `Sak-` prefix for shared skills, `Sak<Name>-` for per-persona skills (enforced by `sakthai skills validate --naming`)
+- **CI scope:** ruff/mypy/bandit/pytest/pylint scopes to `sakthai` core only; gitleaks scans everything (`.gitleaks.toml` allowlists persona docs)
 
 Everything below this point describes the SakThai agent package itself.
 
@@ -152,137 +55,34 @@ uv sync --all-extras      # install all project and optional dependencies
 # Test / lint / type-check / security (mirrors .github/workflows/ci.yml)
 uv run pytest tests/ -q                      # full unit suite (no network, no GCP)
 uv run pytest tests/test_memory_store.py -q  # a single test file
-uv run pytest -m "not integration" -q        # exclude network tests (default in CI)
-uv run ruff check personas/sakthai/sakthai tests              # lint
-uv run ruff format --check personas/sakthai/sakthai tests     # format check (drop --check to apply)
-uv run mypy personas/sakthai/sakthai                          # strict type-check
-uv run bandit -c pyproject.toml -r personas/sakthai/sakthai   # security scan
+uv run pytest -m "not integration" -q        # Exclude network tests (default in CI)
+uv run ruff check personas/sakthai/sakthai tests              # Lint
+uv run ruff format --check personas/sakthai/sakthai tests     # Format check (drop --check to apply)
+uv run mypy personas/sakthai/sakthai                          # Strict type-check
+uv run bandit -c pyproject.toml -r personas/sakthai/sakthai   # Security scan
 make mutation                                # mutmut on core seam modules (slow, local-only, not in CI)
 ```
 
-`uv sync --all-extras` (not plain `uv sync`) is required: `hypothesis` lives in
-the `dev` extra and `tests/test_store_properties.py` fails collection without it,
-which aborts the whole run.
-
-Other `make` targets: `compose-personas` (rebuild full skill trees into
-`build/personas/`), `export-agent-repos` / `export-agent-repo PERSONA=<name>`
-(materialize standalone per-persona repo snapshots), `test`, `lint`.
-
-`.githooks/` holds a `pre-commit` hook that fails if `uv.lock` is out of sync with
-`pyproject.toml`, and a `pre-push` hook. Opt in with
-`git config core.hooksPath .githooks`.
-
-### CI
-
-Thirty workflows live in `.github/workflows/`, plus four gh-aw Markdown
-sources compiled to `.lock.yml` beside them. The ones that gate a change:
-Twenty hand-written workflows live in `.github/workflows/`, plus **eight** gh-aw
-Markdown sources compiled to `.lock.yml` beside them. None of the eight runs on
-Copilot any more: seven run on `engine: gemini` and one on a vendored OpenCode
-engine driving a Gemini model — see
-[`docs/gh-aw-engines.md`](docs/gh-aw-engines.md) and the gh-aw note below.
-
-Every hand-written workflow that a pull request can trigger declares a top-level
-`concurrency:` block, and every job in every hand-written workflow declares
-`timeout-minutes`. Both are enforced by `tests/test_workflow_hygiene.py`; the
-convention for `cancel-in-progress` is
-`${{ github.event_name == 'pull_request' }}` — cancel a superseded PR run, never
-a run on `main`, because a cancelled analysis uploads no SARIF and an alert is
-only ever closed by a newer analysis from the same tool. The `.lock.yml` files
-are exempt from both rules: they are compiler output and gh-aw sets
-`timeout-minutes` on only one of each workflow's generated jobs.
-
-The ones that gate a change:
-
-| Workflow | Trigger | What it does |
-|---|---|---|
-| `ci.yml` | push/PR to `main` | ruff check + format → mypy + bandit → pytest with coverage, on Python **3.11 and 3.12** |
-| `pylint.yml` | push/PR to `main` | pylint over `personas/sakthai/sakthai` + `tests` |
-| `secret-scan.yml` | push to `main`, all PRs | gitleaks (config `.gitleaks.toml`, which allowlists persona docs) |
-| `dependency-audit.yml` | PRs touching `pyproject.toml`/`uv.lock`, weekly | pip-audit over `uv.lock` |
-| `dependency-review.yml` | all PRs | GitHub dependency-review on the PR's diff |
-| `innersource-advisories.yml` | daily, manual | reads the open Dependabot alert list and rewrites one standing issue with it. **Needs `DEPENDABOT_ALERTS_TOKEN`** — `GITHUB_TOKEN` cannot read Dependabot alerts, and `security-events: read` does not grant it (the Actions app lacks the permission entirely). Gates nothing |
-| `ossar.yml` | push/PR to `main`, weekly | open-source static analysis |
-| `sonarcloud.yml` | push to `main` | SonarCloud analysis |
-| `sonarcloud.yml` | push/PR to `main`, manual | SonarCloud analysis (skipped on a fork's PR, which has no `SONAR_TOKEN`) |
-| `subprojects.yml` | push/PR touching `apps/agent_workflow_framework/**`, `apps/sak_agent_dashboard/**`, or `services/teams-copilot-mcp/**` | the two out-of-tree pytest suites + the dashboard's lint/typecheck/test/build chain |
-| `agent-self-evolution.yml` | push/PR touching `personas/sakthai/agent-self-evolution/**` | that subproject's own suite |
-| `labeler.yml` | `pull_request_target` | PR labelling |
-| `scorecard.yml` | push to `main`, weekly | OpenSSF Scorecard → SARIF to code scanning |
-| `codeql.yml` | push/PR to `main`, weekly | CodeQL **advanced** setup over `actions`, `javascript-typescript`, `python`; scope from `.github/codeql/codeql-config.yml` via `config-file:` |
-| `bandit.yml` | push/PR to `main`, weekly | bandit with `-c pyproject.toml` over first-party Python → SARIF to code scanning. Publishes, does not gate — `ci.yml` is the gate |
-| `eslint.yml` | push/PR touching `apps/sak_agent_dashboard/**`, weekly | `eslint src` with the app's own flat config → SARIF (`category: eslint-dashboard`). Publishes, does not gate — `subprojects.yml` is the gate |
-| `self-healing-ci.yml` | `workflow_run` completion of `CI` on `main` (failure only), or manual | runs `sakthai heal run` over the failed job's log and opens a `selfheal/` fix PR when the patch is safe and locally verified. Gates nothing — it only ever adds a PR |
-| `auto-merge.yml` | `pull_request_target` labeled/unlabeled/ready_for_review | turns GitHub's **native** auto-merge on for a PR carrying the `automerge` label (squash), off when the label is removed. Gates nothing and waives nothing — GitHub still holds the merge until branch protection is satisfied, including the non-author approval. Uses no checkout, so the `pull_request_target` token never meets PR code |
-
-Scheduled / manual only, so they never block a PR: `verify-assets.yml` (daily HF
-asset check), `run-evals.yml` (weekly lm-eval, installs the `evals` dependency
-group), `summary.yml` (on new issues), `OSPS.yml` (weekly security-baseline
-assessment), `code-scanning-cleanup.yml` (manual, retires orphaned code-scanning
-alerts), and four agentic audit workflows — `security-audit.md` (weekly Thursday,
-triages bandit + pip-audit + the guardrail suite), `shared-package-drift.md`
-(weekly, audits the `personas/shared/sakthai/` divergence register),
-`skills-hygiene.md` (weekly, runs `sakthai skills validate --naming`), and
-`opencode-smoke.md` (weekly, proves the vendored OpenCode engine still runs). All
-four report by opening an issue and none can open a pull request.
-
-**Five workflows were removed on 2026-08-18** after their run history was read
-rather than their files: `auto-dependency-update.yml` (22 runs, 22 failures — it
-died at *Create Pull Request* with `Input 'token' not supplied`, because no
-`GH_PAT_FOR_ACTIONS` secret exists here, and Dependabot already covers pip / npm /
-Docker / Actions), `continuous-security.yml` (nightly, but every run skipped its
-agent step because there is no `ANTHROPIC_API_KEY` — `security-audit.md` replaces
-it on the Gemini engine the rest of the agentic workflows already use),
-`ossar.yml` (MSDO with `tools: eslint` at a repository root that has no
-`package.json`, duplicating what `eslint.yml` does properly), `stale.yml` (still
-carrying the starter template's literal `'Stale issue message'` placeholder), and
-`manual.yml` (a greeting echo). Before adding a workflow back, check the Actions
-tab for what it actually did.
-
-CodeQL used to run via GitHub's *default setup*, and the rule was "never add
-`codeql.yml`" — an advanced analysis cannot upload while default setup is
-enabled, so remediation bots that added the file twice failed every job with
-`CodeQL analyses from advanced configurations cannot be processed when the
-default setup is enabled`. **That is no longer the state of the repository.**
-Default setup is off and `codeql.yml` is the live producer: its three `Analyze`
-jobs upload successfully, which is only possible with default setup disabled.
-Do not delete it, and do not re-enable default setup without deleting it — the
-two cannot coexist. The payoff is `config-file:`, which default setup could not
-be given by path: `.github/codeql/codeql-config.yml` was inert for exactly that
-reason and now applies, excluding the vendored trees that produced 545 of the
-788 open CodeQL alerts. See `docs/code-scanning-sweep-2026-08-18.md`.
-
-**No smoke-test job is wired into any workflow**, despite
-`.claude/skills/run-sakthai-agent-v2/driver.py` existing — treat that as
-available tooling, not an enforced gate.
-
-Workflow files are expected to be real, loadable workflows: a `.yml`/`.yaml`
-extension (GitHub silently ignores anything else, including a name like
-`foo. yml` with a space), a top-level `on:` and `jobs:`, no duplicate keys, and
-a top-level `permissions:` block. A batch of pasted starter templates that met
-none of this was removed on 2026-08-13, and three more (`bandit.yml`,
-`codeql.yml`, `eslint.yml`) arrived on 2026-08-18.
-
-**`tests/test_workflow_hygiene.py` now enforces all of it in CI**, plus SHA
-pinning on every `uses:`, the `self-healing-ci.yml` fork guard, `codeql.yml`'s
-`config-file:` reference, and `.bandit` being parseable configuration. It exists
-because a bot commit reverted a merged critical security fix — 446 deletions
-under a message about something else — and nothing failed. If you are adding a
-workflow, run it: `uv run pytest tests/test_workflow_hygiene.py -q`.
-
-Coverage floor is **96%** (`fail_under = 96`, branch coverage on) over the
-`sakthai` package. Nothing is omitted from measurement any more — `omit = []`;
-`telegram/bot.py` used to be excluded, which did not make it tested, only
-invisible (it sat at 38% while the reported total stayed above the floor). It is
-measured now and covered at 98%. The suite currently sits at **97.92%**. Run the
-lint→pytest sequence locally before
-pushing; green CI is the bar for `main`.
+CI (`.github/workflows/ci.yml`, via `uv sync --all-extras`) runs: lint (ruff
+check + format --check) → static analysis (mypy, bandit) → pytest with
+coverage, across Python **3.11 and 3.12**. A separate `pylint.yml` workflow
+runs pylint over the same `personas/sakthai/sakthai` + `tests` scope. A
+`secret-scan.yml` workflow runs gitleaks (config: `.gitleaks.toml`) on pushes
+to `main` and all PRs, and `dependency-audit.yml` runs pip-audit over
+`uv.lock` weekly and on dependency changes. CodeQL runs via GitHub's *default
+setup* (repo settings), so there is deliberately no `codeql.yml` — adding one
+would conflict. **No smoke-test job is wired into any GitHub workflow**,
+despite `.claude/skills/run-sakthai-agent-v2/driver.py` existing in the repo
+— treat that as available tooling, not an enforced CI gate. Run the lint→pytest
+sequence locally before pushing; green CI is the bar for `main`. Coverage
+floor is **96%** (`fail_under = 96`, branch coverage included) over the whole
+`sakthai/` package.
 
 ---
 
 ## Runtime entry points
 
-One package, four ways in — all sharing `~/.sakthai/memory.db` by default
+One package, three ways in — all sharing `~/.sakthai/memory.db` by default
 (override the root with `SAKTHAI_HOME`). On the VM deployment, each persona's
 process sets its own `SAKTHAI_HOME=$HOME/.sakthai/$AGENT`, so each persona
 naturally gets its own memory shard at `~/.sakthai/<persona>/memory.db`. For
@@ -290,76 +90,56 @@ local dev, pass `--persona <name>` to `learn`/`recall`/`run`/`chat`/`memory` to
 get the same per-persona shard without setting `SAKTHAI_HOME` yourself — see
 "Per-persona memory sharding" below.
 
-1. **CLI** — `sakthai <cmd>` (entry point `sakthai.cli:main`, wired in
-   `cli/__init__.py`). Commands:
-   - Memory: `learn`, `recall`, and the `memory` group —
-     `show|stats|search|forget|forget-obs|backup|healthcheck|export|import|consolidate|consolidate-sessions|deduplicate|family|sync|pull`.
-     `--persona <name>` is a **group-level** option on `memory` (and a plain
-     option on `learn`/`recall`); `sync` and `pull` explicitly reject it (git/HTTP
-     sync always targets the unscoped `memory.db`), and `family` merges across
+1. **CLI** — `sakthai <cmd>` (entry point `sakthai.cli:main`). Commands:
+   - Memory: `learn`, `recall`, `memory show|stats|search|export|import|backup|consolidate|consolidate-sessions|deduplicate|family`
+     — all except `family`, `sync`, and `pull` accept `--persona <name>` to scope to that
+     persona's own shard instead of the default unscoped `memory.db`; `family` merges across
      every persona's shard (or a `--personas a,b,c` subset) into one read-only view.
-   - Agent: `run "<task>"` — `--provider`/`-p`
-     (anthropic/google/openai/ollama/gateway/huggingface), `--model`,
-     `--max-tokens`, `--max-iterations`, `--max-seconds`, `--with-skills <name>`
-     (repeatable), `--no-mcp`, `--dry-run` (validate config, no API call),
-     `--stream`, `--fast` (skip the 6-stage cycle), `--stateless` (don't
-     load/append memory), `--caveman lite|full|ultra|wenyan-*` (token-compression
-     skill), `--sandbox` (run inside the `Dockerfile.sandbox` container; only
-     `memory.db` is bind-mounted; not combinable with `--persona`),
-     `--persona <name>`, `-v/--verbose`.
-   - Chat: `chat` — interactive multi-turn REPL over the same loop and memory.
-   - Server: `mcp` (start the MCP stdio server).
-   - Web: `web setup` (print/create the API bearer token), `web regen-token`.
+   - Agent: `run "<task>"` — key flags: `--provider`/`-p` (anthropic/google/openai/ollama/gateway/huggingface),
+     `--model`, `--max-tokens`, `--max-iterations`, `--max-seconds`, `--with-skills <name>`
+     (repeatable), `--no-mcp`, `--dry-run` (validate config, no API call), `--stream`, `--fast`
+     (skip the 6-stage cycle), `--stateless` (don't load/append memory), `--caveman
+     lite|full|ultra|wenyan-*` (token-compression skill), `--sandbox` (run inside the
+     `Dockerfile.sandbox` container; only `memory.db` is bind-mounted; not combinable with
+     `--persona`), `--persona <name>` (use that persona's memory shard, inject its SOUL.md
+     as a system-prompt prefix, resolve `--with-skills`/caveman/slash-commands against that
+     persona's own skill overlay instead of SakThai's, auto-load its own `config/mcp.json`
+     when `SAKTHAI_MCP_CONFIG` isn't already set, and default `--model`/`--provider` from its
+     own `config/config.yaml` when those flags are left at their CLI defaults), `-v/--verbose`
+   - Server: `mcp` (start MCP stdio server)
    - Cycle: `cycle status|next|set|list`
    - Skills: `skills list|show|validate|create|sync-sakking`
-   - Extensions: `extensions install|list|remove`
-   - Sessions: `sessions list|show|clean`
-   - Eval: `eval summary [--limit N] [--json]`
-   - Heal: `heal inspect|run` — the self-healing CI agent. `inspect` parses a
-     failed job's log and prints the failures (no model call, no writes); `run`
-     walks the full diagnose → gate → patch → verify → publish pipeline. Its
-     exit code reports whether the *pipeline* ran, not whether a fix was found —
-     read the status from `--json`. See "Self-healing CI" below.
-   - Hugging Face: `hf info|download <repo_id>`
+   - Extensions: `extensions add|list|remove`
+   - Sessions: `sessions list|show|export`
    - System: `doctor`, `setup`, `status`, `tools`
-   - There is **no `dashboard` command** — the CLI wiring was removed (a stale
-     copy still registering it survives under `personas/saksee|saksit/sakthai/cli/`),
-     but `dashboard/data.py` was later re-added as the KPI module behind the web
-     API. See the dashboard note under "Other subsystems".
+   - Eval: `eval` (inspect local model evaluation / MLOps metrics)
+   - Hugging Face: `hf info|download <repo_id>`
+   - Note: there is **no `dashboard` CLI command** — the CLI wiring was
+     removed, but `sakthai/dashboard/data.py` (the KPI collection module used
+     by `web/server.py`) was later re-added. See the dashboard note under
+     "Other subsystems" below.
 
 2. **Agent loop** — `sakthai run` drives a provider-agnostic tool-using loop
-   (Claude, Gemini, or any OpenAI-compatible/Ollama/gateway/HF endpoint).
+   (Claude, Gemini, or any OpenAI-compatible/Ollama endpoint).
 
-3. **Chat REPL** — `sakthai chat` drives the same loop turn by turn.
-
-4. **MCP server** — `sakthai mcp` serves the same tools over JSON-RPC stdio.
+3. **MCP server** — `sakthai mcp` serves the same tools over JSON-RPC stdio.
 
 `sakthai run` can also reach *out* to external MCP servers: tools discovered from
 them are merged into the registry (namespaced `<server>__<tool>`) for that run.
-
-A task starting with `/plugin:command` is treated as a **slash command**:
-`_parse_slash_command()` in `agent/loop.py` resolves
-`<root>/<plugin>/commands/<command>.md` across the skill roots, strips its
-frontmatter, substitutes `$ARGUMENTS`/`$FEATURE`, and injects the body as a
-system-prompt block.
 
 ---
 
 ## Architecture (the big picture)
 
 A small, strictly layered package — each layer has one job. Data flows
-CLI/MCP → agent loop → guardrails → tool registry → MemoryStore → SQLite. See
+CLI/MCP → agent loop → tool registry → MemoryStore → SQLite. See
 [`docs/architecture.md`](docs/architecture.md) for the full diagram.
 
 ### Core modules
 
 - **`config.py`** — single source of truth for paths and env-var names
-  (`sakthai_home`, `memory_db_path`, `persona_memory_db_path`, `sessions_dir`,
-  `eval_log_path`, `persona_skills_dir`, `persona_mcp_config_path`,
-  `persona_model_defaults`, `check_env`). Also owns secret handling:
-  `SECRET_PATTERN`, `register_secret()`, `redact_secrets()` — used by the loop,
-  the eval log, and the guardrails' output filter. Nothing else hard-codes a
-  path; new paths and env-var names go here.
+  (`sakthai_home`, `memory_db_path`, `sessions_dir`, `check_env`). Nothing else
+  hard-codes a path; new paths go here.
 - **`auth.py`** — credential resolution. Always call `resolve_anthropic_client()`
   rather than constructing a client. Anthropic chain: `ANTHROPIC_API_KEY` →
   `ANTHROPIC_AUTH_TOKEN` → Claude CLI OAuth token. Google uses the Gemini CLI
@@ -367,17 +147,8 @@ CLI/MCP → agent loop → guardrails → tool registry → MemoryStore → SQLi
   URL and API key. Raises `AuthError` when no credentials are found.
 - **`sandbox.py`** — backs `sakthai run --sandbox`. Builds/reuses a Docker image
   from `Dockerfile.sandbox` (layer-cached) and re-executes the task inside it;
-  only `memory.db` is bind-mounted from the host. Egress is on by default (the
-  model provider needs it) — set `SAKTHAI_SANDBOX_NETWORK` (e.g. `none`) to
-  restrict it. Raises `SandboxError` if Docker isn't on `PATH`.
-- **`giturl.py`** — `validate_git_url()`. Every user-supplied URL handed to a git
-  subprocess (memory sync remotes, extension clone URLs) goes through it: it
-  rejects `-`-leading values (option smuggling), remote-helper transports
-  (`ext::…` runs arbitrary commands), and schemes outside http(s)/ssh/git/file.
-- **`hf.py`** — Hugging Face Hub info/download; `huggingface_hub` is imported
-  lazily so the package and test suite work without it installed.
-- **`sakking_skills.py`** — idempotent import of SakKing's *learned* skills from
-  `~/.sakking` into this repo as `SakKing-` prefixed skills (`skills sync-sakking`).
+  only `memory.db` is bind-mounted from the host. Raises `SandboxError` if Docker
+  isn't on `PATH`.
 
 ### Memory subsystem (`memory/`)
 
@@ -396,7 +167,8 @@ CLI/MCP → agent loop → guardrails → tool registry → MemoryStore → SQLi
   HTTP backup to a configured endpoint.
 - **`memory/merged.py`** — `FamilyMemoryView`, a read-only view across every
   persona's memory shard plus the legacy unscoped `memory.db`, deduplicated and
-  grouped by persona. Backs `sakthai memory family`.
+  grouped by persona. Backs `sakthai memory family`. See "Per-persona memory
+  sharding" below.
 
 ### Per-persona memory sharding
 
@@ -413,16 +185,12 @@ two things possible that weren't before:
 
 - **Local CLI parity** — `learn`/`recall`/`run`/`chat`/`memory <subcommand>` all
   accept `--persona <name>` so a local dev shell (which isn't running with a
-  persona-scoped `SAKTHAI_HOME`) can still read/write a specific persona's shard.
-  `run`/`chat --persona` additionally inject that persona's `SOUL.md` as a
-  system-prompt prefix, resolve `--with-skills`/caveman/slash-commands against
-  that persona's own skill overlay instead of SakThai's, auto-load its own
-  `config/mcp.json` when `SAKTHAI_MCP_CONFIG` isn't already set, and default
-  `--model`/`--provider` from its own `config/config.yaml` when those flags are
-  left at their CLI defaults. `memory sync`/`memory pull` reject `--persona`
-  (they always target the unscoped `memory.db` — no per-persona git/HTTP sync
-  exists). `run --persona` can't combine with `--sandbox` (the sandbox only
-  bind-mounts the unscoped `memory.db`).
+  persona-scoped `SAKTHAI_HOME`) can still read/write a specific persona's shard,
+  and `run --persona`/`chat --persona` also inject that persona's `SOUL.md` as a
+  system-prompt prefix. `memory sync`/`memory pull` reject `--persona` (they
+  always target the unscoped `memory.db` — no per-persona git/HTTP sync exists).
+  `run --persona` can't combine with `--sandbox` (the sandbox only bind-mounts
+  the unscoped `memory.db`).
 - **The merged family view** — `FamilyMemoryView` (`memory/merged.py`) opens
   every persona's shard (skipping ones that don't exist yet) plus the legacy
   `memory.db` at once, regardless of which single persona the current process
@@ -437,82 +205,27 @@ not an error.
 
 ### Agent subsystem (`agent/`)
 
-- **`agent/tools.py`** — defines `BUILTIN_TOOLS` (14 tools, one schema + handler
+- **`agent/tools.py`** — defines `BUILTIN_TOOLS` (10 tools, one schema + handler
   each): `learn`, `ingest_document`, `capture_lead`, `recall`, `search`, `forget`,
-  `read_file`, `run_command`, `send_telegram_message`, `send_outlook_mail`,
-  `read_outlook_mail`, `list_calendar_events`, `create_calendar_event`,
-  `run_agent_loop`. Add a tool here and it appears in both the agent loop and
-  the MCP server automatically. Note: `run_agent_loop` is filtered out of the
-  in-loop tool set (it's MCP-only) and additionally guards on the
-  `SAKTHAI_AGENT_ACTIVE` env var to block indirect recursion. The four Graph
-  tools share `_graph_access_token()` / `_graph_request()` / `_graph_safe()`
-  helpers: a refresh token (env `MS_GRAPH_REFRESH_TOKEN` or cached at
-  `~/.sakthai/graph_token.json`, seeded via `scripts/graph_device_login.py`) is
-  exchanged for a short-lived access token on every call.
+  `read_file`, `run_command`, `send_telegram_message`, `run_agent_loop`. Add a
+  tool here and it appears in both the agent loop and the MCP server
+  automatically. Note: `run_agent_loop` is filtered out of the in-loop tool set
+  (it's MCP-only) to avoid recursion.
 - **`agent/registry.py`** — `ToolRegistry` keys tools by name; `with_tools()`
   merges sets (later tool wins on name clash, so plugins can shadow built-ins).
 - **`agent/loop.py`** — `run_agent()` is the main orchestration loop. Injects
-  `store.render_prompt_block()` into the system prompt, resolves slash commands,
-  applies the context filter, dispatches every tool call through the guardrail
-  policy, appends an `EvalRecord` per run, and writes session logs to
-  `~/.sakthai/sessions/`. Returns `AgentResult` (iterations, stop_reason,
-  tool_calls, usage). `client`, `store`, `guardrail_policy`, and `context_filter`
-  are all injectable for testing. Defaults live here: `DEFAULT_MODEL =
-  "claude-opus-4-8"`, `DEFAULT_MAX_TOKENS = 16000`, `DEFAULT_MAX_ITERATIONS = 12`.
-- **`agent/chat.py`** — the interactive REPL behind `sakthai chat`. Keeps
-  `rich`/`prompt_toolkit` I/O at the module edges (renderers take an injected
-  `Console`, the loop takes an injected `read_input`) so conversation flow is
-  testable without a terminal.
-- **`agent/eval.py`** — local model-eval / MLOps logging. Every `run_agent` call
-  appends one `EvalRecord` (model, provider, latency, usage, outcome) to
-  `eval_log_path()` (default `~/.sakthai/eval.jsonl`); `summarize_evals()` backs
-  `sakthai eval summary`. No cloud dependency.
+  `store.render_prompt_block()` into the system prompt, dispatches tool calls,
+  writes session logs to `~/.sakthai/sessions/`. Returns `AgentResult` (iterations,
+  stop_reason, tool_calls, usage). Client and store are injectable for testing.
 - **`agent/usage.py`** — `UsageTracker` / `extract_usage()` for token counting.
-- **`agent/context_filter.py`** — the `ContextFilter` protocol plus
-  `TurnSummarizationFilter` (currently truncates older long turns rather than
-  LLM-summarizing them) and `DEFAULT_CONTEXT_FILTER`, wired into `run_agent`.
-- **`agent/prompt_builder.py`** / **`agent/context_manager.py`** — an extracted
-  prompt-assembly seam (`build_system_prompt`, `render_skills_prompt_block`,
-  `ContextManager`). Both are tested (`tests/test_prompt_builder.py`,
-  `tests/test_context_manager.py`), but note that `agent/loop.py` still imports
-  `render_skills_prompt_block` straight from `skills.py` — the loop has not been
-  migrated onto `ContextManager` yet.
 - **`agent/providers/`** — provider abstraction:
   - `base.py` — shared types (`Block`, `Response`), retry logic via `tenacity`
-  - `anthropic_provider.py` — Claude via the `anthropic` SDK
+  - `anthropic_provider.py` — Claude via `anthropic` SDK
   - `gemini_provider.py` — Gemini via `google-genai`
   - `openai_provider.py` — OpenAI-compatible APIs, Ollama, the `gateway`
     provider (OpenRouter/LiteLLM/Vercel/Cloudflare AI gateways), and the
     `huggingface` provider (HF Inference Providers router, via `HF_TOKEN`) — all via `httpx`
   - `__init__.py` — provider detection and client factory
-
-### Security subsystem (`agent/guardrails*.py`, `agent/security_hardening.py`)
-
-This is the largest single body of code in the package and the most actively
-attacked surface — several rounds of Sentinel audits landed here.
-
-- **`agent/guardrails.py`** (~1,400 lines) — `GuardrailPolicy` with pre- and
-  post-execution checks around every tool call; `DEFAULT_POLICY` is what
-  `run_agent` uses. Enforces: `run_command` blocked unless `SAKTHAI_SHELL_ALLOW`
-  is set, dangerous/destructive shell commands, sensitive-path arguments
-  (`_is_sensitive_path` over `_SENSITIVE_BASENAMES` / `_SENSITIVE_DIRS` /
-  `_SENSITIVE_KEY_STEMS` / `_CRITICAL_ROOTS`, matched case-insensitively, across
-  separators, for relative as well as absolute paths, including `make` recipe
-  and `-C`/`-f` resolution), and secret-bearing tool output. A `GuardrailResult`
-  carries a `GuardrailAction` (`ALLOW`/`DENY`) plus possibly-rewritten args.
-- **`agent/security_hardening.py`** — defense-in-depth primitives: environment
-  pinning/verification, MCP server validation and allowlisting,
-  `EnhancedPathValidator`, `SymlinkDetector`, `ConfigFileIntegrity`, TOCTOU
-  prevention, `ShellCommandHardener`, and an audit logger.
-- **`agent/guardrails_hardened.py`** — wires those primitives on top of the base
-  policy.
-
-**When you change guardrails, you must sync the file.** `guardrails.py` is
-copied per persona and `tests/test_persona_guardrails_parity.py` fails CI the
-moment any copy drifts from `personas/sakthai/sakthai/agent/guardrails.py`
-(it checks sakthai, sakjules, sakking, saksee, saksit). Roughly 15 test files
-(`test_guardrails_*.py`, `test_sentinel_*.py`, `test_security_*.py`) cover this
-area; add a regression test for every new bypass you close.
 
 ### MCP subsystem (`mcp/`)
 
@@ -526,10 +239,9 @@ area; add a regression test for every new bypass you close.
 - **`mcp/manager.py`** — `connect_servers()` context manager starts all configured
   servers, fails soft on errors, merges tools, cleans up on exit.
 - **`mcp/servers.py`** — `MCPServerSpec` dataclass + `load_server_specs()`:
-  discovers external server specs from `~/.sakthai/mcp.json` (or
-  `SAKTHAI_MCP_CONFIG`, or the persona's own `config/mcp.json`) and extensions.
+  discovers external server specs from `~/.sakthai/mcp.json` and extensions.
 
-External MCP server config format:
+External MCP server config format (`~/.sakthai/mcp.json`):
 
 ```json
 {
@@ -541,82 +253,51 @@ External MCP server config format:
 
 ### CLI subsystem (`cli/`)
 
-Click commands split by area; all sub-files imported by `cli/__init__.py`, which
-binds groups under `*_cmd` aliases on purpose so `sakthai.cli.<name>` keeps
-resolving to the *module* rather than the command object:
+Click commands split by area; all sub-files imported by `cli/__init__.py`:
 
 - `agent.py` — `run`, `mcp`
-- `chat.py` — `chat`
 - `memory.py` — `learn`, `recall`, `memory` group
-- `system.py` — `doctor`, `setup`, `status`, `tools`, `web` group
+- `system.py` — `doctor`, `setup`, `status`, `tools`
 - `skills.py` — `skills` group
 - `cycle.py` — `cycle` group
 - `extensions.py` — `extensions` group
-- `eval.py` — `eval` group
-- `heal.py` — `heal` group
+- `eval.py` — `eval` (local model evaluation / MLOps metrics)
 - `sessions.py` — `sessions` group
-- `hf.py` — `hf` group
+- `hf.py` — `hf info|download` (Hugging Face Hub operations)
 
 There is no `dashboard.py` here — see the dashboard note below.
 
 ### Other subsystems
 
 - **`cycle/`** — six-stage Dream → Hope → Care → Joy → Trust → Growth state
-  machine. `stages.py` defines the `Stage` StrEnum plus a `StageInfo` table
-  (goal, commands, guidance per stage); `state.py` persists the current stage as
-  a single fact in the store (kind=`cycle`, key=`current_stage`).
+  machine. `stages.py` defines the `Stage` enum; `state.py` persists the current
+  stage as a single fact in the store (kind=`cycle`, key=`current_stage`).
 - **`skills.py` + `library/` + `personas/*/skills/`** — parse/catalog/validate
-  `SKILL.md` files. `default_skill_roots(persona=None)` returns, in order:
-  the persona's own overlay (`persona_skills_dir(persona)`, else `SKILLS_DIR` =
-  `personas/sakthai/skills/`), `personas/shared/skills/`
-  (`SHARED_SKILLS_DIR`/`LIBRARY_DIR`, 3 skills identical across personas), root
-  `library/` (`CURATED_LIBRARY_DIR`, 31 curated skills across 11 categories,
-  pre-dating the `Sak-`/`SakThai-` convention), `~/.sakthai/extensions`, and the
-  Gemini extensions dir if it exists. The **root-level `skills/` directory is not
-  a root** — it's orphaned content. Skills reach the system prompt via
+  `SKILL.md` files (YAML frontmatter: name, category, description, version,
+  platforms, tags, related_skills). Default discovery roots
+  (`default_skill_roots()` in `skills.py`) are: `personas/sakthai/skills/`
+  (`SKILLS_DIR`, this persona's own overlay), `personas/shared/skills/`
+  (`SHARED_SKILLS_DIR`/`LIBRARY_DIR`, 3 skills byte-identical across all
+  personas), root `library/` (`CURATED_LIBRARY_DIR`, 31 curated skills across
+  11 categories, pre-dates the `Sak-`/`SakThai-` naming convention), and
+  `~/.sakthai/extensions`. The root-level `skills/` directory is **not** one
+  of these roots — it's orphaned content, not part of live skill discovery.
+  Skills are injected into the agent system prompt via
   `render_skills_prompt_block()`.
-- **Dashboard — backend only.** The CLI's `dashboard` command and the frontend
-  (both the old in-package bundle and the repo-root Vite project) are gone, but
-  `personas/sakthai/sakthai/dashboard/data.py` was re-added: it collects
-  KPI/lead/revenue metrics from the memory store and is served by
+- **Dashboard — backend only.** The CLI's `dashboard` command and the
+  frontend (both the old in-package bundle and the repo-root Vite project)
+  are gone, but `personas/sakthai/sakthai/dashboard/data.py` was re-added:
+  it collects KPI/lead/revenue metrics from the memory store and is served by
   `web/server.py`'s `/api/stages` endpoint (covered by
   `tests/test_dashboard_data.py`). `_STATIC_ROOT` resolves to
-  `personas/sakthai/sakthai/dashboard/dist/`, which does not exist, so the web
-  server runs API-only and static requests fall through to 404.
-- **`web/server.py`** — HTTP API server exposing `/health`, `/api/stages`, and
-  `/api/ecosystem`. Refuses non-loopback binds unless `SAKTHAI_WEB_ALLOW_PUBLIC`
-  is set. **Every path except `/health` now requires the bearer token** —
-  `/api/*` answers 401/403 as JSON, and static paths get a plaintext 401, closing
-  the gap described in
-  `docs/superpowers/specs/2026-08-03-sakthai-web-auth-design.md`. The token comes
-  from `_get_or_create_bearer_token()` (stored as a `web_auth` fact in
-  `memory.db`, managed with `sakthai web setup` / `web regen-token`). Static
-  serving additionally canonicalises the request path against `_STATIC_ROOT`
-  before delegating.
-- **`selfheal/`** — the self-healing CI agent behind `sakthai heal` and
-  `.github/workflows/self-healing-ci.yml`. `pipeline.heal()` is the whole flow in
-  one injectable function: `ingest.py` parses a failed job's log into
-  `FailureSignal`s (pytest/ruff/mypy/bandit), `inspector.py` resolves the
-  implicated files against the checkout and reads bounded, containment-checked
-  windows, `diagnose.py` asks a model for **JSON only** (root cause, confidence,
-  exact-string edits — never commands), `safety.py` gates those edits
-  deterministically, `patch.py` applies them all-or-nothing with a byte-exact
-  rollback, `verify.py` re-runs the failing test then the whole suite,
-  `publish.py` pushes a `selfheal/` branch and opens the PR, and
-  `walkthrough.py` renders the report. **The safety gate has the final word: a
-  violation is a hard stop that no confidence score overrides**, and its
-  protected-path list includes `.github/`, dependency pins, the security
-  subsystem, and the `selfheal` package itself — the agent cannot edit its own
-  gate, its own workflow, or its own tests. Rationale and the full status table
-  are in [`docs/self-healing-ci.md`](docs/self-healing-ci.md). Note this module
-  exists only in the SakThai copy of the package, not in
-  `personas/shared/sakthai/` — the same known divergence described above.
+  `personas/sakthai/sakthai/dashboard/dist/`, which does not exist, so the
+  web server runs API-only and static requests fall through to 403/404.
 - **`extensions/install.py`** — clones skill/MCP bundles from git into
-  `~/.sakthai/extensions` (URLs validated via `giturl.py`, removal containment-
-  checked); `list`/`remove` manage installed bundles.
+  `~/.sakthai/extensions`; `list`/`remove` manage installed bundles.
+- **`web/server.py`** — HTTP API server; optionally serves a pre-built static
+  bundle from `_STATIC_ROOT` (see the dashboard note above) alongside its API
+  endpoints, falling back to 403/404 for static requests if it's missing.
 - **`learn/capture.py`** — `learn()` one-shot fact capture used by `sakthai learn`.
-  **`learn/ingest.py`** — `ingest_document`, splitting Markdown/text/CSV into facts.
-  **`lead/capture.py`** — `capture_lead()`, storing a structured lead fact.
 - **`telegram/`** — a standalone `python-telegram-bot` polling bot (`bot.py`,
   `config.py`, `workflow_executor.py`). `bot.py`'s `/workflow <name>` handler
   runs `run_agent()` **in-process** via `asyncio.to_thread` — it does not shell
@@ -625,119 +306,36 @@ There is no `dashboard.py` here — see the dashboard note below.
   --stateless`) are unit-tested but currently unused by `bot.py` (only
   `get_available_workflows()` is called from there). `telegram/config.py`
   re-exports `ALLOWED_USER_IDS`/`TELEGRAM_BOT_TOKEN` from the central
-  `config.py`. `workflow_executor.py`'s skill discovery is persona-aware: it uses
-  `config.persona_skills_dir(config.sakthai_persona())` when `SAKTHAI_PERSONA` is
-  set (see `infra/vm-agents/env-templates/*.env.example`), falling back to
-  `config.SKILLS_DIR`. This subpackage is the one part of the package held to a
-  lower bar: mypy skips it and coverage omits `bot.py`.
+  `config.py` (`telegram_allowed_user_ids()`/`telegram_bot_token()`).
+  `workflow_executor.py`'s skill discovery is persona-aware: it uses
+  `config.persona_skills_dir(config.sakthai_persona())` when the
+  `SAKTHAI_PERSONA` env var is set (see
+  `infra/vm-agents/env-templates/*.env.example`), falling back to
+  `config.SKILLS_DIR` (SakThai's own overlay) otherwise. Covered
+  by `tests/test_telegram_bot.py` and `tests/test_telegram_workflow_executor.py`.
+
 
 ---
 
 ## Tests
 
-Tests live in `tests/` (119 test files, ~29,500 lines) and are the suite for the
-`sakthai` package — there is no per-persona test tree. All tests are hermetic:
-no network, no GCP credentials. Integration tests that may hit real endpoints
+Tests live in `tests/` (90 files, ~21,500 lines). All tests are hermetic — no
+network, no GCP credentials. Integration tests that may hit real endpoints
 (Ollama, Anthropic) are marked `@pytest.mark.integration` and self-skip when
-credentials/endpoints are absent; `ci.yml` also excludes them by marker with
-`-m "not integration"`, so a test that forgets its `skipif` guard still cannot
-make CI network-dependent.
-
-Three suites live **outside** `tests/` and are not covered by `testpaths`:
-`apps/agent_workflow_framework/tests/` (127 tests, no `pyproject.toml` — run
-in-place with `uv run --with pyyaml python -m pytest tests/`),
-`services/teams-copilot-mcp/tests/` (37 tests, its own `pyproject.toml`/`uv.lock`
-— `uv run --project . --extra dev python -m pytest tests/`), and
-`apps/sak_agent_dashboard/` (the repo's only Node subproject — 172 vitest tests,
-run with `pnpm test`; see the dashboard gates below). All three are run by
-`.github/workflows/subprojects.yml`, path-filtered to their own directories.
-
-**The dashboard's CI job runs more than tests, and lint gates the rest.** The
-`sak_agent_dashboard` job runs `pnpm lint` → `pnpm typecheck` → `pnpm test` →
-`pnpm build` in that order, each `needs`-free but sequential, so a lint error
-silently skips the three steps behind it (they report as skipped, not failed —
-read the *first* red step, not the last). `pnpm lint` is stock
-`eslint-config-next` v16, which enables the **React Compiler** rules
-(`react-hooks/immutability`, `react-hooks/set-state-in-effect`, …). These are
-stricter than the classic `exhaustive-deps` set and catch things a passing
-vitest run will not: a `useCallback` that references itself, or an effect body
-that calls `setState` synchronously. Run the full sequence locally before
-pushing any change under `apps/sak_agent_dashboard/`:
-
-```bash
-cd apps/sak_agent_dashboard
-pnpm install --frozen-lockfile
-pnpm lint && pnpm typecheck && pnpm test && pnpm build
-```
-
-**Assert on the rule, not just the outcome.** Several guardrail rules overlap,
-so a test that asserts only `action == DENY` can pass because a *different*,
-broader rule fired — which is exactly how the container-escape battery in
-`tests/test_guardrails_containers.py` stayed green while the container-specific
-logic it was named after (`guardrails.py` rule 6) never executed once. New
-guardrail tests must pin `result.reason` so the intended defense is what gets
-verified.
-
-That anti-pattern is not hypothetical and was **not** confined to the container
-battery — a 2026-08-16 sweep found four more live instances in
-`tests/test_guardrails_hardened.py` alone, all since fixed: two path tests
-(`test_glob_pattern_denied`, `test_case_sensitivity_trick_denied`) whose inputs
-were caught by the earlier sensitive-path branch so the rules they were named
-for never ran; one that asserted `action in (ALLOW, DENY)`, which no behavior
-can fail; and one that pinned the environment *before* setting
-`SAKTHAI_SHELL_ALLOW`, so it denied at env-tampering two checks earlier than the
-branch it claimed to cover. When writing a test for a specific rule, confirm the
-rule actually fires — run it and read `result.reason` — rather than trusting a
-green `DENY`.
-
-Two guardrail branches are **structurally unreachable**, both shadowed by an
-earlier, broader check, and both pinned by characterization tests rather than
-deleted: `guardrails.py` rule 6 (container mounts/`cp`, shadowed by rule 2's
-destructive-binary scan) and `check_enhanced_path_safety`'s case-trick branch
-(shadowed by `_is_sensitive_path`, which already matches case-insensitively).
-Rule 6 is extracted as `_check_container_tokens` and tested directly in
-`tests/test_guardrails_container_rule.py`, so the backstop is verified before it
-could ever become load-bearing. If you change rule 2's binary list or the rule
-ordering, expect those characterization tests to fail — that is them working.
+credentials/endpoints are absent; CI excludes them with `-m "not integration"`.
 
 Key test areas:
 
-- **Memory** — `test_memory_store.py`, `test_memory_sync.py`, `test_memory_aux.py`,
-  `test_memory_concurrent.py`, `test_memory_merged.py`,
-  `test_memory_secrets_redaction.py`, `test_store_migrations.py`,
-  `test_store_properties.py` (hypothesis)
-- **Agent** — `test_agent_loop.py`, `test_agent_loop_failure_seams.py`,
-  `test_tools.py`, `test_tools_overrides.py`, `test_registry.py`, `test_usage.py`,
-  `test_chat.py`, `test_eval*.py`, `test_context_filter.py`,
-  `test_context_manager.py`, `test_prompt_builder.py`, `test_providers*.py`,
-  `test_provider_contracts.py`, `test_provider_resilience.py`
-- **Security** — `test_guardrails*.py` (12 files, incl.
-  `test_guardrails_container_rule.py`), `test_sentinel_*.py` (6 files),
-  `test_security_hardening.py`, `test_security_sentinel.py`,
-  `test_persona_guardrails_parity.py`, `test_sakking_skill_security.py`,
-  `test_giturl.py`, `test_web_auth.py`
-- **MCP** — `test_mcp_server.py`, `test_mcp_client.py`,
-  `test_mcp_client_resilience.py`, `test_mcp_manager.py`, `test_mcp_servers.py`,
-  `test_mcp_main.py`
-- **CLI** — `test_cli.py`, `test_cli_system.py`, `test_cli_eval.py`,
-  `test_cli_heal.py`, `test_cli_consolidate_sessions.py`, `test_sessions_cli.py`,
-  `test_entrypoint.py`
-- **Self-healing CI** — `test_selfheal_ingest.py`, `test_selfheal_inspector.py`,
-  `test_selfheal_safety.py`, `test_selfheal_patch.py`, `test_selfheal_verify.py`,
-  `test_selfheal_diagnose.py`, `test_selfheal_walkthrough.py`,
-  `test_selfheal_publish.py`, `test_selfheal_completion.py`,
-  `test_selfheal_pipeline.py`
-- **Repo/CI invariants** — `test_workflow_hygiene.py` (every workflow loadable,
-  top-level `permissions:`, SHA-pinned actions, the `self-healing-ci.yml` fork
-  guard, `codeql.yml`'s `config-file:`, `.bandit` parseable),
-  `test_dependabot_config.py` (every `dependabot.yml` directory exists, is not a
-  symlink, and holds a manifest of its declared ecosystem; no globs; no
-  `target-branch`; bounded open-PR budget; and a completeness sweep that fails
-  when a manifest has no entry and is not in `UNCOVERED_BY_DESIGN`)
-- **Repo/persona invariants** — `test_soul_consistency.py`,
-  `test_shared_package_divergence.py`,
-  `test_compose_persona.py`, `test_export_agent_repo.py`,
-  `test_persona_workspace_workflows.py`, `test_train_configs.py`
+- `test_memory_store.py`, `test_memory_sync.py`, `test_memory_aux.py`,
+  `test_memory_concurrent.py`, `test_store_migrations.py` — memory subsystem
+- `test_agent_loop.py`, `test_tools.py`, `test_registry.py`, `test_usage.py`,
+  `test_providers_*.py` (4 files) — agent subsystem
+- `test_mcp_server.py`, `test_mcp_client.py`, `test_mcp_manager.py`,
+  `test_mcp_servers.py` — MCP subsystem
+- `test_cli*.py`, `test_sessions_cli.py` — CLI commands
+- `test_auth.py`, `test_config_reports.py`, `test_extensions.py`,
+  `test_skill_injection.py`, `test_cycle_skills_config.py`,
+  `test_integration.py`, `test_web_server.py`
 - `conftest.py` — shared fixtures: in-memory `MemoryStore`, temp dirs,
   mock Anthropic clients
 
@@ -755,22 +353,17 @@ reach out to a real endpoint. Use `tmp_path` fixtures for file I/O.
 - **Config centralization.** No module hard-codes a path — everything goes through
   `config.py`. New paths and env-var names belong there.
 - **Dependency injection over global state.** `run_agent()` and `handle_request()`
-  accept injectable client, store, policy, and filter arguments; this is what
-  makes them testable. Don't use module-level globals for these.
+  accept injectable client and store arguments; this is what makes them testable.
+  Don't use module-level globals for these.
 - **Tests assume no network and no GCP credentials.** Keep them hermetic; inject
   clients/stores instead of reaching out.
 - **Sandbox defaults are deliberate.** `read_file` is restricted to cwd +
   `~/.sakthai` + `SAKTHAI_READ_ALLOW`; `run_command` is **opt-in** via
   `SAKTHAI_SHELL_ALLOW`. Don't widen these without reason.
-- **Guardrail changes must be synced across personas.** Copy the canonical
-  `personas/sakthai/sakthai/agent/guardrails.py` to every persona copy, or
-  `tests/test_persona_guardrails_parity.py` fails CI.
 - **Not linted / not type-checked:** ruff excludes `library/` and `scripts/`;
-  mypy covers only `personas/sakthai/sakthai`. Don't "fix" lint/types in the
-  other trees.
-- **mypy is `strict`** over the package, with exactly one exemption:
-  `sakthai.telegram.*` is `ignore_errors = true` (an early-stage standalone
-  prototype). Keep all other new code strict-clean.
+  mypy only covers `sakthai/`. Don't "fix" lint/types in those trees.
+- **mypy is `strict`** over the whole `sakthai/` package with no per-module
+  exceptions. Keep all new code strict-clean.
 - **Schema migrations are additive.** Use `ALTER TABLE` only, under
   `BEGIN IMMEDIATE`. Never drop columns or tables in a migration.
 - **Tool registry is the MCP server.** `BUILTIN_TOOLS` in `agent/tools.py` is
@@ -781,15 +374,6 @@ reach out to a real endpoint. Use `tmp_path` fixtures for file I/O.
   name.
 - **Ollama uses 127.0.0.1, not localhost.** IPv6 resolution for `localhost` breaks
   some environments; the OpenAI provider explicitly connects to `127.0.0.1`.
-- **Scripts must fix up `sys.path`.** There is no root-level `sakthai/` package;
-  `import sakthai` only works because of the editable install. Any script under
-  `scripts/` that must run outside the installed env has to
-  `sys.path.insert(0, str(REPO_ROOT / "personas" / "sakthai"))` first.
-- **PRs into `main` need a non-author approval before merging.** Agent-opened
-  PRs are reviewed by the repository owner; green CI is not a substitute, and a
-  bot that auto-approves is explicitly out of bounds. Policy in
-  `docs/CONTRIBUTING.md`, rationale and the Scorecard mechanism behind it in
-  `docs/code-scanning-sweep-2026-08-12.md`.
 
 ---
 
@@ -803,13 +387,9 @@ reach out to a real endpoint. Use `tmp_path` fixtures for file I/O.
 
 ### PLAN.md Safety
 
-- **Never overwrite `PLAN.md` entirely.** Use targeted chunk replacements only.
+- **Never overwrite `PLAN.md` entirely.** Use `multi_replace_file_content` with targeted chunk replacements only.
 - When marking tasks complete, find and replace only the specific `- [ ]` or `- [/]` line(s) — not whole sections.
 - After any edit to `PLAN.md`, immediately re-read it to verify the surrounding content is intact before continuing.
-
-`PLAN.md` is the master index; sub-plans live in `product/PLAN.md`,
-`security/SECURITY_FIXES_PLAN.md`, `personas/*/PLAN.md`, and
-`docs/superpowers/plans/`. Link, don't duplicate.
 
 ---
 
@@ -825,32 +405,14 @@ reach out to a real endpoint. Use `tmp_path` fixtures for file I/O.
 | `SAKTHAI_GATEWAY_URL` | Base URL of an OpenAI-compatible AI gateway (OpenRouter/LiteLLM/Vercel/Cloudflare) — enables the `gateway` provider |
 | `SAKTHAI_GATEWAY_API_KEY` | Bearer token for the AI gateway (defaults to `nokey`) |
 | `HF_TOKEN` | Hugging Face access token — used by `sakthai hf` and the `huggingface` provider |
-| `SAKTHAI_HF_API_BASE` | HF Inference Providers router base URL (default: `https://router.huggingface.co/v1`) |
-| `SAKTHAI_HOME` | Override the `~/.sakthai` root (memory db, sessions, extensions, eval log) |
-| `SAKTHAI_PERSONA` | Persona identity for systemd/Telegram launches — scopes skill discovery |
-| `SAKTHAI_MODEL` / `SAKTHAI_PROVIDER` | Default model/provider for non-interactive launches |
-| `SAKTHAI_FAST` / `SAKTHAI_STATELESS` / `SAKTHAI_NO_MCP` | Env equivalents of `--fast` / `--stateless` / `--no-mcp` |
-| `SAKTHAI_WITH_SKILLS` | Comma-separated skill names injected into the system prompt |
-| `SAKTHAI_SYSTEM_PROMPT` / `SAKTHAI_SYSTEM_PROMPT_FILE` | Inline or file-backed system-prompt prefix |
-| `SAKTHAI_READ_ALLOW` | `os.pathsep`-separated extra paths the `read_file` tool may read |
+| `SAKTHAI_HF_API_BASE` | Hugging Face Inference Providers router base URL (default: `https://router.huggingface.co/v1`) |
+| `SAKTHAI_HOME` | Override the `~/.sakthai` root (memory db, sessions, extensions) |
+| `SAKTHAI_READ_ALLOW` | Colon-separated extra paths the `read_file` tool may read |
 | `SAKTHAI_SHELL_ALLOW` | Any non-empty value enables the `run_command` tool |
-| `SAKTHAI_SANDBOX_NETWORK` | Docker `--network` value for `run --sandbox` (e.g. `none` to cut egress) |
-| `SAKTHAI_MCP_CONFIG` | Override the external MCP server config path |
 | `SAKTHAI_MCP_TIMEOUT` | Seconds to wait for an external MCP server reply (default: 30) |
-| `SAKTHAI_MCP_ENV_PASSTHROUGH` | Env vars forwarded to spawned MCP servers |
-| `SAKTHAI_EVAL_LOG` | Override the eval/MLOps JSONL log path (default `SAKTHAI_HOME/eval.jsonl`) |
-| `SAKTHAI_WEB_ALLOW_PUBLIC` | Opt-in to non-loopback binds for the web server (default: refused — loopback-only) |
-| `SAKTHAI_AGENT_ACTIVE` | Set by the loop itself; the `run_agent_loop` recursion guard reads it |
-| `SAKKING_HOME` | Override the SakKing data dir (default `~/.sakking`) for `skills sync-sakking` |
-| `TELEGRAM_BOT_TOKEN` / `TELEGRAM_CHAT_ID` / `TELEGRAM_ALLOWED_USER_IDS` | Telegram gateway and the `send_telegram_message` tool |
-| `MS_GRAPH_CLIENT_ID` / `MS_GRAPH_TENANT_ID` / `MS_GRAPH_REFRESH_TOKEN` | Microsoft Graph mail + calendar tools (seed via `scripts/graph_device_login.py`) |
+| `TELEGRAM_BOT_TOKEN` / `TELEGRAM_CHAT_ID` | Needed for the `send_telegram_message` tool |
 
 ---
-
-## Local skills for this repo
-
-- `run-sakthai-agent-v2` — use when asked to build, run, drive, or smoke-test the SakThai CLI/agent loop/MCP server/web API in this monorepo.
-- `Sak-family-auto-cycle` — use when asked to run the six-persona (SakKing/SakThai/SakSee/SakSit/SakTan/SakJules) auto-cycle or dispatch them as a team.
 
 ## Skills format
 
@@ -877,27 +439,23 @@ Note: `tags`/`related_skills` must be nested under `metadata.sakthai` — a flat
 top-level `tags:`/`related_skills:` is silently ignored by the parser in
 `skills.py`.
 
-Discovery roots are listed under "Other subsystems" above. Run
-`sakthai skills list` to see everything discovered, and `sakthai skills validate
---naming` to check the `Sak-`/`Sak<Name>-` prefix convention.
+Skills are discovered from `skills/` (user/extension skills),
+`personas/shared/skills/` (the shared six-persona skills), and `library/`
+(curated catalog). Run `sakthai skills list` to see all discovered skills.
 `sakthai run --dry-run` validates `--with-skills` names and fails on
 unresolved ones; a live run warns and skips them.
-
-A skill directory may also carry `commands/<name>.md` files, which become
-`/skill:command` slash commands for `sakthai run` (see "Runtime entry points").
 
 ---
 
 ## Adding a new built-in tool
 
 1. Add a `Tool(name=..., description=..., input_schema=..., handler=...)` to
-   `BUILTIN_TOOLS` in `personas/sakthai/sakthai/agent/tools.py`.
+   `BUILTIN_TOOLS` in `sakthai/agent/tools.py`.
 2. The tool automatically appears in both `sakthai run` (agent loop) and
    `sakthai mcp` (MCP server) — no other wiring needed.
 3. Write a test in `tests/test_tools.py` using an injected `MemoryStore(":memory:")`.
 4. If the tool touches the filesystem or network, sandbox it appropriately
-   (follow the `read_file` / `run_command` patterns) and check whether
-   `agent/guardrails.py` needs a matching rule.
+   (follow the `read_file` / `run_command` patterns).
 
 ---
 
@@ -913,13 +471,4 @@ A skill directory may also carry `commands/<name>.md` files, which become
 | `docs/workspace.md` | Dev environment setup |
 | `docs/og_parity_audit.md` | Comparison with original SakThai |
 | `docs/integrations.md` | Composio and cross-agent communication recipes |
-| `docs/skill-naming.md` | The `Sak-` / `Sak<Name>-` naming convention |
-| `docs/agent-diagnosis.md` | Standalone run checklist and runtime notes |
-| `docs/self-healing-ci.md` | The `sakthai heal` pipeline, its safety model, and the workflow that drives it |
-| `docs/configuring-multi-ecosystem-updates.md` · `docs/dependabot-setup.md` | The five-ecosystem Dependabot config and why it is shaped that way · enabling the repository settings the config cannot |
-| `.github/INNERSOURCE.md` | Advisory ownership, severity SLAs, and how accepted-risk advisories are recorded |
-| `docs/SOUL.md` · `docs/USER.md` · `docs/OPERATING_CONTRACT.md` | Team identity · Beer's profile · agent operating rules |
-| `docs/SECURITY.md` · `docs/security-hardening.md` · `docs/SECURITY_HARDENING_IMPLEMENTATION.md` | Security policy/architecture · audit findings and the prevention pattern + regression test for each · implementation notes |
-| `docs/security_audit_2026-07-11.md` · `docs/security_audit_2026-07-12.md` | Point-in-time audit reports |
-| `docs/superpowers/plans/` · `docs/superpowers/specs/` | Dated feature plans and design specs |
-| `AGENTS.md` | Repo guidelines + the SakJules PR protocol |
+| `docs/SECURITY.md` · `docs/security-hardening.md` | Security policy/architecture · audit findings, fixes, and the prevention pattern + regression test for each |

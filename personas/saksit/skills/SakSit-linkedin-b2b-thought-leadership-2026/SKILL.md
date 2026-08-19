@@ -1,7 +1,6 @@
 ---
 name: SakSit-linkedin-b2b-thought-leadership-2026
-description: Saksit Linkedin B2B Thought Leadership 2026
-...
+description: "Saksit Linkedin B2B Thought Leadership 2026"
 ---
 
 # LinkedIn B2B Thought-Leadership Strategy 2026

@@ -1,7 +1,6 @@
 ---
 name: SakTan-weekly-review
-description: "End-of-week retrospective \u2014 what got done, what habits held, and next weeks\
-  \ top priority \u2014 logged to memory."
+description: "End-of-week retrospective — what got done, what habits held, and next weeks top priority — logged to memory."
 ---
 
 # Weekly Review

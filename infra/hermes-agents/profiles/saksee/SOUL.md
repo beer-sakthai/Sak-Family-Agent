@@ -1,1 +1,0 @@
-../../../../personas/saksee/SOUL.md
