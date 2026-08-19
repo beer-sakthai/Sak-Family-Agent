@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { AdkCodeViewer } from './adk/AdkCodeViewer';
 import { CloudDeploymentBuilder } from './adk/CloudDeploymentBuilder';
 import { QualityFlywheelGauge } from './adk/QualityFlywheelGauge';
+import { AdkObservabilityExplorer } from './adk/AdkObservabilityExplorer';
 import {
   AdkAgentSpec,
   AgentRegistryStatus,
@@ -132,6 +133,9 @@ export const GoogleAdkBridgePanel: React.FC = () => {
 
       {/* Quality Flywheel Evaluation */}
       <QualityFlywheelGauge evalResult={evalResult} onRunEval={handleRunEval} isRunning={isEvaluating} />
+
+      {/* Cloud Trace & BigQuery Observability Suite */}
+      <AdkObservabilityExplorer />
     </div>
   );
 };

@@ -1,7 +1,9 @@
 ---
 name: repo-ops-pipeline
-description: >-
-  Automated DevOps & CI/CD pipeline skill for the Sak Family workspace. Runs full QA audits (Pytest, Ruff, MyPy, Bandit, Vitest), checks GitHub PR divergence and overlap, and builds the full-stack Next.js web dashboard.
+description: Automated DevOps & CI/CD pipeline skill for the Sak Family workspace. Runs full QA
+  audits (Pytest, Ruff, MyPy, Bandit, Vitest), checks GitHub PR divergence and overlap,
+  and builds the full-stack Next.js web dashboard.
+...
 ---
 
 # Repository Operations & CI/CD Pipeline

@@ -1,6 +1,7 @@
 ---
 name: SakSee-full-sak-cycle
-description: "Orchestrate all 6 stages of the Sak family cycle (Dream→Hope→Care→Joy→Trust→Growth) as a solo Hermes agent, without the sakthai CLI."
+description: "Orchestrate all 6 stages of the Sak family cycle (Dream\u2192Hope\u2192Care\u2192\
+  Joy\u2192Trust\u2192Growth) as a solo Hermes agent, without the sakthai CLI."
 ---
 
 # Full Sak Cycle

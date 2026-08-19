@@ -1,6 +1,9 @@
 ---
 name: SakJules-sandbox-sdk
-description: "Build sandboxed applications for secure code execution. Load when building AI code execution, code interpreters, CI/CD systems, interactive dev environments, or executing untrusted code. Covers Sandbox SDK lifecycle, commands, files, code interpreter"
+description: Build sandboxed applications for secure code execution. Load when building AI code
+  execution, code interpreters, CI/CD systems, interactive dev environments, or executing
+  untrusted code. Covers Sandbox SDK lifecycle, commands, files, code interpreter
+...
 ---
 
 # Cloudflare Sandbox SDK

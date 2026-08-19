@@ -1,6 +1,9 @@
 ---
 name: SakJules-SakThai-hf-spaces-lifecycle
-description: ">   Complete reference for Hugging Face Spaces lifecycle management — auto-sleep   behavior on free vs paid hardware, custom sleep time configuration, manual   pause/resume workflow, billing model (per-minute billing, no-cost build phase,   no billin"
+description: ">   Complete reference for Hugging Face Spaces lifecycle management \u2014 auto-sleep\
+  \   behavior on free vs paid hardware, custom sleep time configuration, manual \
+  \  pause/resume workflow, billing model (per-minute billing, no-cost build phase,\
+  \   no billin"
 ---
 
 # HF Spaces Lifecycle Management — Sleep, Pause, Billing & Duration

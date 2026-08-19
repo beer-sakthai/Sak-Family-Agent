@@ -1,6 +1,7 @@
 ---
 name: SakSee-openhue
-description: "Control Philips Hue lights, scenes, rooms via OpenHue CLI."
+description: Control Philips Hue lights, scenes, rooms via OpenHue CLI.
+...
 ---
 
 # OpenHue CLI

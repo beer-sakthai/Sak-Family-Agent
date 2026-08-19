@@ -1,6 +1,7 @@
 ---
 name: SakSee-hermes-agent-skill-authoring
-description: "Author SKILL.md files with proper frontmatter and structure."
+description: Author SKILL.md files with proper frontmatter and structure.
+...
 ---
 
 # Hermes Agent Skill Authoring

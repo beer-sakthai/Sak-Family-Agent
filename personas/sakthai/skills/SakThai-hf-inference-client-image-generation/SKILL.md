@@ -1,6 +1,9 @@
 ---
 name: SakThai-hf-inference-client-image-generation
-description: "Using Hugging Face InferenceClient for image generation via serverless inference API. Covers text-to-image, image-to-image, inpainting, and controlnet through hf_hubs InferenceClient."
+description: Using Hugging Face InferenceClient for image generation via serverless inference API.
+  Covers text-to-image, image-to-image, inpainting, and controlnet through hf_hubs
+  InferenceClient.
+...
 ---
 
 # InferenceClient Image Generation Patterns

@@ -1,6 +1,6 @@
 ---
 name: SakThai-hf-context-engineering
-description: "Context engineering for code agents — skills, MCP, hooks."
+description: "Context engineering for code agents \u2014 skills, MCP, hooks."
 ---
 
 # Context Engineering for Code Agents

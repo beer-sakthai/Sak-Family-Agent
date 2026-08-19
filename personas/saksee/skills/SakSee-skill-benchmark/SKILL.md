@@ -1,6 +1,7 @@
 ---
 name: SakSee-skill-benchmark
-description: "Two-pass cold/hot file read benchmark for SKILL.md files."
+description: Two-pass cold/hot file read benchmark for SKILL.md files.
+...
 ---
 
 # Skill Benchmark

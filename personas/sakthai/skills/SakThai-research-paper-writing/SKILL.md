@@ -1,6 +1,6 @@
 ---
 name: SakThai-research-paper-writing
-description: "Write ML papers for NeurIPS/ICML/ICLR: design→submit."
+description: "Write ML papers for NeurIPS/ICML/ICLR: design\u2192submit."
 ---
 
 # Research Paper Writing Pipeline

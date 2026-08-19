@@ -1,6 +1,8 @@
 ---
 name: SakSee-cloud-monitoring-metric-selection
-description: ">-   Retrieve, query, and identify relevant Google Cloud Monitoring metric   descriptors for a GCP service or resource (such as Compute Engine, Spanner,   BigQuery, Cloud Run, Cloud SQL, Pub/Sub, Cloud Storage, etc.). Use when asked   to find, list, "
+description: '>-   Retrieve, query, and identify relevant Google Cloud Monitoring metric   descriptors
+  for a GCP service or resource (such as Compute Engine, Spanner,   BigQuery, Cloud
+  Run, Cloud SQL, Pub/Sub, Cloud Storage, etc.). Use when asked   to find, list, '
 ---
 
 # Metric Selection (Service Query & Local Keyword Filtering)

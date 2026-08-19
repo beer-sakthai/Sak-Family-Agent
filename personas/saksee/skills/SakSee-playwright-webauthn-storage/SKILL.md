@@ -1,6 +1,8 @@
 ---
 name: SakSee-SakThai-playwright-webauthn-storage
-description: "Use Playwright’s WebAuthn virtual authenticator, credentials API, and   Web Storage APIs to automate passkey flows and read/write browser storage state   without UI workarounds or hardware."
+description: "Use Playwright\u2019s WebAuthn virtual authenticator, credentials API, and   Web\
+  \ Storage APIs to automate passkey flows and read/write browser storage state  \
+  \ without UI workarounds or hardware."
 ---
 
 # Playwright WebAuthn + Web Storage Automation

@@ -1,7 +1,9 @@
 ---
 name: SakKing-github-repo-management
-description: "Clone/create/fork repos; manage remotes, releases."
+description: Clone/create/fork repos; manage remotes, releases.
+...
 ---
+
 # GitHub Repository Management
 
 Create, clone, fork, configure, and manage GitHub repositories. Each section shows `gh` first, then the `git` + `curl` fallback.

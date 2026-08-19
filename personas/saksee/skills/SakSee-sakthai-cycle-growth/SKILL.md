@@ -1,7 +1,9 @@
 ---
 name: SakSee-sakthai-cycle-growth
-description: "Saksee Sakthai Cycle Growth"
+description: Saksee Sakthai Cycle Growth
+...
 ---
+
 # SakThai Cycle — Growth
 
 Fold lessons back into memory and skills.

@@ -1,6 +1,8 @@
 ---
 name: SakThai-hf-hub-publisher-analytics
-description: "Publisher Analytics dashboard, CSV export API, unique downloader logs for Team & Enterprise plans"
+description: Publisher Analytics dashboard, CSV export API, unique downloader logs for Team & Enterprise
+  plans
+...
 ---
 
 # HF Hub Publisher Analytics
