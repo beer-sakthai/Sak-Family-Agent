@@ -10,9 +10,16 @@ carried forward here.
 
 ## [Unreleased]
 
-### Planned
-- **Distributed Memory Vector Mesh**: High-concurrency embedding sync across external Postgres/pgvector nodes.
+### In Progress
 - **Cross-Persona A2A Streaming**: Real-time gRPC/A2A token streaming between SakKing, SakSee, SakSit, SakTan, SakJules, and SakThai.
+- **Distributed Memory Vector Mesh**: High-concurrency embedding sync across external Postgres/pgvector nodes.
+  - Roadmap: [docs/superpowers/plans/](docs/superpowers/plans/)
+
+### Documentation
+- Enhanced onboarding guide with practical "Get Started" tasks
+- Updated README with quick-start section and table of contents
+- Clarified security vulnerability reporting procedures
+- Added code review checklist to CONTRIBUTING.md
 
 ---
 
