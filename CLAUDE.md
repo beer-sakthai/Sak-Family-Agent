@@ -573,8 +573,18 @@ not an error.
   `sakthai eval summary`. No cloud dependency.
 - **`agent/usage.py`** — `UsageTracker` / `extract_usage()` for token counting.
 - **`agent/context_filter.py`** — the `ContextFilter` protocol plus
-  `TurnSummarizationFilter` (currently truncates older long turns rather than
-  LLM-summarizing them) and `DEFAULT_CONTEXT_FILTER`, wired into `run_agent`.
+  `TurnSummarizationFilter` and `DEFAULT_CONTEXT_FILTER`, wired into
+  `run_agent`. The filter compacts every turn but the last two, and it takes an
+  optional `summarizer` callable — the injected seam for a smaller, faster
+  model. `DEFAULT_CONTEXT_FILTER` passes none, so the default behaviour is
+  still deterministic truncation; a summarizer that raises, returns a
+  non-string, or fails to shorten the text falls back to that truncation.
+  Compaction covers plain string content, `text` blocks, and `tool_result`
+  blocks — the last of those is where a tool-using run's tokens actually
+  accumulate, since `read_file`/`run_command` output only ever reaches history
+  as a block. Provider `Block` objects on an assistant turn are passed through
+  untouched (rewriting them would mutate objects the caller still holds), and
+  the filter never mutates its input.
 - **`agent/prompt_builder.py`** / **`agent/context_manager.py`** — an extracted
   prompt-assembly seam (`build_system_prompt`, `render_skills_prompt_block`,
   `ContextManager`). Both are tested (`tests/test_prompt_builder.py`,
