@@ -8,6 +8,7 @@ import pytest
 
 from sakthai.agent import loop as loop
 from sakthai.agent.loop import run_agent
+from sakthai.agent.tools import Tool
 from sakthai.healing.dlq import DeadLetterQueue
 from sakthai.healing.snapshot import MemorySnapshotManager
 from sakthai.healing.supervisor import SelfHealingSupervisor
@@ -102,3 +103,39 @@ def test_run_agent_without_supervisor_is_unchanged(
     # No supervisor -> pre-existing behavior: the provider error propagates.
     with pytest.raises(Exception, match="429"):
         run_agent("do thing", client=FakeClient([]), store=store, provider="anthropic")
+
+
+def test_run_agent_heals_tool_failure(store: MemoryStore, tmp_path) -> None:
+    """A tool handler that raises is routed through the supervisor and the run continues."""
+
+    def _boom(args: dict[str, Any], _store: MemoryStore) -> str:
+        raise RuntimeError("tool crashed")
+
+    boom = Tool(
+        name="boom",
+        description="always fails",
+        input_schema={"type": "object", "properties": {}},
+        handler=_boom,
+    )
+
+    sup = _supervisor(tmp_path)
+    result = run_agent(
+        "run boom",
+        client=FakeClient(
+            [
+                _Resp("tool_use", [_Block(type="tool_use", id="t1", name="boom", input={})]),
+                _Resp("end_turn", [_Block(type="text", text="recovered")]),
+            ]
+        ),
+        store=store,
+        provider="anthropic",
+        tools=(boom,),
+        supervisor=sup,
+    )
+
+    # The loop continued past the healed tool failure to the final answer.
+    assert result.text == "recovered"
+    pending = sup.dlq.list_pending(limit=10)
+    assert len(pending) == 1
+    assert pending[0].action == "boom"
+    assert sup.get_circuit_breaker("sakthai").failure_count == 1
